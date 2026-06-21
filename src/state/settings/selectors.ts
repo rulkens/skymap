@@ -131,6 +131,12 @@ export const selectShowDiskRadiusRing = (state: RootState): boolean =>
 export const selectDisabledPasses = (state: RootState): Record<string, boolean> =>
   selectSettings(state).debug.disabledPasses;
 
+export const selectLensingEnabled = (state: RootState): boolean =>
+  selectSettings(state).debug.lensingEnabled;
+
+export const selectLensStrengthDeg = (state: RootState): number =>
+  selectSettings(state).debug.lensStrengthDeg;
+
 // --- structures cluster -------------------------------------------------------
 
 export const selectStructureItems = (

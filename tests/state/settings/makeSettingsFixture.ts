@@ -36,6 +36,8 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_LENSING_ENABLED,
+  DEFAULT_LENS_STRENGTH_DEG,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
@@ -78,6 +80,8 @@ export function makeSettingsFixture(
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       disabledPasses: {},
+      lensingEnabled: DEFAULT_LENSING_ENABLED,
+      lensStrengthDeg: DEFAULT_LENS_STRENGTH_DEG,
     },
     structures: {
       enabled: true,

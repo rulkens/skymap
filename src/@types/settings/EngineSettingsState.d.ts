@@ -191,6 +191,21 @@ export type EngineSettingsState = {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
     disabledPasses: Record<string, boolean>;
+    /**
+     * Gravitational-lensing prototype toggle. When on, the points vertex
+     * stage deflects sources behind the camera orbit target using an SIS
+     * thin-lens model (see `lib/lensing.wesl`). Off by default — it
+     * distorts the view around whatever you're orbiting, so it's an
+     * opt-in experiment rather than a always-on layer.
+     */
+    lensingEnabled: boolean;
+    /**
+     * Einstein-ring radius in DEGREES (UI units). Real cluster Einstein
+     * radii are tens of arcseconds — invisible at typical zoom — so this
+     * is an exaggeration knob, converted to radians before upload. The
+     * deflection scales with this and with the source's D_ls/D_s.
+     */
+    lensStrengthDeg: number;
   };
 
   /**

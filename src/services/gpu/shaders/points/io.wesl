@@ -186,6 +186,26 @@ struct Uniforms {
   // would not be pickable (the disk renderer has no pick pipeline).
   pickPass: u32,
   _padFade1: f32,
+
+  // ── Gravitational-lensing prototype (SIS thin-lens) ─────────────────
+  //
+  // Appended at the END of the struct (offset 176+) so the picker's
+  // in-place uniform mutations — selectedPacked (80), pointSizePx (88),
+  // pickPass (168), all < 176 — keep their byte offsets. See
+  // lib/lensing.wesl for the deflection model.
+  //
+  //   offset 176 : lensCenterWorld vec3<f32>  (lens centre, world Mpc =
+  //                                             the camera orbit target)
+  //   offset 188 : lensEnabled     u32        (fills the vec4 slot)
+  //   offset 192 : lensThetaE      f32        (Einstein radius, radians,
+  //                                             already × UI exaggeration)
+  //   offset 196 : _padLens0/1/2   f32×3      (round up to 208 = 13×16)
+  lensCenterWorld: vec3<f32>,
+  lensEnabled: u32,
+  lensThetaE: f32,
+  _padLens0: f32,
+  _padLens1: f32,
+  _padLens2: f32,
 };
 
 // ─── per-instance vertex attributes ──────────────────────────────────

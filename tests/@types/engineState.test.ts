@@ -103,6 +103,8 @@ describe('EngineState type', () => {
         showPickBuffer: false,
         showDiskRadiusRing: false,
         disabledPasses: {},
+        lensingEnabled: false,
+        lensStrengthDeg: 3,
       },
       structures: {
         enabled: true,
@@ -255,6 +257,8 @@ describe('EngineState type', () => {
         showPickBuffer: false,
         showDiskRadiusRing: false,
         disabledPasses: {},
+        lensingEnabled: false,
+        lensStrengthDeg: 3,
       },
       structures: {
         enabled: true,
@@ -307,6 +311,8 @@ describe('EngineState type', () => {
           showPickBuffer: false,
           showDiskRadiusRing: false,
           disabledPasses: {},
+        lensingEnabled: false,
+        lensStrengthDeg: 3,
         },
         structures: {
           enabled: true,

@@ -274,3 +274,14 @@ export const DEFAULT_SHOW_PICK_BUFFER = false;
 
 /** Disk-radius debug ring starts off.  See `EngineSettingsState.debug.showDiskRadiusRing`. */
 export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
+
+/** Gravitational-lensing prototype starts off.  See `EngineSettingsState.debug.lensingEnabled`. */
+export const DEFAULT_LENSING_ENABLED = false;
+
+/**
+ * Default exaggerated Einstein-ring radius in DEGREES.  Real cluster
+ * Einstein radii are tens of arcseconds (~0.01°); 3° is wildly
+ * exaggerated so the ring is visible while orbiting a cluster.  See
+ * `EngineSettingsState.debug.lensStrengthDeg`.
+ */
+export const DEFAULT_LENS_STRENGTH_DEG = 3.0;

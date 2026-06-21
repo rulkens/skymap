@@ -29,6 +29,7 @@ import package::points::io::Uniforms;
 import package::points::io::PerVertex;
 import package::points::io::VSOut;
 import package::lib::camera::worldToClip;
+import package::lib::lensing::lensDeflect;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::sourceUniforms::SourceUniforms;
@@ -89,9 +90,25 @@ fn vs(
   @builtin(instance_index) ii: u32,
   p: PerVertex,
 ) -> VSOut {
-  // Project the point's 3-D world position to clip space via the
+  // Gravitational-lensing deflection (prototype). When the lens is
+  // enabled, a source BEHIND the lens has its apparent direction pushed
+  // outward around the lens centre (the camera orbit target); when
+  // disabled, lensDeflect returns p.position unchanged. The deflection
+  // preserves the source's distance from the eye, so the apparent-size
+  // and depth-fade math below (which read p.position's length) are
+  // unaffected — only the projected screen direction changes. See
+  // lib/lensing.wesl for the SIS model.
+  let lensedPos = lensDeflect(
+    u.camPosWorld,
+    u.lensCenterWorld,
+    u.lensThetaE,
+    u.lensEnabled,
+    p.position,
+  );
+
+  // Project the (possibly lensed) world position to clip space via the
   // shared 'worldToClip' helper from 'lib/camera.wesl'.
-  let center = worldToClip(u.cam, p.position);
+  let center = worldToClip(u.cam, lensedPos);
 
   // Fetch the quad corner for this vertex (in [-1, +1]²).
   let corner = quadCorner(vi);

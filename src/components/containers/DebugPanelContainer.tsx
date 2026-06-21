@@ -28,6 +28,8 @@ import {
   selectHighlightFallback,
   selectRealOnly,
   selectFlow,
+  selectLensingEnabled,
+  selectLensStrengthDeg,
 } from '../../state/settings/selectors';
 import {
   setShowPickBuffer,
@@ -36,6 +38,8 @@ import {
   setRealOnly,
   setFlow,
   setPassDisabled,
+  setLensingEnabled,
+  setLensStrengthDeg,
 } from '../../state/settings/settingsSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
@@ -60,6 +64,8 @@ function DebugPanelContainer({
   const highlightFallback = useAppSelector(selectHighlightFallback);
   const realOnlyMode = useAppSelector(selectRealOnly);
   const flow = useAppSelector(selectFlow);
+  const lensingEnabled = useAppSelector(selectLensingEnabled);
+  const lensStrengthDeg = useAppSelector(selectLensStrengthDeg);
 
   const onShowPickBufferChange = useCallback(
     (enabled: boolean) => dispatch(setShowPickBuffer(enabled)),
@@ -86,6 +92,16 @@ function DebugPanelContainer({
     [dispatch],
   );
 
+  const onLensingEnabledChange = useCallback(
+    (enabled: boolean) => dispatch(setLensingEnabled(enabled)),
+    [dispatch],
+  );
+
+  const onLensStrengthDegChange = useCallback(
+    (deg: number) => dispatch(setLensStrengthDeg(deg)),
+    [dispatch],
+  );
+
   // Reads `disabledPasses[pass]` in its body — dep array includes `disabledPasses`
   // so the callback captures the current record on each store update.
   const onTogglePass = useCallback(
@@ -109,6 +125,10 @@ function DebugPanelContainer({
       onShowDiskRadiusRingChange={onShowDiskRadiusRingChange}
       flow={flow}
       onFlowChange={onFlowChange}
+      lensingEnabled={lensingEnabled}
+      lensStrengthDeg={lensStrengthDeg}
+      onLensingEnabledChange={onLensingEnabledChange}
+      onLensStrengthDegChange={onLensStrengthDegChange}
       onTogglePass={onTogglePass}
     />
   );

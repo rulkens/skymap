@@ -158,6 +158,12 @@ const settingsSlice = createSlice({
       // Open-world membership record (any pass name): `[name] === true` disables.
       settings.debug.disabledPasses[action.payload.pass] = action.payload.disabled;
     },
+    setLensingEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.debug.lensingEnabled = action.payload;
+    },
+    setLensStrengthDeg: (settings, action: PayloadAction<number>) => {
+      settings.debug.lensStrengthDeg = action.payload;
+    },
 
     // ── structures ──────────────────────────────────────────────────────────
     setStructureItemEnabled: (
@@ -211,6 +217,8 @@ export const {
   setShowPickBuffer,
   setShowDiskRadiusRing,
   setPassDisabled,
+  setLensingEnabled,
+  setLensStrengthDeg,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,

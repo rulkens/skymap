@@ -31,6 +31,7 @@ import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
 import { FlowTuningSection } from './FlowTuningSection';
+import { LensingTuningSection } from './LensingTuningSection';
 import { DataQualitySection } from './DataQualitySection';
 import { LabelEffectsSection } from './LabelEffectsSection';
 
@@ -73,6 +74,15 @@ export type DebugPanelProps = {
   flow: FlowSettings;
   onFlowChange: (patch: Partial<FlowSettings>) => void;
   /**
+   * Gravitational-lensing prototype: master toggle + exaggerated Einstein
+   * radius in degrees. App-owned and optimistic like the other toggles —
+   * the container dispatches `setLensingEnabled` / `setLensStrengthDeg`.
+   */
+  lensingEnabled: boolean;
+  lensStrengthDeg: number;
+  onLensingEnabledChange: (enabled: boolean) => void;
+  onLensStrengthDegChange: (deg: number) => void;
+  /**
    * Called with the pass name when a RenderTogglesSection checkbox is toggled.
    * Container (DebugPanelContainer) dispatches `setPassDisabled`; absorbed here
    * from the section so it is no longer a leaf-level store reach.
@@ -95,6 +105,10 @@ export function DebugPanel({
   onShowDiskRadiusRingChange,
   flow,
   onFlowChange,
+  lensingEnabled,
+  lensStrengthDeg,
+  onLensingEnabledChange,
+  onLensStrengthDegChange,
   onTogglePass,
 }: DebugPanelProps) {
   return (
@@ -125,6 +139,13 @@ export function DebugPanel({
       />
       <div style={{ marginTop: 6 }} />
       <FlowTuningSection flow={flow} onChange={onFlowChange} />
+      <div style={{ marginTop: 6 }} />
+      <LensingTuningSection
+        enabled={lensingEnabled}
+        strengthDeg={lensStrengthDeg}
+        onEnabledChange={onLensingEnabledChange}
+        onStrengthDegChange={onLensStrengthDegChange}
+      />
       <div style={{ marginTop: 6 }} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
         <input

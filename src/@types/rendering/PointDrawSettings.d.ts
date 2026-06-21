@@ -55,4 +55,23 @@ export type PointDrawSettings = {
    * id and reads `state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id }, now)`.
    */
   readonly fadeOpacityOf: (source: SourceType) => number;
+
+  /**
+   * Gravitational-lensing prototype gate. When true, the vertex stage
+   * deflects sources behind the lens centre (SIS thin-lens model). When
+   * false, the lens math short-circuits at zero cost.
+   */
+  lensEnabled: boolean;
+  /**
+   * Lens centre in world Mpc — the camera orbit target this frame. The
+   * thing you've zoomed in on becomes the lens.
+   */
+  lensCenterWorld: Readonly<Vec3>;
+  /**
+   * Einstein angular radius in radians, already scaled by the UI
+   * exaggeration factor. Real cluster Einstein radii are tens of
+   * arcseconds (invisible at typical zoom), so this is intentionally
+   * exaggerated. See `lib/lensing.wesl`.
+   */
+  lensThetaERad: number;
 };

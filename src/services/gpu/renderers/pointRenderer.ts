@@ -185,8 +185,17 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 164..167: pxFadeEnd         f32          (procedural-disk band high) } 16 bytes
  *   bytes 168..171: pickPass          u32          (0 = visual, 1 = pick)      }
  *   bytes 172..175: _padFade1         f32          (written as 0)              }
+ *   bytes 176..187: lensCenterWorld   vec3<f32>    (lens centre, world Mpc)    }
+ *   bytes 188..191: lensEnabled       u32          (0 = off, 1 = lens)         } 32 bytes
+ *   bytes 192..195: lensThetaE        f32          (Einstein radius, radians)  }  (two vec4 slots)
+ *   bytes 196..207: _padLens0/1/2     f32×3        (written as 0)              }
  *
- * Total: 176 bytes — a multiple of 16 ✓
+ * Total: 208 bytes — a multiple of 16 ✓
+ *
+ * The lensing block (gravitational-lensing prototype) is appended at the
+ * END so the picker's in-place writes (selectedPacked/pointSizePx/pickPass,
+ * all < 176) keep their byte offsets — see `points/io.wesl::Uniforms` and
+ * `lib/lensing.wesl`.
  *
  * WGSL uniform buffers follow rules similar to std140 (WGSL spec §13,
  * "Memory Layout").  `vec3<f32>` requires 16-byte alignment, which is why
@@ -208,7 +217,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * uniforms.  They stay in the layout only to keep `pickPass`'s byte offset
  * stable; the WGSL struct still declares them but no shader reads them.
  */
-const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; // 176 bytes
+const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4 + 8 * 4; // 208 bytes
 
 /**
  * Off-thread bake runner.  Spawns a fresh worker per call, ships the
@@ -724,6 +733,9 @@ export function createPointRenderer(
       pxFadeStart,
       pxFadeEnd,
       focusBindGroup,
+      lensEnabled,
+      lensCenterWorld,
+      lensThetaERad,
     } = settings;
     if (galaxyCatalogs.size === 0) return;
 
@@ -771,6 +783,18 @@ export function createPointRenderer(
     f32[40] = pxFadeStart;
     f32[41] = pxFadeEnd;
     // f32[42] (pickPass) / f32[43] (_padFade1) stay zero.
+
+    // Gravitational-lensing block (bytes 176..207).  lensCenterWorld is
+    // the camera orbit target this frame; lensThetaERad is the
+    // UI-exaggerated Einstein radius.  The pick pass leaves these slots
+    // untouched (its in-place writes are all < 176), so picking lenses
+    // with the same parameters the visual pass just wrote.
+    f32[44] = lensCenterWorld[0]; // bytes 176
+    f32[45] = lensCenterWorld[1];
+    f32[46] = lensCenterWorld[2];
+    u32[47] = lensEnabled ? 1 : 0; // bytes 188
+    f32[48] = lensThetaERad; // bytes 192
+    // f32[49..51] (_padLens0/1/2) stay zero.
 
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 

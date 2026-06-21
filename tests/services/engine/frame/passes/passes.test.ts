@@ -432,6 +432,10 @@ const POINT_SPRITES_SETTINGS_STUB = {
     mode: BiasMode.None,
     absMagLimit: -19,
   },
+  debug: {
+    lensingEnabled: false,
+    lensStrengthDeg: 3,
+  },
 } as unknown as EngineState['settings'];
 
 describe('pointSpritesPass.draw', () => {
