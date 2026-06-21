@@ -22,6 +22,8 @@ function makeCtx(): ReadyFrameContext {
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     focusBlend: 0,
+    visibleSourceMask: 0xffffffff,
+    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
     renderer: {} as never,
     postProcess: {} as never,
     volumeOffscreen: {} as never,

@@ -86,6 +86,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      0xffffffff,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -96,6 +97,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      0xffffffff,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -106,6 +108,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      0xffffffff,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -116,6 +119,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      0xffffffff,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -126,6 +130,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      0xffffffff,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -135,7 +140,7 @@ describe('deriveFrameContext — ready branch', () => {
   it('assembles ctx.cam from pose + projection (not from state.cam)', () => {
     const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
     const projection: CameraProjection = { fovYRad: 1.2, aspect: 2, near: 0.01, far: 5000 };
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, projection);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, projection, 0xffffffff);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     // ctx.cam must reflect the pose and projection.
@@ -150,7 +155,7 @@ describe('deriveFrameContext — ready branch', () => {
     // The projection Resource is the source of fovYRad; state.cam.fovYRad is
     // only the drag register bootstrap value and is never read for rendering.
     const projection: CameraProjection = { fovYRad: 0.9, aspect: 1, near: 0.1, far: 1000 };
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, projection);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, projection, 0xffffffff);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.cam.fovYRad).toBe(0.9);
@@ -159,7 +164,7 @@ describe('deriveFrameContext — ready branch', () => {
   it('drawPxPerRad uses projection.fovYRad', () => {
     const projection: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
     const canvas = makeCanvas(1920, 1080);
-    const ctx = deriveFrameContext(makeState(), canvas, RESTING_POSE, projection);
+    const ctx = deriveFrameContext(makeState(), canvas, RESTING_POSE, projection, 0xffffffff);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     // pxPerRad = height / (2 * tan(fovY / 2))
@@ -169,7 +174,7 @@ describe('deriveFrameContext — ready branch', () => {
 
   it('ctx.vp matches computeViewProj(assembleOrbitCamera(pose, projection))', () => {
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION, 0xffffffff);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     const expected = computeViewProj(assembleOrbitCamera(pose, PROJECTION));
@@ -177,7 +182,7 @@ describe('deriveFrameContext — ready branch', () => {
   });
 
   it('populates canvasSize from canvas dimensions', () => {
-    const ctx = deriveFrameContext(makeState(), makeCanvas(800, 600), RESTING_POSE, PROJECTION);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(800, 600), RESTING_POSE, PROJECTION, 0xffffffff);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.canvasSize).toEqual({ width: 800, height: 600 });
@@ -192,6 +197,7 @@ describe('deriveFrameContext — ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      0xffffffff,
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
@@ -207,10 +213,20 @@ describe('deriveFrameContext — ready branch', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      0xffffffff,
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.volumeOffscreen).toBe(volumeOffscreen);
+  });
+
+  it('exposes visibleSourceMask and a seeded focus on the ready context', () => {
+    const mask = 0b1011;
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, PROJECTION, mask);
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+    expect(ctx.visibleSourceMask).toBe(mask);
+    expect(ctx.focus.blend).toBe(0);
   });
 });
 
@@ -221,6 +237,7 @@ describe('deriveFrameContext — type narrowing', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      0xffffffff,
     );
     if (ctx.isReady) {
       // If FrameContext were `{ cam: OrbitCamera | null }` instead of a
@@ -236,6 +253,7 @@ describe('deriveFrameContext — type narrowing', () => {
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
+      0xffffffff,
     );
     if (ctx.isReady) {
       // @ts-expect-error — drawCamPos is Readonly<[...]>; index assignment is forbidden.

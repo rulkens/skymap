@@ -90,6 +90,7 @@ import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
+import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 
 /**
  * Derive the per-frame context from an already-produced pose and projection.
@@ -114,6 +115,7 @@ export function deriveFrameContext(
   canvas: HTMLCanvasElement,
   pose: CameraPose,
   projection: CameraProjection,
+  visibleSourceMask: number,
 ): FrameContext {
   // The bootstrap gate. Every site that asks 'is the engine bootstrapped?' —
   // per-frame, slot-commit, public-handle — funnels through the one
@@ -149,6 +151,15 @@ export function deriveFrameContext(
   // and double-ticking would double-advance the ramp). So the value is a
   // placeholder until `runFrame` fills it in, before any consumer (label
   // director, marker upload, render settings) reads it.
+  //
+  // `focus` is seeded to ZERO_FOCUS (blend=0, the at-rest sentinel) and overwritten
+  // by `runFrame` with this frame's real FocusUniformsValue the moment the ready
+  // gate passes. Same reason as `focusBlend`: `produceFocusUniforms` ticks the
+  // focus fade controller — a once-per-frame side effect — so it can't run here.
+  // ZERO_FOCUS is a module-private constant in structureFocusSubsystem; importing
+  // it avoids duplicating the literal and keeps a single source of truth for the
+  // at-rest defaults (blend=0, apparentRadiusMpc=1 so smoothstep edges are
+  // never degenerate, everything else a don't-care).
   return {
     isReady: true,
     cam,
@@ -157,6 +168,8 @@ export function deriveFrameContext(
     drawCamPos,
     drawPxPerRad,
     focusBlend: 0,
+    visibleSourceMask,
+    focus: ZERO_FOCUS,
     renderer,
     postProcess,
     volumeOffscreen,

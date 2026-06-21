@@ -31,6 +31,8 @@ function makeCtx(): ReadyFrameContext {
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     focusBlend: 0,
+    visibleSourceMask: 0xffffffff,
+    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
     renderer: { draw: vi.fn() } as any,
     postProcess: {
       view: {} as GPUTextureView,

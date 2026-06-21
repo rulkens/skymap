@@ -237,7 +237,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // for downstream `renderFrame()`. The 'not ready' branch is the brief window
   // before the first cloud lands; once cam + GPU handles populate together,
   // it's never taken again.
-  const ctx = deriveFrameContext(state, deps.canvas, renderPose, state.cameraRuntime.projection);
+  const ctx = deriveFrameContext(state, deps.canvas, renderPose, state.cameraRuntime.projection, masks.draw);
   if (!ctx.isReady) {
     // Essential wake: bootstrap populates cam/GPU handles without waking any
     // channel — keep re-polling until the gate opens.
@@ -271,6 +271,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   state.subsystems.structureFocus.update(focusedStructure, nowMs);
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   ctx.focusBlend = focusUniforms.blend;
+  ctx.focus = focusUniforms;
 
   // ── Per-frame impostor planners ───────────────────────────────────────────
   //

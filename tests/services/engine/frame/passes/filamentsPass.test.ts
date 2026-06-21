@@ -37,6 +37,8 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     focusBlend,
+    visibleSourceMask: 0xffffffff,
+    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: focusBlend },
     renderer: {} as never,
     postProcess: {
       view: {} as GPUTextureView,
