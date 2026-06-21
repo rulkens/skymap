@@ -70,7 +70,7 @@ export const filamentsPass: Pass = {
   // Update: the runtime `draw` short-circuits anyway via the
   // `filamentRenderer === null` early return; `enabled` returning
   // true with a null renderer is a self-correcting near-miss.
-  enabled(state, _ctx, _settings) {
+  enabled(state, _ctx) {
     // State boolean is the user's intent; opacityOf > 0 is the visual
     // state. We render whenever EITHER is true so a fade-out continues
     // drawing after the user toggles off (until opacity hits 0). The
@@ -81,7 +81,7 @@ export const filamentsPass: Pass = {
     return state.subsystems.fades.opacityOf({ kind: 'filament' }, performance.now()) > 0;
   },
 
-  draw(pass, ctx, state, _settings, deps) {
+  draw(pass, ctx, state, deps) {
     // Renderer-null check lives here rather than in `enabled` because
     // `enabled` doesn't receive `deps`.  Keeping this as a defensive
     // early-return makes the `enabled === true → draw runs` invariant

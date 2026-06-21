@@ -19,7 +19,6 @@ import type { mat4 } from 'gl-matrix';
 
 import { Source } from '../../../../../src/data/sources';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
-import { ToneMapCurve } from '../../../../../src/data/toneMapCurve';
 import {
   HDR_PASSES,
   TIMED_SLOT_NAMES,
@@ -31,7 +30,6 @@ import {
 } from '../../../../../src/services/engine/frame/passes';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { SelectionRef } from '../../../../../src/@types/engine/SelectionRef';
@@ -87,31 +85,6 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     postProcess,
     volumeOffscreen,
     texturedDisks,
-    ...overrides,
-  };
-}
-
-function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrameSettings {
-  return {
-    pointSizePx: 2.5,
-    brightness: 1.0,
-    selected: null,
-    visibleSourceMask: 0xffffffff,
-    highlightFallback: true,
-    realOnlyMode: false,
-    biasMode: BiasMode.None,
-    absMagLimit: -19,
-    depthFadeEnabled: true,
-    pxFadeStartPoints: 8,
-    pxFadeEndPoints: 14,
-    focus: { center: [0, 0, 0], apparentRadiusMpc: 0, physicalRadiusMpc: 0, blend: 0 },
-    exposure: 1.0,
-    toneMapCurve: ToneMapCurve.Reinhard,
-    galaxyTexturesEnabled: true,
-    milkyWayEnabled: true,
-    filamentsEnabled: false,
-    filamentIntensity: 1,
-    volumesEnabled: false,
     ...overrides,
   };
 }
@@ -205,14 +178,9 @@ describe('TIMED_SLOT_NAMES registry', () => {
 
 describe('pointSpritesPass.enabled', () => {
   it('always returns true (no user-facing toggle for point-sprites)', () => {
-    expect(pointSpritesPass.enabled(STATE_STUB, makeCtx(), makeSettings())).toBe(true);
+    expect(pointSpritesPass.enabled(STATE_STUB, makeCtx())).toBe(true);
     // Even when every other toggle is off, point-sprites still runs.
-    const off = makeSettings({
-      galaxyTexturesEnabled: false,
-      milkyWayEnabled: false,
-      filamentsEnabled: false,
-    });
-    expect(pointSpritesPass.enabled(STATE_STUB, makeCtx(), off)).toBe(true);
+    expect(pointSpritesPass.enabled(STATE_STUB, makeCtx())).toBe(true);
   });
 });
 
@@ -225,7 +193,7 @@ describe('proceduralDisksPass.enabled', () => {
       settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings()),
+      proceduralDisksPass.enabled(state, makeCtx()),
     ).toBe(false);
   });
 
@@ -235,7 +203,7 @@ describe('proceduralDisksPass.enabled', () => {
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings()),
+      proceduralDisksPass.enabled(state, makeCtx()),
     ).toBe(false);
   });
 
@@ -245,7 +213,7 @@ describe('proceduralDisksPass.enabled', () => {
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings()),
+      proceduralDisksPass.enabled(state, makeCtx()),
     ).toBe(false);
   });
 
@@ -255,7 +223,7 @@ describe('proceduralDisksPass.enabled', () => {
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings()),
+      proceduralDisksPass.enabled(state, makeCtx()),
     ).toBe(true);
   });
 });
@@ -272,7 +240,7 @@ describe('filamentsPass.enabled', () => {
       settings: { filaments: { enabled: true, intensity: 1 } },
     } as unknown as EngineState;
     expect(
-      filamentsPass.enabled(stateOn, makeCtx(), makeSettings()),
+      filamentsPass.enabled(stateOn, makeCtx()),
     ).toBe(true);
   });
 
@@ -284,7 +252,7 @@ describe('filamentsPass.enabled', () => {
       settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
     expect(
-      filamentsPass.enabled(stateZeroFade, makeCtx(), makeSettings()),
+      filamentsPass.enabled(stateZeroFade, makeCtx()),
     ).toBe(false);
   });
 
@@ -297,7 +265,7 @@ describe('filamentsPass.enabled', () => {
       settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
     expect(
-      filamentsPass.enabled(stateOffFading, makeCtx(), makeSettings()),
+      filamentsPass.enabled(stateOffFading, makeCtx()),
     ).toBe(true);
   });
 });
@@ -317,7 +285,6 @@ describe('filamentsPass.draw', () => {
         PASS_STUB,
         makeCtx(),
         stateOn,
-        makeSettings(),
         deps,
       ),
     ).not.toThrow();
@@ -332,7 +299,7 @@ describe('filamentsPass.draw', () => {
       ...STATE_STUB,
       settings: { filaments: { enabled: true, intensity: 0.7 } },
     } as unknown as EngineState;
-    filamentsPass.draw(PASS_STUB, ctx, stateWith07, makeSettings(), deps);
+    filamentsPass.draw(PASS_STUB, ctx, stateWith07, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
@@ -352,7 +319,7 @@ describe('milkyWayPass.enabled', () => {
       settings: { milkyWay: { enabled: true } },
     } as unknown as EngineState;
     expect(
-      milkyWayPass.enabled(stateOn, makeCtx(), makeSettings()),
+      milkyWayPass.enabled(stateOn, makeCtx()),
     ).toBe(true);
   });
 
@@ -364,7 +331,7 @@ describe('milkyWayPass.enabled', () => {
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      milkyWayPass.enabled(stateOffZeroFade, makeCtx(), makeSettings()),
+      milkyWayPass.enabled(stateOffZeroFade, makeCtx()),
     ).toBe(false);
   });
 
@@ -377,7 +344,7 @@ describe('milkyWayPass.enabled', () => {
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      milkyWayPass.enabled(stateOffFading, makeCtx(), makeSettings()),
+      milkyWayPass.enabled(stateOffFading, makeCtx()),
     ).toBe(true);
   });
 
@@ -392,7 +359,7 @@ describe('milkyWayPass.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [1000, 0, 0] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayPass.enabled(stateOn, ctx, makeSettings())).toBe(false);
+    expect(milkyWayPass.enabled(stateOn, ctx)).toBe(false);
   });
 });
 
@@ -403,7 +370,7 @@ describe('milkyWayPass.draw', () => {
     const drawSpy = vi.fn();
     const deps = makeDeps({ milkyWayRenderer: { draw: drawSpy } as any, milkyWayITimeSec: 1.5 });
     const ctx = makeCtx();
-    milkyWayPass.draw(PASS_STUB, ctx, STATE_STUB, makeSettings(), deps);
+    milkyWayPass.draw(PASS_STUB, ctx, STATE_STUB, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
@@ -421,7 +388,7 @@ describe('horizonShellPass.enabled', () => {
     // Camera at 5 Mpc is far below the shell's fade-in band (5% of
     // 14.3 Gpc ≈ 0.7 Gpc), so the pass is skipped — no empty
     // full-screen ray-march pass at galaxy-scale zoom.
-    expect(horizonShellPass.enabled(STATE_STUB, makeCtx(), makeSettings())).toBe(false);
+    expect(horizonShellPass.enabled(STATE_STUB, makeCtx())).toBe(false);
   });
 
   it('returns true once the camera pulls back to cosmological scale', () => {
@@ -429,7 +396,7 @@ describe('horizonShellPass.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
     });
-    expect(horizonShellPass.enabled(STATE_STUB, ctx, makeSettings())).toBe(true);
+    expect(horizonShellPass.enabled(STATE_STUB, ctx)).toBe(true);
   });
 });
 
@@ -440,7 +407,7 @@ describe('horizonShellPass.draw', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
     });
-    horizonShellPass.draw(PASS_STUB, ctx, STATE_STUB, makeSettings(), deps);
+    horizonShellPass.draw(PASS_STUB, ctx, STATE_STUB, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
@@ -485,7 +452,7 @@ describe('pointSpritesPass.draw', () => {
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
     const deps = makeDeps();
-    pointSpritesPass.draw(PASS_STUB, ctx, stateWithSelection, makeSettings(), deps);
+    pointSpritesPass.draw(PASS_STUB, ctx, stateWithSelection, deps);
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Selection lives on arg[3].selectedPacked (the PointDrawSettings
@@ -504,7 +471,7 @@ describe('pointSpritesPass.draw', () => {
       selection: { select: null, hover: null, focus: null },
       settings: POINT_SPRITES_SETTINGS_STUB,
     } as unknown as EngineState;
-    pointSpritesPass.draw(PASS_STUB, ctx, stateNullSelection, makeSettings(), makeDeps());
+    pointSpritesPass.draw(PASS_STUB, ctx, stateNullSelection, makeDeps());
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);

@@ -35,7 +35,7 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 export const diskRadiusRingPass: Pass = {
   name: 'disk-radius-ring',
 
-  enabled(state, _ctx, _settings) {
+  enabled(state, _ctx) {
     // Handle check first: no ring renderer means nothing to draw, and
     // short-circuiting here keeps the gate robust against the not-yet-
     // constructed startup window (and partial test stubs) without
@@ -46,7 +46,7 @@ export const diskRadiusRingPass: Pass = {
     return sel !== null && sel.type === 'galaxyCatalog';
   },
 
-  draw(pass, ctx, state, _settings, _deps) {
+  draw(pass, ctx, state, _deps) {
     const sel = state.selection.select;
     // `enabled()` proved a galaxy ref — narrow accordingly.
     if (sel === null || sel.type !== 'galaxyCatalog') return;

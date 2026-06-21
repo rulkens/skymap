@@ -25,7 +25,6 @@ import { filamentsPass } from '../../../../../src/services/engine/frame/passes/f
 import { FILAMENT_RECESSION } from '../../../../../src/services/engine/presentation/focusRecession';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 
 function makeCtx(focusBlend: number): ReadyFrameContext {
@@ -74,11 +73,6 @@ function makeState(
   } as unknown as EngineState;
 }
 
-/** Minimal settings stub — the pass no longer reads from this bag. */
-function makeSettings(): RenderFrameSettings {
-  return {} as RenderFrameSettings;
-}
-
 function makeDeps(drawSpy = vi.fn()): PassDeps {
   return { filamentRenderer: { draw: drawSpy } } as unknown as PassDeps;
 }
@@ -88,7 +82,7 @@ const PASS_STUB = {} as GPURenderPassEncoder;
 describe('filamentsPass.draw focus recession', () => {
   it('passes plain opacityOf at blend 0', () => {
     const drawSpy = vi.fn();
-    filamentsPass.draw(PASS_STUB, makeCtx(0), makeState(1), makeSettings(), makeDeps(drawSpy));
+    filamentsPass.draw(PASS_STUB, makeCtx(0), makeState(1), makeDeps(drawSpy));
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Args: (pass, vp, viewport, halfwidth, intensity, opacity).
     expect(drawSpy.mock.calls[0]![5]).toBe(1);
@@ -96,7 +90,7 @@ describe('filamentsPass.draw focus recession', () => {
 
   it('passes opacityOf × FILAMENT_RECESSION at blend 1', () => {
     const drawSpy = vi.fn();
-    filamentsPass.draw(PASS_STUB, makeCtx(1), makeState(1), makeSettings(), makeDeps(drawSpy));
+    filamentsPass.draw(PASS_STUB, makeCtx(1), makeState(1), makeDeps(drawSpy));
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect(drawSpy.mock.calls[0]![5]).toBeCloseTo(FILAMENT_RECESSION, 6);
   });
@@ -106,7 +100,7 @@ describe('filamentsPass.enabled is unaffected by focus recession', () => {
   it('returns false when the toggle is off and opacity is 0, regardless of blend', () => {
     // Pass enabled=false via state; settings arg is unused by the pass.
     const state = makeState(0, { enabled: false });
-    expect(filamentsPass.enabled(state, makeCtx(0), makeSettings())).toBe(false);
-    expect(filamentsPass.enabled(state, makeCtx(1), makeSettings())).toBe(false);
+    expect(filamentsPass.enabled(state, makeCtx(0))).toBe(false);
+    expect(filamentsPass.enabled(state, makeCtx(1))).toBe(false);
   });
 });

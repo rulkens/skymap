@@ -103,7 +103,6 @@ export function renderFrame(input: RenderFrameInput): void {
     flowFieldRenderer,
     texturedDiskRenderer,
     proceduralDiskRenderer,
-    settings,
     timingService,
   } = input;
 
@@ -152,7 +151,7 @@ export function renderFrame(input: RenderFrameInput): void {
 
   if (timingService.enabled) {
     const timingCtx = timingService.beginFrame();
-    encodeHdrSplit(encoder, ctx, state, settings, deps, timingService);
+    encodeHdrSplit(encoder, ctx, state, deps, timingService);
     ctx.postProcess.draw(
       encoder,
       swapView,
@@ -165,15 +164,14 @@ export function renderFrame(input: RenderFrameInput): void {
       swapView,
       ctx,
       state,
-      settings,
       deps,
       timingService.descriptorFor('ui-overlay'),
     );
     timingService.endFrame(timingCtx, encoder);
   } else {
-    encodeHdrSingle(encoder, ctx, state, settings, deps);
+    encodeHdrSingle(encoder, ctx, state, deps);
     ctx.postProcess.draw(encoder, swapView, state.settings.tonemap.exposure, state.settings.tonemap.curve, undefined);
-    encodeUiOverlay(encoder, swapView, ctx, state, settings, deps, undefined);
+    encodeUiOverlay(encoder, swapView, ctx, state, deps, undefined);
   }
 
   device.queue.submit([encoder.finish()]);

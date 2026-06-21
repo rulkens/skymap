@@ -14,12 +14,12 @@ import type { Pass } from '../../../../@types/engine/frame/Pass';
 
 export const texturedDisksPass: Pass = {
   name: 'textured-disks',
-  enabled(state, _ctx, _settings) {
+  enabled(state, _ctx) {
     if (!state.settings.thumbnails.enabled) return false;
     if (state.subsystems.texturedDisks === null) return false;
     return state.subsystems.texturedDisks.lastOutput.disks.length > 0;
   },
-  draw(pass, ctx, state, _settings, deps) {
+  draw(pass, ctx, state, deps) {
     const subsys = state.subsystems.texturedDisks;
     if (subsys === null) return;
     const { disks } = subsys.lastOutput;

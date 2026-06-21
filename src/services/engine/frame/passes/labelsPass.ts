@@ -43,12 +43,12 @@ import type { Pass } from '../../../../@types/engine/frame/Pass';
 export const labelsPass: Pass = {
   name: 'labels',
 
-  enabled(state, _ctx, _settings) {
+  enabled(state, _ctx) {
     if (state.gpu.labelRenderer === null) return false;
     return state.gpu.labelRenderer.glyphCount() > 0;
   },
 
-  draw(pass, ctx, state, _settings, _deps) {
+  draw(pass, ctx, state, _deps) {
     state.gpu.labelRenderer!.render(pass, ctx.vp as Float32Array, [
       ctx.canvasSize.width,
       ctx.canvasSize.height,

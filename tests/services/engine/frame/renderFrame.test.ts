@@ -291,6 +291,10 @@ function makeInput(
     canvasWidth,
     canvasHeight,
     viewProj,
+    // Expose the local settings bag so tests can assert against it
+    // (e.g. exposure, toneMapCurve) without reaching into input.settings,
+    // which no longer exists on RenderFrameInput.
+    settings,
     input: {
       ctx,
       // Passes read engine state via `input.state`. The label +
@@ -358,7 +362,6 @@ function makeInput(
       texturedQuadRenderer,
       texturedDiskRenderer,
       proceduralDiskRenderer,
-      settings,
       // Disabled stub (`service.enabled === false`) → renderFrame takes
       // the single-pass branch. Active-mode behaviour lives in
       // `renderFrame.timing.test.ts`.
@@ -424,21 +427,21 @@ describe('renderFrame', () => {
     expect(args[1]).toBe(fx.viewProj);
     expect(args[2]).toEqual([fx.canvasWidth, fx.canvasHeight]);
     const drawSettings = args[3] as Record<string, unknown>;
-    expect(drawSettings.pointSizePx).toBe(fx.input.settings.pointSizePx);
-    expect(drawSettings.brightness).toBe(fx.input.settings.brightness);
+    expect(drawSettings.pointSizePx).toBe(fx.settings.pointSizePx);
+    expect(drawSettings.brightness).toBe(fx.settings.brightness);
     // selected null → 0xffffffff packed sentinel
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
-    expect(drawSettings.visibleSourceMask).toBe(fx.input.settings.visibleSourceMask);
+    expect(drawSettings.visibleSourceMask).toBe(fx.settings.visibleSourceMask);
     // camPos is a 3-tuple snapshot from cam.position
     expect(Array.from(drawSettings.camPosWorld as ArrayLike<number>)).toEqual([0, 0, 5]);
     // pxPerRad = h / (2 · tan(fovY/2))
     const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
     expect(drawSettings.pxPerRad as number).toBeCloseTo(expectedPxPerRad, 6);
-    expect(drawSettings.highlightFallback).toBe(fx.input.settings.highlightFallback);
-    expect(drawSettings.realOnlyMode).toBe(fx.input.settings.realOnlyMode);
-    expect(drawSettings.biasMode).toBe(fx.input.settings.biasMode);
-    expect(drawSettings.absMagLimit).toBe(fx.input.settings.absMagLimit);
-    expect(drawSettings.depthFadeEnabled).toBe(fx.input.settings.depthFadeEnabled);
+    expect(drawSettings.highlightFallback).toBe(fx.settings.highlightFallback);
+    expect(drawSettings.realOnlyMode).toBe(fx.settings.realOnlyMode);
+    expect(drawSettings.biasMode).toBe(fx.settings.biasMode);
+    expect(drawSettings.absMagLimit).toBe(fx.settings.absMagLimit);
+    expect(drawSettings.depthFadeEnabled).toBe(fx.settings.depthFadeEnabled);
   });
 
   it('packs (source, index) into the selectedPacked u32 sent to pointRenderer.draw', () => {
@@ -479,8 +482,8 @@ describe('renderFrame', () => {
     const args = draw.mock.calls[0]!;
     expect(args[0]).toBe(fx.env.encoder);
     expect(args[1]).toBe(fx.swapView);
-    expect(args[2]).toBe(fx.input.settings.exposure);
-    expect(args[3]).toBe(fx.input.settings.toneMapCurve);
+    expect(args[2]).toBe(fx.settings.exposure);
+    expect(args[3]).toBe(fx.settings.toneMapCurve);
   });
 
   it('records full frame in the canonical order: createEncoder → HDR pass (begin + draws + end) → postProcess.draw → encoder.finish → submit', () => {

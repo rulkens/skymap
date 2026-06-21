@@ -11,7 +11,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { flowFieldPass } from '../../../../../src/services/engine/frame/passes/flowFieldPass';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { mat4 } from 'gl-matrix';
 
@@ -56,7 +55,6 @@ function makeState(
   } as unknown as EngineState;
 }
 
-const SETTINGS = {} as RenderFrameSettings;
 const PASS_STUB = {
   setPipeline: vi.fn(),
   setBindGroup: vi.fn(),
@@ -69,14 +67,13 @@ describe('flowFieldPass.enabled', () => {
       flowFieldPass.enabled(
         makeState({ enabled: true, loaded: false, opacity: 1 }),
         makeCtx(),
-        SETTINGS,
       ),
     ).toBe(false);
   });
 
   it('returns true when enabled AND loaded', () => {
     expect(
-      flowFieldPass.enabled(makeState({ enabled: true, loaded: true }), makeCtx(), SETTINGS),
+      flowFieldPass.enabled(makeState({ enabled: true, loaded: true }), makeCtx()),
     ).toBe(true);
   });
 
@@ -85,7 +82,6 @@ describe('flowFieldPass.enabled', () => {
       flowFieldPass.enabled(
         makeState({ enabled: false, loaded: true, opacity: 0.3 }),
         makeCtx(),
-        SETTINGS,
       ),
     ).toBe(true);
   });
@@ -95,7 +91,6 @@ describe('flowFieldPass.enabled', () => {
       flowFieldPass.enabled(
         makeState({ enabled: false, loaded: true, opacity: 0 }),
         makeCtx(),
-        SETTINGS,
       ),
     ).toBe(false);
   });
@@ -106,7 +101,7 @@ describe('flowFieldPass.draw', () => {
     const drawSpy = vi.fn();
     const deps = { flowFieldRenderer: { draw: drawSpy } } as unknown as PassDeps;
     const state = makeState({ opacity: 0.42 });
-    flowFieldPass.draw(PASS_STUB, makeCtx(), state, SETTINGS, deps);
+    flowFieldPass.draw(PASS_STUB, makeCtx(), state, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const call = drawSpy.mock.calls[0]!;
     expect(call[0]).toBe(PASS_STUB);
@@ -119,7 +114,7 @@ describe('flowFieldPass.draw', () => {
   it('does not throw when flowFieldRenderer is null (defensive null-check)', () => {
     const deps = { flowFieldRenderer: null } as unknown as PassDeps;
     expect(() =>
-      flowFieldPass.draw(PASS_STUB, makeCtx(), makeState(), SETTINGS, deps),
+      flowFieldPass.draw(PASS_STUB, makeCtx(), makeState(), deps),
     ).not.toThrow();
   });
 });

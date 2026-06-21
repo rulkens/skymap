@@ -42,7 +42,6 @@
 
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import { encodeVolumes } from './encodeVolumes';
@@ -53,7 +52,6 @@ export function encodeVolumePrepass(
   encoder: GPUCommandEncoder,
   ctx: ReadyFrameContext,
   state: EngineState,
-  _settings: RenderFrameSettings,
   timingService: GpuTimingService | null,
 ): void {
   if (state.gpu.volumeFieldRenderer !== null) {

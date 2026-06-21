@@ -8,13 +8,11 @@
  * ### `state` arrived in D.2
  *
  * Pre-D.2, `renderFrame` consumed only the per-frame snapshot
- * (`ctx`) plus settings — engine state was never read directly here.
- * D.2's `Pass.draw` signature accepts `state` so that future passes
- * can read engine-side data (selection, picking, sources) without a
- * `RenderFrameSettings` field for every consumer.  None of today's
- * four passes actually read `state`, but the field is plumbed
- * through so the type system supports passes that need it without
- * a follow-up migration.
+ * (`ctx`) plus a flat settings bag — engine state was never read
+ * directly here.  The flat bag is now dissolved: every pass reads
+ * `state.settings.*` directly, so the only non-state inputs are
+ * the GPU handles, the per-frame snapshot (`ctx`), and the timing
+ * service.
  */
 
 import type { EngineState } from '../state/EngineState';
@@ -27,7 +25,6 @@ import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from './ReadyFrameContext';
-import type { RenderFrameSettings } from './RenderFrameSettings';
 
 export type RenderFrameInput = {
   /**
@@ -39,9 +36,7 @@ export type RenderFrameInput = {
   ctx: ReadyFrameContext;
   /**
    * Engine state — forwarded to each `Pass.draw` so per-pass logic
-   * can read selection / picking / source-state without going via
-   * settings.  Today's four HDR passes don't read it (they consume
-   * settings + ctx + deps); the parameter exists for future passes.
+   * can read selection / picking / source-state / settings.
    */
   state: EngineState;
   /**
@@ -94,9 +89,6 @@ export type RenderFrameInput = {
    * field pattern as its disk sibling above.
    */
   proceduralDiskRenderer: ProceduralDiskRenderer;
-
-  // ── Settings ──────────────────────────────────────────────────────────
-  settings: RenderFrameSettings;
 
   /**
    * Per-pass GPU timing service (always non-null; check `.enabled`

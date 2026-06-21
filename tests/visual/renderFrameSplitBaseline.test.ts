@@ -389,7 +389,6 @@ describe('renderFrame visual baseline', () => {
       flowFieldRenderer: null,
       texturedDiskRenderer: texturedDiskRenderer as never,
       proceduralDiskRenderer: proceduralDiskRenderer as never,
-      settings: settings as never,
       // Disabled stub forces the single-pass path.  The split-pass
       // (timing-on) shape is exercised in `renderFrame.timing.test.ts`.
       timingService: createDisabledGpuTimingService(),

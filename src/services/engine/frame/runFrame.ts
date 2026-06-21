@@ -63,10 +63,6 @@ import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { commitCameraPose, cancelCameraTween } from '../../../state/camera/cameraSlice';
-import {
-  PROCEDURAL_DISK_FADE_START_PX,
-  PROCEDURAL_DISK_FADE_END_PX,
-} from '../subsystems/proceduralDiskSubsystem';
 import { updateSelectionHover } from '../../../state/selection/selectionSlice';
 
 /**
@@ -350,34 +346,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     texturedDiskRenderer: deps.texturedDiskRenderer,
     proceduralDiskRenderer: deps.proceduralDiskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
-    settings: {
-      pointSizePx: state.settings.galaxyCatalogs.sizePx,
-      brightness: state.settings.galaxyCatalogs.brightness,
-      selected: state.selection.select,
-      visibleSourceMask: masks.draw,
-      highlightFallback: state.settings.galaxyCatalogs.highlightFallback,
-      realOnlyMode: state.settings.galaxyCatalogs.realOnly,
-      biasMode: state.settings.bias.mode,
-      absMagLimit: state.settings.bias.absMagLimit,
-      depthFadeEnabled: state.settings.galaxyCatalogs.depthFade,
-      // Same crossfade band the procedural-disk pass fades IN over, so the two
-      // passes blend cleanly without a double-bright donut. Constants are the
-      // single source of truth in `proceduralDiskSubsystem.ts`.
-      pxFadeStartPoints: PROCEDURAL_DISK_FADE_START_PX,
-      pxFadeEndPoints: PROCEDURAL_DISK_FADE_END_PX,
-      // Live cluster-focus uniform (blend ramps 0↔1 over 400 ms; at rest
-      // blend=0 → shader no-op). Reuses the value computed once at the top of
-      // the frame — NOT a fresh produceFocusUniforms call, which would
-      // double-tick the fade controller.
-      focus: focusUniforms,
-      exposure: state.settings.tonemap.exposure,
-      toneMapCurve: state.settings.tonemap.curve,
-      galaxyTexturesEnabled: state.settings.thumbnails.enabled,
-      milkyWayEnabled: state.settings.milkyWay.enabled,
-      filamentsEnabled: state.settings.filaments.enabled,
-      filamentIntensity: state.settings.filaments.intensity,
-      volumesEnabled: state.settings.volumes.enabled,
-    },
     timingService: deps.timingService,
   });
 

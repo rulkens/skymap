@@ -26,7 +26,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { volumeUpsamplePass } from '../../../../../src/services/engine/frame/passes/volumeUpsamplePass';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { mat4 } from 'gl-matrix';
 
@@ -58,10 +57,6 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
   };
 }
 
-function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrameSettings {
-  return { volumesEnabled: true, ...(overrides as object) } as RenderFrameSettings;
-}
-
 const PASS_STUB = {
   setPipeline: vi.fn(),
   setBindGroup: vi.fn(),
@@ -87,7 +82,7 @@ describe('volumeUpsamplePass.enabled', () => {
       settings: { volumes: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      volumeUpsamplePass.enabled(state, makeCtx(), makeSettings()),
+      volumeUpsamplePass.enabled(state, makeCtx()),
     ).toBe(false);
   });
 
@@ -106,7 +101,7 @@ describe('volumeUpsamplePass.enabled', () => {
       subsystems: { fades: { opacityOf: () => 0 } },
       settings: { volumes: { enabled: true } },
     } as unknown as EngineState;
-    expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(volumeUpsamplePass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns false when volumeUpsample is null (pre-bootstrap)', () => {
@@ -116,7 +111,7 @@ describe('volumeUpsamplePass.enabled', () => {
         volumeUpsample: null,
       },
     } as unknown as EngineState;
-    expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(volumeUpsamplePass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns false when volumeFieldRenderer is null (pre-bootstrap)', () => {
@@ -126,7 +121,7 @@ describe('volumeUpsamplePass.enabled', () => {
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
     } as unknown as EngineState;
-    expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(volumeUpsamplePass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns true when every gate passes', () => {
@@ -138,7 +133,7 @@ describe('volumeUpsamplePass.enabled', () => {
       subsystems: { fades: { opacityOf: () => 1 } },
       settings: { volumes: { enabled: true } },
     } as unknown as EngineState;
-    expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+    expect(volumeUpsamplePass.enabled(state, makeCtx())).toBe(true);
   });
 });
 
@@ -156,7 +151,7 @@ describe('volumeUpsamplePass.draw', () => {
         volumeUpsample: { draw: drawSpy, destroy: vi.fn() },
       },
     } as unknown as EngineState;
-    volumeUpsamplePass.draw(PASS_STUB, makeCtx(offscreenView), state, makeSettings(), DEPS_STUB);
+    volumeUpsamplePass.draw(PASS_STUB, makeCtx(offscreenView), state, DEPS_STUB);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBe(PASS_STUB);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(offscreenView);
@@ -170,7 +165,7 @@ describe('volumeUpsamplePass.draw', () => {
       },
     } as unknown as EngineState;
     expect(() =>
-      volumeUpsamplePass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB),
+      volumeUpsamplePass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB),
     ).not.toThrow();
   });
 });

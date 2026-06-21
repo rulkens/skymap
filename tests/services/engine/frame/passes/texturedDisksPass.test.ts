@@ -3,7 +3,6 @@ import type { mat4 } from 'gl-matrix';
 import { texturedDisksPass } from '../../../../../src/services/engine/frame/passes/texturedDisksPass';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 
@@ -49,10 +48,6 @@ function makeCtx(): ReadyFrameContext {
   };
 }
 
-function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrameSettings {
-  return { galaxyTexturesEnabled: true, ...overrides } as RenderFrameSettings;
-}
-
 function makeDeps(): PassDeps {
   return {
     texturedDiskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
@@ -79,7 +74,7 @@ describe('texturedDisksPass', () => {
       settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      texturedDisksPass.enabled(state, makeCtx(), makeSettings()),
+      texturedDisksPass.enabled(state, makeCtx()),
     ).toBe(false);
   });
 
@@ -88,7 +83,7 @@ describe('texturedDisksPass', () => {
       subsystems: { texturedDisks: null },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns false when disks array is empty', () => {
@@ -96,7 +91,7 @@ describe('texturedDisksPass', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns true when disks array is non-empty', () => {
@@ -104,7 +99,7 @@ describe('texturedDisksPass', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(true);
   });
 
   it('draw() invokes texturedDiskRenderer.draw', () => {
@@ -114,7 +109,7 @@ describe('texturedDisksPass', () => {
       gpu: { focusUniform: { bindGroup: {} as GPUBindGroup } },
     } as unknown as EngineState;
     const deps = makeDeps();
-    texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
+    texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, deps);
     expect(deps.texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
   });
 
@@ -123,7 +118,7 @@ describe('texturedDisksPass', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [] } } },
     } as unknown as EngineState;
     const deps = makeDeps();
-    texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
+    texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, deps);
     expect(deps.texturedDiskRenderer.draw).not.toHaveBeenCalled();
   });
 });

@@ -47,7 +47,7 @@ export const horizonShellPass: Pass = {
     return horizonShellFadeAlpha(camDistMpc, HORIZON_RADIUS_MPC) > 0;
   },
 
-  draw(pass, ctx, _state, _settings, deps) {
+  draw(pass, ctx, _state, deps) {
     const { cam, canvasSize, drawCamPos } = ctx;
     const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
     const fadeAlpha = horizonShellFadeAlpha(camDistMpc, HORIZON_RADIUS_MPC);

@@ -22,12 +22,12 @@ import type { Pass } from '../../../../@types/engine/frame/Pass';
 
 export const proceduralDisksPass: Pass = {
   name: 'procedural-disks',
-  enabled(state, _ctx, _settings) {
+  enabled(state, _ctx) {
     if (!state.settings.thumbnails.enabled) return false;
     if (state.subsystems.proceduralDisks === null) return false;
     return state.subsystems.proceduralDisks.lastOutput.instances.length > 0;
   },
-  draw(pass, ctx, state, _settings, deps) {
+  draw(pass, ctx, state, deps) {
     const subsys = state.subsystems.proceduralDisks;
     if (subsys === null) return;
     const instances = subsys.lastOutput.instances;

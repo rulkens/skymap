@@ -262,7 +262,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     flowFieldRenderer: null,
     texturedDiskRenderer: texturedDiskRenderer as never,
     proceduralDiskRenderer: proceduralDiskRenderer as never,
-    settings: settings as never,
     timingService,
   };
 
@@ -363,7 +362,6 @@ describe('renderFrame — timing service hookup', () => {
     const { input, beginCalls } = makeMinimalInputWithTiming(svc);
 
     // Force volumes on with an active volumeFieldRenderer.
-    (input.settings as any).volumesEnabled = true;
     (input.state as any).settings.volumes = { enabled: true };
     const drawSpy = vi.fn();
     (input as any).volumeFieldRenderer = {

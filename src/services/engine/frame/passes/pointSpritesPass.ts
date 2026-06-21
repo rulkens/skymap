@@ -66,7 +66,7 @@ export const pointSpritesPass: Pass = {
     return true;
   },
 
-  draw(pass, ctx, state, _settings, _deps) {
+  draw(pass, ctx, state, _deps) {
     const { renderer, vp, canvasSize, drawCamPos, drawPxPerRad } = ctx;
     const { width, height } = canvasSize;
 

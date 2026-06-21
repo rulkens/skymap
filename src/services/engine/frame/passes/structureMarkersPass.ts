@@ -26,12 +26,12 @@ import type { Pass } from '../../../../@types/engine/frame/Pass';
 export const structureMarkersPass: Pass = {
   name: 'structure-markers',
 
-  enabled(state, _ctx, _settings) {
+  enabled(state, _ctx) {
     if (state.gpu.structureMarkerRenderer === null) return false;
     return state.gpu.structureMarkerRenderer.markerCount() > 0;
   },
 
-  draw(pass, ctx, state, _settings, _deps) {
+  draw(pass, ctx, state, _deps) {
     // fadeOpacity = 1 at v1 — the structure-markers layer has no
     // FadeRegistry handle yet.  The renderer still binds a real fade
     // group at @group(1) so the BGL matches what filaments (and other

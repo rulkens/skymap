@@ -3,7 +3,6 @@ import type { mat4 } from 'gl-matrix';
 import { proceduralDisksPass } from '../../../../../src/services/engine/frame/passes/proceduralDisksPass';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 
@@ -51,10 +50,6 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   };
 }
 
-function makeSettings(): RenderFrameSettings {
-  return { galaxyTexturesEnabled: true } as RenderFrameSettings;
-}
-
 function makeDeps(): PassDeps {
   return {
     texturedQuadRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
@@ -81,7 +76,7 @@ describe('proceduralDisksPass', () => {
       subsystems: { proceduralDisks: null },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(proceduralDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(proceduralDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
@@ -89,7 +84,7 @@ describe('proceduralDisksPass', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
       settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
-    expect(proceduralDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(proceduralDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns false when lastOutput.instances is empty', () => {
@@ -97,7 +92,7 @@ describe('proceduralDisksPass', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(proceduralDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(proceduralDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns true with a non-empty lastOutput', () => {
@@ -105,7 +100,7 @@ describe('proceduralDisksPass', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(proceduralDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+    expect(proceduralDisksPass.enabled(state, makeCtx())).toBe(true);
   });
 
   it('draw() forwards instances to proceduralDiskRenderer.draw', () => {
@@ -117,7 +112,7 @@ describe('proceduralDisksPass', () => {
     } as unknown as EngineState;
     const deps = makeDeps();
     const pass = {} as GPURenderPassEncoder;
-    proceduralDisksPass.draw(pass, makeCtx(), state, makeSettings(), deps);
+    proceduralDisksPass.draw(pass, makeCtx(), state, deps);
     expect(deps.proceduralDiskRenderer.draw).toHaveBeenCalledTimes(1);
     const call = (deps.proceduralDiskRenderer.draw as any).mock.calls[0];
     // Args: (pass, vp, viewport, camPos, pxPerRad, focusBindGroup, instances).

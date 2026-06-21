@@ -38,7 +38,7 @@ import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId
 export const volumeUpsamplePass: Pass = {
   name: 'volume-upsample',
 
-  enabled(state, _ctx, _settings) {
+  enabled(state, _ctx) {
     // Pre-bootstrap window: either handle null means initGpu hasn't
     // finished.  Same shape as the old scalarVolumePass gate.
     if (state.gpu.volumeFieldRenderer === null) return false;
@@ -61,7 +61,7 @@ export const volumeUpsamplePass: Pass = {
     return false;
   },
 
-  draw(pass, ctx, state, _settings, _deps) {
+  draw(pass, ctx, state, _deps) {
     // Defensive null-check — same pattern as filamentsPass / milkyWayPass:
     // the gate in `enabled` already proved the field is non-null, but
     // null-checking here too means future gate reorderings can't silently

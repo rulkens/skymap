@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { selectionRingPass } from '../../../../../src/services/engine/frame/passes/selectionRingPass';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { mat4 } from 'gl-matrix';
 import { Source } from '../../../../../src/data/sources';
@@ -29,10 +28,6 @@ function makeCtx(): ReadyFrameContext {
     volumeOffscreen: {} as never,
     texturedDisks: {} as never,
   };
-}
-
-function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrameSettings {
-  return { pointSizePx: 4, ...overrides } as RenderFrameSettings;
 }
 
 function makeStateWithSizePx(row: SelectionRow | null, sizePx: number): EngineState {
@@ -117,32 +112,32 @@ describe('selectionRingPass.enabled', () => {
       gpu: { selectionRingRenderer: null },
       selectionRows: { select: null, focus: null, hover: null },
     } as unknown as EngineState;
-    expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(selectionRingPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns false when nothing is selected', () => {
     const state = makeStateWithSelection(null);
-    expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(selectionRingPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns true when renderer is non-null and a galaxy row is selected', () => {
     const state = makeStateWithSelection(galaxyRow());
-    expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+    expect(selectionRingPass.enabled(state, makeCtx())).toBe(true);
   });
 
   it('is true when the Milky Way row is selected', () => {
     const state = makeStateWithSelection(MILKY_WAY_ROW);
-    expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+    expect(selectionRingPass.enabled(state, makeCtx())).toBe(true);
   });
 
   it('stays false for a structure row (marker pass owns that halo)', () => {
     const state = makeStateWithSelection(structureRow() as SelectionRow);
-    expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(selectionRingPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('stays true for a galaxy row (regression)', () => {
     const state = makeStateWithSelection(galaxyRow());
-    expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+    expect(selectionRingPass.enabled(state, makeCtx())).toBe(true);
   });
 });
 
@@ -155,7 +150,6 @@ describe('selectionRingPass.draw', () => {
       PASS_STUB,
       makeCtx(),
       state,
-      makeSettings(),
       DEPS_STUB,
     );
 
@@ -183,7 +177,6 @@ describe('selectionRingPass.draw', () => {
       PASS_STUB,
       makeCtx(),
       state,
-      makeSettings(),
       DEPS_STUB,
     );
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
@@ -197,7 +190,7 @@ describe('selectionRingPass.draw', () => {
 
   it('draws the ring at MILKY_WAY_CENTER_WORLD for a milkyWay row', () => {
     const state = makeStateWithSizePx(MILKY_WAY_ROW, 4);
-    selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
+    selectionRingPass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB);
 
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
@@ -213,7 +206,7 @@ describe('selectionRingPass.draw', () => {
 
   it('calls renderer.draw() exactly once with viewProj + viewport', () => {
     const state = makeStateWithSizePx(galaxyRow(), 4);
-    selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
+    selectionRingPass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB);
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;

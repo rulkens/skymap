@@ -51,7 +51,7 @@ import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter
 export const milkyWayPass: Pass = {
   name: 'milky-way',
 
-  enabled(state, ctx, _settings) {
+  enabled(state, ctx) {
     // State boolean is the user's intent; opacityOf > 0 keeps the
     // pass alive through the ~100 ms toggle fade-out tail. The
     // distance-based milkyWayFadeAlpha still gates separately — if
@@ -65,7 +65,7 @@ export const milkyWayPass: Pass = {
     return milkyWayFadeAlpha(camDistMpc) > 0;
   },
 
-  draw(pass, ctx, state, _settings, deps) {
+  draw(pass, ctx, state, deps) {
     const { vp, canvasSize, drawCamPos } = ctx;
     const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
     // Composite the distance-based fade with the registry-supplied

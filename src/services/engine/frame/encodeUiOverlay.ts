@@ -56,7 +56,6 @@
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
-import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import { UI_PASSES } from './passes';
 
 export function encodeUiOverlay(
@@ -64,7 +63,6 @@ export function encodeUiOverlay(
   swapView: GPUTextureView,
   ctx: ReadyFrameContext,
   state: EngineState,
-  settings: RenderFrameSettings,
   deps: PassDeps,
   timestampWrites: GPURenderPassTimestampWrites | undefined,
 ): void {
@@ -73,7 +71,7 @@ export function encodeUiOverlay(
   // live settings snapshot; empty in production, so the check is in the noise.
   const disabledPasses = state.settings.debug.disabledPasses;
   const enabled = UI_PASSES.filter(
-    (p) => p.enabled(state, ctx, settings) && disabledPasses[p.name] !== true,
+    (p) => p.enabled(state, ctx) && disabledPasses[p.name] !== true,
   );
   if (enabled.length === 0 && !timestampWrites) return;
 
@@ -94,7 +92,7 @@ export function encodeUiOverlay(
   });
 
   for (const p of enabled) {
-    p.draw(pass, ctx, state, settings, deps);
+    p.draw(pass, ctx, state, deps);
   }
 
   pass.end();

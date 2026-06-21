@@ -35,14 +35,14 @@ import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
 export const selectionRingPass: Pass = {
   name: 'selection-ring',
 
-  enabled(state, _ctx, _settings) {
+  enabled(state, _ctx) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const row = state.selectionRows.select;
     // A row drives the halo iff the table yields a descriptor for its kind.
     return selectionHalo(row) !== null;
   },
 
-  draw(pass, ctx, state, _settings, _deps) {
+  draw(pass, ctx, state, _deps) {
     const row = state.selectionRows.select;
     // A null descriptor is the structure arm (it renders its ring through the
     // cluster marker pass).  The descriptor carries both the radius and the
