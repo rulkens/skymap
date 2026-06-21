@@ -1,6 +1,8 @@
 # Dissolve `RenderFrameSettings`: passes read from `state` + `ctx`
 
 > **Spec:** [`docs/superpowers/specs/2026-06-21-dissolve-render-frame-settings-design.md`](../specs/2026-06-21-dissolve-render-frame-settings-design.md). This plan implements exactly that spec — read it first; it carries the rationale and the Definition of Done.
+>
+> **Status: SHIPPED.** All 11 tasks executed via subagent-driven development; `RenderFrameSettings` deleted, every pass reads from `state`/`ctx`/constants. Typecheck clean (both tsconfigs), full suite 2978 green, manual visual-parity confirmed, whole-branch review APPROVE_WITH_MINOR (both Minor findings fixed). Behaviour-neutral.
 
 ## Goal
 
@@ -49,7 +51,7 @@ TypeScript + Vitest. No new dependencies. The on-disk binary format is untouched
 | `filamentIntensity` | `state.settings.filaments.intensity` |
 | `volumesEnabled` | `state.settings.volumes.enabled` |
 
-> **For agentic workers:** execute this plan with the `subagent-driven-development` workflow — a fresh implementer subagent per task, dispatched `run_in_background: true`. The main thread runs `npm test` / `npm run typecheck` and commits; implementers only edit. Tick each task's `- [ ]` to `- [x]` in the same response as the TaskUpdate. Front-load constraints in each dispatch (sequential bash, Read/Grep not sed, absolute worktree paths, typed `vi.fn`). Implementers: if a clean implementation is blocked, STOP and report — don't hack around it.
+> **For agentic workers:** execute this plan with the `subagent-driven-development` workflow — a fresh implementer subagent per task, dispatched `run_in_background: true`. The main thread runs `npm test` / `npm run typecheck` and commits; implementers only edit. Tick each task's `- [x]` to `- [x]` in the same response as the TaskUpdate. Front-load constraints in each dispatch (sequential bash, Read/Grep not sed, absolute worktree paths, typed `vi.fn`). Implementers: if a clean implementation is blocked, STOP and report — don't hack around it.
 
 ---
 
@@ -61,11 +63,11 @@ TypeScript + Vitest. No new dependencies. The on-disk binary format is untouched
 
 **Why pure deletion:** no pass or `encode*` reads `deps.catalogs` / `deps.famousMeta`. The thumbnail subsystem — the field's claimed consumer per the stale `PassDeps` docblock — reads `state.data.galaxies.catalogs` / `.famousMeta` **directly** at `runFrame.ts:303-308`. No consumer is re-pointed.
 
-- [ ] Remove the two fields + their now-unused `GalaxyCatalog` / `SourceType` / `FamousMetaEntry` imports from `RenderFrameInput.d.ts` and `PassDeps.d.ts` (check which imports go unused after removal; `RenderFrameInput` keeps `GalaxyCatalog`/`SourceType` only if something else uses them — verify).
-- [ ] Remove `catalogs` / `famousMeta` from the `deps` literal in `renderFrame.ts` and from the `renderFrame({ … })` call in `runFrame.ts`.
-- [ ] Drop the fixture keys + unused `catalogs` local from `renderFrame.test.ts`.
-- [ ] `npm run typecheck` clean; `npm test -- renderFrame` green. `grep -rn "catalogs\|famousMeta" src/@types/engine/frame/` shows neither.
-- [ ] Commit (`git add` the specific paths).
+- [x] Remove the two fields + their now-unused `GalaxyCatalog` / `SourceType` / `FamousMetaEntry` imports from `RenderFrameInput.d.ts` and `PassDeps.d.ts` (check which imports go unused after removal; `RenderFrameInput` keeps `GalaxyCatalog`/`SourceType` only if something else uses them — verify).
+- [x] Remove `catalogs` / `famousMeta` from the `deps` literal in `renderFrame.ts` and from the `renderFrame({ … })` call in `runFrame.ts`.
+- [x] Drop the fixture keys + unused `catalogs` local from `renderFrame.test.ts`.
+- [x] `npm run typecheck` clean; `npm test -- renderFrame` green. `grep -rn "catalogs\|famousMeta" src/@types/engine/frame/` shows neither.
+- [x] Commit (`git add` the specific paths).
 
 ---
 
@@ -101,12 +103,12 @@ Set `visibleSourceMask` at construction (the ready-branch return literal, `frame
 
 Nothing reads the new ctx fields yet; `RenderFrameSettings` still carries them. Suite stays green.
 
-- [ ] Add the two fields to `ReadyFrameContext.d.ts` with the `FocusUniformsValue` import.
-- [ ] Add the `visibleSourceMask` arg to `deriveFrameContext`; set it at construction; seed `focus` (placeholder, mirroring `focusBlend`).
-- [ ] Wire `runFrame`: `masks.draw` into the call; `ctx.focus = focusUniforms` at `:273`.
-- [ ] In `frameContext.test.ts`, add a test `deriveFrameContext exposes visibleSourceMask and a seeded focus on the ready context` asserting `ctx.visibleSourceMask` equals the passed mask and `ctx.focus.blend === 0`. Update the existing `deriveFrameContext` call sites in that file to pass the new arg.
-- [ ] `npm run typecheck` clean; `npm test -- frameContext runFrame` green.
-- [ ] Commit.
+- [x] Add the two fields to `ReadyFrameContext.d.ts` with the `FocusUniformsValue` import.
+- [x] Add the `visibleSourceMask` arg to `deriveFrameContext`; set it at construction; seed `focus` (placeholder, mirroring `focusBlend`).
+- [x] Wire `runFrame`: `masks.draw` into the call; `ctx.focus = focusUniforms` at `:273`.
+- [x] In `frameContext.test.ts`, add a test `deriveFrameContext exposes visibleSourceMask and a seeded focus on the ready context` asserting `ctx.visibleSourceMask` equals the passed mask and `ctx.focus.blend === 0`. Update the existing `deriveFrameContext` call sites in that file to pass the new arg.
+- [x] `npm run typecheck` clean; `npm test -- frameContext runFrame` green.
+- [x] Commit.
 
 ---
 
@@ -129,11 +131,11 @@ Update the module-header "What it reads" block (`:29-32`) to name the real sourc
 
 **Test:** the two `pointSpritesPass.draw` tests (`packs (source, index)…`, `translates null selection…`) currently set selection via `makeSettings({ selected })`. Drive selection via `state.selection.select` instead (extend `STATE_STUB` or pass an override-state). The `STATE_STUB` (`:137-149`) needs `selection`, `settings.{galaxyCatalogs,bias}`, and `ctx.visibleSourceMask` populated enough that the draw runs. Assertions on `drawSettings.selectedPacked` are unchanged.
 
-- [ ] Re-source every `PointDrawSettings` field per the mapping; import the two fade constants.
-- [ ] Update the module-header read-list comment.
-- [ ] Rewrite the two draw tests to drive selection via `state.selection.select`; extend the state stub with the needed settings/selection/ctx fields.
-- [ ] `npm test -- passes` green.
-- [ ] Commit.
+- [x] Re-source every `PointDrawSettings` field per the mapping; import the two fade constants.
+- [x] Update the module-header read-list comment.
+- [x] Rewrite the two draw tests to drive selection via `state.selection.select`; extend the state stub with the needed settings/selection/ctx fields.
+- [x] `npm test -- passes` green.
+- [x] Commit.
 
 ### Task 4: `milkyWayPass.enabled` reads `state.settings.milkyWay.enabled`
 
@@ -141,10 +143,10 @@ Update the module-header "What it reads" block (`:29-32`) to name the real sourc
 
 `settings.milkyWayEnabled` → `state.settings.milkyWay.enabled` (`:61`). `draw` already ignores settings (`_settings`). Update the `### What it reads` note (`:35`).
 
-- [ ] Re-source the gate; update the comment.
-- [ ] Rewrite the three `milkyWayPass.enabled` tests + the `milkyWayPass.draw` test to set `state.settings.milkyWay.enabled` (extend the state stub) instead of `makeSettings({ milkyWayEnabled })`.
-- [ ] `npm test -- passes` green.
-- [ ] Commit.
+- [x] Re-source the gate; update the comment.
+- [x] Rewrite the three `milkyWayPass.enabled` tests + the `milkyWayPass.draw` test to set `state.settings.milkyWay.enabled` (extend the state stub) instead of `makeSettings({ milkyWayEnabled })`.
+- [x] `npm test -- passes` green.
+- [x] Commit.
 
 ### Task 5: `filamentsPass` reads `state.settings.filaments.{enabled,intensity}`
 
@@ -152,10 +154,10 @@ Update the module-header "What it reads" block (`:29-32`) to name the real sourc
 
 `enabled`: `settings.filamentsEnabled` → `state.settings.filaments.enabled` (`:74`). `draw`: `settings.filamentIntensity` → `state.settings.filaments.intensity` (`:96`).
 
-- [ ] Re-source both reads.
-- [ ] Rewrite `filamentsPass.test.ts` (drop its local `makeSettings`, drive `enabled`/`intensity` via state) and the `filamentsPass.enabled`/`.draw` blocks in `passes.test.ts`. The `forwards correct args` assertion on `args[4] === 0.7` now comes from `state.settings.filaments.intensity = 0.7`.
-- [ ] `npm test -- filamentsPass passes` green.
-- [ ] Commit.
+- [x] Re-source both reads.
+- [x] Rewrite `filamentsPass.test.ts` (drop its local `makeSettings`, drive `enabled`/`intensity` via state) and the `filamentsPass.enabled`/`.draw` blocks in `passes.test.ts`. The `forwards correct args` assertion on `args[4] === 0.7` now comes from `state.settings.filaments.intensity = 0.7`.
+- [x] `npm test -- filamentsPass passes` green.
+- [x] Commit.
 
 ### Task 6: `texturedDisksPass` + `proceduralDisksPass` read `state.settings.thumbnails.enabled`
 
@@ -163,10 +165,10 @@ Update the module-header "What it reads" block (`:29-32`) to name the real sourc
 
 Both `enabled` gates: `settings.galaxyTexturesEnabled` → `state.settings.thumbnails.enabled`.
 
-- [ ] Re-source both gates.
-- [ ] Rewrite the two per-pass tests + the `passes.test.ts` block to set `state.settings.thumbnails.enabled` (extend each test's state stub) instead of `makeSettings({ galaxyTexturesEnabled })`.
-- [ ] `npm test -- texturedDisksPass proceduralDisksPass passes` green.
-- [ ] Commit.
+- [x] Re-source both gates.
+- [x] Rewrite the two per-pass tests + the `passes.test.ts` block to set `state.settings.thumbnails.enabled` (extend each test's state stub) instead of `makeSettings({ galaxyTexturesEnabled })`.
+- [x] `npm test -- texturedDisksPass proceduralDisksPass passes` green.
+- [x] Commit.
 
 ### Task 7: `volumeUpsamplePass.enabled` reads `state.settings.volumes.enabled`
 
@@ -174,10 +176,10 @@ Both `enabled` gates: `settings.galaxyTexturesEnabled` → `state.settings.thumb
 
 `settings.volumesEnabled` → `state.settings.volumes.enabled`. (`draw` already `_settings`.)
 
-- [ ] Re-source the gate.
-- [ ] Rewrite the test to set `state.settings.volumes.enabled` instead of `makeSettings({ volumesEnabled })`.
-- [ ] `npm test -- volumeUpsamplePass` green.
-- [ ] Commit.
+- [x] Re-source the gate.
+- [x] Rewrite the test to set `state.settings.volumes.enabled` instead of `makeSettings({ volumesEnabled })`.
+- [x] `npm test -- volumeUpsamplePass` green.
+- [x] Commit.
 
 ### Task 8: `selectionRingPass.draw` reads `state.settings.galaxyCatalogs.sizePx`
 
@@ -185,10 +187,10 @@ Both `enabled` gates: `settings.galaxyTexturesEnabled` → `state.settings.thumb
 
 `settings.pointSizePx` → `state.settings.galaxyCatalogs.sizePx`. (`enabled` already `_settings`.)
 
-- [ ] Re-source the `selectionRingRadiusPx` arg.
-- [ ] Rewrite the draw tests to set `state.settings.galaxyCatalogs.sizePx = 4` instead of `makeSettings({ pointSizePx: 4 })`.
-- [ ] `npm test -- selectionRingPass` green.
-- [ ] Commit.
+- [x] Re-source the `selectionRingRadiusPx` arg.
+- [x] Rewrite the draw tests to set `state.settings.galaxyCatalogs.sizePx = 4` instead of `makeSettings({ pointSizePx: 4 })`.
+- [x] `npm test -- selectionRingPass` green.
+- [x] Commit.
 
 ### Task 9: `encodeVolumePrepass` reads `state.settings.volumes.enabled`
 
@@ -196,9 +198,9 @@ Both `enabled` gates: `settings.galaxyTexturesEnabled` → `state.settings.thumb
 
 Update the gating-rationale comment (`:26`) that says "Master gate: `settings.volumesEnabled`". The `settings` param stays for now (Phase 3 drops it).
 
-- [ ] Re-source the master gate; update the comment.
-- [ ] No dedicated test file — covered by `renderFrame.test.ts`'s volume pre-pass tests (`:542-591`) and `encodeVolumes.test.ts`. Run `npm test -- renderFrame encodeVolumes` green.
-- [ ] Commit.
+- [x] Re-source the master gate; update the comment.
+- [x] No dedicated test file — covered by `renderFrame.test.ts`'s volume pre-pass tests (`:542-591`) and `encodeVolumes.test.ts`. Run `npm test -- renderFrame encodeVolumes` green.
+- [x] Commit.
 
 ### Task 10: `renderFrame` reads `ctx.focus` + `state.settings.tonemap.{exposure,curve}`
 
@@ -211,10 +213,10 @@ The four `encode*` calls still receive `settings` here (Phase 3 drops the param)
 
 **Test:** `renderFrame.test.ts`'s `calls postProcess.draw … with exposure, curve…` (`:480-497`) asserts `args[2]/[3]` equal `fx.input.settings.exposure/toneMapCurve`. Move those values onto `state.settings.tonemap` in the fixture and assert against those. The fixture must populate `ctx.focus` (seed a `blend:0` value) and `state.settings.tonemap`. Mirror in `renderFrame.timing.test.ts`.
 
-- [ ] Re-source the three reads in `renderFrame.ts`.
-- [ ] Add `state.settings.tonemap` + `ctx.focus` to the `renderFrame.test.ts` / `renderFrame.timing.test.ts` fixtures; repoint the exposure/curve assertions.
-- [ ] `npm test -- renderFrame` green.
-- [ ] Commit.
+- [x] Re-source the three reads in `renderFrame.ts`.
+- [x] Add `state.settings.tonemap` + `ctx.focus` to the `renderFrame.test.ts` / `renderFrame.timing.test.ts` fixtures; repoint the exposure/curve assertions.
+- [x] `npm test -- renderFrame` green.
+- [x] Commit.
 
 ---
 
@@ -250,16 +252,16 @@ Remove the `RenderFrameSettings` import + the argument-order docblock mentions o
 
 `npm run typecheck` is the safety net — a missed call site is a tsc error, not a silent pass.
 
-- [ ] Drop the `settings` param from `Pass.d.ts` + remove the import + docblock mentions.
-- [ ] Drop `settings` from the four `encode*` functions and their `pass.enabled`/`pass.draw` calls.
-- [ ] Drop `settings` from `renderFrame.ts` (destructure + `encode*` calls) and `RenderFrameInput.d.ts` (field + import).
-- [ ] Delete the `settings: { … }` literal from `runFrame.ts`; remove the now-dead `PROCEDURAL_DISK_FADE_*` import if unused there.
-- [ ] Drop the `settings`/`_settings` param from all 13 pass files.
-- [ ] Delete `src/@types/engine/frame/RenderFrameSettings.d.ts`.
-- [ ] Update every test call site to drop the settings arg; remove the `makeSettings`/`SETTINGS` builders + `RenderFrameSettings` imports.
-- [ ] `npm run typecheck` clean (both tsconfigs); `npm test` full suite green, no pass-count reduction, output pristine.
-- [ ] `grep -rn RenderFrameSettings src tests` is empty; `grep -rn "settings" src/services/engine/frame/passes/` shows no `Pass`-param references (only `state.settings.…` reads).
-- [ ] Commit.
+- [x] Drop the `settings` param from `Pass.d.ts` + remove the import + docblock mentions.
+- [x] Drop `settings` from the four `encode*` functions and their `pass.enabled`/`pass.draw` calls.
+- [x] Drop `settings` from `renderFrame.ts` (destructure + `encode*` calls) and `RenderFrameInput.d.ts` (field + import).
+- [x] Delete the `settings: { … }` literal from `runFrame.ts`; remove the now-dead `PROCEDURAL_DISK_FADE_*` import if unused there.
+- [x] Drop the `settings`/`_settings` param from all 13 pass files.
+- [x] Delete `src/@types/engine/frame/RenderFrameSettings.d.ts`.
+- [x] Update every test call site to drop the settings arg; remove the `makeSettings`/`SETTINGS` builders + `RenderFrameSettings` imports.
+- [x] `npm run typecheck` clean (both tsconfigs); `npm test` full suite green, no pass-count reduction, output pristine.
+- [x] `grep -rn RenderFrameSettings src tests` is empty; `grep -rn "settings" src/services/engine/frame/passes/` shows no `Pass`-param references (only `state.settings.…` reads).
+- [x] Commit.
 
 ---
 
