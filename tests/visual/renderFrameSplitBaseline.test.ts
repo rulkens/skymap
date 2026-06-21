@@ -352,6 +352,7 @@ describe('renderFrame visual baseline', () => {
             realOnly: settings.realOnlyMode,
             depthFade: settings.depthFadeEnabled,
           },
+          tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },

@@ -126,7 +126,8 @@ export function renderFrame(input: RenderFrameInput): void {
   // Write the single shared cluster-focus uniform once per frame, before
   // any pass (points, impostor disks, and the later pick submit) reads it.
   // blend=0 at rest makes the per-vertex multiplier a no-op.
-  state.gpu.focusUniform?.write(settings.focus);
+  // ctx.focus is the per-frame FocusUniformsValue derived in deriveFrameContext.
+  state.gpu.focusUniform?.write(ctx.focus);
 
   // ── Encoder + HDR rendering ───────────────────────────────────────
   //
@@ -155,8 +156,8 @@ export function renderFrame(input: RenderFrameInput): void {
     ctx.postProcess.draw(
       encoder,
       swapView,
-      settings.exposure,
-      settings.toneMapCurve,
+      state.settings.tonemap.exposure,
+      state.settings.tonemap.curve,
       timingService.descriptorFor('tone-map'),
     );
     encodeUiOverlay(
@@ -171,7 +172,7 @@ export function renderFrame(input: RenderFrameInput): void {
     timingService.endFrame(timingCtx, encoder);
   } else {
     encodeHdrSingle(encoder, ctx, state, settings, deps);
-    ctx.postProcess.draw(encoder, swapView, settings.exposure, settings.toneMapCurve, undefined);
+    ctx.postProcess.draw(encoder, swapView, state.settings.tonemap.exposure, state.settings.tonemap.curve, undefined);
     encodeUiOverlay(encoder, swapView, ctx, state, settings, deps, undefined);
   }
 
