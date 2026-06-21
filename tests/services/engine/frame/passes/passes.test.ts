@@ -417,18 +417,41 @@ describe('horizonShellPass.draw', () => {
   });
 });
 
+// Minimal settings shape for the pointSpritesPass.draw tests — only
+// the fields the pass now reads from `state.settings`.
+const POINT_SPRITES_SETTINGS_STUB = {
+  galaxyCatalogs: {
+    sizePx: 2.5,
+    brightness: 1.0,
+    highlightFallback: true,
+    realOnly: false,
+    depthFade: true,
+  },
+  bias: {
+    mode: BiasMode.None,
+    absMagLimit: -19,
+  },
+} as unknown as EngineState['settings'];
+
 describe('pointSpritesPass.draw', () => {
   it('packs (source, index) into the selectedPacked u32', () => {
     const ctx = makeCtx();
-    const settings = makeSettings({
-      selected: {
-        type: 'galaxyCatalog',
-        source: Source.SDSS,
-        index: 42,
-      } as SelectionRef,
-    });
+    // Selection is sourced from state.selection.select, not makeSettings.
+    const stateWithSelection = {
+      ...STATE_STUB,
+      selection: {
+        select: {
+          type: 'galaxyCatalog',
+          source: Source.SDSS,
+          index: 42,
+        } as SelectionRef,
+        hover: null,
+        focus: null,
+      },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+    } as unknown as EngineState;
     const deps = makeDeps();
-    pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, settings, deps);
+    pointSpritesPass.draw(PASS_STUB, ctx, stateWithSelection, makeSettings(), deps);
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Selection lives on arg[3].selectedPacked (the PointDrawSettings
@@ -440,7 +463,14 @@ describe('pointSpritesPass.draw', () => {
 
   it('translates null selection to the 0xFFFFFFFF sentinel', () => {
     const ctx = makeCtx();
-    pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, makeSettings({ selected: null }), makeDeps());
+    // Null selection via state.selection.select; settings shape satisfies
+    // the pass's direct reads from state.settings.
+    const stateNullSelection = {
+      ...STATE_STUB,
+      selection: { select: null, hover: null, focus: null },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+    } as unknown as EngineState;
+    pointSpritesPass.draw(PASS_STUB, ctx, stateNullSelection, makeSettings(), makeDeps());
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);

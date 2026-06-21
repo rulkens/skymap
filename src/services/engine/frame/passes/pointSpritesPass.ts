@@ -19,17 +19,23 @@
  *
  * ### What it reads
  *
- * - `ctx.renderer` (the bootstrap-narrowed `PointRenderer`)
+ * - `ctx.renderer` — the bootstrap-narrowed `PointRenderer`
  * - `ctx.vp` — view-projection matrix
  * - `ctx.canvasSize` — backing-store viewport dimensions
  * - `ctx.drawCamPos` — camera position, fed to the shader's parallax
  *   + brightness terms
  * - `ctx.drawPxPerRad` — radian→pixel scale for apparent-size
  *   computation
- * - The whole `RenderFrameSettings` block — every field of the
- *   `PointDrawSettings` object passed to `pointRenderer.draw`
- *   originates either there or in `ctx`.  See `renderFrame.ts`'s
- *   `RenderFrameSettings` shape for the per-field rationale.
+ * - `ctx.visibleSourceMask` — bitmask of currently-visible source codes
+ * - `state.settings.galaxyCatalogs.{sizePx,brightness,highlightFallback,realOnly,depthFade}`
+ *   — point-billboard appearance knobs
+ * - `state.settings.bias.{mode,absMagLimit}` — luminosity-bias correction
+ * - `state.selection.select` — structured selection ref translated to the
+ *   packed u32 the shader compares per vertex
+ * - `PROCEDURAL_DISK_FADE_START_PX` / `PROCEDURAL_DISK_FADE_END_PX` —
+ *   module constants from `proceduralDiskSubsystem`; kept in one place so
+ *   the fade-in band (disks pass) and fade-out band (points pass) can't
+ *   drift apart and recreate the double-bright donut artefact
  *
  * ### Selection-packed encoding
  *
@@ -46,6 +52,10 @@
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
+import {
+  PROCEDURAL_DISK_FADE_START_PX,
+  PROCEDURAL_DISK_FADE_END_PX,
+} from '../../subsystems/proceduralDiskSubsystem';
 
 export const pointSpritesPass: Pass = {
   name: 'point-sprites',
@@ -56,7 +66,7 @@ export const pointSpritesPass: Pass = {
     return true;
   },
 
-  draw(pass, ctx, state, settings, _deps) {
+  draw(pass, ctx, state, _settings, _deps) {
     const { renderer, vp, canvasSize, drawCamPos, drawPxPerRad } = ctx;
     const { width, height } = canvasSize;
 
@@ -64,9 +74,10 @@ export const pointSpritesPass: Pass = {
     // against per-vertex `(sourceCode << 27u) | instance_index`.
     // Structure targets don't light up galaxy halos, so they map to the
     // "nothing selected" sentinel.
+    const selected = state.selection.select;
     const selectedPacked =
-      settings.selected !== null && settings.selected.type === 'galaxyCatalog'
-        ? packSelection(settings.selected.source, settings.selected.index)
+      selected !== null && selected.type === 'galaxyCatalog'
+        ? packSelection(selected.source, selected.index)
         : SELECTION_NONE_SENTINEL;
 
     // Capture the fade registry + timestamp once so the per-source
@@ -75,23 +86,23 @@ export const pointSpritesPass: Pass = {
     const fades = state.subsystems.fades;
 
     renderer.draw(pass, vp, [width, height], {
-      pointSizePx: settings.pointSizePx,
-      brightness: settings.brightness,
+      pointSizePx: state.settings.galaxyCatalogs.sizePx,
+      brightness: state.settings.galaxyCatalogs.brightness,
       selectedPacked,
-      visibleSourceMask: settings.visibleSourceMask,
+      visibleSourceMask: ctx.visibleSourceMask,
       camPosWorld: drawCamPos,
       pxPerRad: drawPxPerRad,
-      highlightFallback: settings.highlightFallback,
-      realOnlyMode: settings.realOnlyMode,
-      biasMode: settings.biasMode,
-      absMagLimit: settings.absMagLimit,
-      depthFadeEnabled: settings.depthFadeEnabled,
+      highlightFallback: state.settings.galaxyCatalogs.highlightFallback,
+      realOnlyMode: state.settings.galaxyCatalogs.realOnly,
+      biasMode: state.settings.bias.mode,
+      absMagLimit: state.settings.bias.absMagLimit,
+      depthFadeEnabled: state.settings.galaxyCatalogs.depthFade,
       // The points-pass fragment fades alpha to zero across the same
       // apparent-pixel-size band the procedural-disk pass fades IN over.
       // Both thresholds come from one source of truth so they can't drift
       // apart and re-introduce the double-bright donut artefact.
-      pxFadeStart: settings.pxFadeStartPoints,
-      pxFadeEnd: settings.pxFadeEndPoints,
+      pxFadeStart: PROCEDURAL_DISK_FADE_START_PX,
+      pxFadeEnd: PROCEDURAL_DISK_FADE_END_PX,
       // Shared cluster-focus bind group (@group(3)). The engine owns the
       // single focus buffer (written once per frame in renderFrame); we
       // bind its group. At rest (blend 0) the shader multiplier is 1.0.
