@@ -14,7 +14,8 @@
  * a galaxy yields its catalog diameter, the Milky Way its disc radius, a
  * structure `null` (it renders its ring through the cluster marker pass).
  * This pass then defers the apparent-px math to the shared
- * `selectionRingRadiusPx` helper.  Because a structure is already a table
+ * `selectionRingRadiusPx` helper, passing `state.settings.galaxyCatalogs.sizePx`
+ * as the minimum-radius floor.  Because a structure is already a table
  * row returning null, no per-kind branch is needed here: a new halo-bearing
  * kind is one table row, and the descriptor carries the position so the pass
  * never re-narrows the union to read coordinates.
@@ -41,7 +42,7 @@ export const selectionRingPass: Pass = {
     return selectionHalo(row) !== null;
   },
 
-  draw(pass, ctx, state, settings, _deps) {
+  draw(pass, ctx, state, _settings, _deps) {
     const row = state.selectionRows.select;
     // A null descriptor is the structure arm (it renders its ring through the
     // cluster marker pass).  The descriptor carries both the radius and the
@@ -59,7 +60,7 @@ export const selectionRingPass: Pass = {
       radiusMpc,
       camDist,
       ctx.drawPxPerRad,
-      settings.pointSizePx,
+      state.settings.galaxyCatalogs.sizePx,
     );
 
     state.gpu.selectionRingRenderer!.draw(

@@ -35,6 +35,14 @@ function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrame
   return { pointSizePx: 4, ...overrides } as RenderFrameSettings;
 }
 
+function makeStateWithSizePx(row: SelectionRow | null, sizePx: number): EngineState {
+  return {
+    gpu: { selectionRingRenderer: makeRendererSpy() },
+    selectionRows: { select: row, focus: null, hover: null },
+    settings: { galaxyCatalogs: { sizePx } },
+  } as unknown as EngineState;
+}
+
 const PASS_STUB = {
   setPipeline: vi.fn(),
   setBindGroup: vi.fn(),
@@ -142,12 +150,12 @@ describe('selectionRingPass.enabled', () => {
 
 describe('selectionRingPass.draw', () => {
   it('computes ringRadiusPx from the row and forwards to renderer', () => {
-    const state = makeStateWithSelection(galaxyRow());
+    const state = makeStateWithSizePx(galaxyRow(), 4);
     selectionRingPass.draw(
       PASS_STUB,
       makeCtx(),
       state,
-      makeSettings({ pointSizePx: 4 }),
+      makeSettings(),
       DEPS_STUB,
     );
 
@@ -169,13 +177,13 @@ describe('selectionRingPass.draw', () => {
 
   it('uses apparentPxRadius when galaxy is closer and larger on screen', () => {
     // Galaxy at 10 Mpc so the apparent radius dominates.
-    const state = makeStateWithSelection(galaxyRow({ z: 10 }));
+    const state = makeStateWithSizePx(galaxyRow({ z: 10 }), 4);
 
     selectionRingPass.draw(
       PASS_STUB,
       makeCtx(),
       state,
-      makeSettings({ pointSizePx: 4 }),
+      makeSettings(),
       DEPS_STUB,
     );
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
@@ -188,7 +196,7 @@ describe('selectionRingPass.draw', () => {
   });
 
   it('draws the ring at MILKY_WAY_CENTER_WORLD for a milkyWay row', () => {
-    const state = makeStateWithSelection(MILKY_WAY_ROW);
+    const state = makeStateWithSizePx(MILKY_WAY_ROW, 4);
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
 
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
@@ -204,7 +212,7 @@ describe('selectionRingPass.draw', () => {
   });
 
   it('calls renderer.draw() exactly once with viewProj + viewport', () => {
-    const state = makeStateWithSelection(galaxyRow());
+    const state = makeStateWithSizePx(galaxyRow(), 4);
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
