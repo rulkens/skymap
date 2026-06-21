@@ -317,9 +317,22 @@ function makeInput(
         // most tests pass no overrides so the default is an empty record (matches
         // production); the skip-on-toggle test passes `overrides.disabledPasses`.
         settings: {
+          galaxyCatalogs: {
+            sizePx: settings.pointSizePx,
+            brightness: settings.brightness,
+            highlightFallback: settings.highlightFallback,
+            realOnly: settings.realOnlyMode,
+            depthFade: settings.depthFadeEnabled,
+          },
+          bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
+          thumbnails: { enabled: settings.galaxyTexturesEnabled },
+          milkyWay: { enabled: settings.milkyWayEnabled },
+          filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+          volumes: { enabled: settings.volumesEnabled },
           flow: { enabled: false },
           debug: { disabledPasses: overrides.disabledPasses ?? {} },
         },
+        selection: { select: settings.selected },
         assetSlots: { flow: null },
         // proceduralDisksPass / texturedDisksPass each read their slot
         // off `state.subsystems` in their `enabled()` gate; nulling both
@@ -513,12 +526,12 @@ describe('renderFrame', () => {
   });
 
   it('opens a pre-HDR render pass against the half-res view when volumes are active', () => {
-    // When `volumesEnabled` is true AND volumeFieldRenderer has active
-    // fields, `encodeVolumes` must run BEFORE the HDR mega-pass.  The
-    // fixture's default settings has volumesEnabled=false → no pre-pass
-    // fires.  We force-enable it here and stub a renderer with an
-    // active field, then check that the FIRST beginRenderPass goes
-    // against the half-res view.
+    // When `state.settings.volumes.enabled` is true AND volumeFieldRenderer
+    // has active fields, `encodeVolumes` must run BEFORE the HDR mega-pass.
+    // The fixture's default state has volumes.enabled=false → no pre-pass
+    // fires.  We force-enable it here and stub a renderer with an active
+    // field, then check that the FIRST beginRenderPass goes against the
+    // half-res view.
     const fx2 = makeInput({ settings: { volumesEnabled: true } });
     // Wire in a volumeFieldRenderer with active fields.
     const drawSpy = vi.fn();

@@ -344,7 +344,23 @@ describe('renderFrame visual baseline', () => {
         // A null slot → slotReady false → not loaded.
         // The encoders read the renderer-toggle override bag off
         // `settings.debug.disabledPasses`; empty so every pass fires.
-        settings: { flow: { enabled: false }, debug: { disabledPasses: {} } },
+        settings: {
+          galaxyCatalogs: {
+            sizePx: settings.pointSizePx,
+            brightness: settings.brightness,
+            highlightFallback: settings.highlightFallback,
+            realOnly: settings.realOnlyMode,
+            depthFade: settings.depthFadeEnabled,
+          },
+          bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
+          thumbnails: { enabled: settings.galaxyTexturesEnabled },
+          milkyWay: { enabled: settings.milkyWayEnabled },
+          filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+          volumes: { enabled: settings.volumesEnabled },
+          flow: { enabled: false },
+          debug: { disabledPasses: {} },
+        },
+        selection: { select: settings.selected },
         assetSlots: { flow: null },
         subsystems: {
           proceduralDisks: proceduralDisksSubsystem,

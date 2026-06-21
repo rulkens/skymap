@@ -23,7 +23,7 @@
  *
  * ### Gating rationale
  *
- * Master gate: `settings.volumesEnabled` OR a non-zero master fade tail.
+ * Master gate: `state.settings.volumes.enabled` OR a non-zero master fade tail.
  * Focus recession dims the whole volume subsystem in lockstep with the
  * filament overlay, but it's applied to the master MULTIPLIER only, not the
  * gate above: recession ∈ [VOLUME_RECESSION, 1] can never zero the layer,
@@ -53,13 +53,13 @@ export function encodeVolumePrepass(
   encoder: GPUCommandEncoder,
   ctx: ReadyFrameContext,
   state: EngineState,
-  settings: RenderFrameSettings,
+  _settings: RenderFrameSettings,
   timingService: GpuTimingService | null,
 ): void {
   if (state.gpu.volumeFieldRenderer !== null) {
     const nowMs = performance.now();
     const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
-    if (settings.volumesEnabled || masterOpacity > 0) {
+    if (state.settings.volumes.enabled || masterOpacity > 0) {
       // Focus recession dims the whole volume subsystem in lockstep with the
       // filament overlay. Applied to the master MULTIPLIER only, not the gate
       // above: recession ∈ [VOLUME_RECESSION, 1] can never zero the layer, so
