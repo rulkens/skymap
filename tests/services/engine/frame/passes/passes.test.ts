@@ -321,31 +321,40 @@ describe('filamentsPass.draw', () => {
 });
 
 describe('milkyWayPass.enabled', () => {
-  it('returns true when milkyWayEnabled is true and camera is inside the fade band', () => {
+  it('returns true when milkyWay.enabled is true and camera is inside the fade band', () => {
     // Default makeCtx() puts the camera at 5 Mpc, inside the full-alpha
     // (≤10 Mpc) regime. Both gates pass.
+    const stateOn = {
+      ...STATE_STUB,
+      settings: { milkyWay: { enabled: true } },
+    } as unknown as EngineState;
     expect(
-      milkyWayPass.enabled(STATE_STUB, makeCtx(), makeSettings({ milkyWayEnabled: true })),
+      milkyWayPass.enabled(stateOn, makeCtx(), makeSettings()),
     ).toBe(true);
   });
 
-  it('returns false when milkyWayEnabled is false AND fade opacity is 0', () => {
-    // STATE_STUB's fades.opacityOf returns 1 by default — override to 0
-    // so the gate doesn't keep the pass alive through a fade-out tail.
-    const stateZeroFade = {
+  it('returns false when milkyWay.enabled is false AND fade opacity is 0', () => {
+    // fades.opacityOf returns 0 so the gate doesn't keep the pass alive
+    // through a fade-out tail; toggle is also off — both conditions false.
+    const stateOffZeroFade = {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
+      settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      milkyWayPass.enabled(stateZeroFade, makeCtx(), makeSettings({ milkyWayEnabled: false })),
+      milkyWayPass.enabled(stateOffZeroFade, makeCtx(), makeSettings()),
     ).toBe(false);
   });
 
-  it('returns true when milkyWayEnabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
+  it('returns true when milkyWay.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
     // opacityOf = 1 simulates a toggle fade-out still in flight, and the
     // distance-based fadeAlpha also passes (camera near origin), so the
     // gate's second condition is non-zero — the pass renders.
+    const stateOffFading = {
+      ...STATE_STUB,
+      settings: { milkyWay: { enabled: false } },
+    } as unknown as EngineState;
     expect(
-      milkyWayPass.enabled(STATE_STUB, makeCtx(), makeSettings({ milkyWayEnabled: false })),
+      milkyWayPass.enabled(stateOffFading, makeCtx(), makeSettings()),
     ).toBe(true);
   });
 
@@ -353,12 +362,14 @@ describe('milkyWayPass.enabled', () => {
     // 1000 Mpc — well past FADE_OUTER_MPC (50 Mpc). Gating in `enabled`
     // (not just `draw`) skips the empty beginRenderPass +
     // timestamp-write on the split-encoder path.
+    const stateOn = {
+      ...STATE_STUB,
+      settings: { milkyWay: { enabled: true } },
+    } as unknown as EngineState;
     const ctx = makeCtx({
       drawCamPos: [1000, 0, 0] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayPass.enabled(STATE_STUB, ctx, makeSettings({ milkyWayEnabled: true }))).toBe(
-      false,
-    );
+    expect(milkyWayPass.enabled(stateOn, ctx, makeSettings())).toBe(false);
   });
 });
 
