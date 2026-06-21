@@ -60,8 +60,6 @@ function makeDeps(): PassDeps {
     flowFieldRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
-    catalogs: new Map(),
-    famousMeta: [],
     milkyWayITimeSec: 0,
   } as PassDeps;
 }
