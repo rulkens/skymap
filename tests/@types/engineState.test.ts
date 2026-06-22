@@ -119,6 +119,7 @@ describe('EngineState type', () => {
       lastPickedMouseCss: null,
       pickInFlight: false,
       pointerDown: false,
+      lastFrameUniformBytes: null,
     };
 
     // Forward-declare so the bias-correction subsystem's narrow
@@ -331,6 +332,7 @@ describe('EngineState type', () => {
         lastPickedMouseCss: null,
         pickInFlight: false,
         pointerDown: false,
+        lastFrameUniformBytes: null,
       },
       gpu: {
         renderer: null,

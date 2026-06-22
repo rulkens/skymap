@@ -42,4 +42,11 @@ export type EnginePickingState = {
   lastPickedMouseCss: MousePos | null;
   pickInFlight: boolean;
   pointerDown: boolean;
+  /**
+   * Packed PointUniforms image from the last visual frame (see
+   * packPointUniforms). The pick paths upload this to the pick renderer's
+   * own buffer so a pick reproduces the last frame's camera without
+   * re-running the per-frame camera drivers. Null until the first frame.
+   */
+  lastFrameUniformBytes: ArrayBuffer | null;
 };
