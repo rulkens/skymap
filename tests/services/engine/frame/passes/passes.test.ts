@@ -124,8 +124,6 @@ const STATE_STUB = {
   // the per-frame camera drivers.
   picking: {
     lastFrameUniformBytes: null as ArrayBuffer | null,
-    latestMouseCss: null,
-    lastPickedMouseCss: null,
     pickInFlight: false,
     pointerDown: false,
   },
@@ -498,8 +496,6 @@ describe('pointSpritesPass.draw', () => {
     // Mutable picking bag so we can observe the write.
     const pickingBag = {
       lastFrameUniformBytes: null as ArrayBuffer | null,
-      latestMouseCss: null,
-      lastPickedMouseCss: null,
       pickInFlight: false,
       pointerDown: false,
     };
@@ -525,8 +521,6 @@ describe('pointSpritesPass.draw', () => {
     const ctx = makeCtx({ renderer: { draw: drawStub } as any });
     const pickingBag = {
       lastFrameUniformBytes: priorBytes,
-      latestMouseCss: null,
-      lastPickedMouseCss: null,
       pickInFlight: false,
       pointerDown: false,
     };

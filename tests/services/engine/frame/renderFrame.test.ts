@@ -346,8 +346,6 @@ function makeInput(
         // values — only lastFrameUniformBytes is mutated by the pass.
         picking: {
           lastFrameUniformBytes: null as ArrayBuffer | null,
-          latestMouseCss: null,
-          lastPickedMouseCss: null,
           pickInFlight: false,
           pointerDown: false,
         },

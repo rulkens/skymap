@@ -105,7 +105,7 @@ function makeState(): EngineState {
       },
     },
     bias: {} as never,
-    picking: { latestMouseCss: null, pointerDown: false } as never,
+    picking: { pointerDown: false } as never,
     // createClickResolver captures the store accessors for resolvePick;
     // createClickResolver is module-mocked here, so the accessors are
     // never invoked — an empty galaxies/structures stub is enough.

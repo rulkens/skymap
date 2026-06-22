@@ -226,7 +226,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // is selected the card stays visible (showing the pinned
     // point) — selection state is unaffected.
     onPointerLeave: () => {
-      state.picking.latestMouseCss = null;
       deps.cb.store.dispatch(updateSelectionHover(null));
     },
     // Clear hover on pointerdown so the card immediately reflects "nothing

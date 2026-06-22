@@ -115,8 +115,6 @@ describe('EngineState type', () => {
       },
     };
     const picking: EnginePickingState = {
-      latestMouseCss: null,
-      lastPickedMouseCss: null,
       pickInFlight: false,
       pointerDown: false,
       lastFrameUniformBytes: null,
@@ -328,8 +326,6 @@ describe('EngineState type', () => {
       selectionRows: { hover: null, select: null, focus: null },
       data: createEngineData(),
       picking: {
-        latestMouseCss: null,
-        lastPickedMouseCss: null,
         pickInFlight: false,
         pointerDown: false,
         lastFrameUniformBytes: null,

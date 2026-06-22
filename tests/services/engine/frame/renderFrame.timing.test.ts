@@ -246,8 +246,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // draw — the bag must exist so the property write doesn't throw.
       picking: {
         lastFrameUniformBytes: null as ArrayBuffer | null,
-        latestMouseCss: null,
-        lastPickedMouseCss: null,
         pickInFlight: false,
         pointerDown: false,
       },

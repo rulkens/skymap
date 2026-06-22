@@ -117,8 +117,6 @@ const posB: CssPx = { x: 150, y: 250 };
 
 let picker: ReturnType<typeof makeFakePicker>;
 let pickingState: {
-  latestMouseCss: null;
-  lastPickedMouseCss: null;
   pickInFlight: boolean;
   pointerDown: boolean;
   lastFrameUniformBytes: ArrayBuffer | null;
@@ -130,8 +128,6 @@ beforeEach(() => {
   picker = makeFakePicker();
 
   pickingState = {
-    latestMouseCss: null,
-    lastPickedMouseCss: null,
     pickInFlight: false,
     pointerDown: false,
     lastFrameUniformBytes: dummyUniformBytes,

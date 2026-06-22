@@ -367,8 +367,6 @@ describe('renderFrame visual baseline', () => {
         // draw — the bag must exist so the assignment doesn't throw.
         picking: {
           lastFrameUniformBytes: null as ArrayBuffer | null,
-          latestMouseCss: null,
-          lastPickedMouseCss: null,
           pickInFlight: false,
           pointerDown: false,
         },
