@@ -85,7 +85,13 @@ export const pointSpritesPass: Pass = {
     const nowMs = performance.now();
     const fades = state.subsystems.fades;
 
-    renderer.draw(pass, vp, [width, height], {
+    // draw returns the packed PointUniforms ArrayBuffer it submitted to
+    // the GPU, or null when there are zero loaded catalogs. Stash a
+    // non-null return so the pick paths can replay this frame's camera
+    // without re-running the per-frame camera drivers. A null return
+    // (zero catalogs) leaves any prior snapshot in place — both pick
+    // paths gate on catalogs.size > 0 and won't consume a stale snapshot.
+    const bytes = renderer.draw(pass, vp, [width, height], {
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
       selectedPacked,
@@ -116,5 +122,6 @@ export const pointSpritesPass: Pass = {
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
     });
+    if (bytes !== null) state.picking.lastFrameUniformBytes = bytes;
   },
 };
