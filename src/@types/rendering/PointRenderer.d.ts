@@ -82,13 +82,21 @@ export type PointRenderer = {
    * threaded internally.
    */
   uniformBuffer: GPUBuffer;
-  /** Issue one instanced draw call per visible source. */
+  /**
+   * Issue one instanced draw call per visible source.
+   *
+   * Returns the packed `ArrayBuffer` so the pick renderer can snapshot the
+   * visual-frame uniform state and apply its three overrides (selectedPacked
+   * sentinel, padded pointSizePx, pickPass = 1) without touching the
+   * already-uploaded visual buffer.  Returns `null` when no catalogs are
+   * loaded — the buffer was never packed this frame.
+   */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
     settings: PointDrawSettings,
-  ): void;
+  ): ArrayBuffer | null;
   /** Release every GPU resource this renderer owns. */
   destroy(): void;
 };
