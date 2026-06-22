@@ -102,6 +102,44 @@ describe('attachEngineInputs', () => {
     });
     canvas.fire('pointermove', { pointerType: 'mouse', clientX: 42, clientY: 99 });
     expect(onPointerMove).toHaveBeenCalledWith({ x: 42, y: 99 });
+  });
+
+  // Wake ownership: hover is driven by the hoverPickDriver, which owns its
+  // own async pick path (no frame needed). pointermove feeds the driver via
+  // onPointerMove and must NOT call requestRender — every mouse move over a
+  // static scene would otherwise force a full 2.5M-point re-render.
+  it('mouse pointermove does NOT call scheduler.requestRender', () => {
+    attachEngineInputs({
+      canvas: canvas.target as unknown as HTMLCanvasElement,
+      scheduler,
+      onPointerMove: () => {},
+      onPointerLeave: () => {},
+      onPointerDown: () => {},
+      onPointerUp: () => {},
+      onEscape: () => {},
+      onResize: () => {},
+    });
+    canvas.fire('pointermove', { pointerType: 'mouse', clientX: 10, clientY: 20 });
+    expect(scheduler.requestRender).not.toHaveBeenCalled();
+  });
+
+  // pointerleave clears hover state (a store dispatch that is wake-free by
+  // convention), so this listener mouth keeps the wake. Contrast with
+  // pointermove: hover-clear IS a visible state change (card disappears),
+  // whereas hover-update feeds only React text via the store and needs no
+  // re-render.
+  it('pointerleave still calls requestRender', () => {
+    attachEngineInputs({
+      canvas: canvas.target as unknown as HTMLCanvasElement,
+      scheduler,
+      onPointerMove: () => {},
+      onPointerLeave: () => {},
+      onPointerDown: () => {},
+      onPointerUp: () => {},
+      onEscape: () => {},
+      onResize: () => {},
+    });
+    canvas.fire('pointerleave', {});
     expect(scheduler.requestRender).toHaveBeenCalledTimes(1);
   });
 

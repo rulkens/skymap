@@ -8,8 +8,9 @@
  *   1. A picker miss (`null`) returns null.
  *   2. A galaxy catalog hit resolves to a `{ type:'galaxyCatalog', source, index }` ref.
  *   3. A structure hit resolves to a `{ type:'structure', id }` ref.
- *   4. The picker is called with the exact (viewport, x, y, sources)
- *      values supplied by the engine — no transformation.
+ *   4. The picker is called with the exact (viewport, x, y, sources, pointSizePx,
+ *      uniformBytes) values supplied by the engine — no transformation.
+ *   5. `uniformBytes` is threaded verbatim into `pickRenderer.pick`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -52,11 +53,17 @@ const deps = {
   structures,
 };
 
+// A dummy uniform bytes buffer — the click resolver passes it verbatim to
+// the pick renderer without reading its contents.
+const dummyUniformBytes = new ArrayBuffer(176);
+
 const dummyArgs: ClickResolveInput = {
   pickXPx: 10,
   pickYPx: 20,
   viewportPx: [800, 600],
   visibleSources: [],
+  pointSizePx: 2.5,
+  uniformBytes: dummyUniformBytes,
 };
 
 describe('createClickResolver', () => {
@@ -94,16 +101,67 @@ describe('createClickResolver', () => {
     const picker = makePicker({ sourceCode: Source.SDSS, localIdx: 0 });
     const r = createClickResolver({ pickRenderer: picker, ...deps });
     const sources: ClickResolveInput['visibleSources'] = [];
+    const uniformBytes = new ArrayBuffer(176);
     await r.resolveClick({
       pickXPx: 11,
       pickYPx: 22,
       viewportPx: [1280, 720],
       visibleSources: sources,
+      pointSizePx: 3.2,
+      uniformBytes,
     });
     expect(picker.pick).toHaveBeenCalledTimes(1);
-    // 5th arg is `pointSizePx` (undefined when unsupplied — no pick-floor
-    // boost); 6th is the optional `timingDescriptor` (undefined when the
-    // timing service is absent — see PickRenderer JSDoc).
-    expect(picker.pick).toHaveBeenCalledWith([1280, 720], 11, 22, sources, undefined, undefined);
+    // Args in order: viewportPx, pickXPx, pickYPx, visibleSources,
+    // pointSizePx (now required), uniformBytes, timingDescriptor (undefined when absent).
+    expect(picker.pick).toHaveBeenCalledWith(
+      [1280, 720],
+      11,
+      22,
+      sources,
+      3.2,
+      uniformBytes,
+      undefined,
+    );
+  });
+
+  it('threads uniformBytes into pickRenderer.pick — the pick renderer receives the exact buffer', async () => {
+    // This test proves the click resolver is a correct conduit for the
+    // last-frame uniform bytes: the buffer object identity is preserved
+    // through resolveClick → pick, so the pick renderer uploads exactly
+    // what the visual frame packed.
+    const picker = makePicker(null);
+    const r = createClickResolver({ pickRenderer: picker, ...deps });
+
+    const specificUniformBytes = new ArrayBuffer(176);
+    await r.resolveClick({
+      pickXPx: 5,
+      pickYPx: 5,
+      viewportPx: [800, 600],
+      visibleSources: [],
+      pointSizePx: 2.5,
+      uniformBytes: specificUniformBytes,
+    });
+
+    expect(picker.pick).toHaveBeenCalledTimes(1);
+    // The 6th arg (index 5) must be the exact same ArrayBuffer reference.
+    const callArgs = (picker.pick as ReturnType<typeof vi.fn>).mock.calls[0] as unknown[];
+    expect(callArgs[5]).toBe(specificUniformBytes);
+  });
+
+  it('threads pointSizePx into pickRenderer.pick when provided', async () => {
+    const picker = makePicker(null);
+    const r = createClickResolver({ pickRenderer: picker, ...deps });
+
+    await r.resolveClick({
+      pickXPx: 5,
+      pickYPx: 5,
+      viewportPx: [800, 600],
+      visibleSources: [],
+      uniformBytes: dummyUniformBytes,
+      pointSizePx: 5.0,
+    });
+
+    const callArgs = (picker.pick as ReturnType<typeof vi.fn>).mock.calls[0] as unknown[];
+    expect(callArgs[4]).toBe(5.0);
   });
 });

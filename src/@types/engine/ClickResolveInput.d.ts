@@ -14,13 +14,22 @@ export type ClickResolveInput = {
    * `pickRenderer.pick` so it can boost the picking floor (see
    * `PICK_PADDING_PX` in pickRenderer.ts) — distant point-like
    * galaxies get a wider hit-test area, making them easier to click.
-   * Optional so legacy callers that don't yet thread the setting
-   * through can still construct a ClickResolveInput.
    */
-  pointSizePx?: number;
+  pointSizePx: number;
+  /**
+   * Packed uniform bytes from the last visual frame — the value
+   * `pointRenderer.draw()` returned and was stashed on
+   * `state.picking.lastFrameUniformBytes`.  Forwarded verbatim to
+   * `pickRenderer.pick` so the pick pass reproduces the last frame's
+   * camera state without re-running the camera drivers or touching the
+   * visual pass's GPU buffer.  Required: the new `pick()` signature no
+   * longer takes an optional here; the caller guards on `null` before
+   * constructing a `ClickResolveInput`.
+   */
+  uniformBytes: ArrayBuffer;
   /**
    * Optional `RenderPassTimestampWrites` descriptor for per-pass GPU
-   * profiling, forwarded verbatim to `pickRenderer.pick` as its 6th
+   * profiling, forwarded verbatim to `pickRenderer.pick` as its 7th
    * argument.  The caller is expected to pass
    * `state.gpu.timingService?.descriptorFor('pick')` — when the
    * timing service is absent (no `timestamp-query` feature on the

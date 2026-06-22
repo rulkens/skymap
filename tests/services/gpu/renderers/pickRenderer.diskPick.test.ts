@@ -22,14 +22,19 @@ import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/Pr
 // ── 1. Signature pin ────────────────────────────────────────────────────────
 
 describe('createPickRenderer disk-pick integration', () => {
-  it('keeps proceduralDiskRenderer optional as the 8th positional (index 7)', () => {
-    // Compile-time: the 8th parameter must exist and be assignable from
-    // `undefined` (declared with `?`). Removing it, making it required,
-    // or reordering it before structureMarkerRenderer all break this.
+  it('keeps proceduralDiskRenderer optional as the 7th positional (index 6)', () => {
+    // Compile-time: the 7th parameter (index 6, after device/fadeBgl/
+    // sourceBgl/focusBgl/focusBindGroup/structureMarkerRenderer) must
+    // exist and be assignable from `undefined` (declared with `?`).
+    // Removing it, making it required, or reordering it before
+    // structureMarkerRenderer all break this.
+    //
+    // Note: `pointRenderer` was removed from position 1 in Task 4, shifting
+    // the optional tail params down by one index each.
     type Sig = Parameters<typeof createPickRenderer>;
     const _check = (...args: Sig): void => {
-      const eighth: Sig[7] = args[7];
-      const _undef: typeof eighth = undefined;
+      const seventh: Sig[6] = args[6];
+      const _undef: typeof seventh = undefined;
       void _undef;
     };
     expect(_check).toBeTypeOf('function');

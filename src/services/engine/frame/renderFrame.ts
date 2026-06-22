@@ -63,8 +63,9 @@
  *
  * ### What stays in `runFrame()` (NOT here)
  *
- *   - Hover pick readback (mutates `hoveredIndex` + queues another GPU
- *     submit on its own — the pick renderer encodes its own commands).
+ *   - `drawPickDebugOverlay` — composites the pick-buffer debug overlay over
+ *     the swap chain using its own encoder/submit (AFTER this function's
+ *     submit), so it can read `state.picking.lastFrameUniformBytes`.
  *   - The render-on-demand scheduler decision.
  *   - Camera state mutation (resize, tween advance, auto-rotate yaw
  *     bump).

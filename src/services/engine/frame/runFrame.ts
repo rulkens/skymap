@@ -9,10 +9,10 @@
  * ### What counts as the 'frame body'
  *
  * Everything from the camera-driver resolve at the top to the `renderFrame()`
- * GPU dispatch and the throttled hover pick that follows. The still-animating
- * predicate ('keep ticking ONLY if motion or async work is in flight') lives
- * here too — a single condition that fires `scheduler.requestRender()` if any
- * busy-flag is set.
+ * GPU dispatch and the `drawPickDebugOverlay` call that follows. The
+ * still-animating predicate ('keep ticking ONLY if motion or async work is in
+ * flight') lives here too — a single condition that fires
+ * `scheduler.requestRender()` if any busy-flag is set.
  *
  * ### Why deps are passed explicitly instead of lifted to EngineState
  *
@@ -20,8 +20,7 @@
  * `filamentRenderer`, `texturedDiskRenderer`) are read *only* by the frame body;
  * promoting them to `state.gpu.*` would widen `EngineState`'s contract for one
  * consumer and force every other reader to null-check fields it never touches.
- * They flow through `RunFrameDeps` instead. The pure `cssToTexPx` helper
- * captures nothing, so it's imported directly rather than threaded.
+ * They flow through `RunFrameDeps` instead.
  *
  * ### Camera produce → commit-on-edge ordering
  *
@@ -51,19 +50,14 @@ import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { tweenElapsed } from '../camera/cameraClock';
 import { resizeCanvasToDisplay } from '../../gpu/device';
-import { cssToTexPx } from '../helpers/cssToTexPx';
-import { isEngineReady } from '../helpers/engineReady';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
-import { resolvePick } from '../helpers/resolvePick';
-import { collectPickTargets } from '../helpers/collectPickTargets';
-import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
+import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { commitCameraPose, cancelCameraTween } from '../../../state/camera/cameraSlice';
-import { updateSelectionHover } from '../../../state/selection/selectionSlice';
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -351,144 +345,15 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Pick-buffer debug overlay ─────────────────────────────────────────────
   //
-  // Populate the pick texture (no readback) and composite a colour-mapped
-  // overlay over the swap chain. Sequencing matters:
-  //   - AFTER renderFrame's submit so the shared uniform buffer reflects this
-  //     frame's visual state (queue.writeBuffer is ordered per submit).
-  //   - BEFORE the hover pick so both writers see a known texture state.
-  //   - Own encoder/submit with `loadOp: 'load'` so the pre-multiplied OVER
-  //     blend composites on top of the tone-mapped frame.
-  if (
-    state.settings.debug.showPickBuffer &&
-    state.gpu.pickRenderer !== null &&
-    state.gpu.pickDebugOverlay !== null &&
-    state.data.galaxies.catalogs.size > 0 &&
-    ctx.isReady
-  ) {
-    const { visibleSources: overlaySources, hasAny } = collectPickTargets(
-      ctx.renderer,
-      masks.pick,
-      state.gpu.structureMarkerRenderer,
-      milkyWayPickVisible(state),
-    );
-    if (hasAny) {
-      const pickTex = state.gpu.pickRenderer.renderForDebug(
-        [deps.canvas.width, deps.canvas.height],
-        overlaySources,
-        state.settings.galaxyCatalogs.sizePx,
-      );
-      if (pickTex !== null) {
-        const overlayEncoder = deps.device.createCommandEncoder({
-          label: 'pick-debug-overlay-encoder',
-        });
-        const swapView = deps.context.getCurrentTexture().createView();
-        const overlayPass = overlayEncoder.beginRenderPass({
-          label: 'pick-debug-overlay-pass',
-          colorAttachments: [
-            {
-              view: swapView,
-              // `load` — preserve the tone-mapped frame underneath; the
-              // overlay's pre-multiplied OVER blend composites on top.
-              loadOp: 'load',
-              storeOp: 'store',
-            },
-          ],
-        });
-        state.gpu.pickDebugOverlay.draw(overlayPass, pickTex.createView());
-        overlayPass.end();
-        deps.device.queue.submit([overlayEncoder.finish()]);
-      }
-    }
-  }
-
-  // ── Throttled hover pick ──────────────────────────────────────────────────
+  // Composite a colour-mapped pick-buffer overlay over the swap chain.
+  // Runs AFTER renderFrame's submit (the packed uniform bytes are stashed
+  // by pointSpritesPass just before that submit). The helper owns its own
+  // encoder/submit with `loadOp: 'load'` so the OVER blend composites on
+  // top of the tone-mapped frame without re-rendering the scene.
   //
-  // pointermove updates `state.picking.latestMouseCss`; once per frame we kick
-  // off a pick if the mouse moved and none is already in flight. Movement is
-  // detected by object-reference inequality (the pointermove handler allocates
-  // a fresh position object).
-  //
-  // Fire-and-forget: awaiting inside rAF would block the loop, so the `.then`
-  // updates state when the GPU readback lands (1-2 frames later).
-  //
-  // IMPORTANT: pick() runs *after* device.queue.submit(), so the visual frame's
-  // uniform buffer already holds the latest viewProj — and the pick renderer
-  // reads that same buffer.
-  if (
-    state.data.galaxies.catalogs.size > 0 &&
-    state.picking.latestMouseCss !== null &&
-    state.picking.latestMouseCss !== state.picking.lastPickedMouseCss &&
-    !state.picking.pickInFlight &&
-    !state.picking.pointerDown && // skip hover picks while a drag is in progress
-    // `ctx.isReady` already proved cam/renderer/postProcess/thumbnails are
-    // non-null. `isEngineReady` is the same predicate plus pickRenderer, which
-    // lets us drop the `state.gpu.pickRenderer!` non-null assertion below. The
-    // two checks always agree by construction (same five fields, populated
-    // together in bootstrap, nulled together in destroy).
-    isEngineReady(state)
-  ) {
-    // Snapshot what's pickable this frame — visible galaxy catalogs (filtered
-    // by the pick mask, same rule as the click handler) plus whether any
-    // cluster ring is on screen. Single source of truth so the hover gate, the
-    // pick-debug overlay, and the click resolver all agree on 'is there
-    // anything to pick'.
-    const { visibleSources, hasAny } = collectPickTargets(
-      ctx.renderer,
-      masks.pick,
-      state.gpu.structureMarkerRenderer,
-      milkyWayPickVisible(state),
-    );
-    // Only kick off a GPU pick when something is pickable (a visible galaxy
-    // catalog or an on-screen cluster ring). When nothing is, we skip the pick
-    // but must NOT return — control has to reach the keep-ticking tail so
-    // animated overlays (the flow field) keep the loop alive even with every
-    // galaxy catalog hidden. Pickability and frame-liveness are independent:
-    // an early return here once froze the flow field whenever the cursor
-    // stopped over the canvas or moved onto a panel.
-    if (hasAny) {
-      // Snapshot the position at the moment we kick off the pick.
-      const pos = state.picking.latestMouseCss;
-      state.picking.lastPickedMouseCss = pos;
-      state.picking.pickInFlight = true;
-
-      state.gpu.pickRenderer
-        .pick(
-          [deps.canvas.width, deps.canvas.height],
-          cssToTexPx(pos.x),
-          cssToTexPx(pos.y),
-          visibleSources,
-          // Boost the picking floor for easier hover targets — see
-          // PICK_PADDING_PX in pickRenderer.ts.
-          state.settings.galaxyCatalogs.sizePx,
-          // Optional GPU-timing descriptor for the hover-pick pass. Undefined
-          // unless `?gpuTimings` is set; the click path in clickHandler.ts
-          // wires this the same way. When present, the descriptor binds the
-          // shared query set's 'pick' slot pair; the resolve+copy rides on the
-          // NEXT main-frame `endFrame`, so cross-frame latency is at most one
-          // main frame.
-          state.gpu.timingService.descriptorFor('pick'),
-        )
-        .then((pick) => {
-          // Decode the pick to a SelectionRef (identity) via `resolvePick` —
-          // the same boundary the click path uses, so hover and click can't
-          // drift. Dispatch to the store; the reconciler fills `selectionRows`.
-          // The reducer dedupes on structural equality, so a steady hover is
-          // a no-op and downstream sagas don't re-fire.
-          deps.cb.store.dispatch(
-            updateSelectionHover(resolvePick(pick, { structures: state.data.structures })),
-          );
-          // No scheduler.requestRender() here intentionally. The hover state
-          // only feeds the React InfoCard text — there is no hover halo in the
-          // rendered scene today, so a hover change does NOT require a
-          // re-render. Skipping the wake keeps idle CPU at zero on mouse-over
-          // without click. If a future task adds a hover halo, add
-          // scheduler.requestRender() here.
-        })
-        .finally(() => {
-          state.picking.pickInFlight = false;
-        });
-    }
-  }
+  // Hover picking is now fully pointer-driven (hoverPickDriver, wired in
+  // wireInput.ts) — there is no longer an in-frame pick block here.
+  drawPickDebugOverlay(state, deps, masks);
 
   // ── Render-on-demand: continue ticking ONLY if motion or async work is in
   // flight. Otherwise the loop sleeps until a channel mouth wakes it: input,
@@ -496,9 +361,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // or a settings write. `shouldKeepTicking` owns the full predicate (camera
   // motion, in-flight thumbnails, fades, structure-focus, animated flow) and
   // is deliberately independent of what is pickable — see its module header.
-  //
-  // This MUST be reached every ready frame, which is why the hover-pick block
-  // above skips the pick with `if (hasAny)` rather than an early `return`.
   //
   // Tick the FadeRegistry BEFORE the predicate reads isAnyAnimating: tick is
   // the single resolution site for fadeTo promises, so without it the awaited

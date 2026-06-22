@@ -119,6 +119,14 @@ const STATE_STUB = {
   gpu: {
     focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
   },
+  // pointSpritesPass stashes packed uniform bytes here after each draw so
+  // the pick paths can replay the last frame's camera without re-running
+  // the per-frame camera drivers.
+  picking: {
+    lastFrameUniformBytes: null as ArrayBuffer | null,
+    pickInFlight: false,
+    pointerDown: false,
+  },
 } as unknown as EngineState;
 
 const PASS_STUB = {
@@ -475,5 +483,55 @@ describe('pointSpritesPass.draw', () => {
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
+  });
+
+  it('stashes the packed uniform bytes onto state.picking.lastFrameUniformBytes', () => {
+    // The pass must capture the ArrayBuffer returned by renderer.draw and
+    // write it to state.picking.lastFrameUniformBytes so pick paths can
+    // replay the last frame's camera uniforms without re-running the
+    // per-frame camera drivers.
+    const sentinelBytes = new ArrayBuffer(8);
+    const drawStub = vi.fn<() => ArrayBuffer | null>(() => sentinelBytes);
+    const ctx = makeCtx({ renderer: { draw: drawStub } as any });
+    // Mutable picking bag so we can observe the write.
+    const pickingBag = {
+      lastFrameUniformBytes: null as ArrayBuffer | null,
+      pickInFlight: false,
+      pointerDown: false,
+    };
+    const stateWithPicking = {
+      ...STATE_STUB,
+      selection: { select: null, hover: null, focus: null },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+      picking: pickingBag,
+    } as unknown as EngineState;
+    pointSpritesPass.draw(PASS_STUB, ctx, stateWithPicking, makeDeps());
+    // The pass must stash the exact reference returned by renderer.draw —
+    // no copy, no re-pack. Identity equality (===) enforces this.
+    expect(pickingBag.lastFrameUniformBytes).toBe(sentinelBytes);
+  });
+
+  it('leaves state.picking.lastFrameUniformBytes untouched when renderer.draw returns null', () => {
+    // When there are zero catalogs loaded, draw returns null — signalling
+    // nothing was packed. The pass must not overwrite a previously-valid
+    // bytes snapshot with null; both pick paths gate on catalogs.size > 0
+    // so the stale snapshot will never be consumed in that code path anyway.
+    const priorBytes = new ArrayBuffer(8);
+    const drawStub = vi.fn<() => ArrayBuffer | null>(() => null);
+    const ctx = makeCtx({ renderer: { draw: drawStub } as any });
+    const pickingBag = {
+      lastFrameUniformBytes: priorBytes,
+      pickInFlight: false,
+      pointerDown: false,
+    };
+    const stateWithPicking = {
+      ...STATE_STUB,
+      selection: { select: null, hover: null, focus: null },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+      picking: pickingBag,
+    } as unknown as EngineState;
+    pointSpritesPass.draw(PASS_STUB, ctx, stateWithPicking, makeDeps());
+    // The prior snapshot must survive a null-return frame.
+    expect(pickingBag.lastFrameUniformBytes).toBe(priorBytes);
   });
 });

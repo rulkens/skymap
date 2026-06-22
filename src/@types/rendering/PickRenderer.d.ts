@@ -1,9 +1,9 @@
 /**
  * PickRenderer — public surface of the offscreen per-point picker.
  *
- * Create one instance at startup with `createPickRenderer(device)` and keep it
- * alive for the duration of the app.  Call `pick()` whenever you want to know
- * which point is under the cursor.
+ * Create one instance at startup with `createPickRenderer(device, ...)` and
+ * keep it alive for the duration of the app.  Call `pick()` whenever you want
+ * to know which point is under the cursor.
  */
 
 import type { PickSourceDraw } from './PickSourceDraw';
@@ -43,13 +43,13 @@ export type PickRenderer = {
    *
    * ### Uniform buffer contract
    *
-   * `pick()` does NOT write the per-frame uniforms (viewProj, viewport,
-   * pointSizePx, brightness) — it reuses whatever the visual pass wrote
-   * for the current camera state.  The shared uniform buffer is the one
-   * owned by the `PointRenderer` passed to `createPickRenderer`; the
-   * coupling is bound at construction time and is no longer threaded
-   * through every call.  Call `pick()` *after* the visual frame has
-   * written its uniforms.
+   * `pick()` uploads the caller's `uniformBytes` to the pick renderer's
+   * OWN GPU buffer, then applies three pick-specific overrides on top
+   * (selectedPacked sentinel, padded pointSizePx, pickPass = 1).  The
+   * visual pass's GPU buffer is NEVER touched — there is no shared
+   * buffer, no two-writer hazard, and no dependency on frame ordering.
+   * `uniformBytes` is the CPU copy that `pointRenderer.draw()` returns
+   * after each visual frame (stashed on `state.picking.lastFrameUniformBytes`).
    *
    * ### Concurrency
    *
@@ -80,16 +80,23 @@ export type PickRenderer = {
     pickYPx: number,
     sources: Iterable<PickSourceDraw>,
     /**
-     * The user's current `pointSizePx` setting.  Used to compute the
-     * pick-pass floor: `pointSizePx + PICK_PADDING_PX` is written into
-     * the shared uniform buffer just before the pick pass so distant
-     * point-like galaxies become easier to hover/click.  See
-     * `PICK_PADDING_PX` for the rationale.
-     *
-     * Optional for backwards compatibility — when omitted, the pick
-     * pass reads whatever the visual frame last wrote (no boost).
+     * The user's current `pointSizePx` setting.  The pick pass uploads
+     * `pointSizePx + PICK_PADDING_PX` onto `pickUniformBuffer` so
+     * distant point-like galaxies have a wider hit-test area without
+     * growing the visible sprites.  See `PICK_PADDING_PX` in
+     * `pickRenderer.ts` for the padding rationale.
      */
-    pointSizePx?: number,
+    pointSizePx: number,
+    /**
+     * Packed uniform bytes from the last visual frame (the value
+     * `pointRenderer.draw()` returned and was stashed on
+     * `state.picking.lastFrameUniformBytes`).  Uploaded verbatim to
+     * the pick renderer's own GPU buffer, then the three pick-specific
+     * fields are overridden.  Reproduces the camera/viewport/settings
+     * state the visual frame rendered without re-running the camera
+     * drivers or sharing any buffer with the visual pass.
+     */
+    uniformBytes: ArrayBuffer,
     /**
      * Optional `RenderPassTimestampWrites` descriptor for per-pass GPU
      * profiling.  When the engine's timing service is active, callers
@@ -124,22 +131,24 @@ export type PickRenderer = {
    * `inFlight` guard — sharing it would make the overlay flicker
    * whenever a hover-pick was mid-flight.
    *
-   * Side-effects on the shared uniform buffer match `pick()`:
-   * SELECTION_NONE sentinel into `selectedPacked`, optional
-   * `pointSizePx + PICK_PADDING_PX` boost, `pickPass = 1`.  The next
-   * visual frame's full-buffer rewrite resets all three.  Same
-   * overrides as the real pick pass — the overlay shows what hits.
+   * Writes the pick renderer's OWN buffer (same as `pick()`) — the
+   * visual pass's buffer is never touched.  Applies the same three
+   * pick-specific overrides (selectedPacked sentinel, padded
+   * pointSizePx, pickPass = 1) so the overlay shows exactly what
+   * `pick()` would hit.
    *
    * Returns null when the source list is empty.
    *
    * @param viewportPx   Physical canvas size in backing-store pixels.
    * @param sources      Per-source draw records — same shape `pick()` accepts.
-   * @param pointSizePx  Optional point-size floor for the `PICK_PADDING_PX` boost.
+   * @param pointSizePx  The user's current point-size setting; see `pick()`.
+   * @param uniformBytes Last-frame packed uniform bytes; see `pick()`.
    */
   renderForDebug(
     viewportPx: Vec2,
     sources: Iterable<PickSourceDraw>,
-    pointSizePx?: number,
+    pointSizePx: number,
+    uniformBytes: ArrayBuffer,
   ): GPUTexture | null;
 
   /**

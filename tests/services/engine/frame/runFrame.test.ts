@@ -105,10 +105,9 @@ function makeState(): EngineState {
       volumes: { enabled: false },
     },
     picking: {
-      latestMouseCss: null,
-      lastPickedMouseCss: null,
       pickInFlight: false,
       pointerDown: false,
+      lastFrameUniformBytes: null as ArrayBuffer | null,
     },
     gpu: {
       renderer: null,
@@ -345,5 +344,37 @@ describe('runFrame — demand re-evaluation', () => {
 
     expect(reevaluateDemand).toHaveBeenCalledOnce();
     expect(reevaluateDemand).toHaveBeenCalledWith(state);
+  });
+});
+
+describe('runFrame — hover-pick removed from frame body', () => {
+  it('does not call pickRenderer.pick inside the frame body', () => {
+    // The hover-pick block was removed from runFrame. Hover picking is now
+    // fully pointer-driven via hoverPickDriver (wired in wireInput.ts).
+    // This test pins that invariant: even with a non-null pickRenderer and a
+    // non-null latestMouseCss-equivalent, runFrame must NEVER call
+    // pickRenderer.pick itself. If the block is accidentally re-added,
+    // this assertion catches it.
+    //
+    // The fixture leaves state.gpu.renderer=null so the frame bails before
+    // the GPU-dispatch section — we only need to confirm pick is not called
+    // during the camera + demand pre-pass (where the old block lived).
+    const store = makeStore();
+    const state = makeState();
+    const pickSpy = vi.fn<() => Promise<null>>(() => Promise.resolve(null));
+    // Seed a non-null pickRenderer so the old guard would have let through.
+    (state.gpu as any).pickRenderer = {
+      pick: pickSpy,
+      renderForDebug: vi.fn<() => null>(),
+      destroy: vi.fn<() => void>(),
+      label: 'pick',
+    };
+    const deps = makeDeps(store);
+
+    runFrame(state, deps, 1000);
+
+    // The frame body must never call pickRenderer.pick — hover picks are
+    // now the driver's responsibility, not the frame's.
+    expect(pickSpy).not.toHaveBeenCalled();
   });
 });
