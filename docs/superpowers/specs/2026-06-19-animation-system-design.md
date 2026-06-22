@@ -110,6 +110,14 @@ only** (see "Composition" below):
 | `yaw`, `pitch` | `add` (angular) | base (`aimAt`/`spin`) + vel (`rate`) + osc all sum |
 | `target` | `lin` (vec3) | one vec3 channel, component-wise lerp (`moveTarget`) |
 
+This table is **one canonical record**, not three copies — a single
+`CHANNEL_SPACE: Record<Channel, Space>` read by *both* the authoring helpers (so
+`dollyTo` fills `space: 'log'` from it, never hardcoded) *and* the
+registration-time validator. The `space` field on a `CameraAction` is an optional
+**override** that defaults from `CHANNEL_SPACE`; a helper never restates the
+mapping. (Keeping the channel→space fact in one home avoids the drift where a doc
+table, a helper, and a validator each carry their own copy.)
+
 **Why these four, and not `roll`/`fov`.** `roll` and `fovYRad` are real
 `OrbitCamera` params (the renderer reads `cam.roll`, `cam.fovYRad`) but are **not
 in `CameraPose`** — no driver produces them, no arbitration carries them. Making
@@ -507,16 +515,29 @@ frame's pose — a one-frame camera lag. Splitting compose-in-`pose()` from
 effects-at-end would either make `pose()` impure or run the camera and its scene
 effects off two clocks. Tick-first avoids both.
 
-A clip ending is a driver deactivation like a tween's, so `'clip'` joins the
-commit-on-edge set — the final composed pose bakes into `camera.base` so the next
-driver continues from where the clip left off:
+A clip ending is a driver deactivation like a tween's: the final composed pose
+must bake into `camera.base` so the next driver continues from where the clip left
+off. **Which drivers commit on edge is a property of the driver, not a list in the
+frame loop.** Today `runFrame` hardcodes the id set — `prev === 'tween' || prev
+=== 'autoRotate'` — and naively this design would add a third literal (`'clip'`),
+the start of an ever-growing OR-chain that couples the frame loop to driver-table
+membership. Instead, lift the fact onto the driver row as `commitsOnEdge` and let
+the frame loop read it:
 
 ```ts
-if (prev !== activeId && (prev === 'tween' || prev === 'autoRotate' || prev === 'clip')) {
+// driver rows declare the behaviour (tween / autoRotate / clip set it; orbitDrag / resting don't)
+{ id: 'clip', priority: 95, isActive: (s) => s.camera.clip !== null, commitsOnEdge: true, pose: () => clipPlayer.pose() }
+
+// the frame loop reads the property — no id literals, exhaustive by construction
+if (prev !== activeId && deps.drivers.byId(prev)?.commitsOnEdge) {
   deps.cb.store.dispatch(commitCameraPose(lastPose.current));
   renderPose = lastPose.current;
 }
 ```
+
+This dissolves the branch *and* its future growth: a fourth committing driver (a
+physics fling, a second scripted source) sets the flag on its row and the frame
+loop is untouched.
 
 ### Scene effects: visibility verbs and the opacity single-writer
 
@@ -551,6 +572,18 @@ a clip does not spawn a competing background fade — `show`/`hide` perform the 
 themselves, once. This codifies and **retires** `flowShowcase`'s per-frame
 `setImmediate` opacity clamp, which existed only to suppress that background fade
 by hand.
+
+*Why suspension and not an opacity driver table.* Opacity faces the same shape the
+camera does — multiple time-varying writers, one output, a handoff on edge — but
+solves it differently (suspend-the-bridge, not priority arbitration), and that
+asymmetry is **essential, not an oversight**: the camera has *N concurrent*
+sources to arbitrate every frame (orbitDrag, tween, autoRotate, resting, clip),
+whereas opacity has exactly *two mutually-exclusive* writers — the settings bridge
+*or* the clip, never both at once. For two exclusive writers, "park one while the
+other owns it" is strictly simpler than a full arbitration table; a table would be
+machinery for a concurrency that cannot occur. (If a second concurrent opacity
+animator ever appears, revisit — the camera's table is the proven pattern to
+adopt.)
 
 **Clip end — opacity commits its final value.** There is no dedicated clip-end
 reconcile. The bridge un-suspends by its own guard — `watchFades` resumes once
