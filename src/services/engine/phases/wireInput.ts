@@ -64,8 +64,9 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas } = deps;
 
-  // Build the pick renderer. It shares the same vertex/uniform buffers as
-  // the visual renderer — no extra GPU memory for point data.
+  // Build the pick renderer.  It owns its own uniform buffer; the visual
+  // renderer's buffer is no longer shared.  The `renderer` local is kept
+  // for the null-guard above and for `loadedSources` at pick time.
   const renderer = state.gpu.renderer;
   if (!renderer) return;
   // Thread the cluster marker renderer through so the pick pass can
@@ -75,7 +76,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // and the optional-vs-null distinction stays internal to the handle bag.
   const pickRenderer = createPickRenderer(
     deps.phaseLocals!.device,
-    renderer,
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
     state.gpu.focusBgl!,
@@ -258,6 +258,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     );
     if (!hasAny) return null;
 
+    // No frame rendered yet — no camera state to reproduce in the pick
+    // pass.  Resolves to null (background), matching pre-first-frame
+    // click behaviour.
+    const uniformBytes = state.picking.lastFrameUniformBytes;
+    if (uniformBytes === null) return null;
+
     return cr.resolveClick({
       pickXPx: cssToTexPx(xCss),
       pickYPx: cssToTexPx(yCss),
@@ -266,6 +272,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // Threaded through so the pick pass can boost its floor size
       // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
+      // Packed uniform bytes from the last visual frame.  The pick
+      // renderer uploads them to its OWN buffer and applies its three
+      // overrides — the visual buffer is never touched.
+      uniformBytes,
       // Per-pass GPU timing.  Resolves to `undefined` when the
       // timing service isn't active on this adapter (no
       // `timestamp-query` feature) — in that case the pick render

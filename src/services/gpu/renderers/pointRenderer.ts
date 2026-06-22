@@ -796,7 +796,6 @@ export function createPointRenderer(
     totalCount,
     countOf,
     loadedSources,
-    uniformBuffer,
     draw,
     destroy,
   };

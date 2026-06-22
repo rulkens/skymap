@@ -2,11 +2,10 @@
  * PointRenderer — public surface of the point renderer.
  *
  * Produced by the closure factory `createPointRenderer`.
- * `uniformBuffer` is a bare property rather than a getter because the
- * captured buffer is never reassigned over the renderer's lifetime;
- * `loadedSources` is a function returning a fresh generator on each
- * call.  Consumers: engine, frame body, picker, bias-correction
- * subsystem.
+ * `loadedSources` returns a fresh generator on each call.
+ * Consumers: engine, frame body, bias-correction subsystem.
+ * The pick renderer no longer shares the uniform buffer — it owns its
+ * own GPU buffer and receives the packed bytes via `draw()`'s return value.
  */
 
 import type { mat4 } from 'gl-matrix';
@@ -72,16 +71,6 @@ export type PointRenderer = {
      */
     sourceBuffer: GPUBuffer;
   }>;
-  /**
-   * @internal
-   *
-   * Read by `createPickRenderer` — the pick pass shares this uniform
-   * buffer with the visual pass so it sees the same view-projection
-   * matrix the visual frame just wrote.  Engine code MUST NOT consume
-   * this; the coupling is bound at PickRenderer construction time and
-   * threaded internally.
-   */
-  uniformBuffer: GPUBuffer;
   /**
    * Issue one instanced draw call per visible source.
    *

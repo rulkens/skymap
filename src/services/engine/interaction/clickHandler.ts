@@ -54,7 +54,12 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
         args.pickXPx,
         args.pickYPx,
         args.visibleSources,
-        args.pointSizePx,
+        args.pointSizePx ?? 2.5,
+        // Packed uniform bytes from the last visual frame — the pick
+        // renderer uploads this to its OWN buffer, then applies the
+        // three pick-specific overrides (sentinel, padded size, pickPass).
+        // The visual pass's GPU buffer is never touched.
+        args.uniformBytes,
         // Per-pass GPU timing — undefined when the timing service is
         // absent (no `timestamp-query` feature or overlay off).  The
         // pick render pass writes start/end timestamps into the

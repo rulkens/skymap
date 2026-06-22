@@ -371,11 +371,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       state.gpu.structureMarkerRenderer,
       milkyWayPickVisible(state),
     );
-    if (hasAny) {
+    const debugUniformBytes = state.picking.lastFrameUniformBytes;
+    if (hasAny && debugUniformBytes !== null) {
       const pickTex = state.gpu.pickRenderer.renderForDebug(
         [deps.canvas.width, deps.canvas.height],
         overlaySources,
         state.settings.galaxyCatalogs.sizePx,
+        debugUniformBytes,
       );
       if (pickTex !== null) {
         const overlayEncoder = deps.device.createCommandEncoder({
@@ -445,7 +447,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // galaxy catalog hidden. Pickability and frame-liveness are independent:
     // an early return here once froze the flow field whenever the cursor
     // stopped over the canvas or moved onto a panel.
-    if (hasAny) {
+    const hoverUniformBytes = state.picking.lastFrameUniformBytes;
+    if (hasAny && hoverUniformBytes !== null) {
       // Snapshot the position at the moment we kick off the pick.
       const pos = state.picking.latestMouseCss;
       state.picking.lastPickedMouseCss = pos;
@@ -460,6 +463,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
           // Boost the picking floor for easier hover targets — see
           // PICK_PADDING_PX in pickRenderer.ts.
           state.settings.galaxyCatalogs.sizePx,
+          // Packed uniform bytes from the last visual frame.  The pick
+          // renderer uploads them to its OWN buffer; the visual buffer is
+          // never touched (two-writer hazard eliminated).
+          hoverUniformBytes,
           // Optional GPU-timing descriptor for the hover-pick pass. Undefined
           // unless `?gpuTimings` is set; the click path in clickHandler.ts
           // wires this the same way. When present, the descriptor binds the

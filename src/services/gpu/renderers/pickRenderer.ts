@@ -11,9 +11,13 @@
  * occlusion.  The visual pipeline skips depth because additive
  * blending wants every halo to contribute.
  *
- * The pick pipeline reads `PointRenderer`'s vertex + uniform buffers
- * directly — callers must run the visual pass first so this frame's
- * viewProj/viewport/etc are already written when `pick()` fires.
+ * The pick pipeline owns its OWN uniform buffer (`pickUniformBuffer`,
+ * allocated at construction).  Each `pick()` / `renderForDebug()` call
+ * receives the caller's `uniformBytes` — a CPU copy of what the last
+ * visual frame packed via `packPointUniforms` — uploads them in full,
+ * then applies the three pick-specific overrides (selectedPacked
+ * sentinel, padded pointSizePx, pickPass = 1) on top.  The visual
+ * pass's GPU buffer is NEVER touched; two-writer corruption is gone.
  * Point billboards pick a `pointSizePx`-clamped dot; resolved galaxy
  * disks are picked by the procedural-disk pass at the disk edge.
  *
@@ -29,7 +33,6 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../../../@types/rendering/PickSourceDraw';
 import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
 import type { Vec2 } from '../../../@types/math/Vec2';
-import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
@@ -42,6 +45,7 @@ import {
   SELECTED_PACKED_BYTE_OFFSET,
   POINT_SIZE_BYTE_OFFSET,
   PICK_PASS_BYTE_OFFSET,
+  UNIFORM_BYTES,
 } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { SELECTION_NONE_SENTINEL, unpackPick } from '../../../data/selectionEncoding';
@@ -58,15 +62,14 @@ import type { PickResult } from '../../../@types/data/PickResult';
 const PICK_PADDING_PX = 4;
 
 /**
- * Construct a `PickRenderer` bound to `device` and a specific
- * `PointRenderer`.  Pick textures are allocated lazily and recreated
- * on viewport change.  `pointRenderer` is held by reference and read
- * inside `pick()` to find the shared uniform buffer — destroy this
- * picker before destroying the PointRenderer.
+ * Construct a `PickRenderer` bound to `device`.  Pick textures are
+ * allocated lazily and recreated on viewport change.  The renderer
+ * owns its own `pickUniformBuffer`; callers pass the last visual
+ * frame's packed uniform bytes into each `pick()` / `renderForDebug()`
+ * call instead of sharing the point renderer's live GPU buffer.
  */
 export function createPickRenderer(
   device: GPUDevice,
-  pointRenderer: PointRenderer,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
   focusBgl: FocusUniformsBgl,
@@ -195,6 +198,29 @@ export function createPickRenderer(
     },
   });
 
+  // The pick renderer's own uniform buffer.  `pick()` and
+  // `renderForDebug()` upload the caller's `uniformBytes` (last visual
+  // frame's packed image) here and then apply the three pick-specific
+  // overrides on top — the visual pass's GPU buffer is never touched.
+  // Why own the buffer rather than sharing?  Two writers on one buffer
+  // is the bug this change deletes: pick would scribble on the visual
+  // uniforms and rely on the next render frame to undo the damage.
+  const pickUniformBuffer = device.createBuffer({
+    label: 'pick-uniform-buffer',
+    size: UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  // @group(0) bind group built once at construction time, bound on
+  // every `recordPickPass`.  Building once avoids the per-pass
+  // `createBindGroup` that the previous per-pass path created, and
+  // lets the pipeline layout's group(0) slot hold a stable object.
+  const pickUniformBindGroup = device.createBindGroup({
+    label: 'pick-uniform-bg',
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: pickUniformBuffer } }],
+  });
+
   // `copyTextureToBuffer` requires `bytesPerRow` to be a multiple of
   // 256.  We only read 4 bytes per pick but must allocate at least
   // 256.  MAP_READ-only — never written from the CPU.
@@ -265,49 +291,52 @@ export function createPickRenderer(
   /**
    * Record the shared per-source pick pass into `encoder`.  Both
    * `pick()` and `renderForDebug()` use this for the common middle —
-   * uniform overrides, bind groups, draw loop, structure ring picks.  The
-   * two callers diverge only on the tail (readback vs return-texture).
+   * uniform upload, pick-specific overrides, bind groups, draw loop,
+   * structure ring picks.  The two callers diverge only on the tail
+   * (readback vs return-texture).
    *
-   * Reads `sharedUniformBuffer` lazily so a future PointRenderer
-   * device-loss recovery picks up the new buffer handle.  The bind-
-   * group cache is keyed by GPUBuffer identity, so a tier swap that
-   * destroys an old sourceBuffer invalidates the cached bind group
+   * `uniformBytes` is the CPU copy of what the last visual frame packed
+   * via `packPointUniforms`; it is uploaded verbatim, then the three
+   * pick-specific fields are overridden in place on `pickUniformBuffer`.
+   * The bind-group cache is keyed by GPUBuffer identity, so a tier swap
+   * that destroys an old sourceBuffer invalidates the cached bind group
    * via GC.
    */
   function recordPickPass(
     encoder: GPUCommandEncoder,
     sourceList: readonly PickSourceDraw[],
     passLabel: string,
-    pointSizePx: number | undefined,
+    pointSizePx: number,
+    uniformBytes: ArrayBuffer,
     timingDescriptor: GPURenderPassTimestampWrites | undefined,
   ): GPUTexture {
-    const sharedUniformBuffer = pointRenderer.uniformBuffer;
     const pt = pickTexture!;
     const dt = depthTexture!;
 
-    // Three in-place uniform overrides, all reset by the next visual
-    // frame's full-buffer rewrite:
-    //   - `selectedPacked` → none-sentinel: stops the 8× selection-
-    //     ring scaling from inflating the pick area.
-    //   - `pointSizePx` + PICK_PADDING_PX: widens the click target
-    //     for far-field dots.
-    //   - `pickPass` = 1: shared vertex shader skips procedural-disk
-    //     crossfade-OUT and the intensity-floor cull, so disk-sized
-    //     galaxies remain pickable (the disk renderer has no pick
-    //     pipeline of its own).
+    // Full upload: reproduce the last visual frame's camera / viewport /
+    // settings state on the pick renderer's OWN buffer.  The visual
+    // pass's GPU buffer is never touched — this is the invariant that
+    // eliminates the two-writer bug.
+    device.queue.writeBuffer(pickUniformBuffer, 0, uniformBytes);
+
+    // Three pick-specific overrides applied on top of the base upload:
+    //   - `selectedPacked` → none-sentinel: stops the 8× selection-ring
+    //     scaling from inflating the hit area for the selected galaxy.
+    //   - `pointSizePx` + PICK_PADDING_PX: widens click targets for
+    //     far-field point-like galaxies without growing visible sprites.
+    //   - `pickPass` = 1: shared vertex shader skips crossfade-OUT and
+    //     intensity-floor culls so disk-sized galaxies stay pickable.
     device.queue.writeBuffer(
-      sharedUniformBuffer,
+      pickUniformBuffer,
       SELECTED_PACKED_BYTE_OFFSET,
       new Uint32Array([SELECTION_NONE_SENTINEL]),
     );
-    if (pointSizePx !== undefined) {
-      device.queue.writeBuffer(
-        sharedUniformBuffer,
-        POINT_SIZE_BYTE_OFFSET,
-        new Float32Array([pointSizePx + PICK_PADDING_PX]),
-      );
-    }
-    device.queue.writeBuffer(sharedUniformBuffer, PICK_PASS_BYTE_OFFSET, new Uint32Array([1]));
+    device.queue.writeBuffer(
+      pickUniformBuffer,
+      POINT_SIZE_BYTE_OFFSET,
+      new Float32Array([pointSizePx + PICK_PADDING_PX]),
+    );
+    device.queue.writeBuffer(pickUniformBuffer, PICK_PASS_BYTE_OFFSET, new Uint32Array([1]));
 
     const pass = encoder.beginRenderPass({
       label: `${passLabel}-pass`,
@@ -331,13 +360,10 @@ export function createPickRenderer(
       ...(timingDescriptor ? { timestampWrites: timingDescriptor } : {}),
     });
 
-    const bindGroup = device.createBindGroup({
-      label: `${passLabel}-uniforms`,
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: { buffer: sharedUniformBuffer } }],
-    });
+    // Bind the prebuilt @group(0) bind group (built once at construction
+    // against pickUniformBuffer — avoids per-pass createBindGroup calls).
     pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
+    pass.setBindGroup(0, pickUniformBindGroup);
     pass.setBindGroup(1, dummyFadeBindGroup);
     pass.setBindGroup(3, focusBindGroup);
 
@@ -404,7 +430,8 @@ export function createPickRenderer(
     pickXPx: number,
     pickYPx: number,
     sources: Iterable<PickSourceDraw>,
-    pointSizePx?: number,
+    pointSizePx: number,
+    uniformBytes: ArrayBuffer,
     timingDescriptor?: GPURenderPassTimestampWrites,
   ): Promise<PickResult | null> {
     if (inFlight) return null;
@@ -423,7 +450,7 @@ export function createPickRenderer(
     const py = Math.max(0, Math.min(vpH - 1, Math.floor(pickYPx)));
 
     const encoder = device.createCommandEncoder();
-    const pt = recordPickPass(encoder, sourceList, 'pick', pointSizePx, timingDescriptor);
+    const pt = recordPickPass(encoder, sourceList, 'pick', pointSizePx, uniformBytes, timingDescriptor);
 
     // `bytesPerRow` must be a multiple of 256; staging buffer is
     // pre-sized to 256 even though we only read 4 bytes.
@@ -467,7 +494,8 @@ export function createPickRenderer(
   function renderForDebug(
     viewportPx: Vec2,
     sources: Iterable<PickSourceDraw>,
-    pointSizePx?: number,
+    pointSizePx: number,
+    uniformBytes: ArrayBuffer,
   ): GPUTexture | null {
     const sourceList = Array.from(sources);
     if (!hasAnyPickTarget(sourceList)) return null;
@@ -475,7 +503,7 @@ export function createPickRenderer(
     ensureTextures(vpW, vpH);
 
     const encoder = device.createCommandEncoder({ label: 'pick-debug-encoder' });
-    const pt = recordPickPass(encoder, sourceList, 'pick-debug', pointSizePx, undefined);
+    const pt = recordPickPass(encoder, sourceList, 'pick-debug', pointSizePx, uniformBytes, undefined);
     device.queue.submit([encoder.finish()]);
     return pt;
   }
@@ -486,6 +514,7 @@ export function createPickRenderer(
     depthTexture?.destroy();
     stagingBuffer.destroy();
     dummyFadeBuffer.destroy();
+    pickUniformBuffer.destroy();
     // focusBindGroup wraps the engine-owned shared focus buffer; the
     // engine's destroy() releases it, not the picker.
   }

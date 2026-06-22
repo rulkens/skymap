@@ -109,6 +109,7 @@ function makeState(): EngineState {
       lastPickedMouseCss: null,
       pickInFlight: false,
       pointerDown: false,
+      lastFrameUniformBytes: null as ArrayBuffer | null,
     },
     gpu: {
       renderer: null,
