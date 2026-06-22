@@ -286,11 +286,11 @@ uniformBytes: ArrayBuffer;
 
 **Interfaces — Consumes:** `createHoverPickDriver` (Task 5); `collectPickTargets` / `deriveSourceMasks` / `milkyWayPickVisible` (existing). **Produces:** the live trigger that replaces the in-frame hover block (removed in Task 8).
 
-- [ ] In `inputBindings.test.ts`, add/modify: `mouse pointermove does NOT call scheduler.requestRender` and `mouse pointermove calls onPointerMove`; keep `pointerleave still calls requestRender`. (The existing wake-ownership tests at the "Wake ownership" coverage area, `:13-15`, are the place to edit.)
-- [ ] Run `npm test -- inputBindings` → the no-requestRender test fails (it currently wakes).
-- [ ] Remove the `requestRender()` from the pointermove handler; construct + wire the driver in `wireInput.ts`.
-- [ ] `npm test -- inputBindings` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] In `inputBindings.test.ts`, add/modify: `mouse pointermove does NOT call scheduler.requestRender` and `mouse pointermove calls onPointerMove`; keep `pointerleave still calls requestRender`. (The existing wake-ownership tests at the "Wake ownership" coverage area, `:13-15`, are the place to edit.)
+- [x] Run `npm test -- inputBindings` → the no-requestRender test fails (it currently wakes).
+- [x] Remove the `requestRender()` from the pointermove handler; construct + wire the driver in `wireInput.ts`.
+- [x] `npm test -- inputBindings` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
@@ -307,12 +307,12 @@ uniformBytes: ArrayBuffer;
 
 **Interfaces — Consumes:** `state.picking.lastFrameUniformBytes` (Task 2); `renderForDebug(..., uniformBytes)` (Task 4). **Produces:** `drawPickDebugOverlay` (called from `runFrame`).
 
-- [ ] In `renderFrame.test.ts` (or the `runFrame` test if separate), add/modify: `the frame body issues no hover pick` (assert no `pickRenderer.pick` call inside the frame), `lastFrameUniformBytes is populated at frame tail` (covered via the point-sprites stash — assert the value is set after a frame), and `the pick-debug overlay still draws when showPickBuffer is on` (now via `drawPickDebugOverlay`, passing the snapshot bytes). Add a `drawPickDebugOverlay` unit test if the helper warrants one (null-bytes → no draw; non-null → `renderForDebug` called with the bytes).
-- [ ] Run the relevant tests → the new assertions fail (hover block still present).
-- [ ] Delete the hover block; extract `drawPickDebugOverlay`; remove dead imports + (if unread) the `latestMouseCss`/`lastPickedMouseCss` fields; update the docblock.
-- [ ] `npm test -- renderFrame runFrame` green; `npm run typecheck` clean (both tsconfigs); full `npm test` green.
-- [ ] `grep -rn "resolvePick\|updateSelectionHover\|latestMouseCss" src/services/engine/frame/runFrame.ts` is empty.
-- [ ] Commit.
+- [x] In `renderFrame.test.ts` (or the `runFrame` test if separate), add/modify: `the frame body issues no hover pick` (assert no `pickRenderer.pick` call inside the frame), `lastFrameUniformBytes is populated at frame tail` (covered via the point-sprites stash — assert the value is set after a frame), and `the pick-debug overlay still draws when showPickBuffer is on` (now via `drawPickDebugOverlay`, passing the snapshot bytes). Add a `drawPickDebugOverlay` unit test if the helper warrants one (null-bytes → no draw; non-null → `renderForDebug` called with the bytes).
+- [x] Run the relevant tests → the new assertions fail (hover block still present).
+- [x] Delete the hover block; extract `drawPickDebugOverlay`; remove dead imports + (if unread) the `latestMouseCss`/`lastPickedMouseCss` fields; update the docblock.
+- [x] `npm test -- renderFrame runFrame` green; `npm run typecheck` clean (both tsconfigs); full `npm test` green.
+- [x] `grep -rn "resolvePick\|updateSelectionHover\|latestMouseCss" src/services/engine/frame/runFrame.ts` is empty.
+- [x] Commit.
 
 ---
 
