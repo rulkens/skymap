@@ -54,7 +54,7 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
         args.pickXPx,
         args.pickYPx,
         args.visibleSources,
-        args.pointSizePx ?? 2.5,
+        args.pointSizePx,
         // Packed uniform bytes from the last visual frame — the pick
         // renderer uploads this to its OWN buffer, then applies the
         // three pick-specific overrides (sentinel, padded size, pickPass).

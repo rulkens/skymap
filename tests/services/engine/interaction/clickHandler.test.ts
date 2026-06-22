@@ -62,6 +62,7 @@ const dummyArgs: ClickResolveInput = {
   pickYPx: 20,
   viewportPx: [800, 600],
   visibleSources: [],
+  pointSizePx: 2.5,
   uniformBytes: dummyUniformBytes,
 };
 
@@ -106,18 +107,18 @@ describe('createClickResolver', () => {
       pickYPx: 22,
       viewportPx: [1280, 720],
       visibleSources: sources,
+      pointSizePx: 3.2,
       uniformBytes,
     });
     expect(picker.pick).toHaveBeenCalledTimes(1);
     // Args in order: viewportPx, pickXPx, pickYPx, visibleSources,
-    // pointSizePx (defaults to 2.5 when not in ClickResolveInput),
-    // uniformBytes, timingDescriptor (undefined when absent).
+    // pointSizePx (now required), uniformBytes, timingDescriptor (undefined when absent).
     expect(picker.pick).toHaveBeenCalledWith(
       [1280, 720],
       11,
       22,
       sources,
-      2.5,
+      3.2,
       uniformBytes,
       undefined,
     );
@@ -137,6 +138,7 @@ describe('createClickResolver', () => {
       pickYPx: 5,
       viewportPx: [800, 600],
       visibleSources: [],
+      pointSizePx: 2.5,
       uniformBytes: specificUniformBytes,
     });
 
