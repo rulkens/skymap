@@ -67,7 +67,7 @@ export function packPointUniforms(
 
 **Do not re-braid:** `packPointUniforms` knows nothing about EngineState, the pick path, or overrides — it is a pure packer. Keep it that way.
 
-- [ ] Write `tests/utils/gpu/packPointUniforms.test.ts` first (failing). Assert, against a known `viewProj`/`viewportPx`/`settings` fixture, the bytes at every written offset by reading the result through `Float32Array`/`Uint32Array` views:
+- [x] Write `tests/utils/gpu/packPointUniforms.test.ts` first (failing). Assert, against a known `viewProj`/`viewportPx`/`settings` fixture, the bytes at every written offset by reading the result through `Float32Array`/`Uint32Array` views:
   - viewProj at float index 0 (16 floats) equals the input matrix.
   - `viewportPx.x`/`.y` at byte 64/68 (float index 16/17).
   - `selectedPacked` (u32) at byte 80 (`SELECTED_PACKED_BYTE_OFFSET`).
@@ -78,11 +78,11 @@ export function packPointUniforms(
   - `pxFadeStart`/`pxFadeEnd` at bytes 160/164.
   - `pickPass` at byte 168 (`PICK_PASS_BYTE_OFFSET`) packs as **0**; the pad slots (84, 124, the reserved Schechter floats, 172) stay **0**.
   - The returned buffer's `byteLength === UNIFORM_BYTES` (176).
-- [ ] Confirm the test names map to the spec's "Testing" → `packPointUniforms` bullet (every written offset is the layout-drift guard).
-- [ ] Run `npm test -- packPointUniforms` → fails (module missing).
-- [ ] Implement `packPointUniforms` (move the packing body out of `draw` verbatim). Export `UNIFORM_BYTES`. Repoint `draw` to call it + return the buffer; change `draw`'s return to `ArrayBuffer | null`. Update `PointRenderer.d.ts` `draw` return type + the early-return-null docnote. Remove the now-stale `pointRenderer.ts:768-773` comment about pickRenderer flipping `pickPass` "in place" (that contract dies in Task 4 — but the comment about the *visual* pack writing `pickPass = 0` can stay; just drop the "pickRenderer flips it / visual frame resets it" sentence).
-- [ ] `npm test -- packPointUniforms pointRenderer` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Confirm the test names map to the spec's "Testing" → `packPointUniforms` bullet (every written offset is the layout-drift guard).
+- [x] Run `npm test -- packPointUniforms` → fails (module missing).
+- [x] Implement `packPointUniforms` (move the packing body out of `draw` verbatim). Export `UNIFORM_BYTES`. Repoint `draw` to call it + return the buffer; change `draw`'s return to `ArrayBuffer | null`. Update `PointRenderer.d.ts` `draw` return type + the early-return-null docnote. Remove the now-stale `pointRenderer.ts:768-773` comment about pickRenderer flipping `pickPass` "in place" (that contract dies in Task 4 — but the comment about the *visual* pack writing `pickPass = 0` can stay; just drop the "pickRenderer flips it / visual frame resets it" sentence).
+- [x] `npm test -- packPointUniforms pointRenderer` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
@@ -106,10 +106,10 @@ Initialise to `null` in the `engine.ts` picking literal (`:238`).
 
 **Interfaces — Produces:** `state.picking.lastFrameUniformBytes: ArrayBuffer | null` (read by Tasks 3, 4, 5, 6, 8).
 
-- [ ] Add the field + docblock to `EnginePickingState.d.ts:40-45`.
-- [ ] Add `lastFrameUniformBytes: null` to the `engine.ts` picking literal.
-- [ ] `npm run typecheck` clean; `npm test` full suite green (no behaviour change yet).
-- [ ] Commit.
+- [x] Add the field + docblock to `EnginePickingState.d.ts:40-45`.
+- [x] Add `lastFrameUniformBytes: null` to the `engine.ts` picking literal.
+- [x] `npm run typecheck` clean; `npm test` full suite green (no behaviour change yet).
+- [x] Commit.
 
 ---
 
@@ -125,11 +125,11 @@ The pass already calls `renderer.draw(pass, vp, [width, height], { … })`. Capt
 
 **Interfaces — Consumes:** `PointRenderer.draw` returns `ArrayBuffer | null` (Task 1). **Produces:** populates `state.picking.lastFrameUniformBytes` (Task 2).
 
-- [ ] In `passes.test.ts`, add a test `pointSpritesPass.draw stashes the packed uniform bytes onto state.picking.lastFrameUniformBytes` — drive a `draw` whose stubbed `renderer.draw` returns a sentinel `ArrayBuffer`, assert `state.picking.lastFrameUniformBytes === thatBuffer`. Add a sibling test asserting a `null` return leaves the prior value untouched. Extend the existing `STATE_STUB` with a `picking: { lastFrameUniformBytes: null, … }` slice.
-- [ ] Run `npm test -- passes` → the new tests fail.
-- [ ] Implement the stash in `pointSpritesPass.draw`.
-- [ ] `npm test -- passes` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] In `passes.test.ts`, add a test `pointSpritesPass.draw stashes the packed uniform bytes onto state.picking.lastFrameUniformBytes` — drive a `draw` whose stubbed `renderer.draw` returns a sentinel `ArrayBuffer`, assert `state.picking.lastFrameUniformBytes === thatBuffer`. Add a sibling test asserting a `null` return leaves the prior value untouched. Extend the existing `STATE_STUB` with a `picking: { lastFrameUniformBytes: null, … }` slice.
+- [x] Run `npm test -- passes` → the new tests fail.
+- [x] Implement the stash in `pointSpritesPass.draw`.
+- [x] `npm test -- passes` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
@@ -174,12 +174,12 @@ Both existing callers already pass `state.settings.galaxyCatalogs.sizePx` uncond
 
 **Interfaces — Consumes:** `state.picking.lastFrameUniformBytes` (the `uniformBytes` arg, threaded by Tasks 5/6/8); `UNIFORM_BYTES` export (Task 1). **Produces:** the new `pick`/`renderForDebug` signatures (consumed by Tasks 5, 6, 8); `createPickRenderer` drops its `pointRenderer` arg (consumed by `wireInput`).
 
-- [ ] In `pickRenderer.test.ts`: rewrite the construction test (`:69` "takes a PointRenderer at construction") to assert `createPickRenderer` no longer takes a point renderer. Add the **decoupling regression test**: with the stub device, call `pick(..., uniformBytes)` and assert (a) the renderer's `writeBuffer` is called with the renderer's OWN pick uniform buffer (the one returned by its own `createBuffer`, NOT any externally supplied buffer — there is no external buffer anymore), and (b) the three override `writeBuffer` calls land at `SELECTED_PACKED_BYTE_OFFSET` / `POINT_SIZE_BYTE_OFFSET` / `PICK_PASS_BYTE_OFFSET` with `SELECTION_NONE_SENTINEL` / `pointSizePx + PICK_PADDING_PX` / `1`. Add a test asserting `pick` returns `null` for an empty scene (no targets) and when a pick is already in flight (drive a deferred `mapAsync`). Thread the new `pointSizePx` (required) + `uniformBytes` args through every existing `pick(...)` call in all three pickRenderer test files.
-- [ ] Run `npm test -- pickRenderer` → fails.
-- [ ] Implement the own-buffer change in `pickRenderer.ts`; update both type files; update `wireInput.ts` + `pointRenderer.ts` (drop the public `uniformBuffer`); thread `uniformBytes` through `clickHandler.resolveClick` → `pick` (the `ClickResolveInput.uniformBytes` field is added in Task 6 — if landing Task 4 first, pass a placeholder `args.uniformBytes` and let Task 6 add the field; OR fold Task 6's type edit into this task. Prefer folding the `ClickResolveInput.uniformBytes` field + the `clickHandler` thread here so the suite is green, and let Task 6 wire the *reader* in `wireInput`).
-- [ ] `npm test -- pickRenderer clickHandler` green; `npm run typecheck` clean (the dropped `uniformBuffer` field will surface any stray reader as a tsc error — fix at the source).
-- [ ] `grep -rn "uniformBuffer" src/services/gpu/renderers/pickRenderer.ts` shows only `pickUniformBuffer`; `grep -rn "\.uniformBuffer" src/` shows no consumer reading a point-renderer buffer.
-- [ ] Commit.
+- [x] In `pickRenderer.test.ts`: rewrite the construction test (`:69` "takes a PointRenderer at construction") to assert `createPickRenderer` no longer takes a point renderer. Add the **decoupling regression test**: with the stub device, call `pick(..., uniformBytes)` and assert (a) the renderer's `writeBuffer` is called with the renderer's OWN pick uniform buffer (the one returned by its own `createBuffer`, NOT any externally supplied buffer — there is no external buffer anymore), and (b) the three override `writeBuffer` calls land at `SELECTED_PACKED_BYTE_OFFSET` / `POINT_SIZE_BYTE_OFFSET` / `PICK_PASS_BYTE_OFFSET` with `SELECTION_NONE_SENTINEL` / `pointSizePx + PICK_PADDING_PX` / `1`. Add a test asserting `pick` returns `null` for an empty scene (no targets) and when a pick is already in flight (drive a deferred `mapAsync`). Thread the new `pointSizePx` (required) + `uniformBytes` args through every existing `pick(...)` call in all three pickRenderer test files.
+- [x] Run `npm test -- pickRenderer` → fails.
+- [x] Implement the own-buffer change in `pickRenderer.ts`; update both type files; update `wireInput.ts` + `pointRenderer.ts` (drop the public `uniformBuffer`); thread `uniformBytes` through `clickHandler.resolveClick` → `pick` (the `ClickResolveInput.uniformBytes` field is added in Task 6 — if landing Task 4 first, pass a placeholder `args.uniformBytes` and let Task 6 add the field; OR fold Task 6's type edit into this task. Prefer folding the `ClickResolveInput.uniformBytes` field + the `clickHandler` thread here so the suite is green, and let Task 6 wire the *reader* in `wireInput`).
+- [x] `npm test -- pickRenderer clickHandler` green; `npm run typecheck` clean (the dropped `uniformBuffer` field will surface any stray reader as a tsc error — fix at the source).
+- [x] `grep -rn "uniformBuffer" src/services/gpu/renderers/pickRenderer.ts` shows only `pickUniformBuffer`; `grep -rn "\.uniformBuffer" src/` shows no consumer reading a point-renderer buffer.
+- [x] Commit.
 
 ---
 
