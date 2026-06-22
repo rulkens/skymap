@@ -320,25 +320,25 @@ uniformBytes: ArrayBuffer;
 
 **This is a review pass, not a code change.** Run the `entanglement-radar` skill/lens over the whole branch diff (`git diff main...HEAD`). Confirm the decomplection actually happened and no new accidental coupling was introduced. Per `docs/superpowers/conventions/simplicity.md`.
 
-- [ ] The shared-buffer **two-writer coupling is gone**: `grep -rn "pointRenderer.uniformBuffer\|\.uniformBuffer" src/` shows no cross-renderer reader; `PointRenderer` no longer exposes `uniformBuffer`; the pick renderer writes only its own `pickUniformBuffer`.
-- [ ] `packPointUniforms` is the **sole packer**: the 176-byte layout is inlined nowhere else (`grep -rn "ArrayBuffer(UNIFORM_BYTES)\|new Float32Array(buf)" src/` points only at `packPointUniforms.ts`); the offset-table test is present.
-- [ ] **No re-braid**: the hover driver snapshots only `lastFrameUniformBytes` (targets/viewport/pointSize stay live thunks); the click path still derives targets fresh; hover does not call `requestRender`.
-- [ ] **No new accidental coupling**: `drawPickDebugOverlay`'s dep bag is the narrowest shape it needs (not the whole `RunFrameDeps` if avoidable); `HoverPickDeps` is thunks-not-EngineState; no renderer imports `EngineState`.
-- [ ] Capture any finding as a follow-up note in the plan (or fix inline if trivial + green).
+- [x] The shared-buffer **two-writer coupling is gone**: `grep -rn "pointRenderer.uniformBuffer\|\.uniformBuffer" src/` shows no cross-renderer reader; `PointRenderer` no longer exposes `uniformBuffer`; the pick renderer writes only its own `pickUniformBuffer`.
+- [x] `packPointUniforms` is the **sole packer**: the 176-byte layout is inlined nowhere else (`grep -rn "ArrayBuffer(UNIFORM_BYTES)\|new Float32Array(buf)" src/` points only at `packPointUniforms.ts`); the offset-table test is present.
+- [x] **No re-braid**: the hover driver snapshots only `lastFrameUniformBytes` (targets/viewport/pointSize stay live thunks); the click path still derives targets fresh; hover does not call `requestRender`.
+- [x] **No new accidental coupling**: `drawPickDebugOverlay`'s dep bag is the narrowest shape it needs (not the whole `RunFrameDeps` if avoidable); `HoverPickDeps` is thunks-not-EngineState; no renderer imports `EngineState`.
+- [x] Capture any finding as a follow-up note in the plan (or fix inline if trivial + green).
 
 ---
 
 ## Definition of Done
 
-- [ ] `npm test` — full suite green, no pass-count reduction, output pristine.
-- [ ] `npm run typecheck` clean (both src + tools tsconfigs).
-- [ ] **The decoupling regression test is present** (pickRenderer never writes an external buffer; overrides land on its own buffer at the right offsets) and green.
-- [ ] **The pointermove-no-longer-wakes-a-frame test is present** (mouse pointermove does not call `requestRender`; pointerleave still does) and green.
-- [ ] `packPointUniforms` offset-table test is present (every written byte offset asserted; `pickPass` packs 0; pads stay 0).
-- [ ] `renderFrame.ts` "What stays in `runFrame()`" docblock updated (hover pick gone; debug overlay is a helper).
-- [ ] No dead imports in `runFrame.ts` (`resolvePick`/`updateSelectionHover`/`latestMouseCss` removed where unread).
-- [ ] Spec out-of-scope respected: no change to the pick *encoding*/`resolvePick`/`selectionEncoding`, no change to the pick GPU pipeline / WGSL, no touch/pen behaviour change (mouse-only gate stays), no double-click/focus change, no shared hover↔click throttle (click stays one-shot).
-- [ ] `git diff main...HEAD` reviewed via `entanglement-radar` (Task 9) — the two-writer coupling is gone, `packPointUniforms` is the sole packer, no new accidental coupling.
+- [x] `npm test` — full suite green, no pass-count reduction, output pristine.
+- [x] `npm run typecheck` clean (both src + tools tsconfigs).
+- [x] **The decoupling regression test is present** (pickRenderer never writes an external buffer; overrides land on its own buffer at the right offsets) and green.
+- [x] **The pointermove-no-longer-wakes-a-frame test is present** (mouse pointermove does not call `requestRender`; pointerleave still does) and green.
+- [x] `packPointUniforms` offset-table test is present (every written byte offset asserted; `pickPass` packs 0; pads stay 0).
+- [x] `renderFrame.ts` "What stays in `runFrame()`" docblock updated (hover pick gone; debug overlay is a helper).
+- [x] No dead imports in `runFrame.ts` (`resolvePick`/`updateSelectionHover`/`latestMouseCss` removed where unread).
+- [x] Spec out-of-scope respected: no change to the pick *encoding*/`resolvePick`/`selectionEncoding`, no change to the pick GPU pipeline / WGSL, no touch/pen behaviour change (mouse-only gate stays), no double-click/focus change, no shared hover↔click throttle (click stays one-shot).
+- [x] `git diff main...HEAD` reviewed via `entanglement-radar` (Task 9) — the two-writer coupling is gone, `packPointUniforms` is the sole packer, no new accidental coupling.
 
 ## Plan-style self-review
 
