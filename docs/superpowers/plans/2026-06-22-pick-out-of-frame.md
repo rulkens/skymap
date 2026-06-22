@@ -226,17 +226,17 @@ export function createHoverPickDriver(deps: HoverPickDeps): {
 
 **Interfaces — Consumes:** `pickRenderer.pick(..., pointSizePx, uniformBytes, timingDescriptor?)` (Task 4); `state.picking.lastFrameUniformBytes` (Task 2); `resolvePick` + `updateSelectionHover` (existing); `cssToTexPx` (existing helper). **Produces:** `createHoverPickDriver` (consumed by Task 7's `wireInput`).
 
-- [ ] Write `hoverPickDriver.test.ts` first (failing), pure-logic with a fake `pick` returning a controllable deferred promise (no GPU). Tests (map 1:1 to spec "Testing" → `hoverPickDriver`):
+- [x] Write `hoverPickDriver.test.ts` first (failing), pure-logic with a fake `pick` returning a controllable deferred promise (no GPU). Tests (map 1:1 to spec "Testing" → `hoverPickDriver`):
   - `a move while a pick is in flight does not start a second pick` (one `pick` call after two rapid moves).
   - `the trailing-edge maybeFire fires the resting position after the in-flight pick resolves` (resolve the deferred, assert a second `pick` at the latest pos).
   - `null lastFrameUniformBytes is a no-op` (no `pick` call).
   - `an empty-target scene is a no-op` (`collectTargets` → `hasAny: false`, no `pick` call).
   - `the resolved pick dispatches updateSelectionHover` (assert `store.dispatch` got the `updateSelectionHover(resolvePick(...))` action).
   - `the driver never calls requestRender` (assert no scheduler in deps / no requestRender invoked — structural: the deps bag has no scheduler field).
-- [ ] Run `npm test -- hoverPickDriver` → fails.
-- [ ] Implement `HoverPickDeps.d.ts` + `hoverPickDriver.ts`.
-- [ ] `npm test -- hoverPickDriver` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Run `npm test -- hoverPickDriver` → fails.
+- [x] Implement `HoverPickDeps.d.ts` + `hoverPickDriver.ts`.
+- [x] `npm test -- hoverPickDriver` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
@@ -265,11 +265,11 @@ uniformBytes: ArrayBuffer;
 
 **Interfaces — Consumes:** `state.picking.lastFrameUniformBytes` (Task 2); `ClickResolveInput.uniformBytes` (this task / Task 4); `pick(..., uniformBytes, …)` (Task 4).
 
-- [ ] In `clickHandler.test.ts`, add `resolveClick threads uniformBytes into pickRenderer.pick` (assert the `pick` mock's 6th arg === the passed `uniformBytes`). Thread `uniformBytes` into every existing `resolveClick({ … })` fixture in that file.
-- [ ] Run `npm test -- clickHandler` → fails (if the field/thread aren't in yet).
-- [ ] Add the `ClickResolveInput.uniformBytes` field (if not from Task 4); wire `runPickAtCss` to read + thread the snapshot + null-guard.
-- [ ] `npm test -- clickHandler` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] In `clickHandler.test.ts`, add `resolveClick threads uniformBytes into pickRenderer.pick` (assert the `pick` mock's 6th arg === the passed `uniformBytes`). Thread `uniformBytes` into every existing `resolveClick({ … })` fixture in that file.
+- [x] Run `npm test -- clickHandler` → fails (if the field/thread aren't in yet).
+- [x] Add the `ClickResolveInput.uniformBytes` field (if not from Task 4); wire `runPickAtCss` to read + thread the snapshot + null-guard.
+- [x] `npm test -- clickHandler` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
