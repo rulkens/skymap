@@ -23,10 +23,8 @@
  *
  * ```ts
  * const sched = createRenderScheduler({ onFrame: () => frame() });
- * canvas.addEventListener('pointermove', () => {
- *   latestMouseCss = ...;
- *   sched.requestRender();
- * });
+ * canvas.addEventListener('wheel', () => { sched.requestRender(); });
+ * canvas.addEventListener('pointerdown', () => { sched.requestRender(); });
  *
  * function frame() {
  *   // ...all the existing per-frame work...

@@ -234,6 +234,14 @@ describe('createHoverPickDriver', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(expectedAction);
   });
 
+  // (g) Drag-skip: no picks while a pointer drag (orbit) is in progress
+  it('a pointermove while pointerDown (dragging) does not start a pick', () => {
+    pickingState.pointerDown = true;
+    const driver = createHoverPickDriver(deps);
+    driver.onPointerMove(posA);
+    expect(picker.callCount()).toBe(0);
+  });
+
   // (f) Structural: no scheduler in deps bag
   it('the driver has no scheduler / requestRender field in its deps bag', () => {
     // This test is structural — it documents and enforces that the deps type

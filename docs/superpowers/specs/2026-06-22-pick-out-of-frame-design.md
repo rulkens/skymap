@@ -201,6 +201,7 @@ function createHoverPickDriver(deps: HoverPickDeps) {
   function onPointerMove(pos: CssPx): void { latest = pos; maybeFire(); }
 
   function maybeFire(): void {
+    if (deps.state.picking.pointerDown) return;        // skip hover picks mid-drag (orbiting, not hovering)
     if (deps.state.picking.pickInFlight) return;       // coalesce
     if (latest === null || latest === picked) return;  // nothing new
     fire(latest);

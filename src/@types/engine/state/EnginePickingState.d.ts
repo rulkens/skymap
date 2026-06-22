@@ -42,6 +42,14 @@
 
 export type EnginePickingState = {
   pickInFlight: boolean;
+  /**
+   * True while the user holds the pointer button down to orbit the camera.
+   * `hoverPickDriver` returns early in `maybeFire()` when this is true so
+   * orbit drags do not trigger hover picks — a drag is not a hover, and
+   * firing picks every readback cycle mid-drag causes a pick-per-readback
+   * storm and spurious `updateSelectionHover` dispatches.
+   * Written by `wireInput.ts`; read by `hoverPickDriver.ts`.
+   */
   pointerDown: boolean;
   /**
    * Packed PointUniforms image from the last visual frame (see

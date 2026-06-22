@@ -57,6 +57,12 @@ export function createHoverPickDriver(deps: HoverPickDeps): {
   }
 
   function maybeFire(): void {
+    // Skip hover picks while the user is dragging to orbit — a drag is not
+    // a hover, and firing picks every readback cycle during a drag causes a
+    // pick-per-readback storm plus spurious updateSelectionHover dispatches.
+    // Restores the pre-refactor gate that lived in the old in-frame block.
+    if (deps.state.picking.pointerDown) return;
+
     // Coalesce: a second pick while the first readback is in flight wastes
     // GPU work and risks reading stale results. The `.finally` will re-call
     // maybeFire() after the in-flight pick settles, so the resting position
