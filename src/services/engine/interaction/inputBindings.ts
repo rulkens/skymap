@@ -49,9 +49,11 @@
  *   - window  resize                                 — onResize.
  *
  * Wake contract: listeners whose effects no change channel covers
- * (pointermove, pointerdown, resize) call `scheduler.requestRender()`
- * themselves; Escape stays wake-free (the selection setters own that
- * wake) and pointerup only flips a flag the next frame reads.
+ * (pointerleave, pointerdown, resize) call `scheduler.requestRender()`
+ * themselves; pointermove is wake-free — hover is handled by the
+ * hoverPickDriver which dispatches to the store with no frame needed;
+ * Escape stays wake-free (the selection setters own that wake) and
+ * pointerup only flips a flag the next frame reads.
  */
 
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -90,11 +92,11 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
 
   // ── Canvas pointer events ────────────────────────────────────────────
   //
-  // We track the latest mouse position via `onPointerMove`'s callback;
-  // engine uses this to drive the per-frame throttled hover pick.  The
-  // pick itself is async (1-2 frames later) and its `.then` calls
-  // `requestRender` again so the selection halo updates as soon as the
-  // readback lands.
+  // `onPointerMove` feeds the `hoverPickDriver` (constructed in wireInput).
+  // The driver schedules its own GPU pick asynchronously and dispatches the
+  // hover result to the store, which React reads via selectors — no render
+  // frame is needed. Omitting `requestRender` here is intentional: a mouse
+  // move over a static scene must not force a 2.5M-point re-render.
 
   addCanvasListener('pointermove', (e) => {
     const pe = e as PointerEvent;
@@ -102,12 +104,11 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
     // pointermove that would otherwise drive the hover-pick and pop the
     // InfoCard on tap.  Gating on the moving pointer being a mouse is
     // per-event, so a hybrid device (touchscreen laptop, iPad + trackpad)
-    // still gets hover from its mouse and never from a finger.  We skip the
+    // still gets hover from its mouse and never from a finger.  We skip
     // requestRender too: this listener exists only to feed the hover-pick,
     // so a touch move has nothing here to wake the loop for.
     if (pe.pointerType !== 'mouse') return;
     onPointerMove({ x: pe.clientX, y: pe.clientY });
-    scheduler.requestRender();
   });
 
   // When the pointer leaves the canvas the engine clears hover state.

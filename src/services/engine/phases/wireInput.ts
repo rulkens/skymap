@@ -32,6 +32,7 @@ import { attachOrbitControls } from '../../camera/orbitControls';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
 import { createClickResolver } from '../interaction/clickHandler';
+import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
 import { poseOf } from '../camera/poseOf';
@@ -95,6 +96,37 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     () => milkyWayPickHalfExtentPx(state, canvas.height),
   );
   state.gpu.pickRenderer = pickRenderer;
+
+  // ── Hover-pick driver ────────────────────────────────────────────────
+  //
+  // `hoverPickDriver` owns the full async hover-pick path, decoupled from
+  // the render frame. A pointer move feeds `onPointerMove`; the driver
+  // coalesces moves (GPU readback latency is the natural throttle),
+  // fires an async pick, and dispatches the hover result to the Redux store.
+  // Because hover feeds only the React InfoCard text — not a visual halo —
+  // no `requestRender` is ever needed here.
+  //
+  // All thunks are closures over live `state` / `canvas` so viewport size,
+  // sizePx setting, and pick masks are always fresh at fire time, not
+  // captured as stale values at construction.
+  const store = deps.cb.store;
+  const hoverPickDriver = createHoverPickDriver({
+    state,
+    pickRenderer,
+    store,
+    resolveDeps: { structures: state.data.structures },
+    collectTargets: () =>
+      collectPickTargets(
+        renderer,
+        deriveSourceMasks(state).pick,
+        state.gpu.structureMarkerRenderer,
+        milkyWayPickVisible(state),
+      ),
+    viewportPx: () => [canvas.width, canvas.height],
+    pointSizePx: () => state.settings.galaxyCatalogs.sizePx,
+    timingDescriptor: () => state.gpu.timingService.descriptorFor('pick'),
+  });
+
   // The resolver runs the whole pixel → SelectionRef boundary via
   // `resolvePick`: it decodes the pick and emits an identity ref. Galaxy
   // identity is purely positional (no cloud read at pick time); the
@@ -139,7 +171,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   //   3. `commitCameraPose` dispatch — makes `camera.base` in the Redux store
   //      authoritative before the first produced frame, so the `resting` driver
   //      returns the correct pose and the first frame does not jump.
-  const store = deps.cb.store;
   state.cameraRuntime.projection = {
     fovYRad,
     aspect: canvas.width / canvas.height,
@@ -176,19 +207,20 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // is the *semantic* engine action — the inputBindings module
   // already converts `e.clientX/Y` to a CSS-pixel record and owns
   // the requestRender wake for channel-uncovered events (see its
-  // module header for the contract).
+  // module header for the contract).  pointermove is wake-free: the
+  // hoverPickDriver owns the async pick path and dispatches to the
+  // store; no render frame is required for hover.
   state.subsystems.inputBindings = attachEngineInputs({
     canvas,
     // Scheduler by reference — created eagerly in the state literal (the
     // forward-declared `frame` binding handles the construction-vs-body
     // chicken-and-egg).
     scheduler: state.subsystems.scheduler,
-    // Track latest mouse position for the per-frame throttled
-    // hover pick.  The pick itself is async (1-2 frames later)
-    // but its .then also calls requestRender so the selection
-    // halo updates as soon as the readback lands.
+    // Delegate to the hoverPickDriver, which coalesces moves and fires an
+    // async GPU pick. The driver dispatches the hover SelectionRef to the
+    // store; React reads it via selectors. No requestRender needed.
     onPointerMove: (cssPx) => {
-      state.picking.latestMouseCss = cssPx;
+      hoverPickDriver.onPointerMove(cssPx);
     },
     // Pointer left the canvas → clear hover state.  If a point
     // is selected the card stays visible (showing the pinned
