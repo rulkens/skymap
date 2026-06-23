@@ -186,9 +186,11 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 168..171: pickPass          u32          (0 = visual, 1 = pick)      }
  *   bytes 172..175: _padFade1         f32          (written as 0)              }
  *   bytes 176..187: lensCenterWorld   vec3<f32>    (lens centre, world Mpc)    }
- *   bytes 188..191: lensEnabled       u32          (0 = off, 1 = lens)         } 32 bytes
- *   bytes 192..195: lensThetaE        f32          (Einstein radius, radians)  }  (two vec4 slots)
- *   bytes 196..207: _padLens0/1/2     f32×3        (written as 0)              }
+ *   bytes 188..191: lensEnabled       u32          (0 = off, 1 = lens)         }
+ *   bytes 192..195: lensStrength      f32          (peak deflection, radians)  } 32 bytes
+ *   bytes 196..199: lensMode          u32          (0 = SIS, 1 = NFW)          }  (two vec4 slots)
+ *   bytes 200..203: lensScaleRadius   f32          (NFW r_s in Mpc)            }
+ *   bytes 204..207: _padLens0         f32          (written as 0)              }
  *
  * Total: 208 bytes — a multiple of 16 ✓
  *
@@ -735,7 +737,9 @@ export function createPointRenderer(
       focusBindGroup,
       lensEnabled,
       lensCenterWorld,
-      lensThetaERad,
+      lensStrengthRad,
+      lensMode,
+      lensScaleRadiusMpc,
     } = settings;
     if (galaxyCatalogs.size === 0) return;
 
@@ -793,8 +797,10 @@ export function createPointRenderer(
     f32[45] = lensCenterWorld[1];
     f32[46] = lensCenterWorld[2];
     u32[47] = lensEnabled ? 1 : 0; // bytes 188
-    f32[48] = lensThetaERad; // bytes 192
-    // f32[49..51] (_padLens0/1/2) stay zero.
+    f32[48] = lensStrengthRad; // bytes 192
+    u32[49] = lensMode === 'nfw' ? 1 : 0; // bytes 196 (0 = SIS, 1 = NFW)
+    f32[50] = lensScaleRadiusMpc; // bytes 200
+    // f32[51] (_padLens0) stays zero.
 
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 

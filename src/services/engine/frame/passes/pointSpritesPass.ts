@@ -117,11 +117,14 @@ export const pointSpritesPass: Pass = {
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
       // Gravitational-lensing prototype. The lens centre is the camera
       // orbit target (the thing you've zoomed into); the strength slider
-      // is an exaggerated Einstein radius in degrees, converted to
-      // radians here. Off by default — toggled from the Debug panel.
+      // is an exaggerated peak deflection in degrees, converted to radians
+      // here. Off by default — toggled from the Debug panel, where the
+      // SIS/NFW mode and NFW scale radius also live.
       lensEnabled: state.settings.debug.lensingEnabled,
       lensCenterWorld: [ctx.cam.target[0]!, ctx.cam.target[1]!, ctx.cam.target[2]!],
-      lensThetaERad: (state.settings.debug.lensStrengthDeg * Math.PI) / 180,
+      lensStrengthRad: (state.settings.debug.lensStrengthDeg * Math.PI) / 180,
+      lensMode: state.settings.debug.lensMode,
+      lensScaleRadiusMpc: state.settings.debug.lensScaleRadiusMpc,
     });
   },
 };

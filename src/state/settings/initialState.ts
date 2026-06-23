@@ -26,6 +26,8 @@ import {
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_LENSING_ENABLED,
   DEFAULT_LENS_STRENGTH_DEG,
+  DEFAULT_LENS_MODE,
+  DEFAULT_LENS_SCALE_RADIUS_MPC,
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -105,6 +107,8 @@ export function buildInitialSettings(): EngineSettingsState {
       disabledPasses: {},
       lensingEnabled: DEFAULT_LENSING_ENABLED,
       lensStrengthDeg: DEFAULT_LENS_STRENGTH_DEG,
+      lensMode: DEFAULT_LENS_MODE,
+      lensScaleRadiusMpc: DEFAULT_LENS_SCALE_RADIUS_MPC,
     },
     // Structure overlay: master gate on + one item row per category, each
     // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`

@@ -101,7 +101,9 @@ fn vs(
   let lensedPos = lensDeflect(
     u.camPosWorld,
     u.lensCenterWorld,
-    u.lensThetaE,
+    u.lensStrength,
+    u.lensScaleRadius,
+    u.lensMode,
     u.lensEnabled,
     p.position,
   );

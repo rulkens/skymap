@@ -10,6 +10,7 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
+import type { LensMode } from '../settings/LensMode';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -68,10 +69,19 @@ export type PointDrawSettings = {
    */
   lensCenterWorld: Readonly<Vec3>;
   /**
-   * Einstein angular radius in radians, already scaled by the UI
-   * exaggeration factor. Real cluster Einstein radii are tens of
-   * arcseconds (invisible at typical zoom), so this is intentionally
-   * exaggerated. See `lib/lensing.wesl`.
+   * Peak angular deflection in radians, already scaled by the UI
+   * exaggeration factor. The Einstein radius θ_E in SIS mode; the peak
+   * deflection in NFW mode (the shape is peak-normalised so the two match).
+   * Real cluster Einstein radii are tens of arcseconds (invisible at
+   * typical zoom), so this is intentionally exaggerated. See
+   * `lib/lensing.wesl`.
    */
-  lensThetaERad: number;
+  lensStrengthRad: number;
+  /** Lensing profile: SIS (constant deflection) or NFW (g(x)/x). */
+  lensMode: LensMode;
+  /**
+   * NFW scale radius r_s in Mpc — sets where the deflection peaks (the ring
+   * radius). Ignored in SIS mode.
+   */
+  lensScaleRadiusMpc: number;
 };

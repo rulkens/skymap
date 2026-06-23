@@ -197,15 +197,17 @@ struct Uniforms {
   //   offset 176 : lensCenterWorld vec3<f32>  (lens centre, world Mpc =
   //                                             the camera orbit target)
   //   offset 188 : lensEnabled     u32        (fills the vec4 slot)
-  //   offset 192 : lensThetaE      f32        (Einstein radius, radians,
+  //   offset 192 : lensStrength    f32        (peak deflection, radians,
   //                                             already × UI exaggeration)
-  //   offset 196 : _padLens0/1/2   f32×3      (round up to 208 = 13×16)
+  //   offset 196 : lensMode        u32        (0 = SIS, 1 = NFW)
+  //   offset 200 : lensScaleRadius f32        (NFW r_s in Mpc; SIS ignores)
+  //   offset 204 : _padLens0       f32        (round up to 208 = 13×16)
   lensCenterWorld: vec3<f32>,
   lensEnabled: u32,
-  lensThetaE: f32,
+  lensStrength: f32,
+  lensMode: u32,
+  lensScaleRadius: f32,
   _padLens0: f32,
-  _padLens1: f32,
-  _padLens2: f32,
 };
 
 // ─── per-instance vertex attributes ──────────────────────────────────

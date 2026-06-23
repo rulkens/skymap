@@ -54,6 +54,7 @@ import type { BiasMode as BiasModeT } from '../@types/data/galaxyCatalog/BiasMod
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
+import type { LensMode } from '../@types/settings/LensMode';
 import { SOURCE_REGISTRY, Source } from './sources';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
@@ -279,9 +280,20 @@ export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
 export const DEFAULT_LENSING_ENABLED = false;
 
 /**
- * Default exaggerated Einstein-ring radius in DEGREES.  Real cluster
- * Einstein radii are tens of arcseconds (~0.01°); 3° is wildly
- * exaggerated so the ring is visible while orbiting a cluster.  See
+ * Default exaggerated peak deflection in DEGREES.  Real cluster Einstein
+ * radii are tens of arcseconds (~0.01°); 3° is wildly exaggerated so the
+ * ring is visible while orbiting a cluster.  See
  * `EngineSettingsState.debug.lensStrengthDeg`.
  */
 export const DEFAULT_LENS_STRENGTH_DEG = 3.0;
+
+/** Default lensing profile.  See `EngineSettingsState.debug.lensMode`. */
+export const DEFAULT_LENS_MODE: LensMode = 'sis';
+
+/**
+ * Default NFW scale radius r_s in Mpc — sets where the deflection peaks
+ * (the ring radius).  ~1 Mpc gives a visible ring while orbiting a cluster
+ * at the prototype's exaggerated scales.  See
+ * `EngineSettingsState.debug.lensScaleRadiusMpc`.
+ */
+export const DEFAULT_LENS_SCALE_RADIUS_MPC = 1.0;

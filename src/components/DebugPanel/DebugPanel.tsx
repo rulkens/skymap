@@ -27,6 +27,7 @@
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { LensMode } from '../../@types/settings/LensMode';
 import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
@@ -74,14 +75,20 @@ export type DebugPanelProps = {
   flow: FlowSettings;
   onFlowChange: (patch: Partial<FlowSettings>) => void;
   /**
-   * Gravitational-lensing prototype: master toggle + exaggerated Einstein
-   * radius in degrees. App-owned and optimistic like the other toggles —
-   * the container dispatches `setLensingEnabled` / `setLensStrengthDeg`.
+   * Gravitational-lensing prototype: master toggle, SIS/NFW profile, the
+   * exaggerated peak deflection in degrees, and the NFW scale radius. App-
+   * owned and optimistic like the other toggles — the container dispatches
+   * `setLensingEnabled` / `setLensMode` / `setLensStrengthDeg` /
+   * `setLensScaleRadiusMpc`.
    */
   lensingEnabled: boolean;
+  lensMode: LensMode;
   lensStrengthDeg: number;
+  lensScaleRadiusMpc: number;
   onLensingEnabledChange: (enabled: boolean) => void;
+  onLensModeChange: (mode: LensMode) => void;
   onLensStrengthDegChange: (deg: number) => void;
+  onLensScaleRadiusMpcChange: (mpc: number) => void;
   /**
    * Called with the pass name when a RenderTogglesSection checkbox is toggled.
    * Container (DebugPanelContainer) dispatches `setPassDisabled`; absorbed here
@@ -106,9 +113,13 @@ export function DebugPanel({
   flow,
   onFlowChange,
   lensingEnabled,
+  lensMode,
   lensStrengthDeg,
+  lensScaleRadiusMpc,
   onLensingEnabledChange,
+  onLensModeChange,
   onLensStrengthDegChange,
+  onLensScaleRadiusMpcChange,
   onTogglePass,
 }: DebugPanelProps) {
   return (
@@ -142,9 +153,13 @@ export function DebugPanel({
       <div style={{ marginTop: 6 }} />
       <LensingTuningSection
         enabled={lensingEnabled}
+        mode={lensMode}
         strengthDeg={lensStrengthDeg}
+        scaleRadiusMpc={lensScaleRadiusMpc}
         onEnabledChange={onLensingEnabledChange}
+        onModeChange={onLensModeChange}
         onStrengthDegChange={onLensStrengthDegChange}
+        onScaleRadiusMpcChange={onLensScaleRadiusMpcChange}
       />
       <div style={{ marginTop: 6 }} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>

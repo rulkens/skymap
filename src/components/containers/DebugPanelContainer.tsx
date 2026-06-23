@@ -29,7 +29,9 @@ import {
   selectRealOnly,
   selectFlow,
   selectLensingEnabled,
+  selectLensMode,
   selectLensStrengthDeg,
+  selectLensScaleRadiusMpc,
 } from '../../state/settings/selectors';
 import {
   setShowPickBuffer,
@@ -39,8 +41,11 @@ import {
   setFlow,
   setPassDisabled,
   setLensingEnabled,
+  setLensMode,
   setLensStrengthDeg,
+  setLensScaleRadiusMpc,
 } from '../../state/settings/settingsSlice';
+import type { LensMode } from '../../@types/settings/LensMode';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
@@ -65,7 +70,9 @@ function DebugPanelContainer({
   const realOnlyMode = useAppSelector(selectRealOnly);
   const flow = useAppSelector(selectFlow);
   const lensingEnabled = useAppSelector(selectLensingEnabled);
+  const lensMode = useAppSelector(selectLensMode);
   const lensStrengthDeg = useAppSelector(selectLensStrengthDeg);
+  const lensScaleRadiusMpc = useAppSelector(selectLensScaleRadiusMpc);
 
   const onShowPickBufferChange = useCallback(
     (enabled: boolean) => dispatch(setShowPickBuffer(enabled)),
@@ -97,8 +104,15 @@ function DebugPanelContainer({
     [dispatch],
   );
 
+  const onLensModeChange = useCallback((mode: LensMode) => dispatch(setLensMode(mode)), [dispatch]);
+
   const onLensStrengthDegChange = useCallback(
     (deg: number) => dispatch(setLensStrengthDeg(deg)),
+    [dispatch],
+  );
+
+  const onLensScaleRadiusMpcChange = useCallback(
+    (mpc: number) => dispatch(setLensScaleRadiusMpc(mpc)),
     [dispatch],
   );
 
@@ -126,9 +140,13 @@ function DebugPanelContainer({
       flow={flow}
       onFlowChange={onFlowChange}
       lensingEnabled={lensingEnabled}
+      lensMode={lensMode}
       lensStrengthDeg={lensStrengthDeg}
+      lensScaleRadiusMpc={lensScaleRadiusMpc}
       onLensingEnabledChange={onLensingEnabledChange}
+      onLensModeChange={onLensModeChange}
       onLensStrengthDegChange={onLensStrengthDegChange}
+      onLensScaleRadiusMpcChange={onLensScaleRadiusMpcChange}
       onTogglePass={onTogglePass}
     />
   );

@@ -44,6 +44,7 @@ import type { StructureItemSettings } from '../../@types/settings/StructureItemS
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { LensMode } from '../../@types/settings/LensMode';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
@@ -136,6 +137,11 @@ export const selectLensingEnabled = (state: RootState): boolean =>
 
 export const selectLensStrengthDeg = (state: RootState): number =>
   selectSettings(state).debug.lensStrengthDeg;
+
+export const selectLensMode = (state: RootState): LensMode => selectSettings(state).debug.lensMode;
+
+export const selectLensScaleRadiusMpc = (state: RootState): number =>
+  selectSettings(state).debug.lensScaleRadiusMpc;
 
 // --- structures cluster -------------------------------------------------------
 
