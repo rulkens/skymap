@@ -167,9 +167,15 @@ fn vs(
       let dirImage = normalize(toSrc + primaryOffset * dS);
       lensedPos = u.camPosWorld + dirImage * dS;
       lensValid = 1u;
-    } else if (hasDominant) {
-      // Dominant lens's counter image: θ = δ − β on the −tangent side,
-      // valid only when the source sits inside that lens's Einstein radius.
+    } else if (hasDominant && lensing.mode == 0u) {
+      // Counter image — SIS ONLY. The inner image sits at θ = δ − β on the
+      // −tangent side, valid when the source is inside the Einstein radius.
+      // NFW is deliberately suppressed here: its deflection δ(β) varies, so
+      // the SIS closed-form counter position and the 1 + δ/β magnification
+      // place a spurious inner ghost. Correct NFW multi-imaging requires
+      // inverting β = θ − α(θ), which has no closed form — deferred to the
+      // precomputed-LUT approach (see the NFW-lensing-LUT design spec). Until
+      // then NFW renders the primary image only; the counter quad is culled.
       let thetaC = bestDelta - bestBeta;
       if (thetaC > 0.0) {
         let dirImage = bestDirLens * cos(thetaC) - bestTangent * sin(thetaC);
