@@ -52,7 +52,7 @@
 // the summation/dominant-pick. This keeps the per-lens math here and the
 // accumulation policy in the vertex stage.
 //
-// ## Distance scaling and the finite-cluster envelope
+// ## Distance scaling and the two damping envelopes
 //
 // The Einstein radius carries a D_ls/D_s factor: a source just behind
 // the lens is barely deflected, one at infinity feels the full θ_E. We
@@ -60,9 +60,23 @@
 // fidelity of an interactive viz (the box is ~Gpc, redshifts modest).
 //
 // A true SIS has infinite extent and would shift the ENTIRE sky by θ_E.
-// Real clusters are finite, so we damp the deflection with a Gaussian
-// envelope a few Einstein radii wide, keeping the distortion a local
-// "lens" around the cluster instead of a global pan.
+// We damp the deflection by TWO Gaussian envelopes:
+//
+//   - ANGULAR, a few Einstein radii wide in β. This is the real physics:
+//     the deflection falls off with angular separation from the lens
+//     centre, shaping the ring.
+//   - SPATIAL, in world Mpc: gate on the IMPACT PARAMETER — the
+//     perpendicular distance from the cluster centre to the source's line
+//     of sight, b = D_l·sin β. The angular envelope's physical width is
+//     ~3·θ_E·D_l, which GROWS with the eye→lens distance, so a pulled-back
+//     camera lenses an ever-wider physical cone behind the cluster. Capping
+//     b at a fixed Mpc scale instead confines each lens to a fixed-width
+//     pencil along the line of sight to the cluster: sources directly
+//     behind it are bent at ANY depth (b → 0, so the ring still forms),
+//     off-axis sources are not, and a distant camera no longer widens the
+//     reach. A real cluster's finite extent truncates its lensing at just
+//     such a physical impact parameter, so this is also the honest
+//     finite-SIS cutoff.
 //
 // ## Prototype scope
 //
@@ -90,6 +104,12 @@
 // diverges as β → 0 (a point source on the caustic); real sources are
 // extended, which caps the peak — 'vs' approximates that finite-source
 // limit with its own MU_MAX clamp.
+
+// Spatial-envelope radius: the impact-parameter scale (world Mpc) over
+// which a cluster's deflection dies off (1-sigma). Light passing within
+// ~3x this of the cluster centre is bent. Single prototype value for now;
+// the follow-up is to scale it per-cluster with mass alongside θ_E.
+const LENS_LOCAL_RADIUS_MPC: f32 = 30.0;
 
 // One lens's contribution to a source, resolved in the source's sky frame.
 // 'valid == 0u' means the lens does not deflect this source (it sits in
@@ -162,13 +182,21 @@ fn lensTerm(eye: vec3<f32>, lens: vec4<f32>, dirSrc: vec3<f32>, dS: f32) -> Lens
   // lens centre — the direction the primary image is pushed.
   let tangent = (dirSrc - dirLens * cosB) / sinB;
 
-  // Finite-cluster envelope: Gaussian ~3·θ_E wide so the shift dies off
-  // far from the lens centre instead of panning the whole sky.
-  let envelope = exp(-(beta * beta) / (2.0 * thetaEeff * thetaEeff * 9.0));
+  // Angular envelope: Gaussian ~3·θ_E wide so the shift dies off with
+  // separation from the lens centre instead of panning the whole sky.
+  let angularEnv = exp(-(beta * beta) / (2.0 * thetaEeff * thetaEeff * 9.0));
+
+  // Spatial envelope: gate on the impact parameter b = D_l·sin β (the
+  // perpendicular distance from the cluster centre to the eye→source ray),
+  // in world Mpc. Sources directly behind the cluster (b → 0) stay bent at
+  // any depth — so the ring survives — while a distant camera cannot widen
+  // the physical reach. See the header.
+  let impact = dL * sinB;
+  let localEnv = exp(-(impact * impact) / (2.0 * LENS_LOCAL_RADIUS_MPC * LENS_LOCAL_RADIUS_MPC));
 
   term.valid = 1u;
   term.beta = beta;
-  term.delta = thetaEeff * envelope;
+  term.delta = thetaEeff * angularEnv * localEnv;
   term.dirLens = dirLens;
   term.tangent = tangent;
   return term;
