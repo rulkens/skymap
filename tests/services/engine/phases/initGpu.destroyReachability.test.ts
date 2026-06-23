@@ -76,12 +76,22 @@ vi.mock('../../../../src/services/gpu/bindGroupLayouts/sourceUniforms', () => ({
 vi.mock('../../../../src/services/gpu/bindGroupLayouts/focusUniforms', () => ({
   createFocusUniformsBgl: vi.fn(() => ({ __mockFocusBgl: true })),
 }));
+vi.mock('../../../../src/services/gpu/bindGroupLayouts/lensingUniforms', () => ({
+  createLensingUniformsBgl: vi.fn(() => ({ __mockLensingBgl: true })),
+}));
 
-// The shared focus uniform allocates a real GPU buffer; the minimal device
-// stub here has no createBuffer, so mock the factory to a no-op handle.
+// The shared focus + lensing uniforms allocate real GPU buffers; the minimal
+// device stub here has no createBuffer, so mock the factories to no-op handles.
 vi.mock('../../../../src/services/gpu/resources/createFocusUniformBuffer', () => ({
   createFocusUniformBuffer: vi.fn(() => ({
     bindGroup: { __mockFocusBindGroup: true },
+    write: () => {},
+    destroy: () => {},
+  })),
+}));
+vi.mock('../../../../src/services/gpu/resources/createLensingUniformBuffer', () => ({
+  createLensingUniformBuffer: vi.fn(() => ({
+    bindGroup: { __mockLensingBindGroup: true },
     write: () => {},
     destroy: () => {},
   })),

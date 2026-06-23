@@ -10,8 +10,6 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
-import type { LensSpec } from './LensSpec';
-import type { LensMode } from '../settings/LensMode';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -60,25 +58,18 @@ export type PointDrawSettings = {
 
   /**
    * Gravitational-lensing prototype gate. When true, the vertex stage
-   * deflects sources behind the in-view cluster lenses (SIS thin-lens
-   * model). When false, the lens math short-circuits at zero cost and the
-   * draw issues the single (un-doubled) quad per source.
+   * deflects sources behind the in-view cluster lenses and the draw issues
+   * TWO quads per source (primary + counter image). When false, the lens
+   * math short-circuits at zero cost and the draw issues the single
+   * (un-doubled) quad per source. The CPU keeps this flag (not the shared
+   * lensing buffer) because it gates the 12-vs-6 vertex draw count here.
    */
   lensEnabled: boolean;
   /**
-   * The in-view cluster lenses to apply this frame, each a world centre +
-   * Einstein angular radius (already scaled by the per-cluster mass proxy).
-   * Packed into the points uniform tail by `packPointUniforms`; the vertex
-   * shader sums every foreground lens's deflection and renders the dominant
-   * lens's counter-image. Capped at `MAX_LENSES`; empty when lensing is off
-   * or no cluster sits in front of the camera. See `lib/lensing.wesl`.
+   * Shared LensingUniforms bind group (@group(4)) bound by the points + pick
+   * pipelines. The engine writes the single lensing buffer once per frame in
+   * renderFrame; the vertex stage reads the lens array + mode + scale radius
+   * from it.
    */
-  lenses: readonly LensSpec[];
-  /** Lensing profile applied to every in-view lens: SIS (constant deflection) or NFW (g(x)/x). */
-  lensMode: LensMode;
-  /**
-   * NFW scale radius r_s in Mpc — sets where the deflection peaks (the ring
-   * radius). Ignored in SIS mode.
-   */
-  lensScaleRadiusMpc: number;
+  lensingBindGroup: GPUBindGroup;
 };

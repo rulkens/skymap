@@ -22,7 +22,8 @@ import type { Vec3 } from '../../@types/math/Vec3';
  *
  * `masterThetaRad` is the UI Einstein radius (radians) for a significance-1
  * cluster; `0` (slider at rest) returns no lenses. The result feeds
- * `PointDrawSettings.lenses` → `packPointUniforms`.
+ * `LensingUniformsValue.lenses` → `packLensingUniforms` (the shared lensing
+ * buffer written once per frame in `renderFrame`).
  */
 export function buildClusterLenses(
   structures: readonly StructureInfo[],

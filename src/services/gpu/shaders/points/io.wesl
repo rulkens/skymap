@@ -186,31 +186,11 @@ struct Uniforms {
   // would not be pickable (the disk renderer has no pick pipeline).
   pickPass: u32,
   _padFade1: f32,
-
-  // ── Gravitational-lensing prototype (multi-cluster SIS thin-lens) ───
-  //
-  // Appended at the END of the struct (offset 176+) so the picker's
-  // in-place uniform mutations — selectedPacked (80), pointSizePx (88),
-  // pickPass (168), all < 176 — keep their byte offsets. See
-  // lib/lensing.wesl for the deflection model.
-  //
-  //   offset 176 : lensEnabled     u32   master toggle
-  //   offset 180 : lensCount       u32   active lenses (≤ MAX_LENSES)
-  //   offset 184 : lensMode        u32   0 = SIS, 1 = NFW
-  //   offset 188 : lensScaleRadius f32   NFW r_s in Mpc (SIS ignores)
-  //   offset 192 : lenses          array<vec4<f32>, 16>  xyz = centre Mpc,
-  //                                       w = peak deflection rad (θ_E in SIS)
-  //
-  // lensMode + lensScaleRadius repurpose the two pad slots that fill the
-  // vec4 header before the 16-byte-aligned array, so the struct stays 448
-  // bytes. MAX_LENSES (16) MUST match 'packPointUniforms.MAX_LENSES' — the
-  // CPU packer and this array length are the single drift point, same as
-  // the rest of the byte layout.
-  lensEnabled: u32,
-  lensCount: u32,
-  lensMode: u32,
-  lensScaleRadius: f32,
-  lenses: array<vec4<f32>, 16>,
+  // The struct ends here at 176 bytes. The gravitational-lensing lens
+  // array + profile knobs live in their OWN shared buffer (the points
+  // vertex stage binds it at @group(4) — see lib/lensingUniforms.wesl),
+  // not in this tail, so a second pipeline (the volume raymarch, a later
+  // phase) can bind the same lens data without re-packing it.
 };
 
 // ─── per-instance vertex attributes ──────────────────────────────────

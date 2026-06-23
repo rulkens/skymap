@@ -80,9 +80,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
     state.gpu.focusBgl!,
+    state.gpu.lensingBgl!,
     // The live shared focus buffer — so the pick pass excludes non-members
     // of a focused structure from hit-testing (vertex shader culls them).
     state.gpu.focusUniform!.bindGroup,
+    // The live shared lensing buffer — so the pick pass deflects sources the
+    // same way the visual pass does and lensed images stay hit-testable.
+    state.gpu.lensingUniform!.bindGroup,
     state.gpu.structureMarkerRenderer ?? undefined,
     state.gpu.proceduralDiskRenderer ?? undefined,
     // The Milky-Way pick provider + its disk-visibility-gate-and-size

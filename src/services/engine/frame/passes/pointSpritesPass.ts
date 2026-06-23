@@ -52,8 +52,6 @@
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
-import { buildClusterLenses } from '../../../../utils/lensing/buildClusterLenses';
-import { MAX_LENSES } from '../../../../utils/gpu/packPointUniforms';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
@@ -86,23 +84,6 @@ export const pointSpritesPass: Pass = {
     // closure below doesn't call performance.now() per source.
     const nowMs = performance.now();
     const fades = state.subsystems.fades;
-
-    // Gravitational-lensing lenses: every in-view cluster, each with an
-    // Einstein radius = the master slider angle scaled by the cluster's mass
-    // proxy. buildClusterLenses culls to clusters in front of the camera and
-    // caps the count (the shader loops over them per vertex). Empty when the
-    // toggle is off or the slider is at zero, so the cost is gated.
-    const lensEnabled = state.settings.debug.lensingEnabled;
-    const masterThetaRad = (state.settings.debug.lensStrengthDeg * Math.PI) / 180;
-    const lenses = lensEnabled
-      ? buildClusterLenses(
-          state.data.structures.all(),
-          ctx.drawCamPos,
-          ctx.cam.target,
-          masterThetaRad,
-          MAX_LENSES,
-        )
-      : [];
 
     // draw returns the packed PointUniforms ArrayBuffer it submitted to
     // the GPU, or null when there are zero loaded catalogs. Stash a
@@ -140,13 +121,12 @@ export const pointSpritesPass: Pass = {
       // registered yet renders at full opacity rather than disappearing.
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
-      // Gravitational-lensing prototype: the in-view cluster lenses built
-      // above. Off by default — toggled from the Debug panel, where the
-      // SIS/NFW mode and NFW scale radius also live.
-      lensEnabled,
-      lenses,
-      lensMode: state.settings.debug.lensMode,
-      lensScaleRadiusMpc: state.settings.debug.lensScaleRadiusMpc,
+      // Gravitational-lensing prototype. `lensEnabled` still gates the
+      // 12-vs-6 vertex draw count on the CPU; the actual lens array + mode +
+      // scale radius live in the shared LensingUniforms buffer (written once
+      // per frame in renderFrame), bound here at @group(4).
+      lensEnabled: state.settings.debug.lensingEnabled,
+      lensingBindGroup: state.gpu.lensingUniform!.bindGroup,
     });
     if (bytes !== null) state.picking.lastFrameUniformBytes = bytes;
   },

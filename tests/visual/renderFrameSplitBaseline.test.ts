@@ -339,6 +339,7 @@ describe('renderFrame visual baseline', () => {
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
+          lensingUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
         // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
         // A null slot → slotReady false → not loaded.

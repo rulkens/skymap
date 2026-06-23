@@ -313,6 +313,7 @@ function makeInput(
           flowFieldRenderer: null,
           structureMarkerRenderer: null,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
+          lensingUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
         // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the
         // gate early-returns once the renderer is null.  A null slot →

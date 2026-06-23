@@ -260,6 +260,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       sourceBgl: null,
       focusBgl: null,
       focusUniform: null,
+      lensingBgl: null,
+      lensingUniform: null,
       postProcess: null,
       volumeOffscreen: null,
       filamentRenderer: null,
@@ -656,6 +658,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // its group (points/disks/pick already destroyed above).
     state.gpu.focusUniform?.destroy();
     state.gpu.focusUniform = null;
+    // Shared gravitational-lensing uniform — same lifecycle: released after
+    // the points + pick pipelines that bind its @group(4) group are gone.
+    state.gpu.lensingUniform?.destroy();
+    state.gpu.lensingUniform = null;
 
     // 5. Drop remaining strong references to aid GC.
     for (const source of [...state.data.galaxies.catalogs.keys()]) {

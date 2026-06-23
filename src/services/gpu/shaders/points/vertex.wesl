@@ -20,8 +20,9 @@
 // importing one authoritative struct makes drift structurally impossible.
 //
 // pickFragment.wesl declares no bindings of its own — this vertex
-// module references '@group(0)' (Uniforms) and '@group(2)' (per-source
-// SourceUniforms). The colorFragment module additionally declares
+// module references '@group(0)' (Uniforms), '@group(2)' (per-source
+// SourceUniforms), '@group(3)' (FocusUniforms), and '@group(4)'
+// (LensingUniforms). The colorFragment module additionally declares
 // '@group(1)' (FadeUniforms). PickRenderer binds a no-op fade buffer
 // at '@group(1)' so its pipeline layout matches the visual pipeline.
 
@@ -38,6 +39,7 @@ import package::lib::astro::distanceModulus;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
+import package::lib::lensingUniforms::LensingUniforms;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -76,6 +78,16 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // dim into 'intensity'; at blend == 0 it returns 1.0 (no-op when nothing
 // is focused). See lib/focusUniforms.wesl for the math.
 @group(3) @binding(0) var<uniform> focus: FocusUniforms;
+
+// ── @group(4) — gravitational-lensing uniform (single shared binding) ─
+//
+// Pulled out of the @group(0) Uniforms tail into its own shared buffer so
+// a second pipeline (the volume raymarch) can bind the same lens data. One
+// lens set is active per frame, so this is a single global binding (like
+// focus, not per-source). 'lensing.count' gates the per-vertex lens loop;
+// 'lensing.enabled' short-circuits the deflection. See lib/lensingUniforms.wesl
+// for the struct and lib/lensing.wesl for the deflection model.
+@group(4) @binding(0) var<uniform> lensing: LensingUniforms;
 
 // Peak lensing magnification clamp. A point source on the caustic has
 // infinite μ; a real (extended) source saturates at ~θ_E / source-size.
@@ -121,10 +133,10 @@ fn vs(
   var bestTangent = vec3<f32>(0.0, 0.0, 0.0);
   var hasDominant = false;
 
-  if (u.lensEnabled == 1u && dS > 1e-4) {
+  if (lensing.enabled == 1u && dS > 1e-4) {
     let dirSrc = toSrc / dS;
-    for (var i = 0u; i < u.lensCount; i = i + 1u) {
-      let term = lensTerm(u.camPosWorld, u.lenses[i], dirSrc, dS, u.lensMode, u.lensScaleRadius);
+    for (var i = 0u; i < lensing.count; i = i + 1u) {
+      let term = lensTerm(u.camPosWorld, lensing.lenses[i], dirSrc, dS, lensing.mode, lensing.scaleRadius);
       if (term.valid == 0u) {
         continue;
       }
@@ -149,7 +161,7 @@ fn vs(
   // Lens disabled / no foreground lens → identity primary, culled counter.
   var lensedPos = p.position;
   var lensValid = select(1u, 0u, imageKind == 1u);
-  if (u.lensEnabled == 1u && dS > 1e-4) {
+  if (lensing.enabled == 1u && dS > 1e-4) {
     if (imageKind == 0u) {
       // Primary: source direction rotated by the SUMMED deflection.
       let dirImage = normalize(toSrc + primaryOffset * dS);

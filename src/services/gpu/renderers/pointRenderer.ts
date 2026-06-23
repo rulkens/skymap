@@ -53,6 +53,7 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import type { LensingUniformsBgl } from '../../../@types/rendering/LensingUniformsBgl';
 import { packPointUniforms, UNIFORM_BYTES } from '../../../utils/gpu/packPointUniforms';
 
 // Re-export so the pick renderer and tests can obtain the buffer size
@@ -196,20 +197,14 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 164..167: pxFadeEnd         f32          (procedural-disk band high) } 16 bytes
  *   bytes 168..171: pickPass          u32          (0 = visual, 1 = pick)      }
  *   bytes 172..175: _padFade1         f32          (written as 0)              }
- *   bytes 176..179: lensEnabled       u32          (0 = off, 1 = lens)         }
- *   bytes 180..183: lensCount         u32          (active lenses ≤ MAX_LENSES)} 16-byte
- *   bytes 184..187: lensMode          u32          (0 = SIS, 1 = NFW)          } header
- *   bytes 188..191: lensScaleRadius   f32          (NFW r_s in Mpc)            }
- *   bytes 192..207: lenses[0]         vec4<f32>    (xyz centre Mpc, w θ_E rad) }
- *   …             : lenses[1..15]     vec4<f32>    (one per in-view cluster)   } MAX_LENSES×16
  *
- * Total: 176 + 16 + MAX_LENSES×16 = 448 bytes at MAX_LENSES=16 — a multiple of 16 ✓
+ * Total: 176 bytes — a multiple of 16 ✓
  *
- * The lensing block (gravitational-lensing prototype) is appended at the
- * END so the picker's in-place writes (selectedPacked/pointSizePx/pickPass,
- * all < 176) keep their byte offsets — see `points/io.wesl::Uniforms` and
- * `lib/lensing.wesl`.  `MAX_LENSES` lives in `packPointUniforms.ts`; the WGSL
- * `array<vec4<f32>, N>` length must match it.
+ * The gravitational-lensing lens array + profile knobs are NOT in this
+ * buffer — they live in their own shared `LensingUniforms` buffer (bound at
+ * @group(4) by the points + pick pipelines), so a second pipeline can bind
+ * the same lens data without re-packing the points uniform.  See
+ * `lib/lensingUniforms.wesl` + `utils/gpu/packLensingUniforms.ts`.
  *
  * WGSL uniform buffers follow rules similar to std140 (WGSL spec §13,
  * "Memory Layout").  `vec3<f32>` requires 16-byte alignment, which is why
@@ -231,7 +226,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * uniforms.  They stay in the layout only to keep `pickPass`'s byte offset
  * stable; the WGSL struct still declares them but no shader reads them.
  *
- * The value (208) is defined in `src/utils/gpu/packPointUniforms.ts` and
+ * The value (176) is defined in `src/utils/gpu/packPointUniforms.ts` and
  * re-exported from here so callers that already import from `pointRenderer`
  * don't need a second import path.
  */
@@ -360,6 +355,7 @@ export function createPointRenderer(
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
   focusBgl: FocusUniformsBgl,
+  lensingBgl: LensingUniformsBgl,
 ): PointRenderer {
   // Each renderer compiles its own GPUShaderModule from the shared
   // vertex source — sharing modules across pipelines hits the WebGPU
@@ -387,6 +383,10 @@ export function createPointRenderer(
       // @group(3) FocusUniforms — a single shared/global binding (only
       // one POI focused at a time), unlike the per-source @group(1) fade.
       focusBgl,
+      // @group(4) LensingUniforms — a single shared/global binding (one
+      // lens set per frame), shared with PickRenderer and (later) the
+      // volume raymarch. The vertex stage reads the lens array from it.
+      lensingBgl,
     ],
   });
 
@@ -740,12 +740,13 @@ export function createPointRenderer(
     viewportPx: [number, number],
     settings: PointDrawSettings,
   ): ArrayBuffer | null {
-    const { visibleSourceMask, focusBindGroup } = settings;
+    const { visibleSourceMask, focusBindGroup, lensingBindGroup } = settings;
     if (galaxyCatalogs.size === 0) return null;
 
-    // Pack the uniform buffer (incl. the gravitational-lensing block at bytes
-    // 176..207) — see `UNIFORM_BYTES` for the layout, and
-    // `points/io.wesl::Uniforms` for the WGSL-side struct.
+    // Pack the 176-byte uniform buffer (camera / points / bias / fade) — see
+    // `UNIFORM_BYTES` for the layout, and `points/io.wesl::Uniforms` for the
+    // WGSL-side struct. The gravitational-lensing lens data is bound
+    // separately at @group(4) below.
     // `pickPass` is packed as 0 (visual pass) — the pick renderer applies
     // its three overrides after uploading this buffer.
     const buf = packPointUniforms(viewProj, viewportPx, settings);
@@ -758,10 +759,12 @@ export function createPointRenderer(
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
-    // @group(3) focus is the engine's shared focus bind group (one POI
-    // focused at a time, written once per frame in renderFrame). Bind once
-    // before the per-source loop, not per source like fade/source.
+    // @group(3) focus + @group(4) lensing are the engine's shared bind groups
+    // (one POI focused / one lens set per frame, both written once per frame
+    // in renderFrame). Bind once before the per-source loop, not per source
+    // like fade/source.
     pass.setBindGroup(3, focusBindGroup);
+    pass.setBindGroup(4, lensingBindGroup);
 
     for (const { code: source, id } of CATALOG_DRAW_ORDER) {
       const entry = galaxyCatalogs.get(id);

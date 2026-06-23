@@ -72,6 +72,8 @@ import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
 import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
+import { createLensingUniformsBgl } from '../../gpu/bindGroupLayouts/lensingUniforms';
+import { createLensingUniformBuffer } from '../../gpu/resources/createLensingUniformBuffer';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -98,7 +100,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   const { device, context, format } = await gpuInitGpu(canvas);
 
-  // Build the canonical fade + source + focus bind-group layouts ONCE —
+  // Build the canonical fade + source + focus + lensing bind-group layouts ONCE —
   // every renderer pipeline below threads these into createPipelineLayout
   // so each consumer's bind groups are valid across pipelines. See
   // src/services/gpu/bindGroupLayouts/fadeUniforms.ts for the rationale.
@@ -109,6 +111,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // renderFrame; its bind group is bound by points, the impostor disks, and
   // the pick pass (each at its own group slot). See EngineGpuHandles.
   state.gpu.focusUniform = createFocusUniformBuffer(device, state.gpu.focusBgl!);
+  state.gpu.lensingBgl = createLensingUniformsBgl(device);
+  // The single shared gravitational-lensing uniform — written once per frame
+  // in renderFrame; its bind group is bound at @group(4) by the points + pick
+  // pipelines (and, later, the volume raymarch). One lens set is active per
+  // frame, so one buffer serves the whole engine. See EngineGpuHandles.
+  state.gpu.lensingUniform = createLensingUniformBuffer(device, state.gpu.lensingBgl!);
 
   // ── HDR offscreen target + tone-map post-process ──────────────────
   //
@@ -156,6 +164,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
     state.gpu.focusBgl!,
+    state.gpu.lensingBgl!,
   );
   state.gpu.renderer = renderer;
 

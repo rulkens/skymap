@@ -147,6 +147,9 @@ function makeStubSourceBgl() {
 function makeStubFocusBgl() {
   return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
 }
+function makeStubLensingBgl() {
+  return {} as import('../../../../src/@types/rendering/LensingUniformsBgl').LensingUniformsBgl;
+}
 
 // A minimal dummy uniform bytes buffer for pick() calls.
 function makeUniformBytes(): ArrayBuffer {
@@ -169,6 +172,8 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
+      makeStubLensingBgl(),
+      {} as unknown as GPUBindGroup,
       {} as unknown as GPUBindGroup,
     );
 
@@ -199,6 +204,8 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
+      makeStubLensingBgl(),
+      {} as unknown as GPUBindGroup,
       {} as unknown as GPUBindGroup,
     );
 
@@ -264,6 +271,8 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
+      makeStubLensingBgl(),
+      {} as unknown as GPUBindGroup,
       {} as unknown as GPUBindGroup,
     );
 
@@ -324,6 +333,8 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
+      makeStubLensingBgl(),
+      {} as unknown as GPUBindGroup,
       {} as unknown as GPUBindGroup,
     );
 
@@ -414,6 +425,8 @@ describe('createPickRenderer', () => {
       canonicalFadeBgl,
       canonicalSourceBgl,
       canonicalFocusBgl,
+      makeStubLensingBgl(),
+      {} as unknown as GPUBindGroup,
       {} as unknown as GPUBindGroup,
     );
 
@@ -498,6 +511,8 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
+      makeStubLensingBgl(),
+      {} as unknown as GPUBindGroup,
       {} as unknown as GPUBindGroup,
       undefined, // no structure markers
       undefined, // no procedural disks
@@ -527,6 +542,8 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
+      makeStubLensingBgl(),
+      {} as unknown as GPUBindGroup,
       {} as unknown as GPUBindGroup,
       undefined,
       undefined,

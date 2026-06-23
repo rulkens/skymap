@@ -63,6 +63,8 @@ import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
+import type { LensingUniformsBgl } from '../../rendering/LensingUniformsBgl';
+import type { LensingUniformBuffer } from '../../rendering/LensingUniformBuffer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -109,6 +111,24 @@ export type EngineGpuHandles = {
    * resolves; released and re-nulled by `destroy()`.
    */
   focusUniform: FocusUniformBuffer | null;
+  /**
+   * Canonical LensingUniforms bind-group layout (@group(4)). Constructed
+   * once in `initGpu` and shared by every pipeline that applies the
+   * gravitational-lensing deflection — points (vertex stage), the pick pass,
+   * and (a later phase) the volume raymarch (fragment stage). Null until
+   * `initGpu` resolves.
+   */
+  lensingBgl: LensingUniformsBgl | null;
+  /**
+   * The single shared gravitational-lensing uniform (buffer + bind group +
+   * packer). One lens set is active per frame, so one buffer serves the whole
+   * engine: written once per frame in `renderFrame`, and its bind group —
+   * built against `lensingBgl` — is bound at @group(4) by the points + pick
+   * pipelines (a bind group is tied to a layout, not a group number). The
+   * pick pass binds this same live buffer so lensed images stay hit-testable.
+   * Null until `initGpu` resolves; released and re-nulled by `destroy()`.
+   */
+  lensingUniform: LensingUniformBuffer | null;
   /**
    * Combined HDR offscreen target + tone-map post-process.  One field
    * because their lifetimes are identical and they're always used

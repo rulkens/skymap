@@ -218,6 +218,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         flowFieldRenderer: null,
         structureMarkerRenderer: null,
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
+        lensingUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
       // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
       // A null slot → slotReady false → not loaded.

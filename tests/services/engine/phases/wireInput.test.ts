@@ -119,9 +119,11 @@ function makeState(): EngineState {
         loadedSources: () => [],
       } as never,
       pickRenderer: null,
-      // createPickRenderer binds the shared focus group; the stub only
-      // needs an opaque bindGroup handle.
+      // createPickRenderer binds the shared focus + lensing groups; the stub
+      // only needs opaque bindGroup handles.
       focusUniform: { bindGroup: {} as GPUBindGroup },
+      lensingBgl: {} as never,
+      lensingUniform: { bindGroup: {} as GPUBindGroup },
       postProcess: null,
       filamentRenderer: null,
       labelRenderer: null,

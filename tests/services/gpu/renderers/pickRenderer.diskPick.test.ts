@@ -22,19 +22,20 @@ import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/Pr
 // ── 1. Signature pin ────────────────────────────────────────────────────────
 
 describe('createPickRenderer disk-pick integration', () => {
-  it('keeps proceduralDiskRenderer optional as the 7th positional (index 6)', () => {
-    // Compile-time: the 7th parameter (index 6, after device/fadeBgl/
-    // sourceBgl/focusBgl/focusBindGroup/structureMarkerRenderer) must
-    // exist and be assignable from `undefined` (declared with `?`).
-    // Removing it, making it required, or reordering it before
-    // structureMarkerRenderer all break this.
+  it('keeps proceduralDiskRenderer optional as the 9th positional (index 8)', () => {
+    // Compile-time: the 9th parameter (index 8, after device/fadeBgl/
+    // sourceBgl/focusBgl/lensingBgl/focusBindGroup/lensingBindGroup/
+    // structureMarkerRenderer) must exist and be assignable from `undefined`
+    // (declared with `?`). Removing it, making it required, or reordering it
+    // before structureMarkerRenderer all break this.
     //
-    // Note: `pointRenderer` was removed from position 1 in Task 4, shifting
-    // the optional tail params down by one index each.
+    // Note: the lensing refactor inserted `lensingBgl` (index 4) +
+    // `lensingBindGroup` (index 6), shifting the optional tail params down by
+    // two indices each.
     type Sig = Parameters<typeof createPickRenderer>;
     const _check = (...args: Sig): void => {
-      const seventh: Sig[6] = args[6];
-      const _undef: typeof seventh = undefined;
+      const ninth: Sig[8] = args[8];
+      const _undef: typeof ninth = undefined;
       void _undef;
     };
     expect(_check).toBeTypeOf('function');

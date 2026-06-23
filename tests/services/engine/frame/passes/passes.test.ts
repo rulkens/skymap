@@ -119,10 +119,16 @@ const STATE_STUB = {
       isAnyAnimating: () => false,
     },
   },
-  // pointSpritesPass / disk passes bind the shared focus group off
-  // state.gpu.focusUniform; an opaque bind group is all they read.
+  // pointSpritesPass / disk passes bind the shared focus + lensing groups
+  // off state.gpu.focusUniform / state.gpu.lensingUniform; an opaque bind
+  // group is all they read.
   gpu: {
     focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
+    lensingUniform: {
+      bindGroup: {} as GPUBindGroup,
+      write: vi.fn<(v: unknown) => void>(),
+      destroy: vi.fn<() => void>(),
+    },
   },
   // pointSpritesPass stashes packed uniform bytes here after each draw so
   // the pick paths can replay the last frame's camera without re-running

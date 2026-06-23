@@ -76,6 +76,8 @@ import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import { encodeHdrSingle } from './encodeHdrSingle';
 import { encodeHdrSplit } from './encodeHdrSplit';
 import { encodeUiOverlay } from './encodeUiOverlay';
+import { buildClusterLenses } from '../../../utils/lensing/buildClusterLenses';
+import { MAX_LENSES } from '../../../utils/gpu/packLensingUniforms';
 
 /**
  * Encode and submit one frame's worth of HDR + tone-map work.
@@ -128,6 +130,32 @@ export function renderFrame(input: RenderFrameInput): void {
   // blend=0 at rest makes the per-vertex multiplier a no-op.
   // ctx.focus is the per-frame FocusUniformsValue derived in deriveFrameContext.
   state.gpu.focusUniform?.write(ctx.focus);
+
+  // Write the single shared gravitational-lensing uniform once per frame,
+  // before the points pass (and the later pick submit) reads it at @group(4).
+  // The lenses are built here — not in pointSpritesPass — so both the visual
+  // pass and the pick pass replay the SAME lens centres + Einstein radii from
+  // one shared buffer. buildClusterLenses culls to clusters in front of the
+  // camera (using the same camera position + target the points pass used) and
+  // caps the count; empty when the toggle is off or the slider is at zero, so
+  // the per-vertex cost stays gated.
+  const lensEnabled = state.settings.debug.lensingEnabled;
+  const masterThetaRad = (state.settings.debug.lensStrengthDeg * Math.PI) / 180;
+  const lenses = lensEnabled
+    ? buildClusterLenses(
+        state.data.structures.all(),
+        ctx.drawCamPos,
+        ctx.cam.target,
+        masterThetaRad,
+        MAX_LENSES,
+      )
+    : [];
+  state.gpu.lensingUniform?.write({
+    enabled: lensEnabled,
+    lenses,
+    mode: state.settings.debug.lensMode,
+    scaleRadiusMpc: state.settings.debug.lensScaleRadiusMpc,
+  });
 
   // ── Encoder + HDR rendering ───────────────────────────────────────
   //
