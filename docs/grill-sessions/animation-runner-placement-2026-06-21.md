@@ -106,6 +106,24 @@ returns 0 for `'clip'` (correct — the player owns its own clock, like the
 controls own the gesture), and keep-alive falls out of `camera.clip !== null`
 being Intent that `selectCameraActive` already sees (no `requestRender` hack).
 
+**Correction (2026-06-23) — clip is tween-shaped, not `orbitDrag`-shaped.** The
+"60 Hz pose can't be Intent" reasoning conflated the *pose* (derived, 60 Hz —
+correctly not Intent) with the *clip descriptor* (low-freq, set once — fine as
+Intent). The **tween** is the proof: it is also a per-frame-changing pose, yet it
+is *not* a Resource — it's `evaluateTween(s.camera.tween, elapsed)`, a pure
+function of a store descriptor + `cameraClock` elapsed. The clip is a multi-segment
+tween (Q2), so it takes the *same* shape: store `camera.clip: { data: ClipData }`,
+`pose: (s, _cam, elapsed) => evaluateClip(s.camera.clip.data, elapsed)`, pure, no
+live-pose Resource. The `clipPlayer` shrinks to scene-cues + lifecycle only (no
+pose, no own clock — it rides `cameraClock` like the tween, so even
+`elapsedForWinner` no longer special-cases `'clip'`). Benefits: structural
+symmetry with the tween (Option S becomes structural, not just shared math),
+serializable live animation state (`camera.clip.data` is *in* the store),
+near-free scrub/preview, and frame-rate-independent determinism. Cost: `∫vel`
+expressed in closed form rather than a per-frame accumulator. This supersedes the
+`orbitDrag`-shaped decision above; the spec's "The clip driver is the focus tween,
+generalized" section is the resolved form.
+
 ---
 
 ## Q4: Within a clip, how do concurrent camera actions compose — and what conflicts?

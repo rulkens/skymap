@@ -349,44 +349,35 @@ clip; "wait for the picture to load" → a saga composing clips.
 
 ## Layer 1 — the runner
 
-> **⚠ Under revision (grill 2026-06-21).** Positioning the runner *as* a
-> `CameraDriver` is being reconsidered. Two findings drive it:
+> **Revised (grill 2026-06-21, tween-shaped refinement 2026-06-23).** The
+> original spec made the runner a `CameraDriver` that owned camera + scene + clock
+> in one closure. Two findings retired that:
 >
 > 1. **Purity break.** PR #357 made `CameraDriver.pose()` a *pure* function
 >    (return a pose, no mutation, no side effects). The runner must `dispatch`
->    intents and drive the `FadeRegistry` mid-timeline — side effects — so it
+>    intents and drive the `FadeRegistry` mid-timeline — side effects — so they
 >    cannot live inside a `pose()` without undoing what #357 bought.
-> 2. **Single-authority constraint.** The driver table exists to be the *single
->    writer* of camera pose — priority arbitration among competing motion
->    sources. A clip's *camera motion* is itself such a source. Bolting the
->    runner on *outside* the table (a preemption branch that produces a pose the
->    camera reads) would create a **second pose authority** — re-complecting the
->    exact thing the table exists to prevent.
+> 2. **Single-authority constraint.** The driver table is the *single writer* of
+>    camera pose. A clip's *camera motion* is just another source it must
+>    arbitrate, so it lives *in* the table as a real driver — not in a preemption
+>    branch beside it, which would be a **second pose authority**.
 >
-> **Decided (grill 2026-06-21): the driver table is the authority over *all*
-> camera pose.** A clip's camera motion is therefore just another motion source
-> the table arbitrates — it lives *in* the table as a real driver (pure pose),
-> not in a preemption branch beside it. Being a table member, it inherits
-> `commit-on-edge` handoff for free (the spike dodged this at priority 90).
+> So a clip splits into two facets, and **the camera facet is shaped like the
+> focus tween, not like `orbitDrag`:**
+> - **Camera facet** → a store **descriptor** (`camera.clip.data`) evaluated by a
+>   *pure* function `evaluateClip(data, elapsed)`, on a `clip`@95 driver row that
+>   is structurally identical to the `tween`@60 row. No live-pose Resource.
+> - **Scene + lifecycle facet** → a frame-ticked `clipPlayer` (peer of `fades` /
+>   `structureFocus`) that fires the timeline's scene cues (edge-triggered side
+>   effects) in the tick phase and resolves the `playClip` Promise. It no longer
+>   holds the pose or its own clock.
 >
-> So a clip splits into two facets:
-> - **Camera facet** → a source the table arbitrates, evaluated as a *pure*
->   pose. Stays inside the camera authority.
-> - **Scene + clock + lifecycle facet** → a frame-ticked player subsystem (peer
->   of `fades` / `structureFocus`) that walks the timeline, fires its
->   dispatches/fades in the side-effect-sanctioned tick phase, owns the clip
->   clock, and resolves the `playClip` Promise.
->
-> Resolved in grill: **Option S** — one shared `evaluateCameraTrack` evaluator
-> with **two driver rows** (focus `tween` @60 Intent untouched, scripted `clip`
-> @95); the priority/interruptibility difference is *essential*, not accidental.
-> **The driver's unit is the live camera state, not the clip.** The `clip` driver
-> is `orbitDrag`-shaped: an Intent flag `camera.clip` + a `clipPlayer` Resource.
-> Still open: the per-channel action vocabulary + value-space table; scene-effect
-> routing through the player tick; commit-on-edge on clip end; the `playClip`
-> Promise + cancellation; frame-body ordering (player tick before arbitration).
-> The revised model follows; the original "CameraDriver-owns-everything" prose is
-> removed.
+> The clip is a **generalized tween** (Option S, now *structural* not just shared
+> math): `evaluateTween` is the one-segment case of `evaluateClip`; both ride
+> `cameraClock`; the only essential difference is priority — a focus suggestion
+> yields to your hand (@60 < drag), a recording owns the camera (@95 > drag). The
+> full reasoning is the grill transcript (Q1–Q16) + the tween-shaping note; the
+> resolved model follows.
 
 ### The model: arbitration across drivers, composition within a clip
 
@@ -397,13 +388,14 @@ state, not the clip.** Two mechanisms, not one:
 - **Across drivers (the table) — arbitration.** Single-writer: the highest-priority
   active driver's pose is the frame's pose. A scripted clip contributes *one*
   driver here.
-- **Within a clip (the player) — composition.** Multiple camera *actions* on
-  different channels blend each frame — a `dollyTo` on distance, a `rate` on yaw,
-  an `oscillate` on pitch, concurrently. This is the `base`/`vel`/`osc` per-channel
-  sum, **not** arbitration.
+- **Within a clip (the evaluator) — composition.** Multiple camera *actions* on
+  different channels blend at a given time — a `dollyTo` on distance, a `rate` on
+  yaw, an `oscillate` on pitch, concurrently. This is the `base`/`vel`/`osc`
+  per-channel sum, **not** arbitration — and it is a **pure function of
+  `(clip, elapsed)`** (`evaluateClip`), not a Resource mutated each frame.
 
-A camera **action** is the composition unit; the **clip** is the container the
-player walks; the **table** sees only the net pose.
+A camera **action** is the composition unit; the **clip** is the container; the
+**table** sees only the net pose, evaluated purely from the stored clip.
 
 ```ts
 // camera actions — the "other moves" beyond a tween; each a per-channel contribution
@@ -415,52 +407,71 @@ type CameraAction =
 // a tween/focus-style move is a `set` across all four channels — one constructor, shared ramp math.
 ```
 
-### The clip driver is `orbitDrag` for scripted motion
+### The clip driver is the focus tween, generalized
 
-The table already contains a driver that reads a **live Resource** gated by a
-**low-frequency store flag**: `orbitDrag` reads `state.cam` (mutated outside the
-store by the controls) while `camera.dragging` is set. The clip driver is the same
-shape — a live register (the player's composed pose) gated by a flag set once on
-clip start/stop:
+The table already evaluates a **store descriptor** with a **pure function**: the
+focus `tween`@60 row is `pose: (s, _cam, elapsed) => evaluateTween(s.camera.tween!,
+elapsed)`. The clip is a multi-segment tween, so its driver is the same shape,
+differing only in priority:
 
 ```ts
-// Intent (low-freq, set on clip start/stop — mirrors `camera.dragging`)
-camera.clip: { id: string } | null
-// Resource (60 Hz composed pose — mirrors `state.cam`):  clipPlayer
-{ id: 'clip', priority: 95, isActive: (s) => s.camera.clip !== null, pose: () => clipPlayer.pose() }
+// Intent: the authored clip lives in the store (low-freq, set once on start/stop)
+camera.clip: { data: ClipData } | null
+// pose is a PURE function of descriptor + cameraClock elapsed — no Resource; mirrors the tween row:
+{ id: 'clip', priority: 95, commitsOnEdge: true,
+  isActive: (s) => s.camera.clip !== null,
+  pose: (s, _cam, elapsed) => evaluateClip(s.camera.clip.data, elapsed) }
 ```
 
-Two consequences both *dissolve* infra the pre-revision design would have had to add:
+`evaluateClip(data, t)` returns the composed `CameraPose` at time `t` — the `base`
+ramps, the closed-form `∫vel`, and `osc`, summed per channel (see "Composition").
+It is **pure**: same `(data, t)` → same pose, no accumulated per-frame state.
+`evaluateTween` is its one-segment case; `playClip` flattens the `ClipData` tree
+once into the per-channel tracks the evaluator reads (the same flatten the
+registration-time validator does — memoised on the clip's identity, not re-walked
+each frame).
 
-- **Clock** — the player owns its own clock (like the controls own the gesture).
-  `elapsedForWinner` returns `0` for `'clip'`, which is correct, exactly as for
-  `orbitDrag`. `cameraClock` stays tween/autoRotate-only, untouched.
+Three things *dissolve* versus an `orbitDrag`-shaped clip holding a live-pose
+Resource:
+
+- **No pose register.** The pose is derived on demand from store state — no
+  mutable `livePose` to keep in sync, and no "tick must run before pose is read"
+  ordering coupling between the player and the driver.
+- **Clock** — the clip rides `cameraClock` exactly as the tween does; `elapsed` is
+  time-since-activation. (The grill's "`elapsedForWinner` returns 0 for clip"
+  special-case is gone — `clip` joins the `tween`/`autoRotate` set.)
 - **Keep-alive** — `camera.clip !== null` is store Intent, so `selectCameraActive`
   sees it and render-on-demand stays awake. No per-frame `requestRender`.
 
-The focus tween (`camera.tween` @60, an Intent descriptor evaluated by
-`evaluateTween`) is left exactly as shipped (#357/#358); it shares only the
-per-channel ramp math with the clip's `set` actions — the "different contexts,
-shared evaluator" of Option S. There is **no** "subsume `tweenManager`" step
-(`tweenManager` no longer exists): focus stays an interruptible @60 source;
-scripted clips are an own-the-camera @95 source.
+The focus tween (`camera.tween`@60) is untouched (#357/#358) and now shares not
+just ramp *math* but the whole *shape* with the clip — Option S, structural. Focus
+stays an interruptible @60 source; scripted clips own the camera @95. (No "subsume
+`tweenManager`" step — `tweenManager` no longer exists.)
 
-### The player (a Resource)
+This also makes the **live animation state serializable** — it is `camera.clip.data`
+in the store, not hidden in a Resource — and a scrub/preview tool nearly free
+(pose at any `t` is one pure call). The cost is expressing `∫vel` in **closed
+form** rather than a per-frame accumulator, which is also what makes the motion
+frame-rate-independent and a recording reproducible.
 
-`clipPlayer` walks `ClipData` against its own clock each frame and:
+### The player (a Resource): scene cues + lifecycle only
 
-- composes the active `CameraAction`s into the live pose the `clip` driver reads
-  (`base`/`vel`/`osc` per channel; `base + osc`, `vel` integrated into `base`);
-- fires the timeline's `dispatch`/`fade` scene effects in the frame's
-  side-effect-sanctioned tick phase (next to `fades.tick`), **not** inside the
-  driver's pure `pose`;
-- resolves `playClip(clip): Promise<void>` when the tree completes, and dispatches
-  `camera.clip = null` so the @95 driver deactivates and `commit-on-edge` bakes the
-  final pose into `camera.base`.
+With the pose pure-derived by the driver, `clipPlayer` keeps only the
+side-effecting work. Each frame, given `elapsed` from `cameraClock`, it:
 
-Because the tree is static, the player needs no generator pumping — it is a
-recursive stepper over `seq`/`all`/`fork`/leaf nodes; `fork`ed children run on a
-small child list, cancelled when the root completes.
+- **fires scene cues** — the timeline's `show`/`hide`/`fade`/`scene`/`focus`
+  effects, edge-triggered: any cue whose time falls in `(prevElapsed, elapsed]`
+  dispatches now, in the frame's side-effect-sanctioned tick phase (next to
+  `fades.tick`), **never** inside the driver's pure `pose`;
+- **detects completion** — when `elapsed` reaches the awaited tree's duration (or
+  on abort) it dispatches `endClip()`, so the @95 driver deactivates and
+  `commit-on-edge` bakes the final pose into `camera.base`;
+- **resolves `playClip(clip): Promise<void>`**.
+
+Its only state is a cue cursor (`prevElapsed`) plus `fork` bookkeeping — no pose,
+no clock. Because the tree is static, it needs no generator pumping: cue-firing and
+completion are a flat scan of the compiled timeline against `elapsed`, with `fork`ed
+children cancelled when their enclosing scope completes.
 
 ### Composition: layers and the single-writer rule
 
@@ -473,8 +484,10 @@ final[ch] = base[ch]  +  ∫vel[ch]  +  osc[ch]
 - **`base`** — the channel's *position*, driven by `set` / `spin` (and the
   `dollyTo` / `moveTarget` / `aimAt` helpers). **Single-writer: at most one
   base-writer per channel at a time.**
-- **`vel`** — a persistent velocity (`rate`), integrated into the channel each
-  frame. Additive; multiple sum.
+- **`vel`** — a persistent velocity (`rate`), integrated into the channel **in
+  closed form** (`∫₀ᵗ vel`, a pure function of `elapsed` — not a per-frame
+  accumulator, so the result is frame-rate-independent and reproducible).
+  Additive; multiple sum.
 - **`osc`** — an additive oscillation (`oscillate`). Additive; multiple sum.
 
 So `base + vel`, `base + osc`, two `vel`s, two `osc`s all **compose** — different
@@ -502,18 +515,20 @@ checks were rejected as cryptic and incomplete.)
 
 `clipPlayer.tick(nowMs)` is the **first** step of `runFrame`, before demand/mask
 derivation and the camera produce step. It is the frame's intent source: it
-composes the camera pose (cached for the `clip` driver to read), fires the
-timeline's `dispatch`/`fade` scene effects, and on completion dispatches
-`camera.clip = null`. The whole frame — demand, masks, arbitration, render — is
-then a consistent function of the post-animation state. The `clip` driver's
-`pose: () => clipPlayer.pose()` is a **pure read** of the cached composition;
-every side effect lives in `tick()`, in the frame's side-effect phase (alongside
-the existing demand/resize work).
+fires the timeline's scene cues (`show`/`hide`/`fade`/`scene`/`focus`) and on
+completion dispatches `endClip()`. The whole frame — demand, masks, arbitration,
+render — is then a consistent function of the post-cue state. The camera pose is
+**not** produced here: the `clip` driver evaluates it purely from store state
+(`evaluateClip(s.camera.clip.data, elapsed)`) during arbitration, so it needs
+nothing the tick wrote. Tick-first is purely about **scene cues firing before the
+frame derives from them** — every side effect lives in `tick()`, in the frame's
+side-effect phase (alongside the existing demand/resize work).
 
-Ticking last (where `fades.tick` runs) would make the driver read the previous
-frame's pose — a one-frame camera lag. Splitting compose-in-`pose()` from
-effects-at-end would either make `pose()` impure or run the camera and its scene
-effects off two clocks. Tick-first avoids both.
+Ticking the cues *last* (where `fades.tick` runs) would derive the frame from
+pre-cue state, then fire the cues — a one-frame scene lag (a layer toggled at this
+beat wouldn't take until next frame). Tick-first avoids it. The pose has no such
+ordering constraint at all now, because it is a pure read of the store rather than
+of a register the player mutates.
 
 A clip ending is a driver deactivation like a tween's: the final composed pose
 must bake into `camera.base` so the next driver continues from where the clip left
@@ -526,7 +541,8 @@ the frame loop read it:
 
 ```ts
 // driver rows declare the behaviour (tween / autoRotate / clip set it; orbitDrag / resting don't)
-{ id: 'clip', priority: 95, isActive: (s) => s.camera.clip !== null, commitsOnEdge: true, pose: () => clipPlayer.pose() }
+{ id: 'clip', priority: 95, isActive: (s) => s.camera.clip !== null, commitsOnEdge: true,
+  pose: (s, _cam, elapsed) => evaluateClip(s.camera.clip.data, elapsed) }
 
 // the frame loop reads the property — no id literals, exhaustive by construction
 if (prev !== activeId && deps.drivers.byId(prev)?.commitsOnEdge) {
@@ -624,9 +640,9 @@ or by the tour. Teardown is the *set of reactions* to it, each in its owner:
 - **Opacity** — `watchFades` un-suspends by its guard (it stops early-returning
   once `camera.clip` is null); nothing fires on the transition, and opacity stays
   at the clip's final value (see "Clip end — opacity commits its final value").
-- **Resource** — `clipPlayer` does its own lifecycle cleanup (stop the clock,
-  cancel forks, resolve the `playClip` Promise). Imperative, because Resources are
-  imperative (ADR 0007).
+- **Resource** — `clipPlayer` does its own lifecycle cleanup (reset the cue
+  cursor, cancel forks, resolve the `playClip` Promise). Imperative, because
+  Resources are imperative (ADR 0007).
 - **Settings** (Layer 2 only) — the tour saga's `finally` dispatches
   `restoreSettings(snapshot)`, reverting what `scene`/`show`/`hide` changed and
   running the full `fx.syncFades` reconcile back to live.
@@ -756,8 +772,10 @@ it to Layer 2 regardless, keeping Layer 1 purely non-reactive.
 
 ## Migration and integration notes
 
-- **`tweenManager` retires** into the clip runner (focus = a one-tween clip).
-  One execution path for all camera moves.
+- **Focus and clips share one evaluator.** `evaluateTween` becomes the
+  one-segment case of `evaluateClip` — focus is `tween`@60, scripted clips are
+  `clip`@95, both pure-evaluated store descriptors on `cameraClock`. One ramp-math
+  path for all camera moves; no separate tween manager (none exists).
 - **The parked `TourBeat[]` survives as data.** `BeatData[]` is fed to the tour
   saga; what changes is that the hand-rolled `tourSubsystem.advance(nowMs)`
   sequencer is replaced by `for (const beat of beats) yield* visitBeat(beat)`.
@@ -766,8 +784,10 @@ it to Layer 2 regardless, keeping Layer 1 purely non-reactive.
   seed had to add.
 - **The `engine.tour.start(beats): Promise<void>` API survives** — the saga's
   run resolves the promise.
-- **The existing `CameraDriver` priority-80 seam is reused** verbatim; the clip
-  runner is the driver that fills it.
+- **The clip adds one `CameraDriver` row** (`clip`@95) shaped exactly like the
+  shipped focus `tween`@60 — a store descriptor + a pure evaluator on `cameraClock`
+  — plus the `clipPlayer` subsystem for scene cues + lifecycle. No new pose
+  authority beside the table.
 
 ## What we are deliberately not building (YAGNI)
 
@@ -795,14 +815,17 @@ it to Layer 2 regardless, keeping Layer 1 purely non-reactive.
 4. **Preview tool** — defer, but record the intended shape (a player that reads
    `ClipData` and a scrubber over a flattened timeline) so Layer 1's data
    purity is not casually broken later.
-5. **Decomposition** — likely three plans: (A) the clip data model + runner +
-   re-express one spike; (B) `playClip` seam + retire `tweenManager`; (C) the
-   tour saga + `BeatData` + reactive effects, landing on the parked tour spec.
+5. **Decomposition** — likely three plans: (A) the clip data model +
+   `evaluateClip` + the `clip`@95 driver row + `clipPlayer` cues/lifecycle +
+   re-express one spike; (B) the `playClip` seam + fold `evaluateTween` into
+   `evaluateClip` (focus = the one-segment case); (C) the tour saga + `BeatData` +
+   reactive effects, landing on the parked tour spec.
 
 ## First implementation slice (suggested)
 
-Build Layer 1 end-to-end on the smallest surface: the `Effect`/`ClipData`
-types, the runner as a `CameraDriver`, a handful of primitives (`tween`/`rate`/
-`oscillate`/`wait`/`all`/`seq`/`fork`/`fade`), and re-express **one** spike
-(the flyout) as a clip to validate the model against known-good footage. Sagas
-and the tour come after the data layer is proven.
+Build Layer 1 end-to-end on the smallest surface: the `Effect`/`ClipData` types,
+`evaluateClip` (pure, with closed-form `∫vel`), the `clip`@95 driver row (shaped
+like the shipped focus `tween`), a handful of primitives (`tween`/`rate`/
+`oscillate`/`wait`/`all`/`seq`/`fork`/`fade`), and re-express **one** spike (the
+flyout) as a clip to validate the model against known-good footage. Sagas and the
+tour come after the data layer is proven.
