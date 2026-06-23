@@ -32,6 +32,7 @@ import { attachOrbitControls } from '../../camera/orbitControls';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
 import { createClickResolver } from '../interaction/clickHandler';
+import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
 import { poseOf } from '../camera/poseOf';
@@ -64,8 +65,9 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas } = deps;
 
-  // Build the pick renderer. It shares the same vertex/uniform buffers as
-  // the visual renderer — no extra GPU memory for point data.
+  // Build the pick renderer.  It owns its own uniform buffer; the visual
+  // renderer's buffer is no longer shared.  The `renderer` local is kept
+  // for the null-guard above and for `loadedSources` at pick time.
   const renderer = state.gpu.renderer;
   if (!renderer) return;
   // Thread the cluster marker renderer through so the pick pass can
@@ -75,7 +77,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // and the optional-vs-null distinction stays internal to the handle bag.
   const pickRenderer = createPickRenderer(
     deps.phaseLocals!.device,
-    renderer,
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
     state.gpu.focusBgl!,
@@ -95,6 +96,37 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     () => milkyWayPickHalfExtentPx(state, canvas.height),
   );
   state.gpu.pickRenderer = pickRenderer;
+
+  // ── Hover-pick driver ────────────────────────────────────────────────
+  //
+  // `hoverPickDriver` owns the full async hover-pick path, decoupled from
+  // the render frame. A pointer move feeds `onPointerMove`; the driver
+  // coalesces moves (GPU readback latency is the natural throttle),
+  // fires an async pick, and dispatches the hover result to the Redux store.
+  // Because hover feeds only the React InfoCard text — not a visual halo —
+  // no `requestRender` is ever needed here.
+  //
+  // All thunks are closures over live `state` / `canvas` so viewport size,
+  // sizePx setting, and pick masks are always fresh at fire time, not
+  // captured as stale values at construction.
+  const store = deps.cb.store;
+  const hoverPickDriver = createHoverPickDriver({
+    state,
+    pickRenderer,
+    store,
+    resolveDeps: { structures: state.data.structures },
+    collectTargets: () =>
+      collectPickTargets(
+        renderer,
+        deriveSourceMasks(state).pick,
+        state.gpu.structureMarkerRenderer,
+        milkyWayPickVisible(state),
+      ),
+    viewportPx: () => [canvas.width, canvas.height],
+    pointSizePx: () => state.settings.galaxyCatalogs.sizePx,
+    timingDescriptor: () => state.gpu.timingService.descriptorFor('pick'),
+  });
+
   // The resolver runs the whole pixel → SelectionRef boundary via
   // `resolvePick`: it decodes the pick and emits an identity ref. Galaxy
   // identity is purely positional (no cloud read at pick time); the
@@ -139,7 +171,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   //   3. `commitCameraPose` dispatch — makes `camera.base` in the Redux store
   //      authoritative before the first produced frame, so the `resting` driver
   //      returns the correct pose and the first frame does not jump.
-  const store = deps.cb.store;
   state.cameraRuntime.projection = {
     fovYRad,
     aspect: canvas.width / canvas.height,
@@ -176,25 +207,25 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // is the *semantic* engine action — the inputBindings module
   // already converts `e.clientX/Y` to a CSS-pixel record and owns
   // the requestRender wake for channel-uncovered events (see its
-  // module header for the contract).
+  // module header for the contract).  pointermove is wake-free: the
+  // hoverPickDriver owns the async pick path and dispatches to the
+  // store; no render frame is required for hover.
   state.subsystems.inputBindings = attachEngineInputs({
     canvas,
     // Scheduler by reference — created eagerly in the state literal (the
     // forward-declared `frame` binding handles the construction-vs-body
     // chicken-and-egg).
     scheduler: state.subsystems.scheduler,
-    // Track latest mouse position for the per-frame throttled
-    // hover pick.  The pick itself is async (1-2 frames later)
-    // but its .then also calls requestRender so the selection
-    // halo updates as soon as the readback lands.
+    // Delegate to the hoverPickDriver, which coalesces moves and fires an
+    // async GPU pick. The driver dispatches the hover SelectionRef to the
+    // store; React reads it via selectors. No requestRender needed.
     onPointerMove: (cssPx) => {
-      state.picking.latestMouseCss = cssPx;
+      hoverPickDriver.onPointerMove(cssPx);
     },
     // Pointer left the canvas → clear hover state.  If a point
     // is selected the card stays visible (showing the pinned
     // point) — selection state is unaffected.
     onPointerLeave: () => {
-      state.picking.latestMouseCss = null;
       deps.cb.store.dispatch(updateSelectionHover(null));
     },
     // Clear hover on pointerdown so the card immediately reflects "nothing
@@ -258,6 +289,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     );
     if (!hasAny) return null;
 
+    // No frame rendered yet — no camera state to reproduce in the pick
+    // pass.  Resolves to null (background), matching pre-first-frame
+    // click behaviour.
+    const uniformBytes = state.picking.lastFrameUniformBytes;
+    if (uniformBytes === null) return null;
+
     return cr.resolveClick({
       pickXPx: cssToTexPx(xCss),
       pickYPx: cssToTexPx(yCss),
@@ -266,6 +303,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // Threaded through so the pick pass can boost its floor size
       // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
+      // Packed uniform bytes from the last visual frame.  The pick
+      // renderer uploads them to its OWN buffer and applies its three
+      // overrides — the visual buffer is never touched.
+      uniformBytes,
       // Per-pass GPU timing.  Resolves to `undefined` when the
       // timing service isn't active on this adapter (no
       // `timestamp-query` feature) — in that case the pick render

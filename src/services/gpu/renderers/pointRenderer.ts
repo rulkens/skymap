@@ -47,6 +47,11 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import { packPointUniforms, UNIFORM_BYTES } from '../../../utils/gpu/packPointUniforms';
+
+// Re-export so the pick renderer and tests can obtain the buffer size
+// from the canonical renderer import path without a separate import.
+export { UNIFORM_BYTES };
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -216,8 +221,12 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * slots (spliced in by `biasCorrectionSubsystem`), never from these
  * uniforms.  They stay in the layout only to keep `pickPass`'s byte offset
  * stable; the WGSL struct still declares them but no shader reads them.
+ *
+ * The value (208) is defined in `src/utils/gpu/packPointUniforms.ts` and
+ * re-exported from here so callers that already import from `pointRenderer`
+ * don't need a second import path.
  */
-const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4 + 8 * 4; // 208 bytes
+// UNIFORM_BYTES: defined in packPointUniforms.ts, re-exported above.
 
 /**
  * Off-thread bake runner.  Spawns a fresh worker per call, ships the
@@ -711,91 +720,26 @@ export function createPointRenderer(
    * instanced draw per visible source.  Per-source fade opacity rides
    * on each source's own 16-byte fade buffer, so writes for one
    * source don't race against draws against another.
+   *
+   * Returns the packed `ArrayBuffer` so the pick renderer can snapshot it
+   * (Task 3 of the pick-out-of-frame refactor).  Returns `null` when there
+   * are no catalogs to draw (buffer was never packed this frame).
    */
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
     settings: PointDrawSettings,
-  ): void {
-    const {
-      pointSizePx,
-      brightness,
-      selectedPacked,
-      visibleSourceMask,
-      camPosWorld,
-      pxPerRad,
-      highlightFallback,
-      realOnlyMode,
-      biasMode,
-      absMagLimit,
-      depthFadeEnabled,
-      pxFadeStart,
-      pxFadeEnd,
-      focusBindGroup,
-      lensEnabled,
-      lensCenterWorld,
-      lensThetaERad,
-    } = settings;
-    if (galaxyCatalogs.size === 0) return;
+  ): ArrayBuffer | null {
+    const { visibleSourceMask, focusBindGroup } = settings;
+    if (galaxyCatalogs.size === 0) return null;
 
-    // Pack 176 bytes — see `UNIFORM_BYTES` for the layout, and
-    // `points/io.wesl::Uniforms` for the WGSL-side struct.  Pad slots
-    // are zero-initialised by `new ArrayBuffer` and never written.
-    const buf = new ArrayBuffer(UNIFORM_BYTES);
-    const f32 = new Float32Array(buf);
-    const u32 = new Uint32Array(buf);
-
-    // CameraUniforms prefix (bytes 0..79).
-    f32.set(viewProj, 0);
-    f32[16] = viewportPx[0]; // viewportPx.x
-    f32[17] = viewportPx[1]; // viewportPx.y
-    // f32[18..19] cam._pad0/1 stay zero.
-
-    u32[20] = selectedPacked >>> 0; // bytes 80
-    // u32[21] (offset 84) _pad0 stays zero.
-    f32[22] = pointSizePx; // bytes 88
-    f32[23] = brightness; // bytes 92
-    f32[24] = camPosWorld[0]; // bytes 96
-    f32[25] = camPosWorld[1];
-    f32[26] = camPosWorld[2];
-    f32[27] = pxPerRad; // bytes 108
-    u32[28] = highlightFallback ? 1 : 0; // bytes 112
-    u32[29] = realOnlyMode ? 1 : 0; // bytes 116
-    u32[30] = depthFadeEnabled ? 1 : 0; // bytes 120
-    // u32[31] _pad4 stays zero.
-
-    // Malmquist-bias state.  Mode goes through the u32 view, threshold
-    // through f32 — both alias the same ArrayBuffer.
-    u32[32] = biasMode >>> 0;
-    f32[33] = absMagLimit;
-    // f32[34..38] (apparentMagLimit / schechterMStar / schechterAlpha /
-    // schechterMLim / schechterNRef) + u32[39] (_pad5) stay zero.  The
-    // Schechter / 1-over-Vmax modes read their per-galaxy weights from the
-    // per-vertex `schechterRatio` + angular slots (spliced in by
-    // `biasCorrectionSubsystem`), so these uniform slots carry nothing —
-    // left reserved rather than removed to keep the struct's byte offsets
-    // (incl. `pickPass`) stable.
-
-    // Procedural-disk crossfade band.  Slot 42 is `pickPass` — stays 0
-    // here (visual pass); pickRenderer flips it to 1 in place before its
-    // draw, and this full-buffer rewrite resets it each visual frame.
-    f32[40] = pxFadeStart;
-    f32[41] = pxFadeEnd;
-    // f32[42] (pickPass) / f32[43] (_padFade1) stay zero.
-
-    // Gravitational-lensing block (bytes 176..207).  lensCenterWorld is
-    // the camera orbit target this frame; lensThetaERad is the
-    // UI-exaggerated Einstein radius.  The pick pass leaves these slots
-    // untouched (its in-place writes are all < 176), so picking lenses
-    // with the same parameters the visual pass just wrote.
-    f32[44] = lensCenterWorld[0]; // bytes 176
-    f32[45] = lensCenterWorld[1];
-    f32[46] = lensCenterWorld[2];
-    u32[47] = lensEnabled ? 1 : 0; // bytes 188
-    f32[48] = lensThetaERad; // bytes 192
-    // f32[49..51] (_padLens0/1/2) stay zero.
-
+    // Pack the uniform buffer (incl. the gravitational-lensing block at bytes
+    // 176..207) — see `UNIFORM_BYTES` for the layout, and
+    // `points/io.wesl::Uniforms` for the WGSL-side struct.
+    // `pickPass` is packed as 0 (visual pass) — the pick renderer applies
+    // its three overrides after uploading this buffer.
+    const buf = packPointUniforms(viewProj, viewportPx, settings);
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
     pass.setPipeline(pipeline);
@@ -822,6 +766,8 @@ export function createPointRenderer(
       pass.setVertexBuffer(0, entry.buffer);
       pass.draw(6, entry.count);
     }
+
+    return buf;
   }
 
   /**
@@ -860,7 +806,6 @@ export function createPointRenderer(
     totalCount,
     countOf,
     loadedSources,
-    uniformBuffer,
     draw,
     destroy,
   };

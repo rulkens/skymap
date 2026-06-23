@@ -238,10 +238,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     picking: {
       // Per-frame pick-throttle state. Hover / select live on the
       // Redux `selection` slice; see `EnginePickingState.d.ts`.
-      latestMouseCss: null,
-      lastPickedMouseCss: null,
+      // `latestMouseCss`/`lastPickedMouseCss` are gone — hover picking is
+      // now fully pointer-driven via `hoverPickDriver` in wireInput.ts, which
+      // tracks its own `latest`/`picked` locals.
       pickInFlight: false,
       pointerDown: false,
+      lastFrameUniformBytes: null,
     },
     gpu: {
       // All GPU handles populate during the async IIFE below and

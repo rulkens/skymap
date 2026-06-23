@@ -1,0 +1,288 @@
+/**
+ * packPointUniforms — byte-layout guard tests.
+ *
+ * Every written offset is asserted against a known fixture so a layout
+ * drift (reordering struct fields, changing pad allocation, forgetting a
+ * write) fails loudly here rather than silently producing a bad frame.
+ *
+ * The function is a pure ArrayBuffer packer: no GPU device, no WebGPU
+ * globals needed.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { packPointUniforms } from '../../../src/utils/gpu/packPointUniforms';
+import {
+  UNIFORM_BYTES,
+  SELECTED_PACKED_BYTE_OFFSET,
+  POINT_SIZE_BYTE_OFFSET,
+  PICK_PASS_BYTE_OFFSET,
+} from '../../../src/services/gpu/renderers/pointRenderer';
+import type { mat4 } from 'gl-matrix';
+import type { PointDrawSettings } from '../../../src/@types/rendering/PointDrawSettings';
+
+// ─── Fixture ──────────────────────────────────────────────────────────────────
+
+// A recognisable viewProj: identity with a distinct value at [15] so every
+// float index maps to a clearly non-default value.  The test below checks
+// all 16 floats verbatim, so any mis-placement is caught.
+function makeViewProj(): mat4 {
+  const m = new Float32Array(16);
+  // Diagonal 1s (identity-ish) with a unique value per slot so transposition
+  // bugs show up.
+  for (let i = 0; i < 16; i++) m[i] = i + 1; // 1..16
+  return m as unknown as mat4;
+}
+
+const VIEW_PROJ = makeViewProj();
+const VIEWPORT_PX: readonly [number, number] = [1920, 1080];
+
+// A selection encoding that isn't the "no-selection" sentinel so we can
+// confirm the real value passes through unmodified.
+const SELECTED_PACKED = ((3 << 27) | 42) >>> 0;
+
+// Stub GPUBindGroup for focusBindGroup — packPointUniforms doesn't touch it,
+// but PointDrawSettings requires the field.
+const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
+
+const SETTINGS: PointDrawSettings = {
+  pointSizePx: 2.5,
+  brightness: 0.75,
+  selectedPacked: SELECTED_PACKED,
+  visibleSourceMask: 0b11111,
+  camPosWorld: [100, 200, 300],
+  pxPerRad: 600,
+  highlightFallback: true,
+  realOnlyMode: false,
+  biasMode: 2,
+  absMagLimit: -19.5,
+  depthFadeEnabled: true,
+  pxFadeStart: 4,
+  pxFadeEnd: 8,
+  focusBindGroup: FOCUS_BIND_GROUP,
+  // packPointUniforms does not call this; fadeOpacityOf is a per-draw-loop
+  // concern owned by the renderer.  The pure packer receives the settings
+  // shape, not the render loop.
+  fadeOpacityOf: () => 1,
+  // Gravitational-lensing block — distinct, recognisable values so a
+  // mis-placed write shows up in the byte-offset assertions below.
+  lensEnabled: true,
+  lensCenterWorld: [11, 22, 33],
+  lensThetaERad: 0.05,
+};
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+describe('packPointUniforms — byteLength', () => {
+  it('returns a buffer of exactly UNIFORM_BYTES (208)', () => {
+    // The size is the single source of truth (exported UNIFORM_BYTES); a
+    // mismatch here means the alloc and the layout constant are out of sync.
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    expect(buf.byteLength).toBe(UNIFORM_BYTES);
+    expect(buf.byteLength).toBe(208);
+  });
+});
+
+describe('packPointUniforms — CameraUniforms prefix (bytes 0..79)', () => {
+  it('copies all 16 viewProj floats starting at byte 0', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    // Float indices 0..15 are the mat4x4 (column-major, 64 bytes).
+    for (let i = 0; i < 16; i++) {
+      expect(f32[i]).toBe(VIEW_PROJ[i]);
+    }
+  });
+
+  it('writes viewportPx.x at byte 64 (float index 16)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[16]).toBe(VIEWPORT_PX[0]); // 1920
+  });
+
+  it('writes viewportPx.y at byte 68 (float index 17)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[17]).toBe(VIEWPORT_PX[1]); // 1080
+  });
+
+  it('leaves cam._pad0/1 (bytes 72..79, float indices 18/19) as zero', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[18]).toBe(0);
+    expect(f32[19]).toBe(0);
+  });
+});
+
+describe('packPointUniforms — selectedPacked + pad (bytes 80..91)', () => {
+  it('writes selectedPacked (u32) at SELECTED_PACKED_BYTE_OFFSET (80)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    // u32 index 20 = byte 80.
+    expect(u32[20]).toBe(SELECTED_PACKED >>> 0);
+    expect(SELECTED_PACKED_BYTE_OFFSET).toBe(80);
+  });
+
+  it('leaves the pad slot at byte 84 (u32 index 21) as zero', () => {
+    // Slot 21 (byte 84) is reserved for sourceCode — the renderer writes
+    // this per-source in the draw loop, not in the uniform pack.  The
+    // packer leaves it untouched (zero-initialised by ArrayBuffer).
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    expect(u32[21]).toBe(0);
+  });
+
+  it('writes pointSizePx at POINT_SIZE_BYTE_OFFSET (88, float index 22)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[22]).toBeCloseTo(SETTINGS.pointSizePx);
+    expect(POINT_SIZE_BYTE_OFFSET).toBe(88);
+  });
+
+  it('writes brightness at byte 92 (float index 23)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[23]).toBeCloseTo(SETTINGS.brightness);
+  });
+});
+
+describe('packPointUniforms — camPosWorld + pxPerRad (bytes 96..111)', () => {
+  it('writes camPosWorld.x at byte 96 (float index 24)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[24]).toBe(SETTINGS.camPosWorld[0]);
+  });
+
+  it('writes camPosWorld.y at byte 100 (float index 25)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[25]).toBe(SETTINGS.camPosWorld[1]);
+  });
+
+  it('writes camPosWorld.z at byte 104 (float index 26)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[26]).toBe(SETTINGS.camPosWorld[2]);
+  });
+
+  it('writes pxPerRad at byte 108 (float index 27)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[27]).toBe(SETTINGS.pxPerRad);
+  });
+});
+
+describe('packPointUniforms — flags (bytes 112..127)', () => {
+  it('writes highlightFallback as 1 at byte 112 (u32 index 28)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    expect(u32[28]).toBe(1); // highlightFallback: true
+  });
+
+  it('writes realOnlyMode as 0 at byte 116 (u32 index 29)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    expect(u32[29]).toBe(0); // realOnlyMode: false
+  });
+
+  it('writes depthFadeEnabled as 1 at byte 120 (u32 index 30)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    expect(u32[30]).toBe(1); // depthFadeEnabled: true
+  });
+
+  it('leaves _pad4 at byte 124 (u32 index 31) as zero', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    expect(u32[31]).toBe(0);
+  });
+});
+
+describe('packPointUniforms — Malmquist-bias state (bytes 128..159)', () => {
+  it('writes biasMode (u32) at byte 128 (u32 index 32)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    expect(u32[32]).toBe(SETTINGS.biasMode >>> 0);
+  });
+
+  it('writes absMagLimit at byte 132 (float index 33)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[33]).toBeCloseTo(SETTINGS.absMagLimit);
+  });
+
+  it('leaves reserved Schechter floats + _pad5 (bytes 136..159, indices 34..39) as zero', () => {
+    // These slots (apparentMagLimit, schechterMStar, schechterAlpha,
+    // schechterMLim, schechterNRef, _pad5) are reserved-but-unwritten: the
+    // WGSL struct declares them to keep pickPass at a stable offset.
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    for (let i = 34; i <= 39; i++) {
+      expect(f32[i]).toBe(0);
+    }
+  });
+});
+
+describe('packPointUniforms — procedural-disk crossfade + pickPass (bytes 160..175)', () => {
+  it('writes pxFadeStart at byte 160 (float index 40)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[40]).toBeCloseTo(SETTINGS.pxFadeStart);
+  });
+
+  it('writes pxFadeEnd at byte 164 (float index 41)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[41]).toBeCloseTo(SETTINGS.pxFadeEnd);
+  });
+
+  it('writes pickPass as 0 at PICK_PASS_BYTE_OFFSET (168, u32 index 42)', () => {
+    // The visual pack always writes pickPass = 0.  The pick renderer applies
+    // its three overrides (selectedPacked sentinel, padded pointSizePx,
+    // pickPass = 1) after uploading this buffer — see Task 4.
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    expect(u32[42]).toBe(0);
+    expect(PICK_PASS_BYTE_OFFSET).toBe(168);
+  });
+
+  it('leaves _padFade1 at byte 172 (float index 43) as zero', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[43]).toBe(0);
+  });
+});
+
+describe('packPointUniforms — gravitational-lensing block (bytes 176..207)', () => {
+  it('writes lensCenterWorld.xyz at bytes 176/180/184 (float indices 44..46)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[44]).toBe(SETTINGS.lensCenterWorld[0]);
+    expect(f32[45]).toBe(SETTINGS.lensCenterWorld[1]);
+    expect(f32[46]).toBe(SETTINGS.lensCenterWorld[2]);
+  });
+
+  it('writes lensEnabled as 1 at byte 188 (u32 index 47)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    expect(u32[47]).toBe(1); // lensEnabled: true
+  });
+
+  it('writes lensThetaERad at byte 192 (float index 48)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[48]).toBeCloseTo(SETTINGS.lensThetaERad);
+  });
+
+  it('leaves _padLens0/1/2 at bytes 196/200/204 (float indices 49..51) as zero', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[49]).toBe(0);
+    expect(f32[50]).toBe(0);
+    expect(f32[51]).toBe(0);
+  });
+
+  it('packs lensEnabled as 0 when the prototype is off', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, { ...SETTINGS, lensEnabled: false });
+    const u32 = new Uint32Array(buf);
+    expect(u32[47]).toBe(0);
+  });
+});

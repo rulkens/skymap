@@ -339,6 +339,16 @@ function makeInput(
         },
         selection: { select: settings.selected },
         assetSlots: { flow: null },
+        // pointSpritesPass stashes the packed uniform bytes onto
+        // state.picking.lastFrameUniformBytes after each draw so the pick
+        // paths can snapshot the last frame's camera state.  The bag must
+        // exist; all other fields are at their default 'nothing in flight'
+        // values — only lastFrameUniformBytes is mutated by the pass.
+        picking: {
+          lastFrameUniformBytes: null as ArrayBuffer | null,
+          pickInFlight: false,
+          pointerDown: false,
+        },
         // proceduralDisksPass / texturedDisksPass each read their slot
         // off `state.subsystems` in their `enabled()` gate; nulling both
         // references makes the passes skip cleanly.

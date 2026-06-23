@@ -117,10 +117,9 @@ describe('EngineState type', () => {
       },
     };
     const picking: EnginePickingState = {
-      latestMouseCss: null,
-      lastPickedMouseCss: null,
       pickInFlight: false,
       pointerDown: false,
+      lastFrameUniformBytes: null,
     };
 
     // Forward-declare so the bias-correction subsystem's narrow
@@ -333,10 +332,9 @@ describe('EngineState type', () => {
       selectionRows: { hover: null, select: null, focus: null },
       data: createEngineData(),
       picking: {
-        latestMouseCss: null,
-        lastPickedMouseCss: null,
         pickInFlight: false,
         pointerDown: false,
+        lastFrameUniformBytes: null,
       },
       gpu: {
         renderer: null,

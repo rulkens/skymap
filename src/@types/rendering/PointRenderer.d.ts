@@ -2,11 +2,10 @@
  * PointRenderer — public surface of the point renderer.
  *
  * Produced by the closure factory `createPointRenderer`.
- * `uniformBuffer` is a bare property rather than a getter because the
- * captured buffer is never reassigned over the renderer's lifetime;
- * `loadedSources` is a function returning a fresh generator on each
- * call.  Consumers: engine, frame body, picker, bias-correction
- * subsystem.
+ * `loadedSources` returns a fresh generator on each call.
+ * Consumers: engine, frame body, bias-correction subsystem.
+ * The pick renderer no longer shares the uniform buffer — it owns its
+ * own GPU buffer and receives the packed bytes via `draw()`'s return value.
  */
 
 import type { mat4 } from 'gl-matrix';
@@ -73,22 +72,20 @@ export type PointRenderer = {
     sourceBuffer: GPUBuffer;
   }>;
   /**
-   * @internal
+   * Issue one instanced draw call per visible source.
    *
-   * Read by `createPickRenderer` — the pick pass shares this uniform
-   * buffer with the visual pass so it sees the same view-projection
-   * matrix the visual frame just wrote.  Engine code MUST NOT consume
-   * this; the coupling is bound at PickRenderer construction time and
-   * threaded internally.
+   * Returns the packed `ArrayBuffer` so the pick renderer can snapshot the
+   * visual-frame uniform state and apply its three overrides (selectedPacked
+   * sentinel, padded pointSizePx, pickPass = 1) without touching the
+   * already-uploaded visual buffer.  Returns `null` when no catalogs are
+   * loaded — the buffer was never packed this frame.
    */
-  uniformBuffer: GPUBuffer;
-  /** Issue one instanced draw call per visible source. */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
     settings: PointDrawSettings,
-  ): void;
+  ): ArrayBuffer | null;
   /** Release every GPU resource this renderer owns. */
   destroy(): void;
 };
