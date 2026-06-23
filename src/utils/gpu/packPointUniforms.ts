@@ -25,17 +25,30 @@ import type { mat4 } from 'gl-matrix';
 import type { PointDrawSettings } from '../../@types/rendering/PointDrawSettings';
 
 /**
+ * Maximum number of cluster lenses packed into the uniform tail.  The vertex
+ * shader loops over `lensCount ≤ MAX_LENSES`, so this bounds both the uniform
+ * size and the per-vertex ALU cost (iOS headroom).  Must match the
+ * `array<vec4<f32>, N>` length in `points/io.wesl::Uniforms`.
+ */
+export const MAX_LENSES = 16;
+
+/**
  * Byte size of the `Uniforms` struct as seen by the GPU.  The single
  * source of truth for the alloc in `packPointUniforms` and for any consumer
  * that needs to know the buffer size up front (e.g. the pick renderer).
  * `pointRenderer.ts` re-exports this so existing call-sites that already
  * import from `pointRenderer` don't need a new import path.
  *
- * 208 = (16 + 4 + 4 + 4 + 4 + 8 + 4 + 8) × 4 bytes.  The trailing 8 words are
- * the gravitational-lensing block (bytes 176..207).  See the `UNIFORM_BYTES`
- * docblock in `pointRenderer.ts` for the full slot-by-slot layout.
+ * 176 bytes of camera/points/bias/fade prefix, then the gravitational-lensing
+ * block: a 16-byte header (lensEnabled + lensCount + 2 pad words) and a
+ * `vec4<f32>` per lens (xyz = centre Mpc, w = Einstein radius rad).  See the
+ * `UNIFORM_BYTES` docblock in `pointRenderer.ts` for the full slot-by-slot
+ * layout.
  */
-export const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4 + 8 * 4; // 208 bytes
+export const UNIFORM_BYTES = 176 + 16 + MAX_LENSES * 16; // 448 bytes at MAX_LENSES = 16
+
+/** f32/u32 index of the first lens `vec4` (byte 192). */
+const LENS_ARRAY_BASE_INDEX = 48;
 
 /**
  * Allocate and pack a `Uniforms` buffer for the visual point-sprite pass.
@@ -64,8 +77,7 @@ export function packPointUniforms(
     pxFadeStart,
     pxFadeEnd,
     lensEnabled,
-    lensCenterWorld,
-    lensThetaERad,
+    lenses,
   } = settings;
 
   // Pad slots are zero-initialised by `new ArrayBuffer` and never written.
@@ -111,16 +123,24 @@ export function packPointUniforms(
   f32[41] = pxFadeEnd; // byte 164
   // f32[42] (pickPass, byte 168) / f32[43] (_padFade1, byte 172) stay zero.
 
-  // Gravitational-lensing block (bytes 176..207).  lensCenterWorld is the
-  // camera orbit target this frame; lensThetaERad is the UI-exaggerated
-  // Einstein radius.  The pick renderer's overrides are all < 176, so picking
-  // lenses with the same parameters the visual pass just wrote.
-  f32[44] = lensCenterWorld[0]; // byte 176
-  f32[45] = lensCenterWorld[1]; // byte 180
-  f32[46] = lensCenterWorld[2]; // byte 184
-  u32[47] = lensEnabled ? 1 : 0; // byte 188
-  f32[48] = lensThetaERad; // byte 192
-  // f32[49..51] (_padLens0/1/2, bytes 196/200/204) stay zero.
+  // Gravitational-lensing block (bytes 176..).  The 16-byte header is the
+  // master toggle + lens count; the `vec4` array that follows carries one
+  // in-view cluster lens per slot (xyz = centre Mpc, w = Einstein radius rad).
+  // The pick renderer's overrides are all < 176, so picking lenses with the
+  // same parameters the visual pass just wrote.
+  const lensCount = Math.min(lenses.length, MAX_LENSES);
+  u32[44] = lensEnabled ? 1 : 0; // byte 176  lensEnabled
+  u32[45] = lensCount >>> 0; // byte 180  lensCount
+  // u32[46..47] (_padLens0/1, bytes 184/188) stay zero.
+  for (let i = 0; i < lensCount; i++) {
+    const base = LENS_ARRAY_BASE_INDEX + i * 4;
+    const { center, thetaERad } = lenses[i]!;
+    f32[base] = center[0];
+    f32[base + 1] = center[1];
+    f32[base + 2] = center[2];
+    f32[base + 3] = thetaERad;
+  }
+  // Unused lens slots stay zero (count gates the shader loop).
 
   return buf;
 }

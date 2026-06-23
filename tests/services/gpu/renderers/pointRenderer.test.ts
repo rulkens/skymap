@@ -874,8 +874,7 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       pxFadeEnd: 0,
       focusBindGroup: FOCUS_BIND_GROUP,
       lensEnabled: false,
-      lensCenterWorld: [0, 0, 0],
-      lensThetaERad: 0,
+      lenses: [],
       fadeOpacityOf: () => 1,
     });
 

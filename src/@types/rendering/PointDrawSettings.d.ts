@@ -10,6 +10,7 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
+import type { LensSpec } from './LensSpec';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -58,20 +59,18 @@ export type PointDrawSettings = {
 
   /**
    * Gravitational-lensing prototype gate. When true, the vertex stage
-   * deflects sources behind the lens centre (SIS thin-lens model). When
-   * false, the lens math short-circuits at zero cost.
+   * deflects sources behind the in-view cluster lenses (SIS thin-lens
+   * model). When false, the lens math short-circuits at zero cost and the
+   * draw issues the single (un-doubled) quad per source.
    */
   lensEnabled: boolean;
   /**
-   * Lens centre in world Mpc — the camera orbit target this frame. The
-   * thing you've zoomed in on becomes the lens.
+   * The in-view cluster lenses to apply this frame, each a world centre +
+   * Einstein angular radius (already scaled by the per-cluster mass proxy).
+   * Packed into the points uniform tail by `packPointUniforms`; the vertex
+   * shader sums every foreground lens's deflection and renders the dominant
+   * lens's counter-image. Capped at `MAX_LENSES`; empty when lensing is off
+   * or no cluster sits in front of the camera. See `lib/lensing.wesl`.
    */
-  lensCenterWorld: Readonly<Vec3>;
-  /**
-   * Einstein angular radius in radians, already scaled by the UI
-   * exaggeration factor. Real cluster Einstein radii are tens of
-   * arcseconds (invisible at typical zoom), so this is intentionally
-   * exaggerated. See `lib/lensing.wesl`.
-   */
-  lensThetaERad: number;
+  lenses: readonly LensSpec[];
 };

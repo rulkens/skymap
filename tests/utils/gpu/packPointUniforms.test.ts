@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { packPointUniforms } from '../../../src/utils/gpu/packPointUniforms';
+import { packPointUniforms, MAX_LENSES } from '../../../src/utils/gpu/packPointUniforms';
 import {
   UNIFORM_BYTES,
   SELECTED_PACKED_BYTE_OFFSET,
@@ -63,22 +63,24 @@ const SETTINGS: PointDrawSettings = {
   // concern owned by the renderer.  The pure packer receives the settings
   // shape, not the render loop.
   fadeOpacityOf: () => 1,
-  // Gravitational-lensing block — distinct, recognisable values so a
-  // mis-placed write shows up in the byte-offset assertions below.
+  // Gravitational-lensing block — two lenses with distinct, recognisable
+  // values so a mis-placed write shows up in the byte-offset assertions below.
   lensEnabled: true,
-  lensCenterWorld: [11, 22, 33],
-  lensThetaERad: 0.05,
+  lenses: [
+    { center: [11, 22, 33], thetaERad: 0.05 },
+    { center: [44, 55, 66], thetaERad: 0.08 },
+  ],
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('packPointUniforms — byteLength', () => {
-  it('returns a buffer of exactly UNIFORM_BYTES (208)', () => {
+  it('returns a buffer of exactly UNIFORM_BYTES (448 at MAX_LENSES=16)', () => {
     // The size is the single source of truth (exported UNIFORM_BYTES); a
     // mismatch here means the alloc and the layout constant are out of sync.
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     expect(buf.byteLength).toBe(UNIFORM_BYTES);
-    expect(buf.byteLength).toBe(208);
+    expect(buf.byteLength).toBe(448);
   });
 });
 
@@ -251,38 +253,66 @@ describe('packPointUniforms — procedural-disk crossfade + pickPass (bytes 160.
   });
 });
 
-describe('packPointUniforms — gravitational-lensing block (bytes 176..207)', () => {
-  it('writes lensCenterWorld.xyz at bytes 176/180/184 (float indices 44..46)', () => {
-    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
-    const f32 = new Float32Array(buf);
-    expect(f32[44]).toBe(SETTINGS.lensCenterWorld[0]);
-    expect(f32[45]).toBe(SETTINGS.lensCenterWorld[1]);
-    expect(f32[46]).toBe(SETTINGS.lensCenterWorld[2]);
-  });
-
-  it('writes lensEnabled as 1 at byte 188 (u32 index 47)', () => {
+describe('packPointUniforms — gravitational-lensing block (bytes 176..)', () => {
+  it('writes lensEnabled as 1 at byte 176 (u32 index 44)', () => {
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const u32 = new Uint32Array(buf);
-    expect(u32[47]).toBe(1); // lensEnabled: true
+    expect(u32[44]).toBe(1); // lensEnabled: true
   });
 
-  it('writes lensThetaERad at byte 192 (float index 48)', () => {
+  it('writes lensCount at byte 180 (u32 index 45)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    expect(u32[45]).toBe(2); // two lenses in the fixture
+  });
+
+  it('leaves the lens header pad (bytes 184/188, u32 indices 46/47) as zero', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const u32 = new Uint32Array(buf);
+    expect(u32[46]).toBe(0);
+    expect(u32[47]).toBe(0);
+  });
+
+  it('packs lens[0] as a vec4 (centre.xyz, thetaE) at float indices 48..51', () => {
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const f32 = new Float32Array(buf);
-    expect(f32[48]).toBeCloseTo(SETTINGS.lensThetaERad);
+    expect(f32[48]).toBe(11);
+    expect(f32[49]).toBe(22);
+    expect(f32[50]).toBe(33);
+    expect(f32[51]).toBeCloseTo(0.05);
   });
 
-  it('leaves _padLens0/1/2 at bytes 196/200/204 (float indices 49..51) as zero', () => {
+  it('packs lens[1] as a vec4 at float indices 52..55', () => {
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const f32 = new Float32Array(buf);
-    expect(f32[49]).toBe(0);
-    expect(f32[50]).toBe(0);
-    expect(f32[51]).toBe(0);
+    expect(f32[52]).toBe(44);
+    expect(f32[53]).toBe(55);
+    expect(f32[54]).toBe(66);
+    expect(f32[55]).toBeCloseTo(0.08);
   });
 
-  it('packs lensEnabled as 0 when the prototype is off', () => {
+  it('leaves unused lens slots (float index 56+) as zero', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    // Third lens slot onward — nothing packed past lensCount.
+    for (let i = 56; i < UNIFORM_BYTES / 4; i++) {
+      expect(f32[i]).toBe(0);
+    }
+  });
+
+  it('packs lensEnabled as 0 and lensCount from the array when off', () => {
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, { ...SETTINGS, lensEnabled: false });
     const u32 = new Uint32Array(buf);
-    expect(u32[47]).toBe(0);
+    expect(u32[44]).toBe(0);
+  });
+
+  it('caps lensCount at MAX_LENSES even when handed more lenses', () => {
+    const many = Array.from({ length: MAX_LENSES + 4 }, () => ({
+      center: [1, 2, 3] as const,
+      thetaERad: 0.01,
+    }));
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, { ...SETTINGS, lenses: many });
+    const u32 = new Uint32Array(buf);
+    expect(u32[45]).toBe(MAX_LENSES);
   });
 });

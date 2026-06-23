@@ -52,6 +52,8 @@
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
+import { buildClusterLenses } from '../../../../utils/lensing/buildClusterLenses';
+import { MAX_LENSES } from '../../../../utils/gpu/packPointUniforms';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
@@ -84,6 +86,23 @@ export const pointSpritesPass: Pass = {
     // closure below doesn't call performance.now() per source.
     const nowMs = performance.now();
     const fades = state.subsystems.fades;
+
+    // Gravitational-lensing lenses: every in-view cluster, each with an
+    // Einstein radius = the master slider angle scaled by the cluster's mass
+    // proxy. buildClusterLenses culls to clusters in front of the camera and
+    // caps the count (the shader loops over them per vertex). Empty when the
+    // toggle is off or the slider is at zero, so the cost is gated.
+    const lensEnabled = state.settings.debug.lensingEnabled;
+    const masterThetaRad = (state.settings.debug.lensStrengthDeg * Math.PI) / 180;
+    const lenses = lensEnabled
+      ? buildClusterLenses(
+          state.data.structures.all(),
+          ctx.drawCamPos,
+          ctx.cam.target,
+          masterThetaRad,
+          MAX_LENSES,
+        )
+      : [];
 
     // draw returns the packed PointUniforms ArrayBuffer it submitted to
     // the GPU, or null when there are zero loaded catalogs. Stash a
@@ -121,13 +140,10 @@ export const pointSpritesPass: Pass = {
       // registered yet renders at full opacity rather than disappearing.
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
-      // Gravitational-lensing prototype. The lens centre is the camera
-      // orbit target (the thing you've zoomed into); the strength slider
-      // is an exaggerated Einstein radius in degrees, converted to
-      // radians here. Off by default — toggled from the Debug panel.
-      lensEnabled: state.settings.debug.lensingEnabled,
-      lensCenterWorld: [ctx.cam.target[0]!, ctx.cam.target[1]!, ctx.cam.target[2]!],
-      lensThetaERad: (state.settings.debug.lensStrengthDeg * Math.PI) / 180,
+      // Gravitational-lensing prototype: the in-view cluster lenses built
+      // above. Off by default — toggled from the Debug panel.
+      lensEnabled,
+      lenses,
     });
     if (bytes !== null) state.picking.lastFrameUniformBytes = bytes;
   },

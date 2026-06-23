@@ -187,25 +187,27 @@ struct Uniforms {
   pickPass: u32,
   _padFade1: f32,
 
-  // ── Gravitational-lensing prototype (SIS thin-lens) ─────────────────
+  // ── Gravitational-lensing prototype (multi-cluster SIS thin-lens) ───
   //
   // Appended at the END of the struct (offset 176+) so the picker's
   // in-place uniform mutations — selectedPacked (80), pointSizePx (88),
   // pickPass (168), all < 176 — keep their byte offsets. See
   // lib/lensing.wesl for the deflection model.
   //
-  //   offset 176 : lensCenterWorld vec3<f32>  (lens centre, world Mpc =
-  //                                             the camera orbit target)
-  //   offset 188 : lensEnabled     u32        (fills the vec4 slot)
-  //   offset 192 : lensThetaE      f32        (Einstein radius, radians,
-  //                                             already × UI exaggeration)
-  //   offset 196 : _padLens0/1/2   f32×3      (round up to 208 = 13×16)
-  lensCenterWorld: vec3<f32>,
+  //   offset 176 : lensEnabled u32   master toggle
+  //   offset 180 : lensCount   u32   active lenses (≤ MAX_LENSES)
+  //   offset 184 : _padLens0/1 u32×2 (fills the vec4 header slot)
+  //   offset 192 : lenses      array<vec4<f32>, 16>  xyz = centre Mpc,
+  //                                                  w = Einstein radius rad
+  //
+  // MAX_LENSES (16) MUST match `packPointUniforms.MAX_LENSES` — the CPU
+  // packer and this array length are the single drift point, same as the
+  // rest of the byte layout.
   lensEnabled: u32,
-  lensThetaE: f32,
-  _padLens0: f32,
-  _padLens1: f32,
-  _padLens2: f32,
+  lensCount: u32,
+  _padLens0: u32,
+  _padLens1: u32,
+  lenses: array<vec4<f32>, 16>,
 };
 
 // ─── per-instance vertex attributes ──────────────────────────────────

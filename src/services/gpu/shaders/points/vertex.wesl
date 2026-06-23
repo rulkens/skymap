@@ -29,7 +29,7 @@ import package::points::io::Uniforms;
 import package::points::io::PerVertex;
 import package::points::io::VSOut;
 import package::lib::camera::worldToClip;
-import package::lib::lensing::lensDeflect;
+import package::lib::lensing::lensTerm;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::sourceUniforms::SourceUniforms;
@@ -77,6 +77,12 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // is focused). See lib/focusUniforms.wesl for the math.
 @group(3) @binding(0) var<uniform> focus: FocusUniforms;
 
+// Peak lensing magnification clamp. A point source on the caustic has
+// infinite μ; a real (extended) source saturates at ~θ_E / source-size.
+// We have no source size, so we cap |μ| here to keep an on-axis galaxy
+// from blowing out the additive HDR target. See lib/lensing.wesl.
+const LENS_MU_MAX: f32 = 10.0;
+
 // ─── vertex stage ─────────────────────────────────────────────────────
 //
 // The vertex shader runs once per (instance, vertex) pair.
@@ -90,28 +96,85 @@ fn vs(
   @builtin(instance_index) ii: u32,
   p: PerVertex,
 ) -> VSOut {
-  // Gravitational-lensing deflection (prototype). When the lens is
-  // enabled, a source BEHIND the lens has its apparent direction pushed
-  // outward around the lens centre (the camera orbit target); when
-  // disabled, lensDeflect returns p.position unchanged. The deflection
-  // preserves the source's distance from the eye, so the apparent-size
-  // and depth-fade math below (which read p.position's length) are
-  // unaffected — only the projected screen direction changes. See
-  // lib/lensing.wesl for the SIS model.
-  let lensedPos = lensDeflect(
-    u.camPosWorld,
-    u.lensCenterWorld,
-    u.lensThetaE,
-    u.lensEnabled,
-    p.position,
-  );
+  // Gravitational lensing (multi-cluster). Each source is drawn as TWO
+  // quads when the lens pass is active: vertex_index 0..5 carry the summed
+  // primary image, 6..11 the dominant lens's inner counter-image. We loop
+  // over every in-view cluster lens: the primary accumulates the deflection
+  // of all of them (the weak-shear field between clusters + each ring's
+  // outward push), while the counter image is rendered only for the lens
+  // with the largest δ/β on this source (the one closest to forming a ring).
+  // 'lensMu' folds the dominant lens's magnification into intensity below.
+  // The deflection preserves the source's distance from the eye, so the
+  // apparent-size and depth-fade math below (which read p.position's length)
+  // are unaffected — only the projected screen direction changes. See
+  // lib/lensing.wesl.
+  let imageKind = select(0u, 1u, vi >= 6u);
+  let toSrc = p.position - u.camPosWorld;
+  let dS = length(toSrc);
+
+  var primaryOffset = vec3<f32>(0.0, 0.0, 0.0);
+  var lensMu = 1.0;
+  var bestRatio = 0.0;
+  var bestBeta = 0.0;
+  var bestDelta = 0.0;
+  var bestDirLens = vec3<f32>(0.0, 0.0, 1.0);
+  var bestTangent = vec3<f32>(0.0, 0.0, 0.0);
+  var hasDominant = false;
+
+  if (u.lensEnabled == 1u && dS > 1e-4) {
+    let dirSrc = toSrc / dS;
+    for (var i = 0u; i < u.lensCount; i = i + 1u) {
+      let term = lensTerm(u.camPosWorld, u.lenses[i], dirSrc, dS);
+      if (term.valid == 0u) {
+        continue;
+      }
+      // Primary: accumulate this lens's outward push (δ along +tangent).
+      primaryOffset = primaryOffset + term.tangent * term.delta;
+      // Primary brightness tracks the strongest single-lens magnification.
+      lensMu = max(lensMu, min(1.0 + term.delta / term.beta, LENS_MU_MAX));
+      // Dominant lens for the counter image: largest δ/β (nearest a ring).
+      let ratio = term.delta / term.beta;
+      if (ratio > bestRatio) {
+        bestRatio = ratio;
+        bestBeta = term.beta;
+        bestDelta = term.delta;
+        bestDirLens = term.dirLens;
+        bestTangent = term.tangent;
+        hasDominant = true;
+      }
+    }
+  }
+
+  // Assemble this quad's lensed position + validity from the accumulators.
+  // Lens disabled / no foreground lens → identity primary, culled counter.
+  var lensedPos = p.position;
+  var lensValid = select(1u, 0u, imageKind == 1u);
+  if (u.lensEnabled == 1u && dS > 1e-4) {
+    if (imageKind == 0u) {
+      // Primary: source direction rotated by the SUMMED deflection.
+      let dirImage = normalize(toSrc + primaryOffset * dS);
+      lensedPos = u.camPosWorld + dirImage * dS;
+      lensValid = 1u;
+    } else if (hasDominant) {
+      // Dominant lens's counter image: θ = δ − β on the −tangent side,
+      // valid only when the source sits inside that lens's Einstein radius.
+      let thetaC = bestDelta - bestBeta;
+      if (thetaC > 0.0) {
+        let dirImage = bestDirLens * cos(thetaC) - bestTangent * sin(thetaC);
+        lensedPos = u.camPosWorld + dirImage * dS;
+        lensMu = min(bestDelta / bestBeta - 1.0, LENS_MU_MAX);
+        lensValid = 1u;
+      }
+    }
+  }
 
   // Project the (possibly lensed) world position to clip space via the
   // shared 'worldToClip' helper from 'lib/camera.wesl'.
   let center = worldToClip(u.cam, lensedPos);
 
-  // Fetch the quad corner for this vertex (in [-1, +1]²).
-  let corner = quadCorner(vi);
+  // Fetch the quad corner for this vertex (in [-1, +1]²).  The second
+  // quad (vi 6..11) reuses the same six corner offsets.
+  let corner = quadCorner(vi % 6u);
 
   // ── Malmquist-bias gating (volume-limited mode) ──────────────────────────
   //
@@ -138,10 +201,14 @@ fn vs(
   // limited) or by realOnlyMode (hide fallback orientations) emit a
   // degenerate clip position so all 6 vertices of the quad land outside
   // the NDC cube and the rasteriser drops the primitive — no fragment
-  // work, no pick-texture write.
+  // work, no pick-texture write.  A counter-image quad for a source
+  // outside the Einstein radius (lensed.valid == 0u) is culled the same
+  // way: most of the doubled quads collapse here, so the lens pass adds
+  // fragments only for the handful of images that actually form.
   let malmquistGated = u.biasMode == 1u && absMag > u.absMagLimit;
   let realOnlyGated = u.realOnlyMode == 1u && isFallbackFlag == 1u;
-  if (malmquistGated || realOnlyGated) {
+  let lensCulled = lensValid == 0u;
+  if (malmquistGated || realOnlyGated || lensCulled) {
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
@@ -241,6 +308,12 @@ fn vs(
   // non-member that drops under the perceptibility floor is culled rather
   // than left to pile up additively in a dense field.
   let focusMult = focusAlphaMultiplier(p.position, focus);
+  // Lensing magnification: each SIS image's flux scales by |μ| (1.0 when
+  // the lens is off or the source is unlensed). This brightens the primary
+  // near the ring and dims the counter-image toward the Einstein radius —
+  // the physically correct brightness, not equal-weighted copies. A
+  // strongly-demagnified counter-image falls below INVISIBILITY_THRESHOLD
+  // below and is culled, saving the fragment work.
   let intensity = clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0)
     * u.brightness
     * vMaxAlpha
@@ -248,7 +321,8 @@ fn vs(
     * angularMult
     * depthFadeMult
     * crossfadeOut
-    * focusMult;
+    * focusMult
+    * lensMu;
 
   // Bake the K-corrected ramp colour, the magenta highlight, and the
   // intensity scalar straight into out.shaded.rgb. .w carries safeAB —

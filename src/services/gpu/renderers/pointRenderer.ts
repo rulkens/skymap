@@ -7,6 +7,12 @@
  * colour index, axis ratio + PA, padded radius, three bias weights —
  * see `POINT_VERTEX_ATTRIBUTES`).
  *
+ * When the gravitational-lensing pass is active the draw widens to
+ * `draw(12, N)` — vertices 0..5 carry each source's SIS primary image and
+ * 6..11 its inner counter-image (see `points/vertex.wesl`).  The widening
+ * is gated on `settings.lensEnabled`, so the default (lens off) path keeps
+ * the single-quad cost.
+ *
  * One vertex buffer per loaded galaxy catalog; an engine-supplied bitmask
  * decides which sources draw each frame.  Each source's `@group(2)`
  * SourceUniforms carries a 5-bit `sourceCode` that the vertex stage
@@ -190,17 +196,19 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 164..167: pxFadeEnd         f32          (procedural-disk band high) } 16 bytes
  *   bytes 168..171: pickPass          u32          (0 = visual, 1 = pick)      }
  *   bytes 172..175: _padFade1         f32          (written as 0)              }
- *   bytes 176..187: lensCenterWorld   vec3<f32>    (lens centre, world Mpc)    }
- *   bytes 188..191: lensEnabled       u32          (0 = off, 1 = lens)         } 32 bytes
- *   bytes 192..195: lensThetaE        f32          (Einstein radius, radians)  }  (two vec4 slots)
- *   bytes 196..207: _padLens0/1/2     f32×3        (written as 0)              }
+ *   bytes 176..179: lensEnabled       u32          (0 = off, 1 = lens)         }
+ *   bytes 180..183: lensCount         u32          (active lenses ≤ MAX_LENSES)} 16-byte
+ *   bytes 184..191: _padLens0/1       u32×2        (written as 0)              } header
+ *   bytes 192..207: lenses[0]         vec4<f32>    (xyz centre Mpc, w θ_E rad) }
+ *   …             : lenses[1..15]     vec4<f32>    (one per in-view cluster)   } MAX_LENSES×16
  *
- * Total: 208 bytes — a multiple of 16 ✓
+ * Total: 176 + 16 + MAX_LENSES×16 = 448 bytes at MAX_LENSES=16 — a multiple of 16 ✓
  *
  * The lensing block (gravitational-lensing prototype) is appended at the
  * END so the picker's in-place writes (selectedPacked/pointSizePx/pickPass,
  * all < 176) keep their byte offsets — see `points/io.wesl::Uniforms` and
- * `lib/lensing.wesl`.
+ * `lib/lensing.wesl`.  `MAX_LENSES` lives in `packPointUniforms.ts`; the WGSL
+ * `array<vec4<f32>, N>` length must match it.
  *
  * WGSL uniform buffers follow rules similar to std140 (WGSL spec §13,
  * "Memory Layout").  `vec3<f32>` requires 16-byte alignment, which is why
@@ -742,6 +750,11 @@ export function createPointRenderer(
     const buf = packPointUniforms(viewProj, viewportPx, settings);
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
+    // Gravitational-lensing pass draws each source's quad TWICE (primary +
+    // counter image — see points/vertex.wesl); when the lens is off we draw
+    // the single quad so the vertex stage carries zero extra cost.
+    const verticesPerPoint = settings.lensEnabled ? 12 : 6;
+
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     // @group(3) focus is the engine's shared focus bind group (one POI
@@ -764,7 +777,7 @@ export function createPointRenderer(
       pass.setBindGroup(1, entry.fadeBindGroup);
       pass.setBindGroup(2, entry.sourceBindGroup);
       pass.setVertexBuffer(0, entry.buffer);
-      pass.draw(6, entry.count);
+      pass.draw(verticesPerPoint, entry.count);
     }
 
     return buf;
