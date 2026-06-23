@@ -141,9 +141,12 @@ export const pointSpritesPass: Pass = {
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
       // Gravitational-lensing prototype: the in-view cluster lenses built
-      // above. Off by default — toggled from the Debug panel.
+      // above. Off by default — toggled from the Debug panel, where the
+      // SIS/NFW mode and NFW scale radius also live.
       lensEnabled,
       lenses,
+      lensMode: state.settings.debug.lensMode,
+      lensScaleRadiusMpc: state.settings.debug.lensScaleRadiusMpc,
     });
     if (bytes !== null) state.picking.lastFrameUniformBytes = bytes;
   },

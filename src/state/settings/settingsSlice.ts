@@ -38,6 +38,7 @@ import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCata
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
+import type { LensMode } from '../../@types/settings/LensMode';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 
@@ -164,6 +165,12 @@ const settingsSlice = createSlice({
     setLensStrengthDeg: (settings, action: PayloadAction<number>) => {
       settings.debug.lensStrengthDeg = action.payload;
     },
+    setLensMode: (settings, action: PayloadAction<LensMode>) => {
+      settings.debug.lensMode = action.payload;
+    },
+    setLensScaleRadiusMpc: (settings, action: PayloadAction<number>) => {
+      settings.debug.lensScaleRadiusMpc = action.payload;
+    },
 
     // ── structures ──────────────────────────────────────────────────────────
     setStructureItemEnabled: (
@@ -219,6 +226,8 @@ export const {
   setPassDisabled,
   setLensingEnabled,
   setLensStrengthDeg,
+  setLensMode,
+  setLensScaleRadiusMpc,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,

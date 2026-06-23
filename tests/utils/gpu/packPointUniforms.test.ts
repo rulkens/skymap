@@ -70,6 +70,8 @@ const SETTINGS: PointDrawSettings = {
     { center: [11, 22, 33], thetaERad: 0.05 },
     { center: [44, 55, 66], thetaERad: 0.08 },
   ],
+  lensMode: 'nfw',
+  lensScaleRadiusMpc: 0.7,
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -266,11 +268,16 @@ describe('packPointUniforms — gravitational-lensing block (bytes 176..)', () =
     expect(u32[45]).toBe(2); // two lenses in the fixture
   });
 
-  it('leaves the lens header pad (bytes 184/188, u32 indices 46/47) as zero', () => {
+  it('writes lensMode at byte 184 (u32 index 46) — 1 for NFW', () => {
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const u32 = new Uint32Array(buf);
-    expect(u32[46]).toBe(0);
-    expect(u32[47]).toBe(0);
+    expect(u32[46]).toBe(1); // fixture uses 'nfw'
+  });
+
+  it('writes lensScaleRadiusMpc at byte 188 (float index 47)', () => {
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
+    const f32 = new Float32Array(buf);
+    expect(f32[47]).toBeCloseTo(0.7);
   });
 
   it('packs lens[0] as a vec4 (centre.xyz, thetaE) at float indices 48..51', () => {

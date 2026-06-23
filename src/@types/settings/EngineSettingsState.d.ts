@@ -51,6 +51,7 @@ import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
+import type { LensMode } from './LensMode';
 
 export type EngineSettingsState = {
   /**
@@ -200,12 +201,24 @@ export type EngineSettingsState = {
      */
     lensingEnabled: boolean;
     /**
-     * Einstein-ring radius in DEGREES (UI units). Real cluster Einstein
+     * Peak deflection in DEGREES (UI units) — the Einstein-ring radius in
+     * SIS mode, the peak deflection in NFW mode. Real cluster Einstein
      * radii are tens of arcseconds — invisible at typical zoom — so this
      * is an exaggeration knob, converted to radians before upload. The
      * deflection scales with this and with the source's D_ls/D_s.
      */
     lensStrengthDeg: number;
+    /**
+     * Lensing profile: `'sis'` (constant deflection, one ring) or `'nfw'`
+     * (g(x)/x — deflection peaks near the scale radius, adds a radial
+     * critical curve). See `lib/lensing.wesl`.
+     */
+    lensMode: LensMode;
+    /**
+     * NFW scale radius r_s in Mpc — sets where the deflection peaks (the
+     * ring radius). Ignored in SIS mode.
+     */
+    lensScaleRadiusMpc: number;
   };
 
   /**

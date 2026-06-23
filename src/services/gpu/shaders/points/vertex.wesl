@@ -124,7 +124,7 @@ fn vs(
   if (u.lensEnabled == 1u && dS > 1e-4) {
     let dirSrc = toSrc / dS;
     for (var i = 0u; i < u.lensCount; i = i + 1u) {
-      let term = lensTerm(u.camPosWorld, u.lenses[i], dirSrc, dS);
+      let term = lensTerm(u.camPosWorld, u.lenses[i], dirSrc, dS, u.lensMode, u.lensScaleRadius);
       if (term.valid == 0u) {
         continue;
       }

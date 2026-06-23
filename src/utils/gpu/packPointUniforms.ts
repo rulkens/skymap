@@ -1,5 +1,5 @@
 /**
- * packPointUniforms — pure packer for the 208-byte `Uniforms` struct.
+ * packPointUniforms — pure packer for the 448-byte `Uniforms` struct.
  *
  * Single source of truth for the visual-pass byte layout.  Both the point
  * renderer's `draw()` and (via the returned buffer) the pick renderer's
@@ -40,10 +40,10 @@ export const MAX_LENSES = 16;
  * import from `pointRenderer` don't need a new import path.
  *
  * 176 bytes of camera/points/bias/fade prefix, then the gravitational-lensing
- * block: a 16-byte header (lensEnabled + lensCount + 2 pad words) and a
- * `vec4<f32>` per lens (xyz = centre Mpc, w = Einstein radius rad).  See the
- * `UNIFORM_BYTES` docblock in `pointRenderer.ts` for the full slot-by-slot
- * layout.
+ * block: a 16-byte header (lensEnabled + lensCount + lensMode + NFW scale
+ * radius) and a `vec4<f32>` per lens (xyz = centre Mpc, w = peak deflection
+ * rad).  See the `UNIFORM_BYTES` docblock in `pointRenderer.ts` for the full
+ * slot-by-slot layout.
  */
 export const UNIFORM_BYTES = 176 + 16 + MAX_LENSES * 16; // 448 bytes at MAX_LENSES = 16
 
@@ -78,6 +78,8 @@ export function packPointUniforms(
     pxFadeEnd,
     lensEnabled,
     lenses,
+    lensMode,
+    lensScaleRadiusMpc,
   } = settings;
 
   // Pad slots are zero-initialised by `new ArrayBuffer` and never written.
@@ -124,14 +126,16 @@ export function packPointUniforms(
   // f32[42] (pickPass, byte 168) / f32[43] (_padFade1, byte 172) stay zero.
 
   // Gravitational-lensing block (bytes 176..).  The 16-byte header is the
-  // master toggle + lens count; the `vec4` array that follows carries one
-  // in-view cluster lens per slot (xyz = centre Mpc, w = Einstein radius rad).
-  // The pick renderer's overrides are all < 176, so picking lenses with the
-  // same parameters the visual pass just wrote.
+  // master toggle + lens count + the shared profile knobs (mode + NFW scale
+  // radius, applied to every lens this frame); the `vec4` array that follows
+  // carries one in-view cluster lens per slot (xyz = centre Mpc, w = peak
+  // deflection rad).  The pick renderer's overrides are all < 176, so picking
+  // lenses with the same parameters the visual pass just wrote.
   const lensCount = Math.min(lenses.length, MAX_LENSES);
   u32[44] = lensEnabled ? 1 : 0; // byte 176  lensEnabled
   u32[45] = lensCount >>> 0; // byte 180  lensCount
-  // u32[46..47] (_padLens0/1, bytes 184/188) stay zero.
+  u32[46] = lensMode === 'nfw' ? 1 : 0; // byte 184  lensMode (0 = SIS, 1 = NFW)
+  f32[47] = lensScaleRadiusMpc; // byte 188  NFW scale radius r_s (Mpc)
   for (let i = 0; i < lensCount; i++) {
     const base = LENS_ARRAY_BASE_INDEX + i * 4;
     const { center, thetaERad } = lenses[i]!;

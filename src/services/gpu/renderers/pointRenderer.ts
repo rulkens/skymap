@@ -198,7 +198,8 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 172..175: _padFade1         f32          (written as 0)              }
  *   bytes 176..179: lensEnabled       u32          (0 = off, 1 = lens)         }
  *   bytes 180..183: lensCount         u32          (active lenses ≤ MAX_LENSES)} 16-byte
- *   bytes 184..191: _padLens0/1       u32×2        (written as 0)              } header
+ *   bytes 184..187: lensMode          u32          (0 = SIS, 1 = NFW)          } header
+ *   bytes 188..191: lensScaleRadius   f32          (NFW r_s in Mpc)            }
  *   bytes 192..207: lenses[0]         vec4<f32>    (xyz centre Mpc, w θ_E rad) }
  *   …             : lenses[1..15]     vec4<f32>    (one per in-view cluster)   } MAX_LENSES×16
  *

@@ -11,6 +11,7 @@
 import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
 import type { LensSpec } from './LensSpec';
+import type { LensMode } from '../settings/LensMode';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -73,4 +74,11 @@ export type PointDrawSettings = {
    * or no cluster sits in front of the camera. See `lib/lensing.wesl`.
    */
   lenses: readonly LensSpec[];
+  /** Lensing profile applied to every in-view lens: SIS (constant deflection) or NFW (g(x)/x). */
+  lensMode: LensMode;
+  /**
+   * NFW scale radius r_s in Mpc — sets where the deflection peaks (the ring
+   * radius). Ignored in SIS mode.
+   */
+  lensScaleRadiusMpc: number;
 };

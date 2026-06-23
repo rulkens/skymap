@@ -1,5 +1,5 @@
-// lib/lensing.wesl — singular-isothermal-sphere (SIS) thin-lens deflection,
-// summed over the in-view cluster lenses.
+// lib/lensing.wesl — thin-lens deflection (SIS or NFW profile) summed over
+// the in-view cluster lenses.
 //
 // ## What this models
 //
@@ -118,8 +118,51 @@ const LENS_LOCAL_RADIUS_MPC: f32 = 30.0;
 // primary (δ along +tangent) and to place the dominant counter-image
 // (δ − β on the −tangent side):
 //
+// ## NFW radial shape m(x) = g(x)/x
+//
+// The Navarro–Frenk–White profile (ρ ∝ 1/[(r/r_s)(1+r/r_s)²]) is the
+// "universal" cold-dark-matter halo. Unlike the SIS's constant deflection,
+// NFW deflection rises from zero at the core, peaks near the scale radius,
+// then falls off as ~ln(x)/x — the curvature that gives real clusters their
+// inner radial critical curve (radial arcs), not just the tangential ring.
+//
+// Its enclosed-mass function has a closed form (Wright & Brainerd 2000;
+// Bartelmann 1996), with x = R/r_s the projected radius in scale-radius units:
+//
+//   g(x) = ln(x/2) + ⎧ arccosh(1/x)/√(1−x²)  (x < 1)
+//                    ⎨ 1                       (x = 1) → g(1) = 1 − ln2
+//                    ⎩ arccos(1/x)/√(x²−1)    (x > 1)
+//
+// and the deflection magnitude ∝ g(x)/x. We compute it analytically here
+// rather than from a baked 1D LUT: it is a handful of transcendentals per
+// vertex (cheap on the GPU) and avoids forcing a texture+sampler bind group
+// onto the SHARED pick pipeline. arccosh(1/x) is expanded to its log form
+// (log((1+√(1−x²))/x)) so we only need WGSL's core 'log'/'acos'/'sqrt'.
+//
+// The result is divided by NFW_SHAPE_PEAK (the numeric maximum of g(x)/x,
+// ≈0.312 near x≈1.3) so the curve peaks at 1.0 — that makes the strength
+// knob read as the *peak* angular deflection in BOTH modes, so toggling
+// SIS↔NFW keeps the ring roughly the same size and only its profile changes.
+const NFW_SHAPE_PEAK: f32 = 0.3122;
+
+fn nfwShape(x: f32) -> f32 {
+  let xc = clamp(x, 1e-4, 1e4);
+  var g: f32;
+  if (abs(xc - 1.0) < 1e-3) {
+    g = 1.0 - 0.6931472; // g(1) = 1 − ln2 (removable singularity)
+  } else if (xc < 1.0) {
+    let s = sqrt(1.0 - xc * xc);
+    // arccosh(1/x) = log((1 + √(1−x²)) / x)
+    g = log(xc * 0.5) + log((1.0 + s) / xc) / s;
+  } else {
+    let s = sqrt(xc * xc - 1.0);
+    g = log(xc * 0.5) + acos(1.0 / xc) / s;
+  }
+  return (g / xc) / NFW_SHAPE_PEAK;
+}
+
 //   beta     angular separation source↔lens centre (radians)
-//   delta    envelope-damped, distance-scaled Einstein radius (radians)
+//   delta    profile deflection, distance-scaled (radians)
 //   dirLens  unit direction eye→lens centre
 //   tangent  unit in-plane direction pointing AWAY from the lens centre
 struct LensTerm {
@@ -132,11 +175,21 @@ struct LensTerm {
 
 // Resolve one cluster lens's geometry for a source.
 //
-//   eye      camera position, world Mpc
-//   lens     xyz = lens centre (world Mpc), w = Einstein radius (radians)
-//   dirSrc   unit direction eye→source (precomputed once by the caller)
-//   dS       distance eye→source, Mpc (precomputed once by the caller)
-fn lensTerm(eye: vec3<f32>, lens: vec4<f32>, dirSrc: vec3<f32>, dS: f32) -> LensTerm {
+//   eye            camera position, world Mpc
+//   lens           xyz = lens centre (world Mpc), w = peak deflection (radians):
+//                  Einstein radius θ_E in SIS mode, peak deflection in NFW mode
+//   dirSrc         unit direction eye→source (precomputed once by the caller)
+//   dS             distance eye→source, Mpc (precomputed once by the caller)
+//   mode           0 = SIS (constant deflection), 1 = NFW (g(x)/x profile)
+//   scaleRadiusMpc NFW scale radius r_s in Mpc (where the ring sits); SIS-ignored
+fn lensTerm(
+  eye: vec3<f32>,
+  lens: vec4<f32>,
+  dirSrc: vec3<f32>,
+  dS: f32,
+  mode: u32,
+  scaleRadiusMpc: f32,
+) -> LensTerm {
   var term: LensTerm;
   term.valid = 0u;
   term.beta = 0.0;
@@ -161,9 +214,11 @@ fn lensTerm(eye: vec3<f32>, lens: vec4<f32>, dirSrc: vec3<f32>, dS: f32) -> Lens
 
   let dirLens = toLens / dL;
 
-  // SIS distance scaling: deflection ∝ D_ls / D_s (Euclidean approx).
+  // Distance scaling: deflection ∝ D_ls / D_s (Euclidean approx). Identical
+  // for both profiles — a source just behind the lens is barely deflected,
+  // one at infinity feels the full strength.
   let dLS = dS - dL;
-  let thetaEeff = thetaE * (dLS / dS);
+  let distFactor = dLS / dS;
 
   // Angular separation β between the source and the lens centre, plus its
   // sine for the in-plane tangent.
@@ -182,21 +237,32 @@ fn lensTerm(eye: vec3<f32>, lens: vec4<f32>, dirSrc: vec3<f32>, dS: f32) -> Lens
   // lens centre — the direction the primary image is pushed.
   let tangent = (dirSrc - dirLens * cosB) / sinB;
 
-  // Angular envelope: Gaussian ~3·θ_E wide so the shift dies off with
-  // separation from the lens centre instead of panning the whole sky.
-  let angularEnv = exp(-(beta * beta) / (2.0 * thetaEeff * thetaEeff * 9.0));
-
-  // Spatial envelope: gate on the impact parameter b = D_l·sin β (the
-  // perpendicular distance from the cluster centre to the eye→source ray),
-  // in world Mpc. Sources directly behind the cluster (b → 0) stay bent at
-  // any depth — so the ring survives — while a distant camera cannot widen
-  // the physical reach. See the header.
-  let impact = dL * sinB;
-  let localEnv = exp(-(impact * impact) / (2.0 * LENS_LOCAL_RADIUS_MPC * LENS_LOCAL_RADIUS_MPC));
+  // Deflection magnitude by profile.
+  var delta: f32;
+  if (mode == 1u) {
+    // NFW: x = β·D_l/r_s is the impact parameter in scale-radius units. The
+    // shape g(x)/x → 0 at both small and large x, so the effect self-localises
+    // on the physical scale r_s — no separate envelope needed.
+    let x = beta * dL / max(scaleRadiusMpc, 1e-4);
+    delta = thetaE * distFactor * nfwShape(x);
+  } else {
+    // SIS: constant Einstein deflection θ_E·D_ls/D_s, damped by two envelopes
+    // so an idealised infinite SIS doesn't pan the whole sky.
+    let thetaEeff = thetaE * distFactor;
+    // Angular: Gaussian ~3·θ_E wide — deflection dies off with separation.
+    let angularEnv = exp(-(beta * beta) / (2.0 * thetaEeff * thetaEeff * 9.0));
+    // Spatial: gate on the impact parameter b = D_l·sin β (perpendicular
+    // distance from the cluster centre to the eye→source ray), in world Mpc.
+    // Sources directly behind the cluster (b → 0) stay bent at any depth — so
+    // the ring survives — while a distant camera cannot widen the reach.
+    let impact = dL * sinB;
+    let localEnv = exp(-(impact * impact) / (2.0 * LENS_LOCAL_RADIUS_MPC * LENS_LOCAL_RADIUS_MPC));
+    delta = thetaEeff * angularEnv * localEnv;
+  }
 
   term.valid = 1u;
   term.beta = beta;
-  term.delta = thetaEeff * angularEnv * localEnv;
+  term.delta = delta;
   term.dirLens = dirLens;
   term.tangent = tangent;
   return term;
