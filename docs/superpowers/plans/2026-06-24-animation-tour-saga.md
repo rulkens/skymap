@@ -632,26 +632,27 @@ Plan A/B camera constructors + `playClip`.
 
 ## Definition of Done
 
-- [ ] All new tests green; whole suite (`npm test`) green; `npm run typecheck`
-  clean; `npm run build` clean.
-- [ ] `final alpha = intentOpacity × focusRecession × clipOpacity` (Plan A's
+- [x] All new tests green; whole suite (`npm test`) green; `npm run typecheck`
+  clean; `npm run build` clean. (513 files / 3261 tests.)
+- [x] `final alpha = intentOpacity × focusRecession × clipOpacity` (Plan A's
   renderer composition) is verified by the Task 8 integration tests — this plan
   READS the composed alpha, does not build it.
-- [ ] The scene verbs behave as Plan A built them — `fade()` moves `clipOpacity`
+- [x] The scene verbs behave as Plan A built them — `fade()` moves `clipOpacity`
   ONLY (never intent); `show`/`hide` ride the live bridge; `scene`/`focus` dispatch
   the production action surface — verified read-only by the Task 8 validation.
-- [ ] `BeatData.effects` are `put` verbatim — no `applyIntent`/`applyEffect` wrapper.
-- [ ] The tour stops ONLY on `TOUR_EXIT` (no camera-input self-abort); the `finally`
+- [x] `BeatData.effects` are `put` verbatim — no `applyIntent`/`applyEffect` wrapper.
+- [x] The tour stops ONLY on `TOUR_EXIT` (no camera-input self-abort); the `finally`
   always runs `restoreScene` (settings + focus) and un-hides the UI.
-- [ ] `captureScene`/`restoreScene` are `getContext('reconcile')` closures; the saga
+- [x] `captureScene`/`restoreScene` are `getContext('reconcile')` closures; the saga
   passes no `state`/`store`.
-- [ ] This plan adds NO `clipOpacity` channel, NO `resolveLayerOpacity` change, NO
+- [x] This plan adds NO `clipOpacity` channel, NO `resolveLayerOpacity` change, NO
   `SceneEffect` type, NO scene-verb constructor, NO `applySceneEffect`, NO
   `syncVisibilityFades` duration override (all Plan A's), and NO `suspendDuringClip`
   or `endClip → cancelCameraTween` reaction (Plan B's) — verify none leaked back in.
-- [ ] Run the `entanglement-radar` skill over the diff — confirm the tour clip
+  (Final whole-branch review confirmed the Plan A/B file set is untouched.)
+- [x] Run the `entanglement-radar` skill over the diff — confirm the tour clip
   builders compose Plan A's verbs (no re-minted constructor) and `BeatData.effects`
-  are `put` verbatim (no wrapper).
+  are `put` verbatim (no wrapper). (Clean; one accept-as-is name-mismatch Minor.)
 - [ ] PR (squash-merge) with the spec linked; relocate this plan via `/feature-done`.
 
 ## Self-review (run before handing off)
