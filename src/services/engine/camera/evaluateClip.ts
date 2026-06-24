@@ -13,11 +13,14 @@
  * the channel holds its most recent value.
  *
  * **Velocity layer** (`velTracks`): closed-form integral of `rate` ramps. A
- * ramp accelerates a channel's velocity from 0 to `to` over its window
- * `[s, e)`, then HOLDS `to` forever after. Multiple ramps on the same channel
- * stack in emission order; a later ramp overrides the prior velocity from its
- * own startSec (its displacement is computed fresh from that point onward).
- * The total displacement is a pure function of `t` — NO per-frame accumulator.
+ * ramp accelerates a channel's velocity FROM the velocity carried out of the
+ * previous ramp TO its own `to` over its window `[s, e)`, then HOLDS `to`
+ * until the next ramp starts (or forever, if it is the last). Multiple ramps
+ * on the same channel form an OVERRIDE chain: a later ramp takes over from
+ * the prior ramp's carried velocity at its own `startSec`. Each ramp is only
+ * active over its own interval — it does not keep accumulating after the next
+ * ramp starts. The total displacement is a pure function of `t` — NO
+ * per-frame accumulator.
  *
  * **Oscillation layer** (`oscTracks`): zero-mean sine bob,
  * `amp · sin(2π t / period)`. Additive with both base and velocity;
@@ -26,36 +29,35 @@
  *
  * ### Velocity-integral method
  *
- * For each `VelRamp [s, e)` with terminal velocity `to` and ease function `E`:
+ * For a channel's VelRamps r_0..r_{k-1} sorted ascending by startSec,
+ * let b_i = r_{i+1}.startSec (the "boundary" where the next ramp takes over),
+ * and b_{last} = +Infinity. Ramp i is active over [s_i, b_i).
  *
- *   displacement(t) =
- *     ∫_s^{min(t,e)} to · E((u-s)/(e-s)) du  +  to · max(0, t - e)
+ * Carried velocity into r_0 is 0; into r_{i+1} is the velocity of r_i
+ * evaluated at b_i (= to_i if b_i ≥ e_i, otherwise the mid-ramp value).
  *
- * The ramp portion requires integrating the ease analytically or numerically.
- * This implementation uses a 64-step Simpson's rule quadrature for the ramp
- * portion. Rationale:
+ * Velocity inside ramp i at u ∈ [s_i, e_i):
+ *   v(u) = carriedV_i + (to_i − carriedV_i) · EASE((u − s_i) / (e_i − s_i))
+ * For u ≥ e_i (held): v(u) = to_i.
  *
- *   - `ease:'linear'` has an exact analytic closed form (see `rampIntegral`),
- *     which is used directly when the ease is `'linear'`.
- *   - The non-linear eases (`in`, `out`, `inOut`) have analytic antiderivatives
- *     (polynomials), but implementing and testing three separate formulas
- *     introduces more surface area than the fixed-step quadrature does. A
- *     64-step Simpson rule over a [0,1] normalised interval is deterministic,
- *     frame-rate-independent, and accurate to better than 1e-9 for smooth
- *     monotone functions — more than enough for camera animation.
- *   - The spec's headline requirement is "no per-frame accumulator", not a
- *     symbolic integral. Fixed-step quadrature satisfies that requirement: the
- *     same `(ramp, t)` pair always produces the same displacement.
+ * Displacement contributed by ramp i over [s_i, min(t, b_i)]:
+ *   ramp portion: carriedV_i·Δ + (to_i − carriedV_i)·dur_i·∫₀^q EASE(p) dp
+ *     where Δ = min(min(t,b_i), e_i) − s_i, q = Δ / dur_i
+ *   held portion: to_i · (min(t, b_i) − e_i)  if min(t, b_i) > e_i
+ *
+ * For `ease:'linear'`, ∫₀^q p dp = q²/2 (analytic). Non-linear eases use
+ * a 64-step Simpson quadrature over [0, q]. The quadrature is deterministic
+ * and frame-rate-independent — the same (ramp, t) pair always produces the
+ * same displacement.
+ *
+ * With a single ramp, carriedV=0 and b_0=∞, so the formula reduces exactly
+ * to the prior single-ramp behavior.
  *
  * ### Spin-loop continuation choice
  *
  * For a `spin` segment with `loop: true`, the spin delta continues beyond
- * `endSec` as a LINEAR extrapolation of the final rate: the eased cycle from
- * `[startSec, endSec)` is treated as a single revolution, and subsequent
- * revolutions use the same `by` delta per `(endSec - startSec)` interval.
- * Formally: for t ≥ endSec, the total delta is
- *   `by + by · (t - startSec)/(endSec - startSec)  - by`
- *   = `by · (t - startSec)/(endSec - startSec)`.
+ * `endSec` as a LINEAR extrapolation of the final rate: for t ≥ startSec,
+ * the total delta is `by · (t − startSec) / (endSec − startSec)`.
  * The tested clips do not exercise `loop`, but flyout/dwellDrift authors can
  * rely on linear continuation.
  *
@@ -104,8 +106,8 @@ function getCompiled(data: ClipData): CompiledClip {
 // ---------------------------------------------------------------------------
 // Velocity integral helpers
 //
-// The ramp integral ∫_s^{w} to·E((u-s)/(e-s)) du in closed form for linear,
-// and 64-step Simpson quadrature for the other eases.
+// The ramp integral ∫_0^{q} carriedV + (to − carriedV)·E(x) dx in closed form
+// for linear ease, and 64-step Simpson quadrature for the other eases.
 // ---------------------------------------------------------------------------
 
 const SIMPSON_STEPS = 64; // must be even for Simpson's rule
@@ -130,52 +132,100 @@ function integrateEase(easeName: Ease, p: number): number {
 }
 
 /**
- * rampDisplacement — displacement contributed by ONE VelRamp at time t.
+ * rampVelocity — velocity produced by ONE VelRamp at time u, given its
+ * carried-in velocity `carriedV`.
  *
- * The ramp runs from `s` to `e`, ramping velocity 0→`to` with `ease`.
- * After `e` the velocity is held at `to` indefinitely.
- *
- * displacement(t) =
- *   (e - s) · to · ∫_0^{p} E(x) dx   (ramp portion, p = clamp(t-s, 0, e-s)/(e-s))
- *   + to · max(0, t - e)               (hold portion)
+ * v(u) = carriedV + (to − carriedV)·E((u − s) / (e − s))  for u ∈ [s, e)
+ * v(u) = to                                                 for u ≥ e
+ * v(u) = carriedV                                           for u < s
  */
-function rampDisplacement(ramp: VelRamp, t: number): number {
+function rampVelocity(ramp: VelRamp, carriedV: number, u: number): number {
   const { startSec: s, endSec: e, to, ease } = ramp;
-  if (t <= s) return 0;
-
-  const w = Math.min(t, e);
+  if (u < s) return carriedV;
+  if (u >= e) return to;
   const dur = e - s;
-  const p = dur > 0 ? (w - s) / dur : 1;
+  const progress = dur > 0 ? (u - s) / dur : 1;
+  return carriedV + (to - carriedV) * EASE[ease](progress);
+}
+
+/**
+ * rampContribution — displacement contributed by ONE VelRamp over its ACTIVE
+ * interval [s_i, min(t, b_i)], given its carried-in velocity `carriedV`.
+ *
+ * `boundary` is b_i = next ramp's startSec (or +Infinity for the last ramp).
+ * The ramp is only responsible for its own active interval — it does not keep
+ * accumulating past `boundary` even though it might hold a non-zero velocity.
+ *
+ * Decomposed into:
+ *   ramp portion: carriedV·Δ + (to − carriedV)·dur·∫_0^q E(x) dx
+ *     where Δ = min(w, e) − s, q = Δ / dur, w = min(t, boundary)
+ *   held portion: to · (w − e)  if w > e
+ */
+function rampContribution(ramp: VelRamp, carriedV: number, boundary: number, t: number): number {
+  const { startSec: s, endSec: e, to, ease } = ramp;
+  // The ramp is active over [s, boundary). Clamp our query window to that.
+  const w = Math.min(t, boundary);
+  if (w <= s) return 0;
+
+  const dur = e - s;
+  // The ramp portion: velocity linearly-or-eased from carriedV to to over [s, e).
+  const rampEnd = Math.min(w, e);
+  const delta = rampEnd - s; // time within the ramp portion being integrated
+  const q = dur > 0 ? delta / dur : 1;
 
   let rampPart: number;
   if (ease === 'linear') {
-    // Analytic closed form for linear ease: ∫_0^p x dx = p²/2.
-    // Total: dur · to · p²/2
-    rampPart = dur * to * (p * p) * 0.5;
+    // Analytic closed form for linear ease (E(x) = x):
+    //   ∫_0^q [carriedV + (to − carriedV)·x] dx
+    //   = carriedV·q + (to − carriedV)·q²/2
+    // Multiply by dur to convert back from normalised units to seconds.
+    rampPart = dur * (carriedV * q + (to - carriedV) * (q * q) * 0.5);
   } else {
-    // 64-step Simpson quadrature for non-linear eases.
-    // ∫_0^p E(x) dx, scaled by dur·to.
-    rampPart = dur * to * integrateEase(ease, p);
+    // 64-step Simpson quadrature: ∫_0^q E(x) dx.
+    //   Total: dur·[carriedV·q + (to − carriedV)·∫_0^q E(x) dx]
+    rampPart = dur * (carriedV * q + (to - carriedV) * integrateEase(ease, q));
   }
 
-  const holdPart = to * Math.max(0, t - e);
+  // The held portion: velocity is exactly `to` for all u ≥ e within [s, w].
+  const holdPart = w > e ? to * (w - e) : 0;
   return rampPart + holdPart;
 }
 
 // ---------------------------------------------------------------------------
-// Velocity layer — sum of all ramp displacements on a channel.
+// Velocity layer — override chain across all ramps on a channel.
 //
-// Multiple ramps on the same channel are processed in emission order. A later
-// ramp overrides the prior velocity FROM its own startSec onward — its
-// displacement is computed fresh from that point, starting at rest.
+// Ramps are processed in ascending startSec order. Each ramp is active only
+// over [s_i, b_i) where b_i = next ramp's startSec. Carried velocity passes
+// forward: carriedV_{i+1} = velocity of ramp i at b_i.
+//
+// With a single ramp, carriedV=0 and boundary=+Infinity, which reduces
+// exactly to the prior single-ramp behavior.
 // ---------------------------------------------------------------------------
 
 function velDisplacement(compiled: CompiledClip, ch: Channel, t: number): number {
+  // Collect and sort this channel's ramps by startSec ascending.
+  const ramps = compiled.velTracks.filter((r) => r.channel === ch);
+  if (ramps.length === 0) return 0;
+  ramps.sort((a, b) => a.startSec - b.startSec);
+
   let total = 0;
-  for (const ramp of compiled.velTracks) {
-    if (ramp.channel !== ch) continue;
-    total += rampDisplacement(ramp, t);
+  let carriedV = 0;
+
+  for (let i = 0; i < ramps.length; i++) {
+    const ramp = ramps[i]!;
+    const nextRamp = ramps[i + 1];
+    const boundary = nextRamp !== undefined ? nextRamp.startSec : Infinity;
+
+    // Accumulate this ramp's contribution over its own active interval.
+    total += rampContribution(ramp, carriedV, boundary, t);
+
+    // If t is still before this ramp's active interval ends, we're done.
+    if (t < boundary) break;
+
+    // Carry forward the velocity this ramp holds at the boundary.
+    carriedV = rampVelocity(ramp, carriedV, boundary);
   }
+
   return total;
 }
 
@@ -274,8 +324,10 @@ function evaluateBaseScalar(
 /**
  * evaluateBaseVec3 — evaluate the base layer for the `target` Vec3 channel.
  *
- * `target` only ever has `'tween'`/`setVec` segments (never spin); each
- * component is interpolated linearly (space is always `'lin'`).
+ * `target` only ever has `'tween'`/`setVec` segments (never spin). `seg.space`
+ * is intentionally ignored here: world-space coordinates are always interpolated
+ * component-wise in linear space (log-space and additive-angle semantics are
+ * undefined for signed 3D positions).
  */
 function evaluateBaseVec3(
   segments: BaseSegment[],
@@ -352,10 +404,9 @@ export function evaluateClip(data: ClipData, elapsedSec: number): CameraPose {
   const velDist = velDisplacement(compiled, 'distance', t);
   const velYaw = velDisplacement(compiled, 'yaw', t);
   const velPitch = velDisplacement(compiled, 'pitch', t);
-  // target velocity is not typically used, but handled for completeness
-  const velTargetX = 0; // rate on 'target' is not supported in the current effectHelpers
-  const velTargetY = 0;
-  const velTargetZ = 0;
+  // `rate` on 'target' is uncommon but structurally consistent — velDisplacement
+  // returns 0 when no VelRamp exists for a channel, so this is a no-op by default.
+  const velTarget = velDisplacement(compiled, 'target', t);
 
   // --- Oscillation layer (additive) ---
   const oscDist = oscOffset(compiled, 'distance', t);
@@ -368,9 +419,9 @@ export function evaluateClip(data: ClipData, elapsedSec: number): CameraPose {
   return {
     // Fresh target triple — never alias any input.
     target: [
-      baseTarget[0] + velTargetX + oscTarget,
-      baseTarget[1] + velTargetY + oscTarget,
-      baseTarget[2] + velTargetZ + oscTarget,
+      baseTarget[0] + velTarget + oscTarget,
+      baseTarget[1] + velTarget + oscTarget,
+      baseTarget[2] + velTarget + oscTarget,
     ],
     yaw: baseYaw + velYaw + oscYaw,
     pitch: basePitch + velPitch + oscPitch,

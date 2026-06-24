@@ -14,6 +14,7 @@ import {
   oscillate,
   tween,
   all,
+  seq,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -169,11 +170,59 @@ describe('evaluateClip is pure', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 7 — composes base + vel + osc correctly on yaw
+// Test 7 — velocity ramps OVERRIDE, not stack
+//
+// Two sequential `rate` ramps on `yaw`:
+//   ramp A: yaw velocity 0 → 1.0 rad/s over 1 second  (active [0, 1))
+//   ramp B: yaw velocity 1.0 → 0.2 rad/s over 1 second (active [1, 2))
+//
+// After both ramps complete (t > 2), the channel velocity is held at 0.2 rad/s.
+// The stacking (wrong) model would accumulate both ramps' integrals starting
+// from rest, yielding velocity ≈ 1.0 + 0.2 = 1.2 rad/s after t=2.
+// The override (correct) model carries ramp A's final velocity (1.0) into ramp B,
+// which ramps it DOWN to 0.2, so the held velocity after t=2 is exactly 0.2.
+//
+// Measured as: yaw(t+1) − yaw(t) ≈ 0.2 for some t well past both ramps.
+// Under stacking that delta would be ≈ 1.2 (6× larger).
+// ---------------------------------------------------------------------------
+
+describe('evaluateClip velocity ramps OVERRIDE, not stack', () => {
+  it('second rate ramp governs velocity; delta is ~0.2/s, not ~1.2/s', () => {
+    // ramp A: 0→1.0 rad/s over 1 second; ramp B: →0.2 rad/s over 1 second.
+    // seq ensures B starts immediately after A ends (at t=1).
+    const data: ClipData = {
+      start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
+      timeline: [
+        seq([
+          rate('yaw', { to: 1.0, over: 1, ease: 'linear' }),
+          rate('yaw', { to: 0.2, over: 1, ease: 'linear' }),
+        ]),
+      ],
+    };
+
+    // Query in the held region well after both ramps, measuring the 1-second delta.
+    // Both ramps end by t=2; at t=3 and t=4 the velocity is held at 0.2 rad/s.
+    const yaw3 = evaluateClip(data, 3).yaw;
+    const yaw4 = evaluateClip(data, 4).yaw;
+    const delta = yaw4 - yaw3;
+
+    // Override: the second ramp's held velocity (0.2 rad/s) governs → delta ≈ 0.2.
+    expect(delta).toBeCloseTo(0.2, 4);
+
+    // Stacking would give ≈ 1.2 rad/s. Assert the correct value is well below
+    // even 0.5 to make the distinction unambiguous.
+    expect(delta).toBeLessThan(0.5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 8 — composes base + vel + osc correctly on yaw
 //
 // Build three single-layer clips that each touch only one layer of yaw at a
 // fixed time t=1.5. Assert that the combined clip's yaw delta equals the sum
 // of the three independent deltas (linearity of the additive model).
+// Note: the vel-only clip uses a SINGLE rate ramp; this is intentionally
+// single-ramp to keep it independent of Test 7's multi-ramp override behavior.
 // ---------------------------------------------------------------------------
 
 describe('evaluateClip composes base+vel+osc on one channel', () => {
