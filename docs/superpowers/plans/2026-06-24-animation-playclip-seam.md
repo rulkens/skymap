@@ -405,16 +405,18 @@ by playing it through `playClip` (dispatch → frames → commit-on-edge bake �
 resolves). This is the integration check that the whole `playClip` → `clipPlayer` →
 `clip`@95 driver → commit-on-edge loop closes.
 
-- [ ] `playClip(flyout) drives the camera and resolves` — an integration-style test
+- [x] `playClip(flyout) drives the camera and resolves` — an integration-style test
   (drive `runFrame` over enough simulated frames): assert the camera distance moves
   from the live pose toward the flyout's horizon-shell target, the Promise resolves
   after the timeline duration, and `camera.base` is committed to the saturated final
   pose (commit-on-edge bake, NOT one frame stale).
-- [ ] Run → red.
-- [ ] Implement the spike call site (`playClip(flyout)`), reusing Plan A's `flyout`
-  `ClipData` verbatim — do not re-author it.
-- [ ] `npm test` (the integration test) → green; `npm run typecheck` → green.
-- [ ] Commit.
+- [x] Run → red.
+- [x] Implement the spike call site (`playClip(flyout)`), reusing Plan A's `flyout`
+  `ClipData` verbatim — do not re-author it. *(The integration TEST is the
+  non-reactive call site — no unwired `src/` spike module created, which would be
+  dead code; live wiring is Plan C. No `src/` change needed: Tasks 1-5 closed the seam.)*
+- [x] `npm test` (the integration test) → green; `npm run typecheck` → green.
+- [x] Commit.
 
 ## Task 7 — Full-suite green + cleanup pass
 
