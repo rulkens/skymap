@@ -67,7 +67,6 @@ const SETTINGS: PointDrawSettings = {
   // (see packLensingUniforms), so the points uniform carries only the
   // lensEnabled CPU gate — not the lens array / mode / scale radius.
   lensEnabled: false,
-  lensingBindGroup: FOCUS_BIND_GROUP,
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

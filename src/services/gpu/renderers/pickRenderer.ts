@@ -36,7 +36,6 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import type { LensingUniformsBgl } from '../../../@types/rendering/LensingUniformsBgl';
 import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 import type { MilkyWayPickRenderer } from '../../../@types/rendering/MilkyWayPickRenderer';
@@ -74,21 +73,19 @@ export function createPickRenderer(
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
   focusBgl: FocusUniformsBgl,
-  // Canonical LensingUniforms layout (@group(4)), shared with the visual
-  // points pipeline so the same lensing bind group binds in both.
-  lensingBgl: LensingUniformsBgl,
+  // The engine's shared gravitational-lensing buffer (live, written once per
+  // frame in renderFrame).  Embedded at @group(0) @binding(1) of the pick
+  // pipeline — the SAME buffer the visual pass binds there — so the pick
+  // pass deflects sources identically and lensed images stay hit-testable.
+  // It rides binding 1 of the uniforms group rather than a 5th @group:
+  // WebGPU caps a pipeline at 4 bind groups and the pick pipeline already
+  // uses all four (uniforms, fade, source, focus).
+  lensingBuffer: GPUBuffer,
   // The engine's shared cluster-focus bind group (live buffer, written
   // once per frame in renderFrame).  Bound at @group(3) so the pick pass
   // sees the same focus state the visual pass does and the shared vertex
   // shader can cull non-members of a focused structure from hit-testing.
   focusBindGroup: GPUBindGroup,
-  // The engine's shared gravitational-lensing bind group (live buffer,
-  // written once per frame in renderFrame).  Bound at @group(4) — the SAME
-  // shared group the visual pass uses — so the pick pass deflects sources
-  // identically and lensed images stay hit-testable. Only the DATA source
-  // changed (from the old points-uniform tail to this shared bind group);
-  // the pick draw-vertex-count behaviour is unchanged.
-  lensingBindGroup: GPUBindGroup,
   // Optional structure-ring pick provider.  When present, the pick pass
   // calls `structureMarkerRenderer.pickRing(pass)` after the galaxy
   // draws so cluster / supercluster / void ring hits land in the same
@@ -140,12 +137,19 @@ export function createPickRenderer(
             visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
             buffer: { type: 'uniform' },
           },
+          // @group(0) @binding(1): the shared lensing buffer — same slot the
+          // visual pipeline uses, so the shared vertex shader's `lensing`
+          // binding resolves identically.
+          {
+            binding: 1,
+            visibility: GPUShaderStage.VERTEX,
+            buffer: { type: 'uniform' },
+          },
         ],
       }),
       fadeBgl,
       sourceBgl,
       focusBgl,
-      lensingBgl,
     ],
   });
 
@@ -230,7 +234,12 @@ export function createPickRenderer(
   const pickUniformBindGroup = device.createBindGroup({
     label: 'pick-uniform-bg',
     layout: pipeline.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: pickUniformBuffer } }],
+    entries: [
+      { binding: 0, resource: { buffer: pickUniformBuffer } },
+      // @group(0) @binding(1): the engine's shared lensing buffer — same
+      // object the visual pass embeds, so picking deflects identically.
+      { binding: 1, resource: { buffer: lensingBuffer } },
+    ],
   });
 
   // `copyTextureToBuffer` requires `bytesPerRow` to be a multiple of
@@ -375,10 +384,11 @@ export function createPickRenderer(
     // Bind the prebuilt @group(0) bind group (built once at construction
     // against pickUniformBuffer — avoids per-pass createBindGroup calls).
     pass.setPipeline(pipeline);
+    // @group(0) holds the pick uniforms (binding 0) + the shared lensing
+    // buffer (binding 1), both baked into pickUniformBindGroup at construction.
     pass.setBindGroup(0, pickUniformBindGroup);
     pass.setBindGroup(1, dummyFadeBindGroup);
     pass.setBindGroup(3, focusBindGroup);
-    pass.setBindGroup(4, lensingBindGroup);
 
     for (const src of sourceList) {
       let sourceBindGroup = sourceBindGroupCache.get(src.sourceBuffer);
@@ -528,8 +538,9 @@ export function createPickRenderer(
     stagingBuffer.destroy();
     dummyFadeBuffer.destroy();
     pickUniformBuffer.destroy();
-    // focusBindGroup + lensingBindGroup wrap engine-owned shared buffers;
-    // the engine's destroy() releases them, not the picker.
+    // focusBindGroup wraps an engine-owned shared buffer, and lensingBuffer
+    // is the engine's shared lensing buffer; the engine's destroy() releases
+    // them, not the picker.
   }
 
   const renderer: PickRenderer = { label: 'pickRenderer', pick, renderForDebug, destroy };

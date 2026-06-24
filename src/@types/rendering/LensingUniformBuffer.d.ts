@@ -9,16 +9,20 @@
  *
  * One lens set is active per frame, so the whole engine holds exactly one
  * of these (on `state.gpu.lensingUniform`) and writes it once per frame in
- * `renderFrame`. Its bind group is shared by every lensing-aware pipeline —
- * points (vertex stage) and the volume raymarch (fragment stage) — a bind
- * group is tied to a layout, not a group number, so the same object binds
- * at each pipeline's own group slot.
+ * `renderFrame`. The single `buffer` is the shared unit: the points + pick
+ * pipelines embed it as a second binding in their own `@group(0)` (WebGPU
+ * caps a pipeline at 4 bind groups, and points already uses all four — so
+ * lensing rides binding 1 of the per-pipeline uniforms group rather than a
+ * 5th group). The standalone `bindGroup` lets a pipeline with a free group
+ * (the volume raymarch) bind the same buffer directly.
  */
 
 import type { LensingUniformsValue } from './LensingUniformsValue';
 
 export type LensingUniformBuffer = {
-  /** Bind group wrapping the lensing buffer — bound at the pipeline's lensing group. */
+  /** The lensing GPU buffer itself — embedded as `@group(0) @binding(1)` by the points + pick pipelines. */
+  readonly buffer: GPUBuffer;
+  /** Standalone bind group wrapping the buffer — for a pipeline binding it at its own free group (volume raymarch). */
   readonly bindGroup: GPUBindGroup;
   /** Pack `value` into the shared layout and upload it. */
   write(value: LensingUniformsValue): void;

@@ -164,7 +164,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
     state.gpu.focusBgl!,
-    state.gpu.lensingBgl!,
+    // The shared lensing buffer, embedded at @group(0) @binding(1) (points
+    // already uses all four bind groups, so lensing can't be a 5th group).
+    state.gpu.lensingUniform!.buffer,
   );
   state.gpu.renderer = renderer;
 

@@ -50,6 +50,7 @@ export function createLensingUniformBuffer(
   }
 
   return {
+    buffer,
     bindGroup,
     write,
     destroy(): void {

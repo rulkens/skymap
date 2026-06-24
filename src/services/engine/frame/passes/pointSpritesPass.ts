@@ -121,12 +121,12 @@ export const pointSpritesPass: Pass = {
       // registered yet renders at full opacity rather than disappearing.
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
-      // Gravitational-lensing prototype. `lensEnabled` still gates the
-      // 12-vs-6 vertex draw count on the CPU; the actual lens array + mode +
-      // scale radius live in the shared LensingUniforms buffer (written once
-      // per frame in renderFrame), bound here at @group(4).
+      // Gravitational-lensing prototype. `lensEnabled` gates the 12-vs-6
+      // vertex draw count on the CPU; the lens array + mode + scale radius
+      // live in the shared lensing buffer (written once per frame in
+      // renderFrame), which the renderer baked into its @group(0) bind group
+      // at construction — so there's nothing lens-related to pass per draw.
       lensEnabled: state.settings.debug.lensingEnabled,
-      lensingBindGroup: state.gpu.lensingUniform!.bindGroup,
     });
     if (bytes !== null) state.picking.lastFrameUniformBytes = bytes;
   },

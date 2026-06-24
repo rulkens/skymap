@@ -65,11 +65,4 @@ export type PointDrawSettings = {
    * lensing buffer) because it gates the 12-vs-6 vertex draw count here.
    */
   lensEnabled: boolean;
-  /**
-   * Shared LensingUniforms bind group (@group(4)) bound by the points + pick
-   * pipelines. The engine writes the single lensing buffer once per frame in
-   * renderFrame; the vertex stage reads the lens array + mode + scale radius
-   * from it.
-   */
-  lensingBindGroup: GPUBindGroup;
 };

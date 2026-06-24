@@ -7,7 +7,9 @@
  * 1. Signature shape — `proceduralDiskRenderer` must be the 8th positional
  *    (index 7) and optional. Pins append-not-reorder: if a future edit
  *    moves it before `structureMarkerRenderer` (index 6) or makes it
- *    required, the type assertion below fails at type-check time.
+ *    required, the type assertion below fails at type-check time. (After the
+ *    lensing refactor the required head is device/fadeBgl/sourceBgl/focusBgl/
+ *    lensingBuffer/focusBindGroup at 0..5, structureMarkerRenderer at 6.)
  *
  * 2. `pickDisks` behaviour — after a `draw` with N instances, `pickDisks`
  *    issues `pass.draw(6, N)`; on a fresh renderer (no prior draw) it is a
@@ -22,20 +24,20 @@ import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/Pr
 // ── 1. Signature pin ────────────────────────────────────────────────────────
 
 describe('createPickRenderer disk-pick integration', () => {
-  it('keeps proceduralDiskRenderer optional as the 9th positional (index 8)', () => {
-    // Compile-time: the 9th parameter (index 8, after device/fadeBgl/
-    // sourceBgl/focusBgl/lensingBgl/focusBindGroup/lensingBindGroup/
-    // structureMarkerRenderer) must exist and be assignable from `undefined`
-    // (declared with `?`). Removing it, making it required, or reordering it
-    // before structureMarkerRenderer all break this.
+  it('keeps proceduralDiskRenderer optional as the 8th positional (index 7)', () => {
+    // Compile-time: the 8th parameter (index 7, after device/fadeBgl/
+    // sourceBgl/focusBgl/lensingBuffer/focusBindGroup/structureMarkerRenderer)
+    // must exist and be assignable from `undefined` (declared with `?`).
+    // Removing it, making it required, or reordering it before
+    // structureMarkerRenderer all break this.
     //
-    // Note: the lensing refactor inserted `lensingBgl` (index 4) +
-    // `lensingBindGroup` (index 6), shifting the optional tail params down by
-    // two indices each.
+    // Note: the lensing refactor embeds the shared lensing buffer at index 4
+    // (replacing focus/lensing BGLs), with focusBindGroup at 5 and
+    // structureMarkerRenderer at 6.
     type Sig = Parameters<typeof createPickRenderer>;
     const _check = (...args: Sig): void => {
-      const ninth: Sig[8] = args[8];
-      const _undef: typeof ninth = undefined;
+      const eighth: Sig[7] = args[7];
+      const _undef: typeof eighth = undefined;
       void _undef;
     };
     expect(_check).toBeTypeOf('function');
