@@ -130,6 +130,35 @@ describe('applyIntent', () => {
     expect(post).toHaveBeenCalledTimes(1);
     expect(post).toHaveBeenCalledWith(state, undefined);
   });
+
+  it('uses the durationMs override when given', () => {
+    const { state, fadeTo } = makeState();
+
+    const onRow = makeRow({ intent: () => true });
+    applyIntentForTest(state, onRow, undefined, { animate: true, durationMs: 1234 });
+    expect(fadeTo).toHaveBeenCalledWith(HANDLE, 1, 1234);
+    // The override must not equal the default so this assertion is meaningful.
+    expect(1234).not.toBe(FADE_IN_DURATION_MS);
+
+    fadeTo.mockClear();
+    const offRow = makeRow({ intent: () => false });
+    applyIntentForTest(state, offRow, undefined, { animate: true, durationMs: 1234 });
+    expect(fadeTo).toHaveBeenCalledWith(HANDLE, 0, 1234);
+    expect(1234).not.toBe(FADE_OUT_DURATION_MS);
+  });
+
+  it('falls back to FADE_IN/OUT constants when durationMs is omitted', () => {
+    const { state, fadeTo } = makeState();
+
+    const onRow = makeRow({ intent: () => true });
+    applyIntentForTest(state, onRow, undefined, { animate: true });
+    expect(fadeTo).toHaveBeenCalledWith(HANDLE, 1, FADE_IN_DURATION_MS);
+
+    fadeTo.mockClear();
+    const offRow = makeRow({ intent: () => false });
+    applyIntentForTest(state, offRow, undefined, { animate: true });
+    expect(fadeTo).toHaveBeenCalledWith(HANDLE, 0, FADE_OUT_DURATION_MS);
+  });
 });
 
 // ── syncVisibilityFades (public bridge over the REAL FADE_LAYERS) ──────
@@ -301,6 +330,18 @@ describe('syncVisibilityFades', () => {
 
     // The bridge does fades ONLY, so settings are untouched.
     expect(JSON.parse(JSON.stringify(settings))).toEqual(before);
+  });
+
+  it('threads durationMs to every animated fadeTo call', () => {
+    const { state, fadeTo } = makeBridgeState();
+
+    syncVisibilityFades(state, { animate: true, durationMs: 750 });
+
+    // Every fadeTo call must have received the override, not a default constant.
+    expect(fadeTo.mock.calls.length).toBeGreaterThan(0);
+    for (const [, , dur] of fadeTo.mock.calls) {
+      expect(dur).toBe(750);
+    }
   });
 });
 
