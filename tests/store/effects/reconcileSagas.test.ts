@@ -45,6 +45,7 @@ import { setTier } from '../../../src/state/tier/tierSlice';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
 import type { BiasMode } from '../../../src/@types/data/galaxyCatalog/BiasMode';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
+import type { SceneSnapshot } from '../../../src/@types/engine/settings/SceneSnapshot';
 
 // A real reconcile spy object matching the ReconcileEffects surface. Typed
 // vi.fn<...>() throughout — bare vi.fn() fails tsc against typed callback fields.
@@ -53,6 +54,8 @@ type ReconcileSpies = {
   syncFades: ReturnType<typeof vi.fn<(rows: readonly VisibilityLayerKey[]) => void>>;
   reseedFlow: ReturnType<typeof vi.fn<() => void>>;
   bakeBias: ReturnType<typeof vi.fn<(mode: BiasMode) => void>>;
+  captureScene: ReturnType<typeof vi.fn<() => SceneSnapshot>>;
+  restoreScene: ReturnType<typeof vi.fn<(snapshot: SceneSnapshot, opts: { animate: boolean }) => void>>;
 };
 
 function buildStore() {
@@ -67,6 +70,8 @@ function buildStore() {
     syncFades: vi.fn<(rows: readonly VisibilityLayerKey[]) => void>(),
     reseedFlow: vi.fn<() => void>(),
     bakeBias: vi.fn<(mode: BiasMode) => void>(),
+    captureScene: vi.fn<() => SceneSnapshot>(),
+    restoreScene: vi.fn<(snapshot: SceneSnapshot, opts: { animate: boolean }) => void>(),
   };
 
   // setContext BEFORE running the sagas so getContext finds the closures when

@@ -14,14 +14,19 @@
  *   syncFades      — pushes a new visibility row set to the fade bridge
  *   reseedFlow     — reseeds the cosmic-flow particle field (e.g. on setting change)
  *   bakeBias       — re-computes the galaxy brightness bias LUT
+ *   captureScene   — snapshots the six settings clusters + selection.focus for tour restore
+ *   restoreScene   — rewinds a captured snapshot (settings + focus), optionally animated
  */
 
 import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
+import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
 
 export type ReconcileEffects = {
   requestRender: () => void;
   syncFades: (rows: readonly VisibilityLayerKey[]) => void;
   reseedFlow: () => void;
   bakeBias: (mode: BiasMode) => void;
+  captureScene: () => SceneSnapshot;
+  restoreScene: (snapshot: SceneSnapshot, opts: { animate: boolean }) => void;
 };

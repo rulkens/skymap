@@ -502,7 +502,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   cb.setSagaContext({
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
-    reconcile: makeReconcileEffects(state),
+    reconcile: makeReconcileEffects(state, store),
     resolveDeps,
     // The live camera Resources `watchFocusTween` reads to build a focus tween:
     // the visible from-pose (so a re-focus hands off from what the user sees) and
