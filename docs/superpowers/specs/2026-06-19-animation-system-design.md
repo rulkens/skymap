@@ -168,8 +168,10 @@ the opacity single-writer" below for the full rule):
 - `scene(action)` — a non-visibility settings change, typed to a `SettingsAction`
   union (never `AnyAction` — no arbitrary-Redux escape hatch).
 - `focus(ref)` — set selection focus to a `SelectionRef` (or `null` to clear). A
-  selection-Intent change — drives the member-isolation dim; the focus-tween it
-  kicks stays dormant under the `clip` driver. Distinct from `scene` because focus
+  selection-Intent change — drives the member-isolation dim. The camera tween it
+  would normally kick (`watchFocusTween`) is **suspended** while a clip plays — not
+  merely outranked — by the same saga-suspension policy as the fade bridge (see
+  "The reactive bridges are suspended" below). Distinct from `scene` because focus
   is selection, not settings.
 
 **Combinators** (structure):
@@ -571,8 +573,9 @@ A clip changes the scene through three primitives, split by *what they own*:
 - **`scene(action)`** — a non-visibility settings change (bias, intensity, …),
   typed to a `SettingsAction` union, never `AnyAction`.
 - **`focus(ref)`** — set selection focus to a `SelectionRef` or `null` (a
-  selection-Intent change, not a setting — drives the member-isolation dim; the
-  focus-tween it kicks stays dormant under the `clip`@95 driver).
+  selection-Intent change, not a setting — drives the member-isolation dim). The
+  camera tween `watchFocusTween` would kick is **suspended** while a clip plays, not
+  merely outranked — see "The reactive bridges are suspended" below.
 
 `show`/`hide` are sugar over "set visibility intent + `fadeTo`" — the way
 `dollyTo` is sugar over `tween('distance', …)`.
@@ -582,12 +585,47 @@ A clip changes the scene through three primitives, split by *what they own*:
 `base` channels: two opacity-writers on one layer at once is an authoring error.
 `scene` never touches opacity, so it cannot collide.
 
-**The reactive bridge is suspended while a clip plays.** `watchFades`
-early-returns when `camera.clip !== null`, so a visibility-intent change *inside*
-a clip does not spawn a competing background fade — `show`/`hide` perform the fade
-themselves, once. This codifies and **retires** `flowShowcase`'s per-frame
-`setImmediate` opacity clamp, which existed only to suppress that background fade
-by hand.
+**The reactive bridges are suspended while a clip plays — declared in one place.**
+A clip dispatches the *same* intents the UI does (`updateSelectionFocus`, the
+visibility toggles), so it trips the production sagas that react to them. Some
+reactions the clip *wants* (`scene(setFlow{enabled})` must still load the cube);
+some it *owns itself or overrides* and must suppress. The suppressed set is a
+single list, **not** a `if (camera.clip) return` guard sprinkled per saga (the
+second copy of that guard is the smell — consolidate):
+
+```ts
+// the clip is the sole scene/camera authority while it runs; these reactors park.
+// NOT watchFlowLoad / watchWake — the clip relies on those still firing.
+const SUSPEND_DURING_CLIP = [watchFades, watchFocusTween] as const;
+const whileNoClip = (saga) => function* (...a) {
+  if (selectClipActive(yield* select())) return;
+  yield* saga(...a);
+};
+```
+
+- **`watchFades`** parked → a visibility-intent change inside a clip does not spawn
+  a competing fixed-duration background fade; `show`/`hide` drive the fade
+  themselves (next paragraph). Retires `flowShowcase`'s per-frame `setImmediate`
+  clamp, which existed only to suppress that background fade by hand.
+- **`watchFocusTween`** parked → a `focus()` cue sets selection + the isolation dim
+  but plants **no** `camera.tween`. This is load-bearing, and priority alone is
+  *not* enough: a tween planted at @60 is dormant *during* the clip (clip@95 wins),
+  but `camera.tween` is still non-null when the clip ends, so the instant @95
+  deactivates the stale tween outranks `resting`@0 and **snaps the camera to the
+  focus framing** — defeating commit-on-edge's bake into `base`.
+  Dormancy-by-priority does not survive the edge; suspension does.
+
+**`show`/`hide` reuse the bridge body — they don't re-implement it.** With
+`watchFades` parked, the cue handler dispatches the visibility intent and then
+calls the *same* `syncVisibilityFades(state, { only, durationMs, animate })` the
+saga would have — narrowed to the cue's layers (`only`, which the bridge already
+takes), with the cue's `over` as `durationMs` (`over: 0` → `animate: false` snap).
+The only addition is an optional `durationMs` override threaded to `applyIntent`,
+which hard-codes `FADE_IN/OUT_DURATION_MS` today. So there is exactly **one**
+opacity-from-intent code path with two callers — saga-triggered (UI, fixed
+duration) and clip-triggered (custom duration) — not a duplicated manifest walk.
+`fade([layers], to, over)` (transient, no intent) stays a direct `fades.fadeTo`: it
+dispatches no intent, so it never trips the parked saga and is not a second writer.
 
 *Why suspension and not an opacity driver table.* Opacity faces the same shape the
 camera does — multiple time-varying writers, one output, a handoff on edge — but
@@ -609,7 +647,7 @@ camera's *final* pose into `base` (a freeze, not a reset). Layers the clip drove
 with `show`/`hide` already have opacity == intent (nothing to reconcile);
 transient `fade`s (the fade-to-black, partial dims) persist, which is exactly what
 a recording ending on black wants. The only full reconcile back to live is the
-tour saga's `restore` (Layer 2) — `restoreSettings(snapshot)` runs the existing
+tour saga's `restore` (Layer 2) — `restoreScene(snapshot)` runs the existing
 `fx.syncFades` path. Recordings end on their final frame and reload.
 
 So there is exactly **one** opacity-writing path — the clip's `show`/`hide`/`fade`
@@ -643,8 +681,9 @@ or by the tour. Teardown is the *set of reactions* to it, each in its owner:
 - **Resource** — `clipPlayer` does its own lifecycle cleanup (reset the cue
   cursor, cancel forks, resolve the `playClip` Promise). Imperative, because
   Resources are imperative (ADR 0007).
-- **Settings** (Layer 2 only) — the tour saga's `finally` dispatches
-  `restoreSettings(snapshot)`, reverting what `scene`/`show`/`hide` changed and
+- **Settings + selection** (Layer 2 only) — the tour saga's `finally` calls
+  `restoreScene(snapshot)`, reverting what `scene`/`show`/`hide`/`focus` changed
+  (the snapshot captures the six settings clusters *and* `selection.focus`) and
   running the full `fx.syncFades` reconcile back to live.
 
 `clipPlayer.stop()` is thin: Resource cleanup + `dispatch(endClip())`. It does not
@@ -696,12 +735,12 @@ function* visitBeat(beat: BeatData) {
 }
 
 function* guidedTour(beats: BeatData[]) {
-  const snapshot = captureSettings(state);                        // the wiring seam (Pick of the six clusters)
+  const snapshot = captureScene(state);                           // six settings clusters + selection.focus
   yield* put(setUiHidden(true));
   try {
     for (const beat of beats) yield* visitBeat(beat);
   } finally {
-    yield* call(restoreSettings, state, store, snapshot, { animate: true }); // restore even on cancel
+    yield* call(restoreScene, state, store, snapshot, { animate: true }); // restore settings + focus, even on cancel
     yield* put(setUiHidden(false));
   }
 }
@@ -716,10 +755,16 @@ cinematic** — with no per-beat waits it is legitimately *one* spline clip (Lay
 1), so the boundary rule keeps it out of this saga rather than forcing a
 granularity choice here.
 
-`captureSettings` / `restoreSettings` are the existing wiring seam
-(`services/engine/wiring/`), called (not `put`) — `restoreSettings(state, store,
-snapshot, { animate })` runs the full `fx.syncFades` reconcile back to live, the
-only place opacity is reset to baseline (clip end merely freezes it).
+`captureScene` / `restoreScene` extend the existing `captureSettings` /
+`restoreSettings` wiring seam (`services/engine/wiring/`), called (not `put`) —
+`restoreScene` runs the full `fx.syncFades` reconcile back to live (the only place
+opacity is reset to baseline; clip end merely freezes it) **and** re-dispatches
+`updateSelectionFocus(snapshot.focus)`. The widening is forced by `focus()` joining
+the scene vocabulary: `captureSettings` snapshots the six *settings* clusters only,
+so a beat's `focus()` and its member-isolation dim would otherwise leak past the
+`finally`. Capturing `selection.focus` alongside settings keeps "the snapshot is
+the scene" honest — `focus` is reverted the same way `scene` is, not by a separate
+`put(updateSelectionFocus(null))` bolted onto the tour.
 
 | Tour need | Mechanism |
 | --- | --- |
@@ -727,7 +772,7 @@ only place opacity is reset to baseline (clip end merely freezes it).
 | Auto-advance, but let the viewer click "next" | `race({ timeout: delay(...), next: take(TOUR_ADVANCE), drift: call(playClip, dwellDrift) })` |
 | Dwell is never frozen | a perpetual `dwellDrift` clip in the race — always loses, cancelled on advance |
 | Cancel the whole tour on stray input | runner cancellation → the `finally` runs |
-| Restore settings even on mid-beat cancel | `try { … } finally { call(restoreSettings, …, { animate }) }` |
+| Restore settings + focus even on mid-beat cancel | `try { … } finally { call(restoreScene, …, { animate }) }` |
 | Per-beat scene changes, captions | `put(intent)` — same flow as the UI |
 | The cinematic move itself | `call(playClip, clip)` — Layer 1 |
 
@@ -788,6 +833,20 @@ it to Layer 2 regardless, keeping Layer 1 purely non-reactive.
   shipped focus `tween`@60 — a store descriptor + a pure evaluator on `cameraClock`
   — plus the `clipPlayer` subsystem for scene cues + lifecycle. No new pose
   authority beside the table.
+- **The clip suspends a declared set of reconcile sagas** — `SUSPEND_DURING_CLIP =
+  [watchFades, watchFocusTween]`, wired through one `whileNoClip` wrapper, not a
+  per-saga `if (camera.clip)`. `watchFades` parks so `show`/`hide` own the fade at
+  the cue's duration; `watchFocusTween` parks so a `focus()` cue plants no stale
+  `camera.tween` that would hijack the camera at clip-end. `watchFlowLoad` /
+  `watchWake` stay unguarded — the clip relies on them. This is the small,
+  load-bearing reactive-layer change Layer 1 needs from the existing sagas.
+- **`syncVisibilityFades` gains an optional `durationMs`** (it already takes
+  `only?`), threaded to `applyIntent` (which hard-codes `FADE_IN/OUT_DURATION_MS`
+  today), so `show`/`hide` reuse the one bridge body at a custom duration rather
+  than re-walking the manifest.
+- **`captureSettings`/`restoreSettings` widen to `captureScene`/`restoreScene`** —
+  the snapshot adds `selection.focus` so the tour's `restore` reverts a beat's
+  `focus()` and its isolation dim, not settings alone.
 
 ## What we are deliberately not building (YAGNI)
 
