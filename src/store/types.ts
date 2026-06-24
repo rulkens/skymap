@@ -23,9 +23,12 @@
  * the lazy live-resource read the selection reconciler uses to turn a `SelectionRef`
  * into a `SelectionRow` (read lazily each call so the reconciler always sees the
  * current catalog and structure state — render-wake is reused from
- * `reconcile.requestRender`, not re-added here); and `cameraRuntime` is the
+ * `reconcile.requestRender`, not re-added here); `cameraRuntime` is the
  * live camera read `watchFocusTween` uses to build a focus tween — the visible
- * from-pose plus the lens FOV, or null when the camera is not ready. `SagaContext` is the bag the
+ * from-pose plus the lens FOV, or null when the camera is not ready; and
+ * `playClip` is the engine's clip-player — the tour saga calls it with a
+ * `ClipData` and awaits the returned Promise, which resolves when the clip
+ * completes or is cancelled by the engine. `SagaContext` is the bag the
  * running root saga reads them back out of via `getContext`; `SetSagaContext` is
  * the setter the factory hands back so the engine can inject them
  * post-construction (a `Partial`, so each registration site supplies only what it
@@ -43,6 +46,7 @@ import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { ResolveDeps } from '../@types/engine/ResolveDeps';
 import type { Tier } from '../@types/data/Tier';
 import type { CameraPose } from '../@types/camera/CameraPose';
+import type { ClipData } from '../@types/animation/ClipData';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -61,10 +65,18 @@ export type SagaContext = {
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
   resolveDeps: () => ResolveDeps;
   /**
-   * The live camera Resources `watchFocusTween` reads to build the tween, or
+   * The live camera resources `watchFocusTween` reads to build the tween, or
    * null when the camera is not ready (pre-bootstrap / post-destroy) — the focus
    * tween then no-ops.
    */
   cameraRuntime: () => FocusCameraRuntime | null;
+  /**
+   * Plays a data clip and resolves when the clip completes or is cancelled.
+   * The tour saga awaits this Promise for the establishing fly and races it
+   * (as dwellDrift) against the dwell timer during the interactive dwell.
+   * Engine registration (createPlayClip + setSagaContext) is a separate task;
+   * tests inject a stub via sagaMiddleware.setContext.
+   */
+  playClip: (clip: ClipData) => Promise<void>;
 };
 export type SetSagaContext = (ctx: Partial<SagaContext>) => void;

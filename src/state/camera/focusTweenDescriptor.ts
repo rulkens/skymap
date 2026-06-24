@@ -27,12 +27,7 @@
  */
 
 import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
-import { galaxyFocusDistance } from '../../services/engine/camera/galaxyFocusDistance';
-import { structureFocusDistance } from '../../services/engine/camera/structureFocusDistance';
-import {
-  MILKY_WAY_CENTER_WORLD,
-  MILKY_WAY_VIEW_DISTANCE_MPC,
-} from '../../data/milkyWay/galacticCenter';
+import { focusFraming } from '../../services/engine/camera/focusFraming';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
@@ -52,29 +47,8 @@ export function focusTweenDescriptor(
 ): CameraTweenDescriptor {
   return {
     from,
-    to: { yaw: from.yaw, pitch: from.pitch, ...frame(row, fovYRad) },
+    to: { yaw: from.yaw, pitch: from.pitch, ...focusFraming(row, fovYRad) },
     durationMs: FOCUS_TWEEN_MS,
     easing: 'easeOutCubic',
   };
-}
-
-/** The per-arm part: where to point and how far back to sit. */
-function frame(row: SelectionRow, fovYRad: number): Pick<CameraPose, 'target' | 'distance'> {
-  switch (row.type) {
-    case 'galaxyCatalog':
-      return { target: [row.x, row.y, row.z], distance: galaxyFocusDistance(row.diameterKpc) };
-    case 'structure':
-      return {
-        target: [row.worldPos[0], row.worldPos[1], row.worldPos[2]],
-        // Frame on the WIDER apparent extent — the radius the close-approach
-        // fade reads — so the ring + label land just past their fade-out;
-        // fall back to the physical core when there is no wider extent.
-        distance: structureFocusDistance(row.apparentRadiusMpc ?? row.physicalRadiusMpc, fovYRad),
-      };
-    case 'milkyWay':
-      return {
-        target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
-        distance: MILKY_WAY_VIEW_DISTANCE_MPC,
-      };
-  }
 }
