@@ -421,16 +421,57 @@ fn lensedPosition(
       }
     }
 
+    // Sample the NFW image-finding LUT ONCE for the dominant lens (NFW mode
+    // only), so the dominant lens's primary AND counter read from the same
+    // inverse solution — otherwise the two images are solved by different
+    // methods and visibly cross. r_s and y_lut are reused by the primary swap
+    // and the counter branch.
+    //
+    // Dimensionless LUT query inputs, in scale-radius units:
+    //   y = beta * D_l / r_s        (source separation)
+    //   s = strengthEff * D_l / r_s (reduced strength = theta_E_peak*(D_ls/D_s)*(D_l/r_s))
+    // Map (y, s) → texture UV. The y-axis is linear in [0, Y_MAX]; the s-axis
+    // is the ALGEBRAIC INVERSE of buildNfwLensLut.ts's forward log map
+    //   s(j) = S_MAX * (exp(LOG_K * t) − 1) / (exp(LOG_K) − 1)
+    // i.e.  t(s) = log(1 + (s/S_MAX)*(exp(LOG_K) − 1)) / LOG_K.
+    // LENS_LUT_LOG_K mirrors that file's LOG_K (parity-tested) — keep in sync.
+    // Channels: [xPrimary, muPrimary, xCounter, muCounter].
+    var cell = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    let r_s = max(lensing.scaleRadius, 1e-4);
+    var y_lut = 0.0;
+    let haveLut = hasDominant && lensing.mode == 1u;
+    if (haveLut) {
+      y_lut = bestBeta * bestDL / r_s;
+      let s_lut = bestStrengthEff * bestDL / r_s;
+      let u_lut = clamp(y_lut / LENS_LUT_Y_MAX, 0.0, 1.0);
+      let expK = exp(LENS_LUT_LOG_K) - 1.0;
+      let v_lut = clamp(log(1.0 + (s_lut / LENS_LUT_S_MAX) * expK) / LENS_LUT_LOG_K, 0.0, 1.0);
+      // Single explicit-LOD sample (vertex stage — no implicit derivatives).
+      cell = textureSampleLevel(lensLut, lensLutSampler, vec2<f32>(u_lut, v_lut), 0.0);
+    }
+
     if (imageKind == 0u) {
-      // Primary: source direction rotated by the SUMMED deflection. Both modes
-      // share this summed-deflection primary. Folding the dominant lens's
-      // primary position + magnification from the NFW LUT (xPrimary/muPrimary)
-      // is a deferred refinement — left out here to keep this task minimal-risk.
-      let dirImage = normalize(toSrc + primaryOffset * dS);
+      // Primary image. Default: the summed multi-lens deflection (exact for SIS;
+      // a source-plane approximation for NFW).
+      var offset = primaryOffset;
+      var muP = lensMu;
+      // NFW dominant lens: swap its source-plane push for the LUT-exact image
+      // position, so the primary matches the counter (same inverse solution).
+      // Only inside the LUT's y-domain: beyond y = Y_MAX the u-coord clamps to
+      // the edge column, whose xPrimary would pull a distant source inward —
+      // while the summed deflection already tends to the source position there
+      // (nfwShape → 0). Continuous at the boundary because xPrimary → y as
+      // y → Y_MAX, so the swapped push tends to the source-plane push.
+      if (haveLut && y_lut <= LENS_LUT_Y_MAX) {
+        let thetaPrimary = cell.x * r_s / bestDL;   // cell.x = xPrimary (signed, same side as source)
+        offset = primaryOffset - bestTangent * bestDelta + bestTangent * (thetaPrimary - bestBeta);
+        muP = max(lensMu, cell.y);                  // cell.y = muPrimary (LUT, already clamped)
+      }
+      let dirImage = normalize(toSrc + offset * dS);
       img.position = eye + dirImage * dS;
-      img.mu = lensMu;
+      img.mu = muP;
       img.valid = 1u;
-    } else if (hasDominant && lensing.mode == 0u) {
+    } else if (lensing.mode == 0u && hasDominant) {
       // Counter image — SIS analytic. The inner image sits at theta = delta − beta
       // on the −tangent side, valid when the source is inside the Einstein
       // radius. SIS's constant deflection has this closed form; NFW's varying
@@ -442,29 +483,11 @@ fn lensedPosition(
         img.mu = min(bestDelta / bestBeta - 1.0, muMax);
         img.valid = 1u;
       }
-    } else if (hasDominant && lensing.mode == 1u) {
-      // Counter image — NFW, resolved from the precomputed image-finding LUT.
-      // NFW's deflection delta(beta) varies, so the lens equation
-      // beta = theta − alpha(theta) has no closed-form inverse. The LUT bakes
-      // that inverse over a dimensionless (y, s) grid; we look up the dominant
-      // lens's counter image here. See src/utils/lensing/buildNfwLensLut.ts.
-      let r_s = max(lensing.scaleRadius, 1e-4);
-      // Dimensionless LUT query inputs, in scale-radius units:
-      //   y = beta * D_l / r_s        (source separation)
-      //   s = strengthEff * D_l / r_s (reduced strength = theta_E_peak*(D_ls/D_s)*(D_l/r_s))
-      let y = bestBeta * bestDL / r_s;
-      let s = bestStrengthEff * bestDL / r_s;
-      // Map (y, s) → texture UV. The y-axis is linear in [0, Y_MAX]; the s-axis
-      // is the ALGEBRAIC INVERSE of buildNfwLensLut.ts's forward log map
-      //   s(j) = S_MAX * (exp(LOG_K * t) − 1) / (exp(LOG_K) − 1)
-      // i.e.  t(s) = log(1 + (s/S_MAX)*(exp(LOG_K) − 1)) / LOG_K.
-      // LENS_LUT_LOG_K mirrors that file's LOG_K (parity-tested) — keep in sync.
-      let u_lut = clamp(y / LENS_LUT_Y_MAX, 0.0, 1.0);
-      let expK = exp(LENS_LUT_LOG_K) - 1.0;
-      let v_lut = clamp(log(1.0 + (s / LENS_LUT_S_MAX) * expK) / LENS_LUT_LOG_K, 0.0, 1.0);
-      // Single explicit-LOD sample (vertex stage — no implicit derivatives).
-      // Channels: [xPrimary, muPrimary, xCounter, muCounter].
-      let cell = textureSampleLevel(lensLut, lensLutSampler, vec2<f32>(u_lut, v_lut), 0.0);
+    } else if (haveLut) {
+      // Counter image — NFW, from the hoisted LUT sample. NFW's deflection
+      // delta(beta) varies, so the lens equation beta = theta − alpha(theta)
+      // has no closed-form inverse; the LUT bakes that inverse over the
+      // dimensionless (y, s) grid. See src/utils/lensing/buildNfwLensLut.ts.
       // xCounter == 0.0 is the LUT's 'no counter image' sentinel ⇒ cull.
       if (cell.z == 0.0) {
         img.valid = 0u;
@@ -473,10 +496,10 @@ fn lensedPosition(
         // negative value places the image on the opposite side of the lens,
         // which the rotation handles directly (cos(theta) with negative theta
         // flips dirLens's tangential component the right way).
-        let theta = cell.z * r_s / bestDL;
+        let theta = cell.z * r_s / bestDL;          // cell.z = xCounter (signed, opposite side)
         let dirImage = bestDirLens * cos(theta) + bestTangent * sin(theta);
         img.position = eye + dirImage * dS;
-        img.mu = cell.w; // muCounter — already clamped to muMax in the LUT.
+        img.mu = cell.w; // cell.w = muCounter — already clamped to muMax in the LUT.
         img.valid = 1u;
       }
     }
