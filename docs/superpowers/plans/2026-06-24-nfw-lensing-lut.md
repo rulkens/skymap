@@ -308,7 +308,7 @@ var lensValid = img.valid;
 **Test strategy (proving behaviour-neutrality):** this is a GPU shader, so the
 proof is a golden-WGSL + behaviour check, not a unit test of WESL directly:
 
-- [ ] **Linked-WGSL golden check.** Add/extend a test that imports
+- [x] **Linked-WGSL golden check.** Add/extend a test that imports
   `points/vertex.wesl?static` (or links it via the existing wesl test harness —
   see how other shader tests resolve `?static`) and asserts the linked module
   still **compiles** and contains the expected lensing symbols. The test name:
@@ -316,16 +316,16 @@ proof is a golden-WGSL + behaviour check, not a unit test of WESL directly:
   `?static` test harness for `vertex.wesl`, instead assert via the renderer
   smoke path below and SAY SO in the task — do not invent a harness that doesn't
   exist; escalate if neither route is available.
-- [ ] **Renderer behaviour parity.** Extend the existing point-renderer test
+- [x] **Renderer behaviour parity.** Extend the existing point-renderer test
   coverage so a SIS-mode draw still issues `draw(12, N)` and an NFW-mode draw
   still issues `draw(6, N)` (the vertex-count gate at `pointRenderer.ts:767` is
   UNCHANGED in this phase — NFW is still 6 here; the 12-for-NFW change lands in
   Part 2). Test name: `SIS draw stays 12 vertices, NFW stays 6 after extraction`.
-- [ ] `npm run build` — WESL links (this is the real compile gate for the
+- [x] `npm run build` — WESL links (this is the real compile gate for the
   extraction).
-- [ ] `npm test` — full suite green (no behaviour changed).
-- [ ] `npm run typecheck` — clean.
-- [ ] Commit.
+- [x] `npm test` — full suite green (no behaviour changed).
+- [x] `npm run typecheck` — clean.
+- [x] Commit.
 
 **Independently testable deliverable:** the points pass renders identically; the
 deflection model now lives behind a single shared `lensedPosition` call.
