@@ -47,14 +47,14 @@
 
 import type { SceneEffect } from '../../@types/animation/SceneEffect';
 import type { EngineState } from '../../@types/engine/state/EngineState';
-import type { AppStore } from '../../store/types';
+import type { AppDispatch } from '../../store/types';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import { syncVisibilityFades } from '../engine/wiring/syncVisibilityFades';
 import { VISIBILITY_ACTION_ROW } from './visibilityActionRow';
 
 export function applySceneEffect(
   effect: SceneEffect,
-  deps: { state: EngineState; store: AppStore },
+  deps: { state: EngineState; store: { dispatch: AppDispatch } },
 ): void {
   const { state, store } = deps;
 

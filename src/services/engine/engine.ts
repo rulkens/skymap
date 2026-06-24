@@ -86,6 +86,7 @@ import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
+import { createClipPlayer } from './subsystems/clipPlayer';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
@@ -330,6 +331,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // `produceFocusUniforms` into the points draw.  Eager, no GPU dep.
       structureFocus: createStructureFocusSubsystem({
         requestRender: () => state.subsystems.scheduler.requestRender(),
+      }),
+
+      // ── Clip player ───────────────────────────────────────────────
+      // Owns the active clip's scene cues, the clipOpacity channel, and
+      // clip-completion lifecycle.  Eager (no GPU dep), non-null from t=0.
+      // tick() is called as the first step of runFrame (Task 12).
+      clipPlayer: createClipPlayer({
+        store: cb.store,
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+        clock: cameraRuntime.clock,
+        getEngineState: () => state,
       }),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
