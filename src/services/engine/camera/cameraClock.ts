@@ -21,6 +21,7 @@
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { ClipData } from '../../../@types/animation/ClipData';
 
 /**
  * Create a fresh CameraClock with no recorded starts.
@@ -34,6 +35,8 @@ export function createCameraClock(): CameraClock {
     lastTweenRef: null,
     lastAutoRotateActive: false,
     lastBaseRef: null,
+    clipStartMs: null,
+    lastClipRef: null,
   };
 }
 
@@ -88,4 +91,33 @@ export function autoRotateElapsed(
     clock.autoRotateStartMs = active ? nowMs : null;
   }
   return clock.autoRotateStartMs === null ? 0 : nowMs - clock.autoRotateStartMs;
+}
+
+/**
+ * Detect whether the clip reference changed; if so, reset the clip start to
+ * `nowMs` (or null when the new clip is null). Then return SECONDS elapsed
+ * since the current clip started.
+ *
+ * Unit boundary: unlike `tweenElapsed` (which returns milliseconds for the
+ * easing driver), `clipElapsed` returns SECONDS because `evaluateClip` takes
+ * an `elapsedSec` parameter. The conversion is `(nowMs - clipStartMs) / 1000`.
+ *
+ * A freshly-installed clip reference returns 0 on the arrival frame and grows
+ * in seconds on subsequent frames that carry the same reference. A null clip
+ * always returns 0.
+ *
+ * Reference identity is the correct signal: a `startClip` dispatch installs a
+ * new `{ data: ClipData }` object, so `!==` fires exactly once on the
+ * transition frame — same pattern as `tweenElapsed`.
+ */
+export function clipElapsed(
+  clock: CameraClock,
+  clip: { data: ClipData } | null,
+  nowMs: number,
+): number {
+  if (clip !== clock.lastClipRef) {
+    clock.lastClipRef = clip;
+    clock.clipStartMs = clip === null ? null : nowMs;
+  }
+  return clock.clipStartMs === null ? 0 : (nowMs - clock.clipStartMs) / 1000;
 }
