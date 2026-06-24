@@ -69,12 +69,11 @@ export type PointDrawSettings = {
   lensEnabled: boolean;
 
   /**
-   * Active lensing profile (`state.settings.debug.lensMode`). Gates the
-   * counter-image quad alongside `lensEnabled`: the inner ghost is SIS-only
-   * (NFW's varying deflection has no closed-form counter position, so the
-   * vertex stage culls it), so the draw doubles to 12 vertices only for
-   * `lensEnabled && lensMode === 'sis'`. In NFW mode the primary image is
-   * still deflected — only the second quad is skipped.
+   * Active lensing profile (`state.settings.debug.lensMode`). `lensEnabled`
+   * alone gates the 12-vs-6 vertex doubling; `lensMode` now selects the
+   * counter-image MATH, not whether a counter exists. SIS places the inner
+   * ghost analytically (θ = δ − β); NFW reads it from the precomputed
+   * image-finding LUT. Both modes draw the second quad when lensing is on.
    */
   lensMode: LensMode;
 };

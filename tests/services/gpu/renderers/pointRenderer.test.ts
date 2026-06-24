@@ -885,12 +885,11 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
 });
 
 describe('PointRenderer.draw — lensing vertex count', () => {
-  // The counter-image (inner ghost) quad is SIS-only: NFW's varying
-  // deflection has no closed-form counter position, so the vertex stage
-  // culls it (points/vertex.wesl). Drawing 12 vertices in NFW mode would
-  // run the whole vertex stage twice per galaxy only to discard half — so
-  // the draw issues the doubled quad ONLY in SIS mode. NFW and lens-off
-  // both draw the single 6-vertex quad.
+  // Lensing on draws each source's quad TWICE in BOTH modes (primary +
+  // counter image — points/vertex.wesl): SIS places the counter analytically,
+  // NFW reads it from the image-finding LUT. The draw-count gate keys on
+  // `lensEnabled` alone; `lensMode` selects the counter math, not whether a
+  // second quad is issued. Lens-off draws the single 6-vertex quad.
   async function vertexCountFor(lensEnabled: boolean, lensMode: LensMode): Promise<number> {
     const renderer = createPointRenderer(
       makeStubDevice(),
@@ -933,25 +932,25 @@ describe('PointRenderer.draw — lensing vertex count', () => {
     return vertexCount;
   }
 
-  it('draws the doubled (12-vertex) quad only when lensing is on AND mode is SIS', async () => {
+  it('draws the doubled (12-vertex) quad when lensing is on in SIS mode', async () => {
     expect(await vertexCountFor(true, 'sis')).toBe(12);
   });
 
-  it('draws the single (6-vertex) quad in NFW mode even with lensing on', async () => {
-    expect(await vertexCountFor(true, 'nfw')).toBe(6);
+  it('draws the doubled (12-vertex) quad when lensing is on in NFW mode', async () => {
+    expect(await vertexCountFor(true, 'nfw')).toBe(12);
   });
 
   it('draws the single (6-vertex) quad when lensing is off', async () => {
     expect(await vertexCountFor(false, 'sis')).toBe(6);
   });
 
-  // Behaviour-neutrality guard for the lensedPosition extraction (Task 2.1):
-  // moving the inline deflection block into lib/lensing.wesl must not touch the
-  // vertex-count gate at pointRenderer.ts:767 — SIS still doubles the quad,
-  // NFW still draws one (the 12-for-NFW change lands in Part 2).
-  it('SIS draw stays 12 vertices, NFW stays 6 after extraction', async () => {
+  // The NFW counter image is now real (LUT-driven), so lensing-on draws the
+  // doubled quad in BOTH modes — the gate keys on `lensEnabled` alone. This
+  // replaces the Task-2.1 'NFW stays 6' guard, which held only while NFW had
+  // no counter image.
+  it('lens-on draws 12 vertices in both SIS and NFW mode', async () => {
     expect(await vertexCountFor(true, 'sis')).toBe(12);
-    expect(await vertexCountFor(true, 'nfw')).toBe(6);
+    expect(await vertexCountFor(true, 'nfw')).toBe(12);
   });
 });
 

@@ -21,8 +21,9 @@
 //
 // pickFragment.wesl declares no bindings of its own — this vertex
 // module references '@group(0)' (Uniforms at binding 0), '@group(2)'
-// (per-source SourceUniforms), and '@group(3)' (FocusUniforms at binding 0
-// + LensingUniforms at binding 1). The colorFragment module additionally
+// (per-source SourceUniforms), and '@group(3)' (FocusUniforms at binding 0,
+// LensingUniforms at binding 1, and the NFW lens LUT texture + sampler at
+// bindings 2/3). The colorFragment module additionally
 // declares '@group(1)' (FadeUniforms). PickRenderer binds a no-op fade
 // buffer at '@group(1)' so its pipeline layout matches the visual pipeline.
 
@@ -92,6 +93,17 @@ import package::lib::lensingUniforms::LensingUniforms;
 // deflection model.
 @group(3) @binding(1) var<uniform> lensing: LensingUniforms;
 
+// binding 2/3 — NFW image-finding LUT (texture_2d<f32>) + its sampler. Indexed
+// by (y, s) and carrying the channels [xPrimary, muPrimary, xCounter, muCounter];
+// 'lensedPosition' samples it for the dominant NFW lens's counter image. The BGL
+// already declares both at bindings 2/3 (Task 4.1), VERTEX-visible — the vertex
+// stage has no implicit derivatives, so the sample uses 'textureSampleLevel' with
+// explicit LOD 0.0. See lib/lensing.wesl for the (y,s) → UV map and
+// src/utils/lensing/buildNfwLensLut.ts for the generation (and the log-s forward
+// map this inverts).
+@group(3) @binding(2) var lensLut: texture_2d<f32>;
+@group(3) @binding(3) var lensLutSampler: sampler;
+
 // Peak lensing magnification clamp. A point source on the caustic has
 // infinite μ; a real (extended) source saturates at ~θ_E / source-size.
 // We have no source size, so we cap |μ| here to keep an on-axis galaxy
@@ -112,16 +124,25 @@ fn vs(
   p: PerVertex,
 ) -> VSOut {
   // Gravitational lensing (multi-cluster). Each source is drawn as TWO
-  // quads when the lens pass is active: vertex_index 0..5 carry the summed
-  // primary image, 6..11 the dominant lens's inner counter-image. The whole
-  // deflection model — summed-primary push, dominant-lens counter, and the
-  // per-image magnification — lives in 'lensedPosition' (lib/lensing.wesl), so
-  // the visual and pick pipelines share one authoritative policy. The
+  // quads when the lens pass is active (in BOTH modes now): vertex_index 0..5
+  // carry the summed primary image, 6..11 the dominant lens's inner
+  // counter-image (SIS analytic, NFW from the LUT). The whole deflection
+  // model — summed-primary push, dominant-lens counter, and the per-image
+  // magnification — lives in 'lensedPosition' (lib/lensing.wesl), so the
+  // visual and pick pipelines share one authoritative policy. The
   // deflection preserves the source's distance from the eye, so the
   // apparent-size and depth-fade math below (which read p.position's length)
   // are unaffected — only the projected screen direction changes.
   let imageKind = select(0u, 1u, vi >= 6u);
-  let img = lensedPosition(p.position, u.camPosWorld, lensing, imageKind, LENS_MU_MAX);
+  let img = lensedPosition(
+    p.position,
+    u.camPosWorld,
+    lensing,
+    imageKind,
+    LENS_MU_MAX,
+    lensLut,
+    lensLutSampler,
+  );
   let lensedPos = img.position;
   let lensValid = img.valid;
   // 'lensMu' folds the image's magnification into intensity below (1.0 when

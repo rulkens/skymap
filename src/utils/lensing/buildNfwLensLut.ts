@@ -92,8 +92,10 @@ const NFW_SHAPE_PEAK = 0.3122;
 // Log-curvature constant for the s-axis mapping. Higher LOG_K packs more
 // rows near s = 0; LOG_K = 4 puts ~50 % of the rows below s ≈ 0.13 · sMax.
 // The GPU sampler must use the same value in the algebraic inverse formula
-// documented in the module header above.
-const LOG_K = 4.0;
+// documented in the module header above. Exported as the single source of
+// truth for the WESL mirror 'LENS_LUT_LOG_K' (lib/lensing.wesl), guarded by
+// tests/services/gpu/shaders/nfwLutConstants.parity.test.ts.
+export const LOG_K = 4.0;
 
 // Hard cap on magnification. Matches `LENS_MU_MAX` in
 // `shaders/points/vertex.wesl` so the LUT and the existing SIS path agree

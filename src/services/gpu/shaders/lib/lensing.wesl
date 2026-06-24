@@ -48,7 +48,10 @@ import package::lib::lensingUniforms::LensingUniforms;
 //     the largest δ/β on this source (closest to forming a ring). Its
 //     inner image fills the disk the primary alone would leave hollow.
 //     The combinatorial 2^N counter-images of the weaker lenses are
-//     dropped; the dominant one carries the visible ring interior.
+//     dropped; the dominant one carries the visible ring interior. SIS
+//     places it analytically (θ = δ − β); NFW's varying deflection has no
+//     closed-form counter, so it reads the dominant image from the
+//     precomputed inverse-lens LUT (see 'lensedPosition').
 //
 // 'lensTerm' below resolves ONE lens's geometry; 'lensedPosition' runs the
 // loop and the summation/dominant-pick. This keeps the per-lens math and the
@@ -165,16 +168,44 @@ fn nfwShape(x: f32) -> f32 {
   return (g / xc) / NFW_SHAPE_PEAK;
 }
 
-//   beta     angular separation source↔lens centre (radians)
-//   delta    profile deflection, distance-scaled (radians)
-//   dirLens  unit direction eye→lens centre
-//   tangent  unit in-plane direction pointing AWAY from the lens centre
+// ## NFW image-finding LUT axis constants
+//
+// The dominant-lens NFW counter image is read from a precomputed 2D texture
+// indexed by (y, s) — see 'lensedPosition' below. These three consts MIRROR the
+// TS source of truth and must not drift from it; a parity test
+// (tests/services/gpu/shaders/nfwLutConstants.parity.test.ts) regex-extracts
+// them and asserts equality, because '?static' WESL linking injects no values.
+//
+//   LENS_LUT_Y_MAX  source of truth: src/data/nfwLensLut.ts NFW_LUT_Y_MAX
+//   LENS_LUT_S_MAX  source of truth: src/data/nfwLensLut.ts NFW_LUT_S_MAX
+//   LENS_LUT_LOG_K  source of truth: src/utils/lensing/buildNfwLensLut.ts LOG_K
+//                   (the s-axis log-mapping curvature; the UV map below is the
+//                   algebraic INVERSE of that file's forward s(j) map)
+const LENS_LUT_Y_MAX: f32 = 3.0;
+const LENS_LUT_S_MAX: f32 = 3.0;
+const LENS_LUT_LOG_K: f32 = 4.0;
+
+//   beta         angular separation source↔lens centre (radians)
+//   delta        profile deflection, distance-scaled (radians)
+//   dirLens      unit direction eye→lens centre
+//   tangent      unit in-plane direction pointing AWAY from the lens centre
+//   dL           eye→lens distance (world Mpc) — the dominant-lens NFW
+//                counter image needs it to convert the LUT's scale-radius-unit
+//                image position 'x' back to an angle (theta = x*r_s/D_l) and to
+//                form the LUT query inputs y = beta*D_l/r_s, s = strengthEff*D_l/r_s
+//   strengthEff  distance-scaled peak deflection BEFORE the radial profile
+//                shape (= thetaE * distFactor). This is the NFW reduced-strength
+//                numerator 'theta_E_peak * (D_ls/D_s)'; the LUT s-axis is then
+//                strengthEff * D_l/r_s. Surfaced so 'lensedPosition' forms the
+//                (y,s) LUT query without re-running 'lensTerm' for the dominant lens.
 struct LensTerm {
   valid: u32,
   beta: f32,
   delta: f32,
   dirLens: vec3<f32>,
   tangent: vec3<f32>,
+  dL: f32,
+  strengthEff: f32,
 }
 
 // Resolve one cluster lens's geometry for a source.
@@ -200,6 +231,8 @@ fn lensTerm(
   term.delta = 0.0;
   term.dirLens = vec3<f32>(0.0, 0.0, 1.0);
   term.tangent = vec3<f32>(0.0, 0.0, 0.0);
+  term.dL = 0.0;
+  term.strengthEff = 0.0;
 
   let thetaE = lens.w;
   if (thetaE <= 0.0) {
@@ -269,6 +302,12 @@ fn lensTerm(
   term.delta = delta;
   term.dirLens = dirLens;
   term.tangent = tangent;
+  term.dL = dL;
+  // strengthEff = thetaE * distFactor — the distance-scaled peak deflection
+  // before the radial profile. distFactor was computed above for both modes;
+  // surfacing it here lets 'lensedPosition' build the NFW LUT query (s-axis)
+  // for the dominant lens without a second 'lensTerm' call.
+  term.strengthEff = thetaE * distFactor;
   return term;
 }
 
@@ -279,8 +318,8 @@ fn lensTerm(
 // pick pipeline see one authoritative deflection model.
 //
 //   valid     0u culls this quad (the inner counter-image when no such image
-//             exists — source outside the Einstein radius, NFW counter, or a
-//             disabled lens)
+//             exists — source outside the Einstein radius in SIS, the LUT's
+//             xCounter==0 sentinel in NFW, or a disabled lens)
 //   position  the lensed world position; identical to the source position when
 //             the image is unlensed
 //   mu        magnification multiplied into the per-image flux; 1.0 when the
@@ -301,6 +340,24 @@ struct LensedImage {
 //                small uniform structs in this pipeline
 //   imageKind    0 = primary (summed deflection), 1 = inner counter-image
 //   muMax        the peak-magnification clamp the caller keeps as a const
+//   lensLut      NFW image-finding LUT (texture_2d<f32>), channels
+//                [xPrimary, muPrimary, xCounter, muCounter]; only read on the
+//                NFW counter path (mode == 1u)
+//   lensLutSampler  the LUT's bilinear sampler
+//
+// ## Why the LUT is a function PARAMETER (architecture choice (b))
+//
+// 'lensLut' / 'lensLutSampler' are module-global '@group(3)' bindings the
+// consuming module (points/vertex.wesl) declares — WESL has no global state, so
+// 'lib/lensing.wesl' cannot declare them itself. Rather than have the vertex
+// stage sample the LUT and pass a vec4 in (option (a)), we pass the texture +
+// sampler THROUGH this function boundary (option (b)) so the entire deflection
+// model — summed primary, dominant-lens counter, AND the NFW LUT read — stays in
+// this one shared function; the disk shaders adopt it verbatim. WGSL permits
+// texture/sampler function params and the wesl-plugin links them (see
+// lib/flow.wesl::overdensity for the established precedent). 'textureSampleLevel'
+// with explicit LOD 0.0 is used because the vertex stage has no implicit
+// derivatives and WebKit rejects 'textureSample' in a vs.
 //
 // When lensing is off (or the source is too close to the eye to deflect) the
 // primary renders unlensed at unit magnification and the counter is culled.
@@ -312,6 +369,8 @@ fn lensedPosition(
   lensing: LensingUniforms,
   imageKind: u32,
   muMax: f32,
+  lensLut: texture_2d<f32>,
+  lensLutSampler: sampler,
 ) -> LensedImage {
   let toSrc = sourceWorld - eye;
   let dS = length(toSrc);
@@ -332,6 +391,11 @@ fn lensedPosition(
     var bestDelta = 0.0;
     var bestDirLens = vec3<f32>(0.0, 0.0, 1.0);
     var bestTangent = vec3<f32>(0.0, 0.0, 0.0);
+    // Dominant-lens raw geometry the NFW LUT query needs: eye→lens distance and
+    // the distance-scaled peak deflection (before profile shape). Tracked here
+    // so the counter branch never re-runs 'lensTerm' for the dominant lens.
+    var bestDL = 0.0;
+    var bestStrengthEff = 0.0;
     var hasDominant = false;
 
     for (var i = 0u; i < lensing.count; i = i + 1u) {
@@ -351,31 +415,68 @@ fn lensedPosition(
         bestDelta = term.delta;
         bestDirLens = term.dirLens;
         bestTangent = term.tangent;
+        bestDL = term.dL;
+        bestStrengthEff = term.strengthEff;
         hasDominant = true;
       }
     }
 
     if (imageKind == 0u) {
-      // Primary: source direction rotated by the SUMMED deflection.
+      // Primary: source direction rotated by the SUMMED deflection. Both modes
+      // share this summed-deflection primary. Folding the dominant lens's
+      // primary position + magnification from the NFW LUT (xPrimary/muPrimary)
+      // is a deferred refinement — left out here to keep this task minimal-risk.
       let dirImage = normalize(toSrc + primaryOffset * dS);
       img.position = eye + dirImage * dS;
       img.mu = lensMu;
       img.valid = 1u;
     } else if (hasDominant && lensing.mode == 0u) {
-      // Counter image — SIS ONLY. The inner image sits at theta = delta − beta
+      // Counter image — SIS analytic. The inner image sits at theta = delta − beta
       // on the −tangent side, valid when the source is inside the Einstein
-      // radius. NFW is deliberately suppressed here: its deflection delta(beta)
-      // varies, so the SIS closed-form counter position and the 1 + delta/beta
-      // magnification place a spurious inner ghost. Correct NFW multi-imaging
-      // requires inverting beta = theta − alpha(theta), which has no closed
-      // form — deferred to the precomputed-LUT approach (see the NFW-lensing-LUT
-      // design spec). Until then NFW renders the primary image only; the counter
-      // quad is culled.
+      // radius. SIS's constant deflection has this closed form; NFW's varying
+      // deflection does not, so NFW takes the LUT branch below instead.
       let thetaC = bestDelta - bestBeta;
       if (thetaC > 0.0) {
         let dirImage = bestDirLens * cos(thetaC) - bestTangent * sin(thetaC);
         img.position = eye + dirImage * dS;
         img.mu = min(bestDelta / bestBeta - 1.0, muMax);
+        img.valid = 1u;
+      }
+    } else if (hasDominant && lensing.mode == 1u) {
+      // Counter image — NFW, resolved from the precomputed image-finding LUT.
+      // NFW's deflection delta(beta) varies, so the lens equation
+      // beta = theta − alpha(theta) has no closed-form inverse. The LUT bakes
+      // that inverse over a dimensionless (y, s) grid; we look up the dominant
+      // lens's counter image here. See src/utils/lensing/buildNfwLensLut.ts.
+      let r_s = max(lensing.scaleRadius, 1e-4);
+      // Dimensionless LUT query inputs, in scale-radius units:
+      //   y = beta * D_l / r_s        (source separation)
+      //   s = strengthEff * D_l / r_s (reduced strength = theta_E_peak*(D_ls/D_s)*(D_l/r_s))
+      let y = bestBeta * bestDL / r_s;
+      let s = bestStrengthEff * bestDL / r_s;
+      // Map (y, s) → texture UV. The y-axis is linear in [0, Y_MAX]; the s-axis
+      // is the ALGEBRAIC INVERSE of buildNfwLensLut.ts's forward log map
+      //   s(j) = S_MAX * (exp(LOG_K * t) − 1) / (exp(LOG_K) − 1)
+      // i.e.  t(s) = log(1 + (s/S_MAX)*(exp(LOG_K) − 1)) / LOG_K.
+      // LENS_LUT_LOG_K mirrors that file's LOG_K (parity-tested) — keep in sync.
+      let u_lut = clamp(y / LENS_LUT_Y_MAX, 0.0, 1.0);
+      let expK = exp(LENS_LUT_LOG_K) - 1.0;
+      let v_lut = clamp(log(1.0 + (s / LENS_LUT_S_MAX) * expK) / LENS_LUT_LOG_K, 0.0, 1.0);
+      // Single explicit-LOD sample (vertex stage — no implicit derivatives).
+      // Channels: [xPrimary, muPrimary, xCounter, muCounter].
+      let cell = textureSampleLevel(lensLut, lensLutSampler, vec2<f32>(u_lut, v_lut), 0.0);
+      // xCounter == 0.0 is the LUT's 'no counter image' sentinel ⇒ cull.
+      if (cell.z == 0.0) {
+        img.valid = 0u;
+      } else {
+        // Image angle theta = xCounter * r_s / D_l. xCounter is SIGNED: a
+        // negative value places the image on the opposite side of the lens,
+        // which the rotation handles directly (cos(theta) with negative theta
+        // flips dirLens's tangential component the right way).
+        let theta = cell.z * r_s / bestDL;
+        let dirImage = bestDirLens * cos(theta) + bestTangent * sin(theta);
+        img.position = eye + dirImage * dS;
+        img.mu = cell.w; // muCounter — already clamped to muMax in the LUT.
         img.valid = 1u;
       }
     }

@@ -7,12 +7,12 @@
  * colour index, axis ratio + PA, padded radius, three bias weights —
  * see `POINT_VERTEX_ATTRIBUTES`).
  *
- * In SIS lensing mode the draw widens to `draw(12, N)` — vertices 0..5
- * carry each source's primary image and 6..11 its inner counter-image
- * (see `points/vertex.wesl`).  The widening is gated on `settings.lensEnabled
- * && settings.lensMode === 'sis'`: NFW has no closed-form counter image, so
- * it (like lens-off) keeps the single-quad cost while still deflecting the
- * primary image.
+ * With lensing on the draw widens to `draw(12, N)` — vertices 0..5 carry
+ * each source's primary image and 6..11 its inner counter-image (see
+ * `points/vertex.wesl`).  The widening is gated on `settings.lensEnabled`
+ * alone and applies in BOTH modes: SIS places the counter analytically, NFW
+ * reads it from the precomputed image-finding LUT.  Lens-off keeps the single
+ * 6-vertex quad.
  *
  * One vertex buffer per loaded galaxy catalog; an engine-supplied bitmask
  * decides which sources draw each frame.  Each source's `@group(2)`
@@ -758,13 +758,12 @@ export function createPointRenderer(
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
     // Gravitational-lensing pass draws each source's quad TWICE (primary +
-    // counter image — see points/vertex.wesl) ONLY in SIS mode: the inner
-    // ghost has no closed-form position under NFW, so the vertex stage culls
-    // it there. Doubling to 12 in NFW would run the whole vertex stage twice
-    // per galaxy and discard half — so NFW (and lens-off) keep the single
-    // 6-vertex quad. The primary image is still deflected in NFW; only the
-    // second quad is skipped.
-    const verticesPerPoint = settings.lensEnabled && settings.lensMode === 'sis' ? 12 : 6;
+    // counter image — see points/vertex.wesl) whenever lensing is on, in BOTH
+    // modes: SIS places the counter analytically, NFW reads it from the
+    // image-finding LUT. Lens-off draws the single 6-vertex quad. Quads for
+    // sources with no counter image (outside the Einstein radius, or the LUT's
+    // xCounter sentinel) collapse to a degenerate primitive in the vertex stage.
+    const verticesPerPoint = settings.lensEnabled ? 12 : 6;
 
     pass.setPipeline(pipeline);
     // @group(0) carries the per-frame uniforms (binding 0) only.

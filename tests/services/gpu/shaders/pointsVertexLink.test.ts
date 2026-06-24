@@ -30,4 +30,13 @@ describe('points vertex links and references lensedPosition', () => {
     // The per-lens geometry helper the policy loops over must link in too.
     expect(vsCode).toContain('lensTerm');
   });
+
+  it('links the NFW LUT sample into the vertex stage', () => {
+    // The dominant-NFW counter image reads the precomputed LUT (Task 4.3). The
+    // texture binding and the explicit-LOD sampler call must both survive into
+    // the linked WGSL — the vertex stage has no implicit derivatives, so
+    // `textureSampleLevel` (not `textureSample`) is the portable call.
+    expect(vsCode).toContain('lensLut');
+    expect(vsCode).toContain('textureSampleLevel');
+  });
 });
