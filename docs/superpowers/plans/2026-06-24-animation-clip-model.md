@@ -472,22 +472,22 @@ final[ch] = base[ch](t)  +  ∫₀ᵗ vel[ch]  +  osc[ch](t)
   Document that `playClip` (Plan B) will reuse the same cache.
 - Produces: a `CameraPose`.
 
-- [ ] `evaluateClip at t=0 returns the start pose` (single `dollyTo` clip).
-- [ ] `evaluateClip dolly is log-uniform` — half-decade at half-time:
+- [x] `evaluateClip at t=0 returns the start pose` (single `dollyTo` clip).
+- [x] `evaluateClip dolly is log-uniform` — half-decade at half-time:
   `dollyTo` from `start.distance=1` to `100` over `1`s, at `t=0.5` ⇒ ≈ `10`
   (with `ease:'linear'`).
-- [ ] `evaluateClip holds the final base value past the segment end` —
+- [x] `evaluateClip holds the final base value past the segment end` —
   past `durationSec`, `distance === to`.
-- [ ] `evaluateClip rate keeps integrating after the ramp ends` — a
+- [x] `evaluateClip rate keeps integrating after the ramp ends` — a
   `rate('yaw',{to:0.1,over:1})`: yaw displacement at `t=2` strictly exceeds the
   linear-extrapolation-from-`t=1` lower bound by the ramp's stored momentum
   (assert monotone increase and `yaw(2) > yaw(1) + 0`).
-- [ ] `evaluateClip osc is additive and zero-mean` — `oscillate('pitch',{amp:0.1,period:4})`:
+- [x] `evaluateClip osc is additive and zero-mean` — `oscillate('pitch',{amp:0.1,period:4})`:
   `pitch(0)===base`, `pitch(1)===base+0.1`, `pitch(2)===base`.
-- [ ] `evaluateClip is pure` — same `(data, t)` twice ⇒ deep-equal; fresh `target` array.
-- [ ] `evaluateClip composes base+vel+osc on one channel` — yaw with all three:
+- [x] `evaluateClip is pure` — same `(data, t)` twice ⇒ deep-equal; fresh `target` array.
+- [x] `evaluateClip composes base+vel+osc on one channel` — yaw with all three:
   result equals the sum of the three evaluated independently.
-- [ ] Implement. `npm test -- evaluateClip` → pass. Commit.
+- [x] Implement. `npm test -- evaluateClip` → pass. Commit.
 
 ## Task 7 — `camera.clip` store Intent (`startClip` / `endClip`)
 
