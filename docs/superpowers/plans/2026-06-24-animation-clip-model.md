@@ -519,11 +519,11 @@ Storing a FRESH `data` object is load-bearing — it is the clock-reset trigger
     NEW object with `start` concrete (passes through a non-`'live'` start).
   - `initialState.clip = null`.
 
-- [ ] `startClip stores the clip data` — `camera.clip.data === payload`.
-- [ ] `endClip clears clip` — `camera.clip === null` after.
-- [ ] `endClip also clears a dormant tween` — with `tween` set, `endClip()` nulls both.
-- [ ] `resolveClipStart swaps 'live' for the live pose` and `passes a concrete start through`.
-- [ ] Implement. `npm test -- cameraSlice` → pass. Commit.
+- [x] `startClip stores the clip data` — `camera.clip.data === payload`.
+- [x] `endClip clears clip` — `camera.clip === null` after.
+- [x] `endClip also clears a dormant tween` — with `tween` set, `endClip()` nulls both.
+- [x] `resolveClipStart swaps 'live' for the live pose` and `passes a concrete start through`.
+- [x] Implement. `npm test -- cameraSlice` → pass. Commit.
 
 ## Task 8 — `CameraClock` clip arm: `clipElapsed` keyed on `camera.clip` identity
 
