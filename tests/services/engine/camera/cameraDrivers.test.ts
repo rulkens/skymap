@@ -7,8 +7,8 @@
  *   - `buildCameraDrivers` exposes the five drivers with correct ids,
  *     priorities, and `commitsOnEdge` flags.
  *   - Each driver's `isActive` reads the right slice field.
- *   - Each driver's `pose` produces the correct result (evaluateClip,
- *     evaluateTween, spinAutoRotate, s.camera.base, or poseOf(cam)).
+ *   - Each driver's `pose` produces the correct result (evaluateClip via
+ *     tweenToClip for tween, spinAutoRotate, s.camera.base, or poseOf(cam)).
  *   - `pickWinner` selects by priority, not list order (incl. clip > orbitDrag).
  *   - `pickWinner` and `activeDriverId` always agree (invariant 1).
  *   - `runCameraDrivers` passes the winner's elapsed (tween/autoRotate use
@@ -33,7 +33,8 @@ import {
 } from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
 import { poseOf } from '../../../../src/services/engine/camera/poseOf';
-import { evaluateTween } from '../../../../src/services/engine/camera/evaluateTween';
+import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
 import { spinAutoRotate } from '../../../../src/services/engine/camera/spinAutoRotate';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { rootReducer } from '../../../../src/store/rootReducer';
@@ -152,9 +153,13 @@ describe('buildCameraDrivers — isActive reads the store', () => {
     const store = makeStore();
     // Default is DEFAULT_AUTO_ROTATE from cameraSlice initial state.
     const defaultActive = (store.getState() as unknown as RootState).camera.autoRotate.active;
-    expect(byId('autoRotate').isActive(store.getState() as unknown as RootState)).toBe(defaultActive);
+    expect(byId('autoRotate').isActive(store.getState() as unknown as RootState)).toBe(
+      defaultActive,
+    );
     store.dispatch(setAutoRotate({ active: !defaultActive, rate: 0.000873 }));
-    expect(byId('autoRotate').isActive(store.getState() as unknown as RootState)).toBe(!defaultActive);
+    expect(byId('autoRotate').isActive(store.getState() as unknown as RootState)).toBe(
+      !defaultActive,
+    );
   });
 
   it('clip.isActive ⇔ s.camera.clip !== null', () => {
@@ -184,13 +189,15 @@ describe('buildCameraDrivers — pose functions', () => {
     expect(result).toEqual(poseOf(CAM_STUB));
   });
 
-  it('tween.pose returns evaluateTween(descriptor, elapsed)', () => {
+  it('tween.pose returns evaluateClip(tweenToClip(descriptor), elapsed / 1000)', () => {
+    // The tween driver routes through evaluateClip via tweenToClip — the
+    // single camera-evaluation path after the Task-1 fold.
     const store = makeStore();
     store.dispatch(startCameraTween(TWEEN_DESC));
     const s = store.getState() as unknown as RootState;
-    const elapsed = 300;
-    const result = byId('tween').pose(s, CAM_STUB, elapsed);
-    expect(result).toEqual(evaluateTween(TWEEN_DESC, elapsed));
+    const elapsedMs = 300;
+    const result = byId('tween').pose(s, CAM_STUB, elapsedMs);
+    expect(result).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), elapsedMs / 1000));
   });
 
   it('autoRotate.pose returns spinAutoRotate(base, rate, elapsed)', () => {
@@ -289,6 +296,8 @@ describe('pickWinner / activeDriverId invariant', () => {
 
 describe('runCameraDrivers — elapsed dispatch', () => {
   it('passes tween elapsed to the tween driver pose', () => {
+    // The tween driver evaluates via evaluateClip(tweenToClip(desc), elapsedSec).
+    // Verify runCameraDrivers passes the right elapsed and the result matches.
     const store = makeStore();
     store.dispatch(startCameraTween(TWEEN_DESC));
     const s = store.getState() as unknown as RootState;
@@ -298,12 +307,12 @@ describe('runCameraDrivers — elapsed dispatch', () => {
 
     // First call — tween starts here, elapsed = 0 on first frame.
     const pose0 = runCameraDrivers(drivers, s, CAM_STUB, clock, nowMs);
-    // tween wins; elapsed == 0 on first-ever call for a fresh descriptor.
-    expect(pose0).toEqual(evaluateTween(TWEEN_DESC, 0));
+    // tween wins; elapsedMs == 0 on first-ever call for a fresh descriptor.
+    expect(pose0).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), 0));
 
-    // Second call at nowMs + 200 — same descriptor reference, elapsed = 200.
+    // Second call at nowMs + 200 — same descriptor reference, elapsedMs = 200.
     const pose200 = runCameraDrivers(drivers, s, CAM_STUB, clock, nowMs + 200);
-    expect(pose200).toEqual(evaluateTween(TWEEN_DESC, 200));
+    expect(pose200).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000));
   });
 
   it('passes 0 elapsed to orbitDrag (pose does not use elapsed)', () => {
@@ -317,9 +326,7 @@ describe('runCameraDrivers — elapsed dispatch', () => {
       poseOf(CAM_STUB),
     );
     // Replace just the orbitDrag driver's pose fn to capture elapsed.
-    const patchedDrivers = drivers.map((d) =>
-      d.id === 'orbitDrag' ? { ...d, pose: poseSpy } : d,
-    );
+    const patchedDrivers = drivers.map((d) => (d.id === 'orbitDrag' ? { ...d, pose: poseSpy } : d));
 
     runCameraDrivers(patchedDrivers, s, CAM_STUB, clock, 9999);
     expect(poseSpy).toHaveBeenCalledWith(s, CAM_STUB, 0);
@@ -333,12 +340,10 @@ describe('runCameraDrivers — elapsed dispatch', () => {
 
     // Force resting to win by ensuring default state has autoRotate inactive.
     // (DEFAULT_AUTO_ROTATE is false, so resting wins by default.)
-    const poseSpy = vi.fn<(s: RootState, cam: OrbitCamera, e: number) => CameraPose>(() =>
-      s.camera.base,
+    const poseSpy = vi.fn<(s: RootState, cam: OrbitCamera, e: number) => CameraPose>(
+      () => s.camera.base,
     );
-    const patchedDrivers = drivers.map((d) =>
-      d.id === 'resting' ? { ...d, pose: poseSpy } : d,
-    );
+    const patchedDrivers = drivers.map((d) => (d.id === 'resting' ? { ...d, pose: poseSpy } : d));
 
     runCameraDrivers(patchedDrivers, s, CAM_STUB, clock, 9999);
     // resting wins when nothing else is active; elapsed must be 0.
@@ -363,8 +368,8 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     runCameraDrivers(drivers, s, CAM_STUB, clock, installMs);
 
     // Spy-patch the clip pose to capture the elapsed value passed in.
-    const poseSpy = vi.fn<(s: RootState, cam: OrbitCamera, e: number) => CameraPose>(() =>
-      s.camera.base,
+    const poseSpy = vi.fn<(s: RootState, cam: OrbitCamera, e: number) => CameraPose>(
+      () => s.camera.base,
     );
     const patchedDrivers = drivers.map((d) => (d.id === 'clip' ? { ...d, pose: poseSpy } : d));
 

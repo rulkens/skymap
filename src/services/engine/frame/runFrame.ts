@@ -162,8 +162,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── (2) TWEEN COMPLETION: cancel a finished tween exactly once ────────────
   //
-  // Must run AFTER the pose is produced (so `pose` already == evaluateTween(to)
-  // via saturation at elapsed >= durationMs) and BEFORE commit-on-edge sees the
+  // Must run AFTER the pose is produced (so `pose` already == to via saturation
+  // at elapsed >= durationMs) and BEFORE commit-on-edge sees the
   // deactivation. The cancel sets tween=null in the store; on the NEXT frame the
   // tween driver is inactive → winner changes away from 'tween' → commit fires.
   // Exactly one commit per tween: the commit-on-edge prev!==activeId guard is
@@ -250,7 +250,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // for downstream `renderFrame()`. The 'not ready' branch is the brief window
   // before the first cloud lands; once cam + GPU handles populate together,
   // it's never taken again.
-  const ctx = deriveFrameContext(state, deps.canvas, renderPose, state.cameraRuntime.projection, masks.draw);
+  const ctx = deriveFrameContext(
+    state,
+    deps.canvas,
+    renderPose,
+    state.cameraRuntime.projection,
+    masks.draw,
+  );
   if (!ctx.isReady) {
     // Essential wake: bootstrap populates cam/GPU handles without waking any
     // channel — keep re-polling until the gate opens.

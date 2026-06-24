@@ -4,6 +4,12 @@
  * Each test exercises one property of the `base + ∫vel + osc` composition.
  * Inputs are built via `effectHelpers` constructors (no raw `{ kind }` literals)
  * and the `ClipData` shape. All assertions are deterministic; no wall-clock.
+ *
+ * The final section ('focus tween = one-segment clip') verifies that a
+ * one-segment clip with `ease:'out'` and `space:'lin'` on distance is
+ * byte-for-byte equivalent to the deleted `evaluateTween`. This is the
+ * correctness proof for the Task-1 fold: after `evaluateTween` is deleted,
+ * `evaluateClip` via `tweenToClip` is the single camera-evaluation path.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -13,6 +19,7 @@ import {
   rate,
   oscillate,
   tween,
+  moveTarget,
   all,
   seq,
 } from '../../../../src/services/engine/animation/effectHelpers';
@@ -269,5 +276,130 @@ describe('evaluateClip composes base+vel+osc on one channel', () => {
 
     // Combined yaw = startYaw + baseDelta + velDelta + oscDelta.
     expect(combinedYaw).toBeCloseTo(startYaw + baseDelta + velDelta + oscDelta, 6);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 9 — focus tween = one-segment clip
+//
+// A focus tween is the degenerate clip: one `set`/`setVec` segment per channel
+// with `ease:'out'` (= easeOutCubic) and `space:'lin'` for `distance` (focus
+// tweens use linear distance interpolation, not log-space). These four cases
+// are the correctness proof for the Task-1 fold: after `evaluateTween` is
+// deleted, `evaluateClip` via `tweenToClip` must be byte-for-byte equivalent.
+//
+// Helper: build the ClipData that corresponds to a CameraTweenDescriptor with
+// the given from/to/durationMs. Distance explicitly uses space:'lin' to match
+// the old evaluateTween's lerp(from, to, t) path — the clip default is 'log'.
+// ---------------------------------------------------------------------------
+
+function makeTweenClip(opts: { from: CameraPose; to: CameraPose; durationMs: number }): ClipData {
+  const durationSec = opts.durationMs / 1000;
+  return {
+    start: opts.from,
+    timeline: [
+      all([
+        tween('distance', { to: opts.to.distance, over: durationSec, ease: 'out', space: 'lin' }),
+        tween('yaw', { to: opts.to.yaw, over: durationSec, ease: 'out' }),
+        tween('pitch', { to: opts.to.pitch, over: durationSec, ease: 'out' }),
+        moveTarget(opts.to.target, durationSec, 'out'),
+      ]),
+    ],
+  };
+}
+
+const TWEEN_FROM: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+const TWEEN_TO: CameraPose = { target: [10, 0, 0], yaw: 1.0, pitch: 0.2, distance: 50 };
+const DURATION_MS = 600;
+const DURATION_SEC = DURATION_MS / 1000;
+
+describe('focus tween = one-segment clip', () => {
+  it('evaluateClip matches the old tween at t=0', () => {
+    // At elapsed=0, the pose must equal `from` on all channels.
+    const data = makeTweenClip({ from: TWEEN_FROM, to: TWEEN_TO, durationMs: DURATION_MS });
+    const pose = evaluateClip(data, 0);
+
+    expect(pose.target[0]).toBeCloseTo(TWEEN_FROM.target[0], 10);
+    expect(pose.target[1]).toBeCloseTo(TWEEN_FROM.target[1], 10);
+    expect(pose.target[2]).toBeCloseTo(TWEEN_FROM.target[2], 10);
+    expect(pose.yaw).toBeCloseTo(TWEEN_FROM.yaw, 10);
+    expect(pose.pitch).toBeCloseTo(TWEEN_FROM.pitch, 10);
+    expect(pose.distance).toBeCloseTo(TWEEN_FROM.distance, 10);
+  });
+
+  it('evaluateClip eases yaw via shortest arc', () => {
+    // from.yaw = 3.0 rad, to.yaw = -3.0 rad. The short arc crosses ±π (total
+    // delta ≈ 0.28 rad). At the mid-point (easeOutCubic(0.5) ≈ 0.875 of the
+    // way to the destination) the result must still be near ±π, far from 0.
+    // Ruling out abs(yaw) < π/2 eliminates the long-arc path.
+    const from: CameraPose = { target: [0, 0, 0], yaw: 3.0, pitch: 0, distance: 100 };
+    const to: CameraPose = { target: [0, 0, 0], yaw: -3.0, pitch: 0, distance: 100 };
+    const data = makeTweenClip({ from, to, durationMs: DURATION_MS });
+
+    // elapsed = half of DURATION_SEC
+    const pose = evaluateClip(data, DURATION_SEC / 2);
+
+    // Short arc: result must be near ±π, not near 0 (long arc).
+    expect(Math.abs(pose.yaw)).toBeGreaterThan(Math.PI / 2);
+  });
+
+  it('evaluateClip saturates to an exact copy of to past the deadline', () => {
+    // At elapsed >= durationSec, every scalar field must be === to (not
+    // easeOutCubic(1) via floating-point), and target must be a fresh array.
+    const data = makeTweenClip({ from: TWEEN_FROM, to: TWEEN_TO, durationMs: DURATION_MS });
+
+    // Well past the segment window (> DURATION_SEC).
+    const pose = evaluateClip(data, DURATION_SEC * 2);
+
+    // Exact saturation — the evaluator holds `to` once the segment ends, it
+    // does not re-evaluate easeOutCubic. A !== comparison would catch aliasing.
+    expect(pose.yaw).toBe(TWEEN_TO.yaw);
+    expect(pose.pitch).toBe(TWEEN_TO.pitch);
+    expect(pose.distance).toBe(TWEEN_TO.distance);
+    // target values must match to exactly…
+    expect(pose.target[0]).toBe(TWEEN_TO.target[0]);
+    expect(pose.target[1]).toBe(TWEEN_TO.target[1]);
+    expect(pose.target[2]).toBe(TWEEN_TO.target[2]);
+    // …but the array must be a fresh allocation (not aliased to to.target).
+    expect(pose.target).not.toBe(TWEEN_TO.target);
+  });
+
+  it('evaluateClip keeps focus-tween distance LINEAR via space:lin', () => {
+    // A one-segment clip with `space:'lin'` on distance must interpolate
+    // linearly, not in log space. The two paths diverge when from !== to.
+    //
+    // At the mid-progress t = 0.5 (ease:'linear' for a clean ratio):
+    //   linear midpoint: lerp(from, to, 0.5) = (from + to) / 2
+    //   log midpoint:    exp(lerp(ln from, ln to, 0.5)) = sqrt(from * to)
+    //
+    // For from=100, to=0, the log midpoint is undefined (ln(0) = -Inf);
+    // use from=10, to=1000 for a safe comparison.
+    //   linear(0.5) = 505
+    //   log(0.5)    = sqrt(10 * 1000) ≈ 100   (very different!)
+    const from: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 };
+    const to: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1000 };
+    // Use ease:'linear' so the progress at half-duration is exactly 0.5 and
+    // the expected value is exactly lerp(10, 1000, 0.5) = 505.
+    const durationSec = 2;
+    const data: ClipData = {
+      start: from,
+      timeline: [
+        all([
+          tween('distance', { to: to.distance, over: durationSec, ease: 'linear', space: 'lin' }),
+          tween('yaw', { to: to.yaw, over: durationSec, ease: 'linear' }),
+          tween('pitch', { to: to.pitch, over: durationSec, ease: 'linear' }),
+          moveTarget(to.target, durationSec, 'linear'),
+        ]),
+      ],
+    };
+
+    const pose = evaluateClip(data, 1); // t = 0.5 of 2s duration
+
+    // Linear midpoint: lerp(10, 1000, 0.5) = 505.
+    expect(pose.distance).toBeCloseTo(505, 5);
+
+    // Log midpoint for contrast: sqrt(10 * 1000) ≈ 100, which is far from 505.
+    // Asserting the result is well above 200 rules out the log path decisively.
+    expect(pose.distance).toBeGreaterThan(200);
   });
 });

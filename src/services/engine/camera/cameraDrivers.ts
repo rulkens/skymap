@@ -44,7 +44,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import { poseOf } from './poseOf';
-import { evaluateTween } from './evaluateTween';
+import { tweenToClip } from './tweenToClip';
 import { spinAutoRotate } from './spinAutoRotate';
 import { tweenElapsed, autoRotateElapsed, clipElapsed } from './cameraClock';
 import { evaluateClip } from './evaluateClip';
@@ -152,7 +152,7 @@ export function runCameraDrivers(
  *
  *   - `tween` (60) — an in-flight focus tween. Active while `s.camera.tween`
  *     is non-null. Pure: reads `s.camera.tween` + `elapsedMs` from the clock,
- *     returns `evaluateTween(descriptor, elapsed)`.
+ *     converts descriptor via `tweenToClip`, calls `evaluateClip(data, elapsed/1000)`.
  *
  *   - `autoRotate` (20) — the idle drift. Active while
  *     `s.camera.autoRotate.active` is true. Pure: returns
@@ -193,7 +193,10 @@ export function buildCameraDrivers(_state: EngineState): readonly CameraDriver[]
       // tween-to-focus lands cleanly rather than snapping to the pre-tween base.
       commitsOnEdge: true,
       isActive: (s) => s.camera.tween !== null,
-      pose: (s, _cam, elapsedMs) => evaluateTween(s.camera.tween!, elapsedMs),
+      // `tweenToClip` converts the descriptor to a ClipData (memoised by
+      // reference) so `evaluateClip`'s compile cache reuses tracks across frames.
+      // `elapsedMs / 1000` converts to the seconds unit `evaluateClip` expects.
+      pose: (s, _cam, elapsedMs) => evaluateClip(tweenToClip(s.camera.tween!), elapsedMs / 1000),
     },
     {
       id: 'autoRotate',
