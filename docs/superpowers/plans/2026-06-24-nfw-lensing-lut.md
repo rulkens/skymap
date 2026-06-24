@@ -101,13 +101,13 @@ stale: lensing now co-hosts the `@group(3)` scene group at `@binding(1)` (see
 `points/vertex.wesl:74-93` + `sceneUniforms.ts`). The standalone BGL in this file
 is reserved for the volume raymarch's own free group, VERTEX|FRAGMENT.
 
-- [ ] Rewrite the `@group/@binding` paragraph (`lensingUniforms.wesl:13-15`) to
+- [x] Rewrite the `@group/@binding` paragraph (`lensingUniforms.wesl:13-15`) to
   describe current state: the points + pick pipelines read this buffer via the
   `@group(3)` scene group at `@binding(1)` (VERTEX), and the standalone bind
   group exists for a free-group consumer (the volume raymarch, VERTEX|FRAGMENT).
   Comments only — the `struct LensingUniforms` body and byte layout do not change.
-- [ ] `npm run build` — WESL still links; no struct/offset change.
-- [ ] Commit.
+- [x] `npm run build` — WESL still links; no struct/offset change.
+- [x] Commit.
 
 ---
 
