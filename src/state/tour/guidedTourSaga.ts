@@ -1,5 +1,6 @@
 /**
- * guidedTourSaga — the per-beat worker and (in the next task) the outer tour loop.
+ * guidedTourSaga — the per-beat worker (`visitBeat`) and the outer tour loop
+ * (`guidedTour`).
  *
  * ### visitBeat: what it does and why each step exists
  *
@@ -42,6 +43,16 @@
  *      the race — the timer or the user input wins first, and the drift is cancelled.
  *      A finite drift clip would win on short beats and advance the tour prematurely.
  *
+ * ### guidedTour: why a saga and why only TOUR_EXIT aborts
+ *
+ * The outer loop must restore the scene (settings + camera focus) whether the
+ * tour finishes naturally or is cut short by the user. A `try/finally` in a
+ * generator gives that guarantee unconditionally — a pure-data sequencer that
+ * drives beats from outside a saga cannot bind a teardown to its own
+ * cancellation. `TOUR_EXIT` is the only abort signal because the tour's clip@95
+ * camera driver swallows drag input: a stray `beginDrag` or `commitCameraPose`
+ * should NOT stop the show — the user must dispatch `TOUR_EXIT` explicitly.
+ *
  * ### getContext is read INSIDE the worker
  *
  * The engine registers its saga context AFTER the root saga forks. Reading
@@ -57,8 +68,8 @@ import { flyToClip } from './flyToClip';
 import { dwellDrift } from './dwellDrift';
 import { waitUntil } from './waitUntil';
 import { focusReady } from './focusReady';
-import { TOUR_ADVANCE } from './tourActions';
-import { showCaption } from '../ui/uiSlice';
+import { TOUR_ADVANCE, TOUR_EXIT } from './tourActions';
+import { showCaption, setUiHidden } from '../ui/uiSlice';
 import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
 import { focusFraming } from '../../services/engine/camera/focusFraming';
 import type { BeatData } from '../../@types/tour/BeatData';
@@ -106,4 +117,51 @@ export function* visitBeat(beat: BeatData): Generator {
 
   // (7) Clear the caption before the next beat.
   yield* put(showCaption(null));
+}
+
+/**
+ * Play all beats in order, sandwiched in a snapshot/restore pair.
+ *
+ * This is a saga — not a plain async function — because `try/finally` in a
+ * generator runs on BOTH natural completion (all beats finish) and
+ * cancellation (TOUR_EXIT wins the race and redux-saga cancels the `run`
+ * arm). A plain async function whose Promise is externally rejected has no
+ * equivalent guarantee: the caller must set up a separate teardown path.
+ * Here the finally handles both paths with one clause.
+ *
+ * Only TOUR_EXIT stops the tour. Camera-input actions (`beginDrag`,
+ * `commitCameraPose`, …) must NOT abort the run — the clip@95 driver owns
+ * the camera during playback and input actions arrive but have no effect on
+ * tour progression. Adding a camera-input `take` here would incorrectly end
+ * the tour on any background orbit-controls event.
+ */
+export function* guidedTour(beats: readonly BeatData[]): Generator {
+  // Read context inside the saga — the engine sets it after root-saga forks,
+  // same pattern as visitBeat and watchFocusTween.
+  const fx = yield* getContext<SagaContext['reconcile']>('reconcile');
+
+  // Snapshot the six settings clusters + selection.focus so restore can
+  // wind the scene back exactly to where the user left off.
+  const snapshot = fx.captureScene();
+
+  // Hide the UI chrome for the duration of the tour.
+  yield* put(setUiHidden(true));
+
+  try {
+    yield* race({
+      // `run` sequences every beat; a TOUR_EXIT that wins the race cancels
+      // this arm mid-visitBeat — redux-saga propagates the cancellation into
+      // the in-flight playClip call automatically.
+      run: call(function* () {
+        for (const beat of beats) yield* call(visitBeat, beat);
+      }),
+      // `exit` is the only abort: an explicit user/system dispatch, not a
+      // stray camera-input action.
+      exit: take(TOUR_EXIT),
+    });
+  } finally {
+    // Runs on BOTH natural completion and TOUR_EXIT cancellation.
+    fx.restoreScene(snapshot, { animate: true });
+    yield* put(setUiHidden(false));
+  }
 }
