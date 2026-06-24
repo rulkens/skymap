@@ -19,20 +19,26 @@ import {
   selectCameraBase,
   selectAutoRotate,
   selectCameraActive,
+  selectClipActive,
 } from '../../../src/state/camera/selectors';
 import {
   beginDrag,
   startCameraTween,
   setAutoRotate,
   commitCameraPose,
+  startClip,
+  endClip,
 } from '../../../src/state/camera/cameraSlice';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
+import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 // Build a fresh store for each test so dispatch side-effects don't cross cases.
 const makeStore = () => configureStore({ reducer: rootReducer });
 
 const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: -0.3, distance: 10 };
+
+const clipData: ClipData = { timeline: [] };
 
 const tween: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
@@ -123,5 +129,28 @@ describe('selectCameraActive', () => {
     store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
 
     expect(selectCameraActive(store.getState())).toBe(true);
+  });
+
+  it('is true while a clip is active', () => {
+    const store = makeStore();
+    store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
+    store.dispatch(startClip(clipData));
+
+    expect(selectCameraActive(store.getState())).toBe(true);
+  });
+});
+
+describe('selectClipActive', () => {
+  it('is false when no clip is set', () => {
+    const store = makeStore();
+    expect(selectClipActive(store.getState())).toBe(false);
+  });
+
+  it('is true after startClip and false after endClip', () => {
+    const store = makeStore();
+    store.dispatch(startClip(clipData));
+    expect(selectClipActive(store.getState())).toBe(true);
+    store.dispatch(endClip());
+    expect(selectClipActive(store.getState())).toBe(false);
   });
 });

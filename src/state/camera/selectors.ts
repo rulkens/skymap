@@ -43,8 +43,15 @@ export const selectAutoRotateRate = (state: RootState): number =>
 
 // Camera term of the loop-continuation predicate (spec §4): true while any
 // non-resting driver would win. `shouldKeepTicking` ORs this with the other
-// movers to decide whether to reschedule the next frame.
+// movers to decide whether to reschedule the next frame. The clip term keeps
+// the loop alive for the full duration of an animation clip.
 export const selectCameraActive = (state: RootState): boolean => {
   const c = selectCameraIntent(state);
-  return c.dragging || c.tween !== null || c.autoRotate.active;
+  return c.clip !== null || c.dragging || c.tween !== null || c.autoRotate.active;
 };
+
+// True while an animation clip is playing. Plan B/C's `suspendDuringClip`
+// guard and React-side clip-aware components read this rather than
+// reaching into the camera slice directly.
+export const selectClipActive = (state: RootState): boolean =>
+  selectCameraIntent(state).clip !== null;
