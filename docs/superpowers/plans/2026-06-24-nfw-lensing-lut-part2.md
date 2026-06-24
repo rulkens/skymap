@@ -70,16 +70,16 @@ entries gain `{ binding: 2, resource: lensLutView }` and
 `{ binding: 3, resource: lensLutSampler }`. (Pass the *view*, not the texture —
 keep the `NfwLensLutTexture.view` / `.sampler` split from Part 1 Task 3.1.)
 
-- [ ] Test `scene BGL declares the LUT texture + sampler at bindings 2 and 3` —
+- [x] Test `scene BGL declares the LUT texture + sampler at bindings 2 and 3` —
   asserts the faked `createBindGroupLayout` entries include a VERTEX `texture`
   at binding 2 and a VERTEX `sampler` at binding 3.
-- [ ] Test `scene bind group binds the LUT view and sampler` — asserts the faked
+- [x] Test `scene bind group binds the LUT view and sampler` — asserts the faked
   `createBindGroup` entries reference the passed `lensLutView` + `lensLutSampler`.
-- [ ] `npm test` for both files → pass.
-- [ ] `npm run typecheck` → the new params ripple to every `createSceneBindGroup`
+- [x] `npm test` for both files → pass.
+- [x] `npm run typecheck` → the new params ripple to every `createSceneBindGroup`
   caller (see Task 4.2); expect a compile error there until 4.2 lands. Sequence
   4.1 + 4.2 together in one commit if the typecheck gate can't pass standalone.
-- [ ] Commit (with 4.2 if needed for a green typecheck).
+- [x] Commit (with 4.2 if needed for a green typecheck).
 
 ### Task 4.2 — Build the LUT at startup + thread it through `initGpu`
 
@@ -91,30 +91,30 @@ keep the `NfwLensLutTexture.view` / `.sampler` split from Part 1 Task 3.1.)
 **Wiring** (in `initGpu`, near the existing scene-group assembly at
 `initGpu.ts:104-131`):
 
-- [ ] Build the LUT once: `const lut = buildNfwLensLut(W, H, yMax, sMax)` with the
+- [x] Build the LUT once: `const lut = buildNfwLensLut(W, H, yMax, sMax)` with the
   Part-1 defaults (`256 × 64` per spec line 132, plus the pinned `yMax`/`sMax`).
   Pull `W/H/yMax/sMax` from a single named-constant home (a small
   `src/data/nfwLensLut.ts` constants module, or exported consts on
   `buildNfwLensLut.ts`) so the generator and any debug overlay read one source of
   truth — do not inline the magic numbers at the call site.
-- [ ] `state.gpu.lensLutTexture = createNfwLensLutTexture(device, lut)` and add the
+- [x] `state.gpu.lensLutTexture = createNfwLensLutTexture(device, lut)` and add the
   field to `EngineGpuHandles` as `lensLutTexture: NfwLensLutTexture | null`, with a
   docblock matching the bag's lifecycle rule (null before bootstrap, non-null after
   `initGpu`, released + re-nulled by `destroy()` — see
   `EngineGpuHandles.d.ts:69-139` for the pattern). Add its `.destroy()` to the
   engine teardown chain (find the `destroy()` site that releases
   `lensingUniform` / `focusUniform` and add the LUT there).
-- [ ] Pass `state.gpu.lensLutTexture.view` + `.sampler` into the
+- [x] Pass `state.gpu.lensLutTexture.view` + `.sampler` into the
   `createSceneBindGroup(...)` call (`initGpu.ts:126-131`). The LUT must be built
   BEFORE the scene bind group, like `lensingUniform` already is
   (`initGpu.ts:112-131`).
-- [ ] Test `initGpu builds the NFW LUT texture and binds it into the scene group` —
+- [x] Test `initGpu builds the NFW LUT texture and binds it into the scene group` —
   in the bootstrap/initGpu test, assert `state.gpu.lensLutTexture` is non-null
   after init and that `createSceneBindGroup` received its view + sampler.
-- [ ] `npm test` → green (full suite, since this is bootstrap).
-- [ ] `npm run typecheck` → clean (now every `createSceneBindGroup` caller passes
+- [x] `npm test` → green (full suite, since this is bootstrap).
+- [x] `npm run typecheck` → clean (now every `createSceneBindGroup` caller passes
   the new args).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 4.3 — Sample the LUT in `points/vertex.wesl` for the dominant NFW lens
 
