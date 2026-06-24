@@ -75,20 +75,19 @@ export type DebugPanelProps = {
   flow: FlowSettings;
   onFlowChange: (patch: Partial<FlowSettings>) => void;
   /**
-   * Gravitational-lensing prototype: master toggle, SIS/NFW profile, the
-   * exaggerated peak deflection in degrees, and the NFW scale radius. App-
-   * owned and optimistic like the other toggles — the container dispatches
-   * `setLensingEnabled` / `setLensMode` / `setLensStrengthDeg` /
-   * `setLensScaleRadiusMpc`.
+   * Gravitational-lensing prototype: master toggle, SIS/NFW profile, and a
+   * log-scaled dimensionless strength multiplier (0 = off, 1 = physical,
+   * ~1000 = exaggerated). App-owned and optimistic like the other toggles —
+   * the container dispatches `setLensingEnabled` / `setLensMode` /
+   * `setLensStrength`. NFW scale radius r_s is per-cluster (R500/c500) and
+   * no longer a UI knob.
    */
   lensingEnabled: boolean;
   lensMode: LensMode;
-  lensStrengthDeg: number;
-  lensScaleRadiusMpc: number;
+  lensStrength: number;
   onLensingEnabledChange: (enabled: boolean) => void;
   onLensModeChange: (mode: LensMode) => void;
-  onLensStrengthDegChange: (deg: number) => void;
-  onLensScaleRadiusMpcChange: (mpc: number) => void;
+  onLensStrengthChange: (strength: number) => void;
   /**
    * Called with the pass name when a RenderTogglesSection checkbox is toggled.
    * Container (DebugPanelContainer) dispatches `setPassDisabled`; absorbed here
@@ -114,12 +113,10 @@ export function DebugPanel({
   onFlowChange,
   lensingEnabled,
   lensMode,
-  lensStrengthDeg,
-  lensScaleRadiusMpc,
+  lensStrength,
   onLensingEnabledChange,
   onLensModeChange,
-  onLensStrengthDegChange,
-  onLensScaleRadiusMpcChange,
+  onLensStrengthChange,
   onTogglePass,
 }: DebugPanelProps) {
   return (
@@ -154,12 +151,10 @@ export function DebugPanel({
       <LensingTuningSection
         enabled={lensingEnabled}
         mode={lensMode}
-        strengthDeg={lensStrengthDeg}
-        scaleRadiusMpc={lensScaleRadiusMpc}
+        lensStrength={lensStrength}
         onEnabledChange={onLensingEnabledChange}
         onModeChange={onLensModeChange}
-        onStrengthDegChange={onLensStrengthDegChange}
-        onScaleRadiusMpcChange={onLensScaleRadiusMpcChange}
+        onLensStrengthChange={onLensStrengthChange}
       />
       <div style={{ marginTop: 6 }} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
