@@ -372,17 +372,17 @@ runtime → `put(startCameraTween(...))`) is unchanged; only the guard wraps it.
 > WANTS. Parking `watchSelectionRows` would make every in-clip `focus()` a no-op dim.
 > Suspend **exactly one** watcher: `watchFocusTween`.
 
-- [ ] `watchFocusTween plants no tween while a clip is active` — with `camera.clip`
+- [x] `watchFocusTween plants no tween while a clip is active` — with `camera.clip`
   non-null (`selectClipActive` true), an `updateSelectionFocus` dispatch results in
   NO `startCameraTween` dispatch.
-- [ ] `watchFocusTween plants a tween normally with no clip active` — with
+- [x] `watchFocusTween plants a tween normally with no clip active` — with
   `camera.clip` null, the existing behaviour is unchanged (a `startCameraTween` is
   dispatched). This is the regression guard on the existing focus tween.
-- [ ] Run → red.
-- [ ] Implement `suspendDuringClip` (own file, one function; `select` +
+- [x] Run → red.
+- [x] Implement `suspendDuringClip` (own file, one function; `select` +
   `selectClipActive` from Plan A's selector). Wrap the worker at `focusTweenSaga.ts:36`.
-- [ ] `npm test -- focusTweenSaga` → green; `npm run typecheck` → green.
-- [ ] Commit (`focusTweenSaga.ts`, `suspendDuringClip.ts`, the test).
+- [x] `npm test -- focusTweenSaga` → green (6/6); `npm run typecheck` → green.
+- [x] Commit (`focusTweenSaga.ts`, `suspendDuringClip.ts`, the test).
 
 > **`suspendDuringClip` is Layer 1, owned here.** It guards ANY clip's camera from
 > a reconcile saga (`watchFocusTween`), not just a tour's — it keys on
