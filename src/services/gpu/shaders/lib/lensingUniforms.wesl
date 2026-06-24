@@ -10,9 +10,10 @@
 // the NFW r_s in Mpc, ignored by SIS). See lib/lensing.wesl for the model.
 //
 // The @group/@binding decoration is declared by each consuming shader, not
-// here: the points vertex stage parks it at @group(4) (its lower slots hold
-// Uniforms / Fade / Source / Focus). A single shared bind group serves every
-// consumer — it binds to a layout, not a group number.
+// here: the points + pick vertex stage reads this buffer via the @group(3)
+// scene group at @binding(1) (alongside focus at @binding(0)). The standalone
+// lensingUniforms bind-group layout exists for a free-group consumer (the volume
+// raymarch, VERTEX|FRAGMENT); it binds the same buffer bytes.
 //
 // Byte layout (272 bytes total). The four header scalars exactly fill the
 // first 16-byte slot, so the 16-byte-aligned 'lenses' array starts at byte
