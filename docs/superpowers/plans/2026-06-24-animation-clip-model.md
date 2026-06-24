@@ -950,10 +950,10 @@ validates the clip COMPILES + EVALUATES sanely rather than matching torn-down co
 
 **Files:** none (verification only).
 
-- [ ] `npm test` → all green (590+ existing + the new suites).
-- [ ] `npm run typecheck` → clean (both src + tools tsconfigs).
-- [ ] Grep for TODO/placeholder left in new files; remove or convert to a tracked note.
-- [ ] Confirm the cross-plan contract names match this plan's table EXACTLY
+- [x] `npm test` → all green (590+ existing + the new suites). (3204 tests / 501 files green; two stale fixtures fixed — see commit 09d36f73.)
+- [x] `npm run typecheck` → clean (both src + tools tsconfigs).
+- [x] Grep for TODO/placeholder left in new files; remove or convert to a tracked note. (Only descriptive "placeholder" prose for the ZERO_POSE design; no stray TODO/FIXME.)
+- [x] Confirm the cross-plan contract names match this plan's table EXACTLY
   (`ClipData`, `evaluateClip`, `camera.clip`, `startClip`/`endClip`, `clip`@95,
   `commitsOnEdge`, `clipPlayer.tick`, `clipPlayer.clipOpacityOf`, `SceneEffect`,
   the five constructors (`show`/`hide`/`fade`/`scene`/`focus`), `applySceneEffect`,
@@ -963,7 +963,7 @@ validates the clip COMPILES + EVALUATES sanely rather than matching torn-down co
   `clipPlayer.clipOpacityOf` + the verbs and never constructs the channel, the
   `SceneEffect` type, the constructors, `applySceneEffect`, the duration override,
   or touches `resolveLayerOpacity`.
-- [ ] No commit of `public/data/*` or `dist/`. Final commit if any verification fixups.
+- [x] No commit of `public/data/*` or `dist/`. Final commit if any verification fixups.
 
 ---
 
