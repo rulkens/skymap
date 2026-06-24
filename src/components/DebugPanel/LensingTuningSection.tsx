@@ -23,42 +23,14 @@
  * because it is a physics experiment: real cluster Einstein radii are
  * ~arcseconds, and the exaggerated mode distorts the view around whatever you
  * orbit. Idiom matches the sibling sections — a default-closed `<details>` with
- * inline monospace styles and a local `Slider`.
+ * inline monospace styles and the shared `DebugSlider`.
  */
 
 import type { ReactElement } from 'react';
 import type { LensMode } from '../../@types/settings/LensMode';
+import { DebugSlider } from './DebugSlider';
 import { lensStrengthFromSlider } from '../../utils/lensing/lensStrengthFromSlider';
 import { lensSliderFromStrength } from '../../utils/lensing/lensSliderFromStrength';
-
-type SliderProps = {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  readout: string;
-  onChange: (v: number) => void;
-};
-
-function Slider({ label, value, min, max, step, readout, onChange }: SliderProps): ReactElement {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-      <span style={{ flex: '0 0 90px' }}>{label}</span>
-      <span style={{ flex: '0 0 52px', textAlign: 'right', opacity: 0.8 }}>{readout}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        aria-label={label}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ flex: '1 1 auto' }}
-      />
-    </div>
-  );
-}
 
 // Format the strength multiplier for the readout label.
 // Small values (< 10) get one decimal place; larger values are rounded.
@@ -122,7 +94,7 @@ export function LensingTuningSection({
         {/* Log-scaled dimensionless strength. p = 0.25 is the physical 1× point;
             p = 0 is hard-off (slider left edge). The readout shows the multiplier
             so it is clear how far past physical the user has dialled. */}
-        <Slider
+        <DebugSlider
           label="Strength"
           value={lensSliderFromStrength(lensStrength)}
           min={0}
