@@ -248,7 +248,7 @@ un-braided and the plan preserved the spec's un-braided choices.
 
 **Files:** none (review task; may surface follow-up edits).
 
-- [ ] Run the `entanglement-radar` skill over the full `feat/gravitational-lensing`
+- [x] Run the `entanglement-radar` skill over the full `feat/gravitational-lensing`
   branch diff. Confirm specifically:
   - **One texture object.** The LUT is created once (`createNfwLensLutTexture`)
     and referenced from the scene group — not duplicated per pipeline. (The
@@ -269,10 +269,10 @@ un-braided and the plan preserved the spec's un-braided choices.
   - **No stale comments** left behind (the Phase-0 `@group(4)` fix held; the
     `pointRenderer.ts` / `PointDrawSettings` / `sceneUniforms.ts` docblocks now
     describe current state).
-- [ ] If the radar names a knot, either un-braid it (small) or capture it in
+- [x] If the radar names a knot, either un-braid it (small) or capture it in
   `docs/BACKLOG.md` with a one-line rationale (larger) — do not silently leave it.
-- [ ] `npm test` + `npm run typecheck` + `npm run build` → all green.
-- [ ] Commit any review-driven edits.
+- [x] `npm test` + `npm run typecheck` + `npm run build` → all green.
+- [x] Commit any review-driven edits.
 
 ---
 
