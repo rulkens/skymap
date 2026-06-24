@@ -30,7 +30,7 @@ import package::points::io::Uniforms;
 import package::points::io::PerVertex;
 import package::points::io::VSOut;
 import package::lib::camera::worldToClip;
-import package::lib::lensing::lensTerm;
+import package::lib::lensing::lensedPosition;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::sourceUniforms::SourceUniforms;
@@ -113,81 +113,20 @@ fn vs(
 ) -> VSOut {
   // Gravitational lensing (multi-cluster). Each source is drawn as TWO
   // quads when the lens pass is active: vertex_index 0..5 carry the summed
-  // primary image, 6..11 the dominant lens's inner counter-image. We loop
-  // over every in-view cluster lens: the primary accumulates the deflection
-  // of all of them (the weak-shear field between clusters + each ring's
-  // outward push), while the counter image is rendered only for the lens
-  // with the largest δ/β on this source (the one closest to forming a ring).
-  // 'lensMu' folds the dominant lens's magnification into intensity below.
-  // The deflection preserves the source's distance from the eye, so the
+  // primary image, 6..11 the dominant lens's inner counter-image. The whole
+  // deflection model — summed-primary push, dominant-lens counter, and the
+  // per-image magnification — lives in 'lensedPosition' (lib/lensing.wesl), so
+  // the visual and pick pipelines share one authoritative policy. The
+  // deflection preserves the source's distance from the eye, so the
   // apparent-size and depth-fade math below (which read p.position's length)
-  // are unaffected — only the projected screen direction changes. See
-  // lib/lensing.wesl.
+  // are unaffected — only the projected screen direction changes.
   let imageKind = select(0u, 1u, vi >= 6u);
-  let toSrc = p.position - u.camPosWorld;
-  let dS = length(toSrc);
-
-  var primaryOffset = vec3<f32>(0.0, 0.0, 0.0);
-  var lensMu = 1.0;
-  var bestRatio = 0.0;
-  var bestBeta = 0.0;
-  var bestDelta = 0.0;
-  var bestDirLens = vec3<f32>(0.0, 0.0, 1.0);
-  var bestTangent = vec3<f32>(0.0, 0.0, 0.0);
-  var hasDominant = false;
-
-  if (lensing.enabled == 1u && dS > 1e-4) {
-    let dirSrc = toSrc / dS;
-    for (var i = 0u; i < lensing.count; i = i + 1u) {
-      let term = lensTerm(u.camPosWorld, lensing.lenses[i], dirSrc, dS, lensing.mode, lensing.scaleRadius);
-      if (term.valid == 0u) {
-        continue;
-      }
-      // Primary: accumulate this lens's outward push (δ along +tangent).
-      primaryOffset = primaryOffset + term.tangent * term.delta;
-      // Primary brightness tracks the strongest single-lens magnification.
-      lensMu = max(lensMu, min(1.0 + term.delta / term.beta, LENS_MU_MAX));
-      // Dominant lens for the counter image: largest δ/β (nearest a ring).
-      let ratio = term.delta / term.beta;
-      if (ratio > bestRatio) {
-        bestRatio = ratio;
-        bestBeta = term.beta;
-        bestDelta = term.delta;
-        bestDirLens = term.dirLens;
-        bestTangent = term.tangent;
-        hasDominant = true;
-      }
-    }
-  }
-
-  // Assemble this quad's lensed position + validity from the accumulators.
-  // Lens disabled / no foreground lens → identity primary, culled counter.
-  var lensedPos = p.position;
-  var lensValid = select(1u, 0u, imageKind == 1u);
-  if (lensing.enabled == 1u && dS > 1e-4) {
-    if (imageKind == 0u) {
-      // Primary: source direction rotated by the SUMMED deflection.
-      let dirImage = normalize(toSrc + primaryOffset * dS);
-      lensedPos = u.camPosWorld + dirImage * dS;
-      lensValid = 1u;
-    } else if (hasDominant && lensing.mode == 0u) {
-      // Counter image — SIS ONLY. The inner image sits at θ = δ − β on the
-      // −tangent side, valid when the source is inside the Einstein radius.
-      // NFW is deliberately suppressed here: its deflection δ(β) varies, so
-      // the SIS closed-form counter position and the 1 + δ/β magnification
-      // place a spurious inner ghost. Correct NFW multi-imaging requires
-      // inverting β = θ − α(θ), which has no closed form — deferred to the
-      // precomputed-LUT approach (see the NFW-lensing-LUT design spec). Until
-      // then NFW renders the primary image only; the counter quad is culled.
-      let thetaC = bestDelta - bestBeta;
-      if (thetaC > 0.0) {
-        let dirImage = bestDirLens * cos(thetaC) - bestTangent * sin(thetaC);
-        lensedPos = u.camPosWorld + dirImage * dS;
-        lensMu = min(bestDelta / bestBeta - 1.0, LENS_MU_MAX);
-        lensValid = 1u;
-      }
-    }
-  }
+  let img = lensedPosition(p.position, u.camPosWorld, lensing, imageKind, LENS_MU_MAX);
+  let lensedPos = img.position;
+  let lensValid = img.valid;
+  // 'lensMu' folds the image's magnification into intensity below (1.0 when
+  // the source is unlensed).
+  let lensMu = img.mu;
 
   // Project the (possibly lensed) world position to clip space via the
   // shared 'worldToClip' helper from 'lib/camera.wesl'.

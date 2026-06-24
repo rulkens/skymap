@@ -944,6 +944,15 @@ describe('PointRenderer.draw — lensing vertex count', () => {
   it('draws the single (6-vertex) quad when lensing is off', async () => {
     expect(await vertexCountFor(false, 'sis')).toBe(6);
   });
+
+  // Behaviour-neutrality guard for the lensedPosition extraction (Task 2.1):
+  // moving the inline deflection block into lib/lensing.wesl must not touch the
+  // vertex-count gate at pointRenderer.ts:767 — SIS still doubles the quad,
+  // NFW still draws one (the 12-for-NFW change lands in Part 2).
+  it('SIS draw stays 12 vertices, NFW stays 6 after extraction', async () => {
+    expect(await vertexCountFor(true, 'sis')).toBe(12);
+    expect(await vertexCountFor(true, 'nfw')).toBe(6);
+  });
 });
 
 describe('POINT_VERTEX_ATTRIBUTES — shared layout export', () => {

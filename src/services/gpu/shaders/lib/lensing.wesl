@@ -1,5 +1,7 @@
 // lib/lensing.wesl — thin-lens deflection (SIS or NFW profile) summed over
 // the in-view cluster lenses.
+import package::lib::lensingUniforms::LensingUniforms;
+
 //
 // ## What this models
 //
@@ -34,7 +36,7 @@
 //
 // With N cluster lenses the exact problem is intractable in a vertex
 // shader: superposing N SIS lenses has no closed-form image solution, and
-// full multi-image is 2^N. So we approximate, in 'vs':
+// full multi-image is 2^N. So we approximate, in 'lensedPosition':
 //
 //   - PRIMARY image: SUM each foreground lens's deflection. Each lens
 //     rotates the source direction away from its centre by δ along the
@@ -48,9 +50,10 @@
 //     The combinatorial 2^N counter-images of the weaker lenses are
 //     dropped; the dominant one carries the visible ring interior.
 //
-// 'lensTerm' below resolves ONE lens's geometry; 'vs' runs the loop and
-// the summation/dominant-pick. This keeps the per-lens math here and the
-// accumulation policy in the vertex stage.
+// 'lensTerm' below resolves ONE lens's geometry; 'lensedPosition' runs the
+// loop and the summation/dominant-pick. This keeps the per-lens math and the
+// accumulation policy together, with the vertex stage just choosing which
+// image (primary or counter) to ask for.
 //
 // ## Distance scaling and the two damping envelopes
 //
@@ -98,12 +101,13 @@
 //
 // where δ is the same envelope-damped deflection that positions the
 // images, so brightness and geometry stay physically coupled — far from a
-// lens (δ → 0) μ → 1 and the field is untouched. 'vs' folds the dominant
-// lens's μ into per-galaxy intensity, so the ring reads as genuinely
-// bright and the inner counter-images appropriately faint. μ formally
-// diverges as β → 0 (a point source on the caustic); real sources are
-// extended, which caps the peak — 'vs' approximates that finite-source
-// limit with its own MU_MAX clamp.
+// lens (δ → 0) μ → 1 and the field is untouched. 'lensedPosition' folds the
+// dominant lens's μ into the returned magnification, which 'vs' multiplies
+// into per-galaxy intensity, so the ring reads as genuinely bright and the
+// inner counter-images appropriately faint. μ formally diverges as β → 0 (a
+// point source on the caustic); real sources are extended, which caps the
+// peak — 'lensedPosition' approximates that finite-source limit with the
+// caller-supplied muMax clamp.
 
 // Spatial-envelope radius: the impact-parameter scale (world Mpc) over
 // which a cluster's deflection dies off (1-sigma). Light passing within
@@ -266,4 +270,116 @@ fn lensTerm(
   term.dirLens = dirLens;
   term.tangent = tangent;
   return term;
+}
+
+// One image (primary or counter) of a lensed source: its deflected world
+// position, the magnification to fold into its intensity, and a validity
+// flag. This encapsulates the summed-primary + dominant-lens-counter policy
+// that the points vertex stage used to run inline, so both the visual and the
+// pick pipeline see one authoritative deflection model.
+//
+//   valid     0u culls this quad (the inner counter-image when no such image
+//             exists — source outside the Einstein radius, NFW counter, or a
+//             disabled lens)
+//   position  the lensed world position; identical to the source position when
+//             the image is unlensed
+//   mu        magnification multiplied into the per-image flux; 1.0 when the
+//             source is unlensed
+struct LensedImage {
+  valid: u32,
+  position: vec3<f32>,
+  mu: f32,
+}
+
+// Resolve ONE image of a source under the active lens field.
+//
+//   sourceWorld  the source's true world position (eye-relative direction +
+//                distance are recovered from it and 'eye')
+//   eye          camera position, world Mpc
+//   lensing      the shared lens uniform (enabled / count / mode / scaleRadius
+//                + the lens array); passed by value, the established idiom for
+//                small uniform structs in this pipeline
+//   imageKind    0 = primary (summed deflection), 1 = inner counter-image
+//   muMax        the peak-magnification clamp the caller keeps as a const
+//
+// When lensing is off (or the source is too close to the eye to deflect) the
+// primary renders unlensed at unit magnification and the counter is culled.
+// Otherwise the loop sums every foreground lens's deflection into the primary
+// while tracking the dominant lens (largest delta/beta) for the counter image.
+fn lensedPosition(
+  sourceWorld: vec3<f32>,
+  eye: vec3<f32>,
+  lensing: LensingUniforms,
+  imageKind: u32,
+  muMax: f32,
+) -> LensedImage {
+  let toSrc = sourceWorld - eye;
+  let dS = length(toSrc);
+
+  var img: LensedImage;
+  // Lens disabled / source on the eye → identity primary, culled counter.
+  img.valid = select(1u, 0u, imageKind == 1u);
+  img.position = sourceWorld;
+  img.mu = 1.0;
+
+  if (lensing.enabled == 1u && dS > 1e-4) {
+    let dirSrc = toSrc / dS;
+
+    var primaryOffset = vec3<f32>(0.0, 0.0, 0.0);
+    var lensMu = 1.0;
+    var bestRatio = 0.0;
+    var bestBeta = 0.0;
+    var bestDelta = 0.0;
+    var bestDirLens = vec3<f32>(0.0, 0.0, 1.0);
+    var bestTangent = vec3<f32>(0.0, 0.0, 0.0);
+    var hasDominant = false;
+
+    for (var i = 0u; i < lensing.count; i = i + 1u) {
+      let term = lensTerm(eye, lensing.lenses[i], dirSrc, dS, lensing.mode, lensing.scaleRadius);
+      if (term.valid == 0u) {
+        continue;
+      }
+      // Primary: accumulate this lens's outward push (delta along +tangent).
+      primaryOffset = primaryOffset + term.tangent * term.delta;
+      // Primary brightness tracks the strongest single-lens magnification.
+      lensMu = max(lensMu, min(1.0 + term.delta / term.beta, muMax));
+      // Dominant lens for the counter image: largest delta/beta (nearest a ring).
+      let ratio = term.delta / term.beta;
+      if (ratio > bestRatio) {
+        bestRatio = ratio;
+        bestBeta = term.beta;
+        bestDelta = term.delta;
+        bestDirLens = term.dirLens;
+        bestTangent = term.tangent;
+        hasDominant = true;
+      }
+    }
+
+    if (imageKind == 0u) {
+      // Primary: source direction rotated by the SUMMED deflection.
+      let dirImage = normalize(toSrc + primaryOffset * dS);
+      img.position = eye + dirImage * dS;
+      img.mu = lensMu;
+      img.valid = 1u;
+    } else if (hasDominant && lensing.mode == 0u) {
+      // Counter image — SIS ONLY. The inner image sits at theta = delta − beta
+      // on the −tangent side, valid when the source is inside the Einstein
+      // radius. NFW is deliberately suppressed here: its deflection delta(beta)
+      // varies, so the SIS closed-form counter position and the 1 + delta/beta
+      // magnification place a spurious inner ghost. Correct NFW multi-imaging
+      // requires inverting beta = theta − alpha(theta), which has no closed
+      // form — deferred to the precomputed-LUT approach (see the NFW-lensing-LUT
+      // design spec). Until then NFW renders the primary image only; the counter
+      // quad is culled.
+      let thetaC = bestDelta - bestBeta;
+      if (thetaC > 0.0) {
+        let dirImage = bestDirLens * cos(thetaC) - bestTangent * sin(thetaC);
+        img.position = eye + dirImage * dS;
+        img.mu = min(bestDelta / bestBeta - 1.0, muMax);
+        img.valid = 1u;
+      }
+    }
+  }
+
+  return img;
 }
