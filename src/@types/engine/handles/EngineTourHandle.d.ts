@@ -3,16 +3,14 @@ import type { BeatData } from '../../tour/BeatData';
 /**
  * EngineTourHandle — programmatic guided-tour control surface.
  *
- * `start` dispatches TOUR_START and returns a Promise that resolves when the
- * tour ends — either all beats complete naturally or TOUR_EXIT cancels the run.
- * The Promise always resolves (never rejects), so `await engine.tour.start(...)`
- * is safe without a try/catch.
+ * `start` dispatches TOUR_START fire-and-forget: it launches a new tour run
+ * carrying the beat sequence and returns immediately. `watchTour`'s `takeLatest`
+ * ensures a new start supersedes any in-progress run.
  *
- * `exit` dispatches TOUR_EXIT to cancel an in-progress run. The Promise
- * returned by the matching `start` call resolves in the same microtask via
- * the `finally` hook in `watchTour`.
+ * `exit` dispatches TOUR_EXIT to cancel an in-progress run. All restore logic
+ * (settings + camera) lives in `guidedTour`'s `finally` block.
  */
 export type EngineTourHandle = {
-  start: (beats: readonly BeatData[]) => Promise<void>;
+  start: (beats: readonly BeatData[]) => void;
   exit: () => void;
 };

@@ -171,18 +171,11 @@ export function* guidedTour(beats: readonly BeatData[]): Generator {
  *
  * `takeLatest` cancels any in-progress run when a new TOUR_START arrives —
  * the tour is single-instance, so a new start always supersedes the previous
- * one. The `finally` block calls `action.meta.onDone()` on BOTH paths
- * (natural completion and cancellation), resolving the Promise the engine
- * handle returned to the caller. The handle dispatches TOUR_EXIT when it
- * wants to stop the tour; the watcher does not handle that directly —
- * `guidedTour` itself takes TOUR_EXIT via a race inside the tour body.
+ * one. `guidedTour` itself handles TOUR_EXIT via an internal race, so the
+ * watcher simply delegates the full run.
  */
 export function* watchTour() {
   yield* takeLatest(TOUR_START, function* (action) {
-    try {
-      yield* call(guidedTour, action.payload.beats);
-    } finally {
-      action.meta.onDone();
-    }
+    yield* call(guidedTour, action.payload.beats);
   });
 }

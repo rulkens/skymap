@@ -525,6 +525,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     playClip: createPlayClip({
       store,
       clipPlayer: state.subsystems.clipPlayer,
+      // No null-guard needed: lastPose.current is seeded from camera.base at
+      // CameraRuntime construction (synchronous) and playClip is only ever
+      // invoked from tour/tween sagas that run after engine construction.
       getLivePose: () => state.cameraRuntime.lastPose.current,
     }),
   });
@@ -732,14 +735,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // ── Tour handle — programmatic guided-tour launch + exit ─────────────
     //
-    // `start` dispatches TOUR_START and returns a Promise that resolves when
-    // the run ends (natural completion or TOUR_EXIT). The Promise bridge lives
-    // in the TOUR_START action's `meta.onDone` — `watchTour`'s `finally`
-    // calls it on both paths so the caller's await always settles.
-    // `exit` is a plain dispatch — no teardown lives here; all restore logic
-    // is in `guidedTour`'s finally.
+    // `start` dispatches TOUR_START fire-and-forget: `takeLatest` in `watchTour`
+    // cancels any prior run and starts `guidedTour` with the new beats.
+    // `exit` dispatches TOUR_EXIT — all restore logic lives in `guidedTour`'s
+    // finally block, not here.
     tour: {
-      start: (beats) => new Promise<void>((resolve) => store.dispatch(TOUR_START(beats, resolve))),
+      start: (beats) => store.dispatch(TOUR_START(beats)),
       exit: () => store.dispatch(TOUR_EXIT()),
     },
 

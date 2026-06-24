@@ -2,8 +2,8 @@
  * watchTour tests — integration tests over a real store + saga middleware.
  *
  * `watchTour` is the TOUR_START watcher that launches `guidedTour`. Each test
- * dispatches TOUR_START into a store running `mainSaga` (or a local saga that
- * forks `watchTour` directly) with all three saga-context stubs injected:
+ * dispatches TOUR_START into a store running `watchTour` directly with all
+ * saga-context stubs injected:
  *   - `playClip` — resolves immediately so beats complete without blocking
  *   - `resolveDeps` — narration-beat deps (null focus, no catalogs needed)
  *   - `cameraRuntime` — a fixed camera snapshot
@@ -11,12 +11,15 @@
  *
  * ### What we assert
  *
- * 1. `onDone` fires when the run completes naturally (all beats done).
- * 2. `onDone` fires when TOUR_EXIT cancels the run mid-flight.
- * 3. A second TOUR_START supersedes a first run (takeLatest semantics):
- *    `onDone` for the first fires and the second run starts.
- * 4. The tour side-effects fire (setUiHidden(true) dispatched) — confirms
- *    `guidedTour` actually ran, not just that watchTour received the action.
+ * 1. `guidedTour` actually ran: `setUiHidden(true)` is dispatched synchronously
+ *    on TOUR_START, confirming the saga body executed (not just that the action
+ *    was received).
+ * 2. `captureScene` is called and `restoreScene` fires after natural completion,
+ *    confirming the snapshot/restore pair in `guidedTour`'s try/finally executed.
+ * 3. `restoreScene` fires when TOUR_EXIT cancels a mid-dwell run — the finally
+ *    block runs on BOTH paths.
+ * 4. A second TOUR_START supersedes a first run (takeLatest semantics): the
+ *    first run's `restoreScene` fires before the second run's beats execute.
  *
  * ### Timing
  *
@@ -110,25 +113,40 @@ describe('watchTour', () => {
     vi.useRealTimers();
   });
 
-  // ── (1) onDone fires on natural completion ────────────────────────────────
+  // ── (1) guidedTour actually ran (setUiHidden(true) dispatched) ────────────
 
-  it('onDone fires when all beats complete naturally', async () => {
+  it('guidedTour runs: setUiHidden(true) is dispatched on TOUR_START', async () => {
+    const { store } = buildHarness();
+
+    store.dispatch(TOUR_START([SHORT_BEAT]));
+
+    // setUiHidden(true) is dispatched synchronously inside guidedTour before
+    // the first beat's async work begins.
+    expect(store.getState().ui.uiHidden).toBe(true);
+  });
+
+  // ── (2) restoreScene fires on natural completion ──────────────────────────
+
+  it('restoreScene fires when all beats complete naturally', async () => {
     vi.useFakeTimers();
 
-    const { store } = buildHarness();
-    let done = false;
+    const reconcile = buildReconcileStub();
+    const { store } = buildHarness({ reconcile });
 
-    store.dispatch(TOUR_START([SHORT_BEAT], () => { done = true; }));
+    store.dispatch(TOUR_START([SHORT_BEAT]));
 
     // Advance timers so the 0.001s dwell expires and the beat + loop complete.
     await vi.runAllTimersAsync();
 
-    expect(done).toBe(true);
+    // guidedTour's finally must have run: captureScene called before the beat,
+    // restoreScene called after completion.
+    expect(reconcile.captureScene).toHaveBeenCalledTimes(1);
+    expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });
   });
 
-  // ── (2) onDone fires when TOUR_EXIT cancels the run ───────────────────────
+  // ── (3) restoreScene fires when TOUR_EXIT cancels the run ────────────────
 
-  it('onDone fires when TOUR_EXIT cancels the run', async () => {
+  it('restoreScene fires when TOUR_EXIT cancels the run', async () => {
     // Long dwell so the beat never auto-advances during this test.
     const longBeat: BeatData = { focus: null, caption: 'Long', dwellSec: 9999 };
 
@@ -139,38 +157,28 @@ describe('watchTour', () => {
       return callIdx === 1 ? Promise.resolve() : new Promise<void>(() => {});
     });
 
-    const { store } = buildHarness({ playClip: playClipMock });
-    let done = false;
+    const reconcile = buildReconcileStub();
+    const { store } = buildHarness({ playClip: playClipMock, reconcile });
 
-    store.dispatch(TOUR_START([longBeat], () => { done = true; }));
+    store.dispatch(TOUR_START([longBeat]));
 
     // Advance to the dwell race inside the beat.
     await flush();
     await flush();
 
-    expect(done).toBe(false); // still running
+    // Still running — restoreScene has not fired yet.
+    expect(reconcile.restoreScene).not.toHaveBeenCalled();
 
     store.dispatch(TOUR_EXIT());
     await flush();
 
-    expect(done).toBe(true);
-  });
-
-  // ── (3) guidedTour actually ran (setUiHidden(true) dispatched) ────────────
-
-  it('guidedTour runs: setUiHidden(true) is dispatched on TOUR_START', async () => {
-    const { store } = buildHarness();
-
-    store.dispatch(TOUR_START([SHORT_BEAT], () => {}));
-
-    // setUiHidden(true) is dispatched synchronously inside guidedTour before
-    // the first beat's async work begins.
-    expect(store.getState().ui.uiHidden).toBe(true);
+    // The finally block must have run on TOUR_EXIT cancellation.
+    expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });
   });
 
   // ── (4) second TOUR_START supersedes first (takeLatest) ──────────────────
 
-  it('a second TOUR_START cancels the first run and fires its onDone', async () => {
+  it('a second TOUR_START cancels the first run', async () => {
     const longBeat: BeatData = { focus: null, caption: 'Long', dwellSec: 9999 };
 
     let callIdx = 0;
@@ -179,26 +187,26 @@ describe('watchTour', () => {
       return callIdx % 2 === 1 ? Promise.resolve() : new Promise<void>(() => {});
     });
 
-    const { store } = buildHarness({ playClip: playClipMock });
-    let firstDone = false;
-    let secondDone = false;
+    const reconcile = buildReconcileStub();
+    const { store } = buildHarness({ playClip: playClipMock, reconcile });
 
     // Start first run with a long dwell.
-    store.dispatch(TOUR_START([longBeat], () => { firstDone = true; }));
+    store.dispatch(TOUR_START([longBeat]));
 
     // Advance to the dwell race inside the first beat.
     await flush();
     await flush();
 
-    expect(firstDone).toBe(false);
+    // First run is live — restoreScene has not fired yet.
+    expect(reconcile.restoreScene).not.toHaveBeenCalled();
 
     // Dispatch a second TOUR_START — takeLatest cancels the first worker.
-    store.dispatch(TOUR_START([{ focus: null, caption: 'B2', dwellSec: 9999 }], () => { secondDone = true; }));
+    store.dispatch(TOUR_START([{ focus: null, caption: 'B2', dwellSec: 9999 }]));
     await flush();
 
-    // The first run was cancelled: its onDone must have fired.
-    expect(firstDone).toBe(true);
-    // The second run is live: it has not completed yet.
-    expect(secondDone).toBe(false);
+    // The first run was cancelled: its finally block must have run.
+    expect(reconcile.restoreScene).toHaveBeenCalledTimes(1);
+    // The second run is live: setUiHidden(true) is still in effect.
+    expect(store.getState().ui.uiHidden).toBe(true);
   });
 });
