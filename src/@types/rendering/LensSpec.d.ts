@@ -1,19 +1,26 @@
 import type { Vec3 } from '../math/Vec3';
 
 /**
- * LensSpec — one gravitational lens for the points pass: a world-space centre
- * (Mpc) and an Einstein angular radius (radians).
+ * LensSpec — one gravitational lens for the points pass: eye-relative geometry
+ * precomputed each frame from the current camera pose.
  *
- * The multi-lens model packs an array of these into the shared lensing
- * uniform buffer (see `packLensingUniforms`), one per in-view cluster. The
- * vertex shader sums
- * the deflection of every foreground lens and renders the dominant lens's
- * counter-image — so each massive cluster shows an Einstein ring and the field
- * between them carries the summed weak-lensing shear. `thetaERad` is already
- * the per-cluster value (the master strength scaled by the cluster's mass
- * proxy); the shader applies only the per-source `D_ls/D_s` distance factor.
+ * `dirLens` is the unit vector from the eye toward the cluster centre,
+ * computed as `(worldPos − camPos) / |worldPos − camPos|` in world space
+ * each frame. `dL` is the eye→lens distance in Mpc. Both are recomputed
+ * every frame so the shader never touches world coordinates directly.
+ *
+ * `thetaERad` is the per-cluster Einstein angular radius (rad): the global
+ * `lensStrength` multiplier times the physical asymptotic deflection α∞
+ * derived from this cluster's R500. The shader applies only the per-source
+ * `D_ls/D_s` distance factor at draw time.
+ *
+ * `rsMpc` is the NFW scale radius r_s = R500/c500 (Mpc) for this cluster.
+ * Carrying it per-lens means each cluster gets the right deflection peak
+ * without a shared global knob.
  */
 export type LensSpec = {
-  readonly center: Readonly<Vec3>;
+  readonly dirLens: Readonly<Vec3>;
+  readonly dL: number;
   readonly thetaERad: number;
+  readonly rsMpc: number;
 };
