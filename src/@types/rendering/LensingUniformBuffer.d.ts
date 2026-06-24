@@ -1,11 +1,12 @@
 /**
  * LensingUniformBuffer — the singleton gravitational-lensing uniform a
  * pipeline binds to deflect sources behind in-view cluster lenses. Owns the
- * 272-byte GPU buffer and its bind group; `createLensingUniformBuffer` is
+ * 528-byte GPU buffer and its bind group; 'createLensingUniformBuffer' is
  * the single place that wires the buffer to its bind group, and
- * `packLensingUniforms` is the single place that knows the
- * `enabled + count + mode + scaleRadius + array<vec4, 16>` byte layout
- * (mirrored in `lib/lensingUniforms.wesl`).
+ * 'packLensingUniforms' is the single place that knows the
+ * 'enabled + count + mode + _pad0 + array<LensData, 16>' byte layout — each
+ * LensData is two vec4s: geom (dirLens xyz, dL w) + params (thetaERad x, r_s y)
+ * (mirrored in 'lib/lensingUniforms.wesl').
  *
  * One lens set is active per frame, so the whole engine holds exactly one
  * of these (on `state.gpu.lensingUniform`) and writes it once per frame in

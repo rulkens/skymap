@@ -82,7 +82,7 @@ import package::lib::lensingUniforms::LensingUniforms;
 @group(3) @binding(0) var<uniform> focus: FocusUniforms;
 
 // binding 1 — gravitational-lensing uniform. The shared lens data
-// (enabled, count, mode, scaleRadius, + the lens array) lives in its OWN
+// (enabled, count, mode, _pad0, + the lens array) lives in its OWN
 // buffer, NOT the Uniforms tail, so a second pipeline (the volume
 // raymarch) can bind the same bytes. It co-hosts the scene group rather
 // than taking a dedicated @group because WebGPU caps a pipeline at 4 bind

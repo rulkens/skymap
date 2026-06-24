@@ -8,8 +8,10 @@
  *
  * ## Why this is the only place that wires the lensing buffer
  *
- * The 272-byte block (enabled + count + mode + scaleRadius + a `vec4` per
- * lens) is packed by `packLensingUniforms`, the single source of truth for
+ * The 528-byte block (enabled + count + mode + _pad0 + two `vec4`s — a
+ * `LensData` — per lens: geom vec4 (dirLens xyz, dL w) + params vec4
+ * (thetaERad x, r_s y)) is packed by `packLensingUniforms`, the single
+ * source of truth for
  * the layout. This factory owns only the GPU-resource lifecycle (alloc the
  * buffer at `LENSING_UNIFORM_BYTES`, build the bind group against the shared
  * BGL, upload via the packer). Keeping pack + alloc split mirrors the
