@@ -21,6 +21,22 @@ export const C_KM_S = 299792.458;
 export const H0_KM_S_MPC = 70;
 
 /**
+ * Newton's gravitational constant in astrophysical units:
+ *   G = 4.30091 × 10⁻⁹  Mpc · (km/s)² · M☉⁻¹
+ *
+ * SI gives G = 6.674 × 10⁻¹¹ m³ · kg⁻¹ · s⁻², but every cluster formula
+ * in this codebase works in Mpc, km/s, and solar masses — the units the
+ * catalogs already use. Expressing G in the same basis lets the critical
+ * density, velocity-dispersion, and NFW mass scale formulae be written
+ * exactly as they appear in review papers (e.g. Bartelmann 1996) without
+ * threading in metre↔Mpc or kg↔M☉ conversion factors at each step.
+ * The value comes from NIST CODATA with unit conversion:
+ *   G [Mpc·(km/s)²·M☉⁻¹] = G_SI × (M☉/kg) / (Mpc/m) / (km/m)²
+ *                          ≈ 4.30091 × 10⁻⁹
+ */
+export const G = 4.30091e-9;
+
+/**
  * The Hubble distance c/H₀ ≈ 4282.75 Mpc.
  *
  * Precomputing means `redshiftToDistanceMpc` is a single multiplication
