@@ -161,27 +161,29 @@ case of a single `base`-layer `set` per channel with `easeOutCubic`. There must 
 > so existing focus-tween motion is byte-for-byte unchanged. This is the one
 > subtlety the implementer must not paper over.
 
-- [ ] Move the assertions from `tests/services/engine/camera/evaluateTween.test.ts`
+- [x] Move the assertions from `tests/services/engine/camera/evaluateTween.test.ts`
   into `evaluateClip.test.ts` as a "focus tween = one-segment clip" describe block:
-  - [ ] `evaluateClip matches the old tween at t=0` — a one-segment clip built from
+  - [x] `evaluateClip matches the old tween at t=0` — a one-segment clip built from
     `{ from, to, durationMs, easing: 'easeOutCubic' }` returns `from` at `elapsed=0`.
-  - [ ] `evaluateClip eases yaw via shortest arc` — `from.yaw`/`to.yaw` straddling
+  - [x] `evaluateClip eases yaw via shortest arc` — `from.yaw`/`to.yaw` straddling
     ±π lerps the short way (port `evaluateTween`'s shortest-arc assertion).
-  - [ ] `evaluateClip saturates to an exact copy of to past the deadline` — at
+  - [x] `evaluateClip saturates to an exact copy of to past the deadline` — at
     `elapsed > duration` every field `===` `to` (the coterminal-angle guard), and
     `target` is a fresh array (not aliased to `to.target`).
-  - [ ] `evaluateClip keeps focus-tween distance LINEAR` — a one-segment clip with
+  - [x] `evaluateClip keeps focus-tween distance LINEAR` — a one-segment clip with
     a `lin`-space distance segment matches `lerp(fromDist, toDist, easeOutCubic(t))`
     at a mid-`t`, NOT the log interpolation the default would give.
-- [ ] Run → red (some cases fail until `evaluateClip` handles the one-segment / `lin`
+- [x] Run → red (some cases fail until `evaluateClip` handles the one-segment / `lin`
   cases; if Plan A already covers them, they pass and you only delete the old file).
-- [ ] Implement the one-segment case inside `evaluateClip` (read Plan A's current
+- [x] Implement the one-segment case inside `evaluateClip` (read Plan A's current
   body; reuse `easeOutCubic`/`lerp`/`lerpAngleShortest` from `src/utils/math/`).
-- [ ] Delete `src/services/engine/camera/evaluateTween.ts` and
+  *(evaluateClip's body needed no change — it already reproduces the tween; the
+  one-segment clip is built by the `tweenToClip` adapter, see Task 2.)*
+- [x] Delete `src/services/engine/camera/evaluateTween.ts` and
   `tests/services/engine/camera/evaluateTween.test.ts`.
-- [ ] `npm test -- evaluateClip` → green; `npm run typecheck` → green (catches any
+- [x] `npm test -- evaluateClip` → green; `npm run typecheck` → green (catches any
   remaining `evaluateTween` import).
-- [ ] Commit (`evaluateClip.ts`, `evaluateClip.test.ts`, the two deletions).
+- [x] Commit (`evaluateClip.ts`, `evaluateClip.test.ts`, the two deletions).
 
 ## Task 2 — Re-point the `tween`@60 driver row at `evaluateClip`
 
@@ -216,18 +218,20 @@ pose: (s, _cam, elapsedMs) => evaluateClip(tweenAsClip(s.camera.tween!), elapsed
 >   + lin-target segment, `easeOutCubic`). It restates the channel→space mapping
 >   ONLY via the `space` override, never hardcoding (spec lines 137-138).
 
-- [ ] Add `cameraDrivers tween row produces the same pose via evaluateClip` — drive
+- [x] Add `cameraDrivers tween row produces the same pose via evaluateClip` — drive
   the table with a fixed `camera.tween` descriptor + `nowMs`, assert the produced
   pose equals the pre-fold `evaluateTween` value at the same elapsed (golden values
   ported from `evaluateTween`'s test, or computed inline).
-- [ ] Add `cameraDrivers tween row converts ms→sec correctly` — at `elapsedMs` =
+- [x] Add `cameraDrivers tween row converts ms→sec correctly` — at `elapsedMs` =
   half the duration, the produced pose is the eased midpoint (NOT the start, which
-  is what a 1000× unit slip would give).
-- [ ] Run → red.
-- [ ] Implement: add `tweenAsClip`, re-point the row, import `evaluateClip`, drop the
-  `evaluateTween` import.
-- [ ] `npm test -- cameraDrivers` → green; `npm run typecheck` → green.
-- [ ] Commit (`cameraDrivers.ts`, the adapter file, `cameraDrivers.test.ts`).
+  is what a 1000× unit slip would give). *(Non-tautological oracle:
+  `lerp(10,1000,easeOutCubic(0.5))=876.25` + strict start/end bounds.)*
+- [x] Run → red.
+- [x] Implement: add `tweenAsClip`, re-point the row, import `evaluateClip`, drop the
+  `evaluateTween` import. *(adapter landed as `tweenToClip` — `<noun>To<Noun>`
+  convention, mirrors `tweenToCameraSnapshot`.)*
+- [x] `npm test -- cameraDrivers` → green; `npm run typecheck` → green.
+- [x] Commit (`cameraDrivers.ts`, the adapter file, `cameraDrivers.test.ts`).
 
 ## Task 3 — `playClip(clip): Promise<void>` — the seam (resolve-on-end)
 
