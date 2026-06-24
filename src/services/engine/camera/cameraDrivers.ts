@@ -34,7 +34,9 @@
  *
  * Priorities: clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 > resting 0.
  * The gap between each step is deliberate headroom so a future driver can slot
- * in without renumbering. The 95 slot is now occupied by the clip driver.
+ * in without renumbering. The clip@95 and tween@60 rows share ONE evaluator:
+ * both produce their pose through `evaluateClip` (the tween via `tweenToClip`),
+ * differing only in priority and which `camera.*` descriptor they read.
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';

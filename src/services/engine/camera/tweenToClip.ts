@@ -3,12 +3,12 @@
  *
  * ### Why this exists
  *
- * After the Task-1 fold, there is ONE camera-evaluation path: `evaluateClip`.
+ * There is ONE camera-evaluation path: `evaluateClip`.
  * A focus tween is the degenerate clip — one `set` segment per scalar channel
  * and one `setVec` for `target`, all with `ease:'out'` (= easeOutCubic) and
  * `space:'lin'` for `distance` (focus tweens interpolate distance linearly, not
  * in log space). The `cameraDrivers` tween row calls `evaluateClip` via this
- * helper rather than the deleted `evaluateTween`.
+ * helper.
  *
  * ### Memoisation by descriptor identity
  *
@@ -27,7 +27,7 @@
  *
  * `dollyTo` / `tween('distance', ...)` defaults to `space:'log'` (the natural
  * space for camera zooms). Focus tweens use `lerp` — plain linear distance
- * interpolation — matching the pre-fold `evaluateTween` semantics. This helper
+ * interpolation. This helper
  * explicitly passes `space:'lin'` to override the default.
  */
 
@@ -46,7 +46,7 @@ const cache = new WeakMap<CameraTweenDescriptor, ClipData>();
  *
  * @param d A `CameraTweenDescriptor` stored in the Redux camera slice.
  * @returns  A `ClipData` whose `evaluateClip(data, elapsedMs / 1000)` produces
- *           the same pose as the old `evaluateTween(d, elapsedMs)`.
+ *           the focus-tween pose at `elapsedMs` milliseconds elapsed.
  */
 export function tweenToClip(d: CameraTweenDescriptor): ClipData {
   const cached = cache.get(d);

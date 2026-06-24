@@ -7,9 +7,8 @@
  *
  * The final section ('focus tween = one-segment clip') verifies that a
  * one-segment clip with `ease:'out'` and `space:'lin'` on distance is
- * byte-for-byte equivalent to the deleted `evaluateTween`. This is the
- * correctness proof for the Task-1 fold: after `evaluateTween` is deleted,
- * `evaluateClip` via `tweenToClip` is the single camera-evaluation path.
+ * reproduces the focus-tween motion exactly — `evaluateClip` via `tweenToClip`
+ * is the single camera-evaluation path for both scripted clips and focus tweens.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -285,12 +284,13 @@ describe('evaluateClip composes base+vel+osc on one channel', () => {
 // A focus tween is the degenerate clip: one `set`/`setVec` segment per channel
 // with `ease:'out'` (= easeOutCubic) and `space:'lin'` for `distance` (focus
 // tweens use linear distance interpolation, not log-space). These four cases
-// are the correctness proof for the Task-1 fold: after `evaluateTween` is
-// deleted, `evaluateClip` via `tweenToClip` must be byte-for-byte equivalent.
+// These four cases pin that `evaluateClip` via `tweenToClip` reproduces the
+// focus-tween motion exactly — the single camera-evaluation path for scripted
+// clips and tweens.
 //
 // Helper: build the ClipData that corresponds to a CameraTweenDescriptor with
-// the given from/to/durationMs. Distance explicitly uses space:'lin' to match
-// the old evaluateTween's lerp(from, to, t) path — the clip default is 'log'.
+// the given from/to/durationMs. Distance explicitly uses space:'lin' for the
+// focus tween's linear lerp(from, to, t) path — the clip default is 'log'.
 // ---------------------------------------------------------------------------
 
 function makeTweenClip(opts: { from: CameraPose; to: CameraPose; durationMs: number }): ClipData {
