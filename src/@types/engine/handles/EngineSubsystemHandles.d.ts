@@ -26,6 +26,7 @@ import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
 import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
+import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClickResolver } from '../ClickResolver';
 import type { InputBindings } from '../../input/InputBindings';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
@@ -99,6 +100,16 @@ export type EngineSubsystemHandles = {
    * eagerly; no GPU dep, non-null from t=0.
    */
   structureFocus: StructureFocusSubsystem;
+  /**
+   * Clip-player Resource — owns the active clip's scene cues, the
+   * `clipOpacity` channel (per-layer transient opacity), and clip-completion
+   * lifecycle (`endClip` dispatch with the two-frame post-produce defer).
+   *
+   * Constructed eagerly (no GPU dep), non-null from t=0. `tick(nowMs)` is
+   * the first step of `runFrame` (Task 12), before the camera produce step,
+   * so scene cues fire before the pose is evaluated on each frame.
+   */
+  clipPlayer: ClipPlayer;
   /**
    * Per-engine download-progress emitter — instantiated inside the GPU
    * init IIFE so `cb.onLoadProgress` and the slot registry are in scope.

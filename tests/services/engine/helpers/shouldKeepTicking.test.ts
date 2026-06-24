@@ -29,6 +29,7 @@ function rootWithCamera(
       dragging: over.dragging ?? false,
       tween: over.tween ?? null,
       autoRotate: { active: over.autoRotateActive ?? false },
+      clip: null,
     },
   } as unknown as RootState;
 }

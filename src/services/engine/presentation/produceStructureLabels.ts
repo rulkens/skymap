@@ -76,6 +76,13 @@ export function produceStructureLabels(
   const now = performance.now();
   const focusedStructureId = structureIdOf(state.selection.focus);
 
+  // Clip-owned transient opacity for structure labels — hoisted outside the loop
+  // because ALL structure-label categories (`{ kind: 'labelLayer', layer: 'structure',
+  // category: any }`) collapse to the same `'structureLabel'` key. Returns 1 when
+  // no clip is playing. We address the key directly since `fadeIdToVisibilityKey`
+  // maps every structure-label FadeId to this value without discrimination.
+  const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('structureLabel', now);
+
   const structures = state.data.structures;
   for (const p of structures.all()) {
     // Per-category label opacity: the category toggle's fade, read from the
@@ -154,9 +161,12 @@ export function produceStructureLabels(
     }
 
     // Bake the resolved layer opacity into fadeAlpha on top of the distance
-    // fade: catOpacity (toggle fade) × recession (focus fade). The focused
-    // structure's own label is exempt from recession — a faded ring never
-    // carries a bright label, but the thing under inspection keeps its label.
+    // fade: catOpacity (toggle fade) × recession (focus fade) × clipFactor
+    // (clip-owned transient dimming). The focused structure's own label is
+    // exempt from recession — a faded ring never carries a bright label, but
+    // the thing under inspection keeps its label. clipFactor is NOT exempted
+    // for the focused structure: a tour cue that dims all structure labels is
+    // expected to dim even the focused one (the tour controls the whole scene).
     const recession =
       p.id === focusedStructureId
         ? 1
@@ -164,7 +174,7 @@ export function produceStructureLabels(
             { kind: 'labelLayer', layer: 'structure', category: p.category },
             ctx.focusBlend,
           );
-    fadeAlpha *= catOpacity * recession;
+    fadeAlpha *= catOpacity * recession * clipFactor;
 
     // Per-structure override fields: only structures whose category matches the
     // override's target adopt the outline values; others keep the default.

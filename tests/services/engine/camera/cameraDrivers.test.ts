@@ -1,18 +1,18 @@
 /**
  * cameraDrivers — unit tests for the store-reading driver table and resolver.
  *
- * The four drivers read directly from the Redux store; the resolver picks the
+ * The five drivers read directly from the Redux store; the resolver picks the
  * highest-priority active one and calls its `pose`. Tests cover:
  *
- *   - `buildCameraDrivers` exposes the four drivers with correct ids and
- *     priorities.
+ *   - `buildCameraDrivers` exposes the five drivers with correct ids,
+ *     priorities, and `commitsOnEdge` flags.
  *   - Each driver's `isActive` reads the right slice field.
- *   - Each driver's `pose` produces the correct result (evaluateTween,
- *     spinAutoRotate, s.camera.base, or poseOf(cam)).
- *   - `pickWinner` selects by priority, not list order.
+ *   - Each driver's `pose` produces the correct result (evaluateClip,
+ *     evaluateTween, spinAutoRotate, s.camera.base, or poseOf(cam)).
+ *   - `pickWinner` selects by priority, not list order (incl. clip > orbitDrag).
  *   - `pickWinner` and `activeDriverId` always agree (invariant 1).
  *   - `runCameraDrivers` passes the winner's elapsed (tween/autoRotate use
- *     the clock; orbitDrag/resting use 0).
+ *     the clock in ms; clip uses the clock in seconds; orbitDrag/resting use 0).
  *
  * Fixtures use a real `RootState` built via `configureStore({ reducer:
  * rootReducer })` so the shape is always in sync with the actual slices.
@@ -44,8 +44,10 @@ import {
   cancelCameraTween,
   setAutoRotate,
   commitCameraPose,
+  startClip,
 } from '../../../../src/state/camera/cameraSlice';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
+import type { ClipData } from '../../../../src/@types/animation/ClipData';
 
 /** A real-ish store so we can observe dispatches. */
 function makeStore() {
@@ -75,26 +77,48 @@ const CAM_STUB: OrbitCamera = {
 
 const FAKE_ENGINE_STATE = {} as EngineState;
 
+// Minimal ClipData fixture — no effects, just the required timeline field.
+// The clip row only needs `data` to be a non-null object for isActive; the
+// actual evaluateClip call is not exercised in these structural tests.
+const CLIP_DATA: ClipData = { timeline: [] };
+
 // ── buildCameraDrivers: table shape ────────────────────────────────────────
 
 describe('buildCameraDrivers — table shape', () => {
-  it('exposes four drivers with correct ids', () => {
+  it('exposes five drivers with correct ids', () => {
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
     const ids = drivers.map((d) => d.id);
+    expect(ids).toContain('clip');
     expect(ids).toContain('orbitDrag');
     expect(ids).toContain('tween');
     expect(ids).toContain('autoRotate');
     expect(ids).toContain('resting');
-    expect(ids).toHaveLength(4);
+    expect(ids).toHaveLength(5);
   });
 
-  it('assigns correct priorities (orbitDrag 80, tween 60, autoRotate 20, resting 0)', () => {
+  it('assigns correct priorities (clip 95, orbitDrag 80, tween 60, autoRotate 20, resting 0)', () => {
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
     const byId = Object.fromEntries(drivers.map((d) => [d.id, d.priority]));
+    expect(byId.clip).toBe(95);
     expect(byId.orbitDrag).toBe(80);
     expect(byId.tween).toBe(60);
     expect(byId.autoRotate).toBe(20);
     expect(byId.resting).toBe(0);
+  });
+
+  it('clip@95 row has commitsOnEdge:true', () => {
+    const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
+    const clip = drivers.find((d) => d.id === 'clip')!;
+    expect(clip.commitsOnEdge).toBe(true);
+  });
+
+  it('tween and autoRotate rows have commitsOnEdge:true; orbitDrag and resting do not', () => {
+    const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
+    const byId = Object.fromEntries(drivers.map((d) => [d.id, d]));
+    expect(byId['tween']!.commitsOnEdge).toBe(true);
+    expect(byId['autoRotate']!.commitsOnEdge).toBe(true);
+    expect(byId['orbitDrag']!.commitsOnEdge).toBeUndefined();
+    expect(byId['resting']!.commitsOnEdge).toBeUndefined();
   });
 });
 
@@ -131,6 +155,13 @@ describe('buildCameraDrivers — isActive reads the store', () => {
     expect(byId('autoRotate').isActive(store.getState() as unknown as RootState)).toBe(defaultActive);
     store.dispatch(setAutoRotate({ active: !defaultActive, rate: 0.000873 }));
     expect(byId('autoRotate').isActive(store.getState() as unknown as RootState)).toBe(!defaultActive);
+  });
+
+  it('clip.isActive ⇔ s.camera.clip !== null', () => {
+    const store = makeStore();
+    expect(byId('clip').isActive(store.getState() as unknown as RootState)).toBe(false);
+    store.dispatch(startClip(CLIP_DATA));
+    expect(byId('clip').isActive(store.getState() as unknown as RootState)).toBe(true);
   });
 
   it('resting.isActive() is always true', () => {
@@ -219,6 +250,17 @@ describe('pickWinner', () => {
     // All inactive → defensive fallback → drivers[0]
     expect(pickWinner([only], fakeState)).toBe(only);
   });
+
+  it('clip (95) beats orbitDrag (80) when both are active', () => {
+    // A real store with both camera.clip set and camera.dragging true:
+    // clip@95 outranks orbitDrag@80.
+    const store = makeStore();
+    store.dispatch(beginDrag());
+    store.dispatch(startClip(CLIP_DATA));
+    const s = store.getState() as unknown as RootState;
+    const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
+    expect(pickWinner(drivers, s).id).toBe('clip');
+  });
 });
 
 // ── pickWinner === activeDriverId (invariant 1) ─────────────────────────────
@@ -303,5 +345,33 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     if (poseSpy.mock.calls.length > 0) {
       expect(poseSpy.mock.calls[0]![2]).toBe(0);
     }
+  });
+
+  it('passes elapsed in SECONDS to the clip driver via runCameraDrivers', () => {
+    // elapsedForWinner is module-private; drive the assertion through
+    // runCameraDrivers + a spy on the clip row's pose, mirroring how the
+    // orbitDrag-elapsed test is done above.
+    const store = makeStore();
+    store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
+    store.dispatch(startClip(CLIP_DATA));
+    const s = store.getState() as unknown as RootState;
+    const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
+    const clock = createCameraClock();
+    const installMs = 1000;
+
+    // First call — clip installs at installMs, elapsed = 0 s on the first frame.
+    runCameraDrivers(drivers, s, CAM_STUB, clock, installMs);
+
+    // Spy-patch the clip pose to capture the elapsed value passed in.
+    const poseSpy = vi.fn<(s: RootState, cam: OrbitCamera, e: number) => CameraPose>(() =>
+      s.camera.base,
+    );
+    const patchedDrivers = drivers.map((d) => (d.id === 'clip' ? { ...d, pose: poseSpy } : d));
+
+    // Second call 1500 ms later — clip still active (same reference).
+    // clipElapsed returns (nowMs - clipStartMs) / 1000 = 1500 / 1000 = 1.5 s.
+    runCameraDrivers(patchedDrivers, s, CAM_STUB, clock, installMs + 1500);
+    expect(poseSpy).toHaveBeenCalledTimes(1);
+    expect(poseSpy.mock.calls[0]![2]).toBeCloseTo(1.5, 5);
   });
 });

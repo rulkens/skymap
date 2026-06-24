@@ -19,6 +19,7 @@
 
 import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../camera/CameraPose';
+import type { ClipData } from '../../animation/ClipData';
 
 export type CameraClock = {
   tweenStartMs: number | null;
@@ -30,4 +31,10 @@ export type CameraClock = {
   // this changes so the freshly committed base spins from elapsed 0, not from
   // the stale accumulated time (which would jump the camera on resume).
   lastBaseRef: CameraPose | null;
+  // The clip clock keys on the `camera.clip` REFERENCE, not its contents.
+  // A `startClip` dispatch installs a NEW `{ data: ClipData }` object each time,
+  // so `!==` fires the zero exactly once on the transition frame — the same
+  // identity-reset pattern used by `lastTweenRef` for tweens.
+  clipStartMs: number | null;
+  lastClipRef: { data: ClipData } | null;
 };

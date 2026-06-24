@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'gl-matrix';
 import { produceStructureMarkers } from '../../../../src/services/engine/presentation/produceStructureMarkers';
 import { MARKER_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
@@ -46,6 +46,14 @@ function makeState(
     },
     subsystems: {
       fades: makeRegistry(),
+      // clipPlayer is non-nullable; return factor 1 so the clip channel is
+      // behaviour-neutral and existing assertions are unaffected.
+      clipPlayer: {
+        tick: vi.fn<(nowMs: number) => void>(),
+        stop: vi.fn<() => void>(),
+        clipOpacityOf: vi.fn<(layer: string, nowMs: number) => number>(() => 1),
+        destroy: vi.fn<() => void>(),
+      },
     },
   } as unknown as TestState;
 }

@@ -59,12 +59,16 @@ export type ApplyIntentState = Pick<EngineState, 'settings' | 'subsystems' | 'as
  *
  * Order: guard → read intent → fade (animated or immediate) → post. Only ever
  * called on intent rows, so `row.intent` is always present.
+ *
+ * `opts.durationMs` overrides the hard-coded `FADE_IN/OUT_DURATION_MS` for the
+ * animated path. When omitted, the defaults apply unchanged. The snap path
+ * (`animate: false`) ignores `durationMs` — `setImmediate` has no duration.
  */
 function applyIntent<Item>(
   state: ApplyIntentState,
   row: FadeLayer<Item>,
   item: Item,
-  opts: { animate: boolean },
+  opts: { animate: boolean; durationMs?: number },
 ): void {
   // `FadeLayer.guard`/`post` are typed against the full EngineState, but
   // applyIntent only ever feeds them the clusters they actually read (named in
@@ -76,12 +80,11 @@ function applyIntent<Item>(
   const target = row.intent!(state.settings, item) ? 1 : 0;
 
   if (opts.animate) {
+    // When a caller supplies durationMs (e.g. a clip cue with a custom `over`),
+    // use it; otherwise fall back to the perception-tuned defaults.
+    const dur = opts.durationMs ?? (target === 1 ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS);
     // fadeTo wakes the scheduler itself; fire-and-forget (last-issued wins).
-    void state.subsystems.fades.fadeTo(
-      row.handle(item),
-      target,
-      target === 1 ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-    );
+    void state.subsystems.fades.fadeTo(row.handle(item), target, dur);
   } else {
     // setImmediate snaps without waking — the caller schedules a render if needed.
     state.subsystems.fades.setImmediate(row.handle(item), target);
@@ -106,6 +109,10 @@ export { applyIntent as applyIntentForTest };
  * restore path), no React echoes. State flows one way here — settings → intent →
  * fade.
  *
+ * `opts.durationMs` is forwarded to every per-row `applyIntent` call, overriding
+ * the hard-coded `FADE_IN/OUT_DURATION_MS` for the animated path. When omitted,
+ * the defaults apply unchanged — all existing callers are unaffected.
+ *
  * ### Why the wake is asymmetric
  *
  * `applyIntent` itself never wakes the scheduler; the wake is the whole reason
@@ -122,7 +129,7 @@ export { applyIntent as applyIntentForTest };
  */
 export function syncVisibilityFades(
   state: ApplyIntentState,
-  opts: { animate: boolean; only?: readonly VisibilityLayerKey[] },
+  opts: { animate: boolean; only?: readonly VisibilityLayerKey[]; durationMs?: number },
 ): void {
   const only = opts.only ? new Set(opts.only) : undefined;
 
@@ -137,7 +144,7 @@ export function syncVisibilityFades(
     // are constants that read nothing from state — same boundary cast as the
     // guard/post calls inside applyIntent.
     for (const item of row.expand(state as EngineState)) {
-      applyIntent(state, row, item, { animate: opts.animate });
+      applyIntent(state, row, item, { animate: opts.animate, durationMs: opts.durationMs });
     }
   }
 
@@ -162,12 +169,16 @@ export function syncVisibilityFades(
  * authored for, so the caller passes the matching item for `key` — the same
  * soundness argument as the batch's per-row loop, which feeds `applyIntent` items
  * typed `unknown` straight from `row.expand`.
+ *
+ * `opts.durationMs` overrides the hard-coded `FADE_IN/OUT_DURATION_MS` for the
+ * animated path, matching the batch bridge's override semantics. Omitting it
+ * preserves existing default behaviour.
  */
 export function syncVisibilityFadeItem(
   state: ApplyIntentState,
   key: VisibilityLayerKey,
   item: unknown,
-  opts: { animate: boolean },
+  opts: { animate: boolean; durationMs?: number },
 ): void {
   const row = FADE_LAYERS.find((r) => r.key === key);
   // Registration-only keys have no intent to apply — skip, the same way the

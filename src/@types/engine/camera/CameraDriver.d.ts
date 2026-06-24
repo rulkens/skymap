@@ -16,17 +16,18 @@
  * ordering between them is a number. Adding a tour, or re-ranking the
  * existing movers, becomes data — not a rewrite of the frame loop.
  *
- * The four members, and why each exists:
+ * The five members, and why each exists:
  *
- *   - `id` — a stable string identity ('tween' | 'autoRotate' | 'resting',
- *     with 'tour' joining later). Purely for debugging and logging: it
- *     lets a trace say "frame written by 'tween'" without the resolver
- *     needing to know any concrete driver's type.
+ *   - `id` — a stable string identity ('clip' | 'orbitDrag' | 'tween' |
+ *     'autoRotate' | 'resting'). Purely for debugging and logging: it lets
+ *     a trace say "frame written by 'tween'" without the resolver needing
+ *     to know any concrete driver's type.
  *
  *   - `priority` — the sole thing the resolver orders by. The current
- *     ranking is tour 80 > tween 60 > autoRotate 20 > resting 0; the
- *     gap around 80 is deliberate headroom so a future driver can slot
- *     between two existing ones without renumbering.
+ *     ranking is clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 >
+ *     resting 0; the gaps are deliberate headroom so a future driver can
+ *     slot between two existing ones without renumbering. The 95 slot is
+ *     now occupied by the clip driver.
  *
  *   - `isActive(s)` — answers two questions with one predicate. Per-driver
  *     it means "do I want to author the camera pose this frame?", which
@@ -42,7 +43,16 @@
  *     `pose` is called — single-writer, no blending. The `cam` reference
  *     is forwarded so shim drivers (that still advance engine state) can
  *     read the live orbit params; real store-reading drivers read `s`
- *     instead.
+ *     instead. NOTE: the `elapsedMs` name is generic — the clip driver
+ *     interprets it as SECONDS (not ms), because `evaluateClip` takes an
+ *     `elapsedSec` parameter. Each driver owns its own elapsed unit.
+ *
+ *   - `commitsOnEdge` — optional flag. When true, the frame loop bakes this
+ *     driver's final pose into `camera.base` the frame it deactivates, so
+ *     the camera holds the saturated pose rather than snapping back to the
+ *     previous base. The frame loop reads this flag instead of hardcoding
+ *     driver-id literals — adding a new committing driver is a one-line
+ *     declaration here.
  */
 
 import type { OrbitCamera } from '../../camera/OrbitCamera';
@@ -52,6 +62,11 @@ import type { RootState } from '../../../store/types';
 export type CameraDriver = {
   readonly id: string;
   readonly priority: number;
+  // Drivers whose final pose must bake into `camera.base` when they DEACTIVATE
+  // set this (so the frame loop freezes the saturated pose instead of snapping
+  // back). The frame loop (Task 10) reads this flag instead of hardcoding
+  // driver-id literals.
+  readonly commitsOnEdge?: boolean;
   isActive(s: RootState): boolean;
   pose(s: RootState, cam: OrbitCamera, elapsedMs: number): CameraPose;
 };

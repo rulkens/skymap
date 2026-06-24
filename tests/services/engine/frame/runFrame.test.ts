@@ -36,6 +36,15 @@ vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
 
+// deriveSourceMasks is mocked here so the clipPlayer tick-ordering test can
+// observe the call sequence without needing a full FadeRegistry seeded for
+// every galaxy catalog source. Returns inert masks (draw 0, pick 0) — the
+// renderer-null bail-out fires before any renderer reads the masks, so they
+// do not need to be realistic in this test suite.
+vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
+  deriveSourceMasks: vi.fn(() => ({ draw: 0, pick: 0 })),
+}));
+
 // resizeCanvasToDisplay reads window.devicePixelRatio; in this node test
 // environment window is undefined. The cam-bearing regression fixtures
 // reach the resize block (non-null cam), so stub it to a no-op false —
@@ -49,6 +58,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
+import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import {
@@ -119,7 +129,9 @@ function makeState(): EngineState {
       scheduler: { requestRender: vi.fn() },
       // deriveSourceMasks reads opacityOf({kind:'galaxyCatalog', id}) for every
       // galaxy catalog to compute the fade-out draw tail; 0 everywhere (no fade in
-      // flight) is the right baseline for these fixtures.
+      // flight) is the right baseline for these fixtures. With the module mock
+      // above this value is also mocked out, but the real fades stub is kept
+      // here for completeness and so the type constraint is satisfied.
       fades: { opacityOf: () => 0 },
       // Minimal selection-subsystem stub.  The runFrame body reads
       // `focused()` (cluster-focus fade) + `selected()` (halo) for the
@@ -134,6 +146,14 @@ function makeState(): EngineState {
         setSelected: vi.fn(),
         setFocused: vi.fn(),
         destroy: vi.fn(),
+      },
+      // clipPlayer is non-nullable from t=0 (no GPU dep). The tick spy must be
+      // a typed vi.fn — bare vi.fn() fails tsc against the typed ClipPlayer interface.
+      clipPlayer: {
+        tick: vi.fn<(nowMs: number) => void>(),
+        stop: vi.fn<() => void>(),
+        clipOpacityOf: vi.fn<(layer: string, nowMs: number) => number>(() => 1),
+        destroy: vi.fn<() => void>(),
       },
       galaxyAtlas: null,
       proceduralDisks: null,
@@ -344,6 +364,58 @@ describe('runFrame — demand re-evaluation', () => {
 
     expect(reevaluateDemand).toHaveBeenCalledOnce();
     expect(reevaluateDemand).toHaveBeenCalledWith(state);
+  });
+});
+
+describe('runFrame — clipPlayer tick ordering (Task 12)', () => {
+  it('ticks clipPlayer before deriveSourceMasks — scene cues fire before mask derivation', () => {
+    // Task 12 contract: `clipPlayer.tick(nowMs)` must be the FIRST statement of
+    // `runFrame`, before `deriveSourceMasks` and `reevaluateDemand`. Scene cues
+    // (e.g. a visibility toggle dispatched by a cue) must be committed before
+    // this frame derives its draw masks from state, so a cue's effects are
+    // visible in the same frame rather than lagging one frame behind.
+    //
+    // Strategy: both `clipPlayer.tick` and `deriveSourceMasks` are replaced with
+    // spies. Each spy pushes a marker into a shared `callOrder` array. After
+    // running one frame we assert tick appeared before deriveSourceMasks.
+    const callOrder: string[] = [];
+
+    const store = makeStore();
+    const state = makeState();
+
+    // Replace the clipPlayer tick stub so it records its position in callOrder.
+    state.subsystems.clipPlayer.tick = vi.fn<() => void>(() => {
+      callOrder.push('tick');
+    });
+
+    // Replace the deriveSourceMasks mock's implementation for this test.
+    vi.mocked(deriveSourceMasks).mockImplementationOnce(() => {
+      callOrder.push('deriveSourceMasks');
+      return { draw: 0, pick: 0 };
+    });
+
+    const deps = makeDeps(store);
+    runFrame(state, deps, 500);
+
+    // tick must precede deriveSourceMasks in the call sequence.
+    const tickIdx = callOrder.indexOf('tick');
+    const masksIdx = callOrder.indexOf('deriveSourceMasks');
+
+    expect(tickIdx).toBeGreaterThanOrEqual(0); // tick was called
+    expect(masksIdx).toBeGreaterThanOrEqual(0); // deriveSourceMasks was called
+    expect(tickIdx).toBeLessThan(masksIdx); // tick came first
+  });
+
+  it('passes nowMs to clipPlayer.tick', () => {
+    // The clip player advances internal state based on elapsed time. It must
+    // receive the same `nowMs` the frame was called with, not a stale clock read.
+    const store = makeStore();
+    const state = makeState();
+    const deps = makeDeps(store);
+
+    runFrame(state, deps, 12345);
+
+    expect(state.subsystems.clipPlayer.tick).toHaveBeenCalledWith(12345);
   });
 });
 

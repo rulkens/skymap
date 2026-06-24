@@ -103,7 +103,13 @@ export const filamentsPass: Pass = {
       // Focus recession is applied HERE (on the drawn opacity), not on the
       // `enabled` gate above: recession ∈ [FILAMENT_RECESSION, 1] can never
       // zero the layer, so the gate keeps reading the pure toggle opacity.
-      resolveLayerOpacity(state.subsystems.fades, { kind: 'filament' }, ctx.focusBlend, nowMs),
+      resolveLayerOpacity(
+        state.subsystems.fades,
+        { kind: 'filament' },
+        ctx.focusBlend,
+        nowMs,
+        state.subsystems.clipPlayer,
+      ),
     );
   },
 };

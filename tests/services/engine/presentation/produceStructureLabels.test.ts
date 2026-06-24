@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { produceStructureLabels } from '../../../../src/services/engine/presentation/produceStructureLabels';
 import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
@@ -37,6 +37,14 @@ function makeState(
     },
     subsystems: {
       fades,
+      // clipPlayer is non-nullable; return factor 1 so the clip channel is
+      // behaviour-neutral and existing assertions are unaffected.
+      clipPlayer: {
+        tick: vi.fn<(nowMs: number) => void>(),
+        stop: vi.fn<() => void>(),
+        clipOpacityOf: vi.fn<(layer: string, nowMs: number) => number>(() => 1),
+        destroy: vi.fn<() => void>(),
+      },
     },
   } as unknown as EngineState;
 }

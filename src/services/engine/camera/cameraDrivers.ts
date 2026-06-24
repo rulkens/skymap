@@ -25,16 +25,16 @@
  * winner, guaranteeing that the driver's `pose` and the commit-on-edge guard
  * never disagree (invariant 1 of the frame-ordering contract).
  *
- * `buildCameraDrivers` produces the four-row table that reads directly from the
+ * `buildCameraDrivers` produces the five-row table that reads directly from the
  * Redux store. Each driver's `isActive` and `pose` read `s.camera.*`, so the
  * resolver needs only the store `RootState` to work; `cam` is still forwarded
  * to the `orbitDrag` driver, which reads `state.cam` (the gesture register) for
  * its live yaw/pitch/distance. The `_state: EngineState` parameter is unused
  * but kept for stability at the `startLoop` call site.
  *
- * Priorities: orbitDrag 80 > tween 60 > autoRotate 20 > resting 0. The gap
- * between each step is deliberate headroom so a future driver (e.g. a tour at
- * 95) can slot in without renumbering.
+ * Priorities: clip 95 > orbitDrag 80 > tween 60 > autoRotate 20 > resting 0.
+ * The gap between each step is deliberate headroom so a future driver can slot
+ * in without renumbering. The 95 slot is now occupied by the clip driver.
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
@@ -46,7 +46,8 @@ import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import { poseOf } from './poseOf';
 import { evaluateTween } from './evaluateTween';
 import { spinAutoRotate } from './spinAutoRotate';
-import { tweenElapsed, autoRotateElapsed } from './cameraClock';
+import { tweenElapsed, autoRotateElapsed, clipElapsed } from './cameraClock';
+import { evaluateClip } from './evaluateClip';
 
 /**
  * Pick the highest-priority active driver. A pure max-scan over `drivers`:
@@ -71,13 +72,21 @@ export function pickWinner(drivers: readonly CameraDriver[], s: RootState): Came
 }
 
 /**
- * Compute the elapsed ms for whichever driver won this frame.
+ * Compute the elapsed value for whichever driver won this frame.
  *
  * `orbitDrag` and `resting` are stateless — they do not use elapsed time,
  * so 0 is the correct and only sensible value. `tween` and `autoRotate`
- * both need cumulative elapsed time from their respective clocks. Dispatching
- * on `winner.id` is a table lookup keyed on a stable string — cleaner than a
- * chain of `if (driver === tweenDriver)` identity checks.
+ * both need cumulative elapsed time from their respective clocks. `clip`
+ * needs cumulative elapsed in SECONDS (not ms) — `evaluateClip` takes
+ * `elapsedSec`. Dispatching on `winner.id` is a table lookup keyed on a
+ * stable string — cleaner than a chain of `if (driver === tweenDriver)`
+ * identity checks.
+ *
+ * UNIT NOTE: the returned value is passed straight to the winner's `pose`.
+ * Each driver interprets it in its own unit — `tween` and `autoRotate` expect
+ * ms; `clip` expects SECONDS. This is intentional: the generic `elapsedMs`
+ * name on the CameraDriver type is approximate; do not 'fix' the clip arm to
+ * multiply by 1000.
  */
 function elapsedForWinner(
   winner: CameraDriver,
@@ -85,9 +94,10 @@ function elapsedForWinner(
   clock: CameraClock,
   nowMs: number,
 ): number {
-  if (winner.id === 'tween') return tweenElapsed(clock, s.camera.tween, nowMs);
+  if (winner.id === 'clip') return clipElapsed(clock, s.camera.clip, nowMs); // returns SECONDS
+  if (winner.id === 'tween') return tweenElapsed(clock, s.camera.tween, nowMs); // returns ms
   if (winner.id === 'autoRotate')
-    return autoRotateElapsed(clock, s.camera.autoRotate.active, s.camera.base, nowMs);
+    return autoRotateElapsed(clock, s.camera.autoRotate.active, s.camera.base, nowMs); // returns ms
   // orbitDrag and resting are stateless; elapsed is irrelevant to their pose.
   return 0;
 }
@@ -118,16 +128,23 @@ export function runCameraDrivers(
 }
 
 /**
- * Build the engine's camera-driver table — four rows, store-reading, returned
+ * Build the engine's camera-driver table — five rows, store-reading, returned
  * in priority order for readability (the resolver uses a max-scan, so order
  * does not affect correctness).
  *
- * All four drivers read directly from the Redux store `RootState`; none of them
+ * All five drivers read directly from the Redux store `RootState`; none of them
  * mutate `state.cam` or `EngineState`. The `_state` parameter is kept for
  * stability at the `startLoop.ts` call site (`buildCameraDrivers(state)`) — it
  * is unused here because the drivers close over nothing from `EngineState`.
  *
  * Drivers, highest priority first:
+ *
+ *   - `clip` (95) — an in-flight animation clip. Active while `s.camera.clip`
+ *     is non-null. Owns the camera above orbitDrag so a playing clip cannot
+ *     be interrupted by a drag gesture. `commitsOnEdge: true` bakes the clip's
+ *     final pose into `base` on deactivation — the camera holds the last frame
+ *     of the clip rather than snapping back to the pre-clip base. Elapsed is
+ *     in SECONDS (evaluateClip's unit).
  *
  *   - `orbitDrag` (80) — the live gesture register (`state.cam`). Active while
  *     `s.camera.dragging` is true. Returns `poseOf(cam)` so the controls keep
@@ -148,6 +165,19 @@ export function runCameraDrivers(
 export function buildCameraDrivers(_state: EngineState): readonly CameraDriver[] {
   return [
     {
+      id: 'clip',
+      priority: 95,
+      // When the clip ends, bake its final pose into `base` so the camera
+      // holds the saturated pose (not snap back to whatever base was before
+      // the clip started). Task 10's frame loop reads this flag; it does not
+      // hardcode 'clip' as a string.
+      commitsOnEdge: true,
+      isActive: (s) => s.camera.clip !== null,
+      // elapsed here is SECONDS from clipElapsed (not ms) — evaluateClip
+      // takes elapsedSec. See the UNIT NOTE in elapsedForWinner.
+      pose: (s, _cam, elapsed) => evaluateClip(s.camera.clip!.data, elapsed),
+    },
+    {
       id: 'orbitDrag',
       priority: 80,
       isActive: (s) => s.camera.dragging,
@@ -159,12 +189,18 @@ export function buildCameraDrivers(_state: EngineState): readonly CameraDriver[]
     {
       id: 'tween',
       priority: 60,
+      // Bake the tween's final pose into `base` on deactivation so that a
+      // tween-to-focus lands cleanly rather than snapping to the pre-tween base.
+      commitsOnEdge: true,
       isActive: (s) => s.camera.tween !== null,
       pose: (s, _cam, elapsedMs) => evaluateTween(s.camera.tween!, elapsedMs),
     },
     {
       id: 'autoRotate',
       priority: 20,
+      // Bake the spin's accumulated yaw into `base` when auto-rotate stops,
+      // so resume picks up from the final heading rather than jumping back.
+      commitsOnEdge: true,
       isActive: (s) => s.camera.autoRotate.active,
       // Spins from the FROZEN base: base does not update while autoRotate wins
       // (commit-on-edge only fires on driver deactivation), so the yaw advances

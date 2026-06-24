@@ -45,8 +45,11 @@ import { createRenderScheduler } from '../../src/services/engine/subsystems/rend
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
 import { createStructureFocusSubsystem } from '../../src/services/engine/subsystems/structureFocusSubsystem';
+import { createClipPlayer } from '../../src/services/engine/subsystems/clipPlayer';
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
+import { configureStore } from '@reduxjs/toolkit';
+import { rootReducer } from '../../src/store/rootReducer';
 
 function makeRegistry() {
   return createFadeRegistry({ requestRender: () => {} });
@@ -125,6 +128,8 @@ describe('EngineState type', () => {
     // the live ref before `state` is assigned.
     // eslint-disable-next-line prefer-const
     let stateRef: { current: EngineState | null } = { current: null };
+    const fixtureStore1 = configureStore({ reducer: rootReducer });
+    const fixtureClock1 = createCameraClock();
     const state: EngineState = {
       settings,
       // `state.tier` delegates to the root tier slice in the engine; in this
@@ -176,6 +181,12 @@ describe('EngineState type', () => {
         }),
         labelDirector: createLabelDirectorSubsystem(),
         structureFocus: createStructureFocusSubsystem({ requestRender: () => {} }),
+        clipPlayer: createClipPlayer({
+          store: fixtureStore1,
+          requestRender: () => {},
+          clock: fixtureClock1,
+          getEngineState: () => stateRef.current!,
+        }),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -277,6 +288,8 @@ describe('EngineState type', () => {
     // Readonly. Exercise one representative mutation per bag.
     // eslint-disable-next-line prefer-const
     let stateRef: { current: EngineState | null } = { current: null };
+    const fixtureStore2 = configureStore({ reducer: rootReducer });
+    const fixtureClock2 = createCameraClock();
     const state: EngineState = {
       settings: {
         galaxyCatalogs: {
@@ -370,6 +383,12 @@ describe('EngineState type', () => {
         }),
         labelDirector: createLabelDirectorSubsystem(),
         structureFocus: createStructureFocusSubsystem({ requestRender: () => {} }),
+        clipPlayer: createClipPlayer({
+          store: fixtureStore2,
+          requestRender: () => {},
+          clock: fixtureClock2,
+          getEngineState: () => stateRef.current!,
+        }),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),

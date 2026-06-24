@@ -47,7 +47,9 @@
 
 import type { FadeId } from '../../../@types/animation/FadeId';
 import type { FadeRegistry } from '../../../@types/animation/FadeRegistry';
+import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 import { lerp } from '../../../utils/math/lerp';
+import { fadeIdToVisibilityKey } from './fadeIdToVisibilityKey';
 
 // Per-layer recession targets — the opacity each tagged layer settles to
 // at full focus (blend = 1). Markers/labels dim moderately; the large
@@ -104,16 +106,39 @@ export function focusRecession(h: FadeId, blend: number): number {
 }
 
 /**
+ * The clip-owned opacity factor for `h` at `now`, via `ClipPlayer.clipOpacityOf`.
+ *
+ * Maps the `FadeId` to its `VisibilityLayerKey` via `fadeIdToVisibilityKey`.
+ * Returns 1 for unmapped ids (e.g. `overlay`) — no clip cue addresses them
+ * via this bridge, so the factor is neutral. Kept as a tiny local so
+ * `resolveLayerOpacity` stays a flat single expression rather than a nested
+ * ternary or an inlined bridge call.
+ */
+function clipFactorFor(clip: ClipPlayer, h: FadeId, now: number): number {
+  const key = fadeIdToVisibilityKey(h);
+  return key === undefined ? 1 : clip.clipOpacityOf(key, now);
+}
+
+/**
  * Composition sugar for whole-layer consumers: the id's toggle opacity
- * times its recession factor. Per-instance consumers (markers / labels
- * with a focused-instance exemption) take the two parts separately and
- * combine them themselves.
+ * times its recession factor times the clip-owned transient opacity.
+ *
+ * The optional `clip` arg adds a THIRD factor: when a cinematic clip is
+ * playing it can independently dim a layer (e.g. fade to black, spotlight
+ * one catalog). Callers that omit `clip` (or pass `undefined`) get factor
+ * 1 by default — the clip channel is behaviour-neutral when no clip plays
+ * and `ClipPlayer.clipOpacityOf` returns 1 for any untouched layer.
+ *
+ * Per-instance consumers (markers / labels with a focused-instance
+ * exemption) take the three parts separately and combine them themselves.
  */
 export function resolveLayerOpacity(
   fades: FadeRegistry,
   h: FadeId,
   blend: number,
   now: number,
+  clip?: ClipPlayer, // NEW — omitted ⇒ factor 1 (no clip playing)
 ): number {
-  return fades.opacityOf(h, now) * focusRecession(h, blend);
+  const clipFactor = clip === undefined ? 1 : clipFactorFor(clip, h, now);
+  return fades.opacityOf(h, now) * focusRecession(h, blend) * clipFactor;
 }

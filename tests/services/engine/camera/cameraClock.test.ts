@@ -11,7 +11,9 @@ import {
   createCameraClock,
   tweenElapsed,
   autoRotateElapsed,
+  clipElapsed,
 } from '../../../../src/services/engine/camera/cameraClock';
+import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 
@@ -33,6 +35,8 @@ describe('createCameraClock', () => {
     expect(clock.lastTweenRef).toBeNull();
     expect(clock.lastAutoRotateActive).toBe(false);
     expect(clock.lastBaseRef).toBeNull();
+    expect(clock.clipStartMs).toBeNull();
+    expect(clock.lastClipRef).toBeNull();
   });
 });
 
@@ -202,5 +206,39 @@ describe('autoRotateElapsed', () => {
     const yResults = steps.map(([active, nowMs]) => autoRotateElapsed(clockY, active, BASE, nowMs));
 
     expect(xResults).toEqual(yResults);
+  });
+});
+
+describe('clipElapsed', () => {
+  // Minimal clip ref fixture — ClipData requires only `timeline`.
+  function makeClipRef(): { data: ClipData } {
+    return { data: { timeline: [] } };
+  }
+
+  it('returns 0 for null clip', () => {
+    const clock = createCameraClock();
+    expect(clipElapsed(clock, null, 1000)).toBe(0);
+    expect(clipElapsed(clock, null, 5000)).toBe(0);
+  });
+
+  it('returns 0 on the arrival frame then grows in seconds', () => {
+    const clock = createCameraClock();
+    const clip = makeClipRef();
+    // Install the ref at nowMs=1000 — arrival frame returns 0.
+    expect(clipElapsed(clock, clip, 1000)).toBe(0);
+    // Same ref at nowMs=2500 — 1500 ms have passed → 1.5 seconds.
+    expect(clipElapsed(clock, clip, 2500)).toBeCloseTo(1.5);
+  });
+
+  it('resets when the clip reference changes', () => {
+    const clock = createCameraClock();
+    const clipA = makeClipRef();
+    clipElapsed(clock, clipA, 1000);
+    clipElapsed(clock, clipA, 2000); // elapsed = 1 s
+
+    // A NEW object reference (as startClip installs) must reset the start.
+    const clipB = makeClipRef();
+    expect(clipElapsed(clock, clipB, 3000)).toBe(0); // arrival frame → 0
+    expect(clipElapsed(clock, clipB, 3500)).toBeCloseTo(0.5); // grows from new start
   });
 });

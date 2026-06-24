@@ -32,6 +32,13 @@
  * `autoRotate`, and `dragging` keep their prior references (their selectors
  * skip) — the same guarantee the old copy-on-write spreads hand-maintained,
  * with none of the nesting overhead.
+ *
+ *   `clip`        — an optional in-flight animation clip descriptor. Null when
+ *                   no clip is active. The clip@95 driver owns the camera during
+ *                   playback; `clip.data` is the serializable authored form. A
+ *                   FRESH `{ data }` wrapper is stored on each `startClip` — the
+ *                   Task 8 clock keys on this reference identity to detect a new
+ *                   clip (same pattern as `tween` reference equality in tweenSaga).
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
@@ -40,6 +47,7 @@ import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
 import type { CameraState } from '../../@types/camera/CameraState';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
+import type { ClipData } from '../../@types/animation/ClipData';
 
 // `base` is a placeholder; bootstrap overwrites via `commitCameraPose` once
 // `computeInitialCamera` has run. 0.43 mirrors `cameraFraming.INITIAL_DISTANCE_MPC`,
@@ -56,6 +64,7 @@ const initialState: CameraState = {
     rate: 0.000873,
   },
   dragging: false,
+  clip: null,
 };
 
 const cameraSlice = createSlice({
@@ -85,6 +94,26 @@ const cameraSlice = createSlice({
       camera.tween = null;
     },
 
+    // ── clip lifecycle ──────────────────────────────────────────────────────
+    // `startClip` stores a FRESH `{ data }` wrapper so Task 8's clock saga can
+    // detect a new clip by reference inequality (`prev !== next`) without
+    // comparing deep descriptor equality. The payload must already be resolved
+    // (no `start: 'live'` sentinel) — call `resolveClipStart` at the dispatch
+    // site before putting this action, mirroring `focusTweenSaga`'s pattern of
+    // baking the tween `from` before `put(startCameraTween)`.
+    startClip: (camera, action: PayloadAction<ClipData>) => {
+      camera.clip = { data: action.payload };
+    },
+    // `endClip` clears BOTH `clip` and `tween`. A tween planted before or
+    // during the clip (e.g. by a focus saga) is dormant while the clip@95
+    // driver wins priority, but once the clip deactivates an un-cleared @60
+    // tween would outrank `resting`@0 and snap the camera to a stale target.
+    // Mirroring `cancelCameraTween`, this is the teardown contract.
+    endClip: (camera) => {
+      camera.clip = null;
+      camera.tween = null;
+    },
+
     // ── auto-rotate ─────────────────────────────────────────────────────────
     // Replaces the whole sub-object so both `active` and `rate` can be
     // updated atomically (e.g. a settings panel that exposes a rate slider).
@@ -101,6 +130,19 @@ export const {
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,
+  startClip,
+  endClip,
 } = cameraSlice.actions;
+
+// ── pure helper (not a reducer) ──────────────────────────────────────────────
+// Resolution happens at the dispatch site rather than inside the reducer because
+// the reducer is pure and has no access to the live camera pose. This mirrors
+// `focusTweenSaga.ts` baking the tween `from` before `put(startCameraTween)` —
+// the store only ever receives already-concrete values, which keeps reducers
+// testable without engine context and the payload safe to serialise/replay.
+export function resolveClipStart(data: ClipData, live: CameraPose): ClipData {
+  const start = data.start === 'live' || data.start === undefined ? live : data.start;
+  return { ...data, start };
+}
 
 export default cameraSlice.reducer;

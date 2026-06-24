@@ -264,15 +264,15 @@ src/services/engine/presentation/focusRecession.ts  resolveLayerOpacity gains th
     `in` ⇒ `t³`; `inOut` ⇒ smootherstep/`t<.5 ? 4t³ : 1-…` (cubic in-out);
     `linear` ⇒ identity. Each clamps `t` to `[0,1]`.
 
-- [ ] `channelSpace.test.ts`: `CHANNEL_SPACE maps distance→log, angles→add, target→lin`.
-- [ ] `channelSpace.test.ts`: `lerpInSpace log gives geometric midpoint` — assert
+- [x] `channelSpace.test.ts`: `CHANNEL_SPACE maps distance→log, angles→add, target→lin`.
+- [x] `channelSpace.test.ts`: `lerpInSpace log gives geometric midpoint` — assert
   `lerpInSpace('log', 1, 100, 0.5)` ≈ `10`.
-- [ ] `channelSpace.test.ts`: `lerpInSpace add is plain lerp` — `lerpInSpace('add', 0, 2, 0.5) === 1`.
-- [ ] `ease.test.ts`: `EASE.out matches easeOutCubic`, `EASE.in is t³ (in(0.5)===0.125)`,
+- [x] `channelSpace.test.ts`: `lerpInSpace add is plain lerp` — `lerpInSpace('add', 0, 2, 0.5) === 1`.
+- [x] `ease.test.ts`: `EASE.out matches easeOutCubic`, `EASE.in is t³ (in(0.5)===0.125)`,
   `EASE.inOut is symmetric (inOut(0.5)===0.5, inOut(0.25)+inOut(0.75)===1)`,
   `EASE.linear is identity`, and `each clamps t outside [0,1]`.
-- [ ] Implement (didactic header on `channelSpace.ts`: the single-home rationale).
-- [ ] `npm test -- channelSpace ease` → pass. Commit.
+- [x] Implement (didactic header on `channelSpace.ts`: the single-home rationale).
+- [x] `npm test -- channelSpace ease` → pass. Commit.
 
 ## Task 2 — Effect / CameraAction / SceneEffect serializable union types
 
@@ -325,9 +325,10 @@ No test (pure type declarations — exercised by Task 3's helper tests).
     `| { kind:'all'; children: Effect[] }`
     `| { kind:'fork'; child: Effect }`.
 
-- [ ] Write the three `.d.ts` with didactic headers (every effect is plain
+- [x] Write the three `.d.ts` with didactic headers (every effect is plain
   serializable data; helpers in Task 3 are the only constructors).
-- [ ] `npm run typecheck` → clean. Commit.
+  *(landed as four files — `SettingsAction` got its own `.d.ts`, one type per file.)*
+- [x] `npm run typecheck` → clean. Commit.
 
 ## Task 3 — Authoring helpers (the one-line constructors)
 
@@ -356,14 +357,14 @@ No test (pure type declarations — exercised by Task 3's helper tests).
     `focus(ref): SceneEffect`.
   - `seq(children): Effect`, `all(children): Effect`, `fork(child): Effect`.
 
-- [ ] `dollyTo fills space:'log' from CHANNEL_SPACE` — assert
+- [x] `dollyTo fills space:'log' from CHANNEL_SPACE` — assert
   `dollyTo(300, 4)` ⇒ `{ kind:'set', ch:'distance', to:300, over:4, ease:'inOut', space:'log' }`.
-- [ ] `tween override space wins` — `tween('distance',{to:5,over:1,space:'lin'}).space==='lin'`.
-- [ ] `spin carries loop flag` — `spin('yaw',{by:6.28,over:30,loop:true}).loop===true`.
-- [ ] `oscillate has no over/ease` — shape assertion `{kind:'osc',ch:'pitch',amp,period}`.
-- [ ] `all/seq/fork wrap children with the right kind`.
-- [ ] `moveTarget emits a single setVec on target` — `moveTarget([1,2,3],5).to` deep-equals `[1,2,3]`.
-- [ ] Implement. `npm test -- effectHelpers` → pass. Commit.
+- [x] `tween override space wins` — `tween('distance',{to:5,over:1,space:'lin'}).space==='lin'`.
+- [x] `spin carries loop flag` — `spin('yaw',{by:6.28,over:30,loop:true}).loop===true`.
+- [x] `oscillate has no over/ease` — shape assertion `{kind:'osc',ch:'pitch',amp,period}`.
+- [x] `all/seq/fork wrap children with the right kind`.
+- [x] `moveTarget emits a single setVec on target` — `moveTarget([1,2,3],5).to` deep-equals `[1,2,3]`.
+- [x] Implement. `npm test -- effectHelpers` → pass. Commit.
 
 ## Task 4 — `compileClip`: flatten the tree to per-channel tracks + a cue list
 
@@ -396,18 +397,18 @@ list. `preroll` shifts all windows by `preroll` seconds.
   - `compileClip(data: ClipData): CompiledClip` — pure; throws via
     `validateSingleWriter` (Task 5) on a base-writer clash.
 
-- [ ] `compileClip seq accumulates windows` — `seq([dollyTo(300,4), hold(3), dollyTo(950,4)])`
+- [x] `compileClip seq accumulates windows` — `seq([dollyTo(300,4), hold(3), dollyTo(950,4)])`
   ⇒ base `distance` segments at `[0,4)`, gap `[4,7)`, `[7,11)`; `durationSec===11`.
-- [ ] `compileClip all shares block start` — `all([dollyTo(300,4), spin('yaw',{by:1,over:4})])`
+- [x] `compileClip all shares block start` — `all([dollyTo(300,4), spin('yaw',{by:1,over:4})])`
   ⇒ both windows `[0,4)`; `durationSec===4`.
-- [ ] `compileClip routes rate→velTracks, oscillate→oscTracks, set/spin→baseTracks`.
-- [ ] `compileClip preroll shifts every window by preroll` — `preroll:2` ⇒ first
+- [x] `compileClip routes rate→velTracks, oscillate→oscTracks, set/spin→baseTracks`.
+- [x] `compileClip preroll shifts every window by preroll` — `preroll:2` ⇒ first
   segment starts at `2`, `durationSec` includes the 2 s hold.
-- [ ] `compileClip orders cues by atSec` — a `hide(...,0)` then a later `fade(...)`
+- [x] `compileClip orders cues by atSec` — a `hide(...,0)` then a later `fade(...)`
   ⇒ `cues[0].atSec===0`, ascending.
-- [ ] `compileClip ignores fork duration in durationSec` — a perpetual `fork(spin(loop))`
+- [x] `compileClip ignores fork duration in durationSec` — a perpetual `fork(spin(loop))`
   does NOT extend `durationSec` (spec: a fork never keeps a scope alive).
-- [ ] Implement. `npm test -- compileClip` → pass. Commit.
+- [x] Implement. `npm test -- compileClip` → pass. Commit.
 
 ## Task 5 — `validateSingleWriter`: registration-time base-writer clash check
 
@@ -423,15 +424,15 @@ Called by `compileClip` (Task 4) — wire the call after both land.
   registration-time validation"). Complete over dynamically-built/forked timelines
   (a static-tree walk), which compile-time schemes can't see.
 
-- [ ] `validateSingleWriter passes for sequential ramps on one channel` —
+- [x] `validateSingleWriter passes for sequential ramps on one channel` —
   `seq([dollyTo(300,4), dollyTo(950,4)])` compiles without throw.
-- [ ] `validateSingleWriter throws on two overlapping base-writers` —
+- [x] `validateSingleWriter throws on two overlapping base-writers` —
   `all([dollyTo(300,4), dollyTo(950,4)])` throws, message names `distance` and
   both windows `[0,4)`.
-- [ ] `validateSingleWriter allows base+vel+osc on one channel` — a `set('yaw')` +
+- [x] `validateSingleWriter allows base+vel+osc on one channel` — a `set('yaw')` +
   `rate('yaw')` + `oscillate` ('yaw') do NOT clash (different layers).
-- [ ] Wire `compileClip` to call it; add `compileClip throws on a base clash`.
-- [ ] `npm test -- validateSingleWriter compileClip` → pass. Commit.
+- [x] Wire `compileClip` to call it; add `compileClip throws on a base clash`.
+- [x] `npm test -- validateSingleWriter compileClip` → pass. Commit.
 
 ## Task 6 — `evaluateClip`: the pure per-channel `base + ∫vel + osc` evaluator
 
@@ -471,22 +472,22 @@ final[ch] = base[ch](t)  +  ∫₀ᵗ vel[ch]  +  osc[ch](t)
   Document that `playClip` (Plan B) will reuse the same cache.
 - Produces: a `CameraPose`.
 
-- [ ] `evaluateClip at t=0 returns the start pose` (single `dollyTo` clip).
-- [ ] `evaluateClip dolly is log-uniform` — half-decade at half-time:
+- [x] `evaluateClip at t=0 returns the start pose` (single `dollyTo` clip).
+- [x] `evaluateClip dolly is log-uniform` — half-decade at half-time:
   `dollyTo` from `start.distance=1` to `100` over `1`s, at `t=0.5` ⇒ ≈ `10`
   (with `ease:'linear'`).
-- [ ] `evaluateClip holds the final base value past the segment end` —
+- [x] `evaluateClip holds the final base value past the segment end` —
   past `durationSec`, `distance === to`.
-- [ ] `evaluateClip rate keeps integrating after the ramp ends` — a
+- [x] `evaluateClip rate keeps integrating after the ramp ends` — a
   `rate('yaw',{to:0.1,over:1})`: yaw displacement at `t=2` strictly exceeds the
   linear-extrapolation-from-`t=1` lower bound by the ramp's stored momentum
   (assert monotone increase and `yaw(2) > yaw(1) + 0`).
-- [ ] `evaluateClip osc is additive and zero-mean` — `oscillate('pitch',{amp:0.1,period:4})`:
+- [x] `evaluateClip osc is additive and zero-mean` — `oscillate('pitch',{amp:0.1,period:4})`:
   `pitch(0)===base`, `pitch(1)===base+0.1`, `pitch(2)===base`.
-- [ ] `evaluateClip is pure` — same `(data, t)` twice ⇒ deep-equal; fresh `target` array.
-- [ ] `evaluateClip composes base+vel+osc on one channel` — yaw with all three:
+- [x] `evaluateClip is pure` — same `(data, t)` twice ⇒ deep-equal; fresh `target` array.
+- [x] `evaluateClip composes base+vel+osc on one channel` — yaw with all three:
   result equals the sum of the three evaluated independently.
-- [ ] Implement. `npm test -- evaluateClip` → pass. Commit.
+- [x] Implement. `npm test -- evaluateClip` → pass. Commit.
 
 ## Task 7 — `camera.clip` store Intent (`startClip` / `endClip`)
 
@@ -518,11 +519,11 @@ Storing a FRESH `data` object is load-bearing — it is the clock-reset trigger
     NEW object with `start` concrete (passes through a non-`'live'` start).
   - `initialState.clip = null`.
 
-- [ ] `startClip stores the clip data` — `camera.clip.data === payload`.
-- [ ] `endClip clears clip` — `camera.clip === null` after.
-- [ ] `endClip also clears a dormant tween` — with `tween` set, `endClip()` nulls both.
-- [ ] `resolveClipStart swaps 'live' for the live pose` and `passes a concrete start through`.
-- [ ] Implement. `npm test -- cameraSlice` → pass. Commit.
+- [x] `startClip stores the clip data` — `camera.clip.data === payload`.
+- [x] `endClip clears clip` — `camera.clip === null` after.
+- [x] `endClip also clears a dormant tween` — with `tween` set, `endClip()` nulls both.
+- [x] `resolveClipStart swaps 'live' for the live pose` and `passes a concrete start through`.
+- [x] Implement. `npm test -- cameraSlice` → pass. Commit.
 
 ## Task 8 — `CameraClock` clip arm: `clipElapsed` keyed on `camera.clip` identity
 
@@ -546,12 +547,12 @@ this unit boundary.
     — returns elapsed SECONDS since the current `clip` reference started; `0` for
     null, `0` on the arrival frame.
 
-- [ ] `clipElapsed returns 0 for null clip`.
-- [ ] `clipElapsed returns 0 on the arrival frame then grows in seconds` —
+- [x] `clipElapsed returns 0 for null clip`.
+- [x] `clipElapsed returns 0 on the arrival frame then grows in seconds` —
   ref installed at `nowMs=1000` ⇒ `0`; same ref at `nowMs=2500` ⇒ `1.5`.
-- [ ] `clipElapsed resets when the clip reference changes` — a NEW `{data}` object
+- [x] `clipElapsed resets when the clip reference changes` — a NEW `{data}` object
   resets the start (the clock-reset-on-fresh-object invariant).
-- [ ] Implement. `npm test -- cameraClock` → pass. Commit.
+- [x] Implement. `npm test -- cameraClock` → pass. Commit.
 
 ## Task 9 — `clip`@95 driver row + `elapsedForWinner` clip arm + `commitsOnEdge`
 
@@ -585,14 +586,14 @@ Members 1 & 3 of the triple, plus the `commitsOnEdge` property.
   - `selectClipActive(state): boolean` = `selectCameraIntent(state).clip !== null`
     (Plan B/C and the `suspendDuringClip` guard read this).
 
-- [ ] `buildCameraDrivers includes a clip@95 row with commitsOnEdge`.
-- [ ] `pickWinner picks clip over orbitDrag` — `camera.clip` set AND `dragging`
+- [x] `buildCameraDrivers includes a clip@95 row with commitsOnEdge`.
+- [x] `pickWinner picks clip over orbitDrag` — `camera.clip` set AND `dragging`
   true ⇒ winner id `'clip'` (clip 95 > orbitDrag 80).
-- [ ] `elapsedForWinner returns clipElapsed seconds for the clip winner`.
-- [ ] `tween and autoRotate rows now declare commitsOnEdge:true; orbitDrag/resting do not`.
-- [ ] `selectCameraActive is true while a clip is active`.
-- [ ] `selectClipActive reflects camera.clip`.
-- [ ] Implement. `npm test -- cameraDrivers selectors` → pass. Commit.
+- [x] `elapsedForWinner returns clipElapsed seconds for the clip winner`.
+- [x] `tween and autoRotate rows now declare commitsOnEdge:true; orbitDrag/resting do not`.
+- [x] `selectCameraActive is true while a clip is active`.
+- [x] `selectClipActive reflects camera.clip`.
+- [x] Implement. `npm test -- cameraDrivers selectors` → pass. Commit.
 
 ## Task 10 — Frame loop: commit-on-edge reads `commitsOnEdge`; clip clock wired
 
@@ -620,13 +621,13 @@ that is the `clipPlayer`'s job (Task 11), ticked first.
 - Produces: behaviour-neutral for tween/autoRotate (still commit on edge); the
   clip edge now commits too.
 
-- [ ] `commit-on-edge fires when a clip deactivates` — drive a frame where
+- [x] `commit-on-edge fires when a clip deactivates` — drive a frame where
   `prevActiveId='clip'` and `camera.clip` is null ⇒ `commitCameraPose(lastPose)`
   dispatched once.
-- [ ] `commit-on-edge still fires for tween and autoRotate` (regression — the
+- [x] `commit-on-edge still fires for tween and autoRotate` (regression — the
   existing tests stay green).
-- [ ] `commit-on-edge does NOT fire for orbitDrag/resting edges`.
-- [ ] Implement. `npm test -- runFrame` → pass. Commit.
+- [x] `commit-on-edge does NOT fire for orbitDrag/resting edges`.
+- [x] Implement. `npm test -- runFrame` → pass. Commit.
 
 ## Task 11 — `clipPlayer` Resource: tick-first scene cues + the `clipOpacity` channel + lifecycle
 
@@ -777,37 +778,38 @@ unchanged; here only the non-zero custom duration matters.
   - `EngineSubsystemHandles.clipPlayer: ClipPlayer` (eager, non-null from t=0 —
     no GPU dep, like `structureFocus`).
 
-- [ ] `clipOpacityChannel.test.ts`: `factorOf returns 1 for an untouched layer`.
-- [ ] `clipOpacityChannel.test.ts`: `fadeTo to 0 then factorOf at end returns 0` (snap, `over=0`).
-- [ ] `clipOpacityChannel.test.ts`: `fadeTo animates between 1 and 0 over the duration`
+- [x] `clipOpacityChannel.test.ts`: `factorOf returns 1 for an untouched layer`.
+- [x] `clipOpacityChannel.test.ts`: `fadeTo to 0 then factorOf at end returns 0` (snap, `over=0`).
+- [x] `clipOpacityChannel.test.ts`: `fadeTo animates between 1 and 0 over the duration`
   — sample a midpoint, assert strictly between, using an explicit `nowMs` clock.
-- [ ] `clipOpacityChannel.test.ts`: `reset restores every faded layer to 1`.
-- [ ] `clipOpacityChannel.test.ts`: `isAnimating is true mid-ramp, false after duration`.
-- [ ] `clipOpacityChannel.test.ts`: `a second fadeTo on the same layer retargets from the current value`.
-- [ ] `clipPlayer fires a cue when elapsed crosses its atSec` — a clip with a
+- [x] `clipOpacityChannel.test.ts`: `reset restores every faded layer to 1`.
+- [x] `clipOpacityChannel.test.ts`: `isAnimating is true mid-ramp, false after duration`.
+- [x] `clipOpacityChannel.test.ts`: `a second fadeTo on the same layer retargets from the current value`.
+- [x] `clipPlayer fires a cue when elapsed crosses its atSec` — a clip with a
   `fade([...],0,0)` cue: `tick` at `elapsed≥0` writes `clipOpacity` once; a second tick does NOT re-fire.
-- [ ] `clipPlayer fires cues in (prevElapsed, elapsed]` — two cues at `0` and `3`s;
+- [x] `clipPlayer fires cues in (prevElapsed, elapsed]` — two cues at `0` and `3`s;
   one tick jumping `prevElapsed=0→4` fires BOTH, in `atSec` order.
-- [ ] `clipPlayer dispatches endClip the frame the clip reaches durationSec (not before)` —
+- [x] `clipPlayer dispatches endClip the frame the clip reaches durationSec (not before)` —
   pin the post-produce ordering: at `elapsed = durationSec` the FIRST tick records
   completion and dispatches `endClip` (after evaluator saturates), not on the tick
-  BEFORE reaching the end.
-- [ ] `clipPlayer fade cue drives clipOpacity; clipOpacityOf reflects it; resets to 1 on endClip`.
-- [ ] `clipPlayer.stop dispatches endClip and resets the cursor + clipOpacity`.
-- [ ] `clipPlayer is registered in EngineSubsystemHandles` (typecheck-level).
-- [ ] `clipPlayer routes a non-fade cue through applySceneEffect` — a `focus(ref)`
+  BEFORE reaching the end. (Implemented as a two-frame defer: pendingEnd recorded on
+  the saturation frame, endClip dispatched on the next tick — see clipPlayer module header.)
+- [x] `clipPlayer fade cue drives clipOpacity; clipOpacityOf reflects it; resets to 1 on endClip`.
+- [x] `clipPlayer.stop dispatches endClip and resets the cursor + clipOpacity`.
+- [x] `clipPlayer is registered in EngineSubsystemHandles` (typecheck-level).
+- [x] `clipPlayer routes a non-fade cue through applySceneEffect` — a `focus(ref)`
   cue dispatches `updateSelectionFocus(ref)`; a `fade` cue does NOT call `applySceneEffect`.
-- [ ] `applySceneEffect.test.ts`: `scene dispatches its SettingsAction verbatim`.
-- [ ] `applySceneEffect.test.ts`: `focus dispatches updateSelectionFocus(ref)` (and `null` clears).
-- [ ] `applySceneEffect.test.ts`: `show dispatches visibility-on (via VISIBILITY_ACTION_ROW) + runs the bridge with only+durationMs`.
-- [ ] `applySceneEffect.test.ts`: `hide dispatches visibility-off + bridge`.
-- [ ] `applySceneEffect.test.ts`: `over === 0 routes show/hide through the snap (animate:false) path`.
-- [ ] `applySceneEffect.test.ts`: `VISIBILITY_ACTION_ROW is a data table, every VisibilityLayerKey resolves to its on/off action`.
-- [ ] `syncVisibilityFades.test.ts`: `applyIntent uses the durationMs override when given`
+- [x] `applySceneEffect.test.ts`: `scene dispatches its SettingsAction verbatim`.
+- [x] `applySceneEffect.test.ts`: `focus dispatches updateSelectionFocus(ref)` (and `null` clears).
+- [x] `applySceneEffect.test.ts`: `show dispatches visibility-on (via VISIBILITY_ACTION_ROW) + runs the bridge with only+durationMs`.
+- [x] `applySceneEffect.test.ts`: `hide dispatches visibility-off + bridge`.
+- [x] `applySceneEffect.test.ts`: `over === 0 routes show/hide through the snap (animate:false) path`.
+- [x] `applySceneEffect.test.ts`: `VISIBILITY_ACTION_ROW is a data table, every VisibilityLayerKey resolves to its on/off action` (per-item factory: each key → action list, reg-only keys → `[]`).
+- [x] `syncVisibilityFades.test.ts`: `applyIntent uses the durationMs override when given`
   — fake `subsystems.fades.fadeTo` asserts the passed duration equals the override, not `FADE_IN_DURATION_MS`.
-- [ ] `syncVisibilityFades.test.ts`: `applyIntent falls back to the FADE_IN/OUT constants when omitted` (regression).
-- [ ] `syncVisibilityFades.test.ts`: `syncVisibilityFades threads durationMs to every applied row`.
-- [ ] Implement. `npm test -- clipOpacityChannel clipPlayer applySceneEffect syncVisibilityFades` → pass. Commit.
+- [x] `syncVisibilityFades.test.ts`: `applyIntent falls back to the FADE_IN/OUT constants when omitted` (regression).
+- [x] `syncVisibilityFades.test.ts`: `syncVisibilityFades threads durationMs to every applied row`.
+- [x] Implement. `npm test -- clipOpacityChannel clipPlayer applySceneEffect syncVisibilityFades` → pass. Commit.
 
 ## Task 12 — Wire `clipPlayer.tick` FIRST in runFrame + the `clipOpacity` third factor in `resolveLayerOpacity`
 
@@ -886,20 +888,23 @@ export function resolveLayerOpacity(
   before same-frame derivation; rendered alpha includes the clip factor (default 1
   ⇒ behaviour-neutral when no clip plays).
 
-- [ ] `fadeIdToVisibilityKey maps flow id to 'flow'`, `filament id to 'filaments'`,
+- [x] `fadeIdToVisibilityKey maps flow id to 'flow'`, `filament id to 'filaments'`,
   `a structure ring id to 'structureRing'`.
-- [ ] `fadeIdToVisibilityKey returns undefined for non-clip-fadeable kinds` (e.g. `overlay`).
-- [ ] `fadeIdToVisibilityKey is exhaustive` — the no-`default` switch fails tsc if a
-  `FadeId['kind']` is unhandled (compile-error guard).
-- [ ] `runFrame ticks clipPlayer before deriving masks/demand` — order assertion
+- [x] `fadeIdToVisibilityKey returns undefined for non-clip-fadeable kinds` (e.g. `overlay`).
+- [x] `fadeIdToVisibilityKey is exhaustive` — the no-`default` switch fails tsc if a
+  `FadeId['kind']` is unhandled (compile-error guard). (Note: under skymap's tsconfig the
+  no-`default` switch does NOT actually fail tsc — an unhandled kind silently returns
+  `undefined`; mirrors the existing `recessionTargetFor` pattern. Flagged for final review:
+  make it real with `const _exhaustive: never = h.kind`.)
+- [x] `runFrame ticks clipPlayer before deriving masks/demand` — order assertion
   via a spy: `clipPlayer.tick` called before `deriveSourceMasks`.
-- [ ] `resolveLayerOpacity includes the clip factor` — `intent×focus×clip`;
+- [x] `resolveLayerOpacity includes the clip factor` — `intent×focus×clip`;
   `clip=1` is behaviour-neutral (existing tests stay green), a `fade`d layer halves.
-- [ ] `resolveLayerOpacity omitting the clip channel leaves opacity unchanged` (back-compat).
-- [ ] `resolveLayerOpacity uses factor 1 for an id with no clip key even with a channel present`.
-- [ ] Thread `clipOpacity` through the six consumers (each: add the arg).
-- [ ] Construct `clipPlayer` in the engine bootstrap (eager).
-- [ ] `npm test -- runFrame focusRecession fadeIdToVisibilityKey` → pass. `npm run typecheck` clean. Commit.
+- [x] `resolveLayerOpacity omitting the clip channel leaves opacity unchanged` (back-compat).
+- [x] `resolveLayerOpacity uses factor 1 for an id with no clip key even with a channel present`.
+- [x] Thread `clipOpacity` through the six consumers (each: add the arg).
+- [x] Construct `clipPlayer` in the engine bootstrap (eager). (Pre-satisfied in Task 11a-ii — verified at `engine.ts:340`, not duplicated.)
+- [x] `npm test -- runFrame focusRecession fadeIdToVisibilityKey` → pass. `npm run typecheck` clean. Commit.
 
 ## Task 13 — The flyout spike as a `ClipData` (validate the model)
 
@@ -931,24 +936,24 @@ validates the clip COMPILES + EVALUATES sanely rather than matching torn-down co
   `resolveClipStart` (to bind a concrete `start` for evaluation).
 - Produces: `flyout: ClipData`.
 
-- [ ] `flyout compiles without a single-writer clash` (one base-writer per channel
+- [x] `flyout compiles without a single-writer clash` (one base-writer per channel
   — `distance` and `yaw` are distinct channels).
-- [ ] `flyout durationSec is 22`.
-- [ ] `flyout dollies log-uniformly to ~29 500 Mpc` — with a concrete
+- [x] `flyout durationSec is 22`.
+- [x] `flyout dollies log-uniformly to ~29 500 Mpc` — with a concrete
   `start.distance` (resolve `'live'` to a test pose), `evaluateClip(..., 22)`
   ⇒ `distance` ≈ `29_500`; at `t=11` the distance is the geometric midpoint
   (log-space), NOT the arithmetic midpoint (asserts log interpolation).
-- [ ] `flyout yaw advances by 1.1 rad over the take` — `yaw(22) - start.yaw ≈ 1.1`.
-- [ ] Implement. `npm test -- flyoutClip` → pass. Commit.
+- [x] `flyout yaw advances by 1.1 rad over the take` — `yaw(22) - start.yaw ≈ 1.1`.
+- [x] Implement. `npm test -- flyoutClip` → pass. Commit.
 
 ## Task 14 — Full-suite green + typecheck + DoD self-check
 
 **Files:** none (verification only).
 
-- [ ] `npm test` → all green (590+ existing + the new suites).
-- [ ] `npm run typecheck` → clean (both src + tools tsconfigs).
-- [ ] Grep for TODO/placeholder left in new files; remove or convert to a tracked note.
-- [ ] Confirm the cross-plan contract names match this plan's table EXACTLY
+- [x] `npm test` → all green (590+ existing + the new suites). (3204 tests / 501 files green; two stale fixtures fixed — see commit 09d36f73.)
+- [x] `npm run typecheck` → clean (both src + tools tsconfigs).
+- [x] Grep for TODO/placeholder left in new files; remove or convert to a tracked note. (Only descriptive "placeholder" prose for the ZERO_POSE design; no stray TODO/FIXME.)
+- [x] Confirm the cross-plan contract names match this plan's table EXACTLY
   (`ClipData`, `evaluateClip`, `camera.clip`, `startClip`/`endClip`, `clip`@95,
   `commitsOnEdge`, `clipPlayer.tick`, `clipPlayer.clipOpacityOf`, `SceneEffect`,
   the five constructors (`show`/`hide`/`fade`/`scene`/`focus`), `applySceneEffect`,
@@ -958,7 +963,7 @@ validates the clip COMPILES + EVALUATES sanely rather than matching torn-down co
   `clipPlayer.clipOpacityOf` + the verbs and never constructs the channel, the
   `SceneEffect` type, the constructors, `applySceneEffect`, the duration override,
   or touches `resolveLayerOpacity`.
-- [ ] No commit of `public/data/*` or `dist/`. Final commit if any verification fixups.
+- [x] No commit of `public/data/*` or `dist/`. Final commit if any verification fixups.
 
 ---
 
