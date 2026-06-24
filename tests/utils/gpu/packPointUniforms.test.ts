@@ -65,8 +65,9 @@ const SETTINGS: PointDrawSettings = {
   fadeOpacityOf: () => 1,
   // Gravitational lensing now rides in its own shared LensingUniforms buffer
   // (see packLensingUniforms), so the points uniform carries only the
-  // lensEnabled CPU gate — not the lens array / mode / scale radius.
+  // lensEnabled / lensMode CPU gate — not the lens array / scale radius.
   lensEnabled: false,
+  lensMode: 'sis',
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

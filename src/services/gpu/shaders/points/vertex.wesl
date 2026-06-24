@@ -20,11 +20,11 @@
 // importing one authoritative struct makes drift structurally impossible.
 //
 // pickFragment.wesl declares no bindings of its own — this vertex
-// module references '@group(0)' (Uniforms at binding 0 + LensingUniforms
-// at binding 1), '@group(2)' (per-source SourceUniforms), and '@group(3)'
-// (FocusUniforms). The colorFragment module additionally declares
-// '@group(1)' (FadeUniforms). PickRenderer binds a no-op fade buffer
-// at '@group(1)' so its pipeline layout matches the visual pipeline.
+// module references '@group(0)' (Uniforms at binding 0), '@group(2)'
+// (per-source SourceUniforms), and '@group(3)' (FocusUniforms at binding 0
+// + LensingUniforms at binding 1). The colorFragment module additionally
+// declares '@group(1)' (FadeUniforms). PickRenderer binds a no-op fade
+// buffer at '@group(1)' so its pipeline layout matches the visual pipeline.
 
 import package::points::io::Uniforms;
 import package::points::io::PerVertex;
@@ -50,18 +50,6 @@ import package::lib::lensingUniforms::LensingUniforms;
 // pick floor — see pickRenderer.ts).
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
-// ── @group(0) @binding(1) — gravitational-lensing uniform ──────────────
-//
-// The shared lens data (enabled, count, mode, scaleRadius, + the lens
-// array) lives in its OWN buffer, NOT in the Uniforms tail — so a second
-// pipeline (the volume raymarch) can bind the same bytes. It rides binding
-// 1 of THIS group rather than a dedicated @group: WebGPU caps a pipeline at
-// 4 bind groups and the points pipeline already uses all four (uniforms,
-// fade, source, focus), so a 5th group is invalid (and iOS is stricter
-// still). See lib/lensingUniforms.wesl for the struct and lib/lensing.wesl
-// for the deflection model.
-@group(0) @binding(1) var<uniform> lensing: LensingUniforms;
-
 // ── @group(1) — FadeUniforms (declared but unused at vertex stage) ─
 //
 // We don't re-declare FadeUniforms here because the vertex stage
@@ -83,13 +71,26 @@ import package::lib::lensingUniforms::LensingUniforms;
 // for the pick-output path.
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
 
-// ── @group(3) — cluster-focus uniform (single shared binding) ───────
+// ── @group(3) — per-frame galaxy-scene state ────────────────────────
 //
-// One POI is focused at a time, so this is a single global binding (not
-// per-source like fade). 'focusAlphaMultiplier' folds a membership-based
-// dim into 'intensity'; at blend == 0 it returns 1.0 (no-op when nothing
-// is focused). See lib/focusUniforms.wesl for the math.
+// binding 0 — cluster-focus uniform (single shared binding). One POI is
+// focused at a time, so this is a single global binding (not per-source
+// like fade). 'focusAlphaMultiplier' folds a membership-based dim into
+// 'intensity'; at blend == 0 it returns 1.0 (no-op when nothing is
+// focused). See lib/focusUniforms.wesl for the math.
 @group(3) @binding(0) var<uniform> focus: FocusUniforms;
+
+// binding 1 — gravitational-lensing uniform. The shared lens data
+// (enabled, count, mode, scaleRadius, + the lens array) lives in its OWN
+// buffer, NOT the Uniforms tail, so a second pipeline (the volume
+// raymarch) can bind the same bytes. It co-hosts the focus group rather
+// than taking a dedicated @group because WebGPU caps a pipeline at 4 bind
+// groups and points already uses all four (uniforms, fade, source, focus);
+// group 0 is the shared camera group the secondary pick renderers reuse,
+// so group 3 is the only home that ripples to nothing else. See
+// lib/lensingUniforms.wesl for the struct and lib/lensing.wesl for the
+// deflection model.
+@group(3) @binding(1) var<uniform> lensing: LensingUniforms;
 
 // Peak lensing magnification clamp. A point source on the caustic has
 // infinite μ; a real (extended) source saturates at ~θ_E / source-size.

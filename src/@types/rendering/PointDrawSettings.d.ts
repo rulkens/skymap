@@ -10,6 +10,7 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
+import type { LensMode } from '../settings/LensMode';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -65,4 +66,14 @@ export type PointDrawSettings = {
    * lensing buffer) because it gates the 12-vs-6 vertex draw count here.
    */
   lensEnabled: boolean;
+
+  /**
+   * Active lensing profile (`state.settings.debug.lensMode`). Gates the
+   * counter-image quad alongside `lensEnabled`: the inner ghost is SIS-only
+   * (NFW's varying deflection has no closed-form counter position, so the
+   * vertex stage culls it), so the draw doubles to 12 vertices only for
+   * `lensEnabled && lensMode === 'sis'`. In NFW mode the primary image is
+   * still deflected — only the second quad is skipped.
+   */
+  lensMode: LensMode;
 };

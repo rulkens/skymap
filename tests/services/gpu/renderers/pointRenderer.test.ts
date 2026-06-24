@@ -28,6 +28,7 @@ import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { mat4 } from 'gl-matrix';
+import type { LensMode } from '../../../../src/@types/settings/LensMode';
 
 // PointRenderer keys its catalogs by the string `GalaxyCatalogId` now;
 // these tests still reason in terms of the numeric `Source` codes (the
@@ -141,11 +142,6 @@ function makeStubSourceBgl() {
 function makeStubFocusBgl() {
   return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
 }
-// The shared lensing buffer is embedded at @group(0) @binding(1); the
-// renderer only references it, never introspects it.
-function makeStubLensingBuffer() {
-  return {} as unknown as GPUBuffer;
-}
 
 // Stub shared focus bind group passed into draw() — the renderer only binds
 // it (setBindGroup(3, …)), never introspects it.
@@ -161,7 +157,6 @@ describe('PointRenderer.totalCount', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     expect(renderer.totalCount()).toBe(0);
   });
@@ -173,7 +168,6 @@ describe('PointRenderer.totalCount', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(100));
     await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
@@ -188,7 +182,6 @@ describe('PointRenderer.totalCount', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(100));
     await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
@@ -207,7 +200,6 @@ describe('PointRenderer.loadedSources', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     // Upload in non-iteration order on purpose — the renderer must re-sort.
     // GALAXY_CATALOG_SOURCES is ordered smallest-catalogue → largest:
@@ -231,7 +223,6 @@ describe('PointRenderer.loadedSources', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
     await renderer.upload(idOf(Source.SDSS), makeCloud(100));
@@ -265,7 +256,6 @@ describe('PointRenderer.upload — regression: replace, not append', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     const cloudA = makeCloud(1000);
     const cloudB = makeCloud(500);
@@ -314,7 +304,6 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(1000));
 
@@ -346,7 +335,6 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await expect(renderer.upload(idOf(Source.SDSS), makeCloud(0))).resolves.toBeUndefined();
     expect(renderer.totalCount()).toBe(0);
@@ -362,7 +350,6 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(1000));
     await renderer.upload(idOf(Source.SDSS), makeCloud(0));
@@ -401,7 +388,6 @@ describe('PointRenderer.upload — regression: parallel-upload rebake race', () 
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
 
     // Seed with the "prior tier" layout so the rebake has stale offsets to act on.
@@ -564,7 +550,6 @@ describe('PointRenderer.spliceSchechterRatios', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(3));
 
@@ -588,7 +573,6 @@ describe('PointRenderer.spliceSchechterRatios', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(5));
     expect(() => renderer.spliceSchechterRatios(Source.SDSS, new Float32Array(4))).toThrow(
@@ -603,7 +587,6 @@ describe('PointRenderer.spliceSchechterRatios', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     // Should not throw — subsystem may call this for a stale source mid-bake.
     expect(() => renderer.spliceSchechterRatios(Source.Glade, new Float32Array(0))).not.toThrow();
@@ -620,7 +603,6 @@ describe('PointRenderer.spliceAngularWeights', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(2));
 
@@ -642,7 +624,6 @@ describe('PointRenderer.spliceAngularWeights', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(5));
     expect(() => renderer.spliceAngularWeights(Source.SDSS, new Float32Array(6))).toThrow(
@@ -661,7 +642,6 @@ describe('PointRenderer.clearBiasOverlays', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(2));
 
@@ -690,7 +670,6 @@ describe('PointRenderer.clearBiasOverlays', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(1));
     await renderer.upload(idOf(Source.Glade), makeCloud(1));
@@ -708,7 +687,6 @@ describe('PointRenderer.clearBiasOverlays', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     expect(() => renderer.clearBiasOverlays()).not.toThrow();
   });
@@ -773,7 +751,6 @@ describe('PointRenderer.destroy', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     // The constructor allocates one buffer: the renderer's own uniform.
     // The cluster-focus uniform is shared and owned by the engine
@@ -795,7 +772,6 @@ describe('PointRenderer.destroy', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     // Constructor allocates 1 buffer: the renderer's own uniform (the
     // cluster-focus uniform is shared/engine-owned, not per renderer).
@@ -828,7 +804,6 @@ describe('PointRenderer.destroy', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(2));
     await renderer.upload(idOf(Source.TwoMRS), makeCloud(3));
@@ -848,7 +823,6 @@ describe('PointRenderer.destroy', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(1));
 
@@ -870,7 +844,6 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(10));
 
@@ -902,11 +875,74 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       pxFadeEnd: 0,
       focusBindGroup: FOCUS_BIND_GROUP,
       lensEnabled: false,
+      lensMode: 'sis',
       fadeOpacityOf: () => 1,
     });
 
     expect(calls).toContain('setPipeline');
     expect(calls).toContain('draw');
+  });
+});
+
+describe('PointRenderer.draw — lensing vertex count', () => {
+  // The counter-image (inner ghost) quad is SIS-only: NFW's varying
+  // deflection has no closed-form counter position, so the vertex stage
+  // culls it (points/vertex.wesl). Drawing 12 vertices in NFW mode would
+  // run the whole vertex stage twice per galaxy only to discard half — so
+  // the draw issues the doubled quad ONLY in SIS mode. NFW and lens-off
+  // both draw the single 6-vertex quad.
+  async function vertexCountFor(lensEnabled: boolean, lensMode: LensMode): Promise<number> {
+    const renderer = createPointRenderer(
+      makeStubDevice(),
+      'rgba16float',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
+
+    let vertexCount = -1;
+    const pass = {
+      setPipeline: () => {},
+      setBindGroup: () => {},
+      setVertexBuffer: () => {},
+      draw: (verts: number) => {
+        vertexCount = verts;
+      },
+    } as unknown as GPURenderPassEncoder;
+
+    renderer.draw(pass, new Float32Array(16) as unknown as mat4, [800, 600], {
+      pointSizePx: 1,
+      brightness: 1,
+      selectedPacked: 0xffffffff >>> 0,
+      visibleSourceMask: 0xffffffff,
+      camPosWorld: [0, 0, 0],
+      pxPerRad: 1,
+      highlightFallback: false,
+      realOnlyMode: false,
+      biasMode: 0,
+      absMagLimit: 0,
+      depthFadeEnabled: false,
+      pxFadeStart: 0,
+      pxFadeEnd: 0,
+      focusBindGroup: FOCUS_BIND_GROUP,
+      lensEnabled,
+      lensMode,
+      fadeOpacityOf: () => 1,
+    });
+    return vertexCount;
+  }
+
+  it('draws the doubled (12-vertex) quad only when lensing is on AND mode is SIS', async () => {
+    expect(await vertexCountFor(true, 'sis')).toBe(12);
+  });
+
+  it('draws the single (6-vertex) quad in NFW mode even with lensing on', async () => {
+    expect(await vertexCountFor(true, 'nfw')).toBe(6);
+  });
+
+  it('draws the single (6-vertex) quad when lensing is off', async () => {
+    expect(await vertexCountFor(false, 'sis')).toBe(6);
   });
 });
 

@@ -107,16 +107,23 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.fadeBgl = createFadeUniformsBgl(device);
   state.gpu.sourceBgl = createSourceUniformsBgl(device);
   state.gpu.focusBgl = createFocusUniformsBgl(device);
-  // The single shared cluster-focus uniform — written once per frame in
-  // renderFrame; its bind group is bound by points, the impostor disks, and
-  // the pick pass (each at its own group slot). See EngineGpuHandles.
-  state.gpu.focusUniform = createFocusUniformBuffer(device, state.gpu.focusBgl!);
   state.gpu.lensingBgl = createLensingUniformsBgl(device);
   // The single shared gravitational-lensing uniform — written once per frame
-  // in renderFrame; its bind group is bound at @group(4) by the points + pick
-  // pipelines (and, later, the volume raymarch). One lens set is active per
-  // frame, so one buffer serves the whole engine. See EngineGpuHandles.
+  // in renderFrame. Its standalone bind group (lensingBgl) is for the later
+  // volume raymarch; the points + pick pipelines read the SAME buffer via the
+  // focus bind group, which co-hosts it at @group(3) @binding(1). One lens set
+  // is active per frame, so one buffer serves the whole engine. Built BEFORE
+  // the focus uniform because the focus bind group references its buffer.
   state.gpu.lensingUniform = createLensingUniformBuffer(device, state.gpu.lensingBgl!);
+  // The single shared cluster-focus uniform — written once per frame in
+  // renderFrame; its bind group (focus at binding 0 + the lensing buffer at
+  // binding 1) is bound by points, the impostor disks, and the pick pass
+  // (each at its own group slot). See EngineGpuHandles + createFocusUniformsBgl.
+  state.gpu.focusUniform = createFocusUniformBuffer(
+    device,
+    state.gpu.focusBgl!,
+    state.gpu.lensingUniform!.buffer,
+  );
 
   // ── HDR offscreen target + tone-map post-process ──────────────────
   //
@@ -163,10 +170,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     'rgba16float',
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
+    // @group(3) focus + lensing — the focus bind group bound per frame
+    // carries both (see createFocusUniformsBgl for the co-tenancy rationale).
     state.gpu.focusBgl!,
-    // The shared lensing buffer, embedded at @group(0) @binding(1) (points
-    // already uses all four bind groups, so lensing can't be a 5th group).
-    state.gpu.lensingUniform!.buffer,
   );
   state.gpu.renderer = renderer;
 

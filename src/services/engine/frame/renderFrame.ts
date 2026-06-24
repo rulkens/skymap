@@ -132,8 +132,9 @@ export function renderFrame(input: RenderFrameInput): void {
   state.gpu.focusUniform?.write(ctx.focus);
 
   // Write the single shared gravitational-lensing uniform once per frame,
-  // before the points pass (and the later pick submit) reads it at @group(4).
-  // The lenses are built here — not in pointSpritesPass — so both the visual
+  // before the points pass (and the later pick submit) reads it at
+  // @group(3) @binding(1) (co-hosted with cluster focus). The lenses are
+  // built here — not in pointSpritesPass — so both the visual
   // pass and the pick pass replay the SAME lens centres + Einstein radii from
   // one shared buffer. buildClusterLenses culls to clusters in front of the
   // camera (using the same camera position + target the points pass used) and

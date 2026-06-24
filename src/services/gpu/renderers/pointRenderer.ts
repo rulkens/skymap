@@ -7,11 +7,12 @@
  * colour index, axis ratio + PA, padded radius, three bias weights —
  * see `POINT_VERTEX_ATTRIBUTES`).
  *
- * When the gravitational-lensing pass is active the draw widens to
- * `draw(12, N)` — vertices 0..5 carry each source's SIS primary image and
- * 6..11 its inner counter-image (see `points/vertex.wesl`).  The widening
- * is gated on `settings.lensEnabled`, so the default (lens off) path keeps
- * the single-quad cost.
+ * In SIS lensing mode the draw widens to `draw(12, N)` — vertices 0..5
+ * carry each source's primary image and 6..11 its inner counter-image
+ * (see `points/vertex.wesl`).  The widening is gated on `settings.lensEnabled
+ * && settings.lensMode === 'sis'`: NFW has no closed-form counter image, so
+ * it (like lens-off) keeps the single-quad cost while still deflecting the
+ * primary image.
  *
  * One vertex buffer per loaded galaxy catalog; an engine-supplied bitmask
  * decides which sources draw each frame.  Each source's `@group(2)`
@@ -200,10 +201,10 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * Total: 176 bytes — a multiple of 16 ✓
  *
  * The gravitational-lensing lens array + profile knobs are NOT in this
- * buffer — they live in their own shared `LensingUniforms` buffer (bound at
- * @group(0) @binding(1) by the points + pick pipelines, since WebGPU caps a
- * pipeline at 4 bind groups and points already uses all four), so a second
- * pipeline can bind the same lens data without re-packing the points
+ * buffer — they live in their own shared `LensingUniforms` buffer, co-bound
+ * at @group(3) @binding(1) alongside the cluster-focus uniform (since WebGPU
+ * caps a pipeline at 4 bind groups and points already uses all four), so a
+ * second pipeline can bind the same lens data without re-packing the points
  * uniform.  See `lib/lensingUniforms.wesl` + `utils/gpu/packLensingUniforms.ts`.
  *
  * WGSL uniform buffers follow rules similar to std140 (WGSL spec §13,
@@ -354,8 +355,10 @@ export function createPointRenderer(
   format: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
+  // @group(3): cluster-focus (binding 0) + the shared lensing buffer
+  // (binding 1). The focus bind group bound per-frame in draw() carries
+  // both — see createFocusUniformsBgl for why lensing co-hosts this group.
   focusBgl: FocusUniformsBgl,
-  lensingBuffer: GPUBuffer,
 ): PointRenderer {
   // Each renderer compiles its own GPUShaderModule from the shared
   // vertex source — sharing modules across pipelines hits the WebGPU
@@ -367,12 +370,10 @@ export function createPointRenderer(
   const pipelineLayout = device.createPipelineLayout({
     label: 'points-pipeline-layout',
     bindGroupLayouts: [
-      // @group(0) per-frame Uniforms (binding 0, points-pipeline-specific)
-      // + the shared LensingUniforms (binding 1). Lensing rides binding 1 of
-      // this group rather than a 5th @group: WebGPU caps a pipeline at 4 bind
-      // groups and points already uses all four (uniforms, fade, source,
-      // focus). The lens buffer is still engine-owned and shared (the volume
-      // raymarch binds the same buffer at its own free group).
+      // @group(0) per-frame Uniforms (binding 0). Camera + point settings,
+      // bound once per frame. The secondary pick renderers (structure rings,
+      // Milky-Way) reuse this group, so it stays a single binding — lensing
+      // lives on @group(3) instead (see createFocusUniformsBgl).
       device.createBindGroupLayout({
         label: 'points-bgl-group0',
         entries: [
@@ -381,17 +382,14 @@ export function createPointRenderer(
             visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
             buffer: { type: 'uniform' },
           },
-          {
-            binding: 1,
-            visibility: GPUShaderStage.VERTEX,
-            buffer: { type: 'uniform' },
-          },
         ],
       }),
       fadeBgl, // @group(1) FadeUniforms (canonical)
       sourceBgl, // @group(2) SourceUniforms (canonical, shared with PickRenderer)
-      // @group(3) FocusUniforms — a single shared/global binding (only
-      // one POI focused at a time), unlike the per-source @group(1) fade.
+      // @group(3) per-frame galaxy-scene state: cluster-focus (binding 0) +
+      // the shared lensing buffer (binding 1). One POI focused at a time and
+      // one lens set per frame, so both are global bindings (unlike the
+      // per-source @group(1) fade / @group(2) source).
       focusBgl,
     ],
   });
@@ -441,12 +439,7 @@ export function createPointRenderer(
   const bindGroup = device.createBindGroup({
     label: 'points-bg-uniforms',
     layout: pipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: uniformBuffer } },
-      // @group(0) @binding(1): the shared lensing buffer (engine-owned,
-      // written once per frame in renderFrame).
-      { binding: 1, resource: { buffer: lensingBuffer } },
-    ],
+    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
 
   // 16 bytes (opacity + pad) of scratch reused per-source-per-frame
@@ -757,25 +750,29 @@ export function createPointRenderer(
     // Pack the 176-byte uniform buffer (camera / points / bias / fade) — see
     // `UNIFORM_BYTES` for the layout, and `points/io.wesl::Uniforms` for the
     // WGSL-side struct. The gravitational-lensing lens data lives in its own
-    // buffer, bound at @group(0) @binding(1) (baked into `bindGroup` at
-    // construction), not in this buffer's bytes.
+    // buffer, co-bound at @group(3) @binding(1) (carried by the focus bind
+    // group passed in `settings.focusBindGroup`), not in this buffer's bytes.
     // `pickPass` is packed as 0 (visual pass) — the pick renderer applies
     // its three overrides after uploading this buffer.
     const buf = packPointUniforms(viewProj, viewportPx, settings);
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
     // Gravitational-lensing pass draws each source's quad TWICE (primary +
-    // counter image — see points/vertex.wesl); when the lens is off we draw
-    // the single quad so the vertex stage carries zero extra cost.
-    const verticesPerPoint = settings.lensEnabled ? 12 : 6;
+    // counter image — see points/vertex.wesl) ONLY in SIS mode: the inner
+    // ghost has no closed-form position under NFW, so the vertex stage culls
+    // it there. Doubling to 12 in NFW would run the whole vertex stage twice
+    // per galaxy and discard half — so NFW (and lens-off) keep the single
+    // 6-vertex quad. The primary image is still deflected in NFW; only the
+    // second quad is skipped.
+    const verticesPerPoint = settings.lensEnabled && settings.lensMode === 'sis' ? 12 : 6;
 
     pass.setPipeline(pipeline);
-    // @group(0) carries the per-frame uniforms (binding 0) AND the shared
-    // lensing buffer (binding 1) — both baked into `bindGroup` at construction.
+    // @group(0) carries the per-frame uniforms (binding 0) only.
     pass.setBindGroup(0, bindGroup);
-    // @group(3) focus is the engine's shared bind group (one POI focused per
-    // frame, written once per frame in renderFrame). Bind once before the
-    // per-source loop, not per source like fade/source.
+    // @group(3) is the engine's shared scene-state bind group — cluster
+    // focus (binding 0) + the lensing buffer (binding 1), both written once
+    // per frame in renderFrame. Bind once before the per-source loop, not
+    // per source like fade/source.
     pass.setBindGroup(3, focusBindGroup);
 
     for (const { code: source, id } of CATALOG_DRAW_ORDER) {

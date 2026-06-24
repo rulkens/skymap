@@ -147,12 +147,6 @@ function makeStubSourceBgl() {
 function makeStubFocusBgl() {
   return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
 }
-// The shared lensing buffer is embedded at @group(0) @binding(1); the pick
-// renderer only references it, never introspects it.
-function makeStubLensingBuffer() {
-  return {} as unknown as GPUBuffer;
-}
-
 // A minimal dummy uniform bytes buffer for pick() calls.
 function makeUniformBytes(): ArrayBuffer {
   return new ArrayBuffer(UNIFORM_BYTES);
@@ -174,7 +168,6 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
       {} as unknown as GPUBindGroup,
     );
 
@@ -205,7 +198,6 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
       {} as unknown as GPUBindGroup,
     );
 
@@ -271,7 +263,6 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
       {} as unknown as GPUBindGroup,
     );
 
@@ -332,7 +323,6 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
       {} as unknown as GPUBindGroup,
     );
 
@@ -423,7 +413,6 @@ describe('createPickRenderer', () => {
       canonicalFadeBgl,
       canonicalSourceBgl,
       canonicalFocusBgl,
-      makeStubLensingBuffer(),
       {} as unknown as GPUBindGroup,
     );
 
@@ -508,7 +497,6 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
       {} as unknown as GPUBindGroup,
       undefined, // no structure markers
       undefined, // no procedural disks
@@ -538,7 +526,6 @@ describe('createPickRenderer', () => {
       makeStubFadeBgl(),
       makeStubSourceBgl(),
       makeStubFocusBgl(),
-      makeStubLensingBuffer(),
       {} as unknown as GPUBindGroup,
       undefined,
       undefined,

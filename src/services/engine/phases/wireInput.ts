@@ -80,12 +80,11 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
     state.gpu.focusBgl!,
-    // The shared lensing buffer — embedded at @group(0) @binding(1) of the
-    // pick pipeline (same slot the visual pass uses) so the pick pass
-    // deflects sources identically and lensed images stay hit-testable.
-    state.gpu.lensingUniform!.buffer,
-    // The live shared focus buffer — so the pick pass excludes non-members
-    // of a focused structure from hit-testing (vertex shader culls them).
+    // The live shared @group(3) scene-state bind group — cluster focus
+    // (binding 0) + the lensing buffer (binding 1). Lets the pick pass
+    // exclude non-members of a focused structure from hit-testing AND
+    // deflect sources identically to the visual pass, keeping lensed
+    // images hit-testable.
     state.gpu.focusUniform!.bindGroup,
     state.gpu.structureMarkerRenderer ?? undefined,
     state.gpu.proceduralDiskRenderer ?? undefined,
