@@ -264,15 +264,15 @@ src/services/engine/presentation/focusRecession.ts  resolveLayerOpacity gains th
     `in` ⇒ `t³`; `inOut` ⇒ smootherstep/`t<.5 ? 4t³ : 1-…` (cubic in-out);
     `linear` ⇒ identity. Each clamps `t` to `[0,1]`.
 
-- [ ] `channelSpace.test.ts`: `CHANNEL_SPACE maps distance→log, angles→add, target→lin`.
-- [ ] `channelSpace.test.ts`: `lerpInSpace log gives geometric midpoint` — assert
+- [x] `channelSpace.test.ts`: `CHANNEL_SPACE maps distance→log, angles→add, target→lin`.
+- [x] `channelSpace.test.ts`: `lerpInSpace log gives geometric midpoint` — assert
   `lerpInSpace('log', 1, 100, 0.5)` ≈ `10`.
-- [ ] `channelSpace.test.ts`: `lerpInSpace add is plain lerp` — `lerpInSpace('add', 0, 2, 0.5) === 1`.
-- [ ] `ease.test.ts`: `EASE.out matches easeOutCubic`, `EASE.in is t³ (in(0.5)===0.125)`,
+- [x] `channelSpace.test.ts`: `lerpInSpace add is plain lerp` — `lerpInSpace('add', 0, 2, 0.5) === 1`.
+- [x] `ease.test.ts`: `EASE.out matches easeOutCubic`, `EASE.in is t³ (in(0.5)===0.125)`,
   `EASE.inOut is symmetric (inOut(0.5)===0.5, inOut(0.25)+inOut(0.75)===1)`,
   `EASE.linear is identity`, and `each clamps t outside [0,1]`.
-- [ ] Implement (didactic header on `channelSpace.ts`: the single-home rationale).
-- [ ] `npm test -- channelSpace ease` → pass. Commit.
+- [x] Implement (didactic header on `channelSpace.ts`: the single-home rationale).
+- [x] `npm test -- channelSpace ease` → pass. Commit.
 
 ## Task 2 — Effect / CameraAction / SceneEffect serializable union types
 
