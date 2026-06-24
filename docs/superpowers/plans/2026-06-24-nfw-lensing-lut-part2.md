@@ -7,8 +7,10 @@
 Part 1 built the dimensionless CPU LUT generator, extracted the shared
 `lensedPosition` WESL seam, and created the `NfwLensLutTexture` GPU resource. This
 file wires the LUT into the `@group(3)` scene group, drives the NFW counter image
-from the table in the points vertex stage, extends the disk/quad shaders to bend
-lensed galaxies, and closes with an entanglement-radar pass.
+from the table in the points vertex stage, and closes with an entanglement-radar
+pass. Disk/quad lensing coverage is intentionally **out of scope** (see the
+deferred note before the Definition of Done) — the Phase-2 `lensedPosition` seam
+pre-wires it so it stays a one-line-per-shader follow-up.
 
 > **Read Part 1's Global Constraints and the stale-spec warning before starting.**
 > They apply verbatim to every task below. In particular: the spec's
@@ -230,100 +232,19 @@ const verticesPerPoint = settings.lensEnabled ? 12 : 6;
 
 **Independently testable deliverable:** with lensing on + NFW mode, the points
 pass renders a primary + a LUT-placed counter image with LUT magnification; SIS is
-unchanged. Visual confirmation of NFW imaging happens in Task 5.2's smoke test.
+unchanged. Confirm the NFW imaging visually against the live renderer (the inner
+counter image should now appear as a point); this is the only manual check in the
+plan and can ride the Phase-6 review.
 
 ---
 
-## Phase 5 — Disk / quad lensing coverage (behaviour change)
-
-The impostor procedural disks and textured thumbnail quads of a lensed galaxy
-currently bind the scene group (so they already carry the lensing buffer — and now
-the LUT) but ignore it: their vertex stages place the disk at the UN-lensed
-`pos` / `center` (`proceduralDisks/vertex.wesl:98,133` and
-`texturedDisks/vertex.wesl:79,109`). Once `lensedPosition` is shared (Phase 2),
-they can deflect with a one-line call so a lensed galaxy's disk follows its point.
-This is a **deliberate behaviour change** and needs **visual verification** — do
-not auto-claim it works.
-
-### Task 5.1 — Deflect the disk centre in the disk vertex shaders
-
-**Files:**
-- `src/services/gpu/shaders/proceduralDisks/vertex.wesl` (modify).
-- `src/services/gpu/shaders/texturedDisks/vertex.wesl` (modify).
-- (If the disk shaders don't already declare the lensing buffer + LUT at their
-  `@group(1)` scene-group slot, add the `@group(1) @binding(1/2/3)` declarations —
-  they bind the same scene group at `@group(1)` per
-  `proceduralDisks/vertex.wesl:60-64`; today they declare only `@binding(0)` focus.)
-- `tests/...` linked-WGSL compile gate for both shaders.
-
-**Contract:** before building the disk-plane basis, deflect the disk CENTRE
-through the shared primary-image path:
-
-```
-// proceduralDisks/vertex.wesl, before basis construction (~line 98):
-// before:
-let pos = instance.posSize.xyz;
-// after — primary-image deflection (imageKind = 0u) so the disk tracks its point:
-let img = lensedPosition(instance.posSize.xyz, u.camPosWorld, lensing, 0u, LENS_MU_MAX);
-let pos = img.position;
-```
-
-- Use `imageKind == 0u` (the **primary** image) only — disks render the primary,
-  not a counter ghost (a counter disk would need a second instance, out of scope;
-  keep it to the primary so the disk follows the lensed point exactly).
-- The disk corners are still built around `pos` with the existing
-  `(major, minor)` basis — only the CENTRE moves. Do NOT also rotate the basis by
-  the deflection (the deflection is a position shift of the line of sight; the
-  disk's intrinsic 3D orientation is unchanged). Match the same shared-vs-copied
-  choice (a) or (b) Task 4.3 made for how `lensedPosition` reads the LUT.
-- `texturedDisks/vertex.wesl`: same edit on `center` (`texturedDisks/vertex.wesl:79`),
-  applied BEFORE `diskAxes(center, …)` so the nucleus-offset math at line 108 uses
-  the lensed centre.
-- Magnification: optionally fold `img.mu` into the disk's `focusDim` / alpha so a
-  magnified disk brightens like its point does — keep this minimal and consistent
-  with the points pass, or defer it with a one-line comment. Do not silently drop
-  it without a note.
-
-- [ ] Linked-WGSL gate: test `procedural + textured disk vertex shaders link with
-  lensedPosition` — assert both `?static` modules link and reference
-  `lensedPosition`.
-- [ ] `npm run build` → both WESL modules link.
-- [ ] `npm test` → green (no TS behaviour changed; this is shader-only).
-- [ ] Commit.
-
-### Task 5.2 — Smoke test: confirm a lensed galaxy's disk follows the point
-
-**Files:** none (manual visual verification task).
-
-This is the deliberate-behaviour-change confirmation. It CANNOT be a unit test —
-it's a GPU visual effect. Do NOT auto-claim it works.
-
-- [ ] With the dev server running, enable lensing (`state.settings.debug.lensingEnabled`)
-  and pick a configuration where a galaxy sits behind an in-view cluster lens (the
-  same setup that produces a visible primary deflection in the points pass).
-- [ ] **Ask the user to confirm**, in these words, that the impostor disk and/or
-  textured thumbnail of the lensed galaxy now follows the deflected point (the disk
-  is co-located with its lensed billboard, not left at the un-lensed sky position).
-  Have the user check BOTH the procedural-disk band (~8–24 px apparent size) and
-  the textured-thumbnail band (close approach).
-- [ ] Have the user also confirm SIS mode AND NFW mode both look right (NFW should
-  now show the inner counter image as a point, and the disk should track the
-  primary).
-- [ ] If the user reports the disk does NOT follow (or jitters / detaches), STOP
-  and treat it as a bug to reproduce — do not mark this task done on assumption.
-- [ ] Once the user confirms, record their confirmation in the commit message and
-  commit (docs/plan checkbox tick only — no code change in this task unless a bug
-  surfaced).
-
----
-
-## Phase 6 — Final entanglement-radar pass
+## Phase 5 — Final entanglement-radar pass
 
 Per the project convention (`feedback_operationalize_simplicity`), the last task
 runs the entanglement-radar lens over the branch diff to confirm the LUT landed
 un-braided and the plan preserved the spec's un-braided choices.
 
-### Task 6.1 — Entanglement-radar review of the branch diff
+### Task 5.1 — Entanglement-radar review of the branch diff
 
 **Files:** none (review task; may surface follow-up edits).
 
@@ -333,10 +254,11 @@ un-braided and the plan preserved the spec's un-braided choices.
     and referenced from the scene group — not duplicated per pipeline. (The
     standalone `lensingUniforms` BGL's later fragment-visible LUT entry is a
     deferred volume-phase note, not a second object now.)
-  - **Two BGL homes, one model.** The deflection model lives in ONE shared
-    `lensedPosition` (lib/lensing.wesl), called by points + both disk shaders —
-    not copied into three vertex stages. Verify the LUT-read choice (Task 4.3
-    note (a) vs (b)) is applied identically in all consumers.
+  - **One model, ready to share.** The deflection model lives in ONE shared
+    `lensedPosition` (lib/lensing.wesl), called by the points vertex stage — not
+    re-inlined. Confirm the extraction left a clean one-call seam the disk shaders
+    could adopt later (deferred — see the out-of-scope note) without copying the
+    model.
   - **The `(y,s)` log-map + its inverse are a documented pair** — one source of
     truth (the generator) with the shader's inverse quoting `LOG_K`. A drifting
     map written independently in two places is exactly the asymmetry-language
@@ -364,8 +286,9 @@ spec relocate to `completed/`.
   no counter at small `s`, two opposite-side images super-critically, `μ` clamped
   to `MU_MAX`, dropped-third-image warns.
 - [ ] **Shared seam:** the deflection model lives in ONE `lensedPosition` WESL
-  function; points + both disk shaders call it. No copy of the summation /
-  dominant-pick / counter math in three places.
+  function called by the points vertex stage. No copy of the summation /
+  dominant-pick / counter math elsewhere; the seam is ready for the disk shaders
+  to adopt later with a one-line call.
 - [ ] **GPU resource:** `createNfwLensLutTexture` uploads an `N×M rgba16float`
   texture (f16-packed via `floatToF16`) with a clamp-to-edge linear sampler;
   never `texture_1d`.
@@ -378,9 +301,9 @@ spec relocate to `completed/`.
   NFW lens, places the counter image from `xCounter` (culling when `0`), and uses
   the LUT magnification; SIS stays on its unchanged analytic branch. The
   vertex-count gate doubles to 12 for `lensEnabled` in BOTH modes.
-- [ ] **Disk coverage:** lensed galaxies' procedural + textured disks follow the
-  deflected (primary) point — **confirmed by the user** in the Task 5.2 smoke
-  test (NOT auto-claimed). SIS + NFW both visually correct.
+- [ ] **NFW imaging confirmed visually:** SIS + NFW both render correctly against
+  the live renderer (NFW shows the inner counter image as a point) — checked in the
+  Phase-5 review, NOT auto-claimed.
 - [ ] **Stale comments cleared:** the `lensingUniforms.wesl` `@group(4)` comment,
   the `pointRenderer.ts` 12-vs-6 docblock, the `PointDrawSettings.lensMode`
   docblock, and the `sceneUniforms.ts` "join here later" line all describe
@@ -389,9 +312,20 @@ spec relocate to `completed/`.
   `utils/` / `@types/` files; `type` aliases; `Vec2`/`Vec3` aliases; no backticks
   in WESL comments; didactic comments throughout.
 - [ ] **Green:** `npm test`, `npm run typecheck`, and `npm run build` all pass.
-- [ ] **Entanglement-radar pass (Task 6.1) run** and clean (or follow-ups
+- [ ] **Entanglement-radar pass (Task 5.1) run** and clean (or follow-ups
   captured in `docs/BACKLOG.md`).
-- [ ] **Out of scope, untouched:** the volume raymarch's LUT wiring (the
-  standalone `lensingUniforms` BGL's fragment-visible LUT entry) is NOT added
-  here — only noted as a deferred hook. NFW's third image and per-lens `r_s` from
-  a mass–concentration relation remain deferred (spec lines 205–211).
+- [ ] **Out of scope, untouched:**
+  - **Disk/quad lensing coverage** — the impostor procedural disks and textured
+    thumbnails still render at the UN-lensed centre (`proceduralDisks/vertex.wesl`,
+    `texturedDisks/vertex.wesl`). Deferred deliberately: a galaxy large enough to
+    resolve into a disk is near the camera (small `D_s`), so it is rarely behind a
+    lens (`D_s > D_l`) with meaningful deflection. The one concrete trigger to
+    revisit is a visible *crossfade snap* — a galaxy that is both lensed and inside
+    the points→disk handoff band (~8–24 px) would smear/jump as its billboard
+    (lensed) hands off to its disk (un-lensed). The Phase-2 `lensedPosition` seam
+    makes the fix a one-line `imageKind == 0u` call per disk vertex shader if that
+    artifact is ever observed.
+  - **Volume raymarch LUT wiring** — the standalone `lensingUniforms` BGL's
+    fragment-visible LUT entry is NOT added here, only noted as a deferred hook.
+  - NFW's third image and per-lens `r_s` from a mass–concentration relation remain
+    deferred (spec lines 205–211).

@@ -2,11 +2,14 @@
 
 **Spec:** [`specs/2026-06-24-nfw-lensing-lut-image-finding-design.md`](../specs/2026-06-24-nfw-lensing-lut-image-finding-design.md)
 **Branch:** `feat/gravitational-lensing`
-**Part 2:** [`2026-06-24-nfw-lensing-lut-part2.md`](./2026-06-24-nfw-lensing-lut-part2.md) (Phases 4–6)
+**Part 2:** [`2026-06-24-nfw-lensing-lut-part2.md`](./2026-06-24-nfw-lensing-lut-part2.md) (Phases 4–5)
 
 This file carries Phases 0–3 (constraints + CPU generator + `lensedPosition`
-extraction + GPU LUT texture resource). Part 2 carries the wiring, the
-disk/quad coverage behaviour change, and the final entanglement-radar pass.
+extraction + GPU LUT texture resource). Part 2 carries the scene-group wiring +
+vertex-stage LUT sampling + the 12-vs-6 vertex gate change, and the final
+entanglement-radar pass. Disk/quad lensing coverage is **out of scope** (deferred
+— see Part 2's Definition of Done); the `lensedPosition` extraction here pre-wires
+it as a one-line-per-shader follow-up.
 
 ---
 
@@ -228,7 +231,10 @@ counter placement) lives inline in `points/vertex.wesl:114-190`. The braid: the
 deflection *model* is welded to the points pipeline, so the impostor-disk and
 textured-thumbnail shaders can't reuse it. Un-braid it into a shared
 `lib/lensing.wesl` function so any galaxy-rendering shader lenses with a one-line
-call — this is the single seam the LUT slots into in Part 2 (one place, not three).
+call. This is valuable on its own as decomplection, and it is the single place the
+LUT counter math lands in Part 2 (not scattered across the assembly). It also
+pre-wires the deferred disk/quad coverage (a future one-line call per disk shader)
+without committing to that behaviour change now.
 
 **Sequenced before the LUT** so the LUT changes the counter math in exactly one
 extracted function, and so this task can prove byte-identical point rendering
@@ -412,9 +418,8 @@ uploads correctly — not yet bound to any pipeline.
 
 ## Hand-off to Part 2
 
-Phases 4–6 (scene-group wiring + vertex-stage LUT sampling + the 12-vs-6 vertex
-gate change, disk/quad coverage behaviour change + smoke test, and the final
-entanglement-radar pass) continue in
+Phases 4–5 (scene-group wiring + vertex-stage LUT sampling + the 12-vs-6 vertex
+gate change, and the final entanglement-radar pass) continue in
 [`2026-06-24-nfw-lensing-lut-part2.md`](./2026-06-24-nfw-lensing-lut-part2.md).
 
 After all of Part 1 + Part 2 ships, run `/feature-done` to gate on the Definition
