@@ -40,13 +40,14 @@ export type PointDrawSettings = {
   /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */
   pxFadeEnd: number;
   /**
-   * Shared cluster-focus bind group for the @group(3) FocusUniforms
-   * binding. The engine owns the single focus buffer (written once per
-   * frame in renderFrame) and hands its bind group here; the vertex stage
-   * dims non-members of the focused POI. At rest (`blend: 0`) the shader
-   * multiplier collapses to 1.0, so this is always supplied.
+   * Shared @group(3) scene-state bind group — cluster focus (binding 0) +
+   * the lensing buffer (binding 1). The engine owns both buffers (written
+   * once per frame in renderFrame) and assembles this group; the vertex
+   * stage dims non-members of the focused POI and deflects lensed sources.
+   * At rest (`blend: 0`, lens off) both collapse to no-ops, so this is
+   * always supplied.
    */
-  focusBindGroup: GPUBindGroup;
+  sceneBindGroup: GPUBindGroup;
   /**
    * Look up the registry-managed opacity for a given source. Called
    * once per visible source per frame from the points draw loop;

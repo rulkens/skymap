@@ -44,7 +44,7 @@ export type TexturedDiskRenderer = {
     viewProj: mat4,
     viewportPx: [number, number],
     camPos: Readonly<Vec3>,
-    focusBindGroup: GPUBindGroup,
+    sceneBindGroup: GPUBindGroup,
     instances: ReadonlyArray<DiskInstance>,
   ): void;
   /**

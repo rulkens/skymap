@@ -1,20 +1,15 @@
 /**
  * createFocusUniformBuffer — allocate the single engine-owned cluster-focus
- * uniform (buffer + bind group + scratch packer). One structure is focused at a
- * time, so one instance lives on `state.gpu.focusUniform`; `renderFrame`
- * writes it once per frame and every focus-aware pipeline (points, the
- * impostor disks, and the pick pass) binds its bind group.
+ * uniform (buffer + scratch packer). One structure is focused at a time, so
+ * one instance lives on `state.gpu.focusUniform`; `renderFrame` writes it once
+ * per frame.
  *
- * ## Why the bind group also references the lensing buffer
- *
- * The @group(3) layout (see `createFocusUniformsBgl`) co-hosts the shared
- * gravitational-lensing buffer at binding 1, because the points + pick
- * pipelines have no free 5th bind group for it. The two concerns stay
- * independent in data — separate buffers, separate packers, separate
- * per-frame `write` calls — and only this GPU bind-group object composes
- * them, forced by the 4-group cap. `renderFrame` writes the focus buffer
- * here and the lensing buffer via its own factory; this group just binds
- * both. The caller passes the engine-owned lensing buffer in.
+ * This factory owns ONLY the focus buffer. The bind group that composes focus
+ * (binding 0) with its scene-group co-tenants (the lensing buffer at binding 1,
+ * and later the lensing LUT) is assembled separately by `createSceneBindGroup`
+ * from the already-built buffers — so the per-tenant wiring grows there, not in
+ * this focus-specific factory. The buffer is exposed for that assembler to
+ * reference.
  *
  * ## Why this is the only place that packs FocusUniforms
  *
@@ -29,7 +24,6 @@
  * `lib/focusUniforms.wesl`.
  */
 
-import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { FocusUniformBuffer } from '../../../@types/rendering/FocusUniformBuffer';
 
@@ -38,29 +32,12 @@ const FOCUS_UNIFORM_BYTES = 32;
 
 export function createFocusUniformBuffer(
   device: GPUDevice,
-  focusBgl: FocusUniformsBgl,
-  // The engine's shared gravitational-lensing buffer — co-bound at
-  // @group(3) @binding(1) of this group (see the module docblock + the BGL
-  // for why lensing rides the focus group). This factory never writes it;
-  // it only references it so the points + pick vertex stages can read the
-  // lens array. Allocated by createLensingUniformBuffer before this runs.
-  lensingBuffer: GPUBuffer,
   label = 'focus',
 ): FocusUniformBuffer {
   const buffer = device.createBuffer({
     label: `${label}-focus-uniform`,
     size: FOCUS_UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  const bindGroup = device.createBindGroup({
-    label: `${label}-focus-bg`,
-    layout: focusBgl,
-    entries: [
-      { binding: 0, resource: { buffer } },
-      // binding 1: the shared lensing buffer (engine-owned, written once
-      // per frame by createLensingUniformBuffer's write(), not here).
-      { binding: 1, resource: { buffer: lensingBuffer } },
-    ],
   });
 
   // Reusable scratch: f32 for centre/radius/blend/inner. Pad words [6..7] stay zero.
@@ -78,7 +55,7 @@ export function createFocusUniformBuffer(
   }
 
   return {
-    bindGroup,
+    buffer,
     write,
     destroy(): void {
       buffer.destroy();

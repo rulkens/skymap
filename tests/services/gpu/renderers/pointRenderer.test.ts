@@ -131,7 +131,7 @@ function makeStubDevice(): GPUDevice {
 }
 
 // Stub BGLs — createPointRenderer requires fadeBgl + sourceBgl +
-// focusBgl as canonical shared layouts. These stubs satisfy the branded
+// sceneBgl as canonical shared layouts. These stubs satisfy the branded
 // opaque-newtype shape structurally.
 function makeStubFadeBgl() {
   return {} as import('../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
@@ -140,12 +140,12 @@ function makeStubSourceBgl() {
   return {} as import('../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
 }
 function makeStubFocusBgl() {
-  return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
+  return {} as import('../../../../src/@types/rendering/SceneUniformsBgl').SceneUniformsBgl;
 }
 
 // Stub shared focus bind group passed into draw() — the renderer only binds
 // it (setBindGroup(3, …)), never introspects it.
-const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
+const SCENE_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
@@ -873,7 +873,7 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       depthFadeEnabled: false,
       pxFadeStart: 0,
       pxFadeEnd: 0,
-      focusBindGroup: FOCUS_BIND_GROUP,
+      sceneBindGroup: SCENE_BIND_GROUP,
       lensEnabled: false,
       lensMode: 'sis',
       fadeOpacityOf: () => 1,
@@ -925,7 +925,7 @@ describe('PointRenderer.draw — lensing vertex count', () => {
       depthFadeEnabled: false,
       pxFadeStart: 0,
       pxFadeEnd: 0,
-      focusBindGroup: FOCUS_BIND_GROUP,
+      sceneBindGroup: SCENE_BIND_GROUP,
       lensEnabled,
       lensMode,
       fadeOpacityOf: () => 1,

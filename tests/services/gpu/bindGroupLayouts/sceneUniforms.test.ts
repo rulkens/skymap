@@ -1,16 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createFocusUniformsBgl } from '../../../../src/services/gpu/bindGroupLayouts/focusUniforms';
+import { createSceneUniformsBgl } from '../../../../src/services/gpu/bindGroupLayouts/sceneUniforms';
 
-describe('createFocusUniformsBgl', () => {
+describe('createSceneUniformsBgl', () => {
   it('builds two VERTEX-visible uniform bindings: focus (0) + lensing (1)', () => {
     const createBindGroupLayout = vi.fn().mockReturnValue({ __mock: 'bgl' });
     const fakeDevice = { createBindGroupLayout } as unknown as GPUDevice;
-    const bgl = createFocusUniformsBgl(fakeDevice);
+    const bgl = createSceneUniformsBgl(fakeDevice);
     expect(bgl).toBeDefined();
     expect(createBindGroupLayout).toHaveBeenCalledTimes(1);
     const arg = createBindGroupLayout.mock.calls[0]![0]!;
     // Slot 0 = cluster focus, slot 1 = the co-hosted shared lensing buffer.
-    // Both VERTEX-visible (see createFocusUniformsBgl's docblock for why
+    // Both VERTEX-visible (see createSceneUniformsBgl's docblock for why
     // lensing rides the focus group rather than a dedicated @group).
     expect(arg.entries).toHaveLength(2);
     expect(arg.entries[0].binding).toBe(0);

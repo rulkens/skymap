@@ -113,7 +113,7 @@ export const pointSpritesPass: Pass = {
       // + the lensing buffer (binding 1). The engine owns both, written once
       // per frame in renderFrame; we bind the group. At rest (blend 0) the
       // focus multiplier is 1.0, and an empty lens set is a no-op.
-      focusBindGroup: state.gpu.focusUniform!.bindGroup,
+      sceneBindGroup: state.gpu.sceneBindGroup!,
       // Look up the FadeRegistry opacity for each source at this frame's
       // timestamp. The renderer calls back with the numeric source code of
       // each loaded catalog; resolve it to the catalog's string id (the

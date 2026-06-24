@@ -123,7 +123,8 @@ const STATE_STUB = {
   // off state.gpu.focusUniform / state.gpu.lensingUniform; an opaque bind
   // group is all they read.
   gpu: {
-    focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
+    focusUniform: { buffer: {} as GPUBuffer, write: () => {}, destroy: () => {} },
+    sceneBindGroup: {} as GPUBindGroup,
     lensingUniform: {
       bindGroup: {} as GPUBindGroup,
       write: vi.fn<(v: unknown) => void>(),

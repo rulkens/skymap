@@ -24,7 +24,7 @@ export type ProceduralDiskRenderer = {
     viewport: [number, number],
     camPosWorld: Readonly<Vec3>,
     pxPerRad: number,
-    focusBindGroup: GPUBindGroup,
+    sceneBindGroup: GPUBindGroup,
     instances: ReadonlyArray<ProceduralDiskInstance>,
   ): void;
   /**

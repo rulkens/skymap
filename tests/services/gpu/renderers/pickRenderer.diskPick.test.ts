@@ -8,7 +8,7 @@
  *    (index 6) and optional. Pins append-not-reorder: if a future edit
  *    moves it before `structureMarkerRenderer` (index 5) or makes it
  *    required, the type assertion below fails at type-check time. (The
- *    required head is device/fadeBgl/sourceBgl/focusBgl/focusBindGroup at
+ *    required head is device/fadeBgl/sourceBgl/sceneBgl/sceneBindGroup at
  *    0..4, structureMarkerRenderer at 5. The focus bind group carries both
  *    cluster focus and the lensing buffer at @group(3).)
  *
@@ -27,7 +27,7 @@ import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/Pr
 describe('createPickRenderer disk-pick integration', () => {
   it('keeps proceduralDiskRenderer optional as the 7th positional (index 6)', () => {
     // Compile-time: the 7th parameter (index 6, after device/fadeBgl/
-    // sourceBgl/focusBgl/focusBindGroup/structureMarkerRenderer) must exist
+    // sourceBgl/sceneBgl/sceneBindGroup/structureMarkerRenderer) must exist
     // and be assignable from `undefined` (declared with `?`). Removing it,
     // making it required, or reordering it before structureMarkerRenderer
     // all break this.
@@ -69,7 +69,7 @@ function makePickStubInit() {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
-      focusBgl: {} as unknown as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
+      sceneBgl: {} as unknown as import('../../../../src/@types/rendering/SceneUniformsBgl').SceneUniformsBgl,
     },
   };
 }

@@ -41,21 +41,21 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import type { SceneUniformsBgl } from '../../../@types/rendering/SceneUniformsBgl';
 import vsCode from '../shaders/texturedDisks/vertex.wesl?static';
 import fsCode from '../shaders/texturedDisks/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
 export function createTexturedDiskRenderer(
   ctx: GpuContext,
-  focusBgl: FocusUniformsBgl,
+  sceneBgl: SceneUniformsBgl,
   maxInstances = 256,
 ): TexturedDiskRenderer {
   const inner = createInstancedQuadRenderer(ctx, {
     label: 'disk',
     vertexSource: vsCode,
     fragmentSource: fsCode,
-    focusBgl,
+    sceneBgl,
     // 'hiResArray: true' makes the shared factory append @binding(3,4)
     // (texture_2d_array + sampler) to the BGL so the fragment shader's
     // hi-res sample matches the pipeline layout. The bind group only
@@ -88,7 +88,7 @@ export function createTexturedDiskRenderer(
     viewProj: mat4,
     viewportPx: [number, number],
     camPos: Readonly<Vec3>,
-    focusBindGroup: GPUBindGroup,
+    sceneBindGroup: GPUBindGroup,
     instances: ReadonlyArray<DiskInstance>,
   ): void {
     if (instances.length === 0) return;
@@ -128,7 +128,7 @@ export function createTexturedDiskRenderer(
       instanceBytes: data,
       instanceCount: instances.length,
       camPosWorld: camPos,
-      focusBindGroup,
+      sceneBindGroup,
       // pxPerRad omitted — the disk geometry sizes itself in world
       // space, so the trailing uniform slot stays zero-padded.
     });

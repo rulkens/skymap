@@ -53,7 +53,7 @@ import colorFsCode from '../shaders/points/colorFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
-import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import type { SceneUniformsBgl } from '../../../@types/rendering/SceneUniformsBgl';
 import { packPointUniforms, UNIFORM_BYTES } from '../../../utils/gpu/packPointUniforms';
 
 // Re-export so the pick renderer and tests can obtain the buffer size
@@ -356,9 +356,9 @@ export function createPointRenderer(
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
   // @group(3): cluster-focus (binding 0) + the shared lensing buffer
-  // (binding 1). The focus bind group bound per-frame in draw() carries
-  // both — see createFocusUniformsBgl for why lensing co-hosts this group.
-  focusBgl: FocusUniformsBgl,
+  // (binding 1). The scene bind group bound per-frame in draw() carries
+  // both — see createSceneUniformsBgl for why lensing co-hosts this group.
+  sceneBgl: SceneUniformsBgl,
 ): PointRenderer {
   // Each renderer compiles its own GPUShaderModule from the shared
   // vertex source — sharing modules across pipelines hits the WebGPU
@@ -373,7 +373,7 @@ export function createPointRenderer(
       // @group(0) per-frame Uniforms (binding 0). Camera + point settings,
       // bound once per frame. The secondary pick renderers (structure rings,
       // Milky-Way) reuse this group, so it stays a single binding — lensing
-      // lives on @group(3) instead (see createFocusUniformsBgl).
+      // lives on @group(3) instead (see createSceneUniformsBgl).
       device.createBindGroupLayout({
         label: 'points-bgl-group0',
         entries: [
@@ -390,7 +390,7 @@ export function createPointRenderer(
       // the shared lensing buffer (binding 1). One POI focused at a time and
       // one lens set per frame, so both are global bindings (unlike the
       // per-source @group(1) fade / @group(2) source).
-      focusBgl,
+      sceneBgl,
     ],
   });
 
@@ -744,14 +744,14 @@ export function createPointRenderer(
     viewportPx: [number, number],
     settings: PointDrawSettings,
   ): ArrayBuffer | null {
-    const { visibleSourceMask, focusBindGroup } = settings;
+    const { visibleSourceMask, sceneBindGroup } = settings;
     if (galaxyCatalogs.size === 0) return null;
 
     // Pack the 176-byte uniform buffer (camera / points / bias / fade) — see
     // `UNIFORM_BYTES` for the layout, and `points/io.wesl::Uniforms` for the
     // WGSL-side struct. The gravitational-lensing lens data lives in its own
     // buffer, co-bound at @group(3) @binding(1) (carried by the focus bind
-    // group passed in `settings.focusBindGroup`), not in this buffer's bytes.
+    // group passed in `settings.sceneBindGroup`), not in this buffer's bytes.
     // `pickPass` is packed as 0 (visual pass) — the pick renderer applies
     // its three overrides after uploading this buffer.
     const buf = packPointUniforms(viewProj, viewportPx, settings);
@@ -773,7 +773,7 @@ export function createPointRenderer(
     // focus (binding 0) + the lensing buffer (binding 1), both written once
     // per frame in renderFrame. Bind once before the per-source loop, not
     // per source like fade/source.
-    pass.setBindGroup(3, focusBindGroup);
+    pass.setBindGroup(3, sceneBindGroup);
 
     for (const { code: source, id } of CATALOG_DRAW_ORDER) {
       const entry = galaxyCatalogs.get(id);

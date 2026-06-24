@@ -258,8 +258,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // services/gpu/bindGroupLayouts/fadeUniforms.ts (layout:'auto' trap).
       fadeBgl: null,
       sourceBgl: null,
-      focusBgl: null,
+      sceneBgl: null,
       focusUniform: null,
+      sceneBindGroup: null,
       lensingBgl: null,
       lensingUniform: null,
       postProcess: null,
@@ -654,12 +655,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
     state.gpu.renderer = null;
+    // Shared scene-state bind group — drop the reference (a bind group has no
+    // destroy; its buffers are released below).
+    state.gpu.sceneBindGroup = null;
     // Shared cluster-focus uniform — released after the renderers that bind
     // its group (points/disks/pick already destroyed above).
     state.gpu.focusUniform?.destroy();
     state.gpu.focusUniform = null;
     // Shared gravitational-lensing uniform — same lifecycle: released after
-    // the points + pick pipelines that bind its @group(4) group are gone.
+    // the points + pick pipelines that read it via the scene group are gone.
     state.gpu.lensingUniform?.destroy();
     state.gpu.lensingUniform = null;
 

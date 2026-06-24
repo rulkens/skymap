@@ -1,8 +1,8 @@
 /**
  * pickRenderer.structure.test — type-level contract that `createPickRenderer`
  * keeps `structureMarkerRenderer` as its OPTIONAL tail positional argument
- * (index 5, after the required device/fadeBgl/sourceBgl/focusBgl at 0..3 and
- * the shared `focusBindGroup` (index 4) — which carries both cluster focus
+ * (index 5, after the required device/fadeBgl/sourceBgl/sceneBgl at 0..3 and
+ * the shared `sceneBindGroup` (index 4) — which carries both cluster focus
  * and the gravitational-lensing buffer at @group(3)).
  *
  * Why type-only rather than a GPU integration test? The pick pass needs

@@ -1,6 +1,7 @@
 /**
- * FocusUniformsBgl — opaque newtype for the canonical focus-uniforms
- * bind-group layout (@group(3) on the points + pick pipelines).
+ * SceneUniformsBgl — opaque newtype for the canonical scene-state
+ * bind-group layout (@group(3) on the points + pick pipelines): cluster
+ * focus + gravitational lensing, the per-frame global galaxy modifiers.
  *
  * Like FadeUniformsBgl / SourceUniformsBgl, the newtype makes accidental
  * swaps between the three @group BGLs a type error — all three are
@@ -9,4 +10,4 @@
  * with an unhelpful error.
  */
 
-export type FocusUniformsBgl = GPUBindGroupLayout & { readonly __brand: 'FocusUniformsBgl' };
+export type SceneUniformsBgl = GPUBindGroupLayout & { readonly __brand: 'SceneUniformsBgl' };

@@ -6,7 +6,7 @@
 import type { AtlasConfig } from './AtlasConfig';
 import type { BlendMode } from './BlendMode';
 import type { CapacityStrategy } from './CapacityStrategy';
-import type { FocusUniformsBgl } from './FocusUniformsBgl';
+import type { SceneUniformsBgl } from './SceneUniformsBgl';
 
 export type InstancedQuadConfig = {
   /** Human-readable label prefix for GPU resource labels and shader
@@ -37,7 +37,7 @@ export type InstancedQuadConfig = {
    *  per instance in each consumer's vertex stage via
    *  `focusAlphaMultiplier`; the same shared layout serves every impostor
    *  pipeline so the points pass and the disks fade in lockstep. */
-  focusBgl: FocusUniformsBgl;
+  sceneBgl: SceneUniformsBgl;
   /** Visibility for the uniform binding. Defaults to `VERTEX` —
    *  matches TexturedQuadRenderer + TexturedDiskRenderer. ProceduralDiskRenderer
    *  passes `VERTEX | FRAGMENT` to mirror its existing BGL even

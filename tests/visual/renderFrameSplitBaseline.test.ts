@@ -338,7 +338,8 @@ describe('renderFrame visual baseline', () => {
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.
-          focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
+          focusUniform: { buffer: {}, write: () => {}, destroy: () => {} },
+          sceneBindGroup: {} as GPUBindGroup,
           lensingUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
         // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.

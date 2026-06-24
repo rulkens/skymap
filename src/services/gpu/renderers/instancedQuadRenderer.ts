@@ -111,7 +111,7 @@ export function createInstancedQuadRenderer(
     capacity,
     blend,
     format,
-    focusBgl,
+    sceneBgl,
     uniformVisibility = GPUShaderStage.VERTEX,
   } = config;
 
@@ -172,7 +172,7 @@ export function createInstancedQuadRenderer(
       // pipeline (which carries fade@1 + source@2 and so parks focus at
       // @group(3)), the impostor pipelines have no intervening groups, so
       // focus sits at the first free slot.
-      bindGroupLayouts: [bindGroupLayout, focusBgl],
+      bindGroupLayouts: [bindGroupLayout, sceneBgl],
     }),
     vertex: {
       module: vsModule,
@@ -320,10 +320,10 @@ export function createInstancedQuadRenderer(
     instanceCount: number;
     camPosWorld?: Readonly<Vec3>;
     pxPerRad?: number;
-    /** Shared cluster-focus bind group (bound at @group(1)). Built once by
-     *  the engine against the canonical focusBgl; the same group serves
+    /** Shared scene bind group (bound at @group(1)). Built once by
+     *  the engine against the canonical sceneBgl; the same group serves
      *  every impostor pipeline. */
-    focusBindGroup: GPUBindGroup;
+    sceneBindGroup: GPUBindGroup;
   }): void {
     if (args.instanceCount === 0) return;
     if (!bindGroup) return; // atlas-capable renderer with no atlas bound yet
@@ -372,7 +372,7 @@ export function createInstancedQuadRenderer(
 
     args.pass.setPipeline(pipeline);
     args.pass.setBindGroup(0, bindGroup);
-    args.pass.setBindGroup(1, args.focusBindGroup);
+    args.pass.setBindGroup(1, args.sceneBindGroup);
     args.pass.setVertexBuffer(0, instanceBuffer!);
     args.pass.draw(6, args.instanceCount, 0, 0);
   }

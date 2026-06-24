@@ -4,7 +4,7 @@
  * stage) and, in a later phase, the MCPM volume raymarch (read in the
  * fragment stage).
  *
- * Like FocusUniformsBgl / FadeUniformsBgl / SourceUniformsBgl, the brand
+ * Like SceneUniformsBgl / FadeUniformsBgl / SourceUniformsBgl, the brand
  * makes accidental swaps between the @group BGLs a type error — all are
  * `GPUBindGroupLayout` at the GPU level, but mixing them up silently
  * produces a wrong-binding pipeline that fails validation at draw time with

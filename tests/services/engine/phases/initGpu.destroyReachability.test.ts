@@ -63,7 +63,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 }));
 
 // The canonical BGLs are constructed in initGpu by calling
-// createFadeUniformsBgl / createSourceUniformsBgl / createFocusUniformsBgl,
+// createFadeUniformsBgl / createSourceUniformsBgl / createSceneUniformsBgl,
 // all of which call device.createBindGroupLayout. The mock device returned
 // by the gpuInitGpu mock is a plain object without WebGPU methods, so we
 // mock the BGL factories directly instead of stubbing the device.
@@ -73,8 +73,8 @@ vi.mock('../../../../src/services/gpu/bindGroupLayouts/fadeUniforms', () => ({
 vi.mock('../../../../src/services/gpu/bindGroupLayouts/sourceUniforms', () => ({
   createSourceUniformsBgl: vi.fn(() => ({ __mockSourceBgl: true })),
 }));
-vi.mock('../../../../src/services/gpu/bindGroupLayouts/focusUniforms', () => ({
-  createFocusUniformsBgl: vi.fn(() => ({ __mockFocusBgl: true })),
+vi.mock('../../../../src/services/gpu/bindGroupLayouts/sceneUniforms', () => ({
+  createSceneUniformsBgl: vi.fn(() => ({ __mockFocusBgl: true })),
 }));
 vi.mock('../../../../src/services/gpu/bindGroupLayouts/lensingUniforms', () => ({
   createLensingUniformsBgl: vi.fn(() => ({ __mockLensingBgl: true })),
@@ -84,10 +84,13 @@ vi.mock('../../../../src/services/gpu/bindGroupLayouts/lensingUniforms', () => (
 // device stub here has no createBuffer, so mock the factories to no-op handles.
 vi.mock('../../../../src/services/gpu/resources/createFocusUniformBuffer', () => ({
   createFocusUniformBuffer: vi.fn(() => ({
-    bindGroup: { __mockFocusBindGroup: true },
+    buffer: { __mockFocusBuffer: true },
     write: () => {},
     destroy: () => {},
   })),
+}));
+vi.mock('../../../../src/services/gpu/resources/createSceneBindGroup', () => ({
+  createSceneBindGroup: vi.fn(() => ({ __mockSceneBindGroup: true })),
 }));
 vi.mock('../../../../src/services/gpu/resources/createLensingUniformBuffer', () => ({
   createLensingUniformBuffer: vi.fn(() => ({
