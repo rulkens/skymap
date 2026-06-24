@@ -17,9 +17,13 @@ import reducer, {
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,
+  startClip,
+  endClip,
+  resolveClipStart,
 } from '../../../src/state/camera/cameraSlice';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
+import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { EngineSubsystemHandles } from '../../../src/@types/engine/handles/EngineSubsystemHandles';
 
 // ── Compile-time freeze guards ──────────────────────────────────────────────
@@ -127,11 +131,11 @@ describe('cameraSlice — initial state is serialisable', () => {
 });
 
 describe('cameraSlice — frozen surface', () => {
-  it('the slice state is exactly { base, tween, autoRotate, dragging }', () => {
+  it('the slice state is exactly { base, tween, autoRotate, dragging, clip }', () => {
     // Pins the camera Intent surface: the cutover folded the whole mutable
-    // OrbitCamera into these four fields. A new key here means new Intent that
+    // OrbitCamera into these fields. A new key here means new Intent that
     // should have been deliberated, not slipped in.
-    expect(Object.keys(base()).sort()).toEqual(['autoRotate', 'base', 'dragging', 'tween']);
+    expect(Object.keys(base()).sort()).toEqual(['autoRotate', 'base', 'clip', 'dragging', 'tween']);
   });
 
   it('the tween descriptor is exactly { from, to, durationMs, easing } — no wall-clock', () => {
@@ -142,5 +146,69 @@ describe('cameraSlice — frozen surface', () => {
     expect(json).not.toContain('"startMs"');
     expect(json).not.toContain('"position"');
     expect(json).not.toContain('"fovYRad"');
+  });
+});
+
+// ── Shared clip fixture ───────────────────────────────────────────────────────
+// Minimal ClipData — `timeline` can be empty for slice-level tests; the
+// compiler and evaluator (Tasks 4/8) test richer descriptors separately.
+const clipData: ClipData = { start: 'live', timeline: [] };
+
+const livePose: CameraPose = { target: [10, 20, 30], yaw: 1.0, pitch: -0.5, distance: 50 };
+
+describe('cameraSlice — clip lifecycle', () => {
+  it('startClip stores the clip data', () => {
+    const next = reducer(base(), startClip(clipData));
+    // Reference equality: the reducer stores the exact payload object.
+    expect(next.clip!.data).toBe(clipData);
+  });
+
+  it('endClip clears clip to null', () => {
+    const withClip = reducer(base(), startClip(clipData));
+    const cleared = reducer(withClip, endClip());
+    expect(cleared.clip).toBeNull();
+  });
+
+  it('endClip also clears a dormant tween', () => {
+    // A focus saga may plant a tween before/during a clip; once the clip@95
+    // driver deactivates, an un-cleared @60 tween would outrank resting@0.
+    const withBoth = reducer(
+      reducer(base(), startCameraTween(tween)),
+      startClip(clipData),
+    );
+    const cleared = reducer(withBoth, endClip());
+    expect(cleared.clip).toBeNull();
+    expect(cleared.tween).toBeNull();
+  });
+
+  it('initial clip state is null', () => {
+    expect(base().clip).toBeNull();
+  });
+});
+
+describe('resolveClipStart', () => {
+  it("swaps 'live' for the live pose and returns a new object", () => {
+    const resolved = resolveClipStart(clipData, livePose);
+    // `start` is now the concrete live pose
+    expect(resolved.start).toEqual(livePose);
+    // Must be a NEW object — Task 8 clock keys on reference identity.
+    expect(resolved).not.toBe(clipData);
+  });
+
+  it('treats undefined start the same as live', () => {
+    const noStart: ClipData = { timeline: [] };
+    const resolved = resolveClipStart(noStart, livePose);
+    expect(resolved.start).toEqual(livePose);
+    expect(resolved).not.toBe(noStart);
+  });
+
+  it('passes a concrete start through unchanged', () => {
+    const concretePose: CameraPose = { target: [1, 2, 3], yaw: 0.1, pitch: 0.2, distance: 5 };
+    const withConcrete: ClipData = { start: concretePose, timeline: [] };
+    const resolved = resolveClipStart(withConcrete, livePose);
+    // The concrete pose is passed through — livePose is not substituted.
+    expect(resolved.start).toBe(concretePose);
+    // Still a new wrapper object.
+    expect(resolved).not.toBe(withConcrete);
   });
 });
