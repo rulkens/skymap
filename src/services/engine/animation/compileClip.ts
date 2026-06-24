@@ -50,8 +50,9 @@
  *
  * ### Single-writer check
  *
- * TODO: call `validateSingleWriter(compiled.baseTracks)` here once Task 5 wires
- * it in. The check is intentionally deferred; this call site is the right hook.
+ * After building `baseTracks`, `compileClip` calls `validateSingleWriter` to
+ * assert that no two base writers overlap on any channel. Any clash throws
+ * immediately at registration time, before the `CompiledClip` is returned.
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
@@ -60,6 +61,7 @@ import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import { CHANNEL_SPACE } from './channelSpace';
+import { validateSingleWriter } from './validateSingleWriter';
 
 // ---------------------------------------------------------------------------
 // Zero pose — used when start is 'live' or absent (placeholder; resolved by
@@ -225,9 +227,9 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
  * @param data  The authored clip description.
  * @returns     A `CompiledClip` ready for the evaluator.
  *
- * @throws      (Task 5) Will throw via `validateSingleWriter` when a base-layer
- *              write clash is detected on a channel. The check is not yet wired
- *              in — see the TODO in the module header.
+ * @throws      Throws via `validateSingleWriter` when a base-layer write clash
+ *              is detected on a channel (two overlapping `[start, end)` windows
+ *              on the same channel's base track).
  */
 export function compileClip(data: ClipData): CompiledClip {
   const preroll = data.preroll ?? 0;
@@ -283,8 +285,7 @@ export function compileClip(data: ClipData): CompiledClip {
     ]),
   ) as Record<Channel, BaseSegment[]>;
 
-  // TODO (Task 5): validateSingleWriter(baseTracks) — call here once the
-  // single-writer check is wired in.
+  validateSingleWriter(baseTracks);
 
   return {
     start,
