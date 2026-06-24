@@ -135,13 +135,10 @@ export const selectDisabledPasses = (state: RootState): Record<string, boolean> 
 export const selectLensingEnabled = (state: RootState): boolean =>
   selectSettings(state).debug.lensingEnabled;
 
-export const selectLensStrengthDeg = (state: RootState): number =>
-  selectSettings(state).debug.lensStrengthDeg;
+export const selectLensStrength = (state: RootState): number =>
+  selectSettings(state).debug.lensStrength;
 
 export const selectLensMode = (state: RootState): LensMode => selectSettings(state).debug.lensMode;
-
-export const selectLensScaleRadiusMpc = (state: RootState): number =>
-  selectSettings(state).debug.lensScaleRadiusMpc;
 
 // --- structures cluster -------------------------------------------------------
 

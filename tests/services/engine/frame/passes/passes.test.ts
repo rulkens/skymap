@@ -427,9 +427,8 @@ const POINT_SPRITES_SETTINGS_STUB = {
   },
   debug: {
     lensingEnabled: false,
-    lensStrengthDeg: 3,
+    lensStrength: 1,
     lensMode: 'sis',
-    lensScaleRadiusMpc: 1,
   },
 } as unknown as EngineState['settings'];
 

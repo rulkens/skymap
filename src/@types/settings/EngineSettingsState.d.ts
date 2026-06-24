@@ -201,24 +201,19 @@ export type EngineSettingsState = {
      */
     lensingEnabled: boolean;
     /**
-     * Peak deflection in DEGREES (UI units) — the Einstein-ring radius in
-     * SIS mode, the peak deflection in NFW mode. Real cluster Einstein
-     * radii are tens of arcseconds — invisible at typical zoom — so this
-     * is an exaggeration knob, converted to radians before upload. The
-     * deflection scales with this and with the source's D_ls/D_s.
+     * Dimensionless lensing strength multiplier. 0 = no lensing, 1 = the
+     * real physical effect (per-cluster R500-derived α∞), slider runs to
+     * ~1000× for visible exaggeration. The per-source D_ls/D_s geometric
+     * factor still applies in-shader, so sources at different distances
+     * deflect differently even at a fixed strength.
      */
-    lensStrengthDeg: number;
+    lensStrength: number;
     /**
      * Lensing profile: `'sis'` (constant deflection, one ring) or `'nfw'`
      * (g(x)/x — deflection peaks near the scale radius, adds a radial
      * critical curve). See `lib/lensing.wesl`.
      */
     lensMode: LensMode;
-    /**
-     * NFW scale radius r_s in Mpc — sets where the deflection peaks (the
-     * ring radius). Ignored in SIS mode.
-     */
-    lensScaleRadiusMpc: number;
   };
 
   /**

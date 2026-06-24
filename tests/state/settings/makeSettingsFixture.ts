@@ -37,9 +37,8 @@ import {
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_LENSING_ENABLED,
-  DEFAULT_LENS_STRENGTH_DEG,
+  DEFAULT_LENS_STRENGTH,
   DEFAULT_LENS_MODE,
-  DEFAULT_LENS_SCALE_RADIUS_MPC,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
@@ -83,9 +82,8 @@ export function makeSettingsFixture(
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       disabledPasses: {},
       lensingEnabled: DEFAULT_LENSING_ENABLED,
-      lensStrengthDeg: DEFAULT_LENS_STRENGTH_DEG,
+      lensStrength: DEFAULT_LENS_STRENGTH,
       lensMode: DEFAULT_LENS_MODE,
-      lensScaleRadiusMpc: DEFAULT_LENS_SCALE_RADIUS_MPC,
     },
     structures: {
       enabled: true,

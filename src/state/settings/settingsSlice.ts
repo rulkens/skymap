@@ -162,14 +162,11 @@ const settingsSlice = createSlice({
     setLensingEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.debug.lensingEnabled = action.payload;
     },
-    setLensStrengthDeg: (settings, action: PayloadAction<number>) => {
-      settings.debug.lensStrengthDeg = action.payload;
+    setLensStrength: (settings, action: PayloadAction<number>) => {
+      settings.debug.lensStrength = action.payload;
     },
     setLensMode: (settings, action: PayloadAction<LensMode>) => {
       settings.debug.lensMode = action.payload;
-    },
-    setLensScaleRadiusMpc: (settings, action: PayloadAction<number>) => {
-      settings.debug.lensScaleRadiusMpc = action.payload;
     },
 
     // ── structures ──────────────────────────────────────────────────────────
@@ -225,9 +222,8 @@ export const {
   setShowDiskRadiusRing,
   setPassDisabled,
   setLensingEnabled,
-  setLensStrengthDeg,
+  setLensStrength,
   setLensMode,
-  setLensScaleRadiusMpc,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,

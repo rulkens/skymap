@@ -280,20 +280,14 @@ export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
 export const DEFAULT_LENSING_ENABLED = false;
 
 /**
- * Default exaggerated peak deflection in DEGREES.  Real cluster Einstein
- * radii are tens of arcseconds (~0.01°); 3° is wildly exaggerated so the
- * ring is visible while orbiting a cluster.  See
- * `EngineSettingsState.debug.lensStrengthDeg`.
+ * Default dimensionless lensing strength multiplier.  0 = no lensing,
+ * 1 = the real physical effect (per-cluster R500-derived α∞), slider runs
+ * to ~1000× for visible exaggeration while orbiting a cluster.  The
+ * per-source D_ls/D_s geometric factor still applies in-shader, so the
+ * visual deflection varies by source distance even at a fixed strength.
+ * See `EngineSettingsState.debug.lensStrength`.
  */
-export const DEFAULT_LENS_STRENGTH_DEG = 3.0;
+export const DEFAULT_LENS_STRENGTH = 1.0;
 
 /** Default lensing profile.  See `EngineSettingsState.debug.lensMode`. */
 export const DEFAULT_LENS_MODE: LensMode = 'sis';
-
-/**
- * Default NFW scale radius r_s in Mpc — sets where the deflection peaks
- * (the ring radius).  ~1 Mpc gives a visible ring while orbiting a cluster
- * at the prototype's exaggerated scales.  See
- * `EngineSettingsState.debug.lensScaleRadiusMpc`.
- */
-export const DEFAULT_LENS_SCALE_RADIUS_MPC = 1.0;
