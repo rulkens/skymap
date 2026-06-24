@@ -192,27 +192,27 @@ truncation is visible, not silent (spec line 120).
 
 **Tests** (assertions are the acceptance criteria):
 
-- [ ] `buildNfwLensLut packs width*height*4 f32 values` — asserts
+- [x] `buildNfwLensLut packs width*height*4 f32 values` — asserts
   `lut.data.length === width * height * 4` for a small `(8, 4, …)` grid.
-- [ ] `s→0 leaves the primary at x≈y with μ≈1` — at the smallest `s` row, for a
+- [x] `s→0 leaves the primary at x≈y with μ≈1` — at the smallest `s` row, for a
   mid-range `y`, asserts `xPrimary ≈ y` (tolerance ~`yMax/width`) and
   `muPrimary ≈ 1` (tol ~1e-2), and `xCounter === 0` (no secondary).
-- [ ] `s→0 produces no counter image` — across the smallest-`s` row, asserts
+- [x] `s→0 produces no counter image` — across the smallest-`s` row, asserts
   every cell has `xCounter === 0 && muCounter === 0`.
-- [ ] `super-critical s yields two opposite-side images for small y` — for a
+- [x] `super-critical s yields two opposite-side images for small y` — for a
   large `s` and a small `y` inside the caustic, asserts `xPrimary > 0` and
   `xCounter < 0` (opposite sides of the lens centre) and `muCounter !== 0`.
-- [ ] `magnifications are clamped to MU_MAX` — asserts no `|mu*|` in `data`
+- [x] `magnifications are clamped to MU_MAX` — asserts no `|mu*|` in `data`
   exceeds `MU_MAX` even for a near-caustic cell.
-- [ ] `dropped third image is counted, not silent` — for a grid/`s` range known
+- [x] `dropped third image is counted, not silent` — for a grid/`s` range known
   to produce a three-root cell, asserts the build warns (spy on `console.warn`)
   rather than silently keeping only two. (If no `(width,height,yMax,sMax)` in the
   test's reach produces three roots, assert the warn path is reachable via a
   crafted small grid; do not fabricate a passing assertion against a path that
   can't fire — escalate instead.)
-- [ ] `npm test -- buildNfwLensLut` → all pass.
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit.
+- [x] `npm test -- buildNfwLensLut` → all pass.
+- [x] `npm run typecheck` → clean.
+- [x] Commit.
 
 > **Calibration note (spec open-questions 1 & 2):** `yMax`, `sMax`, the `LOG_K`
 > base, and the `(width, height)` default (`256 × 64` per spec line 132) are the
