@@ -31,10 +31,12 @@
  *      dispatch `cancelCameraTween()`. The tween deactivates on the NEXT frame;
  *      this frame's pose is already == to exactly (saturation). No activeId change
  *      here — the commit fires on the next frame's deactivation edge.
- *   3. COMMIT-ON-EDGE: if the winning driver CHANGED AWAY FROM 'tween' or
- *      'autoRotate', fold the last produced pose into `base` exactly once.
- *      `orbitDrag` and `resting` are excluded (orbitDrag commits via
- *      `onGestureEnd`; resting's pose IS `base`).
+ *   3. COMMIT-ON-EDGE: if the winning driver changed, and the PREVIOUS driver
+ *      has `commitsOnEdge: true`, fold the last produced pose into `base`
+ *      exactly once. Drivers that declare this flag (tween, autoRotate, clip)
+ *      must bake their saturated pose into base on deactivation. `orbitDrag`
+ *      and `resting` are excluded (orbitDrag commits via `onGestureEnd`;
+ *      resting's pose IS `base`).
  *   4. UPDATE Resources: `prevActiveId.current = activeId`,
  *      `lastPose.current = pose`.
  *
@@ -170,11 +172,19 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── (3) COMMIT-ON-EDGE: fold the last produced pose into base, once ───────
   //
-  // Fires when the active driver CHANGED AWAY FROM a tween or autoRotate driver.
-  // `orbitDrag` and `resting` are deliberately excluded:
+  // Fires when the active driver changed AND the departing driver declared
+  // `commitsOnEdge: true`. Drivers that declare this (tween, autoRotate, clip)
+  // must bake their final pose into `base` on deactivation so the camera holds
+  // the saturated pose rather than snapping back to the pre-animation base.
+  // `orbitDrag` and `resting` do NOT declare it:
   //   - orbitDrag commits via `onGestureEnd` (the synchronous DOM handler),
   //     which bakes the final cam pose before the next frame sees dragging=false.
   //   - resting's pose IS base; committing it is a noise-write.
+  //
+  // Reading the flag off the driver row (rather than a hardcoded id set) means
+  // adding a new committing driver is a one-line declaration in buildCameraDrivers,
+  // with no surgery here. The clip driver is among them: its deactivation edge
+  // bakes the final composed pose into base for free.
   //
   // `lastPose.current` at this point holds the PREVIOUS frame's pose (it has
   // not been updated for this frame yet — that happens in step 4). So when the
@@ -186,14 +196,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The pose this frame actually renders. Normally the freshly produced pose;
   // on a deactivation edge it is overridden to the just-committed pose (below).
   let renderPose = pose;
-  if (prev !== activeId && (prev === 'tween' || prev === 'autoRotate')) {
+  if (prev !== activeId && deps.drivers.find((d) => d.id === prev)?.commitsOnEdge) {
     deps.cb.store.dispatch(commitCameraPose(lastPose.current));
     // Commit-on-edge fires AFTER produce, so the produce step above ran the
     // INCOMING driver against the PRE-commit `base`. For a driver that reads
     // `base` (resting / autoRotate) that pose is the stale pre-edge value —
-    // rendering it flashes the camera back to where the tween or spin started
-    // for one frame. `lastPose.current` is the animation's final pose and the
-    // value we just baked into `base`, so render THAT this frame instead.
+    // rendering it flashes the camera back to where the tween, spin, or clip
+    // started for one frame. `lastPose.current` is the animation's final pose
+    // and the value we just baked into `base`, so render THAT this frame instead.
     renderPose = lastPose.current;
   }
 

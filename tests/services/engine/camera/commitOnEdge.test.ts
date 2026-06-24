@@ -6,7 +6,8 @@
  *   1. PRODUCE the pose from the driver table (runCameraDrivers).
  *   2. TWEEN COMPLETION: cancel a finished tween with cancelCameraTween().
  *   3. COMMIT-ON-EDGE: dispatch commitCameraPose(lastPose) when the active
- *      driver changes AWAY FROM 'tween' or 'autoRotate'.
+ *      driver changes AND the departing driver has `commitsOnEdge: true`
+ *      (tween, autoRotate, clip). orbitDrag and resting are excluded.
  *   4. UPDATE Resources: prevActiveId.current = activeId; lastPose.current = pose.
  *
  * These tests pin the commit-on-edge contract — the invariants that prevent
@@ -18,9 +19,13 @@
  *   - While the tween is the active driver, no `commitCameraPose` fires
  *     per frame — only on the deactivation edge.
  *   - When auto-rotate deactivates, `commitCameraPose` fires exactly once.
+ *   - When a clip deactivates (clip → null), `commitCameraPose` fires exactly
+ *     once (clip declares `commitsOnEdge: true`).
  *   - Grabbing during a tween (orbitDrag takes over) does NOT produce a
  *     jump: the grab seeds from `lastPose.current` (the visible position),
  *     not from `base` (the stale committed pose).
+ *   - orbitDrag and resting deactivation edges do NOT fire commitCameraPose
+ *     (neither declares `commitsOnEdge`).
  *   - The auto-rotate bridge fires `setAutoRotate` when settings bit ≠
  *     camera slice bit; on steady-state frames it is a no-op.
  *
@@ -40,7 +45,10 @@ import {
   beginDrag,
   endDrag,
   setAutoRotate,
+  startClip,
+  endClip,
 } from '../../../../src/state/camera/cameraSlice';
+import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import {
   buildCameraDrivers,
   runCameraDrivers,
@@ -97,7 +105,8 @@ function makeStore() {
  * Simulate one frame of the commit-on-edge logic:
  *   1. Produce pose via runCameraDrivers.
  *   2. If activeId === 'tween' and elapsed >= durationMs, dispatch cancelCameraTween.
- *   3. If prevActiveId changed away from 'tween' or 'autoRotate', dispatch commitCameraPose.
+ *   3. If prevActiveId changed AND the departing driver has commitsOnEdge: true,
+ *      dispatch commitCameraPose (mirrors runFrame's property-based guard).
  *   4. Update prevActiveId and lastPose.
  *
  * Returns { pose, activeId, committed } so tests can inspect per-frame output.
@@ -126,9 +135,11 @@ function simulateFrame(
   // Step 3: Commit-on-edge. On a deactivation edge the frame renders the
   // just-committed pose (lastPose), not the stale-base produce result — mirrors
   // runFrame's `renderPose` override that prevents the one-frame edge flicker.
+  // MIRROR: this guard must stay identical to runFrame's property-based guard so
+  // the clip case reflects real production behaviour.
   const prev = prevActiveId.current;
   let renderPose = pose;
-  if (prev !== currActiveId && (prev === 'tween' || prev === 'autoRotate')) {
+  if (prev !== currActiveId && drivers.find((d) => d.id === prev)?.commitsOnEdge) {
     store.dispatch(commitCameraPose(lastPose.current));
     committed = true;
     renderPose = lastPose.current;
@@ -383,6 +394,61 @@ describe('commitOnEdge — no-jump-on-grab', () => {
 
     // Cleanup.
     store.dispatch(endDrag());
+  });
+});
+
+describe('commitOnEdge — clip deactivation', () => {
+  it('commit fires when a clip deactivates (clip → null edge)', () => {
+    // clip declares commitsOnEdge: true, so the frame after endClip() must
+    // dispatch commitCameraPose exactly once.
+    const store = makeStore();
+    const { state } = makeEngineState();
+    const drivers = buildCameraDrivers(state as unknown as EngineState);
+
+    const START_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 80 };
+    const clip: ClipData = { start: START_POSE, timeline: [] };
+
+    // Activate the clip driver.
+    store.dispatch(startClip(clip));
+    // Seed prevActiveId so there's no spurious commit on the first frame.
+    state.cameraRuntime.prevActiveId.current = 'clip';
+
+    // Run one frame with the clip active — no commit expected.
+    const frame1 = simulateFrame(state, store, drivers, 0);
+    expect(frame1.activeId).toBe('clip');
+    expect(frame1.committed).toBe(false);
+
+    // Deactivate the clip.
+    store.dispatch(endClip());
+
+    // Next frame: driver changes from 'clip' to 'resting' → commit fires.
+    const frame2 = simulateFrame(state, store, drivers, 16);
+    expect(frame2.activeId).toBe('resting');
+    expect(frame2.committed).toBe(true);
+  });
+
+  it('commit does NOT fire on an orbitDrag deactivation edge', () => {
+    // orbitDrag has no commitsOnEdge; endDrag() commits via onGestureEnd instead.
+    const store = makeStore();
+    const { state } = makeEngineState();
+    const drivers = buildCameraDrivers(state as unknown as EngineState);
+
+    store.dispatch(beginDrag());
+    state.cameraRuntime.prevActiveId.current = 'orbitDrag';
+
+    // Frame with drag active — no commit.
+    const frame1 = simulateFrame(state, store, drivers, 0);
+    expect(frame1.activeId).toBe('orbitDrag');
+    expect(frame1.committed).toBe(false);
+
+    // End the drag gesture.
+    store.dispatch(endDrag());
+
+    // Next frame: driver changes from 'orbitDrag' to 'resting' — no commit
+    // because orbitDrag does not declare commitsOnEdge.
+    const frame2 = simulateFrame(state, store, drivers, 16);
+    expect(frame2.activeId).toBe('resting');
+    expect(frame2.committed).toBe(false);
   });
 });
 
