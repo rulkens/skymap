@@ -1,62 +1,98 @@
 import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import type { LensSpec } from '../../@types/rendering/LensSpec';
 import type { Vec3 } from '../../@types/math/Vec3';
+import { clusterLensDeflection } from './clusterLensDeflection';
 
 /**
- * Select and weight the in-view cluster lenses for one frame.
+ * Select the in-view cluster lenses for one frame and precompute their
+ * eye-relative geometry.
  *
- * Gravitational lensing in the points pass needs a short list of foreground
- * clusters, each with an Einstein radius. This picks them:
+ * ### What drives lensing
  *
- *   - Only `category === 'cluster'` structures lens (superclusters/voids/groups
- *     are diffuse or underdense — not point-like deflectors).
- *   - Only clusters IN FRONT of the camera (a background source must sit behind
- *     the lens to be deflected; a cluster behind the eye can't lens what you
- *     see). "In front" is `dot(cam→cluster, cam→target) > 0`.
- *   - Each cluster's Einstein radius is the master angle scaled by its
- *     normalised-M500 `significance` (a coarse mass proxy). Clusters with no
- *     significance carry no mass estimate, so they're skipped rather than given
- *     an invented strength.
- *   - Capped to the `maxLenses` most significant, since the shader loops over
- *     every lens per vertex (the per-vertex ALU + iOS-headroom bound).
+ * Lensing is now driven by each cluster's PHYSICAL R500 (`physicalRadiusMpc`)
+ * via the SIS closed-form `α∞ = K · R500²` from `clusterLensDeflection`.
+ * Every cluster with a positive R500 can lens — `significance` is a display
+ * weight (ring brightness, label priority) but carries no lensing meaning.
+ * Sorting by R500 descending (equivalently by α∞, since α∞ ∝ R500²) and
+ * capping to `maxLenses` keeps the most strongly-deflecting clusters when
+ * the cap bites.
  *
- * `masterThetaRad` is the UI Einstein radius (radians) for a significance-1
- * cluster; `0` (slider at rest) returns no lenses. The result feeds
- * `LensingUniformsValue.lenses` → `packLensingUniforms` (the shared lensing
- * buffer written once per frame in `renderFrame`).
+ * ### lensStrength
+ *
+ * `lensStrength` is a dimensionless multiplier applied to `α∞`:
+ *   - 0   → off (early-out; no lenses returned)
+ *   - 1   → physical deflection (tens of arcsec for a Coma-class cluster)
+ *   - ~1000 → artistically exaggerated, visible to the eye
+ *
+ * ### Eye-relative geometry
+ *
+ * `dirLens` and `dL` are precomputed here so the shader does no per-vertex
+ * world-space subtract, length, or normalize. Both are derived from the same
+ * `toLens = worldPos − camPos` vector used for the in-front dot test — it is
+ * never recomputed. The shader receives `dirLens` (unit vector, eye → cluster)
+ * and `dL` (Mpc distance), and applies only the per-source `D_ls/D_s` factor
+ * at draw time.
+ *
+ * ### Geometry is frame-local
+ *
+ * The result is valid only for the current camera pose. Call once per frame
+ * before writing `packLensingUniforms`.
+ *
+ *   - Only `category === 'cluster'` structures lens; superclusters, voids, and
+ *     groups are diffuse or underdense — not point-like deflectors.
+ *   - Only clusters IN FRONT of the camera (`dot(cam→cluster, cam→target) > 0`).
+ *   - Capped to `maxLenses` per the shader's ALU + iOS headroom budget.
  */
 export function buildClusterLenses(
   structures: readonly StructureInfo[],
   camPos: Readonly<Vec3>,
   target: Readonly<Vec3>,
-  masterThetaRad: number,
+  lensStrength: number,
   maxLenses: number,
 ): LensSpec[] {
-  if (masterThetaRad <= 0 || maxLenses <= 0) return [];
+  if (lensStrength <= 0 || maxLenses <= 0) return [];
 
-  // Camera forward (need not be unit — we only test the sign of the dot).
+  // Camera forward vector — need not be unit; we only test the sign of the dot.
   const fx = target[0] - camPos[0];
   const fy = target[1] - camPos[1];
   const fz = target[2] - camPos[2];
 
-  const candidates: { center: Vec3; significance: number }[] = [];
+  type Candidate = { dirLens: Vec3; dL: number; physicalRadiusMpc: number };
+  const candidates: Candidate[] = [];
+
   for (const s of structures) {
     if (s.category !== 'cluster') continue;
-    const significance = s.significance ?? 0;
-    if (significance <= 0) continue;
+    if (s.physicalRadiusMpc <= 0) continue;
 
-    const dx = s.worldPos[0] - camPos[0];
-    const dy = s.worldPos[1] - camPos[1];
-    const dz = s.worldPos[2] - camPos[2];
+    // Reuse toLens for both the in-front dot test and the geometry computation.
+    const tx = s.worldPos[0] - camPos[0];
+    const ty = s.worldPos[1] - camPos[1];
+    const tz = s.worldPos[2] - camPos[2];
+
     // In front of the camera: positive projection onto the view direction.
-    if (dx * fx + dy * fy + dz * fz <= 0) continue;
+    if (tx * fx + ty * fy + tz * fz <= 0) continue;
 
-    candidates.push({ center: [s.worldPos[0], s.worldPos[1], s.worldPos[2]], significance });
+    const dL = Math.sqrt(tx * tx + ty * ty + tz * tz);
+    // Skip degenerate case where the cluster is exactly at the camera position —
+    // cannot normalise a zero-length vector.
+    if (dL <= 0) continue;
+
+    const dirLens: Vec3 = [tx / dL, ty / dL, tz / dL];
+    candidates.push({ dirLens, dL, physicalRadiusMpc: s.physicalRadiusMpc });
   }
 
-  // Most massive first, then keep the top maxLenses.
-  candidates.sort((a, b) => b.significance - a.significance);
+  // Sort by R500 descending (monotone in α∞ since α∞ ∝ R500²) so the most
+  // strongly-deflecting clusters survive the cap.
+  candidates.sort((a, b) => b.physicalRadiusMpc - a.physicalRadiusMpc);
   candidates.length = Math.min(candidates.length, maxLenses);
 
-  return candidates.map((c) => ({ center: c.center, thetaERad: masterThetaRad * c.significance }));
+  return candidates.map((c) => {
+    const { alphaInfRad, rsMpc } = clusterLensDeflection(c.physicalRadiusMpc);
+    return {
+      dirLens: c.dirLens,
+      dL: c.dL,
+      thetaERad: lensStrength * alphaInfRad,
+      rsMpc,
+    };
+  });
 }
