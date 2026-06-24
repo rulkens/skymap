@@ -325,11 +325,14 @@ and **snaps the camera to the focus framing** — defeating commit-on-edge's bak
 > reducer suffices — the tween clock resets by descriptor-reference change on the next
 > plant, so no Resource side-effect is needed and no saga arm is warranted.
 
-- [ ] Confirm Plan A Task 7's tests exist and pass: `endClip also clears a dormant
+- [x] Confirm Plan A Task 7's tests exist and pass: `endClip also clears a dormant
   tween` (both fields non-null → `endClip()` nulls both) and the no-planted-tween
   no-op. If Plan A's reducer does NOT clear `camera.tween`, STOP and report — do not
   add a competing `takeEvery(endClip, …)` saga arm here.
-- [ ] `npm test -- cameraSlice` (Plan A's teardown tests) → green; `npm run typecheck`
+  *(Verified: `cameraSlice.ts:112-115` `endClip` reducer sets both `camera.clip=null`
+  and `camera.tween=null`; tests `endClip also clears a dormant tween` + `endClip
+  clears clip to null` present and green. Single teardown home — no saga arm added.)*
+- [x] `npm test -- cameraSlice` (Plan A's teardown tests) → green (20/20); `npm run typecheck`
   → green. No commit (no code change).
 
 ## Task 5 — Suspend `watchFocusTween` while a clip plays
