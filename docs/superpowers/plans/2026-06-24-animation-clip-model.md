@@ -547,12 +547,12 @@ this unit boundary.
     — returns elapsed SECONDS since the current `clip` reference started; `0` for
     null, `0` on the arrival frame.
 
-- [ ] `clipElapsed returns 0 for null clip`.
-- [ ] `clipElapsed returns 0 on the arrival frame then grows in seconds` —
+- [x] `clipElapsed returns 0 for null clip`.
+- [x] `clipElapsed returns 0 on the arrival frame then grows in seconds` —
   ref installed at `nowMs=1000` ⇒ `0`; same ref at `nowMs=2500` ⇒ `1.5`.
-- [ ] `clipElapsed resets when the clip reference changes` — a NEW `{data}` object
+- [x] `clipElapsed resets when the clip reference changes` — a NEW `{data}` object
   resets the start (the clock-reset-on-fresh-object invariant).
-- [ ] Implement. `npm test -- cameraClock` → pass. Commit.
+- [x] Implement. `npm test -- cameraClock` → pass. Commit.
 
 ## Task 9 — `clip`@95 driver row + `elapsedForWinner` clip arm + `commitsOnEdge`
 
