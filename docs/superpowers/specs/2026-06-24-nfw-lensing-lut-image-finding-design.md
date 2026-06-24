@@ -1,7 +1,11 @@
 # NFW gravitational-lensing image-finding via a precomputed 2D LUT
 
-**Status:** design / awaiting plan. Picks up after the shared-`LensingUniforms`
-extraction and the MCPM volume-lensing phase land.
+**Status:** design / awaiting plan. The shared-`LensingUniforms` extraction has
+landed, but in a *split* form (see "Architecture fit" — lensing co-hosts the
+`@group(3)` focus group for points + pick, with a standalone BGL reserved for the
+volume raymarch). This spec lands for the **points + pick** pipelines
+independently; wiring the LUT into the MCPM volume raymarch rides the later
+volume-lensing phase.
 
 **Goal:** Render the *correct* NFW multi-image structure (primary + inner /
 counter image) with physically-accurate magnification, without per-vertex
@@ -130,6 +134,16 @@ that happens so the truncation is visible, not silent.
 silently drops the whole frame (see CLAUDE.md). Bilinear sampling smooths the
 magnification spikes at caustics, which is acceptable given the `MU_MAX` clamp.
 
+**Filtering caveat (resolve in the plan):** a `linear` sampler on an
+`rgba32float` texture requires the `float32-filterable` device feature, which is
+**not** universal (and WebKit is strict). Three options, cheapest first: (a)
+store the LUT as `rgba16float` and sample `linear` (half precision is plenty for
+clamped deflections/magnifications — likely the default); (b) request
+`float32-filterable` at device creation and keep `rgba32float`; (c) keep
+`rgba32float` with a `non-filtering` sampler and do bilinear by hand via four
+`textureLoad`s. Pick (a) unless 16-bit precision proves visibly insufficient at a
+caustic.
+
 ## Shader integration
 
 In `points/vertex.wesl`, per source per dominant lens (NFW mode only — SIS keeps
@@ -150,18 +164,29 @@ multi-lens summation for the primary is unchanged; the LUT resolves the
 
 ## Architecture fit
 
-The LUT slots into the **shared `LensingUniforms` bind group** built in the
-preceding extraction phase. Extend that group with two entries:
+Lensing did **not** end up in a single shared bind group. The extraction split
+it into two homes, and the LUT follows the same split — one texture object,
+referenced from both groups, exactly how the lens *buffer* is shared today:
 
-- `@binding(1)` the LUT `texture_2d<f32>`
-- `@binding(2)` a clamped, linear `sampler`
+- **Points + pick** read lensing from the **`@group(3)` focus group**
+  (`focusUniforms` BGL), which already carries `@binding(0)` focus +
+  `@binding(1)` the lensing buffer. Extend that BGL with two **VERTEX-visible**
+  entries — `@binding(2)` the LUT `texture_2d<f32>` and `@binding(3)` a clamped,
+  linear `sampler` — and add them to the single shared focus bind group. Group 3
+  is the only group the secondary pick renderers (structure rings, Milky-Way)
+  don't declare, so this ripples to nothing else; the impostor-disk pipelines
+  inherit the entries unused (as they already do the lensing buffer). The
+  deflection is read in the vertex stage, so VERTEX visibility suffices here.
 
-So points, the pick pipeline, **and** the MCPM volume raymarch all read the LUT
-from the one shared group — no new bind group, and the volume's NFW ray-bend
-gets correct deflection for free. This reverses the original prototype's reason
-for staying analytic (avoiding a texture+sampler on the shared *pick* pipeline):
-that cost is now a single shared binding the pick pass already carries for the
-lens data, not a per-renderer burden.
+- **The MCPM volume raymarch** (deferred to the volume-lensing phase) reads the
+  same LUT in its **fragment** stage via the standalone `lensingUniforms` BGL
+  (`VERTEX|FRAGMENT`). When that phase lands, extend *that* BGL with the texture
+  + sampler (fragment-visible) and bind the same texture object. Nothing in the
+  points/pick landing depends on it.
+
+This still reverses the prototype's original reason for staying analytic
+(avoiding a texture+sampler on the shared *pick* pipeline): the cost is one pair
+of bindings on a group the pick pass already carries, not a per-renderer burden.
 
 The LUT texture is uploaded once at startup (it is dimensionless and universal);
 it never re-uploads on camera move, zoom, or strength change, because `strength`
@@ -201,10 +226,16 @@ and `r_s` enter only through the per-source `(y, s)` computation, not the table.
   Unit-tested against known limits (`s→0 ⇒ x≈y, μ≈1`; super-critical `s` ⇒ two
   opposite-side images).
 - `src/services/gpu/resources/createNfwLensLutTexture.ts` — upload the
-  `Float32Array` into an `N×M rgba32float texture_2d` + sampler; expose them for
-  the shared lensing bind group.
-- extend `bindGroupLayouts/lensingUniforms.ts` + `createLensingUniformBuffer.ts`
-  (or a sibling) to add the texture + sampler bindings to the shared group.
-- `lib/lensingUniforms.wesl` + `points/vertex.wesl` (+ the volume fragment) —
-  declare and sample the LUT; replace the SIS counter branch for NFW.
+  `Float32Array` into an `N×M rgba32float texture_2d` + sampler; expose the one
+  texture object for the focus bind group now (and the standalone lensing group
+  in the later volume phase).
+- extend `bindGroupLayouts/focusUniforms.ts` (the points/pick home) with the
+  `@binding(2)` texture + `@binding(3)` sampler entries, and
+  `createFocusUniformBuffer.ts` to put them in the shared focus bind group. The
+  standalone `bindGroupLayouts/lensingUniforms.ts` gains the matching
+  fragment-visible entries only when the volume-lensing phase wires the raymarch.
+- `points/vertex.wesl` — declare `@group(3) @binding(2)` the LUT texture +
+  `@binding(3)` the sampler, sample once for the dominant NFW lens, and replace
+  the SIS counter branch for NFW. (The volume fragment declares its own copy
+  against the standalone group in the later phase.)
 - a small `?gpuLensLut` debug overlay (optional) to visualise the table.
