@@ -325,9 +325,10 @@ No test (pure type declarations — exercised by Task 3's helper tests).
     `| { kind:'all'; children: Effect[] }`
     `| { kind:'fork'; child: Effect }`.
 
-- [ ] Write the three `.d.ts` with didactic headers (every effect is plain
+- [x] Write the three `.d.ts` with didactic headers (every effect is plain
   serializable data; helpers in Task 3 are the only constructors).
-- [ ] `npm run typecheck` → clean. Commit.
+  *(landed as four files — `SettingsAction` got its own `.d.ts`, one type per file.)*
+- [x] `npm run typecheck` → clean. Commit.
 
 ## Task 3 — Authoring helpers (the one-line constructors)
 
