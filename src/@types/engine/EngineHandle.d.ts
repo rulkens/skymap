@@ -23,6 +23,7 @@ import type { EngineSelectionHandle } from './handles/EngineSelectionHandle';
 import type { EngineSourcesHandle } from './handles/EngineSourcesHandle';
 import type { EngineVolumesHandle } from './handles/EngineVolumesHandle';
 import type { EngineDebugHandle } from './handles/EngineDebugHandle';
+import type { EngineTourHandle } from './handles/EngineTourHandle';
 
 /**
  * Handle returned by `createEngine`. Lets the React layer drive the
@@ -38,6 +39,7 @@ export type EngineHandle = {
   sources: EngineSourcesHandle;
   volumes: EngineVolumesHandle;
   debug: EngineDebugHandle;
+  tour: EngineTourHandle;
 
   /**
    * Stop the render loop, release GPU resources, and detach all event

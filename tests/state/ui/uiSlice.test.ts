@@ -15,6 +15,7 @@ import reducer, {
   toggleUiHidden,
   setDebugPanelOpen,
   toggleDebugPanelOpen,
+  showCaption,
   dismissSplash,
   reopenSplash,
 } from '../../../src/state/ui/uiSlice';
@@ -24,6 +25,7 @@ const base = (): UiState => ({
   paletteOpen: false,
   uiHidden: false,
   debugPanelOpen: false,
+  caption: null,
   splash: {
     visible: false,
     dismissedVersion: null,
@@ -61,6 +63,16 @@ describe('uiSlice — debug panel', () => {
 
     const after2 = reducer(after1, toggleDebugPanelOpen());
     expect(after2.debugPanelOpen).toBe(false);
+  });
+});
+
+describe('uiSlice — caption', () => {
+  it('showCaption sets ui.caption and clears to null', () => {
+    const withCaption = reducer(base(), showCaption('Virgo'));
+    expect(withCaption.caption).toBe('Virgo');
+
+    const cleared = reducer(withCaption, showCaption(null));
+    expect(cleared.caption).toBe(null);
   });
 });
 

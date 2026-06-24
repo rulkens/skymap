@@ -64,6 +64,7 @@ describe('useSplash — slice-backed visibility', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      caption: null,
       splash: { visible: true, dismissedVersion: null },
     };
     const { result } = renderSplash(makeInput(), ui);
@@ -75,6 +76,7 @@ describe('useSplash — slice-backed visibility', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      caption: null,
       splash: { visible: false, dismissedVersion: CURRENT_SPLASH_VERSION },
     };
     const { result } = renderSplash(makeInput(), ui);
@@ -86,6 +88,7 @@ describe('useSplash — slice-backed visibility', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      caption: null,
       splash: { visible: true, dismissedVersion: null },
     };
     const { store, result } = renderSplash(makeInput(), ui);
@@ -115,6 +118,7 @@ describe('useSplash — dispatch on dismiss + reopen', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      caption: null,
       splash: { visible: true, dismissedVersion: null },
     };
     const { store, result } = renderSplash(makeInput(), ui);
@@ -132,6 +136,7 @@ describe('useSplash — dispatch on dismiss + reopen', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      caption: null,
       splash: { visible: true, dismissedVersion: null },
     };
     const { store, result } = renderSplash(makeInput(), ui);
@@ -149,6 +154,7 @@ describe('useSplash — dispatch on dismiss + reopen', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      caption: null,
       splash: { visible: false, dismissedVersion: CURRENT_SPLASH_VERSION },
     };
     const { store, result } = renderSplash(makeInput(), ui);
@@ -173,6 +179,7 @@ describe('useSplash — blocked state', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      caption: null,
       splash: { visible: true, dismissedVersion: null },
     };
     const { store } = createAppStore({ settings: buildInitialSettings(), ui });
@@ -200,6 +207,7 @@ describe('useSplash — blocked state', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      caption: null,
       splash: { visible: true, dismissedVersion: null },
     };
     const { result } = renderSplash(
@@ -229,6 +237,7 @@ describe('useSplash — 8 s "Continue anyway" timer', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      caption: null,
       splash: { visible: true, dismissedVersion: null },
     };
     const { result } = renderSplash(makeInput(), ui);
@@ -244,6 +253,7 @@ describe('useSplash — 8 s "Continue anyway" timer', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      caption: null,
       splash: { visible: false, dismissedVersion: null },
     };
     const { result } = renderSplash(makeInput(), ui);
@@ -264,6 +274,7 @@ describe('useSplash error mapping', () => {
     paletteOpen: false,
     uiHidden: false,
     debugPanelOpen: false,
+    caption: null,
     splash: { visible: true, dismissedVersion: null },
   };
 

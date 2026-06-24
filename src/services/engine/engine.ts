@@ -105,6 +105,8 @@ import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
+import { createPlayClip } from './animation/playClip';
+import { TOUR_START, TOUR_EXIT } from '../../state/tour/tourActions';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
@@ -502,7 +504,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   cb.setSagaContext({
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
-    reconcile: makeReconcileEffects(state),
+    reconcile: makeReconcileEffects(state, store),
     resolveDeps,
     // The live camera Resources `watchFocusTween` reads to build a focus tween:
     // the visible from-pose (so a re-focus hands off from what the user sees) and
@@ -516,6 +518,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             fovYRad: state.cameraRuntime.projection.fovYRad,
           }
         : null,
+    // Bound clip player: resolves 'live' pose at dispatch time, attaches the
+    // [CANCEL] hook, and returns a Promise that resolves on both natural end
+    // and cancellation. The tour saga awaits this for the establishing fly and
+    // races it (as dwellDrift) against the dwell timer.
+    playClip: createPlayClip({
+      store,
+      clipPlayer: state.subsystems.clipPlayer,
+      // No null-guard needed: lastPose.current is seeded from camera.base at
+      // CameraRuntime construction (synchronous) and playClip is only ever
+      // invoked from tour/tween sagas that run after engine construction.
+      getLivePose: () => state.cameraRuntime.lastPose.current,
+    }),
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
@@ -717,6 +731,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       passOverrides: {
         allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
       },
+    },
+
+    // ── Tour handle — programmatic guided-tour launch + exit ─────────────
+    //
+    // `start` dispatches TOUR_START fire-and-forget: `takeLatest` in `watchTour`
+    // cancels any prior run and starts `guidedTour` with the new beats.
+    // `exit` dispatches TOUR_EXIT — all restore logic lives in `guidedTour`'s
+    // finally block, not here.
+    tour: {
+      start: (beats) => store.dispatch(TOUR_START(beats)),
+      exit: () => store.dispatch(TOUR_EXIT()),
     },
 
     destroy,

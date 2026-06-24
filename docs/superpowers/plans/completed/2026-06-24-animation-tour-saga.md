@@ -238,10 +238,10 @@ export type BeatData = {
   for its own scene vocabulary; this plan imports them where a tour clip builder
   needs a verb. Do NOT redeclare either here.
 
-- [ ] Add `BeatData.ts` with the shape above and a didactic header (why
+- [x] Add `BeatData.ts` with the shape above and a didactic header (why
   `SelectionRef` not a new `SourceRef`; `effects` are `put` verbatim, no wrapper).
-- [ ] `npm run typecheck` clean (the type is consumed in later tasks).
-- [ ] Commit.
+- [x] `npm run typecheck` clean (the type is consumed in later tasks).
+- [x] Commit.
 
 ### Interfaces
 
@@ -305,18 +305,18 @@ export function restoreScene(
   `clipOpacity` is already reset to 1 at clip end, so transient `fade`s need no
   separate undo here.
 
-- [ ] Test `captureScene captures the six settings clusters + selection.focus`.
-- [ ] Test `captureScene is detached` — mutating live `selection.focus` after
+- [x] Test `captureScene captures the six settings clusters + selection.focus`.
+- [x] Test `captureScene is detached` — mutating live `selection.focus` after
   capture does not change the snapshot (the settings half is already detached via
   `structuredClone` in `captureSettings`; assert the focus ref isn't aliased into
   later mutation — a fresh write to the slice leaves the snapshot's `focus`).
-- [ ] Test `restoreScene restores settings then re-dispatches focus` — assert the
+- [x] Test `restoreScene restores settings then re-dispatches focus` — assert the
   `mergeSnapshot` dispatch AND the `updateSelectionFocus(snapshot.focus)` dispatch
   both fire (order: settings first).
-- [ ] Test `restoreScene with focus null clears selection focus`.
-- [ ] Implement both wrappers + `SceneSnapshot`.
-- [ ] `npm test -- captureScene restoreScene` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Test `restoreScene with focus null clears selection focus`.
+- [x] Implement both wrappers + `SceneSnapshot`.
+- [x] `npm test -- captureScene restoreScene` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Interfaces
 
@@ -354,13 +354,13 @@ The two new closures **capture the live `state` + `store`** at engine
 construction (where `ReconcileEffects` is built — the same place `syncFades`
 closes over the engine), so the saga calls them with no args / snapshot-only.
 
-- [ ] Test `the reconcile bag exposes captureScene/restoreScene` — extend the
+- [x] Test `the reconcile bag exposes captureScene/restoreScene` — extend the
   engine-wiring test that asserts the `ReconcileEffects` shape; assert
   `fx.captureScene()` returns a `SceneSnapshot` over a stub engine state, and
   `fx.restoreScene(snap, { animate })` calls through to `restoreScene`.
-- [ ] Add the two fields to the type + the registration closures.
-- [ ] `npm test` (touched wiring tests) green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Add the two fields to the type + the registration closures.
+- [x] `npm test` (touched wiring tests) green; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Interfaces
 
@@ -385,11 +385,11 @@ store; the shipped `ui` slice (`uiSlice.ts`) is its home (it already owns
 **Signature:** `showCaption: (state, action: PayloadAction<string | null>) => void`
 setting `state.caption = action.payload`.
 
-- [ ] Test `showCaption sets ui.caption` — dispatch `showCaption('Virgo')`,
+- [x] Test `showCaption sets ui.caption` — dispatch `showCaption('Virgo')`,
   assert `ui.caption === 'Virgo'`; `showCaption(null)` clears it.
-- [ ] Add the `caption` field (init `null`) + the reducer; export `showCaption`.
-- [ ] `npm test -- uiSlice` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Add the `caption` field (init `null`) + the reducer; export `showCaption`.
+- [x] `npm test -- uiSlice` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Interfaces
 
@@ -443,15 +443,15 @@ export function flyToClip(beat: BeatData, resolved: ResolvedFocus): ClipData;
 > `resolveStructure`/`resolveFamous` in the spec). A `null` focus → a no-move clip
 > (hold only).
 
-- [ ] Test `dwellDrift builds a perpetual loop clip` — assert the `spin` is
+- [x] Test `dwellDrift builds a perpetual loop clip` — assert the `spin` is
   `loop: true` and the clip has no finite-duration awaited child (it loses the
   race by construction).
-- [ ] Test `dwellDrift starts live`.
-- [ ] Test `flyToClip builds a moveTarget + dollyTo to the resolved pose`.
-- [ ] Test `flyToClip with null focus is a hold-only clip`.
-- [ ] Implement the actions + both builders using Plan A's Layer-1 constructors.
-- [ ] `npm test -- dwellDrift flyToClip` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Test `dwellDrift starts live`.
+- [x] Test `flyToClip builds a moveTarget + dollyTo to the resolved pose`.
+- [x] Test `flyToClip with null focus is a hold-only clip`.
+- [x] Implement the actions + both builders using Plan A's Layer-1 constructors.
+- [x] `npm test -- dwellDrift flyToClip` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Interfaces
 
@@ -491,20 +491,21 @@ per-beat intents → caption → interactive dwell (never frozen) → clear capt
 > B introduced for `famousHopTour`. `focusReady(ref)` checks the focus target's
 > data is loaded (resolve via `resolveDeps`); a `null` focus is trivially ready.
 
-- [ ] Test `visitBeat waits for focus data before flying` — `focusReady` false
+- [x] Test `visitBeat waits for focus data before flying` — `focusReady` false
   then true; assert `playClip` not called until ready.
-- [ ] Test `visitBeat awaits the fly clip before arming advance` — assert the
+- [x] Test `visitBeat awaits the fly clip before arming advance` — assert the
   establishing `playClip` resolves before `take(TOUR_ADVANCE)` is listened for.
-- [ ] Test `visitBeat puts each effect verbatim (no wrapper)` — `effects: [setFlow(…)]`
+- [x] Test `visitBeat puts each effect verbatim (no wrapper)` — `effects: [setFlow(…)]`
   → assert `setFlow(…)` dispatched as-is.
-- [ ] Test `visitBeat puts showCaption then clears it`.
-- [ ] Test `TOUR_ADVANCE wins the dwell race and cancels dwellDrift` — the
+- [x] Test `visitBeat puts showCaption then clears it`.
+- [x] Test `TOUR_ADVANCE wins the dwell race and cancels dwellDrift` — the
   perpetual drift clip's `[CANCEL]` (→ `clipPlayer.stop()`) fires.
-- [ ] Test `the dwell timeout auto-advances when no click arrives`.
-- [ ] Implement `visitBeat` (typed-redux-saga; `getContext` inside for
-  `resolveDeps`/`reconcile` as needed).
-- [ ] `npm test -- guidedTourSaga` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Test `the dwell timeout auto-advances when no click arrives`.
+- [x] Implement `visitBeat` (typed-redux-saga; `getContext` inside for
+  `resolveDeps`/`reconcile` as needed). (Plus the resolver plumbing: extracted
+  `focusFraming`, added `focusReady`/`waitUntil`, `playClip` on `SagaContext`.)
+- [x] `npm test -- guidedTourSaga` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Interfaces
 
@@ -555,21 +556,23 @@ couldn't.
   returns a promise). Confirm the exact handle shape against Plan A/B's
   `engine.tour` if they touched it; otherwise add `watchTour` here.
 
-- [ ] Test `guidedTour captures the scene before the first beat`.
-- [ ] Test `guidedTour hides the UI for the duration and restores it after`.
-- [ ] Test `guidedTour runs every beat in order` — two beats → two `visitBeat`
+- [x] Test `guidedTour captures the scene before the first beat`.
+- [x] Test `guidedTour hides the UI for the duration and restores it after`.
+- [x] Test `guidedTour runs every beat in order` — two beats → two `visitBeat`
   passes.
-- [ ] Test `TOUR_EXIT cancels mid-beat and the finally restores the scene` —
+- [x] Test `TOUR_EXIT cancels mid-beat and the finally restores the scene` —
   assert `fx.restoreScene(snapshot, { animate: true })` is called AND
   `setUiHidden(false)` dispatched, even when exit fires during beat 1.
-- [ ] Test `natural completion restores the scene` (the `finally` runs on the
+- [x] Test `natural completion restores the scene` (the `finally` runs on the
   non-exit path too).
-- [ ] Test `no camera-input action aborts the tour` — a `beginDrag` /
+- [x] Test `no camera-input action aborts the tour` — a `beginDrag` /
   `commitCameraPose` during a beat does NOT end the run.
-- [ ] Implement `guidedTour` + the launch watcher (`watchTour`) + `TOUR_START`,
-  fork `watchTour` in `rootSaga.ts`.
-- [ ] `npm test -- guidedTourSaga rootSaga` green; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Implement `guidedTour` + the launch watcher (`watchTour`) + `TOUR_START`,
+  fork `watchTour` in `rootSaga.ts`. (Task 7b — plus the `playClip` engine
+  registration via `createPlayClip` + `setSagaContext`; launch is fire-and-forget,
+  `TOUR_START` serializable.)
+- [x] `npm test -- guidedTourSaga rootSaga` green; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Interfaces
 
@@ -608,14 +611,15 @@ composition are Plan A's, and the integration test reads
 - After `endClip`, `clipOpacity` resets to 1 and composed alpha returns to
   `intentOpacity × focusRecession` (spec "Clip end — no opacity reconcile").
 
-- [ ] Re-express the chosen spike clip as `ClipData` using Plan A's scene verbs +
-  camera constructors.
-- [ ] Test `the clip type-checks and carries the expected cue sequence`.
-- [ ] Integration test `the flow mask keeps composed alpha at 0 until the lift`.
-- [ ] Integration test `the crossfade dims galaxies without touching intent`.
-- [ ] Integration test `clip end restores composed alpha to the steady state`.
-- [ ] `npm test` (whole suite) green; `npm run typecheck` clean; `npm run build`.
-- [ ] Commit.
+- [x] Re-express the chosen spike clip as `ClipData` using Plan A's scene verbs +
+  camera constructors. (cosmicFlows; illustrative spec layer names mapped to real
+  `VisibilityLayerKey`s.)
+- [x] Test `the clip type-checks and carries the expected cue sequence`.
+- [x] Integration test `the flow mask keeps composed alpha at 0 until the lift`.
+- [x] Integration test `the crossfade dims galaxies without touching intent`.
+- [x] Integration test `clip end restores composed alpha to the steady state`.
+- [x] `npm test` (whole suite) green; `npm run typecheck` clean; `npm run build`.
+- [x] Commit.
 
 ### Interfaces
 
@@ -628,27 +632,28 @@ Plan A/B camera constructors + `playClip`.
 
 ## Definition of Done
 
-- [ ] All new tests green; whole suite (`npm test`) green; `npm run typecheck`
-  clean; `npm run build` clean.
-- [ ] `final alpha = intentOpacity × focusRecession × clipOpacity` (Plan A's
+- [x] All new tests green; whole suite (`npm test`) green; `npm run typecheck`
+  clean; `npm run build` clean. (513 files / 3261 tests.)
+- [x] `final alpha = intentOpacity × focusRecession × clipOpacity` (Plan A's
   renderer composition) is verified by the Task 8 integration tests — this plan
   READS the composed alpha, does not build it.
-- [ ] The scene verbs behave as Plan A built them — `fade()` moves `clipOpacity`
+- [x] The scene verbs behave as Plan A built them — `fade()` moves `clipOpacity`
   ONLY (never intent); `show`/`hide` ride the live bridge; `scene`/`focus` dispatch
   the production action surface — verified read-only by the Task 8 validation.
-- [ ] `BeatData.effects` are `put` verbatim — no `applyIntent`/`applyEffect` wrapper.
-- [ ] The tour stops ONLY on `TOUR_EXIT` (no camera-input self-abort); the `finally`
+- [x] `BeatData.effects` are `put` verbatim — no `applyIntent`/`applyEffect` wrapper.
+- [x] The tour stops ONLY on `TOUR_EXIT` (no camera-input self-abort); the `finally`
   always runs `restoreScene` (settings + focus) and un-hides the UI.
-- [ ] `captureScene`/`restoreScene` are `getContext('reconcile')` closures; the saga
+- [x] `captureScene`/`restoreScene` are `getContext('reconcile')` closures; the saga
   passes no `state`/`store`.
-- [ ] This plan adds NO `clipOpacity` channel, NO `resolveLayerOpacity` change, NO
+- [x] This plan adds NO `clipOpacity` channel, NO `resolveLayerOpacity` change, NO
   `SceneEffect` type, NO scene-verb constructor, NO `applySceneEffect`, NO
   `syncVisibilityFades` duration override (all Plan A's), and NO `suspendDuringClip`
   or `endClip → cancelCameraTween` reaction (Plan B's) — verify none leaked back in.
-- [ ] Run the `entanglement-radar` skill over the diff — confirm the tour clip
+  (Final whole-branch review confirmed the Plan A/B file set is untouched.)
+- [x] Run the `entanglement-radar` skill over the diff — confirm the tour clip
   builders compose Plan A's verbs (no re-minted constructor) and `BeatData.effects`
-  are `put` verbatim (no wrapper).
-- [ ] PR (squash-merge) with the spec linked; relocate this plan via `/feature-done`.
+  are `put` verbatim (no wrapper). (Clean; one accept-as-is name-mismatch Minor.)
+- [x] PR (squash-merge) with the spec linked; relocate this plan via `/feature-done`.
 
 ## Self-review (run before handing off)
 

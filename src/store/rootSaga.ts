@@ -12,6 +12,7 @@
  *   watchSelectionWake   — wakes the render loop on select/focus writes (hover excluded)
  *   watchRequestFocus    — resolves a durable focus id to a ref, deferring on catalogLoaded
  *   watchFocusTween      — builds + dispatches the camera tween on every focus ref change
+ *   watchTour            — starts a guidedTour run on each TOUR_START (takeLatest — single-instance)
  *
  * Each watcher is authored beside its concern (the tier watcher in
  * `state/tier/tierSaga`, the reconcile watchers in `effects/reconcileSagas`) and
@@ -35,6 +36,7 @@ import { watchSelectionRows } from '../state/selectionRows/selectionRowsSaga';
 import { watchSelectionWake } from '../state/selection/selectionWakeSaga';
 import { watchRequestFocus } from '../state/selection/requestFocusSaga';
 import { watchFocusTween } from '../state/selection/focusTweenSaga';
+import { watchTour } from '../state/tour/guidedTourSaga';
 
 export function* mainSaga() {
   yield* all([
@@ -47,5 +49,6 @@ export function* mainSaga() {
     watchSelectionWake(),
     watchRequestFocus(),
     watchFocusTween(),
+    watchTour(),
   ]);
 }
