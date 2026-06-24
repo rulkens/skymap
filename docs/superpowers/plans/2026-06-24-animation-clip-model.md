@@ -621,13 +621,13 @@ that is the `clipPlayer`'s job (Task 11), ticked first.
 - Produces: behaviour-neutral for tween/autoRotate (still commit on edge); the
   clip edge now commits too.
 
-- [ ] `commit-on-edge fires when a clip deactivates` — drive a frame where
+- [x] `commit-on-edge fires when a clip deactivates` — drive a frame where
   `prevActiveId='clip'` and `camera.clip` is null ⇒ `commitCameraPose(lastPose)`
   dispatched once.
-- [ ] `commit-on-edge still fires for tween and autoRotate` (regression — the
+- [x] `commit-on-edge still fires for tween and autoRotate` (regression — the
   existing tests stay green).
-- [ ] `commit-on-edge does NOT fire for orbitDrag/resting edges`.
-- [ ] Implement. `npm test -- runFrame` → pass. Commit.
+- [x] `commit-on-edge does NOT fire for orbitDrag/resting edges`.
+- [x] Implement. `npm test -- runFrame` → pass. Commit.
 
 ## Task 11 — `clipPlayer` Resource: tick-first scene cues + the `clipOpacity` channel + lifecycle
 
