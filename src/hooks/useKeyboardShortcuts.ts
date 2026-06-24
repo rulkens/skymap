@@ -3,7 +3,7 @@
  * top-level shortcuts:
  *
  *   - Cmd+K / Ctrl+K / `/`  → open the command palette
- *   - Esc                    → clear pinned selection
+ *   - Esc                    → clear pinned selection + exit a running tour
  *   - f / F                  → focus on the currently-pinned galaxy
  *   - h / H                  → return camera to home view
  *   - Tab                    → toggle "hide UI" mode (clean visual)
@@ -69,11 +69,16 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
         return;
       }
 
-      // ── Esc — universal "close the card" gesture ──────────────
+      // ── Esc — universal "close / abort" gesture ───────────────
       // Clears both galaxy selection AND structure focus in one
-      // dispatch, collapsing whichever card variant is on screen.
+      // dispatch, collapsing whichever card variant is on screen,
+      // and exits a running guided tour. A running tour hides the
+      // whole HUD (including the dev panel that launched it), so Esc
+      // is the only way back out; `tour.exit` is a harmless no-op
+      // when no tour is active.
       if (e.key === 'Escape') {
         dispatch(clearSelection());
+        engineHandleRef.current?.tour.exit();
         return;
       }
 

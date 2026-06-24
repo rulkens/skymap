@@ -6,7 +6,8 @@
  * the `onTogglePass` handler previously inline in `RenderTogglesSection`.
  * `DebugPanel` and its children import nothing from `store/` or `state/`.
  *
- * Engine props (`slots`, `timingService`, `passNames`) are passed in by App
+ * Engine props (`slots`, `timingService`, `passNames`, and the clip/tour
+ * seams `onPlayClip` / `onStopClip` / `onStartTour`) are passed in by App
  * because they come from `handleRef.current` — a non-Redux handle that the
  * container has no way to reach. The engine-prop gate (`debugPanelOpen &&
  * handleRef.current`) stays in App for the same reason.
@@ -40,17 +41,28 @@ import {
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { ClipData } from '../../@types/animation/ClipData';
+import type { BeatData } from '../../@types/tour/BeatData';
 
 export type DebugPanelContainerProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
   timingService: GpuTimingService;
   passNames: readonly string[];
+  // Engine-handle clip/tour seams — passed by App (they come from
+  // `handleRef.current`, which the container can't reach), then forwarded
+  // straight to DebugPanel alongside the other engine props.
+  onPlayClip: (clip: ClipData) => Promise<void>;
+  onStopClip: () => void;
+  onStartTour: (beats: readonly BeatData[]) => void;
 };
 
 function DebugPanelContainer({
   slots,
   timingService,
   passNames,
+  onPlayClip,
+  onStopClip,
+  onStartTour,
 }: DebugPanelContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
 
@@ -110,6 +122,9 @@ function DebugPanelContainer({
       flow={flow}
       onFlowChange={onFlowChange}
       onTogglePass={onTogglePass}
+      onPlayClip={onPlayClip}
+      onStopClip={onStopClip}
+      onStartTour={onStartTour}
     />
   );
 }
