@@ -586,14 +586,14 @@ Members 1 & 3 of the triple, plus the `commitsOnEdge` property.
   - `selectClipActive(state): boolean` = `selectCameraIntent(state).clip !== null`
     (Plan B/C and the `suspendDuringClip` guard read this).
 
-- [ ] `buildCameraDrivers includes a clip@95 row with commitsOnEdge`.
-- [ ] `pickWinner picks clip over orbitDrag` — `camera.clip` set AND `dragging`
+- [x] `buildCameraDrivers includes a clip@95 row with commitsOnEdge`.
+- [x] `pickWinner picks clip over orbitDrag` — `camera.clip` set AND `dragging`
   true ⇒ winner id `'clip'` (clip 95 > orbitDrag 80).
-- [ ] `elapsedForWinner returns clipElapsed seconds for the clip winner`.
-- [ ] `tween and autoRotate rows now declare commitsOnEdge:true; orbitDrag/resting do not`.
-- [ ] `selectCameraActive is true while a clip is active`.
-- [ ] `selectClipActive reflects camera.clip`.
-- [ ] Implement. `npm test -- cameraDrivers selectors` → pass. Commit.
+- [x] `elapsedForWinner returns clipElapsed seconds for the clip winner`.
+- [x] `tween and autoRotate rows now declare commitsOnEdge:true; orbitDrag/resting do not`.
+- [x] `selectCameraActive is true while a clip is active`.
+- [x] `selectClipActive reflects camera.clip`.
+- [x] Implement. `npm test -- cameraDrivers selectors` → pass. Commit.
 
 ## Task 10 — Frame loop: commit-on-edge reads `commitsOnEdge`; clip clock wired
 
