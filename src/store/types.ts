@@ -74,8 +74,8 @@ export type SagaContext = {
    * Plays a data clip and resolves when the clip completes or is cancelled.
    * The tour saga awaits this Promise for the establishing fly and races it
    * (as dwellDrift) against the dwell timer during the interactive dwell.
-   * Engine registration (createPlayClip + setSagaContext) is a separate task;
-   * tests inject a stub via sagaMiddleware.setContext.
+   * The engine registers this at construction via `createPlayClip` +
+   * `setSagaContext`; tests inject a stub via `sagaMiddleware.setContext`.
    */
   playClip: (clip: ClipData) => Promise<void>;
 };

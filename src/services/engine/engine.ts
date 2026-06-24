@@ -105,6 +105,8 @@ import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
+import { createPlayClip } from './animation/playClip';
+import { TOUR_START, TOUR_EXIT } from '../../state/tour/tourActions';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
@@ -516,6 +518,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             fovYRad: state.cameraRuntime.projection.fovYRad,
           }
         : null,
+    // Bound clip player: resolves 'live' pose at dispatch time, attaches the
+    // [CANCEL] hook, and returns a Promise that resolves on both natural end
+    // and cancellation. The tour saga awaits this for the establishing fly and
+    // races it (as dwellDrift) against the dwell timer.
+    playClip: createPlayClip({
+      store,
+      clipPlayer: state.subsystems.clipPlayer,
+      getLivePose: () => state.cameraRuntime.lastPose.current,
+    }),
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
@@ -717,6 +728,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       passOverrides: {
         allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
       },
+    },
+
+    // ── Tour handle — programmatic guided-tour launch + exit ─────────────
+    //
+    // `start` dispatches TOUR_START and returns a Promise that resolves when
+    // the run ends (natural completion or TOUR_EXIT). The Promise bridge lives
+    // in the TOUR_START action's `meta.onDone` — `watchTour`'s `finally`
+    // calls it on both paths so the caller's await always settles.
+    // `exit` is a plain dispatch — no teardown lives here; all restore logic
+    // is in `guidedTour`'s finally.
+    tour: {
+      start: (beats) => new Promise<void>((resolve) => store.dispatch(TOUR_START(beats, resolve))),
+      exit: () => store.dispatch(TOUR_EXIT()),
     },
 
     destroy,

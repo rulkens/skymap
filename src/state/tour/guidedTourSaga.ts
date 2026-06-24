@@ -62,13 +62,13 @@
  * This mirrors the pattern in `watchFocusTween` (focusTweenSaga.ts).
  */
 
-import { call, put, take, race, delay, getContext } from 'typed-redux-saga';
+import { call, put, take, race, delay, getContext, takeLatest } from 'typed-redux-saga';
 
 import { flyToClip } from './flyToClip';
 import { dwellDrift } from './dwellDrift';
 import { waitUntil } from './waitUntil';
 import { focusReady } from './focusReady';
-import { TOUR_ADVANCE, TOUR_EXIT } from './tourActions';
+import { TOUR_ADVANCE, TOUR_EXIT, TOUR_START } from './tourActions';
 import { showCaption, setUiHidden } from '../ui/uiSlice';
 import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
 import { focusFraming } from '../../services/engine/camera/focusFraming';
@@ -80,8 +80,8 @@ import type { SagaContext } from '../../store/types';
  * Play one beat of the guided tour: wait for data, fly, dispatch effects,
  * show caption, dwell interactively, clear caption.
  *
- * Callers (the outer `guidedTour` loop, added next task) step through a
- * `BeatData[]` array by calling `yield* call(visitBeat, beat)` in sequence.
+ * The outer `guidedTour` loop steps through a `BeatData[]` by calling
+ * `yield* call(visitBeat, beat)` in sequence.
  */
 export function* visitBeat(beat: BeatData): Generator {
   // Read context inside the worker — the engine sets it after root-saga forks.
@@ -164,4 +164,25 @@ export function* guidedTour(beats: readonly BeatData[]): Generator {
     fx.restoreScene(snapshot, { animate: true });
     yield* put(setUiHidden(false));
   }
+}
+
+/**
+ * Watcher: starts a `guidedTour` run each time TOUR_START is dispatched.
+ *
+ * `takeLatest` cancels any in-progress run when a new TOUR_START arrives —
+ * the tour is single-instance, so a new start always supersedes the previous
+ * one. The `finally` block calls `action.meta.onDone()` on BOTH paths
+ * (natural completion and cancellation), resolving the Promise the engine
+ * handle returned to the caller. The handle dispatches TOUR_EXIT when it
+ * wants to stop the tour; the watcher does not handle that directly —
+ * `guidedTour` itself takes TOUR_EXIT via a race inside the tour body.
+ */
+export function* watchTour() {
+  yield* takeLatest(TOUR_START, function* (action) {
+    try {
+      yield* call(guidedTour, action.payload.beats);
+    } finally {
+      action.meta.onDone();
+    }
+  });
 }
