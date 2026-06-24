@@ -134,20 +134,23 @@ export function renderFrame(input: RenderFrameInput): void {
   // Write the single shared gravitational-lensing uniform once per frame,
   // before the points pass (and the later pick submit) reads it at
   // @group(3) @binding(1) (co-hosted with cluster focus). The lenses are
-  // built here — not in pointSpritesPass — so both the visual
-  // pass and the pick pass replay the SAME lens centres + Einstein radii from
-  // one shared buffer. buildClusterLenses culls to clusters in front of the
-  // camera (using the same camera position + target the points pass used) and
-  // caps the count; empty when the toggle is off or the slider is at zero, so
-  // the per-vertex cost stays gated.
+  // built here — not in pointSpritesPass — so both the visual pass and the
+  // pick pass replay the SAME lenses from one shared buffer.
+  //
+  // buildClusterLenses receives the dimensionless lensStrength multiplier and
+  // the camera position + target it needs to precompute each lens's
+  // eye-relative geometry (dirLens + dL) internally. Each lens carries its
+  // own physical Einstein radius (derived from R500) and its own r_s; there
+  // is no global scale-radius write. Clusters behind the camera are culled;
+  // the count is capped at MAX_LENSES; the array is empty when the toggle is
+  // off or strength is zero, keeping the per-vertex shader cost gated.
   const lensEnabled = state.settings.debug.lensingEnabled;
-  const masterThetaRad = (state.settings.debug.lensStrengthDeg * Math.PI) / 180;
   const lenses = lensEnabled
     ? buildClusterLenses(
         state.data.structures.all(),
         ctx.drawCamPos,
         ctx.cam.target,
-        masterThetaRad,
+        state.settings.debug.lensStrength,
         MAX_LENSES,
       )
     : [];
@@ -155,7 +158,6 @@ export function renderFrame(input: RenderFrameInput): void {
     enabled: lensEnabled,
     lenses,
     mode: state.settings.debug.lensMode,
-    scaleRadiusMpc: state.settings.debug.lensScaleRadiusMpc,
   });
 
   // ── Encoder + HDR rendering ───────────────────────────────────────
