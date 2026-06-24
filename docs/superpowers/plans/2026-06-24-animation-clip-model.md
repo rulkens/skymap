@@ -397,18 +397,18 @@ list. `preroll` shifts all windows by `preroll` seconds.
   - `compileClip(data: ClipData): CompiledClip` — pure; throws via
     `validateSingleWriter` (Task 5) on a base-writer clash.
 
-- [ ] `compileClip seq accumulates windows` — `seq([dollyTo(300,4), hold(3), dollyTo(950,4)])`
+- [x] `compileClip seq accumulates windows` — `seq([dollyTo(300,4), hold(3), dollyTo(950,4)])`
   ⇒ base `distance` segments at `[0,4)`, gap `[4,7)`, `[7,11)`; `durationSec===11`.
-- [ ] `compileClip all shares block start` — `all([dollyTo(300,4), spin('yaw',{by:1,over:4})])`
+- [x] `compileClip all shares block start` — `all([dollyTo(300,4), spin('yaw',{by:1,over:4})])`
   ⇒ both windows `[0,4)`; `durationSec===4`.
-- [ ] `compileClip routes rate→velTracks, oscillate→oscTracks, set/spin→baseTracks`.
-- [ ] `compileClip preroll shifts every window by preroll` — `preroll:2` ⇒ first
+- [x] `compileClip routes rate→velTracks, oscillate→oscTracks, set/spin→baseTracks`.
+- [x] `compileClip preroll shifts every window by preroll` — `preroll:2` ⇒ first
   segment starts at `2`, `durationSec` includes the 2 s hold.
-- [ ] `compileClip orders cues by atSec` — a `hide(...,0)` then a later `fade(...)`
+- [x] `compileClip orders cues by atSec` — a `hide(...,0)` then a later `fade(...)`
   ⇒ `cues[0].atSec===0`, ascending.
-- [ ] `compileClip ignores fork duration in durationSec` — a perpetual `fork(spin(loop))`
+- [x] `compileClip ignores fork duration in durationSec` — a perpetual `fork(spin(loop))`
   does NOT extend `durationSec` (spec: a fork never keeps a scope alive).
-- [ ] Implement. `npm test -- compileClip` → pass. Commit.
+- [x] Implement. `npm test -- compileClip` → pass. Commit.
 
 ## Task 5 — `validateSingleWriter`: registration-time base-writer clash check
 
