@@ -641,6 +641,18 @@ export const flowOrbit: ClipData = {
 - After `endClip`, `clipOpacity` resets to 1 and composed alpha returns to
   `intentOpacity × focusRecession` (spec "Clip end — no opacity reconcile").
 
+> **Layer names — use the real `VisibilityLayerKey`s, do NOT add composite
+> aliases.** The spec's `cosmicFlows` worked example uses friendly composite names
+> (`'galaxies'`, `'volumes'`, `'milkyWay'`, `'structures'`, `'labels'`,
+> `'famousGalaxyLabels'`) that are NOT `VisibilityLayerKey` members. When
+> re-expressing, map each to the real keys and **enumerate** (the spike findings
+> are explicit: "no global fade, everything together, per layer"):
+> `galaxies → 'survey'`, `volumes → 'volumesMaster'`, `milkyWay → 'milkyWayDisk'
+> (+ 'milkyWayLabel')`, `structures → 'structureRing' (+ 'structureLabel')`,
+> `labels → 'surveyLabel' + 'milkyWayLabel' + 'structureLabel'`,
+> `famousGalaxyLabels → 'surveyLabel'`. Do NOT widen `VisibilityLayerKey` with
+> composite aliases — that would re-fuse the intents it deliberately splits.
+
 - [ ] Re-express `flowOrbit` as `ClipData`; test `flowOrbit compiles with no
   single-writer clash` and `evaluateClip advances yaw monotonically while pitch
   oscillates zero-mean; the fork does not extend durationSec`.
