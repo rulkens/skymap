@@ -167,9 +167,11 @@ for now. The channel set is coupled to the camera *parameterization*, not to the
   `aimAt(bearing, over, ease?)`.
 - `spin(ch, { by, over, ease, loop? })` — relative ramp (e.g. a yaw drift);
   `loop` repeats it seamlessly (constant rate).
-- `rate(ch, { to, over, ease })` — ramp a **persistent velocity** that the
-  runner integrates each frame; it keeps applying after the ramp ends (this is
-  how rotation decelerates to a residual drift).
+- `rate(ch, { to, over, ease })` — ramp a **persistent velocity** the evaluator
+  integrates; it keeps applying after the ramp ends, *within the clip* (this is how
+  rotation eases down to a residual drift). Velocity is a within-clip layer and does
+  **not** survive the clip's end — the single-pose handoff bakes position only (see
+  "Composition").
 - `oscillate(ch, { amp, period })` — an additive sine on top of the base;
   runs until cancelled (use inside `fork`).
 - `wait(sec)` — advance the clock with no write (a gap in the timeline).
@@ -462,8 +464,15 @@ Resource:
   mutable `livePose` to keep in sync, and no "tick must run before pose is read"
   ordering coupling between the player and the driver.
 - **Clock** — the clip rides `cameraClock` exactly as the tween does; `elapsed` is
-  time-since-activation. (The grill's "`elapsedForWinner` returns 0 for clip"
-  special-case is gone — `clip` joins the `tween`/`autoRotate` set.)
+  time-since-activation. This is **not free**: `elapsedForWinner` is a closed dispatch
+  on `winner.id` with a silent `return 0` default, so "`clip` joins the set" is a
+  required **triple** — (1) a `clipStartMs` + `lastClipRef` on `CameraClock`, (2) a
+  `clipElapsed(clock, s.camera.clip, nowMs)` keyed on `camera.clip` *reference
+  identity* (mirroring `tweenElapsed` — and exactly why `startClip` resolves `'live'`
+  into a *fresh* `camera.clip.data` object: the new reference is the clock-reset
+  trigger), (3) a third arm in `elapsedForWinner`. Omit any one and the default-0
+  fallthrough leaves the clip **frozen at t=0** with no error — a silent-freeze trap
+  the plan must not skip.
 - **Keep-alive** — `camera.clip !== null` is store Intent, so `selectCameraActive`
   sees it and render-on-demand stays awake. No per-frame `requestRender`.
 
@@ -513,6 +522,19 @@ final[ch] = base[ch]  +  ∫vel[ch]  +  osc[ch]
   accumulator, so the result is frame-rate-independent and reproducible).
   Additive; multiple sum.
 - **`osc`** — an additive oscillation (`oscillate`). Additive; multiple sum.
+
+**Velocity and oscillation do not cross the clip boundary — by design.** The handoff
+is a single `CameraPose` (`commitCameraPose` bakes *position* into `camera.base`);
+`CameraPose` has no velocity slot, so a clip's residual `rate` drift and `osc` phase
+end with the clip — the next driver continues from the frozen *position*. This is a
+deliberate choice over widening the handoff to carry velocity (which would
+reintroduce the velocity-carrying state the single-pose handoff exists to avoid). The
+**authoring discipline** that follows: a clip that should *look* like it keeps moving
+hands off to another clip rather than to `resting` — a tour's dwell is the perpetual
+`dwellDrift` clip (Layer 2), and a standalone recording that wants to end in motion
+either ramps `rate` toward 0 before the end or simply cuts. "A frozen position the
+author intended as moving" is an authoring error the boundary makes visible, not a
+case the handoff silently smooths.
 
 So `base + vel`, `base + osc`, two `vel`s, two `osc`s all **compose** — different
 layers never conflict. The *only* conflict is **two base-writers on one channel
@@ -763,10 +785,17 @@ const dwellDrift = (beat: BeatData): ClipData => ({
   ],
 });
 
+type BeatData = {
+  focus: SourceRef | null;
+  caption: string | null;
+  dwellSec: number;
+  effects?: Action[];      // plain Redux actions — nothing more; the saga `put`s them like the UI
+};
+
 function* visitBeat(beat: BeatData) {
   yield* call(waitUntil, () => focusReady(beat.focus));           // reactive load-wait
   yield* call(playClip, flyToClip(beat));                         // establishing move — plays out (awaited)
-  for (const e of beat.effects ?? []) yield* put(applyIntent(e)); // per-beat scene intents
+  for (const e of beat.effects ?? []) yield* put(e);             // per-beat intents — plain actions, same as the UI
   yield* put(showCaption(beat.caption));
   yield* race({                                                   // the interactive dwell — never frozen
     timeout: delay(beat.dwellSec * 1000),                         //   auto-advance, or…
@@ -777,7 +806,8 @@ function* visitBeat(beat: BeatData) {
 }
 
 function* guidedTour(beats: BeatData[]) {
-  const snapshot = captureScene(state);                           // six settings clusters + selection.focus
+  const fx = yield* getContext<ReconcileEffects>('reconcile');    // the engine seam — the same bag watchFades reads
+  const snapshot = fx.captureScene();                             // six settings clusters + selection.focus
   yield* put(setUiHidden(true));
   try {
     yield* race({
@@ -785,7 +815,7 @@ function* guidedTour(beats: BeatData[]) {
       exit: take(TOUR_EXIT),                                       // explicit stop control — cancels the run
     });
   } finally {
-    yield* call(restoreScene, state, store, snapshot, { animate: true }); // restore settings + focus, even on exit
+    fx.restoreScene(snapshot, { animate: true });                 // restore settings + focus, even on exit
     yield* put(setUiHidden(false));
   }
 }
@@ -800,17 +830,30 @@ cinematic** — with no per-beat waits it is legitimately *one* spline clip (Lay
 1), so the boundary rule keeps it out of this saga rather than forcing a
 granularity choice here.
 
-`captureScene` / `restoreScene` extend the existing `captureSettings` /
-`restoreSettings` wiring seam (`services/engine/wiring/`), called (not `put`) —
-`restoreScene` reverts the *intent* changes a beat's `scene`/`show`/`hide` made and
-runs the full `fx.syncFades` reconcile of `intentOpacity` back to baseline (clip-end
-already reset `clipOpacity` to 1, so transient `fade`s need no separate undo) **and**
-re-dispatches `updateSelectionFocus(snapshot.focus)`. The widening is forced by `focus()` joining
-the scene vocabulary: `captureSettings` snapshots the six *settings* clusters only,
-so a beat's `focus()` and its member-isolation dim would otherwise leak past the
-`finally`. Capturing `selection.focus` alongside settings keeps "the snapshot is
-the scene" honest — `focus` is reverted the same way `scene` is, not by a separate
-`put(updateSelectionFocus(null))` bolted onto the tour.
+`captureScene` / `restoreScene` are **`ReconcileEffects` closures** the engine
+registers under `getContext('reconcile')` — the same bag `watchFades` reaches for
+`fx.syncFades`. They wrap the existing `captureSettings` / `restoreSettings`
+helpers (`services/engine/wiring/`), which already take the live `state`/`store`;
+a saga has neither in lexical scope, so it cannot call them directly — it reaches
+them through the seam, exactly as `watchFades` does `fx.syncFades([...])` instead of
+importing the bridge. `restoreScene` reverts the *intent* changes a beat's
+`scene`/`show`/`hide` made and runs the full `syncVisibilityFades` reconcile of
+`intentOpacity` back to baseline (clip-end already reset `clipOpacity` to 1, so
+transient `fade`s need no separate undo) **and** re-dispatches
+`updateSelectionFocus(snapshot.focus)`. The widening past `captureSettings` is
+forced by `focus()` joining the scene vocabulary: `captureSettings` snapshots the
+six *settings* clusters only, so a beat's `focus()` and its member-isolation dim
+would otherwise leak past the `finally`. Capturing `selection.focus` alongside
+settings keeps "the snapshot is the scene" honest — `focus` is reverted the same
+way `scene` is, not by a separate `put(updateSelectionFocus(null))` bolted onto the
+tour.
+
+A beat's `effects` are **plain Redux actions** — the same `setGalaxyCatalogVisible`,
+`setFlow`, `setStructureItemEnabled` the SettingsPanel dispatches. `visitBeat`
+`put`s them verbatim; there is no `applyIntent`/`applyEffect` wrapper. That is the
+whole point of Layer 2 reusing the production action surface: a beat changes the
+scene by dispatching exactly what a user click would, so every reconcile saga
+(`watchFades`, `watchFlowReseed`, …) fires for free.
 
 | Tour need | Mechanism |
 | --- | --- |
@@ -895,9 +938,13 @@ it to Layer 2 regardless, keeping Layer 1 purely non-reactive.
   takes `only?`; `applyIntent` hard-codes `FADE_IN/OUT_DURATION_MS` today and gains an
   optional override). One intent→opacity path, honoring the cue's duration — no
   bypass, no parking.
-- **`captureSettings`/`restoreSettings` widen to `captureScene`/`restoreScene`** —
-  the snapshot adds `selection.focus` so the tour's `restore` reverts a beat's
-  `focus()` and its isolation dim, not settings alone.
+- **`captureSettings`/`restoreSettings` widen to `captureScene`/`restoreScene` and
+  join `ReconcileEffects`** — the snapshot adds `selection.focus` so the tour's
+  `restore` reverts a beat's `focus()` and its isolation dim, not settings alone; and
+  the two helpers are exposed as `fx.captureScene()`/`fx.restoreScene(snapshot, opts)`
+  closures under `getContext('reconcile')`, since a saga can't hand them the live
+  `state`/`store` they need. `BeatData.effects` stays a plain `Action[]` — `put`
+  verbatim, no wrapper.
 
 ## What we are deliberately not building (YAGNI)
 
