@@ -888,20 +888,23 @@ export function resolveLayerOpacity(
   before same-frame derivation; rendered alpha includes the clip factor (default 1
   ⇒ behaviour-neutral when no clip plays).
 
-- [ ] `fadeIdToVisibilityKey maps flow id to 'flow'`, `filament id to 'filaments'`,
+- [x] `fadeIdToVisibilityKey maps flow id to 'flow'`, `filament id to 'filaments'`,
   `a structure ring id to 'structureRing'`.
-- [ ] `fadeIdToVisibilityKey returns undefined for non-clip-fadeable kinds` (e.g. `overlay`).
-- [ ] `fadeIdToVisibilityKey is exhaustive` — the no-`default` switch fails tsc if a
-  `FadeId['kind']` is unhandled (compile-error guard).
-- [ ] `runFrame ticks clipPlayer before deriving masks/demand` — order assertion
+- [x] `fadeIdToVisibilityKey returns undefined for non-clip-fadeable kinds` (e.g. `overlay`).
+- [x] `fadeIdToVisibilityKey is exhaustive` — the no-`default` switch fails tsc if a
+  `FadeId['kind']` is unhandled (compile-error guard). (Note: under skymap's tsconfig the
+  no-`default` switch does NOT actually fail tsc — an unhandled kind silently returns
+  `undefined`; mirrors the existing `recessionTargetFor` pattern. Flagged for final review:
+  make it real with `const _exhaustive: never = h.kind`.)
+- [x] `runFrame ticks clipPlayer before deriving masks/demand` — order assertion
   via a spy: `clipPlayer.tick` called before `deriveSourceMasks`.
-- [ ] `resolveLayerOpacity includes the clip factor` — `intent×focus×clip`;
+- [x] `resolveLayerOpacity includes the clip factor` — `intent×focus×clip`;
   `clip=1` is behaviour-neutral (existing tests stay green), a `fade`d layer halves.
-- [ ] `resolveLayerOpacity omitting the clip channel leaves opacity unchanged` (back-compat).
-- [ ] `resolveLayerOpacity uses factor 1 for an id with no clip key even with a channel present`.
-- [ ] Thread `clipOpacity` through the six consumers (each: add the arg).
-- [ ] Construct `clipPlayer` in the engine bootstrap (eager).
-- [ ] `npm test -- runFrame focusRecession fadeIdToVisibilityKey` → pass. `npm run typecheck` clean. Commit.
+- [x] `resolveLayerOpacity omitting the clip channel leaves opacity unchanged` (back-compat).
+- [x] `resolveLayerOpacity uses factor 1 for an id with no clip key even with a channel present`.
+- [x] Thread `clipOpacity` through the six consumers (each: add the arg).
+- [x] Construct `clipPlayer` in the engine bootstrap (eager). (Pre-satisfied in Task 11a-ii — verified at `engine.ts:340`, not duplicated.)
+- [x] `npm test -- runFrame focusRecession fadeIdToVisibilityKey` → pass. `npm run typecheck` clean. Commit.
 
 ## Task 13 — The flyout spike as a `ClipData` (validate the model)
 
