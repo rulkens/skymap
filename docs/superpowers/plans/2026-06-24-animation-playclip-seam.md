@@ -422,16 +422,18 @@ resolves). This is the integration check that the whole `playClip` → `clipPlay
 
 **Files:** none new — verification.
 
-- [ ] `npm run typecheck` (both tsconfigs) → green. This is the net that catches any
+- [x] `npm run typecheck` (both tsconfigs) → green. This is the net that catches any
   surviving `evaluateTween` import anywhere in `src/` or `tools/`.
-- [ ] `npm test` → full suite green.
-- [ ] Grep for `evaluateTween` across `src/` + `tests/` → zero hits (the function is
+- [x] `npm test` → full suite green (502 files / 3207 tests).
+- [x] Grep for `evaluateTween` across `src/` + `tests/` → zero hits (the function is
   fully dissolved; only `evaluateClip` remains). Grep for `CameraTweenDescriptor` →
   still present (the type survives; only the evaluator folded).
-- [ ] Confirm `camera.tween`, `startCameraTween`, `cancelCameraTween`, and
+- [x] Confirm `camera.tween`, `startCameraTween`, `cancelCameraTween`, and
   `focusTweenSaga`'s descriptor build are all **untouched** by this plan (the pinned
   decision: state stays separate, only the evaluator + the tween row folded).
-- [ ] Commit any final cleanup (didactic-comment tidy on the touched files — the
+  *(`cameraSlice.ts` byte-identical to base; `focusTweenSaga.ts` changed only by the
+  Task-5 `suspendDuringClip` wrap, descriptor build unchanged.)*
+- [x] Commit any final cleanup (didactic-comment tidy on the touched files — the
   `cameraDrivers.ts` header at lines 36-37 still says "tween 60" and should note both
   rows now share `evaluateClip`).
 
