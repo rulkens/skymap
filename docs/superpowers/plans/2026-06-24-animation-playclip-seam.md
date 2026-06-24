@@ -283,23 +283,26 @@ cleanup + `dispatch(endClip())`, and the Promise **resolves** (never rejects) �
 the common path needs no try/catch. `clipPlayer.stop()` is thin: it does not OWN
 teardown, it triggers `endClip()` like every caller (spec lines 753-755).
 
-- [ ] `playClip resolves its Promise when the clip ends` — drive a short clip through
+- [x] `playClip resolves its Promise when the clip ends` — drive a short clip through
   a stubbed `clipPlayer` to completion; assert the Promise resolves and that
   `endClip()` was dispatched on the resolving edge.
-- [ ] `playClip resolves (not rejects) on stop()` — invoke the `[CANCEL]` hook;
+- [x] `playClip resolves (not rejects) on stop()` — invoke the `[CANCEL]` hook;
   assert `clipPlayer.stop()` ran and the Promise resolved.
-- [ ] `playClip resolves 'live' to a concrete start at dispatch` — with `start: 'live'`,
+- [x] `playClip resolves 'live' to a concrete start at dispatch` — with `start: 'live'`,
   assert the dispatched `startClip` payload carries a concrete `Pose` equal to the
   current `lastPose.current`, and that `data` is a **fresh object reference** (the
   clock-reset trigger).
-- [ ] `playClip with a fixed start passes it through unchanged` — `start: Pose` is
+- [x] `playClip with a fixed start passes it through unchanged` — `start: Pose` is
   forwarded verbatim.
-- [ ] Run → red.
-- [ ] Implement `playClip`; add the resolver-registration hook to `clipPlayer`
+- [x] Run → red.
+- [x] Implement `playClip`; add the resolver-registration hook to `clipPlayer`
   (read Plan A's `clipPlayer` shape — the hook is a `(onEnd) => void` or a
   per-clip resolver slot; match Plan A's lifecycle). Attach `[CANCEL]`.
-- [ ] `npm test -- playClip` → green; `npm run typecheck` → green.
-- [ ] Commit (`playClip.ts`, `clipPlayer.ts`, `playClip.test.ts`).
+  *(landed as a `createPlayClip(deps)` factory → `playClip(clip)`; clipPlayer
+  gains `registerEndResolver`, fired via `fireEndResolver()` after both endClip
+  edges — tick step-1 + stop — exactly once.)*
+- [x] `npm test -- playClip` → green; `npm run typecheck` → green.
+- [x] Commit (`playClip.ts`, `clipPlayer.ts`, `playClip.test.ts`).
 
 ## Task 4 — Verify `endClip()` clears a dormant `camera.tween` (no new code)
 
