@@ -96,6 +96,7 @@ describe('produceStructureMarkers → structureMarkerRenderer.setMarkers', () =>
       selection: { hover: null, select: null, focus: null },
       subsystems: {
         fades: makeRegistry(),
+        clipPlayer: { clipOpacityOf: () => 1 },
       },
     } as unknown as EngineState;
     const ctx = {
