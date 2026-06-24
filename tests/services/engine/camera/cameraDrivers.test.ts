@@ -21,6 +21,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
+import { easeOutCubic } from '../../../../src/utils/math/easeOutCubic';
+import { lerp } from '../../../../src/utils/math/lerp';
+
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -198,6 +201,44 @@ describe('buildCameraDrivers — pose functions', () => {
     const elapsedMs = 300;
     const result = byId('tween').pose(s, CAM_STUB, elapsedMs);
     expect(result).toEqual(evaluateClip(tweenToClip(TWEEN_DESC), elapsedMs / 1000));
+  });
+
+  it('tween row converts ms→sec correctly', () => {
+    // Oracle independent of evaluateClip / tweenToClip — a 1000× unit slip
+    // (passing elapsedMs instead of elapsedMs/1000) would saturate the clip to
+    // its `to` pose (500 s >> 1 s duration), making distance == 1000.
+    // The midpoint + bounds assertions below catch that slip.
+    //
+    // Derivation:
+    //   durationMs = 1000 ms → duration = 1 s
+    //   elapsedMs  = 500  ms → elapsedSec = 0.5 s
+    //   t = elapsedSec / durationSec = 0.5
+    //   eased = easeOutCubic(0.5) = 1 - (1-0.5)^3 = 1 - 0.125 = 0.875
+    //   distance = lerp(10, 1000, 0.875) = 10*(1-0.875) + 1000*0.875 = 876.25
+    //
+    // A forgotten /1000 would pass 500 s to a 1 s clip → saturated to `to`
+    // (distance == 1000); the midpoint + bounds below reject that.
+    const UNIT_SLIP_DESC: CameraTweenDescriptor = {
+      from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
+      to: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1000 },
+      durationMs: 1000,
+      easing: 'easeOutCubic',
+    };
+
+    const store = makeStore();
+    store.dispatch(startCameraTween(UNIT_SLIP_DESC));
+    const s = store.getState() as unknown as RootState;
+
+    const elapsedMs = 500;
+    const result = byId('tween').pose(s, CAM_STUB, elapsedMs);
+
+    // Independent oracle: easeOutCubic(0.5) = 0.875; lerp(10, 1000, 0.875) = 876.25
+    const expectedDistance = lerp(10, 1000, easeOutCubic(0.5));
+    expect(result.distance).toBeCloseTo(expectedDistance, 5);
+
+    // Slip-catching bounds: a forgotten /1000 saturates to 1000; these reject that.
+    expect(result.distance).toBeGreaterThan(10);
+    expect(result.distance).toBeLessThan(1000);
   });
 
   it('autoRotate.pose returns spinAutoRotate(base, rate, elapsed)', () => {
