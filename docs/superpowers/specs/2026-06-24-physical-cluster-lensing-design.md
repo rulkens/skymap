@@ -117,7 +117,8 @@ directly. The label shows the multiplier (`1.0×`, `42×`, `off`).
 ## Uniform layout change
 
 Per-lens `r_s` requires growing each lens slot. The current single-`vec4` lens
-(`xyz` + `θ_E`) becomes **two** `vec4`s:
+(`xyz` + `θ_E`) becomes **two** `vec4`s, which also lets the first vec4 carry
+precomputed eye-relative geometry:
 
 ```
 struct LensingUniforms {
@@ -128,20 +129,27 @@ struct LensingUniforms {
   lenses:  array<LensData, 16>,
 }
 struct LensData {
-  centreThetaE: vec4<f32>,            // xyz = centre Mpc, w = thetaERad
-  rs:           vec4<f32>,            // x = r_s Mpc, yzw = 0 (reserved)
+  geom:   vec4<f32>,                  // xyz = unit eye->lens dir, w = dL (eye->lens distance, Mpc)
+  params: vec4<f32>,                  // x = thetaERad, y = r_s Mpc, zw = 0 (reserved)
 }
 ```
 
 - New size: `16 + 16·32 = 528` bytes (was 272).
+- Per-lens `dirLens` (unit eye→lens direction) + `dL` (eye→lens distance) are
+  precomputed CPU-side each frame in `buildClusterLenses` (from `worldPos −
+  camPos`, the same vector it already forms for the in-front test) — the
+  world-space centre is **not** stored. This eliminates the per-vertex
+  `toLens` / `length` / `normalize` in `lensTerm` (~30M invocations/frame).
 - The header's old `scaleRadius` word is retired to padding — `r_s` is now
   per-lens. The global `lensScaleRadiusMpc` setting and its slider are removed.
 - `MAX_LENSES = 16` is unchanged; the WESL `array` length and the CPU packer
   stay the single drift point (existing convention).
 
-`packLensingUniforms` writes `centre + thetaERad` into the first vec4 and `r_s`
-into the second per lens. `lensing.wesl` reads `lenses[i].rs.x` where it
-currently reads the global `lensing.scaleRadius`.
+`packLensingUniforms` writes `dirLens + dL` into the first vec4 (`geom`) and
+`thetaERad + r_s` into the second (`params`) per lens. `lensing.wesl` reads each
+lens's precomputed `geom` (dir + dL) and `params` (θ_E + r_s) where it currently
+recomputes eye-relative geometry per vertex and reads the global
+`lensing.scaleRadius`.
 
 ## Lens selection change
 
@@ -165,7 +173,7 @@ sorts/caps by `significance`. With the physical model:
 | `src/@types/rendering/LensingUniformsValue.d.ts` | packer input | drop global `scaleRadiusMpc`; per-lens carries `rsMpc` |
 | `src/utils/gpu/packLensingUniforms.ts` | byte layout | two-vec4 lens stride, 528 B, retire header `scaleRadius` |
 | `src/services/gpu/shaders/lib/lensingUniforms.wesl` | GPU struct | `LensData` two-vec4 struct |
-| `src/services/gpu/shaders/lib/lensing.wesl` | model | read `lenses[i].rs.x` per lens instead of header `scaleRadius` |
+| `src/services/gpu/shaders/lib/lensing.wesl` | model | read precomputed `lenses[i].geom` (dir+dL) and `lenses[i].params` (θ_E + r_s) per lens instead of recomputing geometry per vertex + reading header `scaleRadius` |
 | `src/state/settings/*` + `src/data/defaults.ts` | settings | `lensStrengthDeg` → `lensStrength` (default 1.0); remove `lensScaleRadiusMpc` |
 | `src/services/engine/frame/renderFrame.ts` | wiring | pass `lensStrength` into `buildClusterLenses`; drop the degree→rad conversion and the global r_s |
 | `src/components/DebugPanel/*` + `DebugPanelContainer` | UI | log-scaled strength slider; remove r_s slider |
