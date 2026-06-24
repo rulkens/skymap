@@ -67,6 +67,7 @@ export function encodeVolumePrepass(
         { kind: 'volumesMaster' },
         ctx.focusBlend,
         nowMs,
+        state.subsystems.clipPlayer,
       );
       const fadeOpacityOf = (id: VolumeFieldId) =>
         state.subsystems.fades.opacityOf({ kind: 'volumeField', id }, nowMs) *

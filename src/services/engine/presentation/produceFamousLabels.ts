@@ -183,14 +183,18 @@ export function produceFamousLabels(
   // loop. See `labelStyleOverride.ts`.
   const override = getLabelStyleOverride();
 
-  // Snapshot the layer opacity × uniform recession ONCE — it's identical for
-  // every famous label (the `galaxyNames` handle is shared, and there is no
-  // per-member focus exemption here). Folded into each label + anchor-line
-  // fadeAlpha below. `fades`/`now` were snapshotted at the top for the
-  // opacity-aware visibility gate; reuse them rather than re-reading the clock.
+  // Snapshot the layer opacity × uniform recession × clip factor ONCE — it's
+  // identical for every famous label (the `galaxyNames` handle is shared, and
+  // there is no per-member focus exemption here). Folded into each label +
+  // anchor-line fadeAlpha below. `fades`/`now` were snapshotted at the top for
+  // the opacity-aware visibility gate; reuse them rather than re-reading the clock.
+  // The clip factor addresses the `'surveyLabel'` key — the VisibilityLayerKey
+  // that `fadeIdToVisibilityKey` maps `galaxyNames` to.
+  const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('surveyLabel', now);
   const layerAlpha =
     fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' }, now) *
-    focusRecession({ kind: 'labelLayer', layer: 'galaxyNames' }, ctx.focusBlend);
+    focusRecession({ kind: 'labelLayer', layer: 'galaxyNames' }, ctx.focusBlend) *
+    clipFactor;
 
   for (const p of inputs) {
     const dx = p.worldPos[0] - cx;

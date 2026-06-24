@@ -71,6 +71,19 @@ import { commitCameraPose, cancelCameraTween } from '../../../state/camera/camer
  * tests can drive deterministic timing.
  */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
+  // ── Clip-player tick (MUST run first) ─────────────────────────────────────
+  //
+  // Task 12 contract: `clipPlayer.tick(nowMs)` is the first statement of
+  // `runFrame` — before `deriveSourceMasks` / `reevaluateDemand` and before
+  // the camera produce step. Scene cues (fade / show / hide / focus) fired
+  // here are therefore committed before this frame derives masks, demand, or
+  // the camera pose from store state. A cue that dispatches a store action
+  // (e.g. `settings.milkyWay.enabled → false`) is seen by every downstream
+  // reader in the same frame, rather than lagging one frame behind.
+  //
+  // `clipPlayer` is non-null from t=0 (no GPU dep), so no null-check needed.
+  state.subsystems.clipPlayer.tick(nowMs);
+
   // ── Demand re-evaluation ──────────────────────────────────────────────────
   //
   // Re-derive what should be loading from current state, every frame. The

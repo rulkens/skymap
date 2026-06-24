@@ -59,6 +59,13 @@ export function produceStructureMarkers(
   const fades = state.subsystems.fades;
   const now = performance.now();
 
+  // Clip-owned transient opacity for structure rings — hoisted outside the loop
+  // because ALL structure sources map to the same `'structureRing'` key, so the
+  // factor is identical for every structure. Returns 1 when no clip is playing.
+  // We address the key directly (`'structureRing'`) since `fadeIdToVisibilityKey`
+  // maps every `StructureId` to this value without discrimination.
+  const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('structureRing', now);
+
   const structures = state.data.structures;
   for (const p of structures.all()) {
     // Per-category marker opacity: the category toggle's fade, read from the
@@ -123,7 +130,9 @@ export function produceStructureMarkers(
     // SIG_MIN_ALPHA (significance 0) to 1 (significance 1). Featured anchors
     // omit significance, so `?? 1` leaves their at-rest alpha unchanged.
     const sigWeight = SIG_MIN_ALPHA + (1 - SIG_MIN_ALPHA) * (p.significance ?? 1);
-    const weightedFade = fadeAlpha * sigWeight * catOpacity;
+    // clipFactor is the clip-player's transient opacity for the structureRing
+    // key — 1 when no clip plays, otherwise the cue-driven dimming value.
+    const weightedFade = fadeAlpha * sigWeight * catOpacity * clipFactor;
 
     // Cluster focus mode: while some structure is FOCUSED, every OTHER marker
     // smoothly recedes toward MARKER_RECESSION as ctx.focusBlend ramps 0→1. The
