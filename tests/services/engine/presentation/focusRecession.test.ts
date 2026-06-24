@@ -19,13 +19,15 @@ function makeRegistry() {
 
 /**
  * Build a minimal ClipPlayer stub: `clipOpacityOf` returns `factor` for every
- * call; `tick`, `stop`, and `destroy` are no-ops. Typed to satisfy `ClipPlayer`
- * without bare `vi.fn()` (bare fails tsc against typed callback fields).
+ * call; `tick`, `stop`, `registerEndResolver`, and `destroy` are no-ops. Typed
+ * to satisfy `ClipPlayer` without bare `vi.fn()` (bare fails tsc against typed
+ * callback fields).
  */
 function makeClipPlayer(factor: number): ClipPlayer {
   return {
     tick: vi.fn<(nowMs: number) => void>(),
     stop: vi.fn<() => void>(),
+    registerEndResolver: vi.fn<(onEnd: () => void) => void>(),
     clipOpacityOf: vi.fn<(layer: VisibilityLayerKey, nowMs: number) => number>(() => factor),
     destroy: vi.fn<() => void>(),
   };

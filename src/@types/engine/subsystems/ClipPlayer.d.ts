@@ -41,12 +41,26 @@ export type ClipPlayer = {
    * Stop the active clip immediately: dispatch `endClip()` and reset all
    * internal state (cue cursor, clipOpacity, compile cache). Called when the
    * engine needs to abort a clip without waiting for natural completion —
-   * e.g. user interaction that pre-empts the tour.
+   * e.g. a `[CANCEL]` hook on the `playClip` Promise pre-empts the tour.
    *
-   * Plan B will add the `playClip` Promise and a `[CANCEL]` hook; for now
-   * `stop()` is the sole external abort surface.
+   * `stop()` fires the end-resolver (if registered) AFTER dispatching
+   * `endClip()` — the same edge `playClip` uses for natural completion. This
+   * ensures cancellation RESOLVES the Promise rather than rejecting it.
    */
   stop(): void;
+
+  /**
+   * Register a one-shot callback to invoke when this clip ends, either by
+   * natural completion (two-frame deferred `endClip` dispatch in `tick`) or
+   * by `stop()`. The callback is fired exactly once and then cleared, so a
+   * second call to `registerEndResolver` can register for the NEXT clip.
+   *
+   * Used by `createPlayClip` to resolve the Promise it returns: when the
+   * callback fires the Promise settles, and `yield* call(playClip, clip)` in
+   * a saga resumes. Registering BEFORE dispatching `startClip` avoids the
+   * narrow race where the clip completes on the same JS microtask.
+   */
+  registerEndResolver(onEnd: () => void): void;
 
   /**
    * The clip-owned transient opacity factor for `layer` at `nowMs`.

@@ -8,11 +8,13 @@ import {
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
+import { startClip } from '../../../src/state/camera/cameraSlice';
 import { cameraRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -73,5 +75,29 @@ describe('watchFocusTween', () => {
     store.dispatch(updateSelectionFocus(null));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
+  });
+
+  // A minimal clip payload: no camera motion, just timeline structure. The
+  // timeline contents don't matter — what matters is that `camera.clip` is
+  // non-null, which is what `selectClipActive` reads.
+  const MINIMAL_CLIP: ClipData = { start: 'live', timeline: [] };
+
+  it('watchFocusTween plants no tween while a clip is active', async () => {
+    store.dispatch(startClip(MINIMAL_CLIP));
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+  });
+
+  it('watchFocusTween plants a tween normally with no clip active', async () => {
+    // Regression guard: `suspendDuringClip` must be transparent when no clip is active.
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+
+    const tween = store.getState()[cameraRoute].tween;
+    expect(tween).not.toBeNull();
+    expect(tween!.from).toEqual(FROM);
+    expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(tween!.to.yaw).toBe(FROM.yaw);
   });
 });

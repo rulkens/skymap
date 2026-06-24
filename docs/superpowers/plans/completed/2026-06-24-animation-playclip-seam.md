@@ -161,27 +161,29 @@ case of a single `base`-layer `set` per channel with `easeOutCubic`. There must 
 > so existing focus-tween motion is byte-for-byte unchanged. This is the one
 > subtlety the implementer must not paper over.
 
-- [ ] Move the assertions from `tests/services/engine/camera/evaluateTween.test.ts`
+- [x] Move the assertions from `tests/services/engine/camera/evaluateTween.test.ts`
   into `evaluateClip.test.ts` as a "focus tween = one-segment clip" describe block:
-  - [ ] `evaluateClip matches the old tween at t=0` — a one-segment clip built from
+  - [x] `evaluateClip matches the old tween at t=0` — a one-segment clip built from
     `{ from, to, durationMs, easing: 'easeOutCubic' }` returns `from` at `elapsed=0`.
-  - [ ] `evaluateClip eases yaw via shortest arc` — `from.yaw`/`to.yaw` straddling
+  - [x] `evaluateClip eases yaw via shortest arc` — `from.yaw`/`to.yaw` straddling
     ±π lerps the short way (port `evaluateTween`'s shortest-arc assertion).
-  - [ ] `evaluateClip saturates to an exact copy of to past the deadline` — at
+  - [x] `evaluateClip saturates to an exact copy of to past the deadline` — at
     `elapsed > duration` every field `===` `to` (the coterminal-angle guard), and
     `target` is a fresh array (not aliased to `to.target`).
-  - [ ] `evaluateClip keeps focus-tween distance LINEAR` — a one-segment clip with
+  - [x] `evaluateClip keeps focus-tween distance LINEAR` — a one-segment clip with
     a `lin`-space distance segment matches `lerp(fromDist, toDist, easeOutCubic(t))`
     at a mid-`t`, NOT the log interpolation the default would give.
-- [ ] Run → red (some cases fail until `evaluateClip` handles the one-segment / `lin`
+- [x] Run → red (some cases fail until `evaluateClip` handles the one-segment / `lin`
   cases; if Plan A already covers them, they pass and you only delete the old file).
-- [ ] Implement the one-segment case inside `evaluateClip` (read Plan A's current
+- [x] Implement the one-segment case inside `evaluateClip` (read Plan A's current
   body; reuse `easeOutCubic`/`lerp`/`lerpAngleShortest` from `src/utils/math/`).
-- [ ] Delete `src/services/engine/camera/evaluateTween.ts` and
+  *(evaluateClip's body needed no change — it already reproduces the tween; the
+  one-segment clip is built by the `tweenToClip` adapter, see Task 2.)*
+- [x] Delete `src/services/engine/camera/evaluateTween.ts` and
   `tests/services/engine/camera/evaluateTween.test.ts`.
-- [ ] `npm test -- evaluateClip` → green; `npm run typecheck` → green (catches any
+- [x] `npm test -- evaluateClip` → green; `npm run typecheck` → green (catches any
   remaining `evaluateTween` import).
-- [ ] Commit (`evaluateClip.ts`, `evaluateClip.test.ts`, the two deletions).
+- [x] Commit (`evaluateClip.ts`, `evaluateClip.test.ts`, the two deletions).
 
 ## Task 2 — Re-point the `tween`@60 driver row at `evaluateClip`
 
@@ -216,18 +218,20 @@ pose: (s, _cam, elapsedMs) => evaluateClip(tweenAsClip(s.camera.tween!), elapsed
 >   + lin-target segment, `easeOutCubic`). It restates the channel→space mapping
 >   ONLY via the `space` override, never hardcoding (spec lines 137-138).
 
-- [ ] Add `cameraDrivers tween row produces the same pose via evaluateClip` — drive
+- [x] Add `cameraDrivers tween row produces the same pose via evaluateClip` — drive
   the table with a fixed `camera.tween` descriptor + `nowMs`, assert the produced
   pose equals the pre-fold `evaluateTween` value at the same elapsed (golden values
   ported from `evaluateTween`'s test, or computed inline).
-- [ ] Add `cameraDrivers tween row converts ms→sec correctly` — at `elapsedMs` =
+- [x] Add `cameraDrivers tween row converts ms→sec correctly` — at `elapsedMs` =
   half the duration, the produced pose is the eased midpoint (NOT the start, which
-  is what a 1000× unit slip would give).
-- [ ] Run → red.
-- [ ] Implement: add `tweenAsClip`, re-point the row, import `evaluateClip`, drop the
-  `evaluateTween` import.
-- [ ] `npm test -- cameraDrivers` → green; `npm run typecheck` → green.
-- [ ] Commit (`cameraDrivers.ts`, the adapter file, `cameraDrivers.test.ts`).
+  is what a 1000× unit slip would give). *(Non-tautological oracle:
+  `lerp(10,1000,easeOutCubic(0.5))=876.25` + strict start/end bounds.)*
+- [x] Run → red.
+- [x] Implement: add `tweenAsClip`, re-point the row, import `evaluateClip`, drop the
+  `evaluateTween` import. *(adapter landed as `tweenToClip` — `<noun>To<Noun>`
+  convention, mirrors `tweenToCameraSnapshot`.)*
+- [x] `npm test -- cameraDrivers` → green; `npm run typecheck` → green.
+- [x] Commit (`cameraDrivers.ts`, the adapter file, `cameraDrivers.test.ts`).
 
 ## Task 3 — `playClip(clip): Promise<void>` — the seam (resolve-on-end)
 
@@ -279,23 +283,26 @@ cleanup + `dispatch(endClip())`, and the Promise **resolves** (never rejects) �
 the common path needs no try/catch. `clipPlayer.stop()` is thin: it does not OWN
 teardown, it triggers `endClip()` like every caller (spec lines 753-755).
 
-- [ ] `playClip resolves its Promise when the clip ends` — drive a short clip through
+- [x] `playClip resolves its Promise when the clip ends` — drive a short clip through
   a stubbed `clipPlayer` to completion; assert the Promise resolves and that
   `endClip()` was dispatched on the resolving edge.
-- [ ] `playClip resolves (not rejects) on stop()` — invoke the `[CANCEL]` hook;
+- [x] `playClip resolves (not rejects) on stop()` — invoke the `[CANCEL]` hook;
   assert `clipPlayer.stop()` ran and the Promise resolved.
-- [ ] `playClip resolves 'live' to a concrete start at dispatch` — with `start: 'live'`,
+- [x] `playClip resolves 'live' to a concrete start at dispatch` — with `start: 'live'`,
   assert the dispatched `startClip` payload carries a concrete `Pose` equal to the
   current `lastPose.current`, and that `data` is a **fresh object reference** (the
   clock-reset trigger).
-- [ ] `playClip with a fixed start passes it through unchanged` — `start: Pose` is
+- [x] `playClip with a fixed start passes it through unchanged` — `start: Pose` is
   forwarded verbatim.
-- [ ] Run → red.
-- [ ] Implement `playClip`; add the resolver-registration hook to `clipPlayer`
+- [x] Run → red.
+- [x] Implement `playClip`; add the resolver-registration hook to `clipPlayer`
   (read Plan A's `clipPlayer` shape — the hook is a `(onEnd) => void` or a
   per-clip resolver slot; match Plan A's lifecycle). Attach `[CANCEL]`.
-- [ ] `npm test -- playClip` → green; `npm run typecheck` → green.
-- [ ] Commit (`playClip.ts`, `clipPlayer.ts`, `playClip.test.ts`).
+  *(landed as a `createPlayClip(deps)` factory → `playClip(clip)`; clipPlayer
+  gains `registerEndResolver`, fired via `fireEndResolver()` after both endClip
+  edges — tick step-1 + stop — exactly once.)*
+- [x] `npm test -- playClip` → green; `npm run typecheck` → green.
+- [x] Commit (`playClip.ts`, `clipPlayer.ts`, `playClip.test.ts`).
 
 ## Task 4 — Verify `endClip()` clears a dormant `camera.tween` (no new code)
 
@@ -318,11 +325,14 @@ and **snaps the camera to the focus framing** — defeating commit-on-edge's bak
 > reducer suffices — the tween clock resets by descriptor-reference change on the next
 > plant, so no Resource side-effect is needed and no saga arm is warranted.
 
-- [ ] Confirm Plan A Task 7's tests exist and pass: `endClip also clears a dormant
+- [x] Confirm Plan A Task 7's tests exist and pass: `endClip also clears a dormant
   tween` (both fields non-null → `endClip()` nulls both) and the no-planted-tween
   no-op. If Plan A's reducer does NOT clear `camera.tween`, STOP and report — do not
   add a competing `takeEvery(endClip, …)` saga arm here.
-- [ ] `npm test -- cameraSlice` (Plan A's teardown tests) → green; `npm run typecheck`
+  *(Verified: `cameraSlice.ts:112-115` `endClip` reducer sets both `camera.clip=null`
+  and `camera.tween=null`; tests `endClip also clears a dormant tween` + `endClip
+  clears clip to null` present and green. Single teardown home — no saga arm added.)*
+- [x] `npm test -- cameraSlice` (Plan A's teardown tests) → green (20/20); `npm run typecheck`
   → green. No commit (no code change).
 
 ## Task 5 — Suspend `watchFocusTween` while a clip plays
@@ -362,17 +372,17 @@ runtime → `put(startCameraTween(...))`) is unchanged; only the guard wraps it.
 > WANTS. Parking `watchSelectionRows` would make every in-clip `focus()` a no-op dim.
 > Suspend **exactly one** watcher: `watchFocusTween`.
 
-- [ ] `watchFocusTween plants no tween while a clip is active` — with `camera.clip`
+- [x] `watchFocusTween plants no tween while a clip is active` — with `camera.clip`
   non-null (`selectClipActive` true), an `updateSelectionFocus` dispatch results in
   NO `startCameraTween` dispatch.
-- [ ] `watchFocusTween plants a tween normally with no clip active` — with
+- [x] `watchFocusTween plants a tween normally with no clip active` — with
   `camera.clip` null, the existing behaviour is unchanged (a `startCameraTween` is
   dispatched). This is the regression guard on the existing focus tween.
-- [ ] Run → red.
-- [ ] Implement `suspendDuringClip` (own file, one function; `select` +
+- [x] Run → red.
+- [x] Implement `suspendDuringClip` (own file, one function; `select` +
   `selectClipActive` from Plan A's selector). Wrap the worker at `focusTweenSaga.ts:36`.
-- [ ] `npm test -- focusTweenSaga` → green; `npm run typecheck` → green.
-- [ ] Commit (`focusTweenSaga.ts`, `suspendDuringClip.ts`, the test).
+- [x] `npm test -- focusTweenSaga` → green (6/6); `npm run typecheck` → green.
+- [x] Commit (`focusTweenSaga.ts`, `suspendDuringClip.ts`, the test).
 
 > **`suspendDuringClip` is Layer 1, owned here.** It guards ANY clip's camera from
 > a reconcile saga (`watchFocusTween`), not just a tour's — it keys on
@@ -395,31 +405,35 @@ by playing it through `playClip` (dispatch → frames → commit-on-edge bake �
 resolves). This is the integration check that the whole `playClip` → `clipPlayer` →
 `clip`@95 driver → commit-on-edge loop closes.
 
-- [ ] `playClip(flyout) drives the camera and resolves` — an integration-style test
+- [x] `playClip(flyout) drives the camera and resolves` — an integration-style test
   (drive `runFrame` over enough simulated frames): assert the camera distance moves
   from the live pose toward the flyout's horizon-shell target, the Promise resolves
   after the timeline duration, and `camera.base` is committed to the saturated final
   pose (commit-on-edge bake, NOT one frame stale).
-- [ ] Run → red.
-- [ ] Implement the spike call site (`playClip(flyout)`), reusing Plan A's `flyout`
-  `ClipData` verbatim — do not re-author it.
-- [ ] `npm test` (the integration test) → green; `npm run typecheck` → green.
-- [ ] Commit.
+- [x] Run → red.
+- [x] Implement the spike call site (`playClip(flyout)`), reusing Plan A's `flyout`
+  `ClipData` verbatim — do not re-author it. *(The integration TEST is the
+  non-reactive call site — no unwired `src/` spike module created, which would be
+  dead code; live wiring is Plan C. No `src/` change needed: Tasks 1-5 closed the seam.)*
+- [x] `npm test` (the integration test) → green; `npm run typecheck` → green.
+- [x] Commit.
 
 ## Task 7 — Full-suite green + cleanup pass
 
 **Files:** none new — verification.
 
-- [ ] `npm run typecheck` (both tsconfigs) → green. This is the net that catches any
+- [x] `npm run typecheck` (both tsconfigs) → green. This is the net that catches any
   surviving `evaluateTween` import anywhere in `src/` or `tools/`.
-- [ ] `npm test` → full suite green.
-- [ ] Grep for `evaluateTween` across `src/` + `tests/` → zero hits (the function is
+- [x] `npm test` → full suite green (502 files / 3207 tests).
+- [x] Grep for `evaluateTween` across `src/` + `tests/` → zero hits (the function is
   fully dissolved; only `evaluateClip` remains). Grep for `CameraTweenDescriptor` →
   still present (the type survives; only the evaluator folded).
-- [ ] Confirm `camera.tween`, `startCameraTween`, `cancelCameraTween`, and
+- [x] Confirm `camera.tween`, `startCameraTween`, `cancelCameraTween`, and
   `focusTweenSaga`'s descriptor build are all **untouched** by this plan (the pinned
   decision: state stays separate, only the evaluator + the tween row folded).
-- [ ] Commit any final cleanup (didactic-comment tidy on the touched files — the
+  *(`cameraSlice.ts` byte-identical to base; `focusTweenSaga.ts` changed only by the
+  Task-5 `suspendDuringClip` wrap, descriptor build unchanged.)*
+- [x] Commit any final cleanup (didactic-comment tidy on the touched files — the
   `cameraDrivers.ts` header at lines 36-37 still says "tween 60" and should note both
   rows now share `evaluateClip`).
 

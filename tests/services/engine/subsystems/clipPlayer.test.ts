@@ -30,20 +30,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
-import {
-  startClip,
-  endClip,
-  resolveClipStart,
-} from '../../../../src/state/camera/cameraSlice';
+import { startClip, endClip, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { applySceneEffect } from '../../../../src/services/animation/applySceneEffect';
-import {
-  fade,
-  focus,
-  seq,
-  hold,
-} from '../../../../src/services/engine/animation/effectHelpers';
+import { fade, focus, seq, hold } from '../../../../src/services/engine/animation/effectHelpers';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -58,9 +49,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 
 const { mockApplySceneEffect } = vi.hoisted(() => ({
   mockApplySceneEffect:
-    vi.fn<
-      typeof import('../../../../src/services/animation/applySceneEffect').applySceneEffect
-    >(),
+    vi.fn<typeof import('../../../../src/services/animation/applySceneEffect').applySceneEffect>(),
 }));
 
 vi.mock('../../../../src/services/animation/applySceneEffect', () => ({
@@ -148,9 +137,7 @@ describe('clipPlayer', () => {
     // Two fade cues: survey at atSec=0, filaments at atSec=3.
     // seq([fade@0, hold(3), fade@3, hold(5)]) — hold(3) advances cursor to 3.
     const data: ClipData = {
-      timeline: [
-        seq([fade(['survey'], 0, 0), hold(3), fade(['filaments'], 0, 0), hold(5)]),
-      ],
+      timeline: [seq([fade(['survey'], 0, 0), hold(3), fade(['filaments'], 0, 0), hold(5)])],
     };
     installClip(store, data);
 
@@ -161,7 +148,7 @@ describe('clipPlayer', () => {
 
     // Tick 2 at t=4000: elapsed=4. prevElapsed=0. Fires cue@3 (filaments) in (0,4].
     player.tick(4000);
-    expect(player.clipOpacityOf('survey', 4000)).toBe(0);   // still faded
+    expect(player.clipOpacityOf('survey', 4000)).toBe(0); // still faded
     expect(player.clipOpacityOf('filaments', 4000)).toBe(0); // now faded
   });
 
@@ -333,5 +320,24 @@ describe('clipPlayer', () => {
     player.destroy();
     // After destroy, clipOpacity is reset — all layers return 1.
     expect(player.clipOpacityOf('survey', 0)).toBe(1);
+  });
+
+  it('destroy settles an in-flight playClip end-resolver', () => {
+    const store = makeStore();
+    const clock = createCameraClock();
+    const player = createClipPlayer({
+      store,
+      requestRender: () => {},
+      clock,
+      getEngineState: makeEngineStateStub,
+    });
+
+    let settled = false;
+    player.registerEndResolver(() => {
+      settled = true;
+    });
+
+    player.destroy();
+    expect(settled).toBe(true);
   });
 });

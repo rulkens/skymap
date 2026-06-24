@@ -149,6 +149,15 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
   // Last-seen compile cache: recompile only when clip.data changes by reference.
   let compileCache: CompileCache | null = null;
 
+  // One-shot Promise resolver registered by `playClip` (Plan B). Fires on
+  // BOTH clip-end edges (natural deferred completion in tick step 1 and stop).
+  // Cleared immediately after firing so the slot is free for the next clip.
+  // Lives outside resetState intentionally — resetState clears playback
+  // bookkeeping; the resolver is a caller-owned Promise handle, not playback
+  // state, and must fire AFTER endClip() so the Promise settles with the
+  // correct store shape already in place.
+  let endResolver: (() => void) | null = null;
+
   // ── helpers ──────────────────────────────────────────────────────────────
 
   function getCompiled(data: ClipData): CompiledClip {
@@ -163,6 +172,17 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     prevElapsed = -Infinity;
     clipOpacity.reset();
     compileCache = null;
+    // NOTE: endResolver is deliberately NOT cleared here — fireEndResolver
+    // clears it after invoking it. Clearing here would race the fire call.
+  }
+
+  // Fire the registered end-resolver exactly once, then clear the slot.
+  // Called right AFTER each store.dispatch(endClip()) to ensure the Promise
+  // resolves with the up-to-date store (clip === null) already in place.
+  function fireEndResolver(): void {
+    const cb = endResolver;
+    endResolver = null;
+    cb?.();
   }
 
   function fireCue(cue: SceneCue, nowMs: number): void {
@@ -196,6 +216,9 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     if (pendingEnd) {
       store.dispatch(endClip());
       resetState();
+      // Resolve the playClip Promise (if any) AFTER endClip() has landed in the
+      // store, so the Promise settler sees camera.clip === null immediately.
+      fireEndResolver();
       return;
     }
 
@@ -238,6 +261,10 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     // every faded layer back to factor 1.
     store.dispatch(endClip());
     resetState();
+    // Resolve the playClip Promise (if any) on the abort edge — the [CANCEL]
+    // hook on the returned Promise calls stop(), so this makes cancellation
+    // RESOLVE rather than reject (no try/catch needed at call sites).
+    fireEndResolver();
   }
 
   function clipOpacityOf(layer: VisibilityLayerKey, nowMs: number): number {
@@ -251,7 +278,20 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     compileCache = null;
     pendingEnd = false;
     prevElapsed = -Infinity;
+    // Settle any in-flight playClip Promise so an awaiter unwinds on teardown
+    // rather than hanging forever. Unlike stop(), this doesn't dispatch endClip
+    // because destroy() intentionally leaves the store untouched.
+    fireEndResolver();
   }
 
-  return { tick, stop, clipOpacityOf, destroy };
+  function registerEndResolver(onEnd: () => void): void {
+    // Overwrites any previously registered resolver. In normal usage only one
+    // playClip call is in flight per clip, so overwriting is a safety valve
+    // rather than an expected code path (e.g. if a prior Promise was abandoned
+    // without being awaited). The prior resolver is simply replaced — it was
+    // already unreachable by the call site that created it.
+    endResolver = onEnd;
+  }
+
+  return { tick, stop, clipOpacityOf, destroy, registerEndResolver };
 }

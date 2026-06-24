@@ -30,19 +30,23 @@ import { updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
+import { suspendDuringClip } from './suspendDuringClip';
 import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTween() {
-  yield* takeEvery(updateSelectionFocus, function* (action) {
-    const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
-    const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
+  yield* takeEvery(
+    updateSelectionFocus,
+    suspendDuringClip(function* (action) {
+      const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+      const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
-    const row = extractSelectionRow(action.payload, resolveDeps());
-    if (row === null) return;
+      const row = extractSelectionRow(action.payload, resolveDeps());
+      if (row === null) return;
 
-    const runtime = cameraRuntime();
-    if (runtime === null) return;
+      const runtime = cameraRuntime();
+      if (runtime === null) return;
 
-    yield* put(startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad)));
-  });
+      yield* put(startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad)));
+    }),
+  );
 }
