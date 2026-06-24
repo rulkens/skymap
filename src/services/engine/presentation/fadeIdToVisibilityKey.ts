@@ -23,11 +23,11 @@
  *
  * ### Exhaustiveness discipline
  *
- * The outer `switch (h.kind)` has NO `default` arm — every
- * `FadeId['kind']` union member is handled explicitly. This mirrors
- * `recessionTargetFor` (focusRecession.ts:70-94): adding a new kind to
- * `FadeId` becomes a compile error here until the new kind declares its
- * clip stance, rather than silently returning `undefined` at runtime.
+ * The outer `switch (h.kind)` has a `default` arm that assigns `h` to a
+ * `never`-typed variable. Adding a new `FadeId['kind']` union member causes
+ * tsc to reject that assignment — the new kind must declare its clip stance
+ * here or the build fails. This mirrors the guard pattern in
+ * `compileClip.ts:207-211`.
  *
  * ### Why `overlay` returns `undefined`
  *
@@ -43,8 +43,9 @@
  * ### `labelLayer` sub-switch
  *
  * The `labelLayer` kind splits into four keys by `LabelLayerId`. The inner
- * switch is exhaustive over the four members so the compiler reports a
- * missing case if `LabelLayerId` is extended.
+ * switch has its own `never`-guard `default` arm — extending `LabelLayerId`
+ * is a compile error here. This guard also closes the former fall-through
+ * path from the inner switch into the outer `case 'overlay'` arm.
  */
 
 import type { FadeId } from '../../../@types/animation/FadeId';
@@ -54,8 +55,8 @@ import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLay
  * Maps a `FadeId` to its `VisibilityLayerKey`, or `undefined` for kinds
  * with no clip-layer address (`overlay`).
  *
- * Exhaustive over `FadeId['kind']` with no `default` arm — a new union
- * kind must declare its clip stance here or tsc fails.
+ * Exhaustive over `FadeId['kind']` via a `never`-guard `default` arm — a
+ * new union kind must declare its clip stance here or tsc fails.
  */
 export function fadeIdToVisibilityKey(h: FadeId): VisibilityLayerKey | undefined {
   switch (h.kind) {
@@ -77,8 +78,6 @@ export function fadeIdToVisibilityKey(h: FadeId): VisibilityLayerKey | undefined
     case 'flow':
       return 'flow';
     case 'labelLayer': {
-      // Inner switch is exhaustive over LabelLayerId — no default arm.
-      // Adding a new LabelLayerId becomes a compile error here.
       switch (h.layer) {
         case 'milkyWay':
           return 'milkyWayLabel';
@@ -91,6 +90,11 @@ export function fadeIdToVisibilityKey(h: FadeId): VisibilityLayerKey | undefined
           // single `structureLabel` key — the clip channel targets all
           // structure labels together.
           return 'structureLabel';
+        // TypeScript exhaustiveness guard — a new LabelLayerId must map a key here.
+        default: {
+          const _exhaustive: never = h.layer;
+          throw new Error(`unhandled LabelLayerId: ${JSON.stringify(_exhaustive)}`);
+        }
       }
     }
     case 'overlay':
@@ -99,5 +103,10 @@ export function fadeIdToVisibilityKey(h: FadeId): VisibilityLayerKey | undefined
       return undefined;
     case 'volumesMaster':
       return 'volumesMaster';
+    // TypeScript exhaustiveness guard — the union is closed.
+    default: {
+      const _exhaustive: never = h;
+      throw new Error(`unhandled FadeId kind: ${JSON.stringify(_exhaustive)}`);
+    }
   }
 }
