@@ -84,6 +84,10 @@ export type BaseSegment = {
   readonly to: number | Vec3;
   readonly ease: Ease;
   readonly space: Space;
+  /** Only meaningful for `spin`-kind segments: when true, the spin repeats
+   *  its `by`-delta sweep after `endSec` (the perpetual looping orbit idiom).
+   *  The evaluator (Task 6) reads this to gate completion logic. */
+  readonly loop?: boolean;
 };
 
 // ---------------------------------------------------------------------------

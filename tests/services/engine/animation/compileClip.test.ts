@@ -228,3 +228,31 @@ describe('compileClip ignores fork duration in durationSec', () => {
     expect(clip.durationSec).toBe(4);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Test 7 — loop flag survives compilation for spin segments
+// ---------------------------------------------------------------------------
+
+describe('compileClip carries loop flag on spin segments', () => {
+  it('a spin with loop:true compiles to a segment with loop===true', () => {
+    const clip = compileClip({
+      timeline: [spin('yaw', { by: 6.28, over: 30, loop: true })],
+    });
+
+    const yawSegs = clip.baseTracks['yaw'];
+    expect(yawSegs).toHaveLength(1);
+    expect(yawSegs[0]!.segKind).toBe('spin');
+    expect(yawSegs[0]!.loop).toBe(true);
+  });
+
+  it('a spin without loop compiles to a segment whose loop is undefined', () => {
+    const clip = compileClip({
+      timeline: [spin('yaw', { by: 6.28, over: 30 })],
+    });
+
+    const yawSegs = clip.baseTracks['yaw'];
+    expect(yawSegs).toHaveLength(1);
+    expect(yawSegs[0]!.segKind).toBe('spin');
+    expect(yawSegs[0]!.loop).toBeUndefined();
+  });
+});

@@ -164,6 +164,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         to: effect.by,
         ease: effect.ease,
         space: CHANNEL_SPACE[effect.ch],
+        ...(effect.loop !== undefined ? { loop: effect.loop } : {}),
       });
       return effect.over;
     }
