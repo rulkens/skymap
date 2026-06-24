@@ -205,11 +205,8 @@ src/
       wiring/
         captureScene.ts         NEW  wraps captureSettings + selection.focus
         restoreScene.ts         NEW  wraps restoreSettings + updateSelectionFocus
-  data/
-    animation/
-      flowOrbitClip.ts          NEW  the ?floworbit spike as ClipData (Task 8)
-      cosmicFlowsClip.ts        NEW  the ?flowshow spike as ClipData (Task 8)
-                                (flyout reused from Plan A's src/data/animation/flyoutClip.ts)
+  clips/
+    cosmicFlows.ts (or webShowcase.ts)  NEW  the validation-target clip (re-expressed spike)
 tests/  mirror every NEW/MOD src path above
 ```
 
@@ -583,98 +580,49 @@ couldn't.
 
 ---
 
-## Task 8: Validation — re-express ALL THREE current spikes as clips + an end-to-end tour test
+## Task 8: Validation target — re-express the `webShowcase` (or `cosmicFlows`) clip + an end-to-end tour test
 
-**Why all three (not one):** the three throwaway `CameraDriver` spikes
-(`docs/research/2026-06-19-camera-animation-spike-findings.md`) are the real
-acceptance bar for "is Layer 1 expressive enough." Re-expressing only one would
-leave the model's coverage unproven for the motion shapes the others exercise. The
-three current spikes are `flyoutDriver` / `flowOrbitDriver` / `flowShowcaseDriver`;
-re-expressed as clips they validate **distinct** capabilities of the A+B+C stack,
-so all three land here (`webShowcase` + `famousHop` are aspirational spec examples,
-NOT current spikes — leave them out). `flyout` is already a clip from **Plan A Task
-13** (`src/data/animation/flyoutClip.ts`); this task REUSES it (does not redeclare)
-and adds the other two.
+**Files:** `src/clips/webShowcase.ts` (new — pick whichever spike clip the user
+prefers; `webShowcase` exercises `focus()` + the isolation dim, `cosmicFlows`
+exercises `fade()`/`clipOpacity` masking; **prefer `cosmicFlows`** since it
+validates the load-bearing `clipOpacity` channel Plan A owns), tests
+`tests/clips/cosmicFlows.test.ts` (new) + an integration test
+`tests/state/tour/tour.integration.test.ts` (new).
 
-**Files:**
-- `src/data/animation/flowOrbitClip.ts` (new) — the `?floworbit` spike as data.
-- `src/data/animation/cosmicFlowsClip.ts` (new) — the `?flowshow` spike (the spec's
-  `cosmicFlows`, lines 261-283) as data.
-- `tests/data/animation/flowOrbitClip.test.ts` (new),
-  `tests/data/animation/cosmicFlowsClip.test.ts` (new),
-- `tests/state/tour/tour.integration.test.ts` (new) — the end-to-end tour + the
-  three-spike playback assertions.
+Re-express the spec's `cosmicFlows` clip (spec lines 261-283) using Plan A's scene
+verbs (`show`/`hide`/`fade`/`scene`/`focus`) + camera constructors — `hide(…, 0)`,
+`fade(['flow'], 0, 0)` mask, `scene(setFlow({ enabled: true }))`, the crossfade
+`all([ fade(['flow'], 1, 3), fade(['galaxies'], 0, 3) ])`, and the fade-to-black
+`fade([...], 0, 3)`. This validation READS the composed alpha (it does not build
+the channel): `fade()` is Plan A's constructor, the channel + the third-factor
+composition are Plan A's, and the integration test reads
+`clipPlayer.clipOpacityOf` / `resolveLayerOpacity` to assert known-good footage.
 
-Keep clip data in `src/data/animation/` to match Plan A's `flyoutClip.ts` (NOT
-`src/clips/`). Each clip is built from Plan A's scene verbs + camera constructors;
-this task READS the composed alpha (`clipPlayer.clipOpacityOf` / `resolveLayerOpacity`)
-— it does not build the channel (Plan A owns it).
-
-### The three spikes, and the distinct capability each proves
-
-| Spike → clip | Motion shape it proves | Key assertions |
-| --- | --- | --- |
-| `flyout` (Plan A Task 13, REUSED) | log-space dolly + base-layer yaw, played through the `playClip` seam (Plan B) | `playClip(flyout)` resolves on clip end; commit-on-edge bakes the saturated final pose into `camera.base` |
-| `flowOrbit` (new) | a perpetual base `spin` + a **`fork`ed `oscillate`** pitch-bob — proves vel/osc layering and the never-completing loop | compiles with NO single-writer clash (`yaw` base vs `pitch` osc are distinct layers); `evaluateClip` yaw advances monotonically while `pitch` oscillates zero-mean; the fork does NOT extend `durationSec` |
-| `cosmicFlows` (new) | the full **scene choreography** — `hide(…,0)`, the `fade(['flow'],0,0)` load-but-don't-show mask, `scene(setFlow({enabled:true}))`, the crossfade `all([fade(['flow'],1,3), fade(['galaxies'],0,3)])`, the per-layer fade-to-black | the three composed-alpha properties below |
-
-**`flowOrbit` clip shape** (spec lines 246-257, the `?floworbit` driver — "seamless
-orbit with a gentle pitch-sine bob"):
-
-```ts
-export const flowOrbit: ClipData = {
-  start: 'live',
-  timeline: [
-    fork(oscillate('pitch', { amp: 0.04, period: 14 })),   // the gentle bob — additive, perpetual
-    spin('yaw', { by: TWO_PI, over: 90, loop: true }),     // very slow orbit — never completes
-  ],
-};
-```
-
-**`cosmicFlows` composed-alpha assertions (the load-bearing properties):**
+**Integration assertion (the load-bearing properties):**
 - The `fade(['flow'], 0, 0)` mask drives `clipOpacity(flow) → 0` while
   `scene(setFlow({ enabled: true }))` brings `intentOpacity(flow) → 1` behind it —
   assert composed `resolveLayerOpacity` for flow stays 0 during the mask, then
-  rises with the `fade(['flow'], 1, 3)` lift ("load but don't show").
+  rises with the `fade(['flow'], 1, 3)` lift.
 - The crossfade moves `clipOpacity(galaxies) → 0` while `intentOpacity(galaxies)`
   stays 1 (galaxies stay LOADED) — assert intent untouched, composed alpha dims.
 - After `endClip`, `clipOpacity` resets to 1 and composed alpha returns to
   `intentOpacity × focusRecession` (spec "Clip end — no opacity reconcile").
 
-> **Layer names — use the real `VisibilityLayerKey`s, do NOT add composite
-> aliases.** The spec's `cosmicFlows` worked example uses friendly composite names
-> (`'galaxies'`, `'volumes'`, `'milkyWay'`, `'structures'`, `'labels'`,
-> `'famousGalaxyLabels'`) that are NOT `VisibilityLayerKey` members. When
-> re-expressing, map each to the real keys and **enumerate** (the spike findings
-> are explicit: "no global fade, everything together, per layer"):
-> `galaxies → 'survey'`, `volumes → 'volumesMaster'`, `milkyWay → 'milkyWayDisk'
-> (+ 'milkyWayLabel')`, `structures → 'structureRing' (+ 'structureLabel')`,
-> `labels → 'surveyLabel' + 'milkyWayLabel' + 'structureLabel'`,
-> `famousGalaxyLabels → 'surveyLabel'`. Do NOT widen `VisibilityLayerKey` with
-> composite aliases — that would re-fuse the intents it deliberately splits.
-
-- [ ] Re-express `flowOrbit` as `ClipData`; test `flowOrbit compiles with no
-  single-writer clash` and `evaluateClip advances yaw monotonically while pitch
-  oscillates zero-mean; the fork does not extend durationSec`.
-- [ ] Re-express `cosmicFlows` as `ClipData`; test `the clip type-checks and carries
-  the expected cue sequence` (hide → mask → enable → crossfade → fade-to-black).
-- [ ] Integration test `playClip resolves for each of the three spikes` — `flyout`,
-  `flowOrbit` (drive it past several loops then `stop()`), `cosmicFlows` each play
-  through the runner without throwing; the camera is owned by `clip`@95 throughout.
-- [ ] Integration test `the flow mask keeps composed alpha at 0 until the lift` (cosmicFlows).
-- [ ] Integration test `the crossfade dims galaxies without touching intent` (cosmicFlows).
-- [ ] Integration test `clip end restores composed alpha to the steady state` (cosmicFlows).
+- [ ] Re-express the chosen spike clip as `ClipData` using Plan A's scene verbs +
+  camera constructors.
+- [ ] Test `the clip type-checks and carries the expected cue sequence`.
+- [ ] Integration test `the flow mask keeps composed alpha at 0 until the lift`.
+- [ ] Integration test `the crossfade dims galaxies without touching intent`.
+- [ ] Integration test `clip end restores composed alpha to the steady state`.
 - [ ] `npm test` (whole suite) green; `npm run typecheck` clean; `npm run build`.
 - [ ] Commit.
 
 ### Interfaces
 
-**Consumes:** Plan A's scene verbs + `fade()` primitive + `oscillate`/`spin`/`fork`
-camera constructors + `clipPlayer.clipOpacityOf` + `resolveLayerOpacity` (read-only,
-for the assertions), Plan A's `flyout` clip (reused), Plan A/B `playClip` + the
-`clip`@95 driver.
-**Produces:** the `flowOrbit` + `cosmicFlows` validation clips + the end-to-end tour
-and three-spike playback assertions. (`flyout` is reused, not produced here.)
+**Consumes:** Plan A's scene verbs + `fade()` primitive +
+`clipPlayer.clipOpacityOf` + `resolveLayerOpacity` (read-only, for the assertion),
+Plan A/B camera constructors + `playClip`.
+**Produces:** the validation clip + the end-to-end opacity-composition assertions.
 
 ---
 
@@ -707,9 +655,8 @@ and three-spike playback assertions. (`flyout` is reused, not produced here.)
 **Spec coverage** — every Layer-2 item in the Plan-C scope is a task: `BeatData`
 (T1), `captureScene`/`restoreScene` (T2) on `ReconcileEffects` (T3), `showCaption`/
 `ui.caption` (T4), `TOUR_ADVANCE`/`TOUR_EXIT` + the tour clip builders
-`flyToClip`/`dwellDrift` (T5), `visitBeat` (T6), `guidedTour` (T7), and the
-validation re-expressing ALL THREE current spikes — `flyout` (reused) / `flowOrbit`
-/ `cosmicFlows` (T8). The scene vocabulary (`SceneEffect`, the five constructors, `applySceneEffect`,
+`flyToClip`/`dwellDrift` (T5), `visitBeat` (T6), `guidedTour` (T7), validation clip
+(T8). The scene vocabulary (`SceneEffect`, the five constructors, `applySceneEffect`,
 the `show`/`hide` duration override) is Plan A's; `suspendDuringClip` + the
 `endClip → cancelCameraTween` reaction are Plan B's; the `clipOpacity` channel +
 renderer composition are Plan A's — none are tasks here. ✓
