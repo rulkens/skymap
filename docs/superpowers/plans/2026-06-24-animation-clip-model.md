@@ -778,37 +778,38 @@ unchanged; here only the non-zero custom duration matters.
   - `EngineSubsystemHandles.clipPlayer: ClipPlayer` (eager, non-null from t=0 —
     no GPU dep, like `structureFocus`).
 
-- [ ] `clipOpacityChannel.test.ts`: `factorOf returns 1 for an untouched layer`.
-- [ ] `clipOpacityChannel.test.ts`: `fadeTo to 0 then factorOf at end returns 0` (snap, `over=0`).
-- [ ] `clipOpacityChannel.test.ts`: `fadeTo animates between 1 and 0 over the duration`
+- [x] `clipOpacityChannel.test.ts`: `factorOf returns 1 for an untouched layer`.
+- [x] `clipOpacityChannel.test.ts`: `fadeTo to 0 then factorOf at end returns 0` (snap, `over=0`).
+- [x] `clipOpacityChannel.test.ts`: `fadeTo animates between 1 and 0 over the duration`
   — sample a midpoint, assert strictly between, using an explicit `nowMs` clock.
-- [ ] `clipOpacityChannel.test.ts`: `reset restores every faded layer to 1`.
-- [ ] `clipOpacityChannel.test.ts`: `isAnimating is true mid-ramp, false after duration`.
-- [ ] `clipOpacityChannel.test.ts`: `a second fadeTo on the same layer retargets from the current value`.
-- [ ] `clipPlayer fires a cue when elapsed crosses its atSec` — a clip with a
+- [x] `clipOpacityChannel.test.ts`: `reset restores every faded layer to 1`.
+- [x] `clipOpacityChannel.test.ts`: `isAnimating is true mid-ramp, false after duration`.
+- [x] `clipOpacityChannel.test.ts`: `a second fadeTo on the same layer retargets from the current value`.
+- [x] `clipPlayer fires a cue when elapsed crosses its atSec` — a clip with a
   `fade([...],0,0)` cue: `tick` at `elapsed≥0` writes `clipOpacity` once; a second tick does NOT re-fire.
-- [ ] `clipPlayer fires cues in (prevElapsed, elapsed]` — two cues at `0` and `3`s;
+- [x] `clipPlayer fires cues in (prevElapsed, elapsed]` — two cues at `0` and `3`s;
   one tick jumping `prevElapsed=0→4` fires BOTH, in `atSec` order.
-- [ ] `clipPlayer dispatches endClip the frame the clip reaches durationSec (not before)` —
+- [x] `clipPlayer dispatches endClip the frame the clip reaches durationSec (not before)` —
   pin the post-produce ordering: at `elapsed = durationSec` the FIRST tick records
   completion and dispatches `endClip` (after evaluator saturates), not on the tick
-  BEFORE reaching the end.
-- [ ] `clipPlayer fade cue drives clipOpacity; clipOpacityOf reflects it; resets to 1 on endClip`.
-- [ ] `clipPlayer.stop dispatches endClip and resets the cursor + clipOpacity`.
-- [ ] `clipPlayer is registered in EngineSubsystemHandles` (typecheck-level).
-- [ ] `clipPlayer routes a non-fade cue through applySceneEffect` — a `focus(ref)`
+  BEFORE reaching the end. (Implemented as a two-frame defer: pendingEnd recorded on
+  the saturation frame, endClip dispatched on the next tick — see clipPlayer module header.)
+- [x] `clipPlayer fade cue drives clipOpacity; clipOpacityOf reflects it; resets to 1 on endClip`.
+- [x] `clipPlayer.stop dispatches endClip and resets the cursor + clipOpacity`.
+- [x] `clipPlayer is registered in EngineSubsystemHandles` (typecheck-level).
+- [x] `clipPlayer routes a non-fade cue through applySceneEffect` — a `focus(ref)`
   cue dispatches `updateSelectionFocus(ref)`; a `fade` cue does NOT call `applySceneEffect`.
-- [ ] `applySceneEffect.test.ts`: `scene dispatches its SettingsAction verbatim`.
-- [ ] `applySceneEffect.test.ts`: `focus dispatches updateSelectionFocus(ref)` (and `null` clears).
-- [ ] `applySceneEffect.test.ts`: `show dispatches visibility-on (via VISIBILITY_ACTION_ROW) + runs the bridge with only+durationMs`.
-- [ ] `applySceneEffect.test.ts`: `hide dispatches visibility-off + bridge`.
-- [ ] `applySceneEffect.test.ts`: `over === 0 routes show/hide through the snap (animate:false) path`.
-- [ ] `applySceneEffect.test.ts`: `VISIBILITY_ACTION_ROW is a data table, every VisibilityLayerKey resolves to its on/off action`.
-- [ ] `syncVisibilityFades.test.ts`: `applyIntent uses the durationMs override when given`
+- [x] `applySceneEffect.test.ts`: `scene dispatches its SettingsAction verbatim`.
+- [x] `applySceneEffect.test.ts`: `focus dispatches updateSelectionFocus(ref)` (and `null` clears).
+- [x] `applySceneEffect.test.ts`: `show dispatches visibility-on (via VISIBILITY_ACTION_ROW) + runs the bridge with only+durationMs`.
+- [x] `applySceneEffect.test.ts`: `hide dispatches visibility-off + bridge`.
+- [x] `applySceneEffect.test.ts`: `over === 0 routes show/hide through the snap (animate:false) path`.
+- [x] `applySceneEffect.test.ts`: `VISIBILITY_ACTION_ROW is a data table, every VisibilityLayerKey resolves to its on/off action` (per-item factory: each key → action list, reg-only keys → `[]`).
+- [x] `syncVisibilityFades.test.ts`: `applyIntent uses the durationMs override when given`
   — fake `subsystems.fades.fadeTo` asserts the passed duration equals the override, not `FADE_IN_DURATION_MS`.
-- [ ] `syncVisibilityFades.test.ts`: `applyIntent falls back to the FADE_IN/OUT constants when omitted` (regression).
-- [ ] `syncVisibilityFades.test.ts`: `syncVisibilityFades threads durationMs to every applied row`.
-- [ ] Implement. `npm test -- clipOpacityChannel clipPlayer applySceneEffect syncVisibilityFades` → pass. Commit.
+- [x] `syncVisibilityFades.test.ts`: `applyIntent falls back to the FADE_IN/OUT constants when omitted` (regression).
+- [x] `syncVisibilityFades.test.ts`: `syncVisibilityFades threads durationMs to every applied row`.
+- [x] Implement. `npm test -- clipOpacityChannel clipPlayer applySceneEffect syncVisibilityFades` → pass. Commit.
 
 ## Task 12 — Wire `clipPlayer.tick` FIRST in runFrame + the `clipOpacity` third factor in `resolveLayerOpacity`
 
