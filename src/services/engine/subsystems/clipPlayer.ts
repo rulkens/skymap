@@ -278,6 +278,10 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     compileCache = null;
     pendingEnd = false;
     prevElapsed = -Infinity;
+    // Settle any in-flight playClip Promise so an awaiter unwinds on teardown
+    // rather than hanging forever. Unlike stop(), this doesn't dispatch endClip
+    // because destroy() intentionally leaves the store untouched.
+    fireEndResolver();
   }
 
   function registerEndResolver(onEnd: () => void): void {
