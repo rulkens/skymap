@@ -653,7 +653,7 @@ Plan A/B camera constructors + `playClip`.
 - [x] Run the `entanglement-radar` skill over the diff — confirm the tour clip
   builders compose Plan A's verbs (no re-minted constructor) and `BeatData.effects`
   are `put` verbatim (no wrapper). (Clean; one accept-as-is name-mismatch Minor.)
-- [ ] PR (squash-merge) with the spec linked; relocate this plan via `/feature-done`.
+- [x] PR (squash-merge) with the spec linked; relocate this plan via `/feature-done`.
 
 ## Self-review (run before handing off)
 
