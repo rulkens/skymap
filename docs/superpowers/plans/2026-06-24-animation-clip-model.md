@@ -424,15 +424,15 @@ Called by `compileClip` (Task 4) — wire the call after both land.
   registration-time validation"). Complete over dynamically-built/forked timelines
   (a static-tree walk), which compile-time schemes can't see.
 
-- [ ] `validateSingleWriter passes for sequential ramps on one channel` —
+- [x] `validateSingleWriter passes for sequential ramps on one channel` —
   `seq([dollyTo(300,4), dollyTo(950,4)])` compiles without throw.
-- [ ] `validateSingleWriter throws on two overlapping base-writers` —
+- [x] `validateSingleWriter throws on two overlapping base-writers` —
   `all([dollyTo(300,4), dollyTo(950,4)])` throws, message names `distance` and
   both windows `[0,4)`.
-- [ ] `validateSingleWriter allows base+vel+osc on one channel` — a `set('yaw')` +
+- [x] `validateSingleWriter allows base+vel+osc on one channel` — a `set('yaw')` +
   `rate('yaw')` + `oscillate` ('yaw') do NOT clash (different layers).
-- [ ] Wire `compileClip` to call it; add `compileClip throws on a base clash`.
-- [ ] `npm test -- validateSingleWriter compileClip` → pass. Commit.
+- [x] Wire `compileClip` to call it; add `compileClip throws on a base clash`.
+- [x] `npm test -- validateSingleWriter compileClip` → pass. Commit.
 
 ## Task 6 — `evaluateClip`: the pure per-channel `base + ∫vel + osc` evaluator
 
