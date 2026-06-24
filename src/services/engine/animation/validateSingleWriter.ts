@@ -64,9 +64,9 @@ export function validateSingleWriter(baseTracks: Record<Channel, BaseSegment[]>)
   for (const ch of channels) {
     const segs = baseTracks[ch];
     // Segments are pre-sorted by startSec ascending (compileClip guarantees
-    // this). Consecutive-pair scan is sufficient: if segment i overlaps
-    // segment i+2, then i must also overlap i+1 (since sorted order ensures
-    // segs[i+1].startSec <= segs[i+2].startSec < segs[i].endSec).
+    // this). Consecutive-pair scan is sufficient by contrapositive: if segment i
+    // does NOT overlap i+1, then segs[i].endSec <= segs[i+1].startSec, so by
+    // sorted order segs[i] cannot overlap i+2 or any later segment either.
     for (let i = 0; i < segs.length - 1; i++) {
       const a = segs[i]!;
       const b = segs[i + 1]!;
