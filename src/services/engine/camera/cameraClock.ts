@@ -1,21 +1,23 @@
 /**
  * cameraClock — the engine Resource that turns descriptor-identity changes
- * into elapsed-ms values for camera drivers.
+ * into elapsed values for camera drivers.
  *
  * The clock sits between the Redux store (timeless intent) and the frame-loop
- * drivers (need an elapsed-ms for easing). Each frame the caller passes the
- * current tween descriptor and the auto-rotate active bit; the clock detects
- * when either changed by reference identity / value, resets the relevant
- * start time, and returns elapsed ms from that start.
+ * drivers. Each frame the caller passes the current tween descriptor, the
+ * auto-rotate active bit, and the active clip; the clock detects when any
+ * changed by reference identity / value, resets the relevant start time, and
+ * returns elapsed time from that start.
  *
- * Both functions take `nowMs` as a parameter — they never read
+ * Three functions, one resource: `tweenElapsed` and `autoRotateElapsed` both
+ * return milliseconds (for easing drivers); `clipElapsed` returns SECONDS (for
+ * `evaluateClip`). All take `nowMs` as a parameter — they never read
  * `performance.now()` or `Date.now()` themselves. The caller owns the wall
  * clock; this keeps the clock deterministic and testable.
  *
- * One module for both functions (rather than one-fn-per-file) because they
- * share the `CameraClock` Resource: the two halves are inseparable parts of
- * one stateful computation. Same reasoning as `cameraDrivers.ts` holding both
- * `runCameraDrivers` and `buildCameraDrivers`.
+ * One module for all three functions because they share the `CameraClock`
+ * Resource: the three halves are inseparable parts of one stateful computation.
+ * Same reasoning as `cameraDrivers.ts` holding both `runCameraDrivers` and
+ * `buildCameraDrivers`.
  */
 
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
