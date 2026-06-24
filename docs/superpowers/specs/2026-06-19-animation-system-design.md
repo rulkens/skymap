@@ -786,7 +786,7 @@ const dwellDrift = (beat: BeatData): ClipData => ({
 });
 
 type BeatData = {
-  focus: SourceRef | null;
+  focus: SelectionRef | null;   // the same ref `updateSelectionFocus` carries — no new SourceRef type
   caption: string | null;
   dwellSec: number;
   effects?: Action[];      // plain Redux actions — nothing more; the saga `put`s them like the UI
