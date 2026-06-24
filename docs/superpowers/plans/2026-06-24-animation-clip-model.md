@@ -936,15 +936,15 @@ validates the clip COMPILES + EVALUATES sanely rather than matching torn-down co
   `resolveClipStart` (to bind a concrete `start` for evaluation).
 - Produces: `flyout: ClipData`.
 
-- [ ] `flyout compiles without a single-writer clash` (one base-writer per channel
+- [x] `flyout compiles without a single-writer clash` (one base-writer per channel
   — `distance` and `yaw` are distinct channels).
-- [ ] `flyout durationSec is 22`.
-- [ ] `flyout dollies log-uniformly to ~29 500 Mpc` — with a concrete
+- [x] `flyout durationSec is 22`.
+- [x] `flyout dollies log-uniformly to ~29 500 Mpc` — with a concrete
   `start.distance` (resolve `'live'` to a test pose), `evaluateClip(..., 22)`
   ⇒ `distance` ≈ `29_500`; at `t=11` the distance is the geometric midpoint
   (log-space), NOT the arithmetic midpoint (asserts log interpolation).
-- [ ] `flyout yaw advances by 1.1 rad over the take` — `yaw(22) - start.yaw ≈ 1.1`.
-- [ ] Implement. `npm test -- flyoutClip` → pass. Commit.
+- [x] `flyout yaw advances by 1.1 rad over the take` — `yaw(22) - start.yaw ≈ 1.1`.
+- [x] Implement. `npm test -- flyoutClip` → pass. Commit.
 
 ## Task 14 — Full-suite green + typecheck + DoD self-check
 
