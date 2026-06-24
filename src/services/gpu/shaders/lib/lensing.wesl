@@ -87,11 +87,11 @@ import package::lib::lensingUniforms::LensingUniforms;
 // ## Prototype scope
 //
 // Each lens centre is an in-view cluster (CPU-side: clusters in front of
-// the camera, capped to the most massive MAX_LENSES). θ_E per cluster is
-// the UI master angle scaled by the cluster's normalised-M500 significance
-// — a coarse mass proxy and wildly exaggerated vs reality (real cluster
-// Einstein radii are tens of arcseconds). Deriving θ_E from a proper
-// velocity dispersion (σ_v from M500) is the follow-up.
+// the camera, capped to the most massive MAX_LENSES). theta_E per cluster is
+// 'lensStrength' times the physical asymptotic deflection alpha-infinity derived
+// from the cluster's R500 (via clusterLensDeflection), and r_s = R500/c500 per
+// cluster. The per-lens eye-relative geometry ('dirLens' + 'dL') is precomputed
+// CPU-side each frame so the shader does no per-vertex subtract or normalise.
 //
 // ## Brightness: magnification
 //
@@ -210,16 +210,17 @@ struct LensTerm {
 
 // Resolve one cluster lens's geometry for a source.
 //
-//   eye            camera position, world Mpc
-//   lens           xyz = lens centre (world Mpc), w = peak deflection (radians):
-//                  Einstein radius θ_E in SIS mode, peak deflection in NFW mode
-//   dirSrc         unit direction eye→source (precomputed once by the caller)
-//   dS             distance eye→source, Mpc (precomputed once by the caller)
+//   dirLens        unit eye->lens direction, precomputed CPU-side each frame
+//   dL             eye->lens distance, world Mpc, precomputed CPU-side each frame
+//   thetaE         peak deflection radians: Einstein radius in SIS, peak deflection in NFW
+//   dirSrc         unit direction eye->source (precomputed once by the caller)
+//   dS             distance eye->source, Mpc (precomputed once by the caller)
 //   mode           0 = SIS (constant deflection), 1 = NFW (g(x)/x profile)
-//   scaleRadiusMpc NFW scale radius r_s in Mpc (where the ring sits); SIS-ignored
+//   scaleRadiusMpc per-lens NFW scale radius r_s in Mpc (where the ring sits); SIS-ignored
 fn lensTerm(
-  eye: vec3<f32>,
-  lens: vec4<f32>,
+  dirLens: vec3<f32>,
+  dL: f32,
+  thetaE: f32,
   dirSrc: vec3<f32>,
   dS: f32,
   mode: u32,
@@ -234,13 +235,9 @@ fn lensTerm(
   term.dL = 0.0;
   term.strengthEff = 0.0;
 
-  let thetaE = lens.w;
   if (thetaE <= 0.0) {
     return term;
   }
-
-  let toLens = lens.xyz - eye;
-  let dL = length(toLens);
 
   // Only sources BEHIND the lens are lensed; foreground objects (and the
   // lens-plane neighbours) pass through untouched. Guard tiny distances
@@ -248,8 +245,6 @@ fn lensTerm(
   if (dS <= dL || dL < 1e-4 || dS < 1e-4) {
     return term;
   }
-
-  let dirLens = toLens / dL;
 
   // Distance scaling: deflection ∝ D_ls / D_s (Euclidean approx). Identical
   // for both profiles — a source just behind the lens is barely deflected,
@@ -335,8 +330,9 @@ struct LensedImage {
 //   sourceWorld  the source's true world position (eye-relative direction +
 //                distance are recovered from it and 'eye')
 //   eye          camera position, world Mpc
-//   lensing      the shared lens uniform (enabled / count / mode / scaleRadius
-//                + the lens array); passed by value, the established idiom for
+//   lensing      the shared lens uniform (enabled / count / mode + the per-lens
+//                array, each lens carrying precomputed eye-relative geometry and
+//                its own r_s); passed by value, the established idiom for
 //                small uniform structs in this pipeline
 //   imageKind    0 = primary (summed deflection), 1 = inner counter-image
 //   muMax        the peak-magnification clamp the caller keeps as a const
@@ -396,10 +392,12 @@ fn lensedPosition(
     // so the counter branch never re-runs 'lensTerm' for the dominant lens.
     var bestDL = 0.0;
     var bestStrengthEff = 0.0;
+    var bestRs = 1e-4;
     var hasDominant = false;
 
     for (var i = 0u; i < lensing.count; i = i + 1u) {
-      let term = lensTerm(eye, lensing.lenses[i], dirSrc, dS, lensing.mode, lensing.scaleRadius);
+      let ld = lensing.lenses[i];
+      let term = lensTerm(ld.geom.xyz, ld.geom.w, ld.params.x, dirSrc, dS, lensing.mode, ld.params.y);
       if (term.valid == 0u) {
         continue;
       }
@@ -417,6 +415,7 @@ fn lensedPosition(
         bestTangent = term.tangent;
         bestDL = term.dL;
         bestStrengthEff = term.strengthEff;
+        bestRs = ld.params.y;
         hasDominant = true;
       }
     }
@@ -437,7 +436,7 @@ fn lensedPosition(
     // LENS_LUT_LOG_K mirrors that file's LOG_K (parity-tested) — keep in sync.
     // Channels: [xPrimary, muPrimary, xCounter, muCounter].
     var cell = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-    let r_s = max(lensing.scaleRadius, 1e-4);
+    let r_s = max(bestRs, 1e-4);
     var y_lut = 0.0;
     let haveLut = hasDominant && lensing.mode == 1u;
     if (haveLut) {
