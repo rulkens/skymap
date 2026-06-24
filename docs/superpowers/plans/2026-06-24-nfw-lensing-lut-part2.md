@@ -186,11 +186,11 @@ SIS-only), the function:
 > params — verify against the wesl-plugin before committing; fall back to (a) if
 > not. Document the choice in `lensedPosition`'s docblock.
 
-- [ ] Linked-WGSL compile gate: test `points vertex links with the NFW LUT
+- [x] Linked-WGSL compile gate: test `points vertex links with the NFW LUT
   sample` — assert `points/vertex.wesl?static` links and the WGSL references
   `lensLut` + `textureSampleLevel`.
-- [ ] `npm run build` — WESL links (the real shader compile gate).
-- [ ] Commit (with Task 4.4 — they form one coherent NFW-counter landing).
+- [x] `npm run build` — WESL links (the real shader compile gate).
+- [x] Commit (with Task 4.4 — they form one coherent NFW-counter landing).
 
 ### Task 4.4 — NFW now draws 12 vertices (vertex-count gate change)
 
@@ -211,24 +211,24 @@ const verticesPerPoint = settings.lensEnabled && settings.lensMode === 'sis' ? 1
 const verticesPerPoint = settings.lensEnabled ? 12 : 6;
 ```
 
-- [ ] Update the `pointRenderer.ts` draw docblock (lines 11–16) and the inline
+- [x] Update the `pointRenderer.ts` draw docblock (lines 11–16) and the inline
   comment (lines 760–766) — they currently explain NFW staying at 6 ("NFW has no
   closed-form counter image, so it … keeps the single-quad cost"). Rewrite to:
   lensing on ⇒ 12 vertices in BOTH modes (NFW's counter now comes from the LUT);
   lens-off ⇒ 6. No history notes — describe current state only.
-- [ ] Update the `PointDrawSettings.lensMode` docblock
+- [x] Update the `PointDrawSettings.lensMode` docblock
   (`PointDrawSettings.d.ts:71-79`) — it says the draw doubles "only for
   `lensEnabled && lensMode === 'sis'`". Rewrite: `lensEnabled` alone gates the
   12-vs-6 doubling; `lensMode` now selects the counter MATH (SIS analytic vs NFW
   LUT), not whether a counter exists.
-- [ ] Test `lens-on draws 12 vertices in both SIS and NFW mode` — extend the draw
+- [x] Test `lens-on draws 12 vertices in both SIS and NFW mode` — extend the draw
   test so an NFW-mode lens-on draw now asserts `draw(12, count)` (the Part-1
   `NFW stays 6` assertion from Task 2.1 is REPLACED here — this is the deliberate
   behaviour change; update that assertion, don't leave a contradicting test).
-- [ ] `npm test` → green.
-- [ ] `npm run typecheck` → clean.
-- [ ] `npm run build` → links.
-- [ ] Commit.
+- [x] `npm test` → green.
+- [x] `npm run typecheck` → clean.
+- [x] `npm run build` → links.
+- [x] Commit.
 
 **Independently testable deliverable:** with lensing on + NFW mode, the points
 pass renders a primary + a LUT-placed counter image with LUT magnification; SIS is
