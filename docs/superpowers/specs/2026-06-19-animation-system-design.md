@@ -84,11 +84,30 @@ already exists.
 
 ```ts
 type ClipData = {
-  start?: Pose | 'live';   // snap to a fixed pose, or capture the live camera (default 'live')
+  start?: Pose | 'live';   // fixed pose, or 'live' = capture the live pose at startClip (default 'live')
   preroll?: number;        // seconds of static hold before the timeline clock starts
   timeline: Effect[];      // played in order; an entry may itself be concurrent (all/fork)
 };
 ```
+
+**`'live'` is resolved once, at dispatch — never carried as a literal into the
+evaluator.** `startClip(clip)` reads the live rendered pose
+(`cameraRuntime.lastPose.current`) and writes a concrete `start: Pose` into
+`camera.clip.data`, exactly as `focusTweenSaga` bakes the tween's `from` before
+`put(startCameraTween(...))`. So the stored descriptor is always fully concrete and
+`evaluateClip(data, t)` stays a pure function of `(data, t)` with no `'live'`
+sentinel to resolve. This is load-bearing twice over:
+
+- It is **what makes the pose pure and serializable** (Layer-1's headline) — the
+  evaluator never reads the live camera, so pose-at-`t` is one pure call.
+- It makes **clip-to-clip handoff robust without a frame handshake.** A beat's next
+  clip resolves `'live'` from `lastPose` — the pose the previous clip *last
+  rendered* — so it does not matter that the synchronous `endClip → startClip`
+  between beats can close and reopen `camera.clip` faster than the frame loop samples
+  the null edge (skipping the commit-on-edge that would bake `camera.base`). The next
+  clip never reads `base`; it reads the pose it can see. (Resolving at dispatch
+  carries a sub-frame staleness identical to the tween's `from` capture — accepted on
+  the same terms.)
 
 ### The effect vocabulary
 
@@ -156,23 +175,23 @@ for now. The channel set is coupled to the camera *parameterization*, not to the
 - `wait(sec)` — advance the clock with no write (a gap in the timeline).
 
 **Scene effects** (timed, still data — see "Scene effects: visibility verbs and
-the opacity single-writer" below for the full rule):
+the three opacity channels" below for the full rule):
 
-- `show([layers], over?)` / `hide([layers], over?)` — visibility: set the layers'
-  visibility intent **and** fade opacity to 1 / 0. `over` is the fade time in
-  seconds: omit → default, `0` → instant snap, `N` → custom. The convenient
-  common case (and the scene-setup beat).
-- `fade([layers], to, over)` — a *transient* opacity move to an arbitrary value,
-  **no** intent change (partial dims, the fade-to-black end card, layers with no
-  settings toggle).
+- `show([layers], over?)` / `hide([layers], over?)` — visibility *intent*: flip the
+  layers' visibility setting; the live intent→fade bridge drives their intent-opacity
+  to match. `over` is the fade time in seconds: omit → default, `0` → instant snap,
+  `N` → custom. The convenient common case (and the scene-setup beat).
+- `fade([layers], to, over)` — a *transient* opacity move on the clip-owned
+  `clipOpacity` channel, **no** intent change (crossfades, the fade-to-black end card,
+  partial dims). Composed with intent-opacity at the renderer; resets on clip end.
 - `scene(action)` — a non-visibility settings change, typed to a `SettingsAction`
   union (never `AnyAction` — no arbitrary-Redux escape hatch).
 - `focus(ref)` — set selection focus to a `SelectionRef` (or `null` to clear). A
   selection-Intent change — drives the member-isolation dim. The camera tween it
   would normally kick (`watchFocusTween`) is **suspended** while a clip plays — not
-  merely outranked — by the same saga-suspension policy as the fade bridge (see
-  "The reactive bridges are suspended" below). Distinct from `scene` because focus
-  is selection, not settings.
+  merely outranked — because the clip owns the camera @95 (see "Only the camera-tween
+  reactor is suspended" below). Distinct from `scene` because focus is selection, not
+  settings.
 
 **Combinators** (structure):
 
@@ -242,13 +261,14 @@ const cosmicFlows: ClipData = {
   preroll: 2,                                                  // static hold — time to hit record
   timeline: [
     hide(['volumes', 'filaments', 'famousGalaxyLabels'], 0),  // cosmic web off — instant intent (3 dispatches → 1)
-    scene(setFlow({ enabled: true })),                        // load the cube + keep resident — NO visual yet
+    fade(['flow'], 0, 0),                                     // mask: clipOpacity(flow) → 0 BEFORE enabling it
+    scene(setFlow({ enabled: true })),                        // load the cube; intentOpacity fades up behind the mask — no visual yet
 
     fork(oscillate('pitch', { amp: 0.09, period: 16 })),      // gentle bob throughout
     fork(rate('yaw', { to: 0.18, over: 1.5, ease: 'in' })),   // ease the orbit in; drift persists
     hold(2),                                                  // I — establish on the MW
 
-    all([ fade(['flow'], 1, 3), fade(['galaxies'], 0, 3) ]),  // A — crossfade (opacity only; galaxies stay LOADED)
+    all([ fade(['flow'], 1, 3), fade(['galaxies'], 0, 3) ]),  // A — crossfade on clipOpacity (intent untouched; both stay LOADED)
 
     all([                                                     // B — both branches 11 s
       seq([ dollyTo(300, 4), hold(3), dollyTo(950, 4) ]),     //   pull back → dwell → pull out
@@ -256,7 +276,7 @@ const cosmicFlows: ClipData = {
     ]),
 
     hold(5),                                                  // C — hold (drift + bob keep it alive)
-    fade(['flow', 'milkyWay', 'structures', 'labels'], 0, 3), // D — fade to black (transient; no settings flipped)
+    fade(['flow', 'milkyWay', 'structures', 'labels'], 0, 3), // D — fade to black on clipOpacity (transient; intent untouched)
   ],
 };
 ```
@@ -427,7 +447,9 @@ camera.clip: { data: ClipData } | null
 
 `evaluateClip(data, t)` returns the composed `CameraPose` at time `t` — the `base`
 ramps, the closed-form `∫vel`, and `osc`, summed per channel (see "Composition").
-It is **pure**: same `(data, t)` → same pose, no accumulated per-frame state.
+It is **pure**: same `(data, t)` → same pose, no accumulated per-frame state — which
+requires `start: 'live'` to have been resolved to a concrete pose at `startClip`
+(see "The shape"); the evaluator never reads the live camera.
 `evaluateTween` is its one-segment case; `playClip` flattens the `ClipData` tree
 once into the per-channel tracks the evaluator reads (the same flatten the
 registration-time validator does — memoised on the clip's identity, not re-walked
@@ -557,114 +579,131 @@ This dissolves the branch *and* its future growth: a fourth committing driver (a
 physics fling, a second scripted source) sets the flag on its row and the frame
 loop is untouched.
 
-### Scene effects: visibility verbs and the opacity single-writer
+### Scene effects: visibility verbs and the three opacity channels
 
-A clip changes the scene through three primitives, split by *what they own*:
+A clip changes the scene through four primitives, split by *what they own*:
 
-- **`show([layers], over?)` / `hide([layers], over?)`** — visibility: set the
-  layers' visibility *intent* (the setting) **and** drive their opacity to 1 / 0.
-  `over` is the fade time in seconds (omit → default, `0` → instant, `N` →
-  custom). The convenient common case, including the scene-setup beat
-  (`hide(['volumes', 'filaments', 'famousLabels'], 0)` replaces three raw
-  dispatches).
-- **`fade([layers], to, over)`** — a *transient* opacity move to an arbitrary
-  value, with **no** intent change. For partial dims, the fade-to-black end card,
-  and layers with no settings toggle (scaleBar, galaxyNames).
-- **`scene(action)`** — a non-visibility settings change (bias, intensity, …),
-  typed to a `SettingsAction` union, never `AnyAction`.
-- **`focus(ref)`** — set selection focus to a `SelectionRef` or `null` (a
-  selection-Intent change, not a setting — drives the member-isolation dim). The
-  camera tween `watchFocusTween` would kick is **suspended** while a clip plays, not
-  merely outranked — see "The reactive bridges are suspended" below.
+- **`show([layers], over?)` / `hide([layers], over?)`** — visibility *intent*: flip
+  the layers' visibility setting; the intent→fade bridge (`watchFades` /
+  `syncVisibilityFades`) drives their **intent-opacity** to match, the same path the
+  UI toggle uses. `over` rides on the dispatched action as the fade duration (omit →
+  default, `0` → instant, `N` → custom). `hide(['volumes', 'filaments',
+  'famousLabels'], 0)` is the instant scene-setup beat (three raw dispatches → one).
+- **`fade([layers], to, over)`** — a *transient* opacity move that changes **no
+  intent**: the layer stays enabled and loaded, only its on-screen alpha moves (the
+  crossfade, the fade-to-black, partial dims). It writes a **separate** channel,
+  `clipOpacity` (below) — never the intent channel.
+- **`scene(action)`** — a non-visibility settings change (bias, intensity, …), typed
+  to a `SettingsAction` union, never `AnyAction`.
+- **`focus(ref)`** — set selection focus to a `SelectionRef` or `null` (drives the
+  member-isolation dim). Its camera tween is **suspended** while a clip plays — see
+  "Only the camera-tween reactor is suspended" below.
 
-`show`/`hide` are sugar over "set visibility intent + `fadeTo`" — the way
-`dollyTo` is sugar over `tween('distance', …)`.
+**Final alpha is a product of three independent channels — compose, don't braid.**
+The renderer already composes two: `resolveLayerOpacity` returns `fades.opacityOf(h)
+* focusRecession(h, blend)` (the `focusRecession` module is titled "compose, don't
+braid"). A clip's transient fades are a **third** factor on that same line:
 
-**Opacity is single-writer too.** All three opacity-moving verbs (`show`, `hide`,
-`fade`) are clip-owned and covered by the same registration-time validation as
-`base` channels: two opacity-writers on one layer at once is an authoring error.
-`scene` never touches opacity, so it cannot collide.
-
-**The reactive bridges are suspended while a clip plays — declared in one place.**
-A clip dispatches the *same* intents the UI does (`updateSelectionFocus`, the
-visibility toggles), so it trips the production sagas that react to them. Some
-reactions the clip *wants* (`scene(setFlow{enabled})` must still load the cube);
-some it *owns itself or overrides* and must suppress. The suppressed set is a
-single list, **not** a `if (camera.clip) return` guard sprinkled per saga (the
-second copy of that guard is the smell — consolidate):
-
-```ts
-// the clip is the sole scene/camera authority while it runs; these reactors park.
-// NOT watchFlowLoad / watchWake — the clip relies on those still firing.
-const SUSPEND_DURING_CLIP = [watchFades, watchFocusTween] as const;
-const whileNoClip = (saga) => function* (...a) {
-  if (selectClipActive(yield* select())) return;
-  yield* saga(...a);
-};
+```
+final alpha = intentOpacity(bridge)  ×  focusRecession(structureFocus)  ×  clipOpacity(clipPlayer)
 ```
 
-- **`watchFades`** parked → a visibility-intent change inside a clip does not spawn
-  a competing fixed-duration background fade; `show`/`hide` drive the fade
-  themselves (next paragraph). Retires `flowShowcase`'s per-frame `setImmediate`
-  clamp, which existed only to suppress that background fade by hand.
-- **`watchFocusTween`** parked → a `focus()` cue sets selection + the isolation dim
-  but plants **no** `camera.tween`. This is load-bearing, and priority alone is
-  *not* enough: a tween planted at @60 is dormant *during* the clip (clip@95 wins),
-  but `camera.tween` is still non-null when the clip ends, so the instant @95
-  deactivates the stale tween outranks `resting`@0 and **snaps the camera to the
-  focus framing** — defeating commit-on-edge's bake into `base`.
-  Dormancy-by-priority does not survive the edge; suspension does.
+- **`intentOpacity`** — owned by the intent→fade bridge, driven by the visibility
+  setting (`show`/`hide`). The steady state: persists past the clip, restored by the
+  tour snapshot. *`fade()` never touches it.*
+- **`focusRecession`** — owned by `structureFocus` (ships today): the
+  member-isolation multiplier.
+- **`clipOpacity`** — a **new clip-owned channel**, the exact shape `structureFocus`
+  already uses (private `FadeController`s in `clipPlayer`), default 1, driven by
+  `fade()`, composed at the renderer, and **reset to 1 when the clip ends** (Resource
+  teardown).
 
-**`show`/`hide` reuse the bridge body — they don't re-implement it.** With
-`watchFades` parked, the cue handler dispatches the visibility intent and then
-calls the *same* `syncVisibilityFades(state, { only, durationMs, animate })` the
-saga would have — narrowed to the cue's layers (`only`, which the bridge already
-takes), with the cue's `over` as `durationMs` (`over: 0` → `animate: false` snap).
-The only addition is an optional `durationMs` override threaded to `applyIntent`,
-which hard-codes `FADE_IN/OUT_DURATION_MS` today. So there is exactly **one**
-opacity-from-intent code path with two callers — saga-triggered (UI, fixed
-duration) and clip-triggered (custom duration) — not a duplicated manifest walk.
-`fade([layers], to, over)` (transient, no intent) stays a direct `fades.fadeTo`: it
-dispatches no intent, so it never trips the parked saga and is not a second writer.
+The three are independent multipliers, so they **compose** rather than collide: a
+`show` (intent) and a `fade` (clipOpacity) on the same layer multiply cleanly. The
+single-writer rule applies *within* a channel — two overlapping `fade()`s on one
+layer retarget the `clipOpacity` ramp, the same registration-time validation as two
+base-writers on a camera channel — but never *across* channels. `scene` touches no
+opacity channel at all.
 
-*Why suspension and not an opacity driver table.* Opacity faces the same shape the
-camera does — multiple time-varying writers, one output, a handoff on edge — but
-solves it differently (suspend-the-bridge, not priority arbitration), and that
-asymmetry is **essential, not an oversight**: the camera has *N concurrent*
-sources to arbitrate every frame (orbitDrag, tween, autoRotate, resting, clip),
-whereas opacity has exactly *two mutually-exclusive* writers — the settings bridge
-*or* the clip, never both at once. For two exclusive writers, "park one while the
-other owns it" is strictly simpler than a full arbitration table; a table would be
-machinery for a concurrency that cannot occur. (If a second concurrent opacity
-animator ever appears, revisit — the camera's table is the proven pattern to
-adopt.)
+**`fade()` cannot desync intent** — the whole reason for the third channel.
+`fade(['galaxies'], 0, 3)` ramps `clipOpacity(galaxies)` to 0 while `intentOpacity`
+(galaxies still enabled) stays 1: the galaxies dim out but remain loaded. At clip end
+`clipOpacity` resets to 1 and rendered alpha returns to `intentOpacity ×
+focusRecession × 1` = intent. There is no opacity-vs-intent divergence to reconcile —
+the steady-state channel was never touched, the transient channel evaporates. (This
+retires the earlier draft, where `fade()` wrote the intent channel directly and a
+transient dim corrupted the steady-state value with no path back.)
 
-**Clip end — opacity commits its final value.** There is no dedicated clip-end
-reconcile. The bridge un-suspends by its own guard — `watchFades` resumes once
-`camera.clip` is null, and nothing fires on the transition — and opacity **stays
-at the clip's final value**, the true analogue of `commit-on-edge` baking the
-camera's *final* pose into `base` (a freeze, not a reset). Layers the clip drove
-with `show`/`hide` already have opacity == intent (nothing to reconcile);
-transient `fade`s (the fade-to-black, partial dims) persist, which is exactly what
-a recording ending on black wants. The only full reconcile back to live is the
-tour saga's `restore` (Layer 2) — `restoreScene(snapshot)` runs the existing
-`fx.syncFades` path. Recordings end on their final frame and reload.
+**Only the camera-tween reactor is suspended during a clip — opacity needs no
+suspension.** `fade()` rides its own channel and `show`/`hide` ride the live bridge
+(which the clip *wants*: enabling a layer must bring its `intentOpacity` to 1 so
+`clipOpacity` has something to modulate, and a demand-loaded layer's fade correctly
+re-fires when its slot commits). So the only production reactor a clip must park is
+`watchFocusTween` — the camera tween it would otherwise plant while the clip owns the
+camera @95. The guard is **one shared helper, gating per dispatched action *inside*
+`takeEvery`'s worker** — not around the watcher (a watcher registers its `takeEvery`
+once at boot, so wrapping the watcher would evaluate the guard a single time and
+either never park or never register the listener at all):
 
-So there is exactly **one** opacity-writing path — the clip's `show`/`hide`/`fade`
-verbs, single-writer-validated, reactive bridge parked while the clip plays — and
-the common case never makes the author hand-roll a fade.
+```ts
+const suspendDuringClip = (worker) => function* (action) {   // re-checked on every dispatch
+  if (selectClipActive(yield* select())) return;
+  yield* worker(action);
+};
+function* watchFocusTween() {
+  yield* takeEvery(updateSelectionFocus, suspendDuringClip(focusTweenWorker));
+}
+// NOT suspended: watchFades (the clip relies on it driving intentOpacity), watchFlowLoad /
+// watchWake, and watchSelectionRows (it drives the isolation dim the clip's focus() WANTS).
+```
+
+Parking `watchFocusTween` → a `focus()` cue sets selection + the isolation dim but
+plants **no** `camera.tween`. Priority alone is *not* enough: a tween planted at @60
+is dormant during the clip (clip@95 wins) but `camera.tween` stays non-null, so the
+instant @95 deactivates the stale tween outranks `resting`@0 and **snaps the camera
+to the focus framing** — defeating commit-on-edge's bake into `base`. And parking
+stops only *new* tweens; one planted *before* the clip is already in `camera.tween`,
+so `endClip()` also clears it (`cancelCameraTween()`, teardown's Camera reaction
+below). `watchSelectionRows` stays **live** despite sharing the `updateSelectionFocus`
+trigger — it reconciles the derived `selectionRows.focus` that drives the isolation
+dim the clip *wants*; parking it would make every in-clip `focus()` a no-op dim.
+
+**"Load but don't show."** A clip that loads a layer before revealing it (cosmicFlows:
+`setFlow{enabled}` — "load the cube, no visual yet") masks with `clipOpacity`: snap
+`clipOpacity(flow)` to 0, enable flow (its `intentOpacity` fades to 1 behind the mask,
+invisible), then `fade(['flow'], 1, over)` lifts the mask in sync with the rest. No
+bridge-parking and no per-frame `setImmediate` clamp — the mask is one ordinary
+`fade` cue, which retires `flowShowcase`'s hand-rolled clamp.
+
+**Clip end — no opacity reconcile, no freeze.** `clipOpacity` resets to 1 with the
+`clipPlayer` Resource; `intentOpacity` (untouched by `fade()`) persists;
+`focusRecession` follows selection. A recording's fade-to-black is captured frame by
+frame *during* the clip; the mask lifts after the final frame (a reload clears it
+anyway). The only full reset back to live is the tour's `restoreScene` (Layer 2).
+
+*Why opacity composes where the camera arbitrates.* Opacity's three contributions are
+independent **multipliers** that all apply at once (intent × focus × clip), so the
+output is their product — no winner to pick. The camera's sources are competing
+**absolute poses** where only one can be the frame's pose, so it needs a priority
+table. The difference is essential: multipliers commute and compose; poses don't. The
+earlier draft's "suspend the opacity bridge / freeze at clip end" machinery existed
+only because `fade()` and intent shared one channel; splitting them into independent
+factors dissolves it.
 
 ### Cancellation and teardown
 
 Interruption is **all-or-nothing and reactive** — never a per-frame partial
 override. `clip`@95 outranks `orbitDrag`@80, so while a clip plays the camera is
-owned by the clip; a drag cannot steer it. Taking control means **cancelling the
-whole clip** (camera *and* scene together) — a decision the orchestration makes,
-not a priority the table arbitrates. The alternative (raise drag above clip so a
-drag steers the camera while the clip's scene choreography keeps running) splits
-one animation across two controllers and snaps back on release — the braid we
-removed. A recording (no saga) simply never watches for input; `g` calls
-`clipPlayer.stop()`.
+owned by the clip; a drag cannot steer it, and a stray drag/scroll is **swallowed by
+design — it is not an abort trigger.** Ending an animation is an **explicit
+decision**: a recording is stopped by its `g` keypress calling `clipPlayer.stop()`;
+a tour is stopped by an exit/stop control that dispatches `TOUR_EXIT`. (Inferring
+abort from camera input was rejected — it needs an `isUserCameraInput` predicate that
+the tour's *own* commit-on-edge `commitCameraPose` would trip, self-aborting every
+beat, and a stray touch would destroy a beat. An explicit exit has neither problem.)
+Either way, taking control means **cancelling the whole clip** (camera *and* scene
+together), not raising drag above the clip — that would split one animation across
+two controllers and snap back on release, the braid we removed.
 
 **One action triggers teardown** — `endClip()` (the mirror of `startClip(clip)`,
 as `cancelCameraTween` mirrors `startCameraTween`), the single write path,
@@ -672,12 +711,15 @@ dispatched by the player on natural completion, by `clipPlayer.stop()` on abort,
 or by the tour. Teardown is the *set of reactions* to it, each in its owner:
 
 - **Camera** — the frame loop's commit-on-edge bakes the *current* pose into
-  `camera.base` on the `camera.clip`→null edge (existing; `'clip'` is in the set).
-  A mid-clip abort freezes the camera where it is — no snap — and the next driver
-  continues from there.
-- **Opacity** — `watchFades` un-suspends by its guard (it stops early-returning
-  once `camera.clip` is null); nothing fires on the transition, and opacity stays
-  at the clip's final value (see "Clip end — opacity commits its final value").
+  `camera.base` on the `camera.clip`→null edge (existing; `'clip'` is in the set),
+  **and `endClip()` clears any dormant `camera.tween` (`cancelCameraTween()`)** so a
+  tween planted before the clip can't outrank `resting`@0 and hijack the camera once
+  @95 deactivates. A mid-clip abort freezes the camera where it is — no snap — and
+  the next driver continues from there.
+- **Opacity** — `clipPlayer` resets its `clipOpacity` channel to 1 (Resource
+  teardown); `intentOpacity` (never touched by `fade()`) and `focusRecession` are
+  untouched, so rendered alpha returns to the steady state with no reconcile and no
+  freeze (see "Clip end — no opacity reconcile, no freeze").
 - **Resource** — `clipPlayer` does its own lifecycle cleanup (reset the cue
   cursor, cancel forks, resolve the `playClip` Promise). Imperative, because
   Resources are imperative (ADR 0007).
@@ -693,10 +735,10 @@ any caller ends a clip the same way.
 **The `playClip` Promise** resolves on natural completion *and* on `stop()`;
 cancellation is structured via a redux-saga `[CANCEL]` hook
 (`p[CANCEL] = () => clipPlayer.stop()`), never a rejection — so the common path
-carries no try/catch. A tour aborts with
-`race({ run: call(playClip, clip), abort: take(isUserCameraInput) })`: the lost
-`call` is cancelled, `[CANCEL]` stops the player, and the saga's `finally`
-restores.
+carries no try/catch. The tour wraps its whole beat loop in
+`race({ run, exit: take(TOUR_EXIT) })` (see `guidedTour` below): on `TOUR_EXIT` the
+`run` arm is cancelled, cancellation propagates into whatever clip is playing, its
+`[CANCEL]` stops the player, and the saga's `finally` restores.
 
 ## Layer 2 — saga orchestration
 
@@ -738,9 +780,12 @@ function* guidedTour(beats: BeatData[]) {
   const snapshot = captureScene(state);                           // six settings clusters + selection.focus
   yield* put(setUiHidden(true));
   try {
-    for (const beat of beats) yield* visitBeat(beat);
+    yield* race({
+      run: call(function* () { for (const beat of beats) yield* visitBeat(beat); }),
+      exit: take(TOUR_EXIT),                                       // explicit stop control — cancels the run
+    });
   } finally {
-    yield* call(restoreScene, state, store, snapshot, { animate: true }); // restore settings + focus, even on cancel
+    yield* call(restoreScene, state, store, snapshot, { animate: true }); // restore settings + focus, even on exit
     yield* put(setUiHidden(false));
   }
 }
@@ -757,9 +802,10 @@ granularity choice here.
 
 `captureScene` / `restoreScene` extend the existing `captureSettings` /
 `restoreSettings` wiring seam (`services/engine/wiring/`), called (not `put`) —
-`restoreScene` runs the full `fx.syncFades` reconcile back to live (the only place
-opacity is reset to baseline; clip end merely freezes it) **and** re-dispatches
-`updateSelectionFocus(snapshot.focus)`. The widening is forced by `focus()` joining
+`restoreScene` reverts the *intent* changes a beat's `scene`/`show`/`hide` made and
+runs the full `fx.syncFades` reconcile of `intentOpacity` back to baseline (clip-end
+already reset `clipOpacity` to 1, so transient `fade`s need no separate undo) **and**
+re-dispatches `updateSelectionFocus(snapshot.focus)`. The widening is forced by `focus()` joining
 the scene vocabulary: `captureSettings` snapshots the six *settings* clusters only,
 so a beat's `focus()` and its member-isolation dim would otherwise leak past the
 `finally`. Capturing `selection.focus` alongside settings keeps "the snapshot is
@@ -771,7 +817,7 @@ the scene" honest — `focus` is reverted the same way `scene` is, not by a sepa
 | Don't start a beat before its data loads | `call(waitUntil, () => focusReady(...))` |
 | Auto-advance, but let the viewer click "next" | `race({ timeout: delay(...), next: take(TOUR_ADVANCE), drift: call(playClip, dwellDrift) })` |
 | Dwell is never frozen | a perpetual `dwellDrift` clip in the race — always loses, cancelled on advance |
-| Cancel the whole tour on stray input | runner cancellation → the `finally` runs |
+| End the tour (explicit stop control, not camera input) | `take(TOUR_EXIT)` races the beat loop → run cancelled → the `finally` runs |
 | Restore settings + focus even on mid-beat cancel | `try { … } finally { call(restoreScene, …, { animate }) }` |
 | Per-beat scene changes, captions | `put(intent)` — same flow as the UI |
 | The cinematic move itself | `call(playClip, clip)` — Layer 1 |
@@ -833,17 +879,22 @@ it to Layer 2 regardless, keeping Layer 1 purely non-reactive.
   shipped focus `tween`@60 — a store descriptor + a pure evaluator on `cameraClock`
   — plus the `clipPlayer` subsystem for scene cues + lifecycle. No new pose
   authority beside the table.
-- **The clip suspends a declared set of reconcile sagas** — `SUSPEND_DURING_CLIP =
-  [watchFades, watchFocusTween]`, wired through one `whileNoClip` wrapper, not a
-  per-saga `if (camera.clip)`. `watchFades` parks so `show`/`hide` own the fade at
-  the cue's duration; `watchFocusTween` parks so a `focus()` cue plants no stale
-  `camera.tween` that would hijack the camera at clip-end. `watchFlowLoad` /
-  `watchWake` stay unguarded — the clip relies on them. This is the small,
-  load-bearing reactive-layer change Layer 1 needs from the existing sagas.
-- **`syncVisibilityFades` gains an optional `durationMs`** (it already takes
-  `only?`), threaded to `applyIntent` (which hard-codes `FADE_IN/OUT_DURATION_MS`
-  today), so `show`/`hide` reuse the one bridge body at a custom duration rather
-  than re-walking the manifest.
+- **`fade()` adds a third opacity channel, `clipOpacity`** — a clip-owned set of
+  private `FadeController`s (the shape `structureFocus` already uses), composed into
+  rendered alpha as a third factor in `resolveLayerOpacity` (`intentOpacity ×
+  focusRecession × clipOpacity`) and reset on clip end. This is the load-bearing fix
+  that lets `fade()` move intent-bearing layers without desyncing them from intent.
+- **The clip suspends exactly one reconcile saga** — `watchFocusTween`, via a shared
+  `suspendDuringClip(worker)` guard applied *inside* its `takeEvery` (per action, not
+  around the watcher — see "Only the camera-tween reactor is suspended"). `endClip()`
+  also clears any tween planted before the clip. `watchFades` / `watchFlowLoad` /
+  `watchWake` / `watchSelectionRows` all stay live — the clip relies on them. Opacity
+  needs no suspension at all now that `fade()` rides its own channel.
+- **The visibility actions carry an optional fade duration** so `show`/`hide`'s
+  `over` reaches the live bridge (`watchFades` → `syncVisibilityFades`, which already
+  takes `only?`; `applyIntent` hard-codes `FADE_IN/OUT_DURATION_MS` today and gains an
+  optional override). One intent→opacity path, honoring the cue's duration — no
+  bypass, no parking.
 - **`captureSettings`/`restoreSettings` widen to `captureScene`/`restoreScene`** —
   the snapshot adds `selection.focus` so the tour's `restore` reverts a beat's
   `focus()` and its isolation dim, not settings alone.
