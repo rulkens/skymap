@@ -84,10 +84,10 @@
 import type { NfwLensLut } from '../../@types/lensing/NfwLensLut';
 
 // Peak of g(x)/x for the Wright & Brainerd NFW enclosed-mass profile.
-// This exact value is the source of truth in `lib/lensing.wesl:146`
-// (`NFW_SHAPE_PEAK: f32 = 0.3122`). Do NOT introduce a second value here —
-// keep both in sync, and the WESL file is the canonical reference.
-const NFW_SHAPE_PEAK = 0.3122;
+// This exact value is the source of truth mirrored in 'lib/lensing.wesl'
+// as 'NFW_SHAPE_PEAK: f32 = 0.3122'. Exported so parity tests can assert
+// the WESL mirror matches without a second literal.
+export const NFW_SHAPE_PEAK = 0.3122;
 
 // Log-curvature constant for the s-axis mapping. Higher LOG_K packs more
 // rows near s = 0; LOG_K = 4 puts ~50 % of the rows below s ≈ 0.13 · sMax.
@@ -97,10 +97,11 @@ const NFW_SHAPE_PEAK = 0.3122;
 // tests/services/gpu/shaders/nfwLutConstants.parity.test.ts.
 export const LOG_K = 4.0;
 
-// Hard cap on magnification. Matches `LENS_MU_MAX` in
-// `shaders/points/vertex.wesl` so the LUT and the existing SIS path agree
-// on the maximum brightness boost a lensed galaxy can receive.
-const MU_MAX = 10.0;
+// Hard cap on magnification. Exported as the source of truth mirrored in
+// 'shaders/points/vertex.wesl' as 'LENS_MU_MAX: f32 = 10.0'. The LUT and
+// the SIS path agree on the maximum brightness boost a lensed galaxy can
+// receive; parity tests assert the WESL mirror matches this value.
+export const MU_MAX = 10.0;
 
 // How many x-samples to take in the initial root-bracketing scan. 2000 gives
 // sub-0.005 unit spacing for a typical x-range of 10, narrow enough to

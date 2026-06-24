@@ -77,8 +77,10 @@ export function createPickRenderer(
   // written once per frame in renderFrame): cluster-focus at binding 0 +
   // the gravitational-lensing buffer at binding 1 — the SAME group the
   // visual pass binds. So the pick pass culls non-members of a focused
-  // structure AND deflects sources identically, keeping lensed images
-  // hit-testable. Lensing co-hosts the scene group rather than taking a
+  // structure AND deflects sources identically, keeping the PRIMARY lensed
+  // image hit-testable. The pick pass draws draw(6, ...) — never widened
+  // to 12 — so the counter image is not picked; only the primary quad
+  // participates. Lensing co-hosts the scene group rather than taking a
   // 5th @group because WebGPU caps a pipeline at 4 bind groups and pick
   // already uses all four (uniforms, fade, source, focus); group 0 is the
   // shared camera group the structure-ring / Milky-Way pick draws reuse,

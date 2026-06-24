@@ -4,11 +4,12 @@
  *
  * Canonical, not `layout: 'auto'`: auto layouts don't cross pipelines
  * (see CLAUDE.md). One layout built at bootstrap is threaded into every
- * lensing-aware pipeline — the points pipeline (@group(4)), the pick
- * pipeline (@group(4)), and, in a later phase, the MCPM volume raymarch —
- * and the single shared lensing bind group, built against this layout,
- * binds in all of them (a bind group is tied to a layout, not a group
- * number).
+ * lensing-aware pipeline. Today's only consumer that uses this standalone
+ * BGL directly is the RESERVED volume-raymarch path (`createLensingUniformBuffer`);
+ * the points and pick pipelines read the same buffer via the shared scene
+ * group at @group(3) @binding(1) (not via this BGL directly). The single
+ * shared lensing bind group, built against this layout, is valid for that
+ * path (a bind group is tied to a layout, not a group number).
  *
  * The buffer is visible to BOTH the vertex and fragment stages: the points
  * vertex stage reads the lens array to deflect each source, and the volume

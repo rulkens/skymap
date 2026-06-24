@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { buildNfwLensLut } from '../../../src/utils/lensing/buildNfwLensLut';
-
-// Hard cap on magnification (must match MU_MAX in buildNfwLensLut.ts and
-// LENS_MU_MAX in shaders/points/vertex.wesl).
-const MU_MAX = 10.0;
+import { buildNfwLensLut, MU_MAX } from '../../../src/utils/lensing/buildNfwLensLut';
 
 describe('buildNfwLensLut', () => {
   afterEach(() => {

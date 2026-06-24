@@ -187,10 +187,10 @@ struct Uniforms {
   pickPass: u32,
   _padFade1: f32,
   // The struct ends here at 176 bytes. The gravitational-lensing lens
-  // array + profile knobs live in their OWN shared buffer (the points
-  // vertex stage binds it at @group(4) — see lib/lensingUniforms.wesl),
-  // not in this tail, so a second pipeline (the volume raymarch, a later
-  // phase) can bind the same lens data without re-packing it.
+  // array + profile knobs live in their OWN shared buffer, bound via the
+  // scene group at @group(3) @binding(1) — see lib/lensingUniforms.wesl.
+  // Keeping it separate from this tail lets a second pipeline (the volume
+  // raymarch, a later phase) bind the same lens data without re-packing it.
 };
 
 // ─── per-instance vertex attributes ──────────────────────────────────

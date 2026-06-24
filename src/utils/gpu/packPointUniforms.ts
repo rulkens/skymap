@@ -8,9 +8,10 @@
  * packing never drifts.
  *
  * Gravitational-lensing lens data is NOT here: it rides in its own shared
- * `LensingUniforms` buffer (`packLensingUniforms` packs it), bound at
- * @group(4) by the points + pick pipelines — so a second pipeline can bind
- * the same lens data without re-packing the whole points uniform.
+ * `LensingUniforms` buffer (`packLensingUniforms` packs it), bound via the
+ * scene group at @group(3) @binding(1) by the points + pick pipelines — so
+ * a second pipeline can bind the same lens data without re-packing the whole
+ * points uniform.
  *
  * Why a separate module rather than an inner function in `pointRenderer.ts`?
  * The pick renderer needs to pack a fresh buffer *without* touching the

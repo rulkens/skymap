@@ -122,11 +122,12 @@ export const pointSpritesPass: Pass = {
       // registered yet renders at full opacity rather than disappearing.
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
-      // Gravitational-lensing prototype. `lensEnabled` + `lensMode` together
-      // gate the 12-vs-6 vertex draw count on the CPU (the doubled counter-
-      // image quad is SIS-only). The lens array + mode + scale radius also
-      // live in the shared lensing buffer (written once per frame in
-      // renderFrame), co-bound at @group(3) @binding(1) via the focus bind
+      // Gravitational-lensing prototype. `lensEnabled` gates the 12-vs-6
+      // vertex draw count on the CPU: when lensing is on, both SIS and NFW
+      // modes draw 12 vertices per instance (the primary quad at vi 0..5 and
+      // the counter-image quad at vi 6..11). The lens array + mode + scale
+      // radius also live in the shared lensing buffer (written once per frame
+      // in renderFrame), co-bound at @group(3) @binding(1) via the focus bind
       // group above — so there's nothing else lens-related to pass per draw.
       lensEnabled: state.settings.debug.lensingEnabled,
       lensMode: state.settings.debug.lensMode,
