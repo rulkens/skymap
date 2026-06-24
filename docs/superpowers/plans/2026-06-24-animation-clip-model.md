@@ -357,14 +357,14 @@ No test (pure type declarations — exercised by Task 3's helper tests).
     `focus(ref): SceneEffect`.
   - `seq(children): Effect`, `all(children): Effect`, `fork(child): Effect`.
 
-- [ ] `dollyTo fills space:'log' from CHANNEL_SPACE` — assert
+- [x] `dollyTo fills space:'log' from CHANNEL_SPACE` — assert
   `dollyTo(300, 4)` ⇒ `{ kind:'set', ch:'distance', to:300, over:4, ease:'inOut', space:'log' }`.
-- [ ] `tween override space wins` — `tween('distance',{to:5,over:1,space:'lin'}).space==='lin'`.
-- [ ] `spin carries loop flag` — `spin('yaw',{by:6.28,over:30,loop:true}).loop===true`.
-- [ ] `oscillate has no over/ease` — shape assertion `{kind:'osc',ch:'pitch',amp,period}`.
-- [ ] `all/seq/fork wrap children with the right kind`.
-- [ ] `moveTarget emits a single setVec on target` — `moveTarget([1,2,3],5).to` deep-equals `[1,2,3]`.
-- [ ] Implement. `npm test -- effectHelpers` → pass. Commit.
+- [x] `tween override space wins` — `tween('distance',{to:5,over:1,space:'lin'}).space==='lin'`.
+- [x] `spin carries loop flag` — `spin('yaw',{by:6.28,over:30,loop:true}).loop===true`.
+- [x] `oscillate has no over/ease` — shape assertion `{kind:'osc',ch:'pitch',amp,period}`.
+- [x] `all/seq/fork wrap children with the right kind`.
+- [x] `moveTarget emits a single setVec on target` — `moveTarget([1,2,3],5).to` deep-equals `[1,2,3]`.
+- [x] Implement. `npm test -- effectHelpers` → pass. Commit.
 
 ## Task 4 — `compileClip`: flatten the tree to per-channel tracks + a cue list
 
