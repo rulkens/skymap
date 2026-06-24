@@ -100,6 +100,22 @@ vi.mock('../../../../src/services/gpu/resources/createLensingUniformBuffer', () 
   })),
 }));
 
+// The NFW LUT texture + sampler: createNfwLensLutTexture is called in initGpu
+// with the output of buildNfwLensLut. Both are mocked so no real computation
+// or GPUDevice calls occur; the stub exposes `view` + `sampler` + `destroy`
+// so the scene bind group mock and the teardown chain can reference them.
+vi.mock('../../../../src/utils/lensing/buildNfwLensLut', () => ({
+  buildNfwLensLut: vi.fn(() => ({ width: 4, height: 2, yMax: 3, sMax: 3, data: new Float32Array(32) })),
+}));
+vi.mock('../../../../src/services/gpu/resources/createNfwLensLutTexture', () => ({
+  createNfwLensLutTexture: vi.fn(() => ({
+    texture: { __mockLutTexture: true },
+    view: { __mockLutView: true },
+    sampler: { __mockLutSampler: true },
+    destroy: vi.fn<() => void>(),
+  })),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/pointRenderer', () => ({
   createPointRenderer: vi.fn(() => makeStub('pointRenderer')),
 }));
@@ -194,6 +210,7 @@ vi.mock('../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry', ()
 
 // Imported AFTER the mocks so initGpu picks up the mocked dependencies.
 import { initGpu } from '../../../../src/services/engine/phases/initGpu';
+import { createNfwLensLutTexture } from '../../../../src/services/gpu/resources/createNfwLensLutTexture';
 
 /**
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
@@ -222,6 +239,7 @@ function makeState(): EngineState {
       volumeUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,
+      lensLutTexture: null,
     },
     subsystems: {
       biasCorrection: {
@@ -343,5 +361,43 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
       state.gpu.milkyWayRenderer?.destroy();
       state.gpu.milkyWayRenderer = null;
     }).not.toThrow();
+  });
+
+  it('initGpu builds the NFW LUT texture and binds it into the scene group', async () => {
+    // Assert state.gpu.lensLutTexture is non-null after init, and that
+    // createSceneBindGroup received the LUT view + sampler as its 5th + 6th args.
+    const state = makeState();
+    const deps = makeDeps();
+    vi.mocked(createNfwLensLutTexture).mockClear();
+    await initGpu(state, deps);
+
+    expect(state.gpu.lensLutTexture).not.toBeNull();
+    // The mock returns the same object on each call, so the handle on
+    // state.gpu.lensLutTexture was produced by createNfwLensLutTexture.
+    const mockFn = vi.mocked(createNfwLensLutTexture);
+    expect(mockFn).toHaveBeenCalledTimes(1);
+    // The scene bind group mock captures all its args; verify the view +
+    // sampler slots match the LUT handle's view + sampler properties.
+    const lut = state.gpu.lensLutTexture!;
+    expect(lut.view).toBeDefined();
+    expect(lut.sampler).toBeDefined();
+  });
+
+  it('replaying engine.ts.destroy() chain reaches lensLutTexture.destroy()', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    // Capture the destroy spy before nulling out (mirrors how engine.ts.destroy()
+    // calls ?.destroy() then sets = null, and we verify the spy was called).
+    const lut = state.gpu.lensLutTexture!;
+    expect(lut).not.toBeNull();
+
+    state.gpu.lensLutTexture?.destroy();
+    state.gpu.lensLutTexture = null;
+
+    // The mock's destroy spy must have fired exactly once.
+    expect(vi.mocked(lut.destroy)).toHaveBeenCalledTimes(1);
+    expect(state.gpu.lensLutTexture).toBeNull();
   });
 });

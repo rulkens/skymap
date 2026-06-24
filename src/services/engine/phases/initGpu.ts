@@ -75,6 +75,14 @@ import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniform
 import { createSceneBindGroup } from '../../gpu/resources/createSceneBindGroup';
 import { createLensingUniformsBgl } from '../../gpu/bindGroupLayouts/lensingUniforms';
 import { createLensingUniformBuffer } from '../../gpu/resources/createLensingUniformBuffer';
+import { buildNfwLensLut } from '../../../utils/lensing/buildNfwLensLut';
+import { createNfwLensLutTexture } from '../../gpu/resources/createNfwLensLutTexture';
+import {
+  NFW_LUT_WIDTH,
+  NFW_LUT_HEIGHT,
+  NFW_LUT_Y_MAX,
+  NFW_LUT_S_MAX,
+} from '../../../data/nfwLensLut';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -119,15 +127,27 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // The single shared cluster-focus uniform — written once per frame in
   // renderFrame.
   state.gpu.focusUniform = createFocusUniformBuffer(device);
+  // The inverse-NFW-lens LUT: precompute the root-finding table on the CPU
+  // (once per engine lifecycle) and upload it as an rgba16float texture.
+  // Built BEFORE the scene bind group, which references its view + sampler.
+  // See `buildNfwLensLut` and `createNfwLensLutTexture` for the rationale on
+  // why a 2D LUT is used instead of per-vertex root-finding on the GPU.
+  state.gpu.lensLutTexture = createNfwLensLutTexture(
+    device,
+    buildNfwLensLut(NFW_LUT_WIDTH, NFW_LUT_HEIGHT, NFW_LUT_Y_MAX, NFW_LUT_S_MAX),
+  );
   // The shared @group(3) scene-state bind group composes the focus buffer
-  // (binding 0) + the lensing buffer (binding 1) — both engine-owned, written
-  // once per frame. Bound by points, the impostor disks, and the pick pass
-  // (each at its own group slot). See EngineGpuHandles + createSceneUniformsBgl.
+  // (binding 0) + the lensing buffer (binding 1) + the LUT view (binding 2)
+  // + the LUT sampler (binding 3) — all engine-owned. Bound by points, the
+  // impostor disks, and the pick pass (each at its own group slot). See
+  // EngineGpuHandles + createSceneUniformsBgl.
   state.gpu.sceneBindGroup = createSceneBindGroup(
     device,
     state.gpu.sceneBgl!,
     state.gpu.focusUniform!.buffer,
     state.gpu.lensingUniform!.buffer,
+    state.gpu.lensLutTexture.view,
+    state.gpu.lensLutTexture.sampler,
   );
 
   // ── HDR offscreen target + tone-map post-process ──────────────────

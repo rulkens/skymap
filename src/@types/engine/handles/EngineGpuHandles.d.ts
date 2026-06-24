@@ -65,6 +65,7 @@ import type { SceneUniformsBgl } from '../../rendering/SceneUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
 import type { LensingUniformsBgl } from '../../rendering/LensingUniformsBgl';
 import type { LensingUniformBuffer } from '../../rendering/LensingUniformBuffer';
+import type { NfwLensLutTexture } from '../../rendering/NfwLensLutTexture';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -137,6 +138,17 @@ export type EngineGpuHandles = {
    * `initGpu` resolves; released and re-nulled by `destroy()`.
    */
   lensingUniform: LensingUniformBuffer | null;
+  /**
+   * Precomputed inverse-NFW-lens LUT texture (rgba16float, 256 × 64). Built
+   * once in `initGpu` from `buildNfwLensLut` + `createNfwLensLutTexture`. The
+   * view + sampler fill bindings 2 and 3 of the shared scene bind group; the
+   * vertex stage samples it to invert the NFW lens equation per galaxy without
+   * GPU-side root-finding. Null until `initGpu` resolves; released and re-nulled
+   * by `destroy()`. Destroying the texture does not invalidate the scene bind
+   * group (a view holds a strong reference to the texture), so teardown order
+   * vis-à-vis `sceneBindGroup` is flexible.
+   */
+  lensLutTexture: NfwLensLutTexture | null;
   /**
    * Combined HDR offscreen target + tone-map post-process.  One field
    * because their lifetimes are identical and they're always used

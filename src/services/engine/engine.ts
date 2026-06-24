@@ -263,6 +263,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       sceneBindGroup: null,
       lensingBgl: null,
       lensingUniform: null,
+      lensLutTexture: null,
       postProcess: null,
       volumeOffscreen: null,
       filamentRenderer: null,
@@ -666,6 +667,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // the points + pick pipelines that read it via the scene group are gone.
     state.gpu.lensingUniform?.destroy();
     state.gpu.lensingUniform = null;
+    // NFW LUT texture — destroyed after the scene bind group is dropped
+    // (a GPUTextureView holds a strong reference to its texture, so the
+    // group keeps it alive; setting sceneBindGroup = null above releases
+    // the view's hold; this call then frees the underlying texture bytes).
+    state.gpu.lensLutTexture?.destroy();
+    state.gpu.lensLutTexture = null;
 
     // 5. Drop remaining strong references to aid GC.
     for (const source of [...state.data.galaxies.catalogs.keys()]) {
