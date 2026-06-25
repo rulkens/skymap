@@ -29,7 +29,9 @@ import type { Action } from '@reduxjs/toolkit';
 // is evaluated — only importOriginal() is safe to call inside the factory.
 vi.mock('../../../src/services/engine/wiring/syncVisibilityFades', async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import('../../../src/services/engine/wiring/syncVisibilityFades')>();
+    await importOriginal<
+      typeof import('../../../src/services/engine/wiring/syncVisibilityFades')
+    >();
   return { ...actual, syncVisibilityFades: vi.fn() };
 });
 
@@ -46,7 +48,7 @@ import {
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
   setVolumesEnabled,
-  setFlow,
+  setFlowEnabled,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
   setStructureItemEnabled,
@@ -147,7 +149,7 @@ describe('applySceneEffect — scene', () => {
   it('dispatches its SettingsAction verbatim', () => {
     const state = makeEngineState();
     const { store, dispatch } = makeSpyStore();
-    const action = setFlow({ enabled: true });
+    const action = setFlowEnabled(true);
 
     applySceneEffect({ kind: 'scene', action }, { state, store });
 
@@ -158,7 +160,7 @@ describe('applySceneEffect — scene', () => {
   it('dispatches the action with the exact payload, not a copy', () => {
     const state = makeEngineState();
     const { store, dispatch } = makeSpyStore();
-    const action = setFlow({ enabled: false });
+    const action = setFlowEnabled(false);
 
     applySceneEffect({ kind: 'scene', action }, { state, store });
 
@@ -305,9 +307,9 @@ describe('applySceneEffect — hide', () => {
 
     expect(structureActions.length).toBe(STRUCTURE_IDS.length);
     for (const id of STRUCTURE_IDS) {
-      expect(
-        structureActions.some((a) => a.payload.id === id && a.payload.enabled === false),
-      ).toBe(true);
+      expect(structureActions.some((a) => a.payload.id === id && a.payload.enabled === false)).toBe(
+        true,
+      );
     }
   });
 
@@ -371,10 +373,7 @@ describe('applySceneEffect — fade', () => {
     const { store } = makeSpyStore();
 
     expect(() =>
-      applySceneEffect(
-        { kind: 'fade', layers: ['filaments'], to: 0, over: 500 },
-        { state, store },
-      ),
+      applySceneEffect({ kind: 'fade', layers: ['filaments'], to: 0, over: 500 }, { state, store }),
     ).toThrow();
   });
 });
@@ -475,9 +474,9 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
     ]);
   });
 
-  it('flow factory produces setFlow({ enabled: on })', () => {
-    expect(VISIBILITY_ACTION_ROW['flow'](true, settings)).toEqual([setFlow({ enabled: true })]);
-    expect(VISIBILITY_ACTION_ROW['flow'](false, settings)).toEqual([setFlow({ enabled: false })]);
+  it('flow factory produces setFlowEnabled(on)', () => {
+    expect(VISIBILITY_ACTION_ROW['flow'](true, settings)).toEqual([setFlowEnabled(true)]);
+    expect(VISIBILITY_ACTION_ROW['flow'](false, settings)).toEqual([setFlowEnabled(false)]);
   });
 
   it('survey factory emits one setGalaxyCatalogVisible per catalog id', () => {

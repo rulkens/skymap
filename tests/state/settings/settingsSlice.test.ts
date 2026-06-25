@@ -33,6 +33,7 @@ import reducer, {
   addVolumeField,
   removeVolumeField,
   writeVolumeField,
+  setFlowEnabled,
   setFlow,
   setShowPickBuffer,
   setShowDiskRadiusRing,
@@ -214,6 +215,12 @@ describe('settingsSlice — volume fields', () => {
 });
 
 describe('settingsSlice — flow', () => {
+  it('setFlowEnabled updates flow.enabled', () => {
+    const before = base();
+    expect(reducer(before, setFlowEnabled(!before.flow.enabled)).flow.enabled).toBe(
+      !before.flow.enabled,
+    );
+  });
   it('setFlow partial-merges leaf-by-leaf', () => {
     const before = base();
     const next = reducer(before, setFlow({ flowSpeed: 9.5 }));

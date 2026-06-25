@@ -35,12 +35,13 @@
 import type { ReactNode } from 'react';
 import type { FlowMode } from '../../@types/data/flow/FlowMode';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flow/flowFields';
 import styles from './FlowRow.module.css';
 
 export type FlowRowProps = {
   flow: FlowSettings;
-  onChange: (patch: Partial<FlowSettings>) => void;
+  onChange: (patch: Partial<FlowFieldDefaults>) => void;
 };
 
 /** The slider knobs that surface in the explorer panel (just intensity today). */

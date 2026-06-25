@@ -52,7 +52,7 @@ import {
   setMilkyWayLabelEnabled,
   setFilamentsEnabled,
   setVolumesEnabled,
-  setFlow,
+  setFlowEnabled,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
   setStructureItemEnabled,
@@ -80,7 +80,7 @@ export const VISIBILITY_ACTION_ROW: Record<
   milkyWayLabel: (on) => [setMilkyWayLabelEnabled(on)],
   filaments: (on) => [setFilamentsEnabled(on)],
   volumesMaster: (on) => [setVolumesEnabled(on)],
-  flow: (on) => [setFlow({ enabled: on })],
+  flow: (on) => [setFlowEnabled(on)],
 
   // ── Per-item layers (one action per registered item) ────────────────────
   // These layers fan out across a `settings.<cluster>.items` record. The factory

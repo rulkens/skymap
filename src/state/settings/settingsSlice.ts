@@ -38,7 +38,7 @@ import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCata
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
-import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 
 // The slice seeds the appearance knobs from `buildInitialSettings()`. The data
@@ -142,8 +142,15 @@ const settingsSlice = createSlice({
     },
 
     // ── flow ────────────────────────────────────────────────────────────────
-    setFlow: (settings, action: PayloadAction<Partial<FlowSettings>>) => {
-      // Leaf-by-leaf merge of the partial patch into the single flow slice.
+    // The master gate is its own scalar setter (like setMilkyWayEnabled /
+    // setVolumesEnabled), so `flow.enabled` has a single writer. `setFlow`
+    // patches only the look/motion knobs — its payload deliberately excludes
+    // `enabled`, keeping the visibility intent off the generic merge path.
+    setFlowEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.flow.enabled = action.payload;
+    },
+    setFlow: (settings, action: PayloadAction<Partial<FlowFieldDefaults>>) => {
+      // Leaf-by-leaf merge of the partial knob patch into the flow slice.
       Object.assign(settings.flow, action.payload);
     },
 
@@ -207,6 +214,7 @@ export const {
   addVolumeField,
   removeVolumeField,
   writeVolumeField,
+  setFlowEnabled,
   setFlow,
   setShowPickBuffer,
   setShowDiskRadiusRing,

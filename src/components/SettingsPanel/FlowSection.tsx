@@ -23,6 +23,7 @@
 
 import { memo } from 'react';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import { CollapsibleSection } from './CollapsibleSection';
 import FlowRow from './FlowRow';
 
@@ -31,8 +32,10 @@ import FlowRow from './FlowRow';
 export type FlowSectionProps = {
   /** Current flow state: master enable + all look/motion knobs. */
   flow: FlowSettings;
-  /** Called whenever the master toggle or any FlowRow knob changes. */
-  onFlowChange: (patch: Partial<FlowSettings>) => void;
+  /** Called when the header master toggle flips the layer's enable gate. */
+  onEnabledChange: (enabled: boolean) => void;
+  /** Called whenever a FlowRow look/motion knob changes. */
+  onFlowChange: (patch: Partial<FlowFieldDefaults>) => void;
 };
 
 // ── FlowSection ────────────────────────────────────────────────────────────────
@@ -41,12 +44,12 @@ export type FlowSectionProps = {
  * Renders the Flow thematic group: a master enable on the section header and
  * `FlowRow` (mode switch + intensity slider) in the body.
  */
-function FlowSection({ flow, onFlowChange }: FlowSectionProps) {
+function FlowSection({ flow, onEnabledChange, onFlowChange }: FlowSectionProps) {
   return (
     <CollapsibleSection
       title="Flow"
       headerToggle={flow.enabled}
-      onHeaderToggleChange={(enabled) => onFlowChange({ enabled })}
+      onHeaderToggleChange={onEnabledChange}
     >
       <FlowRow flow={flow} onChange={onFlowChange} />
     </CollapsibleSection>

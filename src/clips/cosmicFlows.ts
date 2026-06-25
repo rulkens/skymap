@@ -17,7 +17,7 @@
  * ### The "load behind the mask, then reveal" idiom
  *
  * `fade(['flow'], 0, 0)` sets `clipOpacity('flow') → 0` INSTANTLY, BEFORE
- * `scene(setFlow({ enabled: true }))` enables the flow field. The flow
+ * `scene(setFlowEnabled(true))` enables the flow field. The flow
  * renderer starts loading and its `intentOpacity` begins to fade up — but
  * the clip channel's factor-0 keeps composed alpha at zero. The viewer sees
  * nothing while the GPU data arrives. The subsequent `fade(['flow'], 1, 3)`
@@ -50,7 +50,7 @@ import {
   seq,
   dollyTo,
 } from '../services/engine/animation/effectHelpers';
-import { setFlow } from '../state/settings/settingsSlice';
+import { setFlowEnabled } from '../state/settings/settingsSlice';
 
 /**
  * cosmicFlows — a ~20-second scripted reveal of the CF4++ peculiar-velocity
@@ -68,22 +68,23 @@ export const cosmicFlows: ClipData = {
   preroll: 2,
   timeline: [
     hide(['volumesMaster', 'filaments', 'surveyLabel'], 0), // snap cosmic web off — instant intent
-    fade(['flow'], 0, 0),                                   // mask: clipOpacity(flow) → 0 before enable
-    scene(setFlow({ enabled: true })),                      // load the flow field behind the mask
+    fade(['flow'], 0, 0), // mask: clipOpacity(flow) → 0 before enable
+    scene(setFlowEnabled(true)), // load the flow field behind the mask
 
-    fork(oscillate('pitch', { amp: 0.09, period: 16 })),    // gentle bob throughout the clip
+    fork(oscillate('pitch', { amp: 0.09, period: 16 })), // gentle bob throughout the clip
     fork(rate('yaw', { to: 0.18, over: 1.5, ease: 'in' })), // ease the orbit in; velocity persists
 
-    hold(2),                                                // I — establish on the MW
+    hold(2), // I — establish on the MW
 
-    all([ fade(['flow'], 1, 3), fade(['survey'], 0, 3) ]),  // A — crossfade via clipOpacity only
+    all([fade(['flow'], 1, 3), fade(['survey'], 0, 3)]), // A — crossfade via clipOpacity only
 
-    all([                                                   // B — 11 s pull-back
-      seq([ dollyTo(300, 4), hold(3), dollyTo(950, 4) ]),  //   pull → dwell → pull
+    all([
+      // B — 11 s pull-back
+      seq([dollyTo(300, 4), hold(3), dollyTo(950, 4)]), //   pull → dwell → pull
       rate('yaw', { to: 0.025, over: 11, ease: 'inOut' }), //   decelerate orbit across the whole pull
     ]),
 
-    hold(5),                                                // C — hold at cosmic-web scale
+    hold(5), // C — hold at cosmic-web scale
 
     fade(['flow', 'milkyWayDisk', 'structureRing', 'surveyLabel'], 0, 3), // D — fade to black
   ],

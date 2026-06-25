@@ -10,18 +10,19 @@
  * ### Creator set (Task 2 baseline)
  *
  * Seeded from the only example that dispatches a `scene` effect at this plan
- * stage: the `cosmicFlows` spike, which calls `scene(setFlow({ enabled: true }))`.
+ * stage: the `cosmicFlows` spike, which calls `scene(setFlowEnabled(true))`.
  * Plan C widens this union as the guided-tour beats need additional settings knobs
  * (bias, filament intensity, exposure, etc.).
  *
- *   - `setFlow` — enable/disable the cosmic-flow field and adjust its display
- *     settings. The primary scene-effect use case from the spike.
+ *   - `setFlowEnabled` — toggle the cosmic-flow field's master gate. The primary
+ *     scene-effect use case from the spike.
+ *   - `setFlow` — adjust the flow field's look/motion knobs (mode, intensity, …).
  *
  * Add to this union (with a brief rationale comment) when a new tour beat calls
  * `scene(someCreator(…))` for the first time. The canonical creator list lives in
  * `src/state/settings/settingsSlice.ts`.
  */
 
-import type { setFlow } from '../../state/settings/settingsSlice';
+import type { setFlow, setFlowEnabled } from '../../state/settings/settingsSlice';
 
-export type SettingsAction = ReturnType<typeof setFlow>;
+export type SettingsAction = ReturnType<typeof setFlowEnabled> | ReturnType<typeof setFlow>;
