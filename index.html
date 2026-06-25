@@ -116,6 +116,19 @@
       them from main.tsx (side-effect import) rather than linking from this
       file so Vite's module graph owns the asset and HMR works during dev.
     -->
+
+    <!--
+      Counterscale — privacy-first, cookieless visitor analytics, self-hosted
+      on our own Cloudflare Workers + Analytics Engine.  No cookies, no PII,
+      no consent banner needed.  `defer` keeps it off the critical path so it
+      never delays first paint of the WebGPU canvas.
+    -->
+    <script
+      id="counterscale-script"
+      data-site-id="skymap"
+      src="https://counterscale.rulkens.workers.dev/tracker.js"
+      defer
+    ></script>
   </head>
   <body>
     <!--
