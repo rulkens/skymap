@@ -501,12 +501,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     structures: { byId: (id) => state.data.structures.byId(id) },
   });
 
-  // Bound clip player, hoisted so the saga context AND the public `clip`
-  // sub-handle share one instance: resolves the 'live' pose at dispatch time,
-  // attaches the [CANCEL] hook, and returns a Promise that resolves on both
-  // natural end and cancellation. The tour saga awaits this for the
-  // establishing fly and races it (as dwellDrift) against the dwell timer; the
-  // dev panel calls it directly to play a single clip in isolation.
+  // Bound clip player, hoisted into the saga context as the single clip-run
+  // seam: resolves the 'live' pose at dispatch time, attaches the [CANCEL] hook,
+  // and returns a Promise that resolves on both natural end and cancellation.
+  // The tour saga awaits this for the establishing fly and races it (as
+  // dwellDrift) against the dwell timer; `watchClip` runs it for a `playClip`
+  // action (the dev panel's single-clip path).
   const playClip = createPlayClip({
     store,
     clipPlayer: state.subsystems.clipPlayer,
@@ -734,16 +734,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       passOverrides: {
         allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
       },
-    },
-
-    // ── Clip handle — play/stop a single Layer-1 clip directly ───────────
-    //
-    // Reuses the hoisted `playClip` seam (the same one the tour saga awaits)
-    // and `clipPlayer.stop`. The dev panel uses this to trigger a showcase
-    // clip and exercise the stop/cancel path without launching a tour.
-    clip: {
-      play: playClip,
-      stop: () => state.subsystems.clipPlayer.stop(),
     },
 
     destroy,
