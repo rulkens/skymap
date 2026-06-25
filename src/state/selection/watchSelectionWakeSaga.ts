@@ -1,5 +1,5 @@
 /**
- * watchSelectionWake — render-on-demand for selection. A select, focus, or
+ * watchSelectionWakeSaga — render-on-demand for selection. A select, focus, or
  * clear write has a GPU consequence (the selection ring, the member-isolation
  * fade — appearing OR disappearing), so it wakes the loop via requestRender.
  * Hover has NO GPU consequence — it only feeds the React InfoCard — so it is
@@ -20,7 +20,7 @@ import { takeEvery, getContext } from 'typed-redux-saga';
 import { updateSelectionSelect, updateSelectionFocus, clearSelection } from './selectionSlice';
 import type { ReconcileEffects } from '../../store/effects/ReconcileEffects';
 
-export function* watchSelectionWake() {
+export function* watchSelectionWakeSaga() {
   yield* takeEvery([updateSelectionSelect, updateSelectionFocus, clearSelection], function* () {
     const fx = yield* getContext<ReconcileEffects>('reconcile');
     fx.requestRender();

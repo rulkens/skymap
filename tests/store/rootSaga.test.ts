@@ -6,9 +6,9 @@
  * action arrives. With no action dispatched the workers never run, so missing
  * context keys are never dereferenced. This test pins that guarantee for the
  * full watcher set:
- *   watchTier, watchWake, watchFlowReseed, watchBiasBake, watchFades,
- *   watchSelectionRows, watchSelectionWake, watchRequestFocus,
- *   watchFocusTween, watchTourSaga, watchClipSaga.
+ *   watchTierSaga, watchWakeSaga, watchFlowReseedSaga, watchBiasBakeSaga,
+ *   watchFadesSaga, watchSelectionRowsSaga, watchSelectionWakeSaga,
+ *   watchRequestFocusSaga, watchFocusTweenSaga, watchTourSaga, watchClipSaga.
  */
 
 import { describe, it, expect } from 'vitest';

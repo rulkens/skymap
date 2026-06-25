@@ -1,6 +1,6 @@
 /**
  * visitBeatSaga tests — integration tests over a real store + saga middleware,
- * following the reconcileSagas harness pattern.
+ * following the reconcile saga harness pattern.
  *
  * Each test builds a fresh store with the three context stubs injected via
  * `sagaMiddleware.setContext` BEFORE running the saga. A `playClip` stub

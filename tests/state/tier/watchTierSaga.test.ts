@@ -31,7 +31,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { watchTier } from '../../../src/state/tier/tierSaga';
+import { watchTierSaga } from '../../../src/state/tier/watchTierSaga';
 import { requestTier } from '../../../src/state/tier/requestTier';
 import { selectTier } from '../../../src/state/tier/selectors';
 import {
@@ -73,7 +73,7 @@ function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
 
 // ─── Store builder ─────────────────────────────────────────────────────────────
 
-describe('watchTier', () => {
+describe('watchTierSaga', () => {
   let store: ReturnType<typeof buildStore>;
   let runner: ReturnType<typeof vi.fn<RunTierTransition>>;
 
@@ -83,7 +83,7 @@ describe('watchTier', () => {
       reducer: rootReducer,
       middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sagaMiddleware),
     });
-    sagaMiddleware.run(watchTier);
+    sagaMiddleware.run(watchTierSaga);
     runner = vi.fn<RunTierTransition>();
     sagaMiddleware.setContext({ runTierTransition: runner });
     if (resolveDeps) sagaMiddleware.setContext({ resolveDeps });

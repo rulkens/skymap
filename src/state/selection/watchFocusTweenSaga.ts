@@ -1,13 +1,13 @@
 /**
- * watchFocusTween — the camera-tween EFFECT of a focus gesture. A focus writes
+ * watchFocusTweenSaga — the camera-tween EFFECT of a focus gesture. A focus writes
  * the focus ref (updateSelectionFocus); the camera flying to that target is an
  * effect of that Intent, so it lives here as a saga — symmetric with
- * watchSelectionWake (render-wake) and tierSaga's runTierTransition.
+ * watchSelectionWakeSaga (render-wake) and watchTierSaga's runTierTransition.
  *
  * The saga is a thin resolve→build→dispatch shell:
  *   1. re-resolve the ref to a row via the live `resolveDeps` (firing on the REF,
  *      not the reconciled row, keeps the tween a response to the Intent and free
- *      of any dependence on watchSelectionRows running first);
+ *      of any dependence on watchSelectionRowsSaga running first);
  *   2. read the live camera Resources (`cameraRuntime`) — the visible from-pose
  *      and the lens FOV — bailing when the camera is not ready (pre-bootstrap /
  *      post-destroy), so a focus that races bootstrap or arrives after destroy
@@ -16,12 +16,12 @@
  *      table and dispatch it.
  *
  * The dispatch alone wakes the render loop: `startCameraTween` is a `camera/*`
- * write, which `watchWake`/WAKE_ROUTES turns into a render request — so there is
+ * write, which `watchWakeSaga`/WAKE_ROUTES turns into a render request — so there is
  * no separate requestRender here. A null ref (focus release) resolves to a null
  * row → no tween.
  *
- * getContext is read INSIDE the worker (per-action), like watchSelectionWake and
- * tierSaga, because the engine registers its saga context AFTER the root saga
+ * getContext is read INSIDE the worker (per-action), like watchSelectionWakeSaga and
+ * watchTierSaga, because the engine registers its saga context AFTER the root saga
  * forks.
  */
 import { takeEvery, getContext, put } from 'typed-redux-saga';
@@ -33,7 +33,7 @@ import { extractSelectionRow } from '../../services/engine/helpers/extractSelect
 import { suspendDuringClip } from './suspendDuringClip';
 import type { SagaContext } from '../../store/types';
 
-export function* watchFocusTween() {
+export function* watchFocusTweenSaga() {
   yield* takeEvery(
     updateSelectionFocus,
     suspendDuringClip(function* (action) {

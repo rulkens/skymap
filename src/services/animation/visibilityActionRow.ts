@@ -5,7 +5,7 @@
  *
  * ### Why this is FADE_ROW's inverse
  *
- * `FADE_ROW` (reconcileSagas.ts) maps action.type → VisibilityLayerKey,
+ * `FADE_ROW` (watchFadesSaga.ts) maps action.type → VisibilityLayerKey,
  * answering "which layer does this write affect?" `VISIBILITY_ACTION_ROW`
  * inverts that question: given a layer and a desired on/off state, which
  * settings actions should be dispatched? These two tables are the two

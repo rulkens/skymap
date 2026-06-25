@@ -21,10 +21,10 @@
  *
  * ### Why no requestRender
  *
- * The `startCameraTween` dispatch is a `camera/*` write, and `watchWake`/
+ * The `startCameraTween` dispatch is a `camera/*` write, and `watchWakeSaga`/
  * WAKE_ROUTES turns every such write into a render request — so the wake is
  * automatic. (The lone caller, `focusOnHome`, also dispatches a selection write,
- * which wakes via `watchSelectionWake` too.)
+ * which wakes via `watchSelectionWakeSaga` too.)
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

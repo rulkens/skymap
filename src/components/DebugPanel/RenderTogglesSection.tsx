@@ -7,7 +7,7 @@
  * a pass calls `onTogglePass(name)` (supplied by `DebugPanelContainer`),
  * which dispatches `setPassDisabled` to the RTK settings store; the
  * store notifies synchronously and the updated `disabledPasses` record
- * flows back down via the `disabledPasses` prop; `watchWake` wakes the
+ * flows back down via the `disabledPasses` prop; `watchWakeSaga` wakes the
  * render-on-demand loop so the change shows up on the next frame even
  * when the camera is idle.
  *

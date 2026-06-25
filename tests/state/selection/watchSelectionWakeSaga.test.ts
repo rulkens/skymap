@@ -3,7 +3,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { watchSelectionWake } from '../../../src/state/selection/selectionWakeSaga';
+import { watchSelectionWakeSaga } from '../../../src/state/selection/watchSelectionWakeSaga';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
@@ -15,17 +15,17 @@ import type { SceneSnapshot } from '../../../src/@types/engine/settings/SceneSna
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-describe('watchSelectionWake', () => {
+describe('watchSelectionWakeSaga', () => {
   let store: ReturnType<typeof build>;
   let requestRender: ReturnType<typeof vi.fn<() => void>>;
 
   function build() {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
-    mw.run(watchSelectionWake);
+    mw.run(watchSelectionWakeSaga);
     requestRender = vi.fn<() => void>();
     // requestRender lives in the reconcile bag (PR #352); inject the whole
-    // surface with spies, mirroring tests/store/effects/reconcileSagas.test.ts.
+    // surface with spies, mirroring tests/store/effects/watchFadesSaga.test.ts.
     const reconcile: ReconcileEffects = {
       requestRender,
       syncFades: vi.fn(),

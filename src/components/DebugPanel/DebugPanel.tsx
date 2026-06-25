@@ -47,7 +47,7 @@ export type DebugPanelProps = {
   /**
    * Live disabled-pass record from the settings store (`DebugPanelContainer`
    * subscribes via `selectDisabledPasses`).  A toggle calls `onTogglePass`,
-   * the container dispatches `setPassDisabled`, and `watchWake` wakes the loop.
+   * the container dispatches `setPassDisabled`, and `watchWakeSaga` wakes the loop.
    */
   disabledPasses: Record<string, boolean>;
   highlightFallback: boolean;

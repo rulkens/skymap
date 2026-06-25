@@ -11,7 +11,7 @@
  *      but ONLY on hashchange events (back/forward navigation) — not
  *      on the initial mount call, which would fire a spurious
  *      `clearSelection` on every normal page load. The
- *      `watchRequestFocus` saga owns resolution and deferral.
+ *      `watchRequestFocusSaga` owns resolution and deferral.
  *
  *   B. URL WRITE (runs on every store-derived `focused` change)
  *      Reads `selectFocusedFocusable` from the Redux store and

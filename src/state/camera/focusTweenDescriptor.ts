@@ -2,7 +2,7 @@
  * focusTweenDescriptor — the pure `SelectionRow → CameraTweenDescriptor` table.
  *
  * A focus gesture writes the focus ref; the camera flying to that target is the
- * EFFECT of that Intent, and `watchFocusTween` is where that effect lives. This
+ * EFFECT of that Intent, and `watchFocusTweenSaga` is where that effect lives. This
  * function is the pure core of that saga: given the resolved row, the live
  * from-pose, and the lens FOV, it returns the `startCameraTween` payload. No
  * engine state, no dispatch, no clock — so it is trivially unit-testable and the

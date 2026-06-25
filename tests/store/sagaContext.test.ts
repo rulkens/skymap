@@ -6,7 +6,7 @@
  * #352 respectively). `resolveDeps` is the lazy live-resource read: the selection
  * reconciler calls it per saga run to get the current catalog + structure state
  * without coupling to the engine's internals. `cameraRuntime` is the live camera
- * read `watchFocusTween` uses to build a focus tween — the visible from-pose plus
+ * read `watchFocusTweenSaga` uses to build a focus tween — the visible from-pose plus
  * the lens FOV, or null when the camera is not ready.
  *
  * Render-wake is NOT added to SagaContext here — it already arrives via

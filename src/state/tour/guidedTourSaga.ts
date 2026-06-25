@@ -16,7 +16,7 @@
  *
  * The engine registers its saga context AFTER the root saga forks, so reading
  * `getContext` here (not at fork time) guarantees the context is populated by the
- * time the tour runs. Same pattern as `visitBeatSaga` and `watchFocusTween`.
+ * time the tour runs. Same pattern as `visitBeatSaga` and `watchFocusTweenSaga`.
  */
 
 import { call, put, take, race, getContext } from 'typed-redux-saga';
@@ -45,7 +45,7 @@ import type { SagaContext } from '../../store/types';
  */
 export function* guidedTourSaga(beats: readonly BeatData[]): Generator {
   // Read context inside the saga — the engine sets it after root-saga forks,
-  // same pattern as visitBeatSaga and watchFocusTween.
+  // same pattern as visitBeatSaga and watchFocusTweenSaga.
   const fx = yield* getContext<SagaContext['reconcile']>('reconcile');
 
   // Snapshot the six settings clusters + selection.focus so restore can

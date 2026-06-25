@@ -3,21 +3,22 @@
  *
  * The store wires the saga middleware and runs this root saga at construction.
  * The root only composes; it forks every feature watcher:
- *   watchTier            — runs the tier transition (per-source reload + famous rebuild)
- *   watchWake            — requests a render frame on every settings write
- *   watchFlowReseed      — reseeds the flow particle field when mode or count changes
- *   watchBiasBake        — rebakes the brightness bias LUT when BiasMode changes
- *   watchFades           — syncs visibility-layer fades via the FADE_ROW table
- *   watchSelectionRows   — keeps the selectionRows derived cache in sync with selection refs
- *   watchSelectionWake   — wakes the render loop on select/focus writes (hover excluded)
- *   watchRequestFocus    — resolves a durable focus id to a ref, deferring on catalogLoaded
- *   watchFocusTween      — builds + dispatches the camera tween on every focus ref change
- *   watchTourSaga        — starts a guidedTourSaga run on each startTour (takeLatest — single-instance)
- *   watchClipSaga        — runs the clip-player seam on each playClip; stopClip/re-play cancels it
+ *   watchTierSaga          — runs the tier transition (per-source reload + famous rebuild)
+ *   watchWakeSaga          — requests a render frame on every settings write
+ *   watchFlowReseedSaga    — reseeds the flow particle field when mode or count changes
+ *   watchBiasBakeSaga      — rebakes the brightness bias LUT when BiasMode changes
+ *   watchFadesSaga         — syncs visibility-layer fades via the FADE_ROW table
+ *   watchSelectionRowsSaga — keeps the selectionRows derived cache in sync with selection refs
+ *   watchSelectionWakeSaga — wakes the render loop on select/focus writes (hover excluded)
+ *   watchRequestFocusSaga  — resolves a durable focus id to a ref, deferring on catalogLoaded
+ *   watchFocusTweenSaga    — builds + dispatches the camera tween on every focus ref change
+ *   watchTourSaga          — starts a guidedTourSaga run on each startTour (takeLatest — single-instance)
+ *   watchClipSaga          — runs the clip-player seam on each playClip; stopClip/re-play cancels it
  *
- * Each watcher is authored beside its concern (the tier watcher in
- * `state/tier/tierSaga`, the reconcile watchers in `effects/reconcileSagas`) and
- * their worker bodies reach the engine via `getContext` lazily. Composing the
+ * Each watcher is one saga per file, named after the saga, authored beside its
+ * concern (the tier watcher in `state/tier/watchTierSaga`, the reconcile watchers
+ * in `effects/watch*Saga`) and their worker bodies reach the engine via
+ * `getContext` lazily. Composing the
  * watchers before the engine registers the saga context is safe: no worker body
  * runs until an action arrives, and the engine registers the context at
  * construction before any settings dispatch can occur. Later phases add watchers
@@ -31,26 +32,29 @@
 
 import { all } from 'typed-redux-saga';
 
-import { watchTier } from '../state/tier/tierSaga';
-import { watchWake, watchFlowReseed, watchBiasBake, watchFades } from './effects/reconcileSagas';
-import { watchSelectionRows } from '../state/selectionRows/selectionRowsSaga';
-import { watchSelectionWake } from '../state/selection/selectionWakeSaga';
-import { watchRequestFocus } from '../state/selection/requestFocusSaga';
-import { watchFocusTween } from '../state/selection/focusTweenSaga';
+import { watchTierSaga } from '../state/tier/watchTierSaga';
+import { watchWakeSaga } from './effects/watchWakeSaga';
+import { watchFlowReseedSaga } from './effects/watchFlowReseedSaga';
+import { watchBiasBakeSaga } from './effects/watchBiasBakeSaga';
+import { watchFadesSaga } from './effects/watchFadesSaga';
+import { watchSelectionRowsSaga } from '../state/selectionRows/watchSelectionRowsSaga';
+import { watchSelectionWakeSaga } from '../state/selection/watchSelectionWakeSaga';
+import { watchRequestFocusSaga } from '../state/selection/watchRequestFocusSaga';
+import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
 import { watchTourSaga } from '../state/tour/watchTourSaga';
 import { watchClipSaga } from '../state/camera/watchClipSaga';
 
 export function* mainSaga() {
   yield* all([
-    watchTier(),
-    watchWake(),
-    watchFlowReseed(),
-    watchBiasBake(),
-    watchFades(),
-    watchSelectionRows(),
-    watchSelectionWake(),
-    watchRequestFocus(),
-    watchFocusTween(),
+    watchTierSaga(),
+    watchWakeSaga(),
+    watchFlowReseedSaga(),
+    watchBiasBakeSaga(),
+    watchFadesSaga(),
+    watchSelectionRowsSaga(),
+    watchSelectionWakeSaga(),
+    watchRequestFocusSaga(),
+    watchFocusTweenSaga(),
     watchTourSaga(),
     watchClipSaga(),
   ]);

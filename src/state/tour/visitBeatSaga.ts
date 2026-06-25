@@ -48,8 +48,8 @@
  * `getContext` at the call site of `visitBeatSaga` (e.g. in the outer
  * `guidedTourSaga` loop) would race against bootstrap and see null. Reading it
  * here, inside the worker, guarantees the context is populated by the time
- * `visitBeatSaga` runs. This mirrors the pattern in `watchFocusTween`
- * (focusTweenSaga.ts).
+ * `visitBeatSaga` runs. This mirrors the pattern in `watchFocusTweenSaga`
+ * (watchFocusTweenSaga.ts).
  */
 
 import { call, put, take, race, delay, getContext } from 'typed-redux-saga';

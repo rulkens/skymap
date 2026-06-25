@@ -1,5 +1,5 @@
 /**
- * watchSelectionRows — integration tests over a real store + saga middleware.
+ * watchSelectionRowsSaga — integration tests over a real store + saga middleware.
  *
  * Two core scenarios:
  *   1. A ref change immediately re-extracts the matching slot (cloud present).
@@ -17,7 +17,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { watchSelectionRows } from '../../../src/state/selectionRows/selectionRowsSaga';
+import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSelectionRowsSaga';
 import {
   updateSelectionHover,
   updateSelectionSelect,
@@ -52,7 +52,7 @@ function makeCloud(): GalaxyCatalog {
   } as unknown as GalaxyCatalog;
 }
 
-describe('watchSelectionRows', () => {
+describe('watchSelectionRowsSaga', () => {
   let store: ReturnType<typeof build>;
   // Mutable: the cloud is absent at first (deep-link), then arrives.
   let cloudPresent = false;
@@ -68,7 +68,7 @@ describe('watchSelectionRows', () => {
       famousMeta: [],
       structures: { byId: () => null },
     };
-    sagaMiddleware.run(watchSelectionRows);
+    sagaMiddleware.run(watchSelectionRowsSaga);
     sagaMiddleware.setContext({ resolveDeps: () => deps });
     return s;
   }

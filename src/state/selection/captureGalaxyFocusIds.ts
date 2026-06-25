@@ -13,7 +13,7 @@
  * before firing a load — so capture and the transition runner cannot drift and
  * leave the re-anchor `take` waiting on a source that never reloads.
  *
- * Hover is NOT captured: `watchTier` clears the hover slot unconditionally
+ * Hover is NOT captured: `watchTierSaga` clears the hover slot unconditionally
  * across the swap (a stale hover over an evicted cloud would resolve to a
  * different galaxy). Capturing hover and then clearing it would fight; the clear
  * wins, so only select + focus flow through here.

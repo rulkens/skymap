@@ -27,7 +27,7 @@
  * The engine registers its saga context AFTER the root saga forks. Reading
  * `getContext('playClip')` inside the worker (not at fork time) guarantees the
  * context is populated by the time a `playClip` action actually arrives — the
- * same pattern as `visitBeatSaga` / `watchFocusTween`.
+ * same pattern as `visitBeatSaga` / `watchFocusTweenSaga`.
  */
 import { call, race, take, takeLatest, getContext } from 'typed-redux-saga';
 
