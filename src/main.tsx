@@ -54,6 +54,7 @@ import { buildInitialSettings } from './state/settings/initialState';
 import { buildInitialUiState } from './state/ui/buildInitialUiState';
 import { persistSplashVersion } from './state/ui/persistSplashVersion';
 import { initialTierFromViewport } from './utils/initialTierFromViewport';
+import { injectAnalytics } from './utils/analytics/injectAnalytics';
 import { renderUnsupportedPageHtml } from './unsupportedPage';
 // Side-effect import — defines design-token custom properties on `:root`
 // and the page-level reset.  Loaded once at app boot so every CSS module
@@ -67,6 +68,11 @@ if (!root) {
   // into nothing.
   throw new Error('main.tsx: #root element not found in index.html');
 }
+
+// Load the privacy-first analytics tracker (production builds only).  Injected
+// before the WebGPU gate so visitors on unsupported browsers are counted too:
+// the <script> lands in <head> and survives the body.innerHTML swap below.
+injectAnalytics();
 
 if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   // No WebGPU — swap the entire document body for the static unsupported
