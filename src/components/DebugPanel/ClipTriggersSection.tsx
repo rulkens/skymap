@@ -4,9 +4,10 @@
  *
  * The spike camera *drivers* (`?webshow` et al.) were torn down once the
  * animation system landed, leaving no in-browser way to trigger a clip. This
- * section fills that gap with plain buttons — no URL gate — wired to the
- * engine handle's `clip.play` / `clip.stop` and `tour.start` seams (threaded
- * down as callbacks by App, the same way `slots` / `timingService` are).
+ * section fills that gap with plain buttons — no URL gate. Clip play/stop wire
+ * to the engine handle's `clip.play` / `clip.stop` seams; the tour wires to a
+ * `startTour` dispatch — all threaded down as callbacks by App, the same way
+ * `slots` / `timingService` are.
  *
  * ### Why a local "now playing" state, not a store read
  *
@@ -19,7 +20,7 @@
  *
  * ### Why the tour has no "now playing"
  *
- * `tour.start` is fire-and-forget (no Promise), and the running tour hides the
+ * `startTour` is fire-and-forget (no Promise), and the running tour hides the
  * whole HUD — including this panel — via `setUiHidden(true)`. A readout would
  * be both unfeedable and invisible. Aborting a running tour is therefore a
  * keyboard gesture (Esc), not a button here.

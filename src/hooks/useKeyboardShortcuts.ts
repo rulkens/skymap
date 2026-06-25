@@ -28,6 +28,7 @@
 import { useEffect } from 'react';
 import { useAppDispatch } from '../store/hooks';
 import { clearSelection, updateSelectionFocus } from '../state/selection/selectionSlice';
+import { advanceTour, exitTour } from '../state/tour/tourActions';
 import { refOf } from '../services/engine/helpers/refOf';
 import type { UseKeyboardShortcutsInput } from '../@types/engine/UseKeyboardShortcutsInput';
 
@@ -75,11 +76,11 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       // dispatch, collapsing whichever card variant is on screen,
       // and exits a running guided tour. A running tour hides the
       // whole HUD (including the dev panel that launched it), so Esc
-      // is the only way back out; `tour.exit` is a harmless no-op
+      // is the only way back out; `exitTour` is a harmless no-op
       // when no tour is active.
       if (e.key === 'Escape') {
         dispatch(clearSelection());
-        engineHandleRef.current?.tour.exit();
+        dispatch(exitTour());
         return;
       }
 
@@ -89,7 +90,7 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       // tour hides the HUD, so this keyboard gesture is the only
       // beat-navigation control.
       if (e.key === 'ArrowRight') {
-        engineHandleRef.current?.tour.advance();
+        dispatch(advanceTour());
         return;
       }
 

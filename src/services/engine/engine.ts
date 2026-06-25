@@ -106,7 +106,6 @@ import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { createPlayClip } from './animation/playClip';
-import { TOUR_START, TOUR_ADVANCE, TOUR_EXIT } from '../../state/tour/tourActions';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
@@ -735,18 +734,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       passOverrides: {
         allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
       },
-    },
-
-    // ── Tour handle — programmatic guided-tour launch + exit ─────────────
-    //
-    // `start` dispatches TOUR_START fire-and-forget: `takeLatest` in `watchTour`
-    // cancels any prior run and starts `guidedTour` with the new beats.
-    // `exit` dispatches TOUR_EXIT — all restore logic lives in `guidedTour`'s
-    // finally block, not here.
-    tour: {
-      start: (beats) => store.dispatch(TOUR_START(beats)),
-      advance: () => store.dispatch(TOUR_ADVANCE()),
-      exit: () => store.dispatch(TOUR_EXIT()),
     },
 
     // ── Clip handle — play/stop a single Layer-1 clip directly ───────────

@@ -23,7 +23,6 @@ import type { EngineSelectionHandle } from './handles/EngineSelectionHandle';
 import type { EngineSourcesHandle } from './handles/EngineSourcesHandle';
 import type { EngineVolumesHandle } from './handles/EngineVolumesHandle';
 import type { EngineDebugHandle } from './handles/EngineDebugHandle';
-import type { EngineTourHandle } from './handles/EngineTourHandle';
 import type { EngineClipHandle } from './handles/EngineClipHandle';
 
 /**
@@ -40,7 +39,6 @@ export type EngineHandle = {
   sources: EngineSourcesHandle;
   volumes: EngineVolumesHandle;
   debug: EngineDebugHandle;
-  tour: EngineTourHandle;
   clip: EngineClipHandle;
 
   /**

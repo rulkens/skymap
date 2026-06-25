@@ -12,7 +12,7 @@
  *   watchSelectionWake   — wakes the render loop on select/focus writes (hover excluded)
  *   watchRequestFocus    — resolves a durable focus id to a ref, deferring on catalogLoaded
  *   watchFocusTween      — builds + dispatches the camera tween on every focus ref change
- *   watchTour            — starts a guidedTour run on each TOUR_START (takeLatest — single-instance)
+ *   watchTour            — starts a guidedTour run on each startTour (takeLatest — single-instance)
  *
  * Each watcher is authored beside its concern (the tier watcher in
  * `state/tier/tierSaga`, the reconcile watchers in `effects/reconcileSagas`) and

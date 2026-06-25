@@ -49,6 +49,7 @@ import { selectTier } from '../../state/tier/selectors';
 import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
 import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
+import { startTour } from '../../state/tour/tourActions';
 import { refOf } from '../../services/engine/helpers/refOf';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { ClipData } from '../../@types/animation/ClipData';
@@ -120,7 +121,7 @@ export function App(): React.ReactElement {
   const openPalette = useCallback(() => dispatch(setPaletteOpen(true)), [dispatch]);
   const closePalette = useCallback(() => dispatch(setPaletteOpen(false)), [dispatch]);
 
-  // Clip/tour seams for the debug panel, bound to the engine handle. `handleRef`
+  // Clip seams for the debug panel, bound to the engine handle. `handleRef`
   // is a stable ref, so these keep a permanent identity; the mount is gated on
   // `handleRef.current` but the `?.` guards make them safe pre-bootstrap too.
   const onPlayClip = useCallback(
@@ -128,9 +129,12 @@ export function App(): React.ReactElement {
     [handleRef],
   );
   const onStopClip = useCallback(() => handleRef.current?.clip.stop(), [handleRef]);
+  // The tour is driven by a plain action — `startTour` dispatches straight to
+  // the saga, no engine-handle round-trip. `dispatch` is the invariant
+  // `store.dispatch`, so the callback identity is stable.
   const onStartTour = useCallback(
-    (beats: readonly BeatData[]) => handleRef.current?.tour.start(beats),
-    [handleRef],
+    (beats: readonly BeatData[]) => dispatch(startTour(beats)),
+    [dispatch],
   );
 
   // Stable dispatching callbacks for the keyboard hook — wrapped in

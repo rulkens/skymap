@@ -6,7 +6,7 @@ import type { ClipData } from '../../animation/ClipData';
  * This is the live call-site the saga context already owns (`playClip` /
  * `clipPlayer.stop`), re-exposed on the public handle so the dev panel can
  * trigger a clip directly — no tour, no URL gate. The guided tour drives
- * clips through `EngineTourHandle`; this surface is for playing one clip in
+ * clips through the `startTour` saga; this surface is for playing one clip in
  * isolation (showcase recordings, exercising the stop/cancel path).
  *
  * `play` returns the same Promise the tour saga awaits: it resolves on BOTH
