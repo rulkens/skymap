@@ -1,5 +1,5 @@
 /**
- * flyoutClip tests — validate the `flyout` ClipData literal compiles and
+ * flyout tests — validate the `flyout` clip's `ClipData` compiles and
  * evaluates correctly.
  *
  * These tests are the acceptance proof for the animation data model (Plan A,
@@ -30,11 +30,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { flyout } from '../../../src/data/animation/flyoutClip';
-import { compileClip } from '../../../src/services/engine/animation/compileClip';
-import { evaluateClip } from '../../../src/services/engine/camera/evaluateClip';
-import { resolveClipStart } from '../../../src/state/camera/cameraSlice';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import { flyout } from '../../../../src/data/animation/clips/flyout';
+import { compileClip } from '../../../../src/services/engine/animation/compileClip';
+import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import { resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 
 // ---------------------------------------------------------------------------
 // Shared test pose — a concrete CameraPose used to resolve `start: 'live'`.
@@ -53,16 +53,16 @@ describe('flyout clip', () => {
     // dollyTo drives `distance` and spin drives `yaw` — distinct channels.
     // validateSingleWriter (called inside compileClip) throws on any overlap.
     // If this test passes, the clip is structurally valid.
-    expect(() => compileClip(flyout)).not.toThrow();
+    expect(() => compileClip(flyout.data)).not.toThrow();
   });
 
   it('has a total duration of 22 seconds', () => {
-    const compiled = compileClip(flyout);
+    const compiled = compileClip(flyout.data);
     expect(compiled.durationSec).toBe(22);
   });
 
   it('dollies to ~29 500 Mpc using log (geometric) interpolation', () => {
-    const resolved = resolveClipStart(flyout, TEST_POSE);
+    const resolved = resolveClipStart(flyout.data, TEST_POSE);
 
     // At t=22 (end of clip): distance should be at the target, 29 500 Mpc.
     const poseEnd = evaluateClip(resolved, 22);
@@ -73,7 +73,7 @@ describe('flyout clip', () => {
     // Linear interpolation would give the ARITHMETIC midpoint: (from + to) / 2.
     const poseMid = evaluateClip(resolved, 11);
     const geometricMidpoint = Math.sqrt(START_DISTANCE * 29_500); // ≈ 543.1
-    const arithmeticMidpoint = (START_DISTANCE + 29_500) / 2;     // ≈ 14 755
+    const arithmeticMidpoint = (START_DISTANCE + 29_500) / 2; // ≈ 14 755
 
     // Assert geometric: distance is close to sqrt(10 × 29500).
     expect(poseMid.distance).toBeCloseTo(geometricMidpoint, 0);
@@ -84,7 +84,7 @@ describe('flyout clip', () => {
   });
 
   it('advances yaw by 1.1 rad over the full take', () => {
-    const resolved = resolveClipStart(flyout, TEST_POSE);
+    const resolved = resolveClipStart(flyout.data, TEST_POSE);
 
     const poseEnd = evaluateClip(resolved, 22);
     // spin is additive: final_yaw - start_yaw ≈ 1.1

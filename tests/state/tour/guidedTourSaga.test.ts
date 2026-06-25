@@ -3,12 +3,13 @@
  * race between `run` (beat sequence) and `exit` (exitTour). Each test builds a
  * store with a `reconcile` stub injected alongside the visitBeatSaga stubs.
  *
- * Beat fixtures use narration focus (null) so `waitUntil` exits synchronously
- * and `focusReady` never blocks. playClip stubs resolve immediately for the
- * fly and never for the drift — two flushes advance past each beat's fly and
- * one advanceTour dispatched afterwards drives the dwell race so the beat
- * completes. Short dwell beats (dwellSec: 0.001) combined with fake timers
- * let the dwell timeout win without a manual advanceTour dispatch.
+ * Beat fixtures use narration clips (empty timeline, no id-bearing cues) so
+ * `waitUntil(clipFociReady)` exits synchronously on the first predicate check.
+ * playClip stubs resolve immediately for the fly and never for the drift — two
+ * flushes advance past each beat's fly and one advanceTour dispatched afterwards
+ * drives the dwell race so the beat completes. Short dwell beats (dwellSec: 0.001)
+ * combined with fake timers let the dwell timeout win without a manual
+ * advanceTour dispatch.
  *
  * ### Timing
  *
@@ -25,7 +26,9 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { guidedTourSaga } from '../../../src/state/tour/guidedTourSaga';
 import { exitTour } from '../../../src/state/tour/tourActions';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
-import type { BeatData } from '../../../src/@types/tour/BeatData';
+import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
+import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
+import type { Tour } from '../../../src/@types/animation/tour/Tour';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { FocusCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -41,12 +44,19 @@ const CAMERA_RUNTIME: FocusCameraRuntime = {
   fovYRad: 0.8,
 };
 
-// Deps that make all refs immediately resolvable; the guided-tour beats use
-// narration focus (null), so focusReady never blocks regardless.
+// Deps for narration clips — no id-bearing cues, so clipFociReady is trivially
+// true and waitUntil exits on the first synchronous check.
 const immediateDeps: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
   structures: { byId: () => null },
+};
+
+// Narration clip: empty timeline, no focus ids. clipFociReady returns true
+// immediately so waitUntil does not poll.
+const NARRATION_CLIP: ClipData = {
+  start: 'live',
+  timeline: [],
 };
 
 type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
@@ -97,6 +107,12 @@ function buildStore(opts: {
   return { store, sagaMiddleware, playClipFn };
 }
 
+// Build a minimal Tour wrapping the given beats. No setup by default — tests
+// that need setup effects build their own Tour literal.
+function makeTour(beats: readonly BeatData[]): Tour {
+  return { id: 'demo', label: 'Demo', beats };
+}
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('guidedTourSaga', () => {
@@ -123,10 +139,11 @@ describe('guidedTourSaga', () => {
 
   it('guidedTourSaga captures the scene before the first beat', async () => {
     const reconcile = buildReconcileStub();
-    const beat: BeatData = { focus: null, caption: 'B1', dwellSec: 60 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 60 };
+    const tour = makeTour([beat]);
 
     const { sagaMiddleware } = buildStore({ reconcile });
-    sagaMiddleware.run(guidedTourSaga, [beat]);
+    sagaMiddleware.run(guidedTourSaga, tour);
 
     // One flush: the saga runs getContext, calls captureScene, puts setUiHidden,
     // enters the race, starts visitBeatSaga, reaches the fly call.
@@ -143,7 +160,7 @@ describe('guidedTourSaga', () => {
 
     const reconcile = buildReconcileStub();
     // Very short dwell so the beat completes without a manual advanceTour.
-    const beat: BeatData = { focus: null, caption: 'B1', dwellSec: 0.001 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 0.001 };
 
     // Fly resolves; drift blocks (timeout wins the dwell race).
     let callIdx = 0;
@@ -153,7 +170,7 @@ describe('guidedTourSaga', () => {
     });
 
     const { store, sagaMiddleware } = buildStore({ reconcile, playClip: playClipMock });
-    sagaMiddleware.run(guidedTourSaga, [beat]);
+    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
 
     // setUiHidden(true) must be in the store already.
     expect(store.getState().ui.uiHidden).toBe(true);
@@ -172,14 +189,14 @@ describe('guidedTourSaga', () => {
     vi.useFakeTimers();
 
     const reconcile = buildReconcileStub();
-    const beat1: BeatData = { focus: null, caption: 'First', dwellSec: 0.001 };
-    const beat2: BeatData = { focus: null, caption: 'Second', dwellSec: 0.001 };
+    const beat1: BeatData = { clip: NARRATION_CLIP, caption: 'First', dwellSec: 0.001 };
+    const beat2: BeatData = { clip: NARRATION_CLIP, caption: 'Second', dwellSec: 0.001 };
 
     // Fly calls resolve; drift calls block. Calls interleave: fly1, drift1, fly2, drift2.
     const stub = makeAutoFlyStub();
     const { store, sagaMiddleware } = buildStore({ reconcile, playClip: stub });
 
-    sagaMiddleware.run(guidedTourSaga, [beat1, beat2]);
+    sagaMiddleware.run(guidedTourSaga, makeTour([beat1, beat2]));
 
     // Run all timers — each beat's 0.001 s dwell fires the timeout and advances.
     await vi.runAllTimersAsync();
@@ -199,7 +216,7 @@ describe('guidedTourSaga', () => {
   it('exitTour cancels mid-beat and the finally restores the scene', async () => {
     const reconcile = buildReconcileStub();
     // Long dwell — we will interrupt before it auto-advances.
-    const beat: BeatData = { focus: null, caption: 'B1', dwellSec: 9999 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 9999 };
 
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -208,7 +225,7 @@ describe('guidedTourSaga', () => {
     });
 
     const { store, sagaMiddleware } = buildStore({ reconcile, playClip: playClipMock });
-    sagaMiddleware.run(guidedTourSaga, [beat]);
+    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
 
     // Advance to the dwell race inside beat 1 (fly resolved, drift blocking).
     await flush();
@@ -229,7 +246,7 @@ describe('guidedTourSaga', () => {
     vi.useFakeTimers();
 
     const reconcile = buildReconcileStub();
-    const beat: BeatData = { focus: null, caption: 'B1', dwellSec: 0.001 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 0.001 };
 
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -238,7 +255,7 @@ describe('guidedTourSaga', () => {
     });
 
     const { store, sagaMiddleware } = buildStore({ reconcile, playClip: playClipMock });
-    sagaMiddleware.run(guidedTourSaga, [beat]);
+    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
 
     // Run timers so the single beat completes and the loop exits naturally.
     await vi.runAllTimersAsync();
@@ -253,7 +270,7 @@ describe('guidedTourSaga', () => {
   it('no camera-input action aborts the tour', async () => {
     const reconcile = buildReconcileStub();
     // Long dwell so the beat never auto-advances during this test.
-    const beat: BeatData = { focus: null, caption: 'B1', dwellSec: 9999 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 9999 };
 
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -262,7 +279,7 @@ describe('guidedTourSaga', () => {
     });
 
     const { store, sagaMiddleware } = buildStore({ reconcile, playClip: playClipMock });
-    sagaMiddleware.run(guidedTourSaga, [beat]);
+    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
 
     // Advance to the dwell race inside beat 1.
     await flush();
@@ -276,5 +293,44 @@ describe('guidedTourSaga', () => {
     expect(reconcile.restoreScene).not.toHaveBeenCalled();
     // uiHidden stays true — the tour is mid-beat.
     expect(store.getState().ui.uiHidden).toBe(true);
+  });
+
+  // ── (7) dispatches setup effects before the first beat ───────────────────
+
+  it('guidedTourSaga dispatches setup effects before the first beat', async () => {
+    vi.useFakeTimers();
+
+    const reconcile = buildReconcileStub();
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 0.001 };
+
+    // Tour with a setup effect that disables volumes.
+    const tour: Tour = {
+      id: 'demo',
+      label: 'Demo',
+      setup: { effects: [setVolumesEnabled(false)] },
+      beats: [beat],
+    };
+
+    let callIdx = 0;
+    const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
+      callIdx++;
+      return callIdx === 1 ? Promise.resolve() : new Promise<void>(() => {});
+    });
+
+    const { store, sagaMiddleware } = buildStore({ reconcile, playClip: playClipMock });
+    sagaMiddleware.run(guidedTourSaga, tour);
+
+    // The setup effect fires synchronously before the first beat's async work:
+    // volumes must already be off at this point.
+    expect(store.getState().settings.volumes.enabled).toBe(false);
+
+    // Run timers so the beat completes and the finally fires.
+    await vi.runAllTimersAsync();
+
+    // restoreScene must have been called with the pre-setup snapshot.
+    // (In this test the reconcile stub returns SENTINEL_SNAPSHOT regardless,
+    // but the call confirms the finally always runs.)
+    expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });
+    expect(store.getState().ui.uiHidden).toBe(false);
   });
 });

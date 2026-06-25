@@ -1,9 +1,14 @@
 /**
  * watchTourSaga tests — integration tests over a real store + saga middleware.
  *
- * `watchTourSaga` is the startTour watcher that launches `guidedTourSaga`. Each test
- * dispatches startTour into a store running `watchTourSaga` directly with all
- * saga-context stubs injected:
+ * `watchTourSaga` is the startTour watcher: it resolves the dispatched `TourId`
+ * against `tourRegistry` and launches `guidedTourSaga` with the resolved tour's
+ * beats. The registry is MOCKED here with two controlled tours — a `demo` tour
+ * whose single narration beat auto-advances, and a `webShowcase` tour whose beat
+ * dwells effectively forever — so each test drives timing deterministically
+ * without depending on the real (catalog-resolving) tour definitions. Each test
+ * dispatches `startTour(id)` into a store running `watchTourSaga` directly with
+ * all saga-context stubs injected:
  *   - `playClip` — resolves immediately so beats complete without blocking
  *   - `resolveDeps` — narration-beat deps (null focus, no catalogs needed)
  *   - `cameraRuntime` — a fixed camera snapshot
@@ -32,10 +37,30 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
+// Controlled registry: `demo` auto-advances (tiny dwell), `webShowcase` dwells
+// forever so a run stays live until exitTour / a superseding startTour. Inlined
+// in the factory (vi.mock is hoisted above the imports).
+// Both use narration clips (empty timeline) so clipFociReady exits immediately.
+// The clip literals are inlined inside the factory because vi.mock factories are
+// hoisted before the module scope runs, so outer-scope constants are not visible.
+vi.mock('../../../src/data/animation/tours/tourRegistry', () => ({
+  tourRegistry: {
+    demo: {
+      id: 'demo',
+      label: 'Demo',
+      beats: [{ clip: { start: 'live', timeline: [] }, caption: 'Test', dwellSec: 0.001 }],
+    },
+    webShowcase: {
+      id: 'webShowcase',
+      label: 'Web',
+      beats: [{ clip: { start: 'live', timeline: [] }, caption: 'Long', dwellSec: 9999 }],
+    },
+  },
+}));
+
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTourSaga } from '../../../src/state/tour/watchTourSaga';
 import { startTour, exitTour } from '../../../src/state/tour/tourActions';
-import type { BeatData } from '../../../src/@types/tour/BeatData';
 import type { FocusCameraRuntime } from '../../../src/store/types';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -58,11 +83,6 @@ const NARRATION_DEPS: ResolveDeps = {
 };
 
 const SENTINEL_SNAPSHOT = { settings: {}, focus: null } as unknown as SceneSnapshot;
-
-// ─── Beat fixtures ────────────────────────────────────────────────────────────
-
-// Narration beat: null focus exits waitUntil synchronously, no catalog needed.
-const SHORT_BEAT: BeatData = { focus: null, caption: 'Test', dwellSec: 0.001 };
 
 // ─── Harness ─────────────────────────────────────────────────────────────────
 
@@ -120,7 +140,7 @@ describe('watchTourSaga', () => {
   it('guidedTourSaga runs: setUiHidden(true) is dispatched on startTour', async () => {
     const { store } = buildHarness();
 
-    store.dispatch(startTour([SHORT_BEAT]));
+    store.dispatch(startTour('demo'));
 
     // setUiHidden(true) is dispatched synchronously inside guidedTourSaga before
     // the first beat's async work begins.
@@ -135,7 +155,7 @@ describe('watchTourSaga', () => {
     const reconcile = buildReconcileStub();
     const { store } = buildHarness({ reconcile });
 
-    store.dispatch(startTour([SHORT_BEAT]));
+    store.dispatch(startTour('demo'));
 
     // Advance timers so the 0.001s dwell expires and the beat + loop complete.
     await vi.runAllTimersAsync();
@@ -149,9 +169,6 @@ describe('watchTourSaga', () => {
   // ── (3) restoreScene fires when exitTour cancels the run ────────────────
 
   it('restoreScene fires when exitTour cancels the run', async () => {
-    // Long dwell so the beat never auto-advances during this test.
-    const longBeat: BeatData = { focus: null, caption: 'Long', dwellSec: 9999 };
-
     // Fly resolves immediately; drift blocks so we can interrupt mid-dwell.
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -162,7 +179,8 @@ describe('watchTourSaga', () => {
     const reconcile = buildReconcileStub();
     const { store } = buildHarness({ playClip: playClipMock, reconcile });
 
-    store.dispatch(startTour([longBeat]));
+    // webShowcase dwells forever — the beat never auto-advances during this test.
+    store.dispatch(startTour('webShowcase'));
 
     // Advance to the dwell race inside the beat.
     await flush();
@@ -181,8 +199,6 @@ describe('watchTourSaga', () => {
   // ── (4) second startTour supersedes first (takeLatest) ──────────────────
 
   it('a second startTour cancels the first run', async () => {
-    const longBeat: BeatData = { focus: null, caption: 'Long', dwellSec: 9999 };
-
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
       callIdx++;
@@ -192,8 +208,8 @@ describe('watchTourSaga', () => {
     const reconcile = buildReconcileStub();
     const { store } = buildHarness({ playClip: playClipMock, reconcile });
 
-    // Start first run with a long dwell.
-    store.dispatch(startTour([longBeat]));
+    // Start first run with a forever-dwelling tour.
+    store.dispatch(startTour('webShowcase'));
 
     // Advance to the dwell race inside the first beat.
     await flush();
@@ -203,7 +219,7 @@ describe('watchTourSaga', () => {
     expect(reconcile.restoreScene).not.toHaveBeenCalled();
 
     // Dispatch a second startTour — takeLatest cancels the first worker.
-    store.dispatch(startTour([{ focus: null, caption: 'B2', dwellSec: 9999 }]));
+    store.dispatch(startTour('webShowcase'));
     await flush();
 
     // The first run was cancelled: its finally block must have run.

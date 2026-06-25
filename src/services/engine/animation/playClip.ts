@@ -42,7 +42,7 @@
 
 import { CANCEL } from 'redux-saga';
 
-import { resolveClipStart, startClip } from '../../../state/camera/cameraSlice';
+import { resolveClipStart, clipStarted } from '../../../state/camera/cameraSlice';
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { AppDispatch } from '../../../store/types';
@@ -99,23 +99,23 @@ export function createPlayClip(deps: PlayClipDeps): (clip: ClipData) => Promise<
     const resolvedClip = resolveClipStart(clip, getLivePose());
 
     // Build the Promise first and register its resolver with the clip player
-    // BEFORE dispatching startClip. This ordering is defensive: if a
+    // BEFORE dispatching clipStarted. This ordering is defensive: if a
     // zero-duration clip somehow completes synchronously the resolver is already
-    // in place when endClip fires.
+    // in place when clipEnded fires.
     const p = new Promise<void>((resolve) => {
       clipPlayer.registerEndResolver(resolve);
     });
 
     // Attach the redux-saga [CANCEL] hook. When a saga task is cancelled (e.g.
     // by a race sibling), the middleware calls p[CANCEL](). stop() dispatches
-    // endClip() and fires the resolver → Promise resolves, never rejects.
+    // clipEnded() and fires the resolver → Promise resolves, never rejects.
     (p as Promise<void> & { [CANCEL]: () => void })[CANCEL] = () => {
       clipPlayer.stop();
     };
 
     // Activate the clip@95 driver. The fresh `resolvedClip` reference triggers
     // the clipElapsed clock reset on the first tick.
-    store.dispatch(startClip(resolvedClip));
+    store.dispatch(clipStarted(resolvedClip));
 
     return p;
   };

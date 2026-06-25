@@ -6,13 +6,18 @@
  * `effectHelpers.ts` (Task 3) are the ONLY constructors; authors never write raw
  * `{ kind: … }` objects.
  *
- * ### Why Effect = CameraAction | SceneEffect | four structural nodes?
+ * ### Why Effect = CameraAction | SceneEffect | FocusBoundEffect | structural nodes?
  *
  * Camera motion and scene changes are independent axes: a camera tween says
  * nothing about what layers are visible, and a `show` cue says nothing about
  * where the camera is. Unioning them here keeps the timeline homogeneous (one
  * array, one type), while the discriminant `kind` lets the player split them at
  * runtime without an `instanceof` check or parallel arrays.
+ *
+ * `FocusBoundEffect` arms (`moveTargetId`, `dollyToId`, `focusId`) are the
+ * UNRESOLVED authoring forms — they carry a `FocusId` instead of a concrete
+ * `Vec3`/`SelectionRef`. They are rewritten by `resolveClipFoci` before
+ * `compileClip` runs; `compileClip` throws if it ever sees one unresolved.
  *
  * The four structural nodes (`hold`, `wait`, `seq`, `all`, `fork`) compose
  * effects without nesting types: a `seq` holds a `children: Effect[]`, which can
@@ -48,11 +53,13 @@
  */
 
 import type { CameraAction } from './CameraAction';
+import type { FocusBoundEffect } from './FocusBoundEffect';
 import type { SceneEffect } from './SceneEffect';
 
 export type Effect =
   | CameraAction
   | SceneEffect
+  | FocusBoundEffect
   | { readonly kind: 'hold'; readonly sec: number }
   | { readonly kind: 'wait'; readonly sec: number }
   | { readonly kind: 'seq'; readonly children: Effect[] }

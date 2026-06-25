@@ -3,38 +3,33 @@
  *
  * ### What it does and why each step exists
  *
- * 1. **Wait for data** (`waitUntil focusReady`): a galaxy beat cannot start its
- *    fly clip if the source cloud hasn't loaded yet. Polling until ready means the
- *    tour never starts a fly to a null world position — the fly would stall or
- *    orbit the origin instead. Structure and milkyWay beats resolve immediately;
- *    narration beats (null focus) are trivially ready.
+ * 1. **Wait for clip foci AND camera runtime** (`waitUntil clipFociReady && cameraRuntime`):
+ *    a clip that contains `moveTargetId`/`dollyToId`/`focusId` cues cannot be
+ *    resolved until the relevant catalog data is loaded. `clipFociReady` walks
+ *    the clip's effect tree and returns false as soon as any id-bearing cue
+ *    cannot be resolved — so the saga polls until all ids are resolvable. The
+ *    camera runtime gate is also checked here: `resolveClipFoci` needs the
+ *    current FOV to compute framing distances, and the runtime is null
+ *    pre-bootstrap.
  *
- * 2. **Resolve the focus pose once** (after the wait): calling `extractSelectionRow`
- *    and `focusFraming` once before the fly keeps the clip builders pure — they take
- *    a plain `ResolvedFocus`, not engine handles. The one-time snapshot is correct
- *    because the focus target cannot change mid-beat (the outer loop owns beat
- *    sequencing). A null row (structure not loaded) produces `resolved = null`,
- *    which tells `flyToClip` to hold in place gracefully.
+ * 2. **Resolve clip foci once** (after the wait): `resolveClipFoci` rewrites
+ *    every `moveTargetId`, `dollyToId`, and `focusId` leaf to its concrete
+ *    equivalent in a single pass. The one-time snapshot is correct because the
+ *    focus target cannot change mid-beat (the outer loop owns beat sequencing).
+ *    Resolving after the wait guarantees the engine state is consistent — no
+ *    partially-loaded catalogs.
  *
- * 3. **Await the establishing fly** (`call(playClip, flyToClip(...))`): the fly IS
- *    the establishing move — the camera smoothly arrives at the target. Awaiting it
- *    (not forking) means an advanceTour that arrives mid-flight does NOT cut the
- *    camera move short and does NOT skip the current beat. The tour's advance
- *    contract is "wait for the fly to land before the next beat begins". This is
- *    the correctness invariant the `call` enforces.
+ * 3. **Await the establishing fly** (`call(playClip, clip)`): the resolved clip
+ *    IS the establishing move. Awaiting it (not forking) means an `advanceTour`
+ *    that arrives mid-flight does NOT cut the camera move short and does NOT skip
+ *    the current beat. The advance contract is "wait for the clip to land before
+ *    the next beat begins." This is the correctness invariant the `call` enforces.
  *
- * 4. **Dispatch effects verbatim** (`put(e)` for each `beat.effects` entry): beat
- *    effects are plain RTK actions — the author writes exactly what the store
- *    should receive, and `visitBeatSaga` passes them through without an
- *    `applyIntent`/`applyEffect` wrapper. This decouples beat authoring from
- *    intent semantics: the beat is a description of a store state, not a
- *    user-gesture intent.
- *
- * 5. **Show the caption** (`put(showCaption(beat.caption))`): the caption is
+ * 4. **Show the caption** (`put(showCaption(beat.caption))`): the caption is
  *    transient — it lives only during the dwell phase. `showCaption(null)` after
- *    the race clears it so the next beat starts with no stale chrome.
+ *    the race clears it so the next beat starts without stale chrome.
  *
- * 6. **Race the dwell** (`race({ timeout, next, drift })`): three things compete.
+ * 5. **Race the dwell** (`race({ timeout, next, drift })`): three things compete.
  *    - `timeout = delay(dwellSec * 1000)`: auto-advance after the authored dwell time.
  *    - `next = take(advanceTour)`: user-initiated skip.
  *    - `drift = call(playClip, dwellDrift(beat))`: perpetual ambient camera motion.
@@ -54,21 +49,18 @@
 
 import { call, put, take, race, delay, getContext } from 'typed-redux-saga';
 
-import { flyToClip } from './flyToClip';
 import { dwellDrift } from './dwellDrift';
 import { waitUntil } from './waitUntil';
-import { focusReady } from './focusReady';
+import { clipFociReady } from './clipFociReady';
 import { advanceTour } from './tourActions';
 import { showCaption } from '../ui/uiSlice';
-import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
-import { focusFraming } from '../../services/engine/camera/focusFraming';
-import type { BeatData } from '../../@types/tour/BeatData';
-import type { ResolvedFocus } from '../../@types/tour/ResolvedFocus';
+import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
+import type { BeatData } from '../../@types/animation/tour/BeatData';
 import type { SagaContext } from '../../store/types';
 
 /**
- * Play one beat of the guided tour: wait for data, fly, dispatch effects,
- * show caption, dwell interactively, clear caption.
+ * Play one beat of the guided tour: wait for clip data, resolve focus ids,
+ * play the clip, show caption, dwell interactively, clear caption.
  *
  * The outer `guidedTourSaga` loop steps through a `BeatData[]` by calling
  * `yield* call(visitBeatSaga, beat)` in sequence.
@@ -79,32 +71,26 @@ export function* visitBeatSaga(beat: BeatData): Generator {
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
   const playClip = yield* getContext<SagaContext['playClip']>('playClip');
 
-  // (1) Block until the focus target's cloud is loaded.
-  yield* call(waitUntil, () => focusReady(beat.focus, resolveDeps()));
+  // (1) Block until every id-bearing cue in the clip resolves AND the camera
+  //     runtime is available. Both are needed by resolveClipFoci (step 2).
+  yield* call(waitUntil, () => clipFociReady(beat.clip, resolveDeps()) && cameraRuntime() !== null);
 
-  // (2) Resolve the focus pose once — after the cloud is confirmed loaded.
-  const row = beat.focus === null ? null : extractSelectionRow(beat.focus, resolveDeps());
-  const runtime = cameraRuntime();
-  const framing = row !== null && runtime !== null ? focusFraming(row, runtime.fovYRad) : null;
-  const resolved: ResolvedFocus | null =
-    framing !== null ? { worldPos: framing.target, focusMpc: framing.distance } : null;
+  // (2) Resolve clip foci once — after all ids are confirmed resolvable.
+  const clip = resolveClipFoci(beat.clip, resolveDeps(), cameraRuntime()!.fovYRad);
 
-  // (3) Await the establishing fly — never fork; a mid-flight advanceTour must not cut it.
-  yield* call(playClip, flyToClip(beat, resolved));
+  // (3) Await the establishing clip — never fork; a mid-flight advanceTour must not cut it.
+  yield* call(playClip, clip);
 
-  // (4) Dispatch beat effects verbatim — no applyIntent/applyEffect wrapper.
-  for (const e of beat.effects ?? []) yield* put(e);
-
-  // (5) Show the caption.
+  // (4) Show the caption.
   yield* put(showCaption(beat.caption));
 
-  // (6) Race: dwell timer vs user input vs perpetual drift (drift always loses).
+  // (5) Race: dwell timer vs user input vs perpetual drift (drift always loses).
   yield* race({
     timeout: delay(beat.dwellSec * 1000),
     next: take(advanceTour),
     drift: call(playClip, dwellDrift(beat)),
   });
 
-  // (7) Clear the caption before the next beat.
+  // (6) Clear the caption before the next beat.
   yield* put(showCaption(null));
 }

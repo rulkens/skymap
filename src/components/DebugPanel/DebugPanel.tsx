@@ -7,7 +7,7 @@
  * debugging), `FlowTuningSection` + the pick/disk-ring toggles,
  * `DataQualitySection` (catalog-audit diagnostics such as the
  * orientation-fallback toggles), `LabelEffectsSection`, and
- * `ClipTriggersSection` (play/stop a clip + launch the demo tour).
+ * `ClipTriggersSection` (play/stop a registered clip + launch a guided tour).
  * Mount is owned by `App.tsx` (toggled by the `d` keyboard shortcut);
  * when this component renders, all sections always render — section-level
  * visibility (e.g. "GPU timings unavailable") is each section's
@@ -29,9 +29,9 @@
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { ClipId } from '../../@types/animation/ClipId';
+import type { TourId } from '../../@types/animation/tour/TourId';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
-import type { ClipData } from '../../@types/animation/ClipData';
-import type { BeatData } from '../../@types/tour/BeatData';
 import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
@@ -88,14 +88,14 @@ export type DebugPanelProps = {
   onTogglePass: (name: string) => void;
   /**
    * Clip/tour controls — plain dispatches wired by `DebugPanelContainer`. All
-   * three are fire-and-forget request actions; `clipActive` (from
-   * `selectClipActive`) is the live "is a clip playing" flag the section uses for
-   * its readout instead of awaiting a Promise.
+   * three are fire-and-forget request actions naming a registered clip/tour by
+   * id; `clipActive` (from `selectClipActive`) is the live "is a clip playing"
+   * flag the section uses for its readout instead of awaiting a Promise.
    */
   clipActive: boolean;
-  onPlayClip: (clip: ClipData) => void;
+  onStartClip: (id: ClipId) => void;
   onStopClip: () => void;
-  onStartTour: (beats: readonly BeatData[]) => void;
+  onStartTour: (id: TourId) => void;
 };
 
 export function DebugPanel({
@@ -115,7 +115,7 @@ export function DebugPanel({
   onFlowChange,
   onTogglePass,
   clipActive,
-  onPlayClip,
+  onStartClip,
   onStopClip,
   onStartTour,
 }: DebugPanelProps) {
@@ -176,7 +176,7 @@ export function DebugPanel({
       <div style={{ marginTop: 6 }} />
       <ClipTriggersSection
         clipActive={clipActive}
-        onPlayClip={onPlayClip}
+        onStartClip={onStartClip}
         onStopClip={onStopClip}
         onStartTour={onStartTour}
       />

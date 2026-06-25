@@ -1,13 +1,16 @@
 /**
- * flyoutClip — the "fly to the observable horizon" clip as a serializable
- * `ClipData`.
+ * flyout — the "fly to the observable horizon" `Clip` (id + label + serializable
+ * `ClipData`).
+ *
+ * Derived from the `flyoutDriver` recording spike (`?flyout`) — see
+ * `docs/research/2026-06-19-camera-animation-spike-findings.md`.
  *
  * ### What this demonstrates
  *
  * This clip is the acceptance proof for the animation data model (Plan A,
  * Task 13). It re-expresses the flyout camera spike — a smooth zoom from the
  * user's current viewing distance out to the Hubble radius (~29 500 Mpc) with a
- * gentle quarter-turn — as a plain serializable `ClipData` literal.
+ * gentle quarter-turn — as a plain serializable `ClipData`.
  *
  * Two things make it a meaningful model exercise:
  *
@@ -25,25 +28,26 @@
  * The log-dolly (`dollyTo`) zooms at a perceptually uniform rate: 10 → 100 Mpc
  * feels the same duration as 100 → 10 000 Mpc. This is the geometric
  * interpolation path in the evaluator (`lerpInSpace('log', ...)`).
- */
-
-import type { ClipData } from '../../@types/animation/ClipData';
-import { dollyTo, spin, all } from '../../services/engine/animation/effectHelpers';
-
-/**
- * flyout — zoom from the user's current position to the observable horizon
- * (~29 500 Mpc) over 22 seconds, with a gentle quarter-turn.
  *
  * `start: 'live'` means the starting distance is captured at playback time.
- * Call `resolveClipStart(flyout, livePose)` before evaluation in tests or in
- * the clip-player, so the evaluator receives a concrete numeric `start.distance`.
+ * Call `resolveClipStart(flyout.data, livePose)` before evaluation in tests or
+ * in the clip-player, so the evaluator receives a concrete numeric
+ * `start.distance`.
  */
-export const flyout: ClipData = {
-  start: 'live',                                         // dolly from wherever the user is framed
-  timeline: [
-    all([
-      dollyTo(29_500, 22, 'inOut'),                      // log-dolly to the horizon shell
-      spin('yaw', { by: 1.1, over: 22, ease: 'inOut' }), // gentle quarter-turn
-    ]),
-  ],
+
+import type { Clip } from '../../../@types/animation/Clip';
+import { dollyTo, spin, all } from '../../../services/engine/animation/effectHelpers';
+
+export const flyout: Clip = {
+  id: 'flyout',
+  label: 'Fly to Horizon',
+  data: {
+    start: 'live', // dolly from wherever the user is framed
+    timeline: [
+      all([
+        dollyTo(29_500, 22, 'inOut'), // log-dolly to the horizon shell
+        spin('yaw', { by: 1.1, over: 22, ease: 'inOut' }), // gentle quarter-turn
+      ]),
+    ],
+  },
 };

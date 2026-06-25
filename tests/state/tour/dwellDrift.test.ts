@@ -13,10 +13,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
-import type { BeatData } from '../../../src/@types/tour/BeatData';
+import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 
 // Minimal beat — dwellDrift ignores its content but needs a compatible type.
-const beat: BeatData = { focus: null, caption: null, dwellSec: 10 };
+// clip is a trivial narration clip with an empty timeline.
+const beat: BeatData = { clip: { start: 'live', timeline: [] }, caption: null, dwellSec: 10 };
 
 describe('dwellDrift', () => {
   it('starts live', () => {

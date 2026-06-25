@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
 import {
   dollyTo,
+  moveTargetId,
   spin,
   rate,
   oscillate,
@@ -21,6 +22,7 @@ import {
   all,
   fork,
 } from '../../../../src/services/engine/animation/effectHelpers';
+import { focusId } from '../../../../src/utils/animation/focusId';
 
 // ---------------------------------------------------------------------------
 // Test 1 — seq accumulates windows
@@ -141,10 +143,7 @@ describe('compileClip preroll shifts every window by preroll', () => {
     // After preroll shift: hide.atSec = 0+2 = 2, rate.startSec = 0+2 = 2.
     const clip = compileClip({
       preroll: 2,
-      timeline: [
-        hide(['flow'], 0),
-        rate('yaw', { to: 1, over: 3 }),
-      ],
+      timeline: [hide(['flow'], 0), rate('yaw', { to: 1, over: 3 })],
     });
 
     expect(clip.velTracks[0]!.startSec).toBe(2);
@@ -165,13 +164,7 @@ describe('compileClip orders cues by atSec', () => {
     // The timeline in a seq processes left to right, so hide fires at 0 and
     // fade fires after the hold.
     const clip = compileClip({
-      timeline: [
-        seq([
-          hide(['flow'], 0),
-          hold(3),
-          fade(['flow'], 0.5, 2),
-        ]),
-      ],
+      timeline: [seq([hide(['flow'], 0), hold(3), fade(['flow'], 0.5, 2)])],
     });
 
     expect(clip.cues).toHaveLength(2);
@@ -195,12 +188,7 @@ describe('compileClip ignores fork duration in durationSec', () => {
     // With fork: it is fire-and-forget; the awaited duration is only the
     // hold(5) that follows it.
     const clip = compileClip({
-      timeline: [
-        seq([
-          fork(spin('yaw', { by: Math.PI * 2, over: 60, loop: true })),
-          hold(5),
-        ]),
-      ],
+      timeline: [seq([fork(spin('yaw', { by: Math.PI * 2, over: 60, loop: true })), hold(5)])],
     });
 
     // fork contributes 0 to the awaited duration; hold(5) contributes 5.
@@ -218,10 +206,7 @@ describe('compileClip ignores fork duration in durationSec', () => {
     // all([fork(bigSpin), dollyTo(100, 4)]) → durationSec === 4
     const clip = compileClip({
       timeline: [
-        all([
-          fork(spin('yaw', { by: Math.PI * 4, over: 120, loop: true })),
-          dollyTo(100, 4),
-        ]),
+        all([fork(spin('yaw', { by: Math.PI * 4, over: 120, loop: true })), dollyTo(100, 4)]),
       ],
     });
 
@@ -254,5 +239,22 @@ describe('compileClip carries loop flag on spin segments', () => {
     expect(yawSegs).toHaveLength(1);
     expect(yawSegs[0]!.segKind).toBe('spin');
     expect(yawSegs[0]!.loop).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 8 — compileClip throws on unresolved focus-bound effects
+// ---------------------------------------------------------------------------
+
+describe('compileClip throws on an unresolved focus-bound effect', () => {
+  it('compileClip throws on an unresolved focus-bound effect', () => {
+    // A clip that contains moveTargetId — unresolved because resolveClipFoci
+    // has not run. compileClip must throw with a message naming resolveClipFoci
+    // rather than silently no-op or producing a broken CompiledClip.
+    expect(() =>
+      compileClip({
+        timeline: [moveTargetId(focusId('m87'), 5)],
+      }),
+    ).toThrow('resolveClipFoci');
   });
 });

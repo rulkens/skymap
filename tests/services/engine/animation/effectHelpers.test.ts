@@ -12,6 +12,8 @@ import {
   tween,
   dollyTo,
   moveTarget,
+  moveTargetId,
+  dollyToId,
   aimAt,
   spin,
   rate,
@@ -27,6 +29,7 @@ import {
   all,
   fork,
 } from '../../../../src/services/engine/animation/effectHelpers';
+import { focusId } from '../../../../src/utils/animation/focusId';
 
 // ---------------------------------------------------------------------------
 // tween (scalar set)
@@ -281,17 +284,53 @@ describe('scene', () => {
   });
 });
 
-describe('focus', () => {
-  it('emits kind:focus with the given ref', () => {
-    const ref = { kind: 'structure', id: 'virgo' } as any;
-    const e = focus(ref);
-    expect(e.kind).toBe('focus');
-    expect(e.ref).toBe(ref);
+// ---------------------------------------------------------------------------
+// moveTargetId / dollyToId
+// ---------------------------------------------------------------------------
+
+describe('moveTargetId', () => {
+  it('moveTargetId carries the id and defaults ease to inOut', () => {
+    const id = focusId('m87');
+    const e = moveTargetId(id, 5);
+    expect(e.kind).toBe('moveTargetId');
+    expect(e.id).toBe(id);
+    expect(e.over).toBe(5);
+    expect(e.ease).toBe('inOut');
   });
 
-  it('emits kind:focus with null to clear', () => {
+  it('forwards explicit ease', () => {
+    const e = moveTargetId(focusId('virgo'), 3, 'out');
+    expect(e.ease).toBe('out');
+  });
+});
+
+describe('dollyToId', () => {
+  it('dollyToId carries the id and defaults ease to inOut', () => {
+    const id = focusId('m87');
+    const e = dollyToId(id, 4);
+    expect(e.kind).toBe('dollyToId');
+    expect(e.id).toBe(id);
+    expect(e.over).toBe(4);
+    expect(e.ease).toBe('inOut');
+  });
+
+  it('forwards explicit ease', () => {
+    const e = dollyToId(focusId('virgo'), 2, 'in');
+    expect(e.ease).toBe('in');
+  });
+});
+
+describe('focus', () => {
+  it('focus(id) builds a focusId effect carrying the id', () => {
+    const id = focusId('m87');
+    const e = focus(id);
+    expect(e.kind).toBe('focusId');
+    expect(e.id).toBe(id);
+  });
+
+  it('focus(null) builds a focusId effect with id null', () => {
     const e = focus(null);
-    expect(e).toEqual({ kind: 'focus', ref: null });
+    expect(e).toEqual({ kind: 'focusId', id: null });
   });
 });
 

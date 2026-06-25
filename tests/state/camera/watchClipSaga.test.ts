@@ -1,14 +1,15 @@
 /**
  * watchClipSaga tests — integration over a real store + saga middleware.
  *
- * `watchClipSaga` runs the injected `playClip` seam (read from saga context) for
- * each `playClip` action and cancels it on `stopClip` or a re-play (takeLatest).
- * Cancellation is observed via the seam Promise's `[CANCEL]` hook — the same
- * mechanism the production `playClip` seam attaches to route cancellation into
- * `clipPlayer.stop()`.
+ * `watchClipSaga` resolves the dispatched `ClipId` against `clipRegistry` and
+ * runs the injected `playClip` seam (read from saga context) with the resolved
+ * `ClipData` for each `startClip` action, cancelling it on `stopClip` or a
+ * re-play (takeLatest). Cancellation is observed via the seam Promise's
+ * `[CANCEL]` hook — the same mechanism the production `playClip` seam attaches to
+ * route cancellation into `clipPlayer.stop()`.
  *
  * The seam itself is stubbed, so these tests assert the saga's routing
- * contract (run on play, cancel on stop / re-play), not the clip player.
+ * contract (resolve + run on play, cancel on stop / re-play), not the clip player.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -18,7 +19,8 @@ import { CANCEL } from '@redux-saga/core';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchClipSaga } from '../../../src/state/camera/watchClipSaga';
-import { playClip, stopClip } from '../../../src/state/camera/clipActions';
+import { startClip, stopClip } from '../../../src/state/camera/clipActions';
+import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
@@ -27,9 +29,10 @@ const CANCEL_SYM = CANCEL as unknown as symbol;
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-// Sentinel clip — the seam is stubbed, so its content is irrelevant; identity
-// is all the "called with" assertion needs.
-const CLIP = { id: 'test-clip' } as unknown as ClipData;
+// A real registered clip — the saga resolves the id to this clip's ClipData
+// before handing it to the seam.
+const CLIP_ID = 'flyout' as const;
+const EXPECTED = clipRegistry[CLIP_ID].data;
 
 type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 
@@ -58,15 +61,15 @@ describe('watchClipSaga', () => {
     vi.clearAllMocks();
   });
 
-  it('runs the playClip seam with the clip on a playClip action', async () => {
+  it('resolves the id and runs the playClip seam with the clip data on a startClip action', async () => {
     const seam = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
     const { store } = buildHarness(seam);
 
-    store.dispatch(playClip(CLIP));
+    store.dispatch(startClip(CLIP_ID));
     await flush();
 
     expect(seam).toHaveBeenCalledTimes(1);
-    expect(seam).toHaveBeenCalledWith(CLIP);
+    expect(seam).toHaveBeenCalledWith(EXPECTED);
   });
 
   it('cancels the in-flight seam when stopClip is dispatched', async () => {
@@ -76,7 +79,7 @@ describe('watchClipSaga', () => {
     });
     const { store } = buildHarness(seam);
 
-    store.dispatch(playClip(CLIP));
+    store.dispatch(startClip(CLIP_ID));
     await flush();
     expect(cancelled).toBe(false);
 
@@ -87,16 +90,16 @@ describe('watchClipSaga', () => {
     expect(cancelled).toBe(true);
   });
 
-  it('cancels the prior run when a second playClip arrives (takeLatest)', async () => {
+  it('cancels the prior run when a second startClip arrives (takeLatest)', async () => {
     let cancelCount = 0;
     const seam = blockingSeam(() => {
       cancelCount++;
     });
     const { store } = buildHarness(seam);
 
-    store.dispatch(playClip(CLIP));
+    store.dispatch(startClip(CLIP_ID));
     await flush();
-    store.dispatch(playClip(CLIP));
+    store.dispatch(startClip(CLIP_ID));
     await flush();
 
     // takeLatest cancelled the first run (one [CANCEL]); both runs called the seam.

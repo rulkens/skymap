@@ -48,7 +48,7 @@ import {
   cancelCameraTween,
   setAutoRotate,
   commitCameraPose,
-  startClip,
+  clipStarted,
 } from '../../../../src/state/camera/cameraSlice';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
@@ -168,7 +168,7 @@ describe('buildCameraDrivers — isActive reads the store', () => {
   it('clip.isActive ⇔ s.camera.clip !== null', () => {
     const store = makeStore();
     expect(byId('clip').isActive(store.getState() as unknown as RootState)).toBe(false);
-    store.dispatch(startClip(CLIP_DATA));
+    store.dispatch(clipStarted(CLIP_DATA));
     expect(byId('clip').isActive(store.getState() as unknown as RootState)).toBe(true);
   });
 
@@ -304,7 +304,7 @@ describe('pickWinner', () => {
     // clip@95 outranks orbitDrag@80.
     const store = makeStore();
     store.dispatch(beginDrag());
-    store.dispatch(startClip(CLIP_DATA));
+    store.dispatch(clipStarted(CLIP_DATA));
     const s = store.getState() as unknown as RootState;
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
     expect(pickWinner(drivers, s).id).toBe('clip');
@@ -399,7 +399,7 @@ describe('runCameraDrivers — elapsed dispatch', () => {
     // orbitDrag-elapsed test is done above.
     const store = makeStore();
     store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
-    store.dispatch(startClip(CLIP_DATA));
+    store.dispatch(clipStarted(CLIP_DATA));
     const s = store.getState() as unknown as RootState;
     const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
     const clock = createCameraClock();

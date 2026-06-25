@@ -36,7 +36,7 @@
  *   `clip`        — an optional in-flight animation clip descriptor. Null when
  *                   no clip is active. The clip@95 driver owns the camera during
  *                   playback; `clip.data` is the serializable authored form. A
- *                   FRESH `{ data }` wrapper is stored on each `startClip` — the
+ *                   FRESH `{ data }` wrapper is stored on each `clipStarted` — the
  *                   Task 8 clock keys on this reference identity to detect a new
  *                   clip (same pattern as `tween` reference equality in tweenSaga).
  */
@@ -95,21 +95,26 @@ const cameraSlice = createSlice({
     },
 
     // ── clip lifecycle ──────────────────────────────────────────────────────
-    // `startClip` stores a FRESH `{ data }` wrapper so Task 8's clock saga can
+    // `clipStarted` stores a FRESH `{ data }` wrapper so Task 8's clock saga can
     // detect a new clip by reference inequality (`prev !== next`) without
     // comparing deep descriptor equality. The payload must already be resolved
     // (no `start: 'live'` sentinel) — call `resolveClipStart` at the dispatch
     // site before putting this action, mirroring `focusTweenSaga`'s pattern of
     // baking the tween `from` before `put(startCameraTween)`.
-    startClip: (camera, action: PayloadAction<ClipData>) => {
+    //
+    // Past-tense `clipStarted`/`clipEnded` (not `startClip`/`endClip`): these are
+    // the low-level lifecycle WRITES. The user-facing request action that names a
+    // clip to play is `startClip(id)` in `clipActions.ts` — the saga resolves it
+    // and dispatches `clipStarted` here.
+    clipStarted: (camera, action: PayloadAction<ClipData>) => {
       camera.clip = { data: action.payload };
     },
-    // `endClip` clears BOTH `clip` and `tween`. A tween planted before or
+    // `clipEnded` clears BOTH `clip` and `tween`. A tween planted before or
     // during the clip (e.g. by a focus saga) is dormant while the clip@95
     // driver wins priority, but once the clip deactivates an un-cleared @60
     // tween would outrank `resting`@0 and snap the camera to a stale target.
     // Mirroring `cancelCameraTween`, this is the teardown contract.
-    endClip: (camera) => {
+    clipEnded: (camera) => {
       camera.clip = null;
       camera.tween = null;
     },
@@ -130,8 +135,8 @@ export const {
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,
-  startClip,
-  endClip,
+  clipStarted,
+  clipEnded,
 } = cameraSlice.actions;
 
 // ── pure helper (not a reducer) ──────────────────────────────────────────────

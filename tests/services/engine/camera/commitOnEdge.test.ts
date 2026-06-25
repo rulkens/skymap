@@ -45,8 +45,8 @@ import {
   beginDrag,
   endDrag,
   setAutoRotate,
-  startClip,
-  endClip,
+  clipStarted,
+  clipEnded,
 } from '../../../../src/state/camera/cameraSlice';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import {
@@ -399,7 +399,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
 
 describe('commitOnEdge — clip deactivation', () => {
   it('commit fires when a clip deactivates (clip → null edge)', () => {
-    // clip declares commitsOnEdge: true, so the frame after endClip() must
+    // clip declares commitsOnEdge: true, so the frame after clipEnded() must
     // dispatch commitCameraPose exactly once.
     const store = makeStore();
     const { state } = makeEngineState();
@@ -409,7 +409,7 @@ describe('commitOnEdge — clip deactivation', () => {
     const clip: ClipData = { start: START_POSE, timeline: [] };
 
     // Activate the clip driver.
-    store.dispatch(startClip(clip));
+    store.dispatch(clipStarted(clip));
     // Seed prevActiveId so there's no spurious commit on the first frame.
     state.cameraRuntime.prevActiveId.current = 'clip';
 
@@ -419,7 +419,7 @@ describe('commitOnEdge — clip deactivation', () => {
     expect(frame1.committed).toBe(false);
 
     // Deactivate the clip.
-    store.dispatch(endClip());
+    store.dispatch(clipEnded());
 
     // Next frame: driver changes from 'clip' to 'resting' → commit fires.
     const frame2 = simulateFrame(state, store, drivers, 16);

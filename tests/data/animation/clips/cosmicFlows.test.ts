@@ -20,8 +20,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { cosmicFlows } from '../../src/clips/cosmicFlows';
-import type { SceneEffect } from '../../src/@types/animation/SceneEffect';
+import { cosmicFlows } from '../../../../src/data/animation/clips/cosmicFlows';
+import type { SceneEffect } from '../../../../src/@types/animation/SceneEffect';
+
+// The authored timeline lives on the Clip's `data` field; these tests assert on
+// the ClipData, not the id/label wrapper.
+const clip = cosmicFlows.data;
 
 // Convenience: cast an Effect to SceneEffect when we know the kind.
 function asScene(e: unknown): SceneEffect {
@@ -31,7 +35,7 @@ function asScene(e: unknown): SceneEffect {
 describe('cosmicFlows clip', () => {
   it('has a fixed start pose (not live)', () => {
     // The clip is scripted from a specific vantage point — not a user-triggered live start.
-    const start = cosmicFlows.start;
+    const start = clip.start;
     expect(start).not.toBe('live');
     expect(start).toBeDefined();
     // Shape: target near the LG bary, close-in distance.
@@ -41,19 +45,19 @@ describe('cosmicFlows clip', () => {
   });
 
   it('has preroll of 2 seconds', () => {
-    expect(cosmicFlows.preroll).toBe(2);
+    expect(clip.preroll).toBe(2);
   });
 
   it('has 10 top-level timeline entries', () => {
     // hide, fade(mask), scene, fork(osc), fork(rate), hold,
     // all(crossfade), all(dolly+rate), hold, fade(to-black).
-    expect(cosmicFlows.timeline).toHaveLength(10);
+    expect(clip.timeline).toHaveLength(10);
   });
 
   it('the flow mask (fade flow→0 instant) precedes the scene enable cue', () => {
     // Timeline entries 1 and 2 (0-indexed).
-    const fadeMask = asScene(cosmicFlows.timeline[1]);
-    const sceneEnable = asScene(cosmicFlows.timeline[2]);
+    const fadeMask = asScene(clip.timeline[1]);
+    const sceneEnable = asScene(clip.timeline[2]);
 
     expect(fadeMask.kind).toBe('fade');
     if (fadeMask.kind === 'fade') {
@@ -71,7 +75,7 @@ describe('cosmicFlows clip', () => {
 
   it('the crossfade all-node fades flow in and survey out simultaneously', () => {
     // Timeline entry 6 — the concurrent crossfade block.
-    const crossfade = cosmicFlows.timeline[6] as { kind: string; children: SceneEffect[] };
+    const crossfade = clip.timeline[6] as { kind: string; children: SceneEffect[] };
 
     expect(crossfade.kind).toBe('all');
     expect(crossfade.children).toHaveLength(2);
@@ -95,7 +99,7 @@ describe('cosmicFlows clip', () => {
 
   it('the final fade-to-black covers the four expected layers', () => {
     // Timeline entry 9 — the closing fade.
-    const fadeOut = asScene(cosmicFlows.timeline[9]);
+    const fadeOut = asScene(clip.timeline[9]);
 
     expect(fadeOut.kind).toBe('fade');
     if (fadeOut.kind === 'fade') {
@@ -111,7 +115,7 @@ describe('cosmicFlows clip', () => {
 
   it('the dolly block is an all-node with a seq child and a rate child', () => {
     // Timeline entry 7 — the concurrent pull-back block.
-    const dollyBlock = cosmicFlows.timeline[7] as {
+    const dollyBlock = clip.timeline[7] as {
       kind: string;
       children: { kind: string }[];
     };

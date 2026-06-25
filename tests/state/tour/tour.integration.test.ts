@@ -35,7 +35,7 @@
  *
  * ### Clock model
  *
- * `clipElapsed` keys on `camera.clip` reference identity. `startClip(data)`
+ * `clipElapsed` keys on `camera.clip` reference identity. `clipStarted(data)`
  * stores a fresh wrapper, setting the start stamp on the first tick. A tick at
  * `nowMs=0` primes the clock (elapsed=0). Ticking at `nowMs=N` gives
  * `elapsed = N/1000` seconds, so:
@@ -48,12 +48,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { startClip } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { createCameraClock } from '../../../src/services/engine/camera/cameraClock';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { resolveLayerOpacity } from '../../../src/services/engine/presentation/focusRecession';
-import { cosmicFlows } from '../../../src/clips/cosmicFlows';
+import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
 
 import type { ClipPlayer } from '../../../src/@types/engine/subsystems/ClipPlayer';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
@@ -155,8 +155,8 @@ describe('three-way opacity product: intent × focus × clip', () => {
 describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   /**
    * Shared setup: one store, one clock, one clipPlayer. The cosmicFlows start
-   * pose is concrete (not 'live'), so startClip can take it directly — no
-   * resolveClipStart call needed. We dispatch startClip at nowMs=0; ticking
+   * pose is concrete (not 'live'), so clipStarted can take it directly — no
+   * resolveClipStart call needed. We dispatch clipStarted at nowMs=0; ticking
    * at nowMs=N gives elapsed = N/1000 seconds.
    */
   function setupClip() {
@@ -174,10 +174,10 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
         makeEngineState(store.getState().settings as unknown as EngineSettingsState),
     });
 
-    // Activate the clip. cosmicFlows.start is a concrete CameraPose — no
-    // 'live' token — so startClip receives it as-is. The fresh wrapper object
+    // Activate the clip. cosmicFlows.data.start is a concrete CameraPose — no
+    // 'live' token — so clipStarted receives it as-is. The fresh wrapper object
     // triggers the clipElapsed clock reset on the first tick.
-    store.dispatch(startClip(cosmicFlows));
+    store.dispatch(clipStarted(cosmicFlows.data));
 
     return { store, clock, clipPlayer };
   }
