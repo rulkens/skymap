@@ -1,8 +1,8 @@
 /**
- * watchTour tests — integration tests over a real store + saga middleware.
+ * watchTourSaga tests — integration tests over a real store + saga middleware.
  *
- * `watchTour` is the startTour watcher that launches `guidedTour`. Each test
- * dispatches startTour into a store running `watchTour` directly with all
+ * `watchTourSaga` is the startTour watcher that launches `guidedTourSaga`. Each test
+ * dispatches startTour into a store running `watchTourSaga` directly with all
  * saga-context stubs injected:
  *   - `playClip` — resolves immediately so beats complete without blocking
  *   - `resolveDeps` — narration-beat deps (null focus, no catalogs needed)
@@ -11,11 +11,11 @@
  *
  * ### What we assert
  *
- * 1. `guidedTour` actually ran: `setUiHidden(true)` is dispatched synchronously
+ * 1. `guidedTourSaga` actually ran: `setUiHidden(true)` is dispatched synchronously
  *    on startTour, confirming the saga body executed (not just that the action
  *    was received).
  * 2. `captureScene` is called and `restoreScene` fires after natural completion,
- *    confirming the snapshot/restore pair in `guidedTour`'s try/finally executed.
+ *    confirming the snapshot/restore pair in `guidedTourSaga`'s try/finally executed.
  * 3. `restoreScene` fires when exitTour cancels a mid-dwell run — the finally
  *    block runs on BOTH paths.
  * 4. A second startTour supersedes a first run (takeLatest semantics): the
@@ -33,7 +33,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { watchTour } from '../../../src/state/tour/guidedTourSaga';
+import { watchTourSaga } from '../../../src/state/tour/watchTourSaga';
 import { startTour, exitTour } from '../../../src/state/tour/tourActions';
 import type { BeatData } from '../../../src/@types/tour/BeatData';
 import type { FocusCameraRuntime } from '../../../src/store/types';
@@ -102,27 +102,27 @@ function buildHarness(
     reconcile,
   });
 
-  sagaMiddleware.run(watchTour);
+  sagaMiddleware.run(watchTourSaga);
 
   return { store, sagaMiddleware, playClipFn, reconcile };
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('watchTour', () => {
+describe('watchTourSaga', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  // ── (1) guidedTour actually ran (setUiHidden(true) dispatched) ────────────
+  // ── (1) guidedTourSaga actually ran (setUiHidden(true) dispatched) ────────────
 
-  it('guidedTour runs: setUiHidden(true) is dispatched on startTour', async () => {
+  it('guidedTourSaga runs: setUiHidden(true) is dispatched on startTour', async () => {
     const { store } = buildHarness();
 
     store.dispatch(startTour([SHORT_BEAT]));
 
-    // setUiHidden(true) is dispatched synchronously inside guidedTour before
+    // setUiHidden(true) is dispatched synchronously inside guidedTourSaga before
     // the first beat's async work begins.
     expect(store.getState().ui.uiHidden).toBe(true);
   });
@@ -140,7 +140,7 @@ describe('watchTour', () => {
     // Advance timers so the 0.001s dwell expires and the beat + loop complete.
     await vi.runAllTimersAsync();
 
-    // guidedTour's finally must have run: captureScene called before the beat,
+    // guidedTourSaga's finally must have run: captureScene called before the beat,
     // restoreScene called after completion.
     expect(reconcile.captureScene).toHaveBeenCalledTimes(1);
     expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });

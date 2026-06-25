@@ -3,7 +3,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { watchRequestFocus } from '../../../src/state/selection/requestFocusSaga';
+import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
@@ -34,7 +34,7 @@ function makeCloud(objId: bigint): GalaxyCatalog {
   } as unknown as GalaxyCatalog;
 }
 
-describe('watchRequestFocus', () => {
+describe('watchRequestFocusSaga', () => {
   let store: ReturnType<typeof build>;
   // Mutable: the SDSS cloud is absent at first (deep link before load), then arrives.
   let cloudPresent = false;
@@ -50,7 +50,7 @@ describe('watchRequestFocus', () => {
       famousMeta: [],
       structures: { byId: () => null },
     };
-    mw.run(watchRequestFocus);
+    mw.run(watchRequestFocusSaga);
     mw.setContext({ resolveDeps: () => deps });
     return s;
   }

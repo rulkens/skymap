@@ -211,7 +211,7 @@ describe('captureGalaxyFocusIds', () => {
   it('does NOT capture the hover slot (hover is cleared across the swap, not re-anchored)', () => {
     // captureGalaxyFocusIds only captures select + focus. Even if hover holds a
     // galaxy ref on a reloading source, it must NOT appear in the output because
-    // watchTier clears hover unconditionally and re-anchoring would fight that clear.
+    // watchTierSaga clears hover unconditionally and re-anchoring would fight that clear.
     const store = buildStore();
     store.dispatch(updateSelectionHover(SDSS_REF));
 

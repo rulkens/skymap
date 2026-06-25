@@ -1,5 +1,5 @@
 /**
- * watchSelectionRows — the reconciler: the SINGLE owner of the selectionRows
+ * watchSelectionRowsSaga — the reconciler: the SINGLE owner of the selectionRows
  * derived cache. It keeps every row in sync with its SelectionRef.
  *
  * On a ref change (updateSelection{Hover,Select,Focus}) it re-extracts that one
@@ -16,7 +16,7 @@
  * goes stale — a clear that the UI never sees.
  *
  * It reaches the live engine cloud/structures via getContext('resolveDeps'),
- * the same seam tierSaga uses for runTierTransition. The reducers stay free of
+ * the same seam watchTierSaga uses for runTierTransition. The reducers stay free of
  * engine references; only this saga crosses the boundary.
  */
 import { takeEvery, select, put, getContext } from 'typed-redux-saga';
@@ -40,7 +40,7 @@ function* reextract(slot: SelectionSlot) {
   yield* put(setSelectionRow({ slot, row: extractSelectionRow(ref, resolveDeps()) }));
 }
 
-export function* watchSelectionRows() {
+export function* watchSelectionRowsSaga() {
   yield* takeEvery(updateSelectionHover, function* () {
     yield* reextract('hover');
   });

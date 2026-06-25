@@ -17,16 +17,16 @@
  *
  * WHAT it protects:
  *
- *   While a clip owns the camera at driver-priority 95, `watchFocusTween` must not
+ *   While a clip owns the camera at driver-priority 95, `watchFocusTweenSaga` must not
  *   plant a `camera.tween`. A tween planted during a clip is dormant only while the
  *   clip@95 driver wins priority — the instant `endClip` fires and the clip driver
  *   yields, the leftover tween@60 outranks `resting`@0 and snaps the camera to a
  *   stale focus target. Task 4's `endClip` reducer clears tweens planted BEFORE the
  *   clip started; this guard stops NEW ones from being planted DURING it.
  *
- * SCOPE — guard only `watchFocusTween`. The clip RELIES on:
- *   - `watchFades` driving `intentOpacity` for in-clip fade cues.
- *   - `watchSelectionRows` reconciling `selectionRows.focus` for the isolation dim
+ * SCOPE — guard only `watchFocusTweenSaga`. The clip RELIES on:
+ *   - `watchFadesSaga` driving `intentOpacity` for in-clip fade cues.
+ *   - `watchSelectionRowsSaga` reconciling `selectionRows.focus` for the isolation dim
  *     that in-clip `focus()` cues trigger.
  * Parking either of those would make in-clip focus/fade cues silently no-op.
  */

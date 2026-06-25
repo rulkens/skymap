@@ -1,5 +1,5 @@
 /**
- * tierSaga — the watcher that turns a tier COMMAND into the tier WRITE, with the
+ * watchTierSaga — the watcher that turns a tier COMMAND into the tier WRITE, with the
  * engine's data-transition runner fired in between, and a galaxy-selection re-anchor
  * after the new clouds land.
  *
@@ -67,7 +67,7 @@ import { resolveFocusId } from '../../services/url/resolveFocusId';
 import { catalogLoaded } from '../catalog/catalogLoaded';
 import type { RootState, RunTierTransition, SagaContext } from '../../store/types';
 
-export function* watchTier() {
+export function* watchTierSaga() {
   yield* takeLatest(requestTier, function* (action) {
     const prev = yield* select(selectTier);
     if (prev === action.payload) return;

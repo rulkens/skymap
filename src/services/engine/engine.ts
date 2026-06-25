@@ -505,7 +505,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // seam: resolves the 'live' pose at dispatch time, attaches the [CANCEL] hook,
   // and returns a Promise that resolves on both natural end and cancellation.
   // The tour saga awaits this for the establishing fly and races it (as
-  // dwellDrift) against the dwell timer; `watchClip` runs it for a `playClip`
+  // dwellDrift) against the dwell timer; `watchClipSaga` runs it for a `playClip`
   // action (the dev panel's single-clip path).
   const playClip = createPlayClip({
     store,
@@ -520,7 +520,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state, store),
     resolveDeps,
-    // The live camera Resources `watchFocusTween` reads to build a focus tween:
+    // The live camera Resources `watchFocusTweenSaga` reads to build a focus tween:
     // the visible from-pose (so a re-focus hands off from what the user sees) and
     // the lens FOV (for structure screen-fill framing). Null when `state.cam` is
     // absent — pre-bootstrap or post-destroy — so the focus tween no-ops rather
@@ -725,7 +725,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // `passOverrides`: read-only pass-name list for the DebugPanel's renderer
     // toggle section. `allNames` is materialised from HDR_PASSES + UI_PASSES so
     // the React rows track the encoder's actual pass loop in draw order.
-    // The DebugPanel dispatches `setPassDisabled` directly; `watchWake` wakes
+    // The DebugPanel dispatches `setPassDisabled` directly; `watchWakeSaga` wakes
     // the render loop on the store write.
     debug: {
       get timingService() {

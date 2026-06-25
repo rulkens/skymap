@@ -1,6 +1,6 @@
 /**
- * clipSaga — the bridge from the `playClip` / `stopClip` request actions to the
- * engine's clip-player seam.
+ * watchClipSaga — the bridge from the `playClip` / `stopClip` request actions to
+ * the engine's clip-player seam.
  *
  * The UI dispatches `playClip(clip)` instead of reaching an engine handle. This
  * watcher runs the hoisted `playClip` seam read from saga context — the same
@@ -27,14 +27,14 @@
  * The engine registers its saga context AFTER the root saga forks. Reading
  * `getContext('playClip')` inside the worker (not at fork time) guarantees the
  * context is populated by the time a `playClip` action actually arrives — the
- * same pattern as `visitBeat` / `watchFocusTween`.
+ * same pattern as `visitBeatSaga` / `watchFocusTweenSaga`.
  */
 import { call, race, take, takeLatest, getContext } from 'typed-redux-saga';
 
 import { playClip, stopClip } from './clipActions';
 import type { SagaContext } from '../../store/types';
 
-export function* watchClip() {
+export function* watchClipSaga() {
   yield* takeLatest(playClip, function* (action) {
     const playClipSeam = yield* getContext<SagaContext['playClip']>('playClip');
     yield* race({

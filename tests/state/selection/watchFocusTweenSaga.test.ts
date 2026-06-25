@@ -3,7 +3,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { watchFocusTween } from '../../../src/state/selection/focusTweenSaga';
+import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import {
   updateSelectionFocus,
   updateSelectionSelect,
@@ -31,14 +31,14 @@ const resolveDeps = (): ResolveDeps =>
     structures: { byId: () => undefined },
   }) as unknown as ResolveDeps;
 
-describe('watchFocusTween', () => {
+describe('watchFocusTweenSaga', () => {
   let store: ReturnType<typeof build>;
   let cameraRuntime: () => FocusCameraRuntime | null;
 
   function build() {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
-    mw.run(watchFocusTween);
+    mw.run(watchFocusTweenSaga);
     cameraRuntime = () => ({ from: FROM, fovYRad: 0.8 });
     mw.setContext({ resolveDeps, cameraRuntime: () => cameraRuntime() });
     return s;
@@ -82,14 +82,14 @@ describe('watchFocusTween', () => {
   // non-null, which is what `selectClipActive` reads.
   const MINIMAL_CLIP: ClipData = { start: 'live', timeline: [] };
 
-  it('watchFocusTween plants no tween while a clip is active', async () => {
+  it('watchFocusTweenSaga plants no tween while a clip is active', async () => {
     store.dispatch(startClip(MINIMAL_CLIP));
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
-  it('watchFocusTween plants a tween normally with no clip active', async () => {
+  it('watchFocusTweenSaga plants a tween normally with no clip active', async () => {
     // Regression guard: `suspendDuringClip` must be transparent when no clip is active.
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();

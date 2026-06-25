@@ -34,14 +34,14 @@
  * ### scene
  *
  * Dispatches `effect.action` (a `SettingsAction`) verbatim. Every reconcile
- * saga (`watchFades`, `watchWake`, `watchFlowReseed`, `watchBiasBake`) fires for
+ * saga (`watchFadesSaga`, `watchWakeSaga`, `watchFlowReseedSaga`, `watchBiasBakeSaga`) fires for
  * free because the store's saga middleware sees the action.
  *
  * ### focus
  *
  * Dispatches `updateSelectionFocus(effect.ref)`. `effect.ref` is a `SelectionRef`
- * or `null`; `null` clears the focus. `watchFocusTween` is parked by Plan B's
- * `suspendDuringClip`, so no camera tween is planted; `watchSelectionRows` stays
+ * or `null`; `null` clears the focus. `watchFocusTweenSaga` is parked by Plan B's
+ * `suspendDuringClip`, so no camera tween is planted; `watchSelectionRowsSaga` stays
  * live, so the isolation dim fires immediately.
  */
 

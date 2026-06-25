@@ -1,0 +1,126 @@
+/**
+ * watchFadesSaga tests — verifies that every action in FADE_ROW drives
+ * syncFades([key]) through the fade bridge, plus a direct freeze of the
+ * FADE_ROW data table.
+ *
+ * Runs under the shared reconcileSagaHarness (all four reconcile watchers).
+ *
+ * The synchronous-notify test pins a load-bearing invariant: RTK dispatch is
+ * synchronous and the `takeEvery` worker runs AFTER the reducer, so when
+ * syncFades fires it observes the POST-write settings value, not the stale one.
+ */
+
+import { describe, it, expect, beforeEach } from 'vitest';
+
+import { buildStore, type ReconcileSpies } from './reconcileSagaHarness';
+import { FADE_ROW } from '../../../src/store/effects/watchFadesSaga';
+import {
+  setMilkyWayEnabled,
+  writeVolumeField,
+  setFlow,
+  setGalaxyCatalogVisible,
+  setGalaxyCatalogLabelEnabled,
+  setFilamentsEnabled,
+  setMilkyWayLabelEnabled,
+  setStructureItemEnabled,
+  setStructureLabelEnabled,
+  setVolumesEnabled,
+} from '../../../src/state/settings/settingsSlice';
+import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
+
+describe('watchFadesSaga', () => {
+  let store: ReturnType<typeof buildStore>['store'];
+  let reconcile: ReconcileSpies;
+
+  beforeEach(() => {
+    const built = buildStore();
+    store = built.store;
+    reconcile = built.reconcile;
+  });
+
+  // ── setMilkyWayEnabled ─────────────────────────────────────────────────────
+
+  it('setMilkyWayEnabled(true) → syncFades(["milkyWayDisk"]) called', () => {
+    store.dispatch(setMilkyWayEnabled(true));
+
+    expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
+    expect(reconcile.syncFades).toHaveBeenCalledWith(['milkyWayDisk']);
+  });
+
+  // ── synchronous-notify invariant: saga worker sees post-dispatch state ───────
+  // RTK dispatch is synchronous; the saga `takeEvery` worker runs AFTER the
+  // reducer. This confirms that when syncFades fires inside watchFadesSaga, it
+  // observes the flipped `milkyWay.enabled` value, not the pre-dispatch stale
+  // value. An assertion that only lives INSIDE the spy passes silently if the
+  // spy is never called; the call-count check outside makes it fail loudly if
+  // the worker never fires (preventing vacuous passes).
+
+  it('synchronous-notify: when watchFadesSaga fires, store.getState() sees POST-WRITE settings', () => {
+    const before = store.getState().settings.milkyWay.enabled;
+
+    reconcile.syncFades.mockImplementationOnce(() => {
+      expect(store.getState().settings.milkyWay.enabled).toBe(!before);
+    });
+
+    store.dispatch(setMilkyWayEnabled(!before));
+
+    expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
+  });
+
+  // ── writeVolumeField — row-driven: fires regardless of what changed ────────
+
+  it('writeVolumeField contrast patch → syncFades(["volumeField"]) fired', () => {
+    // 'cf4-density' is a production volume seeded by buildInitialSettings. Any
+    // patch (here contrast-only) triggers the row-driven sync; the no-op guard
+    // lives in the fade bridge, not this saga.
+    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
+
+    expect(reconcile.syncFades).toHaveBeenCalledWith(['volumeField']);
+  });
+
+  it('writeVolumeField idempotent: second identical dispatch → syncFades fires again', () => {
+    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
+    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
+
+    // Saga is row-driven; it fires on every dispatch. The bridge's own tests
+    // cover the no-op-if-unchanged guard.
+    expect(reconcile.syncFades).toHaveBeenCalledTimes(2);
+    expect(reconcile.syncFades).toHaveBeenNthCalledWith(1, ['volumeField']);
+    expect(reconcile.syncFades).toHaveBeenNthCalledWith(2, ['volumeField']);
+  });
+
+  // ── setFlow — fade fires for every setFlow regardless of payload ───────────
+
+  it('setFlow({enabled:true}) → syncFades(["flow"]) called', () => {
+    store.dispatch(setFlow({ enabled: true }));
+
+    expect(reconcile.syncFades).toHaveBeenCalledWith(['flow']);
+  });
+
+  // ── FADE_ROW mapping table — freezes action→visibility-layer registry ────────
+  // The wired cases above (milkyWayDisk, volumeField, flow) prove the saga
+  // dispatches syncFades([key]) for FADE_ROW entries; this freezes the complete
+  // DATA table so a stray future row fails.
+
+  it('FADE_ROW: complete action→key mapping', () => {
+    const fadeRowTests: Array<[{ type: string }, VisibilityLayerKey]> = [
+      [setGalaxyCatalogVisible, 'survey'],
+      [setGalaxyCatalogLabelEnabled, 'surveyLabel'],
+      [setFilamentsEnabled, 'filaments'],
+      [setMilkyWayEnabled, 'milkyWayDisk'],
+      [setMilkyWayLabelEnabled, 'milkyWayLabel'],
+      [setStructureItemEnabled, 'structureRing'],
+      [setStructureLabelEnabled, 'structureLabel'],
+      [writeVolumeField, 'volumeField'],
+      [setVolumesEnabled, 'volumesMaster'],
+      [setFlow, 'flow'],
+    ];
+
+    fadeRowTests.forEach(([actionCreator, expectedKey]) => {
+      expect(FADE_ROW[actionCreator.type]).toBe(expectedKey);
+    });
+
+    // Freeze the table size so a stray row added later fails.
+    expect(Object.keys(FADE_ROW)).toHaveLength(10);
+  });
+});

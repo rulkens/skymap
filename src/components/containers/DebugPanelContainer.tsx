@@ -8,7 +8,7 @@
  * `DebugPanel` and its children import nothing from `store/` or `state/`.
  *
  * The clip/tour controls are plain dispatches: `playClip` / `stopClip` /
- * `startTour` are request actions consumed by sagas (`watchClip` / `watchTour`),
+ * `startTour` are request actions consumed by sagas (`watchClipSaga` / `watchTourSaga`),
  * so the container needs no engine handle — it dispatches like every other knob
  * here. The "now playing" readout reads `selectClipActive` (live clip state)
  * instead of awaiting a Promise. Only the genuinely handle-bound engine props
@@ -97,7 +97,7 @@ function DebugPanelContainer({
   );
 
   // Clip/tour controls — plain dispatches of request actions. The sagas
-  // (`watchClip` / `watchTour`) own the engine-side work.
+  // (`watchClipSaga` / `watchTourSaga`) own the engine-side work.
   const onPlayClip = useCallback((clip: ClipData) => dispatch(playClip(clip)), [dispatch]);
   const onStopClip = useCallback(() => dispatch(stopClip()), [dispatch]);
   const onStartTour = useCallback(

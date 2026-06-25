@@ -1,7 +1,7 @@
 /**
- * watchClip tests — integration over a real store + saga middleware.
+ * watchClipSaga tests — integration over a real store + saga middleware.
  *
- * `watchClip` runs the injected `playClip` seam (read from saga context) for
+ * `watchClipSaga` runs the injected `playClip` seam (read from saga context) for
  * each `playClip` action and cancels it on `stopClip` or a re-play (takeLatest).
  * Cancellation is observed via the seam Promise's `[CANCEL]` hook — the same
  * mechanism the production `playClip` seam attaches to route cancellation into
@@ -17,7 +17,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { CANCEL } from '@redux-saga/core';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { watchClip } from '../../../src/state/camera/clipSaga';
+import { watchClipSaga } from '../../../src/state/camera/watchClipSaga';
 import { playClip, stopClip } from '../../../src/state/camera/clipActions';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
@@ -49,11 +49,11 @@ function buildHarness(seam: PlayClipStub) {
     middleware: (getDefault) => getDefault().concat(sagaMiddleware),
   });
   sagaMiddleware.setContext({ playClip: (clip: ClipData) => seam(clip) });
-  sagaMiddleware.run(watchClip);
+  sagaMiddleware.run(watchClipSaga);
   return { store };
 }
 
-describe('watchClip', () => {
+describe('watchClipSaga', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

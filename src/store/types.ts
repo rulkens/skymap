@@ -24,7 +24,7 @@
  * into a `SelectionRow` (read lazily each call so the reconciler always sees the
  * current catalog and structure state — render-wake is reused from
  * `reconcile.requestRender`, not re-added here); `cameraRuntime` is the
- * live camera read `watchFocusTween` uses to build a focus tween — the visible
+ * live camera read `watchFocusTweenSaga` uses to build a focus tween — the visible
  * from-pose plus the lens FOV, or null when the camera is not ready; and
  * `playClip` is the engine's clip-player — the tour saga calls it with a
  * `ClipData` and awaits the returned Promise, which resolves when the clip
@@ -54,7 +54,7 @@ export type AppDispatch = AppStore['dispatch'];
 
 export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
 /**
- * The live camera Resources `watchFocusTween` reads to seed a tween: the visible
+ * The live camera Resources `watchFocusTweenSaga` reads to seed a tween: the visible
  * `from` pose (what the user sees this frame, so a re-focus hands off smoothly)
  * and the projection FOV (the structure arm frames a cluster to screen-fill).
  */
@@ -65,7 +65,7 @@ export type SagaContext = {
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
   resolveDeps: () => ResolveDeps;
   /**
-   * The live camera resources `watchFocusTween` reads to build the tween, or
+   * The live camera resources `watchFocusTweenSaga` reads to build the tween, or
    * null when the camera is not ready (pre-bootstrap / post-destroy) — the focus
    * tween then no-ops.
    */
