@@ -1,19 +1,20 @@
 /**
- * watchClipSaga — the bridge from the `playClip` / `stopClip` request actions to
+ * watchClipSaga — the bridge from the `startClip` / `stopClip` request actions to
  * the engine's clip-player seam.
  *
- * The UI dispatches `playClip(clip)` instead of reaching an engine handle. This
- * watcher runs the hoisted `playClip` seam read from saga context — the same
- * Promise + `[CANCEL]` runner the guided tour awaits — so all of the live-pose
- * resolution, two-frame completion, and cancellation machinery is reused
- * verbatim. The seam stays the single internal entry; this saga only routes the
- * external (React) intents into it.
+ * The UI dispatches `startClip(id)` instead of reaching an engine handle. This
+ * watcher resolves the id against `clipRegistry` and runs the hoisted `playClip`
+ * seam read from saga context — the same Promise + `[CANCEL]` runner the guided
+ * tour awaits — so all of the live-pose resolution, two-frame completion, and
+ * cancellation machinery is reused verbatim. The registry lookup lives here, at
+ * the action boundary; the seam stays the single internal entry and still takes
+ * a resolved `ClipData`.
  *
  * ### Why `takeLatest` + an inner `race(stop)`
  *
- * `takeLatest` makes a second `playClip` cancel the in-flight run; redux-saga
+ * `takeLatest` makes a second `startClip` cancel the in-flight run; redux-saga
  * propagates that cancellation into the seam `call`, whose `[CANCEL]` hook calls
- * `clipPlayer.stop()` (dispatching `endClip`, resetting the opacity channel, and
+ * `clipPlayer.stop()` (dispatching `clipEnded`, resetting the opacity channel, and
  * settling the Promise). The inner `race` against `take(stopClip)` gives the same
  * cancellation path an explicit trigger. Both routes converge on the existing
  * stop machinery, so no clipPlayer reference is needed here.
@@ -31,14 +32,16 @@
  */
 import { call, race, take, takeLatest, getContext } from 'typed-redux-saga';
 
-import { playClip, stopClip } from './clipActions';
+import { startClip, stopClip } from './clipActions';
+import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import type { SagaContext } from '../../store/types';
 
 export function* watchClipSaga() {
-  yield* takeLatest(playClip, function* (action) {
+  yield* takeLatest(startClip, function* (action) {
     const playClipSeam = yield* getContext<SagaContext['playClip']>('playClip');
+    const clip = clipRegistry[action.payload];
     yield* race({
-      run: call(playClipSeam, action.payload),
+      run: call(playClipSeam, clip.data),
       stop: take(stopClip),
     });
   });

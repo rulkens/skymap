@@ -8,7 +8,7 @@ import {
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
-import { startClip } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { cameraRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
@@ -83,7 +83,7 @@ describe('watchFocusTweenSaga', () => {
   const MINIMAL_CLIP: ClipData = { start: 'live', timeline: [] };
 
   it('watchFocusTweenSaga plants no tween while a clip is active', async () => {
-    store.dispatch(startClip(MINIMAL_CLIP));
+    store.dispatch(clipStarted(MINIMAL_CLIP));
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();

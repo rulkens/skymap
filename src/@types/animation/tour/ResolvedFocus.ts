@@ -12,7 +12,7 @@
  * structure's scale — the dolly target.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../math/Vec3';
 
 export type ResolvedFocus = {
   readonly worldPos: Vec3;

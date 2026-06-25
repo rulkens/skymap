@@ -25,7 +25,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { guidedTourSaga } from '../../../src/state/tour/guidedTourSaga';
 import { exitTour } from '../../../src/state/tour/tourActions';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
-import type { BeatData } from '../../../src/@types/tour/BeatData';
+import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { FocusCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';

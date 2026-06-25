@@ -17,8 +17,8 @@ import reducer, {
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,
-  startClip,
-  endClip,
+  clipStarted,
+  clipEnded,
   resolveClipStart,
 } from '../../../src/state/camera/cameraSlice';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
@@ -157,26 +157,23 @@ const clipData: ClipData = { start: 'live', timeline: [] };
 const livePose: CameraPose = { target: [10, 20, 30], yaw: 1.0, pitch: -0.5, distance: 50 };
 
 describe('cameraSlice — clip lifecycle', () => {
-  it('startClip stores the clip data', () => {
-    const next = reducer(base(), startClip(clipData));
+  it('clipStarted stores the clip data', () => {
+    const next = reducer(base(), clipStarted(clipData));
     // Reference equality: the reducer stores the exact payload object.
     expect(next.clip!.data).toBe(clipData);
   });
 
-  it('endClip clears clip to null', () => {
-    const withClip = reducer(base(), startClip(clipData));
-    const cleared = reducer(withClip, endClip());
+  it('clipEnded clears clip to null', () => {
+    const withClip = reducer(base(), clipStarted(clipData));
+    const cleared = reducer(withClip, clipEnded());
     expect(cleared.clip).toBeNull();
   });
 
-  it('endClip also clears a dormant tween', () => {
+  it('clipEnded also clears a dormant tween', () => {
     // A focus saga may plant a tween before/during a clip; once the clip@95
     // driver deactivates, an un-cleared @60 tween would outrank resting@0.
-    const withBoth = reducer(
-      reducer(base(), startCameraTween(tween)),
-      startClip(clipData),
-    );
-    const cleared = reducer(withBoth, endClip());
+    const withBoth = reducer(reducer(base(), startCameraTween(tween)), clipStarted(clipData));
+    const cleared = reducer(withBoth, clipEnded());
     expect(cleared.clip).toBeNull();
     expect(cleared.tween).toBeNull();
   });

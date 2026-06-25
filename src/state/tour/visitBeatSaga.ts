@@ -62,8 +62,8 @@ import { advanceTour } from './tourActions';
 import { showCaption } from '../ui/uiSlice';
 import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
 import { focusFraming } from '../../services/engine/camera/focusFraming';
-import type { BeatData } from '../../@types/tour/BeatData';
-import type { ResolvedFocus } from '../../@types/tour/ResolvedFocus';
+import type { BeatData } from '../../@types/animation/tour/BeatData';
+import type { ResolvedFocus } from '../../@types/animation/tour/ResolvedFocus';
 import type { SagaContext } from '../../store/types';
 
 /**

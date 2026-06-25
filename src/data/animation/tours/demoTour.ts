@@ -1,5 +1,5 @@
 /**
- * demoTour — a minimal three-beat guided tour for exercising the tour saga
+ * demoTour — a minimal three-beat guided `Tour` for exercising the tour saga
  * end-to-end from the dev panel.
  *
  * Each beat is a focus target + caption + dwell. The first beat targets the
@@ -18,21 +18,25 @@
  * No `effects` — this tour only moves the camera and shows captions, the
  * smallest itinerary that still drives the full fly → dwell → restore path.
  * Richer scripted itineraries (layer fades, scene cues) belong in their own
- * tour definitions; this one stays the bare smoke test.
+ * tour definitions (see `webShowcase`); this one stays the bare smoke test.
  */
 
-import type { BeatData } from '../@types/tour/BeatData';
+import type { Tour } from '../../../@types/animation/tour/Tour';
 
-export const demoTour: readonly BeatData[] = [
-  { focus: { type: 'milkyWay' }, caption: 'Home — the Milky Way', dwellSec: 5 },
-  {
-    focus: { type: 'structure', id: 'cluster-virgo-m87' },
-    caption: 'The Virgo Cluster',
-    dwellSec: 5,
-  },
-  {
-    focus: { type: 'structure', id: 'supercluster-laniakea-sc' },
-    caption: 'Laniakea — our home supercluster',
-    dwellSec: 6,
-  },
-];
+export const demoTour: Tour = {
+  id: 'demo',
+  label: 'Demo Tour',
+  beats: [
+    { focus: { type: 'milkyWay' }, caption: 'Home — the Milky Way', dwellSec: 5 },
+    {
+      focus: { type: 'structure', id: 'cluster-virgo-m87' },
+      caption: 'The Virgo Cluster',
+      dwellSec: 5,
+    },
+    {
+      focus: { type: 'structure', id: 'supercluster-laniakea-sc' },
+      caption: 'Laniakea — our home supercluster',
+      dwellSec: 6,
+    },
+  ],
+};

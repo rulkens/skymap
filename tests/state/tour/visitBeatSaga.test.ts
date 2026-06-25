@@ -38,7 +38,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
 import { advanceTour } from '../../../src/state/tour/tourActions';
 import { setFlow } from '../../../src/state/settings/settingsSlice';
-import type { BeatData } from '../../../src/@types/tour/BeatData';
+import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { FocusCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';

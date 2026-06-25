@@ -14,8 +14,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { flyToClip } from '../../../src/state/tour/flyToClip';
-import type { BeatData } from '../../../src/@types/tour/BeatData';
-import type { ResolvedFocus } from '../../../src/@types/tour/ResolvedFocus';
+import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
+import type { ResolvedFocus } from '../../../src/@types/animation/tour/ResolvedFocus';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 
 // A non-null SelectionRef — content is opaque to the builder; only null/non-null matters.

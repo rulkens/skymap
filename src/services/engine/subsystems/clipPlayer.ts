@@ -12,7 +12,7 @@
  *   1. Reads `camera.clip` from the store (idle if null).
  *   2. Fires any scene cues whose `atSec` falls in `(prevElapsed, elapsed]`.
  *   3. Advances the `clipOpacity` channel (the clip-owned per-layer opacity).
- *   4. Records clip completion for the two-frame deferred `endClip` dispatch.
+ *   4. Records clip completion for the two-frame deferred `clipEnded` dispatch.
  *
  * ### Why `clock` is injected (rides cameraClock)
  *
@@ -34,7 +34,7 @@
  * ### Two-frame deferred completion — the post-produce safety contract
  *
  * `clipPlayer.tick` is called as the FIRST step of `runFrame` (Task 12),
- * BEFORE the camera produce step runs `evaluateClip`. If `endClip()` were
+ * BEFORE the camera produce step runs `evaluateClip`. If `clipEnded()` were
  * dispatched on the SAME frame `elapsed` first reaches `durationSec`, the
  * produce step that same frame would see `camera.clip === null`, the clip
  * driver would be inactive, and commit-on-edge would bake the PREVIOUS frame's
@@ -44,12 +44,12 @@
  * `pendingEnd = true` (step 8) but do NOT dispatch. The clip stays active, so
  * the produce step runs `evaluateClip` saturated at `durationSec` (the exact
  * held final pose) and `lastPose` captures it. On the NEXT frame, step 1
- * dispatches `endClip()` → `camera.clip` goes null → produce's resting driver
+ * dispatches `clipEnded()` → `camera.clip` goes null → produce's resting driver
  * wins → commit-on-edge (prev='clip', clip.commitsOnEdge=true) bakes `lastPose`
  * = the saturated final pose. This mirrors the tween-completion ordering
  * (`runFrame.ts`: cancel this frame, commit next).
  *
- * NOTE: The Task 11 brief's checkbox title says "dispatches endClip the frame
+ * NOTE: The Task 11 brief's checkbox title says "dispatches clipEnded the frame
  * the clip reaches durationSec" — that wording is superseded by this contract.
  * The test pins the two-frame defer explicitly.
  */
@@ -58,7 +58,7 @@ import { createClipOpacityChannel } from '../../animation/clipOpacityChannel';
 import { compileClip } from '../animation/compileClip';
 import { clipElapsed } from '../camera/cameraClock';
 import { applySceneEffect } from '../../animation/applySceneEffect';
-import { endClip } from '../../../state/camera/cameraSlice';
+import { clipEnded } from '../../../state/camera/cameraSlice';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
@@ -75,7 +75,7 @@ import type { ClipData } from '../../../@types/animation/ClipData';
 export type ClipPlayerDeps = {
   /**
    * Injected Redux store accessor. The clipPlayer reads `camera.clip` from
-   * `getState()` each tick and dispatches `endClip()` on completion. A
+   * `getState()` each tick and dispatches `clipEnded()` on completion. A
    * narrow stub (`{ getState, dispatch }`) is sufficient — the full AppStore
    * type is satisfied by this shape at the engine wiring site.
    */
@@ -123,7 +123,7 @@ type CompileCache = {
  *   - `prevElapsed` — cue-firing cursor (seconds), initialised to -Infinity
  *     so a cue at atSec=0 fires on the clip's arrival frame.
  *   - `pendingEnd` — set true on the frame completion is first detected;
- *     cleared and `endClip()` dispatched on the following frame (see the
+ *     cleared and `clipEnded()` dispatched on the following frame (see the
  *     two-frame deferred completion rationale in the module header above).
  *   - `compileCache` — last-seen `{ data, compiled }` pair, keyed by
  *     reference identity so recompilation is O(1) on steady frames.
@@ -143,7 +143,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
   let prevElapsed = -Infinity;
 
   // Two-frame completion defer: true after the frame where elapsed first
-  // reaches durationSec. On the NEXT tick, endClip() is dispatched.
+  // reaches durationSec. On the NEXT tick, clipEnded() is dispatched.
   let pendingEnd = false;
 
   // Last-seen compile cache: recompile only when clip.data changes by reference.
@@ -154,7 +154,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
   // Cleared immediately after firing so the slot is free for the next clip.
   // Lives outside resetState intentionally — resetState clears playback
   // bookkeeping; the resolver is a caller-owned Promise handle, not playback
-  // state, and must fire AFTER endClip() so the Promise settles with the
+  // state, and must fire AFTER clipEnded() so the Promise settles with the
   // correct store shape already in place.
   let endResolver: (() => void) | null = null;
 
@@ -177,7 +177,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
   }
 
   // Fire the registered end-resolver exactly once, then clear the slot.
-  // Called right AFTER each store.dispatch(endClip()) to ensure the Promise
+  // Called right AFTER each store.dispatch(clipEnded()) to ensure the Promise
   // resolves with the up-to-date store (clip === null) already in place.
   function fireEndResolver(): void {
     const cb = endResolver;
@@ -208,15 +208,15 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
 
   function tick(nowMs: number): void {
     // Step 1 — deferred completion: if we recorded pendingEnd on a prior
-    // frame, dispatch endClip NOW (before reading the new clip state), then
+    // frame, dispatch clipEnded NOW (before reading the new clip state), then
     // reset and return. This is the post-produce-safe exit: the produce step
     // on the PRIOR frame ran evaluateClip saturated at durationSec and baked
-    // the final pose into lastPose. Now that endClip() fires, commit-on-edge
+    // the final pose into lastPose. Now that clipEnded() fires, commit-on-edge
     // will capture that pose on this frame's produce edge.
     if (pendingEnd) {
-      store.dispatch(endClip());
+      store.dispatch(clipEnded());
       resetState();
-      // Resolve the playClip Promise (if any) AFTER endClip() has landed in the
+      // Resolve the playClip Promise (if any) AFTER clipEnded() has landed in the
       // store, so the Promise settler sees camera.clip === null immediately.
       fireEndResolver();
       return;
@@ -247,19 +247,19 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     prevElapsed = elapsed;
 
     // Step 8 — completion detection: record pendingEnd on the frame elapsed
-    // first reaches durationSec. DO NOT dispatch endClip this frame — the
+    // first reaches durationSec. DO NOT dispatch clipEnded this frame — the
     // produce step must still run evaluateClip saturated at durationSec to
-    // bake the correct final pose. endClip dispatches on the NEXT tick (step 1).
+    // bake the correct final pose. clipEnded dispatches on the NEXT tick (step 1).
     if (elapsed >= compiled.durationSec) {
       pendingEnd = true;
     }
   }
 
   function stop(): void {
-    // Abort the active clip immediately: dispatch endClip, then clean up so
+    // Abort the active clip immediately: dispatch clipEnded, then clean up so
     // the next tick starts from a blank slate. clipOpacity.reset() snaps
     // every faded layer back to factor 1.
-    store.dispatch(endClip());
+    store.dispatch(clipEnded());
     resetState();
     // Resolve the playClip Promise (if any) on the abort edge — the [CANCEL]
     // hook on the returned Promise calls stop(), so this makes cancellation
@@ -279,7 +279,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     pendingEnd = false;
     prevElapsed = -Infinity;
     // Settle any in-flight playClip Promise so an awaiter unwinds on teardown
-    // rather than hanging forever. Unlike stop(), this doesn't dispatch endClip
+    // rather than hanging forever. Unlike stop(), this doesn't dispatch clipEnded
     // because destroy() intentionally leaves the store untouched.
     fireEndResolver();
   }

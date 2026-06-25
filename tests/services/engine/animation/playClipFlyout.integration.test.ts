@@ -67,7 +67,7 @@ import { activeDriverId } from '../../../../src/services/engine/camera/activeDri
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
-import { flyout } from '../../../../src/data/animation/flyoutClip';
+import { flyout } from '../../../../src/data/animation/clips/flyout';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -184,7 +184,7 @@ describe('playClip — flyout seam', () => {
     // distance so we have a measurable baseline.
     const LIVE_START_DISTANCE = 100; // Mpc — a typical mid-orbit viewing distance
     const FLYOUT_TARGET = 29_500; // Mpc — the horizon-shell target
-    const DURATION_SEC = 22; // seconds — from flyoutClip.ts
+    const DURATION_SEC = 22; // seconds — from clips/flyout.ts
 
     const store = makeStore();
     const { state } = makeEngineState(LIVE_START_DISTANCE);
@@ -238,11 +238,11 @@ describe('playClip — flyout seam', () => {
 
     // ── Kick off the flyout ──────────────────────────────────────────────────
 
-    // playClip resolves 'live' → { ...flyout, start: lastPose.current },
+    // playClip resolves 'live' → { ...flyout.data, start: lastPose.current },
     // registers the end-resolver, attaches the [CANCEL] hook, and dispatches
-    // startClip. The Promise resolves on the deferred endClip frame.
+    // clipStarted. The Promise resolves on the deferred clipEnded frame.
     let settled = false;
-    const p = playClip(flyout);
+    const p = playClip(flyout.data);
     void p.then(() => {
       settled = true;
     });

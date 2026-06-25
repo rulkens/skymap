@@ -29,7 +29,7 @@ import {
   selectRealOnly,
 } from '../../../src/state/settings/selectors';
 import { setShowPickBuffer } from '../../../src/state/settings/settingsSlice';
-import { playClip } from '../../../src/state/camera/clipActions';
+import { startClip } from '../../../src/state/camera/clipActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
 
@@ -131,7 +131,7 @@ describe('DebugPanelContainer', () => {
     expect(selectRealOnly(store.getState())).toBe(true);
   });
 
-  it('dispatches playClip on a clip-play button click', () => {
+  it('dispatches startClip with the clip id on a clip-play button click', () => {
     const { store } = createAppStore();
     const dispatchSpy = vi.spyOn(store, 'dispatch');
     const { container } = renderContainer(store);
@@ -139,23 +139,23 @@ describe('DebugPanelContainer', () => {
     const playButton = buttons.find((b) => b.textContent?.includes('Cosmic Flows'));
     expect(playButton).not.toBeUndefined();
     fireEvent.click(playButton!);
-    const playAction = dispatchSpy.mock.calls.find((c) => playClip.match(c[0]));
+    const playAction = dispatchSpy.mock.calls.map((c) => c[0]).find(startClip.match);
     expect(playAction).not.toBeUndefined();
+    // The button names the registered clip; the action carries its id.
+    expect(playAction!.payload).toBe('cosmicFlows');
   });
 
-  it('dispatches startTour on the demo-tour button click', () => {
+  it('dispatches startTour with the tour id on a tour button click', () => {
     const { store } = createAppStore();
     const dispatchSpy = vi.spyOn(store, 'dispatch');
     const { container } = renderContainer(store);
     const buttons = Array.from(container.querySelectorAll('button'));
-    const tourButton = buttons.find((b) => b.textContent?.includes('demo tour'));
+    const tourButton = buttons.find((b) => b.textContent?.includes('Demo Tour'));
     expect(tourButton).not.toBeUndefined();
     fireEvent.click(tourButton!);
     const tourAction = dispatchSpy.mock.calls.map((c) => c[0]).find(startTour.match);
     expect(tourAction).not.toBeUndefined();
-    // The demo tour carries three beats, the first targeting the Milky Way.
-    const beats = tourAction!.payload.beats;
-    expect(beats).toHaveLength(3);
-    expect(beats[0]!.focus).toEqual({ type: 'milkyWay' });
+    // The button names the registered tour; the action carries its id.
+    expect(tourAction!.payload.id).toBe('demo');
   });
 });

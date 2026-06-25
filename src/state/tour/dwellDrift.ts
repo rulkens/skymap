@@ -23,7 +23,7 @@
  * without a signature change.
  */
 
-import type { BeatData } from '../../@types/tour/BeatData';
+import type { BeatData } from '../../@types/animation/tour/BeatData';
 import type { ClipData } from '../../@types/animation/ClipData';
 import { fork, oscillate, spin } from '../../services/engine/animation/effectHelpers';
 

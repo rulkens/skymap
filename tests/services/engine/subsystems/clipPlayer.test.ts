@@ -13,7 +13,7 @@
  * ### Clock behaviour
  *
  * `clipElapsed` keys on `camera.clip` REFERENCE identity. On the first tick
- * after `startClip(data)`, the clock sees a new reference → `clipStartMs = nowMs`,
+ * after `clipStarted(data)`, the clock sees a new reference → `clipStartMs = nowMs`,
  * elapsed = 0 s. Subsequent ticks at `nowMs = clipStartMs + N*1000` yield N seconds.
  * So: install the clip, tick at t=0 (elapsed=0, seeds clock), tick at t=N*1000
  * (elapsed=N s). That is the pattern used throughout.
@@ -21,8 +21,8 @@
  * ### Two-frame deferred completion
  *
  * On the frame elapsed first reaches durationSec: `pendingEnd` is set but
- * `endClip` is NOT dispatched. On the NEXT tick: `endClip` IS dispatched and
- * internal state resets. The test "dispatches endClip the frame AFTER the clip
+ * `clipEnded` is NOT dispatched. On the NEXT tick: `clipEnded` IS dispatched and
+ * internal state resets. The test "dispatches clipEnded the frame AFTER the clip
  * reaches durationSec" pins this ordering explicitly.
  */
 
@@ -30,7 +30,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { startClip, endClip, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { clipStarted, clipEnded, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { applySceneEffect } from '../../../../src/services/animation/applySceneEffect';
@@ -73,7 +73,7 @@ function makeStore() {
 /** Install a clip into the store at the given start time. */
 function installClip(store: TestStore, data: ClipData): ClipData {
   const resolved = resolveClipStart(data, LIVE_POSE);
-  store.dispatch(startClip(resolved));
+  store.dispatch(clipStarted(resolved));
   return resolved;
 }
 
@@ -152,7 +152,7 @@ describe('clipPlayer', () => {
     expect(player.clipOpacityOf('filaments', 4000)).toBe(0); // now faded
   });
 
-  it('dispatches endClip the frame AFTER the clip reaches durationSec (post-produce defer)', () => {
+  it('dispatches clipEnded the frame AFTER the clip reaches durationSec (post-produce defer)', () => {
     const store = makeStore();
     const clock = createCameraClock();
     const dispatchSpy = vi.spyOn(store, 'dispatch');
@@ -167,7 +167,7 @@ describe('clipPlayer', () => {
     const data: ClipData = { timeline: [hold(2)] };
     installClip(store, data);
 
-    const endClipType = endClip().type;
+    const endClipType = clipEnded().type;
 
     // Tick 1 at t=0: seeds clock, elapsed=0 (not at duration yet).
     dispatchSpy.mockClear();
@@ -176,7 +176,7 @@ describe('clipPlayer', () => {
     expect(types1).not.toContain(endClipType);
 
     // Tick 2 at t=2000: elapsed=2 = durationSec. Sets pendingEnd=true.
-    // endClip must NOT be dispatched on THIS frame (post-produce safety).
+    // clipEnded must NOT be dispatched on THIS frame (post-produce safety).
     dispatchSpy.mockClear();
     player.tick(2000);
     const types2 = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
@@ -184,7 +184,7 @@ describe('clipPlayer', () => {
     // Clip is still active — produce step runs evaluateClip at saturation.
     expect(store.getState().camera.clip).not.toBeNull();
 
-    // Tick 3 (any nowMs): pendingEnd was true → dispatches endClip NOW.
+    // Tick 3 (any nowMs): pendingEnd was true → dispatches clipEnded NOW.
     dispatchSpy.mockClear();
     player.tick(3000);
     const types3 = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
@@ -193,7 +193,7 @@ describe('clipPlayer', () => {
     expect(store.getState().camera.clip).toBeNull();
   });
 
-  it('fade cue drives clipOpacity; clipOpacityOf reflects it; resets to 1 on endClip', () => {
+  it('fade cue drives clipOpacity; clipOpacityOf reflects it; resets to 1 on clipEnded', () => {
     const store = makeStore();
     const clock = createCameraClock();
     const player = createClipPlayer({
@@ -215,12 +215,12 @@ describe('clipPlayer', () => {
     player.tick(1000);
     expect(player.clipOpacityOf('survey', 1000)).toBe(0);
 
-    // Tick 3: pendingEnd was true → endClip dispatched → reset() called → all factors back to 1.
+    // Tick 3: pendingEnd was true → clipEnded dispatched → reset() called → all factors back to 1.
     player.tick(2000);
     expect(player.clipOpacityOf('survey', 2000)).toBe(1);
   });
 
-  it('stop dispatches endClip and resets the cursor + clipOpacity', () => {
+  it('stop dispatches clipEnded and resets the cursor + clipOpacity', () => {
     const store = makeStore();
     const clock = createCameraClock();
     const dispatchSpy = vi.spyOn(store, 'dispatch');
@@ -239,12 +239,12 @@ describe('clipPlayer', () => {
     player.tick(0);
     expect(player.clipOpacityOf('survey', 0)).toBe(0);
 
-    // stop() dispatches endClip and resets clipOpacity.
+    // stop() dispatches clipEnded and resets clipOpacity.
     dispatchSpy.mockClear();
     player.stop();
 
     const dispatchedTypes = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
-    expect(dispatchedTypes).toContain(endClip().type);
+    expect(dispatchedTypes).toContain(clipEnded().type);
     // clipOpacity reset → factor back to 1.
     expect(player.clipOpacityOf('survey', 0)).toBe(1);
     // Clip cleared from the store.

@@ -19,9 +19,9 @@
  *
  *   While a clip owns the camera at driver-priority 95, `watchFocusTweenSaga` must not
  *   plant a `camera.tween`. A tween planted during a clip is dormant only while the
- *   clip@95 driver wins priority — the instant `endClip` fires and the clip driver
+ *   clip@95 driver wins priority — the instant `clipEnded` fires and the clip driver
  *   yields, the leftover tween@60 outranks `resting`@0 and snaps the camera to a
- *   stale focus target. Task 4's `endClip` reducer clears tweens planted BEFORE the
+ *   stale focus target. The `clipEnded` reducer clears tweens planted BEFORE the
  *   clip started; this guard stops NEW ones from being planted DURING it.
  *
  * SCOPE — guard only `watchFocusTweenSaga`. The clip RELIES on:

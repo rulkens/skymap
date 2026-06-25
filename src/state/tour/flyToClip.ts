@@ -20,15 +20,10 @@
  * error — it pauses gracefully.
  */
 
-import type { BeatData } from '../../@types/tour/BeatData';
-import type { ResolvedFocus } from '../../@types/tour/ResolvedFocus';
+import type { BeatData } from '../../@types/animation/tour/BeatData';
+import type { ResolvedFocus } from '../../@types/animation/tour/ResolvedFocus';
 import type { ClipData } from '../../@types/animation/ClipData';
-import {
-  all,
-  dollyTo,
-  hold,
-  moveTarget,
-} from '../../services/engine/animation/effectHelpers';
+import { all, dollyTo, hold, moveTarget } from '../../services/engine/animation/effectHelpers';
 
 /** Duration of the establishing move in seconds. */
 const FLY_SEC = 5;

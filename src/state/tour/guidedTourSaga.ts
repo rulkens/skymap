@@ -24,7 +24,7 @@ import { call, put, take, race, getContext } from 'typed-redux-saga';
 import { visitBeatSaga } from './visitBeatSaga';
 import { exitTour } from './tourActions';
 import { setUiHidden } from '../ui/uiSlice';
-import type { BeatData } from '../../@types/tour/BeatData';
+import type { BeatData } from '../../@types/animation/tour/BeatData';
 import type { SagaContext } from '../../store/types';
 
 /**

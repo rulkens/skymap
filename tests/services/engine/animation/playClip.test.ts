@@ -5,7 +5,7 @@
  *
  * Tests here exercise ONLY `createPlayClip` and the resolver-registration
  * hook it uses on `clipPlayer`. The real store, real `resolveClipStart`, and
- * real `startClip`/`endClip` actions are used to keep assertions concrete.
+ * real `clipStarted`/`clipEnded` actions are used to keep assertions concrete.
  * The `clipPlayer` is a STUB — the tests drive it manually rather than running
  * the full tick-based lifecycle. This isolates `playClip`'s contract from the
  * timing details of `clipPlayer.tick`.
@@ -22,7 +22,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { CANCEL } from 'redux-saga';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { startClip, endClip } from '../../../../src/state/camera/cameraSlice';
+import { clipStarted, clipEnded } from '../../../../src/state/camera/cameraSlice';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
@@ -60,13 +60,13 @@ function makeStubClipPlayer() {
 
   const stop = vi.fn<() => void>(() => {
     // Mirrors the real clipPlayer.stop: fire the resolver (simulating the
-    // endClip dispatch + fireEndResolver sequence). Tests that invoke stop()
+    // clipEnded dispatch + fireEndResolver sequence). Tests that invoke stop()
     // via the [CANCEL] hook expect the Promise to resolve as a result.
     capturedResolver?.();
     capturedResolver = null;
   });
 
-  /** Drive the natural clip-end edge (simulates tick step 1 firing endClip). */
+  /** Drive the natural clip-end edge (simulates tick step 1 firing clipEnded). */
   function simulateClipEnd(): void {
     capturedResolver?.();
     capturedResolver = null;
@@ -107,18 +107,18 @@ describe('playClip', () => {
       settled = true;
     });
 
-    // Simulate endClip dispatch + resolver fire (what clipPlayer.tick step 1 does).
+    // Simulate clipEnded dispatch + resolver fire (what clipPlayer.tick step 1 does).
     dispatchSpy.mockClear();
-    store.dispatch(endClip()); // mirror the real clipPlayer edge
+    store.dispatch(clipEnded()); // mirror the real clipPlayer edge
     stub.simulateClipEnd();
 
     await p;
 
     expect(settled).toBe(true);
-    // endClip must have been dispatched (this call was by us above; the real
+    // clipEnded must have been dispatched (this call was by us above; the real
     // clipPlayer would do it — assert the action type reached the store).
     const dispatchedTypes = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
-    expect(dispatchedTypes).toContain(endClip().type);
+    expect(dispatchedTypes).toContain(clipEnded().type);
   });
 
   it('resolves (not rejects) on stop()', async () => {
@@ -163,13 +163,13 @@ describe('playClip', () => {
     const originalClip = makeClip('live');
     playClip(originalClip);
 
-    // Find the startClip dispatch and inspect its payload.
+    // Find the clipStarted dispatch and inspect its payload.
     const startClipCall = dispatchSpy.mock.calls.find(
-      (c) => (c[0] as { type?: string }).type === startClip(originalClip).type,
+      (c) => (c[0] as { type?: string }).type === clipStarted(originalClip).type,
     );
     expect(startClipCall).toBeDefined();
 
-    const dispatched = startClipCall![0] as ReturnType<typeof startClip>;
+    const dispatched = startClipCall![0] as ReturnType<typeof clipStarted>;
     const payload = dispatched.payload;
 
     // start must be the concrete LIVE_POSE, not the 'live' sentinel.
@@ -196,11 +196,11 @@ describe('playClip', () => {
     playClip(originalClip);
 
     const startClipCall = dispatchSpy.mock.calls.find(
-      (c) => (c[0] as { type?: string }).type === startClip(originalClip).type,
+      (c) => (c[0] as { type?: string }).type === clipStarted(originalClip).type,
     );
     expect(startClipCall).toBeDefined();
 
-    const dispatched = startClipCall![0] as ReturnType<typeof startClip>;
+    const dispatched = startClipCall![0] as ReturnType<typeof clipStarted>;
     const payload = dispatched.payload;
 
     // The concrete start pose must be forwarded verbatim (value equality).

@@ -1,5 +1,5 @@
 import type { Action } from '@reduxjs/toolkit';
-import type { SelectionRef } from '../engine/SelectionRef';
+import type { SelectionRef } from '../../engine/SelectionRef';
 
 /**
  * BeatData — a single beat in a tour: a focus target, optional caption, dwell
