@@ -98,7 +98,7 @@ export function ClipTriggersSection({
             ▶ Play demo tour
           </button>
         </div>
-        <div style={{ opacity: 0.5 }}>Tour hides the HUD — press Esc to exit.</div>
+        <div style={{ opacity: 0.5 }}>Tour hides the HUD — → next beat, Esc to exit.</div>
       </div>
     </details>
   );

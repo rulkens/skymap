@@ -106,7 +106,7 @@ import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { createPlayClip } from './animation/playClip';
-import { TOUR_START, TOUR_EXIT } from '../../state/tour/tourActions';
+import { TOUR_START, TOUR_ADVANCE, TOUR_EXIT } from '../../state/tour/tourActions';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
@@ -745,6 +745,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // finally block, not here.
     tour: {
       start: (beats) => store.dispatch(TOUR_START(beats)),
+      advance: () => store.dispatch(TOUR_ADVANCE()),
       exit: () => store.dispatch(TOUR_EXIT()),
     },
 

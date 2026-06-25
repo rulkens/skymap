@@ -4,6 +4,7 @@
  *
  *   - Cmd+K / Ctrl+K / `/`  → open the command palette
  *   - Esc                    → clear pinned selection + exit a running tour
+ *   - →  (ArrowRight)        → advance to the next tour beat
  *   - f / F                  → focus on the currently-pinned galaxy
  *   - h / H                  → return camera to home view
  *   - Tab                    → toggle "hide UI" mode (clean visual)
@@ -79,6 +80,16 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       if (e.key === 'Escape') {
         dispatch(clearSelection());
         engineHandleRef.current?.tour.exit();
+        return;
+      }
+
+      // ── ArrowRight advances to the next tour beat ──────────────
+      // Skips the current beat's remaining dwell. No-op outside a
+      // dwell phase, so it's safe to dispatch unconditionally. The
+      // tour hides the HUD, so this keyboard gesture is the only
+      // beat-navigation control.
+      if (e.key === 'ArrowRight') {
+        engineHandleRef.current?.tour.advance();
         return;
       }
 

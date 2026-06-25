@@ -168,6 +168,21 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
     expect(exit).toHaveBeenCalledOnce();
   });
 
+  it('ArrowRight advances to the next tour beat via the engine handle', () => {
+    const advance = vi.fn<() => void>();
+    const input = {
+      ...makeInput(store),
+      engineHandleRef: { current: { tour: { advance } } as never },
+    };
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
+
+    act(() => fireKey({ key: 'ArrowRight' }));
+    expect(advance).toHaveBeenCalledOnce();
+  });
+
   it('keys inside an INPUT element are ignored', () => {
     const input = makeInput(store);
     renderHook(() => useKeyboardShortcuts(input), {
