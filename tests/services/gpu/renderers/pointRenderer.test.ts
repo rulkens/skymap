@@ -28,6 +28,7 @@ import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { mat4 } from 'gl-matrix';
+import type { LensMode } from '../../../../src/@types/settings/LensMode';
 
 // PointRenderer keys its catalogs by the string `GalaxyCatalogId` now;
 // these tests still reason in terms of the numeric `Source` codes (the
@@ -130,7 +131,7 @@ function makeStubDevice(): GPUDevice {
 }
 
 // Stub BGLs — createPointRenderer requires fadeBgl + sourceBgl +
-// focusBgl as canonical shared layouts. These stubs satisfy the branded
+// sceneBgl as canonical shared layouts. These stubs satisfy the branded
 // opaque-newtype shape structurally.
 function makeStubFadeBgl() {
   return {} as import('../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
@@ -139,12 +140,12 @@ function makeStubSourceBgl() {
   return {} as import('../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
 }
 function makeStubFocusBgl() {
-  return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
+  return {} as import('../../../../src/@types/rendering/SceneUniformsBgl').SceneUniformsBgl;
 }
 
-// Stub shared focus bind group passed into draw() — the renderer only
-// binds it (setBindGroup(3, …)), never introspects it.
-const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
+// Stub shared focus bind group passed into draw() — the renderer only binds
+// it (setBindGroup(3, …)), never introspects it.
+const SCENE_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
@@ -872,12 +873,84 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       depthFadeEnabled: false,
       pxFadeStart: 0,
       pxFadeEnd: 0,
-      focusBindGroup: FOCUS_BIND_GROUP,
+      sceneBindGroup: SCENE_BIND_GROUP,
+      lensEnabled: false,
+      lensMode: 'sis',
       fadeOpacityOf: () => 1,
     });
 
     expect(calls).toContain('setPipeline');
     expect(calls).toContain('draw');
+  });
+});
+
+describe('PointRenderer.draw — lensing vertex count', () => {
+  // Lensing on draws each source's quad TWICE in BOTH modes (primary +
+  // counter image — points/vertex.wesl): SIS places the counter analytically,
+  // NFW reads it from the image-finding LUT. The draw-count gate keys on
+  // `lensEnabled` alone; `lensMode` selects the counter math, not whether a
+  // second quad is issued. Lens-off draws the single 6-vertex quad.
+  async function vertexCountFor(lensEnabled: boolean, lensMode: LensMode): Promise<number> {
+    const renderer = createPointRenderer(
+      makeStubDevice(),
+      'rgba16float',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
+
+    let vertexCount = -1;
+    const pass = {
+      setPipeline: () => {},
+      setBindGroup: () => {},
+      setVertexBuffer: () => {},
+      draw: (verts: number) => {
+        vertexCount = verts;
+      },
+    } as unknown as GPURenderPassEncoder;
+
+    renderer.draw(pass, new Float32Array(16) as unknown as mat4, [800, 600], {
+      pointSizePx: 1,
+      brightness: 1,
+      selectedPacked: 0xffffffff >>> 0,
+      visibleSourceMask: 0xffffffff,
+      camPosWorld: [0, 0, 0],
+      pxPerRad: 1,
+      highlightFallback: false,
+      realOnlyMode: false,
+      biasMode: 0,
+      absMagLimit: 0,
+      depthFadeEnabled: false,
+      pxFadeStart: 0,
+      pxFadeEnd: 0,
+      sceneBindGroup: SCENE_BIND_GROUP,
+      lensEnabled,
+      lensMode,
+      fadeOpacityOf: () => 1,
+    });
+    return vertexCount;
+  }
+
+  it('draws the doubled (12-vertex) quad when lensing is on in SIS mode', async () => {
+    expect(await vertexCountFor(true, 'sis')).toBe(12);
+  });
+
+  it('draws the doubled (12-vertex) quad when lensing is on in NFW mode', async () => {
+    expect(await vertexCountFor(true, 'nfw')).toBe(12);
+  });
+
+  it('draws the single (6-vertex) quad when lensing is off', async () => {
+    expect(await vertexCountFor(false, 'sis')).toBe(6);
+  });
+
+  // The NFW counter image is now real (LUT-driven), so lensing-on draws the
+  // doubled quad in BOTH modes — the gate keys on `lensEnabled` alone. This
+  // replaces the Task-2.1 'NFW stays 6' guard, which held only while NFW had
+  // no counter image.
+  it('lens-on draws 12 vertices in both SIS and NFW mode', async () => {
+    expect(await vertexCountFor(true, 'sis')).toBe(12);
+    expect(await vertexCountFor(true, 'nfw')).toBe(12);
   });
 });
 

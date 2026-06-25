@@ -4,10 +4,13 @@
  *
  * Two concerns:
  *
- * 1. Signature shape — `proceduralDiskRenderer` must be the 8th positional
- *    (index 7) and optional. Pins append-not-reorder: if a future edit
- *    moves it before `structureMarkerRenderer` (index 6) or makes it
- *    required, the type assertion below fails at type-check time.
+ * 1. Signature shape — `proceduralDiskRenderer` must be the 7th positional
+ *    (index 6) and optional. Pins append-not-reorder: if a future edit
+ *    moves it before `structureMarkerRenderer` (index 5) or makes it
+ *    required, the type assertion below fails at type-check time. (The
+ *    required head is device/fadeBgl/sourceBgl/sceneBgl/sceneBindGroup at
+ *    0..4, structureMarkerRenderer at 5. The focus bind group carries both
+ *    cluster focus and the lensing buffer at @group(3).)
  *
  * 2. `pickDisks` behaviour — after a `draw` with N instances, `pickDisks`
  *    issues `pass.draw(6, N)`; on a fresh renderer (no prior draw) it is a
@@ -24,13 +27,13 @@ import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/Pr
 describe('createPickRenderer disk-pick integration', () => {
   it('keeps proceduralDiskRenderer optional as the 7th positional (index 6)', () => {
     // Compile-time: the 7th parameter (index 6, after device/fadeBgl/
-    // sourceBgl/focusBgl/focusBindGroup/structureMarkerRenderer) must
-    // exist and be assignable from `undefined` (declared with `?`).
-    // Removing it, making it required, or reordering it before
-    // structureMarkerRenderer all break this.
+    // sourceBgl/sceneBgl/sceneBindGroup/structureMarkerRenderer) must exist
+    // and be assignable from `undefined` (declared with `?`). Removing it,
+    // making it required, or reordering it before structureMarkerRenderer
+    // all break this.
     //
-    // Note: `pointRenderer` was removed from position 1 in Task 4, shifting
-    // the optional tail params down by one index each.
+    // Note: lensing co-hosts the @group(3) focus group, so the focus bind
+    // group (index 4) carries it — there's no separate lensing argument.
     type Sig = Parameters<typeof createPickRenderer>;
     const _check = (...args: Sig): void => {
       const seventh: Sig[6] = args[6];
@@ -66,7 +69,7 @@ function makePickStubInit() {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
-      focusBgl: {} as unknown as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
+      sceneBgl: {} as unknown as import('../../../../src/@types/rendering/SceneUniformsBgl').SceneUniformsBgl,
     },
   };
 }

@@ -1,9 +1,15 @@
 /**
  * createFocusUniformBuffer — allocate the single engine-owned cluster-focus
- * uniform (buffer + bind group + scratch packer). One structure is focused at a
- * time, so one instance lives on `state.gpu.focusUniform`; `renderFrame`
- * writes it once per frame and every focus-aware pipeline (points, the
- * impostor disks, and the pick pass) binds its bind group.
+ * uniform (buffer + scratch packer). One structure is focused at a time, so
+ * one instance lives on `state.gpu.focusUniform`; `renderFrame` writes it once
+ * per frame.
+ *
+ * This factory owns ONLY the focus buffer. The bind group that composes focus
+ * (binding 0) with its scene-group co-tenants (the lensing buffer at binding 1,
+ * and later the lensing LUT) is assembled separately by `createSceneBindGroup`
+ * from the already-built buffers — so the per-tenant wiring grows there, not in
+ * this focus-specific factory. The buffer is exposed for that assembler to
+ * reference.
  *
  * ## Why this is the only place that packs FocusUniforms
  *
@@ -18,7 +24,6 @@
  * `lib/focusUniforms.wesl`.
  */
 
-import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { FocusUniformBuffer } from '../../../@types/rendering/FocusUniformBuffer';
 
@@ -27,18 +32,12 @@ const FOCUS_UNIFORM_BYTES = 32;
 
 export function createFocusUniformBuffer(
   device: GPUDevice,
-  focusBgl: FocusUniformsBgl,
   label = 'focus',
 ): FocusUniformBuffer {
   const buffer = device.createBuffer({
     label: `${label}-focus-uniform`,
     size: FOCUS_UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  const bindGroup = device.createBindGroup({
-    label: `${label}-focus-bg`,
-    layout: focusBgl,
-    entries: [{ binding: 0, resource: { buffer } }],
   });
 
   // Reusable scratch: f32 for centre/radius/blend/inner. Pad words [6..7] stay zero.
@@ -56,7 +55,7 @@ export function createFocusUniformBuffer(
   }
 
   return {
-    bindGroup,
+    buffer,
     write,
     destroy(): void {
       buffer.destroy();

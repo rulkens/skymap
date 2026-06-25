@@ -70,8 +70,19 @@ import {
 } from '../wiring/galaxyCatalogSourceRegistry';
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
-import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
+import { createSceneUniformsBgl } from '../../gpu/bindGroupLayouts/sceneUniforms';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
+import { createSceneBindGroup } from '../../gpu/resources/createSceneBindGroup';
+import { createLensingUniformsBgl } from '../../gpu/bindGroupLayouts/lensingUniforms';
+import { createLensingUniformBuffer } from '../../gpu/resources/createLensingUniformBuffer';
+import { buildNfwLensLut } from '../../../utils/lensing/buildNfwLensLut';
+import { createNfwLensLutTexture } from '../../gpu/resources/createNfwLensLutTexture';
+import {
+  NFW_LUT_WIDTH,
+  NFW_LUT_HEIGHT,
+  NFW_LUT_Y_MAX,
+  NFW_LUT_S_MAX,
+} from '../../../data/nfwLensLut';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -98,17 +109,46 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   const { device, context, format } = await gpuInitGpu(canvas);
 
-  // Build the canonical fade + source + focus bind-group layouts ONCE —
+  // Build the canonical fade + source + focus + lensing bind-group layouts ONCE —
   // every renderer pipeline below threads these into createPipelineLayout
   // so each consumer's bind groups are valid across pipelines. See
   // src/services/gpu/bindGroupLayouts/fadeUniforms.ts for the rationale.
   state.gpu.fadeBgl = createFadeUniformsBgl(device);
   state.gpu.sourceBgl = createSourceUniformsBgl(device);
-  state.gpu.focusBgl = createFocusUniformsBgl(device);
+  state.gpu.sceneBgl = createSceneUniformsBgl(device);
+  state.gpu.lensingBgl = createLensingUniformsBgl(device);
+  // The single shared gravitational-lensing uniform — written once per frame
+  // in renderFrame. Its standalone bind group (lensingBgl) is for the later
+  // volume raymarch; the points + pick pipelines read the SAME buffer via the
+  // scene bind group, which co-hosts it at @group(3) @binding(1). One lens set
+  // is active per frame, so one buffer serves the whole engine. Built BEFORE
+  // the focus uniform because the scene bind group references its buffer.
+  state.gpu.lensingUniform = createLensingUniformBuffer(device, state.gpu.lensingBgl!);
   // The single shared cluster-focus uniform — written once per frame in
-  // renderFrame; its bind group is bound by points, the impostor disks, and
-  // the pick pass (each at its own group slot). See EngineGpuHandles.
-  state.gpu.focusUniform = createFocusUniformBuffer(device, state.gpu.focusBgl!);
+  // renderFrame.
+  state.gpu.focusUniform = createFocusUniformBuffer(device);
+  // The inverse-NFW-lens LUT: precompute the root-finding table on the CPU
+  // (once per engine lifecycle) and upload it as an rgba16float texture.
+  // Built BEFORE the scene bind group, which references its view + sampler.
+  // See `buildNfwLensLut` and `createNfwLensLutTexture` for the rationale on
+  // why a 2D LUT is used instead of per-vertex root-finding on the GPU.
+  state.gpu.lensLutTexture = createNfwLensLutTexture(
+    device,
+    buildNfwLensLut(NFW_LUT_WIDTH, NFW_LUT_HEIGHT, NFW_LUT_Y_MAX, NFW_LUT_S_MAX),
+  );
+  // The shared @group(3) scene-state bind group composes the focus buffer
+  // (binding 0) + the lensing buffer (binding 1) + the LUT view (binding 2)
+  // + the LUT sampler (binding 3) — all engine-owned. Bound by points, the
+  // impostor disks, and the pick pass (each at its own group slot). See
+  // EngineGpuHandles + createSceneUniformsBgl.
+  state.gpu.sceneBindGroup = createSceneBindGroup(
+    device,
+    state.gpu.sceneBgl!,
+    state.gpu.focusUniform!.buffer,
+    state.gpu.lensingUniform!.buffer,
+    state.gpu.lensLutTexture.view,
+    state.gpu.lensLutTexture.sampler,
+  );
 
   // ── HDR offscreen target + tone-map post-process ──────────────────
   //
@@ -155,7 +195,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     'rgba16float',
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
-    state.gpu.focusBgl!,
+    // @group(3) focus + lensing — the scene bind group bound per frame
+    // carries both (see createSceneUniformsBgl for the co-tenancy rationale).
+    state.gpu.sceneBgl!,
   );
   state.gpu.renderer = renderer;
 
@@ -254,7 +296,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the points pass.  Matched by the LOD-2 `texturedDisksPass`.
   const texturedDiskRenderer = createTexturedDiskRenderer(
     { device, context, format: 'rgba16float', canvas },
-    state.gpu.focusBgl!,
+    state.gpu.sceneBgl!,
   );
   // ProceduralDiskRenderer fills the visibility gap between the
   // screen-aligned point glow (pixelated above ~8 px) and the
@@ -268,7 +310,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     context,
     format: 'rgba16float',
     canvas,
-    focusBgl: state.gpu.focusBgl!,
+    sceneBgl: state.gpu.sceneBgl!,
   });
   // Procedural Milky Way impostor at world origin.  See
   // `services/gpu/milkyWayRenderer.ts` for the rationale on why this

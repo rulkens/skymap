@@ -35,7 +35,7 @@ import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
-import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import type { SceneUniformsBgl } from '../../../@types/rendering/SceneUniformsBgl';
 import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 import type { MilkyWayPickRenderer } from '../../../@types/rendering/MilkyWayPickRenderer';
@@ -72,12 +72,20 @@ export function createPickRenderer(
   device: GPUDevice,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
-  focusBgl: FocusUniformsBgl,
-  // The engine's shared cluster-focus bind group (live buffer, written
-  // once per frame in renderFrame).  Bound at @group(3) so the pick pass
-  // sees the same focus state the visual pass does and the shared vertex
-  // shader can cull non-members of a focused structure from hit-testing.
-  focusBindGroup: GPUBindGroup,
+  sceneBgl: SceneUniformsBgl,
+  // The engine's shared @group(3) scene-state bind group (live buffers,
+  // written once per frame in renderFrame): cluster-focus at binding 0 +
+  // the gravitational-lensing buffer at binding 1 — the SAME group the
+  // visual pass binds. So the pick pass culls non-members of a focused
+  // structure AND deflects sources identically, keeping the PRIMARY lensed
+  // image hit-testable. The pick pass draws draw(6, ...) — never widened
+  // to 12 — so the counter image is not picked; only the primary quad
+  // participates. Lensing co-hosts the scene group rather than taking a
+  // 5th @group because WebGPU caps a pipeline at 4 bind groups and pick
+  // already uses all four (uniforms, fade, source, focus); group 0 is the
+  // shared camera group the structure-ring / Milky-Way pick draws reuse,
+  // so group 3 is the only home that ripples to nothing else.
+  sceneBindGroup: GPUBindGroup,
   // Optional structure-ring pick provider.  When present, the pick pass
   // calls `structureMarkerRenderer.pickRing(pass)` after the galaxy
   // draws so cluster / supercluster / void ring hits land in the same
@@ -133,7 +141,11 @@ export function createPickRenderer(
       }),
       fadeBgl,
       sourceBgl,
-      focusBgl,
+      // @group(3) scene state: focus (binding 0) + lensing (binding 1) — the
+      // shared vertex shader resolves both. The structure-ring + Milky-Way
+      // pick draws that reuse this pass's @group(0) never touch group 3, so
+      // hosting lensing here keeps them layout-compatible.
+      sceneBgl,
     ],
   });
 
@@ -363,9 +375,11 @@ export function createPickRenderer(
     // Bind the prebuilt @group(0) bind group (built once at construction
     // against pickUniformBuffer — avoids per-pass createBindGroup calls).
     pass.setPipeline(pipeline);
+    // @group(0) holds the pick uniforms (binding 0) only; the shared
+    // scene-state group (focus + lensing) is bound at @group(3) below.
     pass.setBindGroup(0, pickUniformBindGroup);
     pass.setBindGroup(1, dummyFadeBindGroup);
-    pass.setBindGroup(3, focusBindGroup);
+    pass.setBindGroup(3, sceneBindGroup);
 
     for (const src of sourceList) {
       let sourceBindGroup = sourceBindGroupCache.get(src.sourceBuffer);
@@ -515,8 +529,8 @@ export function createPickRenderer(
     stagingBuffer.destroy();
     dummyFadeBuffer.destroy();
     pickUniformBuffer.destroy();
-    // focusBindGroup wraps the engine-owned shared focus buffer; the
-    // engine's destroy() releases it, not the picker.
+    // sceneBindGroup wraps engine-owned shared buffers (focus + lensing);
+    // the engine's destroy() releases them, not the picker.
   }
 
   const renderer: PickRenderer = { label: 'pickRenderer', pick, renderForDebug, destroy };

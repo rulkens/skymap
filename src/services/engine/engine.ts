@@ -261,8 +261,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // services/gpu/bindGroupLayouts/fadeUniforms.ts (layout:'auto' trap).
       fadeBgl: null,
       sourceBgl: null,
-      focusBgl: null,
+      sceneBgl: null,
       focusUniform: null,
+      sceneBindGroup: null,
+      lensingBgl: null,
+      lensingUniform: null,
+      lensLutTexture: null,
       postProcess: null,
       volumeOffscreen: null,
       filamentRenderer: null,
@@ -678,10 +682,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
     state.gpu.renderer = null;
+    // Shared scene-state bind group — drop the reference (a bind group has no
+    // destroy; its buffers are released below).
+    state.gpu.sceneBindGroup = null;
     // Shared cluster-focus uniform — released after the renderers that bind
     // its group (points/disks/pick already destroyed above).
     state.gpu.focusUniform?.destroy();
     state.gpu.focusUniform = null;
+    // Shared gravitational-lensing uniform — same lifecycle: released after
+    // the points + pick pipelines that read it via the scene group are gone.
+    state.gpu.lensingUniform?.destroy();
+    state.gpu.lensingUniform = null;
+    // NFW LUT texture — destroyed after the scene bind group is dropped
+    // (a GPUTextureView holds a strong reference to its texture, so the
+    // group keeps it alive; setting sceneBindGroup = null above releases
+    // the view's hold; this call then frees the underlying texture bytes).
+    state.gpu.lensLutTexture?.destroy();
+    state.gpu.lensLutTexture = null;
 
     // 5. Drop remaining strong references to aid GC.
     for (const source of [...state.data.galaxies.catalogs.keys()]) {

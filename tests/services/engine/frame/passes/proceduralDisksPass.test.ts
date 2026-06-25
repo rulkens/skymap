@@ -103,18 +103,18 @@ describe('proceduralDisksPass', () => {
 
   it('draw() forwards instances to proceduralDiskRenderer.draw', () => {
     const instances = [{ x: 1 }, { x: 2 }];
-    const focusBindGroup = {} as GPUBindGroup;
+    const sceneBindGroup = {} as GPUBindGroup;
     const state = {
       subsystems: { proceduralDisks: { lastOutput: { instances } } },
-      gpu: { focusUniform: { bindGroup: focusBindGroup } },
+      gpu: { sceneBindGroup },
     } as unknown as EngineState;
     const deps = makeDeps();
     const pass = {} as GPURenderPassEncoder;
     proceduralDisksPass.draw(pass, makeCtx(), state, deps);
     expect(deps.proceduralDiskRenderer.draw).toHaveBeenCalledTimes(1);
     const call = (deps.proceduralDiskRenderer.draw as any).mock.calls[0];
-    // Args: (pass, vp, viewport, camPos, pxPerRad, focusBindGroup, instances).
-    expect(call[5]).toBe(focusBindGroup);
+    // Args: (pass, vp, viewport, camPos, pxPerRad, sceneBindGroup, instances).
+    expect(call[5]).toBe(sceneBindGroup);
     expect(call[6]).toBe(instances);
   });
 });

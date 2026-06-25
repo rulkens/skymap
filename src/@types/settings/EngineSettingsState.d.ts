@@ -51,6 +51,7 @@ import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
+import type { LensMode } from './LensMode';
 
 export type EngineSettingsState = {
   /**
@@ -191,6 +192,28 @@ export type EngineSettingsState = {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
     disabledPasses: Record<string, boolean>;
+    /**
+     * Gravitational-lensing prototype toggle. When on, the points vertex
+     * stage deflects sources behind the camera orbit target using an SIS
+     * thin-lens model (see `lib/lensing.wesl`). Off by default — it
+     * distorts the view around whatever you're orbiting, so it's an
+     * opt-in experiment rather than a always-on layer.
+     */
+    lensingEnabled: boolean;
+    /**
+     * Dimensionless lensing strength multiplier. 0 = no lensing, 1 = the
+     * real physical effect (per-cluster R500-derived α∞), slider runs to
+     * ~1000× for visible exaggeration. The per-source D_ls/D_s geometric
+     * factor still applies in-shader, so sources at different distances
+     * deflect differently even at a fixed strength.
+     */
+    lensStrength: number;
+    /**
+     * Lensing profile: `'sis'` (constant deflection, one ring) or `'nfw'`
+     * (g(x)/x — deflection peaks near the scale radius, adds a radial
+     * critical curve). See `lib/lensing.wesl`.
+     */
+    lensMode: LensMode;
   };
 
   /**

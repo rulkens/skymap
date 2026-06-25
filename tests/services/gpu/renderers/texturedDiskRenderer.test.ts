@@ -14,12 +14,12 @@ import { createTexturedDiskRenderer } from '../../../../src/services/gpu/rendere
 import { FLOATS_PER_INSTANCE } from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import type { DiskInstance } from '../../../../src/@types/rendering/DiskInstance';
-import type { FocusUniformsBgl } from '../../../../src/@types/rendering/FocusUniformsBgl';
+import type { SceneUniformsBgl } from '../../../../src/@types/rendering/SceneUniformsBgl';
 
 // Stub focus BGL (forwarded into the pipeline layout) + shared focus bind
 // group (passed into draw, only bound). Both are opaque to the mock device.
-const FOCUS_BGL = {} as unknown as FocusUniformsBgl;
-const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
+const SCENE_BGL = {} as unknown as SceneUniformsBgl;
+const SCENE_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 function makeStubCtx() {
   const writeBufferCalls: Array<{ data: Float32Array; offset: number }> = [];
@@ -94,7 +94,7 @@ function fakeDiskInstance(overrides: Partial<DiskInstance> = {}): DiskInstance {
 describe('texturedDiskRenderer pack loop (Task R1)', () => {
   it('pack writes hiResLayerIdx + hiResCrossfadeAlpha into slots 12, 13 and nucleusOffset into slots 14, 15', () => {
     const { ctx, writeBufferCalls } = makeStubCtx();
-    const renderer = createTexturedDiskRenderer(ctx, FOCUS_BGL);
+    const renderer = createTexturedDiskRenderer(ctx, SCENE_BGL);
 
     // The textured disk renderer is atlas-capable AND hi-res-array-
     // capable (Task R3 flipped 'atlas.hiResArray: true' on the inner
@@ -121,7 +121,7 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
       fakeDiskInstance({ hiResLayerIdx: 0, hiResCrossfadeAlpha: 0 }),
     ];
 
-    renderer.draw(pass, new Float32Array(16) as never, [800, 600], [0, 0, 0], FOCUS_BIND_GROUP, instances);
+    renderer.draw(pass, new Float32Array(16) as never, [800, 600], [0, 0, 0], SCENE_BIND_GROUP, instances);
 
     // uniforms (1) + instance bytes (1) = 2 writeBuffer calls.
     expect(writeBufferCalls.length).toBe(2);
@@ -155,7 +155,7 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
     // without reaching into the inner factory. Pin the forwarding so
     // a refactor that drops the method (or renames it) fails loudly.
     const { ctx } = makeStubCtx();
-    const renderer = createTexturedDiskRenderer(ctx, FOCUS_BGL);
+    const renderer = createTexturedDiskRenderer(ctx, SCENE_BGL);
     const stubView = { __marker: 'hires' } as unknown as GPUTextureView;
 
     expect(typeof renderer.bindHiResArray).toBe('function');

@@ -136,7 +136,7 @@ function makeDrivableDevice() {
   };
 }
 
-// Stub BGLs — PickRenderer requires fadeBgl + sourceBgl + focusBgl as
+// Stub BGLs — PickRenderer requires fadeBgl + sourceBgl + sceneBgl as
 // canonical shared layouts.
 function makeStubFadeBgl() {
   return {} as import('../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
@@ -145,9 +145,8 @@ function makeStubSourceBgl() {
   return {} as import('../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
 }
 function makeStubFocusBgl() {
-  return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
+  return {} as import('../../../../src/@types/rendering/SceneUniformsBgl').SceneUniformsBgl;
 }
-
 // A minimal dummy uniform bytes buffer for pick() calls.
 function makeUniformBytes(): ArrayBuffer {
   return new ArrayBuffer(UNIFORM_BYTES);

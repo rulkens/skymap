@@ -109,10 +109,11 @@ export const pointSpritesPass: Pass = {
       // apart and re-introduce the double-bright donut artefact.
       pxFadeStart: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEnd: PROCEDURAL_DISK_FADE_END_PX,
-      // Shared cluster-focus bind group (@group(3)). The engine owns the
-      // single focus buffer (written once per frame in renderFrame); we
-      // bind its group. At rest (blend 0) the shader multiplier is 1.0.
-      focusBindGroup: state.gpu.focusUniform!.bindGroup,
+      // Shared scene-state bind group (@group(3)): cluster focus (binding 0)
+      // + the lensing buffer (binding 1). The engine owns both, written once
+      // per frame in renderFrame; we bind the group. At rest (blend 0) the
+      // focus multiplier is 1.0, and an empty lens set is a no-op.
+      sceneBindGroup: state.gpu.sceneBindGroup!,
       // Look up the FadeRegistry opacity for each source at this frame's
       // timestamp. The renderer calls back with the numeric source code of
       // each loaded catalog; resolve it to the catalog's string id (the
@@ -121,6 +122,15 @@ export const pointSpritesPass: Pass = {
       // registered yet renders at full opacity rather than disappearing.
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
+      // Gravitational-lensing prototype. `lensEnabled` gates the 12-vs-6
+      // vertex draw count on the CPU: when lensing is on, both SIS and NFW
+      // modes draw 12 vertices per instance (the primary quad at vi 0..5 and
+      // the counter-image quad at vi 6..11). The lens array + mode + scale
+      // radius also live in the shared lensing buffer (written once per frame
+      // in renderFrame), co-bound at @group(3) @binding(1) via the focus bind
+      // group above — so there's nothing else lens-related to pass per draw.
+      lensEnabled: state.settings.debug.lensingEnabled,
+      lensMode: state.settings.debug.lensMode,
     });
     if (bytes !== null) state.picking.lastFrameUniformBytes = bytes;
   },

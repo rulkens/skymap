@@ -54,6 +54,7 @@ import type { BiasMode as BiasModeT } from '../@types/data/galaxyCatalog/BiasMod
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
+import type { LensMode } from '../@types/settings/LensMode';
 import { SOURCE_REGISTRY, Source } from './sources';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
@@ -274,3 +275,19 @@ export const DEFAULT_SHOW_PICK_BUFFER = false;
 
 /** Disk-radius debug ring starts off.  See `EngineSettingsState.debug.showDiskRadiusRing`. */
 export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
+
+/** Gravitational-lensing prototype starts off.  See `EngineSettingsState.debug.lensingEnabled`. */
+export const DEFAULT_LENSING_ENABLED = false;
+
+/**
+ * Default dimensionless lensing strength multiplier.  0 = no lensing,
+ * 1 = the real physical effect (per-cluster R500-derived α∞), slider runs
+ * to ~1000× for visible exaggeration while orbiting a cluster.  The
+ * per-source D_ls/D_s geometric factor still applies in-shader, so the
+ * visual deflection varies by source distance even at a fixed strength.
+ * See `EngineSettingsState.debug.lensStrength`.
+ */
+export const DEFAULT_LENS_STRENGTH = 1.0;
+
+/** Default lensing profile.  See `EngineSettingsState.debug.lensMode`. */
+export const DEFAULT_LENS_MODE: LensMode = 'sis';

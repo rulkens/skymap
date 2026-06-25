@@ -20,15 +20,18 @@
 // importing one authoritative struct makes drift structurally impossible.
 //
 // pickFragment.wesl declares no bindings of its own — this vertex
-// module references '@group(0)' (Uniforms) and '@group(2)' (per-source
-// SourceUniforms). The colorFragment module additionally declares
-// '@group(1)' (FadeUniforms). PickRenderer binds a no-op fade buffer
-// at '@group(1)' so its pipeline layout matches the visual pipeline.
+// module references '@group(0)' (Uniforms at binding 0), '@group(2)'
+// (per-source SourceUniforms), and '@group(3)' (FocusUniforms at binding 0,
+// LensingUniforms at binding 1, and the NFW lens LUT texture + sampler at
+// bindings 2/3). The colorFragment module additionally
+// declares '@group(1)' (FadeUniforms). PickRenderer binds a no-op fade
+// buffer at '@group(1)' so its pipeline layout matches the visual pipeline.
 
 import package::points::io::Uniforms;
 import package::points::io::PerVertex;
 import package::points::io::VSOut;
 import package::lib::camera::worldToClip;
+import package::lib::lensing::lensedPosition;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::sourceUniforms::SourceUniforms;
@@ -37,6 +40,7 @@ import package::lib::astro::distanceModulus;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
+import package::lib::lensingUniforms::LensingUniforms;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -68,13 +72,43 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // for the pick-output path.
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
 
-// ── @group(3) — cluster-focus uniform (single shared binding) ───────
+// ── @group(3) — per-frame galaxy-scene state ────────────────────────
 //
-// One POI is focused at a time, so this is a single global binding (not
-// per-source like fade). 'focusAlphaMultiplier' folds a membership-based
-// dim into 'intensity'; at blend == 0 it returns 1.0 (no-op when nothing
-// is focused). See lib/focusUniforms.wesl for the math.
+// binding 0 — cluster-focus uniform (single shared binding). One POI is
+// focused at a time, so this is a single global binding (not per-source
+// like fade). 'focusAlphaMultiplier' folds a membership-based dim into
+// 'intensity'; at blend == 0 it returns 1.0 (no-op when nothing is
+// focused). See lib/focusUniforms.wesl for the math.
 @group(3) @binding(0) var<uniform> focus: FocusUniforms;
+
+// binding 1 — gravitational-lensing uniform. The shared lens data
+// (enabled, count, mode, _pad0, + the lens array) lives in its OWN
+// buffer, NOT the Uniforms tail, so a second pipeline (the volume
+// raymarch) can bind the same bytes. It co-hosts the scene group rather
+// than taking a dedicated @group because WebGPU caps a pipeline at 4 bind
+// groups and points already uses all four (uniforms, fade, source, focus);
+// group 0 is the shared camera group the secondary pick renderers reuse,
+// so group 3 is the only home that ripples to nothing else. See
+// lib/lensingUniforms.wesl for the struct and lib/lensing.wesl for the
+// deflection model.
+@group(3) @binding(1) var<uniform> lensing: LensingUniforms;
+
+// binding 2/3 — NFW image-finding LUT (texture_2d<f32>) + its sampler. Indexed
+// by (y, s) and carrying the channels [xPrimary, muPrimary, xCounter, muCounter];
+// 'lensedPosition' samples it for the dominant NFW lens's counter image. The BGL
+// already declares both at bindings 2/3 (Task 4.1), VERTEX-visible — the vertex
+// stage has no implicit derivatives, so the sample uses 'textureSampleLevel' with
+// explicit LOD 0.0. See lib/lensing.wesl for the (y,s) → UV map and
+// src/utils/lensing/buildNfwLensLut.ts for the generation (and the log-s forward
+// map this inverts).
+@group(3) @binding(2) var lensLut: texture_2d<f32>;
+@group(3) @binding(3) var lensLutSampler: sampler;
+
+// Peak lensing magnification clamp. A point source on the caustic has
+// infinite μ; a real (extended) source saturates at ~θ_E / source-size.
+// We have no source size, so we cap |μ| here to keep an on-axis galaxy
+// from blowing out the additive HDR target. See lib/lensing.wesl.
+const LENS_MU_MAX: f32 = 10.0;
 
 // ─── vertex stage ─────────────────────────────────────────────────────
 //
@@ -89,12 +123,39 @@ fn vs(
   @builtin(instance_index) ii: u32,
   p: PerVertex,
 ) -> VSOut {
-  // Project the point's 3-D world position to clip space via the
-  // shared 'worldToClip' helper from 'lib/camera.wesl'.
-  let center = worldToClip(u.cam, p.position);
+  // Gravitational lensing (multi-cluster). Each source is drawn as TWO
+  // quads when the lens pass is active (in BOTH modes now): vertex_index 0..5
+  // carry the summed primary image, 6..11 the dominant lens's inner
+  // counter-image (SIS analytic, NFW from the LUT). The whole deflection
+  // model — summed-primary push, dominant-lens counter, and the per-image
+  // magnification — lives in 'lensedPosition' (lib/lensing.wesl), so the
+  // visual and pick pipelines share one authoritative policy. The
+  // deflection preserves the source's distance from the eye, so the
+  // apparent-size and depth-fade math below (which read p.position's length)
+  // are unaffected — only the projected screen direction changes.
+  let imageKind = select(0u, 1u, vi >= 6u);
+  let img = lensedPosition(
+    p.position,
+    u.camPosWorld,
+    lensing,
+    imageKind,
+    LENS_MU_MAX,
+    lensLut,
+    lensLutSampler,
+  );
+  let lensedPos = img.position;
+  let lensValid = img.valid;
+  // 'lensMu' folds the image's magnification into intensity below (1.0 when
+  // the source is unlensed).
+  let lensMu = img.mu;
 
-  // Fetch the quad corner for this vertex (in [-1, +1]²).
-  let corner = quadCorner(vi);
+  // Project the (possibly lensed) world position to clip space via the
+  // shared 'worldToClip' helper from 'lib/camera.wesl'.
+  let center = worldToClip(u.cam, lensedPos);
+
+  // Fetch the quad corner for this vertex (in [-1, +1]²).  The second
+  // quad (vi 6..11) reuses the same six corner offsets.
+  let corner = quadCorner(vi % 6u);
 
   // ── Malmquist-bias gating (volume-limited mode) ──────────────────────────
   //
@@ -121,10 +182,14 @@ fn vs(
   // limited) or by realOnlyMode (hide fallback orientations) emit a
   // degenerate clip position so all 6 vertices of the quad land outside
   // the NDC cube and the rasteriser drops the primitive — no fragment
-  // work, no pick-texture write.
+  // work, no pick-texture write.  A counter-image quad for a source
+  // outside the Einstein radius (lensed.valid == 0u) is culled the same
+  // way: most of the doubled quads collapse here, so the lens pass adds
+  // fragments only for the handful of images that actually form.
   let malmquistGated = u.biasMode == 1u && absMag > u.absMagLimit;
   let realOnlyGated = u.realOnlyMode == 1u && isFallbackFlag == 1u;
-  if (malmquistGated || realOnlyGated) {
+  let lensCulled = lensValid == 0u;
+  if (malmquistGated || realOnlyGated || lensCulled) {
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
@@ -224,6 +289,12 @@ fn vs(
   // non-member that drops under the perceptibility floor is culled rather
   // than left to pile up additively in a dense field.
   let focusMult = focusAlphaMultiplier(p.position, focus);
+  // Lensing magnification: each SIS image's flux scales by |μ| (1.0 when
+  // the lens is off or the source is unlensed). This brightens the primary
+  // near the ring and dims the counter-image toward the Einstein radius —
+  // the physically correct brightness, not equal-weighted copies. A
+  // strongly-demagnified counter-image falls below INVISIBILITY_THRESHOLD
+  // below and is culled, saving the fragment work.
   let intensity = clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0)
     * u.brightness
     * vMaxAlpha
@@ -231,7 +302,8 @@ fn vs(
     * angularMult
     * depthFadeMult
     * crossfadeOut
-    * focusMult;
+    * focusMult
+    * lensMu;
 
   // Bake the K-corrected ramp colour, the magenta highlight, and the
   // intensity scalar straight into out.shaded.rgb. .w carries safeAB —

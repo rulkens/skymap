@@ -11,43 +11,14 @@
  * re-spelled here.  Each slider owns its `max`; a new debug knob is one registry row.
  *
  * Idiom: a default-closed `<details>` with inline monospace styles (no
- * `.module.css`), matching the other DebugPanel sections.  A local `Slider`
- * component DRYs the labelled rows.
+ * `.module.css`), matching the other DebugPanel sections.  The shared
+ * `DebugSlider` component DRYs the labelled rows.
  */
 
 import type { ReactElement } from 'react';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import { DebugSlider } from './DebugSlider';
 import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flow/flowFields';
-
-type SliderProps = {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  /** Pre-formatted value readout (e.g. `toFixed(3)` or an integer string). */
-  readout: string;
-  onChange: (v: number) => void;
-};
-
-function Slider({ label, value, min, max, step, readout, onChange }: SliderProps): ReactElement {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-      <span style={{ flex: '0 0 90px' }}>{label}</span>
-      <span style={{ flex: '0 0 52px', textAlign: 'right', opacity: 0.8 }}>{readout}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        aria-label={label}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ flex: '1 1 auto' }}
-      />
-    </div>
-  );
-}
 
 export type FlowTuningSectionProps = {
   flow: FlowSettings;
@@ -63,7 +34,7 @@ export function FlowTuningSection({ flow, onChange }: FlowTuningSectionProps): R
       <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>Flow tuning</summary>
       <div style={{ marginTop: 4 }}>
         {DEBUG_SLIDERS.map((f) => (
-          <Slider
+          <DebugSlider
             key={f.key}
             label={f.label}
             value={flow[f.key]}

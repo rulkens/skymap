@@ -1,9 +1,17 @@
 /**
  * packPointUniforms — pure packer for the 176-byte `Uniforms` struct.
  *
- * Single source of truth for the visual-pass byte layout.  Both the point
- * renderer's `draw()` and (via the returned buffer) the pick renderer's
- * per-frame snapshot call this function so their packing never drifts.
+ * Single source of truth for the visual-pass byte layout (camera prefix,
+ * points appearance, Malmquist-bias state, procedural-disk crossfade band,
+ * pickPass flag).  Both the point renderer's `draw()` and (via the returned
+ * buffer) the pick renderer's per-frame snapshot call this function so their
+ * packing never drifts.
+ *
+ * Gravitational-lensing lens data is NOT here: it rides in its own shared
+ * `LensingUniforms` buffer (`packLensingUniforms` packs it), bound via the
+ * scene group at @group(3) @binding(1) by the points + pick pipelines — so
+ * a second pipeline can bind the same lens data without re-packing the whole
+ * points uniform.
  *
  * Why a separate module rather than an inner function in `pointRenderer.ts`?
  * The pick renderer needs to pack a fresh buffer *without* touching the
@@ -31,10 +39,11 @@ import type { PointDrawSettings } from '../../@types/rendering/PointDrawSettings
  * `pointRenderer.ts` re-exports this so existing call-sites that already
  * import from `pointRenderer` don't need a new import path.
  *
- * 176 = (16 + 4 + 4 + 4 + 4 + 8 + 4) × 4 bytes.  See the `UNIFORM_BYTES`
- * docblock in `pointRenderer.ts` for the full slot-by-slot layout.
+ * 176 bytes of camera / points / bias / procedural-disk-fade layout — a
+ * multiple of 16.  See the `UNIFORM_BYTES` docblock in `pointRenderer.ts`
+ * for the full slot-by-slot layout.
  */
-export const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; // 176 bytes
+export const UNIFORM_BYTES = 176;
 
 /**
  * Allocate and pack a `Uniforms` buffer for the visual point-sprite pass.

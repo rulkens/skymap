@@ -70,14 +70,14 @@ function makeStubInit() {
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
-      focusBgl: {} as unknown as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
+      sceneBgl: {} as unknown as import('../../../../src/@types/rendering/SceneUniformsBgl').SceneUniformsBgl,
     },
     writeBufferCalls,
   };
 }
 
 // Stub shared focus bind group passed into draw() — only bound, never read.
-const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
+const SCENE_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 function fakeProceduralInstance(overrides: Partial<ProceduralDiskInstance> = {}): ProceduralDiskInstance {
   return {
@@ -116,7 +116,7 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
       fakeProceduralInstance({ sourceCode: 3, localIdx: 1_000_000 }),
     ];
 
-    renderer.draw(pass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, instances);
+    renderer.draw(pass, new Float32Array(16), [800, 600], [0, 0, 0], 100, SCENE_BIND_GROUP, instances);
 
     // Visual instance payload is always writeBufferCalls[1] (uniforms first,
     // visual instances second, pick mirror third).
@@ -146,7 +146,7 @@ describe('proceduralDiskRenderer pack loop (Task R1)', () => {
       fakeProceduralInstance({ x: 40, y: 50, z: 60 }),
     ];
 
-    renderer.draw(pass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, instances);
+    renderer.draw(pass, new Float32Array(16), [800, 600], [0, 0, 0], 100, SCENE_BIND_GROUP, instances);
 
     // draw emits three writeBuffer calls per frame: uniforms first, then
     // the visual instance payload, then the pick instance buffer mirror.

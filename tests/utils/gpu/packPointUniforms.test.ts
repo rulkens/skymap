@@ -40,9 +40,9 @@ const VIEWPORT_PX: readonly [number, number] = [1920, 1080];
 // confirm the real value passes through unmodified.
 const SELECTED_PACKED = ((3 << 27) | 42) >>> 0;
 
-// Stub GPUBindGroup for focusBindGroup — packPointUniforms doesn't touch it,
+// Stub GPUBindGroup for sceneBindGroup — packPointUniforms doesn't touch it,
 // but PointDrawSettings requires the field.
-const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
+const SCENE_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 const SETTINGS: PointDrawSettings = {
   pointSizePx: 2.5,
@@ -58,11 +58,16 @@ const SETTINGS: PointDrawSettings = {
   depthFadeEnabled: true,
   pxFadeStart: 4,
   pxFadeEnd: 8,
-  focusBindGroup: FOCUS_BIND_GROUP,
+  sceneBindGroup: SCENE_BIND_GROUP,
   // packPointUniforms does not call this; fadeOpacityOf is a per-draw-loop
   // concern owned by the renderer.  The pure packer receives the settings
   // shape, not the render loop.
   fadeOpacityOf: () => 1,
+  // Gravitational lensing now rides in its own shared LensingUniforms buffer
+  // (see packLensingUniforms), so the points uniform carries only the
+  // lensEnabled / lensMode CPU gate — not the lens array / scale radius.
+  lensEnabled: false,
+  lensMode: 'sis',
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

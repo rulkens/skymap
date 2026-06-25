@@ -116,6 +116,12 @@ Diagnosed but unplanned. Captured here so they don't get lost; promote to a spec
   - Plus the structure-category-identity sites enumerated in the DRY item above (source code, pick decode, marker buckets, visibility defaults, focus framing, marker style, `POI_CATEGORY_INFO`).
 
   The checklist is the deliverable; the skill is the home for it. Pairs with the `STRUCTURE_CATEGORY_META` consolidation (a `meta`-derived category set would let several of these checklist items become compile-time-enforced rather than prose).
+- **Gravitational lensing is ~50% slower than the default points pipeline** — diagnosed 2026-06-24 on `feat/gravitational-lensing`. The points pass is vertex/primitive-bound (~2.5M tiny billboards). Lensing-on widens every draw from 6→12 verts (`pointRenderer.ts:766`, primary + counter image) AND runs the per-vertex lens loop (`lensedPosition`, `lib/lensing.wesl:401`, up to `MAX_LENSES=16` clusters with `acos`/`sqrt`/`normalize`/`exp` each) on **all** ~30M invocations — yet a counter image forms for only a handful of points (Einstein radii are arcseconds). Collapsed counter verts early-out at `vertex.wesl:192` *after* paying the loop, so the loop is the bulk of the cost. **Ranked fixes:**
+  - **R3 (folded into the physical-cluster-lensing plan)** — precompute per-lens eye-relative `dirLens` + `dL` CPU-side into the lens uniform (rides the layout change that plan already makes), so `lensTerm` drops a per-vertex subtract + `length` + `normalize`.
+  - **R2 (cheap, separable)** — broad-phase cone reject in `lensTerm`: one `dot(dirSrc, dirLens)` test against a precomputed per-lens angular reach, `continue` before the `acos`/`exp`/`normalize`. Turns ~all 30M loop iterations into a dot + branch.
+  - **R4 (free guard)** — `verticesPerPoint = (lensEnabled && lensCountInView > 0) ? 12 : 6`; set `lensing.enabled = 0` when no cluster is in front of the camera, so "lensing on but looking away from every cluster" costs ~baseline.
+  - **R1 (bigger, only if R2/R3/R4 fall short)** — compute pre-pass builds a compact lensed-points list, then `drawIndirect` the counter quad for only those (~hundreds). Removes the 2× vertex count entirely; first GPU compute pass in the renderer (real infra).
+  - **Measure first:** two one-line A/B probes pin the dominant cost — (1) force `verticesPerPoint = 6` with lensing on (isolates counter geometry); (2) force `lensing.count = 0` with 12 verts (isolates the loop). Prediction from the code: probe (2) recovers most of it ⇒ R2/R3 are the high-leverage fixes.
 
 ---
 

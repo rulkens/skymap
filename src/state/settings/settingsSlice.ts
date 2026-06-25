@@ -38,6 +38,7 @@ import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCata
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
+import type { LensMode } from '../../@types/settings/LensMode';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 
@@ -158,6 +159,15 @@ const settingsSlice = createSlice({
       // Open-world membership record (any pass name): `[name] === true` disables.
       settings.debug.disabledPasses[action.payload.pass] = action.payload.disabled;
     },
+    setLensingEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.debug.lensingEnabled = action.payload;
+    },
+    setLensStrength: (settings, action: PayloadAction<number>) => {
+      settings.debug.lensStrength = action.payload;
+    },
+    setLensMode: (settings, action: PayloadAction<LensMode>) => {
+      settings.debug.lensMode = action.payload;
+    },
 
     // ── structures ──────────────────────────────────────────────────────────
     setStructureItemEnabled: (
@@ -211,6 +221,9 @@ export const {
   setShowPickBuffer,
   setShowDiskRadiusRing,
   setPassDisabled,
+  setLensingEnabled,
+  setLensStrength,
+  setLensMode,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,

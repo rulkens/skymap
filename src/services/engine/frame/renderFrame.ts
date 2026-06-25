@@ -76,6 +76,8 @@ import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import { encodeHdrSingle } from './encodeHdrSingle';
 import { encodeHdrSplit } from './encodeHdrSplit';
 import { encodeUiOverlay } from './encodeUiOverlay';
+import { buildClusterLenses } from '../../../utils/lensing/buildClusterLenses';
+import { MAX_LENSES } from '../../../utils/gpu/packLensingUniforms';
 
 /**
  * Encode and submit one frame's worth of HDR + tone-map work.
@@ -128,6 +130,35 @@ export function renderFrame(input: RenderFrameInput): void {
   // blend=0 at rest makes the per-vertex multiplier a no-op.
   // ctx.focus is the per-frame FocusUniformsValue derived in deriveFrameContext.
   state.gpu.focusUniform?.write(ctx.focus);
+
+  // Write the single shared gravitational-lensing uniform once per frame,
+  // before the points pass (and the later pick submit) reads it at
+  // @group(3) @binding(1) (co-hosted with cluster focus). The lenses are
+  // built here — not in pointSpritesPass — so both the visual pass and the
+  // pick pass replay the SAME lenses from one shared buffer.
+  //
+  // buildClusterLenses receives the dimensionless lensStrength multiplier and
+  // the camera position + target it needs to precompute each lens's
+  // eye-relative geometry (dirLens + dL) internally. Each lens carries its
+  // own physical Einstein radius (derived from R500) and its own r_s; there
+  // is no global scale-radius write. Clusters behind the camera are culled;
+  // the count is capped at MAX_LENSES; the array is empty when the toggle is
+  // off or strength is zero, keeping the per-vertex shader cost gated.
+  const lensEnabled = state.settings.debug.lensingEnabled;
+  const lenses = lensEnabled
+    ? buildClusterLenses(
+        state.data.structures.all(),
+        ctx.drawCamPos,
+        ctx.cam.target,
+        state.settings.debug.lensStrength,
+        MAX_LENSES,
+      )
+    : [];
+  state.gpu.lensingUniform?.write({
+    enabled: lensEnabled,
+    lenses,
+    mode: state.settings.debug.lensMode,
+  });
 
   // ── Encoder + HDR rendering ───────────────────────────────────────
   //

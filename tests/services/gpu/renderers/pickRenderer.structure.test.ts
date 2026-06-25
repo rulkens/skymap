@@ -1,8 +1,9 @@
 /**
  * pickRenderer.structure.test — type-level contract that `createPickRenderer`
  * keeps `structureMarkerRenderer` as its OPTIONAL tail positional argument
- * (the 6th, index 5, after the required `focusBgl` at index 3 and the
- * required shared `focusBindGroup` at index 4).
+ * (index 5, after the required device/fadeBgl/sourceBgl/sceneBgl at 0..3 and
+ * the shared `sceneBindGroup` (index 4) — which carries both cluster focus
+ * and the gravitational-lensing buffer at @group(3)).
  *
  * Why type-only rather than a GPU integration test? The pick pass needs
  * a live `GPUDevice` plus a constructed `StructureMarkerRenderer` to exercise
@@ -10,10 +11,6 @@
  * down is the signature shape: dropping the optional marker, making it
  * required, or reordering positional args breaks the type assertions below
  * at type-check time (vitest runs tsc).
- *
- * Note: `pointRenderer` was removed from position 1 in Task 4 (the pick
- * renderer now owns its own uniform buffer), shifting the optional tail
- * params down by one index each.
  */
 
 import { describe, it, expect } from 'vitest';

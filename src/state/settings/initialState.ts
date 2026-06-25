@@ -24,6 +24,9 @@ import {
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
+  DEFAULT_LENSING_ENABLED,
+  DEFAULT_LENS_STRENGTH,
+  DEFAULT_LENS_MODE,
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -101,6 +104,9 @@ export function buildInitialSettings(): EngineSettingsState {
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},
+      lensingEnabled: DEFAULT_LENSING_ENABLED,
+      lensStrength: DEFAULT_LENS_STRENGTH,
+      lensMode: DEFAULT_LENS_MODE,
     },
     // Structure overlay: master gate on + one item row per category, each
     // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`

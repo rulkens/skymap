@@ -61,8 +61,11 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
-import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
+import type { SceneUniformsBgl } from '../../rendering/SceneUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
+import type { LensingUniformsBgl } from '../../rendering/LensingUniformsBgl';
+import type { LensingUniformBuffer } from '../../rendering/LensingUniformBuffer';
+import type { NfwLensLutTexture } from '../../rendering/NfwLensLutTexture';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -92,23 +95,60 @@ export type EngineGpuHandles = {
    */
   sourceBgl: SourceUniformsBgl | null;
   /**
-   * Canonical FocusUniforms bind-group layout. Constructed once in
-   * `initGpu` and shared by every pipeline that renders the cluster-focus
-   * dim — points (@group(3)), the impostor disks (@group(1)), and the
-   * pick pass. Null until `initGpu` resolves.
+   * Canonical scene-state (SceneUniforms) bind-group layout — cluster focus +
+   * lensing, the per-frame global galaxy modifiers. Constructed once in
+   * `initGpu` and shared by every galaxy-rendering pipeline — points
+   * (@group(3)), the impostor disks (@group(1)), and the pick pass. Null until
+   * `initGpu` resolves.
    */
-  focusBgl: FocusUniformsBgl | null;
+  sceneBgl: SceneUniformsBgl | null;
   /**
-   * The single shared cluster-focus uniform (buffer + bind group + packer).
-   * Only one structure is focused at a time, so one buffer serves the whole
-   * engine: written once per frame in `renderFrame`, and its bind group —
-   * built against `focusBgl` — is bound by every focus-aware pipeline at
-   * its own group slot (a bind group is tied to a layout, not a group
-   * number). The pick pass binds this same live buffer so non-members of a
-   * focused structure are excluded from hit-testing. Null until `initGpu`
-   * resolves; released and re-nulled by `destroy()`.
+   * The single shared cluster-focus uniform (buffer + packer). Only one
+   * structure is focused at a time, so one buffer serves the whole engine,
+   * written once per frame in `renderFrame`. The buffer fills binding 0 of the
+   * scene bind group below; the pick pass reads the same live buffer so
+   * non-members of a focused structure are excluded from hit-testing. Null
+   * until `initGpu` resolves; released and re-nulled by `destroy()`.
    */
   focusUniform: FocusUniformBuffer | null;
+  /**
+   * The single shared @group(3) scene-state bind group, assembled in `initGpu`
+   * by `createSceneBindGroup` from the focus buffer (binding 0) and the lensing
+   * buffer (binding 1). Bound by every galaxy-rendering pipeline at its own
+   * group slot — points (@group(3)), the impostor disks (@group(1)), and the
+   * pick pass — since a bind group is tied to a layout, not a group number.
+   * Null until `initGpu` resolves. (A bind group is not a destroyable resource;
+   * the buffers it references are released by their own factories.)
+   */
+  sceneBindGroup: GPUBindGroup | null;
+  /**
+   * Canonical standalone LensingUniforms bind-group layout, VERTEX|FRAGMENT.
+   * Constructed in `initGpu` and reserved for the volume raymarch (a later
+   * phase), which reads the lens array in its fragment stage. Points + pick do
+   * NOT bind this layout — they read the same lensing buffer via the scene
+   * group (binding 1) in their vertex stage. Null until `initGpu` resolves.
+   */
+  lensingBgl: LensingUniformsBgl | null;
+  /**
+   * The single shared gravitational-lensing uniform (buffer + packer). One lens
+   * set is active per frame, so one buffer serves the whole engine, written
+   * once per frame in `renderFrame`. The buffer fills binding 1 of the scene
+   * bind group (read by points + pick); the same buffer also fills the
+   * standalone `lensingBgl` group reserved for the volume raymarch. Null until
+   * `initGpu` resolves; released and re-nulled by `destroy()`.
+   */
+  lensingUniform: LensingUniformBuffer | null;
+  /**
+   * Precomputed inverse-NFW-lens LUT texture (rgba16float, 256 × 64). Built
+   * once in `initGpu` from `buildNfwLensLut` + `createNfwLensLutTexture`. The
+   * view + sampler fill bindings 2 and 3 of the shared scene bind group; the
+   * vertex stage samples it to invert the NFW lens equation per galaxy without
+   * GPU-side root-finding. Null until `initGpu` resolves; released and re-nulled
+   * by `destroy()`. Destroying the texture does not invalidate the scene bind
+   * group (a view holds a strong reference to the texture), so teardown order
+   * vis-à-vis `sceneBindGroup` is flexible.
+   */
+  lensLutTexture: NfwLensLutTexture | null;
   /**
    * Combined HDR offscreen target + tone-map post-process.  One field
    * because their lifetimes are identical and they're always used

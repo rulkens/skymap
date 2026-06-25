@@ -104,7 +104,7 @@ describe('texturedDisksPass', () => {
     const disks = [{ x: 1 }];
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks } } },
-      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup } },
+      gpu: { sceneBindGroup: {} as GPUBindGroup },
     } as unknown as EngineState;
     const deps = makeDeps();
     texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, deps);

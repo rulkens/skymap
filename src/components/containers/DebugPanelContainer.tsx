@@ -28,6 +28,9 @@ import {
   selectHighlightFallback,
   selectRealOnly,
   selectFlow,
+  selectLensingEnabled,
+  selectLensMode,
+  selectLensStrength,
 } from '../../state/settings/selectors';
 import {
   setShowPickBuffer,
@@ -36,7 +39,11 @@ import {
   setRealOnly,
   setFlow,
   setPassDisabled,
+  setLensingEnabled,
+  setLensMode,
+  setLensStrength,
 } from '../../state/settings/settingsSlice';
+import type { LensMode } from '../../@types/settings/LensMode';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
@@ -60,6 +67,9 @@ function DebugPanelContainer({
   const highlightFallback = useAppSelector(selectHighlightFallback);
   const realOnlyMode = useAppSelector(selectRealOnly);
   const flow = useAppSelector(selectFlow);
+  const lensingEnabled = useAppSelector(selectLensingEnabled);
+  const lensMode = useAppSelector(selectLensMode);
+  const lensStrength = useAppSelector(selectLensStrength);
 
   const onShowPickBufferChange = useCallback(
     (enabled: boolean) => dispatch(setShowPickBuffer(enabled)),
@@ -86,6 +96,18 @@ function DebugPanelContainer({
     [dispatch],
   );
 
+  const onLensingEnabledChange = useCallback(
+    (enabled: boolean) => dispatch(setLensingEnabled(enabled)),
+    [dispatch],
+  );
+
+  const onLensModeChange = useCallback((mode: LensMode) => dispatch(setLensMode(mode)), [dispatch]);
+
+  const onLensStrengthChange = useCallback(
+    (strength: number) => dispatch(setLensStrength(strength)),
+    [dispatch],
+  );
+
   // Reads `disabledPasses[pass]` in its body — dep array includes `disabledPasses`
   // so the callback captures the current record on each store update.
   const onTogglePass = useCallback(
@@ -109,6 +131,12 @@ function DebugPanelContainer({
       onShowDiskRadiusRingChange={onShowDiskRadiusRingChange}
       flow={flow}
       onFlowChange={onFlowChange}
+      lensingEnabled={lensingEnabled}
+      lensMode={lensMode}
+      lensStrength={lensStrength}
+      onLensingEnabledChange={onLensingEnabledChange}
+      onLensModeChange={onLensModeChange}
+      onLensStrengthChange={onLensStrengthChange}
       onTogglePass={onTogglePass}
     />
   );

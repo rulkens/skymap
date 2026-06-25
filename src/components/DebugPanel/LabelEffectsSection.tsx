@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useState, type ReactElement } from 'react';
+import { DebugSlider } from './DebugSlider';
 import {
   setLabelStyleOverride,
   clearLabelStyleOverride,
@@ -73,28 +74,25 @@ export function LabelEffectsSection(): ReactElement {
         <label style={labelStyle}>
           <span style={{ width: 70 }}>Outline</span>
           <input type="color" value={outlineHex} onChange={(e) => setOutlineHex(e.target.value)} />
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={outlineAlpha}
-            onChange={(e) => setOutlineAlpha(parseFloat(e.target.value))}
-          />
-          <span style={{ width: 30 }}>{outlineAlpha.toFixed(2)}</span>
         </label>
-        <label style={labelStyle}>
-          <span style={{ width: 70 }}>Out width</span>
-          <input
-            type="range"
-            min={0}
-            max={0.28}
-            step={0.005}
-            value={outlineEmFrac}
-            onChange={(e) => setOutlineEmFrac(parseFloat(e.target.value))}
-          />
-          <span style={{ width: 40 }}>{outlineEmFrac.toFixed(3)}</span>
-        </label>
+        <DebugSlider
+          label="Outline α"
+          value={outlineAlpha}
+          min={0}
+          max={1}
+          step={0.01}
+          readout={outlineAlpha.toFixed(2)}
+          onChange={(v) => setOutlineAlpha(v)}
+        />
+        <DebugSlider
+          label="Out width"
+          value={outlineEmFrac}
+          min={0}
+          max={0.28}
+          step={0.005}
+          readout={outlineEmFrac.toFixed(3)}
+          onChange={(v) => setOutlineEmFrac(v)}
+        />
       </div>
     </details>
   );

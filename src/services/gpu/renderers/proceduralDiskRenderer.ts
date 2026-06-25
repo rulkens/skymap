@@ -42,7 +42,7 @@ import type { ProceduralDiskInstance } from '../../../@types/rendering/Procedura
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import type { SceneUniformsBgl } from '../../../@types/rendering/SceneUniformsBgl';
 import { FLOATS_PER_INSTANCE, BYTES_PER_INSTANCE, UNIFORM_BYTES, createInstancedQuadRenderer } from './instancedQuadRenderer';
 import { packSelection } from '../../../data/selectionEncoding';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -53,7 +53,7 @@ type Init = {
   format: GPUTextureFormat;
   canvas: HTMLCanvasElement;
   /** Shared cluster-focus layout, bound at @group(1) — see instancedQuadRenderer. */
-  focusBgl: FocusUniformsBgl;
+  sceneBgl: SceneUniformsBgl;
 };
 
 export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer {
@@ -64,7 +64,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     // No atlas — the procedural fragment shader generates the
     // brightness profile from scratch.
     capacity: { kind: 'grow' },
-    focusBgl: init.focusBgl,
+    sceneBgl: init.sceneBgl,
     // Procedural disks are EMISSIVE; same rationale as quad/disk.
     blend: 'additive',
     format: init.format,
@@ -88,7 +88,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
   //               `uniformVisibility` flag passed to the visual pipeline
   //               above (see the module-header rationale for widening to
   //               FRAGMENT even though the vertex stage is the only reader).
-  //   @group(1) — focusBgl (shared with the visual pipeline; identical
+  //   @group(1) — sceneBgl (shared with the visual pipeline; identical
   //               layout identity).
   //
   // The vertex source is the SAME 'vertex.wesl' the visual pipeline uses
@@ -137,7 +137,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     label: 'proceduralDisks-pick-pipeline',
     layout: init.device.createPipelineLayout({
       label: 'proceduralDisks-pick-pipeline-layout',
-      bindGroupLayouts: [pickCameraBgl, init.focusBgl],
+      bindGroupLayouts: [pickCameraBgl, init.sceneBgl],
     }),
     vertex: {
       module: pickVsModule,
@@ -196,7 +196,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
   let cachedViewport: [number, number] = [0, 0];
   let cachedCamPosWorld: Readonly<Vec3> = [0, 0, 0];
   let cachedPxPerRad = 0;
-  let cachedFocusBindGroup: GPUBindGroup | null = null;
+  let cachedSceneBindGroup: GPUBindGroup | null = null;
 
   function draw(
     pass: GPURenderPassEncoder,
@@ -204,7 +204,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     viewport: [number, number],
     camPosWorld: Readonly<Vec3>,
     pxPerRad: number,
-    focusBindGroup: GPUBindGroup,
+    sceneBindGroup: GPUBindGroup,
     instances: ReadonlyArray<ProceduralDiskInstance>,
   ): void {
     if (instances.length === 0) {
@@ -263,7 +263,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       instanceCount: instances.length,
       camPosWorld,
       pxPerRad,
-      focusBindGroup,
+      sceneBindGroup,
     });
 
     // Cache camera state for pickDisks() — the pick pass runs after this
@@ -272,7 +272,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     cachedViewport = viewport;
     cachedCamPosWorld = camPosWorld;
     cachedPxPerRad = pxPerRad;
-    cachedFocusBindGroup = focusBindGroup;
+    cachedSceneBindGroup = sceneBindGroup;
 
     // ── Pick instance buffer (mirror of the visual upload) ─────────────
     //
@@ -302,7 +302,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     // No-op until draw() has uploaded at least one instance this frame
     // (so we have live camera values + a populated pick instance buffer).
     if (lastPickInstanceCount === 0 || pickInstanceBuffer === null) return;
-    if (cachedFocusBindGroup === null) return;
+    if (cachedSceneBindGroup === null) return;
 
     // Write the pick uniform buffer with this frame's camera values.
     // Same 96-byte layout as the visual pipeline's uniformScratch:
@@ -325,7 +325,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     // @group(1): shared focus uniform. Shared depth state means a closer
     // point dot or disk claims the pixel; the disk and its companion point
     // carry the SAME packed id, so overlap is harmless.
-    pass.setBindGroup(1, cachedFocusBindGroup);
+    pass.setBindGroup(1, cachedSceneBindGroup);
     pass.setVertexBuffer(0, pickInstanceBuffer);
     pass.draw(6, lastPickInstanceCount);
   }
