@@ -8,7 +8,7 @@
  * full watcher set:
  *   watchTier, watchWake, watchFlowReseed, watchBiasBake, watchFades,
  *   watchSelectionRows, watchSelectionWake, watchRequestFocus,
- *   watchFocusTween, watchTour.
+ *   watchFocusTween, watchTourSaga, watchClipSaga.
  */
 
 import { describe, it, expect } from 'vitest';

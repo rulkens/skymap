@@ -5,7 +5,7 @@
  * ### Why perpetual?
  *
  * The tour saga races `dwellDrift` against the beat's dwell timer inside
- * `visitBeat`. A clip that NEVER completes on its own always loses that race —
+ * `visitBeatSaga`. A clip that NEVER completes on its own always loses that race —
  * the timer fires first, the beat advances, and the clip is torn down. If
  * `dwellDrift` were finite it would WIN the race on short beats and advance the
  * tour prematurely. Perpetual-by-construction is the correctness invariant, not
@@ -19,17 +19,13 @@
  *
  * `beat` is accepted but unused — the dwell motion is intentionally
  * beat-independent. The parameter is kept for call-site symmetry with
- * `visitBeat`'s `dwellDrift(beat)` and to allow per-beat tuning in future
+ * `visitBeatSaga`'s `dwellDrift(beat)` and to allow per-beat tuning in future
  * without a signature change.
  */
 
 import type { BeatData } from '../../@types/tour/BeatData';
 import type { ClipData } from '../../@types/animation/ClipData';
-import {
-  fork,
-  oscillate,
-  spin,
-} from '../../services/engine/animation/effectHelpers';
+import { fork, oscillate, spin } from '../../services/engine/animation/effectHelpers';
 
 export function dwellDrift(_beat: BeatData): ClipData {
   return {

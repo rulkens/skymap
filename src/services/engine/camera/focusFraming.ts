@@ -6,7 +6,7 @@
  *
  * Two consumers need "given a resolved row and the lens FOV, where should the
  * camera point and how far back should it sit?": the focus tween (which builds
- * an animated descriptor) and the tour saga's visitBeat (which needs the target
+ * an animated descriptor) and the tour saga's visitBeatSaga (which needs the target
  * pose to build a fly clip). Duplicating the tagged-union framing switch across
  * both would be the decomplection smell the project forbids — a change to
  * structure-framing logic would require two edits instead of one. One shared

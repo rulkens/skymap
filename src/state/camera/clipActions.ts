@@ -1,7 +1,7 @@
 /**
  * clipActions — the request signals that drive single-clip playback from the UI.
  *
- * `playClip` asks the engine to play one Layer-1 clip; `clipSaga`'s watcher runs
+ * `playClip` asks the engine to play one Layer-1 clip; `watchClipSaga` runs
  * the clip-player seam (live-pose resolution + completion Promise) in response.
  * `stopClip` aborts the active clip.
  *

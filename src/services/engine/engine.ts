@@ -505,7 +505,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // seam: resolves the 'live' pose at dispatch time, attaches the [CANCEL] hook,
   // and returns a Promise that resolves on both natural end and cancellation.
   // The tour saga awaits this for the establishing fly and races it (as
-  // dwellDrift) against the dwell timer; `watchClip` runs it for a `playClip`
+  // dwellDrift) against the dwell timer; `watchClipSaga` runs it for a `playClip`
   // action (the dev panel's single-clip path).
   const playClip = createPlayClip({
     store,

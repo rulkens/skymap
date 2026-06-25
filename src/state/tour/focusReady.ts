@@ -18,7 +18,7 @@
  *     that as false so the saga polls until the cloud arrives.
  *
  * This is consumed by `waitUntil(() => focusReady(beat.focus, resolveDeps()))`
- * in `visitBeat`, which polls every POLL_MS milliseconds. The poll is cheap —
+ * in `visitBeatSaga`, which polls every POLL_MS milliseconds. The poll is cheap —
  * `extractSelectionRow` touches only the in-memory catalog map, not the GPU or
  * disk.
  */
