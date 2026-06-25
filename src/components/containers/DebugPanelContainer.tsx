@@ -47,9 +47,9 @@ import { startClip, stopClip } from '../../state/camera/clipActions';
 import { startTour } from '../../state/tour/tourActions';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
-import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { TourId } from '../../@types/animation/tour/TourId';
+import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 
 export type DebugPanelContainerProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
@@ -93,7 +93,7 @@ function DebugPanelContainer({
   );
 
   const onFlowChange = useCallback(
-    (patch: Partial<FlowSettings>) => dispatch(setFlow(patch)),
+    (patch: Partial<FlowFieldDefaults>) => dispatch(setFlow(patch)),
     [dispatch],
   );
 

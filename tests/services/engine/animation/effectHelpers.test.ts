@@ -277,7 +277,7 @@ describe('fade', () => {
 
 describe('scene', () => {
   it('emits kind:scene wrapping the action', () => {
-    const fakeAction = { type: 'settings/setFlow', payload: { enabled: true } } as any;
+    const fakeAction = { type: 'settings/setFlowEnabled', payload: true } as any;
     const e = scene(fakeAction);
     expect(e.kind).toBe('scene');
     expect(e.action).toBe(fakeAction);

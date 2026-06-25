@@ -7,10 +7,10 @@
  * matches `vitest.config.ts` `include` glob `tests/**\/*.test.ts`).
  *
  * Tests assert:
- *  - Toggling the header checkbox dispatches `setFlow({ enabled: true })` when
+ *  - Toggling the header checkbox dispatches `setFlowEnabled(true)` when
  *    the master is OFF; `selectFlow(store.getState()).enabled` reflects the new
  *    value.
- *  - Toggling the header checkbox dispatches `setFlow({ enabled: false })` when
+ *  - Toggling the header checkbox dispatches `setFlowEnabled(false)` when
  *    the master is ON; `selectFlow(store.getState()).enabled` reflects the new
  *    value.
  *
@@ -31,7 +31,7 @@ import { Provider } from 'react-redux';
 import FlowSectionContainer from '../../../src/components/containers/FlowSectionContainer';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { selectFlow } from '../../../src/state/settings/selectors';
-import { setFlow } from '../../../src/state/settings/settingsSlice';
+import { setFlowEnabled } from '../../../src/state/settings/settingsSlice';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
@@ -43,7 +43,7 @@ describe('FlowSectionContainer', () => {
     it('sets selectFlow(store.getState()).enabled to true when master is toggled from OFF', () => {
       const { store } = createAppStore();
       // Ensure master starts OFF.
-      store.dispatch(setFlow({ enabled: false }));
+      store.dispatch(setFlowEnabled(false));
 
       const { container } = render(createElement(FlowSectionContainer, null), {
         wrapper: makeWrapper(store),
@@ -63,7 +63,7 @@ describe('FlowSectionContainer', () => {
     it('sets selectFlow(store.getState()).enabled to false when master is toggled from ON', () => {
       const { store } = createAppStore();
       // Ensure master starts ON.
-      store.dispatch(setFlow({ enabled: true }));
+      store.dispatch(setFlowEnabled(true));
 
       const { container } = render(createElement(FlowSectionContainer, null), {
         wrapper: makeWrapper(store),

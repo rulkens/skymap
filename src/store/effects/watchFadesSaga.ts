@@ -25,7 +25,7 @@ import {
   setStructureLabelEnabled,
   writeVolumeField,
   setVolumesEnabled,
-  setFlow,
+  setFlowEnabled,
 } from '../../state/settings/settingsSlice';
 import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
 import type { ReconcileEffects } from './ReconcileEffects';
@@ -51,7 +51,7 @@ export const FADE_ROW: Partial<Record<string, VisibilityLayerKey>> = {
   [setStructureLabelEnabled.type]: 'structureLabel',
   [writeVolumeField.type]: 'volumeField',
   [setVolumesEnabled.type]: 'volumesMaster',
-  [setFlow.type]: 'flow',
+  [setFlowEnabled.type]: 'flow',
 };
 
 export function* watchFadesSaga() {

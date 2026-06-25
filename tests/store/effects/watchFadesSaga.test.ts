@@ -17,7 +17,7 @@ import { FADE_ROW } from '../../../src/store/effects/watchFadesSaga';
 import {
   setMilkyWayEnabled,
   writeVolumeField,
-  setFlow,
+  setFlowEnabled,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
   setFilamentsEnabled,
@@ -89,10 +89,10 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenNthCalledWith(2, ['volumeField']);
   });
 
-  // ── setFlow — fade fires for every setFlow regardless of payload ───────────
+  // ── setFlowEnabled — fade fires when the master gate flips ─────────────────
 
-  it('setFlow({enabled:true}) → syncFades(["flow"]) called', () => {
-    store.dispatch(setFlow({ enabled: true }));
+  it('setFlowEnabled(true) → syncFades(["flow"]) called', () => {
+    store.dispatch(setFlowEnabled(true));
 
     expect(reconcile.syncFades).toHaveBeenCalledWith(['flow']);
   });
@@ -113,7 +113,7 @@ describe('watchFadesSaga', () => {
       [setStructureLabelEnabled, 'structureLabel'],
       [writeVolumeField, 'volumeField'],
       [setVolumesEnabled, 'volumesMaster'],
-      [setFlow, 'flow'],
+      [setFlowEnabled, 'flow'],
     ];
 
     fadeRowTests.forEach(([actionCreator, expectedKey]) => {

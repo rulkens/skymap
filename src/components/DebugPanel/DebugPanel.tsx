@@ -31,6 +31,7 @@ import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService'
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { TourId } from '../../@types/animation/tour/TourId';
+import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
@@ -69,14 +70,16 @@ export type DebugPanelProps = {
   showDiskRadiusRing: boolean;
   onShowDiskRadiusRingChange: (enabled: boolean) => void;
   /**
-   * Flow overlay slice + its patch callback.  App-owned and optimistic, like
-   * the other DebugPanel toggles: `onFlowChange` applies a `Partial<FlowSettings>`
-   * to both the React mirror and the engine handle.  The dev-only motion knobs
-   * (count / trail / flowSpeed / densityBias / wander / edgeFade) live in
-   * FlowTuningSection, driven from the flow field registry.
+   * Flow overlay slice + its knob-patch callback.  App-owned and optimistic,
+   * like the other DebugPanel toggles: `onFlowChange` applies a
+   * `Partial<FlowFieldDefaults>` to both the React mirror and the engine handle.
+   * The dev-only motion knobs (count / trail / flowSpeed / densityBias / wander
+   * / edgeFade) live in FlowTuningSection, driven from the flow field registry.
+   * The master gate is not here — it rides the SettingsPanel header via
+   * `setFlowEnabled`.
    */
   flow: FlowSettings;
-  onFlowChange: (patch: Partial<FlowSettings>) => void;
+  onFlowChange: (patch: Partial<FlowFieldDefaults>) => void;
   /**
    * Called with the pass name when a RenderTogglesSection checkbox is toggled.
    * Container (DebugPanelContainer) dispatches `setPassDisabled`; absorbed here

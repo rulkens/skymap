@@ -8,7 +8,7 @@
  *
  * Tests cover:
  *  - Master toggle reflects `flow.enabled` (checked when true, unchecked when false).
- *  - Clicking the master toggle calls `onFlowChange({ enabled: <toggled> })`.
+ *  - Clicking the master toggle calls `onEnabledChange(<toggled>)`.
  *  - A FlowRow control change (mode button click) calls `onFlowChange` with the
  *    patched key.
  *
@@ -30,6 +30,7 @@ import { createElement } from 'react';
 import FlowSection from '../../../src/components/SettingsPanel/FlowSection';
 import type { FlowSectionProps } from '../../../src/components/SettingsPanel/FlowSection';
 import type { FlowSettings } from '../../../src/@types/settings/FlowSettings';
+import type { FlowFieldDefaults } from '../../../src/@types/data/flow/FlowFieldDefaults';
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
 
@@ -48,7 +49,8 @@ const BASE_FLOW: FlowSettings = {
 function baseProps(overrides?: Partial<FlowSectionProps>): FlowSectionProps {
   return {
     flow: BASE_FLOW,
-    onFlowChange: vi.fn<(patch: Partial<FlowSettings>) => void>(),
+    onEnabledChange: vi.fn<(enabled: boolean) => void>(),
+    onFlowChange: vi.fn<(patch: Partial<FlowFieldDefaults>) => void>(),
     ...overrides,
   };
 }
@@ -76,41 +78,41 @@ describe('FlowSection', () => {
     });
   });
 
-  describe('master toggle click calls onFlowChange', () => {
-    it('calls onFlowChange({ enabled: false }) when master is clicked while enabled=true', () => {
-      const onFlowChange = vi.fn<(patch: Partial<FlowSettings>) => void>();
+  describe('master toggle click calls onEnabledChange', () => {
+    it('calls onEnabledChange(false) when master is clicked while enabled=true', () => {
+      const onEnabledChange = vi.fn<(enabled: boolean) => void>();
       const { container } = render(
         createElement(
           FlowSection,
-          baseProps({ flow: { ...BASE_FLOW, enabled: true }, onFlowChange }),
+          baseProps({ flow: { ...BASE_FLOW, enabled: true }, onEnabledChange }),
         ),
       );
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
-      expect(onFlowChange).toHaveBeenCalledOnce();
-      expect(onFlowChange).toHaveBeenCalledWith({ enabled: false });
+      expect(onEnabledChange).toHaveBeenCalledOnce();
+      expect(onEnabledChange).toHaveBeenCalledWith(false);
     });
 
-    it('calls onFlowChange({ enabled: true }) when master is clicked while enabled=false', () => {
-      const onFlowChange = vi.fn<(patch: Partial<FlowSettings>) => void>();
+    it('calls onEnabledChange(true) when master is clicked while enabled=false', () => {
+      const onEnabledChange = vi.fn<(enabled: boolean) => void>();
       const { container } = render(
         createElement(
           FlowSection,
-          baseProps({ flow: { ...BASE_FLOW, enabled: false }, onFlowChange }),
+          baseProps({ flow: { ...BASE_FLOW, enabled: false }, onEnabledChange }),
         ),
       );
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
-      expect(onFlowChange).toHaveBeenCalledOnce();
-      expect(onFlowChange).toHaveBeenCalledWith({ enabled: true });
+      expect(onEnabledChange).toHaveBeenCalledOnce();
+      expect(onEnabledChange).toHaveBeenCalledWith(true);
     });
   });
 
   describe('FlowRow mode button click calls onFlowChange', () => {
     it('calls onFlowChange({ mode: "streamline" }) when the Streamline button is clicked', () => {
-      const onFlowChange = vi.fn<(patch: Partial<FlowSettings>) => void>();
+      const onFlowChange = vi.fn<(patch: Partial<FlowFieldDefaults>) => void>();
       // Start with mode='advect' so Streamline is not currently pressed.
       const { getByRole } = render(
         createElement(

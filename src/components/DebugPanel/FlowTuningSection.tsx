@@ -17,6 +17,7 @@
 
 import type { ReactElement } from 'react';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flow/flowFields';
 
 type SliderProps = {
@@ -51,7 +52,7 @@ function Slider({ label, value, min, max, step, readout, onChange }: SliderProps
 
 export type FlowTuningSectionProps = {
   flow: FlowSettings;
-  onChange: (patch: Partial<FlowSettings>) => void;
+  onChange: (patch: Partial<FlowFieldDefaults>) => void;
 };
 
 /** The flow knobs that surface in the dev panel. */
