@@ -1,29 +1,24 @@
-import type { Action } from '@reduxjs/toolkit';
-import type { SelectionRef } from '../../engine/SelectionRef';
+import type { ClipData } from '../ClipData';
 
 /**
- * BeatData — a single beat in a tour: a focus target, optional caption, dwell
- * time, and optional effects to dispatch.
+ * BeatData — a single beat in a tour: a clip to play, an optional caption
+ * shown during the dwell phase, and a dwell duration.
  *
- * `focus` is a SelectionRef (the codebase's authoritative selection identity),
- * null to clear the selection. The tour driver dispatches
- * updateSelectionFocus(SelectionRef) for non-null focus.
+ * `clip` is the full establishing-move animation for the beat. Focus lives
+ * INSIDE the clip as a `focus()` or `focusId()` cue — the beat has no
+ * separate focus field. Scene changes (visibility, settings) are expressed
+ * as tour-level `setup` actions or as in-clip `scene()` cues.
  *
- * `caption` renders in the UI overlay; null for no caption. Tour captions are
- * ephemeral — they live in the beat, not persisted to the store.
+ * `caption` renders in the UI overlay during the dwell phase; null for no
+ * caption. Captions are ephemeral — they live only for the beat's dwell and
+ * are cleared when the next beat begins.
  *
- * `dwellSec` is the auto-advance delay in seconds. Keyboard/gesture input can
- * interrupt early; timer expires to proceed to the next beat.
- *
- * `effects` are plain Redux actions dispatched verbatim by `put(e)` in the
- * tour saga — no applyIntent or applyEffect wrapper. This decouples the tour
- * beat definition from intent semantics: a beat author writes the action they
- * want the store to receive, and the tour driver passes it through. Subsystems
- * reading from the store see the effects appear as normal state mutations.
+ * `dwellSec` is the auto-advance delay in seconds after the clip completes.
+ * Keyboard or gesture input can interrupt early; the timer expiration proceeds
+ * to the next beat automatically.
  */
 export type BeatData = {
-  readonly focus: SelectionRef | null;
   readonly caption: string | null;
   readonly dwellSec: number;
-  readonly effects?: readonly Action[];
+  readonly clip: ClipData;
 };

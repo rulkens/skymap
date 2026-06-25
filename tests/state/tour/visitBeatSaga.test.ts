@@ -14,12 +14,13 @@
  * continuation fire and the saga advance past it. Where two async boundaries
  * occur in sequence, two consecutive `flush()` calls are needed.
  *
- * ### waitUntil and the focusReady predicate
+ * ### waitUntil and the clipFociReady predicate
  *
- * `waitUntil` polls via `delay(POLL_MS)`. In the "waits for focus data" test,
- * we use Vitest fake timers to advance past the poll delay without real-time
- * waits. All other tests keep focus immediately ready (narration or milkyWay
- * beats) so `waitUntil` exits on the first synchronous predicate check.
+ * `waitUntil` polls via `delay(POLL_MS)`. In the "waits until clip foci ready"
+ * test, we use Vitest fake timers to advance past the poll delay without
+ * real-time waits. All other tests use clips whose foci are immediately
+ * resolvable (structure or milkyWay ids) so `waitUntil` exits on the first
+ * synchronous predicate check.
  *
  * ### The drift race and CANCEL
  *
@@ -37,12 +38,13 @@ import { CANCEL } from '@redux-saga/core';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
 import { advanceTour } from '../../../src/state/tour/tourActions';
-import { setFlow } from '../../../src/state/settings/settingsSlice';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { FocusCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
+import { focusId } from '../../../src/utils/animation/focusId';
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the drift Promise stub.
@@ -50,15 +52,34 @@ const CANCEL_SYM = CANCEL as unknown as symbol;
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-// ─── Stubs ──────────────────────────────────────────────────────────────────
+/**
+ * collectTimelineNodes — recursively walks a clip's timeline tree and collects
+ * all Effect nodes (seq/all/fork/leaf). Traverses seq.children, all.children,
+ * and fork.child depth-first, calling mapFn for each node.
+ */
+function collectTimelineNodes<T>(
+  effects: ClipData['timeline'],
+  mapFn: (effect: (typeof effects)[0]) => T,
+): T[] {
+  const results: T[] = [];
+  for (const e of effects) {
+    results.push(mapFn(e));
+    if (e.kind === 'seq' || e.kind === 'all')
+      results.push(...collectTimelineNodes(e.children, mapFn));
+    else if (e.kind === 'fork') results.push(...collectTimelineNodes([e.child], mapFn));
+  }
+  return results;
+}
+
+// ─── Stubs ───────────────────────────────────────────────────────────────────
 
 const CAMERA_RUNTIME: FocusCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
 };
 
-// Deps that make all refs immediately resolvable (structures/milkyWay).
-const immediateDeps: ResolveDeps = {
+// Structure resolved by id immediately — no catalog needed.
+const STRUCTURE_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
   structures: {
@@ -68,7 +89,7 @@ const immediateDeps: ResolveDeps = {
         id,
         name: 'Test Structure',
         category: 'cluster',
-        worldPos: [1, 2, 3],
+        worldPos: [1, 2, 3] as [number, number, number],
         physicalRadiusMpc: 1,
         apparentRadiusMpc: 2,
         featured: true,
@@ -76,17 +97,21 @@ const immediateDeps: ResolveDeps = {
   },
 };
 
-// ─── Beat fixtures ──────────────────────────────────────────────────────────
+// ─── Beat fixtures ───────────────────────────────────────────────────────────
 
-const milkyWayBeat: BeatData = { focus: { type: 'milkyWay' }, caption: 'Our galaxy', dwellSec: 5 };
-const narrationBeat: BeatData = { focus: null, caption: 'Narration', dwellSec: 4 };
-const galaxyBeat: BeatData = {
-  focus: { type: 'galaxyCatalog', source: 0, index: 0 },
-  caption: 'Galaxy',
-  dwellSec: 3,
-};
+// A clip with a milkyWay focus id — resolves immediately without catalog data.
+const milkyWayClip: ClipData = flyAndFocusOnClip(focusId('milkyWay'));
+const milkyWayBeat: BeatData = { clip: milkyWayClip, caption: 'Our galaxy', dwellSec: 5 };
 
-// ─── Harness ─────────────────────────────────────────────────────────────────
+// A clip with no focus ids — trivially ready.
+const narrationClip: ClipData = { start: 'live', timeline: [] };
+const narrationBeat: BeatData = { clip: narrationClip, caption: 'Narration', dwellSec: 4 };
+
+// A clip with a structure focus id — resolves immediately (structures are always in deps).
+const structureClip: ClipData = flyAndFocusOnClip(focusId('cluster-virgo'));
+const structureBeat: BeatData = { clip: structureClip, caption: 'Virgo Cluster', dwellSec: 3 };
+
+// ─── Harness ────────────────────────────────────────────────────────────────
 
 type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 
@@ -104,7 +129,7 @@ function buildStore(opts: {
   const playClipFn: PlayClipStub =
     opts.playClip ??
     (vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined) as PlayClipStub);
-  const deps = opts.resolveDeps ?? immediateDeps;
+  const deps = opts.resolveDeps ?? STRUCTURE_DEPS;
   const cam = opts.cameraRuntime !== undefined ? opts.cameraRuntime : CAMERA_RUNTIME;
 
   sagaMiddleware.setContext({
@@ -127,14 +152,18 @@ describe('visitBeatSaga', () => {
     vi.useRealTimers();
   });
 
-  // ── (1) waits for focus data before flying ────────────────────────────────
+  // ── (1) waits until clip foci are ready AND camera runtime is non-null ────
 
-  it('visitBeatSaga waits for focus data before flying', async () => {
+  it('visitBeatSaga waits until clip foci are ready and camera runtime is non-null before playing', async () => {
     vi.useFakeTimers();
 
     let cloudLoaded = false;
+    let runtimeReady = false;
 
-    // Minimal single-row cloud stub shaped like a real GalaxyCatalog.
+    // A famous-id clip — requires the famous cloud to be loaded.
+    // We stub famousMeta with one entry whose id matches the clip.
+    const FAMOUS_ID = 'm87';
+    // Minimal single-row cloud shaped like a real GalaxyCatalog.
     const CLOUD: GalaxyCatalog = {
       count: 1,
       positions: new Float32Array([1, 0, 0]),
@@ -152,38 +181,96 @@ describe('visitBeatSaga', () => {
       parentSurveyByte: new Uint8Array([0]),
     } as unknown as GalaxyCatalog;
 
+    // resolveFamous calls deps.catalogs.get(Source.FamousGalaxy); return the
+    // cloud when loaded, undefined otherwise to simulate a lazy load.
     const lazyDeps: ResolveDeps = {
-      catalogs: { get: () => (cloudLoaded ? CLOUD : undefined) },
-      famousMeta: [],
+      catalogs: {
+        get: (_source) => {
+          return cloudLoaded ? CLOUD : undefined;
+        },
+      },
+      famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 } as never],
       structures: { byId: () => null },
     };
 
+    const famousClip: ClipData = flyAndFocusOnClip(focusId(FAMOUS_ID));
+    const famousBeat: BeatData = { clip: famousClip, caption: 'M87', dwellSec: 3 };
+
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
-    const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: lazyDeps });
+    const { sagaMiddleware } = buildStore({
+      playClip: playClipMock,
+      resolveDeps: lazyDeps,
+      cameraRuntime: runtimeReady ? CAMERA_RUNTIME : null,
+    });
 
-    sagaMiddleware.run(visitBeatSaga, galaxyBeat);
+    // Runtime is also dynamic — swap it in after sagaMiddleware.setContext.
+    // We need to control cameraRuntime as a closure, so override the context:
+    let currentRuntime: FocusCameraRuntime | null = null;
+    // NOTE: redux-saga's setContext overwrites all keys; must include resolveDeps, cameraRuntime, and playClip.
+    sagaMiddleware.setContext({
+      resolveDeps: () => lazyDeps,
+      cameraRuntime: () => currentRuntime,
+      playClip: (clip: ClipData) => playClipMock(clip),
+    });
 
-    // Cloud not loaded — saga is blocked in waitUntil.
+    sagaMiddleware.run(visitBeatSaga, famousBeat);
+
+    // Cloud not loaded, runtime null — saga blocked in waitUntil.
     await vi.advanceTimersByTimeAsync(200);
     expect(playClipMock).not.toHaveBeenCalled();
 
-    // Cloud now arrives.
+    // Cloud arrives but runtime still null.
     cloudLoaded = true;
+    await vi.advanceTimersByTimeAsync(200);
+    expect(playClipMock).not.toHaveBeenCalled();
+
+    // Runtime arrives — both conditions satisfied.
+    currentRuntime = CAMERA_RUNTIME;
     await vi.runAllTimersAsync();
 
-    // After a poll succeeds, the saga proceeds to call playClip.
+    // After both conditions satisfied, saga proceeds to call playClip.
     expect(playClipMock).toHaveBeenCalled();
   });
 
-  // ── (2) awaits the fly clip before arming advance ─────────────────────────
+  // ── (2) passes the resolved clip to playClip ──────────────────────────────
 
-  it('visitBeatSaga awaits the fly clip before arming advance', async () => {
+  it('visitBeatSaga passes the resolved clip to playClip', async () => {
+    // structureBeat uses flyAndFocusOnClip('cluster-virgo') which contains
+    // moveTargetId, dollyToId, and focusId cues. After resolveClipFoci runs,
+    // those must be replaced with setVec, set, and focus arms respectively.
+    const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
+    const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: STRUCTURE_DEPS });
+
+    sagaMiddleware.run(visitBeatSaga, structureBeat);
+
+    await flush();
+    await flush();
+
+    // playClip should have been called — first call is the establishing clip.
+    expect(playClipMock).toHaveBeenCalled();
+    const resolvedClip = playClipMock.mock.calls[0]![0];
+
+    // Walk the resolved clip's timeline and assert no unresolved id-bearing cues remain.
+    const kinds = collectTimelineNodes(resolvedClip.timeline, (e) => e.kind);
+    // No id-bearing kinds should remain after resolution.
+    expect(kinds).not.toContain('moveTargetId');
+    expect(kinds).not.toContain('dollyToId');
+    expect(kinds).not.toContain('focusId');
+    // Concrete resolved forms should be present.
+    expect(kinds).toContain('setVec'); // resolved moveTargetId → setVec
+    expect(kinds).toContain('set'); // resolved dollyToId → set
+    expect(kinds).toContain('focus'); // resolved focusId → focus
+  });
+
+  // ── (3) awaits the fly clip before showing the caption ───────────────────
+
+  it('visitBeatSaga awaits the fly clip before showing the caption', async () => {
     let resolveFly!: () => void;
     const flyPromise = new Promise<void>((res) => {
       resolveFly = res;
     });
 
-    // First call = establishing fly (held); second call = dwell drift (resolves).
+    // First call = establishing clip (held); second call = dwell drift (blocks).
     let callCount = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
       callCount++;
@@ -194,12 +281,12 @@ describe('visitBeatSaga', () => {
 
     sagaMiddleware.run(visitBeatSaga, milkyWayBeat);
 
-    await flush(); // saga runs to the fly call and awaits
+    await flush(); // saga runs to the clip call and awaits
 
-    // Caption not shown yet — we're still in the fly.
+    // Caption not shown yet — we're still in the clip.
     expect(store.getState().ui.caption).toBeNull();
 
-    // Dispatch advanceTour during the fly — must have no effect (fly not done).
+    // Dispatch advanceTour during the clip — must have no effect (clip not done).
     store.dispatch(advanceTour());
     await flush();
 
@@ -209,41 +296,16 @@ describe('visitBeatSaga', () => {
     // Resolve the fly.
     resolveFly();
     await flush();
-    await flush(); // post-fly effects + showCaption
+    await flush(); // post-clip effects + showCaption
 
-    // Caption now visible — the saga proceeded after the fly resolved.
+    // Caption now visible — the saga proceeded after the clip resolved.
     expect(store.getState().ui.caption).toBe(milkyWayBeat.caption);
   });
 
-  // ── (3) puts each effect verbatim ────────────────────────────────────────
+  // ── (4) shows then clears the caption ────────────────────────────────────
 
-  it('visitBeatSaga puts each effect verbatim (no wrapper)', async () => {
-    const effectAction = setFlow({ enabled: true });
-    const beatWithEffect: BeatData = {
-      focus: null,
-      caption: 'With effect',
-      dwellSec: 30,
-      effects: [effectAction],
-    };
-
-    // Both fly and drift resolve immediately; the saga dwell will be long but
-    // effects fire before the dwell race starts.
-    const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
-    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
-
-    sagaMiddleware.run(visitBeatSaga, beatWithEffect);
-
-    await flush();
-    await flush();
-
-    // The setFlow effect must have been dispatched verbatim.
-    expect(store.getState().settings.flow.enabled).toBe(true);
-  });
-
-  // ── (4) puts showCaption then clears it ───────────────────────────────────
-
-  it('visitBeatSaga puts showCaption then clears it', async () => {
-    // Fly resolves; drift blocks so advanceTour drives the race.
+  it('visitBeatSaga shows then clears the caption', async () => {
+    // Clip resolves; drift blocks so advanceTour drives the race.
     let callCount = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
       callCount++;
@@ -270,7 +332,7 @@ describe('visitBeatSaga', () => {
   it('advanceTour wins the dwell race and cancels dwellDrift', async () => {
     let cancelCalled = false;
 
-    // Fly resolves immediately. Drift returns a never-resolving Promise with a
+    // Clip resolves immediately. Drift returns a never-resolving Promise with a
     // [CANCEL] hook so we can assert that redux-saga fires cancellation.
     let callCount = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -301,7 +363,7 @@ describe('visitBeatSaga', () => {
     expect(store.getState().ui.caption).toBeNull();
   });
 
-  // ── (6) dwell timeout auto-advances when no click arrives ────────────────
+  // ── (6) the dwell timeout auto-advances ──────────────────────────────────
 
   it('the dwell timeout auto-advances when no click arrives', async () => {
     vi.useFakeTimers();
@@ -312,14 +374,43 @@ describe('visitBeatSaga', () => {
       return callCount === 1 ? Promise.resolve() : new Promise<void>(() => {});
     });
 
-    const shortDwellBeat: BeatData = { focus: null, caption: 'Short dwell', dwellSec: 2 };
+    const shortDwellBeat: BeatData = { clip: narrationClip, caption: 'Short dwell', dwellSec: 2 };
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
 
     sagaMiddleware.run(visitBeatSaga, shortDwellBeat);
 
-    // Advance past the fly (already resolved) + past the 2s dwell timer.
+    // Advance past the clip (already resolved) + past the 2s dwell timer.
     await vi.runAllTimersAsync();
 
     expect(store.getState().ui.caption).toBeNull();
+  });
+
+  // ── (7) in-clip focus path: flyAndFocusOnClip resolved clip carries focus cue ──
+
+  it('a flyAndFocusOnClip beat resolved clip carries a { kind: "focus", ref } cue', async () => {
+    // flyAndFocusOnClip('cluster-virgo') produces a clip with a focusId('cluster-virgo')
+    // cue. After resolveClipFoci runs against STRUCTURE_DEPS, it must become a
+    // concrete { kind: 'focus', ref: { type: 'structure', id: 'cluster-virgo' } } cue.
+    const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
+    const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: STRUCTURE_DEPS });
+
+    sagaMiddleware.run(visitBeatSaga, structureBeat);
+
+    await flush();
+    await flush();
+
+    expect(playClipMock).toHaveBeenCalled();
+    const resolvedClip = playClipMock.mock.calls[0]![0];
+
+    // Collect all focus-kind cues from the timeline.
+    const focusCues = collectTimelineNodes(resolvedClip.timeline, (e) => e).filter(
+      (e) => e.kind === 'focus',
+    ) as Array<{ kind: 'focus'; ref: unknown }>;
+    expect(focusCues.length).toBeGreaterThan(0);
+    // The resolved focus cue carries the structure ref.
+    expect(focusCues[0]).toEqual({
+      kind: 'focus',
+      ref: { type: 'structure', id: 'cluster-virgo' },
+    });
   });
 });
