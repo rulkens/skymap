@@ -79,12 +79,12 @@ relative imports, no barrels; didactic timeless comments.
 **Type:** `export type FocusId = string & { readonly __focusId: unique symbol };`
 **Signature:** `focusId(raw: string): FocusId` — brands via cast.
 
-- [ ] Add `FocusId.ts` with a didactic docblock: brand earns its keep only at the
+- [x] Add `FocusId.ts` with a didactic docblock: brand earns its keep only at the
   authoring surface; assignable-to-string so `resolveFocusId` stays plain.
-- [ ] Add `focusId.ts` — single function, file named for it.
-- [ ] Test `focusId returns a value assignable to string` — assign `focusId('m87')` to a
+- [x] Add `focusId.ts` — single function, file named for it.
+- [x] Test `focusId returns a value assignable to string` — assign `focusId('m87')` to a
   `string` const and assert `=== 'm87'` (the round-trip is identity).
-- [ ] `npm test -- focusId` → green. Commit.
+- [x] `npm test -- focusId` → green. Commit.
 
 ## Task 2 — `resolveFocusId` learns `'milkyWay'`
 
@@ -101,13 +101,13 @@ if (focusId === 'milkyWay') return { type: 'milkyWay' };
 // … existing famous fallback …
 ```
 
-- [ ] Add the branch with a one-line comment (literal singleton; would otherwise scan
+- [x] Add the branch with a one-line comment (literal singleton; would otherwise scan
   famousMeta and miss).
-- [ ] Test `resolveFocusId('milkyWay', deps) returns the milkyWay ref` asserting
+- [x] Test `resolveFocusId('milkyWay', deps) returns the milkyWay ref` asserting
   `{ type: 'milkyWay' }`.
-- [ ] Note in the test/docblock that the inverse `focusIdOf` stays null for milkyWay —
+- [x] Note in the test/docblock that the inverse `focusIdOf` stays null for milkyWay —
   out of scope (spec "Out of scope").
-- [ ] `npm test -- resolveFocusId` → green. Commit.
+- [x] `npm test -- resolveFocusId` → green. Commit.
 
 ## Task 3 — `FocusBoundEffect` type + id-bearing helpers + `compileClip` throw
 
@@ -136,30 +136,30 @@ export function dollyToId(id: FocusId, over: number, ease?: Ease): FocusBoundEff
 export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' }; // CHANGED from focus(ref: SelectionRef|null)
 ```
 
-- [ ] Add `moveTargetId` / `dollyToId` (default `ease: 'inOut'`, matching `moveTarget`/`dollyTo`).
-- [ ] **Change** the existing `focus()` (`effectHelpers.ts:324`) from
+- [x] Add `moveTargetId` / `dollyToId` (default `ease: 'inOut'`, matching `moveTarget`/`dollyTo`).
+- [x] **Change** the existing `focus()` (`effectHelpers.ts:324`) from
   `focus(ref: SelectionRef | null): SceneEffect & { kind: 'focus' }` to
   `focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' }`. It has NO other
   callers — verify with a grep for `focus(` across `src`/`tests` (excluding `focusFraming`,
   `focusReady`, `updateSelectionFocus`, `.focus(`) before editing; if a caller surfaces,
   STOP and report rather than hacking. The drift docblock should note the `focusId` cue is
   resolved to a `SceneEffect kind:'focus'` (carrying `ref`) by `resolveClipFoci` at play time.
-- [ ] **Keep** the `SceneEffect` `kind:'focus'` arm (`SceneEffect.ts:77-80`) — it is the
+- [x] **Keep** the `SceneEffect` `kind:'focus'` arm (`SceneEffect.ts:77-80`) — it is the
   RESOLVED form the pass produces; do not delete it.
-- [ ] **`compileClip`**: its exhaustive `walk` switch (`compileClip.ts:95-213`) must THROW on
+- [x] **`compileClip`**: its exhaustive `walk` switch (`compileClip.ts:95-213`) must THROW on
   the three id-bearing kinds with a clear message, e.g.
   `resolveClipFoci must run before compileClip (unresolved <kind>)`. The existing
   `default: never` guard stays for true exhaustiveness; add explicit `moveTargetId` /
   `dollyToId` / `focusId` cases that throw (so the `never` narrowing still holds).
-- [ ] Tests (`effectHelpers.test.ts`):
+- [x] Tests (`effectHelpers.test.ts`):
   - `moveTargetId carries the id and defaults ease to inOut`
   - `dollyToId carries the id and defaults ease to inOut`
   - `focus(id) builds a focusId effect carrying the id`
   - `focus(null) builds a focusId effect with id null`
-- [ ] Test (`compileClip.test.ts`): `compileClip throws on an unresolved focus-bound effect`
+- [x] Test (`compileClip.test.ts`): `compileClip throws on an unresolved focus-bound effect`
   — build a `ClipData` whose timeline contains `moveTargetId(focusId('m87'), 5)` and assert
   the throw message mentions `resolveClipFoci`.
-- [ ] `npm test -- effectHelpers compileClip` → green. Commit.
+- [x] `npm test -- effectHelpers compileClip` → green. Commit.
 
 ## Task 4 — `resolveClipFoci` (+ optional `collectFocusIds`)
 
@@ -193,18 +193,18 @@ clean `collectFocusIds(data: ClipData): FocusId[]` helper falls out (gather ever
 `collectFocusIds.ts` and have `clipFociReady` consume it. If the two walks differ enough
 (rewrite vs predicate) that sharing adds indirection, keep them separate — note which you chose.
 
-- [ ] Implement `resolveClipFoci` (recursive rewrite; reuse `moveTarget`/`dollyTo` from
+- [x] Implement `resolveClipFoci` (recursive rewrite; reuse `moveTarget`/`dollyTo` from
   `effectHelpers.ts`; the `focus` cue is a raw `{ kind:'focus', ref }` `SceneEffect`).
-- [ ] Test `resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera actions` —
+- [x] Test `resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera actions` —
   a `flyToClip('m87')`-shaped clip (an `all([moveTargetId, dollyToId])`) resolves to
   `setVec ch:'target'` + `set ch:'distance'` with the framed target/distance from a stub
   `focusFraming` input (use immediateDeps + a known structure/galaxy row).
-- [ ] Test `resolveClipFoci rewrites a focusId cue to a focus ref cue` — a `focusId(id)`
+- [x] Test `resolveClipFoci rewrites a focusId cue to a focus ref cue` — a `focusId(id)`
   resolves to `{ kind:'focus', ref: <resolved SelectionRef> }`.
-- [ ] Test `resolveClipFoci resolves focusId(null) to focus(null)` — `{ kind:'focus', ref: null }`.
-- [ ] Test `resolveClipFoci recurses into seq/all/fork` — an id-bearing effect nested under
+- [x] Test `resolveClipFoci resolves focusId(null) to focus(null)` — `{ kind:'focus', ref: null }`.
+- [x] Test `resolveClipFoci recurses into seq/all/fork` — an id-bearing effect nested under
   `all`/`seq`/`fork` is rewritten in place.
-- [ ] `npm test -- resolveClipFoci` → green. Commit.
+- [x] `npm test -- resolveClipFoci` → green. Commit.
 
 ## Task 5 — `clipFociReady` (replaces `focusReady`)
 
@@ -220,16 +220,16 @@ ready (it clears focus — no data needed). A clip with no id-bearing effects is
 
 Share `collectFocusIds` with Task 4 if extracted; otherwise mirror the same walk.
 
-- [ ] Implement the predicate.
-- [ ] Test `clipFociReady is false when a famous id is not yet loaded` — `flyToClip('m87')`-shaped
+- [x] Implement the predicate.
+- [x] Test `clipFociReady is false when a famous id is not yet loaded` — `flyToClip('m87')`-shaped
   clip against deps whose `catalogs.get` / `famousMeta` make `'m87'` unresolvable → false.
-- [ ] Test `clipFociReady is true for a structure id` — `cluster-virgo-m87` against immediateDeps
+- [x] Test `clipFociReady is true for a structure id` — `cluster-virgo-m87` against immediateDeps
   (structures.byId returns a record) → true.
-- [ ] Test `clipFociReady is true for milkyWay` — `flyToClip(focusId('milkyWay'))` → true
+- [x] Test `clipFociReady is true for milkyWay` — `flyToClip(focusId('milkyWay'))` → true
   (depends on Task 2's branch).
-- [ ] Test `clipFociReady is true for a clip with no focus-bound effects` (e.g. a hold-only clip).
-- [ ] Test `clipFociReady is true for focusId(null)`.
-- [ ] `npm test -- clipFociReady` → green. Commit.
+- [x] Test `clipFociReady is true for a clip with no focus-bound effects` (e.g. a hold-only clip).
+- [x] Test `clipFociReady is true for focusId(null)`.
+- [x] `npm test -- clipFociReady` → green. Commit.
 
 ## Task 6 — Clip builders: finish `flyToClip`, add `flyAndFocusOnClip`
 
@@ -249,15 +249,15 @@ export function flyAndFocusOnClip(id: FocusId): ClipData;  // same timeline, LED
 ```
 `FLY_SEC = 5` stays (`flyToClip.ts:27`).
 
-- [ ] Correct `flyToClip.ts`: import `FocusId`, `moveTargetId`, `dollyToId`, `all`; rewrite the
+- [x] Correct `flyToClip.ts`: import `FocusId`, `moveTargetId`, `dollyToId`, `all`; rewrite the
   docblock to describe id-bearing authoring (resolved by `resolveClipFoci` at play time);
   no pre-resolved-pose / `ResolvedFocus` language.
-- [ ] Add `flyAndFocusOnClip.ts`: `timeline: [ focus(id), all([moveTargetId, dollyToId]) ]`.
-- [ ] Test (`flyToClip.test.ts`) `flyToClip has no focus cue and is live-start` — assert the
+- [x] Add `flyAndFocusOnClip.ts`: `timeline: [ focus(id), all([moveTargetId, dollyToId]) ]`.
+- [x] Test (`flyToClip.test.ts`) `flyToClip has no focus cue and is live-start` — assert the
   timeline contains an `all` of `moveTargetId`+`dollyToId` and NO `focusId` effect.
-- [ ] Test (`flyAndFocusOnClip.test.ts`) `flyAndFocusOnClip leads with a focusId cue` — the
+- [x] Test (`flyAndFocusOnClip.test.ts`) `flyAndFocusOnClip leads with a focusId cue` — the
   first timeline entry is `{ kind:'focusId', id }`.
-- [ ] `npm test -- flyToClip flyAndFocusOnClip` → green. Commit.
+- [x] `npm test -- flyToClip flyAndFocusOnClip` → green. Commit.
 
 ## Task 7 — `BeatData` confirm + `visitBeatSaga` rewrite
 
@@ -287,9 +287,9 @@ the clip as a `focus()` cue, scene changes are tour-level `setup` or in-clip `sc
 Remove imports of `focusReady`, `extractSelectionRow`, `focusFraming`, `ResolvedFocus`. Keep
 the "getContext read inside the worker" docblock rationale.
 
-- [ ] Confirm/finish `BeatData.ts` (shape + docblock).
-- [ ] Rewrite `visitBeatSaga.ts` per the 7 steps above.
-- [ ] Rewrite `visitBeatSaga.test.ts` to the new beat shape (beats carry `clip`, not `focus`/`effects`).
+- [x] Confirm/finish `BeatData.ts` (shape + docblock).
+- [x] Rewrite `visitBeatSaga.ts` per the 7 steps above.
+- [x] Rewrite `visitBeatSaga.test.ts` to the new beat shape (beats carry `clip`, not `focus`/`effects`).
   Read the current test's mock style first (`sagaMiddleware.setContext` for
   `resolveDeps`/`cameraRuntime`/`playClip`; `flush()` macrotask helper; CANCEL hook) and match it.
   Required tests:
@@ -305,7 +305,7 @@ the "getContext read inside the worker" docblock rationale.
   - An in-clip-focus path test: a `flyAndFocusOnClip`-shaped beat's resolved clip carries a
     `{ kind:'focus', ref }` cue (assert the resolved clip's timeline contains it).
   - DELETE the `puts each effect verbatim` test (no `beat.effects` anymore).
-- [ ] `npm test -- visitBeatSaga` → green. Commit.
+- [x] `npm test -- visitBeatSaga` → green. Commit.
 
 ## Task 8 — `TourSetup` type + `Tour.setup` + `guidedTourSaga` + `watchTourSaga`
 
@@ -348,12 +348,12 @@ outside that set, the snapshot must be extended (no extension needed for this pl
 **`watchTourSaga`** (`watchTourSaga.ts:18-21`): change `call(guidedTourSaga, tour)` (was
 `tour.beats`).
 
-- [ ] Add `TourSetup.ts`.
-- [ ] Migrate `Tour.ts` to `setup?: TourSetup` (named, optional); reconcile WIP docblock.
-- [ ] Rewrite `guidedTourSaga` signature + setup-dispatch + beats loop; keep the
+- [x] Add `TourSetup.ts`.
+- [x] Migrate `Tour.ts` to `setup?: TourSetup` (named, optional); reconcile WIP docblock.
+- [x] Rewrite `guidedTourSaga` signature + setup-dispatch + beats loop; keep the
   `try/finally` + race + `exitTour`-only-abort rationale.
-- [ ] Update `watchTourSaga` call site.
-- [ ] Update `guidedTourSaga.test.ts`: the saga now takes a `Tour`, not `BeatData[]`. Wrap the
+- [x] Update `watchTourSaga` call site.
+- [x] Update `guidedTourSaga.test.ts`: the saga now takes a `Tour`, not `BeatData[]`. Wrap the
   existing narration-beat fixtures in a `Tour` (`{ id, label, beats:[…] }`). Port all six
   existing tests. ADD `guidedTourSaga dispatches setup effects before the first beat` — a tour
   with `setup.effects: [setVolumesEnabled(false)]` drives `settings.volumes` off in the store
@@ -362,7 +362,7 @@ outside that set, the snapshot must be extended (no extension needed for this pl
   `{ caption, dwellSec, clip }` — narration beats become a minimal hold-only or
   `flyToClip(focusId('milkyWay'))` clip; pick the smallest that keeps `clipFociReady` true
   synchronously (a hold-only clip has no foci → always ready).
-- [ ] `npm test -- guidedTourSaga watchTourSaga` → green. Commit.
+- [x] `npm test -- guidedTourSaga watchTourSaga` → green. Commit.
 
 ## Task 9 — Data reshape + integration test
 
@@ -410,12 +410,12 @@ real store with stubbed `resolveDeps`/`cameraRuntime`/`playClip`, matching the
   `camera.tween` is set while a clip is active. Assert `store.getState().camera.tween` stays null
   across the dive. (Cite `suspendDuringClip.ts` in the test docblock for why.)
 
-- [ ] Reshape `demoTour.ts` (+ docblock tidy: drop the "no effects" paragraph if stale).
-- [ ] Finish `webShowcase.ts` beats with branded `focusId(...)` + import `flyAndFocusOnClip`;
+- [x] Reshape `demoTour.ts` (+ docblock tidy: drop the "no effects" paragraph if stale).
+- [x] Finish `webShowcase.ts` beats with branded `focusId(...)` + import `flyAndFocusOnClip`;
   rewrite the docblock.
-- [ ] Verify `cosmicFlows.ts` compiles (read; no `focus()` call expected).
-- [ ] Add the integration test with the three dive assertions above.
-- [ ] `npm test -- tour webShowcase demoTour` → green. Commit.
+- [x] Verify `cosmicFlows.ts` compiles (read; no `focus()` call expected).
+- [x] Add the integration test with the three dive assertions above.
+- [x] `npm test -- tour webShowcase demoTour` → green. Commit.
 
 ## Task 10 — Cleanup + full gate
 
@@ -424,15 +424,15 @@ real store with stubbed `resolveDeps`/`cameraRuntime`/`playClip`, matching the
 
 After Tasks 7–9, `ResolvedFocus` and `focusReady` are likely unused.
 
-- [ ] Grep `src`/`tests` for importers of `ResolvedFocus` and `focusReady`. **Only if zero
+- [x] Grep `src`/`tests` for importers of `ResolvedFocus` and `focusReady`. **Only if zero
   importers remain**, delete each file + its test. If anything still imports them, STOP and
   report rather than leaving a dangling import.
-- [ ] Run `npm run typecheck` (both src + tools tsconfigs) → clean.
-- [ ] Run `npm test` (full suite) → green.
-- [ ] Note in the commit/PR body: the dive itself is a VISUAL property not covered by automated
+- [x] Run `npm run typecheck` (both src + tools tsconfigs) → clean.
+- [x] Run `npm test` (full suite) → green.
+- [x] Note in the commit/PR body: the dive itself is a VISUAL property not covered by automated
   tests — the user confirms on screen (load `webShowcase`, watch beat 3 dive to M87 while the
   rest of the sky stays dimmed and Virgo's members ride bright).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
