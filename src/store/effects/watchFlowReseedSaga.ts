@@ -1,8 +1,9 @@
 /**
  * watchFlowReseedSaga — reseed the cosmic-flow particle field when the user
- * changes the particle count or flow mode. Patch-only writes (e.g. enabled
- * toggle) skip the reseed: reseeding is only required when the particle
- * population or its generation parameters change.
+ * changes the particle count or flow mode. Knob patches that touch neither
+ * (e.g. intensity) skip the reseed: reseeding is only required when the particle
+ * population or its generation parameters change. The master gate toggle goes
+ * through `setFlowEnabled`, which this saga ignores entirely.
  *
  * The worker reaches the engine via getContext — the ReconcileEffects closure
  * registered by the engine after construction. This keeps the store layer free

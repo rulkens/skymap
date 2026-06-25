@@ -1,7 +1,7 @@
 /**
  * watchFlowReseedSaga tests — verifies that reseedFlow fires only when a setFlow
- * patch changes the particle count or flow mode, and is skipped for patch-only
- * writes (e.g. the enabled toggle).
+ * patch changes the particle count or flow mode, and is skipped for knob patches
+ * that touch neither (e.g. an intensity-only write).
  *
  * Runs under the shared reconcileSagaHarness (all four reconcile watchers), so
  * the setFlow fan-out into watchFadesSaga is present but asserted elsewhere.
@@ -34,10 +34,10 @@ describe('watchFlowReseedSaga', () => {
     expect(reconcile.reseedFlow).toHaveBeenCalledTimes(1);
   });
 
-  it('setFlow({enabled:true}) → reseedFlow NOT called', () => {
-    // enabled-only patch: mode and count are both undefined → reseed guard
+  it('setFlow({intensity}) → reseedFlow NOT called', () => {
+    // knob-only patch: mode and count are both undefined → reseed guard
     // returns early.
-    store.dispatch(setFlow({ enabled: true }));
+    store.dispatch(setFlow({ intensity: 0.5 }));
 
     expect(reconcile.reseedFlow).not.toHaveBeenCalled();
   });

@@ -37,7 +37,7 @@ import { CANCEL } from '@redux-saga/core';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
 import { advanceTour } from '../../../src/state/tour/tourActions';
-import { setFlow } from '../../../src/state/settings/settingsSlice';
+import { setFlowEnabled } from '../../../src/state/settings/settingsSlice';
 import type { BeatData } from '../../../src/@types/tour/BeatData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { FocusCameraRuntime } from '../../../src/store/types';
@@ -218,7 +218,7 @@ describe('visitBeatSaga', () => {
   // ── (3) puts each effect verbatim ────────────────────────────────────────
 
   it('visitBeatSaga puts each effect verbatim (no wrapper)', async () => {
-    const effectAction = setFlow({ enabled: true });
+    const effectAction = setFlowEnabled(true);
     const beatWithEffect: BeatData = {
       focus: null,
       caption: 'With effect',
@@ -236,7 +236,7 @@ describe('visitBeatSaga', () => {
     await flush();
     await flush();
 
-    // The setFlow effect must have been dispatched verbatim.
+    // The setFlowEnabled effect must have been dispatched verbatim.
     expect(store.getState().settings.flow.enabled).toBe(true);
   });
 

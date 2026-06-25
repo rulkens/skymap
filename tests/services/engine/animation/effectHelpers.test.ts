@@ -131,7 +131,13 @@ describe('aimAt', () => {
 
     const [yawAction, pitchAction] = e.children;
     expect(yawAction).toMatchObject({ kind: 'set', ch: 'yaw', to: 1.5, over: 3, ease: 'inOut' });
-    expect(pitchAction).toMatchObject({ kind: 'set', ch: 'pitch', to: 0.2, over: 3, ease: 'inOut' });
+    expect(pitchAction).toMatchObject({
+      kind: 'set',
+      ch: 'pitch',
+      to: 0.2,
+      over: 3,
+      ease: 'inOut',
+    });
   });
 
   it('forwards explicit ease to both children', () => {
@@ -268,7 +274,7 @@ describe('fade', () => {
 
 describe('scene', () => {
   it('emits kind:scene wrapping the action', () => {
-    const fakeAction = { type: 'settings/setFlow', payload: { enabled: true } } as any;
+    const fakeAction = { type: 'settings/setFlowEnabled', payload: true } as any;
     const e = scene(fakeAction);
     expect(e.kind).toBe('scene');
     expect(e.action).toBe(fakeAction);

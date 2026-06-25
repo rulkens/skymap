@@ -46,7 +46,7 @@ import { playClip, stopClip } from '../../state/camera/clipActions';
 import { startTour } from '../../state/tour/tourActions';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
-import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { BeatData } from '../../@types/tour/BeatData';
 
@@ -92,7 +92,7 @@ function DebugPanelContainer({
   );
 
   const onFlowChange = useCallback(
-    (patch: Partial<FlowSettings>) => dispatch(setFlow(patch)),
+    (patch: Partial<FlowFieldDefaults>) => dispatch(setFlow(patch)),
     [dispatch],
   );
 

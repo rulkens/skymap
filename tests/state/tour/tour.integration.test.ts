@@ -7,7 +7,7 @@
  * Three load-bearing behavioural properties:
  *
  *   1. The `fade(['flow'], 0, 0)` clip-opacity mask holds the composed flow alpha
- *      at zero from the moment `setFlow(enabled)` fires until the
+ *      at zero from the moment `setFlowEnabled` fires until the
  *      `fade(['flow'], 1, 3)` lift completes, even as the intent opacity rises.
  *
  *   2. The crossfade `all([fade flow→1, fade survey→0])` dims the galaxy-points

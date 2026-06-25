@@ -10,7 +10,7 @@
  *
  * 1. The clip type-checks (tsc confirms it; at runtime we check `timeline.length`
  *    to catch an authored-vs-expected mismatch that TypeScript cannot catch).
- * 2. The `fade(['flow'], 0, 0)` mask fires BEFORE `scene(setFlow)` — ordering
+ * 2. The `fade(['flow'], 0, 0)` mask fires BEFORE `scene(setFlowEnabled)` — ordering
  *    inside the timeline array is sequential.
  * 3. The crossfade `all([fade flow→1, fade survey→0])` is a concurrent node.
  * 4. The final fade-to-black covers the four layers that must dim at clip end.
@@ -81,14 +81,14 @@ describe('cosmicFlows clip', () => {
     expect(fadeFlow?.kind).toBe('fade');
     if (fadeFlow?.kind === 'fade') {
       expect(fadeFlow.layers).toEqual(['flow']);
-      expect(fadeFlow.to).toBe(1);   // reveal flow
+      expect(fadeFlow.to).toBe(1); // reveal flow
       expect(fadeFlow.over).toBe(3); // 3-second lift
     }
 
     expect(fadeSurvey?.kind).toBe('fade');
     if (fadeSurvey?.kind === 'fade') {
       expect(fadeSurvey.layers).toEqual(['survey']);
-      expect(fadeSurvey.to).toBe(0);  // dim galaxies
+      expect(fadeSurvey.to).toBe(0); // dim galaxies
       expect(fadeSurvey.over).toBe(3);
     }
   });
