@@ -56,7 +56,13 @@
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
-import type { CompiledClip, BaseSegment, VelRamp, OscTrack, SceneCue } from '../../../@types/animation/CompiledClip';
+import type {
+  CompiledClip,
+  BaseSegment,
+  VelRamp,
+  OscTrack,
+  SceneCue,
+} from '../../../@types/animation/CompiledClip';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
@@ -204,6 +210,15 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
       return 0;
     }
 
+    // --- Unresolved focus-bound effects: must be rewritten by resolveClipFoci
+    // before compileClip is called. Reaching any of these cases is a
+    // programming error — the clip was passed to compileClip with unresolved IDs.
+    case 'moveTargetId':
+    case 'dollyToId':
+    case 'focusId': {
+      throw new Error(`resolveClipFoci must run before compileClip (unresolved ${effect.kind})`);
+    }
+
     // TypeScript exhaustiveness guard — the union is closed.
     default: {
       const _exhaustive: never = effect;
@@ -279,9 +294,7 @@ export function compileClip(data: ClipData): CompiledClip {
   const baseTracks = Object.fromEntries(
     ALL_CHANNELS.map((ch) => [
       ch,
-      shiftedBaseSegs
-        .filter((s) => s.channel === ch)
-        .sort((a, b) => a.startSec - b.startSec),
+      shiftedBaseSegs.filter((s) => s.channel === ch).sort((a, b) => a.startSec - b.startSec),
     ]),
   ) as Record<Channel, BaseSegment[]>;
 

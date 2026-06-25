@@ -34,7 +34,7 @@ import { clipStarted, clipEnded, resolveClipStart } from '../../../../src/state/
 import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { applySceneEffect } from '../../../../src/services/animation/applySceneEffect';
-import { fade, focus, seq, hold } from '../../../../src/services/engine/animation/effectHelpers';
+import { fade, hide, seq, hold } from '../../../../src/services/engine/animation/effectHelpers';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -263,12 +263,11 @@ describe('clipPlayer', () => {
 
     // Two cues both at atSec=0:
     //   - fade(['survey'], 0, 0): must NOT call applySceneEffect (clipPlayer's own)
-    //   - focus(null): MUST call applySceneEffect
-    // seq with hold(0) between them to put both at atSec=0:
-    // Actually seq accumulates: fade returns 0 duration (scene cue), hold(0) adds 0,
-    // focus returns 0. All at cursor=0 → atSec=0 for both.
+    //   - hide(['flow']): MUST call applySceneEffect
+    // seq accumulates: fade returns 0 duration (scene cue), hide returns 0.
+    // Both at cursor=0 → atSec=0 for both.
     const data: ClipData = {
-      timeline: [seq([fade(['survey'], 0, 0), focus(null), hold(5)])],
+      timeline: [seq([fade(['survey'], 0, 0), hide(['flow']), hold(5)])],
     };
     installClip(store, data);
     mockedApplySceneEffect.mockClear();
@@ -276,10 +275,10 @@ describe('clipPlayer', () => {
     // Tick at t=0: both cues at atSec=0 fire.
     player.tick(0);
 
-    // focus cue routes through applySceneEffect; fade cue does NOT.
+    // hide cue routes through applySceneEffect; fade cue does NOT.
     expect(mockedApplySceneEffect).toHaveBeenCalledTimes(1);
     const calledEffect = mockedApplySceneEffect.mock.calls[0]?.[0];
-    expect(calledEffect?.kind).toBe('focus');
+    expect(calledEffect?.kind).toBe('hide');
   });
 
   it('clipPlayer is registered in EngineSubsystemHandles (typecheck-level)', () => {

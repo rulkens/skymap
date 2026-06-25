@@ -38,6 +38,8 @@
  */
 
 import type { CameraAction } from '../../../@types/animation/CameraAction';
+import type { FocusBoundEffect } from '../../../@types/animation/FocusBoundEffect';
+import type { FocusId } from '../../../@types/animation/FocusId';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
@@ -46,7 +48,6 @@ import type { Space } from '../../../@types/animation/Space';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
-import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import { CHANNEL_SPACE } from './channelSpace';
 
 // ---------------------------------------------------------------------------
@@ -99,11 +100,7 @@ export function dollyTo(mpc: number, over: number, ease?: Ease): CameraAction & 
  * log-space is undefined for signed values). See `CameraAction.d.ts` for the
  * full rationale on the `setVec` / `set` split.
  */
-export function moveTarget(
-  to: Vec3,
-  over: number,
-  ease?: Ease,
-): CameraAction & { kind: 'setVec' } {
+export function moveTarget(to: Vec3, over: number, ease?: Ease): CameraAction & { kind: 'setVec' } {
   return {
     kind: 'setVec',
     ch: 'target',
@@ -112,6 +109,40 @@ export function moveTarget(
     ease: ease ?? 'inOut',
     space: 'lin',
   };
+}
+
+/**
+ * moveTargetId — pan the camera's orbit target to the position of the structure
+ * or galaxy identified by `id`, over `over` seconds.
+ *
+ * The UNRESOLVED form of `moveTarget`: `resolveClipFoci` rewrites it to a
+ * concrete `moveTarget(vec3, over, ease)` before `compileClip` runs. Authors
+ * use this when the target position is not known at clip-authoring time but
+ * must be looked up from the catalog at play time via a durable `FocusId`.
+ */
+export function moveTargetId(
+  id: FocusId,
+  over: number,
+  ease?: Ease,
+): FocusBoundEffect & { kind: 'moveTargetId' } {
+  return { kind: 'moveTargetId', id, over, ease: ease ?? 'inOut' };
+}
+
+/**
+ * dollyToId — zoom the camera to the distance of the structure or galaxy
+ * identified by `id`, over `over` seconds.
+ *
+ * The UNRESOLVED form of `dollyTo`: `resolveClipFoci` rewrites it to a concrete
+ * `dollyTo(mpc, over, ease)` before `compileClip` runs. Authors use this when
+ * the target distance is not known statically but must be derived from the
+ * catalog at play time via a durable `FocusId`.
+ */
+export function dollyToId(
+  id: FocusId,
+  over: number,
+  ease?: Ease,
+): FocusBoundEffect & { kind: 'dollyToId' } {
+  return { kind: 'dollyToId', id, over, ease: ease ?? 'inOut' };
 }
 
 /**
@@ -268,10 +299,7 @@ export function fork(child: Effect): Effect & { kind: 'fork' } {
  * Dispatches the same settings actions the UI does. The bridge in
  * `syncVisibilityFades` handles the translation to per-layer fade controllers.
  */
-export function show(
-  layers: VisibilityLayerKey[],
-  over?: number,
-): SceneEffect & { kind: 'show' } {
+export function show(layers: VisibilityLayerKey[], over?: number): SceneEffect & { kind: 'show' } {
   return { kind: 'show', layers, ...(over !== undefined ? { over } : {}) };
 }
 
@@ -279,10 +307,7 @@ export function show(
  * hide — set visibility INTENT for `layers` to hidden, fading out over `over`
  * seconds (`undefined` → default fade duration; `0` → instant).
  */
-export function hide(
-  layers: VisibilityLayerKey[],
-  over?: number,
-): SceneEffect & { kind: 'hide' } {
+export function hide(layers: VisibilityLayerKey[], over?: number): SceneEffect & { kind: 'hide' } {
   return { kind: 'hide', layers, ...(over !== undefined ? { over } : {}) };
 }
 
@@ -315,12 +340,19 @@ export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
 }
 
 /**
- * focus — set the selection focus to `ref`, or `null` to clear.
+ * focus — build a `focusId` cue addressed by a durable `FocusId` handle, or
+ * `null` to clear the selection focus.
  *
- * Drives the structure-isolation dim (`focusRecession` channel). A focused
- * structure is highlighted; all others recede in opacity. Pass `null` to
- * restore the unfocused state.
+ * This is the UNRESOLVED form: it carries a `FocusId` string rather than a
+ * concrete `SelectionRef`. `resolveClipFoci` rewrites it to the resolved
+ * `kind:'focus'` arm (in `SceneEffect`) — which carries a `SelectionRef` — at
+ * play time, before `compileClip` runs. `compileClip` throws if it encounters a
+ * `focusId` cue that was not resolved.
+ *
+ * The resolved `kind:'focus'` arm remains in `SceneEffect` and is what
+ * `applySceneEffect` dispatches: the split keeps the clip-authoring vocabulary
+ * (durable IDs) separate from the runtime dispatch vocabulary (concrete refs).
  */
-export function focus(ref: SelectionRef | null): SceneEffect & { kind: 'focus' } {
-  return { kind: 'focus', ref };
+export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' } {
+  return { kind: 'focusId', id };
 }
