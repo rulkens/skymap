@@ -122,11 +122,15 @@
       on our own Cloudflare Workers + Analytics Engine.  No cookies, no PII,
       no consent banner needed.  `defer` keeps it off the critical path so it
       never delays first paint of the WebGPU canvas.
+
+      The worker origin comes from VITE_COUNTERSCALE_URL in .env.production,
+      which Vite inlines at build time.  Dev has no value for it, so the
+      placeholder stays unresolved and the tracker doesn't load locally.
     -->
     <script
       id="counterscale-script"
       data-site-id="skymap"
-      src="https://counterscale.rulkens.workers.dev/tracker.js"
+      src="%VITE_COUNTERSCALE_URL%/tracker.js"
       defer
     ></script>
   </head>
