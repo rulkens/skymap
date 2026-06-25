@@ -1,40 +1,48 @@
 /**
- * flyToClip tests — verify the establishing-move clip builds the correct cues
- * for a FocusId-addressed camera move.
+ * flyAndFocusOnClip tests — verify the establishing-move clip leads with a
+ * focusId selection cue followed by the concurrent camera move.
  *
  * The builder is a pure function over a durable FocusId. Tests assert:
  *   - The clip is live-start.
- *   - The timeline contains exactly one `all` block with moveTargetId + dollyToId.
- *   - No focusId cue is present (camera-only; selection focus is not touched).
+ *   - The first timeline entry is a `focusId` cue carrying the same id.
+ *   - The second timeline entry is an `all` block with moveTargetId + dollyToId.
  *
  * Cue kinds come from effectHelpers constructors:
+ *   - `focus(id)` → `{ kind: 'focusId', id }`
  *   - `moveTargetId` → `{ kind: 'moveTargetId', id, over, ease }`
  *   - `dollyToId`    → `{ kind: 'dollyToId',    id, over, ease }`
  *   - `all`          → `{ kind: 'all', children: [...] }`
  */
 
 import { describe, it, expect } from 'vitest';
-import { flyToClip } from '../../../src/state/tour/flyToClip';
+import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
 import { focusId } from '../../../src/utils/animation/focusId';
 
-const id = focusId('virgo');
+const id = focusId('m87');
 
-describe('flyToClip', () => {
-  it('flyToClip has no focus cue and is live-start', () => {
-    const clip = flyToClip(id);
+describe('flyAndFocusOnClip', () => {
+  it('flyAndFocusOnClip leads with a focusId cue', () => {
+    const clip = flyAndFocusOnClip(id);
 
     expect(clip.start).toBe('live');
-    expect(clip.timeline).toHaveLength(1);
+    expect(clip.timeline).toHaveLength(2);
 
-    // Top-level entry is an `all` block for concurrent camera move + dolly.
-    const allNode = clip.timeline[0];
+    // First entry: immediate selection-focus cue carrying the FocusId.
+    const focusCue = clip.timeline[0];
+    expect(focusCue).not.toBeUndefined();
+    expect(focusCue!.kind).toBe('focusId');
+    if (focusCue!.kind === 'focusId') {
+      expect(focusCue.id).toBe(id);
+    }
+
+    // Second entry: concurrent camera move + dolly.
+    const allNode = clip.timeline[1];
     expect(allNode).not.toBeUndefined();
     expect(allNode!.kind).toBe('all');
 
     if (allNode!.kind === 'all') {
       expect(allNode.children).toHaveLength(2);
 
-      // moveTargetId carries the FocusId for deferred world-position resolution.
       const targetMove = allNode.children[0];
       expect(targetMove).not.toBeUndefined();
       expect(targetMove!.kind).toBe('moveTargetId');
@@ -42,7 +50,6 @@ describe('flyToClip', () => {
         expect(targetMove.id).toBe(id);
       }
 
-      // dollyToId carries the same FocusId for deferred distance resolution.
       const dolly = allNode.children[1];
       expect(dolly).not.toBeUndefined();
       expect(dolly!.kind).toBe('dollyToId');
@@ -50,9 +57,5 @@ describe('flyToClip', () => {
         expect(dolly.id).toBe(id);
       }
     }
-
-    // No focusId selection cue — this is the camera-only builder.
-    const json = JSON.stringify(clip.timeline);
-    expect(json).not.toContain('"focusId"');
   });
 });
