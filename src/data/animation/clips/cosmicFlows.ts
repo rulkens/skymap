@@ -51,16 +51,16 @@
 import type { Clip } from '../../../@types/animation/Clip';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import {
-  hide,
+  all,
+  dollyTo,
   fade,
-  scene,
   fork,
+  hide,
+  hold,
   oscillate,
   rate,
-  hold,
-  all,
+  scene,
   seq,
-  dollyTo,
 } from '../../../services/engine/animation/effectHelpers';
 import { setFlow } from '../../../state/settings/settingsSlice';
 
