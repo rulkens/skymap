@@ -152,6 +152,37 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
     expect(selectUiHidden(store.getState())).toBe(false);
   });
 
+  it('Esc exits a running tour via the engine handle', () => {
+    const exit = vi.fn<() => void>();
+    // Minimal handle stub: only the tour.exit path the Esc branch touches.
+    const input = {
+      ...makeInput(store),
+      engineHandleRef: { current: { tour: { exit } } as never },
+    };
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
+
+    act(() => fireKey({ key: 'Escape' }));
+    expect(exit).toHaveBeenCalledOnce();
+  });
+
+  it('ArrowRight advances to the next tour beat via the engine handle', () => {
+    const advance = vi.fn<() => void>();
+    const input = {
+      ...makeInput(store),
+      engineHandleRef: { current: { tour: { advance } } as never },
+    };
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
+
+    act(() => fireKey({ key: 'ArrowRight' }));
+    expect(advance).toHaveBeenCalledOnce();
+  });
+
   it('keys inside an INPUT element are ignored', () => {
     const input = makeInput(store);
     renderHook(() => useKeyboardShortcuts(input), {

@@ -3,7 +3,8 @@
  * top-level shortcuts:
  *
  *   - Cmd+K / Ctrl+K / `/`  → open the command palette
- *   - Esc                    → clear pinned selection
+ *   - Esc                    → clear pinned selection + exit a running tour
+ *   - →  (ArrowRight)        → advance to the next tour beat
  *   - f / F                  → focus on the currently-pinned galaxy
  *   - h / H                  → return camera to home view
  *   - Tab                    → toggle "hide UI" mode (clean visual)
@@ -69,11 +70,26 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
         return;
       }
 
-      // ── Esc — universal "close the card" gesture ──────────────
+      // ── Esc — universal "close / abort" gesture ───────────────
       // Clears both galaxy selection AND structure focus in one
-      // dispatch, collapsing whichever card variant is on screen.
+      // dispatch, collapsing whichever card variant is on screen,
+      // and exits a running guided tour. A running tour hides the
+      // whole HUD (including the dev panel that launched it), so Esc
+      // is the only way back out; `tour.exit` is a harmless no-op
+      // when no tour is active.
       if (e.key === 'Escape') {
         dispatch(clearSelection());
+        engineHandleRef.current?.tour.exit();
+        return;
+      }
+
+      // ── ArrowRight advances to the next tour beat ──────────────
+      // Skips the current beat's remaining dwell. No-op outside a
+      // dwell phase, so it's safe to dispatch unconditionally. The
+      // tour hides the HUD, so this keyboard gesture is the only
+      // beat-navigation control.
+      if (e.key === 'ArrowRight') {
+        engineHandleRef.current?.tour.advance();
         return;
       }
 

@@ -106,7 +106,7 @@ import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { createPlayClip } from './animation/playClip';
-import { TOUR_START, TOUR_EXIT } from '../../state/tour/tourActions';
+import { TOUR_START, TOUR_ADVANCE, TOUR_EXIT } from '../../state/tour/tourActions';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
@@ -502,6 +502,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     structures: { byId: (id) => state.data.structures.byId(id) },
   });
 
+  // Bound clip player, hoisted so the saga context AND the public `clip`
+  // sub-handle share one instance: resolves the 'live' pose at dispatch time,
+  // attaches the [CANCEL] hook, and returns a Promise that resolves on both
+  // natural end and cancellation. The tour saga awaits this for the
+  // establishing fly and races it (as dwellDrift) against the dwell timer; the
+  // dev panel calls it directly to play a single clip in isolation.
+  const playClip = createPlayClip({
+    store,
+    clipPlayer: state.subsystems.clipPlayer,
+    // No null-guard needed: lastPose.current is seeded from camera.base at
+    // CameraRuntime construction (synchronous) and playClip is only ever
+    // invoked from tour/tween sagas or the dev panel, all after construction.
+    getLivePose: () => state.cameraRuntime.lastPose.current,
+  });
+
   cb.setSagaContext({
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state, store),
@@ -518,18 +533,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             fovYRad: state.cameraRuntime.projection.fovYRad,
           }
         : null,
-    // Bound clip player: resolves 'live' pose at dispatch time, attaches the
-    // [CANCEL] hook, and returns a Promise that resolves on both natural end
-    // and cancellation. The tour saga awaits this for the establishing fly and
-    // races it (as dwellDrift) against the dwell timer.
-    playClip: createPlayClip({
-      store,
-      clipPlayer: state.subsystems.clipPlayer,
-      // No null-guard needed: lastPose.current is seeded from camera.base at
-      // CameraRuntime construction (synchronous) and playClip is only ever
-      // invoked from tour/tween sagas that run after engine construction.
-      getLivePose: () => state.cameraRuntime.lastPose.current,
-    }),
+    playClip,
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
@@ -741,7 +745,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // finally block, not here.
     tour: {
       start: (beats) => store.dispatch(TOUR_START(beats)),
+      advance: () => store.dispatch(TOUR_ADVANCE()),
       exit: () => store.dispatch(TOUR_EXIT()),
+    },
+
+    // ── Clip handle — play/stop a single Layer-1 clip directly ───────────
+    //
+    // Reuses the hoisted `playClip` seam (the same one the tour saga awaits)
+    // and `clipPlayer.stop`. The dev panel uses this to trigger a showcase
+    // clip and exercise the stop/cancel path without launching a tour.
+    clip: {
+      play: playClip,
+      stop: () => state.subsystems.clipPlayer.stop(),
     },
 
     destroy,
