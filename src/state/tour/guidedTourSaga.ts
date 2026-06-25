@@ -1,6 +1,7 @@
 /**
  * guidedTourSaga — the outer tour loop: play every beat in order, sandwiched in
- * a snapshot/restore pair.
+ * a snapshot/restore pair, with optional setup effects dispatched before the
+ * first beat.
  *
  * ### Why a saga and why only exitTour aborts
  *
@@ -11,6 +12,13 @@
  * cancellation. `exitTour` is the only abort signal because the tour's clip@95
  * camera driver swallows drag input: a stray `beginDrag` or `commitCameraPose`
  * should NOT stop the show — the user must dispatch `exitTour` explicitly.
+ *
+ * ### Setup effects and snapshot ordering
+ *
+ * `tour.setup?.effects` are dispatched INSIDE the try, AFTER the snapshot is
+ * taken. This means the snapshot covers the state before any setup mutation, and
+ * `restoreScene` in the finally winds it all back — both setup effects and
+ * per-beat visibility changes are undone in one restore call.
  *
  * ### getContext is read INSIDE the saga
  *
@@ -24,11 +32,13 @@ import { call, put, take, race, getContext } from 'typed-redux-saga';
 import { visitBeatSaga } from './visitBeatSaga';
 import { exitTour } from './tourActions';
 import { setUiHidden } from '../ui/uiSlice';
-import type { BeatData } from '../../@types/animation/tour/BeatData';
+import type { Tour } from '../../@types/animation/tour/Tour';
 import type { SagaContext } from '../../store/types';
 
 /**
- * Play all beats in order, sandwiched in a snapshot/restore pair.
+ * Play all beats in order, sandwiched in a snapshot/restore pair. Dispatches
+ * any `tour.setup?.effects` after the snapshot and before the first beat so
+ * the finally unwinds setup mutations along with per-beat changes.
  *
  * This is a saga — not a plain async function — because `try/finally` in a
  * generator runs on BOTH natural completion (all beats finish) and
@@ -43,25 +53,30 @@ import type { SagaContext } from '../../store/types';
  * tour progression. Adding a camera-input `take` here would incorrectly end
  * the tour on any background orbit-controls event.
  */
-export function* guidedTourSaga(beats: readonly BeatData[]): Generator {
+export function* guidedTourSaga(tour: Tour): Generator {
   // Read context inside the saga — the engine sets it after root-saga forks,
   // same pattern as visitBeatSaga and watchFocusTweenSaga.
   const fx = yield* getContext<SagaContext['reconcile']>('reconcile');
 
-  // Snapshot the six settings clusters + selection.focus so restore can
-  // wind the scene back exactly to where the user left off.
+  // Snapshot the six settings clusters + selection.focus BEFORE setup effects
+  // so restore winds back to the user's pre-tour state including any mutations
+  // the setup strip makes.
   const snapshot = fx.captureScene();
 
   // Hide the UI chrome for the duration of the tour.
   yield* put(setUiHidden(true));
 
   try {
+    // Dispatch the establishing scene strip. Runs inside the try so the finally
+    // restoreScene call winds these mutations back on any exit path.
+    for (const e of tour.setup?.effects ?? []) yield* put(e);
+
     yield* race({
       // `run` sequences every beat; an exitTour that wins the race cancels
       // this arm mid-visitBeatSaga — redux-saga propagates the cancellation into
       // the in-flight playClip call automatically.
       run: call(function* () {
-        for (const beat of beats) yield* call(visitBeatSaga, beat);
+        for (const beat of tour.beats) yield* call(visitBeatSaga, beat);
       }),
       // `exit` is the only abort: an explicit user/system dispatch, not a
       // stray camera-input action.

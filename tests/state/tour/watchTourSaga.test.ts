@@ -40,17 +40,20 @@ import { configureStore } from '@reduxjs/toolkit';
 // Controlled registry: `demo` auto-advances (tiny dwell), `webShowcase` dwells
 // forever so a run stays live until exitTour / a superseding startTour. Inlined
 // in the factory (vi.mock is hoisted above the imports).
+// Both use narration clips (empty timeline) so clipFociReady exits immediately.
+// The clip literals are inlined inside the factory because vi.mock factories are
+// hoisted before the module scope runs, so outer-scope constants are not visible.
 vi.mock('../../../src/data/animation/tours/tourRegistry', () => ({
   tourRegistry: {
     demo: {
       id: 'demo',
       label: 'Demo',
-      beats: [{ focus: null, caption: 'Test', dwellSec: 0.001 }],
+      beats: [{ clip: { start: 'live', timeline: [] }, caption: 'Test', dwellSec: 0.001 }],
     },
     webShowcase: {
       id: 'webShowcase',
       label: 'Web',
-      beats: [{ focus: null, caption: 'Long', dwellSec: 9999 }],
+      beats: [{ clip: { start: 'live', timeline: [] }, caption: 'Long', dwellSec: 9999 }],
     },
   },
 }));
