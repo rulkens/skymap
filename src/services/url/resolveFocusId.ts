@@ -97,6 +97,14 @@ export function resolveFocusId(focusId: string, deps: ResolveDeps): SelectionRef
     }
   }
 
+  // ── milkyWay literal ────────────────────────────────────────────────────
+  //
+  // Milky Way is a singleton; return its SelectionRef directly.  Must run
+  // before the famous fallback or 'milkyWay' would be scanned (and missed)
+  // in famousMeta.
+
+  if (focusId === 'milkyWay') return { type: 'milkyWay' };
+
   // ── famous id fallback ───────────────────────────────────────────────────
   //
   // Anything left that passes the character-class gate is treated as a famous

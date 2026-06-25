@@ -165,6 +165,16 @@ describe('resolveFocusId', () => {
     });
   });
 
+  // ── milkyWay ─────────────────────────────────────────────────────────────
+
+  it('milkyWay literal → milkyWay singleton ref', () => {
+    // The Milky Way is a singleton focal target with no per-instance data.
+    // focusIdOf (the inverse) returns null for milkyWay — out of scope.
+    expect(resolveFocusId('milkyWay', deps)).toEqual({ type: 'milkyWay' });
+  });
+
+  // ── structure ────────────────────────────────────────────────────────────
+
   it('structure id with invalid chars → null', () => {
     // The regex [a-z0-9_-]+ must fail to prevent wild input slipping through.
     expect(resolveFocusId('cluster-virgo m87', deps)).toBeNull();
