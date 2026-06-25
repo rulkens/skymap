@@ -23,7 +23,7 @@
  *
  * ### The drift race and CANCEL
  *
- * When TOUR_ADVANCE wins the dwell race, redux-saga cancels the `drift` branch.
+ * When advanceTour wins the dwell race, redux-saga cancels the `drift` branch.
  * For `call(fn, arg)` where `fn` returns a Promise, cancellation fires
  * `p[CANCEL]()` if it exists. The test attaches a `[CANCEL]` hook to the
  * drift stub's Promise so we can assert that cancellation fired.
@@ -36,7 +36,7 @@ import { CANCEL } from '@redux-saga/core';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { visitBeat, guidedTour } from '../../../src/state/tour/guidedTourSaga';
-import { TOUR_ADVANCE, TOUR_EXIT } from '../../../src/state/tour/tourActions';
+import { advanceTour, exitTour } from '../../../src/state/tour/tourActions';
 import { setFlow } from '../../../src/state/settings/settingsSlice';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
 import type { BeatData } from '../../../src/@types/tour/BeatData';
@@ -205,7 +205,9 @@ describe('visitBeat', () => {
 
   it('visitBeat awaits the fly clip before arming advance', async () => {
     let resolveFly!: () => void;
-    const flyPromise = new Promise<void>((res) => { resolveFly = res; });
+    const flyPromise = new Promise<void>((res) => {
+      resolveFly = res;
+    });
 
     // First call = establishing fly (held); second call = dwell drift (resolves).
     let callCount = 0;
@@ -223,8 +225,8 @@ describe('visitBeat', () => {
     // Caption not shown yet — we're still in the fly.
     expect(store.getState().ui.caption).toBeNull();
 
-    // Dispatch TOUR_ADVANCE during the fly — must have no effect (fly not done).
-    store.dispatch(TOUR_ADVANCE());
+    // Dispatch advanceTour during the fly — must have no effect (fly not done).
+    store.dispatch(advanceTour());
     await flush();
 
     // Still no caption.
@@ -267,7 +269,7 @@ describe('visitBeat', () => {
   // ── (4) puts showCaption then clears it ───────────────────────────────────
 
   it('visitBeat puts showCaption then clears it', async () => {
-    // Fly resolves; drift blocks so TOUR_ADVANCE drives the race.
+    // Fly resolves; drift blocks so advanceTour drives the race.
     let callCount = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
       callCount++;
@@ -283,15 +285,15 @@ describe('visitBeat', () => {
 
     expect(store.getState().ui.caption).toBe(narrationBeat.caption);
 
-    store.dispatch(TOUR_ADVANCE());
+    store.dispatch(advanceTour());
     await flush();
 
     expect(store.getState().ui.caption).toBeNull();
   });
 
-  // ── (5) TOUR_ADVANCE wins the dwell race and cancels dwellDrift ───────────
+  // ── (5) advanceTour wins the dwell race and cancels dwellDrift ───────────
 
-  it('TOUR_ADVANCE wins the dwell race and cancels dwellDrift', async () => {
+  it('advanceTour wins the dwell race and cancels dwellDrift', async () => {
     let cancelCalled = false;
 
     // Fly resolves immediately. Drift returns a never-resolving Promise with a
@@ -300,9 +302,12 @@ describe('visitBeat', () => {
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
       callCount++;
       if (callCount === 1) return Promise.resolve();
-      const p: Promise<void> & { [key: symbol]: () => void } = new Promise<void>(() => {}) as
-        Promise<void> & { [key: symbol]: () => void };
-      p[CANCEL_SYM] = () => { cancelCalled = true; };
+      const p: Promise<void> & { [key: symbol]: () => void } = new Promise<void>(
+        () => {},
+      ) as Promise<void> & { [key: symbol]: () => void };
+      p[CANCEL_SYM] = () => {
+        cancelCalled = true;
+      };
       return p;
     });
 
@@ -313,7 +318,7 @@ describe('visitBeat', () => {
     await flush();
     await flush(); // saga reaches the dwell race
 
-    store.dispatch(TOUR_ADVANCE());
+    store.dispatch(advanceTour());
     await flush();
 
     // The drift's [CANCEL] hook must have fired.
@@ -349,15 +354,15 @@ describe('visitBeat', () => {
 
 /**
  * These tests verify the outer tour loop — snapshot/restore sandwich and the
- * race between `run` (beat sequence) and `exit` (TOUR_EXIT). Each test builds
+ * race between `run` (beat sequence) and `exit` (exitTour). Each test builds
  * a store with a `reconcile` stub injected alongside the visitBeat stubs.
  *
  * Beat fixtures use narration focus (null) so `waitUntil` exits synchronously
  * and `focusReady` never blocks. playClip stubs resolve immediately for the
  * fly and never for the drift — two flushes advance past each beat's fly and
- * one TOUR_ADVANCE dispatched afterwards drives the dwell race so the beat
+ * one advanceTour dispatched afterwards drives the dwell race so the beat
  * completes. Short dwell beats (dwellSec: 0.001) combined with fake timers
- * let the dwell timeout win without manual TOUR_ADVANCE dispatch.
+ * let the dwell timeout win without manual advanceTour dispatch.
  */
 
 describe('guidedTour', () => {
@@ -406,7 +411,7 @@ describe('guidedTour', () => {
     vi.useFakeTimers();
 
     const reconcile = buildReconcileStub();
-    // Very short dwell so the beat completes without a manual TOUR_ADVANCE.
+    // Very short dwell so the beat completes without a manual advanceTour.
     const beat: BeatData = { focus: null, caption: 'B1', dwellSec: 0.001 };
 
     // Fly resolves; drift blocks (timeout wins the dwell race).
@@ -458,9 +463,9 @@ describe('guidedTour', () => {
     expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });
   });
 
-  // ── (4) TOUR_EXIT cancels mid-beat and the finally restores the scene ─────
+  // ── (4) exitTour cancels mid-beat and the finally restores the scene ─────
 
-  it('TOUR_EXIT cancels mid-beat and the finally restores the scene', async () => {
+  it('exitTour cancels mid-beat and the finally restores the scene', async () => {
     const reconcile = buildReconcileStub();
     // Long dwell — we will interrupt before it auto-advances.
     const beat: BeatData = { focus: null, caption: 'B1', dwellSec: 9999 };
@@ -478,8 +483,8 @@ describe('guidedTour', () => {
     await flush();
     await flush();
 
-    // Dispatch TOUR_EXIT — the exit arm wins the outer race and cancels run.
-    store.dispatch(TOUR_EXIT());
+    // Dispatch exitTour — the exit arm wins the outer race and cancels run.
+    store.dispatch(exitTour());
     await flush();
 
     // finally must have executed: restore called and UI unhidden.

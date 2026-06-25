@@ -4,25 +4,26 @@
  *
  * The spike camera *drivers* (`?webshow` et al.) were torn down once the
  * animation system landed, leaving no in-browser way to trigger a clip. This
- * section fills that gap with plain buttons — no URL gate — wired to the
- * engine handle's `clip.play` / `clip.stop` and `tour.start` seams (threaded
- * down as callbacks by App, the same way `slots` / `timingService` are).
+ * section fills that gap with plain buttons — no URL gate. Play/stop/tour are
+ * fire-and-forget dispatches wired by `DebugPanelContainer` (`playClip` /
+ * `stopClip` / `startTour` request actions), the same way the other panel knobs
+ * dispatch.
  *
- * ### Why a local "now playing" state, not a store read
+ * ### Why the readout reads `clipActive`, not a Promise
  *
- * A `ClipData` carries no id, so the store's `camera.clip` can't name which
- * button is live. The button owns the label, so this section tracks it: on
- * play it stamps the label and clears it when `onPlayClip`'s Promise settles —
- * which resolves on BOTH natural end and `stop()`-driven abort. The stale-stamp
- * guard (`cur === label`) means a second clip started before the first settles
- * wins the readout and the first's late resolve is ignored.
+ * A `ClipData` carries no id, so `camera.clip` can't name which button is live —
+ * the button owns the label. This section stamps the last-played label locally
+ * and shows it only while the store reports a clip is playing (`clipActive`).
+ * When playback ends — natural completion or stop — `clipActive` flips false and
+ * the readout falls back to "—". Deriving from store state (rather than awaiting
+ * a play Promise) keeps the section a plain dispatcher with no engine handle.
  *
  * ### Why the tour has no "now playing"
  *
- * `tour.start` is fire-and-forget (no Promise), and the running tour hides the
- * whole HUD — including this panel — via `setUiHidden(true)`. A readout would
- * be both unfeedable and invisible. Aborting a running tour is therefore a
- * keyboard gesture (Esc), not a button here.
+ * `startTour` is fire-and-forget, and the running tour hides the whole HUD —
+ * including this panel — via `setUiHidden(true)`. A readout would be both
+ * unfeedable and invisible. Aborting a running tour is therefore a keyboard
+ * gesture (Esc), not a button here.
  */
 
 import { useState, type ReactElement } from 'react';
@@ -33,8 +34,10 @@ import { cosmicFlows } from '../../clips/cosmicFlows';
 import { demoTour } from '../../clips/demoTour';
 
 export type ClipTriggersSectionProps = {
-  /** Play a single clip; the Promise resolves on natural end or stop. */
-  onPlayClip: (clip: ClipData) => Promise<void>;
+  /** Live "is a clip playing" flag from the store (`selectClipActive`). */
+  clipActive: boolean;
+  /** Play a single clip (fire-and-forget dispatch). */
+  onPlayClip: (clip: ClipData) => void;
   /** Abort the active clip immediately (no-op when nothing is playing). */
   onStopClip: () => void;
   /** Launch a guided tour (fire-and-forget; hides the HUD until it ends). */
@@ -58,17 +61,19 @@ const buttonStyle: React.CSSProperties = {
 };
 
 export function ClipTriggersSection({
+  clipActive,
   onPlayClip,
   onStopClip,
   onStartTour,
 }: ClipTriggersSectionProps): ReactElement {
-  const [playing, setPlaying] = useState<string | null>(null);
+  // The label of the last clip the user started. Shown only while `clipActive`,
+  // so it self-clears when playback ends without any Promise plumbing.
+  const [lastLabel, setLastLabel] = useState<string | null>(null);
+  const playing = clipActive ? lastLabel : null;
 
   const handlePlay = (label: string, clip: ClipData): void => {
-    setPlaying(label);
-    // Clear only if this clip is still the live one — a newer clip's stamp
-    // must not be wiped by this one's late settle.
-    void onPlayClip(clip).finally(() => setPlaying((cur) => (cur === label ? null : cur)));
+    setLastLabel(label);
+    onPlayClip(clip);
   };
 
   return (

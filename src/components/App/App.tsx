@@ -51,8 +51,6 @@ import { updateSelectionFocus, clearSelection } from '../../state/selection/sele
 import { requestFocus } from '../../state/selection/requestFocus';
 import { refOf } from '../../services/engine/helpers/refOf';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { ClipData } from '../../@types/animation/ClipData';
-import type { BeatData } from '../../@types/tour/BeatData';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
 import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
@@ -119,19 +117,6 @@ export function App(): React.ReactElement {
   // inline arrow each render would defeat the memo.
   const openPalette = useCallback(() => dispatch(setPaletteOpen(true)), [dispatch]);
   const closePalette = useCallback(() => dispatch(setPaletteOpen(false)), [dispatch]);
-
-  // Clip/tour seams for the debug panel, bound to the engine handle. `handleRef`
-  // is a stable ref, so these keep a permanent identity; the mount is gated on
-  // `handleRef.current` but the `?.` guards make them safe pre-bootstrap too.
-  const onPlayClip = useCallback(
-    (clip: ClipData) => handleRef.current?.clip.play(clip) ?? Promise.resolve(),
-    [handleRef],
-  );
-  const onStopClip = useCallback(() => handleRef.current?.clip.stop(), [handleRef]);
-  const onStartTour = useCallback(
-    (beats: readonly BeatData[]) => handleRef.current?.tour.start(beats),
-    [handleRef],
-  );
 
   // Stable dispatching callbacks for the keyboard hook — wrapped in
   // `useCallback([dispatch])` so the arrow identity is stable for the
@@ -253,9 +238,6 @@ export function App(): React.ReactElement {
             slots={handleRef.current.assetSlots}
             timingService={handleRef.current.debug.timingService}
             passNames={handleRef.current.debug.passOverrides.allNames}
-            onPlayClip={onPlayClip}
-            onStopClip={onStopClip}
-            onStartTour={onStartTour}
           />
         )}
       </div>

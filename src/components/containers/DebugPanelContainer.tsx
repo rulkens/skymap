@@ -2,15 +2,18 @@
 /**
  * DebugPanelContainer — store boundary for the developer debug panel.
  *
- * Owns ALL store reads and dispatch for the DebugPanel subtree, including
- * the `onTogglePass` handler previously inline in `RenderTogglesSection`.
+ * Owns ALL store reads and dispatch for the DebugPanel subtree, including the
+ * clip/tour controls (`onPlayClip` / `onStopClip` / `onStartTour`) and the
+ * `onTogglePass` handler previously inline in `RenderTogglesSection`.
  * `DebugPanel` and its children import nothing from `store/` or `state/`.
  *
- * Engine props (`slots`, `timingService`, `passNames`, and the clip/tour
- * seams `onPlayClip` / `onStopClip` / `onStartTour`) are passed in by App
- * because they come from `handleRef.current` — a non-Redux handle that the
- * container has no way to reach. The engine-prop gate (`debugPanelOpen &&
- * handleRef.current`) stays in App for the same reason.
+ * The clip/tour controls are plain dispatches: `playClip` / `stopClip` /
+ * `startTour` are request actions consumed by sagas (`watchClip` / `watchTour`),
+ * so the container needs no engine handle — it dispatches like every other knob
+ * here. The "now playing" readout reads `selectClipActive` (live clip state)
+ * instead of awaiting a Promise. Only the genuinely handle-bound engine props
+ * (`slots`, `timingService`, `passNames`) are still passed in by App, gated on
+ * `debugPanelOpen && handleRef.current`.
  *
  * `onTogglePass` reads `disabledPasses[pass]` in its body, so its
  * `useCallback` dep array is `[dispatch, disabledPasses]` — NOT the
@@ -38,6 +41,9 @@ import {
   setFlow,
   setPassDisabled,
 } from '../../state/settings/settingsSlice';
+import { selectClipActive } from '../../state/camera/selectors';
+import { playClip, stopClip } from '../../state/camera/clipActions';
+import { startTour } from '../../state/tour/tourActions';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
@@ -48,21 +54,12 @@ export type DebugPanelContainerProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
   timingService: GpuTimingService;
   passNames: readonly string[];
-  // Engine-handle clip/tour seams — passed by App (they come from
-  // `handleRef.current`, which the container can't reach), then forwarded
-  // straight to DebugPanel alongside the other engine props.
-  onPlayClip: (clip: ClipData) => Promise<void>;
-  onStopClip: () => void;
-  onStartTour: (beats: readonly BeatData[]) => void;
 };
 
 function DebugPanelContainer({
   slots,
   timingService,
   passNames,
-  onPlayClip,
-  onStopClip,
-  onStartTour,
 }: DebugPanelContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
 
@@ -72,6 +69,7 @@ function DebugPanelContainer({
   const highlightFallback = useAppSelector(selectHighlightFallback);
   const realOnlyMode = useAppSelector(selectRealOnly);
   const flow = useAppSelector(selectFlow);
+  const clipActive = useAppSelector(selectClipActive);
 
   const onShowPickBufferChange = useCallback(
     (enabled: boolean) => dispatch(setShowPickBuffer(enabled)),
@@ -95,6 +93,15 @@ function DebugPanelContainer({
 
   const onFlowChange = useCallback(
     (patch: Partial<FlowSettings>) => dispatch(setFlow(patch)),
+    [dispatch],
+  );
+
+  // Clip/tour controls — plain dispatches of request actions. The sagas
+  // (`watchClip` / `watchTour`) own the engine-side work.
+  const onPlayClip = useCallback((clip: ClipData) => dispatch(playClip(clip)), [dispatch]);
+  const onStopClip = useCallback(() => dispatch(stopClip()), [dispatch]);
+  const onStartTour = useCallback(
+    (beats: readonly BeatData[]) => dispatch(startTour(beats)),
     [dispatch],
   );
 
@@ -122,6 +129,7 @@ function DebugPanelContainer({
       flow={flow}
       onFlowChange={onFlowChange}
       onTogglePass={onTogglePass}
+      clipActive={clipActive}
       onPlayClip={onPlayClip}
       onStopClip={onStopClip}
       onStartTour={onStartTour}

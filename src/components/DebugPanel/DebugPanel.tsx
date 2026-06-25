@@ -84,11 +84,13 @@ export type DebugPanelProps = {
    */
   onTogglePass: (name: string) => void;
   /**
-   * Clip/tour control seams forwarded from the engine handle (App threads them
-   * through the container, like `slots` / `timingService`). `onPlayClip`'s
-   * Promise resolves on natural end or stop; `onStartTour` is fire-and-forget.
+   * Clip/tour controls — plain dispatches wired by `DebugPanelContainer`. All
+   * three are fire-and-forget request actions; `clipActive` (from
+   * `selectClipActive`) is the live "is a clip playing" flag the section uses for
+   * its readout instead of awaiting a Promise.
    */
-  onPlayClip: (clip: ClipData) => Promise<void>;
+  clipActive: boolean;
+  onPlayClip: (clip: ClipData) => void;
   onStopClip: () => void;
   onStartTour: (beats: readonly BeatData[]) => void;
 };
@@ -109,6 +111,7 @@ export function DebugPanel({
   flow,
   onFlowChange,
   onTogglePass,
+  clipActive,
   onPlayClip,
   onStopClip,
   onStartTour,
@@ -169,6 +172,7 @@ export function DebugPanel({
       <LabelEffectsSection />
       <div style={{ marginTop: 6 }} />
       <ClipTriggersSection
+        clipActive={clipActive}
         onPlayClip={onPlayClip}
         onStopClip={onStopClip}
         onStartTour={onStartTour}

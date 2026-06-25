@@ -26,6 +26,7 @@ import {
   selectPaletteOpen,
 } from '../../src/state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../src/state/ui/uiSlice';
+import { advanceTour, exitTour } from '../../src/state/tour/tourActions';
 
 /** Fire a keydown on window with the given init options. */
 function fireKey(init: KeyboardEventInit): void {
@@ -152,35 +153,30 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
     expect(selectUiHidden(store.getState())).toBe(false);
   });
 
-  it('Esc exits a running tour via the engine handle', () => {
-    const exit = vi.fn<() => void>();
-    // Minimal handle stub: only the tour.exit path the Esc branch touches.
-    const input = {
-      ...makeInput(store),
-      engineHandleRef: { current: { tour: { exit } } as never },
-    };
+  it('Esc clears selection and dispatches exitTour', () => {
+    const input = makeInput(store);
+    // exitTour is reducer-less, so we assert the dispatch rather than state.
+    const dispatchSpy = vi.spyOn(store, 'dispatch');
     renderHook(() => useKeyboardShortcuts(input), {
       wrapper: ({ children }: { children: ReactNode }) =>
         createElement(Provider, { store, children }),
     });
 
     act(() => fireKey({ key: 'Escape' }));
-    expect(exit).toHaveBeenCalledOnce();
+    expect(dispatchSpy).toHaveBeenCalledWith(exitTour());
   });
 
-  it('ArrowRight advances to the next tour beat via the engine handle', () => {
-    const advance = vi.fn<() => void>();
-    const input = {
-      ...makeInput(store),
-      engineHandleRef: { current: { tour: { advance } } as never },
-    };
+  it('ArrowRight dispatches advanceTour to step the next beat', () => {
+    const input = makeInput(store);
+    // advanceTour is reducer-less, so we assert the dispatch rather than state.
+    const dispatchSpy = vi.spyOn(store, 'dispatch');
     renderHook(() => useKeyboardShortcuts(input), {
       wrapper: ({ children }: { children: ReactNode }) =>
         createElement(Provider, { store, children }),
     });
 
     act(() => fireKey({ key: 'ArrowRight' }));
-    expect(advance).toHaveBeenCalledOnce();
+    expect(dispatchSpy).toHaveBeenCalledWith(advanceTour());
   });
 
   it('keys inside an INPUT element are ignored', () => {

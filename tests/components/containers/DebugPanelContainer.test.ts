@@ -29,9 +29,9 @@ import {
   selectRealOnly,
 } from '../../../src/state/settings/selectors';
 import { setShowPickBuffer } from '../../../src/state/settings/settingsSlice';
+import { playClip } from '../../../src/state/camera/clipActions';
+import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
-import type { ClipData } from '../../../src/@types/animation/ClipData';
-import type { BeatData } from '../../../src/@types/tour/BeatData';
 
 // ---------------------------------------------------------------------------
 // Stub engine props
@@ -59,24 +59,12 @@ function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
   return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });
 }
 
-type ClipTourStubs = {
-  onPlayClip?: (clip: ClipData) => Promise<void>;
-  onStopClip?: () => void;
-  onStartTour?: (beats: readonly BeatData[]) => void;
-};
-
-function renderContainer(
-  store: ReturnType<typeof createAppStore>['store'],
-  clipTour: ClipTourStubs = {},
-) {
+function renderContainer(store: ReturnType<typeof createAppStore>['store']) {
   return render(
     createElement(DebugPanelContainer, {
       slots: stubSlots,
       timingService: stubTimingService,
       passNames: PASS_NAMES,
-      onPlayClip: clipTour.onPlayClip ?? (() => Promise.resolve()),
-      onStopClip: clipTour.onStopClip ?? (() => undefined),
-      onStartTour: clipTour.onStartTour ?? (() => undefined),
     }),
     { wrapper: makeWrapper(store) },
   );
@@ -143,28 +131,30 @@ describe('DebugPanelContainer', () => {
     expect(selectRealOnly(store.getState())).toBe(true);
   });
 
-  it('forwards a clip-play button click to onPlayClip', () => {
+  it('dispatches playClip on a clip-play button click', () => {
     const { store } = createAppStore();
-    const onPlayClip = vi.fn<(clip: ClipData) => Promise<void>>(() => Promise.resolve());
-    const { container } = renderContainer(store, { onPlayClip });
+    const dispatchSpy = vi.spyOn(store, 'dispatch');
+    const { container } = renderContainer(store);
     const buttons = Array.from(container.querySelectorAll('button'));
     const playButton = buttons.find((b) => b.textContent?.includes('Cosmic Flows'));
     expect(playButton).not.toBeUndefined();
     fireEvent.click(playButton!);
-    expect(onPlayClip).toHaveBeenCalledTimes(1);
+    const playAction = dispatchSpy.mock.calls.find((c) => playClip.match(c[0]));
+    expect(playAction).not.toBeUndefined();
   });
 
-  it('forwards the demo-tour button click to onStartTour', () => {
+  it('dispatches startTour on the demo-tour button click', () => {
     const { store } = createAppStore();
-    const onStartTour = vi.fn<(beats: readonly BeatData[]) => void>();
-    const { container } = renderContainer(store, { onStartTour });
+    const dispatchSpy = vi.spyOn(store, 'dispatch');
+    const { container } = renderContainer(store);
     const buttons = Array.from(container.querySelectorAll('button'));
     const tourButton = buttons.find((b) => b.textContent?.includes('demo tour'));
     expect(tourButton).not.toBeUndefined();
     fireEvent.click(tourButton!);
-    expect(onStartTour).toHaveBeenCalledTimes(1);
+    const tourAction = dispatchSpy.mock.calls.map((c) => c[0]).find(startTour.match);
+    expect(tourAction).not.toBeUndefined();
     // The demo tour carries three beats, the first targeting the Milky Way.
-    const beats = onStartTour.mock.calls[0]![0];
+    const beats = tourAction!.payload.beats;
     expect(beats).toHaveLength(3);
     expect(beats[0]!.focus).toEqual({ type: 'milkyWay' });
   });

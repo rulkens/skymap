@@ -19,7 +19,7 @@
  *
  * 3. **Await the establishing fly** (`call(playClip, flyToClip(...))`): the fly IS
  *    the establishing move — the camera smoothly arrives at the target. Awaiting it
- *    (not forking) means a TOUR_ADVANCE that arrives mid-flight does NOT cut the
+ *    (not forking) means an advanceTour that arrives mid-flight does NOT cut the
  *    camera move short and does NOT skip the current beat. The tour's advance
  *    contract is "wait for the fly to land before the next beat begins". This is
  *    the correctness invariant the `call` enforces.
@@ -37,21 +37,21 @@
  *
  * 6. **Race the dwell** (`race({ timeout, next, drift })`): three things compete.
  *    - `timeout = delay(dwellSec * 1000)`: auto-advance after the authored dwell time.
- *    - `next = take(TOUR_ADVANCE)`: user-initiated skip.
+ *    - `next = take(advanceTour)`: user-initiated skip.
  *    - `drift = call(playClip, dwellDrift(beat))`: perpetual ambient camera motion.
  *      `dwellDrift` is intentionally perpetual (`loop: true` spin) so it ALWAYS loses
  *      the race — the timer or the user input wins first, and the drift is cancelled.
  *      A finite drift clip would win on short beats and advance the tour prematurely.
  *
- * ### guidedTour: why a saga and why only TOUR_EXIT aborts
+ * ### guidedTour: why a saga and why only exitTour aborts
  *
  * The outer loop must restore the scene (settings + camera focus) whether the
  * tour finishes naturally or is cut short by the user. A `try/finally` in a
  * generator gives that guarantee unconditionally — a pure-data sequencer that
  * drives beats from outside a saga cannot bind a teardown to its own
- * cancellation. `TOUR_EXIT` is the only abort signal because the tour's clip@95
+ * cancellation. `exitTour` is the only abort signal because the tour's clip@95
  * camera driver swallows drag input: a stray `beginDrag` or `commitCameraPose`
- * should NOT stop the show — the user must dispatch `TOUR_EXIT` explicitly.
+ * should NOT stop the show — the user must dispatch `exitTour` explicitly.
  *
  * ### getContext is read INSIDE the worker
  *
@@ -68,7 +68,7 @@ import { flyToClip } from './flyToClip';
 import { dwellDrift } from './dwellDrift';
 import { waitUntil } from './waitUntil';
 import { focusReady } from './focusReady';
-import { TOUR_ADVANCE, TOUR_EXIT, TOUR_START } from './tourActions';
+import { advanceTour, exitTour, startTour } from './tourActions';
 import { showCaption, setUiHidden } from '../ui/uiSlice';
 import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
 import { focusFraming } from '../../services/engine/camera/focusFraming';
@@ -99,7 +99,7 @@ export function* visitBeat(beat: BeatData): Generator {
   const resolved: ResolvedFocus | null =
     framing !== null ? { worldPos: framing.target, focusMpc: framing.distance } : null;
 
-  // (3) Await the establishing fly — never fork; a mid-flight TOUR_ADVANCE must not cut it.
+  // (3) Await the establishing fly — never fork; a mid-flight advanceTour must not cut it.
   yield* call(playClip, flyToClip(beat, resolved));
 
   // (4) Dispatch beat effects verbatim — no applyIntent/applyEffect wrapper.
@@ -111,7 +111,7 @@ export function* visitBeat(beat: BeatData): Generator {
   // (6) Race: dwell timer vs user input vs perpetual drift (drift always loses).
   yield* race({
     timeout: delay(beat.dwellSec * 1000),
-    next: take(TOUR_ADVANCE),
+    next: take(advanceTour),
     drift: call(playClip, dwellDrift(beat)),
   });
 
@@ -124,12 +124,12 @@ export function* visitBeat(beat: BeatData): Generator {
  *
  * This is a saga — not a plain async function — because `try/finally` in a
  * generator runs on BOTH natural completion (all beats finish) and
- * cancellation (TOUR_EXIT wins the race and redux-saga cancels the `run`
+ * cancellation (exitTour wins the race and redux-saga cancels the `run`
  * arm). A plain async function whose Promise is externally rejected has no
  * equivalent guarantee: the caller must set up a separate teardown path.
  * Here the finally handles both paths with one clause.
  *
- * Only TOUR_EXIT stops the tour. Camera-input actions (`beginDrag`,
+ * Only exitTour stops the tour. Camera-input actions (`beginDrag`,
  * `commitCameraPose`, …) must NOT abort the run — the clip@95 driver owns
  * the camera during playback and input actions arrive but have no effect on
  * tour progression. Adding a camera-input `take` here would incorrectly end
@@ -149,7 +149,7 @@ export function* guidedTour(beats: readonly BeatData[]): Generator {
 
   try {
     yield* race({
-      // `run` sequences every beat; a TOUR_EXIT that wins the race cancels
+      // `run` sequences every beat; an exitTour that wins the race cancels
       // this arm mid-visitBeat — redux-saga propagates the cancellation into
       // the in-flight playClip call automatically.
       run: call(function* () {
@@ -157,25 +157,25 @@ export function* guidedTour(beats: readonly BeatData[]): Generator {
       }),
       // `exit` is the only abort: an explicit user/system dispatch, not a
       // stray camera-input action.
-      exit: take(TOUR_EXIT),
+      exit: take(exitTour),
     });
   } finally {
-    // Runs on BOTH natural completion and TOUR_EXIT cancellation.
+    // Runs on BOTH natural completion and exitTour cancellation.
     fx.restoreScene(snapshot, { animate: true });
     yield* put(setUiHidden(false));
   }
 }
 
 /**
- * Watcher: starts a `guidedTour` run each time TOUR_START is dispatched.
+ * Watcher: starts a `guidedTour` run each time startTour is dispatched.
  *
- * `takeLatest` cancels any in-progress run when a new TOUR_START arrives —
+ * `takeLatest` cancels any in-progress run when a new startTour arrives —
  * the tour is single-instance, so a new start always supersedes the previous
- * one. `guidedTour` itself handles TOUR_EXIT via an internal race, so the
+ * one. `guidedTour` itself handles exitTour via an internal race, so the
  * watcher simply delegates the full run.
  */
 export function* watchTour() {
-  yield* takeLatest(TOUR_START, function* (action) {
+  yield* takeLatest(startTour, function* (action) {
     yield* call(guidedTour, action.payload.beats);
   });
 }
