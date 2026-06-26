@@ -48,12 +48,16 @@ vi.mock('../../../src/data/animation/tours/tourRegistry', () => ({
     demo: {
       id: 'demo',
       label: 'Demo',
-      beats: [{ clip: { start: 'live', timeline: [] }, caption: 'Test', dwellSec: 0.001 }],
+      beats: [
+        { clip: { start: 'live', timeline: [] }, caption: { title: 'Test' }, dwellSec: 0.001 },
+      ],
     },
     webShowcase: {
       id: 'webShowcase',
       label: 'Web',
-      beats: [{ clip: { start: 'live', timeline: [] }, caption: 'Long', dwellSec: 9999 }],
+      beats: [
+        { clip: { start: 'live', timeline: [] }, caption: { title: 'Long' }, dwellSec: 9999 },
+      ],
     },
   },
 }));
@@ -135,16 +139,16 @@ describe('watchTourSaga', () => {
     vi.useRealTimers();
   });
 
-  // ── (1) guidedTourSaga actually ran (setUiHidden(true) dispatched) ────────────
+  // ── (1) guidedTourSaga actually ran (tourStarted dispatched) ────────────
 
-  it('guidedTourSaga runs: setUiHidden(true) is dispatched on startTour', async () => {
+  it('guidedTourSaga runs: the tour is marked active on startTour', async () => {
     const { store } = buildHarness();
 
     store.dispatch(startTour('demo'));
 
-    // setUiHidden(true) is dispatched synchronously inside guidedTourSaga before
-    // the first beat's async work begins.
-    expect(store.getState().ui.uiHidden).toBe(true);
+    // tourStarted is dispatched synchronously inside guidedTourSaga before the
+    // first beat's async work begins (the App derives HUD-hidden from it).
+    expect(store.getState().tour.active).toBe(true);
   });
 
   // ── (2) restoreScene fires on natural completion ──────────────────────────
@@ -224,7 +228,7 @@ describe('watchTourSaga', () => {
 
     // The first run was cancelled: its finally block must have run.
     expect(reconcile.restoreScene).toHaveBeenCalledTimes(1);
-    // The second run is live: setUiHidden(true) is still in effect.
-    expect(store.getState().ui.uiHidden).toBe(true);
+    // The second run is live: the tour is still marked active.
+    expect(store.getState().tour.active).toBe(true);
   });
 });

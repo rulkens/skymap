@@ -20,6 +20,17 @@
  * `restoreScene` in the finally winds it all back — both setup effects and
  * per-beat visibility changes are undone in one restore call.
  *
+ * ### Why no setUiHidden here
+ *
+ * HUD-hidden-during-tour is DERIVED from `tour.active`, not toggled imperatively:
+ * the App hides the HUD stack while a tour is active and mounts the overlay from
+ * the same flag. A separate `setUiHidden(true/false)` would be a second write to
+ * coordinate — and on a `takeLatest` supersede (tour B starting over tour A) the
+ * outgoing run's finally would race the incoming run's setup over that flag. With
+ * a single lifecycle write (`tourStarted` / `tourEnded`) there is nothing to
+ * desync: the finally's one `put` settles synchronously during cancellation,
+ * before the successor forks.
+ *
  * ### getContext is read INSIDE the saga
  *
  * The engine registers its saga context AFTER the root saga forks, so reading
@@ -31,7 +42,7 @@ import { call, put, take, race, getContext } from 'typed-redux-saga';
 
 import { visitBeatSaga } from './visitBeatSaga';
 import { exitTour } from './tourActions';
-import { setUiHidden } from '../ui/uiSlice';
+import { tourStarted, tourEnded } from './tourSlice';
 import type { Tour } from '../../@types/animation/tour/Tour';
 import type { SagaContext } from '../../store/types';
 
@@ -63,8 +74,9 @@ export function* guidedTourSaga(tour: Tour): Generator {
   // the setup strip makes.
   const snapshot = fx.captureScene();
 
-  // Hide the UI chrome for the duration of the tour.
-  yield* put(setUiHidden(true));
+  // Activate the tour runtime slice — the App derives HUD-hidden + mounts the
+  // overlay from `tour.active`.
+  yield* put(tourStarted({ tourId: tour.id }));
 
   try {
     // Dispatch the establishing scene strip. Runs inside the try so the finally
@@ -72,19 +84,29 @@ export function* guidedTourSaga(tour: Tour): Generator {
     for (const e of tour.setup?.effects ?? []) yield* put(e);
 
     yield* race({
-      // `run` sequences every beat; an exitTour that wins the race cancels
-      // this arm mid-visitBeatSaga — redux-saga propagates the cancellation into
-      // the in-flight playClip call automatically.
+      // `run` sequences the beats by INDEX (not a forward-only for-of), so a
+      // `'prev'` outcome can step the index back and re-play the previous beat's
+      // establishing fly. Advancing off the last beat ends the run naturally.
+      // An exitTour that wins the outer race cancels this arm mid-visitBeatSaga —
+      // redux-saga propagates the cancellation into the in-flight playClip call.
       run: call(function* () {
-        for (const beat of tour.beats) yield* call(visitBeatSaga, beat);
+        let i = 0;
+        while (i < tour.beats.length) {
+          // Delegate (not `call`) so the typed `BeatOutcome` return flows back;
+          // cancellation from the outer `exit` race still propagates through the
+          // yield* into the in-flight worker.
+          const outcome = yield* visitBeatSaga(tour.beats[i]!, i);
+          i = outcome === 'prev' ? Math.max(0, i - 1) : i + 1;
+        }
       }),
       // `exit` is the only abort: an explicit user/system dispatch, not a
       // stray camera-input action.
       exit: take(exitTour),
     });
   } finally {
-    // Runs on BOTH natural completion and exitTour cancellation.
+    // Runs on BOTH natural completion and exitTour cancellation. One lifecycle
+    // write (tourEnded) keeps the finally synchronous during a supersede cancel.
     fx.restoreScene(snapshot, { animate: true });
-    yield* put(setUiHidden(false));
+    yield* put(tourEnded());
   }
 }

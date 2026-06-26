@@ -62,12 +62,6 @@ const uiSlice = createSlice({
       state.debugPanelOpen = !state.debugPanelOpen;
     },
 
-    // ── caption ──────────────────────────────────────────────────────────────
-    // Transient tour caption; null when no caption is showing.
-    showCaption: (state, action: PayloadAction<string | null>) => {
-      state.caption = action.payload;
-    },
-
     // ── splash ───────────────────────────────────────────────────────────────
     // One reducer for Explore + Tour dismiss; atomically writes both fields.
     dismissSplash: (state, action: PayloadAction<number>) => {
@@ -87,7 +81,6 @@ export const {
   toggleUiHidden,
   setDebugPanelOpen,
   toggleDebugPanelOpen,
-  showCaption,
   dismissSplash,
   reopenSplash,
 } = uiSlice.actions;

@@ -139,13 +139,13 @@ describe('guidedTourSaga', () => {
 
   it('guidedTourSaga captures the scene before the first beat', async () => {
     const reconcile = buildReconcileStub();
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 60 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 60 };
     const tour = makeTour([beat]);
 
     const { sagaMiddleware } = buildStore({ reconcile });
     sagaMiddleware.run(guidedTourSaga, tour);
 
-    // One flush: the saga runs getContext, calls captureScene, puts setUiHidden,
+    // One flush: the saga runs getContext, calls captureScene, puts tourStarted,
     // enters the race, starts visitBeatSaga, reaches the fly call.
     await flush();
 
@@ -153,14 +153,14 @@ describe('guidedTourSaga', () => {
     expect(reconcile.captureScene).toHaveBeenCalledTimes(1);
   });
 
-  // ── (2) hides the UI and restores it after completion ────────────────────
+  // ── (2) activates the tour for the duration and ends it after completion ──
 
-  it('guidedTourSaga hides the UI for the duration and restores it after', async () => {
+  it('guidedTourSaga marks the tour active for the duration and ends it after', async () => {
     vi.useFakeTimers();
 
     const reconcile = buildReconcileStub();
     // Very short dwell so the beat completes without a manual advanceTour.
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 0.001 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 0.001 };
 
     // Fly resolves; drift blocks (timeout wins the dwell race).
     let callIdx = 0;
@@ -172,15 +172,15 @@ describe('guidedTourSaga', () => {
     const { store, sagaMiddleware } = buildStore({ reconcile, playClip: playClipMock });
     sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
 
-    // setUiHidden(true) must be in the store already.
-    expect(store.getState().ui.uiHidden).toBe(true);
+    // tourStarted must be in the store already (the App derives HUD-hidden from it).
+    expect(store.getState().tour.active).toBe(true);
 
     // Advance timers so the dwell timeout fires and the beat + loop complete.
     await vi.runAllTimersAsync();
 
-    // After natural completion the finally must restore + unhide.
+    // After natural completion the finally must restore the scene and end the tour.
     expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });
-    expect(store.getState().ui.uiHidden).toBe(false);
+    expect(store.getState().tour.active).toBe(false);
   });
 
   // ── (3) runs every beat in order ─────────────────────────────────────────
@@ -189,8 +189,8 @@ describe('guidedTourSaga', () => {
     vi.useFakeTimers();
 
     const reconcile = buildReconcileStub();
-    const beat1: BeatData = { clip: NARRATION_CLIP, caption: 'First', dwellSec: 0.001 };
-    const beat2: BeatData = { clip: NARRATION_CLIP, caption: 'Second', dwellSec: 0.001 };
+    const beat1: BeatData = { clip: NARRATION_CLIP, caption: { title: 'First' }, dwellSec: 0.001 };
+    const beat2: BeatData = { clip: NARRATION_CLIP, caption: { title: 'Second' }, dwellSec: 0.001 };
 
     // Fly calls resolve; drift calls block. Calls interleave: fly1, drift1, fly2, drift2.
     const stub = makeAutoFlyStub();
@@ -201,10 +201,12 @@ describe('guidedTourSaga', () => {
     // Run all timers — each beat's 0.001 s dwell fires the timeout and advances.
     await vi.runAllTimersAsync();
 
-    // Both captions must have appeared in order; the final state should be null
-    // (cleared after beat2) and uiHidden restored to false.
-    expect(store.getState().ui.caption).toBeNull();
-    expect(store.getState().ui.uiHidden).toBe(false);
+    // Both beats must have flown (≥ 2 fly calls — calls 1 and 3 in the parity
+    // stub), the loop ran off the end (tour no longer active), and the UI is
+    // restored.
+    expect(stub.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(store.getState().tour.active).toBe(false);
+    expect(store.getState().tour.active).toBe(false);
 
     // restoreScene called once after both beats complete.
     expect(reconcile.restoreScene).toHaveBeenCalledTimes(1);
@@ -216,7 +218,7 @@ describe('guidedTourSaga', () => {
   it('exitTour cancels mid-beat and the finally restores the scene', async () => {
     const reconcile = buildReconcileStub();
     // Long dwell — we will interrupt before it auto-advances.
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 9999 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 9999 };
 
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -237,7 +239,7 @@ describe('guidedTourSaga', () => {
 
     // finally must have executed: restore called and UI unhidden.
     expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });
-    expect(store.getState().ui.uiHidden).toBe(false);
+    expect(store.getState().tour.active).toBe(false);
   });
 
   // ── (5) natural completion restores the scene ─────────────────────────────
@@ -246,7 +248,7 @@ describe('guidedTourSaga', () => {
     vi.useFakeTimers();
 
     const reconcile = buildReconcileStub();
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 0.001 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 0.001 };
 
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -262,7 +264,7 @@ describe('guidedTourSaga', () => {
 
     // restoreScene must have fired — the finally ran on natural completion.
     expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });
-    expect(store.getState().ui.uiHidden).toBe(false);
+    expect(store.getState().tour.active).toBe(false);
   });
 
   // ── (6) camera-input action does not abort the tour ──────────────────────
@@ -270,7 +272,7 @@ describe('guidedTourSaga', () => {
   it('no camera-input action aborts the tour', async () => {
     const reconcile = buildReconcileStub();
     // Long dwell so the beat never auto-advances during this test.
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 9999 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 9999 };
 
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -292,7 +294,7 @@ describe('guidedTourSaga', () => {
     // restoreScene must NOT have been called — the tour is still running.
     expect(reconcile.restoreScene).not.toHaveBeenCalled();
     // uiHidden stays true — the tour is mid-beat.
-    expect(store.getState().ui.uiHidden).toBe(true);
+    expect(store.getState().tour.active).toBe(true);
   });
 
   // ── (7) dispatches setup effects before the first beat ───────────────────
@@ -301,7 +303,7 @@ describe('guidedTourSaga', () => {
     vi.useFakeTimers();
 
     const reconcile = buildReconcileStub();
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: 'B1', dwellSec: 0.001 };
+    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 0.001 };
 
     // Tour with a setup effect that disables volumes.
     const tour: Tour = {
@@ -331,6 +333,6 @@ describe('guidedTourSaga', () => {
     // (In this test the reconcile stub returns SENTINEL_SNAPSHOT regardless,
     // but the call confirms the finally always runs.)
     expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });
-    expect(store.getState().ui.uiHidden).toBe(false);
+    expect(store.getState().tour.active).toBe(false);
   });
 });

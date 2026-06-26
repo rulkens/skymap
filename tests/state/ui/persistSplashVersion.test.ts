@@ -41,7 +41,6 @@ describe('persistSplashVersion', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
-      caption: null,
       splash: { visible: false, dismissedVersion: 2 },
     };
     const { store } = createAppStore({ settings, ui: preloadedUi });

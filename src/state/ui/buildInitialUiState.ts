@@ -46,7 +46,6 @@ export function buildInitialUiState(): UiState {
     paletteOpen: false,
     uiHidden: false,
     debugPanelOpen: false,
-    caption: null,
     splash: {
       visible: splashVisible,
       dismissedVersion: seen,
