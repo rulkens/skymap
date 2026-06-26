@@ -47,9 +47,9 @@ export const MILLIQUAS_ENTRY = {
   schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
   // Matches the upstream catalogue's own short-name convention.
   iauPrefix: 'MQ',
-  // small drops Milliquas entirely (mobile GPU budget); medium caps at
+  // small caps at ~60k brightest for the mobile GPU budget; medium caps at
   // ~200k brightest; large is uncapped.
-  tierTargets: { small: 0, medium: 200_000 },
+  tierTargets: { small: 60_000, medium: 200_000 },
   // Quasars sit at apparent mag 18–22+; with the bulk-galaxy catalog floor of
   // 0.02 most rows would pin to it and look identical. A higher floor
   // (0.15) keeps the faint tail distinguishable. The 1000-Mpc fade
