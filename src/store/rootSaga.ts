@@ -13,6 +13,7 @@
  *   watchRequestFocusSaga  — resolves a durable focus id to a ref, deferring on catalogLoaded
  *   watchFocusTweenSaga    — builds + dispatches the camera tween on every focus ref change
  *   watchTourSaga          — starts a guidedTourSaga run on each startTour (takeLatest — single-instance)
+ *   watchTourKeyboardSaga  — binds the tour nav keys (→/←/Space) only while a tour runs
  *   watchClipSaga          — runs the clip-player seam on each playClip; stopClip/re-play cancels it
  *
  * Each watcher is one saga per file, named after the saga, authored beside its
@@ -42,6 +43,7 @@ import { watchSelectionWakeSaga } from '../state/selection/watchSelectionWakeSag
 import { watchRequestFocusSaga } from '../state/selection/watchRequestFocusSaga';
 import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
 import { watchTourSaga } from '../state/tour/watchTourSaga';
+import { watchTourKeyboardSaga } from '../state/tour/watchTourKeyboardSaga';
 import { watchClipSaga } from '../state/camera/watchClipSaga';
 
 export function* mainSaga() {
@@ -56,6 +58,7 @@ export function* mainSaga() {
     watchRequestFocusSaga(),
     watchFocusTweenSaga(),
     watchTourSaga(),
+    watchTourKeyboardSaga(),
     watchClipSaga(),
   ]);
 }

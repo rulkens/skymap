@@ -26,7 +26,7 @@ import {
   selectPaletteOpen,
 } from '../../src/state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../src/state/ui/uiSlice';
-import { advanceTour, exitTour } from '../../src/state/tour/tourActions';
+import { exitTour } from '../../src/state/tour/tourActions';
 
 /** Fire a keydown on window with the given init options. */
 function fireKey(init: KeyboardEventInit): void {
@@ -166,18 +166,8 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(exitTour());
   });
 
-  it('ArrowRight dispatches advanceTour to step the next beat', () => {
-    const input = makeInput(store);
-    // advanceTour is reducer-less, so we assert the dispatch rather than state.
-    const dispatchSpy = vi.spyOn(store, 'dispatch');
-    renderHook(() => useKeyboardShortcuts(input), {
-      wrapper: ({ children }: { children: ReactNode }) =>
-        createElement(Provider, { store, children }),
-    });
-
-    act(() => fireKey({ key: 'ArrowRight' }));
-    expect(dispatchSpy).toHaveBeenCalledWith(advanceTour());
-  });
+  // The tour navigation keys (→/←/Space) moved to `watchTourKeyboardSaga`,
+  // which binds them only while a tour runs. The hook no longer handles them.
 
   it('keys inside an INPUT element are ignored', () => {
     const input = makeInput(store);
