@@ -329,23 +329,11 @@
   border-radius: 50%;
 }
 
-/* Start the sweep at 12 o'clock (−90°) and rotate the whole ring a full
- * extra turn over the dwell, so the depleting arc visibly spins as it
- * empties rather than draining in place. The duration + play-state are set
- * inline (same dwell length as the depletion) so the spin and the drain
- * stay locked together and pause as one. */
+/* Rotate −90° so the sweep starts at 12 o'clock. */
 .ringSvg {
   position: absolute;
   inset: 0;
-  animation: tourSpin linear forwards;
-}
-@keyframes tourSpin {
-  from {
-    transform: rotate(-90deg);
-  }
-  to {
-    transform: rotate(270deg);
-  }
+  transform: rotate(-90deg);
 }
 .ringTrack {
   fill: none;
@@ -390,13 +378,6 @@
   .title::after {
     animation: none;
     width: 72px;
-  }
-  /* Keep the depleting sweep (it is informative — it mirrors the autoplay
-   * timer) but drop the decorative whole-ring spin, snapping back to the
-   * static 12-o'clock start. */
-  .ringSvg {
-    animation: none;
-    transform: rotate(-90deg);
   }
 }
 

@@ -32,7 +32,7 @@ export function dwellDrift(_beat: BeatData): ClipData {
     start: 'live',
     timeline: [
       fork(oscillate('pitch', { amp: 0.04, period: 14 })), // gentle bob
-      spin('yaw', { by: Math.PI * 2, over: 90, loop: true }), // very slow orbit — perpetual
+      spin('yaw', { by: Math.PI * 2, over: 45, loop: true }), // slow orbit — perpetual
     ],
   };
 }

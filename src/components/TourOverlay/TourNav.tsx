@@ -81,10 +81,6 @@ function TourNav({
           height="40"
           viewBox="0 0 40 40"
           aria-hidden="true"
-          style={{
-            animationDuration: `${dwellSec}s`,
-            animationPlayState: paused ? 'paused' : 'running',
-          }}
         >
           <circle className={styles.ringTrack} cx="20" cy="20" r="17" />
           <circle
