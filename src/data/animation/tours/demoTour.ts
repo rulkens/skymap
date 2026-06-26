@@ -30,15 +30,31 @@ export const demoTour: Tour = {
   id: 'demo',
   label: 'Demo Tour',
   beats: [
-    { clip: flyAndFocusOnClip(focusId('milkyWay')), caption: 'Home — the Milky Way', dwellSec: 5 },
+    {
+      clip: flyAndFocusOnClip(focusId('milkyWay')),
+      caption: {
+        title: 'The Milky Way',
+        body: 'Home — one barred spiral among the millions mapped here.',
+        position: 'bottom-left',
+      },
+      dwellSec: 5,
+    },
     {
       clip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
-      caption: 'The Virgo Cluster',
+      caption: {
+        title: 'The Virgo Cluster',
+        body: 'Two thousand galaxies, bound by gravity 54 million light-years away.',
+        position: 'bottom-left',
+      },
       dwellSec: 5,
     },
     {
       clip: flyAndFocusOnClip(focusId('supercluster-laniakea-sc')),
-      caption: 'Laniakea — our home supercluster',
+      caption: {
+        title: 'Laniakea',
+        body: 'Our home supercluster — a hundred thousand galaxies streaming toward the Great Attractor.',
+        position: 'bottom-right',
+      },
       dwellSec: 6,
     },
   ],

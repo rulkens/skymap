@@ -20,9 +20,9 @@ import {
 describe('webShowcase tour', () => {
   it('has three beats with captions and dwell times', () => {
     expect(webShowcase.beats).toHaveLength(3);
-    expect(webShowcase.beats[0]!.caption).toBe('The named cosmic web');
-    expect(webShowcase.beats[1]!.caption).toBe('The Virgo Cluster');
-    expect(webShowcase.beats[2]!.caption).toBe('The M87 Galaxy');
+    expect(webShowcase.beats[0]!.caption?.title).toBe('The Milky Way');
+    expect(webShowcase.beats[1]!.caption?.title).toBe('The Virgo Cluster');
+    expect(webShowcase.beats[2]!.caption?.title).toBe('M87');
     expect(webShowcase.beats[0]!.dwellSec).toBe(4);
     expect(webShowcase.beats[1]!.dwellSec).toBe(6);
     expect(webShowcase.beats[2]!.dwellSec).toBe(6);

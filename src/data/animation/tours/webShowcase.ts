@@ -64,17 +64,29 @@ export const webShowcase: Tour = {
   },
   beats: [
     {
-      caption: 'The named cosmic web',
+      caption: {
+        title: 'The Milky Way',
+        body: "Home — a few hundred billion stars, and the one vantage point in this entire map you're looking out **from**.",
+        position: 'bottom-left',
+      },
       dwellSec: 4,
       clip: flyToClip(focusId('milkyWay')),
     },
     {
-      caption: 'The Virgo Cluster',
+      caption: {
+        title: 'The Virgo Cluster',
+        body: 'Two thousand galaxies bound by gravity — the dense heart of the supercluster we call **home**, 54 million light-years away.',
+        position: 'bottom-left',
+      },
       dwellSec: 6,
       clip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
     },
     {
-      caption: 'The M87 Galaxy',
+      caption: {
+        title: 'M87',
+        body: "The cluster's giant — a trillion stars around a black hole six billion times the Sun's mass, the **first ever photographed**.",
+        position: 'bottom-right',
+      },
       dwellSec: 6,
       clip: flyToClip(focusId('m87')),
     },
