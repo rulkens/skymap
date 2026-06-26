@@ -27,9 +27,9 @@
  *    kept separate from `beatChanged` (fly START) so the ring begins on the
  *    LANDING, not during the fly.
  *
- * 5. **Delegate the pausable hold** (`pausableDwell`): the interruptible
+ * 5. **Delegate the pausable hold** (`pausableDwellSaga`): the interruptible
  *    countdown — including pause/resume and the ambient drift — is its own
- *    concern, owned by `pausableDwell`. Its return value IS this beat's outcome.
+ *    concern, owned by `pausableDwellSaga`. Its return is this beat's outcome.
  *
  * ### getContext is read INSIDE the worker
  *
@@ -40,13 +40,13 @@
 
 import { call, put, getContext } from 'typed-redux-saga';
 
-import { pausableDwell } from './pausableDwell';
+import { pausableDwellSaga } from './pausableDwellSaga';
 import { waitUntil } from './waitUntil';
 import { clipFociReady } from './clipFociReady';
 import { beatChanged, dwellStarted } from './tourSlice';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import type { BeatData } from '../../@types/animation/tour/BeatData';
-import type { BeatOutcome } from './pausableDwell';
+import type { BeatOutcome } from './pausableDwellSaga';
 import type { SagaContext } from '../../store/types';
 
 export type { BeatOutcome };
@@ -75,6 +75,6 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   // (4) The fly landed — start the dwell (fades caption in, starts the ring).
   yield* put(dwellStarted());
 
-  // (5) Hold interactively until the user advances / steps back / the timer fires.
-  return yield* pausableDwell(beat);
+  // (5) Hold interactively until the viewer advances / steps back / the timer fires.
+  return yield* pausableDwellSaga(beat);
 }
