@@ -14,9 +14,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
-import { captureScene } from '../../../../src/services/engine/wiring/captureScene';
+import type { RootState } from '../../../src/store/types';
+import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
+import { captureScene } from '../../../src/state/tour/captureScene';
 
 const SNAPSHOT_SETTINGS_KEYS = [
   'filaments',
@@ -46,7 +46,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
       tonemap: { exposure: 1.2 },
     },
     selection: { hover: null, select: null, focus },
-  } as unknown as Pick<EngineState, 'settings' | 'selection'>;
+  } as unknown as RootState;
 }
 
 describe('captureScene', () => {

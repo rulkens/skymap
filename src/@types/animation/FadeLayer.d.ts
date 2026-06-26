@@ -47,14 +47,9 @@ import type { VisibilityLayerKey } from './VisibilityLayerKey';
 import type { FadeId } from './FadeId';
 import type { EngineState } from '../engine/state/EngineState';
 import type { EngineSettingsState } from '../settings/EngineSettingsState';
-import type { SettingsSnapshot } from '../engine/settings/SettingsSnapshot';
 
 export type FadeLayer<Item> = {
   readonly key: VisibilityLayerKey;
-  // The `SettingsSnapshot` cluster this row's `intent` reads.
-  // Lets `applyEffect` map a touched cluster to its rows without a parallel
-  // table; registration-only rows omit it.
-  readonly cluster?: keyof SettingsSnapshot;
   expand(state: EngineState): readonly Item[];
   handle(item: Item): FadeId;
   seed(settings: EngineSettingsState, item: Item): number;

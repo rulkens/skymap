@@ -1,11 +1,21 @@
 /**
- * watchFadesSaga — push a visibility-layer sync to the fade bridge on every
- * action that appears in FADE_ROW, plus the FADE_ROW dispatch table itself.
+ * watchFadesSaga — drive the intent→fade bridge off settings writes. Two arms:
+ *
+ *   1. Per-leaf writes in FADE_ROW → fade the one affected layer.
+ *   2. `mergeSnapshot` (a bulk settings write) → fade EVERY row.
  *
  * FADE_ROW is the flat 1:1 action→VisibilityLayerKey registry that replaces
  * a chain of near-identical setter bodies (simplicity.md §7 — data-table, not
- * a branch chain). Adding a new fade-triggering action is one line in the
- * table; this worker never changes.
+ * a branch chain). Adding a new fade-triggering leaf write is one line in the
+ * table; that arm never changes.
+ *
+ * The `mergeSnapshot` arm is why a tour scene-restore needs NO restore-specific
+ * engine effect: `restoreSceneSaga` simply `put`s `mergeSnapshot(settings)`, and
+ * this arm reacts by re-fading every layer to the restored intent — the same
+ * "settings write → fade" rule the per-leaf arm applies, just over the whole set.
+ * `mergeSnapshot` is the only bulk write, so a full pass (`syncFades()` with no
+ * rows) is the right scope; the bridge's no-op-if-unchanged guard makes re-fading
+ * untouched rows free.
  *
  * The worker reaches the engine via getContext — the ReconcileEffects closure
  * registered by the engine after construction. This keeps the store layer free
@@ -26,6 +36,7 @@ import {
   writeVolumeField,
   setVolumesEnabled,
   setFlowEnabled,
+  mergeSnapshot,
 } from '../../state/settings/settingsSlice';
 import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
 import type { ReconcileEffects } from './ReconcileEffects';
@@ -55,6 +66,7 @@ export const FADE_ROW: Partial<Record<string, VisibilityLayerKey>> = {
 };
 
 export function* watchFadesSaga() {
+  // Arm 1 — per-leaf writes: fade the single affected layer.
   yield* takeEvery(
     (a: Action) => a.type in FADE_ROW,
     function* (action: Action) {
@@ -62,4 +74,10 @@ export function* watchFadesSaga() {
       fx.syncFades([FADE_ROW[action.type]!]);
     },
   );
+
+  // Arm 2 — bulk restore: a mergeSnapshot re-fades every row to the merged intent.
+  yield* takeEvery(mergeSnapshot, function* () {
+    const fx = yield* getContext<ReconcileEffects>('reconcile');
+    fx.syncFades();
+  });
 }

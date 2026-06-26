@@ -11,22 +11,25 @@
  * Each method represents a distinct engine concern that a saga might need to
  * trigger in response to a dispatched action:
  *   requestRender  — wakes the render-on-demand scheduler
- *   syncFades      — pushes a new visibility row set to the fade bridge
+ *   syncFades      — drives the intent→fade bridge; `rows` narrows to specific
+ *                    layers, OMITTING it re-fades every row (the full pass a tour
+ *                    scene-restore needs)
  *   reseedFlow     — reseeds the cosmic-flow particle field (e.g. on setting change)
  *   bakeBias       — re-computes the galaxy brightness bias LUT
- *   captureScene   — snapshots the six settings clusters + selection.focus for tour restore
- *   restoreScene   — rewinds a captured snapshot (settings + focus), optionally animated
+ *
+ * This boundary is kept deliberately small: the tour's scene capture is a pure
+ * store read (`captureScene` selector) and its restore is pure Intent
+ * (`restoreSceneSaga` puts `mergeSnapshot` + `updateSelectionFocus`); the restore
+ * fade rides the EXISTING `syncFades` reactively (watchFadesSaga reacts to
+ * `mergeSnapshot`), so no restore-specific effect is added here.
  */
 
 import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
-import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
 
 export type ReconcileEffects = {
   requestRender: () => void;
-  syncFades: (rows: readonly VisibilityLayerKey[]) => void;
+  syncFades: (rows?: readonly VisibilityLayerKey[]) => void;
   reseedFlow: () => void;
   bakeBias: (mode: BiasMode) => void;
-  captureScene: () => SceneSnapshot;
-  restoreScene: (snapshot: SceneSnapshot, opts: { animate: boolean }) => void;
 };

@@ -25,6 +25,7 @@ import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
   setVolumesEnabled,
+  mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
 
@@ -95,6 +96,27 @@ describe('watchFadesSaga', () => {
     store.dispatch(setFlowEnabled(true));
 
     expect(reconcile.syncFades).toHaveBeenCalledWith(['flow']);
+  });
+
+  // ── mergeSnapshot — bulk restore arm: re-fades every row (full pass) ────────
+  // The tour scene-restore puts mergeSnapshot; this arm reacts with a full
+  // syncFades() (no rows) so every layer re-fades to the merged intent — no
+  // restore-specific engine effect needed.
+
+  it('mergeSnapshot → syncFades() called with no rows (full pass)', () => {
+    store.dispatch(mergeSnapshot({}));
+
+    expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
+    expect(reconcile.syncFades).toHaveBeenCalledWith();
+  });
+
+  it('mergeSnapshot does NOT also trigger a per-leaf FADE_ROW sync', () => {
+    // mergeSnapshot.type is not in FADE_ROW, so only the bulk arm fires — one
+    // full-pass call, never a scoped [key] call.
+    store.dispatch(mergeSnapshot({}));
+
+    expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
+    expect(reconcile.syncFades).not.toHaveBeenCalledWith(expect.anything());
   });
 
   // ── FADE_ROW mapping table — freezes action→visibility-layer registry ────────

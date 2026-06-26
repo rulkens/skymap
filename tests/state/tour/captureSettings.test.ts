@@ -13,8 +13,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import { captureSettings } from '../../../../src/services/engine/wiring/captureSettings';
+import type { RootState } from '../../../src/store/types';
+import { captureSettings } from '../../../src/state/tour/captureSettings';
 
 const SNAPSHOT_KEYS = [
   'filaments',
@@ -44,7 +44,7 @@ function makeState() {
       // Excluded — must NOT appear in the snapshot.
       tonemap: { exposure: 1.2, curve: 'aces' },
     },
-  } as unknown as Pick<EngineState, 'settings'>;
+  } as unknown as Pick<RootState, 'settings'>;
 }
 
 describe('captureSettings', () => {

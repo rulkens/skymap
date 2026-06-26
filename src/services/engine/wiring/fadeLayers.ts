@@ -90,7 +90,6 @@ export const FADE_LAYERS = [
   // milkyWay disk — absorbs registerOverlayFades.ts:64-67
   layer({
     key: 'milkyWayDisk',
-    cluster: 'milkyWay',
     expand: () => [undefined],
     handle: () => ({ kind: 'milkyWay' }),
     seed: (s) => (s.milkyWay.enabled ? 1 : 0),
@@ -113,7 +112,6 @@ export const FADE_LAYERS = [
   // volumes master gate — registerOverlayFades.ts:80-83
   layer({
     key: 'volumesMaster',
-    cluster: 'volumes',
     expand: () => [undefined],
     handle: () => ({ kind: 'volumesMaster' }),
     seed: (s) => (s.volumes.enabled ? 1 : 0),
@@ -122,7 +120,6 @@ export const FADE_LAYERS = [
   // milkyWay label — registerOverlayFades.ts:95-98
   layer({
     key: 'milkyWayLabel',
-    cluster: 'milkyWay',
     expand: () => [undefined],
     handle: () => ({ kind: 'labelLayer', layer: 'milkyWay' }),
     seed: (s) => (s.milkyWay.labelEnabled ? 1 : 0),
@@ -134,7 +131,6 @@ export const FADE_LAYERS = [
   // famousGalaxy.labelEnabled) — matching milkyWayLabel/structureLabel.
   layer({
     key: 'surveyLabel',
-    cluster: 'galaxyCatalogs',
     expand: () => [undefined],
     handle: () => ({ kind: 'labelLayer', layer: 'galaxyNames' }),
     seed: (s) => (s.galaxyCatalogs.items.famousGalaxy.labelEnabled ? 1 : 0),
@@ -150,7 +146,6 @@ export const FADE_LAYERS = [
   // structure rings — registerOverlayFades.ts:109-113 (per StructureId)
   layer({
     key: 'structureRing',
-    cluster: 'structures',
     expand: () => STRUCTURE_IDS,
     handle: (id) => ({ kind: 'structure', id }),
     seed: (s, id) => (s.structures.items[id].enabled ? 1 : 0),
@@ -159,7 +154,6 @@ export const FADE_LAYERS = [
   // structure labels — registerOverlayFades.ts:114-117 (per StructureId)
   layer({
     key: 'structureLabel',
-    cluster: 'structures',
     expand: () => STRUCTURE_IDS,
     handle: (id) => ({ kind: 'labelLayer', layer: 'structure', category: id }),
     seed: (s, id) => (s.structures.items[id].labelEnabled ? 1 : 0),
@@ -168,7 +162,6 @@ export const FADE_LAYERS = [
   // galaxy catalogs — absorbs galaxyCatalogSourceRegistry.ts:154 (demand-loaded; seed 0)
   layer({
     key: 'survey',
-    cluster: 'galaxyCatalogs',
     expand: () => GALAXY_CATALOG_IDS,
     handle: (id) => ({ kind: 'galaxyCatalog', id }),
     seed: () => 0,
@@ -179,7 +172,6 @@ export const FADE_LAYERS = [
   // filament skeleton — absorbs filamentSlot.ts:30 (demand-loaded; seed 0)
   layer({
     key: 'filaments',
-    cluster: 'filaments',
     expand: () => [undefined],
     handle: () => ({ kind: 'filament' }),
     seed: () => 0,
@@ -188,7 +180,6 @@ export const FADE_LAYERS = [
   // flow field — absorbs flowFieldSlot.ts:36 (demand-loaded; seed 0)
   layer({
     key: 'flow',
-    cluster: 'flow',
     expand: () => [undefined],
     handle: () => ({ kind: 'flow' }),
     seed: () => 0,
@@ -203,7 +194,6 @@ export const FADE_LAYERS = [
   // VolumeFieldId, including the DEV-only debug fixtures — see volumeFieldIds)
   layer<VolumeFieldId, 'volumeField'>({
     key: 'volumeField',
-    cluster: 'volumes',
     expand: () => volumeFieldIds(),
     handle: (id) => ({ kind: 'volumeField', id }),
     seed: () => 0,

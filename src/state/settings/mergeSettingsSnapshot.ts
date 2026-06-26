@@ -3,11 +3,14 @@
  * `SettingsSnapshot` back onto an `EngineSettingsState`.
  *
  * The cinematic tour captures the user's settings, plays effects that mutate
- * them, then restores the capture. Both the restore (full snapshot) and a
- * mid-playback effect (partial patch) need the SAME write: replace each cluster
- * the patch carries, leave the rest untouched. This reducer is that one shared
- * transition, so `restoreSettings` and `applyEffect` differ only in WHICH fade
- * rows they re-sync afterwards — not in how they write the store.
+ * them, then restores the capture via `restoreSceneSaga`, which `put`s
+ * `mergeSnapshot(snapshot)`. This reducer is that write: replace each cluster the
+ * snapshot carries, leave the rest untouched. It stays patch-shaped (a `Partial`
+ * snapshot) even though the tour restore always sends all six clusters, so a
+ * narrower patch would merge the same way.
+ *
+ * The fade that follows is NOT this reducer's concern: `watchFadesSaga` reacts to
+ * `mergeSnapshot` and re-fades every layer to the merged intent.
  *
  * Two properties it guarantees:
  *

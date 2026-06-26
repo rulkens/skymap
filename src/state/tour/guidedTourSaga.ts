@@ -17,7 +17,7 @@
  *
  * `tour.setup?.effects` are dispatched INSIDE the try, AFTER the snapshot is
  * taken. This means the snapshot covers the state before any setup mutation, and
- * `restoreScene` in the finally winds it all back — both setup effects and
+ * `restoreSceneSaga` in the finally winds it all back — both setup effects and
  * per-beat visibility changes are undone in one restore call.
  *
  * ### Why no setUiHidden here
@@ -25,26 +25,27 @@
  * HUD-hidden-during-tour is DERIVED from `tour.active`, not toggled imperatively:
  * the App hides the HUD stack while a tour is active and mounts the overlay from
  * the same flag. A separate `setUiHidden(true/false)` would be a second write to
- * coordinate — and on a `takeLatest` supersede (tour B starting over tour A) the
- * outgoing run's finally would race the incoming run's setup over that flag. With
- * a single lifecycle write (`tourStarted` / `tourEnded`) there is nothing to
- * desync: the finally's one `put` settles synchronously during cancellation,
- * before the successor forks.
+ * coordinate. With a single lifecycle write (`tourStarted` / `tourEnded`) there is
+ * nothing to desync, and the finally guards its `tourEnded` behind `cancelled()`
+ * (see below) so a superseding run's `tourStarted` is never clobbered by the
+ * outgoing run's teardown.
  *
- * ### getContext is read INSIDE the saga
+ * ### Capture is a selector, restore is a saga
  *
- * The engine registers its saga context AFTER the root saga forks, so reading
- * `getContext` here (not at fork time) guarantees the context is populated by the
- * time the tour runs. Same pattern as `visitBeatSaga` and `watchFocusTweenSaga`.
+ * The snapshot is a pure store read — `yield* select(captureScene)` — so capture
+ * needs no engine context here. The matching restore DISPATCHES (settings merge +
+ * focus revert), so it lives in `restoreSceneSaga`, which reads its own engine
+ * context for the fade pass. This saga therefore reaches no `getContext` itself.
  */
 
-import { call, put, take, race, getContext } from 'typed-redux-saga';
+import { call, put, select, take, race, cancelled } from 'typed-redux-saga';
 
 import { visitBeatSaga } from './visitBeatSaga';
+import { captureScene } from './captureScene';
+import { restoreSceneSaga } from './restoreSceneSaga';
 import { exitTour } from './tourActions';
 import { tourStarted, tourEnded } from './tourSlice';
 import type { Tour } from '../../@types/animation/tour/Tour';
-import type { SagaContext } from '../../store/types';
 
 /**
  * Play all beats in order, sandwiched in a snapshot/restore pair. Dispatches
@@ -65,14 +66,10 @@ import type { SagaContext } from '../../store/types';
  * the tour on any background orbit-controls event.
  */
 export function* guidedTourSaga(tour: Tour): Generator {
-  // Read context inside the saga — the engine sets it after root-saga forks,
-  // same pattern as visitBeatSaga and watchFocusTweenSaga.
-  const fx = yield* getContext<SagaContext['reconcile']>('reconcile');
-
   // Snapshot the six settings clusters + selection.focus BEFORE setup effects
   // so restore winds back to the user's pre-tour state including any mutations
-  // the setup strip makes.
-  const snapshot = fx.captureScene();
+  // the setup strip makes. A pure store read — no engine context needed.
+  const snapshot = yield* select(captureScene);
 
   // Activate the tour runtime slice — the App derives HUD-hidden + mounts the
   // overlay from `tour.active`.
@@ -80,7 +77,7 @@ export function* guidedTourSaga(tour: Tour): Generator {
 
   try {
     // Dispatch the establishing scene strip. Runs inside the try so the finally
-    // restoreScene call winds these mutations back on any exit path.
+    // restoreSceneSaga winds these mutations back on any exit path.
     for (const e of tour.setup?.effects ?? []) yield* put(e);
 
     yield* race({
@@ -104,9 +101,19 @@ export function* guidedTourSaga(tour: Tour): Generator {
       exit: take(exitTour),
     });
   } finally {
-    // Runs on BOTH natural completion and exitTour cancellation. One lifecycle
-    // write (tourEnded) keeps the finally synchronous during a supersede cancel.
-    fx.restoreScene(snapshot, { animate: true });
-    yield* put(tourEnded());
+    // Runs on natural completion, exitTour, AND supersede cancellation — always
+    // restore the captured scene.
+    yield* call(restoreSceneSaga, snapshot);
+
+    // Emit the lifecycle `tourEnded` only when THIS run is the one ending. On a
+    // takeLatest supersede the incoming run has already put its own `tourStarted`
+    // (the finally yields, so the successor runs in between), and a late
+    // `tourEnded` from this cancelled finally would clobber it — leaving the HUD
+    // shown while the new tour plays. `cancelled()` is true ONLY on an external
+    // cancel (supersede); a natural finish or an exitTour-won race completes the
+    // try normally, so it stays false there and the tour ends as it should.
+    if (!(yield* cancelled())) {
+      yield* put(tourEnded());
+    }
   }
 }
