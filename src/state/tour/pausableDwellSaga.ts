@@ -25,9 +25,12 @@
  *
  * ### Why drift is forked, not awaited
  *
- * `dwellDrift` is perpetual ambient motion, not an outcome. Awaiting it would
- * deadlock the race (it never settles); forking lets it run under the race and
- * be torn down with `cancel` the instant any arm wins.
+ * `dwellDrift` is ambient motion, not an outcome. It is a velocity envelope
+ * synced to the time the dwell has left (ease in, cruise, ease out to rest), so
+ * it completes at rest right as the timer fires. Forking — never awaiting — keeps
+ * its completion out of the race (a finished fork is not an arm) and lets any
+ * winning arm tear it down early with `cancel`. It is handed `remainingMs`, not
+ * the beat, so a post-pause restart reshapes the envelope to fit what remains.
  *
  * ### getContext is read INSIDE the saga
  *
@@ -60,8 +63,10 @@ export function* pausableDwellSaga(beat: BeatData): Generator<unknown, BeatOutco
   let paused = false;
 
   while (true) {
-    // Drift is ambient motion — it runs only while the clock runs.
-    const driftTask = paused ? null : yield* fork(playClip, dwellDrift(beat));
+    // Drift is ambient motion — it runs only while the clock runs. Hand it the
+    // time still left so its velocity envelope eases out exactly on the cut,
+    // even when a pause/resume has shortened what remains.
+    const driftTask = paused ? null : yield* fork(playClip, dwellDrift(remainingMs / 1000));
     const sliceStartedAt = Date.now();
 
     // One race. The `timeout` arm is present only while running; when paused the

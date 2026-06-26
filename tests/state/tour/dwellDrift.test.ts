@@ -1,51 +1,74 @@
 /**
- * dwellDrift tests — verify the dwell clip is perpetual and starts live.
+ * dwellDrift tests — verify the dwell clip is a velocity envelope synced to the
+ * duration it is handed: ease in to a cruise rate, hold, ease out to rest.
  *
- * The perpetual guarantee is structural: the awaited timeline node must be a
- * `spin` with `loop: true`. Any finite-duration node at the top-level awaited
- * position would allow the clip to complete, winning the dwell race and
- * advancing the tour prematurely.
- *
- * The oscillate is forked — it contributes no duration to the timeline and
- * is therefore not part of the awaited path. Tests confirm this by verifying
- * the fork wraps an `osc`, not a finite cue.
+ * The envelope is the awaited `seq([rate, hold, rate])` on yaw; the final ramp
+ * targets zero velocity, so the camera is still by the time the clip ends — and
+ * the three children's durations sum to exactly the requested duration, so the
+ * ease-out lands on the cut. The pitch bob is forked (no duration), so it runs
+ * under the envelope rather than on the awaited path.
  */
 
 import { describe, it, expect } from 'vitest';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
-import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
-
-// Minimal beat — dwellDrift ignores its content but needs a compatible type.
-// clip is a trivial narration clip with an empty timeline.
-const beat: BeatData = { clip: { start: 'live', timeline: [] }, caption: null, dwellSec: 10 };
 
 describe('dwellDrift', () => {
   it('starts live', () => {
-    const clip = dwellDrift(beat);
-    expect(clip.start).toBe('live');
+    expect(dwellDrift(10).start).toBe('live');
   });
 
-  it('builds a perpetual loop clip', () => {
-    const clip = dwellDrift(beat);
-
-    // The timeline has exactly two entries: a fork (the bob) and a spin (the orbit).
+  it('shapes ease-in → cruise → ease-out-to-rest on yaw, with a forked pitch bob', () => {
+    const clip = dwellDrift(10);
     expect(clip.timeline).toHaveLength(2);
 
-    // First entry: fork wrapping an oscillate — the bob runs under the awaited spin.
+    // First entry: forked oscillate — the bob runs under the awaited envelope.
     const forkEntry = clip.timeline[0];
-    expect(forkEntry).not.toBeUndefined();
     expect(forkEntry!.kind).toBe('fork');
-    if (forkEntry!.kind === 'fork') {
-      expect(forkEntry.child.kind).toBe('osc');
-    }
+    if (forkEntry!.kind === 'fork') expect(forkEntry.child.kind).toBe('osc');
 
-    // Second entry: spin with loop: true — the awaited node that never completes.
-    const spinEntry = clip.timeline[1];
-    expect(spinEntry).not.toBeUndefined();
-    expect(spinEntry!.kind).toBe('spin');
-    if (spinEntry!.kind === 'spin') {
-      expect(spinEntry.loop).toBe(true);
-      expect(spinEntry.ch).toBe('yaw');
+    // Second entry: the awaited seq of rate → hold → rate on yaw.
+    const seqEntry = clip.timeline[1];
+    expect(seqEntry!.kind).toBe('seq');
+    if (seqEntry!.kind === 'seq') {
+      const [easeIn, cruise, easeOut] = seqEntry.children;
+      expect(easeIn!.kind).toBe('rate');
+      expect(cruise!.kind).toBe('hold');
+      expect(easeOut!.kind).toBe('rate');
+
+      // Ease-in ramps yaw velocity up to a positive cruise rate…
+      if (easeIn!.kind === 'rate') {
+        expect(easeIn.ch).toBe('yaw');
+        expect(easeIn.to).toBeGreaterThan(0);
+      }
+      // …and ease-out ramps it back to zero, so the camera ends at rest.
+      if (easeOut!.kind === 'rate') {
+        expect(easeOut.ch).toBe('yaw');
+        expect(easeOut.to).toBe(0);
+      }
+    }
+  });
+
+  it('fills exactly the requested duration (ramp + cruise + ramp)', () => {
+    const seqEntry = dwellDrift(10).timeline[1];
+    if (seqEntry!.kind === 'seq') {
+      const total = seqEntry.children.reduce((sum, child) => {
+        if (child.kind === 'rate') return sum + child.over;
+        if (child.kind === 'hold') return sum + child.sec;
+        return sum;
+      }, 0);
+      expect(total).toBeCloseTo(10);
+    }
+  });
+
+  it('clamps the ramps so a short dwell still eases in and out without overrunning', () => {
+    // 2s is shorter than 2 × RAMP_SEC (3s), so each ramp clamps to half (1s)
+    // and the cruise collapses to zero — still a symmetric in/out that fills 2s.
+    const seqEntry = dwellDrift(2).timeline[1];
+    if (seqEntry!.kind === 'seq') {
+      const [easeIn, cruise, easeOut] = seqEntry.children;
+      if (easeIn!.kind === 'rate') expect(easeIn.over).toBeCloseTo(1);
+      if (cruise!.kind === 'hold') expect(cruise.sec).toBeCloseTo(0);
+      if (easeOut!.kind === 'rate') expect(easeOut.over).toBeCloseTo(1);
     }
   });
 });
