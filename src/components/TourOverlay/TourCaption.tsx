@@ -16,6 +16,7 @@
  */
 
 import type { ReactNode } from 'react';
+import cx from 'classnames';
 import ReactMarkdown from 'react-markdown';
 import type { BeatCaption } from '../../@types/animation/tour/BeatCaption';
 import { captionAnchor } from '../../utils/animation/captionAnchor';
@@ -52,9 +53,7 @@ function TourCaption({ caption, label, index, total }: TourCaptionProps): ReactN
   const readout = `${current} / ${grand}`;
 
   return (
-    <div
-      className={`${styles.caption} ${VERTICAL_CLASS[vertical]} ${HORIZONTAL_CLASS[horizontal]}`}
-    >
+    <div className={cx(styles.caption, VERTICAL_CLASS[vertical], HORIZONTAL_CLASS[horizontal])}>
       <div className={styles.label}>{label ? `${label} · ${readout}` : readout}</div>
       <h1 className={styles.title}>{caption.title}</h1>
       {caption.body ? (

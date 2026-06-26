@@ -26,6 +26,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
+import cx from 'classnames';
 import type { BeatCaption } from '../../@types/animation/tour/BeatCaption';
 import TourCaption from './TourCaption';
 import TourNav from './TourNav';
@@ -90,7 +91,7 @@ function TourOverlay({
     <div className={styles.root}>
       {showCaption && caption ? (
         <>
-          <div className={`${styles.vignette} ${vignetteClass}`} aria-hidden="true" />
+          <div className={cx(styles.vignette, vignetteClass)} aria-hidden="true" />
           {/*
            * Keyed on the beat index so each beat re-mounts the caption and
            * replays the staggered fade-up reveal rather than cross-fading

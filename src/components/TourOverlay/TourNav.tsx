@@ -1,13 +1,18 @@
 // src/components/TourOverlay/TourNav.tsx
 /**
  * TourNav — the centered navigation cluster at bottom-center: prev, the
- * pause button wrapping a live dwell-countdown ring, next, a hairline
- * divider, and exit.
+ * pause button wrapping a live dwell-countdown ring, the stop button, and
+ * next. Pause and stop are the two circular "media" controls and sit
+ * adjacent; prev/next flank them as bare arrow buttons.
  *
  * Purely presentational. The cluster is visible during the establishing
  * fly too (the caption is not), so it is the one always-on control surface
  * of the overlay — and the only part that opts back into pointer events,
  * since the root layer is click-through.
+ *
+ * Each button + glyph is its own component (NavButton, Prev/Next/Stop/
+ * Pause/PlayIcon) so the markup here is just the cluster's composition and
+ * the one piece of real behaviour: the dwell ring.
  *
  * The dwell ring is a CSS-driven SVG sweep, not a React-animated value:
  * the depleting circle runs the `tourDeplete` keyframe over `dwellSec`,
@@ -18,6 +23,12 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
+import NavButton from './NavButton';
+import PrevIcon from './PrevIcon';
+import NextIcon from './NextIcon';
+import PauseIcon from './PauseIcon';
+import PlayIcon from './PlayIcon';
+import StopIcon from './StopIcon';
 import styles from './TourOverlay.module.css';
 
 export type TourNavProps = {
@@ -43,15 +54,14 @@ function TourNav({
 }: TourNavProps): ReactNode {
   return (
     <div className={styles.nav}>
-      <button
-        type="button"
-        className={cx(styles.navBtn, !canPrev && styles.ghost)}
+      <NavButton
         onClick={onPrev}
         disabled={!canPrev}
-        aria-label="Previous beat"
+        className={cx(!canPrev && styles.ghost)}
+        ariaLabel="Previous beat"
       >
-        ◀
-      </button>
+        <PrevIcon />
+      </NavButton>
 
       <button
         type="button"
@@ -71,6 +81,10 @@ function TourNav({
           height="40"
           viewBox="0 0 40 40"
           aria-hidden="true"
+          style={{
+            animationDuration: `${dwellSec}s`,
+            animationPlayState: paused ? 'paused' : 'running',
+          }}
         >
           <circle className={styles.ringTrack} cx="20" cy="20" r="17" />
           <circle
@@ -84,30 +98,16 @@ function TourNav({
             }}
           />
         </svg>
-        {paused ? (
-          <span className={styles.playGlyph} aria-hidden="true" />
-        ) : (
-          <span className={styles.pauseGlyph} aria-hidden="true">
-            <i />
-            <i />
-          </span>
-        )}
+        {paused ? <PlayIcon /> : <PauseIcon />}
       </button>
 
-      <button type="button" className={styles.navBtn} onClick={onNext} aria-label="Next beat">
-        ▶
+      <button type="button" className={styles.stopWrap} onClick={onExit} aria-label="Exit tour">
+        <StopIcon />
       </button>
 
-      <span className={styles.divider} aria-hidden="true" />
-
-      <button
-        type="button"
-        className={cx(styles.navBtn, styles.exit)}
-        onClick={onExit}
-        aria-label="Exit tour"
-      >
-        ✕
-      </button>
+      <NavButton onClick={onNext} ariaLabel="Next beat">
+        <NextIcon />
+      </NavButton>
     </div>
   );
 }

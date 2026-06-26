@@ -276,14 +276,30 @@
   cursor: default;
 }
 
-.divider {
-  width: 1px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.exit {
+/* Stop button — a circular sibling to the pause ring, sitting next to it.
+ * The square StopIcon replaces the former hairline ✕, and the circle border
+ * echoes the dwell ring's track so the two media controls read as a pair. */
+.stopWrap {
+  pointer-events: auto;
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 2px solid rgba(168, 208, 255, 0.18);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
   color: var(--color-fg-label);
+}
+.stopWrap:hover {
+  color: var(--color-fg);
+  border-color: rgba(168, 208, 255, 0.32);
+}
+.stopWrap:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 /* ── Pause / dwell ring ─────────────────────────────────────────────
@@ -304,6 +320,8 @@
   border: none;
   padding: 0;
   cursor: pointer;
+  /* The Pause/PlayIcon glyphs inherit this as their fill via currentColor. */
+  color: var(--color-fg);
 }
 .pauseWrap:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -311,11 +329,23 @@
   border-radius: 50%;
 }
 
-/* Rotate −90° so the sweep starts at 12 o'clock. */
+/* Start the sweep at 12 o'clock (−90°) and rotate the whole ring a full
+ * extra turn over the dwell, so the depleting arc visibly spins as it
+ * empties rather than draining in place. The duration + play-state are set
+ * inline (same dwell length as the depletion) so the spin and the drain
+ * stay locked together and pause as one. */
 .ringSvg {
   position: absolute;
   inset: 0;
-  transform: rotate(-90deg);
+  animation: tourSpin linear forwards;
+}
+@keyframes tourSpin {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: rotate(270deg);
+  }
 }
 .ringTrack {
   fill: none;
@@ -339,26 +369,6 @@
   }
 }
 
-/* Pause glyph — two bars when playing, a play triangle when paused. */
-.pauseGlyph {
-  display: inline-flex;
-  gap: 3px;
-}
-.pauseGlyph i {
-  width: 3px;
-  height: 12px;
-  background: var(--color-fg);
-  border-radius: 1px;
-}
-.playGlyph {
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 6px 0 6px 10px;
-  border-color: transparent transparent transparent var(--color-fg);
-  margin-left: 2px;
-}
-
 /* ── Reduced motion ─────────────────────────────────────────────────
  * Snap everything in (no fade-up, no underline draw), exactly like the
  * splash. The dwell ring keeps its (informative) sweep — it is a live
@@ -380,6 +390,13 @@
   .title::after {
     animation: none;
     width: 72px;
+  }
+  /* Keep the depleting sweep (it is informative — it mirrors the autoplay
+   * timer) but drop the decorative whole-ring spin, snapping back to the
+   * static 12-o'clock start. */
+  .ringSvg {
+    animation: none;
+    transform: rotate(-90deg);
   }
 }
 
