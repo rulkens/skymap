@@ -69,7 +69,7 @@ export const webShowcase: Tour = {
         body: "Home — a few hundred billion stars, and the one vantage point in this entire map you're looking out **from**.",
         position: 'bottom-left',
       },
-      dwellSec: 4,
+      dwellSec: 8,
       clip: flyToClip(focusId('milkyWay')),
     },
     {
@@ -78,7 +78,7 @@ export const webShowcase: Tour = {
         body: 'Two thousand galaxies bound by gravity — the dense heart of the supercluster we call **home**, 54 million light-years away.',
         position: 'bottom-left',
       },
-      dwellSec: 6,
+      dwellSec: 10,
       clip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
     },
     {
@@ -87,7 +87,7 @@ export const webShowcase: Tour = {
         body: "The cluster's giant — a trillion stars around a black hole six billion times the Sun's mass, the **first ever photographed**.",
         position: 'bottom-right',
       },
-      dwellSec: 6,
+      dwellSec: 10,
       clip: flyToClip(focusId('m87')),
     },
   ],

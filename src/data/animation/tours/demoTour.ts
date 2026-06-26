@@ -37,7 +37,7 @@ export const demoTour: Tour = {
         body: 'Home — one barred spiral among the millions mapped here.',
         position: 'bottom-left',
       },
-      dwellSec: 5,
+      dwellSec: 8,
     },
     {
       clip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
@@ -46,7 +46,7 @@ export const demoTour: Tour = {
         body: 'Two thousand galaxies, bound by gravity 54 million light-years away.',
         position: 'bottom-left',
       },
-      dwellSec: 5,
+      dwellSec: 8,
     },
     {
       clip: flyAndFocusOnClip(focusId('supercluster-laniakea-sc')),
@@ -55,7 +55,7 @@ export const demoTour: Tour = {
         body: 'Our home supercluster — a hundred thousand galaxies streaming toward the Great Attractor.',
         position: 'bottom-right',
       },
-      dwellSec: 6,
+      dwellSec: 9,
     },
   ],
 };

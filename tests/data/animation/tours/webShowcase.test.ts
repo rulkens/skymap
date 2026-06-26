@@ -23,9 +23,9 @@ describe('webShowcase tour', () => {
     expect(webShowcase.beats[0]!.caption?.title).toBe('The Milky Way');
     expect(webShowcase.beats[1]!.caption?.title).toBe('The Virgo Cluster');
     expect(webShowcase.beats[2]!.caption?.title).toBe('M87');
-    expect(webShowcase.beats[0]!.dwellSec).toBe(4);
-    expect(webShowcase.beats[1]!.dwellSec).toBe(6);
-    expect(webShowcase.beats[2]!.dwellSec).toBe(6);
+    expect(webShowcase.beats[0]!.dwellSec).toBe(8);
+    expect(webShowcase.beats[1]!.dwellSec).toBe(10);
+    expect(webShowcase.beats[2]!.dwellSec).toBe(10);
   });
 
   it('each beat carries a clip', () => {
