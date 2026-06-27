@@ -174,9 +174,9 @@ export type SceneCue = {
  * Produced by `compileClip` (Task 4) from a `ClipData`. Consumed by the
  * evaluator (Task 6) each frame and the cue-firer (Task 7) on each clock tick.
  *
- * All times are in seconds relative to the clip's start (after preroll is
- * applied — `baseTracks`, `velTracks`, `oscTracks`, and `cues` all use
- * post-preroll absolute times).
+ * All times are in seconds relative to the clip's start. A leading `wait` in
+ * the source timeline simply shifts the cursor, so `baseTracks`, `velTracks`,
+ * `oscTracks`, and `cues` all carry those later absolute times directly.
  */
 export type CompiledClip = {
   /** The concrete starting camera pose. `'live'` is resolved upstream before
@@ -185,8 +185,8 @@ export type CompiledClip = {
    *  until the live-resolution task (Task N) is wired in. */
   readonly start: CameraPose;
 
-  /** Total duration of the AWAITED (non-fork) effect tree, including preroll.
-   *  Fork children do not contribute to this value. */
+  /** Total duration of the AWAITED (non-fork) effect tree, including any
+   *  leading `wait` lead-in. Fork children do not contribute to this value. */
   readonly durationSec: number;
 
   /** Per-channel base segments, one entry per Channel (possibly empty array).

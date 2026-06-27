@@ -245,14 +245,12 @@ describe('resolveClipFoci throws on unresolvable id', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolveClipFoci preserves ClipData metadata', () => {
-  it('start and preroll are preserved unchanged', () => {
+  it('the start pose passes through unchanged', () => {
     const clip: ClipData = {
       start: { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 },
-      preroll: 1.5,
       timeline: [hold(1)],
     };
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
     expect(resolved.start).toBe(clip.start);
-    expect(resolved.preroll).toBe(1.5);
   });
 });
