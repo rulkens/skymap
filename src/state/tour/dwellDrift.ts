@@ -58,9 +58,9 @@ export function dwellDrift(
   // One eased velocity envelope: rest → cruiseV → rest, over the whole window.
   const envelope = (ch: Channel, cruiseV: number) =>
     seq([
-      rate(ch, { to: cruiseV, over: ramp }), // ease in to cruise
+      rate(ch, { to: cruiseV, over: ramp, ease: 'inOut' }), // ease in to cruise
       hold(cruise), // hold at constant speed
-      rate(ch, { to: 0, over: ramp }), // ease out — at rest as the beat ends
+      rate(ch, { to: 0, over: ramp, ease: 'inOut' }), // ease out — at rest as the beat ends
     ]);
 
   return {
