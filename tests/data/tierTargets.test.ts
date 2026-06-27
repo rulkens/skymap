@@ -72,11 +72,10 @@ describe('tierFilenameForSource — Milliquas', () => {
 });
 
 describe('tierTarget — Milliquas', () => {
-  it('excludes Milliquas from the small tier (mobile budget)', () => {
-    // Same shape as SDSS small: the mobile GPU budget can't accommodate
-    // another ~10^5 instanced points on top of the existing GLADE small
-    // sample, so the small tier ships without quasars.
-    expect(tierTarget(Source.Milliquas, 'small')).toBe(0);
+  it('caps Milliquas at 60k in the small tier (mobile budget)', () => {
+    // The mobile GPU budget admits the brightest ~60k quasars on top of
+    // the GLADE small sample.
+    expect(tierTarget(Source.Milliquas, 'small')).toBe(60_000);
   });
 
   it('caps Milliquas at 200k in the medium tier', () => {
