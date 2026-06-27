@@ -1,70 +1,78 @@
 /**
- * dwellDrift — the ambient camera motion played DURING a beat's dwell, shaped
- * as a velocity ENVELOPE synced to the time the dwell has left: ease the orbit
- * up to a cruise rate, hold, then ease back to rest, so the camera is still the
- * instant the next beat begins.
+ * dwellDrift — the ambient camera motion played DURING a beat's dwell, synced to
+ * the time the dwell has left so it starts gently and is settled the instant the
+ * next beat begins.
  *
- * ### Both axes, the same envelope
+ * ### Two motions, two layers
  *
- * Yaw orbits and pitch tilts, but they ramp identically: each is a velocity
- * envelope on its channel — `rate` up to a cruise speed, `hold` at that speed,
- * `rate` back to zero — run concurrently under `all`. Expressing the motion on
- * the VELOCITY layer is what makes "ease in, cruise, ease out" the literal
- * structure: each ramp carries the previous ramp's velocity, so `0 → ω → ω → 0`
- * reads straight down the timeline and integrates in closed form
- * (frame-rate-independent, scrubbable). Pitch cruises at a gentle fraction of
- * yaw so the tilt stays a subtle wobble under the orbit.
+ * Yaw and pitch want different things, so they ride different effects:
+ *
+ *   - Yaw ORBITS: a single finite `spin` over the whole dwell with `ease: 'inOut'`.
+ *     The S-curve accelerates from rest, peaks mid-dwell, and decelerates back to
+ *     rest right on the cut — every requirement (gentle start, ease-out before the
+ *     next beat) in one node. It rotates BY a net angle and stays there, which is
+ *     fine for an orbit; the next beat's fly resets the pose. (A LOOPING spin was
+ *     the original mistake: its ease spread over the loop window, not the dwell,
+ *     so a beat only ever saw the ramp-up.)
+ *   - Pitch BOBS: an eased OSCILLATION — a zero-mean sine whose AMPLITUDE fades in
+ *     and out over `rampSec`. Because it is zero-mean it returns to centre, so the
+ *     camera nods without drifting off. (A spin or velocity ramp on pitch would
+ *     tilt it to a new elevation; the amplitude-enveloped bob is what keeps it
+ *     home.)
+ *
+ * Both run concurrently under `all`, both easing their motion in/out, so the
+ * drift swells up and settles together.
  *
  * ### Why a duration, not the beat
  *
- * The envelope needs exactly one thing from the dwell: how long it has to play.
+ * The motion needs exactly one thing from the dwell: how long it has to play.
  * Taking the REMAINING dwell seconds (not the whole `BeatData`) keeps the
  * dependency minimal and lands the ease-out on the cut even across pauses —
  * `pausableDwellSaga` restarts the drift on every resume with the time still
- * left, so a freshly reshaped envelope always fills exactly what remains.
+ * left, so a freshly sized motion always fills exactly what remains.
  *
- * `rampSec` and `cruiseRate` are arguments (with defaults) so the caller can
- * tune the start/stop softness and the orbit speed without editing this file.
- * The ramp is clamped to half the window, so a short remaining dwell still eases
- * symmetrically in and out and never overruns the cut.
+ * `rampSec` (the pitch fade) and `cruiseRate` (the yaw's average orbit speed) are
+ * arguments with defaults so the caller can tune the bob softness and the orbit
+ * speed without editing this file. The pitch fade is clamped to half the window so
+ * a short remaining dwell still fades symmetrically in and out.
  *
  * ### Finite, and that's fine
  *
  * The clip ends (at `durationSec`) rather than looping forever. The dwell saga
- * FORKS it and cancels it when any race arm wins, so a finite clip that
- * completes at rest right as the timer fires is harmless: a completed fork is
- * not a race arm, and a cancel on an already-finished task is a no-op.
+ * FORKS it and cancels it when any race arm wins, so a finite clip that completes
+ * at rest right as the timer fires is harmless: a completed fork is not a race
+ * arm, and a cancel on an already-finished task is a no-op.
  */
 
 import type { ClipData } from '../../@types/animation/ClipData';
-import type { Channel } from '../../@types/animation/Channel';
-import { all, hold, rate, seq } from '../../services/engine/animation/effectHelpers';
+import { all, oscillate, spin } from '../../services/engine/animation/effectHelpers';
 
-// Defaults: the steady orbit speed once eased in (rad/s — 2π over 45s, the old
-// looping-spin rate, so the cruise feel is unchanged), and the ease in/out ramp
-// length (s). Pitch cruises at this fraction of yaw, a gentle wobble.
+// Yaw's average orbit speed (rad/s — 2π over 45s) and the pitch-bob fade length
+// (s), both overridable. Pitch is a gentle bob: PITCH_AMP radians peak,
+// PITCH_PERIOD seconds per cycle.
 const DEFAULT_CRUISE_RATE = (Math.PI * 2) / 45;
 const DEFAULT_RAMP_SEC = 1.5;
-const PITCH_FRACTION = 0.1;
+const PITCH_AMP = 0.05;
+const PITCH_PERIOD = 14;
 
 export function dwellDrift(
   durationSec: number,
   rampSec: number = DEFAULT_RAMP_SEC,
   cruiseRate: number = DEFAULT_CRUISE_RATE,
 ): ClipData {
-  const ramp = Math.min(rampSec, durationSec / 2);
-  const cruise = Math.max(0, durationSec - 2 * ramp);
-
-  // One eased velocity envelope: rest → cruiseV → rest, over the whole window.
-  const envelope = (ch: Channel, cruiseV: number) =>
-    seq([
-      rate(ch, { to: cruiseV, over: ramp, ease: 'inOut' }), // ease in to cruise
-      hold(cruise), // hold at constant speed
-      rate(ch, { to: 0, over: ramp, ease: 'inOut' }), // ease out — at rest as the beat ends
-    ]);
+  const fade = Math.min(rampSec, durationSec / 2);
 
   return {
     start: 'live',
-    timeline: [all([envelope('yaw', cruiseRate), envelope('pitch', cruiseRate * PITCH_FRACTION)])],
+    timeline: [
+      all([
+        // Yaw: one eased orbit. `by = cruiseRate × durationSec` makes the AVERAGE
+        // angular speed `cruiseRate`; inOut eases in and out and ends at rest.
+        spin('yaw', { by: cruiseRate * durationSec, over: durationSec, ease: 'inOut' }),
+        // Pitch: eased oscillation — a bob whose amplitude fades in/out over the
+        // window, zero-mean so it returns to centre.
+        oscillate('pitch', { amp: PITCH_AMP, period: PITCH_PERIOD, over: durationSec, fade }),
+      ]),
+    ],
   };
 }

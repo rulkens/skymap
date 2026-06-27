@@ -105,15 +105,34 @@ describe('compileClip routes to the correct track families', () => {
     expect(clip.velTracks[0]!.channel).toBe('yaw');
     expect(clip.velTracks[0]!.to).toBe(0.5);
 
-    // oscillate → oscTracks
+    // oscillate → oscTracks; a bare bob is perpetual: the maximal [-∞, +∞)
+    // window, no fade.
     expect(clip.oscTracks).toHaveLength(1);
     expect(clip.oscTracks[0]!.channel).toBe('pitch');
     expect(clip.oscTracks[0]!.amp).toBe(0.05);
     expect(clip.oscTracks[0]!.period).toBe(6);
+    expect(clip.oscTracks[0]!.startSec).toBe(-Infinity);
+    expect(clip.oscTracks[0]!.endSec).toBe(Infinity);
+    expect(clip.oscTracks[0]!.fade).toBe(0);
 
     // baseTracks for unused channels are empty arrays, not absent
     expect(clip.baseTracks['pitch']).toEqual([]);
     expect(clip.baseTracks['target']).toEqual([]);
+  });
+
+  it('a windowed oscillate carries [at, at+over) + fade, and preroll shifts it', () => {
+    const clip = compileClip({
+      preroll: 2,
+      // The bob sits after a 3s hold, so it starts at 3 (pre-preroll), then the
+      // 2s preroll shifts its window to [5, 13). Perpetual bobs would stay
+      // [-∞, +∞); this one is finite, so it shifts like any other window.
+      timeline: [seq([hold(3), oscillate('pitch', { amp: 0.04, period: 14, over: 8, fade: 1.5 })])],
+    });
+
+    expect(clip.oscTracks).toHaveLength(1);
+    expect(clip.oscTracks[0]!.startSec).toBe(5);
+    expect(clip.oscTracks[0]!.endSec).toBe(13);
+    expect(clip.oscTracks[0]!.fade).toBe(1.5);
   });
 });
 

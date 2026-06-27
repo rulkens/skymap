@@ -145,6 +145,34 @@ describe('evaluateClip osc is additive and zero-mean', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Test 5b — windowed oscillation: amplitude fades in/out, silent outside window
+//
+// `oscillate('pitch', { amp:0.1, period:4, over:10, fade:2, ease:'linear' })`:
+//   the bob runs over [0,10); a linear fade ramps amplitude 0→1 over the first
+//   2s, holds 1, ramps 1→0 over the last 2s. sin(2π t / 4) = 1 at t∈{1,5,9}.
+//   - t=1 (fade-in,  env=0.5): pitch === base + 0.05
+//   - t=5 (held,     env=1):   pitch === base + 0.10
+//   - t=9 (fade-out, env=0.5): pitch === base + 0.05
+//   - t=11 (past window):      pitch === base  (silent)
+// ---------------------------------------------------------------------------
+
+describe('evaluateClip windowed osc fades its amplitude', () => {
+  it('linear fade over a [0,10) window: 0.5 / 1 / 0.5 amplitude, silent after', () => {
+    const basePitch = 0.3;
+    const amp = 0.1;
+    const data: ClipData = {
+      start: { target: [0, 0, 0], yaw: 0, pitch: basePitch, distance: 10 },
+      timeline: [oscillate('pitch', { amp, period: 4, over: 10, fade: 2, ease: 'linear' })],
+    };
+
+    expect(evaluateClip(data, 1).pitch).toBeCloseTo(basePitch + 0.5 * amp, 8); // fading in
+    expect(evaluateClip(data, 5).pitch).toBeCloseTo(basePitch + amp, 8); // full amplitude
+    expect(evaluateClip(data, 9).pitch).toBeCloseTo(basePitch + 0.5 * amp, 8); // fading out
+    expect(evaluateClip(data, 11).pitch).toBeCloseTo(basePitch, 10); // past the window → silent
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Test 6 — purity: same (data, t) twice → deep-equal; fresh target array
 // ---------------------------------------------------------------------------
 
