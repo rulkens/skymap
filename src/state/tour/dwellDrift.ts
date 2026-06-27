@@ -4,23 +4,29 @@
  * up to a cruise rate, hold, then ease back to rest, so the camera is still the
  * instant the next beat begins.
  *
- * ### Why an envelope, not a looping spin
+ * ### Both axes, the same envelope
  *
- * A looping `spin` orbits at one rate with no end. Easing its loop ramps over a
- * fixed window unrelated to the dwell, so within a single beat it either starts
- * abruptly or never settles before the cut. Expressing the motion on the
- * VELOCITY layer with `rate` makes "ease in, cruise, ease out" the literal
+ * Yaw orbits and pitch tilts, but they ramp identically: each is a velocity
+ * envelope on its channel — `rate` up to a cruise speed, `hold` at that speed,
+ * `rate` back to zero — run concurrently under `all`. Expressing the motion on
+ * the VELOCITY layer is what makes "ease in, cruise, ease out" the literal
  * structure: each ramp carries the previous ramp's velocity, so `0 → ω → ω → 0`
  * reads straight down the timeline and integrates in closed form
- * (frame-rate-independent, scrubbable).
+ * (frame-rate-independent, scrubbable). Pitch cruises at a gentle fraction of
+ * yaw so the tilt stays a subtle wobble under the orbit.
  *
  * ### Why a duration, not the beat
  *
- * The envelope needs exactly ONE number: how long it has to play. Taking the
- * REMAINING dwell seconds (not the whole `BeatData`) keeps the dependency
- * minimal and lands the ease-out on the cut even across pauses — `pausableDwellSaga`
- * restarts the drift on every resume with the time still left, so a freshly
- * reshaped envelope always fills exactly what remains.
+ * The envelope needs exactly one thing from the dwell: how long it has to play.
+ * Taking the REMAINING dwell seconds (not the whole `BeatData`) keeps the
+ * dependency minimal and lands the ease-out on the cut even across pauses —
+ * `pausableDwellSaga` restarts the drift on every resume with the time still
+ * left, so a freshly reshaped envelope always fills exactly what remains.
+ *
+ * `rampSec` and `cruiseRate` are arguments (with defaults) so the caller can
+ * tune the start/stop softness and the orbit speed without editing this file.
+ * The ramp is clamped to half the window, so a short remaining dwell still eases
+ * symmetrically in and out and never overruns the cut.
  *
  * ### Finite, and that's fine
  *
@@ -28,32 +34,37 @@
  * FORKS it and cancels it when any race arm wins, so a finite clip that
  * completes at rest right as the timer fires is harmless: a completed fork is
  * not a race arm, and a cancel on an already-finished task is a no-op.
- *
- * The ramp is clamped to half the window so a short remaining dwell still eases
- * symmetrically in and out and never overruns the cut.
  */
 
 import type { ClipData } from '../../@types/animation/ClipData';
-import { fork, hold, oscillate, rate, seq } from '../../services/engine/animation/effectHelpers';
+import type { Channel } from '../../@types/animation/Channel';
+import { all, hold, rate, seq } from '../../services/engine/animation/effectHelpers';
 
-// Cruise angular velocity (rad/s) — the steady orbit speed once eased in — and
-// the ease in/out ramp length (s). CRUISE_RATE is the old looping-spin rate
-// (2π over 45s) so the cruise feel is unchanged; only the start/stop is new.
-const CRUISE_RATE = (Math.PI * 2) / 45;
-const RAMP_SEC = 1.5;
+// Defaults: the steady orbit speed once eased in (rad/s — 2π over 45s, the old
+// looping-spin rate, so the cruise feel is unchanged), and the ease in/out ramp
+// length (s). Pitch cruises at this fraction of yaw, a gentle wobble.
+const DEFAULT_CRUISE_RATE = (Math.PI * 2) / 45;
+const DEFAULT_RAMP_SEC = 1.5;
+const PITCH_FRACTION = 0.1;
 
-export function dwellDrift(durationSec: number): ClipData {
-  const ramp = Math.min(RAMP_SEC, durationSec / 2);
+export function dwellDrift(
+  durationSec: number,
+  rampSec: number = DEFAULT_RAMP_SEC,
+  cruiseRate: number = DEFAULT_CRUISE_RATE,
+): ClipData {
+  const ramp = Math.min(rampSec, durationSec / 2);
   const cruise = Math.max(0, durationSec - 2 * ramp);
+
+  // One eased velocity envelope: rest → cruiseV → rest, over the whole window.
+  const envelope = (ch: Channel, cruiseV: number) =>
+    seq([
+      rate(ch, { to: cruiseV, over: ramp }), // ease in to cruise
+      hold(cruise), // hold at constant speed
+      rate(ch, { to: 0, over: ramp }), // ease out — at rest as the beat ends
+    ]);
+
   return {
     start: 'live',
-    timeline: [
-      fork(oscillate('pitch', { amp: 0.04, period: 14 })), // gentle bob, under the envelope
-      seq([
-        rate('yaw', { to: CRUISE_RATE, over: ramp }), // ease in to cruise
-        hold(cruise), // orbit at constant speed
-        rate('yaw', { to: 0, over: ramp }), // ease out — at rest as the beat ends
-      ]),
-    ],
+    timeline: [all([envelope('yaw', cruiseRate), envelope('pitch', cruiseRate * PITCH_FRACTION)])],
   };
 }
