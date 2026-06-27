@@ -189,14 +189,26 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
       return effect.over;
     }
 
-    // --- Camera leaves: oscillation (perpetual, no window) ---
+    // --- Camera leaves: oscillation (windowed; perpetual = the [-∞, +∞) case) ---
     case 'osc': {
+      // A bare bob (no `over`) is perpetual: the maximal window, never gated,
+      // never faded — identical to the historical always-on sine. A windowed
+      // bob plays over `[atSec, atSec + over)` and fades its amplitude at the
+      // ends. The phase is read off absolute time in the evaluator, so the
+      // window carries no phase offset.
+      const windowed = effect.over !== undefined;
       acc.oscTracks.push({
         channel: effect.ch,
         amp: effect.amp,
         period: effect.period,
+        startSec: windowed ? atSec : -Infinity,
+        endSec: windowed ? atSec + effect.over! : Infinity,
+        fade: effect.fade ?? 0,
+        ease: effect.ease,
       });
-      // `osc` has no duration — it runs for the clip's full lifetime.
+      // `osc` contributes no awaited duration — it runs under its scope as a
+      // background layer; a windowed bob self-terminates via its window, never
+      // gating the timeline.
       return 0;
     }
 
@@ -287,7 +299,14 @@ export function compileClip(data: ClipData): CompiledClip {
     .map((c) => ({ ...c, atSec: c.atSec + preroll }))
     .sort((a, b) => a.atSec - b.atSec);
 
-  // OscTracks have no time window — they are unaffected by preroll.
+  // Shift osc windows like every other window. A perpetual bob's window is
+  // [-∞, +∞); adding preroll to ±Infinity is a no-op, so it keeps running from
+  // clip start (including through the preroll) exactly as before.
+  const shiftedOscTracks: OscTrack[] = acc.oscTracks.map((o) => ({
+    ...o,
+    startSec: o.startSec + preroll,
+    endSec: o.endSec + preroll,
+  }));
 
   // Build baseTracks as Record<Channel, BaseSegment[]> with an entry for
   // every channel (sorted ascending by startSec within each channel).
@@ -305,7 +324,7 @@ export function compileClip(data: ClipData): CompiledClip {
     durationSec: preroll + awaitedDur,
     baseTracks,
     velTracks: shiftedVelRamps,
-    oscTracks: acc.oscTracks,
+    oscTracks: shiftedOscTracks,
     cues: shiftedCues,
   };
 }

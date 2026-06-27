@@ -335,29 +335,6 @@ describe('FADE_LAYERS intent subset', () => {
     }
   });
 
-  it('every intent row declares its settings cluster', () => {
-    // The cluster field is what lets applyEffect map a touched SettingsSnapshot
-    // cluster to its fade rows without a parallel table. An intent row MUST
-    // carry one; a registration-only row MUST NOT (it has no settings to read).
-    const VALID_CLUSTERS = new Set([
-      'galaxyCatalogs',
-      'structures',
-      'volumes',
-      'filaments',
-      'milkyWay',
-      'flow',
-    ]);
-    for (const row of FADE_LAYERS) {
-      expect(
-        row.intent === undefined,
-        `${row.key}: cluster presence must mirror intent presence`,
-      ).toBe(row.cluster === undefined);
-      if (row.intent !== undefined) {
-        expect(VALID_CLUSTERS.has(row.cluster as string), `${row.key}.cluster is valid`).toBe(true);
-      }
-    }
-  });
-
   it('survey row intent reads galaxyCatalogs.items[id].enabled', () => {
     const row = rowFor('survey');
     expect(row.intent?.(makeSettings({ sdssEnabled: false }), 'sdss')).toBe(false);

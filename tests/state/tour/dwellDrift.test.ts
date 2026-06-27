@@ -1,51 +1,64 @@
 /**
- * dwellDrift tests — verify the dwell clip is perpetual and starts live.
+ * dwellDrift tests — verify the dwell clip drives yaw and pitch with the right
+ * effects, synced to the duration it is handed.
  *
- * The perpetual guarantee is structural: the awaited timeline node must be a
- * `spin` with `loop: true`. Any finite-duration node at the top-level awaited
- * position would allow the clip to complete, winning the dwell race and
- * advancing the tour prematurely.
- *
- * The oscillate is forked — it contributes no duration to the timeline and
- * is therefore not part of the awaited path. Tests confirm this by verifying
- * the fork wraps an `osc`, not a finite cue.
+ * Yaw is a single finite `spin` over the whole dwell with `inOut` ease (gentle
+ * start, settles by the cut, ends displaced — an orbit). Pitch is an
+ * amplitude-enveloped `oscillate`: a zero-mean bob whose amplitude fades in/out
+ * over the ramp, so it returns to centre. Both run concurrently under `all`.
  */
 
 import { describe, it, expect } from 'vitest';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
-import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
+import type { Effect } from '../../../src/@types/animation/Effect';
 
-// Minimal beat — dwellDrift ignores its content but needs a compatible type.
-// clip is a trivial narration clip with an empty timeline.
-const beat: BeatData = { clip: { start: 'live', timeline: [] }, caption: null, dwellSec: 10 };
+/** The two channel effects inside the clip's top-level `all`. */
+function effectsOf(clip: ReturnType<typeof dwellDrift>): Effect[] | null {
+  const top = clip.timeline[0];
+  return top?.kind === 'all' ? top.children : null;
+}
 
 describe('dwellDrift', () => {
   it('starts live', () => {
-    const clip = dwellDrift(beat);
-    expect(clip.start).toBe('live');
+    expect(dwellDrift(10).start).toBe('live');
   });
 
-  it('builds a perpetual loop clip', () => {
-    const clip = dwellDrift(beat);
+  it('drives yaw with a finite inOut spin and pitch with an eased oscillation', () => {
+    const effects = effectsOf(dwellDrift(10));
+    expect(effects).not.toBeNull();
+    expect(effects).toHaveLength(2);
 
-    // The timeline has exactly two entries: a fork (the bob) and a spin (the orbit).
-    expect(clip.timeline).toHaveLength(2);
+    const spin = effects!.find((e) => e.kind === 'spin');
+    const osc = effects!.find((e) => e.kind === 'osc');
 
-    // First entry: fork wrapping an oscillate — the bob runs under the awaited spin.
-    const forkEntry = clip.timeline[0];
-    expect(forkEntry).not.toBeUndefined();
-    expect(forkEntry!.kind).toBe('fork');
-    if (forkEntry!.kind === 'fork') {
-      expect(forkEntry.child.kind).toBe('osc');
+    // Yaw: a finite (non-looping) spin over the whole dwell, eased in and out.
+    expect(spin).toBeDefined();
+    if (spin?.kind === 'spin') {
+      expect(spin.ch).toBe('yaw');
+      expect(spin.over).toBe(10);
+      expect(spin.ease).toBe('inOut');
+      expect(spin.loop).toBeUndefined();
+      expect(spin.by).toBeGreaterThan(0);
     }
 
-    // Second entry: spin with loop: true — the awaited node that never completes.
-    const spinEntry = clip.timeline[1];
-    expect(spinEntry).not.toBeUndefined();
-    expect(spinEntry!.kind).toBe('spin');
-    if (spinEntry!.kind === 'spin') {
-      expect(spinEntry.loop).toBe(true);
-      expect(spinEntry.ch).toBe('yaw');
+    // Pitch: an amplitude-enveloped oscillation over the dwell, returning to centre.
+    expect(osc).toBeDefined();
+    if (osc?.kind === 'osc') {
+      expect(osc.ch).toBe('pitch');
+      expect(osc.over).toBe(10);
+      expect(osc.fade).toBeGreaterThan(0);
     }
+  });
+
+  it('sizes the yaw rotation so the average speed is the cruise rate', () => {
+    // by = cruiseRate × durationSec ⇒ by / durationSec === cruiseRate.
+    const spin = effectsOf(dwellDrift(10, 1.5, 0.2))!.find((e) => e.kind === 'spin');
+    if (spin?.kind === 'spin') expect(spin.by / spin.over).toBeCloseTo(0.2);
+  });
+
+  it('clamps the pitch fade so a short dwell still fades symmetrically', () => {
+    // 2s is shorter than 2 × default ramp (3s), so the fade clamps to half (1s).
+    const osc = effectsOf(dwellDrift(2))!.find((e) => e.kind === 'osc');
+    if (osc?.kind === 'osc') expect(osc.fade).toBeCloseTo(1);
   });
 });

@@ -11,7 +11,6 @@ import {
   clearSelection,
 } from '../../../src/state/selection/selectionSlice';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
-import type { SceneSnapshot } from '../../../src/@types/engine/settings/SceneSnapshot';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -31,8 +30,6 @@ describe('watchSelectionWakeSaga', () => {
       syncFades: vi.fn(),
       reseedFlow: vi.fn(),
       bakeBias: vi.fn(),
-      captureScene: vi.fn<() => SceneSnapshot>(),
-      restoreScene: vi.fn<(snapshot: SceneSnapshot, opts: { animate: boolean }) => void>(),
     };
     mw.setContext({ reconcile });
     return s;

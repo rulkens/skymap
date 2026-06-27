@@ -26,3 +26,7 @@ export const tierRoute = 'tier' as const;
 export const cameraRoute = 'camera' as const;
 export const selectionRoute = 'selection' as const;
 export const selectionRowsRoute = 'selectionRows' as const;
+// `tourRoute` is the guided-tour runtime slice (active / tourId / beatIndex /
+// paused / dwellNonce) — the single-writer state the tour sagas drive and the
+// TourOverlay reads; everything else it shows derives from the registry.
+export const tourRoute = 'tour' as const;

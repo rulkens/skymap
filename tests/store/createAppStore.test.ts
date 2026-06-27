@@ -63,7 +63,6 @@ describe('createAppStore', () => {
       paletteOpen: true,
       uiHidden: false,
       debugPanelOpen: false,
-      caption: null,
       splash: { visible: false, dismissedVersion: 3 },
     };
     const { store } = createAppStore({

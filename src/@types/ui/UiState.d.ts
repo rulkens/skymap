@@ -7,15 +7,15 @@
  * be over-segmentation: the store combiner gains a level of nesting but no
  * decomplection — the same reducer would own both fields either way.
  *
- * `caption` is a transient string set by the tour during visit beats; null
- * when no caption is showing.
+ * Tour caption / beat-progress state is NOT here — it lives in the dedicated
+ * `tour` runtime slice (the overlay derives the caption from `tourId` +
+ * `beatIndex`), keeping this slice to app-level chrome.
  */
 
 export type UiState = {
   paletteOpen: boolean;
   uiHidden: boolean;
   debugPanelOpen: boolean;
-  caption: string | null;
   splash: {
     visible: boolean;
     dismissedVersion: number | null;

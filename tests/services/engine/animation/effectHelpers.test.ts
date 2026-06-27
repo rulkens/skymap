@@ -202,15 +202,28 @@ describe('rate', () => {
 // ---------------------------------------------------------------------------
 
 describe('oscillate', () => {
-  it('oscillate has no over/ease — emits kind:osc with amp and period', () => {
+  it('a bare bob emits kind:osc with amp, period, and a default inOut ease', () => {
     const a = oscillate('pitch', { amp: 0.1, period: 8 });
-    expect(a).toEqual({ kind: 'osc', ch: 'pitch', amp: 0.1, period: 8 });
+    expect(a).toEqual({ kind: 'osc', ch: 'pitch', amp: 0.1, period: 8, ease: 'inOut' });
   });
 
-  it('does NOT include over or ease fields', () => {
+  it('omits over/fade when not given (perpetual, full-amplitude)', () => {
     const a = oscillate('yaw', { amp: 0.5, period: 10 });
     expect(a).not.toHaveProperty('over');
-    expect(a).not.toHaveProperty('ease');
+    expect(a).not.toHaveProperty('fade');
+  });
+
+  it('carries over, fade, and a custom ease for an amplitude-enveloped bob', () => {
+    const a = oscillate('pitch', { amp: 0.04, period: 14, over: 8, fade: 1.5, ease: 'out' });
+    expect(a).toEqual({
+      kind: 'osc',
+      ch: 'pitch',
+      amp: 0.04,
+      period: 14,
+      over: 8,
+      fade: 1.5,
+      ease: 'out',
+    });
   });
 });
 

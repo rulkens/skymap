@@ -1,0 +1,410 @@
+/* src/components/TourOverlay/TourOverlay.module.css */
+/*
+ * TourOverlay — the guided-tour HUD, in the Splash's typographic register.
+ *
+ * Same idiom as Splash: no card, no glass — only text over a localized
+ * vignette, with the live 3D field as the hero behind it. The overlay
+ * differs from the splash in two ways: the caption anchors per-beat to
+ * dodge that frame's bright subject (five anchors, not one fixed corner),
+ * and a centered navigation cluster lives at bottom-center — which is why
+ * `bottom-center` is deliberately absent from the caption anchor set.
+ *
+ * The root layer is click-through (`pointer-events: none`) so the canvas
+ * stays interactive everywhere except the nav buttons, which opt back in.
+ */
+
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+}
+
+/* ── Vignette ───────────────────────────────────────────────────────
+ * One radial ellipse per anchor corner, reusing the splash's
+ * bottom-left gradient and mirroring it for the right / top anchors.
+ * Anchored under the caption so the text stays legible against the
+ * live field without dimming the opposite half of the canvas. */
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.vignetteBottomLeft {
+  background: radial-gradient(
+    ellipse at 16% 88%,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.5) 26%,
+    rgba(0, 0, 0, 0.16) 48%,
+    transparent 66%
+  );
+}
+.vignetteBottomRight {
+  background: radial-gradient(
+    ellipse at 84% 88%,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.5) 26%,
+    rgba(0, 0, 0, 0.16) 48%,
+    transparent 66%
+  );
+}
+.vignetteTopLeft {
+  background: radial-gradient(
+    ellipse at 16% 12%,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.5) 26%,
+    rgba(0, 0, 0, 0.16) 48%,
+    transparent 66%
+  );
+}
+.vignetteTopRight {
+  background: radial-gradient(
+    ellipse at 84% 12%,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.5) 26%,
+    rgba(0, 0, 0, 0.16) 48%,
+    transparent 66%
+  );
+}
+/* top-center / bottom-... centred variants share a centred-top ellipse;
+ * bottom-center is not an anchor (the nav owns that slot). */
+.vignetteTopCenter {
+  background: radial-gradient(
+    ellipse at 50% 12%,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.5) 26%,
+    rgba(0, 0, 0, 0.16) 48%,
+    transparent 66%
+  );
+}
+
+/* ── Caption block ──────────────────────────────────────────────────
+ * Absolutely positioned per anchor. The text-shadow keeps the prose
+ * readable where the vignette thins against a bright field — the same
+ * trick the approved mockup composites over the real frames. */
+.caption {
+  position: absolute;
+  max-width: 42%;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+}
+
+.captionTop {
+  top: 74px;
+}
+.captionBottom {
+  bottom: 74px;
+}
+.captionLeft {
+  left: 44px;
+  align-items: flex-start;
+  text-align: left;
+}
+.captionCenter {
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: center;
+  text-align: center;
+}
+.captionRight {
+  right: 44px;
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* ── Staggered fade-up reveal (splash register) ─────────────────────
+ * Copied from Splash.module.css splashReveal: label fades up first,
+ * title next (+90ms) with its accent underline drawing out beneath it
+ * (the "camera focusing" beat), body last (+190ms). The caption is
+ * keyed on the beat index by the parent, so re-mounting replays this. */
+.label {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: tourReveal 0.42s ease-out forwards;
+  animation-delay: 0ms;
+
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-fg-label);
+}
+/* Accent hairline before the kicker. On right anchors the row reverses
+ * (below), which floats the hairline to the right edge of the label. */
+.label::before {
+  content: '';
+  display: block;
+  width: 28px;
+  height: 1px;
+  background: var(--color-accent);
+}
+/* Right-anchored captions flip the kicker so the hairline trails the
+ * text toward the screen edge rather than poking inward. */
+.captionRight .label {
+  flex-direction: row-reverse;
+}
+
+.title {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: tourReveal 0.42s ease-out forwards;
+  animation-delay: 90ms;
+
+  position: relative;
+  font-family: var(--font-family-display);
+  font-weight: 600;
+  font-size: 40px;
+  line-height: 1.04;
+  letter-spacing: 0.005em;
+  margin: 0;
+  color: #ffffff;
+  padding-bottom: 8px;
+}
+/* Draw-underline beat, like splash .title::after. */
+.title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1px;
+  width: 0;
+  background: var(--color-accent);
+  animation: tourDraw 1s 520ms ease-out forwards;
+}
+/* On right anchors the underline draws from the title's right edge so
+ * it tracks the text alignment rather than dangling from the left. */
+.captionRight .title::after {
+  left: auto;
+  right: 0;
+}
+
+.body {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: tourReveal 0.42s ease-out forwards;
+  animation-delay: 190ms;
+
+  font-family: var(--font-family-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--color-fg);
+  margin: 0;
+  max-width: 42ch;
+}
+/* react-markdown emits a <p> per paragraph; collapse the default
+ * margins so the body reads as a single placard block. */
+.body p {
+  margin: 0;
+}
+.body p + p {
+  margin-top: 0.7em;
+}
+.body strong {
+  color: #ffffff;
+}
+.body a {
+  color: var(--color-accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--color-accent);
+}
+.body a:hover,
+.body a:focus-visible {
+  border-bottom-style: solid;
+}
+
+@keyframes tourReveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* On right anchors the centring transform must survive the reveal's
+ * end state — but right/left anchors carry no transform of their own,
+ * so the keyframe's translateY(0) is correct as written. Centre is the
+ * exception: it owns translateX(-50%) on the block, not the children,
+ * so the children's reveal transform is independent and safe. */
+@keyframes tourDraw {
+  to {
+    width: 72px;
+  }
+}
+
+/* ── Navigation cluster ─────────────────────────────────────────────
+ * Centered at bottom-center — the slot the caption anchors deliberately
+ * avoid. Buttons opt back into pointer events (the root is click-through
+ * so the canvas stays draggable around the controls). */
+.nav {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.navBtn {
+  pointer-events: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-family-mono);
+  font-size: 15px;
+  line-height: 1;
+  color: var(--color-fg-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.navBtn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+/* Disabled prev — dimmed to a ghost rather than removed, so the cluster
+ * keeps a stable width across the first beat. */
+.ghost {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Stop button — a circular sibling to the pause ring, sitting next to it.
+ * The square StopIcon replaces the former hairline ✕, and the circle border
+ * echoes the dwell ring's track so the two media controls read as a pair. */
+.stopWrap {
+  pointer-events: auto;
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 2px solid rgba(168, 208, 255, 0.18);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-fg-label);
+}
+.stopWrap:hover {
+  color: var(--color-fg);
+  border-color: rgba(168, 208, 255, 0.32);
+}
+.stopWrap:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ── Pause / dwell ring ─────────────────────────────────────────────
+ * The pause button wraps a 40px SVG countdown ring. The depleting
+ * circle sweeps stroke-dashoffset 0 → circumference over the dwell
+ * duration (r=17, circumference ≈ 106.8). The whole ring is keyed on
+ * the dwell nonce by the parent, so a fresh dwell remounts and restarts
+ * the sweep from full. */
+.pauseWrap {
+  pointer-events: auto;
+  position: relative;
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  /* The Pause/PlayIcon glyphs inherit this as their fill via currentColor. */
+  color: var(--color-fg);
+}
+.pauseWrap:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+/* Rotate −90° so the sweep starts at 12 o'clock. */
+.ringSvg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.ringTrack {
+  fill: none;
+  stroke: rgba(168, 208, 255, 0.18);
+  stroke-width: 2;
+}
+.ringFill {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 106.8;
+  animation: tourDeplete linear forwards;
+}
+@keyframes tourDeplete {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 106.8;
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────
+ * Snap everything in (no fade-up, no underline draw), exactly like the
+ * splash. The dwell ring keeps its (informative) sweep — it is a live
+ * progress indicator, not decorative motion, so it is intentionally not
+ * disabled here; the autoplay timer it mirrors still runs. */
+@media (prefers-reduced-motion: reduce) {
+  .label,
+  .title,
+  .body {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .captionCenter .label,
+  .captionCenter .title,
+  .captionCenter .body {
+    transform: none;
+  }
+  .title::after {
+    animation: none;
+    width: 72px;
+  }
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────
+ * Tighten the inset and shrink the title, mirroring the splash's mobile
+ * reflow so the caption fits a narrow viewport above the nav. */
+@media (max-width: 768px) {
+  .caption {
+    max-width: none;
+    left: 24px;
+    right: 24px;
+  }
+  .captionCenter {
+    left: 24px;
+    right: 24px;
+    transform: none;
+  }
+  .captionBottom {
+    bottom: 72px;
+  }
+  .captionTop {
+    top: 56px;
+  }
+  .title {
+    font-size: 30px;
+  }
+  .body {
+    max-width: none;
+  }
+}

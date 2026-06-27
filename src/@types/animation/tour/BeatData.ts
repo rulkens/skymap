@@ -1,4 +1,5 @@
 import type { ClipData } from '../ClipData';
+import type { BeatCaption } from './BeatCaption';
 
 /**
  * BeatData — a single beat in a tour: a clip to play, an optional caption
@@ -9,16 +10,18 @@ import type { ClipData } from '../ClipData';
  * separate focus field. Scene changes (visibility, settings) are expressed
  * as tour-level `setup` actions or as in-clip `scene()` cues.
  *
- * `caption` renders in the UI overlay during the dwell phase; null for no
- * caption. Captions are ephemeral — they live only for the beat's dwell and
- * are cleared when the next beat begins.
+ * `caption` is the beat's placard — a title, optional markdown body, and an
+ * anchor (`BeatCaption`); null for a silent beat. The overlay reveals it once
+ * the establishing fly lands and clears it when the next beat begins. The
+ * runtime slice does not store the caption — it is derived from this field via
+ * the active `tourId` + `beatIndex`.
  *
  * `dwellSec` is the auto-advance delay in seconds after the clip completes.
  * Keyboard or gesture input can interrupt early; the timer expiration proceeds
  * to the next beat automatically.
  */
 export type BeatData = {
-  readonly caption: string | null;
+  readonly caption: BeatCaption | null;
   readonly dwellSec: number;
   readonly clip: ClipData;
 };

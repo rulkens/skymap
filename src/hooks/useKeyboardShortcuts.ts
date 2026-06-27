@@ -4,7 +4,6 @@
  *
  *   - Cmd+K / Ctrl+K / `/`  → open the command palette
  *   - Esc                    → clear pinned selection + exit a running tour
- *   - →  (ArrowRight)        → advance to the next tour beat
  *   - f / F                  → focus on the currently-pinned galaxy
  *   - h / H                  → return camera to home view
  *   - Tab                    → toggle "hide UI" mode (clean visual)
@@ -28,7 +27,7 @@
 import { useEffect } from 'react';
 import { useAppDispatch } from '../store/hooks';
 import { clearSelection, updateSelectionFocus } from '../state/selection/selectionSlice';
-import { advanceTour, exitTour } from '../state/tour/tourActions';
+import { exitTour } from '../state/tour/tourActions';
 import { refOf } from '../services/engine/helpers/refOf';
 import type { UseKeyboardShortcutsInput } from '../@types/engine/UseKeyboardShortcutsInput';
 
@@ -81,16 +80,6 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       if (e.key === 'Escape') {
         dispatch(clearSelection());
         dispatch(exitTour());
-        return;
-      }
-
-      // ── ArrowRight advances to the next tour beat ──────────────
-      // Skips the current beat's remaining dwell. No-op outside a
-      // dwell phase, so it's safe to dispatch unconditionally. The
-      // tour hides the HUD, so this keyboard gesture is the only
-      // beat-navigation control.
-      if (e.key === 'ArrowRight') {
-        dispatch(advanceTour());
         return;
       }
 

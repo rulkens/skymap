@@ -1,6 +1,6 @@
 /**
  * mergeSettingsSnapshot — unit tests for the pure cluster-merge reducer that
- * backs the tour's `restoreSettings` / `applyEffect` writes.
+ * backs the tour's `restoreSceneSaga` settings write.
  *
  * The reducer takes a (possibly partial) `SettingsSnapshot` and returns a fresh
  * `EngineSettingsState` with each PRESENT cluster replaced by a detached deep

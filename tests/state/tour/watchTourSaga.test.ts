@@ -2,29 +2,27 @@
  * watchTourSaga tests — integration tests over a real store + saga middleware.
  *
  * `watchTourSaga` is the startTour watcher: it resolves the dispatched `TourId`
- * against `tourRegistry` and launches `guidedTourSaga` with the resolved tour's
- * beats. The registry is MOCKED here with two controlled tours — a `demo` tour
- * whose single narration beat auto-advances, and a `webShowcase` tour whose beat
- * dwells effectively forever — so each test drives timing deterministically
- * without depending on the real (catalog-resolving) tour definitions. Each test
- * dispatches `startTour(id)` into a store running `watchTourSaga` directly with
- * all saga-context stubs injected:
- *   - `playClip` — resolves immediately so beats complete without blocking
- *   - `resolveDeps` — narration-beat deps (null focus, no catalogs needed)
- *   - `cameraRuntime` — a fixed camera snapshot
- *   - `reconcile` — a `captureScene`/`restoreScene` stub
+ * against `tourRegistry` and launches `guidedTourSaga` with the resolved tour.
+ * The registry is MOCKED here with two controlled tours — a `demo` tour whose
+ * single narration beat auto-advances, and a `webShowcase` tour whose beat dwells
+ * effectively forever — so each test drives timing deterministically without
+ * depending on the real (catalog-resolving) tour definitions. Both tours carry a
+ * `setup` effect that disables volumes, so the capture → restore round-trip is
+ * OBSERVABLE in the store: each test seeds `volumes.enabled = true` first, the
+ * setup flips it off during the run, and the finally winds it back on.
+ *
+ * Capture is a pure `select(captureScene)` and restore is `restoreSceneSaga`
+ * (two `put`s), so neither watcher nor tour needs a `reconcile` stub — the
+ * saga-context only carries `playClip` / `resolveDeps` / `cameraRuntime` for
+ * `visitBeatSaga`.
  *
  * ### What we assert
  *
- * 1. `guidedTourSaga` actually ran: `setUiHidden(true)` is dispatched synchronously
- *    on startTour, confirming the saga body executed (not just that the action
- *    was received).
- * 2. `captureScene` is called and `restoreScene` fires after natural completion,
- *    confirming the snapshot/restore pair in `guidedTourSaga`'s try/finally executed.
- * 3. `restoreScene` fires when exitTour cancels a mid-dwell run — the finally
- *    block runs on BOTH paths.
- * 4. A second startTour supersedes a first run (takeLatest semantics): the
- *    first run's `restoreScene` fires before the second run's beats execute.
+ * 1. `guidedTourSaga` ran: `tour.active` is true synchronously on startTour.
+ * 2. The captured baseline is restored after natural completion (volumes back on).
+ * 3. The baseline is restored when exitTour cancels a mid-dwell run.
+ * 4. A second startTour supersedes a first run (takeLatest): the tour stays active
+ *    under the new run and a fresh beat fly fires.
  *
  * ### Timing
  *
@@ -38,34 +36,42 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 // Controlled registry: `demo` auto-advances (tiny dwell), `webShowcase` dwells
-// forever so a run stays live until exitTour / a superseding startTour. Inlined
-// in the factory (vi.mock is hoisted above the imports).
-// Both use narration clips (empty timeline) so clipFociReady exits immediately.
-// The clip literals are inlined inside the factory because vi.mock factories are
-// hoisted before the module scope runs, so outer-scope constants are not visible.
-vi.mock('../../../src/data/animation/tours/tourRegistry', () => ({
-  tourRegistry: {
-    demo: {
-      id: 'demo',
-      label: 'Demo',
-      beats: [{ clip: { start: 'live', timeline: [] }, caption: 'Test', dwellSec: 0.001 }],
+// forever so a run stays live until exitTour / a superseding startTour. Both
+// carry a volumes-off setup so the restore is observable. Inlined in the factory
+// (vi.mock is hoisted above the imports); the settings action is imported INSIDE
+// the async factory because outer-scope bindings are not visible to it.
+vi.mock('../../../src/data/animation/tours/tourRegistry', async () => {
+  const { setVolumesEnabled } = await import('../../../src/state/settings/settingsSlice');
+  const setup = { effects: [setVolumesEnabled(false)] };
+  return {
+    tourRegistry: {
+      demo: {
+        id: 'demo',
+        label: 'Demo',
+        setup,
+        beats: [
+          { clip: { start: 'live', timeline: [] }, caption: { title: 'Test' }, dwellSec: 0.001 },
+        ],
+      },
+      webShowcase: {
+        id: 'webShowcase',
+        label: 'Web',
+        setup,
+        beats: [
+          { clip: { start: 'live', timeline: [] }, caption: { title: 'Long' }, dwellSec: 9999 },
+        ],
+      },
     },
-    webShowcase: {
-      id: 'webShowcase',
-      label: 'Web',
-      beats: [{ clip: { start: 'live', timeline: [] }, caption: 'Long', dwellSec: 9999 }],
-    },
-  },
-}));
+  };
+});
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTourSaga } from '../../../src/state/tour/watchTourSaga';
 import { startTour, exitTour } from '../../../src/state/tour/tourActions';
+import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
 import type { FocusCameraRuntime } from '../../../src/store/types';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
-import type { SceneSnapshot } from '../../../src/@types/engine/settings/SceneSnapshot';
-import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -82,27 +88,11 @@ const NARRATION_DEPS: ResolveDeps = {
   structures: { byId: () => null },
 };
 
-const SENTINEL_SNAPSHOT = { settings: {}, focus: null } as unknown as SceneSnapshot;
-
 // ─── Harness ─────────────────────────────────────────────────────────────────
 
 type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 
-type ReconcileStub = {
-  captureScene: ReturnType<typeof vi.fn<() => SceneSnapshot>>;
-  restoreScene: ReturnType<typeof vi.fn<(s: SceneSnapshot, opts: { animate: boolean }) => void>>;
-};
-
-function buildReconcileStub(): ReconcileStub {
-  return {
-    captureScene: vi.fn<() => SceneSnapshot>().mockReturnValue(SENTINEL_SNAPSHOT),
-    restoreScene: vi.fn<(s: SceneSnapshot, opts: { animate: boolean }) => void>(),
-  };
-}
-
-function buildHarness(
-  opts: { playClip?: PlayClipStub; reconcile?: Partial<ReconcileEffects> } = {},
-) {
+function buildHarness(opts: { playClip?: PlayClipStub } = {}) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
@@ -113,18 +103,25 @@ function buildHarness(
     opts.playClip ??
     (vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined) as PlayClipStub);
 
-  const reconcile = opts.reconcile ?? buildReconcileStub();
-
   sagaMiddleware.setContext({
     resolveDeps: () => NARRATION_DEPS,
     cameraRuntime: () => CAMERA_RUNTIME,
     playClip: (clip: ClipData) => playClipFn(clip),
-    reconcile,
   });
 
   sagaMiddleware.run(watchTourSaga);
 
-  return { store, sagaMiddleware, playClipFn, reconcile };
+  return { store, sagaMiddleware, playClipFn };
+}
+
+// Fly resolves (odd calls), drift blocks forever (even calls) — lets a beat reach
+// its dwell race and stay there until something interrupts it.
+function makeAutoFlyStub(): PlayClipStub {
+  let parity = 0;
+  return vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
+    parity++;
+    return parity % 2 === 1 ? Promise.resolve() : new Promise<void>(() => {});
+  });
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -135,49 +132,43 @@ describe('watchTourSaga', () => {
     vi.useRealTimers();
   });
 
-  // ── (1) guidedTourSaga actually ran (setUiHidden(true) dispatched) ────────────
+  // ── (1) guidedTourSaga actually ran (tour marked active) ─────────────────
 
-  it('guidedTourSaga runs: setUiHidden(true) is dispatched on startTour', async () => {
+  it('guidedTourSaga runs: the tour is marked active on startTour', () => {
     const { store } = buildHarness();
 
     store.dispatch(startTour('demo'));
 
-    // setUiHidden(true) is dispatched synchronously inside guidedTourSaga before
-    // the first beat's async work begins.
-    expect(store.getState().ui.uiHidden).toBe(true);
+    // tourStarted is dispatched synchronously inside guidedTourSaga before the
+    // first beat's async work begins (the App derives HUD-hidden from it).
+    expect(store.getState().tour.active).toBe(true);
   });
 
-  // ── (2) restoreScene fires on natural completion ──────────────────────────
+  // ── (2) restore fires on natural completion ──────────────────────────────
 
-  it('restoreScene fires when all beats complete naturally', async () => {
+  it('restores the captured baseline when all beats complete naturally', async () => {
     vi.useFakeTimers();
 
-    const reconcile = buildReconcileStub();
-    const { store } = buildHarness({ reconcile });
+    const { store } = buildHarness();
+    store.dispatch(setVolumesEnabled(true));
 
     store.dispatch(startTour('demo'));
+    // Setup ran: volumes off during the tour.
+    expect(store.getState().settings.volumes.enabled).toBe(false);
 
     // Advance timers so the 0.001s dwell expires and the beat + loop complete.
     await vi.runAllTimersAsync();
 
-    // guidedTourSaga's finally must have run: captureScene called before the beat,
-    // restoreScene called after completion.
-    expect(reconcile.captureScene).toHaveBeenCalledTimes(1);
-    expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });
+    // guidedTourSaga's finally restored the captured baseline and ended the tour.
+    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().tour.active).toBe(false);
   });
 
-  // ── (3) restoreScene fires when exitTour cancels the run ────────────────
+  // ── (3) restore fires when exitTour cancels the run ──────────────────────
 
-  it('restoreScene fires when exitTour cancels the run', async () => {
-    // Fly resolves immediately; drift blocks so we can interrupt mid-dwell.
-    let callIdx = 0;
-    const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
-      callIdx++;
-      return callIdx === 1 ? Promise.resolve() : new Promise<void>(() => {});
-    });
-
-    const reconcile = buildReconcileStub();
-    const { store } = buildHarness({ playClip: playClipMock, reconcile });
+  it('restores the captured baseline when exitTour cancels the run', async () => {
+    const { store } = buildHarness({ playClip: makeAutoFlyStub() });
+    store.dispatch(setVolumesEnabled(true));
 
     // webShowcase dwells forever — the beat never auto-advances during this test.
     store.dispatch(startTour('webShowcase'));
@@ -185,46 +176,37 @@ describe('watchTourSaga', () => {
     // Advance to the dwell race inside the beat.
     await flush();
     await flush();
-
-    // Still running — restoreScene has not fired yet.
-    expect(reconcile.restoreScene).not.toHaveBeenCalled();
+    expect(store.getState().settings.volumes.enabled).toBe(false);
 
     store.dispatch(exitTour());
     await flush();
 
-    // The finally block must have run on exitTour cancellation.
-    expect(reconcile.restoreScene).toHaveBeenCalledWith(SENTINEL_SNAPSHOT, { animate: true });
+    // The finally block ran on exitTour cancellation: baseline restored, tour ended.
+    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().tour.active).toBe(false);
   });
 
-  // ── (4) second startTour supersedes first (takeLatest) ──────────────────
+  // ── (4) second startTour supersedes first (takeLatest) ───────────────────
 
-  it('a second startTour cancels the first run', async () => {
-    let callIdx = 0;
-    const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
-      callIdx++;
-      return callIdx % 2 === 1 ? Promise.resolve() : new Promise<void>(() => {});
-    });
+  it('a second startTour supersedes the first run, staying active under the new run', async () => {
+    const playClip = makeAutoFlyStub();
+    const { store } = buildHarness({ playClip });
+    store.dispatch(setVolumesEnabled(true));
 
-    const reconcile = buildReconcileStub();
-    const { store } = buildHarness({ playClip: playClipMock, reconcile });
-
-    // Start first run with a forever-dwelling tour.
-    store.dispatch(startTour('webShowcase'));
-
-    // Advance to the dwell race inside the first beat.
-    await flush();
-    await flush();
-
-    // First run is live — restoreScene has not fired yet.
-    expect(reconcile.restoreScene).not.toHaveBeenCalled();
-
-    // Dispatch a second startTour — takeLatest cancels the first worker.
+    // Start first run with a forever-dwelling tour; advance into its dwell.
     store.dispatch(startTour('webShowcase'));
     await flush();
+    await flush();
+    const fliesAfterFirst = playClip.mock.calls.length;
 
-    // The first run was cancelled: its finally block must have run.
-    expect(reconcile.restoreScene).toHaveBeenCalledTimes(1);
-    // The second run is live: setUiHidden(true) is still in effect.
-    expect(store.getState().ui.uiHidden).toBe(true);
+    // Dispatch a second startTour — takeLatest cancels the first worker (its
+    // finally restores), then launches a fresh run that re-applies setup.
+    store.dispatch(startTour('webShowcase'));
+    await flush();
+    await flush();
+
+    // The second run is live and a fresh beat fly fired for it.
+    expect(store.getState().tour.active).toBe(true);
+    expect(playClip.mock.calls.length).toBeGreaterThan(fliesAfterFirst);
   });
 });

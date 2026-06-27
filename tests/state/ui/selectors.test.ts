@@ -19,7 +19,6 @@ describe('ui selectors', () => {
       paletteOpen: true,
       uiHidden: false,
       debugPanelOpen: false,
-      caption: null,
       splash: { visible: false, dismissedVersion: null },
     };
     const { store } = createAppStore({ settings: baseSettings, ui });
@@ -31,7 +30,6 @@ describe('ui selectors', () => {
       paletteOpen: false,
       uiHidden: true,
       debugPanelOpen: false,
-      caption: null,
       splash: { visible: false, dismissedVersion: null },
     };
     const { store } = createAppStore({ settings: baseSettings, ui });
@@ -43,7 +41,6 @@ describe('ui selectors', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: true,
-      caption: null,
       splash: { visible: false, dismissedVersion: null },
     };
     const { store } = createAppStore({ settings: baseSettings, ui });
@@ -55,7 +52,6 @@ describe('ui selectors', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
-      caption: null,
       splash: { visible: true, dismissedVersion: null },
     };
     const { store } = createAppStore({ settings: baseSettings, ui });
@@ -67,7 +63,6 @@ describe('ui selectors', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
-      caption: null,
       splash: { visible: false, dismissedVersion: 4 },
     };
     const { store } = createAppStore({ settings: baseSettings, ui });
@@ -79,7 +74,6 @@ describe('ui selectors', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
-      caption: null,
       splash: { visible: true, dismissedVersion: null },
     };
     const { store } = createAppStore({ settings: baseSettings, ui });
@@ -93,7 +87,6 @@ describe('ui selectors', () => {
       paletteOpen: true,
       uiHidden: true,
       debugPanelOpen: true,
-      caption: null,
       splash: { visible: true, dismissedVersion: 7 },
     };
     const { store } = createAppStore({ settings: baseSettings, ui });

@@ -212,20 +212,27 @@ export function rate(
  *
  * Writes to the oscillation layer; additive with both base and velocity.
  * `amp` is the peak deviation; `period` is the full cycle length in seconds.
- * There is deliberately no `over` or `ease`: an oscillation is perpetual
- * (it has no intrinsic end), and easing a sinusoid is contradictory. Fork it
- * to let it run under an awaited timeline:
- * `fork(oscillate('pitch', { amp: 0.05, period: 6 }))`.
+ *
+ * By default the bob is perpetual (runs for the whole clip) at full amplitude —
+ * `fork(oscillate('pitch', { amp: 0.05, period: 6 }))`. What is eased is not the
+ * sinusoid but its AMPLITUDE: pass `over` (a window length) and `fade` (a ramp)
+ * and the amplitude eases `0 → amp → 0` across the window, shaped by `ease`, so
+ * the bob fades up and settles instead of lurching at full swing. It stays
+ * zero-mean throughout, so unlike a `rate` envelope it returns to centre.
+ * `fade` needs `over` (there is no end to fade out toward without a window).
  */
 export function oscillate(
   ch: Channel,
-  opts: { amp: number; period: number },
+  opts: { amp: number; period: number; over?: number; fade?: number; ease?: Ease },
 ): CameraAction & { kind: 'osc' } {
   return {
     kind: 'osc',
     ch,
     amp: opts.amp,
     period: opts.period,
+    ease: opts.ease ?? 'inOut',
+    ...(opts.over !== undefined ? { over: opts.over } : {}),
+    ...(opts.fade !== undefined ? { fade: opts.fade } : {}),
   };
 }
 

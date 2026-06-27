@@ -52,6 +52,8 @@ import { requestFocus } from '../../state/selection/requestFocus';
 import { refOf } from '../../services/engine/helpers/refOf';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
+import TourOverlayContainer from '../containers/TourOverlayContainer';
+import { selectTourActive } from '../../state/tour/selectors';
 import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
 
@@ -113,6 +115,11 @@ export function App(): React.ReactElement {
   const uiHidden = useAppSelector(selectUiHidden);
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
 
+  // A running guided tour hides the whole HUD stack and mounts its own overlay
+  // (caption + nav). HUD-hidden-during-tour is DERIVED from `tour.active`, not a
+  // separate `setUiHidden` write — see guidedTourSaga's "no setUiHidden" note.
+  const tourActive = useAppSelector(selectTourActive);
+
   // Stable handlers for the `React.memo`'d SearchTrigger — a fresh
   // inline arrow each render would defeat the memo.
   const openPalette = useCallback(() => dispatch(setPaletteOpen(true)), [dispatch]);
@@ -172,7 +179,7 @@ export function App(): React.ReactElement {
       <div
         className={cx(
           appStyles.uiStack,
-          (uiHidden || splash.splashVisible) && appStyles.uiStackHidden,
+          (uiHidden || splash.splashVisible || tourActive) && appStyles.uiStackHidden,
           selected != null && isMobile && appStyles.hasSelection,
         )}
       >
@@ -241,6 +248,10 @@ export function App(): React.ReactElement {
           />
         )}
       </div>
+      {/* Tour overlay — sibling of the HUD stack, not inside it, so the
+          `uiStackHidden` fade (which the tour triggers) doesn't also fade the
+          caption + nav. Mounted only while a tour runs. */}
+      {tourActive && <TourOverlayContainer />}
       {splash.splashVisible && (
         <Splash
           blocked={splash.blocked}

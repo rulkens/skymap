@@ -26,7 +26,10 @@
  *
  *   - `osc` — oscillation-layer writer. Additive zero-mean sine: `amp · sin(2π t /
  *     period)`. The gentle bob / "life during a hold" idiom. Never clashes with
- *     base or vel.
+ *     base or vel. Perpetual by default; an optional `over` window plus a `fade`
+ *     ramp let the amplitude ease in and out (eased the same way as `rate`/`spin`
+ *     via `ease`) so the bob fades up and settles instead of starting/stopping
+ *     mid-swing. It stays zero-mean throughout, so it returns to centre.
  *
  * ### Why `setVec` as a separate arm?
  *
@@ -89,4 +92,14 @@ export type CameraAction =
       readonly ch: Channel;
       readonly amp: number;
       readonly period: number;
+      // Window length (s). Omit → perpetual (active for the whole clip). With
+      // `over`, the bob plays over `[at, at + over)` and `fade` eases its
+      // amplitude in/out at the ends.
+      readonly over?: number;
+      // Amplitude ease-in/out ramp (s) at each end of the window. Omit/0 → no
+      // fade (the historical abrupt full-amplitude bob). Needs `over` to fade out.
+      readonly fade?: number;
+      // Shoulder easing for the amplitude fade — same `Ease` table as the other
+      // actions. Unused when `fade` is 0.
+      readonly ease: Ease;
     };

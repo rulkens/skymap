@@ -23,9 +23,11 @@
  * per-frame accumulator.
  *
  * **Oscillation layer** (`oscTracks`): zero-mean sine bob,
- * `amp · sin(2π t / period)`. Additive with both base and velocity;
- * perpetual (runs for the clip's full lifetime). Multiple tracks on the same
- * channel are summed independently.
+ * `amp · env(t) · sin(2π t / period)`. Additive with both base and velocity.
+ * A bob is active over `[startSec, endSec)` (a perpetual bob is the limiting
+ * `[-∞, +∞)` case, where `env ≡ 1` and it reduces to `amp · sin(2π t / period)`);
+ * `env` ramps the amplitude in/out over the window's `fade` seconds. Multiple
+ * tracks on the same channel are summed independently.
  *
  * ### Velocity-integral method
  *
@@ -233,11 +235,31 @@ function velDisplacement(compiled: CompiledClip, ch: Channel, t: number): number
 // Oscillation layer — sum of all osc tracks on a channel.
 // ---------------------------------------------------------------------------
 
+/**
+ * oscEnvelope — the amplitude multiplier for a windowed bob at window-local time
+ * `local` (= t − startSec) given window length `dur` and ramp `fade`.
+ *
+ * Trapezoid: amplitude rises over the first `fade` seconds, holds at 1, falls
+ * over the last `fade` seconds. `Math.min(up, down)` is the linear trapezoid;
+ * `EASE[ease]` shapes the shoulders (and clamps to [0, 1], so the held middle —
+ * where both ratios exceed 1 — pins to 1). `fade <= 0` short-circuits to a flat
+ * 1, which is also what keeps the perpetual case (`dur = Infinity`) off the
+ * Infinity arithmetic.
+ */
+function oscEnvelope(local: number, dur: number, fade: number, ease: Ease): number {
+  if (fade <= 0) return 1;
+  const up = local / fade;
+  const down = (dur - local) / fade;
+  return EASE[ease](Math.min(up, down));
+}
+
 function oscOffset(compiled: CompiledClip, ch: Channel, t: number): number {
   let total = 0;
   for (const osc of compiled.oscTracks) {
     if (osc.channel !== ch) continue;
-    total += osc.amp * Math.sin((2 * Math.PI * t) / osc.period);
+    if (t < osc.startSec || t >= osc.endSec) continue; // outside the window → silent
+    const env = oscEnvelope(t - osc.startSec, osc.endSec - osc.startSec, osc.fade, osc.ease);
+    total += osc.amp * env * Math.sin((2 * Math.PI * t) / osc.period);
   }
   return total;
 }
@@ -329,11 +351,7 @@ function evaluateBaseScalar(
  * component-wise in linear space (log-space and additive-angle semantics are
  * undefined for signed 3D positions).
  */
-function evaluateBaseVec3(
-  segments: BaseSegment[],
-  startVal: Vec3,
-  t: number,
-): Vec3 {
+function evaluateBaseVec3(segments: BaseSegment[], startVal: Vec3, t: number): Vec3 {
   if (segments.length === 0) return [startVal[0], startVal[1], startVal[2]];
 
   // Compute component-wise running Vec3.
@@ -348,10 +366,7 @@ function evaluateBaseVec3(
       return [rx, ry, rz];
     }
 
-    const from =
-      seg.from !== undefined
-        ? (seg.from as Vec3)
-        : ([rx, ry, rz] as Vec3);
+    const from = seg.from !== undefined ? (seg.from as Vec3) : ([rx, ry, rz] as Vec3);
 
     const to = seg.to as Vec3;
 
