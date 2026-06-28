@@ -4,8 +4,8 @@
  *
  * The engine is a non-React, non-Redux imperative module: it owns the WebGPU
  * device, the per-frame render loop, and all catalog loading. The alternative
- * to a Redux slice would be callbacks into React `useState` setters (the old
- * model: `onStatusChange`, `onScaleChange`, `onLoadProgress`, …), which worked
+ * to a Redux slice would be React `useState` slots fed by per-event engine
+ * callbacks (the old model), which worked
  * fine for a handful of independent flags but fractured the observable surface
  * across multiple unrelated `useState` slots — each one a separate re-render
  * trigger with its own staleness window. Moving the engine's emitted state into

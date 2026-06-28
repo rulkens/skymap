@@ -30,7 +30,7 @@
  *
  * ### Why this orchestrator owns the try/catch
  *
- * Any thrown error surfaces via `cb.onStatusChange({ kind: 'error', … })`:
+ * Any thrown error is dispatched via `engineStatusChanged({ kind: 'error', … })`:
  * the `await` chain in `runBootstrapPhases` short-circuits on the
  * first rejection, and the call site in `engine.ts` keeps a single
  * try/catch around the orchestrator call.  Phases themselves don't
@@ -61,7 +61,7 @@
  *     taken in `startLoop` (the * 0.25 animation scale makes "engine
  *     construction" vs "loop start" imperceptible).  Scale-bar
  *     derivation lives entirely React-side (driven by
- *     `cb.onCameraChange`), so there's no engine-side scale-bar
+ *     the frame loop's `engineScaleChanged` dispatch), so there's no engine-side scale-bar
  *     factory to thread.  Hover/select/focus dispatches go through the
  *     Redux store (the pick path calls `store.dispatch` directly);
  *   - `allSlots` — the flat slot Map that `engine.ts` exposes via the
@@ -84,8 +84,8 @@ import { startLoop } from './startLoop';
 /**
  * Run the four bootstrap phases in declared order.  First rejection
  * short-circuits the chain.  The caller (engine.ts) wraps the call in
- * a try/catch and surfaces any thrown error via
- * `cb.onStatusChange({ kind: 'error', … })`.
+ * a try/catch and dispatches any thrown error via
+ * `engineStatusChanged({ kind: 'error', … })`.
  *
  * Phase order is fixed by data dependencies:
  *   1. `initGpu` runs first because every later phase needs the

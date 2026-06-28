@@ -4,9 +4,9 @@
  *
  * ### Where this runs
  *
- * Consumed React-side from `useEngine.ts`, which receives camera
- * snapshots via `cb.onCameraChange` and feeds them in alongside the
- * live canvas size.  The pure return value flows into a `useState`
+ * Consumed React-side from `useEngine.ts`, which reads the camera pose
+ * from the engine's `engineScaleChanged` dispatch and feeds it in alongside
+ * the live canvas size.  The pure return value flows into a `useState`
  * slot whose default equality check dedups unchanged frames —
  * replacing the engine-side `lastScaleSig` string compare an earlier
  * iteration relied on.

@@ -36,7 +36,7 @@
  * on localhost and via Cloudflare Workers Assets in production — the
  * same CDN that serves the JS bundle.  If any fetch fails the renderer
  * simply won't exist (the `initGpu` await will reject and the bootstrap
- * phase will surface an `onStatusChange({ kind: 'error' })` message),
+ * phase will dispatch `engineStatusChanged({ kind: 'error' })`),
  * which is the same behaviour as a failed GPU adapter request.  Retry
  * logic would be dead code for the vast majority of loads and add
  * complexity for a corner case better handled by the user's network
@@ -83,7 +83,7 @@ async function loadOneFont(id: FontId): Promise<readonly [FontMetrics, ImageBitm
 /**
  * Load every registered MSDF atlas in parallel.  Throws if any fetch
  * rejects or any decode fails — `initGpu` lets that rejection bubble
- * to the bootstrap catch block, which surfaces it via `onStatusChange`.
+ * to the bootstrap catch block, which dispatches `engineStatusChanged({ kind: 'error' })`.
  */
 export async function loadFontAtlases(): Promise<LoadedFontAtlases> {
   const loaded = await Promise.all(FONT_IDS.map((id) => loadOneFont(id)));

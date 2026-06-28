@@ -18,13 +18,12 @@
  * map into the same `(loadedBytes, totalBytes, inFlightCount)` shape
  * the loading-bar UI consumes.  So the aggregator's job collapses to
  * "subscribe to every slot, recompute the projection on every state
- * change, forward the snapshot via the engine's onLoadProgress
- * callback".
+ * change, dispatch `engineLoadProgressChanged(snapshot)`".
  *
  * ### Why a tiny emitter facade rather than calling the projection inline
  *
  * The engine already has the slot map in scope — it could `for-each
- * subscribe` directly and feed `aggregateRegistry` to `cb.onLoadProgress`.
+ * subscribe` directly and dispatch `engineLoadProgressChanged(aggregateRegistry(...))`.
  * The facade wins three things:
  *
  *   1. The "null when empty" convention (loading bar fades out) is

@@ -22,7 +22,7 @@
  * §StructuredSerialize step "If value has [[ArrayBufferData]]…").
  *
  * Cloning without transferring freezes the main thread for ~5 s on a
- * 100 MB SDSS+GLADE upload, blocking `onCatalogReady` from firing.  The
+ * 100 MB SDSS+GLADE upload, blocking the `engineSourceCountReported` dispatch.  The
  * caller (`pointRenderer.defaultWorkerRunner`) therefore slices each
  * typed array's buffer to produce an owned copy and transfers those
  * slices via the `postMessage` transfer list — a one-shot ~50 ms memcpy

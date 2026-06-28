@@ -112,7 +112,7 @@ export type EngineSubsystemHandles = {
   clipPlayer: ClipPlayer;
   /**
    * Per-engine download-progress emitter — instantiated inside the GPU
-   * init IIFE so `cb.onLoadProgress` and the slot registry are in scope.
+   * init IIFE so the `engineLoadProgressChanged` dispatch and the slot registry are in scope.
    * Subscribes to every slot's state transitions and recomputes the
    * aggregate snapshot from `aggregateRegistry` on every change, so the
    * loading-bar UI sees the same view of "what's still loading" as the
