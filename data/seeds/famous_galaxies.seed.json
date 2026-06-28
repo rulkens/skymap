@@ -646,6 +646,24 @@
     "magK": 4.49
   },
   {
+    "id": "leda1313424",
+    "names": [
+      "LEDA 1313424",
+      "PGC 1313424",
+      "Bullseye Galaxy"
+    ],
+    "ra": 2.4141666666666666,
+    "dec": 7.0811111111111105,
+    "distanceMpc": 163.68571428571428,
+    "diameterKpc": 29.358704998987825,
+    "type": "Ring galaxy",
+    "description": "LEDA 1313424, nicknamed the Bullseye, is a giant low-surface-brightness disc galaxy in the constellation Pisces, roughly two and a half times the diameter of the Milky Way. It is encircled by nine concentric rings — more than any other galaxy known — eight confirmed by the NASA/ESA Hubble Space Telescope and a ninth by the W. M. Keck Observatory. The rings are thought to have been raised about 50 million years ago when a small blue dwarf galaxy plunged almost straight through the Bullseye's core, sending waves of star formation rippling outward like the rings from a stone dropped in a pond; a thin trail of gas still links the two, now separated by about 130,000 light-years. The discovery was reported by Imad Pasha and Pieter van Dokkum in 2025; in 2026 Pierre Sikivie and Yuxin Zhao argued instead that the pattern traces caustic rings of cold dark matter rather than a collisional wake.",
+    "axisRatio": 0.8128305161640993,
+    "positionAngleDeg": 33.0,
+    "magB": 16.68,
+    "magK": 12.56
+  },
+  {
     "id": "lmc",
     "names": [
       "LMC",
