@@ -5,7 +5,7 @@
 > **Relationship to prior work.** Refines the precision stance of the
 > 2026-05-08 "Cosmic Zoom — Powers of Ten" plan's
 > [ADR 0001 (per-shell floating origin)](../plans/2026-05-08-cosmic-zoom-powers-of-ten/decisions/0001-floating-origin.md)
-> for the *interactive free-zoom* case (see §3). This is the first kept
+> for the _interactive free-zoom_ case (see §3). This is the first kept
 > increment of that larger vision: the scale-architecture seam plus a
 > visible payoff (fly down to a textured Earth past a few anchors).
 
@@ -57,9 +57,12 @@ The audits confirmed the `f32` assumption is baked in end-to-end:
 
 - Catalog positions decode to `Float32Array` with no `f64` intermediate
   (`galaxyCatalogFormat.ts:161`).
-- **gl-matrix uses `Float32Array` by default**, so `computeViewProj` already
-  composes the view/projection in `f32` (`computeViewProj.ts:118/131/136`).
-- Camera *intent* (yaw/pitch/distance/target) is, however, already stored as
+- **The default matrix math is `f32`.** `computeViewProj` composes the
+  view/projection with wgpu-matrix's default `mat4`/`vec3` namespaces, which
+  return `Float32Array` (`computeViewProj.ts`). wgpu-matrix also ships
+  parallel `mat4d`/`vec3d` namespaces that return `Float64Array` — that is the
+  `f64` path this feature uses (see §3 and §8).
+- Camera _intent_ (yaw/pitch/distance/target) is, however, already stored as
   `f64` JS numbers in the `camera` slice and only narrowed at pose assembly —
   so the upstream truth survives; the loss happens at matrix compose + upload.
 
@@ -75,14 +78,14 @@ The audits confirmed the `f32` assumption is baked in end-to-end:
   is expressed relative to. **For this feature it is fixed at the Sun
   `(0,0,0)`** — every body we render (Sun, Earth, Moon, Jupiter, Proxima) sits
   within ~1.3 pc of it, so a moving origin buys nothing here. `renderOrigin`
-  exists as the *named extension point* where a future shell (zooming into M31,
+  exists as the _named extension point_ where a future shell (zooming into M31,
   etc.) plugs a moving origin in. We do **not** build threshold-rebasing or
   per-instance buffer re-upload we won't exercise (YAGNI).
 - **Per-object MVP composed in `f64`, narrowed to `f32`.** Each foreground body
-  composes `MVP = proj · view · model` in `f64` (camera relative to
-  `renderOrigin`, geometry in the body's **native unit**), then narrows the
-  resulting `mat4` to `f32` for upload. Composing *before* narrowing is what
-  dodges catastrophic cancellation.
+  composes `MVP = proj · view · model` in `f64` using wgpu-matrix's `mat4d`
+  (camera relative to `renderOrigin`, geometry in the body's **native unit**),
+  then narrows the resulting `Float64Array` to `f32` for upload. Composing
+  _before_ narrowing is what dodges catastrophic cancellation.
 - **Native units per body** keep model-scale factors sane: Earth/planets in
   **km**, stars in **pc**. Conversions live in one file (`scaleUnits.ts`).
 - **The galaxy backdrop is unchanged.** Its `Float32Array` buffer renders with
@@ -93,8 +96,8 @@ The audits confirmed the `f32` assumption is baked in end-to-end:
 ### Relationship to ADR 0001
 
 ADR 0001 chose **discrete per-shell** floating origins with snap-once anchors,
-designed for a *scripted tour* with nine curated shells. This feature is
-*interactive free zoom*: there is no "current shell" because the user parks
+designed for a _scripted tour_ with nine curated shells. This feature is
+_interactive free zoom_: there is no "current shell" because the user parks
 anywhere on the continuum, and discrete snap-once anchors would produce
 re-anchor pops at boundaries. The **continuous per-object** scheme keeps ADR
 0001's core (`f64` truth, `f32` on GPU, per-object/native units) while dropping
@@ -135,7 +138,7 @@ additive backdrop using the existing half-res-volume offscreen pattern.**
 
 ### LOD — presentation chosen by apparent size
 
-A body's *presentation* is chosen by `apparentSizePx()` (the existing util that
+A body's _presentation_ is chosen by `apparentSizePx()` (the existing util that
 drives the famous-galaxy point→thumbnail promotion at ≥200 px):
 
 - A **star** is a **point** in the additive backdrop when far, and **promotes
@@ -153,11 +156,11 @@ Following the existing `SOURCE_REGISTRY` + per-type-store + seed/catalog
 architecture (ADR 0005), add **three new data types**, each a tagged
 `SOURCE_REGISTRY` entry dispatched by its `type` discriminant:
 
-| Data type | `type` | Source (now) | Source (later) | Presentation |
-|---|---|---|---|---|
-| Star | `'star'` | seed: Sun, Proxima | star `.bin` + meta sidecar (famous pattern) | point (far) ↔ emissive sphere (near) |
-| Planet | `'planet'` | seed: Moon, Jupiter | ephemeris | lit sphere |
-| Earth | `'earth'` | seed: Earth | — | textured sphere (atmosphere later) |
+| Data type | `type`     | Source (now)        | Source (later)                              | Presentation                         |
+| --------- | ---------- | ------------------- | ------------------------------------------- | ------------------------------------ |
+| Star      | `'star'`   | seed: Sun, Proxima  | star `.bin` + meta sidecar (famous pattern) | point (far) ↔ emissive sphere (near) |
+| Planet    | `'planet'` | seed: Moon, Jupiter | ephemeris                                   | lit sphere                           |
+| Earth     | `'earth'`  | seed: Earth         | —                                           | textured sphere (atmosphere later)   |
 
 - **Source codes are appended, never renumbered** (the append-only rule in
   `sources.ts`). Three new codes for `star`/`planet`/`earth`.
@@ -185,10 +188,10 @@ export type StarSourceEntry = SourceEntryBase & { readonly type: 'star' };
 export type StarBody = {
   readonly id: string;
   readonly label: string;
-  readonly positionMpc: Vec3;   // absolute heliocentric, f64-valued
-  readonly absMag: number;      // drives point brightness/size + LOD
-  readonly color: Vec3;         // B–V → rgb
-  readonly radiusKm: number;    // used once resolved to a sphere (the Sun)
+  readonly positionMpc: Vec3; // absolute heliocentric, f64-valued
+  readonly absMag: number; // drives point brightness/size + LOD
+  readonly color: Vec3; // B–V → rgb
+  readonly radiusKm: number; // used once resolved to a sphere (the Sun)
 };
 
 // src/@types/scene/PlanetBody.d.ts
@@ -197,7 +200,7 @@ export type PlanetBody = {
   readonly label: string;
   readonly positionMpc: Vec3;
   readonly radiusKm: number;
-  readonly albedo: Vec3;        // flat lit colour (no texture yet)
+  readonly albedo: Vec3; // flat lit colour (no texture yet)
 };
 
 // src/@types/scene/EarthBody.d.ts
@@ -205,8 +208,8 @@ export type EarthBody = {
   readonly id: string;
   readonly label: string;
   readonly positionMpc: Vec3;
-  readonly radiusKm: number;    // 6371
-  readonly textureUrl: string;  // Blue Marble equirectangular
+  readonly radiusKm: number; // 6371
+  readonly textureUrl: string; // Blue Marble equirectangular
 };
 ```
 
@@ -259,25 +262,29 @@ Earth texture upload uses the existing `copyExternalImageToTexture` pattern
   copy only). Single source of truth (ADR 0005 reserved this path; it does not
   exist yet — today only Hubble/`PC_TO_LY` constants live in
   `utils/math/constants.ts`).
-- **`src/utils/math/*` f64 matrix helpers** (one function per file):
-  `lookAt64`, `perspectiveZO64`, `multiply64`, `translate64`, `scale64`,
-  `narrowMat4` (f64 → f32). Needed because gl-matrix is `f32`-only.
+- **f64 matrix composition via wgpu-matrix `mat4d`/`vec3d`** (no hand-written
+  helpers needed — the gl-matrix → wgpu-matrix migration in PR #382 provides the
+  `Float64Array` namespaces directly: `mat4d.lookAt`, `mat4d.perspective` (ZO by
+  default), `mat4d.multiply`, `mat4d.translate`, `mat4d.scale`). The only
+  bespoke piece is **`src/utils/math/narrowMat4.ts`** — a one-line `f64 → f32`
+  narrow (`new Float32Array(m)`) for the GPU upload boundary.
 
 ## 9. Testing
 
-- **Unit:** f64 matrix round-trip + a **catastrophic-cancellation guard** (a
-  point at Earth's radius placed at 1 AU survives compose-then-narrow with
-  sub-metre error); `SCALE_UNITS` constants snapshot; UV-sphere mesh
-  vertex/winding; foreground composite math.
+- **Unit:** `mat4d` compose-then-`narrowMat4` round-trip + a
+  **catastrophic-cancellation guard** (a point at Earth's radius placed at 1 AU
+  survives compose-then-narrow with sub-metre error); `SCALE_UNITS` constants
+  snapshot; UV-sphere mesh vertex/winding; foreground composite math.
 - **Visual** (user-verified on the dev server): zoom galaxies → Earth; Earth
   resolves as a stable, round, textured sphere with no jitter / clipping /
   swim; anchors at believable relative sizes; backdrop intact.
 
 ## 10. Phasing
 
-1. **Precision slice (kept if green).** `scaleUnits` + f64 matrix helpers +
-   the opaque foreground depth pass + lowered min-distance clamp +
-   `renderOrigin` + a **plain debug sphere** at Earth's true size/position.
+1. **Precision slice (kept if green).** `scaleUnits` + `narrowMat4` + f64
+   compose via `mat4d` + the opaque foreground depth pass + lowered
+   min-distance clamp + `renderOrigin` + a **plain debug sphere** at Earth's
+   true size/position.
    Acceptance: stable, jitter-free zoom from the galaxy view down to the
    sphere, galaxy backdrop intact. This is the de-risk; it stays.
 2. **Earth.** `earth` type + `earthRenderer` + Blue Marble texture + Earth
@@ -300,8 +307,8 @@ src/data/bodies/sceneBodies.ts                seed: Sun, Earth, Moon, Jupiter, P
 src/@types/data/StarSourceEntry.d.ts          (+ Planet, Earth source entries)
 src/@types/scene/StarBody.d.ts                (+ PlanetBody, EarthBody)
 src/@types/rendering/EarthRenderer.d.ts        (+ Planet, Star, StarPoint renderer types)
-src/utils/math/lookAt64.ts                     (+ perspectiveZO64, multiply64,
-                                                translate64, scale64, narrowMat4)
+src/utils/math/narrowMat4.ts                   (f64 → f32 for GPU upload; f64
+                                                compose itself uses wgpu-matrix mat4d)
 src/utils/math/uvSphereMesh.ts
 src/services/gpu/renderers/earthRenderer.ts    (+ planet/star/starPoint renderers)
 src/services/gpu/shaders/lib/sphere.wesl
@@ -346,6 +353,7 @@ src/@types/engine/EngineGpuHandles.d.ts         (new nullable renderer slots)
 - [ADR 0005 — engine data layer + asset loading](../../adrs/0005-engine-data-layer-and-asset-loading.md) (data-type vs presentation axis)
 - [`renderers.md`](../conventions/renderers.md), [`simplicity.md`](../conventions/simplicity.md), [`intent.md`](../conventions/intent.md)
 - Audit findings (this session): main scene is depthless/additive
-  (`postProcess.ts:48–62`); gl-matrix is `f32`-only
-  (`computeViewProj.ts`); `apparentSizePx` LOD precedent; volume-offscreen
-  composite template (`volumeOffscreen.ts` / `volumeUpsamplePass.ts`).
+  (`postProcess.ts:48–62`); the default matrix path is `f32`, with `f64`
+  available via wgpu-matrix `mat4d`/`vec3d` (`computeViewProj.ts`, PR #382);
+  `apparentSizePx` LOD precedent; volume-offscreen composite template
+  (`volumeOffscreen.ts` / `volumeUpsamplePass.ts`).
