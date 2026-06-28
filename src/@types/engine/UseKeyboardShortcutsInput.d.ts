@@ -7,7 +7,7 @@ export type UseKeyboardShortcutsInput = {
   selected: FocusableTarget | null;
   /** Used to gate the `/` shortcut so the palette doesn't reopen on top of itself. */
   paletteOpen: boolean;
-  /** Engine driver for camera.focusOnHome and camera.logState. */
+  /** Engine driver for the `l` dev hotkey (camera.logState). */
   engineHandleRef: RefObject<EngineHandle | null>;
   /**
    * Stable `useCallback(() => dispatch(setPaletteOpen(open)), [dispatch])` from App.

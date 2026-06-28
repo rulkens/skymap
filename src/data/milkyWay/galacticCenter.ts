@@ -70,12 +70,8 @@ export const MILKY_WAY_CENTER_WORLD: Vec3 = raDecDistToCartesian(
  * (`milkyWayFadeAlpha` returns 1.0 for camDist ≤ 10 Mpc) and a few times
  * the Milky Way's own ~25 kpc disc radius, so we're framing it from
  * outside without being so close that the procedural volume reveals its
- * raymarched seams.
- *
- * The home framing is at hundreds of Mpc (whatever the bootstrap bbox
- * computes), which sits well past the 50 Mpc fade-out — that's why
- * `focusOnHome` doesn't put the impostor on screen even though it ends
- * up "near home".
+ * raymarched seams. This is also the "home" framing: the Home pill and the
+ * `h` hotkey focus the Milky Way, landing the camera right here.
  */
 export const MILKY_WAY_VIEW_DISTANCE_MPC = 0.15;
 

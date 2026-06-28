@@ -1,16 +1,13 @@
 /**
- * EngineCameraHandle — viewpoint tweens and dev helpers.
+ * EngineCameraHandle — dev camera helper.
  *
  * Camera focus is fully driven by the Redux `selection` slice: the
  * focus-tween saga watches `state.selection.focus` and builds + dispatches
- * the camera tween when it changes. The only imperative camera op
- * still on the handle is `focusOnHome` (which dispatches a focus-null
- * write and tweens the camera to the framing snapshot) and the dev
- * `logState` helper.
+ * the camera tween when it changes. "Home" is a focus on the Milky Way
+ * dispatched through that same channel, so the handle carries no imperative
+ * camera op — only the dev `logState` helper.
  */
 export type EngineCameraHandle = {
-  /** Smoothly tween back to the initial bootstrap framing. */
-  focusOnHome: () => void;
   /** Debug helper — log the live camera state for copy-paste tuning. */
   logState: () => void;
 };

@@ -405,7 +405,6 @@ function makeState(
       },
     } as never,
     cam: null,
-    initialCamSnapshot: null,
     assetSlots: {
       points: points as Map<SourceType, never>,
       filaments: null,

@@ -16,7 +16,7 @@
  *
  * ### State writes
  *
- *   - `state.cam`, `state.initialCamSnapshot`.
+ *   - `state.cam`.
  *   - `state.gpu.pickRenderer`.
  *   - `state.subsystems.clickResolver`, `state.subsystems.inputBindings`.
  *
@@ -179,26 +179,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   };
   state.cameraRuntime.lastPose.current = poseOf(cam);
   store.dispatch(commitCameraPose(poseOf(cam)));
-
-  // ── Initial camera snapshot for resetCamera() ────────────────────────
-  //
-  // Capture the framing values so `resetCamera()` can restore them later.
-  // We mirror the helper's output rather than re-reading from `cam` so
-  // later camera reconfigures (e.g. user FOV changes) don't drift the
-  // reset target.  `aspect` is intentionally not captured — reset uses the
-  // *current* canvas aspect so the projection survives a window resize.
-  //
-  // `target` is cloned into a fresh tuple because `createOrbitCamera`'s
-  // shallow spread makes `cam.target` and `initialCam.target` alias the
-  // SAME array; every later focusOn / tween / pan mutates `cam.target` in
-  // place, which would otherwise corrupt the snapshot into "reset to the
-  // last-focused galaxy" instead of the catalog origin.  Cloning here is a
-  // one-line fix; fixing it at the spread site ripples through the
-  // OrbitCamera contract.
-  state.initialCamSnapshot = {
-    ...initialCam,
-    target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
-  };
 
   // ── Pointer / keyboard / resize listeners ────────────────────────────
   //
