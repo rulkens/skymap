@@ -35,6 +35,7 @@ import type { GalaxyCatalogSourceConfig } from '../../../../src/@types/engine/wi
 import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/WirePointSourceDeps';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
+import type { LoadProgressState } from '../../../../src/@types/loading/LoadProgressState';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -352,11 +353,11 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
 
     installLoadProgress(state, deps);
 
-    // The mock captured the emit callback — fire it with a fake snapshot.
-    const fakeSnapshot = { loaded: 50, total: 100, sources: [] };
-    capturedProgressEmitFn!(fakeSnapshot);
+    // The mock captured the emit callback — fire it with a real snapshot.
+    const snapshot: LoadProgressState = { loadedBytes: 50, totalBytes: 100, inFlightCount: 2 };
+    capturedProgressEmitFn!(snapshot);
 
-    expect(spy).toHaveBeenCalledWith(engineLoadProgressChanged(fakeSnapshot as never));
+    expect(spy).toHaveBeenCalledWith(engineLoadProgressChanged(snapshot));
   });
 
   it('dispatches engineLoadProgressChanged(null) when the emitter fires with null', () => {
