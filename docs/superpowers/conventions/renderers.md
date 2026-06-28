@@ -161,8 +161,7 @@ scalarVolumeRenderer" work — don't model new renderers on it.
 
 ### Naming
 
-The per-frame entrypoint is called `draw` on 9 of the 11 renderers. The two
-holdouts (`labelRenderer`, `markerLineRenderer`) call it `render`. Use `draw`.
+The per-frame entrypoint is called `draw` on every renderer. Use `draw`.
 
 ### Signature shape
 
@@ -301,9 +300,6 @@ up as a separate field on `state.gpu`.
 These pre-date the convention. Don't model new code on them; clean up incidentally
 when you're already editing the file.
 
-- **`render` vs `draw` naming.** `labelRenderer.render(...)` and
-  `markerLineRenderer.render(...)` should be `draw(...)`. Rename + update the two
-  call sites in `youAreHereSubsystem.runFrame`.
 - **Positional factory args.** `createPointRenderer`, `createPickRenderer`,
   `createFilamentRenderer`, `createScalarVolumeRenderer` take `(device, format)`
   instead of a context bag. Convert when you next need to add a constructor arg.

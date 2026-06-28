@@ -5,6 +5,7 @@
  */
 
 import type { Label } from './Label';
+import type { Vec2 } from '../math/Vec2';
 
 export type LabelRenderer = {
   /**
@@ -31,7 +32,7 @@ export type LabelRenderer = {
    * implementation.  The pass's render target format must match the
    * `format` field of the `GpuContext` passed to `createLabelRenderer`.
    */
-  render(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: [number, number]): void;
+  draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void;
   /** Total glyph count across all active labels. Used by tests + debug HUD. */
   glyphCount(): number;
   /** Number of labels last passed to setLabels. Used by tests + debug HUD. */

@@ -10,6 +10,7 @@
  */
 
 import type { StructureMarkerDescriptor } from './StructureMarkerDescriptor';
+import type { Vec2 } from '../math/Vec2';
 
 export type StructureMarkerRenderer = {
   /** Human-readable identifier. */
@@ -34,10 +35,10 @@ export type StructureMarkerRenderer = {
    * constant 1.0; a FadeRegistry handle for structure markers (e.g. for
    * layer-toggle animations) can substitute its per-frame value here.
    */
-  render(
+  draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
-    viewportSize: [number, number],
+    viewportSize: Vec2,
     fadeOpacity: number,
   ): void;
   /** Number of markers last passed to setMarkers.  Used by the pass `enabled()` check. */

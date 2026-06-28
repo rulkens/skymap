@@ -5,6 +5,7 @@
  */
 
 import type { MarkerLine } from './MarkerLine';
+import type { Vec2 } from '../math/Vec2';
 
 export type MarkerLineRenderer = {
   /**
@@ -30,7 +31,7 @@ export type MarkerLineRenderer = {
    * implementation.  The pass's render target format must match the
    * `format` field of the `GpuContext` passed to `createMarkerLineRenderer`.
    */
-  render(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: [number, number]): void;
+  draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void;
   /** Number of lines last passed to setLines. Used by tests + debug HUD. */
   lineCount(): number;
   /** Release all GPU resources. No-op if constructed with a null device. */

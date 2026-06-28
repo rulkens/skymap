@@ -63,6 +63,7 @@ import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { InstancedQuadConfig } from '../../../@types/rendering/InstancedQuadConfig';
 import type { InstancedQuadRenderer } from '../../../@types/rendering/InstancedQuadRenderer';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
@@ -315,7 +316,7 @@ export function createInstancedQuadRenderer(
   function draw(args: {
     pass: GPURenderPassEncoder;
     viewProj: Float32Array;
-    viewport: [number, number];
+    viewport: Vec2;
     instanceBytes: Float32Array;
     instanceCount: number;
     camPosWorld?: Readonly<Vec3>;

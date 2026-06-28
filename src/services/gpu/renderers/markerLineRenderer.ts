@@ -66,6 +66,7 @@ import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import vsCode from '../shaders/markerLines/vertex.wesl?static';
 import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -114,7 +115,7 @@ const CORNER_BYTES = CORNER_DATA.byteLength; // 32 bytes (4 × 2 × 4)
  *
  * Pass `device: null` (or a GpuContext whose `device` is null) for unit
  * tests that exercise CPU state only.  GPU resource creation is skipped
- * in that branch and `render(...)` becomes a no-op.
+ * in that branch and `draw(...)` becomes a no-op.
  *
  * `maxLines` sizes the static GPU instance buffer; the default (64) covers
  * the "you are here" indicator plus any future tagged-object markers without
@@ -136,7 +137,7 @@ export function createMarkerLineRenderer(ctx: GpuContext, maxLines = 64): Marker
 
   // Closure-scoped mutable counter — replaces the `this.currentLineCount`
   // field the class form would use.  Updated only by `setLines`; read by
-  // `render` and `lineCount`.
+  // `draw` and `lineCount`.
   let currentLineCount = 0;
 
   // ── GPU resources (null when device is null) ─────────────────────────────
@@ -302,11 +303,7 @@ export function createMarkerLineRenderer(ctx: GpuContext, maxLines = 64): Marker
     }
   }
 
-  function render(
-    pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewportSize: [number, number],
-  ): void {
+  function draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void {
     if (
       !device ||
       !pipeline ||
@@ -356,7 +353,7 @@ export function createMarkerLineRenderer(ctx: GpuContext, maxLines = 64): Marker
   const renderer: MarkerLineRenderer = {
     label: 'markerLineRenderer',
     setLines,
-    render,
+    draw,
     lineCount,
     destroy,
   };

@@ -49,7 +49,7 @@ export const labelsPass: Pass = {
   },
 
   draw(pass, ctx, state, _deps) {
-    state.gpu.labelRenderer!.render(pass, ctx.vp as Float32Array, [
+    state.gpu.labelRenderer!.draw(pass, ctx.vp as Float32Array, [
       ctx.canvasSize.width,
       ctx.canvasSize.height,
     ]);

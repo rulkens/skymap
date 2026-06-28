@@ -9,6 +9,7 @@
 
 import type { mat4 } from 'gl-matrix';
 import type { FilamentCloud } from '../data/filament/FilamentCloud';
+import type { Vec2 } from '../math/Vec2';
 
 export type FilamentRenderer = {
   readonly label: string;
@@ -17,7 +18,7 @@ export type FilamentRenderer = {
   draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
-    viewportPx: [number, number],
+    viewportPx: Vec2,
     halfWidthPx: number,
     intensityScale: number,
     fadeOpacity: number,

@@ -4,6 +4,7 @@
  * fragment shader generates the spiral disk procedurally.
  */
 
+import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 
 export type MilkyWayRenderer = {
@@ -37,7 +38,7 @@ export type MilkyWayRenderer = {
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
-    viewport: [number, number],
+    viewport: Vec2,
     fadeAlpha: number,
     iTimeSec: number,
     cameraPosWorld: Readonly<Vec3>,

@@ -29,6 +29,7 @@ import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/Bu
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 // `?worker` emits the worker as a separate chunk and exports a class
 // whose `new` spawns it.  The bake runs off-thread to dodge the
@@ -719,7 +720,7 @@ export function createPointRenderer(
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
-    viewportPx: [number, number],
+    viewportPx: Vec2,
     settings: PointDrawSettings,
   ): ArrayBuffer | null {
     const { visibleSourceMask, focusBindGroup } = settings;

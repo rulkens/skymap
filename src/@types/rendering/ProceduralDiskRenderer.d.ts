@@ -4,6 +4,7 @@
  * textured disks (~24 px).
  */
 
+import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 import type { ProceduralDiskInstance } from './ProceduralDiskInstance';
 
@@ -21,7 +22,7 @@ export type ProceduralDiskRenderer = {
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
-    viewport: [number, number],
+    viewport: Vec2,
     camPosWorld: Readonly<Vec3>,
     pxPerRad: number,
     focusBindGroup: GPUBindGroup,

@@ -5,6 +5,7 @@
  * this type directly.
  */
 
+import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 
 export type InstancedQuadRenderer = {
@@ -41,7 +42,7 @@ export type InstancedQuadRenderer = {
   draw: (args: {
     pass: GPURenderPassEncoder;
     viewProj: Float32Array;
-    viewport: [number, number];
+    viewport: Vec2;
     instanceBytes: Float32Array;
     instanceCount: number;
     camPosWorld?: Readonly<Vec3>;
