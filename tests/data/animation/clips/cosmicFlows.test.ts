@@ -44,20 +44,24 @@ describe('cosmicFlows clip', () => {
     }
   });
 
-  it('has preroll of 2 seconds', () => {
-    expect(clip.preroll).toBe(2);
+  it('opens with a 2-second wait lead-in', () => {
+    // The lead-in is a leading wait, not a clip-level preroll field. It holds
+    // the start pose for 2 s while the forked bob plays underneath.
+    const leadIn = clip.timeline[0] as { kind: string; sec: number };
+    expect(leadIn.kind).toBe('wait');
+    expect(leadIn.sec).toBe(2);
   });
 
-  it('has 10 top-level timeline entries', () => {
-    // hide, fade(mask), scene, fork(osc), fork(rate), hold,
+  it('has 11 top-level timeline entries', () => {
+    // wait(lead-in), hide, fade(mask), scene, fork(osc), fork(rate), hold,
     // all(crossfade), all(dolly+rate), hold, fade(to-black).
-    expect(clip.timeline).toHaveLength(10);
+    expect(clip.timeline).toHaveLength(11);
   });
 
   it('the flow mask (fade flow→0 instant) precedes the scene enable cue', () => {
-    // Timeline entries 1 and 2 (0-indexed).
-    const fadeMask = asScene(clip.timeline[1]);
-    const sceneEnable = asScene(clip.timeline[2]);
+    // Timeline entries 2 and 3 (0-indexed) — after the wait lead-in and hide.
+    const fadeMask = asScene(clip.timeline[2]);
+    const sceneEnable = asScene(clip.timeline[3]);
 
     expect(fadeMask.kind).toBe('fade');
     if (fadeMask.kind === 'fade') {
@@ -74,8 +78,8 @@ describe('cosmicFlows clip', () => {
   });
 
   it('the crossfade all-node fades flow in and survey out simultaneously', () => {
-    // Timeline entry 6 — the concurrent crossfade block.
-    const crossfade = clip.timeline[6] as { kind: string; children: SceneEffect[] };
+    // Timeline entry 7 — the concurrent crossfade block.
+    const crossfade = clip.timeline[7] as { kind: string; children: SceneEffect[] };
 
     expect(crossfade.kind).toBe('all');
     expect(crossfade.children).toHaveLength(2);
@@ -98,8 +102,8 @@ describe('cosmicFlows clip', () => {
   });
 
   it('the final fade-to-black covers the four expected layers', () => {
-    // Timeline entry 9 — the closing fade.
-    const fadeOut = asScene(clip.timeline[9]);
+    // Timeline entry 10 — the closing fade.
+    const fadeOut = asScene(clip.timeline[10]);
 
     expect(fadeOut.kind).toBe('fade');
     if (fadeOut.kind === 'fade') {
@@ -114,8 +118,8 @@ describe('cosmicFlows clip', () => {
   });
 
   it('the dolly block is an all-node with a seq child and a rate child', () => {
-    // Timeline entry 7 — the concurrent pull-back block.
-    const dollyBlock = clip.timeline[7] as {
+    // Timeline entry 8 — the concurrent pull-back block.
+    const dollyBlock = clip.timeline[8] as {
       kind: string;
       children: { kind: string }[];
     };

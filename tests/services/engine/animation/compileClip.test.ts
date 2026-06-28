@@ -21,6 +21,7 @@ import {
   seq,
   all,
   fork,
+  wait,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
 
@@ -120,13 +121,14 @@ describe('compileClip routes to the correct track families', () => {
     expect(clip.baseTracks['target']).toEqual([]);
   });
 
-  it('a windowed oscillate carries [at, at+over) + fade, and preroll shifts it', () => {
+  it('a windowed oscillate carries [at, at+over) + fade, shifted by a leading wait', () => {
     const clip = compileClip({
-      preroll: 2,
-      // The bob sits after a 3s hold, so it starts at 3 (pre-preroll), then the
-      // 2s preroll shifts its window to [5, 13). Perpetual bobs would stay
-      // [-∞, +∞); this one is finite, so it shifts like any other window.
-      timeline: [seq([hold(3), oscillate('pitch', { amp: 0.04, period: 14, over: 8, fade: 1.5 })])],
+      // A 2s wait lead-in then a 3s hold puts the bob at 5; over:8 → [5, 13).
+      // Perpetual bobs would stay [-∞, +∞); this one is finite, so the wait
+      // shifts it like any other window.
+      timeline: [
+        seq([wait(2), hold(3), oscillate('pitch', { amp: 0.04, period: 14, over: 8, fade: 1.5 })]),
+      ],
     });
 
     expect(clip.oscTracks).toHaveLength(1);
@@ -137,17 +139,16 @@ describe('compileClip routes to the correct track families', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 4 — preroll shifts every window by preroll seconds
+// Test 4 — a leading wait shifts every following window
 // ---------------------------------------------------------------------------
 
-describe('compileClip preroll shifts every window by preroll', () => {
-  it('preroll:2 shifts the distance segment to start at 2; durationSec includes preroll', () => {
+describe('compileClip leading wait shifts every following window', () => {
+  it('a 2s wait shifts the distance segment to start at 2; durationSec includes the wait', () => {
     const clip = compileClip({
-      preroll: 2,
-      timeline: [dollyTo(400, 5)],
+      timeline: [wait(2), dollyTo(400, 5)],
     });
 
-    // The authored effect occupies 5 s; preroll adds 2 s before it.
+    // The authored dolly occupies 5 s; the wait adds 2 s before it.
     expect(clip.durationSec).toBe(7);
 
     const distSegs = clip.baseTracks['distance'];
@@ -156,19 +157,16 @@ describe('compileClip preroll shifts every window by preroll', () => {
     expect(distSegs[0]!.endSec).toBe(7);
   });
 
-  it('preroll:2 shifts velTracks and cues by 2 as well', () => {
-    // hide fires at pre-preroll t=0 (first in timeline), rate starts at t=0
-    // too (seq: hide has duration 0, rate follows immediately at t=0).
-    // After preroll shift: hide.atSec = 0+2 = 2, rate.startSec = 0+2 = 2.
+  it('a 2s wait shifts velTracks and cues by 2 as well', () => {
+    // After the wait the cursor sits at 2: hide fires at 2 (duration 0), and
+    // the rate follows immediately, so its ramp is [2, 5).
     const clip = compileClip({
-      preroll: 2,
-      timeline: [hide(['flow'], 0), rate('yaw', { to: 1, over: 3 })],
+      timeline: [wait(2), hide(['flow'], 0), rate('yaw', { to: 1, over: 3 })],
     });
 
     expect(clip.velTracks[0]!.startSec).toBe(2);
     expect(clip.velTracks[0]!.endSec).toBe(5);
 
-    // hide fires at pre-preroll t=0, shifted by preroll to t=2
     expect(clip.cues[0]!.atSec).toBe(2);
   });
 });

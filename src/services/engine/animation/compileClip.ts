@@ -36,10 +36,13 @@
  *   - `osc`            → `OscTrack`.
  *   - `show` / `hide` / `fade` / `scene` / `focus` → `SceneCue`.
  *
- * ### `preroll`
+ * ### Lead-in
  *
- * After the walk, every emitted window (`startSec`, `endSec`, `atSec`) is
- * shifted by `preroll` (default 0). `durationSec` includes the preroll.
+ * A clip that wants to open on its start pose before anything happens places a
+ * `wait(sec)` first in its timeline — the cursor advances by `sec` and every
+ * following window/cue lands later by exactly that much. There is no separate
+ * clip-level `preroll` field: a leading `wait` already IS the lead-in, so the
+ * data model keeps one way to express it rather than two.
  *
  * ### `start`
  *
@@ -259,8 +262,6 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
  *              on the same channel's base track).
  */
 export function compileClip(data: ClipData): CompiledClip {
-  const preroll = data.preroll ?? 0;
-
   // Resolve the starting pose — 'live' and absent both fall through to the
   // zero placeholder; a concrete CameraPose is used directly.
   const start: CameraPose =
@@ -274,46 +275,22 @@ export function compileClip(data: ClipData): CompiledClip {
     cues: [],
   };
 
-  // Walk the timeline, starting at cursor 0 (pre-preroll).
+  // Walk the timeline, accumulating the cursor across top-level entries. A
+  // leading `wait` simply advances the cursor before the rest, which is the
+  // whole of the lead-in mechanism.
   let awaitedDur = 0;
   for (const effect of data.timeline) {
     awaitedDur += walk(effect, awaitedDur, acc);
   }
 
-  // Apply preroll shift to every emitted window and cue.
-  // Preroll is added AFTER the walk so we don't have to thread it through
-  // every recursive call — shift in a single pass instead.
-  const shiftedBaseSegs: BaseSegment[] = acc.baseSegs.map((s) => ({
-    ...s,
-    startSec: s.startSec + preroll,
-    endSec: s.endSec + preroll,
-  }));
-
-  const shiftedVelRamps: VelRamp[] = acc.velRamps.map((r) => ({
-    ...r,
-    startSec: r.startSec + preroll,
-    endSec: r.endSec + preroll,
-  }));
-
-  const shiftedCues: SceneCue[] = acc.cues
-    .map((c) => ({ ...c, atSec: c.atSec + preroll }))
-    .sort((a, b) => a.atSec - b.atSec);
-
-  // Shift osc windows like every other window. A perpetual bob's window is
-  // [-∞, +∞); adding preroll to ±Infinity is a no-op, so it keeps running from
-  // clip start (including through the preroll) exactly as before.
-  const shiftedOscTracks: OscTrack[] = acc.oscTracks.map((o) => ({
-    ...o,
-    startSec: o.startSec + preroll,
-    endSec: o.endSec + preroll,
-  }));
+  const sortedCues: SceneCue[] = [...acc.cues].sort((a, b) => a.atSec - b.atSec);
 
   // Build baseTracks as Record<Channel, BaseSegment[]> with an entry for
   // every channel (sorted ascending by startSec within each channel).
   const baseTracks = Object.fromEntries(
     ALL_CHANNELS.map((ch) => [
       ch,
-      shiftedBaseSegs.filter((s) => s.channel === ch).sort((a, b) => a.startSec - b.startSec),
+      acc.baseSegs.filter((s) => s.channel === ch).sort((a, b) => a.startSec - b.startSec),
     ]),
   ) as Record<Channel, BaseSegment[]>;
 
@@ -321,10 +298,10 @@ export function compileClip(data: ClipData): CompiledClip {
 
   return {
     start,
-    durationSec: preroll + awaitedDur,
+    durationSec: awaitedDur,
     baseTracks,
-    velTracks: shiftedVelRamps,
-    oscTracks: shiftedOscTracks,
-    cues: shiftedCues,
+    velTracks: acc.velRamps,
+    oscTracks: acc.oscTracks,
+    cues: sortedCues,
   };
 }

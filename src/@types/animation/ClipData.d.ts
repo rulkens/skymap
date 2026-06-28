@@ -16,14 +16,12 @@
  *         runtime signal handled by the clip player (Task N), not the compiler.
  *       - `undefined` (absent) — treated the same as `'live'` by convention.
  *
- *   - `preroll`: optional lead-in silence in seconds (default 0). Shifts every
- *     emitted track window and cue by `preroll` seconds, so the first authored
- *     effect starts at `preroll` rather than 0. The compiled `durationSec`
- *     includes the preroll.
- *
  *   - `timeline`: the ordered array of `Effect` nodes that make up the clip.
  *     A `seq` of top-level effects is the most common form; nested `seq`/`all`/
- *     `fork` nodes allow arbitrary concurrency patterns.
+ *     `fork` nodes allow arbitrary concurrency patterns. A clip that wants a
+ *     lead-in — holding the start pose before anything happens — opens its
+ *     timeline with a `wait(sec)`; there is no separate clip-level field for it,
+ *     because a leading `wait` already shifts every following window by `sec`.
  *
  * ### Why `start?: CameraPose | 'live'` instead of always requiring a pose?
  *
@@ -41,6 +39,5 @@ import type { Effect } from './Effect';
 
 export type ClipData = {
   readonly start?: CameraPose | 'live';
-  readonly preroll?: number;
   readonly timeline: Effect[];
 };
