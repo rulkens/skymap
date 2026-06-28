@@ -6,6 +6,12 @@
  * `useAppDispatch` find the store.  The wrapper is built with `createElement`
  * (not JSX) so this stays a `.ts` file — matches the hooks.test.ts convention.
  *
+ * `status` and `loadProgress` are now read from the engine Redux slice inside
+ * the hook rather than being passed as input props.  Tests that previously
+ * passed them via `makeInput` now seed the engine slice via the Task-1 action
+ * creators (`engineStatusChanged`, `engineLoadProgressChanged`) before or
+ * during the render.
+ *
  * Visibility init (first-visit / deep-link / seenVersion gates) is covered by
  * `buildInitialUiState.test.ts`.  These tests assert that `splashVisible`
  * follows the store and that dismiss/reopen dispatch the correct actions.
@@ -22,6 +28,10 @@ import { createAppStore } from '../../src/store/createAppStore';
 import { buildInitialUiState } from '../../src/state/ui/buildInitialUiState';
 import { buildInitialSettings } from '../../src/state/settings/initialState';
 import { dismissSplash, reopenSplash } from '../../src/state/ui/uiSlice';
+import {
+  engineStatusChanged,
+  engineLoadProgressChanged,
+} from '../../src/state/engine/engineSlice';
 import { selectSplashVisible, selectSplashDismissedVersion } from '../../src/state/ui/selectors';
 import { CURRENT_SPLASH_VERSION } from '../../src/state/ui/splashStorage';
 import type { UseSplashInput } from '../../src/@types/splash/UseSplashInput';
@@ -30,8 +40,6 @@ import { Source } from '../../src/data/sources';
 
 function makeInput(overrides: Partial<UseSplashInput> = {}): UseSplashInput {
   return {
-    status: { kind: 'initializing' },
-    loadProgress: null,
     famousMetaReady: false,
     ...overrides,
   };
@@ -179,19 +187,25 @@ describe('useSplash — blocked state', () => {
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
 
+    // Start with the default engine state (initializing, no loadProgress).
+    // Hook reads status + loadProgress from the store.
     const { result, rerender } = renderHook(
       ({ input }: { input: UseSplashInput }) => useSplash(input),
       { wrapper, initialProps: { input: makeInput() } },
     );
     expect(result.current.blocked).toBe(true);
 
-    rerender({
-      input: makeInput({
-        status: { kind: 'ready', count: 100, source: Source.SDSS },
-        loadProgress: null,
-        famousMetaReady: true,
-      }),
+    // Drive engine to ready state via the store.
+    act(() => {
+      store.dispatch(
+        engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }),
+      );
+      store.dispatch(engineLoadProgressChanged(null));
     });
+
+    // famousMetaReady is the only remaining prop — rerender with it true.
+    // (engine status + loadProgress are already in the store.)
+    rerender({ input: makeInput({ famousMetaReady: true }) });
     expect(result.current.blocked).toBe(false);
   });
 
@@ -202,13 +216,18 @@ describe('useSplash — blocked state', () => {
       debugPanelOpen: false,
       splash: { visible: true, dismissedVersion: null },
     };
-    const { result } = renderSplash(
-      makeInput({
-        status: { kind: 'ready', count: 100, source: Source.SDSS },
-        loadProgress: { loadedBytes: 1, totalBytes: 2, inFlightCount: 1 },
-        famousMetaReady: true,
-      }),
-      ui,
+    const { store } = createAppStore({ settings: buildInitialSettings(), ui });
+    // Seed the engine slice: status=ready, loadProgress in-flight.
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
+    store.dispatch(
+      engineLoadProgressChanged({ loadedBytes: 1, totalBytes: 2, inFlightCount: 1 }),
+    );
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(Provider, { store, children });
+
+    const { result } = renderHook(
+      () => useSplash(makeInput({ famousMetaReady: true })),
+      { wrapper },
     );
     expect(result.current.blocked).toBe(true);
   });
@@ -231,6 +250,7 @@ describe('useSplash — 8 s "Continue anyway" timer', () => {
       debugPanelOpen: false,
       splash: { visible: true, dismissedVersion: null },
     };
+    // Default engine state is `initializing` → hook reads blocked=true.
     const { result } = renderSplash(makeInput(), ui);
     expect(result.current.canContinueAnyway).toBe(false);
     act(() => {
@@ -267,11 +287,27 @@ describe('useSplash error mapping', () => {
     splash: { visible: true, dismissedVersion: null },
   };
 
+  /**
+   * Helper: render useSplash with an explicit engine `status` seeded in the
+   * store.  `famousMetaFailed` is the only remaining input prop that affects
+   * error mapping.
+   */
+  function renderWithStatus(
+    statusPayload: Parameters<typeof engineStatusChanged>[0],
+    input: Partial<UseSplashInput> = {},
+  ) {
+    const { store } = createAppStore({ settings: buildInitialSettings(), ui: visibleUi });
+    store.dispatch(engineStatusChanged(statusPayload));
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(Provider, { store, children });
+    return renderHook(() => useSplash(makeInput(input)), { wrapper });
+  }
+
   it('returns error.kind=webgpu-init-failed when status.kind=error with a webgpu message', () => {
-    const { result } = renderSplash(
-      makeInput({ status: { kind: 'error', message: 'WebGPU: requestAdapter returned null' } }),
-      visibleUi,
-    );
+    const { result } = renderWithStatus({
+      kind: 'error',
+      message: 'WebGPU: requestAdapter returned null',
+    });
     expect(result.current.error).toEqual({
       kind: 'webgpu-init-failed',
       message: 'WebGPU: requestAdapter returned null',
@@ -279,10 +315,10 @@ describe('useSplash error mapping', () => {
   });
 
   it('returns error.kind=catalog-fetch-failed for non-webgpu engine errors', () => {
-    const { result } = renderSplash(
-      makeInput({ status: { kind: 'error', message: 'Failed to fetch sdss.bin' } }),
-      visibleUi,
-    );
+    const { result } = renderWithStatus({
+      kind: 'error',
+      message: 'Failed to fetch sdss.bin',
+    });
     expect(result.current.error).toEqual({
       kind: 'catalog-fetch-failed',
       message: 'Failed to fetch sdss.bin',
@@ -290,37 +326,36 @@ describe('useSplash error mapping', () => {
   });
 
   it('returns error.kind=famous-meta-failed when famousMetaFailed=true and no engine error', () => {
-    const { result } = renderSplash(
-      makeInput({
-        status: { kind: 'ready', count: 100, source: Source.SDSS },
-        loadProgress: null,
-        famousMetaReady: true,
-        famousMetaFailed: true,
-      }),
-      visibleUi,
+    const { store } = createAppStore({ settings: buildInitialSettings(), ui: visibleUi });
+    // Seed: engine ready, no load progress, famous-meta failed.
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
+    store.dispatch(engineLoadProgressChanged(null));
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(Provider, { store, children });
+    const { result } = renderHook(
+      () => useSplash(makeInput({ famousMetaReady: true, famousMetaFailed: true })),
+      { wrapper },
     );
     expect(result.current.error).toEqual({ kind: 'famous-meta-failed' });
   });
 
   it('prefers engine error over famous-meta-failed (engine error blocks the whole app)', () => {
-    const { result } = renderSplash(
-      makeInput({
-        status: { kind: 'error', message: 'Failed to fetch sdss.bin' },
-        famousMetaFailed: true,
-      }),
-      visibleUi,
+    const { result } = renderWithStatus(
+      { kind: 'error', message: 'Failed to fetch sdss.bin' },
+      { famousMetaFailed: true },
     );
     expect(result.current.error?.kind).toBe('catalog-fetch-failed');
   });
 
   it('returns null on the happy path', () => {
-    const { result } = renderSplash(
-      makeInput({
-        status: { kind: 'ready', count: 100, source: Source.SDSS },
-        loadProgress: null,
-        famousMetaReady: true,
-      }),
-      visibleUi,
+    const { store } = createAppStore({ settings: buildInitialSettings(), ui: visibleUi });
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
+    store.dispatch(engineLoadProgressChanged(null));
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(Provider, { store, children });
+    const { result } = renderHook(
+      () => useSplash(makeInput({ famousMetaReady: true })),
+      { wrapper },
     );
     expect(result.current.error).toBeNull();
   });

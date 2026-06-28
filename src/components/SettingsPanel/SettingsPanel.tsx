@@ -21,17 +21,15 @@
  *
  * ### Props
  *
- * Only the four props that cannot be sourced from the Redux store are
- * threaded through here:
+ * Only two props remain — both are beyond the Redux store's reach:
  *
  *   - `defaultOpen` — initial Panel open/closed state (false on mobile viewports).
- *   - `sourceCounts` — per-source loaded point counts from the engine's async
- *     catalog-landing events; passed to GalaxiesSectionContainer, which forwards
- *     them to GalaxiesSection for the "N" badge next to each catalog toggle.
- *   - `structureCounts` — per-category structure counts from the engine; same
- *     pattern as sourceCounts for the Structures section badges.
  *   - `onResetCamera` — called when the user clicks "Reset camera"; wired in App
  *     to a focus on the Milky Way ("home").
+ *
+ * Engine counts (`sourceCounts`, `structureCounts`) are now read directly in
+ * `GalaxiesSectionContainer` and `StructuresSectionContainer` via the engine
+ * Redux slice selectors, so they no longer pass through this shell.
  *
  * ### Tier chip
  *
@@ -47,8 +45,6 @@
 
 import { memo } from 'react';
 import type { ReactNode } from 'react';
-import type { SourceType } from '../../@types/data/SourceType';
-import type { StructureId } from '../../@types/data/structure/StructureId';
 import { Panel } from '../common/Panel/Panel';
 import Button from '../common/Button/Button';
 import TierChipContainer from '../containers/TierChipContainer';
@@ -65,16 +61,6 @@ import styles from './SettingsPanel.module.css';
 type SettingsPanelProps = {
   /** Initial Panel open/closed state. App passes `false` on mobile viewports. */
   defaultOpen?: boolean;
-  /**
-   * Per-source loaded point counts. Comes from the engine's async catalog-
-   * landing events, not the Redux store — forwarded to GalaxiesSectionContainer.
-   */
-  sourceCounts?: Partial<Record<SourceType, number>>;
-  /**
-   * Per-category loaded structure counts. Same source as sourceCounts — forwarded
-   * to StructuresSectionContainer.
-   */
-  structureCounts?: Partial<Record<StructureId, number>>;
   /** Called when the user clicks "Reset camera". App wires it to a Milky-Way focus. */
   onResetCamera: () => void;
 };
@@ -83,8 +69,6 @@ type SettingsPanelProps = {
 
 export const SettingsPanel = memo(function SettingsPanel({
   defaultOpen,
-  sourceCounts,
-  structureCounts,
   onResetCamera,
 }: SettingsPanelProps): ReactNode {
   return (
@@ -94,10 +78,10 @@ export const SettingsPanel = memo(function SettingsPanel({
       defaultOpen={defaultOpen}
       headerExtra={<TierChipContainer />}
     >
-      <GalaxiesSectionContainer sourceCounts={sourceCounts} />
+      <GalaxiesSectionContainer />
       <CosmicWebSectionContainer />
       <FlowSectionContainer />
-      <StructuresSectionContainer structureCounts={structureCounts} />
+      <StructuresSectionContainer />
       <LabelsSectionContainer />
       <DisplaySectionContainer />
       <div className={styles.panelDivider} role="separator" />

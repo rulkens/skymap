@@ -38,6 +38,11 @@
  * does render a disabled Tour tooltip — that's wired in Task 6's error
  * mapping plus the Splash component's disabled-state CSS.
  *
+ * `status` and `loadProgress` are read from the Redux engine slice via
+ * `useAppSelector` — they are no longer threaded in as props.  Only
+ * `famousMetaReady` / `famousMetaFailed` remain as inputs because they
+ * come from `useFamousMeta`, not the engine store.
+ *
  * ### 8 s "Continue anyway" timer
  *
  * Starts when the splash becomes visible AND blocked.  Fired once,
@@ -55,13 +60,23 @@ import type { SplashError } from '../@types/splash/SplashError';
 import { CURRENT_SPLASH_VERSION } from '../state/ui/splashStorage';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { selectSplashVisible } from '../state/ui/selectors';
+import { selectEngineStatus, selectLoadProgress } from '../state/engine/selectors';
 import { dismissSplash, reopenSplash } from '../state/ui/uiSlice';
 
 /** Milliseconds before the "Continue anyway" escape appears. */
 export const CONTINUE_ANYWAY_DELAY_MS = 8_000;
 
 export function useSplash(input: UseSplashInput): UseSplashReturn {
-  const { status, loadProgress, famousMetaReady, famousMetaFailed = false } = input;
+  const { famousMetaReady, famousMetaFailed = false } = input;
+
+  // ── Engine state from the Redux slice ────────────────────────────────────
+  //
+  // `status` and `loadProgress` come from the engine slice rather than being
+  // threaded in as input props.  The engine dispatches `engineStatusChanged`
+  // and `engineLoadProgressChanged`; these selectors read the accumulated
+  // result so every subscriber sees a consistent snapshot.
+  const status = useAppSelector(selectEngineStatus);
+  const loadProgress = useAppSelector(selectLoadProgress);
 
   // ── Slice-backed visibility ───────────────────────────────────────────────
   //

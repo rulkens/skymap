@@ -3,14 +3,15 @@
  * GalaxiesSectionContainer — store boundary for the Galaxies settings section.
  *
  * Owns all Redux reach for the Galaxies group: reads five settings selectors
- * and wraps five dispatch calls in `useCallback`. The presentational
- * `GalaxiesSection` imports nothing from `store/` or `state/`.
+ * plus `selectSourceCounts` from the engine slice, and wraps five dispatch
+ * calls in `useCallback`. The presentational `GalaxiesSection` imports nothing
+ * from `store/` or `state/`.
  *
- * `sourceCounts` is the only prop threaded in from the parent — it comes from
- * the engine's async catalog-landing events, not from the Redux store, so the
- * parent (App or a future EngineContext) still owns it. All counts are
- * low-frequency (one arrival per bin load), so prop-threading them does not
- * undermine the re-render win.
+ * `sourceCounts` is read from the engine Redux slice via `useAppSelector`
+ * (the engine dispatches `engineSourceCountReported` as each catalog lands).
+ * This replaces the old prop-threading path through App → SettingsPanel →
+ * GalaxiesSectionContainer, keeping engine state reach in the container layer
+ * as the Container convention requires.
  *
  * Why all handlers use `[dispatch]` only: `dispatch` from `useAppDispatch()` is
  * the invariant `store.dispatch` — it never changes across the component's
@@ -34,6 +35,7 @@ import {
   selectBiasMode,
   selectAbsMagLimit,
 } from '../../state/settings/selectors';
+import { selectSourceCounts } from '../../state/engine/selectors';
 import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogSize,
@@ -45,18 +47,13 @@ import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { BiasMode as BiasModeT } from '../../@types/data/galaxyCatalog/BiasMode';
 
-export type GalaxiesSectionContainerProps = {
-  /**
-   * Per-source loaded point counts. Engine-absent before any catalog lands;
-   * the presentational section renders toggles without counts when undefined.
-   */
-  sourceCounts?: Partial<Record<SourceType, number>>;
-};
-
-function GalaxiesSectionContainer({
-  sourceCounts,
-}: GalaxiesSectionContainerProps): React.ReactElement {
+function GalaxiesSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
+
+  // Per-source loaded point counts from the engine slice.  The engine
+  // dispatches `engineSourceCountReported` as each catalog bin lands;
+  // the selector accumulates them one source at a time.
+  const sourceCounts = useAppSelector(selectSourceCounts);
 
   const visibleSourceMask = useAppSelector(selectVisibleSourceMask);
   const pointSize = useAppSelector(selectGalaxyCatalogSize);

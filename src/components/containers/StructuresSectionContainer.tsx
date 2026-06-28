@@ -3,21 +3,19 @@
  * StructuresSectionContainer — store boundary for the Structures settings section.
  *
  * Owns all Redux reach for the Structures group: reads `selectStructureItems`
- * and wraps `setStructureItemEnabled` in a `useCallback`. The presentational
+ * and `selectStructureCounts` from the engine slice, and wraps
+ * `setStructureItemEnabled` in a `useCallback`. The presentational
  * `StructuresSection` imports nothing from `store/` or `state/`.
  *
- * The marker-category-visibility projection (previously in App.tsx) lives here
- * because it is structure-group-local: it projects `items[cat].enabled` → the
- * flat `Record<StructureId, boolean>` the section's checkboxes read. Moving it
- * into the section avoids a prop-threading chain through App → SettingsPanel →
- * StructuresSection and un-braids "App knows the section's projection shape"
- * from App's actual responsibilities.
+ * The marker-category-visibility projection lives here because it is
+ * structure-group-local: it projects `items[cat].enabled` → the flat
+ * `Record<StructureId, boolean>` the section's checkboxes read.
  *
- * `structureCounts` is the only prop threaded in from the parent — it comes from
- * the engine's async catalog-landing events, not from the Redux store, so the
- * parent (App or a future EngineContext) still owns it. Counts arrive at low
- * frequency (one per catalog load), so prop-threading them does not undermine
- * the re-render win.
+ * `structureCounts` is read from the engine Redux slice via `useAppSelector`
+ * (the engine dispatches `engineStructureCountsChanged` as each catalog lands).
+ * This replaces the old prop-threading path through App → SettingsPanel →
+ * StructuresSectionContainer, keeping engine state reach in the container layer
+ * as the Container convention requires.
  *
  * Why the handler uses `[dispatch]` only: `dispatch` from `useAppDispatch()` is
  * the invariant `store.dispatch` — it never changes across the component's
@@ -30,23 +28,17 @@ import { memo, useCallback, useMemo } from 'react';
 import StructuresSection from '../SettingsPanel/StructuresSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectStructureItems } from '../../state/settings/selectors';
+import { selectStructureCounts } from '../../state/engine/selectors';
 import { setStructureItemEnabled } from '../../state/settings/settingsSlice';
 import { projectMarkerCategoryVisibility } from '../../state/settings/projectMarkerCategoryVisibility';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 
-export type StructuresSectionContainerProps = {
-  /**
-   * Per-category loaded structure counts. Engine-absent before any catalog
-   * lands; the presentational section renders toggles without counts when
-   * undefined.
-   */
-  structureCounts?: Partial<Record<StructureId, number>>;
-};
-
-function StructuresSectionContainer({
-  structureCounts,
-}: StructuresSectionContainerProps): React.ReactElement {
+function StructuresSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
+
+  // Per-category loaded structure counts from the engine slice.  The engine
+  // dispatches `engineStructureCountsChanged` after each catalog load.
+  const structureCounts = useAppSelector(selectStructureCounts);
 
   const structureItems = useAppSelector(selectStructureItems);
 
