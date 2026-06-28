@@ -15,12 +15,10 @@
  *   orbit camera math
  *   GPU pick readback
  *
- * Callbacks (`EngineCallbacks`) are the seam for lifecycle, camera, and
- * source-readiness events. Selection state (hover / select / focus) is not
- * echoed via callbacks — the engine dispatches directly to the Redux
- * `selection` slice, and React reads via `useAppSelector` selectors.
- * Per-frame `onCameraChange` fires unconditionally while the camera exists;
- * React-side `setState` equality checks filter unchanged frames.
+ * All observable engine state (lifecycle status, scale, source counts, load
+ * progress, selection) is dispatched directly to the Redux store; React reads
+ * via `useAppSelector` selectors. `EngineCallbacks` carries only the injected
+ * `store` and `setSagaContext` — there are no event callback clusters.
  *
  * ### Module layout
  *
@@ -55,12 +53,7 @@
  * ### Usage
  *
  * ```ts
- * const handle = createEngine(canvas, {
- *   store,
- *   setSagaContext,
- *   lifecycle: { onStatusChange: (s) => setStatus(s) },
- *   camera: { onCameraChange: (snap) => setScale(computeScaleInfo({...})) },
- * });
+ * const handle = createEngine(canvas, { store, setSagaContext });
  *
  * // later (e.g. React cleanup):
  * handle.destroy();
@@ -111,19 +104,20 @@ import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
  * Start the WebGPU engine on `canvas`.
  *
  * Returns a handle synchronously; async setup (GPU init, data loading)
- * progresses in the background and is reported via `cb.onStatusChange`.
+ * progresses in the background and is dispatched to the store via
+ * `engineStatusChanged`.
  *
  * ### Lifecycle
  *
- *   1. `cb.onStatusChange({ kind: 'initializing' })` fires immediately.
+ *   1. `engineStatusChanged({ kind: 'initializing' })` dispatches immediately.
  *   2. `initGpu()` + `loadCloud()` run asynchronously.
- *   3. `cb.onStatusChange({ kind: 'loading' })` fires before the fetch.
- *   4. `cb.onStatusChange({ kind: 'ready', ... })` fires when the render loop
- *      starts, or `{ kind: 'error' }` if GPU init fails.
- *   5. `cb.camera.onCameraChange` fires during steady-state rendering as
- *      the camera moves.
+ *   3. `engineStatusChanged({ kind: 'loading' })` dispatches before the fetch.
+ *   4. `engineStatusChanged({ kind: 'ready', ... })` dispatches when the render
+ *      loop starts, or `{ kind: 'error' }` if GPU init fails.
+ *   5. `engineScaleChanged` dispatches per frame during steady-state rendering
+ *      as the camera moves (deduped by the slice).
  *
- * @throws Never — errors are reported via `onStatusChange({ kind: 'error' })`.
+ * @throws Never — errors are dispatched via `engineStatusChanged({ kind: 'error' })`.
  */
 
 export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
@@ -362,8 +356,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // pickRenderer, scheduler) exist.
       clickResolver: null,
       inputBindings: null,
-      // Download-progress aggregator — built inside the IIFE so
-      // `cb.onLoadProgress` is the closure target.
+      // Download-progress aggregator — built inside the IIFE so the
+      // `engineLoadProgressChanged` dispatch is the closure target.
       loadProgress: null,
     },
     cam: null,
@@ -449,7 +443,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // in flight.
   const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
 
-  cb.lifecycle?.onStatusChange?.({ kind: 'initializing' });
   cb.store.dispatch(engineStatusChanged({ kind: 'initializing' }));
 
   // ── Bootstrap dependency bag ─────────────────────────────────────────────
@@ -534,7 +527,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
-  // and reported via `onStatusChange`.  See `runBootstrapPhases`.
+  // and dispatched via `engineStatusChanged({ kind: 'error' })`.  See `runBootstrapPhases`.
   (async () => {
     try {
       await runBootstrapPhases(state, bootstrapDeps);
@@ -542,7 +535,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Surface initialisation failures via the status callback so the UI
       // shows a readable message rather than a blank canvas.
       const message = err instanceof Error ? err.message : String(err);
-      cb.lifecycle?.onStatusChange?.({ kind: 'error', message });
       cb.store.dispatch(engineStatusChanged({ kind: 'error', message }));
       console.error('Engine startup failed:', err);
     }

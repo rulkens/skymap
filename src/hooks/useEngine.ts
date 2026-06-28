@@ -1,6 +1,5 @@
 /**
- * `useEngine` — owns the WebGPU engine lifecycle and the React state
- * slices the engine itself drives.
+ * `useEngine` — owns the WebGPU engine lifecycle.
  *
  * ──────────────────────────────────────────────────────────────────────
  * What this hook owns
@@ -12,13 +11,10 @@
  *     stored in a ref so other hooks (useFocusUrlSync, useAliasIndex,
  *     useKeyboardShortcuts) can call methods on it without dependency
  *     gymnastics.
- *   - Engine-driven state: status, scale, sourceCounts, loadProgress.
- *     Selection state (hovered/selected/focused) lives in the Redux store —
- *     App reads via `useAppSelector(selectXFocusable)`.
- *     `scale` is derived locally from `onCameraChange` snapshots via
- *     the pure `computeScaleInfo` helper — the engine emits the
- *     camera scalars; this hook computes the legend.  React's
- *     `setState` equality filters unchanged frames.
+ *
+ * All engine-driven state (status, scale, source counts, load progress,
+ * structure counts) lives in the Redux `engine` slice, dispatched
+ * directly by the engine. React reads via `useAppSelector(selectX)`.
  *
  * ──────────────────────────────────────────────────────────────────────
  * What this hook does NOT own
@@ -30,13 +26,13 @@
  * `useAppStore` and threads that same instance into `createEngine` so the
  * engine reads its settings from the one store React renders from.
  *
- * Two NON-callback options ride into `createEngine` as plain values: the
- * `store` (above) and `setSagaContext` — the store factory's saga-context
- * setter.  Both are obtained from context seams symmetrically: `store` via
- * `useAppStore` (the redux `<Provider>`), `setSagaContext` via
- * `useSetSagaContext` (the `<SagaContextProvider>`).  The engine uses the
- * setter to register its `runTierTransition` runner so the tier saga can reach
- * the engine; this hook just forwards it, it neither owns nor reads it.
+ * Two plain-value options ride into `createEngine`: the `store` (above)
+ * and `setSagaContext` — the store factory's saga-context setter.  Both
+ * are obtained from context seams symmetrically: `store` via `useAppStore`
+ * (the redux `<Provider>`), `setSagaContext` via `useSetSagaContext` (the
+ * `<SagaContextProvider>`).  The engine uses the setter to register its
+ * `runTierTransition` runner so the tier saga can reach the engine; this
+ * hook just forwards it, it neither owns nor reads it.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why empty `useEffect` deps?
@@ -49,34 +45,12 @@
  * on every render.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { createEngine } from '../services/engine';
-import { computeScaleInfo } from '../services/engine/helpers/scaleBar';
 import type { EngineHandle } from '../@types/engine/EngineHandle';
-import type { EngineStatus } from '../@types/engine/EngineStatus';
-import type { ScaleInfo } from '../@types/engine/ScaleInfo';
-import type { LoadProgressState } from '../@types/loading/LoadProgressState';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
 import { useSetSagaContext } from '../store/SagaContextProvider';
-import type { SourceType } from '../@types/data/SourceType';
-import type { StructureId } from '../@types/data/structure/StructureId';
-
-/**
- * Initial scale-bar value that renders something sensible before the
- * engine fires its first `onCameraChange`.
- */
-const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
-
-/**
- * Desired bar width in CSS pixels.  Same value the engine used to
- * hardcode before the lift; kept here as the React-side single source
- * of truth.  150 px is the design choice — wide enough to read,
- * narrow enough to never collide with the InfoCard.
- */
-const SCALE_TARGET_PX = 150;
-
-// UseEngineInput / UseEngineReturn moved to @types/engine/.
 
 export function useEngine(): UseEngineReturn {
   // The injected settings store — created in main.tsx, shared with React via
@@ -94,83 +68,11 @@ export function useEngine(): UseEngineReturn {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<EngineHandle | null>(null);
 
-  // Selection (hovered/selected/focused) is not mirrored here — the engine
-  // dispatches directly to the Redux store and App reads via selectors.
-  const [status, setStatus] = useState<EngineStatus>({ kind: 'initializing' });
-  const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
-  const [sourceCounts, setSourceCounts] = useState<Partial<Record<SourceType, number>>>({});
-  const [structureCounts, setStructureCounts] = useState<Partial<Record<StructureId, number>>>({});
-  const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
-
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Stable refs to the React setters wired into the nested sub-bag
-    // entries below.  `EngineCallbacks` is nested-only: every subscriber
-    // lives inside its event cluster (`lifecycle`, `selection`,
-    // `camera`, `sources`).
-    const onCatalogReadyImpl = (source: SourceType, count: number) =>
-      setSourceCounts((prev) => ({ ...prev, [source]: count }));
-    const onCameraChangeImpl = (snapshot: { distance: number; fovYRad: number }) => {
-      const c = canvasRef.current;
-      if (!c) return;
-      const info = computeScaleInfo({
-        cam: snapshot,
-        canvasSize: { width: c.clientWidth, height: c.clientHeight },
-        targetPx: SCALE_TARGET_PX,
-      });
-      if (info === null) return;
-      // `computeScaleInfo` allocates a fresh object every call, so
-      // `setScale(info)` always passes React's `Object.is` dedup
-      // even when the visible values are unchanged.  During autorotate
-      // (or any animation that holds `distance`/`fovYRad` constant) the
-      // scale-bar legend is bit-stable frame to frame; reusing `prev`'s
-      // reference in that case stops App from re-rendering every frame
-      // and cascading through the rest of the HUD.
-      setScale((prev) =>
-        prev.label === info.label && prev.widthPx === info.widthPx ? prev : info,
-      );
-    };
-
-    // `EngineCallbacks` is EVENT-only: lifecycle / camera / sources events,
-    // all wired from this hook's session-level subscriptions.
-    //
-    // Selection state flows through the Redux `selection` slice — the engine
-    // dispatches directly; React reads via `useAppSelector` selectors.
-    // There is no selection callback cluster in `EngineCallbacks`.
-    //
-    // Settings VALUES do not flow through here: they live in the injected store
-    // and React reads them via `useAppSelector` selectors, so there is no echo
-    // to merge.  The injected `store` and `setSagaContext` ride through as
-    // non-callback options — both are sibling returns of `createAppStore`,
-    // delivered here via their respective React contexts (`<Provider>` for
-    // `store`, `<SagaContextProvider>` for `setSagaContext`).
-    const handle = createEngine(canvas, {
-      store,
-      setSagaContext,
-      lifecycle: {
-        onStatusChange: setStatus,
-      },
-      camera: {
-        // Derive scale-bar legend from the engine's per-frame camera
-        // snapshot.  `computeScaleInfo` is pure (and reused from the
-        // engine's helpers — see scaleBar.ts).  We read viewport
-        // dimensions from the live canvas ref so a resize that hasn't
-        // yet triggered a cam tick still produces an up-to-date bar on
-        // the next emission.  The pure function returns null for
-        // degenerate inputs (viewport height 0, distance ≈ 0); we
-        // skip setState in that window so the placeholder stays.
-        // React's setState equality dedups unchanged frames.
-        onCameraChange: onCameraChangeImpl,
-      },
-      sources: {
-        onCatalogReady: onCatalogReadyImpl,
-        onLoadProgress: setLoadProgress,
-        onStructureCountsChange: setStructureCounts,
-      },
-    });
-
+    const handle = createEngine(canvas, { store, setSagaContext });
     handleRef.current = handle;
 
     return () => {
@@ -185,13 +87,5 @@ export function useEngine(): UseEngineReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return {
-    canvasRef,
-    handleRef,
-    status,
-    scale,
-    sourceCounts,
-    structureCounts,
-    loadProgress,
-  };
+  return { canvasRef, handleRef };
 }

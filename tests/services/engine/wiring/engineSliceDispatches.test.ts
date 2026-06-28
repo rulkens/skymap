@@ -386,7 +386,7 @@ describe('createSyntheticFallback → engineStatusChanged({ kind: "ready" })', (
     const { store } = createAppStore();
     const spy = vi.spyOn(store, 'dispatch');
     const { state, slots } = makeSyntheticFallbackState();
-    const cb = { store, lifecycle: { onStatusChange: vi.fn() } } as unknown as EngineCallbacks;
+    const cb = { store } as unknown as EngineCallbacks;
 
     createSyntheticFallback(state, cb);
 
@@ -406,7 +406,7 @@ describe('createSyntheticFallback → engineStatusChanged({ kind: "ready" })', (
     const { store } = createAppStore();
     const spy = vi.spyOn(store, 'dispatch');
     const { state, slots } = makeSyntheticFallbackState();
-    const cb = { store, lifecycle: { onStatusChange: vi.fn() } } as unknown as EngineCallbacks;
+    const cb = { store } as unknown as EngineCallbacks;
 
     createSyntheticFallback(state, cb);
 
@@ -426,7 +426,7 @@ describe('createSyntheticFallback → engineStatusChanged({ kind: "ready" })', (
     const { store } = createAppStore();
     const spy = vi.spyOn(store, 'dispatch');
     const { state, slots } = makeSyntheticFallbackState();
-    const cb = { store, lifecycle: { onStatusChange: vi.fn() } } as unknown as EngineCallbacks;
+    const cb = { store } as unknown as EngineCallbacks;
 
     createSyntheticFallback(state, cb);
 

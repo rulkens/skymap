@@ -18,6 +18,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
 import { createAppStore } from '../../../../src/store/createAppStore';
+import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
 import { Source } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
@@ -86,7 +87,6 @@ function errored(): LoadState<GalaxyCatalog> {
 type MakeStateResult = {
   state: EngineState;
   slots: Map<SourceType, StubSlot>;
-  onStatusChange: ReturnType<typeof vi.fn>;
   cb: EngineCallbacks;
 };
 
@@ -125,10 +125,8 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     slots.set(src, stubSlot());
   }
 
-  const onStatusChange = vi.fn();
   const cb = {
     store: createAppStore().store,
-    lifecycle: { onStatusChange },
   } as unknown as EngineCallbacks;
 
   const state = {
@@ -141,7 +139,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     },
   } as unknown as EngineState;
 
-  return { state, slots, onStatusChange, cb };
+  return { state, slots, cb };
 }
 
 /** Drive every real galaxy catalog slot through a final state (ready/error). */
@@ -217,16 +215,19 @@ describe('createSyntheticFallback', () => {
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
   });
 
-  it('emits onStatusChange per real-galaxy catalog ready arrival', () => {
-    const { slots, onStatusChange, cb, state } = makeState();
+  it('dispatches engineStatusChanged(ready) per real-galaxy catalog ready arrival', () => {
+    const { slots, cb, state } = makeState();
+    const dispatchSpy = vi.spyOn(cb.store, 'dispatch');
     createSyntheticFallback(state, cb);
 
     slots.get(Source.Glade)?.emit(ready(7));
 
-    expect(onStatusChange).toHaveBeenCalledWith({
-      kind: 'ready',
-      count: 42, // state.gpu.renderer.totalCount()
-      source: Source.Glade,
-    });
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      engineStatusChanged({
+        kind: 'ready',
+        count: 42, // state.gpu.renderer.totalCount()
+        source: Source.Glade,
+      }),
+    );
   });
 });

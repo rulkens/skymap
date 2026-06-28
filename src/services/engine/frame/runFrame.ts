@@ -238,23 +238,17 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   prevActiveId.current = activeId;
   lastPose.current = renderPose;
 
-  // Emit a per-frame camera snapshot for React-side derived state (scale bar
-  // today; potentially other zoom-dependent UI later). Fires unconditionally
-  // while the engine is ready — React's setState equality check filters
-  // unchanged snapshots, so the cost on stable frames is one object alloc and
-  // one optional-chain call. Distance comes from the produced pose (not
-  // `state.cam`, the stale drag register); fovYRad from the projection Resource.
-  // state.cam non-null is the bootstrap-ready proxy here — the snapshot values come from lastPose + projection, not from state.cam.
+  // Compute the scale-bar legend engine-side so the store's `engine.scale`
+  // slice stays authoritative for every consumer (ScaleBar, tour sagas).
+  // `clientWidth`/`clientHeight` are CSS pixels — required by computeScaleInfo;
+  // using `width`/`height` (backing-store px) silently breaks the bar on retina.
+  // state.cam non-null is the bootstrap-ready proxy — snap values come from
+  // lastPose + projection, not from state.cam.
   if (state.cam) {
     const snap = {
       distance: lastPose.current.distance,
       fovYRad: state.cameraRuntime.projection.fovYRad,
     };
-    deps.cb.camera?.onCameraChange?.(snap);
-    // Compute the scale-bar legend engine-side so the store's `engine.scale`
-    // slice stays authoritative for every consumer (ScaleBar, tour sagas).
-    // `clientWidth`/`clientHeight` are CSS pixels — required by computeScaleInfo;
-    // using `width`/`height` (backing-store px) silently breaks the bar on retina.
     const scaleInfo = computeScaleInfo({
       cam: snap,
       canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },

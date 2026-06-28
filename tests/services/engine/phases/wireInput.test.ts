@@ -159,8 +159,6 @@ function makeState(): EngineState {
 function makeDeps(): BootstrapDeps {
   const cb: EngineCallbacks = {
     store: configureStore({ reducer: rootReducer }),
-    lifecycle: { onStatusChange: vi.fn() },
-    selection: { onSelectionChange: vi.fn() } as never,
   } as unknown as EngineCallbacks;
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,

@@ -9,9 +9,9 @@
  * prefix touches no GPU device and no canvas methods, but it does bind
  * `requestAnimationFrame` via the RenderScheduler (a global the sync prefix
  * constructs), so the test runs under jsdom. The async IIFE then fails GPU
- * init in Node, but the error is caught internally and reported via
- * `cb.lifecycle.onStatusChange`. No unhandled rejection; no assertion about
- * engine readiness.
+ * init in Node, but the error is caught internally and dispatched to the store
+ * via `engineStatusChanged({ kind: 'error' })`. No unhandled rejection; no
+ * assertion about engine readiness.
  *
  * What we assert:
  *   - `setSagaContext` is called exactly once during the synchronous prefix.
@@ -51,7 +51,6 @@ describe('createEngine — saga context registration', () => {
     const cb: EngineCallbacks = {
       store,
       setSagaContext,
-      lifecycle: { onStatusChange: vi.fn<() => void>() },
     };
 
     // Call createEngine — runs the synchronous prefix, which calls setSagaContext,

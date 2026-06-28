@@ -44,6 +44,10 @@ import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
+import {
+  engineStatusChanged,
+  engineStructureCountsChanged,
+} from '../../../../src/state/engine/engineSlice';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -422,10 +426,8 @@ function makeState(
 function makeDeps(): BootstrapDeps {
   const cb: EngineCallbacks = {
     store: createAppStore().store,
-    lifecycle: { onStatusChange: vi.fn() },
-    selection: { onSelectionChange: vi.fn() } as never,
-    sources: { onCatalogReady: vi.fn(), onLoadProgress: vi.fn() } as never,
-  } as unknown as EngineCallbacks;
+    setSagaContext: vi.fn<() => void>() as never,
+  };
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb,
@@ -463,22 +465,25 @@ describe('wireSlots', () => {
     ]);
     const state = makeState({ points });
     const deps = makeDeps();
+    const dispatchSpy = vi.spyOn(deps.cb.store, 'dispatch');
 
     // No slots fired yet — wireSlots must still resolve.
     await wireSlots(state, deps);
 
-    expect(deps.cb.lifecycle?.onStatusChange).toHaveBeenCalledWith({ kind: 'loading' });
+    expect(dispatchSpy).toHaveBeenCalledWith(engineStatusChanged({ kind: 'loading' }));
     expect(sdssSlot.load).toHaveBeenCalled();
     expect(twoMrsSlot.load).toHaveBeenCalled();
     expect(gladeSlot.load).toHaveBeenCalled();
     expect(famousSlot.load).toHaveBeenCalled();
 
-    // The `loading` status is fired exactly once — it's the one-shot
+    // The `loading` status is dispatched exactly once — it's the one-shot
     // "show the loading screen" signal, not a per-arrival echo (those are
     // the `ready` emissions asserted elsewhere).
-    const statusCalls = (deps.cb.lifecycle?.onStatusChange as ReturnType<typeof vi.fn>).mock.calls;
-    const loadingCalls = statusCalls.filter((c) => (c[0] as { kind: string }).kind === 'loading');
-    expect(loadingCalls.length).toBe(1);
+    const loadingDispatches = dispatchSpy.mock.calls.filter((c) => {
+      const action = c[0] as ReturnType<typeof engineStatusChanged>;
+      return action.type === engineStatusChanged.type && action.payload.kind === 'loading';
+    });
+    expect(loadingDispatches.length).toBe(1);
   });
 
   it('assigns all five impostor subsystems onto state.subsystems', async () => {
@@ -612,6 +617,7 @@ describe('wireSlots', () => {
       loadedSources: () => [] as unknown[],
     } as never;
     const deps = makeDeps();
+    const dispatchSpy = vi.spyOn(deps.cb.store, 'dispatch');
     await wireSlots(state, deps);
 
     total = 10000;
@@ -619,11 +625,13 @@ describe('wireSlots', () => {
     total = 30000;
     gladeSlot.fire(readyValue(20000));
 
-    const calls = (deps.cb.lifecycle?.onStatusChange as ReturnType<typeof vi.fn>).mock.calls;
-    const readyCalls = calls.filter((c) => (c[0] as { kind: string }).kind === 'ready');
-    expect(readyCalls.length).toBe(2);
-    expect(readyCalls[0]![0]).toMatchObject({ kind: 'ready', count: 10000 });
-    expect(readyCalls[1]![0]).toMatchObject({ kind: 'ready', count: 30000 });
+    const readyStatuses = dispatchSpy.mock.calls
+      .map((c) => c[0] as ReturnType<typeof engineStatusChanged>)
+      .filter((a) => a.type === engineStatusChanged.type && a.payload.kind === 'ready')
+      .map((a) => a.payload);
+    expect(readyStatuses.length).toBe(2);
+    expect(readyStatuses[0]).toMatchObject({ kind: 'ready', count: 10000 });
+    expect(readyStatuses[1]).toMatchObject({ kind: 'ready', count: 30000 });
   });
 
   it('synthetic-fallback path fires `load(...)` on the synthetic slot when every real galaxy catalog errors', async () => {
@@ -788,15 +796,14 @@ describe('wireSlots', () => {
     // and race the mock once-value against its empty default.
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
-    const counts: Array<Partial<Record<string, number>>> = [];
-    (
-      deps.cb.sources as { onStructureCountsChange?: (c: Record<string, number>) => void }
-    ).onStructureCountsChange = (c) => {
-      counts.push(c);
-    };
+    const dispatchSpy = vi.spyOn(deps.cb.store, 'dispatch');
     await wireSlots(state, deps);
     await new Promise((r) => setTimeout(r, 0));
 
+    const counts = dispatchSpy.mock.calls
+      .map((c) => c[0] as ReturnType<typeof engineStructureCountsChanged>)
+      .filter((a) => a.type === engineStructureCountsChanged.type)
+      .map((a) => a.payload);
     expect(counts.length).toBeGreaterThanOrEqual(2);
     const first = counts[0]!;
     const last = counts[counts.length - 1]!;

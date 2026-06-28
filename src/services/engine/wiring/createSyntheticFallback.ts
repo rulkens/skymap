@@ -99,7 +99,6 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
           count: state.gpu.renderer?.totalCount() ?? 0,
           source,
         };
-        cb.lifecycle?.onStatusChange?.(readyStatus);
         cb.store.dispatch(engineStatusChanged(readyStatus));
         if (realSet.has(source)) anyRealReady = true;
       }
@@ -124,13 +123,13 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
     const synthSlot = state.assetSlots.points.get(Source.Synthetic);
     synthSlot?.subscribe((s) => {
       if (s.kind === 'ready' && s.value.count > 0) {
-        const readyStatus = {
-          kind: 'ready' as const,
-          count: state.gpu.renderer?.totalCount() ?? 0,
-          source: Source.Synthetic,
-        };
-        cb.lifecycle?.onStatusChange?.(readyStatus);
-        cb.store.dispatch(engineStatusChanged(readyStatus));
+        cb.store.dispatch(
+          engineStatusChanged({
+            kind: 'ready',
+            count: state.gpu.renderer?.totalCount() ?? 0,
+            source: Source.Synthetic,
+          }),
+        );
       }
     });
 

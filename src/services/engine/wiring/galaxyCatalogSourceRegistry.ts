@@ -217,7 +217,6 @@ export function wireGalaxyCatalogSourceSlot(
 
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
-      cb.sources?.onCatalogReady?.(source, s.value.count);
       cb.store.dispatch(engineSourceCountReported({ source, count: s.value.count }));
     }
   });

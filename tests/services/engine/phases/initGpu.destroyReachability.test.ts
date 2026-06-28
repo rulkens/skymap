@@ -234,10 +234,7 @@ function makeState(): EngineState {
 function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
-    cb: {
-      onStatusChange: vi.fn(),
-      onCatalogReady: vi.fn(),
-    } as unknown as EngineCallbacks,
+    cb: { store: { dispatch: vi.fn() } } as unknown as EngineCallbacks,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },

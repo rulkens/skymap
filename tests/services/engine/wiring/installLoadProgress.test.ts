@@ -72,7 +72,7 @@ function makeState(): EngineState {
 function makeDeps(): BootstrapDeps {
   return {
     canvas: {} as HTMLCanvasElement,
-    cb: { sources: { onLoadProgress: vi.fn() } } as unknown as BootstrapDeps['cb'],
+    cb: { store: { dispatch: vi.fn() } } as unknown as BootstrapDeps['cb'],
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
     handleRef: { current: null },

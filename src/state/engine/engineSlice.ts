@@ -40,9 +40,7 @@ import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
- * fires its first `onCameraChange`. Mirrors the `INITIAL_SCALE` constant in
- * `src/hooks/useEngine.ts` — the two must stay in sync until Task 3 removes
- * the hook's local copy.
+ * fires its first `engineScaleChanged` dispatch.
  */
 const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
 

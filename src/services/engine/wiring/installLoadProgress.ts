@@ -59,7 +59,6 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
   }
 
   const progressEmitter = createLoadProgressEmitter((snapshot) => {
-    cb.sources?.onLoadProgress?.(snapshot);
     cb.store.dispatch(engineLoadProgressChanged(snapshot));
   }, allSlots);
   for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
