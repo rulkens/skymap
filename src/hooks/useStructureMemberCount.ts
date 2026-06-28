@@ -7,8 +7,14 @@
  * `structureMemberCount`.  The cone search is O(total loaded ≈ 2.5M) but
  * runs single-digit milliseconds and only when one of the memo deps
  * changes — selecting a different structure, a tier swap, a per-source
- * catalog landing (`sourceCounts` bump), or a galaxy catalog toggle — never per
- * frame.
+ * catalog landing (`sourceCounts` bump from the engine slice), or a galaxy
+ * catalog toggle — never per frame.
+ *
+ * `sourceCounts` is read from the Redux engine slice via `useAppSelector`
+ * rather than being threaded in as a prop.  It is an intentional recompute
+ * trigger: when a catalog lands the engine dispatches
+ * `engineSourceCountReported`, which bumps the selector output and re-fires
+ * the memo so the count reflects the newly loaded data.
  *
  * Returns `null` (caller omits the row) when nothing is countable: no
  * structure selected, a famous-galaxy selection, or the engine handle / catalogs
@@ -18,15 +24,21 @@
 
 import { useMemo } from 'react';
 import { structureMemberCount } from '../utils/structure/structureMemberCount';
+import { useAppSelector } from '../store/hooks';
+import { selectSourceCounts } from '../state/engine/selectors';
 import type { UseStructureMemberCountInput } from '../@types/engine/UseStructureMemberCountInput';
 
 export function useStructureMemberCount({
   selected,
   engineHandleRef,
   tier,
-  sourceCounts,
   visibleSourceMask,
 }: UseStructureMemberCountInput): number | null {
+  // `sourceCounts` is an intentional recompute trigger: each catalog landing
+  // dispatches `engineSourceCountReported`, bumping this selector and re-firing
+  // the memo so the member count reflects the newly loaded data.
+  const sourceCounts = useAppSelector(selectSourceCounts);
+
   return useMemo(() => {
     // Narrow on the union tag, not a structural sniff: only a `structure`
     // target is countable, and `type !== 'structure'` narrows `selected`

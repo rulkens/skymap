@@ -20,17 +20,29 @@
  * so callers can call `.has(...)` without a null guard before the load
  * resolves; an empty map just collapses unknown PGCs to `unknown`
  * instead of `tier`.
+ *
+ * `sourceCounts` is read from the Redux engine slice via `useAppSelector`
+ * rather than being threaded in as a prop.  It gates the lazy load (the
+ * join requires at least one GLADE or 2MRS entry to be loaded) and acts
+ * as a recompute trigger for the effect.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { Source } from '../data/sources';
 import { buildAliasIndex } from './buildAliasIndex';
+import { useAppSelector } from '../store/hooks';
+import { selectSourceCounts } from '../state/engine/selectors';
 import type { AliasIndexEntry } from '../@types/engine/AliasIndexEntry';
 import type { UseAliasIndexInput } from '../@types/engine/UseAliasIndexInput';
 import type { UseAliasIndexReturn } from '../@types/engine/UseAliasIndexReturn';
 
 export function useAliasIndex(input: UseAliasIndexInput): UseAliasIndexReturn {
-  const { paletteOpen, sourceCounts, engineHandleRef } = input;
+  const { paletteOpen, engineHandleRef } = input;
+
+  // `sourceCounts` gates the lazy GLADE/2MRS join (requires at least one
+  // catalog to be loaded) and is an effect dependency so new arrivals
+  // can unblock a pending load on the first open.
+  const sourceCounts = useAppSelector(selectSourceCounts);
 
   const [aliasIndex, setAliasIndex] = useState<readonly AliasIndexEntry[] | null>(null);
   const [aliasMap, setAliasMap] = useState<ReadonlyMap<bigint, readonly string[]>>(() => new Map());

@@ -17,10 +17,10 @@
  * `produceFamousLabels` derives their labels directly from `galaxyStore`
  * (catalog ⋈ famousMeta) per frame.  There is no structure-store famous group.
  *
- * ### Structure-count emissions
+ * ### Structure-count dispatches
  *
- * After every group change we forward `{ cluster, supercluster, void, group }`
- * counts to `cb.sources?.onStructureCountsChange` so the Structures panel's
+ * After every group change we dispatch `engineStructureCountsChanged` with
+ * `{ cluster, supercluster, void, group }` counts so the Structures panel's
  * toggles can display "Clusters 573" alongside their checkboxes.  Counts are
  * read from `structureStore.byCategory` — the authoritative record set — so
  * the number matches exactly what will render.  Every structure category MUST
@@ -30,6 +30,7 @@
 
 import { buildStaticAnchorStructures } from '../../../data/structure/buildStaticAnchorStructures';
 import { structureCatalogToStructures } from './structureCatalogToStructures';
+import { engineStructureCountsChanged } from '../../../state/engine/engineSlice';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
@@ -48,12 +49,14 @@ export function wireStructureProjection(state: EngineState, cb: EngineCallbacks)
    * the authoritative record set — the same one that renders.
    */
   function emitCounts(): void {
-    cb.sources?.onStructureCountsChange?.({
-      cluster: state.data.structures.byCategory('cluster').length,
-      supercluster: state.data.structures.byCategory('supercluster').length,
-      void: state.data.structures.byCategory('void').length,
-      group: state.data.structures.byCategory('group').length,
-    });
+    cb.store.dispatch(
+      engineStructureCountsChanged({
+        cluster: state.data.structures.byCategory('cluster').length,
+        supercluster: state.data.structures.byCategory('supercluster').length,
+        void: state.data.structures.byCategory('void').length,
+        group: state.data.structures.byCategory('group').length,
+      }),
+    );
   }
 
   // ── Group 1: static anchors (synchronous) ───────────────────────────

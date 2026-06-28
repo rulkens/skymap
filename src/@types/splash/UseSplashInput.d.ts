@@ -1,11 +1,4 @@
-import type { EngineStatus } from '../engine/EngineStatus';
-import type { LoadProgressState } from '../loading/LoadProgressState';
-
 export type UseSplashInput = {
-  /** Engine status from `useEngine`. */
-  status: EngineStatus;
-  /** Aggregated load progress from `useEngine`. `null` when no fetches in flight. */
-  loadProgress: LoadProgressState | null;
   /** Famous-meta `ready` flag from `useFamousMeta`. */
   famousMetaReady: boolean;
   /**

@@ -7,6 +7,9 @@
  * Pattern: `createAppStore()` + `<Provider>` + `createElement` (no JSX —
  * matches `vitest.config.ts` `include` glob `tests/**\/*.test.ts`).
  *
+ * `sourceCounts` and `structureCounts` are no longer props on `SettingsPanel`;
+ * the containers read them from the engine Redux slice directly.
+ *
  * Tests assert:
  *  - Each section's CollapsibleSection header button is present in the DOM.
  *    CollapsibleSection titles render as `<button>` elements and stay mounted
@@ -16,7 +19,7 @@
  *
  * Why these assertions?
  *  Without the shell, mounting `SettingsPanel` would fail outright (its type
- *  formerly required ~40 props; the shell requires only 4). With the shell but
+ *  formerly required ~40 props; the shell requires only 2). With the shell but
  *  a missing container, the corresponding section heading would be absent from
  *  the rendered output. These two checks together guarantee the shell composes
  *  all seven containers and wires the footer action correctly.
@@ -42,8 +45,6 @@ describe('SettingsPanel (shell)', () => {
     render(
       createElement(SettingsPanel, {
         defaultOpen: true,
-        sourceCounts: undefined,
-        structureCounts: undefined,
         onResetCamera,
       }),
       { wrapper: makeWrapper(store) },

@@ -26,6 +26,7 @@
 
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { ASSET_WIRING } from './assetWiring';
+import { engineLoadProgressChanged } from '../../../state/engine/engineSlice';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -58,7 +59,7 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
   }
 
   const progressEmitter = createLoadProgressEmitter((snapshot) => {
-    cb.sources?.onLoadProgress?.(snapshot);
+    cb.store.dispatch(engineLoadProgressChanged(snapshot));
   }, allSlots);
   for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
   state.subsystems.loadProgress = progressEmitter;

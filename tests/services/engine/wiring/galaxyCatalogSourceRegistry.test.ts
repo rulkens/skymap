@@ -60,6 +60,7 @@ import type { GalaxyCatalogSourceConfig } from '../../../../src/@types/engine/wi
 import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/WirePointSourceDeps';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
+import { engineSourceCountReported } from '../../../../src/state/engine/engineSlice';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -203,13 +204,11 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(gladeSlot!.name).toBe('glade-points');
   });
 
-  it('subscribes a handler that fires onCatalogReady(source, count) on the ready transition', async () => {
+  it('dispatches engineSourceCountReported(source, count) on the ready transition', async () => {
     const upload = vi.fn().mockResolvedValue(undefined);
     const state = makeState({ rendererUpload: upload });
-    const onCatalogReady = vi.fn();
-    // Nested-only fire shape (H5 task 11): the registry fires
-    // `cb.sources?.onCatalogReady?.(...)` on the ready transition.
-    const cb: Partial<EngineCallbacks> = { sources: { onCatalogReady } };
+    // The registry dispatches `engineSourceCountReported` on the ready transition.
+    const deps = makeDeps();
     // Use a stub fetcher so we control when the slot transitions to ready.
     const cfg: GalaxyCatalogSourceConfig = {
       source: Source.SDSS,
@@ -218,20 +217,22 @@ describe('wireGalaxyCatalogSourceSlot', () => {
       category: 'survey',
     };
 
-    wireGalaxyCatalogSourceSlot(state, cfg, makeDeps(cb));
+    wireGalaxyCatalogSourceSlot(state, cfg, deps);
 
     const slot = state.assetSlots.points.get(Source.SDSS)!;
     slot.load({ source: Source.SDSS, tier: 'medium' });
 
     // Drive microtasks so the slot's fetch + commit chain settles.
     // The slot's commit awaits the renderer upload; once that resolves
-    // the state transitions to 'ready' and the subscriber fires.
+    // the state transitions to 'ready' and the subscriber dispatches.
     await vi.waitFor(() => {
       expect(slot.state().kind).toBe('ready');
     });
 
-    expect(onCatalogReady).toHaveBeenCalledOnce();
-    expect(onCatalogReady).toHaveBeenCalledWith(Source.SDSS, 42);
+    const dispatch = deps.cb.store.dispatch as ReturnType<typeof vi.fn>;
+    expect(dispatch).toHaveBeenCalledWith(
+      engineSourceCountReported({ source: Source.SDSS, count: 42 }),
+    );
     // The render wake is covered generically by installSlotReadyWake.test.ts.
   });
 

@@ -26,6 +26,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createAppStore } from '../../../../src/store/createAppStore';
+import { engineStructureCountsChanged } from '../../../../src/state/engine/engineSlice';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -141,10 +143,19 @@ function makeState(): {
   return { state, structureCatalogSlot };
 }
 
-function makeCb(): { cb: EngineCallbacks; countsSpy: ReturnType<typeof vi.fn> } {
-  const countsSpy = vi.fn();
-  const cb = { sources: { onStructureCountsChange: countsSpy } } as unknown as EngineCallbacks;
-  return { cb, countsSpy };
+function makeCb(): {
+  cb: EngineCallbacks;
+  // The per-category count payloads dispatched so far, newest last.
+  structureCountsCalls: () => Array<Partial<Record<string, number>>>;
+} {
+  const cb = { store: createAppStore().store } as unknown as EngineCallbacks;
+  const dispatchSpy = vi.spyOn(cb.store, 'dispatch');
+  const structureCountsCalls = () =>
+    dispatchSpy.mock.calls
+      .map((c) => c[0] as ReturnType<typeof engineStructureCountsChanged>)
+      .filter((a) => a.type === engineStructureCountsChanged.type)
+      .map((a) => a.payload);
+  return { cb, structureCountsCalls };
 }
 
 const clusterPayload: StructureCatalogPayload = {
@@ -192,13 +203,13 @@ describe('wireStructureProjection', () => {
 
   it('clears the bulk group and re-emits counts on a slot error', () => {
     const { state, structureCatalogSlot } = makeState();
-    const { cb, countsSpy } = makeCb();
+    const { cb, structureCountsCalls } = makeCb();
 
     wireStructureProjection(state, cb);
     structureCatalogSlot.fire(readyState(clusterPayload));
     expect(state.data.structures.byId('cluster-bulk-coma')).not.toBeNull();
 
-    countsSpy.mockClear();
+    const beforeError = structureCountsCalls().length;
     structureCatalogSlot.fire({
       kind: 'error',
       req: {},
@@ -206,18 +217,19 @@ describe('wireStructureProjection', () => {
       finalAttempt: 1,
     });
     expect(state.data.structures.byId('cluster-bulk-coma')).toBeNull();
-    expect(countsSpy).toHaveBeenCalled();
+    // The error path re-emits counts (a fresh dispatch beyond those before it).
+    expect(structureCountsCalls().length).toBeGreaterThan(beforeError);
   });
 
-  it('emits onStructureCountsChange with per-category counts after a group change', () => {
+  it('dispatches engineStructureCountsChanged with per-category counts after a group change', () => {
     const { state, structureCatalogSlot } = makeState();
-    const { cb, countsSpy } = makeCb();
+    const { cb, structureCountsCalls } = makeCb();
 
     wireStructureProjection(state, cb);
 
     // At boot: static anchors emit counts.
-    expect(countsSpy).toHaveBeenCalledTimes(1);
-    const bootCounts = countsSpy.mock.calls[0]![0] as Record<string, number>;
+    expect(structureCountsCalls()).toHaveLength(1);
+    const bootCounts = structureCountsCalls()[0]!;
     expect(typeof bootCounts.cluster).toBe('number');
     expect(typeof bootCounts.supercluster).toBe('number');
     expect(typeof bootCounts.void).toBe('number');
@@ -227,8 +239,8 @@ describe('wireStructureProjection', () => {
 
     structureCatalogSlot.fire(readyState(clusterPayload));
 
-    expect(countsSpy).toHaveBeenCalledTimes(2);
-    const afterCluster = countsSpy.mock.calls[1]![0] as Record<string, number>;
+    expect(structureCountsCalls()).toHaveLength(2);
+    const afterCluster = structureCountsCalls()[1]!;
     expect(afterCluster['cluster']).toBe(bootCounts['cluster']! + 1);
     expect(afterCluster['supercluster']).toBe(bootCounts['supercluster']!);
     expect(afterCluster['void']).toBe(bootCounts['void']!);

@@ -15,7 +15,7 @@
  *     through the Redux store via `store.dispatch`. Scale-bar derivation
  *     lives React-side
  *     (it's a pure function of cam + viewport CSS height) —
- *     `cb.onCameraChange` emissions from `runFrame` drive it.
+ *     the frame loop's per-frame `engineScaleChanged` dispatch drives it.
  *   - Replaces the no-op `frameRef.current` stub with the real frame
  *     body — a one-line closure that calls `runFrame(state, frameDeps,
  *     performance.now())`.  The scheduler in

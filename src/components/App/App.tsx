@@ -13,11 +13,15 @@
  * loop — it isn't designed for the synthetic double-mount. `useEngine`'s
  * cleanup still runs on real unmounts.
  *
- * Store reach is intentionally minimal: `selectHoveredFocusable` /
- * `selectSelectedFocusable` drive the InfoCard; `selectPaletteOpen`,
- * `selectUiHidden`, `selectDebugPanelOpen` gate App's own JSX; and
- * `selectVisibleSourceMask` + `selectTier` feed `useStructureMemberCount`. All
- * settings reach lives in the section containers under SettingsPanel.
+ * Store reach: `selectHoveredFocusable` / `selectSelectedFocusable` drive the
+ * InfoCard; `selectPaletteOpen`, `selectUiHidden`, `selectDebugPanelOpen` gate
+ * App's own JSX; `selectVisibleSourceMask` + `selectTier` feed
+ * `useStructureMemberCount`; and `selectEngineStatus`, `selectScale`,
+ * `selectLoadProgress` from the engine slice drive the HUD chrome (StatusBar,
+ * ScaleBar, LoadingBar, Splash). The engine count selectors
+ * (`selectSourceCounts`, `selectStructureCounts`) are read inside the section
+ * containers + hooks, not App. All settings reach lives in the section
+ * containers under SettingsPanel.
  */
 
 import { useCallback, useState } from 'react';
@@ -56,10 +60,14 @@ import TourOverlayContainer from '../containers/TourOverlayContainer';
 import { selectTourActive } from '../../state/tour/selectors';
 import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
+import {
+  selectEngineStatus,
+  selectScale,
+  selectLoadProgress,
+} from '../../state/engine/selectors';
 
 export function App(): React.ReactElement {
-  const { canvasRef, handleRef, status, scale, sourceCounts, structureCounts, loadProgress } =
-    useEngine();
+  const { canvasRef, handleRef } = useEngine();
 
   // Dispatch drives selection commands (InfoCard / CommandPalette) plus the
   // palette/ui/debug toggle actions fired from the keyboard hook and the
@@ -79,6 +87,15 @@ export function App(): React.ReactElement {
   const visibleSourceMask = useAppSelector(selectVisibleSourceMask);
   const currentTier = useAppSelector(selectTier);
 
+  // Engine runtime state from the Redux engine slice.  The engine dispatches
+  // these on each lifecycle / scale / progress event; the HUD chrome
+  // (StatusBar, ScaleBar, LoadingBar, Splash) reads them here.  Count fields
+  // (`sourceCounts`, `structureCounts`) are read directly in their respective
+  // containers and hooks — App no longer needs them.
+  const status = useAppSelector(selectEngineStatus);
+  const scale = useAppSelector(selectScale);
+  const loadProgress = useAppSelector(selectLoadProgress);
+
   // "Home" frames our own galaxy: the Reset-camera button, the Home pill, and
   // the palette's Milky-Way entry all route through the standard focus channel
   // (updateSelectionFocus → watchFocusTweenSaga), so the camera tween, URL hash,
@@ -90,13 +107,13 @@ export function App(): React.ReactElement {
   );
 
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
-  // on selection / tier swap / catalog landing (`sourceCounts`) / galaxy catalog
-  // toggle — null for galaxy selections and famous-galaxy structures.
+  // on selection / tier swap / catalog landing (`sourceCounts` from engine slice)
+  // / galaxy catalog toggle — null for galaxy selections and famous-galaxy
+  // structures.
   const selectedMemberCount = useStructureMemberCount({
     selected,
     engineHandleRef: handleRef,
     tier: currentTier,
-    sourceCounts,
     visibleSourceMask,
   });
 
@@ -150,12 +167,13 @@ export function App(): React.ReactElement {
 
   // Splash hook owns visibility, readiness gate (engine + famous-meta),
   // localStorage versioning, deep-link bypass, 8 s Continue-anyway timer,
-  // and dismiss/reopen.  See `useSplash.ts` for rationale.
-  const splash = useSplash({ status, loadProgress, famousMetaReady });
+  // and dismiss/reopen.  `status` and `loadProgress` are now read from the
+  // engine Redux slice inside `useSplash` — only the famous-meta flags are
+  // passed here.  See `useSplash.ts` for rationale.
+  const splash = useSplash({ famousMetaReady });
 
   const { aliasIndex } = useAliasIndex({
     paletteOpen,
-    sourceCounts,
     engineHandleRef: handleRef,
   });
 
@@ -209,8 +227,6 @@ export function App(): React.ReactElement {
           <NavigationPanel defaultOpen={initialPanelsOpen} isMobile={initialMobile} />
           <SettingsPanel
             defaultOpen={initialPanelsOpen}
-            sourceCounts={sourceCounts}
-            structureCounts={structureCounts}
             onResetCamera={focusMilkyWay}
           />
         </div>

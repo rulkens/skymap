@@ -50,6 +50,7 @@ import {
   TIER_FETCHED_POINT_SOURCES,
 } from './galaxyCatalogSourceRegistry';
 import { reevaluateDemand } from './reevaluateDemand';
+import { engineStatusChanged } from '../../../state/engine/engineSlice';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
@@ -93,11 +94,12 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
     let counted = false;
     const unsub = slot.subscribe((s) => {
       if (s.kind === 'ready' && s.value.count > 0) {
-        cb.lifecycle?.onStatusChange?.({
-          kind: 'ready',
+        const readyStatus = {
+          kind: 'ready' as const,
           count: state.gpu.renderer?.totalCount() ?? 0,
           source,
-        });
+        };
+        cb.store.dispatch(engineStatusChanged(readyStatus));
         if (realSet.has(source)) anyRealReady = true;
       }
       if (counted) return;
@@ -121,11 +123,13 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
     const synthSlot = state.assetSlots.points.get(Source.Synthetic);
     synthSlot?.subscribe((s) => {
       if (s.kind === 'ready' && s.value.count > 0) {
-        cb.lifecycle?.onStatusChange?.({
-          kind: 'ready',
-          count: state.gpu.renderer?.totalCount() ?? 0,
-          source: Source.Synthetic,
-        });
+        cb.store.dispatch(
+          engineStatusChanged({
+            kind: 'ready',
+            count: state.gpu.renderer?.totalCount() ?? 0,
+            source: Source.Synthetic,
+          }),
+        );
       }
     });
 

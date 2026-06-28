@@ -47,6 +47,7 @@ import { syncVisibilityFadeItem } from './syncVisibilityFades';
 import { dissolveCatalogBuffer } from './dissolveCatalogBuffer';
 import type { SourceType } from '../../../@types/data/SourceType';
 import { dispatchCatalogLoaded } from './dispatchCatalogLoaded';
+import { engineSourceCountReported } from '../../../state/engine/engineSlice';
 
 /**
  * Registry rows, in Source enum order.  Order matters: `initGpu`'s
@@ -216,7 +217,7 @@ export function wireGalaxyCatalogSourceSlot(
 
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
-      cb.sources?.onCatalogReady?.(source, s.value.count);
+      cb.store.dispatch(engineSourceCountReported({ source, count: s.value.count }));
     }
   });
 

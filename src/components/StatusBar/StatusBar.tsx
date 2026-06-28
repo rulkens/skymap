@@ -40,7 +40,7 @@ import styles from './StatusBar.module.css';
 
 /** Props for StatusBar. */
 type StatusBarProps = {
-  /** The current engine status, driven by `createEngine`'s `onStatusChange` callback. */
+  /** The current engine status, read from the engine slice via `selectEngineStatus` (dispatched via `engineStatusChanged`). */
   status: EngineStatus;
 };
 

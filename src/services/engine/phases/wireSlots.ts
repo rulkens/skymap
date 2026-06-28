@@ -29,11 +29,11 @@
  *      same loop re-runs on every state change, so "is this asset required?"
  *      has one answer in one place.
  *
- * The phase does not block on data arrival: `cb.onStatusChange({ kind:
- * 'loading' })` fires synchronously and `wireInput`/`startLoop` run immediately
- * after, so the camera and rAF loop come up with whatever has landed. Per-
- * arrival `ready` emission and the synthetic fallback run as background
- * subscribers wired here.
+ * The phase does not block on data arrival: `engineStatusChanged({ kind:
+ * 'loading' })` dispatches synchronously and `wireInput`/`startLoop` run
+ * immediately after, so the camera and rAF loop come up with whatever has
+ * landed. Per-arrival `ready` dispatch and the synthetic fallback run as
+ * background subscribers wired here.
  *
  * ### State writes
  *
@@ -41,7 +41,7 @@
  *     cf4Density,mcpm,flow}` (via `installSlots`) + `.syntheticVolumes` (DEV).
  *   - `state.subsystems.{loadProgress, structures}` + the impostor subsystem handles.
  *   - `state.requests` may gain `'syntheticFallback'` (via the gate).
- *   - `cb.onStatusChange({ kind: 'loading' })` synchronously.
+ *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
  *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` subscriber.
  *
  * ### Side effects on `deps`
@@ -60,6 +60,7 @@ import { seedFades } from '../wiring/fadeLayers';
 import { wireStructureProjection } from '../wiring/wireStructureProjection';
 import { createSyntheticFallback } from '../wiring/createSyntheticFallback';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
+import { engineStatusChanged } from '../../../state/engine/engineSlice';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -121,7 +122,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // Signal loading state immediately so the user sees progress before the
   // (potentially multi-second) fetches complete.
-  cb.lifecycle?.onStatusChange?.({ kind: 'loading' });
+  cb.store.dispatch(engineStatusChanged({ kind: 'loading' }));
 
   // The single place loads start: walk the wiring registry and trigger every
   // demanded slot with its tier-derived request.  At boot this loads the

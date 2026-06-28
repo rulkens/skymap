@@ -6,6 +6,10 @@
  * Pattern: `createAppStore()` + `<Provider>` + `createElement` (no JSX —
  * matches `vitest.config.ts` `include` glob `tests/**\/*.test.ts`).
  *
+ * `sourceCounts` is no longer a prop — it is read from the engine Redux slice
+ * via `selectSourceCounts` inside the container.  The container accepts no
+ * props; `createElement(GalaxiesSectionContainer, null)` is the correct form.
+ *
  * Tests assert:
  *  - The container reads `selectGalaxyCatalogSize` and forwards it to the
  *    point-size slider's `value`. We seed via a pre-render dispatch so the

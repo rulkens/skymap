@@ -30,3 +30,7 @@ export const selectionRowsRoute = 'selectionRows' as const;
 // paused / dwellNonce) — the single-writer state the tour sagas drive and the
 // TourOverlay reads; everything else it shows derives from the registry.
 export const tourRoute = 'tour' as const;
+// `engineRoute` is the engine runtime slice — lifecycle status, per-source and
+// per-structure counts, load progress, and the scale-bar descriptor. Written
+// by the engine via action dispatches; read by React UI components.
+export const engineRoute = 'engine' as const;

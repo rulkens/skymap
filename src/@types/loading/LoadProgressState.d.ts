@@ -1,9 +1,9 @@
 /**
- * Aggregated download-progress snapshot emitted by `onLoadProgress`.
+ * Aggregated download-progress snapshot dispatched via `engineLoadProgressChanged`.
  *
  * The aggregator owns one of these whenever any source's fetch is in
  * flight.  Once the last in-flight fetch settles (success, abort, or
- * error), the engine fires `onLoadProgress(null)` so the UI can hide
+ * error), the engine dispatches `engineLoadProgressChanged(null)` so the UI can hide
  * the bar.
  */
 export type LoadProgressState = {

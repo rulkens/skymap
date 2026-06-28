@@ -9,15 +9,16 @@ import {
   selectionRoute,
   selectionRowsRoute,
   tourRoute,
+  engineRoute,
 } from '../../src/store/constants';
 
 describe('rootReducer', () => {
-  it('mounts the settings, ui, tier, camera, selection, selectionRows, and tour routes', () => {
-    // The combine should mount exactly the seven slices the store holds —
-    // `settings`, `ui`, `tier`, `camera`, `selection`, `selectionRows`, and
-    // `tour` — in that order. This guards against an accidental extra route
-    // sneaking in (or one going missing); each slice's own initialState shape is
-    // asserted in its slice test, not re-checked here.
+  it('mounts the settings, ui, tier, camera, selection, selectionRows, tour, and engine routes', () => {
+    // The combine should mount exactly the eight slices the store holds —
+    // `settings`, `ui`, `tier`, `camera`, `selection`, `selectionRows`, `tour`,
+    // and `engine` — in that order. This guards against an accidental extra
+    // route sneaking in (or one going missing); each slice's own initialState
+    // shape is asserted in its slice test, not re-checked here.
     const state = rootReducer(undefined, { type: '@@INIT' });
     expect(Object.keys(state)).toEqual([
       settingsRoute,
@@ -27,6 +28,7 @@ describe('rootReducer', () => {
       selectionRoute,
       selectionRowsRoute,
       tourRoute,
+      engineRoute,
     ]);
     expect(state.settings).toBeDefined();
     expect(state.ui).toBeDefined();
@@ -35,5 +37,6 @@ describe('rootReducer', () => {
     expect(state.selection).toBeDefined();
     expect(state.selectionRows).toBeDefined();
     expect(state.tour).toBeDefined();
+    expect(state.engine).toBeDefined();
   });
 });

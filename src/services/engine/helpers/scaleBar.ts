@@ -4,15 +4,15 @@
  *
  * ### Where this runs
  *
- * Consumed React-side from `useEngine.ts`, which receives camera
- * snapshots via `cb.onCameraChange` and feeds them in alongside the
- * live canvas size.  The pure return value flows into a `useState`
- * slot whose default equality check dedups unchanged frames —
- * replacing the engine-side `lastScaleSig` string compare an earlier
- * iteration relied on.
+ * Called engine-side at the frame site (`runFrame.ts`), which feeds the
+ * per-frame camera snapshot alongside the live canvas CSS size.  The pure
+ * return value is dispatched via `engineScaleChanged`, whose dedup-on-write
+ * reducer skips the assignment when label + widthPx are unchanged — so an
+ * autorotate frame that produces an identical legend never re-renders the
+ * HUD.  React reads the dispatched value via `selectScale`.
  *
- * The file still lives under `services/engine/helpers/` because moving
- * it would be unrelated churn; logically it's a pure UI helper.
+ * The file still lives under `services/engine/helpers/` alongside the frame
+ * loop that calls it; logically it's a pure UI helper.
  *
  * ### The math
  *

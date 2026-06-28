@@ -19,7 +19,7 @@ import type { CameraDriver } from '../camera/CameraDriver';
 export type RunFrameDeps = {
   /** createEngine arg — for resize + viewport reads. */
   canvas: HTMLCanvasElement;
-  /** createEngine arg — for the `camera.onCameraChange` echo. */
+  /** createEngine arg — carries the Redux store the frame loop dispatches through (camera pose, `engineScaleChanged`). */
   cb: EngineCallbacks;
   /** GPU device handle from `initGpu`. */
   device: GPUDevice;

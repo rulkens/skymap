@@ -49,7 +49,7 @@ import cx from 'classnames';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import styles from './LoadingBar.module.css';
 
-/** Props for LoadingBar.  Matches the engine's `onLoadProgress` shape. */
+/** Props for LoadingBar.  Matches the engine slice's `LoadProgressState` (dispatched via `engineLoadProgressChanged`). */
 export type LoadingBarProps = {
   /**
    * Aggregated download-progress snapshot from the engine's aggregator.

@@ -1,16 +1,11 @@
 /**
  * ScaleInfo — label and pixel width for the bottom-right distance legend bar.
  *
- * Computed React-side from the camera snapshot the engine emits via
- * `cb.onCameraChange`.  The pure math lives in
- * `services/engine/helpers/scaleBar.ts` (`computeScaleInfo`); React stores
- * the latest value in a `useState` slot whose default equality check
- * filters unchanged emissions.
- *
- * Pre-extraction the engine owned this computation, dedup'd on a closure-
- * captured `lastScaleSig`, and pushed via `onScaleChange`.  The lift to
- * React lets the engine shed scale-bar state entirely and treat camera
- * mutations as the single signal — UI derivation is a React concern.
+ * Computed engine-side each frame in `runFrame` from the current camera pose
+ * and canvas dimensions, then dispatched to the store via `engineScaleChanged`.
+ * The pure math lives in `services/engine/helpers/scaleBar.ts`
+ * (`computeScaleInfo`); the reducer's dedup-on-write guard keeps autorotate
+ * frames from re-rendering the ScaleBar when the label hasn't changed.
  */
 
 export type ScaleInfo = {

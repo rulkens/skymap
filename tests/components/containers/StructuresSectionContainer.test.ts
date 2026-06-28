@@ -7,9 +7,13 @@
  * matches `vitest.config.ts` `include` glob `tests/**\/*.test.ts`).
  *
  * The container:
- *  - reads `selectStructureItems` from the store
+ *  - reads `selectStructureItems` + `selectStructureCounts` from the store
  *  - projects items → `markerCategoryVisibility` via `projectMarkerCategoryVisibility`
  *  - dispatches `setStructureItemEnabled` when a per-category checkbox is toggled
+ *
+ * `structureCounts` is no longer a prop — it is read from the engine Redux
+ * slice via `selectStructureCounts`.  Tests that assert on count display seed
+ * the engine slice via `engineStructureCountsChanged` before rendering.
  *
  * Tests assert on `store.getState()` via `selectStructureItems` rather than
  * re-reading the DOM: RTK `dispatch` is synchronous, so the store reflects the
@@ -29,6 +33,7 @@ import { Provider } from 'react-redux';
 import StructuresSectionContainer from '../../../src/components/containers/StructuresSectionContainer';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { selectStructureItems } from '../../../src/state/settings/selectors';
+import { engineStructureCountsChanged } from '../../../src/state/engine/engineSlice';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
@@ -96,10 +101,14 @@ describe('StructuresSectionContainer', () => {
     expect(selectStructureItems(store.getState())['cluster'].enabled).toBe(false);
   });
 
-  it('threads structureCounts prop through to the section body', () => {
+  it('reads structureCounts from the engine slice and forwards them to the section body', () => {
     const { store } = createAppStore();
+    // Seed the engine slice with a known count — the container reads
+    // `selectStructureCounts` internally (no prop threading).
+    store.dispatch(engineStructureCountsChanged({ cluster: 42 }));
+
     const { container } = render(
-      createElement(StructuresSectionContainer, { structureCounts: { cluster: 42 } }),
+      createElement(StructuresSectionContainer, null),
       { wrapper: makeWrapper(store) },
     );
 
