@@ -163,7 +163,6 @@ function makeState(): EngineState {
       loadProgress: null,
     },
     cam: null,
-    initialCamSnapshot: null,
     assetSlots: {
       points: new Map(),
       filaments: null,

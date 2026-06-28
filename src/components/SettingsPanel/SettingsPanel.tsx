@@ -31,7 +31,7 @@
  *   - `structureCounts` — per-category structure counts from the engine; same
  *     pattern as sourceCounts for the Structures section badges.
  *   - `onResetCamera` — called when the user clicks "Reset camera"; wired in App
- *     to `handleRef.current?.camera.focusOnHome()`.
+ *     to a focus on the Milky Way ("home").
  *
  * ### Tier chip
  *
@@ -75,7 +75,7 @@ type SettingsPanelProps = {
    * to StructuresSectionContainer.
    */
   structureCounts?: Partial<Record<StructureId, number>>;
-  /** Called when the user clicks "Reset camera". App wires `camera.focusOnHome()`. */
+  /** Called when the user clicks "Reset camera". App wires it to a Milky-Way focus. */
   onResetCamera: () => void;
 };
 

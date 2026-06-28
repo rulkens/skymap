@@ -193,7 +193,6 @@ describe('EngineState type', () => {
         fades: makeRegistry(),
       },
       cam: null,
-      initialCamSnapshot: null,
       cameraRuntime: {
         clock: createCameraClock(),
         projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
@@ -395,7 +394,6 @@ describe('EngineState type', () => {
         fades: makeRegistry(),
       },
       cam: null,
-      initialCamSnapshot: null,
       cameraRuntime: {
         clock: createCameraClock(),
         projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },

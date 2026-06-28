@@ -79,9 +79,15 @@ export function App(): React.ReactElement {
   const visibleSourceMask = useAppSelector(selectVisibleSourceMask);
   const currentTier = useAppSelector(selectTier);
 
-  // Stable reset-camera callback for SettingsPanel's memo to bail on re-renders.
-  // `handleRef` is a stable ref — the arrow identity is permanent.
-  const onResetCamera = useCallback(() => handleRef.current?.camera.focusOnHome(), [handleRef]);
+  // "Home" frames our own galaxy: the Reset-camera button, the Home pill, and
+  // the palette's Milky-Way entry all route through the standard focus channel
+  // (updateSelectionFocus → watchFocusTweenSaga), so the camera tween, URL hash,
+  // and selection state match every other focus. One stable identity keeps the
+  // memo'd SettingsPanel / HomeButton from re-rendering.
+  const focusMilkyWay = useCallback(
+    () => dispatch(updateSelectionFocus({ type: 'milkyWay' })),
+    [dispatch],
+  );
 
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
   // on selection / tier swap / catalog landing (`sourceCounts`) / galaxy catalog
@@ -205,17 +211,14 @@ export function App(): React.ReactElement {
             defaultOpen={initialPanelsOpen}
             sourceCounts={sourceCounts}
             structureCounts={structureCounts}
-            onResetCamera={onResetCamera}
+            onResetCamera={focusMilkyWay}
           />
         </div>
         {/* Top-center pill row.  SearchTrigger + the pills share a flex
             wrapper so they fade together when the palette opens. */}
         <div className={appStyles.topBar}>
           <SearchTrigger onClick={openPalette} hidden={paletteOpen || splash.splashVisible} />
-          <HomeButton
-            onClick={() => handleRef.current?.camera.focusOnHome()}
-            hidden={paletteOpen || splash.splashVisible}
-          />
+          <HomeButton onClick={focusMilkyWay} hidden={paletteOpen || splash.splashVisible} />
           <AutoRotateToggleContainer hidden={paletteOpen || splash.splashVisible} />
           <AboutPill onClick={splash.reopen} hidden={paletteOpen || splash.splashVisible} />
         </div>
@@ -236,7 +239,7 @@ export function App(): React.ReactElement {
           }
           // The Milky Way is a first-class FocusableTarget — focus it through
           // the same select → focus path every other target uses.
-          onSelectMilkyWay={() => dispatch(updateSelectionFocus({ type: 'milkyWay' }))}
+          onSelectMilkyWay={focusMilkyWay}
         />
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}

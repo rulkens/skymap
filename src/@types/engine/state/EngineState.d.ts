@@ -31,7 +31,6 @@
  *   - `state.gpu`        — pipelines / textures allocated lazily.
  *   - `state.subsystems` — owned long-lived helpers.
  *   - `state.cam`        — the orbit camera (null until first cloud).
- *   - `state.initialCamSnapshot` — framing snapshot for resetCamera().
  *
  * ### Why a single `const` instead of a class?
  *
@@ -81,7 +80,6 @@ import type { EngineAssetSlots } from './EngineAssetSlots';
 import type { EngineGpuHandles } from '../handles/EngineGpuHandles';
 import type { EngineSubsystemHandles } from '../handles/EngineSubsystemHandles';
 import type { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
-import type { InitialCam } from '../../camera/InitialCam';
 import type { RequestKey } from '../../loading/RequestKey';
 import type { CameraRuntime } from './CameraRuntime';
 import type { SelectionState } from '../../store/SelectionState';
@@ -120,7 +118,6 @@ export type EngineState = {
   gpu: EngineGpuHandles;
   subsystems: EngineSubsystemHandles;
   cam: ReturnType<typeof createOrbitCamera> | null;
-  initialCamSnapshot: InitialCam | null;
   /**
    * Live camera Resources: the animation clock, the projection config, and
    * the commit-on-edge bookkeeping (lastPose + prevActiveId). Constructed in

@@ -89,12 +89,10 @@ import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsys
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
-import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
-import { tweenToCameraSnapshot } from './camera/cameraSnapshot';
 
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
@@ -147,8 +145,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //                    `initGpu` finishes.
   //   - `subsystems` → long-lived helpers; some construct up-front, the rest
   //                    land later.
-  //   - `cam` / `initialCamSnapshot` → orbit camera + framing snapshot,
-  //                    null until the first cloud loads.
+  //   - `cam`        → orbit camera, null until the first cloud loads.
   //
   // The outer `state` binding is `const` — only inner fields mutate.
   // Mutation in place matches the subsystem facades and avoids per-frame
@@ -369,7 +366,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       loadProgress: null,
     },
     cam: null,
-    initialCamSnapshot: null,
     // The live camera Resources — clock, projection, lastPose, prevActiveId.
     // Seeded with placeholders; wireInput fills real values at bootstrap.
     cameraRuntime,
@@ -562,19 +558,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // returning live state.  Declared up-front so the sub-handle literal can
   // reference each by name — no forward references, no `!` assertions.
 
-  function focusOnHome(): void {
-    // Snapshot null-check; cam-null is absorbed inside the helper.
-    if (!state.initialCamSnapshot) return;
-
-    // Returning to home clears the focus slot so the cluster-focus fade
-    // collapses and the URL hash clears. The focus slot lives in the Redux
-    // selection slice — dispatch the null write through the store so the
-    // saga and React readers see the same authoritative value.
-    store.dispatch(updateSelectionFocus(null));
-
-    tweenToCameraSnapshot(state, state.initialCamSnapshot, store);
-  }
-
   function logCameraStateFn(): void {
     logCameraState(state.cam);
   }
@@ -700,7 +683,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // selection, sources, volumes, debug) while store writes go direct to the store.
   const handle: EngineHandle = {
     camera: {
-      focusOnHome,
       logState: logCameraStateFn,
     },
     selection: {

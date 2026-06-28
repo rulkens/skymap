@@ -5,7 +5,7 @@
  *   - Cmd+K / Ctrl+K / `/`  → open the command palette
  *   - Esc                    → clear pinned selection + exit a running tour
  *   - f / F                  → focus on the currently-pinned galaxy
- *   - h / H                  → return camera to home view
+ *   - h / H                  → frame the Milky Way ("home" is our galaxy)
  *   - Tab                    → toggle "hide UI" mode (clean visual)
  *   - l                      → debug: log live camera state
  *   - d / D                  → toggle the asset-loading dev panel
@@ -91,9 +91,12 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
         return;
       }
 
-      // ── h returns to the home / Earth view ─────────────────────
+      // ── h frames the Milky Way — our galaxy is "home" ──────────
+      // Routes through the standard focus channel (updateSelectionFocus →
+      // watchFocusTweenSaga) so the camera tween, URL hash, and selection
+      // state stay consistent with every other focus.
       if (e.key === 'h' || e.key === 'H') {
-        engineHandleRef.current?.camera.focusOnHome();
+        dispatch(updateSelectionFocus({ type: 'milkyWay' }));
         return;
       }
 

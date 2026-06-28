@@ -3,8 +3,8 @@
  * third bootstrap phase: the initial camera framing call.
  *
  * `computeInitialCamera` is called with a 60° FOV and the result drives
- * `state.cam` + `state.initialCamSnapshot`. No bbox input — framing
- * uses pure constants so the phase can run before any galaxy catalog arrives.
+ * `state.cam`. No bbox input — framing uses pure constants so the phase
+ * can run before any galaxy catalog arrives.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -140,7 +140,6 @@ function makeState(): EngineState {
       inputBindings: null,
     } as never,
     cam: null,
-    initialCamSnapshot: null,
     cameraRuntime: {
       clock: createCameraClock(),
       projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
@@ -191,7 +190,6 @@ describe('wireInput', () => {
       fovYRad: (Math.PI / 180) * 60,
     });
     expect(state.cam).not.toBeNull();
-    expect(state.initialCamSnapshot).not.toBeNull();
   });
 
   it('runs to completion even with no catalogs loaded', async () => {

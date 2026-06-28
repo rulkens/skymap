@@ -70,8 +70,7 @@ export type PlayClipDeps = {
   /**
    * Accessor for the live produced camera pose. Reads
    * `state.cameraRuntime.lastPose.current` (the pose the user actually sees,
-   * not the potentially-stale `camera.base`). The same accessor
-   * `tweenToCameraSnapshot` uses for tween `from` seeds.
+   * not the potentially-stale `camera.base`).
    *
    * A closure accessor (not the pose value itself) so 'live' resolution always
    * captures the pose at dispatch time rather than at factory-creation time.
