@@ -12,19 +12,24 @@ import { flowFieldPass } from '../../../../../src/services/engine/frame/passes/f
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 
 function makeCtx(): ReadyFrameContext {
   return {
     isReady: true,
     cam: {} as never,
-    vp: new Float32Array(16) as unknown as mat4,
+    vp: new Float32Array(16) as unknown as Mat4,
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
-    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
+    focus: {
+      center: [0, 0, 0] as Readonly<[number, number, number]>,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0,
+      blend: 0,
+    },
     renderer: {} as never,
     postProcess: {} as never,
     volumeOffscreen: {} as never,
@@ -64,34 +69,23 @@ const PASS_STUB = {
 describe('flowFieldPass.enabled', () => {
   it('returns false when the cube is not loaded (even if enabled)', () => {
     expect(
-      flowFieldPass.enabled(
-        makeState({ enabled: true, loaded: false, opacity: 1 }),
-        makeCtx(),
-      ),
+      flowFieldPass.enabled(makeState({ enabled: true, loaded: false, opacity: 1 }), makeCtx()),
     ).toBe(false);
   });
 
   it('returns true when enabled AND loaded', () => {
-    expect(
-      flowFieldPass.enabled(makeState({ enabled: true, loaded: true }), makeCtx()),
-    ).toBe(true);
+    expect(flowFieldPass.enabled(makeState({ enabled: true, loaded: true }), makeCtx())).toBe(true);
   });
 
   it('returns true when disabled but loaded and fade opacity > 0 (fade-out keep-alive)', () => {
     expect(
-      flowFieldPass.enabled(
-        makeState({ enabled: false, loaded: true, opacity: 0.3 }),
-        makeCtx(),
-      ),
+      flowFieldPass.enabled(makeState({ enabled: false, loaded: true, opacity: 0.3 }), makeCtx()),
     ).toBe(true);
   });
 
   it('returns false when disabled, loaded, and fade opacity is 0', () => {
     expect(
-      flowFieldPass.enabled(
-        makeState({ enabled: false, loaded: true, opacity: 0 }),
-        makeCtx(),
-      ),
+      flowFieldPass.enabled(makeState({ enabled: false, loaded: true, opacity: 0 }), makeCtx()),
     ).toBe(false);
   });
 });
@@ -113,8 +107,6 @@ describe('flowFieldPass.draw', () => {
 
   it('does not throw when flowFieldRenderer is null (defensive null-check)', () => {
     const deps = { flowFieldRenderer: null } as unknown as PassDeps;
-    expect(() =>
-      flowFieldPass.draw(PASS_STUB, makeCtx(), makeState(), deps),
-    ).not.toThrow();
+    expect(() => flowFieldPass.draw(PASS_STUB, makeCtx(), makeState(), deps)).not.toThrow();
   });
 });

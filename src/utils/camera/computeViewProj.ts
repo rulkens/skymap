@@ -9,7 +9,8 @@
  * plain Node/Vitest environment.
  */
 
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4 } from 'wgpu-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { Vec3 } from '../../@types/math/Vec3';
 
@@ -33,21 +34,13 @@ import type { Vec3 } from '../../@types/math/Vec3';
  *   - −Z points *into* the scene (toward `center`).
  *   - +Y aligns with the world-up projected onto the image plane.
  *
- * ### Projection matrix — `mat4.perspectiveZO` (not `perspectiveNO`)
+ * ### Projection matrix — `mat4.perspective`
  *
- * gl-matrix offers two perspective variants:
- *
- *   - `perspectiveNO` — maps the view frustum to clip-space depth **[−1, +1]**
- *     (OpenGL convention, "Normalized range from Negative to pOsitive one").
- *   - `perspectiveZO` — maps the view frustum to clip-space depth **[0, 1]**
- *     (WebGPU / Direct3D / Metal convention, "Zero to One").
- *
- * WebGPU's NDC (Normalised Device Coordinates) uses the [0, 1] depth range.
- * Using `perspectiveNO` would map depths to [−1, +1] in clip space, but the
- * hardware would then interpret those values against a [0, 1] depth buffer,
- * effectively discarding half the frustum and inverting depth comparisons.
- * The result is objects that disappear or z-fight incorrectly.  Always use
- * `perspectiveZO` for WebGPU.
+ * wgpu-matrix's `mat4.perspective` maps the view frustum to clip-space depth
+ * **[0, 1]** — the WebGPU / Direct3D / Metal convention ("Zero to One") — by
+ * default.  That matches WebGPU's NDC depth range directly, so there is no
+ * separate "ZO vs NO" choice to make (unlike gl-matrix, which defaulted to the
+ * OpenGL [−1, +1] range and required calling `perspectiveZO` explicitly).
  *
  * ### Multiplication order — `proj * view`
  *
@@ -63,9 +56,9 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * clip).  This is the standard MVP formula with M = Identity.
  *
  * @param cam  The orbit camera whose state to snapshot into matrices.
- * @returns A new `mat4` representing the combined view-projection transform.
+ * @returns A new `Mat4` representing the combined view-projection transform.
  */
-export function computeViewProj(cam: OrbitCamera): mat4 {
+export function computeViewProj(cam: OrbitCamera): Mat4 {
   // ── View matrix ──────────────────────────────────────────────────────────
   //
   // We need an "up" vector for `lookAt`.  By default this is world +Y, which
@@ -115,11 +108,12 @@ export function computeViewProj(cam: OrbitCamera): mat4 {
     upZ = 0 * c + crossZ * s + kz * dot * (1 - c);
   }
 
-  const view = mat4.create();
-  mat4.lookAt(
-    view,
+  // wgpu-matrix ops take the destination as an optional LAST argument and
+  // return it.  Omitting it allocates a fresh Mat4 (Float32Array) — same
+  // allocation behaviour as the previous `mat4.create()` + write-into-dst.
+  const view = mat4.lookAt(
     cam.position, // eye: where the camera is
-    cam.target as vec3, // center: what the camera looks at
+    cam.target, // center: what the camera looks at
     [upX, upY, upZ], // up: world +Y by default; rotated by roll when non-zero
     // ⚠ If pitch = ±π/2, `position` is directly above/below `target` and
     // the default up vector is parallel to the view direction.  lookAt
@@ -128,14 +122,12 @@ export function computeViewProj(cam: OrbitCamera): mat4 {
   );
 
   // ── Projection matrix ────────────────────────────────────────────────────
-  const proj = mat4.create();
-  // perspectiveZO: depth maps to [0, 1] — required for WebGPU.
-  mat4.perspectiveZO(proj, cam.fovYRad, cam.aspect, cam.near, cam.far);
+  // mat4.perspective: depth maps to [0, 1] by default — required for WebGPU.
+  const proj = mat4.perspective(cam.fovYRad, cam.aspect, cam.near, cam.far);
 
   // ── Combined view-projection ─────────────────────────────────────────────
-  const vp = mat4.create();
-  // mat4.multiply(out, a, b) computes out = a * b.
+  // mat4.multiply(a, b) computes a * b.
   // Reading right-to-left: view is applied first, then projection.
-  mat4.multiply(vp, proj, view);
+  const vp = mat4.multiply(proj, view);
   return vp;
 }

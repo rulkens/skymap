@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import { texturedDisksPass } from '../../../../../src/services/engine/frame/passes/texturedDisksPass';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -25,13 +25,18 @@ function makeCtx(): ReadyFrameContext {
   return {
     isReady: true,
     cam,
-    vp: new Float32Array(16) as unknown as mat4,
+    vp: new Float32Array(16) as unknown as Mat4,
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
-    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
+    focus: {
+      center: [0, 0, 0] as Readonly<[number, number, number]>,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0,
+      blend: 0,
+    },
     renderer: { draw: vi.fn() } as any,
     postProcess: {
       view: {} as GPUTextureView,
@@ -71,9 +76,7 @@ describe('texturedDisksPass', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}], quads: [] } } },
       settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
-    expect(
-      texturedDisksPass.enabled(state, makeCtx()),
-    ).toBe(false);
+    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns false when subsystem is null', () => {

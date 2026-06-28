@@ -12,7 +12,6 @@
  * that logic.  It is pure: pose and projection are never mutated.
  */
 
-import { vec3 } from 'gl-matrix';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
@@ -37,8 +36,8 @@ export function assembleOrbitCamera(pose: CameraPose, projection: CameraProjecti
     aspect: projection.aspect,
     near: projection.near,
     far: projection.far,
-    // Writable Float32Array; updatePosition fills it before we return.
-    position: vec3.create(),
+    // Writable position tuple; updatePosition fills it before we return.
+    position: [0, 0, 0],
   };
   // Derive position = target + distance * spherical-to-Cartesian(yaw, pitch).
   updatePosition(cam);

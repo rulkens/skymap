@@ -45,7 +45,7 @@
  * valid, so a palette change costs one queue write and zero rebinds.
  */
 
-import { mat4 } from 'gl-matrix';
+import { mat4 } from 'wgpu-matrix';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { ScalarFieldPaletteId } from '../../../@types/data/volume/ScalarFieldPaletteId';
 import type { Renderer } from '../../../@types/rendering/Renderer';
@@ -276,8 +276,7 @@ export function createVolumeFieldRenderer(
       // seeded here — they live in settings and are read per frame in `draw`.
       const defaults = getVolumeFieldDefaults(id);
       const modelMatrix = buildCubeModelMatrix(cube);
-      const invModelMatrix = mat4.create();
-      mat4.invert(invModelMatrix, modelMatrix);
+      const invModelMatrix = mat4.inverse(modelMatrix);
       const volumeTexture = uploadCube(cube);
       const paletteTexture = createPaletteTexture();
       // Seed the resident LUT from the registry default so it matches

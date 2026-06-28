@@ -45,7 +45,7 @@
  * resurrect the race.
  */
 
-import { mat4 } from 'gl-matrix';
+import { mat4, type Mat4 } from 'wgpu-matrix';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
@@ -220,7 +220,9 @@ export function createFlowFieldRenderer(init: {
   // ── Mutable internal state (the one allowed mutable shell) ─────────────────
   const reseed = createReseedLatch();
   let field: FlowField | null = null;
-  let modelMatrix = mat4.create();
+  // mat4.identity() — wgpu-matrix's create() returns zeros, but this default
+  // must be identity (it's read by encodeCompute before a field loads).
+  let modelMatrix = mat4.identity();
   // Travelling-pulse accumulator for streamline mode; an internal per-frame
   // counter advanced by DT * flowSpeed, kept off the settings store.
   let phase = 0;
@@ -345,7 +347,7 @@ export function createFlowFieldRenderer(init: {
 
     draw(
       pass: GPURenderPassEncoder,
-      viewProj: mat4,
+      viewProj: Mat4,
       viewportPx: Vec2,
       flow: FlowSettings,
       opacity: number,

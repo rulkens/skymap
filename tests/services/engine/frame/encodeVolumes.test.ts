@@ -15,7 +15,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { encodeVolumes } from '../../../../src/services/engine/frame/encodeVolumes';
 import { VOLUME_RENDER_SCALE_DIVISOR } from '../../../../src/services/gpu/passes/volumeOffscreen';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 
 function makeFakePass() {
@@ -44,13 +44,18 @@ function makeCtx(): ReadyFrameContext {
   return {
     isReady: true,
     cam: {} as never,
-    vp: new Float32Array(16) as unknown as mat4,
+    vp: new Float32Array(16) as unknown as Mat4,
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
-    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
+    focus: {
+      center: [0, 0, 0] as Readonly<[number, number, number]>,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0,
+      blend: 0,
+    },
     renderer: {} as never,
     postProcess: {
       view: {} as GPUTextureView,
@@ -237,7 +242,10 @@ describe('encodeVolumes', () => {
     const env = makeFakeEncoder();
     const ctx = makeCtx();
     const hasSpy = vi.fn((_settingsOf?: unknown, _fadeOpacityOf?: unknown) => true);
-    const volumeFieldRenderer = { draw: vi.fn((..._args: unknown[]) => {}), hasActiveFields: hasSpy } as any;
+    const volumeFieldRenderer = {
+      draw: vi.fn((..._args: unknown[]) => {}),
+      hasActiveFields: hasSpy,
+    } as any;
     const settingsOf = () => undefined;
     const fadeOpacityOf = () => 1;
     encodeVolumes({

@@ -34,7 +34,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -168,7 +168,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const cam = makeCam();
   const canvasWidth = 1280;
   const canvasHeight = 720;
-  const viewProj = new Float32Array(16) as unknown as mat4;
+  const viewProj = new Float32Array(16) as unknown as Mat4;
 
   const ctx = {
     isReady: true as const,

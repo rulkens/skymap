@@ -20,10 +20,10 @@
  *
  * ### Why `drawCamPos: Readonly<Vec3>` (a tuple)
  *
- * `OrbitCamera.position` is a gl-matrix `vec3`, which under the hood is
- * a `Float32Array`.  Forwarding the live `Float32Array` to downstream
+ * `OrbitCamera.position` is a mutable `Vec3` tuple, updated in place by
+ * `updatePosition`.  Forwarding the live array to downstream
  * passes risks two failure modes: (a) a consumer accidentally mutating
- * an entry (TypedArray writes don't fault), and (b) the camera moving
+ * an entry (array writes don't fault), and (b) the camera moving
  * between the snapshot point and the read point inside one frame —
  * possible in principle if a future feature lets a tween advance
  * mid-frame.  Snapshotting to a plain readonly tuple defends against
@@ -46,7 +46,7 @@
  * read `ctx.renderer.draw(...)` directly, no `!` needed.
  */
 
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { Vec3 } from '../../math/Vec3';
@@ -62,7 +62,7 @@ export type ReadyFrameContext = {
   /** Live camera reference. */
   cam: OrbitCamera;
   /** Combined view-projection matrix, computed once per frame. */
-  vp: mat4;
+  vp: Mat4;
   /** Backing-store-pixel viewport size; same as `canvas.{width,height}`. */
   canvasSize: { width: number; height: number };
   /** Snapshot of `cam.position` as a readonly tuple (no live Float32Array aliasing). */

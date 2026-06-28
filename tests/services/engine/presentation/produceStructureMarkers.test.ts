@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mat4 } from 'gl-matrix';
+import { mat4 } from 'wgpu-matrix';
 import { produceStructureMarkers } from '../../../../src/services/engine/presentation/produceStructureMarkers';
 import { MARKER_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
@@ -64,7 +64,7 @@ function makeCtx(focusBlend = 0): ReadyFrameContext {
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
     focusBlend,
-    vp: mat4.create(),
+    vp: mat4.identity(),
   } as unknown as ReadyFrameContext;
 }
 

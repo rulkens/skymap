@@ -7,7 +7,7 @@
  * or WebGPU dependency so it can run in a plain Node/Vitest environment.
  */
 
-import { vec3 } from 'gl-matrix';
+import { vec3 } from 'wgpu-matrix';
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 
 /**
@@ -35,7 +35,7 @@ import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
  *
  * Finally:  position = target + distance · dir
  *
- * (This is `vec3.scaleAndAdd`: dst = a + b*scale.)
+ * (This is `vec3.addScaled`: dst = a + b*scale.)
  *
  * @param cam  The camera to update in-place.
  */
@@ -50,6 +50,6 @@ export function updatePosition(cam: OrbitCamera): void {
   const dir = vec3.fromValues(cp * sy, sp, cp * cy);
 
   // position = target + distance * dir
-  // vec3.scaleAndAdd(out, a, b, scale) computes  out = a + b*scale.
-  vec3.scaleAndAdd(cam.position, cam.target as vec3, dir, cam.distance);
+  // vec3.addScaled(a, b, scale, dst) computes  dst = a + b*scale.
+  vec3.addScaled(cam.target, dir, cam.distance, cam.position);
 }

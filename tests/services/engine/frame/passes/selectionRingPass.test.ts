@@ -3,7 +3,7 @@ import { selectionRingPass } from '../../../../../src/services/engine/frame/pass
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import { Source } from '../../../../../src/data/sources';
 import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
@@ -16,13 +16,18 @@ function makeCtx(): ReadyFrameContext {
   return {
     isReady: true,
     cam: {} as never,
-    vp: new Float32Array(16) as unknown as mat4,
+    vp: new Float32Array(16) as unknown as Mat4,
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
-    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
+    focus: {
+      center: [0, 0, 0] as Readonly<[number, number, number]>,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0,
+      blend: 0,
+    },
     renderer: {} as never,
     postProcess: {} as never,
     volumeOffscreen: {} as never,
@@ -146,12 +151,7 @@ describe('selectionRingPass.enabled', () => {
 describe('selectionRingPass.draw', () => {
   it('computes ringRadiusPx from the row and forwards to renderer', () => {
     const state = makeStateWithSizePx(galaxyRow(), 4);
-    selectionRingPass.draw(
-      PASS_STUB,
-      makeCtx(),
-      state,
-      DEPS_STUB,
-    );
+    selectionRingPass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB);
 
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
@@ -173,12 +173,7 @@ describe('selectionRingPass.draw', () => {
     // Galaxy at 10 Mpc so the apparent radius dominates.
     const state = makeStateWithSizePx(galaxyRow({ z: 10 }), 4);
 
-    selectionRingPass.draw(
-      PASS_STUB,
-      makeCtx(),
-      state,
-      DEPS_STUB,
-    );
+    selectionRingPass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB);
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;

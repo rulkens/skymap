@@ -27,7 +27,7 @@ import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bak
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 
 // PointRenderer keys its catalogs by the string `GalaxyCatalogId` now;
 // these tests still reason in terms of the numeric `Source` codes (the
@@ -856,7 +856,7 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       draw: () => calls.push('draw'),
     } as unknown as GPURenderPassEncoder;
 
-    const viewProj = new Float32Array(16) as unknown as mat4;
+    const viewProj = new Float32Array(16) as unknown as Mat4;
 
     renderer.draw(pass, viewProj, [800, 600], {
       pointSizePx: 1,

@@ -37,7 +37,7 @@ import fsCode from '../shaders/filaments/fragment.wesl?static';
 import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { FilamentRenderer } from '../../../@types/rendering/FilamentRenderer';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -274,7 +274,7 @@ export function createFilamentRenderer(
 
   function draw(
     pass: GPURenderPassEncoder,
-    viewProj: mat4,
+    viewProj: Mat4,
     viewportPx: Vec2,
     halfWidthPx: number,
     intensityScale: number,

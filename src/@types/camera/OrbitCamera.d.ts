@@ -4,7 +4,7 @@
  * raycasting code can read it cheaply without re-deriving it each frame.
  */
 
-import type { vec3 } from 'gl-matrix';
+import type { Vec3 } from '../math/Vec3';
 import type { OrbitCameraInit } from './OrbitCameraInit';
 
 /**
@@ -23,5 +23,5 @@ export type OrbitCamera = OrbitCameraInit & {
    * World-space camera position, derived from target + distance + yaw + pitch.
    * Do NOT write this directly — call `updatePosition(cam)` instead.
    */
-  position: vec3;
+  position: Vec3;
 };

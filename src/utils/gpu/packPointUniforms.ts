@@ -21,7 +21,7 @@
  * @module
  */
 
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { PointDrawSettings } from '../../@types/rendering/PointDrawSettings';
 
 /**
@@ -45,7 +45,7 @@ export const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 
  * produce a clean starting point for its three-field override.
  */
 export function packPointUniforms(
-  viewProj: mat4,
+  viewProj: Mat4,
   viewportPx: readonly [number, number],
   settings: PointDrawSettings,
 ): ArrayBuffer {

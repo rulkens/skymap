@@ -20,7 +20,7 @@
  * (the `Pass` interface) lets us assert behaviour without a real device.
  */
 import { describe, it, expect, vi } from 'vitest';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import { filamentsPass } from '../../../../../src/services/engine/frame/passes/filamentsPass';
 import { FILAMENT_RECESSION } from '../../../../../src/services/engine/presentation/focusRecession';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
@@ -31,13 +31,18 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
   return {
     isReady: true,
     cam: {} as never,
-    vp: new Float32Array(16) as unknown as mat4,
+    vp: new Float32Array(16) as unknown as Mat4,
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     focusBlend,
     visibleSourceMask: 0xffffffff,
-    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: focusBlend },
+    focus: {
+      center: [0, 0, 0] as Readonly<[number, number, number]>,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0,
+      blend: focusBlend,
+    },
     renderer: {} as never,
     postProcess: {
       view: {} as GPUTextureView,

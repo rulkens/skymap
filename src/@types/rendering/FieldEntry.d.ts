@@ -16,7 +16,7 @@
  * shape.
  */
 
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
@@ -56,8 +56,8 @@ export type FieldEntry = {
    * that needs a residency mirror to know when a re-upload is due.
    */
   residentPaletteId: ScalarFieldPaletteId;
-  modelMatrix: mat4;
-  invModelMatrix: mat4;
+  modelMatrix: Mat4;
+  invModelMatrix: Mat4;
   volumeTexture: GPUTexture;
   paletteTexture: GPUTexture;
   uniformBuffer: GPUBuffer;
