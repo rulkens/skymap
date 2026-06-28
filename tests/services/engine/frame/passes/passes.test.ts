@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 
 import { Source } from '../../../../../src/data/sources';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
@@ -57,7 +57,7 @@ function makeCam(): OrbitCamera {
  */
 function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   const cam = makeCam();
-  const vp = new Float32Array(16) as unknown as mat4;
+  const vp = new Float32Array(16) as unknown as Mat4;
   const renderer = { draw: vi.fn() } as any;
   const postProcess = {
     view: {} as GPUTextureView,
@@ -80,7 +80,12 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
-    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
+    focus: {
+      center: [0, 0, 0] as Readonly<[number, number, number]>,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0,
+      blend: 0,
+    },
     renderer,
     postProcess,
     volumeOffscreen,
@@ -200,9 +205,7 @@ describe('proceduralDisksPass.enabled', () => {
       },
       settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
-    expect(
-      proceduralDisksPass.enabled(state, makeCtx()),
-    ).toBe(false);
+    expect(proceduralDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns false when subsystem is null', () => {
@@ -210,9 +213,7 @@ describe('proceduralDisksPass.enabled', () => {
       subsystems: { proceduralDisks: null },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(
-      proceduralDisksPass.enabled(state, makeCtx()),
-    ).toBe(false);
+    expect(proceduralDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns false when no instances are pending', () => {
@@ -220,9 +221,7 @@ describe('proceduralDisksPass.enabled', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(
-      proceduralDisksPass.enabled(state, makeCtx()),
-    ).toBe(false);
+    expect(proceduralDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns true when enabled, subsystem present, and instances pending', () => {
@@ -230,9 +229,7 @@ describe('proceduralDisksPass.enabled', () => {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(
-      proceduralDisksPass.enabled(state, makeCtx()),
-    ).toBe(true);
+    expect(proceduralDisksPass.enabled(state, makeCtx())).toBe(true);
   });
 });
 
@@ -247,9 +244,7 @@ describe('filamentsPass.enabled', () => {
       ...STATE_STUB,
       settings: { filaments: { enabled: true, intensity: 1 } },
     } as unknown as EngineState;
-    expect(
-      filamentsPass.enabled(stateOn, makeCtx()),
-    ).toBe(true);
+    expect(filamentsPass.enabled(stateOn, makeCtx())).toBe(true);
   });
 
   it('returns false when filaments.enabled is false AND fade opacity is 0', () => {
@@ -259,9 +254,7 @@ describe('filamentsPass.enabled', () => {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
       settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
-    expect(
-      filamentsPass.enabled(stateZeroFade, makeCtx()),
-    ).toBe(false);
+    expect(filamentsPass.enabled(stateZeroFade, makeCtx())).toBe(false);
   });
 
   it('returns true when filaments.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
@@ -272,9 +265,7 @@ describe('filamentsPass.enabled', () => {
       ...STATE_STUB,
       settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
-    expect(
-      filamentsPass.enabled(stateOffFading, makeCtx()),
-    ).toBe(true);
+    expect(filamentsPass.enabled(stateOffFading, makeCtx())).toBe(true);
   });
 });
 
@@ -288,14 +279,7 @@ describe('filamentsPass.draw', () => {
       ...STATE_STUB,
       settings: { filaments: { enabled: true, intensity: 1 } },
     } as unknown as EngineState;
-    expect(() =>
-      filamentsPass.draw(
-        PASS_STUB,
-        makeCtx(),
-        stateOn,
-        deps,
-      ),
-    ).not.toThrow();
+    expect(() => filamentsPass.draw(PASS_STUB, makeCtx(), stateOn, deps)).not.toThrow();
   });
 
   it('forwards correct args to filamentRenderer.draw when present', () => {
@@ -326,9 +310,7 @@ describe('milkyWayPass.enabled', () => {
       ...STATE_STUB,
       settings: { milkyWay: { enabled: true } },
     } as unknown as EngineState;
-    expect(
-      milkyWayPass.enabled(stateOn, makeCtx()),
-    ).toBe(true);
+    expect(milkyWayPass.enabled(stateOn, makeCtx())).toBe(true);
   });
 
   it('returns false when milkyWay.enabled is false AND fade opacity is 0', () => {
@@ -338,9 +320,7 @@ describe('milkyWayPass.enabled', () => {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
-    expect(
-      milkyWayPass.enabled(stateOffZeroFade, makeCtx()),
-    ).toBe(false);
+    expect(milkyWayPass.enabled(stateOffZeroFade, makeCtx())).toBe(false);
   });
 
   it('returns true when milkyWay.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
@@ -351,9 +331,7 @@ describe('milkyWayPass.enabled', () => {
       ...STATE_STUB,
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
-    expect(
-      milkyWayPass.enabled(stateOffFading, makeCtx()),
-    ).toBe(true);
+    expect(milkyWayPass.enabled(stateOffFading, makeCtx())).toBe(true);
   });
 
   it('returns false when camera is beyond the fade band (no empty render pass)', () => {

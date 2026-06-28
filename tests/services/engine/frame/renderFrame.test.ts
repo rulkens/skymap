@@ -24,7 +24,7 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ function makeInput(
   // a single struct. The test mirrors that wiring.
   const canvasWidth = 1280;
   const canvasHeight = 720;
-  const viewProj = new Float32Array(16) as unknown as mat4;
+  const viewProj = new Float32Array(16) as unknown as Mat4;
   const ctx = {
     isReady: true as const,
     cam,
@@ -263,7 +263,12 @@ function makeInput(
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
-    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
+    focus: {
+      center: [0, 0, 0] as Readonly<[number, number, number]>,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0,
+      blend: 0,
+    },
     renderer: pointRenderer,
     postProcess,
     volumeOffscreen,

@@ -13,7 +13,7 @@
  * the cube unchanged), and the flow renderer builds one from `FlowFieldMeta` +
  * an identity rotation. See `CubePlacement` for that rationale.
  */
-import { mat4 } from 'gl-matrix';
+import { mat4, type Mat4 } from 'wgpu-matrix';
 import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../data/superGalacticTransform';
 import type { ScalarFieldFrameKind } from '../../@types/data/volume/ScalarFieldFrameKind';
 import type { CubePlacement } from '../../@types/rendering/CubePlacement';
@@ -34,11 +34,11 @@ import type { CubePlacement } from '../../@types/rendering/CubePlacement';
 // `SG_TO_EQ_MAT4_COL_MAJOR` for the rationale and the historical
 // drift that prompted the consolidation.
 //
-// Cast: gl-matrix's `mat4` is `Float32Array(16)`, and `mat4.fromValues`
-// expects 16 positional args.  `Float32Array.of(...readonly number[])`
-// would work too, but `mat4.fromValues` makes the gl-matrix contract
-// explicit at the call site.
-const SG_TO_EQ_ROT = mat4.fromValues(
+// `mat4.create` accepts 16 positional values and returns a `Mat4`
+// (`Float32Array(16)`).  `Float32Array.of(...readonly number[])` would work
+// too, but the positional form makes the matrix contract explicit at the call
+// site.  (wgpu-matrix has no `fromValues`; `create` doubles as both.)
+const SG_TO_EQ_ROT = mat4.create(
   SG_TO_EQ_MAT4_COL_MAJOR[0]!,
   SG_TO_EQ_MAT4_COL_MAJOR[1]!,
   SG_TO_EQ_MAT4_COL_MAJOR[2]!,
@@ -57,10 +57,13 @@ const SG_TO_EQ_ROT = mat4.fromValues(
   SG_TO_EQ_MAT4_COL_MAJOR[15]!,
 );
 
-const FRAME_TO_WORLD: Record<ScalarFieldFrameKind, mat4> = {
+// wgpu-matrix's `mat4.create()` returns a ZERO matrix (unlike gl-matrix's
+// identity-returning `create()`), so the no-rotation frames use `mat4.identity()`
+// — anything else would zero out the cube transform.
+const FRAME_TO_WORLD: Record<ScalarFieldFrameKind, Mat4> = {
   'supergalactic-cartesian': SG_TO_EQ_ROT,
-  'equatorial-cartesian': mat4.create(),
-  galactic: mat4.create(),
+  'equatorial-cartesian': mat4.identity(),
+  galactic: mat4.identity(),
 };
 
 // Composition order, applied right-to-left to a unit-cube corner v:
@@ -82,16 +85,20 @@ const FRAME_TO_WORLD: Record<ScalarFieldFrameKind, mat4> = {
 //
 // Pure math, no GPU device — unit-testable on its own (see
 // `tests/utils/math/buildCubeModelMatrix.test.ts`).
-export function buildCubeModelMatrix(cube: CubePlacement): mat4 {
-  const out = mat4.create();
-  mat4.copy(out, FRAME_TO_WORLD[cube.frameKind]);
-  const rotMat = mat4.create();
-  mat4.fromQuat(rotMat, [cube.rotation[0], cube.rotation[1], cube.rotation[2], cube.rotation[3]]);
-  mat4.multiply(out, out, rotMat);
-  mat4.translate(out, out, [cube.origin[0], cube.origin[1], cube.origin[2]]);
+export function buildCubeModelMatrix(cube: CubePlacement): Mat4 {
+  // wgpu-matrix ops take the destination as an optional LAST arg and return it.
+  const out = mat4.copy(FRAME_TO_WORLD[cube.frameKind]);
+  const rotMat = mat4.fromQuat([
+    cube.rotation[0],
+    cube.rotation[1],
+    cube.rotation[2],
+    cube.rotation[3],
+  ]);
+  mat4.multiply(out, rotMat, out);
+  mat4.translate(out, [cube.origin[0], cube.origin[1], cube.origin[2]], out);
   const sx = cube.dims[0] * cube.voxelSize;
   const sy = cube.dims[1] * cube.voxelSize;
   const sz = cube.dims[2] * cube.voxelSize;
-  mat4.scale(out, out, [sx, sy, sz]);
+  mat4.scale(out, [sx, sy, sz], out);
   return out;
 }

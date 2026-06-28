@@ -8,7 +8,7 @@
  * own GPU buffer and receives the packed bytes via `draw()`'s return value.
  */
 
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../data/SourceType';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
@@ -83,7 +83,7 @@ export type PointRenderer = {
    */
   draw(
     pass: GPURenderPassEncoder,
-    viewProj: mat4,
+    viewProj: Mat4,
     viewportPx: Vec2,
     settings: PointDrawSettings,
   ): ArrayBuffer | null;

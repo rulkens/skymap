@@ -64,7 +64,8 @@ import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
 import { updatePosition } from '../../utils/camera/updatePosition';
 import { clampDistance } from '../../utils/camera/clampDistance';
-import { vec3 } from 'gl-matrix';
+import { vec3 } from 'wgpu-matrix';
+import type { Vec3 } from '../../@types/math/Vec3';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -316,13 +317,13 @@ export function attachOrbitControls(
   //
   // Allocated once at attach time and reused on every pointermove so the
   // hot-path doesn't allocate.  vec3.cross / vec3.normalize / vec3.scale all
-  // accept an `out` first arg; we pass these scratches in to keep GC pressure
-  // at zero during a continuous drag.
+  // accept the `dst` as an optional LAST arg; we pass these scratches in as
+  // that destination to keep GC pressure at zero during a continuous drag.
   const forwardScratch = vec3.create();
   const rightScratch = vec3.create();
   const upScratch = vec3.create();
   const panDeltaScratch = vec3.create();
-  const WORLD_UP: vec3 = [0, 1, 0];
+  const WORLD_UP: Vec3 = [0, 1, 0];
 
   const onMove = (e: PointerEvent) => {
     // Update the live position of whichever pointer this move belongs to.
@@ -394,11 +395,11 @@ export function attachOrbitControls(
       // screen-up axis, recomputed orthogonal to forward + right rather
       // than blindly using world_up; this is what handles tilt cases
       // correctly when pitch is non-zero).
-      vec3.subtract(forwardScratch, cam.target as vec3, cam.position as vec3);
+      vec3.subtract(cam.target, cam.position, forwardScratch);
       vec3.normalize(forwardScratch, forwardScratch);
-      vec3.cross(rightScratch, forwardScratch, WORLD_UP);
+      vec3.cross(forwardScratch, WORLD_UP, rightScratch);
       vec3.normalize(rightScratch, rightScratch);
-      vec3.cross(upScratch, rightScratch, forwardScratch);
+      vec3.cross(rightScratch, forwardScratch, upScratch);
       // upScratch is already unit length (cross of two perpendicular unit
       // vectors), but normalising defensively guards against floating-point
       // drift on long drags.
@@ -422,13 +423,13 @@ export function attachOrbitControls(
       // (CSS y grows downward; cam_up points toward +screen-up, which is
       // the OPPOSITE of CSS y, so the +dy → +cam_up sign falls out
       // naturally without an extra flip.)
-      vec3.scale(panDeltaScratch, rightScratch, -dx * pxToWorld);
-      vec3.scaleAndAdd(panDeltaScratch, panDeltaScratch, upScratch, dy * pxToWorld);
+      vec3.scale(rightScratch, -dx * pxToWorld, panDeltaScratch);
+      vec3.addScaled(panDeltaScratch, upScratch, dy * pxToWorld, panDeltaScratch);
 
       // Step 4: shift the target.  Camera.position is recomputed from
       // target + dir(yaw, pitch) · distance inside updatePosition, so we
       // only mutate target — the orbit framing stays intact.
-      vec3.add(cam.target as vec3, cam.target as vec3, panDeltaScratch);
+      vec3.add(cam.target, panDeltaScratch, cam.target);
       updatePosition(cam);
       options?.onChange?.();
       return;

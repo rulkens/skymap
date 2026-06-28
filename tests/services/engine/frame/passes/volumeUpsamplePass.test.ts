@@ -27,7 +27,7 @@ import { volumeUpsamplePass } from '../../../../../src/services/engine/frame/pas
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 
 /**
  * Build a minimal ReadyFrameContext.  The `offscreenView` parameter
@@ -38,13 +38,18 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
   return {
     isReady: true,
     cam: {} as never,
-    vp: new Float32Array(16) as unknown as mat4,
+    vp: new Float32Array(16) as unknown as Mat4,
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
-    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
+    focus: {
+      center: [0, 0, 0] as Readonly<[number, number, number]>,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0,
+      blend: 0,
+    },
     renderer: {} as never,
     postProcess: {
       view: {} as GPUTextureView,
@@ -81,9 +86,7 @@ describe('volumeUpsamplePass.enabled', () => {
       subsystems: { fades: { opacityOf: () => 0 } },
       settings: { volumes: { enabled: false } },
     } as unknown as EngineState;
-    expect(
-      volumeUpsamplePass.enabled(state, makeCtx()),
-    ).toBe(false);
+    expect(volumeUpsamplePass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns false when no fields are active and no fade-out tail is in flight', () => {
@@ -164,8 +167,6 @@ describe('volumeUpsamplePass.draw', () => {
         volumeUpsample: null,
       },
     } as unknown as EngineState;
-    expect(() =>
-      volumeUpsamplePass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB),
-    ).not.toThrow();
+    expect(() => volumeUpsamplePass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB)).not.toThrow();
   });
 });

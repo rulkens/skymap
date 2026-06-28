@@ -96,7 +96,7 @@
 // for the procedural-galaxy helpers. Sharing modules across pipelines
 // would invite the WebGPU 'auto' bind-group-layout trap — sidestepped
 // here by giving each stage its own module from disjoint sources.
-import { mat4, type vec3 } from 'gl-matrix';
+import { mat4 } from 'wgpu-matrix';
 import vsCode from '../shaders/milkyWay/vertex.wesl?static';
 import fsCode from '../shaders/milkyWay/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -267,7 +267,7 @@ export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
     // default), the translation is identity and `shiftedCP =
     // cameraPosWorld`, so back-compat with the pre-offset call sites
     // is exact.
-    mat4.translate(scratchVp, viewProj as Float32Array as mat4, centerWorld as vec3);
+    mat4.translate(viewProj, centerWorld, scratchVp);
     const shiftedCamX = cameraPosWorld[0] - centerWorld[0];
     const shiftedCamY = cameraPosWorld[1] - centerWorld[1];
     const shiftedCamZ = cameraPosWorld[2] - centerWorld[2];

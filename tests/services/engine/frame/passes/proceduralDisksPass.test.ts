@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import { proceduralDisksPass } from '../../../../../src/services/engine/frame/passes/proceduralDisksPass';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -22,7 +22,7 @@ function makeCam(): OrbitCamera {
 
 function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   const cam = makeCam();
-  const vp = new Float32Array(16) as unknown as mat4;
+  const vp = new Float32Array(16) as unknown as Mat4;
   return {
     isReady: true,
     cam,
@@ -32,7 +32,12 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
-    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
+    focus: {
+      center: [0, 0, 0] as Readonly<[number, number, number]>,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0,
+      blend: 0,
+    },
     renderer: { draw: vi.fn() } as any,
     postProcess: {
       view: {} as GPUTextureView,

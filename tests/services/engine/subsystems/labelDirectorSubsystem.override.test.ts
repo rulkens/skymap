@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mat4 } from 'gl-matrix';
+import { mat4 } from 'wgpu-matrix';
 import { createLabelDirectorSubsystem } from '../../../../src/services/engine/subsystems/labelDirectorSubsystem';
 import {
   clearLabelStyleOverride,
@@ -24,7 +24,7 @@ function makeCtx(): ReadyFrameContext {
   // fields it reads; the single sample label projects on-screen and survives.
   return {
     drawCamPos: [0, 0, 0],
-    vp: mat4.create(),
+    vp: mat4.identity(),
     canvasSize: { width: 1000, height: 1000 },
   } as unknown as ReadyFrameContext;
 }

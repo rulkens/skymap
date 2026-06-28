@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mat4 } from 'gl-matrix';
+import { mat4 } from 'wgpu-matrix';
 import { createLabelDirectorSubsystem } from '../../../../src/services/engine/subsystems/labelDirectorSubsystem';
 import type { LabelProducer } from '../../../../src/@types/engine/subsystems/LabelProducer';
 import type { Label } from '../../../../src/@types/rendering/Label';
@@ -23,7 +23,7 @@ function makeState(requestRender: () => void = () => {}): EngineState {
 function makeCtx(): ReadyFrameContext {
   return {
     drawCamPos: [0, 0, 0],
-    vp: mat4.create(),
+    vp: mat4.identity(),
     canvasSize: { width: 1000, height: 1000 },
   } as unknown as ReadyFrameContext;
 }

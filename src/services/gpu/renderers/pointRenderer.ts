@@ -19,7 +19,7 @@
  * @module
  */
 
-import { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PointDrawSettings } from '../../../@types/rendering/PointDrawSettings';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
@@ -719,7 +719,7 @@ export function createPointRenderer(
    */
   function draw(
     pass: GPURenderPassEncoder,
-    viewProj: mat4,
+    viewProj: Mat4,
     viewportPx: Vec2,
     settings: PointDrawSettings,
   ): ArrayBuffer | null {

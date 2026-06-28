@@ -17,7 +17,7 @@ import {
   POINT_SIZE_BYTE_OFFSET,
   PICK_PASS_BYTE_OFFSET,
 } from '../../../src/services/gpu/renderers/pointRenderer';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { PointDrawSettings } from '../../../src/@types/rendering/PointDrawSettings';
 
 // ─── Fixture ──────────────────────────────────────────────────────────────────
@@ -25,12 +25,12 @@ import type { PointDrawSettings } from '../../../src/@types/rendering/PointDrawS
 // A recognisable viewProj: identity with a distinct value at [15] so every
 // float index maps to a clearly non-default value.  The test below checks
 // all 16 floats verbatim, so any mis-placement is caught.
-function makeViewProj(): mat4 {
+function makeViewProj(): Mat4 {
   const m = new Float32Array(16);
   // Diagonal 1s (identity-ish) with a unique value per slot so transposition
   // bugs show up.
   for (let i = 0; i < 16; i++) m[i] = i + 1; // 1..16
-  return m as unknown as mat4;
+  return m as unknown as Mat4;
 }
 
 const VIEW_PROJ = makeViewProj();

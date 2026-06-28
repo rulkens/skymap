@@ -7,7 +7,7 @@
  * fade buffer.
  */
 
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { FilamentCloud } from '../data/filament/FilamentCloud';
 import type { Vec2 } from '../math/Vec2';
 
@@ -17,7 +17,7 @@ export type FilamentRenderer = {
   clear(): void;
   draw(
     pass: GPURenderPassEncoder,
-    viewProj: mat4,
+    viewProj: Mat4,
     viewportPx: Vec2,
     halfWidthPx: number,
     intensityScale: number,

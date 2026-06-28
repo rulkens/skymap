@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import { createVolumeFieldRenderer } from '../../../../src/services/gpu/renderers/volumeFieldRenderer';
 import { getVolumeFieldDefaults } from '../../../../src/data/volume/volumeFieldDefaults';
 import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
@@ -104,7 +104,7 @@ describe('createVolumeFieldRenderer draw', () => {
     const pass = makeFakePass();
     r.draw(
       pass,
-      new Float32Array(16) as unknown as mat4,
+      new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
       () => fullSettings(),
@@ -127,7 +127,7 @@ describe('createVolumeFieldRenderer draw', () => {
     const pass = makeFakePass();
     r.draw(
       pass,
-      new Float32Array(16) as unknown as mat4,
+      new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
       () => undefined,
@@ -146,7 +146,7 @@ describe('createVolumeFieldRenderer draw', () => {
     r.upload('mcpm', fixture());
     r.draw(
       makeFakePass(),
-      new Float32Array(16) as unknown as mat4,
+      new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
       () => fullSettings(),
@@ -173,7 +173,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // Draw with the registry-default palette (already resident).
     r.draw(
       makeFakePass(),
-      new Float32Array(16) as unknown as mat4,
+      new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
       () => fullSettings({ paletteId: getVolumeFieldDefaults('mcpm').paletteId }),
@@ -185,7 +185,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // Draw with a different palette — mcpm defaults to 'inferno', so 'viridis' diverges.
     r.draw(
       makeFakePass(),
-      new Float32Array(16) as unknown as mat4,
+      new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
       () => fullSettings({ paletteId: 'viridis' }),
@@ -197,7 +197,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // Draw again with 'viridis' — already resident, no further upload.
     r.draw(
       makeFakePass(),
-      new Float32Array(16) as unknown as mat4,
+      new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
       () => fullSettings({ paletteId: 'viridis' }),
@@ -217,7 +217,7 @@ describe('createVolumeFieldRenderer draw', () => {
     const pass = makeFakePass();
     r.draw(
       pass,
-      new Float32Array(16) as unknown as mat4,
+      new Float32Array(16) as unknown as Mat4,
       [320, 180],
       [0, 0, 5],
       () => fullSettings({ enabled: false }),

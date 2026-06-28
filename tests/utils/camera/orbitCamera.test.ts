@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { vec4 } from 'gl-matrix';
+import { vec4 } from 'wgpu-matrix';
+import type { Vec4 } from '../../../src/@types/math/Vec4';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
 
@@ -32,8 +33,8 @@ describe('orbit camera', () => {
       far: 100,
     });
     const vp = computeViewProj(cam);
-    const p = vec4.fromValues(0, 0, 0, 1);
-    vec4.transformMat4(p, p, vp);
+    const p: Vec4 = [0, 0, 0, 1];
+    vec4.transformMat4(p, vp, p);
     expect(Math.abs(p[0] / p[3])).toBeLessThan(1e-5);
     expect(Math.abs(p[1] / p[3])).toBeLessThan(1e-5);
   });
@@ -108,13 +109,13 @@ describe('orbit camera', () => {
     // NDC x), and world +X should project near the bottom (negative NDC y).
 
     // Project a point along world +Y, close to target
-    const pY = vec4.fromValues(0, 1, 0, 1); // world +Y unit point
-    vec4.transformMat4(pY, pY, vp);
+    const pY: Vec4 = [0, 1, 0, 1]; // world +Y unit point
+    vec4.transformMat4(pY, vp, pY);
     const ndcXy = pY[0] / pY[3];
 
     // Project a point along world +X, close to target
-    const pX = vec4.fromValues(1, 0, 0, 1); // world +X unit point
-    vec4.transformMat4(pX, pX, vp);
+    const pX: Vec4 = [1, 0, 0, 1]; // world +X unit point
+    vec4.transformMat4(pX, vp, pX);
     const ndcYx = pX[1] / pX[3];
 
     // After 90° CCW roll: +Y maps to screen-right (positive ndc x)

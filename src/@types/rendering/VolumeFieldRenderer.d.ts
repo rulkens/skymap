@@ -12,7 +12,7 @@
  * ray-march details.
  */
 
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { ScalarCube } from '../data/volume/ScalarCube';
 import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { Vec2 } from '../math/Vec2';
@@ -55,7 +55,7 @@ export type VolumeFieldRenderer = {
    */
   draw(
     pass: GPURenderPassEncoder,
-    viewProj: mat4,
+    viewProj: Mat4,
     viewportPx: Vec2,
     cameraPosWorld: Readonly<Vec3>,
     settingsOf: (id: VolumeFieldId) => VolumeFieldSettings | undefined,

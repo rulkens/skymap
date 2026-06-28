@@ -22,7 +22,7 @@ const makeCam = (): OrbitCamera =>
     aspect: 1.5,
     near: 0.1,
     far: 10000,
-    position: new Float32Array([0, 0, 150]),
+    position: [0, 0, 150],
   }) as OrbitCamera;
 
 describe('poseOf', () => {

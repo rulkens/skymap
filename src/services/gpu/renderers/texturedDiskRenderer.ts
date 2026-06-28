@@ -35,7 +35,7 @@
  * shared instancedQuadRenderer factory requires uniform stride.
  */
 
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
@@ -86,7 +86,7 @@ export function createTexturedDiskRenderer(
 
   function draw(
     pass: GPURenderPassEncoder,
-    viewProj: mat4,
+    viewProj: Mat4,
     viewportPx: Vec2,
     camPos: Readonly<Vec3>,
     focusBindGroup: GPUBindGroup,

@@ -21,7 +21,7 @@
  * ### Frustum-corner rays
  *
  * The four NDC-corner view-ray directions are unprojected on the CPU
- * (fp64 via gl-matrix), uploaded in the uniform block, selected
+ * (fp64, plain-array vec3 math), uploaded in the uniform block, selected
  * per-vertex, and interpolated across the quad — so the vertex stage
  * never multiplies a large world coordinate either.
  *
@@ -35,7 +35,8 @@
  *   offset 48 | vec3<f32> cameraPosGpc (world pos / 1000) + f32 fadeAlpha
  */
 
-import { vec3 } from 'gl-matrix';
+import { vec3 } from 'wgpu-matrix';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import vsCode from '../shaders/horizonShell/vertex.wesl?static';
 import fsCode from '../shaders/horizonShell/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -65,7 +66,7 @@ export const HORIZON_RADIUS_GPC = 14.3;
 const MPC_PER_GPC = 1000;
 
 /** World up axis used for the camera basis (matches `computeViewProj`). */
-const WORLD_UP: vec3 = [0, 1, 0];
+const WORLD_UP: Vec3 = [0, 1, 0];
 
 export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   const { device, format } = init;
@@ -125,9 +126,12 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   // Per-frame scratch, allocated once to avoid GC churn.
   const uniforms = new ArrayBuffer(HORIZON_SHELL_UNIFORM_BUFFER_SIZE);
   const f32 = new Float32Array(uniforms);
-  const fwd = vec3.create();
-  const right = vec3.create();
-  const up = vec3.create();
+  // Plain Vec3 tuples (not vec3.create's Float32Array) so the per-component
+  // reads below index cleanly under noUncheckedIndexedAccess.  wgpu-matrix
+  // writes into them in place via the `dst` arg just the same.
+  const fwd: Vec3 = [0, 0, 0];
+  const right: Vec3 = [0, 0, 0];
+  const up: Vec3 = [0, 0, 0];
 
   function draw(
     pass: GPURenderPassEncoder,
@@ -145,11 +149,11 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
     // view-projection (which is numerically unstable at the shell's
     // huge near:far ratio).  Roll is not applied — the shell predates
     // any roll usage and the default up is world +Y.
-    vec3.subtract(fwd, cam.target as vec3, cam.position);
+    vec3.subtract(cam.target, cam.position, fwd);
     vec3.normalize(fwd, fwd);
-    vec3.cross(right, fwd, WORLD_UP);
+    vec3.cross(fwd, WORLD_UP, right);
     vec3.normalize(right, right);
-    vec3.cross(up, right, fwd);
+    vec3.cross(right, fwd, up);
 
     const aspect = viewport[1] > 0 ? viewport[0] / viewport[1] : cam.aspect;
     const tanHalfFovY = Math.tan(cam.fovYRad / 2);

@@ -30,7 +30,7 @@
  * which is what removes the spike's writeBuffer/submit seed race.
  */
 
-import type { mat4 } from 'gl-matrix';
+import type { Mat4 } from 'wgpu-matrix';
 import type { Vec2 } from '../math/Vec2';
 import type { ScalarCube } from '../data/volume/ScalarCube';
 import type { FlowSettings } from '../settings/FlowSettings';
@@ -83,7 +83,7 @@ export type FlowFieldRenderer = {
    */
   draw(
     pass: GPURenderPassEncoder,
-    viewProj: mat4,
+    viewProj: Mat4,
     viewportPx: Vec2,
     flow: FlowSettings,
     opacity: number,

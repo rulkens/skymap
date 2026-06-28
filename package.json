@@ -96,13 +96,13 @@
   "dependencies": {
     "@reduxjs/toolkit": "2.12.0",
     "classnames": "2.5.1",
-    "gl-matrix": "3.4.4",
     "hotkeys-js": "4.0.4",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "react-markdown": "10.1.0",
     "react-redux": "9.3.0",
     "redux-saga": "1.5.0",
-    "typed-redux-saga": "1.5.0"
+    "typed-redux-saga": "1.5.0",
+    "wgpu-matrix": "3.4.2"
   }
 }

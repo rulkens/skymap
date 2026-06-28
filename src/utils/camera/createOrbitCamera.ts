@@ -18,7 +18,6 @@
  * plain Node/Vitest environment.
  */
 
-import { vec3 } from 'gl-matrix';
 import type { OrbitCameraInit } from '../../@types/camera/OrbitCameraInit';
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import { updatePosition } from './updatePosition';
@@ -34,8 +33,8 @@ import { updatePosition } from './updatePosition';
  *          the given yaw, pitch, and distance.
  */
 export function createOrbitCamera(init: OrbitCameraInit): OrbitCamera {
-  // Allocate a zero vec3; updatePosition will fill it before we return.
-  const cam: OrbitCamera = { ...init, position: vec3.create() };
+  // Allocate a zero position tuple; updatePosition fills it before we return.
+  const cam: OrbitCamera = { ...init, position: [0, 0, 0] };
   updatePosition(cam);
   return cam;
 }

@@ -45,9 +45,9 @@
  *
  * ### Why `drawCamPos: Readonly<Vec3>` (a tuple)
  *
- * `OrbitCamera.position` is a gl-matrix `vec3`, which under the hood is a
- * `Float32Array`. Forwarding the live `Float32Array` to downstream passes risks
- * two failure modes: (a) a consumer accidentally mutating an entry (TypedArray
+ * `OrbitCamera.position` is a mutable `Vec3` tuple, updated in place by
+ * `updatePosition`. Forwarding the live array to downstream passes risks
+ * two failure modes: (a) a consumer accidentally mutating an entry (array
  * writes don't fault), and (b) the camera moving between the snapshot point and
  * the read point inside one frame. Snapshotting to a plain readonly tuple
  * defends against both: the array is small (3 floats — copy is essentially
