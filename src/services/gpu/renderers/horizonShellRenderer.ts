@@ -42,6 +42,7 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { HorizonShellRenderer } from '../../../@types/rendering/HorizonShellRenderer';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 type Init = {
   device: GPUDevice;
@@ -131,7 +132,7 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   function draw(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
-    viewport: [number, number],
+    viewport: Vec2,
     fadeAlpha: number,
   ): void {
     // ── Camera basis (matches gl-matrix lookAt in computeViewProj) ────

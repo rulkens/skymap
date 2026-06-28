@@ -72,6 +72,7 @@ import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
 import type { LoadedFontAtlases } from '../../../@types/rendering/LoadedFontAtlases';
 import { FONT_IDS } from '../../../data/fonts';
 import type { FontId } from '../../../@types/data/FontId';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import { layoutLabel } from '../labels/labelLayout';
 import vsCode from '../shaders/labels/vertex.wesl?static';
 import fsCode from '../shaders/labels/fragment.wesl?static';
@@ -135,7 +136,7 @@ const CORNER_BYTES = CORNER_DATA.byteLength; // 32 bytes (4 × 2 × 4)
  *
  * Pass `device: null` (or a GpuContext whose `device` is null) for unit
  * tests that exercise CPU state only.  GPU resource creation is skipped
- * in that branch and `render(...)` becomes a no-op.
+ * in that branch and `draw(...)` becomes a no-op.
  *
  * `maxLabels` and `maxGlyphsPerLabel` size the static GPU buffers; the
  * defaults (64 × 64 = 4096 glyphs) cover the "you are here" + a few
@@ -190,7 +191,7 @@ export function createLabelRenderer(
 
   // Closure-scoped mutable counters — replace the `this.currentGlyphCount`
   // / `this.currentLabelCount` fields the class form used.  Updated only
-  // by `setLabels`; read by `render`, `glyphCount`, `labelCount`.
+  // by `setLabels`; read by `draw`, `glyphCount`, `labelCount`.
   let currentGlyphCount = 0;
   let currentLabelCount = 0;
 
@@ -517,11 +518,7 @@ export function createLabelRenderer(
     }
   }
 
-  function render(
-    pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewportSize: [number, number],
-  ): void {
+  function draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void {
     if (!device || !pipeline || !bindGroup || !uniformBuffer || !cornerBuffer || !instanceBuffer) {
       return;
     }
@@ -570,7 +567,7 @@ export function createLabelRenderer(
   const renderer: LabelRenderer = {
     label: 'labelRenderer',
     setLabels,
-    render,
+    draw,
     glyphCount,
     labelCount,
     destroy,

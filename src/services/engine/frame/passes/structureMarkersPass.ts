@@ -39,7 +39,7 @@ export const structureMarkersPass: Pass = {
     // future opacityOf({kind:'structureMarkers'}, nowMs) substitution
     // would let the layer animate in/out via the unified fade
     // architecture (see lib/fadeUniforms.wesl module header).
-    state.gpu.structureMarkerRenderer!.render(
+    state.gpu.structureMarkerRenderer!.draw(
       pass,
       ctx.vp as Float32Array,
       [ctx.canvasSize.width, ctx.canvasSize.height],

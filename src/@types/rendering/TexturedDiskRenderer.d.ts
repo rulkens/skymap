@@ -9,6 +9,7 @@
  */
 
 import type { mat4 } from 'gl-matrix';
+import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 import type { DiskInstance } from './DiskInstance';
 
@@ -42,7 +43,7 @@ export type TexturedDiskRenderer = {
   draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
-    viewportPx: [number, number],
+    viewportPx: Vec2,
     camPos: Readonly<Vec3>,
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<DiskInstance>,

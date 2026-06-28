@@ -13,6 +13,7 @@ import type { SourceType } from '../data/SourceType';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { PointDrawSettings } from './PointDrawSettings';
+import type { Vec2 } from '../math/Vec2';
 
 export type PointRenderer = {
   /**
@@ -83,7 +84,7 @@ export type PointRenderer = {
   draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
-    viewportPx: [number, number],
+    viewportPx: Vec2,
     settings: PointDrawSettings,
   ): ArrayBuffer | null;
   /** Release every GPU resource this renderer owns. */

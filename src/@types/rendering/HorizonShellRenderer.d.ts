@@ -12,6 +12,7 @@
  */
 
 import type { OrbitCamera } from '../camera/OrbitCamera';
+import type { Vec2 } from '../math/Vec2';
 
 export type HorizonShellRenderer = {
   /** Human-readable identifier (`'horizonShellRenderer'`). */
@@ -27,12 +28,7 @@ export type HorizonShellRenderer = {
    * `utils/math/horizonShellFadeAlpha`); the fragment shader multiplies it
    * into the additive contribution so the shell ramps in with pull-back.
    */
-  draw(
-    pass: GPURenderPassEncoder,
-    cam: OrbitCamera,
-    viewport: [number, number],
-    fadeAlpha: number,
-  ): void;
+  draw(pass: GPURenderPassEncoder, cam: OrbitCamera, viewport: Vec2, fadeAlpha: number): void;
   /** Release the GPU buffers backing the uniform block. */
   destroy(): void;
 };

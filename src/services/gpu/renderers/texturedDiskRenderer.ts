@@ -40,6 +40,7 @@ import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import vsCode from '../shaders/texturedDisks/vertex.wesl?static';
@@ -86,7 +87,7 @@ export function createTexturedDiskRenderer(
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
-    viewportPx: [number, number],
+    viewportPx: Vec2,
     camPos: Readonly<Vec3>,
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<DiskInstance>,

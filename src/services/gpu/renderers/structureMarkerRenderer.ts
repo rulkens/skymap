@@ -15,7 +15,7 @@
  *
  * ### One draw per category
  *
- * `render`/`pickRing` partition descriptors by category and issue one
+ * `draw`/`pickRing` partition descriptors by category and issue one
  * instanced draw per non-empty bucket, binding that category's
  * SourceUniforms at `@group(2)`.  The uniform carries the category's
  * 5-bit `sourceCode`, which the ringPick fragment composes into
@@ -52,11 +52,9 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import {
-  STRUCTURE_IDS,
-  STRUCTURE_ID_CODES,
-} from '../../../data/structure/structureIds';
+import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import haloVsCode from '../shaders/structureMarker/halo.wesl?static';
 import haloFsCode from '../shaders/structureMarker/halo.wesl?static';
 import ringVsCode from '../shaders/structureMarker/ring.wesl?static';
@@ -489,10 +487,10 @@ export function createStructureMarkerRenderer(
     );
   }
 
-  function render(
+  function draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
-    viewportSize: [number, number],
+    viewportSize: Vec2,
     fadeOpacity: number,
   ): void {
     if (
@@ -619,7 +617,7 @@ export function createStructureMarkerRenderer(
   const renderer: StructureMarkerRenderer = {
     label: 'structureMarkerRenderer',
     setMarkers,
-    render,
+    draw,
     markerCount,
     pickRing,
     destroy,

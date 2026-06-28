@@ -51,7 +51,7 @@ export const markerLinesPass: Pass = {
     // `enabled()` proved markerLineRenderer is non-null and has at least
     // one line.  The `!` assertion is safe: the pass framework only calls
     // `draw` when `enabled` returns true.
-    state.gpu.markerLineRenderer!.render(pass, ctx.vp as Float32Array, [
+    state.gpu.markerLineRenderer!.draw(pass, ctx.vp as Float32Array, [
       ctx.canvasSize.width,
       ctx.canvasSize.height,
     ]);

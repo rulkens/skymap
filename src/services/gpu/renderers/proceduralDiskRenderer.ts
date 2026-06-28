@@ -41,9 +41,15 @@ import pickFsCode from '../shaders/proceduralDisks/pickFragment.wesl?static';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import { FLOATS_PER_INSTANCE, BYTES_PER_INSTANCE, UNIFORM_BYTES, createInstancedQuadRenderer } from './instancedQuadRenderer';
+import {
+  FLOATS_PER_INSTANCE,
+  BYTES_PER_INSTANCE,
+  UNIFORM_BYTES,
+  createInstancedQuadRenderer,
+} from './instancedQuadRenderer';
 import { packSelection } from '../../../data/selectionEncoding';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
@@ -122,11 +128,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     entries: [{ binding: 0, resource: { buffer: pickUniformBuffer } }],
   });
 
-  const pickVsModule = createShaderModuleWithDevLog(
-    init.device,
-    vsCode,
-    'proceduralDisks.pick.vs',
-  );
+  const pickVsModule = createShaderModuleWithDevLog(init.device, vsCode, 'proceduralDisks.pick.vs');
   const pickFsModule = createShaderModuleWithDevLog(
     init.device,
     pickFsCode,
@@ -193,7 +195,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
   // AFTER draw() in the same frame, so these are always the current
   // frame's camera state when pickDisks() is called.
   let cachedViewProj: Float32Array = new Float32Array(16);
-  let cachedViewport: [number, number] = [0, 0];
+  let cachedViewport: Vec2 = [0, 0];
   let cachedCamPosWorld: Readonly<Vec3> = [0, 0, 0];
   let cachedPxPerRad = 0;
   let cachedFocusBindGroup: GPUBindGroup | null = null;
@@ -201,7 +203,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
-    viewport: [number, number],
+    viewport: Vec2,
     camPosWorld: Readonly<Vec3>,
     pxPerRad: number,
     focusBindGroup: GPUBindGroup,

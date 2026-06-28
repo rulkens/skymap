@@ -102,6 +102,7 @@ import fsCode from '../shaders/milkyWay/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { MilkyWayRenderer } from '../../../@types/rendering/MilkyWayRenderer';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 type Init = {
@@ -231,7 +232,7 @@ export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
-    viewport: [number, number],
+    viewport: Vec2,
     fadeAlpha: number,
     iTimeSec: number,
     cameraPosWorld: Readonly<Vec3>,

@@ -253,11 +253,11 @@ describe('renderFrame visual baseline', () => {
     };
     const labelRenderer = {
       glyphCount: vi.fn(() => 12),
-      ...makeLoggingRenderer(records, 'labels', 'render'),
+      ...makeLoggingRenderer(records, 'labels'),
     };
     const markerLineRenderer = {
       lineCount: vi.fn(() => 3),
-      ...makeLoggingRenderer(records, 'marker-lines', 'render'),
+      ...makeLoggingRenderer(records, 'marker-lines'),
     };
     const postProcess = makePostProcess(records);
 
