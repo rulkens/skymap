@@ -28,10 +28,7 @@
  * the redux `<Provider>`.  React reads those values via `useAppSelector`
  * selectors, not through this hook; this hook only obtains the store via
  * `useAppStore` and threads that same instance into `createEngine` so the
- * engine reads its settings from the one store React renders from.  The
- * only thing the caller layers in via `extraCallbacks` is extra EVENT
- * subscriptions — App-level event wiring — which we spread into the
- * createEngine options block alongside our session callbacks.
+ * engine reads its settings from the one store React renders from.
  *
  * Two NON-callback options ride into `createEngine` as plain values: the
  * `store` (above) and `setSagaContext` — the store factory's saga-context
@@ -46,12 +43,10 @@
  * ──────────────────────────────────────────────────────────────────────
  * Same rationale as the original App.tsx engine effect: the engine is
  * a one-shot side effect tied to the canvas's lifetime.  No inputs
- * should cause it to restart.  `extraCallbacks` is captured at first
- * render and held for the life of the engine — this is intentional
- * because its members are stable event subscriptions (setState
- * references and the like) for the component's lifetime.  Listing
- * extraCallbacks in the dep array would re-create the engine on every
- * render.
+ * should cause it to restart.  `store` and `setSagaContext` are both
+ * single instances stable for the app's lifetime (each created once in
+ * main.tsx); listing either in the dep array would re-create the engine
+ * on every render.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -61,7 +56,6 @@ import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { EngineStatus } from '../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../@types/engine/ScaleInfo';
 import type { LoadProgressState } from '../@types/loading/LoadProgressState';
-import type { UseEngineInput } from '../@types/engine/UseEngineInput';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
 import { useSetSagaContext } from '../store/SagaContextProvider';
@@ -84,9 +78,7 @@ const SCALE_TARGET_PX = 150;
 
 // UseEngineInput / UseEngineReturn moved to @types/engine/.
 
-export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
-  const { extraCallbacks } = input;
-
+export function useEngine(): UseEngineReturn {
   // The injected settings store — created in main.tsx, shared with React via
   // the redux `<Provider>`. We thread this exact instance into `createEngine`
   // so the engine reads its settings from the same store React renders from.
@@ -141,11 +133,8 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       );
     };
 
-    // `EngineCallbacks` is EVENT-only: lifecycle / camera / sources events.
-    // Each bag merges this hook's session-level subscriptions with whatever
-    // `extraCallbacks` declares for that cluster. Spread order puts the
-    // extra-callback entries LAST so the caller wins where both define the
-    // same method.
+    // `EngineCallbacks` is EVENT-only: lifecycle / camera / sources events,
+    // all wired from this hook's session-level subscriptions.
     //
     // Selection state flows through the Redux `selection` slice — the engine
     // dispatches directly; React reads via `useAppSelector` selectors.
@@ -157,18 +146,11 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     // non-callback options — both are sibling returns of `createAppStore`,
     // delivered here via their respective React contexts (`<Provider>` for
     // `store`, `<SagaContextProvider>` for `setSagaContext`).
-    const {
-      lifecycle: extraLifecycle,
-      camera: extraCamera,
-      sources: extraSources,
-    } = extraCallbacks ?? {};
-
     const handle = createEngine(canvas, {
       store,
       setSagaContext,
       lifecycle: {
         onStatusChange: setStatus,
-        ...extraLifecycle,
       },
       camera: {
         // Derive scale-bar legend from the engine's per-frame camera
@@ -181,13 +163,11 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         // skip setState in that window so the placeholder stays.
         // React's setState equality dedups unchanged frames.
         onCameraChange: onCameraChangeImpl,
-        ...extraCamera,
       },
       sources: {
         onCatalogReady: onCatalogReadyImpl,
         onLoadProgress: setLoadProgress,
         onStructureCountsChange: setStructureCounts,
-        ...extraSources,
       },
     });
 
@@ -198,11 +178,10 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       handleRef.current = null;
     };
     // Engine is a one-shot effect — see hook header for rationale.
-    // `extraCallbacks`, `store`, and `setSagaContext` are all intentionally
-    // captured at first render: callbacks are stable React setters; `store`
-    // and `setSagaContext` are both single instances stable for the app's
-    // lifetime (each created once in main.tsx). Listing any of them here
-    // would re-create the engine on every render.
+    // `store` and `setSagaContext` are both intentionally captured at first
+    // render: each is a single instance stable for the app's lifetime
+    // (created once in main.tsx). Listing either here would re-create the
+    // engine on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
