@@ -22,9 +22,9 @@
 
 The working tree already has the `extraCallbacks` removal (`src/hooks/useEngine.ts` modified, `src/@types/engine/UseEngineInput.d.ts` deleted). This is groundwork that predates the slice work — land it as the branch's first commit so later tasks diff cleanly against it.
 
-- [ ] Create the feature branch off `main`.
-- [ ] `npm test` + `npm run typecheck` → confirm green with the existing change in place.
-- [ ] Commit `src/hooks/useEngine.ts` + the `UseEngineInput.d.ts` deletion (stage those two paths specifically — never `git add -A`).
+- [x] Create the feature branch off `main`.
+- [x] `npm test` + `npm run typecheck` → confirm green with the existing change in place.
+- [x] Commit `src/hooks/useEngine.ts` + the `UseEngineInput.d.ts` deletion (stage those two paths specifically — never `git add -A`).
 
 ---
 
@@ -74,7 +74,7 @@ Reducers + action names (exported action creators must be spelled exactly as bel
 The `engineScaleChanged` no-op-when-equal behaviour is **load-bearing**: it is what keeps the per-frame scale dispatch (Task 3) from re-rendering the HUD every autorotate frame. When the guard skips the assignment, Immer returns the same slice reference, so `useSelector(selectScale)` does not re-fire. Model the guard on `setIfChanged` in `src/state/selection/selectionSlice.ts:20-24` (skip-the-mutation-when-unchanged), specialised here to the two `ScaleInfo` scalar fields.
 
 **Steps**
-- [ ] Add the `EngineState` test failing-first by writing `tests/state/engine/engineSlice.test.ts` against the not-yet-existing slice. Follow the reducer-unit style of `tests/state/ui/uiSlice.test.ts` (`reducer(state, actionCreator(payload))`, a `base()` factory returning a fresh `EngineState`). Tests + key assertions:
+- [x] Add the `EngineState` test failing-first by writing `tests/state/engine/engineSlice.test.ts` against the not-yet-existing slice. Follow the reducer-unit style of `tests/state/ui/uiSlice.test.ts` (`reducer(state, actionCreator(payload))`, a `base()` factory returning a fresh `EngineState`). Tests + key assertions:
   - `engineStatusChanged writes status` — `reducer(base(), engineStatusChanged({ kind: 'loading' })).status` deep-equals `{ kind: 'loading' }`.
   - `engineSourceCountReported writes the reported source count` — after one report of `{ source: Source.SDSS, count: 5 }`, `sourceCounts[Source.SDSS] === 5`.
   - `engineSourceCountReported merges a second source without dropping the first` — report SDSS then 2MRS; assert BOTH keys present with their counts.
@@ -82,12 +82,12 @@ The `engineScaleChanged` no-op-when-equal behaviour is **load-bearing**: it is w
   - `engineLoadProgressChanged writes loadProgress` — assert a non-null payload lands, and that `null` clears it.
   - `engineScaleChanged returns the same state reference when label and widthPx are unchanged` — seed `scale`, dispatch `engineScaleChanged` with an equal-valued (but freshly-allocated) `ScaleInfo`; assert `reducer(s, engineScaleChanged(equalValue)) === s`.
   - `engineScaleChanged replaces scale when widthPx differs` — companion asserting the new value IS written when `widthPx` changes (and likewise label-only changes are written).
-- [ ] Run the test → confirm it fails (slice + type don't exist).
-- [ ] Add `engineRoute = 'engine' as const` to `src/store/constants.ts` (one line, matching the existing route docstring style there).
-- [ ] Create `src/@types/store/EngineState.d.ts` and `src/state/engine/engineSlice.ts`.
-- [ ] Mount the slice in `src/store/rootReducer.ts` (`[engineRoute]: engineReducer`) — `RootState` derives the new `engine` slot automatically.
-- [ ] Run the test → confirm all pass. `npm run typecheck`.
-- [ ] Commit.
+- [x] Run the test → confirm it fails (slice + type don't exist).
+- [x] Add `engineRoute = 'engine' as const` to `src/store/constants.ts` (one line, matching the existing route docstring style there).
+- [x] Create `src/@types/store/EngineState.d.ts` and `src/state/engine/engineSlice.ts`.
+- [x] Mount the slice in `src/store/rootReducer.ts` (`[engineRoute]: engineReducer`) — `RootState` derives the new `engine` slot automatically.
+- [x] Run the test → confirm all pass. `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -112,10 +112,10 @@ Produces (mirror the base+leaf shape of `src/state/ui/selectors.ts` and `src/sta
 Plain composed arrows (no `createSelector`) — these are primitive / object-reference reads and `useSelector`'s reference-equality already bails on identical values, exactly the rationale documented at `src/state/ui/selectors.ts:14-18`.
 
 **Steps**
-- [ ] Write `tests/state/engine/selectors.test.ts` failing-first. Seed a store (`createAppStore`, then dispatch the Task-1 actions to populate the slice) OR construct a `RootState`-shaped object and call the selectors directly — match whichever the existing `tests/state/.../selectors.test.ts` files do. Tests: one per leaf asserting it reads the right field after a known write (e.g. dispatch `engineStatusChanged({ kind: 'loading' })`, assert `selectEngineStatus(store.getState())` deep-equals it).
-- [ ] Run → fail (module absent).
-- [ ] Create `src/state/engine/selectors.ts`.
-- [ ] Run → pass. `npm run typecheck`. Commit.
+- [x] Write `tests/state/engine/selectors.test.ts` failing-first. Seed a store (`createAppStore`, then dispatch the Task-1 actions to populate the slice) OR construct a `RootState`-shaped object and call the selectors directly — match whichever the existing `tests/state/.../selectors.test.ts` files do. Tests: one per leaf asserting it reads the right field after a known write (e.g. dispatch `engineStatusChanged({ kind: 'loading' })`, assert `selectEngineStatus(store.getState())` deep-equals it).
+- [x] Run → fail (module absent).
+- [x] Create `src/state/engine/selectors.ts`.
+- [x] Run → pass. `npm run typecheck`. Commit.
 
 ---
 
@@ -163,15 +163,15 @@ The existing `runFrame.ts:237-243` block builds a per-frame `snap = { distance, 
 - When it returns non-`null`, `deps.cb.store.dispatch(engineScaleChanged(info))`. (The `null` return — degenerate viewport / camera — skips the dispatch, exactly as the React side skipped `setScale`.) The reducer's dedup-on-write (Task 1) absorbs the unchanged-frame case, so this fires unconditionally every ready frame at no re-render cost.
 
 **Steps**
-- [ ] Extend the engine wiring tests (`tests/services/engine/wiring/...`) to assert the new dispatches, following the spy-on-store-dispatch model of `tests/services/engine/wiring/catalogLoadedDispatch.test.ts` (`vi.spyOn(store, 'dispatch')`, assert `toHaveBeenCalledWith(<action>(<payload>))`). Cover at minimum:
+- [x] Extend the engine wiring tests (`tests/services/engine/wiring/...`) to assert the new dispatches, following the spy-on-store-dispatch model of `tests/services/engine/wiring/catalogLoadedDispatch.test.ts` (`vi.spyOn(store, 'dispatch')`, assert `toHaveBeenCalledWith(<action>(<payload>))`). Cover at minimum:
   - `galaxyCatalogSourceRegistry` dispatches `engineSourceCountReported({ source, count })` on a slot `ready`.
   - `wireStructureProjection` dispatches `engineStructureCountsChanged` with the four category counts on group change.
   - `installLoadProgress` dispatches `engineLoadProgressChanged(snapshot)` from the emitter.
   - status: a test asserting the `loading` / `ready` / `error` / `initializing` dispatches at the sites that have a testable seam (extend `createSyntheticFallback.test.ts` for the ready emissions if that test already drives slots; otherwise assert at the lowest-friction site).
   - scale: a frame test asserting `engineScaleChanged` is dispatched with the `computeScaleInfo` result on a ready frame, and NOT dispatched (or dispatched-but-deduped) when inputs are degenerate. If `runFrame` already has a frame-test harness, extend it; otherwise assert against a thin call into the scale block.
-- [ ] Run the new/extended tests → fail (dispatches absent).
-- [ ] Add the seven dispatches per the table; move `SCALE_TARGET_PX` into the engine for the scale site.
-- [ ] Run → pass. `npm test` + `npm run typecheck` (full suite — UI is still callback-fed and unchanged). Commit.
+- [x] Run the new/extended tests → fail (dispatches absent).
+- [x] Add the seven dispatches per the table; move `SCALE_TARGET_PX` into the engine for the scale site.
+- [x] Run → pass. `npm test` + `npm run typecheck` (full suite — UI is still callback-fed and unchanged). Commit.
 
 ---
 
@@ -201,10 +201,10 @@ Per-consumer migration:
 Constraint check: all selector reads land in components/hooks (allowed `react-redux` zone). No selector logic moves into `src/state/` or `src/services/`.
 
 **Steps**
-- [ ] Update the affected tests first (they will fail or need reshaping): component/hook tests that previously passed `status` / `loadProgress` / `sourceCounts` / `structureCounts` as props/inputs must now render inside a store `<Provider>` (or the project's test-store helper) seeded with the matching `engine`-slice values via the Task-1 actions. Mirror however the repo's existing store-backed component tests seed state. Assert the same observable behaviour (StatusBar text, ScaleBar width, member-count row, splash readiness, alias-load gating).
-- [ ] Run the updated tests → fail (consumers still read props/inputs).
-- [ ] Migrate each consumer per the list; push the two count selectors down into the SettingsPanel section containers.
-- [ ] Run → pass. `npm test` + `npm run typecheck` (full suite). Behaviour identical. Commit.
+- [x] Update the affected tests first (they will fail or need reshaping): component/hook tests that previously passed `status` / `loadProgress` / `sourceCounts` / `structureCounts` as props/inputs must now render inside a store `<Provider>` (or the project's test-store helper) seeded with the matching `engine`-slice values via the Task-1 actions. Mirror however the repo's existing store-backed component tests seed state. Assert the same observable behaviour (StatusBar text, ScaleBar width, member-count row, splash readiness, alias-load gating).
+- [x] Run the updated tests → fail (consumers still read props/inputs).
+- [x] Migrate each consumer per the list; push the two count selectors down into the SettingsPanel section containers.
+- [x] Run → pass. `npm test` + `npm run typecheck` (full suite). Behaviour identical. Commit.
 
 ---
 
@@ -228,13 +228,13 @@ Produces — the collapsed surfaces:
 - `EngineCallbacks` keeps only `store` + `setSagaContext` (`src/@types/engine/EngineCallbacks.d.ts:56`, `:71`); delete the `lifecycle`, `camera`, and `sources` members (`:79-139`) and their now-unused type imports (`EngineStatus`, `ScaleInfo`, `SourceType`, `LoadProgressState`, `StructureId`). Update the module docblock — it no longer describes an event surface.
 
 **Steps**
-- [ ] Update tests first: remove/adjust any that construct a `createEngine` callback bag with `lifecycle`/`camera`/`sources`, or that assert on `useEngine`'s removed return fields. The engine-side dispatch tests from Task 3 remain the coverage for the behaviour.
-- [ ] Run → fail / red where the removed surface is still referenced.
-- [ ] `useEngine.ts`: delete the five `useState` slices (`src/hooks/useEngine.ts:99-103`), the `onCatalogReadyImpl` / `onCameraChangeImpl` locals (`:113-134`), the `lifecycle`/`camera`/`sources` blocks in the `createEngine(...)` options (`:152-171`), and the now-unused `INITIAL_SCALE` (`:69`), `SCALE_TARGET_PX` (`:77` — already moved to the engine in Task 3), `computeScaleInfo` import (`:54`) and any now-unused type imports. Return `{ canvasRef, handleRef }`. Refresh the hook's module docblock to drop the engine-driven-state description.
-- [ ] `EngineCallbacks.d.ts` + `UseEngineReturn.d.ts`: collapse per the Interfaces block.
-- [ ] Engine: delete every now-redundant callback invocation — `cb.lifecycle?.onStatusChange?.` at `engine.ts:451`, `:543`; the two in `createSyntheticFallback.ts`; `wireSlots.ts:124`; `cb.sources?.onCatalogReady?.` at `galaxyCatalogSourceRegistry.ts:219`; `cb.sources?.onStructureCountsChange?.` in `wireStructureProjection.ts`; `cb.sources?.onLoadProgress?.` in `installLoadProgress.ts`; and `deps.cb.camera?.onCameraChange?.(snap)` at `runFrame.ts:242`. Keep the Task-3 `store.dispatch` lines and (at the frame site) the `snap` build + `computeScaleInfo` + `engineScaleChanged` dispatch.
-- [ ] `ScaleInfo.d.ts`: update the docblock (`src/@types/engine/ScaleInfo.d.ts:3-13`) — it currently says scale is "Computed React-side … via `cb.onCameraChange`"; it is now engine-computed at the frame site and dispatched via `engineScaleChanged`.
-- [ ] Run → pass. `npm test` + `npm run typecheck` (full suite). Commit.
+- [x] Update tests first: remove/adjust any that construct a `createEngine` callback bag with `lifecycle`/`camera`/`sources`, or that assert on `useEngine`'s removed return fields. The engine-side dispatch tests from Task 3 remain the coverage for the behaviour.
+- [x] Run → fail / red where the removed surface is still referenced.
+- [x] `useEngine.ts`: delete the five `useState` slices (`src/hooks/useEngine.ts:99-103`), the `onCatalogReadyImpl` / `onCameraChangeImpl` locals (`:113-134`), the `lifecycle`/`camera`/`sources` blocks in the `createEngine(...)` options (`:152-171`), and the now-unused `INITIAL_SCALE` (`:69`), `SCALE_TARGET_PX` (`:77` — already moved to the engine in Task 3), `computeScaleInfo` import (`:54`) and any now-unused type imports. Return `{ canvasRef, handleRef }`. Refresh the hook's module docblock to drop the engine-driven-state description.
+- [x] `EngineCallbacks.d.ts` + `UseEngineReturn.d.ts`: collapse per the Interfaces block.
+- [x] Engine: delete every now-redundant callback invocation — `cb.lifecycle?.onStatusChange?.` at `engine.ts:451`, `:543`; the two in `createSyntheticFallback.ts`; `wireSlots.ts:124`; `cb.sources?.onCatalogReady?.` at `galaxyCatalogSourceRegistry.ts:219`; `cb.sources?.onStructureCountsChange?.` in `wireStructureProjection.ts`; `cb.sources?.onLoadProgress?.` in `installLoadProgress.ts`; and `deps.cb.camera?.onCameraChange?.(snap)` at `runFrame.ts:242`. Keep the Task-3 `store.dispatch` lines and (at the frame site) the `snap` build + `computeScaleInfo` + `engineScaleChanged` dispatch.
+- [x] `ScaleInfo.d.ts`: update the docblock (`src/@types/engine/ScaleInfo.d.ts:3-13`) — it currently says scale is "Computed React-side … via `cb.onCameraChange`"; it is now engine-computed at the frame site and dispatched via `engineScaleChanged`.
+- [x] Run → pass. `npm test` + `npm run typecheck` (full suite). Commit.
 
 ---
 
