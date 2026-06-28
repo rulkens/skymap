@@ -67,7 +67,7 @@ after the image step is identical.
 
 ### 2. Add the seed entry
 
-The seed is `data/famous_galaxies.seed.json`, a JSON array sorted by `id`. Write
+The seed is `data/seeds/famous_galaxies.seed.json`, a JSON array sorted by `id`. Write
 fields in the canonical order used by `expandFamousFromCatalogs.orderEntryFields`
 so a later `expand-famous` run produces a zero diff: `id`, `names`, `ra`, `dec`,
 `distanceMpc`, `diameterKpc`, `type`, `description`, then optional `axisRatio`,
@@ -98,7 +98,7 @@ npm run famous-seed-from-leda -- NGC3166 NGC3169
 
 It emits a JSON array (canonical field order) with `description` left empty for
 you to fill from each galaxy's Wikipedia lead. Paste the objects into
-`data/famous_galaxies.seed.json` (sorted by `id`; `ngc…` ids sort after `m…`,
+`data/seeds/famous_galaxies.seed.json` (sorted by `id`; `ngc…` ids sort after `m…`,
 i.e. at the end), then write the descriptions. That's the whole step — the rest
 of this section is what the script does under the hood.
 
@@ -198,7 +198,7 @@ On Commit, the curator writes the full tile set to
 (`atlas → public/images/famous/<id>.webp`,
 `thumb → public/images/famous-thumb/<id>.webp`,
 `full → public/data/images/famous-hires/<id>.webp`), and records the source URL
-+ licence + author in `data/famous_curated_overrides.json`. **Do not run
++ licence + author in `data/seeds/famous_curated_overrides.json`. **Do not run
 `fetch-famous-images` on this path** — the curator's output would just be
 overwritten by it.
 
@@ -250,8 +250,8 @@ longer carry a row at the new galaxy's position.
 Never `git add -A` (project rule). Stage exactly what changed:
 
 ```bash
-git add data/famous_galaxies.seed.json \
-        data/famous_curated_overrides.json \
+git add data/seeds/famous_galaxies.seed.json \
+        data/seeds/famous_curated_overrides.json \
         public/images/famous/<id>.webp \
         public/images/famous-thumb/<id>.webp \
         public/images/famous-curated/<id>/
