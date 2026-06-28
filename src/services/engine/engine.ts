@@ -89,6 +89,7 @@ import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsys
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
+import { engineStatusChanged } from '../../state/engine/engineSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
@@ -449,6 +450,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
 
   cb.lifecycle?.onStatusChange?.({ kind: 'initializing' });
+  cb.store.dispatch(engineStatusChanged({ kind: 'initializing' }));
 
   // ── Bootstrap dependency bag ─────────────────────────────────────────────
   //
@@ -541,6 +543,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // shows a readable message rather than a blank canvas.
       const message = err instanceof Error ? err.message : String(err);
       cb.lifecycle?.onStatusChange?.({ kind: 'error', message });
+      cb.store.dispatch(engineStatusChanged({ kind: 'error', message }));
       console.error('Engine startup failed:', err);
     }
   })();

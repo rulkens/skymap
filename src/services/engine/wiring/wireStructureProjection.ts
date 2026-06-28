@@ -30,6 +30,7 @@
 
 import { buildStaticAnchorStructures } from '../../../data/structure/buildStaticAnchorStructures';
 import { structureCatalogToStructures } from './structureCatalogToStructures';
+import { engineStructureCountsChanged } from '../../../state/engine/engineSlice';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
@@ -48,12 +49,14 @@ export function wireStructureProjection(state: EngineState, cb: EngineCallbacks)
    * the authoritative record set — the same one that renders.
    */
   function emitCounts(): void {
-    cb.sources?.onStructureCountsChange?.({
+    const counts = {
       cluster: state.data.structures.byCategory('cluster').length,
       supercluster: state.data.structures.byCategory('supercluster').length,
       void: state.data.structures.byCategory('void').length,
       group: state.data.structures.byCategory('group').length,
-    });
+    };
+    cb.sources?.onStructureCountsChange?.(counts);
+    cb.store.dispatch(engineStructureCountsChanged(counts));
   }
 
   // ── Group 1: static anchors (synchronous) ───────────────────────────

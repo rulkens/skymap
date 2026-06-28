@@ -26,6 +26,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createAppStore } from '../../../../src/store/createAppStore';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -143,7 +144,10 @@ function makeState(): {
 
 function makeCb(): { cb: EngineCallbacks; countsSpy: ReturnType<typeof vi.fn> } {
   const countsSpy = vi.fn();
-  const cb = { sources: { onStructureCountsChange: countsSpy } } as unknown as EngineCallbacks;
+  const cb = {
+    store: createAppStore().store,
+    sources: { onStructureCountsChange: countsSpy },
+  } as unknown as EngineCallbacks;
   return { cb, countsSpy };
 }
 

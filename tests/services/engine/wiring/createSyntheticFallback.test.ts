@@ -17,6 +17,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
+import { createAppStore } from '../../../../src/store/createAppStore';
 import { Source } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
@@ -125,7 +126,10 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
   }
 
   const onStatusChange = vi.fn();
-  const cb = { lifecycle: { onStatusChange } } as unknown as EngineCallbacks;
+  const cb = {
+    store: createAppStore().store,
+    lifecycle: { onStatusChange },
+  } as unknown as EngineCallbacks;
 
   const state = {
     tier: 'medium',

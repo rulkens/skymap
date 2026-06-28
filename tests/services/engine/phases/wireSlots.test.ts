@@ -40,6 +40,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
+import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
@@ -420,6 +421,7 @@ function makeState(
 /** Build a stub `BootstrapDeps` with a populated `phaseLocals`. */
 function makeDeps(): BootstrapDeps {
   const cb: EngineCallbacks = {
+    store: createAppStore().store,
     lifecycle: { onStatusChange: vi.fn() },
     selection: { onSelectionChange: vi.fn() } as never,
     sources: { onCatalogReady: vi.fn(), onLoadProgress: vi.fn() } as never,

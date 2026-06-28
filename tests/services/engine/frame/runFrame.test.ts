@@ -66,6 +66,7 @@ import {
   setAutoRotate,
   commitCameraPose,
 } from '../../../../src/state/camera/cameraSlice';
+import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -447,5 +448,73 @@ describe('runFrame — hover-pick removed from frame body', () => {
     // The frame body must never call pickRenderer.pick — hover picks are
     // now the driver's responsibility, not the frame's.
     expect(pickSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('runFrame — engineScaleChanged dispatch', () => {
+  // The scale-dispatch block fires inside the `if (state.cam)` guard —
+  // the same guard that emits `onCameraChange`. `makeCamState()` seeds a
+  // non-null `cam`; `makeCamDeps` gives the canvas real clientWidth/Height
+  // (100×100) so `computeScaleInfo` returns a non-null result.
+  it('dispatches engineScaleChanged when the camera is ready and the viewport is non-degenerate', () => {
+    const store = makeStore();
+    const spy = vi.spyOn(store, 'dispatch');
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+
+    runFrame(state, deps, 0);
+
+    // At least one dispatch of engineScaleChanged must have fired.
+    // The payload shape is { label: string, widthPx: number }.
+    const scaleCalls = spy.mock.calls.filter((call) => {
+      const action = call[0] as { type?: string };
+      return action?.type === engineScaleChanged.type;
+    });
+    expect(scaleCalls.length).toBeGreaterThan(0);
+    const payload = (scaleCalls[0]![0] as ReturnType<typeof engineScaleChanged>).payload;
+    expect(typeof payload.label).toBe('string');
+    expect(typeof payload.widthPx).toBe('number');
+    expect(payload.widthPx).toBeGreaterThan(0);
+  });
+
+  it('does not dispatch engineScaleChanged when the canvas has zero height (degenerate viewport)', () => {
+    const store = makeStore();
+    const spy = vi.spyOn(store, 'dispatch');
+    const state = makeCamState();
+    const deps: RunFrameDeps = {
+      ...makeCamDeps(state, store),
+      // clientHeight = 0 → computeScaleInfo returns null → no dispatch.
+      canvas: {
+        width: 100,
+        height: 100,
+        clientWidth: 100,
+        clientHeight: 0,
+      } as unknown as HTMLCanvasElement,
+    };
+
+    runFrame(state, deps, 0);
+
+    const scaleCalls = spy.mock.calls.filter((call) => {
+      const action = call[0] as { type?: string };
+      return action?.type === engineScaleChanged.type;
+    });
+    expect(scaleCalls).toHaveLength(0);
+  });
+
+  it('does not dispatch engineScaleChanged when state.cam is null (pre-bootstrap)', () => {
+    // Without a camera the `if (state.cam)` guard is false and the scale
+    // block is unreachable — the test pins that it stays silent.
+    const store = makeStore();
+    const spy = vi.spyOn(store, 'dispatch');
+    const state = makeState(); // cam === null
+    const deps = makeDeps(store);
+
+    runFrame(state, deps, 0);
+
+    const scaleCalls = spy.mock.calls.filter((call) => {
+      const action = call[0] as { type?: string };
+      return action?.type === engineScaleChanged.type;
+    });
+    expect(scaleCalls).toHaveLength(0);
   });
 });
