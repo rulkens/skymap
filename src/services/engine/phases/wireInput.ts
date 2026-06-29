@@ -27,7 +27,7 @@
  */
 
 import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
-import { clampDistance } from '../../../utils/camera/clampDistance';
+import { zoomedPose } from '../../../utils/camera/zoomedPose';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
@@ -302,15 +302,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // tick's committed distance. `clampDistance` enforces the same zoom envelope
     // as the drag/pinch path.
     onZoom: (factor) => {
-      const base = store.getState().camera.base;
-      store.dispatch(
-        commitCameraPose({
-          target: [base.target[0], base.target[1], base.target[2]],
-          yaw: base.yaw,
-          pitch: base.pitch,
-          distance: clampDistance(base.distance * factor),
-        }),
-      );
+      store.dispatch(commitCameraPose(zoomedPose(store.getState().camera.base, factor)));
       state.subsystems.scheduler.requestRender();
     },
 
