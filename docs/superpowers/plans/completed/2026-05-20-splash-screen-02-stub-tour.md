@@ -1,5 +1,7 @@
 # Tour Engine Seed (cinematic-core) — Implementation Plan
 
+> **SUPERSEDED** by the animation-system plans in `plans/completed/` (`2026-06-24-animation-clip-model.md`, `2026-06-24-animation-playclip-seam.md`, `2026-06-24-animation-tour-saga.md`). The `TourStore`-based seed described here was never built (zero refs in `src/`); the tour runs through the clip/saga system instead. Kept for history.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Follows [`plan-style.md`](../conventions/plan-style.md): contract code (types, test names, signatures) is included; implementation bodies are not — read the cited code and write the body from the tests.
 
 > **Companion plan:** `2026-05-20-splash-screen-01-core.md` — the splash dialog + AboutPill + useSplash hook + WebGPU gate. **Plan 1 has landed:** the `Splash` component, `useSplash` (`dismissExplore` / `dismissTour` / `reopen`), and the `<Splash onTour={...}>` prop all exist; `onTour` is currently wired to `splash.dismissTour` (the Tour button just dismisses). This plan replaces that no-op with a real, frame-driven camera tour.
