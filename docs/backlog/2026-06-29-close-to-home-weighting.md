@@ -5,7 +5,7 @@
 
 ## Problem
 
-Retune the small/medium tier subsampling so more galaxies survive near the camera's home position — maximum visual density on first load — while keeping the on-screen count fast. Distinct from the deliberate SDSS far-shell sample (memory `project_sdss_medium_intentionally_far`), and distinct from per-group seeding (see [dense Local Volume seeding](dense-local-volume-seeding.md)): this is camera-home density.
+Retune the small/medium tier subsampling so more galaxies survive near the camera's home position — maximum visual density on first load — while keeping the on-screen count fast. Distinct from the deliberate SDSS far-shell sample (memory `project_sdss_medium_intentionally_far`), and distinct from per-group seeding (see [dense Local Volume seeding](2026-06-29-dense-local-volume-seeding.md)): this is camera-home density.
 
 ## Current state (verified 2026-06-29)
 

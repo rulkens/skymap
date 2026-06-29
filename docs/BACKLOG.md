@@ -26,38 +26,38 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
-- [ ] **Source-registry factory** `needs-design` — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry; today each source is hand-wired across `slots/`, `assetWiring.ts`, `initGpu`. → [details](backlog/source-registry-factory.md)
-- [ ] **Render-graph restructure** `deferred` — turn the imperative `runFrame.ts` body into a declarative pass DAG. → [details](backlog/render-graph-restructure.md)
-- [ ] **GPU-handle nullability follow-on** `deferred` — `EngineGpuHandles` fields are all `T | null` (a transient bootstrap fact as a perpetual null-check); narrow into a non-null "ready GPU" view and shed `PassDeps`' renderer fields. → [details](backlog/gpu-handle-nullability.md)
-- [ ] **`useStructureMemberCount` honest invalidation** `deferred` — the hook's `sourceCounts`/`tier` args are memo tripwires for live GPU catalog state; swap for a real catalog-generation signal. → [details](backlog/usestructuremembercount-invalidation.md)
+- [ ] **Source-registry factory** `needs-design` — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry; today each source is hand-wired across `slots/`, `assetWiring.ts`, `initGpu`. → [details](backlog/2026-06-29-source-registry-factory.md)
+- [ ] **Render-graph restructure** `deferred` — turn the imperative `runFrame.ts` body into a declarative pass DAG. → [details](backlog/2026-06-29-render-graph-restructure.md)
+- [ ] **GPU-handle nullability follow-on** `deferred` — `EngineGpuHandles` fields are all `T | null` (a transient bootstrap fact as a perpetual null-check); narrow into a non-null "ready GPU" view and shed `PassDeps`' renderer fields. → [details](backlog/2026-06-29-gpu-handle-nullability.md)
+- [ ] **`useStructureMemberCount` honest invalidation** `deferred` — the hook's `sourceCounts`/`tier` args are memo tripwires for live GPU catalog state; swap for a real catalog-generation signal. → [details](backlog/2026-06-29-usestructuremembercount-invalidation.md)
 - [ ] **Derive `BULK_CATALOG_CATEGORIES` from a registry flag** `deferred` — add `hasBulkCatalog` to `SOURCE_REGISTRY` rows so the hand-listed `['cluster','supercluster','void']` in `assetWiring.ts` derives from it. Keep the three category lists (UI / marker / bulk-fetch) separate — membership genuinely differs. (`bearsMarker` + `DEFAULT_CATEGORY_VISIBILITY` already shipped.)
 - [ ] **Backfill ADR 0008 (effects-layer vehicle)** `process` — the decision shipped as `typed-redux-saga`; write the ADR only if the record is wanted.
 
 ## Rendering
 
-- [ ] **Milliquas AGN colormap** `needs-design` — AGN reuse the galaxy B−R ramp and misread as blue star-forming; give them their own encoding. Only the kPerZ=0 clamp shipped (#282). → [details](backlog/milliquas-agn-colormap.md)
-- [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/supercluster-shape-focus.md)
-- [ ] **In-scene thumbnail quality (SDSS/DSS)** `needs-design` — the auto-fetched atlas-quad path still uses fixed cutout sizes; mask / sky-sub / per-galaxy size / DESI / brightness-norm. (InfoCard path already got sizing + DSS color.) → [details](backlog/thumbnail-quality-sdss-dss.md)
+- [ ] **Milliquas AGN colormap** `needs-design` — AGN reuse the galaxy B−R ramp and misread as blue star-forming; give them their own encoding. Only the kPerZ=0 clamp shipped (#282). → [details](backlog/2026-06-29-milliquas-agn-colormap.md)
+- [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/2026-06-29-supercluster-shape-focus.md)
+- [ ] **In-scene thumbnail quality (SDSS/DSS)** `needs-design` — the auto-fetched atlas-quad path still uses fixed cutout sizes; mask / sky-sub / per-galaxy size / DESI / brightness-norm. (InfoCard path already got sizing + DSS color.) → [details](backlog/2026-06-29-thumbnail-quality-sdss-dss.md)
 - [ ] **Half-res ↔ post-process resize type-safety** `deferred` — the offscreen-volume and post-process targets resize via two independent `?.resize()` calls in `runFrame.ts`; enforce the coupling in the type system.
-- [ ] **Thumbnail-priority loop scaling** `deferred` — the per-frame priority scan (`texturedDiskSubsystem.ts`) is CPU-linear with stride decimation (#79); add a BVH or compute-shader pass for larger tiers. → [details](backlog/thumbnail-loop-scaling.md)
-- [ ] **Picking GPU resources → own subsystem** `deferred` — `pickRenderer.ts` owns its per-camera pick texture directly; migrate it (parallel to fade per ADR 0001). Pick texture is per-camera, so it needs its own ADR. → [details](backlog/picking-gpu-subsystem.md)
+- [ ] **Thumbnail-priority loop scaling** `deferred` — the per-frame priority scan (`texturedDiskSubsystem.ts`) is CPU-linear with stride decimation (#79); add a BVH or compute-shader pass for larger tiers. → [details](backlog/2026-06-29-thumbnail-loop-scaling.md)
+- [ ] **Picking GPU resources → own subsystem** `deferred` — `pickRenderer.ts` owns its per-camera pick texture directly; migrate it (parallel to fade per ADR 0001). Pick texture is per-camera, so it needs its own ADR. → [details](backlog/2026-06-29-picking-gpu-subsystem.md)
 - [ ] **Structure-ring click smoke-test** `manual` — after the `poiIndex`→`structureIndex` WESL rename (#288), click a cluster/SC/void/group ring on the dev server and confirm the right structure selects. `ringPick.test.ts` guards the encoding but can't run the shader.
 
 ## Data pipeline
 
-- [ ] **Close-to-home tier weighting** `needs-design` — bias small/medium subsampling toward galaxies near the camera home for first-load density (`subsampleByAbsMag` ranks by M_abs only). → [details](backlog/close-to-home-weighting.md)
-- [ ] **Dense Local Volume seeding** `needs-design` — spare galaxies inside the featured group spheres (`structure_anchors.seed.json` radii) regardless of M_abs, so group rings aren't near-empty at low tiers. → [details](backlog/dense-local-volume-seeding.md)
+- [ ] **Close-to-home tier weighting** `needs-design` — bias small/medium subsampling toward galaxies near the camera home for first-load density (`subsampleByAbsMag` ranks by M_abs only). → [details](backlog/2026-06-29-close-to-home-weighting.md)
+- [ ] **Dense Local Volume seeding** `needs-design` — spare galaxies inside the featured group spheres (`structure_anchors.seed.json` radii) regardless of M_abs, so group rings aren't near-empty at low tiers. → [details](backlog/2026-06-29-dense-local-volume-seeding.md)
 
 ## UI & UX
 
-- [ ] **Structure search in the palette** `ready` — index clusters/superclusters/voids (MCXC+MSCC names + Abell numbers from `structures_meta.json`) in `CommandPalette.tsx` + select-and-fly-to. → [details](backlog/structure-search-palette.md)
+- [ ] **Structure search in the palette** `ready` — index clusters/superclusters/voids (MCXC+MSCC names + Abell numbers from `structures_meta.json`) in `CommandPalette.tsx` + select-and-fly-to. → [details](backlog/2026-06-29-structure-search-palette.md)
 - [ ] **Milky Way URL deep-link (encode)** `ready` — the parser already returns `{type:'milkyWay'}`; make `URL_HASH_FOR['milkyWay']` emit `#focus=milkyway` to close the round-trip (`urlHashFor.ts:29`).
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
 - [ ] **VolumeFieldRow schema-driven UI** `needs-design` — replace the seven hand-coded sliders with a settings-schema-generated UI.
-- [ ] **Global shortcuts → keyboard saga** `needs-design` — migrate the non-tour keys (Cmd+K, /, Esc, f, h, l, Tab, d) from the `useKeyboardShortcuts` hook to a declarative map + a shared `watchKeyboardEventsSaga`. → [details](backlog/keyboard-shortcuts-saga.md)
-- [ ] **Label declutter toggle + hysteresis** `needs-design` — add `settings.labels.declutter` wired to `labelDirectorSubsystem` (replacing the `?nodeclutter` stopgap) and hysteresis-damp the cull so labels stop flickering under camera motion. → [details](backlog/label-declutter-toggle.md)
+- [ ] **Global shortcuts → keyboard saga** `needs-design` — migrate the non-tour keys (Cmd+K, /, Esc, f, h, l, Tab, d) from the `useKeyboardShortcuts` hook to a declarative map + a shared `watchKeyboardEventsSaga`. → [details](backlog/2026-06-29-keyboard-shortcuts-saga.md)
+- [ ] **Label declutter toggle + hysteresis** `needs-design` — add `settings.labels.declutter` wired to `labelDirectorSubsystem` (replacing the `?nodeclutter` stopgap) and hysteresis-damp the cull so labels stop flickering under camera motion. → [details](backlog/2026-06-29-label-declutter-toggle.md)
 - [ ] **Label fade opt-out ADR** `needs-design` — decide whether per-character MSDF label opacity opts out of the per-handle fade bind-group pattern; follow-up to ADR 0001.
-- [ ] **Reusable structure-visit tour clip** `needs-design` — generalize the hardcoded Virgo/M87 tour beats into a parameterized `structureVisitClip`. Focus-isolation primitive already shipped. → [details](backlog/structure-visit-tour-clip.md)
+- [ ] **Reusable structure-visit tour clip** `needs-design` — generalize the hardcoded Virgo/M87 tour beats into a parameterized `structureVisitClip`. Focus-isolation primitive already shipped. → [details](backlog/2026-06-29-structure-visit-tour-clip.md)
 
 ## Docs & process
 

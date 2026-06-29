@@ -13,4 +13,4 @@ No group-sphere sparing. Neither `subsampleByAbsMag.ts`, `selectTierRecords.ts`,
 
 ## Direction
 
-The group seed positions/radii (`data/structure_anchors.seed.json`) are available to the build, so the subsampler can spare points within `apparentRadiusMpc` of each group centre. Keep an eye on the on-screen count budget. Pairs with the cluster-focus member count (`PoiDetailCard` "Galaxies" row) — denser seeding makes that number meaningful at lower tiers. Distinct from [close-to-home weighting](close-to-home-weighting.md): this is per-group membership density keyed off the structure seed, not camera-home density.
+The group seed positions/radii (`data/structure_anchors.seed.json`) are available to the build, so the subsampler can spare points within `apparentRadiusMpc` of each group centre. Keep an eye on the on-screen count budget. Pairs with the cluster-focus member count (`PoiDetailCard` "Galaxies" row) — denser seeding makes that number meaningful at lower tiers. Distinct from [close-to-home weighting](2026-06-29-close-to-home-weighting.md): this is per-group membership density keyed off the structure seed, not camera-home density.

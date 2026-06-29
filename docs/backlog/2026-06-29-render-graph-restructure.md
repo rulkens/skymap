@@ -18,4 +18,4 @@ Model the frame as a graph of passes with declared inputs/outputs; let ordering 
 ## Notes
 
 - Listed under "Deferred from existing plans / ADRs" — scoped out of the renderer-interface-extraction work with a paper trail.
-- Sibling cleanup: the [GPU-handle nullability follow-on](gpu-handle-nullability.md) removes one source of per-pass null-threading that complicates the current frame body.
+- Sibling cleanup: the [GPU-handle nullability follow-on](2026-06-29-gpu-handle-nullability.md) removes one source of per-pass null-threading that complicates the current frame body.
