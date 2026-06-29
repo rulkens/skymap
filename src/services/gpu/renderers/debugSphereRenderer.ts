@@ -18,9 +18,11 @@
  *
  * `lib/sphere.wesl` defines `SphereUniforms` (one mat4x4<f32>, 64 bytes)
  * and `clip_from_local`. `debugSphere/vertex.wesl` declares the binding
- * at `@group(0) @binding(0)` and imports the struct + helper. The CPU
- * side writes 64 bytes of column-major float32 per draw via
- * `queue.writeBuffer`.
+ * at `@group(0) @binding(0)` and imports the struct + helper. To draw
+ * several spheres in one frame the CPU side packs each body's 64-byte MVP
+ * into its own 256-byte slot of a dynamic-offset uniform buffer, then draws
+ * each with the matching bind-group offset — so every sphere keeps its own
+ * matrix through to submit.
  *
  * ### Pipeline state
  *
@@ -59,6 +61,16 @@ const RINGS = 24;
 /** `SphereUniforms` contains one mat4x4<f32> — 16 floats × 4 bytes. */
 const UNIFORM_BUFFER_SIZE = 64;
 
+/** Per-sphere stride in the dynamic-offset uniform buffer. WebGPU requires
+ *  dynamic offsets to be a multiple of `minUniformBufferOffsetAlignment`,
+ *  whose maximum across our target devices is 256 — so each sphere's 64-byte
+ *  MVP gets its own 256-byte slot. */
+const UNIFORM_SLOT_SIZE = 256;
+
+/** Upper bound on spheres drawn per frame. The debug overlay only ever shows
+ *  a handful of bodies (Sun, Earth, …); this caps the uniform buffer size. */
+const MAX_SPHERES = 8;
+
 export function createDebugSphereRenderer(
   device: GPUDevice,
   colorFormat: GPUTextureFormat,
@@ -86,13 +98,20 @@ export function createDebugSphereRenderer(
   });
   device.queue.writeBuffer(indexBuffer, 0, mesh.indices);
 
-  // ── Uniform buffer ────────────────────────────────────────────────────────
+  // ── Uniform buffer (dynamic-offset, one slot per sphere) ──────────────────
   //
-  // Holds `SphereUniforms { mvp: mat4x4<f32> }` — 64 bytes, overwritten
-  // once per draw call.
+  // Holds up to MAX_SPHERES `SphereUniforms { mvp: mat4x4<f32> }` blocks, one
+  // per 256-byte slot. Each sphere's MVP is written to its OWN slot before any
+  // draw, and selected at draw time by a dynamic bind-group offset — so every
+  // sphere renders with its own matrix in a single submit. Writing one shared
+  // 64-byte uniform per draw would NOT work: queue.writeBuffer is ordered
+  // against submit, not against the draws between writes, so all draws would
+  // read the last-written MVP and every sphere would collapse onto the final
+  // body (the same class of bug as the per-draw-uniform mutation noted in the
+  // renderer guidance — bake per-draw data so it survives to submit).
   const uniformBuffer = device.createBuffer({
     label: 'debugSphere-uniform-buffer',
-    size: UNIFORM_BUFFER_SIZE,
+    size: MAX_SPHERES * UNIFORM_SLOT_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
@@ -100,22 +119,27 @@ export function createDebugSphereRenderer(
   //
   // Group 0, binding 0: the SphereUniforms block, visible in the vertex
   // stage only (the fragment shader derives everything from the interpolated
-  // localPos passed by the vertex stage).
+  // localPos passed by the vertex stage). `hasDynamicOffset` lets one bind
+  // group address any sphere's slot via a per-draw offset.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'debugSphere-bgl',
     entries: [
       {
         binding: 0,
         visibility: GPUShaderStage.VERTEX,
-        buffer: { type: 'uniform' },
+        buffer: { type: 'uniform', hasDynamicOffset: true },
       },
     ],
   });
 
+  // `size: UNIFORM_BUFFER_SIZE` binds just the 64-byte SphereUniforms window
+  // that starts at the dynamic offset, not the whole multi-slot buffer.
   const bindGroup = device.createBindGroup({
     label: 'debugSphere-bg',
     layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    entries: [
+      { binding: 0, resource: { buffer: uniformBuffer, offset: 0, size: UNIFORM_BUFFER_SIZE } },
+    ],
   });
 
   // ── Shader modules ────────────────────────────────────────────────────────
@@ -179,19 +203,26 @@ export function createDebugSphereRenderer(
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, mvp: Float32Array): void {
-    // Upload the caller-provided MVP matrix (16 floats = 64 bytes) into
-    // SphereUniforms at offset 0.  The mvp is computed CPU-side and varies
-    // per body; writing it here (not at pipeline creation time) lets the
-    // same renderer draw multiple spheres in one frame by calling `draw`
-    // multiple times with different mvp values.
-    device.queue.writeBuffer(uniformBuffer, 0, mvp);
+  function draw(pass: GPURenderPassEncoder, mvps: readonly Float32Array[]): void {
+    const count = Math.min(mvps.length, MAX_SPHERES);
+    if (count === 0) return;
+
+    // Write every MVP to its own 256-byte slot FIRST (distinct byte ranges, so
+    // no write clobbers another), then issue the draws — each selecting its
+    // slot via a dynamic offset. All slots are populated before the single
+    // submit, so each sphere renders with its own matrix.
+    for (let i = 0; i < count; i++) {
+      const mvp = mvps[i];
+      if (mvp) device.queue.writeBuffer(uniformBuffer, i * UNIFORM_SLOT_SIZE, mvp);
+    }
 
     pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
     pass.setVertexBuffer(0, positionBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
-    pass.drawIndexed(indexCount);
+    for (let i = 0; i < count; i++) {
+      pass.setBindGroup(0, bindGroup, [i * UNIFORM_SLOT_SIZE]);
+      pass.drawIndexed(indexCount);
+    }
   }
 
   // ── destroy ───────────────────────────────────────────────────────────────

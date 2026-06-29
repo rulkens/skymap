@@ -29,12 +29,15 @@ import type { Renderer } from './Renderer';
 
 export type DebugSphereRenderer = Renderer & {
   /**
-   * Issue a single indexed draw for the UV-sphere mesh.
+   * Draw one UV sphere per supplied MVP, in order, into the current pass.
    *
-   * `mvp` must be a length-16 Float32Array (column-major mat4x4<f32>,
-   * 64 bytes) that folds model scale + translate + view + projection.
-   * The value is written into the `SphereUniforms` uniform buffer with
-   * `queue.writeBuffer` before the draw call.
+   * Each entry must be a length-16 Float32Array (column-major mat4x4<f32>,
+   * 64 bytes) folding that body's model scale + translate + view +
+   * projection. Each MVP is written to its OWN slot of a dynamic-offset
+   * uniform buffer before any draw, so all spheres render with their own
+   * matrix in a single submit — writing one shared uniform per draw would
+   * collapse every sphere onto the last MVP (the queue.writeBuffer / submit
+   * ordering trap, see feedback_webgpu_auto_layout_trap's sibling note).
    */
-  draw(pass: GPURenderPassEncoder, mvp: Float32Array): void;
+  draw(pass: GPURenderPassEncoder, mvps: readonly Float32Array[]): void;
 };

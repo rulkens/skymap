@@ -43,7 +43,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
-import { DEBUG_SPHERE_BODY } from '../../../data/bodies/debugSphereBody';
+import { DEBUG_SPHERE_BODIES } from '../../../data/bodies/debugSphereBody';
 
 /**
  * Encode the foreground depth pass + OVER-composite into the HDR target.
@@ -98,15 +98,13 @@ export function encodeForegroundPass(
     },
   });
 
-  // Compose the full MVP in f64 before narrowing to f32 (see composeBodyMvp
-  // for the catastrophic-cancellation rationale at 1-AU distances).
-  const mvp = composeBodyMvp(
-    ctx.foregroundVp,
-    DEBUG_SPHERE_BODY.positionMpc,
-    ctx.renderOrigin,
-    DEBUG_SPHERE_BODY.radiusMpc,
+  // One MVP per debug body, each composed fully in f64 before narrowing to
+  // f32 (see composeBodyMvp for the catastrophic-cancellation rationale). The
+  // renderer draws each into the depth-tested foreground in array order.
+  const mvps = DEBUG_SPHERE_BODIES.map((body) =>
+    composeBodyMvp(ctx.foregroundVp, body.positionMpc, ctx.renderOrigin, body.radiusMpc),
   );
-  debugSphereRenderer.draw(fgPass, mvp);
+  debugSphereRenderer.draw(fgPass, mvps);
 
   fgPass.end();
 
