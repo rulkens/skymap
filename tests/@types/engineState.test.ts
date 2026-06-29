@@ -165,6 +165,9 @@ describe('EngineState type', () => {
         volumeUpsample: null,
         pickDebugOverlay: null,
         diskRadiusRing: null,
+        foregroundOffscreen: null,
+        foregroundComposite: null,
+        debugSphereRenderer: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
@@ -366,6 +369,9 @@ describe('EngineState type', () => {
         volumeUpsample: null,
         pickDebugOverlay: null,
         diskRadiusRing: null,
+        foregroundOffscreen: null,
+        foregroundComposite: null,
+        debugSphereRenderer: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {

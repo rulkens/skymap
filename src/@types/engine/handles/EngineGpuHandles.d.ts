@@ -63,6 +63,9 @@ import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
+import type { ForegroundOffscreen } from '../../rendering/ForegroundOffscreen';
+import type { ForegroundComposite } from '../../rendering/ForegroundComposite';
+import type { DebugSphereRenderer } from '../../rendering/DebugSphereRenderer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -260,6 +263,34 @@ export type EngineGpuHandles = {
    * uniform buffers, so the `destroy()` chain must release it.
    */
   diskRadiusRing: DiskRadiusRing | null;
+  /**
+   * Full-resolution foreground render target (Plan 01 — zoom-to-Earth).
+   * Carries an 'rgba16float' colour attachment and a 'depth32float' depth
+   * attachment so opaque foreground geometry (Earth, Moon, Sun) can depth-test
+   * against itself independently of the additive HDR target.  Resized in
+   * lockstep with 'postProcess' and 'volumeOffscreen' whenever the canvas
+   * changes size (see 'runFrame.ts' resize branch).  Null until 'initGpu'
+   * constructs it; released and re-nulled by 'destroy()'.
+   */
+  foregroundOffscreen: ForegroundOffscreen | null;
+  /**
+   * Fullscreen OVER-composite pass that blends the foreground colour texture
+   * onto the HDR target (Plan 01 — zoom-to-Earth).  Viewport-independent —
+   * no resize method; the foreground colour view is passed per-draw call so
+   * the caller always supplies a view that matches the current canvas size.
+   * Null until 'initGpu' constructs it; released and re-nulled by
+   * 'destroy()' (no-op destroy for lifecycle symmetry).
+   */
+  foregroundComposite: ForegroundComposite | null;
+  /**
+   * UV-sphere debug overlay drawn into the foreground depth pass (Plan 01 —
+   * zoom-to-Earth).  Renders a lat-long-grid sphere so roundness, jitter, and
+   * pole orientation are legible at Earth scale before a real texture is
+   * applied.  Viewport-independent (like 'foregroundComposite') — no resize.
+   * Null until 'initGpu' constructs it; released and re-nulled by 'destroy()'
+   * (releases the position VBO, index IBO, and uniform buffer).
+   */
+  debugSphereRenderer: DebugSphereRenderer | null;
   /**
    * Per-pass GPU timing service.  Always non-null — the engine state
    * is initialized with a no-op stub (see `createDisabledGpuTimingService`)

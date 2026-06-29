@@ -72,6 +72,9 @@ import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
 import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
+import { createForegroundOffscreen } from '../../gpu/passes/foregroundOffscreen';
+import { createForegroundComposite } from '../../gpu/passes/foregroundComposite';
+import { createDebugSphereRenderer } from '../../gpu/renderers/debugSphereRenderer';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -373,6 +376,32 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     hasUrlGate('gpuTimings'),
     TIMED_SLOT_NAMES,
   );
+
+  // ── Foreground pass resources (Plan 01 — zoom-to-Earth) ──────────
+  //
+  // Three handles required by the foreground depth pass:
+  //
+  //   foregroundOffscreen — full-resolution rgba16float + depth32float target
+  //     pair.  The foreground pass draws opaque geometry (Earth, Moon, Sun)
+  //     into these textures, separately from the additive HDR target, so it
+  //     can carry its own depth buffer without touching any existing pipeline.
+  //     Sized to match the canvas here, then resized in the runFrame resize
+  //     branch alongside postProcess + volumeOffscreen (see runFrame.ts).
+  //
+  //   foregroundComposite — fullscreen OVER-composite pass.  Viewport-
+  //     independent: the foreground colour view is passed per-draw, so this
+  //     handle needs no resize call — the caller always supplies a fresh view
+  //     after a foregroundOffscreen.resize().
+  //
+  //   debugSphereRenderer — UV-sphere mesh for visual correctness checks at
+  //     Earth scale (roundness, jitter, pole orientation) before a real Earth
+  //     texture lands in Plan 02.  Viewport-independent; no resize.
+  state.gpu.foregroundOffscreen = createForegroundOffscreen(device, {
+    width: canvas.width,
+    height: canvas.height,
+  });
+  state.gpu.foregroundComposite = createForegroundComposite(device, 'rgba16float');
+  state.gpu.debugSphereRenderer = createDebugSphereRenderer(device, 'rgba16float', 'depth32float');
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

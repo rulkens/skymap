@@ -137,6 +137,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       width: deps.canvas.width,
       height: deps.canvas.height,
     });
+    // foregroundComposite + debugSphereRenderer are viewport-independent:
+    // the former receives the colour view per-draw; the latter draws indexed
+    // geometry that is not sized to the viewport.  Only foregroundOffscreen
+    // carries canvas-sized textures and needs resizing here.
+    state.gpu.foregroundOffscreen?.resize({
+      width: deps.canvas.width,
+      height: deps.canvas.height,
+    });
   }
 
   // ── Camera produce → commit-on-edge ──────────────────────────────────────

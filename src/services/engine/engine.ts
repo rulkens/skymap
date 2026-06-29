@@ -282,6 +282,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null-checks each together with its `settings.debug.*` toggle.
       pickDebugOverlay: null,
       diskRadiusRing: null,
+      // Foreground pass resources (Plan 01 — zoom-to-Earth).  Null until
+      // initGpu constructs them; released and re-nulled by destroy().
+      // foregroundComposite + debugSphereRenderer need no resize call —
+      // only foregroundOffscreen carries canvas-sized textures.
+      foregroundOffscreen: null,
+      foregroundComposite: null,
+      debugSphereRenderer: null,
       // Per-pass GPU timing service.  Always non-null — a no-op stub until
       // initGpu swaps in the device-aware service.  Consumers gate on
       // `.enabled`.
@@ -655,6 +662,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.pickDebugOverlay = null;
     state.gpu.diskRadiusRing?.destroy();
     state.gpu.diskRadiusRing = null;
+    // Foreground pass resources (Plan 01 — zoom-to-Earth).
+    // foregroundOffscreen owns two GPU textures (rgba16float + depth32float);
+    // foregroundComposite and debugSphereRenderer own shader pipelines and
+    // (in the debug sphere's case) vertex/index/uniform GPU buffers.
+    state.gpu.foregroundOffscreen?.destroy();
+    state.gpu.foregroundOffscreen = null;
+    state.gpu.foregroundComposite?.destroy();
+    state.gpu.foregroundComposite = null;
+    state.gpu.debugSphereRenderer?.destroy();
+    state.gpu.debugSphereRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
