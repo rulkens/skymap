@@ -47,12 +47,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Half-res ↔ post-process resize type-safety** `deferred` — the offscreen-volume and post-process targets resize via two independent `?.resize()` calls in `runFrame.ts`; enforce the coupling in the type system.
 - [ ] **Thumbnail-priority loop scaling** `deferred` — the per-frame priority scan (`texturedDiskSubsystem.ts`) is CPU-linear with stride decimation (#79); add a BVH or compute-shader pass for larger tiers. → [details](backlog/2026-06-29-thumbnail-loop-scaling.md)
 - [ ] **Picking GPU resources → own subsystem** `deferred` — `pickRenderer.ts` owns its per-camera pick texture directly; migrate it (parallel to fade per ADR 0001). Pick texture is per-camera, so it needs its own ADR. → [details](backlog/2026-06-29-picking-gpu-subsystem.md)
-- [ ] **Structure-ring click smoke-test** `manual` — after the `poiIndex`→`structureIndex` WESL rename (#288), click a cluster/SC/void/group ring on the dev server and confirm the right structure selects. `ringPick.test.ts` guards the encoding but can't run the shader.
-
-## Data pipeline
-
-- [ ] **Close-to-home tier weighting** `needs-design` — bias small/medium subsampling toward galaxies near the camera home for first-load density (`subsampleByAbsMag` ranks by M_abs only). → [details](backlog/2026-06-29-close-to-home-weighting.md)
-- [ ] **Dense Local Volume seeding** `needs-design` — spare galaxies inside the featured group spheres (`structure_anchors.seed.json` radii) regardless of M_abs, so group rings aren't near-empty at low tiers. → [details](backlog/2026-06-29-dense-local-volume-seeding.md)
 
 ## UI & UX
 
