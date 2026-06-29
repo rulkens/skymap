@@ -67,10 +67,11 @@ export function debugSphereLabels(): Label[] {
       font: 'cormorant',
       pixelSize: 0,
       color: BODY_COLOR[body.label] ?? [1, 1, 1, 1],
-      // Black outline so the caption stays legible against the bright limb
-      // of a sphere as well as against empty space.
-      outlineColor: [0, 0, 0, 1],
-      outlineEmFrac: 0.18,
+      // Faint black drop shadow for legibility against space or a bright
+      // limb. Matches the shared label convention (10%-alpha, em-frac 0.16);
+      // a fully-opaque outline paints a hard black ring, not a shadow.
+      outlineColor: [0, 0, 0, 0.1],
+      outlineEmFrac: 0.16,
       // Em height tracks the body's true size; the pixel clamps below keep
       // it readable even though that em is microscopic at most zooms.
       worldEmMpc: body.radiusMpc,
