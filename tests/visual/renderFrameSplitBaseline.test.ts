@@ -326,6 +326,9 @@ describe('renderFrame visual baseline', () => {
       state: {
         gpu: {
           labelRenderer,
+          // Foreground caption renderer stays null so foregroundLabelsPass is
+          // disabled — the recorded draw sequence is unchanged by this pass.
+          foregroundLabelRenderer: null,
           markerLineRenderer,
           selectionRingRenderer: null,
           volumeFieldRenderer,

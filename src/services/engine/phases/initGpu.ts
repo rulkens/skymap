@@ -75,6 +75,7 @@ import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniform
 import { createForegroundOffscreen } from '../../gpu/passes/foregroundOffscreen';
 import { createForegroundComposite } from '../../gpu/passes/foregroundComposite';
 import { createDebugSphereRenderer } from '../../gpu/renderers/debugSphereRenderer';
+import { debugSphereLabels } from '../presentation/debugSphereLabels';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -402,6 +403,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   });
   state.gpu.foregroundComposite = createForegroundComposite(device, 'rgba16float');
   state.gpu.debugSphereRenderer = createDebugSphereRenderer(device, 'rgba16float', 'depth32float');
+
+  // Name captions for the foreground bodies.  A second label renderer (UI /
+  // swap-chain format, like the main one) drawn with `foregroundVp` so the
+  // captions track the Sun/Earth at solar-system zoom.  The label set is
+  // static, so it's uploaded once here; `foregroundLabelsPass` only draws it.
+  state.gpu.foregroundLabelRenderer = createLabelRenderer(uiCtx, fontAtlases);
+  state.gpu.foregroundLabelRenderer.setLabels(debugSphereLabels());
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

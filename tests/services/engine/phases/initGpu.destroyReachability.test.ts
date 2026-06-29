@@ -48,6 +48,7 @@ function makeStub(name: string): { destroy: ReturnType<typeof vi.fn> } {
     // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
+    setLabels: vi.fn(),
   };
   stubs[name] = stub;
   return stub;
@@ -221,6 +222,7 @@ function makeState(): EngineState {
       postProcess: null,
       filamentRenderer: null,
       labelRenderer: null,
+      foregroundLabelRenderer: null,
       markerLineRenderer: null,
       selectionRingRenderer: null,
       structureMarkerRenderer: null,

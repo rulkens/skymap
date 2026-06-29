@@ -104,6 +104,7 @@ import { milkyWayPass } from './milkyWayPass';
 import { horizonShellPass } from './horizonShellPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
+import { foregroundLabelsPass } from './foregroundLabelsPass';
 import { structureMarkersPass } from './structureMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
 import { diskRadiusRingPass } from './diskRadiusRingPass';
@@ -136,6 +137,7 @@ export const UI_PASSES: readonly Pass[] = [
   diskRadiusRingPass,
   markerLinesPass,
   labelsPass,
+  foregroundLabelsPass,
 ];
 
 /**
@@ -176,6 +178,7 @@ export { milkyWayPass } from './milkyWayPass';
 export { horizonShellPass } from './horizonShellPass';
 export { markerLinesPass } from './markerLinesPass';
 export { labelsPass } from './labelsPass';
+export { foregroundLabelsPass } from './foregroundLabelsPass';
 export { structureMarkersPass } from './structureMarkersPass';
 export { selectionRingPass } from './selectionRingPass';
 export { diskRadiusRingPass } from './diskRadiusRingPass';

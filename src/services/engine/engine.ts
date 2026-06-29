@@ -261,6 +261,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // font-atlas fetch.  Excluded from isEngineReady (optional async
       // resources, null-checked at use by labelsPass / markerLinesPass).
       labelRenderer: null,
+      // Second label renderer for the true-scale foreground bodies; null
+      // until initGpu builds it. foregroundLabelsPass null-checks at use.
+      foregroundLabelRenderer: null,
       markerLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
@@ -638,6 +641,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.filamentRenderer = null;
     state.gpu.labelRenderer?.destroy();
     state.gpu.labelRenderer = null;
+    state.gpu.foregroundLabelRenderer?.destroy();
+    state.gpu.foregroundLabelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
     state.gpu.selectionRingRenderer?.destroy();

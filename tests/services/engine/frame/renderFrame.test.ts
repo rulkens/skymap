@@ -316,6 +316,7 @@ function makeInput(
         // group keeps the mock encoder happy.
         gpu: {
           labelRenderer: null,
+          foregroundLabelRenderer: null,
           markerLineRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer: null,

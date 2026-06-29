@@ -150,6 +150,17 @@ export type EngineGpuHandles = {
    */
   labelRenderer: LabelRenderer | null;
   /**
+   * Second MSDF label renderer for the true-scale foreground bodies
+   * (Plan 01 — zoom-to-Earth).  Separate from `labelRenderer` because the
+   * Sun/Earth captions project with the adaptive `foregroundVp` rather than
+   * the galaxy-scale `vp` the main labels use, and one renderer draws with
+   * one view-projection.  Holds the static `debugSphereLabels()` set,
+   * uploaded once at construction.  Null until `initGpu` builds it against
+   * the font atlas; released and re-nulled by `destroy()`.  Plan 02
+   * repoints this at the real BodyStore label source.
+   */
+  foregroundLabelRenderer: LabelRenderer | null;
+  /**
    * Thick screen-space line overlay renderer.  Null until `initGpu`
    * constructs it alongside `labelRenderer` (same phase, no atlas dep).
    * Excluded from the `isEngineReady` predicate for the same reason as
