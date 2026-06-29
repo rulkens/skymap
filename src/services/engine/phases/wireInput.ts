@@ -36,6 +36,7 @@ import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 import { poseOf } from '../camera/poseOf';
+import { projectionOf } from '../camera/projectionOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
@@ -65,9 +66,9 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas } = deps;
 
-  // Build the pick renderer.  It owns its own uniform buffer; the visual
-  // renderer's buffer is no longer shared.  The `renderer` local is kept
-  // for the null-guard above and for `loadedSources` at pick time.
+  // The visual renderer must exist before we wire picking + the camera. The
+  // `renderer` local is the null-guard subject on the next line and is captured
+  // by the hover-pick `collectTargets` closure below.
   const renderer = state.gpu.renderer;
   if (!renderer) return;
   // Thread the cluster marker renderer through so the pick pass can
@@ -144,16 +145,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   const fovYRad = DEFAULT_FOV_Y_RAD;
   const initialCam = computeInitialCamera({ fovYRad });
 
-  const cam = createOrbitCamera({
-    target: initialCam.target,
-    distance: initialCam.distance,
-    yaw: initialCam.yaw,
-    pitch: initialCam.pitch,
-    fovYRad: initialCam.fovYRad,
-    aspect: canvas.width / canvas.height,
-    near: initialCam.near,
-    far: initialCam.far,
-  });
+  // `InitialCam` is exactly an `OrbitCameraInit` minus `aspect` (reset uses the
+  // live canvas ratio, not a captured one), so the camera is the framing
+  // snapshot plus the current aspect.
+  const cam = createOrbitCamera({ ...initialCam, aspect: canvas.width / canvas.height });
   state.cam = cam;
 
   // ── Bootstrap seed ───────────────────────────────────────────────────────
@@ -164,19 +159,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // framing pose, causing a visible camera jump on the first frame.
   //
   // Three writes, in dependency order:
-  //   1. `projection` — the full projection config from the initial camera +
-  //      the current canvas aspect ratio. Subsequent resizes patch only `aspect`.
+  //   1. `projection` — read off the assembled camera via `projectionOf`.
+  //      Subsequent resizes patch only `aspect`.
   //   2. `lastPose.current` — the initial pose so the first commit-on-edge has
   //      a valid previous pose to refer to.
   //   3. `commitCameraPose` dispatch — makes `camera.base` in the Redux store
   //      authoritative before the first produced frame, so the `resting` driver
   //      returns the correct pose and the first frame does not jump.
-  state.cameraRuntime.projection = {
-    fovYRad,
-    aspect: canvas.width / canvas.height,
-    near: initialCam.near,
-    far: initialCam.far,
-  };
+  state.cameraRuntime.projection = projectionOf(cam);
   state.cameraRuntime.lastPose.current = poseOf(cam);
   store.dispatch(commitCameraPose(poseOf(cam)));
 
