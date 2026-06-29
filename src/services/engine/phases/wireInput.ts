@@ -196,7 +196,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // is selected the card stays visible (showing the pinned
     // point) — selection state is unaffected.
     onPointerLeave: () => {
-      deps.cb.store.dispatch(updateSelectionHover(null));
+      store.dispatch(updateSelectionHover(null));
     },
     // Clear hover on pointerdown so the card immediately reflects "nothing
     // hovered" instead of lagging until the drag ends. Cancelling an in-flight
@@ -204,7 +204,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // `cancelCameraTween()` when a drag actually begins).
     onPointerDown: () => {
       state.picking.pointerDown = true;
-      deps.cb.store.dispatch(updateSelectionHover(null));
+      store.dispatch(updateSelectionHover(null));
     },
     onPointerUp: () => {
       state.picking.pointerDown = false;
@@ -217,7 +217,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // through the handle's `clearSelection()`, which dispatches the same
     // action; the reducer dedupes, so a double-fire is a no-op.
     onEscape: () => {
-      deps.cb.store.dispatch(clearSelection());
+      store.dispatch(clearSelection());
     },
     // resize: the next frame's resizeCanvasToDisplay() picks up
     // the new dimensions and recreates the HDR target.  All we
@@ -346,7 +346,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // Single-click dispatches the identity ref (null clears). The
       // reconciler saga watches the slot and fills `selectionRows`.
       pick.then((ref) => {
-        deps.cb.store.dispatch(updateSelectionSelect(ref));
+        store.dispatch(updateSelectionSelect(ref));
       });
     },
     onDoubleClick: () => {
@@ -356,8 +356,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // readbacks resolve out of order). A null select ref means empty space:
       // dispatch focus(null) to lift the cluster-focus fade. The camera tween
       // is triggered by the watchFocusTweenSaga — not here.
-      const ref = selectSelectedRef(deps.cb.store.getState());
-      deps.cb.store.dispatch(updateSelectionFocus(ref));
+      const ref = selectSelectedRef(store.getState());
+      store.dispatch(updateSelectionFocus(ref));
     },
   });
 }
