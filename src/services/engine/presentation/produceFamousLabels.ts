@@ -174,9 +174,7 @@ export function produceFamousLabels(
   const labels: Label[] = [];
   const lines: MarkerLine[] = [];
 
-  // Recover the vertical fov from the per-frame `drawPxPerRad` (the scalar
-  // every other per-frame consumer reads).
-  const fovYRad = 2 * Math.atan((ctx.canvasSize.height * 0.5) / ctx.drawPxPerRad);
+  const fovYRad = ctx.fovYRad;
   const [cx, cy, cz] = ctx.drawCamPos;
   const style = FAMOUS_LABEL_STYLE;
   // Snapshot the live-tuning override once so it stays consistent across the

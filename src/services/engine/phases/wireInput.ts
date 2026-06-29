@@ -34,7 +34,7 @@ import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
 import { createClickResolver } from '../interaction/clickHandler';
 import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
-import { computeInitialCamera } from '../camera/cameraFraming';
+import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 import { poseOf } from '../camera/poseOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
@@ -141,7 +141,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   //
   // Pure constants — see `cameraFraming.ts`. No dependency on loaded
   // catalogs, so the camera is built before any galaxy catalog has arrived.
-  const fovYRad = (Math.PI / 180) * 60;
+  const fovYRad = DEFAULT_FOV_Y_RAD;
   const initialCam = computeInitialCamera({ fovYRad });
 
   const cam = createOrbitCamera({

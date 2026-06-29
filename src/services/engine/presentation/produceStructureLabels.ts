@@ -57,13 +57,7 @@ export function produceStructureLabels(
 ): LabelProducerOutput {
   const labels: Label[] = [];
 
-  // Recover the vertical fov from the per-frame `drawPxPerRad`:
-  //   drawPxPerRad = canvasSize.height / (2 * tan(fovY/2))
-  // ⇒ fovY = 2 * atan(canvasSize.height / (2 * drawPxPerRad))
-  // matching the scalar every other per-frame consumer reads.
-  const halfH = ctx.canvasSize.height * 0.5;
-  const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
-  const pxPerRad = halfH / Math.tan(fovYRad * 0.5);
+  const pxPerRad = ctx.drawPxPerRad;
   const [cx, cy, cz] = ctx.drawCamPos;
 
   // Snapshot the live-tuning override once so it stays consistent across the
