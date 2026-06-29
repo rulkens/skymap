@@ -148,9 +148,18 @@ what's being moved in one line, then do it:
 - If a matching spec exists at `docs/superpowers/specs/<same-date>-<same-slug>*.md`
   (or one the plan links to in its header), `git mv` it to
   `docs/superpowers/specs/completed/` the same way.
-- Remove the plan's line from `docs/BACKLOG.md` (if present) via Edit.
-  If the plan referenced a deferred item that's still open, leave
-  that item — it stays in the backlog until separately picked up.
+- **Sweep the backlog.** The item should already be gone — the
+  convention removes a backlog item (its index line **and** its
+  `docs/backlog/<date>-<slug>.md` detail file) the moment it's picked
+  up to write a spec/plan — but catch stragglers. Search `docs/BACKLOG.md`
+  and `docs/backlog/` for the feature's slug/name:
+  - Remove any matching index line via Edit.
+  - `git rm` any matching `docs/backlog/<date>-<slug>.md` detail file —
+    the shipped plan/spec supersedes it.
+  - **Never leave a `~~struck-through~~` "done" line** — delete it. The
+    completion record is the git log + `*/completed/`, not the backlog.
+  - If the plan referenced a *separate* deferred item that's still open,
+    leave that one — it stays in the backlog until independently picked up.
 
 Then **commit and push** the moves so the "this plan shipped" record
 lands on the feature branch / PR without a manual follow-up:
@@ -159,7 +168,8 @@ lands on the feature branch / PR without a manual follow-up:
   any in-place edits** (ticked checkboxes, a completion note). A bare
   `git mv` over an unstaged edit stages only the rename and strands the
   content change, so `git add` the new paths explicitly. Stage the
-  BACKLOG edit too. Stage only those doc paths — never `git add -A`.
+  BACKLOG edit + any removed `docs/backlog/` detail file too. Stage only
+  those doc paths — never `git add -A`.
 - Commit with a `docs(plan): mark <slug> complete` message under the
   user's git identity + the `Co-Authored-By: Claude …` trailer, with the
   audit verdict in the body.
@@ -169,7 +179,8 @@ lands on the feature branch / PR without a manual follow-up:
 
 Don't update CLAUDE.md, and don't commit anything beyond the completion
 moves — the implementation should already be committed; this commit is
-*only* the plan/spec relocation + checkbox ticks + BACKLOG edit.
+*only* the plan/spec relocation + checkbox ticks + BACKLOG/`docs/backlog`
+sweep.
 
 If the user explicitly says "audit only" / "don't move" / similar
 before invoking, skip the moves and just report. Otherwise default to

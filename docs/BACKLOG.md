@@ -11,7 +11,13 @@ Pickup-able work + surfaced issues. The git log is ground truth for _what shippe
 - `process` — awaiting a human action (review, write-up).
 - `blocked` — external dependency.
 
-Items with a **→ details** link have a full write-up in [`backlog/`](backlog/) — the problem, verified current state with `file:line` evidence, and options — ready to promote into a spec/plan. Tick `- [ ]` → `- [x]` when an item ships, then delete it (and its detail file) on the next sweep.
+Items with a **→ details** link have a full write-up in [`backlog/`](backlog/) — the problem, verified current state with `file:line` evidence, and options — ready to promote into a spec/plan.
+
+**Lifecycle.** This file lists only _unstarted_ work.
+
+- **Picking up an item removes it — same change.** The moment you start it, whether you implement it directly or write a spec/plan from it, delete its index line **and** its `docs/backlog/<date>-<slug>.md` detail file in that same commit/branch. The detail file's content seeds the spec; once it exists, the spec/plan is the source of truth, not the backlog.
+- **Never strike through.** No `~~done~~` lines — delete the item. The completion record is the git log + `plans/completed/` + `specs/completed/`, never a crossed-out backlog entry.
+- **Belt-and-suspenders:** `/feature-done` sweeps `BACKLOG.md` + `docs/backlog/` for the shipped feature when a plan completes, and a periodic verify-against-code audit (like 2026-06-29) catches anything the discipline missed.
 
 ---
 
