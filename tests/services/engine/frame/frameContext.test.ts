@@ -228,6 +228,27 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.visibleSourceMask).toBe(mask);
     expect(ctx.focus.blend).toBe(0);
   });
+
+  it('populates the foreground fields when ready', () => {
+    // Use a non-trivial pose so the foreground vp is definitely non-identity.
+    const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 50 };
+    const projection: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, projection, 0xffffffff);
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+
+    // foregroundVp must be a Float64Array of exactly 16 elements (column-major mat4).
+    expect(ctx.foregroundVp).toBeInstanceOf(Float64Array);
+    expect(ctx.foregroundVp.length).toBe(16);
+
+    // renderOrigin must match RENDER_ORIGIN_MPC ([0, 0, 0] for Plan 01).
+    expect(ctx.renderOrigin).toEqual([0, 0, 0]);
+
+    // near and far must both be positive and near < far (frustum is well-formed).
+    expect(ctx.foregroundNear).toBeGreaterThan(0);
+    expect(ctx.foregroundFar).toBeGreaterThan(0);
+    expect(ctx.foregroundNear).toBeLessThan(ctx.foregroundFar);
+  });
 });
 
 describe('deriveFrameContext — type narrowing', () => {

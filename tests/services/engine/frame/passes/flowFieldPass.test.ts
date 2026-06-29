@@ -34,6 +34,10 @@ function makeCtx(): ReadyFrameContext {
     postProcess: {} as never,
     volumeOffscreen: {} as never,
     texturedDisks: {} as never,
+    foregroundVp: new Float64Array(16),
+    foregroundNear: 0.001,
+    foregroundFar: 1000,
+    renderOrigin: [0, 0, 0],
   };
 }
 

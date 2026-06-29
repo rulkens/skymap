@@ -50,6 +50,10 @@ function makeCtx(): ReadyFrameContext {
       lastOutput: { disks: [] },
       hasInFlightWork: () => false,
     } as any,
+    foregroundVp: new Float64Array(16),
+    foregroundNear: 0.001,
+    foregroundFar: 1000,
+    renderOrigin: [0, 0, 0],
   };
 }
 

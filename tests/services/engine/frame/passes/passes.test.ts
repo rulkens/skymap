@@ -90,6 +90,10 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     postProcess,
     volumeOffscreen,
     texturedDisks,
+    foregroundVp: new Float64Array(16),
+    foregroundNear: 0.001,
+    foregroundFar: 1000,
+    renderOrigin: [0, 0, 0] as Readonly<[number, number, number]>,
     ...overrides,
   };
 }

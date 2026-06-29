@@ -93,4 +93,36 @@ export type ReadyFrameContext = {
    */
   volumeOffscreen: VolumeOffscreen;
   texturedDisks: TexturedDiskSubsystem;
+  /**
+   * F64 view-projection matrix for the foreground pass, expressed relative to
+   * `renderOrigin`. Computed once per frame via `computeForegroundViewProj` so
+   * the foreground renderer doesn't need to recompute it. All per-object model
+   * matrices passed to the foreground pass must also be expressed relative to
+   * `renderOrigin` for the MVP product to be correct.
+   */
+  readonly foregroundVp: Float64Array;
+  /**
+   * Near clip plane distance in Mpc for the foreground frustum.
+   *
+   * Plan 01: a simple heuristic proportional to `cam.distance` (see
+   * `frameContext.ts`). Plan 03 replaces this with an adaptive value from
+   * `foregroundFrustum(cam.distance)` in `src/utils/camera/foregroundFrustum.ts`
+   * to keep Earth-at-true-scale inside the frustum throughout the descent.
+   */
+  readonly foregroundNear: number;
+  /**
+   * Far clip plane distance in Mpc for the foreground frustum.
+   *
+   * Plan 01: a simple heuristic proportional to `cam.distance`. Plan 03 makes
+   * this adaptive; see `foregroundNear` above.
+   */
+  readonly foregroundFar: number;
+  /**
+   * The world-space render origin in Mpc. All foreground object model matrices
+   * and the foreground view-projection matrix are expressed relative to this
+   * point. Currently fixed at `RENDER_ORIGIN_MPC` = [0, 0, 0] (the Sun);
+   * a future floating-origin scheme would update this per-frame to reduce
+   * floating-point precision loss as the camera moves far from the Sun.
+   */
+  readonly renderOrigin: Readonly<Vec3>;
 };

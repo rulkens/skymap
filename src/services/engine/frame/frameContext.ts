@@ -88,9 +88,11 @@ import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
+import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
+import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 
 /**
  * Derive the per-frame context from an already-produced pose and projection.
@@ -143,6 +145,45 @@ export function deriveFrameContext(
   const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
   const drawPxPerRad = canvasSize.height / (2 * Math.tan(cam.fovYRad / 2));
 
+  // ── Foreground frustum (Plan 01: coarse distance-proportional heuristic) ──
+  //
+  // near and far are set to simple fractions of cam.distance, wide enough to
+  // contain Earth-at-true-scale (~4.8e-9 Mpc radius) through the full descent.
+  // Plan 03 replaces both constants with an adaptive call to
+  // `foregroundFrustum(cam.distance)` in `src/utils/camera/foregroundFrustum.ts`
+  // once the near-Earth choreography is defined. For now, a 1e-4 / 100 ratio
+  // keeps a 1-AU object visible from any distance ≥ MIN_DISTANCE_MPC (enforced
+  // by orbit controls) while giving enough far range to show nearby structures.
+  //
+  // Both guards: near must be > 0 (perspective projection is undefined for
+  // near ≤ 0), and near must be < far. Because cam.distance > 0 by the orbit-
+  // controls invariant (clampedDistance), the arithmetic here is always safe.
+  const FOREGROUND_NEAR_FRACTION = 1e-4; // Plan 01 coarse heuristic; Plan 03 replaces
+  const FOREGROUND_FAR_MULTIPLIER = 100; // Plan 01 coarse heuristic; Plan 03 replaces
+  const foregroundNear = cam.distance * FOREGROUND_NEAR_FRACTION;
+  const foregroundFar = cam.distance * FOREGROUND_FAR_MULTIPLIER;
+
+  // cam.position and cam.target are Vec3 tuples; extract to explicit [x,y,z]
+  // number tuples so the call signature matches Readonly<Vec3> exactly and we
+  // don't inadvertently pass a mutable alias into a function that treats the
+  // argument as a pure value.
+  const eyeMpc: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
+  const targetMpc: Readonly<Vec3> = [cam.target[0]!, cam.target[1]!, cam.target[2]!];
+
+  // Plan 01: fixed up = world +Y. Roll-parity with the backdrop is deferred to
+  // Plan 03 / later — the debug sphere descent is roll-0 throughout, so the
+  // fixed-up assumption is safe for now.
+  const foregroundVp = computeForegroundViewProj({
+    eyeMpc,
+    targetMpc,
+    up: [0, 1, 0],
+    renderOrigin: RENDER_ORIGIN_MPC,
+    fovYRad: cam.fovYRad,
+    aspect: cam.aspect,
+    near: foregroundNear,
+    far: foregroundFar,
+  });
+
   // `focusBlend` is seeded to 0 (the at-rest, no-recession value) and then
   // overwritten by `runFrame` with this frame's real blend the moment the ready
   // gate passes. It can't be derived here: computing it ticks the structureFocus
@@ -174,5 +215,9 @@ export function deriveFrameContext(
     postProcess,
     volumeOffscreen,
     texturedDisks,
+    foregroundVp,
+    foregroundNear,
+    foregroundFar,
+    renderOrigin: RENDER_ORIGIN_MPC,
   };
 }

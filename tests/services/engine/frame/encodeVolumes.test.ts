@@ -65,6 +65,10 @@ function makeCtx(): ReadyFrameContext {
     } as never,
     volumeOffscreen: { view: offscreenView, resize: vi.fn(), destroy: vi.fn() },
     texturedDisks: {} as never,
+    foregroundVp: new Float64Array(16),
+    foregroundNear: 0.001,
+    foregroundFar: 1000,
+    renderOrigin: [0, 0, 0],
   };
 }
 
