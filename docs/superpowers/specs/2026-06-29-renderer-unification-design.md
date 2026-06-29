@@ -1,0 +1,371 @@
+# Renderer Unification Design
+
+**Status:** Draft (brainstorming output, iterating with the user)
+**Date:** 2026-06-29
+**Author:** Alexander Rulkens (+ Claude)
+
+## Goal
+
+Unify the "background" (cosmological scene) and "foreground" (near-field bodies)
+render paths — plus the pick path — onto **one compositor model**, removing the
+accidental duplication that has accreted while keeping the differences that are
+essential physics. The end-state is a renderer where adding a new visual element
+(a translucent atmosphere, a new overlay, a third depth slab) is a *data* edit to
+a registry, not a new bespoke `encode*` function wired by hand into `renderFrame`.
+
+## Why now
+
+The recent zoom-to-Earth work added a third rendering path (opaque, depth-tested,
+f64, near-field bodies) bolted onto a frame loop that previously had two
+(additive HDR scene + premultiplied-OVER UI overlay). That third path is wired by
+hand in `renderFrame` via `encodeForegroundPass` + `encodeForegroundOver`, and it
+duplicates machinery that already exists:
+
+- A second tone-map pass (`foregroundComposite`) byte-identical to `postProcess`'s,
+  kept in sync only by a shared `toneMapDefaults.ts` + `lib/tonemap.wesl`.
+- A second "render to an offscreen, sample it back" pattern, identical in shape to
+  `volumeOffscreen` → `volumeUpsamplePass` but reimplemented.
+
+A 2-way split (`HDR_PASSES` additive vs `UI_PASSES` over) has gone 3-way by hand.
+Per the project's "tagged union + table dispatch for a >2-way split" rule, that is
+the trigger to introduce a proper model rather than add a fourth bespoke branch
+when the atmosphere lands.
+
+## The essential / accidental split
+
+The two paths differ on five axes. **Only some of those differences are essential
+— the spec preserves those and erases the rest.**
+
+| Axis | Background (scene) | Foreground (bodies) | Verdict |
+|---|---|---|---|
+| Coordinate frame / precision | world-absolute f32 | origin-relative f64, narrow-at-upload | **Essential** — spanning ~30 orders of magnitude forces it |
+| Projection frustum | one fixed wide (near 0.01 / far 50000 Mpc) | adaptive (near `dist·1e-4` / far `dist·100`) | **Essential** — one depth buffer can't span the scale |
+| Accumulation | additive, no depth, order-independent | opaque, depth-tested, occluding | **Essential** — emissive point clouds vs solid surfaces is different physics |
+| Tone-map | once, after additive accumulation | a second pass with the same curve | **Accidental** — one operator, implemented twice |
+| Composite into swap | tone-map blit, then UI over | tone-map + OVER after the UI overlay | **Accidental** — both are "merge an offscreen into a target" |
+
+**Decomplection thesis.** Today these axes are *braided*: which `Pass[]` array a
+renderer lives in implicitly fixes its projection, its precision, its blend, and
+its target all at once. The model un-braids them into three independent axes:
+
+- **Slab** — which view-projection + depth range the geometry projects through.
+- **Target** — which texture it draws into (`hdr` / `volume` / `foreground:0` / `swap` / a pick target).
+- **Blend** — how its fragments combine (`additive` / `opaque` / `over`).
+
+A content layer is one point in this 3-axis space, plus a renderer and an enable
+gate. The axes are genuinely independent: a slab can host layers that go to
+different targets with different blends (cosmological galaxies additive-into-`hdr`
+*and* cosmological labels over-onto-`swap` are both cosmological-slab).
+
+## Core concepts
+
+### Slab — a scale-separated depth range + its projection
+
+A depth buffer has finite precision (~1 part in 2²³). A perspective projection
+crams most of it near the near plane, so the usable near/far ratio before opaque
+surfaces z-fight is ~1e5–1e6. Skymap needs `far/near ≈ 5e4 / 1e-12 ≈ 5e16` to put
+Earth and distant galaxies in one buffer — impossible. So depth is sliced into
+**slabs**, each with its own near/far sized to its slab, each getting the full
+depth-buffer precision for its own range. Slabs composite far→near (the nearer
+slab's pixels land on top, which *is* inter-slab occlusion).
+
+**Skymap already has exactly two slabs** — the model names and generalizes them:
+
+```ts
+// @types/engine/frame/Slab.d.ts (one type per file)
+export type Slab = {
+  index: number;          // 0 = nearest; higher = farther back. Composite order is high→low.
+  nearMpc: number;        // near plane for THIS slab
+  farMpc: number;         // far plane for THIS slab
+  vp: Float64Array;       // proj·view for this slab (origin-relative for near slabs)
+  originRelative: boolean; // true ⇒ geometry deltas are computed as pos − renderOrigin
+  precision: 'f32' | 'f64'; // f64 ⇒ MVP composed in double then narrowed (composeBodyMvp path)
+};
+```
+
+The two slabs this spec instantiates (derived per frame from `cam.distance`):
+
+```ts
+const SLABS: Slab[] = [
+  { index: 0, nearMpc: camDist * 1e-4, farMpc: camDist * 100, vp: foregroundVp,
+    originRelative: true,  precision: 'f64' }, // near-field bodies (Sun, Earth)
+  { index: 1, nearMpc: 0.01,           farMpc: 50000,         vp: cosmoVp,
+    originRelative: false, precision: 'f32' }, // cosmological (galaxies, MW, filaments)
+];
+```
+
+The type is **N-capable**: a third slab is one more entry plus one more
+`foreground:k` target. This spec does **not** design slab spawn/retire or adaptive
+slab-set selection during a descent — that is explicitly deferred (see Out of scope).
+
+A content layer names its slab by index (no tagged union — the slab table holds
+all the per-slab attributes):
+
+```ts
+// @types/engine/frame/ContentSpace.d.ts
+export type ContentSpace = { slab: number }; // index into the per-frame SLABS list
+```
+
+### RenderTarget — an offscreen (or the swap chain)
+
+```ts
+// @types/engine/frame/RenderTargetSpec.d.ts
+export type RenderTargetSpec = {
+  id: string;               // 'hdr' | 'volume' | 'foreground:0' | 'swap' | 'pick:cosmo' | 'pick:near0'
+  format: GPUTextureFormat; // rgba16float offscreen / swap format / r32uint for pick
+  depth: GPUTextureFormat | null; // 'depth32float' opaque slabs, 'depth24plus' pick, null additive/over
+  scale: number;            // 1 = full res, 3 = volume's downsample divisor
+};
+```
+
+The concrete table:
+
+| id | format | depth | scale | purpose |
+|---|---|---|---|---|
+| `hdr` | rgba16float | — | 1 | cosmological additive accumulation |
+| `volume` | rgba16float | — | 3 | scalar-volume raymarch (half-ish res) |
+| `foreground:0` | rgba16float | depth32float | 1 | near-field slab 0 opaque bodies |
+| `swap` | (swap format) | — | 1 | the presented frame |
+| `pick:cosmo` | r32uint | depth24plus | 1 | cosmological pick IDs |
+| `pick:near0` | r32uint | depth32float | 1 | near-field slab 0 pick IDs (allocated only when a slab-0 layer has `drawPick`) |
+
+### ContentLayer — the flat registry (replaces `HDR_PASSES` + `UI_PASSES` + foreground)
+
+```ts
+// @types/engine/frame/ContentLayer.d.ts
+export type ContentLayer = {
+  name: string;
+  space: ContentSpace;   // which slab ⇒ which VP gets threaded into draw
+  target: string;        // RenderTargetSpec.id it draws into
+  blend: Blend;          // 'additive' | 'opaque' | 'over'
+  enabled(state: EngineState, ctx: ReadyFrameContext): boolean;
+  draw(pass: GPURenderPassEncoder, ctx: ReadyFrameContext, state: EngineState, deps: PassDeps): void;
+  drawPick?(pass: GPURenderPassEncoder, ctx: ReadyFrameContext, state: EngineState, deps: PassDeps): void;
+};
+```
+
+`Blend` is its own one-type-per-file alias (`'additive' | 'opaque' | 'over'`).
+
+**Invariant** (the load-bearing constraint): a layer's `target.{format,depth}` +
+`blend` must match the *profile* baked into the renderer pipeline its `draw` calls.
+Where they differ, you need a renderer *variant* — pick is the canonical example
+(`r32uint` + `depth24plus` is a second pipeline over the same point geometry, which
+is why `drawPick` delegates to `pickRenderer`, not `pointRenderer`).
+
+**Migration of every current pass:**
+
+| Current pass | slab | target | blend | drawPick? |
+|---|---|---|---|---|
+| pointSpritesPass | cosmological | hdr | additive | ✓ (pickRenderer) |
+| proceduralDisksPass | cosmological | hdr | additive | ✓ (pickDisks) |
+| texturedDisksPass | cosmological | hdr | additive | — |
+| milkyWayPass | cosmological | hdr | additive | ✓ (milkyWayPickRenderer, cosmological billboard) |
+| filamentsPass | cosmological | hdr | additive | — |
+| flowFieldPass | cosmological | hdr | additive | — |
+| horizonShellPass | cosmological | hdr | additive | — |
+| structureMarkersPass | cosmological | hdr | additive | ✓ (pickRing) |
+| (volume raymarch) | cosmological | volume | additive | — |
+| selectionRingPass | cosmological | swap | over | — |
+| diskRadiusRingPass | cosmological | swap | over | — |
+| markerLinesPass | cosmological | swap | over | — |
+| labelsPass | cosmological | swap | over | — |
+| debug bodies | near-field (slab 0) | foreground:0 | opaque | — (no pickable body yet) |
+| captions (foreground labels) | near-field (slab 0) | swap | over | — |
+
+Note `volumeUpsamplePass` does **not** appear as a content layer — it is a
+*composite step* (`volume → hdr`, additive), see below.
+
+### Renderers — unchanged GPU-resource owners
+
+Renderers (`pointRenderer`, `debugSphereRenderer`, `milkyWayRenderer`,
+`labelRenderer`, …) keep their current role and lifecycle: long-lived owners of
+pipelines / vertex buffers / bind groups / shaders, built in `initGpu`, held on
+`state.gpu.*`, torn down on `destroy`. They are **slab-ignorant** — the VP arrives
+as a uniform, so the same renderer can serve multiple slabs *if* its pipeline
+profile matches the target. A `ContentLayer.draw` threads the right slab VP
+(`ctx.vpFor(space.slab)`) into the renderer call. This spec adds **no new renderer
+variants** beyond what already exists.
+
+### Compositor — one primitive (replaces three bespoke composites)
+
+```ts
+// @types/rendering/Compositor.d.ts
+export type ToneMap = { exposure: number; curve: number }; // null ⇒ source already LDR
+
+export type CompositeBlend =
+  | 'replace'    // overwrite dst       (hdr → swap: swap is cleared)
+  | 'over'       // Porter-Duff OVER    (foreground → swap)
+  | 'additive';  // add into dst        (volume → hdr)
+
+export type Compositor = {
+  // Pipelines keyed by (blend, dstFormat); applies the shared lib/tonemap.wesl when `tone` is set.
+  draw(pass: GPURenderPassEncoder, src: GPUTextureView, blend: CompositeBlend, tone: ToneMap | null): void;
+  destroy(): void;
+};
+```
+
+This single module replaces: the tone-map half of `postProcess`, all of
+`foregroundComposite`, and the blit in `volumeUpsamplePass`. The shared
+`toneMapDefaults.ts` + `lib/tonemap.wesl` it already leans on stay the single
+source of curve truth.
+
+### CompositeStep + FrameStep — the frame as data
+
+```ts
+// @types/engine/frame/CompositeStep.d.ts
+export type CompositeStep = { source: string; dest: string; blend: CompositeBlend; tone: ToneMap | null };
+
+// @types/engine/frame/FrameStep.d.ts
+export type FrameStep =
+  | { kind: 'compute'; name: string }            // pre-frame compute dispatch (flow particles)
+  | { kind: 'render'; target: string }           // draw all enabled ContentLayers whose target === this, in registry order
+  | { kind: 'composite'; step: CompositeStep };   // merge source → dest via the Compositor
+```
+
+The concrete program — **byte-equivalent to today's frame**, but now data instead
+of imperative code in `renderFrame`:
+
+```ts
+const FRAME: FrameStep[] = [
+  { kind: 'compute',   name: 'flow' },                                                   // particle seed/integrate
+  { kind: 'render',    target: 'volume' },                                               // raymarch (cosmological)
+  { kind: 'composite', step: { source: 'volume', dest: 'hdr', blend: 'additive', tone: null } },
+  { kind: 'render',    target: 'hdr' },                                                  // cosmological additive group
+  { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } }, // tonemap → swap
+  { kind: 'render',    target: 'swap' },                                                 // cosmological OVER group (rings, lines, labels)
+  { kind: 'render',    target: 'foreground:0' },                                         // near-field slab 0 opaque (bodies)
+  { kind: 'composite', step: { source: 'foreground:0', dest: 'swap', blend: 'over', tone: TONE } },
+  // captions are a swap layer ordered AFTER the foreground composite (see decision below)
+];
+```
+
+The `render target: 'swap'` for the near-field OVER group (captions) comes *after*
+the `foreground:0 → swap` composite, so captions land on top of the bodies while
+the bodies occlude the cosmological labels drawn in the earlier `render swap` step.
+**The "labels occluded by bodies" behaviour is now a visible ordering decision in
+`FRAME`, not a buried `encodeForegroundOver`-after-`encodeUiOverlay` convention.**
+
+A `render swap` step appears twice (cosmological-over group, then near-field-over
+group). The executor selects layers by `(target, slab-class)` for each step, so the
+two `render swap` entries draw disjoint layer sets.
+
+## Pick — a parallel program over the same registry
+
+Pick is **not** a member of `FRAME`. It is a second consumer of the content
+registry, terminating in a readback rather than the swap chain:
+
+- It runs on its **own encoder + submit, off the render frame** — `hoverPickDriver`
+  fires it on pointer events, throttled by `mapAsync` readback latency. Unchanged.
+- It draws only the **pick aspect** (`drawPick`) of pickable layers, depth-resolved.
+- **Space-aware (N=1 now):** one pick target per slab (`pick:cosmo`,
+  `pick:near0`). Render `drawPick` of each slab's pickable layers into that slab's
+  pick target, depth-resolved within the slab.
+- **Resolve across slabs on readback:** read back the single texel under the cursor
+  from each slab's pick target, and on the CPU take the **frontmost non-zero in slab
+  order** (near → far). This mirrors the visible far→near OVER but as a handful of
+  texel reads + a pure-CPU pick — no GPU pick-composite pass.
+
+```ts
+// @types/engine/frame/PickProgram (conceptual)
+// for each slab S with at least one pickable layer:
+//   render drawPick(layers where layer.space.slab === S.index && layer.drawPick) → pick:<S>
+// readback texel under cursor from each pick:<S>
+// decode = firstNonZero([near…far].map(texel))   // pure CPU, unit-testable
+```
+
+At N=1 this is **exactly today's single cosmological pick pass** — the per-slab loop
+has one populated iteration (`pick:near0` is unused until a slab-0 layer gains a
+`drawPick`, e.g. a selectable body). The Milky Way stays a cosmological-slab pick
+(its existing `mwHalfExtentPx` billboard), unchanged.
+
+The frontmost-non-zero resolver is a pure function:
+
+```ts
+// utils/picking/frontmostPick.ts  (one function per file)
+export function frontmostPick(perSlabRaw: readonly number[]): number; // first non-zero near→far, else 0
+```
+
+## Phasing — three shippable PRs, no thrown-away work
+
+Each phase is a clean superset of the previous; each is independently mergeable and
+behaviour-neutral (until pick semantics extend in phase 3, which is also
+behaviour-neutral at N=1).
+
+**Phase 1 — Compositor primitive (accidental complexity only).**
+Introduce `Compositor`; repoint `postProcess`'s HDR→swap tonemap,
+`foregroundComposite`, and `volumeUpsamplePass`'s blit to it. Delete the three
+bespoke composite implementations. No registry / slab / `renderFrame`-order change.
+Pure de-duplication; visual baseline unchanged.
+
+**Phase 2 — Slab table + RenderTarget table + flat ContentLayer registry + FrameStep program.**
+Replace `HDR_PASSES` / `UI_PASSES` / the bespoke foreground wiring with one flat
+`ContentLayer` registry and the `FRAME` data program executed by a small executor.
+Foreground stops being a `renderFrame` special case; captions become a swap layer.
+Two slabs, derived per frame as today. `renderFrame` shrinks to "run `FRAME`."
+
+**Phase 3 — Pick folded in, space-aware (N=1).**
+Add the `drawPick` aspect to pickable content layers; build the pick program as a
+parallel registry consumer with per-slab pick targets + the `frontmostPick`
+resolver. Cosmological-only in practice (N=1), but the structure supports a
+near-field pickable layer with no restructure.
+
+## Testing strategy
+
+The headline win: **frame order becomes data, so it becomes unit-testable** — today
+the ordering lives in imperative `renderFrame` code that no test asserts.
+
+- **Phase 1:** the JS-mirror tone-map curve tests already cover the shared curve
+  math (`Compositor` reuses `lib/tonemap.wesl` + `toneMapDefaults.ts`). Add a test
+  asserting each of the three former call sites maps to the same `(blend, tone)`
+  config it used before. Visual-equivalence baseline unchanged.
+- **Phase 2:** unit-test the slab table (per-frame `near < far`, descending composite
+  order), the `target` ⟷ renderer-profile invariant (a layer's target/blend matches
+  its renderer's pipeline), and the `FRAME` program (assert the step sequence — now
+  possible because it's data). Per-layer `enabled` gates carry over verbatim.
+- **Phase 3:** `frontmostPick` is a pure function → exhaustive unit tests
+  (all-zero, single-slab hit, near-occludes-far, far-only). Per-slab pick-pass
+  structure mirrors the existing pick test.
+
+## File structure
+
+Follows project conventions: one type per file in `@types/`, one function per file
+in `utils/`, `type` aliases never `interface`, deep relative imports, no barrels
+(the `frame/passes/index.ts` registry exception applies — the new
+`frameProgram.ts` owns the registry decision, not a re-export barrel).
+
+- `@types/engine/frame/`: `Slab.d.ts`, `ContentSpace.d.ts`, `RenderTargetSpec.d.ts`,
+  `ContentLayer.d.ts`, `Blend.d.ts`, `CompositeStep.d.ts`, `FrameStep.d.ts`.
+- `@types/rendering/Compositor.d.ts`, `@types/rendering/ToneMap.d.ts`,
+  `@types/rendering/CompositeBlend.d.ts`.
+- `services/gpu/passes/compositor.ts` + `shaders/compositor/{vertex,fragment}.wesl`.
+- `services/engine/frame/slabs.ts` — per-frame `SLABS` derivation from `cam.distance`.
+- `services/engine/frame/contentLayers.ts` (or keep per-layer files + an index, as
+  `passes/` does today) — the flat registry.
+- `services/engine/frame/frameProgram.ts` — the `FRAME` data + the executor.
+- `services/engine/frame/pickProgram.ts` — the parallel pick program.
+- `utils/picking/frontmostPick.ts` + test.
+
+Exact paths and the fate of each existing `*Pass.ts` file are settled at plan time.
+
+## Out of scope (explicitly deferred)
+
+- **Slab spawn/retire & adaptive slab-set.** No `cam.distance → active-slab-set`
+  function; no depth handoff between adjacent slabs at a shared boundary. The type is
+  N-capable but the spec instantiates the two slabs that exist today. A third slab
+  (e.g. an Earth-surface descent slab) is future work.
+- **New renderer pipeline variants.** No opaque-galaxy-in-near-field variant, etc. —
+  added only when a concrete feature needs one.
+- **Making bodies selectable.** Pick is space-aware, but no near-field `drawPick`
+  ships (there is no pickable body yet); `pick:near0` is allocated lazily.
+- **The translucent atmosphere itself.** The model is shaped so an atmosphere drops
+  in as one more layer/target, but building it is a separate feature.
+
+## Open questions / notes for iteration
+
+- Should the two `render target: 'swap'` steps be disambiguated by an explicit
+  `slabClass` field on the step, or is "select layers whose `target === swap` and
+  whose slab matches the step's position" too implicit? (Leaning: explicit field.)
+- `flow` compute is modelled as a `FrameStep` `compute` kind; confirm that's the
+  right home vs. a separate pre-frame compute list.
+- Whether `slabs.ts` should expose `vpFor(slab)` on `ReadyFrameContext` or keep the
+  VP lookup inside the executor.
