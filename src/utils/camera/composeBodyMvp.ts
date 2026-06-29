@@ -14,11 +14,11 @@
  *
  * ### Why compose the FULL MVP in f64 before narrowing (spec §3 / §9)
  *
- * Earth sits at ~1 AU ≈ 4.8×10⁻⁹ Mpc from the Sun. The body position is
+ * Earth sits at ~1 AU ≈ 4.85×10⁻¹² Mpc from the Sun. The body position is
  * therefore a very small number in Mpc — but the view-projection matrix
  * carries a large translation that nearly cancels it. When that translation
  * is stored in f32 first, the low-order bits (which encode the inter-body
- * separation, ~10⁻⁹ Mpc) are already gone. Multiplying an f32 VP by an
+ * separation, ~10⁻¹² Mpc) are already gone. Multiplying an f32 VP by an
  * f32 model matrix therefore places Earth at exactly the wrong position —
  * the error can easily exceed one Earth radius.
  *

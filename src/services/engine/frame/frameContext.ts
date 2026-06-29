@@ -148,7 +148,8 @@ export function deriveFrameContext(
   // ── Foreground frustum (Plan 01: coarse distance-proportional heuristic) ──
   //
   // near and far are set to simple fractions of cam.distance, wide enough to
-  // contain Earth-at-true-scale (~4.8e-9 Mpc radius) through the full descent.
+  // bracket a body at ~1 AU ≈ 4.85e-12 Mpc from the origin whose radius is
+  // ~2.06e-16 Mpc (Earth radius ~6,371 km), through the full descent.
   // Plan 03 replaces both constants with an adaptive call to
   // `foregroundFrustum(cam.distance)` in `src/utils/camera/foregroundFrustum.ts`
   // once the near-Earth choreography is defined. For now, a 1e-4 / 100 ratio

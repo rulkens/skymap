@@ -29,12 +29,16 @@
  *      trip per boundary on M1, which is acceptable in dev mode but
  *      not in production.
  *
- *   2. Tone-map post-process.  Samples the HDR target and writes the
+ *   2. Foreground composite (`encodeForegroundPass`).  Renders true-scale
+ *      bodies (Earth, Sun, planets) into the HDR target using the f64
+ *      view-projection matrix and compose-before-narrow MVP path.
+ *
+ *   3. Tone-map post-process.  Samples the HDR target and writes the
  *      compressed [0, 1] range to the swap chain.  Begins+ends its
  *      own internal render pass on the same encoder via
  *      `postProcess.draw`.
  *
- *   3. UI overlay (`encodeUiOverlay`).  Composites marker-lines + labels
+ *   4. UI overlay (`encodeUiOverlay`).  Composites marker-lines + labels
  *      onto the tone-mapped swap chain via premultiplied OVER blend.
  *      Lives post-tone-map so the OVER overlays bypass the tone-map
  *      curve (no `[8, 8, 8, 1]` overshoot hack needed) and so their
@@ -43,7 +47,7 @@
  *      because they target a different texture).  See `encodeUiOverlay.ts`
  *      for the full coherency / colour-mismatch rationale.
  *
- *   4. (timing path only) `resolveQuerySet` + `copyBufferToBuffer`
+ *   5. (timing path only) `resolveQuerySet` + `copyBufferToBuffer`
  *      recorded via `timingService.endFrame`.
  *
  *   submit: device.queue.submit([encoder.finish()])

@@ -245,8 +245,10 @@ describe('composeBodyMvp', () => {
 
     // ── Assertion 2: separate-narrow path blows past one body radius ──────────
     // Narrow foregroundVp to f32 first, then build and narrow the model
-    // separately — the VP's ~1.3e-6 Mpc translation loses ~7.76e-14 Mpc in
-    // f32 rounding, which is ~376× larger than one Earth radius.
+    // separately. The VP's ~1.3e-6 Mpc translation carries a raw f32 rounding
+    // error of ~7.76e-14 Mpc (~376 Earth radii). That positional offset throws
+    // the projected sphere centre far off-screen, so the measured ndcErrorMpc
+    // (NDC distance × radiusMpc) cleanly exceeds one radiusMpc.
 
     const vpF32 = narrowMat4(pcForegroundVp);
 

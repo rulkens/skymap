@@ -8,7 +8,7 @@
  * ### Why f64?
  *
  * Near-Earth rendering requires sub-metre accuracy at cosmological scales
- * (eye positions on the order of 1 AU ≈ 4.8×10⁻⁹ Mpc). A Float32Array matrix
+ * (eye positions on the order of 1 AU ≈ 4.85×10⁻¹² Mpc). A Float32Array matrix
  * built from those coordinates loses the low-order bits of the translation
  * before the shader ever runs. By computing in f64 (`mat4d`) we retain ~15
  * significant decimal digits — enough for submetre precision anywhere in the

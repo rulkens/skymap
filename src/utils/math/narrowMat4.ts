@@ -18,12 +18,12 @@
  * ### The conversion
  *
  * This function constructs a new `Float32Array` from a `Float64Array` of 16
- * elements (the row-major layout of a 4×4 matrix). The constructor implicitly
+ * elements (the column-major layout of a 4×4 matrix). The constructor implicitly
  * performs the narrowing: each f64 value is coerced to the nearest representable
  * f32 value. The relative error is at most `2^-24` (f32 machine epsilon), which
  * is acceptable for typical 3D transformations.
  *
- * @param m  A 4×4 matrix as a `Float64Array` of length 16 (row-major).
+ * @param m  A 4×4 matrix as a `Float64Array` of length 16 (column-major).
  * @returns  The same matrix as a `Float32Array` of length 16, narrowed to f32 precision.
  */
 export function narrowMat4(m: Float64Array): Float32Array {
