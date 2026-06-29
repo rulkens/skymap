@@ -1,148 +1,91 @@
 # Skymap Backlog
 
-Curated list of pickup-able work and surfaced issues. Living document — update when a plan starts, completes, or a new issue is captured. The git log is the ground truth for _what shipped_; this file is the ground truth for _what's next_.
+Pickup-able work + surfaced issues. The git log is ground truth for _what shipped_; this file is ground truth for _what's next_. Shipped work is deleted from here and lives in `plans/completed/` + `specs/completed/`.
 
-> **Conventions**
->
-> - Anything in `docs/superpowers/plans/completed/` or `docs/superpowers/specs/completed/` is shipped and intentionally absent from this file.
-> - "Pickup-able" = the writing is done (or done enough) that an implementer could start without re-doing design.
-> - "Deferred" = scoped out of an existing plan or ADR with a paper trail; needs its own plan when prioritised.
-> - "Surfaced issue" = a known wart with a diagnosis but no plan or spec yet. May graduate to either.
->
-> **Process**
->
-> - When a plan ships, `/feature-done` audits and (on READY) moves the plan + matching spec to `completed/`.
-> - When a spec graduates to a plan, leave the spec where it is; the plan links back to it. Both move together once the plan ships.
-> - When an issue here gets a plan, delete its line; the plan link replaces it.
+**Format.** Items are grouped by **subsystem area** and tagged by readiness:
+
+- `ready` — design is done; pick it up now.
+- `needs-design` — brainstorm/spec it first.
+- `deferred` — paper-trailed, lower priority.
+- `manual` — a human smoke-test, not code.
+- `process` — awaiting a human action (review, write-up).
+- `blocked` — external dependency.
+
+Items with a **→ details** link have a full write-up in [`backlog/`](backlog/) — the problem, verified current state with `file:line` evidence, and options — ready to promote into a spec/plan. Tick `- [ ]` → `- [x]` when an item ships, then delete it (and its detail file) on the next sweep.
 
 ---
 
-## ADRs
+## ADR status
 
-| ADR                                                                                          | Status                                                                                                         | Executed by                                                                                                                                                                                                                                                                                                                                                     |
-| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [0001 — Fade ownership](adrs/0001-fade-ownership.md)                                         | Accepted 2026-05-27                                                                                            | Original executor ([renderer-interface-extraction plan](superpowers/plans/archive/2026-05-27-renderer-interface-extraction.md)) **archived/superseded**; the `bindGroupFor`/`flushGpu` mechanism is reworked by the live [fade-ownership merged design](superpowers/specs/2026-06-15-fade-ownership-visibility-seam-merged-design.md) (designed, awaiting plan) |
-| [0007 — Intent-centric state + effects layer](adrs/0007-intent-centric-state-and-effects.md) | Accepted 2026-06-17 (direction); **effects-layer vehicle open** (RTK listener middleware vs. typed-redux-saga) | Not started — needs a vehicle decision then an incremental migration spec. See the "From ADR 0007" deferred item. Convention: [`intent.md`](superpowers/conventions/intent.md).                                                                                                                                                                                 |
-
----
-
-## Plans ready to pick up
-
-Plans live in `docs/superpowers/plans/`. All have TDD task lists with checkboxes; pick one and run it via `superpowers:subagent-driven-development` or `superpowers:executing-plans`.
-
-_None currently — `docs/superpowers/plans/` is empty; all written plans have shipped or been superseded (see `plans/completed/`)._
+| ADR | Status |
+| --- | --- |
+| [0001 — Fade ownership](adrs/0001-fade-ownership.md) | Accepted 2026-05-27 · **shipped** — fade is a subsystem; the visibility-seam plans (A/B/C, #309) landed and are in `*/completed/`. |
+| [0007 — Intent-centric state + effects](adrs/0007-intent-centric-state-and-effects.md) | Accepted 2026-06-17 · folding incrementally — selection (#350), settings→RTK (#345), camera (#357), engine slice (#380) shipped; effects vehicle = `typed-redux-saga`. |
 
 ---
 
-## Specs awaiting plans
+## Engine & State
 
-Design is captured; an implementer or `superpowers:writing-plans` needs to turn each into a task list before pickup.
+- [ ] **Source-registry factory** `needs-design` — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry; today each source is hand-wired across `slots/`, `assetWiring.ts`, `initGpu`. → [details](backlog/source-registry-factory.md)
+- [ ] **Render-graph restructure** `deferred` — turn the imperative `runFrame.ts` body into a declarative pass DAG. → [details](backlog/render-graph-restructure.md)
+- [ ] **GPU-handle nullability follow-on** `deferred` — `EngineGpuHandles` fields are all `T | null` (a transient bootstrap fact as a perpetual null-check); narrow into a non-null "ready GPU" view and shed `PassDeps`' renderer fields. → [details](backlog/gpu-handle-nullability.md)
+- [ ] **`useStructureMemberCount` honest invalidation** `deferred` — the hook's `sourceCounts`/`tier` args are memo tripwires for live GPU catalog state; swap for a real catalog-generation signal. → [details](backlog/usestructuremembercount-invalidation.md)
+- [ ] **Derive `BULK_CATALOG_CATEGORIES` from a registry flag** `deferred` — add `hasBulkCatalog` to `SOURCE_REGISTRY` rows so the hand-listed `['cluster','supercluster','void']` in `assetWiring.ts` derives from it. Keep the three category lists (UI / marker / bulk-fetch) separate — membership genuinely differs. (`bearsMarker` + `DEFAULT_CATEGORY_VISIBILITY` already shipped.)
+- [ ] **Backfill ADR 0008 (effects-layer vehicle)** `process` — the decision shipped as `typed-redux-saga`; write the ADR only if the record is wanted.
 
-_None currently — the [2026-05-07 tour-animation brainstorm](superpowers/specs/completed/2026-05-07-tour-animation-design.md) was superseded by the shipped [animation-system design](superpowers/specs/completed/2026-06-19-animation-system-design.md) and relocated to `specs/completed/`._
+## Rendering
 
----
+- [ ] **Milliquas AGN colormap** `needs-design` — AGN reuse the galaxy B−R ramp and misread as blue star-forming; give them their own encoding. Only the kPerZ=0 clamp shipped (#282). → [details](backlog/milliquas-agn-colormap.md)
+- [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/supercluster-shape-focus.md)
+- [ ] **In-scene thumbnail quality (SDSS/DSS)** `needs-design` — the auto-fetched atlas-quad path still uses fixed cutout sizes; mask / sky-sub / per-galaxy size / DESI / brightness-norm. (InfoCard path already got sizing + DSS color.) → [details](backlog/thumbnail-quality-sdss-dss.md)
+- [ ] **Half-res ↔ post-process resize type-safety** `deferred` — the offscreen-volume and post-process targets resize via two independent `?.resize()` calls in `runFrame.ts`; enforce the coupling in the type system.
+- [ ] **Thumbnail-priority loop scaling** `deferred` — the per-frame priority scan (`texturedDiskSubsystem.ts`) is CPU-linear with stride decimation (#79); add a BVH or compute-shader pass for larger tiers. → [details](backlog/thumbnail-loop-scaling.md)
+- [ ] **Picking GPU resources → own subsystem** `deferred` — `pickRenderer.ts` owns its per-camera pick texture directly; migrate it (parallel to fade per ADR 0001). Pick texture is per-camera, so it needs its own ADR. → [details](backlog/picking-gpu-subsystem.md)
+- [ ] **Structure-ring click smoke-test** `manual` — after the `poiIndex`→`structureIndex` WESL rename (#288), click a cluster/SC/void/group ring on the dev server and confirm the right structure selects. `ringPick.test.ts` guards the encoding but can't run the shader.
 
-## Deferred from existing plans / ADRs
+## Data pipeline
 
-Scoped out of a parent plan or ADR with explicit rationale; needs its own ADR or plan when picked up.
+- [ ] **Close-to-home tier weighting** `needs-design` — bias small/medium subsampling toward galaxies near the camera home for first-load density (`subsampleByAbsMag` ranks by M_abs only). → [details](backlog/close-to-home-weighting.md)
+- [ ] **Dense Local Volume seeding** `needs-design` — spare galaxies inside the featured group spheres (`structure_anchors.seed.json` radii) regardless of M_abs, so group rings aren't near-empty at low tiers. → [details](backlog/dense-local-volume-seeding.md)
 
-From [renderer-interface-extraction plan §Out of scope](superpowers/plans/archive/2026-05-27-renderer-interface-extraction.md) (plan archived/superseded; these deferred items remain independently valid):
+## UI & UX
 
-- **Source-registry factory** — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry.
-- **Render-graph / frame-graph restructuring** of `runFrame.ts` and the pass DAG.
-- **Settings schema with auto-generated UI** for `VolumeFieldRow`'s seven sliders.
-- **Half-res offscreen ↔ post-process resize coupling** type-enforcement.
-- **Selection / picking GPU resource migration** to its subsystem (parallel to fade per ADR 0001; needs its own ADR — pick texture is per-camera, not per-handle).
+- [ ] **Structure search in the palette** `ready` — index clusters/superclusters/voids (MCXC+MSCC names + Abell numbers from `structures_meta.json`) in `CommandPalette.tsx` + select-and-fly-to. → [details](backlog/structure-search-palette.md)
+- [ ] **Milky Way URL deep-link (encode)** `ready` — the parser already returns `{type:'milkyWay'}`; make `URL_HASH_FOR['milkyWay']` emit `#focus=milkyway` to close the round-trip (`urlHashFor.ts:29`).
+- [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
+- [ ] **VolumeFieldRow schema-driven UI** `needs-design` — replace the seven hand-coded sliders with a settings-schema-generated UI.
+- [ ] **Global shortcuts → keyboard saga** `needs-design` — migrate the non-tour keys (Cmd+K, /, Esc, f, h, l, Tab, d) from the `useKeyboardShortcuts` hook to a declarative map + a shared `watchKeyboardEventsSaga`. → [details](backlog/keyboard-shortcuts-saga.md)
+- [ ] **Label declutter toggle + hysteresis** `needs-design` — add `settings.labels.declutter` wired to `labelDirectorSubsystem` (replacing the `?nodeclutter` stopgap) and hysteresis-damp the cull so labels stop flickering under camera motion. → [details](backlog/label-declutter-toggle.md)
+- [ ] **Label fade opt-out ADR** `needs-design` — decide whether per-character MSDF label opacity opts out of the per-handle fade bind-group pattern; follow-up to ADR 0001.
+- [ ] **Reusable structure-visit tour clip** `needs-design` — generalize the hardcoded Virgo/M87 tour beats into a parameterized `structureVisitClip`. Focus-isolation primitive already shipped. → [details](backlog/structure-visit-tour-clip.md)
 
-From [ADR 0001 §"explicitly not deciding"](adrs/0001-fade-ownership.md):
+## Docs & process
 
-- **Label fade opt-in / opt-out decision** — per-character MSDF opacity may not fit the per-handle bind-group pattern; needs a follow-up ADR if labels opt out.
-
-From the tour keyboard saga (2026-06-26):
-
-- **Migrate the remaining global shortcuts to the saga keyboard pattern.** The tour keys (`→`/`←`/`Space`) route through `watchTourKeyboardSaga` + `createKeyboardListener` (a `hotkeys-js` `eventChannel`), bracketed by the tour lifecycle so the keys (and their synchronous `preventDefault`) are bound only while a tour runs. The rest of `useKeyboardShortcuts` (`Cmd+K`, `/`, `Esc`→clearSelection+exitTour, `f`, `h`, `l`, `Tab`, `d`) still lives in the React hook. Migrate them to a single declarative `KeyboardShortcutsInfo` map (`{ action, filter?, args? }`) + a shared `watchKeyboardEventsSaga` (the [repperjs](file:///Users/rulkens/Development/js/repperjs) `watchKeyboardEventsSaga` pattern). Engine-method keys (`h`→`focusHome`, `l`→`logState`) need a `reconcile` effect or a camera intent; conditional `preventDefault` (`/` only when the palette is closed) needs hotkeys scopes or a synchronous state read. Aligns with ADR 0007 (sagas drive intent).
-
-From [ADR 0007 §"NOT deciding" / "Open question"](adrs/0007-intent-centric-state-and-effects.md) (intent-centric state + effects):
-
-- **Effects-layer vehicle decision** — choose RTK `createListenerMiddleware` vs. `typed-redux-saga` for the reactive effects layer (demand/loads/fade-triggering). Trade-offs recorded in the ADR; either way the tour timeline stays a separate engine-land concern that dispatches into the store. Promote to its own ADR (0008) when picked.
-- **Settings store → Redux Toolkit (2-phase vehicle migration).** Move the store off `zustand` onto RTK so the effects seam (above) has a home. Reference conventions adopted from the start: `~/Development/js/repperjs/packages/motif-segmentation`.
-  - **Phase 1 — full RTK vehicle, store injected, React on `<Provider>`** — ✅ **SHIPPED** (PR #345). Both plans completed: [foundation](superpowers/plans/completed/2026-06-18-settings-store-rtk-migration-1-foundation.md) + [injection/React](superpowers/plans/completed/2026-06-18-settings-store-rtk-migration-2-injection-react.md), spec [completed](superpowers/specs/completed/2026-06-18-settings-store-rtk-migration-design.md). `configureStore` + `createSlice` (inline Immer), `src/store/` + `src/state/settings/`, RootState-scoped selectors, empty saga wired, `disabledPasses` `Set`→`Record`, `zustand` removed. Store created in `main.tsx`, wrapped in `<Provider>`, injected into `createEngine`; engine `get settings()` → `store.getState().settings`; write path dispatches; `useSettingsStore` + `handle.settingsStore` deleted. Behaviour identical; render-wake imperative; `tier` in-slice. 2678 tests green.
-  - **Phase 2 — effects onto the saga seam + intent folds:** move render-wake, fade-triggering, `requestTier` re-anchor, and demand-loads onto `typed-redux-saga`; components dispatch directly once wake is a saga; promote `tier` to root; add the `selection` / `dataStatus` slices (the [selection fold](superpowers/specs/2026-06-18-selection-into-intent-store-design.md)).
-    - **`tier` → root slice + the first saga seam** — ✅ **SHIPPED**. [Plan completed](superpowers/plans/completed/2026-06-19-tier-out-of-settings-saga.md) + [spec completed](superpowers/specs/completed/2026-06-19-tier-out-of-settings-saga-design.md). `tier` is its own `RootState` slice (un-braided from `settings`); the imperative `setTier` handle is now a `requestTier` command + a `takeLatest` `watchTier` saga that writes `setTier` and calls the engine-registered `runTierTransition`; `setSagaContext` rides a dedicated `SagaContextProvider`. The vehicle question is answered for this edge (`typed-redux-saga`). **Still open in Phase 2:** render-wake / fade-triggering / demand-loads onto the saga, components dispatching directly, and a `tierChanged` event. (The `selection` slice, the descriptor bridge, and selection's tier re-anchor landed with the selection fold — PR #350; `dataStatus` was added then collapsed to a `catalogLoaded` event.)
-- **Incremental intent-migration spec** — turn ADR 0007 into a sequenced plan.
-  - **First fold: the selection subsystem** — ✅ **SHIPPED** (PR #350). [Part 1 — foundation](superpowers/plans/completed/2026-06-19-selection-into-intent-store-part-1-foundation.md) + [Part 2 — cutover](superpowers/plans/completed/2026-06-19-selection-into-intent-store-part-2-cutover.md), spec [completed](superpowers/specs/completed/2026-06-18-selection-into-intent-store-design.md) (grill: [`grill-sessions/selection-into-intent-store-2026-06-18.md`](grill-sessions/selection-into-intent-store-2026-06-18.md)). `SelectionRef`-as-Intent in a `selection` slice + a saga-reconciled `selectionRows` descriptor cache; pick→ref cut, render-wake + focus-tween + deep-link + tier re-anchor all on `typed-redux-saga`; React mirrors deleted (selectors only). Post-ship hardening on the same branch: `dataStatus` collapsed to a bare `catalogLoaded` event, the `galaxyInfoBuilder` shell dissolved. 2814 tests green.
-  - Then: retire the in-place `items[id]` / `restoreSettings` mutations (the known staleness bug), and rebuild **tours as an ephemeral Intent overlay** (supersedes `captureSettings`/`restoreSettings`/`applyEffect`, unblocking the next [tour work](superpowers/plans/completed/2026-06-24-animation-tour-saga.md) — the animation tour shipped on `captureSettings`/`restoreSettings`; the Intent-overlay rebuild is the follow-on). `debug.disabledPasses` `Set`→`Record` for serializable Intent.
-
----
-
-## Surfaced issues
-
-Diagnosed but unplanned. Captured here so they don't get lost; promote to a spec or plan when prioritised. Most have richer notes in agent memory (`~/.claude/projects/-Users-rulkens-Development-js-skymap/memory/`).
-
-- **Verify structure-ring click after the `poiIndex`→`structureIndex` WESL rename** — surfaced 2026-06-08 in the poi-free refactor (#288). The structureMarker pick varying was renamed `poiIndex`→`structureIndex` across `structureMarker/{io,ring,halo,ringPick}.wesl` + the renderer/decode TS. Covered by `ringPick.test.ts` + a clean WESL build, but it never got a _visual_ check this session — clicking a cluster/supercluster/void/group ring on the dev server and confirming the right structure selects. Quick manual smoke test; if a ring stops responding to clicks, the renamed pick varying is the first place to look.
-- **Mobile layout reflow** — hover-on-touch is handled (`disable hover on touch input`, #226: hover-only affordances now route through tap). What remains is the general responsive layout pass: reflow the InfoCard / SettingsPanel / StatusBar for narrow viewports so the UI is usable on a phone, not just non-broken. **Update 2026-06-17:** the InfoCard half shipped — [2026-06-07 mobile bottom-sheet design](superpowers/specs/completed/2026-06-07-mobile-info-card-bottom-sheet-design.md) + [its plan](superpowers/plans/completed/2026-06-16-mobile-info-card-bottom-sheet.md). What remains is StatusBar reflow + the SettingsPanel launcher (a gated fast-follow pending an `entanglement-radar` pass over `SettingsPanel`).
-- **Lower-tier "close to home" weighting** — retune the small/medium tier subsampling so more galaxies survive near the camera's home position for maximum visual density on first load, while keeping the on-screen count fast. Distinct from the deliberate SDSS far-shell sample (memory `project_sdss_medium_intentionally_far`).
-- **Densely seed the Local Volume across all tiers (group explorability)** — surfaced 2026-06-04 with the `group` category. The 16 Local Volume groups are only interesting to fly into if their _member_ galaxies are present, but `subsampleByAbsMag` (`tools/catalog/`) thins the nearby volume by absolute-magnitude cut, so faint dwarfs in the Local Group / M81 / Cen A / Sculptor etc. get culled — a group ring you focus into can be nearly empty at small/medium tier. Bias the subsampling to **keep galaxies inside (or near) the featured group spheres** regardless of `M_abs`, across small + medium and ideally large tiers, so each group has as many members as possible. Related to but distinct from the "close to home" weighting above: that's camera-home density; this is per-group membership density keyed off the structure seed. Implementation hooks: the group seed positions/radii (`data/structure_anchors.seed.json`) are available to the build, so the subsampler can spare points within `apparentRadiusMpc` of each group centre. Keep an eye on the on-screen count budget. Pairs with the cluster-focus member count (`PoiDetailCard` "Galaxies" row) — denser seeding makes that number meaningful at lower tiers.
-- **Milliquas needs its own colormap (AGN ≠ galaxy)** — Milliquas points render overwhelmingly blue. The _clamp_ half shipped (#282): the redshift K-correction (`kPerZ`) was subtracting more than the whole `[0,2]` ramp span for high-z quasars and pinning every row to the blue floor; `kPerZ` is now 0 so the real B−R spread survives. What remains is the **semantic mismatch**: quasars genuinely have small B−R, so on the galaxy star-forming↔elliptical ramp they legitimately land in the blue third, but "blue" there means "star-forming galaxy" — the wrong reading for a non-thermal AGN continuum. The fix is to give AGN their own visual encoding instead of reusing the galaxy ramp. Directions to weigh in the brainstorm: (a) a distinct AGN ramp (violet/amber) keyed on B−R so quasars read as a different object class; (b) encode **redshift** instead of colour (z is the meaningful axis for objects spanning the observable universe); (c) tint by the Milliquas **class byte** (Q/A/B/K/N/S) or parent-survey byte — both already on the `.bin`. Likely needs a `colourMode` discriminant on `SOURCE_REGISTRY` + a shader ramp branch; brainstorm → spec → plan, not a drop-in.
-- **Tour feature (full)** — the guided tour **shipped** through the animation clips + saga system: clip data model + `playClip` seam + tour saga (PRs #364/#366/#367; completed plans `2026-06-24-animation-{clip-model,playclip-seam,tour-saga}.md`), clip/tour registries + the M87 galaxy dive (#373), and the guided-tour caption + nav overlay + keyboard saga (#375). The earlier design docs are superseded and now under `*/completed/` ([spec](superpowers/specs/completed/2026-05-07-tour-animation-design.md), [seed plan](superpowers/plans/completed/2026-05-20-splash-screen-02-stub-tour.md)). **Remaining:** per-structure choreography — a reusable `structureVisitClip` + focus-isolation so any featured structure can be visited (memory `project_debug_panel_clip_triggers`); plus the deferred capture/restore → Intent-overlay rebuild noted above. _(Remaining scope worth a re-verify before pickup.)_
-- **Label declutter flickers under continuous camera motion (make it a toggle)** — surfaced 2026-06-18 while spiking the cosmic-flows orbit capture. The label director's greedy screen-space overlap cull (`labelDirectorSubsystem.ts` `declutter`, `DECLUTTER_MARGIN_PX = 48`) suppresses the lower-`prominencePx` of any two anchors landing within 48 px in both x and y. Under a slow orbit (or any sustained camera move) labels repeatedly cross that margin and get suppressed-then-released frame-to-frame, which reads as flicker — distracting on a screen recording, and arguably on normal navigation. Two threads: (1) **add a user setting** to disable declutter — belongs under **Settings → Labels → Advanced** (the Labels section already exists; this is a new per-section Advanced toggle, plumbed `settings.labels.declutter` → `labelDirectorSubsystem`). A throwaway `?nodeclutter` URL gate was added in the `fly-to-edge-spike` worktree as a stopgap and should be replaced by the real setting. (2) **Stabilise the cull itself** so on/off decisions hysteresis-damp rather than toggle per-frame (e.g. a release margin wider than the suppress margin, or a short cooldown before a suppressed label can re-show) — the proper fix if labels are wanted _on_ during the cosmic-web clip (Post 1) and the tour.
-- **GPU-handle nullability + the `ctx`/`PassDeps` re-threading it forces (revisit)** — surfaced 2026-06-21 while specing the [RenderFrameSettings dissolution](superpowers/specs/2026-06-21-dissolve-render-frame-settings-design.md). **Tackle _after_ that dissolution lands** — RFS is the smaller, cleaner first cut of the identical "bag re-threads what's already on state" pattern, and finishing it makes this one obvious.
-  - **The root fact.** Every field on `EngineGpuHandles` is `Renderer | null` because `createEngine` returns synchronously but the GPU pipelines are built in an async `requestAdapter`→`requestDevice`→shader/atlas chain — absent for ~2 bootstrap frames (and re-nulled by `destroy()`). One _transient_ lifecycle fact is encoded as _perpetual_ per-field nullability, so every access forever pays a null-check tax though the handle is provably non-null after `initGpu`.
-  - **The inconsistency.** Four different access styles coexist for the same kind of thing: (1) **ctx-narrowed** — `renderer`/`postProcess`/`volumeOffscreen`/`texturedDisks` narrowed once via `isEngineReady`/`ReadyFrameContext` (`frameContext.ts:57-72`), read as `ctx.renderer`; (2) **`!`-asserted** at point of use (`pointSpritesPass.ts:98` `state.gpu.focusUniform!`); (3) **null-checked** at point of use (~15 renderers); (4) **always-non-null null-object** (`timingService`'s no-op stub — the better pattern, already in the tree). The `runFrame`→`renderFrame` assembly even pulls renderers from two sources inconsistently (`runFrame.ts:344-348`: some from `deps`, some from `state.gpu`).
-  - **`PassDeps` is the renderer-equivalent of `RenderFrameSettings`.** It re-threads renderers already on `state.gpu` purely to launder the `| null` into a non-null shape at the `renderFrame` boundary — the docblock admits `texturedDiskRenderer`/`proceduralDiskRenderer`/`milkyWayRenderer` live on the bag _only_ for `destroy()` reachability and "are not consumed via this bag at runtime (the frame loop receives them through `RunFrameDeps`)." Fix the nullability once and passes read `state.gpu.X` directly (they already get `state`); `PassDeps` sheds its renderer fields. Also folds in the `ctx` half: `ctx` re-declaring `state.gpu.*` handles is the same narrowing-laundering.
-  - **The careful caveat (scar tissue).** The point-of-use checks are _partly deliberate_: the docblocks exclude handles from `isEngineReady` because "bootstrap progression isn't the inverse of teardown" — the 2026-05-08 black-screen incident (memory `feedback_lifecycle_vs_teardown_invariants`), where consolidating a multi-handle "ready" predicate over-constrained mid-bootstrap callbacks and blanked the canvas. So the naive "one big ready flag" is exactly the move that bit us.
-  - **Target.** Separate the three concerns currently fused under one `| null`: **existence** (non-null after `initGpu` — nearly all), **data readiness** (`filamentRenderer` exists but empty until `loadFilaments`; `flowFieldRenderer` until demand — genuinely still absent at draw time), and **destroy reachability**. Narrow the bootstrap-guaranteed handles once into a non-null "ready GPU" view (extend `ReadyFrameContext` or a `ReadyGpu` bag), keep `| null` only for the genuinely-absent-at-draw-time ones (some via a `timingService`-style null-object), let `destroy()` iterate the raw bag — done incrementally, respecting the teardown asymmetry, never a big-bang ready flag.
-- **`useStructureMemberCount` invalidates on `sourceCounts`/`tier` proxies (decomplect once catalog state moves into per-type stores)** — surfaced 2026-06-28 alongside the [engine-state-into-store](superpowers/plans/2026-06-28-engine-state-into-store.md) pass. The hook (`src/hooks/useStructureMemberCount.ts`) takes `sourceCounts` + `tier` but its body never reads them (see its own lines 42-44) — they're pure **memo tripwires** standing in for "the engine's catalog buffers changed." Its real dependency is `handle.sources.getCloud(source)` — _live GPU catalog state_, not store state — which is why it can't be a plain selector. The engine-state-into-store pass makes the hook's _inputs_ store-derived (it reads `selectSourceCounts`/`selectTier`), which sheds the App-level prop-threading, but does **not** make the tripwire honest: the catalog _contents_ still live on the engine, so the proxy is essentially the best available signal until catalog state moves into the store. The genuine decomplection — invalidate on a real catalog-generation signal (or fold the count into a selector/saga) — belongs to the **per-type stores / demand-driven loading** work (memory `project_data_layer_redesign`), not a state-relocation pass. Deliberately kept out of the 2026-06-28 pass to avoid braiding two independent refactors.
-- **Thumbnail quality (SDSS / DSS branches)** — the auto-fetched SDSS-cutout and CDS-DSS thumbnails still have the original quality issues: ranked fix options are mask, sky-sub, per-galaxy size, DESI source, brightness norm (see memory `project_thumbnail_quality`). The _famous-galaxy_ branch is now fully addressed — procedural-disk fade-out, high-res LOD (#214), and thumbnail calibration + square deproject + disk-plane unification (#229/#234/#235/#240) all shipped — so this item is scoped to the non-curated SDSS/DSS path only.
-- **Supercluster/wall shape accuracy (focus mode)** — cluster-focus mode (PR #242) renders membership as a sphere of radius `apparentRadiusMpc ?? physicalRadiusMpc` centred on the catalog centroid. For superclusters/walls (MSCC) this is crude: the structure is a flattened sheet, so the sphere swallows foreground/background voids and clips the wall's arms (e.g. Hydra Wall reads ~847 galaxies at medium tier). No all-sky per-galaxy membership catalog exists to replace it — redMaPPer/WHL give cluster member galaxies but only in the SDSS footprint; Liivamägi+2012 gives galaxy→supercluster IDs but is also SDSS-limited and threshold-dependent. Investigate a better proxy: (a) **ellipsoid fit** from MSCC member-cluster positions (`memCl` column — data we already have); (b) **density-field membership** reusing the rhizome/MCPM cosmic-web field or DisPerSE filaments (all-sky, same method the literature uses). Option (a) is cheap and immediate; (b) is more principled and reuses existing plumbing.
-- **GLADE shell artifact at ~400 Mpc** — hard depth boundary created by Task 7 abs-mag filter; 3 fix options deferred 2026-05-04. See memory `project_glade_shell_artifact`.
-- **Per-frame thumbnail-priority loop CPU cost** — RoD + stride decimation (PR #79) addressed panning case; BVH or compute-shader pass needed if scaling to larger tiers. See memory `project_thumbnail_loop_perf`.
-- **Structure-category identity is spelled out in N parallel places (DRY)** — surfaced while adding the `group` category (2026-06-04). Mostly resolved by PR #276, which made `SOURCE_REGISTRY` the single source of truth: every source gained a readable `id`; the structure discriminator is `type: 'structure'`; `StructureCategory` / `STRUCTURE_CATEGORIES` / `STRUCTURE_CATEGORY_CODES` derive from the registry's structure rows; `unpackPick` decodes straight off the registry (no inverse `code → category` table); the renderer's marker buckets and `clickHandler`'s guard read the derived category set. Resolved sub-items:
-  - ✅ **Bidirectional `category ↔ Source-code` map** — was two hand-maintained inverses (`SOURCE_CODE_BY_CATEGORY` forward + the `if (sourceCode === 5) → 'cluster'` inverse in `unpackPick`). Now one direction derived from the registry; decode reads the registry directly.
-  - ✅ **`PickResult.kind` re-spelling `StructureCategory`** — now `kind: StructureCategory`, not longhand `'galaxy' | <each category>`.
-  - ✅ **Untotality-checked disjunctions / arrays** — `clickHandler`'s POI guard is `!== 'galaxy'`; the renderer's per-category `Record` literals come from a `byCategory()` helper seeded off `STRUCTURE_CATEGORIES`.
-
-  **Still open (follow-ups):**
-  - **Pure copy-paste:** the `{ cluster: true, supercluster: true, void: true, famousGalaxy: true }` visibility default appears **8×** (`useEngineSettings.ts` ×2, `engine.ts` ×2, 4 test fixtures) — should be one `DEFAULT_CATEGORY_VISIBILITY` const.
-  - **`meta`-flag derivations:** add `hasBulkCatalog` / `markerBearing` to each registry row so `BULK_CATALOG_CATEGORIES` and `POI_CATEGORIES_WITH_MARKERS` _derive_ from flags rather than being hand-listed. **Do not** merge the three category _lists_ (UI / marker / bulk-fetch) — membership genuinely differs (`group` ∈ UI+marker, ∉ bulk-fetch). **Keep** the totality-checked per-attribute `Record<StructureCategory, …>` tables (`STRUCTURE_POI_STYLES`, `POI_CATEGORY_INFO`, `CATEGORY_MULTIPLIER`) — their compile errors are a _feature_ (a checklist).
-
-- **Milky Way URL deep-linking** — `#focus=milkyway` round-trip needs the `FocusTarget` parser to grow a milkyWay kind; `URL_HASH_FOR['milkyWay']` currently returns null (clears the focus hash). Deferred from the first-class-Milky-Way work (shipped PRs #312–317).
-- **Cosmic zoom plan** — 60-doc "Powers of Ten" walkthrough plan drafted in worktree `cosmic-zoom-plan` (2026-05-08), awaiting user review. See memory `project_cosmic_zoom_plan`.
-- **Structure search (cluster / supercluster / void)** — the command palette (`CommandPalette.tsx`) only indexes the famous-galaxy atlas (~75) and the PGC alias index (~48k GLADE+2MRS rows). Structure POIs — clusters, superclusters, and voids (MCXC + MSCC, names + Abell numbers + descriptions already in `public/data/structures_meta.json`) — aren't searchable, so there's no way to look up "Coma", "A2703", "MSCC 216", a named void, etc. and fly to them. Add a third search index over the structure catalog (all three categories) + a select handler that selects the structure POI and frames the camera. Naturally pairs with naming large-scale structures (e.g. a "Sloan Great Wall" / "CfA Great Wall" entry) so they become navigable by name.
-- **No general `add-data-source` skill (+ its checklist)** — surfaced 2026-06-04 while adding `group`. Skills exist for the _narrow_ cases (`add-famous` for the famous-galaxy pipeline, `link-data` for symlinking real catalogs into a worktree) but there's no skill that walks the full "add a new data source / featured category" path, so steps get missed piecemeal. Concrete checklist items discovered the hard way, each of which should live in such a skill:
-  - **Settings-panel per-category count.** A new structure category must be added to the `onStructureCountsChange` emission (`wireStructureProjection.ts` `emitCounts`) — the SettingsPanel only renders a count when `structureCounts?.[cat] !== undefined`, so a missing category shows a toggle with no number (the `group` bug, fixed 2026-06-04 + guarded by a test). Any per-source/per-category count surfaced in the UI has this shape.
-  - **Seed the real data early** (memory `feedback_seed_data_early`): wire real data right after the parser, not as a late task, so the rest of the work has something to look at.
-  - Plus the structure-category-identity sites enumerated in the DRY item above (source code, pick decode, marker buckets, visibility defaults, focus framing, marker style, `POI_CATEGORY_INFO`).
-
-  The checklist is the deliverable; the skill is the home for it. Pairs with the `STRUCTURE_CATEGORY_META` consolidation (a `meta`-derived category set would let several of these checklist items become compile-time-enforced rather than prose).
-
----
+- [ ] **Cosmic-zoom plan review** `process` — 60-doc "Powers of Ten" walkthrough plan drafted in worktree `cosmic-zoom-plan` (2026-05-08), awaiting user review (memory `project_cosmic_zoom_plan`).
 
 ## External / blocked
 
-Tracked here so the dependency is visible; no skymap-side work until unblocked.
-
-- **Rhizome SDSS calibration** — in flight in the PolyPhy fork (branch `rhizome-spec`, PR #114). Skymap is read-only on this surface until calibration lands. See memory `project_rhizome_handoff_in_flight`.
-- **HyperLEDA cache backfill** — R2 cache is intentionally partial (52k / ~1.5M PGCs). Do not auto-trigger a re-fetch; promote only if a concrete need surfaces. See memory `project_hyperleda_partial_cache`.
-- **DESI DR1 as a data source** — verified viable and ~90% new data (extends the map in depth), but blocked on rendering capacity: DESI adds ~10× points (~9.75M from LSS alone) and skymap is already at the interactive-render limit. Revisit only after a major engine improvement lifts the point ceiling (~25M+). Full facts + overlap analysis in [`research/2026-06-05-desi-dr1-as-a-data-source.md`](research/2026-06-05-desi-dr1-as-a-data-source.md). See memory `project_desi_deferred`.
-
----
+- [ ] **Rhizome SDSS calibration** `blocked` — in flight in the PolyPhy fork (branch `rhizome-spec`, PR #114); skymap is read-only until it lands (memory `project_rhizome_handoff_in_flight`).
+- [ ] **HyperLEDA cache backfill** `blocked` — R2 cache is intentionally partial (52k / ~1.5M PGCs); don't auto-refetch, promote only on concrete need (memory `project_hyperleda_partial_cache`).
+- [ ] **DESI DR1 as a data source** `blocked` — viable + ~90% new data, but ~10× points (~9.75M) exceeds the interactive-render ceiling; revisit after the point ceiling lifts to ~25M+ ([research](research/2026-06-05-desi-dr1-as-a-data-source.md), memory `project_desi_deferred`).
 
 ## Outreach (long-tail)
 
-The outreach push has its own per-task plan tree under [`superpowers/plans/2026-05-05-outreach-and-promotion/`](superpowers/plans/2026-05-05-outreach-and-promotion/). The actionable open items live in [`TODO.md`](superpowers/plans/2026-05-05-outreach-and-promotion/TODO.md). Top-level outstanding:
+Per-task plan tree under [`superpowers/plans/2026-05-05-outreach-and-promotion/`](superpowers/plans/2026-05-05-outreach-and-promotion/); actionable items in [`TODO.md`](superpowers/plans/2026-05-05-outreach-and-promotion/TODO.md).
 
-- JOSS submission (Task 3) — `paper/paper.md` + `paper/paper.bib`.
-- RNAAS submission (Task 6) — short note + PDF.
-- Remaining Reddit posts (Task 4) — r/Astronomy (video), r/WebGPU (video), reschedule r/MapPorn.
-- 5 academic outreach emails (Task 5) — SDSS, GLADE, AAS WWT, CDS, LVK EM.
+- [ ] **JOSS submission** `ready` — `paper/paper.md` + `paper/paper.bib` (Task 3).
+- [ ] **RNAAS submission** `ready` — short note + PDF (Task 6).
+- [ ] **Remaining Reddit posts** `ready` — r/Astronomy (video), r/WebGPU (video), reschedule r/MapPorn (Task 4).
+- [ ] **Academic outreach emails** `ready` — SDSS, GLADE, AAS WWT, CDS, LVK EM (Task 5).
 
 ---
 
 ## Reference docs (not pickup-able)
 
-Living context docs; cite them from plans rather than turning them into work.
+Cite these from plans rather than turning them into work.
 
+- [`backlog/`](backlog/) — per-item detail write-ups for the design-bearing entries above
 - [`audits/`](audits/) — backward-looking codebase critiques (code reviews, renderer audits)
 - [`research/`](research/) — forward-looking surveys (cluster/void viz, cosmic web)
 - [`superpowers/conventions/`](superpowers/conventions/) — renderer + plan conventions
+- `plans/completed/` + `specs/completed/` — shipped designs, cited by name from this file
