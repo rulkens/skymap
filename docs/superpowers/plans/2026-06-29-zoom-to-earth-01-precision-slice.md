@@ -132,19 +132,19 @@ matrix math is expressed relative to; fixed at the Sun for this feature; the nam
 extension point where a future moving origin plugs in. Do NOT build
 threshold-rebasing (YAGNI — spec §3).
 
-- [ ] Add `scaleUnits.ts` with named-local derivation + a didactic docblock
+- [x] Add `scaleUnits.ts` with named-local derivation + a didactic docblock
   (native-units-per-body rationale, spec §3 / §8).
-- [ ] Add `renderOrigin.ts` (`[0,0,0]`, `Readonly<Vec3>`, extension-point docblock).
-- [ ] Test (`scaleUnits.test.ts`): each constant snapshots to its computed value
+- [x] Add `renderOrigin.ts` (`[0,0,0]`, `Readonly<Vec3>`, extension-point docblock).
+- [x] Test (`scaleUnits.test.ts`): each constant snapshots to its computed value
   with tight tolerance — `expect(SCALE_UNITS.PC_TO_MPC).toBe(1e-6)`,
   `KPC_TO_MPC` `toBe(1e-3)`, `MPC_TO_MPC` `toBe(1)`, `GPC_TO_MPC` `toBe(1e3)`;
   `KM_TO_MPC` and `AU_TO_MPC` `toBeCloseTo` their computed values;
   `LY_TO_MPC` `toBeCloseTo(1e-6 / 3.26156)`.
-- [ ] Test internal consistency: `KPC_TO_MPC / PC_TO_MPC` `toBeCloseTo(1000)`;
+- [x] Test internal consistency: `KPC_TO_MPC / PC_TO_MPC` `toBeCloseTo(1000)`;
   `GPC_TO_MPC / MPC_TO_MPC` `toBe(1000)`; `AU_TO_MPC / KM_TO_MPC` `toBeCloseTo(AU_IN_KM)`
   (where `AU_IN_KM` is asserted as `1.495978707e8`).
-- [ ] Test (`renderOrigin.test.ts`): `RENDER_ORIGIN_MPC` equals `[0, 0, 0]`.
-- [ ] `npm test -- scaleUnits renderOrigin` → green. Commit.
+- [x] Test (`renderOrigin.test.ts`): `RENDER_ORIGIN_MPC` equals `[0, 0, 0]`.
+- [x] `npm test -- scaleUnits renderOrigin` → green. Commit.
 
 ## Task 2 — `narrowMat4`
 
@@ -154,14 +154,14 @@ threshold-rebasing (YAGNI — spec §3).
 - _Produces:_ `export function narrowMat4(m: Float64Array): Float32Array;`
   (`new Float32Array(m)`, length 16 — the f64→f32 GPU-upload boundary).
 
-- [ ] Add `narrowMat4.ts` — single function, didactic docblock (why narrow only
+- [x] Add `narrowMat4.ts` — single function, didactic docblock (why narrow only
   at the boundary; the f64 compose itself uses `mat4d`).
-- [ ] Test `narrows a known f64 matrix element-wise to f32`: build a
+- [x] Test `narrows a known f64 matrix element-wise to f32`: build a
   `Float64Array(16)` of known values, assert the result is a `Float32Array`,
   `length === 16`, and each element `toBeCloseTo` the f64 input (f32 precision).
-- [ ] Test `preserves a value that is exactly representable in f32` (e.g. `0.5`,
+- [x] Test `preserves a value that is exactly representable in f32` (e.g. `0.5`,
   `2`) — `toBe`, not `toBeCloseTo`.
-- [ ] `npm test -- narrowMat4` → green. Commit.
+- [x] `npm test -- narrowMat4` → green. Commit.
 
 ## Task 3 — `computeForegroundViewProj`
 
@@ -192,21 +192,21 @@ Body (f64 via `mat4d`): `view = mat4d.lookAt(eye − origin, target − origin, 
 `computeViewProj`, see `computeViewProj.ts:124-126`); return `mat4d.multiply(proj, view)`.
 Subtract `renderOrigin` from `eye`/`target` in f64 before `lookAt`.
 
-- [ ] Add `computeForegroundViewProj.ts` — didactic docblock paralleling
+- [x] Add `computeForegroundViewProj.ts` — didactic docblock paralleling
   `computeViewProj.ts`'s `proj * view` / ZO-depth explanation, but for the f64
   `mat4d` path and the renderOrigin-relative subtraction.
-- [ ] Test `with renderOrigin=[0,0,0] the narrowed result ≈ computeViewProj`:
+- [x] Test `with renderOrigin=[0,0,0] the narrowed result ≈ computeViewProj`:
   build a camera via `createOrbitCamera` (matching `orbitCamera.test.ts:9-18`
   fields); call `computeForegroundViewProj` with that camera's `eye`/`target`/`up`
   (= `[0,1,0]`)/`fovYRad`/`aspect`/`near`/`far` and `renderOrigin=[0,0,0]`; narrow
   via `narrowMat4`; assert every element `toBeCloseTo` `computeViewProj(cam)`'s
   element (f32 tolerance). This is the sanity bridge to the existing f32 path.
-- [ ] Test `eye/target far from origin but origin near them yields a finite,
+- [x] Test `eye/target far from origin but origin near them yields a finite,
   well-conditioned matrix`: place eye/target ~`1 * SCALE_UNITS.AU_TO_MPC` from the
   world origin with `renderOrigin` set to a nearby point (so eye−origin is small);
   assert every result element `Number.isFinite` and the matrix is non-degenerate
   (e.g. a known surface point projects to finite NDC after divide).
-- [ ] `npm test -- computeForegroundViewProj` → green. Commit.
+- [x] `npm test -- computeForegroundViewProj` → green. Commit.
 
 ## Task 4 — `composeBodyMvp` + catastrophic-cancellation guard (the headline de-risk)
 
@@ -234,8 +234,8 @@ the cancellation dodge; geometry is a unit sphere scaled by `radiusMpc` in f64, 
 one unit (Mpc) across all bodies — no per-kind native-unit braid. Didactic docblock
 must state this (spec §3 / §9).
 
-- [ ] Add `composeBodyMvp.ts` with the docblock above.
-- [ ] **Guard test (positive case)** `an Earth-radius body at 1 AU survives
+- [x] Add `composeBodyMvp.ts` with the docblock above.
+- [x] **Guard test (positive case)** `an Earth-radius body at 1 AU survives
   compose-then-narrow with sub-metre error`: radius `6371 * SCALE_UNITS.KM_TO_MPC`,
   body at `[1 * SCALE_UNITS.AU_TO_MPC, 0, 0]`, `renderOrigin = RENDER_ORIGIN_MPC`;
   build `foregroundVp` via `computeForegroundViewProj` with a camera ~2 Earth-radii
@@ -246,14 +246,40 @@ must state this (spec §3 / §9).
   **sub-metre** — i.e. the positional error is well under `radiusMpc`
   (`1e-3 km * KM_TO_MPC` as the tolerance budget). Compute the error against the
   same point composed in **pure f64** (no narrow) as ground truth.
-- [ ] **Guard test (negative case)** `narrowing view and model separately blows
-  past a whole Earth radius`: narrow `foregroundVp` to f32 AND narrow the model
-  matrix to f32 SEPARATELY, multiply in f32 (`mat4.multiply`), transform the same
-  `[1,0,0,1]`; assert the positional error vs the f64 ground truth **exceeds one
-  Earth radius** (`> radiusMpc`). This proves the guard actually guards — if this
-  assertion ever fails, the cancellation isn't being triggered and the positive
-  test is vacuous.
-- [ ] `npm test -- composeBodyMvp` → green. Commit.
+- [x] **Guard test (negative case)** `narrowing separately blows past the body
+  radius at parsec scale`. **CORRECTED GEOMETRY (see note below):** the 1 AU
+  positive geometry does NOT discriminate — at 1 AU from the Sun origin, f32 has
+  ~700× margin on an Earth radius, so separate-narrow is *also* sub-feature there.
+  The cancellation this feature actually faces is at the **anchor (star) scale**:
+  a body of Earth's radius (`6371 * KM_TO_MPC ≈ 2.06e-16 Mpc`) placed at Proxima's
+  distance from the Sun origin (`1.301 * SCALE_UNITS.PC_TO_MPC ≈ 1.3e-6 Mpc`),
+  camera ~2 body-radii away looking at it, `renderOrigin = RENDER_ORIGIN_MPC`.
+  Build `foregroundVp` via `computeForegroundViewProj` with near/far bracketing
+  the body. Assert BOTH:
+  - **f64 survives:** `composeBodyMvp(...)` transformed surface vertex `[1,0,0,1]`
+    vs pure-f64 ground truth error is sub-feature (`< radiusMpc`, comfortably) —
+    f64 holds ~1.6e6× margin at this scale.
+  - **f32 fails:** narrow `foregroundVp` AND the model to f32 SEPARATELY, multiply
+    in f32 (`mat4.multiply`), transform the same vertex; positional error vs the
+    f64 ground truth **exceeds one body radius** (`> radiusMpc`) — at 1.3 pc the
+    separate-narrow loses ~378 body radii. This proves the guard discriminates.
+- [x] `npm test -- composeBodyMvp` → green. Commit.
+
+> **PLAN CORRECTION (Task 4 negative test) — flagged for review.** The original
+> negative-test geometry (Earth radius at 1 AU) cannot trigger catastrophic
+> cancellation: referenced to the Sun origin, 1 AU values are small enough that
+> f32 resolves an Earth radius with ~700× margin, so separate-narrow passes too.
+> Catastrophic cancellation in this architecture bites at the **parsec scale**
+> (the star anchors), where f32's 24-bit mantissa can't hold an Earth-/star-radius
+> feature at ~1 pc from the origin but f64's 53-bit mantissa can — *provided the
+> floating origin keeps values near the camera* (a galaxy-scale absolute camera at
+> ~100 Mpc would break f64 too, so that is NOT a valid negative geometry). The
+> negative test was moved to the Proxima-distance case accordingly. **Implication:**
+> the precision *slice's* debug sphere (Task 12, at Earth/1 AU) is in the
+> f32-adequate regime, so the visual gate (Task 13) confirms the foreground pass +
+> zoom-range + roundness end-to-end but does NOT by itself prove f64 is *necessary*
+> — this Task 4 math test is the rigorous de-risk of that. f64's necessity becomes
+> visually apparent at the star anchors (Plan 03).
 
 ## Task 5 — `uvSphereMesh`
 
@@ -276,19 +302,19 @@ must state this (spec §3 / §9).
   (One type per `@types` file — `UvSphereMesh` gets its own file; `uvSphereMesh`
   the function gets its own util file.)
 
-- [ ] Add `UvSphereMesh.d.ts` (type only) and `uvSphereMesh.ts` (function only),
+- [x] Add `UvSphereMesh.d.ts` (type only) and `uvSphereMesh.ts` (function only),
   each with a didactic docblock (why a UV sphere, equirectangular uv mapping so
   Plan 02's Blue Marble texture maps cleanly, CCW = outward winding).
-- [ ] Test `vertex count is (segments+1)*(rings+1)` (assert `positions.length / 3`).
-- [ ] Test `every position is unit length` — for each vertex `Math.hypot(x,y,z)`
+- [x] Test `vertex count is (segments+1)*(rings+1)` (assert `positions.length / 3`).
+- [x] Test `every position is unit length` — for each vertex `Math.hypot(x,y,z)`
   `toBeCloseTo(1)`.
-- [ ] Test `index count is segments*rings*6` (triangle-list).
-- [ ] Test `winding is outward-facing` — spot-check one triangle: its geometric
+- [x] Test `index count is segments*rings*6` (triangle-list).
+- [x] Test `winding is outward-facing` — spot-check one triangle: its geometric
   normal (cross of two edges) dotted with the triangle centroid is `> 0` (normal
   points away from origin).
-- [ ] Test `uv ranges are within [0,1]` — every `u` and `v` `toBeGreaterThanOrEqual(0)`
+- [x] Test `uv ranges are within [0,1]` — every `u` and `v` `toBeGreaterThanOrEqual(0)`
   and `toBeLessThanOrEqual(1)`.
-- [ ] `npm test -- uvSphereMesh` → green. Commit.
+- [x] `npm test -- uvSphereMesh` → green. Commit.
 
 ## Task 6 — Foreground offscreen target + composite pass
 
@@ -341,14 +367,14 @@ docblock MUST call out the blend difference vs `volumeUpsample` explicitly (cite
 `volumeUpsample.ts:80-88`). The fragment shader samples the foreground color and
 returns it premultiplied-or-straight per the chosen blend (document which).
 
-- [ ] Add the two `@types` files (one type each) + factories + the two WESL files,
+- [x] Add the two `@types` files (one type each) + factories + the two WESL files,
   each with didactic docblocks. WESL: follow `wesl-shaders` conventions (no
   backticks, `?static`); the composite shaders mirror `volumeUpsample/{vertex,
   fragment}.wesl` structurally.
-- [ ] Structural assertion (the closest to a headless test): no WebGPU unit test;
+- [x] Structural assertion (the closest to a headless test): no WebGPU unit test;
   rely on `npm run typecheck` proving the factory return shapes satisfy the
   contracted types. Note the visual gate covers correctness.
-- [ ] `npm run typecheck` → clean. Commit.
+- [x] `npm run typecheck` → clean. Commit.
 
 ## Task 7 — Sphere WESL lib + debug-sphere shaders
 
@@ -381,10 +407,10 @@ enough to eyeball roundness + jitter (a simple normal-based shade or uv-grid is
 fine). No backticks in comments; literal `package::` prefix; reference identifiers
 with single quotes in comments.
 
-- [ ] Add `lib/sphere.wesl` (struct + `clip_from_local` helper, didactic header in
+- [x] Add `lib/sphere.wesl` (struct + `clip_from_local` helper, didactic header in
   the `lib/camera.wesl` voice).
-- [ ] Add `debugSphere/vertex.wesl` + `debugSphere/fragment.wesl`.
-- [ ] `npm run typecheck` → clean (the `?static` linker resolves the imports at
+- [x] Add `debugSphere/vertex.wesl` + `debugSphere/fragment.wesl`.
+- [x] `npm run typecheck` → clean (the `?static` linker resolves the imports at
   build/typecheck time). Commit.
 
 ## Task 8 — `DebugSphereRenderer`
@@ -418,13 +444,13 @@ target against `colorFormat`. Per draw, writes the f32 `mvp` into a
 `SphereUniforms` uniform buffer and draws indexed. Plan 02 decides whether to
 retire this once `earthRenderer` exists (call it out there, not here).
 
-- [ ] Add `DebugSphereRenderer.d.ts` + `debugSphereRenderer.ts` with a didactic
+- [x] Add `DebugSphereRenderer.d.ts` + `debugSphereRenderer.ts` with a didactic
   docblock (what it's for: eyeball roundness + jitter at Earth scale; the shared
   `lib/sphere.wesl`; the foreground pass owns the depth attachment).
-- [ ] Structural note: no headless WebGPU test; `npm run typecheck` proves
+- [x] Structural note: no headless WebGPU test; `npm run typecheck` proves
   `createDebugSphereRenderer`'s return `satisfies DebugSphereRenderer` and the
   `Renderer` contract. Visual gate covers correctness.
-- [ ] `npm run typecheck` → clean. Commit.
+- [x] `npm run typecheck` → clean. Commit.
 
 ## Task 9 — `ReadyFrameContext` + `frameContext` foreground fields
 
@@ -457,19 +483,20 @@ NOTE (contract): existing tests build `ReadyFrameContext` via
 `labelDirectorSubsystem.test.ts`) — those keep compiling. Only `frameContext`'s own
 test (if present) populates the new fields for real.
 
-- [ ] Add the four fields to `ReadyFrameContext.d.ts` with per-field didactic
+- [x] Add the four fields to `ReadyFrameContext.d.ts` with per-field didactic
   comments (matching the file's existing field-comment style; note the Plan 03
   adaptive seam on `foregroundNear`/`foregroundFar`).
-- [ ] Populate them in `deriveFrameContext`'s return literal; add the
+- [x] Populate them in `deriveFrameContext`'s return literal; add the
   `computeForegroundViewProj` call alongside the existing `computeViewProj(cam)`
   (`frameContext.ts:142`).
-- [ ] Test (frameContext's test): `deriveFrameContext populates the foreground
+- [x] Test (frameContext's test): `deriveFrameContext populates the foreground
   fields when ready` — drive `deriveFrameContext` with a ready state + a known
   pose/projection; assert `ctx.foregroundVp` is a `Float64Array` length 16,
   `ctx.renderOrigin` equals `RENDER_ORIGIN_MPC`, and `foregroundNear < foregroundFar`,
   both `> 0`. If no frameContext test exists, add a minimal one mirroring the
   ready-state setup other engine/frame tests use (check the harness first).
-- [ ] `npm test -- frameContext` → green; `npm run typecheck` → clean. Commit.
+- [x] `npm test -- frameContext` → green; `npm run typecheck` → clean. Commit.
+  (Rippled: 9 sibling ready-ctx test fixtures updated for the 4 new required fields.)
 
 ## Task 10 — `encodeForegroundPass` + `renderFrame` slot
 
@@ -519,11 +546,12 @@ AFTER the HDR mega-pass and BEFORE `postProcess.draw` in BOTH branches of
 This keeps Earth inside the HDR/tonemap pipeline (spec §12). It is NOT an
 `HDR_PASSES` entry (see Contract conflicts + `renderFrame.ts:54-62`).
 
-- [ ] Add `encodeForegroundPass.ts` with a didactic docblock (two-step offscreen
+- [x] Add `encodeForegroundPass.ts` with a didactic docblock (two-step offscreen
   → OVER-composite; why its own depth; why between HDR and tone-map).
-- [ ] Insert the call in both `renderFrame` branches at the cited insertion points.
-- [ ] `npm run typecheck` → clean; run the existing `renderFrame`/engine-frame
+- [x] Insert the call in both `renderFrame` branches at the cited insertion points.
+- [x] `npm run typecheck` → clean; run the existing `renderFrame`/engine-frame
   tests if any (`npm test -- renderFrame`) to confirm nothing regressed. Commit.
+  (Full suite 3400 green + `npm run build` green.)
 
 ## Task 11 — `EngineGpuHandles` slots + `initGpu` construction + teardown
 
@@ -558,15 +586,15 @@ resize branch that resizes `postProcess` / `volumeOffscreen` (find it — grep f
 the `destroy()` chain so they're released and re-nulled (cite the existing
 `destroy()` site that nulls `volumeUpsample`/`postProcess`).
 
-- [ ] Add the three nullable slots to `EngineGpuHandles.d.ts` with per-field
+- [x] Add the three nullable slots to `EngineGpuHandles.d.ts` with per-field
   didactic comments matching the file's style (Plan 01 tag; nullable lifecycle).
-- [ ] Construct all three in `initGpu.ts` after the existing renderer block;
+- [x] Construct all three in `initGpu.ts` after the existing renderer block;
   assign to `state.gpu.*`.
-- [ ] Wire `foregroundOffscreen.resize` into the resize branch alongside the other
+- [x] Wire `foregroundOffscreen.resize` into the resize branch alongside the other
   offscreen targets.
-- [ ] Add all three to the `destroy()` chain (release + re-null).
-- [ ] `npm run typecheck` → clean; `npm test` (the engine bootstrap / handles
-  tests, if any) → green. Commit.
+- [x] Add all three to the `destroy()` chain (release + re-null).
+- [x] `npm run typecheck` → clean; `npm test` (the engine bootstrap / handles
+  tests, if any) → green. Commit. (Also `npx vite build` green — foreground WESL links.)
 
 ## Task 12 — Lower `MIN_DISTANCE_MPC` + seed the debug sphere
 
@@ -593,24 +621,24 @@ something to fly to: radius `6371 * SCALE_UNITS.KM_TO_MPC`, at a plausible fixed
 Earth position (e.g. `[1 * SCALE_UNITS.AU_TO_MPC, 0, 0]` — 1 AU from the Sun at the
 render origin). `encodeForegroundPass` reads this seed for its single draw.
 
-- [ ] Lower `MIN_DISTANCE_MPC` to the spec §7 floor; rewrite the docblock for the
+- [x] Lower `MIN_DISTANCE_MPC` to the spec §7 floor; rewrite the docblock for the
   new value (timeless — describe the current floor + the focus-tween interaction,
-  no "was 0.05" history).
-- [ ] Test (`clampDistance.test.ts`): `clampDistance floors at MIN_DISTANCE_MPC`
+  no "was 0.05" history). (1e-17 Mpc; focus-on end 0.15 Mpc unchanged by clamp.)
+- [x] Test (`clampDistance.test.ts`): `clampDistance floors at MIN_DISTANCE_MPC`
   asserting a sub-floor input returns the new `MIN_DISTANCE_MPC`; `clampDistance
   caps at MAX_DISTANCE_MPC` (port/keep existing); `the focus-on end distance is not
   ratcheted` — assert `clampDistance(galaxyFocusDistance)` returns that distance
   unchanged (read `galaxyFocusDistance.ts` for the value; cite it).
-- [ ] Add the minimal Earth-scale debug-body seed (clearly marked Plan-01
-  stand-in) consumed by `encodeForegroundPass`.
-- [ ] `npm test -- clampDistance` → green. Commit.
+- [x] Add the minimal Earth-scale debug-body seed (clearly marked Plan-01
+  stand-in) consumed by `encodeForegroundPass`. (`src/data/bodies/debugSphereBody.ts`)
+- [x] `npm test -- clampDistance` → green. Commit.
 
 ## Task 13 — Final gate (typecheck + test + VISUAL confirmation)
 
 **Files:** none (verification only).
 
-- [ ] `npm run typecheck` (both src + tools tsconfigs) → clean.
-- [ ] `npm test` (full suite) → green. (Per CLAUDE.md, 590+ tests; keep green.)
+- [x] `npm run typecheck` (both src + tools tsconfigs) → clean.
+- [x] `npm test` (full suite) → green. (3400 tests; `npm run build` also green.)
 - [ ] **VISUAL gate — STOP and report, do not claim success unattended.** The
   spec §10.1 acceptance is a VISUAL property: on the dev server, zoom continuously
   from the galaxy view down to the debug sphere and confirm:
