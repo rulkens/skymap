@@ -1,5 +1,7 @@
 # Tour animation — design (brainstorm, grounded 2026-06-04)
 
+> **SUPERSEDED** by [`specs/completed/2026-06-19-animation-system-design.md`](2026-06-19-animation-system-design.md). The tour shipped as an animation clips + saga system (`guidedTourSaga.ts`, clip/tour registries; PRs #364/#366/#367/#373/#375), not the approach sketched here. Kept for history.
+
 > **Status: brainstorm, partially resolved.** Started 2026-05-07 during the
 > outreach work (the trigger was needing a 20-30 s screen capture for
 > r/Astronomy and r/WebGPU; the existing sub-second focus tween produces
