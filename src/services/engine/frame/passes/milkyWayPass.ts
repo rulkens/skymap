@@ -15,17 +15,23 @@
  * Two gates, both in `enabled`:
  *
  *   1. `state.settings.milkyWay.enabled` — user toggle.
- *   2. `milkyWayFadeAlpha(camDist) > 0` — camera-distance fade band
- *      defined in `utils/math/milkyWayFadeAlpha.ts` (full strength inside
- *      10 Mpc, smoothstep out to 0 at 50 Mpc).
+ *   2. `milkyWayVisibility(camDist) > 0` — the camera-distance visibility
+ *      window, a product of two fades:
+ *        - `milkyWayFadeAlpha` (far side): full inside 10 Mpc, out to 0 at
+ *          50 Mpc, so the impostor isn't a cartoon spiral on a cosmic-web
+ *          shot.
+ *        - `milkyWayApproachFadeAlpha` (near side): full outside ~40 kpc,
+ *          fading to 0 by ~8 kpc as the camera dives inside the disc toward
+ *          the solar system — the same "dim once you're inside it" behaviour
+ *          clusters have.
  *
  * Both gates live in `enabled` so that when the camera flies well
- * beyond the local volume the whole pass is skipped — no
- * `beginRenderPass`, no tile-RAM round-trip on M1, and no idle
- * timestamp slot in the GPU-timings panel.  `milkyWayFadeAlpha` is
- * called again inside `draw` to compute the actual alpha to send to
- * the shader; both reads use the frame-frozen `ctx.drawCamPos`, so
- * they return the same value (no race).
+ * beyond the local volume — or all the way inside the disc — the whole
+ * pass is skipped: no `beginRenderPass`, no tile-RAM round-trip on M1,
+ * and no idle timestamp slot in the GPU-timings panel.  The same
+ * visibility product is recomputed inside `draw` to set the shader
+ * alpha; both reads use the frame-frozen `ctx.drawCamPos`, so they
+ * return the same value (no race).
  *
  * ### What it reads
  *
@@ -46,7 +52,17 @@
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { milkyWayFadeAlpha } from '../../../../utils/math/milkyWayFadeAlpha';
+import { milkyWayApproachFadeAlpha } from '../../../../utils/math/milkyWayApproachFadeAlpha';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
+
+/**
+ * Camera-distance visibility window for the impostor: the product of the
+ * far-side fade (recede past the local volume) and the near-side approach
+ * fade (dive inside the disc).  Returns `[0, 1]`; 0 means "don't draw".
+ */
+function milkyWayVisibility(camDistMpc: number): number {
+  return milkyWayFadeAlpha(camDistMpc) * milkyWayApproachFadeAlpha(camDistMpc);
+}
 
 export const milkyWayPass: Pass = {
   name: 'milky-way',
@@ -62,21 +78,22 @@ export const milkyWayPass: Pass = {
       state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now()) > 0;
     if (!togglePart) return false;
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return milkyWayFadeAlpha(camDistMpc) > 0;
+    return milkyWayVisibility(camDistMpc) > 0;
   },
 
   draw(pass, ctx, state, deps) {
     const { vp, canvasSize, drawCamPos } = ctx;
     const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
-    // Composite the distance-based fade with the registry-supplied
-    // toggle opacity. The renderer already accepts a scalar fadeAlpha
-    // CPU-side param, so multiplying two opacities here is the
-    // minimal-change path — no shader edits, no FadeUniforms binding.
+    // Composite the camera-distance visibility window (far + near fades)
+    // with the registry-supplied toggle opacity. The renderer already
+    // accepts a scalar fadeAlpha CPU-side param, so multiplying opacities
+    // here is the minimal-change path — no shader edits, no FadeUniforms
+    // binding.
     const toggleOpacity = state.subsystems.fades.opacityOf(
       { kind: 'milkyWay' },
       performance.now(),
     );
-    const fadeAlpha = milkyWayFadeAlpha(camDistMpc) * toggleOpacity;
+    const fadeAlpha = milkyWayVisibility(camDistMpc) * toggleOpacity;
 
     deps.milkyWayRenderer.draw(
       pass,
