@@ -75,6 +75,7 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
     drawCamPos: [0, 0, 0],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
+    fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
     ...over,
   } as unknown as ReadyFrameContext;

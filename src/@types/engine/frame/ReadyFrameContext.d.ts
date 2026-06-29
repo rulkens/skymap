@@ -69,6 +69,8 @@ export type ReadyFrameContext = {
   drawCamPos: Readonly<Vec3>;
   /** `canvasSize.height / (2·tan(fovY/2))` — pinhole radian→pixel conversion. */
   drawPxPerRad: number;
+  /** Vertical field-of-view in radians (`cam.fovYRad`) — the source `drawPxPerRad` is derived from. */
+  fovYRad: number;
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
   /** Galaxy-catalog draw mask (deriveSourceMasks(state).draw), this frame. */

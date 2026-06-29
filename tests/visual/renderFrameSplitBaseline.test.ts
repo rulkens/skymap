@@ -289,6 +289,7 @@ describe('renderFrame visual baseline', () => {
         [number, number, number]
       >,
       drawPxPerRad,
+      fovYRad: (60 * Math.PI) / 180,
       renderer: pointRenderer,
       postProcess,
       texturedDisks: texturedDisksSubsystem,
