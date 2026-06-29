@@ -15,6 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolveFocusId } from '../../../src/services/url/resolveFocusId';
 import { focusIdOf } from '../../../src/services/url/focusIdOf';
+import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { Source } from '../../../src/data/sources';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
@@ -169,8 +170,19 @@ describe('resolveFocusId', () => {
 
   it('milkyWay literal → milkyWay singleton ref', () => {
     // The Milky Way is a singleton focal target with no per-instance data.
-    // focusIdOf (the inverse) returns null for milkyWay — out of scope.
+    // The literal comes from MILKY_WAY_FOCUS_ID — the same constant the
+    // encoder (focusIdOf) emits, so the round-trip closes.
+    expect(resolveFocusId(MILKY_WAY_FOCUS_ID, deps)).toEqual({ type: 'milkyWay' });
     expect(resolveFocusId('milkyWay', deps)).toEqual({ type: 'milkyWay' });
+  });
+
+  it('round-trips a milkyWay ref through encode → decode', () => {
+    // Encode a milkyWay SelectionRef, then decode the resulting id back: it
+    // must land on the same singleton ref. This is the guard the deep-link
+    // feature exists for — encoder and decoder agreeing on the literal.
+    const id = focusIdOf({ type: 'milkyWay' }, deps);
+    expect(id).not.toBeNull();
+    expect(resolveFocusId(id as string, deps)).toEqual({ type: 'milkyWay' });
   });
 
   // ── structure ────────────────────────────────────────────────────────────
