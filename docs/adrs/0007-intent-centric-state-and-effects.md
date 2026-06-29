@@ -1,6 +1,6 @@
 # ADR 0007: Intent-Centric State with an Explicit Effects Layer
 
-- **Status:** Accepted (direction); the effects-layer _vehicle_ is an open sub-decision (see "Open question")
+- **Status:** Accepted (direction); the effects-layer _vehicle_ open sub-decision (see "Open question") is now resolved by [ADR 0008](0008-effects-layer-vehicle.md) — `typed-redux-saga`.
 - **Date:** 2026-06-17
 - **Deciders:** Alexander Rulkens
 - **Tags:** engine, settings, state-management, architecture, effects, tours
@@ -39,9 +39,10 @@ Separately, the project's architecture turns out to _already_ be an
 Intent → continuous-validation → View system in the sense Steven Wittens describes
 ("I is for Intent", "Climbing Mt Effect", "Reconcile All The Things", "Live"):
 `state.settings` is Intent; the per-frame demand re-evaluation + `deriveSourceMasks`
-+ the fade bridge are the continuous, non-destructive validation; the GPU draw is
-the View. It simply was never _named_ one, so the discipline wasn't applied
-uniformly — which is why the non-settings state drifted.
+
+- the fade bridge are the continuous, non-destructive validation; the GPU draw is
+  the View. It simply was never _named_ one, so the discipline wasn't applied
+  uniformly — which is why the non-settings state drifted.
 
 The prior ADRs that touch this area were each scoped narrowly:
 
@@ -116,6 +117,9 @@ Adopt **intent-centric state** as the binding architecture, per
   builds on them.
 
 ## Open question: the effects-layer vehicle
+
+> **Resolved by [ADR 0008](0008-effects-layer-vehicle.md):** the vehicle is
+> `typed-redux-saga`. The two candidates below are retained for the rationale.
 
 The reactive effects layer will land as one of two mechanisms. Both satisfy the
 principle; the choice is a follow-up decision.
