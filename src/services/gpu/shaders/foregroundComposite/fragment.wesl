@@ -1,5 +1,17 @@
-// foregroundComposite/fragment.wesl — sample the foreground colour texture
-// and emit it straight for OVER-compositing into the HDR target.
+// foregroundComposite/fragment.wesl — sample the foreground colour texture,
+// tone-map it, and emit it straight for OVER-compositing onto the
+// tone-mapped swap chain.
+//
+// ## Why tone-map here
+//
+// The foreground (Sun, Earth, later an atmosphere) renders in HDR into its
+// own offscreen, then composites AFTER the UI overlay so opaque bodies
+// occlude the galaxy-level labels.  The swap chain is already LDR by then,
+// so this pass applies the SAME five-curve tone-map the scene used (shared
+// 'lib/tonemap.wesl' math, shared parameters through the ToneMapUniforms
+// block) before the OVER blend, so the foreground shares the background's
+// response across the limb.  Alpha (coverage) passes through untouched so a
+// translucent atmosphere tints the labels behind it rather than hard-masking.
 //
 // ## Blend model: straight (unassociated) OVER
 //
@@ -33,19 +45,42 @@
 // no downsampling to undo.  A single bilinear sample is exact.
 
 import package::foregroundComposite::io::VSOut;
+import package::toneMap::io::ToneMapUniforms;
+import package::lib::tonemap::applyLinear;
+import package::lib::tonemap::applyReinhard;
+import package::lib::tonemap::applyAsinh;
+import package::lib::tonemap::applyGamma2;
+import package::lib::tonemap::applyAces;
 
 @group(0) @binding(0) var fgTex: texture_2d<f32>;
 @group(0) @binding(1) var fgSamp: sampler;
+@group(0) @binding(2) var<uniform> u: ToneMapUniforms;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Single bilinear sample -- the foreground target is full resolution,
   // so 'in.uv' maps to exactly the corresponding foreground texel.
-  // The linear sampler gives a clean result at non-integer UVs caused
-  // by sub-pixel rounding, matching the volumeUpsample convention.
-  //
-  // The returned value is the foreground colour in straight-alpha form.
-  // The blend hardware applies 'srcFactor: src-alpha', completing the
-  // Porter-Duff OVER multiplication described in the module header.
-  return textureSample(fgTex, fgSamp, in.uv);
+  let fg = textureSample(fgTex, fgSamp, in.uv);
+
+  // Tone-map the HDR foreground colour with the scene's curve.  The same
+  // 'if' chain as 'toneMap/fragment.wesl' (a dynamic-uniform branch the GPU
+  // handles per-frame-uniformly), over the shared 'lib/tonemap.wesl' math.
+  let scaled = fg.rgb * u.exposure;
+  var mapped: vec3<f32>;
+  if (u.curve == 0u) {
+    mapped = applyLinear(scaled);
+  } else if (u.curve == 1u) {
+    mapped = applyReinhard(scaled, u.whitepointSq);
+  } else if (u.curve == 2u) {
+    mapped = applyAsinh(scaled, u.asinhSoftness);
+  } else if (u.curve == 3u) {
+    mapped = applyGamma2(scaled);
+  } else {
+    mapped = applyAces(scaled);
+  }
+
+  // Emit straight-alpha: tone-mapped colour with the foreground's own
+  // coverage.  The blend hardware applies 'srcFactor: src-alpha', completing
+  // the Porter-Duff OVER described in the module header.
+  return vec4<f32>(mapped, fg.a);
 }

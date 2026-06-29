@@ -1,6 +1,8 @@
 /**
- * ForegroundComposite — fullscreen pass that OVER-composites the
- * foreground offscreen colour texture onto the HDR target.
+ * ForegroundComposite — fullscreen pass that tone-maps the foreground
+ * offscreen colour texture and OVER-composites it onto the tone-mapped
+ * swap chain (after the UI overlay, so opaque foreground bodies occlude the
+ * galaxy-level labels behind them).
  *
  * ### Blend semantics — OVER, not additive
  *
@@ -29,17 +31,27 @@
 
 export type ForegroundComposite = {
   /**
-   * Encode the foreground OVER-composite draw into an already-open
-   * render pass against the HDR target.
+   * Encode the tone-map + OVER-composite draw into an already-open render
+   * pass against the swap chain.
    *
-   * @param pass  Render-pass encoder writing into the HDR target.
-   *              Must have been opened with 'loadOp: "load"' so existing
-   *              HDR content is preserved and composited into.
-   * @param src   Full-resolution 'rgba16float' foreground colour view
-   *              ('ForegroundOffscreen.colorView').  Bound fresh every
-   *              draw so resize invalidation is handled by the caller.
+   * @param pass      Render-pass encoder writing into the swap chain. Must
+   *                  have been opened with 'loadOp: "load"' so the
+   *                  tone-mapped scene + UI overlay are preserved and
+   *                  composited onto.
+   * @param src       Full-resolution 'rgba16float' foreground colour view
+   *                  ('ForegroundOffscreen.colorView'). Bound fresh every
+   *                  draw so resize invalidation is handled by the caller.
+   * @param exposure  Tone-map exposure (clamped at point of use), matching
+   *                  the scene's post-process pass.
+   * @param curve     Tone-map curve selector (see ToneMapCurve), matching
+   *                  the scene's post-process pass.
    */
-  draw(pass: GPURenderPassEncoder, src: GPUTextureView): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    src: GPUTextureView,
+    exposure: number,
+    curve: number,
+  ): void;
   /**
    * No-op — sampler, bind-group-layout, and pipeline have no explicit
    * destroy methods (GC'd when their last reference drops).  Present for

@@ -104,7 +104,6 @@ import { milkyWayPass } from './milkyWayPass';
 import { horizonShellPass } from './horizonShellPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
-import { foregroundLabelsPass } from './foregroundLabelsPass';
 import { structureMarkersPass } from './structureMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
 import { diskRadiusRingPass } from './diskRadiusRingPass';
@@ -137,7 +136,9 @@ export const UI_PASSES: readonly Pass[] = [
   diskRadiusRingPass,
   markerLinesPass,
   labelsPass,
-  foregroundLabelsPass,
+  // NOTE: foregroundLabelsPass is intentionally NOT here. The Sun/Earth
+  // captions must draw AFTER the foreground composite (so they land on top of
+  // the Sun disc), which happens in `encodeForegroundOver`, past this overlay.
 ];
 
 /**

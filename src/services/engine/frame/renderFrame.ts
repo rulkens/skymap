@@ -81,6 +81,7 @@ import { encodeHdrSingle } from './encodeHdrSingle';
 import { encodeHdrSplit } from './encodeHdrSplit';
 import { encodeUiOverlay } from './encodeUiOverlay';
 import { encodeForegroundPass } from './encodeForegroundPass';
+import { encodeForegroundOver } from './encodeForegroundOver';
 
 /**
  * Encode and submit one frame's worth of HDR + tone-map work.
@@ -155,6 +156,8 @@ export function renderFrame(input: RenderFrameInput): void {
   const encoder = device.createCommandEncoder();
   const swapView = context.getCurrentTexture().createView();
 
+  const { exposure, curve } = state.settings.tonemap;
+
   if (timingService.enabled) {
     const timingCtx = timingService.beginFrame();
     encodeHdrSplit(encoder, ctx, state, deps, timingService);
@@ -162,8 +165,8 @@ export function renderFrame(input: RenderFrameInput): void {
     ctx.postProcess.draw(
       encoder,
       swapView,
-      state.settings.tonemap.exposure,
-      state.settings.tonemap.curve,
+      exposure,
+      curve,
       timingService.descriptorFor('tone-map'),
     );
     encodeUiOverlay(
@@ -174,12 +177,16 @@ export function renderFrame(input: RenderFrameInput): void {
       deps,
       timingService.descriptorFor('ui-overlay'),
     );
+    // After the UI overlay so the foreground occludes galaxy-level labels.
+    encodeForegroundOver(encoder, swapView, ctx, state, deps, exposure, curve);
     timingService.endFrame(timingCtx, encoder);
   } else {
     encodeHdrSingle(encoder, ctx, state, deps);
     encodeForegroundPass(encoder, ctx, state, deps);
-    ctx.postProcess.draw(encoder, swapView, state.settings.tonemap.exposure, state.settings.tonemap.curve, undefined);
+    ctx.postProcess.draw(encoder, swapView, exposure, curve, undefined);
     encodeUiOverlay(encoder, swapView, ctx, state, deps, undefined);
+    // After the UI overlay so the foreground occludes galaxy-level labels.
+    encodeForegroundOver(encoder, swapView, ctx, state, deps, exposure, curve);
   }
 
   device.queue.submit([encoder.finish()]);

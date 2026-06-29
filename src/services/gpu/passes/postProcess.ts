@@ -98,17 +98,17 @@
 // so the vertex-to-fragment interface stays byte-identical.
 import vsCode from '../shaders/toneMap/vertex.wesl?static';
 import fsCode from '../shaders/toneMap/fragment.wesl?static';
-import { ToneMapCurve } from '../../../data/toneMapCurve';
+import { TONEMAP_WHITEPOINT, TONEMAP_ASINH_SOFTNESS } from '../../../data/toneMapDefaults';
 import { clampExposure } from '../../../utils/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { Size } from '../../../@types/rendering/Size';
 import type { PostProcess } from '../../../@types/rendering/PostProcess';
 
-/** Default whitepoint for Reinhard-extended — input value where the curve reaches 1.0. */
-const DEFAULT_WHITEPOINT = 4.0;
-
-/** Default softness for asinh stretch — higher = more aggressive low-end lift. */
-const DEFAULT_ASINH_SOFTNESS = 10.0;
+// Sourced from the shared tone-map defaults so the foreground composite
+// (which tone-maps the Sun/Earth in a separate pass) uses identical curve
+// parameters. Local aliases keep the call sites below unchanged.
+const DEFAULT_WHITEPOINT = TONEMAP_WHITEPOINT;
+const DEFAULT_ASINH_SOFTNESS = TONEMAP_ASINH_SOFTNESS;
 
 // ─── JS-mirror tone-map curves ────────────────────────────────────────────
 //

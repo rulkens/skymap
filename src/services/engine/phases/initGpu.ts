@@ -401,7 +401,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     width: canvas.width,
     height: canvas.height,
   });
-  state.gpu.foregroundComposite = createForegroundComposite(device, 'rgba16float');
+  // Swap-chain format: the composite tone-maps and OVER-blends onto the
+  // swap chain after the UI overlay (not into the HDR target).
+  state.gpu.foregroundComposite = createForegroundComposite(device, format);
   state.gpu.debugSphereRenderer = createDebugSphereRenderer(device, 'rgba16float', 'depth32float');
 
   // Name captions for the foreground bodies.  A second label renderer (UI /

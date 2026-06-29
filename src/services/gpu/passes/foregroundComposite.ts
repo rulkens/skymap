@@ -1,6 +1,16 @@
 /**
- * foregroundComposite — fullscreen pass that OVER-composites the
- * opaque foreground render target onto the HDR buffer.
+ * foregroundComposite — fullscreen pass that tone-maps the foreground
+ * render target and OVER-composites it onto the tone-mapped swap chain.
+ *
+ * ### Why it runs after the UI overlay (and tone-maps itself)
+ *
+ * The foreground (Sun, Earth, …) renders in HDR into its own offscreen.
+ * Compositing it onto the swap chain AFTER the galaxy-level UI overlay is
+ * what makes opaque bodies occlude the labels/marker-lines behind them (and
+ * lets a future translucent atmosphere tint them).  By then the swap chain
+ * is LDR, so this pass applies the same tone-map curve the scene used —
+ * shared math (`lib/tonemap.wesl`) and shared parameters
+ * (`toneMapDefaults.ts`) — before the OVER blend.
  *
  * ### Why OVER, not additive (key difference from volumeUpsample)
  *
@@ -47,11 +57,13 @@
 import vsCode from '../shaders/foregroundComposite/vertex.wesl?static';
 import fsCode from '../shaders/foregroundComposite/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { TONEMAP_WHITEPOINT, TONEMAP_ASINH_SOFTNESS } from '../../../data/toneMapDefaults';
+import { clampExposure } from '../../../utils/clampExposure';
 import type { ForegroundComposite } from '../../../@types/rendering/ForegroundComposite';
 
 export function createForegroundComposite(
   device: GPUDevice,
-  hdrFormat: GPUTextureFormat,
+  swapFormat: GPUTextureFormat,
 ): ForegroundComposite {
   const vsModule = createShaderModuleWithDevLog(
     device,
@@ -73,11 +85,24 @@ export function createForegroundComposite(
     minFilter: 'linear',
   });
 
+  // Tone-map uniform — same 16-byte layout as `postProcess`
+  // (exposure, whitepoint², asinhSoftness, curve) so the foreground shares
+  // the scene's curve. Rewritten per draw from the live tonemap settings.
+  const uniformBuffer = device.createBuffer({
+    label: 'foregroundComposite-uniform-buffer',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const uniformBytes = new ArrayBuffer(16);
+  const uniformF32 = new Float32Array(uniformBytes);
+  const uniformU32 = new Uint32Array(uniformBytes);
+
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'foregroundComposite-bgl',
     entries: [
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     ],
   });
 
@@ -93,11 +118,11 @@ export function createForegroundComposite(
       entryPoint: 'fs',
       targets: [
         {
-          format: hdrFormat,
+          format: swapFormat,
           // OVER composite — Porter-Duff OVER with straight alpha.
           // Contrast with volumeUpsample's additive '(one, one)':
-          // foreground geometry replaces (not adds to) the HDR
-          // background in proportion to its coverage alpha.
+          // foreground geometry replaces (not adds to) the already
+          // tone-mapped swap-chain pixels in proportion to its coverage.
           blend: {
             color: {
               srcFactor: 'src-alpha',
@@ -117,7 +142,21 @@ export function createForegroundComposite(
   });
 
   return {
-    draw(pass: GPURenderPassEncoder, src: GPUTextureView): void {
+    draw(
+      pass: GPURenderPassEncoder,
+      src: GPUTextureView,
+      exposure: number,
+      curve: number,
+    ): void {
+      // Same packing as postProcess.draw — clamp exposure at point of use,
+      // pre-square the whitepoint, select the curve. Keeps the foreground's
+      // tone-map byte-identical to the scene's.
+      uniformF32[0] = clampExposure(exposure);
+      uniformF32[1] = TONEMAP_WHITEPOINT * TONEMAP_WHITEPOINT;
+      uniformF32[2] = TONEMAP_ASINH_SOFTNESS;
+      uniformU32[3] = curve >>> 0;
+      device.queue.writeBuffer(uniformBuffer, 0, uniformBytes);
+
       // Bind group rebuilt per draw — 'src' is recreated on every
       // foregroundOffscreen.resize(); caching across resize would bind
       // a destroyed view.  See module header for the rationale.
@@ -127,6 +166,7 @@ export function createForegroundComposite(
         entries: [
           { binding: 0, resource: src },
           { binding: 1, resource: sampler },
+          { binding: 2, resource: { buffer: uniformBuffer } },
         ],
       });
       pass.setPipeline(pipeline);
@@ -134,11 +174,9 @@ export function createForegroundComposite(
       pass.draw(3, 1, 0, 0);
     },
     destroy(): void {
-      // No GPUTexture / GPUBuffer to release — sampler, pipeline, and
+      // Release the tone-map uniform buffer. Sampler, pipeline, and
       // bind-group-layout are GC'd when their last reference drops.
-      // Present for lifecycle symmetry with PostProcess and volumeUpsample
-      // so the engine's teardown call shape is uniform across GPU-resource
-      // owners.
+      uniformBuffer.destroy();
     },
   };
 }

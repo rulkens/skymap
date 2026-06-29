@@ -1,8 +1,8 @@
 /**
- * encodeForegroundPass — two-step offscreen → OVER-composite for foreground
- * geometry (Earth, Moon, Sun) into the HDR pipeline.
+ * encodeForegroundPass — render opaque foreground geometry (Earth, Moon, Sun)
+ * into the dedicated foreground offscreen.
  *
- * ### Why two steps, not direct-to-HDR
+ * ### Why a separate offscreen
  *
  * The HDR target (PostProcess.view) has no depth attachment — every existing
  * galaxy/disk/volume renderer uses additive blending with depthWriteEnabled:
@@ -13,30 +13,25 @@
  * require re-declaring depthStencil state in every additive pipeline — a
  * cross-cutting change that previously caused regressions.
  *
- * The two-step solution: render opaque geometry into a dedicated
- * 'rgba16float + depth32float' offscreen (ForegroundOffscreen), then
- * OVER-composite the colour result onto the HDR target in a second pass.
- * The OVER composite uses 'loadOp: load' so existing HDR content (the galaxy
- * backdrop) is preserved and only covered where the foreground has non-zero
- * alpha.
+ * So opaque geometry renders into a dedicated 'rgba16float + depth32float'
+ * offscreen (ForegroundOffscreen) here, cleared to transparent black each
+ * frame. The colour result is tone-mapped and OVER-composited onto the screen
+ * later, by `encodeForegroundOver`.
  *
- * ### Why between HDR and tone-map
+ * ### Why the composite is deferred past the UI overlay
  *
- * Earth must participate in the same tone-map curve as the galaxy backdrop —
- * its surface brightness can exceed 1.0 in 'rgba16float' (e.g. sunlit limb
- * vs deep-space black). Compositing after postProcess.draw would apply the
- * OVER blend in [0,1] LDR space, compressing Earth's brightness range
- * incorrectly. By landing the composite in the HDR target before tone-map,
- * Earth and the background share the same tonemapping pass and the brightness
- * transition across the limb is physically coherent.
+ * The composite runs AFTER tone-map AND after the UI overlay, not here in
+ * HDR. That ordering is what makes opaque foreground bodies occlude the
+ * galaxy-level labels / marker-lines behind them (and lets a future
+ * translucent atmosphere tint them). `encodeForegroundOver` tone-maps the
+ * foreground with the same curve the scene used, so the Sun still shares the
+ * background's response across the limb.
  *
  * ### Template
  *
  * The volume-offscreen → volume-upsample pattern in encodeVolumePrepass /
  * volumeUpsamplePass is the structural template: pre-pass writes to an
- * offscreen target, HDR pass samples it back in. This foreground variant
- * differs in blend mode (OVER vs additive) and target (full-res vs
- * quarter-res), but the two-encoder-pass shape is the same.
+ * offscreen target, a later pass samples it back in.
  */
 
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
@@ -46,14 +41,9 @@ import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
 import { DEBUG_SPHERE_BODIES } from '../../../data/bodies/debugSphereBody';
 
 /**
- * Encode the foreground depth pass + OVER-composite into the HDR target.
- *
- * Step 1: render opaque foreground geometry into ForegroundOffscreen
- * (full-res 'rgba16float' + 'depth32float').  Cleared to transparent black
- * each frame so the OVER composite only covers pixels the foreground drew.
- *
- * Step 2: OVER-composite the foreground colour texture onto the HDR target
- * (ctx.postProcess.view) with 'loadOp: load' to preserve the galaxy backdrop.
+ * Render opaque foreground geometry into ForegroundOffscreen (full-res
+ * 'rgba16float' + 'depth32float'), cleared to transparent black each frame so
+ * the later composite only covers pixels the foreground actually drew.
  *
  * Self-gated: if any required handle is null the function returns without
  * opening any render pass, mirroring how other passes null-check their
@@ -65,18 +55,18 @@ export function encodeForegroundPass(
   state: EngineState,
   _deps: PassDeps,
 ): void {
-  const { foregroundOffscreen, foregroundComposite, debugSphereRenderer } = state.gpu;
+  const { foregroundOffscreen, debugSphereRenderer } = state.gpu;
 
-  // Self-gate: all three handles must be constructed before this pass can run.
+  // Self-gate: both handles must be constructed before this pass can run.
   // During early bootstrap or on platforms where initGpu is in flight these
   // will be null — a silent no-op keeps the frame loop correct.
-  if (!foregroundOffscreen || !foregroundComposite || !debugSphereRenderer) return;
+  if (!foregroundOffscreen || !debugSphereRenderer) return;
 
-  // ── Step 1 — render opaque geometry into the foreground offscreen ─────────
+  // ── Render opaque geometry into the foreground offscreen ──────────────────
   //
   // Clear colour to transparent black (r:0,g:0,b:0,a:0) so pixels the
-  // foreground does NOT draw retain full transparency — the OVER composite
-  // will leave those pixels unchanged in the HDR target.
+  // foreground does NOT draw retain full transparency — the later composite
+  // leaves those pixels unchanged on screen.
   //
   // Clear depth to 1.0 (far plane) so the first foreground fragment always
   // wins the initial depth test regardless of draw order.
@@ -108,27 +98,8 @@ export function encodeForegroundPass(
 
   fgPass.end();
 
-  // ── Step 2 — OVER-composite the foreground colour onto the HDR target ─────
-  //
-  // 'loadOp: load' preserves the galaxy/disk/volume backdrop already in
-  // ctx.postProcess.view.  The ForegroundComposite pipeline uses straight-alpha
-  // OVER blending (src-alpha / one-minus-src-alpha), so transparent foreground
-  // pixels are no-ops and opaque pixels fully replace the HDR backdrop.
-  //
-  // No depth attachment: the composite is a fullscreen blit — depth ordering
-  // was already resolved inside the foreground offscreen pass above.
-  const compositePass = encoder.beginRenderPass({
-    label: 'foreground-composite-pass',
-    colorAttachments: [
-      {
-        view: ctx.postProcess.view,
-        loadOp: 'load',
-        storeOp: 'store',
-      },
-    ],
-  });
-
-  foregroundComposite.draw(compositePass, foregroundOffscreen.colorView);
-
-  compositePass.end();
+  // The OVER-composite of this offscreen onto the screen happens later, in
+  // `encodeForegroundOver` — AFTER tone-map and AFTER the UI overlay — so
+  // opaque foreground bodies occlude the galaxy-level labels behind them.
+  // This pass only fills the offscreen; it does not touch the HDR target.
 }
