@@ -27,7 +27,7 @@
  */
 
 import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
-import { clampDistance } from '../../../utils/camera/clampDistance';
+import { zoomedPose } from '../../../utils/camera/zoomedPose';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
@@ -36,6 +36,7 @@ import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 import { poseOf } from '../camera/poseOf';
+import { projectionOf } from '../camera/projectionOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
@@ -65,9 +66,9 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas } = deps;
 
-  // Build the pick renderer.  It owns its own uniform buffer; the visual
-  // renderer's buffer is no longer shared.  The `renderer` local is kept
-  // for the null-guard above and for `loadedSources` at pick time.
+  // The visual renderer must exist before we wire picking + the camera. The
+  // `renderer` local is the null-guard subject on the next line and is captured
+  // by the hover-pick `collectTargets` closure below.
   const renderer = state.gpu.renderer;
   if (!renderer) return;
   // Thread the cluster marker renderer through so the pick pass can
@@ -144,16 +145,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   const fovYRad = DEFAULT_FOV_Y_RAD;
   const initialCam = computeInitialCamera({ fovYRad });
 
-  const cam = createOrbitCamera({
-    target: initialCam.target,
-    distance: initialCam.distance,
-    yaw: initialCam.yaw,
-    pitch: initialCam.pitch,
-    fovYRad: initialCam.fovYRad,
-    aspect: canvas.width / canvas.height,
-    near: initialCam.near,
-    far: initialCam.far,
-  });
+  // `InitialCam` is exactly an `OrbitCameraInit` minus `aspect` (reset uses the
+  // live canvas ratio, not a captured one), so the camera is the framing
+  // snapshot plus the current aspect.
+  const cam = createOrbitCamera({ ...initialCam, aspect: canvas.width / canvas.height });
   state.cam = cam;
 
   // ── Bootstrap seed ───────────────────────────────────────────────────────
@@ -164,19 +159,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // framing pose, causing a visible camera jump on the first frame.
   //
   // Three writes, in dependency order:
-  //   1. `projection` — the full projection config from the initial camera +
-  //      the current canvas aspect ratio. Subsequent resizes patch only `aspect`.
+  //   1. `projection` — read off the assembled camera via `projectionOf`.
+  //      Subsequent resizes patch only `aspect`.
   //   2. `lastPose.current` — the initial pose so the first commit-on-edge has
   //      a valid previous pose to refer to.
   //   3. `commitCameraPose` dispatch — makes `camera.base` in the Redux store
   //      authoritative before the first produced frame, so the `resting` driver
   //      returns the correct pose and the first frame does not jump.
-  state.cameraRuntime.projection = {
-    fovYRad,
-    aspect: canvas.width / canvas.height,
-    near: initialCam.near,
-    far: initialCam.far,
-  };
+  state.cameraRuntime.projection = projectionOf(cam);
   state.cameraRuntime.lastPose.current = poseOf(cam);
   store.dispatch(commitCameraPose(poseOf(cam)));
 
@@ -206,7 +196,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // is selected the card stays visible (showing the pinned
     // point) — selection state is unaffected.
     onPointerLeave: () => {
-      deps.cb.store.dispatch(updateSelectionHover(null));
+      store.dispatch(updateSelectionHover(null));
     },
     // Clear hover on pointerdown so the card immediately reflects "nothing
     // hovered" instead of lagging until the drag ends. Cancelling an in-flight
@@ -214,7 +204,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // `cancelCameraTween()` when a drag actually begins).
     onPointerDown: () => {
       state.picking.pointerDown = true;
-      deps.cb.store.dispatch(updateSelectionHover(null));
+      store.dispatch(updateSelectionHover(null));
     },
     onPointerUp: () => {
       state.picking.pointerDown = false;
@@ -227,7 +217,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // through the handle's `clearSelection()`, which dispatches the same
     // action; the reducer dedupes, so a double-fire is a no-op.
     onEscape: () => {
-      deps.cb.store.dispatch(clearSelection());
+      store.dispatch(clearSelection());
     },
     // resize: the next frame's resizeCanvasToDisplay() picks up
     // the new dimensions and recreates the HDR target.  All we
@@ -312,15 +302,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // tick's committed distance. `clampDistance` enforces the same zoom envelope
     // as the drag/pinch path.
     onZoom: (factor) => {
-      const base = store.getState().camera.base;
-      store.dispatch(
-        commitCameraPose({
-          target: [base.target[0], base.target[1], base.target[2]],
-          yaw: base.yaw,
-          pitch: base.pitch,
-          distance: clampDistance(base.distance * factor),
-        }),
-      );
+      store.dispatch(commitCameraPose(zoomedPose(store.getState().camera.base, factor)));
       state.subsystems.scheduler.requestRender();
     },
 
@@ -356,7 +338,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // Single-click dispatches the identity ref (null clears). The
       // reconciler saga watches the slot and fills `selectionRows`.
       pick.then((ref) => {
-        deps.cb.store.dispatch(updateSelectionSelect(ref));
+        store.dispatch(updateSelectionSelect(ref));
       });
     },
     onDoubleClick: () => {
@@ -366,8 +348,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // readbacks resolve out of order). A null select ref means empty space:
       // dispatch focus(null) to lift the cluster-focus fade. The camera tween
       // is triggered by the watchFocusTweenSaga — not here.
-      const ref = selectSelectedRef(deps.cb.store.getState());
-      deps.cb.store.dispatch(updateSelectionFocus(ref));
+      const ref = selectSelectedRef(store.getState());
+      store.dispatch(updateSelectionFocus(ref));
     },
   });
 }
