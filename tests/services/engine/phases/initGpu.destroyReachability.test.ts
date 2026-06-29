@@ -163,6 +163,30 @@ vi.mock('../../../../src/services/gpu/passes/diskRadiusRing', () => ({
   createDiskRadiusRing: vi.fn(() => makeStub('diskRadiusRing')),
 }));
 
+vi.mock('../../../../src/services/gpu/passes/foregroundOffscreen', () => ({
+  createForegroundOffscreen: vi.fn(() => ({
+    colorView: {},
+    depthView: {},
+    resize: vi.fn(),
+    destroy: vi.fn(),
+  })),
+}));
+
+vi.mock('../../../../src/services/gpu/passes/foregroundComposite', () => ({
+  createForegroundComposite: vi.fn(() => ({
+    draw: vi.fn(),
+    destroy: vi.fn(),
+  })),
+}));
+
+vi.mock('../../../../src/services/gpu/renderers/debugSphereRenderer', () => ({
+  createDebugSphereRenderer: vi.fn(() => ({
+    label: 'debugSphereRenderer',
+    draw: vi.fn(),
+    destroy: vi.fn(),
+  })),
+}));
+
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
   loadFontAtlases: vi.fn(async () => ({
     metricsByFont: { cormorant: { __mockMetrics: true } },
@@ -209,6 +233,9 @@ function makeState(): EngineState {
       volumeUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,
+      foregroundOffscreen: null,
+      foregroundComposite: null,
+      debugSphereRenderer: null,
     },
     subsystems: {
       biasCorrection: {

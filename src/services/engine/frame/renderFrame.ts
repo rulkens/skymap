@@ -76,6 +76,7 @@ import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import { encodeHdrSingle } from './encodeHdrSingle';
 import { encodeHdrSplit } from './encodeHdrSplit';
 import { encodeUiOverlay } from './encodeUiOverlay';
+import { encodeForegroundPass } from './encodeForegroundPass';
 
 /**
  * Encode and submit one frame's worth of HDR + tone-map work.
@@ -153,6 +154,7 @@ export function renderFrame(input: RenderFrameInput): void {
   if (timingService.enabled) {
     const timingCtx = timingService.beginFrame();
     encodeHdrSplit(encoder, ctx, state, deps, timingService);
+    encodeForegroundPass(encoder, ctx, state, deps);
     ctx.postProcess.draw(
       encoder,
       swapView,
@@ -171,6 +173,7 @@ export function renderFrame(input: RenderFrameInput): void {
     timingService.endFrame(timingCtx, encoder);
   } else {
     encodeHdrSingle(encoder, ctx, state, deps);
+    encodeForegroundPass(encoder, ctx, state, deps);
     ctx.postProcess.draw(encoder, swapView, state.settings.tonemap.exposure, state.settings.tonemap.curve, undefined);
     encodeUiOverlay(encoder, swapView, ctx, state, deps, undefined);
   }
