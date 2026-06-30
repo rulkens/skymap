@@ -8,23 +8,23 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { InfoTip } from '../InfoTip/InfoTip';
-import { FeaturedCardTip } from './FeaturedCardTip';
+import FeaturedCardTip from './FeaturedCardTip';
 import { pickProperName } from './utils/pickProperName';
 import { resolveFeaturedEntries } from './utils/resolveFeaturedEntries';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import styles from './FeaturedGrid.module.css';
 
 export type FeaturedGridProps = {
-  entries: readonly FamousMetaEntry[];
-  onSelect: (entry: FamousMetaEntry) => void;
+  readonly entries: readonly FamousMetaEntry[];
+  readonly onSelect: (entry: FamousMetaEntry) => void;
 };
 
-export function FeaturedGrid({ entries, onSelect }: FeaturedGridProps): ReactNode {
+function FeaturedGrid({ entries, onSelect }: FeaturedGridProps): ReactNode {
   const featuredEntries = useMemo(() => resolveFeaturedEntries(entries), [entries]);
 
   if (featuredEntries.length === 0) return null;
   return (
-    <ul className={styles.featuredGrid} aria-label="Featured galaxies">
+    <ul className={styles.root} aria-label="Featured galaxies">
       {featuredEntries.map((entry) => {
         const properName = pickProperName(entry.names);
         return (
@@ -43,17 +43,17 @@ export function FeaturedGrid({ entries, onSelect }: FeaturedGridProps): ReactNod
             >
               <button
                 type="button"
-                className={styles.featuredCard}
+                className={styles.card}
                 onClick={() => onSelect(entry)}
                 aria-label={`Focus ${properName}`}
               >
                 <img
-                  className={styles.featuredThumb}
+                  className={styles.thumb}
                   src={`/images/famous/${entry.id}.webp`}
                   alt=""
                   loading="lazy"
                 />
-                <span className={styles.featuredName}>{properName}</span>
+                <span className={styles.name}>{properName}</span>
               </button>
             </InfoTip>
           </li>
@@ -62,3 +62,5 @@ export function FeaturedGrid({ entries, onSelect }: FeaturedGridProps): ReactNod
     </ul>
   );
 }
+
+export default FeaturedGrid;

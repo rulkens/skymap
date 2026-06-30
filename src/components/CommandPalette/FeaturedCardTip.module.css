@@ -6,7 +6,14 @@
  * reference tokens from `src/styles/global.css`.
  */
 
-.tipType {
+/* The tip body is injected into InfoTip's container; .root just groups the
+ * three sections (which carry their own spacing) so the component keeps the
+ * conventional single root element. */
+.root {
+  display: contents;
+}
+
+.type {
   display: inline-block;
   margin-bottom: var(--space-2);
   padding: 0 var(--space-3);
@@ -18,14 +25,14 @@
   text-transform: uppercase;
 }
 
-.tipAliases {
+.aliases {
   margin-bottom: var(--space-3);
   font-size: var(--font-size-sm);
   letter-spacing: var(--letter-spacing-mid);
   color: var(--color-fg-dim);
 }
 
-.tipAliasesLabel {
+.aliasesLabel {
   /*
    * Slightly lower opacity than the aliases themselves so "Also known
    * as M31 · NGC 224 · …" reads as label + values rather than as one
@@ -37,7 +44,7 @@
   font-size: var(--font-size-xs);
 }
 
-.tipDescription {
+.description {
   /*
    * Comfortable reading width for the curated paragraph.  No max-
    * height clamp here — InfoTip's max-width: 320px paired with

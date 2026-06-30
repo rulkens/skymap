@@ -13,22 +13,24 @@ import type { ReactNode } from 'react';
 import styles from './FeaturedCardTip.module.css';
 
 export type FeaturedCardTipProps = {
-  names: readonly string[];
-  description: string;
-  type: string;
+  readonly names: readonly string[];
+  readonly description: string;
+  readonly type: string;
 };
 
-export function FeaturedCardTip({ names, description, type }: FeaturedCardTipProps): ReactNode {
+function FeaturedCardTip({ names, description, type }: FeaturedCardTipProps): ReactNode {
   return (
-    <>
-      {type && <div className={styles.tipType}>{type}</div>}
+    <div className={styles.root}>
+      {type && <div className={styles.type}>{type}</div>}
       {names.length > 1 && (
-        <div className={styles.tipAliases}>
-          <span className={styles.tipAliasesLabel}>Also known as </span>
+        <div className={styles.aliases}>
+          <span className={styles.aliasesLabel}>Also known as </span>
           {names.join(' · ')}
         </div>
       )}
-      {description && <div className={styles.tipDescription}>{description}</div>}
-    </>
+      {description && <div className={styles.description}>{description}</div>}
+    </div>
   );
 }
+
+export default FeaturedCardTip;

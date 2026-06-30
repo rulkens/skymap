@@ -7,33 +7,29 @@
  * active index, and the dispatch handlers.
  */
 import type { ReactNode } from 'react';
+import cx from 'classnames';
 import { ROW_VIEW } from './paletteRows';
 import type { ScoredRow } from './paletteRowModel';
 import styles from './ResultsList.module.css';
 
 export type ResultsListProps = {
-  matches: readonly ScoredRow[];
-  activeIdx: number;
-  onActivate: (i: number) => void;
-  onSelect: (m: ScoredRow) => void;
+  readonly matches: readonly ScoredRow[];
+  readonly activeIdx: number;
+  readonly onActivate: (i: number) => void;
+  readonly onSelect: (m: ScoredRow) => void;
 };
 
-export function ResultsList({
-  matches,
-  activeIdx,
-  onActivate,
-  onSelect,
-}: ResultsListProps): ReactNode {
+function ResultsList({ matches, activeIdx, onActivate, onSelect }: ResultsListProps): ReactNode {
   if (matches.length === 0) return <div className={styles.empty}>No matches</div>;
   return (
-    <ul className={styles.results}>
+    <ul className={styles.root}>
       {matches.map((m, i) => {
         const view = ROW_VIEW[m.kind](m);
         const isActive = i === activeIdx;
         return (
           <li
             key={view.key}
-            className={`${styles.result} ${isActive ? styles.resultActive : ''}`}
+            className={cx(styles.row, isActive && styles.rowActive)}
             onMouseEnter={() => onActivate(i)}
             onClick={() => onSelect(m)}
             data-testid={view.testid}
@@ -49,3 +45,5 @@ export function ResultsList({
     </ul>
   );
 }
+
+export default ResultsList;

@@ -148,6 +148,29 @@ invisible string handshake between two files that nothing checks. Any time
 you're tempted to write `:global(.foo)` in a module so another component's CSS
 can reach in, the answer is a shared class composed in instead.
 
+### 5c. Compose `className` with `cx`, never string templates
+
+Any `className` that joins more than one class — or applies one conditionally —
+goes through `cx` (the project's `classnames` import), never a template literal
+or string concatenation:
+
+```tsx
+import cx from 'classnames';
+// …
+<li className={cx(styles.row, isActive && styles.rowActive)}>
+<button className={cx(styles.root, hidden && styles.hidden, className)}>
+```
+
+Not `className={`${styles.row} ${isActive ? styles.rowActive : ''}`}` — the
+template form leaves a stray space when the condition is false, can't drop a
+falsy class cleanly, and reads worse the moment a third class joins. A single
+unconditional class needs no `cx`: `className={styles.root}` is fine as-is.
+
+Why `cx`: it's the one composition primitive the whole codebase already uses
+(`App.tsx`, `PillButton`, `InfoCard`), it handles `false` / `undefined` /
+arrays / objects uniformly, and it keeps conditional styling declarative
+instead of hand-rolled string maths.
+
 ### 6. Destructure props inline
 
 ```tsx
@@ -481,6 +504,7 @@ existing code. Each one points back to a rule explaining the *why*.
 - **Arrow-function components** (`export const X = () => …`) — see rule 3.
 - **`interface` for props** — `type` only. Rule 4.
 - **Omitting `.root`** because "the component is small" — rule 5.
+- **Template-literal / string-concat `className`** instead of `cx(...)` — rule 5c.
 - **`index.ts` barrel re-exports** — rule 7.
 - **Editing `src/styles/global.css`** or writing `:global(.foo)` rules
   inside a module to support a component — rule 8.

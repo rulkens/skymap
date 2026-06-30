@@ -21,7 +21,7 @@
  */
 import { memo } from 'react';
 import type { RefObject } from 'react';
-import { CommandPalette } from '../CommandPalette/CommandPalette';
+import CommandPalette from '../CommandPalette/CommandPalette';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';

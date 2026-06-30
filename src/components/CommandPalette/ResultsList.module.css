@@ -1,19 +1,21 @@
 /*
- * ResultsList — the ranked results <ul>, its rows, and the empty-state
- * message.  The per-row leading visual + secondary text are styled in
- * `paletteRows.module.css` (where `ROW_VIEW` emits them); this module owns the
- * list container, the row shell, the active highlight, the primary name, and
- * the "No matches" line.  All atoms reference tokens from `src/styles/global.css`.
+ * ResultsList — the ranked results list and its rows.  ResultsList is
+ * polymorphic: the populated list (.root, a <ul>) and the empty-state message
+ * (.empty, a <div>) are mutually-exclusive render branches, each its own
+ * outermost element — two roots rather than one wrapper.  The per-row internals
+ * below (.thumb / .glyph / .source / .secondary) are emitted by the ROW_VIEW
+ * table in `paletteRows.tsx`, which composes this same module.  All atoms
+ * reference tokens from `src/styles/global.css`.
  */
 
-.results {
+.root {
   list-style: none;
   margin: 0;
   padding: var(--space-2) 0;
   overflow-y: auto;
 }
 
-.result {
+.row {
   display: flex;
   align-items: center;
   gap: var(--space-5);
@@ -28,7 +30,7 @@
  * Soft enough that it reads as "selected" without competing with the
  * primary text underneath.
  */
-.resultActive {
+.rowActive {
   background: var(--surface-badge);
 }
 
@@ -43,7 +45,75 @@
   letter-spacing: var(--letter-spacing-tight);
 }
 
-/* Empty-results message — same dim tone as section headings. */
+/*
+ * Aliases ("· Andromeda Galaxy · NGC 224") rendered in the dim heading
+ * tone so the eye reads "primary name + supporting metadata".
+ */
+.secondary {
+  margin-left: var(--space-4);
+  color: var(--color-fg-dim);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-mid);
+}
+
+/*
+ * Result thumbnail — 32 px square.  Matches the InfoCard thumbnail
+ * styling family at a smaller scale (rounded corners, faint rim).
+ */
+.thumb {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
+  object-fit: cover;
+}
+
+/*
+ * Alias-row glyph — stand-in for the absent thumbnail.  Same 32-px
+ * footprint as `.thumb` so heights stay aligned with the famous rows
+ * directly above.  Renders the alias's first letter ("N" for NGC,
+ * "I" for IC, …) inside a soft-glass disc — readable cue without
+ * the visual noise of a real thumbnail we don't have.
+ */
+.glyph {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-badge);
+  border: 1px solid var(--border-default);
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / 32px var(--font-family-mono);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+/*
+ * Source-label chip on alias rows ("GLADE" / "2MRS").  Lives at the
+ * end of the secondary line so the row reads
+ *
+ *     NGC 4565    UGC 7772 · MCG +04-30-006   GLADE
+ *
+ * with the chip visually distinct from the alias list — same badge
+ * surface as the active-row highlight, but tiny and uppercase like
+ * the chips inside InfoCard.
+ */
+.source {
+  margin-left: var(--space-5);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-badge);
+  color: var(--color-fg-dim);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+/* Empty-results message — the alternate root (see header). */
 .empty {
   padding: var(--space-10);
   text-align: center;

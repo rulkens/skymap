@@ -13,7 +13,7 @@
  * `src/styles/global.css`.
  */
 
-.backdrop {
+.root {
   position: fixed;
   inset: 0;
   background: var(--surface-scrim);

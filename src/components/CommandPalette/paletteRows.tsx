@@ -9,12 +9,16 @@
  * the CSS module.  A new row kind is one entry here, not a new render branch.
  * Selection routing is NOT here — every row maps to a durable focus id via
  * `utils/focusIdForRow` and fires the single `requestFocus` command.
+ *
+ * Styling: ROW_VIEW emits the per-row internals into ResultsList's <li>, so it
+ * composes ResultsList's module rather than carrying its own — the row styles
+ * belong to the one component that renders them.
  */
 import type { ReactNode } from 'react';
 import { SOURCE_REGISTRY } from '../../data/sources';
 import { MILKY_WAY_NAMES } from './paletteRowModel';
 import type { ScoredRow } from './paletteRowModel';
-import styles from './paletteRows.module.css';
+import styles from './ResultsList.module.css';
 
 /** What InfoCard's row renderer needs, computed per row kind. */
 export type RowView = {
@@ -61,7 +65,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
     key: 'milkyWay',
     testid: 'milky-way-row',
     leading: (
-      <span className={styles.aliasGlyph} aria-hidden="true">
+      <span className={styles.glyph} aria-hidden="true">
         {MILKY_WAY_NAMES[0][0]}
       </span>
     ),
@@ -78,7 +82,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       key: `alias:${m.entry.source}:${m.entry.localIdx}`,
       testid: `alias-row-${m.entry.localIdx}`,
       leading: (
-        <span className={styles.aliasGlyph} aria-hidden="true">
+        <span className={styles.glyph} aria-hidden="true">
           {primary[0] ?? '·'}
         </span>
       ),
@@ -88,7 +92,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
           {remaining.length > 0 && (
             <span className={styles.secondary}>{remaining.join(' · ')}</span>
           )}
-          <span className={styles.aliasSource}>{SOURCE_REGISTRY[m.entry.source].label}</span>
+          <span className={styles.source}>{SOURCE_REGISTRY[m.entry.source].label}</span>
         </>
       ),
     };

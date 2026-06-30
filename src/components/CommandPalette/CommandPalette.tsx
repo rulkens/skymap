@@ -38,35 +38,35 @@
  */
 import type { ReactNode } from 'react';
 import { usePaletteSearch } from './usePaletteSearch';
-import { FeaturedGrid } from './FeaturedGrid';
-import { ResultsList } from './ResultsList';
+import FeaturedGrid from './FeaturedGrid';
+import ResultsList from './ResultsList';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import styles from './CommandPalette.module.css';
 
 export type CommandPaletteProps = {
   /** All famous entries to search across.  Loaded from `famous_meta.json`. */
-  entries: readonly FamousMetaEntry[];
+  readonly entries: readonly FamousMetaEntry[];
   /**
    * The PGC alias index built by joining `pgc_aliases.json` against
    * the runtime GLADE+2MRS clouds.  Optional — the palette degrades
    * gracefully to famous-only when the array is undefined or empty
    * (e.g. on developer clones without the sidecar).
    */
-  aliasIndex?: readonly AliasIndexEntry[];
+  readonly aliasIndex?: readonly AliasIndexEntry[];
   /** Whether the palette is currently shown. */
-  open: boolean;
+  readonly open: boolean;
   /** Close handler — called on Esc, click-outside, or after a successful selection. */
-  onClose: () => void;
+  readonly onClose: () => void;
   /**
    * Selection handler — receives the picked row's durable `#focus=<id>` string
    * (famous seed id, `pgc-<n>`, or the Milky-Way literal).  The container fires
    * `requestFocus(focusId)`; the palette resolves nothing itself.
    */
-  onSelect: (focusId: string) => void;
+  readonly onSelect: (focusId: string) => void;
 };
 
-export function CommandPalette({
+function CommandPalette({
   entries,
   aliasIndex,
   open,
@@ -86,7 +86,7 @@ export function CommandPalette({
 
   if (!open) return null;
   return (
-    <div className={styles.backdrop} onClick={onClose} onKeyDown={onKeyDown} role="presentation">
+    <div className={styles.root} onClick={onClose} onKeyDown={onKeyDown} role="presentation">
       <div
         className={styles.panel}
         onClick={(e) => e.stopPropagation()}
@@ -116,3 +116,5 @@ export function CommandPalette({
     </div>
   );
 }
+
+export default CommandPalette;

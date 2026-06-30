@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
-import { CommandPalette } from '../../../src/components/CommandPalette/CommandPalette';
+import CommandPalette from '../../../src/components/CommandPalette/CommandPalette';
 import { Source } from '../../../src/data/sources';
 import type { FamousMetaEntry } from '../../../src/@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
