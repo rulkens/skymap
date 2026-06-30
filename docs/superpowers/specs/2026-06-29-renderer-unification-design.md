@@ -347,6 +347,50 @@ in `utils/`, `type` aliases never `interface`, deep relative imports, no barrels
 
 Exact paths and the fate of each existing `*Pass.ts` file are settled at plan time.
 
+## Relationship to existing backlog
+
+Three backlog items landed on `main` (2026-06-29) in this problem space; this spec is
+not writing on a blank slate. Where it overlaps each, and where it deliberately
+diverges:
+
+- **`docs/backlog/2026-06-29-render-graph-restructure.md`** — "model the frame as a
+  graph of passes with declared inputs/outputs; ordering and resource lifetimes fall
+  out of dependency edges." This spec is a **partial promotion** that **narrows** it:
+  instead of a full dependency DAG with derived ordering, it proposes an explicit
+  ordered `FrameStep` program. The trade is deliberate — an explicit, readable,
+  unit-testable list (where "labels occluded by bodies" is a visible ordering decision
+  in `FRAME`) is simpler than a DAG and sufficient for the current pass count. A DAG
+  can be layered on later if dependency edges ever need to drive resource lifetimes
+  automatically; this spec does not foreclose it. **Per the backlog-hygiene
+  convention, this item's index line + detail file should be removed when this spec is
+  accepted** (the spec becomes the source of truth for the frame-order half).
+
+- **`docs/backlog/2026-06-29-picking-gpu-subsystem.md`** — migrate pick GPU resources
+  into their own subsystem (the pick texture is per-camera, so the fade pattern doesn't
+  transfer; wants its own ADR first). This spec is **orthogonal and complementary**: it
+  addresses the *scheduling/registry* half — pick becomes a parallel program consuming
+  the same `ContentLayer` registry via a `drawPick` aspect — but does **not** do the
+  GPU-resource-ownership migration that item calls for, and does **not** supersede its
+  ADR. The two compose: the `drawPick` model here is agnostic to whether
+  `pickRenderer`'s textures later move into a picking subsystem. (Consistent with #362,
+  which already lifted pick out of the render frame — the lifecycle half.) This item
+  **stays** on the backlog.
+
+- **`docs/backlog/2026-06-29-gpu-handle-nullability.md`** — `EngineGpuHandles` fields
+  are all `| null`, and `PassDeps` re-threads renderers purely to launder that null at
+  the `renderFrame` boundary; the target is a narrowed non-null "ready GPU" view. This
+  spec **advances** that cleanup rather than fighting it: the flat `ContentLayer`
+  registry reads renderers from `state.gpu.*` directly (passes already receive
+  `state`), which is exactly the end-state that item wants — so `PassDeps` can shed its
+  renderer fields as the registry lands. The spec's **new** GPU handles (`Compositor`,
+  `foreground:k` / `pick:<slab>` targets, the slab table) must follow the same rule:
+  narrow bootstrap-guaranteed handles **once** into the ready view, never add fresh
+  ad-hoc `| null` + `PassDeps` threading. The teardown-asymmetry caveat from that item
+  (no big-bang ready flag; the 2026-05-08 black-screen incident,
+  `feedback_lifecycle_vs_teardown_invariants`) binds any new handle this spec adds.
+  This item **stays** on the backlog (the spec depends on its direction but doesn't
+  complete it).
+
 ## Out of scope (explicitly deferred)
 
 - **Slab spawn/retire & adaptive slab-set.** No `cam.distance → active-slab-set`
