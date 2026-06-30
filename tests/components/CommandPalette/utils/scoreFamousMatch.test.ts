@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreFamousMatch } from '../../../src/components/CommandPalette/scoreFamousMatch';
+import { scoreFamousMatch } from '../../../../src/components/CommandPalette/utils/scoreFamousMatch';
 
 const M31 = {
   id: 'm31',
