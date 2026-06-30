@@ -150,8 +150,6 @@ vi.mock('../../../../src/services/engine/subsystems/proceduralDiskSubsystem', ()
     lastOutput: { instances: [] },
     destroy: vi.fn(),
   })),
-  PROCEDURAL_DISK_FADE_START_PX: 8,
-  PROCEDURAL_DISK_FADE_END_PX: 14,
 }));
 vi.mock('../../../../src/services/engine/subsystems/texturedDiskSubsystem', () => ({
   createTexturedDiskSubsystem: vi.fn(() => ({
@@ -188,8 +186,6 @@ vi.mock('../../../../src/services/engine/subsystems/hiResFamousSubsystem', () =>
     lastOutput: { byFamousIdx: new Map() },
     destroy: vi.fn(),
   })),
-  HI_RES_TRIGGER_PX: 120,
-  HI_RES_FADE_BAND_PX: 40,
 }));
 
 // Load-progress emitter: keep the real factory (so the slot registry

@@ -2,12 +2,12 @@
  * Sanity tests for `maybeEmitProceduralDisk` — Task 9 of the procedural-
  * disk-impostor plan.
  *
- * The runtime call lives inside `thumbnailSubsystem.runFrame`'s per-galaxy
+ * The runtime call lives inside `proceduralDiskSubsystem.runFrame`'s per-galaxy
  * loop, which can't be reached without a full WebGPU device + bootstrapped
  * engine.  Pulling the per-galaxy emission decision into a pure function
  * lets us pin its branches — apparent-size gate, NaN orientation guard,
  * smoothstep crossfade math — directly.  See the helper's own
- * doc-comment in `thumbnailSubsystem.ts` for the deeper "why" on each
+ * doc-comment in `maybeEmitProceduralDisk.ts` for the deeper "why" on each
  * branch.
  *
  * NOTE on smoothstep boundaries:  the inline runtime check is `px >
@@ -18,7 +18,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { maybeEmitProceduralDisk } from '../../../src/services/engine/subsystems/proceduralDiskSubsystem';
+import { maybeEmitProceduralDisk } from '../../../../src/utils/render/disk/maybeEmitProceduralDisk';
 
 describe('maybeEmitProceduralDisk', () => {
   // Fixture values used across most cases.  Distinct primes so a swap-

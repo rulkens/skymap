@@ -38,24 +38,14 @@ import { byDistanceToCamera } from '../../../utils/render/disk/byDistanceToCamer
 import { galaxyCacheKey } from '../../../utils/render/disk/galaxyCacheKey';
 import { resolveDiskPlacement } from '../../../utils/render/disk/resolveDiskPlacement';
 import { hiResLayerFold } from '../../../utils/render/disk/hiResLayerFold';
+import {
+  APPARENT_SIZE_THRESHOLD_PX,
+  FADE_BAND_PX,
+  DISK_THRESHOLD_PX,
+} from '../../../data/galaxyLodBands';
 
-/**
- * Apparent-size gate (px).  Exported so the procedural-disk subsystem
- * can compute its fade-OUT against the textured-disk fade-IN band in
- * lockstep (the famous-WebP crossfade); see `proceduralDiskSubsystem.ts`.
- */
-export const APPARENT_SIZE_THRESHOLD_PX = 24;
-/**
- * Width of the procedural → textured disk crossfade band (px).  16 px
- * gives the eye time to register the handoff between the procedural
- * pattern and the curated WebP at typical fly-in speeds; narrower
- * bands flash by in a fraction of a second.
- */
-export const FADE_BAND_PX = 16;
 /** Load-fade duration once a bitmap lands (ms). */
 const LOAD_FADE_MS = 400;
-/** Disks render above this apparent size; below it the point sprite carries. */
-const DISK_THRESHOLD_PX = 4;
 
 export type TexturedDiskDeps = {
   readonly device: GPUDevice;

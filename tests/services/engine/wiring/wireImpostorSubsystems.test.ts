@@ -82,8 +82,6 @@ vi.mock('../../../../src/services/engine/subsystems/proceduralDiskSubsystem', ()
     lastOutput: { instances: [] },
     destroy: vi.fn(),
   })),
-  PROCEDURAL_DISK_FADE_START_PX: 8,
-  PROCEDURAL_DISK_FADE_END_PX: 14,
 }));
 
 // Import AFTER mocks so the module resolves the stubs.

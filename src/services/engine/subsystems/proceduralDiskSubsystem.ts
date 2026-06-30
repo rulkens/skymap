@@ -13,9 +13,9 @@
  * separately (own stride cursor each); folding them into one shared walk
  * is the deferred perf item `backlog/2026-06-30-unify-disk-planner-walks.md`.
  *
- * `PROCEDURAL_DISK_FADE_START_PX` / `PROCEDURAL_DISK_FADE_END_PX` and
- * `maybeEmitProceduralDisk` live here — the LOD-aligned source of truth
- * the points-pass wiring in `runFrame.ts` imports.
+ * The LOD-aligned fade constants live in `data/galaxyLodBands.ts` and the
+ * pure emission helper `maybeEmitProceduralDisk` in `utils/render/disk/`;
+ * this planner imports both.
  */
 
 import { Source } from '../../../data/sources';
@@ -28,7 +28,13 @@ import { strideWindow } from '../../../utils/render/disk/strideWindow';
 import { purgeStrideWindow } from '../../../utils/render/disk/purgeStrideWindow';
 import { byDistanceToCamera } from '../../../utils/render/disk/byDistanceToCamera';
 import { galaxyCacheKey } from '../../../utils/render/disk/galaxyCacheKey';
-import { APPARENT_SIZE_THRESHOLD_PX, FADE_BAND_PX } from './texturedDiskSubsystem';
+import { maybeEmitProceduralDisk } from '../../../utils/render/disk/maybeEmitProceduralDisk';
+import {
+  APPARENT_SIZE_THRESHOLD_PX,
+  FADE_BAND_PX,
+  PROCEDURAL_DISK_FADE_START_PX,
+  PROCEDURAL_DISK_FADE_END_PX,
+} from '../../../data/galaxyLodBands';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
@@ -38,56 +44,6 @@ import type {
   ProceduralDiskFrameOutput,
   ProceduralDiskSubsystem,
 } from '../../../@types/engine/subsystems/ProceduralDiskSubsystem';
-
-/**
- * Point-sprite → procedural-disk crossfade band (px of apparent size).
- * Below the start the sprite carries fully and the disk is skipped;
- * the disk smoothsteps in across the band.
- */
-export const PROCEDURAL_DISK_FADE_START_PX = 8;
-export const PROCEDURAL_DISK_FADE_END_PX = 14;
-
-/**
- * Decide whether (and how) to emit a per-frame ProceduralDiskInstance.
- * Pure helper (no captured state) so the gate + smoothstep crossfade
- * are unit-testable without a planner.
- *
- * `procFadeOut` defaults to 1.0 (no fade-out against the textured-disk
- * pass). The caller in `runFrame` overrides it for famous galaxies
- * whose curated WebP is loaded into the atlas — see the famous-WebP
- * crossfade comment at the override site.
- */
-export function maybeEmitProceduralDisk(
-  px: number,
-  ar: number,
-  pa: number,
-  x: number,
-  y: number,
-  z: number,
-  sizeWorldMpc: number,
-  colourIndex: number,
-  fadeStartPx: number,
-  fadeEndPx: number,
-  sourceCode: SourceType,
-  localIdx: number,
-): ProceduralDiskInstance | null {
-  if (px <= fadeStartPx) return null;
-  if (!Number.isFinite(ar) || !Number.isFinite(pa)) return null;
-  const crossfadeAlpha = smoothstep(fadeStartPx, fadeEndPx, px);
-  return {
-    x,
-    y,
-    z,
-    sizeWorldMpc,
-    axisRatio: ar,
-    positionAngleDeg: pa,
-    colourIndex,
-    crossfadeAlpha,
-    procFadeOut: 1.0,
-    sourceCode,
-    localIdx,
-  };
-}
 
 export type ProceduralDiskDeps = {
   /** Defaults to 8.  Tests pass 1 to disable decimation. */
