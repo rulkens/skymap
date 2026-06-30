@@ -1,31 +1,21 @@
 /**
  * texturedDiskSubsystem — LOD-2 per-frame planner.
  *
- * Walks the catalog, applies the px ≥ 24 gate, allocates atlas slots
- * via the injected atlas subsystem, schedules fetches, computes
- * load-fade + distance-fade, sorts back-to-front, emits the sorted
- * disk array.
+ * Walks the catalogs, applies the px ≥ 24 gate, allocates atlas slots,
+ * schedules fetches, computes load-fade × distance-fade, sorts back-to-front,
+ * and emits the sorted disk array. Shares the per-row helpers in
+ * `utils/render/disk/` with the LOD-1 procedural planner.
  *
- * ### Why disks-only (no screen-aligned quad fallback)
+ * Disks-only (no screen-aligned quad fallback): every encoded galaxy has finite
+ * orientation via the build-pipeline fallback, so the `Number.isFinite` checks
+ * below are only a corrupted-`.bin` guard.
  *
- * Every encoded galaxy has finite orientation — `tools/catalog/buildAllBins.ts`
- * applies a deterministic hash-based fallback when the parser emits
- * null — so a quad-fallback branch would only fire for famous galaxies
- * at <4 px apparent size, where the point sprite is already at full
- * strength.  The `Number.isFinite` checks below stay as a defensive
- * guard against corrupted .bin files.
- *
- * ### What this owns (vs. galaxyAtlasSubsystem)
- *
- * The atlas subsystem owns "did a bitmap land at all? did the fetch
- * permanently fail?".  This subsystem owns "when did the bitmap land?
- * is the load-fade still ramping?".  The split mirrors the difference
- * between persistent atlas state (lives across frames) and per-frame
- * planning state (lives in the planner that uses it).
+ * Ownership split with `galaxyAtlasSubsystem`: the atlas owns "did a bitmap land
+ * / permanently fail?" (persistent across frames); this planner owns "when did
+ * it land / is the load-fade still ramping?" (per-frame planning state).
  */
 
 import { Source } from '../../../data/sources';
-import { paddedRadiusMpc } from '../../../utils/paddedRadiusMpc';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
@@ -37,9 +27,17 @@ import type {
   TexturedDiskSubsystemWithTestSeam,
 } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
 import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
-import { cartesianToRaDec } from '../../../utils/math';
-import { calibratedDiskSizeWorld, effectiveTilt, nucleusCorner } from './famousPlacement';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import { cartesianToRaDec, smoothstep } from '../../../utils/math';
+import { apparentSizePxAtDistance } from '../../../utils/render/disk/apparentSizePxAtDistance';
+import { maxVisibleCamDistSq } from '../../../utils/render/disk/maxVisibleCamDistSq';
+import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
+import { loadFadeAlpha } from '../../../utils/render/disk/loadFadeAlpha';
+import { strideWindow } from '../../../utils/render/disk/strideWindow';
+import { purgeStrideWindow } from '../../../utils/render/disk/purgeStrideWindow';
+import { byDistanceToCamera } from '../../../utils/render/disk/byDistanceToCamera';
+import { galaxyCacheKey } from '../../../utils/render/disk/galaxyCacheKey';
+import { resolveDiskPlacement } from '../../../utils/render/disk/resolveDiskPlacement';
+import { hiResLayerFold } from '../../../utils/render/disk/hiResLayerFold';
 
 /**
  * Apparent-size gate (px).  Exported so the procedural-disk subsystem
@@ -56,15 +54,8 @@ export const APPARENT_SIZE_THRESHOLD_PX = 24;
 export const FADE_BAND_PX = 16;
 /** Load-fade duration once a bitmap lands (ms). */
 const LOAD_FADE_MS = 400;
-/** Squared-distance early-out bound based on max plausible galaxy diameter. */
-const MAX_PLAUSIBLE_DIAMETER_KPC = 200;
 /** Disks render above this apparent size; below it the point sprite carries. */
 const DISK_THRESHOLD_PX = 4;
-
-/** Cache key for atlas + load-fade maps — RA/Dec rounded to 5 dp. */
-export function galaxyCacheKey(ra: number, dec: number): string {
-  return `${ra.toFixed(5)}_${dec.toFixed(5)}`;
-}
 
 export type TexturedDiskDeps = {
   readonly device: GPUDevice;
@@ -77,13 +68,10 @@ export type TexturedDiskDeps = {
   }) => Promise<ImageBitmap | null>;
   readonly decimationFactor?: number;
   /**
-   * Optional. When provided, the planner reads hi-res state per
-   * Famous-source galaxy (keyed by per-cloud local index) and folds
-   * `hiResLayerIdx` + `hiResCrossfadeAlpha` into the emitted
-   * `DiskInstance`. When omitted, both default to -1 / 0 for every
-   * instance and the hi-res path is fully disabled. The shader
-   * already gates the hi-res sample on `hiResLayerIdx >= 0`, so the
-   * sentinel reliably disables the LOD-3 path with no extra branching.
+   * Optional LOD-3 source. When provided, the planner folds each famous
+   * galaxy's `hiResLayerIdx` + `hiResCrossfadeAlpha` into its `DiskInstance`;
+   * when omitted, every instance gets the -1 / 0 sentinel and the shader's
+   * `hiResLayerIdx >= 0` gate skips the hi-res sample.
    */
   readonly hiResFamous?: HiResFamousSubsystem;
 };
@@ -126,9 +114,7 @@ export function createTexturedDiskSubsystem(
     const { cam, catalogs, visibleSourceMask, pxPerRad, famousMeta } = input;
     frameCounter++;
 
-    const dMpcMax = MAX_PLAUSIBLE_DIAMETER_KPC / 1000;
-    const maxCamDistForVisibilityUpper = (dMpcMax * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
-    const maxCamDistSqUpper = maxCamDistForVisibilityUpper * maxCamDistForVisibilityUpper;
+    const maxCamDistSqUpper = maxVisibleCamDistSq(APPARENT_SIZE_THRESHOLD_PX, pxPerRad);
 
     const cx = cam.position[0];
     const cy = cam.position[1];
@@ -138,33 +124,26 @@ export function createTexturedDiskSubsystem(
 
     const nowMs = performance.now();
 
-    for (const [cloudSource, cloud] of catalogs.entries()) {
-      let stickyDisks = stickyDisksBySource.get(cloudSource);
+    for (const [source, catalog] of catalogs.entries()) {
+      let stickyDisks = stickyDisksBySource.get(source);
       if (!stickyDisks) {
         stickyDisks = new Map();
-        stickyDisksBySource.set(cloudSource, stickyDisks);
+        stickyDisksBySource.set(source, stickyDisks);
       }
 
-      if (((visibleSourceMask >> cloudSource) & 1) === 0) {
+      if (((visibleSourceMask >> source) & 1) === 0) {
         stickyDisks.clear();
         continue;
       }
 
-      const positions = cloud.positions;
-      const count = cloud.count;
-      const stride = Math.max(1, Math.ceil(count / decimationFactor));
-      const start = strideStartBySource.get(cloudSource) ?? 0;
-      const safeStart = start >= count ? 0 : start;
-      const end = Math.min(safeStart + stride, count);
-
-      const purgeStride = <V>(m: Map<number, V>): void => {
-        const drop: number[] = [];
-        for (const k of m.keys()) {
-          if (k >= safeStart && k < end) drop.push(k);
-        }
-        for (const k of drop) m.delete(k);
-      };
-      purgeStride(stickyDisks);
+      const positions = catalog.positions;
+      const count = catalog.count;
+      const { safeStart, end, nextStart } = strideWindow(
+        count,
+        decimationFactor,
+        strideStartBySource.get(source) ?? 0,
+      );
+      purgeStrideWindow(stickyDisks, safeStart, end);
 
       for (let i = safeStart; i < end; i++) {
         const i3 = i * 3;
@@ -178,38 +157,25 @@ export function createTexturedDiskSubsystem(
         const camDistSq = dx * dx + dy * dy + dz * dz;
         if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
 
-        const dKpcRow = cloud.diameterKpc[i]!;
-        const dMpcRow = dKpcRow / 1000;
+        const dKpcRow = catalog.diameterKpc[i]!;
         const camDist = Math.sqrt(camDistSq);
-        const px = (dMpcRow / camDist) * pxPerRad;
+        const px = apparentSizePxAtDistance(dKpcRow, camDist, pxPerRad);
 
-        if (cloudSource !== Source.FamousGalaxy && px < APPARENT_SIZE_THRESHOLD_PX) continue;
+        if (source !== Source.FamousGalaxy && px < APPARENT_SIZE_THRESHOLD_PX) continue;
 
-        // posSize.w stores the FULL quad extent (vertex stage halves it
-        // at corner expansion), so double the shared radius helper.
-        const sizeWorldMpc = paddedRadiusMpc(dKpcRow) * 2;
-        const ar = cloud.axisRatio[i]!;
-        const pa = cloud.positionAngleDeg[i]!;
+        const sizeWorldMpc = diskQuadExtentMpc(dKpcRow);
+        const ar = catalog.axisRatio[i]!;
+        const pa = catalog.positionAngleDeg[i]!;
 
-        // Famous-galaxy thumbnails ship with a hand-authored placement
-        // calibration that overrides catalog geometry for the EMITTED
-        // instance (size, tilt, nucleus offset).  The catalog `ar`/`pa`
-        // above stay untouched — the finite-orientation gate below reads
-        // them as the corrupted-bin guard, not the render values.  An
-        // absent calibration (the common case) leaves every emitted value
+        // Famous-galaxy thumbnails carry a hand-authored calibration that
+        // overrides catalog geometry for the EMITTED instance (size, tilt,
+        // nucleus offset); `resolveDiskPlacement` folds in the no-calibration
+        // default so the catalog `ar`/`pa` stay untouched for the
+        // finite-orientation guard below (the corrupted-bin guard, not the
+        // render values).  An absent calibration leaves the placement
         // bit-identical to the catalog path.
-        const cal = cloudSource === Source.FamousGalaxy ? famousMeta[i]?.calibration : undefined;
-        let sizeForInstance = sizeWorldMpc;
-        let axisRatioForInstance = ar;
-        let paForInstance = pa;
-        let nucleus: Vec2 = [0, 0];
-        if (cal !== undefined) {
-          sizeForInstance = calibratedDiskSizeWorld(sizeWorldMpc, cal.diskRadiusFrac);
-          const tilt = effectiveTilt(cal, ar, pa);
-          axisRatioForInstance = tilt.axisRatio;
-          paForInstance = tilt.positionAngleDeg;
-          nucleus = nucleusCorner(cal.center);
-        }
+        const cal = source === Source.FamousGalaxy ? famousMeta[i]?.calibration : undefined;
+        const placement = resolveDiskPlacement(sizeWorldMpc, ar, pa, cal);
 
         const [ra, dec] = cartesianToRaDec(x, y, z);
         const key = galaxyCacheKey(ra, dec);
@@ -220,7 +186,7 @@ export function createTexturedDiskSubsystem(
         if (atlas.isFailed(key)) continue;
 
         if (!atlas.isLoaded(key)) {
-          const sourceForFetch = cloudSource;
+          const sourceForFetch = source;
           const idxForFetch = i;
           atlas.enqueueFetch({
             key,
@@ -250,73 +216,53 @@ export function createTexturedDiskSubsystem(
 
         const [u0, v0, u1, v1] = atlas.slotUv(slot);
 
-        const distT = Math.min(1, Math.max(0, (px - APPARENT_SIZE_THRESHOLD_PX) / FADE_BAND_PX));
-        const distFade = distT * distT * (3 - 2 * distT);
-        const tReady = bitmapReadyTime.get(key);
-        const loadFade = tReady === undefined ? 0 : Math.min(1, (nowMs - tReady) / LOAD_FADE_MS);
+        const distFade = smoothstep(
+          APPARENT_SIZE_THRESHOLD_PX,
+          APPARENT_SIZE_THRESHOLD_PX + FADE_BAND_PX,
+          px,
+        );
+        const loadFade = loadFadeAlpha(bitmapReadyTime.get(key), nowMs, LOAD_FADE_MS);
         const fadeAlpha = distFade * loadFade;
 
         // Disks-only.  The `Number.isFinite` checks are a defensive
         // guard against corrupted .bin files — every encoded galaxy
         // has finite orientation via the build-pipeline fallback.
         if (px > DISK_THRESHOLD_PX && Number.isFinite(ar) && Number.isFinite(pa)) {
-          // Hi-res LOD-3 fold-in: only Famous-source rows can possibly
-          // be assigned a hi-res layer (the curated WebP atlas covers
-          // Famous galaxies only). Non-Famous sources emit the sentinel
-          // -1 / 0 unconditionally — the shader's `hiResLayerIdx >= 0`
-          // gate makes those rows skip the hi-res sample entirely.
-          // `i` is the per-cloud local index, which for `Source.FamousGalaxy`
-          // matches the Famous-source-local key contract on
-          // `HiResFamousFrameOutput.byFamousIdx` (a numeric map).
-          let hiResLayerIdx = -1;
-          let hiResCrossfadeAlpha = 0;
-          if (cloudSource === Source.FamousGalaxy && hiResFamous !== undefined) {
-            const s = hiResFamous.lastOutput.byFamousIdx.get(i);
-            if (s !== undefined) {
-              hiResLayerIdx = s.hiResLayerIdx;
-              hiResCrossfadeAlpha = s.hiResCrossfadeAlpha;
-            }
-          }
+          // Hi-res LOD-3 fold-in: only Famous-source rows can be assigned a
+          // hi-res layer (the curated WebP atlas covers Famous galaxies only),
+          // so non-Famous sources pass `undefined` and fold the -1 / 0 sentinel
+          // the shader's `hiResLayerIdx >= 0` gate skips.  `i` is the per-catalog
+          // local index, which for `Source.FamousGalaxy` matches the
+          // Famous-source-local key contract on `byFamousIdx`.
+          const hiRes = hiResLayerFold(
+            source === Source.FamousGalaxy ? hiResFamous?.lastOutput.byFamousIdx : undefined,
+            i,
+          );
           stickyDisks.set(i, {
             x,
             y,
             z,
-            sizeWorld: sizeForInstance,
+            sizeWorld: placement.sizeWorld,
             u0,
             v0,
             u1,
             v1,
-            axisRatio: axisRatioForInstance,
-            positionAngleDeg: paForInstance,
+            axisRatio: placement.axisRatio,
+            positionAngleDeg: placement.positionAngleDeg,
             fadeAlpha,
-            hiResLayerIdx,
-            hiResCrossfadeAlpha,
-            nucleusOffset: nucleus,
+            hiResLayerIdx: hiRes.hiResLayerIdx,
+            hiResCrossfadeAlpha: hiRes.hiResCrossfadeAlpha,
+            nucleusOffset: placement.nucleusOffset,
           });
         }
       }
 
-      strideStartBySource.set(cloudSource, end >= count ? 0 : end);
+      strideStartBySource.set(source, nextStart);
 
       for (const d of stickyDisks.values()) disks.push(d);
     }
 
-    const camPosX = cam.position[0];
-    const camPosY = cam.position[1];
-    const camPosZ = cam.position[2];
-    const cmpFar = (
-      a: { x: number; y: number; z: number },
-      b: { x: number; y: number; z: number },
-    ): number => {
-      const dax = a.x - camPosX;
-      const day = a.y - camPosY;
-      const daz = a.z - camPosZ;
-      const dbx = b.x - camPosX;
-      const dby = b.y - camPosY;
-      const dbz = b.z - camPosZ;
-      return dbx * dbx + dby * dby + dbz * dbz - (dax * dax + day * day + daz * daz);
-    };
-    disks.sort(cmpFar);
+    disks.sort(byDistanceToCamera(cam.position));
 
     lastOutput = { disks };
     return lastOutput;
