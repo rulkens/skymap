@@ -36,9 +36,9 @@ export type ClipPathInspectorSectionProps = {
   onScrub: (scrub01: number) => void;
   /** Fly the exact computed route — deterministic replay (the "Play this path" button). */
   onReplay: () => void;
-  /** Align-in seconds (start-aim blend window) — applied on the next Calculate. */
+  /** Align-in seconds (start-aim blend) — applied on the next Calculate. */
   align: number;
-  /** Ease ramp seconds each end (0 = clip's authored ease) — applied on the next Calculate. */
+  /** Ease ramp seconds each end (0 = named ease) — applied on the next Calculate. */
   rampSec: number;
   /** Set the align-in seconds. */
   onAlign: (align: number) => void;
@@ -114,11 +114,9 @@ export function ClipPathInspectorSection({
             value={rampSec}
             onChange={(e) => onRampSec(Number(e.target.value))}
           />
-          <span className={styles.readout}>{rampSec === 0 ? 'off' : `${rampSec.toFixed(1)}s`}</span>
+          <span className={styles.readout}>{rampSec.toFixed(1)}s</span>
         </div>
-        {active && (
-          <div className={styles.muted}>Re-Calculate to apply align/ramp to the path.</div>
-        )}
+        {active && <div className={styles.muted}>Re-Calculate to apply align/ramp.</div>}
 
         <div className={styles.scrubRow}>
           <input

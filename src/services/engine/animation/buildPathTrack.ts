@@ -56,6 +56,7 @@ import { monotoneCubic } from '../../../utils/math/monotoneCubic';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
+import { DEFAULT_ALIGN_SEC } from './pathDefaults';
 import { EASE } from './ease';
 
 /** A waypoint after focus resolution — always concrete (`at` + `distance`). */
@@ -87,11 +88,12 @@ const STEP = 64;
 // non-uniform basis never divide by zero on a degenerate (coincident) knot.
 const CHORD_EPS = 1e-9;
 
-// Built-in "align-in": seconds to blend from the live orientation into the
-// forward (down-the-path) aim at the start. Short and fixed (not tied to the
-// first leg's length) so the camera turns to face the journey promptly even
-// when the first leg is a long cosmic fly-in. Capped at half the total below.
-const ALIGN_SEC = 1.2;
+// Fallback "align-in" seconds for a direct caller that passes no `align`
+// (the flyPath helper always supplies `DEFAULT_ALIGN_SEC`). Short and fixed
+// (not tied to the first leg's length) so the camera turns to face the journey
+// promptly even when the first leg is a long cosmic fly-in. Capped at half the
+// total below.
+const ALIGN_SEC = DEFAULT_ALIGN_SEC;
 
 function clamp01(x: number): number {
   return x < 0 ? 0 : x > 1 ? 1 : x;

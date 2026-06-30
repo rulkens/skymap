@@ -185,7 +185,7 @@ const settingsSlice = createSlice({
     },
     // flyPath pacing knobs the saga bakes into the clip at Calculate time.
     // `align` = start-aim blend seconds; `rampSec` = ease ramp seconds each end
-    // (0 = keep authored ease). Re-Calculate to apply to the held snapshot.
+    // (0 = use the named ease). Re-Calculate to apply.
     setClipPathAlign: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.align = action.payload;
     },

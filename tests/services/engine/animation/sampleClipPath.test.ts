@@ -16,11 +16,19 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 
 const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
 
-/** A simple two-waypoint flyPath, hand-placed so no focus resolution is needed. */
+/**
+ * A simple two-waypoint flyPath, hand-placed so no focus resolution is needed.
+ * `rampSec: 0` opts out of the default trapezoidal envelope so the pacing is the
+ * plain `ease: 'linear'` this test reasons about.
+ */
 const DATA: ClipData = {
   start: START,
   timeline: [
-    flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], { over: 4, ease: 'linear' }),
+    flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], {
+      over: 4,
+      ease: 'linear',
+      rampSec: 0,
+    }),
   ],
 };
 

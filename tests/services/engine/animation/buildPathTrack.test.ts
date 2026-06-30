@@ -183,7 +183,7 @@ describe('buildPathTrack', () => {
   });
 
   it('aligns to the forward aim promptly at the start (align-in), not across the whole first leg', () => {
-    // A long first leg toward +X. By ALIGN_SEC (~1.2s) the camera should already
+    // A long first leg toward +X. By ALIGN_SEC (~1.35s) the camera should already
     // be looking forward (+X), even though the eye has barely begun the leg.
     const start: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
     const track = buildPathTrack({

@@ -50,6 +50,7 @@ import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLay
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import { CHANNEL_SPACE } from './channelSpace';
+import { DEFAULT_ALIGN_SEC, DEFAULT_RAMP_SEC } from './pathDefaults';
 
 // ---------------------------------------------------------------------------
 // Camera-action helpers
@@ -401,15 +402,16 @@ export function atFocus(id: FocusId, opts?: WaypointOpts): PathWaypoint {
 
 /**
  * flyPath — fly a smooth spline through `waypoints` over `opts.over` total
- * seconds, with `opts.ease` shaping the whole leg's accel/decel (defaults
- * `'inOut'`: launch from rest, settle at the last waypoint). The opts object —
- * not a bare ease — leaves room for future knobs (e.g. look-offset) without
- * touching call sites.
+ * seconds. The default pacing comes from `pathDefaults`: `align`
+ * (`DEFAULT_ALIGN_SEC`) turns the camera into the path as it launches, and
+ * `rampSec` (`DEFAULT_RAMP_SEC`) gives a trapezoidal speed envelope — short
+ * accel, long constant-speed cruise, short decel — so a flythrough feels right
+ * with no per-clip tuning. The named `opts.ease` is the OPT-OUT: it shapes the
+ * envelope only when `rampSec` is 0, otherwise the trapezoid wins.
  *
  * Unlike chained `seq([moveTarget, …])` tweens (which corner at each point),
- * the path is C1-smooth and perceived speed is uniform by default. It owns all
- * four camera channels for its window, so don't also drive them with `set`/
- * `dollyTo`/`moveTarget` in the same window.
+ * the path is C1-smooth. It owns all four camera channels for its window, so
+ * don't also drive them with `set` / `dollyTo` / `moveTarget` in the same window.
  */
 export function flyPath(
   waypoints: PathWaypoint[],
@@ -420,7 +422,7 @@ export function flyPath(
     waypoints,
     over: opts.over,
     ease: opts.ease ?? 'inOut',
-    ...(opts.align !== undefined ? { align: opts.align } : {}),
-    ...(opts.rampSec !== undefined ? { rampSec: opts.rampSec } : {}),
+    align: opts.align ?? DEFAULT_ALIGN_SEC,
+    rampSec: opts.rampSec ?? DEFAULT_RAMP_SEC,
   };
 }

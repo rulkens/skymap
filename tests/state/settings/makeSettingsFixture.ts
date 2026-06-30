@@ -22,6 +22,10 @@ import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalo
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { seedVolumeFields } from '../../../src/data/volume/volumeFieldDefaults';
 import {
+  DEFAULT_ALIGN_SEC,
+  DEFAULT_RAMP_SEC,
+} from '../../../src/services/engine/animation/pathDefaults';
+import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_BIAS_MODE,
   DEFAULT_BRIGHTNESS,
@@ -78,7 +82,12 @@ export function makeSettingsFixture(
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       disabledPasses: {},
-      clipPathInspect: { clipId: null, scrub01: 0, align: 1.2, rampSec: 0 },
+      clipPathInspect: {
+        clipId: null,
+        scrub01: 0,
+        align: DEFAULT_ALIGN_SEC,
+        rampSec: DEFAULT_RAMP_SEC,
+      },
     },
     structures: {
       enabled: true,

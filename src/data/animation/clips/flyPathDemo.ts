@@ -19,15 +19,11 @@
  *      travel ("toward the place it's moving to"), so each group grows ahead of
  *      you and slides past.
  *
- *   3. Tuned pacing — `align: 1.35` blends the start aim into the path quickly,
- *      so the camera turns AS it launches rather than rotating in place first;
- *      `rampSec: 1.4` gives a short trapezoidal ease in/out around a
- *      constant-speed cruise (it replaces the named `ease`), so most of the take
- *      is spent gliding rather than ramping. Both values came from tuning
- *      against the clip-path inspector's deterministic replay.
- *
- *   4. The ramp still reaches zero velocity at both ends, so the take launches
- *      from rest and settles gently on Sculptor — a beat dwell hands off cleanly.
+ *   3. Default pacing — no align/ramp set here, so the flyPath defaults apply
+ *      (`pathDefaults`): the camera turns into the path as it launches, then a
+ *      short trapezoidal ease in/out around a long constant-speed cruise. The
+ *      ramp reaches zero velocity at both ends, so the take launches from rest
+ *      and settles gently on Sculptor — a beat dwell hands off cleanly.
  *
  * To slow one stretch further, pin a waypoint's `over`; to shape the curve where
  * catalog positions bend it awkwardly, drop a hand-placed `atPoint(world,
@@ -51,7 +47,7 @@ export const flyPathDemo: Clip = {
           atFocus(focusId('group-cen-a-group')), // slow glide past Cen A
           atFocus(focusId('group-sculptor-group')), // settle on Sculptor group
         ],
-        { over: 20, ease: 'inOut', align: 1.35, rampSec: 1.4 },
+        { over: 20 },
       ),
     ],
   },

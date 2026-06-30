@@ -204,8 +204,9 @@ export type EngineSettingsState = {
      *
      * `align` / `rampSec` are the live flyPath pacing knobs the inspector bakes
      * into the clip at Calculate time (via `applyPathTuning`): `align` is the
-     * start-aim blend seconds; `rampSec` is the seconds of ease ramp each end
-     * (0 = keep the clip's authored ease).
+     * start-aim blend seconds, `rampSec` the seconds of ease ramp each end (0 =
+     * use the named `ease`). They seed from the flyPath defaults, so a fresh
+     * inspect re-applies the clip's own pacing until a slider is dragged.
      */
     clipPathInspect: {
       clipId: ClipId | null;

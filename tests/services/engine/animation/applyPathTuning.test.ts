@@ -50,15 +50,15 @@ describe('applyPathTuning', () => {
     expect(fly.rampSec).toBe(1.2);
   });
 
-  it('leaves rampSec unset when 0 (keeps the clip authored ease), still applies align', () => {
+  it('overwrites a flyPath that already carries its own align/rampSec', () => {
     const clip: ClipData = {
       start: 'live',
-      timeline: [flyPath([atPoint([10, 0, 0], 5)], { over: 8, ease: 'inOut' })],
+      timeline: [flyPath([atPoint([10, 0, 0], 5)], { over: 8, align: 2, rampSec: 3 })],
     };
-    const tuned = applyPathTuning(clip, { align: 0.9, rampSec: 0 });
+    const tuned = applyPathTuning(clip, TUNING);
     const node = tuned.timeline[0] as Extract<(typeof tuned.timeline)[number], { kind: 'flyPath' }>;
-    expect(node.align).toBe(0.9);
-    expect(node.rampSec).toBeUndefined();
+    expect(node.align).toBe(0.7);
+    expect(node.rampSec).toBe(1.2);
   });
 
   it('leaves a flyPath-free clip unchanged', () => {
