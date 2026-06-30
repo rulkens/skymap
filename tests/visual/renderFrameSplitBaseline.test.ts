@@ -387,7 +387,6 @@ describe('renderFrame visual baseline', () => {
           },
         },
       } as never,
-      milkyWayITimeSec: 0,
       device,
       context,
       milkyWayRenderer: milkyWayRenderer as never,
@@ -431,7 +430,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "textured-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,number,Array[3],Array[3]",
+          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],Array[3]",
           "renderer": "milky-way",
         },
         {

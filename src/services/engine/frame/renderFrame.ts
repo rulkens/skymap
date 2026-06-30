@@ -94,7 +94,6 @@ export function renderFrame(input: RenderFrameInput): void {
   const {
     ctx,
     state,
-    milkyWayITimeSec,
     device,
     context,
     milkyWayRenderer,
@@ -120,7 +119,6 @@ export function renderFrame(input: RenderFrameInput): void {
     flowFieldRenderer,
     milkyWayRenderer,
     horizonShellRenderer,
-    milkyWayITimeSec,
   };
 
   // Write the single shared cluster-focus uniform once per frame, before
@@ -160,18 +158,17 @@ export function renderFrame(input: RenderFrameInput): void {
       state.settings.tonemap.curve,
       timingService.descriptorFor('tone-map'),
     );
-    encodeUiOverlay(
-      encoder,
-      swapView,
-      ctx,
-      state,
-      deps,
-      timingService.descriptorFor('ui-overlay'),
-    );
+    encodeUiOverlay(encoder, swapView, ctx, state, deps, timingService.descriptorFor('ui-overlay'));
     timingService.endFrame(timingCtx, encoder);
   } else {
     encodeHdrSingle(encoder, ctx, state, deps);
-    ctx.postProcess.draw(encoder, swapView, state.settings.tonemap.exposure, state.settings.tonemap.curve, undefined);
+    ctx.postProcess.draw(
+      encoder,
+      swapView,
+      state.settings.tonemap.exposure,
+      state.settings.tonemap.curve,
+      undefined,
+    );
     encodeUiOverlay(encoder, swapView, ctx, state, deps, undefined);
   }
 
