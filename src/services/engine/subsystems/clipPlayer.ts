@@ -271,14 +271,6 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     return clipOpacity.factorOf(layer, nowMs);
   }
 
-  // The compiled form of the active clip, or null when idle. Exposed for the
-  // debug clip-path overlay (`produceClipPathLines`), which samples the
-  // compiled `pathTracks` to draw the flythrough route. Reads the same memoised
-  // cache `tick` populates — null between clips (resetState clears it).
-  function currentCompiled(): CompiledClip | null {
-    return compileCache?.compiled ?? null;
-  }
-
   function destroy(): void {
     // No GPU resources to free. Reset channel and bookkeeping to leave a
     // clean state in case the subsystem bag is inspected after destroy.
@@ -301,5 +293,5 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     endResolver = onEnd;
   }
 
-  return { tick, stop, clipOpacityOf, currentCompiled, destroy, registerEndResolver };
+  return { tick, stop, clipOpacityOf, destroy, registerEndResolver };
 }

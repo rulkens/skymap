@@ -1,70 +1,55 @@
 /**
- * buildClipPathLines — sample a compiled flyPath's eye path into a marker-line
- * polyline for the debug overlay.
+ * buildClipPathLines — render a precomputed `ClipPathSnapshot` as the debug
+ * inspector's lines: a speed-coloured eye polyline plus a scrub gizmo.
  *
- * The camera (eye) flies the path's centripetal spline. When debugging a
- * flyPath it is hard to "guess if we're on the right track" from the moving
- * camera alone, so this helper turns the static eye path into a visible polyline
- * the `markerLineRenderer` draws in-scene. It samples each `PathTrack`'s
- * `sample(localSec)` at a fixed resolution, reconstructs the eye position from
- * the pose via the orbit convention, and emits one `MarkerLine` per segment.
+ * The route polyline is one segment per sample pair, each coloured by the
+ * leading sample's normalised speed (`speedRamp`), so where the camera lingers
+ * vs whips reads at a glance. The gizmo (`cameraGizmoLines`) draws the camera
+ * sightline + frustum at the scrubbed instant — the sample nearest `scrubT`.
  *
- * ### Stable, path-keyed ids
- *
- * The `labelDirector` keys its GPU re-upload on the line ids (positions are
- * deliberately excluded from its change-signature). A static set of ids would
- * therefore go stale when a DIFFERENT clip plays — same ids, new positions, no
- * re-upload. We fold the rounded path endpoints into the id, so a different
- * route yields different ids and forces a fresh upload, while the same route
- * re-emits identical ids and uploads only once.
+ * Returns a flat `DebugLine[]` for the dedicated `debugLineRenderer`, route
+ * first then gizmo (the order callers/tests rely on). The renderer rebuilds and
+ * uploads wholesale each frame, so — unlike the old label-director path — these
+ * carry no ids or re-upload keys.
  */
 
-import type { PathTrack } from '../../../@types/animation/CompiledClip';
-import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { Vec4 } from '../../../@types/math/Vec4';
+import type { ClipPathSnapshot } from '../../../@types/engine/debug/ClipPathSnapshot';
+import type { DebugLine } from '../../../@types/rendering/DebugLine';
+import { speedRamp } from '../../../utils/color/speedRamp';
+import { cameraGizmoLines } from './cameraGizmoLines';
 
-/** Eye samples per track — enough for a smooth polyline without flooding the buffer. */
-const EYE_SAMPLES = 48;
-/** Cyan, premultiplied-alpha (alpha 1) — reads clearly over the HDR sky. */
-const PATH_COLOR: Vec4 = [0, 0.85, 1, 1];
-const PATH_WIDTH_PX = 2;
+/** Full pixel width of the speed-coloured route (wider than the old 2px hint). */
+const ROUTE_WIDTH_PX = 3;
 
-/** Reconstruct the eye position from a pose via the orbit convention. */
-function eyeOf(target: Vec3, distance: number, yaw: number, pitch: number): Vec3 {
-  const cp = Math.cos(pitch);
-  return [
-    target[0] + distance * (cp * Math.sin(yaw)),
-    target[1] + distance * Math.sin(pitch),
-    target[2] + distance * (cp * Math.cos(yaw)),
-  ];
-}
+export function buildClipPathLines(
+  snapshot: ClipPathSnapshot,
+  scrubT: number,
+  view: { fovYRad: number; aspect: number },
+): DebugLine[] {
+  const { durationSec, samples } = snapshot;
+  if (samples.length < 2) return [];
 
-function key(p: Vec3): string {
-  return `${Math.round(p[0])},${Math.round(p[1])},${Math.round(p[2])}`;
-}
+  const lines: DebugLine[] = [];
 
-export function buildClipPathLines(tracks: readonly PathTrack[]): MarkerLine[] {
-  const lines: MarkerLine[] = [];
-  tracks.forEach((track, ti) => {
-    const over = track.endSec - track.startSec;
-    const pts: Vec3[] = [];
-    for (let i = 0; i < EYE_SAMPLES; i++) {
-      const localSec = (i / (EYE_SAMPLES - 1)) * over;
-      const s = track.sample(localSec);
-      pts.push(eyeOf(s.target, s.distance, s.yaw, s.pitch));
-    }
-    const k = `${key(pts[0]!)}-${key(pts[pts.length - 1]!)}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      lines.push({
-        id: `clippath:${ti}:${k}:${i}`,
-        fromWorld: pts[i]!,
-        toWorld: pts[i + 1]!,
-        pixelWidth: PATH_WIDTH_PX,
-        color: PATH_COLOR,
-        fadeAlpha: 1,
-      });
-    }
-  });
+  // --- Speed-coloured route polyline (one segment per sample pair) ---
+  for (let i = 0; i < samples.length - 1; i++) {
+    const a = samples[i]!;
+    lines.push({
+      from: a.eye,
+      to: samples[i + 1]!.eye,
+      width: ROUTE_WIDTH_PX,
+      color: speedRamp(a.speed01), // colour by the speed entering the segment
+    });
+  }
+
+  // --- Scrub gizmo at the sample nearest scrubT ---
+  const clampedT = scrubT < 0 ? 0 : scrubT > durationSec ? durationSec : scrubT;
+  const idx =
+    durationSec > 0
+      ? Math.min(samples.length - 1, Math.round((clampedT / durationSec) * (samples.length - 1)))
+      : 0;
+  const g = samples[idx]!;
+  lines.push(...cameraGizmoLines(g.eye, g.target, view.fovYRad, view.aspect));
+
   return lines;
 }

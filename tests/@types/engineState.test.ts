@@ -46,6 +46,7 @@ import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsyst
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
 import { createStructureFocusSubsystem } from '../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createClipPlayer } from '../../src/services/engine/subsystems/clipPlayer';
+import { createClipPathInspector } from '../../src/services/engine/subsystems/clipPathInspector';
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import { configureStore } from '@reduxjs/toolkit';
@@ -187,6 +188,7 @@ describe('EngineState type', () => {
           clock: fixtureClock1,
           getEngineState: () => stateRef.current!,
         }),
+        clipPathInspector: createClipPathInspector(),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -388,6 +390,7 @@ describe('EngineState type', () => {
           clock: fixtureClock2,
           getEngineState: () => stateRef.current!,
         }),
+        clipPathInspector: createClipPathInspector(),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),

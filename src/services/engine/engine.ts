@@ -78,9 +78,9 @@ import { registerLabelStyleOverrideWake } from './labelStyleOverride';
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
-import { createClipPathLinesProducer } from './presentation/produceClipPathLines';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
+import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
@@ -338,6 +338,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         getEngineState: () => state,
       }),
 
+      // ── Clip-path inspector (debug) ───────────────────────────────
+      // Holds the precomputed ClipPathSnapshot the debug panel's "Calculate"
+      // button produces; the clip-path debug pass reads it each frame. Eager
+      // (no GPU dep), non-null from t=0; snapshot null until the first Calculate.
+      clipPathInspector: createClipPathInspector(),
+
       // ── Render scheduler — eager, capture-safe ────────────────────
       // Created here (not a deferred shim): its `onFrame` closes over the
       // forward-declared `frame` binding, and the IIFE assigns the real
@@ -416,13 +422,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   state.subsystems.labelDirector.registerProducer({
     id: 'famousLabels',
     produceLabels: produceFamousLabels,
-  });
-  // Debug overlay: draw the most-recent flyPath's eye route as an in-scene
-  // polyline. Persists after the clip ends so the route can be inspected from a
-  // free camera (you can't see it while flying it).
-  state.subsystems.labelDirector.registerProducer({
-    id: 'clipPathDebug',
-    produceLabels: createClipPathLinesProducer(),
   });
 
   // ── Wake on label-style override edits ────────────────────────────────

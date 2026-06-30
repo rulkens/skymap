@@ -27,6 +27,7 @@ import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsys
 import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
+import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
 import type { ClickResolver } from '../ClickResolver';
 import type { InputBindings } from '../../input/InputBindings';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
@@ -110,6 +111,13 @@ export type EngineSubsystemHandles = {
    * so scene cues fire before the pose is evaluated on each frame.
    */
   clipPlayer: ClipPlayer;
+  /**
+   * Clip-path inspector (debug) — holds the precomputed `ClipPathSnapshot` the
+   * "Calculate" button produces, read each frame by the clip-path debug pass to
+   * draw the speed-coloured route + scrub gizmo. Eager (no GPU dep), non-null
+   * from t=0; snapshot null until the first Calculate.
+   */
+  clipPathInspector: ClipPathInspector;
   /**
    * Per-engine download-progress emitter — instantiated inside the GPU
    * init IIFE so the `engineLoadProgressChanged` dispatch and the slot registry are in scope.
