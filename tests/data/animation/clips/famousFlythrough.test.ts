@@ -1,7 +1,7 @@
 /**
  * famousFlythrough tests — the curated "grand tour" clip: one `flyPath` that
- * sweeps THROUGH a dozen iconic famous galaxies, ordered as an outward journey
- * from the Local Group (Andromeda) to the Virgo cluster (M87).
+ * sweeps THROUGH iconic famous galaxies, ordered as an outward journey from the
+ * Local Group (Andromeda) to the Virgo cluster (M87).
  *
  * The flyPath primitive's resolve→compile→evaluate pipeline is already proven
  * end-to-end by `flyPathDemo.test.ts` (with a structure fixture). What's unique
@@ -24,7 +24,6 @@ const EXPECTED_WAYPOINTS = [
   'm31', // Andromeda
   'm33', // Triangulum
   'm81', // Bode's
-  'm82', // Cigar (close pass with M81)
   'c77', // Centaurus A
   'c65', // Sculptor
   'm83', // Southern Pinwheel
@@ -48,7 +47,7 @@ describe('famousFlythrough clip', () => {
     expect(fly.over).toBeGreaterThan(0);
   });
 
-  it('visits the curated dozen famous galaxies as catalog-resolved waypoints, in order', () => {
+  it('visits the curated famous galaxies as catalog-resolved waypoints, in order', () => {
     const fly = famousFlythrough.data.timeline[0]!;
     if (fly.kind !== 'flyPath') throw new Error('expected a flyPath effect');
 

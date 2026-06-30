@@ -1,9 +1,8 @@
 /**
- * famousFlythrough — a curated "grand tour" of a dozen iconic famous galaxies,
- * flown as one continuous `flyPath`. Where `flyPathDemo` bends through three
- * nearby galaxy GROUPS, this sweeps THROUGH twelve individually-famous galaxies,
- * ordered as an outward journey: from the Local Group's Andromeda out to the
- * Virgo cluster's M87.
+ * famousFlythrough — a curated "grand tour" of iconic famous galaxies, flown as
+ * one continuous `flyPath`. Where `flyPathDemo` bends through three nearby galaxy
+ * GROUPS, this sweeps THROUGH individually-famous galaxies, ordered as an outward
+ * journey: from the Local Group's Andromeda out to the Virgo cluster's M87.
  *
  * Each waypoint is an `atFocus` addressed by a BARE famous-galaxy seed id (the
  * ids in `data/seeds/famous_galaxies.seed.json`). Bare ids route to the famous
@@ -38,7 +37,6 @@ export const famousFlythrough: Clip = {
           atFocus(focusId('m31')), // Andromeda — the nearest large spiral
           atFocus(focusId('m33')), // Triangulum
           atFocus(focusId('m81')), // Bode's Galaxy
-          atFocus(focusId('m82')), // Cigar — a close pass beside M81
           atFocus(focusId('c77')), // Centaurus A
           atFocus(focusId('c65')), // Sculptor Galaxy
           atFocus(focusId('m83')), // Southern Pinwheel
@@ -48,7 +46,7 @@ export const famousFlythrough: Clip = {
           atFocus(focusId('m104')), // Sombrero
           atFocus(focusId('m87')), // Virgo A — settle on the cluster giant
         ],
-        { over: 60 },
+        { over: 120 },
       ),
     ],
   },
