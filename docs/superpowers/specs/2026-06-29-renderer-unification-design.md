@@ -391,12 +391,71 @@ diverges:
   This item **stays** on the backlog (the spec depends on its direction but doesn't
   complete it).
 
+## Alternative considered: full frame DAG
+
+The frame-order layer could be a full dependency graph (a Frostbite-style frame graph)
+instead of an ordered `FrameStep` list: each node declares the resources it **reads**
+and **writes**, edges are derived (`writer(r) → reader(r)`), a topo-sort produces the
+order, and resource lifetimes fall out for pooling/aliasing. The three axes
+(`slab` / `target` / `blend`), `ContentLayer`, `Compositor`, and the renderers are
+unchanged either way — only the program representation differs. Two findings rule it
+out for now:
+
+**1. The swap-chain OVER chain can't be ordered from reads/writes alone.** `tonemap`,
+`ui-overlay`, `fg-composite`, and `captions` all read *and* write `swap`, so there is no
+acyclic `writer → reader` edge to order them — the part of the frame where "order falls
+out of the edges" is exactly where it fails. The standard fix is SSA-style resource
+versioning (`swap@1 → swap@2 → swap@3 → swap@4`), but that just re-encodes the ordered
+list as data-dependencies: for a linear composite chain the DAG does not *derive* the
+order, you re-author it through version threading, plus a compile step.
+
+**2. The frame is linear — now and in the dynamic-slab future.** `hdr` accumulation is
+commutative (additive); the `swap` chain is strictly sequential; the only genuine fan-in
+is `fg-composite` (needs `fg0` **and** `swap`). A DAG earns its keep on
+branching/parallelism (concurrent passes to schedule, non-trivial lifetime aliasing,
+dead-pass culling) — skymap has almost none, and WebGPU inserts barriers/transitions
+itself (a Vulkan/D3D12 motivation that does not apply here). Critically, the deferred
+dynamic-slab future is *also* a linear far→near stack (see Out of scope): the dynamism is
+only *how many slabs are in the stack this frame*, handled by **generating** the ordered
+`FrameStep` list from the active-slab set, not by a graph:
+
+```ts
+function buildFrame(slabs: Slab[]): FrameStep[] {
+  return [
+    ...slabs.map((s) => ({ kind: 'render', target: targetFor(s) })),                 // populate each slab
+    { kind: 'composite', step: { source: 'hdr', dest: 'swap', op: TONEMAP_BLIT } },
+    ...slabs.filter(isNearfield).reverse().map((s) =>                                 // composite far → near
+      ({ kind: 'composite', step: { source: targetFor(s), dest: 'swap', op: TONEMAP_OVER } })),
+  ];
+}
+```
+
+So the program graduates from a constant `FRAME` to a generated function when slabs go
+dynamic — still a flat ordered list, no SSA, no topo-sort. A DAG stays available to
+layer on later **only if** real parallel/branchy structure ever appears; this spec does
+not foreclose it, but does not pay for it speculatively.
+
 ## Out of scope (explicitly deferred)
 
 - **Slab spawn/retire & adaptive slab-set.** No `cam.distance → active-slab-set`
   function; no depth handoff between adjacent slabs at a shared boundary. The type is
   N-capable but the spec instantiates the two slabs that exist today. A third slab
   (e.g. an Earth-surface descent slab) is future work.
+
+  When built, *dynamic slabs* means a **generated** `FrameStep` list driven by **camera
+  scale** — at any zoom only ~2 adjacent slabs are active (the one the camera is in, plus
+  the backdrop/next-coarser for context), a window that slides down a scale ladder
+  (surface ~m → solar-system ~AU → stellar ~pc → cosmological ~Mpc) as the camera dives.
+  It stays a linear far→near stack (see *Alternative considered: full frame DAG*), not a
+  graph. What makes slabs dynamic is *camera scale*, **not** data loading or texture
+  detail — those are an orthogonal **content axis**: loading/unloading a catalog changes
+  what *populates* a scale band (it can drive lazy GPU-target allocation, but not
+  topology), and texture LOD (hi-res Earth/planet albedo) is pure texture streaming,
+  independent of depth slabs. The concrete motivator for a *third* slab is a
+  **stellar / parsec** slab fed by a star catalog (Gaia): the parsec regime is where
+  **f64 becomes load-bearing** (Proxima ~1.3 pc — compose-in-f64-then-narrow beats
+  separate-narrow; f32 is adequate only out to ~1 AU). Hi-res *terrain geometry* (not
+  texture) near a surface camera would similarly motivate the surface slab.
 - **New renderer pipeline variants.** No opaque-galaxy-in-near-field variant, etc. —
   added only when a concrete feature needs one.
 - **Making bodies selectable.** Pick is space-aware, but no near-field `drawPick`
