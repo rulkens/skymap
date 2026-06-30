@@ -19,19 +19,20 @@
  *      travel ("toward the place it's moving to"), so each group grows ahead of
  *      you and slides past.
  *
- *   3. A pinned slow leg — the leg into Centaurus A pins `over: 5`, so the
- *      camera decelerates to a slow glide through that stretch ("watch the
- *      view") and accelerates away WITHOUT stopping. The unpinned legs split the
- *      remaining time by arc-length share (uniform speed).
+ *   3. Tuned pacing — `align: 1.35` blends the start aim into the path quickly,
+ *      so the camera turns AS it launches rather than rotating in place first;
+ *      `rampSec: 1.4` gives a short trapezoidal ease in/out around a
+ *      constant-speed cruise (it replaces the named `ease`), so most of the take
+ *      is spent gliding rather than ramping. Both values came from tuning
+ *      against the clip-path inspector's deterministic replay.
  *
- *   4. Global `ease: 'inOut'` — the whole take launches from rest and settles
- *      gently on Sculptor, independent of the internal speed structure. The
- *      settle arrives at zero velocity, so a beat dwell would hand off cleanly.
+ *   4. The ramp still reaches zero velocity at both ends, so the take launches
+ *      from rest and settles gently on Sculptor — a beat dwell hands off cleanly.
  *
- * To shape the curve where catalog positions alone bend it awkwardly, drop a
- * hand-placed `atPoint(world, distance)` control point between two `atFocus`
- * waypoints — the two forms interleave freely. The group ids are
- * `${category}-${seedId}` per `resolveFocusId`.
+ * To slow one stretch further, pin a waypoint's `over`; to shape the curve where
+ * catalog positions bend it awkwardly, drop a hand-placed `atPoint(world,
+ * distance)` control point between two `atFocus` waypoints — the forms interleave
+ * freely. The group ids are `${category}-${seedId}` per `resolveFocusId`.
  */
 
 import type { Clip } from '../../../@types/animation/Clip';
@@ -50,7 +51,7 @@ export const flyPathDemo: Clip = {
           atFocus(focusId('group-cen-a-group')), // slow glide past Cen A
           atFocus(focusId('group-sculptor-group')), // settle on Sculptor group
         ],
-        { over: 20, ease: 'inOut' },
+        { over: 20, ease: 'inOut', align: 1.35, rampSec: 1.4 },
       ),
     ],
   },
