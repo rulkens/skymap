@@ -203,6 +203,8 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
           over: effect.over,
           ease: effect.ease,
           waypoints,
+          align: effect.align,
+          rampSec: effect.rampSec,
         }),
       );
       return effect.over;

@@ -201,10 +201,17 @@ export type EngineSettingsState = {
      * (null = nothing computed); `scrub01` is the scrubber position as a
      * normalised `[0,1]` fraction (NOT seconds — the UI has no access to the
      * clip duration, so the scrubber is a pure position).
+     *
+     * `align` / `rampSec` are the live flyPath pacing knobs the inspector bakes
+     * into the clip at Calculate time (via `applyPathTuning`): `align` is the
+     * start-aim blend seconds; `rampSec` is the seconds of ease ramp each end
+     * (0 = keep the clip's authored ease).
      */
     clipPathInspect: {
       clipId: ClipId | null;
       scrub01: number;
+      align: number;
+      rampSec: number;
     };
   };
 

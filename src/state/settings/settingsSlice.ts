@@ -183,6 +183,15 @@ const settingsSlice = createSlice({
     setClipPathScrub: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.scrub01 = action.payload;
     },
+    // flyPath pacing knobs the saga bakes into the clip at Calculate time.
+    // `align` = start-aim blend seconds; `rampSec` = ease ramp seconds each end
+    // (0 = keep authored ease). Re-Calculate to apply to the held snapshot.
+    setClipPathAlign: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.align = action.payload;
+    },
+    setClipPathRampSec: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.rampSec = action.payload;
+    },
 
     // ── structures ──────────────────────────────────────────────────────────
     setStructureItemEnabled: (
@@ -240,6 +249,8 @@ export const {
   inspectClipPath,
   clearClipPath,
   setClipPathScrub,
+  setClipPathAlign,
+  setClipPathRampSec,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,

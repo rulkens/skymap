@@ -83,4 +83,18 @@ export type Effect =
       readonly waypoints: PathWaypoint[];
       readonly over: number;
       readonly ease: Ease;
+      /**
+       * Seconds to blend the live orientation into the down-the-path aim at the
+       * start (the "align-in"). Omit for the builder default. Tunable so the
+       * camera doesn't finish turning before it has begun translating.
+       */
+      readonly align?: number;
+      /**
+       * Seconds of ease ramp at EACH end for a trapezoidal speed envelope: ease
+       * in over the first `rampSec`, cruise at constant speed, ease out over the
+       * last `rampSec`. Omit (or 0) to use the named `ease` instead. Smaller =
+       * shorter accel/decel + longer cruise; clamped so the two ramps never
+       * exceed the take.
+       */
+      readonly rampSec?: number;
     };

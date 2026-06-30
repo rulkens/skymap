@@ -102,8 +102,10 @@ export function buildInitialSettings(): EngineSettingsState {
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},
       // Clip-path inspector idle: no clip chosen, scrubber at the start. The
-      // overlay stays quiet until the curator clicks "Calculate".
-      clipPathInspect: { clipId: null, scrub01: 0 },
+      // overlay stays quiet until the curator clicks "Calculate". `align`
+      // mirrors the builder's ALIGN_SEC default (a no-op until tuned); `rampSec`
+      // 0 means "keep the clip's authored ease" until the curator dials a ramp.
+      clipPathInspect: { clipId: null, scrub01: 0, align: 1.2, rampSec: 0 },
     },
     // Structure overlay: master gate on + one item row per category, each
     // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`

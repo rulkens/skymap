@@ -26,11 +26,13 @@
  * root saga forks, so the seam is read inside the worker (when an action arrives)
  * rather than at fork time.
  */
-import { call, takeLatest, takeEvery, getContext } from 'typed-redux-saga';
+import { call, select, takeLatest, takeEvery, getContext } from 'typed-redux-saga';
 
 import { inspectClipPath, clearClipPath } from '../settings/settingsSlice';
+import { selectClipPathAlign, selectClipPathRampSec } from '../settings/selectors';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
+import { applyPathTuning } from '../../services/engine/animation/applyPathTuning';
 import { clipFociReady } from '../tour/clipFociReady';
 import { waitUntil } from '../tour/waitUntil';
 import type { SagaContext } from '../../store/types';
@@ -49,7 +51,12 @@ export function* watchClipPathInspectSaga() {
       () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null,
     );
     const resolved = resolveClipFoci(clip.data, resolveDeps(), cameraRuntime()!.fovYRad);
-    seam.compute(action.payload, resolved);
+    // Bake the live pacing sliders into the flyPath nodes before sampling, so the
+    // overlay AND the pinned (replayable) clip carry the tuning.
+    const align = yield* select(selectClipPathAlign);
+    const rampSec = yield* select(selectClipPathRampSec);
+    const tuned = applyPathTuning(resolved, { align, rampSec });
+    seam.compute(action.payload, tuned);
   });
 
   yield* takeEvery(clearClipPath, function* () {

@@ -413,7 +413,14 @@ export function atFocus(id: FocusId, opts?: WaypointOpts): PathWaypoint {
  */
 export function flyPath(
   waypoints: PathWaypoint[],
-  opts: { over: number; ease?: Ease },
+  opts: { over: number; ease?: Ease; align?: number; rampSec?: number },
 ): Effect & { kind: 'flyPath' } {
-  return { kind: 'flyPath', waypoints, over: opts.over, ease: opts.ease ?? 'inOut' };
+  return {
+    kind: 'flyPath',
+    waypoints,
+    over: opts.over,
+    ease: opts.ease ?? 'inOut',
+    ...(opts.align !== undefined ? { align: opts.align } : {}),
+    ...(opts.rampSec !== undefined ? { rampSec: opts.rampSec } : {}),
+  };
 }

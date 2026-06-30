@@ -55,6 +55,7 @@ import { catmullRomNonUniform } from '../../../utils/math/catmullRomNonUniform';
 import { monotoneCubic } from '../../../utils/math/monotoneCubic';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { lerp } from '../../../utils/math/lerp';
+import { trapezoidEase } from '../../../utils/math/trapezoidEase';
 import { EASE } from './ease';
 
 /** A waypoint after focus resolution — always concrete (`at` + `distance`). */
@@ -72,6 +73,10 @@ type BuildParams = {
   readonly over: number;
   readonly ease: Ease;
   readonly waypoints: readonly AtWaypoint[];
+  /** Align-in seconds override (default `ALIGN_SEC`); see the field on the flyPath effect. */
+  readonly align?: number;
+  /** Seconds of ease ramp each end; when > 0, replaces the named `ease` envelope. */
+  readonly rampSec?: number;
 };
 
 // Spline samples per leg for the arc-length table. 64 is plenty for a smooth
@@ -97,7 +102,7 @@ function chord(a: Vec3, b: Vec3): number {
 }
 
 export function buildPathTrack(params: BuildParams): PathTrack {
-  const { start, startSec, over, ease, waypoints } = params;
+  const { start, startSec, over, ease, waypoints, align, rampSec } = params;
 
   if (waypoints.length === 0) {
     throw new Error('buildPathTrack: a flyPath needs at least one waypoint.');
@@ -342,7 +347,17 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   // --- Align-in: blend the live orientation into the forward aim at the start ---
   const liveYaw = start.yaw;
   const livePitch = start.pitch;
-  const alignSec = Math.min(ALIGN_SEC, over * 0.5); // never exceed half the take
+  const alignSec = Math.min(align ?? ALIGN_SEC, over * 0.5); // never exceed half the take
+
+  // Global time envelope: a trapezoidal speed profile with `rampSec`-long ramps
+  // each end (tunable in seconds) when set, else the named cubic `ease`. The
+  // trapezoid takes a ramp FRACTION, so convert rampSec → rampSec/over (it
+  // clamps the fraction to ≤ 0.5 internally). Both reach rest at the ends, so
+  // the settle still hands off cleanly to a dwell.
+  const warp =
+    rampSec !== undefined && rampSec > 0
+      ? (s: number): number => trapezoidEase(s, rampSec / over)
+      : (s: number): number => EASE[ease](s);
   // Shortest-arc yaw blend so the initial turn takes the short way round.
   const blendYaw = (from: number, to: number, w: number): number => {
     let d = to - from;
@@ -353,7 +368,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
 
   const sample = (localSec: number): PathSample => {
     const s = clamp01(localSec / over);
-    const easedTime = EASE[ease](s) * over;
+    const easedTime = warp(s) * over;
     const u = clamp01(timing(easedTime));
     const t = paramAtArcFrac(u);
     const pose = poseAtTau(t);

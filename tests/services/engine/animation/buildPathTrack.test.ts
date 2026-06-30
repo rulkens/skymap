@@ -235,6 +235,67 @@ describe('buildPathTrack', () => {
     expect(end.pitch).toBeCloseTo(0.25, 3);
   });
 
+  // ── Tunable align-in: `align` overrides the built-in ALIGN_SEC window ──
+  it('honours an `align` override for how long the start aim takes to settle', () => {
+    const start: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
+    const waypoints = [
+      { at: [1000, 0, 0] as Vec3, distance: 10 },
+      { at: [2000, 0, 0] as Vec3, distance: 10 },
+    ];
+    // A long 3s align-in is still mid-turn at t=1.0 (not yet looking +X).
+    const slow = buildPathTrack({
+      start,
+      startSec: 0,
+      over: 12,
+      ease: 'linear',
+      waypoints,
+      align: 3,
+    });
+    expect(Math.abs(slow.sample(1.0).yaw - -Math.PI / 2)).toBeGreaterThan(0.1);
+    // A short 0.5s align-in has already settled forward (+X → yaw -π/2) by t=0.6.
+    const fast = buildPathTrack({
+      start,
+      startSec: 0,
+      over: 12,
+      ease: 'linear',
+      waypoints,
+      align: 0.5,
+    });
+    expect(fast.sample(0.6).yaw).toBeCloseTo(-Math.PI / 2, 2);
+  });
+
+  // ── Tunable envelope: `rampSec` (seconds) shortens the accel/decel ──
+  it('uses a trapezoidal envelope when `rampSec` is set: shorter ramp ⇒ further along by quarter-time', () => {
+    const waypoints = [
+      { at: [10, 0, 0] as Vec3, distance: 10 },
+      { at: [20, 0, 0] as Vec3, distance: 10 },
+    ];
+    // Default cubic inOut is still accelerating at quarter-time; a short ramp
+    // (0.4s of a 4s take = 10% each end) is already cruising → further along.
+    const inOut = buildPathTrack({ start: START, startSec: 0, over: 4, ease: 'inOut', waypoints });
+    const trap = buildPathTrack({
+      start: START,
+      startSec: 0,
+      over: 4,
+      ease: 'inOut',
+      waypoints,
+      rampSec: 0.4,
+    });
+    expect(eyeOf(trap.sample(1))[0]).toBeGreaterThan(eyeOf(inOut.sample(1))[0]);
+    // Both still settle framed on the destination at the end (envelope reaches 1).
+    expect(eyeOf(trap.sample(4))[0]).toBeCloseTo(eyeOf(inOut.sample(4))[0], 3);
+    // rampSec: 0 is a no-op — falls back to the named ease exactly.
+    const off = buildPathTrack({
+      start: START,
+      startSec: 0,
+      over: 4,
+      ease: 'inOut',
+      waypoints,
+      rampSec: 0,
+    });
+    expect(eyeOf(off.sample(1))[0]).toBeCloseTo(eyeOf(inOut.sample(1))[0], 6);
+  });
+
   // ── No slingshot: a far start + clustered waypoints must not balloon ──
   //
   // The eye rides the centripetal spline, so it stays snug to its knots instead

@@ -138,6 +138,12 @@ export const selectClipPathInspectId = (state: RootState): ClipId | null =>
 export const selectClipPathScrub = (state: RootState): number =>
   selectSettings(state).debug.clipPathInspect.scrub01;
 
+export const selectClipPathAlign = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.align;
+
+export const selectClipPathRampSec = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.rampSec;
+
 // --- structures cluster -------------------------------------------------------
 
 export const selectStructureItems = (

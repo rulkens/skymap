@@ -1,0 +1,71 @@
+/**
+ * applyPathTuning — bakes the inspector's live align / rampSec (seconds) sliders
+ * into a clip's `flyPath` nodes (recursively through seq/all/fork), so the pinned
+ * and replayed clip carries the tuning. Non-flyPath clips pass through unchanged.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { applyPathTuning } from '../../../../src/services/engine/animation/applyPathTuning';
+import {
+  flyPath,
+  atPoint,
+  dollyTo,
+  seq,
+  all,
+} from '../../../../src/services/engine/animation/effectHelpers';
+import type { ClipData } from '../../../../src/@types/animation/ClipData';
+
+const TUNING = { align: 0.7, rampSec: 1.2 };
+
+describe('applyPathTuning', () => {
+  it('injects align + rampSec (seconds) into a top-level flyPath', () => {
+    const clip: ClipData = {
+      start: 'live',
+      timeline: [flyPath([atPoint([10, 0, 0], 5)], { over: 8, ease: 'inOut' })],
+    };
+    const tuned = applyPathTuning(clip, TUNING);
+    const node = tuned.timeline[0] as Extract<(typeof tuned.timeline)[number], { kind: 'flyPath' }>;
+    expect(node.kind).toBe('flyPath');
+    expect(node.align).toBe(0.7);
+    expect(node.rampSec).toBe(1.2);
+    expect(node.over).toBe(8); // other fields preserved
+  });
+
+  it('reaches a flyPath nested inside seq/all', () => {
+    const clip: ClipData = {
+      start: 'live',
+      timeline: [seq([all([flyPath([atPoint([1, 2, 3], 4)], { over: 5, ease: 'out' })])])],
+    };
+    const tuned = applyPathTuning(clip, TUNING);
+    const seqNode = tuned.timeline[0] as Extract<(typeof tuned.timeline)[number], { kind: 'seq' }>;
+    const allNode = seqNode.children[0] as Extract<
+      (typeof seqNode.children)[number],
+      { kind: 'all' }
+    >;
+    const fly = allNode.children[0] as Extract<
+      (typeof allNode.children)[number],
+      { kind: 'flyPath' }
+    >;
+    expect(fly.align).toBe(0.7);
+    expect(fly.rampSec).toBe(1.2);
+  });
+
+  it('leaves rampSec unset when 0 (keeps the clip authored ease), still applies align', () => {
+    const clip: ClipData = {
+      start: 'live',
+      timeline: [flyPath([atPoint([10, 0, 0], 5)], { over: 8, ease: 'inOut' })],
+    };
+    const tuned = applyPathTuning(clip, { align: 0.9, rampSec: 0 });
+    const node = tuned.timeline[0] as Extract<(typeof tuned.timeline)[number], { kind: 'flyPath' }>;
+    expect(node.align).toBe(0.9);
+    expect(node.rampSec).toBeUndefined();
+  });
+
+  it('leaves a flyPath-free clip unchanged', () => {
+    const clip: ClipData = {
+      start: 'live',
+      timeline: [dollyTo(100, 6, 'inOut')],
+    };
+    expect(applyPathTuning(clip, TUNING)).toEqual(clip);
+  });
+});

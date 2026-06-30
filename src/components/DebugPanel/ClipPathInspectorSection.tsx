@@ -36,6 +36,14 @@ export type ClipPathInspectorSectionProps = {
   onScrub: (scrub01: number) => void;
   /** Fly the exact computed route — deterministic replay (the "Play this path" button). */
   onReplay: () => void;
+  /** Align-in seconds (start-aim blend window) — applied on the next Calculate. */
+  align: number;
+  /** Ease ramp seconds each end (0 = clip's authored ease) — applied on the next Calculate. */
+  rampSec: number;
+  /** Set the align-in seconds. */
+  onAlign: (align: number) => void;
+  /** Set the ease-ramp seconds. */
+  onRampSec: (rampSec: number) => void;
 };
 
 // Registry rows → dropdown options. A new clip is a new option, no edit here.
@@ -48,6 +56,10 @@ export function ClipPathInspectorSection({
   onClear,
   onScrub,
   onReplay,
+  align,
+  rampSec,
+  onAlign,
+  onRampSec,
 }: ClipPathInspectorSectionProps): ReactElement {
   // The dropdown's pending choice — seeded from the computed clip, else the
   // first registered clip. Calculate is what commits it to the store.
@@ -77,6 +89,36 @@ export function ClipPathInspectorSection({
             Clear
           </button>
         </div>
+
+        <div className={styles.scrubRow}>
+          <span className={styles.muted}>align</span>
+          <input
+            className={styles.scrub}
+            type="range"
+            min={0}
+            max={3}
+            step={0.05}
+            value={align}
+            onChange={(e) => onAlign(Number(e.target.value))}
+          />
+          <span className={styles.readout}>{align.toFixed(2)}s</span>
+        </div>
+        <div className={styles.scrubRow}>
+          <span className={styles.muted}>ramp</span>
+          <input
+            className={styles.scrub}
+            type="range"
+            min={0}
+            max={6}
+            step={0.1}
+            value={rampSec}
+            onChange={(e) => onRampSec(Number(e.target.value))}
+          />
+          <span className={styles.readout}>{rampSec === 0 ? 'off' : `${rampSec.toFixed(1)}s`}</span>
+        </div>
+        {active && (
+          <div className={styles.muted}>Re-Calculate to apply align/ramp to the path.</div>
+        )}
 
         <div className={styles.scrubRow}>
           <input
