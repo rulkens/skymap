@@ -1,10 +1,12 @@
 /**
  * CommandPalette — Cmd+K (or Ctrl+K, or `/`) overlay for searching
- * across two parallel indexes:
+ * across three parallel indexes:
  *
  *   1. The curated famous-galaxies atlas (`entries`, ~75 hand-picked).
  *   2. The PGC-keyed alias index (`aliasIndex`, ~48k GLADE+2MRS rows
  *      with NGC/IC/UGC/M/etc. cross-references from HyperLEDA).
+ *   3. The large-scale structure index (`structures`, ~370 clusters /
+ *      superclusters / voids / groups, by name + Abell number).
  *
  * UX:
  *   - Triggered by a keyboard shortcut (handled in App.tsx).
@@ -42,6 +44,7 @@ import FeaturedGrid from './FeaturedGrid';
 import ResultsList from './ResultsList';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
+import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import styles from './CommandPalette.module.css';
 
 export type CommandPaletteProps = {
@@ -54,6 +57,14 @@ export type CommandPaletteProps = {
    * (e.g. on developer clones without the sidecar).
    */
   readonly aliasIndex?: readonly AliasIndexEntry[];
+  /**
+   * The large-scale structure index (clusters / superclusters / voids / groups)
+   * snapshotted from the engine's loaded structures on palette open.  Optional —
+   * the palette degrades to galaxy-only search when undefined or empty (e.g.
+   * before the structure catalog has loaded, or with every structure category
+   * hidden).
+   */
+  readonly structures?: readonly StructureSearchEntry[];
   /** Whether the palette is currently shown. */
   readonly open: boolean;
   /** Close handler — called on Esc, click-outside, or after a successful selection. */
@@ -69,6 +80,7 @@ export type CommandPaletteProps = {
 function CommandPalette({
   entries,
   aliasIndex,
+  structures,
   open,
   onClose,
   onSelect,
@@ -82,7 +94,7 @@ function CommandPalette({
     inputRef,
     onKeyDown,
     dispatchSelection,
-  } = usePaletteSearch({ entries, aliasIndex, open, onClose, onSelect });
+  } = usePaletteSearch({ entries, aliasIndex, structures, open, onClose, onSelect });
 
   if (!open) return null;
   return (
@@ -96,7 +108,7 @@ function CommandPalette({
         <input
           ref={inputRef}
           className={styles.input}
-          placeholder="Search galaxies (M31, NGC 4565, Andromeda, …)"
+          placeholder="Search galaxies & clusters (M31, NGC 4565, Coma, A2703, …)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />

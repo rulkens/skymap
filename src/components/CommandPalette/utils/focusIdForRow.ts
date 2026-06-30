@@ -14,6 +14,9 @@
  *                'pgc-<n>' for the GLADE/2MRS PGC the alias row carries. We reuse
  *                that encoder rather than re-spell the 'pgc-' grammar here so the
  *                encode↔decode round-trip keeps one home.
+ *   - structure→ the record's own durable `${category}-${seedId}` id, which
+ *                `resolveFocusId` accepts and `structures.byId` resolves. No
+ *                re-encoding — the store already holds the canonical id.
  *   - milkyWay → the fixed singleton literal `MILKY_WAY_FOCUS_ID`.
  *
  * TABLE-DISPATCH on `row.kind` (simplicity convention item 7): a new row kind is
@@ -41,6 +44,7 @@ const FOCUS_ID: Record<ScoredRow['kind'], (row: ScoredRow) => string> = {
           dec: 0,
         })!
       : '',
+  structure: (row) => (row.kind === 'structure' ? row.entry.id : ''),
   milkyWay: () => MILKY_WAY_FOCUS_ID,
 };
 

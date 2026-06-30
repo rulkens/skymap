@@ -51,7 +51,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## UI & UX
 
-- [ ] **Structure search in the palette** `ready` — index clusters/superclusters/voids (MCXC+MSCC names + Abell numbers from `structures_meta.json`) in `CommandPalette.tsx` + select-and-fly-to. → [details](backlog/2026-06-29-structure-search-palette.md)
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
 - [ ] **VolumeFieldRow schema-driven UI** `needs-design` — replace the seven hand-coded sliders with a settings-schema-generated UI.
 - [ ] **Global shortcuts → keyboard saga** `needs-design` — migrate the non-tour keys (Cmd+K, /, Esc, f, h, l, Tab, d) from the `useKeyboardShortcuts` hook to a declarative map + a shared `watchKeyboardEventsSaga`. → [details](backlog/2026-06-29-keyboard-shortcuts-saga.md)

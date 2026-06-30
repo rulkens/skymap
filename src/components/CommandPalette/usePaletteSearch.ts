@@ -17,10 +17,12 @@ import { focusIdForRow } from './utils/focusIdForRow';
 import type { ScoredRow } from './paletteRowModel';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
+import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
 export type UsePaletteSearchInput = {
   entries: readonly FamousMetaEntry[];
   aliasIndex?: readonly AliasIndexEntry[];
+  structures?: readonly StructureSearchEntry[];
   open: boolean;
   onClose: () => void;
   /** Fired with the picked row's durable focus id; the parent runs `requestFocus`. */
@@ -41,6 +43,7 @@ export type UsePaletteSearch = {
 export function usePaletteSearch({
   entries,
   aliasIndex,
+  structures,
   open,
   onClose,
   onSelect,
@@ -50,8 +53,8 @@ export function usePaletteSearch({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const matches = useMemo(
-    () => rankPaletteMatches(entries, aliasIndex, query),
-    [entries, aliasIndex, query],
+    () => rankPaletteMatches(entries, aliasIndex, structures, query),
+    [entries, aliasIndex, structures, query],
   );
 
   // Reset highlight when the query changes — otherwise we'd point past the
