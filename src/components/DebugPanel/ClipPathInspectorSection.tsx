@@ -118,6 +118,17 @@ export function ClipPathInspectorSection({
           <button type="button" className={styles.button} onClick={() => onInspect(selected)}>
             Calculate
           </button>
+          {/* Re-sample the SHOWN clip from the current camera — move the camera
+              to view the path, then refresh its start knot without re-picking. */}
+          <button
+            type="button"
+            className={styles.button}
+            onClick={() => inspectId !== null && onInspect(inspectId)}
+            disabled={!active}
+            title="Recompute the shown path from the current camera position"
+          >
+            Re-calc
+          </button>
           <button type="button" className={styles.button} onClick={onClear}>
             Clear
           </button>
