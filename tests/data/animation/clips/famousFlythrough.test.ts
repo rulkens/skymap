@@ -19,18 +19,21 @@
 import { describe, it, expect } from 'vitest';
 import { famousFlythrough } from '../../../../src/data/animation/clips/famousFlythrough';
 
-/** The curated outward journey, in authored order (Local Group → Virgo). */
+/**
+ * The curated set in its turn-minimised order (open-TSP over real 3D positions,
+ * not by distance — see the clip's module docstring). Settles on M87.
+ */
 const EXPECTED_WAYPOINTS = [
-  'm31', // Andromeda
-  'm33', // Triangulum
-  'm81', // Bode's
-  'c77', // Centaurus A
   'c65', // Sculptor
-  'm83', // Southern Pinwheel
-  'm64', // Black Eye
+  'm31', // Andromeda
   'm101', // Pinwheel
   'm51', // Whirlpool
   'm104', // Sombrero
+  'm83', // Southern Pinwheel
+  'c77', // Centaurus A
+  'm33', // Triangulum
+  'm81', // Bode's
+  'm64', // Black Eye
   'm87', // Virgo A (finale)
 ];
 
