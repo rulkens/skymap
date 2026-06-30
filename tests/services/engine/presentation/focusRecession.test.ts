@@ -29,6 +29,7 @@ function makeClipPlayer(factor: number): ClipPlayer {
     stop: vi.fn<() => void>(),
     registerEndResolver: vi.fn<(onEnd: () => void) => void>(),
     clipOpacityOf: vi.fn<(layer: VisibilityLayerKey, nowMs: number) => number>(() => factor),
+    currentCompiled: vi.fn<() => null>(() => null),
     destroy: vi.fn<() => void>(),
   };
 }

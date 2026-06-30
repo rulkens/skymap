@@ -192,7 +192,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   const fontAtlases = await loadFontAtlases();
   state.gpu.labelRenderer = createLabelRenderer(uiCtx, fontAtlases);
-  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx);
+  // 256 lines: the "you are here" stem + any tagged markers, plus headroom for
+  // the debug clip-path overlay (`produceClipPathLines` emits ~47 per track).
+  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx, 256);
   state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx);
   // HDR pass — writes into the rgba16float offscreen target, NOT the
   // swap chain.  The fadeBgl placeholder at @group(1) must match what the

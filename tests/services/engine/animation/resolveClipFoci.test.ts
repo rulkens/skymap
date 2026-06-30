@@ -35,6 +35,9 @@ import {
   fork,
   hold,
   hide,
+  flyPath,
+  atFocus,
+  atPoint,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
@@ -252,5 +255,47 @@ describe('resolveClipFoci preserves ClipData metadata', () => {
     };
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
     expect(resolved.start).toBe(clip.start);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 7 — flyPath: id-form waypoints resolve, at-form pass through, opts kept
+// ---------------------------------------------------------------------------
+
+describe('resolveClipFoci resolves flyPath waypoints', () => {
+  it('rewrites atFocus to at-form and leaves atPoint untouched, preserving over/angles', () => {
+    const clip: ClipData = {
+      timeline: [
+        flyPath(
+          [
+            atFocus(focusId('cluster-virgo'), { over: 2 }),
+            atPoint([5, 5, 5], 3, { pitch: 0.2 }),
+          ],
+          { over: 5, ease: 'inOut' },
+        ),
+      ],
+    };
+
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const fp = resolved.timeline[0]!;
+    if (fp.kind !== 'flyPath') throw new Error('expected a flyPath effect');
+
+    // Waypoint 0: the focus id resolved to Virgo's framed pose; over preserved.
+    const w0 = fp.waypoints[0]!;
+    if (!('at' in w0)) throw new Error('waypoint 0 should be resolved to at-form');
+    expect(w0.at).toEqual(EXPECTED_TARGET);
+    expect(w0.distance).toBeCloseTo(EXPECTED_DISTANCE, 6);
+    expect(w0.over).toBe(2);
+
+    // Waypoint 1: the concrete point passed through unchanged.
+    const w1 = fp.waypoints[1]!;
+    if (!('at' in w1)) throw new Error('waypoint 1 should remain at-form');
+    expect(w1.at).toEqual([5, 5, 5]);
+    expect(w1.distance).toBe(3);
+    expect(w1.pitch).toBe(0.2);
+
+    // The path-level over/ease pass through.
+    expect(fp.over).toBe(5);
+    expect(fp.ease).toBe('inOut');
   });
 });

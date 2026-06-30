@@ -26,6 +26,7 @@
  */
 
 import type { VisibilityLayerKey } from '../../animation/VisibilityLayerKey';
+import type { CompiledClip } from '../../animation/CompiledClip';
 import type { Destroyable } from '../../rendering/Destroyable';
 
 export type ClipPlayer = {
@@ -73,4 +74,12 @@ export type ClipPlayer = {
    *   `finalAlpha = registryFactor × intentBridgeFactor × clipOpacityOf(layer, now)`
    */
   clipOpacityOf(layer: VisibilityLayerKey, nowMs: number): number;
+
+  /**
+   * The compiled form of the active clip, or `null` when idle. Reads the same
+   * memoised cache `tick` populates. Exposed for the debug clip-path overlay
+   * (`produceClipPathLines`), which samples the compiled `pathTracks` to draw
+   * the flythrough route in-scene.
+   */
+  currentCompiled(): CompiledClip | null;
 } & Destroyable;

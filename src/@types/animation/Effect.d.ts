@@ -44,6 +44,17 @@
  *     duration ignores a fork. A `fork`ed perpetual `spin`/`oscillate` runs
  *     "under" the awaited timeline and is cancelled at clip end.
  *
+ *   - `flyPath` — a multi-waypoint camera flythrough. Unlike chained `setVec`
+ *     tweens (which corner at each point), it fits one arc-length-reparametrised
+ *     Catmull-Rom through its `waypoints`, so the path is C1-smooth and
+ *     perceived speed is uniform by default. It owns all four camera channels
+ *     for its window (a single composite writer), so the base/`set` layer must
+ *     not also write them there. `over` is the TOTAL travel seconds; `ease`
+ *     shapes the whole leg's accel/decel. A `flyPath` may carry `id`-form
+ *     waypoints, so `resolveClipFoci` rewrites it before `compileClip` — but
+ *     unlike the `FocusBoundEffect` arms it is NOT consumed away: the resolved
+ *     `flyPath` (all waypoints in `at`-form) survives into `compileClip`.
+ *
  * ### Alternative rejected: separate `CameraEffect` and `SceneEffect` timelines
  *
  * Two parallel arrays would let the player split without discriminating on `kind`,
@@ -55,6 +66,8 @@
 import type { CameraAction } from './CameraAction';
 import type { FocusBoundEffect } from './FocusBoundEffect';
 import type { SceneEffect } from './SceneEffect';
+import type { PathWaypoint } from './PathWaypoint';
+import type { Ease } from './Ease';
 
 export type Effect =
   | CameraAction
@@ -64,4 +77,10 @@ export type Effect =
   | { readonly kind: 'wait'; readonly sec: number }
   | { readonly kind: 'seq'; readonly children: Effect[] }
   | { readonly kind: 'all'; readonly children: Effect[] }
-  | { readonly kind: 'fork'; readonly child: Effect };
+  | { readonly kind: 'fork'; readonly child: Effect }
+  | {
+      readonly kind: 'flyPath';
+      readonly waypoints: PathWaypoint[];
+      readonly over: number;
+      readonly ease: Ease;
+    };

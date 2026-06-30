@@ -22,6 +22,9 @@ import {
   all,
   fork,
   wait,
+  flyPath,
+  atPoint,
+  atFocus,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
 
@@ -273,5 +276,41 @@ describe('compileClip throws on an unresolved focus-bound effect', () => {
         timeline: [moveTargetId(focusId('m87'), 5)],
       }),
     ).toThrow('resolveClipFoci');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 9 — flyPath compiles to a path track; guards its invariants
+// ---------------------------------------------------------------------------
+
+describe('compileClip flyPath', () => {
+  it('compiles a resolved flyPath to one path track spanning its window', () => {
+    const compiled = compileClip({
+      start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
+      timeline: [flyPath([atPoint([10, 0, 0], 10), atPoint([20, 0, 0], 100)], { over: 6 })],
+    });
+    expect(compiled.pathTracks).toHaveLength(1);
+    expect(compiled.pathTracks[0]!.startSec).toBe(0);
+    expect(compiled.pathTracks[0]!.endSec).toBe(6);
+    expect(compiled.durationSec).toBe(6);
+  });
+
+  it('throws on an unresolved (id-form) waypoint', () => {
+    expect(() =>
+      compileClip({
+        timeline: [flyPath([atFocus(focusId('m87'))], { over: 4 })],
+      }),
+    ).toThrow('resolveClipFoci');
+  });
+
+  it('throws when a base writer overlaps the flyPath window (composite exclusivity)', () => {
+    // A flyPath owns all camera channels for [0,4); a concurrent dollyTo on
+    // `distance` in the same window is a clash, caught at compile time.
+    expect(() =>
+      compileClip({
+        start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
+        timeline: [all([flyPath([atPoint([10, 0, 0], 10)], { over: 4 }), dollyTo(50, 4)])],
+      }),
+    ).toThrow(/flyPath window/);
   });
 });

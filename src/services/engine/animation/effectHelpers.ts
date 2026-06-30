@@ -48,6 +48,7 @@ import type { Space } from '../../../@types/animation/Space';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
+import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import { CHANNEL_SPACE } from './channelSpace';
 
 // ---------------------------------------------------------------------------
@@ -362,4 +363,57 @@ export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
  */
 export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' } {
   return { kind: 'focusId', id };
+}
+
+// ---------------------------------------------------------------------------
+// Path helpers — waypoints + the flythrough that flies a spline through them
+// ---------------------------------------------------------------------------
+
+type WaypointOpts = { yaw?: number; pitch?: number; over?: number };
+
+function waypointExtras(opts?: WaypointOpts): WaypointOpts {
+  return {
+    ...(opts?.yaw !== undefined ? { yaw: opts.yaw } : {}),
+    ...(opts?.pitch !== undefined ? { pitch: opts.pitch } : {}),
+    ...(opts?.over !== undefined ? { over: opts.over } : {}),
+  };
+}
+
+/**
+ * atPoint — a `flyPath` waypoint at a concrete world position and distance.
+ *
+ * `opts.over` pins the seconds of the leg leading into this waypoint (omit for
+ * the arc-length share of the path total — uniform speed). `opts.yaw`/`pitch`
+ * pin the approach angle (omit to interpolate it across the leg).
+ */
+export function atPoint(at: Vec3, distance: number, opts?: WaypointOpts): PathWaypoint {
+  return { at, distance, ...waypointExtras(opts) };
+}
+
+/**
+ * atFocus — a `flyPath` waypoint addressed by a durable `FocusId`. The UNRESOLVED
+ * form: `resolveClipFoci` rewrites it to an `atPoint`-shaped waypoint (the
+ * structure/galaxy's framed position + distance) before `compileClip` runs.
+ */
+export function atFocus(id: FocusId, opts?: WaypointOpts): PathWaypoint {
+  return { id, ...waypointExtras(opts) };
+}
+
+/**
+ * flyPath — fly a smooth spline through `waypoints` over `opts.over` total
+ * seconds, with `opts.ease` shaping the whole leg's accel/decel (defaults
+ * `'inOut'`: launch from rest, settle at the last waypoint). The opts object —
+ * not a bare ease — leaves room for future knobs (e.g. look-offset) without
+ * touching call sites.
+ *
+ * Unlike chained `seq([moveTarget, …])` tweens (which corner at each point),
+ * the path is C1-smooth and perceived speed is uniform by default. It owns all
+ * four camera channels for its window, so don't also drive them with `set`/
+ * `dollyTo`/`moveTarget` in the same window.
+ */
+export function flyPath(
+  waypoints: PathWaypoint[],
+  opts: { over: number; ease?: Ease },
+): Effect & { kind: 'flyPath' } {
+  return { kind: 'flyPath', waypoints, over: opts.over, ease: opts.ease ?? 'inOut' };
 }

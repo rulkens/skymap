@@ -13,9 +13,11 @@ import type { ClipId } from '../../../@types/animation/ClipId';
 import { cosmicFlows } from './cosmicFlows';
 import { flyout } from './flyout';
 import { flowOrbit } from './flowOrbit';
+import { flyPathDemo } from './flyPathDemo';
 
 export const clipRegistry: Record<ClipId, Clip> = {
   cosmicFlows,
   flyout,
   flowOrbit,
+  flyPathDemo,
 };

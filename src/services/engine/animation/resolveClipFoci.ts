@@ -97,6 +97,22 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number): Effect 
       const { distance } = resolveFraming(effect.id, deps, fovYRad);
       return dollyTo(distance, effect.over, effect.ease);
     }
+    // ── flyPath — resolve each id-bearing waypoint; pass at-form through ──────
+    case 'flyPath': {
+      const waypoints = effect.waypoints.map((w) => {
+        if (!('id' in w)) return w; // already concrete
+        const { target, distance } = resolveFraming(w.id, deps, fovYRad);
+        return {
+          at: target,
+          distance,
+          ...(w.yaw !== undefined ? { yaw: w.yaw } : {}),
+          ...(w.pitch !== undefined ? { pitch: w.pitch } : {}),
+          ...(w.over !== undefined ? { over: w.over } : {}),
+        };
+      });
+      return { kind: 'flyPath', waypoints, over: effect.over, ease: effect.ease };
+    }
+
     case 'focusId': {
       if (effect.id === null) {
         // Explicit focus-clear: resolves to a no-op focus cue.
