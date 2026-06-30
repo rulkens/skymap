@@ -1,0 +1,74 @@
+/*
+ * paletteRows — the per-row internals `ROW_VIEW` emits into each results <li>:
+ * the famous thumbnail, the alias letter-glyph stand-in, the source-label chip,
+ * and the dim secondary (alias) text.  The list container + row shell live in
+ * `ResultsList.module.css`.  All atoms reference tokens from `src/styles/global.css`.
+ */
+
+/*
+ * Result thumbnail — 32 px square.  Matches the InfoCard thumbnail
+ * styling family at a smaller scale (rounded corners, faint rim).
+ */
+.thumb {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
+  object-fit: cover;
+}
+
+/*
+ * Aliases ("· Andromeda Galaxy · NGC 224") rendered in the dim heading
+ * tone so the eye reads "primary name + supporting metadata".
+ */
+.secondary {
+  margin-left: var(--space-4);
+  color: var(--color-fg-dim);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-mid);
+}
+
+/*
+ * Alias-row glyph — stand-in for the absent thumbnail.  Same 32-px
+ * footprint as `.thumb` so heights stay aligned with the famous rows
+ * directly above.  Renders the alias's first letter ("N" for NGC,
+ * "I" for IC, …) inside a soft-glass disc — readable cue without
+ * the visual noise of a real thumbnail we don't have.
+ */
+.aliasGlyph {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-badge);
+  border: 1px solid var(--border-default);
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / 32px var(--font-family-mono);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+/*
+ * Source-label chip on alias rows ("GLADE" / "2MRS").  Lives at the
+ * end of the secondary line so the row reads
+ *
+ *     NGC 4565    UGC 7772 · MCG +04-30-006   GLADE
+ *
+ * with the chip visually distinct from the alias list — same badge
+ * surface as the resultActive highlight, but tiny and uppercase like
+ * the chips inside InfoCard.
+ */
+.aliasSource {
+  margin-left: var(--space-5);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-badge);
+  color: var(--color-fg-dim);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  vertical-align: middle;
+}

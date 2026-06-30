@@ -1,0 +1,50 @@
+/*
+ * FeaturedCardTip — the InfoTip body that hovers a featured-grid card.  Three
+ * optional sections stacked with progressively muted typography so the eye sees
+ * them in order: morphological type chip first (compact identifier), aliases
+ * line (designations comma-separated), then the curated paragraph.  All atoms
+ * reference tokens from `src/styles/global.css`.
+ */
+
+.tipType {
+  display: inline-block;
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-badge);
+  color: var(--color-fg-base);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+}
+
+.tipAliases {
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-mid);
+  color: var(--color-fg-dim);
+}
+
+.tipAliasesLabel {
+  /*
+   * Slightly lower opacity than the aliases themselves so "Also known
+   * as M31 · NGC 224 · …" reads as label + values rather than as one
+   * undifferentiated string.
+   */
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  font-size: var(--font-size-xs);
+}
+
+.tipDescription {
+  /*
+   * Comfortable reading width for the curated paragraph.  No max-
+   * height clamp here — InfoTip's max-width: 320px paired with
+   * normal whitespace already keeps the panel reasonable; truncating
+   * mid-sentence would hide the most interesting part of a galaxy's
+   * story.
+   */
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-relaxed);
+}

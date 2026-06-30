@@ -14,7 +14,7 @@ import type { ReactNode } from 'react';
 import { SOURCE_REGISTRY } from '../../data/sources';
 import { MILKY_WAY_NAMES } from './paletteRowModel';
 import type { ScoredRow } from './paletteRowModel';
-import styles from './CommandPalette.module.css';
+import styles from './paletteRows.module.css';
 
 /** What InfoCard's row renderer needs, computed per row kind. */
 export type RowView = {

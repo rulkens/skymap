@@ -9,7 +9,7 @@
 import type { ReactNode } from 'react';
 import { ROW_VIEW } from './paletteRows';
 import type { ScoredRow } from './paletteRowModel';
-import styles from './CommandPalette.module.css';
+import styles from './ResultsList.module.css';
 
 export type ResultsListProps = {
   matches: readonly ScoredRow[];

@@ -1,0 +1,53 @@
+/*
+ * ResultsList — the ranked results <ul>, its rows, and the empty-state
+ * message.  The per-row leading visual + secondary text are styled in
+ * `paletteRows.module.css` (where `ROW_VIEW` emits them); this module owns the
+ * list container, the row shell, the active highlight, the primary name, and
+ * the "No matches" line.  All atoms reference tokens from `src/styles/global.css`.
+ */
+
+.results {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) 0;
+  overflow-y: auto;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-3) var(--space-7);
+  cursor: pointer;
+  user-select: none;
+}
+
+/*
+ * Active row (keyboard or hover focused).  Uses the badge surface tint —
+ * the same blue we apply to source-attribution chips inside info cards.
+ * Soft enough that it reads as "selected" without competing with the
+ * primary text underneath.
+ */
+.resultActive {
+  background: var(--surface-badge);
+}
+
+/*
+ * Primary name (e.g. "M31").  Uppercased + tracked like the rest of the
+ * UI's primary headlines so the row reads as a section header within
+ * the result list rather than body text.
+ */
+.primary {
+  color: var(--color-fg);
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+/* Empty-results message — same dim tone as section headings. */
+.empty {
+  padding: var(--space-10);
+  text-align: center;
+  color: var(--color-fg-dim);
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-mid);
+}
