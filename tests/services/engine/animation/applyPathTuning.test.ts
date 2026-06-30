@@ -81,4 +81,39 @@ describe('applyPathTuning', () => {
     };
     expect(applyPathTuning(clip, TUNING)).toEqual(clip);
   });
+
+  it('overrides only the present knobs, keeping the clip authored values for the rest', () => {
+    // The inspector passes only the ACTIVATED knobs. An omitted knob must keep
+    // the clip's own value — this is what lets a Calculate preview the clip's
+    // real pacing rather than the inspector's seeded defaults.
+    const clip: ClipData = {
+      start: 'live',
+      timeline: [
+        flyPath([atPoint([10, 0, 0], 5)], {
+          over: 8,
+          align: 2,
+          rampSec: 3,
+          linger: 0.65,
+          spline: 'centripetal',
+          turnDelay: 1,
+        }),
+      ],
+    };
+    // Activate ONLY linger.
+    const tuned = applyPathTuning(clip, { linger: 0.1 });
+    const node = tuned.timeline[0] as Extract<(typeof tuned.timeline)[number], { kind: 'flyPath' }>;
+    expect(node.linger).toBe(0.1); // overridden
+    expect(node.align).toBe(2); // untouched (clip's value)
+    expect(node.rampSec).toBe(3); // untouched
+    expect(node.spline).toBe('centripetal'); // untouched
+    expect(node.turnDelay).toBe(1); // untouched
+  });
+
+  it('is a no-op for an empty tuning (no knob activated)', () => {
+    const clip: ClipData = {
+      start: 'live',
+      timeline: [flyPath([atPoint([10, 0, 0], 5)], { over: 8, linger: 0.65 })],
+    };
+    expect(applyPathTuning(clip, {})).toEqual(clip);
+  });
 });

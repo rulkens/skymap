@@ -53,6 +53,7 @@ import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
 import type { ClipId } from '../animation/ClipId';
 import type { SplineMode } from '../animation/SplineMode';
+import type { ClipPathTuningActive } from './ClipPathTuningActive';
 
 export type EngineSettingsState = {
   /**
@@ -204,14 +205,20 @@ export type EngineSettingsState = {
      * clip duration, so the scrubber is a pure position).
      *
      * `align` / `rampSec` / `linger` / `spline` / `turnDelay` are the live flyPath
-     * pacing + shape knobs the inspector bakes into the clip at Calculate time
+     * pacing + shape knobs the inspector can bake into the clip at Calculate time
      * (via `applyPathTuning`): `align` is the start-aim blend seconds, `rampSec`
      * the seconds of ease ramp each end (0 = use the named `ease`), `linger` the
      * per-target brake depth ∈ [0,1] (0 = cruise straight through each waypoint),
      * `spline` the basis (centripetal Catmull-Rom ↔ causal Hermite), `turnDelay`
-     * the causal-Hermite overshoot magnitude (inert in centripetal mode). They
-     * seed from the flyPath defaults, so a fresh inspect re-applies the clip's own
-     * pacing until a slider is dragged.
+     * the causal-Hermite overshoot magnitude (inert in centripetal mode).
+     *
+     * Each knob is an OVERRIDE that is inactive until the curator touches it:
+     * `active[knob]` gates whether that knob is applied at all. While inactive,
+     * the clip's own authored value flows through untouched — so Calculating a
+     * clip with no slider touched previews its REAL pacing, not the inspector's
+     * defaults. Touching a slider/dropdown flips its `active` flag on; the row's
+     * checkbox toggles it back off. The values seed from the flyPath defaults so a
+     * freshly-activated slider starts somewhere sensible.
      */
     clipPathInspect: {
       clipId: ClipId | null;
@@ -221,6 +228,8 @@ export type EngineSettingsState = {
       linger: number;
       spline: SplineMode;
       turnDelay: number;
+      /** Per-knob override gate — only an active knob is baked into the clip. */
+      active: ClipPathTuningActive;
     };
   };
 

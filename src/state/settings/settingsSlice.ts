@@ -38,6 +38,7 @@ import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCata
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
+import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
@@ -184,27 +185,42 @@ const settingsSlice = createSlice({
     setClipPathScrub: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.scrub01 = action.payload;
     },
-    // flyPath pacing knobs the saga bakes into the clip at Calculate time.
+    // flyPath pacing knobs the saga bakes into the clip at Calculate time — but
+    // only the ones the curator has ACTIVATED (see `setClipPathTuningActive`).
     // `align` = start-aim blend seconds; `rampSec` = ease ramp seconds each end
     // (0 = use the named ease); `linger` = per-target brake depth [0,1] (0 =
-    // cruise straight through). Re-Calculate to apply.
+    // cruise straight through). Touching a value activates that knob's override
+    // (so dragging a slider is enough to opt in); Re-Calculate to apply.
     setClipPathAlign: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.align = action.payload;
+      settings.debug.clipPathInspect.active.align = true;
     },
     setClipPathRampSec: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.rampSec = action.payload;
+      settings.debug.clipPathInspect.active.rampSec = true;
     },
     setClipPathLinger: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.linger = action.payload;
+      settings.debug.clipPathInspect.active.linger = true;
     },
-    // Spline basis A/B: centripetal Catmull-Rom ↔ causal Hermite. Re-Calculate
-    // to apply. `turnDelay` is the causal-Hermite overshoot magnitude (inert in
-    // centripetal mode).
+    // Spline basis A/B: centripetal Catmull-Rom ↔ causal Hermite. `turnDelay` is
+    // the causal-Hermite overshoot magnitude (inert in centripetal mode).
     setClipPathSpline: (settings, action: PayloadAction<SplineMode>) => {
       settings.debug.clipPathInspect.spline = action.payload;
+      settings.debug.clipPathInspect.active.spline = true;
     },
     setClipPathTurnDelay: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.turnDelay = action.payload;
+      settings.debug.clipPathInspect.active.turnDelay = true;
+    },
+    // Toggle a single pacing knob's override on/off. Off (the default) lets the
+    // clip's own authored value flow through; the row checkbox drives this, and
+    // the value setters above flip it on when the curator touches a slider.
+    setClipPathTuningActive: (
+      settings,
+      action: PayloadAction<{ knob: ClipPathTuningKnob; active: boolean }>,
+    ) => {
+      settings.debug.clipPathInspect.active[action.payload.knob] = action.payload.active;
     },
 
     // ── structures ──────────────────────────────────────────────────────────
@@ -268,6 +284,7 @@ export const {
   setClipPathLinger,
   setClipPathSpline,
   setClipPathTurnDelay,
+  setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,

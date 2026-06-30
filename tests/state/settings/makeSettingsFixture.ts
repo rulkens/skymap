@@ -93,6 +93,13 @@ export function makeSettingsFixture(
         linger: DEFAULT_LINGER,
         spline: DEFAULT_SPLINE,
         turnDelay: DEFAULT_TURN_DELAY,
+        active: {
+          align: false,
+          rampSec: false,
+          linger: false,
+          spline: false,
+          turnDelay: false,
+        },
       },
     },
     structures: {

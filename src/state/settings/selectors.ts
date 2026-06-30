@@ -46,6 +46,7 @@ import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSetti
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
+import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningActive';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
@@ -153,6 +154,9 @@ export const selectClipPathSpline = (state: RootState): SplineMode =>
 
 export const selectClipPathTurnDelay = (state: RootState): number =>
   selectSettings(state).debug.clipPathInspect.turnDelay;
+
+export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
+  selectSettings(state).debug.clipPathInspect.active;
 
 // --- structures cluster -------------------------------------------------------
 

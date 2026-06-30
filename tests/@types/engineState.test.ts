@@ -115,6 +115,13 @@ describe('EngineState type', () => {
           linger: 0,
           spline: 'centripetal',
           turnDelay: 1,
+          active: {
+            align: false,
+            rampSec: false,
+            linger: false,
+            spline: false,
+            turnDelay: false,
+          },
         },
       },
       structures: {
@@ -284,6 +291,13 @@ describe('EngineState type', () => {
           linger: 0,
           spline: 'centripetal',
           turnDelay: 1,
+          active: {
+            align: false,
+            rampSec: false,
+            linger: false,
+            spline: false,
+            turnDelay: false,
+          },
         },
       },
       structures: {
@@ -347,6 +361,13 @@ describe('EngineState type', () => {
             linger: 0,
             spline: 'centripetal',
             turnDelay: 1,
+            active: {
+              align: false,
+              rampSec: false,
+              linger: false,
+              spline: false,
+              turnDelay: false,
+            },
           },
         },
         structures: {

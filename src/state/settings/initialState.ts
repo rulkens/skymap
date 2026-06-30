@@ -109,10 +109,10 @@ export function buildInitialSettings(): EngineSettingsState {
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},
       // Clip-path inspector idle: no clip chosen, scrubber at the start. The
-      // overlay stays quiet until the curator clicks "Calculate". `align` /
-      // `rampSec` / `linger` seed from the flyPath defaults, so a fresh inspect
-      // re-applies the clip's own pacing (a no-op) until the curator drags a
-      // slider.
+      // overlay stays quiet until the curator clicks "Calculate". The pacing
+      // knobs seed from the flyPath defaults but every override is INACTIVE, so a
+      // fresh Calculate previews the clip's own authored pacing until the curator
+      // touches a slider (which activates just that knob).
       clipPathInspect: {
         clipId: null,
         scrub01: 0,
@@ -121,6 +121,13 @@ export function buildInitialSettings(): EngineSettingsState {
         linger: DEFAULT_LINGER,
         spline: DEFAULT_SPLINE,
         turnDelay: DEFAULT_TURN_DELAY,
+        active: {
+          align: false,
+          rampSec: false,
+          linger: false,
+          spline: false,
+          turnDelay: false,
+        },
       },
     },
     // Structure overlay: master gate on + one item row per category, each

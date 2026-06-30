@@ -21,6 +21,8 @@ import { useState, type ReactElement } from 'react';
 
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
+import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningActive';
+import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import styles from './ClipPathInspectorSection.module.css';
 
@@ -47,6 +49,8 @@ export type ClipPathInspectorSectionProps = {
   spline: SplineMode;
   /** Causal-Hermite turn-delay magnitude (inert in centripetal) — applied on the next Calculate. */
   turnDelay: number;
+  /** Per-knob override gates — an inactive knob keeps the clip's authored value. */
+  tuningActive: ClipPathTuningActive;
   /** Set the align-in seconds. */
   onAlign: (align: number) => void;
   /** Set the ease-ramp seconds. */
@@ -57,6 +61,8 @@ export type ClipPathInspectorSectionProps = {
   onSpline: (spline: SplineMode) => void;
   /** Set the causal-Hermite turn-delay magnitude. */
   onTurnDelay: (turnDelay: number) => void;
+  /** Toggle a single knob's override on/off (the row checkbox). */
+  onTuningActive: (knob: ClipPathTuningKnob, active: boolean) => void;
 };
 
 // Registry rows → dropdown options. A new clip is a new option, no edit here.
@@ -74,11 +80,13 @@ export function ClipPathInspectorSection({
   linger,
   spline,
   turnDelay,
+  tuningActive,
   onAlign,
   onRampSec,
   onLinger,
   onSpline,
   onTurnDelay,
+  onTuningActive,
 }: ClipPathInspectorSectionProps): ReactElement {
   // The dropdown's pending choice — seeded from the computed clip, else the
   // first registered clip. Calculate is what commits it to the store.
@@ -110,7 +118,14 @@ export function ClipPathInspectorSection({
         </div>
 
         <div className={styles.scrubRow}>
-          <span className={styles.muted}>align</span>
+          <input
+            className={styles.check}
+            type="checkbox"
+            title="Override the clip's align"
+            checked={tuningActive.align}
+            onChange={(e) => onTuningActive('align', e.target.checked)}
+          />
+          <span className={styles.knobLabel}>align</span>
           <input
             className={styles.scrub}
             type="range"
@@ -123,7 +138,14 @@ export function ClipPathInspectorSection({
           <span className={styles.readout}>{align.toFixed(2)}s</span>
         </div>
         <div className={styles.scrubRow}>
-          <span className={styles.muted}>ramp</span>
+          <input
+            className={styles.check}
+            type="checkbox"
+            title="Override the clip's ramp"
+            checked={tuningActive.rampSec}
+            onChange={(e) => onTuningActive('rampSec', e.target.checked)}
+          />
+          <span className={styles.knobLabel}>ramp</span>
           <input
             className={styles.scrub}
             type="range"
@@ -136,7 +158,14 @@ export function ClipPathInspectorSection({
           <span className={styles.readout}>{rampSec.toFixed(1)}s</span>
         </div>
         <div className={styles.scrubRow}>
-          <span className={styles.muted}>linger</span>
+          <input
+            className={styles.check}
+            type="checkbox"
+            title="Override the clip's linger"
+            checked={tuningActive.linger}
+            onChange={(e) => onTuningActive('linger', e.target.checked)}
+          />
+          <span className={styles.knobLabel}>linger</span>
           <input
             className={styles.scrub}
             type="range"
@@ -149,7 +178,14 @@ export function ClipPathInspectorSection({
           <span className={styles.readout}>{linger.toFixed(2)}</span>
         </div>
         <div className={styles.scrubRow}>
-          <span className={styles.muted}>spline</span>
+          <input
+            className={styles.check}
+            type="checkbox"
+            title="Override the clip's spline basis"
+            checked={tuningActive.spline}
+            onChange={(e) => onTuningActive('spline', e.target.checked)}
+          />
+          <span className={styles.knobLabel}>spline</span>
           <select
             className={styles.select}
             value={spline}
@@ -160,7 +196,14 @@ export function ClipPathInspectorSection({
           </select>
         </div>
         <div className={styles.scrubRow}>
-          <span className={styles.muted}>turn delay</span>
+          <input
+            className={styles.check}
+            type="checkbox"
+            title="Override the clip's turn delay"
+            checked={tuningActive.turnDelay}
+            onChange={(e) => onTuningActive('turnDelay', e.target.checked)}
+          />
+          <span className={styles.knobLabel}>turn delay</span>
           <input
             className={styles.scrub}
             type="range"
@@ -168,13 +211,15 @@ export function ClipPathInspectorSection({
             max={3}
             step={0.05}
             value={turnDelay}
-            disabled={spline !== 'causalHermite'}
             onChange={(e) => onTurnDelay(Number(e.target.value))}
           />
           <span className={styles.readout}>{turnDelay.toFixed(2)}</span>
         </div>
         {active && (
-          <div className={styles.muted}>Re-Calculate to apply align/ramp/linger/spline.</div>
+          <div className={styles.muted}>
+            Checked knobs override the clip; unchecked keep its authored value. Re-Calculate to
+            apply.
+          </div>
         )}
 
         <div className={styles.scrubRow}>

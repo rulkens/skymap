@@ -51,6 +51,18 @@
   flex: 1;
 }
 
+/* Per-knob override gate: checked = this knob overrides the clip's value. */
+.check {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+/* A fixed-width label so the sliders line up across rows. */
+.knobLabel {
+  composes: muted from './debugSection.module.css';
+  flex: 0 0 58px;
+}
+
 /* blue→red speed key, mirroring `speedRamp` (slow=blue … fast=red). */
 .legend {
   display: flex;

@@ -35,7 +35,9 @@ import {
   selectClipPathLinger,
   selectClipPathSpline,
   selectClipPathTurnDelay,
+  selectClipPathTuningActive,
 } from '../settings/selectors';
+import type { PathTuning } from '../../services/engine/animation/applyPathTuning';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { applyPathTuning } from '../../services/engine/animation/applyPathTuning';
@@ -57,14 +59,23 @@ export function* watchClipPathInspectSaga() {
       () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null,
     );
     const resolved = resolveClipFoci(clip.data, resolveDeps(), cameraRuntime()!.fovYRad);
-    // Bake the live pacing sliders into the flyPath nodes before sampling, so the
-    // overlay AND the pinned (replayable) clip carry the tuning.
+    // Bake only the ACTIVATED pacing knobs into the flyPath nodes before
+    // sampling, so the overlay AND the pinned (replayable) clip carry the
+    // overrides — while inactive knobs let the clip's own authored value through.
     const align = yield* select(selectClipPathAlign);
     const rampSec = yield* select(selectClipPathRampSec);
     const linger = yield* select(selectClipPathLinger);
     const spline = yield* select(selectClipPathSpline);
     const turnDelay = yield* select(selectClipPathTurnDelay);
-    const tuned = applyPathTuning(resolved, { align, rampSec, linger, spline, turnDelay });
+    const active = yield* select(selectClipPathTuningActive);
+    const tuning: PathTuning = {
+      ...(active.align ? { align } : {}),
+      ...(active.rampSec ? { rampSec } : {}),
+      ...(active.linger ? { linger } : {}),
+      ...(active.spline ? { spline } : {}),
+      ...(active.turnDelay ? { turnDelay } : {}),
+    };
+    const tuned = applyPathTuning(resolved, tuning);
     seam.compute(action.payload, tuned);
   });
 

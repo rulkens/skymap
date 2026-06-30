@@ -24,6 +24,7 @@ import {
   selectClipPathLinger,
   selectClipPathSpline,
   selectClipPathTurnDelay,
+  selectClipPathTuningActive,
 } from '../../state/settings/selectors';
 import {
   inspectClipPath,
@@ -34,10 +35,12 @@ import {
   setClipPathLinger,
   setClipPathSpline,
   setClipPathTurnDelay,
+  setClipPathTuningActive,
 } from '../../state/settings/settingsSlice';
 import { replayInspectedPath } from '../../state/camera/clipActions';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
+import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
 
 function ClipPathInspectorSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
@@ -48,6 +51,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const linger = useAppSelector(selectClipPathLinger);
   const spline = useAppSelector(selectClipPathSpline);
   const turnDelay = useAppSelector(selectClipPathTurnDelay);
+  const tuningActive = useAppSelector(selectClipPathTuningActive);
 
   const onInspect = useCallback((id: ClipId) => dispatch(inspectClipPath(id)), [dispatch]);
   const onClear = useCallback(() => dispatch(clearClipPath()), [dispatch]);
@@ -59,6 +63,11 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const onSpline = useCallback((next: SplineMode) => dispatch(setClipPathSpline(next)), [dispatch]);
   const onTurnDelay = useCallback(
     (next: number) => dispatch(setClipPathTurnDelay(next)),
+    [dispatch],
+  );
+  const onTuningActive = useCallback(
+    (knob: ClipPathTuningKnob, next: boolean) =>
+      dispatch(setClipPathTuningActive({ knob, active: next })),
     [dispatch],
   );
 
@@ -75,11 +84,13 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
       linger={linger}
       spline={spline}
       turnDelay={turnDelay}
+      tuningActive={tuningActive}
       onAlign={onAlign}
       onRampSec={onRampSec}
       onLinger={onLinger}
       onSpline={onSpline}
       onTurnDelay={onTurnDelay}
+      onTuningActive={onTuningActive}
     />
   );
 }
