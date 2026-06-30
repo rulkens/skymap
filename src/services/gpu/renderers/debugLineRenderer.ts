@@ -54,11 +54,13 @@ const CORNER_BYTES = CORNER_DATA.byteLength;
  * unit tests that exercise CPU state only — GPU creation is skipped and
  * `draw(...)` is a no-op.
  *
- * `maxLines` defaults to 512: a clip-path snapshot is one route segment per
- * sample pair (hundreds) plus the 9-line scrub gizmo, so the buffer must be far
- * larger than the marker overlay's 64.
+ * `maxLines` defaults to 1024: a clip-path snapshot draws one route segment AND
+ * one target-path segment per sample pair (2·(n−1), hundreds each at the
+ * inspector's sampleCount) plus the 9-line scrub gizmo, so the buffer must be
+ * far larger than the marker overlay's 64. `setLines` clamps silently, so this
+ * ceiling must stay above 2·(sampleCount−1)+9.
  */
-export function createDebugLineRenderer(ctx: GpuContext, maxLines = 512): DebugLineRenderer {
+export function createDebugLineRenderer(ctx: GpuContext, maxLines = 1024): DebugLineRenderer {
   const device = ctx.device as GPUDevice | null;
   const format = ctx.format;
 

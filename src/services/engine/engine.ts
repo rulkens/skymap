@@ -522,11 +522,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // to sample a clip's camera route into the `clipPathInspector` subsystem (read
   // each frame by `clipPathDebugPass`) and `clear` to drop it. Shares the same
   // live-pose accessor as `playClip` so a `start:'live'` clip samples from the
-  // pose the user sees. 192 samples gives a high-resolution route polyline.
+  // pose the user sees. 384 samples keeps the route + target polylines smooth
+  // through the tight Catmull-Rom corners of a flyPath (must stay within the
+  // debugLineRenderer's maxLines: 2·(n−1) route+target segments + 9 gizmo).
   const clipPathInspect = createClipPathInspectSeam({
     inspector: state.subsystems.clipPathInspector,
     getLivePose: () => state.cameraRuntime.lastPose.current,
-    sampleCount: 192,
+    sampleCount: 384,
   });
 
   cb.setSagaContext({

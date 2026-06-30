@@ -89,8 +89,8 @@ describe('clipPathDebugPass.draw', () => {
 
     expect(renderer.setLines).toHaveBeenCalledOnce();
     const lines = renderer.setLines.mock.calls[0]![0]!;
-    // 1 route segment (2 samples → 1 pair) + 9 gizmo lines
-    expect(lines.length).toBe(10);
+    // 1 route segment + 1 target segment (2 samples → 1 pair each) + 9 gizmo lines
+    expect(lines.length).toBe(11);
 
     expect(renderer.draw).toHaveBeenCalledOnce();
     // viewport is draw's 3rd arg
