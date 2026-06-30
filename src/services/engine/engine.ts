@@ -61,6 +61,7 @@
  */
 
 import type { SourceType } from '../../@types/data/SourceType';
+import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -566,6 +567,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return state.data.galaxies.catalogs.get(source)?.objIDs;
   }
 
+  function getStructures(): readonly StructureInfo[] {
+    return state.data.structures.all();
+  }
+
   function destroy(): void {
     // Every subsystem and renderer satisfies `Destroyable`, so this reads as
     // a flat list of `.destroy()` calls.  Ordering is load-bearing only for
@@ -676,6 +681,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     sources: {
       getCloud,
       getCloudObjIds,
+      getStructures,
     },
     volumes: {
       add: (fieldId, cube) => addVolumeField(state, store, fieldId, cube),

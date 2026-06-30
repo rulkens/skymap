@@ -16,6 +16,7 @@
  */
 import type { ReactNode } from 'react';
 import { SOURCE_REGISTRY } from '../../data/sources';
+import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { MILKY_WAY_NAMES } from './paletteRowModel';
 import type { ScoredRow } from './paletteRowModel';
 import styles from './ResultsList.module.css';
@@ -93,6 +94,29 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
             <span className={styles.secondary}>{remaining.join(' · ')}</span>
           )}
           <span className={styles.source}>{SOURCE_REGISTRY[m.entry.source].label}</span>
+        </>
+      ),
+    };
+  },
+  // Structure row — glyph placeholder like an alias (no atlas thumb) + a
+  // category chip (Cluster / Supercluster / Void / Group) from the per-category
+  // display copy, plus the Abell designation as a secondary name when present.
+  structure: (m) => {
+    if (m.kind !== 'structure') return EMPTY_ROW_VIEW;
+    const { id, name, category, abell } = m.entry;
+    return {
+      key: `structure:${id}`,
+      testid: `structure-row-${id}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {name[0] ?? '·'}
+        </span>
+      ),
+      primary: name,
+      secondary: (
+        <>
+          {abell !== null && abell !== name && <span className={styles.secondary}>{abell}</span>}
+          <span className={styles.source}>{CATEGORY_DISPLAY_INFO[category].shortLabel}</span>
         </>
       ),
     };

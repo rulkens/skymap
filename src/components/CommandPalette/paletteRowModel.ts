@@ -9,6 +9,7 @@
  */
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
+import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
 /**
  * Fixed search terms for the always-present Milky Way row.  The matcher
@@ -23,7 +24,7 @@ export const MILKY_WAY_PRIMARY_NAME = 'Milky Way';
 export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as const;
 
 /**
- * One scored row, ready to render.  `kind` discriminates the three payload
+ * One scored row, ready to render.  `kind` discriminates the four payload
  * shapes; `ROW_VIEW` dispatches on it for the rendered text and
  * `utils/focusIdForRow` for the durable focus id.  `milkyWay` carries no
  * payload — it's the singleton FocusableTarget, resolved by the saga.
@@ -31,4 +32,5 @@ export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as con
 export type ScoredRow =
   | { kind: 'famous'; entry: FamousMetaEntry; score: number }
   | { kind: 'alias'; entry: AliasIndexEntry; score: number }
+  | { kind: 'structure'; entry: StructureSearchEntry; score: number }
   | { kind: 'milkyWay'; score: number };

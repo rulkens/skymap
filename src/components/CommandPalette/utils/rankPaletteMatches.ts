@@ -1,20 +1,20 @@
 /**
  * rankPaletteMatches — the command palette's pure ranking pipeline.
  *
- * Filters + ranks the two parallel indexes (the curated famous atlas and the
- * PGC-keyed alias index) against the current query, plus the always-present
- * Milky Way row, into one ordered `ScoredRow[]` ready to render.  Pulled out
- * of the component so it has no React / DOM dependency and can be tested in
- * isolation.
+ * Filters + ranks the three parallel indexes (the curated famous atlas, the
+ * PGC-keyed alias index, and the large-scale structure catalog) against the
+ * current query, plus the always-present Milky Way row, into one ordered
+ * `ScoredRow[]` ready to render.  Pulled out of the component so it has no
+ * React / DOM dependency and can be tested in isolation.
  *
  * Empty query shows the full famous atlas in seed-file order so the user can
- * browse without typing — alias entries are NOT shown for empty queries
- * because there are 48k of them and rendering the full list every time the
- * palette opens would be a DOM-thrashing disaster.
+ * browse without typing — alias and structure entries are NOT shown for empty
+ * queries (48k aliases / ~370 structures) because rendering the full list
+ * every time the palette opens would be a DOM-thrashing disaster.
  *
- * Non-empty query: score both indexes, sort, slice the alias list to a
- * reasonable cap, and concatenate (famous first because famous always
- * wins ties — see FAMOUS_TIEBREAK).
+ * Non-empty query: score every index, sort, slice the alias/structure lists to
+ * a reasonable cap, and concatenate (famous first because famous always wins
+ * ties — see FAMOUS_TIEBREAK; structures after aliases).
  */
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
@@ -22,6 +22,7 @@ import { MILKY_WAY_NAMES } from '../paletteRowModel';
 import type { ScoredRow } from '../paletteRowModel';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
+import type { StructureSearchEntry } from '../../../@types/engine/StructureSearchEntry';
 
 /**
  * The maximum number of alias rows to include in the rendered list.
@@ -31,6 +32,13 @@ import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
  * famous hits.
  */
 const MAX_ALIAS_RESULTS = 50;
+
+/**
+ * Cap on rendered structure rows.  Far fewer structures (~370) than aliases,
+ * but a generic substring ('A' for Abell) still hits a few hundred, so we cap
+ * for the same DOM-budget reason.
+ */
+const MAX_STRUCTURE_RESULTS = 50;
 
 /**
  * Famous-row tiebreak boost.  Added to every famous-row score so that
@@ -45,6 +53,7 @@ const FAMOUS_TIEBREAK = 5;
 export function rankPaletteMatches(
   entries: readonly FamousMetaEntry[],
   aliasIndex: readonly AliasIndexEntry[] | undefined,
+  structures: readonly StructureSearchEntry[] | undefined,
   query: string,
 ): ScoredRow[] {
   // The Milky Way row is always present (no catalog membership): on an empty
@@ -82,5 +91,31 @@ export function rankPaletteMatches(
   aliasScored.sort((a, b) => b.score - a.score);
   const aliasCapped = aliasScored.slice(0, MAX_ALIAS_RESULTS);
 
-  return [...(milkyWayRow ? [milkyWayRow] : []), ...famousScored, ...aliasCapped];
+  // Structures score through the same heuristic as famous rows: we fold the
+  // Abell designation into the searchable `names` so 'A1656' and 'Coma' both
+  // hit, and pass the durable id (which contains the seed slug) + description
+  // for last-resort substring matches — no structure-specific scorer needed.
+  const structureScored: ScoredRow[] = (structures ?? [])
+    .map<ScoredRow>((entry) => ({
+      kind: 'structure',
+      entry,
+      score: scoreFamousMatch(
+        {
+          id: entry.id,
+          names: entry.abell !== null ? [entry.name, entry.abell] : [entry.name],
+          description: entry.description,
+        },
+        query,
+      ),
+    }))
+    .filter((s) => s.score > 0);
+  structureScored.sort((a, b) => b.score - a.score);
+  const structureCapped = structureScored.slice(0, MAX_STRUCTURE_RESULTS);
+
+  return [
+    ...(milkyWayRow ? [milkyWayRow] : []),
+    ...famousScored,
+    ...aliasCapped,
+    ...structureCapped,
+  ];
 }
