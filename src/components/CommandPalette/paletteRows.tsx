@@ -1,0 +1,100 @@
+/**
+ * paletteRows — the JSX table-dispatch vocabulary for the command palette.
+ *
+ * `ROW_VIEW` turns a `ScoredRow` into its rendered parts (leading visual +
+ * primary/secondary text) for the shared <li>, keyed on the row's `kind`.
+ *
+ * Split from `paletteRowModel` (the non-JSX type/const seam) so the pure
+ * ranking pipeline can import the row vocabulary without pulling in React +
+ * the CSS module.  A new row kind is one entry here, not a new render branch.
+ * Selection routing is NOT here — every row maps to a durable focus id via
+ * `utils/focusIdForRow` and fires the single `requestFocus` command.
+ *
+ * Styling: ROW_VIEW emits the per-row internals into ResultsList's <li>, so it
+ * composes ResultsList's module rather than carrying its own — the row styles
+ * belong to the one component that renders them.
+ */
+import type { ReactNode } from 'react';
+import { SOURCE_REGISTRY } from '../../data/sources';
+import { MILKY_WAY_NAMES } from './paletteRowModel';
+import type { ScoredRow } from './paletteRowModel';
+import styles from './ResultsList.module.css';
+
+/** What InfoCard's row renderer needs, computed per row kind. */
+export type RowView = {
+  readonly key: string;
+  readonly testid?: string;
+  readonly leading: ReactNode;
+  readonly primary: ReactNode;
+  readonly secondary: ReactNode;
+};
+
+const EMPTY_ROW_VIEW: RowView = { key: '', leading: null, primary: null, secondary: null };
+
+/**
+ * ROW_VIEW — table dispatch from a ScoredRow kind to its rendered parts, keyed
+ * on `m.kind`. The list renderer wraps every row in one identical <li> (active
+ * styling, hover, click → dispatchSelection); this table only supplies the
+ * kind-specific leading visual + primary/secondary text. Each row narrows `m`
+ * on `kind` (the fallback RowView is unreachable — the table is indexed by the
+ * row's own tag). A new row kind is one entry here, not a new render branch.
+ */
+export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
+  famous: (m) =>
+    m.kind === 'famous'
+      ? {
+          key: `famous:${m.entry.id}`,
+          leading: (
+            <img
+              className={styles.thumb}
+              src={`/images/famous/${m.entry.id}.webp`}
+              alt=""
+              loading="lazy"
+            />
+          ),
+          primary: m.entry.names[0],
+          secondary:
+            m.entry.names.length > 1 ? (
+              <span className={styles.secondary}>{m.entry.names.slice(1).join(' · ')}</span>
+            ) : null,
+        }
+      : EMPTY_ROW_VIEW,
+  // The Milky Way is a procedural backdrop with no atlas WebP, so it renders a
+  // first-letter glyph like an alias row, but it is its own row kind.
+  milkyWay: () => ({
+    key: 'milkyWay',
+    testid: 'milky-way-row',
+    leading: (
+      <span className={styles.glyph} aria-hidden="true">
+        {MILKY_WAY_NAMES[0][0]}
+      </span>
+    ),
+    primary: MILKY_WAY_NAMES[0],
+    secondary: <span className={styles.secondary}>{MILKY_WAY_NAMES.slice(1).join(' · ')}</span>,
+  }),
+  // Alias row — no thumbnail (we don't pre-render NGC galaxies); letter-glyph
+  // placeholder + source-label chip so GLADE vs 2MRS reads at a glance.
+  alias: (m) => {
+    if (m.kind !== 'alias') return EMPTY_ROW_VIEW;
+    const primary = m.entry.names[0] ?? '(unnamed)';
+    const remaining = m.entry.names.slice(1);
+    return {
+      key: `alias:${m.entry.source}:${m.entry.localIdx}`,
+      testid: `alias-row-${m.entry.localIdx}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {primary[0] ?? '·'}
+        </span>
+      ),
+      primary,
+      secondary: (
+        <>
+          {remaining.length > 0 && (
+            <span className={styles.secondary}>{remaining.join(' · ')}</span>
+          )}
+          <span className={styles.source}>{SOURCE_REGISTRY[m.entry.source].label}</span>
+        </>
+      ),
+    };
+  },
+};

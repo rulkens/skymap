@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreAliasMatch } from '../../../src/components/CommandPalette/scoreAliasMatch';
+import { scoreAliasMatch } from '../../../../src/components/CommandPalette/utils/scoreAliasMatch';
 
 const NGC4565 = {
   names: ['NGC 4565', 'UGC 7772', 'MCG +04-30-006'],

@@ -3,7 +3,7 @@
  *
  * Layout and container-mounting: renders the engine canvas, mounts the HUD
  * chrome (StatusBar, InfoCard, ScaleBar, NavigationPanel, SettingsPanel,
- * CommandPalette, AutoRotateToggleContainer, DebugPanelContainer, Splash),
+ * CommandPaletteContainer, AutoRotateToggleContainer, DebugPanelContainer, Splash),
  * and wires keyboard shortcuts + URL sync.
  *
  * `handleRef` is a ref, not state: engine hooks call methods on it, and
@@ -36,7 +36,7 @@ import InfoCard from '../InfoCard/InfoCard';
 import { ScaleBar } from '../ScaleBar/ScaleBar';
 import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
 import NavigationPanel from '../NavigationPanel/NavigationPanel';
-import { CommandPalette } from '../CommandPalette/CommandPalette';
+import CommandPaletteContainer from '../containers/CommandPaletteContainer';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggleContainer from '../containers/AutoRotateToggleContainer';
 import HomeButton from '../HomeButton/HomeButton';
@@ -45,26 +45,19 @@ import AboutPill from '../Splash/AboutPill';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
-import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectVisibleSourceMask } from '../../state/settings/selectors';
 import { selectTier } from '../../state/tier/selectors';
 import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
 import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
-import { requestFocus } from '../../state/selection/requestFocus';
 import { refOf } from '../../services/engine/helpers/refOf';
-import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import { selectTourActive } from '../../state/tour/selectors';
 import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
-import {
-  selectEngineStatus,
-  selectScale,
-  selectLoadProgress,
-} from '../../state/engine/selectors';
+import { selectEngineStatus, selectScale, selectLoadProgress } from '../../state/engine/selectors';
 
 export function App(): React.ReactElement {
   const { canvasRef, handleRef } = useEngine();
@@ -96,11 +89,12 @@ export function App(): React.ReactElement {
   const scale = useAppSelector(selectScale);
   const loadProgress = useAppSelector(selectLoadProgress);
 
-  // "Home" frames our own galaxy: the Reset-camera button, the Home pill, and
-  // the palette's Milky-Way entry all route through the standard focus channel
-  // (updateSelectionFocus → watchFocusTweenSaga), so the camera tween, URL hash,
-  // and selection state match every other focus. One stable identity keeps the
-  // memo'd SettingsPanel / HomeButton from re-rendering.
+  // "Home" frames our own galaxy: the Reset-camera button and the Home pill
+  // route through the standard focus channel (updateSelectionFocus →
+  // watchFocusTweenSaga), so the camera tween, URL hash, and selection state
+  // match every other focus. (The palette's Milky-Way row reaches the same
+  // state via requestFocus(MILKY_WAY_FOCUS_ID), the deep-link path.) One stable
+  // identity keeps the memo'd SettingsPanel / HomeButton from re-rendering.
   const focusMilkyWay = useCallback(
     () => dispatch(updateSelectionFocus({ type: 'milkyWay' })),
     [dispatch],
@@ -143,10 +137,9 @@ export function App(): React.ReactElement {
   // separate `setUiHidden` write — see guidedTourSaga's "no setUiHidden" note.
   const tourActive = useAppSelector(selectTourActive);
 
-  // Stable handlers for the `React.memo`'d SearchTrigger — a fresh
+  // Stable handler for the `React.memo`'d SearchTrigger — a fresh
   // inline arrow each render would defeat the memo.
   const openPalette = useCallback(() => dispatch(setPaletteOpen(true)), [dispatch]);
-  const closePalette = useCallback(() => dispatch(setPaletteOpen(false)), [dispatch]);
 
   // Stable dispatching callbacks for the keyboard hook — wrapped in
   // `useCallback([dispatch])` so the arrow identity is stable for the
@@ -163,7 +156,7 @@ export function App(): React.ReactElement {
     [dispatch],
   );
 
-  const { famousMeta, ready: famousMetaReady } = useFamousMeta();
+  const { ready: famousMetaReady } = useFamousMeta();
 
   // Splash hook owns visibility, readiness gate (engine + famous-meta),
   // localStorage versioning, deep-link bypass, 8 s Continue-anyway timer,
@@ -171,11 +164,6 @@ export function App(): React.ReactElement {
   // engine Redux slice inside `useSplash` — only the famous-meta flags are
   // passed here.  See `useSplash.ts` for rationale.
   const splash = useSplash({ famousMetaReady });
-
-  const { aliasIndex } = useAliasIndex({
-    paletteOpen,
-    engineHandleRef: handleRef,
-  });
 
   // Deep-link hash read + URL write. Reads focus from the store directly;
   // dispatches `requestFocus` / `clearSelection` for hash changes.
@@ -225,10 +213,7 @@ export function App(): React.ReactElement {
             they're added, so we don't need per-panel `bottom:` math. */}
         <div className={appStyles.leftStack}>
           <NavigationPanel defaultOpen={initialPanelsOpen} isMobile={initialMobile} />
-          <SettingsPanel
-            defaultOpen={initialPanelsOpen}
-            onResetCamera={focusMilkyWay}
-          />
+          <SettingsPanel defaultOpen={initialPanelsOpen} onResetCamera={focusMilkyWay} />
         </div>
         {/* Top-center pill row.  SearchTrigger + the pills share a flex
             wrapper so they fade together when the palette opens. */}
@@ -238,25 +223,7 @@ export function App(): React.ReactElement {
           <AutoRotateToggleContainer hidden={paletteOpen || splash.splashVisible} />
           <AboutPill onClick={splash.reopen} hidden={paletteOpen || splash.splashVisible} />
         </div>
-        <CommandPalette
-          entries={famousMeta}
-          aliasIndex={aliasIndex ?? undefined}
-          open={paletteOpen}
-          onClose={closePalette}
-          onSelect={(id) => dispatch(requestFocus(id))}
-          onSelectAlias={(target) =>
-            dispatch(
-              updateSelectionFocus({
-                type: 'galaxyCatalog',
-                source: target.source as GalaxyCatalogSourceType,
-                index: target.localIdx,
-              }),
-            )
-          }
-          // The Milky Way is a first-class FocusableTarget — focus it through
-          // the same select → focus path every other target uses.
-          onSelectMilkyWay={focusMilkyWay}
-        />
+        <CommandPaletteContainer engineHandleRef={handleRef} />
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (
