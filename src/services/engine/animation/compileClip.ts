@@ -208,6 +208,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
           linger: effect.linger,
           spline: effect.spline,
           turnDelay: effect.turnDelay,
+          lookAhead: effect.lookAhead,
         }),
       );
       return effect.over;

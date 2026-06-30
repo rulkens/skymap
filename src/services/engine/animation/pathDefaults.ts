@@ -42,3 +42,12 @@ export const DEFAULT_SPLINE: SplineMode = 'centripetal';
  * when `spline` is `causalHermite`.
  */
 export const DEFAULT_TURN_DELAY = 1;
+
+/**
+ * Seconds the LOOK leads the eye along the path. 0 (the default) splines the
+ * per-knot forward aim — the historical behaviour. Raise it so the camera aims
+ * at where it will be `lookAhead` seconds from now: paired with `causalHermite`
+ * it flies into each target head-on, then turns toward the next the moment the
+ * path bends past it, instead of holding the incoming gaze until it arrives.
+ */
+export const DEFAULT_LOOK_AHEAD = 0;

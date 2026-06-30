@@ -213,6 +213,11 @@ const settingsSlice = createSlice({
       settings.debug.clipPathInspect.turnDelay = action.payload;
       settings.debug.clipPathInspect.active.turnDelay = true;
     },
+    // Seconds the look leads the eye along the path (0 = spline the per-knot aim).
+    setClipPathLookAhead: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.lookAhead = action.payload;
+      settings.debug.clipPathInspect.active.lookAhead = true;
+    },
     // Toggle a single pacing knob's override on/off. Off (the default) lets the
     // clip's own authored value flow through; the row checkbox drives this, and
     // the value setters above flip it on when the curator touches a slider.
@@ -284,6 +289,7 @@ export const {
   setClipPathLinger,
   setClipPathSpline,
   setClipPathTurnDelay,
+  setClipPathLookAhead,
   setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,

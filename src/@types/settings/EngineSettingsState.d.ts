@@ -204,13 +204,15 @@ export type EngineSettingsState = {
      * normalised `[0,1]` fraction (NOT seconds — the UI has no access to the
      * clip duration, so the scrubber is a pure position).
      *
-     * `align` / `rampSec` / `linger` / `spline` / `turnDelay` are the live flyPath
-     * pacing + shape knobs the inspector can bake into the clip at Calculate time
-     * (via `applyPathTuning`): `align` is the start-aim blend seconds, `rampSec`
-     * the seconds of ease ramp each end (0 = use the named `ease`), `linger` the
-     * per-target brake depth ∈ [0,1] (0 = cruise straight through each waypoint),
-     * `spline` the basis (centripetal Catmull-Rom ↔ causal Hermite), `turnDelay`
-     * the causal-Hermite overshoot magnitude (inert in centripetal mode).
+     * `align` / `rampSec` / `linger` / `spline` / `turnDelay` / `lookAhead` are the
+     * live flyPath pacing + shape knobs the inspector can bake into the clip at
+     * Calculate time (via `applyPathTuning`): `align` is the start-aim blend
+     * seconds, `rampSec` the seconds of ease ramp each end (0 = use the named
+     * `ease`), `linger` the per-target brake depth ∈ [0,1] (0 = cruise straight
+     * through each waypoint), `spline` the basis (centripetal Catmull-Rom ↔ causal
+     * Hermite), `turnDelay` the causal-Hermite overshoot magnitude (inert in
+     * centripetal mode), `lookAhead` the seconds the look leads the eye (0 = spline
+     * the per-knot aim).
      *
      * Each knob is an OVERRIDE that is inactive until the curator touches it:
      * `active[knob]` gates whether that knob is applied at all. While inactive,
@@ -228,6 +230,7 @@ export type EngineSettingsState = {
       linger: number;
       spline: SplineMode;
       turnDelay: number;
+      lookAhead: number;
       /** Per-knob override gate — only an active knob is baked into the clip. */
       active: ClipPathTuningActive;
     };

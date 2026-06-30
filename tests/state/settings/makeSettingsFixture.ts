@@ -27,6 +27,7 @@ import {
   DEFAULT_LINGER,
   DEFAULT_SPLINE,
   DEFAULT_TURN_DELAY,
+  DEFAULT_LOOK_AHEAD,
 } from '../../../src/services/engine/animation/pathDefaults';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -93,12 +94,14 @@ export function makeSettingsFixture(
         linger: DEFAULT_LINGER,
         spline: DEFAULT_SPLINE,
         turnDelay: DEFAULT_TURN_DELAY,
+        lookAhead: DEFAULT_LOOK_AHEAD,
         active: {
           align: false,
           rampSec: false,
           linger: false,
           spline: false,
           turnDelay: false,
+          lookAhead: false,
         },
       },
     },

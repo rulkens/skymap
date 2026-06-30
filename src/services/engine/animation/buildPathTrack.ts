@@ -28,6 +28,10 @@
  *      the path. The blend starts at the live pose (no aim pop on handoff). A
  *      waypoint may pin `yaw`/`pitch` to override the forward default. The
  *      look-at `target` the renderer needs is derived back from eye + aim.
+ *      With `lookAhead > 0` the aim instead points from the eye toward the eye
+ *      `lookAhead` seconds AHEAD on the path: a causal flythrough then flies
+ *      straight in looking head-on, and leads toward the next subject the instant
+ *      the path bends past a waypoint (supersedes per-waypoint aim pins).
  *
  *   3. **Arc-length reparametrisation (scale space)** — raw spline parameter is
  *      not perceptually uniform: lerping it blows through the near field and
@@ -58,7 +62,7 @@ import { monotoneCubic } from '../../../utils/math/monotoneCubic';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
-import { DEFAULT_ALIGN_SEC, DEFAULT_TURN_DELAY } from './pathDefaults';
+import { DEFAULT_ALIGN_SEC, DEFAULT_TURN_DELAY, DEFAULT_LOOK_AHEAD } from './pathDefaults';
 import { EASE } from './ease';
 
 /** A waypoint after focus resolution — always concrete (`at` + `distance`). */
@@ -88,6 +92,12 @@ type BuildParams = {
   readonly spline?: SplineMode;
   /** Causal-Hermite tangent magnitude (turn-delay); ignored unless `spline` is `causalHermite`. */
   readonly turnDelay?: number;
+  /**
+   * Seconds the LOOK leads the eye along the path. 0 (default) splines the
+   * per-knot forward aim. > 0 derives the look from the eye position this many
+   * seconds ahead — supersedes per-waypoint yaw/pitch pins.
+   */
+  readonly lookAhead?: number;
 };
 
 // Spline samples per leg for the arc-length table. 64 is plenty for a smooth
@@ -117,6 +127,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   const { start, startSec, over, ease, waypoints, align, rampSec, linger } = params;
   const spline: SplineMode = params.spline ?? 'centripetal';
   const turnDelay = params.turnDelay ?? DEFAULT_TURN_DELAY;
+  const lookAhead = params.lookAhead ?? DEFAULT_LOOK_AHEAD;
 
   if (waypoints.length === 0) {
     throw new Error('buildPathTrack: a flyPath needs at least one waypoint.');
@@ -435,17 +446,54 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     return from + d * w;
   };
 
-  const sample = (localSec: number): PathSample => {
+  // localSec → spline parameter τ, through the full time pipeline (envelope,
+  // linger pre-warp, arc-length inversion). Pulled out of `sample` so the
+  // look-ahead aim can re-evaluate the EYE at a future time with the same map.
+  const paramAtLocalSec = (localSec: number): number => {
     const s = clamp01(localSec / over);
     const easedTime = warp(s) * over;
     const u = clamp01(timing(lingerWarp(easedTime)));
-    const t = paramAtArcFrac(u);
-    const pose = poseAtTau(t);
+    return paramAtArcFrac(u);
+  };
+  const eyePosAt = (localSec: number): Vec3 => {
+    const p = poseAtTau(paramAtLocalSec(localSec));
+    return [p.tx, p.ty, p.tz];
+  };
 
-    // Align-in: 0 → live orientation, 1 → the splined forward aim.
+  // Look-ahead aim: the look points from the eye now toward the eye `lookAhead`
+  // seconds ahead. As the destination nears, the probe runs out of runway (`tB`
+  // clamps to the end), so `lead` decays 1 → 0 and the aim blends back to the
+  // exact splined forward aim — which frames the destination centre precisely —
+  // for a clean settle. The aim yaw is anchored to the (unwrapped, continuous)
+  // splined forward yaw, so it stays seam-continuous without frame-to-frame state.
+  const aheadAim = (localSec: number, splinedYaw: number, splinedPitch: number) => {
+    if (lookAhead <= 0) return { yaw: splinedYaw, pitch: splinedPitch };
+    const tB = Math.min(localSec + lookAhead, over);
+    const lead = clamp01((tB - localSec) / lookAhead); // 1 in the body, → 0 at the end
+    if (lead <= 0) return { yaw: splinedYaw, pitch: splinedPitch };
+    const eyeA = eyePosAt(localSec);
+    const eyeB = eyePosAt(tB);
+    const fwd: Vec3 = [eyeB[0] - eyeA[0], eyeB[1] - eyeA[1], eyeB[2] - eyeA[2]];
+    if (Math.hypot(fwd[0], fwd[1], fwd[2]) < CHORD_EPS) {
+      return { yaw: splinedYaw, pitch: splinedPitch };
+    }
+    const a = orbitAnglesLookingAlong(fwd);
+    return {
+      yaw: blendYaw(splinedYaw, a.yaw, lead),
+      pitch: splinedPitch + (a.pitch - splinedPitch) * lead,
+    };
+  };
+
+  const sample = (localSec: number): PathSample => {
+    const t = paramAtLocalSec(localSec);
+    const pose = poseAtTau(t);
+    const aim = aheadAim(localSec, pose.yaw, pose.pitch);
+
+    // Align-in: 0 → live orientation, 1 → the path aim (splined forward, or the
+    // look-ahead direction when `lookAhead` > 0).
     const w = EASE['inOut'](clamp01(localSec / alignSec));
-    const yawV = blendYaw(liveYaw, pose.yaw, w);
-    const pitchV = livePitch + (pose.pitch - livePitch) * w;
+    const yawV = blendYaw(liveYaw, aim.yaw, w);
+    const pitchV = livePitch + (aim.pitch - livePitch) * w;
 
     // The spline IS the eye path. Derive the look-at target the renderer needs:
     // updatePosition sets eye = target + distance · dir(yaw, pitch), so to land

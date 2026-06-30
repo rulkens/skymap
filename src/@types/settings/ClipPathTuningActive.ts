@@ -2,7 +2,7 @@
  * ClipPathTuningActive — the clip-path inspector's per-knob override gates.
  *
  * Each flyPath pacing knob the inspector exposes (align / rampSec / linger /
- * spline / turnDelay) is an OVERRIDE that is inactive until the curator touches
+ * spline / turnDelay / lookAhead) is an OVERRIDE that is inactive until the curator touches
  * it. A `true` here means that knob is baked into the clip at Calculate time; a
  * `false` lets the clip's own authored value flow through untouched. Splitting
  * the gates out from the values keeps "is this knob overriding?" separate from
@@ -15,4 +15,5 @@ export type ClipPathTuningActive = {
   linger: boolean;
   spline: boolean;
   turnDelay: boolean;
+  lookAhead: boolean;
 };

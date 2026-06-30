@@ -155,6 +155,9 @@ export const selectClipPathSpline = (state: RootState): SplineMode =>
 export const selectClipPathTurnDelay = (state: RootState): number =>
   selectSettings(state).debug.clipPathInspect.turnDelay;
 
+export const selectClipPathLookAhead = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.lookAhead;
+
 export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
   selectSettings(state).debug.clipPathInspect.active;
 

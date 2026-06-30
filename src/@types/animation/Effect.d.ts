@@ -117,4 +117,12 @@ export type Effect =
        * `spline` is `causalHermite`. Omit for the builder default (1).
        */
       readonly turnDelay?: number;
+      /**
+       * Seconds the LOOK leads the eye along the path. 0 (the default) splines the
+       * per-knot forward aim. > 0 aims at where the camera will be `lookAhead`
+       * seconds from now — with `causalHermite` it flies into each target head-on
+       * then turns toward the next as the path bends past it. Supersedes
+       * per-waypoint yaw/pitch pins. Omit for the builder default (0).
+       */
+      readonly lookAhead?: number;
     };

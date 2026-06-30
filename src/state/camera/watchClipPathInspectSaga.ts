@@ -35,6 +35,7 @@ import {
   selectClipPathLinger,
   selectClipPathSpline,
   selectClipPathTurnDelay,
+  selectClipPathLookAhead,
   selectClipPathTuningActive,
 } from '../settings/selectors';
 import type { PathTuning } from '../../services/engine/animation/applyPathTuning';
@@ -67,6 +68,7 @@ export function* watchClipPathInspectSaga() {
     const linger = yield* select(selectClipPathLinger);
     const spline = yield* select(selectClipPathSpline);
     const turnDelay = yield* select(selectClipPathTurnDelay);
+    const lookAhead = yield* select(selectClipPathLookAhead);
     const active = yield* select(selectClipPathTuningActive);
     const tuning: PathTuning = {
       ...(active.align ? { align } : {}),
@@ -74,6 +76,7 @@ export function* watchClipPathInspectSaga() {
       ...(active.linger ? { linger } : {}),
       ...(active.spline ? { spline } : {}),
       ...(active.turnDelay ? { turnDelay } : {}),
+      ...(active.lookAhead ? { lookAhead } : {}),
     };
     const tuned = applyPathTuning(resolved, tuning);
     seam.compute(action.payload, tuned);

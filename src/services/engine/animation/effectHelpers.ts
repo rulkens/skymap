@@ -57,6 +57,7 @@ import {
   DEFAULT_LINGER,
   DEFAULT_SPLINE,
   DEFAULT_TURN_DELAY,
+  DEFAULT_LOOK_AHEAD,
 } from './pathDefaults';
 
 // ---------------------------------------------------------------------------
@@ -431,6 +432,7 @@ export function flyPath(
     linger?: number;
     spline?: SplineMode;
     turnDelay?: number;
+    lookAhead?: number;
   },
 ): Effect & { kind: 'flyPath' } {
   return {
@@ -443,5 +445,6 @@ export function flyPath(
     linger: opts.linger ?? DEFAULT_LINGER,
     spline: opts.spline ?? DEFAULT_SPLINE,
     turnDelay: opts.turnDelay ?? DEFAULT_TURN_DELAY,
+    lookAhead: opts.lookAhead ?? DEFAULT_LOOK_AHEAD,
   };
 }

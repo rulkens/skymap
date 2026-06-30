@@ -40,6 +40,7 @@ import reducer, {
   setPassDisabled,
   setClipPathLinger,
   setClipPathSpline,
+  setClipPathLookAhead,
   setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
@@ -188,6 +189,7 @@ describe('settingsSlice — debug', () => {
       linger: false,
       spline: false,
       turnDelay: false,
+      lookAhead: false,
     });
   });
 
@@ -204,6 +206,12 @@ describe('settingsSlice — debug', () => {
     const next = reducer(base(), setClipPathSpline('causalHermite'));
     expect(next.debug.clipPathInspect.spline).toBe('causalHermite');
     expect(next.debug.clipPathInspect.active.spline).toBe(true);
+  });
+
+  it('setClipPathLookAhead activates the look-ahead override', () => {
+    const next = reducer(base(), setClipPathLookAhead(1.5));
+    expect(next.debug.clipPathInspect.lookAhead).toBe(1.5);
+    expect(next.debug.clipPathInspect.active.lookAhead).toBe(true);
   });
 
   it('setClipPathTuningActive toggles a knob without touching its value', () => {

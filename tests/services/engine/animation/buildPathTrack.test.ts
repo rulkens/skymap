@@ -503,6 +503,104 @@ describe('buildPathTrack', () => {
     });
   });
 
+  // ── Look-ahead aim: the look LEADS toward the next waypoint after a corner ──
+  //
+  // With causal geometry the path flies straight into a corner then bends out.
+  // Splining the per-knot aim (lookAhead 0) keeps the look head-on along the
+  // incoming chord well past the corner — "looking sideways" until it reaches the
+  // next knot. Look-ahead derives the look from the eye path a short time Δ ahead:
+  // flying straight in, Δ-ahead is still on the approach (head-on preserved); the
+  // instant the path bends, Δ-ahead is already on the next leg, so the look leads.
+  describe('look-ahead aim', () => {
+    const start: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
+    const waypoints = [
+      { at: [0, 0, 100] as Vec3, distance: 10 }, // interior corner: fly +Z in, +X out
+      { at: [100, 0, 100] as Vec3, distance: 10 }, // destination after the turn
+    ];
+    const lookOf = (s: PathSample): Vec3 => {
+      const cp = Math.cos(s.pitch);
+      return [-cp * Math.sin(s.yaw), -Math.sin(s.pitch), -cp * Math.cos(s.yaw)];
+    };
+    const build = (lookAhead?: number): ReturnType<typeof buildPathTrack> =>
+      buildPathTrack({
+        start,
+        startSec: 0,
+        over: 20,
+        ease: 'linear',
+        waypoints,
+        spline: 'causalHermite',
+        ...(lookAhead !== undefined ? { lookAhead } : {}),
+      });
+    // localSec at which the eye is closest to a probe point. Geometry is identical
+    // across lookAhead values, so the same localSec frames the same eye position —
+    // only the LOOK differs, which is what these tests isolate.
+    const timeNearest = (track: ReturnType<typeof buildPathTrack>, probe: Vec3): number => {
+      let best = Infinity;
+      let tStar = 0;
+      for (let i = 0; i <= 1000; i++) {
+        const t = (i / 1000) * 20;
+        const e = eyeOf(track.sample(t));
+        const d = Math.hypot(e[0] - probe[0], e[1] - probe[1], e[2] - probe[2]);
+        if (d < best) {
+          best = d;
+          tStar = t;
+        }
+      }
+      return tStar;
+    };
+
+    it('defaults to no look-ahead (absent === 0, byte-identical aim)', () => {
+      const def = build();
+      const zero = build(0);
+      for (let i = 0; i <= 20; i++) {
+        const t = (i / 20) * 20;
+        expect(def.sample(t).yaw).toBeCloseTo(zero.sample(t).yaw, 9);
+        expect(def.sample(t).pitch).toBeCloseTo(zero.sample(t).pitch, 9);
+      }
+    });
+
+    it('leads toward the next leg sooner after a corner than no look-ahead', () => {
+      const base = build(0);
+      const lead = build(3);
+      // A point just past the corner, on the +X out-leg. Travelling +X ⇒ a look
+      // that leads has a large +X component; the per-knot causal aim is still
+      // mostly head-on (+Z) there, so its +X component is much smaller.
+      const t = timeNearest(base, [20, 0, 100]);
+      const baseX = lookOf(base.sample(t))[0];
+      const leadX = lookOf(lead.sample(t))[0];
+      expect(leadX).toBeGreaterThan(baseX + 0.2);
+    });
+
+    it('leads sooner the larger the look-ahead (the knob is monotone)', () => {
+      // The instant the look crosses 45° toward the +X out-leg (look.x > √½). A
+      // larger Δ reaches that lead earlier in the take; no Δ saturates the metric
+      // because it is a TIME, not an angle. 4 < 1.5 < 0 (no look-ahead is latest).
+      // Scan from t=3 — past the align-in, whose initial live→forward turn can
+      // transiently swing the look through ±X and is unrelated to the leg lead.
+      const tCrossX = (d: number): number => {
+        const track = build(d);
+        for (let i = 0; i <= 2000; i++) {
+          const t = (i / 2000) * 20;
+          if (t < 3) continue;
+          if (lookOf(track.sample(t))[0] > Math.SQRT1_2) return t;
+        }
+        return Infinity;
+      };
+      const t0 = tCrossX(0);
+      const t1 = tCrossX(1.5);
+      const t2 = tCrossX(4);
+      expect(t1).toBeLessThan(t0 - 0.1);
+      expect(t2).toBeLessThan(t1 - 0.1);
+    });
+
+    it('still settles framed on the destination centre (tail look-at preserved)', () => {
+      const end = build(3).sample(20);
+      expect(end.target[0]).toBeCloseTo(100, 1);
+      expect(end.target[1]).toBeCloseTo(0, 1);
+      expect(end.target[2]).toBeCloseTo(100, 1);
+    });
+  });
+
   // ── No slingshot: a far start + clustered waypoints must not balloon ──
   //
   // The eye rides the centripetal spline, so it stays snug to its knots instead

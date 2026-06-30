@@ -49,6 +49,8 @@ export type ClipPathInspectorSectionProps = {
   spline: SplineMode;
   /** Causal-Hermite turn-delay magnitude (inert in centripetal) — applied on the next Calculate. */
   turnDelay: number;
+  /** Seconds the look leads the eye along the path (0 = spline the per-knot aim) — applied on the next Calculate. */
+  lookAhead: number;
   /** Per-knob override gates — an inactive knob keeps the clip's authored value. */
   tuningActive: ClipPathTuningActive;
   /** Set the align-in seconds. */
@@ -61,6 +63,8 @@ export type ClipPathInspectorSectionProps = {
   onSpline: (spline: SplineMode) => void;
   /** Set the causal-Hermite turn-delay magnitude. */
   onTurnDelay: (turnDelay: number) => void;
+  /** Set the look-ahead seconds. */
+  onLookAhead: (lookAhead: number) => void;
   /** Toggle a single knob's override on/off (the row checkbox). */
   onTuningActive: (knob: ClipPathTuningKnob, active: boolean) => void;
 };
@@ -80,12 +84,14 @@ export function ClipPathInspectorSection({
   linger,
   spline,
   turnDelay,
+  lookAhead,
   tuningActive,
   onAlign,
   onRampSec,
   onLinger,
   onSpline,
   onTurnDelay,
+  onLookAhead,
   onTuningActive,
 }: ClipPathInspectorSectionProps): ReactElement {
   // The dropdown's pending choice — seeded from the computed clip, else the
@@ -214,6 +220,26 @@ export function ClipPathInspectorSection({
             onChange={(e) => onTurnDelay(Number(e.target.value))}
           />
           <span className={styles.readout}>{turnDelay.toFixed(2)}</span>
+        </div>
+        <div className={styles.scrubRow}>
+          <input
+            className={styles.check}
+            type="checkbox"
+            title="Override the clip's look-ahead"
+            checked={tuningActive.lookAhead}
+            onChange={(e) => onTuningActive('lookAhead', e.target.checked)}
+          />
+          <span className={styles.knobLabel}>look ahead</span>
+          <input
+            className={styles.scrub}
+            type="range"
+            min={0}
+            max={6}
+            step={0.1}
+            value={lookAhead}
+            onChange={(e) => onLookAhead(Number(e.target.value))}
+          />
+          <span className={styles.readout}>{lookAhead.toFixed(1)}s</span>
         </div>
         {active && (
           <div className={styles.muted}>

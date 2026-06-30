@@ -24,6 +24,7 @@ import {
   selectClipPathLinger,
   selectClipPathSpline,
   selectClipPathTurnDelay,
+  selectClipPathLookAhead,
   selectClipPathTuningActive,
 } from '../../state/settings/selectors';
 import {
@@ -35,6 +36,7 @@ import {
   setClipPathLinger,
   setClipPathSpline,
   setClipPathTurnDelay,
+  setClipPathLookAhead,
   setClipPathTuningActive,
 } from '../../state/settings/settingsSlice';
 import { replayInspectedPath } from '../../state/camera/clipActions';
@@ -51,6 +53,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const linger = useAppSelector(selectClipPathLinger);
   const spline = useAppSelector(selectClipPathSpline);
   const turnDelay = useAppSelector(selectClipPathTurnDelay);
+  const lookAhead = useAppSelector(selectClipPathLookAhead);
   const tuningActive = useAppSelector(selectClipPathTuningActive);
 
   const onInspect = useCallback((id: ClipId) => dispatch(inspectClipPath(id)), [dispatch]);
@@ -63,6 +66,10 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const onSpline = useCallback((next: SplineMode) => dispatch(setClipPathSpline(next)), [dispatch]);
   const onTurnDelay = useCallback(
     (next: number) => dispatch(setClipPathTurnDelay(next)),
+    [dispatch],
+  );
+  const onLookAhead = useCallback(
+    (next: number) => dispatch(setClipPathLookAhead(next)),
     [dispatch],
   );
   const onTuningActive = useCallback(
@@ -84,12 +91,14 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
       linger={linger}
       spline={spline}
       turnDelay={turnDelay}
+      lookAhead={lookAhead}
       tuningActive={tuningActive}
       onAlign={onAlign}
       onRampSec={onRampSec}
       onLinger={onLinger}
       onSpline={onSpline}
       onTurnDelay={onTurnDelay}
+      onLookAhead={onLookAhead}
       onTuningActive={onTuningActive}
     />
   );

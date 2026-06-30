@@ -35,6 +35,8 @@ export type PathTuning = {
   readonly spline?: SplineMode;
   /** Causal-Hermite turn-delay magnitude. Omit to keep the clip's value. */
   readonly turnDelay?: number;
+  /** Seconds the look leads the eye along the path. Omit to keep the clip's value. */
+  readonly lookAhead?: number;
 };
 
 function tuneEffect(effect: Effect, tuning: PathTuning): Effect {
@@ -47,6 +49,7 @@ function tuneEffect(effect: Effect, tuning: PathTuning): Effect {
         ...(tuning.linger !== undefined ? { linger: tuning.linger } : {}),
         ...(tuning.spline !== undefined ? { spline: tuning.spline } : {}),
         ...(tuning.turnDelay !== undefined ? { turnDelay: tuning.turnDelay } : {}),
+        ...(tuning.lookAhead !== undefined ? { lookAhead: tuning.lookAhead } : {}),
       };
     case 'seq':
     case 'all':
