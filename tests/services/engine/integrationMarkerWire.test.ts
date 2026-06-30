@@ -103,6 +103,7 @@ describe('produceStructureMarkers → structureMarkerRenderer.setMarkers', () =>
       drawCamPos: [0, 0, 1000],
       canvasSize: { width: 1024, height: 768 },
       drawPxPerRad: 500,
+      fovYRad: (60 * Math.PI) / 180,
       focusBlend: 0,
     } as unknown as ReadyFrameContext;
 

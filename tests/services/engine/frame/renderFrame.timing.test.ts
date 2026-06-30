@@ -179,6 +179,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       [number, number, number]
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
+    fovYRad: (60 * Math.PI) / 180,
     renderer: pointRenderer,
     postProcess,
     // texturedDisks slot is referenced from frameContext shape;

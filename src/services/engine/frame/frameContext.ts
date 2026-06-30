@@ -209,6 +209,7 @@ export function deriveFrameContext(
     canvasSize,
     drawCamPos,
     drawPxPerRad,
+    fovYRad: cam.fovYRad,
     focusBlend: 0,
     visibleSourceMask,
     focus: ZERO_FOCUS,
