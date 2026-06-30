@@ -74,7 +74,6 @@ import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
-import { registerLabelStyleOverrideWake } from './labelStyleOverride';
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
@@ -416,15 +415,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     id: 'famousLabels',
     produceLabels: produceFamousLabels,
   });
-
-  // ── Wake on label-style override edits ────────────────────────────────
-  //
-  // The DebugPanel writes to `labelStyleOverride`, bumping a version the
-  // director reads from its signature hash — but render-on-demand only
-  // consults that hash inside an active frame, so idle slider edits would
-  // sit invisible.  Registering requestRender here wakes the loop on every
-  // set/clear.
-  registerLabelStyleOverrideWake(() => state.subsystems.scheduler.requestRender());
 
   // ── Cleanup function returned by `attachOrbitControls` ─────────────────
   // Orbit-controls attachment lives outside `inputBindings` because it

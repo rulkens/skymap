@@ -33,7 +33,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { milkyWayLabelAlpha } from '../../gpu/labels/milkyWayLabelVisibility';
-import { getLabelStyleOverride } from '../labelStyleOverride';
 
 // Origin anchor + stem geometry. The label floats just above the Milky Way
 // dot; the stem runs from the origin up to 3/4 of the label anchor height so
@@ -73,15 +72,6 @@ export function produceMilkyWayLabel(
   // fade in lock-step.
   const fadeAlpha = distAlpha * layerOpacity;
 
-  // Live-tuning override: when the DebugPanel targets the milkyWay category,
-  // substitute the override's outline fields for the producer defaults. Read
-  // fresh each frame so panel edits apply on the next render.
-  const override = getLabelStyleOverride();
-  const overrideFields =
-    override.targetCategory === 'milkyWay'
-      ? { outlineColor: override.outlineColor, outlineEmFrac: override.outlineEmFrac }
-      : {};
-
   const style = MILKY_WAY_LABEL_STYLE;
 
   const labels: readonly Label[] = [
@@ -101,7 +91,6 @@ export function produceMilkyWayLabel(
       alignX: 'center',
       outlineColor: [...style.outlineColor],
       outlineEmFrac: style.outlineEmFrac,
-      ...overrideFields,
     },
   ];
   const lines: readonly MarkerLine[] = [
