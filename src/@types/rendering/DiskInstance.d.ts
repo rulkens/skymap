@@ -50,8 +50,8 @@ export type DiskInstance = {
    * [0, 0] = centred (the uncalibrated default). The vertex shader
    * subtracts it from each corner so a calibrated galaxy's nucleus lands
    * on the catalog 3-D point, using its own (major, minor) basis — no
-   * CPU-side world basis to reconstruct. See `nucleusCorner` in
-   * `famousPlacement.ts`.
+   * CPU-side world basis to reconstruct. See `nucleusCorner`, composed
+   * into the disk frame by `resolveDiskPlacement`.
    */
   nucleusOffset: Vec2;
 };

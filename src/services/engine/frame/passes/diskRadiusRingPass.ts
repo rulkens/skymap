@@ -28,7 +28,7 @@
 
 import { Source } from '../../../../data/sources';
 import { paddedRadiusMpc } from '../../../../utils/paddedRadiusMpc';
-import { effectiveTilt } from '../../subsystems/famousPlacement';
+import { effectiveTilt } from '../../../../utils/render/disk/effectiveTilt';
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 

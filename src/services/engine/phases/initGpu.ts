@@ -261,7 +261,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // textured-disk pass (kicks in at 24 px).  In the 8-14 px band both the
   // points pass and this renderer crossfade via complementary smoothstep
   // alphas (PROCEDURAL_DISK_FADE_START_PX / _END_PX in
-  // proceduralDiskSubsystem.ts).  Same HDR target as the other thumbnail
+  // data/galaxyLodBands.ts).  Same HDR target as the other thumbnail
   // renderers.
   const proceduralDiskRenderer = createProceduralDiskRenderer({
     device,

@@ -37,6 +37,7 @@
 import { Source } from '../../../data/sources';
 import { cartesianToRaDec } from '../../../utils/math';
 import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
+import { HI_RES_TRIGGER_PX, HI_RES_FADE_BAND_PX } from '../../../data/galaxyLodBands';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { FetchGalaxyBitmapInput } from '../../../@types/loading/FetchGalaxyBitmapInput';
 import type { HiResFamousTexture } from '../../../@types/rendering/HiResFamousTexture';
@@ -46,21 +47,6 @@ import type {
   HiResFamousPerGalaxyState,
   HiResFamousSubsystem,
 } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
-
-/**
- * Gate: a galaxy must be at least this big on screen before the planner
- * touches the hi-res array.  Re-exported so the texturedDiskSubsystem
- * fragment shader's atlas-tile fade-OUT band can stay in lockstep.
- */
-export const HI_RES_TRIGGER_PX = 120;
-/**
- * Crossfade band: above the gate, the alpha ramps from 0 → 1 across
- * `[HI_RES_TRIGGER_PX, HI_RES_TRIGGER_PX + HI_RES_FADE_BAND_PX]`.  40 px
- * gives the eye time to register the handoff at typical fly-in speeds
- * — narrower bands flash; wider bands let the soft 128 px atlas tile
- * dominate too long after it's started to pixel-double.
- */
-export const HI_RES_FADE_BAND_PX = 40;
 
 /**
  * Upper-bound clamp for the squared-distance early-out, tuned higher
