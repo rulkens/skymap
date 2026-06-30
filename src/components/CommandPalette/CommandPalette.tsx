@@ -103,7 +103,7 @@ function CommandPalette({
         className={styles.panel}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Search galaxies"
+        aria-label="Search galaxies and clusters"
       >
         <input
           ref={inputRef}
