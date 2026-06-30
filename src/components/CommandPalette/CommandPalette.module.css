@@ -22,12 +22,11 @@
   align-items: flex-start;
   justify-content: center;
   /*
-   * Drop the palette in from the top sixth of the viewport — high
-   * enough that it doesn't overlap the page-left HUD panels at common
-   * laptop heights, low enough that the user's eye isn't yanked all
-   * the way to the top edge.
+   * Drop the palette in from near the top of the viewport — high enough
+   * to give the results list most of the window height, low enough that
+   * the user's eye isn't yanked all the way to the top edge.
    */
-  padding-top: 12vh;
+  padding-top: 8vh;
   /*
    * Backdrop fades in as the palette mounts — same 180 ms timing as
    * the SearchTrigger's fade-out so the two transitions overlap and
@@ -39,7 +38,7 @@
 .panel {
   position: relative; /* anchor for the ::before accent bar */
   width: min(560px, 90vw);
-  max-height: 70vh;
+  max-height: 84vh;
 
   background: var(--surface-card-strong);
   /* Vendor-prefixed first, standard last — see Panel.module.css for why. */
