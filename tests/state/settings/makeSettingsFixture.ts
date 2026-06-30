@@ -25,6 +25,8 @@ import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
   DEFAULT_LINGER,
+  DEFAULT_SPLINE,
+  DEFAULT_TURN_DELAY,
 } from '../../../src/services/engine/animation/pathDefaults';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -89,6 +91,8 @@ export function makeSettingsFixture(
         align: DEFAULT_ALIGN_SEC,
         rampSec: DEFAULT_RAMP_SEC,
         linger: DEFAULT_LINGER,
+        spline: DEFAULT_SPLINE,
+        turnDelay: DEFAULT_TURN_DELAY,
       },
     },
     structures: {

@@ -20,6 +20,7 @@
 import { useState, type ReactElement } from 'react';
 
 import type { ClipId } from '../../@types/animation/ClipId';
+import type { SplineMode } from '../../@types/animation/SplineMode';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import styles from './ClipPathInspectorSection.module.css';
 
@@ -42,12 +43,20 @@ export type ClipPathInspectorSectionProps = {
   rampSec: number;
   /** Per-target brake depth [0,1] (0 = cruise through) — applied on the next Calculate. */
   linger: number;
+  /** Spline basis (centripetal Catmull-Rom ↔ causal Hermite) — applied on the next Calculate. */
+  spline: SplineMode;
+  /** Causal-Hermite turn-delay magnitude (inert in centripetal) — applied on the next Calculate. */
+  turnDelay: number;
   /** Set the align-in seconds. */
   onAlign: (align: number) => void;
   /** Set the ease-ramp seconds. */
   onRampSec: (rampSec: number) => void;
   /** Set the per-target brake depth. */
   onLinger: (linger: number) => void;
+  /** Set the spline basis. */
+  onSpline: (spline: SplineMode) => void;
+  /** Set the causal-Hermite turn-delay magnitude. */
+  onTurnDelay: (turnDelay: number) => void;
 };
 
 // Registry rows → dropdown options. A new clip is a new option, no edit here.
@@ -63,9 +72,13 @@ export function ClipPathInspectorSection({
   align,
   rampSec,
   linger,
+  spline,
+  turnDelay,
   onAlign,
   onRampSec,
   onLinger,
+  onSpline,
+  onTurnDelay,
 }: ClipPathInspectorSectionProps): ReactElement {
   // The dropdown's pending choice — seeded from the computed clip, else the
   // first registered clip. Calculate is what commits it to the store.
@@ -135,7 +148,34 @@ export function ClipPathInspectorSection({
           />
           <span className={styles.readout}>{linger.toFixed(2)}</span>
         </div>
-        {active && <div className={styles.muted}>Re-Calculate to apply align/ramp/linger.</div>}
+        <div className={styles.scrubRow}>
+          <span className={styles.muted}>spline</span>
+          <select
+            className={styles.select}
+            value={spline}
+            onChange={(e) => onSpline(e.target.value as SplineMode)}
+          >
+            <option value="centripetal">centripetal</option>
+            <option value="causalHermite">causal Hermite</option>
+          </select>
+        </div>
+        <div className={styles.scrubRow}>
+          <span className={styles.muted}>turn delay</span>
+          <input
+            className={styles.scrub}
+            type="range"
+            min={0}
+            max={3}
+            step={0.05}
+            value={turnDelay}
+            disabled={spline !== 'causalHermite'}
+            onChange={(e) => onTurnDelay(Number(e.target.value))}
+          />
+          <span className={styles.readout}>{turnDelay.toFixed(2)}</span>
+        </div>
+        {active && (
+          <div className={styles.muted}>Re-Calculate to apply align/ramp/linger/spline.</div>
+        )}
 
         <div className={styles.scrubRow}>
           <input

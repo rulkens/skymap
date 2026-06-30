@@ -68,6 +68,7 @@ import type { FocusBoundEffect } from './FocusBoundEffect';
 import type { SceneEffect } from './SceneEffect';
 import type { PathWaypoint } from './PathWaypoint';
 import type { Ease } from './Ease';
+import type { SplineMode } from './SplineMode';
 
 export type Effect =
   | CameraAction
@@ -104,4 +105,16 @@ export type Effect =
        * through; 1 eases to a near-stop. Omit for the builder default (0).
        */
       readonly linger?: number;
+      /**
+       * Which spline basis fits the waypoints: `centripetal` (Catmull-Rom, banks
+       * early — the default) or `causalHermite` (arrives head-on, turns after).
+       * Omit for the builder default (`centripetal`). See `SplineMode`.
+       */
+      readonly spline?: SplineMode;
+      /**
+       * Causal-Hermite tangent magnitude — the turn-delay / overshoot knob (1 =
+       * natural; >1 shoots further past a corner before banking). Ignored unless
+       * `spline` is `causalHermite`. Omit for the builder default (1).
+       */
+      readonly turnDelay?: number;
     };

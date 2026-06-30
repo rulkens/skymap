@@ -37,6 +37,7 @@ import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { ClipId } from '../../@types/animation/ClipId';
+import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
@@ -196,6 +197,15 @@ const settingsSlice = createSlice({
     setClipPathLinger: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.linger = action.payload;
     },
+    // Spline basis A/B: centripetal Catmull-Rom ↔ causal Hermite. Re-Calculate
+    // to apply. `turnDelay` is the causal-Hermite overshoot magnitude (inert in
+    // centripetal mode).
+    setClipPathSpline: (settings, action: PayloadAction<SplineMode>) => {
+      settings.debug.clipPathInspect.spline = action.payload;
+    },
+    setClipPathTurnDelay: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.turnDelay = action.payload;
+    },
 
     // ── structures ──────────────────────────────────────────────────────────
     setStructureItemEnabled: (
@@ -256,6 +266,8 @@ export const {
   setClipPathAlign,
   setClipPathRampSec,
   setClipPathLinger,
+  setClipPathSpline,
+  setClipPathTurnDelay,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,

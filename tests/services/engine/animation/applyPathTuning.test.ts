@@ -15,7 +15,13 @@ import {
 } from '../../../../src/services/engine/animation/effectHelpers';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 
-const TUNING = { align: 0.7, rampSec: 1.2, linger: 0.3 };
+const TUNING = {
+  align: 0.7,
+  rampSec: 1.2,
+  linger: 0.3,
+  spline: 'causalHermite' as const,
+  turnDelay: 1.5,
+};
 
 describe('applyPathTuning', () => {
   it('injects align + rampSec (seconds) into a top-level flyPath', () => {
@@ -29,6 +35,8 @@ describe('applyPathTuning', () => {
     expect(node.align).toBe(0.7);
     expect(node.rampSec).toBe(1.2);
     expect(node.linger).toBe(0.3);
+    expect(node.spline).toBe('causalHermite');
+    expect(node.turnDelay).toBe(1.5);
     expect(node.over).toBe(8); // other fields preserved
   });
 
@@ -50,6 +58,8 @@ describe('applyPathTuning', () => {
     expect(fly.align).toBe(0.7);
     expect(fly.rampSec).toBe(1.2);
     expect(fly.linger).toBe(0.3);
+    expect(fly.spline).toBe('causalHermite');
+    expect(fly.turnDelay).toBe(1.5);
   });
 
   it('overwrites a flyPath that already carries its own align/rampSec', () => {

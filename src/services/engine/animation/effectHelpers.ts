@@ -49,8 +49,15 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
+import type { SplineMode } from '../../../@types/animation/SplineMode';
 import { CHANNEL_SPACE } from './channelSpace';
-import { DEFAULT_ALIGN_SEC, DEFAULT_RAMP_SEC, DEFAULT_LINGER } from './pathDefaults';
+import {
+  DEFAULT_ALIGN_SEC,
+  DEFAULT_RAMP_SEC,
+  DEFAULT_LINGER,
+  DEFAULT_SPLINE,
+  DEFAULT_TURN_DELAY,
+} from './pathDefaults';
 
 // ---------------------------------------------------------------------------
 // Camera-action helpers
@@ -416,7 +423,15 @@ export function atFocus(id: FocusId, opts?: WaypointOpts): PathWaypoint {
  */
 export function flyPath(
   waypoints: PathWaypoint[],
-  opts: { over: number; ease?: Ease; align?: number; rampSec?: number; linger?: number },
+  opts: {
+    over: number;
+    ease?: Ease;
+    align?: number;
+    rampSec?: number;
+    linger?: number;
+    spline?: SplineMode;
+    turnDelay?: number;
+  },
 ): Effect & { kind: 'flyPath' } {
   return {
     kind: 'flyPath',
@@ -426,5 +441,7 @@ export function flyPath(
     align: opts.align ?? DEFAULT_ALIGN_SEC,
     rampSec: opts.rampSec ?? DEFAULT_RAMP_SEC,
     linger: opts.linger ?? DEFAULT_LINGER,
+    spline: opts.spline ?? DEFAULT_SPLINE,
+    turnDelay: opts.turnDelay ?? DEFAULT_TURN_DELAY,
   };
 }

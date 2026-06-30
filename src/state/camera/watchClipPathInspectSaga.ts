@@ -33,6 +33,8 @@ import {
   selectClipPathAlign,
   selectClipPathRampSec,
   selectClipPathLinger,
+  selectClipPathSpline,
+  selectClipPathTurnDelay,
 } from '../settings/selectors';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
@@ -60,7 +62,9 @@ export function* watchClipPathInspectSaga() {
     const align = yield* select(selectClipPathAlign);
     const rampSec = yield* select(selectClipPathRampSec);
     const linger = yield* select(selectClipPathLinger);
-    const tuned = applyPathTuning(resolved, { align, rampSec, linger });
+    const spline = yield* select(selectClipPathSpline);
+    const turnDelay = yield* select(selectClipPathTurnDelay);
+    const tuned = applyPathTuning(resolved, { align, rampSec, linger, spline, turnDelay });
     seam.compute(action.payload, tuned);
   });
 

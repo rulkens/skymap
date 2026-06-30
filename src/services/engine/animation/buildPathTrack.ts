@@ -51,12 +51,14 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { PathTrack, PathSample } from '../../../@types/animation/CompiledClip';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { SplineMode } from '../../../@types/animation/SplineMode';
 import { catmullRomNonUniform } from '../../../utils/math/catmullRomNonUniform';
+import { causalHermiteNonUniform } from '../../../utils/math/causalHermiteNonUniform';
 import { monotoneCubic } from '../../../utils/math/monotoneCubic';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
-import { DEFAULT_ALIGN_SEC } from './pathDefaults';
+import { DEFAULT_ALIGN_SEC, DEFAULT_TURN_DELAY } from './pathDefaults';
 import { EASE } from './ease';
 
 /** A waypoint after focus resolution — always concrete (`at` + `distance`). */
@@ -82,6 +84,10 @@ type BuildParams = {
   readonly rampSec?: number;
   /** Path-level brake depth ∈ [0,1] applied at every target; per-waypoint `linger` overrides it. */
   readonly linger?: number;
+  /** Which spline basis to fit (default `centripetal`). See `SplineMode`. */
+  readonly spline?: SplineMode;
+  /** Causal-Hermite tangent magnitude (turn-delay); ignored unless `spline` is `causalHermite`. */
+  readonly turnDelay?: number;
 };
 
 // Spline samples per leg for the arc-length table. 64 is plenty for a smooth
@@ -109,6 +115,8 @@ function chord(a: Vec3, b: Vec3): number {
 
 export function buildPathTrack(params: BuildParams): PathTrack {
   const { start, startSec, over, ease, waypoints, align, rampSec, linger } = params;
+  const spline: SplineMode = params.spline ?? 'centripetal';
+  const turnDelay = params.turnDelay ?? DEFAULT_TURN_DELAY;
 
   if (waypoints.length === 0) {
     throw new Error('buildPathTrack: a flyPath needs at least one waypoint.');
@@ -182,14 +190,24 @@ export function buildPathTrack(params: BuildParams): PathTrack {
 
   // --- Aim channels: forward-looking at every knot, with per-waypoint overrides ---
   //
-  // The forward tangent at a knot is the chord through its neighbours (central
-  // difference). Knot 0 looks toward the first waypoint; the last knot uses the
-  // incoming chord. The live orientation is NOT a knot here — it is blended in
-  // over ALIGN_SEC inside `sample`, so the aim aligns to the path promptly
-  // rather than creeping across a long first leg.
+  // The forward tangent at a knot is, in centripetal mode, the chord through its
+  // neighbours (central difference): knot 0 looks toward the first waypoint, the
+  // last knot uses the incoming chord, and interior knots bank toward the next.
+  // In causal-Hermite mode the forward at an INTERIOR knot is the INCOMING chord
+  // alone (head-on arrival — the turn happens after); knot 0 and the last knot
+  // are identical to centripetal either way. The live orientation is NOT a knot
+  // here — it is blended in over ALIGN_SEC inside `sample`, so the aim aligns to
+  // the path promptly rather than creeping across a long first leg.
   const forwardAt = (k: number): { yaw: number; pitch: number } => {
-    const prev = k === 0 ? knotPos[0]! : knotPos[k - 1]!;
-    const next = k === nKnots - 1 ? knotPos[k]! : knotPos[k + 1]!;
+    let prev: Vec3;
+    let next: Vec3;
+    if (spline === 'causalHermite' && k > 0) {
+      prev = knotPos[k - 1]!;
+      next = knotPos[k]!; // incoming chord → look straight down the approach
+    } else {
+      prev = k === 0 ? knotPos[0]! : knotPos[k - 1]!;
+      next = k === nKnots - 1 ? knotPos[k]! : knotPos[k + 1]!;
+    }
     const fwd: Vec3 = [next[0] - prev[0], next[1] - prev[1], next[2] - prev[2]];
     return orbitAnglesLookingAlong(fwd);
   };
@@ -231,21 +249,37 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   const exYaw = extend(yaw);
   const exPitch = extend(pitch);
 
-  // Evaluate one channel's centripetal Catmull-Rom at global parameter τ.
-  // `seg` is the real segment index (0..nLegs-1); ex-arrays are offset by 1, so
-  // segment `seg` reads ex-indices seg..seg+3 (real knots seg-1..seg+2).
-  const evalCh = (exVal: number[], seg: number, t: number): number =>
-    catmullRomNonUniform(
-      exVal[seg]!,
-      exVal[seg + 1]!,
-      exVal[seg + 2]!,
-      exVal[seg + 3]!,
-      exTau[seg]!,
-      exTau[seg + 1]!,
-      exTau[seg + 2]!,
-      exTau[seg + 3]!,
-      t,
-    );
+  // Evaluate one channel's spline at global parameter τ. `seg` is the real
+  // segment index (0..nLegs-1); ex-arrays are offset by 1, so segment `seg` reads
+  // ex-indices seg..seg+3 (real knots seg-1..seg+2). Both bases read the same
+  // 4-knot window; the causal Hermite ignores the forward knot (seg+3).
+  const evalCh =
+    spline === 'causalHermite'
+      ? (exVal: number[], seg: number, t: number): number =>
+          causalHermiteNonUniform(
+            exVal[seg]!,
+            exVal[seg + 1]!,
+            exVal[seg + 2]!,
+            exVal[seg + 3]!,
+            exTau[seg]!,
+            exTau[seg + 1]!,
+            exTau[seg + 2]!,
+            exTau[seg + 3]!,
+            t,
+            turnDelay,
+          )
+      : (exVal: number[], seg: number, t: number): number =>
+          catmullRomNonUniform(
+            exVal[seg]!,
+            exVal[seg + 1]!,
+            exVal[seg + 2]!,
+            exVal[seg + 3]!,
+            exTau[seg]!,
+            exTau[seg + 1]!,
+            exTau[seg + 2]!,
+            exTau[seg + 3]!,
+            t,
+          );
 
   const segOf = (t: number): number => {
     let seg = 0;

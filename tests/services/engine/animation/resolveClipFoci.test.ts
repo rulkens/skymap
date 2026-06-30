@@ -296,7 +296,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     expect(fp.ease).toBe('inOut');
   });
 
-  it('carries path-level align/rampSec/linger and per-waypoint linger through the rewrite', () => {
+  it('carries path-level align/rampSec/linger/spline/turnDelay and per-waypoint linger through the rewrite', () => {
     // Regression: the rewrite once rebuilt the flyPath as {kind,waypoints,over,
     // ease}, silently dropping the pacing knobs — only the inspector masked it by
     // re-injecting via applyPathTuning. Normal playback must keep them.
@@ -307,7 +307,15 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
             atFocus(focusId('cluster-virgo'), { linger: 0.8 }), // per-target brake
             atPoint([5, 5, 5], 3),
           ],
-          { over: 5, ease: 'inOut', align: 1.1, rampSec: 0.9, linger: 0.4 },
+          {
+            over: 5,
+            ease: 'inOut',
+            align: 1.1,
+            rampSec: 0.9,
+            linger: 0.4,
+            spline: 'causalHermite',
+            turnDelay: 1.7,
+          },
         ),
       ],
     };
@@ -319,6 +327,8 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     expect(fp.align).toBe(1.1);
     expect(fp.rampSec).toBe(0.9);
     expect(fp.linger).toBe(0.4);
+    expect(fp.spline).toBe('causalHermite');
+    expect(fp.turnDelay).toBe(1.7);
 
     // The per-waypoint linger survives onto the resolved at-form waypoint.
     const w0 = fp.waypoints[0]!;

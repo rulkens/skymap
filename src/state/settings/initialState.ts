@@ -39,6 +39,8 @@ import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
   DEFAULT_LINGER,
+  DEFAULT_SPLINE,
+  DEFAULT_TURN_DELAY,
 } from '../../services/engine/animation/pathDefaults';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
@@ -117,6 +119,8 @@ export function buildInitialSettings(): EngineSettingsState {
         align: DEFAULT_ALIGN_SEC,
         rampSec: DEFAULT_RAMP_SEC,
         linger: DEFAULT_LINGER,
+        spline: DEFAULT_SPLINE,
+        turnDelay: DEFAULT_TURN_DELAY,
       },
     },
     // Structure overlay: master gate on + one item row per category, each

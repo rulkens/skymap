@@ -406,6 +406,103 @@ describe('buildPathTrack', () => {
     expect(speedAt(slow, tStar)).toBeLessThan(speedAt(base, tStar) * 0.6);
   });
 
+  // ── Spline mode: causal Hermite arrives head-on; centripetal banks early ──
+  //
+  // The aim looks down the path tangent. Catmull-Rom's central-difference tangent
+  // banks toward the NEXT waypoint before arriving; the causal-Hermite tangent is
+  // the incoming chord, so the camera reaches an interior waypoint looking
+  // straight along its approach and only turns afterwards.
+  describe('spline mode', () => {
+    // A corner in the XZ plane: fly +Z to the interior corner, then turn +X to
+    // the destination. The incoming chord at the corner is +Z; the central
+    // difference (toward the destination) banks ~45° off it.
+    const start: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
+    const waypoints = [
+      { at: [0, 0, 100] as Vec3, distance: 10 }, // interior corner (flown through)
+      { at: [100, 0, 100] as Vec3, distance: 10 }, // destination after the turn
+    ];
+
+    /** The camera's LOOK direction (target − eye, i.e. −dir) from a pose. */
+    const lookOf = (s: PathSample): Vec3 => {
+      const cp = Math.cos(s.pitch);
+      return [-cp * Math.sin(s.yaw), -Math.sin(s.pitch), -cp * Math.cos(s.yaw)];
+    };
+
+    // Angle (radians) between the look direction at the eye's closest approach to
+    // the interior corner [0,0,100] and the incoming chord +Z. ~0 = head-on.
+    const lookAngleOffApproach = (spline: 'centripetal' | 'causalHermite'): number => {
+      const track = buildPathTrack({
+        start,
+        startSec: 0,
+        over: 20,
+        ease: 'linear',
+        waypoints,
+        spline,
+      });
+      let best = Infinity;
+      let look: Vec3 = [0, 0, 1];
+      for (let i = 0; i <= 800; i++) {
+        const s = track.sample((i / 800) * 20);
+        const e = eyeOf(s);
+        const d = Math.hypot(e[0], e[1], e[2] - 100);
+        if (d < best) {
+          best = d;
+          look = lookOf(s);
+        }
+      }
+      const mag = Math.hypot(look[0], look[1], look[2]);
+      return Math.acos(Math.max(-1, Math.min(1, look[2] / mag))); // angle to +Z
+    };
+
+    it('causal Hermite aims head-on at an interior corner (along the incoming chord)', () => {
+      expect(lookAngleOffApproach('causalHermite')).toBeLessThan(0.15);
+    });
+
+    it('centripetal banks toward the next waypoint at the same corner', () => {
+      expect(lookAngleOffApproach('centripetal')).toBeGreaterThan(0.5);
+    });
+
+    it('defaults to centripetal when no spline mode is given', () => {
+      const def = buildPathTrack({ start, startSec: 0, over: 20, ease: 'linear', waypoints });
+      const cen = buildPathTrack({
+        start,
+        startSec: 0,
+        over: 20,
+        ease: 'linear',
+        waypoints,
+        spline: 'centripetal',
+      });
+      for (let i = 0; i <= 10; i++) {
+        const t = (i / 10) * 20;
+        expect(def.sample(t).yaw).toBeCloseTo(cen.sample(t).yaw, 9);
+        expect(eyeOf(def.sample(t))[0]).toBeCloseTo(eyeOf(cen.sample(t))[0], 9);
+      }
+    });
+
+    it('turnDelay scales the causal overshoot past a sharp interior corner', () => {
+      // A right-angle corner: fly +Z to the corner, then +X. A larger turnDelay
+      // lengthens the arrival tangent, so the curve shoots further past the
+      // corner (max Z above the corner's Z=100) before banking back.
+      const overshootZ = (turnDelay: number): number => {
+        const track = buildPathTrack({
+          start,
+          startSec: 0,
+          over: 20,
+          ease: 'linear',
+          waypoints,
+          spline: 'causalHermite',
+          turnDelay,
+        });
+        let maxZ = -Infinity;
+        for (let i = 0; i <= 800; i++) {
+          maxZ = Math.max(maxZ, eyeOf(track.sample((i / 800) * 20))[2]);
+        }
+        return maxZ;
+      };
+      expect(overshootZ(2)).toBeGreaterThan(overshootZ(0.5));
+    });
+  });
+
   // ── No slingshot: a far start + clustered waypoints must not balloon ──
   //
   // The eye rides the centripetal spline, so it stays snug to its knots instead

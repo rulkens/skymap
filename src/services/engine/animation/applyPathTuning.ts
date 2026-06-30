@@ -20,6 +20,7 @@
 
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { Effect } from '../../../@types/animation/Effect';
+import type { SplineMode } from '../../../@types/animation/SplineMode';
 
 export type PathTuning = {
   /** Align-in seconds (start-aim blend window). */
@@ -28,12 +29,23 @@ export type PathTuning = {
   readonly rampSec: number;
   /** Per-target brake depth ∈ [0,1] (0 = cruise straight through). */
   readonly linger: number;
+  /** Spline basis (centripetal Catmull-Rom ↔ causal Hermite). */
+  readonly spline: SplineMode;
+  /** Causal-Hermite turn-delay magnitude (ignored in centripetal mode). */
+  readonly turnDelay: number;
 };
 
 function tuneEffect(effect: Effect, tuning: PathTuning): Effect {
   switch (effect.kind) {
     case 'flyPath':
-      return { ...effect, align: tuning.align, rampSec: tuning.rampSec, linger: tuning.linger };
+      return {
+        ...effect,
+        align: tuning.align,
+        rampSec: tuning.rampSec,
+        linger: tuning.linger,
+        spline: tuning.spline,
+        turnDelay: tuning.turnDelay,
+      };
     case 'seq':
     case 'all':
       return { ...effect, children: effect.children.map((c) => tuneEffect(c, tuning)) };

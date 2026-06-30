@@ -52,6 +52,7 @@ import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
 import type { ClipId } from '../animation/ClipId';
+import type { SplineMode } from '../animation/SplineMode';
 
 export type EngineSettingsState = {
   /**
@@ -202,13 +203,15 @@ export type EngineSettingsState = {
      * normalised `[0,1]` fraction (NOT seconds — the UI has no access to the
      * clip duration, so the scrubber is a pure position).
      *
-     * `align` / `rampSec` / `linger` are the live flyPath pacing knobs the
-     * inspector bakes into the clip at Calculate time (via `applyPathTuning`):
-     * `align` is the start-aim blend seconds, `rampSec` the seconds of ease ramp
-     * each end (0 = use the named `ease`), `linger` the per-target brake depth
-     * ∈ [0,1] (0 = cruise straight through each waypoint). They seed from the
-     * flyPath defaults, so a fresh inspect re-applies the clip's own pacing until
-     * a slider is dragged.
+     * `align` / `rampSec` / `linger` / `spline` / `turnDelay` are the live flyPath
+     * pacing + shape knobs the inspector bakes into the clip at Calculate time
+     * (via `applyPathTuning`): `align` is the start-aim blend seconds, `rampSec`
+     * the seconds of ease ramp each end (0 = use the named `ease`), `linger` the
+     * per-target brake depth ∈ [0,1] (0 = cruise straight through each waypoint),
+     * `spline` the basis (centripetal Catmull-Rom ↔ causal Hermite), `turnDelay`
+     * the causal-Hermite overshoot magnitude (inert in centripetal mode). They
+     * seed from the flyPath defaults, so a fresh inspect re-applies the clip's own
+     * pacing until a slider is dragged.
      */
     clipPathInspect: {
       clipId: ClipId | null;
@@ -216,6 +219,8 @@ export type EngineSettingsState = {
       align: number;
       rampSec: number;
       linger: number;
+      spline: SplineMode;
+      turnDelay: number;
     };
   };
 

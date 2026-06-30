@@ -22,6 +22,8 @@ import {
   selectClipPathAlign,
   selectClipPathRampSec,
   selectClipPathLinger,
+  selectClipPathSpline,
+  selectClipPathTurnDelay,
 } from '../../state/settings/selectors';
 import {
   inspectClipPath,
@@ -30,9 +32,12 @@ import {
   setClipPathAlign,
   setClipPathRampSec,
   setClipPathLinger,
+  setClipPathSpline,
+  setClipPathTurnDelay,
 } from '../../state/settings/settingsSlice';
 import { replayInspectedPath } from '../../state/camera/clipActions';
 import type { ClipId } from '../../@types/animation/ClipId';
+import type { SplineMode } from '../../@types/animation/SplineMode';
 
 function ClipPathInspectorSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
@@ -41,6 +46,8 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const align = useAppSelector(selectClipPathAlign);
   const rampSec = useAppSelector(selectClipPathRampSec);
   const linger = useAppSelector(selectClipPathLinger);
+  const spline = useAppSelector(selectClipPathSpline);
+  const turnDelay = useAppSelector(selectClipPathTurnDelay);
 
   const onInspect = useCallback((id: ClipId) => dispatch(inspectClipPath(id)), [dispatch]);
   const onClear = useCallback(() => dispatch(clearClipPath()), [dispatch]);
@@ -49,6 +56,11 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const onAlign = useCallback((next: number) => dispatch(setClipPathAlign(next)), [dispatch]);
   const onRampSec = useCallback((next: number) => dispatch(setClipPathRampSec(next)), [dispatch]);
   const onLinger = useCallback((next: number) => dispatch(setClipPathLinger(next)), [dispatch]);
+  const onSpline = useCallback((next: SplineMode) => dispatch(setClipPathSpline(next)), [dispatch]);
+  const onTurnDelay = useCallback(
+    (next: number) => dispatch(setClipPathTurnDelay(next)),
+    [dispatch],
+  );
 
   return (
     <ClipPathInspectorSection
@@ -61,9 +73,13 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
       align={align}
       rampSec={rampSec}
       linger={linger}
+      spline={spline}
+      turnDelay={turnDelay}
       onAlign={onAlign}
       onRampSec={onRampSec}
       onLinger={onLinger}
+      onSpline={onSpline}
+      onTurnDelay={onTurnDelay}
     />
   );
 }
