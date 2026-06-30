@@ -40,6 +40,7 @@ function buildHarness(pinned: ClipData | null) {
     playClip,
     clipPathInspect: {
       compute: vi.fn<(clipId: ClipId, resolved: ClipData) => void>(),
+      recompute: vi.fn<(clipId: ClipId, resolved: ClipData) => void>(),
       clear: vi.fn<() => void>(),
       pinnedClip,
     },

@@ -28,7 +28,7 @@
  */
 import { call, select, takeLatest, takeEvery, getContext } from 'typed-redux-saga';
 
-import { inspectClipPath, clearClipPath } from '../settings/settingsSlice';
+import { inspectClipPath, recalcClipPath, clearClipPath } from '../settings/settingsSlice';
 import {
   selectClipPathAlign,
   selectClipPathRampSec,
@@ -45,41 +45,54 @@ import { applyPathTuning } from '../../services/engine/animation/applyPathTuning
 import { clipFociReady } from '../tour/clipFociReady';
 import { waitUntil } from '../tour/waitUntil';
 import type { SagaContext } from '../../store/types';
+import type { ClipId } from '../../@types/animation/ClipId';
+
+/**
+ * Resolve + tune the named clip, then hand it to the seam. `keepStart` picks the
+ * seam entry point: `false` (Calculate) captures the live camera as the start;
+ * `true` (Re-calc) keeps the start the last Calculate captured, so only foci +
+ * tuning are refreshed.
+ */
+function* sampleInspected(clipId: ClipId, keepStart: boolean) {
+  const seam = yield* getContext<SagaContext['clipPathInspect']>('clipPathInspect');
+  const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+  const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
+  const clip = clipRegistry[clipId];
+
+  // Block until every id-bearing cue resolves AND the camera runtime (which
+  // carries the FOV resolveClipFoci needs) exists — same gate as watchClipSaga.
+  yield* call(waitUntil, () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null);
+  const resolved = resolveClipFoci(clip.data, resolveDeps(), cameraRuntime()!.fovYRad);
+  // Bake only the ACTIVATED pacing knobs into the flyPath nodes before
+  // sampling, so the overlay AND the pinned (replayable) clip carry the
+  // overrides — while inactive knobs let the clip's own authored value through.
+  const align = yield* select(selectClipPathAlign);
+  const rampSec = yield* select(selectClipPathRampSec);
+  const linger = yield* select(selectClipPathLinger);
+  const spline = yield* select(selectClipPathSpline);
+  const turnDelay = yield* select(selectClipPathTurnDelay);
+  const lookAhead = yield* select(selectClipPathLookAhead);
+  const active = yield* select(selectClipPathTuningActive);
+  const tuning: PathTuning = {
+    ...(active.align ? { align } : {}),
+    ...(active.rampSec ? { rampSec } : {}),
+    ...(active.linger ? { linger } : {}),
+    ...(active.spline ? { spline } : {}),
+    ...(active.turnDelay ? { turnDelay } : {}),
+    ...(active.lookAhead ? { lookAhead } : {}),
+  };
+  const tuned = applyPathTuning(resolved, tuning);
+  if (keepStart) seam.recompute(clipId, tuned);
+  else seam.compute(clipId, tuned);
+}
 
 export function* watchClipPathInspectSaga() {
   yield* takeLatest(inspectClipPath, function* (action) {
-    const seam = yield* getContext<SagaContext['clipPathInspect']>('clipPathInspect');
-    const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
-    const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
-    const clip = clipRegistry[action.payload];
+    yield* sampleInspected(action.payload, false);
+  });
 
-    // Block until every id-bearing cue resolves AND the camera runtime (which
-    // carries the FOV resolveClipFoci needs) exists — same gate as watchClipSaga.
-    yield* call(
-      waitUntil,
-      () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null,
-    );
-    const resolved = resolveClipFoci(clip.data, resolveDeps(), cameraRuntime()!.fovYRad);
-    // Bake only the ACTIVATED pacing knobs into the flyPath nodes before
-    // sampling, so the overlay AND the pinned (replayable) clip carry the
-    // overrides — while inactive knobs let the clip's own authored value through.
-    const align = yield* select(selectClipPathAlign);
-    const rampSec = yield* select(selectClipPathRampSec);
-    const linger = yield* select(selectClipPathLinger);
-    const spline = yield* select(selectClipPathSpline);
-    const turnDelay = yield* select(selectClipPathTurnDelay);
-    const lookAhead = yield* select(selectClipPathLookAhead);
-    const active = yield* select(selectClipPathTuningActive);
-    const tuning: PathTuning = {
-      ...(active.align ? { align } : {}),
-      ...(active.rampSec ? { rampSec } : {}),
-      ...(active.linger ? { linger } : {}),
-      ...(active.spline ? { spline } : {}),
-      ...(active.turnDelay ? { turnDelay } : {}),
-      ...(active.lookAhead ? { lookAhead } : {}),
-    };
-    const tuned = applyPathTuning(resolved, tuning);
-    seam.compute(action.payload, tuned);
+  yield* takeLatest(recalcClipPath, function* (action) {
+    yield* sampleInspected(action.payload, true);
   });
 
   yield* takeEvery(clearClipPath, function* () {

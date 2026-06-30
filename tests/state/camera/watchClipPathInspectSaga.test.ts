@@ -15,7 +15,11 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchClipPathInspectSaga } from '../../../src/state/camera/watchClipPathInspectSaga';
-import { inspectClipPath, clearClipPath } from '../../../src/state/settings/settingsSlice';
+import {
+  inspectClipPath,
+  recalcClipPath,
+  clearClipPath,
+} from '../../../src/state/settings/settingsSlice';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../src/@types/animation/ClipId';
@@ -40,6 +44,7 @@ const RUNTIME: FocusCameraRuntime = {
 
 function buildHarness() {
   const compute = vi.fn<(clipId: ClipId, resolved: ClipData) => void>();
+  const recompute = vi.fn<(clipId: ClipId, resolved: ClipData) => void>();
   const clear = vi.fn<() => void>();
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
@@ -47,12 +52,17 @@ function buildHarness() {
     middleware: (getDefault) => getDefault().concat(sagaMiddleware),
   });
   sagaMiddleware.setContext({
-    clipPathInspect: { compute, clear, pinnedClip: vi.fn<() => ClipData | null>(() => null) },
+    clipPathInspect: {
+      compute,
+      recompute,
+      clear,
+      pinnedClip: vi.fn<() => ClipData | null>(() => null),
+    },
     resolveDeps: () => EMPTY_DEPS,
     cameraRuntime: () => RUNTIME,
   });
   sagaMiddleware.run(watchClipPathInspectSaga);
-  return { store, compute, clear };
+  return { store, compute, recompute, clear };
 }
 
 describe('watchClipPathInspectSaga', () => {
@@ -67,6 +77,16 @@ describe('watchClipPathInspectSaga', () => {
 
     expect(compute).toHaveBeenCalledTimes(1);
     expect(compute).toHaveBeenCalledWith(CLIP_ID, EXPECTED);
+  });
+
+  it('routes recalcClipPath to recompute (keep-start), not compute', async () => {
+    const { store, compute, recompute } = buildHarness();
+    store.dispatch(recalcClipPath(CLIP_ID));
+    await flush();
+
+    expect(recompute).toHaveBeenCalledTimes(1);
+    expect(recompute).toHaveBeenCalledWith(CLIP_ID, EXPECTED);
+    expect(compute).not.toHaveBeenCalled();
   });
 
   it('calls clear on clearClipPath', async () => {

@@ -35,6 +35,27 @@ describe('createClipPathInspectSeam', () => {
     expect(snap.samples).toHaveLength(8);
   });
 
+  it('recompute() re-samples with the start the last compute captured, not the current live pose', () => {
+    const inspector = fakeInspector();
+    // A moving live pose: compute() sees POSE_A, then the camera moves to POSE_B.
+    const POSE_A: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 };
+    const POSE_B: CameraPose = { target: [9, 9, 9], yaw: 1, pitch: 0.5, distance: 99 };
+    let live = POSE_A;
+    const seam = createClipPathInspectSeam({
+      inspector,
+      getLivePose: () => live,
+      sampleCount: 8,
+    });
+
+    seam.compute('flyout', clipRegistry['flyout'].data);
+    expect(seam.pinnedClip()).toEqual(resolveClipStart(clipRegistry['flyout'].data, POSE_A));
+
+    // Camera moves to view the path; Re-calc must KEEP POSE_A as the start.
+    live = POSE_B;
+    seam.recompute('flyout', clipRegistry['flyout'].data);
+    expect(seam.pinnedClip()).toEqual(resolveClipStart(clipRegistry['flyout'].data, POSE_A));
+  });
+
   it('clear() clears the inspector', () => {
     const inspector = fakeInspector();
     const seam = createClipPathInspectSeam({

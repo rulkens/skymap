@@ -33,6 +33,8 @@ export type ClipPathInspectorSectionProps = {
   scrub01: number;
   /** Sample the named clip's path into the overlay (the "Calculate" button). */
   onInspect: (id: ClipId) => void;
+  /** Re-sample the shown clip keeping the last start pose (the "Re-calc" button). */
+  onRecalc: (id: ClipId) => void;
   /** Hide the overlay + drop the snapshot (the "Clear" button). */
   onClear: () => void;
   /** Move the scrubber (a [0,1] fraction). */
@@ -76,6 +78,7 @@ export function ClipPathInspectorSection({
   inspectId,
   scrub01,
   onInspect,
+  onRecalc,
   onClear,
   onScrub,
   onReplay,
@@ -118,14 +121,15 @@ export function ClipPathInspectorSection({
           <button type="button" className={styles.button} onClick={() => onInspect(selected)}>
             Calculate
           </button>
-          {/* Re-sample the SHOWN clip from the current camera — move the camera
-              to view the path, then refresh its start knot without re-picking. */}
+          {/* Re-sample the SHOWN clip keeping the start the last Calculate captured:
+              move the camera out to view the path, tweak a knob, Re-calc to see it
+              without the start jumping to the overview camera. */}
           <button
             type="button"
             className={styles.button}
-            onClick={() => inspectId !== null && onInspect(inspectId)}
+            onClick={() => inspectId !== null && onRecalc(inspectId)}
             disabled={!active}
-            title="Recompute the shown path from the current camera position"
+            title="Recompute the shown path (foci + tuning) keeping the original start camera"
           >
             Re-calc
           </button>

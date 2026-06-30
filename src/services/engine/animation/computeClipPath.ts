@@ -16,6 +16,14 @@
  * the same dispatch-time resolution `playClip` does — so the sampled route
  * begins exactly where a real play would.
  *
+ * ### compute vs recompute (the "Re-calc" button)
+ *
+ * `compute` captures the live pose as the start; `recompute` re-samples with the
+ * SAME start pose the last `compute` captured. The curator Calculates from where
+ * they sit, moves the camera out to see the route, then iterates on tuning with
+ * `recompute` — so the start knot stays put instead of snapping to the overview
+ * camera each press. Everything but the start (foci, tuning) is still fresh.
+ *
  * ### Why compile just for the duration
  *
  * `sampleClipPath` walks the clip uniformly in TIME, so it needs the total
@@ -59,16 +67,29 @@ export function createClipPathInspectSeam(deps: ClipPathInspectSeamDeps): ClipPa
   // carries only render geometry) so `watchReplayInspectedPathSaga` can replay
   // the EXACT inspected route rather than a fresh `start: 'live'` resolution.
   let pinned: ClipData | null = null;
+  // The start pose the last `compute` captured — `recompute` re-uses it so the
+  // route keeps its original origin while the curator views it from elsewhere.
+  let lastStart: CameraPose | null = null;
+
+  const sampleInto = (clipId: ClipId, resolved: ClipData, startPose: CameraPose): void => {
+    const started = resolveClipStart(resolved, startPose);
+    pinned = started;
+    const durationSec = compileClip(started).durationSec;
+    inspector.setSnapshot(sampleClipPath(clipId, started, durationSec, sampleCount));
+  };
 
   return {
     compute(clipId: ClipId, resolved: ClipData): void {
-      const started = resolveClipStart(resolved, getLivePose());
-      pinned = started;
-      const durationSec = compileClip(started).durationSec;
-      inspector.setSnapshot(sampleClipPath(clipId, started, durationSec, sampleCount));
+      lastStart = getLivePose();
+      sampleInto(clipId, resolved, lastStart);
+    },
+    recompute(clipId: ClipId, resolved: ClipData): void {
+      // Keep the last captured start (fall back to live if nothing computed yet).
+      sampleInto(clipId, resolved, lastStart ?? getLivePose());
     },
     clear(): void {
       pinned = null;
+      lastStart = null;
       inspector.clear();
     },
     pinnedClip(): ClipData | null {

@@ -69,6 +69,11 @@ export type FocusCameraRuntime = { from: CameraPose; fovYRad: number };
  * construction via `createClipPathInspectSeam` + `setSagaContext`; tests inject a
  * stub via `sagaMiddleware.setContext`.
  *
+ * `recompute` re-samples with the SAME start pose the last `compute` captured,
+ * rather than the current live pose — so the curator can move the camera to view
+ * the path and iterate on tuning without the start knot jumping to the new
+ * viewpoint (the "Re-calc" button). Everything else (foci, tuning) is fresh.
+ *
  * `pinnedClip` returns the foci-resolved, start-pinned `ClipData` the last
  * `compute` produced (null before the first / after `clear`). It is the replay
  * source: `watchReplayInspectedPathSaga` plays it verbatim so the flown route is
@@ -76,6 +81,7 @@ export type FocusCameraRuntime = { from: CameraPose; fovYRad: number };
  */
 export type ClipPathInspectSeam = {
   compute: (clipId: ClipId, resolved: ClipData) => void;
+  recompute: (clipId: ClipId, resolved: ClipData) => void;
   clear: () => void;
   pinnedClip: () => ClipData | null;
 };

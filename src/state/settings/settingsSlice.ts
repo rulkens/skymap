@@ -174,6 +174,14 @@ const settingsSlice = createSlice({
       settings.debug.clipPathInspect.clipId = action.payload;
       settings.debug.clipPathInspect.scrub01 = 0;
     },
+    // Re-sample the shown clip with everything fresh EXCEPT the start pose, which
+    // the seam keeps from the last Calculate — so moving the camera to view the
+    // path then tuning a knob doesn't snap the start to the new viewpoint. The
+    // saga watches this; state-wise it mirrors `inspectClipPath`.
+    recalcClipPath: (settings, action: PayloadAction<ClipId>) => {
+      settings.debug.clipPathInspect.clipId = action.payload;
+      settings.debug.clipPathInspect.scrub01 = 0;
+    },
     // Drop the inspected path (the "Clear" button). The saga clears the held
     // snapshot so the overlay goes quiet.
     clearClipPath: (settings) => {
@@ -282,6 +290,7 @@ export const {
   setShowDiskRadiusRing,
   setPassDisabled,
   inspectClipPath,
+  recalcClipPath,
   clearClipPath,
   setClipPathScrub,
   setClipPathAlign,

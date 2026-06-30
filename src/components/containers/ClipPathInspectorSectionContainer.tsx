@@ -29,6 +29,7 @@ import {
 } from '../../state/settings/selectors';
 import {
   inspectClipPath,
+  recalcClipPath,
   clearClipPath,
   setClipPathScrub,
   setClipPathAlign,
@@ -57,6 +58,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const tuningActive = useAppSelector(selectClipPathTuningActive);
 
   const onInspect = useCallback((id: ClipId) => dispatch(inspectClipPath(id)), [dispatch]);
+  const onRecalc = useCallback((id: ClipId) => dispatch(recalcClipPath(id)), [dispatch]);
   const onClear = useCallback(() => dispatch(clearClipPath()), [dispatch]);
   const onScrub = useCallback((next: number) => dispatch(setClipPathScrub(next)), [dispatch]);
   const onReplay = useCallback(() => dispatch(replayInspectedPath()), [dispatch]);
@@ -83,6 +85,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
       inspectId={inspectId}
       scrub01={scrub01}
       onInspect={onInspect}
+      onRecalc={onRecalc}
       onClear={onClear}
       onScrub={onScrub}
       onReplay={onReplay}
