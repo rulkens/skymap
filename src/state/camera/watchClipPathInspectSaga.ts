@@ -29,7 +29,11 @@
 import { call, select, takeLatest, takeEvery, getContext } from 'typed-redux-saga';
 
 import { inspectClipPath, clearClipPath } from '../settings/settingsSlice';
-import { selectClipPathAlign, selectClipPathRampSec } from '../settings/selectors';
+import {
+  selectClipPathAlign,
+  selectClipPathRampSec,
+  selectClipPathLinger,
+} from '../settings/selectors';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { applyPathTuning } from '../../services/engine/animation/applyPathTuning';
@@ -55,7 +59,8 @@ export function* watchClipPathInspectSaga() {
     // overlay AND the pinned (replayable) clip carry the tuning.
     const align = yield* select(selectClipPathAlign);
     const rampSec = yield* select(selectClipPathRampSec);
-    const tuned = applyPathTuning(resolved, { align, rampSec });
+    const linger = yield* select(selectClipPathLinger);
+    const tuned = applyPathTuning(resolved, { align, rampSec, linger });
     seam.compute(action.payload, tuned);
   });
 

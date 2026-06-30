@@ -50,7 +50,7 @@ import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLay
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import { CHANNEL_SPACE } from './channelSpace';
-import { DEFAULT_ALIGN_SEC, DEFAULT_RAMP_SEC } from './pathDefaults';
+import { DEFAULT_ALIGN_SEC, DEFAULT_RAMP_SEC, DEFAULT_LINGER } from './pathDefaults';
 
 // ---------------------------------------------------------------------------
 // Camera-action helpers
@@ -370,13 +370,14 @@ export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' 
 // Path helpers — waypoints + the flythrough that flies a spline through them
 // ---------------------------------------------------------------------------
 
-type WaypointOpts = { yaw?: number; pitch?: number; over?: number };
+type WaypointOpts = { yaw?: number; pitch?: number; over?: number; linger?: number };
 
 function waypointExtras(opts?: WaypointOpts): WaypointOpts {
   return {
     ...(opts?.yaw !== undefined ? { yaw: opts.yaw } : {}),
     ...(opts?.pitch !== undefined ? { pitch: opts.pitch } : {}),
     ...(opts?.over !== undefined ? { over: opts.over } : {}),
+    ...(opts?.linger !== undefined ? { linger: opts.linger } : {}),
   };
 }
 
@@ -415,7 +416,7 @@ export function atFocus(id: FocusId, opts?: WaypointOpts): PathWaypoint {
  */
 export function flyPath(
   waypoints: PathWaypoint[],
-  opts: { over: number; ease?: Ease; align?: number; rampSec?: number },
+  opts: { over: number; ease?: Ease; align?: number; rampSec?: number; linger?: number },
 ): Effect & { kind: 'flyPath' } {
   return {
     kind: 'flyPath',
@@ -424,5 +425,6 @@ export function flyPath(
     ease: opts.ease ?? 'inOut',
     align: opts.align ?? DEFAULT_ALIGN_SEC,
     rampSec: opts.rampSec ?? DEFAULT_RAMP_SEC,
+    linger: opts.linger ?? DEFAULT_LINGER,
   };
 }

@@ -107,7 +107,7 @@ describe('EngineState type', () => {
         showPickBuffer: false,
         showDiskRadiusRing: false,
         disabledPasses: {},
-        clipPathInspect: { clipId: null, scrub01: 0, align: 1.35, rampSec: 1.4 },
+        clipPathInspect: { clipId: null, scrub01: 0, align: 1.35, rampSec: 1.4, linger: 0 },
       },
       structures: {
         enabled: true,
@@ -268,7 +268,7 @@ describe('EngineState type', () => {
         showPickBuffer: false,
         showDiskRadiusRing: false,
         disabledPasses: {},
-        clipPathInspect: { clipId: null, scrub01: 0, align: 1.35, rampSec: 1.4 },
+        clipPathInspect: { clipId: null, scrub01: 0, align: 1.35, rampSec: 1.4, linger: 0 },
       },
       structures: {
         enabled: true,
@@ -323,7 +323,7 @@ describe('EngineState type', () => {
           showPickBuffer: false,
           showDiskRadiusRing: false,
           disabledPasses: {},
-          clipPathInspect: { clipId: null, scrub01: 0, align: 1.35, rampSec: 1.4 },
+          clipPathInspect: { clipId: null, scrub01: 0, align: 1.35, rampSec: 1.4, linger: 0 },
         },
         structures: {
           enabled: true,

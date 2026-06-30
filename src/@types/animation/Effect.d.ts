@@ -97,4 +97,11 @@ export type Effect =
        * exceed the take.
        */
       readonly rampSec?: number;
+      /**
+       * Path-level brake depth ∈ [0,1] applied at EVERY target — a local velocity
+       * dip as the camera passes each waypoint (slow on approach + departure). A
+       * per-waypoint `linger` overrides it. 0 (the default) cruises straight
+       * through; 1 eases to a near-stop. Omit for the builder default (0).
+       */
+      readonly linger?: number;
     };

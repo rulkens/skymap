@@ -24,6 +24,14 @@
  * path never STOPS at a waypoint — a stop is a separate beat dwell, not a path
  * feature.
  *
+ * ### Optional per-target slowdown (`linger`)
+ *
+ * `linger` ∈ [0,1] brakes the camera as it passes THIS waypoint — a local
+ * velocity dip centred on the target (slow on approach, slow on departure),
+ * unlike `over` which paces a whole leg uniformly. 0 cruises straight through;
+ * 1 eases to a near-stop. Omit to inherit the `flyPath`'s path-level `linger`.
+ * The path still never fully STOPS — a stop is a separate beat dwell.
+ *
  * After `resolveClipFoci` runs, every waypoint is in `at`-form; `compileClip`
  * throws if it ever sees a surviving `id`-form (the readiness gate guarantees
  * it won't).
@@ -39,10 +47,12 @@ export type PathWaypoint =
       readonly yaw?: number;
       readonly pitch?: number;
       readonly over?: number;
+      readonly linger?: number;
     }
   | {
       readonly id: FocusId;
       readonly yaw?: number;
       readonly pitch?: number;
       readonly over?: number;
+      readonly linger?: number;
     };

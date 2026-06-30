@@ -21,6 +21,7 @@ import {
   selectClipPathScrub,
   selectClipPathAlign,
   selectClipPathRampSec,
+  selectClipPathLinger,
 } from '../../state/settings/selectors';
 import {
   inspectClipPath,
@@ -28,6 +29,7 @@ import {
   setClipPathScrub,
   setClipPathAlign,
   setClipPathRampSec,
+  setClipPathLinger,
 } from '../../state/settings/settingsSlice';
 import { replayInspectedPath } from '../../state/camera/clipActions';
 import type { ClipId } from '../../@types/animation/ClipId';
@@ -38,6 +40,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const scrub01 = useAppSelector(selectClipPathScrub);
   const align = useAppSelector(selectClipPathAlign);
   const rampSec = useAppSelector(selectClipPathRampSec);
+  const linger = useAppSelector(selectClipPathLinger);
 
   const onInspect = useCallback((id: ClipId) => dispatch(inspectClipPath(id)), [dispatch]);
   const onClear = useCallback(() => dispatch(clearClipPath()), [dispatch]);
@@ -45,6 +48,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const onReplay = useCallback(() => dispatch(replayInspectedPath()), [dispatch]);
   const onAlign = useCallback((next: number) => dispatch(setClipPathAlign(next)), [dispatch]);
   const onRampSec = useCallback((next: number) => dispatch(setClipPathRampSec(next)), [dispatch]);
+  const onLinger = useCallback((next: number) => dispatch(setClipPathLinger(next)), [dispatch]);
 
   return (
     <ClipPathInspectorSection
@@ -56,8 +60,10 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
       onReplay={onReplay}
       align={align}
       rampSec={rampSec}
+      linger={linger}
       onAlign={onAlign}
       onRampSec={onRampSec}
+      onLinger={onLinger}
     />
   );
 }

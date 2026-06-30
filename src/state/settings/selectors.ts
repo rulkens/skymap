@@ -144,6 +144,9 @@ export const selectClipPathAlign = (state: RootState): number =>
 export const selectClipPathRampSec = (state: RootState): number =>
   selectSettings(state).debug.clipPathInspect.rampSec;
 
+export const selectClipPathLinger = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.linger;
+
 // --- structures cluster -------------------------------------------------------
 
 export const selectStructureItems = (

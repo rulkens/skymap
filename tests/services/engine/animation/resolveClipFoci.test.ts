@@ -267,10 +267,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     const clip: ClipData = {
       timeline: [
         flyPath(
-          [
-            atFocus(focusId('cluster-virgo'), { over: 2 }),
-            atPoint([5, 5, 5], 3, { pitch: 0.2 }),
-          ],
+          [atFocus(focusId('cluster-virgo'), { over: 2 }), atPoint([5, 5, 5], 3, { pitch: 0.2 })],
           { over: 5, ease: 'inOut' },
         ),
       ],
@@ -297,5 +294,35 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     // The path-level over/ease pass through.
     expect(fp.over).toBe(5);
     expect(fp.ease).toBe('inOut');
+  });
+
+  it('carries path-level align/rampSec/linger and per-waypoint linger through the rewrite', () => {
+    // Regression: the rewrite once rebuilt the flyPath as {kind,waypoints,over,
+    // ease}, silently dropping the pacing knobs — only the inspector masked it by
+    // re-injecting via applyPathTuning. Normal playback must keep them.
+    const clip: ClipData = {
+      timeline: [
+        flyPath(
+          [
+            atFocus(focusId('cluster-virgo'), { linger: 0.8 }), // per-target brake
+            atPoint([5, 5, 5], 3),
+          ],
+          { over: 5, ease: 'inOut', align: 1.1, rampSec: 0.9, linger: 0.4 },
+        ),
+      ],
+    };
+
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const fp = resolved.timeline[0]!;
+    if (fp.kind !== 'flyPath') throw new Error('expected a flyPath effect');
+
+    expect(fp.align).toBe(1.1);
+    expect(fp.rampSec).toBe(0.9);
+    expect(fp.linger).toBe(0.4);
+
+    // The per-waypoint linger survives onto the resolved at-form waypoint.
+    const w0 = fp.waypoints[0]!;
+    if (!('at' in w0)) throw new Error('waypoint 0 should be resolved to at-form');
+    expect(w0.linger).toBe(0.8);
   });
 });

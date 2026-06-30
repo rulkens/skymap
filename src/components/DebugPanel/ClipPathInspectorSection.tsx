@@ -40,10 +40,14 @@ export type ClipPathInspectorSectionProps = {
   align: number;
   /** Ease ramp seconds each end (0 = named ease) — applied on the next Calculate. */
   rampSec: number;
+  /** Per-target brake depth [0,1] (0 = cruise through) — applied on the next Calculate. */
+  linger: number;
   /** Set the align-in seconds. */
   onAlign: (align: number) => void;
   /** Set the ease-ramp seconds. */
   onRampSec: (rampSec: number) => void;
+  /** Set the per-target brake depth. */
+  onLinger: (linger: number) => void;
 };
 
 // Registry rows → dropdown options. A new clip is a new option, no edit here.
@@ -58,8 +62,10 @@ export function ClipPathInspectorSection({
   onReplay,
   align,
   rampSec,
+  linger,
   onAlign,
   onRampSec,
+  onLinger,
 }: ClipPathInspectorSectionProps): ReactElement {
   // The dropdown's pending choice — seeded from the computed clip, else the
   // first registered clip. Calculate is what commits it to the store.
@@ -116,7 +122,20 @@ export function ClipPathInspectorSection({
           />
           <span className={styles.readout}>{rampSec.toFixed(1)}s</span>
         </div>
-        {active && <div className={styles.muted}>Re-Calculate to apply align/ramp.</div>}
+        <div className={styles.scrubRow}>
+          <span className={styles.muted}>linger</span>
+          <input
+            className={styles.scrub}
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={linger}
+            onChange={(e) => onLinger(Number(e.target.value))}
+          />
+          <span className={styles.readout}>{linger.toFixed(2)}</span>
+        </div>
+        {active && <div className={styles.muted}>Re-Calculate to apply align/ramp/linger.</div>}
 
         <div className={styles.scrubRow}>
           <input

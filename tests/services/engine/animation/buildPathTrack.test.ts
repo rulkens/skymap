@@ -296,6 +296,116 @@ describe('buildPathTrack', () => {
     expect(eyeOf(off.sample(1))[0]).toBeCloseTo(eyeOf(inOut.sample(1))[0], 6);
   });
 
+  // ── Linger: a per-target velocity dip (slow on approach + departure) ──
+  //
+  // `linger` ∈ [0,1] brakes the camera as it passes a waypoint. It is a pure
+  // time pre-warp: identity at 0 (no behaviour change), and at high values the
+  // camera crawls THROUGH the target while flying faster between targets — the
+  // leg's total time is unchanged, only its distribution. The eye still passes
+  // each interior knot at the SAME scheduled time (the warp is identity at leg
+  // boundaries), so closest-approach timing is stable.
+  it('linger:0 (and absent) is byte-identical to no linger', () => {
+    const waypoints = [
+      { at: [10, 0, 0] as Vec3, distance: 10 },
+      { at: [20, 0, 0] as Vec3, distance: 4 },
+    ];
+    const base = buildPathTrack({ start: START, startSec: 0, over: 8, ease: 'linear', waypoints });
+    const zero = buildPathTrack({
+      start: START,
+      startSec: 0,
+      over: 8,
+      ease: 'linear',
+      waypoints,
+      linger: 0,
+    });
+    for (let i = 0; i <= 10; i++) {
+      const t = (i / 10) * 8;
+      const a = eyeOf(base.sample(t));
+      const b = eyeOf(zero.sample(t));
+      expect(b[0]).toBeCloseTo(a[0], 9);
+      expect(b[1]).toBeCloseTo(a[1], 9);
+      expect(b[2]).toBeCloseTo(a[2], 9);
+    }
+  });
+
+  it('path-level linger slows the camera as it passes an interior target', () => {
+    const waypoints = [
+      { at: [10, 0, 0] as Vec3, distance: 10 }, // interior pass-point
+      { at: [20, 0, 0] as Vec3, distance: 4 }, // destination
+    ];
+    const base = buildPathTrack({ start: START, startSec: 0, over: 8, ease: 'linear', waypoints });
+    const slow = buildPathTrack({
+      start: START,
+      startSec: 0,
+      over: 8,
+      ease: 'linear',
+      waypoints,
+      linger: 0.9,
+    });
+    // Time of closest approach to the interior waypoint [10,0,0] — the SAME in
+    // both, since the warp is identity at the knot boundary.
+    let tStar = 0;
+    let best = Infinity;
+    for (let i = 0; i <= 400; i++) {
+      const t = (i / 400) * 8;
+      const e = eyeOf(base.sample(t));
+      const d = Math.hypot(e[0] - 10, e[1], e[2]);
+      if (d < best) {
+        best = d;
+        tStar = t;
+      }
+    }
+    const speedAt = (tr: ReturnType<typeof buildPathTrack>, t: number): number => {
+      const dt = 0.02;
+      const a = eyeOf(tr.sample(Math.max(0, t - dt)));
+      const b = eyeOf(tr.sample(Math.min(8, t + dt)));
+      return Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    };
+    // Markedly slower passing the target with linger on.
+    expect(speedAt(slow, tStar)).toBeLessThan(speedAt(base, tStar) * 0.6);
+  });
+
+  it('honours a per-waypoint linger (the targeted knot brakes)', () => {
+    const base = buildPathTrack({
+      start: START,
+      startSec: 0,
+      over: 8,
+      ease: 'linear',
+      waypoints: [
+        { at: [10, 0, 0], distance: 10 },
+        { at: [20, 0, 0], distance: 4 },
+      ],
+    });
+    const slow = buildPathTrack({
+      start: START,
+      startSec: 0,
+      over: 8,
+      ease: 'linear',
+      waypoints: [
+        { at: [10, 0, 0], distance: 10, linger: 0.9 }, // brake at THIS target
+        { at: [20, 0, 0], distance: 4 },
+      ],
+    });
+    let tStar = 0;
+    let best = Infinity;
+    for (let i = 0; i <= 400; i++) {
+      const t = (i / 400) * 8;
+      const e = eyeOf(base.sample(t));
+      const d = Math.hypot(e[0] - 10, e[1], e[2]);
+      if (d < best) {
+        best = d;
+        tStar = t;
+      }
+    }
+    const speedAt = (tr: ReturnType<typeof buildPathTrack>, t: number): number => {
+      const dt = 0.02;
+      const a = eyeOf(tr.sample(Math.max(0, t - dt)));
+      const b = eyeOf(tr.sample(Math.min(8, t + dt)));
+      return Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    };
+    expect(speedAt(slow, tStar)).toBeLessThan(speedAt(base, tStar) * 0.6);
+  });
+
   // ── No slingshot: a far start + clustered waypoints must not balloon ──
   //
   // The eye rides the centripetal spline, so it stays snug to its knots instead

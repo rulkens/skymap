@@ -205,6 +205,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
           waypoints,
           align: effect.align,
           rampSec: effect.rampSec,
+          linger: effect.linger,
         }),
       );
       return effect.over;

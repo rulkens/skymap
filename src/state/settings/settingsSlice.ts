@@ -185,12 +185,16 @@ const settingsSlice = createSlice({
     },
     // flyPath pacing knobs the saga bakes into the clip at Calculate time.
     // `align` = start-aim blend seconds; `rampSec` = ease ramp seconds each end
-    // (0 = use the named ease). Re-Calculate to apply.
+    // (0 = use the named ease); `linger` = per-target brake depth [0,1] (0 =
+    // cruise straight through). Re-Calculate to apply.
     setClipPathAlign: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.align = action.payload;
     },
     setClipPathRampSec: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.rampSec = action.payload;
+    },
+    setClipPathLinger: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.linger = action.payload;
     },
 
     // ── structures ──────────────────────────────────────────────────────────
@@ -251,6 +255,7 @@ export const {
   setClipPathScrub,
   setClipPathAlign,
   setClipPathRampSec,
+  setClipPathLinger,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,

@@ -17,3 +17,10 @@ export const DEFAULT_ALIGN_SEC = 1.35;
  * envelope; author `rampSec: 0` on a flyPath to opt out and use the named `ease`.
  */
 export const DEFAULT_RAMP_SEC = 1.4;
+
+/**
+ * Per-target brake depth ∈ [0,1] — a local velocity dip at each waypoint. 0 is
+ * opt-in off (cruise straight through every target, no behaviour change); raise
+ * it to make the camera slow down and dwell as it passes each galaxy.
+ */
+export const DEFAULT_LINGER = 0;

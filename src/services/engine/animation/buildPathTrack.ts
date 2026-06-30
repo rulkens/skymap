@@ -66,6 +66,8 @@ type AtWaypoint = {
   readonly yaw?: number;
   readonly pitch?: number;
   readonly over?: number;
+  /** Per-target brake depth ∈ [0,1]; overrides the path-level `linger`. */
+  readonly linger?: number;
 };
 
 type BuildParams = {
@@ -78,6 +80,8 @@ type BuildParams = {
   readonly align?: number;
   /** Seconds of ease ramp each end; when > 0, replaces the named `ease` envelope. */
   readonly rampSec?: number;
+  /** Path-level brake depth ∈ [0,1] applied at every target; per-waypoint `linger` overrides it. */
+  readonly linger?: number;
 };
 
 // Spline samples per leg for the arc-length table. 64 is plenty for a smooth
@@ -104,7 +108,7 @@ function chord(a: Vec3, b: Vec3): number {
 }
 
 export function buildPathTrack(params: BuildParams): PathTrack {
-  const { start, startSec, over, ease, waypoints, align, rampSec } = params;
+  const { start, startSec, over, ease, waypoints, align, rampSec, linger } = params;
 
   if (waypoints.length === 0) {
     throw new Error('buildPathTrack: a flyPath needs at least one waypoint.');
@@ -346,6 +350,35 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   for (let j = 0; j < nLegs; j++) knotTime.push(knotTime[j]! + dur[j]!);
   const timing = monotoneCubic(knotTime, knotArcFrac);
 
+  // --- Linger: a per-target velocity dip, expressed as a time PRE-WARP ---
+  //
+  // `linger` ∈ [0,1] brakes the camera as it passes a waypoint. Knot 0 (the live
+  // eye) is never a target, so it never lingers; each waypoint's knot takes its
+  // own `linger` or the path-level default. Within each leg we warp the local
+  // time fraction p by a cubic g(p) whose END SLOPES are `1 − linger` at each
+  // knot: a low slope means the camera moves slowly through time there → it
+  // crawls through the target and flies faster between targets, the leg's total
+  // duration unchanged. g is provably monotone for slopes in [0,1] (it is
+  // concave with non-negative endpoints), so progress never drifts backward, and
+  // at linger 0 the slopes are 1 → g(p)=p → an EXACT identity (no behaviour
+  // change). The warp is identity at p=0 and p=1, so the eye still reaches each
+  // knot at its scheduled `knotTime` — only the in-between pacing bends.
+  const knotLinger = [0, ...waypoints.map((w) => clamp01(w.linger ?? linger ?? 0))];
+  const anyLinger = knotLinger.some((l) => l > 0);
+  const lingerWarp = (timeSec: number): number => {
+    if (!anyLinger) return timeSec;
+    let j = 0;
+    while (j < nLegs - 1 && timeSec > knotTime[j + 1]!) j++;
+    const t0 = knotTime[j]!;
+    const span = knotTime[j + 1]! - t0;
+    if (span <= 0) return timeSec;
+    const p = clamp01((timeSec - t0) / span);
+    const a = 1 - knotLinger[j]!; // departure slope at knot j
+    const b = 1 - knotLinger[j + 1]!; // arrival slope at knot j+1
+    const g = a * p + (3 - 2 * a - b) * p * p + (a + b - 2) * p * p * p;
+    return t0 + g * span;
+  };
+
   // --- Align-in: blend the live orientation into the forward aim at the start ---
   const liveYaw = start.yaw;
   const livePitch = start.pitch;
@@ -371,7 +404,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   const sample = (localSec: number): PathSample => {
     const s = clamp01(localSec / over);
     const easedTime = warp(s) * over;
-    const u = clamp01(timing(easedTime));
+    const u = clamp01(timing(lingerWarp(easedTime)));
     const t = paramAtArcFrac(u);
     const pose = poseAtTau(t);
 

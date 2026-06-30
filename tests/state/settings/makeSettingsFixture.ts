@@ -24,6 +24,7 @@ import { seedVolumeFields } from '../../../src/data/volume/volumeFieldDefaults';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
+  DEFAULT_LINGER,
 } from '../../../src/services/engine/animation/pathDefaults';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -87,6 +88,7 @@ export function makeSettingsFixture(
         scrub01: 0,
         align: DEFAULT_ALIGN_SEC,
         rampSec: DEFAULT_RAMP_SEC,
+        linger: DEFAULT_LINGER,
       },
     },
     structures: {

@@ -35,7 +35,11 @@ import {
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
 } from '../../data/defaults';
-import { DEFAULT_ALIGN_SEC, DEFAULT_RAMP_SEC } from '../../services/engine/animation/pathDefaults';
+import {
+  DEFAULT_ALIGN_SEC,
+  DEFAULT_RAMP_SEC,
+  DEFAULT_LINGER,
+} from '../../services/engine/animation/pathDefaults';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
@@ -104,13 +108,15 @@ export function buildInitialSettings(): EngineSettingsState {
       disabledPasses: {},
       // Clip-path inspector idle: no clip chosen, scrubber at the start. The
       // overlay stays quiet until the curator clicks "Calculate". `align` /
-      // `rampSec` seed from the flyPath defaults, so a fresh inspect re-applies
-      // the clip's own pacing (a no-op) until the curator drags a slider.
+      // `rampSec` / `linger` seed from the flyPath defaults, so a fresh inspect
+      // re-applies the clip's own pacing (a no-op) until the curator drags a
+      // slider.
       clipPathInspect: {
         clipId: null,
         scrub01: 0,
         align: DEFAULT_ALIGN_SEC,
         rampSec: DEFAULT_RAMP_SEC,
+        linger: DEFAULT_LINGER,
       },
     },
     // Structure overlay: master gate on + one item row per category, each

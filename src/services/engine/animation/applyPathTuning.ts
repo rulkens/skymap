@@ -1,6 +1,6 @@
 /**
  * applyPathTuning — bake the clip-path inspector's live tuning (`align`,
- * `rampSec`) into a clip's `flyPath` nodes.
+ * `rampSec`, `linger`) into a clip's `flyPath` nodes.
  *
  * This is a pure pre-pass over the effect tree, in the same family as
  * `resolveClipFoci`: the inspector applies it at "Calculate" time so the SAMPLED
@@ -26,12 +26,14 @@ export type PathTuning = {
   readonly align: number;
   /** Seconds of ease ramp each end (0 = use the named `ease`). */
   readonly rampSec: number;
+  /** Per-target brake depth ∈ [0,1] (0 = cruise straight through). */
+  readonly linger: number;
 };
 
 function tuneEffect(effect: Effect, tuning: PathTuning): Effect {
   switch (effect.kind) {
     case 'flyPath':
-      return { ...effect, align: tuning.align, rampSec: tuning.rampSec };
+      return { ...effect, align: tuning.align, rampSec: tuning.rampSec, linger: tuning.linger };
     case 'seq':
     case 'all':
       return { ...effect, children: effect.children.map((c) => tuneEffect(c, tuning)) };
