@@ -51,6 +51,7 @@ import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
+import type { ClipId } from '../animation/ClipId';
 
 export type EngineSettingsState = {
   /**
@@ -191,6 +192,20 @@ export type EngineSettingsState = {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
     disabledPasses: Record<string, boolean>;
+    /**
+     * Clip-path inspector — the debug overlay that draws a selected clip's
+     * camera route (speed-coloured) plus a scrub gizmo. Only the two scalars
+     * the UI owns live here; the sampled geometry is held off-store in the
+     * `clipPathInspector` subsystem (see its .d.ts for why geometry stays out
+     * of Redux). `clipId` is which clip the held snapshot was computed from
+     * (null = nothing computed); `scrub01` is the scrubber position as a
+     * normalised `[0,1]` fraction (NOT seconds — the UI has no access to the
+     * clip duration, so the scrubber is a pure position).
+     */
+    clipPathInspect: {
+      clipId: ClipId | null;
+      scrub01: number;
+    };
   };
 
   /**

@@ -1,0 +1,46 @@
+/*
+ * debugSection — the shared styling vocabulary for the DebugPanel's collapsible
+ * sections. A concept module (no eponymous .tsx): each section's own module
+ * `composes` the bits it needs, so the family shares one set of rules instead of
+ * re-declaring the button/summary chrome inline per section.
+ */
+
+.summary {
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.body {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.button {
+  font: inherit;
+  color: #cfc;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.readout {
+  opacity: 0.8;
+}
+
+.muted {
+  opacity: 0.5;
+}

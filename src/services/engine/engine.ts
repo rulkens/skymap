@@ -99,6 +99,7 @@ import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { createPlayClip } from './animation/playClip';
+import { createClipPathInspectSeam } from './animation/computeClipPath';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
@@ -263,6 +264,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // resources, null-checked at use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
+      // null until initGpu; excluded from isEngineReady, null-checked at use by
+      // clipPathDebugPass.
+      debugLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
@@ -514,6 +518,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     getLivePose: () => state.cameraRuntime.lastPose.current,
   });
 
+  // Debug clip-path inspector seam — `watchClipPathInspectSaga` calls `compute`
+  // to sample a clip's camera route into the `clipPathInspector` subsystem (read
+  // each frame by `clipPathDebugPass`) and `clear` to drop it. Shares the same
+  // live-pose accessor as `playClip` so a `start:'live'` clip samples from the
+  // pose the user sees. 192 samples gives a high-resolution route polyline.
+  const clipPathInspect = createClipPathInspectSeam({
+    inspector: state.subsystems.clipPathInspector,
+    getLivePose: () => state.cameraRuntime.lastPose.current,
+    sampleCount: 192,
+  });
+
   cb.setSagaContext({
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state),
@@ -531,6 +546,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           }
         : null,
     playClip,
+    clipPathInspect,
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
@@ -640,6 +656,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
+    state.gpu.debugLineRenderer?.destroy();
+    state.gpu.debugLineRenderer = null;
     state.gpu.selectionRingRenderer?.destroy();
     state.gpu.selectionRingRenderer = null;
     state.gpu.structureMarkerRenderer?.destroy();

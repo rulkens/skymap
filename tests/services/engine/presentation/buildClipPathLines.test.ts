@@ -20,9 +20,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
 const DATA: ClipData = {
   start: START,
-  timeline: [
-    flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], { over: 4, ease: 'inOut' }),
-  ],
+  timeline: [flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], { over: 4, ease: 'inOut' })],
 };
 const VIEW = { fovYRad: 0.8, aspect: 1.5 };
 const N = 24;
@@ -61,11 +59,12 @@ describe('buildClipPathLines', () => {
   });
 
   it('moves the gizmo sightline (first gizmo line) to the scrubbed instant', () => {
+    // scrub01 is a [0,1] position, not seconds.
     const atStart = buildClipPathLines(snap(), 0, VIEW)[N - 1]!; // first gizmo line = sightline
     expect(atStart.from[0]).toBeCloseTo(0, 2);
     expect(atStart.from[2]).toBeCloseTo(1, 2); // eye at live start
 
-    const atEnd = buildClipPathLines(snap(), 4, VIEW)[N - 1]!;
+    const atEnd = buildClipPathLines(snap(), 1, VIEW)[N - 1]!;
     expect(atEnd.from[0]).toBeCloseTo(17, 1); // eye at framed destination
   });
 });

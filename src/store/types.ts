@@ -47,6 +47,7 @@ import type { ResolveDeps } from '../@types/engine/ResolveDeps';
 import type { Tier } from '../@types/data/Tier';
 import type { CameraPose } from '../@types/camera/CameraPose';
 import type { ClipData } from '../@types/animation/ClipData';
+import type { ClipId } from '../@types/animation/ClipId';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -59,6 +60,19 @@ export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
  * and the projection FOV (the structure arm frames a cluster to screen-fill).
  */
 export type FocusCameraRuntime = { from: CameraPose; fovYRad: number };
+/**
+ * The debug clip-path inspector seam — the non-reactive bridge the
+ * `watchClipPathInspectSaga` calls to (re)sample a clip's camera route into the
+ * `clipPathInspector` subsystem. `compute` takes a resolved `ClipData` (foci
+ * already turned into world positions at the action boundary); `clear` drops the
+ * held snapshot so the overlay goes quiet. The engine registers it at
+ * construction via `createClipPathInspectSeam` + `setSagaContext`; tests inject a
+ * stub via `sagaMiddleware.setContext`.
+ */
+export type ClipPathInspectSeam = {
+  compute: (clipId: ClipId, resolved: ClipData) => void;
+  clear: () => void;
+};
 export type SagaContext = {
   runTierTransition: RunTierTransition; // already present — drives per-source data load on tier change
   reconcile: ReconcileEffects; // already present — provides requestRender + fade/reseed/bias
@@ -78,5 +92,11 @@ export type SagaContext = {
    * `setSagaContext`; tests inject a stub via `sagaMiddleware.setContext`.
    */
   playClip: (clip: ClipData) => Promise<void>;
+  /**
+   * The debug clip-path inspector seam — `watchClipPathInspectSaga` calls
+   * `compute` on `inspectClipPath` and `clear` on `clearClipPath`. Engine-
+   * registered at construction; null-safe to omit in non-debug saga setups.
+   */
+  clipPathInspect: ClipPathInspectSeam;
 };
 export type SetSagaContext = (ctx: Partial<SagaContext>) => void;

@@ -214,6 +214,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       gpu: {
         labelRenderer: null,
         markerLineRenderer: null,
+        debugLineRenderer: null,
         selectionRingRenderer: null,
         volumeFieldRenderer: null,
         flowFieldRenderer: null,

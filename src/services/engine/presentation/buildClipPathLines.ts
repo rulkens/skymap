@@ -5,7 +5,12 @@
  * The route polyline is one segment per sample pair, each coloured by the
  * leading sample's normalised speed (`speedRamp`), so where the camera lingers
  * vs whips reads at a glance. The gizmo (`cameraGizmoLines`) draws the camera
- * sightline + frustum at the scrubbed instant — the sample nearest `scrubT`.
+ * sightline + frustum at the scrubbed instant — the sample nearest `scrub01`.
+ *
+ * `scrub01` is a normalised position in `[0,1]`, NOT seconds. The scrubber UI
+ * has no access to the clip's duration (it lives only in the off-store snapshot,
+ * and `compileClip` throws on the focus-bearing demo clip), so the slider is a
+ * pure 0→1 position and the gizmo maps it straight to the nearest sample index.
  *
  * Returns a flat `DebugLine[]` for the dedicated `debugLineRenderer`, route
  * first then gizmo (the order callers/tests rely on). The renderer rebuilds and
@@ -23,10 +28,10 @@ const ROUTE_WIDTH_PX = 3;
 
 export function buildClipPathLines(
   snapshot: ClipPathSnapshot,
-  scrubT: number,
+  scrub01: number,
   view: { fovYRad: number; aspect: number },
 ): DebugLine[] {
-  const { durationSec, samples } = snapshot;
+  const { samples } = snapshot;
   if (samples.length < 2) return [];
 
   const lines: DebugLine[] = [];
@@ -42,12 +47,9 @@ export function buildClipPathLines(
     });
   }
 
-  // --- Scrub gizmo at the sample nearest scrubT ---
-  const clampedT = scrubT < 0 ? 0 : scrubT > durationSec ? durationSec : scrubT;
-  const idx =
-    durationSec > 0
-      ? Math.min(samples.length - 1, Math.round((clampedT / durationSec) * (samples.length - 1)))
-      : 0;
+  // --- Scrub gizmo at the sample nearest scrub01 (a [0,1] position) ---
+  const f = scrub01 < 0 ? 0 : scrub01 > 1 ? 1 : scrub01;
+  const idx = Math.round(f * (samples.length - 1));
   const g = samples[idx]!;
   lines.push(...cameraGizmoLines(g.eye, g.target, view.fovYRad, view.aspect));
 

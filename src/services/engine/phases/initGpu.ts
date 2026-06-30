@@ -52,6 +52,7 @@ import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShellRend
 import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
+import { createDebugLineRenderer } from '../../gpu/renderers/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRingRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWayPickRenderer';
@@ -193,6 +194,11 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const fontAtlases = await loadFontAtlases();
   state.gpu.labelRenderer = createLabelRenderer(uiCtx, fontAtlases);
   state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx);
+  // Dedicated debug-line renderer for the clip-path inspector overlay. Same
+  // swap-chain ctx as the marker lines (UI overlay, drawn post-tone-map), but
+  // its own pipeline + buffers so the debug viz never touches the label
+  // director's reconcile path.
+  state.gpu.debugLineRenderer = createDebugLineRenderer(uiCtx);
   state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx);
   // HDR pass — writes into the rgba16float offscreen target, NOT the
   // swap chain.  The fadeBgl placeholder at @group(1) must match what the

@@ -44,6 +44,7 @@ import type { StructureItemSettings } from '../../@types/settings/StructureItemS
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { ClipId } from '../../@types/animation/ClipId';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
@@ -130,6 +131,12 @@ export const selectShowDiskRadiusRing = (state: RootState): boolean =>
 
 export const selectDisabledPasses = (state: RootState): Record<string, boolean> =>
   selectSettings(state).debug.disabledPasses;
+
+export const selectClipPathInspectId = (state: RootState): ClipId | null =>
+  selectSettings(state).debug.clipPathInspect.clipId;
+
+export const selectClipPathScrub = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.scrub01;
 
 // --- structures cluster -------------------------------------------------------
 

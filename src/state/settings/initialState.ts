@@ -101,6 +101,9 @@ export function buildInitialSettings(): EngineSettingsState {
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},
+      // Clip-path inspector idle: no clip chosen, scrubber at the start. The
+      // overlay stays quiet until the curator clicks "Calculate".
+      clipPathInspect: { clipId: null, scrub01: 0 },
     },
     // Structure overlay: master gate on + one item row per category, each
     // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`

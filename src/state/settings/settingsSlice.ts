@@ -36,6 +36,7 @@ import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
+import type { ClipId } from '../../@types/animation/ClipId';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
@@ -165,6 +166,23 @@ const settingsSlice = createSlice({
       // Open-world membership record (any pass name): `[name] === true` disables.
       settings.debug.disabledPasses[action.payload.pass] = action.payload.disabled;
     },
+    // Clip-path inspector: choose which clip to sample. The saga watches this
+    // action to (re)compute the snapshot; the scrubber resets to the start.
+    inspectClipPath: (settings, action: PayloadAction<ClipId>) => {
+      settings.debug.clipPathInspect.clipId = action.payload;
+      settings.debug.clipPathInspect.scrub01 = 0;
+    },
+    // Drop the inspected path (the "Clear" button). The saga clears the held
+    // snapshot so the overlay goes quiet.
+    clearClipPath: (settings) => {
+      settings.debug.clipPathInspect.clipId = null;
+      settings.debug.clipPathInspect.scrub01 = 0;
+    },
+    // Move the scrubber (a [0,1] fraction). Pure scalar write — the overlay's
+    // gizmo reads it each frame and maps it to the nearest held sample.
+    setClipPathScrub: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.scrub01 = action.payload;
+    },
 
     // ── structures ──────────────────────────────────────────────────────────
     setStructureItemEnabled: (
@@ -219,6 +237,9 @@ export const {
   setShowPickBuffer,
   setShowDiskRadiusRing,
   setPassDisabled,
+  inspectClipPath,
+  clearClipPath,
+  setClipPathScrub,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,

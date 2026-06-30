@@ -15,6 +15,7 @@
  *   watchTourSaga          — starts a guidedTourSaga run on each startTour (takeLatest — single-instance)
  *   watchTourKeyboardSaga  — binds the tour nav keys (→/←/Space) only while a tour runs
  *   watchClipSaga          — runs the clip-player seam on each playClip; stopClip/re-play cancels it
+ *   watchClipPathInspectSaga — samples a clip's camera route into the debug inspector on inspectClipPath/clearClipPath
  *
  * Each watcher is one saga per file, named after the saga, authored beside its
  * concern (the tier watcher in `state/tier/watchTierSaga`, the reconcile watchers
@@ -45,6 +46,7 @@ import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
 import { watchTourSaga } from '../state/tour/watchTourSaga';
 import { watchTourKeyboardSaga } from '../state/tour/watchTourKeyboardSaga';
 import { watchClipSaga } from '../state/camera/watchClipSaga';
+import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSaga';
 
 export function* mainSaga() {
   yield* all([
@@ -60,5 +62,6 @@ export function* mainSaga() {
     watchTourSaga(),
     watchTourKeyboardSaga(),
     watchClipSaga(),
+    watchClipPathInspectSaga(),
   ]);
 }
