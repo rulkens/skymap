@@ -1,16 +1,11 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { produceMilkyWayLabel } from '../../../../src/services/engine/presentation/produceMilkyWayLabel';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import {
-  setLabelStyleOverride,
-  clearLabelStyleOverride,
-} from '../../../../src/services/engine/labelStyleOverride';
 
 // Minimal state: the producer reads settings.milkyWay.labelEnabled, the fade
-// registry (opacityOf only — the producer is a pure reader), the selection
-// focused() is not consulted (single label, no recession), and the label-style
-// override (global module, no stub).
+// registry (opacityOf only — the producer is a pure reader), and the selection
+// focused() is not consulted (single label, no recession).
 function makeState(labelEnabled: boolean, layerOpacity: number): EngineState {
   return {
     settings: { milkyWay: { enabled: true, labelEnabled } },
@@ -27,12 +22,6 @@ function makeCtx(camDistMpc: number): ReadyFrameContext {
 }
 
 describe('produceMilkyWayLabel', () => {
-  // Reset the live-tuning override set by the override tests below — otherwise
-  // it leaks forward.
-  afterEach(() => {
-    clearLabelStyleOverride();
-  });
-
   it('emits one label and one line at full alpha when close (<= 0.6 Mpc) and enabled', () => {
     const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
     expect(out.labels).toHaveLength(1);
@@ -66,30 +55,6 @@ describe('produceMilkyWayLabel', () => {
     const out = produceMilkyWayLabel(makeState(false, 0.3), makeCtx(0.5));
     expect(out.labels).toHaveLength(1);
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.3);
-  });
-
-  it('applies the label-style override outline when targetCategory is milkyWay', () => {
-    setLabelStyleOverride({
-      targetCategory: 'milkyWay',
-      outlineColor: [0.2, 0.4, 0.6, 1],
-      outlineEmFrac: 0.25,
-    });
-    const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
-    expect(out.labels[0]!.outlineColor).toEqual([0.2, 0.4, 0.6, 1]);
-    expect(out.labels[0]!.outlineEmFrac).toBe(0.25);
-  });
-
-  it('falls back to the baked outline when the override targets another category', () => {
-    // Override is active but aimed at 'cluster', so the milkyWay producer
-    // ignores it and keeps the baked MILKY_WAY_LABEL_STYLE outline.
-    setLabelStyleOverride({
-      targetCategory: 'cluster',
-      outlineColor: [1, 0, 0, 1],
-      outlineEmFrac: 0.9,
-    });
-    const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
-    expect(out.labels[0]!.outlineColor).toEqual([0, 0, 0, 0.1]);
-    expect(out.labels[0]!.outlineEmFrac).toBe(0.16);
   });
 
   it('reports awake: false across the fade band', () => {

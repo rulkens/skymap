@@ -6,7 +6,7 @@
  * `RenderTogglesSection` (per-pass on/off checkboxes for visual
  * debugging), `FlowTuningSection` + the pick/disk-ring toggles,
  * `DataQualitySection` (catalog-audit diagnostics such as the
- * orientation-fallback toggles), `LabelEffectsSection`, and
+ * orientation-fallback toggles), and
  * `ClipTriggersSection` (play/stop a registered clip + launch a guided tour).
  * Mount is owned by `App.tsx` (toggled by the `d` keyboard shortcut);
  * when this component renders, all sections always render — section-level
@@ -37,7 +37,6 @@ import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
 import { FlowTuningSection } from './FlowTuningSection';
 import { DataQualitySection } from './DataQualitySection';
-import { LabelEffectsSection } from './LabelEffectsSection';
 import { ClipTriggersSection } from './ClipTriggersSection';
 
 export type DebugPanelProps = {
@@ -171,8 +170,6 @@ export function DebugPanel({
         onHighlightFallbackChange={onHighlightFallbackChange}
         onRealOnlyModeChange={onRealOnlyModeChange}
       />
-      <div style={{ marginTop: 6 }} />
-      <LabelEffectsSection />
       <div style={{ marginTop: 6 }} />
       <ClipTriggersSection
         clipActive={clipActive}
