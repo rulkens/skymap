@@ -36,12 +36,6 @@ export type RunFrameDeps = {
   /** Procedural-disk renderer (LOD-1; synthetic ellipse fill). */
   proceduralDiskRenderer: ProceduralDiskRenderer;
   /**
-   * Wall-clock epoch (ms, from `performance.now`) snapshot taken at
-   * engine construction; used to derive the Milky Way impostor's iTime
-   * each frame.
-   */
-  milkyWayITimeEpochMs: number;
-  /**
    * Per-pass GPU timing service.  Always non-null — check `.enabled`
    * before doing timing work.  Forwarded straight through to
    * `renderFrame` via `RenderFrameInput.timingService`.

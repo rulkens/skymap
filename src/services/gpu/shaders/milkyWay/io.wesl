@@ -47,31 +47,20 @@ import package::lib::camera::CameraUniforms;
 //
 // ## Why the field order changed (vs the pre-WESL layout)
 //
-// The pre-WESL-conversion layout had this shape:
-//
-//   offset 0  : viewProj           (mat4)
-//   offset 64 : viewport           (vec2)
-//   offset 72 : fadeAlpha          (f32)   <─── overlaps CameraUniforms
-//   offset 76 : iTime              (f32)   <─── ._pad0/._pad1 slots
-//   offset 80 : cameraPosWorld     (vec3)
-//   offset 92 : _pad               (f32)
-//   total: 96 bytes
-//
 // 'CameraUniforms' explicitly reserves bytes 72..79 as '_pad0/_pad1'
 // (so renderers extending it can place their first vec3-aligned field
-// at offset 80). The old impostor layout filled those bytes with
-// 'fadeAlpha' + 'iTime' — which is fine for a hand-rolled struct but
+// at offset 80). The old hand-rolled impostor layout filled those
+// bytes with renderer-specific scalars — fine on its own but
 // incompatible with embedding 'cam: CameraUniforms' as the first
 // field. We can't drop CameraUniforms in as a pure prefix without
 // moving the renderer-specific scalars somewhere else.
 //
 // Resolution: put 'cam: CameraUniforms' first (occupies 0..79), then
 // pack the renderer-specific fields after. 'cameraPosWorld' goes at
-// offset 80 (already 16-byte aligned, which vec3 requires), and the
-// two f32 scalars 'fadeAlpha' + 'iTime' fall in naturally at 92 / 96.
-// The trailing pad lands at 100..111 to round the struct size up to
-// 112 bytes (a multiple of 16, the struct alignment for vec3-bearing
-// types).
+// offset 80 (already 16-byte aligned, which vec3 requires), and
+// 'fadeAlpha' falls in naturally at offset 92. The trailing pad lands
+// at 96..111 to round the struct size up to 112 bytes (a multiple of
+// 16, the struct alignment for vec3-bearing types).
 //
 // ## Byte layout (canonical)
 //
@@ -79,8 +68,7 @@ import package::lib::camera::CameraUniforms;
 //                                       + _pad0 + _pad1)
 //   offset 80  : cameraPosWorld       (vec3; 12 B)
 //   offset 92  : fadeAlpha            (f32; 4 B)
-//   offset 96  : iTime                (f32; 4 B)
-//   offset 100 : _pad                 (12 B; round up to 112)
+//   offset 96  : _pad                 (16 B; round up to 112)
 //   total: 112 bytes
 //
 // CPU-side counterpart in 'milkyWayRenderer.ts' must write the
@@ -109,16 +97,13 @@ struct Uniforms {
   // ('utils/math/milkyWayFade.ts').  Multiplied into the fragment's
   // emissive output and into alpha for premultiplied blend.
   fadeAlpha: f32,
-  // iTime in seconds, scaled by 0.25 on the CPU before upload so the
-  // ShaderToy's internal 'TIME = iTime*0.1' works out to a slow,
-  // alive-but-not-spinning rotation.  Currently unread by the
-  // fragment stage (animation is locked off — see 'fs' in
-  // fragment.wesl) but retained for ABI symmetry and future
-  // re-enablement.
-  iTime: f32,
+  // Tail padding (offsets 96..111). Float 24 used to be iTime (animation),
+  // removed when impostor animation was locked off — kept as pad so the
+  // 112-byte ABI and every other field's offset are unchanged.
   _pad0: f32,
   _pad1: f32,
   _pad2: f32,
+  _pad3: f32,
 };
 
 // ── vertex-to-fragment interface ────────────────────────────────────

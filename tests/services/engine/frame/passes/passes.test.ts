@@ -104,7 +104,6 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     flowFieldRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
-    milkyWayITimeSec: 0,
     ...overrides,
   };
 }
@@ -355,7 +354,7 @@ describe('milkyWayPass.draw', () => {
     // Camera at 5 Mpc from origin sits inside the full-alpha (≤10 Mpc)
     // regime — fadeAlpha should be 1.0.
     const drawSpy = vi.fn();
-    const deps = makeDeps({ milkyWayRenderer: { draw: drawSpy } as any, milkyWayITimeSec: 1.5 });
+    const deps = makeDeps({ milkyWayRenderer: { draw: drawSpy } as any });
     const ctx = makeCtx();
     milkyWayPass.draw(PASS_STUB, ctx, STATE_STUB, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
@@ -365,8 +364,7 @@ describe('milkyWayPass.draw', () => {
     expect(args[2]).toEqual([ctx.canvasSize.width, ctx.canvasSize.height]);
     // fadeAlpha at distance 5 Mpc is 1.0 (full strength).
     expect(args[3]).toBe(1.0);
-    expect(args[4]).toBe(1.5);
-    expect(args[5]).toEqual([0, 0, 5]);
+    expect(args[4]).toEqual([0, 0, 5]);
   });
 });
 

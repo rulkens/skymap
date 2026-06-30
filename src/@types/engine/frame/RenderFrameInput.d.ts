@@ -39,12 +39,6 @@ export type RenderFrameInput = {
    * can read selection / picking / source-state / settings.
    */
   state: EngineState;
-  /**
-   * Animation time in seconds for the Milky Way impostor, already
-   * scaled by the engine's chosen "slow but alive" factor (0.25× wall
-   * clock).  See `engine.ts` for the epoch-relative calculation.
-   */
-  milkyWayITimeSec: number;
 
   // ── GPU handles ───────────────────────────────────────────────────────
   device: GPUDevice;

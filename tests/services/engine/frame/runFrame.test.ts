@@ -203,7 +203,6 @@ function makeDeps(store = makeStore()): RunFrameDeps {
     filamentRenderer: {} as unknown as RunFrameDeps['filamentRenderer'],
     texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer'],
     proceduralDiskRenderer: {} as unknown as RunFrameDeps['proceduralDiskRenderer'],
-    milkyWayITimeEpochMs: 0,
     // Disabled stub matches production's "no `?gpuTimings`" path.
     timingService: createDisabledGpuTimingService(),
     drivers: buildCameraDrivers({} as unknown as EngineState),

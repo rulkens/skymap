@@ -59,11 +59,4 @@ export type PassDeps = {
   milkyWayRenderer: MilkyWayRenderer;
   /** Observable-universe horizon shell renderer. */
   horizonShellRenderer: HorizonShellRenderer;
-  /**
-   * Animation time in seconds for the Milky Way impostor's
-   * shader-clock uniform.  Already scaled by the engine's chosen
-   * "slow but alive" factor (0.25× wall-clock); see `runFrame.ts`
-   * for the epoch-relative calculation.
-   */
-  milkyWayITimeSec: number;
 };
