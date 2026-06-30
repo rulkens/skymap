@@ -68,10 +68,16 @@ export type FocusCameraRuntime = { from: CameraPose; fovYRad: number };
  * held snapshot so the overlay goes quiet. The engine registers it at
  * construction via `createClipPathInspectSeam` + `setSagaContext`; tests inject a
  * stub via `sagaMiddleware.setContext`.
+ *
+ * `pinnedClip` returns the foci-resolved, start-pinned `ClipData` the last
+ * `compute` produced (null before the first / after `clear`). It is the replay
+ * source: `watchReplayInspectedPathSaga` plays it verbatim so the flown route is
+ * the inspected overlay exactly, with no fresh `start: 'live'` resolution.
  */
 export type ClipPathInspectSeam = {
   compute: (clipId: ClipId, resolved: ClipData) => void;
   clear: () => void;
+  pinnedClip: () => ClipData | null;
 };
 export type SagaContext = {
   runTierTransition: RunTierTransition; // already present — drives per-source data load on tier change

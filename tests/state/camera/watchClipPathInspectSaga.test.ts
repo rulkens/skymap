@@ -47,7 +47,7 @@ function buildHarness() {
     middleware: (getDefault) => getDefault().concat(sagaMiddleware),
   });
   sagaMiddleware.setContext({
-    clipPathInspect: { compute, clear },
+    clipPathInspect: { compute, clear, pinnedClip: vi.fn<() => ClipData | null>(() => null) },
     resolveDeps: () => EMPTY_DEPS,
     cameraRuntime: () => RUNTIME,
   });

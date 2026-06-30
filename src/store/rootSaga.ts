@@ -16,6 +16,7 @@
  *   watchTourKeyboardSaga  — binds the tour nav keys (→/←/Space) only while a tour runs
  *   watchClipSaga          — runs the clip-player seam on each playClip; stopClip/re-play cancels it
  *   watchClipPathInspectSaga — samples a clip's camera route into the debug inspector on inspectClipPath/clearClipPath
+ *   watchReplayInspectedPathSaga — replays the inspector's pinned route verbatim on replayInspectedPath
  *
  * Each watcher is one saga per file, named after the saga, authored beside its
  * concern (the tier watcher in `state/tier/watchTierSaga`, the reconcile watchers
@@ -47,6 +48,7 @@ import { watchTourSaga } from '../state/tour/watchTourSaga';
 import { watchTourKeyboardSaga } from '../state/tour/watchTourKeyboardSaga';
 import { watchClipSaga } from '../state/camera/watchClipSaga';
 import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSaga';
+import { watchReplayInspectedPathSaga } from '../state/camera/watchReplayInspectedPathSaga';
 
 export function* mainSaga() {
   yield* all([
@@ -63,5 +65,6 @@ export function* mainSaga() {
     watchTourKeyboardSaga(),
     watchClipSaga(),
     watchClipPathInspectSaga(),
+    watchReplayInspectedPathSaga(),
   ]);
 }

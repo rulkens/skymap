@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createClipPathInspectSeam } from '../../../../src/services/engine/animation/computeClipPath';
+import { resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { clipRegistry } from '../../../../src/data/animation/clips/clipRegistry';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { ClipPathSnapshot } from '../../../../src/@types/engine/debug/ClipPathSnapshot';
@@ -43,5 +44,21 @@ describe('createClipPathInspectSeam', () => {
     });
     seam.clear();
     expect(inspector.clear).toHaveBeenCalledOnce();
+  });
+
+  it('pinnedClip() holds the start-pinned clip after compute — null before and after clear', () => {
+    const inspector = fakeInspector();
+    const seam = createClipPathInspectSeam({
+      inspector,
+      getLivePose: () => LIVE_POSE,
+      sampleCount: 8,
+    });
+    // The pinned clip is the replay source: foci already resolved + start pinned
+    // to the live pose at compute time, so a later play flies the EXACT route.
+    expect(seam.pinnedClip()).toBeNull();
+    seam.compute('flyout', clipRegistry['flyout'].data);
+    expect(seam.pinnedClip()).toEqual(resolveClipStart(clipRegistry['flyout'].data, LIVE_POSE));
+    seam.clear();
+    expect(seam.pinnedClip()).toBeNull();
   });
 });

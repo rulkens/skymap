@@ -3,10 +3,11 @@
  *
  * Pick a registered clip, click "Calculate" to sample its camera route into the
  * `clipPathInspector` subsystem (the engine draws a speed-coloured polyline +
- * a scrub gizmo), scrub through it, or "Clear" to hide it. All three are plain
- * dispatches wired by `DebugPanelContainer` (`inspectClipPath` / `clearClipPath`
- * / `setClipPathScrub`); the section holds only the dropdown's pending choice
- * locally — everything else lives in the store.
+ * a scrub gizmo), scrub through it, "Play this path" to fly the EXACT computed
+ * route (deterministic replay — see `replayInspectedPath`), or "Clear" to hide
+ * it. All are plain dispatches wired by the container (`inspectClipPath` /
+ * `clearClipPath` / `setClipPathScrub` / `replayInspectedPath`); the section
+ * holds only the dropdown's pending choice locally — everything else is store.
  *
  * ### Why the scrubber is a [0,1] fraction, not seconds
  *
@@ -33,6 +34,8 @@ export type ClipPathInspectorSectionProps = {
   onClear: () => void;
   /** Move the scrubber (a [0,1] fraction). */
   onScrub: (scrub01: number) => void;
+  /** Fly the exact computed route — deterministic replay (the "Play this path" button). */
+  onReplay: () => void;
 };
 
 // Registry rows → dropdown options. A new clip is a new option, no edit here.
@@ -44,6 +47,7 @@ export function ClipPathInspectorSection({
   onInspect,
   onClear,
   onScrub,
+  onReplay,
 }: ClipPathInspectorSectionProps): ReactElement {
   // The dropdown's pending choice — seeded from the computed clip, else the
   // first registered clip. Calculate is what commits it to the store.
@@ -87,6 +91,15 @@ export function ClipPathInspectorSection({
           />
           <span className={styles.readout}>{Math.round(scrub01 * 100)}%</span>
         </div>
+
+        <div className={styles.buttonRow}>
+          <button type="button" className={styles.button} onClick={onReplay} disabled={!active}>
+            ▶ Play this path
+          </button>
+        </div>
+        {active && (
+          <div className={styles.muted}>Flies the exact computed route. Stop / Esc to abort.</div>
+        )}
 
         <div className={styles.legend}>
           <span className={styles.muted}>slow</span>

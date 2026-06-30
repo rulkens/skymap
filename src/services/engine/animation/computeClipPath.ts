@@ -54,14 +54,25 @@ export type ClipPathInspectSeamDeps = {
 export function createClipPathInspectSeam(deps: ClipPathInspectSeamDeps): ClipPathInspectSeam {
   const { inspector, getLivePose, sampleCount } = deps;
 
+  // The clip the current snapshot was sampled from — fully resolved and pinned
+  // to the live pose at compute time. Held here (not in the snapshot, which
+  // carries only render geometry) so `watchReplayInspectedPathSaga` can replay
+  // the EXACT inspected route rather than a fresh `start: 'live'` resolution.
+  let pinned: ClipData | null = null;
+
   return {
     compute(clipId: ClipId, resolved: ClipData): void {
       const started = resolveClipStart(resolved, getLivePose());
+      pinned = started;
       const durationSec = compileClip(started).durationSec;
       inspector.setSnapshot(sampleClipPath(clipId, started, durationSec, sampleCount));
     },
     clear(): void {
+      pinned = null;
       inspector.clear();
+    },
+    pinnedClip(): ClipData | null {
+      return pinned;
     },
   };
 }

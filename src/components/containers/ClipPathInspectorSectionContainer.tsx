@@ -5,12 +5,12 @@
  *
  * Owns all Redux reach for the section: reads `selectClipPathInspectId` +
  * `selectClipPathScrub` and wraps the `inspectClipPath` / `clearClipPath` /
- * `setClipPathScrub` dispatches in `useCallback`. Mounted directly by
- * `DebugPanel` so its scalars don't prop-drill through the panel — a scrub drag
- * re-renders only this subtree, not the whole DebugPanel.
+ * `setClipPathScrub` / `replayInspectedPath` dispatches in `useCallback`.
+ * Mounted directly by `DebugPanel` so its scalars don't prop-drill through the
+ * panel — a scrub drag re-renders only this subtree, not the whole DebugPanel.
  *
- * All three handlers close over nothing but `dispatch`, so `[dispatch]` is the
- * sole dep and each keeps a stable identity across the panel's re-renders.
+ * Every handler closes over nothing but `dispatch`, so `[dispatch]` is the sole
+ * dep and each keeps a stable identity across the panel's re-renders.
  */
 
 import { useCallback } from 'react';
@@ -22,6 +22,7 @@ import {
   clearClipPath,
   setClipPathScrub,
 } from '../../state/settings/settingsSlice';
+import { replayInspectedPath } from '../../state/camera/clipActions';
 import type { ClipId } from '../../@types/animation/ClipId';
 
 function ClipPathInspectorSectionContainer(): React.ReactElement {
@@ -32,6 +33,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const onInspect = useCallback((id: ClipId) => dispatch(inspectClipPath(id)), [dispatch]);
   const onClear = useCallback(() => dispatch(clearClipPath()), [dispatch]);
   const onScrub = useCallback((next: number) => dispatch(setClipPathScrub(next)), [dispatch]);
+  const onReplay = useCallback(() => dispatch(replayInspectedPath()), [dispatch]);
 
   return (
     <ClipPathInspectorSection
@@ -40,6 +42,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
       onInspect={onInspect}
       onClear={onClear}
       onScrub={onScrub}
+      onReplay={onReplay}
     />
   );
 }
