@@ -55,7 +55,7 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { PathTrack, PathSample } from '../../../@types/animation/CompiledClip';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { SplineMode } from '../../../@types/animation/SplineMode';
+import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import { catmullRomNonUniform } from '../../../utils/math/catmullRomNonUniform';
 import { causalHermiteNonUniform } from '../../../utils/math/causalHermiteNonUniform';
 import { monotoneCubic } from '../../../utils/math/monotoneCubic';
@@ -88,16 +88,12 @@ type BuildParams = {
   readonly rampSec?: number;
   /** Path-level brake depth ∈ [0,1] applied at every target; per-waypoint `linger` overrides it. */
   readonly linger?: number;
-  /** Which spline basis to fit (default `centripetal`). See `SplineMode`. */
-  readonly spline?: SplineMode;
-  /** Causal-Hermite tangent magnitude (turn-delay); ignored unless `spline` is `causalHermite`. */
-  readonly turnDelay?: number;
   /**
-   * Seconds the LOOK leads the eye along the path. 0 (default) splines the
-   * per-knot forward aim. > 0 derives the look from the eye position this many
-   * seconds ahead — supersedes per-waypoint yaw/pitch pins.
+   * Which spline basis to fit (default `{ kind: 'centripetal' }`). The
+   * `causalHermite` arm carries the turn-delay (overshoot) and look-ahead knobs;
+   * `centripetal` carries neither. See `SplineConfig`.
    */
-  readonly lookAhead?: number;
+  readonly spline?: SplineConfig;
 };
 
 // Spline samples per leg for the arc-length table. 64 is plenty for a smooth
@@ -125,9 +121,14 @@ function chord(a: Vec3, b: Vec3): number {
 
 export function buildPathTrack(params: BuildParams): PathTrack {
   const { start, startSec, over, ease, waypoints, align, rampSec, linger } = params;
-  const spline: SplineMode = params.spline ?? 'centripetal';
-  const turnDelay = params.turnDelay ?? DEFAULT_TURN_DELAY;
-  const lookAhead = params.lookAhead ?? DEFAULT_LOOK_AHEAD;
+  // Normalize the basis + its causal-only knobs. centripetal carries neither, so
+  // turnDelay is irrelevant and lookAhead is forced to 0 (no lead); the causal
+  // arm fills each from the knob or its builder default.
+  const cfg: SplineConfig = params.spline ?? { kind: 'centripetal' };
+  const splineKind = cfg.kind;
+  const turnDelay =
+    cfg.kind === 'causalHermite' ? (cfg.turnDelay ?? DEFAULT_TURN_DELAY) : DEFAULT_TURN_DELAY;
+  const lookAhead = cfg.kind === 'causalHermite' ? (cfg.lookAhead ?? DEFAULT_LOOK_AHEAD) : 0;
 
   if (waypoints.length === 0) {
     throw new Error('buildPathTrack: a flyPath needs at least one waypoint.');
@@ -212,7 +213,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   const forwardAt = (k: number): { yaw: number; pitch: number } => {
     let prev: Vec3;
     let next: Vec3;
-    if (spline === 'causalHermite' && k > 0) {
+    if (splineKind === 'causalHermite' && k > 0) {
       prev = knotPos[k - 1]!;
       next = knotPos[k]!; // incoming chord → look straight down the approach
     } else {
@@ -265,7 +266,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   // ex-indices seg..seg+3 (real knots seg-1..seg+2). Both bases read the same
   // 4-knot window; the causal Hermite ignores the forward knot (seg+3).
   const evalCh =
-    spline === 'causalHermite'
+    splineKind === 'causalHermite'
       ? (exVal: number[], seg: number, t: number): number =>
           causalHermiteNonUniform(
             exVal[seg]!,

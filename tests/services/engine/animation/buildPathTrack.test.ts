@@ -430,14 +430,14 @@ describe('buildPathTrack', () => {
 
     // Angle (radians) between the look direction at the eye's closest approach to
     // the interior corner [0,0,100] and the incoming chord +Z. ~0 = head-on.
-    const lookAngleOffApproach = (spline: 'centripetal' | 'causalHermite'): number => {
+    const lookAngleOffApproach = (kind: 'centripetal' | 'causalHermite'): number => {
       const track = buildPathTrack({
         start,
         startSec: 0,
         over: 20,
         ease: 'linear',
         waypoints,
-        spline,
+        spline: { kind },
       });
       let best = Infinity;
       let look: Vec3 = [0, 0, 1];
@@ -470,7 +470,7 @@ describe('buildPathTrack', () => {
         over: 20,
         ease: 'linear',
         waypoints,
-        spline: 'centripetal',
+        spline: { kind: 'centripetal' },
       });
       for (let i = 0; i <= 10; i++) {
         const t = (i / 10) * 20;
@@ -490,8 +490,7 @@ describe('buildPathTrack', () => {
           over: 20,
           ease: 'linear',
           waypoints,
-          spline: 'causalHermite',
-          turnDelay,
+          spline: { kind: 'causalHermite', turnDelay },
         });
         let maxZ = -Infinity;
         for (let i = 0; i <= 800; i++) {
@@ -528,8 +527,7 @@ describe('buildPathTrack', () => {
         over: 20,
         ease: 'linear',
         waypoints,
-        spline: 'causalHermite',
-        ...(lookAhead !== undefined ? { lookAhead } : {}),
+        spline: { kind: 'causalHermite', ...(lookAhead !== undefined ? { lookAhead } : {}) },
       });
     // localSec at which the eye is closest to a probe point. Geometry is identical
     // across lookAhead values, so the same localSec frames the same eye position —

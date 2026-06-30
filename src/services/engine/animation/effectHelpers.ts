@@ -49,15 +49,13 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
-import type { SplineMode } from '../../../@types/animation/SplineMode';
+import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import { CHANNEL_SPACE } from './channelSpace';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
   DEFAULT_LINGER,
   DEFAULT_SPLINE,
-  DEFAULT_TURN_DELAY,
-  DEFAULT_LOOK_AHEAD,
 } from './pathDefaults';
 
 // ---------------------------------------------------------------------------
@@ -430,9 +428,7 @@ export function flyPath(
     align?: number;
     rampSec?: number;
     linger?: number;
-    spline?: SplineMode;
-    turnDelay?: number;
-    lookAhead?: number;
+    spline?: SplineConfig;
   },
 ): Effect & { kind: 'flyPath' } {
   return {
@@ -443,8 +439,8 @@ export function flyPath(
     align: opts.align ?? DEFAULT_ALIGN_SEC,
     rampSec: opts.rampSec ?? DEFAULT_RAMP_SEC,
     linger: opts.linger ?? DEFAULT_LINGER,
-    spline: opts.spline ?? DEFAULT_SPLINE,
-    turnDelay: opts.turnDelay ?? DEFAULT_TURN_DELAY,
-    lookAhead: opts.lookAhead ?? DEFAULT_LOOK_AHEAD,
+    // The causal-only knobs (turnDelay/lookAhead) ride INSIDE the causalHermite
+    // arm, so they default per-knob in buildPathTrack — not here.
+    spline: opts.spline ?? { kind: DEFAULT_SPLINE },
   };
 }

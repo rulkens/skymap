@@ -313,8 +313,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
             align: 1.1,
             rampSec: 0.9,
             linger: 0.4,
-            spline: 'causalHermite',
-            turnDelay: 1.7,
+            spline: { kind: 'causalHermite', turnDelay: 1.7 },
           },
         ),
       ],
@@ -327,8 +326,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     expect(fp.align).toBe(1.1);
     expect(fp.rampSec).toBe(0.9);
     expect(fp.linger).toBe(0.4);
-    expect(fp.spline).toBe('causalHermite');
-    expect(fp.turnDelay).toBe(1.7);
+    expect(fp.spline).toEqual({ kind: 'causalHermite', turnDelay: 1.7 });
 
     // The per-waypoint linger survives onto the resolved at-form waypoint.
     const w0 = fp.waypoints[0]!;

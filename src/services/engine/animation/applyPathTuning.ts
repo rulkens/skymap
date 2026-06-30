@@ -22,7 +22,7 @@
 
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { Effect } from '../../../@types/animation/Effect';
-import type { SplineMode } from '../../../@types/animation/SplineMode';
+import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 
 export type PathTuning = {
   /** Align-in seconds (start-aim blend window). Omit to keep the clip's value. */
@@ -31,12 +31,13 @@ export type PathTuning = {
   readonly rampSec?: number;
   /** Per-target brake depth ∈ [0,1] (0 = cruise straight through). Omit to keep the clip's value. */
   readonly linger?: number;
-  /** Spline basis (centripetal Catmull-Rom ↔ causal Hermite). Omit to keep the clip's value. */
-  readonly spline?: SplineMode;
-  /** Causal-Hermite turn-delay magnitude. Omit to keep the clip's value. */
-  readonly turnDelay?: number;
-  /** Seconds the look leads the eye along the path. Omit to keep the clip's value. */
-  readonly lookAhead?: number;
+  /**
+   * The whole spline config (basis + its causal-only knobs) as ONE override unit
+   * — the causalHermite arm carries turnDelay/lookAhead, centripetal carries
+   * neither, so the inspector can't override a knob onto the wrong basis. Omit to
+   * keep the clip's value.
+   */
+  readonly spline?: SplineConfig;
 };
 
 function tuneEffect(effect: Effect, tuning: PathTuning): Effect {
@@ -48,8 +49,6 @@ function tuneEffect(effect: Effect, tuning: PathTuning): Effect {
         ...(tuning.rampSec !== undefined ? { rampSec: tuning.rampSec } : {}),
         ...(tuning.linger !== undefined ? { linger: tuning.linger } : {}),
         ...(tuning.spline !== undefined ? { spline: tuning.spline } : {}),
-        ...(tuning.turnDelay !== undefined ? { turnDelay: tuning.turnDelay } : {}),
-        ...(tuning.lookAhead !== undefined ? { lookAhead: tuning.lookAhead } : {}),
       };
     case 'seq':
     case 'all':

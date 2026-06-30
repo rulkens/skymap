@@ -99,11 +99,11 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number): Effect 
     }
     // ── flyPath — resolve each id-bearing waypoint; pass at-form through ──────
     //
-    // The path-level pacing (`align` / `rampSec` / `linger` / `spline` /
-    // `turnDelay` / `lookAhead`) carries through UNCHANGED. Dropping it here would silently
-    // strip the helper's pacing defaults on normal playback (compileClip would
-    // see undefined), which only the inspector masked by re-injecting via
-    // applyPathTuning.
+    // The path-level pacing (`align` / `rampSec` / `linger` / `spline`, whose
+    // causalHermite arm carries `turnDelay` / `lookAhead`) carries through
+    // UNCHANGED. Dropping it here would silently strip the helper's pacing
+    // defaults on normal playback (compileClip would see undefined), which only
+    // the inspector masked by re-injecting via applyPathTuning.
     case 'flyPath': {
       const waypoints = effect.waypoints.map((w) => {
         if (!('id' in w)) return w; // already concrete
@@ -126,8 +126,6 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number): Effect 
         ...(effect.rampSec !== undefined ? { rampSec: effect.rampSec } : {}),
         ...(effect.linger !== undefined ? { linger: effect.linger } : {}),
         ...(effect.spline !== undefined ? { spline: effect.spline } : {}),
-        ...(effect.turnDelay !== undefined ? { turnDelay: effect.turnDelay } : {}),
-        ...(effect.lookAhead !== undefined ? { lookAhead: effect.lookAhead } : {}),
       };
     }
 

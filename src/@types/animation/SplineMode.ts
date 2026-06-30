@@ -1,5 +1,6 @@
 /**
- * SplineMode — which basis a `flyPath` fits through its waypoints.
+ * SplineMode — the bare basis NAME a `flyPath` fits through its waypoints,
+ * derived from `SplineConfig`'s discriminant so the two can never drift.
  *
  *   - `centripetal` — centripetal (α=0.5) Catmull-Rom. The tangent at a knot is
  *     the CENTRAL difference through its neighbours, so the curve (and the aim,
@@ -9,11 +10,12 @@
  *   - `causalHermite` — cubic Hermite whose arrival tangent is the INCOMING
  *     chord alone (a backward / "causal" difference). The camera reaches each
  *     interior waypoint head-on and only turns toward the next one AFTER passing
- *     it — a "fly in straight, then bank away" feel. `turnDelay` scales the
- *     tangent magnitude (overshoot on sharp corners).
+ *     it — a "fly in straight, then bank away" feel.
  *
- * The two are an inspector-selectable A/B; authored clips default to
- * `centripetal`, so the choice changes nothing until a clip (or the inspector)
- * opts into `causalHermite`.
+ * Use this where only the basis name matters (the inspector dropdown). The
+ * causal-only knobs (`turnDelay`, `lookAhead`) live on `SplineConfig`'s
+ * `causalHermite` arm, NOT here — a basis name carries no pacing.
  */
-export type SplineMode = 'centripetal' | 'causalHermite';
+import type { SplineConfig } from './SplineConfig';
+
+export type SplineMode = SplineConfig['kind'];

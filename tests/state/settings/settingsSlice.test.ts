@@ -188,8 +188,6 @@ describe('settingsSlice — debug', () => {
       rampSec: false,
       linger: false,
       spline: false,
-      turnDelay: false,
-      lookAhead: false,
     });
   });
 
@@ -208,10 +206,12 @@ describe('settingsSlice — debug', () => {
     expect(next.debug.clipPathInspect.active.spline).toBe(true);
   });
 
-  it('setClipPathLookAhead activates the look-ahead override', () => {
+  it('setClipPathLookAhead sets the value and activates the one spline override', () => {
+    // lookAhead is a causal-only sub-knob with no gate of its own — it rides the
+    // single `spline` override, so touching it activates `spline`.
     const next = reducer(base(), setClipPathLookAhead(1.5));
     expect(next.debug.clipPathInspect.lookAhead).toBe(1.5);
-    expect(next.debug.clipPathInspect.active.lookAhead).toBe(true);
+    expect(next.debug.clipPathInspect.active.spline).toBe(true);
   });
 
   it('setClipPathTuningActive toggles a knob without touching its value', () => {

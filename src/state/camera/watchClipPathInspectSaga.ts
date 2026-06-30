@@ -39,6 +39,7 @@ import {
   selectClipPathTuningActive,
 } from '../settings/selectors';
 import type { PathTuning } from '../../services/engine/animation/applyPathTuning';
+import type { SplineConfig } from '../../@types/animation/SplineConfig';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { applyPathTuning } from '../../services/engine/animation/applyPathTuning';
@@ -73,13 +74,18 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   const turnDelay = yield* select(selectClipPathTurnDelay);
   const lookAhead = yield* select(selectClipPathLookAhead);
   const active = yield* select(selectClipPathTuningActive);
+  // Project the flat scratch scalars into ONE SplineConfig: the causal-only
+  // sub-knobs only ride along when the basis is causal, so an override can never
+  // attach turnDelay/lookAhead to a centripetal path.
+  const splineCfg: SplineConfig =
+    spline === 'causalHermite'
+      ? { kind: 'causalHermite', turnDelay, lookAhead }
+      : { kind: 'centripetal' };
   const tuning: PathTuning = {
     ...(active.align ? { align } : {}),
     ...(active.rampSec ? { rampSec } : {}),
     ...(active.linger ? { linger } : {}),
-    ...(active.spline ? { spline } : {}),
-    ...(active.turnDelay ? { turnDelay } : {}),
-    ...(active.lookAhead ? { lookAhead } : {}),
+    ...(active.spline ? { spline: splineCfg } : {}),
   };
   const tuned = applyPathTuning(resolved, tuning);
   if (keepStart) seam.recompute(clipId, tuned);

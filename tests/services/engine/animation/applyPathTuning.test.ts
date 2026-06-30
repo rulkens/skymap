@@ -19,8 +19,7 @@ const TUNING = {
   align: 0.7,
   rampSec: 1.2,
   linger: 0.3,
-  spline: 'causalHermite' as const,
-  turnDelay: 1.5,
+  spline: { kind: 'causalHermite', turnDelay: 1.5 } as const,
 };
 
 describe('applyPathTuning', () => {
@@ -35,8 +34,7 @@ describe('applyPathTuning', () => {
     expect(node.align).toBe(0.7);
     expect(node.rampSec).toBe(1.2);
     expect(node.linger).toBe(0.3);
-    expect(node.spline).toBe('causalHermite');
-    expect(node.turnDelay).toBe(1.5);
+    expect(node.spline).toEqual({ kind: 'causalHermite', turnDelay: 1.5 });
     expect(node.over).toBe(8); // other fields preserved
   });
 
@@ -58,8 +56,7 @@ describe('applyPathTuning', () => {
     expect(fly.align).toBe(0.7);
     expect(fly.rampSec).toBe(1.2);
     expect(fly.linger).toBe(0.3);
-    expect(fly.spline).toBe('causalHermite');
-    expect(fly.turnDelay).toBe(1.5);
+    expect(fly.spline).toEqual({ kind: 'causalHermite', turnDelay: 1.5 });
   });
 
   it('overwrites a flyPath that already carries its own align/rampSec', () => {
@@ -94,8 +91,7 @@ describe('applyPathTuning', () => {
           align: 2,
           rampSec: 3,
           linger: 0.65,
-          spline: 'centripetal',
-          turnDelay: 1,
+          spline: { kind: 'causalHermite', turnDelay: 1 },
         }),
       ],
     };
@@ -105,8 +101,7 @@ describe('applyPathTuning', () => {
     expect(node.linger).toBe(0.1); // overridden
     expect(node.align).toBe(2); // untouched (clip's value)
     expect(node.rampSec).toBe(3); // untouched
-    expect(node.spline).toBe('centripetal'); // untouched
-    expect(node.turnDelay).toBe(1); // untouched
+    expect(node.spline).toEqual({ kind: 'causalHermite', turnDelay: 1 }); // untouched
   });
 
   it('is a no-op for an empty tuning (no knob activated)', () => {

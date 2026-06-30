@@ -68,7 +68,7 @@ import type { FocusBoundEffect } from './FocusBoundEffect';
 import type { SceneEffect } from './SceneEffect';
 import type { PathWaypoint } from './PathWaypoint';
 import type { Ease } from './Ease';
-import type { SplineMode } from './SplineMode';
+import type { SplineConfig } from './SplineConfig';
 
 export type Effect =
   | CameraAction
@@ -106,23 +106,12 @@ export type Effect =
        */
       readonly linger?: number;
       /**
-       * Which spline basis fits the waypoints: `centripetal` (Catmull-Rom, banks
-       * early — the default) or `causalHermite` (arrives head-on, turns after).
-       * Omit for the builder default (`centripetal`). See `SplineMode`.
+       * Which spline basis fits the waypoints, plus the knobs that basis owns.
+       * `{ kind: 'centripetal' }` (Catmull-Rom, banks early — the default) carries
+       * nothing else; `{ kind: 'causalHermite', turnDelay?, lookAhead? }` (arrives
+       * head-on, turns after) carries the overshoot + look-lead knobs INSIDE the
+       * arm, so they can't be set on centripetal. Omit for the builder default
+       * (`{ kind: 'centripetal' }`). See `SplineConfig`.
        */
-      readonly spline?: SplineMode;
-      /**
-       * Causal-Hermite tangent magnitude — the turn-delay / overshoot knob (1 =
-       * natural; >1 shoots further past a corner before banking). Ignored unless
-       * `spline` is `causalHermite`. Omit for the builder default (1).
-       */
-      readonly turnDelay?: number;
-      /**
-       * Seconds the LOOK leads the eye along the path. 0 (the default) splines the
-       * per-knot forward aim. > 0 aims at where the camera will be `lookAhead`
-       * seconds from now — with `causalHermite` it flies into each target head-on
-       * then turns toward the next as the path bends past it. Supersedes
-       * per-waypoint yaw/pitch pins. Omit for the builder default (0).
-       */
-      readonly lookAhead?: number;
+      readonly spline?: SplineConfig;
     };

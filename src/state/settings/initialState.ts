@@ -128,8 +128,6 @@ export function buildInitialSettings(): EngineSettingsState {
           rampSec: false,
           linger: false,
           spline: false,
-          turnDelay: false,
-          lookAhead: false,
         },
       },
     },

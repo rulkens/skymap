@@ -216,46 +216,39 @@ export function ClipPathInspectorSection({
             <option value="causalHermite">causal Hermite</option>
           </select>
         </div>
-        <div className={styles.scrubRow}>
-          <input
-            className={styles.check}
-            type="checkbox"
-            title="Override the clip's turn delay"
-            checked={tuningActive.turnDelay}
-            onChange={(e) => onTuningActive('turnDelay', e.target.checked)}
-          />
-          <span className={styles.knobLabel}>turn delay</span>
-          <input
-            className={styles.scrub}
-            type="range"
-            min={0}
-            max={3}
-            step={0.05}
-            value={turnDelay}
-            onChange={(e) => onTurnDelay(Number(e.target.value))}
-          />
-          <span className={styles.readout}>{turnDelay.toFixed(2)}</span>
-        </div>
-        <div className={styles.scrubRow}>
-          <input
-            className={styles.check}
-            type="checkbox"
-            title="Override the clip's look-ahead"
-            checked={tuningActive.lookAhead}
-            onChange={(e) => onTuningActive('lookAhead', e.target.checked)}
-          />
-          <span className={styles.knobLabel}>look ahead</span>
-          <input
-            className={styles.scrub}
-            type="range"
-            min={0}
-            max={6}
-            step={0.1}
-            value={lookAhead}
-            onChange={(e) => onLookAhead(Number(e.target.value))}
-          />
-          <span className={styles.readout}>{lookAhead.toFixed(1)}s</span>
-        </div>
+        {/* Causal-only sub-knobs: turnDelay (overshoot) + lookAhead (look-lead)
+            are meaningless on centripetal, so they only appear in causal mode and
+            carry no own checkbox — touching either rides the one `spline` gate. */}
+        {spline === 'causalHermite' && (
+          <div className={styles.causalKnobs}>
+            <div className={styles.scrubRow}>
+              <span className={styles.knobLabel}>turn delay</span>
+              <input
+                className={styles.scrub}
+                type="range"
+                min={0}
+                max={3}
+                step={0.05}
+                value={turnDelay}
+                onChange={(e) => onTurnDelay(Number(e.target.value))}
+              />
+              <span className={styles.readout}>{turnDelay.toFixed(2)}</span>
+            </div>
+            <div className={styles.scrubRow}>
+              <span className={styles.knobLabel}>look ahead</span>
+              <input
+                className={styles.scrub}
+                type="range"
+                min={0}
+                max={6}
+                step={0.1}
+                value={lookAhead}
+                onChange={(e) => onLookAhead(Number(e.target.value))}
+              />
+              <span className={styles.readout}>{lookAhead.toFixed(1)}s</span>
+            </div>
+          </div>
+        )}
         {active && (
           <div className={styles.muted}>
             Checked knobs override the clip; unchecked keep its authored value. Re-Calculate to

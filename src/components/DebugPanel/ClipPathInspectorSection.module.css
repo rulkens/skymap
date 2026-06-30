@@ -51,6 +51,16 @@
   flex: 1;
 }
 
+/* Causal-only sub-knobs (turnDelay / lookAhead), indented under the spline
+ * dropdown to read as "these belong to the basis above". The left pad replaces
+ * the checkbox column the other rows carry, so the sliders still line up. */
+.causalKnobs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 19px;
+}
+
 /* Per-knob override gate: checked = this knob overrides the clip's value. */
 .check {
   flex: 0 0 auto;
