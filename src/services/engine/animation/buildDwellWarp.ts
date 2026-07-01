@@ -20,10 +20,18 @@
  *   - `slowness(baseTime)` = wall-seconds spent per base-second. It is 1 in
  *     cruise (base and wall advance together) and rises to a plateau inside each
  *     window, so the camera covers less base-progress per wall-second there — it
- *     crawls. `smoothstep` shoulders ramp it up before the knot and down after,
- *     so there is no kink and (crucially) no zero-slope freeze.
+ *     crawls. `smoothstep` shoulders ramp it up and down, so there is no kink and
+ *     (crucially) no zero-slope freeze.
  *   - `wall(baseTime) = ∫ slowness` maps `[0, over] → [0, totalSec]`, strictly
  *     increasing (slowness ≥ 1), so it inverts. `baseTimeAt` is that inverse.
+ *
+ * ### The window LEADS the knot (biased before, not centred)
+ *
+ * With look-ahead aim the camera looks DOWN the path, so a target is framed
+ * ahead of you on APPROACH and slides behind once you pass it. So the slow-down
+ * must lead the knot — be slowest while the target is still ahead in view, then
+ * recover as you pass. `DWELL_LEAD_FRAC` shifts the plateau centre earlier by
+ * that fraction of the half-window; the tail barely crosses the knot.
  *
  * Depth 1 caps at a finite crawl (`MIN_SPEED_FRAC` of cruise), never 0 — the fix
  * for the old dead-stop. The geometry (spline, arc-length, aim) is untouched:
@@ -42,6 +50,14 @@ export type DwellWarp = {
 
 /** Slowest the crawl ever gets, as a fraction of cruise speed (depth 1). */
 const MIN_SPEED_FRAC = 0.12;
+
+/**
+ * How far the slow plateau LEADS the knot, as a fraction of the half-window.
+ * 0 centres it on the knot; 1 ends the window at the knot (fully on approach).
+ * ~0.7 puts the slowest moment on approach — while the target is framed ahead —
+ * with a short tail just past the knot.
+ */
+const DWELL_LEAD_FRAC = 0.7;
 
 /** Additive slowness at a knot's plateau for a depth ∈ [0,1]. 0 → 0 (no dwell). */
 function plateauSlowness(depth: number): number {
@@ -70,13 +86,15 @@ export function buildDwellWarp(
     return { totalSec: over, baseTimeAt: (w) => (w < 0 ? 0 : w > over ? over : w) };
   }
 
-  // slowness(τ) = 1 + Σ knots  ampₖ · pulseₖ(τ), where pulse is 1 at the knot,
+  // slowness(τ) = 1 + Σ knots  ampₖ · pulseₖ(τ). The pulse is 1 at its centre,
   // smoothly 0 at the window edge (flat top from smoothstep's zero-slope ends).
+  // The centre LEADS the knot by `lead`, so the crawl sits on the approach.
+  const lead = DWELL_LEAD_FRAC * half;
   const slowness = (tau: number): number => {
     let s = 1;
     for (let k = 0; k < knotTime.length; k++) {
       if (amps[k]! <= 0) continue;
-      const x = Math.abs(tau - knotTime[k]!);
+      const x = Math.abs(tau - (knotTime[k]! - lead));
       if (x >= half) continue;
       s += amps[k]! * (1 - smoothstep(0, half, x));
     }

@@ -400,7 +400,7 @@ describe('buildPathTrack', () => {
     expect(track.endSec).toBeGreaterThan(8);
   });
 
-  it('crawls slow BEFORE and AFTER the target — a sustained window, not a point', () => {
+  it('slows on the APPROACH and recovers after — the dwell leads the target', () => {
     // Dwell the FIRST interior knot only; the SECOND is the un-dwelled cruise
     // reference (same orbit distance → same cruise world-speed).
     const track = buildPathTrack({
@@ -419,11 +419,22 @@ describe('buildPathTrack', () => {
     const tDwell = approachTime(track, [10, 0, 0], T);
     const tCruise = approachTime(track, [20, 0, 0], T);
     const cruise = speedOf(track, tCruise, T);
-    // Slow at the target AND ~0.8s to either side — the plateau. A point dip
-    // would be back near cruise that far out.
-    expect(speedOf(track, tDwell, T)).toBeLessThan(cruise * 0.5);
-    expect(speedOf(track, tDwell - 0.8, T)).toBeLessThan(cruise * 0.85);
-    expect(speedOf(track, tDwell + 0.8, T)).toBeLessThan(cruise * 0.85);
+    // Slowest instant lands BEFORE closest approach (the target is framed ahead
+    // on the way in, so the crawl leads it rather than straddling it).
+    let tMin = 0;
+    let best = Infinity;
+    for (let i = 0; i <= 800; i++) {
+      const t = (i / 800) * T;
+      const s = speedOf(track, t, T);
+      if (s < best) {
+        best = s;
+        tMin = t;
+      }
+    }
+    expect(tMin).toBeLessThan(tDwell); // slowest on approach, not at/after the knot
+    expect(best).toBeLessThan(cruise * 0.5); // a real crawl
+    // Asymmetric: markedly slower approaching than departing.
+    expect(speedOf(track, tDwell - 1, T)).toBeLessThan(speedOf(track, tDwell + 1, T));
   });
 
   it('at depth 1 the camera crawls but never freezes (min speed > 0)', () => {

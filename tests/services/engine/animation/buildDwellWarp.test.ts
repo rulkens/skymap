@@ -55,25 +55,28 @@ describe('buildDwellWarp', () => {
     expect(w.baseTimeAt(2)).toBeCloseTo(2, 3);
   });
 
-  it('crawls through the dwell window — base advances slower than cruise there', () => {
+  it('crawls with the slow-down biased BEFORE the knot (approach, not departure)', () => {
     const w = buildDwellWarp(KNOT_TIME, [0, 0.9, 0], 2, 8);
     // Local slope dBase/dWall via finite difference.
     const slope = (wall: number): number => {
       const dt = 0.05;
       return (w.baseTimeAt(wall + dt) - w.baseTimeAt(wall - dt)) / (2 * dt);
     };
-    // Cruise slope ≈ 1 well before the window; the knot sits at wall time
-    // baseTimeAt⁻¹(4). Its wall time is past 4 (dwell pushed it later), so scan
-    // for where base-time crosses 4 and check the slope there is markedly < 1.
-    let knotWall = 0;
-    for (let i = 0; i <= 1000; i++) {
+    // Scan for the slowest instant (min slope).
+    let tMin = 0;
+    let best = Infinity;
+    for (let i = 1; i < 1000; i++) {
       const wall = (i / 1000) * w.totalSec;
-      if (w.baseTimeAt(wall) >= 4) {
-        knotWall = wall;
-        break;
+      const s = slope(wall);
+      if (s < best) {
+        best = s;
+        tMin = wall;
       }
     }
-    expect(slope(1)).toBeCloseTo(1, 1); // cruise
-    expect(slope(knotWall)).toBeLessThan(0.5); // crawl at the knot
+    expect(slope(1)).toBeCloseTo(1, 1); // cruise well before the window
+    expect(best).toBeLessThan(0.5); // a real crawl
+    // The slowest instant lands on the APPROACH — its base-time is before the
+    // knot at base 4 (the dwell leads the waypoint, it doesn't straddle it).
+    expect(w.baseTimeAt(tMin)).toBeLessThan(4);
   });
 });
