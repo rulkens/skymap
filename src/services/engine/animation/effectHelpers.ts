@@ -50,6 +50,7 @@ import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLay
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
+import type { PassByConfig } from '../../../@types/animation/PassByConfig';
 import { CHANNEL_SPACE } from './channelSpace';
 import {
   DEFAULT_ALIGN_SEC,
@@ -429,6 +430,7 @@ export function flyPath(
     rampSec?: number;
     linger?: number;
     spline?: SplineConfig;
+    passBy?: PassByConfig;
   },
 ): Effect & { kind: 'flyPath' } {
   return {
@@ -442,5 +444,8 @@ export function flyPath(
     // The causal-only knobs (turnDelay/lookAhead) ride INSIDE the causalHermite
     // arm, so they default per-knob in buildPathTrack — not here.
     spline: opts.spline ?? { kind: DEFAULT_SPLINE },
+    // Absent = fly through centres (right for a group cloud); a galaxy flythrough
+    // opts in. No default stamped, so groups stay through-centre.
+    ...(opts.passBy !== undefined ? { passBy: opts.passBy } : {}),
   };
 }

@@ -41,6 +41,8 @@ import reducer, {
   setClipPathLinger,
   setClipPathSpline,
   setClipPathLookAhead,
+  setClipPathPassByOffset,
+  setClipPathGlance,
   setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
@@ -188,6 +190,7 @@ describe('settingsSlice — debug', () => {
       rampSec: false,
       linger: false,
       spline: false,
+      passBy: false,
     });
   });
 
@@ -212,6 +215,20 @@ describe('settingsSlice — debug', () => {
     const next = reducer(base(), setClipPathLookAhead(1.5));
     expect(next.debug.clipPathInspect.lookAhead).toBe(1.5);
     expect(next.debug.clipPathInspect.active.spline).toBe(true);
+  });
+
+  it('setClipPathGlance sets the value and activates the one passBy override', () => {
+    // glance is a fly-past sub-knob with no gate of its own — it rides the single
+    // `passBy` override, so touching it activates `passBy` (not a `glance` gate).
+    const next = reducer(base(), setClipPathGlance(0.5));
+    expect(next.debug.clipPathInspect.glance).toBe(0.5);
+    expect(next.debug.clipPathInspect.active.passBy).toBe(true);
+  });
+
+  it('setClipPathPassByOffset activates the passBy override', () => {
+    const next = reducer(base(), setClipPathPassByOffset(4));
+    expect(next.debug.clipPathInspect.passByOffset).toBe(4);
+    expect(next.debug.clipPathInspect.active.passBy).toBe(true);
   });
 
   it('setClipPathTuningActive toggles a knob without touching its value', () => {

@@ -31,7 +31,10 @@
  *      With `lookAhead > 0` the aim instead points from the eye toward the eye
  *      `lookAhead` seconds AHEAD on the path: a causal flythrough then flies
  *      straight in looking head-on, and leads toward the next subject the instant
- *      the path bends past a waypoint (supersedes per-waypoint aim pins).
+ *      the path bends past a waypoint (supersedes per-waypoint aim pins). A
+ *      `passBy` config flies the eye PAST interior subjects rather than through
+ *      them: the interior knots are offset laterally off-centre, and (with
+ *      `glance`) the aim swings to frame each subject as it slides by.
  *
  *   3. **Arc-length reparametrisation (scale space)** — raw spline parameter is
  *      not perceptually uniform: lerping it blows through the near field and
@@ -56,13 +59,21 @@ import type { PathTrack, PathSample } from '../../../@types/animation/CompiledCl
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
+import type { PassByConfig } from '../../../@types/animation/PassByConfig';
+import type { PassByDir } from '../../../@types/animation/PassByDir';
 import { catmullRomNonUniform } from '../../../utils/math/catmullRomNonUniform';
 import { causalHermiteNonUniform } from '../../../utils/math/causalHermiteNonUniform';
 import { monotoneCubic } from '../../../utils/math/monotoneCubic';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
-import { DEFAULT_ALIGN_SEC, DEFAULT_TURN_DELAY, DEFAULT_LOOK_AHEAD } from './pathDefaults';
+import {
+  DEFAULT_ALIGN_SEC,
+  DEFAULT_TURN_DELAY,
+  DEFAULT_LOOK_AHEAD,
+  DEFAULT_PASS_BY_DIR,
+  DEFAULT_GLANCE,
+} from './pathDefaults';
 import { EASE } from './ease';
 
 /** A waypoint after focus resolution — always concrete (`at` + `distance`). */
@@ -74,6 +85,8 @@ type AtWaypoint = {
   readonly over?: number;
   /** Per-target brake depth ∈ [0,1]; overrides the path-level `linger`. */
   readonly linger?: number;
+  /** Subject world radius (Mpc); the unit `passBy.offset` scales by. */
+  readonly radius?: number;
 };
 
 type BuildParams = {
@@ -94,6 +107,12 @@ type BuildParams = {
    * `centripetal` carries neither. See `SplineConfig`.
    */
   readonly spline?: SplineConfig;
+  /**
+   * How to fly PAST interior galaxy waypoints instead of through their centres
+   * (lateral offset + direction + optional glance). Omit for through-centre.
+   * See `PassByConfig`.
+   */
+  readonly passBy?: PassByConfig;
 };
 
 // Spline samples per leg for the arc-length table. 64 is plenty for a smooth
@@ -119,6 +138,57 @@ function chord(a: Vec3, b: Vec3): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
 
+// --- Small Vec3 helpers for the pass-by offset geometry ---
+const WORLD_UP: Vec3 = [0, 1, 0];
+const sub3 = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const dot3 = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross3 = (a: Vec3, b: Vec3): Vec3 => [
+  a[1] * b[2] - a[2] * b[1],
+  a[2] * b[0] - a[0] * b[2],
+  a[0] * b[1] - a[1] * b[0],
+];
+function norm3(a: Vec3): Vec3 {
+  const m = Math.hypot(a[0], a[1], a[2]);
+  return m > CHORD_EPS ? [a[0] / m, a[1] / m, a[2] / m] : [0, 0, 0];
+}
+/** Component of `a` perpendicular to the UNIT vector `t`. */
+const perp3 = (a: Vec3, t: Vec3): Vec3 => {
+  const d = dot3(a, t);
+  return [a[0] - d * t[0], a[1] - d * t[1], a[2] - d * t[2]];
+};
+const isZero3 = (a: Vec3): boolean => a[0] === 0 && a[1] === 0 && a[2] === 0;
+
+/**
+ * passByDirVec — the UNIT lateral direction to offset an interior eye knot so it
+ * flies past the subject at knot `cK` rather than through it. `cPrev`/`cNext` are
+ * the neighbouring centres (the travel tangent is their chord). See `PassByDir`.
+ */
+function passByDirVec(cPrev: Vec3, cK: Vec3, cNext: Vec3, mode: PassByDir): Vec3 {
+  const t = norm3(sub3(cNext, cPrev)); // travel tangent
+  const above = (): Vec3 => {
+    const n = norm3(perp3(WORLD_UP, t));
+    return isZero3(n) ? [1, 0, 0] : n; // travel is vertical → arbitrary lateral
+  };
+  switch (mode) {
+    case 'above':
+      return above();
+    case 'screenSide': {
+      const r = norm3(cross3(t, WORLD_UP));
+      return isZero3(r) ? [1, 0, 0] : r;
+    }
+    case 'outsideBend': {
+      // Path acceleration points INTO the bend; the outside is its negation.
+      const accel: Vec3 = [
+        cPrev[0] + cNext[0] - 2 * cK[0],
+        cPrev[1] + cNext[1] - 2 * cK[1],
+        cPrev[2] + cNext[2] - 2 * cK[2],
+      ];
+      const inside = norm3(perp3(accel, t));
+      return isZero3(inside) ? above() : [-inside[0], -inside[1], -inside[2]]; // ~straight leg → above
+    }
+  }
+}
+
 export function buildPathTrack(params: BuildParams): PathTrack {
   const { start, startSec, over, ease, waypoints, align, rampSec, linger } = params;
   // Normalize the basis + its causal-only knobs. centripetal carries neither, so
@@ -129,6 +199,12 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   const turnDelay =
     cfg.kind === 'causalHermite' ? (cfg.turnDelay ?? DEFAULT_TURN_DELAY) : DEFAULT_TURN_DELAY;
   const lookAhead = cfg.kind === 'causalHermite' ? (cfg.lookAhead ?? DEFAULT_LOOK_AHEAD) : 0;
+
+  // Fly-past: absent (or offset 0) flies the eye through each interior waypoint
+  // centre — the historical behaviour. See `PassByConfig`.
+  const passOffset = params.passBy?.offset ?? 0;
+  const passDir = params.passBy?.dir ?? DEFAULT_PASS_BY_DIR;
+  const glance = params.passBy?.glance ?? DEFAULT_GLANCE;
 
   if (waypoints.length === 0) {
     throw new Error('buildPathTrack: a flyPath needs at least one waypoint.');
@@ -155,6 +231,30 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     start.target[2] + start.distance * (cp0 * Math.cos(start.yaw)),
   ];
   const knotPos: Vec3[] = [liveEye, ...waypoints.map((w) => [w.at[0], w.at[1], w.at[2]] as Vec3)];
+
+  // --- Fly-past: displace interior eye knots off their subject centres ---
+  //
+  // Knot 0 (live eye) and the last knot (the destination, settle-framed below)
+  // are left alone; each INTERIOR knot is pushed `offset · radius` off its centre
+  // along the chosen perpendicular, so the eye sweeps PAST the subject instead of
+  // through it. Directions are computed from the ORIGINAL centres in one pass
+  // (a snapshot), so an earlier offset can't skew a later knot's tangent. A knot
+  // with no subject radius (a hand-placed `atPoint`) is never offset. The galaxy
+  // centres for the glance aim are read straight off `waypoints` (untouched).
+  if (passOffset > 0) {
+    const centres = knotPos.map((p) => [p[0], p[1], p[2]] as Vec3);
+    for (let k = 1; k < nKnots - 1; k++) {
+      const r = waypoints[k - 1]!.radius;
+      if (r === undefined || r <= 0) continue;
+      const n = passByDirVec(centres[k - 1]!, centres[k]!, centres[k + 1]!, passDir);
+      const d = passOffset * r;
+      knotPos[k] = [
+        centres[k]![0] + d * n[0],
+        centres[k]![1] + d * n[1],
+        centres[k]![2] + d * n[2],
+      ];
+    }
+  }
 
   // --- Settle framed on the destination (the final waypoint) ---
   //
@@ -485,10 +585,42 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     };
   };
 
+  // Glance aim: as the eye passes an interior subject, blend the base aim toward
+  // looking AT that subject's centre, weighted by a bell that peaks at the knot's
+  // pass-time and fades to 0 across the adjacent legs. `glance` scales the peak;
+  // between knots the weight is 0 so the base aim (splined / look-ahead) is
+  // untouched. Reads the ORIGINAL centres off `waypoints` (the knots are offset).
+  const glanceAim = (localSec: number, baseYaw: number, basePitch: number) => {
+    if (glance <= 0) return { yaw: baseYaw, pitch: basePitch };
+    let w = 0;
+    let centre: Vec3 | null = null;
+    for (let k = 1; k < nKnots - 1; k++) {
+      const half = 0.5 * Math.min(dur[k - 1]!, dur[k]!);
+      if (half <= 0) continue;
+      const x = 1 - Math.abs(localSec - knotTime[k]!) / half;
+      if (x <= 0) continue;
+      const wk = glance * x * x;
+      if (wk > w) {
+        w = wk;
+        centre = waypoints[k - 1]!.at as Vec3;
+      }
+    }
+    if (w <= 0 || centre === null) return { yaw: baseYaw, pitch: basePitch };
+    const eye = eyePosAt(localSec);
+    const toC: Vec3 = [centre[0] - eye[0], centre[1] - eye[1], centre[2] - eye[2]];
+    if (Math.hypot(toC[0], toC[1], toC[2]) < CHORD_EPS) return { yaw: baseYaw, pitch: basePitch };
+    const a = orbitAnglesLookingAlong(toC);
+    return {
+      yaw: blendYaw(baseYaw, a.yaw, w),
+      pitch: basePitch + (a.pitch - basePitch) * w,
+    };
+  };
+
   const sample = (localSec: number): PathSample => {
     const t = paramAtLocalSec(localSec);
     const pose = poseAtTau(t);
-    const aim = aheadAim(localSec, pose.yaw, pose.pitch);
+    const ahead = aheadAim(localSec, pose.yaw, pose.pitch);
+    const aim = glanceAim(localSec, ahead.yaw, ahead.pitch);
 
     // Align-in: 0 → live orientation, 1 → the path aim (splined forward, or the
     // look-ahead direction when `lookAhead` > 0).

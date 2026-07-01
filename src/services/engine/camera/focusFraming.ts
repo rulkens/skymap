@@ -21,8 +21,11 @@
  *   - milkyWay: fixed world-space centre at a calibrated view distance — we are
  *     inside the galaxy, so no radius or FOV computation makes sense.
  *
- * The return type is `Pick<CameraPose, 'target' | 'distance'>` — just the
- * position-and-depth slice. Callers carry the orientation (yaw/pitch) themselves.
+ * The return type is `Pick<CameraPose, 'target' | 'distance'>` plus the subject's
+ * world `radius` (Mpc) — the position-and-depth slice, with the extent a fly-past
+ * offset scales by. Callers carry the orientation (yaw/pitch) themselves; the
+ * radius is ignored by the framing consumers and read only by `flyPath`'s
+ * pass-by geometry.
  */
 
 import { galaxyFocusDistance } from './galaxyFocusDistance';
@@ -34,20 +37,36 @@ import {
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 
+/** kpc → Mpc; the fallback diameter mirrors `galaxyFocusDistance`. */
+const KPC_PER_MPC = 1000;
+const FALLBACK_DIAMETER_KPC = 30;
+
+export type FocusFraming = Pick<CameraPose, 'target' | 'distance'> & {
+  /** The subject's world radius (Mpc) — the extent a fly-past offset scales by. */
+  readonly radius: number;
+};
+
 /**
- * Compute the target world position and orbit distance appropriate for a
- * focus on the given resolved row, given the camera's current vertical FOV.
+ * Compute the target world position, orbit distance, and subject radius
+ * appropriate for a focus on the given resolved row, given the camera's current
+ * vertical FOV.
  *
- * Returns the two fields that change on a focus; orientation (yaw/pitch) is
- * the caller's responsibility.
+ * Returns the fields that change on a focus (orientation is the caller's) plus
+ * the subject radius.
  */
-export function focusFraming(
-  row: SelectionRow,
-  fovYRad: number,
-): Pick<CameraPose, 'target' | 'distance'> {
+export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
   switch (row.type) {
-    case 'galaxyCatalog':
-      return { target: [row.x, row.y, row.z], distance: galaxyFocusDistance(row.diameterKpc) };
+    case 'galaxyCatalog': {
+      const dKpc =
+        Number.isFinite(row.diameterKpc) && row.diameterKpc > 0
+          ? row.diameterKpc
+          : FALLBACK_DIAMETER_KPC;
+      return {
+        target: [row.x, row.y, row.z],
+        distance: galaxyFocusDistance(row.diameterKpc),
+        radius: dKpc / 2 / KPC_PER_MPC,
+      };
+    }
     case 'structure':
       return {
         target: [row.worldPos[0], row.worldPos[1], row.worldPos[2]],
@@ -55,11 +74,14 @@ export function focusFraming(
         // fade reads — so the ring + label land just past their fade-out;
         // fall back to the physical core when there is no wider extent.
         distance: structureFocusDistance(row.apparentRadiusMpc ?? row.physicalRadiusMpc, fovYRad),
+        radius: row.apparentRadiusMpc ?? row.physicalRadiusMpc,
       };
     case 'milkyWay':
       return {
         target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
         distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+        // We are inside the galaxy; there is no meaningful fly-past radius.
+        radius: 0,
       };
   }
 }

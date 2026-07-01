@@ -21,6 +21,7 @@ import { useState, type ReactElement } from 'react';
 
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
+import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningActive';
 import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
@@ -53,6 +54,12 @@ export type ClipPathInspectorSectionProps = {
   turnDelay: number;
   /** Seconds the look leads the eye along the path (0 = spline the per-knot aim) — applied on the next Calculate. */
   lookAhead: number;
+  /** Fly-past offset in subject-radius units (0 = through centre) — applied on the next Calculate. */
+  passByOffset: number;
+  /** Fly-past offset direction — applied on the next Calculate. */
+  passByDir: PassByDir;
+  /** Fly-past glance [0,1] (0 = look leads down the path) — applied on the next Calculate. */
+  glance: number;
   /** Per-knob override gates — an inactive knob keeps the clip's authored value. */
   tuningActive: ClipPathTuningActive;
   /** Set the align-in seconds. */
@@ -67,6 +74,12 @@ export type ClipPathInspectorSectionProps = {
   onTurnDelay: (turnDelay: number) => void;
   /** Set the look-ahead seconds. */
   onLookAhead: (lookAhead: number) => void;
+  /** Set the fly-past offset (radius units). */
+  onPassByOffset: (offset: number) => void;
+  /** Set the fly-past offset direction. */
+  onPassByDir: (dir: PassByDir) => void;
+  /** Set the fly-past glance strength. */
+  onGlance: (glance: number) => void;
   /** Toggle a single knob's override on/off (the row checkbox). */
   onTuningActive: (knob: ClipPathTuningKnob, active: boolean) => void;
 };
@@ -88,6 +101,9 @@ export function ClipPathInspectorSection({
   spline,
   turnDelay,
   lookAhead,
+  passByOffset,
+  passByDir,
+  glance,
   tuningActive,
   onAlign,
   onRampSec,
@@ -95,6 +111,9 @@ export function ClipPathInspectorSection({
   onSpline,
   onTurnDelay,
   onLookAhead,
+  onPassByOffset,
+  onPassByDir,
+  onGlance,
   onTuningActive,
 }: ClipPathInspectorSectionProps): ReactElement {
   // The dropdown's pending choice — seeded from the computed clip, else the
@@ -220,7 +239,7 @@ export function ClipPathInspectorSection({
             are meaningless on centripetal, so they only appear in causal mode and
             carry no own checkbox — touching either rides the one `spline` gate. */}
         {spline === 'causalHermite' && (
-          <div className={styles.causalKnobs}>
+          <div className={styles.subKnobs}>
             <div className={styles.scrubRow}>
               <span className={styles.knobLabel}>turn delay</span>
               <input
@@ -246,6 +265,58 @@ export function ClipPathInspectorSection({
                 onChange={(e) => onLookAhead(Number(e.target.value))}
               />
               <span className={styles.readout}>{lookAhead.toFixed(1)}s</span>
+            </div>
+          </div>
+        )}
+        <div className={styles.scrubRow}>
+          <input
+            className={styles.check}
+            type="checkbox"
+            title="Override the clip's fly-past (offset off galaxy centres)"
+            checked={tuningActive.passBy}
+            onChange={(e) => onTuningActive('passBy', e.target.checked)}
+          />
+          <span className={styles.knobLabel}>pass by</span>
+          <input
+            className={styles.scrub}
+            type="range"
+            min={0}
+            max={16}
+            step={0.5}
+            value={passByOffset}
+            onChange={(e) => onPassByOffset(Number(e.target.value))}
+          />
+          <span className={styles.readout}>{passByOffset.toFixed(1)}r</span>
+        </div>
+        {/* Fly-past sub-knobs: direction + glance are inert at offset 0 (through
+            centre), so they appear only once you're passing, and carry no own
+            checkbox — touching either rides the one `passBy` gate. */}
+        {passByOffset > 0 && (
+          <div className={styles.subKnobs}>
+            <div className={styles.scrubRow}>
+              <span className={styles.knobLabel}>direction</span>
+              <select
+                className={styles.select}
+                value={passByDir}
+                onChange={(e) => onPassByDir(e.target.value as PassByDir)}
+              >
+                <option value="outsideBend">outside bend</option>
+                <option value="above">above</option>
+                <option value="screenSide">screen side</option>
+              </select>
+            </div>
+            <div className={styles.scrubRow}>
+              <span className={styles.knobLabel}>glance</span>
+              <input
+                className={styles.scrub}
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={glance}
+                onChange={(e) => onGlance(Number(e.target.value))}
+              />
+              <span className={styles.readout}>{glance.toFixed(2)}</span>
             </div>
           </div>
         )}

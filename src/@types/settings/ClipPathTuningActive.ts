@@ -9,13 +9,15 @@
  * would it override with", so a slider can hold a sensible position while still
  * being inactive.
  *
- * `spline` is ONE gate for the whole spline config — the causal-only sub-knobs
- * (turnDelay / lookAhead) ride inside it rather than getting their own gates,
- * because they're meaningless without the causal basis (see `SplineConfig`).
+ * `spline` and `passBy` are each ONE gate for a whole config — the causal-only
+ * sub-knobs (turnDelay / lookAhead) ride the `spline` gate, and the fly-past
+ * sub-knobs (offset / direction / glance) ride the `passBy` gate, rather than
+ * getting their own gates (see `SplineConfig` / `PassByConfig`).
  */
 export type ClipPathTuningActive = {
   align: boolean;
   rampSec: boolean;
   linger: boolean;
   spline: boolean;
+  passBy: boolean;
 };

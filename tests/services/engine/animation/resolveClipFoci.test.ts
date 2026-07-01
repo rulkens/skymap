@@ -314,6 +314,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
             rampSec: 0.9,
             linger: 0.4,
             spline: { kind: 'causalHermite', turnDelay: 1.7 },
+            passBy: { offset: 4, dir: 'above', glance: 0.5 },
           },
         ),
       ],
@@ -327,10 +328,14 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     expect(fp.rampSec).toBe(0.9);
     expect(fp.linger).toBe(0.4);
     expect(fp.spline).toEqual({ kind: 'causalHermite', turnDelay: 1.7 });
+    expect(fp.passBy).toEqual({ offset: 4, dir: 'above', glance: 0.5 });
 
-    // The per-waypoint linger survives onto the resolved at-form waypoint.
+    // The per-waypoint linger survives onto the resolved at-form waypoint, and
+    // the subject radius (VIRGO.physicalRadiusMpc) is stamped for the pass-by
+    // offset unit.
     const w0 = fp.waypoints[0]!;
     if (!('at' in w0)) throw new Error('waypoint 0 should be resolved to at-form');
     expect(w0.linger).toBe(0.8);
+    expect(w0.radius).toBe(4);
   });
 });

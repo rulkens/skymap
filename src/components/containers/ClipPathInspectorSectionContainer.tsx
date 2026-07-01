@@ -25,6 +25,9 @@ import {
   selectClipPathSpline,
   selectClipPathTurnDelay,
   selectClipPathLookAhead,
+  selectClipPathPassByOffset,
+  selectClipPathPassByDir,
+  selectClipPathGlance,
   selectClipPathTuningActive,
 } from '../../state/settings/selectors';
 import {
@@ -38,11 +41,15 @@ import {
   setClipPathSpline,
   setClipPathTurnDelay,
   setClipPathLookAhead,
+  setClipPathPassByOffset,
+  setClipPathPassByDir,
+  setClipPathGlance,
   setClipPathTuningActive,
 } from '../../state/settings/settingsSlice';
 import { replayInspectedPath } from '../../state/camera/clipActions';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
+import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
 
 function ClipPathInspectorSectionContainer(): React.ReactElement {
@@ -55,6 +62,9 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const spline = useAppSelector(selectClipPathSpline);
   const turnDelay = useAppSelector(selectClipPathTurnDelay);
   const lookAhead = useAppSelector(selectClipPathLookAhead);
+  const passByOffset = useAppSelector(selectClipPathPassByOffset);
+  const passByDir = useAppSelector(selectClipPathPassByDir);
+  const glance = useAppSelector(selectClipPathGlance);
   const tuningActive = useAppSelector(selectClipPathTuningActive);
 
   const onInspect = useCallback((id: ClipId) => dispatch(inspectClipPath(id)), [dispatch]);
@@ -74,6 +84,15 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
     (next: number) => dispatch(setClipPathLookAhead(next)),
     [dispatch],
   );
+  const onPassByOffset = useCallback(
+    (next: number) => dispatch(setClipPathPassByOffset(next)),
+    [dispatch],
+  );
+  const onPassByDir = useCallback(
+    (next: PassByDir) => dispatch(setClipPathPassByDir(next)),
+    [dispatch],
+  );
+  const onGlance = useCallback((next: number) => dispatch(setClipPathGlance(next)), [dispatch]);
   const onTuningActive = useCallback(
     (knob: ClipPathTuningKnob, next: boolean) =>
       dispatch(setClipPathTuningActive({ knob, active: next })),
@@ -95,6 +114,9 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
       spline={spline}
       turnDelay={turnDelay}
       lookAhead={lookAhead}
+      passByOffset={passByOffset}
+      passByDir={passByDir}
+      glance={glance}
       tuningActive={tuningActive}
       onAlign={onAlign}
       onRampSec={onRampSec}
@@ -102,6 +124,9 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
       onSpline={onSpline}
       onTurnDelay={onTurnDelay}
       onLookAhead={onLookAhead}
+      onPassByOffset={onPassByOffset}
+      onPassByDir={onPassByDir}
+      onGlance={onGlance}
       onTuningActive={onTuningActive}
     />
   );

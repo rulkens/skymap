@@ -48,6 +48,13 @@ export type PathWaypoint =
       readonly pitch?: number;
       readonly over?: number;
       readonly linger?: number;
+      /**
+       * The subject's world radius (Mpc), set by `resolveClipFoci` from
+       * `focusFraming`. The unit a `flyPath`'s `passBy.offset` scales by — so an
+       * `atFocus` galaxy can be flown past at "N radii". Absent on hand-placed
+       * `atPoint` control points (they have no subject to fly past).
+       */
+      readonly radius?: number;
     }
   | {
       readonly id: FocusId;

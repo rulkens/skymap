@@ -23,6 +23,7 @@
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
+import type { PassByConfig } from '../../../@types/animation/PassByConfig';
 
 export type PathTuning = {
   /** Align-in seconds (start-aim blend window). Omit to keep the clip's value. */
@@ -38,6 +39,11 @@ export type PathTuning = {
    * keep the clip's value.
    */
   readonly spline?: SplineConfig;
+  /**
+   * The whole fly-past config (offset + direction + glance) as ONE override unit.
+   * Omit to keep the clip's value.
+   */
+  readonly passBy?: PassByConfig;
 };
 
 function tuneEffect(effect: Effect, tuning: PathTuning): Effect {
@@ -49,6 +55,7 @@ function tuneEffect(effect: Effect, tuning: PathTuning): Effect {
         ...(tuning.rampSec !== undefined ? { rampSec: tuning.rampSec } : {}),
         ...(tuning.linger !== undefined ? { linger: tuning.linger } : {}),
         ...(tuning.spline !== undefined ? { spline: tuning.spline } : {}),
+        ...(tuning.passBy !== undefined ? { passBy: tuning.passBy } : {}),
       };
     case 'seq':
     case 'all':

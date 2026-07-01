@@ -28,6 +28,9 @@ import {
   DEFAULT_SPLINE,
   DEFAULT_TURN_DELAY,
   DEFAULT_LOOK_AHEAD,
+  DEFAULT_PASS_BY_OFFSET,
+  DEFAULT_PASS_BY_DIR,
+  DEFAULT_GLANCE,
 } from '../../../src/services/engine/animation/pathDefaults';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -95,11 +98,15 @@ export function makeSettingsFixture(
         spline: DEFAULT_SPLINE,
         turnDelay: DEFAULT_TURN_DELAY,
         lookAhead: DEFAULT_LOOK_AHEAD,
+        passByOffset: DEFAULT_PASS_BY_OFFSET,
+        passByDir: DEFAULT_PASS_BY_DIR,
+        glance: DEFAULT_GLANCE,
         active: {
           align: false,
           rampSec: false,
           linger: false,
           spline: false,
+          passBy: false,
         },
       },
     },

@@ -38,6 +38,7 @@ import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCata
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
+import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
@@ -227,6 +228,21 @@ const settingsSlice = createSlice({
       settings.debug.clipPathInspect.lookAhead = action.payload;
       settings.debug.clipPathInspect.active.spline = true;
     },
+    // Fly-past: `passByOffset` (radius units), `passByDir`, and `glance` are the
+    // three fly-past sub-knobs — they ride the ONE `passBy` override gate (they're
+    // one cinematographic concept), so touching any of them activates `passBy`.
+    setClipPathPassByOffset: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.passByOffset = action.payload;
+      settings.debug.clipPathInspect.active.passBy = true;
+    },
+    setClipPathPassByDir: (settings, action: PayloadAction<PassByDir>) => {
+      settings.debug.clipPathInspect.passByDir = action.payload;
+      settings.debug.clipPathInspect.active.passBy = true;
+    },
+    setClipPathGlance: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.glance = action.payload;
+      settings.debug.clipPathInspect.active.passBy = true;
+    },
     // Toggle a single pacing knob's override on/off. Off (the default) lets the
     // clip's own authored value flow through; the row checkbox drives this, and
     // the value setters above flip it on when the curator touches a slider.
@@ -300,6 +316,9 @@ export const {
   setClipPathSpline,
   setClipPathTurnDelay,
   setClipPathLookAhead,
+  setClipPathPassByOffset,
+  setClipPathPassByDir,
+  setClipPathGlance,
   setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,

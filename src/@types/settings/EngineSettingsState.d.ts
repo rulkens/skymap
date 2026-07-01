@@ -53,6 +53,7 @@ import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
 import type { ClipId } from '../animation/ClipId';
 import type { SplineMode } from '../animation/SplineMode';
+import type { PassByDir } from '../animation/PassByDir';
 import type { ClipPathTuningActive } from './ClipPathTuningActive';
 
 export type EngineSettingsState = {
@@ -234,6 +235,13 @@ export type EngineSettingsState = {
       spline: SplineMode;
       turnDelay: number;
       lookAhead: number;
+      // Fly-past scratch scalars: `passByOffset` in subject-radius units (0 =
+      // through centre), `passByDir` the offset direction, `glance` the aim-track
+      // strength. All three ride the single `passBy` override gate; the saga folds
+      // them into one `PassByConfig` (see `PassByConfig`).
+      passByOffset: number;
+      passByDir: PassByDir;
+      glance: number;
       /** Per-knob override gate — only an active knob is baked into the clip. */
       active: ClipPathTuningActive;
     };

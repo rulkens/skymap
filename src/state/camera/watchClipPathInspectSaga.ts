@@ -36,10 +36,14 @@ import {
   selectClipPathSpline,
   selectClipPathTurnDelay,
   selectClipPathLookAhead,
+  selectClipPathPassByOffset,
+  selectClipPathPassByDir,
+  selectClipPathGlance,
   selectClipPathTuningActive,
 } from '../settings/selectors';
 import type { PathTuning } from '../../services/engine/animation/applyPathTuning';
 import type { SplineConfig } from '../../@types/animation/SplineConfig';
+import type { PassByConfig } from '../../@types/animation/PassByConfig';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { applyPathTuning } from '../../services/engine/animation/applyPathTuning';
@@ -73,6 +77,9 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   const spline = yield* select(selectClipPathSpline);
   const turnDelay = yield* select(selectClipPathTurnDelay);
   const lookAhead = yield* select(selectClipPathLookAhead);
+  const passByOffset = yield* select(selectClipPathPassByOffset);
+  const passByDir = yield* select(selectClipPathPassByDir);
+  const glance = yield* select(selectClipPathGlance);
   const active = yield* select(selectClipPathTuningActive);
   // Project the flat scratch scalars into ONE SplineConfig: the causal-only
   // sub-knobs only ride along when the basis is causal, so an override can never
@@ -81,11 +88,14 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
     spline === 'causalHermite'
       ? { kind: 'causalHermite', turnDelay, lookAhead }
       : { kind: 'centripetal' };
+  // Likewise fold the three fly-past scratch scalars into ONE PassByConfig.
+  const passByCfg: PassByConfig = { offset: passByOffset, dir: passByDir, glance };
   const tuning: PathTuning = {
     ...(active.align ? { align } : {}),
     ...(active.rampSec ? { rampSec } : {}),
     ...(active.linger ? { linger } : {}),
     ...(active.spline ? { spline: splineCfg } : {}),
+    ...(active.passBy ? { passBy: passByCfg } : {}),
   };
   const tuned = applyPathTuning(resolved, tuning);
   if (keepStart) seam.recompute(clipId, tuned);

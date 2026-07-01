@@ -69,6 +69,7 @@ import type { SceneEffect } from './SceneEffect';
 import type { PathWaypoint } from './PathWaypoint';
 import type { Ease } from './Ease';
 import type { SplineConfig } from './SplineConfig';
+import type { PassByConfig } from './PassByConfig';
 
 export type Effect =
   | CameraAction
@@ -114,4 +115,11 @@ export type Effect =
        * (`{ kind: 'centripetal' }`). See `SplineConfig`.
        */
       readonly spline?: SplineConfig;
+      /**
+       * How the eye flies PAST interior galaxy waypoints instead of through their
+       * centres (offset + direction + optional glance). Omit for through-centre
+       * (the default — right for a group cloud, so a groups flythrough is
+       * untouched). See `PassByConfig`.
+       */
+      readonly passBy?: PassByConfig;
     };

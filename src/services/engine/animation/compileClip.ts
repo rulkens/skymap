@@ -207,6 +207,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
           rampSec: effect.rampSec,
           linger: effect.linger,
           spline: effect.spline,
+          passBy: effect.passBy,
         }),
       );
       return effect.over;

@@ -46,6 +46,7 @@ import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSetti
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
+import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningActive';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
@@ -157,6 +158,15 @@ export const selectClipPathTurnDelay = (state: RootState): number =>
 
 export const selectClipPathLookAhead = (state: RootState): number =>
   selectSettings(state).debug.clipPathInspect.lookAhead;
+
+export const selectClipPathPassByOffset = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.passByOffset;
+
+export const selectClipPathPassByDir = (state: RootState): PassByDir =>
+  selectSettings(state).debug.clipPathInspect.passByDir;
+
+export const selectClipPathGlance = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.glance;
 
 export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
   selectSettings(state).debug.clipPathInspect.active;

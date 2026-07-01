@@ -26,6 +26,7 @@ import { buildPathTrack } from '../../../../src/services/engine/animation/buildP
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { PathSample } from '../../../../src/@types/animation/CompiledClip';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { PassByConfig } from '../../../../src/@types/animation/PassByConfig';
 
 const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
 
@@ -596,6 +597,78 @@ describe('buildPathTrack', () => {
       expect(end.target[0]).toBeCloseTo(100, 1);
       expect(end.target[1]).toBeCloseTo(0, 1);
       expect(end.target[2]).toBeCloseTo(100, 1);
+    });
+  });
+
+  // ── Fly-past: offset the eye off interior subject centres, optionally glance ──
+  //
+  // Without passBy the eye flies THROUGH each interior waypoint centre (closest
+  // approach ~0). With passBy the interior knot is displaced `offset · radius`
+  // off-centre, so the eye sweeps past; `glance` swings the aim to look AT the
+  // subject as it passes.
+  describe('fly-past (passBy)', () => {
+    const start: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
+    const R = 2; // subject radius (Mpc)
+    const waypoints = [
+      { at: [0, 0, 100] as Vec3, distance: 10, radius: R }, // interior galaxy
+      { at: [100, 0, 100] as Vec3, distance: 10, radius: R }, // destination
+    ];
+    const build = (passBy?: PassByConfig): ReturnType<typeof buildPathTrack> =>
+      buildPathTrack({
+        start,
+        startSec: 0,
+        over: 20,
+        ease: 'linear',
+        waypoints,
+        ...(passBy !== undefined ? { passBy } : {}),
+      });
+    const lookOf = (s: PathSample): Vec3 => {
+      const cp = Math.cos(s.pitch);
+      return [-cp * Math.sin(s.yaw), -Math.sin(s.pitch), -cp * Math.cos(s.yaw)];
+    };
+    // Min distance from the eye path to `centre`, and the sample at that instant.
+    const closest = (
+      track: ReturnType<typeof buildPathTrack>,
+      centre: Vec3,
+    ): { dist: number; sample: PathSample } => {
+      let best = Infinity;
+      let at: PathSample = track.sample(0);
+      for (let i = 0; i <= 2000; i++) {
+        const s = track.sample((i / 2000) * 20);
+        const e = eyeOf(s);
+        const d = Math.hypot(e[0] - centre[0], e[1] - centre[1], e[2] - centre[2]);
+        if (d < best) {
+          best = d;
+          at = s;
+        }
+      }
+      return { dist: best, sample: at };
+    };
+
+    it('flies through the interior centre when passBy is absent', () => {
+      expect(closest(build(), [0, 0, 100]).dist).toBeLessThan(0.5);
+    });
+
+    it('passes the interior subject at ~offset·radius off-centre', () => {
+      const d = closest(build({ offset: 4, dir: 'above' }), [0, 0, 100]).dist;
+      expect(d).toBeGreaterThan(4 * R * 0.7); // ~8 Mpc, slack for spline smoothing
+      expect(d).toBeLessThan(4 * R * 1.3);
+    });
+
+    it('dir:above passes the eye OVER the top (galaxy sweeps below)', () => {
+      const { sample } = closest(build({ offset: 4, dir: 'above' }), [0, 0, 100]);
+      expect(eyeOf(sample)[1]).toBeGreaterThan(3); // eye well above the galaxy plane
+    });
+
+    it('glance aims at the subject centre at closest approach', () => {
+      // Eye passes above the galaxy → framing it means looking DOWN (−y).
+      const { sample } = closest(build({ offset: 4, dir: 'above', glance: 1 }), [0, 0, 100]);
+      expect(lookOf(sample)[1]).toBeLessThan(-0.5);
+    });
+
+    it('glance 0 keeps the look leading down the path, not at the subject', () => {
+      const { sample } = closest(build({ offset: 4, dir: 'above', glance: 0 }), [0, 0, 100]);
+      expect(lookOf(sample)[1]).toBeGreaterThan(-0.5); // not craning down at the galaxy
     });
   });
 
