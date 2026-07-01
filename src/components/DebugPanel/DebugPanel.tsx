@@ -6,7 +6,7 @@
  * `RenderTogglesSection` (per-pass on/off checkboxes for visual
  * debugging), `FlowTuningSection` + the pick/disk-ring toggles,
  * `DataQualitySection` (catalog-audit diagnostics such as the
- * orientation-fallback toggles), `LabelEffectsSection`, and two
+ * orientation-fallback toggles), and two
  * self-contained sections mounted via their own store containers —
  * `ClipTriggersSectionContainer` (play/stop a registered clip + launch a guided
  * tour) and `ClipPathInspectorSectionContainer` (precompute + scrub a clip's
@@ -38,7 +38,6 @@ import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
 import { FlowTuningSection } from './FlowTuningSection';
 import { DataQualitySection } from './DataQualitySection';
-import { LabelEffectsSection } from './LabelEffectsSection';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
 import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
 
@@ -159,8 +158,6 @@ export function DebugPanel({
         onHighlightFallbackChange={onHighlightFallbackChange}
         onRealOnlyModeChange={onRealOnlyModeChange}
       />
-      <div style={{ marginTop: 6 }} />
-      <LabelEffectsSection />
       <div style={{ marginTop: 6 }} />
       <ClipTriggersSectionContainer />
       <div style={{ marginTop: 6 }} />

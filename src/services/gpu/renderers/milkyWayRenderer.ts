@@ -34,20 +34,18 @@
  *                                                synthetic-camera ray
  *                                                origin
  *   offset 92  | f32         fadeAlpha       — distance-based alpha [0..1]
- *   offset 96  | f32         iTime           — animation time (sec * 0.25)
- *   offset 100 | f32 × 3     _pad            — round struct up to 112 B
+ *   offset 96  | f32 × 4     _pad            — tail pad; round struct up to 112 B
  *
  * #### Why the field order changed (vs the pre-WESL-conversion layout)
  *
- * The previous layout placed `fadeAlpha` + `iTime` at offsets 72/76,
- * which collide with the `_pad0/_pad1` slots that `CameraUniforms`
- * reserves. To embed `cam: CameraUniforms` as the first field we
- * had to relocate the renderer-specific scalars after the cam block.
- * `cameraPosWorld` (vec3, 16-byte alignment) lands naturally at
- * offset 80 — the first 16-byte boundary after cam — and the two
- * f32 scalars fall in at 92 / 96. CPU-side: `fadeAlpha` moved from
- * f32 index 18 → 23, `iTime` moved from f32 index 19 → 24,
- * `cameraPosWorld` stays at 20..22.
+ * The previous layout placed `fadeAlpha` at offset 72, which collides
+ * with the `_pad0/_pad1` slots that `CameraUniforms` reserves. To embed
+ * `cam: CameraUniforms` as the first field we had to relocate the
+ * renderer-specific scalars after the cam block. `cameraPosWorld` (vec3,
+ * 16-byte alignment) lands naturally at offset 80 — the first 16-byte
+ * boundary after cam — and `fadeAlpha` falls in at 92. CPU-side:
+ * `fadeAlpha` moved from f32 index 18 → 23, `cameraPosWorld` stays at
+ * 20..22.
  *
  * **viewProj is load-bearing.** Earlier this pass emitted directly
  * in clip-space (slot 0 was kept "for ABI symmetry") and the impostor
@@ -234,7 +232,6 @@ export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
     viewProj: Float32Array,
     viewport: Vec2,
     fadeAlpha: number,
-    iTimeSec: number,
     cameraPosWorld: Readonly<Vec3>,
     centerWorld: Vec3 = [0, 0, 0],
   ): void {
@@ -299,12 +296,7 @@ export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
     // immediately after the vec3, packing the vec3+f32 quad into
     // bytes 80..95.
     f32[23] = fadeAlpha;
-    // iTime (offset 96 / float 24).  Note: this moved from float
-    // index 19 in the pre-CameraUniforms layout — the cam prefix
-    // now occupies 0..79 and the renderer-specific scalars sit
-    // after the cameraPosWorld vec3.
-    f32[24] = iTimeSec;
-    // Floats 25..27 are tail padding (offsets 100..111) rounding
+    // Floats 24..27 are tail padding (offsets 96..111) rounding
     // the struct size up to a 16-byte multiple.  Stays zero.
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
 

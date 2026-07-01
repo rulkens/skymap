@@ -40,7 +40,6 @@ export type MilkyWayRenderer = {
     viewProj: Float32Array,
     viewport: Vec2,
     fadeAlpha: number,
-    iTimeSec: number,
     cameraPosWorld: Readonly<Vec3>,
     centerWorld?: Vec3,
   ): void;

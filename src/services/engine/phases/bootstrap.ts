@@ -56,10 +56,7 @@
  *     forward-declared `let`s in `engine.ts` that later phases need to
  *     write to (round-trip via the `{current}` ref pattern).  The pure
  *     `cssToTexPx` helper is imported directly in `wireInput` (no
- *     per-engine dedup state), and the milky-way iTime epoch is a
- *     `performance.now()` snapshot
- *     taken in `startLoop` (the * 0.25 animation scale makes "engine
- *     construction" vs "loop start" imperceptible).  Scale-bar
+ *     per-engine dedup state).  Scale-bar
  *     derivation lives entirely React-side (driven by
  *     the frame loop's `engineScaleChanged` dispatch), so there's no engine-side scale-bar
  *     factory to thread.  Hover/select/focus dispatches go through the

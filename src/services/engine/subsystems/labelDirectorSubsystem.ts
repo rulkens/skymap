@@ -48,7 +48,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { LabelProducer } from '../../../@types/engine/subsystems/LabelProducer';
 import type { LabelDirectorSubsystem } from '../../../@types/engine/subsystems/LabelDirectorSubsystem';
-import { getLabelStyleOverrideVersion } from '../labelStyleOverride';
 
 /**
  * Minimum screen-pixel gap between two on-screen label anchors before the
@@ -84,9 +83,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   }
 
   function signatureOf(labels: readonly Label[], lines: readonly MarkerLine[]): string {
-    // Cheap stable signature: per-entry `id:fadeAlpha`, joined, plus a
-    // trailing `;O:<version>` term that tracks the labelStyleOverride
-    // module's monotonic version counter.
+    // Cheap stable signature: per-entry `id:fadeAlpha`, joined.
     //
     // Re-upload triggers when ids/count change OR when any entry's
     // `fadeAlpha` differs from the prior frame.  Including `fadeAlpha`
@@ -97,15 +94,6 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     // first frame the marker became visible.  (Symptom: marker
     // appears at e.g. 0.1 alpha and never brightens as the camera
     // closes in.)
-    //
-    // The override-version term forces a re-flush whenever the
-    // DebugPanel's LabelEffectsSection mutates `labelStyleOverride`.
-    // Producers consult the override at frame-build time to swap in
-    // outline+glow fields, but the producer's resulting Label objects
-    // still carry the same `id` and `fadeAlpha`, so without this term
-    // the director would short-circuit and a slider edit would have no
-    // visible effect until something else (camera motion, fade) bumped
-    // the signature.
     //
     // We deliberately DON'T include world positions or colours — the
     // glyph layout in `labelRenderer.setLabels` is the expensive
@@ -118,7 +106,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     // from the structure name which is part of the id space.
     const lIds = labels.map((l) => `${l.id}:${l.fadeAlpha ?? 1}`).join('|');
     const mIds = lines.map((m) => `${m.id}:${m.fadeAlpha ?? 1}`).join('|');
-    return `L:${labels.length}:${lIds};M:${lines.length}:${mIds};O:${getLabelStyleOverrideVersion()}`;
+    return `L:${labels.length}:${lIds};M:${lines.length}:${mIds}`;
   }
 
   /**

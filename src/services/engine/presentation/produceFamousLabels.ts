@@ -62,7 +62,6 @@ import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCat
 import { Source } from '../../../data/sources';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { famousDisplayName } from '../helpers/famousDisplayName';
-import { getLabelStyleOverride } from '../labelStyleOverride';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
 import { focusRecession } from './focusRecession';
 
@@ -177,9 +176,6 @@ export function produceFamousLabels(
   const fovYRad = ctx.fovYRad;
   const [cx, cy, cz] = ctx.drawCamPos;
   const style = FAMOUS_LABEL_STYLE;
-  // Snapshot the live-tuning override once so it stays consistent across the
-  // loop. See `labelStyleOverride.ts`.
-  const override = getLabelStyleOverride();
 
   // Snapshot the layer opacity × uniform recession × clip factor ONCE — it's
   // identical for every famous label (the `galaxyNames` handle is shared, and
@@ -242,13 +238,6 @@ export function produceFamousLabels(
       ownerLabelId: p.id,
     });
 
-    // Per-structure override fields apply only when the override targets the famous
-    // category; otherwise the category-default outline is kept.
-    const overrideFields =
-      override.targetCategory === 'famousGalaxy'
-        ? { outlineColor: override.outlineColor, outlineEmFrac: override.outlineEmFrac }
-        : {};
-
     labels.push({
       id: p.id,
       worldPos: labelWorldPos,
@@ -265,7 +254,6 @@ export function produceFamousLabels(
       outlineColor: [...style.outlineColor],
       outlineEmFrac: style.outlineEmFrac,
       prominencePx,
-      ...overrideFields,
     });
   }
 

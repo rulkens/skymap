@@ -23,10 +23,11 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## ADR status
 
-| ADR                                                                                    | Status                                                                                                                                                                 |
-| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [0001 — Fade ownership](adrs/0001-fade-ownership.md)                                   | Accepted 2026-05-27 · **shipped** — fade is a subsystem; the visibility-seam plans (A/B/C, #309) landed and are in `*/completed/`.                                     |
-| [0007 — Intent-centric state + effects](adrs/0007-intent-centric-state-and-effects.md) | Accepted 2026-06-17 · folding incrementally — selection (#350), settings→RTK (#345), camera (#357), engine slice (#380) shipped; effects vehicle = `typed-redux-saga`. |
+| ADR                                                                                    | Status                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [0001 — Fade ownership](adrs/0001-fade-ownership.md)                                   | Accepted 2026-05-27 · **shipped** — fade is a subsystem; the visibility-seam plans (A/B/C, #309) landed and are in `*/completed/`.                                                                          |
+| [0007 — Intent-centric state + effects](adrs/0007-intent-centric-state-and-effects.md) | Accepted 2026-06-17 · folding incrementally — selection (#350), settings→RTK (#345), camera (#357), engine slice (#380) shipped; effects vehicle decided in [ADR 0008](adrs/0008-effects-layer-vehicle.md). |
+| [0008 — Effects-layer vehicle](adrs/0008-effects-layer-vehicle.md)                     | Accepted 2026-06-30 · records the shipped vehicle for ADR 0007's effects layer — `typed-redux-saga` over `redux-saga`.                                                                                      |
 
 ---
 
@@ -37,7 +38,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **GPU-handle nullability follow-on** `deferred` — `EngineGpuHandles` fields are all `T | null` (a transient bootstrap fact as a perpetual null-check); narrow into a non-null "ready GPU" view and shed `PassDeps`' renderer fields. → [details](backlog/2026-06-29-gpu-handle-nullability.md)
 - [ ] **`useStructureMemberCount` honest invalidation** `deferred` — the hook's `sourceCounts`/`tier` args are memo tripwires for live GPU catalog state; swap for a real catalog-generation signal. → [details](backlog/2026-06-29-usestructuremembercount-invalidation.md)
 - [ ] **Derive `BULK_CATALOG_CATEGORIES` from a registry flag** `deferred` — add `hasBulkCatalog` to `SOURCE_REGISTRY` rows so the hand-listed `['cluster','supercluster','void']` in `assetWiring.ts` derives from it. Keep the three category lists (UI / marker / bulk-fetch) separate — membership genuinely differs. (`bearsMarker` + `DEFAULT_CATEGORY_VISIBILITY` already shipped.)
-- [ ] **Backfill ADR 0008 (effects-layer vehicle)** `process` — the decision shipped as `typed-redux-saga`; write the ADR only if the record is wanted.
 
 ## Rendering
 
@@ -45,19 +45,13 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/2026-06-29-supercluster-shape-focus.md)
 - [ ] **In-scene thumbnail quality (SDSS/DSS)** `needs-design` — the auto-fetched atlas-quad path still uses fixed cutout sizes; mask / sky-sub / per-galaxy size / DESI / brightness-norm. (InfoCard path already got sizing + DSS color.) → [details](backlog/2026-06-29-thumbnail-quality-sdss-dss.md)
 - [ ] **Half-res ↔ post-process resize type-safety** `deferred` — the offscreen-volume and post-process targets resize via two independent `?.resize()` calls in `runFrame.ts`; enforce the coupling in the type system.
+- [ ] **Unify the two disk-planner catalog walks** `ready` — procedural + textured planners walk the catalogs twice per frame, computing each row's geometry twice (~4.2 ms of a 5.1 ms frame, M1 Max); merge into one shared walk feeding two row-reducers. Prerequisite pure helpers shipped in `src/utils/render/disk/`. → [details](backlog/2026-06-30-unify-disk-planner-walks.md)
 - [ ] **Thumbnail-priority loop scaling** `deferred` — the per-frame priority scan (`texturedDiskSubsystem.ts`) is CPU-linear with stride decimation (#79); add a BVH or compute-shader pass for larger tiers. → [details](backlog/2026-06-29-thumbnail-loop-scaling.md)
 - [ ] **Picking GPU resources → own subsystem** `deferred` — `pickRenderer.ts` owns its per-camera pick texture directly; migrate it (parallel to fade per ADR 0001). Pick texture is per-camera, so it needs its own ADR. → [details](backlog/2026-06-29-picking-gpu-subsystem.md)
-- [ ] **Structure-ring click smoke-test** `manual` — after the `poiIndex`→`structureIndex` WESL rename (#288), click a cluster/SC/void/group ring on the dev server and confirm the right structure selects. `ringPick.test.ts` guards the encoding but can't run the shader.
-
-## Data pipeline
-
-- [ ] **Close-to-home tier weighting** `needs-design` — bias small/medium subsampling toward galaxies near the camera home for first-load density (`subsampleByAbsMag` ranks by M_abs only). → [details](backlog/2026-06-29-close-to-home-weighting.md)
-- [ ] **Dense Local Volume seeding** `needs-design` — spare galaxies inside the featured group spheres (`structure_anchors.seed.json` radii) regardless of M_abs, so group rings aren't near-empty at low tiers. → [details](backlog/2026-06-29-dense-local-volume-seeding.md)
 
 ## UI & UX
 
-- [ ] **Structure search in the palette** `ready` — index clusters/superclusters/voids (MCXC+MSCC names + Abell numbers from `structures_meta.json`) in `CommandPalette.tsx` + select-and-fly-to. → [details](backlog/2026-06-29-structure-search-palette.md)
-- [ ] **Milky Way URL deep-link (encode)** `ready` — the parser already returns `{type:'milkyWay'}`; make `URL_HASH_FOR['milkyWay']` emit `#focus=milkyway` to close the round-trip (`urlHashFor.ts:29`).
+- [ ] **Palette pick should pin the InfoCard** `ready` — palette + deep-link navigate but don't pin the card; add a `requestSelect` command mirroring `requestFocus` (shared resolve loop) and compose both. → [details](backlog/2026-06-30-palette-pick-pins-infocard.md)
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
 - [ ] **VolumeFieldRow schema-driven UI** `needs-design` — replace the seven hand-coded sliders with a settings-schema-generated UI.
 - [ ] **Global shortcuts → keyboard saga** `needs-design` — migrate the non-tour keys (Cmd+K, /, Esc, f, h, l, Tab, d) from the `useKeyboardShortcuts` hook to a declarative map + a shared `watchKeyboardEventsSaga`. → [details](backlog/2026-06-29-keyboard-shortcuts-saga.md)

@@ -94,7 +94,6 @@ export function renderFrame(input: RenderFrameInput): void {
   const {
     ctx,
     state,
-    milkyWayITimeSec,
     device,
     context,
     milkyWayRenderer,
@@ -120,7 +119,6 @@ export function renderFrame(input: RenderFrameInput): void {
     flowFieldRenderer,
     milkyWayRenderer,
     horizonShellRenderer,
-    milkyWayITimeSec,
   };
 
   // Write the single shared cluster-focus uniform once per frame, before
@@ -131,49 +129,41 @@ export function renderFrame(input: RenderFrameInput): void {
 
   // ── Encoder + HDR rendering ───────────────────────────────────────
   //
-  // Two HDR-rendering shapes, picked at frame start based on whether
-  // timing is enabled:
+  // The HDR draws take one of two shapes, the ONLY frame-level branch:
   //
-  //   • `!timingService.enabled` (production path, no `?gpuTimings`):
-  //     one mega-pass via `encodeHdrSingle`.  All HDR draws run inside
-  //     one `beginRenderPass(loadOp: 'clear')` block, keeping the
-  //     target tile-local for the whole pass.
+  //   • `encodeHdrSingle` (production, no `?gpuTimings`): one mega-pass.
+  //     All HDR draws run inside one `beginRenderPass(loadOp: 'clear')`
+  //     block, keeping the target tile-local for the whole pass.
   //
-  //   • `timingService.enabled` (dev path, `?gpuTimings` active):
-  //     per-pass split via `encodeHdrSplit` — one `beginRenderPass`
-  //     per enabled HDR_PASSES entry so each pass can carry its own
+  //   • `encodeHdrSplit` (dev, `?gpuTimings` active): one `beginRenderPass`
+  //     per enabled HDR_PASSES entry so each can carry its own
   //     `timestampWrites` descriptor.  Pays a tile-RAM round-trip per
   //     boundary on M1, acceptable in dev mode.
   //
-  // Both shapes are byte-equivalent on a spec-compliant desktop GPU
-  // and feed the same downstream tone-map + UI-overlay sequence.
+  // That split is essential — you can't attach per-pass timestamps inside
+  // a single merged pass.  Everything around it is shape-invariant: the
+  // tone-map + UI-overlay sequence is identical, and the timing
+  // bookkeeping (`beginFrame`/`descriptorFor`/`endFrame`) is a cheap no-op
+  // when `!timingService.enabled` (see GpuTimingService's no-op contract),
+  // so it runs unconditionally rather than mirrored across both branches.
   const encoder = device.createCommandEncoder();
   const swapView = context.getCurrentTexture().createView();
 
+  const timingCtx = timingService.beginFrame();
   if (timingService.enabled) {
-    const timingCtx = timingService.beginFrame();
     encodeHdrSplit(encoder, ctx, state, deps, timingService);
-    ctx.postProcess.draw(
-      encoder,
-      swapView,
-      state.settings.tonemap.exposure,
-      state.settings.tonemap.curve,
-      timingService.descriptorFor('tone-map'),
-    );
-    encodeUiOverlay(
-      encoder,
-      swapView,
-      ctx,
-      state,
-      deps,
-      timingService.descriptorFor('ui-overlay'),
-    );
-    timingService.endFrame(timingCtx, encoder);
   } else {
     encodeHdrSingle(encoder, ctx, state, deps);
-    ctx.postProcess.draw(encoder, swapView, state.settings.tonemap.exposure, state.settings.tonemap.curve, undefined);
-    encodeUiOverlay(encoder, swapView, ctx, state, deps, undefined);
   }
+  ctx.postProcess.draw(
+    encoder,
+    swapView,
+    state.settings.tonemap.exposure,
+    state.settings.tonemap.curve,
+    timingService.descriptorFor('tone-map'),
+  );
+  encodeUiOverlay(encoder, swapView, ctx, state, deps, timingService.descriptorFor('ui-overlay'));
+  timingService.endFrame(timingCtx, encoder);
 
   device.queue.submit([encoder.finish()]);
 }

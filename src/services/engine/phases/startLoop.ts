@@ -7,8 +7,8 @@
  *
  *   - Constructs the `RunFrameDeps` object, threading every closure
  *     capture the frame body needs: `canvas`, `cb`, the GPU device +
- *     context (from `phaseLocals`), every renderer (from `state.gpu.*`),
- *     and a locally-snapshotted Milky-Way iTime epoch.  The pure `cssToTexPx` helper is imported
+ *     context (from `phaseLocals`), and every renderer (from
+ *     `state.gpu.*`).  The pure `cssToTexPx` helper is imported
  *     directly in `runFrame.ts` rather than threaded through deps —
  *     it captures no per-engine state.  See `runFrame.ts`'s module
  *     header for the dep-vs-state rationale.  Hover/select writes go
@@ -92,17 +92,6 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── Render loop ──────────────────────────────────────────────────────
 
-  // Wall-clock epoch (ms) for the Milky Way impostor's iTime uniform.
-  // Per-frame the shader receives `(performance.now() - epoch) * 0.001
-  // * 0.25` — the outer `0.25` slow-but-alive scale makes the choice
-  // of origin (engine construction vs loop start) imperceptible, so we
-  // snapshot here at the loop's birth rather than threading the value
-  // through BootstrapDeps from engine.ts.  See `runFrame.ts`'s
-  // milkyWayITimeSec assignment for the consumer side and
-  // `shaders/milkyWayImpostor.wgsl` line tagged "Match the ShaderToy's
-  // TIME macro" for the inner `* 0.1` factor that runs on top.
-  const milkyWayITimeEpochMs = performance.now();
-
   // Build the dep bag for `runFrame` once, here in the orchestrator's
   // last phase where every closure-captured local is in scope.  The bag
   // is stable across frames: the GPU-side renderers (`milkyWayRenderer`,
@@ -119,7 +108,6 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     filamentRenderer: state.gpu.filamentRenderer!,
     texturedDiskRenderer,
     proceduralDiskRenderer,
-    milkyWayITimeEpochMs,
     // Forward the timing service hung off `state.gpu` by initGpu.
     // Always non-null; `renderFrame` gates work behind `.enabled`.
     timingService: state.gpu.timingService,

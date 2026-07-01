@@ -261,7 +261,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         fades: { opacityOf: () => 0 },
       },
     } as never,
-    milkyWayITimeSec: 0,
     device,
     context,
     milkyWayRenderer: milkyWayRenderer as never,

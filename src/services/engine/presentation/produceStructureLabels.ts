@@ -47,7 +47,6 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
-import { getLabelStyleOverride } from '../labelStyleOverride';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 
@@ -59,10 +58,6 @@ export function produceStructureLabels(
 
   const pxPerRad = ctx.drawPxPerRad;
   const [cx, cy, cz] = ctx.drawCamPos;
-
-  // Snapshot the live-tuning override once so it stays consistent across the
-  // loop. See `labelStyleOverride.ts`.
-  const override = getLabelStyleOverride();
 
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.
@@ -170,13 +165,6 @@ export function produceStructureLabels(
           );
     fadeAlpha *= catOpacity * recession * clipFactor;
 
-    // Per-structure override fields: only structures whose category matches the
-    // override's target adopt the outline values; others keep the default.
-    const overrideFields =
-      override.targetCategory === p.category
-        ? { outlineColor: override.outlineColor, outlineEmFrac: override.outlineEmFrac }
-        : {};
-
     labels.push({
       id: p.id,
       // Structures anchor at the ring centre, centred on both axes (only
@@ -195,7 +183,6 @@ export function produceStructureLabels(
       outlineColor: [...style.outlineColor],
       outlineEmFrac: style.outlineEmFrac,
       prominencePx,
-      ...overrideFields,
     });
   }
 

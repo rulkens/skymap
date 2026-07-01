@@ -61,6 +61,7 @@
  */
 
 import type { SourceType } from '../../@types/data/SourceType';
+import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -74,7 +75,6 @@ import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
-import { registerLabelStyleOverrideWake } from './labelStyleOverride';
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
@@ -428,15 +428,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     produceLabels: produceFamousLabels,
   });
 
-  // ── Wake on label-style override edits ────────────────────────────────
-  //
-  // The DebugPanel writes to `labelStyleOverride`, bumping a version the
-  // director reads from its signature hash — but render-on-demand only
-  // consults that hash inside an active frame, so idle slider edits would
-  // sit invisible.  Registering requestRender here wakes the loop on every
-  // set/clear.
-  registerLabelStyleOverrideWake(() => state.subsystems.scheduler.requestRender());
-
   // ── Cleanup function returned by `attachOrbitControls` ─────────────────
   // Orbit-controls attachment lives outside `inputBindings` because it
   // needs a fully-constructed OrbitCamera, absent at engine() time.  A
@@ -601,6 +592,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return state.data.galaxies.catalogs.get(source)?.objIDs;
   }
 
+  function getStructures(): readonly StructureInfo[] {
+    return state.data.structures.all();
+  }
+
   function destroy(): void {
     // Every subsystem and renderer satisfies `Destroyable`, so this reads as
     // a flat list of `.destroy()` calls.  Ordering is load-bearing only for
@@ -713,6 +708,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     sources: {
       getCloud,
       getCloudObjIds,
+      getStructures,
     },
     volumes: {
       add: (fieldId, cube) => addVolumeField(state, store, fieldId, cube),

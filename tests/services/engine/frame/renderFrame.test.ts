@@ -369,7 +369,6 @@ function makeInput(
           fades: { opacityOf: () => 1 },
         },
       } as never,
-      milkyWayITimeSec: 0,
       device,
       context,
       milkyWayRenderer,
