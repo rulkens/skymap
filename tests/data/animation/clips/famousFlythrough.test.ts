@@ -48,9 +48,10 @@ describe('famousFlythrough clip', () => {
     expect(fly.kind).toBe('flyPath');
     if (fly.kind !== 'flyPath') throw new Error('expected a flyPath effect');
     expect(fly.over).toBeGreaterThan(0);
-    // Authored linger so normal Play dwells on each galaxy (not just the
-    // inspector's applyPathTuning override). 0 would cruise straight through.
-    expect(fly.linger).toBe(0.65);
+    // Inherits the default dwell (depth + window) so normal Play slows on
+    // approach to each galaxy — not just the inspector's applyPathTuning override.
+    expect(fly.linger).toBe(0.7);
+    expect(fly.lingerSec).toBe(1.4);
   });
 
   it('visits the curated famous galaxies as catalog-resolved waypoints, in order', () => {

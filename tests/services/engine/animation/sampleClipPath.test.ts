@@ -28,6 +28,7 @@ const DATA: ClipData = {
       over: 4,
       ease: 'linear',
       rampSec: 0,
+      linger: 0, // opt out of the default dwell — this asserts a flat 4s take
     }),
   ],
 };

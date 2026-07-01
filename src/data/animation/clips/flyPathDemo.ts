@@ -23,8 +23,10 @@
  *      path as it launches, then a short trapezoidal ease in/out around a long
  *      constant-speed cruise. The ramp reaches zero velocity at both ends, so the
  *      take launches from rest and settles gently on Sculptor — a beat dwell
- *      hands off cleanly. An authored `linger: 0.65` adds a velocity dip at each
- *      group so the camera slows to take it in rather than cruising through.
+ *      hands off cleanly. The default dwell (`linger`/`lingerSec`) slows the
+ *      camera on approach to each group so it takes it in rather than cruising
+ *      through (this ADDS time, so the take runs a little past its `over` cruise
+ *      budget).
  *
  * To slow one stretch further, pin a waypoint's `over`; to shape the curve where
  * catalog positions bend it awkwardly, drop a hand-placed `atPoint(world,
@@ -48,7 +50,7 @@ export const flyPathDemo: Clip = {
           atFocus(focusId('group-cen-a-group')), // slow glide past Cen A
           atFocus(focusId('group-sculptor-group')), // settle on Sculptor group
         ],
-        { over: 20, linger: 0.65 },
+        { over: 20 },
       ),
     ],
   },

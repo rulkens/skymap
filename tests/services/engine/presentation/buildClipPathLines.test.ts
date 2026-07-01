@@ -22,7 +22,14 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
 const DATA: ClipData = {
   start: START,
-  timeline: [flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], { over: 4, ease: 'inOut' })],
+  timeline: [
+    // linger:0 opts out of the default dwell so the route is a flat 4s take.
+    flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], {
+      over: 4,
+      ease: 'inOut',
+      linger: 0,
+    }),
+  ],
 };
 const VIEW = { fovYRad: 0.8, aspect: 1.5 };
 const N = 24;

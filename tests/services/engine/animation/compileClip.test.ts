@@ -287,7 +287,10 @@ describe('compileClip flyPath', () => {
   it('compiles a resolved flyPath to one path track spanning its window', () => {
     const compiled = compileClip({
       start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
-      timeline: [flyPath([atPoint([10, 0, 0], 10), atPoint([20, 0, 0], 100)], { over: 6 })],
+      // linger:0 opts out of the default dwell so the window stays a flat 6s.
+      timeline: [
+        flyPath([atPoint([10, 0, 0], 10), atPoint([20, 0, 0], 100)], { over: 6, linger: 0 }),
+      ],
     });
     expect(compiled.pathTracks).toHaveLength(1);
     expect(compiled.pathTracks[0]!.startSec).toBe(0);

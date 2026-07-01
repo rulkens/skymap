@@ -28,9 +28,9 @@
  * The remaining ~100° turn (around M51→Sombrero) is the geometric floor: the set
  * straddles both celestial hemispheres, so at least one equator crossing is
  * unavoidable. Pacing is the flyPath defaults (`pathDefaults`) — a launch-from-
- * rest align-in, a long constant-speed cruise, a gentle settle on M87 — plus an
- * authored `linger: 0.65` so the camera dwells on each galaxy as it sweeps past
- * (the default 0 would cruise straight through).
+ * rest align-in, a long constant-speed cruise, a gentle settle on M87, plus the
+ * default dwell (`linger`/`lingerSec`) so the camera slows on approach to take in
+ * each galaxy before sweeping past.
  *
  * To reshape it: add/remove a galaxy then re-run the ordering (the worst turns
  * come from outliers like M87 at 16.8 Mpc — keep those at an endpoint), pin a
@@ -62,7 +62,7 @@ export const famousFlythrough: Clip = {
           atFocus(focusId('m64')), // Black Eye
           atFocus(focusId('m87')), // Virgo A — settle on the cluster giant
         ],
-        { over: 100, linger: 0.65 },
+        { over: 100 },
       ),
     ],
   },

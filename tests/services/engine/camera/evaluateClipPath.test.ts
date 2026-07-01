@@ -36,7 +36,11 @@ describe('evaluateClip with a flyPath', () => {
   const data: ClipData = {
     start: START,
     timeline: [
-      flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], { over: 4, ease: 'linear' }),
+      flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], {
+        over: 4,
+        ease: 'linear',
+        linger: 0,
+      }),
     ],
   };
 
@@ -66,7 +70,11 @@ describe('evaluateClip with a flyPath', () => {
       start: START,
       timeline: [
         all([
-          flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], { over: 4, ease: 'linear' }),
+          flyPath([atPoint([10, 0, 0], 5), atPoint([20, 0, 0], 3)], {
+            over: 4,
+            ease: 'linear',
+            linger: 0,
+          }),
           fork(oscillate('pitch', { amp: 0.1, period: 4 })),
         ]),
       ],

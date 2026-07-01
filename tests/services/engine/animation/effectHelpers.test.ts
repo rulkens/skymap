@@ -376,6 +376,12 @@ describe('all', () => {
 describe('flyPath', () => {
   const wps = [atPoint([0, 0, 100], 10), atPoint([100, 0, 100], 10)];
 
+  it('stamps the default dwell (depth 0.7, window 1.4s) when none is authored', () => {
+    const e = flyPath(wps, { over: 20 });
+    expect(e.linger).toBe(0.7);
+    expect(e.lingerSec).toBe(1.4);
+  });
+
   it('stamps the default pass-by (4 radii, outsideBend) when none is authored', () => {
     // The authoring default flies the eye BESIDE each galaxy subject. Structures
     // opt out by resolving to radius 0 (focusFraming), so this is safe to stamp

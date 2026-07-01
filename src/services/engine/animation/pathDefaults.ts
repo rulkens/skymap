@@ -25,19 +25,21 @@ export const DEFAULT_RAMP_SEC = 1.4;
 
 /**
  * Per-target dwell DEPTH ∈ [0,1] — how far the camera slows across the dwell
- * window at each waypoint (1 = a ~12%-speed crawl, never a freeze). 0 is opt-in
- * off (cruise straight through, no behaviour change). Pairs with `DEFAULT_LINGER_SEC`
- * — a dwell needs both a depth AND a window.
+ * window at each waypoint (1 = a ~12%-speed crawl, never a freeze). The default
+ * (0.7) makes the camera markedly slow to take in each target; 0 cruises straight
+ * through. Pairs with `DEFAULT_LINGER_SEC` — a dwell needs both a depth AND a
+ * window. This is the AUTHORING default the `flyPath` helper stamps;
+ * `buildPathTrack`'s own direct-call default stays 0 (no dwell). Tuned by eye.
  */
-export const DEFAULT_LINGER = 0;
+export const DEFAULT_LINGER = 0.7;
 
 /**
- * Dwell window WIDTH (seconds) — how long the sustained slow-down lasts around
- * each target. The camera decelerates over the first half (target swims into
- * view), crawls, then accelerates back to cruise over the second half. The dwell
- * ADDS this much slow time per target; `over` stays the cruise budget.
+ * Dwell window WIDTH (seconds) — how long the slow-down lasts around each target.
+ * The crawl LEADS the knot (see `buildDwellWarp`), decelerating on approach while
+ * the target is framed ahead, with a short tail past it. The dwell ADDS this much
+ * slow time per target; `over` stays the cruise budget. Tuned by eye.
  */
-export const DEFAULT_LINGER_SEC = 2.5;
+export const DEFAULT_LINGER_SEC = 1.4;
 
 /**
  * Causal-Hermite tangent magnitude — the turn-delay / overshoot knob. 1 is the
