@@ -32,6 +32,8 @@ import { createSlice, current, type PayloadAction } from '@reduxjs/toolkit';
 import { buildInitialSettings } from './initialState';
 import { buildVolumeFieldSettings } from '../../data/volume/volumeFieldDefaults';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
+import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
+import { isStructureId } from '../../data/structure/structureIds';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -270,6 +272,22 @@ const settingsSlice = createSlice({
       settings.structures.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
 
+    // ── labels (master fan-out) ───────────────────────────────────────────────
+    // Set the text-label axis for EVERY label-bearing category at once. Label
+    // visibility has three authoritative homes (structure items, the famous-
+    // galaxy catalog item, the milkyWay scalar); this routes each LABEL_CATEGORY
+    // to its home, mirroring LabelsSectionContainer's dispatch guard. One
+    // dispatchable action for the panel's tri-state master and for tour setup,
+    // so callers don't hand-roll the per-category loop.
+    setLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
+      const enabled = action.payload;
+      for (const cat of LABEL_CATEGORIES) {
+        if (isStructureId(cat)) settings.structures.items[cat].labelEnabled = enabled;
+        else if (cat === 'milkyWay') settings.milkyWay.labelEnabled = enabled;
+        else settings.galaxyCatalogs.items[cat].labelEnabled = enabled;
+      }
+    },
+
     // ── snapshot merge (tour restore / mid-playback effect) ─────────────────
     // The ONE return-new-state reducer. `mergeSettingsSnapshot` does
     // `{ ...state, ...structuredClone(patch) }`; inside a case reducer `settings`
@@ -325,6 +343,7 @@ export const {
   setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
+  setLabelsEnabled,
   mergeSnapshot,
 } = settingsSlice.actions;
 
