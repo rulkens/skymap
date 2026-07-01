@@ -59,6 +59,8 @@ describe('focusFraming', () => {
     const result = focusFraming(row, FOVY);
     expect(result.target).toEqual([1, 2, 3]);
     expect(result.distance).toBe(galaxyFocusDistance(40));
+    // radius = diameter/2 in Mpc — the pass-by offset unit (40 kpc → 0.02 Mpc).
+    expect(result.radius).toBeCloseTo(0.02, 6);
   });
 
   it('structure arm — targets worldPos and frames on apparent radius via FOV', () => {
@@ -74,6 +76,14 @@ describe('focusFraming', () => {
     expect(result.distance).toBe(structureFocusDistance(2, FOVY));
   });
 
+  it('structure arm — returns radius 0 so a flyPath flies INTO it, never past it', () => {
+    // Pass-by is a galaxy idiom (swoop beside a discrete object). A cluster /
+    // group / supercluster is a volume you approach head-on, so its pass-by
+    // extent is 0 — the offset loop skips any knot with radius ≤ 0.
+    const row = structureRow({ apparentRadiusMpc: 5, physicalRadiusMpc: 2 });
+    expect(focusFraming(row, FOVY).radius).toBe(0);
+  });
+
   it('milkyWay arm — targets galactic centre at the fixed view distance', () => {
     const result = focusFraming({ type: 'milkyWay' }, FOVY);
     expect(result.target).toEqual([
@@ -82,6 +92,7 @@ describe('focusFraming', () => {
       MILKY_WAY_CENTER_WORLD[2],
     ]);
     expect(result.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(result.radius).toBe(0);
   });
 
   it('galaxy arm — target is a fresh array, not aliased from the row', () => {

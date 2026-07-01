@@ -330,12 +330,12 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     expect(fp.spline).toEqual({ kind: 'causalHermite', turnDelay: 1.7 });
     expect(fp.passBy).toEqual({ offset: 4, dir: 'above' });
 
-    // The per-waypoint linger survives onto the resolved at-form waypoint, and
-    // the subject radius (VIRGO.physicalRadiusMpc) is stamped for the pass-by
-    // offset unit.
+    // The per-waypoint linger survives onto the resolved at-form waypoint. VIRGO
+    // is a STRUCTURE, so its pass-by radius resolves to 0 (focusFraming) — a
+    // flyPath flies into a cluster, never past it — and the offset loop skips it.
     const w0 = fp.waypoints[0]!;
     if (!('at' in w0)) throw new Error('waypoint 0 should be resolved to at-form');
     expect(w0.linger).toBe(0.8);
-    expect(w0.radius).toBe(4);
+    expect(w0.radius).toBe(0);
   });
 });

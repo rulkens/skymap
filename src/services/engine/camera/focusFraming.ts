@@ -14,18 +14,20 @@
  *
  * ### Per-arm framing strategy
  *
- *   - galaxyCatalog: physical diameter drives the distance via `galaxyFocusDistance`.
+ *   - galaxyCatalog: physical diameter drives the distance via `galaxyFocusDistance`;
+ *     `radius` is the galaxy's half-diameter (Mpc) — a real pass-by extent.
  *   - structure: apparent extent through the projection FOV via `structureFocusDistance`;
  *     the `apparentRadiusMpc ?? physicalRadiusMpc` fallback ensures every
- *     structure record resolves to a sensible distance.
+ *     structure record resolves to a sensible distance. `radius` is 0 — pass-by
+ *     is a galaxy idiom, so a flyPath flies INTO a cluster, never past it.
  *   - milkyWay: fixed world-space centre at a calibrated view distance — we are
- *     inside the galaxy, so no radius or FOV computation makes sense.
+ *     inside the galaxy, so no radius or FOV computation makes sense; `radius` 0.
  *
  * The return type is `Pick<CameraPose, 'target' | 'distance'>` plus the subject's
- * world `radius` (Mpc) — the position-and-depth slice, with the extent a fly-past
- * offset scales by. Callers carry the orientation (yaw/pitch) themselves; the
- * radius is ignored by the framing consumers and read only by `flyPath`'s
- * pass-by geometry.
+ * pass-by `radius` (Mpc) — the position-and-depth slice, with the extent a fly-past
+ * offset scales by (0 = fly through-centre). Callers carry the orientation
+ * (yaw/pitch) themselves; the radius is ignored by the framing consumers and read
+ * only by `flyPath`'s pass-by geometry.
  */
 
 import { galaxyFocusDistance } from './galaxyFocusDistance';
@@ -42,7 +44,11 @@ const KPC_PER_MPC = 1000;
 const FALLBACK_DIAMETER_KPC = 30;
 
 export type FocusFraming = Pick<CameraPose, 'target' | 'distance'> & {
-  /** The subject's world radius (Mpc) — the extent a fly-past offset scales by. */
+  /**
+   * The subject's pass-by extent (Mpc) — the unit a fly-past offset scales by.
+   * A galaxy's half-diameter; 0 for structures / the Milky Way (flown into, not
+   * past), which zeroes their lateral offset.
+   */
   readonly radius: number;
 };
 
@@ -74,7 +80,10 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
         // fade reads — so the ring + label land just past their fade-out;
         // fall back to the physical core when there is no wider extent.
         distance: structureFocusDistance(row.apparentRadiusMpc ?? row.physicalRadiusMpc, fovYRad),
-        radius: row.apparentRadiusMpc ?? row.physicalRadiusMpc,
+        // Pass-by is a galaxy idiom (swoop beside a discrete object). A cluster /
+        // group / supercluster is a volume you fly INTO, so its pass-by extent is
+        // 0 — the flyPath offset loop skips any knot with radius ≤ 0.
+        radius: 0,
       };
     case 'milkyWay':
       return {

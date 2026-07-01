@@ -1,8 +1,12 @@
 /**
  * famousFlythrough — a curated "grand tour" of iconic famous galaxies, flown as
  * one continuous `flyPath`. Where `flyPathDemo` bends through three nearby galaxy
- * GROUPS, this sweeps THROUGH eleven individually-famous galaxies on a single
- * smooth spline, settling on the Virgo cluster giant M87.
+ * GROUPS, this sweeps PAST eleven individually-famous galaxies on a single smooth
+ * spline, settling on the Virgo cluster giant M87. Each galaxy is a discrete
+ * subject, so the flyPath pass-by default swoops the eye BESIDE it (4 radii off
+ * the outside of the bend) rather than ramming its centre; M87, the destination,
+ * is settle-framed. (Groups in `flyPathDemo` are structures → pass-by radius 0 →
+ * flown through-centre.)
  *
  * Each waypoint is an `atFocus` addressed by a BARE famous-galaxy seed id (the
  * ids in `data/seeds/famous_galaxies.seed.json`). Bare ids route to the famous

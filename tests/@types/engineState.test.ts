@@ -116,7 +116,7 @@ describe('EngineState type', () => {
           spline: 'causalHermite',
           turnDelay: 1.1,
           lookAhead: 1.3,
-          passByOffset: 0,
+          passByOffset: 4,
           passByDir: 'outsideBend',
           active: {
             align: false,
@@ -295,7 +295,7 @@ describe('EngineState type', () => {
           spline: 'causalHermite',
           turnDelay: 1.1,
           lookAhead: 1.3,
-          passByOffset: 0,
+          passByOffset: 4,
           passByDir: 'outsideBend',
           active: {
             align: false,
@@ -368,7 +368,7 @@ describe('EngineState type', () => {
             spline: 'causalHermite',
             turnDelay: 1.1,
             lookAhead: 1.3,
-            passByOffset: 0,
+            passByOffset: 4,
             passByDir: 'outsideBend',
             active: {
               align: false,

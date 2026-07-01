@@ -57,6 +57,7 @@ import {
   DEFAULT_RAMP_SEC,
   DEFAULT_LINGER,
   DEFAULT_SPLINE_CONFIG,
+  DEFAULT_PASS_BY_CONFIG,
 } from './pathDefaults';
 
 // ---------------------------------------------------------------------------
@@ -444,8 +445,9 @@ export function flyPath(
     // No spline authored → the tuned cinematographic default (causal Hermite
     // with the turn-delay / look-ahead from pathDefaults).
     spline: opts.spline ?? DEFAULT_SPLINE_CONFIG,
-    // Absent = fly through centres (right for a group cloud); a galaxy flythrough
-    // opts in. No default stamped, so groups stay through-centre.
-    ...(opts.passBy !== undefined ? { passBy: opts.passBy } : {}),
+    // No passBy authored → the tuned default (swoop 4 radii off the bend). Safe
+    // to stamp on every flyPath: only galaxy waypoints (non-zero radius) are
+    // displaced; structures resolve to radius 0 and fly through-centre.
+    passBy: opts.passBy ?? DEFAULT_PASS_BY_CONFIG,
   };
 }

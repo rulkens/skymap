@@ -11,6 +11,7 @@
 import type { SplineMode } from '../../../@types/animation/SplineMode';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import type { PassByDir } from '../../../@types/animation/PassByDir';
+import type { PassByConfig } from '../../../@types/animation/PassByConfig';
 
 /** Seconds to blend the live orientation into the down-the-path aim at the start. */
 export const DEFAULT_ALIGN_SEC = 1.35;
@@ -66,12 +67,25 @@ export const DEFAULT_SPLINE_CONFIG: SplineConfig = {
 };
 
 /**
- * Fly-past offset, in units of the subject's RADIUS. 0 (the default) flies the
- * eye through each interior waypoint's centre — the historical behaviour, right
- * for a group cloud. Raise it so the eye passes BESIDE each subject (a galaxy
- * flyby): ~4 fills the frame roughly a third; framing distance is ~16 radii.
+ * Fly-past offset, in units of the subject's RADIUS. The default (4) flies the
+ * eye BESIDE each interior GALAXY subject — a swoop-past that fills the frame
+ * roughly a third (framing distance is ~16 radii). Structures are immune: their
+ * `focusFraming` radius is 0, so `buildPathTrack`'s offset loop skips them and
+ * the eye flies straight INTO a cluster / group. 0 flies through every centre.
  */
-export const DEFAULT_PASS_BY_OFFSET = 0;
+export const DEFAULT_PASS_BY_OFFSET = 4;
 
 /** Which perpendicular the fly-past offset points along. See `PassByDir`. */
 export const DEFAULT_PASS_BY_DIR: PassByDir = 'outsideBend';
+
+/**
+ * The pass-by config a `flyPath` gets when it authors none — swoop 4 radii off
+ * the outside of each bend. Stamped on every flyPath, but only interior
+ * waypoints with a non-zero subject radius (galaxies) are displaced; structures
+ * resolve to radius 0 and fly through-centre. `buildPathTrack`'s own direct-call
+ * default stays through-centre (offset 0); this is the AUTHORING default.
+ */
+export const DEFAULT_PASS_BY_CONFIG: PassByConfig = {
+  offset: DEFAULT_PASS_BY_OFFSET,
+  dir: DEFAULT_PASS_BY_DIR,
+};
