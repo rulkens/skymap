@@ -56,7 +56,7 @@ import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
   DEFAULT_LINGER,
-  DEFAULT_SPLINE,
+  DEFAULT_SPLINE_CONFIG,
 } from './pathDefaults';
 
 // ---------------------------------------------------------------------------
@@ -441,9 +441,9 @@ export function flyPath(
     align: opts.align ?? DEFAULT_ALIGN_SEC,
     rampSec: opts.rampSec ?? DEFAULT_RAMP_SEC,
     linger: opts.linger ?? DEFAULT_LINGER,
-    // The causal-only knobs (turnDelay/lookAhead) ride INSIDE the causalHermite
-    // arm, so they default per-knob in buildPathTrack — not here.
-    spline: opts.spline ?? { kind: DEFAULT_SPLINE },
+    // No spline authored → the tuned cinematographic default (causal Hermite
+    // with the turn-delay / look-ahead from pathDefaults).
+    spline: opts.spline ?? DEFAULT_SPLINE_CONFIG,
     // Absent = fly through centres (right for a group cloud); a galaxy flythrough
     // opts in. No default stamped, so groups stay through-centre.
     ...(opts.passBy !== undefined ? { passBy: opts.passBy } : {}),

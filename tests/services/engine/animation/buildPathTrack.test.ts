@@ -27,6 +27,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { PathSample } from '../../../../src/@types/animation/CompiledClip';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { PassByConfig } from '../../../../src/@types/animation/PassByConfig';
+import { DEFAULT_LOOK_AHEAD } from '../../../../src/services/engine/animation/pathDefaults';
 
 const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
 
@@ -438,7 +439,9 @@ describe('buildPathTrack', () => {
         over: 20,
         ease: 'linear',
         waypoints,
-        spline: { kind },
+        // Pin lookAhead 0 to isolate the SPLINE geometry — the causal default
+        // lookAhead would lead the aim off the incoming chord.
+        spline: kind === 'causalHermite' ? { kind, lookAhead: 0 } : { kind },
       });
       let best = Infinity;
       let look: Vec3 = [0, 0, 1];
@@ -548,13 +551,15 @@ describe('buildPathTrack', () => {
       return tStar;
     };
 
-    it('defaults to no look-ahead (absent === 0, byte-identical aim)', () => {
+    it('applies the default look-ahead when absent (buildPathTrack fallback)', () => {
+      // A causal config that omits lookAhead falls back to DEFAULT_LOOK_AHEAD —
+      // so `build()` is byte-identical to spelling out the default.
       const def = build();
-      const zero = build(0);
+      const explicit = build(DEFAULT_LOOK_AHEAD);
       for (let i = 0; i <= 20; i++) {
         const t = (i / 20) * 20;
-        expect(def.sample(t).yaw).toBeCloseTo(zero.sample(t).yaw, 9);
-        expect(def.sample(t).pitch).toBeCloseTo(zero.sample(t).pitch, 9);
+        expect(def.sample(t).yaw).toBeCloseTo(explicit.sample(t).yaw, 9);
+        expect(def.sample(t).pitch).toBeCloseTo(explicit.sample(t).pitch, 9);
       }
     });
 

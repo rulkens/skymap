@@ -5,8 +5,8 @@
  *
  * Hit Play in the debug panel's "Clips & Tours" section (with catalog data
  * linked) to watch the camera bend through the Local Volume groups on one
- * smooth, centripetal Catmull-Rom — no corners, no slingshots, the camera
- * turning to face each group as it approaches.
+ * smooth spline — no corners, no slingshots, the camera turning to face each
+ * group as it approaches (the flyPath default pacing; see `pathDefaults`).
  *
  * ### What it demonstrates
  *

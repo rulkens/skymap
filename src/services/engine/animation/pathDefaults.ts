@@ -9,6 +9,7 @@
  */
 
 import type { SplineMode } from '../../../@types/animation/SplineMode';
+import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import type { PassByDir } from '../../../@types/animation/PassByDir';
 
 /** Seconds to blend the live orientation into the down-the-path aim at the start. */
@@ -29,29 +30,40 @@ export const DEFAULT_RAMP_SEC = 1.4;
 export const DEFAULT_LINGER = 0;
 
 /**
- * Which spline basis a flyPath fits through its waypoints. `centripetal` is the
- * historical default (Catmull-Rom that banks early); `causalHermite` is the
- * head-on-arrival alternative. Default keeps every authored clip on the
- * centripetal curve until it explicitly opts in.
- */
-export const DEFAULT_SPLINE: SplineMode = 'centripetal';
-
-/**
  * Causal-Hermite tangent magnitude — the turn-delay / overshoot knob. 1 is the
  * natural chord-length tangent; 0 collapses to a smoothstep (eases to rest at
  * each knot); >1 shoots further along the approach before banking. Only consulted
- * when `spline` is `causalHermite`.
+ * when `spline` is `causalHermite`. Tuned by eye against famousFlythrough.
  */
-export const DEFAULT_TURN_DELAY = 1;
+export const DEFAULT_TURN_DELAY = 1.1;
 
 /**
- * Seconds the LOOK leads the eye along the path. 0 (the default) splines the
- * per-knot forward aim — the historical behaviour. Raise it so the camera aims
- * at where it will be `lookAhead` seconds from now: paired with `causalHermite`
- * it flies into each target head-on, then turns toward the next the moment the
- * path bends past it, instead of holding the incoming gaze until it arrives.
+ * Seconds the LOOK leads the eye along the path. 0 splines the per-knot forward
+ * aim; > 0 aims at where the camera will be `lookAhead` seconds from now — paired
+ * with `causalHermite` it flies into each target head-on, then turns toward the
+ * next the moment the path bends past it. Tuned by eye against famousFlythrough.
  */
-export const DEFAULT_LOOK_AHEAD = 0;
+export const DEFAULT_LOOK_AHEAD = 1.3;
+
+/**
+ * Which spline basis a flyPath fits through its waypoints. `causalHermite`
+ * (head-on arrival, turn after) is the default — it reads best flying between
+ * discrete subjects; `centripetal` (Catmull-Rom that banks early) is the
+ * alternative. See `DEFAULT_SPLINE_CONFIG` for the whole authored default.
+ */
+export const DEFAULT_SPLINE: SplineMode = 'causalHermite';
+
+/**
+ * The spline config a `flyPath` gets when it authors none — the tuned
+ * cinematographic default (causal Hermite + the turn-delay / look-ahead above).
+ * `buildPathTrack`'s own direct-call default stays neutral centripetal; this is
+ * the AUTHORING default the `flyPath` helper stamps.
+ */
+export const DEFAULT_SPLINE_CONFIG: SplineConfig = {
+  kind: 'causalHermite',
+  turnDelay: DEFAULT_TURN_DELAY,
+  lookAhead: DEFAULT_LOOK_AHEAD,
+};
 
 /**
  * Fly-past offset, in units of the subject's RADIUS. 0 (the default) flies the
