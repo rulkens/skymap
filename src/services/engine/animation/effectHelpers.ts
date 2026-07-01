@@ -46,7 +46,8 @@ import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Space } from '../../../@types/animation/Space';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
+import type { VisibilityLayerArg } from '../../../@types/animation/VisibilityLayerArg';
+import { expandVisibilityLayers } from '../../../utils/animation/expandVisibilityLayers';
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
@@ -316,17 +317,30 @@ export function fork(child: Effect): Effect & { kind: 'fork' } {
  *
  * Dispatches the same settings actions the UI does. The bridge in
  * `syncVisibilityFades` handles the translation to per-layer fade controllers.
+ *
+ * `layers` accepts authoring aggregates (`'labels'`) alongside atomic keys;
+ * `expandVisibilityLayers` resolves them to atomic keys here, so the stored
+ * effect is always atomic.
  */
-export function show(layers: VisibilityLayerKey[], over?: number): SceneEffect & { kind: 'show' } {
-  return { kind: 'show', layers, ...(over !== undefined ? { over } : {}) };
+export function show(layers: VisibilityLayerArg[], over?: number): SceneEffect & { kind: 'show' } {
+  return {
+    kind: 'show',
+    layers: expandVisibilityLayers(layers),
+    ...(over !== undefined ? { over } : {}),
+  };
 }
 
 /**
  * hide — set visibility INTENT for `layers` to hidden, fading out over `over`
- * seconds (`undefined` → default fade duration; `0` → instant).
+ * seconds (`undefined` → default fade duration; `0` → instant). Accepts
+ * authoring aggregates (`'labels'`) — see `show`.
  */
-export function hide(layers: VisibilityLayerKey[], over?: number): SceneEffect & { kind: 'hide' } {
-  return { kind: 'hide', layers, ...(over !== undefined ? { over } : {}) };
+export function hide(layers: VisibilityLayerArg[], over?: number): SceneEffect & { kind: 'hide' } {
+  return {
+    kind: 'hide',
+    layers: expandVisibilityLayers(layers),
+    ...(over !== undefined ? { over } : {}),
+  };
 }
 
 /**
@@ -339,11 +353,11 @@ export function hide(layers: VisibilityLayerKey[], over?: number): SceneEffect &
  * reveal" idioms.
  */
 export function fade(
-  layers: VisibilityLayerKey[],
+  layers: VisibilityLayerArg[],
   to: number,
   over: number,
 ): SceneEffect & { kind: 'fade' } {
-  return { kind: 'fade', layers, to, over };
+  return { kind: 'fade', layers: expandVisibilityLayers(layers), to, over };
 }
 
 /**
