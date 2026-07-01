@@ -29,8 +29,8 @@ describe('computeInitialCamera', () => {
 
   it('uses stable yaw / pitch defaults so the initial framing is reproducible', () => {
     const cam = computeInitialCamera({ fovYRad: FOV });
-    expect(cam.yaw).toBe(3.0045);
-    expect(cam.pitch).toBe(0.0609);
+    expect(cam.yaw).toBe(4.4889);
+    expect(cam.pitch).toBe(-0.0644);
   });
 
   it('uses near = 0.01 Mpc (10 kpc)', () => {

@@ -17,15 +17,15 @@
  *     ratio fine.
  *   - `near = 0.01` Mpc (10 kpc) — well inside the focus-on tween's
  *     end distance (0.12 Mpc, see `galaxyFocusDistance.ts`).
- *   - `yaw ≈ 3.00`, `pitch ≈ 0.06` — nearly looking down the −Z axis
- *     with a near-flat pitch, framing the Local Group at first paint.
+ *   - `yaw ≈ 4.32`, `pitch ≈ 0.25` — the Milky-Way framing the app
+ *     boots with, looking at the galactic disk at first paint.
  */
 
 import { clampDistance } from '../../../utils/camera/clampDistance';
 import type { InitialCam } from '../../../@types/camera/InitialCam';
 
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */
-export const INITIAL_DISTANCE_MPC = 0.43;
+export const INITIAL_DISTANCE_MPC = 0.14;
 
 /** Far-clip plane in Mpc — keeps the horizon shell in-frustum at max camera distance. */
 export const FAR_CLIP_MPC = 50000;
@@ -43,8 +43,8 @@ export function computeInitialCamera({ fovYRad }: { fovYRad: number }): InitialC
   return {
     target: [0, 0, 0],
     distance: clampDistance(INITIAL_DISTANCE_MPC),
-    yaw: 3.0045,
-    pitch: 0.0609,
+    yaw: 4.4889,
+    pitch: -0.0644,
     fovYRad,
     near: 0.01,
     far: FAR_CLIP_MPC,
