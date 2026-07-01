@@ -33,8 +33,8 @@
  *      straight in looking head-on, and leads toward the next subject the instant
  *      the path bends past a waypoint (supersedes per-waypoint aim pins). A
  *      `passBy` config flies the eye PAST interior subjects rather than through
- *      them: the interior knots are offset laterally off-centre, and (with
- *      `glance`) the aim swings to frame each subject as it slides by.
+ *      them: the interior knots are offset laterally off-centre so each subject
+ *      slides by instead of being rammed.
  *
  *   3. **Arc-length reparametrisation (scale space)** — raw spline parameter is
  *      not perceptually uniform: lerping it blows through the near field and
@@ -72,7 +72,6 @@ import {
   DEFAULT_TURN_DELAY,
   DEFAULT_LOOK_AHEAD,
   DEFAULT_PASS_BY_DIR,
-  DEFAULT_GLANCE,
 } from './pathDefaults';
 import { EASE } from './ease';
 
@@ -109,8 +108,7 @@ type BuildParams = {
   readonly spline?: SplineConfig;
   /**
    * How to fly PAST interior galaxy waypoints instead of through their centres
-   * (lateral offset + direction + optional glance). Omit for through-centre.
-   * See `PassByConfig`.
+   * (lateral offset + direction). Omit for through-centre. See `PassByConfig`.
    */
   readonly passBy?: PassByConfig;
 };
@@ -204,7 +202,6 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   // centre — the historical behaviour. See `PassByConfig`.
   const passOffset = params.passBy?.offset ?? 0;
   const passDir = params.passBy?.dir ?? DEFAULT_PASS_BY_DIR;
-  const glance = params.passBy?.glance ?? DEFAULT_GLANCE;
 
   if (waypoints.length === 0) {
     throw new Error('buildPathTrack: a flyPath needs at least one waypoint.');
@@ -239,8 +236,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   // along the chosen perpendicular, so the eye sweeps PAST the subject instead of
   // through it. Directions are computed from the ORIGINAL centres in one pass
   // (a snapshot), so an earlier offset can't skew a later knot's tangent. A knot
-  // with no subject radius (a hand-placed `atPoint`) is never offset. The galaxy
-  // centres for the glance aim are read straight off `waypoints` (untouched).
+  // with no subject radius (a hand-placed `atPoint`) is never offset.
   if (passOffset > 0) {
     const centres = knotPos.map((p) => [p[0], p[1], p[2]] as Vec3);
     for (let k = 1; k < nKnots - 1; k++) {
@@ -585,42 +581,10 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     };
   };
 
-  // Glance aim: as the eye passes an interior subject, blend the base aim toward
-  // looking AT that subject's centre, weighted by a bell that peaks at the knot's
-  // pass-time and fades to 0 across the adjacent legs. `glance` scales the peak;
-  // between knots the weight is 0 so the base aim (splined / look-ahead) is
-  // untouched. Reads the ORIGINAL centres off `waypoints` (the knots are offset).
-  const glanceAim = (localSec: number, baseYaw: number, basePitch: number) => {
-    if (glance <= 0) return { yaw: baseYaw, pitch: basePitch };
-    let w = 0;
-    let centre: Vec3 | null = null;
-    for (let k = 1; k < nKnots - 1; k++) {
-      const half = 0.5 * Math.min(dur[k - 1]!, dur[k]!);
-      if (half <= 0) continue;
-      const x = 1 - Math.abs(localSec - knotTime[k]!) / half;
-      if (x <= 0) continue;
-      const wk = glance * x * x;
-      if (wk > w) {
-        w = wk;
-        centre = waypoints[k - 1]!.at as Vec3;
-      }
-    }
-    if (w <= 0 || centre === null) return { yaw: baseYaw, pitch: basePitch };
-    const eye = eyePosAt(localSec);
-    const toC: Vec3 = [centre[0] - eye[0], centre[1] - eye[1], centre[2] - eye[2]];
-    if (Math.hypot(toC[0], toC[1], toC[2]) < CHORD_EPS) return { yaw: baseYaw, pitch: basePitch };
-    const a = orbitAnglesLookingAlong(toC);
-    return {
-      yaw: blendYaw(baseYaw, a.yaw, w),
-      pitch: basePitch + (a.pitch - basePitch) * w,
-    };
-  };
-
   const sample = (localSec: number): PathSample => {
     const t = paramAtLocalSec(localSec);
     const pose = poseAtTau(t);
-    const ahead = aheadAim(localSec, pose.yaw, pose.pitch);
-    const aim = glanceAim(localSec, ahead.yaw, ahead.pitch);
+    const aim = aheadAim(localSec, pose.yaw, pose.pitch);
 
     // Align-in: 0 → live orientation, 1 → the path aim (splined forward, or the
     // look-ahead direction when `lookAhead` > 0).

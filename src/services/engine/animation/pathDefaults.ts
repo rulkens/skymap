@@ -63,10 +63,3 @@ export const DEFAULT_PASS_BY_OFFSET = 0;
 
 /** Which perpendicular the fly-past offset points along. See `PassByDir`. */
 export const DEFAULT_PASS_BY_DIR: PassByDir = 'outsideBend';
-
-/**
- * Fly-past glance ∈ [0,1] — how hard the aim tracks a passed subject through
- * closest approach. 0 (the default) leaves the look leading down the path (a
- * near-miss); 1 swings the aim to frame the subject, then releases forward.
- */
-export const DEFAULT_GLANCE = 0;

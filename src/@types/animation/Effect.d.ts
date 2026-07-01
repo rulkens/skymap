@@ -117,7 +117,7 @@ export type Effect =
       readonly spline?: SplineConfig;
       /**
        * How the eye flies PAST interior galaxy waypoints instead of through their
-       * centres (offset + direction + optional glance). Omit for through-centre
+       * centres (offset + direction). Omit for through-centre
        * (the default — right for a group cloud, so a groups flythrough is
        * untouched). See `PassByConfig`.
        */

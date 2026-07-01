@@ -58,8 +58,6 @@ export type ClipPathInspectorSectionProps = {
   passByOffset: number;
   /** Fly-past offset direction — applied on the next Calculate. */
   passByDir: PassByDir;
-  /** Fly-past glance [0,1] (0 = look leads down the path) — applied on the next Calculate. */
-  glance: number;
   /** Per-knob override gates — an inactive knob keeps the clip's authored value. */
   tuningActive: ClipPathTuningActive;
   /** Set the align-in seconds. */
@@ -78,8 +76,6 @@ export type ClipPathInspectorSectionProps = {
   onPassByOffset: (offset: number) => void;
   /** Set the fly-past offset direction. */
   onPassByDir: (dir: PassByDir) => void;
-  /** Set the fly-past glance strength. */
-  onGlance: (glance: number) => void;
   /** Toggle a single knob's override on/off (the row checkbox). */
   onTuningActive: (knob: ClipPathTuningKnob, active: boolean) => void;
 };
@@ -103,7 +99,6 @@ export function ClipPathInspectorSection({
   lookAhead,
   passByOffset,
   passByDir,
-  glance,
   tuningActive,
   onAlign,
   onRampSec,
@@ -113,7 +108,6 @@ export function ClipPathInspectorSection({
   onLookAhead,
   onPassByOffset,
   onPassByDir,
-  onGlance,
   onTuningActive,
 }: ClipPathInspectorSectionProps): ReactElement {
   // The dropdown's pending choice — seeded from the computed clip, else the
@@ -288,9 +282,9 @@ export function ClipPathInspectorSection({
           />
           <span className={styles.readout}>{passByOffset.toFixed(1)}r</span>
         </div>
-        {/* Fly-past sub-knobs: direction + glance are inert at offset 0 (through
-            centre), so they appear only once you're passing, and carry no own
-            checkbox — touching either rides the one `passBy` gate. */}
+        {/* Fly-past sub-knob: direction is inert at offset 0 (through centre), so
+            it appears only once you're passing, and carries no own checkbox —
+            touching it rides the one `passBy` gate. */}
         {passByOffset > 0 && (
           <div className={styles.subKnobs}>
             <div className={styles.scrubRow}>
@@ -304,19 +298,6 @@ export function ClipPathInspectorSection({
                 <option value="above">above</option>
                 <option value="screenSide">screen side</option>
               </select>
-            </div>
-            <div className={styles.scrubRow}>
-              <span className={styles.knobLabel}>glance</span>
-              <input
-                className={styles.scrub}
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={glance}
-                onChange={(e) => onGlance(Number(e.target.value))}
-              />
-              <span className={styles.readout}>{glance.toFixed(2)}</span>
             </div>
           </div>
         )}

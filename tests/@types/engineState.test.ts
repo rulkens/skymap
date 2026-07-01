@@ -118,7 +118,6 @@ describe('EngineState type', () => {
           lookAhead: 0,
           passByOffset: 0,
           passByDir: 'outsideBend',
-          glance: 0,
           active: {
             align: false,
             rampSec: false,
@@ -298,7 +297,6 @@ describe('EngineState type', () => {
           lookAhead: 0,
           passByOffset: 0,
           passByDir: 'outsideBend',
-          glance: 0,
           active: {
             align: false,
             rampSec: false,
@@ -372,7 +370,6 @@ describe('EngineState type', () => {
             lookAhead: 0,
             passByOffset: 0,
             passByDir: 'outsideBend',
-            glance: 0,
             active: {
               align: false,
               rampSec: false,

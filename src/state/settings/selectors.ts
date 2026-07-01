@@ -165,9 +165,6 @@ export const selectClipPathPassByOffset = (state: RootState): number =>
 export const selectClipPathPassByDir = (state: RootState): PassByDir =>
   selectSettings(state).debug.clipPathInspect.passByDir;
 
-export const selectClipPathGlance = (state: RootState): number =>
-  selectSettings(state).debug.clipPathInspect.glance;
-
 export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
   selectSettings(state).debug.clipPathInspect.active;
 

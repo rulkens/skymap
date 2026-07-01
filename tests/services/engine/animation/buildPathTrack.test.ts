@@ -600,12 +600,11 @@ describe('buildPathTrack', () => {
     });
   });
 
-  // ── Fly-past: offset the eye off interior subject centres, optionally glance ──
+  // ── Fly-past: offset the eye off interior subject centres ──
   //
   // Without passBy the eye flies THROUGH each interior waypoint centre (closest
   // approach ~0). With passBy the interior knot is displaced `offset · radius`
-  // off-centre, so the eye sweeps past; `glance` swings the aim to look AT the
-  // subject as it passes.
+  // off-centre, so the eye sweeps past instead of ramming the subject.
   describe('fly-past (passBy)', () => {
     const start: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
     const R = 2; // subject radius (Mpc)
@@ -622,10 +621,6 @@ describe('buildPathTrack', () => {
         waypoints,
         ...(passBy !== undefined ? { passBy } : {}),
       });
-    const lookOf = (s: PathSample): Vec3 => {
-      const cp = Math.cos(s.pitch);
-      return [-cp * Math.sin(s.yaw), -Math.sin(s.pitch), -cp * Math.cos(s.yaw)];
-    };
     // Min distance from the eye path to `centre`, and the sample at that instant.
     const closest = (
       track: ReturnType<typeof buildPathTrack>,
@@ -658,17 +653,6 @@ describe('buildPathTrack', () => {
     it('dir:above passes the eye OVER the top (galaxy sweeps below)', () => {
       const { sample } = closest(build({ offset: 4, dir: 'above' }), [0, 0, 100]);
       expect(eyeOf(sample)[1]).toBeGreaterThan(3); // eye well above the galaxy plane
-    });
-
-    it('glance aims at the subject centre at closest approach', () => {
-      // Eye passes above the galaxy → framing it means looking DOWN (−y).
-      const { sample } = closest(build({ offset: 4, dir: 'above', glance: 1 }), [0, 0, 100]);
-      expect(lookOf(sample)[1]).toBeLessThan(-0.5);
-    });
-
-    it('glance 0 keeps the look leading down the path, not at the subject', () => {
-      const { sample } = closest(build({ offset: 4, dir: 'above', glance: 0 }), [0, 0, 100]);
-      expect(lookOf(sample)[1]).toBeGreaterThan(-0.5); // not craning down at the galaxy
     });
   });
 

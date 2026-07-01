@@ -40,7 +40,7 @@ export type PathTuning = {
    */
   readonly spline?: SplineConfig;
   /**
-   * The whole fly-past config (offset + direction + glance) as ONE override unit.
+   * The whole fly-past config (offset + direction) as ONE override unit.
    * Omit to keep the clip's value.
    */
   readonly passBy?: PassByConfig;

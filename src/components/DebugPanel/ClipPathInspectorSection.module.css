@@ -51,10 +51,10 @@
   flex: 1;
 }
 
-/* Gated sub-knobs (spline's causal turnDelay/lookAhead; passBy's direction/
- * glance), indented under their parent row to read as "these belong to the
- * control above". The left pad replaces the checkbox column the other rows
- * carry, so the sliders still line up. */
+/* Gated sub-knobs (spline's causal turnDelay/lookAhead; passBy's direction),
+ * indented under their parent row to read as "these belong to the control
+ * above". The left pad replaces the checkbox column the other rows carry, so
+ * the sliders still line up. */
 .subKnobs {
   display: flex;
   flex-direction: column;

@@ -236,12 +236,11 @@ export type EngineSettingsState = {
       turnDelay: number;
       lookAhead: number;
       // Fly-past scratch scalars: `passByOffset` in subject-radius units (0 =
-      // through centre), `passByDir` the offset direction, `glance` the aim-track
-      // strength. All three ride the single `passBy` override gate; the saga folds
-      // them into one `PassByConfig` (see `PassByConfig`).
+      // through centre) and `passByDir` the offset direction. Both ride the single
+      // `passBy` override gate; the saga folds them into one `PassByConfig` (see
+      // `PassByConfig`).
       passByOffset: number;
       passByDir: PassByDir;
-      glance: number;
       /** Per-knob override gate — only an active knob is baked into the clip. */
       active: ClipPathTuningActive;
     };

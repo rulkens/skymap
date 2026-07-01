@@ -20,7 +20,7 @@ const TUNING = {
   rampSec: 1.2,
   linger: 0.3,
   spline: { kind: 'causalHermite', turnDelay: 1.5 } as const,
-  passBy: { offset: 4, dir: 'above', glance: 0.5 } as const,
+  passBy: { offset: 4, dir: 'above' } as const,
 };
 
 describe('applyPathTuning', () => {
@@ -36,7 +36,7 @@ describe('applyPathTuning', () => {
     expect(node.rampSec).toBe(1.2);
     expect(node.linger).toBe(0.3);
     expect(node.spline).toEqual({ kind: 'causalHermite', turnDelay: 1.5 });
-    expect(node.passBy).toEqual({ offset: 4, dir: 'above', glance: 0.5 });
+    expect(node.passBy).toEqual({ offset: 4, dir: 'above' });
     expect(node.over).toBe(8); // other fields preserved
   });
 

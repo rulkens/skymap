@@ -11,8 +11,8 @@
  *
  * `spline` and `passBy` are each ONE gate for a whole config — the causal-only
  * sub-knobs (turnDelay / lookAhead) ride the `spline` gate, and the fly-past
- * sub-knobs (offset / direction / glance) ride the `passBy` gate, rather than
- * getting their own gates (see `SplineConfig` / `PassByConfig`).
+ * sub-knobs (offset / direction) ride the `passBy` gate, rather than getting
+ * their own gates (see `SplineConfig` / `PassByConfig`).
  */
 export type ClipPathTuningActive = {
   align: boolean;
