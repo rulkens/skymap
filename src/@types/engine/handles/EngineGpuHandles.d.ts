@@ -47,6 +47,7 @@ import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer'
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
+import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
@@ -155,6 +156,16 @@ export type EngineGpuHandles = {
    * buffers (uniform + instance + corner).
    */
   markerLineRenderer: MarkerLineRenderer | null;
+  /**
+   * Dedicated debug-draw thick-line renderer — the substrate for the clip-path
+   * inspector overlay (speed-coloured route + scrub gizmo). Constructed
+   * alongside `markerLineRenderer` (same UI ctx, swap-chain format, no atlas
+   * dep), but decoupled from the label director: the `clipPathDebugPass`
+   * null-checks it and feeds it a freshly built `DebugLine[]` each frame.
+   * Excluded from `isEngineReady`. Stored here so `destroy()` releases its GPU
+   * buffers (uniform + instance + corner).
+   */
+  debugLineRenderer: DebugLineRenderer | null;
   /**
    * Selection-ring overlay renderer — draws a white annulus around the
    * currently-selected galaxy on the swap-chain UI overlay. Null until

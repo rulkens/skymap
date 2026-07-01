@@ -328,6 +328,9 @@ describe('renderFrame visual baseline', () => {
         gpu: {
           labelRenderer,
           markerLineRenderer,
+          // Null so clipPathDebugPass stays disabled and the recorded
+          // draw-command sequence baseline is unchanged.
+          debugLineRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer,
           // Flow's ribbon draw lands in Task 5; here flow stays off (null

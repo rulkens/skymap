@@ -97,6 +97,43 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number): Effect 
       const { distance } = resolveFraming(effect.id, deps, fovYRad);
       return dollyTo(distance, effect.over, effect.ease);
     }
+    // ── flyPath — resolve each id-bearing waypoint; pass at-form through ──────
+    //
+    // The path-level pacing (`align` / `rampSec` / `linger` / `lingerSec` /
+    // `spline`, whose causalHermite arm carries `turnDelay` / `lookAhead`; plus
+    // `passBy`) carries
+    // through UNCHANGED. Dropping it here would silently strip the helper's pacing
+    // defaults on normal playback (compileClip would see undefined), which only
+    // the inspector masked by re-injecting via applyPathTuning. Each resolved
+    // waypoint also gains its subject `radius` (the pass-by offset unit).
+    case 'flyPath': {
+      const waypoints = effect.waypoints.map((w) => {
+        if (!('id' in w)) return w; // already concrete
+        const { target, distance, radius } = resolveFraming(w.id, deps, fovYRad);
+        return {
+          at: target,
+          distance,
+          radius, // the subject extent a pass-by offset scales by
+          ...(w.yaw !== undefined ? { yaw: w.yaw } : {}),
+          ...(w.pitch !== undefined ? { pitch: w.pitch } : {}),
+          ...(w.over !== undefined ? { over: w.over } : {}),
+          ...(w.linger !== undefined ? { linger: w.linger } : {}),
+        };
+      });
+      return {
+        kind: 'flyPath',
+        waypoints,
+        over: effect.over,
+        ease: effect.ease,
+        ...(effect.align !== undefined ? { align: effect.align } : {}),
+        ...(effect.rampSec !== undefined ? { rampSec: effect.rampSec } : {}),
+        ...(effect.linger !== undefined ? { linger: effect.linger } : {}),
+        ...(effect.lingerSec !== undefined ? { lingerSec: effect.lingerSec } : {}),
+        ...(effect.spline !== undefined ? { spline: effect.spline } : {}),
+        ...(effect.passBy !== undefined ? { passBy: effect.passBy } : {}),
+      };
+    }
+
     case 'focusId': {
       if (effect.id === null) {
         // Explicit focus-clear: resolves to a no-op focus cue.

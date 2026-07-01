@@ -48,7 +48,18 @@ import type { Space } from '../../../@types/animation/Space';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
+import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
+import type { SplineConfig } from '../../../@types/animation/SplineConfig';
+import type { PassByConfig } from '../../../@types/animation/PassByConfig';
 import { CHANNEL_SPACE } from './channelSpace';
+import {
+  DEFAULT_ALIGN_SEC,
+  DEFAULT_RAMP_SEC,
+  DEFAULT_LINGER,
+  DEFAULT_LINGER_SEC,
+  DEFAULT_SPLINE_CONFIG,
+  DEFAULT_PASS_BY_CONFIG,
+} from './pathDefaults';
 
 // ---------------------------------------------------------------------------
 // Camera-action helpers
@@ -362,4 +373,84 @@ export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
  */
 export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' } {
   return { kind: 'focusId', id };
+}
+
+// ---------------------------------------------------------------------------
+// Path helpers — waypoints + the flythrough that flies a spline through them
+// ---------------------------------------------------------------------------
+
+type WaypointOpts = { yaw?: number; pitch?: number; over?: number; linger?: number };
+
+function waypointExtras(opts?: WaypointOpts): WaypointOpts {
+  return {
+    ...(opts?.yaw !== undefined ? { yaw: opts.yaw } : {}),
+    ...(opts?.pitch !== undefined ? { pitch: opts.pitch } : {}),
+    ...(opts?.over !== undefined ? { over: opts.over } : {}),
+    ...(opts?.linger !== undefined ? { linger: opts.linger } : {}),
+  };
+}
+
+/**
+ * atPoint — a `flyPath` waypoint at a concrete world position and distance.
+ *
+ * `opts.over` pins the seconds of the leg leading into this waypoint (omit for
+ * the arc-length share of the path total — uniform speed). `opts.yaw`/`pitch`
+ * pin the approach angle (omit to interpolate it across the leg).
+ */
+export function atPoint(at: Vec3, distance: number, opts?: WaypointOpts): PathWaypoint {
+  return { at, distance, ...waypointExtras(opts) };
+}
+
+/**
+ * atFocus — a `flyPath` waypoint addressed by a durable `FocusId`. The UNRESOLVED
+ * form: `resolveClipFoci` rewrites it to an `atPoint`-shaped waypoint (the
+ * structure/galaxy's framed position + distance) before `compileClip` runs.
+ */
+export function atFocus(id: FocusId, opts?: WaypointOpts): PathWaypoint {
+  return { id, ...waypointExtras(opts) };
+}
+
+/**
+ * flyPath — fly a smooth spline through `waypoints` over `opts.over` total
+ * seconds. The default pacing comes from `pathDefaults`: `align`
+ * (`DEFAULT_ALIGN_SEC`) turns the camera into the path as it launches, and
+ * `rampSec` (`DEFAULT_RAMP_SEC`) gives a trapezoidal speed envelope — short
+ * accel, long constant-speed cruise, short decel — so a flythrough feels right
+ * with no per-clip tuning. The named `opts.ease` is the OPT-OUT: it shapes the
+ * envelope only when `rampSec` is 0, otherwise the trapezoid wins.
+ *
+ * Unlike chained `seq([moveTarget, …])` tweens (which corner at each point),
+ * the path is C1-smooth. It owns all four camera channels for its window, so
+ * don't also drive them with `set` / `dollyTo` / `moveTarget` in the same window.
+ */
+export function flyPath(
+  waypoints: PathWaypoint[],
+  opts: {
+    over: number;
+    ease?: Ease;
+    align?: number;
+    rampSec?: number;
+    linger?: number;
+    lingerSec?: number;
+    spline?: SplineConfig;
+    passBy?: PassByConfig;
+  },
+): Effect & { kind: 'flyPath' } {
+  return {
+    kind: 'flyPath',
+    waypoints,
+    over: opts.over,
+    ease: opts.ease ?? 'inOut',
+    align: opts.align ?? DEFAULT_ALIGN_SEC,
+    rampSec: opts.rampSec ?? DEFAULT_RAMP_SEC,
+    linger: opts.linger ?? DEFAULT_LINGER,
+    lingerSec: opts.lingerSec ?? DEFAULT_LINGER_SEC,
+    // No spline authored → the tuned cinematographic default (causal Hermite
+    // with the turn-delay / look-ahead from pathDefaults).
+    spline: opts.spline ?? DEFAULT_SPLINE_CONFIG,
+    // No passBy authored → the tuned default (swoop 4 radii off the bend). Safe
+    // to stamp on every flyPath: only galaxy waypoints (non-zero radius) are
+    // displaced; structures resolve to radius 0 and fly through-centre.
+    passBy: opts.passBy ?? DEFAULT_PASS_BY_CONFIG,
+  };
 }

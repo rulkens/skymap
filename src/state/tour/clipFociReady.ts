@@ -83,6 +83,11 @@ function walkEffect(effect: Effect, deps: ResolveDeps): boolean {
       if (effect.id === null) return true;
       return resolveFocusId(effect.id, deps) !== null;
 
+    // A flyPath carries id-bearing waypoints; each `atFocus` (id-form) must
+    // resolve. Concrete `atPoint` waypoints need no data.
+    case 'flyPath':
+      return effect.waypoints.every((w) => !('id' in w) || resolveFocusId(w.id, deps) !== null);
+
     // ── Pass-through — camera actions, scene effects, hold/wait ────────────
     default:
       return true;

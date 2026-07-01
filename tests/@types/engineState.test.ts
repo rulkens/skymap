@@ -46,6 +46,7 @@ import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsyst
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
 import { createStructureFocusSubsystem } from '../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createClipPlayer } from '../../src/services/engine/subsystems/clipPlayer';
+import { createClipPathInspector } from '../../src/services/engine/subsystems/clipPathInspector';
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import { configureStore } from '@reduxjs/toolkit';
@@ -106,6 +107,26 @@ describe('EngineState type', () => {
         showPickBuffer: false,
         showDiskRadiusRing: false,
         disabledPasses: {},
+        clipPathInspect: {
+          clipId: null,
+          scrub01: 0,
+          align: 1.35,
+          rampSec: 1.4,
+          linger: 0.7,
+          lingerSec: 1.4,
+          spline: 'causalHermite',
+          turnDelay: 1.1,
+          lookAhead: 1.3,
+          passByOffset: 4,
+          passByDir: 'outsideBend',
+          active: {
+            align: false,
+            rampSec: false,
+            linger: false,
+            spline: false,
+            passBy: false,
+          },
+        },
       },
       structures: {
         enabled: true,
@@ -154,6 +175,7 @@ describe('EngineState type', () => {
         filamentRenderer: null,
         labelRenderer: null,
         markerLineRenderer: null,
+        debugLineRenderer: null,
         selectionRingRenderer: null,
         structureMarkerRenderer: null,
         texturedDiskRenderer: null,
@@ -187,6 +209,7 @@ describe('EngineState type', () => {
           clock: fixtureClock1,
           getEngineState: () => stateRef.current!,
         }),
+        clipPathInspector: createClipPathInspector(),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -264,6 +287,26 @@ describe('EngineState type', () => {
         showPickBuffer: false,
         showDiskRadiusRing: false,
         disabledPasses: {},
+        clipPathInspect: {
+          clipId: null,
+          scrub01: 0,
+          align: 1.35,
+          rampSec: 1.4,
+          linger: 0.7,
+          lingerSec: 1.4,
+          spline: 'causalHermite',
+          turnDelay: 1.1,
+          lookAhead: 1.3,
+          passByOffset: 4,
+          passByDir: 'outsideBend',
+          active: {
+            align: false,
+            rampSec: false,
+            linger: false,
+            spline: false,
+            passBy: false,
+          },
+        },
       },
       structures: {
         enabled: true,
@@ -318,6 +361,26 @@ describe('EngineState type', () => {
           showPickBuffer: false,
           showDiskRadiusRing: false,
           disabledPasses: {},
+          clipPathInspect: {
+            clipId: null,
+            scrub01: 0,
+            align: 1.35,
+            rampSec: 1.4,
+            linger: 0.7,
+            lingerSec: 1.4,
+            spline: 'causalHermite',
+            turnDelay: 1.1,
+            lookAhead: 1.3,
+            passByOffset: 4,
+            passByDir: 'outsideBend',
+            active: {
+              align: false,
+              rampSec: false,
+              linger: false,
+              spline: false,
+              passBy: false,
+            },
+          },
         },
         structures: {
           enabled: true,
@@ -355,6 +418,7 @@ describe('EngineState type', () => {
         filamentRenderer: null,
         labelRenderer: null,
         markerLineRenderer: null,
+        debugLineRenderer: null,
         selectionRingRenderer: null,
         structureMarkerRenderer: null,
         texturedDiskRenderer: null,
@@ -388,6 +452,7 @@ describe('EngineState type', () => {
           clock: fixtureClock2,
           getEngineState: () => stateRef.current!,
         }),
+        clipPathInspector: createClipPathInspector(),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),

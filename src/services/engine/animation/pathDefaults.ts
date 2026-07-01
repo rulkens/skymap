@@ -1,0 +1,102 @@
+/**
+ * pathDefaults — the default flyPath pacing, in one place.
+ *
+ * A flythrough authored with no pacing knobs should already feel right, so the
+ * `flyPath` helper stamps these onto every node and `buildPathTrack` falls back
+ * to the align value for direct callers. They were tuned by eye against the
+ * clip-path inspector's deterministic replay; change them here to reshape every
+ * un-pinned flythrough at once.
+ */
+
+import type { SplineMode } from '../../../@types/animation/SplineMode';
+import type { SplineConfig } from '../../../@types/animation/SplineConfig';
+import type { PassByDir } from '../../../@types/animation/PassByDir';
+import type { PassByConfig } from '../../../@types/animation/PassByConfig';
+
+/** Seconds to blend the live orientation into the down-the-path aim at the start. */
+export const DEFAULT_ALIGN_SEC = 1.35;
+
+/**
+ * Seconds of ease ramp at EACH end of the trapezoidal speed envelope (short
+ * accel + long constant-speed cruise + short decel). This is the default
+ * envelope; author `rampSec: 0` on a flyPath to opt out and use the named `ease`.
+ */
+export const DEFAULT_RAMP_SEC = 1.4;
+
+/**
+ * Per-target dwell DEPTH ∈ [0,1] — how far the camera slows across the dwell
+ * window at each waypoint (1 = a ~12%-speed crawl, never a freeze). The default
+ * (0.7) makes the camera markedly slow to take in each target; 0 cruises straight
+ * through. Pairs with `DEFAULT_LINGER_SEC` — a dwell needs both a depth AND a
+ * window. This is the AUTHORING default the `flyPath` helper stamps;
+ * `buildPathTrack`'s own direct-call default stays 0 (no dwell). Tuned by eye.
+ */
+export const DEFAULT_LINGER = 0.7;
+
+/**
+ * Dwell window WIDTH (seconds) — how long the slow-down lasts around each target.
+ * The crawl LEADS the knot (see `buildDwellWarp`), decelerating on approach while
+ * the target is framed ahead, with a short tail past it. The dwell ADDS this much
+ * slow time per target; `over` stays the cruise budget. Tuned by eye.
+ */
+export const DEFAULT_LINGER_SEC = 1.4;
+
+/**
+ * Causal-Hermite tangent magnitude — the turn-delay / overshoot knob. 1 is the
+ * natural chord-length tangent; 0 collapses to a smoothstep (eases to rest at
+ * each knot); >1 shoots further along the approach before banking. Only consulted
+ * when `spline` is `causalHermite`. Tuned by eye against famousFlythrough.
+ */
+export const DEFAULT_TURN_DELAY = 1.1;
+
+/**
+ * Seconds the LOOK leads the eye along the path. 0 splines the per-knot forward
+ * aim; > 0 aims at where the camera will be `lookAhead` seconds from now — paired
+ * with `causalHermite` it flies into each target head-on, then turns toward the
+ * next the moment the path bends past it. Tuned by eye against famousFlythrough.
+ */
+export const DEFAULT_LOOK_AHEAD = 1.3;
+
+/**
+ * Which spline basis a flyPath fits through its waypoints. `causalHermite`
+ * (head-on arrival, turn after) is the default — it reads best flying between
+ * discrete subjects; `centripetal` (Catmull-Rom that banks early) is the
+ * alternative. See `DEFAULT_SPLINE_CONFIG` for the whole authored default.
+ */
+export const DEFAULT_SPLINE: SplineMode = 'causalHermite';
+
+/**
+ * The spline config a `flyPath` gets when it authors none — the tuned
+ * cinematographic default (causal Hermite + the turn-delay / look-ahead above).
+ * `buildPathTrack`'s own direct-call default stays neutral centripetal; this is
+ * the AUTHORING default the `flyPath` helper stamps.
+ */
+export const DEFAULT_SPLINE_CONFIG: SplineConfig = {
+  kind: 'causalHermite',
+  turnDelay: DEFAULT_TURN_DELAY,
+  lookAhead: DEFAULT_LOOK_AHEAD,
+};
+
+/**
+ * Fly-past offset, in units of the subject's RADIUS. The default (4) flies the
+ * eye BESIDE each interior GALAXY subject — a swoop-past that fills the frame
+ * roughly a third (framing distance is ~16 radii). Structures are immune: their
+ * `focusFraming` radius is 0, so `buildPathTrack`'s offset loop skips them and
+ * the eye flies straight INTO a cluster / group. 0 flies through every centre.
+ */
+export const DEFAULT_PASS_BY_OFFSET = 4;
+
+/** Which perpendicular the fly-past offset points along. See `PassByDir`. */
+export const DEFAULT_PASS_BY_DIR: PassByDir = 'outsideBend';
+
+/**
+ * The pass-by config a `flyPath` gets when it authors none — swoop 4 radii off
+ * the outside of each bend. Stamped on every flyPath, but only interior
+ * waypoints with a non-zero subject radius (galaxies) are displaced; structures
+ * resolve to radius 0 and fly through-centre. `buildPathTrack`'s own direct-call
+ * default stays through-centre (offset 0); this is the AUTHORING default.
+ */
+export const DEFAULT_PASS_BY_CONFIG: PassByConfig = {
+  offset: DEFAULT_PASS_BY_OFFSET,
+  dir: DEFAULT_PASS_BY_DIR,
+};

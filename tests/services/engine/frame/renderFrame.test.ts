@@ -314,6 +314,8 @@ function makeInput(
         gpu: {
           labelRenderer: null,
           markerLineRenderer: null,
+          // clipPathDebugPass.enabled short-circuits on a null renderer.
+          debugLineRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer: null,
           flowFieldRenderer: null,

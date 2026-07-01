@@ -12,6 +12,12 @@
  * resolves the id and the live camera pose, not the UI) means the dev panel only
  * names a clip; it never touches the registry or the player. The panel reads
  * `selectClipActive` for its readout rather than awaiting a Promise.
+ *
+ * `replayInspectedPath` is the deterministic sibling: it replays the clip-path
+ * inspector's already-resolved, start-pinned route, so the camera flies the
+ * EXACT path drawn in the overlay (no fresh `start: 'live'` resolution from the
+ * current view). `watchReplayInspectedPathSaga` reads the pinned clip from the
+ * inspector seam and runs the same clip-player; `stopClip` aborts it too.
  */
 import { createAction } from '@reduxjs/toolkit';
 
@@ -19,3 +25,4 @@ import type { ClipId } from '../../@types/animation/ClipId';
 
 export const startClip = createAction('clip/start', (id: ClipId) => ({ payload: id }));
 export const stopClip = createAction('clip/stop');
+export const replayInspectedPath = createAction('clip/replayInspected');

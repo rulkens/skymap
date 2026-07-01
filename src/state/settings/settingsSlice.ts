@@ -36,6 +36,10 @@ import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
+import type { ClipId } from '../../@types/animation/ClipId';
+import type { SplineMode } from '../../@types/animation/SplineMode';
+import type { PassByDir } from '../../@types/animation/PassByDir';
+import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
@@ -165,6 +169,92 @@ const settingsSlice = createSlice({
       // Open-world membership record (any pass name): `[name] === true` disables.
       settings.debug.disabledPasses[action.payload.pass] = action.payload.disabled;
     },
+    // Clip-path inspector: choose which clip to sample. The saga watches this
+    // action to (re)compute the snapshot; the scrubber resets to the start.
+    inspectClipPath: (settings, action: PayloadAction<ClipId>) => {
+      settings.debug.clipPathInspect.clipId = action.payload;
+      settings.debug.clipPathInspect.scrub01 = 0;
+    },
+    // Re-sample the shown clip with everything fresh EXCEPT the start pose, which
+    // the seam keeps from the last Calculate — so moving the camera to view the
+    // path then tuning a knob doesn't snap the start to the new viewpoint. The
+    // saga watches this; state-wise it mirrors `inspectClipPath`.
+    recalcClipPath: (settings, action: PayloadAction<ClipId>) => {
+      settings.debug.clipPathInspect.clipId = action.payload;
+      settings.debug.clipPathInspect.scrub01 = 0;
+    },
+    // Drop the inspected path (the "Clear" button). The saga clears the held
+    // snapshot so the overlay goes quiet.
+    clearClipPath: (settings) => {
+      settings.debug.clipPathInspect.clipId = null;
+      settings.debug.clipPathInspect.scrub01 = 0;
+    },
+    // Move the scrubber (a [0,1] fraction). Pure scalar write — the overlay's
+    // gizmo reads it each frame and maps it to the nearest held sample.
+    setClipPathScrub: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.scrub01 = action.payload;
+    },
+    // flyPath pacing knobs the saga bakes into the clip at Calculate time — but
+    // only the ones the curator has ACTIVATED (see `setClipPathTuningActive`).
+    // `align` = start-aim blend seconds; `rampSec` = ease ramp seconds each end
+    // (0 = use the named ease); `linger` = per-target brake depth [0,1] (0 =
+    // cruise straight through). Touching a value activates that knob's override
+    // (so dragging a slider is enough to opt in); Re-Calculate to apply.
+    setClipPathAlign: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.align = action.payload;
+      settings.debug.clipPathInspect.active.align = true;
+    },
+    setClipPathRampSec: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.rampSec = action.payload;
+      settings.debug.clipPathInspect.active.rampSec = true;
+    },
+    // `linger` (dwell depth) and `lingerSec` (window width) are the two dwell
+    // sub-knobs — they ride the ONE `linger` override gate (one dwell concept),
+    // so touching either activates `linger`.
+    setClipPathLinger: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.linger = action.payload;
+      settings.debug.clipPathInspect.active.linger = true;
+    },
+    setClipPathLingerSec: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.lingerSec = action.payload;
+      settings.debug.clipPathInspect.active.linger = true;
+    },
+    // Spline basis A/B: centripetal Catmull-Rom ↔ causal Hermite. `turnDelay`
+    // (overshoot) and `lookAhead` (look-lead seconds) are the causal-only
+    // sub-knobs — they ride the ONE `spline` override gate (they're meaningless
+    // without the causal basis), so touching any of the three activates `spline`.
+    setClipPathSpline: (settings, action: PayloadAction<SplineMode>) => {
+      settings.debug.clipPathInspect.spline = action.payload;
+      settings.debug.clipPathInspect.active.spline = true;
+    },
+    setClipPathTurnDelay: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.turnDelay = action.payload;
+      settings.debug.clipPathInspect.active.spline = true;
+    },
+    setClipPathLookAhead: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.lookAhead = action.payload;
+      settings.debug.clipPathInspect.active.spline = true;
+    },
+    // Fly-past: `passByOffset` (radius units) and `passByDir` are the two fly-past
+    // sub-knobs — they ride the ONE `passBy` override gate (they're one
+    // cinematographic concept), so touching either activates `passBy`.
+    setClipPathPassByOffset: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.passByOffset = action.payload;
+      settings.debug.clipPathInspect.active.passBy = true;
+    },
+    setClipPathPassByDir: (settings, action: PayloadAction<PassByDir>) => {
+      settings.debug.clipPathInspect.passByDir = action.payload;
+      settings.debug.clipPathInspect.active.passBy = true;
+    },
+    // Toggle a single pacing knob's override on/off. Off (the default) lets the
+    // clip's own authored value flow through; the row checkbox drives this, and
+    // the value setters above flip it on when the curator touches a slider.
+    setClipPathTuningActive: (
+      settings,
+      action: PayloadAction<{ knob: ClipPathTuningKnob; active: boolean }>,
+    ) => {
+      settings.debug.clipPathInspect.active[action.payload.knob] = action.payload.active;
+    },
 
     // ── structures ──────────────────────────────────────────────────────────
     setStructureItemEnabled: (
@@ -219,6 +309,20 @@ export const {
   setShowPickBuffer,
   setShowDiskRadiusRing,
   setPassDisabled,
+  inspectClipPath,
+  recalcClipPath,
+  clearClipPath,
+  setClipPathScrub,
+  setClipPathAlign,
+  setClipPathRampSec,
+  setClipPathLinger,
+  setClipPathLingerSec,
+  setClipPathSpline,
+  setClipPathTurnDelay,
+  setClipPathLookAhead,
+  setClipPathPassByOffset,
+  setClipPathPassByDir,
+  setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,

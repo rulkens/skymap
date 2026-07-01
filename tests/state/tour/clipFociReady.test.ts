@@ -23,6 +23,9 @@ import {
   seq,
   all,
   fork,
+  flyPath,
+  atFocus,
+  atPoint,
 } from '../../../src/services/engine/animation/effectHelpers';
 import type { FocusId } from '../../../src/@types/animation/FocusId';
 
@@ -153,5 +156,23 @@ describe('clipFociReady', () => {
       timeline: [fork(focus(id('m87')))],
     };
     expect(clipFociReady(forkClip, depsM87NotLoaded)).toBe(false);
+  });
+
+  it('returns false when a flyPath has an unresolvable atFocus waypoint', () => {
+    // A flyPath carries id-bearing waypoints; the gate must check each one,
+    // not treat the whole flyPath as trivially ready.
+    const clip: ClipData = {
+      start: 'live',
+      timeline: [flyPath([atFocus(id('m87'))], { over: 4 })],
+    };
+    expect(clipFociReady(clip, depsM87NotLoaded)).toBe(false);
+  });
+
+  it('is true for a flyPath with only concrete (atPoint) waypoints', () => {
+    const clip: ClipData = {
+      start: 'live',
+      timeline: [flyPath([atPoint([1, 0, 0], 5), atPoint([2, 0, 0], 10)], { over: 4 })],
+    };
+    expect(clipFociReady(clip, emptyDeps)).toBe(true);
   });
 });

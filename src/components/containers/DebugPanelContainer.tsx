@@ -1,20 +1,15 @@
 // src/components/containers/DebugPanelContainer.tsx
 /**
- * DebugPanelContainer — store boundary for the developer debug panel.
+ * DebugPanelContainer — store boundary for the developer debug panel's
+ * top-level knobs (pick/disk-ring toggles, flow, data-quality, render toggles).
  *
- * Owns ALL store reads and dispatch for the DebugPanel subtree, including the
- * clip/tour controls (`onStartClip` / `onStopClip` / `onStartTour`) and the
- * `onTogglePass` handler previously inline in `RenderTogglesSection`.
- * `DebugPanel` and its children import nothing from `store/` or `state/`.
- *
- * The clip/tour controls are plain dispatches: `startClip` / `stopClip` /
- * `startTour` are request actions (each naming a registered clip/tour by id)
- * consumed by sagas (`watchClipSaga` / `watchTourSaga`), so the container needs
- * no engine handle — it dispatches like every other knob here. The "now playing"
- * readout reads `selectClipActive` (live clip state)
- * instead of awaiting a Promise. Only the genuinely handle-bound engine props
- * (`slots`, `timingService`, `passNames`) are still passed in by App, gated on
- * `debugPanelOpen && handleRef.current`.
+ * Owns the store reads + dispatch for those knobs plus the `onTogglePass`
+ * handler previously inline in `RenderTogglesSection`. The clip/tour and
+ * clip-path-inspector sections each own their store reach through their OWN
+ * container (`ClipTriggersSectionContainer` / `ClipPathInspectorSectionContainer`,
+ * mounted directly by `DebugPanel`), so their scalars don't prop-drill through
+ * here. Only the genuinely handle-bound engine props (`slots`, `timingService`,
+ * `passNames`) are passed in by App, gated on `debugPanelOpen && handleRef.current`.
  *
  * `onTogglePass` reads `disabledPasses[pass]` in its body, so its
  * `useCallback` dep array is `[dispatch, disabledPasses]` — NOT the
@@ -42,13 +37,8 @@ import {
   setFlow,
   setPassDisabled,
 } from '../../state/settings/settingsSlice';
-import { selectClipActive } from '../../state/camera/selectors';
-import { startClip, stopClip } from '../../state/camera/clipActions';
-import { startTour } from '../../state/tour/tourActions';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
-import type { ClipId } from '../../@types/animation/ClipId';
-import type { TourId } from '../../@types/animation/tour/TourId';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 
 export type DebugPanelContainerProps = {
@@ -70,7 +60,6 @@ function DebugPanelContainer({
   const highlightFallback = useAppSelector(selectHighlightFallback);
   const realOnlyMode = useAppSelector(selectRealOnly);
   const flow = useAppSelector(selectFlow);
-  const clipActive = useAppSelector(selectClipActive);
 
   const onShowPickBufferChange = useCallback(
     (enabled: boolean) => dispatch(setShowPickBuffer(enabled)),
@@ -97,13 +86,6 @@ function DebugPanelContainer({
     [dispatch],
   );
 
-  // Clip/tour controls — plain dispatches of request actions naming a registered
-  // id. The sagas (`watchClipSaga` / `watchTourSaga`) resolve the id against the
-  // registry and own the engine-side work.
-  const onStartClip = useCallback((id: ClipId) => dispatch(startClip(id)), [dispatch]);
-  const onStopClip = useCallback(() => dispatch(stopClip()), [dispatch]);
-  const onStartTour = useCallback((id: TourId) => dispatch(startTour(id)), [dispatch]);
-
   // Reads `disabledPasses[pass]` in its body — dep array includes `disabledPasses`
   // so the callback captures the current record on each store update.
   const onTogglePass = useCallback(
@@ -128,10 +110,6 @@ function DebugPanelContainer({
       flow={flow}
       onFlowChange={onFlowChange}
       onTogglePass={onTogglePass}
-      clipActive={clipActive}
-      onStartClip={onStartClip}
-      onStopClip={onStopClip}
-      onStartTour={onStartTour}
     />
   );
 }

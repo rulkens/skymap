@@ -44,6 +44,17 @@
  *     duration ignores a fork. A `fork`ed perpetual `spin`/`oscillate` runs
  *     "under" the awaited timeline and is cancelled at clip end.
  *
+ *   - `flyPath` — a multi-waypoint camera flythrough. Unlike chained `setVec`
+ *     tweens (which corner at each point), it fits one arc-length-reparametrised
+ *     Catmull-Rom through its `waypoints`, so the path is C1-smooth and
+ *     perceived speed is uniform by default. It owns all four camera channels
+ *     for its window (a single composite writer), so the base/`set` layer must
+ *     not also write them there. `over` is the TOTAL travel seconds; `ease`
+ *     shapes the whole leg's accel/decel. A `flyPath` may carry `id`-form
+ *     waypoints, so `resolveClipFoci` rewrites it before `compileClip` — but
+ *     unlike the `FocusBoundEffect` arms it is NOT consumed away: the resolved
+ *     `flyPath` (all waypoints in `at`-form) survives into `compileClip`.
+ *
  * ### Alternative rejected: separate `CameraEffect` and `SceneEffect` timelines
  *
  * Two parallel arrays would let the player split without discriminating on `kind`,
@@ -55,6 +66,10 @@
 import type { CameraAction } from './CameraAction';
 import type { FocusBoundEffect } from './FocusBoundEffect';
 import type { SceneEffect } from './SceneEffect';
+import type { PathWaypoint } from './PathWaypoint';
+import type { Ease } from './Ease';
+import type { SplineConfig } from './SplineConfig';
+import type { PassByConfig } from './PassByConfig';
 
 export type Effect =
   | CameraAction
@@ -64,4 +79,56 @@ export type Effect =
   | { readonly kind: 'wait'; readonly sec: number }
   | { readonly kind: 'seq'; readonly children: Effect[] }
   | { readonly kind: 'all'; readonly children: Effect[] }
-  | { readonly kind: 'fork'; readonly child: Effect };
+  | { readonly kind: 'fork'; readonly child: Effect }
+  | {
+      readonly kind: 'flyPath';
+      readonly waypoints: PathWaypoint[];
+      readonly over: number;
+      readonly ease: Ease;
+      /**
+       * Seconds to blend the live orientation into the down-the-path aim at the
+       * start (the "align-in"). Omit for the builder default. Tunable so the
+       * camera doesn't finish turning before it has begun translating.
+       */
+      readonly align?: number;
+      /**
+       * Seconds of ease ramp at EACH end for a trapezoidal speed envelope: ease
+       * in over the first `rampSec`, cruise at constant speed, ease out over the
+       * last `rampSec`. Omit (or 0) to use the named `ease` instead. Smaller =
+       * shorter accel/decel + longer cruise; clamped so the two ramps never
+       * exceed the take.
+       */
+      readonly rampSec?: number;
+      /**
+       * Path-level dwell DEPTH ∈ [0,1] applied at EVERY target — how far the
+       * camera slows across the dwell window (slow BEFORE the target, crawl, then
+       * back to cruise AFTER). A per-waypoint `linger` overrides it. 0 (the
+       * default) cruises straight through; 1 is a ~12%-speed crawl, never a
+       * freeze. Needs `lingerSec > 0` to do anything. Omit for the builder
+       * default (0).
+       */
+      readonly linger?: number;
+      /**
+       * Dwell window WIDTH (seconds) — how long the sustained slow-down lasts
+       * around each target. The dwell ADDS this slow time to the take (`over`
+       * stays the cruise budget). 0 (or `linger` 0) → no dwell. Omit for the
+       * builder default (0).
+       */
+      readonly lingerSec?: number;
+      /**
+       * Which spline basis fits the waypoints, plus the knobs that basis owns.
+       * `{ kind: 'centripetal' }` (Catmull-Rom, banks early — the default) carries
+       * nothing else; `{ kind: 'causalHermite', turnDelay?, lookAhead? }` (arrives
+       * head-on, turns after) carries the overshoot + look-lead knobs INSIDE the
+       * arm, so they can't be set on centripetal. Omit for the builder default
+       * (`{ kind: 'centripetal' }`). See `SplineConfig`.
+       */
+      readonly spline?: SplineConfig;
+      /**
+       * How the eye flies PAST interior galaxy waypoints instead of through their
+       * centres (offset + direction). Omit for through-centre
+       * (the default — right for a group cloud, so a groups flythrough is
+       * untouched). See `PassByConfig`.
+       */
+      readonly passBy?: PassByConfig;
+    };
