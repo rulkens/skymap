@@ -46,8 +46,10 @@ export type ClipPathInspectorSectionProps = {
   align: number;
   /** Ease ramp seconds each end (0 = named ease) — applied on the next Calculate. */
   rampSec: number;
-  /** Per-target brake depth [0,1] (0 = cruise through) — applied on the next Calculate. */
+  /** Per-target dwell depth [0,1] (0 = cruise through) — applied on the next Calculate. */
   linger: number;
+  /** Dwell window width in seconds — applied on the next Calculate. */
+  lingerSec: number;
   /** Spline basis (centripetal Catmull-Rom ↔ causal Hermite) — applied on the next Calculate. */
   spline: SplineMode;
   /** Causal-Hermite turn-delay magnitude (inert in centripetal) — applied on the next Calculate. */
@@ -64,8 +66,10 @@ export type ClipPathInspectorSectionProps = {
   onAlign: (align: number) => void;
   /** Set the ease-ramp seconds. */
   onRampSec: (rampSec: number) => void;
-  /** Set the per-target brake depth. */
+  /** Set the per-target dwell depth. */
   onLinger: (linger: number) => void;
+  /** Set the dwell window width (seconds). */
+  onLingerSec: (lingerSec: number) => void;
   /** Set the spline basis. */
   onSpline: (spline: SplineMode) => void;
   /** Set the causal-Hermite turn-delay magnitude. */
@@ -94,6 +98,7 @@ export function ClipPathInspectorSection({
   align,
   rampSec,
   linger,
+  lingerSec,
   spline,
   turnDelay,
   lookAhead,
@@ -103,6 +108,7 @@ export function ClipPathInspectorSection({
   onAlign,
   onRampSec,
   onLinger,
+  onLingerSec,
   onSpline,
   onTurnDelay,
   onLookAhead,
@@ -211,6 +217,26 @@ export function ClipPathInspectorSection({
           />
           <span className={styles.readout}>{linger.toFixed(2)}</span>
         </div>
+        {/* Dwell sub-knob: the window width is inert at depth 0 (no dwell), so it
+            appears only once linger > 0, and carries no own checkbox — touching it
+            rides the one `linger` gate. */}
+        {linger > 0 && (
+          <div className={styles.subKnobs}>
+            <div className={styles.scrubRow}>
+              <span className={styles.knobLabel}>window</span>
+              <input
+                className={styles.scrub}
+                type="range"
+                min={0}
+                max={6}
+                step={0.1}
+                value={lingerSec}
+                onChange={(e) => onLingerSec(Number(e.target.value))}
+              />
+              <span className={styles.readout}>{lingerSec.toFixed(1)}s</span>
+            </div>
+          </div>
+        )}
         <div className={styles.scrubRow}>
           <input
             className={styles.check}

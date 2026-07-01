@@ -50,8 +50,14 @@
  *      global `ease` warps the whole leg's accel/decel on top (rest at the ends
  *      for a clean dwell handoff).
  *
- * A path STOPS nowhere: a dwell is a separate beat, layered after. Over-pinned
- * legs (pinned seconds ≥ total) throw here, loudly, at compile time.
+ *   5. **Dwell (`linger` + `lingerSec`)** — a sustained slow-down window around
+ *      each target that ADDS wall-clock time (see `buildDwellWarp`). The camera
+ *      cruises at constant speed, then crawls across a plateau near each waypoint
+ *      — slow before it swims into view, slow after — settling on `totalSec ≥
+ *      over`. It is a pure wall→base time remap layered under the envelope; the
+ *      geometry is untouched.
+ *
+ * Over-pinned legs (pinned seconds ≥ total) throw here, loudly, at compile time.
  */
 
 import type { CameraPose } from '../../../@types/camera/CameraPose';
@@ -67,6 +73,7 @@ import { monotoneCubic } from '../../../utils/math/monotoneCubic';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
+import { buildDwellWarp } from './buildDwellWarp';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_TURN_DELAY,
@@ -98,8 +105,10 @@ type BuildParams = {
   readonly align?: number;
   /** Seconds of ease ramp each end; when > 0, replaces the named `ease` envelope. */
   readonly rampSec?: number;
-  /** Path-level brake depth ∈ [0,1] applied at every target; per-waypoint `linger` overrides it. */
+  /** Path-level dwell DEPTH ∈ [0,1] applied at every target; per-waypoint `linger` overrides it. */
   readonly linger?: number;
+  /** Dwell window width (seconds) — how long the sustained slow-down lasts per target. */
+  readonly lingerSec?: number;
   /**
    * Which spline basis to fit (default `{ kind: 'centripetal' }`). The
    * `causalHermite` arm carries the turn-delay (overshoot) and look-ahead knobs;
@@ -202,6 +211,10 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   // centre — the historical behaviour. See `PassByConfig`.
   const passOffset = params.passBy?.offset ?? 0;
   const passDir = params.passBy?.dir ?? DEFAULT_PASS_BY_DIR;
+
+  // Dwell window width (seconds). 0 (the direct-call default) = no dwell, so
+  // `linger` depth alone does nothing — a dwell needs both a depth AND a window.
+  const lingerSec = params.lingerSec ?? 0;
 
   if (waypoints.length === 0) {
     throw new Error('buildPathTrack: a flyPath needs at least one waypoint.');
@@ -492,39 +505,25 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   for (let j = 0; j < nLegs; j++) knotTime.push(knotTime[j]! + dur[j]!);
   const timing = monotoneCubic(knotTime, knotArcFrac);
 
-  // --- Linger: a per-target velocity dip, expressed as a time PRE-WARP ---
+  // --- Dwell: a sustained slow-down window around each target (ADDS time) ---
   //
-  // `linger` ∈ [0,1] brakes the camera as it passes a waypoint. Knot 0 (the live
-  // eye) is never a target, so it never lingers; each waypoint's knot takes its
-  // own `linger` or the path-level default. Within each leg we warp the local
-  // time fraction p by a cubic g(p) whose END SLOPES are `1 − linger` at each
-  // knot: a low slope means the camera moves slowly through time there → it
-  // crawls through the target and flies faster between targets, the leg's total
-  // duration unchanged. g is provably monotone for slopes in [0,1] (it is
-  // concave with non-negative endpoints), so progress never drifts backward, and
-  // at linger 0 the slopes are 1 → g(p)=p → an EXACT identity (no behaviour
-  // change). The warp is identity at p=0 and p=1, so the eye still reaches each
-  // knot at its scheduled `knotTime` — only the in-between pacing bends.
-  const knotLinger = [0, ...waypoints.map((w) => clamp01(w.linger ?? linger ?? 0))];
-  const anyLinger = knotLinger.some((l) => l > 0);
-  const lingerWarp = (timeSec: number): number => {
-    if (!anyLinger) return timeSec;
-    let j = 0;
-    while (j < nLegs - 1 && timeSec > knotTime[j + 1]!) j++;
-    const t0 = knotTime[j]!;
-    const span = knotTime[j + 1]! - t0;
-    if (span <= 0) return timeSec;
-    const p = clamp01((timeSec - t0) / span);
-    const a = 1 - knotLinger[j]!; // departure slope at knot j
-    const b = 1 - knotLinger[j + 1]!; // arrival slope at knot j+1
-    const g = a * p + (3 - 2 * a - b) * p * p + (a + b - 2) * p * p * p;
-    return t0 + g * span;
-  };
+  // `linger` ∈ [0,1] is the dwell DEPTH; `lingerSec` the window width. Knot 0
+  // (the live eye) is never a target, so it never dwells; each waypoint takes its
+  // own `linger` or the path-level default. `buildDwellWarp` turns these into a
+  // wall-clock → base-time map: the camera cruises 1:1 everywhere, then crawls
+  // across a plateau around each knot — decelerating BEFORE it (so the target is
+  // already slow as it swims into view) and accelerating AFTER — which lengthens
+  // the take to `totalSec`. Cruise speed stays constant; depth 1 is a finite
+  // crawl, never a freeze. `linger 0` (or `lingerSec 0`) → identity (`totalSec`
+  // = `over`), so an un-dwelled path is byte-unchanged.
+  const knotDepth = [0, ...waypoints.map((w) => clamp01(w.linger ?? linger ?? 0))];
+  const dwell = buildDwellWarp(knotTime, knotDepth, lingerSec, over);
+  const totalSec = dwell.totalSec;
 
   // --- Align-in: blend the live orientation into the forward aim at the start ---
   const liveYaw = start.yaw;
   const livePitch = start.pitch;
-  const alignSec = Math.min(align ?? ALIGN_SEC, over * 0.5); // never exceed half the take
+  const alignSec = Math.min(align ?? ALIGN_SEC, totalSec * 0.5); // never exceed half the take
 
   // Global time envelope: a trapezoidal speed profile with `rampSec`-long ramps
   // each end (tunable in seconds) when set, else the named cubic `ease`. The
@@ -533,7 +532,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   // the settle still hands off cleanly to a dwell.
   const warp =
     rampSec !== undefined && rampSec > 0
-      ? (s: number): number => trapezoidEase(s, rampSec / over)
+      ? (s: number): number => trapezoidEase(s, rampSec / totalSec)
       : (s: number): number => EASE[ease](s);
   // Shortest-arc yaw blend so the initial turn takes the short way round.
   const blendYaw = (from: number, to: number, w: number): number => {
@@ -543,13 +542,15 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     return from + d * w;
   };
 
-  // localSec → spline parameter τ, through the full time pipeline (envelope,
-  // linger pre-warp, arc-length inversion). Pulled out of `sample` so the
-  // look-ahead aim can re-evaluate the EYE at a future time with the same map.
+  // localSec → spline parameter τ, through the full time pipeline (envelope over
+  // the dwelled `totalSec`, wall→base dwell warp, arc-length inversion). Pulled
+  // out of `sample` so the look-ahead aim can re-evaluate the EYE at a future
+  // time with the same map.
   const paramAtLocalSec = (localSec: number): number => {
-    const s = clamp01(localSec / over);
-    const easedTime = warp(s) * over;
-    const u = clamp01(timing(lingerWarp(easedTime)));
+    const s = clamp01(localSec / totalSec);
+    const easedWall = warp(s) * totalSec;
+    const baseTime = dwell.baseTimeAt(easedWall);
+    const u = clamp01(timing(baseTime));
     return paramAtArcFrac(u);
   };
   const eyePosAt = (localSec: number): Vec3 => {
@@ -565,7 +566,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
   // splined forward yaw, so it stays seam-continuous without frame-to-frame state.
   const aheadAim = (localSec: number, splinedYaw: number, splinedPitch: number) => {
     if (lookAhead <= 0) return { yaw: splinedYaw, pitch: splinedPitch };
-    const tB = Math.min(localSec + lookAhead, over);
+    const tB = Math.min(localSec + lookAhead, totalSec);
     const lead = clamp01((tB - localSec) / lookAhead); // 1 in the body, → 0 at the end
     if (lead <= 0) return { yaw: splinedYaw, pitch: splinedPitch };
     const eyeA = eyePosAt(localSec);
@@ -606,5 +607,5 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     };
   };
 
-  return { startSec, endSec: startSec + over, sample };
+  return { startSec, endSec: startSec + totalSec, sample };
 }

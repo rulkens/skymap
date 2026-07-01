@@ -100,12 +100,21 @@ export type Effect =
        */
       readonly rampSec?: number;
       /**
-       * Path-level brake depth ∈ [0,1] applied at EVERY target — a local velocity
-       * dip as the camera passes each waypoint (slow on approach + departure). A
-       * per-waypoint `linger` overrides it. 0 (the default) cruises straight
-       * through; 1 eases to a near-stop. Omit for the builder default (0).
+       * Path-level dwell DEPTH ∈ [0,1] applied at EVERY target — how far the
+       * camera slows across the dwell window (slow BEFORE the target, crawl, then
+       * back to cruise AFTER). A per-waypoint `linger` overrides it. 0 (the
+       * default) cruises straight through; 1 is a ~12%-speed crawl, never a
+       * freeze. Needs `lingerSec > 0` to do anything. Omit for the builder
+       * default (0).
        */
       readonly linger?: number;
+      /**
+       * Dwell window WIDTH (seconds) — how long the sustained slow-down lasts
+       * around each target. The dwell ADDS this slow time to the take (`over`
+       * stays the cruise budget). 0 (or `linger` 0) → no dwell. Omit for the
+       * builder default (0).
+       */
+      readonly lingerSec?: number;
       /**
        * Which spline basis fits the waypoints, plus the knobs that basis owns.
        * `{ kind: 'centripetal' }` (Catmull-Rom, banks early — the default) carries

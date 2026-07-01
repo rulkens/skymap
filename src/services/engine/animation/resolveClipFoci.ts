@@ -99,8 +99,9 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number): Effect 
     }
     // ── flyPath — resolve each id-bearing waypoint; pass at-form through ──────
     //
-    // The path-level pacing (`align` / `rampSec` / `linger` / `spline`, whose
-    // causalHermite arm carries `turnDelay` / `lookAhead`; plus `passBy`) carries
+    // The path-level pacing (`align` / `rampSec` / `linger` / `lingerSec` /
+    // `spline`, whose causalHermite arm carries `turnDelay` / `lookAhead`; plus
+    // `passBy`) carries
     // through UNCHANGED. Dropping it here would silently strip the helper's pacing
     // defaults on normal playback (compileClip would see undefined), which only
     // the inspector masked by re-injecting via applyPathTuning. Each resolved
@@ -127,6 +128,7 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number): Effect 
         ...(effect.align !== undefined ? { align: effect.align } : {}),
         ...(effect.rampSec !== undefined ? { rampSec: effect.rampSec } : {}),
         ...(effect.linger !== undefined ? { linger: effect.linger } : {}),
+        ...(effect.lingerSec !== undefined ? { lingerSec: effect.lingerSec } : {}),
         ...(effect.spline !== undefined ? { spline: effect.spline } : {}),
         ...(effect.passBy !== undefined ? { passBy: effect.passBy } : {}),
       };

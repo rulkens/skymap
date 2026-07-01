@@ -208,8 +208,15 @@ const settingsSlice = createSlice({
       settings.debug.clipPathInspect.rampSec = action.payload;
       settings.debug.clipPathInspect.active.rampSec = true;
     },
+    // `linger` (dwell depth) and `lingerSec` (window width) are the two dwell
+    // sub-knobs — they ride the ONE `linger` override gate (one dwell concept),
+    // so touching either activates `linger`.
     setClipPathLinger: (settings, action: PayloadAction<number>) => {
       settings.debug.clipPathInspect.linger = action.payload;
+      settings.debug.clipPathInspect.active.linger = true;
+    },
+    setClipPathLingerSec: (settings, action: PayloadAction<number>) => {
+      settings.debug.clipPathInspect.lingerSec = action.payload;
       settings.debug.clipPathInspect.active.linger = true;
     },
     // Spline basis A/B: centripetal Catmull-Rom ↔ causal Hermite. `turnDelay`
@@ -309,6 +316,7 @@ export const {
   setClipPathAlign,
   setClipPathRampSec,
   setClipPathLinger,
+  setClipPathLingerSec,
   setClipPathSpline,
   setClipPathTurnDelay,
   setClipPathLookAhead,

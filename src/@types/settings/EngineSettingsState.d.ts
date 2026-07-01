@@ -209,8 +209,9 @@ export type EngineSettingsState = {
      * live flyPath pacing + shape knobs the inspector can bake into the clip at
      * Calculate time (via `applyPathTuning`): `align` is the start-aim blend
      * seconds, `rampSec` the seconds of ease ramp each end (0 = use the named
-     * `ease`), `linger` the per-target brake depth ∈ [0,1] (0 = cruise straight
-     * through each waypoint), `spline` the basis (centripetal Catmull-Rom ↔ causal
+     * `ease`), `linger` the per-target dwell depth ∈ [0,1] (0 = cruise straight
+     * through) and `lingerSec` the dwell window width in seconds (both ride the
+     * one `linger` gate), `spline` the basis (centripetal Catmull-Rom ↔ causal
      * Hermite), `turnDelay` the causal-Hermite overshoot magnitude, `lookAhead` the
      * seconds the look leads the eye. The last two are scratch scalars the causal
      * sub-sliders bind to; the saga only reads them when `spline` is causal,
@@ -232,6 +233,7 @@ export type EngineSettingsState = {
       align: number;
       rampSec: number;
       linger: number;
+      lingerSec: number;
       spline: SplineMode;
       turnDelay: number;
       lookAhead: number;

@@ -85,11 +85,14 @@ describe('flyPathDemo clip', () => {
   it('resolves its named group waypoints and compiles to one path track', () => {
     const compiled = compileClip(prepared());
     expect(compiled.pathTracks).toHaveLength(1);
-    expect(compiled.durationSec).toBe(20);
+    // The clip authors `linger: 0.65`, so the dwell ADDS time: the take runs
+    // longer than the authored 20s cruise budget.
+    expect(compiled.durationSec).toBeGreaterThan(20);
   });
 
   it('starts at the live eye and flies the camera through to the Sculptor group', () => {
     const resolved = prepared();
+    const dur = compileClip(resolved).durationSec; // real (dwelled) take length
 
     // The camera (eye) starts where it is — the live pose's eye at [0,0,5].
     const start = eyeOf(evaluateClip(resolved, 0));
@@ -99,7 +102,7 @@ describe('flyPathDemo clip', () => {
     // …and ends SETTLED FRAMED on the Sculptor group: the look-at target is the
     // group centre at the framing distance (the eye stops short, it does not fly
     // through the centre like the en-route waypoints).
-    const end = evaluateClip(resolved, 20);
+    const end = evaluateClip(resolved, dur);
     expect(end.target[0]).toBeCloseTo(0, 2);
     expect(end.target[1]).toBeCloseTo(0, 2);
     expect(end.target[2]).toBeCloseTo(10, 2); // Sculptor worldPos
@@ -108,12 +111,13 @@ describe('flyPathDemo clip', () => {
 
   it('moves the camera continuously through the take (no freeze, no teleport)', () => {
     const resolved = prepared();
+    const dur = compileClip(resolved).durationSec;
     let prev = eyeOf(evaluateClip(resolved, 0));
     let moved = 0;
     for (let i = 1; i <= 60; i++) {
-      const eye = eyeOf(evaluateClip(resolved, (i / 60) * 20));
+      const eye = eyeOf(evaluateClip(resolved, (i / 60) * dur));
       const step = Math.hypot(eye[0] - prev[0], eye[1] - prev[1], eye[2] - prev[2]);
-      expect(step).toBeLessThan(8); // no single 0.27s step jumps across the path
+      expect(step).toBeLessThan(8); // no single step jumps across the path
       moved += step;
       prev = eye;
     }

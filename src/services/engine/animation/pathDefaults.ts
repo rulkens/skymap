@@ -24,11 +24,20 @@ export const DEFAULT_ALIGN_SEC = 1.35;
 export const DEFAULT_RAMP_SEC = 1.4;
 
 /**
- * Per-target brake depth ∈ [0,1] — a local velocity dip at each waypoint. 0 is
- * opt-in off (cruise straight through every target, no behaviour change); raise
- * it to make the camera slow down and dwell as it passes each galaxy.
+ * Per-target dwell DEPTH ∈ [0,1] — how far the camera slows across the dwell
+ * window at each waypoint (1 = a ~12%-speed crawl, never a freeze). 0 is opt-in
+ * off (cruise straight through, no behaviour change). Pairs with `DEFAULT_LINGER_SEC`
+ * — a dwell needs both a depth AND a window.
  */
 export const DEFAULT_LINGER = 0;
+
+/**
+ * Dwell window WIDTH (seconds) — how long the sustained slow-down lasts around
+ * each target. The camera decelerates over the first half (target swims into
+ * view), crawls, then accelerates back to cruise over the second half. The dwell
+ * ADDS this much slow time per target; `over` stays the cruise budget.
+ */
+export const DEFAULT_LINGER_SEC = 2.5;
 
 /**
  * Causal-Hermite tangent magnitude — the turn-delay / overshoot knob. 1 is the

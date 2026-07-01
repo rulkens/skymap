@@ -22,6 +22,7 @@ import {
   selectClipPathAlign,
   selectClipPathRampSec,
   selectClipPathLinger,
+  selectClipPathLingerSec,
   selectClipPathSpline,
   selectClipPathTurnDelay,
   selectClipPathLookAhead,
@@ -37,6 +38,7 @@ import {
   setClipPathAlign,
   setClipPathRampSec,
   setClipPathLinger,
+  setClipPathLingerSec,
   setClipPathSpline,
   setClipPathTurnDelay,
   setClipPathLookAhead,
@@ -57,6 +59,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const align = useAppSelector(selectClipPathAlign);
   const rampSec = useAppSelector(selectClipPathRampSec);
   const linger = useAppSelector(selectClipPathLinger);
+  const lingerSec = useAppSelector(selectClipPathLingerSec);
   const spline = useAppSelector(selectClipPathSpline);
   const turnDelay = useAppSelector(selectClipPathTurnDelay);
   const lookAhead = useAppSelector(selectClipPathLookAhead);
@@ -72,6 +75,10 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
   const onAlign = useCallback((next: number) => dispatch(setClipPathAlign(next)), [dispatch]);
   const onRampSec = useCallback((next: number) => dispatch(setClipPathRampSec(next)), [dispatch]);
   const onLinger = useCallback((next: number) => dispatch(setClipPathLinger(next)), [dispatch]);
+  const onLingerSec = useCallback(
+    (next: number) => dispatch(setClipPathLingerSec(next)),
+    [dispatch],
+  );
   const onSpline = useCallback((next: SplineMode) => dispatch(setClipPathSpline(next)), [dispatch]);
   const onTurnDelay = useCallback(
     (next: number) => dispatch(setClipPathTurnDelay(next)),
@@ -107,6 +114,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
       align={align}
       rampSec={rampSec}
       linger={linger}
+      lingerSec={lingerSec}
       spline={spline}
       turnDelay={turnDelay}
       lookAhead={lookAhead}
@@ -116,6 +124,7 @@ function ClipPathInspectorSectionContainer(): React.ReactElement {
       onAlign={onAlign}
       onRampSec={onRampSec}
       onLinger={onLinger}
+      onLingerSec={onLingerSec}
       onSpline={onSpline}
       onTurnDelay={onTurnDelay}
       onLookAhead={onLookAhead}

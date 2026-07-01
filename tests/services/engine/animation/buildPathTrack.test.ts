@@ -298,28 +298,66 @@ describe('buildPathTrack', () => {
     expect(eyeOf(off.sample(1))[0]).toBeCloseTo(eyeOf(inOut.sample(1))[0], 6);
   });
 
-  // ── Linger: a per-target velocity dip (slow on approach + departure) ──
+  // ── Dwell: a sustained slow-down window around each target (ADDS time) ──
   //
-  // `linger` ∈ [0,1] brakes the camera as it passes a waypoint. It is a pure
-  // time pre-warp: identity at 0 (no behaviour change), and at high values the
-  // camera crawls THROUGH the target while flying faster between targets — the
-  // leg's total time is unchanged, only its distribution. The eye still passes
-  // each interior knot at the SAME scheduled time (the warp is identity at leg
-  // boundaries), so closest-approach timing is stable.
-  it('linger:0 (and absent) is byte-identical to no linger', () => {
-    const waypoints = [
-      { at: [10, 0, 0] as Vec3, distance: 10 },
-      { at: [20, 0, 0] as Vec3, distance: 4 },
-    ];
-    const base = buildPathTrack({ start: START, startSec: 0, over: 8, ease: 'linear', waypoints });
-    const zero = buildPathTrack({
-      start: START,
+  // `linger` ∈ [0,1] is the dwell DEPTH and `lingerSec` the window width. The
+  // camera cruises at a constant speed everywhere, then crawls across a PLATEAU
+  // around each interior target — slow BEFORE it (already slow as it swims into
+  // view) and slow AFTER — which lengthens the take. A dwell needs BOTH a depth
+  // and a window: either at zero is a no-op (`totalSec === over`, byte-identical).
+  //
+  // Uniform orbit distance (all knots at 10 Mpc) makes cruise WORLD speed
+  // constant along the arc-length-parametrised path, so a dwelled knot can be
+  // compared fairly against an un-dwelled one.
+  const dwellStart: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 };
+  const dwellWaypoints = [
+    { at: [10, 0, 0] as Vec3, distance: 10 }, // interior — dwell target
+    { at: [20, 0, 0] as Vec3, distance: 10 }, // interior — cruise reference knot
+    { at: [40, 0, 0] as Vec3, distance: 10 }, // destination (settle-framed)
+  ];
+  const speedOf = (tr: ReturnType<typeof buildPathTrack>, t: number, total: number): number => {
+    const dt = 0.02;
+    const a = eyeOf(tr.sample(Math.max(0, t - dt)));
+    const b = eyeOf(tr.sample(Math.min(total, t + dt)));
+    return Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / (2 * dt);
+  };
+  const approachTime = (
+    tr: ReturnType<typeof buildPathTrack>,
+    centre: Vec3,
+    total: number,
+  ): number => {
+    let tStar = 0;
+    let best = Infinity;
+    for (let i = 0; i <= 1000; i++) {
+      const t = (i / 1000) * total;
+      const e = eyeOf(tr.sample(t));
+      const d = Math.hypot(e[0] - centre[0], e[1] - centre[1], e[2] - centre[2]);
+      if (d < best) {
+        best = d;
+        tStar = t;
+      }
+    }
+    return tStar;
+  };
+
+  it('linger:0 (and absent) is byte-identical to no dwell', () => {
+    const base = buildPathTrack({
+      start: dwellStart,
       startSec: 0,
       over: 8,
       ease: 'linear',
-      waypoints,
-      linger: 0,
+      waypoints: dwellWaypoints,
     });
+    const zero = buildPathTrack({
+      start: dwellStart,
+      startSec: 0,
+      over: 8,
+      ease: 'linear',
+      waypoints: dwellWaypoints,
+      linger: 0,
+      lingerSec: 2.5,
+    });
+    expect(zero.endSec).toBe(base.endSec);
     for (let i = 0; i <= 10; i++) {
       const t = (i / 10) * 8;
       const a = eyeOf(base.sample(t));
@@ -330,82 +368,105 @@ describe('buildPathTrack', () => {
     }
   });
 
-  it('path-level linger slows the camera as it passes an interior target', () => {
-    const waypoints = [
-      { at: [10, 0, 0] as Vec3, distance: 10 }, // interior pass-point
-      { at: [20, 0, 0] as Vec3, distance: 4 }, // destination
-    ];
-    const base = buildPathTrack({ start: START, startSec: 0, over: 8, ease: 'linear', waypoints });
-    const slow = buildPathTrack({
-      start: START,
+  it('depth without a window does nothing (a dwell needs both)', () => {
+    const base = buildPathTrack({
+      start: dwellStart,
       startSec: 0,
       over: 8,
       ease: 'linear',
-      waypoints,
-      linger: 0.9,
+      waypoints: dwellWaypoints,
     });
-    // Time of closest approach to the interior waypoint [10,0,0] — the SAME in
-    // both, since the warp is identity at the knot boundary.
-    let tStar = 0;
-    let best = Infinity;
-    for (let i = 0; i <= 400; i++) {
-      const t = (i / 400) * 8;
-      const e = eyeOf(base.sample(t));
-      const d = Math.hypot(e[0] - 10, e[1], e[2]);
-      if (d < best) {
-        best = d;
-        tStar = t;
-      }
-    }
-    const speedAt = (tr: ReturnType<typeof buildPathTrack>, t: number): number => {
-      const dt = 0.02;
-      const a = eyeOf(tr.sample(Math.max(0, t - dt)));
-      const b = eyeOf(tr.sample(Math.min(8, t + dt)));
-      return Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-    };
-    // Markedly slower passing the target with linger on.
-    expect(speedAt(slow, tStar)).toBeLessThan(speedAt(base, tStar) * 0.6);
+    const depthOnly = buildPathTrack({
+      start: dwellStart,
+      startSec: 0,
+      over: 8,
+      ease: 'linear',
+      waypoints: dwellWaypoints,
+      linger: 0.9, // no lingerSec → window 0 → no dwell
+    });
+    expect(depthOnly.endSec).toBe(base.endSec);
   });
 
-  it('honours a per-waypoint linger (the targeted knot brakes)', () => {
-    const base = buildPathTrack({
-      start: START,
+  it('a dwell ADDS wall-clock time (endSec grows past the cruise total)', () => {
+    const track = buildPathTrack({
+      start: dwellStart,
+      startSec: 0,
+      over: 8,
+      ease: 'linear',
+      waypoints: dwellWaypoints,
+      linger: 0.9,
+      lingerSec: 2.5,
+    });
+    expect(track.endSec).toBeGreaterThan(8);
+  });
+
+  it('crawls slow BEFORE and AFTER the target — a sustained window, not a point', () => {
+    // Dwell the FIRST interior knot only; the SECOND is the un-dwelled cruise
+    // reference (same orbit distance → same cruise world-speed).
+    const track = buildPathTrack({
+      start: dwellStart,
       startSec: 0,
       over: 8,
       ease: 'linear',
       waypoints: [
-        { at: [10, 0, 0], distance: 10 },
-        { at: [20, 0, 0], distance: 4 },
+        { at: [10, 0, 0], distance: 10, linger: 0.9 }, // dwell target
+        { at: [20, 0, 0], distance: 10 }, // cruise reference knot
+        { at: [40, 0, 0], distance: 10 },
       ],
+      lingerSec: 2.5,
+    });
+    const T = track.endSec;
+    const tDwell = approachTime(track, [10, 0, 0], T);
+    const tCruise = approachTime(track, [20, 0, 0], T);
+    const cruise = speedOf(track, tCruise, T);
+    // Slow at the target AND ~0.8s to either side — the plateau. A point dip
+    // would be back near cruise that far out.
+    expect(speedOf(track, tDwell, T)).toBeLessThan(cruise * 0.5);
+    expect(speedOf(track, tDwell - 0.8, T)).toBeLessThan(cruise * 0.85);
+    expect(speedOf(track, tDwell + 0.8, T)).toBeLessThan(cruise * 0.85);
+  });
+
+  it('at depth 1 the camera crawls but never freezes (min speed > 0)', () => {
+    const track = buildPathTrack({
+      start: dwellStart,
+      startSec: 0,
+      over: 8,
+      ease: 'linear',
+      waypoints: dwellWaypoints,
+      linger: 1,
+      lingerSec: 2.5,
+    });
+    const T = track.endSec;
+    let minSpeed = Infinity;
+    for (let i = 1; i < 400; i++) minSpeed = Math.min(minSpeed, speedOf(track, (i / 400) * T, T));
+    expect(minSpeed).toBeGreaterThan(0.02); // a crawl, not a dead stop
+  });
+
+  it('honours a per-waypoint linger depth (the targeted knot dwells)', () => {
+    const base = buildPathTrack({
+      start: dwellStart,
+      startSec: 0,
+      over: 8,
+      ease: 'linear',
+      waypoints: dwellWaypoints,
+      lingerSec: 2.5,
     });
     const slow = buildPathTrack({
-      start: START,
+      start: dwellStart,
       startSec: 0,
       over: 8,
       ease: 'linear',
       waypoints: [
-        { at: [10, 0, 0], distance: 10, linger: 0.9 }, // brake at THIS target
-        { at: [20, 0, 0], distance: 4 },
+        { at: [10, 0, 0], distance: 10, linger: 0.9 }, // dwell at THIS target only
+        { at: [20, 0, 0], distance: 10 },
+        { at: [40, 0, 0], distance: 10 },
       ],
+      lingerSec: 2.5,
     });
-    let tStar = 0;
-    let best = Infinity;
-    for (let i = 0; i <= 400; i++) {
-      const t = (i / 400) * 8;
-      const e = eyeOf(base.sample(t));
-      const d = Math.hypot(e[0] - 10, e[1], e[2]);
-      if (d < best) {
-        best = d;
-        tStar = t;
-      }
-    }
-    const speedAt = (tr: ReturnType<typeof buildPathTrack>, t: number): number => {
-      const dt = 0.02;
-      const a = eyeOf(tr.sample(Math.max(0, t - dt)));
-      const b = eyeOf(tr.sample(Math.min(8, t + dt)));
-      return Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-    };
-    expect(speedAt(slow, tStar)).toBeLessThan(speedAt(base, tStar) * 0.6);
+    // base has lingerSec but no depth anywhere → no dwell; the per-waypoint depth
+    // is what lengthens the take.
+    expect(base.endSec).toBe(8);
+    expect(slow.endSec).toBeGreaterThan(8);
   });
 
   // ── Spline mode: causal Hermite arrives head-on; centripetal banks early ──

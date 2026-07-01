@@ -196,21 +196,24 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         }
         return w;
       });
-      acc.pathTracks.push(
-        buildPathTrack({
-          start: acc.start,
-          startSec: atSec,
-          over: effect.over,
-          ease: effect.ease,
-          waypoints,
-          align: effect.align,
-          rampSec: effect.rampSec,
-          linger: effect.linger,
-          spline: effect.spline,
-          passBy: effect.passBy,
-        }),
-      );
-      return effect.over;
+      const track = buildPathTrack({
+        start: acc.start,
+        startSec: atSec,
+        over: effect.over,
+        ease: effect.ease,
+        waypoints,
+        align: effect.align,
+        rampSec: effect.rampSec,
+        linger: effect.linger,
+        lingerSec: effect.lingerSec,
+        spline: effect.spline,
+        passBy: effect.passBy,
+      });
+      acc.pathTracks.push(track);
+      // A dwell (`linger` + `lingerSec`) ADDS time, so the real duration is the
+      // track's — not the authored `over` (the cruise budget). Return it so the
+      // cursor and the single-writer window land on the true end.
+      return track.endSec - atSec;
     }
 
     // --- Camera leaves: velocity ramp ---

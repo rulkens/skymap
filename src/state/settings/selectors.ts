@@ -150,6 +150,9 @@ export const selectClipPathRampSec = (state: RootState): number =>
 export const selectClipPathLinger = (state: RootState): number =>
   selectSettings(state).debug.clipPathInspect.linger;
 
+export const selectClipPathLingerSec = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.lingerSec;
+
 export const selectClipPathSpline = (state: RootState): SplineMode =>
   selectSettings(state).debug.clipPathInspect.spline;
 

@@ -1,6 +1,7 @@
 /**
  * applyPathTuning — bake the clip-path inspector's live tuning (`align`,
- * `rampSec`, `linger`) into a clip's `flyPath` nodes.
+ * `rampSec`, `linger`, `lingerSec`, `spline`, `passBy`) into a clip's `flyPath`
+ * nodes.
  *
  * This is a pure pre-pass over the effect tree, in the same family as
  * `resolveClipFoci`: the inspector applies it at "Calculate" time so the SAMPLED
@@ -30,8 +31,10 @@ export type PathTuning = {
   readonly align?: number;
   /** Seconds of ease ramp each end (0 = use the named `ease`). Omit to keep the clip's value. */
   readonly rampSec?: number;
-  /** Per-target brake depth ∈ [0,1] (0 = cruise straight through). Omit to keep the clip's value. */
+  /** Per-target dwell depth ∈ [0,1] (0 = cruise straight through). Omit to keep the clip's value. */
   readonly linger?: number;
+  /** Dwell window width (seconds). Omit to keep the clip's value. */
+  readonly lingerSec?: number;
   /**
    * The whole spline config (basis + its causal-only knobs) as ONE override unit
    * — the causalHermite arm carries turnDelay/lookAhead, centripetal carries
@@ -54,6 +57,7 @@ function tuneEffect(effect: Effect, tuning: PathTuning): Effect {
         ...(tuning.align !== undefined ? { align: tuning.align } : {}),
         ...(tuning.rampSec !== undefined ? { rampSec: tuning.rampSec } : {}),
         ...(tuning.linger !== undefined ? { linger: tuning.linger } : {}),
+        ...(tuning.lingerSec !== undefined ? { lingerSec: tuning.lingerSec } : {}),
         ...(tuning.spline !== undefined ? { spline: tuning.spline } : {}),
         ...(tuning.passBy !== undefined ? { passBy: tuning.passBy } : {}),
       };

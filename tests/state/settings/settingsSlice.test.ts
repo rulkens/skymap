@@ -39,6 +39,7 @@ import reducer, {
   setShowDiskRadiusRing,
   setPassDisabled,
   setClipPathLinger,
+  setClipPathLingerSec,
   setClipPathSpline,
   setClipPathLookAhead,
   setClipPathPassByOffset,
@@ -200,6 +201,14 @@ describe('settingsSlice — debug', () => {
     // Other knobs stay inactive.
     expect(next.debug.clipPathInspect.active.align).toBe(false);
     expect(next.debug.clipPathInspect.active.spline).toBe(false);
+  });
+
+  it('setClipPathLingerSec sets the window and rides the one linger override', () => {
+    // lingerSec is a dwell sub-knob with no gate of its own — it rides the single
+    // `linger` override, so touching it activates `linger`.
+    const next = reducer(base(), setClipPathLingerSec(3.5));
+    expect(next.debug.clipPathInspect.lingerSec).toBe(3.5);
+    expect(next.debug.clipPathInspect.active.linger).toBe(true);
   });
 
   it('setClipPathSpline activates the spline override', () => {

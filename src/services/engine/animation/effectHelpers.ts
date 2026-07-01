@@ -56,6 +56,7 @@ import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
   DEFAULT_LINGER,
+  DEFAULT_LINGER_SEC,
   DEFAULT_SPLINE_CONFIG,
   DEFAULT_PASS_BY_CONFIG,
 } from './pathDefaults';
@@ -430,6 +431,7 @@ export function flyPath(
     align?: number;
     rampSec?: number;
     linger?: number;
+    lingerSec?: number;
     spline?: SplineConfig;
     passBy?: PassByConfig;
   },
@@ -442,6 +444,7 @@ export function flyPath(
     align: opts.align ?? DEFAULT_ALIGN_SEC,
     rampSec: opts.rampSec ?? DEFAULT_RAMP_SEC,
     linger: opts.linger ?? DEFAULT_LINGER,
+    lingerSec: opts.lingerSec ?? DEFAULT_LINGER_SEC,
     // No spline authored → the tuned cinematographic default (causal Hermite
     // with the turn-delay / look-ahead from pathDefaults).
     spline: opts.spline ?? DEFAULT_SPLINE_CONFIG,

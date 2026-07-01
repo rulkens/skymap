@@ -33,6 +33,7 @@ import {
   selectClipPathAlign,
   selectClipPathRampSec,
   selectClipPathLinger,
+  selectClipPathLingerSec,
   selectClipPathSpline,
   selectClipPathTurnDelay,
   selectClipPathLookAhead,
@@ -73,6 +74,7 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   const align = yield* select(selectClipPathAlign);
   const rampSec = yield* select(selectClipPathRampSec);
   const linger = yield* select(selectClipPathLinger);
+  const lingerSec = yield* select(selectClipPathLingerSec);
   const spline = yield* select(selectClipPathSpline);
   const turnDelay = yield* select(selectClipPathTurnDelay);
   const lookAhead = yield* select(selectClipPathLookAhead);
@@ -91,7 +93,7 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   const tuning: PathTuning = {
     ...(active.align ? { align } : {}),
     ...(active.rampSec ? { rampSec } : {}),
-    ...(active.linger ? { linger } : {}),
+    ...(active.linger ? { linger, lingerSec } : {}),
     ...(active.spline ? { spline: splineCfg } : {}),
     ...(active.passBy ? { passBy: passByCfg } : {}),
   };
