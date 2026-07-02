@@ -45,8 +45,16 @@ export const neighbourhoodFlythrough: ClipData = {
       // The settle dwell: full-depth linger (a ~12%-speed crawl, never a
       // freeze) over a wide window, so the camera glides into Sculptor and
       // takes it in before the beat dwell hands over. Only the settle knot
-      // feels these — the pass-throughs pin linger: 0 above.
-      { over: 18, linger: 1, lingerSec: 3 },
+      // feels these — the pass-throughs pin linger: 0 above. The spline is
+      // hand-tuned off the defaults: a longer turnDelay banks later through
+      // the pass-throughs, a shorter lookAhead keeps the aim closer to the
+      // groups as they sweep past.
+      {
+        over: 18,
+        linger: 1,
+        lingerSec: 3,
+        spline: { kind: 'causalHermite', turnDelay: 1.7, lookAhead: 0.8 },
+      },
     ),
     focus(SCULPTOR_GROUP),
   ],
