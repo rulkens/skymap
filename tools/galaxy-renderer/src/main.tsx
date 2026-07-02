@@ -1,12 +1,15 @@
 /**
- * Galaxy Renderer — entry point placeholder.
+ * Galaxy Renderer — entry point.
  *
- * This scaffolding task only wires up the dev-tool shell (Vite config, WESL
- * linker, npm script) so `npm run galaxy-renderer` serves without a 404 from
- * day one. The real engine — star sprites, dust, HDR bloom, the compare
- * panel — arrives in a later plan and replaces this file wholesale.
+ * Mounts the Viewport, which owns the canvas, boots the engine, and seeds
+ * it with the spike's boot defaults. Plan 03 replaces this with the params
+ * store + full `<App>` shell (Hud, compare panel, presets); until then this
+ * is deliberately minimal but real — no placeholder text, an actual galaxy.
  */
+import { createRoot } from 'react-dom/client';
+import Viewport from './ui/Viewport/Viewport';
+
 const root = document.getElementById('root');
 if (!root) throw new Error('Galaxy Renderer: #root element not found');
 
-root.textContent = 'galaxy-renderer: engine lands in plan 02';
+createRoot(root).render(<Viewport />);
