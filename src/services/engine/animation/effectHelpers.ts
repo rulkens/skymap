@@ -389,6 +389,22 @@ export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' 
   return { kind: 'focusId', id };
 }
 
+/**
+ * focusOn — focus the id AND fly the camera to its framing: the clip-land
+ * equivalent of `requestFocus`. In interactive-land a focus change plants a
+ * runtime camera tween; inside a clip that path is fenced off (the clip is the
+ * only camera writer, and its duration must be static), so the fused verb has
+ * to be authored as explicit, timed writers. This composite is that authoring:
+ * the `focus` cue fires first so the selection/isolation dim rides along
+ * during the approach, then target + distance glide concurrently over `over`.
+ *
+ * Plain `focus(id)` remains the camera-free half — use it when the clip's own
+ * choreography (a flyPath, a spin) already owns the camera.
+ */
+export function focusOn(id: FocusId, over: number, ease: Ease = 'inOut'): Effect {
+  return seq([focus(id), all([moveTargetId(id, over, ease), dollyToId(id, over, ease)])]);
+}
+
 // ---------------------------------------------------------------------------
 // Path helpers — waypoints + the flythrough that flies a spline through them
 // ---------------------------------------------------------------------------

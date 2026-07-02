@@ -25,6 +25,7 @@ import {
   fade,
   scene,
   focus,
+  focusOn,
   seq,
   all,
   fork,
@@ -346,6 +347,20 @@ describe('focus', () => {
   it('focus(null) builds a focusId effect with id null', () => {
     const e = focus(null);
     expect(e).toEqual({ kind: 'focusId', id: null });
+  });
+});
+
+describe('focusOn', () => {
+  it('composes focus-then-fly: a seq of the focusId cue and the concurrent camera move', () => {
+    const id = focusId('m87');
+    const e = focusOn(id, 5);
+    expect(e).toEqual(seq([focus(id), all([moveTargetId(id, 5), dollyToId(id, 5)])]));
+  });
+
+  it('forwards an explicit ease to both camera writers', () => {
+    const id = focusId('virgo');
+    const e = focusOn(id, 3, 'out');
+    expect(e).toEqual(seq([focus(id), all([moveTargetId(id, 3, 'out'), dollyToId(id, 3, 'out')])]));
   });
 });
 
