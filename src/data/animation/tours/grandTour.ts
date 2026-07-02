@@ -19,6 +19,7 @@ import { openingTitle } from './grandTour/openingTitle';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31 } from './grandTour/approachM31';
 import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
+import { approachVirgo } from './grandTour/approachVirgo';
 
 export const grandTour: Tour = {
   id: 'grandTour',
@@ -59,6 +60,15 @@ export const grandTour: Tour = {
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(5),
+    },
+    {
+      enterClip: approachVirgo,
+      caption: {
+        title: 'The nearest cluster',
+        body: 'Virgo, the nearest big cluster — over a thousand galaxies, pulled together by gravity, 50 million light-years away.',
+        position: 'bottom-left',
+      },
+      dwellClip: dwellDrift(7),
     },
   ],
 };

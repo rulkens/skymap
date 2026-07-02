@@ -19,4 +19,5 @@ export type ClipId =
   | 'tourYouAreHere'
   | 'tourYouAreHereDwell'
   | 'tourApproachM31'
-  | 'tourNeighbourhood';
+  | 'tourNeighbourhood'
+  | 'tourApproachVirgo';

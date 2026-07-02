@@ -20,6 +20,7 @@ import { openingTitle } from '../tours/grandTour/openingTitle';
 import { youAreHere, youAreHereDwell } from '../tours/grandTour/youAreHere';
 import { approachM31 } from '../tours/grandTour/approachM31';
 import { neighbourhoodFlythrough } from '../tours/grandTour/neighbourhoodFlythrough';
+import { approachVirgo } from '../tours/grandTour/approachVirgo';
 
 export const tourOpeningTitle: Clip = {
   id: 'tourOpeningTitle',
@@ -49,4 +50,10 @@ export const tourNeighbourhood: Clip = {
   id: 'tourNeighbourhood',
   label: 'Grand tour 03 — neighbourhood flythrough',
   data: neighbourhoodFlythrough,
+};
+
+export const tourApproachVirgo: Clip = {
+  id: 'tourApproachVirgo',
+  label: 'Grand tour 04 — approach Virgo',
+  data: approachVirgo,
 };

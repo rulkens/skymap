@@ -33,6 +33,7 @@ describe('clipRegistry', () => {
       'flyPathDemo',
       'flyout',
       'tourApproachM31',
+      'tourApproachVirgo',
       'tourNeighbourhood',
       'tourOpeningTitle',
       'tourYouAreHere',
