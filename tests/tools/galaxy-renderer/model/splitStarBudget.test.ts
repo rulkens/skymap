@@ -84,4 +84,12 @@ describe('splitStarBudget', () => {
     expect(spiral.haloCount).toBe(0);
     expect(barred.haloCount).toBe(0);
   });
+
+  it('bulgeSize 0 falls back to 1 (spike falsy-fallback semantics)', () => {
+    const paramsWithZero = { type: 'Sc', starCount: 400000, bulgeSize: 0 };
+    const paramsWithOne = { type: 'Sc', starCount: 400000, bulgeSize: 1 };
+    const budgetWithZero = splitStarBudget('spiral', paramsWithZero);
+    const budgetWithOne = splitStarBudget('spiral', paramsWithOne);
+    expect(budgetWithZero).toEqual(budgetWithOne);
+  });
 });

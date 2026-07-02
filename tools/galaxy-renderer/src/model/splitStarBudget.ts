@@ -60,9 +60,10 @@ const splitIrregular: Splitter = (totalStars) => {
 // shrinks a touch when barred (bars trade bulge mass for a flatter, more
 // elongated core). Whatever's left of the budget after the bulge splits
 // between arms (scaled by armStrength) and a smooth disk; no halo — spirals
-// and barred spirals don't get one.
+// and barred spirals don't get one. The spike's falsy-fallback semantics
+// (|| not ??) mean an explicit bulgeSize of 0 also maps to 1.
 const splitSpiralLike: Splitter = (totalStars, params, category) => {
-  const bulgeFraction = 0.12 + 0.35 * (params.bulgeSize ?? 1) * (category === 'barred' ? 0.8 : 1);
+  const bulgeFraction = 0.12 + 0.35 * (params.bulgeSize || 1) * (category === 'barred' ? 0.8 : 1);
   const bulgeCount = Math.floor(totalStars * Math.min(0.55, bulgeFraction));
   const armFraction = 0.4 * (params.armStrength ?? 1);
   const diskRemainder = totalStars - bulgeCount;
