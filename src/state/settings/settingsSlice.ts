@@ -160,6 +160,11 @@ const settingsSlice = createSlice({
       Object.assign(settings.flow, action.payload);
     },
 
+    // ── labels (cross-cutting presentation) ─────────────────────────────────
+    setLabelsFocusedOnly: (settings, action: PayloadAction<boolean>) => {
+      settings.labels.focusedOnly = action.payload;
+    },
+
     // ── debug ───────────────────────────────────────────────────────────────
     setShowPickBuffer: (settings, action: PayloadAction<boolean>) => {
       settings.debug.showPickBuffer = action.payload;
@@ -344,6 +349,7 @@ export const {
   setStructureItemEnabled,
   setStructureLabelEnabled,
   setLabelsEnabled,
+  setLabelsFocusedOnly,
   mergeSnapshot,
 } = settingsSlice.actions;
 

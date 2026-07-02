@@ -30,6 +30,7 @@ import reducer, {
   setFilamentsEnabled,
   setFilamentIntensity,
   setVolumesEnabled,
+  setLabelsFocusedOnly,
   addVolumeField,
   removeVolumeField,
   writeVolumeField,
@@ -150,6 +151,10 @@ describe('settingsSlice — overlay layers', () => {
     expect(reducer(before, setVolumesEnabled(!before.volumes.enabled)).volumes.enabled).toBe(
       !before.volumes.enabled,
     );
+  });
+  it('setLabelsFocusedOnly updates labels.focusedOnly', () => {
+    expect(reducer(base(), setLabelsFocusedOnly(true)).labels.focusedOnly).toBe(true);
+    expect(reducer(base(), setLabelsFocusedOnly(false)).labels.focusedOnly).toBe(false);
   });
 });
 

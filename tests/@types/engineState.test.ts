@@ -103,6 +103,7 @@ describe('EngineState type', () => {
         wander: 0.15,
         boundaryFadeWidth: 0.1,
       },
+      labels: { focusedOnly: false },
       debug: {
         showPickBuffer: false,
         showDiskRadiusRing: false,
@@ -283,6 +284,7 @@ describe('EngineState type', () => {
       },
       volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: {} },
       flow: { ...DEFAULT_FLOW },
+      labels: { focusedOnly: false },
       debug: {
         showPickBuffer: false,
         showDiskRadiusRing: false,
@@ -357,6 +359,7 @@ describe('EngineState type', () => {
         filaments: { enabled: false, intensity: 1 },
         volumes: { enabled: false, items: {} },
         flow: { ...DEFAULT_FLOW },
+        labels: { focusedOnly: false },
         debug: {
           showPickBuffer: false,
           showDiskRadiusRing: false,

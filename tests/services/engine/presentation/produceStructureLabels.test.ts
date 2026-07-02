@@ -22,14 +22,17 @@ function makeRegistry(): FadeRegistry {
 // (if any) occupies the focus slot. The items bag defaults all-enabled; tests
 // flip an entry to drive the disabled path.
 function makeState(
-  opts: { focusedStructureId?: string | null; fades?: FadeRegistry } = {},
+  opts: { focusedStructureId?: string | null; fades?: FadeRegistry; focusedOnly?: boolean } = {},
 ): EngineState {
   const fades = opts.fades ?? makeRegistry();
   registerAllCategories(fades);
   const focusedStructureId = opts.focusedStructureId ?? null;
   return {
     data: createEngineData(),
-    settings: { structures: { enabled: true, items: makeStructureItems() } },
+    settings: {
+      structures: { enabled: true, items: makeStructureItems() },
+      labels: { focusedOnly: opts.focusedOnly ?? false },
+    },
     selection: {
       focus: focusedStructureId === null ? null : { type: 'structure', id: focusedStructureId },
       select: null,
@@ -225,6 +228,19 @@ describe('produceStructureLabels', () => {
       .fadeAlpha!;
 
     expect(blend1Alpha).toBeCloseTo(blend0Alpha, 6);
+  });
+
+  it('focusedOnly mode: emits only the focused structure label', () => {
+    const state = makeState({ focusedStructureId: 'a', focusedOnly: true });
+    state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
+    const out = produceStructureLabels(state, makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['a']);
+  });
+
+  it('focusedOnly mode: emits nothing when no structure is focused', () => {
+    const state = makeState({ focusedOnly: true });
+    state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
+    expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
   });
 
   it('at-rest output is unchanged (blend 0, all categories at 1, no focus)', () => {

@@ -3,12 +3,20 @@ import { produceMilkyWayLabel } from '../../../../src/services/engine/presentati
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
-// Minimal state: the producer reads settings.milkyWay.labelEnabled, the fade
-// registry (opacityOf only — the producer is a pure reader), and the selection
-// focused() is not consulted (single label, no recession).
-function makeState(labelEnabled: boolean, layerOpacity: number): EngineState {
+// Minimal state: the producer reads settings.milkyWay.labelEnabled,
+// settings.labels.focusedOnly (+ selection.focus for the solo gate), and the
+// fade registry (opacityOf only — the producer is a pure reader).
+function makeState(
+  labelEnabled: boolean,
+  layerOpacity: number,
+  opts: { focusedOnly?: boolean; focus?: { type: string } | null } = {},
+): EngineState {
   return {
-    settings: { milkyWay: { enabled: true, labelEnabled } },
+    settings: {
+      milkyWay: { enabled: true, labelEnabled },
+      labels: { focusedOnly: opts.focusedOnly ?? false },
+    },
+    selection: { focus: opts.focus ?? null, select: null, hover: null },
     subsystems: {
       fades: {
         opacityOf: () => layerOpacity,
@@ -55,6 +63,29 @@ describe('produceMilkyWayLabel', () => {
     const out = produceMilkyWayLabel(makeState(false, 0.3), makeCtx(0.5));
     expect(out.labels).toHaveLength(1);
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.3);
+  });
+
+  it('focusedOnly mode: emits nothing when something else (or nothing) is focused', () => {
+    const elsewhere = { type: 'structure', id: 'cluster-virgo' };
+    expect(
+      produceMilkyWayLabel(
+        makeState(true, 1, { focusedOnly: true, focus: elsewhere }),
+        makeCtx(0.5),
+      ).labels,
+    ).toEqual([]);
+    expect(
+      produceMilkyWayLabel(makeState(true, 1, { focusedOnly: true, focus: null }), makeCtx(0.5))
+        .labels,
+    ).toEqual([]);
+  });
+
+  it('focusedOnly mode: emits the label when the Milky Way is the focused subject', () => {
+    const out = produceMilkyWayLabel(
+      makeState(true, 1, { focusedOnly: true, focus: { type: 'milkyWay' } }),
+      makeCtx(0.5),
+    );
+    expect(out.labels).toHaveLength(1);
+    expect(out.labels[0]!.id).toBe('milkyWay');
   });
 
   it('reports awake: false across the fade band', () => {

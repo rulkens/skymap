@@ -27,6 +27,7 @@ describe('buildInitialSettings', () => {
         'filaments',
         'flow',
         'galaxyCatalogs',
+        'labels',
         'milkyWay',
         'structures',
         'thumbnails',

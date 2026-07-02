@@ -5,7 +5,7 @@
  * mutates them, then restores the capture. These tests pin the two
  * properties that make that round-trip sound:
  *
- *   1. *Scope* — exactly the six tour-owned clusters are captured, and
+ *   1. *Scope* — exactly the seven tour-owned clusters are captured, and
  *      excluded clusters (e.g. `tonemap`) never leak into the snapshot.
  *   2. *Detachment* — the snapshot is a deep, independent copy; a later
  *      mutation of the live `state.settings` (top-level or nested) must
@@ -20,13 +20,14 @@ const SNAPSHOT_KEYS = [
   'filaments',
   'flow',
   'galaxyCatalogs',
+  'labels',
   'milkyWay',
   'structures',
   'volumes',
 ].sort();
 
 /**
- * A minimal `state` carrying the six tour-owned clusters plus one
+ * A minimal `state` carrying the seven tour-owned clusters plus one
  * deliberately-excluded cluster (`tonemap`) to prove it's dropped. Only
  * the fields the assertions touch are populated; the rest of each cluster
  * is irrelevant to capture's whole-cluster clone, so we cast through
@@ -41,6 +42,7 @@ function makeState() {
       filaments: { enabled: true, intensity: 0.5 },
       milkyWay: { enabled: true, labelEnabled: false },
       flow: { enabled: true, nested: { speed: 2 } },
+      labels: { focusedOnly: false },
       // Excluded — must NOT appear in the snapshot.
       tonemap: { exposure: 1.2, curve: 'aces' },
     },
@@ -48,7 +50,7 @@ function makeState() {
 }
 
 describe('captureSettings', () => {
-  it('clones exactly the six tour-owned clusters', () => {
+  it('clones exactly the seven tour-owned clusters', () => {
     const state = makeState();
     const snap = captureSettings(state);
 

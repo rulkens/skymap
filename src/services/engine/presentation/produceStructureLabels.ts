@@ -72,8 +72,14 @@ export function produceStructureLabels(
   // maps every structure-label FadeId to this value without discrimination.
   const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('structureLabel', now);
 
+  // focusedOnly mode: only the focused structure's label draws — a hard
+  // suppression, not a recession. With nothing (or a non-structure) focused,
+  // no structure labels draw at all.
+  const focusedOnly = state.settings.labels.focusedOnly;
+
   const structures = state.data.structures;
   for (const p of structures.all()) {
+    if (focusedOnly && p.id !== focusedStructureId) continue;
     // Per-category label opacity: the category toggle's fade, read from the
     // registry. The authoritative gate is the boolean — emit while the
     // category's label is enabled OR still fading out. Skip only when it's both
