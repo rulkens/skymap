@@ -5,15 +5,17 @@
  * Capture is now a pure `select(captureScene)` and restore is `restoreSceneSaga`
  * (two `put`s), so the saga touches no `reconcile` context — these tests run it
  * against a REAL `rootReducer` store and assert the scene round-trip BEHAVIOURALLY:
- * a setup effect mutates settings, and on every exit path the finally winds them
- * back to the captured baseline. (The restore's reactive fade is watchFadesSaga's
- * concern, tested there; this suite doesn't run that watcher.)
+ * a settings mutation dispatched mid-run (standing in for an in-clip `scene()` /
+ * `hide()` cue — the beats here are narration stubs, so the test dispatches it
+ * directly) is wound back to the captured baseline on every exit path. (The
+ * restore's reactive fade is watchFadesSaga's concern, tested there; this suite
+ * doesn't run that watcher.)
  *
  * Beat fixtures use narration clips (empty timeline, no id-bearing cues) so
  * `waitUntil(clipFociReady)` exits synchronously on the first predicate check.
  * playClip stubs resolve immediately for the fly and never for the drift — two
  * flushes advance past each beat's fly and one advanceTour dispatched afterwards
- * drives the dwell race so the beat completes. Short dwell beats (dwellSec: 0.001)
+ * drives the dwell race so the beat completes. Short dwell beats (dwellDrift(0.001))
  * combined with fake timers let the dwell timeout win without a manual
  * advanceTour dispatch.
  *
@@ -33,6 +35,7 @@ import { guidedTourSaga } from '../../../src/state/tour/guidedTourSaga';
 import { exitTour } from '../../../src/state/tour/tourActions';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
 import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
+import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { Tour } from '../../../src/@types/animation/tour/Tour';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -91,18 +94,12 @@ function buildStore(opts: {
   return { store, sagaMiddleware, playClipFn };
 }
 
-// Build a minimal Tour wrapping the given beats. No setup by default — tests
-// that need setup effects build their own Tour literal.
+// Build a minimal Tour wrapping the given beats. The narration beats mutate no
+// settings themselves; restore tests seed `setVolumesEnabled(true)` as the
+// baseline, then dispatch `setVolumesEnabled(false)` mid-run — standing in for
+// an in-clip scene cue — so the finally's wind-back is observable.
 function makeTour(beats: readonly BeatData[]): Tour {
   return { id: 'demo', label: 'Demo', beats };
-}
-
-// A tour whose setup disables volumes — gives the restore something observable
-// to wind back (the beats themselves are narration, so settings only change via
-// setup). Tests seed `setVolumesEnabled(true)` first so the captured baseline is
-// `true` and the setup flip to `false` is detectable.
-function makeTourWithVolumesOffSetup(beats: readonly BeatData[]): Tour {
-  return { id: 'demo', label: 'Demo', setup: { effects: [setVolumesEnabled(false)] }, beats };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -133,7 +130,11 @@ describe('guidedTourSaga', () => {
     vi.useFakeTimers();
 
     // Very short dwell so the beat completes without a manual advanceTour.
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 0.001 };
+    const beat: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'B1' },
+      dwellClip: dwellDrift(0.001),
+    };
 
     // Fly resolves; drift blocks (timeout wins the dwell race).
     let callIdx = 0;
@@ -160,8 +161,16 @@ describe('guidedTourSaga', () => {
   it('guidedTourSaga runs every beat in order', async () => {
     vi.useFakeTimers();
 
-    const beat1: BeatData = { clip: NARRATION_CLIP, caption: { title: 'First' }, dwellSec: 0.001 };
-    const beat2: BeatData = { clip: NARRATION_CLIP, caption: { title: 'Second' }, dwellSec: 0.001 };
+    const beat1: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'First' },
+      dwellClip: dwellDrift(0.001),
+    };
+    const beat2: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'Second' },
+      dwellClip: dwellDrift(0.001),
+    };
 
     // Fly calls resolve; drift calls block. Calls interleave: fly1, drift1, fly2, drift2.
     const stub = makeAutoFlyStub();
@@ -180,10 +189,14 @@ describe('guidedTourSaga', () => {
 
   // ── (3) natural completion restores the captured scene ────────────────────
 
-  it('natural completion winds the setup mutation back to the captured baseline', async () => {
+  it('natural completion winds a mid-run mutation back to the captured baseline', async () => {
     vi.useFakeTimers();
 
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 0.001 };
+    const beat: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'B1' },
+      dwellClip: dwellDrift(0.001),
+    };
 
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -192,11 +205,12 @@ describe('guidedTourSaga', () => {
     });
 
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
-    // Seed a known baseline so the setup flip (→ false) is observable.
+    // Seed a known baseline so the mid-run flip (→ false) is observable.
     store.dispatch(setVolumesEnabled(true));
-    sagaMiddleware.run(guidedTourSaga, makeTourWithVolumesOffSetup([beat]));
+    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
 
-    // Setup ran: volumes off during the tour.
+    // Mutate settings mid-run — the stand-in for an in-clip scene cue.
+    store.dispatch(setVolumesEnabled(false));
     expect(store.getState().settings.volumes.enabled).toBe(false);
 
     await vi.runAllTimersAsync();
@@ -210,7 +224,11 @@ describe('guidedTourSaga', () => {
 
   it('exitTour cancels mid-beat and the finally restores the captured baseline', async () => {
     // Long dwell — we will interrupt before it auto-advances.
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 9999 };
+    const beat: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'B1' },
+      dwellClip: dwellDrift(9999),
+    };
 
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -220,7 +238,10 @@ describe('guidedTourSaga', () => {
 
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
     store.dispatch(setVolumesEnabled(true));
-    sagaMiddleware.run(guidedTourSaga, makeTourWithVolumesOffSetup([beat]));
+    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
+
+    // Mutate settings mid-run — the stand-in for an in-clip scene cue.
+    store.dispatch(setVolumesEnabled(false));
 
     // Advance to the dwell race inside beat 1 (fly resolved, drift blocking).
     await flush();
@@ -240,7 +261,11 @@ describe('guidedTourSaga', () => {
 
   it('no camera-input action aborts the tour', async () => {
     // Long dwell so the beat never auto-advances during this test.
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 9999 };
+    const beat: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'B1' },
+      dwellClip: dwellDrift(9999),
+    };
 
     let callIdx = 0;
     const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -250,7 +275,11 @@ describe('guidedTourSaga', () => {
 
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
     store.dispatch(setVolumesEnabled(true));
-    sagaMiddleware.run(guidedTourSaga, makeTourWithVolumesOffSetup([beat]));
+    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
+
+    // Mutate settings mid-run — must survive the camera-input action below
+    // (only exitTour triggers the restore).
+    store.dispatch(setVolumesEnabled(false));
 
     // Advance to the dwell race inside beat 1.
     await flush();
@@ -263,33 +292,5 @@ describe('guidedTourSaga', () => {
     // The tour is still running: not restored (volumes still off), still active.
     expect(store.getState().settings.volumes.enabled).toBe(false);
     expect(store.getState().tour.active).toBe(true);
-  });
-
-  // ── (6) dispatches setup effects before the first beat ───────────────────
-
-  it('guidedTourSaga dispatches setup effects before the first beat', async () => {
-    vi.useFakeTimers();
-
-    const beat: BeatData = { clip: NARRATION_CLIP, caption: { title: 'B1' }, dwellSec: 0.001 };
-
-    let callIdx = 0;
-    const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
-      callIdx++;
-      return callIdx === 1 ? Promise.resolve() : new Promise<void>(() => {});
-    });
-
-    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
-    store.dispatch(setVolumesEnabled(true));
-    sagaMiddleware.run(guidedTourSaga, makeTourWithVolumesOffSetup([beat]));
-
-    // The setup effect fires synchronously before the first beat's async work:
-    // volumes must already be off at this point.
-    expect(store.getState().settings.volumes.enabled).toBe(false);
-
-    // Run timers so the beat completes and the finally fires (restores baseline).
-    await vi.runAllTimersAsync();
-
-    expect(store.getState().settings.volumes.enabled).toBe(true);
-    expect(store.getState().tour.active).toBe(false);
   });
 });

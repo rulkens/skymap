@@ -15,6 +15,12 @@
  *                    fly lands), kept separate from `beatIndex` (which changes
  *                    at fly START) so the countdown ring restarts on landing,
  *                    not on the fly. The overlay keys the ring on it.
+ *   - `dwellSec`   — the active dwell's length in seconds (drives the ring's
+ *                    CSS animation duration). A RUNTIME fact, not derivable by
+ *                    selectors: it is the compiled duration of the beat's
+ *                    RESOLVED `dwellClip` (a flyPath dwell needs foci resolved
+ *                    before its duration is knowable), so `visitBeatSaga`
+ *                    computes it and carries it on `dwellStarted`.
  *
  * The slice is single-writer: only the tour sagas mutate it. The keyboard /
  * nav request actions (`advanceTour`, `prevBeat`, `togglePause`, `exitTour`)
@@ -27,4 +33,5 @@ export type TourRuntimeState = {
   readonly beatIndex: number;
   readonly paused: boolean;
   readonly dwellNonce: number;
+  readonly dwellSec: number;
 };

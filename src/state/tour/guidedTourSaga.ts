@@ -1,7 +1,6 @@
 /**
  * guidedTourSaga — the outer tour loop: play every beat in order, sandwiched in
- * a snapshot/restore pair, with optional setup effects dispatched before the
- * first beat.
+ * a snapshot/restore pair.
  *
  * ### Why a saga and why only exitTour aborts
  *
@@ -13,12 +12,12 @@
  * camera driver swallows drag input: a stray `beginDrag` or `commitCameraPose`
  * should NOT stop the show — the user must dispatch `exitTour` explicitly.
  *
- * ### Setup effects and snapshot ordering
+ * ### Scene preparation is the first beat's job
  *
- * `tour.setup?.effects` are dispatched INSIDE the try, AFTER the snapshot is
- * taken. This means the snapshot covers the state before any setup mutation, and
- * `restoreSceneSaga` in the finally winds it all back — both setup effects and
- * per-beat visibility changes are undone in one restore call.
+ * There is no tour-level setup list: the establishing strip is authored inside
+ * the first beat's clip as `hide()`/`scene()` cues, so a tour has one authoring
+ * surface. The snapshot here is taken before any beat plays, so the restore in
+ * the finally winds back every in-tour mutation regardless of which beat made it.
  *
  * ### Why no setUiHidden here
  *
@@ -48,9 +47,7 @@ import { tourStarted, tourEnded } from './tourSlice';
 import type { Tour } from '../../@types/animation/tour/Tour';
 
 /**
- * Play all beats in order, sandwiched in a snapshot/restore pair. Dispatches
- * any `tour.setup?.effects` after the snapshot and before the first beat so
- * the finally unwinds setup mutations along with per-beat changes.
+ * Play all beats in order, sandwiched in a snapshot/restore pair.
  *
  * This is a saga — not a plain async function — because `try/finally` in a
  * generator runs on BOTH natural completion (all beats finish) and
@@ -66,9 +63,9 @@ import type { Tour } from '../../@types/animation/tour/Tour';
  * the tour on any background orbit-controls event.
  */
 export function* guidedTourSaga(tour: Tour): Generator {
-  // Snapshot the six settings clusters + selection.focus BEFORE setup effects
-  // so restore winds back to the user's pre-tour state including any mutations
-  // the setup strip makes. A pure store read — no engine context needed.
+  // Snapshot the six settings clusters + selection.focus BEFORE any beat plays
+  // so restore winds back to the user's pre-tour state including the first
+  // beat's establishing strip. A pure store read — no engine context needed.
   const snapshot = yield* select(captureScene);
 
   // Activate the tour runtime slice — the App derives HUD-hidden + mounts the
@@ -76,10 +73,6 @@ export function* guidedTourSaga(tour: Tour): Generator {
   yield* put(tourStarted({ tourId: tour.id }));
 
   try {
-    // Dispatch the establishing scene strip. Runs inside the try so the finally
-    // restoreSceneSaga winds these mutations back on any exit path.
-    for (const e of tour.setup?.effects ?? []) yield* put(e);
-
     yield* race({
       // `run` sequences the beats by INDEX (not a forward-only for-of), so a
       // `'prev'` outcome can step the index back and re-play the previous beat's

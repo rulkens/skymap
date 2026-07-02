@@ -17,8 +17,10 @@
  *                      clear `paused` (a fresh beat is never inherited-paused).
  *                      Does NOT bump the dwell nonce — the ring waits for the
  *                      fly to land.
- *   - `dwellStarted` — the fly landed and the interactive dwell begins: bump the
- *                      nonce so the overlay restarts the countdown ring.
+ *   - `dwellStarted` — the fly landed and the interactive dwell begins: record
+ *                      the dwell length (the resolved dwellClip's compiled
+ *                      duration, computed by visitBeatSaga) and bump the nonce
+ *                      so the overlay restarts the countdown ring.
  *   - `setPaused`    — the saga froze or resumed the dwell.
  *   - `tourEnded`    — natural finish or exit: back to the inert initial state.
  */
@@ -33,6 +35,7 @@ const initialState: TourRuntimeState = {
   beatIndex: 0,
   paused: false,
   dwellNonce: 0,
+  dwellSec: 0,
 };
 
 const tourSlice = createSlice({
@@ -45,13 +48,15 @@ const tourSlice = createSlice({
       state.beatIndex = 0;
       state.paused = false;
       state.dwellNonce = 0;
+      state.dwellSec = 0;
     },
     beatChanged: (state, action: PayloadAction<number>) => {
       state.beatIndex = action.payload;
       state.paused = false;
     },
-    dwellStarted: (state) => {
+    dwellStarted: (state, action: PayloadAction<{ dwellSec: number }>) => {
       state.dwellNonce += 1;
+      state.dwellSec = action.payload.dwellSec;
     },
     setPaused: (state, action: PayloadAction<boolean>) => {
       state.paused = action.payload;
@@ -62,6 +67,7 @@ const tourSlice = createSlice({
       state.beatIndex = 0;
       state.paused = false;
       state.dwellNonce = 0;
+      state.dwellSec = 0;
     },
   },
 });

@@ -1,10 +1,10 @@
 /**
- * pausableDwellSaga — the interruptible dwell timer of a guided-tour beat. After
- * the establishing fly lands, the beat holds on its subject for `beat.dwellSec`
- * while gentle ambient drift plays; the viewer can advance, step back, or
+ * pausableDwellSaga — the interruptible dwell of a guided-tour beat. After the
+ * establishing fly lands, the beat holds on its subject while the beat's own
+ * `dwellClip` plays as ambient motion; the viewer can advance, step back, or
  * pause/resume any number of times. This saga owns exactly that concern — the
- * countdown, the pause bookkeeping, and the ambient drift — and returns the
- * steering outcome the outer `guidedTourSaga` loop reads.
+ * countdown, the pause bookkeeping, and playing the ambient clip — and returns
+ * the steering outcome the outer `guidedTourSaga` loop reads.
  *
  * ### One race, pause as state
  *
@@ -12,10 +12,21 @@
  * not; only the auto-advance TIMEOUT is pause-sensitive. So there is a single
  * race and `paused` is a boolean — not a second code path duplicating the
  * navigation arms. While running, the race offers a `timeout` arm and forks the
- * ambient drift; while paused it offers neither, so the clock and the camera
+ * ambient clip; while paused it offers neither, so the clock and the camera
  * both hold until the next toggle. `togglePause` flips the boolean; only a
  * running→paused flip subtracts the elapsed slice from `remainingMs`, so resume
  * CONTINUES the countdown rather than restarting it.
+ *
+ * ### The dwell clip is opaque data; the timer is the authority
+ *
+ * `dwellSec` is the clip's compiled duration (computed by `visitBeatSaga` from
+ * the RESOLVED clip), so on an uninterrupted dwell the clip's ease-out lands
+ * exactly as the timer fires. Across a pause/resume the clip REPLAYS FROM ITS
+ * START into the shorter remaining window — the saga can't reshape an arbitrary
+ * clip the way it could when it owned the `dwellDrift(remaining)` builder — so
+ * the post-resume motion gets cut mid-ease at the timer. Accepted trade: the
+ * beat owns WHICH ambient clip plays (any clip works), and the cut is a gentle
+ * motion interrupted by the next beat's establishing fly.
  *
  * ### Why the loop, and why it terminates
  *
@@ -23,14 +34,11 @@
  * open-ended: every non-toggle arm (`next` / `prev` / `timeout`) RETURNS, so the
  * loop runs only as long as the viewer keeps toggling pause.
  *
- * ### Why drift is forked, not awaited
+ * ### Why the clip is forked, not awaited
  *
- * `dwellDrift` is ambient motion, not an outcome. It is a velocity envelope
- * synced to the time the dwell has left (ease in, cruise, ease out to rest), so
- * it completes at rest right as the timer fires. Forking — never awaiting — keeps
+ * The ambient clip is motion, not an outcome. Forking — never awaiting — keeps
  * its completion out of the race (a finished fork is not an arm) and lets any
- * winning arm tear it down early with `cancel`. It is handed `remainingMs`, not
- * the beat, so a post-pause restart reshapes the envelope to fit what remains.
+ * winning arm tear it down early with `cancel`.
  *
  * ### getContext is read INSIDE the saga
  *
@@ -41,10 +49,9 @@
 
 import { put, take, race, delay, fork, cancel, getContext } from 'typed-redux-saga';
 
-import { dwellDrift } from './dwellDrift';
 import { advanceTour, prevBeat, togglePause } from './tourActions';
 import { setPaused } from './tourSlice';
-import type { BeatData } from '../../@types/animation/tour/BeatData';
+import type { ClipData } from '../../@types/animation/ClipData';
 import type { SagaContext } from '../../store/types';
 
 /** The steering signal the outer tour loop reads: advance forward or step back. */
@@ -52,21 +59,27 @@ export type BeatOutcome = 'next' | 'prev';
 
 /**
  * Hold on the beat's subject until the viewer advances / steps back / the timer
- * expires. Pause freezes the countdown (and the drift) and parks until the next
- * toggle; navigation resolves the dwell whether paused or running.
+ * expires. Pause freezes the countdown (and the ambient clip) and parks until
+ * the next toggle; navigation resolves the dwell whether paused or running.
+ *
+ * `dwellClip` must already be RESOLVED (no id-bearing cues) — `visitBeatSaga`
+ * resolves it alongside the establishing clip. `dwellSec` is its compiled
+ * duration, passed in so this saga never compiles.
  */
-export function* pausableDwellSaga(beat: BeatData): Generator<unknown, BeatOutcome> {
+export function* pausableDwellSaga(
+  dwellClip: ClipData,
+  dwellSec: number,
+): Generator<unknown, BeatOutcome> {
   // Read context inside the saga — the engine sets it after root-saga forks.
   const playClip = yield* getContext<SagaContext['playClip']>('playClip');
 
-  let remainingMs = beat.dwellSec * 1000;
+  let remainingMs = dwellSec * 1000;
   let paused = false;
 
   while (true) {
-    // Drift is ambient motion — it runs only while the clock runs. Hand it the
-    // time still left so its velocity envelope eases out exactly on the cut,
-    // even when a pause/resume has shortened what remains.
-    const driftTask = paused ? null : yield* fork(playClip, dwellDrift(remainingMs / 1000));
+    // The ambient clip runs only while the clock runs. A post-pause slice
+    // replays it from the start (see the module header for the trade-off).
+    const driftTask = paused ? null : yield* fork(playClip, dwellClip);
     const sliceStartedAt = Date.now();
 
     // One race. The `timeout` arm is present only while running; when paused the

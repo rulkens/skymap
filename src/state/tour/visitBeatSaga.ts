@@ -15,20 +15,25 @@
  * 2. **Wait for clip foci AND camera runtime** (`waitUntil`): a clip carrying
  *    `moveTargetId`/`dollyToId`/`focusId` cues cannot resolve until the relevant
  *    catalog data is loaded; `resolveClipFoci` also needs the current FOV, which
- *    is null pre-bootstrap. Poll until both are available.
+ *    is null pre-bootstrap. Poll until both are available. The gate covers BOTH
+ *    the establishing clip and the dwell clip, so an id-bearing dwell (a flyPath
+ *    ring around a structure, say) resolves like any other clip.
  *
  * 3. **Resolve foci once, then await the fly** (`call(playClip, clip)`): the
  *    resolved clip IS the establishing move. Awaiting it (never forking) means a
  *    mid-flight `advanceTour`/`prevBeat` does not cut the camera move short — the
  *    advance contract is "land the clip before the next beat begins".
  *
- * 4. **Start the dwell** (`put(dwellStarted())`): the fly has landed. Bumping the
- *    dwell nonce is what fades the caption in and starts the countdown ring —
+ * 4. **Start the dwell** (`put(dwellStarted({ dwellSec }))`): the fly has landed.
+ *    The dwell length is the RESOLVED dwell clip's compiled duration — computed
+ *    here (the one place the resolved clip exists) and carried on the action so
+ *    the overlay's countdown ring can render it without compiling anything.
+ *    Bumping the dwell nonce is what fades the caption in and starts the ring —
  *    kept separate from `beatChanged` (fly START) so the ring begins on the
  *    LANDING, not during the fly.
  *
  * 5. **Delegate the pausable hold** (`pausableDwellSaga`): the interruptible
- *    countdown — including pause/resume and the ambient drift — is its own
+ *    countdown — including pause/resume and the ambient dwell clip — is its own
  *    concern, owned by `pausableDwellSaga`. Its return is this beat's outcome.
  *
  * ### getContext is read INSIDE the worker
@@ -45,6 +50,7 @@ import { waitUntil } from './waitUntil';
 import { clipFociReady } from './clipFociReady';
 import { beatChanged, dwellStarted } from './tourSlice';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
+import { compileClip } from '../../services/engine/animation/compileClip';
 import type { BeatData } from '../../@types/animation/tour/BeatData';
 import type { BeatOutcome } from './pausableDwellSaga';
 import type { SagaContext } from '../../store/types';
@@ -65,16 +71,31 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   // (1) Announce the beat — sets the index, hides the previous caption.
   yield* put(beatChanged(index));
 
-  // (2) Block until every id-bearing cue resolves AND the camera runtime exists.
-  yield* call(waitUntil, () => clipFociReady(beat.clip, resolveDeps()) && cameraRuntime() !== null);
+  // (2) Block until every id-bearing cue — in BOTH clips — resolves AND the
+  // camera runtime exists.
+  yield* call(
+    waitUntil,
+    () =>
+      (beat.enterClip === undefined || clipFociReady(beat.enterClip, resolveDeps())) &&
+      clipFociReady(beat.dwellClip, resolveDeps()) &&
+      cameraRuntime() !== null,
+  );
 
-  // (3) Resolve foci once, then await the establishing fly. Never fork.
-  const clip = resolveClipFoci(beat.clip, resolveDeps(), cameraRuntime()!.fovYRad);
-  yield* call(playClip, clip);
+  // (3) Resolve foci once, then await the establishing fly. Never fork. A beat
+  // with no `enterClip` is already framed (the previous beat landed here) — the
+  // dwell begins immediately and the caption reveals at once.
+  if (beat.enterClip !== undefined) {
+    const enterClip = resolveClipFoci(beat.enterClip, resolveDeps(), cameraRuntime()!.fovYRad);
+    yield* call(playClip, enterClip);
+  }
 
   // (4) The fly landed — start the dwell (fades caption in, starts the ring).
-  yield* put(dwellStarted());
+  // The dwell length is the resolved dwell clip's compiled duration; carrying
+  // it on the action is what lets the ring render without compiling.
+  const dwellClip = resolveClipFoci(beat.dwellClip, resolveDeps(), cameraRuntime()!.fovYRad);
+  const dwellSec = compileClip(dwellClip).durationSec;
+  yield* put(dwellStarted({ dwellSec }));
 
   // (5) Hold interactively until the viewer advances / steps back / the timer fires.
-  return yield* pausableDwellSaga(beat);
+  return yield* pausableDwellSaga(dwellClip, dwellSec);
 }
