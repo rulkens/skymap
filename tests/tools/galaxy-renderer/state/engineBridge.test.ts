@@ -238,6 +238,23 @@ describe('connectEngineBridge', () => {
     disconnect();
   });
 
+  it('a fit starting inside the debounce window suppresses the pending setParams', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
+
+    store.dispatch(paramsPatched({ armCount: 3 })); // arms the 130ms debounce
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // debounced, not yet fired
+
+    vi.advanceTimersByTime(60); // advance 60ms into the 130ms debounce window
+    store.dispatch(fitStarted()); // fit started during debounce window
+
+    vi.runAllTimers(); // run all remaining timers
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // fire-time re-check suppresses the pending setParams
+
+    disconnect();
+  });
+
   it('disconnect silences everything', () => {
     const { engine, mocks } = makeFakeEngine();
     const disconnect = connectEngineBridge(store, engine);
