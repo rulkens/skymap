@@ -5,17 +5,15 @@
  * as the M31 approach — the viewer reads where they are going before the
  * camera commits.
  *
- * Three scene shifts open the beat:
+ * Two scene shifts open the beat:
  *
  *   - focusedOnly comes back ON. Beat 3 flipped it off so the neighbourhood
  *     read as a populated place; this beat has ONE subject again, and a
  *     thousand-galaxy swarm under many-labels mode would be noise.
  *   - The group rings recede and the cluster rings take over — each ring
- *     category belongs to the scale that introduced it.
- *   - The 2MRS catalog fades in — the first real survey reveal. The famous
- *     galaxies alone are far too sparse to sell "over a thousand galaxies,
- *     pulled together by gravity"; the swarm IS this beat's subject, so it
- *     populates during the turn, before the fly.
+ *     category belongs to the scale that introduced it. (2MRS is already in
+ *     — the neighbourhood beat revealed it — so Virgo reads as a swarm the
+ *     moment the view turns to it.)
  *
  * No strafe here (unlike M31): the old anchor is the Sculptor Group — faint
  * points, not a bright sprite — so it stacking on the boresight during the
@@ -44,7 +42,7 @@ export const approachVirgo: ClipData = {
   timeline: [
     scene(setLabelsFocusedOnly(true)),
     hide(['structureRing:group'], 1),
-    show(['survey:2mrs', 'structureRing:cluster'], 2),
+    show(['structureRing:cluster'], 2),
     lookAtId(VIRGO, 3),
     focus(VIRGO),
     hold(1),

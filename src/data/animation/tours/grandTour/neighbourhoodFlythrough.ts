@@ -34,7 +34,10 @@ const SCULPTOR_GROUP = focusId('group-sculptor-group');
 export const neighbourhoodFlythrough: ClipData = {
   start: 'live',
   timeline: [
-    show(['structureRing:group'], 1),
+    // The first real survey reveal rides this beat: 2MRS fades in as the
+    // sweep launches, so the neighbourhood is populated with actual galaxies
+    // — the famous handful alone would make the groups read as empty rings.
+    show(['survey:2mrs', 'structureRing:group'], 1),
     scene(setLabelsFocusedOnly(false)),
     flyPath(
       [
