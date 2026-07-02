@@ -33,10 +33,12 @@
  * motion gets cut mid-ease — see `pausableDwellSaga`'s header for why that
  * trade was accepted.
  *
- * `rampSec` (the pitch fade) and `cruiseRate` (the yaw's average orbit speed) are
- * arguments with defaults so the caller can tune the bob softness and the orbit
- * speed without editing this file. The pitch fade is clamped to half the window so
- * a short dwell still fades symmetrically in and out.
+ * `rampSec` (the pitch fade) and `cruiseRate` (the yaw's average orbit speed)
+ * are NAMED options with defaults so the caller can tune the bob softness and
+ * the orbit speed without editing this file — named, because as positional
+ * args a beat once fed an orbit rate into the ramp slot and silently got the
+ * default speed with a near-zero fade. The pitch fade is clamped to half the
+ * window so a short dwell still fades symmetrically in and out.
  *
  * ### Finite, and that's fine
  *
@@ -59,9 +61,10 @@ const PITCH_PERIOD = 14;
 
 export function dwellDrift(
   durationSec: number,
-  rampSec: number = DEFAULT_RAMP_SEC,
-  cruiseRate: number = DEFAULT_CRUISE_RATE,
+  opts?: { rampSec?: number; cruiseRate?: number },
 ): ClipData {
+  const rampSec = opts?.rampSec ?? DEFAULT_RAMP_SEC;
+  const cruiseRate = opts?.cruiseRate ?? DEFAULT_CRUISE_RATE;
   const fade = Math.min(rampSec, durationSec / 2);
 
   return {

@@ -16,7 +16,7 @@
 import type { Tour } from '../../../@types/animation/tour/Tour';
 import { dwellDrift } from '../../../state/tour/dwellDrift';
 import { openingTitle } from './grandTour/openingTitle';
-import { youAreHere } from './grandTour/youAreHere';
+import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31 } from './grandTour/approachM31';
 
 export const grandTour: Tour = {
@@ -30,7 +30,7 @@ export const grandTour: Tour = {
         body: 'From home to the edge of the observable universe — and back.',
         position: 'bottom-left',
       },
-      dwellClip: dwellDrift(8, (Math.PI * 2) / 120),
+      dwellClip: dwellDrift(8, { cruiseRate: (Math.PI * 2) / 120 }),
     },
     {
       enterClip: youAreHere,
@@ -39,7 +39,7 @@ export const grandTour: Tour = {
         body: 'The Milky Way — a few hundred billion stars, and the one vantage point you are looking out **from**.',
         position: 'bottom-left',
       },
-      dwellClip: dwellDrift(7),
+      dwellClip: youAreHereDwell,
     },
     {
       enterClip: approachM31,
@@ -48,7 +48,7 @@ export const grandTour: Tour = {
         body: 'Andromeda, the nearest large galaxy to ours. Its light has been travelling toward us for 2.5 million years.',
         position: 'bottom-left',
       },
-      dwellClip: dwellDrift(10, (Math.PI * 2) / 30),
+      dwellClip: dwellDrift(10, { cruiseRate: (Math.PI * 2) / 30 }),
     },
   ],
 };
