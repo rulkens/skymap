@@ -19,6 +19,7 @@ import {
   moveTargetId,
   dollyToId,
   focus,
+  lookAt,
   hold,
   seq,
   all,
@@ -79,6 +80,19 @@ describe('clipFociReady', () => {
     // m87 appears in famousMeta but the FamousGalaxy cloud is absent.
     // resolveFocusId returns null for 'm87', so the predicate must return false.
     expect(clipFociReady(m87FlyClip, depsM87NotLoaded)).toBe(false);
+  });
+
+  it('clipFociReady gates lookAt like the other id-bearing arms', () => {
+    // lookAt carries a FocusId that must resolve before the bearing can be
+    // computed — an unloaded famous id blocks readiness, a structure id never does.
+    const m87LookClip: ClipData = { start: 'live', timeline: [lookAt(id('m87'), 3)] };
+    expect(clipFociReady(m87LookClip, depsM87NotLoaded)).toBe(false);
+
+    const virgoLookClip: ClipData = {
+      start: 'live',
+      timeline: [lookAt(id('cluster-virgo-m87'), 3)],
+    };
+    expect(clipFociReady(virgoLookClip, emptyDeps)).toBe(true);
   });
 
   it('clipFociReady is true for a structure id', () => {

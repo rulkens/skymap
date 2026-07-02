@@ -1,13 +1,13 @@
 /**
- * FocusBoundEffect — a tagged-union of the three focus-addressed effects that
+ * FocusBoundEffect — a tagged-union of the focus-addressed effects that
  * carry a `FocusId` rather than a concrete `SelectionRef`.
  *
  * These are the UNRESOLVED forms: they are authored into a clip at module load
  * time using a durable `FocusId` handle (e.g. `focusId('m87')`), then rewritten
  * to concrete effects by `resolveClipFoci` immediately before `compileClip` runs.
  * `compileClip` treats them as programming errors and throws if it ever sees one
- * unresolved — see the explicit `moveTargetId` / `dollyToId` / `focusId` throw
- * cases in its `walk` switch.
+ * unresolved — see the explicit `moveTargetId` / `dollyToId` / `lookAtId` /
+ * `focusId` throw cases in its `walk` switch.
  *
  * ### Why a separate type rather than optional fields on the concrete arms?
  *
@@ -38,4 +38,5 @@ export type FocusBoundEffect =
       readonly ease: Ease;
     }
   | { readonly kind: 'dollyToId'; readonly id: FocusId; readonly over: number; readonly ease: Ease }
+  | { readonly kind: 'lookAtId'; readonly id: FocusId; readonly over: number; readonly ease: Ease }
   | { readonly kind: 'focusId'; readonly id: FocusId | null };

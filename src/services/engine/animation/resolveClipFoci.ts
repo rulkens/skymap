@@ -13,13 +13,20 @@
  * in `cameraSlice.ts`, which rewrites `'live'` starts before any compilation
  * happens.
  *
- * ### The three id-bearing arms and their concrete replacements
+ * ### The id-bearing arms and their concrete replacements
  *
  *   - `moveTargetId(id, over, ease)` → `moveTarget(target, over, ease)`
  *     The target Vec3 comes from `focusFraming(row, fovYRad).target`.
  *
  *   - `dollyToId(id, over, ease)`   → `dollyTo(distance, over, ease)`
  *     The distance in Mpc comes from `focusFraming(row, fovYRad).distance`.
+ *
+ *   - `lookAtId(id, over, ease)`    → `aimAt({ yaw, pitch }, over, ease)`
+ *     The bearing aims the view from the LIVE orbit target (`orbitTarget`,
+ *     passed by the caller from the camera runtime) at the subject's framed
+ *     position. Because the bearing is baked here — at resolve time — a
+ *     `lookAt` is only correct before anything else moves the target; see
+ *     the `lookAt` helper's docstring.
  *
  *   - `focusId(id)` or `focusId(null)` → `{ kind: 'focus', ref }`
  *     `null` maps to `{ kind: 'focus', ref: null }`.  A non-null id resolves
@@ -49,15 +56,18 @@ import type { ClipData } from '../../../@types/animation/ClipData';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
-import { moveTarget, dollyTo } from './effectHelpers';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import { moveTarget, dollyTo, aimAt } from './effectHelpers';
 import { resolveFocusId } from '../../url/resolveFocusId';
 import { extractSelectionRow } from '../helpers/extractSelectionRow';
 import { focusFraming } from '../camera/focusFraming';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 
 /**
- * Rewrite every `moveTargetId` / `dollyToId` / `focusId` leaf in `data` to
- * its concrete equivalent, given the live catalog state in `deps` and the
- * camera's current vertical FOV in radians.
+ * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
+ * the live catalog state in `deps`, the camera's current vertical FOV in
+ * radians, and the live orbit target (`lookAtId` bearings are measured from
+ * it — callers pass `cameraRuntime.from.target`).
  *
  * Returns a new `ClipData` with the same structure but id-bearing leaves
  * replaced. The `start` field is preserved unchanged (that rewrite is
@@ -66,8 +76,16 @@ import { focusFraming } from '../camera/focusFraming';
  * Throws if any non-null id fails to resolve — callers must ensure the
  * readiness gate has cleared before calling this.
  */
-export function resolveClipFoci(data: ClipData, deps: ResolveDeps, fovYRad: number): ClipData {
-  return { ...data, timeline: data.timeline.map((e) => walkEffect(e, deps, fovYRad)) };
+export function resolveClipFoci(
+  data: ClipData,
+  deps: ResolveDeps,
+  fovYRad: number,
+  orbitTarget: Vec3,
+): ClipData {
+  return {
+    ...data,
+    timeline: data.timeline.map((e) => walkEffect(e, deps, fovYRad, orbitTarget)),
+  };
 }
 
 // ─── Walk ────────────────────────────────────────────────────────────────────
@@ -78,15 +96,21 @@ export function resolveClipFoci(data: ClipData, deps: ResolveDeps, fovYRad: numb
  * Structural nodes (`seq`, `all`, `fork`) recurse into their children.
  * Id-bearing leaves are rewritten. Everything else passes through as-is.
  */
-function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number): Effect {
+function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number, orbitTarget: Vec3): Effect {
   switch (effect.kind) {
     // ── Structural nodes — recurse ──────────────────────────────────────────
     case 'seq':
-      return { kind: 'seq', children: effect.children.map((c) => walkEffect(c, deps, fovYRad)) };
+      return {
+        kind: 'seq',
+        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, orbitTarget)),
+      };
     case 'all':
-      return { kind: 'all', children: effect.children.map((c) => walkEffect(c, deps, fovYRad)) };
+      return {
+        kind: 'all',
+        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, orbitTarget)),
+      };
     case 'fork':
-      return { kind: 'fork', child: walkEffect(effect.child, deps, fovYRad) };
+      return { kind: 'fork', child: walkEffect(effect.child, deps, fovYRad, orbitTarget) };
 
     // ── Id-bearing leaves — rewrite ─────────────────────────────────────────
     case 'moveTargetId': {
@@ -96,6 +120,18 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number): Effect 
     case 'dollyToId': {
       const { distance } = resolveFraming(effect.id, deps, fovYRad);
       return dollyTo(distance, effect.over, effect.ease);
+    }
+    // The bearing that puts the subject centre-frame beyond the LIVE orbit
+    // target — baked here, so a lookAt is only valid before the target moves
+    // (see the `lookAt` helper docstring).
+    case 'lookAtId': {
+      const { target } = resolveFraming(effect.id, deps, fovYRad);
+      const forward: Vec3 = [
+        target[0] - orbitTarget[0],
+        target[1] - orbitTarget[1],
+        target[2] - orbitTarget[2],
+      ];
+      return aimAt(orbitAnglesLookingAlong(forward), effect.over, effect.ease);
     }
     // ── flyPath — resolve each id-bearing waypoint; pass at-form through ──────
     //

@@ -26,6 +26,7 @@ import {
   scene,
   focus,
   focusOn,
+  lookAt,
   seq,
   all,
   fork,
@@ -378,6 +379,18 @@ describe('focusOn', () => {
     const id = focusId('virgo');
     const e = focusOn(id, 3, 'out');
     expect(e).toEqual(seq([focus(id), all([moveTargetId(id, 3, 'out'), dollyToId(id, 3, 'out')])]));
+  });
+});
+
+describe('lookAt', () => {
+  it('builds the unresolved lookAtId arm with ease defaulting to inOut', () => {
+    const id = focusId('m31');
+    expect(lookAt(id, 3)).toEqual({ kind: 'lookAtId', id, over: 3, ease: 'inOut' });
+  });
+
+  it('forwards an explicit ease', () => {
+    const id = focusId('m31');
+    expect(lookAt(id, 2, 'out')).toEqual({ kind: 'lookAtId', id, over: 2, ease: 'out' });
   });
 });
 

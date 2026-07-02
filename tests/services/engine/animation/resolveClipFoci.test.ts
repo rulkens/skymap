@@ -30,6 +30,7 @@ import {
   moveTargetId,
   dollyToId,
   focus,
+  lookAt,
   seq,
   all,
   fork,
@@ -50,6 +51,10 @@ import type { ClipData } from '../../../../src/@types/animation/ClipData';
 // ---------------------------------------------------------------------------
 
 const FOV_Y = 0.8; // radians — arbitrary; shared by all tests
+
+// The live orbit target at resolve time — only `lookAtId` consumes it. Most
+// tests pass the origin, which makes bearing assertions trivial.
+const ORIGIN: [number, number, number] = [0, 0, 0];
 
 /**
  * A minimal structure that `focusFraming` will resolve to a predictable pose.
@@ -93,7 +98,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
       timeline: [all([moveTargetId(id, 3, 'inOut'), dollyToId(id, 3, 'inOut')])],
     };
 
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     const outer = resolved.timeline[0];
     expect(outer).toBeDefined();
     expect(outer!.kind).toBe('all');
@@ -126,7 +131,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
     const clip: ClipData = {
       timeline: [moveTargetId(id, 7, 'in')],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     expect(resolved.timeline[0]).toMatchObject({
       kind: 'setVec',
       ch: 'target',
@@ -146,7 +151,7 @@ describe('resolveClipFoci rewrites a focusId cue to a focus ref cue', () => {
     const clip: ClipData = {
       timeline: [focus(id)],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     expect(resolved.timeline[0]).toEqual({
       kind: 'focus',
       ref: { type: 'structure', id: 'cluster-virgo' },
@@ -163,7 +168,7 @@ describe('resolveClipFoci resolves focusId(null) to focus(null)', () => {
     const clip: ClipData = {
       timeline: [focus(null)],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     expect(resolved.timeline[0]).toEqual({ kind: 'focus', ref: null });
   });
 });
@@ -178,7 +183,7 @@ describe('resolveClipFoci recurses into seq/all/fork', () => {
     const clip: ClipData = {
       timeline: [seq([hold(1), dollyToId(id, 2)])],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     const outer = resolved.timeline[0];
     if (outer!.kind !== 'seq') throw new Error('expected seq');
     expect(outer.children[1]).toMatchObject({
@@ -193,7 +198,7 @@ describe('resolveClipFoci recurses into seq/all/fork', () => {
     const clip: ClipData = {
       timeline: [all([hold(1), moveTargetId(id, 2)])],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     const outer = resolved.timeline[0];
     if (outer!.kind !== 'all') throw new Error('expected all');
     expect(outer.children[1]).toMatchObject({ kind: 'setVec', ch: 'target' });
@@ -204,7 +209,7 @@ describe('resolveClipFoci recurses into seq/all/fork', () => {
     const clip: ClipData = {
       timeline: [fork(focus(id))],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     const outer = resolved.timeline[0];
     if (outer!.kind !== 'fork') throw new Error('expected fork');
     expect(outer.child).toEqual({ kind: 'focus', ref: { type: 'structure', id: 'cluster-virgo' } });
@@ -214,9 +219,46 @@ describe('resolveClipFoci recurses into seq/all/fork', () => {
     const clip: ClipData = {
       timeline: [seq([hold(2), hide(['flow'])])],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     // No id-bearing effects — the output must equal the input structurally.
     expect(resolved.timeline).toEqual(clip.timeline);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 4b — lookAtId resolves to an aimAt bearing from the live orbit target
+// ---------------------------------------------------------------------------
+
+describe('resolveClipFoci rewrites lookAtId to an aimAt bearing', () => {
+  it('resolves to concurrent yaw/pitch tweens aiming from the orbit target at the subject', () => {
+    // Virgo frames at [10,0,0]. Looking from the origin, the camera must aim
+    // along +X: orbitAnglesLookingAlong([1,0,0]) → yaw −π/2, pitch 0.
+    const clip: ClipData = { timeline: [lookAt(focusId('cluster-virgo'), 3, 'out')] };
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
+
+    const outer = resolved.timeline[0]!;
+    if (outer.kind !== 'all') throw new Error('expected aimAt to produce an all block');
+    expect(outer.children[0]).toMatchObject({
+      kind: 'set',
+      ch: 'yaw',
+      over: 3,
+      ease: 'out',
+    });
+    expect((outer.children[0] as { to: number }).to).toBeCloseTo(-Math.PI / 2, 10);
+    expect(outer.children[1]).toMatchObject({ kind: 'set', ch: 'pitch', over: 3, ease: 'out' });
+    expect((outer.children[1] as { to: number }).to).toBeCloseTo(0, 10);
+  });
+
+  it('the bearing is measured from the passed orbit target, not the origin', () => {
+    // From [10,0,10] the subject at [10,0,0] lies along −Z: yaw π, pitch 0.
+    const clip: ClipData = { timeline: [lookAt(focusId('cluster-virgo'), 2)] };
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, [10, 0, 10]);
+
+    const outer = resolved.timeline[0]!;
+    if (outer.kind !== 'all') throw new Error('expected aimAt to produce an all block');
+    const yaw = (outer.children[0] as { to: number }).to;
+    // atan2(0, +1) = 0 for dir = -forward = [0,0,1] → yaw 0.
+    expect(yaw).toBeCloseTo(0, 10);
   });
 });
 
@@ -233,13 +275,13 @@ describe('resolveClipFoci throws on unresolvable id', () => {
     // phantom ref without any existence check, so they would not trigger the throw.
     const id = focusId('no-such-object');
     const clip: ClipData = { timeline: [focus(id)] };
-    expect(() => resolveClipFoci(clip, DEPS, FOV_Y)).toThrow(/no-such-object/);
+    expect(() => resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN)).toThrow(/no-such-object/);
   });
 
   it('throws when moveTargetId cannot resolve the id', () => {
     const id = focusId('cluster-unknown-xyz');
     const clip: ClipData = { timeline: [moveTargetId(id, 2)] };
-    expect(() => resolveClipFoci(clip, DEPS, FOV_Y)).toThrow(/cluster-unknown-xyz/);
+    expect(() => resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN)).toThrow(/cluster-unknown-xyz/);
   });
 });
 
@@ -253,7 +295,7 @@ describe('resolveClipFoci preserves ClipData metadata', () => {
       start: { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 },
       timeline: [hold(1)],
     };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     expect(resolved.start).toBe(clip.start);
   });
 });
@@ -273,7 +315,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
       ],
     };
 
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     const fp = resolved.timeline[0]!;
     if (fp.kind !== 'flyPath') throw new Error('expected a flyPath effect');
 
@@ -321,7 +363,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
       ],
     };
 
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y);
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, ORIGIN);
     const fp = resolved.timeline[0]!;
     if (fp.kind !== 'flyPath') throw new Error('expected a flyPath effect');
 

@@ -266,6 +266,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
     // programming error — the clip was passed to compileClip with unresolved IDs.
     case 'moveTargetId':
     case 'dollyToId':
+    case 'lookAtId':
     case 'focusId': {
       throw new Error(`resolveClipFoci must run before compileClip (unresolved ${effect.kind})`);
     }

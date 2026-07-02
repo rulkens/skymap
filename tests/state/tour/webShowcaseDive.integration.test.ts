@@ -146,7 +146,12 @@ describe('webShowcase dive invariants', () => {
     // flyAndFocusOnClip('cluster-virgo-m87') prepends a focusId cue before
     // the camera-move block. resolveClipFoci rewrites it to a concrete focus cue.
     const beat2Clip: ClipData = webShowcase.beats[1]!.enterClip!;
-    const resolved = resolveClipFoci(beat2Clip, DIVE_DEPS, CAMERA_RUNTIME.fovYRad);
+    const resolved = resolveClipFoci(
+      beat2Clip,
+      DIVE_DEPS,
+      CAMERA_RUNTIME.fovYRad,
+      CAMERA_RUNTIME.from.target,
+    );
 
     const nodes = collectNodes(resolved.timeline);
     const focusCues = nodes.filter((e) => e.kind === 'focus') as Array<{
@@ -168,7 +173,12 @@ describe('webShowcase dive invariants', () => {
     // After resolution there must be no 'focus' or 'focusId' kind, so the
     // selection.focus that beat 2 set (Virgo) stays in place.
     const beat3Clip: ClipData = webShowcase.beats[2]!.enterClip!;
-    const resolved = resolveClipFoci(beat3Clip, DIVE_DEPS, CAMERA_RUNTIME.fovYRad);
+    const resolved = resolveClipFoci(
+      beat3Clip,
+      DIVE_DEPS,
+      CAMERA_RUNTIME.fovYRad,
+      CAMERA_RUNTIME.from.target,
+    );
 
     const nodes = collectNodes(resolved.timeline);
     const focusKinds = nodes.filter((e) => e.kind === 'focus' || e.kind === 'focusId');

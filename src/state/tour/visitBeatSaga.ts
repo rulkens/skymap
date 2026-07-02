@@ -85,14 +85,18 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   // with no `enterClip` is already framed (the previous beat landed here) — the
   // dwell begins immediately and the caption reveals at once.
   if (beat.enterClip !== undefined) {
-    const enterClip = resolveClipFoci(beat.enterClip, resolveDeps(), cameraRuntime()!.fovYRad);
+    const rt = cameraRuntime()!;
+    const enterClip = resolveClipFoci(beat.enterClip, resolveDeps(), rt.fovYRad, rt.from.target);
     yield* call(playClip, enterClip);
   }
 
   // (4) The fly landed — start the dwell (fades caption in, starts the ring).
   // The dwell length is the resolved dwell clip's compiled duration; carrying
-  // it on the action is what lets the ring render without compiling.
-  const dwellClip = resolveClipFoci(beat.dwellClip, resolveDeps(), cameraRuntime()!.fovYRad);
+  // it on the action is what lets the ring render without compiling. The
+  // runtime is re-read here: the enter clip just moved the camera, and a
+  // lookAt in the dwell must bear from where it LANDED, not where it began.
+  const rt = cameraRuntime()!;
+  const dwellClip = resolveClipFoci(beat.dwellClip, resolveDeps(), rt.fovYRad, rt.from.target);
   const dwellSec = compileClip(dwellClip).durationSec;
   yield* put(dwellStarted({ dwellSec }));
 

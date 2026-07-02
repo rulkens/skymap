@@ -77,7 +77,7 @@ const DEPS: ResolveDeps = {
 
 /** Resolve foci + live start, then compile — the play-time pipeline. */
 function prepared() {
-  const foci = resolveClipFoci(flyPathDemo.data, DEPS, FOV_Y);
+  const foci = resolveClipFoci(flyPathDemo.data, DEPS, FOV_Y, TEST_POSE.target);
   return resolveClipStart(foci, TEST_POSE);
 }
 

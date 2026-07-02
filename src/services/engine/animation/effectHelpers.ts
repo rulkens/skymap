@@ -422,6 +422,30 @@ export function focusOn(id: FocusId, over: number, ease: Ease = 'inOut'): Effect
   return seq([focus(id), all([moveTargetId(id, over, ease), dollyToId(id, over, ease)])]);
 }
 
+/**
+ * lookAt — swing the view so the subject identified by `id` drifts to centre
+ * frame, WITHOUT flying to it. The "turn your head before you walk" verb.
+ *
+ * The orbit camera always faces its target, so it cannot literally rotate in
+ * place — "looking at" something else means orbiting the eye around the
+ * CURRENT target until the subject lines up centre-frame beyond it.
+ * `resolveClipFoci` computes that bearing (`orbitAnglesLookingAlong` of the
+ * subject's direction from the live orbit target) and rewrites this arm to an
+ * `aimAt` — concurrent yaw/pitch tweens. Target and distance are untouched.
+ *
+ * The bearing is measured from the orbit target AT RESOLVE TIME (clip start),
+ * so `lookAt` is only correct as an opening move — anything that moves the
+ * target before it fires (a `moveTarget`, a `flyPath`) invalidates the
+ * precomputed angles. Establish the shot first, then fly (`focusOn`).
+ */
+export function lookAt(
+  id: FocusId,
+  over: number,
+  ease?: Ease,
+): FocusBoundEffect & { kind: 'lookAtId' } {
+  return { kind: 'lookAtId', id, over, ease: ease ?? 'inOut' };
+}
+
 // ---------------------------------------------------------------------------
 // Path helpers — waypoints + the flythrough that flies a spline through them
 // ---------------------------------------------------------------------------

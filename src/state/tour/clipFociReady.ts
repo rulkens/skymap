@@ -75,8 +75,8 @@ function walkEffect(effect: Effect, deps: ResolveDeps): boolean {
 
     // ── Id-bearing leaves — check resolvability ─────────────────────────────
     case 'moveTargetId':
-      return resolveFocusId(effect.id, deps) !== null;
     case 'dollyToId':
+    case 'lookAtId':
       return resolveFocusId(effect.id, deps) !== null;
     case 'focusId':
       // null is a focus-clear cue: always ready, no data needed.
