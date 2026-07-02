@@ -11,10 +11,10 @@
  * store holds exactly what the engine wants, no UI-only wrapper fields, so a
  * `paramsPatched` payload is always a subset of the engine's own knob shape.
  *
- * `createStore.ts` mounts `galaxy`/`render`/`lod` now (plan 03 Task 1+2);
- * `compare`/`extras`/`ui` land in Task 3. Until then the store's actual
- * derived state is a strict subset of this type — see the "clear seam" note
- * in `createStore.ts`.
+ * `createStore.ts` mounts all six routes and carries a compile-time
+ * trip-wire keeping its reducer map's combined state equal to this type —
+ * add a field here and the reducer map must grow to match, or the build
+ * breaks in `createStore.ts`, not silently at some call site.
  */
 
 import type { GalaxyParams } from '../model/GalaxyParams';

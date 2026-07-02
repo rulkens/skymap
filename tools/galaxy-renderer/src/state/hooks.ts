@@ -6,9 +6,8 @@
  *
  * The selector state is derived from `AppStore['getState']` rather than
  * hand-typed against `AppState` directly, so it always matches whatever
- * `createStore.ts` actually mounts — it widens to the full `AppState` shape
- * automatically once Task 3 adds the `compare`/`extras`/`ui` reducers,
- * without this file changing.
+ * `createStore.ts` actually mounts — the two only stay equal because
+ * `createStore.ts` carries its own trip-wire checking that.
  */
 
 import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux';
