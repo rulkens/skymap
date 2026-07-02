@@ -1,6 +1,6 @@
 # Galaxy Renderer 01 — tool scaffold & procedural model
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Each implementer subagent must be dispatched `run_in_background: true` per project convention. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Each implementer subagent must be dispatched `run_in_background: true` per project convention. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Spec:** `docs/superpowers/specs/2026-07-02-galaxy-renderer-tool-design.md`
 **Series:** plan 01 of 3 (02 = engine + shaders, 03 = state + UI + matcher). Each plan lands working, tested software on its own.
@@ -61,12 +61,12 @@ so plan 02's `import package::lib::fullscreenTri::…;` resolves against the too
 `package.json` script: `"galaxy-renderer": "vite --config tools/galaxy-renderer/vite.config.ts"`.
 
 **Steps**
-- [ ] Write `tests/tools/galaxy-renderer/viteConfig.smoke.test.ts` failing-first — copy the shape of `tests/tools/flow-workbench/viteConfig.smoke.test.ts` (async import of the config, resolve the function/object union, assert `server.port === 5400`, assert flattened plugin names include `react` and `wesl`).
-- [ ] `npx vitest run tests/tools/galaxy-renderer/viteConfig.smoke.test.ts` → fails (module absent).
-- [ ] Create the six tool files + the npm script.
-- [ ] `npx vitest run tests/tools/galaxy-renderer/viteConfig.smoke.test.ts` → passes. `npm run typecheck` green.
-- [ ] `README.md`: what the tool is (spec §Why in two sentences), `npm run galaxy-renderer` → `http://localhost:5400`, pointer to the spec.
-- [ ] Commit (stage the six new files + `package.json` + the test).
+- [x] Write `tests/tools/galaxy-renderer/viteConfig.smoke.test.ts` failing-first — copy the shape of `tests/tools/flow-workbench/viteConfig.smoke.test.ts` (async import of the config, resolve the function/object union, assert `server.port === 5400`, assert flattened plugin names include `react` and `wesl`).
+- [x] `npx vitest run tests/tools/galaxy-renderer/viteConfig.smoke.test.ts` → fails (module absent).
+- [x] Create the six tool files + the npm script.
+- [x] `npx vitest run tests/tools/galaxy-renderer/viteConfig.smoke.test.ts` → passes. `npm run typecheck` green.
+- [x] `README.md`: what the tool is (spec §Why in two sentences), `npm run galaxy-renderer` → `http://localhost:5400`, pointer to the spec.
+- [x] Commit (stage the six new files + `package.json` + the test).
 
 ---
 
@@ -87,15 +87,15 @@ export function makeValueNoise(seed: number): (x: number, y: number, z: number) 
 Hash lattice + smoothstep-interpolated trilinear blend, constants verbatim from `galaxy-math.js:97-101`: multipliers `374761393`, `668265263`, `2147483647`, seed mix `974711`, avalanche `1274126177`, final `>>> 16` fold, `/ 4294967296`.
 
 **Steps**
-- [ ] Write the failing tests:
+- [x] Write the failing tests:
   - `same seed and coords give the same value` — two independent samplers, same seed, equal outputs at several coords.
   - `different seeds decorrelate` — seed 1 vs seed 2 differ at at least one probe point.
   - `outputs stay in [0, 1)` — sweep a grid of ≥1000 points incl. negative coords; assert `0 <= v && v < 1`.
   - `varies smoothly between lattice points` — for 100 random points, `|f(x+0.01,y,z) − f(x,y,z)| < 0.1` (trilinear + smoothstep bounds the local slope).
   - `is continuous at lattice corners` — the smoothstep weights vanish at integer coords, so `f(i,j,k)` and `f(i+1e-6, j, k)` agree within 1e-3; also assert two neighbouring lattice points differ (non-constant field).
-- [ ] `npx vitest run tests/utils/random/makeValueNoise.test.ts` → fails.
-- [ ] Implement (port the cited lines; keep the house didactic-header style — say why value noise and not Perlin: cheap, isotropy irrelevant for density modulation).
-- [ ] Test passes. Commit.
+- [x] `npx vitest run tests/utils/random/makeValueNoise.test.ts` → fails.
+- [x] Implement (port the cited lines; keep the house didactic-header style — say why value noise and not Perlin: cheap, isotropy irrelevant for density modulation).
+- [x] Test passes. Commit.
 
 ---
 
@@ -241,11 +241,11 @@ export function hiiPalette(metallicity: number): HiiPalette;
 core: metallicity < 0.5 lerps teal `[0.40, 0.85, 0.80]` → pink `[1.0, 0.42, 0.56]`, then pink → deep red `[1.0, 0.30, 0.32]`; halo lerps `[0.42, 0.78, 0.72]` → `[1.0, 0.26, 0.30]` over the full range.
 
 **Steps**
-- [ ] Write the failing tests:
+- [x] Write the failing tests:
   - `tempColor.test.ts`: `t=0 samples the coolest stop` (`[1.00, 0.36, 0.16]`), `t=1 clamps to the hottest stop` (within one step of `[0.60, 0.72, 1.00]` — spike clamps t to 0.999), `midpoints interpolate linearly` (t exactly on stop 1 → `[1.00, 0.58, 0.28]`), `blue channel is monotone non-decreasing in t` (sweep).
   - `hiiPalette.test.ts`: `metallicity 0 gives a teal core`, `metallicity 0.5 gives the pink core exactly`, `metallicity 1 gives the deep-red core exactly`, `halo tracks metallicity` (endpoints exact).
-- [ ] Run both → fail. Create the nine `.d.ts` files + the two modules.
-- [ ] `npx vitest run tests/tools/galaxy-renderer/model` → passes. `npm run typecheck`. Commit.
+- [x] Run both → fail. Create the nine `.d.ts` files + the two modules.
+- [x] `npx vitest run tests/tools/galaxy-renderer/model` → passes. `npm run typecheck`. Commit.
 
 ---
 
@@ -272,10 +272,10 @@ Table dispatch on category (spec mandate: no predicate chain — a `Record<Galax
 - spiral/barred: bulgeFraction = `0.12 + 0.35·bulgeSize·(barred ? 0.8 : 1)` capped 0.55; armFraction = `0.4·armStrength`; arm = floor((total − bulge)·armFraction); disk = remainder; halo = 0
 
 **Steps**
-- [ ] Failing tests:
+- [x] Failing tests:
   - classify: one assertion per family — `'E0'`/`'E7'` → elliptical, `'S0'` → lenticular, `'Irr'` → irregular, `'SBa'`/`'SBc'` → barred, `'Sa'`/`'Sc'` → spiral, unknown string → spiral (spike fallback, model.js:64).
   - split: `counts sum to exactly totalStars for every category` (bulge+disk+arm+halo === totalStars — the spike computes halo as remainder everywhere except spiral where halo=0 and disk is the remainder; assert the sum either way); `totalStars floors at 20000`; `elliptical has zero disk and arm stars`; `irregular has zero smooth-disk stars`; `lenticular has zero arm stars`; `spiral arm share scales with armStrength` (armStrength 0 → armStarCount 0); `barred bulge fraction is 0.8× the spiral one` (same params, compare).
-- [ ] Run → fail. Implement. Run → pass. `npm run typecheck`. Commit.
+- [x] Run → fail. Implement. Run → pass. `npm run typecheck`. Commit.
 
 ---
 
@@ -298,10 +298,10 @@ export function createDustWriter(): DustWriter;
 - DustWriter accumulates in a growable `number[]` (dust count is unknowable up front — mirrors `galaxy-model.js:490-499`'s push array) and `toFloat32Array()` snapshots it.
 
 **Steps**
-- [ ] Failing tests:
+- [x] Failing tests:
   - star: `records land at stride-8 offsets` (write two records, assert exact float slots: record 1 slot 0..7, record 2 slot 8..15, field order x,y,z,r,g,b,size,brightness); `count tracks records written`; `view length is count*8 and aliases the backing buffer` (no copy — mutating view is visible on next view); `writing past capacity throws`.
   - dust: `records land at stride-8 offsets` (field order x,y,z,size,r,g,b,opacity — note the size-before-colour order differs from stars; that asymmetry is the GPU vertex layout's, carried as-is); `toFloat32Array length is count*8`; `empty writer yields a zero-length array`.
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -322,8 +322,8 @@ export function makeWarpOffset(params: GalaxyParams, outerRadius: number): (x: n
 Formula verbatim: `warpStrength · outerRadius · 0.4 · rel² · sin(atan2(z, x) − warpTwist·rel)` with `rel = (r − start) / max(1e-4, outerRadius − start)`, `start = outerRadius · (warpStart ?? 0.3)`; returns 0 when `warpStrength ≤ 0` or `r ≤ start`.
 
 **Steps**
-- [ ] Failing tests: `returns zero everywhere when warpStrength is 0`; `returns zero inside the warp start radius` (probe just inside `start`); `is antisymmetric across the disk (integral-sign shape)` — for warpTwist 0, `offset(x, z) === −offset(−x, −z)` at several outer-disk points; `grows quadratically with radial excess` (offset at rel=1 ≈ 4× offset at rel=0.5 along a fixed azimuth, twist 0); `twist precesses the node line` (with warpTwist > 0, the azimuth of the zero-crossing at rel=1 differs from the one at rel≈0.2).
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Failing tests: `returns zero everywhere when warpStrength is 0`; `returns zero inside the warp start radius` (probe just inside `start`); `is antisymmetric across the disk (integral-sign shape)` — for warpTwist 0, `offset(x, z) === −offset(−x, −z)` at several outer-disk points; `grows quadratically with radial excess` (offset at rel=1 ≈ 4× offset at rel=0.5 along a fixed azimuth, twist 0); `twist precesses the node line` (with warpTwist > 0, the azimuth of the zero-crossing at rel=1 differs from the one at rel≈0.2).
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -390,7 +390,7 @@ Contract points to pin in the docblock and tests:
 - **asymRand construction draws, in order** (model.js:183-189): 1 lopsidedAmp, 2 lopsidedAngle, 3 bulgeAxisZ, 4 bulgeAngle. Nothing else draws from any stream at construction — the main stream's first draw belongs to the bulge builder.
 
 **Steps**
-- [ ] Failing tests:
+- [x] Failing tests:
   - `scale constants match the spike formulas` — radius 1.3, diskThickness 0.8, bulgeSize 0.5, starCount 400000: assert each constant to 1e-12.
   - `grainScale is 1 at 400k stars and shrinks with more stars`.
   - `elliptical flattening follows the E-digit` — 'E0' → 1, 'E7' → 1 − 0.63.
@@ -398,8 +398,8 @@ Contract points to pin in the docblock and tests:
   - `addDust reddens: r > g > b` — write several dust records; assert each record's channel ordering and that colours differ per record (per-particle draws).
   - `two contexts from equal params are stream-identical` — drain 100 draws from `rand` on both, equal sequences.
   - `asymRand construction consumes exactly four draws` — build a context, then compare `ctx.asymRand()` with a fresh `mulberry32(((asymSeed|0)||331)>>>0)` advanced by 4.
-- [ ] Run → fail. Implement (import `mulberry32` from `src/utils/random/mulberry32`, `gaussian` from `tools/utils/random/gaussian`, `makeWarpOffset`, `hiiPalette`, `splitStarBudget`, `classifyHubbleType`, writers).
-- [ ] Run → pass. `npm run typecheck`. Commit.
+- [x] Run → fail. Implement (import `mulberry32` from `src/utils/random/mulberry32`, `gaussian` from `tools/utils/random/gaussian`, `makeWarpOffset`, `hiiPalette`, `splitStarBudget`, `classifyHubbleType`, writers).
+- [x] Run → pass. `npm run typecheck`. Commit.
 
 ---
 
@@ -428,7 +428,7 @@ Behaviour to carry:
 - disk: barred draws only `diskCount − floor(diskCount·0.35)` background stars and fades in from the centre via the `t²` acceptance test (267-269 — a rejected star is *skipped*, not resampled: record count < diskCount is correct for barred); vertical puff `0.6 + bulgeRadius/(radius + bulgeRadius)`; colour temp rises with radius and youngStars; brightness `randomLuminosity() · 1.35 · diskFalloff(radius, 1.7)`.
 
 **Steps**
-- [ ] Failing tests (build a small ctx per case, e.g. starCount 30000):
+- [x] Failing tests (build a small ctx per case, e.g. starCount 30000):
   - `bulge writes exactly budget.bulgeCount records` (spiral and elliptical cases).
   - `elliptical bulge extends beyond a disk-galaxy bulge` (max radius over records: E1 ctx vs Sb ctx with same outerRadius).
   - `bar geometry is zero-length for non-barred categories` and `bar length is 0.42·outerRadius·barStrength for SBb`.
@@ -436,7 +436,7 @@ Behaviour to carry:
   - `bar writes floor(diskCount·0.35) records for barred and none otherwise`.
   - `spiral disk writes exactly diskCount records; barred disk writes fewer` (acceptance test skips).
   - `disk stars sit in the plane` — |y| distribution bounded by a few × diskHeight.
-- [ ] Run → fail. Implement the four modules. Run → pass. Commit.
+- [x] Run → fail. Implement the four modules. Run → pass. Commit.
 
 ---
 
@@ -462,7 +462,7 @@ Contract points:
 - globulars: `floor(globularCount)` clusters × exactly 90 stars (`starsPerCluster`, model.js:119), per-cluster hue `0.26 + 0.20·rand()` with ±0.08 per-star spread, richness skew `0.3 + 0.9·rand()·rand()`, `globularSize`/`globularBright` multipliers.
 
 **Steps**
-- [ ] Failing tests:
+- [x] Failing tests:
   - `spiral arms return dust seeds with armFade in [0,1]`.
   - `with clumping and HII off, arm records equal the arm budget exactly` — ctx with `armClump: 0, hii: 0`: every loop iteration writes exactly one star, so count === `budget.armStarCount` (deterministic, no loose bounds).
   - `HII knots write bonus records` — same params but `hii: 2`: count strictly greater than the `hii: 0` count.
@@ -472,7 +472,7 @@ Contract points:
   - `irregular dust seeds carry armFade 1`.
   - `halo writes exactly haloCount records` (elliptical ctx).
   - `globulars write clusters × 90 records` (globularCount 12 → 1080 on a zero-halo spiral ctx: count delta before/after).
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -505,14 +505,14 @@ export function buildIrregularDust(ctx: GalaxyBuildContext, field: DustField, se
 Behaviour to carry: arm dust nudges toward the arm's concave edge (−cos/−sin · 0.018·outerRadius) with dense-knot split at p=0.28; bar dust runs two lanes along the bar's leading edges with `exp(−t²·1.2)` end fade; lenticular = 34 nuclear cloud centres + the Sombrero "hat-brim" annulus gated on `dustRingStrength > 0` (radius `dustRing·outerRadius`, gaussian width `dustRingWidth·outerRadius`); irregular follows the clump seeds.
 
 **Steps**
-- [ ] Failing tests:
+- [x] Failing tests:
   - `dust field construction draws nothing from the main stream` (probe draw equal with/without `createDustField`).
   - `dustMod keep-rate rises with the noise value` — statistical: with dustNoise 1, average keep over many calls at a high-f location > at a low-f location (find probe points by sampling the noise directly).
   - `arm dust respects its budget` — seeds ≫ budget with dust 1, grainScale 1 → dustWriter count ≤ 30000.
   - `bar dust only for barred` (barLength 0 → no-op).
   - `lenticular ring appears only when dustRingStrength > 0` and `ring particles cluster at the ring radius` (mean hypot(x,z) within ±2 gaussian widths of `dustRing·outerRadius`).
   - `irregular dust tracks its seeds` (each particle within a few spreads of some seed).
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -546,7 +546,7 @@ Execution order (document as a numbered list in the module header — it IS the 
 Worker (`generateGalaxy.worker.ts`) — port of `galaxy-worker.js` verbatim shape: `self.onmessage` receives `{ id, params }`, calls `generateGalaxy`, posts `{ id, stars, starCount, dust, dustCount }` with `stars`/`dust` **sliced to tight standalone buffers and transferred** (the model returns a subarray view — transferring its backing buffer would ship unused headroom and detach the generator's scratch). Message types inline in the worker file (they're private to the worker↔engine pair; plan 02's engine mirrors them). No unit test — no Worker in the vitest node env; typecheck + plan-02 visual covers it.
 
 **Steps**
-- [ ] Failing tests (`generateGalaxy.test.ts` — use starCount 30000-ish for speed):
+- [x] Failing tests (`generateGalaxy.test.ts` — use starCount 30000-ish for speed):
   - `same params produce byte-identical output` — two calls; `expect(a.stars).toEqual(b.stars)` and same for dust (Float32Array deep-equality) plus equal counts.
   - `a different main seed produces different bytes`.
   - `stars length is exactly starCount·8` and `dust length is dustCount·8`.
@@ -556,14 +556,14 @@ Worker (`generateGalaxy.worker.ts`) — port of `galaxy-worker.js` verbatim shap
   - `rerolling waveSeed leaves the bulge segment untouched` — same params, waveSeed 1 vs 2: first `budget.bulgeCount·8` floats identical, full arrays different. (This is the stream-independence property the four seeds exist for.)
   - `starCount floors at 20000` — starCount 5000 still yields ≥ 20000 records.
   - `warp only bends the outer disk` — warpStrength 0 vs 0.3 on an elliptical: identical output (warp never fires — elliptical has no disk/arm/dust y-offsets… the bulge also passes through addStar's warp, and bulge points CAN sit beyond warpStart; instead assert on a spiral: the two outputs differ only in the y column — indices ≡1 mod 8 — for stars beyond warpStart, all other columns byte-identical).
-- [ ] Run → fail. Implement orchestrator + worker. Run → pass.
-- [ ] `npm run typecheck` (both configs) + full `npm test` → green. Commit.
+- [x] Run → fail. Implement orchestrator + worker. Run → pass.
+- [x] `npm run typecheck` (both configs) + full `npm test` → green. Commit.
 
 ---
 
 ## Task 12 — plan gate
 
-- [ ] Full `npm test` green; `npm run typecheck` green.
-- [ ] `npm run galaxy-renderer` serves the placeholder page on 5400 (ask the user to confirm, or curl the dev server root).
-- [ ] Review every new file header against the didactic-comment convention; prettier the touched files.
+- [x] Full `npm test` green; `npm run typecheck` green.
+- [x] `npm run galaxy-renderer` serves the placeholder page on 5400 (ask the user to confirm, or curl the dev server root).
+- [x] Review every new file header against the didactic-comment convention; prettier the touched files.
 - [ ] Commit any stragglers. Plan 02 picks up from here with the engine.
