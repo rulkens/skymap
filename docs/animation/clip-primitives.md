@@ -166,6 +166,16 @@ time.
 | -------------- | -------------------------------------------------- | ---------------------------------------- |
 | `moveTargetId` | `moveTargetId(id, over, ease?) → FocusBoundEffect` | `moveTarget(framing.target, over, ease)` |
 | `dollyToId`    | `dollyToId(id, over, ease?) → FocusBoundEffect`    | `dollyTo(framing.distance, over, ease)`  |
+| `lookAt`       | `lookAt(id, over, ease?) → FocusBoundEffect`       | `aimAt(bearing, over, ease)`             |
+
+> **`lookAt` — turn your head before you walk.** The orbit camera always faces
+> its target, so it cannot rotate in place; "looking at" a subject means
+> orbiting the eye around the CURRENT target until the subject lines up
+> centre-frame beyond it. The bearing (`orbitAnglesLookingAlong` of subject −
+> live orbit target) is baked at **resolve time**, so a `lookAt` is only
+> correct before anything else moves the target — establish the shot as the
+> clip's opening move, then fly (`focusOn`). Target and distance are untouched:
+> the view swings, the camera stays put (up to the orbit-sphere arc).
 
 ### Timeline structure & timing
 
@@ -247,7 +257,7 @@ frame. They change what's _drawn_, not where the camera _is_.
 | `show`  | `show(layers: VisibilityLayerKey[], over?) → SceneEffect` | Turn layers **on** (visibility **intent**) and fade them in. `over` omitted → default fade; `0` → instant; `N` → custom seconds. Rides the live fade bridge — dispatches the same settings actions the UI does.                                                                                                                                                                                                                                        |
 | `hide`  | `hide(layers, over?) → SceneEffect`                       | Turn layers **off** (intent) and fade them out. Same duration rules.                                                                                                                                                                                                                                                                                                                                                                                   |
 | `fade`  | `fade(layers, to, over) → SceneEffect`                    | A **transient** opacity move to `to` (0–1) over `over` seconds that **does not touch intent** — the layer stays loaded/enabled, only its drawn opacity moves. The cross-dissolve / mask / fade-to-black idiom. Writes the clip-owned `clipOpacity` channel (see Opacity below). Resets to 1 at clip end.                                                                                                                                               |
-| `scene` | `scene(action: SettingsAction) → SceneEffect`             | Dispatch a non-visibility settings change. `SettingsAction` is a **narrow** union — currently `setFlowEnabled` and `setFlow` — widened as tour beats need more knobs. It's the same action a UI control dispatches; every reconcile saga fires for free.                                                                                                                                                                                               |
+| `scene` | `scene(action: SettingsAction) → SceneEffect`             | Dispatch a non-visibility settings change. `SettingsAction` is a **narrow** union — `setFlowEnabled`, `setFlow`, `setGalaxyCatalogVisible`, `setLabelsFocusedOnly` — widened as tour beats need more knobs. It's the same action a UI control dispatches; every reconcile saga fires for free. `setLabelsFocusedOnly(true)` is the tour's label declutter: only the focused subject's label draws (multiplies on top of the per-layer label toggles).  |
 | `focus` | `focus(id: FocusId \| null) → FocusBoundEffect`           | Build an **unresolved** `focusId` cue addressed by a durable `FocusId` (`null` clears focus). `resolveClipFoci` rewrites it to the concrete `{ kind: 'focus', ref }` `SceneEffect` at play time. On a **structure** ref this engages focus mode — non-member galaxies dim toward 0.08 (a per-galaxy geometric isolation) and drop out of picking, while surrounding layers (filaments, volumes, structure rings, labels) recede. `null` releases both. |
 
 **`layers` are `VisibilityLayerKey`s** — the intent-addressing keys the UI and
@@ -275,15 +285,18 @@ in the same list:
 
 ### Focus IDs and deferred resolution
 
-Four helpers produce **unresolved** id-bearing effects (`FocusBoundEffect` arms
-`moveTargetId` / `dollyToId` / `focusId`, plus `atFocus` waypoints inside a
-`flyPath`). They carry a durable `FocusId` string rather than a concrete
+Five helpers produce **unresolved** id-bearing effects (`FocusBoundEffect` arms
+`moveTargetId` / `dollyToId` / `lookAtId` / `focusId`, plus `atFocus` waypoints
+inside a `flyPath`). They carry a durable `FocusId` string rather than a concrete
 `Vec3` / distance / `SelectionRef`, so a clip can be authored at module-load time —
 before any catalog is loaded — and resolved against whichever tier is live at play
 time. `resolveClipFoci` walks the timeline and rewrites each one:
 
 - `moveTargetId(id, …)` → `moveTarget(framing.target, …)`
 - `dollyToId(id, …)` → `dollyTo(framing.distance, …)`
+- `lookAt(id, …)` → `aimAt({ yaw, pitch }, …)` — the bearing from the **live
+  orbit target** (passed into `resolveClipFoci` from the camera runtime) at the
+  subject's framed position
 - `focus(id)` → `{ kind: 'focus', ref }` (an id of `null` → `{ kind: 'focus', ref: null }`)
 - a `flyPath` with `atFocus` waypoints → the same `flyPath` with each id-waypoint in
   `at`-form (gaining its subject `radius`); the `flyPath` itself survives into

@@ -8,45 +8,16 @@
  * resolves with NO catalog data loaded, so the tour always establishes even on
  * an unlinked worktree.
  *
- * The home-scene strip lives IN the opening clip (not a tour-level setup list):
- * one authoring surface, and stepping back to beat 1 re-establishes its scene.
- * Everything hidden there is a later beat's reveal; the guidedTourSaga
- * snapshot/restore winds it all back on exit.
+ * This file is the storyboard — beat order, captions, dwell lengths. Each
+ * beat's choreography lives in its own clip file under `./grandTour/`, so a
+ * beat can be re-blocked without scrolling past every other beat's timeline.
  */
 
 import type { Tour } from '../../../@types/animation/tour/Tour';
-import type { ClipData } from '../../../@types/animation/ClipData';
-import { focusOn, hide } from '../../../services/engine/animation/effectHelpers';
-import { focusId } from '../../../utils/animation/focusId';
 import { dwellDrift } from '../../../state/tour/dwellDrift';
-
-const MW = focusId('milkyWay');
-
-/**
- * Opening title — strip the home scene in one instant sweep, fly to the
- * Milky-Way framing, and hold while the title card reads.
- */
-const openingTitle: ClipData = {
-  start: 'live',
-  timeline: [
-    // over: 0 snaps — the tour opens on a clean frame, not mid-fade. 'labels'
-    // is every text label; bare 'survey' gates every galaxy catalog — each is
-    // a later beat's reveal (scoped 'survey:<id>' entries bring them back one
-    // at a time as the journey reaches them).
-    hide(
-      [
-        'volumesMaster', // the cosmic-web beat's reveal
-        'filaments', //      〃
-        'flow', // the flows beat's reveal
-        'structureRing', // shown per category as beats reach them
-        'labels', // named as we reach each subject
-        'survey', // catalogs revealed one at a time on the way out
-      ],
-      0,
-    ),
-    focusOn(MW, 2),
-  ],
-};
+import { openingTitle } from './grandTour/openingTitle';
+import { youAreHere } from './grandTour/youAreHere';
+import { approachM31 } from './grandTour/approachM31';
 
 export const grandTour: Tour = {
   id: 'grandTour',
@@ -59,17 +30,25 @@ export const grandTour: Tour = {
         body: 'From home to the edge of the observable universe — and back.',
         position: 'bottom-left',
       },
-      dwellClip: dwellDrift(8),
+      dwellClip: dwellDrift(8, (Math.PI * 2) / 120),
     },
     {
-      // No enterClip — beat 1 already framed the Milky Way; the caption reveals at
-      // once and the dwell drift carries the local orbit.
+      enterClip: youAreHere,
       caption: {
         title: 'You are here',
         body: 'The Milky Way — a few hundred billion stars, and the one vantage point you are looking out **from**.',
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(7),
+    },
+    {
+      enterClip: approachM31,
+      caption: {
+        title: 'Nearest neighbour',
+        body: 'Andromeda, the nearest large galaxy to ours. Its light has been travelling toward us for 2.5 million years.',
+        position: 'bottom-left',
+      },
+      dwellClip: dwellDrift(10, (Math.PI * 2) / 30),
     },
   ],
 };
