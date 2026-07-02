@@ -18,6 +18,7 @@ import { dwellDrift } from '../../../state/tour/dwellDrift';
 import { openingTitle } from './grandTour/openingTitle';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31 } from './grandTour/approachM31';
+import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
 
 export const grandTour: Tour = {
   id: 'grandTour',
@@ -49,6 +50,15 @@ export const grandTour: Tour = {
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(10, { cruiseRate: (Math.PI * 2) / 30 }),
+    },
+    {
+      enterClip: neighbourhoodFlythrough,
+      caption: {
+        title: 'Our neighbourhood',
+        body: 'Our galaxy runs with neighbours like M81 and Centaurus A, tens of millions of light-years out.',
+        position: 'bottom-left',
+      },
+      dwellClip: dwellDrift(5),
     },
   ],
 };
