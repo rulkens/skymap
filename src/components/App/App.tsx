@@ -52,6 +52,8 @@ import { updateSelectionFocus, clearSelection } from '../../state/selection/sele
 import { refOf } from '../../services/engine/helpers/refOf';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
+import TourDebugPillContainer from '../containers/TourDebugPillContainer';
+import { hasUrlGate } from '../../utils/url/hasUrlGate';
 import { selectTourActive } from '../../state/tour/selectors';
 import {
   selectPaletteOpen,
@@ -66,6 +68,10 @@ import {
   reopenSplash,
 } from '../../state/ui/uiSlice';
 import { selectEngineStatus, selectScale, selectLoadProgress } from '../../state/engine/selectors';
+
+// Temporary `?tour` debug gate for the grand-tour pill. Read once at module
+// scope — the search string can't change without a full page reload.
+const TOUR_DEBUG_GATE = hasUrlGate('tour');
 
 export function App(): React.ReactElement {
   const { canvasRef, handleRef } = useEngine();
@@ -227,6 +233,7 @@ export function App(): React.ReactElement {
           <HomeButton onClick={focusMilkyWay} hidden={paletteOpen || splashVisible} />
           <AutoRotateToggleContainer hidden={paletteOpen || splashVisible} />
           <AboutPill onClick={reopenSplashScreen} hidden={paletteOpen || splashVisible} />
+          {TOUR_DEBUG_GATE && <TourDebugPillContainer hidden={paletteOpen || splashVisible} />}
         </div>
         <CommandPaletteContainer engineHandleRef={handleRef} />
         {/* `handleRef.current` set means the engine finished constructing,
