@@ -1,6 +1,14 @@
 /**
- * Opening title — strip the home scene in one instant sweep, fly to the
- * Milky-Way framing, and hold while the title card reads.
+ * Opening title — strip the home scene in one instant sweep, snap the rig
+ * far out on the Milky-Way bearing, and make the long approach: with every
+ * survey hidden and the sprite sub-pixel at the far pose, the first frame
+ * is empty space, and home MATERIALIZES as the log dolly closes in. The
+ * title card reads on arrival (captions reveal on clip land), so the cold
+ * open plays wordless — black, then a galaxy, then the title.
+ *
+ * The snap is two zero-duration cues, not a baked `start` pose: the clip
+ * keeps `start: 'live'`, so playing it from anywhere (the debugger,
+ * stepping back to beat 1) re-establishes the same open.
  *
  * The home-scene strip lives IN this clip (not a tour-level setup list):
  * one authoring surface, and stepping back to beat 1 re-establishes its
@@ -9,11 +17,22 @@
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
-import { focusOnId, hide, scene } from '../../../../services/engine/animation/effectHelpers';
+import {
+  all,
+  dollyTo,
+  focusOnId,
+  hide,
+  moveTargetId,
+  scene,
+} from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
 
 const MW = focusId('milkyWay');
+
+// Far enough that the Milky-Way sprite (~0.03 Mpc across) is sub-pixel —
+// the open reads as empty space, not a small galaxy.
+const FAR_OPEN_MPC = 200;
 
 export const openingTitle: ClipData = {
   start: 'live',
@@ -40,6 +59,11 @@ export const openingTitle: ClipData = {
     // draws. The snapshot/restore winds it back on exit; a beat that wants
     // many labels at once flips it off with another scene() cue.
     scene(setLabelsFocusedOnly(true)),
-    focusOnId(MW, 2),
+    // Cold open: snap far out on the Milky-Way bearing (zero-duration cues
+    // — target and distance are different channels, so one `all` is legal)…
+    all([moveTargetId(MW, 0), dollyTo(FAR_OPEN_MPC, 0)]),
+    // …then the approach. Log-space dolly: three decades in, decelerating
+    // onto the framing distance as the sprite swells from nothing.
+    focusOnId(MW, 8),
   ],
 };
