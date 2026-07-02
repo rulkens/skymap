@@ -32,6 +32,11 @@ describe('clipRegistry', () => {
       'flowOrbit',
       'flyPathDemo',
       'flyout',
+      'tourApproachM31',
+      'tourNeighbourhood',
+      'tourOpeningTitle',
+      'tourYouAreHere',
+      'tourYouAreHereDwell',
     ]);
   });
 });

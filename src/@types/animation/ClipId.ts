@@ -9,4 +9,14 @@
  *
  * Mirrors `TourId`; see that file for the append-only rationale.
  */
-export type ClipId = 'cosmicFlows' | 'flyout' | 'flowOrbit' | 'flyPathDemo' | 'famousFlythrough';
+export type ClipId =
+  | 'cosmicFlows'
+  | 'flyout'
+  | 'flowOrbit'
+  | 'flyPathDemo'
+  | 'famousFlythrough'
+  | 'tourOpeningTitle'
+  | 'tourYouAreHere'
+  | 'tourYouAreHereDwell'
+  | 'tourApproachM31'
+  | 'tourNeighbourhood';
