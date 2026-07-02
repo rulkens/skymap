@@ -93,8 +93,8 @@ export type GalaxyEngineHandle = {
 These names are consumed verbatim by plan 03's bridge/matcher — they may not drift.
 
 **Steps**
-- [ ] Create the eight files (contract-only task: no test of its own; `npm run typecheck` is the gate — it fails on any import the later tasks disagree with).
-- [ ] `npm run typecheck` → green. Commit.
+- [x] Create the eight files (contract-only task: no test of its own; `npm run typecheck` is the gate — it fails on any import the later tasks disagree with).
+- [x] `npm run typecheck` → green. Commit.
 
 ---
 
@@ -123,11 +123,11 @@ export function lensShift(insetLeft: number, insetRight: number, clientWidthPx: 
 ```
 
 **Steps**
-- [ ] Failing tests:
+- [x] Failing tests:
   - orbitEye: `el=0, az=0 puts the eye at target + [dist, 0, 0]`; `el=π/2 puts the eye dist above the target` (within 1e-12); `distance from target is always dist` (several az/el probes); `target offsets translate the eye`.
   - panAxes: `right and up are unit length` (probe several az/el); `right is horizontal` (y === 0); `right ⊥ up` (dot ≈ 0); `at el=0 up is +Y`.
   - lensShift: `symmetric insets give zero shift`; `a wider right panel shifts positive` (compare panel widths 390 vs 0); `magnitude is inset delta over client width`; `zero client width does not divide by zero` (max(1,…) guard).
-- [ ] Run the three files → fail. Implement. Run → pass. Commit.
+- [x] Run the three files → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -160,8 +160,8 @@ Byte layout — matches WGSL `struct Cam { viewProj: mat4x4<f32>, right: vec4<f3
 Total **112 bytes** — the engine's `camBuf` size (galaxy-engine.js:25). The rows-of-the-view-rotation trick works because a lookAt view matrix's transpose-of-rotation is the camera basis; wgpu-matrix's `mat4.lookAt` uses the same column-major convention as the spike's hand-rolled one.
 
 **Steps**
-- [ ] Failing tests: `output has 28 floats`; `viewProj occupies floats 0-15 verbatim`; `right vector is the view rotation's first row with w=0` (feed a known lookAt matrix, e.g. eye [0,0,10] target origin: right = [1,0,0]); `up vector is the second row with w=0`; `params land at floats 24-27 in order`; `dst is written in place and returned when provided`.
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Failing tests: `output has 28 floats`; `viewProj occupies floats 0-15 verbatim`; `right vector is the view rotation's first row with w=0` (feed a known lookAt matrix, e.g. eye [0,0,10] target origin: right = [1,0,0]); `up vector is the second row with w=0`; `params land at floats 24-27 in order`; `dst is written in place and returned when provided`.
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -189,8 +189,8 @@ export function bakeExtraTransform(
 Port of `galaxy-engine.js:187-195`: scale xyz → rotate about Y (disk spin) → rotate about X (inclination tilt) → translate; multiply the size slot by `scale`. All other slots untouched.
 
 **Steps**
-- [ ] Failing tests: `identity transform leaves positions and sizes unchanged` (pos 0, scale 1, rot 0); `pure Y-rotation preserves distances from the Y axis and leaves y alone`; `tilt then rotation matches the spike's order` (one hand-computed record: rotY π/2 then tiltX π/2 on [1,0,0] → assert exact expected position — compute it from the cited formula, not from the implementation); `size slot is multiplied by scale for the given sizeIndex (6 and 3)`; `colour/brightness slots are untouched`; `translation adds pos after rotation`.
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Failing tests: `identity transform leaves positions and sizes unchanged` (pos 0, scale 1, rot 0); `pure Y-rotation preserves distances from the Y axis and leaves y alone`; `tilt then rotation matches the spike's order` (one hand-computed record: rotY π/2 then tiltX π/2 on [1,0,0] → assert exact expected position — compute it from the cited formula, not from the implementation); `size slot is multiplied by scale for the given sizeIndex (6 and 3)`; `colour/brightness slots are untouched`; `translation adds pos after rotation`.
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -235,9 +235,9 @@ Per-shader contracts — entry points are `vs`/`fs` in every file; constants ver
 The spike's `BLUR_WGSL` (galaxy-shaders.js:157-170) is **dead code** — the shipped chain is bright→down→up→composite — and is ported nowhere (spec lists seven shaders).
 
 **Steps**
-- [ ] Load the `wesl-shaders` skill. Write the seven files. No backticks in comments; imports top-of-file, one per line.
-- [ ] `npm run typecheck` green (the `?static` imports don't exist yet — nothing imports these files until Task 6, so the gate here is the linker running clean when Task 6's engine first imports them; still run typecheck to catch stray `.ts` damage).
-- [ ] Commit.
+- [x] Load the `wesl-shaders` skill. Write the seven files. No backticks in comments; imports top-of-file, one per line.
+- [x] `npm run typecheck` green (the `?static` imports don't exist yet — nothing imports these files until Task 6, so the gate here is the linker running clean when Task 6's engine first imports them; still run typecheck to catch stray `.ts` damage).
+- [x] Commit.
 
 ---
 
@@ -288,9 +288,9 @@ Port map (every row cites `galaxy-engine.js`) — carry each constant verbatim:
 DEVIATION: wgpu-matrix's `mat4.perspective` maps depth to **[0, 1]** (WebGPU convention) whereas the spike's hand-rolled matrix used the GL [−1, 1] convention. The scene has **no depth attachment** (stars are additive, dust is order-independent transmittance), so z only affects near/far clipping — visually identical, and [0,1] is the correct convention for this API. Documented here so nobody "restores" the spike matrix.
 
 **Steps**
-- [ ] Implement `createGalaxyEngine.ts` against the table (read the whole spike file first; keep the module header didactic — pass chain diagram + why extras are baked rather than per-draw-uniformed).
-- [ ] `npm run typecheck` → green (this is the task that proves the `?static` shader imports and the worker URL resolve).
-- [ ] Commit.
+- [x] Implement `createGalaxyEngine.ts` against the table (read the whole spike file first; keep the module header didactic — pass chain diagram + why extras are baked rather than per-draw-uniformed).
+- [x] `npm run typecheck` → green (this is the task that proves the `?static` shader imports and the worker URL resolve).
+- [x] Commit.
 
 ---
 
@@ -327,18 +327,18 @@ Owns the `<canvas>` + engine lifecycle (mirror `tools/flow-workbench/src/ui/View
 `main.tsx`: createRoot → `<Viewport onFps={console-free no-op or small fps badge} />`. Plan 03 replaces this with the store + `<App>`; keep it minimal but real (the spec's `Hud` arrives in plan 03).
 
 **Steps**
-- [ ] Failing test `defaults.test.ts`: `default params match the spike boot state` (spot-check type 'Sc', starCount 200000, seed 3, dustNoise 0.76); `default render settings carry the spike values` (assert every field: 0.92 / 0.85 / 1.26 / 0.5 / 0.3 / 0.11 / 0); `default lod settings carry the spike values` (0.006 / 0).
-- [ ] Run → fail. Create the three data files. Run → pass.
-- [ ] Load `create-component`; build Viewport + swap main.tsx.
-- [ ] `npm run typecheck` + full `npm test` → green.
+- [x] Failing test `defaults.test.ts`: `default params match the spike boot state` (spot-check type 'Sc', starCount 200000, seed 3, dustNoise 0.76); `default render settings carry the spike values` (assert every field: 0.92 / 0.85 / 1.26 / 0.5 / 0.3 / 0.11 / 0); `default lod settings carry the spike values` (0.006 / 0).
+- [x] Run → fail. Create the three data files. Run → pass.
+- [x] Load `create-component`; build Viewport + swap main.tsx.
+- [x] `npm run typecheck` + full `npm test` → green.
 - [ ] **Visual gate:** ask the user to run `npm run galaxy-renderer` (port 5400) and confirm: an Sc spiral renders with bloom; drag orbits; right-drag pans; wheel zooms with damping; idle 2.5 s resumes auto-rotate; resizing keeps it crisp. Do not proceed to plan 03 sign-off without this.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
 ## Task 8 — plan gate
 
 - [ ] Full `npm test` + `npm run typecheck` green.
-- [ ] Skim the seven `.wesl` files once more against the wesl-shaders checklist (backticks, import placement, one-per-line, `package::`).
-- [ ] Update `tools/galaxy-renderer/README.md`: controls, the pass chain in one paragraph, pointer to spike-fidelity constants living in the shaders/engine.
+- [x] Skim the seven `.wesl` files once more against the wesl-shaders checklist (backticks, import placement, one-per-line, `package::`).
+- [x] Update `tools/galaxy-renderer/README.md`: controls, the pass chain in one paragraph, pointer to spike-fidelity constants living in the shaders/engine.
 - [ ] Prettier touched files; commit stragglers.

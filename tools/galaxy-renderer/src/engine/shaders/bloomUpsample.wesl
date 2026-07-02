@@ -1,6 +1,7 @@
 // bloomUpsample.wesl — the ascending half of the dual-filter bloom pyramid.
-// A 9-tap tent filter (corners ×1, edge midpoints ×2, taps at ±t and ±2t on
-// the axes, /12) that spreads a coarse level back onto the next finer level.
+// An 8-tap tent filter (four axis taps at ±2t weighted ×1, four diagonal
+// taps at ±t weighted ×2, total weight 12, /12) that spreads a coarse level
+// back onto the next finer level.
 //
 // Drawn with ADDITIVE blending — the blend state lives in the pipeline, NOT
 // this shader, which just emits the tent-filtered colour. Each pyramid level
