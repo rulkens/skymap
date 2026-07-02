@@ -33,7 +33,7 @@
  *     structure-isolation dim (`focusRecession` channel). `SelectionRef` carries
  *     a galaxyCatalog/structure/milkyWay discriminant and the durable id.
  *
- * ### `layers` are `VisibilityLayerKey`s
+ * ### `layers` are `VisibilityLayerKey`s; `scoped` are per-item entries
  *
  * The keys in `show`/`hide`/`fade` are the same intent-addressing vocabulary the
  * UI and `syncVisibilityFades` use: `'flow'`, `'survey'`, `'filaments'`,
@@ -41,15 +41,18 @@
  * `'survey'`) sets the cluster gate; the bridge expands to individual items.
  * See `src/@types/animation/VisibilityLayerKey.d.ts` for the full set.
  *
- * NOTE (flag): the `cosmicFlows` spike example uses composite aliases
- * (`'volumes'`, `'galaxies'`, `'structures'`, `'labels'`) that are NOT currently
- * members of `VisibilityLayerKey`. Authors must use the actual keys
- * (`'volumesMaster'` / `'volumeField'`, `'survey'`, `'structureRing'` /
- * `'structureLabel'`, `'surveyLabel'`) until Plan C adds higher-level composite
- * keys to `VisibilityLayerKey`.
+ * `show`/`hide` additionally carry `scoped` — `'family:scope'` entries
+ * (`'survey:milliquas'`, `'structureRing:group'`, `'label:milkyWay'`) that
+ * address ONE item of a per-item layer. Authors write them inline in the same
+ * list (`hide(['flow', 'survey:milliquas'])`); the helper splits them out at
+ * construction because they take a different path at fire time: a targeted
+ * settings action + the reactive fade bridge, rather than the row fan-out +
+ * explicit fade sync. `fade` has no scoped form — the clipOpacity channel is
+ * keyed by atomic layer.
  */
 
 import type { VisibilityLayerKey } from './VisibilityLayerKey';
+import type { ScopedVisibilityArg } from './ScopedVisibilityArg';
 import type { SettingsAction } from './SettingsAction';
 import type { SelectionRef } from '../engine/SelectionRef';
 
@@ -57,11 +60,13 @@ export type SceneEffect =
   | {
       readonly kind: 'show';
       readonly layers: VisibilityLayerKey[];
+      readonly scoped?: ScopedVisibilityArg[];
       readonly over?: number;
     }
   | {
       readonly kind: 'hide';
       readonly layers: VisibilityLayerKey[];
+      readonly scoped?: ScopedVisibilityArg[];
       readonly over?: number;
     }
   | {

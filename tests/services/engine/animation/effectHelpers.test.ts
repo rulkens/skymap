@@ -264,6 +264,16 @@ describe('show', () => {
     const e = show(['survey'], 2);
     expect(e.over).toBe(2);
   });
+
+  it('splits scoped entries out of the layer list', () => {
+    const e = show(['flow', 'survey:milliquas', 'label:group']);
+    expect(e.layers).toEqual(['flow']);
+    expect(e.scoped).toEqual(['survey:milliquas', 'label:group']);
+  });
+
+  it('omits the scoped field entirely when no scoped entries are given', () => {
+    expect('scoped' in show(['flow'])).toBe(false);
+  });
 });
 
 describe('hide', () => {
@@ -277,6 +287,13 @@ describe('hide', () => {
   it('forwards over when given', () => {
     const e = hide(['flow'], 1.5);
     expect(e.over).toBe(1.5);
+  });
+
+  it("mixes aggregates and scoped entries: 'labels' expands, scoped separates", () => {
+    const e = hide(['labels', 'survey:milliquas'], 0);
+    expect(e.layers).toEqual(['surveyLabel', 'structureLabel', 'milkyWayLabel']);
+    expect(e.scoped).toEqual(['survey:milliquas']);
+    expect(e.over).toBe(0);
   });
 });
 

@@ -47,7 +47,9 @@ import type { Ease } from '../../../@types/animation/Ease';
 import type { Space } from '../../../@types/animation/Space';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { VisibilityLayerArg } from '../../../@types/animation/VisibilityLayerArg';
+import type { ScopedVisibilityArg } from '../../../@types/animation/ScopedVisibilityArg';
 import { expandVisibilityLayers } from '../../../utils/animation/expandVisibilityLayers';
+import { splitVisibilityArgs } from '../../../utils/animation/splitVisibilityArgs';
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
@@ -318,14 +320,24 @@ export function fork(child: Effect): Effect & { kind: 'fork' } {
  * Dispatches the same settings actions the UI does. The bridge in
  * `syncVisibilityFades` handles the translation to per-layer fade controllers.
  *
- * `layers` accepts authoring aggregates (`'labels'`) alongside atomic keys;
- * `expandVisibilityLayers` resolves them to atomic keys here, so the stored
- * effect is always atomic.
+ * `layers` accepts three vocabularies in one list: atomic keys, authoring
+ * aggregates (`'labels'` → the three label layers), and `'family:scope'`
+ * scoped entries (`'survey:milliquas'`, `'structureRing:group'`,
+ * `'label:milkyWay'`) that address ONE item where the bare key would fan over
+ * all. `splitVisibilityArgs` resolves the mix at construction: aggregates
+ * flatten to atomic keys, scoped entries move to the effect's `scoped` field.
+ * Scoped fades ride the reactive settings→fade bridge, so `over` applies to
+ * the atomic layers only.
  */
-export function show(layers: VisibilityLayerArg[], over?: number): SceneEffect & { kind: 'show' } {
+export function show(
+  layers: (VisibilityLayerArg | ScopedVisibilityArg)[],
+  over?: number,
+): SceneEffect & { kind: 'show' } {
+  const split = splitVisibilityArgs(layers);
   return {
     kind: 'show',
-    layers: expandVisibilityLayers(layers),
+    layers: split.layers,
+    ...(split.scoped.length > 0 ? { scoped: split.scoped } : {}),
     ...(over !== undefined ? { over } : {}),
   };
 }
@@ -333,12 +345,17 @@ export function show(layers: VisibilityLayerArg[], over?: number): SceneEffect &
 /**
  * hide — set visibility INTENT for `layers` to hidden, fading out over `over`
  * seconds (`undefined` → default fade duration; `0` → instant). Accepts
- * authoring aggregates (`'labels'`) — see `show`.
+ * aggregates (`'labels'`) and scoped entries (`'survey:milliquas'`) — see `show`.
  */
-export function hide(layers: VisibilityLayerArg[], over?: number): SceneEffect & { kind: 'hide' } {
+export function hide(
+  layers: (VisibilityLayerArg | ScopedVisibilityArg)[],
+  over?: number,
+): SceneEffect & { kind: 'hide' } {
+  const split = splitVisibilityArgs(layers);
   return {
     kind: 'hide',
-    layers: expandVisibilityLayers(layers),
+    layers: split.layers,
+    ...(split.scoped.length > 0 ? { scoped: split.scoped } : {}),
     ...(over !== undefined ? { over } : {}),
   };
 }

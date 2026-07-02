@@ -16,40 +16,34 @@
 
 import type { Tour } from '../../../@types/animation/tour/Tour';
 import type { ClipData } from '../../../@types/animation/ClipData';
-import { focusOn, hide, scene } from '../../../services/engine/animation/effectHelpers';
+import { focusOn, hide } from '../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../utils/animation/focusId';
 import { dwellDrift } from '../../../state/tour/dwellDrift';
-import { setGalaxyCatalogVisible } from '../../../state/settings/settingsSlice';
 
 const MW = focusId('milkyWay');
 
 /**
- * Opening title — strip the home scene in one instant sweep, focus the Milky
- * Way (selection only — no camera move; the dwell drift carries the motion),
- * and hold while the title card reads.
+ * Opening title — strip the home scene in one instant sweep, fly to the
+ * Milky-Way framing, and hold while the title card reads.
  */
 const openingTitle: ClipData = {
   start: 'live',
   timeline: [
-    // over: 0 snaps — the tour opens on a clean frame, not mid-fade. The
-    // per-item layers (structureRing/structureLabel/surveyLabel) fan out over
-    // every registered id via VISIBILITY_ACTION_ROW.
+    // over: 0 snaps — the tour opens on a clean frame, not mid-fade. 'labels'
+    // is every text label; bare 'survey' gates every galaxy catalog — each is
+    // a later beat's reveal (scoped 'survey:<id>' entries bring them back one
+    // at a time as the journey reaches them).
     hide(
       [
         'volumesMaster', // the cosmic-web beat's reveal
         'filaments', //      〃
         'flow', // the flows beat's reveal
         'structureRing', // shown per category as beats reach them
-        'structureLabel', //  〃
-        'surveyLabel', // name galaxies as we reach them
-        'milkyWayLabel',
+        'labels', // named as we reach each subject
+        'survey', // catalogs revealed one at a time on the way out
       ],
       0,
     ),
-    // Per-item, so hide() can't express it — the 'survey' key gates every
-    // catalog. scene() dispatches the settings action directly; the same
-    // snapshot/restore covers it.
-    scene(setGalaxyCatalogVisible({ id: 'milliquas', enabled: false })),
     focusOn(MW, 2),
   ],
 };

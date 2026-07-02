@@ -78,7 +78,7 @@ interpolates in its natural **space** so motion reads correctly:
 | Channel    | Space | Why                                                                                                |
 | ---------- | ----- | -------------------------------------------------------------------------------------------------- |
 | `distance` | `log` | "Powers of Ten" — uniform decades/sec. Linear distance crams all the change into the last instant. |
-| `yaw`      | `add` | Angles add; `yaw` uses **shortest-arc** interpolation (`lerpAngleShortest`) at the call site.       |
+| `yaw`      | `add` | Angles add; `yaw` uses **shortest-arc** interpolation (`lerpAngleShortest`) at the call site.      |
 | `pitch`    | `add` | Angles add.                                                                                        |
 | `target`   | `lin` | A `Vec3`, interpolated component-wise in linear space.                                             |
 
@@ -144,15 +144,15 @@ return plain `Effect` objects (a tagged union) — serializable, inspectable, te
 
 ### Camera motion
 
-| Helper       | Signature                                                              | What it drives / does                                                                                                                                                                                     |
-| ------------ | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tween`      | `tween(ch, { to, over, ease?, space? }) → CameraAction`               | **base** on one **scalar** channel (`'distance' \| 'yaw' \| 'pitch'` — `'target'` is a compile error). Absolute move to `to` over `over` s. `space` defaults from `CHANNEL_SPACE[ch]`, `ease` `'inOut'`. The primitive the others wrap. |
-| `dollyTo`    | `dollyTo(mpc, over, ease?) → CameraAction`                            | **base / distance.** `tween('distance', { to: mpc, over, ease })` — pull/push to a distance in **Mpc** (log space).                                                                                       |
-| `moveTarget` | `moveTarget(to: Vec3, over, ease?) → CameraAction`                    | **base / target.** Emits ONE `setVec` action; the Vec3 `target` moves as a unit, interpolated component-wise in `'lin'`.                                                                                   |
-| `aimAt`      | `aimAt({ yaw, pitch }, over, ease?) → Effect`                         | **base / yaw + pitch.** `all([ tween('yaw', …), tween('pitch', …) ])` — rotate to a bearing. Shortest-arc for yaw is the evaluator's job.                                                                  |
-| `spin`       | `spin(ch, { by, over, ease?, loop? }) → CameraAction`                 | **base**, additive: add `by` radians over `over` s (typically an angle channel; `ch` is the full `Channel`). `loop: true` makes it **perpetual** — a linear continuation past `endSec`, the orbit idiom.  |
-| `rate`       | `rate(ch, { to, over, ease? }) → CameraAction`                        | **vel.** Ramp the channel's **velocity** from the carried-in velocity to `to` over `over` s, then hold that velocity (within the clip). The "ease rotation in from a standstill" idiom.                     |
-| `oscillate`  | `oscillate(ch, { amp, period, over?, fade?, ease? }) → CameraAction`  | **osc.** Additive zero-mean sine `amp · env(t) · sin(2π t / period)`. Perpetual by default; pass `over` (window length) + `fade` (amplitude ramp seconds) to ease amplitude `0 → amp → 0` across the window. Stays zero-mean throughout. |
+| Helper       | Signature                                                            | What it drives / does                                                                                                                                                                                                                    |
+| ------------ | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tween`      | `tween(ch, { to, over, ease?, space? }) → CameraAction`              | **base** on one **scalar** channel (`'distance' \| 'yaw' \| 'pitch'` — `'target'` is a compile error). Absolute move to `to` over `over` s. `space` defaults from `CHANNEL_SPACE[ch]`, `ease` `'inOut'`. The primitive the others wrap.  |
+| `dollyTo`    | `dollyTo(mpc, over, ease?) → CameraAction`                           | **base / distance.** `tween('distance', { to: mpc, over, ease })` — pull/push to a distance in **Mpc** (log space).                                                                                                                      |
+| `moveTarget` | `moveTarget(to: Vec3, over, ease?) → CameraAction`                   | **base / target.** Emits ONE `setVec` action; the Vec3 `target` moves as a unit, interpolated component-wise in `'lin'`.                                                                                                                 |
+| `aimAt`      | `aimAt({ yaw, pitch }, over, ease?) → Effect`                        | **base / yaw + pitch.** `all([ tween('yaw', …), tween('pitch', …) ])` — rotate to a bearing. Shortest-arc for yaw is the evaluator's job.                                                                                                |
+| `spin`       | `spin(ch, { by, over, ease?, loop? }) → CameraAction`                | **base**, additive: add `by` radians over `over` s (typically an angle channel; `ch` is the full `Channel`). `loop: true` makes it **perpetual** — a linear continuation past `endSec`, the orbit idiom.                                 |
+| `rate`       | `rate(ch, { to, over, ease? }) → CameraAction`                       | **vel.** Ramp the channel's **velocity** from the carried-in velocity to `to` over `over` s, then hold that velocity (within the clip). The "ease rotation in from a standstill" idiom.                                                  |
+| `oscillate`  | `oscillate(ch, { amp, period, over?, fade?, ease? }) → CameraAction` | **osc.** Additive zero-mean sine `amp · env(t) · sin(2π t / period)`. Perpetual by default; pass `over` (window length) + `fade` (amplitude ramp seconds) to ease amplitude `0 → amp → 0` across the window. Stays zero-mean throughout. |
 
 ### Focus-addressed camera helpers (deferred resolution)
 
@@ -162,19 +162,19 @@ helper output before `compileClip` runs (see "Focus IDs" below). Use them when t
 target isn't known at authoring time and must be looked up from the catalog at play
 time.
 
-| Helper         | Signature                                       | Resolves to                                        |
-| -------------- | ----------------------------------------------- | -------------------------------------------------- |
-| `moveTargetId` | `moveTargetId(id, over, ease?) → FocusBoundEffect` | `moveTarget(framing.target, over, ease)`           |
-| `dollyToId`    | `dollyToId(id, over, ease?) → FocusBoundEffect`    | `dollyTo(framing.distance, over, ease)`            |
+| Helper         | Signature                                          | Resolves to                              |
+| -------------- | -------------------------------------------------- | ---------------------------------------- |
+| `moveTargetId` | `moveTargetId(id, over, ease?) → FocusBoundEffect` | `moveTarget(framing.target, over, ease)` |
+| `dollyToId`    | `dollyToId(id, over, ease?) → FocusBoundEffect`    | `dollyTo(framing.distance, over, ease)`  |
 
 ### Timeline structure & timing
 
 | Helper | Signature                          | What it does                                                                                                                                                                                         |
 | ------ | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `seq`  | `seq(children: Effect[]) → Effect` | Play children **in order**; each starts when the previous ends. Block duration is the sum.                                                                                                            |
+| `seq`  | `seq(children: Effect[]) → Effect` | Play children **in order**; each starts when the previous ends. Block duration is the sum.                                                                                                           |
 | `all`  | `all(children: Effect[]) → Effect` | Play children **concurrently**; the block ends when the **longest** child ends.                                                                                                                      |
 | `fork` | `fork(child: Effect) → Effect`     | Start `child` concurrently but **do not** wait for it — the block's duration ignores a fork. A `fork`ed perpetual `spin`/`oscillate` runs "under" the awaited timeline and is cancelled at clip end. |
-| `hold` | `hold(sec) → Effect`               | A timed **dwell**: advance the clock by `sec` holding the current pose. The "slow down at a meaningful scale" beat.                                                                                   |
+| `hold` | `hold(sec) → Effect`               | A timed **dwell**: advance the clock by `sec` holding the current pose. The "slow down at a meaningful scale" beat.                                                                                  |
 | `wait` | `wait(sec) → Effect`               | A pure timeline delay of `sec` seconds — mechanically identical to `hold`; used to offset a following effect or scene cue (and to open a clip's lead-in).                                            |
 
 > `hold` and `wait` are both timeline spacers; the distinction is intent — `hold`
@@ -187,27 +187,28 @@ A `flyPath` flies a smooth spline through a list of waypoints, owning all four
 camera channels for its window (a single composite base writer). Unlike chained
 `seq([moveTarget, …])` tweens (which corner at each point), the path is C1-smooth,
 arc-length-reparametrised in **scale space** (lateral motion normalised by distance
-+ radial motion in log-distance), so perceived speed is uniform by default. The eye
-itself rides the spline; the look-at `target` is derived back from eye + aim.
 
-| Helper     | Signature                                                | What it does                                                                                                                    |
-| ---------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `atPoint`  | `atPoint(at: Vec3, distance, opts?) → PathWaypoint`      | A waypoint at a concrete world position + distance (Mpc). `opts`: `yaw?`, `pitch?` (pin the approach angle), `over?` (pin the leg's seconds), `linger?` (per-target brake ∈ [0,1]). |
-| `atFocus`  | `atFocus(id: FocusId, opts?) → PathWaypoint`             | The **unresolved** waypoint form: `resolveClipFoci` rewrites it to an `atPoint`-shaped waypoint (framed position + distance + subject `radius`) before compile. Same `opts`. |
-| `flyPath`  | `flyPath(waypoints, opts) → Effect`                      | Fly the spline through `waypoints` over `opts.over` **cruise** seconds (a dwell ADDS wall-clock time on top). See the opts + defaults below.                                     |
+- radial motion in log-distance), so perceived speed is uniform by default. The eye
+  itself rides the spline; the look-at `target` is derived back from eye + aim.
+
+| Helper    | Signature                                           | What it does                                                                                                                                                                        |
+| --------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `atPoint` | `atPoint(at: Vec3, distance, opts?) → PathWaypoint` | A waypoint at a concrete world position + distance (Mpc). `opts`: `yaw?`, `pitch?` (pin the approach angle), `over?` (pin the leg's seconds), `linger?` (per-target brake ∈ [0,1]). |
+| `atFocus` | `atFocus(id: FocusId, opts?) → PathWaypoint`        | The **unresolved** waypoint form: `resolveClipFoci` rewrites it to an `atPoint`-shaped waypoint (framed position + distance + subject `radius`) before compile. Same `opts`.        |
+| `flyPath` | `flyPath(waypoints, opts) → Effect`                 | Fly the spline through `waypoints` over `opts.over` **cruise** seconds (a dwell ADDS wall-clock time on top). See the opts + defaults below.                                        |
 
 `flyPath` opts and the defaults the helper stamps (from `pathDefaults.ts`):
 
-| Opt        | Type           | Default (helper)                                          | Meaning                                                                                                                              |
-| ---------- | -------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `over`     | `number`       | _(required)_                                             | Total **cruise** seconds. A dwell adds time; the real end is `endSec = startSec + totalSec`.                                        |
-| `ease`     | `Ease`         | `'inOut'`                                                | The whole-path accel/decel envelope — used **only when `rampSec` is 0**; otherwise the trapezoid wins.                             |
-| `align`    | `number`       | `DEFAULT_ALIGN_SEC = 1.35`                               | Seconds to blend the live orientation into the down-the-path aim at the start (capped at half the take).                            |
-| `rampSec`  | `number`       | `DEFAULT_RAMP_SEC = 1.4`                                 | Ramp seconds at each end for a trapezoidal speed envelope (short accel, long cruise, short decel). `0` opts out to the named `ease`. |
-| `linger`   | `number`       | `DEFAULT_LINGER = 0.7`                                   | Per-target dwell **depth** ∈ [0,1] applied at every waypoint (1 ≈ a 12%-speed crawl, never a freeze). A per-waypoint `linger` overrides it. Needs `lingerSec > 0`. |
-| `lingerSec`| `number`       | `DEFAULT_LINGER_SEC = 1.4`                               | Dwell window **width** (seconds) around each target. The crawl **leads** the knot (slow on approach, short tail past it).           |
-| `spline`   | `SplineConfig` | `DEFAULT_SPLINE_CONFIG = { kind: 'causalHermite', turnDelay: 1.1, lookAhead: 1.3 }` | Which basis fits the waypoints (see below).                                                     |
-| `passBy`   | `PassByConfig` | `DEFAULT_PASS_BY_CONFIG = { offset: 4, dir: 'outsideBend' }` | How the eye flies **past** interior galaxy waypoints instead of through them (see below).                                    |
+| Opt         | Type           | Default (helper)                                                                    | Meaning                                                                                                                                                            |
+| ----------- | -------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `over`      | `number`       | _(required)_                                                                        | Total **cruise** seconds. A dwell adds time; the real end is `endSec = startSec + totalSec`.                                                                       |
+| `ease`      | `Ease`         | `'inOut'`                                                                           | The whole-path accel/decel envelope — used **only when `rampSec` is 0**; otherwise the trapezoid wins.                                                             |
+| `align`     | `number`       | `DEFAULT_ALIGN_SEC = 1.35`                                                          | Seconds to blend the live orientation into the down-the-path aim at the start (capped at half the take).                                                           |
+| `rampSec`   | `number`       | `DEFAULT_RAMP_SEC = 1.4`                                                            | Ramp seconds at each end for a trapezoidal speed envelope (short accel, long cruise, short decel). `0` opts out to the named `ease`.                               |
+| `linger`    | `number`       | `DEFAULT_LINGER = 0.7`                                                              | Per-target dwell **depth** ∈ [0,1] applied at every waypoint (1 ≈ a 12%-speed crawl, never a freeze). A per-waypoint `linger` overrides it. Needs `lingerSec > 0`. |
+| `lingerSec` | `number`       | `DEFAULT_LINGER_SEC = 1.4`                                                          | Dwell window **width** (seconds) around each target. The crawl **leads** the knot (slow on approach, short tail past it).                                          |
+| `spline`    | `SplineConfig` | `DEFAULT_SPLINE_CONFIG = { kind: 'causalHermite', turnDelay: 1.1, lookAhead: 1.3 }` | Which basis fits the waypoints (see below).                                                                                                                        |
+| `passBy`    | `PassByConfig` | `DEFAULT_PASS_BY_CONFIG = { offset: 4, dir: 'outsideBend' }`                        | How the eye flies **past** interior galaxy waypoints instead of through them (see below).                                                                          |
 
 **`SplineConfig` — a discriminated union**, so a basis's knobs can't be set on a
 basis that ignores them:
@@ -241,12 +242,12 @@ never sailing past.
 Scene effects are timeline **cues** — they fire as the clock crosses them, not every
 frame. They change what's _drawn_, not where the camera _is_.
 
-| Helper  | Signature                                                 | What it does                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `show`  | `show(layers: VisibilityLayerKey[], over?) → SceneEffect` | Turn layers **on** (visibility **intent**) and fade them in. `over` omitted → default fade; `0` → instant; `N` → custom seconds. Rides the live fade bridge — dispatches the same settings actions the UI does.                                                                                                                                                                                                            |
-| `hide`  | `hide(layers, over?) → SceneEffect`                       | Turn layers **off** (intent) and fade them out. Same duration rules.                                                                                                                                                                                                                                                                                                                                                     |
-| `fade`  | `fade(layers, to, over) → SceneEffect`                    | A **transient** opacity move to `to` (0–1) over `over` seconds that **does not touch intent** — the layer stays loaded/enabled, only its drawn opacity moves. The cross-dissolve / mask / fade-to-black idiom. Writes the clip-owned `clipOpacity` channel (see Opacity below). Resets to 1 at clip end.                                                                                                                    |
-| `scene` | `scene(action: SettingsAction) → SceneEffect`             | Dispatch a non-visibility settings change. `SettingsAction` is a **narrow** union — currently `setFlowEnabled` and `setFlow` — widened as tour beats need more knobs. It's the same action a UI control dispatches; every reconcile saga fires for free.                                                                                                                                                                    |
+| Helper  | Signature                                                 | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `show`  | `show(layers: VisibilityLayerKey[], over?) → SceneEffect` | Turn layers **on** (visibility **intent**) and fade them in. `over` omitted → default fade; `0` → instant; `N` → custom seconds. Rides the live fade bridge — dispatches the same settings actions the UI does.                                                                                                                                                                                                                                        |
+| `hide`  | `hide(layers, over?) → SceneEffect`                       | Turn layers **off** (intent) and fade them out. Same duration rules.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `fade`  | `fade(layers, to, over) → SceneEffect`                    | A **transient** opacity move to `to` (0–1) over `over` seconds that **does not touch intent** — the layer stays loaded/enabled, only its drawn opacity moves. The cross-dissolve / mask / fade-to-black idiom. Writes the clip-owned `clipOpacity` channel (see Opacity below). Resets to 1 at clip end.                                                                                                                                               |
+| `scene` | `scene(action: SettingsAction) → SceneEffect`             | Dispatch a non-visibility settings change. `SettingsAction` is a **narrow** union — currently `setFlowEnabled` and `setFlow` — widened as tour beats need more knobs. It's the same action a UI control dispatches; every reconcile saga fires for free.                                                                                                                                                                                               |
 | `focus` | `focus(id: FocusId \| null) → FocusBoundEffect`           | Build an **unresolved** `focusId` cue addressed by a durable `FocusId` (`null` clears focus). `resolveClipFoci` rewrites it to the concrete `{ kind: 'focus', ref }` `SceneEffect` at play time. On a **structure** ref this engages focus mode — non-member galaxies dim toward 0.08 (a per-galaxy geometric isolation) and drop out of picking, while surrounding layers (filaments, volumes, structure rings, labels) recede. `null` releases both. |
 
 **`layers` are `VisibilityLayerKey`s** — the intent-addressing keys the UI and
@@ -255,8 +256,22 @@ frame. They change what's _drawn_, not where the camera _is_.
 `'milkyWayLabel'`, `'surveyLabel'`, `'scaleBar'`, `'structureRing'`,
 `'structureLabel'`, `'survey'`, `'filaments'`, `'flow'`, `'volumeField'`. A
 `show`/`hide` on a multi-item layer (e.g. `'survey'`) sets the cluster gate; the
-bridge expands to the items. There are **no** composite aliases like `'galaxies'` /
-`'volumes'` / `'labels'` — use the concrete keys.
+bridge expands to the items.
+
+`show`/`hide` (not `fade`) additionally accept two authoring extensions inline
+in the same list:
+
+- **The `'labels'` aggregate** — every text label
+  (`surveyLabel` + `structureLabel` + `milkyWayLabel`), expanded to atomic keys
+  at construction.
+- **Scoped `'family:scope'` entries** — address ONE item where the bare key
+  fans over all: `'survey:milliquas'` (one catalog), `'structureRing:group'`
+  (one structure category — structure settings items ARE the four categories),
+  and the unified label namespace `'label:milkyWay'` / `'label:survey'` /
+  `'label:structure'` / `'label:group'` (etc. per category). Template-literal
+  typed, so a bad scope is a compile error. Scoped entries dispatch one
+  targeted settings action at fire time and fade via the reactive
+  settings→fade bridge — a custom `over` applies to the atomic layers only.
 
 ### Focus IDs and deferred resolution
 
@@ -367,9 +382,7 @@ fly-past), resolved against the live catalog at play time.
 ```ts
 const groupTour: ClipData = {
   start: 'live',
-  timeline: [
-    flyPath([atFocus('ngc5128'), atFocus('m83'), atFocus('cen-a-group')], { over: 40 }),
-  ],
+  timeline: [flyPath([atFocus('ngc5128'), atFocus('m83'), atFocus('cen-a-group')], { over: 40 })],
 };
 ```
 

@@ -51,6 +51,7 @@ import type { AppDispatch } from '../../store/types';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import { syncVisibilityFades } from '../engine/wiring/syncVisibilityFades';
 import { VISIBILITY_ACTION_ROW } from './visibilityActionRow';
+import { scopedVisibilityActions } from './scopedVisibilityActions';
 
 export function applySceneEffect(
   effect: SceneEffect,
@@ -62,9 +63,16 @@ export function applySceneEffect(
     case 'show': {
       // Dispatch the visibility-on settings actions for each layer, then sync
       // the fade bridge so the opacity animates (or snaps) to reflect the new
-      // intent.
+      // intent. Scoped entries ('survey:milliquas') dispatch their targeted
+      // action instead — the reactive settings→fade bridge animates those, so
+      // they take no part in the explicit sync below.
       for (const layer of effect.layers) {
         for (const action of VISIBILITY_ACTION_ROW[layer](true, state.settings)) {
+          store.dispatch(action);
+        }
+      }
+      for (const scopedArg of effect.scoped ?? []) {
+        for (const action of scopedVisibilityActions(scopedArg, true, state.settings)) {
           store.dispatch(action);
         }
       }
@@ -80,6 +88,11 @@ export function applySceneEffect(
       // Mirror of show: dispatch visibility-off actions, then sync the bridge.
       for (const layer of effect.layers) {
         for (const action of VISIBILITY_ACTION_ROW[layer](false, state.settings)) {
+          store.dispatch(action);
+        }
+      }
+      for (const scopedArg of effect.scoped ?? []) {
+        for (const action of scopedVisibilityActions(scopedArg, false, state.settings)) {
           store.dispatch(action);
         }
       }

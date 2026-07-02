@@ -270,6 +270,27 @@ describe('applySceneEffect — show', () => {
       expect.objectContaining({ animate: true, durationMs: 1200 }),
     );
   });
+
+  it('dispatches a targeted action for a scoped entry, not the whole-row fan-out', () => {
+    const { store } = createAppStore();
+    const settings = store.getState().settings as unknown as EngineSettingsState;
+    const state = makeEngineState(settings);
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    applySceneEffect({ kind: 'show', layers: [], scoped: ['survey:milliquas'] }, { state, store });
+
+    // Exactly ONE catalog-visibility action — the scoped item, no fan-out.
+    const catalogActions = dispatch.mock.calls
+      .map(([a]) => a as ReturnType<typeof setGalaxyCatalogVisible>)
+      .filter((a) => a.type === setGalaxyCatalogVisible.type);
+    expect(catalogActions).toEqual([setGalaxyCatalogVisible({ id: 'milliquas', enabled: true })]);
+    // The explicit fade sync covers atomic layers only (empty here) — the
+    // scoped item's fade rides the reactive settings→fade bridge.
+    expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ only: [] }),
+    );
+  });
 });
 
 describe('applySceneEffect — hide', () => {
@@ -311,6 +332,20 @@ describe('applySceneEffect — hide', () => {
         true,
       );
     }
+  });
+
+  it('dispatches a targeted off action for a scoped hide entry', () => {
+    const { store } = createAppStore();
+    const settings = store.getState().settings as unknown as EngineSettingsState;
+    const state = makeEngineState(settings);
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    applySceneEffect({ kind: 'hide', layers: [], scoped: ['label:group'] }, { state, store });
+
+    const labelActions = dispatch.mock.calls
+      .map(([a]) => a as ReturnType<typeof setStructureLabelEnabled>)
+      .filter((a) => a.type === setStructureLabelEnabled.type);
+    expect(labelActions).toEqual([setStructureLabelEnabled({ id: 'group', enabled: false })]);
   });
 
   it('calls syncVisibilityFades with only + animate:true when over is undefined', () => {
