@@ -9,7 +9,7 @@
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
-import { focusOn, hide, scene } from '../../../../services/engine/animation/effectHelpers';
+import { focusOnId, hide, scene } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
 
@@ -40,6 +40,6 @@ export const openingTitle: ClipData = {
     // draws. The snapshot/restore winds it back on exit; a beat that wants
     // many labels at once flips it off with another scene() cue.
     scene(setLabelsFocusedOnly(true)),
-    focusOn(MW, 2),
+    focusOnId(MW, 2),
   ],
 };

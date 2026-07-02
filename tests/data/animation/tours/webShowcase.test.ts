@@ -15,7 +15,7 @@ import { dwellDrift } from '../../../../src/state/tour/dwellDrift';
 import type { Effect } from '../../../../src/@types/animation/Effect';
 
 // Flatten an effect tree to its leaf/structural kinds — the focus cue may sit
-// inside a seq (focusOn) rather than at the timeline's top level.
+// inside a seq (focusOnId) rather than at the timeline's top level.
 function collectKinds(effects: readonly Effect[]): string[] {
   return effects.flatMap((e) => {
     if (e.kind === 'seq' || e.kind === 'all') return [e.kind, ...collectKinds(e.children)];
@@ -50,7 +50,7 @@ describe('webShowcase tour', () => {
   });
 
   it('beat 2 clip carries a focusId cue (flyAndFocusOnClip)', () => {
-    // beat index 1 is the Virgo Cluster beat — flyAndFocusOnClip wraps focusOn,
+    // beat index 1 is the Virgo Cluster beat — flyAndFocusOnClip wraps focusOnId,
     // whose seq leads with a focusId cue before the camera-move block.
     expect(collectKinds(webShowcase.beats[1]!.enterClip!.timeline)).toContain('focusId');
   });

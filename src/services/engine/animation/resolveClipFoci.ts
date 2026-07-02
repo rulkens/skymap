@@ -22,11 +22,17 @@
  *     The distance in Mpc comes from `focusFraming(row, fovYRad).distance`.
  *
  *   - `lookAtId(id, over, ease)`    → `aimAt({ yaw, pitch }, over, ease)`
- *     The bearing aims the view from the LIVE orbit target (`orbitTarget`,
+ *     The bearing aims the view from the LIVE orbit target (`from.target`,
  *     passed by the caller from the camera runtime) at the subject's framed
  *     position. Because the bearing is baked here — at resolve time — a
- *     `lookAt` is only correct before anything else moves the target; see
- *     the `lookAt` helper's docstring.
+ *     `lookAtId` is only correct before anything else moves the target; see
+ *     the `lookAtId` helper's docstring.
+ *
+ *   - `strafeId(id, byDeg, over, ease)` → `moveTarget(displaced, over, ease)`
+ *     The live orbit target displaced along the horizontal right axis of the
+ *     bearing toward the subject, by `tan(byDeg) × from.distance` — an
+ *     angular sidestep that reads the same at every scale. Same baked-at-
+ *     resolve caveat as `lookAtId`.
  *
  *   - `focusId(id)` or `focusId(null)` → `{ kind: 'focus', ref }`
  *     `null` maps to `{ kind: 'focus', ref: null }`.  A non-null id resolves
@@ -57,6 +63,7 @@ import type { Effect } from '../../../@types/animation/Effect';
 import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
 import { moveTarget, dollyTo, aimAt } from './effectHelpers';
 import { resolveFocusId } from '../../url/resolveFocusId';
 import { extractSelectionRow } from '../helpers/extractSelectionRow';
@@ -66,8 +73,9 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
 /**
  * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
  * the live catalog state in `deps`, the camera's current vertical FOV in
- * radians, and the live orbit target (`lookAtId` bearings are measured from
- * it — callers pass `cameraRuntime.from.target`).
+ * radians, and the live camera pose (`lookAtId` bearings are measured from
+ * its target; `strafeId` scales degrees into Mpc by its distance — callers
+ * pass `cameraRuntime.from`).
  *
  * Returns a new `ClipData` with the same structure but id-bearing leaves
  * replaced. The `start` field is preserved unchanged (that rewrite is
@@ -80,11 +88,11 @@ export function resolveClipFoci(
   data: ClipData,
   deps: ResolveDeps,
   fovYRad: number,
-  orbitTarget: Vec3,
+  from: CameraPose,
 ): ClipData {
   return {
     ...data,
-    timeline: data.timeline.map((e) => walkEffect(e, deps, fovYRad, orbitTarget)),
+    timeline: data.timeline.map((e) => walkEffect(e, deps, fovYRad, from)),
   };
 }
 
@@ -96,21 +104,21 @@ export function resolveClipFoci(
  * Structural nodes (`seq`, `all`, `fork`) recurse into their children.
  * Id-bearing leaves are rewritten. Everything else passes through as-is.
  */
-function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number, orbitTarget: Vec3): Effect {
+function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number, from: CameraPose): Effect {
   switch (effect.kind) {
     // ── Structural nodes — recurse ──────────────────────────────────────────
     case 'seq':
       return {
         kind: 'seq',
-        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, orbitTarget)),
+        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from)),
       };
     case 'all':
       return {
         kind: 'all',
-        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, orbitTarget)),
+        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from)),
       };
     case 'fork':
-      return { kind: 'fork', child: walkEffect(effect.child, deps, fovYRad, orbitTarget) };
+      return { kind: 'fork', child: walkEffect(effect.child, deps, fovYRad, from) };
 
     // ── Id-bearing leaves — rewrite ─────────────────────────────────────────
     case 'moveTargetId': {
@@ -122,16 +130,41 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number, orbitTar
       return dollyTo(distance, effect.over, effect.ease);
     }
     // The bearing that puts the subject centre-frame beyond the LIVE orbit
-    // target — baked here, so a lookAt is only valid before the target moves
-    // (see the `lookAt` helper docstring).
+    // target — baked here, so a lookAtId is only valid before the target
+    // moves (see the `lookAtId` helper docstring).
     case 'lookAtId': {
       const { target } = resolveFraming(effect.id, deps, fovYRad);
       const forward: Vec3 = [
-        target[0] - orbitTarget[0],
-        target[1] - orbitTarget[1],
-        target[2] - orbitTarget[2],
+        target[0] - from.target[0],
+        target[1] - from.target[1],
+        target[2] - from.target[2],
       ];
       return aimAt(orbitAnglesLookingAlong(forward), effect.over, effect.ease);
+    }
+    // A lateral tracking move: displace the live orbit target along the
+    // horizontal right axis of the bearing toward the subject. `forward ×
+    // worldUp` simplifies to `[-fz, 0, fx]` — always horizontal, undefined
+    // only when the bearing is vertical. The angular `byDeg` scales into Mpc
+    // by the live camera distance, so the old anchor slides ~byDeg degrees
+    // across the frame regardless of scale.
+    case 'strafeId': {
+      const { target } = resolveFraming(effect.id, deps, fovYRad);
+      const fx = target[0] - from.target[0];
+      const fz = target[2] - from.target[2];
+      const m = Math.hypot(fz, fx);
+      if (m < 1e-12) {
+        throw new Error(
+          `resolveClipFoci: strafeId '${effect.id}' has a vertical bearing — ` +
+            `no horizontal right axis exists to strafe along.`,
+        );
+      }
+      const byMpc = Math.tan((effect.byDeg * Math.PI) / 180) * from.distance;
+      const displaced: Vec3 = [
+        from.target[0] + (-fz / m) * byMpc,
+        from.target[1],
+        from.target[2] + (fx / m) * byMpc,
+      ];
+      return moveTarget(displaced, effect.over, effect.ease);
     }
     // ── flyPath — resolve each id-bearing waypoint; pass at-form through ──────
     //

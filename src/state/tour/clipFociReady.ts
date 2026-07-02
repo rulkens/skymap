@@ -77,6 +77,7 @@ function walkEffect(effect: Effect, deps: ResolveDeps): boolean {
     case 'moveTargetId':
     case 'dollyToId':
     case 'lookAtId':
+    case 'strafeId':
       return resolveFocusId(effect.id, deps) !== null;
     case 'focusId':
       // null is a focus-clear cue: always ready, no data needed.

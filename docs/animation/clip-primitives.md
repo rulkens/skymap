@@ -162,20 +162,32 @@ helper output before `compileClip` runs (see "Focus IDs" below). Use them when t
 target isn't known at authoring time and must be looked up from the catalog at play
 time.
 
-| Helper         | Signature                                          | Resolves to                              |
-| -------------- | -------------------------------------------------- | ---------------------------------------- |
-| `moveTargetId` | `moveTargetId(id, over, ease?) → FocusBoundEffect` | `moveTarget(framing.target, over, ease)` |
-| `dollyToId`    | `dollyToId(id, over, ease?) → FocusBoundEffect`    | `dollyTo(framing.distance, over, ease)`  |
-| `lookAt`       | `lookAt(id, over, ease?) → FocusBoundEffect`       | `aimAt(bearing, over, ease)`             |
+| Helper         | Signature                                             | Resolves to                                |
+| -------------- | ----------------------------------------------------- | ------------------------------------------ |
+| `moveTargetId` | `moveTargetId(id, over, ease?) → FocusBoundEffect`    | `moveTarget(framing.target, over, ease)`   |
+| `dollyToId`    | `dollyToId(id, over, ease?) → FocusBoundEffect`       | `dollyTo(framing.distance, over, ease)`    |
+| `lookAtId`     | `lookAtId(id, over, ease?) → FocusBoundEffect`        | `aimAt(bearing, over, ease)`               |
+| `strafeId`     | `strafeId(id, byDeg, over, ease?) → FocusBoundEffect` | `moveTarget(displaced target, over, ease)` |
 
-> **`lookAt` — turn your head before you walk.** The orbit camera always faces
+> **`lookAtId` — turn your head before you walk.** The orbit camera always faces
 > its target, so it cannot rotate in place; "looking at" a subject means
 > orbiting the eye around the CURRENT target until the subject lines up
 > centre-frame beyond it. The bearing (`orbitAnglesLookingAlong` of subject −
-> live orbit target) is baked at **resolve time**, so a `lookAt` is only
+> live orbit target) is baked at **resolve time**, so a `lookAtId` is only
 > correct before anything else moves the target — establish the shot as the
-> clip's opening move, then fly (`focusOn`). Target and distance are untouched:
+> clip's opening move, then fly (`focusOnId`). Target and distance are untouched:
 > the view swings, the camera stays put (up to the orbit-sphere arc).
+>
+> **`strafeId` — slide sideways without turning.** The lateral tracking move:
+> the live orbit target displaces along the horizontal right axis of the
+> bearing toward the subject (`forward × worldUp`), by `tan(byDeg) × live
+camera distance` — angular, so it reads the same at every scale. Positive
+> strafes the rig right (whatever sat at the old target drifts ~`byDeg`°
+> screen-left); a distant subject barely moves. At the exact `lookAtId`
+> bearing the old target stacks dead in front of the subject, so the idiom is
+> `all([lookAtId(id, t), strafeId(id, deg, t)])` — composable because the
+> strafe writes `target` while the aim writes yaw/pitch. Same resolve-time
+> caveat as `lookAtId`: an opening move, not a mid-clip one.
 
 ### Timeline structure & timing
 
@@ -285,18 +297,21 @@ in the same list:
 
 ### Focus IDs and deferred resolution
 
-Five helpers produce **unresolved** id-bearing effects (`FocusBoundEffect` arms
-`moveTargetId` / `dollyToId` / `lookAtId` / `focusId`, plus `atFocus` waypoints
-inside a `flyPath`). They carry a durable `FocusId` string rather than a concrete
-`Vec3` / distance / `SelectionRef`, so a clip can be authored at module-load time —
-before any catalog is loaded — and resolved against whichever tier is live at play
-time. `resolveClipFoci` walks the timeline and rewrites each one:
+Six helpers produce **unresolved** id-bearing effects (`FocusBoundEffect` arms
+`moveTargetId` / `dollyToId` / `lookAtId` / `strafeId` / `focusId`, plus `atFocus`
+waypoints inside a `flyPath`). They carry a durable `FocusId` string rather than a
+concrete `Vec3` / distance / `SelectionRef`, so a clip can be authored at module-load
+time — before any catalog is loaded — and resolved against whichever tier is live at
+play time. `resolveClipFoci` walks the timeline and rewrites each one:
 
 - `moveTargetId(id, …)` → `moveTarget(framing.target, …)`
 - `dollyToId(id, …)` → `dollyTo(framing.distance, …)`
-- `lookAt(id, …)` → `aimAt({ yaw, pitch }, …)` — the bearing from the **live
-  orbit target** (passed into `resolveClipFoci` from the camera runtime) at the
+- `lookAtId(id, …)` → `aimAt({ yaw, pitch }, …)` — the bearing from the **live
+  camera pose** (passed into `resolveClipFoci` from the camera runtime) at the
   subject's framed position
+- `strafeId(id, byDeg, …)` → `moveTarget(displaced, …)` — the live orbit target
+  displaced along the bearing's horizontal right axis by `tan(byDeg) × live
+camera distance`
 - `focus(id)` → `{ kind: 'focus', ref }` (an id of `null` → `{ kind: 'focus', ref: null }`)
 - a `flyPath` with `atFocus` waypoints → the same `flyPath` with each id-waypoint in
   `at`-form (gaining its subject `radius`); the `flyPath` itself survives into

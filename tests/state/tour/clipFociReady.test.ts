@@ -19,7 +19,8 @@ import {
   moveTargetId,
   dollyToId,
   focus,
-  lookAt,
+  lookAtId,
+  strafeId,
   hold,
   seq,
   all,
@@ -82,15 +83,18 @@ describe('clipFociReady', () => {
     expect(clipFociReady(m87FlyClip, depsM87NotLoaded)).toBe(false);
   });
 
-  it('clipFociReady gates lookAt like the other id-bearing arms', () => {
-    // lookAt carries a FocusId that must resolve before the bearing can be
-    // computed — an unloaded famous id blocks readiness, a structure id never does.
-    const m87LookClip: ClipData = { start: 'live', timeline: [lookAt(id('m87'), 3)] };
+  it('clipFociReady gates lookAtId and strafeId like the other id-bearing arms', () => {
+    // Both carry a FocusId that must resolve before the resolve-time math can
+    // run — an unloaded famous id blocks readiness, a structure id never does.
+    const m87LookClip: ClipData = { start: 'live', timeline: [lookAtId(id('m87'), 3)] };
     expect(clipFociReady(m87LookClip, depsM87NotLoaded)).toBe(false);
+
+    const m87StrafeClip: ClipData = { start: 'live', timeline: [strafeId(id('m87'), 10, 3)] };
+    expect(clipFociReady(m87StrafeClip, depsM87NotLoaded)).toBe(false);
 
     const virgoLookClip: ClipData = {
       start: 'live',
-      timeline: [lookAt(id('cluster-virgo-m87'), 3)],
+      timeline: [lookAtId(id('cluster-virgo-m87'), 3)],
     };
     expect(clipFociReady(virgoLookClip, emptyDeps)).toBe(true);
   });

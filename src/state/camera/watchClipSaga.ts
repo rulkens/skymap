@@ -65,7 +65,7 @@ export function* watchClipSaga() {
           () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null,
         );
         const rt = cameraRuntime()!;
-        const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from.target);
+        const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from);
         yield* call(playClipSeam, resolved);
       }),
       stop: take(stopClip),

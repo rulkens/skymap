@@ -68,7 +68,7 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   // carries the FOV resolveClipFoci needs) exists — same gate as watchClipSaga.
   yield* call(waitUntil, () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null);
   const rt = cameraRuntime()!;
-  const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from.target);
+  const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from);
   // Bake only the ACTIVATED pacing knobs into the flyPath nodes before
   // sampling, so the overlay AND the pinned (replayable) clip carry the
   // overrides — while inactive knobs let the clip's own authored value through.

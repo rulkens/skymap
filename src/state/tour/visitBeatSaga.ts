@@ -86,7 +86,7 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   // dwell begins immediately and the caption reveals at once.
   if (beat.enterClip !== undefined) {
     const rt = cameraRuntime()!;
-    const enterClip = resolveClipFoci(beat.enterClip, resolveDeps(), rt.fovYRad, rt.from.target);
+    const enterClip = resolveClipFoci(beat.enterClip, resolveDeps(), rt.fovYRad, rt.from);
     yield* call(playClip, enterClip);
   }
 
@@ -96,7 +96,7 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   // runtime is re-read here: the enter clip just moved the camera, and a
   // lookAt in the dwell must bear from where it LANDED, not where it began.
   const rt = cameraRuntime()!;
-  const dwellClip = resolveClipFoci(beat.dwellClip, resolveDeps(), rt.fovYRad, rt.from.target);
+  const dwellClip = resolveClipFoci(beat.dwellClip, resolveDeps(), rt.fovYRad, rt.from);
   const dwellSec = compileClip(dwellClip).durationSec;
   yield* put(dwellStarted({ dwellSec }));
 

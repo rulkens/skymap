@@ -407,7 +407,7 @@ export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' 
 }
 
 /**
- * focusOn — focus the id AND fly the camera to its framing: the clip-land
+ * focusOnId — focus the id AND fly the camera to its framing: the clip-land
  * equivalent of `requestFocus`. In interactive-land a focus change plants a
  * runtime camera tween; inside a clip that path is fenced off (the clip is the
  * only camera writer, and its duration must be static), so the fused verb has
@@ -418,12 +418,12 @@ export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' 
  * Plain `focus(id)` remains the camera-free half — use it when the clip's own
  * choreography (a flyPath, a spin) already owns the camera.
  */
-export function focusOn(id: FocusId, over: number, ease: Ease = 'inOut'): Effect {
+export function focusOnId(id: FocusId, over: number, ease: Ease = 'inOut'): Effect {
   return seq([focus(id), all([moveTargetId(id, over, ease), dollyToId(id, over, ease)])]);
 }
 
 /**
- * lookAt — swing the view so the subject identified by `id` drifts to centre
+ * lookAtId — swing the view so the subject identified by `id` drifts to centre
  * frame, WITHOUT flying to it. The "turn your head before you walk" verb.
  *
  * The orbit camera always faces its target, so it cannot literally rotate in
@@ -434,16 +434,51 @@ export function focusOn(id: FocusId, over: number, ease: Ease = 'inOut'): Effect
  * `aimAt` — concurrent yaw/pitch tweens. Target and distance are untouched.
  *
  * The bearing is measured from the orbit target AT RESOLVE TIME (clip start),
- * so `lookAt` is only correct as an opening move — anything that moves the
+ * so `lookAtId` is only correct as an opening move — anything that moves the
  * target before it fires (a `moveTarget`, a `flyPath`) invalidates the
- * precomputed angles. Establish the shot first, then fly (`focusOn`).
+ * precomputed angles. Establish the shot first, then fly (`focusOnId`).
+ *
+ * At the exact bearing the orbit target sits dead on the line to the subject —
+ * the two stack on the boresight. Compose a concurrent `strafeId` into the
+ * same `all` to break the stack: the strafe writes `target` while this writes
+ * yaw/pitch, so the single-writer rule holds.
  */
-export function lookAt(
+export function lookAtId(
   id: FocusId,
   over: number,
   ease?: Ease,
 ): FocusBoundEffect & { kind: 'lookAtId' } {
   return { kind: 'lookAtId', id, over, ease: ease ?? 'inOut' };
+}
+
+/**
+ * strafeId — slide the camera rig sideways relative to the bearing toward the
+ * subject identified by `id`, WITHOUT turning. The lateral tracking move.
+ *
+ * In the orbit model the eye is derived from the target, so a lateral eye
+ * move IS a target move: `resolveClipFoci` rewrites this arm to a concrete
+ * `moveTarget` — the live orbit target displaced along the bearing's
+ * horizontal right axis (`normalize(forward × worldUp)`). Because it writes
+ * the `target` channel and `lookAtId` writes yaw/pitch, the two compose in
+ * one `all` — aim and sidestep concurrently.
+ *
+ * `byDeg` is ANGULAR, so it reads the same at every scale: the displacement
+ * is `tan(byDeg) × live camera distance`, which slides whatever sat at the
+ * old target ~`byDeg` degrees across the frame. Positive strafes the rig
+ * RIGHT (the old anchor drifts screen-left); negative strafes left. A distant
+ * subject barely moves (parallax shrinks with depth), so `all([lookAtId,
+ * strafeId])` reads as "aim at the subject with the old anchor pushed aside".
+ *
+ * Same resolve-time caveat as `lookAtId`: the axis and displacement are baked
+ * from the live pose at clip start — an opening move, not a mid-clip one.
+ */
+export function strafeId(
+  id: FocusId,
+  byDeg: number,
+  over: number,
+  ease?: Ease,
+): FocusBoundEffect & { kind: 'strafeId' } {
+  return { kind: 'strafeId', id, byDeg, over, ease: ease ?? 'inOut' };
 }
 
 // ---------------------------------------------------------------------------

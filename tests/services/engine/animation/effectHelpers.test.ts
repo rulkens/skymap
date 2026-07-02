@@ -25,8 +25,9 @@ import {
   fade,
   scene,
   focus,
-  focusOn,
-  lookAt,
+  focusOnId,
+  lookAtId,
+  strafeId,
   seq,
   all,
   fork,
@@ -368,29 +369,53 @@ describe('focus', () => {
   });
 });
 
-describe('focusOn', () => {
+describe('focusOnId', () => {
   it('composes focus-then-fly: a seq of the focusId cue and the concurrent camera move', () => {
     const id = focusId('m87');
-    const e = focusOn(id, 5);
+    const e = focusOnId(id, 5);
     expect(e).toEqual(seq([focus(id), all([moveTargetId(id, 5), dollyToId(id, 5)])]));
   });
 
   it('forwards an explicit ease to both camera writers', () => {
     const id = focusId('virgo');
-    const e = focusOn(id, 3, 'out');
+    const e = focusOnId(id, 3, 'out');
     expect(e).toEqual(seq([focus(id), all([moveTargetId(id, 3, 'out'), dollyToId(id, 3, 'out')])]));
   });
 });
 
-describe('lookAt', () => {
+describe('lookAtId', () => {
   it('builds the unresolved lookAtId arm with ease defaulting to inOut', () => {
     const id = focusId('m31');
-    expect(lookAt(id, 3)).toEqual({ kind: 'lookAtId', id, over: 3, ease: 'inOut' });
+    expect(lookAtId(id, 3)).toEqual({ kind: 'lookAtId', id, over: 3, ease: 'inOut' });
   });
 
   it('forwards an explicit ease', () => {
     const id = focusId('m31');
-    expect(lookAt(id, 2, 'out')).toEqual({ kind: 'lookAtId', id, over: 2, ease: 'out' });
+    expect(lookAtId(id, 2, 'out')).toEqual({ kind: 'lookAtId', id, over: 2, ease: 'out' });
+  });
+});
+
+describe('strafeId', () => {
+  it('builds the unresolved strafeId arm with ease defaulting to inOut', () => {
+    const id = focusId('m31');
+    expect(strafeId(id, 10, 3)).toEqual({
+      kind: 'strafeId',
+      id,
+      byDeg: 10,
+      over: 3,
+      ease: 'inOut',
+    });
+  });
+
+  it('forwards a negative angle and an explicit ease', () => {
+    const id = focusId('m31');
+    expect(strafeId(id, -5, 2, 'out')).toEqual({
+      kind: 'strafeId',
+      id,
+      byDeg: -5,
+      over: 2,
+      ease: 'out',
+    });
   });
 });
 

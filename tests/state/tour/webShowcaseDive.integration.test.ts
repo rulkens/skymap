@@ -150,7 +150,7 @@ describe('webShowcase dive invariants', () => {
       beat2Clip,
       DIVE_DEPS,
       CAMERA_RUNTIME.fovYRad,
-      CAMERA_RUNTIME.from.target,
+      CAMERA_RUNTIME.from,
     );
 
     const nodes = collectNodes(resolved.timeline);
@@ -177,7 +177,7 @@ describe('webShowcase dive invariants', () => {
       beat3Clip,
       DIVE_DEPS,
       CAMERA_RUNTIME.fovYRad,
-      CAMERA_RUNTIME.from.target,
+      CAMERA_RUNTIME.from,
     );
 
     const nodes = collectNodes(resolved.timeline);

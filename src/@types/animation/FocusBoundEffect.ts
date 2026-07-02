@@ -39,4 +39,12 @@ export type FocusBoundEffect =
     }
   | { readonly kind: 'dollyToId'; readonly id: FocusId; readonly over: number; readonly ease: Ease }
   | { readonly kind: 'lookAtId'; readonly id: FocusId; readonly over: number; readonly ease: Ease }
+  | {
+      readonly kind: 'strafeId';
+      readonly id: FocusId;
+      /** Lateral swing, degrees of frame at the anchor's depth — see `strafeId` helper. */
+      readonly byDeg: number;
+      readonly over: number;
+      readonly ease: Ease;
+    }
   | { readonly kind: 'focusId'; readonly id: FocusId | null };
