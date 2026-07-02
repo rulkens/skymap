@@ -213,11 +213,31 @@ arc-length-reparametrised in **scale space** (lateral motion normalised by dista
 - radial motion in log-distance), so perceived speed is uniform by default. The eye
   itself rides the spline; the look-at `target` is derived back from eye + aim.
 
-| Helper    | Signature                                           | What it does                                                                                                                                                                        |
-| --------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `atPoint` | `atPoint(at: Vec3, distance, opts?) → PathWaypoint` | A waypoint at a concrete world position + distance (Mpc). `opts`: `yaw?`, `pitch?` (pin the approach angle), `over?` (pin the leg's seconds), `linger?` (per-target brake ∈ [0,1]). |
-| `atFocus` | `atFocus(id: FocusId, opts?) → PathWaypoint`        | The **unresolved** waypoint form: `resolveClipFoci` rewrites it to an `atPoint`-shaped waypoint (framed position + distance + subject `radius`) before compile. Same `opts`.        |
-| `flyPath` | `flyPath(waypoints, opts) → Effect`                 | Fly the spline through `waypoints` over `opts.over` **cruise** seconds (a dwell ADDS wall-clock time on top). See the opts + defaults below.                                        |
+**The launch is a knot you don't author.** The clip's start pose (usually
+`'live'`) is the path's first spline knot — the path flies out of wherever the
+camera is, and `align` eases the live orientation into the down-the-path aim.
+Don't author a waypoint for where the camera already is.
+
+| Helper    | Signature                                           | What it does                                                                                                                                                                 |
+| --------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `atPoint` | `atPoint(at: Vec3, distance, opts?) → PathWaypoint` | A waypoint at a concrete world position + distance (Mpc). Waypoint `opts` below.                                                                                             |
+| `atFocus` | `atFocus(id: FocusId, opts?) → PathWaypoint`        | The **unresolved** waypoint form: `resolveClipFoci` rewrites it to an `atPoint`-shaped waypoint (framed position + distance + subject `radius`) before compile. Same `opts`. |
+| `flyPath` | `flyPath(waypoints, opts) → Effect`                 | Fly the spline through `waypoints` over `opts.over` **cruise** seconds (a dwell ADDS wall-clock time on top). See the opts + defaults below.                                 |
+
+The two waypoint forms **interleave freely**: sweep through named subjects with
+`atFocus` and drop hand-placed `atPoint` control points between them where the
+catalog positions alone would bend the curve wrong.
+
+**Per-waypoint `opts`** (both forms):
+
+| Opt              | Meaning                                                                                                                                                                                                                                                                                                        |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `over?`          | Seconds allotted to the leg **leading into** this waypoint. Omit and the leg takes its arc-length share of the path total (uniform perceived speed — the default); pin one to slow a stretch down, and the remaining unpinned legs split what's left by arc length.                                            |
+| `yaw?`, `pitch?` | Pin the bank/tilt at this waypoint. Omit (the common case) and the approach angle interpolates across the leg — you sweep _through_ subjects rather than banking precisely at each. Yaw is unwrapped so interpolation always takes the short way around.                                                       |
+| `linger?`        | Per-target brake ∈ [0,1], overriding the path-level `linger`: a local velocity dip centred on this waypoint (slow on approach, short tail past). `0` cruises straight through — the **pass-through idiom** for waypoints that only shape the curve (see `neighbourhoodFlythrough`); `1` eases to a ~12% crawl. |
+
+The path never fully **stops** at a waypoint — a stop is a beat dwell (a separate
+clip), not a path feature.
 
 `flyPath` opts and the defaults the helper stamps (from `pathDefaults.ts`):
 
@@ -249,11 +269,22 @@ direct-call default — for callers that bypass the helper — is neutral `centr
 
 **`PassByConfig`** displaces interior eye knots laterally so the eye sweeps _past_ a
 subject rather than ramming it: `offset` is the lateral distance in units of the
-subject's **radius** (0 = through-centre; ~4 fills roughly a third of frame),
-`dir ∈ 'outsideBend' | 'above' | 'screenSide'` names which perpendicular. Only
-interior waypoints with a non-zero subject radius (galaxies, via `atFocus`) are
+subject's **radius** (0 = through-centre; ~4 fills roughly a third of frame), and
+`dir` names which perpendicular to the local travel direction:
+
+- `'outsideBend'` _(default)_ — the outside of the path's turn at that knot: the
+  eye arcs around the galaxy on the convex side, the galaxy on the inside of the
+  curve. Organic, but the screen-side varies per waypoint; on a near-straight leg
+  (no bend to speak of) it falls back to `'above'`.
+- `'above'` — world-up perpendicular: the eye passes over the top and the galaxy
+  sweeps **downward** through frame. Consistent and documentary.
+- `'screenSide'` — the travel-right perpendicular (tangent × up): the galaxy
+  drifts consistently across one side of frame horizontally.
+
+Only interior waypoints with a non-zero subject radius (galaxies, via `atFocus`) are
 displaced; structures resolve to radius 0 and are flown through-centre, so a groups
-flythrough with the default `passBy` is untouched. The final waypoint is the
+flythrough with the default `passBy` is untouched. Hand-placed `atPoint` control
+points carry no radius and are never displaced. The final waypoint is the
 **destination** — the eye pulls back to its framing distance and ends framed on it,
 never sailing past.
 
