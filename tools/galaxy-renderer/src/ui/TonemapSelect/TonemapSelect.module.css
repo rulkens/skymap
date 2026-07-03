@@ -1,0 +1,11 @@
+.root {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--surface-line);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+}
