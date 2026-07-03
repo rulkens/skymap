@@ -56,6 +56,12 @@ export function randomGalaxyParams(
     sampled[key] = Math.min(max, Math.max(min, value));
   }
 
+  // hii is also a PARAM_SPEC key now (for its slider range), so the loop
+  // above draws and steps a `sampled.hii` too — but this explicit,
+  // unstepped draw is what the spike actually used for the randomizer
+  // (html:551) and wins below via spread order, matching the irregular
+  // category's tighter [0, 0.5] cap that PARAM_SPEC's single [0, 2] range
+  // can't express.
   const hii = classifyHubbleType(type) === 'irregular' ? rng() * 0.5 : rng() * 2;
   const seed = (rng() * 1e9) | 0;
   const asymSeed = (rng() * 1e9) | 0;

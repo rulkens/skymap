@@ -1,15 +1,21 @@
 /**
  * PARAM_SPEC — verbatim port of the spike's `SPEC` table
- * (`Galaxy Renderer.dc.html:450-461`): the `[min, max, step]` range for
- * every slider-driven `GalaxyParams` field, reshaped from a tuple into
- * `ParamSpecEntry`'s named fields.
+ * (`Galaxy Renderer.dc.html:450-461`), plus the four sliders whose ranges the
+ * spike sourced from `mk()`'s inline fallback args instead of `SPEC`
+ * (`hii`/`dustRing`/`dustRingWidth`/`dustRingStrength`, html:776-782 — see
+ * the appended block below). The `[min, max, step]` shape is reshaped from a
+ * tuple into `ParamSpecEntry`'s named fields.
  *
  * This is the ONLY place slider ranges exist. The spike's individual
  * `<input type="range">` elements also carried their own min/max attributes
  * (`Galaxy Renderer.dc.html:745`), but those were always overwritten by the
- * SPEC lookup at render time — dead fallback values that never took effect.
- * They are not ported; a slider with no SPEC entry (e.g. `seed`, the
- * `*Seed` fields, `warpStart`) simply isn't range-constrained.
+ * SPEC lookup at render time whenever SPEC had an entry — dead fallback
+ * values that never took effect for those keys. They are not ported; a
+ * slider with no range entry at all (e.g. `seed`, the `*Seed` fields,
+ * `warpStart`) simply isn't range-constrained. The four keys `SPEC` never
+ * covered are different: `mk()`'s inline fallback was the only range they
+ * ever had, so it was live, not dead — those four are ported from `mk()`'s
+ * call-site args instead of from `SPEC`.
  */
 
 import type { GalaxyParams } from '../../@types/model/GalaxyParams';
@@ -42,4 +48,18 @@ export const PARAM_SPEC: Readonly<Partial<Record<keyof GalaxyParams & string, Pa
   globularCount: { min: 0, max: 100, step: 5 },
   globularSize: { min: 0.3, max: 2, step: 0.02 },
   globularBright: { min: 0.1, max: 1.5, step: 0.02 },
+
+  // Appended, not inlined above: the spike's `SPEC` table (html:450-461)
+  // never declared these four keys, so its `mk()` helper's inline fallback
+  // ranges (html:776-782) were the *live* range for these sliders, not dead
+  // code like the fallbacks for keys `SPEC` did cover. Porting them in means
+  // extending this table rather than reinventing a second range source. They
+  // go at the end, after the original 26 keys, so `Object.keys(PARAM_SPEC)`
+  // — which `randomGalaxyParams` iterates in declaration order — keeps
+  // drawing the original 26 in their original sequence; these four are
+  // additional draws, not reordered ones.
+  hii: { min: 0, max: 2, step: 0.05 },
+  dustRing: { min: 0.4, max: 1.1, step: 0.02 },
+  dustRingWidth: { min: 0.02, max: 0.4, step: 0.01 },
+  dustRingStrength: { min: 0, max: 2, step: 0.05 },
 };

@@ -8,16 +8,12 @@
  * category and wires their `onChange` to a `paramsPatched` dispatch.
  *
  * Slider visibility per Hubble category mirrors the spike's `renderVals`
- * (html:749-789) exactly, with one resolved gap: the spike's `mk()` also
- * had inline fallback ranges for three fields with no `SPEC` entry
- * (`dustRing`/`dustRingWidth`/`dustRingStrength`) and for `hii`. Those
- * fallbacks were dead in the live spike whenever `SPEC` *did* have an
- * entry (see `paramSpec.ts`'s docblock) — but for these four fields it
- * never did, so the "live" range was always the inline fallback, i.e. a
- * second range table the port doesn't carry forward. `PARAM_SPEC` is
- * this tool's ONLY range table (entanglement-radar checks this at the
- * plan gate), so those four sliders are dropped rather than re-inventing
- * a per-component fallback.
+ * (html:749-789) exactly, including `hii` (POPULATIONS, html:781-782) and
+ * the lenticular-only dust-ring trio (DUST, html:776-779). Those four had
+ * no `SPEC` entry in the spike, so their range came from `mk()`'s inline
+ * fallback args instead — live, not dead, for exactly these keys (see
+ * `paramSpec.ts`'s docblock). `PARAM_SPEC` now carries those four ranges
+ * too, so it stays this tool's ONLY range table.
  *
  * Every entropy-consuming click (randomize-all, new-seed, reseed-one-die)
  * seeds a fresh `mulberry32` from `Math.random()` at the click site — the
@@ -126,25 +122,40 @@ function buildArmSliders(category: ReturnType<typeof classifyHubbleType>): Slide
   return specs;
 }
 
-// html:781-784 — youngStars/metallicity for star-forming categories only
-// (hii is dropped: no PARAM_SPEC entry, see the module docblock).
+// html:781-784 — hii/youngStars/metallicity for star-forming categories.
+// The spike gave irregular's hii slider a narrower [0, 0.5] display range
+// (html:782) than spiral/barred's [0, 2] (html:781); PARAM_SPEC has one
+// `hii` entry, so this port uses [0, 2] for every category — a cosmetic
+// widening only, since `randomGalaxyParams` already caps irregular's
+// *sampled* hii at 0.5 behaviourally (its own docblock).
 function buildPopSliders(category: ReturnType<typeof classifyHubbleType>): SliderSpec[] {
   if (category !== 'spiral' && category !== 'barred' && category !== 'irregular') return [];
-  return [
+  const specs: SliderSpec[] = [
+    {
+      key: 'hii',
+      label: category === 'irregular' ? 'Star-forming regions' : 'HII / star-forming',
+    },
     { key: 'youngStars', label: 'Young blue stars' },
     { key: 'metallicity', label: 'HII colour · metallicity' },
   ];
+  return specs;
 }
 
-// html:773-775 — every category except elliptical (the ring-dust knobs
-// for lenticular galaxies are dropped, same reason as hii above).
+// html:773-779 — every category except elliptical; lenticular additionally
+// gets the dust-ring trio (strength/radius/width, in that order).
 function buildDustSliders(category: ReturnType<typeof classifyHubbleType>): SliderSpec[] {
   if (category === 'elliptical') return [];
-  return [
+  const specs: SliderSpec[] = [
     { key: 'dust', label: 'Dust density' },
     { key: 'dustNoise', label: 'Dust patchiness' },
     { key: 'dustNoiseScale', label: 'Dust noise scale' },
   ];
+  if (category === 'lenticular') {
+    specs.push({ key: 'dustRingStrength', label: 'Dust ring strength' });
+    specs.push({ key: 'dustRing', label: 'Dust ring radius' });
+    specs.push({ key: 'dustRingWidth', label: 'Dust ring width' });
+  }
+  return specs;
 }
 
 // html:785-789 — unconditional, every category gets a cluster count/size/brightness triplet.

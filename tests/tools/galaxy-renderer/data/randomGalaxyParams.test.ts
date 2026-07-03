@@ -37,9 +37,15 @@ describe('randomGalaxyParams', () => {
     >;
 
     for (const [key, spec] of Object.entries(PARAM_SPEC)) {
+      // hii is exempt: PARAM_SPEC's entry ranges its *slider*, but the
+      // spike's randomizer never stepped hii — it draws hii from a
+      // separate, unstepped formula after the generic SPEC loop
+      // (html:551, mirrored below by the explicit `hii` override that
+      // wins over the loop's `sampled.hii`). Range still applies.
       const value = params[key]!;
       expect(value, key).toBeGreaterThanOrEqual(spec!.min);
       expect(value, key).toBeLessThanOrEqual(spec!.max);
+      if (key === 'hii') continue;
 
       const steps = (value - spec!.min) / spec!.step;
       expect(Math.abs(steps - Math.round(steps)), `${key} on-step`).toBeLessThan(1e-9);
