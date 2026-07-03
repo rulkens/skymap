@@ -566,4 +566,4 @@ Worker (`generateGalaxy.worker.ts`) — port of `galaxy-worker.js` verbatim shap
 - [x] Full `npm test` green; `npm run typecheck` green.
 - [x] `npm run galaxy-renderer` serves the placeholder page on 5400 (ask the user to confirm, or curl the dev server root).
 - [x] Review every new file header against the didactic-comment convention; prettier the touched files.
-- [ ] Commit any stragglers. Plan 02 picks up from here with the engine.
+- [x] Commit any stragglers. Plan 02 picks up from here with the engine.

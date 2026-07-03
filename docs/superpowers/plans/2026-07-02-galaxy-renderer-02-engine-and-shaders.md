@@ -338,7 +338,7 @@ Owns the `<canvas>` + engine lifecycle (mirror `tools/flow-workbench/src/ui/View
 
 ## Task 8 — plan gate
 
-- [ ] Full `npm test` + `npm run typecheck` green.
+- [x] Full `npm test` + `npm run typecheck` green.
 - [x] Skim the seven `.wesl` files once more against the wesl-shaders checklist (backticks, import placement, one-per-line, `package::`).
 - [x] Update `tools/galaxy-renderer/README.md`: controls, the pass chain in one paragraph, pointer to spike-fidelity constants living in the shaders/engine.
-- [ ] Prettier touched files; commit stragglers.
+- [x] Prettier touched files; commit stragglers.

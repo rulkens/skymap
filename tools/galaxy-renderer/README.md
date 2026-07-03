@@ -27,6 +27,28 @@ all four can run side-by-side.
 - **Right-drag / middle-drag** — pan the orbit target.
 - **Wheel** — zoom in/out (damped, clamped range).
 - **Idle** — after 2.5 s without input, auto-rotate resumes.
+- **Controls panel** (right) — Hubble-type chips, every generator/render/LOD
+  slider, a randomize-everything button, the multi-galaxy perf-test toggle,
+  and the JSON preset row.
+
+## Compare workflow
+
+The left-hand compare panel (toggled from the HUD) validates the procedural
+model against real astrophotography. Pick one of eight reference chips
+(M100, NGC 6946, M58, M104, M31, a giant elliptical, the LMC, and the Milky
+Way) to see its photo, facts, and viewing geometry; **Load preset** copies
+its tuned params and pose onto the live galaxy, **Match view** just moves
+the camera. **Auto-fit** runs a coordinate-descent search at a reduced star
+budget, streaming a live score (0–100, colour-graded) and progress note
+while it iterates, with a stop button to cut it short; when it settles it
+renders a match report (dominant arm count, axis ratio, dust index —
+photo vs. render). The Milky Way has no reference photo, so its auto-fit
+button stays disabled.
+
+Presets are JSON, not browser storage: **Download** saves the current
+galaxy + render + LOD settings as `galaxy-<type>-<timestamp>.json`,
+**Upload** restores a previously downloaded file, and **Copy** puts the
+same JSON on the clipboard for pasting elsewhere.
 
 ## Rendering
 
@@ -49,7 +71,7 @@ for the full line-cited port map.
 
 ## Status
 
-Model, engine, and shaders are live; the control panel, compare/auto-fit
-panel, and JSON presets land with plan 03. See
+Feature-complete: model, engine, shaders, the full control panel, the
+compare/auto-fit panel, and JSON presets are all live. See
 [`docs/superpowers/specs/2026-07-02-galaxy-renderer-tool-design.md`](../../docs/superpowers/specs/2026-07-02-galaxy-renderer-tool-design.md)
 for the full design.

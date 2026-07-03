@@ -91,9 +91,9 @@ export type AppDispatch = AppStore['dispatch'];
 `hooks.ts`: `useAppDispatch` / `useAppSelector` typed to `AppState` (mirror `src/store/hooks.ts`). Slice initial states come from Tasks 2–3; this task wires whatever slices exist as they land (author it last within the task, after the slices below, or stub-mount progressively — implementer's choice, but the store factory + hooks file are THIS task's deliverable).
 
 **Steps**
-- [ ] Failing test: `createGalaxyStore builds an isolated store` — two stores, dispatch to one, the other unchanged; `preloaded state seeds a slice` — pass a partial galaxy override, read it back; `initial state matches the documented defaults` (galaxy === DEFAULT_GALAXY_PARAMS, render === DEFAULT_RENDER_SETTINGS, lod === DEFAULT_LOD_SETTINGS from plan 02's data files).
-- [ ] Run → fail. Create the types; then Task 2's three slices are a prerequisite for a compiling store — implement Tasks 1+2 as one commit if the executor prefers, but keep the test files separate.
-- [ ] Run → pass. `npm run typecheck`. Commit.
+- [x] Failing test: `createGalaxyStore builds an isolated store` — two stores, dispatch to one, the other unchanged; `preloaded state seeds a slice` — pass a partial galaxy override, read it back; `initial state matches the documented defaults` (galaxy === DEFAULT_GALAXY_PARAMS, render === DEFAULT_RENDER_SETTINGS, lod === DEFAULT_LOD_SETTINGS from plan 02's data files).
+- [x] Run → fail. Create the types; then Task 2's three slices are a prerequisite for a compiling store — implement Tasks 1+2 as one commit if the executor prefers, but keep the test files separate.
+- [x] Run → pass. `npm run typecheck`. Commit.
 
 ---
 
@@ -114,8 +114,8 @@ export type AppDispatch = AppStore['dispatch'];
 That is the whole write surface — type-button patches, seed rerolls, randomize-all, preset loads and fit results are all just `paramsPatched` payloads computed by their callers (UI/data helpers/bridge). One write path per slice; no bespoke reducers to keep in sync.
 
 **Steps**
-- [ ] Failing tests: `paramsPatched merges without clobbering unrelated params` (patch armCount, assert seed untouched); `paramsPatched can swap type and stage patch atomically` (payload with type+bulgeSize); `renderPatched merges`; `lodPatched merges`; `unknown slice actions leave state referentially identical` (dispatch a render patch, galaxy reference unchanged).
-- [ ] Run → fail. Implement (inline-Immer `createSlice`; reducer args named `galaxy`/`render`/`lod` + `action`). Run → pass. Commit (with Task 1 if combined).
+- [x] Failing tests: `paramsPatched merges without clobbering unrelated params` (patch armCount, assert seed untouched); `paramsPatched can swap type and stage patch atomically` (payload with type+bulgeSize); `renderPatched merges`; `lodPatched merges`; `unknown slice actions leave state referentially identical` (dispatch a render patch, galaxy reference unchanged).
+- [x] Run → fail. Implement (inline-Immer `createSlice`; reducer args named `galaxy`/`render`/`lod` + `action`). Run → pass. Commit (with Task 1 if combined).
 
 ---
 
@@ -144,8 +144,8 @@ extrasSlice: `extrasToggled(boolean)`, `extrasCountSet(number)`, `extrasRegenera
 uiSlice: `sectionToggled(key)`, `copyFeedbackSet(string)` (`''` clears), `autoRotateSet(boolean)`.
 
 **Steps**
-- [ ] Failing tests: one behavioural assertion per action (nonce increments across two `viewRequested`; `referenceSelected` clears a seeded report; `fitStarted` resets the documented fields; toggles flip; nonce++ on `extrasRegenerated`).
-- [ ] Run → fail. Implement (`compare`/`extras`/`ui` + `action` arg names). Run → pass. Mount all six slices in `createStore.ts`. Full `npm test` + typecheck. Commit.
+- [x] Failing tests: one behavioural assertion per action (nonce increments across two `viewRequested`; `referenceSelected` clears a seeded report; `fitStarted` resets the documented fields; toggles flip; nonce++ on `extrasRegenerated`).
+- [x] Run → fail. Implement (`compare`/`extras`/`ui` + `action` arg names). Run → pass. Mount all six slices in `createStore.ts`. Full `npm test` + typecheck. Commit.
 
 ---
 
@@ -193,11 +193,11 @@ export const REFERENCE_GALAXIES: readonly ReferenceGalaxy[];
 Port of REFS (html:389-438) — all eight entries (m100, ngc6946, m58, m104, m31, ell, lmc, mw) with params/view/prose verbatim and the image mapping: m100→`m100`, ngc6946→`c12`, m58→`m58`, m104→`m104`, m31→`m31`, ell→`m49`, lmc→`lmc`, mw→`null`. The spike's per-entry `cat` field is dropped — category derives from `classifyHubbleType(entry.params.type)` (single source; the spike itself already did that for fitting at html:684).
 
 **Steps**
-- [ ] Failing tests:
+- [x] Failing tests:
   - paramSpec: `every entry has min < max and positive step`; `spot-check three rows verbatim` (radius, dust [0, 0.7, 0.05], warpTwist [0, 6.28, 0.05]); `every PARAM_SPEC key is a GalaxyParams key` (compile-time via the type, runtime sanity on a known list of 24 keys).
   - hubbleStagePatches: `each patch carries its type`; `E3 zeroes dust`; `S0 sets dust 0.15`; `Irr sets hii 0.1`; `Sa and SBa share the a-stage quintuple`; `Sc loosens arms vs Sa` (armWinding 0.78 > 0.24).
   - referenceGalaxies: `eight entries with unique ids`; `every non-null img points under /images/famous-curated/ and exists on disk` (resolve against `public/` with `node:fs` — this pins the c12/m49 mappings against future re-curation); `the Milky Way is imageless`; `every entry's params.type classifies without throwing and its view is a finite ViewPose`; `viewLabel is non-empty for all eight` (the un-shadowed field).
-- [ ] Run → fail. Implement the three data files + two types. Run → pass. Commit.
+- [x] Run → fail. Implement the three data files + two types. Run → pass. Commit.
 
 ---
 
@@ -222,10 +222,10 @@ export function buildExtraSpecs(count: number, rng: () => number): ExtraGalaxySp
 Port of html:560-569: per spec — `randomGalaxyParams(rng, { includeSize: true })` then `starCount = (40 + floor(rng()·160)) · 1000`; `dist = 26 + rng()·70`; spherical placement `pos = [dist·cos el·cos az, dist·sin el·0.6, dist·cos el·sin az]` with `az = rng()·2π`, `el = (rng()−0.5)·1.3`; `scale = 0.12 + rng()·0.3`; `rotY = rng()·2π`; `tiltX = rng()·π`. (The spike's `params.background = false` line is dead — plan 01 dropped the param.)
 
 **Steps**
-- [ ] Failing tests:
+- [x] Failing tests:
   - randomGalaxyParams: `deterministic under a seeded rng`; `every sampled value is inside its PARAM_SPEC range and on-step` (allow 1e-9 step epsilon); `includeSize false leaves radius and starCount undefined`; `irregular hii stays ≤ 0.5` (probe with an rng scripted to pick 'Irr' — or filter over many seeds); `all four seeds are integers`.
   - buildExtraSpecs: `count specs`; `star counts in [40k, 200k] and multiples of 1000`; `distances in [26, 96]`; `deterministic under a seeded rng`.
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -253,8 +253,8 @@ export function parseGalaxyPreset(json: string): {
 ```
 
 **Steps**
-- [ ] Failing tests: `round-trips galaxy, render and lod through the wire format`; `wire format matches the spike envelope` (parse the serialized string raw: type/version/p/r keys, lodApparent inside r); `rejects invalid JSON with null`; `rejects a payload without p`; `tolerates a missing r` (spike merged `o.r || {}`).
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Failing tests: `round-trips galaxy, render and lod through the wire format`; `wire format matches the spike envelope` (parse the serialized string raw: type/version/p/r keys, lodApparent inside r); `rejects invalid JSON with null`; `rejects a payload without p`; `tolerates a missing r` (spike merged `o.r || {}`).
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -292,7 +292,7 @@ export function elevationFromQ(q: number, category: GalaxyCategory): number | nu
 Straight ports of `galaxy-matcher.js`: computeDescriptor :10-121 (border-median background, positive-luma cap at the 97th percentile when >20 lit pixels, centroid + second moments → q, half-light radius, NB=15 flux bins, inner/outer colour, RN=10 per-radius means over the 0.5–1.9 annulus, NA=48 azimuthal residual bins, DFT m=1..6 normalised by annulus mean, dust index; returns null when total flux < 1e-6); descriptorLoss :131-138 (weighted sum of squared gaps); dominantArms :124-128; elevationFromQ :161-163 (null for elliptical/irregular; else `clamp(asin(clamp(q, 0.05, 1)), 0.05, 1.45)`).
 
 **Steps**
-- [ ] Failing tests (synthesize RGBA test images with small pure helpers inside the test file — grayscale gaussian blobs on black, N=116):
+- [x] Failing tests (synthesize RGBA test images with small pure helpers inside the test file — grayscale gaussian blobs on black, N=116):
   - `a centered round blob is near-round` — q > 0.85, rHalf > 0, fluxFrac sums to ≈1.
   - `an elongated blob reads as inclined` — σx = 4σy → q < 0.5.
   - `an m=2 azimuthal pattern yields dominant harmonic 2` — two opposing bright arcs painted in the 0.5–1.9·rHalf annulus over a radial disk profile; `dominantArms` === 2.
@@ -300,7 +300,7 @@ Straight ports of `galaxy-matcher.js`: computeDescriptor :10-121 (border-median 
   - `bright-pixel cap tames a saturated core` — same blob with a blown-out 3×3 core: fluxFrac inner bin changes by less than without the cap (compare against a descriptor of the clean blob; loose tolerance).
   - descriptorLoss: `zero at identity`; `monotone in q gap` (three descriptors differing only in q); `each weight channel contributes independently` (zero weights kill a channel's contribution).
   - elevationFromQ: `null for elliptical and irregular`; `q=1 clamps to 1.45`; `tiny q floors at 0.05`.
-- [ ] Run → fail. Implement the four modules. Run → pass. Commit.
+- [x] Run → fail. Implement the four modules. Run → pass. Commit.
 
 ---
 
@@ -353,10 +353,10 @@ export function loadImageDescriptor(url: string, size?: number): Promise<{ desc:
 Port of `galaxy-matcher.js:230-242` — Image + canvas cover-crop centre square → `computeDescriptor`. DOM-thin; no unit test (node env has no Image/canvas), exercised visually via the compare panel.
 
 **Steps**
-- [ ] Failing tests:
+- [x] Failing tests:
   - fitPlan: `elliptical optimises only bulgeSize with zero arm weight`; `barred appends barStrength to the spiral param set`; `edge-on q disables the arm sweep` (q 0.3 → arms null, arm weight 1); `face-on spiral sweeps arms 1..6`.
   - autoFit (drive a scripted fake `GalaxyEngineHandle` — typed `vi.fn` methods; `grab` returns a synthetic image whose descriptor loss is a known function of the last `setParams` payload, e.g. brightness ∝ one param so loss is convex): `loss history is non-increasing at accepted steps` (final loss ≤ first history entry); `onStep fires with monotonically growing iter`; `stop signal ends the run early` (set `signal.stop` inside `onStep` after 3 steps; assert far fewer evaluations than a full run and a well-formed FitResult); `fit runs at the reduced star budget and the result restores the seed count` (every mid-fit `setParams` call saw `starCount === 220000`; `result.params.starCount === seed.starCount`); `a null-descriptor frame is never accepted` (grab one black frame mid-run; loss stays finite in history).
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -394,7 +394,7 @@ Reaction table (diff by slice reference — RTK guarantees a fresh reference per
 On connect: one initial sync — `setRender({ ...render, ...lod })`, `setInsets(...)`, `setAutoRotate(...)`, `setParams(galaxy)` (not debounced; it is the boot render). Engine feedback (`onFps`/`onStats`) is NOT this module's concern — plan 02's Viewport owns the engine callbacks and plan 03's App routes them to local component state (they are per-frame telemetry, not intent; keeping them out of the store avoids 60 Hz dispatches).
 
 **Steps**
-- [ ] Failing tests (fake engine: object of typed `vi.fn`s, e.g. `setParams: vi.fn<(p: GalaxyParams) => Promise<void>>().mockResolvedValue(undefined)`; `vi.useFakeTimers()`):
+- [x] Failing tests (fake engine: object of typed `vi.fn`s, e.g. `setParams: vi.fn<(p: GalaxyParams) => Promise<void>>().mockResolvedValue(undefined)`; `vi.useFakeTimers()`):
   - `connect performs the initial sync` (one setRender, one setInsets, one setAutoRotate, one setParams).
   - `three rapid param patches yield one debounced setParams` — advance 129 ms → still initial-only; advance past 130 → exactly one more, with the final merged params.
   - `render changes call setRender immediately and never setParams`.
@@ -404,7 +404,7 @@ On connect: one initial sync — `setRender({ ...render, ...lod })`, `setInsets(
   - `extras enable → immediate setExtras with count specs; count change debounces 220 ms; disable → setExtras([])` (inject a seeded rng; assert spec count).
   - `param patches during a fit do not reach setParams` — dispatch `fitStarted`, patch params, run all timers: no setParams; after `fitFinished`, the next patch debounces normally.
   - `disconnect silences everything` — call the returned disposer, dispatch + run timers, no further engine calls.
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -432,13 +432,13 @@ export async function runCompareFit(args: {
 Sequence (each step cites html): load/memoize the reference descriptor at size 116 (:689); `elevationFromQ` → `setView({ az: 0.6, el: el ?? reference.view.el, dist: reference.view.dist })`, `setAutoRotate(false)` (:690-693); warm-up `40 × step(t0 + i·33)` (:694); progress estimate `1 + (spiral|barred ? 6 : 0) + 3·nParams·2` with the per-category nParams table {spiral 8, barred 9, elliptical 1, irregular 5, lenticular 4} (:696-697); dispatch `fitStarted`; run `autoFit(engine, Dref, seed, category, { passes: 3, size: 112, signal, onStep })` where onStep dispatches `paramsPatched(step.params)` + `fitProgressed({ progress: min(0.98, ev/est), score, note })` and `signal.stop` mirrors `compare.stopRequested` via a store subscription; on completion dispatch the final `paramsPatched`, `fitProgressed({ progress: 1, … note: 'done' })`, `engine.setParams(best)`, settle `20 × step` (:712), grab 116 → render descriptor → `fitReportSet` (:713-718); errors land in `fitProgressed({ …note: 'error: ' + message })`; finally `fitFinished` + `setAutoRotate(store ui.autoRotate)` (:722-724). Score mapping `max(1, round(100/(1+7·loss)))` (:700).
 
 **Steps**
-- [ ] Failing tests (fake engine + injected `loadDescriptor` resolving a canned descriptor; real store):
+- [x] Failing tests (fake engine + injected `loadDescriptor` resolving a canned descriptor; real store):
   - `dispatches fitStarted then a done fitProgressed and fitFinished in order` (record dispatched action types via `store.subscribe` snapshots or a wrapped dispatch).
   - `disables auto-rotate during the fit and restores the store's setting after`.
   - `stopRequested in the store stops the fit` (dispatch `fitStopRequested` from an onStep-triggered subscription; autoFit's signal must observe it).
   - `a failing image load reports an error note and still finishes` (injected loader rejects; state ends `fitting: false`, note starts with 'error:').
   - `the reference descriptor is memoized` (run twice with the same cache; loader called once).
-- [ ] Run → fail. Implement. Run → pass. Commit.
+- [x] Run → fail. Implement. Run → pass. Commit.
 
 ---
 
@@ -479,8 +479,8 @@ export type TonemapSelectProps = { readonly value: TonemapMode; readonly onChang
 ```
 
 **Steps**
-- [ ] Load `create-component`. Build `shared.module.css` + the three components.
-- [ ] `npm run typecheck` green. Commit.
+- [x] Load `create-component`. Build `shared.module.css` + the three components.
+- [x] `npm run typecheck` green. Commit.
 
 ---
 
@@ -526,8 +526,8 @@ export type TonemapSelectProps = { readonly value: TonemapMode; readonly onChang
 `main.tsx` — `createGalaxyStore()` + react-redux `<Provider>` + `<App />`.
 
 **Steps**
-- [ ] Load `create-component`. Build Hud, ComparePanel, App; rewrite main.tsx.
-- [ ] `npm run typecheck` + full `npm test` green.
+- [x] Load `create-component`. Build Hud, ComparePanel, App; rewrite main.tsx.
+- [x] `npm run typecheck` + full `npm test` green.
 - [ ] **Visual gate** — ask the user to exercise, at `http://localhost:5400`:
   1. sliders regenerate after a short pause (130 ms debounce), render sliders apply live;
   2. type chips restyle the galaxy per stage patch; seed dice reroll only their noise family;
@@ -535,15 +535,15 @@ export type TonemapSelectProps = { readonly value: TonemapMode; readonly onChang
   4. multi-galaxy toggle populates background galaxies and the FPS badge reacts; count slider settles after ~220 ms;
   5. presets: download a JSON, tweak sliders, upload it back → state restored; copy shows feedback;
   6. panels inset the framing (galaxy re-centres between them).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
 ## Task 14 — plan gate: entanglement radar + full suite
 
-- [ ] Run the `entanglement-radar` skill over the full tool diff (all three plans' surface: `tools/galaxy-renderer/`, `src/utils/random/makeValueNoise.ts`, `tests/**`). Findings to specifically check (the spec's un-braided choices must have survived): lod vs render stayed split end-to-end; camera pose never entered the store; `PARAM_SPEC` is the only range table (no copies in components); `classifyHubbleType` has no duplicate; preset wire-format folding happens only in `presets/`; the bridge is the only engine caller (grep for `GalaxyEngineHandle` consumers). File real findings as fixes in this task or as backlog details — do not ship known braids silently.
-- [ ] `npm run typecheck` (both configs) green.
-- [ ] Full `npm test` green (entire repo suite, not just the tool's).
-- [ ] `tools/galaxy-renderer/README.md` final pass: features, controls, compare workflow, preset format, port table (5400).
+- [x] Run the `entanglement-radar` skill over the full tool diff (all three plans' surface: `tools/galaxy-renderer/`, `src/utils/random/makeValueNoise.ts`, `tests/**`). Findings to specifically check (the spec's un-braided choices must have survived): lod vs render stayed split end-to-end; camera pose never entered the store; `PARAM_SPEC` is the only range table (no copies in components); `classifyHubbleType` has no duplicate; preset wire-format folding happens only in `presets/`; the bridge is the only engine caller (grep for `GalaxyEngineHandle` consumers). File real findings as fixes in this task or as backlog details — do not ship known braids silently.
+- [x] `npm run typecheck` (both configs) green.
+- [x] Full `npm test` green (entire repo suite, not just the tool's).
+- [x] `tools/galaxy-renderer/README.md` final pass: features, controls, compare workflow, preset format, port table (5400).
 - [ ] Prettier touched files; commit.
 - [ ] Hand off: plans complete → run `/feature-done` (gates the DoD, relocates spec + plans to `completed/`).

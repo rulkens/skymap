@@ -308,6 +308,10 @@ export async function createGalaxyEngine(
     };
     worker.onerror = () => {
       useWorker = false;
+      // Requests already in flight when the worker dies are never settled —
+      // their promises just hang. Acceptable for this dev tool (a stalled
+      // fit/generate call is visible and the page can be reloaded); if this
+      // engine is ever adapted into the main app, reject the pending map here.
     };
   } catch {
     useWorker = false;
@@ -895,6 +899,11 @@ export async function createGalaxyEngine(
       canvas.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('contextmenu', onContextMenu);
+      // Every HMR/StrictMode remount calls dispose() and creates a fresh
+      // engine; without terminate() the old worker thread (and its module
+      // graph) leaks silently instead of dying with its engine.
+      worker?.terminate();
     },
   };
 }

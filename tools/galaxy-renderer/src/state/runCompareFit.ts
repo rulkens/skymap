@@ -152,6 +152,9 @@ export async function runCompareFit(args: {
 
     const { S, data } = await engine.grab(DESCRIPTOR_SIZE);
     const renderedDescriptor = computeDescriptor(data, S);
+    // The spike threw into the catch on a null descriptor here (html:714-717).
+    // Skipping the report while still finishing cleanly is the deliberate,
+    // more graceful choice.
     if (renderedDescriptor) {
       store.dispatch(
         fitReportSet({
