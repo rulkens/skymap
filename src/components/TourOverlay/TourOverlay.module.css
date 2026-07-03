@@ -257,12 +257,19 @@
 
 /* Stop button — a circular sibling to the pause ring, sitting next to it.
  * The square StopIcon replaces the former hairline ✕, and the circle border
- * echoes the dwell ring's track so the two media controls read as a pair. */
+ * echoes the dwell ring's track so the two media controls read as a pair.
+ * 36px, not the pause button's 40: the dwell ring's stroke sits at r=17
+ * INSIDE its 40px box (outer edge ≈ 36px), while this border draws at the
+ * element edge — equal boxes made the stop circle read visibly larger.
+ * The negative margin pulls it toward the pause ring so the pair sits
+ * tighter than the cluster's 22px gap (which also over-reads here because
+ * of the ring's inset). */
 .stopWrap {
   pointer-events: auto;
   display: inline-flex;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
+  margin-left: -10px;
   align-items: center;
   justify-content: center;
   background: none;
