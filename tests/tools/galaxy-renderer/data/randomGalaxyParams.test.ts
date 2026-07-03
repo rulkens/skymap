@@ -5,7 +5,10 @@
  * the port is that the same seed always produces the same galaxy.
  */
 import { describe, expect, it } from 'vitest';
-import { randomGalaxyParams } from '../../../../tools/galaxy-renderer/src/data/randomGalaxyParams';
+import {
+  randomGalaxyParams,
+  SLIDER_ONLY_KEYS,
+} from '../../../../tools/galaxy-renderer/src/data/randomGalaxyParams';
 import { PARAM_SPEC } from '../../../../tools/galaxy-renderer/src/data/paramSpec';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 
@@ -37,25 +40,35 @@ describe('randomGalaxyParams', () => {
     >;
 
     for (const [key, spec] of Object.entries(PARAM_SPEC)) {
-      // hii is exempt: PARAM_SPEC's entry ranges its *slider*, but the
-      // spike's randomizer never stepped hii — it draws hii from a
-      // separate, unstepped formula after the generic SPEC loop
-      // (html:551, mirrored below by the explicit `hii` override that
-      // wins over the loop's `sampled.hii`). Range still applies.
+      // SLIDER_ONLY_KEYS (hii + the dust-ring trio) aren't drawn by the
+      // sampling loop, so they're not on-step by construction — they're
+      // out of scope for this test. hii still gets its own range assertion
+      // below since it's produced by a separate, unstepped draw.
+      if (SLIDER_ONLY_KEYS.has(key)) continue;
+
       const value = params[key]!;
       expect(value, key).toBeGreaterThanOrEqual(spec!.min);
       expect(value, key).toBeLessThanOrEqual(spec!.max);
-      if (key === 'hii') continue;
 
       const steps = (value - spec!.min) / spec!.step;
       expect(Math.abs(steps - Math.round(steps)), `${key} on-step`).toBeLessThan(1e-9);
     }
+
+    expect(params.hii).toBeGreaterThanOrEqual(PARAM_SPEC.hii!.min);
+    expect(params.hii).toBeLessThanOrEqual(PARAM_SPEC.hii!.max);
   });
 
   it('includeSize false leaves radius and starCount undefined', () => {
     const params = randomGalaxyParams(mulberry32(3), { includeSize: false });
     expect(params.radius).toBeUndefined();
     expect(params.starCount).toBeUndefined();
+  });
+
+  it('leaves the dust-ring trio undefined — the spike randomizer never sampled them', () => {
+    const params = randomGalaxyParams(mulberry32(11), { includeSize: true });
+    expect(params.dustRing).toBeUndefined();
+    expect(params.dustRingWidth).toBeUndefined();
+    expect(params.dustRingStrength).toBeUndefined();
   });
 
   it('irregular hii stays <= 0.5', () => {

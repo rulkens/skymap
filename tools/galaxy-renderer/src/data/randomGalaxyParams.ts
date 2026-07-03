@@ -35,6 +35,20 @@ const TYPES: readonly string[] = [
   'Irr',
 ];
 
+// PARAM_SPEC carries four keys — hii, dustRing, dustRingWidth,
+// dustRingStrength — solely to give their sliders a range; the spike's own
+// randomizer looped over its 26-key `SPEC` table (html:539-554) and never
+// touched any of the four. Skipping them here keeps the draw sequence for
+// the original 26 keys identical to before PARAM_SPEC grew these entries,
+// and leaves dustRing/dustRingWidth/dustRingStrength undefined in randomized
+// output (hii still gets its explicit category-dependent draw below).
+export const SLIDER_ONLY_KEYS = new Set<string>([
+  'hii',
+  'dustRing',
+  'dustRingWidth',
+  'dustRingStrength',
+]);
+
 export function randomGalaxyParams(
   rng: () => number,
   opts: { readonly includeSize: boolean },
@@ -50,18 +64,17 @@ export function randomGalaxyParams(
   const sampled: Record<string, number> = {};
   for (const key of Object.keys(PARAM_SPEC) as (keyof GalaxyParams & string)[]) {
     if (!opts.includeSize && (key === 'radius' || key === 'starCount')) continue;
+    if (SLIDER_ONLY_KEYS.has(key)) continue;
     const { min, max, step } = PARAM_SPEC[key]!;
     let value = min + rng() * (max - min);
     if (step) value = Math.round(value / step) * step;
     sampled[key] = Math.min(max, Math.max(min, value));
   }
 
-  // hii is also a PARAM_SPEC key now (for its slider range), so the loop
-  // above draws and steps a `sampled.hii` too — but this explicit,
-  // unstepped draw is what the spike actually used for the randomizer
-  // (html:551) and wins below via spread order, matching the irregular
-  // category's tighter [0, 0.5] cap that PARAM_SPEC's single [0, 2] range
-  // can't express.
+  // hii is a slider-only PARAM_SPEC key (skipped above), so this explicit,
+  // unstepped draw — matching the spike's randomizer (html:551) — is the
+  // only place hii gets a value, with the irregular category's tighter
+  // [0, 0.5] cap that PARAM_SPEC's single [0, 2] range can't express.
   const hii = classifyHubbleType(type) === 'irregular' ? rng() * 0.5 : rng() * 2;
   const seed = (rng() * 1e9) | 0;
   const asymSeed = (rng() * 1e9) | 0;
