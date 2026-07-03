@@ -26,6 +26,7 @@
 import type { ClipData } from '../../../../@types/animation/ClipData';
 import {
   all,
+  dollyTo,
   dollyToId,
   focus,
   hide,
@@ -33,12 +34,21 @@ import {
   lookAtId,
   moveTargetId,
   scene,
+  seq,
   show,
+  wait,
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
+import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
 const COMA_SC = focusId('supercluster-coma-sc');
+
+// Camera distance that fits the whole MCPM volume: the SCFD wedge reaches
+// ~476 Mpc from home, and the orbit target sits out at Coma, so the pull-back
+// needs ~R/sin(fovY/2) + the target offset. Eye-tuned, not derived — nudge it
+// if the wedge clips or swims too small in frame.
+const FIT_WEB_MPC = 1200;
 
 export const cosmicWeb: ClipData = {
   start: 'live',
@@ -52,4 +62,18 @@ export const cosmicWeb: ClipData = {
     show(['volumesMaster', 'filaments'], 9),
     all([moveTargetId(COMA_SC, 9), dollyToId(COMA_SC, 9)]),
   ],
+};
+
+/**
+ * The dwell: slow rotation throughout, then a pull-back that reveals the
+ * WHOLE web — arrive on Coma's node, take it in turning, and end holding the
+ * entire MCPM volume in frame (the next beat launches from that wide shot).
+ * Same composition idiom as the you-are-here push-in, pointed outward: the
+ * dolly rides inside the drift's `all` (it writes `distance`, the drift
+ * writes yaw/pitch) and a leading `wait` holds it until the rotation has
+ * established the node.
+ */
+export const cosmicWebDwell: ClipData = {
+  start: 'live',
+  timeline: [all([...dwellDrift(12).timeline, seq([wait(4), dollyTo(FIT_WEB_MPC, 8)])])],
 };

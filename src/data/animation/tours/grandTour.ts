@@ -20,7 +20,7 @@ import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31 } from './grandTour/approachM31';
 import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from './grandTour/approachVirgo';
-import { cosmicWeb } from './grandTour/cosmicWeb';
+import { cosmicWeb, cosmicWebDwell } from './grandTour/cosmicWeb';
 
 export const grandTour: Tour = {
   id: 'grandTour',
@@ -60,7 +60,7 @@ export const grandTour: Tour = {
         body: 'Our galaxy runs with neighbours like M81 and Centaurus A, tens of millions of light-years out.',
         position: 'bottom-left',
       },
-      dwellClip: dwellDrift(5),
+      dwellClip: dwellDrift(12),
     },
     {
       enterClip: approachVirgo,
@@ -78,7 +78,7 @@ export const grandTour: Tour = {
         body: 'Far enough out, galaxies trace a web: bright threads and clumps where superclusters gather, ringed by dark voids.',
         position: 'bottom-left',
       },
-      dwellClip: dwellDrift(9),
+      dwellClip: cosmicWebDwell,
     },
   ],
 };
