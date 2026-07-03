@@ -44,6 +44,7 @@ import { captureScene } from './captureScene';
 import { restoreSceneSaga } from './restoreSceneSaga';
 import { exitTour } from './tourActions';
 import { tourStarted, tourEnded } from './tourSlice';
+import { clearSelection } from '../selection/selectionSlice';
 import type { Tour } from '../../@types/animation/tour/Tour';
 
 /**
@@ -71,6 +72,14 @@ export function* guidedTourSaga(tour: Tour): Generator {
   // Activate the tour runtime slice — the App derives HUD-hidden + mounts the
   // overlay from `tour.active`.
   yield* put(tourStarted({ tourId: tour.id }));
+
+  // Clear any pre-tour selection: the beats only ever write the `focus` slot,
+  // so a clicked halo would otherwise float on screen through the whole run.
+  // Focus is cleared with it — the snapshot above already holds the user's
+  // value for the exit restore, and beat 1's own focus() re-establishes the
+  // tour's. `select` is deliberately NOT restored: like `hover`, it is
+  // ephemeral UI state (see captureScene).
+  yield* put(clearSelection());
 
   try {
     yield* race({

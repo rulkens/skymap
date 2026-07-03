@@ -33,6 +33,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { guidedTourSaga } from '../../../src/state/tour/guidedTourSaga';
 import { exitTour } from '../../../src/state/tour/tourActions';
+import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
 import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
@@ -154,6 +155,31 @@ describe('guidedTourSaga', () => {
 
     // After natural completion the finally must end the tour.
     expect(store.getState().tour.active).toBe(false);
+  });
+
+  // ── (1b) clears any pre-tour selection at start ────────────────────────────
+
+  it('clears a pre-tour selection at start so no floating halo rides the tour', async () => {
+    vi.useFakeTimers();
+
+    const beat: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'B1' },
+      dwellClip: dwellDrift(0.001),
+    };
+    const { store, sagaMiddleware } = buildStore({ playClip: makeAutoFlyStub() });
+
+    // The user clicked something before starting the tour — a selection halo
+    // is on screen.
+    store.dispatch(updateSelectionSelect({ type: 'structure', id: 'cluster-virgo' }));
+    expect(store.getState().selection.select).not.toBeNull();
+
+    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
+
+    // Cleared synchronously at tour start — before any beat plays.
+    expect(store.getState().selection.select).toBeNull();
+
+    await vi.runAllTimersAsync();
   });
 
   // ── (2) runs every beat in order ─────────────────────────────────────────
