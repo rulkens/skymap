@@ -30,6 +30,9 @@ export const INITIAL_DISTANCE_MPC = 0.43;
 /** Far-clip plane in Mpc — keeps the horizon shell in-frustum at max camera distance. */
 export const FAR_CLIP_MPC = 50000;
 
+/** Default vertical field-of-view in radians (60°) — the bootstrap lens setting. */
+export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * 60;
+
 /**
  * Compute the initial camera snapshot. Pure constants — no dependency on
  * loaded catalogs, so the camera can be built before any galaxy catalog arrives.

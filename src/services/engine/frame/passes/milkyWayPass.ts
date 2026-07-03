@@ -30,7 +30,6 @@
  * ### What it reads
  *
  * - `deps.milkyWayRenderer`
- * - `deps.milkyWayITimeSec` — animation clock for the raymarcher
  * - `ctx.vp`, `ctx.canvasSize`, `ctx.drawCamPos`
  * - `state.settings.milkyWay.enabled` (user toggle, via the gate)
  *
@@ -72,10 +71,7 @@ export const milkyWayPass: Pass = {
     // toggle opacity. The renderer already accepts a scalar fadeAlpha
     // CPU-side param, so multiplying two opacities here is the
     // minimal-change path — no shader edits, no FadeUniforms binding.
-    const toggleOpacity = state.subsystems.fades.opacityOf(
-      { kind: 'milkyWay' },
-      performance.now(),
-    );
+    const toggleOpacity = state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now());
     const fadeAlpha = milkyWayFadeAlpha(camDistMpc) * toggleOpacity;
 
     deps.milkyWayRenderer.draw(
@@ -83,7 +79,6 @@ export const milkyWayPass: Pass = {
       vp as Float32Array,
       [canvasSize.width, canvasSize.height],
       fadeAlpha,
-      deps.milkyWayITimeSec,
       // World-space camera position drives both the impostor's
       // view-aligned billboard basis (vertex stage) and the
       // fragment stage's synthetic-camera ray origin.

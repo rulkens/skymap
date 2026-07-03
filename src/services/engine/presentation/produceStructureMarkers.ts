@@ -42,9 +42,7 @@ export function produceStructureMarkers(
   ctx: ReadyFrameContext,
 ): readonly StructureMarkerDescriptor[] {
   const out: StructureMarkerDescriptor[] = [];
-  const halfH = ctx.canvasSize.height * 0.5;
-  const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
-  const pxPerRad = (ctx.canvasSize.height * 0.5) / Math.tan(fovYRad * 0.5);
+  const pxPerRad = ctx.drawPxPerRad;
   const [cx, cy, cz] = ctx.drawCamPos;
 
   // selected → 1.5× ring bump (highlight what you clicked); focused → the

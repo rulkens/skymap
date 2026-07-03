@@ -480,7 +480,6 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // the original 'slow but alive' animation physically nonsensical
   // (galaxy rotation periods are ~250 Myr); a static impostor reads
   // as a real photographic backdrop instead of a procedural toy.
-  // The 'iTime' uniform is retained for ABI symmetry but unread.
   let tm: f32 = 0.0;
 
   // Original mainImage: q = fragCoord/RESOLUTION; p = -1 + 2*q; p.x *= aspect.

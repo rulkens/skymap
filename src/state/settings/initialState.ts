@@ -35,6 +35,17 @@ import {
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
 } from '../../data/defaults';
+import {
+  DEFAULT_ALIGN_SEC,
+  DEFAULT_RAMP_SEC,
+  DEFAULT_LINGER,
+  DEFAULT_LINGER_SEC,
+  DEFAULT_SPLINE,
+  DEFAULT_TURN_DELAY,
+  DEFAULT_LOOK_AHEAD,
+  DEFAULT_PASS_BY_OFFSET,
+  DEFAULT_PASS_BY_DIR,
+} from '../../services/engine/animation/pathDefaults';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
@@ -101,6 +112,31 @@ export function buildInitialSettings(): EngineSettingsState {
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},
+      // Clip-path inspector idle: no clip chosen, scrubber at the start. The
+      // overlay stays quiet until the curator clicks "Calculate". The pacing
+      // knobs seed from the flyPath defaults but every override is INACTIVE, so a
+      // fresh Calculate previews the clip's own authored pacing until the curator
+      // touches a slider (which activates just that knob).
+      clipPathInspect: {
+        clipId: null,
+        scrub01: 0,
+        align: DEFAULT_ALIGN_SEC,
+        rampSec: DEFAULT_RAMP_SEC,
+        linger: DEFAULT_LINGER,
+        lingerSec: DEFAULT_LINGER_SEC,
+        spline: DEFAULT_SPLINE,
+        turnDelay: DEFAULT_TURN_DELAY,
+        lookAhead: DEFAULT_LOOK_AHEAD,
+        passByOffset: DEFAULT_PASS_BY_OFFSET,
+        passByDir: DEFAULT_PASS_BY_DIR,
+        active: {
+          align: false,
+          rampSec: false,
+          linger: false,
+          spline: false,
+          passBy: false,
+        },
+      },
     },
     // Structure overlay: master gate on + one item row per category, each
     // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`

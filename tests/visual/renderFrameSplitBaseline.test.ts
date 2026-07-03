@@ -289,6 +289,7 @@ describe('renderFrame visual baseline', () => {
         [number, number, number]
       >,
       drawPxPerRad,
+      fovYRad: (60 * Math.PI) / 180,
       renderer: pointRenderer,
       postProcess,
       texturedDisks: texturedDisksSubsystem,
@@ -327,6 +328,9 @@ describe('renderFrame visual baseline', () => {
         gpu: {
           labelRenderer,
           markerLineRenderer,
+          // Null so clipPathDebugPass stays disabled and the recorded
+          // draw-command sequence baseline is unchanged.
+          debugLineRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer,
           // Flow's ribbon draw lands in Task 5; here flow stays off (null
@@ -386,7 +390,6 @@ describe('renderFrame visual baseline', () => {
           },
         },
       } as never,
-      milkyWayITimeSec: 0,
       device,
       context,
       milkyWayRenderer: milkyWayRenderer as never,
@@ -430,7 +433,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "textured-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,number,Array[3],Array[3]",
+          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],Array[3]",
           "renderer": "milky-way",
         },
         {

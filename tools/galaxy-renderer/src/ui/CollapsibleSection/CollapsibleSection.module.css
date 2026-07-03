@@ -1,0 +1,27 @@
+.root {
+}
+
+.header {
+  composes: sectionHeader from '../shared.module.css';
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin: 4px 0 14px;
+  padding: 16px 0 0;
+  border: none;
+  border-top: 1px solid var(--panel-line);
+  background: transparent;
+  font-family: var(--font);
+  cursor: pointer;
+  user-select: none;
+  text-align: left;
+}
+
+.chevron {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+.body {
+}

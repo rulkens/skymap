@@ -51,6 +51,10 @@ import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
+import type { ClipId } from '../animation/ClipId';
+import type { SplineMode } from '../animation/SplineMode';
+import type { PassByDir } from '../animation/PassByDir';
+import type { ClipPathTuningActive } from './ClipPathTuningActive';
 
 export type EngineSettingsState = {
   /**
@@ -191,6 +195,57 @@ export type EngineSettingsState = {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
     disabledPasses: Record<string, boolean>;
+    /**
+     * Clip-path inspector — the debug overlay that draws a selected clip's
+     * camera route (speed-coloured) plus a scrub gizmo. Only the two scalars
+     * the UI owns live here; the sampled geometry is held off-store in the
+     * `clipPathInspector` subsystem (see its .d.ts for why geometry stays out
+     * of Redux). `clipId` is which clip the held snapshot was computed from
+     * (null = nothing computed); `scrub01` is the scrubber position as a
+     * normalised `[0,1]` fraction (NOT seconds — the UI has no access to the
+     * clip duration, so the scrubber is a pure position).
+     *
+     * `align` / `rampSec` / `linger` / `spline` / `turnDelay` / `lookAhead` are the
+     * live flyPath pacing + shape knobs the inspector can bake into the clip at
+     * Calculate time (via `applyPathTuning`): `align` is the start-aim blend
+     * seconds, `rampSec` the seconds of ease ramp each end (0 = use the named
+     * `ease`), `linger` the per-target dwell depth ∈ [0,1] (0 = cruise straight
+     * through) and `lingerSec` the dwell window width in seconds (both ride the
+     * one `linger` gate), `spline` the basis (centripetal Catmull-Rom ↔ causal
+     * Hermite), `turnDelay` the causal-Hermite overshoot magnitude, `lookAhead` the
+     * seconds the look leads the eye. The last two are scratch scalars the causal
+     * sub-sliders bind to; the saga only reads them when `spline` is causal,
+     * folding them into the one `SplineConfig` override (see `SplineConfig`).
+     *
+     * `active` gates which knobs are baked — align / rampSec / linger / spline.
+     * There is no separate turnDelay/lookAhead gate: they ride the single `spline`
+     * override, so they can't be applied onto a centripetal basis that ignores
+     * them. While a gate is inactive the clip's own authored value flows through
+     * untouched — so Calculating a clip with no slider touched previews its REAL
+     * pacing, not the inspector's defaults. Touching a slider/dropdown flips its
+     * `active` flag on (the causal sub-sliders flip the `spline` gate); the row's
+     * checkbox toggles it back off. The values seed from the flyPath defaults so a
+     * freshly-activated slider starts somewhere sensible.
+     */
+    clipPathInspect: {
+      clipId: ClipId | null;
+      scrub01: number;
+      align: number;
+      rampSec: number;
+      linger: number;
+      lingerSec: number;
+      spline: SplineMode;
+      turnDelay: number;
+      lookAhead: number;
+      // Fly-past scratch scalars: `passByOffset` in subject-radius units (0 =
+      // through centre) and `passByDir` the offset direction. Both ride the single
+      // `passBy` override gate; the saga folds them into one `PassByConfig` (see
+      // `PassByConfig`).
+      passByOffset: number;
+      passByDir: PassByDir;
+      /** Per-knob override gate — only an active knob is baked into the clip. */
+      active: ClipPathTuningActive;
+    };
   };
 
   /**

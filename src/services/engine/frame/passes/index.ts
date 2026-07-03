@@ -104,6 +104,7 @@ import { milkyWayPass } from './milkyWayPass';
 import { horizonShellPass } from './horizonShellPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
+import { clipPathDebugPass } from './clipPathDebugPass';
 import { structureMarkersPass } from './structureMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
 import { diskRadiusRingPass } from './diskRadiusRingPass';
@@ -136,6 +137,10 @@ export const UI_PASSES: readonly Pass[] = [
   diskRadiusRingPass,
   markerLinesPass,
   labelsPass,
+  // Debug overlay last so the clip-path route + gizmo draw on top of
+  // everything; default-quiet (no snapshot held) until the curator clicks
+  // "Calculate" in the DebugPanel.
+  clipPathDebugPass,
 ];
 
 /**
@@ -176,6 +181,7 @@ export { milkyWayPass } from './milkyWayPass';
 export { horizonShellPass } from './horizonShellPass';
 export { markerLinesPass } from './markerLinesPass';
 export { labelsPass } from './labelsPass';
+export { clipPathDebugPass } from './clipPathDebugPass';
 export { structureMarkersPass } from './structureMarkersPass';
 export { selectionRingPass } from './selectionRingPass';
 export { diskRadiusRingPass } from './diskRadiusRingPass';

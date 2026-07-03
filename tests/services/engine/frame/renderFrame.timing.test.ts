@@ -179,6 +179,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       [number, number, number]
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
+    fovYRad: (60 * Math.PI) / 180,
     renderer: pointRenderer,
     postProcess,
     // texturedDisks slot is referenced from frameContext shape;
@@ -213,6 +214,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       gpu: {
         labelRenderer: null,
         markerLineRenderer: null,
+        debugLineRenderer: null,
         selectionRingRenderer: null,
         volumeFieldRenderer: null,
         flowFieldRenderer: null,
@@ -259,7 +261,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         fades: { opacityOf: () => 0 },
       },
     } as never,
-    milkyWayITimeSec: 0,
     device,
     context,
     milkyWayRenderer: milkyWayRenderer as never,

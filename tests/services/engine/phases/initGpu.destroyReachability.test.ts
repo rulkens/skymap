@@ -131,6 +131,10 @@ vi.mock('../../../../src/services/gpu/renderers/markerLineRenderer', () => ({
   createMarkerLineRenderer: vi.fn(() => makeStub('markerLineRenderer')),
 }));
 
+vi.mock('../../../../src/services/gpu/renderers/debugLineRenderer', () => ({
+  createDebugLineRenderer: vi.fn(() => makeStub('debugLineRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/selectionRingRenderer', () => ({
   createSelectionRingRenderer: vi.fn(() => makeStub('selectionRingRenderer')),
 }));

@@ -38,6 +38,12 @@ import reducer, {
   setShowPickBuffer,
   setShowDiskRadiusRing,
   setPassDisabled,
+  setClipPathLinger,
+  setClipPathLingerSec,
+  setClipPathSpline,
+  setClipPathLookAhead,
+  setClipPathPassByOffset,
+  setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   mergeSnapshot,
@@ -176,6 +182,62 @@ describe('settingsSlice — debug', () => {
 
     const flipped = reducer(enabled, setPassDisabled({ pass: 'foo', disabled: false }));
     expect(flipped.debug.disabledPasses).toEqual({ foo: false });
+  });
+
+  it('clip-path tuning starts every override inactive', () => {
+    expect(base().debug.clipPathInspect.active).toEqual({
+      align: false,
+      rampSec: false,
+      linger: false,
+      spline: false,
+      passBy: false,
+    });
+  });
+
+  it('setting a tuning value activates that knob (drag-to-activate)', () => {
+    const next = reducer(base(), setClipPathLinger(0.8));
+    expect(next.debug.clipPathInspect.linger).toBe(0.8);
+    expect(next.debug.clipPathInspect.active.linger).toBe(true);
+    // Other knobs stay inactive.
+    expect(next.debug.clipPathInspect.active.align).toBe(false);
+    expect(next.debug.clipPathInspect.active.spline).toBe(false);
+  });
+
+  it('setClipPathLingerSec sets the window and rides the one linger override', () => {
+    // lingerSec is a dwell sub-knob with no gate of its own — it rides the single
+    // `linger` override, so touching it activates `linger`.
+    const next = reducer(base(), setClipPathLingerSec(3.5));
+    expect(next.debug.clipPathInspect.lingerSec).toBe(3.5);
+    expect(next.debug.clipPathInspect.active.linger).toBe(true);
+  });
+
+  it('setClipPathSpline activates the spline override', () => {
+    const next = reducer(base(), setClipPathSpline('causalHermite'));
+    expect(next.debug.clipPathInspect.spline).toBe('causalHermite');
+    expect(next.debug.clipPathInspect.active.spline).toBe(true);
+  });
+
+  it('setClipPathLookAhead sets the value and activates the one spline override', () => {
+    // lookAhead is a causal-only sub-knob with no gate of its own — it rides the
+    // single `spline` override, so touching it activates `spline`.
+    const next = reducer(base(), setClipPathLookAhead(1.5));
+    expect(next.debug.clipPathInspect.lookAhead).toBe(1.5);
+    expect(next.debug.clipPathInspect.active.spline).toBe(true);
+  });
+
+  it('setClipPathPassByOffset activates the passBy override', () => {
+    const next = reducer(base(), setClipPathPassByOffset(4));
+    expect(next.debug.clipPathInspect.passByOffset).toBe(4);
+    expect(next.debug.clipPathInspect.active.passBy).toBe(true);
+  });
+
+  it('setClipPathTuningActive toggles a knob without touching its value', () => {
+    const activated = reducer(base(), setClipPathTuningActive({ knob: 'align', active: true }));
+    expect(activated.debug.clipPathInspect.active.align).toBe(true);
+    expect(activated.debug.clipPathInspect.align).toBe(base().debug.clipPathInspect.align);
+
+    const off = reducer(activated, setClipPathTuningActive({ knob: 'align', active: false }));
+    expect(off.debug.clipPathInspect.active.align).toBe(false);
   });
 });
 

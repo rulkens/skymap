@@ -55,7 +55,7 @@ import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
-} from '../../subsystems/proceduralDiskSubsystem';
+} from '../../../../data/galaxyLodBands';
 
 export const pointSpritesPass: Pass = {
   name: 'point-sprites',

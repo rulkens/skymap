@@ -10,17 +10,16 @@
  * The priority ladder for galaxy rows lives in encodeGalaxyId.ts — the shared
  * home both galaxy encoders (here and selectionToFocusId) delegate to.
  *
- * The Milky Way has no durable deep-link today — urlHashFor.ts returns null
- * for the milkyWay arm, so we match that behaviour here.  A round-trip for
- * milkyWay would need the parser to grow a dedicated kind; that is deferred.
+ * The Milky Way is a singleton with no catalogued id, so it encodes to the
+ * fixed MILKY_WAY_FOCUS_ID literal — the same constant resolveFocusId decodes
+ * back to `{ type: 'milkyWay' }`, closing the round-trip.
  *
- * Returns null for:
- *   - galaxy clouds that are not yet loaded (the saga should not encode before
- *     the cloud is available, but null is safer than a thrown error)
- *   - the Milky Way (no deep-link representation)
+ * Returns null only when a galaxy cloud is not yet loaded (the saga should not
+ * encode before the cloud is available, but null is safer than a thrown error).
  */
 
 import { encodeGalaxyId } from './encodeGalaxyId';
+import { MILKY_WAY_FOCUS_ID } from './milkyWayFocusId';
 import { extractGalaxyRow } from '../engine/helpers/extractGalaxyRow';
 import { cartesianToRaDec } from '../../utils/math/cartesianToRaDec';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
@@ -28,7 +27,7 @@ import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
  * Encode a SelectionRef to the durable URL focus-id string, or null when the
- * ref is not link-encodable (cloud not loaded, or Milky Way — no deep-link).
+ * ref is not link-encodable (a galaxy whose cloud is not yet loaded).
  *
  * TABLE-DISPATCH on ref.type follows the project's simplicity convention
  * (item 7): a new selectable kind adds one row here rather than extending a
@@ -55,10 +54,9 @@ const ENCODE: EncodeTable = {
   // cloud read needed.
   structure: (ref) => ref.id,
 
-  // No Milky Way deep-link representation today.  Matches urlHashFor.ts's
-  // `milkyWay: () => null` entry.  A future round-trip would add a parser
-  // branch in resolveFocusId at the same time.
-  milkyWay: () => null,
+  // Milky Way singleton → the fixed deep-link literal; resolveFocusId decodes
+  // it back to `{ type: 'milkyWay' }`.
+  milkyWay: () => MILKY_WAY_FOCUS_ID,
 };
 
 // ─── Galaxy arm ──────────────────────────────────────────────────────────────

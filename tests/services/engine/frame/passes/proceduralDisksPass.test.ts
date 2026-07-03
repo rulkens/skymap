@@ -30,6 +30,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
+    fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
     focus: {
@@ -65,7 +66,6 @@ function makeDeps(): PassDeps {
     flowFieldRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
-    milkyWayITimeSec: 0,
   } as PassDeps;
 }
 

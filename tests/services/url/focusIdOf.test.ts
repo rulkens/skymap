@@ -12,6 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { focusIdOf } from '../../../src/services/url/focusIdOf';
+import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { Source } from '../../../src/data/sources';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -104,10 +105,11 @@ describe('focusIdOf', () => {
     );
   });
 
-  it('milkyWay ref → null (no durable deep-link today)', () => {
-    // The Milky Way has no URL representation — urlHashFor.ts returns null
-    // for the milkyWay arm. focusIdOf matches that behaviour.
-    expect(focusIdOf({ type: 'milkyWay' }, deps)).toBeNull();
+  it('milkyWay ref → the fixed deep-link literal', () => {
+    // The Milky Way is a singleton; it encodes to MILKY_WAY_FOCUS_ID, which
+    // resolveFocusId decodes back to { type: 'milkyWay' }.
+    expect(focusIdOf({ type: 'milkyWay' }, deps)).toBe(MILKY_WAY_FOCUS_ID);
+    expect(focusIdOf({ type: 'milkyWay' }, deps)).toBe('milkyWay');
   });
 
   it('cloud not loaded → null (graceful cloud-not-loaded edge)', () => {

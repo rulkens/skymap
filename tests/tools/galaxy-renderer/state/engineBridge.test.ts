@@ -1,0 +1,276 @@
+/**
+ * connectEngineBridge — reaction-table tests. Every case drives the real
+ * `createGalaxyStore` reducer graph (so RTK's own reference-identity
+ * guarantees do the diffing, not a mock) against a fake `GalaxyEngineHandle`
+ * of typed `vi.fn`s, under `vi.useFakeTimers()` to assert the two debounces
+ * without real waits.
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { connectEngineBridge } from '../../../../tools/galaxy-renderer/src/state/engineBridge';
+import {
+  createGalaxyStore,
+  type AppStore,
+} from '../../../../tools/galaxy-renderer/src/state/createStore';
+import { paramsPatched } from '../../../../tools/galaxy-renderer/src/state/slices/galaxySlice';
+import { renderPatched } from '../../../../tools/galaxy-renderer/src/state/slices/renderSlice';
+import { lodPatched } from '../../../../tools/galaxy-renderer/src/state/slices/lodSlice';
+import {
+  comparePanelToggled,
+  fitFinished,
+  fitStarted,
+  viewRequested,
+} from '../../../../tools/galaxy-renderer/src/state/slices/compareSlice';
+import {
+  extrasCountSet,
+  extrasToggled,
+} from '../../../../tools/galaxy-renderer/src/state/slices/extrasSlice';
+import { autoRotateSet } from '../../../../tools/galaxy-renderer/src/state/slices/uiSlice';
+import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/data/defaultGalaxyParams';
+import { DEFAULT_RENDER_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
+import { DEFAULT_LOD_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultLodSettings';
+import { DEFAULT_EXTRAS_STATE } from '../../../../tools/galaxy-renderer/src/data/defaultExtrasState';
+import { mulberry32 } from '../../../../src/utils/random/mulberry32';
+import type { GalaxyEngineHandle } from '../../../../tools/galaxy-renderer/@types/engine/GalaxyEngineHandle';
+
+type EngineMocks = {
+  readonly setParams: ReturnType<typeof vi.fn<GalaxyEngineHandle['setParams']>>;
+  readonly setRender: ReturnType<typeof vi.fn<GalaxyEngineHandle['setRender']>>;
+  readonly setView: ReturnType<typeof vi.fn<GalaxyEngineHandle['setView']>>;
+  readonly setAutoRotate: ReturnType<typeof vi.fn<GalaxyEngineHandle['setAutoRotate']>>;
+  readonly setInsets: ReturnType<typeof vi.fn<GalaxyEngineHandle['setInsets']>>;
+  readonly setExtras: ReturnType<typeof vi.fn<GalaxyEngineHandle['setExtras']>>;
+};
+
+function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
+  const mocks: EngineMocks = {
+    setParams: vi.fn<GalaxyEngineHandle['setParams']>().mockResolvedValue(undefined),
+    setRender: vi.fn<GalaxyEngineHandle['setRender']>(),
+    setView: vi.fn<GalaxyEngineHandle['setView']>(),
+    setAutoRotate: vi.fn<GalaxyEngineHandle['setAutoRotate']>(),
+    setInsets: vi.fn<GalaxyEngineHandle['setInsets']>(),
+    setExtras: vi.fn<GalaxyEngineHandle['setExtras']>().mockResolvedValue(undefined),
+  };
+  const engine: GalaxyEngineHandle = {
+    ...mocks,
+    step: vi.fn<GalaxyEngineHandle['step']>(),
+    sample: vi
+      .fn<GalaxyEngineHandle['sample']>()
+      .mockResolvedValue({ mean: 0, max: 0, litPct: 0, stars: 0 }),
+    grab: vi
+      .fn<GalaxyEngineHandle['grab']>()
+      .mockResolvedValue({ S: 0, data: new Uint8ClampedArray() }),
+    getCamera: vi.fn<GalaxyEngineHandle['getCamera']>().mockReturnValue({ az: 0, el: 0, dist: 1 }),
+    dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
+  };
+  return { engine, mocks };
+}
+
+describe('connectEngineBridge', () => {
+  let store: AppStore;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    store = createGalaxyStore();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('connect performs the initial sync', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+
+    expect(mocks.setRender).toHaveBeenCalledTimes(1);
+    expect(mocks.setRender).toHaveBeenCalledWith({
+      ...DEFAULT_RENDER_SETTINGS,
+      ...DEFAULT_LOD_SETTINGS,
+    });
+    expect(mocks.setInsets).toHaveBeenCalledTimes(1);
+    expect(mocks.setInsets).toHaveBeenCalledWith(0, 340);
+    expect(mocks.setAutoRotate).toHaveBeenCalledTimes(1);
+    expect(mocks.setAutoRotate).toHaveBeenCalledWith(true);
+    expect(mocks.setParams).toHaveBeenCalledTimes(1);
+    expect(mocks.setParams).toHaveBeenCalledWith(DEFAULT_GALAXY_PARAMS);
+
+    disconnect();
+  });
+
+  it('three rapid param patches yield one debounced setParams', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
+
+    store.dispatch(paramsPatched({ armCount: 3 }));
+    store.dispatch(paramsPatched({ armCount: 4 }));
+    store.dispatch(paramsPatched({ armCount: 5 }));
+
+    vi.advanceTimersByTime(129);
+    expect(mocks.setParams).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(1);
+    expect(mocks.setParams).toHaveBeenCalledTimes(2);
+    expect(mocks.setParams).toHaveBeenLastCalledWith({ ...DEFAULT_GALAXY_PARAMS, armCount: 5 });
+
+    disconnect();
+  });
+
+  it('render changes call setRender immediately and never setParams', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+
+    store.dispatch(renderPatched({ exposure: 1.5 }));
+
+    expect(mocks.setRender).toHaveBeenCalledTimes(2); // initial sync + this change
+    expect(mocks.setRender).toHaveBeenLastCalledWith({
+      ...DEFAULT_RENDER_SETTINGS,
+      exposure: 1.5,
+      ...DEFAULT_LOD_SETTINGS,
+    });
+
+    vi.runAllTimers();
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only — never scheduled
+
+    disconnect();
+  });
+
+  it('lod changes ride the same setRender path', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+
+    store.dispatch(lodPatched({ lodApparent: 0.02 }));
+
+    expect(mocks.setRender).toHaveBeenCalledTimes(2); // initial sync + this change
+    expect(mocks.setRender).toHaveBeenLastCalledWith({
+      ...DEFAULT_RENDER_SETTINGS,
+      ...DEFAULT_LOD_SETTINGS,
+      lodApparent: 0.02,
+    });
+
+    vi.runAllTimers();
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only — never scheduled
+
+    disconnect();
+  });
+
+  it('view intent fires setView once per nonce', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    const pose = { az: 0.6, el: 0.3, dist: 4 };
+
+    store.dispatch(viewRequested(pose));
+    expect(mocks.setView).toHaveBeenCalledTimes(1);
+    expect(mocks.setView).toHaveBeenLastCalledWith(pose);
+
+    // Unrelated dispatch must not re-fire setView.
+    store.dispatch(autoRotateSet(false));
+    expect(mocks.setView).toHaveBeenCalledTimes(1);
+
+    // Same pose, but a fresh request (nonce bump) fires again.
+    store.dispatch(viewRequested(pose));
+    expect(mocks.setView).toHaveBeenCalledTimes(2);
+    expect(mocks.setView).toHaveBeenLastCalledWith(pose);
+
+    disconnect();
+  });
+
+  it('compare open/close drives setInsets 390/0', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    expect(mocks.setInsets).toHaveBeenLastCalledWith(0, 340); // initial sync, panel closed
+
+    store.dispatch(comparePanelToggled());
+    expect(mocks.setInsets).toHaveBeenCalledTimes(2);
+    expect(mocks.setInsets).toHaveBeenLastCalledWith(390, 340);
+
+    store.dispatch(comparePanelToggled());
+    expect(mocks.setInsets).toHaveBeenCalledTimes(3);
+    expect(mocks.setInsets).toHaveBeenLastCalledWith(0, 340);
+
+    disconnect();
+  });
+
+  it('extras enable → immediate setExtras; count change debounces 220ms; disable → setExtras([])', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const rng = mulberry32(7);
+    const disconnect = connectEngineBridge(store, engine, { rng });
+
+    store.dispatch(extrasToggled(true));
+    expect(mocks.setExtras).toHaveBeenCalledTimes(1);
+    expect(mocks.setExtras.mock.calls[0]![0]).toHaveLength(DEFAULT_EXTRAS_STATE.count);
+
+    store.dispatch(extrasCountSet(20));
+    expect(mocks.setExtras).toHaveBeenCalledTimes(1); // debounced, not immediate
+
+    vi.advanceTimersByTime(219);
+    expect(mocks.setExtras).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(1);
+    expect(mocks.setExtras).toHaveBeenCalledTimes(2);
+    expect(mocks.setExtras.mock.calls[1]![0]).toHaveLength(20);
+
+    store.dispatch(extrasToggled(false));
+    expect(mocks.setExtras).toHaveBeenCalledTimes(3);
+    expect(mocks.setExtras).toHaveBeenLastCalledWith([]);
+
+    disconnect();
+  });
+
+  it('param patches during a fit do not reach setParams', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
+
+    store.dispatch(fitStarted());
+    store.dispatch(paramsPatched({ armCount: 9 }));
+    vi.runAllTimers();
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // still just the initial sync
+
+    store.dispatch(fitFinished());
+    store.dispatch(paramsPatched({ armCount: 10 }));
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // debounced, not yet fired
+
+    vi.advanceTimersByTime(130);
+    expect(mocks.setParams).toHaveBeenCalledTimes(2);
+    expect(mocks.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ armCount: 10 }));
+
+    disconnect();
+  });
+
+  it('a fit starting inside the debounce window suppresses the pending setParams', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
+
+    store.dispatch(paramsPatched({ armCount: 3 })); // arms the 130ms debounce
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // debounced, not yet fired
+
+    vi.advanceTimersByTime(60); // advance 60ms into the 130ms debounce window
+    store.dispatch(fitStarted()); // fit started during debounce window
+
+    vi.runAllTimers(); // run all remaining timers
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // fire-time re-check suppresses the pending setParams
+
+    disconnect();
+  });
+
+  it('disconnect silences everything', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    disconnect();
+
+    store.dispatch(paramsPatched({ armCount: 2 }));
+    store.dispatch(renderPatched({ exposure: 2 }));
+    store.dispatch(autoRotateSet(false));
+    store.dispatch(comparePanelToggled());
+    store.dispatch(extrasToggled(true));
+    vi.runAllTimers();
+
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
+    expect(mocks.setRender).toHaveBeenCalledTimes(1);
+    expect(mocks.setAutoRotate).toHaveBeenCalledTimes(1);
+    expect(mocks.setInsets).toHaveBeenCalledTimes(1);
+    expect(mocks.setExtras).toHaveBeenCalledTimes(0);
+  });
+});

@@ -1,0 +1,30 @@
+.root {
+}
+
+.header {
+  composes: sectionHeader from '../shared.module.css';
+  margin: 24px 0 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--panel-line);
+}
+
+.row {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 11px;
+}
+
+.button {
+  composes: btnGhost from '../shared.module.css';
+  flex: 1;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--faint);
+  line-height: 1.55;
+}

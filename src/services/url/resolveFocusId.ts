@@ -42,6 +42,7 @@
 import { Source, GALAXY_CATALOG_SOURCES } from '../../data/sources';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import { cartesianToRaDec } from '../../utils/math/cartesianToRaDec';
+import { MILKY_WAY_FOCUS_ID } from './milkyWayFocusId';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
@@ -100,10 +101,10 @@ export function resolveFocusId(focusId: string, deps: ResolveDeps): SelectionRef
   // ── milkyWay literal ────────────────────────────────────────────────────
   //
   // Milky Way is a singleton; return its SelectionRef directly.  Must run
-  // before the famous fallback or 'milkyWay' would be scanned (and missed)
-  // in famousMeta.
+  // before the famous fallback or the id would be scanned (and missed) in
+  // famousMeta.  The encoders (focusIdOf, urlHashFor) emit the same constant.
 
-  if (focusId === 'milkyWay') return { type: 'milkyWay' };
+  if (focusId === MILKY_WAY_FOCUS_ID) return { type: 'milkyWay' };
 
   // ── famous id fallback ───────────────────────────────────────────────────
   //

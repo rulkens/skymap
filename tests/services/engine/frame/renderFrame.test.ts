@@ -261,6 +261,7 @@ function makeInput(
       [number, number, number]
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
+    fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
     focus: {
@@ -313,6 +314,8 @@ function makeInput(
         gpu: {
           labelRenderer: null,
           markerLineRenderer: null,
+          // clipPathDebugPass.enabled short-circuits on a null renderer.
+          debugLineRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer: null,
           flowFieldRenderer: null,
@@ -366,7 +369,6 @@ function makeInput(
           fades: { opacityOf: () => 1 },
         },
       } as never,
-      milkyWayITimeSec: 0,
       device,
       context,
       milkyWayRenderer,

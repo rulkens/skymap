@@ -1,0 +1,35 @@
+/*
+ * ClipTriggersSection — clips + tours trigger controls. The chrome (summary,
+ * body, button rows, readouts) comes from the shared `debugSection` vocabulary;
+ * this module only re-exports those via `composes` so the JSX reads against
+ * local class names.
+ */
+
+/* The outermost <details> needs no styling of its own — `.root` is the
+ * predictable hook the parent/dev-tools target. */
+.root {
+}
+
+.summary {
+  composes: summary from './debugSection.module.css';
+}
+
+.body {
+  composes: body from './debugSection.module.css';
+}
+
+.buttonRow {
+  composes: buttonRow from './debugSection.module.css';
+}
+
+.button {
+  composes: button from './debugSection.module.css';
+}
+
+.readout {
+  composes: readout from './debugSection.module.css';
+}
+
+.muted {
+  composes: muted from './debugSection.module.css';
+}

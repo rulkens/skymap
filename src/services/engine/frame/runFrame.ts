@@ -385,7 +385,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     flowFieldRenderer: state.gpu.flowFieldRenderer,
     texturedDiskRenderer: deps.texturedDiskRenderer,
     proceduralDiskRenderer: deps.proceduralDiskRenderer,
-    milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
     timingService: deps.timingService,
   });
 

@@ -61,6 +61,7 @@
  */
 
 import type { SourceType } from '../../@types/data/SourceType';
+import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -74,12 +75,12 @@ import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
-import { registerLabelStyleOverrideWake } from './labelStyleOverride';
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
+import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
@@ -98,6 +99,7 @@ import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { createPlayClip } from './animation/playClip';
+import { createClipPathInspectSeam } from './animation/computeClipPath';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
@@ -262,6 +264,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // resources, null-checked at use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
+      // null until initGpu; excluded from isEngineReady, null-checked at use by
+      // clipPathDebugPass.
+      debugLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
@@ -336,6 +341,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         clock: cameraRuntime.clock,
         getEngineState: () => state,
       }),
+
+      // ── Clip-path inspector (debug) ───────────────────────────────
+      // Holds the precomputed ClipPathSnapshot the debug panel's "Calculate"
+      // button produces; the clip-path debug pass reads it each frame. Eager
+      // (no GPU dep), non-null from t=0; snapshot null until the first Calculate.
+      clipPathInspector: createClipPathInspector(),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       // Created here (not a deferred shim): its `onFrame` closes over the
@@ -416,15 +427,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     id: 'famousLabels',
     produceLabels: produceFamousLabels,
   });
-
-  // ── Wake on label-style override edits ────────────────────────────────
-  //
-  // The DebugPanel writes to `labelStyleOverride`, bumping a version the
-  // director reads from its signature hash — but render-on-demand only
-  // consults that hash inside an active frame, so idle slider edits would
-  // sit invisible.  Registering requestRender here wakes the loop on every
-  // set/clear.
-  registerLabelStyleOverrideWake(() => state.subsystems.scheduler.requestRender());
 
   // ── Cleanup function returned by `attachOrbitControls` ─────────────────
   // Orbit-controls attachment lives outside `inputBindings` because it
@@ -507,6 +509,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     getLivePose: () => state.cameraRuntime.lastPose.current,
   });
 
+  // Debug clip-path inspector seam — `watchClipPathInspectSaga` calls `compute`
+  // to sample a clip's camera route into the `clipPathInspector` subsystem (read
+  // each frame by `clipPathDebugPass`) and `clear` to drop it. Shares the same
+  // live-pose accessor as `playClip` so a `start:'live'` clip samples from the
+  // pose the user sees. 384 samples keeps the route + target polylines smooth
+  // through the tight Catmull-Rom corners of a flyPath (must stay within the
+  // debugLineRenderer's maxLines: 2·(n−1) route+target segments + 9 gizmo).
+  const clipPathInspect = createClipPathInspectSeam({
+    inspector: state.subsystems.clipPathInspector,
+    getLivePose: () => state.cameraRuntime.lastPose.current,
+    sampleCount: 384,
+  });
+
   cb.setSagaContext({
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state),
@@ -524,6 +539,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           }
         : null,
     playClip,
+    clipPathInspect,
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
@@ -574,6 +590,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function getCloudObjIds(source: SourceType): BigUint64Array | undefined {
     return state.data.galaxies.catalogs.get(source)?.objIDs;
+  }
+
+  function getStructures(): readonly StructureInfo[] {
+    return state.data.structures.all();
   }
 
   function destroy(): void {
@@ -633,6 +653,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
+    state.gpu.debugLineRenderer?.destroy();
+    state.gpu.debugLineRenderer = null;
     state.gpu.selectionRingRenderer?.destroy();
     state.gpu.selectionRingRenderer = null;
     state.gpu.structureMarkerRenderer?.destroy();
@@ -686,6 +708,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     sources: {
       getCloud,
       getCloudObjIds,
+      getStructures,
     },
     volumes: {
       add: (fieldId, cube) => addVolumeField(state, store, fieldId, cube),

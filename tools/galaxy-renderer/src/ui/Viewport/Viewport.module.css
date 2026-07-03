@@ -1,0 +1,110 @@
+.root {
+  position: fixed;
+  inset: 0;
+  background: #04050a;
+  color: #e8ecf5;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* Without this, the browser claims drag gestures for native pan/zoom and
+     fires pointercancel mid-drag (orbit input then freezes on touch). */
+  touch-action: none;
+  cursor: grab;
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  pointer-events: none;
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #7fb8ff;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingLabel {
+  font-size: 13px;
+  color: #aab3c9;
+  letter-spacing: 0.3px;
+}
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: radial-gradient(ellipse at center, #0a0e1c 0%, #04050a 70%);
+}
+
+.fallbackCard {
+  max-width: 520px;
+  text-align: center;
+  background: rgba(16, 20, 34, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 40px 36px;
+  backdrop-filter: blur(12px);
+}
+
+.fallbackGlyph {
+  font-size: 40px;
+  margin-bottom: 6px;
+}
+
+.fallbackTitle {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  margin-bottom: 12px;
+}
+
+.fallbackBody {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #aab3c9;
+}
+
+.fallbackHints {
+  margin: 18px 0 0;
+  padding: 14px 16px 14px 32px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #9aa3b3;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+}
+
+.fallbackDetail {
+  margin-top: 16px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: #5a6a82;
+}

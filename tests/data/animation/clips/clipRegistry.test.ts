@@ -26,6 +26,12 @@ describe('clipRegistry', () => {
   });
 
   it('registers the expected clips', () => {
-    expect(Object.keys(clipRegistry).sort()).toEqual(['cosmicFlows', 'flowOrbit', 'flyout']);
+    expect(Object.keys(clipRegistry).sort()).toEqual([
+      'cosmicFlows',
+      'famousFlythrough',
+      'flowOrbit',
+      'flyPathDemo',
+      'flyout',
+    ]);
   });
 });
