@@ -21,61 +21,40 @@
 }
 
 /* ── Vignette ───────────────────────────────────────────────────────
- * One radial ellipse per anchor corner, reusing the splash's
- * bottom-left gradient and mirroring it for the right / top anchors.
- * Anchored under the caption so the text stays legible against the
- * live field without dimming the opposite half of the canvas. */
+ * One radial ellipse anchored under the caption so the text stays
+ * legible against the live field. The ellipse size is EXPLICIT — an
+ * unsized radial-gradient defaults to farthest-corner, which makes the
+ * stops span the whole screen diagonal and reads as a global dim (the
+ * scene visibly muted everywhere whenever a caption shows). Bounding
+ * it keeps the pool local to the caption's quadrant; the anchor point
+ * is the only thing that varies per position. */
 .vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  background: radial-gradient(
+    ellipse 58% 52% at var(--vignette-at),
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.5) 30%,
+    rgba(0, 0, 0, 0.14) 60%,
+    transparent 82%
+  );
 }
 .vignetteBottomLeft {
-  background: radial-gradient(
-    ellipse at 16% 88%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 26%,
-    rgba(0, 0, 0, 0.16) 48%,
-    transparent 66%
-  );
+  --vignette-at: 16% 88%;
 }
 .vignetteBottomRight {
-  background: radial-gradient(
-    ellipse at 84% 88%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 26%,
-    rgba(0, 0, 0, 0.16) 48%,
-    transparent 66%
-  );
+  --vignette-at: 84% 88%;
 }
 .vignetteTopLeft {
-  background: radial-gradient(
-    ellipse at 16% 12%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 26%,
-    rgba(0, 0, 0, 0.16) 48%,
-    transparent 66%
-  );
+  --vignette-at: 16% 12%;
 }
 .vignetteTopRight {
-  background: radial-gradient(
-    ellipse at 84% 12%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 26%,
-    rgba(0, 0, 0, 0.16) 48%,
-    transparent 66%
-  );
+  --vignette-at: 84% 12%;
 }
-/* top-center / bottom-... centred variants share a centred-top ellipse;
- * bottom-center is not an anchor (the nav owns that slot). */
+/* bottom-center is not an anchor (the nav owns that slot). */
 .vignetteTopCenter {
-  background: radial-gradient(
-    ellipse at 50% 12%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 26%,
-    rgba(0, 0, 0, 0.16) 48%,
-    transparent 66%
-  );
+  --vignette-at: 50% 12%;
 }
 
 /* ── Caption block ──────────────────────────────────────────────────
