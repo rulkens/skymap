@@ -233,6 +233,11 @@ describe('runCompareFit', () => {
     expect(compare.fitting).toBe(false);
     expect(compare.fitNote.startsWith('error:')).toBe(true);
     expect(compare.fitNote).toContain('network down');
+    // fitStarted dispatches before the (failing) descriptor load, so its
+    // reset values — null score, 0.02 progress — are what the error path
+    // re-sends unchanged, not some earlier/default state.
+    expect(compare.fitScore).toBeNull();
+    expect(compare.fitProgress).toBe(0.02);
   });
 
   it('memoizes the reference descriptor across runs', async () => {

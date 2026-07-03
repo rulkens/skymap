@@ -49,7 +49,7 @@ const compareSlice = createSlice({
     },
     fitProgressed: (
       compare,
-      action: PayloadAction<{ progress: number; score: number; note: string }>,
+      action: PayloadAction<{ progress: number; score: number | null; note: string }>,
     ) => {
       compare.fitProgress = action.payload.progress;
       compare.fitScore = action.payload.score;
