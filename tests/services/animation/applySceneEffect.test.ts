@@ -258,16 +258,19 @@ describe('applySceneEffect — show', () => {
     );
   });
 
-  it('calls syncVisibilityFades with animate:true and durationMs when over is a positive number', () => {
+  it('converts a positive `over` (clip seconds) to durationMs for the fade bridge', () => {
     const { store } = createAppStore();
     const settings = store.getState().settings as unknown as EngineSettingsState;
     const state = makeEngineState(settings);
 
-    applySceneEffect({ kind: 'show', layers: ['filaments'], over: 1200 }, { state, store });
+    // `over` is authored in SECONDS (like every clip-land duration); the fade
+    // bridge consumes milliseconds. Forwarding it unconverted made a 9-second
+    // volume reveal run as a 9-millisecond pop.
+    applySceneEffect({ kind: 'show', layers: ['filaments'], over: 9 }, { state, store });
 
     expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ animate: true, durationMs: 1200 }),
+      expect.objectContaining({ animate: true, durationMs: 9000 }),
     );
   });
 

@@ -26,9 +26,10 @@
  *    - `only: effect.layers` so only the affected layers are re-synced.
  *    - `animate: effect.over !== 0` — `over === 0` snaps; `over === undefined`
  *      or a positive number animates.
- *    - `durationMs: effect.over` — forwarded to `applyIntent` so a clip cue
- *      with a custom `over` overrides the default FADE_IN/OUT constants.
- *      `undefined` means "use the defaults"; `0` goes through the snap path
+ *    - `durationMs: effect.over * 1000` — `over` is authored in SECONDS (like
+ *      every clip-land duration) and the fade bridge consumes milliseconds, so
+ *      this boundary owns the conversion. `undefined` means "use the default
+ *      FADE_IN/OUT constants"; `0` goes through the snap path
  *      (`animate: false`) so `durationMs` is ignored there anyway.
  *
  * ### scene
@@ -79,7 +80,7 @@ export function applySceneEffect(
       syncVisibilityFades(state, {
         animate: effect.over !== 0,
         only: effect.layers,
-        durationMs: effect.over,
+        durationMs: effect.over !== undefined ? effect.over * 1000 : undefined,
       });
       return;
     }
@@ -99,7 +100,7 @@ export function applySceneEffect(
       syncVisibilityFades(state, {
         animate: effect.over !== 0,
         only: effect.layers,
-        durationMs: effect.over,
+        durationMs: effect.over !== undefined ? effect.over * 1000 : undefined,
       });
       return;
     }
