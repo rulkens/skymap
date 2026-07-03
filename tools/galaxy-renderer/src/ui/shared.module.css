@@ -102,6 +102,17 @@
   width: 100%;
 }
 
+/* Form controls — the surface/border/text treatment selects and inputs share.
+   Also the token anchor: composing it guarantees the ':root' custom-property
+   block above ships with any component that uses it. */
+.control {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--surface-line);
+  font-family: var(--font);
+  cursor: pointer;
+}
+
 /* ── Section headers — uppercase, letter-spaced (html:196) ───────────────── */
 
 .sectionHeader {

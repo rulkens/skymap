@@ -1,11 +1,9 @@
+/* Composing .control brings in the surface/border/text vocabulary without
+   button action styling (display:flex, gap, padding, brightness:hover, etc.). */
 .root {
+  composes: control from '../shared.module.css';
   width: 100%;
   padding: 6px 8px;
   border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--surface-line);
-  font-family: var(--font);
   font-size: 12px;
-  cursor: pointer;
 }
