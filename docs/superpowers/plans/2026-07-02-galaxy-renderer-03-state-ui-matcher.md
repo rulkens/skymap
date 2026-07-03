@@ -502,8 +502,8 @@ export type TonemapSelectProps = { readonly value: TonemapMode; readonly onChang
 `ControlsPanel` — the right column (width 340, html:149): Randomize-everything button (dispatches `paramsPatched(randomGalaxyParams(rng, { includeSize: false }))` — `Math.random`-seeded `mulberry32` at the click site), TypePicker, then the collapsible slider groups. Group composition + per-category visibility ports html:749-794 exactly, reading ranges ONLY from `PARAM_SPEC`; seed-die wiring per html:759-769 (irregularity + armEdgeVar → `asymSeed`, armClump → `clumpSeed`, armWave → `waveSeed`; reroll dispatches `paramsPatched({ [seedKey]: (rng()*1e9)|0 })`). Rendering section: exposure/bloom/saturation/star-size sliders (ranges html:796-801) **plus vignette (0–1, step .02) and star intensity (0.02–0.4, step .01)** — the two RenderSettings fields the spike engine had but its UI never exposed (resolved spec ambiguity: the render slice owns them, so the panel shows them); TonemapSelect; auto-rotate checkbox (`autoRotateSet`); New-random-seed button (`paramsPatched({ seed: (rng()*1e9)|0 })`); PERFORMANCE (LOD) section — lodApparent 0–0.02/.001, cullBright 0–0.4/.01 + the explainer copy (html:315-327); MultiGalaxySection; PresetsSection. Section open state from `ui.openSections` via `sectionToggled`.
 
 **Steps**
-- [ ] Load `create-component`. Build the four components (ControlsPanel composes the rest; keep it a layout/dispatch shell — logic lives in the data helpers).
-- [ ] `npm run typecheck` green. Commit.
+- [x] Load `create-component`. Build the four components (ControlsPanel composes the rest; keep it a layout/dispatch shell — logic lives in the data helpers).
+- [x] `npm run typecheck` green. Commit.
 
 ---
 
