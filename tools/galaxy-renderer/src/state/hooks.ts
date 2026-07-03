@@ -10,9 +10,12 @@
  * `createStore.ts` carries its own trip-wire checking that.
  */
 
-import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux';
+import { useDispatch, useSelector, useStore, type TypedUseSelectorHook } from 'react-redux';
 
 import type { AppDispatch, AppStore } from './createStore';
 
 export const useAppDispatch: () => AppDispatch = useDispatch;
 export const useAppSelector: TypedUseSelectorHook<ReturnType<AppStore['getState']>> = useSelector;
+
+/** Typed `useStore` — returns the tool's concrete `AppStore` (dispatch + getState typed). */
+export const useAppStore: () => AppStore = useStore;

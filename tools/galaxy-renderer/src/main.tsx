@@ -1,15 +1,23 @@
 /**
  * Galaxy Renderer — entry point.
  *
- * Mounts the Viewport, which owns the canvas, boots the engine, and seeds
- * it with the spike's boot defaults. Plan 03 replaces this with the params
- * store + full `<App>` shell (Hud, compare panel, presets); until then this
- * is deliberately minimal but real — no placeholder text, an actual galaxy.
+ * Mounts `App` inside a fresh `createGalaxyStore()` — the tool's whole UI
+ * shell (Viewport, Hud, ComparePanel, ControlsPanel) reads and writes that
+ * one store; `connectEngineBridge` is the sole place any of it touches the
+ * live engine handle (see `App.tsx`).
  */
 import { createRoot } from 'react-dom/client';
-import Viewport from './ui/Viewport/Viewport';
+import { Provider } from 'react-redux';
+import App from './ui/App/App';
+import { createGalaxyStore } from './state/createStore';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Galaxy Renderer: #root element not found');
 
-createRoot(root).render(<Viewport />);
+const store = createGalaxyStore();
+
+createRoot(root).render(
+  <Provider store={store}>
+    <App />
+  </Provider>,
+);
