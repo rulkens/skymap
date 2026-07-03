@@ -21,6 +21,7 @@ import { approachM31 } from './grandTour/approachM31';
 import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from './grandTour/approachVirgo';
 import { cosmicWeb, cosmicWebDwell } from './grandTour/cosmicWeb';
+import { cosmicFlows } from './grandTour/cosmicFlows';
 
 export const grandTour: Tour = {
   id: 'grandTour',
@@ -79,6 +80,17 @@ export const grandTour: Tour = {
         position: 'bottom-left',
       },
       dwellClip: cosmicWebDwell,
+    },
+    {
+      enterClip: cosmicFlows,
+      caption: {
+        title: 'Everything is flowing',
+        body: "The web isn't still. Galaxies stream along the threads into the densest places, ours included, pulled toward the Great Attractor.",
+        position: 'bottom-left',
+      },
+      // Near-still orbit-reveal: the animated flow carries the beat, so the
+      // camera gets out of the way — a quarter of the default cruise speed.
+      dwellClip: dwellDrift(9, { cruiseRate: (Math.PI * 2) / 180 }),
     },
   ],
 };

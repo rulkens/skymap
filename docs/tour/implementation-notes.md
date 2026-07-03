@@ -14,6 +14,14 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **The subject's ring category gates its focused label** (beat 06,
+  `cosmicFlows`): under focusedOnly a focus() cue only names the subject if
+  its structure category's rings are lit — `produceStructureLabels` skips
+  labels whose ring category is disabled+faded. So pick the beat's subject
+  from a category that's on at that scale (the flows beat focuses
+  `supercluster-laniakea-sc`, whose rings survive from the web beat, rather
+  than the Norma/Great-Attractor `cluster`, hidden since the Virgo→web step)
+  — or budget a ring re-show into the beat's scene strip.
 - **The scene at beat K is a pure function of K** (`computeSceneEntering`): before every beat entry, `guidedTourSaga` merges the tour baseline folded through every `show`/`hide`/`scene` cue of beats 0..K-1 (real settings reducer + the same `VISIBILITY_ACTION_ROW`/`scopedVisibilityActions` tables playback uses). Natural entries are dedup no-ops; a mid-fly skip (cues never fired) or a Prev (later cues must unwind) gets corrected automatically. Consequence for authors: you do NOT need to re-hide a later beat's layers "in case the viewer steps back" — reconstruction owns that. Focus stays beat-local: each enter clip establishes its own subject. Related: enter clips are skippable (the fly races `advanceTour`/`prevBeat`; a nav win cancels the clip and steers at once), and `guidedTourSaga` clears any pre-tour selection at start (beats only write the `focus` slot; a clicked halo would float through the run).
 - **`show`/`hide` `over` is SECONDS and the fade bridge speaks ms** — `applySceneEffect` owns the conversion (was forwarded raw: a 9s volume reveal ran as a 9 ms pop).
 - **Scale steps swap their scene, not just their camera** (beat 04, `approachVirgo`): each ring category belongs to the scale that introduced it, so the cluster beat hides `'structureRing:group'` as it shows `'structureRing:cluster'`; focusedOnly flips back ON (one subject again — the mode is beat-scoped, set it in EVERY beat that cares, don't inherit); and the beat's subject-matter data reveals at the scale that needs it — `'survey:2mrs'` (the first real survey reveal) rides the NEIGHBOURHOOD beat's opening, populating the group sweep and leaving Virgo already a swarm when the view turns to it. The famous galaxies alone are too sparse to sell either. No strafe on this aim: the stacked old anchor (Sculptor) is faint points, not a bright sprite.

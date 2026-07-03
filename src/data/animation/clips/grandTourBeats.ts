@@ -22,6 +22,7 @@ import { approachM31 } from '../tours/grandTour/approachM31';
 import { neighbourhoodFlythrough } from '../tours/grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from '../tours/grandTour/approachVirgo';
 import { cosmicWeb, cosmicWebDwell } from '../tours/grandTour/cosmicWeb';
+import { cosmicFlows } from '../tours/grandTour/cosmicFlows';
 
 export const tourOpeningTitle: Clip = {
   id: 'tourOpeningTitle',
@@ -69,4 +70,10 @@ export const tourCosmicWebDwell: Clip = {
   id: 'tourCosmicWebDwell',
   label: 'Grand tour 05 — web pull-back dwell',
   data: cosmicWebDwell,
+};
+
+export const tourCosmicFlows: Clip = {
+  id: 'tourCosmicFlows',
+  label: 'Grand tour 06 — cosmic flows',
+  data: cosmicFlows,
 };

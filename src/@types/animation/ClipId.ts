@@ -22,4 +22,5 @@ export type ClipId =
   | 'tourNeighbourhood'
   | 'tourApproachVirgo'
   | 'tourCosmicWeb'
-  | 'tourCosmicWebDwell';
+  | 'tourCosmicWebDwell'
+  | 'tourCosmicFlows';
