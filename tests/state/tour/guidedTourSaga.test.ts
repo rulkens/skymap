@@ -32,9 +32,10 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { guidedTourSaga } from '../../../src/state/tour/guidedTourSaga';
-import { exitTour } from '../../../src/state/tour/tourActions';
+import { exitTour, advanceTour, prevBeat } from '../../../src/state/tour/tourActions';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
+import { hide } from '../../../src/services/engine/animation/effectHelpers';
 import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
@@ -211,6 +212,49 @@ describe('guidedTourSaga', () => {
     // stub) and the loop ran off the end (tour no longer active).
     expect(stub.mock.calls.length).toBeGreaterThanOrEqual(3);
     expect(store.getState().tour.active).toBe(false);
+  });
+
+  // ── (2b) every beat entry reconstructs the derived scene ──────────────────
+
+  it('reconstructs the scene on every beat entry, so skip and prev cannot desync it', async () => {
+    // Beat 0 carries a hide cue in its enter clip. playClip is STUBBED here, so
+    // the cue never fires during "playback" — exactly like a mid-fly skip that
+    // cancels the clip before its cues. The reconstruction fold must apply it
+    // anyway when beat 1 is entered, and unwind it when Prev returns to beat 0.
+    const cueBeat: BeatData = {
+      enterClip: { start: 'live', timeline: [hide(['volumesMaster'], 0)] },
+      caption: { title: 'B1' },
+      dwellClip: dwellDrift(9999),
+    };
+    const plainBeat: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'B2' },
+      dwellClip: dwellDrift(9999),
+    };
+
+    const { store, sagaMiddleware } = buildStore({ playClip: makeAutoFlyStub() });
+    store.dispatch(setVolumesEnabled(true));
+    const task = sagaMiddleware.run(guidedTourSaga, makeTour([cueBeat, plainBeat]));
+
+    await flush();
+    await flush();
+    // In beat 0's dwell: the stubbed clip fired no cues, volumes still on.
+    expect(store.getState().settings.volumes.enabled).toBe(true);
+
+    store.dispatch(advanceTour());
+    await flush();
+    await flush();
+    // Entering beat 1: the fold applied beat 0's hide cue despite it never firing.
+    expect(store.getState().settings.volumes.enabled).toBe(false);
+
+    store.dispatch(prevBeat());
+    await flush();
+    await flush();
+    // Back at beat 0: the prefix is empty again — baseline restored.
+    expect(store.getState().settings.volumes.enabled).toBe(true);
+
+    store.dispatch(exitTour());
+    await task.toPromise();
   });
 
   // ── (3) natural completion restores the captured scene ────────────────────

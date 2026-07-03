@@ -19,6 +19,15 @@
  * surface. The snapshot here is taken before any beat plays, so the restore in
  * the finally winds back every in-tour mutation regardless of which beat made it.
  *
+ * ### Every beat entry reconstructs its derived scene
+ *
+ * Before each `visitBeatSaga` the loop merges `computeSceneEntering(i)` — the
+ * baseline folded through every scene cue of beats 0..i-1. On the natural path
+ * the merge reproduces what the cues already did (dedup makes it visually a
+ * no-op); after a mid-fly skip (cues never fired) or a Prev (later cues must
+ * unwind) it is the correction. The invariant: the scene at beat i is a pure
+ * function of i, never of the navigation path that led there.
+ *
  * ### Why no setUiHidden here
  *
  * HUD-hidden-during-tour is DERIVED from `tour.active`, not toggled imperatively:
@@ -42,9 +51,13 @@ import { call, put, select, take, race, cancelled } from 'typed-redux-saga';
 import { visitBeatSaga } from './visitBeatSaga';
 import { captureScene } from './captureScene';
 import { restoreSceneSaga } from './restoreSceneSaga';
+import { computeSceneEntering } from './computeSceneEntering';
 import { exitTour } from './tourActions';
 import { tourStarted, tourEnded } from './tourSlice';
 import { clearSelection } from '../selection/selectionSlice';
+import { mergeSnapshot } from '../settings/settingsSlice';
+import { mergeSettingsSnapshot } from '../settings/mergeSettingsSnapshot';
+import type { RootState } from '../../store/types';
 import type { Tour } from '../../@types/animation/tour/Tour';
 
 /**
@@ -91,6 +104,13 @@ export function* guidedTourSaga(tour: Tour): Generator {
       run: call(function* () {
         let i = 0;
         while (i < tour.beats.length) {
+          // Re-establish beat i's derived scene (see the module header). The
+          // fold needs a FULL settings state: the captured baseline laid over
+          // the live state (non-tour clusters pass through untouched).
+          const live = yield* select((s: RootState) => s.settings);
+          const baseline = mergeSettingsSnapshot(live, snapshot.settings);
+          yield* put(mergeSnapshot(computeSceneEntering(baseline, tour.beats, i)));
+
           // Delegate (not `call`) so the typed `BeatOutcome` return flows back;
           // cancellation from the outer `exit` race still propagates through the
           // yield* into the in-flight worker.
