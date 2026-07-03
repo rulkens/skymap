@@ -25,7 +25,10 @@
  *    built (`armStarCount > 0 && category !== 'irregular'`, matching
  *    `spiralArms.ts:41`'s own guard) — seven more draws per arm (phase,
  *    pitch, weight, meanderAmp, meanderFreq, meanderPhase, fadeRadius;
- *    `spiralArms.ts:100-118`).
+ *    `spiralArms.ts:100-118`). The `weightSum` field (stored in the arms
+ *    scalar group) accumulates the weight draws from this stream
+ *    (`spiralArms.ts:102-103`), making it part of the asymmetry family
+ *    even though it lives in a different field group.
  *  - `clumpStream`/`waveStream` (seeded by `clumpSeed`/`waveSeed`): four
  *    draws per arm each (`spiralArms.ts:107-114`), under the same arms
  *    guard — scoped to their own streams so dialling one doesn't perturb

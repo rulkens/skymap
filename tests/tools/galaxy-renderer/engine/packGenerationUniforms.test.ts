@@ -20,14 +20,15 @@ import { splitStarBudget } from '../../../../tools/galaxy-renderer/src/model/spl
 import type { ExtraGalaxySpec } from '../../../../tools/galaxy-renderer/@types/engine/ExtraGalaxySpec';
 import type { GalaxyParams } from '../../../../tools/galaxy-renderer/@types/model/GalaxyParams';
 
-/** Fixed arm-table geometry, mirroring `generationUboLayout.ts`'s constants. */
-const MAX_ARMS = 8;
-const ARM_STRIDE = 16; // 4 vec4 per arm
+/** Derive arm-table geometry from GENERATION_UBO's layout (the single authority). */
+const MAX_ARMS =
+  GENERATION_UBO.arrays.armTable.countVec4 / GENERATION_UBO.armTableLayout.strideVec4;
+const ARM_STRIDE = GENERATION_UBO.armTableLayout.strideVec4 * 4; // vec4 slots to floats
 
 /** Every float index a full arm-table record spans, split by which stream draws it. */
-const ARM_ASYM_LANES = [0, 1, 2, 3, 4, 5, 6]; // phase, pitch, weight, fadeRadius, meander*3
-const ARM_CLUMP_LANES = [8, 9, 10, 11];
-const ARM_WAVE_LANES = [12, 13, 14, 15];
+const ARM_ASYM_LANES = GENERATION_UBO.armTableLayout.asymLanes;
+const ARM_CLUMP_LANES = GENERATION_UBO.armTableLayout.clumpLanes;
+const ARM_WAVE_LANES = GENERATION_UBO.armTableLayout.waveLanes;
 
 function armTableIndices(lanes: readonly number[]): Set<number> {
   const base = GENERATION_UBO.arrays.armTable.offsetVec4 * 4;

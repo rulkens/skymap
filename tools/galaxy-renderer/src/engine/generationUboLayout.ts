@@ -177,6 +177,12 @@ function buildLayout() {
       starRanges,
       dustRanges,
     },
+    armTableLayout: {
+      strideVec4: 4, // number of vec4 slots per arm record (16 floats)
+      asymLanes: [0, 1, 2, 3, 4, 5, 6], // phase, pitch, weight, fadeRadius, meanderAmp, meanderFreq, meanderPhase
+      clumpLanes: [8, 9, 10, 11], // clumpF1, clumpP1, clumpF2, clumpP2
+      waveLanes: [12, 13, 14, 15], // waveF1, waveP1, waveF2, waveP2
+    },
   };
 }
 
