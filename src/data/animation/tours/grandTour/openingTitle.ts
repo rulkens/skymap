@@ -32,7 +32,7 @@ const MW = focusId('milkyWay');
 
 // Far enough that the Milky-Way sprite (~0.03 Mpc across) is sub-pixel —
 // the open reads as empty space, not a small galaxy.
-const FAR_OPEN_MPC = 200;
+const FAR_OPEN_MPC = 100;
 
 export const openingTitle: ClipData = {
   start: 'live',
@@ -64,6 +64,6 @@ export const openingTitle: ClipData = {
     all([moveTargetId(MW, 0), dollyTo(FAR_OPEN_MPC, 0)]),
     // …then the approach. Log-space dolly: three decades in, decelerating
     // onto the framing distance as the sprite swells from nothing.
-    focusOnId(MW, 8),
+    focusOnId(MW, 7),
   ],
 };

@@ -48,7 +48,7 @@ const COMA_SC = focusId('supercluster-coma-sc');
 // ~476 Mpc from home, and the orbit target sits out at Coma, so the pull-back
 // needs ~R/sin(fovY/2) + the target offset. Eye-tuned, not derived — nudge it
 // if the wedge clips or swims too small in frame.
-const FIT_WEB_MPC = 1200;
+const FIT_WEB_MPC = 250;
 
 export const cosmicWeb: ClipData = {
   start: 'live',
@@ -71,9 +71,11 @@ export const cosmicWeb: ClipData = {
  * Same composition idiom as the you-are-here push-in, pointed outward: the
  * dolly rides inside the drift's `all` (it writes `distance`, the drift
  * writes yaw/pitch) and a leading `wait` holds it until the rotation has
- * established the node.
+ * established the node. The drift outlasts the pull-back by ~10 s on
+ * purpose: the landing is the payoff shot, so the camera keeps turning at
+ * full width rather than cutting the moment the dolly settles.
  */
 export const cosmicWebDwell: ClipData = {
   start: 'live',
-  timeline: [all([...dwellDrift(12).timeline, seq([wait(4), dollyTo(FIT_WEB_MPC, 8)])])],
+  timeline: [all([...dwellDrift(22).timeline, seq([wait(4), dollyTo(FIT_WEB_MPC, 8)])])],
 };

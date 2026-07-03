@@ -36,7 +36,7 @@ export const neighbourhoodFlythrough: ClipData = {
     // The first real survey reveal rides this beat: 2MRS fades in as the
     // sweep launches, so the neighbourhood is populated with actual galaxies
     // — the famous handful alone would make the groups read as empty rings.
-    show(['survey:2mrs', 'structureRing:group'], 1),
+    show(['survey:2mrs', 'structureRing:group'], 2),
     scene(setLabelsFocusedOnly(false)),
     flyPath(
       [

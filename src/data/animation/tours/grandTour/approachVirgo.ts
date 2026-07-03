@@ -42,7 +42,7 @@ export const approachVirgo: ClipData = {
   timeline: [
     scene(setLabelsFocusedOnly(true)),
     hide(['structureRing:group'], 1),
-    show(['structureRing:cluster'], 2),
+    show(['survey:glade', 'survey:sdss', 'structureRing:cluster'], 2),
     lookAtId(VIRGO, 3),
     focus(VIRGO),
     hold(1),
