@@ -58,19 +58,37 @@ describe('buildBulge', () => {
 describe('computeBarGeometry', () => {
   it('is zero-length for a non-barred category', () => {
     const ctx = createGalaxyBuildContext({ type: 'Sb', starCount: 30000 });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     expect(bar.barLength).toBe(0);
   });
 
   it('is outerRadius * 0.42 * barStrength for a barred category', () => {
     const ctx = createGalaxyBuildContext({ type: 'SBb', starCount: 30000, radius: 1.3 });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     expect(bar.barLength).toBeCloseTo(ctx.outerRadius * 0.42 * 1, 12);
   });
 
   it('scales with an explicit barStrength', () => {
     const ctx = createGalaxyBuildContext({ type: 'SBb', starCount: 30000, barStrength: 0.5 });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     expect(bar.barLength).toBeCloseTo(ctx.outerRadius * 0.42 * 0.5, 12);
   });
 
@@ -79,7 +97,13 @@ describe('computeBarGeometry', () => {
     const ctxA = createGalaxyBuildContext(params);
     const ctxB = createGalaxyBuildContext({ ...params });
 
-    computeBarGeometry(ctxA);
+    computeBarGeometry(
+      ctxA.rand,
+      ctxA.category,
+      ctxA.outerRadius,
+      ctxA.asymmetry,
+      ctxA.params.barStrength,
+    );
     ctxB.rand(); // stand-in for the same single unconditional draw
 
     expect(ctxA.rand()).toBe(ctxB.rand());
@@ -90,7 +114,13 @@ describe('computeBarGeometry', () => {
     const ctxA = createGalaxyBuildContext(params);
     const ctxB = createGalaxyBuildContext({ ...params });
 
-    computeBarGeometry(ctxA);
+    computeBarGeometry(
+      ctxA.rand,
+      ctxA.category,
+      ctxA.outerRadius,
+      ctxA.asymmetry,
+      ctxA.params.barStrength,
+    );
     ctxB.rand();
 
     expect(ctxA.rand()).toBe(ctxB.rand());
@@ -100,14 +130,26 @@ describe('computeBarGeometry', () => {
 describe('buildBar', () => {
   it('writes floor(diskCount * 0.35) records for a barred galaxy', () => {
     const ctx = createGalaxyBuildContext({ type: 'SBb', starCount: 30000 });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     buildBar(ctx, bar);
     expect(ctx.stars.count()).toBe(Math.floor(ctx.budget.diskCount * 0.35));
   });
 
   it('writes no records for a non-barred galaxy', () => {
     const ctx = createGalaxyBuildContext({ type: 'Sb', starCount: 30000 });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     buildBar(ctx, bar);
     expect(ctx.stars.count()).toBe(0);
   });
@@ -116,21 +158,39 @@ describe('buildBar', () => {
 describe('buildDisk', () => {
   it('spiral disk writes exactly diskCount records', () => {
     const ctx = createGalaxyBuildContext({ type: 'Sb', starCount: 30000 });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     buildDisk(ctx, bar);
     expect(ctx.stars.count()).toBe(ctx.budget.diskCount);
   });
 
   it('barred disk writes fewer than diskCount records', () => {
     const ctx = createGalaxyBuildContext({ type: 'SBb', starCount: 30000 });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     buildDisk(ctx, bar);
     expect(ctx.stars.count()).toBeLessThan(ctx.budget.diskCount);
   });
 
   it('disk stars sit near the plane — |y| bounded by a few times diskHeight', () => {
     const ctx = createGalaxyBuildContext({ type: 'Sb', starCount: 30000 });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     buildDisk(ctx, bar);
 
     const view = ctx.stars.view();
@@ -150,7 +210,13 @@ describe('bulge -> computeBarGeometry -> bar -> disk main-stream sequencing', ()
     const ctx = createGalaxyBuildContext({ type: 'SBb', starCount: 30000 });
     buildBulge(ctx);
     const bulgeCount = ctx.stars.count();
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     buildBar(ctx, bar);
     const barCount = ctx.stars.count() - bulgeCount;
     buildDisk(ctx, bar);

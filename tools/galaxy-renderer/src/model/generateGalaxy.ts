@@ -11,10 +11,13 @@
  *     constants, draws the four `asymRand` asymmetry values.
  *  2. `buildBulge(ctx)` — first draw from the main `rand`/`randNormal`
  *     stream (model.js:199).
- *  3. `computeBarGeometry(ctx)` — UNCONDITIONAL for every category: the
- *     spike draws the bar-tilt angle here regardless of whether a bar gets
- *     built (model.js:229), so skipping this for non-barred galaxies would
- *     desync every population drawn after it.
+ *  3. `computeBarGeometry(ctx.rand, ctx.category, ctx.outerRadius, ctx.asymmetry,
+ *     ctx.params.barStrength)` — UNCONDITIONAL for every category: the spike
+ *     draws the bar-tilt angle here regardless of whether a bar gets built
+ *     (model.js:229), so skipping this for non-barred galaxies would desync
+ *     every population drawn after it. Takes bare scalars rather than the
+ *     whole `ctx` because `packGenerationUniforms` (Task 2) is a second
+ *     caller with no `GalaxyBuildContext` of its own.
  *  4. `buildBar(ctx, bar)` — no-ops outside `category === 'barred'`
  *     (internal guard, not re-checked here).
  *  5. `buildDisk(ctx, bar)` — no-ops when `budget.diskCount === 0`
@@ -57,7 +60,13 @@ export function generateGalaxy(params: GalaxyParams): GeneratedGalaxy {
   const ctx = createGalaxyBuildContext(params);
 
   buildBulge(ctx);
-  const bar = computeBarGeometry(ctx);
+  const bar = computeBarGeometry(
+    ctx.rand,
+    ctx.category,
+    ctx.outerRadius,
+    ctx.asymmetry,
+    ctx.params.barStrength,
+  );
   buildBar(ctx, bar);
   buildDisk(ctx, bar);
   const armDustSeeds = buildSpiralArms(ctx, bar);

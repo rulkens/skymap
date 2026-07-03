@@ -19,7 +19,13 @@ import { createGalaxyBuildContext } from '../../../../../tools/galaxy-renderer/s
 describe('buildSpiralArms', () => {
   it('returns dust seeds with armFade in [0,1]', () => {
     const ctx = createGalaxyBuildContext({ type: 'Sb', starCount: 30000 });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     const seeds = buildSpiralArms(ctx, bar);
 
     expect(seeds.length).toBeGreaterThan(0);
@@ -36,7 +42,13 @@ describe('buildSpiralArms', () => {
       armClump: 0,
       hii: 0,
     });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     buildSpiralArms(ctx, bar);
 
     expect(ctx.stars.count()).toBe(ctx.budget.armStarCount);
@@ -44,11 +56,23 @@ describe('buildSpiralArms', () => {
 
   it('HII knots write bonus records', () => {
     const off = createGalaxyBuildContext({ type: 'Sb', starCount: 30000, armClump: 0, hii: 0 });
-    const offBar = computeBarGeometry(off);
+    const offBar = computeBarGeometry(
+      off.rand,
+      off.category,
+      off.outerRadius,
+      off.asymmetry,
+      off.params.barStrength,
+    );
     buildSpiralArms(off, offBar);
 
     const on = createGalaxyBuildContext({ type: 'Sb', starCount: 30000, armClump: 0, hii: 2 });
-    const onBar = computeBarGeometry(on);
+    const onBar = computeBarGeometry(
+      on.rand,
+      on.category,
+      on.outerRadius,
+      on.asymmetry,
+      on.params.barStrength,
+    );
     buildSpiralArms(on, onBar);
 
     expect(on.stars.count()).toBeGreaterThan(off.stars.count());
@@ -61,7 +85,13 @@ describe('buildSpiralArms', () => {
       armClump: 1,
       hii: 0,
     });
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     buildSpiralArms(ctx, bar);
 
     expect(ctx.stars.count()).toBeLessThan(ctx.budget.armStarCount);
@@ -70,7 +100,13 @@ describe('buildSpiralArms', () => {
   it('no arm stars for lenticular — the builder tolerates a zero budget', () => {
     const ctx = createGalaxyBuildContext({ type: 'S0', starCount: 30000 });
     expect(ctx.budget.armStarCount).toBe(0);
-    const bar = computeBarGeometry(ctx);
+    const bar = computeBarGeometry(
+      ctx.rand,
+      ctx.category,
+      ctx.outerRadius,
+      ctx.asymmetry,
+      ctx.params.barStrength,
+    );
     const seeds = buildSpiralArms(ctx, bar);
 
     expect(seeds).toEqual([]);
