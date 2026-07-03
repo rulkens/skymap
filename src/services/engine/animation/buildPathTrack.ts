@@ -107,7 +107,7 @@ type BuildParams = {
   readonly rampSec?: number;
   /** Path-level dwell DEPTH ∈ [0,1] applied at every target; per-waypoint `linger` overrides it. */
   readonly linger?: number;
-  /** Dwell window width (seconds) — how long the sustained slow-down lasts per target. */
+  /** Dwell window width in WALL-CLOCK seconds — how long the slow moment lasts per target, whatever the depth. */
   readonly lingerSec?: number;
   /**
    * Which spline basis to fit (default `{ kind: 'centripetal' }`). The

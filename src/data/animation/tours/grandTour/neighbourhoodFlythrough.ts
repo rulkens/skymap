@@ -45,10 +45,10 @@ export const neighbourhoodFlythrough: ClipData = {
         atFocus(CEN_A_GROUP, { linger: 0 }), // bend past Cen A — pass through
         atFocus(SCULPTOR_GROUP), // settle: default linger takes it in
       ],
-      // The settle dwell: full-depth linger (a ~12%-speed crawl, never a
-      // freeze) over a wide window, so the camera glides into Sculptor and
-      // takes it in before the beat dwell hands over. Only the settle knot
-      // feels these — the pass-throughs pin linger: 0 above. The spline is
+      // The settle dwell: a 3-second full-depth linger (a ~12%-speed crawl,
+      // never a freeze — lingerSec is wall-clock), so the camera glides into
+      // Sculptor and takes it in before the beat dwell hands over. Only the
+      // settle knot feels these — the pass-throughs pin linger: 0. The spline is
       // hand-tuned off the defaults: a longer turnDelay banks later through
       // the pass-throughs, a shorter lookAhead keeps the aim closer to the
       // groups as they sweep past.
