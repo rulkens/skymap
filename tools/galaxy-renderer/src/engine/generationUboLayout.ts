@@ -37,6 +37,8 @@
 
 /** Per-arm personality/meander + clump + wave records, `armCount`'s max. */
 const MAX_ARMS = 8;
+/** Number of vec4 slots per arm-table record (16 floats: asymmetry + clump + wave lanes). */
+const ARM_RECORD_STRIDE_VEC4 = 4;
 /** `buildIrregularClumps`'s fixed clump-centre count (irregularClumps.ts). */
 const NUM_IRR_CLUMPS = 7;
 /** `buildLenticularDust`'s fixed cloud-centre count (lenticularDust.ts). */
@@ -156,7 +158,7 @@ function buildLayout() {
     'dustRangeCount',
   ] as const);
 
-  const armTable = vec4Array(cursor, MAX_ARMS * 4);
+  const armTable = vec4Array(cursor, MAX_ARMS * ARM_RECORD_STRIDE_VEC4);
   const clumpCenters = vec4Array(cursor, NUM_IRR_CLUMPS);
   const cloudCenters = vec4Array(cursor, LENT_CLOUDS);
   const starRanges = vec4Array(cursor, MAX_STAR_RANGES);
@@ -178,7 +180,7 @@ function buildLayout() {
       dustRanges,
     },
     armTableLayout: {
-      strideVec4: 4, // number of vec4 slots per arm record (16 floats)
+      strideVec4: ARM_RECORD_STRIDE_VEC4, // number of vec4 slots per arm record (16 floats)
       asymLanes: [0, 1, 2, 3, 4, 5, 6], // phase, pitch, weight, fadeRadius, meanderAmp, meanderFreq, meanderPhase
       clumpLanes: [8, 9, 10, 11], // clumpF1, clumpP1, clumpF2, clumpP2
       waveLanes: [12, 13, 14, 15], // waveF1, waveP1, waveF2, waveP2
