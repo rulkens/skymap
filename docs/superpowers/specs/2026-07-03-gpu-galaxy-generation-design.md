@@ -96,9 +96,13 @@ fn rand(seed: u32, populationId: u32, starIndex: u32, drawSlot: u32) -> f32
 each ported builder are numbered statically as `drawSlot` values;
 rejection-sampling loops advance `drawSlot` by a per-iteration stride, so
 retries never collide with sibling draws. The four seed params keep their
-family roles as hash inputs — `seed` main placement, `asymSeed` asymmetry,
-`clumpSeed` clump placement, `waveSeed` warp/wave — so the per-family seed
-dice in the UI behave exactly as before.
+family roles, but only `seed` feeds the hash: auditing the CPU model showed
+the `asymSeed`/`clumpSeed`/`waveSeed` streams produce exclusively
+_galaxy-level_ values (a few dozen numbers), so `packGenerationUniforms`
+runs real mulberry32 on them CPU-side and ships the results in the UBO —
+the per-family seed dice reproduce today's exact values. Main-seed
+galaxy-level draws (bar tilt, clump/cloud centres) are re-derived from a
+fresh `mulberry32(seed)` in the packer in a fixed documented order.
 
 Determinism contract, restated: **same params → same buffer contents**,
 independent of dispatch size, workgroup layout, and machine (integer hash;
@@ -109,10 +113,15 @@ the usual last-ULP `sin/cos` caveat carries over from the CPU model).
 Builders whose CPU form rejection-samples retry **up to 8 iterations** in
 the thread, then write a **dead point** (size 0 — a degenerate billboard
 rasterizes nothing). Slots between a population's actual count and its
-capacity are dead points too. Expected dead fraction is a few percent of
-vertices; no compaction, no atomics, no indirect draws. The
+capacity are dead points too. Because arm iterations reserve a fixed slot
+stride for optional HII bonus stars, the dead fraction reaches ~45% on
+arm-heavy types (default Sc: ~400k live stars in ~740k slots, ~24 MB) —
+the cost is memory plus trivially-culled degenerate vertices, accepted for
+this tool. No compaction, no atomics, no indirect draws. The
 overflow-throwing writers' job (capacity is never exceeded) becomes
-structural: capacity _is_ the dispatch size.
+structural: capacity _is_ the dispatch size. The plan's `DEVIATION:`
+register (plan 01 header) enumerates this and the four other
+grounding-forced refinements of this spec.
 
 ### Buffers and engine surface
 
