@@ -331,7 +331,7 @@ Owns the `<canvas>` + engine lifecycle (mirror `tools/flow-workbench/src/ui/View
 - [x] Run → fail. Create the three data files. Run → pass.
 - [x] Load `create-component`; build Viewport + swap main.tsx.
 - [x] `npm run typecheck` + full `npm test` → green.
-- [ ] **Visual gate:** ask the user to run `npm run galaxy-renderer` (port 5400) and confirm: an Sc spiral renders with bloom; drag orbits; right-drag pans; wheel zooms with damping; idle 2.5 s resumes auto-rotate; resizing keeps it crisp. Do not proceed to plan 03 sign-off without this.
+- [x] **Visual gate:** ask the user to run `npm run galaxy-renderer` (port 5400) and confirm: an Sc spiral renders with bloom; drag orbits; right-drag pans; wheel zooms with damping; idle 2.5 s resumes auto-rotate; resizing keeps it crisp. Do not proceed to plan 03 sign-off without this.
 - [x] Commit.
 
 ---

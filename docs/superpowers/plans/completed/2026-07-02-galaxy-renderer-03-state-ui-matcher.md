@@ -528,7 +528,7 @@ export type TonemapSelectProps = { readonly value: TonemapMode; readonly onChang
 **Steps**
 - [x] Load `create-component`. Build Hud, ComparePanel, App; rewrite main.tsx.
 - [x] `npm run typecheck` + full `npm test` green.
-- [ ] **Visual gate** — ask the user to exercise, at `http://localhost:5400`:
+- [x] **Visual gate** — ask the user to exercise, at `http://localhost:5400`:
   1. sliders regenerate after a short pause (130 ms debounce), render sliders apply live;
   2. type chips restyle the galaxy per stage patch; seed dice reroll only their noise family;
   3. compare panel: chips switch references, Load preset matches the photo's pose, auto-fit runs with live progress + stop, report fills in; Milky Way's fit button is disabled;
@@ -545,5 +545,5 @@ export type TonemapSelectProps = { readonly value: TonemapMode; readonly onChang
 - [x] `npm run typecheck` (both configs) green.
 - [x] Full `npm test` green (entire repo suite, not just the tool's).
 - [x] `tools/galaxy-renderer/README.md` final pass: features, controls, compare workflow, preset format, port table (5400).
-- [ ] Prettier touched files; commit.
-- [ ] Hand off: plans complete → run `/feature-done` (gates the DoD, relocates spec + plans to `completed/`).
+- [x] Prettier touched files; commit.
+- [x] Hand off: plans complete → run `/feature-done` (gates the DoD, relocates spec + plans to `completed/`).
