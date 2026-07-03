@@ -286,16 +286,55 @@ describe('visitBeatSaga', () => {
     expect(store.getState().tour.beatIndex).toBe(2);
     expect(store.getState().tour.dwellNonce).toBe(0);
 
-    // advanceTour during the fly must have no effect (clip not done).
-    store.dispatch(advanceTour());
-    await flush();
-    expect(store.getState().tour.dwellNonce).toBe(0);
-
     // Land the fly — the dwell now begins and the nonce bumps.
     resolveFly();
     await flush();
     await flush();
     expect(store.getState().tour.dwellNonce).toBe(1);
+  });
+
+  // ── (3b) navigation during the FLY skips it — the enter clip is not a lock ──
+
+  it("returns 'next' when advanceTour arrives mid-fly, cancelling the fly and skipping the dwell", async () => {
+    let flyCancelled = false;
+    const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
+      // The fly never lands on its own; it must be cancelled by the race.
+      const p = new Promise<void>(() => {}) as Promise<void> & { [key: symbol]: () => void };
+      p[CANCEL_SYM] = () => {
+        flyCancelled = true;
+      };
+      return p;
+    });
+
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+
+    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0);
+    await flush(); // saga reaches the fly race and awaits
+
+    store.dispatch(advanceTour());
+    const outcome = await task.toPromise();
+
+    expect(outcome).toBe('next');
+    expect(flyCancelled).toBe(true);
+    // The dwell never started — the caption/ring nonce stays untouched.
+    expect(store.getState().tour.dwellNonce).toBe(0);
+  });
+
+  it("returns 'prev' when prevBeat arrives mid-fly", async () => {
+    const playClipMock = vi
+      .fn<(clip: ClipData) => Promise<void>>()
+      .mockImplementation(() => new Promise<void>(() => {}));
+
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+
+    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 1);
+    await flush();
+
+    store.dispatch(prevBeat());
+    const outcome = await task.toPromise();
+
+    expect(outcome).toBe('prev');
+    expect(store.getState().tour.dwellNonce).toBe(0);
   });
 
   // ── (4) advanceTour during the dwell resolves to 'next' ───────────────────

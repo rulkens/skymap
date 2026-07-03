@@ -19,10 +19,12 @@
  *    the establishing clip and the dwell clip, so an id-bearing dwell (a flyPath
  *    ring around a structure, say) resolves like any other clip.
  *
- * 3. **Resolve foci once, then await the fly** (`call(playClip, clip)`): the
- *    resolved clip IS the establishing move. Awaiting it (never forking) means a
- *    mid-flight `advanceTour`/`prevBeat` does not cut the camera move short — the
- *    advance contract is "land the clip before the next beat begins".
+ * 3. **Resolve foci once, then race the fly against navigation**: the resolved
+ *    clip IS the establishing move, but it is not a lock — `advanceTour` /
+ *    `prevBeat` mid-fly win the race, cancel the clip (the playClip promise's
+ *    `[CANCEL]` hook stops the driver where it is), and steer the outer loop
+ *    immediately, skipping this beat's dwell. The next beat's enter clip starts
+ *    `'live'` from wherever the camera was cut, so a skip is seamless.
  *
  * 4. **Start the dwell** (`put(dwellStarted({ dwellSec }))`): the fly has landed.
  *    The dwell length is the RESOLVED dwell clip's compiled duration — computed
@@ -43,8 +45,9 @@
  * runs — same pattern as `watchFocusTweenSaga`.
  */
 
-import { call, put, getContext } from 'typed-redux-saga';
+import { call, put, race, take, getContext } from 'typed-redux-saga';
 
+import { advanceTour, prevBeat } from './tourActions';
 import { pausableDwellSaga } from './pausableDwellSaga';
 import { waitUntil } from './waitUntil';
 import { clipFociReady } from './clipFociReady';
@@ -81,13 +84,20 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
       cameraRuntime() !== null,
   );
 
-  // (3) Resolve foci once, then await the establishing fly. Never fork. A beat
+  // (3) Resolve foci once, then race the establishing fly against navigation —
+  // a mid-fly Next/Prev cancels the clip and steers at once (no dwell). A beat
   // with no `enterClip` is already framed (the previous beat landed here) — the
   // dwell begins immediately and the caption reveals at once.
   if (beat.enterClip !== undefined) {
     const rt = cameraRuntime()!;
     const enterClip = resolveClipFoci(beat.enterClip, resolveDeps(), rt.fovYRad, rt.from);
-    yield* call(playClip, enterClip);
+    const winner = yield* race({
+      landed: call(playClip, enterClip),
+      next: take(advanceTour),
+      prev: take(prevBeat),
+    });
+    if (winner.next) return 'next';
+    if (winner.prev) return 'prev';
   }
 
   // (4) The fly landed — start the dwell (fades caption in, starts the ring).
