@@ -39,7 +39,7 @@
  */
 
 import type { Clip } from '../../../@types/animation/Clip';
-import { flyPath, atFocus } from '../../../services/engine/animation/effectHelpers';
+import { atFocus, flyPath } from '../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../utils/animation/focusId';
 
 export const famousFlythrough: Clip = {
@@ -54,6 +54,7 @@ export const famousFlythrough: Clip = {
           atFocus(focusId('m31')), // Andromeda
           atFocus(focusId('m101')), // Pinwheel
           atFocus(focusId('m51')), // Whirlpool
+          atFocus(focusId('m63')), // Sunflower
           atFocus(focusId('m104')), // Sombrero
           atFocus(focusId('m83')), // Southern Pinwheel
           atFocus(focusId('c77')), // Centaurus A

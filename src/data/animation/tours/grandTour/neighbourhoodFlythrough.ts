@@ -1,9 +1,8 @@
 /**
  * Our neighbourhood — the one genuinely lateral, grand-tour moment. Sweep
  * THROUGH the local galaxy groups rather than hopping between them: the path
- * bends through the M81 and Centaurus A groups at cruise speed (linger 0 —
- * they shape the curve, they are not stops) and settles on the Sculptor
- * Group, where the caption lands.
+ * bends through the M81 and Centaurus A groups, slowing to take each one in,
+ * and settles on the Sculptor Group, where the caption lands.
  *
  * Label mode flips here: focusedOnly goes OFF so the neighbourhood reads as
  * a populated place — every group's name, plus the nearby famous galaxies'.
@@ -41,20 +40,20 @@ export const neighbourhoodFlythrough: ClipData = {
     scene(setLabelsFocusedOnly(false)),
     flyPath(
       [
-        atFocus(M81_GROUP, { linger: 0 }), // launch toward M81 — pass through
-        atFocus(CEN_A_GROUP, { linger: 0 }), // bend past Cen A — pass through
-        atFocus(SCULPTOR_GROUP), // settle: default linger takes it in
+        atFocus(M81_GROUP), // launch toward M81
+        atFocus(CEN_A_GROUP), // bend past Cen A
+        atFocus(SCULPTOR_GROUP), // settle
       ],
-      // The settle dwell: a 3-second full-depth linger (a ~12%-speed crawl,
-      // never a freeze — lingerSec is wall-clock), so the camera glides into
-      // Sculptor and takes it in before the beat dwell hands over. Only the
-      // settle knot feels these — the pass-throughs pin linger: 0. The spline is
-      // hand-tuned off the defaults: a longer turnDelay banks later through
-      // the pass-throughs, a shorter lookAhead keeps the aim closer to the
-      // groups as they sweep past.
+      // Every group gets a 3-second linger (a slow glide, never a freeze —
+      // lingerSec is wall-clock): the sweep decelerates into each knot so
+      // the viewer takes each group in, then cruises on, settling on
+      // Sculptor before the beat dwell hands over. The spline is hand-tuned
+      // off the defaults: a longer turnDelay banks later through the bends,
+      // a shorter lookAhead keeps the aim closer to the groups as they
+      // sweep past.
       {
         over: 18,
-        linger: 1,
+        linger: 0.8,
         lingerSec: 3,
         spline: { kind: 'causalHermite', turnDelay: 1.7, lookAhead: 0.8 },
       },

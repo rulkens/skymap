@@ -68,7 +68,7 @@ export const grandTour: Tour = {
         body: 'Virgo, the nearest big cluster — over a thousand galaxies, pulled together by gravity, 50 million light-years away.',
         position: 'bottom-left',
       },
-      dwellClip: dwellDrift(7),
+      dwellClip: dwellDrift(12),
     },
   ],
 };
