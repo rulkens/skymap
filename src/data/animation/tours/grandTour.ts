@@ -20,6 +20,7 @@ import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31 } from './grandTour/approachM31';
 import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from './grandTour/approachVirgo';
+import { cosmicWeb } from './grandTour/cosmicWeb';
 
 export const grandTour: Tour = {
   id: 'grandTour',
@@ -69,6 +70,15 @@ export const grandTour: Tour = {
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(12),
+    },
+    {
+      enterClip: cosmicWeb,
+      caption: {
+        title: 'The cosmic web',
+        body: 'Far enough out, galaxies trace a web: bright threads and clumps where superclusters gather, ringed by dark voids.',
+        position: 'bottom-left',
+      },
+      dwellClip: dwellDrift(9),
     },
   ],
 };

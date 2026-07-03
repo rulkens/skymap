@@ -28,6 +28,7 @@ const EXPECTED_WAYPOINTS = [
   'm31', // Andromeda
   'm101', // Pinwheel
   'm51', // Whirlpool
+  'm63', // Sunflower
   'm104', // Sombrero
   'm83', // Southern Pinwheel
   'c77', // Centaurus A

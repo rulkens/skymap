@@ -34,6 +34,7 @@ describe('clipRegistry', () => {
       'flyout',
       'tourApproachM31',
       'tourApproachVirgo',
+      'tourCosmicWeb',
       'tourNeighbourhood',
       'tourOpeningTitle',
       'tourYouAreHere',
