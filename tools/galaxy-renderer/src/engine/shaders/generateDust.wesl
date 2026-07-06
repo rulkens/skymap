@@ -42,6 +42,11 @@
 import package::lib::generate::gen;
 import package::lib::generate::DustRec;
 import package::lib::generate::writeDust;
+import package::lib::generate::buildArmDust;
+import package::lib::generate::buildBarDust;
+import package::lib::generate::buildLenticularNucDust;
+import package::lib::generate::buildLenticularRingDust;
+import package::lib::generate::buildIrregularDust;
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -64,18 +69,18 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     if (slot >= start && slot < start + rangeLen) {
       let iteration = (slot - start) / stride;
       let sub = (slot - start) % stride;
-      // Not yet consumed — every case below is a dead-record stub. Kept
-      // here (rather than only computed inside a later task) so the
-      // decomposition contract is visible at the call site now.
-      _ = iteration;
+      // Every dust population carves stride 1 today, so 'sub' is always 0 and
+      // the builders reconstruct their particle from 'iteration' alone. 'sub'
+      // is still read here (mirroring the star pass) so a future multi-slot
+      // dust population is a carve + switch change, not a rescan rewrite.
       _ = sub;
 
       switch (popId) {
-        case 8u:  { writeDust(slot, dead); return; }  // armDust
-        case 9u:  { writeDust(slot, dead); return; }  // barDust
-        case 10u: { writeDust(slot, dead); return; }  // lenticularNucDust
-        case 11u: { writeDust(slot, dead); return; }  // lenticularRingDust
-        case 12u: { writeDust(slot, dead); return; }  // irregularDust
+        case 8u:  { writeDust(slot, buildArmDust(iteration)); return; }             // armDust
+        case 9u:  { writeDust(slot, buildBarDust(iteration)); return; }             // barDust
+        case 10u: { writeDust(slot, buildLenticularNucDust(iteration)); return; }   // lenticularNucDust
+        case 11u: { writeDust(slot, buildLenticularRingDust(iteration)); return; }  // lenticularRingDust
+        case 12u: { writeDust(slot, buildIrregularDust(iteration)); return; }       // irregularDust
         default:  { writeDust(slot, dead); return; }
       }
     }

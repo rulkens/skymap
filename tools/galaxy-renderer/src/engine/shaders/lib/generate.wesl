@@ -1038,3 +1038,239 @@ fn buildGlobularStar(iteration: u32) -> StarRec {
   rec.alive = true;
   return rec;
 }
+
+// ---------------------------------------------------------------------------
+// Dust builders — batch C (arm, bar, lenticular nuclear + ring, irregular)
+// ---------------------------------------------------------------------------
+//
+// The five dust populations mirror the star builders' shape: each ports one
+// CPU dust loop body verbatim and returns the DustRec for the given output
+// slot. Every per-particle draw reads a fixed SLOT out of the population's own
+// hash id (armDust 8, barDust 9, lenticularNucDust 10, lenticularRingDust 11,
+// irregularDust 12), so a builder's draws never alias its own reddening draws
+// (slots 56-59) nor another population's — same stateless-hash contract the
+// star builders use. Galaxy-level dust knobs (dustAmount, dustNoiseAmt,
+// noiseFreq, ring geometry, cloudCenters) come from the UBO, never re-derived
+// per invocation.
+//
+// ## The candidate-reuse trick (armDust, irregularDust)
+//
+// The CPU arm/irregular dust builders walk the COMPACTED 'dustSeeds' array the
+// star pass produced — one entry per star that both survived its density gates
+// AND passed a dust-seed gate ('seedAccepted'). A stateless GPU pass has no
+// compacted array to walk, so instead each dust candidate 'i' RECOMPUTES the
+// i-th star's shared sample ('armStarSample(i)' / 'irregularSample(i)') — the
+// exact same hash the star pass evaluated for that iteration, bit-identical
+// across passes because it is stateless — and declares itself dead when that
+// sample's 'seedAccepted' is false. So candidate i maps to star ITERATION i,
+// not to the i-th accepted seed: the GPU keeps the gaps the CPU compacts away.
+// That is a deliberate parity DEVIATION when the candidate cap binds (a high-
+// starCount galaxy caps iterations below armStarCount, and the GPU's kept
+// fraction is the seed acceptance rate rather than the CPU's dense-packed
+// count) — the reason the dust-total threshold is advisory, not a gate. The
+// star sample MUST NOT be widened for the dust seam: it is shared with the
+// star pass and has to stay bit-identical across both.
+
+// DustMod — the noise-driven keep/opacity/size modulation, createDustField.ts:
+// 32-43. 'keep' is one rand draw at 'slot' gated against a noise-shaped
+// probability; 'op'/'sz' are draw-free multipliers off the same noise sample.
+// dustNoiseAt reads gen.noiseSeed + gen.noiseFreq; gen.dustNoiseAmt is the mix.
+struct DustMod {
+  keep: bool,
+  op: f32,
+  sz: f32,
+}
+
+fn dustMod(p: vec3<f32>, seed: u32, pop: u32, idx: u32, slot: u32) -> DustMod {
+  let f = dustNoiseAt(p);                 // createDustField.ts:37 (noiseAt)
+  let a = gen.dustNoiseAmt;
+  var m: DustMod;
+  // The single keep-gate rand — the ONLY draw dustMod makes (createDustField.ts:39).
+  m.keep = genRand(seed, pop, idx, slot) < 1.0 - a + a * (0.15 + 1.5 * f * f);
+  m.op = 1.0 - a + a * (0.25 + 1.9 * f);  // :41
+  m.sz = 1.0 - a + a * (0.5 + 1.3 * f);   // :42
+  return m;
+}
+
+// radialFalloff — exponential radial dust falloff, createDustField.ts:45.
+fn radialFalloff(r: f32) -> f32 {
+  return exp(-r / (gen.diskScaleLen * 1.5));
+}
+
+// writeDustParticle — the shared dust write path: compose the galactic warp
+// onto y, draw the four reddening factors at the fixed slots 56-59, then bake
+// the rigid extra-galaxy transform, mirroring the CPU addDust (createGalaxy
+// BuildContext.ts:126-133) followed by the bakeExtraTransform post-pass
+// (createGalaxyEngine.ts:516 / bakeExtraTransform.ts). x/y/z arrive PRE-warp
+// exactly as the CPU builder passes them to addDust. Reddened dust reads warm
+// because interstellar dust absorbs blue more than red (ctx.ts:123-124): four
+// rand draws — darkness, then the r/g/b factors, in that order.
+fn writeDustParticle(
+  seed: u32,
+  pop: u32,
+  idx: u32,
+  x: f32,
+  y: f32,
+  z: f32,
+  size: f32,
+  opacity: f32,
+) -> DustRec {
+  let warpedY = y + warpOffset(x, z);                              // ctx.ts:127
+  let darkness = 0.02 + 0.022 * genRand(seed, pop, idx, 56u);      // slot 56 — ctx.ts:128
+  let dr = darkness * (1.05 + 0.55 * genRand(seed, pop, idx, 57u)); // slot 57 — ctx.ts:129
+  let dg = darkness * (0.6 + 0.22 * genRand(seed, pop, idx, 58u));  // slot 58 — ctx.ts:130
+  let db = darkness * (0.32 + 0.26 * genRand(seed, pop, idx, 59u)); // slot 59 — ctx.ts:131
+  // Position + size baked through the rigid extra transform (identity for a
+  // standalone galaxy, where extraScale == 1 and the rotation is zero). Size
+  // scales by extraScale separately, per bakeExtraTransform.ts:79.
+  var rec: DustRec;
+  rec.pos = applyExtraTransform(vec3<f32>(x, warpedY, z));
+  rec.size = size * gen.extraScale;
+  rec.color = vec3<f32>(dr, dg, db);
+  rec.opacity = opacity;
+  rec.alive = true;
+  return rec;
+}
+
+// buildArmDust — patchy dust lanes nudged onto the inner (concave) edge of the
+// spiral arms, dense-knot/thin-wisp split. Ports armDust.ts:28-51. Candidate i
+// reuses armStarSample(i) (the shared arm draw, pop 3) as its dust seed: pos,
+// radius, angle, armFade; dead when that sample did not accept a dust seed.
+// The inner-edge nudge inX/inZ is draw-free (armDust.ts:30-31).
+fn buildArmDust(i: u32) -> DustRec {
+  var dead: DustRec;
+  dead.alive = false;
+  let seed = gen.seed;
+  let pop = 8u;
+
+  let s = armStarSample(i);          // recompute the arm seed — pop 3, bit-identical
+  if (!s.seedAccepted) { return dead; } // gapped/un-seeded star writes no dust
+
+  let inX = -cos(s.angle) * gen.outerRadius * 0.018; // armDust.ts:30
+  let inZ = -sin(s.angle) * gen.outerRadius * 0.018; // armDust.ts:31
+  let dense = genRand(seed, pop, i, 0u) < 0.28;      // slot 0 — armDust.ts:32
+  let x = s.pos.x + inX + genNormal(seed, pop, i, 1u) * gen.outerRadius * 0.022; // slots 1-2 — :33
+  let y = s.pos.y * 0.4 + genNormal(seed, pop, i, 3u) * gen.diskHeight * 0.28;   // slots 3-4 — :34
+  let z = s.pos.z + inZ + genNormal(seed, pop, i, 5u) * gen.outerRadius * 0.022; // slots 5-6 — :35
+  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 7u); // slot 7 keep gate — :36
+  if (!m.keep) { return dead; }                          // :37
+
+  // slot 8: opacity jitter. Only ONE rand is drawn regardless of the dense
+  // branch (the CPU ternary picks one side — armDust.ts:39), so 'r8' is reused
+  // in both select arms rather than drawing twice.
+  let r8 = genRand(seed, pop, i, 8u);
+  let opJitter = select(0.05 + 0.11 * r8, 0.22 + 0.3 * r8, dense);
+  let opacity = opJitter * gen.dustAmount * s.armFade * (0.4 + 1.4 * radialFalloff(s.radius)) * m.op; // :38-43
+  // slot 9: size jitter (armDust.ts:48). Dense knots are 1.25x, wisps 0.8x.
+  let sizeJitter = 0.007 + 0.015 * genRand(seed, pop, i, 9u);
+  let size = gen.outerRadius * sizeJitter * gen.grainScale * select(0.8, 1.25, dense) * m.sz;
+  return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
+}
+
+// buildBarDust — two straight dust lanes along the bar's leading edges,
+// symmetric about centre with a gaussian end-fade. Ports barDust.ts:22-39. No
+// seed reuse — a pure count loop, carved only when the barred bar has nonzero
+// length. NOTE the SIZE-BEFORE-OPACITY draw order (slot 8 size, slot 9
+// opacity): the CPU evaluates addDust's size argument before its opacity
+// argument (barDust.ts:36 then :37), the opposite of armDust — the tables
+// encode each file's own order and it is NOT normalised.
+fn buildBarDust(i: u32) -> DustRec {
+  var dead: DustRec;
+  dead.alive = false;
+  let seed = gen.seed;
+  let pop = 9u;
+
+  let along = genRand(seed, pop, i, 0u) * 2.0 - 1.0; // slot 0 — barDust.ts:23
+  let side = select(-1.0, 1.0, genRand(seed, pop, i, 1u) < 0.5); // slot 1 lane sign — :24
+  let laneSide = side * gen.barLength * (0.05 + 0.05 * genRand(seed, pop, i, 2u)); // slot 2 width — :24
+  let localX = along * gen.barLength * 0.92; // :25
+  let localZ = laneSide + genNormal(seed, pop, i, 3u) * gen.barLength * 0.04; // slots 3-4 — :26
+  let x = localX * gen.cosBar - localZ * gen.sinBar; // :27
+  let z = localX * gen.sinBar + localZ * gen.cosBar; // :28
+  let y = genNormal(seed, pop, i, 5u) * gen.diskHeight * 0.4; // slots 5-6 — :29
+  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 7u); // slot 7 keep gate — :30
+  if (!m.keep) { return dead; } // :31
+
+  let size = gen.outerRadius * (0.008 + 0.013 * genRand(seed, pop, i, 8u)) * gen.grainScale * m.sz; // slot 8 — :36
+  let opacity = (0.06 + 0.1 * genRand(seed, pop, i, 9u)) * gen.dustAmount * exp(-along * along * 1.2) * m.op; // slot 9 — :37
+  return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
+}
+
+// buildLenticularNucDust — S0's dust-poor nuclear disk: cloudy scatter around
+// 34 cloud centres. Ports lenticularDust.ts:33-48. The cloud centres come from
+// gen.cloudCenters (packed as (cos*rr, sin*rr, rr, 0) — the .z lane is the
+// cloud's own radius, fed to radialFalloff). No seed reuse.
+fn buildLenticularNucDust(i: u32) -> DustRec {
+  var dead: DustRec;
+  dead.alive = false;
+  let seed = gen.seed;
+  let pop = 10u;
+
+  let center = gen.cloudCenters[i % 34u]; // lenticularDust.ts:34 (CLOUD_COUNT = 34)
+  let spread = gen.bulgeRadius * 0.22;    // :35
+  let x = center.x + genNormal(seed, pop, i, 0u) * spread; // slots 0-1 — :36
+  let z = center.y + genNormal(seed, pop, i, 2u) * spread; // slots 2-3 — :37
+  let y = genNormal(seed, pop, i, 4u) * gen.diskHeight * 0.5; // slots 4-5 — :38
+  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 6u); // slot 6 keep gate — :39
+  if (!m.keep) { return dead; } // :40
+
+  let size = gen.outerRadius * (0.007 + 0.012 * genRand(seed, pop, i, 7u)) * gen.grainScale * m.sz; // slot 7 — :45
+  let opacity = (0.05 + 0.15 * genRand(seed, pop, i, 8u)) * gen.dustAmount * (0.3 + radialFalloff(center.z)) * m.op; // slot 8 — :46
+  return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
+}
+
+// buildLenticularRingDust — the Sombrero 'hat-brim': a thin patchy in-plane
+// annulus. Ports lenticularDust.ts:56-71. Carved only when dustRingStrength >
+// 0; its budget and opacity ride gen.ringStrength alone, independent of
+// dustAmount. gen.ringRadius / gen.ringWidth already carry the outerRadius
+// factor (packGenerationUniforms.ts:210-211), so they are used directly.
+fn buildLenticularRingDust(i: u32) -> DustRec {
+  var dead: DustRec;
+  dead.alive = false;
+  let seed = gen.seed;
+  let pop = 11u;
+
+  let th = 2.0 * PI * genRand(seed, pop, i, 0u); // slot 0 — lenticularDust.ts:57
+  let r = gen.ringRadius + genNormal(seed, pop, i, 1u) * gen.ringWidth; // slots 1-2 — :58
+  let x = r * cos(th); // :59
+  let z = r * sin(th); // :60
+  let y = genNormal(seed, pop, i, 3u) * gen.diskHeight * 0.3; // slots 3-4 — :61
+  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 5u); // slot 5 keep gate — :62
+  if (!m.keep) { return dead; } // :63
+
+  let size = gen.outerRadius * (0.008 + 0.014 * genRand(seed, pop, i, 6u)) * gen.grainScale * m.sz; // slot 6 — :68
+  let opacity = (0.2 + 0.3 * genRand(seed, pop, i, 7u)) * gen.ringStrength * m.op; // slot 7 — :69 (ringAmt, not dustAmount)
+  return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
+}
+
+// buildIrregularDust — dust patches on the star-forming clump seeds, same
+// dense/wisp split as armDust but wider spreads (no ordered disk). Ports
+// irregularDust.ts:23-38. Candidate i reuses irregularSample(i) (pop 4) as its
+// seed and is dead when that sample's slot-15 seed gate failed. Only the seed
+// position is used (the seed's radius/angle/armFade the CPU records are unused
+// by this builder). SIZE-BEFORE-OPACITY, like barDust (slot 8 size, slot 9
+// opacity — irregularDust.ts:35 then :36).
+fn buildIrregularDust(i: u32) -> DustRec {
+  var dead: DustRec;
+  dead.alive = false;
+  let seed = gen.seed;
+  let pop = 12u;
+
+  let s = irregularSample(i);        // recompute the clump seed — pop 4, bit-identical
+  if (!s.seedAccepted) { return dead; } // slot-15 seed gate failed — no dust
+
+  let dense = genRand(seed, pop, i, 0u) < 0.3; // slot 0 — irregularDust.ts:25
+  let x = s.pos.x + genNormal(seed, pop, i, 1u) * gen.outerRadius * 0.03; // slots 1-2 — :26
+  let y = s.pos.y + genNormal(seed, pop, i, 3u) * gen.diskHeight * 0.6;   // slots 3-4 — :27
+  let z = s.pos.z + genNormal(seed, pop, i, 5u) * gen.outerRadius * 0.03; // slots 5-6 — :28
+  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 7u); // slot 7 keep gate — :29
+  if (!m.keep) { return dead; } // :30
+
+  // slot 8: size jitter (dense knots 1.2x, wisps 0.8x — irregularDust.ts:35).
+  let size = gen.outerRadius * (0.008 + 0.016 * genRand(seed, pop, i, 8u)) * gen.grainScale * select(0.8, 1.2, dense) * m.sz;
+  // slot 9: opacity jitter — one rand reused across the dense branch (:36).
+  let r9 = genRand(seed, pop, i, 9u);
+  let opJitter = select(0.05 + 0.11 * r9, 0.16 + 0.22 * r9, dense);
+  let opacity = opJitter * gen.dustAmount * m.op;
+  return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
+}
