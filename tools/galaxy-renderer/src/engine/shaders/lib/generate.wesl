@@ -362,12 +362,16 @@ fn diskFalloff(radius: f32, softness: f32) -> f32 {
   return exp(-radius / (gen.diskScaleLen * softness));
 }
 
-// applyExtraTransform — the rigid background-galaxy transform, bakeExtra
-// Transform.ts:56-78: scale, then Y spin (disk), then X tilt (inclination),
-// then translate. gen.extraRot packs (cosRotY, sinRotY, cosTiltX, sinTiltX);
-// gen.extraScale and gen.extraPos supply the scale and translation. POSITION
-// only — the caller scales the record's size by gen.extraScale separately
-// (bakeExtraTransform.ts:79), so builders stay transform-free.
+// applyExtraTransform — the rigid background-galaxy transform: scale, then Y
+// spin (disk), then X tilt (inclination), then translate. gen.extraRot packs
+// (cosRotY, sinRotY, cosTiltX, sinTiltX); gen.extraScale and gen.extraPos
+// supply the scale and translation. POSITION only — the record's size is
+// scaled by gen.extraScale at the write site (writeStar / writeDustParticle),
+// so builders stay transform-free. Identity for a standalone galaxy, where the
+// packer writes scale 1, zero rotation, zero translation into the extra lanes.
+// The step ORDER (Y spin before X tilt) is not a general rotation a reader can
+// reorder: swapping them changes the tilt axis relative to the already-spun
+// disk, producing a visibly different galaxy.
 fn applyExtraTransform(p: vec3<f32>) -> vec3<f32> {
   let s = gen.extraScale;
   let cy = gen.extraRot.x;
@@ -409,17 +413,30 @@ struct DustRec {
   alive: bool,
 }
 
-// writeStar — interleave one star into the stride-8 output at record 'index',
-// field order x,y,z,r,g,b,size,brightness (starWriter.ts:34-42).
+// writeStar — the shared star finalize + write path: bake the rigid extra-
+// galaxy transform onto the record, then interleave into the stride-8 output
+// at record 'index', field order x,y,z,r,g,b,size,brightness
+// (starWriter.ts:34-42). Every star builder returns a StarRec in the galaxy's
+// own local space; this ONE choke point (every builder's result flows through
+// here via the entry shader) places it in world space — position through
+// applyExtraTransform, size scaled by gen.extraScale — exactly as
+// writeDustParticle does for dust. For a standalone galaxy the transform is
+// identity (extraScale == 1, zero rotation, zero translation), so the local
+// record writes through byte-unchanged; a background 'extra' rides its own
+// UBO transform lanes so its stars land pre-placed in the scene without any
+// per-draw model matrix (see applyExtraTransform's docblock for why baking at
+// generation time dodges the writeBuffer-vs-submit race a per-draw uniform
+// would reopen).
 fn writeStar(index: u32, rec: StarRec) {
   let base = index * 8u;
-  outBuf[base + 0u] = rec.pos.x;
-  outBuf[base + 1u] = rec.pos.y;
-  outBuf[base + 2u] = rec.pos.z;
+  let pos = applyExtraTransform(rec.pos);
+  outBuf[base + 0u] = pos.x;
+  outBuf[base + 1u] = pos.y;
+  outBuf[base + 2u] = pos.z;
   outBuf[base + 3u] = rec.color.x;
   outBuf[base + 4u] = rec.color.y;
   outBuf[base + 5u] = rec.color.z;
-  outBuf[base + 6u] = rec.size;
+  outBuf[base + 6u] = rec.size * gen.extraScale;
   outBuf[base + 7u] = rec.brightness;
 }
 
@@ -1180,11 +1197,12 @@ fn starRangeIterations(popId: u32) -> u32 {
 // writeDustParticle — the shared dust write path: compose the galactic warp
 // onto y, draw the four reddening factors at the fixed slots 56-59, then bake
 // the rigid extra-galaxy transform, mirroring the CPU addDust (createGalaxy
-// BuildContext.ts:126-133) followed by the bakeExtraTransform post-pass
-// (createGalaxyEngine.ts:516 / bakeExtraTransform.ts). x/y/z arrive PRE-warp
-// exactly as the CPU builder passes them to addDust. Reddened dust reads warm
-// because interstellar dust absorbs blue more than red (ctx.ts:123-124): four
-// rand draws — darkness, then the r/g/b factors, in that order.
+// BuildContext.ts:126-133) with the world transform folded in at write time
+// (applyExtraTransform, the dust twin of writeStar's finalize). x/y/z arrive
+// PRE-warp exactly as the CPU builder passes them to addDust. Reddened dust
+// reads warm because interstellar dust absorbs blue more than red
+// (ctx.ts:123-124): four rand draws — darkness, then the r/g/b factors, in
+// that order.
 fn writeDustParticle(
   seed: u32,
   pop: u32,
@@ -1202,7 +1220,7 @@ fn writeDustParticle(
   let db = darkness * (0.32 + 0.26 * genRand(seed, pop, idx, 59u)); // slot 59 — ctx.ts:131
   // Position + size baked through the rigid extra transform (identity for a
   // standalone galaxy, where extraScale == 1 and the rotation is zero). Size
-  // scales by extraScale separately, per bakeExtraTransform.ts:79.
+  // scales by extraScale separately, the same split writeStar uses.
   var rec: DustRec;
   rec.pos = applyExtraTransform(vec3<f32>(x, warpedY, z));
   rec.size = size * gen.extraScale;

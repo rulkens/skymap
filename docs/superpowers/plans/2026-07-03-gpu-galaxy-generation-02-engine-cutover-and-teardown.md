@@ -46,10 +46,10 @@
 
 **Steps**
 
-- [ ] Implement the cutover. No unit tests (GPU shell policy — correctness budget went into plan 01's tested pure seams + harness).
-- [ ] `npm run typecheck` + full `npm test` green (engine has no direct unit tests; the suite guards the seams).
+- [x] Implement the cutover. No unit tests (GPU shell policy — correctness budget went into plan 01's tested pure seams + harness).
+- [x] `npm run typecheck` + full `npm test` green (engine has no direct unit tests; the suite guards the seams).
 - [ ] **Checkpoint (user):** dev server — default Sc renders visually equivalent to before (side-by-side judgement vs plan 01's parity record); dragging `starCount`/`radius` sliders still regenerates (still debounced — the bridge is Task 3); `sample()`/`grab()` still work (compare panel thumbnails render).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
