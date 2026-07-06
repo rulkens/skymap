@@ -73,8 +73,8 @@ export const MILKY_WAY_STAR_PX_MAX = 64.0;
 export const MILKY_WAY_EXPOSURE = 0.11;
 ```
 
-- [ ] Failing tests: `medium tier budget equals the preset starCount` (assert `MILKY_WAY_STARS_PER_TIER.medium === MILKY_WAY_GALAXY_PARAMS.starCount`); `small and large derive by x0.5 and x2 from medium`; `model scale maps the preset outer radius onto MILKY_WAY_RADIUS_MPC` (assert `MILKY_WAY_MODEL_SCALE * outerRadiusOf(MILKY_WAY_GALAXY_PARAMS)` ≈ `MILKY_WAY_RADIUS_MPC`); `px clamp is a non-empty positive band` (0 < min < max).
-- [ ] Implement. `npm test -- milkyWayCalibration` → green. Full gates. Commit.
+- [x] Failing tests: `medium tier budget equals the preset starCount` (assert `MILKY_WAY_STARS_PER_TIER.medium === MILKY_WAY_GALAXY_PARAMS.starCount`); `small and large derive by x0.5 and x2 from medium`; `model scale maps the preset outer radius onto MILKY_WAY_RADIUS_MPC` (assert `MILKY_WAY_MODEL_SCALE * outerRadiusOf(MILKY_WAY_GALAXY_PARAMS)` ≈ `MILKY_WAY_RADIUS_MPC`); `px clamp is a non-empty positive band` (0 < min < max).
+- [x] Implement. `npm test -- milkyWayCalibration` → green. Full gates. Commit.
 
 ---
 
