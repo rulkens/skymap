@@ -25,13 +25,13 @@ first step toward procedural disks for other galaxies.
 
 ## Current state (what gets replaced, what stays)
 
-| Piece | Fate |
-| --- | --- |
-| `src/services/gpu/renderers/milkyWayRenderer.ts` (322 ln, impostor pipeline) | **deleted** after the visual gate |
-| `src/services/gpu/shaders/milkyWay/{fragment,vertex,io}.wesl` (809 ln) | **deleted** after the visual gate |
-| `src/services/engine/frame/passes/milkyWayPass.ts` | **modified** — renderer dep swaps, gate logic unchanged |
-| `milkyWayPickRenderer.ts` + `milkyWayPick/*.wesl` | **untouched** (pick is a separate disk-shaped target) |
-| SOURCE_REGISTRY `MilkyWay` row, `settings.milkyWay.enabled`, fade key `'milkyWay'`, `milkyWayFadeAlpha` (10→50 Mpc smoothstep), `MILKY_WAY_CENTER_WORLD`, framing constants | **untouched** |
+| Piece                                                                                                                                                                       | Fate                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `src/services/gpu/renderers/milkyWayRenderer.ts` (322 ln, impostor pipeline)                                                                                                | **deleted** after the visual gate                       |
+| `src/services/gpu/shaders/milkyWay/{fragment,vertex,io}.wesl` (809 ln)                                                                                                      | **deleted** after the visual gate                       |
+| `src/services/engine/frame/passes/milkyWayPass.ts`                                                                                                                          | **modified** — renderer dep swaps, gate logic unchanged |
+| `milkyWayPickRenderer.ts` + `milkyWayPick/*.wesl`                                                                                                                           | **untouched** (pick is a separate disk-shaped target)   |
+| SOURCE_REGISTRY `MilkyWay` row, `settings.milkyWay.enabled`, fade key `'milkyWay'`, `milkyWayFadeAlpha` (10→50 Mpc smoothstep), `MILKY_WAY_CENTER_WORLD`, framing constants | **untouched**                                           |
 
 ## Architecture
 
@@ -54,11 +54,17 @@ Moves (with their tests):
 - `packGenerationUniforms` (+ `CATEGORY_CODE`), `generationUboLayout` (`GENERATION_UBO`),
   `carveStarLayout`, `carveDustLayout`, `populationIds`, `classifyHubbleType`,
   `splitStarBudget`, `computeBarGeometry`, `barLengthOf`, `outerRadiusOf`, `hiiPalette`,
-  `grainScale`
+  `grainScale`, `createGenerationPipelines`, `encodeGeneration` — the last two because the
+  app's init step must dispatch generation and cannot import from `tools/`
+- `GEN_RECORD_BYTES` (today a local const inside `createGalaxyEngine.ts`) extracted to its
+  own one-symbol file in the core — the record-size authority both the tool's pipelines and
+  the app's cloud renderer read their `arrayStride` from
 - `generate.wesl` (both compute entry points and its lib)
 - `generationShaderParity.test.ts` (path constants update)
 - The `@types/model/` shapes they export (`GalaxyParams`, `StarBudget`, `GalaxyCategory`,
-  `BarGeometry`, `HiiPalette`, `PopulationRange`, `GenerationLayout`) — re-homed as a new
+  `BarGeometry`, `HiiPalette`, `PopulationRange`, `GenerationLayout`, plus the engine-side
+  `GenerationPipelines` and `ExtraGalaxySpec` that the moved pipeline/encoder code
+  requires) — re-homed as a new
   `src/@types/galaxy/` subfolder, one type per file, converted from the tool's `.d.ts`
   style to plain `.ts` (main-app style). A dedicated subfolder because these form one
   procedural-galaxy domain that fits neither `data/` (parsed catalogs) nor `rendering/`
@@ -90,11 +96,11 @@ express the full equatorial→galactic rotation.
 **Per-tier star budgets.** The star count scales with the user's tier (the same
 `state.sources.tier` that drives catalog bins):
 
-| Tier | Stars (planned) | Dust |
-| --- | --- | --- |
-| small | 100k | follows the carve's dust fraction |
-| medium | 200k | " |
-| large | 400k | " |
+| Tier   | Stars (planned) | Dust                              |
+| ------ | --------------- | --------------------------------- |
+| small  | 100k            | follows the carve's dust fraction |
+| medium | 200k            | "                                 |
+| large  | 400k            | "                                 |
 
 A single `MILKY_WAY_STARS_PER_TIER` record in the calibration module holds these; the
 preset's `starCount` is the medium value and the others derive by ×0.5 / ×2. Only
@@ -114,15 +120,22 @@ shaders but consuming the app's conventions:
 
 - **Vertex input:** the generated record layout (`arrayStride: GEN_RECORD_BYTES`), same
   attributes as the tool. Dead records (size 0) collapse to zero-area quads, as in the tool.
-- **Uniforms:** app `CameraUniforms` prefix + `model: mat4x4f` + `fadeAlpha: f32`. The model
-  matrix is `translate(MILKY_WAY_CENTER_WORLD) × R_galactic × uniformScale(k)` where
-  `R_galactic` is the same J2000-equatorial→galactic rotation `worldToGalactic` encodes
-  (transposed — this matrix carries local galaxy frame → world), and
-  `k = MILKY_WAY_RADIUS_MPC / <preset disk radius in tool units>`. Built CPU-side once
-  (wgpu-matrix), not per frame.
+- **Uniforms:** app `CameraUniforms` prefix + `model: mat4x4f` + `fadeAlpha: f32`, plus the
+  two additions the adapted billboard shaders require: the camera's world-space right/up
+  basis (the app's `CameraUniforms` carries no view matrix to derive it in-shader) and the
+  calibration scalars (exposure, star px clamp, model scale). The tool's LOD/cull-bright
+  knobs are dropped — the tool ships them defaulted off, so omitting them is
+  behaviour-preserving. The model matrix is
+  `translate(MILKY_WAY_CENTER_WORLD) × R_localToWorld × uniformScale(k)` where
+  `R_localToWorld` is `worldToGalactic` transposed **composed with the tool's local-frame
+  swizzle** (`galacticToShader`: local y = disk normal ↔ galactic Z/NGP) — the exact frame
+  the impostor rendered in — and `k = MILKY_WAY_RADIUS_MPC / <preset disk radius in tool
+units>`. `MILKY_WAY_RADIUS_MPC = 0.030` is minted in the calibration module (the impostor
+  carried it only as a WESL const in the fragment shader this feature deletes). Built
+  CPU-side once (wgpu-matrix), not per frame.
 - **Star pipeline:** additive `one/one` — matches the HDR pass convention and the tool.
 - **Dust pipeline:** multiplicative transmittance `color: { srcFactor: 'dst', dstFactor:
-  'zero' }` — the tool's exact blend. Drawn **after** the stars; the pass keeps its
+'zero' }` — the tool's exact blend. Drawn **after** the stars; the pass keeps its
   last-in-HDR slot, so dust correctly darkens both the MW's own stars and any background
   content behind it. No depth state (pass convention), no offscreen composite.
 - **Fade:** stars multiply emission by `fadeAlpha`; dust outputs
