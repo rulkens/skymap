@@ -35,6 +35,7 @@ import {
   all,
   dollyTo,
   dollyToId,
+  focus,
   hide,
   moveTargetId,
   scene,
@@ -58,6 +59,10 @@ export const cosmicFlows: ClipData = {
   start: 'live',
   timeline: [
     scene(setLabelsFocusedOnly(false)),
+    // Focus is beat-local (scene reconstruction doesn't cover it): a skip out
+    // of the web beat before its dwell's defocus fires would carry Coma's
+    // ring emphasis + recession dimming in here — clear it explicitly.
+    focus(null),
     hide(['label:milkyWay'], 1),
     // Target is already Coma in natural playback (the web pull-back only
     // dollied); the moveTargetId is idempotent insurance for a mid-beat skip.

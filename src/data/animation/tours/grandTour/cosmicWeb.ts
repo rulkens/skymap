@@ -45,11 +45,12 @@ import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
 const COMA_SC = focusId('supercluster-coma-sc');
 
-// Camera distance that fits the whole MCPM volume: the SCFD wedge reaches
-// ~476 Mpc from home, and the orbit target sits out at Coma, so the pull-back
-// needs ~R/sin(fovY/2) + the target offset. Eye-tuned, not derived — nudge it
-// if the wedge clips or swims too small in frame.
-const FIT_WEB_MPC = 250;
+// Camera distance for the pull-back landing: far enough that the eye sits
+// OUTSIDE the MCPM wedge (it reaches ~476 Mpc from home, and the orbit
+// target is out at Coma), not merely far enough to fit it in frame — the
+// next beat reveals the flow field, and the streams read far better from
+// beside the volume than from within it. Eye-tuned, not derived.
+const FIT_WEB_MPC = 400;
 
 export const cosmicWeb: ClipData = {
   start: 'live',
