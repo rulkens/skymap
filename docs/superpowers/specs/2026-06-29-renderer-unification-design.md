@@ -31,11 +31,13 @@ duplicates machinery that already exists:
 - A second "render to an offscreen, sample it back" pattern, identical in shape to
   `volumeOffscreen` → `volumeUpsamplePass` but reimplemented.
 
-On `main` itself the composite-shaped implementations are `postProcess`'s
-HDR→swap tonemap, `volumeUpsamplePass`'s volume→HDR blit, and the dev-only
-`drawPickDebugOverlay` pick→swap OVER blit (own encoder, after the main submit)
-— already three hand-rolled instances of "merge an offscreen into a target"
-before #386 adds its fourth.
+On `main` itself, `postProcess`'s HDR→swap tonemap is the one _generic_
+"merge an offscreen into a target"; two look-alikes — `volumeUpsamplePass`'s
+volume→HDR merge and the dev-only `drawPickDebugOverlay` pick→swap overlay —
+were verified at plan time to be essential specializations (a 4-tap
+grain-suppressing low-pass; an r32uint visualisation) and stay bespoke. The
+load-bearing duplication is therefore #386's second, byte-identical tone-map
+landing on top of the first.
 
 A 2-way split (`HDR_PASSES` additive vs `UI_PASSES` over) is going 3-way by hand.
 Per the project's "tagged union + table dispatch for a >2-way split" rule, that is
@@ -204,6 +206,7 @@ is why `drawPick` delegates to `pickRenderer`, not `pointRenderer`).
 | horizonShellPass                      | cosmological        | hdr          | additive | —                                                |
 | structureMarkersPass                  | cosmological        | hdr          | additive | ✓ (pickRing)                                     |
 | (volume raymarch)                     | cosmological        | volume       | additive | —                                                |
+| volumeUpsamplePass                    | cosmological        | hdr          | additive | — (bespoke 4-tap upsample of the volume target)  |
 | selectionRingPass                     | cosmological        | swap         | over     | —                                                |
 | diskRadiusRingPass                    | cosmological        | swap         | over     | —                                                |
 | markerLinesPass                       | cosmological        | swap         | over     | —                                                |
@@ -212,12 +215,19 @@ is why `drawPick` delegates to `pickRenderer`, not `pointRenderer`).
 | debug bodies (PR #386)                | near-field (slab 0) | foreground:0 | opaque   | — (no pickable body yet)                         |
 | captions (PR #386, foreground labels) | near-field (slab 0) | swap         | over     | —                                                |
 
-Note `volumeUpsamplePass` does **not** appear as a content layer — it is a
-_composite step_ (`volume → hdr`, additive), see below.
+Note `volumeUpsamplePass` **stays a content layer** (an earlier draft modelled
+it as a `volume → hdr` composite step). Plan-time shader verification showed its
+fragment is a deliberate 4-tap rotated-grid low-pass that suppresses the
+raymarch's per-fragment jitter grain — an **essential** specialization the
+generic single-sample Compositor would visibly regress. The double-gate knot it
+had (its `enabled` hand-mirroring the prepass gate) is fixed by both volume
+layers reading ONE shared liveness projection, not by dissolving the layer.
 
-Note `drawPickDebugOverlay` also does not appear: it is a **debug composite
-step** (`pick:cosmo → swap`, over, no tone), not a content layer. It keeps its
-own encoder + submit _after_ the frame program (today that ordering exists
+Note `drawPickDebugOverlay` does not appear as a layer, and is **not** a
+Compositor consumer either: its fragment is a bespoke r32uint visualisation
+(`texture_2d<u32>` + `textureLoad` — integer textures cannot be sampled — plus a
+per-source palette). It stays a specialized debug renderer with its own
+encoder + submit _after_ the frame program (today that ordering exists
 because it replays the frame's camera from `state.picking.lastFrameUniformBytes`
 — see the pick-camera prerequisite under Pick below; once the pick camera is a
 value, the post-frame placement remains a debug-latency choice, not a data
@@ -235,7 +245,7 @@ render step into a `SlabView` and threads it into `draw`; the layer forwards
 `view.vp` (and `view.camPos`) to the renderer call. This spec adds **no new
 renderer variants** beyond what already exists.
 
-### Compositor — one primitive (replaces three bespoke composites)
+### Compositor — one primitive for every generic offscreen→target merge
 
 ```ts
 // @types/rendering/Compositor.d.ts
@@ -243,8 +253,8 @@ export type ToneMap = { exposure: number; curve: number }; // null ⇒ source al
 
 export type CompositeBlend =
   | 'replace' // overwrite dst       (hdr → swap: swap is cleared)
-  | 'over' // Porter-Duff OVER    (foreground → swap)
-  | 'additive'; // add into dst        (volume → hdr)
+  | 'over' // Porter-Duff OVER    (foreground → swap, PR #386)
+  | 'additive'; // add into dst        (no consumer yet; row is cheap, kept for symmetry)
 
 export type Compositor = {
   // Pipelines keyed by (blend, dstFormat); applies the shared lib/tonemap.wesl when `tone` is set.
@@ -258,11 +268,21 @@ export type Compositor = {
 };
 ```
 
-This single module replaces: the tone-map half of `postProcess`, the blit in
-`volumeUpsamplePass`, the pick→swap blit in `drawPickDebugOverlay`, and (once
-PR #386 is in) all of `foregroundComposite`. `lib/tonemap.wesl` stays the single
-source of curve truth (with #386's `toneMapDefaults.ts` as its TS-side constants
-when that lands).
+This single module replaces the tone-map half of `postProcess` and (once
+PR #386 is in) all of `foregroundComposite`. Two look-alikes were verified at
+plan time to be **essential specializations, not Compositor consumers**:
+`volumeUpsamplePass` (4-tap grain-suppressing low-pass — stays a content
+layer) and `drawPickDebugOverlay` (r32uint `textureLoad` visualisation — stays
+a debug renderer). `lib/tonemap.wesl` stays the single source of curve truth
+(with #386's `toneMapDefaults.ts` as its TS-side constants when that lands).
+
+One implementation note the locked signature forces: WebGPU exposes no
+attachment-format getter on a pass encoder, so `draw` cannot recover
+`dstFormat` from `pass`. Phase 1 resolves it with a constructor-provided
+blend→dstFormat mapping (`createCompositor({ device, swapFormat, hdrFormat })`);
+the cache stays keyed by `(blend, dstFormat)` so phase 2 — where the composite
+step knows its dest target's `RenderTargetSpec.format` — dissolves the mapping
+without restructure.
 
 ### CompositeStep + FrameStep — the frame as data
 
@@ -292,8 +312,7 @@ const COSMO = 1; // cosmological slab index
 const FRAME: readonly FrameStep[] = [
   { kind: 'compute', name: 'flow' }, // particle seed/integrate
   { kind: 'render', target: 'volume', slab: COSMO }, // raymarch
-  { kind: 'composite', step: { source: 'volume', dest: 'hdr', blend: 'additive', tone: null } },
-  { kind: 'render', target: 'hdr', slab: COSMO }, // cosmological additive group
+  { kind: 'render', target: 'hdr', slab: COSMO }, // cosmological additive group (incl. the volume-upsample layer)
   { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } }, // tonemap → swap
   { kind: 'render', target: 'swap', slab: COSMO }, // cosmological OVER group (rings, lines, labels)
   { kind: 'render', target: 'foreground:0', slab: NEAR0 }, // near-field opaque bodies (PR #386)
@@ -301,6 +320,12 @@ const FRAME: readonly FrameStep[] = [
   { kind: 'render', target: 'swap', slab: NEAR0 }, // captions over the bodies (PR #386)
 ];
 ```
+
+(`TONE` is illustrative — exposure/curve are live `state.settings.tonemap`
+values, so the program is emitted by a per-frame builder,
+`frameProgram(tone: ToneMap)`, with a constant step shape. There is no
+`volume → hdr` composite step: that merge is the bespoke `volume-upsample`
+content layer inside the hdr render step — see the migration-table note.)
 
 The `render target: 'swap'` for the near-field OVER group (captions) comes _after_
 the `foreground:0 → swap` composite, so captions land on top of the bodies while
@@ -441,15 +466,16 @@ behaviour-neutral (until pick semantics extend in phase 3, which is also
 behaviour-neutral at N=1).
 
 **Phase 1 — Compositor primitive (accidental complexity only).**
-Introduce `Compositor`; repoint the composite implementations on `main` to it —
-`postProcess`'s HDR→swap tonemap, `volumeUpsamplePass`'s blit, and
-`drawPickDebugOverlay`'s pick→swap blit — and delete the bespoke versions. No
-registry / slab / `renderFrame`-order change. Pure de-duplication; visual
-baseline unchanged. **Merge-order with PR #386:** if this phase lands first,
-#386 rebases and its `foregroundComposite` dissolves into the `Compositor`
-(one `draw(..., 'over', TONE)` call); if #386 lands first, `foregroundComposite`
-joins the repoint list here. Either order works; landing the Compositor first is
-less total code.
+Introduce `Compositor` (all three blends built now) and repoint the one generic
+composite on `main` to it — `postProcess`'s HDR→swap tonemap — deleting the
+bespoke tone-map pipeline + `shaders/toneMap/`. `volumeUpsamplePass` and
+`drawPickDebugOverlay` stay bespoke (verified essential specializations — see
+the Compositor section). No registry / slab / `renderFrame`-order change. Pure
+de-duplication; visual baseline unchanged. **Merge-order with PR #386:** if
+this phase lands first, #386 rebases and its `foregroundComposite` dissolves
+into the `Compositor` (one `draw(..., 'over', TONE)` call); if #386 lands
+first, `foregroundComposite` joins the repoint list here. Either order works;
+landing the Compositor first is less total code.
 
 **Phase 2 — Slab table + RenderTarget table + flat ContentLayer registry + FrameStep program.**
 Replace `HDR_PASSES` / `UI_PASSES` / the bespoke foreground wiring with one flat
@@ -487,9 +513,10 @@ the ordering lives in imperative `renderFrame` code that no test asserts.
 
 - **Phase 1:** the JS-mirror tone-map curve test already covers the shared curve
   math (`tests/services/gpu/passes/toneMap.test.ts`; `Compositor` reuses
-  `lib/tonemap.wesl`). Add a test asserting each former call site (`postProcess`
-  tonemap, `volumeUpsample` blit, `pickDebugOverlay` blit) maps to the same
-  `(blend, tone)` config it used before. Visual-equivalence baseline unchanged.
+  `lib/tonemap.wesl`). Add tests pinning the blend-state table per
+  `CompositeBlend`, the `(blend, dstFormat)` pipeline cache, and the tonemap
+  repoint (`postProcess.draw` delegates with `'replace'` + the settings tone).
+  Visual-equivalence baseline unchanged.
 - **Phase 2:** unit-test the slab table (per-frame `near < far`, descending composite
   order), the `target` ⟷ renderer-profile invariant (a layer's target/blend matches
   its renderer's pipeline), and the `FRAME` program (assert the step sequence — now
@@ -669,4 +696,22 @@ main re-verification, are settled:
   the flow render step, so it belongs in the program — dispatched through a
   small `COMPUTE: Record<string, fn>` table, one row per compute kind.
 
-No open questions remain; next step is `writing-plans` against this spec.
+Plan-time shader verification (2026-07-06, while drafting the phase plans)
+corrected the Compositor's scope — reflected throughout this spec:
+
+- **`volumeUpsamplePass` stays a content layer, not a composite step.** Its
+  fragment is a 4-tap rotated-grid low-pass that suppresses raymarch jitter
+  grain; the generic single-sample Compositor would visibly regress it. The
+  `FRAME` program has no `volume → hdr` composite; the double-gate knot is
+  fixed by one shared volume-liveness projection instead.
+- **`drawPickDebugOverlay` is not a Compositor consumer.** Its fragment is an
+  r32uint `textureLoad` visualisation with a per-source palette — a debug
+  renderer, not a composite. It stays bespoke.
+- **`dstFormat` cannot be recovered from a pass encoder**, so phase 1 maps
+  blend→dstFormat in the Compositor's constructor; the `(blend, dstFormat)`
+  cache key is unchanged and phase 2 keys it from the composite step's dest
+  target directly.
+
+The implementation plans are
+`docs/superpowers/plans/2026-07-06-renderer-unification-0{1,2,3}-*.md` (one per
+phase, plus a shared index).
