@@ -2,7 +2,7 @@
 stage:        0
 id:           opening-title
 title:        The Long Way Out
-narration:    From home to the edge, and back.
+narration:    From home to the edge of the observable universe, and back.
 focus:        milkyWay
 distance_mpc: 0.05
 motion:       held / slow drift

@@ -38,7 +38,7 @@ export const grandTour: Tour = {
       enterClip: openingTitle,
       caption: {
         title: 'The Long Way Out',
-        body: "Let's take a tour from home to the edge of the observable universe, and back.",
+        body: 'From home to the edge of the observable universe, and back.',
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(8, { cruiseRate: (Math.PI * 2) / 120 }),
@@ -47,7 +47,7 @@ export const grandTour: Tour = {
       enterClip: youAreHere,
       caption: {
         title: 'You are here',
-        body: 'This is the The Milky Way, our home galaxy. It contains the sun and hundreds of billions of stars.',
+        body: 'The Milky Way, our home galaxy. A hundred billion stars, and the Sun is one of them.',
         position: 'bottom-left',
       },
       dwellClip: youAreHereDwell,
@@ -98,7 +98,7 @@ export const grandTour: Tour = {
       enterClip: approachVirgo,
       caption: {
         title: 'The nearest cluster',
-        body: 'Virgo, the nearest big cluster — over a thousand galaxies, pulled together by gravity, 50 million light-years away.',
+        body: 'Virgo, the nearest big cluster. Over a thousand galaxies, pulled together by gravity, 50 million light-years away.',
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(12),
