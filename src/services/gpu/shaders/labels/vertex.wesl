@@ -25,11 +25,11 @@ import package::lib::billboard::worldLenToPx;
 import package::lib::billboard::pxToClipOffset;
 
 // Atlas em pixel size — must match 'ATLAS_FONT_SIZE' in src/data/fonts.ts.
-const ATLAS_EM_PX: f32 = 42.0;
+const ATLAS_EM_PX: f32 = 84.0;
 // MSDF distance range in pixels — must match 'DISTANCE_RANGE_PX' in
 // src/data/fonts.ts.  Sets the SDF's encoded headroom past the glyph
 // contour; tighter ranges clamp the tail and produce banded edges.
-const DISTANCE_RANGE_PX: f32 = 16.0;
+const DISTANCE_RANGE_PX: f32 = 32.0;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 @group(0) @binding(1) var<storage, read> labels: array<LabelData>;

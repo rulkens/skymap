@@ -70,12 +70,12 @@ const SHARED_OPTIONS = {
   textureSize: [ATLAS_PX, ATLAS_PX],
   // Inter-glyph spacing in the atlas, in pixels.  Must be large enough
   // that a fragment sampling a UV offset outward from a glyph for the
-  // outline+glow falloff never lands in a NEIGHBOURING glyph's pixels.
-  // Worst case at runtime is `glowEmFrac_max * ATLAS_FONT_SIZE`
-  // atlas pixels (LabelEffectsSection caps glowEmFrac at 0.5; with
-  // ATLAS_FONT_SIZE = 42 the worst-case extent is 21 px).  22 leaves
-  // a 1-px safety margin without inflating glyph cells excessively.
-  texturePadding: 12,
+  // outline fringe never lands in a NEIGHBOURING glyph's pixels.
+  // Worst case at runtime is `outlineEmFrac * ATLAS_FONT_SIZE` atlas
+  // pixels past the glyph rect (0.16 em × 84 px ≈ 13.4 px, see
+  // vertex.wesl's fringe expansion).  24 covers that with margin
+  // without inflating glyph cells excessively.
+  texturePadding: 24,
   distanceRange: DISTANCE_RANGE_PX,
   fieldType: 'msdf',
   fontSize: ATLAS_FONT_SIZE,
