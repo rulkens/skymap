@@ -1,6 +1,6 @@
 # GPU galaxy generation 01 — CPU seams, WGSL port & parity harness
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Each implementer subagent must be dispatched `run_in_background: true` per project convention. Steps use checkbox (`- [ ]`) syntax for tracking. **Load the `wesl-shaders` skill before any `.wesl` task.**
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Each implementer subagent must be dispatched `run_in_background: true` per project convention. Steps use checkbox (`- [x]`) syntax for tracking. **Load the `wesl-shaders` skill before any `.wesl` task.**
 
 **Spec:** `docs/superpowers/specs/2026-07-03-gpu-galaxy-generation-design.md`
 **Series:** plan 01 of 2. Requires the galaxy-renderer tool as shipped (plans 01–03 completed 2026-07-02). After this plan the GPU can generate a full galaxy into storage buffers and a dev-only parity harness demonstrates statistical agreement with the CPU model — but the engine still renders the CPU/worker path. Plan 02 cuts the engine over and deletes the CPU model.
@@ -105,8 +105,8 @@ Dust ranges in fixed order armDust, barDust, lenticularNucDust, lenticularRingDu
 
 **Steps**
 
-- [ ] Failing tests — carveStarLayout: `Sc: bulge, disk, arms ranges are contiguous with arms stride 5` (assert each start = previous start + iterations·stride); `SBb: bar takes floor(diskCount*0.35) iterations and disk shrinks by the same amount`; `Irr: clumps range has stride 2 and there is no disk or arms range`; `E3: bulge and halo only`; `globularCount 12 appends a 1080-slot globularStar range`; `capacity equals the sum of iterations*stride`. carveDustLayout: `Sc default params: armDust iterations = min(armStarCount, floor(30000*dust/grainScale^2))`; `elliptical or dust 0 gives an empty layout with capacity 0`; `S0 with dustRingStrength 0 has only the nuclear range`; `S0 with dustRingStrength 0.5 adds the ring range with floor(34000*0.5/g^2) iterations`; `SBb has armDust then barDust`; `Irr has only irregularDust capped at min(armStarCount, budget)`.
-- [ ] Run → fail. Implement (table-driven like `splitStarBudget`, not a predicate chain). Run → pass. Commit.
+- [x] Failing tests — carveStarLayout: `Sc: bulge, disk, arms ranges are contiguous with arms stride 5` (assert each start = previous start + iterations·stride); `SBb: bar takes floor(diskCount*0.35) iterations and disk shrinks by the same amount`; `Irr: clumps range has stride 2 and there is no disk or arms range`; `E3: bulge and halo only`; `globularCount 12 appends a 1080-slot globularStar range`; `capacity equals the sum of iterations*stride`. carveDustLayout: `Sc default params: armDust iterations = min(armStarCount, floor(30000*dust/grainScale^2))`; `elliptical or dust 0 gives an empty layout with capacity 0`; `S0 with dustRingStrength 0 has only the nuclear range`; `S0 with dustRingStrength 0.5 adds the ring range with floor(34000*0.5/g^2) iterations`; `SBb has armDust then barDust`; `Irr has only irregularDust capped at min(armStarCount, budget)`.
+- [x] Run → fail. Implement (table-driven like `splitStarBudget`, not a predicate chain). Run → pass. Commit.
 
 ---
 
@@ -176,9 +176,9 @@ If porting reveals a missing field, **append** it (and update the byte test) —
 
 **Steps**
 
-- [ ] Reshape `computeBarGeometry` + update `generateGalaxy.ts` call site and its existing test (CPU model must stay green — it is the parity reference and the live render path until plan 02).
-- [ ] Failing tests (mirror `packCameraUniforms.test.ts` style, reading offsets from `GENERATION_UBO`): `byteLength is 16-aligned and matches the layout const`; `derived scale constants land at their offsets` (radius 2 → outerRadius 20, diskScaleLen 6.25, starSize per formula); `same params produce identical bytes`; `asymSeed reroll changes only asymmetry-family fields` (diff two packs; the changed float indices must be a subset of the asymmetry group + armTable asym lanes); `clumpSeed reroll changes only the armTable clump lanes`; `waveSeed reroll changes only the armTable wave lanes`; `null extra packs the identity transform` (pos 0,0,0 / extraScale 1 / rot lanes 1,0,1,0); `an ExtraGalaxySpec packs pos, scale and the cos/sin of rotY and tiltX`; `star and dust range lanes mirror the carve fns`; `hii palette lanes equal hiiPalette(metallicity)`; `category and numArms u32s are correct for SBb` (3, clamped arm count).
-- [ ] Run → fail. Implement. Run → pass. Full `npm test` + typecheck. Commit.
+- [x] Reshape `computeBarGeometry` + update `generateGalaxy.ts` call site and its existing test (CPU model must stay green — it is the parity reference and the live render path until plan 02).
+- [x] Failing tests (mirror `packCameraUniforms.test.ts` style, reading offsets from `GENERATION_UBO`): `byteLength is 16-aligned and matches the layout const`; `derived scale constants land at their offsets` (radius 2 → outerRadius 20, diskScaleLen 6.25, starSize per formula); `same params produce identical bytes`; `asymSeed reroll changes only asymmetry-family fields` (diff two packs; the changed float indices must be a subset of the asymmetry group + armTable asym lanes); `clumpSeed reroll changes only the armTable clump lanes`; `waveSeed reroll changes only the armTable wave lanes`; `null extra packs the identity transform` (pos 0,0,0 / extraScale 1 / rot lanes 1,0,1,0); `an ExtraGalaxySpec packs pos, scale and the cos/sin of rotY and tiltX`; `star and dust range lanes mirror the carve fns`; `hii palette lanes equal hiiPalette(metallicity)`; `category and numArms u32s are correct for SBb` (3, clamped arm count).
+- [x] Run → fail. Implement. Run → pass. Full `npm test` + typecheck. Commit.
 
 ---
 
@@ -221,8 +221,8 @@ Notes: the `@group(0)` bindings ('gen' uniform + the output storage array) are d
 
 **Steps**
 
-- [ ] Load `wesl-shaders`. Write the lib (didactic header: why stateless hashing makes sibling-thread recompute free, and why galaxy-level values arrive via the UBO instead). No backticks in comments; nothing imports this yet — the gate is Task 5's link.
-- [ ] `npm run typecheck` (guards stray TS damage). Commit.
+- [x] Load `wesl-shaders`. Write the lib (didactic header: why stateless hashing makes sibling-thread recompute free, and why galaxy-level values arrive via the UBO instead). No backticks in comments; nothing imports this yet — the gate is Task 5's link.
+- [x] `npm run typecheck` (guards stray TS damage). Commit.
 
 ---
 
@@ -248,8 +248,8 @@ Body contract (both files): `slot = gid.x`; return if `slot >= gen.starCapacity`
 
 **Steps**
 
-- [ ] Load `wesl-shaders`. Write both entries (imports one-identifier-per-line, `package::lib::generate::…`).
-- [ ] `npm run typecheck`. Commit. (First link/compile proof lands with Task 5.)
+- [x] Load `wesl-shaders`. Write both entries (imports one-identifier-per-line, `package::lib::generate::…`).
+- [x] `npm run typecheck`. Commit. (First link/compile proof lands with Task 5.)
 
 ---
 
@@ -292,10 +292,10 @@ Harness behaviour: requests its own adapter/device (fully decoupled from the eng
 
 **Steps**
 
-- [ ] Implement the four modules + the dev hook. This is the first task that links the WESL — fix any linker/compile fallout here (compile errors surface via `createShaderModuleWithDevLog`).
-- [ ] `npm run typecheck` + full `npm test` green.
+- [x] Implement the four modules + the dev hook. This is the first task that links the WESL — fix any linker/compile fallout here (compile errors surface via `createShaderModuleWithDevLog`).
+- [x] `npm run typecheck` + full `npm test` green.
 - [ ] **Checkpoint (user or dev console):** with the dev server running, `await window.__galaxyParity()` on the default Sc params reports GPU live counts of 0 across all populations and intact CPU counts — plumbing proven end-to-end, rendering visually unchanged.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -342,10 +342,10 @@ disk (2) — `disk.ts:47-73`; the barred centre-fade is a SKIP (dead point, no r
 
 **Steps**
 
-- [ ] Port the three builders (cite lines per constant, e.g. the elliptical falloff pair `bulge.ts:45-50` vs disk-bulge `:52-57`).
-- [ ] `npm run typecheck` + full `npm test` green (CPU suite untouched).
+- [x] Port the three builders (cite lines per constant, e.g. the elliptical falloff pair `bulge.ts:45-50` vs disk-bulge `:52-57`).
+- [x] `npm run typecheck` + full `npm test` green (CPU suite untouched).
 - [ ] **Checkpoint:** `window.__galaxyParity` on an E3 preset (pure bulge+halo: bulge row live ≈ bulgeCount, halo row still 0 — expected until Task 7) and an SBb (bulge/bar/disk rows within ±2%, disk reflecting the centre-fade undercount exactly like the CPU count does). Radial histogram sanity over the live populations.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -411,10 +411,10 @@ globulars — two ID spaces so cluster-level and member-level draws can't collid
 
 **Steps**
 
-- [ ] Port the four builders + the two sample fns.
-- [ ] `npm run typecheck` + full `npm test` green.
+- [x] Port the four builders + the two sample fns.
+- [x] `npm run typecheck` + full `npm test` green.
 - [ ] **Checkpoint:** `window.__galaxyParity` across Sc, SBb, E3, S0, Irr, and one preset with `globularCount > 0` — all star populations live-count PASS; radial histograms and colour means PASS. HII bonus stars show up as arms live count _exceeding_ iterations (same as CPU); note the observed dead fraction in the task summary.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -455,8 +455,8 @@ irregularDust (12) — `irregularDust.ts:23-38`; candidate i reuses `irregularSa
 
 **Steps**
 
-- [ ] Port the builders (mind each file's own size-vs-opacity draw order — the tables above already encode it; do not 'normalise' them).
-- [ ] `npm run typecheck` + full `npm test` green.
+- [x] Port the builders (mind each file's own size-vs-opacity draw order — the tables above already encode it; do not 'normalise' them).
+- [x] `npm run typecheck` + full `npm test` green.
 - [ ] **Checkpoint:** `window.__galaxyParity` across Sc, SBb, S0 (with and without dustRingStrength), Irr — dust totals within ±5% where the candidate cap doesn't bind; verify the cap DEVIATION on a high-starCount Sc (GPU below CPU, explainable by acceptance rate); star rows still PASS (regression guard on the shared sample fns).
 - [ ] Run the full harness table one more time on the default preset and paste it into the task summary — this is the parity record plan 02's cutover leans on.
-- [ ] Commit.
+- [x] Commit.
