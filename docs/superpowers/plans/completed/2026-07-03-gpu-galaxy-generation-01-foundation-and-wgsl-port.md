@@ -294,7 +294,7 @@ Harness behaviour: requests its own adapter/device (fully decoupled from the eng
 
 - [x] Implement the four modules + the dev hook. This is the first task that links the WESL — fix any linker/compile fallout here (compile errors surface via `createShaderModuleWithDevLog`).
 - [x] `npm run typecheck` + full `npm test` green.
-- [ ] **Checkpoint (user or dev console):** with the dev server running, `await window.__galaxyParity()` on the default Sc params reports GPU live counts of 0 across all populations and intact CPU counts — plumbing proven end-to-end, rendering visually unchanged.
+- [x] **Checkpoint (user or dev console):** with the dev server running, `await window.__galaxyParity()` on the default Sc params reports GPU live counts of 0 across all populations and intact CPU counts — plumbing proven end-to-end, rendering visually unchanged.
 - [x] Commit.
 
 ---
@@ -344,7 +344,7 @@ disk (2) — `disk.ts:47-73`; the barred centre-fade is a SKIP (dead point, no r
 
 - [x] Port the three builders (cite lines per constant, e.g. the elliptical falloff pair `bulge.ts:45-50` vs disk-bulge `:52-57`).
 - [x] `npm run typecheck` + full `npm test` green (CPU suite untouched).
-- [ ] **Checkpoint:** `window.__galaxyParity` on an E3 preset (pure bulge+halo: bulge row live ≈ bulgeCount, halo row still 0 — expected until Task 7) and an SBb (bulge/bar/disk rows within ±2%, disk reflecting the centre-fade undercount exactly like the CPU count does). Radial histogram sanity over the live populations.
+- [x] **Checkpoint:** `window.__galaxyParity` on an E3 preset (pure bulge+halo: bulge row live ≈ bulgeCount, halo row still 0 — expected until Task 7) and an SBb (bulge/bar/disk rows within ±2%, disk reflecting the centre-fade undercount exactly like the CPU count does). Radial histogram sanity over the live populations.
 - [x] Commit.
 
 ---
@@ -413,7 +413,7 @@ globulars — two ID spaces so cluster-level and member-level draws can't collid
 
 - [x] Port the four builders + the two sample fns.
 - [x] `npm run typecheck` + full `npm test` green.
-- [ ] **Checkpoint:** `window.__galaxyParity` across Sc, SBb, E3, S0, Irr, and one preset with `globularCount > 0` — all star populations live-count PASS; radial histograms and colour means PASS. HII bonus stars show up as arms live count _exceeding_ iterations (same as CPU); note the observed dead fraction in the task summary.
+- [x] **Checkpoint:** `window.__galaxyParity` across Sc, SBb, E3, S0, Irr, and one preset with `globularCount > 0` — all star populations live-count PASS; radial histograms and colour means PASS. HII bonus stars show up as arms live count _exceeding_ iterations (same as CPU); note the observed dead fraction in the task summary.
 - [x] Commit.
 
 ---
@@ -457,6 +457,6 @@ irregularDust (12) — `irregularDust.ts:23-38`; same **resample-to-budget** sha
 
 - [x] Port the builders (mind each file's own size-vs-opacity draw order — the tables above already encode it; do not 'normalise' them).
 - [x] `npm run typecheck` + full `npm test` green.
-- [ ] **Checkpoint:** `window.__galaxyParity` across Sc, SBb, S0 (with and without dustRingStrength), Irr — dust totals within ±5% in the budget-limited regime (Sc/Irr/unbarred; barred presets over-emit per the ACCEPTED seed-limited deviation at the top of this plan — the plan-02 visual gate arbitrates) at all params (resample-to-budget makes the GPU match the CPU push-budget regardless of starCount; the old candidate cap is gone); star rows still PASS (regression guard on the shared sample fns).
-- [ ] Run the full harness table one more time on the default preset and paste it into the task summary — this is the parity record plan 02's cutover leans on.
+- [x] **Checkpoint:** `window.__galaxyParity` across Sc, SBb, S0 (with and without dustRingStrength), Irr — dust totals within ±5% in the budget-limited regime (Sc/Irr/unbarred; barred presets over-emit per the ACCEPTED seed-limited deviation at the top of this plan — the plan-02 visual gate arbitrates) at all params (resample-to-budget makes the GPU match the CPU push-budget regardless of starCount; the old candidate cap is gone); star rows still PASS (regression guard on the shared sample fns).
+- [x] Run the full harness table one more time on the default preset and paste it into the task summary — this is the parity record plan 02's cutover leans on.
 - [x] Commit.

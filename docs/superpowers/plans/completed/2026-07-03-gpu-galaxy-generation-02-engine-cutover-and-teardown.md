@@ -128,9 +128,9 @@ No implementer subagent — this is the user-driven acceptance pass for the whol
 
 **Steps**
 
-- [ ] Grep for lingering imports of every deleted module (including `GenerateGalaxyWorkerResponse` in the engine — should already be gone since Task 1); delete the files + tests + types.
-- [ ] README: generation section rewritten — compute-pass architecture, the stateless-hash determinism contract, seed-family table, the planned-counts Hud caveat, and plan 01's flagged deviations (candidate-cap dust budgets, re-derived main-seed galaxy-level values).
-- [ ] Run the `entanglement-radar` skill over the branch diff. Specifically verify the spec's un-braided choices survived: `GENERATION_UBO` is the ONLY offset authority (no literal offsets in packer/tests/WGSL comments drifting on their own); the population-ID table exists once per language with the parity mechanism documented; the carve fns are the only capacity/budget authority (no re-derived budget in the engine or harness leftovers); no debounce or fitting-suppression crept back into the bridge; `GalaxyEngineHandle` consumers unchanged (grep). File real findings as fixes here or as backlog details — never ship known braids silently.
-- [ ] `npm run typecheck` (both configs) green; full `npm test` green (entire repo suite).
-- [ ] Prettier touched files; commit (stage specific paths).
-- [ ] Hand off: plans complete → run `/feature-done` (gates the DoD, relocates the spec + both plans to `completed/`).
+- [x] Grep for lingering imports of every deleted module (including `GenerateGalaxyWorkerResponse` in the engine — should already be gone since Task 1); delete the files + tests + types.
+- [x] README: generation section rewritten — compute-pass architecture, the stateless-hash determinism contract, seed-family table, the planned-counts Hud caveat, and plan 01's flagged deviations (candidate-cap dust budgets, re-derived main-seed galaxy-level values).
+- [x] Run the `entanglement-radar` skill over the branch diff. Specifically verify the spec's un-braided choices survived: `GENERATION_UBO` is the ONLY offset authority (no literal offsets in packer/tests/WGSL comments drifting on their own); the population-ID table exists once per language with the parity mechanism documented; the carve fns are the only capacity/budget authority (no re-derived budget in the engine or harness leftovers); no debounce or fitting-suppression crept back into the bridge; `GalaxyEngineHandle` consumers unchanged (grep). File real findings as fixes here or as backlog details — never ship known braids silently.
+- [x] `npm run typecheck` (both configs) green; full `npm test` green (entire repo suite).
+- [x] Prettier touched files; commit (stage specific paths).
+- [x] Hand off: plans complete → run `/feature-done` (gates the DoD, relocates the spec + both plans to `completed/`).
