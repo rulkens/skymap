@@ -109,6 +109,11 @@ import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
  * Side-effect-free: the clock is advanced by `runFrame`'s produce step, not
  * here. Safe to call speculatively; a second call in the same frame is a no-op
  * on clock state.
+ *
+ * `nowMs` is runFrame's single wall-clock sample, stamped onto the ready
+ * context so every animated consumer reads the frame clock instead of
+ * sampling `performance.now()` itself — the seam a frame-by-frame recorder
+ * needs to step time deterministically.
  */
 export function deriveFrameContext(
   state: EngineState,
@@ -116,6 +121,7 @@ export function deriveFrameContext(
   pose: CameraPose,
   projection: CameraProjection,
   visibleSourceMask: number,
+  nowMs: number,
 ): FrameContext {
   // The bootstrap gate. Every site that asks 'is the engine bootstrapped?' —
   // per-frame, slot-commit, public-handle — funnels through the one
@@ -167,6 +173,7 @@ export function deriveFrameContext(
     canvasSize,
     drawCamPos,
     drawPxPerRad,
+    nowMs,
     fovYRad: cam.fovYRad,
     focusBlend: 0,
     visibleSourceMask,

@@ -38,7 +38,7 @@ import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId
 export const volumeUpsamplePass: Pass = {
   name: 'volume-upsample',
 
-  enabled(state, _ctx) {
+  enabled(state, ctx) {
     // Pre-bootstrap window: either handle null means initGpu hasn't
     // finished.  Same shape as the old scalarVolumePass gate.
     if (state.gpu.volumeFieldRenderer === null) return false;
@@ -47,7 +47,7 @@ export const volumeUpsamplePass: Pass = {
     // While master is fading out, encodeHdr* is still drawing into
     // the half-res target (each field's opacity multiplied by the
     // master), so this blit must run to bring those pixels onto HDR.
-    const now = performance.now();
+    const now = ctx.nowMs;
     const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, now);
     if (!state.settings.volumes.enabled && masterOpacity <= 0) return false;
     // Per-field gate: active fields OR fade-out tails in flight.

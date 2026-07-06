@@ -26,7 +26,7 @@ function makeState(
 }
 
 function makeCtx(camDistMpc: number): ReadyFrameContext {
-  return { drawCamPos: [camDistMpc, 0, 0] } as unknown as ReadyFrameContext;
+  return { drawCamPos: [camDistMpc, 0, 0], nowMs: 0 } as unknown as ReadyFrameContext;
 }
 
 describe('produceMilkyWayLabel', () => {

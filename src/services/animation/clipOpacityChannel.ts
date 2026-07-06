@@ -32,6 +32,16 @@
  * channel calls `tick` on every controller so the FadeController lifecycle
  * is properly maintained even though this channel does not expose the
  * underlying Promises.
+ *
+ * ### The default clock is the last ticked frame time
+ *
+ * When a caller omits `nowMs`, the channel falls back to the time of the
+ * most recent `tick(nowMs)` — the frame clock the clip player forwards from
+ * `runFrame` — NOT `performance.now()`. Same rationale as the FadeRegistry:
+ * quantizing to the frame clock keeps every factor a pure function of
+ * stamped time (deterministic under a stepped recorder clock), at the cost
+ * of at most one frame of skew live. `performance.now()` must not be
+ * sampled anywhere in this module.
  */
 
 import { createFadeController } from './fadeController';
@@ -42,11 +52,17 @@ import type { FadeController } from '../../@types/animation/FadeController';
 export function createClipOpacityChannel(
   // Accepted for API symmetry with other factory shapes (e.g. createFadeController,
   // createStructureFocusSubsystem). Unused here because controllers are lazy —
-  // each is stamped with the `now` from its first fadeTo call, not construction time.
-  _initialNowMs: number = performance.now(),
+  // each is stamped with the `now` from its first fadeTo call, not construction
+  // time — so the default of 0 is inert (no animation can precede construction).
+  _initialNowMs: number = 0,
 ): ClipOpacityChannel {
   // One private FadeController per key, created lazily on first fadeTo.
   const controllers = new Map<VisibilityLayerKey, FadeController>();
+
+  // The channel's default clock: the frame time of the most recent tick.
+  // See the module-header rationale ("The default clock is the last ticked
+  // frame time").
+  let lastTickNowMs = 0;
 
   function getOrCreate(key: VisibilityLayerKey, nowMs: number): FadeController {
     let controller = controllers.get(key);
@@ -68,7 +84,7 @@ export function createClipOpacityChannel(
     // the same timestamp — a two-timestamp split would start the ramp clock
     // slightly after creating the controller, causing an off-by-a-few-μs
     // initial opacity on the first tick.
-    const now = nowMs ?? performance.now();
+    const now = nowMs ?? lastTickNowMs;
     const controller = getOrCreate(key, now);
     // durationMs === 0 snaps instantly via FadeController's Math.max(0, durationMs) path.
     void controller.fadeTo(target, durationMs, now);
@@ -78,20 +94,22 @@ export function createClipOpacityChannel(
     const controller = controllers.get(key);
     // No controller for this key means it was never touched — default 1.
     if (controller === undefined) return 1;
-    return controller.currentOpacity(nowMs ?? performance.now());
+    return controller.currentOpacity(nowMs ?? lastTickNowMs);
   }
 
   function tick(nowMs: number): void {
-    // Advance every controller's bookkeeping (resolves pending Promises).
-    // Factor values advance by the real clock via currentOpacity regardless
-    // of tick; tick is for lifecycle correctness.
+    // Record the frame clock as the channel's default time (see module
+    // header), then advance every controller's bookkeeping (resolves
+    // pending Promises). Factor values advance by the stamped clock via
+    // currentOpacity regardless of tick; tick is for lifecycle correctness.
+    lastTickNowMs = nowMs;
     for (const controller of controllers.values()) {
       controller.tick(nowMs);
     }
   }
 
   function isAnimating(nowMs?: number): boolean {
-    const now = nowMs ?? performance.now();
+    const now = nowMs ?? lastTickNowMs;
     for (const controller of controllers.values()) {
       if (controller.isAnimating(now)) return true;
     }

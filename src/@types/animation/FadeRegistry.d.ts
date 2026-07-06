@@ -47,8 +47,9 @@ export type FadeRegistry = Destroyable & {
    * is a fallback for tests and edge cases.
    *
    * `nowMs` is passed through to the controller's `fadeTo` so tests
-   * can inject deterministic timestamps. Production callers omit it
-   * and let `performance.now()` flow through.
+   * can inject deterministic timestamps. When omitted, the fade starts
+   * at the last `tick(nowMs)` frame time — event-driven starts quantize
+   * to the frame clock rather than sampling `performance.now()`.
    */
   fadeTo(id: FadeId, target: number, durationMs?: number, nowMs?: number): Promise<void>;
 
@@ -59,19 +60,22 @@ export type FadeRegistry = Destroyable & {
    * The opacity at the given time for the given id. Returns 1.0 for
    * unregistered ids — fail-safe so a renderer asking for an id
    * that hasn't finished registering draws at full opacity instead of
-   * disappearing.
+   * disappearing. `nowMs` defaults to the last ticked frame time.
    */
   opacityOf(id: FadeId, nowMs?: number): number;
 
   /**
    * True iff any registered controller is still animating at the given
    * time. Used by the render-on-demand predicate in `runFrame.ts`.
+   * `nowMs` defaults to the last ticked frame time.
    */
   isAnyAnimating(nowMs?: number): boolean;
 
   /**
-   * Called once per frame from `runFrame`. Walks the controllers and
-   * fires any due Promise resolutions.
+   * Called once per frame from `runFrame`. Records `nowMs` as the
+   * registry's default clock, then walks the controllers and fires any
+   * due Promise resolutions. An argless tick re-reads the last stamped
+   * time (a time-wise no-op).
    */
   tick(nowMs?: number): void;
 };

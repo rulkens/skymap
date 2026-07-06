@@ -25,6 +25,7 @@ function makeCtx(): ReadyFrameContext {
     drawCamPos: [0, 0, 0],
     vp: mat4.identity(),
     canvasSize: { width: 1000, height: 1000 },
+    nowMs: 0,
   } as unknown as ReadyFrameContext;
 }
 

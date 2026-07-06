@@ -273,6 +273,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     renderPose,
     state.cameraRuntime.projection,
     masks.draw,
+    nowMs,
   );
   if (!ctx.isReady) {
     // Essential wake: bootstrap populates cam/GPU handles without waking any
@@ -343,6 +344,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
       famousMeta: state.data.galaxies.famousMeta,
+      nowMs: ctx.nowMs,
     });
   }
 

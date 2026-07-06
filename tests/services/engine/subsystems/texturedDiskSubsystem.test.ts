@@ -91,6 +91,7 @@ function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) 
     visibleSourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     famousMeta: [],
+    nowMs: 0,
   };
 }
 

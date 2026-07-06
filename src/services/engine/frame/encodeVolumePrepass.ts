@@ -55,7 +55,7 @@ export function encodeVolumePrepass(
   timingService: GpuTimingService | null,
 ): void {
   if (state.gpu.volumeFieldRenderer !== null) {
-    const nowMs = performance.now();
+    const nowMs = ctx.nowMs;
     const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
     if (state.settings.volumes.enabled || masterOpacity > 0) {
       // Focus recession dims the whole volume subsystem in lockstep with the
@@ -70,8 +70,7 @@ export function encodeVolumePrepass(
         state.subsystems.clipPlayer,
       );
       const fadeOpacityOf = (id: VolumeFieldId) =>
-        state.subsystems.fades.opacityOf({ kind: 'volumeField', id }, nowMs) *
-        recessedMaster;
+        state.subsystems.fades.opacityOf({ kind: 'volumeField', id }, nowMs) * recessedMaster;
       // The store holds raw Intent; clamp GPU-bound fields at the read edge so
       // out-of-range values never reach the raymarch shader uniforms.  Mirrors
       // the setFlow / clampFlowParams pattern for the flow-field subsystem.

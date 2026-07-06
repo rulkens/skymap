@@ -70,7 +70,7 @@ export const filamentsPass: Pass = {
   // Update: the runtime `draw` short-circuits anyway via the
   // `filamentRenderer === null` early return; `enabled` returning
   // true with a null renderer is a self-correcting near-miss.
-  enabled(state, _ctx) {
+  enabled(state, ctx) {
     // State boolean is the user's intent; opacityOf > 0 is the visual
     // state. We render whenever EITHER is true so a fade-out continues
     // drawing after the user toggles off (until opacity hits 0). The
@@ -78,7 +78,7 @@ export const filamentsPass: Pass = {
     // synchronously; this gate is what keeps the pass alive through the
     // ~100 ms ramp.
     if (state.settings.filaments.enabled) return true;
-    return state.subsystems.fades.opacityOf({ kind: 'filament' }, performance.now()) > 0;
+    return state.subsystems.fades.opacityOf({ kind: 'filament' }, ctx.nowMs) > 0;
   },
 
   draw(pass, ctx, state, deps) {
@@ -89,10 +89,10 @@ export const filamentsPass: Pass = {
     // to a cached snapshot the gate could read.
     if (deps.filamentRenderer === null) return;
 
-    // Hoist nowMs to a single call per draw — only one consumer here
+    // Hoist the frame clock to a local — only one consumer here
     // (filaments is single-instance, not per-source), but the pattern
     // matches pointSpritesPass.ts so future readers can copy-paste.
-    const nowMs = performance.now();
+    const nowMs = ctx.nowMs;
     const { vp, canvasSize } = ctx;
     deps.filamentRenderer.draw(
       pass,
