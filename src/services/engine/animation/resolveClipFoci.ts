@@ -127,7 +127,9 @@ function walkEffect(effect: Effect, deps: ResolveDeps, fovYRad: number, from: Ca
     }
     case 'dollyToId': {
       const { distance } = resolveFraming(effect.id, deps, fovYRad);
-      return dollyTo(distance, effect.over, effect.ease);
+      // `scale` multiplies the DERIVED framing distance — the author's
+      // tighter/looser knob that survives framing-math and catalog changes.
+      return dollyTo(distance * (effect.scale ?? 1), effect.over, effect.ease);
     }
     // The bearing that puts the subject centre-frame beyond the LIVE orbit
     // target — baked here, so a lookAtId is only valid before the target

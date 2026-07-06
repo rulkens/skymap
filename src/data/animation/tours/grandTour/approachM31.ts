@@ -61,6 +61,8 @@ export const approachM31: ClipData = {
     all([lookAtId(M31, 3), strafeId(M31, 10, 3)]),
     focus(M31),
     hold(1),
-    all([moveTargetId(M31, 6), dollyToId(M31, 6)]),
+    // Land a touch tighter than the standard 8-diameter framing — Andromeda
+    // is the beat's whole subject, so let it fill more of the frame.
+    all([moveTargetId(M31, 6), dollyToId(M31, 6, { scale: 0.7 })]),
   ],
 };

@@ -350,8 +350,15 @@ describe('dollyToId', () => {
   });
 
   it('forwards explicit ease', () => {
-    const e = dollyToId(focusId('virgo'), 2, 'in');
+    const e = dollyToId(focusId('virgo'), 2, { ease: 'in' });
     expect(e.ease).toBe('in');
+  });
+
+  it('carries the framing-distance scale when given, omits it otherwise', () => {
+    const scaled = dollyToId(focusId('m31'), 6, { scale: 0.7 });
+    expect(scaled.scale).toBe(0.7);
+    const plain = dollyToId(focusId('m31'), 6);
+    expect(plain.scale).toBeUndefined();
   });
 });
 
@@ -379,7 +386,9 @@ describe('focusOnId', () => {
   it('forwards an explicit ease to both camera writers', () => {
     const id = focusId('virgo');
     const e = focusOnId(id, 3, 'out');
-    expect(e).toEqual(seq([focus(id), all([moveTargetId(id, 3, 'out'), dollyToId(id, 3, 'out')])]));
+    expect(e).toEqual(
+      seq([focus(id), all([moveTargetId(id, 3, 'out'), dollyToId(id, 3, { ease: 'out' })])]),
+    );
   });
 });
 

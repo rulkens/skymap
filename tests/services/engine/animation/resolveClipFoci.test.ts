@@ -99,7 +99,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
   it('all([moveTargetId, dollyToId]) resolves to all([setVec ch:target, set ch:distance])', () => {
     const id = focusId('cluster-virgo');
     const clip: ClipData = {
-      timeline: [all([moveTargetId(id, 3, 'inOut'), dollyToId(id, 3, 'inOut')])],
+      timeline: [all([moveTargetId(id, 3, 'inOut'), dollyToId(id, 3, { ease: 'inOut' })])],
     };
 
     const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
@@ -127,6 +127,20 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
       to: EXPECTED_DISTANCE,
       over: 3,
       ease: 'inOut',
+    });
+  });
+
+  it('dollyToId scale multiplies the resolved framing distance', () => {
+    const id = focusId('cluster-virgo');
+    const clip: ClipData = {
+      timeline: [dollyToId(id, 2, { scale: 0.5 })],
+    };
+    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE);
+    expect(resolved.timeline[0]).toMatchObject({
+      kind: 'set',
+      ch: 'distance',
+      to: EXPECTED_DISTANCE * 0.5,
+      over: 2,
     });
   });
 

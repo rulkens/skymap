@@ -37,7 +37,14 @@ export type FocusBoundEffect =
       readonly over: number;
       readonly ease: Ease;
     }
-  | { readonly kind: 'dollyToId'; readonly id: FocusId; readonly over: number; readonly ease: Ease }
+  | {
+      readonly kind: 'dollyToId';
+      readonly id: FocusId;
+      readonly over: number;
+      readonly ease: Ease;
+      /** Multiplier on the resolved framing distance (1 = standard framing) — see `dollyToId`. */
+      readonly scale?: number;
+    }
   | { readonly kind: 'lookAtId'; readonly id: FocusId; readonly over: number; readonly ease: Ease }
   | {
       readonly kind: 'strafeId';

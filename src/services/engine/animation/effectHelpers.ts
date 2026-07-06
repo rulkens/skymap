@@ -143,20 +143,34 @@ export function moveTargetId(
 }
 
 /**
- * dollyToId — zoom the camera to the distance of the structure or galaxy
- * identified by `id`, over `over` seconds.
+ * dollyToId — zoom the camera to the framing distance of the structure or
+ * galaxy identified by `id`, over `over` seconds.
  *
  * The UNRESOLVED form of `dollyTo`: `resolveClipFoci` rewrites it to a concrete
  * `dollyTo(mpc, over, ease)` before `compileClip` runs. Authors use this when
  * the target distance is not known statically but must be derived from the
  * catalog at play time via a durable `FocusId`.
+ *
+ * `opts.scale` multiplies the resolved framing distance — the knob for "land
+ * tighter (or looser) than the standard framing". Because it scales the
+ * DERIVED distance rather than replacing it, the shot stays proportional if
+ * the framing math or the subject's catalogued size ever changes; an absolute
+ * override is what the concrete `dollyTo(mpc, ...)` is for. Options are named
+ * (not positional) per the dwellDrift lesson — a bare number after the ease
+ * slot is unreadable at the call site.
  */
 export function dollyToId(
   id: FocusId,
   over: number,
-  ease?: Ease,
+  opts?: { ease?: Ease; scale?: number },
 ): FocusBoundEffect & { kind: 'dollyToId' } {
-  return { kind: 'dollyToId', id, over, ease: ease ?? 'inOut' };
+  return {
+    kind: 'dollyToId',
+    id,
+    over,
+    ease: opts?.ease ?? 'inOut',
+    ...(opts?.scale !== undefined ? { scale: opts.scale } : {}),
+  };
 }
 
 /**
@@ -419,7 +433,7 @@ export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' 
  * choreography (a flyPath, a spin) already owns the camera.
  */
 export function focusOnId(id: FocusId, over: number, ease: Ease = 'inOut'): Effect {
-  return seq([focus(id), all([moveTargetId(id, over, ease), dollyToId(id, over, ease)])]);
+  return seq([focus(id), all([moveTargetId(id, over, ease), dollyToId(id, over, { ease })])]);
 }
 
 /**

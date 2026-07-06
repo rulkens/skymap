@@ -35,6 +35,8 @@ export function flyToClip(id: FocusId): ClipData {
   // dollyToId) from the catalog at play time.
   return {
     start: 'live',
-    timeline: [all([moveTargetId(id, FLY_SEC, 'inOut'), dollyToId(id, FLY_SEC, 'inOut')])],
+    timeline: [
+      all([moveTargetId(id, FLY_SEC, 'inOut'), dollyToId(id, FLY_SEC, { ease: 'inOut' })]),
+    ],
   };
 }
