@@ -68,10 +68,10 @@
 
 **Steps**
 
-- [ ] Implement; delete the two files; update the engine docblock's "why extras are baked" section — the rationale inverts: the transform now folds in at generation time via the UBO, which is even more writeBuffer-race-proof than baking (nothing is ever rewritten).
-- [ ] `npm run typecheck` + full `npm test` green.
+- [x] Implement; delete the two files; update the engine docblock's "why extras are baked" section — the rationale inverts: the transform now folds in at generation time via the UBO, which is even more writeBuffer-race-proof than baking (nothing is ever rewritten).
+- [x] `npm run typecheck` + full `npm test` green.
 - [ ] **Checkpoint (user):** enable multi-galaxy — background galaxies appear with visibly distinct structure (unique params were previously identical-buffer copies; now e.g. arm counts differ), FPS badge stays healthy at count 50.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -92,10 +92,10 @@
 
 **Steps**
 
-- [ ] Update `engineBridge.test.ts` first: delete the debounce/suppression cases; add `galaxy slice change calls setParams immediately` (no fake timers), `params changes during compare.fitting still forward to the engine`, `extras count change calls setExtras immediately`. Run → fail against current code.
-- [ ] Implement. Run → pass. Full `npm test` (autoFit tests must pass untouched — if they need edits, STOP and re-examine, that's a regression signal).
+- [x] Update `engineBridge.test.ts` first: delete the debounce/suppression cases; add `galaxy slice change calls setParams immediately` (no fake timers), `params changes during compare.fitting still forward to the engine`, `extras count change calls setExtras immediately`. Run → fail against current code.
+- [x] Implement. Run → pass. Full `npm test` (autoFit tests must pass untouched — if they need edits, STOP and re-examine, that's a regression signal).
 - [ ] **Checkpoint (user):** structural sliders (radius, arm width, star count) now track the drag live with no settle pause; auto-fit end-to-end still converges with live progress + stop.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
