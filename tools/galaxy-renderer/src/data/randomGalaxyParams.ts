@@ -7,9 +7,8 @@
  * The RNG is injected rather than reaching for `Math.random()` directly, so
  * the same call sequence is reproducible under test (and, at the UI layer,
  * under an entropy-seeded `mulberry32` for a normal "surprise me" click).
- * This mirrors the house rule established for the model layer
- * (`createGalaxyBuildContext`): pure functions never own their own entropy
- * source.
+ * This mirrors the house rule that governs every pure function in this
+ * package, model layer included: never own your own entropy source.
  */
 
 import type { GalaxyParams } from '../../@types/model/GalaxyParams';

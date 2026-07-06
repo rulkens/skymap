@@ -80,13 +80,11 @@
  *  - `starCount`/`dustCount` are the carved layouts' CAPACITIES
  *    (`GenerationLayout.capacity`), not a count of "live" (visibly nonzero)
  *    records — see `setParams`'s docblock.
- *  - Byte-compat with the CPU model (`generateGalaxy`) is waived for the
- *    central galaxy: the GPU passes derive every star/dust draw from a
- *    stateless per-invocation hash rather than replaying the CPU's serial
- *    RNG stream (see `lib/generate.wesl`'s header), so the two produce
- *    statistically similar but not byte-identical galaxies for the same
- *    `seed`. The determinism contract that DOES hold is CPU-free: same
- *    params in, same GPU buffer contents out, every time.
+ *  - There is no serial-RNG replay: every star/dust draw comes from a
+ *    stateless per-invocation hash (see `lib/generate.wesl`'s header), not a
+ *    single-threaded generator stepping through one draw at a time. The
+ *    determinism contract that DOES hold is CPU-free: same params in, same
+ *    GPU buffer contents out, every time.
  */
 import { mat4 } from 'wgpu-matrix';
 

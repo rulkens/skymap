@@ -1,37 +1,37 @@
 /**
  * carveStarLayout — table-driven CPU-side slot carving for the star
- * populations `generateGalaxy` draws (Task 1's CPU/GPU seam; see
- * `GenerationLayout`'s docblock for why carving happens here rather than
- * inside a compute shader). Walks the star populations in the CPU model's
- * fixed source order — bulge, bar, disk, spiral arms, irregular clumps,
- * halo, globular-cluster stars — evaluating each population's iteration
- * count against `(category, params, budget)` and omitting any that come out
- * zero, the same table-dispatch shape `splitStarBudget` uses for its
- * per-category split rather than an if/else predicate chain.
+ * populations the generation compute shaders draw (see `GenerationLayout`'s
+ * docblock for why carving happens here rather than inside a compute
+ * shader). Walks the star populations in the spike's fixed source order —
+ * bulge, bar, disk, spiral arms, irregular clumps, halo, globular-cluster
+ * stars — evaluating each population's iteration count against `(category,
+ * params, budget)` and omitting any that come out zero, the same
+ * table-dispatch shape `splitStarBudget` uses for its per-category split
+ * rather than an if/else predicate chain.
  *
- * Per-population loop bounds, ported verbatim from their builders:
- *  - bulge: `budget.bulgeCount` (bulge.ts:39, an exact count — the builder's
- *    out-of-range draws are *resampled*, not skipped).
+ * Per-population loop bounds, matching the equivalent population's shader
+ * (`lib/generate.wesl`):
+ *  - bulge: `budget.bulgeCount`, an exact count — out-of-range draws are
+ *    *resampled*, not skipped.
  *  - bar: barred galaxies spend `floor(diskCount*0.35)` of the disk budget on
- *    the bar (bar.ts:26); every other category gets none.
+ *    the bar; every other category gets none.
  *  - disk: the remainder of `diskCount` after the bar's share for barred
- *    galaxies, or the full `diskCount` otherwise (disk.ts:42-45).
+ *    galaxies, or the full `diskCount` otherwise.
  *  - spiralArms (stride 5): `budget.armStarCount` iterations for every
- *    non-irregular category with a nonzero arm budget (spiralArms.ts:41);
- *    stride 5 reserves the worst case an HII knot can write in one
- *    iteration — a halo glow, a core, and up to 3 newborns
- *    (spiralArms.ts:194-219) — even though most iterations write exactly 1.
+ *    non-irregular category with a nonzero arm budget; stride 5 reserves the
+ *    worst case an HII knot can write in one iteration — a halo glow, a
+ *    core, and up to 3 newborns — even though most iterations write exactly
+ *    1.
  *  - irregularClumps (stride 2): `budget.armStarCount` iterations for
- *    irregular galaxies only (irregularClumps.ts:60-90); stride 2 reserves
- *    that builder's own HII worst case, a halo glow plus a core.
- *  - halo: `budget.haloCount` (halo.ts, an exact count via resampling, same
- *    as the bulge).
+ *    irregular galaxies only; stride 2 reserves that population's own HII
+ *    worst case, a halo glow plus a core.
+ *  - halo: `budget.haloCount`, an exact count via resampling, same as the
+ *    bulge.
  *  - globularStar: `floor(globularCount || 0) * 90` — one iteration per
  *    star, not per cluster, since a cluster is just a fixed-size (90-star)
- *    group with no internal variability GPU dispatch needs to see
- *    (globularClusters.ts:18-27). The per-cluster loop itself
- *    (`POPULATION_IDS.globularCluster`) owns no output slots and never
- *    appears in this layout.
+ *    group with no internal variability GPU dispatch needs to see. The
+ *    per-cluster loop itself (`POPULATION_IDS.globularCluster`) owns no
+ *    output slots and never appears in this layout.
  */
 import { POPULATION_IDS } from './populationIds';
 import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';

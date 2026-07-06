@@ -179,10 +179,8 @@ fn pcg4d(vIn: vec4<u32>) -> vec4<u32> {
 }
 
 // genRand — one uniform draw in [0, 1) for a given slot. The f32(u32) cast
-// rounds the 32-bit hash word to f32's 24-bit mantissa before scaling, so
-// this loses low-order bits relative to the CPU's f64 division (mulberry32).
-// That is inherent to f32 GPU math and is the primary numeric divergence the
-// parity harness must tolerate; the distribution is unaffected.
+// rounds the 32-bit hash word to f32's 24-bit mantissa before scaling — a
+// precision loss inherent to f32 GPU math. The distribution is unaffected.
 fn genRand(seed: u32, pop: u32, idx: u32, slot: u32) -> f32 {
   return f32(pcg4d(vec4<u32>(seed, pop, idx, slot)).x) * INV_2POW32;
 }
@@ -238,11 +236,11 @@ fn sampleDiskRadius(seed: u32, pop: u32, idx: u32, slot: u32) -> f32 {
 }
 
 // ---------------------------------------------------------------------------
-// Value noise — port of makeValueNoise.ts:49-81
+// Value noise — a seeded 3D lattice noise for dust density modulation
 // ---------------------------------------------------------------------------
 
-// Cubic smoothstep 3t^2 - 2t^3 (makeValueNoise.ts:63): zero slope at t=0 and
-// t=1 so trilinear-blended cells join seamlessly.
+// Cubic smoothstep 3t^2 - 2t^3: zero slope at t=0 and t=1 so trilinear-blended
+// cells join seamlessly.
 fn nSmooth(t: f32) -> f32 {
   return t * t * (3.0 - 2.0 * t);
 }
@@ -251,12 +249,12 @@ fn nLerp(a: f32, b: f32, t: f32) -> f32 {
   return a + (b - a) * t;
 }
 
-// nHash — the u32 lattice hash from makeValueNoise.ts:49-58. The CPU uses
-// Math.imul (true 32-bit wrap multiply) and | 0 / >>> avalanche steps; WGSL
-// u32 arithmetic reproduces the identical bit pattern up to the final f32
-// division (which rounds the 32-bit word to f32, a small precision loss). The
-// integer lattice coords arrive as i32 (they can be negative) and are
-// bitcast to u32 so the wrap-multiply matches ToInt32 semantics.
+// nHash — u32 lattice hash: three large-prime multiplies plus an
+// avalanche/xor-shift pair, matching a 32-bit wrap-multiply hash's bit
+// pattern up to the final f32 division (which rounds the 32-bit word to f32,
+// a small precision loss). The integer lattice coords arrive as i32 (they
+// can be negative) and are bitcast to u32 so the wrap-multiply matches
+// two's-complement 32-bit truncation semantics.
 fn nHash(xi: i32, yi: i32, zi: i32, s: u32) -> f32 {
   let xu = bitcast<u32>(xi);
   let yu = bitcast<u32>(yi);
@@ -268,8 +266,7 @@ fn nHash(xi: i32, yi: i32, zi: i32, s: u32) -> f32 {
 
 // valueNoise3 — seeded 3D value noise, [0, 1). floor() BEFORE the i32 cast so
 // negative coords floor (not truncate toward zero), matching Math.floor. The
-// trilinear blend order (x edges, then y, then z) is verbatim from
-// makeValueNoise.ts:77-81.
+// trilinear blend order is x edges, then y, then z.
 fn valueNoise3(p: vec3<f32>, seed: u32) -> f32 {
   let xi = i32(floor(p.x));
   let yi = i32(floor(p.y));
@@ -285,11 +282,11 @@ fn valueNoise3(p: vec3<f32>, seed: u32) -> f32 {
   return nLerp(nLerp(x00, x10, yf), nLerp(x01, x11, yf), zf);
 }
 
-// dustNoiseAt — two-octave dust sample, createDustField.ts:27-30. Base octave
-// runs y at half frequency; the 2.3x-frequency detail layer is half-weighted
-// and the sum is normalised by 1.5 (1 + 0.5) to stay roughly in [0, 1). Both
-// octaves read gen.noiseSeed (the dust field's decorrelated seed) and
-// gen.noiseFreq (the CPU 'nfreq' = 2.4 * dustNoiseScale / outerRadius).
+// dustNoiseAt — two-octave dust sample. Base octave runs y at half frequency;
+// the 2.3x-frequency detail layer is half-weighted and the sum is normalised
+// by 1.5 (1 + 0.5) to stay roughly in [0, 1). Both octaves read
+// gen.noiseSeed (the dust field's decorrelated seed) and gen.noiseFreq
+// ('nfreq' = 2.4 * dustNoiseScale / outerRadius, per `packGenerationUniforms`).
 fn dustNoiseAt(p: vec3<f32>) -> f32 {
   let f = gen.noiseFreq;
   let base = valueNoise3(vec3<f32>(p.x * f, p.y * f * 0.5, p.z * f), gen.noiseSeed);
@@ -301,22 +298,22 @@ fn dustNoiseAt(p: vec3<f32>) -> f32 {
 // Colour + shaping helpers
 // ---------------------------------------------------------------------------
 
-// tempColorRamp — stellar colour ramp, tempColor.ts:18-25 + :37-44. Six hand-
-// picked stops, cool (red) to hot (blue). t is clamped to [0, 0.999] before
-// scaling by (6 stops - 1) = 5 so the index never runs past the final stop.
-// A local var array is used (not a module const) so the runtime index is
-// portable across every WGSL backend.
+// tempColorRamp — stellar colour ramp. Six hand-picked stops, cool (red) to
+// hot (blue). t is clamped to [0, 0.999] before scaling by (6 stops - 1) = 5
+// so the index never runs past the final stop. A local var array is used
+// (not a module const) so the runtime index is portable across every WGSL
+// backend.
 fn tempColorRamp(t: f32) -> vec3<f32> {
   var stops = array<vec3<f32>, 6>(
-    vec3<f32>(1.0, 0.36, 0.16),  // tempColor.ts:19
-    vec3<f32>(1.0, 0.58, 0.28),  // tempColor.ts:20
-    vec3<f32>(1.0, 0.83, 0.55),  // tempColor.ts:21
-    vec3<f32>(1.0, 0.97, 0.9),   // tempColor.ts:22
-    vec3<f32>(0.79, 0.86, 1.0),  // tempColor.ts:23
-    vec3<f32>(0.6, 0.72, 1.0)    // tempColor.ts:24
+    vec3<f32>(1.0, 0.36, 0.16),
+    vec3<f32>(1.0, 0.58, 0.28),
+    vec3<f32>(1.0, 0.83, 0.55),
+    vec3<f32>(1.0, 0.97, 0.9),
+    vec3<f32>(0.79, 0.86, 1.0),
+    vec3<f32>(0.6, 0.72, 1.0)
   );
-  let scaled = clamp(t, 0.0, 0.999) * 5.0;  // (COLOR_STOPS.length - 1) — tempColor.ts:37
-  let i = i32(scaled);                       // scaled | 0 — tempColor.ts:38 (scaled >= 0, so trunc == floor)
+  let scaled = clamp(t, 0.0, 0.999) * 5.0;  // (stop count - 1)
+  let i = i32(scaled);                       // scaled | 0 (scaled >= 0, so trunc == floor)
   let f = scaled - f32(i);
   let a = stops[i];
   let b = stops[i + 1];
@@ -334,8 +331,8 @@ fn hiiCorePerturbed(cv: f32) -> vec3<f32> {
   );
 }
 
-// warpOffset — the galactic-warp vertical offset, makeWarpOffset.ts:35-42.
-// Zero inside warpStartRadius (the flat inner disk); beyond it the disk bends
+// warpOffset — the galactic-warp vertical offset. Zero inside
+// warpStartRadius (the flat inner disk); beyond it the disk bends
 // out of plane as rel^2, with the line of nodes precessing by warpTwist * rel.
 // Math.hypot(x, z) maps to length(vec2(x, z)).
 fn warpOffset(x: f32, z: f32) -> f32 {
@@ -351,13 +348,12 @@ fn warpOffset(x: f32, z: f32) -> f32 {
   return gen.warpStrength * gen.outerRadius * 0.4 * rel * rel * sin(atan2(z, x) - node);
 }
 
-// applyLopsided — large-scale one-sided radius modulation, createGalaxyBuild
-// Context.ts:62-63.
+// applyLopsided — large-scale one-sided radius modulation.
 fn applyLopsided(radius: f32, angle: f32) -> f32 {
   return radius * (1.0 + gen.lopsidedAmp * cos(angle - gen.lopsidedAngle));
 }
 
-// diskFalloff — exponential disk density falloff, createGalaxyBuildContext.ts:75-76.
+// diskFalloff — exponential disk density falloff.
 fn diskFalloff(radius: f32, softness: f32) -> f32 {
   return exp(-radius / (gen.diskScaleLen * softness));
 }
@@ -415,10 +411,10 @@ struct DustRec {
 
 // writeStar — the shared star finalize + write path: bake the rigid extra-
 // galaxy transform onto the record, then interleave into the stride-8 output
-// at record 'index', field order x,y,z,r,g,b,size,brightness
-// (starWriter.ts:34-42). Every star builder returns a StarRec in the galaxy's
-// own local space; this ONE choke point (every builder's result flows through
-// here via the entry shader) places it in world space — position through
+// at record 'index', field order x,y,z,r,g,b,size,brightness. Every star
+// builder returns a StarRec in the galaxy's own local space; this ONE choke
+// point (every builder's result flows through here via the entry shader)
+// places it in world space — position through
 // applyExtraTransform, size scaled by gen.extraScale — exactly as
 // writeDustParticle does for dust. For a standalone galaxy the transform is
 // identity (extraScale == 1, zero rotation, zero translation), so the local
@@ -441,9 +437,9 @@ fn writeStar(index: u32, rec: StarRec) {
 }
 
 // writeDust — interleave one dust particle into the stride-8 output at record
-// 'index', field order x,y,z,size,r,g,b,opacity (dustWriter.ts:23-25). Size
-// precedes colour here — the opposite of stars — matching the GPU dust-quad
-// vertex layout; it is carried as-is, not 'fixed'.
+// 'index', field order x,y,z,size,r,g,b,opacity. Size precedes colour here —
+// the opposite of stars — matching the GPU dust-quad vertex layout; it is
+// carried as-is, not 'fixed'.
 fn writeDust(index: u32, rec: DustRec) {
   let base = index * 8u;
   outBuf[base + 0u] = rec.pos.x;
@@ -479,8 +475,7 @@ fn writeDust(index: u32, rec: DustRec) {
 // (bulge axes, bar geometry, flattening...) comes from 'gen' — never
 // re-derived per invocation; only the per-STAR draws come from the hash.
 //
-// The CPU addStar composes the galactic-warp vertical offset onto y
-// (createGalaxyBuildContext.ts:110-121); each builder reproduces that with
+// Every builder composes the galactic-warp vertical offset onto y with
 // 'y + warpOffset(x, z)' so the returned record already carries the warp.
 
 // buildBulge — old, warm stars in a triaxial spheroid. Ports bulge.ts:39-80.
@@ -514,9 +509,9 @@ fn buildBulge(iteration: u32) -> StarRec {
     let cosLat = 2.0 * genRand(seed, pop, iteration, base + 1u) - 1.0; // slot 1 — bulge.ts:60
     let sinLat = sqrt(1.0 - cosLat * cosLat);                          // bulge.ts:61
     let lon = 2.0 * PI * genRand(seed, pop, iteration, base + 2u);     // slot 2 — bulge.ts:62
-    let bulgeAxisX = 1.0;                                              // createGalaxyBuildContext.ts:65 (constant, not in UBO)
+    let bulgeAxisX = 1.0;                                              // fixed axis, not in UBO
     let localX = dist * sinLat * cos(lon) * bulgeAxisX;                // bulge.ts:63
-    let localY = dist * cosLat * gen.flattening;                      // bulge.ts:64 (bulgeAxisY = flattening, ctx.ts:66)
+    let localY = dist * cosLat * gen.flattening;                      // bulge.ts:64 (bulgeAxisY = flattening)
     let localZ = dist * sinLat * sin(lon) * gen.bulgeAxisZ;            // bulge.ts:65
     let x = localX * gen.cosBulge - localZ * gen.sinBulge;             // bulge.ts:66
     let z = localX * gen.sinBulge + localZ * gen.cosBulge;            // bulge.ts:67
@@ -797,8 +792,8 @@ fn armStarSample(i: u32) -> ArmStarSample {
 //   sub 0 : HII halo glow (isHii) OR regular arm star (dead on clump-gap skip)
 //   sub 1 : HII core (isHii) OR dead
 //   sub 2-4 : newborn b = sub - 2 (isHii && b < newbornCount) OR dead
-// addStar composes the galactic warp onto y (createGalaxyBuildContext.ts:120),
-// reproduced per record with 'y + warpOffset(x, z)'.
+// Every record composes the galactic warp onto y with
+// 'y + warpOffset(x, z)'.
 fn buildArmSlot(i: u32, sub: u32) -> StarRec {
   var dead: StarRec;
   dead.alive = false;
@@ -1139,10 +1134,10 @@ fn buildGlobularStar(iteration: u32) -> StarRec {
 // fraction of a percent. The star sample MUST NOT be widened for the dust seam:
 // it is shared with the star pass and has to stay bit-identical across both.
 
-// DustMod — the noise-driven keep/opacity/size modulation, createDustField.ts:
-// 32-43. 'keep' is one rand draw at 'slot' gated against a noise-shaped
-// probability; 'op'/'sz' are draw-free multipliers off the same noise sample.
-// dustNoiseAt reads gen.noiseSeed + gen.noiseFreq; gen.dustNoiseAmt is the mix.
+// DustMod — the noise-driven keep/opacity/size modulation. 'keep' is one rand
+// draw at 'slot' gated against a noise-shaped probability; 'op'/'sz' are
+// draw-free multipliers off the same noise sample. dustNoiseAt reads
+// gen.noiseSeed + gen.noiseFreq; gen.dustNoiseAmt is the mix.
 struct DustMod {
   keep: bool,
   op: f32,
@@ -1150,17 +1145,17 @@ struct DustMod {
 }
 
 fn dustMod(p: vec3<f32>, seed: u32, pop: u32, idx: u32, slot: u32) -> DustMod {
-  let f = dustNoiseAt(p);                 // createDustField.ts:37 (noiseAt)
+  let f = dustNoiseAt(p);
   let a = gen.dustNoiseAmt;
   var m: DustMod;
-  // The single keep-gate rand — the ONLY draw dustMod makes (createDustField.ts:39).
+  // The single keep-gate rand — the ONLY draw dustMod makes.
   m.keep = genRand(seed, pop, idx, slot) < 1.0 - a + a * (0.15 + 1.5 * f * f);
-  m.op = 1.0 - a + a * (0.25 + 1.9 * f);  // :41
-  m.sz = 1.0 - a + a * (0.5 + 1.3 * f);   // :42
+  m.op = 1.0 - a + a * (0.25 + 1.9 * f);
+  m.sz = 1.0 - a + a * (0.5 + 1.3 * f);
   return m;
 }
 
-// radialFalloff — exponential radial dust falloff, createDustField.ts:45.
+// radialFalloff — exponential radial dust falloff.
 fn radialFalloff(r: f32) -> f32 {
   return exp(-r / (gen.diskScaleLen * 1.5));
 }

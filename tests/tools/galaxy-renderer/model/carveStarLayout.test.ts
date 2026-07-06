@@ -1,12 +1,12 @@
 /**
  * carveStarLayout — table-driven CPU-side slot carving for the star
- * populations `generateGalaxy` draws, turned into a `GenerationLayout` a GPU
- * compute pass can dispatch against without any per-invocation branching.
- * Expected iteration counts are derived from `splitStarBudget`'s formulas
- * (not hardcoded numbers) so these tests track the CPU model's actual loop
- * bounds rather than a frozen snapshot of them — see bulge.ts:39, bar.ts:26,
- * disk.ts:42-45, spiralArms.ts:41, irregularClumps.ts:60-90,
- * globularClusters.ts:18-27 for the ported loop bounds this carving mirrors.
+ * populations the generation compute shaders draw, turned into a
+ * `GenerationLayout` a GPU compute pass can dispatch against without any
+ * per-invocation branching. Expected iteration counts are derived from
+ * `splitStarBudget`'s formulas (not hardcoded numbers) so these tests track
+ * the carve function's actual loop bounds rather than a frozen snapshot of
+ * them — see `carveStarLayout.ts`'s docblock for the per-population bounds
+ * this carving mirrors.
  */
 import { describe, expect, it } from 'vitest';
 import { carveStarLayout } from '../../../../tools/galaxy-renderer/src/model/carveStarLayout';

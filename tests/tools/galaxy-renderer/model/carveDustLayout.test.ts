@@ -1,11 +1,11 @@
 /**
  * carveDustLayout — table-driven CPU-side slot carving for the dust
- * populations `generateGalaxy` draws, turned into a `GenerationLayout` a GPU
- * compute pass can dispatch against. Expected iteration counts are derived
- * from the same formulas the dust builders use (armDust.ts:26, barDust.ts:20,
- * lenticularDust.ts:32+55, irregularDust.ts:21), scaled by `grainScale`, so
- * these tests track the CPU model's actual budgets rather than a frozen
- * snapshot of them.
+ * populations the generation compute shaders draw, turned into a
+ * `GenerationLayout` a GPU compute pass can dispatch against. Expected
+ * iteration counts are derived from the same budget formulas
+ * `carveDustLayout.ts` carries (see its docblock), scaled by `grainScale`,
+ * so these tests track the carve function's actual budgets rather than a
+ * frozen snapshot of them.
  */
 import { describe, expect, it } from 'vitest';
 import { carveDustLayout } from '../../../../tools/galaxy-renderer/src/model/carveDustLayout';

@@ -21,16 +21,3 @@ createRoot(root).render(
     <App />
   </Provider>,
 );
-
-// Dev-only GPU/CPU generation parity check, run from the browser console as
-// `await window.__galaxyParity()`. Gated on `import.meta.env.DEV` and lazily
-// imported so `runGpuParity` — which owns its own throwaway adapter/device,
-// entirely separate from the live engine — never enters the production
-// bundle (see `gpuParityHarness.ts`'s module header for why it's kept off to
-// the side of the real engine at all).
-if (import.meta.env.DEV) {
-  void import('./dev/gpuParityHarness').then(({ runGpuParity }) => {
-    (window as typeof window & { __galaxyParity: typeof runGpuParity }).__galaxyParity =
-      runGpuParity;
-  });
-}

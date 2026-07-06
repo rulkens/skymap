@@ -1,37 +1,39 @@
 /**
  * carveDustLayout — table-driven CPU-side slot carving for the dust
- * populations `generateGalaxy` draws, mirroring `carveStarLayout`'s shape
- * (see its docblock for why carving lives here, CPU-side, ahead of any GPU
- * dispatch). Every dust population is gated on the same outer condition the
- * CPU model checks before touching dust at all — `(params.dust ?? 1) > 0 &&
- * category !== 'elliptical'` (generateGalaxy.ts:68-79) — so an ineligible
- * combination returns the empty layout up front rather than evaluating a
- * table of formulas that would all come out zero anyway.
+ * populations the generation compute shaders draw, mirroring
+ * `carveStarLayout`'s shape (see its docblock for why carving lives here,
+ * CPU-side, ahead of any GPU dispatch). Every dust population is gated on
+ * the same outer condition that governs dust at all — `(params.dust ?? 1) >
+ * 0 && category !== 'elliptical'` — so an ineligible combination returns the
+ * empty layout up front rather than evaluating a table of formulas that
+ * would all come out zero anyway.
  *
- * Per-population budgets, ported verbatim from their builders and all scaled
- * by `grainScale(budget.totalStars) ** 2` (fewer stars -> coarser grains ->
- * proportionally fewer particles for the same visual density):
+ * Per-population budgets, matching the equivalent shader population's own
+ * budget, all scaled by `grainScale(budget.totalStars) ** 2` (fewer stars ->
+ * coarser grains -> proportionally fewer particles for the same visual
+ * density). Each budget is a target the shader meets exactly: the GPU dust
+ * pass runs one thread per output slot and hash-resamples the population's
+ * candidate space with a fresh draw stream until each slot lands an
+ * accepted candidate (see the resample-to-budget note in `generate.wesl`),
+ * so the shader always emits ~budget particles regardless of how sparse the
+ * accept rate is — a deliberate departure from a candidate cap, which would
+ * under-emit in seed-limited regimes.
  *  - armDust: `floor(30000*dust/g^2)` for spiral/barred with a nonzero arm
- *    budget (armDust.ts:26). This is the CPU builder's own budget — the count
- *    it pushes up to before stopping — reserved one output slot per particle.
- *    The GPU dust pass runs one thread per slot and RESAMPLES the arm-seed
- *    candidate space until each lands an accepted seed (see the
- *    resample-to-budget note in generate.wesl), so it writes ~budget particles
- *    just as the CPU does. The `armStarCount > 0` gate mirrors the shader,
- *    which reads its candidate space from the spiralArms star range and dies
- *    when that range is absent — reserving budget slots for a galaxy with no
- *    arm seeds to sample would be pure dead capacity.
+ *    budget. The `armStarCount > 0` gate mirrors the shader, which reads its
+ *    candidate space from the spiralArms star range and dies when that range
+ *    is absent — reserving budget slots for a galaxy with no arm seeds to
+ *    sample would be pure dead capacity.
  *  - barDust: `floor(9000*dust/g^2)` when the barred bar has nonzero length
- *    (barDust.ts:20) — gated on the bar geometry rather than `category`
- *    directly, mirroring `buildBarDust`'s own `barLength > 0` guard.
- *  - lenticularNucDust: `floor(12000*dust/g^2)` for lenticular galaxies
- *    (lenticularDust.ts:32), independent of the ring gate below.
+ *    — gated on the bar geometry rather than `category` directly, mirroring
+ *    the shader population's own `barLength > 0` guard.
+ *  - lenticularNucDust: `floor(12000*dust/g^2)` for lenticular galaxies,
+ *    independent of the ring gate below.
  *  - lenticularRingDust: `floor(34000*dustRingStrength/g^2)` for lenticular
- *    galaxies, only when `dustRingStrength > 0` (lenticularDust.ts:55) — a
- *    Sombrero-style ring is driven by its own strength knob, not `dust`.
+ *    galaxies, only when `dustRingStrength > 0` — a Sombrero-style ring is
+ *    driven by its own strength knob, not `dust`.
  *  - irregularDust: `floor(16000*dust/g^2)` for irregular galaxies with a
- *    nonzero clump budget (irregularDust.ts:21), the same resample-to-budget
- *    and `armStarCount > 0` gate as armDust above (the clump seeds live in the
+ *    nonzero clump budget, the same resample-to-budget and
+ *    `armStarCount > 0` gate as armDust above (the clump seeds live in the
  *    irregularClumps star range, sized by `armStarCount`).
  */
 import { grainScale } from './grainScale';

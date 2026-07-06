@@ -5,48 +5,47 @@
  * into one `GENERATION_UBO`-shaped `ArrayBuffer` a compute shader (Task 3)
  * can bind directly.
  *
- * What this function does NOT do is replay the CPU model's full per-star
- * draw sequence — `generateGalaxy` draws millions of `rand()`/`randNormal()`
- * calls per galaxy (one bulge/disk/arm/halo star at a time), and a GPU
- * compute pass can't share one serial RNG stream across billions of
- * parallel invocations the way a single-threaded CPU loop can. Task 3's
- * compute shaders instead seed a per-invocation stream from `seed` plus the
- * invocation index. What DOES need to come from one serial draw sequence —
- * because the spike computes them once, up front, not per star — are the
- * handful of *shared* quantities every invocation reads: the bar's tilt
- * angle, the irregular-galaxy clump centres, the lenticular dust-cloud
- * centres, and each arm's phase/pitch/weight/meander/clump/wave personality.
- * Those are exactly the draws this function replicates, in the CPU model's
- * exact order, so a GPU-generated galaxy's shared geometry matches its CPU
- * twin byte-for-byte:
+ * What this function does NOT do is replay a full per-star draw sequence —
+ * the spike's original model drew millions of `rand()`/`randNormal()` calls
+ * per galaxy (one bulge/disk/arm/halo star at a time), and a GPU compute
+ * pass can't share one serial RNG stream across billions of parallel
+ * invocations the way a single-threaded CPU loop can. The generation compute
+ * shaders instead seed a per-invocation stateless hash from `seed` plus the
+ * invocation index (see `lib/generate.wesl`'s header for the determinism
+ * contract this gives up in exchange). What DOES need to come from one
+ * serial draw sequence — because the spike computes them once, up front,
+ * not per star — are the handful of *shared* quantities every invocation
+ * reads: the bar's tilt angle, the irregular-galaxy clump centres, the
+ * lenticular dust-cloud centres, and each arm's
+ * phase/pitch/weight/meander/clump/wave personality. Those are exactly the
+ * draws this function replicates here, CPU-side, in the spike's exact order,
+ * so every invocation of the compute shaders reads the same shared geometry
+ * a single serial draw sequence would have produced:
  *
- *  - `asymStream` (seeded by `asymSeed`): the four asymmetry values
- *    (`createGalaxyBuildContext.ts:60-68`), then — only when arms would be
- *    built (`armStarCount > 0 && category !== 'irregular'`, matching
- *    `spiralArms.ts:41`'s own guard) — seven more draws per arm (phase,
- *    pitch, weight, meanderAmp, meanderFreq, meanderPhase, fadeRadius;
- *    `spiralArms.ts:100-118`). The `weightSum` field (stored in the arms
- *    scalar group) accumulates the weight draws from this stream
- *    (`spiralArms.ts:102-103`), making it part of the asymmetry family
- *    even though it lives in a different field group.
+ *  - `asymStream` (seeded by `asymSeed`): the four asymmetry values, then —
+ *    only when arms would be built (`armStarCount > 0 && category !==
+ *    'irregular'`) — seven more draws per arm (phase, pitch, weight,
+ *    meanderAmp, meanderFreq, meanderPhase, fadeRadius). The `weightSum`
+ *    field (stored in the arms scalar group) accumulates the weight draws
+ *    from this stream, making it part of the asymmetry family even though
+ *    it lives in a different field group.
  *  - `clumpStream`/`waveStream` (seeded by `clumpSeed`/`waveSeed`): four
- *    draws per arm each (`spiralArms.ts:107-114`), under the same arms
- *    guard — scoped to their own streams so dialling one doesn't perturb
- *    the other or the asymmetry family.
+ *    draws per arm each, under the same arms guard — scoped to their own
+ *    streams so dialling one doesn't perturb the other or the asymmetry
+ *    family.
  *  - `mainStream` (seeded by `seed`): the bar-tilt angle via
- *    `computeBarGeometry` (always, every category — model.js:229), then
- *    the seven irregular clump centres when `category === 'irregular'`
- *    (`irregularClumps.ts:47-55`), then the 34 lenticular cloud centres
- *    when `category === 'lenticular'` (`lenticularDust.ts:26-30`). A galaxy
- *    is only ever one category, so at most one of those two blocks actually
- *    draws; the other's array stays zero-filled, matching every other
- *    ineligible field in this packer (a builder that doesn't run for this
- *    galaxy contributes no draws and no non-zero bytes, not a placeholder
- *    value).
+ *    `computeBarGeometry` (always, every category — model.js:229), then the
+ *    seven irregular clump centres when `category === 'irregular'`, then
+ *    the 34 lenticular cloud centres when `category === 'lenticular'`. A
+ *    galaxy is only ever one category, so at most one of those two blocks
+ *    actually draws; the other's array stays zero-filled, matching every
+ *    other ineligible field in this packer (a population that doesn't run
+ *    for this galaxy contributes no draws and no non-zero bytes, not a
+ *    placeholder value).
  *
  * Every other field is a pure function of `params`/`budget` — no draw order
- * to get wrong, just the same formula the corresponding CPU builder uses at
- * its point of use.
+ * to get wrong, just the same formula the corresponding generation shader
+ * population uses at its point of use.
  */
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 import { gaussian } from '../../../utils/random/gaussian';
@@ -90,7 +89,7 @@ export function packGenerationUniforms(
 ): ArrayBuffer {
   const category = classifyHubbleType(params.type);
 
-  // --- Scale constants (createGalaxyBuildContext.ts:45-50) ----------------
+  // --- Scale constants, per the spike's fixed geometry ratios -------------
   const outerRadius = 10 * (params.radius || 1);
   const diskScaleLen = outerRadius / 3.2;
   const bulgeRadius = outerRadius * 0.34 * (params.bulgeSize || 1);
@@ -194,7 +193,7 @@ export function packGenerationUniforms(
     }
   }
 
-  // --- Arms scalar group (spiralArms.ts:60-98) -----------------------------
+  // --- Arms scalar group, shared by every arm the shader draws -------------
   const armStartRadius = Math.max(
     category === 'barred' ? bar.barLength * 0.9 : bulgeRadius * 0.55,
     bulgeRadius * 0.4,
@@ -202,7 +201,7 @@ export function packGenerationUniforms(
   const armWidthFactor = 0.1 * (params.armWidth ?? 1);
   const armInnerRampW = Math.max(bulgeRadius * 0.6, outerRadius * 0.14);
 
-  // --- Dust scalar group (createDustField.ts:18-22, lenticularDust.ts:50-55)
+  // --- Dust scalar group, shared by every dust population the shader draws
   const dustAmount = params.dust ?? 1;
   const dustNoiseAmt = params.dustNoise ?? 0.6;
   const noiseFreq = (2.4 * (params.dustNoiseScale ?? 1)) / outerRadius;
@@ -222,7 +221,7 @@ export function packGenerationUniforms(
   // --- Palette ---------------------------------------------------------------
   const hii = hiiPalette(params.metallicity ?? 0.5);
 
-  // --- Warp (makeWarpOffset.ts:31-33) ----------------------------------------
+  // --- Warp ------------------------------------------------------------------
   const warpStrength = params.warpStrength ?? 0;
   const warpTwist = params.warpTwist ?? 0;
   const warpStartRadius = outerRadius * (params.warpStart ?? 0.3);
