@@ -13,6 +13,7 @@
  */
 
 import type { ReferenceGalaxy } from '../../@types/data/ReferenceGalaxy';
+import { MILKY_WAY_GALAXY_PARAMS } from '../../../../src/data/milkyWay/milkyWayGalaxyParams';
 
 export const REFERENCE_GALAXIES: readonly ReferenceGalaxy[] = [
   {
@@ -235,34 +236,10 @@ export const REFERENCE_GALAXIES: readonly ReferenceGalaxy[] = [
       'Our own galaxy: a barred spiral with a central bar (~45° to the Sun line), four main arm segments, and a WARPED, twisted outer disk — the twist mapped directly by Cepheids (Chen et al. 2019).',
     credit: 'model — no face-on photograph of the Milky Way is possible',
     img: null,
-    params: {
-      type: 'SBb',
-      armCount: 4,
-      armWinding: 0.32,
-      armWidth: 1.5,
-      armStrength: 1.0,
-      subArms: 0.66,
-      armFalloff: 0.48,
-      armEdgeVar: 0.48,
-      armClump: 0.62,
-      armWave: 0.94,
-      barStrength: 0.6,
-      bulgeSize: 0.45,
-      bulgeFalloff: 0.7,
-      dust: 0.5,
-      dustNoise: 0.5,
-      dustNoiseScale: 1.65,
-      hii: 1.35,
-      youngStars: 0.56,
-      metallicity: 0.56,
-      diskThickness: 0.5,
-      warpStrength: 0.15,
-      warpTwist: 2.4,
-      irregularity: 0.6,
-      globularCount: 60,
-      radius: 1.05,
-      starCount: 200000,
-    },
+    // Single source of truth: src/data/milkyWay/milkyWayGalaxyParams.ts. The
+    // main-app renderer imports the same constant, so the tool and the app
+    // can never quietly render two different "Milky Way"s.
+    params: MILKY_WAY_GALAXY_PARAMS,
     view: { az: 0.5, el: 0.5, dist: 30 },
   },
 ];
