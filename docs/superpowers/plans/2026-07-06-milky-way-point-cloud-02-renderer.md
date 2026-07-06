@@ -101,8 +101,8 @@ export function milkyWayModelMatrix(): Float32Array;
 
 This is `worldToGalactic` transposed + the `galacticToShader` swizzle folded in — the exact frame the impostor rendered in. wgpu-matrix gotchas apply: `mat4.create()` is ZEROS; compose explicitly (e.g. start from `mat4.translation`, multiply the hand-built rotation columns, then `mat4.scale`) with dst args last.
 
-- [ ] Failing tests: `rotation columns are the WESL galactic basis, swizzled` — scrape `GAL_X_EQ`/`GAL_Y_EQ`/`GAL_Z_EQ` literals from `src/services/gpu/shaders/lib/util.wesl` via `readFileSync` + regex (the `constants.parity.test.ts` pattern) and assert matrix columns 0/1/2 equal (GAL_X_EQ, GAL_Z_EQ, GAL_Y_EQ) × `MILKY_WAY_MODEL_SCALE`; `translation lanes are MILKY_WAY_CENTER_WORLD` (elements 12..14); `a local +y unit vector lands on the NGP direction scaled by k, offset by the centre` (end-to-end transform of `[0,1,0]`); `bottom row is 0,0,0,1`.
-- [ ] Implement. Full gates. Commit.
+- [x] Failing tests: `rotation columns are the WESL galactic basis, swizzled` — scrape `GAL_X_EQ`/`GAL_Y_EQ`/`GAL_Z_EQ` literals from `src/services/gpu/shaders/lib/util.wesl` via `readFileSync` + regex (the `constants.parity.test.ts` pattern) and assert matrix columns 0/1/2 equal (GAL_X_EQ, GAL_Z_EQ, GAL_Y_EQ) × `MILKY_WAY_MODEL_SCALE`; `translation lanes are MILKY_WAY_CENTER_WORLD` (elements 12..14); `a local +y unit vector lands on the NGP direction scaled by k, offset by the centre` (end-to-end transform of `[0,1,0]`); `bottom row is 0,0,0,1`.
+- [x] Implement. Full gates. Commit.
 
 ---
 
