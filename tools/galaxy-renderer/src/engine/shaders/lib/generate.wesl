@@ -1282,32 +1282,45 @@ fn buildArmDust(j: u32) -> DustRec {
   return dead; // all attempts missed — the <0.3% shortfall
 }
 
-// buildBarDust — two straight dust lanes along the bar's leading edges,
-// symmetric about centre with a gaussian end-fade. Ports barDust.ts:22-39. No
-// seed reuse — a pure count loop, carved only when the barred bar has nonzero
-// length. NOTE the SIZE-BEFORE-OPACITY draw order (slot 8 size, slot 9
-// opacity): the CPU evaluates addDust's size argument before its opacity
-// argument (barDust.ts:36 then :37), the opposite of armDust — the tables
-// encode each file's own order and it is NOT normalised.
+// S-curve dust-lane tuning knobs. BAR_LANE_S_STEEP sets how sharply the two
+// lanes cross sides at the nucleus (higher = tighter crossover); BAR_LANE_BOW
+// sets how far the lane ends peel outward toward the arm roots. Live-tuned.
+const BAR_LANE_S_STEEP: f32 = 2.2;
+const BAR_LANE_BOW: f32 = 0.18;
+
+// buildBarDust — the two offset dust lanes of a barred spiral, shaped after
+// NGC 1300 / NGC 1365 rather than as straight rails. Each lane hugs its bar
+// half's leading edge, then the pair swaps sides through the nucleus via a
+// tanh S-curve (BAR_LANE_S_STEEP) — a gentle point-symmetric crossover — while
+// an antisymmetric cubic bow (BAR_LANE_BOW) peels the lane ends outward toward
+// the arm roots, in the same rotational sense as the spiral. A straight-lane
+// bar reads as two artificial parallel rails through the centre; the S-plus-
+// bow morphology is what makes it look grown. No seed reuse — a pure count
+// loop, carved only when the barred bar has nonzero length. NOTE the SIZE-
+// BEFORE-OPACITY draw order (slot 8 size, slot 9 opacity): size is drawn
+// before opacity, the opposite of armDust — the slot tables are per-builder
+// and NOT normalised.
 fn buildBarDust(i: u32) -> DustRec {
   var dead: DustRec;
   dead.alive = false;
   let seed = gen.seed;
   let pop = 9u;
 
-  let along = genRand(seed, pop, i, 0u) * 2.0 - 1.0; // slot 0 — barDust.ts:23
-  let side = select(-1.0, 1.0, genRand(seed, pop, i, 1u) < 0.5); // slot 1 lane sign — :24
-  let laneSide = side * gen.barLength * (0.05 + 0.05 * genRand(seed, pop, i, 2u)); // slot 2 width — :24
-  let localX = along * gen.barLength * 0.92; // :25
-  let localZ = laneSide + genNormal(seed, pop, i, 3u) * gen.barLength * 0.04; // slots 3-4 — :26
-  let x = localX * gen.cosBar - localZ * gen.sinBar; // :27
-  let z = localX * gen.sinBar + localZ * gen.cosBar; // :28
-  let y = genNormal(seed, pop, i, 5u) * gen.diskHeight * 0.4; // slots 5-6 — :29
-  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 7u); // slot 7 keep gate — :30
-  if (!m.keep) { return dead; } // :31
+  let t = genRand(seed, pop, i, 0u) * 2.0 - 1.0; // slot 0 — position along bar
+  let lane = select(-1.0, 1.0, genRand(seed, pop, i, 1u) < 0.5); // slot 1 — which of the two lanes
+  let offAmp = gen.barLength * (0.06 + 0.05 * genRand(seed, pop, i, 2u)); // slot 2 — lane offset amplitude
+  let sCurve = tanh(t * BAR_LANE_S_STEEP); // lanes swap sides through the nucleus
+  let bow = BAR_LANE_BOW * gen.barLength * t * t * t; // antisymmetric cubic: ends peel outward toward the arm roots
+  let localX = t * gen.barLength * 0.92;
+  let localZ = lane * offAmp * sCurve + bow + genNormal(seed, pop, i, 3u) * gen.barLength * 0.045; // slots 3-4
+  let x = localX * gen.cosBar - localZ * gen.sinBar;
+  let z = localX * gen.sinBar + localZ * gen.cosBar;
+  let y = genNormal(seed, pop, i, 5u) * gen.diskHeight * 0.4; // slots 5-6
+  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 7u); // slot 7 keep gate
+  if (!m.keep) { return dead; }
 
-  let size = gen.outerRadius * (0.008 + 0.013 * genRand(seed, pop, i, 8u)) * gen.grainScale * m.sz; // slot 8 — :36
-  let opacity = (0.06 + 0.1 * genRand(seed, pop, i, 9u)) * gen.dustAmount * exp(-along * along * 1.2) * m.op; // slot 9 — :37
+  let size = gen.outerRadius * (0.008 + 0.013 * genRand(seed, pop, i, 8u)) * gen.grainScale * m.sz; // slot 8
+  let opacity = (0.06 + 0.1 * genRand(seed, pop, i, 9u)) * gen.dustAmount * exp(-t * t * 1.2) * m.op; // slot 9 — end-fade
   return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
 }
 
