@@ -264,7 +264,16 @@ function oscOffset(compiled: CompiledClip, ch: Channel, t: number): number {
     if (osc.channel !== ch) continue;
     if (t < osc.startSec || t >= osc.endSec) continue; // outside the window → silent
     const env = oscEnvelope(t - osc.startSec, osc.endSec - osc.startSec, osc.fade, osc.ease);
-    total += osc.amp * env * Math.sin((2 * Math.PI * t) / osc.period);
+    // Windowed bobs read their phase WINDOW-LOCALLY, so the sine starts at 0
+    // where the window starts and a period fitted to the window (dwellDrift's
+    // integer-cycle fit) ends at 0 on the cut — the same dwell swings the same
+    // way wherever it sits in the timeline. Absolute-time phase would make the
+    // swing (and the fade's alignment against its zero crossings) depend on
+    // the window's timeline position. Perpetual bobs (startSec = −∞) keep
+    // absolute phase — window-local would be Infinity arithmetic, and with no
+    // window there is nothing to align to anyway.
+    const phaseT = osc.startSec === -Infinity ? t : t - osc.startSec;
+    total += osc.amp * env * Math.sin((2 * Math.PI * phaseT) / osc.period);
   }
   return total;
 }
