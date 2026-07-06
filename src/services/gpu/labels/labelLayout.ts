@@ -29,6 +29,16 @@
  *
  * The "you are here" marker uses `'center'` so the vertical line
  * passes through the middle of the text rather than its left edge.
+ *
+ * ## Line breaks
+ *
+ * `'\n'` starts a new line: the pen returns to 0, the baseline drops by
+ * the font's `lineHeight`, and kerning never carries across the break.
+ * The alignX shift is applied PER LINE against that line's own width, so
+ * a centered two-line label shares a centre rather than a left edge —
+ * a global shift by the widest line would left-align the narrower one.
+ * Wrapping (deciding WHERE to break) stays with the producer; this
+ * module only honours breaks already present in the string.
  */
 import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
 import type { GlyphQuad } from '../../../@types/rendering/GlyphQuad';
@@ -43,46 +53,51 @@ export function layoutLabel(
   alignY: LabelAlignY = 'baseline',
 ): GlyphQuad[] {
   const quads: GlyphQuad[] = [];
-  let penX = 0;
-  let prevCodepoint: number | undefined;
 
-  for (const ch of text) {
-    const cp = ch.codePointAt(0);
-    if (cp === undefined) continue;
-    const g = lookupGlyph(metrics, cp);
-    if (!g) {
-      prevCodepoint = undefined;
-      continue;
-    }
-    if (prevCodepoint !== undefined) {
-      const k = metrics.kerning.get(`${prevCodepoint},${cp}`);
-      if (k) penX += k;
-    }
-    quads.push({
-      localOffsetX: penX + g.offset.x,
-      localOffsetY: g.offset.y,
-      localSizeW: g.size.w,
-      localSizeH: g.size.h,
-      uvU0: g.uv.u0,
-      uvV0: g.uv.v0,
-      uvU1: g.uv.u1,
-      uvV1: g.uv.v1,
-    });
-    penX += g.advance;
-    prevCodepoint = cp;
-  }
+  text.split('\n').forEach((line, lineIdx) => {
+    const lineY = lineIdx * metrics.lineHeight;
+    const lineStart = quads.length;
+    let penX = 0;
+    let prevCodepoint: number | undefined;
 
-  // After the layout pass, `penX` holds the total advance width of the
-  // string (sum of glyph advances + kerning).  Apply the alignment shift
-  // by subtracting a fraction of that width from every glyph's offset.
-  // Skipping the loop for the no-op 'left' case keeps the common path
-  // allocation-free (no second pass over the quads array).
-  if (alignX !== 'left' && quads.length > 0) {
-    const shift = alignX === 'center' ? penX * 0.5 : penX;
-    for (const q of quads) {
-      q.localOffsetX -= shift;
+    for (const ch of line) {
+      const cp = ch.codePointAt(0);
+      if (cp === undefined) continue;
+      const g = lookupGlyph(metrics, cp);
+      if (!g) {
+        prevCodepoint = undefined;
+        continue;
+      }
+      if (prevCodepoint !== undefined) {
+        const k = metrics.kerning.get(`${prevCodepoint},${cp}`);
+        if (k) penX += k;
+      }
+      quads.push({
+        localOffsetX: penX + g.offset.x,
+        localOffsetY: lineY + g.offset.y,
+        localSizeW: g.size.w,
+        localSizeH: g.size.h,
+        uvU0: g.uv.u0,
+        uvV0: g.uv.v0,
+        uvU1: g.uv.u1,
+        uvV1: g.uv.v1,
+      });
+      penX += g.advance;
+      prevCodepoint = cp;
     }
-  }
+
+    // After the line's layout pass, `penX` holds its total advance width
+    // (sum of glyph advances + kerning).  Apply the alignment shift by
+    // subtracting a fraction of that width from the LINE's glyphs only.
+    // Skipping the loop for the no-op 'left' case keeps the common path
+    // allocation-free (no second pass over the quads array).
+    if (alignX !== 'left') {
+      const shift = alignX === 'center' ? penX * 0.5 : penX;
+      for (let i = lineStart; i < quads.length; i++) {
+        quads[i]!.localOffsetX -= shift;
+      }
+    }
+  });
 
   // Vertical alignment: same post-pass shape as alignX, but the
   // reference span is the bounding box of the laid-out glyphs (not
@@ -107,8 +122,7 @@ export function layoutLabel(
     //   center  → midpoint of bbox
     //   top     → top of highest glyph
     //   bottom  → bottom of lowest glyph
-    const shiftY =
-      alignY === 'center' ? (minY + maxY) * 0.5 : alignY === 'top' ? minY : maxY;
+    const shiftY = alignY === 'center' ? (minY + maxY) * 0.5 : alignY === 'top' ? minY : maxY;
     for (const q of quads) {
       q.localOffsetY -= shiftY;
     }
