@@ -41,6 +41,27 @@ export default defineConfig({
   root: resolve(__dirname),
   publicDir: resolve(__dirname, '../../public'),
   server: { port: 5400 },
+  resolve: {
+    // Cross-root WESL: the shared galaxyGen shaders live under the MAIN app's
+    // wesl root (src/services/gpu/shaders/galaxyGen) and are reached here
+    // through the symlink at src/engine/shaders/galaxyGen — one source, no
+    // copy. WESL package paths are root-driven (an include glob alone can
+    // discover a file outside the root but cannot bind package::galaxyGen::,
+    // and two viteWesl instances conflict — the first claims every ?static
+    // load), so the file must APPEAR inside this tool's root. The alias
+    // rewrites any import targeting .../shaders/galaxyGen/*.wesl onto the
+    // symlinked path so the wesl-plugin sees an id inside its root and names
+    // the module package::galaxyGen::...; preserveSymlinks stops Vite from
+    // realpath-ing that id back out to src/services/..., which would undo
+    // the alias.
+    preserveSymlinks: true,
+    alias: [
+      {
+        find: /^(.*)\/shaders\/galaxyGen\/(.+\.wesl(\?.+)?)$/,
+        replacement: `${resolve(__dirname, 'src/engine/shaders/galaxyGen')}/$2`,
+      },
+    ],
+  },
   plugins: [
     viteWesl({
       extensions: [staticBuildExtension],
