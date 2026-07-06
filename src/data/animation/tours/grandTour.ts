@@ -104,9 +104,7 @@ export const grandTour: Tour = {
         body: 'Most of the universe is the empty side of that web. Voids like this one stretch 300 million light-years across.',
         position: 'bottom-left',
       },
-      // Short by design — the contrast against the web registers quickly,
-      // and the tour never lingers on nothing.
-      dwellClip: dwellDrift(6),
+      dwellClip: dwellDrift(12),
     },
     {
       enterClip: deepField,

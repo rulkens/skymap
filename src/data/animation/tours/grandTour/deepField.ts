@@ -34,7 +34,7 @@ const ORIGIN: Vec3 = [0, 0, 0];
 
 // The pull's landing — deep enough that the quasar shell dominates and the
 // local web reads as a core. Eye-tuned against the milliquas density.
-const DEEP_FIELD_MPC = 2500;
+const DEEP_FIELD_MPC = 8251.29;
 
 export const deepField: ClipData = {
   start: 'live',
