@@ -56,13 +56,14 @@ export const grandTour: Tour = {
       dwellClip: approachM31Dwell,
     },
     {
-      enterClip: neighbourhoodFlythrough,
+      // No enter clip: the flythrough IS the dwell, so the caption reveals at
+      // beat entry and rides the whole sweep (captions reveal on dwell start).
       caption: {
         title: 'Our neighbourhood',
         body: 'Our galaxy runs with neighbours like M81 and Centaurus A, tens of millions of light-years out.',
         position: 'bottom-left',
       },
-      dwellClip: dwellDrift(12),
+      dwellClip: neighbourhoodFlythrough,
     },
     {
       enterClip: approachVirgo,

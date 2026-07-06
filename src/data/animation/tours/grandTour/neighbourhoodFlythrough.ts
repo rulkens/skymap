@@ -4,6 +4,15 @@
  * Pinwheel, the Whirlpool, the Sombrero, the Southern Pinwheel — settling on
  * Centaurus A, where the caption's two named galaxies bookend the ride.
  *
+ * This clip is the beat's DWELL, and the beat has no enter clip. Captions
+ * reveal when the dwell starts, so a flight authored as an enter clip plays
+ * wordless and the title only lands on settle — the wrong reading for a beat
+ * whose caption describes the ride itself. With no enter clip the dwell (and
+ * the caption) starts at once, and the text rides the whole sweep. The trade:
+ * pause/resume replays a dwell from its start into the remaining window, so
+ * a mid-flight pause restarts the ride — felt more on a long flythrough than
+ * on a drift, and accepted (see pausableDwellSaga).
+ *
  * Famous galaxies are discrete subjects with a real pass-by radius, so the
  * flyPath swoops the eye BESIDE each one (4 radii off the outside of the
  * bend) rather than through it — that close swing-past is the whole point of
@@ -42,6 +51,7 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
+import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
 const CEN_A = focusId('c77');
 
@@ -75,5 +85,8 @@ export const neighbourhoodFlythrough: ClipData = {
       },
     ),
     focus(CEN_A),
+    // A short drift at Centaurus A so the settle breathes before the
+    // auto-advance — without it the cut fires the instant the spline lands.
+    ...dwellDrift(6).timeline,
   ],
 };
