@@ -122,8 +122,8 @@ This is `worldToGalactic` transposed + the `galacticToShader` swizzle folded in 
 export function cameraBillboardBasis(cam: OrbitCamera): { right: Vec3; up: Vec3 };
 ```
 
-- [ ] Failing tests: `identity pose gives world-aligned axes` (camera on +Z looking at origin → right ≈ +X, up ≈ +Y); `axes are unit length and mutually orthogonal` (also orthogonal to forward); `roll rotates the basis about the view direction` (roll π/2 swaps right/up up to sign — mirror `computeViewProj.ts`'s Rodrigues handling, cited there at the roll block).
-- [ ] Implement (one symbol, one file). Full gates. Commit.
+- [x] Failing tests: `identity pose gives world-aligned axes` (camera on +Z looking at origin → right ≈ +X, up ≈ +Y); `axes are unit length and mutually orthogonal` (also orthogonal to forward); `roll rotates the basis about the view direction` (roll π/2 swaps right/up up to sign — mirror `computeViewProj.ts`'s Rodrigues handling, cited there at the roll block).
+- [x] Implement (one symbol, one file). Full gates. Commit.
 
 ---
 
