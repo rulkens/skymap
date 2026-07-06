@@ -11,7 +11,7 @@
  * pass can't share one serial RNG stream across billions of parallel
  * invocations the way a single-threaded CPU loop can. The generation compute
  * shaders instead seed a per-invocation stateless hash from `seed` plus the
- * invocation index (see `lib/generate.wesl`'s header for the determinism
+ * invocation index (see `galaxyGen/generate.wesl`'s header for the determinism
  * contract this gives up in exchange). What DOES need to come from one
  * serial draw sequence — because the spike computes them once, up front,
  * not per star — are the handful of *shared* quantities every invocation

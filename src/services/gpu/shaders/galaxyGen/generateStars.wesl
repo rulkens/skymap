@@ -44,16 +44,16 @@
 // re-deriving population membership from some other predicate, would be a
 // second place that has to agree with populationIds.ts instead of one.
 
-import package::lib::generate::gen;
-import package::lib::generate::StarRec;
-import package::lib::generate::writeStar;
-import package::lib::generate::buildBulge;
-import package::lib::generate::buildBar;
-import package::lib::generate::buildDisk;
-import package::lib::generate::buildArmSlot;
-import package::lib::generate::buildIrregularSlot;
-import package::lib::generate::buildHalo;
-import package::lib::generate::buildGlobularStar;
+import package::galaxyGen::generate::gen;
+import package::galaxyGen::generate::StarRec;
+import package::galaxyGen::generate::writeStar;
+import package::galaxyGen::generate::buildBulge;
+import package::galaxyGen::generate::buildBar;
+import package::galaxyGen::generate::buildDisk;
+import package::galaxyGen::generate::buildArmSlot;
+import package::galaxyGen::generate::buildIrregularSlot;
+import package::galaxyGen::generate::buildHalo;
+import package::galaxyGen::generate::buildGlobularStar;
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {

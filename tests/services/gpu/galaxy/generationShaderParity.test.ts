@@ -27,7 +27,7 @@ import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUb
 import { CATEGORY_CODE } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
 import { POPULATION_IDS } from '../../../../src/services/gpu/galaxy/populationIds';
 
-const SHADERS = 'tools/galaxy-renderer/src/engine/shaders';
+const SHADERS = 'src/services/gpu/shaders/galaxyGen';
 
 function readShader(rel: string): string {
   return readFileSync(join(process.cwd(), SHADERS, rel), 'utf-8');
@@ -38,14 +38,14 @@ function readShader(rel: string): string {
 type WeslField = { readonly name: string; readonly bytes: number };
 
 /**
- * Extract the `struct GenUniforms { ... }` body from lib/generate.wesl and
+ * Extract the `struct GenUniforms { ... }` body from generate.wesl and
  * parse each field's name + byte size, in declaration order. Field types are
  * f32/u32 (4 bytes), vec4<..> (16), or array<vec4<..>, N> (N*16). The type
  * regex tolerates the comma inside `array<vec4<f32>, 32>` that a naive
  * `[^,]+` split would choke on.
  */
 function parseGenUniformsStruct(): WeslField[] {
-  const text = readShader('lib/generate.wesl');
+  const text = readShader('generate.wesl');
   const block = /struct\s+GenUniforms\s*\{([\s\S]*?)\n\}/.exec(text);
   if (!block) {
     throw new Error(
@@ -96,7 +96,7 @@ describe('GenUniforms ↔ GENERATION_UBO parity', () => {
   });
 
   it('the struct-total comment in generate.wesl agrees with the TS byteLength', () => {
-    const text = readShader('lib/generate.wesl');
+    const text = readShader('generate.wesl');
     const claim = /total\s+(\d+)\s+bytes/.exec(text);
     expect(claim, 'parity: no `total N bytes` comment found in generate.wesl').not.toBeNull();
     expect(parseInt(claim![1]!, 10)).toBe(GENERATION_UBO.byteLength);
@@ -148,7 +148,7 @@ describe('population-id switch ↔ POPULATION_IDS parity', () => {
 // --- (c) gen.category == Nu literals ↔ CATEGORY_CODE ------------------------
 
 describe('gen.category literals ↔ CATEGORY_CODE parity', () => {
-  const text = readShader('lib/generate.wesl');
+  const text = readShader('generate.wesl');
   const re = /gen\.category\s*==\s*(\d+)u/g;
   const literals: number[] = [];
   let m: RegExpExecArray | null;

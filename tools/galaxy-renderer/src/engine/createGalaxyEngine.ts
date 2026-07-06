@@ -51,7 +51,7 @@
  * per-extra UBO carries the rigid transform + size scale in the extra lanes
  * (`packGenerationUniforms`), and the compute passes place every star/dust
  * record in world space as their final write step (`applyExtraTransform` in
- * `lib/generate.wesl`). The vertex buffer that comes out is already
+ * `galaxyGen/generate.wesl`). The vertex buffer that comes out is already
  * world-placed, so drawing an extra is a plain instanced `draw` against its
  * own buffers — no per-draw model-matrix uniform, and nothing rewritten after
  * the generation submit.
@@ -81,7 +81,7 @@
  *    (`GenerationLayout.capacity`), not a count of "live" (visibly nonzero)
  *    records — see `setParams`'s docblock.
  *  - There is no serial-RNG replay: every star/dust draw comes from a
- *    stateless per-invocation hash (see `lib/generate.wesl`'s header), not a
+ *    stateless per-invocation hash (see `galaxyGen/generate.wesl`'s header), not a
  *    single-threaded generator stepping through one draw at a time. The
  *    determinism contract that DOES hold is CPU-free: same params in, same
  *    GPU buffer contents out, every time.

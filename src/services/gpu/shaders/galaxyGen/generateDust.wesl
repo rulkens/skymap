@@ -38,14 +38,14 @@
 // pass: one table both sides read, not an if/else chain re-deriving
 // population membership from some other predicate.
 
-import package::lib::generate::gen;
-import package::lib::generate::DustRec;
-import package::lib::generate::writeDust;
-import package::lib::generate::buildArmDust;
-import package::lib::generate::buildBarDust;
-import package::lib::generate::buildLenticularNucDust;
-import package::lib::generate::buildLenticularRingDust;
-import package::lib::generate::buildIrregularDust;
+import package::galaxyGen::generate::gen;
+import package::galaxyGen::generate::DustRec;
+import package::galaxyGen::generate::writeDust;
+import package::galaxyGen::generate::buildArmDust;
+import package::galaxyGen::generate::buildBarDust;
+import package::galaxyGen::generate::buildLenticularNucDust;
+import package::galaxyGen::generate::buildLenticularRingDust;
+import package::galaxyGen::generate::buildIrregularDust;
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {

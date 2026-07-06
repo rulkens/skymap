@@ -1,4 +1,4 @@
-// lib/generate.wesl — the shared GPU galaxy-generation library: a stateless
+// galaxyGen/generate.wesl — the shared GPU galaxy-generation library: a stateless
 // hash RNG plus every population's generation math, consumed by the two
 // compute entry points (star pass, dust pass).
 //

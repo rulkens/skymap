@@ -10,7 +10,7 @@
  * rather than an if/else predicate chain.
  *
  * Per-population loop bounds, matching the equivalent population's shader
- * (`lib/generate.wesl`):
+ * (`galaxyGen/generate.wesl`):
  *  - bulge: `budget.bulgeCount`, an exact count — out-of-range draws are
  *    *resampled*, not skipped.
  *  - bar: barred galaxies spend `floor(diskCount*0.35)` of the disk budget on
