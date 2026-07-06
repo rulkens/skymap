@@ -457,6 +457,6 @@ irregularDust (12) — `irregularDust.ts:23-38`; same **resample-to-budget** sha
 
 - [x] Port the builders (mind each file's own size-vs-opacity draw order — the tables above already encode it; do not 'normalise' them).
 - [x] `npm run typecheck` + full `npm test` green.
-- [ ] **Checkpoint:** `window.__galaxyParity` across Sc, SBb, S0 (with and without dustRingStrength), Irr — dust totals within ±5% at all params (resample-to-budget makes the GPU match the CPU push-budget regardless of starCount; the old candidate cap is gone); star rows still PASS (regression guard on the shared sample fns).
+- [ ] **Checkpoint:** `window.__galaxyParity` across Sc, SBb, S0 (with and without dustRingStrength), Irr — dust totals within ±5% in the budget-limited regime (Sc/Irr/unbarred; barred presets over-emit per the ACCEPTED seed-limited deviation at the top of this plan — the plan-02 visual gate arbitrates) at all params (resample-to-budget makes the GPU match the CPU push-budget regardless of starCount; the old candidate cap is gone); star rows still PASS (regression guard on the shared sample fns).
 - [ ] Run the full harness table one more time on the default preset and paste it into the task summary — this is the parity record plan 02's cutover leans on.
 - [x] Commit.
