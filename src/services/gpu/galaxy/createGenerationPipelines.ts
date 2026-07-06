@@ -21,10 +21,14 @@
  * `encodeGeneration.ts` is where that's handled: it builds one bind group per
  * pipeline, at dispatch time, rather than trying to share one.
  */
-import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
-import generateStarsWgsl from './shaders/generateStars.wesl?static';
-import generateDustWgsl from './shaders/generateDust.wesl?static';
-import type { GenerationPipelines } from '../../../../src/@types/galaxy/GenerationPipelines';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+// Interim shader paths: the generation WESL still lives under the tool's
+// engine/shaders/ tree (plan 01 Task 5 moves it to ../shaders/galaxyGen/,
+// alongside the rest of this module's new src/ home). Flip these two once
+// that move lands — the tool build and this path must agree.
+import generateStarsWgsl from '../../../../tools/galaxy-renderer/src/engine/shaders/generateStars.wesl?static';
+import generateDustWgsl from '../../../../tools/galaxy-renderer/src/engine/shaders/generateDust.wesl?static';
+import type { GenerationPipelines } from '../../../@types/galaxy/GenerationPipelines';
 
 export function createGenerationPipelines(device: GPUDevice): GenerationPipelines {
   const starsModule = createShaderModuleWithDevLog(device, generateStarsWgsl, 'galaxy:genStars');

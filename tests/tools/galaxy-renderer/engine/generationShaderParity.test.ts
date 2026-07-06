@@ -23,8 +23,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { GENERATION_UBO } from '../../../../tools/galaxy-renderer/src/engine/generationUboLayout';
-import { CATEGORY_CODE } from '../../../../tools/galaxy-renderer/src/engine/packGenerationUniforms';
+import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
+import { CATEGORY_CODE } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
 import { POPULATION_IDS } from '../../../../src/services/gpu/galaxy/populationIds';
 
 const SHADERS = 'tools/galaxy-renderer/src/engine/shaders';

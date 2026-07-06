@@ -103,10 +103,11 @@ import { orbitEye } from './orbitEye';
 import { panAxes } from './panAxes';
 import { lensShift } from './lensShift';
 import { packCameraUniforms } from './packCameraUniforms';
-import { createGenerationPipelines } from './createGenerationPipelines';
-import { encodeGeneration } from './encodeGeneration';
-import { packGenerationUniforms } from './packGenerationUniforms';
-import { GENERATION_UBO } from './generationUboLayout';
+import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
+import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
+import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
+import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
+import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
 import { carveDustLayout } from '../../../../src/services/gpu/galaxy/carveDustLayout';
 import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
@@ -124,17 +125,6 @@ const BLOOM_MIPS = 5;
 
 /** HDR working format for the scene + bloom pyramid. galaxy-engine.js:17. */
 const HDR: GPUTextureFormat = 'rgba16float';
-
-/**
- * Bytes per generated star/dust record: 8 f32 lanes (`x,y,z,r,g,b,size,
- * brightness` for stars; `x,y,z,size,r,g,b,opacity` for dust — different
- * field order, same stride). The single record-size home: the star/dust
- * render pipelines' instance `arrayStride` reads it directly, so a stride
- * change is one edit here. It must still match `lib/generate.wesl`'s stride-8
- * output storage array, which lives across the CPU/GPU seam and so stays a
- * hand-mirror.
- */
-const GEN_RECORD_BYTES = 32;
 
 /**
  * A single generated extra galaxy: its GPU-filled star/dust vertex buffers,

@@ -24,8 +24,8 @@
  * dispatch — recording a zero-workgroup pass would be a no-op that still
  * costs a bind-group allocation and a pass begin/end pair for nothing.
  */
-import type { GenerationPipelines } from '../../../../src/@types/galaxy/GenerationPipelines';
-import type { GenerationLayout } from '../../../../src/@types/galaxy/GenerationLayout';
+import type { GenerationPipelines } from '../../../@types/galaxy/GenerationPipelines';
+import type { GenerationLayout } from '../../../@types/galaxy/GenerationLayout';
 
 /** Matches `@workgroup_size(256)` in both `generateStars.wesl` and `generateDust.wesl`. */
 const WORKGROUP_SIZE = 256;

@@ -47,20 +47,20 @@
  * to get wrong, just the same formula the corresponding generation shader
  * population uses at its point of use.
  */
-import { mulberry32 } from '../../../../src/utils/random/mulberry32';
-import { gaussian } from '../../../utils/random/gaussian';
-import { carveDustLayout } from '../../../../src/services/gpu/galaxy/carveDustLayout';
-import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
-import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
-import { computeBarGeometry } from '../../../../src/services/gpu/galaxy/computeBarGeometry';
-import { grainScale } from '../../../../src/services/gpu/galaxy/grainScale';
-import { hiiPalette } from '../../../../src/services/gpu/galaxy/hiiPalette';
-import { outerRadiusOf } from '../../../../src/services/gpu/galaxy/outerRadiusOf';
+import { mulberry32 } from '../../../utils/random/mulberry32';
+import { gaussian } from '../../../../tools/utils/random/gaussian';
+import { carveDustLayout } from './carveDustLayout';
+import { carveStarLayout } from './carveStarLayout';
+import { classifyHubbleType } from './classifyHubbleType';
+import { computeBarGeometry } from './computeBarGeometry';
+import { grainScale } from './grainScale';
+import { hiiPalette } from './hiiPalette';
+import { outerRadiusOf } from './outerRadiusOf';
 import { GENERATION_UBO } from './generationUboLayout';
-import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
-import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
-import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
-import type { StarBudget } from '../../../../src/@types/galaxy/StarBudget';
+import type { ExtraGalaxySpec } from '../../../@types/galaxy/ExtraGalaxySpec';
+import type { GalaxyCategory } from '../../../@types/galaxy/GalaxyCategory';
+import type { GalaxyParams } from '../../../@types/galaxy/GalaxyParams';
+import type { StarBudget } from '../../../@types/galaxy/StarBudget';
 
 /** `category` u32 encoding — append-only, mirrors the brief's field table. */
 export const CATEGORY_CODE: Record<GalaxyCategory, number> = {

@@ -9,8 +9,8 @@
  * angle, the disk scale, or any other unrelated field.
  */
 import { describe, expect, it } from 'vitest';
-import { GENERATION_UBO } from '../../../../tools/galaxy-renderer/src/engine/generationUboLayout';
-import { packGenerationUniforms } from '../../../../tools/galaxy-renderer/src/engine/packGenerationUniforms';
+import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
+import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
 import { carveDustLayout } from '../../../../src/services/gpu/galaxy/carveDustLayout';
 import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
 import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
