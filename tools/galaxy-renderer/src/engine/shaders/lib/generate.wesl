@@ -440,6 +440,179 @@ fn writeDust(index: u32, rec: DustRec) {
 }
 
 // ---------------------------------------------------------------------------
+// Population builders — batch A (bulge, bar, disk)
+// ---------------------------------------------------------------------------
+//
+// Each builder ports one CPU population loop body verbatim and returns the
+// StarRec for the given 'iteration'. The CPU loop is serial (one shared rand
+// stream, drawn in source order); here every draw reads a fixed SLOT so the
+// hash inputs never alias. The slot budget per builder is the enumeration the
+// Task-6 brief fixes; the numbered comments below map each draw to its slot.
+//
+// ## The rejection-retry convention (bulge, bar)
+//
+// The CPU rejects an out-of-range draw with 'i--; continue' — a *resample*
+// that leaves the population's record count unchanged (the loop keeps trying
+// until it lands in range). A stateless hash cannot 'redraw' from a stream,
+// so a rejected attempt k re-hashes the WHOLE iteration at slot + 64*k: each
+// retry gets its own disjoint 64-slot window so its draws never alias the
+// previous attempt's. After 8 attempts the record is declared dead — a
+// deliberate, negligible-probability divergence from the CPU's unbounded
+// resample, forced by the finite slot budget. Every galaxy-level value
+// (bulge axes, bar geometry, flattening...) comes from 'gen' — never
+// re-derived per invocation; only the per-STAR draws come from the hash.
+//
+// The CPU addStar composes the galactic-warp vertical offset onto y
+// (createGalaxyBuildContext.ts:110-121); each builder reproduces that with
+// 'y + warpOffset(x, z)' so the returned record already carries the warp.
+
+// buildBulge — old, warm stars in a triaxial spheroid. Ports bulge.ts:39-80.
+// Radial rejection loop; retry at +64*k, dead after 8. Two radial branches
+// (elliptical falloff pair bulge.ts:45-50 vs disk-bulge :52-57) share the
+// single radial draw at slot 0.
+fn buildBulge(iteration: u32) -> StarRec {
+  var dead: StarRec;
+  dead.alive = false;
+  let seed = gen.seed;
+  let pop = 0u;
+
+  for (var k = 0u; k < 8u; k = k + 1u) {
+    let base = 64u * k;
+    // slot 0: radial draw (shared by both radial branches — bulge.ts:45 / :52)
+    let u = genRand(seed, pop, iteration, base + 0u);
+    var dist: f32;
+    var brightnessFalloff: f32;
+    if (gen.category == 0u) {
+      // elliptical: heavy-tailed profile + soft brightness falloff (bulge.ts:45-50)
+      dist = gen.outerRadius * 0.16 * pow(-log(1.0 - u * 0.997), 1.3);
+      if (dist > gen.outerRadius * 1.6) { continue; } // bulge.ts:46-49 resample
+      brightnessFalloff = exp(-dist / (gen.outerRadius * (0.62 - 0.4 * gen.bulgeConcentration))); // bulge.ts:50
+    } else {
+      // disk-galaxy bulge: smaller, blends into disk (bulge.ts:52-57)
+      dist = gen.bulgeRadius * 0.55 * pow(-log(1.0 - u * 0.997), 1.25);
+      if (dist > gen.bulgeRadius * 2.8) { continue; } // bulge.ts:53-56 resample
+      brightnessFalloff = exp(-dist / (gen.bulgeRadius * (1.5 - 1.0 * gen.bulgeConcentration))); // bulge.ts:57
+    }
+    // Uniform direction on a sphere, squashed/rotated into a triaxial ellipsoid.
+    let cosLat = 2.0 * genRand(seed, pop, iteration, base + 1u) - 1.0; // slot 1 — bulge.ts:60
+    let sinLat = sqrt(1.0 - cosLat * cosLat);                          // bulge.ts:61
+    let lon = 2.0 * PI * genRand(seed, pop, iteration, base + 2u);     // slot 2 — bulge.ts:62
+    let bulgeAxisX = 1.0;                                              // createGalaxyBuildContext.ts:65 (constant, not in UBO)
+    let localX = dist * sinLat * cos(lon) * bulgeAxisX;                // bulge.ts:63
+    let localY = dist * cosLat * gen.flattening;                      // bulge.ts:64 (bulgeAxisY = flattening, ctx.ts:66)
+    let localZ = dist * sinLat * sin(lon) * gen.bulgeAxisZ;            // bulge.ts:65
+    let x = localX * gen.cosBulge - localZ * gen.sinBulge;             // bulge.ts:66
+    let z = localX * gen.sinBulge + localZ * gen.cosBulge;            // bulge.ts:67
+    let y = localY;                                                    // bulge.ts:68
+    // slot 3: warm/old population colour jitter (bulge.ts:69)
+    let color = tempColorRamp(0.27 + 0.15 * genRand(seed, pop, iteration, base + 3u));
+    // slot 4: size jitter (bulge.ts:77)
+    let size = gen.starSize * (0.8 + 0.5 * genRand(seed, pop, iteration, base + 4u));
+    // slots 5-7: randomLuminosity (bulge.ts:78)
+    let brightness = randomLuminosity(seed, pop, iteration, base + 5u) * 0.85 * brightnessFalloff;
+
+    var rec: StarRec;
+    rec.pos = vec3<f32>(x, y + warpOffset(x, z), z); // addStar warp — ctx.ts:120
+    rec.color = color;
+    rec.size = size;
+    rec.brightness = brightness;
+    rec.alive = true;
+    return rec;
+  }
+  return dead;
+}
+
+// buildBar — for barred spirals, an elongated stellar bar. Ports bar.ts:28-52.
+// |alongBar| > 1.25 rejection; retry at +64*k, dead after 8. Only reachable
+// when the bar range exists (carveStarLayout omits it for non-barred), so no
+// category test is needed inside the builder — bar.ts:22's guard is enforced
+// upstream by the range table.
+fn buildBar(iteration: u32) -> StarRec {
+  var dead: StarRec;
+  dead.alive = false;
+  let seed = gen.seed;
+  let pop = 1u;
+
+  for (var k = 0u; k < 8u; k = k + 1u) {
+    let base = 64u * k;
+    // slots 0-1: position along the bar, a clamped gaussian (bar.ts:29)
+    let alongBar = genNormal(seed, pop, iteration, base + 0u) * 0.44;
+    if (abs(alongBar) > 1.25) { continue; } // bar.ts:30-33 resample
+    let localX = alongBar * gen.barLength; // bar.ts:34
+    // slot 2: half-width, narrowing toward the tips (bar.ts:35)
+    let barHalfWidth = gen.barLength * (0.14 + 0.09 * genRand(seed, pop, iteration, base + 2u)) * (1.0 - 0.4 * abs(alongBar));
+    // slots 3-4: transverse scatter (bar.ts:36)
+    let localZ = genNormal(seed, pop, iteration, base + 3u) * barHalfWidth;
+    let x = localX * gen.cosBar - localZ * gen.sinBar; // bar.ts:37
+    let z = localX * gen.sinBar + localZ * gen.cosBar; // bar.ts:38
+    // slots 5-6: vertical scatter (bar.ts:39)
+    let y = genNormal(seed, pop, iteration, base + 5u) * gen.diskHeight * 1.4;
+    // slot 7: colour jitter (bar.ts:40)
+    let color = tempColorRamp(0.29 + 0.17 * genRand(seed, pop, iteration, base + 7u));
+    let endFade = exp(-alongBar * alongBar * 1.3); // bar.ts:41
+    // slot 8: size jitter (bar.ts:49)
+    let size = gen.starSize * (0.8 + 0.5 * genRand(seed, pop, iteration, base + 8u));
+    // slots 9-11: randomLuminosity (bar.ts:50)
+    let brightness = randomLuminosity(seed, pop, iteration, base + 9u) * 0.9 * endFade;
+
+    var rec: StarRec;
+    rec.pos = vec3<f32>(x, y + warpOffset(x, z), z); // addStar warp — ctx.ts:120
+    rec.color = color;
+    rec.size = size;
+    rec.brightness = brightness;
+    rec.alive = true;
+    return rec;
+  }
+  return dead;
+}
+
+// buildDisk — the smooth inter-arm stellar background. Ports disk.ts:47-73.
+// No retry loop: sampleDiskRadius CLAMPS rather than rejects (slots 0-11), and
+// the barred centre-fade at slot 12 is a SKIP (return dead, NO retry). The
+// skip is deliberate — conflating it with a resample would pad the barred disk
+// back up to diskCount stars and erase the centre fade the bar fills in
+// (disk.ts module header). Slot 12 is reserved for EVERY category so the
+// downstream slots line up regardless of the branch; a non-barred galaxy just
+// leaves it unhashed.
+fn buildDisk(iteration: u32) -> StarRec {
+  var dead: StarRec;
+  dead.alive = false;
+  let seed = gen.seed;
+  let pop = 2u;
+
+  // slots 0-11: rejection-sampled exponential radius, clamped (disk.ts:48)
+  var radius = sampleDiskRadius(seed, pop, iteration, 0u);
+  // slot 12: barred centre-fade gate — SKIP on reject (disk.ts:51-54)
+  if (gen.category == 3u) {
+    let t = radius / (gen.barLength * 1.15);
+    if (genRand(seed, pop, iteration, 12u) > t * t) {
+      return dead; // skip, not resample: shrinks the count on purpose (module header)
+    }
+  }
+  // slot 13: azimuth (disk.ts:55)
+  let angle = 2.0 * PI * genRand(seed, pop, iteration, 13u);
+  radius = applyLopsided(radius, angle); // disk.ts:56 — post-lopsided radius used below
+  let x = radius * cos(angle); // disk.ts:57
+  let z = radius * sin(angle); // disk.ts:58
+  // slots 14-15: vertical scatter, puffier near the bulge (disk.ts:60)
+  let y = genNormal(seed, pop, iteration, 14u) * gen.diskHeight * (0.6 + gen.bulgeRadius / (radius + gen.bulgeRadius));
+  // slot 16: colour — outskirts a little bluer/younger (disk.ts:62)
+  let color = tempColorRamp(0.34 + 0.3 * gen.youngFraction * (radius / gen.outerRadius) + 0.12 * genRand(seed, pop, iteration, 16u));
+  // slot 17: size jitter (disk.ts:70)
+  let size = gen.starSize * (0.75 + 0.5 * genRand(seed, pop, iteration, 17u));
+  // slots 18-20: randomLuminosity (disk.ts:71)
+  let brightness = randomLuminosity(seed, pop, iteration, 18u) * 1.35 * diskFalloff(radius, 1.7);
+
+  var rec: StarRec;
+  rec.pos = vec3<f32>(x, y + warpOffset(x, z), z); // addStar warp — ctx.ts:120
+  rec.color = color;
+  rec.size = size;
+  rec.brightness = brightness;
+  rec.alive = true;
+  return rec;
+}
+
+// ---------------------------------------------------------------------------
 // Task-7 seam — spiral-arm star sampling
 // ---------------------------------------------------------------------------
 

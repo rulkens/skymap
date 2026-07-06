@@ -48,6 +48,9 @@
 import package::lib::generate::gen;
 import package::lib::generate::StarRec;
 import package::lib::generate::writeStar;
+import package::lib::generate::buildBulge;
+import package::lib::generate::buildBar;
+import package::lib::generate::buildDisk;
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -70,16 +73,19 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     if (slot >= start && slot < start + rangeLen) {
       let iteration = (slot - start) / stride;
       let sub = (slot - start) % stride;
-      // Not yet consumed — every case below is a dead-record stub. Kept
-      // here (rather than only computed inside a later task) so the
-      // decomposition contract is visible at the call site now.
-      _ = iteration;
+      // 'sub' is not consumed yet — the batch-A populations (bulge/bar/disk)
+      // carve stride 1, so sub is always 0 for them; the multi-slot arm and
+      // clump populations (Tasks 7-8) are the ones that will read it. Kept
+      // computed here so the decomposition contract stays visible at the call
+      // site for every case.
       _ = sub;
 
       switch (popId) {
-        case 0u: { writeStar(slot, dead); return; }  // bulge
-        case 1u: { writeStar(slot, dead); return; }  // bar
-        case 2u: { writeStar(slot, dead); return; }  // disk
+        // bulge/bar/disk carve stride 1 (one slot per iteration), so 'sub' is
+        // always 0 here; each builder reconstructs its star from 'iteration'.
+        case 0u: { writeStar(slot, buildBulge(iteration)); return; }  // bulge
+        case 1u: { writeStar(slot, buildBar(iteration)); return; }    // bar
+        case 2u: { writeStar(slot, buildDisk(iteration)); return; }   // disk
         case 3u: { writeStar(slot, dead); return; }  // spiralArms
         case 4u: { writeStar(slot, dead); return; }  // irregularClumps
         case 5u: { writeStar(slot, dead); return; }  // halo
