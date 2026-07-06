@@ -101,10 +101,10 @@ Tests (mirror the src tree):
 
 **Rules for this task:** one exported type per file (filename = type name); plain `.ts`, not `.d.ts`; `type` never `interface` (already true — preserve); keep each file's didactic header (fix stale path references like `model.js` cites — those stay, they cite the spike source, not a repo path).
 
-- [ ] `git mv` each `.d.ts` to its new `.ts` path (contents unchanged apart from any intra-`@types` relative imports: `ExtraGalaxySpec.ts` imports `GalaxyParams` from `./GalaxyParams` and `Vec3` from `../math/Vec3` now that they're siblings under `src/@types/`).
-- [ ] Re-point every tool import. Find them all with: `grep -rln "@types/model/" tools/galaxy-renderer tests/tools/galaxy-renderer` and `grep -rln "@types/engine/GenerationPipelines\|@types/engine/ExtraGalaxySpec" tools/galaxy-renderer tests/tools/galaxy-renderer`. Expect ~25 files (matcher, presets, data, state, ui, engine, model). New import shape from `tools/galaxy-renderer/src/<dir>/`: `../../../../src/@types/galaxy/<Type>` (count the depth per file — the tool's own `@types/` files that reference moved types, e.g. `@types/data/ReferenceGalaxy.d.ts`, `@types/engine/GalaxyEngineHandle.d.ts`, re-point too but do NOT move).
-- [ ] `npm run typecheck` (both configs) + `npm test` → green. `npx vite build --config tools/galaxy-renderer/vite.config.ts` → builds.
-- [ ] Commit (stage the specific moved/edited paths).
+- [x] `git mv` each `.d.ts` to its new `.ts` path (contents unchanged apart from any intra-`@types` relative imports: `ExtraGalaxySpec.ts` imports `GalaxyParams` from `./GalaxyParams` and `Vec3` from `../math/Vec3` now that they're siblings under `src/@types/`).
+- [x] Re-point every tool import. Find them all with: `grep -rln "@types/model/" tools/galaxy-renderer tests/tools/galaxy-renderer` and `grep -rln "@types/engine/GenerationPipelines\|@types/engine/ExtraGalaxySpec" tools/galaxy-renderer tests/tools/galaxy-renderer`. Expect ~25 files (matcher, presets, data, state, ui, engine, model). New import shape from `tools/galaxy-renderer/src/<dir>/`: `../../../../src/@types/galaxy/<Type>` (count the depth per file — the tool's own `@types/` files that reference moved types, e.g. `@types/data/ReferenceGalaxy.d.ts`, `@types/engine/GalaxyEngineHandle.d.ts`, re-point too but do NOT move).
+- [x] `npm run typecheck` (both configs) + `npm test` → green. `npx vite build --config tools/galaxy-renderer/vite.config.ts` → builds.
+- [x] Commit (stage the specific moved/edited paths).
 
 ---
 
