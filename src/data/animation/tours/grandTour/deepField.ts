@@ -33,9 +33,8 @@ import { dwellDrift } from '../../../../state/tour/dwellDrift';
 const ORIGIN: Vec3 = [0, 0, 0];
 
 // The pull's landing — deep enough that the quasar shell dominates and the
-// local web reads as a core. The stage doc's ~2,000 Mpc; eye-tune against
-// the milliquas density.
-const DEEP_FIELD_MPC = 2000;
+// local web reads as a core. Eye-tuned against the milliquas density.
+const DEEP_FIELD_MPC = 2500;
 
 export const deepField: ClipData = {
   start: 'live',
