@@ -2,9 +2,7 @@
 // writes one output SLOT, not one source-population "star": it scans the
 // packed range table to find which population owns its slot, decomposes the
 // slot into (iteration, sub) within that population, then dispatches to the
-// population's formula. Every case is a dead-record stub for now — Tasks 6-8
-// fill in the real per-population math; this task fixes the scan/dispatch
-// shape so those tasks only need to fill in a switch-case body each.
+// population's builder.
 //
 // ## Why the range scan is LINEAR, not a binary search
 //
@@ -15,35 +13,36 @@
 // midpoint arithmetic and extra branches cost more instructions than just
 // walking up to 7 entries, and a linear scan is a direct mirror of
 // carveStarLayout's own construction (a single prefix-sum pass over the same
-// spec order) — the CPU and GPU sides read the same shape of table the same
-// way, which is easier to verify than two structurally different searches
-// that merely agree on the answer.
+// spec order) — carveStarLayout and this shader read the same shape of table
+// the same way, which is easier to verify than two structurally different
+// searches that merely agree on the answer.
 //
 // ## Why the slot decomposes into (iteration, sub)
 //
 // A range's 'iterations' count is not its slot count: some populations
-// reserve MORE than one output slot per source draw because a single CPU-
-// side iteration can emit more than one record. spiralArms carves stride 5
-// (carveStarLayout.ts:19-23) — one HII-knot iteration can write a halo glow,
-// a core, and up to 3 newborn stars, so 5 slots are reserved even though most
-// iterations use only 1. irregularClumps carves stride 2
-// (carveStarLayout.ts:24-26) — a halo glow plus a core. Every other star
-// population carves stride 1 (one slot per iteration). 'iteration' says
+// reserve MORE than one output slot per source draw because a single source
+// draw can emit more than one record. spiralArms carves stride 5
+// (carveStarLayout.ts) — one HII-knot iteration can write a halo glow, a
+// core, and up to 3 newborn stars, so 5 slots are reserved even though most
+// iterations use only 1. irregularClumps carves stride 2 (carveStarLayout.ts)
+// — a halo glow plus a core. Every other star population carves stride 1
+// (one slot per iteration). 'iteration' says
 // which source draw this slot belongs to; 'sub' says which of that draw's
 // reserved slots this particular invocation is — together the two numbers a
-// per-population formula needs (Tasks 6-8) to reconstruct "which draw, which
-// of its slots" without the CPU's serial loop ever running on the GPU.
+// per-population builder needs to reconstruct "which draw, which of its
+// slots" from the flat slot index alone.
 //
 // ## Why the dispatch is a table switch
 //
 // One case per id in POPULATION_IDS that actually owns star slots — bulge,
 // bar, disk, spiralArms, irregularClumps, halo, globularStar. globularCluster
-// (6) is the CPU's per-cluster driving loop, not a slot owner:
-// carveStarLayout never emits a range for it, so it has no case here either.
-// A switch keyed on the same ids the CPU carves against is the direct GPU
-// mirror of that table — the alternative, an if/else chain re-deriving
-// population membership from some other predicate, would be a second place
-// that has to agree with populationIds.ts instead of one.
+// (6) is the per-cluster bookkeeping population (cluster centre/richness/
+// radius/hue, drawn once per cluster — see buildGlobularStar), not a slot
+// owner: carveStarLayout never emits a range for it, so it has no case here
+// either. A switch keyed on the same ids carveStarLayout carves against is
+// the direct mirror of that table — the alternative, an if/else chain
+// re-deriving population membership from some other predicate, would be a
+// second place that has to agree with populationIds.ts instead of one.
 
 import package::lib::generate::gen;
 import package::lib::generate::StarRec;

@@ -2,8 +2,7 @@
 // mirror of generateStars.wesl: one invocation per output SLOT, a linear
 // scan of the packed range table to find the owning population, an
 // (iteration, sub) decomposition of the slot within that population, then a
-// table switch on popId. Every case is a dead-record stub for now — later
-// tasks fill in the per-population dust math; this task fixes the shape.
+// table switch on popId.
 //
 // ## Why the range scan is LINEAR, not a binary search
 //
@@ -14,8 +13,8 @@
 // and so on). Same reasoning as the star pass: a binary search's midpoint
 // arithmetic is strictly more work than walking at most 5 entries, and a
 // linear scan mirrors carveDustLayout's own single prefix-sum construction
-// directly, so the CPU and GPU sides read the table the same way instead of
-// merely agreeing on the answer via two different search shapes.
+// directly, so carveDustLayout and this shader read the table the same way
+// instead of merely agreeing on the answer via two different search shapes.
 //
 // ## Why the slot still decomposes into (iteration, sub)
 //
@@ -25,7 +24,7 @@
 // 0 for dust as things stand. The decomposition is still computed here, the
 // same way as the star pass, because the range-table CONTRACT
 // (PopulationRange's start/iterations/stride) doesn't promise stride 1; it
-// only happens to be true of every dust builder ported so far. Reading
+// only happens to be true of every dust builder carved so far. Reading
 // 'iteration'/'sub' out of the same fields the star pass reads keeps the two
 // entry points structurally identical, so a future dust population that
 // *does* need multiple slots per draw (mirroring spiralArms' stride 5) is a
