@@ -209,10 +209,10 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams; // = { type: 'SBb', …, see
 
 ## Task 7 — final sweep + gate
 
-- [ ] Sweep for stragglers: `grep -rn "galaxy-renderer/src/model\|galaxy-renderer/@types/model\|lib::generate\|lib/generate.wesl" src tools tests docs/superpowers/plans/2026-07-06-*` → only historical docs (completed plans) may still reference old paths; live code must have zero hits.
-- [ ] Confirm deleted dirs are gone: `tools/galaxy-renderer/src/model/`, `tools/galaxy-renderer/@types/model/`, the two moved `@types/engine` files, the three old WESL locations, the seven old test locations.
-- [ ] Full gate: `npm test` (all suites), `npm run typecheck`, `npx vite build --config tools/galaxy-renderer/vite.config.ts`, `npm run build` (main app — proves the moved WESL doesn't break the app bundle even before plan 02 consumes it).
-- [ ] Commit any sweep fixes.
+- [x] Sweep for stragglers: `grep -rn "galaxy-renderer/src/model\|galaxy-renderer/@types/model\|lib::generate\|lib/generate.wesl" src tools tests docs/superpowers/plans/2026-07-06-*` → only historical docs (completed plans) may still reference old paths; live code must have zero hits.
+- [x] Confirm deleted dirs are gone: `tools/galaxy-renderer/src/model/`, `tools/galaxy-renderer/@types/model/`, the two moved `@types/engine` files, the three old WESL locations, the seven old test locations.
+- [x] Full gate: `npm test` (all suites), `npm run typecheck`, `npx vite build --config tools/galaxy-renderer/vite.config.ts`, `npm run build` (main app — proves the moved WESL doesn't break the app bundle even before plan 02 consumes it).
+- [x] Commit any sweep fixes.
 
 ## Ledger
 
@@ -220,10 +220,10 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams; // = { type: 'SBb', …, see
 
 ## Definition of Done
 
-- [ ] Every row of the move inventory is at its new path; every old path is deleted; `git log --follow` traces each moved file.
-- [ ] Zero WESL duplication: `generate.wesl`, `generateStars.wesl`, `generateDust.wesl` each exist exactly once in the repo (`find . -name "generate*.wesl" -not -path "*/node_modules/*"` → 3 hits, all under `src/services/gpu/shaders/galaxyGen/`).
-- [ ] The parity test guards the mirrors from `tests/services/gpu/galaxy/` and is green.
-- [ ] The tool imports the core from `src/` only (no `tools/galaxy-renderer/src/model` or tool-local generation WESL remains) and builds + runs visually unchanged.
-- [ ] `MILKY_WAY_GALAXY_PARAMS` + `MILKY_WAY_GENERATION_SEED` exist in `src/data/milkyWay/` and `referenceGalaxies.ts` imports them (no inline mw params).
-- [ ] Ledger records the spike decision.
-- [ ] Full suite + both typechecks + both builds green; every commit staged specific paths.
+- [x] Every row of the move inventory is at its new path; every old path is deleted; `git log --follow` traces each moved file.
+- [x] Zero WESL duplication: `generate.wesl`, `generateStars.wesl`, `generateDust.wesl` each exist exactly once in the repo (`find . -name "generate*.wesl" -not -path "*/node_modules/*"` → 3 hits, all under `src/services/gpu/shaders/galaxyGen/`).
+- [x] The parity test guards the mirrors from `tests/services/gpu/galaxy/` and is green.
+- [x] The tool imports the core from `src/` only (no `tools/galaxy-renderer/src/model` or tool-local generation WESL remains) and builds + runs visually unchanged.
+- [x] `MILKY_WAY_GALAXY_PARAMS` + `MILKY_WAY_GENERATION_SEED` exist in `src/data/milkyWay/` and `referenceGalaxies.ts` imports them (no inline mw params).
+- [x] Ledger records the spike decision.
+- [x] Full suite + both typechecks + both builds green; every commit staged specific paths.
