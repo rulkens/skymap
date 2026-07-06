@@ -3,7 +3,7 @@
  * built once on the CPU (`carveStarLayout`/`carveDustLayout`) before any GPU
  * compute pass dispatches. Carving is CPU-side because the per-category
  * population mix (does this galaxy have a bar? arms? a dust ring?) and every
- * count formula it feeds (`floor(diskCount*0.35)`, `min(armStarCount, ...)`,
+ * count formula it feeds (`floor(diskCount*0.35)`, `floor(30000*dust/g²)`,
  * etc.) depend only on `GalaxyParams`/`GalaxyCategory`/`StarBudget` — none of
  * it needs a single random draw or GPU round-trip. The alternative, carving
  * slot ranges *inside* a compute shader from the same formulas, would mean

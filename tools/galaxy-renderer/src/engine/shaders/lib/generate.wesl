@@ -1053,23 +1053,74 @@ fn buildGlobularStar(iteration: u32) -> StarRec {
 // noiseFreq, ring geometry, cloudCenters) come from the UBO, never re-derived
 // per invocation.
 //
-// ## The candidate-reuse trick (armDust, irregularDust)
+// ## Resample-to-budget (armDust, irregularDust)
 //
-// The CPU arm/irregular dust builders walk the COMPACTED 'dustSeeds' array the
-// star pass produced — one entry per star that both survived its density gates
-// AND passed a dust-seed gate ('seedAccepted'). A stateless GPU pass has no
-// compacted array to walk, so instead each dust candidate 'i' RECOMPUTES the
-// i-th star's shared sample ('armStarSample(i)' / 'irregularSample(i)') — the
-// exact same hash the star pass evaluated for that iteration, bit-identical
-// across passes because it is stateless — and declares itself dead when that
-// sample's 'seedAccepted' is false. So candidate i maps to star ITERATION i,
-// not to the i-th accepted seed: the GPU keeps the gaps the CPU compacts away.
-// That is a deliberate parity DEVIATION when the candidate cap binds (a high-
-// starCount galaxy caps iterations below armStarCount, and the GPU's kept
-// fraction is the seed acceptance rate rather than the CPU's dense-packed
-// count) — the reason the dust-total threshold is advisory, not a gate. The
-// star sample MUST NOT be widened for the dust seam: it is shared with the
-// star pass and has to stay bit-identical across both.
+// The CPU arm/irregular dust builders scan the COMPACTED 'dustSeeds' the star
+// pass produced — one entry per star that both survived its density gates AND
+// passed a dust-seed gate ('seedAccepted') — and PUSH one particle for each
+// candidate that also clears the dense/keep gate, stopping the instant the
+// pushed count reaches the budget (floor(30000*dust/g^2) arm,
+// floor(16000*dust/g^2) irregular). The CPU therefore emits ~exactly budget
+// particles at any params.
+//
+// A stateless GPU pass cannot 'push while count < budget': there is no shared
+// counter thousands of threads can advance without serialising. So the loop is
+// INVERTED to one thread per OUTPUT particle (iterations = budget), and each
+// thread RESAMPLES until it lands an accepted candidate. Thread j tries up to
+// 32 attempts; attempt k hash-picks a candidate index c in [0, candidateCount)
+// (candidateCount = the arm / clump star-loop iteration count, read from the
+// shared starRanges table — see starRangeIterations), recomputes that
+// candidate's star sample ('armStarSample(c)' / 'irregularSample(c)', pop 3/4,
+// bit-identical to the star pass because the hash is stateless), and runs it
+// through the full dust pipeline in the attempt's own disjoint 64-slot hash
+// block. The FIRST attempt whose candidate clears every gate (seedAccepted AND
+// dustMod keep) emits and returns; if all 32 miss, the thread writes a dead
+// point.
+//
+// Why this is budget-exact WITHOUT a counter: hash-picking c uniformly and
+// then gating on 'seedAccepted' reproduces the CPU's compacted-list
+// distribution exactly — the compacted list IS the uniform candidate
+// population filtered by 'seedAccepted' — and dispatching exactly 'budget'
+// threads pins the live total at ~budget. This replaces the earlier candidate-
+// cap DEVIATION (iterations = min(armStarCount, budget)), which under-emitted
+// whenever the cap bound: at default Sc it wrote budget*acceptance ~= 1,110
+// particles against the CPU's ~6,614 (seed*keep acceptance ~17%).
+//
+// Two accepted statistical artifacts remain:
+//  - Candidate DUPLICATION: two output threads can hash-pick the same
+//    candidate seed. Their recomputed star sample is identical, but their own
+//    dust jitter — keyed on the OUTPUT index j, not the candidate — differs,
+//    so the two grains sit at slightly different positions (~6% of particles
+//    at default params; visually indistinguishable from the CPU's single copy).
+//  - SHORTFALL: a thread whose 32 attempts all miss emits nothing. With per-
+//    attempt acceptance p ~= 0.17 the miss rate is (1-p)^32 < 0.3%.
+//
+// ## The seed-limited regime (KNOWN over-emission, barred spirals)
+//
+// 'Budget-exact' holds only while the candidate pool can actually supply the
+// budget: the CPU emits min(budget, seedsPassingKeep), and this matches ~budget
+// ONLY when seedsPassingKeep >= budget. When the arm dust-seed supply is scarce
+// the CPU stops early (seed-limited), but this resample loop keeps trying and
+// fills the budget anyway -- so the GPU OVER-emits. Measured: default Sc has
+// ~12,970 arm seeds and hits budget 6,614 on both sides (~budget); SBb has only
+// ~7,200 seeds (the bar starves the arms of dust-seeding stars) of which ~4,440
+// pass the keep gate, so the CPU writes ~4,440 arm-dust grains while this loop
+// writes ~6,320 -- a ~+30% arm-dust surplus. For barred spirals the crossover
+// (seedsPassingKeep >= budget) only lands above ~650k total stars at dust 0.35,
+// so a barred galaxy over-emits arm dust at every realistic star count. This is
+// the flip side of the OLD candidate-cap DEVIATION (which under-emitted the
+// budget-limited regime instead): a stateless pass with no atomics/compaction
+// (spec-rejected) cannot compute min(budget, seedsPassingKeep) exactly, so it
+// must approximate one regime wrong -- resample-to-budget chooses to be exact
+// where the CPU is budget-limited (the common spiral case) and over-emit where
+// it is seed-limited.
+//
+// Why 32 attempts, not the rejection builders' 8: those (bulge/bar/halo) reject
+// only an out-of-range radial draw, so each attempt almost always lands; here
+// the per-attempt success probability is the far lower seed*keep acceptance
+// (~17%), so the retry budget has to be larger to drive the shortfall below a
+// fraction of a percent. The star sample MUST NOT be widened for the dust seam:
+// it is shared with the star pass and has to stay bit-identical across both.
 
 // DustMod — the noise-driven keep/opacity/size modulation, createDustField.ts:
 // 32-43. 'keep' is one rand draw at 'slot' gated against a noise-shaped
@@ -1095,6 +1146,35 @@ fn dustMod(p: vec3<f32>, seed: u32, pop: u32, idx: u32, slot: u32) -> DustMod {
 // radialFalloff — exponential radial dust falloff, createDustField.ts:45.
 fn radialFalloff(r: f32) -> f32 {
   return exp(-r / (gen.diskScaleLen * 1.5));
+}
+
+// Resample tuning for the budget-exact dust builders (armDust, irregularDust —
+// see the batch-C header). A thread makes at most DUST_ATTEMPTS tries; each try
+// owns a disjoint ATTEMPT_STRIDE-slot hash block, its candidate pick drawn at
+// PICK_SLOT within the block and its pipeline draws at block-relative slots
+// 0..9. 32 * 64 = 2048 slots, comfortably inside the u32 hash space. The shared
+// reddening window (writeDustParticle slots 56-59) sits above every block's
+// pipeline slots, so it never aliases a pick or a pipeline draw.
+const DUST_ATTEMPTS: u32 = 32u;
+const ATTEMPT_STRIDE: u32 = 64u;
+const PICK_SLOT: u32 = 10u;
+
+// starRangeIterations — look up a star population's loop-iteration count in the
+// shared starRanges table. The dust pass binds the SAME 'gen' UBO the star pass
+// does (see the module header — one declaration, one buffer), so this table is
+// live here too. The resample builders use it to size their candidate space:
+// armDust picks over the spiralArms iterations (pop 3), irregularDust over the
+// irregularClumps iterations (pop 4) — exactly the index range the star pass
+// evaluated, so a recomputed sample at that index is the star that seeded it.
+// Returns 0 when the population is absent (e.g. an arm-less spiral), which the
+// callers read as 'no candidates -> dead point'.
+fn starRangeIterations(popId: u32) -> u32 {
+  for (var i = 0u; i < gen.starRangeCount; i = i + 1u) {
+    if (gen.starRanges[i].w == popId) {
+      return gen.starRanges[i].y; // iterations lane (start, iterations, stride, popId)
+    }
+  }
+  return 0u;
 }
 
 // writeDustParticle — the shared dust write path: compose the galactic warp
@@ -1133,38 +1213,55 @@ fn writeDustParticle(
 }
 
 // buildArmDust — patchy dust lanes nudged onto the inner (concave) edge of the
-// spiral arms, dense-knot/thin-wisp split. Ports armDust.ts:28-51. Candidate i
-// reuses armStarSample(i) (the shared arm draw, pop 3) as its dust seed: pos,
-// radius, angle, armFade; dead when that sample did not accept a dust seed.
-// The inner-edge nudge inX/inZ is draw-free (armDust.ts:30-31).
-fn buildArmDust(i: u32) -> DustRec {
+// spiral arms, dense-knot/thin-wisp split. Ports armDust.ts:28-51, but INVERTED
+// to one thread per OUTPUT particle (the resample-to-budget model — see the
+// batch-C header for why the CPU's serial 'push while count < budget' becomes a
+// per-output resample). Thread j resamples: each attempt hash-picks an arm
+// candidate c over the spiralArms iteration space, recomputes armStarSample(c)
+// (pop 3, bit-identical to the star pass) as the dust seed (pos, radius, angle,
+// armFade), and emits on the first candidate that both accepted a dust seed AND
+// clears the keep gate. The inner-edge nudge inX/inZ is draw-free
+// (armDust.ts:30-31). Draw ORDER is opacity-before-size (armDust.ts:39 then
+// :48), preserved from the CPU builder. The pipeline draws key on the OUTPUT
+// index j (not the candidate c), so two threads that pick the same seed still
+// jitter to distinct positions — the accepted candidate-duplication artifact.
+fn buildArmDust(j: u32) -> DustRec {
   var dead: DustRec;
   dead.alive = false;
   let seed = gen.seed;
   let pop = 8u;
 
-  let s = armStarSample(i);          // recompute the arm seed — pop 3, bit-identical
-  if (!s.seedAccepted) { return dead; } // gapped/un-seeded star writes no dust
+  let candidateCount = starRangeIterations(3u); // spiralArms iteration space
+  if (candidateCount == 0u) { return dead; }    // no arm seeds -> no dust
 
-  let inX = -cos(s.angle) * gen.outerRadius * 0.018; // armDust.ts:30
-  let inZ = -sin(s.angle) * gen.outerRadius * 0.018; // armDust.ts:31
-  let dense = genRand(seed, pop, i, 0u) < 0.28;      // slot 0 — armDust.ts:32
-  let x = s.pos.x + inX + genNormal(seed, pop, i, 1u) * gen.outerRadius * 0.022; // slots 1-2 — :33
-  let y = s.pos.y * 0.4 + genNormal(seed, pop, i, 3u) * gen.diskHeight * 0.28;   // slots 3-4 — :34
-  let z = s.pos.z + inZ + genNormal(seed, pop, i, 5u) * gen.outerRadius * 0.022; // slots 5-6 — :35
-  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 7u); // slot 7 keep gate — :36
-  if (!m.keep) { return dead; }                          // :37
+  for (var k = 0u; k < DUST_ATTEMPTS; k = k + 1u) {
+    let base = k * ATTEMPT_STRIDE;
+    let pick = genRand(seed, pop, j, base + PICK_SLOT);
+    let c = min(u32(pick * f32(candidateCount)), candidateCount - 1u);
+    let s = armStarSample(c);          // recompute the arm seed — pop 3, bit-identical
+    if (!s.seedAccepted) { continue; } // gapped/un-seeded candidate — try another
 
-  // slot 8: opacity jitter. Only ONE rand is drawn regardless of the dense
-  // branch (the CPU ternary picks one side — armDust.ts:39), so 'r8' is reused
-  // in both select arms rather than drawing twice.
-  let r8 = genRand(seed, pop, i, 8u);
-  let opJitter = select(0.05 + 0.11 * r8, 0.22 + 0.3 * r8, dense);
-  let opacity = opJitter * gen.dustAmount * s.armFade * (0.4 + 1.4 * radialFalloff(s.radius)) * m.op; // :38-43
-  // slot 9: size jitter (armDust.ts:48). Dense knots are 1.25x, wisps 0.8x.
-  let sizeJitter = 0.007 + 0.015 * genRand(seed, pop, i, 9u);
-  let size = gen.outerRadius * sizeJitter * gen.grainScale * select(0.8, 1.25, dense) * m.sz;
-  return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
+    let inX = -cos(s.angle) * gen.outerRadius * 0.018; // armDust.ts:30
+    let inZ = -sin(s.angle) * gen.outerRadius * 0.018; // armDust.ts:31
+    let dense = genRand(seed, pop, j, base + 0u) < 0.28;      // slot 0 — armDust.ts:32
+    let x = s.pos.x + inX + genNormal(seed, pop, j, base + 1u) * gen.outerRadius * 0.022; // slots 1-2 — :33
+    let y = s.pos.y * 0.4 + genNormal(seed, pop, j, base + 3u) * gen.diskHeight * 0.28;   // slots 3-4 — :34
+    let z = s.pos.z + inZ + genNormal(seed, pop, j, base + 5u) * gen.outerRadius * 0.022; // slots 5-6 — :35
+    let m = dustMod(vec3<f32>(x, y, z), seed, pop, j, base + 7u); // slot 7 keep gate — :36
+    if (!m.keep) { continue; }                                   // :37 — reject, try another
+
+    // slot 8: opacity jitter. Only ONE rand is drawn regardless of the dense
+    // branch (the CPU ternary picks one side — armDust.ts:39), so 'r8' is reused
+    // in both select arms rather than drawing twice.
+    let r8 = genRand(seed, pop, j, base + 8u);
+    let opJitter = select(0.05 + 0.11 * r8, 0.22 + 0.3 * r8, dense);
+    let opacity = opJitter * gen.dustAmount * s.armFade * (0.4 + 1.4 * radialFalloff(s.radius)) * m.op; // :38-43
+    // slot 9: size jitter (armDust.ts:48). Dense knots are 1.25x, wisps 0.8x.
+    let sizeJitter = 0.007 + 0.015 * genRand(seed, pop, j, base + 9u);
+    let size = gen.outerRadius * sizeJitter * gen.grainScale * select(0.8, 1.25, dense) * m.sz;
+    return writeDustParticle(seed, pop, j, x, y, z, size, opacity);
+  }
+  return dead; // all attempts missed — the <0.3% shortfall
 }
 
 // buildBarDust — two straight dust lanes along the bar's leading edges,
@@ -1245,32 +1342,46 @@ fn buildLenticularRingDust(i: u32) -> DustRec {
 
 // buildIrregularDust — dust patches on the star-forming clump seeds, same
 // dense/wisp split as armDust but wider spreads (no ordered disk). Ports
-// irregularDust.ts:23-38. Candidate i reuses irregularSample(i) (pop 4) as its
-// seed and is dead when that sample's slot-15 seed gate failed. Only the seed
-// position is used (the seed's radius/angle/armFade the CPU records are unused
-// by this builder). SIZE-BEFORE-OPACITY, like barDust (slot 8 size, slot 9
-// opacity — irregularDust.ts:35 then :36).
-fn buildIrregularDust(i: u32) -> DustRec {
+// irregularDust.ts:23-38, INVERTED to one thread per OUTPUT particle (the same
+// resample-to-budget model as buildArmDust — see the batch-C header). Thread j
+// resamples: each attempt hash-picks a clump candidate c over the
+// irregularClumps iteration space, recomputes irregularSample(c) (pop 4, bit-
+// identical to the star pass) as its seed, and emits on the first candidate
+// that both passed its slot-15 seed gate AND clears the keep gate. Only the
+// seed position is used (the seed's radius/angle the CPU records are unused by
+// this builder). SIZE-BEFORE-OPACITY, like barDust (slot 8 size, slot 9 opacity
+// — irregularDust.ts:35 then :36). Pipeline draws key on the OUTPUT index j, so
+// same-seed threads still jitter apart (the candidate-duplication artifact).
+fn buildIrregularDust(j: u32) -> DustRec {
   var dead: DustRec;
   dead.alive = false;
   let seed = gen.seed;
   let pop = 12u;
 
-  let s = irregularSample(i);        // recompute the clump seed — pop 4, bit-identical
-  if (!s.seedAccepted) { return dead; } // slot-15 seed gate failed — no dust
+  let candidateCount = starRangeIterations(4u); // irregularClumps iteration space
+  if (candidateCount == 0u) { return dead; }     // no clump seeds -> no dust
 
-  let dense = genRand(seed, pop, i, 0u) < 0.3; // slot 0 — irregularDust.ts:25
-  let x = s.pos.x + genNormal(seed, pop, i, 1u) * gen.outerRadius * 0.03; // slots 1-2 — :26
-  let y = s.pos.y + genNormal(seed, pop, i, 3u) * gen.diskHeight * 0.6;   // slots 3-4 — :27
-  let z = s.pos.z + genNormal(seed, pop, i, 5u) * gen.outerRadius * 0.03; // slots 5-6 — :28
-  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 7u); // slot 7 keep gate — :29
-  if (!m.keep) { return dead; } // :30
+  for (var k = 0u; k < DUST_ATTEMPTS; k = k + 1u) {
+    let base = k * ATTEMPT_STRIDE;
+    let pick = genRand(seed, pop, j, base + PICK_SLOT);
+    let c = min(u32(pick * f32(candidateCount)), candidateCount - 1u);
+    let s = irregularSample(c);        // recompute the clump seed — pop 4, bit-identical
+    if (!s.seedAccepted) { continue; } // slot-15 seed gate failed — try another
 
-  // slot 8: size jitter (dense knots 1.2x, wisps 0.8x — irregularDust.ts:35).
-  let size = gen.outerRadius * (0.008 + 0.016 * genRand(seed, pop, i, 8u)) * gen.grainScale * select(0.8, 1.2, dense) * m.sz;
-  // slot 9: opacity jitter — one rand reused across the dense branch (:36).
-  let r9 = genRand(seed, pop, i, 9u);
-  let opJitter = select(0.05 + 0.11 * r9, 0.16 + 0.22 * r9, dense);
-  let opacity = opJitter * gen.dustAmount * m.op;
-  return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
+    let dense = genRand(seed, pop, j, base + 0u) < 0.3; // slot 0 — irregularDust.ts:25
+    let x = s.pos.x + genNormal(seed, pop, j, base + 1u) * gen.outerRadius * 0.03; // slots 1-2 — :26
+    let y = s.pos.y + genNormal(seed, pop, j, base + 3u) * gen.diskHeight * 0.6;   // slots 3-4 — :27
+    let z = s.pos.z + genNormal(seed, pop, j, base + 5u) * gen.outerRadius * 0.03; // slots 5-6 — :28
+    let m = dustMod(vec3<f32>(x, y, z), seed, pop, j, base + 7u); // slot 7 keep gate — :29
+    if (!m.keep) { continue; } // :30 — reject, try another
+
+    // slot 8: size jitter (dense knots 1.2x, wisps 0.8x — irregularDust.ts:35).
+    let size = gen.outerRadius * (0.008 + 0.016 * genRand(seed, pop, j, base + 8u)) * gen.grainScale * select(0.8, 1.2, dense) * m.sz;
+    // slot 9: opacity jitter — one rand reused across the dense branch (:36).
+    let r9 = genRand(seed, pop, j, base + 9u);
+    let opJitter = select(0.05 + 0.11 * r9, 0.16 + 0.22 * r9, dense);
+    let opacity = opJitter * gen.dustAmount * m.op;
+    return writeDustParticle(seed, pop, j, x, y, z, size, opacity);
+  }
+  return dead; // all attempts missed — the <0.3% shortfall
 }
