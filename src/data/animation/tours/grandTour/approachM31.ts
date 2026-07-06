@@ -14,6 +14,17 @@
  * separate — home drifts just left of frame while Andromeda holds near
  * centre — before the fly recentres onto M31. Composable because they write
  * different channels: the strafe moves `target`, the aim moves yaw/pitch.
+ *
+ * The dwell's orbit is SIZED TO LAND facing the next beat's launch: its net
+ * yaw carries the camera from the arrival bearing to the one that puts the
+ * M81 Group centre-frame beyond Andromeda, so the neighbourhood flythrough
+ * opens already aimed down its path instead of swinging to find it. Both
+ * bearings are pure seed geometry (orbitAnglesLookingAlong convention):
+ * arrival yaw is the lookAtId(M31) bearing from the Milky-Way target
+ * (nothing after it rotates — strafe/moveTarget write `target`, dolly writes
+ * `distance`), and the exit yaw looks along M31 → M81 Group. Constants, not
+ * runtime lookups, because the subjects' positions are static catalog seeds;
+ * re-derive if the enter clip is re-blocked onto a different aim.
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
@@ -28,8 +39,20 @@ import {
   strafeId,
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
+import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
 const M31 = focusId('m31');
+
+const DWELL_SEC = 10;
+const ARRIVAL_YAW_RAD = -2.30311; // lookAtId(M31) bearing from the MW target (−131.96°)
+const EXIT_YAW_RAD = 2.602475; // M81 Group centre-frame beyond M31 (+149.11°)
+// Short way round: −78.9°. The full-wrap +281° alternative keeps the other
+// beats' spin direction but at triple the orbit speed — too brisk this close.
+const NET_YAW_RAD = EXIT_YAW_RAD - ARRIVAL_YAW_RAD - Math.PI * 2;
+
+export const approachM31Dwell: ClipData = dwellDrift(DWELL_SEC, {
+  cruiseRate: NET_YAW_RAD / DWELL_SEC,
+});
 
 export const approachM31: ClipData = {
   start: 'live',

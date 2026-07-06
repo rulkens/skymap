@@ -17,7 +17,7 @@ import type { Tour } from '../../../@types/animation/tour/Tour';
 import { dwellDrift } from '../../../state/tour/dwellDrift';
 import { openingTitle } from './grandTour/openingTitle';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
-import { approachM31 } from './grandTour/approachM31';
+import { approachM31, approachM31Dwell } from './grandTour/approachM31';
 import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from './grandTour/approachVirgo';
 import { cosmicWeb, cosmicWebDwell } from './grandTour/cosmicWeb';
@@ -52,7 +52,8 @@ export const grandTour: Tour = {
         body: 'This is Andromeda, the nearest large galaxy to ours. Its light has been travelling toward us for 2.5 million years.',
         position: 'bottom-left',
       },
-      dwellClip: dwellDrift(10, { cruiseRate: (Math.PI * 2) / 30 }),
+      // Sized to land facing the M81 Group — the next beat's launch bearing.
+      dwellClip: approachM31Dwell,
     },
     {
       enterClip: neighbourhoodFlythrough,
