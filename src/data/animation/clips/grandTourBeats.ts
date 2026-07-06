@@ -23,6 +23,7 @@ import { localGroup } from '../tours/grandTour/localGroup';
 import { neighbourhoodReveal } from '../tours/grandTour/neighbourhoodReveal';
 import { neighbourhoodFlythrough } from '../tours/grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from '../tours/grandTour/approachVirgo';
+import { laniakea } from '../tours/grandTour/laniakea';
 import { cosmicWeb, cosmicWebDwell } from '../tours/grandTour/cosmicWeb';
 import { cosmicFlows } from '../tours/grandTour/cosmicFlows';
 import { emptiness } from '../tours/grandTour/emptiness';
@@ -78,44 +79,50 @@ export const tourApproachVirgo: Clip = {
   data: approachVirgo,
 };
 
+export const tourLaniakea: Clip = {
+  id: 'tourLaniakea',
+  label: 'Grand tour 07 — Laniakea',
+  data: laniakea,
+};
+
 export const tourCosmicWeb: Clip = {
   id: 'tourCosmicWeb',
-  label: 'Grand tour 07 — cosmic web',
+  label: 'Grand tour 08 — cosmic web',
   data: cosmicWeb,
 };
 
 export const tourCosmicWebDwell: Clip = {
   id: 'tourCosmicWebDwell',
-  label: 'Grand tour 07 — web pull-back dwell',
+  label: 'Grand tour 08 — web pull-back dwell',
   data: cosmicWebDwell,
 };
 
 export const tourCosmicFlows: Clip = {
   id: 'tourCosmicFlows',
-  label: 'Grand tour 08 — cosmic flows',
+  label: 'Grand tour 09 — cosmic flows',
   data: cosmicFlows,
 };
 
 export const tourEmptiness: Clip = {
   id: 'tourEmptiness',
-  label: 'Grand tour 09 — the emptiness',
+  label: 'Grand tour 10 — the emptiness',
   data: emptiness,
 };
 
 export const tourDeepField: Clip = {
   id: 'tourDeepField',
-  label: 'Grand tour 10 — deep field',
+  label: 'Grand tour 11 — deep field',
   data: deepField,
 };
 
 export const tourTheEdge: Clip = {
   id: 'tourTheEdge',
-  label: 'Grand tour 11 — the edge',
+  label: 'Grand tour 12 — the edge',
   data: theEdge,
 };
 
 export const tourHomeAgain: Clip = {
   id: 'tourHomeAgain',
-  label: 'Grand tour 12 — home again',
+  label: 'Grand tour 13 — home again',
   data: homeAgain,
 };

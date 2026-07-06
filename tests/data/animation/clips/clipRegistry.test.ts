@@ -40,6 +40,7 @@ describe('clipRegistry', () => {
       'tourDeepField',
       'tourEmptiness',
       'tourHomeAgain',
+      'tourLaniakea',
       'tourLocalGroup',
       'tourNeighbourhood',
       'tourNeighbourhoodReveal',

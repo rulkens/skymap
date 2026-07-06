@@ -22,6 +22,7 @@ import { localGroup, localGroupDwell } from './grandTour/localGroup';
 import { neighbourhoodReveal } from './grandTour/neighbourhoodReveal';
 import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from './grandTour/approachVirgo';
+import { laniakea } from './grandTour/laniakea';
 import { cosmicWeb, cosmicWebDwell } from './grandTour/cosmicWeb';
 import { cosmicFlows, cosmicFlowsDwell } from './grandTour/cosmicFlows';
 import { emptiness } from './grandTour/emptiness';
@@ -98,6 +99,15 @@ export const grandTour: Tour = {
       caption: {
         title: 'The nearest cluster',
         body: 'Virgo, the nearest big cluster — over a thousand galaxies, pulled together by gravity, 50 million light-years away.',
+        position: 'bottom-left',
+      },
+      dwellClip: dwellDrift(12),
+    },
+    {
+      enterClip: laniakea,
+      caption: {
+        title: 'Laniakea',
+        body: 'Virgo is one cluster among dozens. Together they drift as a single vast structure: Laniakea, our home supercluster, half a billion light-years wide.',
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(12),

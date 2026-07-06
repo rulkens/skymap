@@ -1,18 +1,18 @@
 ---
-stage:        11
-id:           the-edge
-title:        The edge
-narration:    >
+stage: 12
+id: the-edge
+title: The edge
+narration: >
   This is the observable universe, everything light has had time to reach us
   from. 93 billion light-years, side to side.
-focus:        point:0,0,0
+focus: point:0,0,0
 distance_mpc: 6000
-motion:       log-dolly to max
-travel_s:     9
-dwell_s:      8
-effects:      []
-requires:     [log-dolly, arbitrary-point-focus, dwell-drift, caption, auto-reveal]
-status:       draft
+motion: log-dolly to max
+travel_s: 9
+dwell_s: 8
+effects: []
+requires: [log-dolly, arbitrary-point-focus, dwell-drift, caption, auto-reveal]
+status: draft
 ---
 
 ## Intent
@@ -34,4 +34,4 @@ pulling far enough out. Long, quiet dwell.
 
 - Final framing distance is set by where the horizon shell reads strongest —
   tune `distance_mpc` against the shell's fade band, not a fixed number.
-- This is the turnaround point; stage 10 returns inward from here.
+- This is the turnaround point; stage 13 returns inward from here.
