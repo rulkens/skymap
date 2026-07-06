@@ -45,7 +45,7 @@ export const grandTour: Tour = {
       enterClip: youAreHere,
       caption: {
         title: 'You are here',
-        body: 'The Milky Way, our home. The sun and a few hundred billion stars, and the one vantage point you are looking out **from**.',
+        body: 'This is the The Milky Way, our home galaxy. It contains the sun and hundreds of billions of stars.',
         position: 'bottom-left',
       },
       dwellClip: youAreHereDwell,
@@ -65,7 +65,7 @@ export const grandTour: Tour = {
       enterClip: localGroup,
       caption: {
         title: 'The Local Group',
-        body: 'The Milky Way and Andromeda travel together — a small family of galaxies, dozens of dwarfs in tow, bound as the Local Group.',
+        body: 'The Milky Way and Andromeda travel together — a small family of galaxies with dozens of dwarfs, gravitationally bound as the Local Group.',
         position: 'bottom-left',
       },
       // One full orbit of the family, landing on the flythrough's launch

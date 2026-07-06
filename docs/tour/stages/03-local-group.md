@@ -41,9 +41,13 @@ next beat dives straight into it.
 
 ## On screen
 
-`The Local Group` + narration on dwell start. Group rings + the Local
-Group's label (focusedOnly). Dwarf galaxies show as famous-galaxy sprites
-(LMC/SMC, M32, M110, NGC 147/185…) strung between the two spirals.
+`The Local Group` + narration on dwell start. The group's ring circle is
+in frame (the enter lands at 2.75× the standard framing — standard lands
+inside the ring's close-approach fade). focusedOnly flips OFF, so the
+family reads with names: Milky Way, Andromeda, Triangulum — the famous
+producer's 6 px apparent-size gate self-culls every dwarf label at this
+framing. Dwarfs still show as sprites (LMC/SMC, M32, M110, NGC 147/185…)
+strung between the two spirals.
 
 ## Tweaks
 
@@ -51,3 +55,6 @@ Group's label (focusedOnly). Dwarf galaxies show as famous-galaxy sprites
   eye-tuned — the orbit should feel unhurried at the close framing and the
   pull-out should finish ~4 s before the cut.
 - Re-derive `EXIT_YAW_RAD` if the enter ever gains an aim cue.
+- Famous-name labels ride the focus recession (dim to 0.25 while the group
+  is focused — same dimming the flythrough's labels ride). If they read
+  too faint, clear focus after the naming or exempt the layer.
