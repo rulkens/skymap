@@ -8,10 +8,13 @@
  * reveal on dwell start; an enter clip would play the pull-back wordless).
  * Same pattern as the flythrough after it.
  *
- * The scene needs no cues: 2MRS, the group rings, and the focusedOnly-off
- * label mode all arrived with the Local-Group beat, and the Local Group
- * stays focused — its ring + label shrink into the field as the camera
- * recedes, which IS the beat's point ("that circle is where you live").
+ * The scene arrived with the Local-Group beat (2MRS, group rings,
+ * focusedOnly-off labels); this clip's one cue is `focus(null)` as the pull
+ * begins. Holding the Local-Group focus through the zoom-out would keep
+ * every sibling ring receded and the member-isolation fade dimming the
+ * whole field outside the family — the opposite of a reveal. Clearing it
+ * releases the recession (400 ms blend), so the neighbourhood lights up
+ * as the camera lets go of home.
  *
  * The drift continues the revolution the Local-Group dwell began: the two
  * dwells share one full backward orbit that lands facing the M81 Group
@@ -23,7 +26,13 @@
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
-import { all, dollyTo, seq, wait } from '../../../../services/engine/animation/effectHelpers';
+import {
+  all,
+  dollyTo,
+  focus,
+  seq,
+  wait,
+} from '../../../../services/engine/animation/effectHelpers';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
 export const REVEAL_DWELL_SEC = 12;
@@ -41,9 +50,10 @@ export const neighbourhoodReveal: ClipData = {
     all([
       ...dwellDrift(REVEAL_DWELL_SEC, { cruiseRate: REVEAL_NET_YAW_RAD / REVEAL_DWELL_SEC })
         .timeline,
-      // A beat of stillness, then the pull; the drift outlasts the dolly so
-      // the wide shot breathes before the flythrough launches.
-      seq([wait(1), dollyTo(NEIGHBOURHOOD_MPC, 9)]),
+      // A beat of stillness, then release the focus and pull; the drift
+      // outlasts the dolly so the wide shot breathes before the flythrough
+      // launches.
+      seq([wait(1), focus(null), dollyTo(NEIGHBOURHOOD_MPC, 9)]),
     ]),
   ],
 };
