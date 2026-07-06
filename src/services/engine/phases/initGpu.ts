@@ -48,6 +48,8 @@ import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
 import { createMilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
+import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
+import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
@@ -317,6 +319,22 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.proceduralDiskRenderer = proceduralDiskRenderer;
   state.gpu.milkyWayRenderer = milkyWayRenderer;
   state.gpu.horizonShellRenderer = horizonShellRenderer;
+
+  // ── Milky-Way point cloud + its two-pass renderer ────────────────────
+  //
+  // The GPU-generated star/dust cloud (`milkyWayCloud`) and its additive+
+  // multiplicative renderer (`milkyWayCloudRenderer`) REPLACE the procedural
+  // impostor on the DRAW path: `milkyWayPass` now dispatches the cloud, not
+  // `milkyWayRenderer`. The impostor above stays constructed on purpose — it
+  // still backs the pick billboard, and its draw-path teardown is gated on a
+  // later visual checkpoint. `state.tier` folds the current tier's star budget
+  // into the first generation; a tier swap regenerates via
+  // `makeRunTierTransition`. Same HDR target ('rgba16float') as the impostor.
+  state.gpu.milkyWayCloud = createMilkyWayCloud(device, state.tier);
+  state.gpu.milkyWayCloudRenderer = createMilkyWayCloudRenderer({
+    device,
+    format: 'rgba16float',
+  });
 
   // ── 3D scalar-field volume renderer ──────────────────────────────────
   //

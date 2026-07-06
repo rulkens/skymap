@@ -159,7 +159,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const device = makeFakeDevice(env.encoder);
   const context = makeFakeContext();
   const pointRenderer = makeLoggingRenderer();
-  const milkyWayRenderer = makeLoggingRenderer();
+  const milkyWayCloudRenderer = makeLoggingRenderer();
   const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
@@ -219,6 +219,10 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         volumeFieldRenderer: null,
         flowFieldRenderer: null,
         structureMarkerRenderer: null,
+        // milkyWayPass.draw reads the generated cloud buffers off this handle.
+        milkyWayCloud: {
+          buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }),
+        },
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
       // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
@@ -263,7 +267,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     } as never,
     device,
     context,
-    milkyWayRenderer: milkyWayRenderer as never,
+    milkyWayCloudRenderer: milkyWayCloudRenderer as never,
     horizonShellRenderer: horizonShellRenderer as never,
     filamentRenderer: null,
     volumeFieldRenderer: null,

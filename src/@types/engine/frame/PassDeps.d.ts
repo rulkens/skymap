@@ -17,7 +17,7 @@
 
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
-import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
@@ -55,8 +55,13 @@ export type PassDeps = {
    * no-op.
    */
   flowFieldRenderer: FlowFieldRenderer | null;
-  /** Procedural Milky Way impostor renderer. */
-  milkyWayRenderer: MilkyWayRenderer;
+  /**
+   * Milky-Way point-cloud renderer (additive stars + multiplicative dust).
+   * The generated star/dust buffers it draws are read separately off
+   * `state.gpu.milkyWayCloud` in `milkyWayPass.draw`; this is the stateless
+   * draw handle only.
+   */
+  milkyWayCloudRenderer: MilkyWayCloudRenderer;
   /** Observable-universe horizon shell renderer. */
   horizonShellRenderer: HorizonShellRenderer;
 };

@@ -277,6 +277,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
+      // Milky-Way point cloud + its two-pass renderer. null until initGpu; the
+      // cloud draws in place of the impostor (which stays constructed above).
+      // Excluded from isEngineReady; released in destroy() alongside the impostor.
+      milkyWayCloud: null,
+      milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
       // null until initGpu; excluded from isEngineReady — volumeUpsamplePass
       // null-checks both before hasActiveFields(), so a null state no-ops.
@@ -665,6 +670,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.proceduralDiskRenderer = null;
     state.gpu.milkyWayRenderer?.destroy();
     state.gpu.milkyWayRenderer = null;
+    state.gpu.milkyWayCloud?.destroy();
+    state.gpu.milkyWayCloud = null;
+    state.gpu.milkyWayCloudRenderer?.destroy();
+    state.gpu.milkyWayCloudRenderer = null;
     state.gpu.horizonShellRenderer?.destroy();
     state.gpu.horizonShellRenderer = null;
     state.gpu.volumeFieldRenderer?.destroy();

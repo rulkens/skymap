@@ -102,11 +102,21 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     filamentRenderer: null,
     volumeFieldRenderer: null,
     flowFieldRenderer: null,
-    milkyWayRenderer: { draw: vi.fn() } as any,
+    milkyWayCloudRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
     ...overrides,
   };
 }
+
+// The generated star/dust buffers the milky-way pass reads off
+// `state.gpu.milkyWayCloud.buffers()`. A stable reference so `draw` tests can
+// assert the exact snapshot was forwarded to the renderer.
+const MW_CLOUD_BUFFERS = {
+  starBuf: {} as GPUBuffer,
+  starCount: 3,
+  dustBuf: null,
+  dustCount: 0,
+};
 
 // `state` is forwarded through — most passes ignore it, but
 // `pointSpritesPass` reads `state.subsystems.fades.opacityOf` for
@@ -123,6 +133,8 @@ const STATE_STUB = {
   // state.gpu.focusUniform; an opaque bind group is all they read.
   gpu: {
     focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
+    // milkyWayPass.draw reads the generated cloud buffers off this handle.
+    milkyWayCloud: { buffers: () => MW_CLOUD_BUFFERS },
   },
   // pointSpritesPass stashes packed uniform bytes here after each draw so
   // the pick paths can replay the last frame's camera without re-running
@@ -350,21 +362,28 @@ describe('milkyWayPass.enabled', () => {
 });
 
 describe('milkyWayPass.draw', () => {
-  it('calls milkyWayRenderer.draw when camera is inside the fade band', () => {
+  it('calls milkyWayCloudRenderer.draw with the packed args when camera is inside the fade band', () => {
     // Camera at 5 Mpc from origin sits inside the full-alpha (≤10 Mpc)
     // regime — fadeAlpha should be 1.0.
     const drawSpy = vi.fn();
-    const deps = makeDeps({ milkyWayRenderer: { draw: drawSpy } as any });
+    const deps = makeDeps({ milkyWayCloudRenderer: { draw: drawSpy } as any });
     const ctx = makeCtx();
     milkyWayPass.draw(PASS_STUB, ctx, STATE_STUB, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    const args = drawSpy.mock.calls[0]!;
-    expect(args[0]).toBe(PASS_STUB);
-    expect(args[1]).toBe(ctx.vp);
-    expect(args[2]).toEqual([ctx.canvasSize.width, ctx.canvasSize.height]);
+    // New two-pass renderer signature: draw(pass, MilkyWayCloudDrawArgs).
+    const [passArg, args] = drawSpy.mock.calls[0]!;
+    expect(passArg).toBe(PASS_STUB);
+    expect(args.vp).toBe(ctx.vp);
+    expect(args.viewportPx).toEqual([ctx.canvasSize.width, ctx.canvasSize.height]);
     // fadeAlpha at distance 5 Mpc is 1.0 (full strength).
-    expect(args[3]).toBe(1.0);
-    expect(args[4]).toEqual([0, 0, 5]);
+    expect(args.fadeAlpha).toBe(1.0);
+    // The generated buffer snapshot is forwarded verbatim.
+    expect(args.buffers).toBe(MW_CLOUD_BUFFERS);
+    // Billboard basis (from cameraBillboardBasis(ctx.cam)) + the fixed model
+    // matrix are packed as plain vectors / a 16-float column-major matrix.
+    expect(args.camRight).toHaveLength(3);
+    expect(args.camUp).toHaveLength(3);
+    expect(args.model).toHaveLength(16);
   });
 });
 

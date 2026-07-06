@@ -18,7 +18,7 @@
 import type { EngineState } from '../state/EngineState';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
-import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
@@ -43,7 +43,7 @@ export type RenderFrameInput = {
   // ── GPU handles ───────────────────────────────────────────────────────
   device: GPUDevice;
   context: GPUCanvasContext;
-  milkyWayRenderer: MilkyWayRenderer;
+  milkyWayCloudRenderer: MilkyWayCloudRenderer;
   /** Observable-universe horizon shell renderer. */
   horizonShellRenderer: HorizonShellRenderer;
   /**

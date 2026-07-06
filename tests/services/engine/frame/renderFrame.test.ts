@@ -135,11 +135,29 @@ function makeMockPointRenderer(callLog: CallLog) {
   } as any;
 }
 
-function makeMockMilkyWayRenderer(callLog: CallLog) {
+function makeMockMilkyWayCloudRenderer(callLog: CallLog) {
   return {
     draw: vi.fn(() => {
-      callLog.push('milkyWayRenderer.draw');
+      callLog.push('milkyWayCloudRenderer.draw');
     }),
+    destroy: vi.fn(),
+  } as any;
+}
+
+/**
+ * Stub the generated-cloud handle the milky-way pass reads off
+ * `state.gpu.milkyWayCloud`. `buffers()` returns an inert snapshot — the
+ * renderer mock never touches its contents.
+ */
+function makeMockMilkyWayCloud() {
+  return {
+    buffers: () => ({
+      starBuf: {} as GPUBuffer,
+      starCount: 0,
+      dustBuf: null,
+      dustCount: 0,
+    }),
+    regenerate: vi.fn(),
     destroy: vi.fn(),
   } as any;
 }
@@ -207,7 +225,8 @@ function makeInput(
   const context = makeFakeContext(swapView, callLog);
   const hdrTargetView = makeFakeHdrView();
   const pointRenderer = makeMockPointRenderer(callLog);
-  const milkyWayRenderer = makeMockMilkyWayRenderer(callLog);
+  const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
+  const milkyWayCloud = makeMockMilkyWayCloud();
   const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
   const postProcess = makeMockPostProcess(callLog, hdrTargetView);
   // Minimal VolumeOffscreen stub — renderFrame's existing tests don't
@@ -285,7 +304,8 @@ function makeInput(
     hdrTargetView,
     postProcess,
     pointRenderer,
-    milkyWayRenderer,
+    milkyWayCloudRenderer,
+    milkyWayCloud,
     horizonShellRenderer,
     thumbnails,
     texturedQuadRenderer,
@@ -320,6 +340,8 @@ function makeInput(
           volumeFieldRenderer: null,
           flowFieldRenderer: null,
           structureMarkerRenderer: null,
+          // milkyWayPass.draw reads the generated cloud buffers off this handle.
+          milkyWayCloud,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
         // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the
@@ -371,7 +393,7 @@ function makeInput(
       } as never,
       device,
       context,
-      milkyWayRenderer,
+      milkyWayCloudRenderer,
       horizonShellRenderer,
       filamentRenderer: null,
       volumeFieldRenderer: null,
@@ -513,7 +535,7 @@ describe('renderFrame', () => {
       'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'pointRenderer.draw',
-      'milkyWayRenderer.draw',
+      'milkyWayCloudRenderer.draw',
       'pass.end',
       'postProcess.draw',
       'encoder.finish',
@@ -524,7 +546,7 @@ describe('renderFrame', () => {
       'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'pointRenderer.draw',
-      'milkyWayRenderer.draw',
+      'milkyWayCloudRenderer.draw',
       'pass.end',
       'postProcess.draw',
       'encoder.finish',
@@ -539,7 +561,7 @@ describe('renderFrame', () => {
     renderFrame(fx.input);
     const log = fx.callLog;
     const idxPoint = log.indexOf('pointRenderer.draw');
-    const idxMw = log.indexOf('milkyWayRenderer.draw');
+    const idxMw = log.indexOf('milkyWayCloudRenderer.draw');
     const idxEnd = log.indexOf('pass.end');
     expect(idxPoint).toBeGreaterThanOrEqual(0);
     expect(idxMw).toBeGreaterThan(idxPoint);
@@ -606,7 +628,7 @@ describe('renderFrame', () => {
     renderFrame(fx2.input);
     expect(fx2.pointRenderer.draw).not.toHaveBeenCalled();
     // Milky-way still draws — the override is per-pass, not global.
-    expect(fx2.milkyWayRenderer.draw).toHaveBeenCalledTimes(1);
+    expect(fx2.milkyWayCloudRenderer.draw).toHaveBeenCalledTimes(1);
   });
 
   it('does not skip a pass whose name maps to false in disabledPasses', () => {

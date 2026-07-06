@@ -123,6 +123,14 @@ vi.mock('../../../../src/services/gpu/renderers/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
 }));
 
+vi.mock('../../../../src/services/gpu/galaxy/milkyWayCloud', () => ({
+  createMilkyWayCloud: vi.fn(() => makeStub('milkyWayCloud')),
+}));
+
+vi.mock('../../../../src/services/gpu/renderers/milkyWayCloudRenderer', () => ({
+  createMilkyWayCloudRenderer: vi.fn(() => makeStub('milkyWayCloudRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/labelRenderer', () => ({
   createLabelRenderer: vi.fn(() => makeStub('labelRenderer')),
 }));
@@ -207,6 +215,8 @@ function makeState(): EngineState {
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
+      milkyWayCloud: null,
+      milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
@@ -263,6 +273,10 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
     expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
     expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
+    // The cloud + its renderer must also reach state.gpu.* so destroy() can
+    // release the star/dust VBs + the shared uniform/corner buffers.
+    expect(state.gpu.milkyWayCloud).toBe(stubs.milkyWayCloud);
+    expect(state.gpu.milkyWayCloudRenderer).toBe(stubs.milkyWayCloudRenderer);
     expect(state.gpu.horizonShellRenderer).toBe(stubs.horizonShellRenderer);
   });
 
@@ -302,12 +316,18 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     state.gpu.proceduralDiskRenderer = null;
     state.gpu.milkyWayRenderer?.destroy();
     state.gpu.milkyWayRenderer = null;
+    state.gpu.milkyWayCloud?.destroy();
+    state.gpu.milkyWayCloud = null;
+    state.gpu.milkyWayCloudRenderer?.destroy();
+    state.gpu.milkyWayCloudRenderer = null;
     state.gpu.horizonShellRenderer?.destroy();
     state.gpu.horizonShellRenderer = null;
 
     expect(stubs.texturedDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.proceduralDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.milkyWayRenderer!.destroy).toHaveBeenCalledTimes(1);
+    expect(stubs.milkyWayCloud!.destroy).toHaveBeenCalledTimes(1);
+    expect(stubs.milkyWayCloudRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.horizonShellRenderer!.destroy).toHaveBeenCalledTimes(1);
 
     // Symmetric null-out matches the rest of the bag — see

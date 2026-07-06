@@ -224,7 +224,7 @@ describe('renderFrame visual baseline', () => {
 
     // Renderer mocks — each draw lands on the same `records` array.
     const pointRenderer = makeLoggingRenderer(records, 'point-sprites');
-    const milkyWayRenderer = makeLoggingRenderer(records, 'milky-way');
+    const milkyWayCloudRenderer = makeLoggingRenderer(records, 'milky-way');
     const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
@@ -339,6 +339,10 @@ describe('renderFrame visual baseline', () => {
           flowFieldRenderer: null,
           volumeUpsample,
           structureMarkerRenderer: null,
+          // milkyWayPass.draw reads the generated cloud buffers off this handle.
+          milkyWayCloud: {
+            buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }),
+          },
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.
@@ -392,7 +396,7 @@ describe('renderFrame visual baseline', () => {
       } as never,
       device,
       context,
-      milkyWayRenderer: milkyWayRenderer as never,
+      milkyWayCloudRenderer: milkyWayCloudRenderer as never,
       horizonShellRenderer: horizonShellRenderer as never,
       filamentRenderer: filamentRenderer as never,
       volumeFieldRenderer: volumeFieldRenderer as never,
@@ -433,7 +437,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "textured-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],Array[3]",
+          "argShape": "pass,object",
           "renderer": "milky-way",
         },
         {

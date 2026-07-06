@@ -57,6 +57,8 @@ import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { MilkyWayCloud } from '../../galaxy/MilkyWayCloud';
+import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
@@ -211,6 +213,27 @@ export type EngineGpuHandles = {
    * exclusion as `texturedDiskRenderer` above.
    */
   milkyWayRenderer: MilkyWayRenderer | null;
+  /**
+   * GPU-generated Milky-Way star+dust point cloud — the buffer resource
+   * (per-tier star/dust instance buffers + regenerate/destroy) that the
+   * `milkyWayCloudRenderer` draws.  Null until `initGpu` generates the first
+   * tier's cloud; regenerated in `makeRunTierTransition` on a tier swap.
+   * Same lifecycle + isEngineReady exclusion as the other optional GPU
+   * resources; stored here so `destroy()` can release the star/dust vertex
+   * buffers + the reused generation UBO.
+   */
+  milkyWayCloud: MilkyWayCloud | null;
+  /**
+   * The two-pass (additive stars + multiplicative dust) renderer that draws
+   * `milkyWayCloud` on the HDR path — the replacement for the procedural
+   * `milkyWayRenderer` impostor on the DRAW surface (the impostor stays
+   * constructed for pick + a later teardown task).  Null until `initGpu`
+   * constructs it; the frame body reads it via `RunFrameDeps`/`PassDeps`.
+   * Stored here so `destroy()` can release its shared uniform + corner-quad
+   * buffers.  Excluded from `isEngineReady` (same rationale as the other
+   * optional renderers).
+   */
+  milkyWayCloudRenderer: MilkyWayCloudRenderer | null;
   /**
    * Cosmic-horizon shell renderer — translucent sphere at the
    * comoving particle-horizon radius.  Same lifecycle as the other

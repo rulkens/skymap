@@ -96,7 +96,7 @@ export function renderFrame(input: RenderFrameInput): void {
     state,
     device,
     context,
-    milkyWayRenderer,
+    milkyWayCloudRenderer,
     horizonShellRenderer,
     filamentRenderer,
     volumeFieldRenderer,
@@ -117,7 +117,7 @@ export function renderFrame(input: RenderFrameInput): void {
     filamentRenderer,
     volumeFieldRenderer,
     flowFieldRenderer,
-    milkyWayRenderer,
+    milkyWayCloudRenderer,
     horizonShellRenderer,
   };
 
