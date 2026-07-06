@@ -154,11 +154,11 @@ export function createGenerationPipelines(device: GPUDevice): GenerationPipeline
 
 **Sequencing note:** Tasks 4 and 5 are one atomic pair for the tool build (`createGenerationPipelines`'s `?static` paths and the WESL's location must agree). Land them as two commits in one green sequence: this task moves the TS with its `?static` paths still pointing at the OLD tool shader location (tool builds, vitest green — vitest never links these shaders), Task 5 moves the WESL and flips the two paths. If the intermediate tool build fails on cross-root TS→tool-WESL resolution, squash the two into one commit instead — note which way it went in the task summary.
 
-- [ ] Extract `GEN_RECORD_BYTES` to its own file; `createGalaxyEngine.ts` imports it (delete the local const, keep its didactic comment with the file reference updated).
-- [ ] `git mv` the four engine modules; re-point their internal imports (`../model/…` → `./…`, `../../@types/…` → `../../../@types/galaxy/…`).
-- [ ] Re-point `createGalaxyEngine.ts:105-113` imports (`./packGenerationUniforms` etc. → `../../../../src/services/gpu/galaxy/…`).
-- [ ] `git mv` + re-point `packGenerationUniforms.test.ts` (imports `GENERATION_UBO`, `packGenerationUniforms`, `hiiPalette`, carve fns — all now `src/services/gpu/galaxy/`).
-- [ ] Gates: `npm test` + `npm run typecheck` + tool `npx vite build` (see sequencing note). Commit.
+- [x] Extract `GEN_RECORD_BYTES` to its own file; `createGalaxyEngine.ts` imports it (delete the local const, keep its didactic comment with the file reference updated).
+- [x] `git mv` the four engine modules; re-point their internal imports (`../model/…` → `./…`, `../../@types/…` → `../../../@types/galaxy/…`).
+- [x] Re-point `createGalaxyEngine.ts:105-113` imports (`./packGenerationUniforms` etc. → `../../../../src/services/gpu/galaxy/…`).
+- [x] `git mv` + re-point `packGenerationUniforms.test.ts` (imports `GENERATION_UBO`, `packGenerationUniforms`, `hiiPalette`, carve fns — all now `src/services/gpu/galaxy/`).
+- [x] Gates: `npm test` + `npm run typecheck` + tool `npx vite build` (see sequencing note). Commit.
 
 ---
 
