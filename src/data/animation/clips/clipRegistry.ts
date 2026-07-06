@@ -25,6 +25,7 @@ import {
   tourCosmicWeb,
   tourCosmicWebDwell,
   tourCosmicFlows,
+  tourEmptiness,
 } from './grandTourBeats';
 
 export const clipRegistry: Record<ClipId, Clip> = {
@@ -42,4 +43,5 @@ export const clipRegistry: Record<ClipId, Clip> = {
   tourCosmicWeb,
   tourCosmicWebDwell,
   tourCosmicFlows,
+  tourEmptiness,
 };

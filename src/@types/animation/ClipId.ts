@@ -23,4 +23,5 @@ export type ClipId =
   | 'tourApproachVirgo'
   | 'tourCosmicWeb'
   | 'tourCosmicWebDwell'
-  | 'tourCosmicFlows';
+  | 'tourCosmicFlows'
+  | 'tourEmptiness';

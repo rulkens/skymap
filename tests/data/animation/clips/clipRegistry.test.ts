@@ -37,6 +37,7 @@ describe('clipRegistry', () => {
       'tourCosmicFlows',
       'tourCosmicWeb',
       'tourCosmicWebDwell',
+      'tourEmptiness',
       'tourNeighbourhood',
       'tourOpeningTitle',
       'tourYouAreHere',

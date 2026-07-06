@@ -22,6 +22,7 @@ import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from './grandTour/approachVirgo';
 import { cosmicWeb, cosmicWebDwell } from './grandTour/cosmicWeb';
 import { cosmicFlows, cosmicFlowsDwell } from './grandTour/cosmicFlows';
+import { emptiness } from './grandTour/emptiness';
 
 export const grandTour: Tour = {
   id: 'grandTour',
@@ -92,6 +93,17 @@ export const grandTour: Tour = {
       },
       // The two-step zoom out (local currents → giant streams), captioned.
       dwellClip: cosmicFlowsDwell,
+    },
+    {
+      enterClip: emptiness,
+      caption: {
+        title: 'The emptiness',
+        body: 'Most of the universe is the empty side of that web. Voids like this one stretch 300 million light-years across.',
+        position: 'bottom-left',
+      },
+      // Short by design — the contrast against the web registers quickly,
+      // and the tour never lingers on nothing.
+      dwellClip: dwellDrift(6),
     },
   ],
 };
