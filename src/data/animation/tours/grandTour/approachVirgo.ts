@@ -15,9 +15,10 @@
  *     — the neighbourhood beat revealed it — so Virgo reads as a swarm the
  *     moment the view turns to it.)
  *
- * No strafe here (unlike M31): the old anchor is the Sculptor Group — faint
- * points, not a bright sprite — so it stacking on the boresight during the
- * aim doesn't read as an occlusion.
+ * The aim rides a strafe (same composition as the M31 approach): the old
+ * anchor is Centaurus A — a bright sprite — and at the exact Virgo bearing
+ * it would stack dead on the boresight. The concurrent strafe slides the rig
+ * sideways so Cen A drifts off-centre while Virgo holds the frame.
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
@@ -31,6 +32,7 @@ import {
   moveTargetId,
   scene,
   show,
+  strafeId,
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
@@ -43,7 +45,7 @@ export const approachVirgo: ClipData = {
     scene(setLabelsFocusedOnly(true)),
     hide(['structureRing:group'], 1),
     show(['survey:glade', 'survey:sdss', 'structureRing:cluster'], 2),
-    lookAtId(VIRGO, 3),
+    all([lookAtId(VIRGO, 3), strafeId(VIRGO, 10, 3)]),
     focus(VIRGO),
     hold(1),
     all([moveTargetId(VIRGO, 7), dollyToId(VIRGO, 7)]),
