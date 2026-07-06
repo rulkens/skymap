@@ -200,10 +200,10 @@ export const MILKY_WAY_GENERATION_SEED = 1;
 export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams; // = { type: 'SBb', …, seed: MILKY_WAY_GENERATION_SEED }
 ```
 
-- [ ] Failing tests: `MILKY_WAY_GALAXY_PARAMS is an SBb with 4 arms and the explicit seed` (assert `type === 'SBb'`, `armCount === 4`, `seed === MILKY_WAY_GENERATION_SEED`, `starCount === 200_000`); `classifyHubbleType(MILKY_WAY_GALAXY_PARAMS.type) is 'barred'` (guards the preset against a type-string typo silently changing the whole morphology).
-- [ ] Create the module: copy the params object verbatim from `referenceGalaxies.ts` (`id: 'mw'` entry, lines ~238-265) + add `seed`.
-- [ ] `referenceGalaxies.ts`: the mw entry's `params:` becomes `MILKY_WAY_GALAXY_PARAMS` (import from `../../../../src/data/milkyWay/milkyWayGalaxyParams`); delete the inline object. `tests/tools/galaxy-renderer/data/referenceGalaxies.test.ts` must stay green unmodified (it asserts entry count/ids, not param literals — verify).
-- [ ] Gates: `npm test` + `npm run typecheck` + tool `npx vite build`. Commit.
+- [x] Failing tests: `MILKY_WAY_GALAXY_PARAMS is an SBb with 4 arms and the explicit seed` (assert `type === 'SBb'`, `armCount === 4`, `seed === MILKY_WAY_GENERATION_SEED`, `starCount === 200_000`); `classifyHubbleType(MILKY_WAY_GALAXY_PARAMS.type) is 'barred'` (guards the preset against a type-string typo silently changing the whole morphology).
+- [x] Create the module: copy the params object verbatim from `referenceGalaxies.ts` (`id: 'mw'` entry, lines ~238-265) + add `seed`.
+- [x] `referenceGalaxies.ts`: the mw entry's `params:` becomes `MILKY_WAY_GALAXY_PARAMS` (import from `../../../../src/data/milkyWay/milkyWayGalaxyParams`); delete the inline object. `tests/tools/galaxy-renderer/data/referenceGalaxies.test.ts` must stay green unmodified (it asserts entry count/ids, not param literals — verify).
+- [x] Gates: `npm test` + `npm run typecheck` + tool `npx vite build`. Commit.
 
 ---
 
