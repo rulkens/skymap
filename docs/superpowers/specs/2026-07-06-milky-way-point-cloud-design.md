@@ -80,13 +80,31 @@ of inlining its own copy: one home, the tool renders the identical galaxy the ap
 
 ### 3. Generate once at init
 
-`initGpu` gains a one-time generation step after device creation: carve layouts → create
-star/dust vertex buffers (`capacity × GEN_RECORD_BYTES`, `VERTEX | STORAGE`, labeled
+`initGpu` gains a generation step after device creation: carve layouts → create star/dust
+vertex buffers (`capacity × GEN_RECORD_BYTES`, `VERTEX | STORAGE`, labeled
 `galaxy:mwStarVB` / `galaxy:mwDustVB`) → write the packed UBO → encode both compute passes →
-submit. No regeneration path exists in the app (fixed preset, fixed seed); the buffers live
-for the session. Generation runs in the local galaxy frame with identity extra-lanes — world
+submit. Generation runs in the local galaxy frame with identity extra-lanes — world
 placement is a draw-side concern (below), because the UBO's two-angle extra-rotation cannot
 express the full equatorial→galactic rotation.
+
+**Per-tier star budgets.** The star count scales with the user's tier (the same
+`state.sources.tier` that drives catalog bins):
+
+| Tier | Stars (planned) | Dust |
+| --- | --- | --- |
+| small | 100k | follows the carve's dust fraction |
+| medium | 200k | " |
+| large | 400k | " |
+
+A single `MILKY_WAY_STARS_PER_TIER` record in the calibration module holds these; the
+preset's `starCount` is the medium value and the others derive by ×0.5 / ×2. Only
+`starCount` varies per tier — morphology params are tier-invariant, so all tiers render the
+same galaxy at different densities. Because tier changes at runtime, generation is not
+strictly once: a tier switch re-runs carve → buffer recreate → dispatch (sub-millisecond,
+same deterministic seed), driven by the existing tier-change path. Drawing a prefix of a
+max-tier buffer is not an option — records are ordered by population, so a prefix would
+drop whole populations rather than thin uniformly. No other regeneration path exists
+(fixed preset, fixed seed).
 
 ### 4. `milkyWayCloudRenderer` — draw-side model transform
 
@@ -136,12 +154,14 @@ uniform ABI; the original ShaderToy port record stays in the completed plan doc)
 
 ## Performance
 
-- Generation: one-time at init, two compute dispatches over ~10⁵ records — sub-millisecond
-  GPU time, no per-frame cost.
+- Generation: at init + on tier switch, two compute dispatches over 10⁵–4×10⁵ records —
+  sub-millisecond GPU time, no per-frame cost.
 - Per frame: two instanced draws over persistent buffers. No new render-wake sources (the
-  MW is static; existing wake channels cover camera motion and fades).
-- Record counts come from the preset's carve (same budgets as the tool's Milky Way entry);
-  no LOD needed for a single galaxy.
+  MW is static; existing wake channels cover camera motion and fades; a tier-switch
+  regeneration rides the wake the tier change already causes).
+- Star budgets per tier: 100k / 200k / 400k planned (see §3); against the app's ~2.5M
+  catalog points this is a small additive cost even at large. No LOD needed for a single
+  galaxy.
 
 ## Testing
 
