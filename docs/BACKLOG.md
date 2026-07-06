@@ -48,6 +48,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Unify the two disk-planner catalog walks** `ready` — procedural + textured planners walk the catalogs twice per frame, computing each row's geometry twice (~4.2 ms of a 5.1 ms frame, M1 Max); merge into one shared walk feeding two row-reducers. Prerequisite pure helpers shipped in `src/utils/render/disk/`. → [details](backlog/2026-06-30-unify-disk-planner-walks.md)
 - [ ] **Thumbnail-priority loop scaling** `deferred` — the per-frame priority scan (`texturedDiskSubsystem.ts`) is CPU-linear with stride decimation (#79); add a BVH or compute-shader pass for larger tiers. → [details](backlog/2026-06-29-thumbnail-loop-scaling.md)
 - [ ] **Picking GPU resources → own subsystem** `deferred` — `pickRenderer.ts` owns its per-camera pick texture directly; migrate it (parallel to fade per ADR 0001). Pick texture is per-camera, so it needs its own ADR. → [details](backlog/2026-06-29-picking-gpu-subsystem.md)
+- [ ] **galaxy-renderer `dispose()` skips GPU teardown** `ready` — RAF loop + DOM listeners are removed but buffers/pipelines/UBOs (incl. per-extra UBOs) are never `destroy()`ed; spike-era behavior, flagged in the GPU-generation final review.
 
 ## UI & UX
 

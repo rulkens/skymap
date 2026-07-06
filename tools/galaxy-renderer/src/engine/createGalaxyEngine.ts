@@ -5,11 +5,25 @@
  * (`createGalaxyRenderer`), with all math delegated to the five tested pure
  * helpers and all seven shaders pulled in as build-time-linked WESL strings.
  *
- * ## The pass chain (per frame)
+ * ## The pass chain
  *
- *   generate (worker) ──► star VB / dust VB
+ * Generation is no longer a per-frame step. `setParams` dispatches it ONCE,
+ * whenever the caller changes the central galaxy's params — not on every
+ * `requestAnimationFrame` — as a pair of compute passes
+ * (`createGenerationPipelines.ts` builds the pipelines, `encodeGeneration.ts`
+ * records the dispatches) that write directly into the star/dust vertex
+ * buffers the frame loop already draws from. It shares this module's one
+ * `GPUQueue` with every subsequent `drawFrame`, so "the new galaxy is ready
+ * before it's drawn" is a queue-ordering guarantee, not something the render
+ * loop waits on — see `setParams`'s docblock for why no readback is needed.
+ * Background extras (`setExtras`) dispatch the same way: one compute pair per
+ * extra, each with its own params AND its own world transform folded into its
+ * UBO — see "Why extras fold their transform into generation" below.
+ *
+ *   setParams(p) ──► genStars / genDust compute passes ──► star VB / dust VB
+ *                     (one queue.submit, no CPU readback)
  *                              │
- *                              ▼
+ *                              ▼ (every later drawFrame, same queue)
  *   ┌─ scene pass (HDR, clear black) ──────────────────────────────────┐
  *   │   star pipe  (additive one/one) : central galaxy + every extra   │
  *   │   dust pipe  (transmittance)    : central galaxy + every extra   │
@@ -31,18 +45,26 @@
  * is also why the projection's [0,1] vs [-1,1] depth convention is
  * cosmetic here — see the `proj` construction below.
  *
- * ## Why extras are baked, not per-draw-uniformed
+ * ## Why extras fold their transform into generation
  *
- * Each background galaxy carries its full world transform baked into its own
- * vertex data (`bakeExtraTransform`), rather than being drawn from the shared
- * subject buffer plus a per-draw model-matrix uniform mutated between draw
- * calls. That per-draw-uniform approach is the standing
- * writeBuffer-vs-submit ordering trap: interleaving `queue.writeBuffer` with
- * `queue.submit` in a frame does not guarantee the write lands before the
- * matching draw reads it, so the first extra to draw would read stale bytes
- * and paint on top of the wrong galaxy. Baking once per `setExtras` makes
- * every instance self-contained: drawing it at any point in the frame reads
- * the same correct bytes, and the per-frame cost is a single extra `draw`.
+ * Each background galaxy folds its full world transform into generation: its
+ * per-extra UBO carries the rigid transform + size scale in the extra lanes
+ * (`packGenerationUniforms`), and the compute passes place every star/dust
+ * record in world space as their final write step (`applyExtraTransform` in
+ * `lib/generate.wesl`). The vertex buffer that comes out is already
+ * world-placed, so drawing an extra is a plain instanced `draw` against its
+ * own buffers — no per-draw model-matrix uniform, and nothing rewritten after
+ * the generation submit.
+ *
+ * The alternative — one shared subject buffer plus a per-draw model matrix
+ * mutated between draw calls — is the standing writeBuffer-vs-submit ordering
+ * trap: interleaving `queue.writeBuffer` with `queue.submit` in a frame does
+ * not guarantee the write lands before the matching draw reads it, so the
+ * first extra to draw would read stale bytes and paint on top of the wrong
+ * galaxy. Folding the transform in at generation time is even further from
+ * that trap than a post-generation bake would be: the transform is applied
+ * once, inline, as the record is first written, so the world-space bytes are
+ * never rewritten at all — there is no second write for a draw to race.
  *
  * ## Deviations from the spike, sanctioned by the plan
  *
@@ -55,6 +77,14 @@
  *    this is a visual-tuning instrument that always animates (idle
  *    auto-rotate, damped camera), so gating renders on dirty state would buy
  *    nothing.
+ *  - `starCount`/`dustCount` are the carved layouts' CAPACITIES
+ *    (`GenerationLayout.capacity`), not a count of "live" (visibly nonzero)
+ *    records — see `setParams`'s docblock.
+ *  - There is no serial-RNG replay: every star/dust draw comes from a
+ *    stateless per-invocation hash (see `lib/generate.wesl`'s header), not a
+ *    single-threaded generator stepping through one draw at a time. The
+ *    determinism contract that DOES hold is CPU-free: same params in, same
+ *    GPU buffer contents out, every time.
  */
 import { mat4 } from 'wgpu-matrix';
 
@@ -65,18 +95,22 @@ import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ViewPose } from '../../@types/engine/ViewPose';
 import type { ExtraGalaxySpec } from '../../@types/engine/ExtraGalaxySpec';
-import type { GeneratedGalaxy } from '../../@types/model/GeneratedGalaxy';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-import { generateGalaxy } from '../model/generateGalaxy';
-import type { GenerateGalaxyWorkerResponse } from '../worker/generateGalaxy.worker';
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 
 import { orbitEye } from './orbitEye';
 import { panAxes } from './panAxes';
 import { lensShift } from './lensShift';
 import { packCameraUniforms } from './packCameraUniforms';
-import { bakeExtraTransform } from './bakeExtraTransform';
+import { createGenerationPipelines } from './createGenerationPipelines';
+import { encodeGeneration } from './encodeGeneration';
+import { packGenerationUniforms } from './packGenerationUniforms';
+import { GENERATION_UBO } from './generationUboLayout';
+import { carveStarLayout } from '../model/carveStarLayout';
+import { carveDustLayout } from '../model/carveDustLayout';
+import { classifyHubbleType } from '../model/classifyHubbleType';
+import { splitStarBudget } from '../model/splitStarBudget';
 
 import starWgsl from './shaders/star.wesl?static';
 import dustWgsl from './shaders/dust.wesl?static';
@@ -91,12 +125,30 @@ const BLOOM_MIPS = 5;
 /** HDR working format for the scene + bloom pyramid. galaxy-engine.js:17. */
 const HDR: GPUTextureFormat = 'rgba16float';
 
-/** A single uploaded extra galaxy: its baked star/dust vertex buffers + counts. */
+/**
+ * Bytes per generated star/dust record: 8 f32 lanes (`x,y,z,r,g,b,size,
+ * brightness` for stars; `x,y,z,size,r,g,b,opacity` for dust — different
+ * field order, same stride). The single record-size home: the star/dust
+ * render pipelines' instance `arrayStride` reads it directly, so a stride
+ * change is one edit here. It must still match `lib/generate.wesl`'s stride-8
+ * output storage array, which lives across the CPU/GPU seam and so stays a
+ * hand-mirror.
+ */
+const GEN_RECORD_BYTES = 32;
+
+/**
+ * A single generated extra galaxy: its GPU-filled star/dust vertex buffers,
+ * their instance counts, and the per-extra UBO the generation passes read.
+ * The UBO is retained (not destroyed right after the generation submit) so its
+ * lifetime brackets the vertex buffers it produced — the whole triple is torn
+ * down together on the next `setExtras`.
+ */
 type Extra = {
   starBuf: GPUBuffer;
   starCount: number;
   dustBuf: GPUBuffer | null;
   dustCount: number;
+  ubo: GPUBuffer;
 };
 
 export async function createGalaxyEngine(
@@ -169,7 +221,7 @@ export async function createGalaxyEngine(
       buffers: [
         { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }] },
         {
-          arrayStride: 32,
+          arrayStride: GEN_RECORD_BYTES,
           stepMode: 'instance',
           attributes: [
             { shaderLocation: 1, offset: 0, format: 'float32x3' },
@@ -206,7 +258,7 @@ export async function createGalaxyEngine(
       buffers: [
         { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }] },
         {
-          arrayStride: 32,
+          arrayStride: GEN_RECORD_BYTES,
           stepMode: 'instance',
           attributes: [
             { shaderLocation: 1, offset: 0, format: 'float32x3' },
@@ -269,6 +321,19 @@ export async function createGalaxyEngine(
   });
   const compPipe = mkPost(compositeWgsl, 'galaxy:compPipe', format);
 
+  // ---- generation pipelines + UBO (compute dispatch — see setParams below) ----
+  // One `genUbo` buffer for the CENTRAL galaxy only: `setParams` rewrites it
+  // in place on every regeneration. Each extra (background galaxy) dispatches
+  // with its OWN params and world transform, so it gets its own per-extra UBO
+  // built in `setExtras` — one shared buffer can't serve them, since packing N
+  // extras into one submit would need N distinct UBO contents live at once.
+  const genPipelines = createGenerationPipelines(device);
+  const genUbo = device.createBuffer({
+    label: 'galaxy:genUbo',
+    size: GENERATION_UBO.byteLength,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
   // ---- tiny readback target for headless verification (galaxy-engine.js:96-97) ----
   const debugTex = device.createTexture({
     label: 'galaxy:debugTex',
@@ -287,44 +352,7 @@ export async function createGalaxyEngine(
   let starCount = 0;
   let dustBuf: GPUBuffer | null = null;
   let dustCount = 0;
-  let extras: Extra[] = []; // background galaxies, each with a baked world transform
-  let extrasToken = 0;
-
-  // ---- generation: worker with synchronous fallback (galaxy-engine.js:104-116) ----
-  let useWorker = true;
-  let worker: Worker | null = null;
-  let reqId = 0;
-  const pending = new Map<number, (g: GeneratedGalaxy) => void>();
-  try {
-    worker = new Worker(new URL('../worker/generateGalaxy.worker.ts', import.meta.url), {
-      type: 'module',
-    });
-    worker.onmessage = (e: MessageEvent<GenerateGalaxyWorkerResponse>) => {
-      const cb = pending.get(e.data.id);
-      if (cb) {
-        pending.delete(e.data.id);
-        cb(e.data);
-      }
-    };
-    worker.onerror = () => {
-      useWorker = false;
-      // Requests already in flight when the worker dies are never settled —
-      // their promises just hang. Acceptable for this dev tool (a stalled
-      // fit/generate call is visible and the page can be reloaded); if this
-      // engine is ever adapted into the main app, reject the pending map here.
-    };
-  } catch {
-    useWorker = false;
-  }
-  function generateAsync(params: GalaxyParams): Promise<GeneratedGalaxy> {
-    if (!useWorker || !worker) return Promise.resolve(generateGalaxy(params));
-    const w = worker;
-    return new Promise((resolve) => {
-      const id = ++reqId;
-      pending.set(id, resolve);
-      w.postMessage({ id, params });
-    });
-  }
+  let extras: Extra[] = []; // background galaxies, each GPU-generated in world space
 
   // Per-pipeline bind groups: `layout:'auto'` groups are pipeline-specific and
   // never cross pipelines, so the SAME cam buffer needs one group for the star
@@ -457,74 +485,172 @@ export async function createGalaxyEngine(
   const camData = new Float32Array(28);
   const compData = new Float32Array(8);
 
+  /**
+   * setParams — regenerate the central galaxy as a GPU compute dispatch
+   * instead of an awaited worker round-trip. Carving the layouts is cheap
+   * pure arithmetic (`splitStarBudget`/`carveStarLayout`/`carveDustLayout`),
+   * so it runs directly on the caller's thread; the actual star/dust MATH
+   * (bulge/disk/arm placement, colour, HII knots, ...) happens on the GPU
+   * inside `encodeGeneration`'s two compute passes, ported in plan 01.
+   *
+   * `starBuf`/`dustBuf` are sized to the carved CAPACITY
+   * (`GenerationLayout.capacity`), not a "how many stars will actually be
+   * visible" count — a population's `iterations` is its CPU builder's loop
+   * bound, and some iterations write a zero-brightness/opacity record (an
+   * arm star past its fade radius, say) without shrinking the layout. The
+   * compute pass fills every capacity slot (dead ones included), and the
+   * render pipelines below draw all of them: a dead slot rasterizes nothing,
+   * so nothing is drawn wrong — it just costs a few zero-alpha billboards.
+   * `starCount`/`dustCount` (the instance counts every `draw` call below
+   * uses) are therefore set to the capacities.
+   *
+   * The write order — `queue.writeBuffer(genUbo, ...)`, THEN record the
+   * compute passes into a fresh encoder, THEN `queue.submit` — is what makes
+   * this safe on one shared `GPUQueue` without a readback: WebGPU processes
+   * everything enqueued on a queue in submission order, so by the time this
+   * submit's compute passes run on the GPU, the preceding `writeBuffer` has
+   * already landed. That is NOT the same shape as the standing
+   * writeBuffer-vs-submit trap documented in the module header ("Why extras
+   * are baked") — that trap is multiple writeBuffer/submit pairs racing to
+   * mutate ONE shared buffer read by draws recorded at different times; here
+   * there is exactly one write, one encoder, one submit, for a buffer
+   * nothing else touches concurrently. The same ordering guarantee is why the
+   * promise can resolve right after `submit`, with no `mapAsync` wait: any
+   * `drawFrame` encoded afterwards shares this queue too, so its draws are
+   * guaranteed to run after this submit's writes land.
+   *
+   * `opts.onStats` reports PLANNED counts, not live ones: the sum of each
+   * star population's `iterations` (not `iterations * stride` — that would
+   * double-count the worst-case HII-bonus slots most iterations never use),
+   * plus the full dust capacity (dust ranges are all stride 1, so capacity
+   * IS its planned count). Actual live counts differ by a few percent, the
+   * same slack `iterations` always carried against its builder's real output
+   * (see `PopulationRange`'s docblock) — a HUD estimate, not an exact tally.
+   */
   async function setParams(p: GalaxyParams): Promise<void> {
-    const g = await generateAsync(p);
+    const category = classifyHubbleType(p.type);
+    const budget = splitStarBudget(category, p);
+    const starLayout = carveStarLayout(category, p, budget);
+    const dustLayout = carveDustLayout(category, p, budget);
+
     if (starBuf) starBuf.destroy();
+    // A zero-capacity star layout is not expected in practice (every
+    // category's split puts at least some stars in bulge/disk/halo), but a
+    // zero-size GPUBuffer is invalid, so clamp to one record just in case.
     starBuf = device.createBuffer({
       label: 'galaxy:starVB',
-      size: g.stars.byteLength,
-      usage: GPUBufferUsage.VERTEX,
-      mappedAtCreation: true,
+      size: Math.max(1, starLayout.capacity) * GEN_RECORD_BYTES,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
     });
-    new Float32Array(starBuf.getMappedRange()).set(g.stars);
-    starBuf.unmap();
-    starCount = g.starCount;
+    starCount = starLayout.capacity;
+
     if (dustBuf) dustBuf.destroy();
-    if (g.dustCount > 0) {
+    if (dustLayout.capacity > 0) {
       dustBuf = device.createBuffer({
         label: 'galaxy:dustVB',
-        size: g.dust.byteLength,
-        usage: GPUBufferUsage.VERTEX,
-        mappedAtCreation: true,
+        size: dustLayout.capacity * GEN_RECORD_BYTES,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
       });
-      new Float32Array(dustBuf.getMappedRange()).set(g.dust);
-      dustBuf.unmap();
     } else {
       dustBuf = null;
     }
-    dustCount = g.dustCount;
-    opts.onStats?.({ stars: starCount, dust: dustCount });
+    dustCount = dustLayout.capacity;
+
+    device.queue.writeBuffer(genUbo, 0, packGenerationUniforms(p, budget, null));
+
+    const enc = device.createCommandEncoder({ label: 'galaxy:generate' });
+    encodeGeneration({
+      device,
+      encoder: enc,
+      pipelines: genPipelines,
+      ubo: genUbo,
+      starBuf,
+      starLayout,
+      dustBuf,
+      dustLayout,
+    });
+    device.queue.submit([enc.finish()]);
+
+    const plannedStars = starLayout.ranges.reduce((sum, r) => sum + r.iterations, 0);
+    opts.onStats?.({ stars: plannedStars, dust: dustLayout.capacity });
   }
 
   function setRender(patch: Partial<RenderSettings & LodSettings>): void {
     Object.assign(render, patch);
   }
 
-  // Replace the set of background galaxies. Token-guarded: a newer setExtras
-  // abandons the older one's remaining work. (galaxy-engine.js:197-215)
+  // Replace the set of background galaxies. Each extra is generated GPU-side
+  // exactly like the central galaxy in `setParams`, but with its own params
+  // and its own rigid world transform folded into its per-extra UBO: carve the
+  // layouts from `spec.params`, allocate that extra's `VERTEX | STORAGE`
+  // star/dust buffers, pack `packGenerationUniforms(spec.params, budget, spec)`
+  // (the transform + size scale ride the UBO's extra lanes, so the compute
+  // passes emit records already placed in the scene), then `encodeGeneration`
+  // into ONE shared encoder for every extra and submit once.
+  //
+  // The whole body is synchronous up to that single submit — no `await` splits
+  // the destroy-old / build-new sequence, so replacing the extras is atomic per
+  // call and needs no interleaving guard: the old buffers are torn down and the
+  // new ones built with nothing able to run in between. The `async` signature
+  // is kept only because `GalaxyEngineHandle` declares it; nothing is awaited.
   async function setExtras(specs: readonly ExtraGalaxySpec[]): Promise<void> {
-    const token = ++extrasToken;
     for (const e of extras) {
       e.starBuf.destroy();
       e.dustBuf?.destroy();
+      e.ubo.destroy();
     }
     extras = [];
+
+    const enc = device.createCommandEncoder({ label: 'galaxy:generateExtras' });
     for (const spec of specs) {
-      const g = await generateAsync(spec.params);
-      if (token !== extrasToken) return; // a newer setExtras superseded this one
-      bakeExtraTransform(g.stars, 6, spec.pos, spec.scale, spec.rotY, spec.tiltX);
-      const sb = device.createBuffer({
+      const category = classifyHubbleType(spec.params.type);
+      const budget = splitStarBudget(category, spec.params);
+      const starLayout = carveStarLayout(category, spec.params, budget);
+      const dustLayout = carveDustLayout(category, spec.params, budget);
+
+      // Same clamp as `setParams`: a zero-capacity star layout isn't expected,
+      // but a zero-size GPUBuffer is invalid, so floor the size at one record.
+      const starBufExtra = device.createBuffer({
         label: 'galaxy:extraStarVB',
-        size: g.stars.byteLength,
-        usage: GPUBufferUsage.VERTEX,
-        mappedAtCreation: true,
+        size: Math.max(1, starLayout.capacity) * GEN_RECORD_BYTES,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
       });
-      new Float32Array(sb.getMappedRange()).set(g.stars);
-      sb.unmap();
-      let db: GPUBuffer | null = null;
-      if (g.dustCount > 0) {
-        bakeExtraTransform(g.dust, 3, spec.pos, spec.scale, spec.rotY, spec.tiltX);
-        db = device.createBuffer({
+      let dustBufExtra: GPUBuffer | null = null;
+      if (dustLayout.capacity > 0) {
+        dustBufExtra = device.createBuffer({
           label: 'galaxy:extraDustVB',
-          size: g.dust.byteLength,
-          usage: GPUBufferUsage.VERTEX,
-          mappedAtCreation: true,
+          size: dustLayout.capacity * GEN_RECORD_BYTES,
+          usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
         });
-        new Float32Array(db.getMappedRange()).set(g.dust);
-        db.unmap();
       }
-      extras.push({ starBuf: sb, starCount: g.starCount, dustBuf: db, dustCount: g.dustCount });
+
+      const ubo = device.createBuffer({
+        label: 'galaxy:extraGenUbo',
+        size: GENERATION_UBO.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      device.queue.writeBuffer(ubo, 0, packGenerationUniforms(spec.params, budget, spec));
+
+      encodeGeneration({
+        device,
+        encoder: enc,
+        pipelines: genPipelines,
+        ubo,
+        starBuf: starBufExtra,
+        starLayout,
+        dustBuf: dustBufExtra,
+        dustLayout,
+      });
+
+      extras.push({
+        starBuf: starBufExtra,
+        starCount: starLayout.capacity,
+        dustBuf: dustBufExtra,
+        dustCount: dustLayout.capacity,
+        ubo,
+      });
     }
+    device.queue.submit([enc.finish()]);
   }
 
   function setView(pose: Partial<ViewPose>): void {
@@ -900,10 +1026,6 @@ export async function createGalaxyEngine(
       window.removeEventListener('pointerup', onUp);
       canvas.removeEventListener('wheel', onWheel);
       canvas.removeEventListener('contextmenu', onContextMenu);
-      // Every HMR/StrictMode remount calls dispose() and creates a fresh
-      // engine; without terminate() the old worker thread (and its module
-      // graph) leaks silently instead of dying with its engine.
-      worker?.terminate();
     },
   };
 }

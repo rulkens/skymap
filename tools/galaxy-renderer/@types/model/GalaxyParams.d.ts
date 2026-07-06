@@ -1,8 +1,8 @@
 /**
- * GalaxyParams — the full knob surface for `generateGalaxy`. Every field is
- * optional except `type`; the generator applies the spike's hand-dialled
- * defaults at the point of use (not here, so this type stays a pure
- * description of the input shape, not a merged/defaulted one).
+ * GalaxyParams — the full knob surface for the GPU galaxy-generation passes.
+ * Every field is optional except `type`; the generation shaders apply the
+ * spike's hand-dialled defaults at the point of use (not here, so this type
+ * stays a pure description of the input shape, not a merged/defaulted one).
  *
  * The spike's `background` flag is deliberately dropped: galaxy-model.js:117
  * hardcodes the background field to 0 regardless of the param, so the knob

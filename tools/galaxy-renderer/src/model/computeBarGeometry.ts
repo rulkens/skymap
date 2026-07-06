@@ -3,20 +3,33 @@
  * fixed orientation trig) once per generation, per `BarGeometry`'s docblock.
  * Ported from galaxy-model.js:228-230.
  *
- * Draws the bar-tilt angle from `ctx.rand()` *unconditionally* — for every
+ * Takes `rand` (a bare draw function) plus the four scalars it needs, rather
+ * than a whole build-context object — its one caller, `packGenerationUniforms`,
+ * packs the GPU generation UBO and has no such context to offer. Threading a
+ * context type through here purely to satisfy a signature would tangle this
+ * pure geometry calculation with a construction contract it doesn't need.
+ *
+ * Draws the bar-tilt angle from `rand()` *unconditionally* — for every
  * category, not just `'barred'` — because that's where the spike's main
  * stream draws it (model.js:229, between the bulge loop and the
- * `category === 'barred'` branch that actually uses `barLength`). This
- * builder must therefore run between `buildBulge` and `buildBar` in the
- * orchestrator (Task 10) even for non-barred galaxies, or every population
- * drawn after it desyncs from the spike's RNG sequence.
+ * `category === 'barred'` branch that actually uses `barLength`).
+ * `packGenerationUniforms`'s `mainStream` draws it in the equivalent position
+ * for the same reason (see that module's header) so a barred galaxy's later
+ * main-stream draws — the irregular clump / lenticular cloud centres — land
+ * in the position the spike's RNG sequence would put them.
  */
+import { barLengthOf } from './barLengthOf';
 import type { BarGeometry } from '../../@types/model/BarGeometry';
-import type { GalaxyBuildContext } from '../../@types/model/GalaxyBuildContext';
+import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';
 
-export function computeBarGeometry(ctx: GalaxyBuildContext): BarGeometry {
-  const { rand, category, outerRadius, asymmetry, params } = ctx;
-  const barLength = category === 'barred' ? outerRadius * 0.42 * (params.barStrength ?? 1) : 0;
+export function computeBarGeometry(
+  rand: () => number,
+  category: GalaxyCategory,
+  outerRadius: number,
+  asymmetry: number,
+  barStrength: number | undefined,
+): BarGeometry {
+  const barLength = barLengthOf(category, outerRadius, barStrength);
   const barAngle = (rand() - 0.5) * 0.6 * asymmetry; // small random tilt
   return { barLength, cosBar: Math.cos(barAngle), sinBar: Math.sin(barAngle) };
 }
