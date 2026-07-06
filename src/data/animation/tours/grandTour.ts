@@ -25,6 +25,7 @@ import { cosmicFlows, cosmicFlowsDwell } from './grandTour/cosmicFlows';
 import { emptiness } from './grandTour/emptiness';
 import { deepField, deepFieldDwell } from './grandTour/deepField';
 import { theEdge } from './grandTour/theEdge';
+import { homeAgain } from './grandTour/homeAgain';
 
 export const grandTour: Tour = {
   id: 'grandTour',
@@ -125,6 +126,16 @@ export const grandTour: Tour = {
         position: 'bottom-left',
       },
       dwellClip: theEdge,
+    },
+    {
+      // No enter clip: the rush home rides the captioned dwell, and the
+      // tour ends on its settle (snapshot restore + UI chrome return).
+      caption: {
+        title: 'Home again',
+        body: 'Back to where we began. Everything you just saw is out there to explore.',
+        position: 'bottom-left',
+      },
+      dwellClip: homeAgain,
     },
   ],
 };

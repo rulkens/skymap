@@ -26,6 +26,7 @@ import { cosmicFlows } from '../tours/grandTour/cosmicFlows';
 import { emptiness } from '../tours/grandTour/emptiness';
 import { deepField } from '../tours/grandTour/deepField';
 import { theEdge } from '../tours/grandTour/theEdge';
+import { homeAgain } from '../tours/grandTour/homeAgain';
 
 export const tourOpeningTitle: Clip = {
   id: 'tourOpeningTitle',
@@ -97,4 +98,10 @@ export const tourTheEdge: Clip = {
   id: 'tourTheEdge',
   label: 'Grand tour 09 — the edge',
   data: theEdge,
+};
+
+export const tourHomeAgain: Clip = {
+  id: 'tourHomeAgain',
+  label: 'Grand tour 10 — home again',
+  data: homeAgain,
 };
