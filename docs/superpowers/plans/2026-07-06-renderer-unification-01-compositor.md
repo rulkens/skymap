@@ -106,15 +106,15 @@ export function createCompositor(init: {
 **Internal contract** (the load-bearing decisions; bodies are the implementer's):
 
 - Lazy cache `Map<string, { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer }>` keyed `` `${blend}:${dstFormat}` `` where `dstFormat` comes from the constructor mapping above. One uniform buffer _per cache entry_ — a single shared buffer would make multiple composite draws in one frame last-write-wins (the known `queue.writeBuffer`-interleave bite; see CLAUDE.md "Things that have bitten us"). Document both choices didactically.
-- Blend-state table (data, not branches — one `Record<CompositeBlend, GPUBlendState | undefined>`):
+- Blend-state table (data, not branches — one `Record<CompositeBlend, { blend: GPUBlendState | undefined; preserveAlpha: 0 | 1 }>`; alpha semantics are a column of this table, NOT a draw argument):
 
-  | blend      | GPUBlendState (color and alpha identical)          |
-  | ---------- | -------------------------------------------------- |
-  | `replace`  | `undefined` — no blending, overwrite               |
-  | `over`     | `src one, dst one-minus-src-alpha, add` (premult.) |
-  | `additive` | `src one, dst one, add`                            |
+  | blend      | color blend                                | alpha blend                          | preserveAlpha |
+  | ---------- | ------------------------------------------ | ------------------------------------ | ------------- |
+  | `replace`  | `undefined` — no blending, overwrite       | `undefined`                          | 0             |
+  | `over`     | `src src-alpha, dst one-minus-src-alpha, add` | `src one, dst one-minus-src-alpha, add` | 1             |
+  | `additive` | `src one, dst one, add`                    | `src one, dst one, add`              | 1             |
 
-  `over`/`additive` values match the existing conventions byte-for-byte — cite `pickDebugOverlay.ts:66-72` and `volumeUpsample.ts:82-87`.
+  `over` is **straight-alpha** Porter-Duff, matching PR #386's `foregroundComposite.ts` blend state byte-for-byte (the fragment emits un-premultiplied colour; the blend hardware applies the coverage multiply — premultiplying in the shader would double-multiply, cite the `foregroundComposite/fragment.wesl` "straight vs premultiplied" rationale). `additive` matches `volumeUpsample.ts:82-87`. `preserveAlpha` feeds the uniform below: `replace` forces alpha 1.0 (the swap chain is premultiplied-alphaMode and the tonemap consumer relies on an opaque result), `over`/`additive` carry the source's alpha (coverage is data the composite must preserve — a translucent atmosphere tints labels rather than hard-masking them).
 
 - Uniform layout — 32-byte buffer, packed via `Float32Array`/`Uint32Array` views over one `ArrayBuffer` (the `postProcess.ts:249-251` idiom):
 
@@ -125,7 +125,8 @@ export function createCompositor(init: {
   | 8      | asinhSoftness | f32  | `DEFAULT_ASINH_SOFTNESS` (10.0); `0` when tone is null  |
   | 12     | curve         | u32  | `tone.curve >>> 0`; `0` when tone is null               |
   | 16     | toneEnabled   | u32  | `1` when tone is set, `0` when null                     |
-  | 20–31  | padding       | —    | zero                                                    |
+  | 20     | preserveAlpha | u32  | the blend-table column above — derived from `blend` at pack time, never passed by the caller |
+  | 24–31  | padding       | —    | zero                                                    |
 
   The exposure clamp moves here with the pipeline — point-of-use ownership per `clampExposure.ts`'s docblock.
 
@@ -136,19 +137,20 @@ export function createCompositor(init: {
 
 **Shaders** (`shaders/compositor/`):
 
-- `io.wesl`: `CompositorUniforms` struct matching the byte table above (5 fields), plus `VSOut { @builtin(position) clip, @location(0) uv }`. Model the header on `toneMap/io.wesl`.
+- `io.wesl`: `CompositorUniforms` struct matching the byte table above (6 fields), plus `VSOut { @builtin(position) clip, @location(0) uv }`. Model the header on `toneMap/io.wesl`.
 - `vertex.wesl`: the covering-triangle stage — functionally identical to `toneMap/vertex.wesl:26-38`, importing `package::compositor::io::VSOut`. Carry the covering-triangle-vs-quad rationale.
-- `fragment.wesl`: bindings `@group(0)` — `srcTex: texture_2d<f32>` @0, `srcSamp: sampler` @1, `u: CompositorUniforms` @2. Body contract: `textureSample` ONCE, unconditionally, at the top (keeps the sample out of any control flow — no uniformity-analysis edge cases); then `if (u.toneEnabled == 0u) { return sample; }` (raw pass-through: no clamp, alpha preserved — additive HDR values legitimately exceed 1); else scale `.rgb` by `u.exposure` and run the five-curve chain exactly as `toneMap/fragment.wesl:54-67` (same `applyLinear`/`applyReinhard`/`applyAsinh`/`applyGamma2`/`applyAces` imports from `package::lib::tonemap`, same ACES fallback for unknown curve values), returning `vec4<f32>(mapped, 1.0)` (alpha 1.0 — the swap chain is premultiplied-alphaMode; carry the `toneMap/fragment.wesl:68-71` comment). `lib/tonemap.wesl` is untouched — it stays the single source of curve truth.
+- `fragment.wesl`: bindings `@group(0)` — `srcTex: texture_2d<f32>` @0, `srcSamp: sampler` @1, `u: CompositorUniforms` @2. Body contract: `textureSample` ONCE, unconditionally, at the top (keeps the sample out of any control flow — no uniformity-analysis edge cases); then `if (u.toneEnabled == 0u) { return sample; }` (raw pass-through: no clamp, alpha preserved — additive HDR values legitimately exceed 1); else scale `.rgb` by `u.exposure` and run the five-curve chain exactly as `toneMap/fragment.wesl:54-67` (same `applyLinear`/`applyReinhard`/`applyAsinh`/`applyGamma2`/`applyAces` imports from `package::lib::tonemap`, same ACES fallback for unknown curve values), returning `vec4<f32>(mapped, select(1.0, sample.a, u.preserveAlpha == 1u))` — `replace` packs `preserveAlpha=0` and gets the historical alpha-1.0 (the swap chain is premultiplied-alphaMode; carry the `toneMap/fragment.wesl:68-71` comment), while `over`/`additive` pack `1` and carry the source's coverage straight (un-premultiplied — the blend hardware applies the `src-alpha` multiply; carry the `foregroundComposite/fragment.wesl` double-multiplication warning). `lib/tonemap.wesl` is untouched — it stays the single source of curve truth.
 
 **Tests** (`compositor.test.ts` — extend the `postProcess.test.ts:28-56` `mockDevice` shape; mock pass = `{ setPipeline: vi.fn<...>(), setBindGroup: vi.fn<...>(), draw: vi.fn<...>() }`):
 
 - [ ] `exposes label, draw, destroy` — `label === 'compositor'`, both methods are functions.
 - [ ] `builds one pipeline per (blend, dstFormat) key and reuses it across draws` — two `draw(..., 'replace', TONE)` calls → `device.createRenderPipeline` called exactly once.
 - [ ] `distinct blends build distinct pipelines` — `'replace'` then `'additive'` → two `createRenderPipeline` calls.
-- [ ] `replace has no blend state; over is premultiplied OVER; additive is one/one` — inspect each captured pipeline descriptor's `fragment.targets[0].blend` against the table above.
+- [ ] `replace has no blend state; over is straight-alpha OVER (color src-alpha/one-minus-src-alpha, alpha one/one-minus-src-alpha); additive is one/one` — inspect each captured pipeline descriptor's `fragment.targets[0].blend` against the table above.
 - [ ] `replace and over target the swap format; additive targets the hdr format` — `fragment.targets[0].format` per captured descriptor (`swapFormat: 'bgra8unorm'`, `hdrFormat: 'rgba16float'` in the fixture).
 - [ ] `tone set packs clamped exposure, curve, and toneEnabled=1` — capture `queue.writeBuffer`'s bytes; with `{ exposure: 1e9, curve: 2 }` assert f32@0 === 16 (upper clamp), f32@4 === 16 (whitepoint²), f32@8 === 10, u32@12 === 2, u32@16 === 1. Second draw with `exposure: 1e-9` asserts the 0.05 lower clamp.
 - [ ] `tone null packs toneEnabled=0` — u32@16 === 0.
+- [ ] `preserveAlpha packs from the blend, not the caller` — `draw(..., 'replace', TONE)` → u32@20 === 0; `draw(..., 'over', TONE)` → u32@20 === 1.
 - [ ] `draw encodes the covering triangle` — `pass.draw` called with `(3, 1, 0, 0)`; `setPipeline` + `setBindGroup` called; no `beginRenderPass` anywhere (the mock device has none to call).
 - [ ] `destroy releases every cached uniform buffer` — after draws on two keys, `destroy()` calls `.destroy()` on both `createBuffer` results.
 - [ ] Repoint `toneMap.test.ts:16-22` and `postProcess.test.ts:19-26` curve imports to `'.../compositor'`; delete the now-redundant `postProcess JS-mirror tone-map curves` describe block (`postProcess.test.ts:92-111`) — `toneMap.test.ts` owns that coverage.

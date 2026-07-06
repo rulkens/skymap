@@ -268,13 +268,24 @@ export type Compositor = {
 };
 ```
 
+Alpha semantics are a **column of the blend table, not a draw argument**:
+`replace` emits alpha 1.0 (the swap chain is premultiplied-alphaMode and the
+tonemap consumer relies on an opaque result), while `over`/`additive` preserve
+the source's alpha — coverage is data the composite must carry. `over` is
+_straight-alpha_ Porter-Duff (color `src-alpha`/`one-minus-src-alpha`, alpha
+`one`/`one-minus-src-alpha`), matching #386's `foregroundComposite`
+byte-for-byte: the fragment emits un-premultiplied colour and the blend
+hardware applies the coverage multiply (premultiplying in the shader would
+double-multiply).
+
 This single module replaces the tone-map half of `postProcess` and (once
 PR #386 is in) all of `foregroundComposite`. Two look-alikes were verified at
 plan time to be **essential specializations, not Compositor consumers**:
 `volumeUpsamplePass` (4-tap grain-suppressing low-pass — stays a content
 layer) and `drawPickDebugOverlay` (r32uint `textureLoad` visualisation — stays
-a debug renderer). `lib/tonemap.wesl` stays the single source of curve truth
-(with #386's `toneMapDefaults.ts` as its TS-side constants when that lands).
+a debug renderer). `lib/tonemap.wesl` stays the single source of curve truth,
+with the compositor module owning the TS-side mirror constants (#386's
+`toneMapDefaults.ts` duplicates them and is deleted when that branch folds in).
 
 One implementation note the locked signature forces: WebGPU exposes no
 attachment-format getter on a pass encoder, so `draw` cannot recover

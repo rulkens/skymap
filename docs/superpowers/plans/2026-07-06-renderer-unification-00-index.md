@@ -16,6 +16,7 @@ rebuilds them.
 | [`01-compositor`](2026-07-06-renderer-unification-01-compositor.md)                     | `Compositor` primitive + the `postProcess` tonemap repoint                                | —          |
 | [`02-registry-and-program`](2026-07-06-renderer-unification-02-registry-and-program.md) | Slab table, `ContentLayer` registry, `FrameStep` program, strategy executor, target table | 01         |
 | [`03-pick`](2026-07-06-renderer-unification-03-pick.md)                                 | Pick camera as a value, `drawPick` aspect, per-slab pick program, `frontmostPick`         | 01 + 02    |
+| [`04-fold-zoom-to-earth`](2026-07-06-renderer-unification-04-fold-zoom-to-earth.md)     | Fold PR #386's foreground onto the model: NEAR0 slab live, `foreground:0` target + depth, two layers, three FRAME steps | 01 + 02 (vehicle: PR #386) |
 
 **Cross-plan seams** (locked contracts — later plans import, never re-declare):
 
@@ -27,10 +28,14 @@ rebuilds them.
   `renderTargets`.
 - Plan 03 consumes all of the above; it adds `drawPick` rows, `pickProgram.ts`,
   and `utils/picking/frontmostPick.ts`.
+- Plan 04 consumes 01 + 02 and adds nothing other plans import — it is the
+  terminal fold. Plan 01's straight-alpha `over` row (`preserveAlpha` blend
+  column) is the contract that lets it delete `foregroundComposite` with zero
+  compositor edits.
 
-**Merge-order with PR #386 (zoom-to-earth):** either order works. If plan 01
-lands first (preferred — less total code), #386 rebases and its
-`foregroundComposite` dissolves into one `compositor.draw(..., 'over', TONE)`
-call. The #386-dependent content rows (foreground bodies, captions) and FRAME
-steps are explicitly excluded from plan 02 and land as data edits when #386
-merges.
+**Merge-order with PR #386 (zoom-to-earth):** plans 01 + 02 execute on `main`
+_without_ #386, exactly as written (their programs and registries deliberately
+exclude the foreground rows). Plan 04 then executes **on the #386 branch**:
+merge `main` in, convert the bespoke foreground wiring to registry rows +
+program steps, and run the visual gate #386 has been waiting on. Plan 03 is
+independent of the fold in either order (no foreground layer is pickable).
