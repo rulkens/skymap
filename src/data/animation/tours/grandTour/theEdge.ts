@@ -18,10 +18,10 @@ import type { ClipData } from '../../../../@types/animation/ClipData';
 import { all, dollyTo, seq, wait } from '../../../../services/engine/animation/effectHelpers';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
-// Inside the shell's full-strength band (≥ ~5,700 Mpc) with margin, well
-// short of the 30,000 Mpc camera ceiling — tune against where the shell
-// reads strongest, not a fixed figure.
-const THE_EDGE_MPC = 6500;
+// Far enough OUTSIDE the 14,300 Mpc shell that the whole sphere sits in
+// frame — the edge seen from without, not from within. Eye-tuned right up
+// against the 30,000 Mpc camera ceiling.
+const THE_EDGE_MPC = 29229.01;
 
 export const theEdge: ClipData = {
   start: 'live',
