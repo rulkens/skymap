@@ -96,13 +96,21 @@ export function createTexturedDiskSubsystem(
   let frameCounter = 0;
   let destroyed = false;
 
+  // The last frame's stamped clock, held so code that runs OUTSIDE a frame
+  // (the async bitmap-arrival callback, hasInFlightWork) reads the frame
+  // clock instead of sampling performance.now(). At most one frame stale —
+  // irrelevant to a 400 ms load-fade — and deterministic under a stepped
+  // recorder clock.
+  let lastFrameNowMs = 0;
+
   let lastOutput: TexturedDiskFrameOutput = { disks: [] };
 
   function runFrame(input: TexturedDiskFrameInput): TexturedDiskFrameOutput {
     if (destroyed) return lastOutput;
 
-    const { cam, catalogs, visibleSourceMask, pxPerRad, famousMeta } = input;
+    const { cam, catalogs, visibleSourceMask, pxPerRad, famousMeta, nowMs } = input;
     frameCounter++;
+    lastFrameNowMs = nowMs;
 
     const maxCamDistSqUpper = maxVisibleCamDistSq(APPARENT_SIZE_THRESHOLD_PX, pxPerRad);
 
@@ -111,8 +119,6 @@ export function createTexturedDiskSubsystem(
     const cz = cam.position[2];
 
     const disks: DiskInstance[] = [];
-
-    const nowMs = performance.now();
 
     for (const [source, catalog] of catalogs.entries()) {
       let stickyDisks = stickyDisksBySource.get(source);
@@ -197,7 +203,11 @@ export function createTexturedDiskSubsystem(
                 return;
               }
               atlas.uploadBitmap(slot, bitmap);
-              bitmapReadyTime.set(key, performance.now());
+              // Arrival stamps quantize to the frame clock so crossfade
+              // alphas are a pure function of stamped time (deterministic
+              // under a stepped recorder clock); sub-frame precision is
+              // irrelevant to a 300 ms crossfade.
+              bitmapReadyTime.set(key, lastFrameNowMs);
               bitmap.close();
             },
           });
@@ -261,9 +271,12 @@ export function createTexturedDiskSubsystem(
   function hasInFlightWork(): boolean {
     if (atlas.inFlightCount() > 0) return true;
     if (bitmapReadyTime.size === 0) return false;
-    const nowMs = performance.now();
+    // Read at the last frame's stamped clock: this predicate is consumed by
+    // the same frame loop that stamps it, so "one frame stale" just extends
+    // a 400 ms fade window by one frame — a no-op visually, and it keeps
+    // the loop-alive decision deterministic under a stepped recorder clock.
     for (const t of bitmapReadyTime.values()) {
-      if (nowMs - t < LOAD_FADE_MS) return true;
+      if (lastFrameNowMs - t < LOAD_FADE_MS) return true;
     }
     return false;
   }

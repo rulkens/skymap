@@ -2,10 +2,11 @@
  * connectEngineBridge — reaction-table tests. Every case drives the real
  * `createGalaxyStore` reducer graph (so RTK's own reference-identity
  * guarantees do the diffing, not a mock) against a fake `GalaxyEngineHandle`
- * of typed `vi.fn`s, under `vi.useFakeTimers()` to assert the two debounces
- * without real waits.
+ * of typed `vi.fn`s. The bridge has no debounce or timer machinery left, so
+ * every assertion is a plain synchronous check after a dispatch — no fake
+ * timers required.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { connectEngineBridge } from '../../../../tools/galaxy-renderer/src/state/engineBridge';
 import {
@@ -70,12 +71,7 @@ describe('connectEngineBridge', () => {
   let store: AppStore;
 
   beforeEach(() => {
-    vi.useFakeTimers();
     store = createGalaxyStore();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it('connect performs the initial sync', () => {
@@ -97,21 +93,18 @@ describe('connectEngineBridge', () => {
     disconnect();
   });
 
-  it('three rapid param patches yield one debounced setParams', () => {
+  it('galaxy slice change calls setParams immediately', () => {
     const { engine, mocks } = makeFakeEngine();
     const disconnect = connectEngineBridge(store, engine);
     expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
 
     store.dispatch(paramsPatched({ armCount: 3 }));
-    store.dispatch(paramsPatched({ armCount: 4 }));
-    store.dispatch(paramsPatched({ armCount: 5 }));
-
-    vi.advanceTimersByTime(129);
-    expect(mocks.setParams).toHaveBeenCalledTimes(1);
-
-    vi.advanceTimersByTime(1);
     expect(mocks.setParams).toHaveBeenCalledTimes(2);
-    expect(mocks.setParams).toHaveBeenLastCalledWith({ ...DEFAULT_GALAXY_PARAMS, armCount: 5 });
+    expect(mocks.setParams).toHaveBeenLastCalledWith({ ...DEFAULT_GALAXY_PARAMS, armCount: 3 });
+
+    store.dispatch(paramsPatched({ armCount: 4 }));
+    expect(mocks.setParams).toHaveBeenCalledTimes(3);
+    expect(mocks.setParams).toHaveBeenLastCalledWith({ ...DEFAULT_GALAXY_PARAMS, armCount: 4 });
 
     disconnect();
   });
@@ -128,8 +121,6 @@ describe('connectEngineBridge', () => {
       exposure: 1.5,
       ...DEFAULT_LOD_SETTINGS,
     });
-
-    vi.runAllTimers();
     expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only — never scheduled
 
     disconnect();
@@ -147,8 +138,6 @@ describe('connectEngineBridge', () => {
       ...DEFAULT_LOD_SETTINGS,
       lodApparent: 0.02,
     });
-
-    vi.runAllTimers();
     expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only — never scheduled
 
     disconnect();
@@ -191,7 +180,7 @@ describe('connectEngineBridge', () => {
     disconnect();
   });
 
-  it('extras enable → immediate setExtras; count change debounces 220ms; disable → setExtras([])', () => {
+  it('extras enable → immediate setExtras; disable → setExtras([])', () => {
     const { engine, mocks } = makeFakeEngine();
     const rng = mulberry32(7);
     const disconnect = connectEngineBridge(store, engine, { rng });
@@ -200,57 +189,42 @@ describe('connectEngineBridge', () => {
     expect(mocks.setExtras).toHaveBeenCalledTimes(1);
     expect(mocks.setExtras.mock.calls[0]![0]).toHaveLength(DEFAULT_EXTRAS_STATE.count);
 
-    store.dispatch(extrasCountSet(20));
-    expect(mocks.setExtras).toHaveBeenCalledTimes(1); // debounced, not immediate
-
-    vi.advanceTimersByTime(219);
-    expect(mocks.setExtras).toHaveBeenCalledTimes(1);
-
-    vi.advanceTimersByTime(1);
-    expect(mocks.setExtras).toHaveBeenCalledTimes(2);
-    expect(mocks.setExtras.mock.calls[1]![0]).toHaveLength(20);
-
     store.dispatch(extrasToggled(false));
-    expect(mocks.setExtras).toHaveBeenCalledTimes(3);
+    expect(mocks.setExtras).toHaveBeenCalledTimes(2);
     expect(mocks.setExtras).toHaveBeenLastCalledWith([]);
 
     disconnect();
   });
 
-  it('param patches during a fit do not reach setParams', () => {
+  it('extras count change calls setExtras immediately', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const rng = mulberry32(7);
+    const disconnect = connectEngineBridge(store, engine, { rng });
+
+    store.dispatch(extrasToggled(true));
+    expect(mocks.setExtras).toHaveBeenCalledTimes(1);
+
+    store.dispatch(extrasCountSet(20));
+    expect(mocks.setExtras).toHaveBeenCalledTimes(2);
+    expect(mocks.setExtras.mock.calls[1]![0]).toHaveLength(20);
+
+    disconnect();
+  });
+
+  it('params changes during compare.fitting still forward to the engine', () => {
     const { engine, mocks } = makeFakeEngine();
     const disconnect = connectEngineBridge(store, engine);
     expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
 
     store.dispatch(fitStarted());
     store.dispatch(paramsPatched({ armCount: 9 }));
-    vi.runAllTimers();
-    expect(mocks.setParams).toHaveBeenCalledTimes(1); // still just the initial sync
+    expect(mocks.setParams).toHaveBeenCalledTimes(2);
+    expect(mocks.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ armCount: 9 }));
 
     store.dispatch(fitFinished());
     store.dispatch(paramsPatched({ armCount: 10 }));
-    expect(mocks.setParams).toHaveBeenCalledTimes(1); // debounced, not yet fired
-
-    vi.advanceTimersByTime(130);
-    expect(mocks.setParams).toHaveBeenCalledTimes(2);
+    expect(mocks.setParams).toHaveBeenCalledTimes(3);
     expect(mocks.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ armCount: 10 }));
-
-    disconnect();
-  });
-
-  it('a fit starting inside the debounce window suppresses the pending setParams', () => {
-    const { engine, mocks } = makeFakeEngine();
-    const disconnect = connectEngineBridge(store, engine);
-    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
-
-    store.dispatch(paramsPatched({ armCount: 3 })); // arms the 130ms debounce
-    expect(mocks.setParams).toHaveBeenCalledTimes(1); // debounced, not yet fired
-
-    vi.advanceTimersByTime(60); // advance 60ms into the 130ms debounce window
-    store.dispatch(fitStarted()); // fit started during debounce window
-
-    vi.runAllTimers(); // run all remaining timers
-    expect(mocks.setParams).toHaveBeenCalledTimes(1); // fire-time re-check suppresses the pending setParams
 
     disconnect();
   });
@@ -265,7 +239,6 @@ describe('connectEngineBridge', () => {
     store.dispatch(autoRotateSet(false));
     store.dispatch(comparePanelToggled());
     store.dispatch(extrasToggled(true));
-    vi.runAllTimers();
 
     expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
     expect(mocks.setRender).toHaveBeenCalledTimes(1);

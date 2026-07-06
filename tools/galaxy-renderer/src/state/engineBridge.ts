@@ -6,35 +6,36 @@
  * callback-shaped API never leaks into components or sagas.
  *
  * The bridge is a plain `store.subscribe` diff, not a saga: there's no async
- * orchestration here beyond two debounce timers, and RTK already guarantees a
- * fresh slice reference on every real change (each slice's reducer either
- * mutates via Immer, which produces a new reference when something actually
- * changed, or leaves the object alone). Comparing `next.<slice> !== prev.<slice>`
- * is therefore a correct, cheap "did this slice change" test — no deep-equal
+ * orchestration here at all, and RTK already guarantees a fresh slice
+ * reference on every real change (each slice's reducer either mutates via
+ * Immer, which produces a new reference when something actually changed, or
+ * leaves the object alone). Comparing `next.<slice> !== prev.<slice>` is
+ * therefore a correct, cheap "did this slice change" test — no deep-equal
  * needed.
  *
- * Two reactions are trailing-debounced rather than immediate, both ported
- * from the spike's own timings (`Galaxy Renderer.dc.html:506,581`):
- * `galaxy` → `setParams` regenerates the whole star buffer on a worker, so a
- * slider drag would otherwise queue a regen per pixel of movement; `extras`
- * count → `setExtras` rebuilds every satellite galaxy, same cost shape at
- * smaller scale. Everything else (`setRender`, `setAutoRotate`, `setInsets`,
- * `setView`) is a cheap live-uniform write, so those fire immediately.
+ * Every reaction fires immediately, on the same tick as the dispatch that
+ * caused it: `galaxy` → `setParams` and `extras.count` → `setExtras` regen on
+ * the GPU now (a compute-shader dispatch, ~1-2 ms), not a CPU worker, so
+ * there's no per-keystroke cost to collapse. A slider drag still only
+ * produces one `setParams` per animation frame, because the RAF-driven
+ * pointer handler coalesces intermediate drag positions before ever
+ * dispatching — the debouncing already happened upstream of the store.
  *
- * `galaxy` changes are additionally suppressed while `compare.fitting`:
- * `autoFit` (plan 03 Task 8) drives the engine directly with its own
- * `setParams` calls per optimisation step, and mirrors its progress into the
- * `galaxy` slice for the UI to display. Without the suppression the bridge
- * would react to those mirrored writes and schedule a second, redundant
- * regen for every fit step.
+ * `galaxy` changes are forwarded even while `compare.fitting`, and that's
+ * correct rather than merely harmless: `autoFit` drives the engine directly
+ * with its own awaited `setParams` per optimisation step, and mirrors each
+ * step's result into the `galaxy` slice so the UI can show live progress.
+ * That mirroring dispatch runs synchronously inside the fit loop, strictly
+ * between the previous step's `grab` and the next step's awaited
+ * `setParams` — so the bridge's echoed `setParams(best)` is redundant with
+ * the state the engine already holds, not a race with it. It costs one
+ * idempotent GPU dispatch per fit step, not a double-generate.
  */
 
 import type { AppStore } from './createStore';
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import { buildExtraSpecs } from '../data/buildExtraSpecs';
 
-const PARAMS_DEBOUNCE_MS = 130; // html:506
-const EXTRAS_DEBOUNCE_MS = 220; // html:581
 const COMPARE_OPEN_INSET_PX = 390; // html:493
 const COMPARE_CLOSED_INSET_PX = 0;
 const REFERENCE_INSET_PX = 340; // html:597 — the reference thumbnail strip, constant regardless of open/closed
@@ -48,9 +49,8 @@ export function connectEngineBridge(
 
   let prev = store.getState();
 
-  // Initial sync — the boot render. Not debounced: there is no burst to
-  // collapse yet, and the first frame should reflect the seeded state
-  // immediately rather than waiting out a debounce window.
+  // Initial sync — the boot render, fired immediately like every other
+  // reaction below.
   engine.setRender({ ...prev.render, ...prev.lod });
   engine.setInsets(
     prev.compare.open ? COMPARE_OPEN_INSET_PX : COMPARE_CLOSED_INSET_PX,
@@ -59,44 +59,11 @@ export function connectEngineBridge(
   engine.setAutoRotate(prev.ui.autoRotate);
   void engine.setParams(prev.galaxy);
 
-  let paramsTimer: ReturnType<typeof setTimeout> | null = null;
-  let extrasTimer: ReturnType<typeof setTimeout> | null = null;
-
-  const scheduleParams = (): void => {
-    if (paramsTimer !== null) clearTimeout(paramsTimer);
-    paramsTimer = setTimeout(() => {
-      paramsTimer = null;
-      const state = store.getState();
-      // Re-check at fire time, not just at schedule time: a fit can start
-      // during the debounce window between the two.
-      if (state.compare.fitting) return;
-      void engine.setParams(state.galaxy);
-    }, PARAMS_DEBOUNCE_MS);
-  };
-
-  const scheduleExtras = (): void => {
-    if (extrasTimer !== null) clearTimeout(extrasTimer);
-    extrasTimer = setTimeout(() => {
-      extrasTimer = null;
-      const { count } = store.getState().extras;
-      void engine.setExtras(buildExtraSpecs(count, rng));
-    }, EXTRAS_DEBOUNCE_MS);
-  };
-
   const unsubscribe = store.subscribe(() => {
     const next = store.getState();
 
     if (next.galaxy !== prev.galaxy) {
-      if (next.compare.fitting) {
-        // autoFit drives the engine directly; don't double-generate off its
-        // per-step echo into the galaxy slice.
-        if (paramsTimer !== null) {
-          clearTimeout(paramsTimer);
-          paramsTimer = null;
-        }
-      } else {
-        scheduleParams();
-      }
+      void engine.setParams(next.galaxy);
     }
 
     if (next.render !== prev.render || next.lod !== prev.lod) {
@@ -119,10 +86,6 @@ export function connectEngineBridge(
     }
 
     if (next.extras.enabled !== prev.extras.enabled) {
-      if (extrasTimer !== null) {
-        clearTimeout(extrasTimer);
-        extrasTimer = null;
-      }
       if (next.extras.enabled) {
         void engine.setExtras(buildExtraSpecs(next.extras.count, rng));
       } else {
@@ -131,15 +94,11 @@ export function connectEngineBridge(
     } else if (next.extras.regenNonce !== prev.extras.regenNonce) {
       void engine.setExtras(buildExtraSpecs(next.extras.count, rng));
     } else if (next.extras.enabled && next.extras.count !== prev.extras.count) {
-      scheduleExtras();
+      void engine.setExtras(buildExtraSpecs(next.extras.count, rng));
     }
 
     prev = next;
   });
 
-  return () => {
-    unsubscribe();
-    if (paramsTimer !== null) clearTimeout(paramsTimer);
-    if (extrasTimer !== null) clearTimeout(extrasTimer);
-  };
+  return unsubscribe;
 }

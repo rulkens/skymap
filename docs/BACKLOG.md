@@ -48,6 +48,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Unify the two disk-planner catalog walks** `ready` — procedural + textured planners walk the catalogs twice per frame, computing each row's geometry twice (~4.2 ms of a 5.1 ms frame, M1 Max); merge into one shared walk feeding two row-reducers. Prerequisite pure helpers shipped in `src/utils/render/disk/`. → [details](backlog/2026-06-30-unify-disk-planner-walks.md)
 - [ ] **Thumbnail-priority loop scaling** `deferred` — the per-frame priority scan (`texturedDiskSubsystem.ts`) is CPU-linear with stride decimation (#79); add a BVH or compute-shader pass for larger tiers. → [details](backlog/2026-06-29-thumbnail-loop-scaling.md)
 - [ ] **Picking GPU resources → own subsystem** `deferred` — `pickRenderer.ts` owns its per-camera pick texture directly; migrate it (parallel to fade per ADR 0001). Pick texture is per-camera, so it needs its own ADR. → [details](backlog/2026-06-29-picking-gpu-subsystem.md)
+- [ ] **galaxy-renderer `dispose()` skips GPU teardown** `ready` — RAF loop + DOM listeners are removed but buffers/pipelines/UBOs (incl. per-extra UBOs) are never `destroy()`ed; spike-era behavior, flagged in the GPU-generation final review.
 
 ## UI & UX
 
@@ -57,7 +58,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Global shortcuts → keyboard saga** `needs-design` — migrate the non-tour keys (Cmd+K, /, Esc, f, h, l, Tab, d) from the `useKeyboardShortcuts` hook to a declarative map + a shared `watchKeyboardEventsSaga`. → [details](backlog/2026-06-29-keyboard-shortcuts-saga.md)
 - [ ] **Label declutter toggle + hysteresis** `needs-design` — add `settings.labels.declutter` wired to `labelDirectorSubsystem` (replacing the `?nodeclutter` stopgap) and hysteresis-damp the cull so labels stop flickering under camera motion. → [details](backlog/2026-06-29-label-declutter-toggle.md)
 - [ ] **Label fade opt-out ADR** `needs-design` — decide whether per-character MSDF label opacity opts out of the per-handle fade bind-group pattern; follow-up to ADR 0001.
-- [ ] **Fade focusedOnly label reveals** `deferred` — labels pop (no fade) on focus change under the tour's focusedOnly mode; jarring in beat 02. → [details](backlog/2026-07-02-focused-label-fade.md)
 - [ ] **Reusable structure-visit tour clip** `needs-design` — generalize the hardcoded Virgo/M87 tour beats into a parameterized `structureVisitClip`. Focus-isolation primitive already shipped. → [details](backlog/2026-06-29-structure-visit-tour-clip.md)
 - [ ] **DebugPanel sections → modules + containers** `ready` — migrate the remaining DebugPanel sections to CSS modules + per-section containers, like the two clip sections. → [details](backlog/2026-06-30-debugpanel-sections-modules-containers.md)
 

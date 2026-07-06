@@ -65,6 +65,7 @@ function makeCtx(focusBlend = 0): ReadyFrameContext {
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
     fovYRad: (60 * Math.PI) / 180,
     focusBlend,
+    nowMs: 0,
     vp: mat4.identity(),
   } as unknown as ReadyFrameContext;
 }

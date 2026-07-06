@@ -51,6 +51,26 @@ describe('createClipOpacityChannel', () => {
     expect(channel.isAnimating(1001)).toBe(false);
   });
 
+  it('fadeTo without nowMs starts at the last ticked frame time', () => {
+    const channel = createClipOpacityChannel();
+    channel.tick(1000);
+    // No nowMs argument — the ramp must anchor at the last tick (t=1000),
+    // not at the wall clock.
+    channel.fadeTo('survey', 0, 1000);
+    expect(channel.factorOf('survey', 1000)).toBeCloseTo(1, 5);
+    expect(channel.factorOf('survey', 1500)).toBeCloseTo(0.5, 5); // smoothstep midpoint
+    expect(channel.factorOf('survey', 2000)).toBeCloseTo(0, 5);
+  });
+
+  it('factorOf without a time reads at the last ticked frame time', () => {
+    const channel = createClipOpacityChannel();
+    channel.fadeTo('survey', 0, 1000, 1000);
+    channel.tick(1500);
+    // Argless read must equal an explicit read at the last tick's time.
+    expect(channel.factorOf('survey')).toBe(channel.factorOf('survey', 1500));
+    expect(channel.factorOf('survey')).toBeCloseTo(0.5, 5);
+  });
+
   it('a second fadeTo on the same layer retargets from the current value', () => {
     const channel = createClipOpacityChannel(0);
     // First ramp: 1 → 0 over 1000 ms starting at t=0.

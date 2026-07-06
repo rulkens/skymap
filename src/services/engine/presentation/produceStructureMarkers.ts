@@ -52,10 +52,10 @@ export function produceStructureMarkers(
   const focusedStructureId = structureIdOf(state.selection.focus);
 
   // Per-category marker opacity (the category toggle's fade) lives in the
-  // FadeRegistry; unregistered handles fail-safe to 1.0. Snapshot `now` once so
-  // every category reads the same instant.
+  // FadeRegistry; unregistered handles fail-safe to 1.0. Snapshot the frame
+  // clock once so every category reads the same instant.
   const fades = state.subsystems.fades;
-  const now = performance.now();
+  const now = ctx.nowMs;
 
   // Clip-owned transient opacity for structure rings — hoisted outside the loop
   // because ALL structure sources map to the same `'structureRing'` key, so the
