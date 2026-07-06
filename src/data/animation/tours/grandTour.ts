@@ -24,6 +24,7 @@ import { cosmicWeb, cosmicWebDwell } from './grandTour/cosmicWeb';
 import { cosmicFlows, cosmicFlowsDwell } from './grandTour/cosmicFlows';
 import { emptiness } from './grandTour/emptiness';
 import { deepField, deepFieldDwell } from './grandTour/deepField';
+import { theEdge } from './grandTour/theEdge';
 
 export const grandTour: Tour = {
   id: 'grandTour',
@@ -115,6 +116,15 @@ export const grandTour: Tour = {
       },
       // The big log-dolly rides the captioned dwell — the pull IS the beat.
       dwellClip: deepFieldDwell,
+    },
+    {
+      // No enter clip: the final pull rides the captioned dwell.
+      caption: {
+        title: 'The edge',
+        body: 'This is the observable universe, everything light has had time to reach us from. 93 billion light-years, side to side.',
+        position: 'bottom-left',
+      },
+      dwellClip: theEdge,
     },
   ],
 };

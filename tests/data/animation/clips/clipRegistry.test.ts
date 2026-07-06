@@ -41,6 +41,7 @@ describe('clipRegistry', () => {
       'tourEmptiness',
       'tourNeighbourhood',
       'tourOpeningTitle',
+      'tourTheEdge',
       'tourYouAreHere',
       'tourYouAreHereDwell',
     ]);

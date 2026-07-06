@@ -25,4 +25,5 @@ export type ClipId =
   | 'tourCosmicWebDwell'
   | 'tourCosmicFlows'
   | 'tourEmptiness'
-  | 'tourDeepField';
+  | 'tourDeepField'
+  | 'tourTheEdge';
