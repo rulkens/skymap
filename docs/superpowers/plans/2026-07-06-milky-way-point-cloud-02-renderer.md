@@ -157,8 +157,8 @@ export function createMilkyWayCloud(device: GPUDevice, tier: Tier): MilkyWayClou
 
 Behaviour contract: buffers `label: 'galaxy:mwStarVB'` / `'galaxy:mwDustVB'`, `usage: VERTEX | STORAGE`, `size: capacity * GEN_RECORD_BYTES` (star size clamped to ≥ 1 record like `createGalaxyEngine.ts:540-544`); UBO `galaxy:mwGenUbo`, `GENERATION_UBO.byteLength`, `UNIFORM | COPY_DST`, written THEN encoded THEN submitted (the queue-ordering guarantee — cite `createGalaxyEngine.ts` `setParams` docblock); dispatch via the moved `createGenerationPipelines` + `encodeGeneration` (pipelines built once at factory time, reused by regenerate). Deterministic: fixed preset, fixed seed — tier is the only variable.
 
-- [ ] Failing tests (mock `GPUDevice` capturing `createBuffer`/`writeBuffer`/`createCommandEncoder`/`queue.submit` args): `creates star and dust VBs with the pinned labels, VERTEX|STORAGE usage, and capacity x GEN_RECORD_BYTES sizes` (compute expected sizes from `carveStarLayout`/`carveDustLayout` on the medium-tier params — the carve fns stay the only capacity authority, the test derives from them rather than hardcoding); `medium tier packs the preset starCount and large packs x2` (inspect the packed UBO's derived fields or the carve inputs); `regenerate destroys the old buffers and submits a new generation`; `destroy releases buffers and UBO`.
-- [ ] Implement. Full gates. Commit.
+- [x] Failing tests (mock `GPUDevice` capturing `createBuffer`/`writeBuffer`/`createCommandEncoder`/`queue.submit` args): `creates star and dust VBs with the pinned labels, VERTEX|STORAGE usage, and capacity x GEN_RECORD_BYTES sizes` (compute expected sizes from `carveStarLayout`/`carveDustLayout` on the medium-tier params — the carve fns stay the only capacity authority, the test derives from them rather than hardcoding); `medium tier packs the preset starCount and large packs x2` (inspect the packed UBO's derived fields or the carve inputs); `regenerate destroys the old buffers and submits a new generation`; `destroy releases buffers and UBO`.
+- [x] Implement. Full gates. Commit.
 
 ---
 
