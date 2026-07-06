@@ -7,9 +7,9 @@ narration: >
   dozens of dwarfs in tow, bound as the Local Group.
 focus: structure:group-local-group
 distance_mpc: 2.5
-motion: pull-back + full orbit
+motion: pull-back + orbit
 travel_s: 9
-dwell_s: 24
+dwell_s: 14
 effects: [group rings + labels on]
 requires: [log-dolly, dwell-drift, caption, auto-reveal]
 status: built
@@ -32,12 +32,11 @@ from Andromeda until home slides into frame beside it. No aim change — the
 bearing inherited from the Andromeda dwell is ~79° off the stacking axis,
 which is what separates the two galaxies on screen.
 
-The dwell is one full slow revolution around the family — the only beat
-that orbits its subject completely, because it's the one structure we are
-inside. The net yaw is sized to land facing the M81 Group, the
-flythrough's first knot. In the dwell's second half, 2MRS fades in while a
-dolly pulls out to ~4.5 Mpc: the local neighbourhood populates, and the
-next beat dives straight into it.
+The dwell orbits the family — the only subject we're inside. One full
+backward revolution spans this dwell and the neighbourhood-reveal beat
+after it, landing facing the M81 Group (the flythrough's first knot); the
+reveal beat owns its gentle share of the turn, this dwell takes the
+remainder, so re-tuning either keeps the landing.
 
 ## On screen
 
@@ -51,9 +50,8 @@ strung between the two spirals.
 
 ## Tweaks
 
-- `NEIGHBOURHOOD_MPC` (the pull-out landing) and the 24 s dwell length are
-  eye-tuned — the orbit should feel unhurried at the close framing and the
-  pull-out should finish ~4 s before the cut.
+- The 14 s dwell length is eye-tuned — the orbit should feel unhurried at
+  the close framing.
 - Re-derive `EXIT_YAW_RAD` if the enter ever gains an aim cue.
 - Famous-name labels ride the focus recession (dim to 0.25 while the group
   is focused — same dimming the flythrough's labels ride). If they read

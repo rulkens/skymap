@@ -42,6 +42,7 @@ describe('clipRegistry', () => {
       'tourHomeAgain',
       'tourLocalGroup',
       'tourNeighbourhood',
+      'tourNeighbourhoodReveal',
       'tourOpeningTitle',
       'tourTheEdge',
       'tourYouAreHere',

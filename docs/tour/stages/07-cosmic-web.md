@@ -1,5 +1,5 @@
 ---
-stage:        6
+stage:        7
 id:           cosmic-web
 title:        The cosmic web
 narration:    >

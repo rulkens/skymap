@@ -20,6 +20,7 @@ import { openingTitle } from '../tours/grandTour/openingTitle';
 import { youAreHere, youAreHereDwell } from '../tours/grandTour/youAreHere';
 import { approachM31 } from '../tours/grandTour/approachM31';
 import { localGroup } from '../tours/grandTour/localGroup';
+import { neighbourhoodReveal } from '../tours/grandTour/neighbourhoodReveal';
 import { neighbourhoodFlythrough } from '../tours/grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from '../tours/grandTour/approachVirgo';
 import { cosmicWeb, cosmicWebDwell } from '../tours/grandTour/cosmicWeb';
@@ -59,56 +60,62 @@ export const tourLocalGroup: Clip = {
   data: localGroup,
 };
 
+export const tourNeighbourhoodReveal: Clip = {
+  id: 'tourNeighbourhoodReveal',
+  label: 'Grand tour 04 — neighbourhood reveal',
+  data: neighbourhoodReveal,
+};
+
 export const tourNeighbourhood: Clip = {
   id: 'tourNeighbourhood',
-  label: 'Grand tour 04 — neighbourhood flythrough',
+  label: 'Grand tour 05 — neighbourhood flythrough',
   data: neighbourhoodFlythrough,
 };
 
 export const tourApproachVirgo: Clip = {
   id: 'tourApproachVirgo',
-  label: 'Grand tour 05 — approach Virgo',
+  label: 'Grand tour 06 — approach Virgo',
   data: approachVirgo,
 };
 
 export const tourCosmicWeb: Clip = {
   id: 'tourCosmicWeb',
-  label: 'Grand tour 06 — cosmic web',
+  label: 'Grand tour 07 — cosmic web',
   data: cosmicWeb,
 };
 
 export const tourCosmicWebDwell: Clip = {
   id: 'tourCosmicWebDwell',
-  label: 'Grand tour 06 — web pull-back dwell',
+  label: 'Grand tour 07 — web pull-back dwell',
   data: cosmicWebDwell,
 };
 
 export const tourCosmicFlows: Clip = {
   id: 'tourCosmicFlows',
-  label: 'Grand tour 07 — cosmic flows',
+  label: 'Grand tour 08 — cosmic flows',
   data: cosmicFlows,
 };
 
 export const tourEmptiness: Clip = {
   id: 'tourEmptiness',
-  label: 'Grand tour 08 — the emptiness',
+  label: 'Grand tour 09 — the emptiness',
   data: emptiness,
 };
 
 export const tourDeepField: Clip = {
   id: 'tourDeepField',
-  label: 'Grand tour 09 — deep field',
+  label: 'Grand tour 10 — deep field',
   data: deepField,
 };
 
 export const tourTheEdge: Clip = {
   id: 'tourTheEdge',
-  label: 'Grand tour 10 — the edge',
+  label: 'Grand tour 11 — the edge',
   data: theEdge,
 };
 
 export const tourHomeAgain: Clip = {
   id: 'tourHomeAgain',
-  label: 'Grand tour 11 — home again',
+  label: 'Grand tour 12 — home again',
   data: homeAgain,
 };

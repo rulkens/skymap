@@ -19,6 +19,7 @@ import { openingTitle } from './grandTour/openingTitle';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31, approachM31Dwell } from './grandTour/approachM31';
 import { localGroup, localGroupDwell } from './grandTour/localGroup';
+import { neighbourhoodReveal } from './grandTour/neighbourhoodReveal';
 import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from './grandTour/approachVirgo';
 import { cosmicWeb, cosmicWebDwell } from './grandTour/cosmicWeb';
@@ -68,16 +69,26 @@ export const grandTour: Tour = {
         body: 'The Milky Way and Andromeda travel together — a small family of galaxies with dozens of dwarfs, gravitationally bound as the Local Group.',
         position: 'bottom-left',
       },
-      // One full orbit of the family, landing on the flythrough's launch
-      // bearing; the pull-out to neighbourhood scale rides its second half.
+      // The orbit of the family — its share of the revolution the next
+      // beat's drift completes, landing on the flythrough's launch bearing.
       dwellClip: localGroupDwell,
+    },
+    {
+      // No enter clip: the pull-back IS the beat — the caption is about the
+      // widening view, so it rides the motion (captions reveal on dwell start).
+      caption: {
+        title: 'Our neighbourhood',
+        body: 'Pull back, and the Local Group turns out to be one small family among many — our galactic neighbourhood, tens of millions of light-years across.',
+        position: 'bottom-left',
+      },
+      dwellClip: neighbourhoodReveal,
     },
     {
       // No enter clip: the flythrough IS the dwell, so the caption reveals at
       // beat entry and rides the whole sweep (captions reveal on dwell start).
       caption: {
-        title: 'Our neighbourhood',
-        body: 'Our galaxy runs with neighbours like M81 and Centaurus A, tens of millions of light-years out.',
+        title: 'Meeting the neighbours',
+        body: "Bode's Galaxy, the Pinwheel, the Whirlpool, the Sombrero, Centaurus A — the bright landmarks of our corner of the universe.",
         position: 'bottom-left',
       },
       dwellClip: neighbourhoodFlythrough,

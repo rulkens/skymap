@@ -1,5 +1,5 @@
 ---
-stage:        11
+stage:        12
 id:           home-again
 title:        Home again
 narration:    Back to where we began. Everything you just saw is out there to explore.

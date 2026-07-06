@@ -1,5 +1,5 @@
 ---
-stage:        5
+stage:        6
 id:           nearest-cluster
 title:        The nearest cluster
 narration:    >

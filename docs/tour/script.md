@@ -20,20 +20,21 @@ stage shows on-screen text.
 
 ## Stages
 
-| #   | Stage               | File                                                        | Focus / dist             | Motion                    | Travel+dwell |
-| --- | ------------------- | ----------------------------------------------------------- | ------------------------ | ------------------------- | ------------ |
-| 00  | Opening title       | [`00-opening-title.md`](stages/00-opening-title.md)         | Milky Way, ~0.05 Mpc     | held / drift              | 0+8 s        |
-| 01  | You are here        | [`01-you-are-here.md`](stages/01-you-are-here.md)           | Milky Way, ~0.05 Mpc     | local orbit               | 3+7 s        |
-| 02  | Nearest neighbour   | [`02-nearest-neighbour.md`](stages/02-nearest-neighbour.md) | M31, ~0.8 Mpc            | log dolly + lean          | 7+7 s        |
-| 03  | The Local Group     | [`03-local-group.md`](stages/03-local-group.md)             | Local Group, ~2.5 Mpc    | pull-back + full orbit    | 9+24 s       |
-| 04  | Our neighbourhood   | [`04-our-neighbourhood.md`](stages/04-our-neighbourhood.md) | local groups, ~4 Mpc     | lateral flythrough        | 9+5 s        |
-| 05  | The nearest cluster | [`05-nearest-cluster.md`](stages/05-nearest-cluster.md)     | Virgo, ~16 Mpc           | log dolly + orbit         | 7+7 s        |
-| 06  | The cosmic web      | [`06-cosmic-web.md`](stages/06-cosmic-web.md)               | Coma SC, ~90 Mpc         | log dolly + orbit reveal  | 9+9 s        |
-| 07  | Cosmic flows        | [`07-cosmic-flows.md`](stages/07-cosmic-flows.md)           | flow basin, ~80 Mpc      | lateral reframe + reveal  | 5+9 s        |
-| 08  | The emptiness       | [`08-emptiness.md`](stages/08-emptiness.md)                 | Boötes void, hold scale  | lateral drift             | 6+5 s        |
-| 09  | The deep field      | [`09-deep-field.md`](stages/09-deep-field.md)               | quasar shell, ~2,000 Mpc | big log dolly             | 8+4 s        |
-| 10  | The edge            | [`10-the-edge.md`](stages/10-the-edge.md)                   | horizon, ~6,000+ Mpc     | log dolly to max          | 9+8 s        |
-| 11  | Home again          | [`11-home-again.md`](stages/11-home-again.md)               | Milky Way, ~0.05 Mpc     | inward log dolly to start | 8+5 s        |
+| #   | Stage                  | File                                                                  | Focus / dist             | Motion                    | Travel+dwell |
+| --- | ---------------------- | --------------------------------------------------------------------- | ------------------------ | ------------------------- | ------------ |
+| 00  | Opening title          | [`00-opening-title.md`](stages/00-opening-title.md)                   | Milky Way, ~0.05 Mpc     | held / drift              | 0+8 s        |
+| 01  | You are here           | [`01-you-are-here.md`](stages/01-you-are-here.md)                     | Milky Way, ~0.05 Mpc     | local orbit               | 3+7 s        |
+| 02  | Nearest neighbour      | [`02-nearest-neighbour.md`](stages/02-nearest-neighbour.md)           | M31, ~0.8 Mpc            | log dolly + lean          | 7+7 s        |
+| 03  | The Local Group        | [`03-local-group.md`](stages/03-local-group.md)                       | Local Group, ~2.5 Mpc    | pull-back + orbit         | 9+14 s       |
+| 04  | Our neighbourhood      | [`04-our-neighbourhood.md`](stages/04-our-neighbourhood.md)           | local groups, ~4.5 Mpc   | pull-back + drift         | 0+12 s       |
+| 05  | Meeting the neighbours | [`05-meeting-the-neighbours.md`](stages/05-meeting-the-neighbours.md) | famous sweep, ~4 Mpc     | lateral flythrough        | 0+32 s       |
+| 06  | The nearest cluster    | [`06-nearest-cluster.md`](stages/06-nearest-cluster.md)               | Virgo, ~16 Mpc           | log dolly + orbit         | 7+7 s        |
+| 07  | The cosmic web         | [`07-cosmic-web.md`](stages/07-cosmic-web.md)                         | Coma SC, ~90 Mpc         | log dolly + orbit reveal  | 9+9 s        |
+| 08  | Cosmic flows           | [`08-cosmic-flows.md`](stages/08-cosmic-flows.md)                     | flow basin, ~80 Mpc      | lateral reframe + reveal  | 5+9 s        |
+| 09  | The emptiness          | [`09-emptiness.md`](stages/09-emptiness.md)                           | Boötes void, hold scale  | lateral drift             | 6+5 s        |
+| 10  | The deep field         | [`10-deep-field.md`](stages/10-deep-field.md)                         | quasar shell, ~2,000 Mpc | big log dolly             | 8+4 s        |
+| 11  | The edge               | [`11-the-edge.md`](stages/11-the-edge.md)                             | horizon, ~6,000+ Mpc     | log dolly to max          | 9+8 s        |
+| 12  | Home again             | [`12-home-again.md`](stages/12-home-again.md)                         | Milky Way, ~0.05 Mpc     | inward log dolly to start | 8+5 s        |
 
 **Total ≈ 2½ min.** Tune timings per file; this table is regenerated from them.
 
