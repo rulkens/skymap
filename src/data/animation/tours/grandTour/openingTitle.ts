@@ -18,6 +18,7 @@
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
 import {
+  aimAt,
   all,
   dollyTo,
   focusOnId,
@@ -27,6 +28,7 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
+import { BOOT_PITCH_RAD, BOOT_YAW_RAD } from '../../../../services/engine/camera/cameraFraming';
 
 const MW = focusId('milkyWay');
 
@@ -60,8 +62,18 @@ export const openingTitle: ClipData = {
     // many labels at once flips it off with another scene() cue.
     scene(setLabelsFocusedOnly(true)),
     // Cold open: snap far out on the Milky-Way bearing (zero-duration cues
-    // — target and distance are different channels, so one `all` is legal)…
-    all([moveTargetId(MW, 0), dollyTo(FAR_OPEN_MPC, 0)]),
+    // — target, distance, and yaw/pitch are different channels, so one `all`
+    // is legal). The aim snaps to the BOOT orientation: the clip starts
+    // 'live', so without it the approach direction — and beat 1's landing —
+    // would inherit whatever pose the viewer wandered into before starting
+    // the tour. Snapping makes every run identical, and the first frame is
+    // empty space (the sprite is sub-pixel at this distance), so the jump
+    // itself is invisible.
+    all([
+      moveTargetId(MW, 0),
+      dollyTo(FAR_OPEN_MPC, 0),
+      aimAt({ yaw: BOOT_YAW_RAD, pitch: BOOT_PITCH_RAD }, 0),
+    ]),
     // …then the approach. Log-space dolly: three decades in, decelerating
     // onto the framing distance as the sprite swells from nothing.
     focusOnId(MW, 7),
