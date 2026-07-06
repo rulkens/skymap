@@ -211,8 +211,13 @@ function makeBridgeState(): {
 
   const state = {
     settings,
-    // Flow field loaded so the flow guard (fieldLoaded()) passes and its fade fires.
-    gpu: { flowFieldRenderer: { fieldLoaded: () => true } },
+    // Demand-loaded renderers report their assets committed so every guarded
+    // row (flow / filaments / volumeField) passes and its fade fires.
+    gpu: {
+      flowFieldRenderer: { fieldLoaded: () => true },
+      filamentRenderer: { hasCloud: () => true },
+      volumeFieldRenderer: { listIds: () => [] },
+    },
     subsystems: {
       fades: { fadeTo, setImmediate },
       scheduler: { requestRender },

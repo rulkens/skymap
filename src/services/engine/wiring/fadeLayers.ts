@@ -86,6 +86,15 @@ function volumeFieldIds(): readonly VolumeFieldId[] {
   return ids;
 }
 
+// The DEV-only runtime-generated fixtures (`binBaseName: null`) — exempt from
+// the volumeField row's demand-loaded guard because their lazy-load is
+// triggered by that row's own `post`, which a false guard would skip.
+const DEBUG_VOLUME_FIELD_IDS: ReadonlySet<VolumeFieldId> = new Set(
+  Object.values(SOURCE_REGISTRY)
+    .filter((entry) => entry.type === 'volume' && entry.binBaseName === null)
+    .map((entry) => entry.id as VolumeFieldId),
+);
+
 export const FADE_LAYERS = [
   // milkyWay disk — absorbs registerOverlayFades.ts:64-67
   layer({
@@ -176,6 +185,12 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'filament' }),
     seed: () => 0,
     intent: (s) => s.filaments.enabled,
+    // Same demand-loaded gate as flow: suppress the fade until the skeleton is
+    // committed. Without it, an enable whose download is still in flight (a
+    // tour reveal) starts the fade over an empty renderer, and the slot
+    // commit's default-duration re-sync then stomps the authored ramp — the
+    // layer pops in at whatever the invisible fade had reached.
+    guard: (state) => state.gpu.filamentRenderer?.hasCloud() ?? false,
   }),
   // flow field — absorbs flowFieldSlot.ts:36 (demand-loaded; seed 0)
   layer({
@@ -198,6 +213,15 @@ export const FADE_LAYERS = [
     handle: (id) => ({ kind: 'volumeField', id }),
     seed: () => 0,
     intent: (s, id) => s.volumes.items[id]?.enabled ?? false,
+    // Demand-loaded gate, like flow/filaments: suppress the fade until the
+    // field is in the renderer's map, so an enable that races its download
+    // doesn't burn the fade window invisibly. The DEV debug fixtures are
+    // EXEMPT: they are loaded BY this row's own `post` below, and a false
+    // guard short-circuits before `post` — suppressing them would mean the
+    // toggle that should trigger the lazy-load never does.
+    guard: (state, id) =>
+      DEBUG_VOLUME_FIELD_IDS.has(id) ||
+      (state.gpu.volumeFieldRenderer?.listIds().includes(id) ?? false),
     // Enable-gated lazy-load: re-read the just-applied intent so a disable
     // toggle never triggers a load. The DEV debug fixtures aren't demand rows,
     // so they keep this direct lazy-load; cf4/mcpm load via reevaluateDemand and

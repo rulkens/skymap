@@ -385,4 +385,36 @@ describe('FADE_LAYERS intent subset', () => {
     fieldLoaded.mockReturnValue(true);
     expect(row.guard?.(state, undefined)).toBe(true);
   });
+
+  it('filaments row guard gates on the renderer’s hasCloud()', () => {
+    // Same demand-loaded pattern as flow: with no skeleton uploaded, a fade
+    // toward "visible" must be suppressed — otherwise an authored slow reveal
+    // ramps invisibly during the download and the commit-time default fade
+    // stomps it (the beat-05 pop-in).
+    const row = rowFor('filaments');
+    const hasCloud = vi.fn<() => boolean>(() => false);
+    const state = {
+      gpu: { filamentRenderer: { hasCloud } },
+    } as unknown as EngineState;
+    expect(row.guard?.(state, undefined)).toBe(false);
+    hasCloud.mockReturnValue(true);
+    expect(row.guard?.(state, undefined)).toBe(true);
+  });
+
+  it('volume-field row guard gates on the renderer holding the field; debug fixtures exempt', () => {
+    const row = rowFor('volumeField');
+    const state = {
+      gpu: { volumeFieldRenderer: { listIds: () => ['cf4-density'] } },
+    } as unknown as EngineState;
+    // Not in the renderer's map → suppressed; present → fades.
+    expect(row.guard?.(state, 'mcpm')).toBe(false);
+    expect(row.guard?.(state, 'cf4-density')).toBe(true);
+    // Debug fixtures are loaded BY this row's own post (maybeLazyLoadDebugVolume),
+    // and a guard skips post — so they are never suppressed.
+    expect(row.guard?.(state, 'debug-gaussian')).toBe(true);
+    // No renderer yet (mid-bootstrap): demand-loaded ids suppressed, debug exempt.
+    const bare = { gpu: {} } as unknown as EngineState;
+    expect(row.guard?.(bare, 'mcpm')).toBe(false);
+    expect(row.guard?.(bare, 'debug-gaussian')).toBe(true);
+  });
 });

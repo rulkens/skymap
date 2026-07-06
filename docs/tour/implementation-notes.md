@@ -14,6 +14,20 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **Demand-loaded layers need a fade guard, or authored reveals pop** (beat
+  05's volume/filament pop-in): a `show(..., over: 9)` on a layer whose asset
+  hasn't downloaded yet starts the 9 s fade over an EMPTY renderer, and the
+  slot commit's default-duration re-sync then stomps the ramp when the data
+  lands — the layer pops. The cure is the flow row's existing pattern,
+  a `guard` in `fadeLayers.ts` that suppresses the fade until the renderer
+  holds the asset (`hasCloud()` / `listIds().includes(id)` /
+  `fieldLoaded()`): loaded → the authored fade runs exactly as written;
+  still downloading → nothing fades until arrival, then the commit fades it
+  in from zero over the 600 ms default. Consequence for authors: a slow
+  cinematic reveal is only honoured when the asset is already resident —
+  the first cold run gets a clean 600 ms dissolve at arrival instead.
+  (The `survey` row still lacks its guard — same latent hazard, needs a
+  per-catalog uploaded-predicate on the point renderer.)
 - **The subject's ring category gates its focused label** (beat 06,
   `cosmicFlows`): under focusedOnly a focus() cue only names the subject if
   its structure category's rings are lit — `produceStructureLabels` skips
