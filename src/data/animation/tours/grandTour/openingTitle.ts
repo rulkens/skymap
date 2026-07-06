@@ -47,7 +47,7 @@ export const openingTitle: ClipData = {
     hide(
       [
         'volumesMaster', // the cosmic-web beat's reveal
-        'filaments', //      〃
+        'filaments', // hidden for the WHOLE tour — the web beats show the volume only
         'flow', // the flows beat's reveal
         'structureRing', // shown per category as beats reach them
         'label:milkyWay', // "You are here" is beat 2's reveal

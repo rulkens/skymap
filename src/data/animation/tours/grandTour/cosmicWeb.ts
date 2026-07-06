@@ -2,9 +2,10 @@
  * The cosmic web — the showcase beat, and the first half of the web's central
  * idea (fullness and emptiness belong together; the voids beat is the other
  * half). Turn toward Coma, name it, then log-dolly out ~16 → ~90 Mpc while
- * the MCPM density volume and the DisPerSE filaments fade in — the reveal
- * rides the travel leg, so the web is at full strength as the camera settles
- * into its arrival orbit.
+ * the MCPM density volume fades in — the reveal rides the travel leg, so the
+ * web is at full strength as the camera settles into its arrival orbit. The
+ * volume carries the beat alone: the DisPerSE filaments stay hidden — two
+ * renderings of the same web compete rather than reinforce.
  *
  * The volume is the hero: galaxies alone read as scatter at this distance;
  * the raymarched field shows the web as continuous density — bright threads
@@ -59,7 +60,7 @@ export const cosmicWeb: ClipData = {
     lookAtId(COMA_SC, 3),
     focus(COMA_SC),
     hold(1),
-    show(['volumesMaster', 'filaments'], 9),
+    show(['volumesMaster'], 9),
     all([moveTargetId(COMA_SC, 9), dollyToId(COMA_SC, 9)]),
   ],
 };
