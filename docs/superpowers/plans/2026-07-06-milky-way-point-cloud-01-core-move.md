@@ -82,16 +82,16 @@ Tests (mirror the src tree):
 
 **Steps**
 
-- [ ] Load the `wesl-shaders` skill.
-- [ ] Create a scratch probe: `src/services/gpu/shaders/galaxyGen/spikeProbe.wesl` (a trivial `fn probeIdentity(x: f32) -> f32` plus a second file importing it via `package::galaxyGen::spikeProbe::probeIdentity`), and a scratch TS module under `src/services/gpu/galaxy/` that imports the probe with `?static`.
-- [ ] Prove the MAIN side: temporarily import the scratch TS module from any app entry (or run `npx vite build` with the import in place) → the linker resolves `package::galaxyGen::…`. Expected: works out of the box (the root toml's include glob already matches).
-- [ ] Prove the TOOL side. Try mechanisms in this order, stopping at the first that builds `npx vite build --config tools/galaxy-renderer/vite.config.ts` with a temporary import of the scratch TS module from `createGalaxyEngine.ts`:
+- [x] Load the `wesl-shaders` skill.
+- [x] Create a scratch probe: `src/services/gpu/shaders/galaxyGen/spikeProbe.wesl` (a trivial `fn probeIdentity(x: f32) -> f32` plus a second file importing it via `package::galaxyGen::spikeProbe::probeIdentity`), and a scratch TS module under `src/services/gpu/galaxy/` that imports the probe with `?static`.
+- [x] Prove the MAIN side: temporarily import the scratch TS module from any app entry (or run `npx vite build` with the import in place) → the linker resolves `package::galaxyGen::…`. Expected: works out of the box (the root toml's include glob already matches).
+- [x] Prove the TOOL side. Try mechanisms in this order, stopping at the first that builds `npx vite build --config tools/galaxy-renderer/vite.config.ts` with a temporary import of the scratch TS module from `createGalaxyEngine.ts`:
   1. **Extend the tool's `wesl.toml`** — add `"../../src/services/gpu/shaders/**/*.wesl"` to `include` (test whether resolution is include-driven or strictly root-driven for the `galaxyGen::` package path).
   2. **Two `viteWesl` plugin instances** in the tool config — one with the tool's toml, one with `weslToml: resolve(__dirname, '../../wesl.toml')` (check whether the second instance picks up what the first can't resolve, or whether they conflict).
   3. **Vite alias / `galaxyGen` symlink under the tool's shader root** so `package::galaxyGen::…` resolves inside the tool's own root (a symlink is a single source, NOT a copy — but weigh git/Windows friction before choosing it).
-- [ ] **Never a WESL copy** — if all three fail, STOP and escalate to the user with findings; do not invent a fourth mechanism that duplicates shader text.
-- [ ] Delete all scratch files and config edits except the winning mechanism's config change (keep that uncommitted if Task 5 will re-apply it cleanly, or commit it now if it stands alone).
-- [ ] Write the one-paragraph decision note in the **Ledger** section below (mechanism, why, what failed). Commit the ledger note.
+- [x] **Never a WESL copy** — if all three fail, STOP and escalate to the user with findings; do not invent a fourth mechanism that duplicates shader text.
+- [x] Delete all scratch files and config edits except the winning mechanism's config change (keep that uncommitted if Task 5 will re-apply it cleanly, or commit it now if it stands alone).
+- [x] Write the one-paragraph decision note in the **Ledger** section below (mechanism, why, what failed). Commit the ledger note.
 
 ---
 

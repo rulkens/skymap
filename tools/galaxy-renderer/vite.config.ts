@@ -19,10 +19,11 @@
  *    source, no copy to keep in sync.
  *
  * Unlike the flow-workbench (which links against the runtime's canonical
- * shader tree because it drives the real flow renderer), this tool's
- * renderer is entirely its own — a new instrument, not an adapter around an
- * existing one — so its shaders live under `src/engine/shaders/` and are
- * wholly self-contained (see `wesl.toml`).
+ * shader tree because it drives the real flow renderer), this tool's DRAW
+ * shaders (star/dust sprites, bloom chain, composite) are entirely its own,
+ * living under `src/engine/shaders/` (see `wesl.toml`). The one exception is
+ * the shared `galaxyGen/` generation shaders, which live in the runtime tree
+ * and reach this build through a symlink — see the `resolve:` block below.
  *
  * `weslToml` is passed EXPLICITLY because the plugin otherwise reads
  * `<process.cwd()>/wesl.toml` — and `npm run galaxy-renderer` keeps cwd at
