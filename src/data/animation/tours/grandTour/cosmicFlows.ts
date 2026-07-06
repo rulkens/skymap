@@ -12,15 +12,22 @@
  * connected circulation. The web dwell ended wide on the pure volume with
  * the target still parked on Coma, so the enter simply dives back down to
  * Coma's derived framing (`dollyToId`, the same distance the web beat
- * arrived at) while the flow fades in over the travel leg — the currents
- * are at full strength when the caption lands, and the pull-back then rides
- * the captioned dwell.
+ * arrived at). The flow reveal fires only ON ARRIVAL — the dive plays over
+ * the bare density field, then the currents materialize in the settled
+ * frame as the caption lands; the dwell's opening breath covers the fade
+ * before the first pull begins.
  *
- * No focus cue: the web beat already named Coma, and this beat's subject is
- * the motion itself — under focusedOnly an unfocused shot draws no labels,
- * which is the clean frame the streamlines want. The web layers (volume,
- * supercluster rings) stay lit from the previous beat — the flow must read
- * as motion THROUGH the same density field, not a separate overlay.
+ * No focus cue — the motion itself is the subject — but focusedOnly flips
+ * OFF so every supercluster label draws: at these scales the names are the
+ * only landmarks, and the pull-back reads better when the viewer can anchor
+ * the streams to Coma, Shapley, Perseus-Pisces. Flood-safe by the ring
+ * gate (the neighbourhood-beat lesson): only the supercluster ring category
+ * is lit, and every survey has been hidden since the web pull-back, so no
+ * other label family can join — except the Milky Way label, lit since the
+ * "You are here" beat, which gets an explicit hide to keep the frame to
+ * supercluster names alone. The web layers (volume, supercluster rings)
+ * stay lit from the previous beat — the flow must read as motion THROUGH
+ * the same density field, not a separate overlay.
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
@@ -28,6 +35,7 @@ import {
   all,
   dollyTo,
   dollyToId,
+  hide,
   moveTargetId,
   scene,
   seq,
@@ -49,11 +57,14 @@ const GIANT_FLOWS_MPC = 950;
 export const cosmicFlows: ClipData = {
   start: 'live',
   timeline: [
-    scene(setLabelsFocusedOnly(true)),
-    show(['flow'], 6),
+    scene(setLabelsFocusedOnly(false)),
+    hide(['label:milkyWay'], 1),
     // Target is already Coma in natural playback (the web pull-back only
     // dollied); the moveTargetId is idempotent insurance for a mid-beat skip.
     all([moveTargetId(COMA_SC, 6), dollyToId(COMA_SC, 6)]),
+    // Reveal fires after the dive settles — a point cue, so the clip lands
+    // (and the caption reveals) as the fade begins.
+    show(['flow'], 4),
   ],
 };
 
@@ -69,7 +80,9 @@ export const cosmicFlowsDwell: ClipData = {
   timeline: [
     all([
       ...dwellDrift(18, { cruiseRate: (Math.PI * 2) / 120 }).timeline,
-      seq([wait(2), dollyTo(LOCAL_FLOWS_MPC, 5), wait(4), dollyTo(GIANT_FLOWS_MPC, 6)]),
+      // The opening wait covers the flow's 4 s fade-in plus a beat of settled
+      // local currents before the first pull.
+      seq([wait(5), dollyTo(LOCAL_FLOWS_MPC, 5), wait(3), dollyTo(GIANT_FLOWS_MPC, 6)]),
     ]),
   ],
 };
