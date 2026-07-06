@@ -36,6 +36,25 @@
  * below is an aggregate over "live" records: total counts, a radial mass
  * histogram, mean colour, summed energy.
  *
+ * ## Why zero-intensity records are excluded from BOTH sides
+ *
+ * `generate.wesl`'s arm builder (`buildArmSlot`) writes a record for every
+ * carved slot, including a spiralArms star past its arm's fade radius or
+ * inside its start radius — the CPU reference (`spiralArms.ts`) does the
+ * same, since its brightness there is `randomLuminosity() * armFade * ...`
+ * with `armFade === 0`. The dust pass has an analogous case: an armFade-zero
+ * dust seed carries `opacity === 0` on both models. Those records are real
+ * (real position/colour/size), but they are invisible — zero brightness or
+ * opacity draws nothing on screen — so neither side's "how many stars/dust
+ * particles are there" statistic should count them. The GPU has a second,
+ * structural reason to exclude them: its fixed-capacity output has no
+ * `alive` lane (see `writeStar`/`writeDust` in `generate.wesl`), so a
+ * present-but-zero-brightness slot is bit-indistinguishable from a
+ * never-written dead one — brightness/opacity `> 0` is the ONLY liveness
+ * signal the GPU side has. Filtering the CPU side with the identical `> 0`
+ * predicate (rather than trusting its tight-packed array length) makes both
+ * sides measure the same thing: visible records, not allocated slots.
+ *
  * ## Why thresholds are advisory prints, not vitest gates
  *
  * WGSL is f32 arithmetic; the CPU reference runs in JS's f64, and its RNG
@@ -150,16 +169,24 @@ function buildSection(args: {
     gpuHist[gpuBin] = (gpuHist[gpuBin] ?? 0) + 1;
   }
 
-  // CPU records are tight-packed at exactly `starCount`/`dustCount` length —
-  // every one of them is live by construction, no filter needed.
+  // CPU records are tight-packed at exactly `starCount`/`dustCount` length,
+  // but that packing is NOT the same thing as "visible": a spiralArms star
+  // past its arm's fade radius (or an armFade-zero dust seed) still occupies
+  // a slot with brightness/opacity == exactly 0 (see module header). Filter
+  // with the identical `v > 0` predicate the GPU side uses so both totals
+  // count the same thing — visible records — rather than the CPU counting
+  // every allocated slot and the GPU counting only the ones it can tell apart
+  // from a dead one.
   let cpuTotal = 0;
   let cpuIntensitySum = 0;
   const cpuColorSum: [number, number, number] = [0, 0, 0];
   const cpuHist = new Array<number>(HIST_BINS).fill(0);
   for (let i = 0; i < cpuRecords.length / STRIDE; i++) {
     const base = i * STRIDE;
+    const v = cpuRecords[base + INTENSITY_OFFSET]!;
+    if (!(v > 0)) continue; // zero-intensity record — excluded on both sides, see module header
     cpuTotal++;
-    cpuIntensitySum += cpuRecords[base + INTENSITY_OFFSET]!;
+    cpuIntensitySum += v;
     cpuColorSum[0] += cpuRecords[base + colorOffsets[0]]!;
     cpuColorSum[1] += cpuRecords[base + colorOffsets[1]]!;
     cpuColorSum[2] += cpuRecords[base + colorOffsets[2]]!;
