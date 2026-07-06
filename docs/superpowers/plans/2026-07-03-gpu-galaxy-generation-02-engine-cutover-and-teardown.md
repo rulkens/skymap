@@ -48,7 +48,7 @@
 
 - [x] Implement the cutover. No unit tests (GPU shell policy — correctness budget went into plan 01's tested pure seams + harness).
 - [x] `npm run typecheck` + full `npm test` green (engine has no direct unit tests; the suite guards the seams).
-- [ ] **Checkpoint (user):** dev server — default Sc renders visually equivalent to before (side-by-side judgement vs plan 01's parity record); dragging `starCount`/`radius` sliders still regenerates (still debounced — the bridge is Task 3); `sample()`/`grab()` still work (compare panel thumbnails render).
+- [x] **Checkpoint (user):** dev server — default Sc renders visually equivalent to before (side-by-side judgement vs plan 01's parity record); dragging `starCount`/`radius` sliders still regenerates (still debounced — the bridge is Task 3); `sample()`/`grab()` still work (compare panel thumbnails render).
 - [x] Commit.
 
 ---
@@ -70,7 +70,7 @@
 
 - [x] Implement; delete the two files; update the engine docblock's "why extras are baked" section — the rationale inverts: the transform now folds in at generation time via the UBO, which is even more writeBuffer-race-proof than baking (nothing is ever rewritten).
 - [x] `npm run typecheck` + full `npm test` green.
-- [ ] **Checkpoint (user):** enable multi-galaxy — background galaxies appear with visibly distinct structure (unique params were previously identical-buffer copies; now e.g. arm counts differ), FPS badge stays healthy at count 50.
+- [x] **Checkpoint (user):** enable multi-galaxy — background galaxies appear with visibly distinct structure (unique params were previously identical-buffer copies; now e.g. arm counts differ), FPS badge stays healthy at count 50.
 - [x] Commit.
 
 ---
@@ -94,7 +94,7 @@
 
 - [x] Update `engineBridge.test.ts` first: delete the debounce/suppression cases; add `galaxy slice change calls setParams immediately` (no fake timers), `params changes during compare.fitting still forward to the engine`, `extras count change calls setExtras immediately`. Run → fail against current code.
 - [x] Implement. Run → pass. Full `npm test` (autoFit tests must pass untouched — if they need edits, STOP and re-examine, that's a regression signal).
-- [ ] **Checkpoint (user):** structural sliders (radius, arm width, star count) now track the drag live with no settle pause; auto-fit end-to-end still converges with live progress + stop.
+- [x] **Checkpoint (user):** structural sliders (radius, arm width, star count) now track the drag live with no settle pause; auto-fit end-to-end still converges with live progress + stop.
 - [x] Commit.
 
 ---
@@ -103,14 +103,14 @@
 
 No implementer subagent — this is the user-driven acceptance pass for the whole feature, mirroring the tool plans' visual gates. **Do not proceed to Task 5 without every box.**
 
-- [ ] Reference presets vs photos: each reference galaxy in the compare panel still reads as its photo (M51, M104, LMC-class Irr, etc. — same judgement pass as the original tool gate).
-- [ ] Live-drag structural sliders: radius / bulge / arm knobs / dust knobs regenerate per-frame with no debounce feel and no hitching (FPS badge is the instrument).
-- [ ] Seed dice families: `seed` re-rolls placement; `asymSeed` re-rolls lopsidedness/arm personality; `clumpSeed` only the along-arm beading; `waveSeed` only the waviness — each die leaves the other three aspects visibly fixed.
-- [ ] Determinism: re-entering the same seed values reproduces the identical galaxy (flip away and back).
-- [ ] Extras: multi-galaxy backgrounds are structurally unique per galaxy; count slider tracks live; regenerate button re-rolls.
-- [ ] Auto-fit e2e: fit runs, progress + stop work, report fills, result visually matches the reference at least as well as the CPU-era fit.
-- [ ] Warp knobs still bend the outer disk (warp moved to WGSL — check an edge-on view).
-- [ ] iOS/WebKit (house gotcha): open the tool on the iOS device — compute pipelines validate (no silently-dropped frames: camera drag visibly moves the scene), galaxies render. If frames drop, diagnose via `createShaderModuleWithDevLog` output before any teardown.
+- [x] Reference presets vs photos: each reference galaxy in the compare panel still reads as its photo (M51, M104, LMC-class Irr, etc. — same judgement pass as the original tool gate).
+- [x] Live-drag structural sliders: radius / bulge / arm knobs / dust knobs regenerate per-frame with no debounce feel and no hitching (FPS badge is the instrument).
+- [x] Seed dice families: `seed` re-rolls placement; `asymSeed` re-rolls lopsidedness/arm personality; `clumpSeed` only the along-arm beading; `waveSeed` only the waviness — each die leaves the other three aspects visibly fixed.
+- [x] Determinism: re-entering the same seed values reproduces the identical galaxy (flip away and back).
+- [x] Extras: multi-galaxy backgrounds are structurally unique per galaxy; count slider tracks live; regenerate button re-rolls.
+- [x] Auto-fit e2e: fit runs, progress + stop work, report fills, result visually matches the reference at least as well as the CPU-era fit.
+- [x] Warp knobs still bend the outer disk (warp moved to WGSL — check an edge-on view).
+- [x] iOS/WebKit (house gotcha): open the tool on the iOS device — compute pipelines validate (no silently-dropped frames: camera drag visibly moves the scene), galaxies render. If frames drop, diagnose via `createShaderModuleWithDevLog` output before any teardown.
 
 ---
 
