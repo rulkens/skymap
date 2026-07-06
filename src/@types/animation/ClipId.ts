@@ -27,4 +27,5 @@ export type ClipId =
   | 'tourEmptiness'
   | 'tourDeepField'
   | 'tourTheEdge'
-  | 'tourHomeAgain';
+  | 'tourHomeAgain'
+  | 'tourLocalGroup';

@@ -15,11 +15,13 @@
  * centre — before the fly recentres onto M31. Composable because they write
  * different channels: the strafe moves `target`, the aim moves yaw/pitch.
  *
- * The dwell's orbit is SIZED TO LAND facing the next beat's launch: its net
- * yaw carries the camera from the arrival bearing to the one that puts the
- * M81 Group centre-frame beyond Andromeda, so the neighbourhood flythrough
- * opens already aimed down its path instead of swinging to find it. Both
- * bearings are pure seed geometry (orbitAnglesLookingAlong convention):
+ * The dwell's orbit is SIZED TO LAND on a chosen bearing: its net yaw
+ * carries the camera from the arrival bearing to one ~79° off the
+ * Milky-Way–M31 axis (the M81 Group's direction), which the Local-Group
+ * beat inherits untouched — its enter writes only target/distance — so the
+ * pull-back there separates home and Andromeda on screen instead of
+ * stacking them. Both bearings are pure seed geometry
+ * (orbitAnglesLookingAlong convention):
  * arrival yaw is the lookAtId(M31) bearing from the Milky-Way target
  * (nothing after it rotates — strafe/moveTarget write `target`, dolly writes
  * `distance`), and the exit yaw looks along M31 → M81 Group. Constants, not

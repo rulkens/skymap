@@ -1,5 +1,5 @@
 ---
-stage:        7
+stage:        8
 id:           emptiness
 title:        The emptiness
 narration:    >

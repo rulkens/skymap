@@ -1,5 +1,5 @@
 ---
-stage:        6
+stage:        7
 id:           cosmic-flows
 title:        Everything is flowing
 narration:    >

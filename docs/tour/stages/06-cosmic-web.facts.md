@@ -1,4 +1,4 @@
-# Facts — Stage 05: The cosmic web
+# Facts — Stage 06: The cosmic web
 
 > Candidate "did you know?" facts. Every fact has a real, retrieved source.
 > **On screen** = shown / inferable at this framing? **New feature** = what the

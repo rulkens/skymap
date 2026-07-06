@@ -1,5 +1,5 @@
 ---
-stage:        8
+stage:        9
 id:           deep-field
 title:        The deep field
 narration:    >

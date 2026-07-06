@@ -20,38 +20,39 @@ stage shows on-screen text.
 
 ## Stages
 
-| # | Stage | File | Focus / dist | Motion | Travel+dwell |
-|---|---|---|---|---|---|
-| 00 | Opening title | [`00-opening-title.md`](stages/00-opening-title.md) | Milky Way, ~0.05 Mpc | held / drift | 0+8 s |
-| 01 | You are here | [`01-you-are-here.md`](stages/01-you-are-here.md) | Milky Way, ~0.05 Mpc | local orbit | 3+7 s |
-| 02 | Nearest neighbour | [`02-nearest-neighbour.md`](stages/02-nearest-neighbour.md) | M31, ~0.8 Mpc | log dolly + lean | 7+7 s |
-| 03 | Our neighbourhood | [`03-our-neighbourhood.md`](stages/03-our-neighbourhood.md) | local groups, ~4 Mpc | lateral flythrough | 9+5 s |
-| 04 | The nearest cluster | [`04-nearest-cluster.md`](stages/04-nearest-cluster.md) | Virgo, ~16 Mpc | log dolly + orbit | 7+7 s |
-| 05 | The cosmic web | [`05-cosmic-web.md`](stages/05-cosmic-web.md) | Coma SC, ~90 Mpc | log dolly + orbit reveal | 9+9 s |
-| 06 | Cosmic flows | [`06-cosmic-flows.md`](stages/06-cosmic-flows.md) | flow basin, ~80 Mpc | lateral reframe + reveal | 5+9 s |
-| 07 | The emptiness | [`07-emptiness.md`](stages/07-emptiness.md) | Boötes void, hold scale | lateral drift | 6+5 s |
-| 08 | The deep field | [`08-deep-field.md`](stages/08-deep-field.md) | quasar shell, ~2,000 Mpc | big log dolly | 8+4 s |
-| 09 | The edge | [`09-the-edge.md`](stages/09-the-edge.md) | horizon, ~6,000+ Mpc | log dolly to max | 9+8 s |
-| 10 | Home again | [`10-home-again.md`](stages/10-home-again.md) | Milky Way, ~0.05 Mpc | inward log dolly to start | 8+5 s |
+| #   | Stage               | File                                                        | Focus / dist             | Motion                    | Travel+dwell |
+| --- | ------------------- | ----------------------------------------------------------- | ------------------------ | ------------------------- | ------------ |
+| 00  | Opening title       | [`00-opening-title.md`](stages/00-opening-title.md)         | Milky Way, ~0.05 Mpc     | held / drift              | 0+8 s        |
+| 01  | You are here        | [`01-you-are-here.md`](stages/01-you-are-here.md)           | Milky Way, ~0.05 Mpc     | local orbit               | 3+7 s        |
+| 02  | Nearest neighbour   | [`02-nearest-neighbour.md`](stages/02-nearest-neighbour.md) | M31, ~0.8 Mpc            | log dolly + lean          | 7+7 s        |
+| 03  | The Local Group     | [`03-local-group.md`](stages/03-local-group.md)             | Local Group, ~2.5 Mpc    | pull-back + full orbit    | 9+24 s       |
+| 04  | Our neighbourhood   | [`04-our-neighbourhood.md`](stages/04-our-neighbourhood.md) | local groups, ~4 Mpc     | lateral flythrough        | 9+5 s        |
+| 05  | The nearest cluster | [`05-nearest-cluster.md`](stages/05-nearest-cluster.md)     | Virgo, ~16 Mpc           | log dolly + orbit         | 7+7 s        |
+| 06  | The cosmic web      | [`06-cosmic-web.md`](stages/06-cosmic-web.md)               | Coma SC, ~90 Mpc         | log dolly + orbit reveal  | 9+9 s        |
+| 07  | Cosmic flows        | [`07-cosmic-flows.md`](stages/07-cosmic-flows.md)           | flow basin, ~80 Mpc      | lateral reframe + reveal  | 5+9 s        |
+| 08  | The emptiness       | [`08-emptiness.md`](stages/08-emptiness.md)                 | Boötes void, hold scale  | lateral drift             | 6+5 s        |
+| 09  | The deep field      | [`09-deep-field.md`](stages/09-deep-field.md)               | quasar shell, ~2,000 Mpc | big log dolly             | 8+4 s        |
+| 10  | The edge            | [`10-the-edge.md`](stages/10-the-edge.md)                   | horizon, ~6,000+ Mpc     | log dolly to max          | 9+8 s        |
+| 11  | Home again          | [`11-home-again.md`](stages/11-home-again.md)               | Milky Way, ~0.05 Mpc     | inward log dolly to start | 8+5 s        |
 
 **Total ≈ 2½ min.** Tune timings per file; this table is regenerated from them.
 
 ## Stage front-matter schema
 
 ```yaml
-stage:        2                  # ordinal → sequence order
-id:           nearest-neighbour  # stable kebab slug
-title:        Nearest neighbour  # ON-SCREEN stage title
-narration:    >                  # ON-SCREEN narration (1–2 lines)
+stage: 2 # ordinal → sequence order
+id: nearest-neighbour # stable kebab slug
+title: Nearest neighbour # ON-SCREEN stage title
+narration: > # ON-SCREEN narration (1–2 lines)
   Andromeda — the nearest big galaxy to ours, and falling toward us.
-focus:        famous:m31         # symbolic target (union below)
-distance_mpc: 0.8                # framing distance (world units ≈ Mpc)
-motion:       log-dolly+lean     # camera character for travel + arrival
-travel_s:     7                  # seconds to reach this stage (0 = held open)
-dwell_s:      7                  # seconds held; floored by reading time
-effects:      []                 # engine toggles on entry (may animate)
-requires:     [log-dolly, lateral-focus, caption]   # primitive tags → engine spec
-status:       draft
+focus: famous:m31 # symbolic target (union below)
+distance_mpc: 0.8 # framing distance (world units ≈ Mpc)
+motion: log-dolly+lean # camera character for travel + arrival
+travel_s: 7 # seconds to reach this stage (0 = held open)
+dwell_s: 7 # seconds held; floored by reading time
+effects: [] # engine toggles on entry (may animate)
+requires: [log-dolly, lateral-focus, caption] # primitive tags → engine spec
+status: draft
 ```
 
 Body below front matter = director's notes (intent, exact move, on-screen,

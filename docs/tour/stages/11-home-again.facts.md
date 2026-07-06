@@ -1,4 +1,4 @@
-# Facts — Stage 10: Home again
+# Facts — Stage 11: Home again
 
 > Candidate "did you know?" facts. Every fact has a real, retrieved source.
 > **On screen** = shown / inferable at this framing? **New feature** = what the

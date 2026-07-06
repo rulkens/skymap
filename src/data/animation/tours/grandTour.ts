@@ -18,6 +18,7 @@ import { dwellDrift } from '../../../state/tour/dwellDrift';
 import { openingTitle } from './grandTour/openingTitle';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31, approachM31Dwell } from './grandTour/approachM31';
+import { localGroup, localGroupDwell } from './grandTour/localGroup';
 import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from './grandTour/approachVirgo';
 import { cosmicWeb, cosmicWebDwell } from './grandTour/cosmicWeb';
@@ -56,8 +57,20 @@ export const grandTour: Tour = {
         body: 'This is Andromeda, the nearest large galaxy to ours. Its light has been travelling toward us for 2.5 million years.',
         position: 'bottom-left',
       },
-      // Sized to land facing the M81 Group — the next beat's launch bearing.
+      // Lands ~79° off the MW–M31 axis, so the next beat's pull-back
+      // separates home and Andromeda instead of stacking them.
       dwellClip: approachM31Dwell,
+    },
+    {
+      enterClip: localGroup,
+      caption: {
+        title: 'The Local Group',
+        body: 'The Milky Way and Andromeda travel together — a small family of galaxies, dozens of dwarfs in tow, bound as the Local Group.',
+        position: 'bottom-left',
+      },
+      // One full orbit of the family, landing on the flythrough's launch
+      // bearing; the pull-out to neighbourhood scale rides its second half.
+      dwellClip: localGroupDwell,
     },
     {
       // No enter clip: the flythrough IS the dwell, so the caption reveals at

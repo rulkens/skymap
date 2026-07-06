@@ -20,9 +20,9 @@
  * (structures have radius 0 and get flown through-centre, which reads as
  * drifting through empty space).
  *
- * The first knot is Bode's Galaxy because the Andromeda dwell LANDS facing
- * the M81 Group's bearing — the launch continues straight along the aim the
- * viewer already holds, no opening swing. Waypoint order follows the
+ * The first knot is Bode's Galaxy because the Local-Group dwell LANDS
+ * facing the M81 Group's bearing — the launch continues straight along the
+ * aim the viewer already holds, no opening swing. Waypoint order follows the
  * famousFlythrough turn-minimisation insight: the set straddles both
  * celestial hemispheres, so one sharp (~100°) equator crossing is the
  * geometric floor — it lands at the Sombrero, where the banked pass-by turn

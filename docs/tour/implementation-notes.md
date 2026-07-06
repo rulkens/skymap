@@ -14,6 +14,17 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **Inserting a beat mid-tour is a renumber, plus a bearing-chain re-check**
+  (beat 03, `localGroup`): stage docs and debugger labels are ordinal, so an
+  insertion renames every later `stages/NN-*.md` (+ `.facts.md`, their
+  `stage:`/header numbers, the `script.md` table) and bumps the
+  `grandTourBeats` labels — clip IDS stay name-based and never change. The
+  camera side: computed dwell landings chain across beats (a dwell's arrival
+  yaw = the previous dwell's exit when everything between writes only
+  target/distance), so the new beat inherits the M31 dwell's bearing and
+  re-sizes its own drift to the flythrough's launch. A net-yaw sliver (here
+  +6°) can't carry a dwell — wrap it a full ±2π so the orbit IS the motion,
+  choosing the sign that keeps the neighbouring dwells' spin direction.
 - **Demand-loaded layers need a fade guard, or authored reveals pop** (beat
   05's volume/filament pop-in): a `show(..., over: 9)` on a layer whose asset
   hasn't downloaded yet starts the 9 s fade over an EMPTY renderer, and the

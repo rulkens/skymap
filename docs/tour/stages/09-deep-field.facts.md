@@ -1,4 +1,4 @@
-# Facts — Stage 08: The deep field
+# Facts — Stage 09: The deep field
 
 > Candidate "did you know?" facts. Every fact has a real, retrieved source.
 > **On screen** = shown / inferable at this framing? **New feature** = what the
