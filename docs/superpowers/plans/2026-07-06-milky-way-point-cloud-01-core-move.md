@@ -112,11 +112,11 @@ Tests (mirror the src tree):
 
 **Files:** the 10 `src/model/*.ts` rows of the inventory + their 5 test files.
 
-- [ ] `git mv` the 10 model files to `src/services/gpu/galaxy/`. Inside each, re-point type imports to `../../../@types/galaxy/<Type>` and sibling imports stay `./<sibling>`.
-- [ ] Re-point every remaining tool import of these modules (`grep -rn "from '.*model/" tools/galaxy-renderer/src` — consumers include `createGalaxyEngine.ts:110-113`, `packGenerationUniforms.ts:52-58` (moves next task — still re-point now so this task's gate passes), `randomGalaxyParams.ts`, `hubbleStagePatches.ts`, `ControlsPanel.tsx`, `runCompareFit.ts`, matcher files).
-- [ ] `git mv` the 5 test files to `tests/services/gpu/galaxy/` and re-point their imports to `../../../../src/services/gpu/galaxy/<fn>`.
-- [ ] Delete the now-empty `tools/galaxy-renderer/src/model/` directory.
-- [ ] Gates: `npm test` + `npm run typecheck` + tool `npx vite build`. Commit.
+- [x] `git mv` the 10 model files to `src/services/gpu/galaxy/`. Inside each, re-point type imports to `../../../@types/galaxy/<Type>` and sibling imports stay `./<sibling>`.
+- [x] Re-point every remaining tool import of these modules (`grep -rn "from '.*model/" tools/galaxy-renderer/src` — consumers include `createGalaxyEngine.ts:110-113`, `packGenerationUniforms.ts:52-58` (moves next task — still re-point now so this task's gate passes), `randomGalaxyParams.ts`, `hubbleStagePatches.ts`, `ControlsPanel.tsx`, `runCompareFit.ts`, matcher files).
+- [x] `git mv` the 5 test files to `tests/services/gpu/galaxy/` and re-point their imports to `../../../../src/services/gpu/galaxy/<fn>`.
+- [x] Delete the now-empty `tools/galaxy-renderer/src/model/` directory.
+- [x] Gates: `npm test` + `npm run typecheck` + tool `npx vite build`. Commit.
 
 ---
 
