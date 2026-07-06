@@ -168,14 +168,14 @@ export function createGenerationPipelines(device: GPUDevice): GenerationPipeline
 
 **Files:** the 3 WESL rows of the inventory; `tests/services/gpu/galaxy/generationShaderParity.test.ts` (moved); `tools/galaxy-renderer/vite.config.ts` and/or `tools/galaxy-renderer/wesl.toml` (the Task-1 mechanism); `src/services/gpu/galaxy/createGenerationPipelines.ts` (the two `?static` paths).
 
-- [ ] `git mv` the three files; the lib flattens: `lib/generate.wesl` → `galaxyGen/generate.wesl`.
-- [ ] Rewrite the entry files' import lines (one identifier per line, at the very top): `package::lib::generate::X` → `package::galaxyGen::generate::X` (10 imports in `generateStars.wesl:47-56`, 8 in `generateDust.wesl:41-48`). `generate.wesl` itself imports nothing — no edits beyond comment path references. **Keep the `total N bytes` comment intact** — the parity test scrapes it.
-- [ ] Flip `createGenerationPipelines.ts`'s two `?static` import paths to `../shaders/galaxyGen/…`.
-- [ ] Apply the Task-1 mechanism to the tool build config so the tool links the moved files.
-- [ ] `git mv` + update the parity test. Path constants change (the test resolves from `process.cwd()`): `const SHADERS = 'src/services/gpu/shaders/galaxyGen'`; `readShader('lib/generate.wesl')` → `readShader('generate.wesl')` (3 sites); TS imports → `../../../../src/services/gpu/galaxy/{generationUboLayout,packGenerationUniforms,populationIds}`. Scraper regexes and every assertion stay byte-identical — the mirrors themselves did not change.
-- [ ] Delete the now-empty `tools/galaxy-renderer/src/engine/shaders/lib/` entry for generate (keep `fullscreenTri.wesl`); delete the two moved entry files from the tool tree (git mv already did).
-- [ ] Gates: `npm test` (parity green from the new home) + `npm run typecheck` + tool `npx vite build` + **manual dev-server check of the tool**: `npm run galaxy-renderer`, load it, confirm a galaxy still generates and draws (this is the only runtime consumer of the moved compute path today).
-- [ ] Commit.
+- [x] `git mv` the three files; the lib flattens: `lib/generate.wesl` → `galaxyGen/generate.wesl`.
+- [x] Rewrite the entry files' import lines (one identifier per line, at the very top): `package::lib::generate::X` → `package::galaxyGen::generate::X` (10 imports in `generateStars.wesl:47-56`, 8 in `generateDust.wesl:41-48`). `generate.wesl` itself imports nothing — no edits beyond comment path references. **Keep the `total N bytes` comment intact** — the parity test scrapes it.
+- [x] Flip `createGenerationPipelines.ts`'s two `?static` import paths to `../shaders/galaxyGen/…`.
+- [x] Apply the Task-1 mechanism to the tool build config so the tool links the moved files.
+- [x] `git mv` + update the parity test. Path constants change (the test resolves from `process.cwd()`): `const SHADERS = 'src/services/gpu/shaders/galaxyGen'`; `readShader('lib/generate.wesl')` → `readShader('generate.wesl')` (3 sites); TS imports → `../../../../src/services/gpu/galaxy/{generationUboLayout,packGenerationUniforms,populationIds}`. Scraper regexes and every assertion stay byte-identical — the mirrors themselves did not change.
+- [x] Delete the now-empty `tools/galaxy-renderer/src/engine/shaders/lib/` entry for generate (keep `fullscreenTri.wesl`); delete the two moved entry files from the tool tree (git mv already did).
+- [x] Gates: `npm test` (parity green from the new home) + `npm run typecheck` + tool `npx vite build` + **manual dev-server check of the tool**: `npm run galaxy-renderer`, load it, confirm a galaxy still generates and draws (this is the only runtime consumer of the moved compute path today).
+- [x] Commit.
 
 ---
 
