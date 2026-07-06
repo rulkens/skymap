@@ -6,6 +6,6 @@
  * galaxy-matcher.js:141-157 — an object shape would just add punctuation.
  */
 
-import type { GalaxyParams } from '../model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 
 export type FitParamRange = readonly [key: keyof GalaxyParams & string, lo: number, hi: number];

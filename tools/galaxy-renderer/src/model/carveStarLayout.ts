@@ -34,11 +34,11 @@
  *    output slots and never appears in this layout.
  */
 import { POPULATION_IDS } from './populationIds';
-import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
-import type { GenerationLayout } from '../../@types/model/GenerationLayout';
-import type { PopulationRange } from '../../@types/model/PopulationRange';
-import type { StarBudget } from '../../@types/model/StarBudget';
+import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { GenerationLayout } from '../../../../src/@types/galaxy/GenerationLayout';
+import type { PopulationRange } from '../../../../src/@types/galaxy/PopulationRange';
+import type { StarBudget } from '../../../../src/@types/galaxy/StarBudget';
 
 type IterationsFn = (category: GalaxyCategory, params: GalaxyParams, budget: StarBudget) => number;
 

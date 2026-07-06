@@ -6,7 +6,7 @@
  * the ratio had to be made in two places or silently desync the packer from
  * the carve. Extracting it makes the derivation one edit, one authority.
  */
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 
 export function outerRadiusOf(params: GalaxyParams): number {
   return 10 * (params.radius || 1);

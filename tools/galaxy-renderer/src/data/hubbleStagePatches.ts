@@ -9,7 +9,7 @@
  * truth) rather than the spike's duplicate `CAT` function.
  */
 
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import { classifyHubbleType } from '../model/classifyHubbleType';
 
 export function hubbleTypePatch(type: string): Partial<GalaxyParams> {

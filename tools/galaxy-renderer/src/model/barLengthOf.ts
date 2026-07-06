@@ -8,7 +8,7 @@
  * barDust population on `> 0`); routing both through here keeps the two from
  * drifting.
  */
-import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';
+import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
 
 export function barLengthOf(
   category: GalaxyCategory,

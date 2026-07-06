@@ -57,10 +57,10 @@ import { grainScale } from '../model/grainScale';
 import { hiiPalette } from '../model/hiiPalette';
 import { outerRadiusOf } from '../model/outerRadiusOf';
 import { GENERATION_UBO } from './generationUboLayout';
-import type { ExtraGalaxySpec } from '../../@types/engine/ExtraGalaxySpec';
-import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
-import type { StarBudget } from '../../@types/model/StarBudget';
+import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
+import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { StarBudget } from '../../../../src/@types/galaxy/StarBudget';
 
 /** `category` u32 encoding — append-only, mirrors the brief's field table. */
 export const CATEGORY_CODE: Record<GalaxyCategory, number> = {

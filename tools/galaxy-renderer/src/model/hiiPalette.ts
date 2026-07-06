@@ -10,7 +10,7 @@
  * one lerp, independent of the core's two-segment path.
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { HiiPalette } from '../../@types/model/HiiPalette';
+import type { HiiPalette } from '../../../../src/@types/galaxy/HiiPalette';
 
 const lerp3 = (a: Vec3, b: Vec3, t: number): Vec3 => [
   a[0] + (b[0] - a[0]) * t,

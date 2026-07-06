@@ -12,9 +12,9 @@ import { describe, expect, it } from 'vitest';
 import { carveStarLayout } from '../../../../tools/galaxy-renderer/src/model/carveStarLayout';
 import { splitStarBudget } from '../../../../tools/galaxy-renderer/src/model/splitStarBudget';
 import { POPULATION_IDS } from '../../../../tools/galaxy-renderer/src/model/populationIds';
-import type { GalaxyCategory } from '../../../../tools/galaxy-renderer/@types/model/GalaxyCategory';
-import type { GalaxyParams } from '../../../../tools/galaxy-renderer/@types/model/GalaxyParams';
-import type { PopulationRange } from '../../../../tools/galaxy-renderer/@types/model/PopulationRange';
+import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { PopulationRange } from '../../../../src/@types/galaxy/PopulationRange';
 
 function sumSlots(ranges: readonly PopulationRange[]): number {
   return ranges.reduce((sum, r) => sum + r.iterations * r.stride, 0);

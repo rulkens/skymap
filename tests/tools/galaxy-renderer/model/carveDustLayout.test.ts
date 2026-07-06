@@ -12,8 +12,8 @@ import { carveDustLayout } from '../../../../tools/galaxy-renderer/src/model/car
 import { splitStarBudget } from '../../../../tools/galaxy-renderer/src/model/splitStarBudget';
 import { grainScale } from '../../../../tools/galaxy-renderer/src/model/grainScale';
 import { POPULATION_IDS } from '../../../../tools/galaxy-renderer/src/model/populationIds';
-import type { GalaxyCategory } from '../../../../tools/galaxy-renderer/@types/model/GalaxyCategory';
-import type { GalaxyParams } from '../../../../tools/galaxy-renderer/@types/model/GalaxyParams';
+import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 
 describe('carveDustLayout', () => {
   it('Sc default params: armDust iterations = floor(30000*dust/grainScale^2) (the budget, not the candidate cap)', () => {

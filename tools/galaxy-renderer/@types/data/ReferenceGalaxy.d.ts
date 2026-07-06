@@ -16,7 +16,7 @@
  * duplicating it here would just be a second source of truth that could
  * drift from the type string. Dropped; callers derive it on demand.
  */
-import type { GalaxyParams } from '../model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { ViewPose } from '../engine/ViewPose';
 
 export type ReferenceGalaxy = {

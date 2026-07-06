@@ -22,8 +22,8 @@
  */
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyDescriptor } from '../../@types/matcher/GalaxyDescriptor';
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
-import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
 import type { AutoFitOptions } from '../../@types/matcher/AutoFitOptions';
 import type { FitResult } from '../../@types/matcher/FitResult';
 import { fitPlan } from './fitPlan';

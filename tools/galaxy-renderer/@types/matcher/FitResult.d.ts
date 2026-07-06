@@ -6,7 +6,7 @@
  * per-evaluation loss trace for a post-hoc convergence plot.
  */
 
-import type { GalaxyParams } from '../model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyDescriptor } from './GalaxyDescriptor';
 
 export type FitResult = {

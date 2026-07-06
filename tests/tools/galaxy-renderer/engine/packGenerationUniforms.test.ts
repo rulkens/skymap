@@ -17,8 +17,8 @@ import { classifyHubbleType } from '../../../../tools/galaxy-renderer/src/model/
 import { grainScale } from '../../../../tools/galaxy-renderer/src/model/grainScale';
 import { hiiPalette } from '../../../../tools/galaxy-renderer/src/model/hiiPalette';
 import { splitStarBudget } from '../../../../tools/galaxy-renderer/src/model/splitStarBudget';
-import type { ExtraGalaxySpec } from '../../../../tools/galaxy-renderer/@types/engine/ExtraGalaxySpec';
-import type { GalaxyParams } from '../../../../tools/galaxy-renderer/@types/model/GalaxyParams';
+import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 
 /** Derive arm-table geometry from GENERATION_UBO's layout (the single authority). */
 const MAX_ARMS =

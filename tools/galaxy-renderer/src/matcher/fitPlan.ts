@@ -12,7 +12,7 @@
  * than searched against noise.
  */
 
-import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';
+import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
 import type { FitPlan } from '../../@types/matcher/FitPlan';
 import type { FitParamRange } from '../../@types/matcher/FitParamRange';
 

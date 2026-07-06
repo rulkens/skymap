@@ -6,7 +6,7 @@
  * from the same constant, so the two can never drift apart.
  */
 
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 
 export const DEFAULT_GALAXY_PARAMS: GalaxyParams = {
   type: 'Sc',

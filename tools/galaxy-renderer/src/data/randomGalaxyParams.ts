@@ -11,7 +11,7 @@
  * package, model layer included: never own your own entropy source.
  */
 
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import { PARAM_SPEC } from './paramSpec';
 import { classifyHubbleType } from '../model/classifyHubbleType';
 

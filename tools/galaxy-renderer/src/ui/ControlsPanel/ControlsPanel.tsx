@@ -25,7 +25,7 @@
  * plain per-click reseed doesn't).
  */
 import { type ReactNode } from 'react';
-import type { GalaxyParams } from '../../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { ParamSpecEntry } from '../../../@types/data/ParamSpecEntry';
 import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';

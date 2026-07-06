@@ -24,7 +24,7 @@
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 import generateStarsWgsl from './shaders/generateStars.wesl?static';
 import generateDustWgsl from './shaders/generateDust.wesl?static';
-import type { GenerationPipelines } from '../../@types/engine/GenerationPipelines';
+import type { GenerationPipelines } from '../../../../src/@types/galaxy/GenerationPipelines';
 
 export function createGenerationPipelines(device: GPUDevice): GenerationPipelines {
   const starsModule = createShaderModuleWithDevLog(device, generateStarsWgsl, 'galaxy:genStars');

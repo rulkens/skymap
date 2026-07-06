@@ -18,7 +18,7 @@
  * call-site args instead of from `SPEC`.
  */
 
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { ParamSpecEntry } from '../../@types/data/ParamSpecEntry';
 
 export const PARAM_SPEC: Readonly<Partial<Record<keyof GalaxyParams & string, ParamSpecEntry>>> = {

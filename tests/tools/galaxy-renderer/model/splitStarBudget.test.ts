@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { splitStarBudget } from '../../../../tools/galaxy-renderer/src/model/splitStarBudget';
-import type { GalaxyCategory } from '../../../../tools/galaxy-renderer/@types/model/GalaxyCategory';
+import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
 
 const CATEGORIES: readonly GalaxyCategory[] = [
   'elliptical',
