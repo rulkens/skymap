@@ -3,8 +3,8 @@ stage: 4
 id: our-neighbourhood
 title: Our neighbourhood
 narration: >
-  Pull back, and the Local Group turns out to be one small family among
-  many — our galactic neighbourhood, tens of millions of light-years across.
+  The Local Group is one small family among many. Our galactic neighbourhood
+  stretches tens of millions of light-years.
 focus: structure:group-local-group
 distance_mpc: 4.5
 motion: pull-back + drift
@@ -34,10 +34,12 @@ automatically.
 
 ## On screen
 
-`Our neighbourhood` + narration riding the pull. No scene cues: 2MRS,
-group rings, and focusedOnly-off all arrived with the Local-Group beat.
-The Local Group stays focused — its ring + label shrink into the field,
-which is the beat's point.
+`Our neighbourhood` + narration riding the pull. The scene arrived with the
+Local-Group beat (2MRS, group rings, focusedOnly-off); this beat's one cue
+is `focus(null)` as the pull starts. Holding the Local-Group focus would
+keep every sibling ring receded and the field outside the family dimmed by
+the member-isolation fade; releasing it lets the neighbourhood brighten as
+the camera recedes.
 
 ## Tweaks
 

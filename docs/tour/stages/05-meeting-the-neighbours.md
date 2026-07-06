@@ -3,7 +3,7 @@ stage: 5
 id: meeting-the-neighbours
 title: Meeting the neighbours
 narration: >
-  Bode's Galaxy, the Pinwheel, the Whirlpool, the Sombrero, Centaurus A —
+  Bode's Galaxy, the Pinwheel, the Whirlpool, the Sombrero, Centaurus A:
   the bright landmarks of our corner of the universe.
 focus: famous:c77
 distance_mpc: 4

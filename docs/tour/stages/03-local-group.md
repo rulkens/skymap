@@ -3,8 +3,8 @@ stage: 3
 id: local-group
 title: The Local Group
 narration: >
-  The Milky Way and Andromeda travel together — a small family of galaxies,
-  dozens of dwarfs in tow, bound as the Local Group.
+  The Milky Way and Andromeda travel together, dozens of dwarf galaxies in
+  tow: a single family bound by gravity, the Local Group.
 focus: structure:group-local-group
 distance_mpc: 2.5
 motion: pull-back + orbit
@@ -19,8 +19,8 @@ status: built
 
 The step between "one neighbour" and "a neighbourhood of groups". Pull back
 from Andromeda until home and its neighbour share the frame, and name the
-family they belong to — the viewer learns that the two galaxies they've met
-are not loose, they're _bound_.
+family they belong to — the viewer learns the two galaxies they've met are
+gravitationally bound.
 
 ## Camera
 

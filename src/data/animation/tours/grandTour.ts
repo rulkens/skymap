@@ -67,7 +67,7 @@ export const grandTour: Tour = {
       enterClip: localGroup,
       caption: {
         title: 'The Local Group',
-        body: 'The Milky Way and Andromeda travel together — a small family of galaxies with dozens of dwarfs, gravitationally bound as the Local Group.',
+        body: 'The Milky Way and Andromeda travel together, dozens of dwarf galaxies in tow: a single family bound by gravity, the Local Group.',
         position: 'bottom-left',
       },
       // The orbit of the family — its share of the revolution the next
@@ -79,7 +79,7 @@ export const grandTour: Tour = {
       // widening view, so it rides the motion (captions reveal on dwell start).
       caption: {
         title: 'Our neighbourhood',
-        body: 'Pull back, and the Local Group turns out to be one small family among many — our galactic neighbourhood, tens of millions of light-years across.',
+        body: 'The Local Group is one small family among many. Our galactic neighbourhood stretches tens of millions of light-years.',
         position: 'bottom-left',
       },
       dwellClip: neighbourhoodReveal,
@@ -89,7 +89,7 @@ export const grandTour: Tour = {
       // beat entry and rides the whole sweep (captions reveal on dwell start).
       caption: {
         title: 'Meeting the neighbours',
-        body: "Bode's Galaxy, the Pinwheel, the Whirlpool, the Sombrero, Centaurus A — the bright landmarks of our corner of the universe.",
+        body: "Bode's Galaxy, the Pinwheel, the Whirlpool, the Sombrero, Centaurus A: the bright landmarks of our corner of the universe.",
         position: 'bottom-left',
       },
       dwellClip: neighbourhoodFlythrough,
@@ -107,7 +107,7 @@ export const grandTour: Tour = {
       enterClip: laniakea,
       caption: {
         title: 'Laniakea',
-        body: 'Virgo is one cluster among dozens. Together they drift as a single vast structure: Laniakea, our home supercluster, half a billion light-years wide.',
+        body: 'Virgo is only the nearest of dozens of clusters, all streaming together as one structure: Laniakea, our home supercluster, half a billion light-years wide.',
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(12),

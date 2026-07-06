@@ -13,8 +13,8 @@
  * begins. Holding the Local-Group focus through the zoom-out would keep
  * every sibling ring receded and the member-isolation fade dimming the
  * whole field outside the family — the opposite of a reveal. Clearing it
- * releases the recession (400 ms blend), so the neighbourhood lights up
- * as the camera lets go of home.
+ * releases the recession (400 ms blend), so the neighbourhood brightens
+ * as the camera pulls away.
  *
  * The drift continues the revolution the Local-Group dwell began: the two
  * dwells share one full backward orbit that lands facing the M81 Group

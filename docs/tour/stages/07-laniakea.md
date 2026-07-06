@@ -3,8 +3,9 @@ stage: 7
 id: laniakea
 title: Laniakea
 narration: >
-  Virgo is one cluster among dozens. Together they drift as a single vast
-  structure: Laniakea, our home supercluster, half a billion light-years wide.
+  Virgo is only the nearest of dozens of clusters, all streaming together as
+  one structure: Laniakea, our home supercluster, half a billion light-years
+  wide.
 focus: structure:supercluster-laniakea-sc
 distance_mpc: ~220
 motion: two-stage log-dolly
@@ -17,11 +18,10 @@ status: draft
 
 ## Intent
 
-The rung between "a cluster" and "the web": clusters are not the top of the
-hierarchy. Two ideas in one beat, in the order they unfold — Virgo is **one
-of many** clusters, and the many belong to **one supercluster**, Laniakea.
-Named and framed, it makes the cosmic-web beat's "bright clumps are where
-superclusters gather" line land on something the viewer has already met.
+The rung between "a cluster" and "the web". Two ideas in sequence: Virgo is
+one of many clusters, and the clusters belong to one supercluster, Laniakea.
+Named and framed here, it gives the cosmic-web beat's "bright clumps are
+where superclusters gather" line something the viewer has already met.
 
 ## Camera
 
