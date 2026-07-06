@@ -5,7 +5,7 @@
  * spiral" behaviour (model.js:64).
  */
 import { describe, expect, it } from 'vitest';
-import { classifyHubbleType } from '../../../../tools/galaxy-renderer/src/model/classifyHubbleType';
+import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
 
 describe('classifyHubbleType', () => {
   it('E0 and E7 classify as elliptical', () => {

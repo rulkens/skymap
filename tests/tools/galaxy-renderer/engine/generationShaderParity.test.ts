@@ -25,7 +25,7 @@ import { describe, expect, it } from 'vitest';
 
 import { GENERATION_UBO } from '../../../../tools/galaxy-renderer/src/engine/generationUboLayout';
 import { CATEGORY_CODE } from '../../../../tools/galaxy-renderer/src/engine/packGenerationUniforms';
-import { POPULATION_IDS } from '../../../../tools/galaxy-renderer/src/model/populationIds';
+import { POPULATION_IDS } from '../../../../src/services/gpu/galaxy/populationIds';
 
 const SHADERS = 'tools/galaxy-renderer/src/engine/shaders';
 

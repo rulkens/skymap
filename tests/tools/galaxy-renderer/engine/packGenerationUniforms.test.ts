@@ -11,12 +11,12 @@
 import { describe, expect, it } from 'vitest';
 import { GENERATION_UBO } from '../../../../tools/galaxy-renderer/src/engine/generationUboLayout';
 import { packGenerationUniforms } from '../../../../tools/galaxy-renderer/src/engine/packGenerationUniforms';
-import { carveDustLayout } from '../../../../tools/galaxy-renderer/src/model/carveDustLayout';
-import { carveStarLayout } from '../../../../tools/galaxy-renderer/src/model/carveStarLayout';
-import { classifyHubbleType } from '../../../../tools/galaxy-renderer/src/model/classifyHubbleType';
-import { grainScale } from '../../../../tools/galaxy-renderer/src/model/grainScale';
-import { hiiPalette } from '../../../../tools/galaxy-renderer/src/model/hiiPalette';
-import { splitStarBudget } from '../../../../tools/galaxy-renderer/src/model/splitStarBudget';
+import { carveDustLayout } from '../../../../src/services/gpu/galaxy/carveDustLayout';
+import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
+import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
+import { grainScale } from '../../../../src/services/gpu/galaxy/grainScale';
+import { hiiPalette } from '../../../../src/services/gpu/galaxy/hiiPalette';
+import { splitStarBudget } from '../../../../src/services/gpu/galaxy/splitStarBudget';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 

@@ -107,10 +107,10 @@ import { createGenerationPipelines } from './createGenerationPipelines';
 import { encodeGeneration } from './encodeGeneration';
 import { packGenerationUniforms } from './packGenerationUniforms';
 import { GENERATION_UBO } from './generationUboLayout';
-import { carveStarLayout } from '../model/carveStarLayout';
-import { carveDustLayout } from '../model/carveDustLayout';
-import { classifyHubbleType } from '../model/classifyHubbleType';
-import { splitStarBudget } from '../model/splitStarBudget';
+import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
+import { carveDustLayout } from '../../../../src/services/gpu/galaxy/carveDustLayout';
+import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
+import { splitStarBudget } from '../../../../src/services/gpu/galaxy/splitStarBudget';
 
 import starWgsl from './shaders/star.wesl?static';
 import dustWgsl from './shaders/dust.wesl?static';

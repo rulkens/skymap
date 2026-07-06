@@ -8,10 +8,10 @@
  * frozen snapshot of them.
  */
 import { describe, expect, it } from 'vitest';
-import { carveDustLayout } from '../../../../tools/galaxy-renderer/src/model/carveDustLayout';
-import { splitStarBudget } from '../../../../tools/galaxy-renderer/src/model/splitStarBudget';
-import { grainScale } from '../../../../tools/galaxy-renderer/src/model/grainScale';
-import { POPULATION_IDS } from '../../../../tools/galaxy-renderer/src/model/populationIds';
+import { carveDustLayout } from '../../../../src/services/gpu/galaxy/carveDustLayout';
+import { splitStarBudget } from '../../../../src/services/gpu/galaxy/splitStarBudget';
+import { grainScale } from '../../../../src/services/gpu/galaxy/grainScale';
+import { POPULATION_IDS } from '../../../../src/services/gpu/galaxy/populationIds';
 import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 

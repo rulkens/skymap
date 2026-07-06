@@ -5,7 +5,7 @@
  * module header on the implementation for the per-category formulas.
  */
 import { describe, expect, it } from 'vitest';
-import { splitStarBudget } from '../../../../tools/galaxy-renderer/src/model/splitStarBudget';
+import { splitStarBudget } from '../../../../src/services/gpu/galaxy/splitStarBudget';
 import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
 
 const CATEGORIES: readonly GalaxyCategory[] = [

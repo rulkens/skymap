@@ -36,7 +36,7 @@ import { sectionToggled, autoRotateSet } from '../../state/slices/uiSlice';
 import { PARAM_SPEC } from '../../data/paramSpec';
 import { hubbleTypePatch } from '../../data/hubbleStagePatches';
 import { randomGalaxyParams } from '../../data/randomGalaxyParams';
-import { classifyHubbleType } from '../../model/classifyHubbleType';
+import { classifyHubbleType } from '../../../../../src/services/gpu/galaxy/classifyHubbleType';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';

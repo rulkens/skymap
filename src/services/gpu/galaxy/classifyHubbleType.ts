@@ -12,7 +12,7 @@
  * the checks below are ordered most-specific-first. Any string that doesn't
  * match a known prefix falls back to 'spiral', matching the spike's default.
  */
-import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
+import type { GalaxyCategory } from '../../../@types/galaxy/GalaxyCategory';
 
 export function classifyHubbleType(type: string): GalaxyCategory {
   if (type[0] === 'E') return 'elliptical'; // E0..E7 — smooth spheroids

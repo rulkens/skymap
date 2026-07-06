@@ -11,9 +11,9 @@
  *
  * Formulas ported verbatim from galaxy-model.js:89-116.
  */
-import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
-import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
-import type { StarBudget } from '../../../../src/@types/galaxy/StarBudget';
+import type { GalaxyCategory } from '../../../@types/galaxy/GalaxyCategory';
+import type { GalaxyParams } from '../../../@types/galaxy/GalaxyParams';
+import type { StarBudget } from '../../../@types/galaxy/StarBudget';
 
 type PopulationSplit = {
   readonly bulgeCount: number;

@@ -49,13 +49,13 @@
  */
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 import { gaussian } from '../../../utils/random/gaussian';
-import { carveDustLayout } from '../model/carveDustLayout';
-import { carveStarLayout } from '../model/carveStarLayout';
-import { classifyHubbleType } from '../model/classifyHubbleType';
-import { computeBarGeometry } from '../model/computeBarGeometry';
-import { grainScale } from '../model/grainScale';
-import { hiiPalette } from '../model/hiiPalette';
-import { outerRadiusOf } from '../model/outerRadiusOf';
+import { carveDustLayout } from '../../../../src/services/gpu/galaxy/carveDustLayout';
+import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
+import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
+import { computeBarGeometry } from '../../../../src/services/gpu/galaxy/computeBarGeometry';
+import { grainScale } from '../../../../src/services/gpu/galaxy/grainScale';
+import { hiiPalette } from '../../../../src/services/gpu/galaxy/hiiPalette';
+import { outerRadiusOf } from '../../../../src/services/gpu/galaxy/outerRadiusOf';
 import { GENERATION_UBO } from './generationUboLayout';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';

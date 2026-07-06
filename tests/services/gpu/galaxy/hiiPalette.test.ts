@@ -5,7 +5,7 @@
  * [0,1] range in one step.
  */
 import { describe, expect, it } from 'vitest';
-import { hiiPalette } from '../../../../tools/galaxy-renderer/src/model/hiiPalette';
+import { hiiPalette } from '../../../../src/services/gpu/galaxy/hiiPalette';
 
 describe('hiiPalette', () => {
   it('metallicity 0 gives a teal core', () => {

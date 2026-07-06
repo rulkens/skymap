@@ -19,8 +19,8 @@
  * in the position the spike's RNG sequence would put them.
  */
 import { barLengthOf } from './barLengthOf';
-import type { BarGeometry } from '../../../../src/@types/galaxy/BarGeometry';
-import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
+import type { BarGeometry } from '../../../@types/galaxy/BarGeometry';
+import type { GalaxyCategory } from '../../../@types/galaxy/GalaxyCategory';
 
 export function computeBarGeometry(
   rand: () => number,
