@@ -26,6 +26,6 @@ describe('tourRegistry', () => {
   });
 
   it('registers the expected tours', () => {
-    expect(Object.keys(tourRegistry).sort()).toEqual(['demo', 'webShowcase']);
+    expect(Object.keys(tourRegistry).sort()).toEqual(['demo', 'grandTour', 'webShowcase']);
   });
 });

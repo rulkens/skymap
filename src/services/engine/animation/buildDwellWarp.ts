@@ -25,6 +25,18 @@
  *   - `wall(baseTime) = ∫ slowness` maps `[0, over] → [0, totalSec]`, strictly
  *     increasing (slowness ≥ 1), so it inverts. `baseTimeAt` is that inverse.
  *
+ * ### `windowSec` is WALL-CLOCK — depth is how slow, window is how long
+ *
+ * The knobs must not braid: `depth` sets how slow the crawl gets, `windowSec`
+ * how long the slow moment lasts ON THE CLOCK. A window fixed in base time
+ * would couple them — one base-second costs `1 + amp` wall-seconds at the
+ * plateau, so a deep dwell would stretch the "3-second window" to ~14 real
+ * seconds (the original bug: authoring depth 1 silently quadrupled the dwell).
+ * Instead each knot's base half-width is sized so the stretched window comes
+ * out at `windowSec` on the wall: the pulse's wall cost is
+ * `2·half + amp·half`, so `half = windowSec / (2 + ampₖ)` — per knot, since a
+ * deeper knot needs a narrower base window to fill the same wall time.
+ *
  * ### The window LEADS the knot (biased before, not centred)
  *
  * With look-ahead aim the camera looks DOWN the path, so a target is framed
@@ -71,7 +83,8 @@ function plateauSlowness(depth: number): number {
  * Build the dwell warp for a cruise timeline whose knots arrive at `knotTime`
  * (base seconds, `knotTime[0] === 0`, last `=== over`) with per-knot `depth`
  * (∈ [0,1]; index 0 is the live eye and should be 0). `windowSec` is the dwell
- * window width in base seconds. Returns the identity warp when nothing dwells.
+ * window width in WALL-CLOCK seconds — how long the slow moment lasts on the
+ * clock, whatever the depth. Returns the identity warp when nothing dwells.
  */
 export function buildDwellWarp(
   knotTime: readonly number[],
@@ -79,22 +92,27 @@ export function buildDwellWarp(
   windowSec: number,
   over: number,
 ): DwellWarp {
-  const half = windowSec / 2;
   const amps = depth.map(plateauSlowness);
-  const anyDwell = half > 0 && amps.some((a) => a > 0);
+  const anyDwell = windowSec > 0 && amps.some((a) => a > 0);
   if (!anyDwell) {
     return { totalSec: over, baseTimeAt: (w) => (w < 0 ? 0 : w > over ? over : w) };
   }
 
+  // Per-knot base half-width, sized so the stretched window spends `windowSec`
+  // on the wall: the pulse's wall cost is `2·half + ampₖ·half` (pulse area =
+  // half), so `half = windowSec / (2 + ampₖ)` — deeper knot, narrower base
+  // window, same felt duration.
+  const halfs = amps.map((a) => windowSec / (2 + a));
+
   // slowness(τ) = 1 + Σ knots  ampₖ · pulseₖ(τ). The pulse is 1 at its centre,
   // smoothly 0 at the window edge (flat top from smoothstep's zero-slope ends).
   // The centre LEADS the knot by `lead`, so the crawl sits on the approach.
-  const lead = DWELL_LEAD_FRAC * half;
   const slowness = (tau: number): number => {
     let s = 1;
     for (let k = 0; k < knotTime.length; k++) {
       if (amps[k]! <= 0) continue;
-      const x = Math.abs(tau - (knotTime[k]! - lead));
+      const half = halfs[k]!;
+      const x = Math.abs(tau - (knotTime[k]! - DWELL_LEAD_FRAC * half));
       if (x >= half) continue;
       s += amps[k]! * (1 - smoothstep(0, half, x));
     }

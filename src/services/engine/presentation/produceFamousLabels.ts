@@ -61,6 +61,7 @@ import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { focusedFamousIndex } from '../helpers/focusedFamousIndex';
 import { famousDisplayName } from '../helpers/famousDisplayName';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
 import { focusRecession } from './focusRecession';
@@ -167,6 +168,14 @@ export function produceFamousLabels(
   const catalog = galaxies.get(Source.FamousGalaxy);
   if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
 
+  // focusedOnly mode: only the focused subject's label draws. A famous focus
+  // is a positional catalog ref; anything else focused (a structure, the
+  // Milky Way, another catalog's galaxy, nothing) silences this producer.
+  const focusedIdx = state.settings.labels.focusedOnly
+    ? focusedFamousIndex(state.selection.focus)
+    : null;
+  if (state.settings.labels.focusedOnly && focusedIdx === null) return empty;
+
   const inputs = deriveFamousLabelInputs(meta, catalog);
   if (inputs.length === 0) return empty;
 
@@ -190,7 +199,11 @@ export function produceFamousLabels(
     focusRecession({ kind: 'labelLayer', layer: 'galaxyNames' }, ctx.focusBlend) *
     clipFactor;
 
-  for (const p of inputs) {
+  for (let i = 0; i < inputs.length; i += 1) {
+    const p = inputs[i]!;
+    // Input i maps to catalog row i (the meta ⋈ catalog join is index-aligned),
+    // so the positional focus ref selects by loop index.
+    if (focusedIdx !== null && i !== focusedIdx) continue;
     const dx = p.worldPos[0] - cx;
     const dy = p.worldPos[1] - cy;
     const dz = p.worldPos[2] - cz;

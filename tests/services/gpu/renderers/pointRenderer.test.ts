@@ -191,6 +191,39 @@ describe('PointRenderer.totalCount', () => {
   });
 });
 
+describe('PointRenderer.hasCatalog', () => {
+  it('is false before upload, true after, false again after unload', async () => {
+    // The survey fade row's guard reads this — it reports whether a catalog's
+    // buffer is committed, independent of the slot lifecycle.
+    const renderer = createPointRenderer(
+      makeStubDevice(),
+      'bgra8unorm',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
+    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
+    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(true);
+    expect(renderer.hasCatalog(idOf(Source.TwoMRS))).toBe(false);
+    renderer.unload(idOf(Source.SDSS));
+    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
+  });
+
+  it('treats a zero-count upload (the unload signal) as not loaded', async () => {
+    const renderer = createPointRenderer(
+      makeStubDevice(),
+      'bgra8unorm',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(0));
+    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
+  });
+});
+
 describe('PointRenderer.loadedSources', () => {
   it('iterates clouds in `GALAXY_CATALOG_SOURCES` order regardless of upload order', async () => {
     const renderer = createPointRenderer(

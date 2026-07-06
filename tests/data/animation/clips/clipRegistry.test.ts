@@ -32,6 +32,19 @@ describe('clipRegistry', () => {
       'flowOrbit',
       'flyPathDemo',
       'flyout',
+      'tourApproachM31',
+      'tourApproachVirgo',
+      'tourCosmicFlows',
+      'tourCosmicWeb',
+      'tourCosmicWebDwell',
+      'tourDeepField',
+      'tourEmptiness',
+      'tourHomeAgain',
+      'tourNeighbourhood',
+      'tourOpeningTitle',
+      'tourTheEdge',
+      'tourYouAreHere',
+      'tourYouAreHereDwell',
     ]);
   });
 });

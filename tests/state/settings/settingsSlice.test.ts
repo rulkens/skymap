@@ -30,6 +30,7 @@ import reducer, {
   setFilamentsEnabled,
   setFilamentIntensity,
   setVolumesEnabled,
+  setLabelsFocusedOnly,
   addVolumeField,
   removeVolumeField,
   writeVolumeField,
@@ -46,11 +47,13 @@ import reducer, {
   setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
+  setLabelsEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
 import { buildInitialSettings } from '../../../src/state/settings/initialState';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { STRUCTURE_IDS, isStructureId } from '../../../src/data/structure/structureIds';
+import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 import type { SettingsSnapshot } from '../../../src/@types/engine/settings/SettingsSnapshot';
 
@@ -148,6 +151,10 @@ describe('settingsSlice — overlay layers', () => {
     expect(reducer(before, setVolumesEnabled(!before.volumes.enabled)).volumes.enabled).toBe(
       !before.volumes.enabled,
     );
+  });
+  it('setLabelsFocusedOnly updates labels.focusedOnly', () => {
+    expect(reducer(base(), setLabelsFocusedOnly(true)).labels.focusedOnly).toBe(true);
+    expect(reducer(base(), setLabelsFocusedOnly(false)).labels.focusedOnly).toBe(false);
   });
 });
 
@@ -325,6 +332,28 @@ describe('settingsSlice — mergeSnapshot', () => {
     // Mutating the patch after dispatch must not bleed into state.
     (patch.galaxyCatalogs as { brightness: number }).brightness = 999;
     expect(next.galaxyCatalogs.brightness).toBe(0.5);
+  });
+});
+
+describe('settingsSlice — setLabelsEnabled (master label fan-out)', () => {
+  // The master routes every label-bearing category to its authoritative home:
+  // structure ids → structures.items, milkyWay → milkyWay scalar, else (famous)
+  // → galaxyCatalogs.items. LABEL_CATEGORIES is exactly the label-bearing set.
+  const labelOf = (state: ReturnType<typeof base>, cat: (typeof LABEL_CATEGORIES)[number]) =>
+    isStructureId(cat)
+      ? state.structures.items[cat].labelEnabled
+      : cat === 'milkyWay'
+        ? state.milkyWay.labelEnabled
+        : state.galaxyCatalogs.items[cat].labelEnabled;
+
+  it('disables labels across every label-bearing category', () => {
+    const next = reducer(base(), setLabelsEnabled(false));
+    for (const cat of LABEL_CATEGORIES) expect(labelOf(next, cat)).toBe(false);
+  });
+
+  it('re-enables labels across every label-bearing category', () => {
+    const on = reducer(reducer(base(), setLabelsEnabled(false)), setLabelsEnabled(true));
+    for (const cat of LABEL_CATEGORIES) expect(labelOf(on, cat)).toBe(true);
   });
 });
 

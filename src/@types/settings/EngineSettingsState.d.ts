@@ -47,6 +47,7 @@ import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { StructureId } from '../data/structure/StructureId';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { FlowSettings } from './FlowSettings';
+import type { LabelSettings } from './LabelSettings';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
@@ -163,6 +164,13 @@ export type EngineSettingsState = {
    * live on `FlowSettings`.
    */
   flow: FlowSettings;
+
+  /**
+   * Cross-cutting label-presentation knobs — apply across every label
+   * producer at once, multiplying on top of the per-layer label gates.
+   * See `LabelSettings` for the per-field docs.
+   */
+  labels: LabelSettings;
 
   /**
    * Developer-oriented debug overlays.  Diagnostic lenses on top of

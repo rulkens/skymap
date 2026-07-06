@@ -62,6 +62,11 @@ export function produceMilkyWayLabel(
   // structure producer uses.
   if (!labelEnabled && layerOpacity === 0) return { labels: [], lines: [], awake: false };
 
+  // focusedOnly mode: this label only draws while the Milky Way is the
+  // focused subject — same hard suppression the other producers apply.
+  if (state.settings.labels.focusedOnly && state.selection.focus?.type !== 'milkyWay')
+    return { labels: [], lines: [], awake: false };
+
   const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   const distAlpha = milkyWayLabelAlpha(camDist);
   // Far away: emit nothing this frame.

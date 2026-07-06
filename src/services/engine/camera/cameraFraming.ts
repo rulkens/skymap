@@ -17,21 +17,27 @@
  *     ratio fine.
  *   - `near = 0.01` Mpc (10 kpc) — well inside the focus-on tween's
  *     end distance (0.12 Mpc, see `galaxyFocusDistance.ts`).
- *   - `yaw ≈ 3.00`, `pitch ≈ 0.06` — nearly looking down the −Z axis
- *     with a near-flat pitch, framing the Local Group at first paint.
+ *   - `BOOT_YAW_RAD` / `BOOT_PITCH_RAD` — the Milky-Way framing the app
+ *     boots with, looking at the galactic disk at first paint. Exported
+ *     because the grand tour's opening snaps to the same bearing, so a
+ *     tour run always approaches home from the boot orientation.
  */
 
 import { clampDistance } from '../../../utils/camera/clampDistance';
 import type { InitialCam } from '../../../@types/camera/InitialCam';
 
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */
-export const INITIAL_DISTANCE_MPC = 0.43;
+export const INITIAL_DISTANCE_MPC = 0.14;
 
 /** Far-clip plane in Mpc — keeps the horizon shell in-frustum at max camera distance. */
 export const FAR_CLIP_MPC = 50000;
 
 /** Default vertical field-of-view in radians (60°) — the bootstrap lens setting. */
 export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * 60;
+
+/** Boot orientation — eye-tuned to face the galactic disk at first paint. */
+export const BOOT_YAW_RAD = 4.4889;
+export const BOOT_PITCH_RAD = -0.0644;
 
 /**
  * Compute the initial camera snapshot. Pure constants — no dependency on
@@ -43,8 +49,8 @@ export function computeInitialCamera({ fovYRad }: { fovYRad: number }): InitialC
   return {
     target: [0, 0, 0],
     distance: clampDistance(INITIAL_DISTANCE_MPC),
-    yaw: 3.0045,
-    pitch: 0.0609,
+    yaw: BOOT_YAW_RAD,
+    pitch: BOOT_PITCH_RAD,
     fovYRad,
     near: 0.01,
     far: FAR_CLIP_MPC,

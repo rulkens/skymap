@@ -24,6 +24,7 @@
 
 import type { Tour } from '../../../@types/animation/tour/Tour';
 import { flyAndFocusOnClip } from '../../../state/tour/flyAndFocusOnClip';
+import { dwellDrift } from '../../../state/tour/dwellDrift';
 import { focusId } from '../../../utils/animation/focusId';
 
 export const demoTour: Tour = {
@@ -31,31 +32,31 @@ export const demoTour: Tour = {
   label: 'Demo Tour',
   beats: [
     {
-      clip: flyAndFocusOnClip(focusId('milkyWay')),
+      enterClip: flyAndFocusOnClip(focusId('milkyWay')),
       caption: {
         title: 'The Milky Way',
         body: 'Home — one barred spiral among the millions mapped here.',
         position: 'bottom-left',
       },
-      dwellSec: 8,
+      dwellClip: dwellDrift(8),
     },
     {
-      clip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
+      enterClip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
       caption: {
         title: 'The Virgo Cluster',
         body: 'Two thousand galaxies, bound by gravity 54 million light-years away.',
         position: 'bottom-left',
       },
-      dwellSec: 8,
+      dwellClip: dwellDrift(8),
     },
     {
-      clip: flyAndFocusOnClip(focusId('supercluster-laniakea-sc')),
+      enterClip: flyAndFocusOnClip(focusId('supercluster-laniakea-sc')),
       caption: {
         title: 'Laniakea',
         body: 'Our home supercluster — a hundred thousand galaxies streaming toward the Great Attractor.',
         position: 'bottom-right',
       },
-      dwellSec: 9,
+      dwellClip: dwellDrift(9),
     },
   ],
 };

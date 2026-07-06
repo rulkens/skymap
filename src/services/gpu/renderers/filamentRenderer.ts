@@ -319,11 +319,19 @@ export function createFilamentRenderer(
     fadeBuffer?.destroy();
   }
 
+  // Whether a drawable cloud is committed — the filaments fade row guards on
+  // this (same demand-loaded pattern as flowFieldRenderer.fieldLoaded): a fade
+  // toward "visible" is suppressed until there is something to fade in.
+  function hasCloud(): boolean {
+    return instanceBuffer !== null;
+  }
+
   const renderer: FilamentRenderer = {
     label: 'filamentRenderer',
     upload,
     clear,
     draw,
+    hasCloud,
     destroy,
   };
   // `satisfies Renderer` confirms the shared label+destroy contract at

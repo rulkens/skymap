@@ -29,7 +29,6 @@ import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useStructureMemberCount } from '../../hooks/useStructureMemberCount';
-import { useSplash } from '../../hooks/useSplash';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
 import InfoCard from '../InfoCard/InfoCard';
@@ -40,11 +39,10 @@ import CommandPaletteContainer from '../containers/CommandPaletteContainer';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggleContainer from '../containers/AutoRotateToggleContainer';
 import HomeButton from '../HomeButton/HomeButton';
-import Splash from '../Splash/Splash';
+import SplashContainer from '../containers/SplashContainer';
 import AboutPill from '../Splash/AboutPill';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
-import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectVisibleSourceMask } from '../../state/settings/selectors';
@@ -54,10 +52,26 @@ import { updateSelectionFocus, clearSelection } from '../../state/selection/sele
 import { refOf } from '../../services/engine/helpers/refOf';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
+import TourDebugPillContainer from '../containers/TourDebugPillContainer';
+import { hasUrlGate } from '../../utils/url/hasUrlGate';
 import { selectTourActive } from '../../state/tour/selectors';
-import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
-import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
+import {
+  selectPaletteOpen,
+  selectUiHidden,
+  selectDebugPanelOpen,
+  selectSplashVisible,
+} from '../../state/ui/selectors';
+import {
+  setPaletteOpen,
+  toggleUiHidden,
+  toggleDebugPanelOpen,
+  reopenSplash,
+} from '../../state/ui/uiSlice';
 import { selectEngineStatus, selectScale, selectLoadProgress } from '../../state/engine/selectors';
+
+// Temporary `?tour` debug gate for the grand-tour pill. Read once at module
+// scope — the search string can't change without a full page reload.
+const TOUR_DEBUG_GATE = hasUrlGate('tour');
 
 export function App(): React.ReactElement {
   const { canvasRef, handleRef } = useEngine();
@@ -156,14 +170,11 @@ export function App(): React.ReactElement {
     [dispatch],
   );
 
-  const { ready: famousMetaReady } = useFamousMeta();
-
-  // Splash hook owns visibility, readiness gate (engine + famous-meta),
-  // localStorage versioning, deep-link bypass, 8 s Continue-anyway timer,
-  // and dismiss/reopen.  `status` and `loadProgress` are now read from the
-  // engine Redux slice inside `useSplash` — only the famous-meta flags are
-  // passed here.  See `useSplash.ts` for rationale.
-  const splash = useSplash({ famousMetaReady });
+  // The full splash state surface lives in `SplashContainer` so its churn
+  // re-renders only that subtree. App needs just two facts: whether the splash
+  // is up (to hide the HUD stack) and how to reopen it from the About pill.
+  const splashVisible = useAppSelector(selectSplashVisible);
+  const reopenSplashScreen = useCallback(() => dispatch(reopenSplash()), [dispatch]);
 
   // Deep-link hash read + URL write. Reads focus from the store directly;
   // dispatches `requestFocus` / `clearSelection` for hash changes.
@@ -183,7 +194,7 @@ export function App(): React.ReactElement {
       {/* The engine takes over this canvas's GPU context; React never
           writes to it after the initial render.  `id="c"` matches the
           fullscreen CSS rule in index.html. */}
-      <canvas ref={canvasRef} id="c" aria-hidden={splash.splashVisible || undefined} />
+      <canvas ref={canvasRef} id="c" aria-hidden={splashVisible || undefined} />
 
       {/* HUD wrapper.  All overlay chrome lives inside this single
           `<div>` so `Tab` can fade the whole stack via one CSS
@@ -191,7 +202,7 @@ export function App(): React.ReactElement {
       <div
         className={cx(
           appStyles.uiStack,
-          (uiHidden || splash.splashVisible || tourActive) && appStyles.uiStackHidden,
+          (uiHidden || splashVisible || tourActive) && appStyles.uiStackHidden,
           selected != null && isMobile && appStyles.hasSelection,
         )}
       >
@@ -218,10 +229,11 @@ export function App(): React.ReactElement {
         {/* Top-center pill row.  SearchTrigger + the pills share a flex
             wrapper so they fade together when the palette opens. */}
         <div className={appStyles.topBar}>
-          <SearchTrigger onClick={openPalette} hidden={paletteOpen || splash.splashVisible} />
-          <HomeButton onClick={focusMilkyWay} hidden={paletteOpen || splash.splashVisible} />
-          <AutoRotateToggleContainer hidden={paletteOpen || splash.splashVisible} />
-          <AboutPill onClick={splash.reopen} hidden={paletteOpen || splash.splashVisible} />
+          <SearchTrigger onClick={openPalette} hidden={paletteOpen || splashVisible} />
+          <HomeButton onClick={focusMilkyWay} hidden={paletteOpen || splashVisible} />
+          <AutoRotateToggleContainer hidden={paletteOpen || splashVisible} />
+          <AboutPill onClick={reopenSplashScreen} hidden={paletteOpen || splashVisible} />
+          {TOUR_DEBUG_GATE && <TourDebugPillContainer hidden={paletteOpen || splashVisible} />}
         </div>
         <CommandPaletteContainer engineHandleRef={handleRef} />
         {/* `handleRef.current` set means the engine finished constructing,
@@ -238,21 +250,7 @@ export function App(): React.ReactElement {
           `uiStackHidden` fade (which the tour triggers) doesn't also fade the
           caption + nav. Mounted only while a tour runs. */}
       {tourActive && <TourOverlayContainer />}
-      {splash.splashVisible && (
-        <Splash
-          blocked={splash.blocked}
-          canContinueAnyway={splash.canContinueAnyway}
-          loadProgress={loadProgress}
-          error={splash.error}
-          onExplore={splash.dismissExplore}
-          // Plan 2 (stub tour) replaces this with the real tour wiring.
-          // For now Tour just dismisses like Explore — the splash work
-          // ships independently of the tour itinerary.
-          onTour={splash.dismissTour}
-          onContinueAnyway={splash.dismissExplore}
-          onReload={() => window.location.reload()}
-        />
-      )}
+      <SplashContainer />
     </>
   );
 }

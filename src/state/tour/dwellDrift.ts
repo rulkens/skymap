@@ -1,7 +1,9 @@
 /**
- * dwellDrift — the ambient camera motion played DURING a beat's dwell, synced to
- * the time the dwell has left so it starts gently and is settled the instant the
- * next beat begins.
+ * dwellDrift — the canonical ambient dwell clip: a gentle orbit + bob sized to
+ * `durationSec`. Beats author it directly (`dwellClip: dwellDrift(8)`); the
+ * clip's compiled duration IS the beat's dwell length. It is one dwell clip
+ * among any — a slow flyPath ring or a push-in are equally valid `dwellClip`s —
+ * this is just the default idle motion.
  *
  * ### Two motions, two layers
  *
@@ -23,18 +25,20 @@
  * Both run concurrently under `all`, both easing their motion in/out, so the
  * drift swells up and settles together.
  *
- * ### Why a duration, not the beat
+ * ### Sized once, at authoring time
  *
- * The motion needs exactly one thing from the dwell: how long it has to play.
- * Taking the REMAINING dwell seconds (not the whole `BeatData`) keeps the
- * dependency minimal and lands the ease-out on the cut even across pauses —
- * `pausableDwellSaga` restarts the drift on every resume with the time still
- * left, so a freshly sized motion always fills exactly what remains.
+ * The ease-out lands exactly on the auto-advance cut for an uninterrupted dwell
+ * (the timer runs for the same `durationSec`). After a pause/resume the saga
+ * replays the clip from its start into the shorter remaining window, so the
+ * motion gets cut mid-ease — see `pausableDwellSaga`'s header for why that
+ * trade was accepted.
  *
- * `rampSec` (the pitch fade) and `cruiseRate` (the yaw's average orbit speed) are
- * arguments with defaults so the caller can tune the bob softness and the orbit
- * speed without editing this file. The pitch fade is clamped to half the window so
- * a short remaining dwell still fades symmetrically in and out.
+ * `rampSec` (the pitch fade) and `cruiseRate` (the yaw's average orbit speed)
+ * are NAMED options with defaults so the caller can tune the bob softness and
+ * the orbit speed without editing this file — named, because as positional
+ * args a beat once fed an orbit rate into the ramp slot and silently got the
+ * default speed with a near-zero fade. The pitch fade is clamped to half the
+ * window so a short dwell still fades symmetrically in and out.
  *
  * ### Finite, and that's fine
  *
@@ -57,9 +61,10 @@ const PITCH_PERIOD = 14;
 
 export function dwellDrift(
   durationSec: number,
-  rampSec: number = DEFAULT_RAMP_SEC,
-  cruiseRate: number = DEFAULT_CRUISE_RATE,
+  opts?: { rampSec?: number; cruiseRate?: number },
 ): ClipData {
+  const rampSec = opts?.rampSec ?? DEFAULT_RAMP_SEC;
+  const cruiseRate = opts?.cruiseRate ?? DEFAULT_CRUISE_RATE;
   const fade = Math.min(rampSec, durationSec / 2);
 
   return {

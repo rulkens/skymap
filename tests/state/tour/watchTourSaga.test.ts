@@ -6,10 +6,10 @@
  * The registry is MOCKED here with two controlled tours — a `demo` tour whose
  * single narration beat auto-advances, and a `webShowcase` tour whose beat dwells
  * effectively forever — so each test drives timing deterministically without
- * depending on the real (catalog-resolving) tour definitions. Both tours carry a
- * `setup` effect that disables volumes, so the capture → restore round-trip is
- * OBSERVABLE in the store: each test seeds `volumes.enabled = true` first, the
- * setup flips it off during the run, and the finally winds it back on.
+ * depending on the real (catalog-resolving) tour definitions. The capture →
+ * restore round-trip is made OBSERVABLE in the store by each test: seed
+ * `volumes.enabled = true` first, dispatch the flip to off mid-run (standing in
+ * for an in-clip scene cue), and the finally winds it back on.
  *
  * Capture is a pure `select(captureScene)` and restore is `restoreSceneSaga`
  * (two `put`s), so neither watcher nor tour needs a `reconcile` stub — the
@@ -36,29 +36,34 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 // Controlled registry: `demo` auto-advances (tiny dwell), `webShowcase` dwells
-// forever so a run stays live until exitTour / a superseding startTour. Both
-// carry a volumes-off setup so the restore is observable. Inlined in the factory
-// (vi.mock is hoisted above the imports); the settings action is imported INSIDE
-// the async factory because outer-scope bindings are not visible to it.
+// forever so a run stays live until exitTour / a superseding startTour. The
+// narration beats mutate no settings; restore tests dispatch a volumes flip
+// mid-run (standing in for an in-clip scene cue) so the wind-back is observable.
+// Inlined in the factory (vi.mock is hoisted above the imports).
 vi.mock('../../../src/data/animation/tours/tourRegistry', async () => {
-  const { setVolumesEnabled } = await import('../../../src/state/settings/settingsSlice');
-  const setup = { effects: [setVolumesEnabled(false)] };
+  const { dwellDrift } = await import('../../../src/state/tour/dwellDrift');
   return {
     tourRegistry: {
       demo: {
         id: 'demo',
         label: 'Demo',
-        setup,
         beats: [
-          { clip: { start: 'live', timeline: [] }, caption: { title: 'Test' }, dwellSec: 0.001 },
+          {
+            enterClip: { start: 'live', timeline: [] },
+            caption: { title: 'Test' },
+            dwellClip: dwellDrift(0.001),
+          },
         ],
       },
       webShowcase: {
         id: 'webShowcase',
         label: 'Web',
-        setup,
         beats: [
-          { clip: { start: 'live', timeline: [] }, caption: { title: 'Long' }, dwellSec: 9999 },
+          {
+            enterClip: { start: 'live', timeline: [] },
+            caption: { title: 'Long' },
+            dwellClip: dwellDrift(9999),
+          },
         ],
       },
     },
@@ -153,7 +158,8 @@ describe('watchTourSaga', () => {
     store.dispatch(setVolumesEnabled(true));
 
     store.dispatch(startTour('demo'));
-    // Setup ran: volumes off during the tour.
+    // Mutate settings mid-run — the stand-in for an in-clip scene cue.
+    store.dispatch(setVolumesEnabled(false));
     expect(store.getState().settings.volumes.enabled).toBe(false);
 
     // Advance timers so the 0.001s dwell expires and the beat + loop complete.
@@ -172,6 +178,8 @@ describe('watchTourSaga', () => {
 
     // webShowcase dwells forever — the beat never auto-advances during this test.
     store.dispatch(startTour('webShowcase'));
+    // Mutate settings mid-run — the stand-in for an in-clip scene cue.
+    store.dispatch(setVolumesEnabled(false));
 
     // Advance to the dwell race inside the beat.
     await flush();
@@ -200,7 +208,7 @@ describe('watchTourSaga', () => {
     const fliesAfterFirst = playClip.mock.calls.length;
 
     // Dispatch a second startTour — takeLatest cancels the first worker (its
-    // finally restores), then launches a fresh run that re-applies setup.
+    // finally restores), then launches a fresh run with its own snapshot.
     store.dispatch(startTour('webShowcase'));
     await flush();
     await flush();

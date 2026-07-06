@@ -1,5 +1,5 @@
 /**
- * captureSettings — take a detached snapshot of the six tour-owned
+ * captureSettings — take a detached snapshot of the seven tour-owned
  * settings clusters off the live store state.
  *
  * The cinematic tour captures the user's settings, plays an effect that
@@ -25,6 +25,14 @@ import type { RootState } from '../../store/types';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 
 export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSnapshot {
-  const { galaxyCatalogs, structures, volumes, filaments, milkyWay, flow } = state.settings;
-  return structuredClone({ galaxyCatalogs, structures, volumes, filaments, milkyWay, flow });
+  const { galaxyCatalogs, structures, volumes, filaments, milkyWay, flow, labels } = state.settings;
+  return structuredClone({
+    galaxyCatalogs,
+    structures,
+    volumes,
+    filaments,
+    milkyWay,
+    flow,
+    labels,
+  });
 }

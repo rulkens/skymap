@@ -52,8 +52,13 @@ describe('dwellDrift', () => {
 
   it('sizes the yaw rotation so the average speed is the cruise rate', () => {
     // by = cruiseRate × durationSec ⇒ by / durationSec === cruiseRate.
-    const spin = effectsOf(dwellDrift(10, 1.5, 0.2))!.find((e) => e.kind === 'spin');
+    const spin = effectsOf(dwellDrift(10, { cruiseRate: 0.2 }))!.find((e) => e.kind === 'spin');
     if (spin?.kind === 'spin') expect(spin.by / spin.over).toBeCloseTo(0.2);
+  });
+
+  it('applies an authored rampSec to the pitch fade', () => {
+    const osc = effectsOf(dwellDrift(10, { rampSec: 3 }))!.find((e) => e.kind === 'osc');
+    if (osc?.kind === 'osc') expect(osc.fade).toBeCloseTo(3);
   });
 
   it('clamps the pitch fade so a short dwell still fades symmetrically', () => {
