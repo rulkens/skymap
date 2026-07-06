@@ -24,6 +24,7 @@ import { approachVirgo } from '../tours/grandTour/approachVirgo';
 import { cosmicWeb, cosmicWebDwell } from '../tours/grandTour/cosmicWeb';
 import { cosmicFlows } from '../tours/grandTour/cosmicFlows';
 import { emptiness } from '../tours/grandTour/emptiness';
+import { deepField } from '../tours/grandTour/deepField';
 
 export const tourOpeningTitle: Clip = {
   id: 'tourOpeningTitle',
@@ -83,4 +84,10 @@ export const tourEmptiness: Clip = {
   id: 'tourEmptiness',
   label: 'Grand tour 07 — the emptiness',
   data: emptiness,
+};
+
+export const tourDeepField: Clip = {
+  id: 'tourDeepField',
+  label: 'Grand tour 08 — deep field',
+  data: deepField,
 };

@@ -24,4 +24,5 @@ export type ClipId =
   | 'tourCosmicWeb'
   | 'tourCosmicWebDwell'
   | 'tourCosmicFlows'
-  | 'tourEmptiness';
+  | 'tourEmptiness'
+  | 'tourDeepField';

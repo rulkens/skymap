@@ -23,6 +23,7 @@ import { approachVirgo } from './grandTour/approachVirgo';
 import { cosmicWeb, cosmicWebDwell } from './grandTour/cosmicWeb';
 import { cosmicFlows, cosmicFlowsDwell } from './grandTour/cosmicFlows';
 import { emptiness } from './grandTour/emptiness';
+import { deepField, deepFieldDwell } from './grandTour/deepField';
 
 export const grandTour: Tour = {
   id: 'grandTour',
@@ -104,6 +105,16 @@ export const grandTour: Tour = {
       // Short by design — the contrast against the web registers quickly,
       // and the tour never lingers on nothing.
       dwellClip: dwellDrift(6),
+    },
+    {
+      enterClip: deepField,
+      caption: {
+        title: 'The deep field',
+        body: 'Further out shine the quasars, the brilliant cores of distant galaxies, their light already billions of years old.',
+        position: 'bottom-left',
+      },
+      // The big log-dolly rides the captioned dwell — the pull IS the beat.
+      dwellClip: deepFieldDwell,
     },
   ],
 };
