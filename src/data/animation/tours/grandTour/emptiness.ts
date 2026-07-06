@@ -5,7 +5,12 @@
  * name it, then dive back down until the dark region fills the frame. The
  * void must read as a dark region OF THE SAME density field, so the volume
  * stays lit; the flow eases out over the turn — it served beat 06, and the
- * emptiness reads cleanest without currents threading through it.
+ * emptiness reads cleanest without currents threading through it. The
+ * galaxies COME BACK here (the web pull-back stripped them for the pure-
+ * volume shot): a void only reads as empty next to fullness, so the
+ * catalogs repopulate the web around the dark patch. Scoped survey entries,
+ * not the bare row — bare 'survey' would also enable milliquas, which is
+ * the deep-field beat's reveal.
  *
  * The stage doc sketched a held-scale lateral slide, but the flows beat now
  * lands at 950 Mpc — so the approach became the same turn-name-fly grammar
@@ -42,6 +47,7 @@ export const emptiness: ClipData = {
   timeline: [
     scene(setLabelsFocusedOnly(true)),
     show(['structureRing:void'], 2),
+    show(['survey:2mrs', 'survey:sdss', 'survey:glade'], 3),
     hide(['flow'], 3),
     lookAtId(BOOTES, 3),
     focus(BOOTES),
