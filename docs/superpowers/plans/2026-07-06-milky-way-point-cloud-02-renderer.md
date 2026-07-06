@@ -245,9 +245,9 @@ Contract:
 - `makeRunTierTransition`: beside the hi-res famous rebuild, `state.gpu.milkyWayCloud?.regenerate(nextTier)` (same lazy-device pattern is unnecessary — the handle itself is null pre-bootstrap, which is the guard).
 - Test updates: `tests/services/engine/frame/passes/passes.test.ts`, `renderFrame.test.ts` + `.timing`, `runFrame.test.ts`, `startLoop.test.ts`, `initGpu.destroyReachability.test.ts` (new handles must be reachable by destroy), `tests/@types/engineState.test.ts`, `tests/services/engine/wiring/makeRunTierTransition.test.ts` (new assertion: `regenerates the Milky Way cloud for the new tier`), `tests/visual/renderFrameSplitBaseline.test.ts` if it stubs PassDeps.
 
-- [ ] Extend the fixtures/tests first (failing): pass-deps shape, destroy reachability, tier-regenerate assertion.
-- [ ] Implement the wiring. Full `npm test` + `npm run typecheck` → green.
-- [ ] Commit.
+- [x] Extend the fixtures/tests first (failing): pass-deps shape, destroy reachability, tier-regenerate assertion.
+- [x] Implement the wiring. Full `npm test` + `npm run typecheck` → green.
+- [x] Commit.
 
 ---
 
