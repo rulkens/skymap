@@ -10,9 +10,10 @@
  * One deliberate deviation from the spike: `engine.setParams` is awaited
  * before `grab` reads the frame. The spike's bespoke engine updated its
  * canvas synchronously enough for the race to not matter in practice, but
- * `GalaxyEngineHandle.setParams` is documented as "regenerate via worker" —
- * an async round-trip — so skipping the await would score whatever frame was
- * on screen from the *previous* candidate.
+ * `GalaxyEngineHandle.setParams` packs the generation UBO and dispatches the
+ * GPU compute passes, resolving only once that work is submitted — so
+ * skipping the await would score whatever frame was on screen from the
+ * *previous* candidate.
  *
  * Runs at a reduced `fitStars` budget (default 220000, well under the
  * spike's normal 600000) so each candidate renders fast enough for a live

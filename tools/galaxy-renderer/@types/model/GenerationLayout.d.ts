@@ -1,5 +1,5 @@
 /**
- * GenerationLayout — the full carved slot map for one `generateGalaxy` run,
+ * GenerationLayout — the full carved slot map for one galaxy-generation run,
  * built once on the CPU (`carveStarLayout`/`carveDustLayout`) before any GPU
  * compute pass dispatches. Carving is CPU-side because the per-category
  * population mix (does this galaxy have a bar? arms? a dust ring?) and every
@@ -7,8 +7,8 @@
  * etc.) depend only on `GalaxyParams`/`GalaxyCategory`/`StarBudget` — none of
  * it needs a single random draw or GPU round-trip. The alternative, carving
  * slot ranges *inside* a compute shader from the same formulas, would mean
- * duplicating this arithmetic in WGSL and losing the ability to unit-test it
- * against the CPU model in plain TypeScript.
+ * duplicating this arithmetic in WGSL and losing the ability to unit-test the
+ * capacity/budget logic in plain TypeScript.
  *
  * `ranges` is ascending and contiguous (`ranges[i+1].start === ranges[i].start
  * + ranges[i].iterations*ranges[i].stride`) with zero-iteration populations

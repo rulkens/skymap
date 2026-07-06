@@ -36,7 +36,9 @@
  *    `armStarCount > 0` gate as armDust above (the clump seeds live in the
  *    irregularClumps star range, sized by `armStarCount`).
  */
+import { barLengthOf } from './barLengthOf';
 import { grainScale } from './grainScale';
+import { outerRadiusOf } from './outerRadiusOf';
 import { POPULATION_IDS } from './populationIds';
 import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';
 import type { GalaxyParams } from '../../@types/model/GalaxyParams';
@@ -57,13 +59,6 @@ type DustRangeSpec = {
   readonly iterations: IterationsFn;
 };
 
-/** Bar length, per `computeBarGeometry` — 0 for every non-barred category. */
-const barLengthOf = (category: GalaxyCategory, params: GalaxyParams): number => {
-  if (category !== 'barred') return 0;
-  const outerRadius = 10 * (params.radius || 1);
-  return outerRadius * 0.42 * (params.barStrength ?? 1);
-};
-
 const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
   {
     popId: POPULATION_IDS.armDust,
@@ -77,7 +72,9 @@ const DUST_RANGE_SPECS: readonly DustRangeSpec[] = [
     popId: POPULATION_IDS.barDust,
     stride: 1,
     iterations: (category, params, _budget, g) =>
-      barLengthOf(category, params) > 0 ? Math.floor((9000 * (params.dust ?? 1)) / (g * g)) : 0,
+      barLengthOf(category, outerRadiusOf(params), params.barStrength) > 0
+        ? Math.floor((9000 * (params.dust ?? 1)) / (g * g))
+        : 0,
   },
   {
     popId: POPULATION_IDS.lenticularNucDust,

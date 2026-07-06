@@ -128,9 +128,11 @@ const HDR: GPUTextureFormat = 'rgba16float';
 /**
  * Bytes per generated star/dust record: 8 f32 lanes (`x,y,z,r,g,b,size,
  * brightness` for stars; `x,y,z,size,r,g,b,opacity` for dust — different
- * field order, same stride). Mirrors `lib/generate.wesl`'s stride-8 output
- * storage array and the star/dust render pipelines' `arrayStride: 32`
- * instance layouts above — all three must agree byte-for-byte.
+ * field order, same stride). The single record-size home: the star/dust
+ * render pipelines' instance `arrayStride` reads it directly, so a stride
+ * change is one edit here. It must still match `lib/generate.wesl`'s stride-8
+ * output storage array, which lives across the CPU/GPU seam and so stays a
+ * hand-mirror.
  */
 const GEN_RECORD_BYTES = 32;
 
@@ -219,7 +221,7 @@ export async function createGalaxyEngine(
       buffers: [
         { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }] },
         {
-          arrayStride: 32,
+          arrayStride: GEN_RECORD_BYTES,
           stepMode: 'instance',
           attributes: [
             { shaderLocation: 1, offset: 0, format: 'float32x3' },
@@ -256,7 +258,7 @@ export async function createGalaxyEngine(
       buffers: [
         { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }] },
         {
-          arrayStride: 32,
+          arrayStride: GEN_RECORD_BYTES,
           stepMode: 'instance',
           attributes: [
             { shaderLocation: 1, offset: 0, format: 'float32x3' },

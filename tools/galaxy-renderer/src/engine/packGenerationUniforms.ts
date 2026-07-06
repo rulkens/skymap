@@ -55,6 +55,7 @@ import { classifyHubbleType } from '../model/classifyHubbleType';
 import { computeBarGeometry } from '../model/computeBarGeometry';
 import { grainScale } from '../model/grainScale';
 import { hiiPalette } from '../model/hiiPalette';
+import { outerRadiusOf } from '../model/outerRadiusOf';
 import { GENERATION_UBO } from './generationUboLayout';
 import type { ExtraGalaxySpec } from '../../@types/engine/ExtraGalaxySpec';
 import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';
@@ -62,7 +63,7 @@ import type { GalaxyParams } from '../../@types/model/GalaxyParams';
 import type { StarBudget } from '../../@types/model/StarBudget';
 
 /** `category` u32 encoding — append-only, mirrors the brief's field table. */
-const CATEGORY_CODE: Record<GalaxyCategory, number> = {
+export const CATEGORY_CODE: Record<GalaxyCategory, number> = {
   elliptical: 0,
   lenticular: 1,
   spiral: 2,
@@ -90,7 +91,7 @@ export function packGenerationUniforms(
   const category = classifyHubbleType(params.type);
 
   // --- Scale constants, per the spike's fixed geometry ratios -------------
-  const outerRadius = 10 * (params.radius || 1);
+  const outerRadius = outerRadiusOf(params);
   const diskScaleLen = outerRadius / 3.2;
   const bulgeRadius = outerRadius * 0.34 * (params.bulgeSize || 1);
   const diskHeight = 0.055 * outerRadius * (params.diskThickness || 1);

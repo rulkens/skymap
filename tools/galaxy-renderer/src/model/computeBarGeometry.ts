@@ -18,6 +18,7 @@
  * main-stream draws — the irregular clump / lenticular cloud centres — land
  * in the position the spike's RNG sequence would put them.
  */
+import { barLengthOf } from './barLengthOf';
 import type { BarGeometry } from '../../@types/model/BarGeometry';
 import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';
 
@@ -28,7 +29,7 @@ export function computeBarGeometry(
   asymmetry: number,
   barStrength: number | undefined,
 ): BarGeometry {
-  const barLength = category === 'barred' ? outerRadius * 0.42 * (barStrength ?? 1) : 0;
+  const barLength = barLengthOf(category, outerRadius, barStrength);
   const barAngle = (rand() - 0.5) * 0.6 * asymmetry; // small random tilt
   return { barLength, cosBar: Math.cos(barAngle), sinBar: Math.sin(barAngle) };
 }
