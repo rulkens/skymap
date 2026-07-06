@@ -1,6 +1,7 @@
 # Renderer Unification Design
 
-**Status:** Draft (brainstorming output, iterating with the user).
+**Status:** Draft — open questions resolved 2026-07-06 (see _Resolved during
+iteration_); next step is `writing-plans`.
 Re-verified against `main` on 2026-07-03 (post #394/#396); see the
 powers-of-ten architecture review (`docs/audits/2026-07-02-powers-of-ten-architecture-review.md`).
 **Date:** 2026-06-29
@@ -113,13 +114,11 @@ The type is **N-capable**: a third slab is one more entry plus one more
 `foreground:k` target. This spec does **not** design slab spawn/retire or adaptive
 slab-set selection during a descent — that is explicitly deferred (see Out of scope).
 
-A content layer names its slab by index (no tagged union — the slab table holds
-all the per-slab attributes):
-
-```ts
-// @types/engine/frame/ContentSpace.d.ts
-export type ContentSpace = { slab: number }; // index into the per-frame SLABS list
-```
+A content layer names its slab by a plain `slab: number` field — an index into
+the per-frame `SLABS` list. No wrapper type: an earlier draft had a
+`ContentSpace = { slab: number }` alias, but a one-field wrapper earns nothing —
+the slab table holds all the per-slab attributes, and the index is the whole
+reference.
 
 ### RenderTarget — an offscreen (or the swap chain)
 
@@ -147,29 +146,44 @@ The concrete table:
 ### ContentLayer — the flat registry (replaces `HDR_PASSES` + `UI_PASSES` + foreground)
 
 ```ts
+// @types/engine/frame/SlabView.d.ts — what a layer's draw sees. Built ONCE per
+// render step by the executor (see the executor sketch below), so layers never
+// do their own slab lookup and the per-pass 'ctx.vp as Float32Array' casts retire.
+export type SlabView = {
+  readonly slab: Slab; // near/far, originRelative, precision — for the rare layer that cares
+  readonly vp: Float32Array; // this slab's proj·view, already narrowed for upload
+  readonly camPos: Vec3; // slab-appropriate camera position (origin-relative for near slabs)
+  readonly viewportPx: Vec2;
+};
+
 // @types/engine/frame/ContentLayer.d.ts
 export type ContentLayer = {
-  name: string;
-  space: ContentSpace; // which slab ⇒ which VP gets threaded into draw
-  target: string; // RenderTargetSpec.id it draws into
-  blend: Blend; // 'additive' | 'opaque' | 'over'
+  readonly name: string;
+  readonly slab: number; // index into the per-frame SLABS list
+  readonly target: string; // RenderTargetSpec.id it draws into
+  readonly blend: Blend; // 'additive' | 'opaque' | 'over'
   enabled(state: EngineState, ctx: ReadyFrameContext): boolean;
   draw(
     pass: GPURenderPassEncoder,
+    view: SlabView,
     ctx: ReadyFrameContext,
     state: EngineState,
-    deps: PassDeps,
   ): void;
   drawPick?(
     pass: GPURenderPassEncoder,
+    view: SlabView,
     ctx: ReadyFrameContext,
     state: EngineState,
-    deps: PassDeps,
   ): void;
 };
 ```
 
 `Blend` is its own one-type-per-file alias (`'additive' | 'opaque' | 'over'`).
+
+There is deliberately **no `deps: PassDeps` argument**: layers read their
+renderers from `state.gpu.*` directly, which is the end-state the
+gpu-handle-nullability backlog item wants — `PassDeps` sheds its renderer
+fields and is deleted in phase 2 (see _Relationship to existing backlog_).
 
 **Invariant** (the load-bearing constraint): a layer's `target.{format,depth}` +
 `blend` must match the _profile_ baked into the renderer pipeline its `draw` calls.
@@ -216,9 +230,10 @@ Renderers (`pointRenderer`, `debugSphereRenderer`, `milkyWayRenderer`,
 pipelines / vertex buffers / bind groups / shaders, built in `initGpu`, held on
 `state.gpu.*`, torn down on `destroy`. They are **slab-ignorant** — the VP arrives
 as a uniform, so the same renderer can serve multiple slabs _if_ its pipeline
-profile matches the target. A `ContentLayer.draw` threads the right slab VP
-(`ctx.vpFor(space.slab)`) into the renderer call. This spec adds **no new renderer
-variants** beyond what already exists.
+profile matches the target. The executor resolves the layer's slab once per
+render step into a `SlabView` and threads it into `draw`; the layer forwards
+`view.vp` (and `view.camPos`) to the renderer call. This spec adds **no new
+renderer variants** beyond what already exists.
 
 ### Compositor — one primitive (replaces three bespoke composites)
 
@@ -262,8 +277,8 @@ export type CompositeStep = {
 
 // @types/engine/frame/FrameStep.d.ts
 export type FrameStep =
-  | { kind: 'compute'; name: string } // pre-frame compute dispatch (flow particles)
-  | { kind: 'render'; target: string } // draw all enabled ContentLayers whose target === this, in registry order
+  | { kind: 'compute'; name: string } // pre-render compute dispatch, via a COMPUTE name→fn table
+  | { kind: 'render'; target: string; slab: number } // draw enabled layers where (target, slab) match, registry order
   | { kind: 'composite'; step: CompositeStep }; // merge source → dest via the Compositor
 ```
 
@@ -271,16 +286,19 @@ The concrete program — **byte-equivalent to today's frame**, but now data inst
 of imperative code in `renderFrame`:
 
 ```ts
-const FRAME: FrameStep[] = [
+const NEAR0 = 0; // near-field slab index (PR #386)
+const COSMO = 1; // cosmological slab index
+
+const FRAME: readonly FrameStep[] = [
   { kind: 'compute', name: 'flow' }, // particle seed/integrate
-  { kind: 'render', target: 'volume' }, // raymarch (cosmological)
+  { kind: 'render', target: 'volume', slab: COSMO }, // raymarch
   { kind: 'composite', step: { source: 'volume', dest: 'hdr', blend: 'additive', tone: null } },
-  { kind: 'render', target: 'hdr' }, // cosmological additive group
+  { kind: 'render', target: 'hdr', slab: COSMO }, // cosmological additive group
   { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } }, // tonemap → swap
-  { kind: 'render', target: 'swap' }, // cosmological OVER group (rings, lines, labels)
-  { kind: 'render', target: 'foreground:0' }, // near-field slab 0 opaque (bodies)
+  { kind: 'render', target: 'swap', slab: COSMO }, // cosmological OVER group (rings, lines, labels)
+  { kind: 'render', target: 'foreground:0', slab: NEAR0 }, // near-field opaque bodies (PR #386)
   { kind: 'composite', step: { source: 'foreground:0', dest: 'swap', blend: 'over', tone: TONE } },
-  // captions are a swap layer ordered AFTER the foreground composite (see decision below)
+  { kind: 'render', target: 'swap', slab: NEAR0 }, // captions over the bodies (PR #386)
 ];
 ```
 
@@ -291,8 +309,11 @@ the bodies occlude the cosmological labels drawn in the earlier `render swap` st
 `FRAME`, not a buried `encodeForegroundOver`-after-`encodeUiOverlay` convention.**
 
 A `render swap` step appears twice (cosmological-over group, then near-field-over
-group). The executor selects layers by `(target, slab-class)` for each step, so the
-two `render swap` entries draw disjoint layer sets.
+group). The step's explicit `(target, slab)` pair selects the layer set —
+`layer.target === step.target && layer.slab === step.slab` — so the two entries
+draw disjoint sets **by construction**, out of data the layers already carry.
+The generated dynamic-slab `buildFrame()` (see _Alternative considered_) emits
+the same shape mechanically.
 
 **The program lifts two steps that are nested today.** On `main` the volume
 prepass and the flow compute are invoked from _inside both_ HDR encoder branches
@@ -309,13 +330,52 @@ the coherent `dst.color`), while `?gpuTimings` opens one pass per layer so each
 can carry its own `timestampWrites` (WebGPU attaches timestamps at pass
 boundaries only). That fork is _essential_, but it is a property of **how a
 `render` step executes**, not of the program: the executor takes a strategy
-(`merged` | `per-layer-timed`) and applies it uniformly, replacing today's
+(`merged` | `perLayerTimed`) and applies it uniformly, replacing today's
 `encodeHdrSingle` / `encodeHdrSplit` pair. Relatedly, `TIMED_SLOT_NAMES`
 (`passes/index.ts`) currently brackets the HDR pass names with four hardcoded
 framework slots (`scalar-volume`, `tone-map`, `ui-overlay`, `pick`); once the
 frame is a `FrameStep` program, the timing-slot list derives from the program
 (one slot per step, per-layer slots under the timed strategy) so a new target or
 slab never means editing timing vocabulary by hand.
+
+The executor's shape (contract sketch, not implementation — the load-bearing
+properties are ONE slab resolution per render step, the strategy as an
+argument, and the derived timing slots):
+
+```ts
+// services/engine/frame/executeFrame.ts (sketch)
+export type RenderStrategy = 'merged' | 'perLayerTimed'; // production | ?gpuTimings
+
+for (const step of program) {
+  switch (step.kind) {
+    case 'compute':
+      COMPUTE[step.name](encoder, ctx, state); // name→fn table, one row per compute
+      break;
+    case 'render': {
+      const view = slabViewOf(ctx, step.slab); // the ONLY slab lookup in the frame
+      const group = layers.filter(
+        (l) =>
+          l.target === step.target &&
+          l.slab === step.slab &&
+          l.enabled(state, ctx) &&
+          !state.settings.debug.disabledPasses[l.name],
+      );
+      // 'merged': one beginRenderPass for the group (tile-local; production).
+      // 'perLayerTimed': one pass per layer, each with its own timestampWrites —
+      //   re-loads the target between passes (the M1 OVER-coherency hazard), dev-only.
+      encodeRenderStep(encoder, ctx, step, group, view, state, strategy, timing);
+      break;
+    }
+    case 'composite':
+      encodeCompositeStep(encoder, ctx, step.step, timing); // opens dest pass, Compositor.draw
+      break;
+  }
+}
+
+// TIMED_SLOT_NAMES' successor — derived from the program, never hand-edited:
+const timedSlots = (program, layers) =>
+  program.flatMap((s) => (s.kind === 'render' ? layerOrSlotNames(s, layers) : [slotOf(s)]));
+```
 
 ## Pick — a parallel program over the same registry
 
@@ -336,7 +396,8 @@ registry, terminating in a readback rather than the swap chain:
 ```ts
 // @types/engine/frame/PickProgram (conceptual)
 // for each slab S with at least one pickable layer:
-//   render drawPick(layers where layer.space.slab === S.index && layer.drawPick) → pick:<S>
+//   render drawPick(layers where layer.slab === S.index && layer.drawPick) → pick:<S>
+//   (each pick pass gets its SlabView from the same slabViewOf(ctx, S.index))
 // readback texel under cursor from each pick:<S>
 // decode = firstNonZero([near…far].map(texel))   // pure CPU, unit-testable
 ```
@@ -360,8 +421,8 @@ program is unimplementable against it — a `pick:near0` pass has no camera
 source.
 
 Phase 3 therefore starts by making camera-for-pick a **value**: the pick program
-takes the slab's `vp` (from the same per-frame slab table the render program
-uses, i.e. `ctx.vpFor(slab)`) and builds the pick uniform from it at pick time.
+takes the slab's `SlabView` (from the same per-frame slab table + `slabViewOf`
+the render program uses) and builds the pick uniform from it at pick time.
 `lastFrameUniformBytes` and its `EnginePickingState` field are deleted. This
 composes with — and does not replace — the backlog's picking-GPU-subsystem
 migration (resource ownership is that item; camera plumbing is this one).
@@ -408,6 +469,8 @@ hybrid (`createStructureMarkerRenderer(uiCtx, 'rgba16float', …)`). After this
 phase `GpuContext.format` means swap-chain format, always. The executor also
 absorbs the single/split timing fork and the volume/flow hoist described under
 _CompositeStep + FrameStep_ above; `TIMED_SLOT_NAMES` derives from the program.
+Layers read renderers from `state.gpu.*` directly, so `PassDeps` sheds its
+renderer fields and is deleted (with `RenderFrameInput` slimming to match).
 
 **Phase 3 — Pick folded in, space-aware (N=1).**
 Starts with the pick-camera prerequisite (see _Pick_ above): camera-for-pick
@@ -442,15 +505,19 @@ in `utils/`, `type` aliases never `interface`, deep relative imports, no barrels
 (the `frame/passes/index.ts` registry exception applies — the new
 `frameProgram.ts` owns the registry decision, not a re-export barrel).
 
-- `@types/engine/frame/`: `Slab.d.ts`, `ContentSpace.d.ts`, `RenderTargetSpec.d.ts`,
-  `ContentLayer.d.ts`, `Blend.d.ts`, `CompositeStep.d.ts`, `FrameStep.d.ts`.
+- `@types/engine/frame/`: `Slab.d.ts`, `SlabView.d.ts`, `RenderTargetSpec.d.ts`,
+  `ContentLayer.d.ts`, `Blend.d.ts`, `CompositeStep.d.ts`, `FrameStep.d.ts`,
+  `RenderStrategy.d.ts`.
 - `@types/rendering/Compositor.d.ts`, `@types/rendering/ToneMap.d.ts`,
   `@types/rendering/CompositeBlend.d.ts`.
 - `services/gpu/passes/compositor.ts` + `shaders/compositor/{vertex,fragment}.wesl`.
-- `services/engine/frame/slabs.ts` — per-frame `SLABS` derivation from `cam.distance`.
+- `services/engine/frame/slabs.ts` — per-frame `SLABS` derivation from
+  `cam.distance`, plus `slabViewOf`.
 - `services/engine/frame/contentLayers.ts` (or keep per-layer files + an index, as
   `passes/` does today) — the flat registry.
-- `services/engine/frame/frameProgram.ts` — the `FRAME` data + the executor.
+- `services/engine/frame/frameProgram.ts` — the `FRAME` data.
+- `services/engine/frame/executeFrame.ts` — the strategy-parameterized executor
+  (+ the `COMPUTE` name→fn table).
 - `services/engine/frame/pickProgram.ts` — the parallel pick program.
 - `utils/picking/frontmostPick.ts` + test.
 
@@ -531,19 +598,17 @@ only _how many slabs are in the stack this frame_, handled by **generating** the
 ```ts
 function buildFrame(slabs: Slab[]): FrameStep[] {
   return [
-    ...slabs.map((s) => ({ kind: 'render', target: targetFor(s) })), // populate each slab
+    // populate each slab
+    ...slabs.map((s) => ({ kind: 'render', target: targetFor(s), slab: s.index })),
     { kind: 'composite', step: { source: 'hdr', dest: 'swap', op: TONEMAP_BLIT } },
+    // composite far → near
     ...slabs
       .filter(isNearfield)
       .reverse()
-      .map(
-        (
-          s, // composite far → near
-        ) => ({
-          kind: 'composite',
-          step: { source: targetFor(s), dest: 'swap', op: TONEMAP_OVER },
-        }),
-      ),
+      .map((s) => ({
+        kind: 'composite',
+        step: { source: targetFor(s), dest: 'swap', op: TONEMAP_OVER },
+      })),
   ];
 }
 ```
@@ -582,12 +647,26 @@ not foreclose it, but does not pay for it speculatively.
 - **The translucent atmosphere itself.** The model is shaped so an atmosphere drops
   in as one more layer/target, but building it is a separate feature.
 
-## Open questions / notes for iteration
+## Resolved during iteration (2026-07-06)
 
-- Should the two `render target: 'swap'` steps be disambiguated by an explicit
-  `slabClass` field on the step, or is "select layers whose `target === swap` and
-  whose slab matches the step's position" too implicit? (Leaning: explicit field.)
-- `flow` compute is modelled as a `FrameStep` `compute` kind; confirm that's the
-  right home vs. a separate pre-frame compute list.
-- Whether `slabs.ts` should expose `vpFor(slab)` on `ReadyFrameContext` or keep the
-  VP lookup inside the executor.
+The three open questions from the first draft, plus two that surfaced in the
+main re-verification, are settled:
+
+- **Explicit `slab` on the render step.** `{ kind: 'render', target, slab }` —
+  the two `render swap` steps select disjoint layer sets by data the layers
+  already carry, and the dynamic-slab `buildFrame()` emits the same shape
+  mechanically. (Was: explicit field vs positional inference.)
+- **`ContentSpace` dropped.** A one-field wrapper type earns nothing; layers
+  carry `slab: number` directly.
+- **Slab resolution lives in the executor, not `ReadyFrameContext`.** No
+  `vpFor(slab)` method for every pass to call ad hoc; the executor builds one
+  `SlabView` per render step and threads it into `draw`/`drawPick`. Layers and
+  renderers stay slab-ignorant, and the scattered `ctx.vp as Float32Array`
+  casts retire with the seam.
+- **No `deps: PassDeps` on layers.** Layers read `state.gpu.*` directly (the
+  gpu-handle-nullability end-state); `PassDeps` is deleted in phase 2.
+- **`flow` compute stays a `FRAME` step.** It is order-constrained relative to
+  the flow render step, so it belongs in the program — dispatched through a
+  small `COMPUTE: Record<string, fn>` table, one row per compute kind.
+
+No open questions remain; next step is `writing-plans` against this spec.
