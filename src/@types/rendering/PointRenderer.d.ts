@@ -50,6 +50,8 @@ export type PointRenderer = {
   totalCount(): number;
   /** Per-source point count, or 0 when the source isn't loaded. */
   countOf(source: SourceType): number;
+  /** True when the catalog's buffer is committed — the survey fade row's guard reads this. */
+  hasCatalog(id: GalaxyCatalogId): boolean;
   /**
    * Iterate over every loaded source's GPU buffer in `Source` enum order.
    * The iterable is generated fresh on each call.

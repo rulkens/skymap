@@ -26,8 +26,8 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
   in from zero over the 600 ms default. Consequence for authors: a slow
   cinematic reveal is only honoured when the asset is already resident —
   the first cold run gets a clean 600 ms dissolve at arrival instead.
-  (The `survey` row still lacks its guard — same latent hazard, needs a
-  per-catalog uploaded-predicate on the point renderer.)
+  All four demand-loaded rows are guarded: survey (`hasCatalog(id)`),
+  filaments (`hasCloud()`), volumeField (`listIds()`), flow (`fieldLoaded()`).
 - **The subject's ring category gates its focused label** (beat 06,
   `cosmicFlows`): under focusedOnly a focus() cue only names the subject if
   its structure category's rings are lit — `produceStructureLabels` skips

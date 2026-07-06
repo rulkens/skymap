@@ -175,6 +175,12 @@ export const FADE_LAYERS = [
     handle: (id) => ({ kind: 'galaxyCatalog', id }),
     seed: () => 0,
     intent: (s, id) => s.galaxyCatalogs.items[id].enabled,
+    // Demand-loaded gate, like flow/filaments/volumeField: suppress the fade
+    // until the catalog's buffer is committed, so an enable that races its
+    // .bin download doesn't burn the fade window invisibly. The slot commit's
+    // per-item re-sync (syncVisibilityFadeItem) runs after upload, so the
+    // guard is already true there.
+    guard: (state, id) => state.gpu.renderer?.hasCatalog(id) ?? false,
     // No `post`: the draw/pick bitmasks are derived per-frame in `runFrame`
     // (and fresh at click time), so a toggle needs no eager mask recompute here.
   }),

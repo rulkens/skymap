@@ -674,6 +674,13 @@ export function createPointRenderer(
     return (id !== undefined ? galaxyCatalogs.get(id)?.count : undefined) ?? 0;
   }
 
+  // Whether a catalog's buffer is committed — the survey fade row guards on
+  // this (same demand-loaded pattern as filamentRenderer.hasCloud): a fade
+  // toward "visible" is suppressed until there is something to fade in.
+  function hasCatalog(id: GalaxyCatalogId): boolean {
+    return galaxyCatalogs.has(id);
+  }
+
   /**
    * Iterate loaded sources in GALAXY_CATALOG_SOURCES order.  Fresh iterator
    * per call so the caller may `unload()` between iterations without
@@ -796,6 +803,7 @@ export function createPointRenderer(
     clearBiasOverlays,
     totalCount,
     countOf,
+    hasCatalog,
     loadedSources,
     draw,
     destroy,

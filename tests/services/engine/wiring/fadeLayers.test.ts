@@ -386,6 +386,19 @@ describe('FADE_LAYERS intent subset', () => {
     expect(row.guard?.(state, undefined)).toBe(true);
   });
 
+  it('survey row guard gates on the renderer holding the catalog', () => {
+    // Same demand-loaded pattern as flow/filaments/volumeField: a catalog
+    // whose .bin is still downloading must not burn its fade window.
+    const row = rowFor('survey');
+    const state = {
+      gpu: { renderer: { hasCatalog: (id: string) => id === '2mrs' } },
+    } as unknown as EngineState;
+    expect(row.guard?.(state, 'sdss')).toBe(false);
+    expect(row.guard?.(state, '2mrs')).toBe(true);
+    // No renderer yet (mid-bootstrap) → suppressed.
+    expect(row.guard?.({ gpu: {} } as unknown as EngineState, 'sdss')).toBe(false);
+  });
+
   it('filaments row guard gates on the renderer’s hasCloud()', () => {
     // Same demand-loaded pattern as flow: with no skeleton uploaded, a fade
     // toward "visible" must be suppressed — otherwise an authored slow reveal
