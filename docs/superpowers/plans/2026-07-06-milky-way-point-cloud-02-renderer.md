@@ -189,8 +189,8 @@ Vertex contract (both): `center = (model * vec4(inPos, 1)).xyz`; billboard corne
 
 Fragment contract: stars — the tool's `core + glow` radial falloff with `a = ... * exposure`, final colour `color * bright * a * fadeAlpha` (fade multiplies EMISSION); dust — the tool's per-channel transmittance `T`, output `vec4(mix(vec3(1.0), T, fadeAlpha), 1.0)` so a faded-out Milky Way stops darkening the scene (fadeAlpha 0 → T = 1 → multiplicative identity).
 
-- [ ] Load `wesl-shaders`. Write the three files (didactic headers: what changed vs the tool source and why — model-matrix placement, px clamp, fade semantics; no backticks in comments).
-- [ ] `npm run typecheck` (guards TS damage; first link proof is Task 6). Commit.
+- [x] Load `wesl-shaders`. Write the three files (didactic headers: what changed vs the tool source and why — model-matrix placement, px clamp, fade semantics; no backticks in comments).
+- [x] `npm run typecheck` (guards TS damage; first link proof is Task 6). Commit.
 
 ---
 
