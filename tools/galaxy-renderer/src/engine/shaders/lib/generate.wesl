@@ -992,7 +992,6 @@ fn buildHalo(iteration: u32) -> StarRec {
 fn buildGlobularStar(iteration: u32) -> StarRec {
   let seed = gen.seed;
   let c = iteration / 90u;
-  let j = iteration % 90u;
 
   // --- Cluster-level, pop 6, idx = c ---
   let cpop = 6u;
