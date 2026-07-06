@@ -75,8 +75,20 @@ export const cosmicWeb: ClipData = {
  * established the node. The drift outlasts the pull-back by ~10 s on
  * purpose: the landing is the payoff shot, so the camera keeps turning at
  * full width rather than cutting the moment the dolly settles.
+ *
+ * The pull-back also STRIPS the shot down to the volume: Coma has served its
+ * "superclusters live in the dense knots" purpose during the establish, so
+ * the defocus fires as the dolly launches and every galaxy catalog fades out
+ * over the travel leg — at full width the field reads as pure density, not
+ * density plus scatter. Scene reconstruction folds dwell cues, so later
+ * beats inherit the galaxy-free state.
  */
 export const cosmicWebDwell: ClipData = {
   start: 'live',
-  timeline: [all([...dwellDrift(22).timeline, seq([wait(4), dollyTo(FIT_WEB_MPC, 8)])])],
+  timeline: [
+    all([
+      ...dwellDrift(22).timeline,
+      seq([wait(4), focus(null), hide(['survey'], 8), dollyTo(FIT_WEB_MPC, 8)]),
+    ]),
+  ],
 };
