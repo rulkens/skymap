@@ -4,6 +4,12 @@
  * `encodeGeneration`) and the CPU reference (`generateGalaxy`), then reports
  * how closely the two agree via `console.table`.
  *
+ * ## Usage
+ *
+ * From the browser console:
+ * - `await window.__galaxyParity()` — run the default Sc (barred spiral) parity check
+ * - `await window.__galaxyParity({ type: 'E', starCount: 100000, ... })` — run with custom params
+ *
  * ## Why this owns its own adapter/device, not the engine's
  *
  * `createGalaxyEngine`'s `GalaxyEngineHandle` is the one live GPU surface the
@@ -59,6 +65,7 @@ import { carveDustLayout } from '../model/carveDustLayout';
 import { classifyHubbleType } from '../model/classifyHubbleType';
 import { splitStarBudget } from '../model/splitStarBudget';
 import { generateGalaxy } from '../model/generateGalaxy';
+import { DEFAULT_GALAXY_PARAMS } from '../data/defaultGalaxyParams';
 import type { GalaxyParams } from '../../@types/model/GalaxyParams';
 import type { GenerationLayout } from '../../@types/model/GenerationLayout';
 import type { ParityReport } from '../../@types/dev/ParityReport';
@@ -270,22 +277,23 @@ function printSection(label: 'stars' | 'dust', section: Section): void {
   ]);
 }
 
-export async function runGpuParity(params: GalaxyParams): Promise<ParityReport> {
+export async function runGpuParity(params?: GalaxyParams): Promise<ParityReport> {
   if (!navigator.gpu)
     throw new Error('gpuParityHarness: no WebGPU support (navigator.gpu is undefined)');
   const adapter = await navigator.gpu.requestAdapter();
   if (!adapter) throw new Error('gpuParityHarness: no GPU adapter available');
   const device = await adapter.requestDevice();
 
-  const category = classifyHubbleType(params.type);
-  const budget = splitStarBudget(category, params);
-  const starLayout = carveStarLayout(category, params, budget);
-  const dustLayout = carveDustLayout(category, params, budget);
+  const p = params ?? DEFAULT_GALAXY_PARAMS;
+  const category = classifyHubbleType(p.type);
+  const budget = splitStarBudget(category, p);
+  const starLayout = carveStarLayout(category, p, budget);
+  const dustLayout = carveDustLayout(category, p, budget);
 
   // `extra: null` — this harness always generates a standalone galaxy, never
   // one of the baked-transform background "extras" `packGenerationUniforms`
   // also supports.
-  const uboData = packGenerationUniforms(params, budget, null);
+  const uboData = packGenerationUniforms(p, budget, null);
   const outerRadius = new Float32Array(uboData)[GENERATION_UBO.f32.outerRadius]!;
 
   const ubo = device.createBuffer({
@@ -348,7 +356,7 @@ export async function runGpuParity(params: GalaxyParams): Promise<ParityReport> 
     dustReadBuf.unmap();
   }
 
-  const cpu = generateGalaxy(params);
+  const cpu = generateGalaxy(p);
 
   const report: ParityReport = {
     stars: buildSection({
