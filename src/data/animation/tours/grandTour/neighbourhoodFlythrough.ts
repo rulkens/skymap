@@ -58,9 +58,9 @@ const CEN_A = focusId('c77');
 export const neighbourhoodFlythrough: ClipData = {
   start: 'live',
   timeline: [
-    // The first real survey reveal rides this beat: 2MRS fades in as the
-    // sweep launches, so the neighbourhood is populated with actual galaxies
-    // — the famous handful alone would make the ride read as empty space.
+    // 2MRS + group rings arrive with the Local-Group beat now; this show is
+    // a dedup no-op in the tour and exists so the clip still dresses its
+    // scene when played standalone from the debugger.
     show(['survey:2mrs', 'structureRing:group'], 2),
     scene(setLabelsFocusedOnly(false)),
     flyPath(

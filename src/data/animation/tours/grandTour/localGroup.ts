@@ -32,12 +32,13 @@
  * makes the orbit the beat's actual content. Constants, not runtime
  * lookups (static catalog seeds); re-derive if the enter gains an aim.
  *
- * The second half of the dwell is the bridge to the flythrough: 2MRS fades
- * in as a dolly pulls out to neighbourhood scale, so the wider field the
- * caption's successor sweeps through is already populated when the beat
- * cuts. Same drift-with-embedded-pullback idiom as the cosmic-web dwell —
- * the dolly writes `distance` inside the drift's `all`, a leading wait
- * holds it until the orbit has established the group up close.
+ * The first real survey reveal rides this beat's opening: 2MRS fades in
+ * with the group ring, so the family shot reads as a populated region and
+ * the dwell's pull-out to neighbourhood scale — the bridge to the
+ * flythrough — is already dressed. Same drift-with-embedded-pullback idiom
+ * as the cosmic-web dwell: the dolly writes `distance` inside the drift's
+ * `all`, a leading wait holds it until the orbit has established the group
+ * up close.
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
@@ -62,7 +63,10 @@ const LOCAL_GROUP = focusId('group-local-group');
 export const localGroup: ClipData = {
   start: 'live',
   timeline: [
-    show(['structureRing:group'], 2),
+    // 2MRS arrives WITH the group: the family shot reads as a populated
+    // region, and the later pull-out to neighbourhood scale is already
+    // dressed (the flythrough's own show is then a dedup no-op).
+    show(['survey:2mrs', 'structureRing:group'], 3),
     scene(setLabelsFocusedOnly(false)),
     focus(LOCAL_GROUP),
     hold(1),
@@ -90,7 +94,7 @@ export const localGroupDwell: ClipData = {
   timeline: [
     all([
       ...dwellDrift(DWELL_SEC, { cruiseRate: NET_YAW_RAD / DWELL_SEC }).timeline,
-      seq([wait(10), show(['survey:2mrs'], 10), dollyTo(NEIGHBOURHOOD_MPC, 10)]),
+      seq([wait(10), dollyTo(NEIGHBOURHOOD_MPC, 10)]),
     ]),
   ],
 };
