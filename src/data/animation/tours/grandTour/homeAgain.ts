@@ -1,7 +1,7 @@
 /**
  * Home again — the return, and the tour's landing. One continuous inward
- * log-dolly from the horizon straight back to the Milky Way: ~4.6 decades in
- * 8 seconds, fast but uniform in log-space, so it reads as a smooth rush
+ * log-dolly from the horizon straight back to the Milky Way: ~5 decades in
+ * 12 seconds, fast but uniform in log-space, so it reads as a smooth rush
  * home back through everything the tour visited rather than a blur. The
  * outbound journey was the story; the return is "you're home, go explore."
  *
@@ -40,9 +40,9 @@ export const homeAgain: ClipData = {
     show(['label:milkyWay'], 1),
     focus(MILKY_WAY),
     all([
-      moveTargetId(MILKY_WAY, 8),
-      dollyToId(MILKY_WAY, 8),
-      aimAt({ yaw: BOOT_YAW_RAD, pitch: BOOT_PITCH_RAD }, 8),
+      moveTargetId(MILKY_WAY, 12),
+      dollyToId(MILKY_WAY, 12),
+      aimAt({ yaw: BOOT_YAW_RAD, pitch: BOOT_PITCH_RAD }, 12),
     ]),
     // A gentle drift on the landing — home breathes while the closing
     // caption finishes, then the tour ends on the settle.
