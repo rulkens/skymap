@@ -93,8 +93,8 @@ submit. Generation runs in the local galaxy frame with identity extra-lanes — 
 placement is a draw-side concern (below), because the UBO's two-angle extra-rotation cannot
 express the full equatorial→galactic rotation.
 
-**Per-tier star budgets.** The star count scales with the user's tier (the same
-`state.sources.tier` that drives catalog bins):
+**Per-tier star budgets.** The star count scales with the user's tier (the root `tier`
+slice that drives catalog bins; the engine-side hook is `makeRunTierTransition`):
 
 | Tier   | Stars (planned) | Dust                              |
 | ------ | --------------- | --------------------------------- |
