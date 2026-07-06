@@ -51,7 +51,7 @@ export function produceMilkyWayLabel(
   ctx: ReadyFrameContext,
 ): LabelProducerOutput {
   const fades = state.subsystems.fades;
-  const now = performance.now();
+  const now = ctx.nowMs;
 
   const layerOpacity = fades.opacityOf(LAYER_ID, now);
   const labelEnabled = state.settings.milkyWay.labelEnabled;

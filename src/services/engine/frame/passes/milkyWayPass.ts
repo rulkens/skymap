@@ -58,7 +58,7 @@ export const milkyWayPass: Pass = {
     // skip even when the toggle is on.
     const togglePart =
       state.settings.milkyWay.enabled ||
-      state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now()) > 0;
+      state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, ctx.nowMs) > 0;
     if (!togglePart) return false;
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     return milkyWayFadeAlpha(camDistMpc) > 0;
@@ -71,7 +71,7 @@ export const milkyWayPass: Pass = {
     // toggle opacity. The renderer already accepts a scalar fadeAlpha
     // CPU-side param, so multiplying two opacities here is the
     // minimal-change path — no shader edits, no FadeUniforms binding.
-    const toggleOpacity = state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now());
+    const toggleOpacity = state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, ctx.nowMs);
     const fadeAlpha = milkyWayFadeAlpha(camDistMpc) * toggleOpacity;
 
     deps.milkyWayRenderer.draw(

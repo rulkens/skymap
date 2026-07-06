@@ -179,6 +179,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       [number, number, number]
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
+    nowMs: 0,
     fovYRad: (60 * Math.PI) / 180,
     renderer: pointRenderer,
     postProcess,

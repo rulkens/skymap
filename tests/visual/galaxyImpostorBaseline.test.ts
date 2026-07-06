@@ -7,15 +7,14 @@
  * Guards the per-galaxy emission order, the fade-alpha math, and the
  * atlas-slot bookkeeping against silent regressions.
  *
- * ## NOTE on `performance.now()` mocking
+ * ## NOTE on the synthetic frame clock
  *
  * The textured-disk planner derives a per-galaxy `fadeAlpha` from
- * `(now - bitmapReadyTime) / 400ms`. Without a fixed clock, the elapsed
- * wall time between bitmap-landing (inside the microtask drain after
- * Frame 1) and `nowMs` read in Frame 2 varies across runs and perturbs
- * the rounded hash. We mock `performance.now` with a synthetic clock
- * advanced by exactly 50 ms between frames so the load-fade lerp lands
- * deterministically on 50/400 = 0.125.
+ * `(now - bitmapReadyTime) / 400ms`, where both times come from the
+ * stamped frame clock (`input.nowMs`) rather than `performance.now()`.
+ * We drive that clock explicitly, advancing it by exactly 50 ms between
+ * frames so the load-fade lerp lands deterministically on 50/400 = 0.125
+ * — the same determinism a stepped recorder clock relies on.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -102,8 +101,10 @@ function hashInstances(instances: ReadonlyArray<object>): string {
 
 describe('galaxy-impostor visual baseline', () => {
   it('emits the same lastOutput sequence given a fixed fixture', async () => {
-    // Synthetic clock — see module docstring for why this is required for
-    // deterministic load-fade.  Restored in `finally`.
+    // Synthetic frame clock — see module docstring for why this is required
+    // for deterministic load-fade. The planner reads the stamped `nowMs`
+    // input; the spy is belt-and-suspenders so any stray wall-clock sample
+    // still sees the same synthetic clock. Restored in `finally`.
     let nowFake = 1_000_000;
     const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => nowFake);
 
@@ -125,12 +126,19 @@ describe('galaxy-impostor visual baseline', () => {
 
       // Frame 1: kick off fetches; bitmaps land via microtask drain.
       procSys.runFrame({ cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad });
-      texSys.runFrame({ cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad, famousMeta: [] });
+      texSys.runFrame({
+        cam,
+        catalogs,
+        visibleSourceMask: 0xffffffff,
+        pxPerRad,
+        famousMeta: [],
+        nowMs: nowFake,
+      });
       await new Promise((r) => setTimeout(r, 0));
 
-      // Advance synthetic clock by 50 ms — bitmapReadyTime was recorded at
-      // nowFake=1_000_000 inside the onResult callback above, so Frame 2
-      // sees loadFade = 50/400 = 0.125 deterministically.
+      // Advance the frame clock by 50 ms — the arrival stamp quantized to
+      // Frame 1's nowMs (1_000_000), so Frame 2 sees loadFade = 50/400 =
+      // 0.125 deterministically.
       nowFake += 50;
 
       // Frame 2: bitmaps ready; disk path fires.
@@ -141,6 +149,7 @@ describe('galaxy-impostor visual baseline', () => {
         visibleSourceMask: 0xffffffff,
         pxPerRad,
         famousMeta: [],
+        nowMs: nowFake,
       });
 
       const summary = {

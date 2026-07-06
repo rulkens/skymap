@@ -105,6 +105,7 @@ describe('produceStructureMarkers → structureMarkerRenderer.setMarkers', () =>
       drawPxPerRad: 500,
       fovYRad: (60 * Math.PI) / 180,
       focusBlend: 0,
+      nowMs: 0,
     } as unknown as ReadyFrameContext;
 
     const markers = produceStructureMarkers(state, ctx);

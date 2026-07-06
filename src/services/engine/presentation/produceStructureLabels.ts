@@ -62,7 +62,7 @@ export function produceStructureLabels(
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.
   const fades = state.subsystems.fades;
-  const now = performance.now();
+  const now = ctx.nowMs;
   const focusedStructureId = structureIdOf(state.selection.focus);
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
