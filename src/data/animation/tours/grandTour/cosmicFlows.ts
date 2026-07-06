@@ -84,7 +84,7 @@ export const cosmicFlowsDwell: ClipData = {
   start: 'live',
   timeline: [
     all([
-      ...dwellDrift(18, { cruiseRate: (Math.PI * 2) / 120 }).timeline,
+      ...dwellDrift(22, { cruiseRate: (Math.PI * 2) / 60 }).timeline,
       // The opening wait covers the flow's 4 s fade-in plus a beat of settled
       // local currents before the first pull.
       seq([wait(5), dollyTo(LOCAL_FLOWS_MPC, 5), wait(3), dollyTo(GIANT_FLOWS_MPC, 6)]),

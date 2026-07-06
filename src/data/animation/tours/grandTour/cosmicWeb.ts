@@ -88,7 +88,7 @@ export const cosmicWebDwell: ClipData = {
   start: 'live',
   timeline: [
     all([
-      ...dwellDrift(22).timeline,
+      ...dwellDrift(22, { cruiseRate: (Math.PI * 2) / 30 }).timeline,
       seq([wait(4), focus(null), hide(['survey'], 8), dollyTo(FIT_WEB_MPC, 8)]),
     ]),
   ],
