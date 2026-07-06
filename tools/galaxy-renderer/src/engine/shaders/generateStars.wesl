@@ -51,6 +51,10 @@ import package::lib::generate::writeStar;
 import package::lib::generate::buildBulge;
 import package::lib::generate::buildBar;
 import package::lib::generate::buildDisk;
+import package::lib::generate::buildArmSlot;
+import package::lib::generate::buildIrregularSlot;
+import package::lib::generate::buildHalo;
+import package::lib::generate::buildGlobularStar;
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -73,12 +77,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     if (slot >= start && slot < start + rangeLen) {
       let iteration = (slot - start) / stride;
       let sub = (slot - start) % stride;
-      // 'sub' is not consumed yet — the batch-A populations (bulge/bar/disk)
-      // carve stride 1, so sub is always 0 for them; the multi-slot arm and
-      // clump populations (Tasks 7-8) are the ones that will read it. Kept
-      // computed here so the decomposition contract stays visible at the call
-      // site for every case.
-      _ = sub;
+      // The stride-1 populations (bulge/bar/disk/halo/globularStar) always see
+      // sub == 0; only the multi-slot arm (stride 5) and clump (stride 2)
+      // populations read 'sub' to pick which of the iteration's reserved
+      // records this invocation writes.
 
       switch (popId) {
         // bulge/bar/disk carve stride 1 (one slot per iteration), so 'sub' is
@@ -86,10 +88,13 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
         case 0u: { writeStar(slot, buildBulge(iteration)); return; }  // bulge
         case 1u: { writeStar(slot, buildBar(iteration)); return; }    // bar
         case 2u: { writeStar(slot, buildDisk(iteration)); return; }   // disk
-        case 3u: { writeStar(slot, dead); return; }  // spiralArms
-        case 4u: { writeStar(slot, dead); return; }  // irregularClumps
-        case 5u: { writeStar(slot, dead); return; }  // halo
-        case 7u: { writeStar(slot, dead); return; }  // globularStar
+        // spiralArms/irregularClumps carve stride 5 / 2 — 'sub' selects the
+        // record (arm/HII/newborn); the shared per-iteration draw is
+        // recomputed identically per sibling inside the builder.
+        case 3u: { writeStar(slot, buildArmSlot(iteration, sub)); return; }        // spiralArms
+        case 4u: { writeStar(slot, buildIrregularSlot(iteration, sub)); return; }  // irregularClumps
+        case 5u: { writeStar(slot, buildHalo(iteration)); return; }               // halo
+        case 7u: { writeStar(slot, buildGlobularStar(iteration)); return; }       // globularStar
         default: { writeStar(slot, dead); return; }
       }
     }

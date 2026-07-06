@@ -613,25 +613,428 @@ fn buildDisk(iteration: u32) -> StarRec {
 }
 
 // ---------------------------------------------------------------------------
-// Task-7 seam — spiral-arm star sampling
+// Population builders — batch B (spiral arms, irregular clumps, halo, globulars)
 // ---------------------------------------------------------------------------
 
-// ArmStarSample — the shared output of the spiral-arm star/dust generator.
-// The arm builder is the one population that spawns BOTH stars (arm stars,
-// HII cores/newborns) and, in the full port, dust — so its per-invocation
-// result is factored into this dedicated sample type both the star and dust
-// entry passes read. Task 7 fills in the body (the ported spiralArms.ts
-// personality/meander/clump/wave math driven off gen.armTable); this file
-// declares the struct + signature so the seam's shape is fixed now. The
-// placeholder returns a dead star so, if linked before Task 7, no arm star
-// is emitted rather than a garbage one.
+// ArmStarSample — the shared per-iteration state of one spiralArms draw
+// (spiralArms.ts:123-236). The arm builder is the one population that spawns
+// BOTH stars (arm star, HII halo/core/newborns) AND dust, so the slots the CPU
+// draws once per loop iteration (0-29, plus the gap gate 30 and dust gate 36 —
+// see the slot table in the Task-7 brief) are computed ONCE here and consumed
+// by every sibling. The stride-5 record means five threads run buildArmSlot for
+// the same 'i'; each recomputes armStarSample(i) identically (the hash is
+// stateless) and then does only its own sub-slot work.
+//
+// ## The Task-8 (dust) seam
+//
+// The dust pass reads EXACTLY these five fields: 'pos' (pre-warp x/y/z), plus
+// 'radius', 'angle', 'armFade' and 'seedAccepted' — the {x,y,z,radius,angle,
+// armFade} the CPU pushes onto dustSeeds, gated by 'seedAccepted' (the slot-36
+// draw, which the CPU's clump-gap 'continue' also skips — spiralArms.ts:221 vs
+// :235). The remaining fields are STAR-only shared state (HII knot geometry,
+// sub-arm brightness/clump modulation, the non-HII gap skip) that buildArmSlot
+// consumes to compose its per-sub records; the dust builder ignores them.
 struct ArmStarSample {
-  star: StarRec,
+  pos: vec3<f32>,      // pre-warp base position (arm star + HII knot origin)
+  radius: f32,         // post-lopsided radius — dust seed
+  angle: f32,          // final arm angle      — dust seed
+  armFade: f32,        // brightness envelope  — dust seed weight
+  clumpMod: f32,       // along-arm bright/faint modulation (non-HII star)
+  brightMul: f32,      // 1.0, or 0.62 for a sub-arm/spur star
+  coreSize: f32,       // HII core radius
+  coreBright: f32,     // HII core brightness
+  cv: f32,             // HII core colour nudge
+  newbornCount: u32,   // 1..3 newborn stars in an HII knot
+  isHii: bool,
+  isSubArm: bool,
+  gapSkipped: bool,    // non-HII clump-gap 'continue' (real density gap)
+  seedAccepted: bool,  // dust-seed gate — the Task-8 dust seam
 }
 
+// armStarSample — recompute one spiralArms iteration's shared state. Every
+// galaxy-level value (per-arm phase/pitch/weight/meander/clump/wave/fadeRadius)
+// comes from gen.armTable, packed by packGenerationUniforms.ts:176-193 as 4
+// vec4 per arm: [phase, pitch, weight, fadeRadius][meanderAmp, meanderFreq,
+// meanderPhase, _][clumpF1, clumpP1, clumpF2, clumpP2][waveF1, waveP1, waveF2,
+// waveP2] (armTableLayout in generationUboLayout.ts:182-187).
 fn armStarSample(i: u32) -> ArmStarSample {
-  _ = i;
+  let seed = gen.seed;
+  let pop = 3u;
+
+  // slots 0-11: smooth-start radius (spiralArms.ts:124)
+  var radius = gen.armStartRadius * 0.5 + sampleDiskRadius(seed, pop, i, 0u);
+
+  // slot 12: weighted arm pick — scan armTable weights vs gen.weightSum
+  // (spiralArms.ts:126-131)
+  var pick = genRand(seed, pop, i, 12u) * gen.weightSum;
+  var arm = 0u;
+  loop {
+    if (arm >= gen.numArms - 1u) { break; }
+    let w = gen.armTable[arm * 4u + 0u].z; // weight lane
+    if (pick <= w) { break; }
+    pick = pick - w;
+    arm = arm + 1u;
+  }
+  let rec0 = gen.armTable[arm * 4u + 0u]; // (phase, pitch, weight, fadeRadius)
+  let rec1 = gen.armTable[arm * 4u + 1u]; // (meanderAmp, meanderFreq, meanderPhase, _)
+  let rec2 = gen.armTable[arm * 4u + 2u]; // (clumpF1, clumpP1, clumpF2, clumpP2)
+  let rec3 = gen.armTable[arm * 4u + 3u]; // (waveF1, waveP1, waveF2, waveP2)
+
+  let logRadius = log(radius / gen.armStartRadius); // spiralArms.ts:132
+
+  // slot 13: sub-arm gate (spiralArms.ts:136); slots 14-16: sub-arm side/phase/
+  // pitch jitter (spiralArms.ts:142-146) — reserved regardless of the branch.
+  let isSubArm = gen.subArmAmount > 0.0 && genRand(seed, pop, i, 13u) < gen.subArmAmount * 0.6;
+  var phase = rec0.x;
+  var pitch = rec0.y;
+  var widthMul = 1.0;
+  var brightMul = 1.0;
+  if (isSubArm) {
+    let side = select(-1.0, 1.0, genRand(seed, pop, i, 14u) < 0.5); // spiralArms.ts:142
+    phase = rec0.x + side * (PI / f32(gen.numArms)) * (0.45 + 0.5 * genRand(seed, pop, i, 15u)); // :143
+    pitch = rec0.y * (0.82 + 0.42 * genRand(seed, pop, i, 16u)); // :144
+    widthMul = 1.8;
+    brightMul = 0.62;
+  }
+
+  // Base log-spiral angle + meander + high-frequency wave (spiralArms.ts:151-160)
+  var angle = phase + pitch * logRadius
+    + rec1.x * sin(rec1.y * logRadius * 2.0 + rec1.z);
+  if (gen.waveAmount > 0.0) {
+    angle = angle + gen.waveAmount * (
+      sin(rec3.x * logRadius + rec3.y) * 0.16 +
+      sin(rec3.z * logRadius + rec3.w) * 0.09);
+  }
+  // slots 17-18: spur feather (sub-arm only — spiralArms.ts:161)
+  if (isSubArm) {
+    angle = angle + genNormal(seed, pop, i, 17u) * 0.14;
+  }
+  // slots 19-20: angle feather (spiralArms.ts:162)
+  angle = angle + genNormal(seed, pop, i, 19u) * gen.armWidthFactor * widthMul * (1.0 + gen.armStartRadius / radius);
+  // slots 21-22: perpendicular offset (spiralArms.ts:163)
+  let perpOffset = genNormal(seed, pop, i, 21u) * gen.armWidthFactor * widthMul * radius * 0.5;
+  radius = applyLopsided(radius, angle); // spiralArms.ts:164 — post-lopsided from here on
+  let x = radius * cos(angle) - perpOffset * sin(angle); // spiralArms.ts:165
+  let z = radius * sin(angle) + perpOffset * cos(angle); // spiralArms.ts:166
+  // slots 23-24: vertical scatter (spiralArms.ts:167)
+  let y = genNormal(seed, pop, i, 23u) * gen.diskHeight * 0.8;
+
+  // Brightness envelope: fade in near arm start, fade out at this arm's own
+  // edge radius (fadeRadius = rec0.w) — both smoothstep (spiralArms.ts:171-175).
+  var innerT = (radius - gen.armStartRadius) / gen.armInnerRampW;
+  innerT = clamp(innerT, 0.0, 1.0);
+  var outerT = (radius - gen.armFullRadius) / max(0.001, rec0.w - gen.armFullRadius);
+  outerT = clamp(outerT, 0.0, 1.0);
+  let armFade = innerT * innerT * (3.0 - 2.0 * innerT) * (1.0 - outerT * outerT * (3.0 - 2.0 * outerT));
+
+  // Low-frequency along-arm modulation (spiralArms.ts:178-184)
+  var clumpMod = 1.0;
+  if (gen.clumpAmount > 0.0) {
+    let noise = sin(logRadius * rec2.x + rec2.y) * 0.6 + sin(logRadius * rec2.z + rec2.w) * 0.4;
+    clumpMod = 1.0 - gen.clumpAmount * (0.5 - 0.5 * noise);
+  }
+
+  // slot 25: HII gate (spiralArms.ts:186)
+  let subFactor = select(1.0, 0.4, isSubArm);
+  let isHii = genRand(seed, pop, i, 25u) < 0.011 * gen.hiiIntensity * subFactor;
+
+  // slots 26-29: HII knot geometry (spiralArms.ts:191-206). Reserved regardless
+  // of the branch so the sub-record composition + newborn block line up.
+  let giant = pow(genRand(seed, pop, i, 26u), 2.5); // slot 26 — spiralArms.ts:191
+  let coreSize = gen.outerRadius * (0.006 + 0.022 * giant); // :192
+  let coreBright = (1.4 + 1.2 * genRand(seed, pop, i, 27u)) * (0.7 + 2.0 * giant) * gen.hiiIntensity * armFade; // slot 27 — :193
+  let cv = 0.1 * genRand(seed, pop, i, 28u); // slot 28 — :195
+  let newbornCount = 1u + u32(genRand(seed, pop, i, 29u) * 3.0); // slot 29 — :206
+
+  // slot 30: clump-gap gate (non-HII only — spiralArms.ts:221). The HII branch
+  // never gaps (the 'continue' lives in the else arm).
+  var gapSkipped = false;
+  if (!isHii) {
+    gapSkipped = gen.clumpAmount > 0.0 && genRand(seed, pop, i, 30u) > 0.4 + 0.6 * clumpMod;
+  }
+
+  // slot 36: dust-seed gate (spiralArms.ts:235). A gapped non-HII star hits the
+  // CPU 'continue' before the seed push, so it seeds no dust.
+  let seedAccepted = (isHii || !gapSkipped) && genRand(seed, pop, i, 36u) < 0.55 * armFade;
+
+  var s: ArmStarSample;
+  s.pos = vec3<f32>(x, y, z);
+  s.radius = radius;
+  s.angle = angle;
+  s.armFade = armFade;
+  s.clumpMod = clumpMod;
+  s.brightMul = brightMul;
+  s.coreSize = coreSize;
+  s.coreBright = coreBright;
+  s.cv = cv;
+  s.newbornCount = newbornCount;
+  s.isHii = isHii;
+  s.isSubArm = isSubArm;
+  s.gapSkipped = gapSkipped;
+  s.seedAccepted = seedAccepted;
+  return s;
+}
+
+// buildArmSlot — compose the star record for spiralArms output slot (i, sub),
+// stride 5 (carveStarLayout.ts:19-23). Sub-slot mapping (spiralArms.ts:187-233):
+//   sub 0 : HII halo glow (isHii) OR regular arm star (dead on clump-gap skip)
+//   sub 1 : HII core (isHii) OR dead
+//   sub 2-4 : newborn b = sub - 2 (isHii && b < newbornCount) OR dead
+// addStar composes the galactic warp onto y (createGalaxyBuildContext.ts:120),
+// reproduced per record with 'y + warpOffset(x, z)'.
+fn buildArmSlot(i: u32, sub: u32) -> StarRec {
   var dead: StarRec;
   dead.alive = false;
-  return ArmStarSample(dead);
+  let seed = gen.seed;
+  let pop = 3u;
+  let s = armStarSample(i);
+  let warped = vec3<f32>(s.pos.x, s.pos.y + warpOffset(s.pos.x, s.pos.z), s.pos.z);
+
+  if (s.isHii) {
+    if (sub == 0u) {
+      // HII halo glow (spiralArms.ts:194)
+      var rec: StarRec;
+      rec.pos = warped;
+      rec.color = gen.hiiHalo.xyz;
+      rec.size = s.coreSize * 1.9;
+      rec.brightness = s.coreBright * 0.22;
+      rec.alive = true;
+      return rec;
+    }
+    if (sub == 1u) {
+      // HII core (spiralArms.ts:196-205)
+      var rec: StarRec;
+      rec.pos = warped;
+      rec.color = hiiCorePerturbed(s.cv);
+      rec.size = s.coreSize;
+      rec.brightness = s.coreBright;
+      rec.alive = true;
+      return rec;
+    }
+    // newborn b = sub - 2 (spiralArms.ts:207-218)
+    let b = sub - 2u;
+    if (b >= s.newbornCount) { return dead; }
+    let nbase = 40u + 8u * b;
+    // slot nbase+0: young-star colour (spiralArms.ts:208)
+    let color = tempColorRamp(0.86 + 0.12 * genRand(seed, pop, i, nbase + 0u));
+    // slots nbase+1..2 / +3..4 / +5..6: x / y / z offset (spiralArms.ts:210-215)
+    let nx = s.pos.x + genNormal(seed, pop, i, nbase + 1u) * s.coreSize * 0.9;
+    let ny = s.pos.y + genNormal(seed, pop, i, nbase + 3u) * 0.05;
+    let nz = s.pos.z + genNormal(seed, pop, i, nbase + 5u) * s.coreSize * 0.9;
+    // slot nbase+7: brightness (spiralArms.ts:217)
+    let brightness = (1.1 + 0.7 * genRand(seed, pop, i, nbase + 7u)) * s.armFade;
+    var rec: StarRec;
+    rec.pos = vec3<f32>(nx, ny + warpOffset(nx, nz), nz);
+    rec.color = color;
+    rec.size = gen.starSize * 0.55;
+    rec.brightness = brightness;
+    rec.alive = true;
+    return rec;
+  }
+
+  // non-HII: only sub 0 is a real star; the clump-gap skip kills it entirely.
+  if (sub != 0u || s.gapSkipped) { return dead; }
+  // slot 31: hot blue-white arm colour (spiralArms.ts:222)
+  let color = tempColorRamp(0.6 + 0.36 * gen.youngFraction + 0.1 * genRand(seed, pop, i, 31u));
+  // slot 32: size jitter (spiralArms.ts:230)
+  let size = gen.starSize * (0.85 + 0.6 * genRand(seed, pop, i, 32u));
+  // slots 33-35: randomLuminosity (spiralArms.ts:231)
+  let brightness = randomLuminosity(seed, pop, i, 33u) * 1.9 * s.armFade * s.brightMul * s.clumpMod;
+  var rec: StarRec;
+  rec.pos = warped;
+  rec.color = color;
+  rec.size = size;
+  rec.brightness = brightness;
+  rec.alive = true;
+  return rec;
+}
+
+// IrregularSample — the shared per-iteration state of one irregularClumps draw
+// (irregularClumps.ts:60-90). Stride 2: sub 0 = regular star or HII halo, sub 1
+// = HII core or dead. Clump centres come from gen.clumpCenters (packed by
+// packGenerationUniforms.ts:120-127); the LMC-style bar offset is gen.irrBarOffset.
+//
+// ## The Task-8 (dust) seam
+//
+// The dust pass reads 'pos' (pre-warp x/y/z) and 'seedAccepted' (the slot-15
+// gate, rand < 0.25 — irregularClumps.ts:87); the HII fields are star-only.
+struct IrregularSample {
+  pos: vec3<f32>,     // pre-warp x/y/z
+  coreSize: f32,      // HII core radius
+  coreBright: f32,    // HII core brightness
+  cv: f32,            // HII core colour nudge
+  isHii: bool,
+  seedAccepted: bool, // dust-seed gate — the Task-8 dust seam
+}
+
+fn irregularSample(i: u32) -> IrregularSample {
+  let seed = gen.seed;
+  let pop = 4u;
+  let center = gen.clumpCenters[i % 7u]; // NUM_CLUMPS = 7 (irregularClumps.ts:26)
+  let spread = gen.outerRadius * 0.16;   // irregularClumps.ts:62
+  // slots 0-1 / 2-3 / 4-5: x / y / z scatter (irregularClumps.ts:63-65)
+  let x = center.x + genNormal(seed, pop, i, 0u) * spread + gen.irrBarOffset;
+  let y = center.y + genNormal(seed, pop, i, 2u) * gen.diskHeight * 2.0;
+  let z = center.z + genNormal(seed, pop, i, 4u) * spread;
+  // slot 6: HII gate (irregularClumps.ts:66)
+  let isHii = genRand(seed, pop, i, 6u) < 0.02 * gen.hiiIntensity;
+  // slots 7-9: HII knot geometry (irregularClumps.ts:68-72), reserved regardless.
+  let giant = pow(genRand(seed, pop, i, 7u), 2.5); // slot 7 — :68
+  let coreSize = gen.outerRadius * (0.006 + 0.024 * giant); // :69 (0.024, not the arm's 0.022)
+  let coreBright = (1.6 + 1.4 * genRand(seed, pop, i, 8u)) * (0.8 + 1.6 * giant); // slot 8 — :70
+  let cv = 0.1 * genRand(seed, pop, i, 9u); // slot 9 — :72
+  // slot 15: dust-seed gate (irregularClumps.ts:87)
+  let seedAccepted = genRand(seed, pop, i, 15u) < 0.25;
+
+  var s: IrregularSample;
+  s.pos = vec3<f32>(x, y, z);
+  s.coreSize = coreSize;
+  s.coreBright = coreBright;
+  s.cv = cv;
+  s.isHii = isHii;
+  s.seedAccepted = seedAccepted;
+  return s;
+}
+
+// buildIrregularSlot — compose the star record for irregularClumps slot
+// (i, sub), stride 2 (carveStarLayout.ts:24-26). No density-gap 'continue' here
+// (module header): every iteration writes at least one star, so a non-HII sub 0
+// is never dead.
+fn buildIrregularSlot(i: u32, sub: u32) -> StarRec {
+  var dead: StarRec;
+  dead.alive = false;
+  let seed = gen.seed;
+  let pop = 4u;
+  let s = irregularSample(i);
+  let warped = vec3<f32>(s.pos.x, s.pos.y + warpOffset(s.pos.x, s.pos.z), s.pos.z);
+
+  if (s.isHii) {
+    if (sub == 0u) {
+      // HII halo glow (irregularClumps.ts:71)
+      var rec: StarRec;
+      rec.pos = warped;
+      rec.color = gen.hiiHalo.xyz;
+      rec.size = s.coreSize * 1.9;
+      rec.brightness = s.coreBright * 0.22;
+      rec.alive = true;
+      return rec;
+    }
+    // sub 1: HII core (irregularClumps.ts:73-82)
+    var rec: StarRec;
+    rec.pos = warped;
+    rec.color = hiiCorePerturbed(s.cv);
+    rec.size = s.coreSize;
+    rec.brightness = s.coreBright;
+    rec.alive = true;
+    return rec;
+  }
+
+  // non-HII: sub 0 is a real star, sub 1 is dead (irregularClumps.ts:84-85).
+  if (sub != 0u) { return dead; }
+  // slot 10: colour (irregularClumps.ts:84)
+  let color = tempColorRamp(0.66 + 0.3 * genRand(seed, pop, i, 10u));
+  // slot 11: size jitter (irregularClumps.ts:85)
+  let size = gen.starSize * (0.9 + 0.7 * genRand(seed, pop, i, 11u));
+  // slots 12-14: randomLuminosity (irregularClumps.ts:85)
+  let brightness = randomLuminosity(seed, pop, i, 12u);
+  var rec: StarRec;
+  rec.pos = warped;
+  rec.color = color;
+  rec.size = size;
+  rec.brightness = brightness;
+  rec.alive = true;
+  return rec;
+}
+
+// buildHalo — the faint extended envelope of old stars (halo.ts:30-54). Stride
+// 1 (sub always 0). Radial rejection retries at +64*k like the bulge/bar; dead
+// after 8 attempts (finite slot budget vs the CPU's unbounded resample). Size
+// is the FIXED starSize*0.7 — no size draw (halo.ts:51).
+fn buildHalo(iteration: u32) -> StarRec {
+  var dead: StarRec;
+  dead.alive = false;
+  let seed = gen.seed;
+  let pop = 5u;
+
+  for (var k = 0u; k < 8u; k = k + 1u) {
+    let base = 64u * k;
+    // slot 0: heavy-tailed radial draw (halo.ts:31)
+    let u = genRand(seed, pop, iteration, base + 0u);
+    let dist = gen.outerRadius * 0.3 * pow(-log(1.0 - u * 0.998), 1.35);
+    if (dist > gen.outerRadius * 2.4) { continue; } // halo.ts:32-35 resample
+    // slot 1: cosLat (halo.ts:36)
+    let cosLat = 2.0 * genRand(seed, pop, iteration, base + 1u) - 1.0;
+    let sinLat = sqrt(1.0 - cosLat * cosLat);
+    // slot 2: lon (halo.ts:38)
+    let lon = 2.0 * PI * genRand(seed, pop, iteration, base + 2u);
+    let x = dist * sinLat * cos(lon);         // halo.ts:39
+    let z = dist * sinLat * sin(lon);         // halo.ts:40
+    let y = dist * cosLat * gen.flattening;   // halo.ts:41
+    let haloFalloff = exp(-dist / (gen.outerRadius * (0.85 - 0.45 * gen.bulgeConcentration))); // halo.ts:42
+    // slot 3: colour jitter (halo.ts:43)
+    let color = tempColorRamp(0.3 + 0.12 * genRand(seed, pop, iteration, base + 3u));
+    // slots 4-6: randomLuminosity (halo.ts:52)
+    let brightness = randomLuminosity(seed, pop, iteration, base + 4u) * 0.5 * haloFalloff;
+
+    var rec: StarRec;
+    rec.pos = vec3<f32>(x, y + warpOffset(x, z), z); // addStar warp — ctx.ts:120
+    rec.color = color;
+    rec.size = gen.starSize * 0.7; // FIXED (halo.ts:51)
+    rec.brightness = brightness;
+    rec.alive = true;
+    return rec;
+  }
+  return dead;
+}
+
+// buildGlobularStar — one star of one globular cluster (globularClusters.ts:20-59).
+// Two disjoint hash ID spaces keep cluster-level and member-level draws from
+// colliding: the cluster's centre/richness/radius/hue are drawn in pop 6 keyed
+// on the cluster index 'c' (pop 6 owns no output slots — populationIds.ts:13),
+// and the member's own position/colour/size/brightness in pop 7 keyed on the
+// flat member index. Every member thread of a cluster recomputes that cluster's
+// pop-6 draws identically. iteration = c*90 + j (carveStarLayout.ts:29,
+// STARS_PER_CLUSTER = 90).
+fn buildGlobularStar(iteration: u32) -> StarRec {
+  let seed = gen.seed;
+  let c = iteration / 90u;
+  let j = iteration % 90u;
+
+  // --- Cluster-level, pop 6, idx = c (globularClusters.ts:28-41) ---
+  let cpop = 6u;
+  let dist = gen.outerRadius * (0.35 + 1.0 * pow(genRand(seed, cpop, c, 0u), 0.5)); // slot 0 — :28
+  let cosLat = 2.0 * genRand(seed, cpop, c, 1u) - 1.0; // slot 1 — :29
+  let sinLat = sqrt(1.0 - cosLat * cosLat);
+  let lon = 2.0 * PI * genRand(seed, cpop, c, 2u); // slot 2 — :31
+  let centerX = dist * sinLat * cos(lon); // :32
+  let centerZ = dist * sinLat * sin(lon); // :33
+  let centerY = dist * cosLat * 0.85;     // :34
+  // slots 3-4: richness = 0.3 + 0.9 * rand() * rand() (two draws — :38)
+  let richness = 0.3 + 0.9 * genRand(seed, cpop, c, 3u) * genRand(seed, cpop, c, 4u);
+  // slot 5: cluster radius (:39-40)
+  let clusterRadius = gen.outerRadius * (0.003 + 0.01 * pow(genRand(seed, cpop, c, 5u), 1.8)) * gen.globularSize * (0.7 + 0.6 * richness);
+  let clusterHue = 0.26 + 0.2 * genRand(seed, cpop, c, 6u); // slot 6 — :41
+
+  // --- Member-level, pop 7, idx = c*90 + j == iteration (globularClusters.ts:44-58) ---
+  let mpop = 7u;
+  let midx = iteration;
+  let d = clusterRadius * pow(genRand(seed, mpop, midx, 0u), 0.7); // slot 0 — :44 (concentrated core)
+  let cl = 2.0 * genRand(seed, mpop, midx, 1u) - 1.0; // slot 1 — :45
+  let sl = sqrt(1.0 - cl * cl);
+  let ln = 2.0 * PI * genRand(seed, mpop, midx, 2u); // slot 2 — :47
+  // slot 3: hue jitter (:48)
+  let color = tempColorRamp(clusterHue + (genRand(seed, mpop, midx, 3u) - 0.5) * 0.16);
+  let size = gen.starSize * (0.5 + 0.22 * genRand(seed, mpop, midx, 4u)); // slot 4 — :56
+  let brightness = (0.18 + 0.32 * genRand(seed, mpop, midx, 5u)) * gen.globularBright * richness; // slot 5 — :57
+
+  let px = centerX + d * sl * cos(ln); // :50
+  let py = centerY + d * cl;           // :51
+  let pz = centerZ + d * sl * sin(ln); // :52
+  var rec: StarRec;
+  rec.pos = vec3<f32>(px, py + warpOffset(px, pz), pz); // addStar warp — ctx.ts:120
+  rec.color = color;
+  rec.size = size;
+  rec.brightness = brightness;
+  rec.alive = true;
+  return rec;
 }
