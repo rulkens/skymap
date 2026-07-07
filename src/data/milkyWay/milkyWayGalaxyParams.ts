@@ -29,9 +29,10 @@ export const MILKY_WAY_GENERATION_SEED = 1;
  * SBb, 4 arms, bar, warp — the tool's hand-dialled `mw` knobs, with the
  * generation seed made explicit (see `MILKY_WAY_GENERATION_SEED`) and
  * `globularCount` calibrated at the app's visual gate (the tool's gallery
- * shares this object, so it shows the same count). `starCount: 200_000` is
- * the MEDIUM-tier star budget; plan 02's per-tier table derives small/large
- * as x0.5/x2 of this value rather than this file carrying three variants.
+ * shares this object, so it shows the same count). `starCount` is the
+ * MEDIUM-tier star budget, also visual-gate calibrated; the per-tier table
+ * in `milkyWayCalibration.ts` derives small/large as x0.5/x2 of this value
+ * rather than carrying three independently-tunable variants.
  */
 export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   type: 'SBb',
@@ -59,6 +60,6 @@ export const MILKY_WAY_GALAXY_PARAMS: GalaxyParams = {
   irregularity: 0.6,
   globularCount: 30,
   radius: 1.05,
-  starCount: 200000,
+  starCount: 150000,
   seed: MILKY_WAY_GENERATION_SEED,
 };

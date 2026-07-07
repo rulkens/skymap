@@ -11,7 +11,7 @@ describe('MILKY_WAY_GALAXY_PARAMS', () => {
     expect(MILKY_WAY_GALAXY_PARAMS.type).toBe('SBb');
     expect(MILKY_WAY_GALAXY_PARAMS.armCount).toBe(4);
     expect(MILKY_WAY_GALAXY_PARAMS.seed).toBe(MILKY_WAY_GENERATION_SEED);
-    expect(MILKY_WAY_GALAXY_PARAMS.starCount).toBe(200_000);
+    expect(MILKY_WAY_GALAXY_PARAMS.starCount).toBe(150_000);
   });
 
   it('classifies as barred (guards against a type-string typo silently changing morphology)', () => {
