@@ -103,7 +103,7 @@ tools/record/recordTour.ts  (Node, Playwright)
         │
         │  per frame:  grant 1000/fps ms budget
         │              await virtualTimeBudgetExpired
-        │              page.screenshot() ──PNG──▶ ffmpeg stdin
+        │              CDP Page.captureScreenshot ──PNG──▶ ffmpeg stdin
         │
         │  stop on hook's tour-ended signal (frame-budget cap as runaway guard)
         ▼
@@ -130,8 +130,11 @@ ffprobe verification (geometry, frame count, duration) printed to the console
    `pauseIfNetworkFetchesPending` policy means virtual time halts while
    fetches (thumbnails, tiers, volumes) are in flight — lazy loads land at
    deterministic _virtual_ moments.
-5. **Capture**: `page.screenshot({ type: 'png' })` after each step, written to
-   ffmpeg's stdin. No frames directory — 20k 4K PNGs would be ~200 GB.
+5. **Capture**: raw CDP `Page.captureScreenshot({ format: 'png', fromSurface: true })`
+   after each step, written to ffmpeg's stdin — NOT Playwright's
+   `page.screenshot()`, whose readiness waits deadlock while the virtual-time
+   budget is exhausted (spike finding). No frames directory — 20k 4K PNGs
+   would be ~200 GB.
 6. **Terminate** on the tour-ended signal; close stdin, await ffmpeg exit,
    run ffprobe on the output and report.
 
@@ -208,13 +211,15 @@ Secondary risks:
 **Spike verdict (2026-07-07): GO, no fallback needed.** 120 frames × 16.67 ms
 grants at 640×360 against the live app: motion on 119/119 consecutive pairs;
 cross-run determinism mean abs diff 0.026 (max 0.068, most frames
-byte-identical); MSDF labels and DOM text rasterize cleanly headless. Two
+byte-identical); MSDF labels and DOM text rasterize cleanly headless. Three
 findings folded into the harness contract: (1) Playwright's default headless
 _shell_ has no WebGPU adapter — launch with `channel: 'chromium'` (full build,
 new headless; adapter works unflagged; `playwright.config.ts`'s
-"headless works by default" comment is stale), and (2) capture must use raw
+"headless works by default" comment is stale), (2) capture must use raw
 CDP `Page.captureScreenshot` — Playwright's `page.screenshot()` readiness
-waits deadlock while the virtual-time budget is exhausted.
+waits deadlock while the virtual-time budget is exhausted, and (3) any DOM
+interaction under paused virtual time goes through `page.evaluate` — locator
+clicks run the same rAF-based readiness dance and deadlock identically.
 
 ## Testing
 

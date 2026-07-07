@@ -179,7 +179,7 @@ export type SkymapRecorderHook = {
 2. `goto <url>/?cinema` — boot in REAL time; await `page.evaluate` on `window.__skymapRecorder.ready`.
 3. CDP `Emulation.setVirtualTimePolicy({ policy: 'pause' })`, then per-frame grants with `pauseIfNetworkFetchesPending` (lazy fetches halt virtual time → deterministic arrivals).
 4. Kick `hook.startTour(id, beats?)` via `page.evaluate` — **do not await it inline**; hold the promise (bridged through `page.exposeFunction` or an evaluated flag the loop polls) and race it against the frame loop.
-5. Loop: grant `1000/fps` ms → await `virtualTimeBudgetExpired` → `page.screenshot({ type: 'png' })` → write the Buffer to ffmpeg's stdin (`spawn('ffmpeg', buildFfmpegArgs({ fps, out }))`, with stdin backpressure respected — await the `write` callback/drain). No frames directory, ever (spec: 20k 4K PNGs ≈ 200 GB).
+5. Loop: grant `1000/fps` ms → await `virtualTimeBudgetExpired` → raw CDP `Page.captureScreenshot({ format: 'png', fromSurface: true })` (NEVER `page.screenshot()` — its readiness waits deadlock under exhausted virtual time; Ledger finding 2) → write the Buffer to ffmpeg's stdin (`spawn('ffmpeg', buildFfmpegArgs({ fps, out }))`, with stdin backpressure respected — await the `write` callback/drain). No frames directory, ever (spec: 20k 4K PNGs ≈ 200 GB).
 6. Stop when the startTour promise resolves; the frame cap — `tourFrameCap(beats.slice(from, to + 1), fps)` over the registry tour's beats — is the runaway guard and progress denominator (print `frame N / cap`). Then: close stdin, await ffmpeg exit code 0, run ffprobe (`-show_streams`: width/height + `nb_frames`), print the report.
 
 **Steps:**
