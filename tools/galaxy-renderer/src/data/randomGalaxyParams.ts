@@ -11,9 +11,9 @@
  * package, model layer included: never own your own entropy source.
  */
 
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import { PARAM_SPEC } from './paramSpec';
-import { classifyHubbleType } from '../model/classifyHubbleType';
+import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
 
 // The spike's fixed 14-entry type roster (html:541) — every Hubble stage the
 // generator knows how to shape, verbatim.

@@ -143,6 +143,7 @@ describe('EngineState type', () => {
       pickInFlight: false,
       pointerDown: false,
       lastFrameUniformBytes: null,
+      lastFrameCam: null,
     };
 
     // Forward-declare so the bias-correction subsystem's narrow
@@ -181,7 +182,8 @@ describe('EngineState type', () => {
         structureMarkerRenderer: null,
         texturedDiskRenderer: null,
         proceduralDiskRenderer: null,
-        milkyWayRenderer: null,
+        milkyWayCloud: null,
+        milkyWayCloudRenderer: null,
         horizonShellRenderer: null,
         volumeFieldRenderer: null,
         flowFieldRenderer: null,
@@ -407,6 +409,7 @@ describe('EngineState type', () => {
         pickInFlight: false,
         pointerDown: false,
         lastFrameUniformBytes: null,
+        lastFrameCam: null,
       },
       gpu: {
         renderer: null,
@@ -426,7 +429,8 @@ describe('EngineState type', () => {
         structureMarkerRenderer: null,
         texturedDiskRenderer: null,
         proceduralDiskRenderer: null,
-        milkyWayRenderer: null,
+        milkyWayCloud: null,
+        milkyWayCloudRenderer: null,
         horizonShellRenderer: null,
         volumeFieldRenderer: null,
         flowFieldRenderer: null,

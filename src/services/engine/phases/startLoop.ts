@@ -75,18 +75,18 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // explicit null-checks turn the phase-ordering assumption into a
   // typed runtime error if `initGpu` is ever skipped/reordered — a `!`
   // bang would assume the ordering silently.
-  const milkyWayRenderer = state.gpu.milkyWayRenderer;
+  const milkyWayCloudRenderer = state.gpu.milkyWayCloudRenderer;
   const horizonShellRenderer = state.gpu.horizonShellRenderer;
   const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
   const proceduralDiskRenderer = state.gpu.proceduralDiskRenderer;
   if (
-    milkyWayRenderer === null ||
+    milkyWayCloudRenderer === null ||
     horizonShellRenderer === null ||
     texturedDiskRenderer === null ||
     proceduralDiskRenderer === null
   ) {
     throw new Error(
-      'startLoop: milkyWay/horizonShell/texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
+      'startLoop: milkyWayCloud/horizonShell/texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
     );
   }
 
@@ -94,8 +94,8 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
 
   // Build the dep bag for `runFrame` once, here in the orchestrator's
   // last phase where every closure-captured local is in scope.  The bag
-  // is stable across frames: the GPU-side renderers (`milkyWayRenderer`,
-  // `texturedQuadRenderer`, …) are read off `state.gpu.*` directly —
+  // is stable across frames: the GPU-side renderers (`milkyWayCloudRenderer`,
+  // `texturedDiskRenderer`, …) are read off `state.gpu.*` directly —
   // mirroring them on `phaseLocals` would be redundant state.  See
   // runFrame.ts's module header for the dep-vs-state rationale.
   const frameDeps: RunFrameDeps = {
@@ -103,7 +103,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     cb: deps.cb,
     device: phaseLocals.device,
     context: phaseLocals.context,
-    milkyWayRenderer,
+    milkyWayCloudRenderer,
     horizonShellRenderer,
     filamentRenderer: state.gpu.filamentRenderer!,
     texturedDiskRenderer,

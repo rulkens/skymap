@@ -40,11 +40,11 @@
 
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { ReferenceGalaxy } from '../../@types/data/ReferenceGalaxy';
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyDescriptor } from '../../@types/matcher/GalaxyDescriptor';
-import type { GalaxyCategory } from '../../@types/model/GalaxyCategory';
+import type { GalaxyCategory } from '../../../../src/@types/galaxy/GalaxyCategory';
 import type { AppStore } from './createStore';
-import { classifyHubbleType } from '../model/classifyHubbleType';
+import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
 import { elevationFromQ } from '../matcher/elevationFromQ';
 import { autoFit } from '../matcher/autoFit';
 import { computeDescriptor } from '../matcher/computeDescriptor';

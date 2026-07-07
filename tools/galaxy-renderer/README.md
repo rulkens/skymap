@@ -53,7 +53,7 @@ same JSON on the clipboard for pasting elsewhere.
 ## Generation
 
 Each galaxy is built by two GPU compute passes — `generateStars.wesl` and
-`generateDust.wesl`, both linked from the shared `lib/generate.wesl` (bind
+`generateDust.wesl`, both linked from the shared `galaxyGen/generate.wesl` (bind
 group, population builders, RNG). Changing a galaxy's params triggers exactly
 one dispatch of this pair (`createGalaxyEngine`'s `setParams`), not a
 per-frame step: the CPU side carves _layouts_ — for every star and dust
@@ -145,7 +145,7 @@ intended behaviour.
 barred-spiral morphology (NGC 1300 / NGC 1365) rather than as straight
 parallel rails: each lane hugs its bar half's leading edge, then the pair
 swaps sides through the nucleus via a tanh S-curve (`BAR_LANE_S_STEEP` in
-`lib/generate.wesl` sets how sharply the lanes cross), while an antisymmetric
+`galaxyGen/generate.wesl` sets how sharply the lanes cross), while an antisymmetric
 cubic bow (`BAR_LANE_BOW`) peels the lane ends outward toward the arm roots,
 in the spiral's own rotational sense. Both are live-tuned knobs at the top of
 `buildBarDust`.

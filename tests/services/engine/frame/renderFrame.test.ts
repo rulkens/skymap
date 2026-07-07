@@ -23,6 +23,10 @@ import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import {
+  MILKY_WAY_FADE_FULL_PX,
+  MILKY_WAY_RADIUS_MPC,
+} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
@@ -135,11 +139,29 @@ function makeMockPointRenderer(callLog: CallLog) {
   } as any;
 }
 
-function makeMockMilkyWayRenderer(callLog: CallLog) {
+function makeMockMilkyWayCloudRenderer(callLog: CallLog) {
   return {
     draw: vi.fn(() => {
-      callLog.push('milkyWayRenderer.draw');
+      callLog.push('milkyWayCloudRenderer.draw');
     }),
+    destroy: vi.fn(),
+  } as any;
+}
+
+/**
+ * Stub the generated-cloud handle the milky-way pass reads off
+ * `state.gpu.milkyWayCloud`. `buffers()` returns an inert snapshot — the
+ * renderer mock never touches its contents.
+ */
+function makeMockMilkyWayCloud() {
+  return {
+    buffers: () => ({
+      starBuf: {} as GPUBuffer,
+      starCount: 0,
+      dustBuf: null,
+      dustCount: 0,
+    }),
+    regenerate: vi.fn(),
     destroy: vi.fn(),
   } as any;
 }
@@ -177,22 +199,34 @@ function makeMockProceduralDiskRenderer() {
   return { draw: vi.fn() } as any;
 }
 
+// Fixture camera optics — the ctx built in makeInput() mirrors these.
+const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;
+const FIXTURE_CANVAS_HEIGHT_PX = 720;
+
+// Camera distance DERIVED from the Milky-Way fade knobs: at this distance
+// the disc's apparent diameter is twice MILKY_WAY_FADE_FULL_PX under the
+// fixture optics, so milkyWayFadeAlpha is 1 by construction and the MW pass
+// stays alive for the ordering tests. A visual-gate re-tune of the fade
+// band moves this distance instead of silently disabling the pass under a
+// magic-number camera.
+const MW_ALIVE_DIST_MPC =
+  (2 * MILKY_WAY_RADIUS_MPC * (FIXTURE_CANVAS_HEIGHT_PX / (2 * Math.tan(FIXTURE_FOV_Y_RAD / 2)))) /
+  (2 * MILKY_WAY_FADE_FULL_PX);
+
 function makeCam(): OrbitCamera {
-  // Camera distance must be inside the Milky-Way fade band
-  // (FADE_INNER_MPC = 10 ... FADE_OUTER_MPC = 50) so the impostor's
-  // distance-fade gate doesn't suppress the draw call in tests that
-  // need to assert MW ordering.  5 Mpc is comfortably inside the
-  // full-alpha (≤10 Mpc) regime.
+  // Camera close enough that the Milky-Way disc sits safely above its FULL
+  // apparent size (MW_ALIVE_DIST_MPC) — the fade gate must not suppress
+  // the draw call in tests that assert MW ordering.
   return {
     target: [0, 0, 0] as unknown as Float32Array,
-    distance: 5,
+    distance: MW_ALIVE_DIST_MPC,
     yaw: 0,
     pitch: 0,
-    fovYRad: (60 * Math.PI) / 180,
+    fovYRad: FIXTURE_FOV_Y_RAD,
     aspect: 16 / 9,
     near: 0.001,
     far: 10000,
-    position: new Float32Array([0, 0, 5]),
+    position: new Float32Array([0, 0, MW_ALIVE_DIST_MPC]),
   } as unknown as OrbitCamera;
 }
 
@@ -207,7 +241,8 @@ function makeInput(
   const context = makeFakeContext(swapView, callLog);
   const hdrTargetView = makeFakeHdrView();
   const pointRenderer = makeMockPointRenderer(callLog);
-  const milkyWayRenderer = makeMockMilkyWayRenderer(callLog);
+  const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
+  const milkyWayCloud = makeMockMilkyWayCloud();
   const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
   const postProcess = makeMockPostProcess(callLog, hdrTargetView);
   // Minimal VolumeOffscreen stub — renderFrame's existing tests don't
@@ -250,7 +285,7 @@ function makeInput(
   // `runFrame` derives these once via `deriveFrameContext()` and forwards
   // a single struct. The test mirrors that wiring.
   const canvasWidth = 1280;
-  const canvasHeight = 720;
+  const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
   const viewProj = new Float32Array(16) as unknown as Mat4;
   const ctx = {
     isReady: true as const,
@@ -262,7 +297,7 @@ function makeInput(
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
-    fovYRad: (60 * Math.PI) / 180,
+    fovYRad: FIXTURE_FOV_Y_RAD,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
     focus: {
@@ -286,7 +321,8 @@ function makeInput(
     hdrTargetView,
     postProcess,
     pointRenderer,
-    milkyWayRenderer,
+    milkyWayCloudRenderer,
+    milkyWayCloud,
     horizonShellRenderer,
     thumbnails,
     texturedQuadRenderer,
@@ -321,6 +357,8 @@ function makeInput(
           volumeFieldRenderer: null,
           flowFieldRenderer: null,
           structureMarkerRenderer: null,
+          // milkyWayPass.draw reads the generated cloud buffers off this handle.
+          milkyWayCloud,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
         // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the
@@ -348,13 +386,14 @@ function makeInput(
         },
         selection: { select: settings.selected },
         assetSlots: { flow: null },
-        // pointSpritesPass stashes the packed uniform bytes onto
-        // state.picking.lastFrameUniformBytes after each draw so the pick
-        // paths can snapshot the last frame's camera state.  The bag must
-        // exist; all other fields are at their default 'nothing in flight'
-        // values — only lastFrameUniformBytes is mutated by the pass.
+        // pointSpritesPass stashes the packed uniform bytes + camera
+        // snapshot onto state.picking after each draw so the pick paths
+        // can replay the last frame's camera state.  The bag must exist;
+        // all other fields are at their default 'nothing in flight'
+        // values — only the two snapshots are mutated by the pass.
         picking: {
           lastFrameUniformBytes: null as ArrayBuffer | null,
+          lastFrameCam: null,
           pickInFlight: false,
           pointerDown: false,
         },
@@ -372,7 +411,7 @@ function makeInput(
       } as never,
       device,
       context,
-      milkyWayRenderer,
+      milkyWayCloudRenderer,
       horizonShellRenderer,
       filamentRenderer: null,
       volumeFieldRenderer: null,
@@ -450,8 +489,12 @@ describe('renderFrame', () => {
     // selected null → 0xffffffff packed sentinel
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
     expect(drawSettings.visibleSourceMask).toBe(fx.settings.visibleSourceMask);
-    // camPos is a 3-tuple snapshot from cam.position
-    expect(Array.from(drawSettings.camPosWorld as ArrayLike<number>)).toEqual([0, 0, 5]);
+    // camPos is a 3-tuple snapshot from cam.position (asserted against the
+    // fixture camera, not a literal — the camera distance derives from the
+    // Milky-Way fade knobs).
+    expect(Array.from(drawSettings.camPosWorld as ArrayLike<number>)).toEqual(
+      Array.from(fx.cam.position),
+    );
     // pxPerRad = h / (2 · tan(fovY/2))
     const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
     expect(drawSettings.pxPerRad as number).toBeCloseTo(expectedPxPerRad, 6);
@@ -514,7 +557,7 @@ describe('renderFrame', () => {
       'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'pointRenderer.draw',
-      'milkyWayRenderer.draw',
+      'milkyWayCloudRenderer.draw',
       'pass.end',
       'postProcess.draw',
       'encoder.finish',
@@ -525,7 +568,7 @@ describe('renderFrame', () => {
       'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'pointRenderer.draw',
-      'milkyWayRenderer.draw',
+      'milkyWayCloudRenderer.draw',
       'pass.end',
       'postProcess.draw',
       'encoder.finish',
@@ -540,7 +583,7 @@ describe('renderFrame', () => {
     renderFrame(fx.input);
     const log = fx.callLog;
     const idxPoint = log.indexOf('pointRenderer.draw');
-    const idxMw = log.indexOf('milkyWayRenderer.draw');
+    const idxMw = log.indexOf('milkyWayCloudRenderer.draw');
     const idxEnd = log.indexOf('pass.end');
     expect(idxPoint).toBeGreaterThanOrEqual(0);
     expect(idxMw).toBeGreaterThan(idxPoint);
@@ -607,7 +650,7 @@ describe('renderFrame', () => {
     renderFrame(fx2.input);
     expect(fx2.pointRenderer.draw).not.toHaveBeenCalled();
     // Milky-way still draws — the override is per-pass, not global.
-    expect(fx2.milkyWayRenderer.draw).toHaveBeenCalledTimes(1);
+    expect(fx2.milkyWayCloudRenderer.draw).toHaveBeenCalledTimes(1);
   });
 
   it('does not skip a pass whose name maps to false in disabledPasses', () => {

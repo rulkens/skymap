@@ -156,6 +156,7 @@ function makeState({
     },
     picking: {
       lastFrameUniformBytes: uniformBytes,
+      lastFrameCam: null,
       pickInFlight: false,
       pointerDown: false,
     },

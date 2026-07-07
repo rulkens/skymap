@@ -88,7 +88,12 @@ export const pointSpritesPass: Pass = {
     // draw returns the packed PointUniforms ArrayBuffer it submitted to
     // the GPU, or null when there are zero loaded catalogs. Stash a
     // non-null return so the pick paths can replay this frame's camera
-    // without re-running the per-frame camera drivers. A null return
+    // without re-running the per-frame camera drivers, and stash the
+    // plain-TS camera facts (position + fovY) beside it for the CPU-side
+    // Milky-Way pick helpers — one write site, so both snapshots always
+    // describe the same frame. `drawCamPos` is already a fresh
+    // non-aliasing tuple (frameContext snapshots the assembled camera),
+    // so the stash can hold the reference without a copy. A null return
     // (zero catalogs) leaves any prior snapshot in place — both pick
     // paths gate on catalogs.size > 0 and won't consume a stale snapshot.
     const bytes = renderer.draw(pass, vp, [width, height], {
@@ -122,6 +127,9 @@ export const pointSpritesPass: Pass = {
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
     });
-    if (bytes !== null) state.picking.lastFrameUniformBytes = bytes;
+    if (bytes !== null) {
+      state.picking.lastFrameUniformBytes = bytes;
+      state.picking.lastFrameCam = { position: drawCamPos, fovYRad: ctx.fovYRad };
+    }
   },
 };

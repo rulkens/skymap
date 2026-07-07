@@ -25,7 +25,7 @@
  * plain per-click reseed doesn't).
  */
 import { type ReactNode } from 'react';
-import type { GalaxyParams } from '../../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { ParamSpecEntry } from '../../../@types/data/ParamSpecEntry';
 import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
@@ -36,7 +36,7 @@ import { sectionToggled, autoRotateSet } from '../../state/slices/uiSlice';
 import { PARAM_SPEC } from '../../data/paramSpec';
 import { hubbleTypePatch } from '../../data/hubbleStagePatches';
 import { randomGalaxyParams } from '../../data/randomGalaxyParams';
-import { classifyHubbleType } from '../../model/classifyHubbleType';
+import { classifyHubbleType } from '../../../../../src/services/gpu/galaxy/classifyHubbleType';
 import CollapsibleSection from '../CollapsibleSection/CollapsibleSection';
 import ParamSlider from '../ParamSlider/ParamSlider';
 import TonemapSelect from '../TonemapSelect/TonemapSelect';

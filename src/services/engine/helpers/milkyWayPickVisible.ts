@@ -1,33 +1,39 @@
 /**
- * milkyWayPickVisible — is the Milky-Way disk on screen this frame?
+ * milkyWayPickVisible — is the Milky-Way disk on screen in the frame the
+ * pick pass replays?
  *
  * The MW pick billboard must contribute a hit ONLY while the disk is
- * actually drawn, so a faded-out MW never claims a click.  This predicate
- * mirrors `milkyWayPass.enabled` beat-for-beat — the right invariant is
- * "pickable iff the disk is rendered", so the pick gate and the draw gate
- * read the same two conditions:
+ * actually drawn, so a faded-out MW never claims a click.  The predicate
+ * itself lives in `milkyWayVisible` — the ONE home shared with
+ * `milkyWayPass.enabled`, so the pick gate can't drift from the draw gate.
+ * This adapter's whole job is choosing the CAMERA the predicate answers
+ * for:
  *
- *   1. The user toggle (or its fade-out tail): `settings.milkyWay.enabled`
- *      OR `opacityOf({ kind: 'milkyWay' }) > 0`.
- *   2. The camera-distance fade band: `milkyWayFadeAlpha(camDist) > 0`
- *      (full strength inside 10 Mpc, smoothstep out to 0 at 50 Mpc).
+ * The camera facts come from `state.picking.lastFrameCam` — the snapshot
+ * the point-sprites pass stashes alongside `lastFrameUniformBytes` — NOT
+ * from the `state.cam` drag register.  The pick pass renders against the
+ * last visual frame's camera, so the gate must agree with THAT frame; the
+ * drag register only re-seeds when a drag starts and lags every
+ * driver-driven move (wheel zoom, tweens), which would leave the gate
+ * answering for a stale pose.  Null snapshot (no visual frame yet) means
+ * nothing has been rendered to pick against — not visible.
  *
- * Keeping this in a helper (rather than inlining the predicate at every
- * pick call site) means the pick gate can't drift from the pass's
- * `enabled` check.  Threaded into the pick renderer as a callback so the
- * renderer itself stays free of EngineState — it just draws when told.
+ * `viewportHeightPx` is the backing-store canvas height (texture pixels) —
+ * the same measure the pick pass renders against and `milkyWayPass` reads
+ * off `ctx.canvasSize`.
+ *
+ * Threaded into the pick renderer as a callback so the renderer itself
+ * stays free of EngineState — it just draws when told.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import { milkyWayFadeAlpha } from '../../../utils/math/milkyWayFadeAlpha';
+import { milkyWayVisible } from './milkyWayVisible';
 
-export function milkyWayPickVisible(state: EngineState): boolean {
-  if (!state.cam) return false;
-  const togglePart =
-    state.settings.milkyWay.enabled ||
-    state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now()) > 0;
-  if (!togglePart) return false;
-  const p = state.cam.position;
-  const camDistMpc = Math.hypot(p[0]!, p[1]!, p[2]!);
-  return milkyWayFadeAlpha(camDistMpc) > 0;
+export function milkyWayPickVisible(state: EngineState, viewportHeightPx: number): boolean {
+  const cam = state.picking.lastFrameCam;
+  if (!cam) return false;
+  // Event-time now: picks fire on pointer events, outside the frame loop,
+  // so the wall clock IS this path's clock (the deterministic ctx.nowMs
+  // seam only exists inside a frame).
+  return milkyWayVisible(state, cam.position, cam.fovYRad, viewportHeightPx, performance.now());
 }

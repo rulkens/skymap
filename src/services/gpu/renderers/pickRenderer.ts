@@ -97,19 +97,18 @@ export function createPickRenderer(
   // `milkyWayPickRenderer.pickMilkyWay(pass)` so the galactic centre is
   // clickable.  Optional so tests and pre-init paths can omit it.
   milkyWayPickRenderer?: MilkyWayPickRenderer,
-  // Visibility gate + size for the Milky-Way pick draw, folded into one
-  // callback.  Returns the screen-pixel half-extent of the hit billboard
-  // (the apparent on-screen radius of the disc, floored — the SAME px the
-  // visible selection ring uses) while the MW disk is on screen, or `null`
-  // to skip the draw entirely.  The MW must contribute a hit ONLY while
-  // its disk is on screen (the `{ kind: 'milkyWay' }` fade opacity > 0 AND
-  // the camera is inside the distance-fade band) — otherwise a faded-out
-  // MW would still be clickable.  Both gate AND size are supplied as data
-  // rather than read off EngineState so this renderer stays dumb: the
-  // engine owns the fade/camera state and the sizing math.  Defaults to
-  // "never visible" so a picker constructed without the gate never draws
-  // the MW.
-  mwHalfExtentPx: () => number | null = () => null,
+  // Visibility gate for the Milky-Way pick draw.  The MW must contribute
+  // a hit ONLY while its disk is on screen (the `{ kind: 'milkyWay' }`
+  // fade opacity > 0 AND the camera is inside the distance-fade band) —
+  // otherwise a faded-out MW would still be clickable.  Only the GATE is
+  // supplied: the hit billboard's SIZE is computed in the MW pick vertex
+  // shader from this pass's own camera uniforms (the same apparent-size
+  // derivation galaxy points use), so there is no sizing callback to
+  // thread.  Supplied as data rather than read off EngineState so this
+  // renderer stays dumb: the engine owns the fade/camera state.  Defaults
+  // to "never visible" so a picker constructed without the gate never
+  // draws the MW.
+  mwPickVisible: () => boolean = () => false,
 ): PickRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
   const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
@@ -396,16 +395,21 @@ export function createPickRenderer(
       proceduralDiskRenderer.pickDisks(pass);
     }
 
-    // Milky-Way pick: a single billboard at the galactic centre, sized to
-    // the disc's apparent on-screen radius (matching the selection ring),
-    // drawn only while the disk is on screen (a `null` half-extent gates a
-    // faded-out MW out).  Shared depth means a closer galaxy still claims
-    // the pixel.
-    if (milkyWayPickRenderer) {
-      const mwHalfExtent = mwHalfExtentPx();
-      if (mwHalfExtent !== null) {
-        milkyWayPickRenderer.pickMilkyWay(pass, mwHalfExtent);
-      }
+    // Milky-Way pick: a single billboard at the galactic centre, drawn
+    // only while the disk is on screen (a closed gate keeps a faded-out
+    // MW unclickable).  Its apparent size is computed in the MW vertex
+    // shader from the SAME pickUniformBuffer bytes uploaded above, so
+    // the hit target always matches the replayed frame.  Shared depth
+    // means a closer galaxy still claims the pixel.
+    //
+    // Re-bind @group(0) first: the ring / disk picks above bind their
+    // own (smaller) uniforms at slot 0, and the MW vertex shader reads
+    // the pick camera mirror — inheriting whatever group the previous
+    // draw left bound would read the wrong buffer (and fails validation
+    // outright once the mirror's read extent exceeds that buffer).
+    if (milkyWayPickRenderer && mwPickVisible()) {
+      pass.setBindGroup(0, pickUniformBindGroup);
+      milkyWayPickRenderer.pickMilkyWay(pass);
     }
 
     pass.end();
@@ -423,7 +427,7 @@ export function createPickRenderer(
   const hasAnyPickTarget = (sourceList: readonly PickSourceDraw[]): boolean =>
     sourceList.length > 0 ||
     (structureMarkerRenderer !== undefined && structureMarkerRenderer.markerCount() > 0) ||
-    (milkyWayPickRenderer !== undefined && mwHalfExtentPx() !== null);
+    (milkyWayPickRenderer !== undefined && mwPickVisible());
 
   async function pick(
     viewportPx: Vec2,
@@ -450,7 +454,14 @@ export function createPickRenderer(
     const py = Math.max(0, Math.min(vpH - 1, Math.floor(pickYPx)));
 
     const encoder = device.createCommandEncoder();
-    const pt = recordPickPass(encoder, sourceList, 'pick', pointSizePx, uniformBytes, timingDescriptor);
+    const pt = recordPickPass(
+      encoder,
+      sourceList,
+      'pick',
+      pointSizePx,
+      uniformBytes,
+      timingDescriptor,
+    );
 
     // `bytesPerRow` must be a multiple of 256; staging buffer is
     // pre-sized to 256 even though we only read 4 bytes.
@@ -503,7 +514,14 @@ export function createPickRenderer(
     ensureTextures(vpW, vpH);
 
     const encoder = device.createCommandEncoder({ label: 'pick-debug-encoder' });
-    const pt = recordPickPass(encoder, sourceList, 'pick-debug', pointSizePx, uniformBytes, undefined);
+    const pt = recordPickPass(
+      encoder,
+      sourceList,
+      'pick-debug',
+      pointSizePx,
+      uniformBytes,
+      undefined,
+    );
     device.queue.submit([encoder.finish()]);
     return pt;
   }

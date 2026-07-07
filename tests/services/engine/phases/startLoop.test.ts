@@ -74,7 +74,7 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
   return {
     sources: { catalogs },
     gpu: {
-      milkyWayRenderer: { label: 'milkyWay' } as never,
+      milkyWayCloudRenderer: { label: 'milkyWayCloud' } as never,
       horizonShellRenderer: { label: 'horizonShell' } as never,
       texturedDiskRenderer: { label: 'disk' } as never,
       proceduralDiskRenderer: { label: 'proc' } as never,
@@ -145,7 +145,7 @@ describe('startLoop', () => {
     // expected renderer + canvas references threaded from state/deps.
     const calledFrameDeps = callArgs[1] as Record<string, unknown>;
     expect(calledFrameDeps.canvas).toBe(deps.canvas);
-    expect(calledFrameDeps.milkyWayRenderer).toBe(state.gpu.milkyWayRenderer);
+    expect(calledFrameDeps.milkyWayCloudRenderer).toBe(state.gpu.milkyWayCloudRenderer);
     expect(calledFrameDeps.texturedDiskRenderer).toBe(state.gpu.texturedDiskRenderer);
     expect(calledFrameDeps.filamentRenderer).toBe(state.gpu.filamentRenderer);
     expect(typeof callArgs[2]).toBe('number'); // performance.now() snapshot
@@ -170,11 +170,11 @@ describe('startLoop', () => {
     // construction site so reordering bugs surface here, not five
     // frames later in some renderer's draw() call.
     const state = makeState({ cloudCount: 1 });
-    state.gpu.milkyWayRenderer = null as never;
+    state.gpu.milkyWayCloudRenderer = null as never;
     const deps = makeDeps();
 
     await expect(startLoop(state, deps)).rejects.toThrow(
-      /milkyWay\/horizonShell\/texturedDisk\/proceduralDisk renderers must be initialised/,
+      /milkyWayCloud\/horizonShell\/texturedDisk\/proceduralDisk renderers must be initialised/,
     );
   });
 });

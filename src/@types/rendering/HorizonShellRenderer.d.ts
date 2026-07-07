@@ -4,7 +4,7 @@
  * origin (the catalog observer) with a Fresnel-rim fragment shader,
  * marking the comoving radius to the cosmic particle horizon.
  *
- * Sibling to `MilkyWayRenderer` (also a single, world-anchored impostor).
+ * A single, world-anchored impostor.
  * Rather than a tessellated mesh — which suffers fp32 dropouts at the
  * 14-Gpc shell radius — the shell is one fullscreen quad whose fragment
  * stage intersects each per-pixel view ray with the sphere analytically,

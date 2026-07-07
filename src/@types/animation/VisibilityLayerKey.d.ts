@@ -18,7 +18,7 @@
  * kinds, because an intent row can split a single kind:
  *
  *   - the `milkyWay` kind splits into two keys — `milkyWayDisk` (the
- *     procedural disk impostor) and `milkyWayLabel` (its text label) —
+ *     star/dust point cloud) and `milkyWayLabel` (its text label) —
  *     because a tour may want to fade the label without the disk.
  *   - the `structure` kind splits into `structureRing` (the marker rings)
  *     and `structureLabel` (the category labels), for the same reason.

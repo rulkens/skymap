@@ -19,7 +19,7 @@ import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/dat
 import type { GalaxyEngineHandle } from '../../../../tools/galaxy-renderer/@types/engine/GalaxyEngineHandle';
 import type { GalaxyDescriptor } from '../../../../tools/galaxy-renderer/@types/matcher/GalaxyDescriptor';
 import type { ReferenceGalaxy } from '../../../../tools/galaxy-renderer/@types/data/ReferenceGalaxy';
-import type { GalaxyParams } from '../../../../tools/galaxy-renderer/@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 
 const SIZE = 24; // tiny grab size — keeps computeDescriptor's pixel loops fast
 

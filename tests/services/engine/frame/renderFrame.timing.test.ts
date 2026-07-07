@@ -39,6 +39,10 @@ import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import {
+  MILKY_WAY_FADE_FULL_PX,
+  MILKY_WAY_RADIUS_MPC,
+} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
@@ -129,17 +133,31 @@ function makePostProcess() {
   };
 }
 
+// Fixture camera optics — the ctx built in makeMinimalInputWithTiming()
+// mirrors these.
+const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;
+const FIXTURE_CANVAS_HEIGHT_PX = 720;
+
+// Camera distance DERIVED from the Milky-Way fade knobs: at this distance
+// the disc's apparent diameter is twice MILKY_WAY_FADE_FULL_PX under the
+// fixture optics, so milkyWayFadeAlpha is 1 by construction and the
+// milky-way pass registers its timing slot. A visual-gate re-tune of the
+// fade band moves this distance instead of silently dropping the slot.
+const MW_ALIVE_DIST_MPC =
+  (2 * MILKY_WAY_RADIUS_MPC * (FIXTURE_CANVAS_HEIGHT_PX / (2 * Math.tan(FIXTURE_FOV_Y_RAD / 2)))) /
+  (2 * MILKY_WAY_FADE_FULL_PX);
+
 function makeCam(): OrbitCamera {
   return {
     target: [0, 0, 0] as unknown as Float32Array,
-    distance: 5,
+    distance: MW_ALIVE_DIST_MPC,
     yaw: 0,
     pitch: 0,
-    fovYRad: (60 * Math.PI) / 180,
+    fovYRad: FIXTURE_FOV_Y_RAD,
     aspect: 16 / 9,
     near: 0.001,
     far: 10000,
-    position: new Float32Array([0, 0, 5]),
+    position: new Float32Array([0, 0, MW_ALIVE_DIST_MPC]),
   } as unknown as OrbitCamera;
 }
 
@@ -159,7 +177,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const device = makeFakeDevice(env.encoder);
   const context = makeFakeContext();
   const pointRenderer = makeLoggingRenderer();
-  const milkyWayRenderer = makeLoggingRenderer();
+  const milkyWayCloudRenderer = makeLoggingRenderer();
   const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
@@ -167,7 +185,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
 
   const cam = makeCam();
   const canvasWidth = 1280;
-  const canvasHeight = 720;
+  const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
   const viewProj = new Float32Array(16) as unknown as Mat4;
 
   const ctx = {
@@ -180,7 +198,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
-    fovYRad: (60 * Math.PI) / 180,
+    fovYRad: FIXTURE_FOV_Y_RAD,
     renderer: pointRenderer,
     postProcess,
     // texturedDisks slot is referenced from frameContext shape;
@@ -220,6 +238,10 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         volumeFieldRenderer: null,
         flowFieldRenderer: null,
         structureMarkerRenderer: null,
+        // milkyWayPass.draw reads the generated cloud buffers off this handle.
+        milkyWayCloud: {
+          buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }),
+        },
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
       // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
@@ -245,10 +267,12 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       },
       selection: { select: settings.selected },
       assetSlots: { flow: null },
-      // pointSpritesPass stashes the packed uniform bytes here after each
-      // draw — the bag must exist so the property write doesn't throw.
+      // pointSpritesPass stashes the packed uniform bytes + camera
+      // snapshot here after each draw — the bag must exist so the
+      // property write doesn't throw.
       picking: {
         lastFrameUniformBytes: null as ArrayBuffer | null,
+        lastFrameCam: null,
         pickInFlight: false,
         pointerDown: false,
       },
@@ -264,7 +288,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     } as never,
     device,
     context,
-    milkyWayRenderer: milkyWayRenderer as never,
+    milkyWayCloudRenderer: milkyWayCloudRenderer as never,
     horizonShellRenderer: horizonShellRenderer as never,
     filamentRenderer: null,
     volumeFieldRenderer: null,
@@ -297,9 +321,10 @@ describe('renderFrame — timing service hookup', () => {
     // tone-map pass PLUS once for the combined UI overlay.  In this
     // fixture the HDR side is point-sprites + milky-way (the others are
     // gated off via null subsystems / null optional renderers; the
-    // horizon shell is gated off too — its distance fade is 0 at this
-    // fixture's ~5-Mpc camera, the same close-volume framing that lights
-    // the Milky-Way impostor); the tone-map slot is unconditional because
+    // horizon shell is gated off too — its fade-in band starts at
+    // cosmological distances, and MW_ALIVE_DIST_MPC is the close-volume
+    // framing that lights the Milky-Way impostor); the tone-map slot is
+    // unconditional because
     // postProcess.draw runs every frame; the ui-overlay slot fires even
     // with no marker-lines / labels because the timing-enabled path
     // always opens the UI overlay pass so its slot reports.

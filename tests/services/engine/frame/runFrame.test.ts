@@ -119,6 +119,7 @@ function makeState(): EngineState {
       pickInFlight: false,
       pointerDown: false,
       lastFrameUniformBytes: null as ArrayBuffer | null,
+      lastFrameCam: null,
     },
     gpu: {
       renderer: null,
@@ -198,7 +199,7 @@ function makeDeps(store = makeStore()): RunFrameDeps {
     cb: { store } as unknown as RunFrameDeps['cb'],
     device: {} as unknown as GPUDevice,
     context: {} as unknown as GPUCanvasContext,
-    milkyWayRenderer: {} as unknown as RunFrameDeps['milkyWayRenderer'],
+    milkyWayCloudRenderer: {} as unknown as RunFrameDeps['milkyWayCloudRenderer'],
     horizonShellRenderer: {} as unknown as RunFrameDeps['horizonShellRenderer'],
     filamentRenderer: {} as unknown as RunFrameDeps['filamentRenderer'],
     texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer'],

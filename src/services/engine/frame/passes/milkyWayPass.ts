@@ -1,23 +1,34 @@
 /**
- * milkyWayPass — procedural Milky Way impostor at the world origin.
+ * milkyWayPass — the Milky Way star/dust point cloud at the galactic
+ * centre (`MILKY_WAY_CENTER_WORLD`, the ~8 kpc Sgr A* offset from the
+ * observer origin, applied via the model matrix).
  *
  * ### What it draws
  *
- * A view-aligned billboard centred on the world origin (the Milky
- * Way's adopted barycentre in catalogue coordinates) carrying a
- * full-screen procedural raymarched spiral.  Both vertex and
- * fragment stages consume the live world-space camera position so
- * the synthetic vantage rotates with the user's orbit instead of
- * presenting the same hard-coded view every frame.
+ * An instanced point cloud generated on-GPU (`milkyWayCloud` owns the
+ * star/dust instance buffers), drawn by `milkyWayCloudRenderer` in two
+ * pipelines: an ADDITIVE star pass (soft radial glows that sum their
+ * light) followed by a MULTIPLICATIVE dust pass (per-channel
+ * transmittance that darkens + reddens the light behind it).  The
+ * sprites are camera-facing billboards built from the live camera basis
+ * each frame; the cloud's world placement (fixed galactic orientation +
+ * scale + the Sgr A* centre offset) is a model matrix built once and
+ * reused.
  *
  * ### When it draws
  *
- * Two gates, both in `enabled`:
+ * `enabled` delegates to `milkyWayVisible` — the ONE home of the MW
+ * visibility predicate, shared with the pick gate
+ * (`milkyWayPickVisible`) so draw and pick can't drift.  Two gates:
  *
- *   1. `state.settings.milkyWay.enabled` — user toggle.
- *   2. `milkyWayFadeAlpha(camDist) > 0` — camera-distance fade band
- *      defined in `utils/math/milkyWayFadeAlpha.ts` (full strength inside
- *      10 Mpc, smoothstep out to 0 at 50 Mpc).
+ *   1. `state.settings.milkyWay.enabled` — user toggle — OR a still-
+ *      nonzero toggle fade (`fades.opacityOf`), which keeps the pass
+ *      alive through the ~100 ms fade-out tail.
+ *   2. `milkyWayFadeAlpha(camDist, fovY, viewportH) > 0` — the
+ *      apparent-size fade band defined in
+ *      `services/gpu/galaxy/milkyWayFadeAlpha.ts` (full strength while the
+ *      disc spans at least `MILKY_WAY_FADE_FULL_PX` on screen, gone once it
+ *      shrinks to `MILKY_WAY_FADE_GONE_PX`).
  *
  * Both gates live in `enabled` so that when the camera flies well
  * beyond the local volume the whole pass is skipped — no
@@ -29,8 +40,9 @@
  *
  * ### What it reads
  *
- * - `deps.milkyWayRenderer`
- * - `ctx.vp`, `ctx.canvasSize`, `ctx.drawCamPos`
+ * - `deps.milkyWayCloudRenderer` (the two-pass star/dust draw)
+ * - `state.gpu.milkyWayCloud` (the generated instance buffers)
+ * - `ctx.cam` (billboard basis), `ctx.vp`, `ctx.canvasSize`, `ctx.drawCamPos`
  * - `state.settings.milkyWay.enabled` (user toggle, via the gate)
  *
  * ### Why drawn LAST inside the HDR pass
@@ -44,52 +56,60 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
-import { milkyWayFadeAlpha } from '../../../../utils/math/milkyWayFadeAlpha';
-import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
+import { milkyWayFadeAlpha } from '../../../gpu/galaxy/milkyWayFadeAlpha';
+import { milkyWayVisible } from '../../helpers/milkyWayVisible';
+import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
+import { milkyWayModelMatrix } from '../../../gpu/galaxy/milkyWayModelMatrix';
+
+// The cloud's world placement never changes (fixed galactic orientation +
+// scale + the Sgr A* centre offset), so build the model matrix once and
+// reuse the same Float32Array every frame rather than re-deriving twelve
+// products per draw.
+let milkyWayModel: Float32Array | null = null;
 
 export const milkyWayPass: Pass = {
   name: 'milky-way',
 
   enabled(state, ctx) {
-    // State boolean is the user's intent; opacityOf > 0 keeps the
-    // pass alive through the ~100 ms toggle fade-out tail. The
-    // distance-based milkyWayFadeAlpha still gates separately — if
-    // the camera is too far away from the Milky Way to render it,
-    // skip even when the toggle is on.
-    const togglePart =
-      state.settings.milkyWay.enabled ||
-      state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, ctx.nowMs) > 0;
-    if (!togglePart) return false;
-    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return milkyWayFadeAlpha(camDistMpc) > 0;
+    // The shared predicate (toggle-or-fade-tail AND apparent-size band),
+    // answered for THIS frame's camera and clock — the frame-frozen ctx
+    // snapshot (ctx.nowMs is the deterministic time seam; passes never
+    // read the wall clock directly).
+    return milkyWayVisible(state, ctx.drawCamPos, ctx.fovYRad, ctx.canvasSize.height, ctx.nowMs);
   },
 
   draw(pass, ctx, state, deps) {
+    // The cloud buffers live on `state.gpu` (nullable, like every GPU handle)
+    // rather than in `deps`. They are non-null once the frame loop runs, but
+    // `enabled` doesn't narrow them, so guard here — the pre-bootstrap window
+    // is the only case this fires.
+    const cloud = state.gpu.milkyWayCloud;
+    if (cloud === null) return;
+
     const { vp, canvasSize, drawCamPos } = ctx;
     const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
-    // Composite the distance-based fade with the registry-supplied
-    // toggle opacity. The renderer already accepts a scalar fadeAlpha
-    // CPU-side param, so multiplying two opacities here is the
-    // minimal-change path — no shader edits, no FadeUniforms binding.
+    // Composite the apparent-size fade with the registry-supplied
+    // toggle opacity, both on the frame clock (ctx.nowMs). The renderer
+    // accepts a scalar fadeAlpha CPU-side param, so multiplying two
+    // opacities here is the minimal-change path — no shader edits, no
+    // FadeUniforms binding.
     const toggleOpacity = state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, ctx.nowMs);
-    const fadeAlpha = milkyWayFadeAlpha(camDistMpc) * toggleOpacity;
+    const fadeAlpha = milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, canvasSize.height) * toggleOpacity;
 
-    deps.milkyWayRenderer.draw(
-      pass,
-      vp as Float32Array,
-      [canvasSize.width, canvasSize.height],
+    // Camera-facing billboard axes for the star/dust sprites (world space),
+    // derived from the live camera each frame.
+    const { right: camRight, up: camUp } = cameraBillboardBasis(ctx.cam);
+    // Fixed world placement — built once, reused every frame.
+    milkyWayModel ??= milkyWayModelMatrix();
+
+    deps.milkyWayCloudRenderer.draw(pass, {
+      vp: vp as Float32Array,
+      viewportPx: [canvasSize.width, canvasSize.height],
+      camRight,
+      camUp,
+      model: milkyWayModel,
       fadeAlpha,
-      // World-space camera position drives both the impostor's
-      // view-aligned billboard basis (vertex stage) and the
-      // fragment stage's synthetic-camera ray origin.
-      [drawCamPos[0], drawCamPos[1], drawCamPos[2]],
-      // The catalog data origin is the OBSERVER (Earth/Sun), so the
-      // Milky Way's actual center sits ~8 kpc from there in the
-      // direction of Sgr A\*.  Anchoring the impostor at that offset
-      // gives the astronomically correct relationship between the
-      // observer and the galaxy at close zoom.  See
-      // `data/galacticCenter.ts` for the constant's derivation.
-      [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
-    );
+      buffers: cloud.buffers(),
+    });
   },
 };

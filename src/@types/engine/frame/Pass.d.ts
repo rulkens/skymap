@@ -4,7 +4,7 @@
  * A `Pass` is one discrete unit of GPU work that records into the
  * in-flight HDR `GPURenderPassEncoder`.  Pre-D.2 the four HDR draw
  * blocks (point sprites, galaxy thumbnails, filament skeleton, Milky
- * Way impostor) lived as inline `if (...)` branches inside
+ * Way layer) lived as inline `if (...)` branches inside
  * `renderFrame.ts`.  After D.2 each block becomes a one-file unit
  * implementing this interface, and `renderFrame` collapses to a small
  * for-loop over a `readonly Pass[]` array.

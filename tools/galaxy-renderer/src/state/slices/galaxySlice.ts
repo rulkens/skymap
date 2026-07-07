@@ -15,7 +15,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import type { GalaxyParams } from '../../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import { DEFAULT_GALAXY_PARAMS } from '../../data/defaultGalaxyParams';
 
 const galaxySlice = createSlice({

@@ -12,7 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { autoFit } from '../../../../tools/galaxy-renderer/src/matcher/autoFit';
 import { computeDescriptor } from '../../../../tools/galaxy-renderer/src/matcher/computeDescriptor';
 import type { GalaxyEngineHandle } from '../../../../tools/galaxy-renderer/@types/engine/GalaxyEngineHandle';
-import type { GalaxyParams } from '../../../../tools/galaxy-renderer/@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 
 const SIZE = 40; // small frame — keeps the descriptor pixel loop fast
 

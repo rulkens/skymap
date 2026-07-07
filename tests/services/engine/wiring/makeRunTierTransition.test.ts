@@ -70,6 +70,10 @@ function makeFixture(opts?: {
   for (const s of GALAXY_CATALOG_SOURCES) pointSlots.set(s, { load: vi.fn() });
   const mcpm: SlotStub = { load: vi.fn() };
 
+  // The Milky-Way cloud handle records its `regenerate` calls so the tier-swap
+  // regeneration can be asserted without a real GPU generation.
+  const milkyWayCloud = { regenerate: vi.fn<(tier: string) => void>() };
+
   const state = {
     get settings() {
       return store.getState().settings;
@@ -82,6 +86,7 @@ function makeFixture(opts?: {
     },
     gpu: {
       texturedDiskRenderer: opts?.texturedDiskRenderer ?? null,
+      milkyWayCloud,
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() },
@@ -92,7 +97,7 @@ function makeFixture(opts?: {
     phaseLocals: opts?.device ? { device: opts.device } : undefined,
   } as unknown as BootstrapDeps;
 
-  return { state, store, pointSlots, mcpm, bootstrapDeps };
+  return { state, store, pointSlots, mcpm, milkyWayCloud, bootstrapDeps };
 }
 
 describe('makeRunTierTransition', () => {
@@ -144,6 +149,18 @@ describe('makeRunTierTransition', () => {
 
     expect(fx.mcpm.load).toHaveBeenCalledTimes(1);
     expect(fx.mcpm.load).toHaveBeenCalledWith({ tier: 'medium' });
+  });
+
+  it('regenerates the Milky Way cloud for the new tier', () => {
+    const fx = makeFixture();
+    const run = makeRunTierTransition(fx.state, fx.bootstrapDeps);
+    run('small', 'medium');
+
+    // The cloud folds the tier's star budget into its generation, so a swap
+    // regenerates it at the next tier — the null-safe `?.regenerate` fires
+    // because the handle is present post-bootstrap.
+    expect(fx.milkyWayCloud.regenerate).toHaveBeenCalledTimes(1);
+    expect(fx.milkyWayCloud.regenerate).toHaveBeenCalledWith('medium');
   });
 
   it('skips the hi-res famous rebuild when device is undefined', () => {

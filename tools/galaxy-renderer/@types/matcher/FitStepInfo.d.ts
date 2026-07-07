@@ -5,7 +5,7 @@
  * `autoFit` itself knowing anything about UI.
  */
 
-import type { GalaxyParams } from '../model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyDescriptor } from './GalaxyDescriptor';
 
 export type FitStepInfo = {

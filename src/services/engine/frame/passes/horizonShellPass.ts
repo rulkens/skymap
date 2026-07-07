@@ -13,7 +13,7 @@
  * ### When it draws
  *
  * Gated by a camera-distance fade — the mirror image of the Milky-Way
- * impostor's.  `horizonShellFadeAlpha` (see `utils/math/horizonShellFadeAlpha`)
+ * point cloud's.  `horizonShellFadeAlpha` (see `utils/math/horizonShellFadeAlpha`)
  * returns 0 while the camera is close enough to be studying individual
  * galaxies and smoothsteps to 1 once it pulls back to a meaningful
  * fraction of the 14.3-Gpc shell radius.  The gate lives in `enabled`

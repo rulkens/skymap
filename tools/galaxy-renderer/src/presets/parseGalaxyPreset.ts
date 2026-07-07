@@ -13,7 +13,7 @@
  * `LodSettings.d.ts`); everything else in `r` is a `RenderSettings` field.
  */
 
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 

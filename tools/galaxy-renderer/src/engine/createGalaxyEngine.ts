@@ -51,7 +51,7 @@
  * per-extra UBO carries the rigid transform + size scale in the extra lanes
  * (`packGenerationUniforms`), and the compute passes place every star/dust
  * record in world space as their final write step (`applyExtraTransform` in
- * `lib/generate.wesl`). The vertex buffer that comes out is already
+ * `galaxyGen/generate.wesl`). The vertex buffer that comes out is already
  * world-placed, so drawing an extra is a plain instanced `draw` against its
  * own buffers — no per-draw model-matrix uniform, and nothing rewritten after
  * the generation submit.
@@ -81,7 +81,7 @@
  *    (`GenerationLayout.capacity`), not a count of "live" (visibly nonzero)
  *    records — see `setParams`'s docblock.
  *  - There is no serial-RNG replay: every star/dust draw comes from a
- *    stateless per-invocation hash (see `lib/generate.wesl`'s header), not a
+ *    stateless per-invocation hash (see `galaxyGen/generate.wesl`'s header), not a
  *    single-threaded generator stepping through one draw at a time. The
  *    determinism contract that DOES hold is CPU-free: same params in, same
  *    GPU buffer contents out, every time.
@@ -90,11 +90,11 @@ import { mat4 } from 'wgpu-matrix';
 
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyEngineOptions } from '../../@types/engine/GalaxyEngineOptions';
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ViewPose } from '../../@types/engine/ViewPose';
-import type { ExtraGalaxySpec } from '../../@types/engine/ExtraGalaxySpec';
+import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
@@ -103,14 +103,15 @@ import { orbitEye } from './orbitEye';
 import { panAxes } from './panAxes';
 import { lensShift } from './lensShift';
 import { packCameraUniforms } from './packCameraUniforms';
-import { createGenerationPipelines } from './createGenerationPipelines';
-import { encodeGeneration } from './encodeGeneration';
-import { packGenerationUniforms } from './packGenerationUniforms';
-import { GENERATION_UBO } from './generationUboLayout';
-import { carveStarLayout } from '../model/carveStarLayout';
-import { carveDustLayout } from '../model/carveDustLayout';
-import { classifyHubbleType } from '../model/classifyHubbleType';
-import { splitStarBudget } from '../model/splitStarBudget';
+import { createGenerationPipelines } from '../../../../src/services/gpu/galaxy/createGenerationPipelines';
+import { encodeGeneration } from '../../../../src/services/gpu/galaxy/encodeGeneration';
+import { packGenerationUniforms } from '../../../../src/services/gpu/galaxy/packGenerationUniforms';
+import { GENERATION_UBO } from '../../../../src/services/gpu/galaxy/generationUboLayout';
+import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
+import { carveStarLayout } from '../../../../src/services/gpu/galaxy/carveStarLayout';
+import { carveDustLayout } from '../../../../src/services/gpu/galaxy/carveDustLayout';
+import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
+import { splitStarBudget } from '../../../../src/services/gpu/galaxy/splitStarBudget';
 
 import starWgsl from './shaders/star.wesl?static';
 import dustWgsl from './shaders/dust.wesl?static';
@@ -124,17 +125,6 @@ const BLOOM_MIPS = 5;
 
 /** HDR working format for the scene + bloom pyramid. galaxy-engine.js:17. */
 const HDR: GPUTextureFormat = 'rgba16float';
-
-/**
- * Bytes per generated star/dust record: 8 f32 lanes (`x,y,z,r,g,b,size,
- * brightness` for stars; `x,y,z,size,r,g,b,opacity` for dust — different
- * field order, same stride). The single record-size home: the star/dust
- * render pipelines' instance `arrayStride` reads it directly, so a stride
- * change is one edit here. It must still match `lib/generate.wesl`'s stride-8
- * output storage array, which lives across the CPU/GPU seam and so stays a
- * hand-mirror.
- */
-const GEN_RECORD_BYTES = 32;
 
 /**
  * A single generated extra galaxy: its GPU-filled star/dust vertex buffers,

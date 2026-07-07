@@ -14,7 +14,7 @@
  * `r` bag; `parseGalaxyPreset` is the one place that splits it apart again.
  */
 
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 

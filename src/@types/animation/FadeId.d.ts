@@ -20,9 +20,10 @@
  *                    rhizome-medium, rhizome-large). Discriminator:
  *                    `id: VolumeFieldId` (the registry id the volume
  *                    renderer keys fields by).
- *   - milkyWay     — the procedural Milky-Way disk impostor. Its fade is
- *                    seeded from `settings.milkyWay.enabled` and multiplied
- *                    into the renderer's distance fade so the disk dissolves
+ *   - milkyWay     — the Milky-Way star/dust point cloud
+ *                    (`milkyWayCloudRenderer`). Its fade is seeded from
+ *                    `settings.milkyWay.enabled` and multiplied into the
+ *                    renderer's apparent-size fade so the disk dissolves
  *                    smoothly on toggle. No discriminator.
  *   - filament     — the single cosmic-web filament skeleton. Fades in on
  *                    first load. No discriminator.

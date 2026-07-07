@@ -1,9 +1,9 @@
 /**
  * horizonShellFade — distance-based alpha for the observable-universe
- * horizon shell.  The inverse regime of `milkyWayFade`: where the Milky
- * Way impostor fades *out* as the camera leaves the local volume, the
- * horizon shell fades *in* as the camera pulls back to cosmological
- * scale.
+ * horizon shell.  The inverse regime of `milkyWayFadeAlpha`: where the
+ * Milky Way point cloud fades *out* as the camera leaves the local
+ * volume, the horizon shell fades *in* as the camera pulls back to
+ * cosmological scale.
  *
  * The shell sits at the comoving particle horizon (~14.3 Gpc).  Anywhere
  * a user is studying individual galaxies it is irrelevant chrome wrapped

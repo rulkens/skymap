@@ -18,6 +18,11 @@
  *                       last frame's camera state without re-running the
  *                       per-frame camera drivers.  Null until the first
  *                       frame.
+ *   - `lastFrameCam` — the same frame's camera position + fovY in plain-TS
+ *                       form, for the CPU-side Milky-Way pick helpers
+ *                       (gate + billboard size).  Same stash site and
+ *                       cadence as `lastFrameUniformBytes`, so every pick
+ *                       input agrees on one camera.
  *
  * ### What used to live here but doesn't anymore
  *
@@ -40,6 +45,8 @@
  * unrelated state.
  */
 
+import type { PickFrameCam } from './PickFrameCam';
+
 export type EnginePickingState = {
   pickInFlight: boolean;
   /**
@@ -58,4 +65,12 @@ export type EnginePickingState = {
    * re-running the per-frame camera drivers. Null until the first frame.
    */
   lastFrameUniformBytes: ArrayBuffer | null;
+  /**
+   * Camera position + fovY from the same visual frame, stashed on the same
+   * cadence as `lastFrameUniformBytes` (same write site, same frame). The
+   * Milky-Way pick helpers read this instead of the `state.cam` drag
+   * register so the pick gate and pick-billboard size agree with the frame
+   * the pick pass renders. Null until the first frame.
+   */
+  lastFrameCam: PickFrameCam | null;
 };

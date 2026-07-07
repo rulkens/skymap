@@ -13,7 +13,7 @@
  * so it isn't ported.
  */
 
-import type { ExtraGalaxySpec } from '../../@types/engine/ExtraGalaxySpec';
+import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { randomGalaxyParams } from './randomGalaxyParams';
 

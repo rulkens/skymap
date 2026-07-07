@@ -48,7 +48,7 @@
  * ### Why no depth attachment
  *
  * An earlier revision (commit `716eb6b`) added a `depth24plus`
- * companion texture so the Milky Way impostor could be occluded by
+ * companion texture so the Milky Way layer could be occluded by
  * per-galaxy thumbnail / disk overlays via depth-test.  Commit
  * `28aced5` then switched every overlay pipeline to pure additive
  * blending (`srcFactor: 'one', dstFactor: 'one'`) with

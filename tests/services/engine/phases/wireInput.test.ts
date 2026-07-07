@@ -130,7 +130,6 @@ function makeState(): EngineState {
       texturedQuadRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
-      milkyWayRenderer: null,
       volumeFieldRenderer: null,
       volumeUpsample: null,
     },

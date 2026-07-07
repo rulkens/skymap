@@ -17,7 +17,7 @@
  * breaks in `createStore.ts`, not silently at some call site.
  */
 
-import type { GalaxyParams } from '../model/GalaxyParams';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../engine/RenderSettings';
 import type { LodSettings } from '../engine/LodSettings';
 import type { CompareState } from './CompareState';

@@ -240,6 +240,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pickInFlight: false,
       pointerDown: false,
       lastFrameUniformBytes: null,
+      lastFrameCam: null,
     },
     gpu: {
       // All GPU handles populate during the async IIFE below and
@@ -270,13 +271,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
-      // texturedDiskRenderer / proceduralDiskRenderer / milkyWayRenderer:
-      // null until initGpu constructs them.  The frame body reads them via
-      // RunFrameDeps; they live here so `destroy()` can reach them and so
-      // later phases consume the same identities by reading `state.gpu.X`.
+      // texturedDiskRenderer / proceduralDiskRenderer: null until initGpu
+      // constructs them.  The frame body reads them via RunFrameDeps; they
+      // live here so `destroy()` can reach them and so later phases consume
+      // the same identities by reading `state.gpu.X`.
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
-      milkyWayRenderer: null,
+      // Milky-Way point cloud + its two-pass renderer. null until initGpu.
+      // Excluded from isEngineReady; released in destroy().
+      milkyWayCloud: null,
+      milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
       // null until initGpu; excluded from isEngineReady — volumeUpsamplePass
       // null-checks both before hasActiveFields(), so a null state no-ops.
@@ -663,8 +667,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
     state.gpu.proceduralDiskRenderer = null;
-    state.gpu.milkyWayRenderer?.destroy();
-    state.gpu.milkyWayRenderer = null;
+    state.gpu.milkyWayCloud?.destroy();
+    state.gpu.milkyWayCloud = null;
+    state.gpu.milkyWayCloudRenderer?.destroy();
+    state.gpu.milkyWayCloudRenderer = null;
     state.gpu.horizonShellRenderer?.destroy();
     state.gpu.horizonShellRenderer = null;
     state.gpu.volumeFieldRenderer?.destroy();

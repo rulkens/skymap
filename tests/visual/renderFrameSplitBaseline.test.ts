@@ -25,7 +25,7 @@
  * ### Why we record at the renderer-mock level, not `pass.draw`
  *
  * Each `Pass.draw` in `passes/` delegates to a renderer's `.draw(...)`
- * method (`pointRenderer.draw`, `milkyWayRenderer.draw`, etc.) that we
+ * method (`pointRenderer.draw`, `milkyWayCloudRenderer.draw`, etc.) that we
  * stub at the test boundary.  The real renderers internally call
  * `pass.draw(vertexCount, instanceCount, ...)` on the GPU encoder, but
  * those WGSL-pipeline-bound calls never fire here — the mocks
@@ -59,6 +59,10 @@ import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
+import {
+  MILKY_WAY_FADE_FULL_PX,
+  MILKY_WAY_RADIUS_MPC,
+} from '../../src/services/gpu/galaxy/milkyWayCalibration';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
@@ -195,20 +199,34 @@ function makePostProcess(records: DrawRecord[]): any {
 
 // ── Domain fixture helpers (camera, point cloud) ───────────────────────────
 
+// Fixture camera optics — the ctx built in the test body mirrors these.
+const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;
+const FIXTURE_CANVAS_HEIGHT_PX = 720;
+
+// Camera distance DERIVED from the Milky-Way fade knobs: at this distance
+// the disc's apparent diameter is twice MILKY_WAY_FADE_FULL_PX under the
+// fixture optics, so milkyWayFadeAlpha is 1 by construction and the
+// milky-way entry stays in the baseline draw sequence. A visual-gate
+// re-tune of the fade band moves this distance instead of silently
+// dropping the pass from the snapshot.
+const MW_ALIVE_DIST_MPC =
+  (2 * MILKY_WAY_RADIUS_MPC * (FIXTURE_CANVAS_HEIGHT_PX / (2 * Math.tan(FIXTURE_FOV_Y_RAD / 2)))) /
+  (2 * MILKY_WAY_FADE_FULL_PX);
+
 function makeCam(): OrbitCamera {
-  // Distance 5 Mpc → comfortably inside the Milky-Way fade band
-  // (FADE_INNER_MPC = 10).  milkyWayPass.draw computes fadeAlpha > 0
-  // and dispatches the impostor.
+  // Camera close enough that the Milky-Way disc sits safely above its FULL
+  // apparent size (MW_ALIVE_DIST_MPC), so milkyWayPass.draw computes
+  // fadeAlpha > 0 and dispatches the impostor.
   return {
     target: [0, 0, 0] as unknown as Float32Array,
-    distance: 5,
+    distance: MW_ALIVE_DIST_MPC,
     yaw: 0,
     pitch: 0,
-    fovYRad: (60 * Math.PI) / 180,
+    fovYRad: FIXTURE_FOV_Y_RAD,
     aspect: 16 / 9,
     near: 0.001,
     far: 10000,
-    position: new Float32Array([0, 0, 5]),
+    position: new Float32Array([0, 0, MW_ALIVE_DIST_MPC]),
   } as unknown as OrbitCamera;
 }
 
@@ -224,7 +242,7 @@ describe('renderFrame visual baseline', () => {
 
     // Renderer mocks — each draw lands on the same `records` array.
     const pointRenderer = makeLoggingRenderer(records, 'point-sprites');
-    const milkyWayRenderer = makeLoggingRenderer(records, 'milky-way');
+    const milkyWayCloudRenderer = makeLoggingRenderer(records, 'milky-way');
     const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
@@ -263,7 +281,7 @@ describe('renderFrame visual baseline', () => {
 
     const cam = makeCam();
     const canvasWidth = 1280;
-    const canvasHeight = 720;
+    const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
     const viewProj = new Float32Array(16) as unknown as Mat4;
     const drawPxPerRad = canvasHeight / (2 * Math.tan(cam.fovYRad / 2));
 
@@ -290,7 +308,7 @@ describe('renderFrame visual baseline', () => {
       >,
       drawPxPerRad,
       nowMs: 0,
-      fovYRad: (60 * Math.PI) / 180,
+      fovYRad: FIXTURE_FOV_Y_RAD,
       renderer: pointRenderer,
       postProcess,
       texturedDisks: texturedDisksSubsystem,
@@ -340,6 +358,10 @@ describe('renderFrame visual baseline', () => {
           flowFieldRenderer: null,
           volumeUpsample,
           structureMarkerRenderer: null,
+          // milkyWayPass.draw reads the generated cloud buffers off this handle.
+          milkyWayCloud: {
+            buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }),
+          },
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.
@@ -368,10 +390,12 @@ describe('renderFrame visual baseline', () => {
         },
         selection: { select: settings.selected },
         assetSlots: { flow: null },
-        // pointSpritesPass writes the packed uniform bytes here after each
-        // draw — the bag must exist so the assignment doesn't throw.
+        // pointSpritesPass writes the packed uniform bytes + camera
+        // snapshot here after each draw — the bag must exist so the
+        // assignment doesn't throw.
         picking: {
           lastFrameUniformBytes: null as ArrayBuffer | null,
+          lastFrameCam: null,
           pickInFlight: false,
           pointerDown: false,
         },
@@ -393,7 +417,7 @@ describe('renderFrame visual baseline', () => {
       } as never,
       device,
       context,
-      milkyWayRenderer: milkyWayRenderer as never,
+      milkyWayCloudRenderer: milkyWayCloudRenderer as never,
       horizonShellRenderer: horizonShellRenderer as never,
       filamentRenderer: filamentRenderer as never,
       volumeFieldRenderer: volumeFieldRenderer as never,
@@ -434,7 +458,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "textured-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],Array[3]",
+          "argShape": "pass,object",
           "renderer": "milky-way",
         },
         {

@@ -65,7 +65,7 @@ function makeDeps(): PassDeps {
     filamentRenderer: null,
     volumeFieldRenderer: null,
     flowFieldRenderer: null,
-    milkyWayRenderer: { draw: vi.fn() } as any,
+    milkyWayCloudRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
   } as PassDeps;
 }

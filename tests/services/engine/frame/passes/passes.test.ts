@@ -31,8 +31,14 @@ import {
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { PickFrameCam } from '../../../../../src/@types/engine/state/PickFrameCam';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { SelectionRef } from '../../../../../src/@types/engine/SelectionRef';
+import {
+  MILKY_WAY_FADE_FULL_PX,
+  MILKY_WAY_FADE_GONE_PX,
+  MILKY_WAY_RADIUS_MPC,
+} from '../../../../../src/services/gpu/galaxy/milkyWayCalibration';
 
 // ── Stub builders ───────────────────────────────────────────────────────────
 
@@ -103,11 +109,31 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     filamentRenderer: null,
     volumeFieldRenderer: null,
     flowFieldRenderer: null,
-    milkyWayRenderer: { draw: vi.fn() } as any,
+    milkyWayCloudRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
     ...overrides,
   };
 }
+
+// Knob-derived camera distances for the Milky-Way apparent-size fade band,
+// under the stub ctx's camera (60° vertical fov, 720-px-tall viewport).
+// Inverting apparentDiameterPx: the disc (diameter 2·R) spans exactly `px`
+// on screen at distance 2·R·pxPerRad / px. Deriving the fixtures from the
+// calibration knobs (rather than hardcoding Mpc values) keeps these tests
+// green across visual-gate re-tunes of the band edges.
+const MW_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
+const MW_FULL_DIST_MPC = (2 * MILKY_WAY_RADIUS_MPC * MW_PX_PER_RAD) / MILKY_WAY_FADE_FULL_PX;
+const MW_GONE_DIST_MPC = (2 * MILKY_WAY_RADIUS_MPC * MW_PX_PER_RAD) / MILKY_WAY_FADE_GONE_PX;
+
+// The generated star/dust buffers the milky-way pass reads off
+// `state.gpu.milkyWayCloud.buffers()`. A stable reference so `draw` tests can
+// assert the exact snapshot was forwarded to the renderer.
+const MW_CLOUD_BUFFERS = {
+  starBuf: {} as GPUBuffer,
+  starCount: 3,
+  dustBuf: null,
+  dustCount: 0,
+};
 
 // `state` is forwarded through — most passes ignore it, but
 // `pointSpritesPass` reads `state.subsystems.fades.opacityOf` for
@@ -124,12 +150,15 @@ const STATE_STUB = {
   // state.gpu.focusUniform; an opaque bind group is all they read.
   gpu: {
     focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
+    // milkyWayPass.draw reads the generated cloud buffers off this handle.
+    milkyWayCloud: { buffers: () => MW_CLOUD_BUFFERS },
   },
   // pointSpritesPass stashes packed uniform bytes here after each draw so
   // the pick paths can replay the last frame's camera without re-running
   // the per-frame camera drivers.
   picking: {
     lastFrameUniformBytes: null as ArrayBuffer | null,
+    lastFrameCam: null as PickFrameCam | null,
     pickInFlight: false,
     pointerDown: false,
   },
@@ -304,14 +333,17 @@ describe('filamentsPass.draw', () => {
 });
 
 describe('milkyWayPass.enabled', () => {
-  it('returns true when milkyWay.enabled is true and camera is inside the fade band', () => {
-    // Default makeCtx() puts the camera at 5 Mpc, inside the full-alpha
-    // (≤10 Mpc) regime. Both gates pass.
+  it('returns true when milkyWay.enabled is true and the disc is above the FULL apparent size', () => {
+    // Half the FULL-threshold distance → apparent diameter is twice
+    // MILKY_WAY_FADE_FULL_PX, safely full-alpha. Both gates pass.
     const stateOn = {
       ...STATE_STUB,
       settings: { milkyWay: { enabled: true } },
     } as unknown as EngineState;
-    expect(milkyWayPass.enabled(stateOn, makeCtx())).toBe(true);
+    const ctx = makeCtx({
+      drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
+    });
+    expect(milkyWayPass.enabled(stateOn, ctx)).toBe(true);
   });
 
   it('returns false when milkyWay.enabled is false AND fade opacity is 0', () => {
@@ -326,46 +358,60 @@ describe('milkyWayPass.enabled', () => {
 
   it('returns true when milkyWay.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
     // opacityOf = 1 simulates a toggle fade-out still in flight, and the
-    // distance-based fadeAlpha also passes (camera near origin), so the
-    // gate's second condition is non-zero — the pass renders.
+    // apparent-size fadeAlpha also passes (camera well inside the FULL
+    // distance), so the gate's second condition is non-zero — the pass
+    // renders.
     const stateOffFading = {
       ...STATE_STUB,
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
-    expect(milkyWayPass.enabled(stateOffFading, makeCtx())).toBe(true);
+    const ctx = makeCtx({
+      drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
+    });
+    expect(milkyWayPass.enabled(stateOffFading, ctx)).toBe(true);
   });
 
-  it('returns false when camera is beyond the fade band (no empty render pass)', () => {
-    // 1000 Mpc — well past FADE_OUTER_MPC (50 Mpc). Gating in `enabled`
-    // (not just `draw`) skips the empty beginRenderPass +
+  it('returns false once the disc shrinks past the GONE apparent size (no empty render pass)', () => {
+    // Twice the GONE-threshold distance → apparent diameter is half
+    // MILKY_WAY_FADE_GONE_PX, safely past the band → alpha 0. Gating in
+    // `enabled` (not just `draw`) skips the empty beginRenderPass +
     // timestamp-write on the split-encoder path.
     const stateOn = {
       ...STATE_STUB,
       settings: { milkyWay: { enabled: true } },
     } as unknown as EngineState;
     const ctx = makeCtx({
-      drawCamPos: [1000, 0, 0] as Readonly<[number, number, number]>,
+      drawCamPos: [MW_GONE_DIST_MPC * 2, 0, 0] as Readonly<[number, number, number]>,
     });
     expect(milkyWayPass.enabled(stateOn, ctx)).toBe(false);
   });
 });
 
 describe('milkyWayPass.draw', () => {
-  it('calls milkyWayRenderer.draw when camera is inside the fade band', () => {
-    // Camera at 5 Mpc from origin sits inside the full-alpha (≤10 Mpc)
-    // regime — fadeAlpha should be 1.0.
+  it('calls milkyWayCloudRenderer.draw with the packed args when the disc is above the FULL apparent size', () => {
+    // Half the FULL-threshold distance → apparent diameter is twice
+    // MILKY_WAY_FADE_FULL_PX — fadeAlpha should be 1.0.
     const drawSpy = vi.fn();
-    const deps = makeDeps({ milkyWayRenderer: { draw: drawSpy } as any });
-    const ctx = makeCtx();
+    const deps = makeDeps({ milkyWayCloudRenderer: { draw: drawSpy } as any });
+    const ctx = makeCtx({
+      drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
+    });
     milkyWayPass.draw(PASS_STUB, ctx, STATE_STUB, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    const args = drawSpy.mock.calls[0]!;
-    expect(args[0]).toBe(PASS_STUB);
-    expect(args[1]).toBe(ctx.vp);
-    expect(args[2]).toEqual([ctx.canvasSize.width, ctx.canvasSize.height]);
-    // fadeAlpha at distance 5 Mpc is 1.0 (full strength).
-    expect(args[3]).toBe(1.0);
-    expect(args[4]).toEqual([0, 0, 5]);
+    // New two-pass renderer signature: draw(pass, MilkyWayCloudDrawArgs).
+    const [passArg, args] = drawSpy.mock.calls[0]!;
+    expect(passArg).toBe(PASS_STUB);
+    expect(args.vp).toBe(ctx.vp);
+    expect(args.viewportPx).toEqual([ctx.canvasSize.width, ctx.canvasSize.height]);
+    // fadeAlpha above the FULL threshold is 1.0 (full strength).
+    expect(args.fadeAlpha).toBe(1.0);
+    // The generated buffer snapshot is forwarded verbatim.
+    expect(args.buffers).toBe(MW_CLOUD_BUFFERS);
+    // Billboard basis (from cameraBillboardBasis(ctx.cam)) + the fixed model
+    // matrix are packed as plain vectors / a 16-float column-major matrix.
+    expect(args.camRight).toHaveLength(3);
+    expect(args.camUp).toHaveLength(3);
+    expect(args.model).toHaveLength(16);
   });
 });
 
@@ -474,6 +520,7 @@ describe('pointSpritesPass.draw', () => {
     // Mutable picking bag so we can observe the write.
     const pickingBag = {
       lastFrameUniformBytes: null as ArrayBuffer | null,
+      lastFrameCam: null as PickFrameCam | null,
       pickInFlight: false,
       pointerDown: false,
     };
@@ -489,16 +536,15 @@ describe('pointSpritesPass.draw', () => {
     expect(pickingBag.lastFrameUniformBytes).toBe(sentinelBytes);
   });
 
-  it('leaves state.picking.lastFrameUniformBytes untouched when renderer.draw returns null', () => {
-    // When there are zero catalogs loaded, draw returns null — signalling
-    // nothing was packed. The pass must not overwrite a previously-valid
-    // bytes snapshot with null; both pick paths gate on catalogs.size > 0
-    // so the stale snapshot will never be consumed in that code path anyway.
-    const priorBytes = new ArrayBuffer(8);
-    const drawStub = vi.fn<() => ArrayBuffer | null>(() => null);
+  it('stashes lastFrameCam (ctx.drawCamPos + ctx.fovYRad) in the same frame as the bytes', () => {
+    // The Milky-Way pick helpers size/gate against the camera the pick
+    // pass replays, so the plain-TS camera facts must be stashed at the
+    // same write site as the uniform bytes — one frame, one camera.
+    const drawStub = vi.fn<() => ArrayBuffer | null>(() => new ArrayBuffer(8));
     const ctx = makeCtx({ renderer: { draw: drawStub } as any });
     const pickingBag = {
-      lastFrameUniformBytes: priorBytes,
+      lastFrameUniformBytes: null as ArrayBuffer | null,
+      lastFrameCam: null as PickFrameCam | null,
       pickInFlight: false,
       pointerDown: false,
     };
@@ -509,7 +555,39 @@ describe('pointSpritesPass.draw', () => {
       picking: pickingBag,
     } as unknown as EngineState;
     pointSpritesPass.draw(PASS_STUB, ctx, stateWithPicking, makeDeps());
-    // The prior snapshot must survive a null-return frame.
+    // ctx.drawCamPos is a fresh per-frame tuple, so the pass may stash the
+    // reference directly (no defensive copy needed).
+    expect(pickingBag.lastFrameCam).not.toBeNull();
+    expect(pickingBag.lastFrameCam!.position).toBe(ctx.drawCamPos);
+    expect(pickingBag.lastFrameCam!.fovYRad).toBe(ctx.fovYRad);
+  });
+
+  it('leaves the picking snapshots untouched when renderer.draw returns null', () => {
+    // When there are zero catalogs loaded, draw returns null — signalling
+    // nothing was packed. The pass must not overwrite a previously-valid
+    // snapshot (bytes OR camera) with a new frame's values; both pick paths
+    // gate on catalogs.size > 0 so the stale snapshot will never be
+    // consumed in that code path anyway, and keeping the pair coherent
+    // means every consumer sees one camera per stashed frame.
+    const priorBytes = new ArrayBuffer(8);
+    const priorCam: PickFrameCam = { position: [0, 0, 7], fovYRad: 1 };
+    const drawStub = vi.fn<() => ArrayBuffer | null>(() => null);
+    const ctx = makeCtx({ renderer: { draw: drawStub } as any });
+    const pickingBag = {
+      lastFrameUniformBytes: priorBytes,
+      lastFrameCam: priorCam as PickFrameCam | null,
+      pickInFlight: false,
+      pointerDown: false,
+    };
+    const stateWithPicking = {
+      ...STATE_STUB,
+      selection: { select: null, hover: null, focus: null },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+      picking: pickingBag,
+    } as unknown as EngineState;
+    pointSpritesPass.draw(PASS_STUB, ctx, stateWithPicking, makeDeps());
+    // The prior snapshots must survive a null-return frame, as a pair.
     expect(pickingBag.lastFrameUniformBytes).toBe(priorBytes);
+    expect(pickingBag.lastFrameCam).toBe(priorCam);
   });
 });

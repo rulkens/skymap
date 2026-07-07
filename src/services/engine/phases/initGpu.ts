@@ -12,9 +12,10 @@
  *     target.  Stored on `state.gpu.renderer`.
  *   - `PostProcess` — combined HDR offscreen rgba16float texture + the
  *     tone-map pass that compresses linear-light into the swap chain.
- *   - `TexturedDiskRenderer`, `ProceduralDiskRenderer`, `MilkyWayRenderer`,
- *     `FilamentRenderer`, … — thumbnail + overlay renderers that write
- *     into the same HDR target as the points pass.
+ *   - `TexturedDiskRenderer`, `ProceduralDiskRenderer`,
+ *     `MilkyWayCloudRenderer`, `FilamentRenderer`, … — thumbnail +
+ *     overlay renderers that write into the same HDR target as the
+ *     points pass.
  *
  * The 5 galaxy-catalog source asset slots are also wired here via the
  * `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table —
@@ -47,7 +48,8 @@ import { createPostProcess } from '../../gpu/passes/postProcess';
 import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
-import { createMilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
+import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
+import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
@@ -276,15 +278,6 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     canvas,
     focusBgl: state.gpu.focusBgl!,
   });
-  // Procedural Milky Way impostor at world origin.  See
-  // `services/gpu/milkyWayRenderer.ts` for the rationale on why this
-  // is a sibling renderer rather than tucked into the per-galaxy
-  // procedural-disk pass, and `utils/math/milkyWayFadeAlpha.ts` for the
-  // distance-fade band.
-  const milkyWayRenderer = createMilkyWayRenderer({
-    device,
-    format: 'rgba16float',
-  });
   // Observable-universe horizon shell — translucent sphere at the
   // comoving particle-horizon radius (~14.3 Gpc).  Single uniform
   // buffer + baked UV-sphere VBO/IBO, no lifecycle dependencies.
@@ -315,8 +308,21 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // black-screen bug class.
   state.gpu.texturedDiskRenderer = texturedDiskRenderer;
   state.gpu.proceduralDiskRenderer = proceduralDiskRenderer;
-  state.gpu.milkyWayRenderer = milkyWayRenderer;
   state.gpu.horizonShellRenderer = horizonShellRenderer;
+
+  // ── Milky-Way point cloud + its two-pass renderer ────────────────────
+  //
+  // The GPU-generated star/dust cloud (`milkyWayCloud`) owns the per-tier
+  // instance buffers; the additive-stars + multiplicative-dust renderer
+  // (`milkyWayCloudRenderer`) draws them from `milkyWayPass`. `state.tier`
+  // folds the current tier's star budget into the first generation; a tier
+  // swap regenerates via `makeRunTierTransition`. Same HDR target
+  // ('rgba16float') as the other overlay renderers.
+  state.gpu.milkyWayCloud = createMilkyWayCloud(device, state.tier);
+  state.gpu.milkyWayCloudRenderer = createMilkyWayCloudRenderer({
+    device,
+    format: 'rgba16float',
+  });
 
   // ── 3D scalar-field volume renderer ──────────────────────────────────
   //

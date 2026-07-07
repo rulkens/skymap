@@ -71,6 +71,12 @@ export function makeRunTierTransition(
     // AssetSlot machinery.
     state.assetSlots.mcpm?.load({ tier: nextTier });
 
+    // The Milky-Way point cloud folds the tier's star budget into its
+    // generation, so a tier swap regenerates it (destroy old star/dust VBs →
+    // carve + dispatch the new budget). The handle is null until initGpu
+    // constructs it, so `?.` IS the pre-bootstrap guard — no device check needed.
+    state.gpu.milkyWayCloud?.regenerate(nextTier);
+
     // The hi-res LOD-3 famous-galaxy texture is tier-aware on its layerSide.
     // WebGPU textures are immutable in shape, so a tier flip destroys + recreates
     // the texture + planner pair and re-binds the renderer's hi-res view (see

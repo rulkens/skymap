@@ -2,12 +2,17 @@
 #
 # Unlike the flow-workbench (which links against the runtime's canonical
 # shader tree, because it drives the one real flow renderer shared with the
-# main app), this tool's renderer is entirely its own — star sprites, dust,
-# and an HDR bloom chain that have no runtime counterpart to share with. So
-# its shaders are self-contained: 'root' points at this tool's own shader
-# directory rather than up into src/services/gpu/shaders, and every import
-# inside those shaders resolves as package::lib::name against that local
-# root, never against the runtime's shader tree.
+# main app), this tool's DRAW shaders are entirely its own — star sprites,
+# dust, and an HDR bloom chain that have no runtime counterpart to share
+# with. So 'root' points at this tool's own shader directory rather than up
+# into src/services/gpu/shaders, and imports inside those shaders resolve
+# as package::lib::name against that local root. The one exception is the
+# shared galaxyGen/ generation shaders, which live in the runtime tree
+# (src/services/gpu/shaders/galaxyGen) and appear inside this root through
+# the symlink at src/engine/shaders/galaxyGen — WESL package binding is
+# root-driven, so the file must appear inside the root to be addressable as
+# package::galaxyGen:: (see vite.config.ts's resolve block for the alias +
+# preserveSymlinks that keep the id inside this root).
 #
 # wesl-plugin locates this file from the explicit 'weslToml' option in
 # vite.config.ts — NOT from the Vite 'root'. By default the plugin reads

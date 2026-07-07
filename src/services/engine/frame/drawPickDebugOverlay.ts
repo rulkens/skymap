@@ -102,7 +102,7 @@ export function drawPickDebugOverlay(
     state.gpu.renderer,
     masks.pick,
     state.gpu.structureMarkerRenderer,
-    milkyWayPickVisible(state),
+    milkyWayPickVisible(state, deps.canvas.height),
   );
 
   const debugUniformBytes = state.picking.lastFrameUniformBytes;

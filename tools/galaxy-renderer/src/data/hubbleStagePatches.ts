@@ -9,8 +9,8 @@
  * truth) rather than the spike's duplicate `CAT` function.
  */
 
-import type { GalaxyParams } from '../../@types/model/GalaxyParams';
-import { classifyHubbleType } from '../model/classifyHubbleType';
+import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
+import { classifyHubbleType } from '../../../../src/services/gpu/galaxy/classifyHubbleType';
 
 export function hubbleTypePatch(type: string): Partial<GalaxyParams> {
   const category = classifyHubbleType(type);

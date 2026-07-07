@@ -41,7 +41,6 @@ import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
-import { milkyWayPickHalfExtentPx } from '../helpers/milkyWayPickHalfExtentPx';
 import {
   commitCameraPose,
   beginDrag,
@@ -86,15 +85,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state.gpu.focusUniform!.bindGroup,
     state.gpu.structureMarkerRenderer ?? undefined,
     state.gpu.proceduralDiskRenderer ?? undefined,
-    // The Milky-Way pick provider + its disk-visibility-gate-and-size
-    // closure.  Returns the hit billboard's half-extent in pixels (the
-    // SAME apparent-px the visible selection ring uses, so the click area
-    // tracks the ring) while the disk is on screen, or `null` to skip the
-    // draw — the same gate `milkyWayPass.enabled` uses.  A closure over
-    // `state` + `canvas` so the renderer stays free of EngineState; it
-    // draws what it's told.
+    // The Milky-Way pick provider + its disk-visibility gate — the same
+    // `milkyWayPickVisible` predicate `collectPickTargets` below uses, so
+    // the draw gate and the has-targets gate can't drift.  Gate only: the
+    // hit billboard's SIZE is computed in the MW pick vertex shader from
+    // the pick pass's camera uniforms.  A closure over `state` + `canvas`
+    // so the renderer stays free of EngineState; it draws when told.
     state.gpu.milkyWayPickRenderer ?? undefined,
-    () => milkyWayPickHalfExtentPx(state, canvas.height),
+    () => milkyWayPickVisible(state, canvas.height),
   );
   state.gpu.pickRenderer = pickRenderer;
 
@@ -121,7 +119,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         renderer,
         deriveSourceMasks(state).pick,
         state.gpu.structureMarkerRenderer,
-        milkyWayPickVisible(state),
+        milkyWayPickVisible(state, canvas.height),
       ),
     viewportPx: () => [canvas.width, canvas.height],
     pointSizePx: () => state.settings.galaxyCatalogs.sizePx,
@@ -255,7 +253,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       r,
       deriveSourceMasks(state).pick,
       state.gpu.structureMarkerRenderer,
-      milkyWayPickVisible(state),
+      milkyWayPickVisible(state, canvas.height),
     );
     if (!hasAny) return null;
 

@@ -10,7 +10,7 @@
 import type { EngineCallbacks } from '../EngineCallbacks';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
-import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
@@ -25,8 +25,8 @@ export type RunFrameDeps = {
   device: GPUDevice;
   /** Swap-chain context handle from `initGpu`. */
   context: GPUCanvasContext;
-  /** Milky-Way impostor renderer; instantiated inside the IIFE. */
-  milkyWayRenderer: MilkyWayRenderer;
+  /** Milky-Way point-cloud renderer; read off `state.gpu.milkyWayCloudRenderer` by `initGpu`. */
+  milkyWayCloudRenderer: MilkyWayCloudRenderer;
   /** Observable-universe horizon shell renderer; instantiated inside the IIFE. */
   horizonShellRenderer: HorizonShellRenderer;
   /** Filament renderer; instantiated inside the IIFE. */
