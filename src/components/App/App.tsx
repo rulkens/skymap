@@ -52,6 +52,7 @@ import { updateSelectionFocus, clearSelection } from '../../state/selection/sele
 import { refOf } from '../../services/engine/helpers/refOf';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
+import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import TourDebugPillContainer from '../containers/TourDebugPillContainer';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
 import { selectTourActive } from '../../state/tour/selectors';
@@ -250,6 +251,7 @@ export function App(): React.ReactElement {
           `uiStackHidden` fade (which the tour triggers) doesn't also fade the
           caption + nav. Mounted only while a tour runs. */}
       {tourActive && <TourOverlayContainer />}
+      {tourActive && <TourBeatRailContainer />}
       <SplashContainer />
     </>
   );
