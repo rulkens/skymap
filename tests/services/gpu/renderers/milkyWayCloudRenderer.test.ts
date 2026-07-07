@@ -6,6 +6,7 @@ import {
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import {
   MILKY_WAY_EXPOSURE,
+  MILKY_WAY_LOD_APPARENT,
   MILKY_WAY_MODEL_SCALE,
   MILKY_WAY_STAR_PX_MIN,
   MILKY_WAY_STAR_PX_MAX,
@@ -187,10 +188,11 @@ describe('createMilkyWayCloudRenderer — uniform packing', () => {
     expect(f32[44]).toBeCloseTo(0.5);
     expect(f32[45]).toBeCloseTo(MILKY_WAY_EXPOSURE);
     expect(f32[46]).toBeCloseTo(MILKY_WAY_MODEL_SCALE);
-    // params1 = (starPxMin, starPxMax, starSizeScale, 0).
+    // params1 = (starPxMin, starPxMax, starSizeScale, lodApparent).
     expect(f32[48]).toBeCloseTo(MILKY_WAY_STAR_PX_MIN);
     expect(f32[49]).toBeCloseTo(MILKY_WAY_STAR_PX_MAX);
     expect(f32[50]).toBeCloseTo(MILKY_WAY_STAR_SIZE_SCALE);
+    expect(f32[51]).toBeCloseTo(MILKY_WAY_LOD_APPARENT);
   });
 
   it('uniform buffer is 208 bytes', () => {

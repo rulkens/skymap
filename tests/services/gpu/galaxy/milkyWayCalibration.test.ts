@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MILKY_WAY_EXPOSURE,
+  MILKY_WAY_LOD_APPARENT,
   MILKY_WAY_MODEL_SCALE,
   MILKY_WAY_RADIUS_MPC,
   MILKY_WAY_STARS_PER_TIER,
@@ -47,5 +48,10 @@ describe('milkyWayCalibration', () => {
   it('star size scale is a positive finite factor', () => {
     expect(MILKY_WAY_STAR_SIZE_SCALE).toBeGreaterThan(0);
     expect(Number.isFinite(MILKY_WAY_STAR_SIZE_SCALE)).toBe(true);
+  });
+
+  it('LOD apparent threshold is finite and non-negative (0 is the legal disable value)', () => {
+    expect(MILKY_WAY_LOD_APPARENT).toBeGreaterThanOrEqual(0);
+    expect(Number.isFinite(MILKY_WAY_LOD_APPARENT)).toBe(true);
   });
 });

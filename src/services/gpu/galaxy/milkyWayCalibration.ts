@@ -74,6 +74,21 @@ export const MILKY_WAY_EXPOSURE = 0.11;
 export const MILKY_WAY_STAR_SIZE_SCALE = 0.7;
 
 /**
+ * NDC apparent-size scale of the flux-conserving star LOD (0 disables).
+ * Each star hashes a stable per-star fraction of this threshold; a star
+ * whose projected NDC half-extent is smaller than roughly its hashed
+ * fraction is culled in the VERTEX stage (degenerate quad, zero
+ * fragments), and the survivors are brightened up to 3x so the total
+ * light of the field holds — no popping, no dimming as stars drop out.
+ * This is the first perf lever: at mid/far views the full star budget of
+ * additive subpixel sprites collapses onto a handful of pixels, and
+ * additive blending serializes the blender per pixel. Kept in NDC (not
+ * px) because the hash band was tuned in NDC units in the tool. Tuned at
+ * the visual gate like its neighbors.
+ */
+export const MILKY_WAY_LOD_APPARENT = 0.02;
+
+/**
  * Apparent-size fade band, px of on-screen diameter. The cloud fades on how
  * BIG it looks, not how far away it is — a fixed distance band fires too
  * early on a wide fov or a tall window and too late on a narrow one,

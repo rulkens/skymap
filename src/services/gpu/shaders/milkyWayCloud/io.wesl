@@ -39,7 +39,8 @@
 //   offset 144 : camRight: vec4<f32>  (xyz billboard right + 0)
 //   offset 160 : camUp: vec4<f32>     (xyz billboard up + 0)
 //   offset 176 : params0: vec4<f32>   (fadeAlpha, exposure, modelScale, 0)
-//   offset 192 : params1: vec4<f32>   (starPxMin, starPxMax, starSizeScale, 0)
+//   offset 192 : params1: vec4<f32>   (starPxMin, starPxMax, starSizeScale,
+//                                       lodApparent)
 //   total: 208 bytes (MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE).
 //
 // Every group is 16-byte aligned: mat4x4 and vec4 both align to 16, and the
@@ -70,7 +71,8 @@ struct Uniforms {
   camRight: vec4<f32>,
   camUp: vec4<f32>,
   // params0 = (fadeAlpha, exposure, modelScale, 0).
-  //   fadeAlpha  — distance-fade in [0, 1]. Stars multiply it into EMISSION
+  //   fadeAlpha  — visibility fade in [0, 1] (apparent-size fade x toggle
+  //                opacity, composed CPU-side). Stars multiply it into EMISSION
   //                (a faded star adds no light); dust mixes T toward the
   //                multiplicative identity (a faded dust lane stops
   //                darkening the scene). See each pass's fragment.
@@ -81,15 +83,19 @@ struct Uniforms {
   //                separate from 'model' so the CPU can scale sprite size
   //                without decomposing the matrix.
   params0: vec4<f32>,
-  // params1 = (starPxMin, starPxMax, starSizeScale, 0). The star pass clamps
-  // each sprite's on-screen half-extent to the [starPxMin, starPxMax] pixel
-  // range: starPxMin is the anti-sparkle FLOOR (a distant star never shrinks
-  // below a stable dot, killing sub-pixel twinkle); starPxMax CAPS
-  // foreground swell on close flythroughs. starSizeScale is a further
-  // dimensionless multiplier on each star's world-space half-extent, applied
-  // BEFORE that pixel clamp (see stars.wesl) -- the one knob for shrinking
-  // or growing the whole star population without touching the generated
-  // data. Dust ignores all three (it uses a fixed NDC clamp instead).
+  // params1 = (starPxMin, starPxMax, starSizeScale, lodApparent). The star
+  // pass clamps each sprite's on-screen half-extent to the
+  // [starPxMin, starPxMax] pixel range: starPxMin is the anti-sparkle FLOOR
+  // (a distant star never shrinks below a stable dot, killing sub-pixel
+  // twinkle); starPxMax CAPS foreground swell on close flythroughs.
+  // starSizeScale is a further dimensionless multiplier on each star's
+  // world-space half-extent, applied BEFORE that pixel clamp (see
+  // stars.wesl) -- the one knob for shrinking or growing the whole star
+  // population without touching the generated data. lodApparent is the NDC
+  // apparent-size scale of the flux-conserving star LOD (0 disables):
+  // stars projecting smaller than roughly their hashed fraction of it are
+  // vertex-culled and the survivors brightened so total light holds. Dust
+  // ignores all four (it uses a fixed NDC clamp instead).
   params1: vec4<f32>,
 };
 

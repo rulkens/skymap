@@ -50,6 +50,7 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { GEN_RECORD_BYTES } from '../galaxy/genRecordBytes';
 import {
   MILKY_WAY_EXPOSURE,
+  MILKY_WAY_LOD_APPARENT,
   MILKY_WAY_MODEL_SCALE,
   MILKY_WAY_STAR_PX_MIN,
   MILKY_WAY_STAR_PX_MAX,
@@ -203,7 +204,7 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
     // Pack io.wesl's Uniforms (byte offsets in the io.wesl header):
     // viewProj 0..15, viewportPx 16..17, pad 18..19, model 20..35,
     // camRight 36..39, camUp 40..43, params0 44..47,
-    // params1 48..51 (starPxMin, starPxMax, starSizeScale, 0).
+    // params1 48..51 (starPxMin, starPxMax, starSizeScale, lodApparent).
     f32.set(vp, 0);
     f32[16] = viewportPx[0];
     f32[17] = viewportPx[1];
@@ -224,11 +225,11 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
     f32[45] = MILKY_WAY_EXPOSURE;
     f32[46] = MILKY_WAY_MODEL_SCALE;
     f32[47] = 0;
-    // params1 = (starPxMin, starPxMax, starSizeScale, 0).
+    // params1 = (starPxMin, starPxMax, starSizeScale, lodApparent).
     f32[48] = MILKY_WAY_STAR_PX_MIN;
     f32[49] = MILKY_WAY_STAR_PX_MAX;
     f32[50] = MILKY_WAY_STAR_SIZE_SCALE;
-    f32[51] = 0;
+    f32[51] = MILKY_WAY_LOD_APPARENT;
 
     device.queue.writeBuffer(uniformBuffer, 0, f32);
 

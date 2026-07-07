@@ -35,9 +35,17 @@
 //   3. Fade multiplies EMISSION. fadeAlpha scales the final star colour, so a
 //      faded-out Milky Way adds no light under the additive blend.
 //
-// The tool's flux-conserving LOD + cull-bright blocks are OMITTED — they were
-// defaulted off in the tool, and the point cloud's sprite count is bounded by
-// generation, not by a per-star apparent-size fade.
+// The tool's flux-conserving LOD block IS ported (the vertex tail below):
+// at mid/far views the whole star budget collapses onto a handful of
+// pixels, and additive blending serializes the blender per pixel — so
+// subpixel stars are culled in the VERTEX stage (degenerate quad, zero
+// fragments) over a per-star hashed fade band, and the survivors are
+// brightened by 1/(fraction still on), capped at 3x, so the total light of
+// the field holds with no popping. The LOD works on the NDC apparent size
+// (the band was tuned in NDC units in the tool), captured before the
+// px-space clamp rescales the corner delta. The tool's cull-bright block
+// (a hard brightness floor on params.w) is NOT ported — a quality knob
+// defaulted off, unrelated to the perf lever.
 
 import package::milkyWayCloud::io::u;
 import package::lib::camera::worldToClip;
@@ -73,9 +81,16 @@ fn vs(@location(0) corner: vec2<f32>,
 
   // Pixel-space screen-size clamp (replaces the tool's 0.11-NDC cap). Only
   // meaningful when both center and corner are in front of the camera.
+  // 'apparent' defaults to 1.0 (LOD leaves off-screen stars alone; clip
+  // culling handles them), matching the tool.
+  var apparent = 1.0;
   if (cClip.w > 0.0 && kClip.w > 0.0) {
     let cN = cClip.xy / cClip.w;
     var d = kClip.xy / kClip.w - cN;
+    // NDC apparent half-extent for the flux-conserving LOD below, captured
+    // BEFORE the px clamp rescales 'd' — the LOD band was tuned in NDC
+    // units in the tool, while the clamp works in pixels.
+    apparent = length(d);
     // NDC spans [-1, 1] across viewportPx, so a delta 'd' in NDC is
     // 'd * viewportPx * 0.5' in pixels. Its length is the sprite's on-screen
     // half-extent in pixels.
@@ -87,10 +102,29 @@ fn vs(@location(0) corner: vec2<f32>,
     }
   }
 
-  o.pos = kClip;
+  // Flux-conserving LOD, ported verbatim from the tool's star.wesl: fade
+  // each star in over a band as its apparent size (a) grows past its
+  // per-star hash; brighten survivors by 1/(fraction on), capped at 3x, so
+  // total light holds. thr <= 0 disables the LOD entirely. The hash keys on
+  // 'inPos' (generated local space), so a star's threshold is stable across
+  // camera and model motion — no frame-to-frame shimmer.
+  var cull = false;
+  var boost = 1.0;
+  let thr = u.params1.w;
+  if (thr > 0.0) {
+    let a = apparent / thr;
+    let h = fract(sin(dot(inPos, vec3<f32>(12.9898, 78.233, 37.719))) * 43758.5453);
+    let fade = smoothstep(h - 0.4, h, a);
+    if (fade <= 0.0) { cull = true; } else { boost = min(fade / min(1.0, a + 0.2), 3.0); }
+  }
+
+  // A culled star parks its quad outside clip space — all four corners land
+  // on the same point past the +w plane, so nothing rasterizes and the
+  // fragment stage never runs for it.
+  if (cull) { o.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0); } else { o.pos = kClip; }
   o.uv = corner;
   o.color = inColor;
-  o.bright = inSB.y;
+  o.bright = inSB.y * boost;
   return o;
 }
 
