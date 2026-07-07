@@ -78,18 +78,28 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { LabelProducer } from '../../../@types/engine/subsystems/LabelProducer';
 import type { LabelDirectorSubsystem } from '../../../@types/engine/subsystems/LabelDirectorSubsystem';
 import { smoothstep } from '../../../utils/math/smoothstep';
+import { ATLAS_FONT_SIZE } from '../../../data/fonts';
+import {
+  LABEL_MIN_PX_DEFAULT,
+  LABEL_MAX_PX_DEFAULT,
+  LABEL_WORLD_EM_MPC_DEFAULT,
+} from '../../gpu/renderers/labelRenderer';
 
 /**
- * Minimum screen-pixel gap between two on-screen label anchors before the
- * lower-`prominencePx` one is suppressed.  Two labels whose anchors land
- * within this many pixels in BOTH x and y collide.  Tuned to keep dense
- * regions (Shapley) readable without over-culling merely-close neighbours.
+ * Breathing margin, in screen pixels, added around every label's measured
+ * text rect before the overlap test.  Two labels collide when their padded
+ * rects INTERSECT — the rects come from `labelRenderer.measure` (real glyph
+ * ink, alignment shifts applied) scaled by the same em clamp the vertex
+ * shader applies, so the test tracks what is actually drawn: a label merely
+ * anchored near another (e.g. just below a baseline-aligned label whose text
+ * extends upward) does not collide, while wide labels whose anchors are far
+ * apart but whose texts overlap do.
  *
  * The declutter runs in the director (not per producer) so it de-collides
  * labels ACROSS producers — a structure label vs a famous-galaxy label vs the
  * Milky Way "you are here" marker — which a per-producer pass could never see.
  */
-const DECLUTTER_MARGIN_PX = 48;
+const DECLUTTER_PAD_PX = 8;
 
 /**
  * Appear/disappear ramp duration in frame-clock ms.  Long enough to read
@@ -169,14 +179,16 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
 
   /**
    * Greedy screen-space declutter over the merged label set.  Projects each
-   * label's anchor to screen pixels, sorts by `prominencePx` DESC (stable
-   * input-order tiebreak), and accepts a label when its on-screen anchor sits
-   * ≥ DECLUTTER_MARGIN_PX (in x OR y) from every accepted on-screen anchor.
+   * label's anchor to screen pixels, places its measured text rect
+   * (`labelRenderer.measure`, scaled by the shader's em clamp reproduced on
+   * the CPU), sorts by `prominencePx` DESC (stable input-order tiebreak),
+   * and accepts a label when its padded rect intersects no accepted rect.
    * Off-screen labels (behind camera / outside the viewport) are accepted
-   * unconditionally and never block.  Decluttering by apparent size (not a
-   * flat significance) keeps the large structure under the camera while a
-   * small distant label sweeping past during an orbit yields, instead of
-   * culling-then-releasing the structure being inspected (flicker).
+   * unconditionally and never block, as are labels whose text lays out to
+   * no ink.  Decluttering by apparent size (not a flat significance) keeps
+   * the large structure under the camera while a small distant label
+   * sweeping past during an orbit yields, instead of culling-then-releasing
+   * the structure being inspected (flicker).
    *
    * A line whose `ownerLabelId` was culled is dropped with its label so no
    * anchor stem outlives its text; lines without an owner survive.  Returns
@@ -190,9 +202,10 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     type Projected = {
       readonly index: number;
       readonly prominencePx: number;
-      readonly screenX: number;
-      readonly screenY: number;
       readonly onScreen: boolean;
+      // Screen-space text rect (px, +Y down), or null when the label has
+      // no measurable ink — such labels never collide with anything.
+      readonly rect: { x0: number; y0: number; x1: number; y1: number } | null;
     };
     const m = ctx.vp;
     const projected: Projected[] = labels.map((label, index) => {
@@ -204,20 +217,44 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
       const clipX = m[0]! * wx + m[4]! * wy + m[8]! * wz + m[12]!;
       const clipY = m[1]! * wx + m[5]! * wy + m[9]! * wz + m[13]!;
       const clipW = m[3]! * wx + m[7]! * wy + m[11]! * wz + m[15]!;
-      let screenX = 0;
-      let screenY = 0;
       let onScreen = false;
+      let rect: Projected['rect'] = null;
       if (clipW > 0) {
         const ndcX = clipX / clipW;
         const ndcY = clipY / clipW;
-        screenX = (ndcX * 0.5 + 0.5) * ctx.canvasSize.width;
+        const screenX = (ndcX * 0.5 + 0.5) * ctx.canvasSize.width;
         // Flip Y: NDC +Y is up, screen +Y is down.
-        screenY = (1 - (ndcY * 0.5 + 0.5)) * ctx.canvasSize.height;
+        const screenY = (1 - (ndcY * 0.5 + 0.5)) * ctx.canvasSize.height;
         onScreen = ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1;
+
+        const bbox = labelRenderer!.measure(label);
+        if (bbox) {
+          // Reproduce the vertex shader's sizing exactly: worldLenToPx
+          // (worldLen / clipW · viewportH/2) clamped to [minPx, maxPx],
+          // then atlas px → screen px via displayEmPx / ATLAS_FONT_SIZE.
+          // The bbox is anchor-relative with +Y down, matching screen
+          // space (the shader's atlas-Y and NDC→screen flips cancel).
+          const pxPerEm =
+            ((label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) / clipW) *
+            (ctx.canvasSize.height * 0.5);
+          const displayEmPx = Math.min(
+            Math.max(pxPerEm, label.minPixelSize ?? LABEL_MIN_PX_DEFAULT),
+            label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
+          );
+          const s = displayEmPx / ATLAS_FONT_SIZE;
+          rect = {
+            x0: screenX + bbox.minX * s,
+            y0: screenY + bbox.minY * s,
+            x1: screenX + bbox.maxX * s,
+            y1: screenY + bbox.maxY * s,
+          };
+        }
       }
-      // A label with no prominence (e.g. the Milky Way label) sinks to lowest
-      // priority rather than beating real structures.
-      return { index, prominencePx: label.prominencePx ?? 0, screenX, screenY, onScreen };
+      // A label with no prominence sinks to lowest priority rather than
+      // beating real structures.  (Labels that must always win — the
+      // Milky Way "You are here" — declare it explicitly with
+      // prominencePx: Number.MAX_VALUE in their producer.)
+      return { index, prominencePx: label.prominencePx ?? 0, onScreen, rect };
     });
 
     const order = projected.map((_, i) => i);
@@ -228,13 +265,15 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     const accepted: Projected[] = [];
     for (const i of order) {
       const c = projected[i]!;
-      if (c.onScreen) {
+      if (c.onScreen && c.rect) {
         let collides = false;
         for (const a of accepted) {
-          if (!a.onScreen) continue;
+          if (!a.onScreen || !a.rect) continue;
           if (
-            Math.abs(c.screenX - a.screenX) < DECLUTTER_MARGIN_PX &&
-            Math.abs(c.screenY - a.screenY) < DECLUTTER_MARGIN_PX
+            c.rect.x0 - DECLUTTER_PAD_PX < a.rect.x1 &&
+            c.rect.x1 + DECLUTTER_PAD_PX > a.rect.x0 &&
+            c.rect.y0 - DECLUTTER_PAD_PX < a.rect.y1 &&
+            c.rect.y1 + DECLUTTER_PAD_PX > a.rect.y0
           ) {
             collides = true;
             break;

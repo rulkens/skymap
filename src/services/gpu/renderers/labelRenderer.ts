@@ -74,9 +74,24 @@ import { FONT_IDS } from '../../../data/fonts';
 import type { FontId } from '../../../@types/data/FontId';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import { layoutLabel } from '../labels/labelLayout';
+import { measureLabel } from '../labels/measureLabel';
+import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
 import vsCode from '../shaders/labels/vertex.wesl?static';
 import fsCode from '../shaders/labels/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+
+// ─── sizing defaults ───────────────────────────────────────────────────────
+
+/**
+ * Defaults applied when a Label omits its sizing fields (see the
+ * corresponding docstrings on the Label type).  Exported because the
+ * label director's rect-based declutter reproduces the vertex shader's
+ * `clamp(worldLenToPx(worldEmMpc), minPx, maxPx)` on the CPU — reading
+ * the defaults from here keeps the two computations from drifting.
+ */
+export const LABEL_WORLD_EM_MPC_DEFAULT = 0.01;
+export const LABEL_MIN_PX_DEFAULT = 8;
+export const LABEL_MAX_PX_DEFAULT = 64;
 
 // ─── buffer constants ──────────────────────────────────────────────────────
 
@@ -436,7 +451,7 @@ export function createLabelRenderer(
       labelBuf[labelBase + 0] = label.worldPos[0];
       labelBuf[labelBase + 1] = label.worldPos[1];
       labelBuf[labelBase + 2] = label.worldPos[2];
-      labelBuf[labelBase + 3] = label.worldEmMpc ?? 0.01;
+      labelBuf[labelBase + 3] = label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT;
 
       // Public colour API is STRAIGHT RGBA — producers write the natural
       // form (`[1, 0, 0, 0.5]` is "half-transparent red"); the fragment
@@ -450,8 +465,8 @@ export function createLabelRenderer(
       labelBuf[labelBase + 7] = ca;
 
       labelBuf[labelBase + 8] = label.outlineEmFrac ?? 0;
-      labelBuf[labelBase + 9] = label.minPixelSize ?? 8;
-      labelBuf[labelBase + 10] = label.maxPixelSize ?? 64;
+      labelBuf[labelBase + 9] = label.minPixelSize ?? LABEL_MIN_PX_DEFAULT;
+      labelBuf[labelBase + 10] = label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT;
       labelBuf[labelBase + 11] = label.fadeAlpha ?? 1;
 
       // outline colour — same straight → premultiplied conversion as fill.
@@ -556,6 +571,25 @@ export function createLabelRenderer(
     return currentLabelCount;
   }
 
+  // Memoized ink-bbox measurement.  The director's declutter measures
+  // every candidate label every frame; the bbox depends only on
+  // (font, alignment, text), all of which are stable for a given label
+  // id, so the cache converges to one entry per distinct label and the
+  // steady-state cost is a Map lookup.  Unbounded by design: the key
+  // space is the label catalog (~hundreds), not user input.
+  const measureCache = new Map<string, LabelBBox | null>();
+  function measure(label: Label): LabelBBox | null {
+    const alignX = label.alignX ?? 'left';
+    const alignY = label.alignY ?? 'baseline';
+    const key = `${label.font}|${alignX}|${alignY}|${label.text}`;
+    let bbox = measureCache.get(key);
+    if (bbox === undefined) {
+      bbox = measureLabel(label.text, metricsByFont[label.font], alignX, alignY);
+      measureCache.set(key, bbox);
+    }
+    return bbox;
+  }
+
   function destroy(): void {
     uniformBuffer?.destroy();
     storageBuffer?.destroy();
@@ -567,6 +601,7 @@ export function createLabelRenderer(
   const renderer: LabelRenderer = {
     label: 'labelRenderer',
     setLabels,
+    measure,
     draw,
     glyphCount,
     labelCount,
