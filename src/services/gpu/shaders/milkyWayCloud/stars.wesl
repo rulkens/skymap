@@ -102,19 +102,28 @@ fn vs(@location(0) corner: vec2<f32>,
     }
   }
 
-  // Flux-conserving LOD, ported verbatim from the tool's star.wesl: fade
-  // each star in over a band as its apparent size (a) grows past its
-  // per-star hash; brighten survivors by 1/(fraction on), capped at 3x, so
-  // total light holds. thr <= 0 disables the LOD entirely. The hash keys on
-  // 'inPos' (generated local space), so a star's threshold is stable across
-  // camera and model motion — no frame-to-frame shimmer.
+  // Flux-conserving LOD, mirrored in the tool's star.wesl: fade each star in
+  // over a band as its apparent size (a) grows past its per-star hash;
+  // brighten survivors by 1/(fraction on), capped at 3x, so total light
+  // holds. thr <= 0 disables the LOD entirely. The hash keys on 'inPos'
+  // (generated local space), so a star's threshold is stable across camera
+  // and model motion — no frame-to-frame shimmer.
+  //
+  // The band's lower edge is 'h * 0.6', NOT the constant-width 'h - 0.4': a
+  // constant width goes negative for h < 0.4, which kept ~40% of the field
+  // at a positive fade no matter how far away the galaxy was — hundreds of
+  // thousands of sub-pixel sprites rasterizing into a handful of screen
+  // tiles. A proportional edge stays strictly positive, so every star's
+  // fade reaches 0 (and its quad degenerates) as a -> 0. The hash is floored
+  // away from 0 so the smoothstep edges can never coincide (equal edges are
+  // indeterminate in WGSL — a NaN there would stick under additive blend).
   var cull = false;
   var boost = 1.0;
   let thr = u.params1.w;
   if (thr > 0.0) {
     let a = apparent / thr;
-    let h = fract(sin(dot(inPos, vec3<f32>(12.9898, 78.233, 37.719))) * 43758.5453);
-    let fade = smoothstep(h - 0.4, h, a);
+    let h = max(fract(sin(dot(inPos, vec3<f32>(12.9898, 78.233, 37.719))) * 43758.5453), 1e-4);
+    let fade = smoothstep(h * 0.6, h, a);
     if (fade <= 0.0) { cull = true; } else { boost = min(fade / min(1.0, a + 0.2), 3.0); }
   }
 

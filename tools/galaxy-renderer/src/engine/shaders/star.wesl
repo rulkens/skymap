@@ -57,9 +57,15 @@ fn vs(@location(0) corner: vec2<f32>,
   if (!cull && thr > 0.0) {
     // Flux-conserving LOD, no hard threshold: fade each star in over a band as its
     // on-screen size (a) grows past its hash; brighten survivors by 1/(fraction on).
+    // The lower edge is 'h * 0.6', NOT 'h - 0.4' — a constant-width band goes
+    // negative for h < 0.4, keeping ~40% of stars at a positive fade at any
+    // distance (they never culled, so the whole field kept rasterizing into a few
+    // screen tiles when the galaxy was small). A proportional edge stays strictly
+    // positive so every star's fade reaches 0 as a -> 0; the hash is floored away
+    // from 0 so the smoothstep edges can never coincide (indeterminate in WGSL).
     let a = apparent / thr;
-    let h = fract(sin(dot(inPos, vec3<f32>(12.9898, 78.233, 37.719))) * 43758.5453);
-    let fade = smoothstep(h - 0.4, h, a);
+    let h = max(fract(sin(dot(inPos, vec3<f32>(12.9898, 78.233, 37.719))) * 43758.5453), 1e-4);
+    let fade = smoothstep(h * 0.6, h, a);
     if (fade <= 0.0) { cull = true; } else { boost = min(fade / min(1.0, a + 0.2), 3.0); }
   }
   if (cull) { o.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0); } else { o.pos = kClip; }
