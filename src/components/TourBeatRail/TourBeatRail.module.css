@@ -47,9 +47,10 @@
   background: var(--color-fg-label);
 }
 
+/* Enlarged via transform, not width/height: scale leaves the 5px layout
+ * box untouched, so every dot's center stays on the same vertical axis. */
 .current .dot {
-  width: 8px;
-  height: 8px;
+  transform: scale(1.6);
   background: var(--color-accent);
 }
 
