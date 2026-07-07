@@ -18,13 +18,14 @@
  *   slot 3     — magnitude
  *   slot 4     — colorIndex
  *   slot 5     — axisRatio (sign bit = isFallback)
- *   slot 6     — positionAngleDeg
- *   slot 7     — radiusMpc (padded half-extent)
- *   slot 8     — vMaxWeight
- *   slot 9     — schechterRatio
- *   slot 10    — angularDensityWeight
+ *   slot 6,7   — paCos, paSin (screen-space PA rotation, negation folded in)
+ *   slot 8     — radiusMpc (padded half-extent)
+ *   slot 9     — vMaxWeight
+ *   slot 10    — schechterRatio
+ *   slot 11    — angularDensityWeight
+ *   slot 12    — absMag (from the offset-normalised slot-3 magnitude)
  *
- * 11 slots × 4 bytes = 44 bytes per point.  kPerZ moved to per-galaxy-catalog
+ * 13 slots × 4 bytes = 52 bytes per point.  kPerZ moved to per-galaxy-catalog
  * `SourceUniforms`; the picker reads instance identity from a per-source
  * uniform + the GPU's `@builtin(instance_index)`.
  */
@@ -54,10 +55,10 @@ function makeCloud(count: number): GalaxyCatalog {
   };
 }
 
-const SLOTS = 11;
+const SLOTS = 13;
 
 describe('buildPointInterleavedBuffer', () => {
-  it('produces an interleaved Float32Array of the expected length (11 slots × 4 bytes)', () => {
+  it('produces an interleaved Float32Array of the expected length (13 slots × 4 bytes)', () => {
     const cloud = makeCloud(3);
     const result = buildPointInterleavedBuffer({
       cloud,
@@ -132,7 +133,7 @@ describe('buildPointInterleavedBuffer', () => {
     expect(result.nRef).toBeGreaterThan(0);
   });
 
-  it('writes vMaxWeight in slot 8; default fast mode leaves slot 9 at 1.0', () => {
+  it('writes vMaxWeight in slot 9; default fast mode leaves slot 10 at 1.0', () => {
     const cloud = makeCloud(1);
     // Place the galaxy at d = 100 Mpc with a typical SDSS-like apparent
     // magnitude.  The exact weight value depends on vMaxWeight()'s formula
@@ -143,20 +144,20 @@ describe('buildPointInterleavedBuffer', () => {
       cloud,
       source: Source.SDSS,
     });
-    const vMax = interleaved[8]!;
-    const sch = interleaved[9]!;
+    const vMax = interleaved[9]!;
+    const sch = interleaved[10]!;
     expect(Number.isFinite(vMax)).toBe(true);
     expect(vMax).toBeGreaterThanOrEqual(0);
     expect(vMax).toBeLessThanOrEqual(1);
-    // Default mode is 'fast' → slot 9 is the multiplicative identity.
+    // Default mode is 'fast' → slot 10 is the multiplicative identity.
     // The shader's `select(1.0, schechterRatio, biasMode == 3u)` ignores
     // this slot in modes 0/1/2, so the visual is unchanged.
     expect(sch).toBe(1);
   });
 
-  it('mode: fast writes 1.0 to schechterRatio (slot 9) for every row', () => {
+  it('mode: fast writes 1.0 to schechterRatio (slot 10) for every row', () => {
     // Build a multi-row cloud spread across distances and assert every
-    // row's slot 9 is exactly 1.0 — the multiplicative identity that
+    // row's slot 10 is exactly 1.0 — the multiplicative identity that
     // makes the shader's mode-3 multiplication a no-op.
     const cloud = makeCloud(5);
     for (let i = 0; i < 5; i++) {
@@ -169,11 +170,11 @@ describe('buildPointInterleavedBuffer', () => {
       mode: 'fast',
     });
     for (let i = 0; i < 5; i++) {
-      expect(interleaved[i * SLOTS + 9]).toBe(1);
+      expect(interleaved[i * SLOTS + 10]).toBe(1);
     }
   });
 
-  it('mode: with-schechter writes the per-row symmetric-rebalance ratios in slot 9', () => {
+  it('mode: with-schechter writes the per-row symmetric-rebalance ratios in slot 10', () => {
     // Symmetric rebalance centers ratios on 1.0 (median pivot): far-field
     // boosts modestly (capped at 1.2×), near-field dims more aggressively
     // (down to 0.3×).  We assert at least one row off 1.0 — this catches
@@ -189,7 +190,7 @@ describe('buildPointInterleavedBuffer', () => {
     });
     let sawNonUnity = false;
     for (let i = 0; i < 5; i++) {
-      const r = interleaved[i * SLOTS + 9]!;
+      const r = interleaved[i * SLOTS + 10]!;
       expect(Number.isFinite(r)).toBe(true);
       expect(r).toBeGreaterThanOrEqual(0.3 - 1e-6);
       expect(r).toBeLessThanOrEqual(1.2 + 1e-6);
@@ -198,15 +199,47 @@ describe('buildPointInterleavedBuffer', () => {
     expect(sawNonUnity).toBe(true);
   });
 
-  it('writes 1.0 into the angularDensityWeight slot (slot 10) by default', () => {
+  it('writes 1.0 into the angularDensityWeight slot (slot 11) by default', () => {
     const cloud = makeCloud(3);
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
     });
     for (let i = 0; i < 3; i++) {
-      expect(interleaved[i * SLOTS + 10]).toBe(1);
+      expect(interleaved[i * SLOTS + 11]).toBe(1);
     }
+  });
+
+  it('bakes cos/sin of the negated position angle into slots 6/7', () => {
+    // PA = 45° east-of-north.  The shader used to compute
+    // 'paRad = -PA · π/180' per vertex; the bake folds the same negation
+    // in, so slot 6 = cos(-45°) = +√2/2 and slot 7 = sin(-45°) = -√2/2.
+    const cloud = makeCloud(1);
+    cloud.magG.set([18]);
+    const { interleaved } = buildPointInterleavedBuffer({
+      cloud,
+      source: Source.SDSS,
+    });
+    expect(interleaved[6]).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(interleaved[7]).toBeCloseTo(-Math.SQRT1_2, 6);
+  });
+
+  it('bakes absMag from the OFFSET-normalised magnitude into slot 12', () => {
+    // Single galaxy → per-catalog mean shift snaps its slot-3 magnitude to
+    // the SDSS target (18).  At d = 100 Mpc the distance modulus is
+    // 5·log10(100) + 25 = 35, so absMag = 18 − 35 = −17.  Using the raw
+    // magnitude (16) would give −19 — the assertion pins the OFFSET
+    // convention, which is what the shader's Malmquist gate historically
+    // computed from slot 3.
+    const cloud = makeCloud(1);
+    cloud.positions.set([100, 0, 0]);
+    cloud.magG.set([16]);
+    const { interleaved } = buildPointInterleavedBuffer({
+      cloud,
+      source: Source.SDSS,
+    });
+    expect(interleaved[3]).toBeCloseTo(18, 5);
+    expect(interleaved[12]).toBeCloseTo(-17, 5);
   });
 
   it('shifts the per-galaxy-catalog magG mean toward the SDSS target (≈18)', () => {

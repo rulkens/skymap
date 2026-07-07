@@ -33,7 +33,6 @@ import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::colorIndex::ramp;
-import package::lib::astro::distanceModulus;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
@@ -98,16 +97,14 @@ fn vs(
 
   // ── Malmquist-bias gating (volume-limited mode) ──────────────────────────
   //
-  // Compute the galaxy's *absolute* magnitude from its observed apparent
-  // magnitude + cosmological distance from origin:
-  //
-  //     M = m  -  5 · log10(d_Mpc)  -  25
+  // The galaxy's absolute magnitude ('M = m - 5·log10(d_Mpc) - 25') is
+  // baked into the per-instance 'p.absMag' at upload time — it's a
+  // galaxy-static value, so recomputing the log10 + sqrt here cost ~15 M
+  // wasted transcendentals per frame at the large tier.
   //
   // 'discard' is fragment-stage only; the vertex stage gates by emitting
   // a clip-space coordinate outside the unit cube, so all 6 vertices of
   // the gated quad land at NDC (2,2,2) and the GPU drops the primitive.
-  let dMpc = length(p.position);
-  let absMag = distanceModulus(p.magnitude, dMpc);
 
   // Recover the per-instance packed identity for the pick path. Bits
   // 27..31 = 5-bit 'source.sourceCode' (this draw's galaxy catalog, set per-
@@ -122,7 +119,7 @@ fn vs(
   // degenerate clip position so all 6 vertices of the quad land outside
   // the NDC cube and the rasteriser drops the primitive — no fragment
   // work, no pick-texture write.
-  let malmquistGated = u.biasMode == 1u && absMag > u.absMagLimit;
+  let malmquistGated = u.biasMode == 1u && p.absMag > u.absMagLimit;
   let realOnlyGated = u.realOnlyMode == 1u && isFallbackFlag == 1u;
   if (malmquistGated || realOnlyGated) {
     var earlyOut: VSOut;
@@ -272,13 +269,11 @@ fn vs(
   // The visual 'fs' ignores this field.
   out.instanceIdx = myPacked;
 
-  // Pre-compute cos/sin of the position-angle rotation so the fragment
-  // stage skips the trig and just reads these flat-interpolated values.
-  // We negate the rotation here because astronomical PA is east-of-north
-  // (CCW on sky) but our UV-y points down on screen, AND because
-  // rotating the UV is the inverse of rotating the ellipse.
-  let paRad = -p.positionAngleDeg * 3.14159265 / 180.0;
-  out.paRotation = vec2<f32>(cos(paRad), sin(paRad));
+  // Forward the pre-baked (cos, sin) of the position-angle rotation —
+  // computed once at upload in 'buildPointInterleavedBuffer' (negation
+  // for the east-of-north → screen-UV convention already folded in), so
+  // neither this stage nor the fragment pays any trig.
+  out.paRotation = p.paCosSin;
 
   return out;
 }
