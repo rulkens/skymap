@@ -15,19 +15,19 @@ describe('assertAtlasDimensions', () => {
     // the requested page size.  Catching that requires knowing the
     // emitted dimensions and screaming loudly with the font id so the
     // engineer knows which charset to shrink (or which atlas to grow).
-    expect(() => assertAtlasDimensions('cormorant', 1024, ATLAS_PX)).toThrow(/cormorant/);
-    expect(() => assertAtlasDimensions('cormorant', 1024, ATLAS_PX)).toThrow(/1024/);
+    expect(() => assertAtlasDimensions('cormorant', 2048, ATLAS_PX)).toThrow(/cormorant/);
+    expect(() => assertAtlasDimensions('cormorant', 2048, ATLAS_PX)).toThrow(/2048/);
   });
 
   it('throws with the font id when height overflows', () => {
-    expect(() => assertAtlasDimensions('cormorant', ATLAS_PX, 1024)).toThrow(/cormorant/);
+    expect(() => assertAtlasDimensions('cormorant', ATLAS_PX, 2048)).toThrow(/cormorant/);
   });
 
   it('mentions both expected and actual dimensions in the error', () => {
     // The engineer reading the failure needs to see which dimension is
     // wrong and by how much.
-    expect(() => assertAtlasDimensions('cormorant', 1024, 768)).toThrow(
-      /512/, // expected
+    expect(() => assertAtlasDimensions('cormorant', 2048, 768)).toThrow(
+      /1024/, // expected
     );
   });
 });
