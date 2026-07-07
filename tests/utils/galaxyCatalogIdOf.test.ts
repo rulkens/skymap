@@ -23,5 +23,6 @@ describe('galaxyCatalogIdOf', () => {
     expect(galaxyCatalogIdOf(Source.FamousGalaxy)).toBe('famousGalaxy');
     expect(galaxyCatalogIdOf(Source.Milliquas)).toBe('milliquas');
     expect(galaxyCatalogIdOf(Source.Synthetic)).toBe('synthetic');
+    expect(galaxyCatalogIdOf(Source.DesiDeep)).toBe('desiDeep');
   });
 });

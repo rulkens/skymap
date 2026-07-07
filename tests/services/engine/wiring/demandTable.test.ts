@@ -172,6 +172,10 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   glade: { enabled: true },
   famousGalaxy: { enabled: true },
   milliquas: { enabled: true },
+  // DesiDeep ships on by default too, matching the real construction seed —
+  // but it has no ASSET_WIRING point row yet (that lands in the engine-wiring
+  // tasks), so this bit is inert here: no test below asserts on it firing.
+  desiDeep: { enabled: true },
 };
 
 // ── Stub state builder ───────────────────────────────────────────────────────

@@ -93,10 +93,12 @@ describe('Source enum — structure codes (cluster/supercluster/void)', () => {
 
   it('ALL_VISIBLE_MASK covers default-visible galaxy catalog sources only (no structure bits)', () => {
     // Default-visible galaxy catalog bits: 0 (Synthetic), 1 (SDSS), 2 (2MRS),
-    // 3 (Glade), 4 (Famous), 8 (Milliquas) = 0b100011111.  Milliquas ships
-    // on by default now that the quasar source is stable.  Structure codes 5/6/7
-    // stay clear so the galaxy catalog draw loop doesn't accidentally gate on them.
-    expect(ALL_VISIBLE_MASK).toBe(0b100011111);
+    // 3 (Glade), 4 (Famous), 8 (Milliquas), 18 (DesiDeep) = 0b1000000000100011111.
+    // Milliquas ships on by default now that the quasar source is stable;
+    // DesiDeep ships on by the same Milliquas precedent.  Structure codes
+    // 5/6/7 stay clear so the galaxy catalog draw loop doesn't accidentally
+    // gate on them.
+    expect(ALL_VISIBLE_MASK).toBe(0b1000000000100011111);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Milliquas)).toBe(true);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Cluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Supercluster)).toBe(false);
