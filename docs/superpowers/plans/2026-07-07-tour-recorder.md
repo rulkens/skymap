@@ -139,10 +139,10 @@ export type SkymapRecorderHook = {
 
 **Steps:**
 
-- [ ] Tests first (real `rootReducer` store, the `buildStore` pattern of `tests/state/tour/guidedTourSaga.test.ts:73-97`; mock `isCinemaMode`): `installRecorderHook is a no-op outside cinema mode` (no `window.__skymapRecorder`); `installRecorderHook exposes the hook in cinema mode`; `ready resolves once the engine is ready and load progress has settled` (dispatch the engine-slice actions to walk the predicate true, assert the promise settles — and a companion assertion that a momentary flicker does NOT resolve it, per the stability caveat); `startTour dispatches tour/start and resolves when the tour ends` (assert the dispatched action's payload carries `id` + `beats`; drive `tourStarted` → `tourEnded` on the store, await the promise).
-- [ ] Implement the two type files + installer; wire the one-line call in `main.tsx` (after `createAppStore`, near `persistSplashVersion(store)` — `src/main.tsx:88-94`).
-- [ ] If Task 1's verdict required the present-handshake fallback: extend the hook type + installer accordingly (the spike's ledger note is the contract) — otherwise skip.
-- [ ] `npm test` + `npm run typecheck` green. Commit.
+- [x] Tests first (real `rootReducer` store, the `buildStore` pattern of `tests/state/tour/guidedTourSaga.test.ts:73-97`; mock `isCinemaMode`): `installRecorderHook is a no-op outside cinema mode` (no `window.__skymapRecorder`); `installRecorderHook exposes the hook in cinema mode`; `ready resolves once the engine is ready and load progress has settled` (dispatch the engine-slice actions to walk the predicate true, assert the promise settles — and a companion assertion that a momentary flicker does NOT resolve it, per the stability caveat); `startTour dispatches tour/start and resolves when the tour ends` (assert the dispatched action's payload carries `id` + `beats`; drive `tourStarted` → `tourEnded` on the store, await the promise).
+- [x] Implement the two type files + installer; wire the one-line call in `main.tsx` (after `createAppStore`, near `persistSplashVersion(store)` — `src/main.tsx:88-94`).
+- [x] If Task 1's verdict required the present-handshake fallback: extend the hook type + installer accordingly (the spike's ledger note is the contract) — otherwise skip.
+- [x] `npm test` + `npm run typecheck` green. Commit.
 
 ---
 

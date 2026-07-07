@@ -1,0 +1,24 @@
+/**
+ * SkymapRecorderHook — the shape of `window.__skymapRecorder`, the ONLY seam
+ * the Playwright recorder harness talks through.
+ *
+ * The harness drives the app from outside the page (`page.evaluate` +
+ * CDP virtual time), so the contract is deliberately promise-shaped: an
+ * awaited `page.evaluate(() => window.__skymapRecorder.ready)` blocks the
+ * harness until the app is capture-ready, and `startTour(...)` resolves when
+ * the tour-ended signal fires — no polling loops on the harness side, no
+ * store access from `page.evaluate`. The alternative (the harness importing
+ * selectors and reaching into the store from evaluated snippets) would couple
+ * the harness to the store's internal layout; two promises keep the whole
+ * coupling surface to this one type.
+ */
+
+import type { TourId } from '../animation/tour/TourId';
+import type { BeatRange } from '../animation/tour/BeatRange';
+
+export type SkymapRecorderHook = {
+  /** Resolves once the engine is running and registered loading slots have settled. */
+  readonly ready: Promise<void>;
+  /** Starts a tour (optionally windowed to a beat range); resolves when the tour ends. */
+  readonly startTour: (id: TourId, beats?: BeatRange) => Promise<void>;
+};
