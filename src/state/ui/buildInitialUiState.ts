@@ -10,7 +10,7 @@
  * meant the Redux slice always started with `visible: false` regardless of
  * what the URL or localStorage said.
  *
- * Moving the three-gate decision here lets the store start in the correct
+ * Moving the gate ladder here lets the store start in the correct
  * state so that any reader (future tour effects, server-side render, test
  * fixtures) sees the right splash flag without waiting for React to mount.
  * useSplash reads the Redux slice going forward, which is the correct
@@ -19,12 +19,15 @@
 
 import type { UiState } from '../../@types/ui/UiState';
 import { hasDeepLink } from '../../utils/url/hasDeepLink';
+import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { CURRENT_SPLASH_VERSION, readSeenVersion, readUrlAtMount } from './splashStorage';
 
 /**
  * Compute the initial UiState.  Called once at store construction.
  *
  * Splash visibility gates (applied in order):
+ *   0. Cinema mode (?cinema) → hide; the recorder screenshots the page and
+ *      must find it capture-ready with zero interaction.
  *   1. Deep link present (#focus= or ?tour=) → hide; user has specific intent.
  *   2. seenVersion stored and >= CURRENT_SPLASH_VERSION → hide; returning user.
  *   3. Otherwise → show; first visit or version-bumped content.
@@ -34,7 +37,9 @@ export function buildInitialUiState(): UiState {
   const seen = readSeenVersion();
 
   let splashVisible: boolean;
-  if (hasDeepLink({ hash, search })) {
+  if (isCinemaMode()) {
+    splashVisible = false;
+  } else if (hasDeepLink({ hash, search })) {
     splashVisible = false;
   } else if (seen !== null && seen >= CURRENT_SPLASH_VERSION) {
     splashVisible = false;

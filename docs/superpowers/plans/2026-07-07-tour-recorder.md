@@ -107,11 +107,11 @@ Follow the `TOUR_DEBUG_GATE` precedent (`App.tsx:73-74`) for reading the flag on
 
 **Steps:**
 
-- [ ] `isCinemaMode` test (mirror `tests/utils/url/hasUrlGate.test.ts`): returns true iff `?cinema` present. Implement.
-- [ ] App component test — RTL over the real store `Provider`, `useEngine` (and any other GPU-touching hook) mocked with typed `vi.fn` (see `tests/components/InfoCard/InfoCard.mobile.test.tsx` for the RTL + `.tsx` pattern; there is no existing App-level test — this is the first, keep the mock surface minimal). Test names: `cinema mode mounts only the canvas (no HUD chrome)` — asserts the canvas is present and StatusBar/ScaleBar/SearchTrigger/AboutPill/NavigationPanel queries all come back empty; `cinema mode mounts TourOverlayContainer while a tour is active` — dispatch `tourStarted` on the store, assert the overlay root appears; `normal mode still mounts the HUD` — regression guard.
-- [ ] Implement: early-return branch in `App.tsx` (cinema JSX is a strict subset — do NOT duplicate the full tree; hooks that must still run in cinema mode — `useEngine`, `useUrlSync` — stay above the branch), plus the `buildInitialUiState` gate with its test.
-- [ ] `npm test` + `npm run typecheck` green. Manual check note for the main session: `http://localhost:5173/?cinema&tour=x` shows a bare canvas.
-- [ ] Commit.
+- [x] `isCinemaMode` test (mirror `tests/utils/url/hasUrlGate.test.ts`): returns true iff `?cinema` present. Implement.
+- [x] App component test — RTL over the real store `Provider`, `useEngine` (and any other GPU-touching hook) mocked with typed `vi.fn` (see `tests/components/InfoCard/InfoCard.mobile.test.tsx` for the RTL + `.tsx` pattern; there is no existing App-level test — this is the first, keep the mock surface minimal). Test names: `cinema mode mounts only the canvas (no HUD chrome)` — asserts the canvas is present and StatusBar/ScaleBar/SearchTrigger/AboutPill/NavigationPanel queries all come back empty; `cinema mode mounts TourOverlayContainer while a tour is active` — dispatch `tourStarted` on the store, assert the overlay root appears; `normal mode still mounts the HUD` — regression guard.
+- [x] Implement: early-return branch in `App.tsx` (cinema JSX is a strict subset — do NOT duplicate the full tree; hooks that must still run in cinema mode — `useEngine`, `useUrlSync` — stay above the branch), plus the `buildInitialUiState` gate with its test.
+- [x] `npm test` + `npm run typecheck` green. Manual check note for the main session: `http://localhost:5173/?cinema&tour=x` shows a bare canvas.
+- [x] Commit.
 
 ---
 

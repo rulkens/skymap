@@ -13,6 +13,10 @@
  * loop — it isn't designed for the synthetic double-mount. `useEngine`'s
  * cleanup still runs on real unmounts.
  *
+ * Cinema mode (`?cinema`): the recorder's capture surface. App renders only
+ * the canvas + the tour overlay; every other piece of HUD chrome is absent
+ * from the DOM, not merely CSS-hidden — see the branch above the main return.
+ *
  * Store reach: `selectHoveredFocusable` / `selectSelectedFocusable` drive the
  * InfoCard; `selectPaletteOpen`, `selectUiHidden`, `selectDebugPanelOpen` gate
  * App's own JSX; `selectVisibleSourceMask` + `selectTier` feed
@@ -54,6 +58,7 @@ import DebugPanelContainer from '../containers/DebugPanelContainer';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourDebugPillContainer from '../containers/TourDebugPillContainer';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
+import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
 import {
   selectPaletteOpen,
@@ -188,6 +193,29 @@ export function App(): React.ReactElement {
     toggleUiHidden: dispatchToggleUiHidden,
     toggleDebugPanelOpen: dispatchToggleDebugPanelOpen,
   });
+
+  // Cinema mode (`?cinema`) — the recorder's capture surface: the canvas plus
+  // the tour overlay (captions + nav), nothing else. The recorder harness
+  // screenshots this page, so the HUD chrome must not EXIST in the DOM;
+  // CSS-hiding it (the `uiStackHidden` route) would still leave it findable
+  // and able to bleed into captures. Every hook above still runs — the
+  // engine, URL sync and keyboard wiring are what make the page playable —
+  // only the JSX diverges, which also keeps the hook order unconditional.
+  //
+  // Read per render, unlike the module-scope TOUR_DEBUG_GATE: a module-scope
+  // const is frozen at first import, so tests couldn't flip a mocked
+  // `isCinemaMode` between cinema and normal renders without module-cache
+  // resets. The search string can't change without a full reload, so the two
+  // read styles are behaviourally identical at runtime — and App renders on
+  // user action, not per frame, so the re-read costs nothing.
+  if (isCinemaMode()) {
+    return (
+      <>
+        <canvas ref={canvasRef} id="c" />
+        {tourActive && <TourOverlayContainer />}
+      </>
+    );
+  }
 
   return (
     <>
