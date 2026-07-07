@@ -34,7 +34,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Engine & State
 
 - [ ] **Source-registry factory** `needs-design` — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry; today each source is hand-wired across `slots/`, `assetWiring.ts`, `initGpu`. → [details](backlog/2026-06-29-source-registry-factory.md)
-- [ ] **Render-graph restructure** `deferred` — turn the imperative `runFrame.ts` body into a declarative pass DAG. → [details](backlog/2026-06-29-render-graph-restructure.md)
 - [ ] **GPU-handle nullability follow-on** `deferred` — `EngineGpuHandles` fields are all `T | null` (a transient bootstrap fact as a perpetual null-check); narrow into a non-null "ready GPU" view and shed `PassDeps`' renderer fields. → [details](backlog/2026-06-29-gpu-handle-nullability.md)
 - [ ] **`useStructureMemberCount` honest invalidation** `deferred` — the hook's `sourceCounts`/`tier` args are memo tripwires for live GPU catalog state; swap for a real catalog-generation signal. → [details](backlog/2026-06-29-usestructuremembercount-invalidation.md)
 - [ ] **Derive `BULK_CATALOG_CATEGORIES` from a registry flag** `deferred` — add `hasBulkCatalog` to `SOURCE_REGISTRY` rows so the hand-listed `['cluster','supercluster','void']` in `assetWiring.ts` derives from it. Keep the three category lists (UI / marker / bulk-fetch) separate — membership genuinely differs. (`bearsMarker` + `DEFAULT_CATEGORY_VISIBILITY` already shipped.)
