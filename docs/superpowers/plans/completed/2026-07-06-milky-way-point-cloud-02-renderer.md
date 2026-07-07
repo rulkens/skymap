@@ -282,19 +282,21 @@ Contract:
 
 Run the `entanglement-radar` skill over the combined plan-01 + plan-02 diff (`git diff main...HEAD`), verifying specifically:
 
-- [ ] `GENERATION_UBO` is still the ONLY offset authority (no new literal offsets in the packer, the cloud resources, or tests — Task 6's uniform test reads its own byte table, which is the CLOUD renderer's authority, distinct from the generation UBO's).
-- [ ] Zero WESL duplication: the generation shaders exist once under `src/services/gpu/shaders/galaxyGen/`; the parity test guards them from `tests/services/gpu/galaxy/`; the cloud draw shaders share nothing textually with the tool's `star.wesl`/`dust.wesl` beyond the ported math (adapted, not copied-with-tweaks — if a helper is identical, note whether it belongs in a shared lib).
-- [ ] The carve fns are the only capacity authority (no hardcoded capacities in `milkyWayCloud.ts` or its tests).
-- [ ] Single-source preset: the tool's `referenceGalaxies.ts` imports `MILKY_WAY_GALAXY_PARAMS`; no second copy of the params object exists (`grep -rn "armWinding: 0.32" --include="*.ts"` → exactly one hit).
-- [ ] Impostor fully gone except pick: `find src -path "*shaders/milkyWay/*"` → empty; `milkyWayPick` intact.
-- [ ] File any knots found as backlog items (or fix trivially in-line); note the radar verdict in the task summary.
+- [x] `GENERATION_UBO` is still the ONLY offset authority (no new literal offsets in the packer, the cloud resources, or tests — Task 6's uniform test reads its own byte table, which is the CLOUD renderer's authority, distinct from the generation UBO's).
+- [x] Zero WESL duplication: the generation shaders exist once under `src/services/gpu/shaders/galaxyGen/`; the parity test guards them from `tests/services/gpu/galaxy/`; the cloud draw shaders share nothing textually with the tool's `star.wesl`/`dust.wesl` beyond the ported math (adapted, not copied-with-tweaks — if a helper is identical, note whether it belongs in a shared lib).
+- [x] The carve fns are the only capacity authority (no hardcoded capacities in `milkyWayCloud.ts` or its tests).
+- [x] Single-source preset: the tool's `referenceGalaxies.ts` imports `MILKY_WAY_GALAXY_PARAMS`; no second copy of the params object exists (`grep -rn "armWinding: 0.32" --include="*.ts"` → exactly one hit).
+- [x] Impostor fully gone except pick: `find src -path "*shaders/milkyWay/*"` → empty; `milkyWayPick` intact.
+- [x] File any knots found as backlog items (or fix trivially in-line); note the radar verdict in the task summary.
+
+**RADAR VERDICT (2026-07-08, reports in `.superpowers/sdd/t10-radar-report.md` + `t10-final-review-report.md`):** all five invariants PASS with evidence; final whole-branch review READY TO MERGE (0 Critical / 0 Important). Pre-merge fixes applied in one wave: single radius home (`MILKY_WAY_DISC_RADIUS_KPC = 17.5` in the data layer, calibration derives the Mpc form), single visibility-predicate home (`milkyWayVisible`, camera + clock injected), pick camera-mirror parity test, stale MW-raymarcher wording sweep, vertex.wesl sentinel prose, wesl.toml scope claim. Backlogged knots: orphaned `util.wesl` noise/ray helpers + inverted `GAL_*_EQ` parity authority; star/dust record FIELD offsets triple-homed (stride is single-homed via `GEN_RECORD_BYTES`); `cameraBillboardBasis` mirrors `computeViewProj`'s roll math by documented copy; tool↔app tuned-constant duplication (consolidate on second re-tune); inject the pick camera bind group into `pickMilkyWay` instead of caller-side re-bind.
 
 ## Definition of Done
 
-- [ ] App draws the generated Milky Way at the correct position (Sgr A\* offset), orientation (galactic frame), and scale (0.030 Mpc disk radius) through the existing pass, fade, and settings seams.
-- [ ] Star budgets 100k/200k/400k per tier; tier switch regenerates via the existing tier-change path; no other regeneration path exists.
-- [ ] Blend states, buffer labels/usages, stride, and fade semantics match the Global Constraints exactly (asserted by tests, not just eyeballed).
-- [ ] Visual gate signed off by the user, including the iOS device check, recorded in Task 8.
-- [ ] Impostor deleted (renderer + three shaders + uniform-size const + type), pick surfaces untouched — or the crossfade fallback consciously adopted and documented instead (escalation path in Task 8).
-- [ ] Entanglement-radar task run and recorded.
-- [ ] Full suite + both typechecks + `npm run build` + tool `npx vite build --config tools/galaxy-renderer/vite.config.ts` green; every commit staged specific paths.
+- [x] App draws the generated Milky Way at the correct position (Sgr A\* offset), orientation (galactic frame), and scale through the existing pass, fade, and settings seams. _(Scale superseded at the signed-off gate: 0.0175 Mpc disk radius — see the Task 8 SIGN-OFF block.)_
+- [x] Star budgets per tier derive from the preset (75k/150k/300k after the signed-off gate retune — see Task 8); tier switch regenerates via the existing tier-change path; no other regeneration path exists.
+- [x] Blend states, buffer labels/usages, stride, and fade semantics match the Global Constraints exactly (asserted by tests, not just eyeballed).
+- [x] Visual gate signed off by the user, including the iOS device check, recorded in Task 8.
+- [x] Impostor deleted (renderer + three shaders + uniform-size const + type), pick surfaces untouched.
+- [x] Entanglement-radar task run and recorded (see the Task 10 RADAR VERDICT block).
+- [x] Full suite + both typechecks + `npm run build` + tool `npx vite build --config tools/galaxy-renderer/vite.config.ts` green; every commit staged specific paths.
