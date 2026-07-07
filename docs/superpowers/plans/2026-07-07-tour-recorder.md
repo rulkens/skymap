@@ -84,10 +84,10 @@ export function tourFrameCap(beats: readonly BeatData[], fps: number): number;
 
 **Steps:**
 
-- [ ] Tests first, per file. Names: `parseBeatRange parses 'a..b' inclusive`, `parseBeatRange parses a single index as a one-beat range`, `parseBeatRange throws on reversed, negative, and malformed input`; `parseSize parses WxH`, `parseSize throws on malformed or non-positive input`; `buildFfmpegArgs emits the pinned libx264 image2pipe argv`; `tourFrameCap sums enter+dwell over the beats and applies the margin formula` (fixture: narration clips + `dwellDrift(n)` beats, as `tests/state/tour/guidedTourSaga.test.ts:66-69,134-140` builds them — assert against the formula evaluated on the same fixture).
-- [ ] Implement each (bodies from the tests, not from this plan).
-- [ ] `npm test -- record` green; `npm run typecheck` green (tools config picks the new files up).
-- [ ] Commit.
+- [x] Tests first, per file. Names: `parseBeatRange parses 'a..b' inclusive`, `parseBeatRange parses a single index as a one-beat range`, `parseBeatRange throws on reversed, negative, and malformed input`; `parseSize parses WxH`, `parseSize throws on malformed or non-positive input`; `buildFfmpegArgs emits the pinned libx264 image2pipe argv`; `tourFrameCap sums enter+dwell over the beats and applies the margin formula` (fixture: narration clips + `dwellDrift(n)` beats, as `tests/state/tour/guidedTourSaga.test.ts:66-69,134-140` builds them — assert against the formula evaluated on the same fixture).
+- [x] Implement each (bodies from the tests, not from this plan).
+- [x] `npm test -- record` green; `npm run typecheck` green (tools config picks the new files up).
+- [x] Commit.
 
 ---
 
