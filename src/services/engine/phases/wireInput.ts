@@ -121,7 +121,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         renderer,
         deriveSourceMasks(state).pick,
         state.gpu.structureMarkerRenderer,
-        milkyWayPickVisible(state),
+        milkyWayPickVisible(state, canvas.height),
       ),
     viewportPx: () => [canvas.width, canvas.height],
     pointSizePx: () => state.settings.galaxyCatalogs.sizePx,
@@ -255,7 +255,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       r,
       deriveSourceMasks(state).pick,
       state.gpu.structureMarkerRenderer,
-      milkyWayPickVisible(state),
+      milkyWayPickVisible(state, canvas.height),
     );
     if (!hasAny) return null;
 

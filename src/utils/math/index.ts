@@ -8,6 +8,7 @@
 
 export * from './constants';
 export * from './apparentSizePx';
+export * from './apparentDiameterPx';
 export * from './galaxyDiameterKpc';
 export * from './defaultGalaxyDiameterKpc';
 export * from './arcsecToKpc';
@@ -30,7 +31,6 @@ export * from './galaxyTypeFromBminusJ';
 export * from './galaxyTypeFromColor';
 export * from './galaxyTypeFromJminusK';
 export * from './smoothstep';
-export * from './milkyWayFadeAlpha';
 export * from './horizonShellFadeAlpha';
 export * from './easeOutCubic';
 export * from './lerp';

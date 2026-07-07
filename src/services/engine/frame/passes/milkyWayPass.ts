@@ -15,9 +15,11 @@
  * Two gates, both in `enabled`:
  *
  *   1. `state.settings.milkyWay.enabled` — user toggle.
- *   2. `milkyWayFadeAlpha(camDist) > 0` — camera-distance fade band
- *      defined in `utils/math/milkyWayFadeAlpha.ts` (full strength inside
- *      10 Mpc, smoothstep out to 0 at 50 Mpc).
+ *   2. `milkyWayFadeAlpha(camDist, fovY, viewportH) > 0` — the
+ *      apparent-size fade band defined in
+ *      `services/gpu/galaxy/milkyWayFadeAlpha.ts` (full strength while the
+ *      disc spans at least `MILKY_WAY_FADE_FULL_PX` on screen, gone once it
+ *      shrinks to `MILKY_WAY_FADE_GONE_PX`).
  *
  * Both gates live in `enabled` so that when the camera flies well
  * beyond the local volume the whole pass is skipped — no
@@ -45,7 +47,7 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
-import { milkyWayFadeAlpha } from '../../../../utils/math/milkyWayFadeAlpha';
+import { milkyWayFadeAlpha } from '../../../gpu/galaxy/milkyWayFadeAlpha';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
 import { milkyWayModelMatrix } from '../../../gpu/galaxy/milkyWayModelMatrix';
 
@@ -60,15 +62,15 @@ export const milkyWayPass: Pass = {
   enabled(state, ctx) {
     // State boolean is the user's intent; opacityOf > 0 keeps the
     // pass alive through the ~100 ms toggle fade-out tail. The
-    // distance-based milkyWayFadeAlpha still gates separately — if
-    // the camera is too far away from the Milky Way to render it,
-    // skip even when the toggle is on.
+    // apparent-size milkyWayFadeAlpha still gates separately — once the
+    // disc shrinks below a few on-screen pixels there is nothing worth
+    // rendering, so skip even when the toggle is on.
     const togglePart =
       state.settings.milkyWay.enabled ||
       state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now()) > 0;
     if (!togglePart) return false;
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return milkyWayFadeAlpha(camDistMpc) > 0;
+    return milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, ctx.canvasSize.height) > 0;
   },
 
   draw(pass, ctx, state, deps) {
@@ -81,12 +83,12 @@ export const milkyWayPass: Pass = {
 
     const { vp, canvasSize, drawCamPos } = ctx;
     const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
-    // Composite the distance-based fade with the registry-supplied
+    // Composite the apparent-size fade with the registry-supplied
     // toggle opacity. The renderer accepts a scalar fadeAlpha CPU-side
     // param, so multiplying two opacities here is the minimal-change
     // path — no shader edits, no FadeUniforms binding.
     const toggleOpacity = state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now());
-    const fadeAlpha = milkyWayFadeAlpha(camDistMpc) * toggleOpacity;
+    const fadeAlpha = milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, canvasSize.height) * toggleOpacity;
 
     // Camera-facing billboard axes for the star/dust sprites (world space),
     // derived from the live camera each frame.

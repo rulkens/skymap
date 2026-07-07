@@ -196,9 +196,9 @@ function makePostProcess(records: DrawRecord[]): any {
 // ── Domain fixture helpers (camera, point cloud) ───────────────────────────
 
 function makeCam(): OrbitCamera {
-  // Distance 5 Mpc → comfortably inside the Milky-Way fade band
-  // (FADE_INNER_MPC = 10).  milkyWayPass.draw computes fadeAlpha > 0
-  // and dispatches the impostor.
+  // Distance 5 Mpc → the Milky-Way disc spans ~7.5 px on the 720-px
+  // fixture viewport, above milkyWayFadeAlpha's GONE threshold, so
+  // milkyWayPass.draw computes fadeAlpha > 0 and dispatches the impostor.
   return {
     target: [0, 0, 0] as unknown as Float32Array,
     distance: 5,

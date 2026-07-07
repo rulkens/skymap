@@ -66,8 +66,9 @@ export const MILKY_WAY_CENTER_WORLD: Vec3 = raDecDistToCartesian(
  *
  * Picked at 0.15 Mpc (≈150 kpc) by visual calibration — at this distance
  * the spiral fills most of the FOV at the project default 60° vertical
- * FOV.  This is well inside the impostor's full-visibility band
- * (`milkyWayFadeAlpha` returns 1.0 for camDist ≤ 10 Mpc) and a few times
+ * FOV.  This is deep inside the disc's full-visibility regime
+ * (`milkyWayFadeAlpha` returns 1.0 while the disc spans at least
+ * `MILKY_WAY_FADE_FULL_PX` on screen — here it fills the view) and a few times
  * the Milky Way's own ~25 kpc disc radius, so we're framing it from
  * outside without being so close that the procedural volume reveals its
  * raymarched seams. This is also the "home" framing: the Home pill and the

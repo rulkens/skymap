@@ -58,8 +58,10 @@ fn vs(@location(0) corner: vec2<f32>,
 
   let modelScale = u.params0.z;
   // inSB = (size, brightness): the two contiguous f32s at the end of the
-  // star record read as one vec2 attribute, matching the tool's inSB.
-  let worldHalfExtent = inSB.x * modelScale;
+  // star record read as one vec2 attribute, matching the tool's inSB. The
+  // size lane also folds in starSizeScale, the visual-gate knob that shrinks
+  // (or grows) every star sprite without touching the generated data.
+  let worldHalfExtent = inSB.x * modelScale * u.params1.z;
 
   // Place the particle center through the model transform, then push the
   // billboard corner out along the camera-facing basis in world space.

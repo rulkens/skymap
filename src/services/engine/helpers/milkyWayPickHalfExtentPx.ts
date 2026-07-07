@@ -40,7 +40,7 @@ export function milkyWayPickHalfExtentPx(
   state: EngineState,
   canvasHeightPx: number,
 ): number | null {
-  if (!milkyWayPickVisible(state) || !state.cam) return null;
+  if (!milkyWayPickVisible(state, canvasHeightPx) || !state.cam) return null;
 
   const p = state.cam.position;
   const dx = MILKY_WAY_CENTER_WORLD[0] - p[0]!;

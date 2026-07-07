@@ -61,3 +61,28 @@ export const MILKY_WAY_STAR_PX_MAX = 64.0;
  * chain differs from the tool's.
  */
 export const MILKY_WAY_EXPOSURE = 0.11;
+
+/**
+ * Dimensionless multiplier on the generated star sprite world size. The
+ * generation records carry the tool's own sprite sizes, tuned against the
+ * tool's reference gallery; the app renders the same cloud against a busier
+ * background (the full point-cloud sky), so sprites read fatter here than
+ * they did in the tool. This scale shrinks them at draw time without
+ * touching the generated data or the px clamp above. Tuned at the visual
+ * gate like its neighbors.
+ */
+export const MILKY_WAY_STAR_SIZE_SCALE = 0.7;
+
+/**
+ * Apparent-size fade band, px of on-screen diameter. The cloud fades on how
+ * BIG it looks, not how far away it is — a fixed distance band fires too
+ * early on a wide fov or a tall window and too late on a narrow one,
+ * whereas an apparent-size band adapts to both for free. At or above
+ * `FULL_PX` the cloud draws at full strength; at or below `GONE_PX` it is
+ * fully gone — below a few px the sprites collapse into an aliased shimmer,
+ * and the Milky Way has no catalog row to fade into (it sits at the origin
+ * where no survey row exists), so it hands off to nothing. Tuned at the
+ * visual gate like its neighbors.
+ */
+export const MILKY_WAY_FADE_FULL_PX = 12;
+export const MILKY_WAY_FADE_GONE_PX = 4;

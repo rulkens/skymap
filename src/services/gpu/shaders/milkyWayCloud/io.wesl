@@ -39,7 +39,7 @@
 //   offset 144 : camRight: vec4<f32>  (xyz billboard right + 0)
 //   offset 160 : camUp: vec4<f32>     (xyz billboard up + 0)
 //   offset 176 : params0: vec4<f32>   (fadeAlpha, exposure, modelScale, 0)
-//   offset 192 : params1: vec4<f32>   (starPxMin, starPxMax, 0, 0)
+//   offset 192 : params1: vec4<f32>   (starPxMin, starPxMax, starSizeScale, 0)
 //   total: 208 bytes (MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE).
 //
 // Every group is 16-byte aligned: mat4x4 and vec4 both align to 16, and the
@@ -81,11 +81,15 @@ struct Uniforms {
   //                separate from 'model' so the CPU can scale sprite size
   //                without decomposing the matrix.
   params0: vec4<f32>,
-  // params1 = (starPxMin, starPxMax, 0, 0). The star pass clamps each
-  // sprite's on-screen half-extent to this pixel range: starPxMin is the
-  // anti-sparkle FLOOR (a distant star never shrinks below a stable dot,
-  // killing sub-pixel twinkle); starPxMax CAPS foreground swell on close
-  // flythroughs. Dust ignores these (it uses a fixed NDC clamp instead).
+  // params1 = (starPxMin, starPxMax, starSizeScale, 0). The star pass clamps
+  // each sprite's on-screen half-extent to the [starPxMin, starPxMax] pixel
+  // range: starPxMin is the anti-sparkle FLOOR (a distant star never shrinks
+  // below a stable dot, killing sub-pixel twinkle); starPxMax CAPS
+  // foreground swell on close flythroughs. starSizeScale is a further
+  // dimensionless multiplier on each star's world-space half-extent, applied
+  // BEFORE that pixel clamp (see stars.wesl) -- the one knob for shrinking
+  // or growing the whole star population without touching the generated
+  // data. Dust ignores all three (it uses a fixed NDC clamp instead).
   params1: vec4<f32>,
 };
 

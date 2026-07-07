@@ -196,11 +196,11 @@ function makeMockProceduralDiskRenderer() {
 }
 
 function makeCam(): OrbitCamera {
-  // Camera distance must be inside the Milky-Way fade band
-  // (FADE_INNER_MPC = 10 ... FADE_OUTER_MPC = 50) so the impostor's
-  // distance-fade gate doesn't suppress the draw call in tests that
-  // need to assert MW ordering.  5 Mpc is comfortably inside the
-  // full-alpha (≤10 Mpc) regime.
+  // Camera distance must keep the Milky-Way disc above its GONE apparent
+  // size (milkyWayFadeAlpha's px band) so the fade gate doesn't suppress
+  // the draw call in tests that need to assert MW ordering.  At 5 Mpc the
+  // disc spans ~7.5 px on the 720-px fixture viewport — inside the band,
+  // alpha > 0.
   return {
     target: [0, 0, 0] as unknown as Float32Array,
     distance: 5,

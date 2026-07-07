@@ -33,6 +33,11 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { SelectionRef } from '../../../../../src/@types/engine/SelectionRef';
+import {
+  MILKY_WAY_FADE_FULL_PX,
+  MILKY_WAY_FADE_GONE_PX,
+  MILKY_WAY_RADIUS_MPC,
+} from '../../../../../src/services/gpu/galaxy/milkyWayCalibration';
 
 // ── Stub builders ───────────────────────────────────────────────────────────
 
@@ -107,6 +112,16 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     ...overrides,
   };
 }
+
+// Knob-derived camera distances for the Milky-Way apparent-size fade band,
+// under the stub ctx's camera (60° vertical fov, 720-px-tall viewport).
+// Inverting apparentDiameterPx: the disc (diameter 2·R) spans exactly `px`
+// on screen at distance 2·R·pxPerRad / px. Deriving the fixtures from the
+// calibration knobs (rather than hardcoding Mpc values) keeps these tests
+// green across visual-gate re-tunes of the band edges.
+const MW_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
+const MW_FULL_DIST_MPC = (2 * MILKY_WAY_RADIUS_MPC * MW_PX_PER_RAD) / MILKY_WAY_FADE_FULL_PX;
+const MW_GONE_DIST_MPC = (2 * MILKY_WAY_RADIUS_MPC * MW_PX_PER_RAD) / MILKY_WAY_FADE_GONE_PX;
 
 // The generated star/dust buffers the milky-way pass reads off
 // `state.gpu.milkyWayCloud.buffers()`. A stable reference so `draw` tests can
@@ -315,14 +330,17 @@ describe('filamentsPass.draw', () => {
 });
 
 describe('milkyWayPass.enabled', () => {
-  it('returns true when milkyWay.enabled is true and camera is inside the fade band', () => {
-    // Default makeCtx() puts the camera at 5 Mpc, inside the full-alpha
-    // (≤10 Mpc) regime. Both gates pass.
+  it('returns true when milkyWay.enabled is true and the disc is above the FULL apparent size', () => {
+    // Half the FULL-threshold distance → apparent diameter is twice
+    // MILKY_WAY_FADE_FULL_PX, safely full-alpha. Both gates pass.
     const stateOn = {
       ...STATE_STUB,
       settings: { milkyWay: { enabled: true } },
     } as unknown as EngineState;
-    expect(milkyWayPass.enabled(stateOn, makeCtx())).toBe(true);
+    const ctx = makeCtx({
+      drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
+    });
+    expect(milkyWayPass.enabled(stateOn, ctx)).toBe(true);
   });
 
   it('returns false when milkyWay.enabled is false AND fade opacity is 0', () => {
@@ -337,37 +355,44 @@ describe('milkyWayPass.enabled', () => {
 
   it('returns true when milkyWay.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
     // opacityOf = 1 simulates a toggle fade-out still in flight, and the
-    // distance-based fadeAlpha also passes (camera near origin), so the
-    // gate's second condition is non-zero — the pass renders.
+    // apparent-size fadeAlpha also passes (camera well inside the FULL
+    // distance), so the gate's second condition is non-zero — the pass
+    // renders.
     const stateOffFading = {
       ...STATE_STUB,
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
-    expect(milkyWayPass.enabled(stateOffFading, makeCtx())).toBe(true);
+    const ctx = makeCtx({
+      drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
+    });
+    expect(milkyWayPass.enabled(stateOffFading, ctx)).toBe(true);
   });
 
-  it('returns false when camera is beyond the fade band (no empty render pass)', () => {
-    // 1000 Mpc — well past FADE_OUTER_MPC (50 Mpc). Gating in `enabled`
-    // (not just `draw`) skips the empty beginRenderPass +
+  it('returns false once the disc shrinks past the GONE apparent size (no empty render pass)', () => {
+    // Twice the GONE-threshold distance → apparent diameter is half
+    // MILKY_WAY_FADE_GONE_PX, safely past the band → alpha 0. Gating in
+    // `enabled` (not just `draw`) skips the empty beginRenderPass +
     // timestamp-write on the split-encoder path.
     const stateOn = {
       ...STATE_STUB,
       settings: { milkyWay: { enabled: true } },
     } as unknown as EngineState;
     const ctx = makeCtx({
-      drawCamPos: [1000, 0, 0] as Readonly<[number, number, number]>,
+      drawCamPos: [MW_GONE_DIST_MPC * 2, 0, 0] as Readonly<[number, number, number]>,
     });
     expect(milkyWayPass.enabled(stateOn, ctx)).toBe(false);
   });
 });
 
 describe('milkyWayPass.draw', () => {
-  it('calls milkyWayCloudRenderer.draw with the packed args when camera is inside the fade band', () => {
-    // Camera at 5 Mpc from origin sits inside the full-alpha (≤10 Mpc)
-    // regime — fadeAlpha should be 1.0.
+  it('calls milkyWayCloudRenderer.draw with the packed args when the disc is above the FULL apparent size', () => {
+    // Half the FULL-threshold distance → apparent diameter is twice
+    // MILKY_WAY_FADE_FULL_PX — fadeAlpha should be 1.0.
     const drawSpy = vi.fn();
     const deps = makeDeps({ milkyWayCloudRenderer: { draw: drawSpy } as any });
-    const ctx = makeCtx();
+    const ctx = makeCtx({
+      drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
+    });
     milkyWayPass.draw(PASS_STUB, ctx, STATE_STUB, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // New two-pass renderer signature: draw(pass, MilkyWayCloudDrawArgs).
@@ -375,7 +400,7 @@ describe('milkyWayPass.draw', () => {
     expect(passArg).toBe(PASS_STUB);
     expect(args.vp).toBe(ctx.vp);
     expect(args.viewportPx).toEqual([ctx.canvasSize.width, ctx.canvasSize.height]);
-    // fadeAlpha at distance 5 Mpc is 1.0 (full strength).
+    // fadeAlpha above the FULL threshold is 1.0 (full strength).
     expect(args.fadeAlpha).toBe(1.0);
     // The generated buffer snapshot is forwarded verbatim.
     expect(args.buffers).toBe(MW_CLOUD_BUFFERS);

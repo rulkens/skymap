@@ -14,6 +14,7 @@ import {
   MILKY_WAY_STARS_PER_TIER,
   MILKY_WAY_STAR_PX_MAX,
   MILKY_WAY_STAR_PX_MIN,
+  MILKY_WAY_STAR_SIZE_SCALE,
 } from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
 import { outerRadiusOf } from '../../../../src/services/gpu/galaxy/outerRadiusOf';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../src/data/milkyWay/milkyWayGalaxyParams';
@@ -41,5 +42,10 @@ describe('milkyWayCalibration', () => {
   it('exposure is a positive finite factor', () => {
     expect(MILKY_WAY_EXPOSURE).toBeGreaterThan(0);
     expect(Number.isFinite(MILKY_WAY_EXPOSURE)).toBe(true);
+  });
+
+  it('star size scale is a positive finite factor', () => {
+    expect(MILKY_WAY_STAR_SIZE_SCALE).toBeGreaterThan(0);
+    expect(Number.isFinite(MILKY_WAY_STAR_SIZE_SCALE)).toBe(true);
   });
 });
