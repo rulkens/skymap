@@ -216,7 +216,14 @@ describe('createPickRenderer', () => {
       [100, 100],
       50,
       50,
-      [{ source: Source.SDSS, vertexBuffer: {} as GPUBuffer, count: 10, sourceBuffer: {} as GPUBuffer }],
+      [
+        {
+          source: Source.SDSS,
+          vertexBuffer: {} as GPUBuffer,
+          count: 10,
+          sourceBuffer: {} as GPUBuffer,
+        },
+      ],
       pointSizePx,
       uniformBytes,
     );
@@ -328,7 +335,12 @@ describe('createPickRenderer', () => {
     );
 
     const sources = [
-      { source: Source.SDSS, vertexBuffer: {} as GPUBuffer, count: 10, sourceBuffer: {} as GPUBuffer },
+      {
+        source: Source.SDSS,
+        vertexBuffer: {} as GPUBuffer,
+        count: 10,
+        sourceBuffer: {} as GPUBuffer,
+      },
     ];
     const uniformBytes = makeUniformBytes();
 
@@ -485,12 +497,12 @@ describe('createPickRenderer', () => {
   } {
     return {
       label: 'milkyWayPickRenderer',
-      pickMilkyWay: vi.fn<(pass: GPURenderPassEncoder, halfExtentPx: number) => void>(),
+      pickMilkyWay: vi.fn<(pass: GPURenderPassEncoder) => void>(),
       destroy: vi.fn<() => void>(),
     };
   }
 
-  it('invokes pickMilkyWay inside the pick pass when the MW is gated visible', async () => {
+  it('invokes pickMilkyWay(pass) — no size argument — when the MW is gated visible', async () => {
     const device = makeMwDrivableDevice();
     const mwPick = makeMilkyWayPickRenderer();
     const pickRenderer = createPickRenderer(
@@ -502,21 +514,29 @@ describe('createPickRenderer', () => {
       undefined, // no structure markers
       undefined, // no procedural disks
       mwPick,
-      () => 24, // MW disk visible — half-extent in px
+      () => true, // MW disk visible — gate open
     );
 
     await pickRenderer.pick(
       [100, 100],
       50,
       50,
-      [{ source: Source.SDSS, vertexBuffer: {} as GPUBuffer, count: 10, sourceBuffer: {} as GPUBuffer }],
+      [
+        {
+          source: Source.SDSS,
+          vertexBuffer: {} as GPUBuffer,
+          count: 10,
+          sourceBuffer: {} as GPUBuffer,
+        },
+      ],
       2.5,
       makeUniformBytes(),
     );
 
     expect(mwPick.pickMilkyWay).toHaveBeenCalledTimes(1);
-    // The computed half-extent is threaded straight through to the draw.
-    expect(mwPick.pickMilkyWay.mock.calls[0]![1]).toBe(24);
+    // The gate supplies visibility ONLY — sizing lives in the MW vertex
+    // shader, so the call carries just the pass encoder.
+    expect(mwPick.pickMilkyWay.mock.calls[0]).toHaveLength(1);
   });
 
   it('does NOT invoke pickMilkyWay when the MW is gated hidden', async () => {
@@ -531,7 +551,7 @@ describe('createPickRenderer', () => {
       undefined,
       undefined,
       mwPick,
-      () => null, // MW disk hidden — gate closed
+      () => false, // MW disk hidden — gate closed
     );
 
     // A galaxy source is present so the pass still runs; the MW draw must
@@ -540,11 +560,41 @@ describe('createPickRenderer', () => {
       [100, 100],
       50,
       50,
-      [{ source: Source.SDSS, vertexBuffer: {} as GPUBuffer, count: 10, sourceBuffer: {} as GPUBuffer }],
+      [
+        {
+          source: Source.SDSS,
+          vertexBuffer: {} as GPUBuffer,
+          count: 10,
+          sourceBuffer: {} as GPUBuffer,
+        },
+      ],
       2.5,
       makeUniformBytes(),
     );
 
     expect(mwPick.pickMilkyWay).not.toHaveBeenCalled();
+  });
+
+  it('a visible MW alone counts as a pick target (galaxy-empty scene still picks)', async () => {
+    // hasAnyPickTarget must treat the open MW gate as a target: with every
+    // galaxy catalog toggled off, a click at the galactic centre still has
+    // to run the pass and reach the MW draw.
+    const device = makeMwDrivableDevice();
+    const mwPick = makeMilkyWayPickRenderer();
+    const pickRenderer = createPickRenderer(
+      device,
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+      {} as unknown as GPUBindGroup,
+      undefined,
+      undefined,
+      mwPick,
+      () => true,
+    );
+
+    await pickRenderer.pick([100, 100], 50, 50, [], 2.5, makeUniformBytes());
+
+    expect(mwPick.pickMilkyWay).toHaveBeenCalledTimes(1);
   });
 });
