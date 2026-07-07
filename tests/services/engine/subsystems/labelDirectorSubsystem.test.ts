@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
+import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import { createLabelDirectorSubsystem } from '../../../../src/services/engine/subsystems/labelDirectorSubsystem';
 import type { LabelProducer } from '../../../../src/@types/engine/subsystems/LabelProducer';
 import type { Label } from '../../../../src/@types/rendering/Label';
@@ -50,6 +51,12 @@ function makeLabelStub() {
     glyphCount: () => 0,
     labelCount: () => 0,
     destroy: vi.fn(),
+    // Default measure: a modest single-line box extending up from the
+    // baseline anchor (text sits above `worldPos`), 20 atlas px per
+    // character.  Rect-declutter tests override this per label.
+    measure: vi.fn<(label: Label) => { minX: number; minY: number; maxX: number; maxY: number }>(
+      (label) => ({ minX: 0, minY: -30, maxX: 20 * label.text.length, maxY: 0 }),
+    ),
   };
 }
 function makeLineStub() {
@@ -215,6 +222,59 @@ describe('labelDirectorSubsystem', () => {
     dir.runFrame(makeState(), makeCtx(300));
     expect(labelStub.setLabels).toHaveBeenLastCalledWith([big]);
     expect(lineStub.setLines).toHaveBeenLastCalledWith([bigLine]);
+  });
+
+  describe('rect-based declutter geometry', () => {
+    // Both tests pin the projected em height to exactly ATLAS_FONT_SIZE
+    // (min = max clamp), so measured atlas px map 1:1 to screen px and
+    // the rects below can be reasoned about in plain pixels.
+    const RECT_LABEL: Label = {
+      ...SAMPLE_LABEL,
+      minPixelSize: ATLAS_FONT_SIZE,
+      maxPixelSize: ATLAS_FONT_SIZE,
+      worldEmMpc: 1,
+    };
+
+    it('keeps a label whose anchor is near another but whose text rect is clear of it', () => {
+      const dir = createLabelDirectorSubsystem();
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      // Baseline-aligned text: the rect spans 30 px UP from the anchor.
+      labelStub.measure.mockImplementation(() => ({ minX: -50, minY: -30, maxX: 50, maxY: 0 }));
+
+      // B sits 40 screen px BELOW A (screen y 500 → 540). Anchor distance is
+      // inside the old 48 px point margin, but A's text occupies y∈[470,500]
+      // and B's y∈[510,540] — visually clear. Neither may be culled.
+      const a: Label = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], prominencePx: 100 };
+      const b: Label = { ...RECT_LABEL, id: 'b', worldPos: [0, -0.08, 0], prominencePx: 10 };
+      dir.registerProducer(makeProducer('p', [a, b], []));
+
+      dir.runFrame(makeState(), makeCtx(0));
+      dir.runFrame(makeState(), makeCtx(300));
+      expect(labelStub.setLabels).toHaveBeenLastCalledWith([a, b]);
+    });
+
+    it('culls the lower-prominence label when wide text rects overlap despite distant anchors', () => {
+      const dir = createLabelDirectorSubsystem();
+      const labelStub = makeLabelStub();
+      const lineStub = makeLineStub();
+      dir.attachRenderers(labelStub as never, lineStub as never);
+
+      // Wide centered text: 300 px across the anchor.
+      labelStub.measure.mockImplementation(() => ({ minX: -150, minY: -15, maxX: 150, maxY: 15 }));
+
+      // B sits 100 screen px RIGHT of A (screen x 500 → 600) — outside the
+      // old 48 px point margin, but the 300 px-wide rects overlap by 200 px.
+      const a: Label = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], prominencePx: 100 };
+      const b: Label = { ...RECT_LABEL, id: 'b', worldPos: [0.2, 0, 0], prominencePx: 10 };
+      dir.registerProducer(makeProducer('p', [a, b], []));
+
+      dir.runFrame(makeState(), makeCtx(0));
+      dir.runFrame(makeState(), makeCtx(300));
+      expect(labelStub.setLabels).toHaveBeenLastCalledWith([a]);
+    });
   });
 
   it('never drops or blocks off-screen labels', () => {
