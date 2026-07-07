@@ -14,12 +14,12 @@
 // is invisible, which is correct — you only see dust silhouetted against the
 // glow it is blocking.
 //
-// ## Ported verbatim from the tool's dust.wesl
+// ## Shared with the tool's dust.wesl via lib/cloudSprite.wesl
 //
-//   - The fragment transmittance math: 'a = smoothstep(1, 0, sqrt(r2)) * op',
-//     then per-channel 'T = clamp(1 - a * vec3(0.55, 0.78, 1.0), 0, 1)' (blue
-//     absorbed most, red least) and the discard outside the unit disc.
-//   - The 0.16-NDC screen-size clamp, KEPT verbatim: dust lanes are broader
+//   - The fragment transmittance math (edge falloff + per-channel
+//     extinction) is single-homed in lib/cloudSprite.wesl's
+//     dustTransmittance, imported by both this pass and the tool's.
+//   - The 0.16-NDC screen-size clamp, KEPT verbatim per-pass: dust lanes are broader
 //     features than stars and tolerate a larger foreground extent before they
 //     need reining in. The spec's pixel clamp is a star-only calibration
 //     lever (anti-sparkle), so dust deliberately keeps the fixed NDC cap with
@@ -41,6 +41,7 @@
 
 import package::milkyWayCloud::io::u;
 import package::lib::camera::worldToClip;
+import package::lib::cloudSprite::dustTransmittance;
 
 struct VSOut {
   @builtin(position) pos: vec4<f32>,
@@ -87,12 +88,9 @@ fn vs(@location(0) corner: vec2<f32>,
 fn fs(i: VSOut) -> @location(0) vec4<f32> {
   let r2 = dot(i.uv, i.uv);
   if (r2 > 1.0) { discard; }
-  let a = smoothstep(1.0, 0.0, sqrt(r2)) * i.op;
-  // Wavelength-dependent extinction: transmittance per channel (blue absorbed
-  // most, red least) — multiplied onto the light behind, so dust darkens +
-  // reddens rather than painting a brown colour. No light behind => dust is
-  // invisible (correct).
-  let T = clamp(vec3<f32>(1.0) - a * vec3<f32>(0.55, 0.78, 1.0), vec3<f32>(0.0), vec3<f32>(1.0));
+  // Extinction math (edge falloff + per-channel transmittance) lives in
+  // lib/cloudSprite.wesl, shared with the galaxy-renderer tool's dust pass.
+  let T = dustTransmittance(r2, i.op);
   // fadeAlpha mixes T toward vec3(1) (the multiplicative identity): at
   // fadeAlpha 0 the dust stops darkening the scene entirely.
   let fadeAlpha = u.params0.x;

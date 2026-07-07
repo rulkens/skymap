@@ -32,14 +32,7 @@ load-bearing; each is an independent cleanup.
    once per frame); extract the shared Rodrigues-roll helper or fold the
    basis derivation into the camera module.
 
-4. **Tool ↔ app tuned-constant duplication** — the star radial profile
-   (5.0/1.6/0.35/0.0774), the LOD hash block, the dust extinction vector,
-   and the 0.16-NDC dust clamp exist in both the tool's draw shaders and
-   the app's `milkyWayCloud` WESL by design (adaptations, not copies).
-   Fine today; consolidate into a shared lib the SECOND time either side
-   re-tunes, per the radar's F8.
-
-5. **Inject the pick camera bind group into `pickMilkyWay`** — the pick
+4. **Inject the pick camera bind group into `pickMilkyWay`** — the pick
    pass currently re-binds `@group(0)` at the call site before the MW draw
    (regression-tested), because ring/disk picks leave their own uniforms
    bound. Passing the bind group into `pickMilkyWay(pass, cameraBg)` would

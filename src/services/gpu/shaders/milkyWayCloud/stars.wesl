@@ -4,14 +4,16 @@
 // overlapping stars sum their light — the physically-correct model for
 // unresolved point sources.
 //
-// ## Ported verbatim from the tool's star.wesl
+// ## Shared with the tool's star.wesl via lib/cloudSprite.wesl
 //
-//   - The fragment core+glow radial falloff: 'core = exp(-r2*5)', 'glow =
-//     exp(-r2*1.6)*0.35', the '- 0.0774' edge subtraction that lets alpha
-//     reach 0 with no hard rim, and the discard outside the unit disc.
+//   - The fragment core+glow radial falloff (starGlowAlpha) and the
+//     flux-conserving LOD (fluxConservingLod) are single-homed in
+//     lib/cloudSprite.wesl and imported by both this pass and the
+//     galaxy-renderer tool's star pass.
 //   - The billboard corner expansion (center + right*corner.x + up*corner.y)
 //     and the project-center-and-corner-then-measure-the-delta structure of
-//     the screen-size clamp.
+//     the screen-size clamp remain per-pass (see below for why the clamp
+//     differs).
 //
 // ## What changed vs the tool source, and why
 //
@@ -35,20 +37,20 @@
 //   3. Fade multiplies EMISSION. fadeAlpha scales the final star colour, so a
 //      faded-out Milky Way adds no light under the additive blend.
 //
-// The tool's flux-conserving LOD block IS ported (the vertex tail below):
-// at mid/far views the whole star budget collapses onto a handful of
-// pixels, and additive blending serializes the blender per pixel — so
-// subpixel stars are culled in the VERTEX stage (degenerate quad, zero
-// fragments) over a per-star hashed fade band, and the survivors are
-// brightened by 1/(fraction still on), capped at 3x, so the total light of
-// the field holds with no popping. The LOD works on the NDC apparent size
-// (the band was tuned in NDC units in the tool), captured before the
-// px-space clamp rescales the corner delta. The tool's cull-bright block
-// (a hard brightness floor on params.w) is NOT ported — a quality knob
-// defaulted off, unrelated to the perf lever.
+// The flux-conserving LOD (the vertex tail below) matters here because at
+// mid/far views the whole star budget collapses onto a handful of pixels,
+// and additive blending serializes the blender per pixel — so subpixel
+// stars are culled in the VERTEX stage (degenerate quad, zero fragments).
+// The LOD works on the NDC apparent size (the band was tuned in NDC units
+// in the tool), captured before the px-space clamp rescales the corner
+// delta. The tool's cull-bright block (a hard brightness floor on params.w)
+// is NOT ported — a quality knob defaulted off, unrelated to the perf
+// lever.
 
 import package::milkyWayCloud::io::u;
 import package::lib::camera::worldToClip;
+import package::lib::cloudSprite::fluxConservingLod;
+import package::lib::cloudSprite::starGlowAlpha;
 
 struct VSOut {
   @builtin(position) pos: vec4<f32>,
@@ -102,38 +104,17 @@ fn vs(@location(0) corner: vec2<f32>,
     }
   }
 
-  // Flux-conserving LOD, mirrored in the tool's star.wesl: fade each star in
-  // over a band as its apparent size (a) grows past its per-star hash;
-  // brighten survivors by 1/(fraction on), capped at 3x, so total light
-  // holds. thr <= 0 disables the LOD entirely. The hash keys on 'inPos'
-  // (generated local space), so a star's threshold is stable across camera
-  // and model motion — no frame-to-frame shimmer.
-  //
-  // The band's lower edge is 'h * 0.6', NOT the constant-width 'h - 0.4': a
-  // constant width goes negative for h < 0.4, which kept ~40% of the field
-  // at a positive fade no matter how far away the galaxy was — hundreds of
-  // thousands of sub-pixel sprites rasterizing into a handful of screen
-  // tiles. A proportional edge stays strictly positive, so every star's
-  // fade reaches 0 (and its quad degenerates) as a -> 0. The hash is floored
-  // away from 0 so the smoothstep edges can never coincide (equal edges are
-  // indeterminate in WGSL — a NaN there would stick under additive blend).
-  var cull = false;
-  var boost = 1.0;
-  let thr = u.params1.w;
-  if (thr > 0.0) {
-    let a = apparent / thr;
-    let h = max(fract(sin(dot(inPos, vec3<f32>(12.9898, 78.233, 37.719))) * 43758.5453), 1e-4);
-    let fade = smoothstep(h * 0.6, h, a);
-    if (fade <= 0.0) { cull = true; } else { boost = min(fade / min(1.0, a + 0.2), 3.0); }
-  }
+  // Flux-conserving LOD — the band math and its tuning rationale live in
+  // lib/cloudSprite.wesl, shared with the galaxy-renderer tool's passes.
+  let lod = fluxConservingLod(inPos, apparent, u.params1.w);
 
   // A culled star parks its quad outside clip space — all four corners land
   // on the same point past the +w plane, so nothing rasterizes and the
   // fragment stage never runs for it.
-  if (cull) { o.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0); } else { o.pos = kClip; }
+  if (lod.cull) { o.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0); } else { o.pos = kClip; }
   o.uv = corner;
   o.color = inColor;
-  o.bright = inSB.y * boost;
+  o.bright = inSB.y * lod.boost;
   return o;
 }
 
@@ -141,12 +122,10 @@ fn vs(@location(0) corner: vec2<f32>,
 fn fs(i: VSOut) -> @location(0) vec4<f32> {
   let r2 = dot(i.uv, i.uv);
   if (r2 > 1.0) { discard; }
-  let core = exp(-r2 * 5.0);
-  let glow = exp(-r2 * 1.6) * 0.35;
-  // Subtract the value at the sprite edge so alpha reaches 0 smoothly (no
-  // hard rim); scale the radial falloff by the exposure knob.
+  // Core+glow radial falloff from lib/cloudSprite.wesl, scaled by the
+  // exposure knob.
   let exposure = u.params0.y;
-  let a = max(0.0, (core + glow) - 0.0774) * exposure;
+  let a = starGlowAlpha(r2) * exposure;
   // fadeAlpha multiplies EMISSION: at fadeAlpha 0 the star adds no light.
   let fadeAlpha = u.params0.x;
   return vec4<f32>(i.color * i.bright * a * fadeAlpha, a);

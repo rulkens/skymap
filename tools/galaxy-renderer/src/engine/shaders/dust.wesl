@@ -17,6 +17,13 @@
 // The screen-size clamp here is 0.16 NDC (vs the star pass's 0.11): dust
 // lanes are broader features and tolerate a larger foreground extent before
 // they need reining in.
+//
+// The LOD band math and the extinction transmittance are single-homed in
+// the main app's lib/cloudSprite.wesl (shared with the milkyWayCloud
+// passes), reached here through the file symlink at lib/cloudSprite.wesl.
+
+import package::lib::cloudSprite::fluxConservingLod;
+import package::lib::cloudSprite::dustTransmittance;
 
 struct Cam {
   viewProj: mat4x4<f32>,
@@ -51,19 +58,12 @@ fn vs(@location(0) corner: vec2<f32>,
     apparent = l;
     if (l > 0.16) { d = d * (0.16 / l); kClip = vec4<f32>((cN + d) * kClip.w, kClip.z, kClip.w); }
   }
-  var cull = false;
-  var boost = 1.0;
-  let thr = cam.params.z;
-  if (thr > 0.0) {
-    let a = apparent / thr;
-    let h = fract(sin(dot(inPos, vec3<f32>(12.9898, 78.233, 37.719))) * 43758.5453);
-    let fade = smoothstep(h - 0.4, h, a);
-    if (fade <= 0.0) { cull = true; } else { boost = min(fade / min(1.0, a + 0.2), 3.0); }
-  }
-  if (cull) { o.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0); } else { o.pos = kClip; }
+  // Flux-conserving LOD — band math + rationale in lib/cloudSprite.wesl.
+  let lod = fluxConservingLod(inPos, apparent, cam.params.z);
+  if (lod.cull) { o.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0); } else { o.pos = kClip; }
   o.uv = corner;
   o.color = inColor;
-  o.op = inOp * boost;
+  o.op = inOp * lod.boost;
   return o;
 }
 
@@ -71,10 +71,7 @@ fn vs(@location(0) corner: vec2<f32>,
 fn fs(i: VSOut) -> @location(0) vec4<f32> {
   let r2 = dot(i.uv, i.uv);
   if (r2 > 1.0) { discard; }
-  let a = smoothstep(1.0, 0.0, sqrt(r2)) * i.op;
-  // Wavelength-dependent extinction: transmittance per channel (blue absorbed most,
-  // red least) — multiplied onto the light behind, so dust darkens + reddens rather
-  // than painting a brown colour. No light behind => dust is invisible (correct).
-  let T = clamp(vec3<f32>(1.0) - a * vec3<f32>(0.55, 0.78, 1.0), vec3<f32>(0.0), vec3<f32>(1.0));
-  return vec4<f32>(T, 1.0);
+  // Extinction math (edge falloff + per-channel transmittance) lives in
+  // lib/cloudSprite.wesl, shared with the app's milkyWayCloud dust pass.
+  return vec4<f32>(dustTransmittance(r2, i.op), 1.0);
 }
