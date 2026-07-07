@@ -21,8 +21,8 @@
 // separate 'view' + 'proj' matrices, plus 'kPerZ', 'dpr', 'timeSec',
 // etc. The actual renderer Uniforms structs argue against it:
 //
-//   - None of the seven renderers uses 'view' or 'proj' separately;
-//     all of them only need the combined 'viewProj'.
+//   - None of the camera-consuming renderers uses 'view' or 'proj'
+//     separately; all of them only need the combined 'viewProj'.
 //   - 'kPerZ' and 'dpr' are not in any uniform struct.
 //   - 'cameraPos' (under various spellings: 'camPosWorld',
 //     'cameraPosWorld', 'camPos') lives at WILDLY different byte
@@ -38,7 +38,7 @@
 //   - 'filaments' has no camera position at all — its quads only
 //     need 'viewProj' for endpoint projection.
 //
-// What IS universal across all six camera-using renderers (everything
+// What IS universal across the camera-consuming renderers (everything
 // except 'toneMap', which is a fullscreen pass without world-space
 // math) is the prefix:
 //

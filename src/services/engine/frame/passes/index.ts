@@ -29,7 +29,7 @@
  *   1. point-sprites       — instanced billboards (always-on)
  *   2. procedural-disks    — LOD-1 procedural-disk impostors
  *   3. textured-disks      — LOD-2 3D-oriented textured-disk impostors
- *   4. milky-way           — procedural impostor at the world origin
+ *   4. milky-way           — star/dust point cloud at the galactic centre
  *   5. filaments           — cosmic-web skeleton overlay
  *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
@@ -71,7 +71,7 @@
  *
  * ### Why milky-way BEFORE filaments / scalar-volume?
  *
- * The Milky Way impostor is the densest, brightest near-field
+ * The Milky Way point cloud is the densest, brightest near-field
  * additive contributor.  Drawing it early lets the broader large-
  * scale-structure overlays (filaments, scalar volumes) composite
  * over its bulge rather than the other way round — the cosmic-web

@@ -1,7 +1,7 @@
 /**
  * milkyWayModelMatrix — the transform that drops the GPU-generated Milky Way
- * point cloud into the scene exactly where (and how) the old procedural
- * impostor rendered it.
+ * point cloud into the scene at the galaxy's real place and orientation:
+ * centred on Sgr A* (`MILKY_WAY_CENTER_WORLD`), disk in the galactic plane.
  *
  * ## The frame chain
  *
@@ -65,7 +65,7 @@ const GAL_Z_EQ: Vec3 = [-0.867666, -0.198076, 0.455984]; // toward North Galacti
 
 /**
  * Model matrix placing the generated point cloud at the Milky Way's world
- * position, in the impostor's orientation. Column-major `Float32Array(16)`:
+ * position, in the galactic-plane orientation. Column-major `Float32Array(16)`:
  * `translate(MILKY_WAY_CENTER_WORLD) x R_localToWorld x uniformScale(k)`.
  */
 export function milkyWayModelMatrix(): Float32Array {

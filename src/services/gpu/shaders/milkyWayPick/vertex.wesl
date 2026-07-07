@@ -22,10 +22,10 @@
 //
 // The packed pick identity is composed in the vertex stage (mirroring
 // points/vertex.wesl's 'packSelection(source.sourceCode, ii)') and
-// forwarded flat-interpolated to the fragment.  The MW carries no
-// per-record localIdx, so it is always 0; the fragment adds
-// PICK_SENTINEL_OFFSET before writing so the cleared-to-zero pick
-// texture stays distinguishable from a real (code, 0) hit.
+// forwarded flat-interpolated to the fragment, which writes it verbatim.
+// The MW carries no per-record localIdx, so it is always 0; the vertex
+// adds PICK_SENTINEL_OFFSET here so the cleared-to-zero pick texture
+// stays distinguishable from a real (code, 0) hit.
 
 import package::milkyWayPick::io::Uniforms;
 import package::milkyWayPick::io::MilkyWayPickUniforms;
@@ -68,7 +68,8 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   // resolves a foreground galaxy over the MW billboard.
   out.pos = vec4<f32>(centerClip.xy + offset, centerClip.zw);
   out.uv = corner;
-  // MW localIdx is always 0; the fragment adds PICK_SENTINEL_OFFSET.
+  // MW localIdx is always 0; add PICK_SENTINEL_OFFSET here — the
+  // fragment writes this value verbatim.
   out.packedPick = packSelection(mw.sourceCode, 0u) + PICK_SENTINEL_OFFSET;
   return out;
 }

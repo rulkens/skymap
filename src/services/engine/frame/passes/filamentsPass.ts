@@ -35,7 +35,7 @@
  * `index.ts`.  Rationale: the filament skeleton is a *local-universe
  * overlay* threaded between the galaxies it was computed from, so
  * it belongs visually on top of the per-galaxy billboards +
- * thumbnails.  The Milky Way impostor at the world origin is a
+ * thumbnails.  The Milky Way point cloud at the galactic centre is a
  * *bright foreground feature*; drawing it last keeps its bulge from
  * being veiled by overlapping filament strands when the camera sits
  * inside the local supercluster.  Additive blending makes per-

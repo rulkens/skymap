@@ -4,9 +4,9 @@
  * The catalog data origin sits at the OBSERVER (Earth/Sun), so the
  * Milky Way's center is NOT at world (0, 0, 0).  It's offset by
  * ~8 kpc in the direction of Sagittarius A\*, the supermassive black
- * hole at the galactic center.  The Milky Way impostor renderer uses
- * `MILKY_WAY_CENTER_WORLD` as its `centerWorld` parameter so the
- * billboard renders where the galaxy actually is in space.
+ * hole at the galactic center.  The Milky Way point cloud places its
+ * model matrix at `MILKY_WAY_CENTER_WORLD` (`milkyWayModelMatrix.ts`)
+ * so the cloud renders where the galaxy actually is in space.
  *
  * ## Why a separate file (not in `namedGalaxies` or `famous_galaxies.seed.json`)
  *
@@ -17,12 +17,12 @@
  * catalog distance to it is undefined (we'd need to pick a reference
  * point — bulge, Sgr A\*, mean stellar position).  Adding it to the
  * famous seed would also enroll it as a regular point in `famous.bin`
- * and double-render it next to the impostor.
+ * and double-render it next to the point cloud.
  *
  * Single-purpose file → single source of truth for the constant, no
- * type machinery needed.  Future per-galaxy impostors (e.g. M31)
- * read THEIR center from the famous bin's positions array via the
- * existing meta lookup; only the Milky Way needs this special case.
+ * type machinery needed.  Per-galaxy disk impostors (e.g. M31) read
+ * THEIR center from the famous bin's positions array via the existing
+ * meta lookup; only the Milky Way needs this special case.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -41,7 +41,7 @@ const SGR_A_DEC_DEG = -29.0078;
  * literature; the GRAVITY collaboration's 2019 trigonometric-orbit
  * measurement gives R₀ = 8.178 ± 0.013 (stat) ± 0.022 (sys) kpc,
  * which we round to 8.0 kpc here for simplicity.  The 2% precision
- * gap is invisible at any zoom that shows the impostor.
+ * gap is invisible at any zoom that shows the point cloud.
  */
 const SGR_A_DIST_MPC = 0.008;
 
@@ -61,26 +61,32 @@ export const MILKY_WAY_CENTER_WORLD: Vec3 = raDecDistToCartesian(
 
 /**
  * Camera distance (Mpc) used by the Milky Way focus tween to land the
- * camera at a viewpoint where the procedural Milky Way impostor is the
- * dominant on-screen subject.
+ * camera at a viewpoint where the Milky Way point cloud is the dominant
+ * on-screen subject.
  *
  * Picked at 0.15 Mpc (≈150 kpc) by visual calibration — at this distance
  * the spiral fills most of the FOV at the project default 60° vertical
  * FOV.  This is deep inside the disc's full-visibility regime
  * (`milkyWayFadeAlpha` returns 1.0 while the disc spans at least
- * `MILKY_WAY_FADE_FULL_PX` on screen — here it fills the view) and a few times
- * the Milky Way's own ~25 kpc disc radius, so we're framing it from
- * outside without being so close that the procedural volume reveals its
- * raymarched seams. This is also the "home" framing: the Home pill and the
- * `h` hotkey focus the Milky Way, landing the camera right here.
+ * `MILKY_WAY_FADE_FULL_PX` on screen — here it fills the view) and
+ * several times the disc radius (`MILKY_WAY_DISC_RADIUS_KPC`), so the
+ * whole spiral is framed from outside rather than seen edge-on from
+ * within. This is also the "home" framing: the Home pill and the `h`
+ * hotkey focus the Milky Way, landing the camera right here.
  */
 export const MILKY_WAY_VIEW_DISTANCE_MPC = 0.15;
 
 /**
- * Physical radius (kpc) of the Milky Way's stellar disc, used to size the
- * selection ring when the Milky Way is the selected target.  ~25 kpc is the
- * conventional figure for the visible disc edge; the selection ring borrows it
- * the way the galaxy branch borrows a catalog `diameterKpc`, so the ring scales
- * with the disc's apparent on-screen size.
+ * Physical radius (kpc) of the Milky Way's stellar disc — THE single home
+ * of the number.  The rendered point cloud and the pick target size from
+ * it via `MILKY_WAY_RADIUS_MPC` (`milkyWayCalibration.ts`, a pure unit
+ * conversion of this constant), and the selection ring borrows it the way
+ * the galaxy branch borrows a catalog `diameterKpc` — so the disc the
+ * user sees, the area that takes the click, and the ring drawn around it
+ * all agree on ONE physical radius.
+ *
+ * 17.5 kpc = a ~35 kpc stellar disk, chosen so the Sun's 8 kpc offset
+ * (`SGR_A_DIST_MPC`) sits mid-disk at ~46% of the radius — in the arm
+ * region where it belongs, not on the bulge's edge.
  */
-export const MILKY_WAY_DISC_RADIUS_KPC = 25;
+export const MILKY_WAY_DISC_RADIUS_KPC = 17.5;

@@ -271,10 +271,10 @@ Contract:
 
 **Explicitly NOT deleted:** `milkyWayPickRenderer.ts`, `shaders/milkyWayPick/*` (pick is a separate disk-shaped target), `milkyWayFadeAlpha.ts`, `galacticCenter.ts`, the `worldToGalactic`/`galacticToShader` helpers in `lib/util.wesl` (Task 2's parity scrape + the pick shaders read that frame).
 
-- [ ] Confirm the Task 8 sign-off line exists in this plan. If not: STOP.
-- [ ] Delete the four files + type; sweep every reference: `grep -rn "milkyWayRenderer\|MilkyWayRenderer\|MILKY_WAY_UNIFORM_BUFFER_SIZE\|shaders/milkyWay/" src tests` — expect hits only in `milkyWayPick*` (keep) and comments in `defaults.ts:109-111` / `milkyWayPickHalfExtentPx.ts:22` (update those comments to cite `milkyWayCloudRenderer` / `milkyWayCalibration.MILKY_WAY_RADIUS_MPC` instead — comments stay timeless, no "used to be" narration).
-- [ ] Update `milkyWayPass.ts`'s module header (it describes the impostor) to describe the cloud pass.
-- [ ] Full `npm test` + `npm run typecheck` + `npm run build`. Commit.
+- [x] Confirm the Task 8 sign-off line exists in this plan. If not: STOP.
+- [x] Delete the four files + type; sweep every reference: `grep -rn "milkyWayRenderer\|MilkyWayRenderer\|MILKY_WAY_UNIFORM_BUFFER_SIZE\|shaders/milkyWay/" src tests` — expect hits only in `milkyWayPick*` (keep) and comments in `defaults.ts:109-111` / `milkyWayPickHalfExtentPx.ts:22` (update those comments to cite `milkyWayCloudRenderer` / `milkyWayCalibration.MILKY_WAY_RADIUS_MPC` instead — comments stay timeless, no "used to be" narration).
+- [x] Update `milkyWayPass.ts`'s module header (it describes the impostor) to describe the cloud pass.
+- [x] Full `npm test` + `npm run typecheck` + `npm run build`. Commit.
 
 ---
 

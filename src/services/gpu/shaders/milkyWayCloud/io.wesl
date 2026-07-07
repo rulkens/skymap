@@ -1,7 +1,7 @@
 // milkyWayCloud/io.wesl — shared interface module for the Milky Way
 // point-cloud draw passes (stars + dust).
 //
-// The point-cloud impostor draws a generated star/dust particle set as two
+// The point cloud draws a generated star/dust particle set as two
 // billboard passes: an ADDITIVE star pass (soft radial glows that sum their
 // light) and a MULTIPLICATIVE dust pass (per-channel transmittance that
 // darkens + reddens the light behind it). Both passes read the SAME uniform

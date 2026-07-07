@@ -1,5 +1,7 @@
 /**
- * milkyWayPass — the Milky Way star/dust point cloud at the world origin.
+ * milkyWayPass — the Milky Way star/dust point cloud at the galactic
+ * centre (`MILKY_WAY_CENTER_WORLD`, the ~8 kpc Sgr A* offset from the
+ * observer origin, applied via the model matrix).
  *
  * ### What it draws
  *
@@ -10,11 +12,14 @@
  * transmittance that darkens + reddens the light behind it).  The
  * sprites are camera-facing billboards built from the live camera basis
  * each frame; the cloud's world placement (fixed galactic orientation +
- * scale at the world origin) is a model matrix built once and reused.
+ * scale + the Sgr A* centre offset) is a model matrix built once and
+ * reused.
  *
  * ### When it draws
  *
- * Two gates, both in `enabled`:
+ * `enabled` delegates to `milkyWayVisible` — the ONE home of the MW
+ * visibility predicate, shared with the pick gate
+ * (`milkyWayPickVisible`) so draw and pick can't drift.  Two gates:
  *
  *   1. `state.settings.milkyWay.enabled` — user toggle — OR a still-
  *      nonzero toggle fade (`fades.opacityOf`), which keeps the pass
@@ -52,29 +57,23 @@
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { milkyWayFadeAlpha } from '../../../gpu/galaxy/milkyWayFadeAlpha';
+import { milkyWayVisible } from '../../helpers/milkyWayVisible';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
 import { milkyWayModelMatrix } from '../../../gpu/galaxy/milkyWayModelMatrix';
 
 // The cloud's world placement never changes (fixed galactic orientation +
-// scale, world origin), so build the model matrix once and reuse the same
-// Float32Array every frame rather than re-deriving twelve products per draw.
+// scale + the Sgr A* centre offset), so build the model matrix once and
+// reuse the same Float32Array every frame rather than re-deriving twelve
+// products per draw.
 let milkyWayModel: Float32Array | null = null;
 
 export const milkyWayPass: Pass = {
   name: 'milky-way',
 
   enabled(state, ctx) {
-    // State boolean is the user's intent; opacityOf > 0 keeps the
-    // pass alive through the ~100 ms toggle fade-out tail. The
-    // apparent-size milkyWayFadeAlpha still gates separately — once the
-    // disc shrinks below a few on-screen pixels there is nothing worth
-    // rendering, so skip even when the toggle is on.
-    const togglePart =
-      state.settings.milkyWay.enabled ||
-      state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now()) > 0;
-    if (!togglePart) return false;
-    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, ctx.canvasSize.height) > 0;
+    // The shared predicate (toggle-or-fade-tail AND apparent-size band),
+    // answered for THIS frame's camera — the frame-frozen ctx snapshot.
+    return milkyWayVisible(state, ctx.drawCamPos, ctx.fovYRad, ctx.canvasSize.height);
   },
 
   draw(pass, ctx, state, deps) {

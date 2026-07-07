@@ -8,19 +8,20 @@
  * this file, never the shared preset the tool's reference gallery also reads.
  */
 import type { Tier } from '../../../@types/data/Tier';
+import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../data/milkyWay/milkyWayGalaxyParams';
 import { outerRadiusOf } from './outerRadiusOf';
 
 /**
- * Disk radius in Mpc (0.0175 Mpc = 17.5 kpc, a ~35 kpc stellar disk). Sized
- * so the Sun — 8 kpc from the galactic center per `galacticCenter.ts` —
- * lands at ~46% of the disk radius, in the arm region where it belongs. At
- * the impostor-era 0.03 the disk rendered ~2x too large and the generator's
- * bulge scatter tail (1.75x the bulge radius ~= 27% of the outer radius)
- * reached exactly the Sun's orbit, parking the you-are-here line on the
- * bulge's edge instead of between the arms.
+ * Disk radius in Mpc — a pure unit conversion of the physical fact, which
+ * lives in the data layer (`galacticCenter.ts`'s `MILKY_WAY_DISC_RADIUS_KPC`,
+ * alongside the Sgr A* centre it is calibrated against). The rendered
+ * cloud, the pick billboard, and the selection ring all size from that one
+ * number; this module only derives the Mpc form the renderer-side formulas
+ * consume. Data must not import from services, so the kpc → Mpc conversion
+ * happens here rather than the other way around.
  */
-export const MILKY_WAY_RADIUS_MPC = 0.0175;
+export const MILKY_WAY_RADIUS_MPC = MILKY_WAY_DISC_RADIUS_KPC / 1000;
 
 /**
  * Per-tier star budgets. `medium` IS the preset's `starCount` — the tier the

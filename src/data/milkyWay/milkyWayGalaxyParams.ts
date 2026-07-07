@@ -1,8 +1,8 @@
 /**
  * MILKY_WAY_GALAXY_PARAMS — the single canonical `GalaxyParams` for the
  * Milky Way, shared by the galaxy-renderer tool's reference gallery
- * (`tools/galaxy-renderer/src/data/referenceGalaxies.ts`, `id: 'mw'`) and,
- * once the main-app renderer grows a Milky Way point cloud, the app itself.
+ * (`tools/galaxy-renderer/src/data/referenceGalaxies.ts`, `id: 'mw'`) and
+ * the main app's Milky Way point cloud (`milkyWayCloud` generation).
  * One object means the tool and the app can never quietly drift onto two
  * different "Milky Way"s — tune it here and both pick up the change.
  *

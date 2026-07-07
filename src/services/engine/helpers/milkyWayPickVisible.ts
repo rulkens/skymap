@@ -1,18 +1,13 @@
 /**
- * milkyWayPickVisible — is the Milky-Way disk on screen this frame?
+ * milkyWayPickVisible — is the Milky-Way disk on screen in the frame the
+ * pick pass replays?
  *
  * The MW pick billboard must contribute a hit ONLY while the disk is
- * actually drawn, so a faded-out MW never claims a click.  This predicate
- * mirrors `milkyWayPass.enabled` beat-for-beat — the right invariant is
- * "pickable iff the disk is rendered", so the pick gate and the draw gate
- * read the same two conditions:
- *
- *   1. The user toggle (or its fade-out tail): `settings.milkyWay.enabled`
- *      OR `opacityOf({ kind: 'milkyWay' }) > 0`.
- *   2. The apparent-size fade band: `milkyWayFadeAlpha(camDist, fovY,
- *      viewportH) > 0` (full strength while the disc spans at least
- *      `MILKY_WAY_FADE_FULL_PX` on screen, gone at
- *      `MILKY_WAY_FADE_GONE_PX`).
+ * actually drawn, so a faded-out MW never claims a click.  The predicate
+ * itself lives in `milkyWayVisible` — the ONE home shared with
+ * `milkyWayPass.enabled`, so the pick gate can't drift from the draw gate.
+ * This adapter's whole job is choosing the CAMERA the predicate answers
+ * for:
  *
  * The camera facts come from `state.picking.lastFrameCam` — the snapshot
  * the point-sprites pass stashes alongside `lastFrameUniformBytes` — NOT
@@ -27,23 +22,15 @@
  * the same measure the pick pass renders against and `milkyWayPass` reads
  * off `ctx.canvasSize`.
  *
- * Keeping this in a helper (rather than inlining the predicate at every
- * pick call site) means the pick gate can't drift from the pass's
- * `enabled` check.  Threaded into the pick renderer as a callback so the
- * renderer itself stays free of EngineState — it just draws when told.
+ * Threaded into the pick renderer as a callback so the renderer itself
+ * stays free of EngineState — it just draws when told.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import { milkyWayFadeAlpha } from '../../gpu/galaxy/milkyWayFadeAlpha';
+import { milkyWayVisible } from './milkyWayVisible';
 
 export function milkyWayPickVisible(state: EngineState, viewportHeightPx: number): boolean {
   const cam = state.picking.lastFrameCam;
   if (!cam) return false;
-  const togglePart =
-    state.settings.milkyWay.enabled ||
-    state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now()) > 0;
-  if (!togglePart) return false;
-  const p = cam.position;
-  const camDistMpc = Math.hypot(p[0]!, p[1]!, p[2]!);
-  return milkyWayFadeAlpha(camDistMpc, cam.fovYRad, viewportHeightPx) > 0;
+  return milkyWayVisible(state, cam.position, cam.fovYRad, viewportHeightPx);
 }
