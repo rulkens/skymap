@@ -209,9 +209,10 @@ function tformByteLength(form: string, columnName: string): number {
     case 'A':
       return repeat;
     default:
-      throw new Error(
-        `parseFitsBinTable: unsupported TFORM "${typeCode}" for column ${columnName}`,
-      );
+      // Echo the full raw TFORM (repeat prefix included, e.g. '3C'), not
+      // just the type letter — matching the unparseable branch above, so
+      // the error always quotes the header card verbatim.
+      throw new Error(`parseFitsBinTable: unsupported TFORM "${form}" for column ${columnName}`);
   }
 }
 

@@ -84,11 +84,28 @@ function buildUnsupportedTformBuffer(): ArrayBuffer {
 
 /** Primary header only, buffer ends immediately after — no second HDU at all. */
 function buildNoExtensionBuffer(): ArrayBuffer {
-  // Copy via concatBuffers rather than slicing `.buffer` directly: a generic
-  // Uint8Array's `.buffer` is `ArrayBuffer | SharedArrayBuffer` under this TS
-  // lib config, while concatBuffers' `new Uint8Array(n).buffer` is a plain
-  // `ArrayBuffer`. A one-element concat is exactly the copy we want.
+  // Copy via concatBuffers rather than slicing `.buffer` directly:
+  // primaryHeaderBlock/packHeaderBlock's bare `: Uint8Array` return
+  // annotations default to `Uint8Array<ArrayBufferLike>`, so `.buffer` is
+  // `ArrayBuffer | SharedArrayBuffer` (even though TextEncoder.encode()
+  // itself returns `Uint8Array<ArrayBuffer>` under this repo's libs).
+  // concatBuffers' `new Uint8Array(n).buffer` is a plain `ArrayBuffer`,
+  // and a one-element concat is exactly the copy we want.
   return concatBuffers(primaryHeaderBlock());
+}
+
+/** A well-formed header block that is not FITS: no SIMPLE card at all. */
+function buildNotFitsBuffer(): ArrayBuffer {
+  return concatBuffers(packHeaderBlock([fitsCard('NAXIS', '0')]));
+}
+
+/** Valid primary header followed by a non-table extension (XTENSION = 'IMAGE'). */
+function buildImageExtensionBuffer(): ArrayBuffer {
+  const extensionBlock = packHeaderBlock([
+    fitsCard('XTENSION', fitsStr('IMAGE')),
+    fitsCard('NAXIS', '0'),
+  ]);
+  return concatBuffers(primaryHeaderBlock(), extensionBlock);
 }
 
 describe('parseFitsBinTable', () => {
@@ -97,6 +114,8 @@ describe('parseFitsBinTable', () => {
     expect(table.rowLengthBytes).toBe(105);
     expect(table.rowCount).toBe(6);
     expect(table.columns.length).toBe(14);
+    // Primary header (1 block) + extension header (2 blocks) = 3 × 2880.
+    expect(table.dataOffset).toBe(8640);
   });
 
   it('column byte offsets are contiguous and sum to rowLengthBytes', () => {
@@ -127,5 +146,15 @@ describe('parseFitsBinTable', () => {
 
   it('throws on a buffer with no BINTABLE extension', () => {
     expect(() => parseFitsBinTable(buildNoExtensionBuffer())).toThrow();
+  });
+
+  it('throws "not a FITS file" when the primary header has no SIMPLE card', () => {
+    expect(() => parseFitsBinTable(buildNotFitsBuffer())).toThrow(/not a FITS file/);
+  });
+
+  it('throws naming the wrong XTENSION when the first extension is not a BINTABLE', () => {
+    expect(() => parseFitsBinTable(buildImageExtensionBuffer())).toThrow(
+      /no BINTABLE extension.*XTENSION="IMAGE"/,
+    );
   });
 });
