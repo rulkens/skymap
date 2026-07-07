@@ -12,11 +12,15 @@ import { MILKY_WAY_GALAXY_PARAMS } from '../../../data/milkyWay/milkyWayGalaxyPa
 import { outerRadiusOf } from './outerRadiusOf';
 
 /**
- * Disk radius in Mpc — the impostor's value (the impostor's fragment shader
- * carried this as a WESL const; this is the canonical home now that the
- * point cloud replaces it).
+ * Disk radius in Mpc (0.0175 Mpc = 17.5 kpc, a ~35 kpc stellar disk). Sized
+ * so the Sun — 8 kpc from the galactic center per `galacticCenter.ts` —
+ * lands at ~46% of the disk radius, in the arm region where it belongs. At
+ * the impostor-era 0.03 the disk rendered ~2x too large and the generator's
+ * bulge scatter tail (1.75x the bulge radius ~= 27% of the outer radius)
+ * reached exactly the Sun's orbit, parking the you-are-here line on the
+ * bulge's edge instead of between the arms.
  */
-export const MILKY_WAY_RADIUS_MPC = 0.03;
+export const MILKY_WAY_RADIUS_MPC = 0.0175;
 
 /**
  * Per-tier star budgets. `medium` IS the preset's `starCount` — the tier the
@@ -52,7 +56,7 @@ export const MILKY_WAY_MODEL_SCALE = MILKY_WAY_RADIUS_MPC / outerRadiusOf(MILKY_
  * raising it keeps distant/faint stars from vanishing to sub-pixel specks).
  */
 export const MILKY_WAY_STAR_PX_MIN = 1.0;
-export const MILKY_WAY_STAR_PX_MAX = 64.0;
+export const MILKY_WAY_STAR_PX_MAX = 48.0;
 
 /**
  * Emission factor into the app's HDR -> tonemap chain. Initial value is the
