@@ -48,8 +48,21 @@ in one sky spot).
 
 - **File row counts** (NAXIS2): BGS_BRIGHT 2,909,876 NGC / 1,047,989 SGC;
   LRG 1,476,135 / 662,492; ELG_LOPnotqso 1,821,322 / 610,750;
-  QSO 793,219 / 430,172. Row stride 117 bytes, 18 columns — matches the June
-  research doc exactly.
+  QSO 793,219 / 430,172.
+- **CORRECTION (2026-07-07, live header inspection): column sets vary per
+  tracer, and only BGS carries photometry.** The June research doc's "18
+  columns / 117 bytes / flux_{g,r,z}_dered" layout is BGS_BRIGHT's. Verified
+  NGC layouts: BGS 18 cols / 117 B (lowercase `flux_g/r/z/w1/w2_dered`, TFORM
+  E); LRG 13 / 97; ELG_LOPnotqso 15 / 113; QSO 14 / 105 — the latter three are
+  positions + clustering weights, **no flux columns**. The `*_full_HPmapcut`
+  files do carry `FLUX_G/R/Z` for every tracer but are ~10 GB total and
+  reintroduce the quality filtering the clustering files pre-apply.
+  **Decision (user, 2026-07-07): keep the lean clustering fetch; LRG/ELG/QSO
+  get synthetic per-tracer display magnitudes** — one tuned constant absolute
+  magnitude + g−r colour per population, converted to apparent mags per row
+  from the ΛCDM luminosity distance; the InfoCard says "no photometry in
+  source catalog" for those tracers. BGS (the finger-of-god population) keeps
+  real fluxes and per-galaxy colour.
 - **CrB cone (233.2, +32.3, r = 2.5°) estimated rows:** BGS ~14.5k (z 0.03–0.46),
   LRG ~15.1k (0.40–1.10), ELG ~21.3k (0.80–1.60), QSO ~5.5k (0.80–3.47).
   **Total ≈ 56k** — comfortably a tier-agnostic single bin.

@@ -133,13 +133,11 @@ Do **not** touch the engine-wiring / SettingsPanel lists yet (`galaxyCatalogSour
 - Create: `tests/tools/parsers/desiFits.test.ts`
 - Create: `tests/fixtures/desi/qso_ngc_head6.fits` (committed binary fixture — precedent: `tests/fixtures/scalar-volume/tiny-8x8x8.scfd`)
 
-**Fixture generation (one-time, do this first).** Run from the scratchpad; only the resulting fixture is committed:
+**Fixture: ALREADY GENERATED (controller, 2026-07-07)** at `tests/fixtures/desi/qso_ngc_head6.fits` (9,270 bytes) from a live 32 KB range request against `QSO_NGC_clustering.dat.fits` — primary header + extension header + 6 data rows, `NAXIS2` card patched to `6` (value field bytes 10–29 of the card, right-justified). Commit it in this task; record the provenance (date + method) in the test file's header comment. **Verified fixture facts — pin these exact literals in the tests:**
 
-1. `curl -s -r 0-32767 -o qso_head.bin https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/QSO_NGC_clustering.dat.fits`
-2. Throwaway node script: FITS is 2880-byte blocks of 80-char ASCII cards. Scan blocks for the primary header's `END` card (expect 1 block), then the `XTENSION= 'BINTABLE'` extension header's `END` card; `dataOffset` = the next 2880 boundary after it (expect 2880 + 5760 = 8640 for 18 columns — verify, don't assume).
-3. Keep 6 data rows: fixture bytes = `[0, dataOffset)` + `[dataOffset, dataOffset + 6 × 117)` ≈ 9.3 KB.
-4. **Patch `NAXIS2`** in the *extension* header so the header row count matches the truncation: locate the 80-byte card beginning `NAXIS2  =`; overwrite its value field (bytes 10–29 of the card, right-justified) with `6` padded to 20 chars — `'6'.padStart(20)` — leaving the rest of the card byte-identical. The card stays exactly 80 bytes.
-5. Write to `tests/fixtures/desi/qso_ngc_head6.fits`. In the same script, independently decode row 0's `RA`/`DEC`/`Z` with a raw big-endian `DataView` read and print them — paste those literals into the test as the pinned expected values. Record the generation date + command in the test file's header comment (didactic provenance).
+- `dataOffset` 8640 (primary header 1 block + extension header 2 blocks), `rowLengthBytes` **105**, `rowCount` 6, **14** columns. (The plan's earlier 117 B / 18-col figures are BGS_BRIGHT's layout — column sets vary per tracer; see Task 4.)
+- Column order: TARGETID `K`, NTILE `K`, RA `D`, DEC `D`, PHOTSYS `1A`, Z `D`, FRAC_TLOBS_TILES `D`, then 7 more `D` weight/NX columns; offsets contiguous, summing to 105.
+- Row 0: `TARGETID` 39627540901396635n, `RA` 159.24049207286527, `DEC` −10.157311765959316, `Z` 3.31353326666703.
 
 **Parser contract**
 
@@ -163,9 +161,9 @@ export function parseFitsBinTable(buf: ArrayBuffer): FitsBinTable;
 
 **Test names + assertions** (`tests/tools/parsers/desiFits.test.ts`):
 
-- `parses the QSO fixture header: rowLengthBytes 117, rowCount 6, 18 columns` — exact equality on all three.
-- `column byte offsets are contiguous and sum to rowLengthBytes` — last column's `byteOffset + byteLength === 117`.
-- `finds RA, DEC, Z as f64 (TFORM D) and the dered fluxes as f32 (TFORM E)` — asserts the forms of the named columns (adjust names to the real header — the fixture is ground truth).
+- `parses the QSO fixture header: rowLengthBytes 105, rowCount 6, 14 columns` — exact equality on all three.
+- `column byte offsets are contiguous and sum to rowLengthBytes` — last column's `byteOffset + byteLength === 105`.
+- `finds RA, DEC, Z as f64 (TFORM D), TARGETID as i64 (TFORM K), PHOTSYS as 1A` — asserts the forms of the named columns per the verified column table above.
 - `throws naming the offending TFORM on an unsupported column type` — synthesized in-memory header (the `glade.test.ts` `makeFixture` idiom, but for 2880-byte blocks) with a `TFORM1 = 'C'` column; `expect(...).toThrow(/TFORM "C"/)`.
 - `throws on a buffer with no BINTABLE extension`.
 
@@ -197,21 +195,41 @@ export function parseDesiClustering(
 ): { records: ParsedRecord[]; skipped: number };
 ```
 
+**Per-tracer column reality (verified live 2026-07-07, NGC headers):** BGS_BRIGHT 18 cols / 117 B including lowercase `flux_g/r/z/w1/w2_dered` (TFORM `E`); LRG 13 / 97, ELG_LOPnotqso 15 / 113, QSO 14 / 105 — **the latter three have NO flux columns** (positions + clustering weights only). Decision (user, 2026-07-07): BGS uses real fluxes; LRG/ELG/QSO synthesize display magnitudes from per-tracer constants.
+
+**Tracer display table** — Create: `tools/parsers/desiTracerDisplay.ts` (one exported symbol):
+
+```ts
+/** Display-only synthetic photometry for the tracers whose LSS clustering
+ *  catalogs carry no fluxes. absMagR ≈ the population's characteristic M_r;
+ *  gMinusR paints the population's colour class. Tuning knobs, not physics. */
+export const DESI_TRACER_DISPLAY: Record<'LRG' | 'ELG' | 'QSO', { absMagR: number; gMinusR: number }> = {
+  LRG: { absMagR: -22.8, gMinusR: 1.4 }, // massive red ellipticals
+  ELG: { absMagR: -20.8, gMinusR: 0.5 }, // blue star-formers
+  QSO: { absMagR: -25.5, gMinusR: 0.3 }, // AGN outshine hosts
+};
+```
+
 **Behaviour** (mirrors `parseSdssCsv`'s result shape; `ParsedRecord` per `tools/parsers/common.ts`):
 
-- Column lookup by TTYPE name, **case-insensitive**, throwing (sdssCsv `requireColumn` style) when a required column is missing: `TARGETID`, `RA`, `DEC`, `Z`, `FLUX_G_DERED`, `FLUX_R_DERED`, `FLUX_Z_DERED`.
-- Decode scalar `D`/`E`/`K` cells big-endian via `DataView`; only the seven needed columns are ever read (other columns are offset-skipped, including `nA` / repeat-count columns).
+- Column lookup by TTYPE name, **case-insensitive** (BGS flux columns are lowercase on disk), throwing (sdssCsv `requireColumn` style) when a required column is missing. Required for ALL tracers: `TARGETID`, `RA`, `DEC`, `Z`. Additionally required for **BGS only**: `flux_g_dered`, `flux_r_dered`, `flux_z_dered`.
+- Decode scalar `D`/`E`/`K` cells big-endian via `DataView`; only the needed columns are ever read (others are offset-skipped, including `nA` / repeat-count columns).
 - **Cone predicate first:** when `keep` is supplied, evaluate it on the decoded RA/DEC **before** building the record — the spec's "cheap, before any allocation-heavy work".
-- **nanomaggy → mag:** `mag = 22.5 − 2.5·log10(flux)`. **Drop** (count in `skipped`) rows with non-positive g **or** r flux; a non-positive z-band flux keeps the row with `magI = NaN`.
+- **BGS, nanomaggy → mag:** `mag = 22.5 − 2.5·log10(flux)`. **Drop** (count in `skipped`) BGS rows with non-positive g **or** r flux; a non-positive z-band flux keeps the row with `magI = NaN`.
+- **LRG/ELG/QSO, synthetic mags:** `magR = DESI_TRACER_DISPLAY[tracer].absMagR + 5·log10(dL·1e5)` where `dL = (1 + z) · redshiftToDistanceMpc(z)` (luminosity distance in Mpc; `·1e5` = the Mpc→10 pc distance-modulus factor); `magG = magR + gMinusR`; `magI = NaN`. The flux-drop rule does not apply (no fluxes ⇒ `skipped` counts nothing for these tracers).
 - Field mapping: `objID = TARGETID` (bigint, from the `K` column); `ra`/`dec`/`z` passthrough; `spectroscopicZ = z`; `magG`/`magR`/`magI` from g/r/z fluxes; `magU = magZ = NaN`; **`axisRatio: null`, `positionAngleDeg: null`** — the GLADE no-orientation path (`tools/parsers/glade.ts:436-441`): the pipeline's `recordsToCloud` applies the deterministic `fallbackOrientation` (`buildAllBins.ts:174-181`); `diameterKpc: null` (pipeline default 30 kpc); `source: Source.DesiDeep`; `parentSurveyByte: 0`.
 - **`classByte` carries the tracer** so the InfoCard can say what each population is (the spec's accepted-artifacts section): add to `src/data/galaxyCatalog/sourceClass.ts` a `DESI_TRACER_CLASS: Record<DesiTracer-shaped-keys, number>` mapping `BGS→1, LRG→2, ELG→3, QSO→4` (0 stays "unknown") plus a label lookup (wired into the InfoCard in Task 9). The parser reads the mapping from `sourceClass.ts` — one source of truth, no mirrored constants.
 
+**Files (addition):** Create `tools/parsers/desiTracerDisplay.ts`; Modify `data/raw/desi/README.md` — correct the Task 1 README's "117 bytes / 18 columns" and consumed-columns claims to the verified per-tracer table above, and document the synthetic-mag decision for LRG/ELG/QSO.
+
 **Test names + assertions**
 
-- `decodes row 0 of the QSO fixture to the pinned RA/DEC/Z` — exact literals from Task 3's generation script.
-- `converts nanomaggy flux to magnitude: flux 100 → mag 17.5` — synthesized single-row buffer (in-memory header builder from Task 3) with known fluxes; `expect(rec.magG).toBeCloseTo(22.5 - 2.5 * Math.log10(100), 10)`.
-- `drops rows with non-positive g or r flux and counts them in skipped`.
-- `keeps rows with non-positive z-band flux, emitting magI = NaN`.
+- `decodes row 0 of the QSO fixture to the pinned RA/DEC/Z` — exact literals from Task 3's verified-fixture block.
+- `QSO fixture row 0 synthesizes magnitudes from the tracer table` — `magR` equals `−25.5 + 5·log10((1+z)·redshiftToDistanceMpc(z)·1e5)` computed with the pinned Z literal; `magG − magR ≈ 0.3`; `magI` NaN.
+- `converts nanomaggy flux to magnitude for BGS: flux 100 → mag 17.5` — synthesized single-row buffer (in-memory header builder from Task 3) with lowercase `flux_*_dered` column names (case-insensitive lookup is thereby asserted); `expect(rec.magG).toBeCloseTo(22.5 - 2.5 * Math.log10(100), 10)`.
+- `drops BGS rows with non-positive g or r flux and counts them in skipped`.
+- `keeps BGS rows with non-positive z-band flux, emitting magI = NaN`.
+- `LRG and ELG rows synthesize magnitudes from their tracer-table entries` — synthesized buffers without flux columns parse successfully.
 - `emits the GLADE no-orientation fallback shape: axisRatio null, positionAngleDeg null, diameterKpc null`.
 - `applies the keep predicate before record construction` — predicate rejecting all rows ⇒ `records.length === 0`, and rejected rows are NOT counted in `skipped` (out-of-cone is scoping, not data quality; assert `skipped === 0`).
 - `carries TARGETID as objID (bigint) and the tracer classByte` — `expect(rec.objID).toBeTypeOf('bigint')`; `QSO` tracer ⇒ `classByte === 4`.
@@ -376,7 +394,7 @@ The `/add-data-source` skill's Path-A surface, enumerated explicitly — impleme
 **Files**
 
 - Modify: `src/components/SettingsPanel/GalaxiesSection.tsx` — append `Source.DesiDeep` to the hand-maintained `TOGGLEABLE_SOURCES` (lines 42-48; a **silent** site — nothing fails if missed, the source is just untoggleable). Label comes from the registry (`'DESI Deep Field'`).
-- Modify: `src/services/engine/helpers/buildGalaxyInfo.ts` — the per-source chain (lines 77-197): DESI rows need (a) a display-name path — verify the IAU fallback (`iauPrefix: 'DESI'` → `DESI J<RA><Dec>`) already fires for unknown sources, add a branch only if it doesn't; (b) a type/class line from Task 4's tracer `classByte` label so the InfoCard says which population (BGS / LRG / ELG / QSO) the point belongs to — the spec's "the InfoCard says what each population is". `bandLabels` and the source label flow from the registry automatically.
+- Modify: `src/services/engine/helpers/buildGalaxyInfo.ts` — the per-source chain (lines 77-197): DESI rows need (a) a display-name path — verify the IAU fallback (`iauPrefix: 'DESI'` → `DESI J<RA><Dec>`) already fires for unknown sources, add a branch only if it doesn't; (b) a type/class line from Task 4's tracer `classByte` label so the InfoCard says which population (BGS / LRG / ELG / QSO) the point belongs to — the spec's "the InfoCard says what each population is"; (c) for LRG/ELG/QSO rows (classByte 2–4), suppress the magnitude rows and show "no photometry in source catalog" instead — their mags are synthetic display constants (Task 4 decision) and must not be presented as measurements. `bandLabels` and the source label flow from the registry automatically.
 - Modify: `src/components/Splash/Splash.tsx` (~line 220) — add a DESI DR1 credit line (CC BY 4.0, data.desi.lbl.gov), matching the existing credit style.
 - Modify: `src/@types/data/SourceEntryBase.d.ts:34` — comment accuracy only (the bulk-catalog list gains desiDeep).
 - Modify (tests): `tests/components/SettingsPanel/GalaxiesSection.test.ts` — `ALL_ON_MASK` (line 37), the "5 sources" comments, `toHaveBeenCalledTimes(5)` → 6; `tests/services/engine/helpers/buildGalaxyInfoBySource.test.ts` — new cases below.
@@ -384,7 +402,7 @@ The `/add-data-source` skill's Path-A surface, enumerated explicitly — impleme
 **Test names + assertions**
 
 - GalaxiesSection: `renders a checkbox row for DESI Deep Field` and the master tri-state count updated to 6.
-- buildGalaxyInfo: `DESI row shows the IAU-style DESI J designation`; `DESI row surfaces the tracer population from classByte` (classByte 4 → the QSO label); `DESI row band labels come from the registry (g/r/z in the G/R/I slots)`.
+- buildGalaxyInfo: `DESI row shows the IAU-style DESI J designation`; `DESI row surfaces the tracer population from classByte` (classByte 4 → the QSO label); `DESI BGS row band labels come from the registry (g/r/z in the G/R/I slots)`; `DESI LRG/ELG/QSO rows suppress magnitudes and show the no-photometry note` (classByte 2–4).
 
 **Steps**
 
