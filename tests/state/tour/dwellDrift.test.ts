@@ -66,4 +66,21 @@ describe('dwellDrift', () => {
     const osc = effectsOf(dwellDrift(2))!.find((e) => e.kind === 'osc');
     if (osc?.kind === 'osc') expect(osc.fade).toBeCloseTo(1);
   });
+
+  it('fits an integer number of full bob cycles to the dwell window', () => {
+    // The sine must return to centre exactly on the cut, or the amplitude
+    // fade drags the camera back from mid-swing (a visible vertical lurch at
+    // the dwell's end). The period stretches to the nearest integer-cycle fit
+    // of the ~14s target: 12s dwell → one 12s cycle; 30s dwell → two 15s cycles.
+    const osc12 = effectsOf(dwellDrift(12))!.find((e) => e.kind === 'osc');
+    if (osc12?.kind === 'osc') expect(osc12.period).toBeCloseTo(12);
+
+    const osc30 = effectsOf(dwellDrift(30))!.find((e) => e.kind === 'osc');
+    if (osc30?.kind === 'osc') expect(osc30.period).toBeCloseTo(15);
+
+    // A dwell shorter than the target still gets one full (faster) cycle
+    // rather than a fraction of a slow one.
+    const osc6 = effectsOf(dwellDrift(6))!.find((e) => e.kind === 'osc');
+    if (osc6?.kind === 'osc') expect(osc6.period).toBeCloseTo(6);
+  });
 });

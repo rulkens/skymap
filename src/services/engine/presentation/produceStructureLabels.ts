@@ -49,6 +49,7 @@ import type { LabelProducerOutput } from '../../../@types/engine/subsystems/Labe
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
+import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 
 export function produceStructureLabels(
   state: EngineState,
@@ -62,7 +63,7 @@ export function produceStructureLabels(
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.
   const fades = state.subsystems.fades;
-  const now = performance.now();
+  const now = ctx.nowMs;
   const focusedStructureId = structureIdOf(state.selection.focus);
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
@@ -176,7 +177,10 @@ export function produceStructureLabels(
       // Structures anchor at the ring centre, centred on both axes (only
       // famous galaxies lift their label off the dot).
       worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
-      text: p.name,
+      // Long names ("Perseus-Pisces Supercluster") break onto two balanced
+      // lines here, at the presentation seam — the store keeps the unwrapped
+      // name for the palette / InfoCard, and the layout just honours the '\n'.
+      text: wrapLabelName(p.name),
       font: 'cormorant',
       pixelSize: 0, // unused — superseded by the worldEm sizing model
       color: [...style.labelColor],

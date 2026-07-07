@@ -32,5 +32,8 @@ import { milkyWayVisible } from './milkyWayVisible';
 export function milkyWayPickVisible(state: EngineState, viewportHeightPx: number): boolean {
   const cam = state.picking.lastFrameCam;
   if (!cam) return false;
-  return milkyWayVisible(state, cam.position, cam.fovYRad, viewportHeightPx);
+  // Event-time now: picks fire on pointer events, outside the frame loop,
+  // so the wall clock IS this path's clock (the deterministic ctx.nowMs
+  // seam only exists inside a frame).
+  return milkyWayVisible(state, cam.position, cam.fovYRad, viewportHeightPx, performance.now());
 }

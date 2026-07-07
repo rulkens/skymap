@@ -1,27 +1,27 @@
 ---
-stage:        6
-id:           cosmic-flows
-title:        Everything is flowing
-narration:    >
+stage: 9
+id: cosmic-flows
+title: Everything is flowing
+narration: >
   The web isn't still. Galaxies stream along the threads into the densest
   places, ours included, pulled toward the Great Attractor.
-focus:        point:0,0,0
+focus: point:0,0,0
 distance_mpc: 80
-motion:       lateral reframe + orbit-reveal
-travel_s:     5
-dwell_s:      9
-effects:      [flow field fade-in]
-requires:     [lateral-focus, dwell-drift, animated-effect, caption, flow-field]
-status:       draft
+motion: lateral reframe + orbit-reveal
+travel_s: 5
+dwell_s: 9
+effects: [flow field fade-in]
+requires: [lateral-focus, dwell-drift, animated-effect, caption, flow-field]
+status: draft
 ---
 
 ## Intent
 
 The dynamic heart of the cosmic-web section — and the **bridge** between its
-two halves. Stage 05 showed fullness, stage 07 will show emptiness; this beat
-shows the *mechanism* that links them: matter flows **out of the voids, along
+two halves. Stage 08 showed fullness, stage 10 will show emptiness; this beat
+shows the _mechanism_ that links them: matter flows **out of the voids, along
 the filaments, into the dense clumps.** The CF4++ flow field makes that
-motion visible. It's also the only beat that adds *time* to the tour — the
+motion visible. It's also the only beat that adds _time_ to the tour — the
 streamlines animate while the camera holds.
 
 ## Camera
@@ -29,7 +29,7 @@ streamlines animate while the camera holds.
 A short lateral reframe at held scale (~90 → ~80 Mpc, swinging toward the
 local flow basin), then a long, near-still orbit-reveal — the camera gets out
 of the way so the animated flow carries the beat. The long dwell (9 s) is to
-*watch the motion*, not read.
+_watch the motion_, not read.
 
 ## On screen
 
@@ -40,7 +40,7 @@ evocative anchor for "our whole neighbourhood is drifting somewhere."
 
 - **Flow field fades in** over the travel leg (animated streamlines /
   velocity field from the CF4++ layer). The MCPM volume + filaments from
-  stage 05 stay on underneath, so the flow reads as motion *through* the
+  stage 08 stay on underneath, so the flow reads as motion _through_ the
   density field, not a separate overlay.
 
 ## Tweaks

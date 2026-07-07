@@ -35,14 +35,14 @@ import { slotReady } from '../../../loading/slotReady';
 export const flowFieldPass: Pass = {
   name: 'flow',
 
-  enabled(state) {
+  enabled(state, ctx) {
     // No cube committed → nothing to draw, even mid-fade.
     if (!slotReady(state.assetSlots.flow)) return false;
     // The setting is the user's intent; a non-zero fade opacity is the visual
     // state. Render while EITHER is true so a fade-out keeps drawing after the
     // user toggles off (until opacity hits 0).
     if (state.settings.flow.enabled) return true;
-    return state.subsystems.fades.opacityOf({ kind: 'flow' }, performance.now()) > 0;
+    return state.subsystems.fades.opacityOf({ kind: 'flow' }, ctx.nowMs) > 0;
   },
 
   draw(pass, ctx, state, deps) {
@@ -51,8 +51,8 @@ export const flowFieldPass: Pass = {
     // own `draw` also early-returns until a field is set, so this is belt +
     // suspenders against the bootstrap window.
     if (deps.flowFieldRenderer === null) return;
-    // Hoist nowMs to a single call per draw, matching filamentsPass.
-    const nowMs = performance.now();
+    // Hoist the frame clock to a local, matching filamentsPass.
+    const nowMs = ctx.nowMs;
     const { vp, canvasSize } = ctx;
     deps.flowFieldRenderer.draw(
       pass,

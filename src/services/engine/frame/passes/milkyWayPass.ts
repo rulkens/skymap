@@ -72,8 +72,10 @@ export const milkyWayPass: Pass = {
 
   enabled(state, ctx) {
     // The shared predicate (toggle-or-fade-tail AND apparent-size band),
-    // answered for THIS frame's camera — the frame-frozen ctx snapshot.
-    return milkyWayVisible(state, ctx.drawCamPos, ctx.fovYRad, ctx.canvasSize.height);
+    // answered for THIS frame's camera and clock — the frame-frozen ctx
+    // snapshot (ctx.nowMs is the deterministic time seam; passes never
+    // read the wall clock directly).
+    return milkyWayVisible(state, ctx.drawCamPos, ctx.fovYRad, ctx.canvasSize.height, ctx.nowMs);
   },
 
   draw(pass, ctx, state, deps) {
@@ -87,10 +89,11 @@ export const milkyWayPass: Pass = {
     const { vp, canvasSize, drawCamPos } = ctx;
     const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
     // Composite the apparent-size fade with the registry-supplied
-    // toggle opacity. The renderer accepts a scalar fadeAlpha CPU-side
-    // param, so multiplying two opacities here is the minimal-change
-    // path — no shader edits, no FadeUniforms binding.
-    const toggleOpacity = state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now());
+    // toggle opacity, both on the frame clock (ctx.nowMs). The renderer
+    // accepts a scalar fadeAlpha CPU-side param, so multiplying two
+    // opacities here is the minimal-change path — no shader edits, no
+    // FadeUniforms binding.
+    const toggleOpacity = state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, ctx.nowMs);
     const fadeAlpha = milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, canvasSize.height) * toggleOpacity;
 
     // Camera-facing billboard axes for the star/dust sprites (world space),

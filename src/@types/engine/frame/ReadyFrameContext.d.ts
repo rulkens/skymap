@@ -69,6 +69,15 @@ export type ReadyFrameContext = {
   drawCamPos: Readonly<Vec3>;
   /** `canvasSize.height / (2·tan(fovY/2))` — pinhole radian→pixel conversion. */
   drawPxPerRad: number;
+  /**
+   * The frame's stamped clock — `performance.now()`-shaped, taken from
+   * `runFrame`'s single wall-clock sample.  Every per-frame-evaluated
+   * animated value (fades, load-fade ramps, clip opacity) must read THIS
+   * instead of sampling `performance.now()` itself, so a frame-by-frame
+   * recorder can substitute a stepped clock at one place and every
+   * animation stays a pure function of the stamped time.
+   */
+  nowMs: number;
   /** Vertical field-of-view in radians (`cam.fovYRad`) — the source `drawPxPerRad` is derived from. */
   fovYRad: number;
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */

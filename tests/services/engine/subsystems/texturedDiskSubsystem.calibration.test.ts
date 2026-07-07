@@ -101,6 +101,7 @@ function makeInput(
     visibleSourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     famousMeta,
+    nowMs: 0,
   };
 }
 

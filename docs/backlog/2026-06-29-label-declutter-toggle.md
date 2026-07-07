@@ -5,7 +5,7 @@
 
 ## Problem
 
-The label director's greedy screen-space overlap cull (`labelDirectorSubsystem.ts` `declutter`, `DECLUTTER_MARGIN_PX = 48`) suppresses the lower-`prominencePx` of any two anchors landing within 48 px in both x and y. Under a slow orbit (or any sustained camera move) labels repeatedly cross that margin and get suppressed-then-released frame-to-frame, which reads as flicker — distracting on a screen recording, and arguably during normal navigation.
+The label director's greedy screen-space overlap cull (`labelDirectorSubsystem.ts` `declutter`) suppresses the lower-`prominencePx` of any two labels whose measured text rects (padded by `DECLUTTER_PAD_PX`) intersect on screen. Under a slow orbit (or any sustained camera move) labels repeatedly cross that boundary and get suppressed-then-released frame-to-frame, which reads as flicker — distracting on a screen recording, and arguably during normal navigation.
 
 ## Current state (verified 2026-06-29)
 

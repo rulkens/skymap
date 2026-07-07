@@ -1,4 +1,4 @@
-# Facts — Stage 06: Everything is flowing
+# Facts — Stage 08: Everything is flowing
 
 > Candidate "did you know?" facts. Every fact has a real, retrieved source.
 > **On screen** = shown / inferable at this framing? **New feature** = what the

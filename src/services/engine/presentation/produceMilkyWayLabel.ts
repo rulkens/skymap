@@ -51,7 +51,7 @@ export function produceMilkyWayLabel(
   ctx: ReadyFrameContext,
 ): LabelProducerOutput {
   const fades = state.subsystems.fades;
-  const now = performance.now();
+  const now = ctx.nowMs;
 
   const layerOpacity = fades.opacityOf(LAYER_ID, now);
   const labelEnabled = state.settings.milkyWay.labelEnabled;
@@ -96,6 +96,14 @@ export function produceMilkyWayLabel(
       alignX: 'center',
       outlineColor: [...style.outlineColor],
       outlineEmFrac: style.outlineEmFrac,
+      // "You are here" is the orientation anchor: whenever it is visible
+      // (camera inside the distance band), overlapping structure labels
+      // yield to it in the director's declutter, never the reverse.
+      // Number.MAX_VALUE sorts above any finite apparent size while
+      // keeping the comparator's subtraction finite (Infinity − Infinity
+      // is NaN, which would corrupt the sort if a second always-wins
+      // label ever appeared).
+      prominencePx: Number.MAX_VALUE,
     },
   ];
   const lines: readonly MarkerLine[] = [

@@ -80,6 +80,7 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
+    nowMs: 0,
     ...over,
   } as unknown as ReadyFrameContext;
 }
@@ -101,6 +102,16 @@ describe('produceStructureLabels', () => {
     state.data.structures.setGroup('bulk', [rec('a'), rec('b', { featured: false })]);
     const out = produceStructureLabels(state, makeCtx());
     expect(out.labels.map((l) => l.id)).toEqual(['a']);
+  });
+
+  it('wraps a long name onto two balanced lines; short names stay one line', () => {
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [
+      rec('lan', { name: 'Laniakea Supercluster' }),
+      rec('virgo', { name: 'Virgo Cluster', worldPos: [0, 10, 0] }),
+    ]);
+    const texts = produceStructureLabels(state, makeCtx()).labels.map((l) => l.text);
+    expect(texts).toEqual(['Laniakea\nSupercluster', 'Virgo Cluster']);
   });
 
   it('skips a label category that is disabled AND fully faded', () => {

@@ -187,7 +187,7 @@
   },
   {
     "id": "laniakea-sc",
-    "names": ["Laniakea SC", "Laniakea Supercluster"],
+    "names": ["Laniakea Supercluster", "Laniakea SC"],
     "commonName": "Laniakea",
     "category": "supercluster",
     "raHours": 10.0,
@@ -199,7 +199,7 @@
   },
   {
     "id": "perseus-pisces-sc",
-    "names": ["Perseus-Pisces SC", "Perseus-Pisces Supercluster"],
+    "names": ["Perseus-Pisces Supercluster", "Perseus-Pisces SC"],
     "commonName": "Perseus-Pisces Supercluster",
     "category": "supercluster",
     "raHours": 2.5,
@@ -211,7 +211,7 @@
   },
   {
     "id": "coma-sc",
-    "names": ["Coma SC", "Coma Supercluster"],
+    "names": ["Coma Supercluster", "Coma SC"],
     "commonName": "Coma Supercluster",
     "category": "supercluster",
     "raHours": 12.8333,
@@ -234,7 +234,7 @@
   },
   {
     "id": "hercules-sc",
-    "names": ["Hercules SC", "Hercules Supercluster"],
+    "names": ["Hercules Supercluster", "Hercules SC"],
     "commonName": "Hercules Supercluster",
     "category": "supercluster",
     "raHours": 15.6667,
@@ -246,7 +246,7 @@
   },
   {
     "id": "shapley-sc",
-    "names": ["Shapley SC", "Shapley Supercluster", "Shapley Concentration"],
+    "names": ["Shapley Supercluster", "Shapley SC", "Shapley Concentration"],
     "commonName": "Shapley Concentration",
     "category": "supercluster",
     "raHours": 13.4167,

@@ -307,6 +307,7 @@ describe('renderFrame visual baseline', () => {
         [number, number, number]
       >,
       drawPxPerRad,
+      nowMs: 0,
       fovYRad: FIXTURE_FOV_Y_RAD,
       renderer: pointRenderer,
       postProcess,

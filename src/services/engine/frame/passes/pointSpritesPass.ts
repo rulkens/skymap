@@ -80,9 +80,9 @@ export const pointSpritesPass: Pass = {
         ? packSelection(selected.source, selected.index)
         : SELECTION_NONE_SENTINEL;
 
-    // Capture the fade registry + timestamp once so the per-source
-    // closure below doesn't call performance.now() per source.
-    const nowMs = performance.now();
+    // Capture the fade registry + the frame clock once so the per-source
+    // closure below reads a single shared timestamp.
+    const nowMs = ctx.nowMs;
     const fades = state.subsystems.fades;
 
     // draw returns the packed PointUniforms ArrayBuffer it submitted to

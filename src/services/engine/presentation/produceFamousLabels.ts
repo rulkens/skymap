@@ -152,7 +152,7 @@ export function produceFamousLabels(
 ): LabelProducerOutput {
   const galaxies = state.data.galaxies;
   const fades = state.subsystems.fades;
-  const now = performance.now();
+  const now = ctx.nowMs;
   const empty: LabelProducerOutput = { labels: [], lines: [], awake: false };
   // Render while the user wants famous labels OR the `galaxyNames` fade-out
   // tail is still non-zero — so a toggle-off fades out smoothly instead of

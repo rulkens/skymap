@@ -27,6 +27,11 @@
  * Both callers hand over the camera POSITION; the origin-distance hypot
  * lives here so neither re-derives it.  `viewportHeightPx` is the
  * backing-store canvas height (texture pixels) in both cases.
+ *
+ * `nowMs` is injected for the same reason the camera is: the render pass
+ * runs on the deterministic frame clock (`ctx.nowMs` — passes never read
+ * the wall clock), while the pick path fires on pointer events and hands
+ * in its own event-time now.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -38,10 +43,11 @@ export function milkyWayVisible(
   camPos: Readonly<Vec3>,
   fovYRad: number,
   viewportHeightPx: number,
+  nowMs: number,
 ): boolean {
   const togglePart =
     state.settings.milkyWay.enabled ||
-    state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now()) > 0;
+    state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, nowMs) > 0;
   if (!togglePart) return false;
   const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
   return milkyWayFadeAlpha(camDistMpc, fovYRad, viewportHeightPx) > 0;
