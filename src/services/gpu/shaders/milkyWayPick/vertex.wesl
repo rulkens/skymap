@@ -3,12 +3,13 @@
 //
 // One instance, six vertices.  The billboard is SCREEN-aligned and sized
 // by 'mw.halfExtentPx' — the apparent on-screen radius of the Milky Way's
-// disc at the current camera distance, floored at the galaxy point-size
-// minimum.  The CPU computes that px via the shared 'selectionRingRadiusPx'
-// helper (the SAME value the visible selection ring uses), so the
-// invisible hit target tracks the ring the user sees as they approach the
-// disk.  The floor is the same 'never shrink below a pixel' guarantee a
-// galaxy point holds via 'u.pointSizePx' (see points/vertex.wesl's
+// rendered disc at the last visual frame's camera distance, floored at
+// the galaxy point-size minimum.  The CPU computes that px via the
+// 'milkyWayPickHalfExtentPx' helper (sized to the rendered star/dust
+// cloud's radius, not the larger selection ring), so the invisible hit
+// target tracks the glow the user sees as they approach the disk.  The
+// floor is the same 'never shrink below a pixel' guarantee a galaxy
+// point holds via 'u.pointSizePx' (see points/vertex.wesl's
 // 'max(u.pointSizePx, apparentPxRadius)').
 //
 // The packed pick identity is composed in the vertex stage (mirroring

@@ -31,6 +31,7 @@ import {
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { PickFrameCam } from '../../../../../src/@types/engine/state/PickFrameCam';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { SelectionRef } from '../../../../../src/@types/engine/SelectionRef';
 import {
@@ -156,6 +157,7 @@ const STATE_STUB = {
   // the per-frame camera drivers.
   picking: {
     lastFrameUniformBytes: null as ArrayBuffer | null,
+    lastFrameCam: null as PickFrameCam | null,
     pickInFlight: false,
     pointerDown: false,
   },
@@ -517,6 +519,7 @@ describe('pointSpritesPass.draw', () => {
     // Mutable picking bag so we can observe the write.
     const pickingBag = {
       lastFrameUniformBytes: null as ArrayBuffer | null,
+      lastFrameCam: null as PickFrameCam | null,
       pickInFlight: false,
       pointerDown: false,
     };
@@ -532,16 +535,15 @@ describe('pointSpritesPass.draw', () => {
     expect(pickingBag.lastFrameUniformBytes).toBe(sentinelBytes);
   });
 
-  it('leaves state.picking.lastFrameUniformBytes untouched when renderer.draw returns null', () => {
-    // When there are zero catalogs loaded, draw returns null — signalling
-    // nothing was packed. The pass must not overwrite a previously-valid
-    // bytes snapshot with null; both pick paths gate on catalogs.size > 0
-    // so the stale snapshot will never be consumed in that code path anyway.
-    const priorBytes = new ArrayBuffer(8);
-    const drawStub = vi.fn<() => ArrayBuffer | null>(() => null);
+  it('stashes lastFrameCam (ctx.drawCamPos + ctx.fovYRad) in the same frame as the bytes', () => {
+    // The Milky-Way pick helpers size/gate against the camera the pick
+    // pass replays, so the plain-TS camera facts must be stashed at the
+    // same write site as the uniform bytes — one frame, one camera.
+    const drawStub = vi.fn<() => ArrayBuffer | null>(() => new ArrayBuffer(8));
     const ctx = makeCtx({ renderer: { draw: drawStub } as any });
     const pickingBag = {
-      lastFrameUniformBytes: priorBytes,
+      lastFrameUniformBytes: null as ArrayBuffer | null,
+      lastFrameCam: null as PickFrameCam | null,
       pickInFlight: false,
       pointerDown: false,
     };
@@ -552,7 +554,39 @@ describe('pointSpritesPass.draw', () => {
       picking: pickingBag,
     } as unknown as EngineState;
     pointSpritesPass.draw(PASS_STUB, ctx, stateWithPicking, makeDeps());
-    // The prior snapshot must survive a null-return frame.
+    // ctx.drawCamPos is a fresh per-frame tuple, so the pass may stash the
+    // reference directly (no defensive copy needed).
+    expect(pickingBag.lastFrameCam).not.toBeNull();
+    expect(pickingBag.lastFrameCam!.position).toBe(ctx.drawCamPos);
+    expect(pickingBag.lastFrameCam!.fovYRad).toBe(ctx.fovYRad);
+  });
+
+  it('leaves the picking snapshots untouched when renderer.draw returns null', () => {
+    // When there are zero catalogs loaded, draw returns null — signalling
+    // nothing was packed. The pass must not overwrite a previously-valid
+    // snapshot (bytes OR camera) with a new frame's values; both pick paths
+    // gate on catalogs.size > 0 so the stale snapshot will never be
+    // consumed in that code path anyway, and keeping the pair coherent
+    // means every consumer sees one camera per stashed frame.
+    const priorBytes = new ArrayBuffer(8);
+    const priorCam: PickFrameCam = { position: [0, 0, 7], fovYRad: 1 };
+    const drawStub = vi.fn<() => ArrayBuffer | null>(() => null);
+    const ctx = makeCtx({ renderer: { draw: drawStub } as any });
+    const pickingBag = {
+      lastFrameUniformBytes: priorBytes,
+      lastFrameCam: priorCam as PickFrameCam | null,
+      pickInFlight: false,
+      pointerDown: false,
+    };
+    const stateWithPicking = {
+      ...STATE_STUB,
+      selection: { select: null, hover: null, focus: null },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+      picking: pickingBag,
+    } as unknown as EngineState;
+    pointSpritesPass.draw(PASS_STUB, ctx, stateWithPicking, makeDeps());
+    // The prior snapshots must survive a null-return frame, as a pair.
     expect(pickingBag.lastFrameUniformBytes).toBe(priorBytes);
+    expect(pickingBag.lastFrameCam).toBe(priorCam);
   });
 });

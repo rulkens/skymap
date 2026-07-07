@@ -143,6 +143,7 @@ describe('EngineState type', () => {
       pickInFlight: false,
       pointerDown: false,
       lastFrameUniformBytes: null,
+      lastFrameCam: null,
     };
 
     // Forward-declare so the bias-correction subsystem's narrow
@@ -408,6 +409,7 @@ describe('EngineState type', () => {
         pickInFlight: false,
         pointerDown: false,
         lastFrameUniformBytes: null,
+        lastFrameCam: null,
       },
       gpu: {
         renderer: null,

@@ -385,13 +385,14 @@ function makeInput(
         },
         selection: { select: settings.selected },
         assetSlots: { flow: null },
-        // pointSpritesPass stashes the packed uniform bytes onto
-        // state.picking.lastFrameUniformBytes after each draw so the pick
-        // paths can snapshot the last frame's camera state.  The bag must
-        // exist; all other fields are at their default 'nothing in flight'
-        // values — only lastFrameUniformBytes is mutated by the pass.
+        // pointSpritesPass stashes the packed uniform bytes + camera
+        // snapshot onto state.picking after each draw so the pick paths
+        // can replay the last frame's camera state.  The bag must exist;
+        // all other fields are at their default 'nothing in flight'
+        // values — only the two snapshots are mutated by the pass.
         picking: {
           lastFrameUniformBytes: null as ArrayBuffer | null,
+          lastFrameCam: null,
           pickInFlight: false,
           pointerDown: false,
         },

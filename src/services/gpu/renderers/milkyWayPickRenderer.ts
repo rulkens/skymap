@@ -181,10 +181,11 @@ export function createMilkyWayPickRenderer(
   function pickMilkyWay(pass: GPURenderPassEncoder, halfExtentPx: number): void {
     if (!device || !pickPipeline || !mwBindGroup || !mwUniformBuffer || !dummyFadeBindGroup) return;
     // The hit-target half-extent is data, not state: the engine computes
-    // it via the shared selectionRingRadiusPx helper (the same value the
-    // visible ring uses) and hands it in, so the renderer stays free of
-    // EngineState — same contract as the visibility boolean.  Upload it to
-    // offset 16 of the @group(2) uniform before the draw.
+    // it via the milkyWayPickHalfExtentPx helper (the rendered disc's
+    // apparent on-screen radius, floored at the galaxy point size) and
+    // hands it in, so the renderer stays free of EngineState — same
+    // contract as the visibility boolean.  Upload it to offset 16 of the
+    // @group(2) uniform before the draw.
     device.queue.writeBuffer(
       mwUniformBuffer,
       MW_HALF_EXTENT_BYTE_OFFSET,

@@ -14,11 +14,18 @@
  *      `MILKY_WAY_FADE_FULL_PX` on screen, gone at
  *      `MILKY_WAY_FADE_GONE_PX`).
  *
+ * The camera facts come from `state.picking.lastFrameCam` — the snapshot
+ * the point-sprites pass stashes alongside `lastFrameUniformBytes` — NOT
+ * from the `state.cam` drag register.  The pick pass renders against the
+ * last visual frame's camera, so the gate must agree with THAT frame; the
+ * drag register only re-seeds when a drag starts and lags every
+ * driver-driven move (wheel zoom, tweens), which would leave the gate
+ * answering for a stale pose.  Null snapshot (no visual frame yet) means
+ * nothing has been rendered to pick against — not visible.
+ *
  * `viewportHeightPx` is the backing-store canvas height (texture pixels) —
  * the same measure the pick pass renders against and `milkyWayPass` reads
- * off `ctx.canvasSize`.  The vertical fov comes off `state.cam`, which this
- * predicate already requires, so the callers only thread the one value
- * they hold anyway (their canvas).
+ * off `ctx.canvasSize`.
  *
  * Keeping this in a helper (rather than inlining the predicate at every
  * pick call site) means the pick gate can't drift from the pass's
@@ -30,12 +37,13 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { milkyWayFadeAlpha } from '../../gpu/galaxy/milkyWayFadeAlpha';
 
 export function milkyWayPickVisible(state: EngineState, viewportHeightPx: number): boolean {
-  if (!state.cam) return false;
+  const cam = state.picking.lastFrameCam;
+  if (!cam) return false;
   const togglePart =
     state.settings.milkyWay.enabled ||
     state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now()) > 0;
   if (!togglePart) return false;
-  const p = state.cam.position;
+  const p = cam.position;
   const camDistMpc = Math.hypot(p[0]!, p[1]!, p[2]!);
-  return milkyWayFadeAlpha(camDistMpc, state.cam.fovYRad, viewportHeightPx) > 0;
+  return milkyWayFadeAlpha(camDistMpc, cam.fovYRad, viewportHeightPx) > 0;
 }

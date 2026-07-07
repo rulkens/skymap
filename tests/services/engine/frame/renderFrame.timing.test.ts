@@ -266,10 +266,12 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       },
       selection: { select: settings.selected },
       assetSlots: { flow: null },
-      // pointSpritesPass stashes the packed uniform bytes here after each
-      // draw — the bag must exist so the property write doesn't throw.
+      // pointSpritesPass stashes the packed uniform bytes + camera
+      // snapshot here after each draw — the bag must exist so the
+      // property write doesn't throw.
       picking: {
         lastFrameUniformBytes: null as ArrayBuffer | null,
+        lastFrameCam: null,
         pickInFlight: false,
         pointerDown: false,
       },

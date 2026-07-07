@@ -1,13 +1,12 @@
 /**
  * Public handle returned by `createMilkyWayPickRenderer`.
  *
- * The Milky Way is a first-class selectable source but draws no visible
- * geometry of its own (the procedural disk impostor is a separate,
- * bespoke renderer). To make it clickable we stamp a pick billboard at
- * the galactic centre into the r32uint pick texture — invisible, pick-
- * only, sized by the caller-supplied apparent on-screen radius of the
- * disc (the same px the visible selection ring uses). The identity it
- * writes is
+ * The Milky Way's visible form is the star/dust point cloud
+ * (`milkyWayCloudRenderer`), which owns no pick pipeline. To make it
+ * clickable we stamp a pick billboard at the galactic centre into the
+ * r32uint pick texture — invisible, pick-only, sized by the
+ * caller-supplied apparent on-screen radius of the rendered disc (see
+ * `milkyWayPickHalfExtentPx`). The identity it writes is
  * `(Source.MilkyWay << 27) | (0 + PICK_SENTINEL_OFFSET)`; the MW carries
  * no per-record `localIdx`, so it is always 0.
  *
@@ -29,13 +28,14 @@ export type MilkyWayPickRenderer = {
    * `Source.MilkyWay`) and emits `draw(6, 1)`. No-op when constructed with
    * a null device.
    *
-   * `halfExtentPx` is the apparent on-screen radius of the Milky Way disc
-   * at the current camera distance (floored at the galaxy point-size
-   * minimum) — the SAME value the visible selection ring uses, so the hit
-   * target tracks the ring. Gating on disk visibility AND computing this
-   * px are the CALLER's job — this renderer is deliberately dumb and just
-   * draws what it's told, the size arriving as data exactly like the
-   * visibility boolean.
+   * `halfExtentPx` is the apparent on-screen radius of the rendered
+   * Milky Way disc at the last visual frame's camera distance (floored at
+   * the galaxy point-size minimum) — computed by the engine's
+   * `milkyWayPickHalfExtentPx` helper, so the hit target tracks the glow
+   * the user sees. Gating on disk visibility AND computing this px are the
+   * CALLER's job — this renderer is deliberately dumb and just draws what
+   * it's told, the size arriving as data exactly like the visibility
+   * boolean.
    */
   pickMilkyWay(pass: GPURenderPassEncoder, halfExtentPx: number): void;
   /** Release GPU resources. No-op under a null device. */

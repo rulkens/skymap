@@ -389,10 +389,12 @@ describe('renderFrame visual baseline', () => {
         },
         selection: { select: settings.selected },
         assetSlots: { flow: null },
-        // pointSpritesPass writes the packed uniform bytes here after each
-        // draw — the bag must exist so the assignment doesn't throw.
+        // pointSpritesPass writes the packed uniform bytes + camera
+        // snapshot here after each draw — the bag must exist so the
+        // assignment doesn't throw.
         picking: {
           lastFrameUniformBytes: null as ArrayBuffer | null,
+          lastFrameCam: null,
           pickInFlight: false,
           pointerDown: false,
         },
