@@ -17,6 +17,14 @@
 //      survivors are brightened by 1/(fraction that faded in) so the TOTAL
 //      light of a cluster stays roughly constant as you zoom — no sudden
 //      brightening or dimming of the field.
+//
+// The LOD band math and the fragment core+glow falloff are single-homed in
+// the main app's lib/cloudSprite.wesl (shared with the milkyWayCloud
+// passes), reached here through the file symlink at lib/cloudSprite.wesl —
+// same root-driven package-binding mechanism as the galaxyGen/ symlink.
+
+import package::lib::cloudSprite::fluxConservingLod;
+import package::lib::cloudSprite::starGlowAlpha;
 
 struct Cam {
   viewProj: mat4x4<f32>,
@@ -53,14 +61,11 @@ fn vs(@location(0) corner: vec2<f32>,
   }
   var cull = inSB.y < cam.params.w;   // hard cull of the very faintest stars (quality knob)
   var boost = 1.0;
-  let thr = cam.params.z;
-  if (!cull && thr > 0.0) {
-    // Flux-conserving LOD, no hard threshold: fade each star in over a band as its
-    // on-screen size (a) grows past its hash; brighten survivors by 1/(fraction on).
-    let a = apparent / thr;
-    let h = fract(sin(dot(inPos, vec3<f32>(12.9898, 78.233, 37.719))) * 43758.5453);
-    let fade = smoothstep(h - 0.4, h, a);
-    if (fade <= 0.0) { cull = true; } else { boost = min(fade / min(1.0, a + 0.2), 3.0); }
+  if (!cull) {
+    // Flux-conserving LOD — band math + rationale in lib/cloudSprite.wesl.
+    let lod = fluxConservingLod(inPos, apparent, cam.params.z);
+    cull = lod.cull;
+    boost = lod.boost;
   }
   if (cull) { o.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0); } else { o.pos = kClip; }
   o.uv = corner;
@@ -73,9 +78,7 @@ fn vs(@location(0) corner: vec2<f32>,
 fn fs(i: VSOut) -> @location(0) vec4<f32> {
   let r2 = dot(i.uv, i.uv);
   if (r2 > 1.0) { discard; }
-  let core = exp(-r2 * 5.0);
-  let glow = exp(-r2 * 1.6) * 0.35;
-  // subtract the value at the sprite edge so alpha reaches 0 smoothly (no hard rim)
-  var a = max(0.0, (core + glow) - 0.0774) * cam.params.y;
+  // Core+glow radial falloff from lib/cloudSprite.wesl, scaled by intensity.
+  let a = starGlowAlpha(r2) * cam.params.y;
   return vec4<f32>(i.color * i.bright * a, a);
 }
