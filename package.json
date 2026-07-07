@@ -46,6 +46,7 @@
     "build-filaments-small": "tsx tools/filaments/buildFilaments.ts --cut 7 --output public/data/filaments-small.bin",
     "build-fonts": "tsx tools/fonts/buildFontAtlas.ts",
     "build-tiers": "tsx tools/catalog/buildAllBins.ts",
+    "tour-length": "tsx tools/animation/tourLength.ts",
     "flow-workbench": "vite --config tools/flow-workbench/vite.config.ts",
     "galaxy-renderer": "vite --config tools/galaxy-renderer/vite.config.ts",
     "curate-famous": "vite --config tools/famous-curator/vite.config.ts",
