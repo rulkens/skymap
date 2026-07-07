@@ -250,8 +250,10 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
           };
         }
       }
-      // A label with no prominence (e.g. the Milky Way label) sinks to lowest
-      // priority rather than beating real structures.
+      // A label with no prominence sinks to lowest priority rather than
+      // beating real structures.  (Labels that must always win — the
+      // Milky Way "You are here" — declare it explicitly with
+      // prominencePx: Number.MAX_VALUE in their producer.)
       return { index, prominencePx: label.prominencePx ?? 0, onScreen, rect };
     });
 

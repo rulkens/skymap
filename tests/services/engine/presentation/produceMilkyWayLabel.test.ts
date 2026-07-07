@@ -41,6 +41,15 @@ describe('produceMilkyWayLabel', () => {
     expect(out.lines[0]!.fadeAlpha).toBeCloseTo(1);
   });
 
+  it('outranks every structure label in the declutter (top prominence)', () => {
+    // "You are here" is the orientation anchor: when it is visible at all
+    // (camera within the fade band), overlapping structure labels must yield
+    // to it, never the other way around. Number.MAX_VALUE sorts above any
+    // finite apparent size a producer can emit.
+    const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
+    expect(out.labels[0]!.prominencePx).toBe(Number.MAX_VALUE);
+  });
+
   it('emits nothing far away (>= 2 Mpc) even when enabled', () => {
     const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(2.0));
     expect(out.labels).toEqual([]);

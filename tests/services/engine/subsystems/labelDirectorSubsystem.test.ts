@@ -308,22 +308,24 @@ describe('labelDirectorSubsystem', () => {
     expect(state.subsystems.fades.fadeTo as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
-  it('treats a label with no prominencePx (you-are-here) as prominence 0', () => {
+  it('treats a label with no prominencePx as prominence 0', () => {
     const dir = createLabelDirectorSubsystem();
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
 
-    // you-are-here (no prominencePx) collides with a prominent structure label
-    // at the same point → loses the overlap; its stem line drops with it.
-    const youAreHere: Label = { ...SAMPLE_LABEL, id: 'you-are-here' };
-    const yahLine: MarkerLine = {
+    // A label that omits prominencePx collides with a prominent structure
+    // label at the same point → loses the overlap; its stem line drops with
+    // it.  (The Milky Way "You are here" avoids this fate by declaring
+    // prominencePx: Number.MAX_VALUE — see produceMilkyWayLabel.)
+    const anonymous: Label = { ...SAMPLE_LABEL, id: 'anonymous' };
+    const anonLine: MarkerLine = {
       ...SAMPLE_LINE,
-      id: 'you-are-here',
-      ownerLabelId: 'you-are-here',
+      id: 'anonymous',
+      ownerLabelId: 'anonymous',
     };
     const structure: Label = { ...SAMPLE_LABEL, id: 'coma', prominencePx: 200 };
-    dir.registerProducer(makeProducer('yah', [youAreHere], [yahLine]));
+    dir.registerProducer(makeProducer('anon', [anonymous], [anonLine]));
     dir.registerProducer(makeProducer('struct', [structure], []));
 
     dir.runFrame(makeState(), makeCtx(0));
