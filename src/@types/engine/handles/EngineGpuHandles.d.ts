@@ -28,7 +28,7 @@
  * **Every field on this bag shares the same lifecycle rule** — null
  * before bootstrap, non-null after `initGpu` resolves, released and
  * re-nulled by `destroy()`.  That symmetry is load-bearing: the
- * `texturedDiskRenderer` / `proceduralDiskRenderer` / `milkyWayRenderer`
+ * `texturedDiskRenderer` / `proceduralDiskRenderer` / `milkyWayCloudRenderer`
  * fields exist on this bag specifically so the `destroy()` chain has a
  * reachable reference to call `.destroy()` on — they are not consumed
  * via this bag at runtime (the frame loop receives them through
@@ -56,7 +56,6 @@ import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
-import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { MilkyWayCloud } from '../../galaxy/MilkyWayCloud';
 import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
@@ -208,12 +207,6 @@ export type EngineGpuHandles = {
    */
   proceduralDiskRenderer: ProceduralDiskRenderer | null;
   /**
-   * Procedural Milky-Way impostor renderer at world origin.  Same
-   * lifecycle, same reachability rationale, and same isEngineReady
-   * exclusion as `texturedDiskRenderer` above.
-   */
-  milkyWayRenderer: MilkyWayRenderer | null;
-  /**
    * GPU-generated Milky-Way star+dust point cloud — the buffer resource
    * (per-tier star/dust instance buffers + regenerate/destroy) that the
    * `milkyWayCloudRenderer` draws.  Null until `initGpu` generates the first
@@ -225,13 +218,11 @@ export type EngineGpuHandles = {
   milkyWayCloud: MilkyWayCloud | null;
   /**
    * The two-pass (additive stars + multiplicative dust) renderer that draws
-   * `milkyWayCloud` on the HDR path — the replacement for the procedural
-   * `milkyWayRenderer` impostor on the DRAW surface (the impostor stays
-   * constructed for pick + a later teardown task).  Null until `initGpu`
-   * constructs it; the frame body reads it via `RunFrameDeps`/`PassDeps`.
-   * Stored here so `destroy()` can release its shared uniform + corner-quad
-   * buffers.  Excluded from `isEngineReady` (same rationale as the other
-   * optional renderers).
+   * `milkyWayCloud` on the HDR path.  Null until `initGpu` constructs it;
+   * the frame body reads it via `RunFrameDeps`/`PassDeps`.  Stored here so
+   * `destroy()` can release its shared uniform + corner-quad buffers.
+   * Excluded from `isEngineReady` (same rationale as the other optional
+   * renderers).
    */
   milkyWayCloudRenderer: MilkyWayCloudRenderer | null;
   /**

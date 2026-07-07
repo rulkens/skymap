@@ -25,7 +25,7 @@
  * ### Why we record at the renderer-mock level, not `pass.draw`
  *
  * Each `Pass.draw` in `passes/` delegates to a renderer's `.draw(...)`
- * method (`pointRenderer.draw`, `milkyWayRenderer.draw`, etc.) that we
+ * method (`pointRenderer.draw`, `milkyWayCloudRenderer.draw`, etc.) that we
  * stub at the test boundary.  The real renderers internally call
  * `pass.draw(vertexCount, instanceCount, ...)` on the GPU encoder, but
  * those WGSL-pipeline-bound calls never fire here — the mocks

@@ -2,9 +2,9 @@
  * milkyWayPickRenderer — invisible, pick-only billboard that makes the
  * Milky Way clickable.
  *
- * The Milky Way is a first-class selectable source, but its visible disk
- * is drawn by a separate bespoke impostor renderer (milkyWayRenderer)
- * that owns no pick pipeline.  This renderer fills the gap: a single
+ * The Milky Way is a first-class selectable source, but its visible form
+ * is the star/dust point cloud (milkyWayCloudRenderer), which owns no
+ * pick pipeline.  This renderer fills the gap: a single
  * screen-size-clamped billboard at the galactic centre that stamps the
  * MW identity into the r32uint pick texture.  It draws nothing visible.
  *
@@ -179,8 +179,7 @@ export function createMilkyWayPickRenderer(
   }
 
   function pickMilkyWay(pass: GPURenderPassEncoder, halfExtentPx: number): void {
-    if (!device || !pickPipeline || !mwBindGroup || !mwUniformBuffer || !dummyFadeBindGroup)
-      return;
+    if (!device || !pickPipeline || !mwBindGroup || !mwUniformBuffer || !dummyFadeBindGroup) return;
     // The hit-target half-extent is data, not state: the engine computes
     // it via the shared selectionRingRadiusPx helper (the same value the
     // visible ring uses) and hands it in, so the renderer stays free of

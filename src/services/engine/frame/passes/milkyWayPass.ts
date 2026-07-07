@@ -1,20 +1,24 @@
 /**
- * milkyWayPass — procedural Milky Way impostor at the world origin.
+ * milkyWayPass — the Milky Way star/dust point cloud at the world origin.
  *
  * ### What it draws
  *
- * A view-aligned billboard centred on the world origin (the Milky
- * Way's adopted barycentre in catalogue coordinates) carrying a
- * full-screen procedural raymarched spiral.  Both vertex and
- * fragment stages consume the live world-space camera position so
- * the synthetic vantage rotates with the user's orbit instead of
- * presenting the same hard-coded view every frame.
+ * An instanced point cloud generated on-GPU (`milkyWayCloud` owns the
+ * star/dust instance buffers), drawn by `milkyWayCloudRenderer` in two
+ * pipelines: an ADDITIVE star pass (soft radial glows that sum their
+ * light) followed by a MULTIPLICATIVE dust pass (per-channel
+ * transmittance that darkens + reddens the light behind it).  The
+ * sprites are camera-facing billboards built from the live camera basis
+ * each frame; the cloud's world placement (fixed galactic orientation +
+ * scale at the world origin) is a model matrix built once and reused.
  *
  * ### When it draws
  *
  * Two gates, both in `enabled`:
  *
- *   1. `state.settings.milkyWay.enabled` — user toggle.
+ *   1. `state.settings.milkyWay.enabled` — user toggle — OR a still-
+ *      nonzero toggle fade (`fades.opacityOf`), which keeps the pass
+ *      alive through the ~100 ms fade-out tail.
  *   2. `milkyWayFadeAlpha(camDist, fovY, viewportH) > 0` — the
  *      apparent-size fade band defined in
  *      `services/gpu/galaxy/milkyWayFadeAlpha.ts` (full strength while the

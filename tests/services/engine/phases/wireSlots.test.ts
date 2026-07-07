@@ -375,7 +375,6 @@ function makeState(
       texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
       texturedDiskRenderer: { bindAtlas: vi.fn(), bindHiResArray: vi.fn() } as never,
       proceduralDiskRenderer: {} as never,
-      milkyWayRenderer: null,
       volumeFieldRenderer: {
         upload: vi.fn(),
       } as never,

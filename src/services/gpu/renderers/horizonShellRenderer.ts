@@ -2,8 +2,8 @@
  * horizonShellRenderer — translucent observable-universe horizon shell,
  * drawn as an analytic ray-marched sphere.
  *
- * Sibling to `milkyWayRenderer` (both single-instance world-anchored
- * impostors).  Rather than rasterising a UV-sphere mesh — which suffers
+ * A single-instance world-anchored impostor.  Rather than rasterising a
+ * UV-sphere mesh — which suffers
  * fp32 precision dropouts at the 14-Gpc shell radius / 30-Gpc camera
  * distances — this renderer draws ONE fullscreen quad and intersects a
  * per-pixel view ray with the sphere analytically in the fragment
@@ -112,7 +112,6 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
           format,
           // Pure additive — the shell is emissive, contributing light
           // where the Fresnel rim is bright and nothing where it isn't.
-          // Same reasoning as `milkyWayRenderer`'s blend choice.
           blend: {
             color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
             alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },

@@ -255,11 +255,13 @@ Contract:
 
 **No code.** Dev server up (`npm run dev` is already running — do not restart it); ask the user to verify, tuning ONLY `milkyWayCalibration.ts` constants (+ at most the WESL falloff constants, flagged loudly if touched) between looks:
 
-- [ ] **Close flythrough (≤ 0.15 Mpc):** arms, bar, bulge, dust lanes read correctly; no popping against the 0.01 Mpc near plane.
-- [ ] **Mid range (1–10 Mpc):** coherent galaxy, no sparkle/aliasing storm (levers in order: `MILKY_WAY_STAR_PX_MIN`, then `MILKY_WAY_EXPOSURE`; if both fail the spec's documented fallback is a near/far crossfade to a RETAINED impostor — STOP and escalate before building that).
-- [ ] **Fade region (10–50 Mpc):** smooth fade; dust darkening disappears with it (toggle `settings.milkyWay.enabled` too — the ~100 ms fade tail must behave).
-- [ ] **iOS device check** (SKYMAP_HTTPS=1 LAN flow in `vite.config.ts:9-29`): navigation still presents frames — WebKit's stricter Tint must accept the new WESL (an invalid pipeline silently drops whole frames; see CLAUDE.md).
-- [ ] Record the user's sign-off (and final tuned constants) in this plan next to this task. **Task 9 must not start without it.**
+- [x] **Close flythrough (≤ 0.15 Mpc):** arms, bar, bulge, dust lanes read correctly; no popping against the 0.01 Mpc near plane.
+- [x] **Mid range (1–10 Mpc):** coherent galaxy, no sparkle/aliasing storm (levers in order: `MILKY_WAY_STAR_PX_MIN`, then `MILKY_WAY_EXPOSURE`; if both fail the spec's documented fallback is a near/far crossfade to a RETAINED impostor — STOP and escalate before building that).
+- [x] **Fade region (10–50 Mpc):** smooth fade; dust darkening disappears with it (toggle `settings.milkyWay.enabled` too — the ~100 ms fade tail must behave).
+- [x] **iOS device check** (SKYMAP_HTTPS=1 LAN flow in `vite.config.ts:9-29`): navigation still presents frames — WebKit's stricter Tint must accept the new WESL (an invalid pipeline silently drops whole frames; see CLAUDE.md).
+- [x] Record the user's sign-off (and final tuned constants) in this plan next to this task. **Task 9 must not start without it.**
+
+**SIGN-OFF (user, 2026-07-08, commit `3b9ac47e`):** approved after an interactive tuning wave. Final tuned constants (all in `milkyWayCalibration.ts` / the shared preset, superseding the plan's initial values): `MILKY_WAY_RADIUS_MPC = 0.0175` (was 0.03 — resized so the Sun's 8 kpc offset lands mid-disk, not at the bulge edge), `MILKY_WAY_STAR_PX_MAX = 48`, `MILKY_WAY_STAR_SIZE_SCALE = 0.7`, `MILKY_WAY_LOD_APPARENT = 0.02` (flux-conserving star LOD ported from the tool's `star.wesl`), fade re-keyed to apparent px (`MILKY_WAY_FADE_FULL_PX = 12` / `GONE_PX = 8`), preset `starCount = 150000` + `globularCount = 30` → tier budgets 75k/150k/300k. Frame cost with the cloud visible: 14–17 ms (down from 23 ms pre-LOD); further perf tuning explicitly deferred by the user.
 
 ---
 

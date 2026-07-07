@@ -8,7 +8,7 @@
  * this many pixels of half-extent".  The renderer stays free of
  * EngineState; it just draws what it's told.
  *
- * ## Sizing: the impostor's visible extent, not the selection ring
+ * ## Sizing: the disc's visible extent, not the selection ring
  *
  * The hit target tracks what the user SEES — the glowing disc — not the
  * selection ring, which is deliberately drawn ~3× larger to leave breathing
@@ -18,9 +18,9 @@
  *   apparentPxRadius = (discRadiusMpc / camDist) * pxPerRad
  *
  * No ring scale, no points-pipeline 4× padding — just the disc's angular
- * half-extent.  The disc's bright emission fades around this radius (the
- * fragment shader's `MILKY_WAY_RADIUS_MPC` scale), so the click area lands on
- * the glow rather than the empty padding of the 240-kpc billboard quad.  A
+ * half-extent.  The point cloud's bright emission fades around this radius
+ * (`milkyWayCalibration.MILKY_WAY_RADIUS_MPC` scales the cloud to it), so the
+ * click area lands on the glow rather than the empty sky around it.  A
  * galaxy point-size floor keeps a small/far disk hittable.
  *
  * `camDist` is the distance from the camera to the galactic centre (NOT

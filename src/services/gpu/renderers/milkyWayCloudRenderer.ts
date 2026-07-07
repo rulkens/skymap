@@ -1,9 +1,8 @@
 /**
  * milkyWayCloudRenderer — the two-pass draw for the generated Milky Way point
- * cloud, running inside the app's HDR pass. It replaces the single-quad
- * procedural impostor (`milkyWayRenderer.ts`) with the tool's real star/dust
- * billboard model: an ADDITIVE star pass (soft radial glows that sum their
- * light) followed by a MULTIPLICATIVE-transmittance dust pass (per-channel
+ * cloud, running inside the app's HDR pass. The star/dust billboard model
+ * draws as an ADDITIVE star pass (soft radial glows that sum their light)
+ * followed by a MULTIPLICATIVE-transmittance dust pass (per-channel
  * absorption that darkens + reddens the light already in the target).
  *
  * ## Two pipelines, two bind groups, ONE uniform buffer

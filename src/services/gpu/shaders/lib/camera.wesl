@@ -27,11 +27,10 @@
 //   - 'cameraPos' (under various spellings: 'camPosWorld',
 //     'cameraPosWorld', 'camPos') lives at WILDLY different byte
 //     offsets across renderers — points puts six other f32/u32
-//     fields between 'viewport' and 'camPosWorld'; milkyWayImpostor
-//     has 'fadeAlpha' in those same slots; quads/texturedDisks
+//     fields between 'viewport' and 'camPosWorld'; quads/texturedDisks
 //     pad those slots out with explicit '_pad0/_pad1'. Forcing all
 //     of them onto the same prefix would mean rewriting the
-//     points/milkyWayImpostor uniform layouts purely to satisfy a
+//     points uniform layout purely to satisfy a
 //     shared struct, with no functional benefit. The guardrail
 //     'fields used by only one renderer stay renderer-specific'
 //     applies a fortiori when the placement of a field varies

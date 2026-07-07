@@ -1,7 +1,5 @@
 /**
- * MilkyWayCloudRenderer — public handle for the Milky Way point-cloud draw,
- * the two-pass replacement for the single-quad procedural impostor
- * (`MilkyWayRenderer`).
+ * MilkyWayCloudRenderer — public handle for the Milky Way point-cloud draw.
  *
  * The cloud is drawn as two instanced-billboard passes over the generated
  * star/dust records: an ADDITIVE star pass (soft radial glows that sum their

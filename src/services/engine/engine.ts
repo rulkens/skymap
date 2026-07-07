@@ -270,16 +270,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
-      // texturedDiskRenderer / proceduralDiskRenderer / milkyWayRenderer:
-      // null until initGpu constructs them.  The frame body reads them via
-      // RunFrameDeps; they live here so `destroy()` can reach them and so
-      // later phases consume the same identities by reading `state.gpu.X`.
+      // texturedDiskRenderer / proceduralDiskRenderer: null until initGpu
+      // constructs them.  The frame body reads them via RunFrameDeps; they
+      // live here so `destroy()` can reach them and so later phases consume
+      // the same identities by reading `state.gpu.X`.
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
-      milkyWayRenderer: null,
-      // Milky-Way point cloud + its two-pass renderer. null until initGpu; the
-      // cloud draws in place of the impostor (which stays constructed above).
-      // Excluded from isEngineReady; released in destroy() alongside the impostor.
+      // Milky-Way point cloud + its two-pass renderer. null until initGpu.
+      // Excluded from isEngineReady; released in destroy().
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
@@ -668,8 +666,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
     state.gpu.proceduralDiskRenderer = null;
-    state.gpu.milkyWayRenderer?.destroy();
-    state.gpu.milkyWayRenderer = null;
     state.gpu.milkyWayCloud?.destroy();
     state.gpu.milkyWayCloud = null;
     state.gpu.milkyWayCloudRenderer?.destroy();

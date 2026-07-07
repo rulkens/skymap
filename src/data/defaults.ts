@@ -104,11 +104,11 @@ export const DEFAULT_REAL_ONLY_MODE = false;
 export const DEFAULT_DEPTH_FADE_ENABLED = true;
 
 /**
- * Procedural Milky Way disk overlay default — the screen-aligned disk at the
- * world origin gives a visceral "you are here" sense before the user flies out
- * into the cosmic-web view. Derived from the SOURCE_REGISTRY milkyWay row's
- * `visible` gate, so the registry is the single source of truth; see
- * `services/gpu/renderers/milkyWayRenderer.ts` +
+ * Milky Way overlay default — the star/dust point cloud at the world origin
+ * gives a visceral "you are here" sense before the user flies out into the
+ * cosmic-web view. Derived from the SOURCE_REGISTRY milkyWay row's `visible`
+ * gate, so the registry is the single source of truth; see
+ * `services/gpu/renderers/milkyWayCloudRenderer.ts` +
  * `services/gpu/galaxy/milkyWayFadeAlpha.ts` for the apparent-size fade band.
  */
 export const DEFAULT_MILKY_WAY_ENABLED = SOURCE_REGISTRY[Source.MilkyWay].visible;
