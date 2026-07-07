@@ -1,7 +1,7 @@
 # Tour beat rail — vertical dot progress indicator for guided tours
 
 **Date:** 2026-07-07
-**Status:** spec — awaiting plan
+**Status:** shipped — PR #414 (implemented directly against the spec, no plan)
 
 ## Goal
 
