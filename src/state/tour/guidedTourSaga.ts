@@ -59,9 +59,13 @@ import { mergeSnapshot } from '../settings/settingsSlice';
 import { mergeSettingsSnapshot } from '../settings/mergeSettingsSnapshot';
 import type { RootState } from '../../store/types';
 import type { Tour } from '../../@types/animation/tour/Tour';
+import type { BeatRange } from '../../@types/animation/tour/BeatRange';
 
 /**
- * Play all beats in order, sandwiched in a snapshot/restore pair.
+ * Play all beats in order, sandwiched in a snapshot/restore pair. An optional
+ * `range` windows the run to a contiguous slice of beats (the recorder passes
+ * one so a single-beat take doesn't replay the whole tour); omitted means the
+ * full tour.
  *
  * This is a saga — not a plain async function — because `try/finally` in a
  * generator runs on BOTH natural completion (all beats finish) and
@@ -76,7 +80,7 @@ import type { Tour } from '../../@types/animation/tour/Tour';
  * tour progression. Adding a camera-input `take` here would incorrectly end
  * the tour on any background orbit-controls event.
  */
-export function* guidedTourSaga(tour: Tour): Generator {
+export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
   // Snapshot the six settings clusters + selection.focus BEFORE any beat plays
   // so restore winds back to the user's pre-tour state including the first
   // beat's establishing strip. A pure store read — no engine context needed.
@@ -98,15 +102,29 @@ export function* guidedTourSaga(tour: Tour): Generator {
     yield* race({
       // `run` sequences the beats by INDEX (not a forward-only for-of), so a
       // `'prev'` outcome can step the index back and re-play the previous beat's
-      // establishing fly. Advancing off the last beat ends the run naturally.
-      // An exitTour that wins the outer race cancels this arm mid-visitBeatSaga —
-      // redux-saga propagates the cancellation into the in-flight playClip call.
+      // establishing fly. Advancing off the window's last beat ends the run
+      // naturally. An exitTour that wins the outer race cancels this arm
+      // mid-visitBeatSaga — redux-saga propagates the cancellation into the
+      // in-flight playClip call.
       run: call(function* () {
-        let i = 0;
-        while (i < tour.beats.length) {
+        // Resolve the beat window. Both ends CLAMP into the tour's bounds
+        // rather than throw — an authoring edit that shortens the tour must
+        // not brick a saved recording command. (`from` clamps against
+        // max(last, 0) so an empty tour yields an empty window — from 0 above
+        // to -1 — instead of a -1 index.) Indices stay GLOBAL throughout:
+        // the beats array is never sliced, because the scene fold below
+        // reconstructs the skipped prefix's cues from the same indices.
+        const last = tour.beats.length - 1;
+        const from = range ? Math.min(Math.max(range.from, 0), Math.max(last, 0)) : 0;
+        const to = range ? Math.min(Math.max(range.to, 0), last) : last;
+
+        let i = from;
+        while (i <= to) {
           // Re-establish beat i's derived scene (see the module header). The
           // fold needs a FULL settings state: the captured baseline laid over
-          // the live state (non-tour clusters pass through untouched).
+          // the live state (non-tour clusters pass through untouched). Under a
+          // range the fold is also what makes a mid-tour take faithful: it
+          // applies the scene cues of beats 0..i-1 even though they never played.
           const live = yield* select((s: RootState) => s.settings);
           const baseline = mergeSettingsSnapshot(live, snapshot.settings);
           yield* put(mergeSnapshot(computeSceneEntering(baseline, tour.beats, i)));
@@ -115,7 +133,9 @@ export function* guidedTourSaga(tour: Tour): Generator {
           // cancellation from the outer `exit` race still propagates through the
           // yield* into the in-flight worker.
           const outcome = yield* visitBeatSaga(tour.beats[i]!, i);
-          i = outcome === 'prev' ? Math.max(0, i - 1) : i + 1;
+          // Prev clamps at the window's start (beat 0 on a full run) — a
+          // windowed take never steps outside its range.
+          i = outcome === 'prev' ? Math.max(from, i - 1) : i + 1;
         }
       }),
       // `exit` is the only abort: an explicit user/system dispatch, not a

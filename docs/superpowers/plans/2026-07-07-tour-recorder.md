@@ -160,10 +160,10 @@ export type SkymapRecorderHook = {
 
 **Steps:**
 
-- [ ] Extend `tests/state/tour/guidedTourSaga.test.ts` (its narration-clip + `dwellDrift(0.001)` + fake-timers idiom, lines 109-215): `plays only the beats inside a given range` (3-beat tour, `{from:1,to:1}` → exactly one fly for beat 1 — assert via the playClip stub's call count and `tour.beatIndex` — then natural completion); `clamps an out-of-range beat range to the tour bounds` (`{from:0,to:99}` → all beats play); `a range take still applies the scene cues of the skipped prefix` (reuse the hide-cue fixture of the `reconstructs the scene on every beat entry` test at lines 219-258, but start at `{from:1,to:1}` and assert the cue's effect is applied on entry).
-- [ ] Extend `watchTourSaga.test.ts`: the range on the action reaches `guidedTourSaga`.
-- [ ] Implement (action payload prepare-fn, watcher pass-through, loop bounds + clamp).
-- [ ] Full `npm test` — the existing five guidedTourSaga tests must stay green untouched (no-range default). `npm run typecheck`. Commit.
+- [x] Extend `tests/state/tour/guidedTourSaga.test.ts` (its narration-clip + `dwellDrift(0.001)` + fake-timers idiom, lines 109-215): `plays only the beats inside a given range` (3-beat tour, `{from:1,to:1}` → exactly one fly for beat 1 — assert via the playClip stub's call count and `tour.beatIndex` — then natural completion); `clamps an out-of-range beat range to the tour bounds` (`{from:0,to:99}` → all beats play); `a range take still applies the scene cues of the skipped prefix` (reuse the hide-cue fixture of the `reconstructs the scene on every beat entry` test at lines 219-258, but start at `{from:1,to:1}` and assert the cue's effect is applied on entry).
+- [x] Extend `watchTourSaga.test.ts`: the range on the action reaches `guidedTourSaga`.
+- [x] Implement (action payload prepare-fn, watcher pass-through, loop bounds + clamp).
+- [x] Full `npm test` — the existing five guidedTourSaga tests must stay green untouched (no-range default). `npm run typecheck`. Commit.
 
 ---
 

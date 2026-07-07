@@ -257,6 +257,96 @@ describe('guidedTourSaga', () => {
     await task.toPromise();
   });
 
+  // ── (2c) beat ranges window the run to a contiguous slice ─────────────────
+
+  it('plays only the beats inside a given range', async () => {
+    vi.useFakeTimers();
+
+    // Three short-dwell beats; the range selects only the middle one.
+    const beats: BeatData[] = ['First', 'Second', 'Third'].map((title) => ({
+      enterClip: NARRATION_CLIP,
+      caption: { title },
+      dwellClip: dwellDrift(0.001),
+    }));
+
+    const stub = makeAutoFlyStub();
+    const { store, sagaMiddleware } = buildStore({ playClip: stub });
+    sagaMiddleware.run(guidedTourSaga, makeTour(beats), { from: 1, to: 1 });
+
+    // The run starts at the window's `from` in GLOBAL indices — beatChanged(1)
+    // lands synchronously before the first async yield, correcting the 0 that
+    // tourStarted reset.
+    expect(store.getState().tour.beatIndex).toBe(1);
+
+    await vi.runAllTimersAsync();
+
+    // Exactly one beat played: one fly (resolved) + one drift (blocked). Beats
+    // 0 and 2 never reached playClip, and the loop ended naturally after the
+    // window (tour no longer active).
+    expect(stub.mock.calls.length).toBe(2);
+    expect(store.getState().tour.active).toBe(false);
+  });
+
+  it('clamps an out-of-range beat range to the tour bounds', async () => {
+    vi.useFakeTimers();
+
+    const beats: BeatData[] = ['First', 'Second', 'Third'].map((title) => ({
+      enterClip: NARRATION_CLIP,
+      caption: { title },
+      dwellClip: dwellDrift(0.001),
+    }));
+
+    const stub = makeAutoFlyStub();
+    const { store, sagaMiddleware } = buildStore({ playClip: stub });
+    // `to: 99` reaches past the end — it must clamp to the last beat, not
+    // throw or play nothing: a saved recording command survives an authoring
+    // change that shortens the tour.
+    sagaMiddleware.run(guidedTourSaga, makeTour(beats), { from: 0, to: 99 });
+
+    await vi.runAllTimersAsync();
+
+    // All three beats flew (calls 1, 3, 5 in the parity stub) and the run
+    // completed naturally.
+    expect(stub.mock.calls.length).toBeGreaterThanOrEqual(5);
+    expect(store.getState().tour.active).toBe(false);
+  });
+
+  it('a range take still applies the scene cues of the skipped prefix', async () => {
+    // Beat 0 carries a hide cue in its enter clip, but the range starts at
+    // beat 1 — beat 0 never plays at all. The reconstruction fold indexes the
+    // FULL beats array with the global entry index, so entering beat 1 must
+    // apply the skipped prefix's cue exactly as a full playthrough would.
+    const cueBeat: BeatData = {
+      enterClip: { start: 'live', timeline: [hide(['volumesMaster'], 0)] },
+      caption: { title: 'B1' },
+      dwellClip: dwellDrift(9999),
+    };
+    const plainBeat: BeatData = {
+      enterClip: NARRATION_CLIP,
+      caption: { title: 'B2' },
+      dwellClip: dwellDrift(9999),
+    };
+
+    const { store, sagaMiddleware } = buildStore({ playClip: makeAutoFlyStub() });
+    store.dispatch(setVolumesEnabled(true));
+    const task = sagaMiddleware.run(guidedTourSaga, makeTour([cueBeat, plainBeat]), {
+      from: 1,
+      to: 1,
+    });
+
+    await flush();
+    await flush();
+    // In beat 1's dwell: the fold applied beat 0's hide cue on entry despite
+    // beat 0 never having played.
+    expect(store.getState().tour.beatIndex).toBe(1);
+    expect(store.getState().settings.volumes.enabled).toBe(false);
+
+    store.dispatch(exitTour());
+    await task.toPromise();
+    // The exit restore winds the cue's effect back to the captured baseline.
+    expect(store.getState().settings.volumes.enabled).toBe(true);
+  });
+
   // ── (3) natural completion restores the captured scene ────────────────────
 
   it('natural completion winds a mid-run mutation back to the captured baseline', async () => {
