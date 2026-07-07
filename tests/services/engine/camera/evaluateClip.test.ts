@@ -21,6 +21,7 @@ import {
   moveTarget,
   all,
   seq,
+  wait,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -169,6 +170,27 @@ describe('evaluateClip windowed osc fades its amplitude', () => {
     expect(evaluateClip(data, 5).pitch).toBeCloseTo(basePitch + amp, 8); // full amplitude
     expect(evaluateClip(data, 9).pitch).toBeCloseTo(basePitch + 0.5 * amp, 8); // fading out
     expect(evaluateClip(data, 11).pitch).toBeCloseTo(basePitch, 10); // past the window → silent
+  });
+
+  it('reads the phase window-locally: a mid-timeline window starts its sine at 0', () => {
+    // The bob is authored to start where its window starts — a dwell tail at
+    // t=3 must swing exactly like the same dwell at t=0, or the sine's phase
+    // (and its zero crossings, which the fade is aligned against) depends on
+    // where the dwell happens to sit in the timeline.
+    const basePitch = 0.3;
+    const amp = 0.1;
+    const data: ClipData = {
+      start: { target: [0, 0, 0], yaw: 0, pitch: basePitch, distance: 10 },
+      timeline: [
+        wait(3),
+        oscillate('pitch', { amp, period: 4, over: 10, fade: 2, ease: 'linear' }),
+      ],
+    };
+
+    // Window [3, 13), local t' = t − 3, value = env(t') · sin(2π t'/4).
+    expect(evaluateClip(data, 4).pitch).toBeCloseTo(basePitch + 0.5 * amp, 8); // t'=1: env 0.5 · sin(π/2)
+    expect(evaluateClip(data, 8).pitch).toBeCloseTo(basePitch + amp, 8); // t'=5: env 1 · sin(π/2)
+    expect(evaluateClip(data, 13).pitch).toBeCloseTo(basePitch, 10); // past the window → silent
   });
 });
 

@@ -18,8 +18,11 @@ import { dwellDrift } from '../../../state/tour/dwellDrift';
 import { openingTitle } from './grandTour/openingTitle';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31, approachM31Dwell } from './grandTour/approachM31';
+import { localGroup, localGroupDwell } from './grandTour/localGroup';
+import { neighbourhoodReveal } from './grandTour/neighbourhoodReveal';
 import { neighbourhoodFlythrough } from './grandTour/neighbourhoodFlythrough';
 import { approachVirgo } from './grandTour/approachVirgo';
+import { laniakea } from './grandTour/laniakea';
 import { cosmicWeb, cosmicWebDwell } from './grandTour/cosmicWeb';
 import { cosmicFlows, cosmicFlowsDwell } from './grandTour/cosmicFlows';
 import { emptiness } from './grandTour/emptiness';
@@ -35,7 +38,7 @@ export const grandTour: Tour = {
       enterClip: openingTitle,
       caption: {
         title: 'The Long Way Out',
-        body: "Let's take a tour from home to the edge of the observable universe, and back.",
+        body: 'From home to the edge of the observable universe, and back.',
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(8, { cruiseRate: (Math.PI * 2) / 120 }),
@@ -44,7 +47,7 @@ export const grandTour: Tour = {
       enterClip: youAreHere,
       caption: {
         title: 'You are here',
-        body: 'The Milky Way, our home. The sun and a few hundred billion stars, and the one vantage point you are looking out **from**.',
+        body: 'The Milky Way, our home galaxy. A hundred billion stars, and the Sun is one of them.',
         position: 'bottom-left',
       },
       dwellClip: youAreHereDwell,
@@ -56,15 +59,37 @@ export const grandTour: Tour = {
         body: 'This is Andromeda, the nearest large galaxy to ours. Its light has been travelling toward us for 2.5 million years.',
         position: 'bottom-left',
       },
-      // Sized to land facing the M81 Group — the next beat's launch bearing.
+      // Lands ~79° off the MW–M31 axis, so the next beat's pull-back
+      // separates home and Andromeda instead of stacking them.
       dwellClip: approachM31Dwell,
+    },
+    {
+      enterClip: localGroup,
+      caption: {
+        title: 'The Local Group',
+        body: 'The Milky Way and Andromeda travel together, dozens of dwarf galaxies in tow: a single family bound by gravity, the Local Group.',
+        position: 'bottom-left',
+      },
+      // The orbit of the family — its share of the revolution the next
+      // beat's drift completes, landing on the flythrough's launch bearing.
+      dwellClip: localGroupDwell,
+    },
+    {
+      // No enter clip: the pull-back IS the beat — the caption is about the
+      // widening view, so it rides the motion (captions reveal on dwell start).
+      caption: {
+        title: 'Our neighbourhood',
+        body: 'The Local Group is one small family among many. Our galactic neighbourhood stretches tens of millions of light-years.',
+        position: 'bottom-left',
+      },
+      dwellClip: neighbourhoodReveal,
     },
     {
       // No enter clip: the flythrough IS the dwell, so the caption reveals at
       // beat entry and rides the whole sweep (captions reveal on dwell start).
       caption: {
-        title: 'Our neighbourhood',
-        body: 'Our galaxy runs with neighbours like M81 and Centaurus A, tens of millions of light-years out.',
+        title: 'Meeting the neighbours',
+        body: "Bode's Galaxy, the Pinwheel, the Whirlpool, the Sombrero, Centaurus A: the bright landmarks of our corner of the universe.",
         position: 'bottom-left',
       },
       dwellClip: neighbourhoodFlythrough,
@@ -73,7 +98,16 @@ export const grandTour: Tour = {
       enterClip: approachVirgo,
       caption: {
         title: 'The nearest cluster',
-        body: 'Virgo, the nearest big cluster — over a thousand galaxies, pulled together by gravity, 50 million light-years away.',
+        body: 'Virgo, the nearest big cluster. Over a thousand galaxies, pulled together by gravity, 50 million light-years away.',
+        position: 'bottom-left',
+      },
+      dwellClip: dwellDrift(12),
+    },
+    {
+      enterClip: laniakea,
+      caption: {
+        title: 'Laniakea',
+        body: 'Virgo is only the nearest of dozens of clusters, all streaming together as one structure: Laniakea, our home supercluster, half a billion light-years wide.',
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(12),

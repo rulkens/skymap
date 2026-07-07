@@ -1,16 +1,16 @@
 ---
-stage:        0
-id:           opening-title
-title:        The Long Way Out
-narration:    From home to the edge, and back.
-focus:        milkyWay
+stage: 0
+id: opening-title
+title: The Long Way Out
+narration: From home to the edge of the observable universe, and back.
+focus: milkyWay
 distance_mpc: 0.05
-motion:       held / slow drift
-travel_s:     0
-dwell_s:      8
-effects:      []
-requires:     [dwell-drift, caption]
-status:       draft
+motion: held / slow drift
+travel_s: 0
+dwell_s: 8
+effects: []
+requires: [dwell-drift, caption]
+status: draft
 ---
 
 ## Intent

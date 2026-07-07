@@ -53,7 +53,7 @@ import { all, oscillate, spin } from '../../services/engine/animation/effectHelp
 
 // Yaw's average orbit speed (rad/s — 2π over 45s) and the pitch-bob fade length
 // (s), both overridable. Pitch is a gentle bob: PITCH_AMP radians peak,
-// PITCH_PERIOD seconds per cycle.
+// PITCH_PERIOD the TARGET seconds per cycle (stretched to fit — see below).
 const DEFAULT_CRUISE_RATE = (Math.PI * 2) / 45;
 const DEFAULT_RAMP_SEC = 1.5;
 const PITCH_AMP = 0.05;
@@ -66,6 +66,14 @@ export function dwellDrift(
   const rampSec = opts?.rampSec ?? DEFAULT_RAMP_SEC;
   const cruiseRate = opts?.cruiseRate ?? DEFAULT_CRUISE_RATE;
   const fade = Math.min(rampSec, durationSec / 2);
+  // Fit an INTEGER number of full cycles into the window, as close to the
+  // target period as the duration allows. A free-running sine is mid-swing
+  // wherever the window happens to end, so the amplitude fade drags the
+  // camera back from that displacement — a visible vertical lurch right at
+  // the cut. With whole cycles the sine returns to centre exactly at the
+  // end, and the fade merely softens a settling the bob was doing anyway.
+  const cycles = Math.max(1, Math.round(durationSec / PITCH_PERIOD));
+  const period = durationSec / cycles;
 
   return {
     start: 'live',
@@ -75,8 +83,8 @@ export function dwellDrift(
         // angular speed `cruiseRate`; inOut eases in and out and ends at rest.
         spin('yaw', { by: cruiseRate * durationSec, over: durationSec, ease: 'inOut' }),
         // Pitch: eased oscillation — a bob whose amplitude fades in/out over the
-        // window, zero-mean so it returns to centre.
-        oscillate('pitch', { amp: PITCH_AMP, period: PITCH_PERIOD, over: durationSec, fade }),
+        // window, zero-mean and cycle-fitted so it returns to centre on the cut.
+        oscillate('pitch', { amp: PITCH_AMP, period, over: durationSec, fade }),
       ]),
     ],
   };

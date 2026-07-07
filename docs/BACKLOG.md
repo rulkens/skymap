@@ -59,6 +59,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Label declutter toggle + hysteresis** `needs-design` — add `settings.labels.declutter` wired to `labelDirectorSubsystem` (replacing the `?nodeclutter` stopgap) and hysteresis-damp the cull so labels stop flickering under camera motion. → [details](backlog/2026-06-29-label-declutter-toggle.md)
 - [ ] **Label fade opt-out ADR** `needs-design` — decide whether per-character MSDF label opacity opts out of the per-handle fade bind-group pattern; follow-up to ADR 0001.
 - [ ] **Reusable structure-visit tour clip** `needs-design` — generalize the hardcoded Virgo/M87 tour beats into a parameterized `structureVisitClip`. Focus-isolation primitive already shipped. → [details](backlog/2026-06-29-structure-visit-tour-clip.md)
+- [ ] **`emphasize()` clip cue** `ready` — per-structure spotlight lift composing with `fade` dims (staggered group highlights in the tour's neighbourhood beat). → [details](backlog/2026-07-07-emphasize-clip-cue.md)
 - [ ] **DebugPanel sections → modules + containers** `ready` — migrate the remaining DebugPanel sections to CSS modules + per-section containers, like the two clip sections. → [details](backlog/2026-06-30-debugpanel-sections-modules-containers.md)
 
 ## Docs & process
