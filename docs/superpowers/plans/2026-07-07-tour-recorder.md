@@ -4,7 +4,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-07-tour-recorder-design.md` (source of truth for every decision below)
 
-**Goal:** Record the grand tour deterministically, frame by frame, at 3840×2160 / 60 fps into an H.264 mp4 — via a Node harness under `tools/record/` that drives the *unmodified* app in headless Chromium with CDP virtual time and pipes screenshots into ffmpeg. The in-repo app surface is exactly three things: a `?cinema` URL mode, a `window.__skymapRecorder` hook, and beat-range support in the tour saga.
+**Goal:** Record the grand tour deterministically, frame by frame, at 3840×2160 / 60 fps into an H.264 mp4 — via a Node harness under `tools/record/` that drives the _unmodified_ app in headless Chromium with CDP virtual time and pipes screenshots into ffmpeg. The in-repo app surface is exactly three things: a `?cinema` URL mode, a `window.__skymapRecorder` hook, and beat-range support in the tour saga.
 
 **Architecture:** The harness launches Playwright Chromium (the e2e suite's known-good headless setup), boots the app in real time behind `?cinema`, awaits the recorder hook's `ready`, then engages `Emulation.setVirtualTimePolicy('pauseIfNetworkFetchesPending')` and steps the whole browser clock in 1000/fps ms grants — screenshotting after each grant into a spawned ffmpeg's stdin. The tour runs itself (`startTour` → `guidedTourSaga`; the dwell timeout auto-advances); the hook's returned promise is the stop signal, with a precomputed frame cap (from the `tour-length` machinery) as runaway guard. Everything clock-shaped in the app (`startLoop`, sagas' `Date.now()`/`delay()`, load-fade stamps) is virtualized by the browser — **no app-side clock changes**.
 
@@ -38,7 +38,7 @@ House rules (repeat in every dispatch):
 
 **Files:** `tools/record/virtualTimeSpike.ts` (new), `package.json` (add `"spike-virtual-time": "tsx tools/record/virtualTimeSpike.ts"`), spec Risks section (append verdict note).
 
-**The unknown (spec "Risks and the spike gate"):** does each virtual-time budget grant reliably fire rAF → `runFrame` → submit → present *before* `page.screenshot()` composites? Headless WebGPU + screenshots is proven (`tests/e2e/cf4-density-volume.spec.ts`); virtual time + canvas stepping is proven (timecut-class tools); the combination on this app is not.
+**The unknown (spec "Risks and the spike gate"):** does each virtual-time budget grant reliably fire rAF → `runFrame` → submit → present _before_ `page.screenshot()` composites? Headless WebGPU + screenshots is proven (`tests/e2e/cf4-density-volume.spec.ts`); virtual time + canvas stepping is proven (timecut-class tools); the combination on this app is not.
 
 **Launch pattern (reuse, don't invent):** the e2e suite runs default Playwright headless Chromium with **no custom flags** — `playwright.config.ts:32-41` documents that the bundled Chromium has WebGPU enabled by default, dev server assumed on `:5173`. The spike does the same via `chromium.launch()` from `@playwright/test`, viewport 640×360, `deviceScaleFactor: 1`.
 
@@ -49,14 +49,14 @@ House rules (repeat in every dispatch):
 
 **Procedure:**
 
-- [ ] Write `virtualTimeSpike.ts`: launch → goto `http://localhost:5173/?tour=x` → wait for boot in real time (networkidle + the engine-ready console log, per the e2e spec's pattern at `tests/e2e/cf4-density-volume.spec.ts:34-49`) → click the auto-rotate pill → open a CDP session (`page.context().newCDPSession(page)`) → `Emulation.setVirtualTimePolicy({ policy: 'pause' })` then step ~120 iterations: grant `{ policy: 'pauseIfNetworkFetchesPending', budget: 1000/60 }`, await the `Emulation.virtualTimeBudgetExpired` event, `page.screenshot({ type: 'png' })` to the OS tmpdir.
-- [ ] Assertion (a) — **motion**: consecutive screenshots differ. Decode with `sharp` (already a devDependency — verified no existing image-diff helper under `tools/utils/image/`) and compute mean absolute pixel difference; assert > a small noise floor for most consecutive pairs.
-- [ ] Assertion (b) — **determinism**: run the 120-frame loop twice in fresh pages; frame N of run 1 vs frame N of run 2 must be *near-equal* (mean abs diff below a tight threshold). NOT byte-equal — GPU floats wiggle.
-- [ ] If (a) fails (frozen/blank frames): try the spec's named fallbacks **in order** and record which one was needed: (1) an extra zero-work budget grant before each screenshot (present-lag absorption); (2) note that an explicit per-frame present handshake must be added to the Task 4 hook — do not build it in the spike.
-- [ ] Eyeball a handful of PNGs: captions/DOM text rasterization looks sane headless (secondary risk in the spec).
-- [ ] Add the npm script; leave the spike in the repo (it is the standing diagnostic for this pipeline).
-- [ ] **Deliverable:** go/no-go + which fallback (if any) in the commit message, AND a short note appended to the spec's "Risks and the spike gate" section. On no-go with both fallbacks dead: STOP the plan and escalate.
-- [ ] Commit.
+- [x] Write `virtualTimeSpike.ts`: launch → goto `http://localhost:5173/?tour=x` → wait for boot in real time (networkidle + the engine-ready console log, per the e2e spec's pattern at `tests/e2e/cf4-density-volume.spec.ts:34-49`) → click the auto-rotate pill → open a CDP session (`page.context().newCDPSession(page)`) → `Emulation.setVirtualTimePolicy({ policy: 'pause' })` then step ~120 iterations: grant `{ policy: 'pauseIfNetworkFetchesPending', budget: 1000/60 }`, await the `Emulation.virtualTimeBudgetExpired` event, `page.screenshot({ type: 'png' })` to the OS tmpdir.
+- [x] Assertion (a) — **motion**: consecutive screenshots differ. Decode with `sharp` (already a devDependency — verified no existing image-diff helper under `tools/utils/image/`) and compute mean absolute pixel difference; assert > a small noise floor for most consecutive pairs.
+- [x] Assertion (b) — **determinism**: run the 120-frame loop twice in fresh pages; frame N of run 1 vs frame N of run 2 must be _near-equal_ (mean abs diff below a tight threshold). NOT byte-equal — GPU floats wiggle.
+- [x] If (a) fails (frozen/blank frames): try the spec's named fallbacks **in order** and record which one was needed: (1) an extra zero-work budget grant before each screenshot (present-lag absorption); (2) note that an explicit per-frame present handshake must be added to the Task 4 hook — do not build it in the spike.
+- [x] Eyeball a handful of PNGs: captions/DOM text rasterization looks sane headless (secondary risk in the spec).
+- [x] Add the npm script; leave the spike in the repo (it is the standing diagnostic for this pipeline).
+- [x] **Deliverable:** go/no-go + which fallback (if any) in the commit message, AND a short note appended to the spec's "Risks and the spike gate" section. On no-go with both fallbacks dead: STOP the plan and escalate.
+- [x] Commit.
 
 ---
 
@@ -133,7 +133,7 @@ export type SkymapRecorderHook = {
 **Behaviour (spec "App changes" §2):**
 
 - `installRecorderHook(store: AppStore): void` (`AppStore` from `src/store/types.ts:53`). **Gating lives inside the installer**: it no-ops unless `isCinemaMode()` — that makes the gate unit-testable and keeps `main.tsx`'s call unconditional (one line, no branch to forget).
-- `ready` resolves when the engine is running and registered loading slots have settled. Both facts are already in the Redux engine slice — `selectEngineStatus` / `selectLoadProgress` (`src/state/engine/selectors.ts:36,48-49`), fed by the load-progress aggregator (`src/services/engine/subsystems/loadProgressAggregator.ts` — note its "null when empty" convention). Predicate: `status.kind === 'ready' && loadProgress === null`. **Caveat the implementer must handle:** `loadProgress` is *also* null before the first slot starts, so the predicate can be momentarily true mid-bootstrap; `ready` must resolve only once the predicate has held stably (e.g. persisted across a ~1 s real-time window via `store.subscribe` + timer — boot runs in real time, so over-waiting costs nothing). State the chosen mechanism in the module header.
+- `ready` resolves when the engine is running and registered loading slots have settled. Both facts are already in the Redux engine slice — `selectEngineStatus` / `selectLoadProgress` (`src/state/engine/selectors.ts:36,48-49`), fed by the load-progress aggregator (`src/services/engine/subsystems/loadProgressAggregator.ts` — note its "null when empty" convention). Predicate: `status.kind === 'ready' && loadProgress === null`. **Caveat the implementer must handle:** `loadProgress` is _also_ null before the first slot starts, so the predicate can be momentarily true mid-bootstrap; `ready` must resolve only once the predicate has held stably (e.g. persisted across a ~1 s real-time window via `store.subscribe` + timer — boot runs in real time, so over-waiting costs nothing). State the chosen mechanism in the module header.
 - `startTour(id, beats?)` dispatches the existing `startTour` action (`src/state/tour/tourActions.ts:33`; Task 5 widens its payload) and resolves on the tour-ended signal. **No new action needed — verified:** `tourSlice.tourEnded` / `tour.active` (`src/state/tour/tourSlice.ts:64-71`, `selectTourActive`) is the observable; `guidedTourSaga`'s finally emits it on natural completion and exit (`src/state/tour/guidedTourSaga.ts:125-140`). Resolve by observing `tour.active` transition true → false via `store.subscribe`.
 - The hook is the harness's **single seam** — the harness never reaches into the store from `page.evaluate`.
 
@@ -154,7 +154,7 @@ export type SkymapRecorderHook = {
 
 - `startTour(id: TourId, beats?: BeatRange)` — payload `{ id, beats? }`, still fully serializable. Existing call sites pass only `id` and stay untouched.
 - `watchTourSaga` (`src/state/tour/watchTourSaga.ts:18-23`) passes the range through: `guidedTourSaga(tour, action.payload.beats)`.
-- `guidedTourSaga`'s run arm (`src/state/tour/guidedTourSaga.ts:104-120` — verified: `let i = 0; while (i < tour.beats.length)`) runs `i` from `range.from` to `range.to` **inclusive**, in *global* beat indices. Default (no range) = full tour — behaviour identical to today.
+- `guidedTourSaga`'s run arm (`src/state/tour/guidedTourSaga.ts:104-120` — verified: `let i = 0; while (i < tour.beats.length)`) runs `i` from `range.from` to `range.to` **inclusive**, in _global_ beat indices. Default (no range) = full tour — behaviour identical to today.
 - **Out-of-range CLAMPS** (not errors) to `[0, beats.length - 1]`; an authoring change that shortens the tour must not brick a saved recording command. `prevBeat` clamps at `range.from` (mirror of today's `Math.max(0, i - 1)`).
 - **Free correctness note for the implementer:** the loop's scene fold `computeSceneEntering(baseline, tour.beats, i)` already takes global `i`, so a `from: 4` take re-establishes the scene as if beats 0–3 had played (guidedTourSaga.ts:108-112 + module header "Every beat entry reconstructs its derived scene"). Range support must NOT slice the beats array — index into it — or the fold breaks. Also fine as-is: `tourStarted` resets `beatIndex` to 0 and the first `beatChanged(from)` corrects it (`tourSlice.ts:45-55`).
 
@@ -184,7 +184,7 @@ export type SkymapRecorderHook = {
 
 **Steps:**
 
-- [ ] Write the harness (the flow above is the contract; Task 2's helpers do all the parsing/math — no new pure logic in this file. Anything that *does* turn out pure and non-trivial: extract to `tools/utils/record/` with a test, per house rule).
+- [ ] Write the harness (the flow above is the contract; Task 2's helpers do all the parsing/math — no new pure logic in this file. Anything that _does_ turn out pure and non-trivial: extract to `tools/utils/record/` with a test, per house rule).
 - [ ] Add the npm script (alphabetical slot, after `r2-cors`) and the `.gitignore` block — own commented section next to the `docs/screenshots` video block (`.gitignore:123-129`): recorder output, huge, regenerable.
 - [ ] `npm run typecheck` green.
 - [ ] **Manual smoke (main session runs this, not CI — needs dev server + GPU + ffmpeg):** `npm run record-tour -- --beats 1..1 --size 640x360 --fps 10` → tiny mp4 exists, ffprobe shows 640×360 and a plausible `nb_frames`, eyeball the clip. Record the result in the commit message.
@@ -206,3 +206,5 @@ export type SkymapRecorderHook = {
 ## Ledger
 
 (Task 1 records its go/no-go verdict, the fallback used if any, and any launch-pattern deviations here — later tasks read this before touching Playwright.)
+
+- **Task 1 verdict: GO — no fallback.** Motion 119/119 pairs; cross-run determinism mean 0.026 / max 0.068 (most frames byte-identical); headless text rasterization clean. Launch-pattern deviations Tasks 4/6 MUST follow: (1) `chromium.launch({ channel: 'chromium' })` — the default headless SHELL has no WebGPU adapter (playwright.config.ts:34-36 comment is stale; flags fallback `--enable-unsafe-webgpu --use-angle=metal`); (2) capture via CDP `Page.captureScreenshot({ fromSurface: true })`, NEVER `page.screenshot()` (readiness waits deadlock under exhausted virtual-time budget); (3) auto-rotate/DOM clicks under paused virtual time go through `page.evaluate`, not locator clicks (same deadlock). No present-handshake needed in the Task 4 hook.

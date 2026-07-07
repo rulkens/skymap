@@ -78,8 +78,8 @@ recorder-shaped on the render side:
 
 ## Decisions (approved)
 
-| Decision      | Choice                                                          |
-| ------------- | --------------------------------------------------------------- |
+| Decision      | Choice                                                           |
+| ------------- | ---------------------------------------------------------------- |
 | Pipeline      | Playwright + CDP virtual time + ffmpeg stdin pipe                |
 | Resolution    | 3840×2160 (viewport 3840×2160 @ `deviceScaleFactor: 1`)          |
 | Frame rate    | 60 fps (budget grant = 1000/60 ms per frame)                     |
@@ -129,7 +129,7 @@ ffprobe verification (geometry, frame count, duration) printed to the console
    `runFrame` with a stepped `performance.now()`. The
    `pauseIfNetworkFetchesPending` policy means virtual time halts while
    fetches (thumbnails, tiers, volumes) are in flight — lazy loads land at
-   deterministic *virtual* moments.
+   deterministic _virtual_ moments.
 5. **Capture**: `page.screenshot({ type: 'png' })` after each step, written to
    ffmpeg's stdin. No frames directory — 20k 4K PNGs would be ~200 GB.
 6. **Terminate** on the tour-ended signal; close stdin, await ffmpeg exit,
@@ -155,6 +155,7 @@ it is a safety cap and a progress denominator, not the stop condition.
 
    This is the single seam the harness talks through; the harness never
    reaches into the store from `page.evaluate`.
+
 3. **Beat ranges** — `--beats 4..6` threads through the hook into
    `guidedTourSaga`'s beat loop as start/end indices. This is the iteration
    answer: a one-beat take costs minutes, not hours.
@@ -204,13 +205,24 @@ Secondary risks:
   must match headed; verified in the spike (worst case: run headed, the
   harness is identical either way).
 
+**Spike verdict (2026-07-07): GO, no fallback needed.** 120 frames × 16.67 ms
+grants at 640×360 against the live app: motion on 119/119 consecutive pairs;
+cross-run determinism mean abs diff 0.026 (max 0.068, most frames
+byte-identical); MSDF labels and DOM text rasterize cleanly headless. Two
+findings folded into the harness contract: (1) Playwright's default headless
+_shell_ has no WebGPU adapter — launch with `channel: 'chromium'` (full build,
+new headless; adapter works unflagged; `playwright.config.ts`'s
+"headless works by default" comment is stale), and (2) capture must use raw
+CDP `Page.captureScreenshot` — Playwright's `page.screenshot()` readiness
+waits deadlock while the virtual-time budget is exhausted.
+
 ## Testing
 
 - Pure harness helpers — frame math (fps → budget, duration → frame cap),
   ffmpeg argument builder, `--beats` range parsing — as one-symbol-per-file
   `tools/utils/` functions with vitest coverage, per house convention.
 - The spike doubles as the integration smoke: `record-tour --beats 1..1
-  --size 640x360 --fps 10` produces a real (tiny) mp4; ffprobe asserts stream
+--size 640x360 --fps 10` produces a real (tiny) mp4; ffprobe asserts stream
   geometry and frame count. Manual/dev-run only (needs GPU + ffmpeg), not CI.
 - Cinema mode — a React component test asserting the HUD elements are absent
   and `TourOverlayContainer` is present under `?cinema`.
