@@ -100,4 +100,4 @@ export const MILKY_WAY_LOD_APPARENT = 0.02;
  * visual gate like its neighbors.
  */
 export const MILKY_WAY_FADE_FULL_PX = 12;
-export const MILKY_WAY_FADE_GONE_PX = 4;
+export const MILKY_WAY_FADE_GONE_PX = 8;

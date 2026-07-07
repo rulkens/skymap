@@ -23,6 +23,10 @@ import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import {
+  MILKY_WAY_FADE_FULL_PX,
+  MILKY_WAY_RADIUS_MPC,
+} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
@@ -195,22 +199,34 @@ function makeMockProceduralDiskRenderer() {
   return { draw: vi.fn() } as any;
 }
 
+// Fixture camera optics — the ctx built in makeInput() mirrors these.
+const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;
+const FIXTURE_CANVAS_HEIGHT_PX = 720;
+
+// Camera distance DERIVED from the Milky-Way fade knobs: at this distance
+// the disc's apparent diameter is twice MILKY_WAY_FADE_FULL_PX under the
+// fixture optics, so milkyWayFadeAlpha is 1 by construction and the MW pass
+// stays alive for the ordering tests. A visual-gate re-tune of the fade
+// band moves this distance instead of silently disabling the pass under a
+// magic-number camera.
+const MW_ALIVE_DIST_MPC =
+  (2 * MILKY_WAY_RADIUS_MPC * (FIXTURE_CANVAS_HEIGHT_PX / (2 * Math.tan(FIXTURE_FOV_Y_RAD / 2)))) /
+  (2 * MILKY_WAY_FADE_FULL_PX);
+
 function makeCam(): OrbitCamera {
-  // Camera distance must keep the Milky-Way disc above its GONE apparent
-  // size (milkyWayFadeAlpha's px band) so the fade gate doesn't suppress
-  // the draw call in tests that need to assert MW ordering.  At 5 Mpc the
-  // disc spans ~7.5 px on the 720-px fixture viewport — inside the band,
-  // alpha > 0.
+  // Camera close enough that the Milky-Way disc sits safely above its FULL
+  // apparent size (MW_ALIVE_DIST_MPC) — the fade gate must not suppress
+  // the draw call in tests that assert MW ordering.
   return {
     target: [0, 0, 0] as unknown as Float32Array,
-    distance: 5,
+    distance: MW_ALIVE_DIST_MPC,
     yaw: 0,
     pitch: 0,
-    fovYRad: (60 * Math.PI) / 180,
+    fovYRad: FIXTURE_FOV_Y_RAD,
     aspect: 16 / 9,
     near: 0.001,
     far: 10000,
-    position: new Float32Array([0, 0, 5]),
+    position: new Float32Array([0, 0, MW_ALIVE_DIST_MPC]),
   } as unknown as OrbitCamera;
 }
 
@@ -269,7 +285,7 @@ function makeInput(
   // `runFrame` derives these once via `deriveFrameContext()` and forwards
   // a single struct. The test mirrors that wiring.
   const canvasWidth = 1280;
-  const canvasHeight = 720;
+  const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
   const viewProj = new Float32Array(16) as unknown as Mat4;
   const ctx = {
     isReady: true as const,
@@ -280,7 +296,7 @@ function makeInput(
       [number, number, number]
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
-    fovYRad: (60 * Math.PI) / 180,
+    fovYRad: FIXTURE_FOV_Y_RAD,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
     focus: {
@@ -471,8 +487,12 @@ describe('renderFrame', () => {
     // selected null → 0xffffffff packed sentinel
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
     expect(drawSettings.visibleSourceMask).toBe(fx.settings.visibleSourceMask);
-    // camPos is a 3-tuple snapshot from cam.position
-    expect(Array.from(drawSettings.camPosWorld as ArrayLike<number>)).toEqual([0, 0, 5]);
+    // camPos is a 3-tuple snapshot from cam.position (asserted against the
+    // fixture camera, not a literal — the camera distance derives from the
+    // Milky-Way fade knobs).
+    expect(Array.from(drawSettings.camPosWorld as ArrayLike<number>)).toEqual(
+      Array.from(fx.cam.position),
+    );
     // pxPerRad = h / (2 · tan(fovY/2))
     const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
     expect(drawSettings.pxPerRad as number).toBeCloseTo(expectedPxPerRad, 6);
