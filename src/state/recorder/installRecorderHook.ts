@@ -32,9 +32,18 @@
  * "tourFinished" callback seam) keeps the recorder a plain observer of state
  * the app already maintains.
  *
- * The `window` write goes through a local cast instead of a `declare global`
- * `interface Window` augmentation — the house style bans `interface`, and the
- * only reader is the harness's untyped `page.evaluate` anyway.
+ * SINGLE-FLIGHT: `startTour` rejects synchronously when a tour is already
+ * active. The watcher is `takeLatest`, and a superseding start deliberately
+ * skips `tourEnded` in the cancelled run's finally — `tour.active` never
+ * flips false during the handoff — so a boolean latch cannot attribute a
+ * later end to the earlier caller: the first promise would silently resolve
+ * when the SECOND tour finished. Rejecting loudly beats reporting the wrong
+ * tour as done; the harness records takes strictly one at a time anyway.
+ *
+ * The `window` write goes through the `RecorderWindow` cast instead of a
+ * `declare global` `interface Window` augmentation — the house style bans
+ * `interface`, and the only reader is the harness's untyped `page.evaluate`
+ * anyway.
  */
 
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
@@ -43,6 +52,7 @@ import { selectTourActive } from '../tour/selectors';
 import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
 import type { AppStore } from '../../store/types';
 import type { SkymapRecorderHook } from '../../@types/recorder/SkymapRecorderHook';
+import type { RecorderWindow } from '../../@types/recorder/RecorderWindow';
 import type { TourId } from '../../@types/animation/tour/TourId';
 import type { BeatRange } from '../../@types/animation/tour/BeatRange';
 
@@ -86,9 +96,16 @@ function whenStablyReady(store: AppStore): Promise<void> {
 // Dispatch the tour and resolve on the `tour.active` true → false transition.
 // Tracking "seen active" (instead of resolving on any false reading) makes
 // the wait immune to store changes that land before the saga flips the flag.
+// Single-flight: reject up front when a tour is already running — see the
+// module header for why the transition can't be attributed to a caller then.
 function runTour(store: AppStore, id: TourId, beats?: BeatRange): Promise<void> {
+  if (selectTourActive(store.getState())) {
+    return Promise.reject(
+      new Error('startTour called while a tour is already active — await the previous call first'),
+    );
+  }
   return new Promise((resolve) => {
-    let seenActive = selectTourActive(store.getState());
+    let seenActive = false;
     const unsubscribe = store.subscribe(() => {
       const active = selectTourActive(store.getState());
       if (active) {
@@ -108,5 +125,5 @@ export function installRecorderHook(store: AppStore): void {
     ready: whenStablyReady(store),
     startTour: (id: TourId, beats?: BeatRange) => runTour(store, id, beats),
   };
-  (window as Window & { __skymapRecorder?: SkymapRecorderHook }).__skymapRecorder = hook;
+  (window as RecorderWindow).__skymapRecorder = hook;
 }

@@ -19,6 +19,10 @@ import type { BeatRange } from '../animation/tour/BeatRange';
 export type SkymapRecorderHook = {
   /** Resolves once the engine is running and registered loading slots have settled. */
   readonly ready: Promise<void>;
-  /** Starts a tour (optionally windowed to a beat range); resolves when the tour ends. */
+  /**
+   * Starts a tour (optionally windowed to a beat range); resolves when the
+   * tour ends. Single-flight: rejects if a tour is already active — await the
+   * previous call first.
+   */
   readonly startTour: (id: TourId, beats?: BeatRange) => Promise<void>;
 };

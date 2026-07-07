@@ -39,13 +39,12 @@ import {
 import { Source } from '../../../src/data/sources';
 import { isCinemaMode } from '../../../src/utils/url/isCinemaMode';
 import type { SkymapRecorderHook } from '../../../src/@types/recorder/SkymapRecorderHook';
+import type { RecorderWindow } from '../../../src/@types/recorder/RecorderWindow';
 import type { BeatRange } from '../../../src/@types/animation/tour/BeatRange';
 
 vi.mock('../../../src/utils/url/isCinemaMode', () => ({
   isCinemaMode: vi.fn<() => boolean>(() => false),
 }));
-
-type RecorderWindow = Window & { __skymapRecorder?: SkymapRecorderHook };
 
 const getHook = (): SkymapRecorderHook | undefined => (window as RecorderWindow).__skymapRecorder;
 
@@ -158,5 +157,28 @@ describe('installRecorderHook', () => {
     // ...the tour-ended signal must.
     store.dispatch(tourEnded());
     await expect(done).resolves.toBeUndefined();
+  });
+
+  it('startTour rejects when a tour is already active', async () => {
+    vi.mocked(isCinemaMode).mockReturnValue(true);
+    const { store, actions } = buildStore();
+    installRecorderHook(store);
+    const hook = getHook();
+    if (!hook) throw new Error('hook not installed');
+
+    // Tour A is running (the saga's activation write, driven directly). A
+    // takeLatest supersede never emits tourEnded for the cancelled run, so an
+    // overlapping call could not attribute the eventual end — the hook is
+    // single-flight and must refuse loudly instead of resolving on tour B.
+    store.dispatch(tourStarted({ tourId: 'demo' }));
+    const dispatchedBefore = actions.filter((action) => action.type === startTour.type).length;
+
+    await expect(hook.startTour('webShowcase')).rejects.toThrow(
+      'startTour called while a tour is already active',
+    );
+
+    // The refused call must not have dispatched a superseding tour/start.
+    const dispatchedAfter = actions.filter((action) => action.type === startTour.type).length;
+    expect(dispatchedAfter).toBe(dispatchedBefore);
   });
 });
