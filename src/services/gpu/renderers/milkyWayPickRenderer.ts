@@ -191,8 +191,11 @@ export function createMilkyWayPickRenderer(
     // the vertex shader from the caller's @group(0) camera uniforms, so
     // the draw is pure command recording.
     pass.setPipeline(pickPipeline);
-    // @group(0) is the caller's CameraUniforms (galaxy pick draws bound
-    // it); we bind only @group(1) (dummy fade) + @group(2) (MW uniform).
+    // @group(0) is the pick pass's camera uniform group — the caller
+    // re-binds it immediately before this call (ring / disk picks bind
+    // their own smaller uniforms at slot 0, so inheriting the last-bound
+    // group would read the wrong buffer); we bind only @group(1) (dummy
+    // fade) + @group(2) (MW uniform).
     pass.setBindGroup(1, dummyFadeBindGroup);
     pass.setBindGroup(2, mwBindGroup);
     pass.draw(6, 1);

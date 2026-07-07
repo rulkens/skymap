@@ -539,6 +539,71 @@ describe('createPickRenderer', () => {
     expect(mwPick.pickMilkyWay.mock.calls[0]).toHaveLength(1);
   });
 
+  it('re-binds @group(0) to the pick camera uniforms between the disk pick and the MW draw', async () => {
+    // The ring / disk picks bind their own (smaller) uniforms at slot 0;
+    // the MW vertex shader reads the pick camera mirror from slot 0, so
+    // the pass must re-bind its own camera group before the MW draw —
+    // inheriting the disk renderer's group reads the wrong buffer and
+    // fails validation once the mirror's read extent exceeds it.
+    const callLog: string[] = [];
+    const passEncoder = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn((index: number) => {
+        if (index === 0) callLog.push('bind0');
+      }),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+      end: vi.fn(),
+    };
+    const device = makeMwDrivableDevice();
+    (device.createCommandEncoder as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+      beginRenderPass: () => passEncoder,
+      copyTextureToBuffer: vi.fn(),
+      finish: vi.fn(() => ({})),
+    }));
+    const mwPick = makeMilkyWayPickRenderer();
+    mwPick.pickMilkyWay.mockImplementation(() => callLog.push('pickMilkyWay'));
+    const diskRenderer = {
+      pickDisks: vi.fn<(pass: GPURenderPassEncoder) => void>(() => callLog.push('pickDisks')),
+    };
+    const pickRenderer = createPickRenderer(
+      device,
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+      {} as unknown as GPUBindGroup,
+      undefined,
+      diskRenderer as unknown as Parameters<typeof createPickRenderer>[6],
+      mwPick,
+      () => true,
+    );
+
+    await pickRenderer.pick(
+      [100, 100],
+      50,
+      50,
+      [
+        {
+          source: Source.SDSS,
+          vertexBuffer: {} as GPUBuffer,
+          count: 10,
+          sourceBuffer: {} as GPUBuffer,
+        },
+      ],
+      2.5,
+      makeUniformBytes(),
+    );
+
+    const diskAt = callLog.indexOf('pickDisks');
+    const mwAt = callLog.indexOf('pickMilkyWay');
+    expect(diskAt).toBeGreaterThanOrEqual(0);
+    expect(mwAt).toBeGreaterThan(diskAt);
+    // A fresh bind0 must land AFTER the disk pick and BEFORE the MW draw.
+    const rebindAt = callLog.lastIndexOf('bind0');
+    expect(rebindAt).toBeGreaterThan(diskAt);
+    expect(rebindAt).toBeLessThan(mwAt);
+  });
+
   it('does NOT invoke pickMilkyWay when the MW is gated hidden', async () => {
     const device = makeMwDrivableDevice();
     const mwPick = makeMilkyWayPickRenderer();

@@ -401,7 +401,14 @@ export function createPickRenderer(
     // shader from the SAME pickUniformBuffer bytes uploaded above, so
     // the hit target always matches the replayed frame.  Shared depth
     // means a closer galaxy still claims the pixel.
+    //
+    // Re-bind @group(0) first: the ring / disk picks above bind their
+    // own (smaller) uniforms at slot 0, and the MW vertex shader reads
+    // the pick camera mirror — inheriting whatever group the previous
+    // draw left bound would read the wrong buffer (and fails validation
+    // outright once the mirror's read extent exceeds that buffer).
     if (milkyWayPickRenderer && mwPickVisible()) {
+      pass.setBindGroup(0, pickUniformBindGroup);
       milkyWayPickRenderer.pickMilkyWay(pass);
     }
 
