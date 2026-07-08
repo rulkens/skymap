@@ -94,6 +94,18 @@
   text-align: right;
 }
 
+/* ── Cinema (no-chrome) presentation ────────────────────────────────
+ * .captionBottom's 74px offset is NAV CLEARANCE: the transport cluster
+ * sits at bottom: 20px in a ~40px box, so bottom-anchored captions must
+ * float above it. Without chrome the cluster is unmounted and that
+ * clearance reads as a dead band along the bottom of the film frame —
+ * so bottom anchors drop to the same 44px inset the left/right anchors
+ * use, giving the frame symmetric margins. Top anchors keep 74px: that
+ * offset was never about the nav. */
+.captionNoChrome.captionBottom {
+  bottom: 44px;
+}
+
 /* ── Staggered fade-up reveal (splash register) ─────────────────────
  * Copied from Splash.module.css splashReveal: label fades up first,
  * title next (+90ms) with its accent underline drawing out beneath it
@@ -383,6 +395,10 @@
   }
   .captionBottom {
     bottom: 72px;
+  }
+  /* Same nav-clearance drop as desktop, to the mobile 24px side inset. */
+  .captionNoChrome.captionBottom {
+    bottom: 24px;
   }
   .captionTop {
     top: 56px;

@@ -1,10 +1,13 @@
 /**
  * tourActions — the reducer-less signals the guided-tour saga takes on.
  *
- * `startTour(id)` launches a new tour run by its `TourId`. `watchTourSaga` picks
- * it up via `takeLatest` — a new start supersedes any in-progress run
- * automatically — looks the id up in `tourRegistry`, and plays the resolved
- * tour's beats. The action is fully serializable (id-only, no callbacks).
+ * `startTour(id, beats?)` launches a new tour run by its `TourId`, optionally
+ * windowed to a contiguous `BeatRange` — the recorder hook passes one so a
+ * single-beat take doesn't replay the whole tour; omitted means the full run.
+ * `watchTourSaga` picks it up via `takeLatest` — a new start supersedes any
+ * in-progress run automatically — looks the id up in `tourRegistry`, and plays
+ * the resolved tour's beats. The action is fully serializable (an id plus a
+ * plain index range, no callbacks).
  *
  * `advanceTour` asks the tour to step to the next beat. It can come from a
  * keyboard shortcut, a UI button, or the auto-advance timer expiring inside
@@ -29,8 +32,11 @@
 import { createAction } from '@reduxjs/toolkit';
 
 import type { TourId } from '../../@types/animation/tour/TourId';
+import type { BeatRange } from '../../@types/animation/tour/BeatRange';
 
-export const startTour = createAction('tour/start', (id: TourId) => ({ payload: { id } }));
+export const startTour = createAction('tour/start', (id: TourId, beats?: BeatRange) => ({
+  payload: { id, beats },
+}));
 
 export const advanceTour = createAction('tour/advance');
 export const prevBeat = createAction('tour/prev');

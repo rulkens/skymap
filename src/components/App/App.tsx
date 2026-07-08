@@ -13,6 +13,10 @@
  * loop — it isn't designed for the synthetic double-mount. `useEngine`'s
  * cleanup still runs on real unmounts.
  *
+ * Cinema mode (`?cinema`): the recorder's capture surface. App renders only
+ * the canvas + the tour overlay; every other piece of HUD chrome is absent
+ * from the DOM, not merely CSS-hidden — see the branch above the main return.
+ *
  * Store reach: `selectHoveredFocusable` / `selectSelectedFocusable` drive the
  * InfoCard; `selectPaletteOpen`, `selectUiHidden`, `selectDebugPanelOpen` gate
  * App's own JSX; `selectVisibleSourceMask` + `selectTier` feed
@@ -55,6 +59,7 @@ import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import TourDebugPillContainer from '../containers/TourDebugPillContainer';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
+import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
 import {
   selectPaletteOpen,
@@ -190,12 +195,45 @@ export function App(): React.ReactElement {
     toggleDebugPanelOpen: dispatchToggleDebugPanelOpen,
   });
 
+  // Shared between BOTH return branches (cinema + normal) so the `id="c"`
+  // contract and the mount-only-while-touring rule each live in one place.
+  //
+  // The engine takes over this canvas's GPU context; React never writes to it
+  // after the initial render. `id="c"` matches the fullscreen CSS rule in
+  // index.html. `aria-hidden` is inert in cinema mode — gate 0 of
+  // buildInitialUiState pins the splash hidden there, so it stays undefined.
+  const canvas = <canvas ref={canvasRef} id="c" aria-hidden={splashVisible || undefined} />;
+  // Tour overlay (caption + nav) — mounted only while a tour runs. In the
+  // normal branch it sits as a SIBLING of the HUD stack, not inside it, so the
+  // `uiStackHidden` fade (which the tour triggers) doesn't also fade it.
+  const tourOverlay = tourActive && <TourOverlayContainer />;
+
+  // Cinema mode (`?cinema`) — the recorder's capture surface: the canvas plus
+  // the tour overlay (captions + nav), nothing else. The recorder harness
+  // screenshots this page, so the HUD chrome must not EXIST in the DOM;
+  // CSS-hiding it (the `uiStackHidden` route) would still leave it findable
+  // and able to bleed into captures. Every hook above still runs — the
+  // engine, URL sync and keyboard wiring are what make the page playable —
+  // only the JSX diverges, which also keeps the hook order unconditional.
+  //
+  // Read per render, unlike the module-scope TOUR_DEBUG_GATE: a module-scope
+  // const is frozen at first import, so tests couldn't flip a mocked
+  // `isCinemaMode` between cinema and normal renders without module-cache
+  // resets. The search string can't change without a full reload, so the two
+  // read styles are behaviourally identical at runtime — and App renders on
+  // user action, not per frame, so the re-read costs nothing.
+  if (isCinemaMode()) {
+    return (
+      <>
+        {canvas}
+        {tourOverlay}
+      </>
+    );
+  }
+
   return (
     <>
-      {/* The engine takes over this canvas's GPU context; React never
-          writes to it after the initial render.  `id="c"` matches the
-          fullscreen CSS rule in index.html. */}
-      <canvas ref={canvasRef} id="c" aria-hidden={splashVisible || undefined} />
+      {canvas}
 
       {/* HUD wrapper.  All overlay chrome lives inside this single
           `<div>` so `Tab` can fade the whole stack via one CSS
@@ -247,10 +285,10 @@ export function App(): React.ReactElement {
           />
         )}
       </div>
-      {/* Tour overlay — sibling of the HUD stack, not inside it, so the
-          `uiStackHidden` fade (which the tour triggers) doesn't also fade the
-          caption + nav. Mounted only while a tour runs. */}
-      {tourActive && <TourOverlayContainer />}
+      {tourOverlay}
+      {/* Beat rail rides the interactive session only — it is progress
+          chrome, so the cinema branch (captions-only film frames) omits it
+          just like TourNav and the beat counter. */}
       {tourActive && <TourBeatRailContainer />}
       <SplashContainer />
     </>

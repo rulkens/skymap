@@ -65,6 +65,8 @@
     "format:check": "prettier --check .",
     "preview": "vite preview",
     "r2-cors": "npx wrangler r2 bucket cors set skymap-data --file tools/deploy/r2Cors.json",
+    "record-tour": "tsx tools/record/recordTour.ts",
+    "spike-virtual-time": "tsx tools/record/virtualTimeSpike.ts",
     "sync-r2": "tsx tools/deploy/syncR2.ts",
     "sync-r2-secure": "bash tools/deploy/syncR2Secure.sh",
     "test": "vitest run",

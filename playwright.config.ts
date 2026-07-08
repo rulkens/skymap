@@ -31,9 +31,17 @@ export default defineConfig({
   reporter: 'list',
   use: {
     baseURL: 'http://localhost:5173',
-    // Real WebGPU needs a real GPU process; headless Chrome still works
-    // on macOS / Linux because Playwright bundles a Chromium that has
-    // WebGPU enabled by default.
+    // Real WebGPU needs a real GPU process, and Playwright's DEFAULT
+    // headless browser — the stripped-down headless SHELL this config
+    // launches — does NOT provide one: it exposes `navigator.gpu` but
+    // `requestAdapter()` yields no adapter (verified empirically on macOS;
+    // the full matrix lives in the launch comment of
+    // tools/record/virtualTimeSpike.ts). The full Chromium build under new
+    // headless (`chromium.launch({ channel: 'chromium' })`) has WebGPU with
+    // no flags; the shell needs `--enable-unsafe-webgpu --use-angle=metal`.
+    // This config is left on the shell deliberately — specs that need real
+    // WebGPU should launch with channel 'chromium' the way tools/record/
+    // does; switching the whole suite is a future pass.
     headless: true,
     viewport: { width: 1280, height: 800 },
     trace: 'retain-on-failure',
