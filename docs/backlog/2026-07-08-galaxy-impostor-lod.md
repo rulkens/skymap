@@ -1,183 +1,241 @@
 # Galaxy impostor LOD — baked rgba16float textures from the generated galaxy renderer
 
-**Status:** design sketch (perf + memory implications), 2026-07-08.
-**Idea (from Alexander):** galaxies smaller than 128 px on screen render from a
-texture baked out of the new GPU galaxy generator; galaxies at or above 128 px
-render the full generated 3D point cloud. The baked texture becomes the next
-step up from the point renderer and **replaces `proceduralDiskRenderer`**.
-Textures are **rgba16float** so they carry linear HDR emission straight through
-the existing HDR → tone-map chain.
+**Status:** design sketch v2 (perf + memory implications, now grounded in
+catalog data), 2026-07-08.
+**Idea (from Alexander):** galaxies below a pixel threshold render from a
+texture baked out of the new GPU galaxy generator; galaxies above it render
+the full generated 3D point cloud. The baked texture becomes the next step up
+from the point renderer and **replaces `proceduralDiskRenderer`**; the
+auto-fetched photo-thumbnail band (24–40 px SDSS/DSS atlas quads) **retires**.
+Textures are **rgba16float** so they carry linear HDR emission straight
+through the existing HDR → tone-map chain.
 
 ## Verified current state
 
 The pieces this composes already exist on `main`:
 
 - **Generator**: `src/services/gpu/galaxy/` — two compute pipelines
-  (`createGenerationPipelines.ts`, workgroup 256) write stars + dust as 32-byte
-  records (`genRecordBytes.ts`) into storage buffers; `encodeGeneration.ts`
-  records the dispatches. Budgets come from `splitStarBudget.ts`
-  (min 20 000 stars, MW preset 150 000 at medium tier,
-  `milkyWayGalaxyParams.ts:63`).
+  (`createGenerationPipelines.ts`, workgroup 256) write stars + dust as
+  32-byte records (`genRecordBytes.ts`); budgets from `splitStarBudget.ts`
+  (min 20 000 stars; MW preset 150 000 at medium tier).
 - **Cloud draw**: `milkyWayCloudRenderer.ts` — additive star pass +
-  multiplicative-transmittance dust pass, no depth, into the shared HDR target.
-  Flux-conserving vertex-stage star culling (`MILKY_WAY_LOD_APPARENT`,
-  `milkyWayCalibration.ts:94`) is the proven overdraw lever (#412).
-- **HDR chain**: `passes/postProcess.ts` — everything visible accumulates
-  additively into one `rgba16float` offscreen, tone-mapped once into the swap
-  chain. rgba16float is renderable + sampleable + blendable in base WebGPU
-  (the header's rationale, `postProcess.ts:30-38`).
-- **LOD ladder today** (`src/data/galaxyLodBands.ts`):
-  point < 8 px → procedural disk 8–14 px fade-in → textured photo thumbnail
-  24–40 px → hi-res famous 120–160 px. The procedural disk is an *analytic*
-  two-exponential brightness profile (`shaders/proceduralDisks/fragment.wesl`)
-  — no spiral structure, no bar, no dust.
-- **Impostor plumbing**: `instancedQuadRenderer.ts` (shared 64-byte instance
-  stride across procedural/textured/quad siblings), oriented-billboard math
-  (axisRatio squash + PA rotate) in `proceduralDisks/vertex.wesl`, per-frame
-  planner in `proceduralDiskSubsystem.ts`.
-- **Texture-array prior art**: `resources/hiResFamousTexture.ts` (fixed-layer
-  `texture_2d_array` + LRU-by-recent-px) and `resources/textureAtlas.ts`
-  (2048² rgba8 = 16 MiB, 256 × 128² slots, LRU-by-frame).
+  multiplicative dust pass, no depth, into the shared HDR target, with the
+  flux-conserving vertex-stage star cull (#412) as the overdraw lever.
+- **HDR chain**: `passes/postProcess.ts` — one `rgba16float` offscreen,
+  tone-mapped once. rgba16float is renderable + sampleable + blendable in
+  base WebGPU.
+- **LOD ladder** (`src/data/galaxyLodBands.ts`): point < 8 px → procedural
+  disk 8–14 px fade-in → textured photo thumbnail 24–40 px → hi-res famous
+  120–160 px. The procedural disk is an analytic bulge+disk profile
+  (`shaders/proceduralDisks/fragment.wesl`) — no arms, no bar, no dust.
+- **Impostor plumbing**: `instancedQuadRenderer.ts` (shared 64-byte stride),
+  axisRatio-squash + PA-rotate billboard math, planner in
+  `proceduralDiskSubsystem.ts`, and — load-bearing for this design — the
+  **`procFadeOut` crossfade** that already fades the procedural disk out when
+  a texture becomes available (today: famous WebPs). "Procedural until the
+  bake lands, then crossfade" is existing machinery, not new design.
+- **Prior art for the cache shapes**: `resources/textureAtlas.ts` (256 × 128²
+  slots, LRU-by-frame), `resources/hiResFamousTexture.ts` (few-layer
+  texture_2d_array, LRU-by-recent-px), `galaxyImageQueue.ts` (priority queue,
+  concurrency 4, idempotent enqueue).
 
-## Proposed ladder
+## The data: how many galaxies are ever in the impostor band?
 
-```
-< 8 px          point sprite                        (unchanged)
-8 → 128 px      baked-impostor billboard            (replaces proceduralDiskRenderer,
-                                                     subsumes? the 24–40 px photo band — open Q1)
-120 → 160 px    crossfade impostor → full geometry  (reuse HI_RES band shape)
-≥ 128 px        full generated star+dust cloud      (the Milky Way path, per-galaxy)
-```
+Measured from the real R2-hosted v6 bins (2026-07-08:
+`2mrs.bin` 39 514 rows, `famous.bin` 80, `sdss-{medium,large}.bin`
+157 640 / 498 268, `glade-{medium,large}.bin` 410 593 / 1 995 215), using the
+runtime's own gate math: `px = diameterKpc/1000/camDist · pxPerRad`,
+`pxPerRad = 1080 / (2·tan 30°) ≈ 935` (60° fov, 1080-tall viewport).
+Counts are **spherical-shell** counts — what the planner walks and emits
+(`proceduralDiskSubsystem.ts` does not frustum-cull); on-screen is ~10% of
+shell for the 60°×~95° frustum. Method: standalone Node script decoding the
+bins and sweeping camera positions/paths; re-derivable from the formula above.
 
-Famous galaxies with curated WebPs / hi-res photos keep their textured path —
-a generated cloud is *a* galaxy, not *that* galaxy.
+**Key structural fact:** every SDSS row carries `diameterKpc = 30.0` (the
+build-time fallback — SDSS contributes no size measurements) *and* sits
+≥ ~100 Mpc out, where 30 kpc ≈ 0.1 px. **SDSS never enters any disk band.**
+GLADE's p50 is also the 30-kpc fallback (p10 17.7, p90 45.4, large tier). The
+disk/impostor population is therefore entirely local-volume GLADE + 2MRS +
+famous rows — the band is *small* everywhere, because a 20–45 kpc galaxy
+needs the camera within ~2–5 Mpc to reach 8 px.
 
-## Key design choice: archetype library, not per-galaxy bakes
+Shell counts by apparent-size band (large tier, 2.53 M rows total):
 
-A baked texture per catalog galaxy is unbounded (the 8 px+ band holds hundreds
-to thousands of galaxies in a dense-field flythrough) and would need runtime
-LRU baking like the thumbnail pipeline. But the generator is *procedural*: two
-galaxies with the same `GalaxyParams` + seed produce identical images. So bake
-a **fixed archetype library** — 5 categories (`classifyHubbleType.ts`) ×
-~8–16 seed/arm/bulge variants ≈ **64–128 layers** — face-on, once, and map every
-catalog galaxy to a layer by a pure hash of `(colourIndex, absMag, axisRatio,
-row index)`. No .bin format bump needed (v6 carries no Hubble type; blue →
-spiral-leaning, red → elliptical-leaning is the standard proxy).
+| view | 4–8 px | 8–14 | 14–24 | 24–40 | 40–64 | 64–96 | 96–128 | ≥128 | **≥8 total** |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| home 0.14 Mpc | 107 | 8 | 7 | 1 | 3 | 0 | 0 | 0 | **19** |
+| Local Volume 5 Mpc | 310 | 33 | 4 | 5 | 4 | 1 | 0 | 2 | **49** |
+| Virgo approach 17 Mpc | 400 | 113 | 47 | 19 | 2 | 2 | 1 | 0 | **184** |
+| Virgo core +0.5 Mpc | 400 | 120 | 53 | 13 | 6 | 2 | 1 | 0 | **195** |
+| 60 Mpc out | 38 | 7 | 2 | 0 | 0 | 0 | 0 | 0 | **9** |
+| densest far cell (127 Mpc) | 334 | 35 | 19 | 3 | 0 | 2 | 0 | 0 | **59** |
+| deep field 300 Mpc | 11 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **0** |
 
-Face-on bake + the *existing* billboard orientation math (axisRatio squash, PA
-rotate) reproduces exactly the 3D-orientation approximation the procedural disk
-uses today — same visual contract, but with real arms/bars instead of a radial
-profile. Edge-on dust-lane realism would need 2–3 inclination bakes per
-archetype (multiplies layer count); defer.
+Medium tier is ~½ of these (Virgo core ≥8 px: 86). A 4K-tall viewport
+doubles `pxPerRad`, which shifts everything one band left — bound ≈ the
+4-px column, so worst case roughly **triples** (~600 shell, ~60 on-screen).
 
-## Memory
+Fly-in churn (camera 500 → 0.05 Mpc into Virgo core, 300 log-spaced samples,
+large tier) — `unique` = total distinct galaxies ever above the threshold
+(= bake count for per-galaxy-unique impostors over an entire dive);
+`influx` = worst new entries in one sample (~2.5 samples per frame of a 2 s
+tween):
 
-Store as a `texture_2d_array` of 128² rgba16float layers **with a full mip
-chain** (the band spans 8→128 px; sampling a 128² texture at 8 px without mips
-= additive HDR shimmer). Arrays, not an atlas, because mips bleed across atlas
-slot boundaries.
+| threshold | max simultaneous | unique over dive | worst influx/step |
+| --- | --- | --- | --- |
+| ≥8 px | 203 | 534 | 12 |
+| ≥14 px | 79 | 277 | 8 |
+| ≥24 px | 27 | 155 | 6 |
+| ≥48 px | 9 | 75 | 5 |
+| ≥96 px | 5 | 31 | 3 |
+| ≥128 px | 2 | 15 | 2 |
 
-| Resource | Size |
-| --- | --- |
-| 128² rgba16f layer + mips | 128 KiB × 4/3 ≈ **171 KiB** |
-| 64-layer library | ≈ 10.7 MiB |
-| 128-layer library | ≈ 21.3 MiB |
-| (per-galaxy-unique fallback, 256 layers, LRU) | ≈ 42.7 MiB |
-| Bake scratch (32 k-star gen buffer + dust, reused serially) | ≈ 1.3 MiB |
-| Full-geometry cache: star+dust buffers per resident galaxy (100 k–400 k × 32 B) | 3–13 MiB each |
-| Full-geometry residency cap ×4–8 (LRU-by-recent-px, like hi-res) | ≈ 20–80 MiB |
+Orbiting at fixed distance adds **zero** churn — band membership is
+spherical, only radial motion crosses thresholds.
 
-Net GPU-memory delta vs today: roughly **+30–100 MiB** depending on layer
-count, tier-scaled geometry budgets, and residency cap. For comparison the
-thumbnail atlas is 16 MiB and the hi-res famous array up to 32 MiB. Desktop:
-comfortable. iOS: scale layer count + budgets by tier (base-WebGPU formats
-throughout, so no feature-gate risk — but see the iOS invalid-pipeline
-gotcha in CLAUDE.md before shipping any new WESL).
+## Conclusion the data forces: per-galaxy unique bakes are affordable
 
-The procedural-disk pipeline this replaces holds **no** texture memory, so the
-whole table is additive; what's *removed* is only its pipelines + the analytic
-fragment ALU.
+The v1 sketch assumed "hundreds to thousands" in-band and recommended a
+precomputed archetype library. The measurement kills that assumption: the
+whole impostor regime is **≤ ~200 live galaxies and ≤ ~550 bakes for the
+longest possible dive** (large tier, 1080p). That is squarely inside what the
+thumbnail pipeline already does today (256-slot atlas, 4 concurrent fetches) —
+except a bake is ~0.3–1 ms of local GPU instead of a 1–3 s network fetch.
 
-## Performance
+So: **every galaxy can be unique.** Seed the generator from the row's
+`objID` (uint64, already in the .bin) — stable across sessions, no format
+bump — and derive `GalaxyParams` from what the row knows: colourIndex →
+category mix (red → elliptical/lenticular-leaning, blue → spiral/irregular),
+absMag → size/brightness class, axisRatio → inclination is *not* baked (see
+framing below). The archetype library survives only as a possible **prebaked
+warm set** (e.g. 32 generic layers shown while a galaxy's own bake is queued)
+— and even that is optional given the procedural-disk placeholder band.
 
-**Bake cost (one-time / amortized).** Per archetype: one generation dispatch
-(32 k threads — microseconds) + one star/dust render into a 128² target
-(16 k pixels; overdraw serialization is bounded by the tiny target) + a 7-step
-mip downsample chain (WebGPU has no auto-mipgen). Well under 1 ms each on
-desktop. A 128-layer library bakes in ~a second of GPU time — do it behind the
-loading screen or budget 2–4 bakes/frame through a queue
-(`galaxyImageQueue.ts` is the prior-art shape). Bake directly into each array
-layer's mip 0 (a render-pass color attachment can be a single layer view) — no
-copy step.
+## The sliders (what you can tune, and what each costs)
 
-**Per-frame, impostor band.** Same instanced-quad machinery, same instance
-counts, same planner walk — the fragment swaps ~10 ALU ops of analytic profile
-for one mipmapped array-texture sample. Net wash to slight win on the GPU. The
-dominant cost in this band stays the **CPU planner walk** (~4.2 ms of a 5.1 ms
-frame on M1 Max — `backlog/2026-06-30-unify-disk-planner-walks.md`); this
-feature adds a reason to do that unification first rather than adding a third
-independent walk.
+1. **Impostor entry threshold `N` px** — the procedural disk stays as the
+   8 → `N` band (Alexander's suggestion), impostors take `N` → full-geometry.
+   The table above *is* this slider: `N`=8 → ≤203 live/≤534 bakes;
+   `N`=14 → ≤79/≤277; `N`=24 → ≤27/≤155. Because the procedural disk is also
+   the bake-latency placeholder (crossfade via the existing `procFadeOut`
+   path), `N` is a *quality* dial, not a correctness one — safe to ship at
+   `N`=14 and lower it toward 8 after profiling.
+2. **Bake budget per frame** — 1–4 bakes/frame through a
+   `galaxyImageQueue`-shaped priority queue (largest-px-first, idempotent
+   enqueue). Worst measured burst ≈ 12–30 new entries in a fast tween frame;
+   at 4/frame the queue drains in well under 200 ms while the procedural band
+   covers. A bake ≈ one 20k-star generation dispatch + a star/dust render
+   into a tiny target + ~7 mip blits ≈ 0.3–1 ms GPU: comfortably hideable,
+   also skippable entirely on frames with tween motion if profiling says so.
+3. **Bake star budget** — stars per baked galaxy (20k floor from
+   `splitStarBudget` is plenty for ≤256² texels; 50k for hero quality).
+   Linear in bake time, zero resident memory (generation buffers are
+   transient scratch, ~1 MiB reused serially).
+4. **Texture resolution × framing** — the subtle one. The gate px measures
+   the *physical* diameter, but the drawn quad is **4× padded**
+   (`paddedRadiusMpc.ts`). If the bake frames the padded footprint, a 128²
+   texture holds only ~32 texels across the galaxy — blurry past gate-32 px.
+   Frame the bake at ~2× the galaxy diameter (the generator's halo/globulars
+   reach ~1.5–2×, `outerRadiusOf`) and shrink the impostor quad to match:
+   then texels-across-galaxy = side/2, i.e. **128² is sharp to gate-64 px,
+   256² to gate-128 px**. Per-layer cost with mips: 128² = 171 KiB,
+   256² = 683 KiB.
+5. **Cache depth (array layers, LRU-by-recent-px)** — sized by max
+   simultaneous, not by catalog size: 256 layers ≥ the 203 worst case with
+   headroom; 384 covers the 4K case. Because it's an LRU over a
+   camera-continuous quantity, misses only happen on threshold *entry*,
+   which the queue + placeholder already handle.
+6. **Two-tier resolution split (optional)** — the population is so skewed
+   (≥24 px ≤ 27 simultaneous; 8–24 px carries the bulk) that a hybrid wins if
+   sharpness above gate-64 matters: 256 × 128² for the 8→24 swarm
+   (43 MiB) + 48 × 256² for ≥24 px (32 MiB) ≈ **75 MiB**, re-baking a galaxy
+   into the hi-res array when it crosses 24 px (a re-bake is just another
+   queue entry). Single-tier 256 × 128² (43 MiB) is the simple v1: mild
+   magnification softness 64→128 px on a diffuse glow object, far sharper
+   than today's procedural profile at every size.
+7. **Full-geometry entry threshold + residency cap** — data: ≥128 px is
+   **≤2 simultaneous, ≤15 unique per dive**. A cap of 4 resident generated
+   clouds (100k–400k stars → 3–13 MiB each, LRU-by-recent-px like
+   `hiResFamousTexture`) is generous; churn is trivial. The 120→160 px
+   crossfade band hides the one-off generation dispatch (<1 ms).
+8. **Uniqueness levers that cost nothing** — per-instance hue from the
+   existing colour-index ramp, seeded flip/rotation, brightness scale from
+   absMag: all applied in the vertex/fragment on top of whatever texture is
+   bound, so even placeholder-archetype frames don't repeat visibly.
 
-**Per-frame, full-geometry tier.** Each ≥128 px galaxy is the Milky Way path
-again: 100 k–400 k additive sprites + dust, with the flux-conserving vertex
-cull as the overdraw lever. The MW ships today at acceptable frame cost
-(#408/#412); typically 1–3 galaxies exceed 128 px simultaneously. Cap
-residency (4–8) and degrade over-cap galaxies to their impostor. Dominant GPU
-cost is additive fill when a galaxy spans ~1000 px — same as MW today, same
-mitigation. Generation on first approach is a one-off compute dispatch
-(<1 ms), hidden inside the 120→160 px crossfade band.
+## Memory budget (recommended v1 vs rich config)
 
-**Pick path.** Impostor pick = the existing procedural pick pipeline
-(`pickFragment.wesl` billboard). Full-geometry galaxies need a pick billboard,
-not per-star picking — `milkyWayPickRenderer.ts` is exactly that pattern.
+| Config | Impostor cache | Full-geo cache (cap 4) | Retired photo atlas | Net vs today |
+| --- | --- | --- | --- | --- |
+| v1: 256 × 128², N=14 | 43 MiB | ~20–50 MiB | −16 MiB | **+45–75 MiB** |
+| rich: 256 × 128² + 48 × 256², N=8 | 75 MiB | ~50 MiB | −16 MiB | **+110 MiB** |
+
+(The 24–40 px photo band retires: `textureAtlas.ts`'s 16 MiB rgba8 atlas, the
+fetch queue's network traffic, and the `2026-06-29-thumbnail-quality-sdss-dss`
+backlog item's in-scene half all go with it. Famous curated WebP + hi-res
+presumably stay — a generated cloud is *a* galaxy, not M31 — confirm at spec
+time.)
+
+## Per-frame performance
+
+- **Impostor band**: ≤ ~200 instanced quads (≤ ~600 at 4K) sampling one
+  mipmapped array texture — strictly cheaper than today's procedural
+  fragment at the same instance counts. CPU planner walk unchanged; the
+  dominant cost in this regime remains the two-planner catalog walk
+  (`backlog/2026-06-30-unify-disk-planner-walks.md`, ~4.2 ms of a 5.1 ms
+  frame) — do that unification first rather than adding a third walk.
+- **Full-geometry tier**: ≤2 simultaneous measured (cap 4) × the Milky Way
+  draw cost, with the same flux-conserving star cull. Additive fill when one
+  galaxy spans ~1000 px is the dominant GPU cost — same as the MW today.
+- **Bakes**: 0.3–1 ms each, ≤4/frame, only during radial motion near
+  galaxies; zero when orbiting or in deep field.
+- **Pick**: impostor quads reuse the procedural pick pipeline verbatim;
+  full-geometry galaxies get a pick billboard (`milkyWayPickRenderer.ts`
+  pattern).
 
 ## Why rgba16float is the right call (and its one subtlety)
 
 Baking **linear pre-tonemap emission** with the same star/dust shaders + the
-same exposure constant means the impostor sample and the live cloud are
-numerically the same signal — the 120→160 px crossfade cannot shift brightness
-or hue, and there is no double tone-mapping. fp16 range (±65 504) and
-~3-decimal precision comfortably cover the accumulation peaks the postProcess
-header documents (~few hundred).
+same exposure constant means the impostor sample and the live cloud are the
+same signal — the crossfade to full geometry cannot shift brightness, and
+nothing is tone-mapped twice. fp16 range/precision comfortably cover the
+documented accumulation peaks. Live dust multiplies the framebuffer, but a
+baked impostor folds extinction into its own RGB and composites purely
+additively — identical to the procedural disk's blend today, so no
+blend-model change.
 
-The subtlety is **flux calibration at the bottom of the band**: a point
-sprite's brightness derives from catalog magnitude; a baked archetype's total
-light derives from the generator + exposure. The impostor instance needs a
-per-galaxy brightness scale (absMag-derived — already baked into the point
-vertex record since #411) multiplying the sampled texel, and the mip chain
-must be a plain flux-preserving box filter, so total light is conserved both
-across the 8–14 px point↔impostor crossfade and as a galaxy shrinks through
-the mip levels.
-
-One compositing simplification: live dust multiplies the framebuffer
-(`dst`-factor blend); a baked impostor folds dust extinction into its own RGB
-and composites **purely additively** — identical to how the procedural disk
-behaves today, so no blend-model change. (Carrying transmittance in alpha for
-a dual-blend impostor is possible but is exactly the kind of accidental
-complexity to skip.)
+The subtlety is **flux calibration at the bottom of the band**: point-sprite
+brightness derives from catalog magnitude; a baked galaxy's total light from
+the generator + exposure. The impostor instance needs an absMag-derived
+brightness scale (already baked into the point vertex record since #411)
+multiplying the sampled texel, and the mip chain must be a plain
+flux-preserving box filter, so total light is conserved across the
+point↔procedural↔impostor crossfades and down the mip levels. WebGPU has no
+auto-mipgen — the bake ends with a short downsample chain (render into each
+array layer's mip views; a layer view is a valid color attachment, no copy).
 
 ## Interaction with renderer unification
 
-The compositor spec (`specs/2026-06-29-renderer-unification-design.md`, plans
-01–04 in flight) makes "additive layer into `hdr`" a registry entry and
-already contains the "render offscreen, sample back" pattern. The impostor
-pass should land as a registry layer and the bake as an offscreen pass —
-sequencing this after plan 02 (registry + program) avoids wiring a fifth
-bespoke `encode*` by hand and then migrating it.
+The compositor spec (`specs/2026-06-29-renderer-unification-design.md`,
+plans 01–04 in flight) makes "additive layer into `hdr`" a registry entry and
+already owns the offscreen-pass pattern. The impostor pass should land as a
+registry layer and the bake as an offscreen pass — sequence after plan 02
+(registry + program) to avoid hand-wiring a fifth bespoke `encode*`.
 
 ## Open questions
 
-1. **Fate of the 24–40 px photo-thumbnail band** for anonymous SDSS/DSS
-   galaxies: retire in favor of impostors (kills the fixed-cutout quality
-   problems in `backlog/2026-06-29-thumbnail-quality-sdss-dss.md` for the
-   in-scene path), or keep photos as "real data" and use impostors only
-   8→24 px? Famous curated WebP/hi-res stays either way.
-2. **Archetype cardinality**: how few layers before the eye spots repeats?
-   (Mitigations: per-instance hue from the existing colour-index ramp,
-   random flip/rotation, brightness scale — all free in the vertex/fragment.)
-3. **Flux calibration constant(s)**: one global bake exposure vs per-category;
-   needs the visual gate.
-4. **Full-geometry budgets per tier** and the residency cap; whether budget
-   scales with apparent size.
-5. **Inclination**: accept face-on-squash approximation (status quo) or add
-   2–3 baked inclinations per archetype later.
+1. **`N` (impostor entry)**: ship at 14 and tune down, or straight to 8?
+   (Data says either is affordable; 14 halves the bake churn.)
+2. **Resolution config**: v1 single 128² array vs the two-tier split —
+   decide after the visual gate shows how objectionable gate-64→128 px
+   magnification softness is on diffuse emission.
+3. **Param derivation**: exact `objID/colourIndex/absMag → GalaxyParams`
+   mapping (category priors per source; 2MRS J−K vs SDSS g−r color meaning
+   differs — `pickColourIndex` already normalizes).
+4. **Famous galaxies**: keep curated WebP/hi-res photo path (likely yes), and
+   does the generated impostor serve as *their* placeholder too?
+5. **GLADE fallback diameters**: p50 is the 30-kpc fallback — fine for
+   gating, but should the *bake's* size class trust `diameterKpc` or absMag
+   when the two disagree?
+6. **Tier/viewport scaling**: 4K roughly triples band counts — scale `N`, the
+   cache depth, or neither (43 MiB → 64 MiB is still cheap)?

@@ -49,7 +49,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Picking GPU resources → own subsystem** `deferred` — `pickRenderer.ts` owns its per-camera pick texture directly; migrate it (parallel to fade per ADR 0001). Pick texture is per-camera, so it needs its own ADR. → [details](backlog/2026-06-29-picking-gpu-subsystem.md)
 - [ ] **galaxy-renderer `dispose()` skips GPU teardown** `ready` — RAF loop + DOM listeners are removed but buffers/pipelines/UBOs (incl. per-extra UBOs) are never `destroy()`ed; spike-era behavior, flagged in the GPU-generation final review.
 - [ ] **MW point-cloud follow-ups** `ready` — five small knots from the T10 radar (orphaned WESL helpers, record-field offsets, billboard-basis mirror, tool↔app constants, pick bind-group injection). → [details](backlog/2026-07-08-mw-point-cloud-follow-ups.md)
-- [ ] **Galaxy impostor LOD** `needs-design` — bake generated galaxies to 128² rgba16f impostor textures (replacing the procedural disk's analytic profile); full star+dust geometry ≥ 128 px. → [details](backlog/2026-07-08-galaxy-impostor-lod.md)
+- [ ] **Galaxy impostor LOD** `needs-design` — bake per-galaxy rgba16f impostor textures from the GPU generator (retiring the photo-thumbnail band; procedural disk stays as placeholder band); full star+dust geometry above ~128 px. Band counts measured from real bins. → [details](backlog/2026-07-08-galaxy-impostor-lod.md)
 
 ## UI & UX
 
