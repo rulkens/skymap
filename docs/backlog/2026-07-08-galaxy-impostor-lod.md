@@ -52,12 +52,14 @@ shell for the 60°×~95° frustum. Method: standalone Node script decoding the
 bins and sweeping camera positions/paths; re-derivable from the formula above.
 
 **Key structural fact:** every SDSS row carries `diameterKpc = 30.0` (the
-build-time fallback — SDSS contributes no size measurements) *and* sits
-≥ ~100 Mpc out, where 30 kpc ≈ 0.1 px. **SDSS never enters any disk band.**
-GLADE's p50 is also the 30-kpc fallback (p10 17.7, p90 45.4, large tier). The
-disk/impostor population is therefore entirely local-volume GLADE + 2MRS +
-famous rows — the band is *small* everywhere, because a 20–45 kpc galaxy
-needs the camera within ~2–5 Mpc to reach 8 px.
+build-time fallback — SDSS contributes no size measurements), and 99% of SDSS
+sits ≥ ~60–100 Mpc out where 30 kpc ≈ 0.1 px — but the tiers' local
+flux-limit supplement pulls a small nearby SDSS population in (min distance
+4.3 Mpc; 463 rows < 30 Mpc on medium, 2 423 on large), and those *do* enter
+the band (at Virgo core, large tier, the ≥8 px split is: SDSS 123, GLADE 36,
+2MRS 24, famous 12). GLADE's p50 diameter is also the 30-kpc fallback (p10
+17.7, p90 45.4, large tier). The band is *small* everywhere because a
+20–45 kpc galaxy needs the camera within ~2–5 Mpc to reach 8 px.
 
 Shell counts by apparent-size band (large tier, 2.53 M rows total):
 
@@ -102,14 +104,42 @@ longest possible dive** (large tier, 1080p). That is squarely inside what the
 thumbnail pipeline already does today (256-slot atlas, 4 concurrent fetches) —
 except a bake is ~0.3–1 ms of local GPU instead of a 1–3 s network fetch.
 
-So: **every galaxy can be unique.** Seed the generator from the row's
-`objID` (uint64, already in the .bin) — stable across sessions, no format
-bump — and derive `GalaxyParams` from what the row knows: colourIndex →
-category mix (red → elliptical/lenticular-leaning, blue → spiral/irregular),
-absMag → size/brightness class, axisRatio → inclination is *not* baked (see
-framing below). The archetype library survives only as a possible **prebaked
-warm set** (e.g. 32 generic layers shown while a galaxy's own bake is queued)
-— and even that is optional given the procedural-disk placeholder band.
+So: **every galaxy can be unique.** Seed the generator from a hash of the
+row's *position* — NOT `objID`: the GLADE and 2MRS parsers emit `objID = 0n`
+(no SDSS anchor), so objID is only populated for SDSS rows. A position hash
+is stable across sessions *and* rebuilds (positions only change when the
+distance pipeline changes), needs no format bump, and is already the idiom
+`galaxyCacheKey(ra, dec)` uses for the thumbnail atlas. Derive
+`GalaxyParams` from what the row knows: a real morphological type where one
+exists (see the coverage section below), else colourIndex → category mix
+(red → elliptical/lenticular-leaning, blue → spiral/irregular), absMag →
+size/brightness class; inclination is *not* baked (see framing below). The
+archetype library survives only as a possible **prebaked warm set** (e.g. 32
+generic layers shown while a galaxy's own bake is queued) — and even that is
+optional given the procedural-disk placeholder band.
+
+## Morphology coverage: how many galaxies have real Hubble types?
+
+What could feed the per-galaxy `GalaxyParams` beyond the colour proxy
+(counted 2026-07-08 from the upstream tables + committed seeds):
+
+| source | typed today | notes |
+| --- | --- | --- |
+| famous | **80 / 80 (100%)** | `data/seeds/famous_galaxies.seed.json` carries a real type string per galaxy (`"Sbc"`, `"SABc"`, `"E1"`, …) — `classifyHubbleType` maps them already. |
+| 2MRS | **~25.3k / 43.5k rows (58%) overall — but 93–96% inside the impostor's range** | The raw table (VizieR J/ApJS/199/26, bytes 165–169) carries ZCAT morphology for every row; "usable" excludes T=98 never-examined / 19 untyped / 15 peculiar / −9 QSO. Usable fraction by distance: 96.5% < 14 Mpc, 92.9% 14–29 Mpc, 90.1% 29–43 Mpc, 82.8% 43–71 Mpc — the unexamined tail is the distant faint rows that never reach 8 px. Bonus: the ZCAT bar letter (A/X/B) maps directly onto the spiral↔barred split, and the T-type digit onto E/S0/Sa–Sm/Irr. The parser (`tools/parsers/twoMrs.ts`) currently *ignores* these bytes. |
+| GLADE | **0 in-pipeline; typeable via PGC → HyperLEDA** | GLADE has no morphology columns, but raw col 1–7 is the PGC key and `fetchHyperLeda.ts` already queries HyperLEDA `meandata` per PGC (for pa/logr25/mod0) — adding `type` to the fetched column list is a one-line change + cache refresh. Local-volume GLADE rows: 2 697 < 30 Mpc (medium), 7 362 (large). HyperLEDA's cache is intentionally partial (52k PGCs), sized to the local volume — which is exactly the impostor population. |
+| SDSS | **none** | The SkyServer CSV has no morphology; the local supplement rows (463 medium / 2 423 large < 30 Mpc) fall back to the colour proxy. (Galaxy Zoo would be a new data source — out of scope.) |
+| Milliquas | n/a | AGN/quasar points; never in a disk band. |
+
+Delivery path without a .bin format bump: `classByte` is *defined* as
+source-interpreted ("future per-galaxy-catalog class signals (e.g. GLADE
+morphology) add a new branch here without touching the .bin format" —
+`sourceClass.ts`), so a packed category+bar+T byte per source slots straight
+in; 6 spare padding bytes remain if more is wanted.
+
+Bottom line: the galaxies big enough to *deserve* a real type mostly have
+one — nearly all 2MRS + famous band members (the largest/nearest), GLADE
+one fetcher-edit away, and only the SDSS supplement rides the colour proxy.
 
 ## The sliders (what you can tune, and what each costs)
 
@@ -163,7 +193,49 @@ warm set** (e.g. 32 generic layers shown while a galaxy's own bake is queued)
    absMag: all applied in the vertex/fragment on top of whatever texture is
    bound, so even placeholder-archetype frames don't repeat visibly.
 
-## Memory budget (recommended v1 vs rich config)
+## Baseline: total memory per tier today
+
+Measured 2026-07-08 from the R2 artefact sizes + the runtime's buffer
+formulas (52 B/point vertex stride, `GalaxyCatalog` decoded arrays ≈ 58 B/row,
+SCFD → r16float/rgba16float 3D textures ≈ file size, MW star budgets
+75k/150k/300k × 32 B). Row counts per tier: small 367 646, medium 807 827,
+large 3 476 538 (2MRS 39 514 + famous 80 are tier-agnostic; SDSS 0/157 640/
+498 268; GLADE 268 052/410 593/1 995 215; Milliquas 60 000/200 000/943 461).
+
+**Tier-scaled memory (MB):**
+
+| component | small | medium | large |
+| --- | --- | --- | --- |
+| point vertex buffer (GPU, 52 B/row) | 19 | 42 | 181 |
+| decoded catalogs (CPU heap, ~58 B/row) | 21 | 47 | 202 |
+| MCPM volume 3D texture (GPU, if enabled) | 2.4 | 19.4 | 155.5 |
+| MW cloud star+dust buffers (GPU) | 3.4 | 6.1 | 11.2 |
+| **tier-scaled subtotal** | **~46** | **~115** | **~550** |
+| network transfer, catalog bins (+MCPM) | 24 (+2) | 52 (+19) | 223 (+156) |
+
+**Tier-independent (add once; MB):**
+
+| component | size |
+| --- | --- |
+| filaments (GPU buffers ≈ bin) | ~31 |
+| flowfield 128³ rgba16f 3D texture (if enabled) | 16.8 |
+| CF-4 density volume (if enabled) | 4.2 |
+| thumbnail atlas 2048² rgba8 | 16.8 |
+| hi-res famous array (8 × 1024² rgba8, worst case) | 33.6 |
+| HDR target rgba16f @1080p | 16.6 |
+| pick r32uint + depth @1080p | ~16.6 |
+| volume offscreen (half-res rgba16f) @1080p | 4.1 |
+| **subtotal** | **~140** |
+
+Screen-sized targets scale with device-pixel area: ×4 at dpr 2 (the three
+rows above become ~150 MB on a retina laptop). Ballpark totals (everything
+enabled, 1080p @dpr 1): **small ~190 MB, medium ~260 MB, large ~690 MB** —
+large tier is already dominated by the 181 MB vertex buffer + 155 MB MCPM
+cube, which is why it's desktop-only today. The impostor feature's +45–75 MB
+(below) is a tier-appropriate increment: its caches can scale with tier
+(128 layers on small) exactly like every other budget in this table.
+
+## Impostor memory budget (recommended v1 vs rich config)
 
 | Config | Impostor cache | Full-geo cache (cap 4) | Retired photo atlas | Net vs today |
 | --- | --- | --- | --- | --- |
@@ -229,9 +301,11 @@ registry layer and the bake as an offscreen pass — sequence after plan 02
 2. **Resolution config**: v1 single 128² array vs the two-tier split —
    decide after the visual gate shows how objectionable gate-64→128 px
    magnification softness is on diffuse emission.
-3. **Param derivation**: exact `objID/colourIndex/absMag → GalaxyParams`
-   mapping (category priors per source; 2MRS J−K vs SDSS g−r color meaning
-   differs — `pickColourIndex` already normalizes).
+3. **Param derivation**: how much of the morphology-coverage table to wire
+   up for v1 — famous types are free, 2MRS ZCAT is a parser-column addition
+   (+ a `classByte` branch), GLADE-via-HyperLEDA is a fetcher edit + cache
+   refresh; the colour proxy (2MRS J−K vs SDSS g−r meaning differs —
+   `pickColourIndex` normalizes) covers the rest.
 4. **Famous galaxies**: keep curated WebP/hi-res photo path (likely yes), and
    does the generated impostor serve as *their* placeholder too?
 5. **GLADE fallback diameters**: p50 is the 30-kpc fallback — fine for
