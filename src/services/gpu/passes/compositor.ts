@@ -34,7 +34,19 @@
  * bite documented in CLAUDE.md 'Things that have bitten us'). Giving
  * each (blend, dstFormat) pipeline its own buffer means a frame that
  * does 'replace' then 'over' writes two independent buffers with no
- * cross-contamination.
+ * cross-contamination, because 'replace' and 'over' are distinct cache
+ * keys.
+ *
+ * That guarantee is per-key, not per-draw: two composite draws that
+ * share one (blend, dstFormat) key in the same frame still share that
+ * key's single buffer, so the second `writeBuffer` overwrites the first
+ * before either draw's commands execute at `submit` — both draws run
+ * with whichever uniforms were written last. Every current caller draws
+ * each key at most once per frame, so this hasn't bitten yet. A future
+ * consumer that draws the same key more than once per frame — e.g.
+ * several additive field composites that all key to `additive:hdr` —
+ * will need a per-draw ring or pool of buffers for that key before it
+ * can share it safely within a frame.
  *
  * ### JS-mirror curves for unit tests
  *

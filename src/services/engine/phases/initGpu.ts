@@ -134,6 +134,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // The target + tone-map pass live in one factory (see
   // `services/gpu/postProcess.ts`): they share a lifetime and a
   // swap-chain-format dependency.
+
   // Unified compositor — one pipeline cache serves every offscreen→target
   // merge the engine performs (tone-mapped HDR→swap below, plus the
   // foreground-OVER and additive-field composites other passes will adopt).

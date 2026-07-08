@@ -3,8 +3,8 @@
 // The smallest vertex stage in the engine: no per-vertex inputs, no
 // uniforms, no bindings. The vs() entry point synthesises clip-space
 // positions and matching UVs directly from the built-in 'vertex_index',
-// drawing a single triangle whose three vertices sit at (-1,-1),
-// (3,-1), (-1,3) in clip space. That triangle covers the entire
+// drawing a single triangle whose three vertices sit at (-1,1),
+// (3,1), (-1,-3) in clip space. That triangle covers the entire
 // viewport [-1, 1]² with a 50% overdraw budget that's free because we
 // never sample those off-screen pixels.
 //

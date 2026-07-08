@@ -15,7 +15,7 @@ export type ToneMap = {
   /**
    * Tone-mapping curve selector. Deliberately narrowed from a bare `number`
    * to enforce the existing `ToneMapCurve` literal union (0..4), keeping
-   * GPU contract contracts with `toneMap.wgsl` synchronized.
+   * this contract with `toneMap.wgsl` synchronized.
    */
   readonly curve: ToneMapCurve;
 };

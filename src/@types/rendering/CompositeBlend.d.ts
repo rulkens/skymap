@@ -3,14 +3,15 @@
  *
  * The Compositor uses these modes to define how a source layer combines with
  * the destination. Each mode is a key in the Compositor's pipeline cache,
- * keyed by (blend, dstFormat) to amortize pipeline creation.
+ * keyed by (blend, dstFormat) to amortize pipeline creation. In phase 2
+ * (CompositeStep data), a step's blend mode will be carried alongside its
+ * tone-map parameters as data in the frame program, rather than passed as a
+ * per-draw call argument.
  */
-
-/**
- * Blend mode for the Compositor.
- *
- * - `'replace'` — overwrite destination (default HDR → swap: swap is cleared first).
- * - `'over'` — Porter-Duff OVER; future consumer planned (foreground → swap).
- * - `'additive'` — add source into destination (no consumer yet; kept for symmetry).
- */
-export type CompositeBlend = 'replace' | 'over' | 'additive';
+export type CompositeBlend =
+  // Overwrite destination (default HDR → swap: swap is cleared first).
+  | 'replace'
+  // Porter-Duff OVER; future consumer planned (foreground → swap).
+  | 'over'
+  // Add source into destination (no consumer yet; kept for symmetry).
+  | 'additive';
