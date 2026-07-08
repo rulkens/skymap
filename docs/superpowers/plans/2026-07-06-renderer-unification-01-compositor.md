@@ -183,12 +183,12 @@ export function createCompositor(init: {
 
 **Tests** (extend the existing suites in that file):
 
-- [ ] `writes compositor onto state.gpu.*` — after `initGpu`, `state.gpu.compositor` is the stub.
-- [ ] `replaying the destroy chain reaches compositor.destroy()` — `state.gpu.compositor?.destroy()` + null-out; stub's destroy called once, field null.
-- [ ] Implement the wiring above.
-- [ ] `npm test -- initGpu.destroyReachability` → green (existing + new assertions).
-- [ ] `npm run typecheck` + `npm test` → full suite green (nothing consumes the handle yet; that is expected and fine for this task).
-- [ ] Commit.
+- [x] `writes compositor onto state.gpu.*` — after `initGpu`, `state.gpu.compositor` is the stub.
+- [x] `replaying the destroy chain reaches compositor.destroy()` — `state.gpu.compositor?.destroy()` + null-out; stub's destroy called once, field null.
+- [x] Implement the wiring above. (Plus forced-minimal `compositor: null` in `tests/@types/engineState.test.ts` strict literals.)
+- [x] `npm test -- initGpu.destroyReachability` → green (existing + new assertions).
+- [x] `npm run typecheck` + `npm test` → full suite green (nothing consumes the handle yet; that is expected and fine for this task).
+- [x] Commit.
 
 ---
 
