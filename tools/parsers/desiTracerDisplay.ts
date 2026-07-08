@@ -6,20 +6,30 @@
  * computes BGS magnitudes from actual nanomaggy fluxes and falls back to this
  * table for the other three tracers.
  *
- * `absMagR` is a DISPLAY-FLATTENING knob, not a physical M*: it is tuned
- * against the *measured* rendered per-segment mean-intensity profile of the
- * built bin so the four tracer bands don't render as brightness cliffs. The
- * tracer boundaries are redshift cuts, so a per-tracer absolute magnitude that
- * differs from its neighbours draws a straight-edged brightness step across the
- * cone. Physically-honest values were the alternative and were rejected: at
- * ELG M ≈ −20.8 the ELG-dominated 2.75–4.5 Gpc stretch renders ~3× dimmer than
- * its BGS/LRG/QSO flanks (mean intensity ≈ 0.21 vs ≈ 0.5–0.75), painting a
- * sharp-edged dim block into the middle of the cone. Raising LRG and ELG (and
- * accounting for the whole-source mean-magnitude normalisation feedback)
- * flattens the profile to a gentle monotone (~0.65 → 0.39 across the galaxy
- * cone) with only a modest step into the sparse quasar tail. `gMinusR` paints
- * each tracer's colour class (red ellipticals for LRG, blue star-formers for
- * ELG, blue AGN continuum for QSO).
+ * `absMagR` is the characteristic absolute magnitude of each tracer
+ * population (LRG: massive red ellipticals near M*; ELG: blue star-forming
+ * dwarfs/spirals, intrinsically fainter; QSO: AGN continuum outshines the
+ * host galaxy by several magnitudes) — a physically-motivated per-tracer
+ * constant, not a display fit. `gMinusR` paints each tracer's colour class
+ * (red ellipticals for LRG, blue star-formers for ELG, blue AGN continuum
+ * for QSO).
+ *
+ * A display-flattening retune was tried and rejected. The idea: raise LRG
+ * to −24.3 and ELG to −24.0 (both well past any physical M*) so the four
+ * tracer bands render at roughly equal mean per-segment intensity instead
+ * of the honest values' brightness steps — the tracer boundaries are
+ * redshift cuts, so any per-tracer magnitude that differs from its
+ * neighbours draws a step across the cone, and at the physical ELG M ≈
+ * −20.8 the ELG-dominated 2.75–4.5 Gpc stretch renders visibly dimmer than
+ * its BGS/LRG/QSO flanks. But the renderer normalises brightness against
+ * the whole source's mean magnitude, so pushing LRG/ELG brighter to lift
+ * the dim ELG middle pays for it by dimming the rest of the cone: the vivid
+ * BGS near field dropped from ≈0.83 to ≈0.66 mean intensity and the far
+ * quasar tail from ≈0.46 to ≈0.28 at 6.5 Gpc. Compared live, the flattened
+ * profile reads as washed-out and loses the cone's dramatic depth falloff;
+ * the honest profile's dim ELG stretch is the survey's real selection
+ * function (ELGs are intrinsically faint) and is accepted as-is rather than
+ * papered over.
  *
  * These are safe as pure display knobs because the InfoCard suppresses the
  * synthetic magnitude for LRG/ELG/QSO rows (only BGS ships real fluxes), so no
@@ -32,7 +42,7 @@ export const DESI_TRACER_DISPLAY: Record<
   'LRG' | 'ELG' | 'QSO',
   { absMagR: number; gMinusR: number }
 > = {
-  LRG: { absMagR: -24.3, gMinusR: 1.4 }, // massive red ellipticals
-  ELG: { absMagR: -24.0, gMinusR: 0.5 }, // blue star-formers
+  LRG: { absMagR: -22.8, gMinusR: 1.4 }, // massive red ellipticals
+  ELG: { absMagR: -20.8, gMinusR: 0.5 }, // blue star-formers
   QSO: { absMagR: -25.5, gMinusR: 0.3 }, // AGN outshine hosts
 };
