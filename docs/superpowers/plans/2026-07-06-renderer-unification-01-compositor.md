@@ -143,20 +143,20 @@ export function createCompositor(init: {
 
 **Tests** (`compositor.test.ts` — extend the `postProcess.test.ts:28-56` `mockDevice` shape; mock pass = `{ setPipeline: vi.fn<...>(), setBindGroup: vi.fn<...>(), draw: vi.fn<...>() }`):
 
-- [ ] `exposes label, draw, destroy` — `label === 'compositor'`, both methods are functions.
-- [ ] `builds one pipeline per (blend, dstFormat) key and reuses it across draws` — two `draw(..., 'replace', TONE)` calls → `device.createRenderPipeline` called exactly once.
-- [ ] `distinct blends build distinct pipelines` — `'replace'` then `'additive'` → two `createRenderPipeline` calls.
-- [ ] `replace has no blend state; over is straight-alpha OVER (color src-alpha/one-minus-src-alpha, alpha one/one-minus-src-alpha); additive is one/one` — inspect each captured pipeline descriptor's `fragment.targets[0].blend` against the table above.
-- [ ] `replace and over target the swap format; additive targets the hdr format` — `fragment.targets[0].format` per captured descriptor (`swapFormat: 'bgra8unorm'`, `hdrFormat: 'rgba16float'` in the fixture).
-- [ ] `tone set packs clamped exposure, curve, and toneEnabled=1` — capture `queue.writeBuffer`'s bytes; with `{ exposure: 1e9, curve: 2 }` assert f32@0 === 16 (upper clamp), f32@4 === 16 (whitepoint²), f32@8 === 10, u32@12 === 2, u32@16 === 1. Second draw with `exposure: 1e-9` asserts the 0.05 lower clamp.
-- [ ] `tone null packs toneEnabled=0` — u32@16 === 0.
-- [ ] `preserveAlpha packs from the blend, not the caller` — `draw(..., 'replace', TONE)` → u32@20 === 0; `draw(..., 'over', TONE)` → u32@20 === 1.
-- [ ] `draw encodes the covering triangle` — `pass.draw` called with `(3, 1, 0, 0)`; `setPipeline` + `setBindGroup` called; no `beginRenderPass` anywhere (the mock device has none to call).
-- [ ] `destroy releases every cached uniform buffer` — after draws on two keys, `destroy()` calls `.destroy()` on both `createBuffer` results.
-- [ ] Repoint `toneMap.test.ts:16-22` and `postProcess.test.ts:19-26` curve imports to `'.../compositor'`; delete the now-redundant `postProcess JS-mirror tone-map curves` describe block (`postProcess.test.ts:92-111`) — `toneMap.test.ts` owns that coverage.
-- [ ] `npm test -- compositor toneMap postProcess` → all pass (new suite + repointed suites).
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit (stage the new + modified files by path).
+- [x] `exposes label, draw, destroy` — `label === 'compositor'`, both methods are functions.
+- [x] `builds one pipeline per (blend, dstFormat) key and reuses it across draws` — two `draw(..., 'replace', TONE)` calls → `device.createRenderPipeline` called exactly once.
+- [x] `distinct blends build distinct pipelines` — `'replace'` then `'additive'` → two `createRenderPipeline` calls.
+- [x] `replace has no blend state; over is straight-alpha OVER (color src-alpha/one-minus-src-alpha, alpha one/one-minus-src-alpha); additive is one/one` — inspect each captured pipeline descriptor's `fragment.targets[0].blend` against the table above.
+- [x] `replace and over target the swap format; additive targets the hdr format` — `fragment.targets[0].format` per captured descriptor (`swapFormat: 'bgra8unorm'`, `hdrFormat: 'rgba16float'` in the fixture).
+- [x] `tone set packs clamped exposure, curve, and toneEnabled=1` — capture `queue.writeBuffer`'s bytes; with `{ exposure: 1e9, curve: 2 }` assert f32@0 === 16 (upper clamp), f32@4 === 16 (whitepoint²), f32@8 === 10, u32@12 === 2, u32@16 === 1. Second draw with `exposure: 1e-9` asserts the 0.05 lower clamp.
+- [x] `tone null packs toneEnabled=0` — u32@16 === 0.
+- [x] `preserveAlpha packs from the blend, not the caller` — `draw(..., 'replace', TONE)` → u32@20 === 0; `draw(..., 'over', TONE)` → u32@20 === 1.
+- [x] `draw encodes the covering triangle` — `pass.draw` called with `(3, 1, 0, 0)`; `setPipeline` + `setBindGroup` called; no `beginRenderPass` anywhere (the mock device has none to call).
+- [x] `destroy releases every cached uniform buffer` — after draws on two keys, `destroy()` calls `.destroy()` on both `createBuffer` results.
+- [x] Repoint `toneMap.test.ts:16-22` and `postProcess.test.ts:19-26` curve imports to `'.../compositor'`; delete the now-redundant `postProcess JS-mirror tone-map curves` describe block (`postProcess.test.ts:92-111`) — `toneMap.test.ts` owns that coverage. (postProcess.test.ts imports removed outright — sole consumer block was deleted; toneMap.test.ts repointed.)
+- [x] `npm test -- compositor toneMap postProcess` → all pass (new suite + repointed suites).
+- [x] `npm run typecheck` → clean.
+- [x] Commit (stage the new + modified files by path).
 
 ---
 
