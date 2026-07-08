@@ -44,9 +44,13 @@ describe('makeConeFilter', () => {
 
   it('handles a polar center (dec +89°) without RA-compression artifacts', () => {
     const isInCone = makeConeFilter(0, 89, 2);
-    // At high dec, RA-compression is extreme; the predicate should still work
-    // Any point within 2° of (0, 89) should be accepted regardless of RA
-    expect(isInCone(180, 87.5)).toBe(true);
+    // At high dec, ΔRA wildly overstates angular distance; the great-circle
+    // path to RA 180° runs ACROSS the pole. (180, 89.5): separation is
+    // (90−89) + (90−89.5) = 1.5° — inside the 2° cone despite ΔRA = 180°.
+    expect(isInCone(180, 89.5)).toBe(true);
+    // (90, 88.5): true angular separation ≈ 1.79°, inside despite ΔRA = 90°.
     expect(isInCone(90, 88.5)).toBe(true);
+    // Across the pole: (90−89) + (90−87.5) = 3.5° > 2° — outside.
+    expect(isInCone(180, 87.5)).toBe(false);
   });
 });
