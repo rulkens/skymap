@@ -36,7 +36,7 @@ design and the spike's findings.
 Full take, defaults (`grandTour`, all beats, 3840×2160 output @ 60 fps —
 rendered in a 1920×1080 viewport at `deviceScaleFactor: 2` so captions keep
 their designed proportions — H.264 `-crf 16`, output
-`recordings/grand-tour-4k60.mp4`):
+`recordings/grandTour-3840x2160-60fps-<timestamp>.mp4`):
 
 ```bash
 npm run record-tour
@@ -44,15 +44,15 @@ npm run record-tour
 
 Flags (all optional; positional `tour id` defaults to `grandTour`):
 
-| Flag       | Default                          | Notes                                                      |
-| ---------- | -------------------------------- | ---------------------------------------------------------- |
-| `--beats`  | full tour (`0..lastBeat`)        | `a..b`, inclusive, 0-based                                 |
-| `--fps`    | `60`                             | positive integer                                           |
-| `--size`   | `3840x2160`                      | `WIDTHxHEIGHT` — the OUTPUT film resolution                |
-| `--dpr`    | `2`                              | viewport = size/dpr; `1` for CSS-px-native capture         |
-| `--out`    | `recordings/grand-tour-4k60.mp4` | directory is created if missing                            |
-| `--url`    | `http://localhost:5173`          | trailing slash stripped; point at a non-default dev server |
-| positional | `grandTour`                      | tour id, must exist in `tourRegistry`                      |
+| Flag       | Default                                             | Notes                                                                              |
+| ---------- | --------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `--beats`  | full tour (`0..lastBeat`)                           | `a..b`, inclusive, 0-based                                                         |
+| `--fps`    | `60`                                                | positive integer                                                                   |
+| `--size`   | `3840x2160`                                         | `WIDTHxHEIGHT` — the OUTPUT film resolution                                        |
+| `--dpr`    | `2`                                                 | viewport = size/dpr; `1` for CSS-px-native capture                                 |
+| `--out`    | `recordings/<tour>-<size>-<fps>fps-<timestamp>.mp4` | never overwrites a previous take; pass `--out` for a fixed name (dir auto-created) |
+| `--url`    | `http://localhost:5173`                             | trailing slash stripped; point at a non-default dev server                         |
+| positional | `grandTour`                                         | tour id, must exist in `tourRegistry`                                              |
 
 `--size` always means the pixels that land in the mp4; `--dpr` only chooses
 how they are produced. At the default `--dpr 2` the page runs in a size/2

@@ -5,12 +5,6 @@ Small improvements deferred from the tour-recorder branch's final review
 once shipped). None affect the correctness of a take; all were triaged
 backlog-not-blocking by the whole-branch review.
 
-- **Derive the default `--out` name from tour id + size + fps.** Today the
-  default is the fixed `recordings/grand-tour-4k60.mp4`, so recording a
-  _different tour_ (or a smoke) with default flags silently overwrites the
-  main film. Also stamp the tour id into the harness's `DONE` report line so
-  an overwrite is at least visible in console history.
-  (`tools/record/recordTour.ts`)
 - **Observable-driven settle discard.** The windowed-take settle is a shared
   constant (`FOLD_SETTLE_MS`) with a positional assumption — the saga's delay
   must stay the first virtual-time consumer of a windowed run; documented at

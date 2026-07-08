@@ -86,7 +86,7 @@ recorder-shaped on the render side:
 | Codec         | H.264, `libx264 -crf 16 -preset slow -pix_fmt yuv420p`, mp4                                                    |
 | Audio         | none — captions carry the narration                                                                            |
 | Overlays kept | TourOverlay captions only; all other HUD hidden ("cinema mode")                                                |
-| Output        | `recordings/grand-tour-4k60.mp4` (`recordings/` gitignored)                                                    |
+| Output        | `recordings/<tour>-<size>-<fps>fps-<timestamp>.mp4` default (`--out` overrides; `recordings/` gitignored)      |
 | ffmpeg        | host prerequisite (`brew install ffmpeg`), not an npm dependency                                               |
 
 ## Architecture

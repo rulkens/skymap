@@ -89,6 +89,7 @@ import { grantAndAwaitExpiry } from './grantAndAwaitExpiry';
 import { parseBeatRange } from '../utils/record/parseBeatRange';
 import { parseSize } from '../utils/record/parseSize';
 import { buildFfmpegArgs } from '../utils/record/buildFfmpegArgs';
+import { defaultOutName } from '../utils/record/defaultOutName';
 import { tourFrameCap } from '../utils/record/tourFrameCap';
 
 // How long to wait for window.__skymapRecorder to appear after load — it is
@@ -113,7 +114,8 @@ type RecordOptions = {
   size: { width: number; height: number };
   /** deviceScaleFactor for the page; --size stays the output resolution. */
   dpr: number;
-  out: string;
+  /** Explicit --out, used verbatim; absent = timestamped default (see main). */
+  out: string | undefined;
   url: string;
 };
 
@@ -142,7 +144,10 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     // designer judges them on a 2x display — see the didactic block at the
     // viewport derivation in captureTour for the full proportion argument.
     dpr: 2,
-    out: 'recordings/grand-tour-4k60.mp4',
+    // No fixed default name: main derives a timestamped one via
+    // defaultOutName so successive default-flag takes never overwrite each
+    // other (buildFfmpegArgs passes -y). An explicit --out is used verbatim.
+    out: undefined,
     url: 'http://localhost:5173',
   };
   let positionalSeen = false;
@@ -576,6 +581,21 @@ async function main(): Promise<void> {
   }
   const frameCap = tourFrameCap(slicedBeats, options.fps);
 
+  // Default output name = tour + size + fps + timestamp, so successive
+  // default-flag takes (or a smoke against a different tour) never silently
+  // overwrite a previous film — ffmpeg runs -y. An explicit --out is exact
+  // and CAN overwrite: a fixed name is then the operator's stated intent.
+  // The banner below prints the resolved path either way.
+  const out =
+    options.out ??
+    defaultOutName({
+      tourId: tour.id,
+      width: options.size.width,
+      height: options.size.height,
+      fps: options.fps,
+      now: new Date(),
+    });
+
   console.log(
     `record-tour — '${tour.id}' beats ${range.from}..${range.to} ` +
       `(${slicedBeats.length} of ${tour.beats.length})`,
@@ -583,12 +603,12 @@ async function main(): Promise<void> {
   console.log(
     `  ${options.size.width}x${options.size.height} @ ${options.fps} fps ` +
       `(viewport ${options.size.width / options.dpr}x${options.size.height / options.dpr} ` +
-      `@ dpr ${options.dpr}) → ${options.out}`,
+      `@ dpr ${options.dpr}) → ${out}`,
   );
 
   // ffmpeg first: a missing binary should fail in milliseconds, not after a
   // browser launch and a full app boot.
-  const ffmpeg = await spawnFfmpeg(options.fps, options.out);
+  const ffmpeg = await spawnFfmpeg(options.fps, out);
   let frames: number;
   try {
     const browser = await launchChromium();
@@ -613,8 +633,8 @@ async function main(): Promise<void> {
     throw err;
   }
 
-  const probe = await ffprobeReport(options.out);
-  console.log(`\nDONE — ${options.out}`);
+  const probe = await ffprobeReport(out);
+  console.log(`\nDONE — ${out}`);
   console.log(`  captured frames: ${frames}  (cap was ${frameCap})`);
   console.log(`  ffprobe: ${probe.width}x${probe.height}, nb_frames ${probe.nbFrames}`);
 }
