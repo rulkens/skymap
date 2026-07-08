@@ -45,6 +45,7 @@
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
 import { createPostProcess } from '../../gpu/passes/postProcess';
+import { createCompositor } from '../../gpu/passes/compositor';
 import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
@@ -133,6 +134,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // The target + tone-map pass live in one factory (see
   // `services/gpu/postProcess.ts`): they share a lifetime and a
   // swap-chain-format dependency.
+  // Unified compositor — one pipeline cache serves every offscreen→target
+  // merge the engine performs (tone-mapped HDR→swap below, plus the
+  // foreground-OVER and additive-field composites other passes will adopt).
+  // The blend→dstFormat table is baked in at construction, as data, rather
+  // than threaded per-draw, because a render-pass encoder cannot be queried
+  // for its own colour-attachment format — the caller has to hand it over
+  // up front. Constructed immediately before `postProcess` so the lexical
+  // order makes the dependency obvious: `postProcess` is about to become
+  // one of this compositor's callers.
+  const compositor = createCompositor({ device, swapFormat: format, hdrFormat: 'rgba16float' });
+  state.gpu.compositor = compositor;
+
   const postProcess = createPostProcess(device, format, {
     width: canvas.width,
     height: canvas.height,
