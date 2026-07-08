@@ -59,7 +59,7 @@ import { crossMatch } from './crossMatch';
 import { dropFamousMatches } from './dropFamousMatches';
 import type { FamousSkyPosition } from './dropFamousMatches';
 import { parseFamousSeed } from '../parsers/famousSeed';
-import { DESI_CONE } from './desiCone';
+import { DESI_CONE, DESI_TRACER_FILE_KEYS } from './desiCone';
 import { makeConeFilter } from '../utils/math/makeConeFilter';
 
 import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
@@ -344,19 +344,6 @@ function loadMilliquas(path: string | undefined): MilliquasParseResult {
   );
   return result;
 }
-
-/**
- * Registry keys for the four DESI DR1 LSS clustering FITS files, keyed by
- * the same `DesiTracer` union `parseDesiClustering` accepts.
- */
-type DesiTracerFileKey = 'desi.bgs' | 'desi.lrg' | 'desi.elg' | 'desi.qso';
-
-const DESI_TRACER_FILE_KEYS: Record<DesiTracer, DesiTracerFileKey> = {
-  BGS: 'desi.bgs',
-  LRG: 'desi.lrg',
-  ELG: 'desi.elg',
-  QSO: 'desi.qso',
-};
 
 /**
  * Load + cone-filter the four DESI DR1 LSS clustering FITS files into one

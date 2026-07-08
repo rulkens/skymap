@@ -14,13 +14,17 @@ export const DESI_DEEP_ENTRY = {
   allSky: false,
   bearsLabel: false,
   bearsMarker: false,
-  // Visible by default: Milliquas precedent (a new galaxy catalog ships on
-  // rather than opt-in). The GalaxiesSection toggle (Task 9) is the off
-  // switch a user reaches for if the far-tail cone is distracting.
-  visible: true,
-  // z ≈ 3.5 comoving (the QSO tracer's redshift ceiling) works out past
-  // 7000 Mpc under the renderer's linear-Hubble display approximation —
-  // extends the camera clamp well past Milliquas's 4000, since DESI's
+  // Off by default: a single 2.5°-radius pencil-beam reaching z ≈ 3.5 / ~7 Gpc
+  // is a specialist overlay, not part of the all-sky default scene the other
+  // bulk catalogs populate — dropping a lone spike of far-field points into an
+  // otherwise coherent local view would mislead more than inform. The
+  // GalaxiesSection toggle is the opt-in for anyone who wants the deep cone.
+  visible: false,
+  // The QSO tracer's z ≈ 3.5 ceiling maps to ~7100 Mpc of line-of-sight
+  // comoving distance under the flat-ΛCDM conversion the pipeline applies to
+  // every row (`redshiftToDistanceMpc`, Simpson-integrated) — NOT the linear
+  // Hubble law, which would place z ≈ 3.5 out near 15,000 Mpc. That comoving
+  // ceiling extends the camera clamp well past Milliquas's 4000, since DESI's
   // QSO tail reaches noticeably deeper than Milliquas's bulk z < 3.
   maxDistMpc: 7100,
   // DESI's LSS clustering catalogs carry DERED g/r/z fluxes (FLUX_G/R/Z_DERED,
@@ -28,18 +32,21 @@ export const DESI_DEEP_ENTRY = {
   // redshift) is the closest match to the empty magI slot among the five —
   // no u-band or true i-band exists in the DESI columns.
   bandLabels: { u: '—', g: 'g', r: 'r', i: 'z', z: '—' },
-  // g−r is the natural DESI optical colour. Range widened past Milliquas's
-  // B−R span (0.2–1.8 vs 0.0–2.0) to better bracket the mixed BGS/LRG/ELG/QSO
-  // population. kPerZ is 0 for the same reason Milliquas's is: the four
-  // tracers span z ≈ 0.03–3.5, and any non-zero K-correction coefficient
-  // would clamp most of that range to one end of the ramp rather than
-  // meaningfully correcting it.
+  // g−r is the natural DESI optical colour. Range tightened relative to
+  // Milliquas's B−R span (0.2–1.8 is narrower than Milliquas's 0.0–2.0) so the
+  // ramp spends its full dynamic range on the g−r interval the mixed
+  // BGS/LRG/ELG/QSO population actually occupies — sharper colour contrast than
+  // a wider span that would waste both ends on near-empty colour. kPerZ is 0
+  // for the same reason Milliquas's is: the four tracers span z ≈ 0.03–3.5, and
+  // any non-zero K-correction coefficient would clamp most of that range to one
+  // end of the ramp rather than meaningfully correcting it.
   colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.2, rangeMax: 1.8, kPerZ: 0.0 },
   // BGS_BRIGHT's r-band selection limit (r < 19.5) is the tightest of the
-  // four tracers; used as a permissive stand-in for the whole mixed-tracer
-  // catalog, same rationale as Milliquas's single mLim across a
-  // heterogeneous parent-survey mix — vMaxWeight short-circuits rather than
-  // upweighting an unphysical volume.
+  // four tracers; used as a single representative limit for the whole
+  // mixed-tracer catalog, same rationale as Milliquas's single mLim across a
+  // heterogeneous parent-survey mix — the exact value isn't load-bearing
+  // because vMaxWeight short-circuits rather than upweighting an unphysical
+  // volume.
   mLim: 19.5,
   // Placeholder triple, not a real DESI luminosity function: the four
   // tracers (BGS/LRG/ELG/QSO) each have their own selection function and

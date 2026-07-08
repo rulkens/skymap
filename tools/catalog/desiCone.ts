@@ -18,4 +18,26 @@
  * re-center — the census diagnostic's whole reason for existing — is a
  * one-line edit in exactly one file, per the design spec's decision #4.
  */
+import type { DesiTracer } from '../parsers/desiFits';
+
 export const DESI_CONE = { raDeg: 233.2, decDeg: 32.3, radiusDeg: 2.5 } as const;
+
+/**
+ * Raw-data registry keys for the four DESI DR1 LSS clustering FITS files,
+ * keyed by the same `DesiTracer` union `parseDesiClustering` accepts.
+ *
+ * Keyed by `DesiTracer` (not a flat array) so both the build (`loadDesi`) and
+ * the census (`tallyTracer`) can look a file up straight from the tracer they
+ * are iterating, with no name-to-key mapping step in between. The values are
+ * dotted `rawDataRegistry` keys — every raw file goes through `rawDataPath`
+ * rather than a hard-coded `data/raw/...` literal — so this is the one place
+ * that pins the tracer→registry-key correspondence for both consumers.
+ */
+export type DesiTracerFileKey = 'desi.bgs' | 'desi.lrg' | 'desi.elg' | 'desi.qso';
+
+export const DESI_TRACER_FILE_KEYS: Record<DesiTracer, DesiTracerFileKey> = {
+  BGS: 'desi.bgs',
+  LRG: 'desi.lrg',
+  ELG: 'desi.elg',
+  QSO: 'desi.qso',
+};

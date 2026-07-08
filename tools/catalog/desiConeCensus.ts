@@ -49,21 +49,12 @@ import { parseFitsBinTable } from '../parsers/desiFits';
 import type { DesiTracer, FitsColumn } from '../parsers/desiFits';
 import { eqRaDecToUnitCart } from '../../src/utils/math/eqRaDecToUnitCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
-import { DESI_CONE } from './desiCone';
+import { DESI_CONE, DESI_TRACER_FILE_KEYS } from './desiCone';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 const RAD = Math.PI / 180;
 
 const TRACERS: readonly DesiTracer[] = ['BGS', 'LRG', 'ELG', 'QSO'];
-
-type DesiTracerFileKey = 'desi.bgs' | 'desi.lrg' | 'desi.elg' | 'desi.qso';
-
-const DESI_TRACER_FILE_KEYS: Record<DesiTracer, DesiTracerFileKey> = {
-  BGS: 'desi.bgs',
-  LRG: 'desi.lrg',
-  ELG: 'desi.elg',
-  QSO: 'desi.qso',
-};
 
 /** ±2° in 0.5° steps around the configured center, per the brief's grid spec. */
 const OFFSET_STEP_DEG = 0.5;
