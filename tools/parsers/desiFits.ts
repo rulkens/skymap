@@ -38,16 +38,23 @@
  *     laid out contiguously within each row in `TTYPEn` order — this
  *     module computes each column's `byteOffset`/`byteLength` from that
  *     layout so a caller can slice rows without re-deriving it.
- *   - All FITS binary data (the actual row bytes, decoded by the
- *     caller in Task 4) is big-endian ("network byte order"), the
- *     opposite of the little-endian convention used everywhere else in
- *     this codebase's binary formats (`galaxyCatalogFormat.ts`,
- *     `scalarFieldFormat.ts`). Header *cards* are plain ASCII text, so
- *     endianness doesn't apply to anything parsed in this file.
+ *   - All FITS binary data (the actual row bytes, decoded by
+ *     `parseDesiClustering` below) is big-endian ("network byte
+ *     order"), the opposite of the little-endian convention used
+ *     everywhere else in this codebase's binary formats
+ *     (`galaxyCatalogFormat.ts`, `scalarFieldFormat.ts`). Header
+ *     *cards* are plain ASCII text, so endianness doesn't apply to
+ *     anything parsed by the header half of this file.
  *
  * Reference: NOST 100-2.0, "Definition of the Flexible Image Transport
  * System (FITS)".
  */
+
+import type { ParsedRecord } from './common';
+import { Source } from '../../src/data/sources';
+import { DESI_TRACER_CLASS } from '../../src/data/galaxyCatalog/sourceClass';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import { DESI_TRACER_DISPLAY } from './desiTracerDisplay';
 
 const BLOCK_SIZE = 2880;
 const CARD_SIZE = 80;
@@ -223,7 +230,7 @@ function tformByteLength(form: string, columnName: string): number {
  *
  * Row *decoding* (turning those byte ranges into numbers, and mapping
  * columns to a `ParsedRecord`) is deliberately out of scope here — see
- * the module's Task 4 half.
+ * `parseDesiClustering` below.
  */
 export function parseFitsBinTable(buf: ArrayBuffer): FitsBinTable {
   const u8 = new Uint8Array(buf);
@@ -269,4 +276,206 @@ export function parseFitsBinTable(buf: ArrayBuffer): FitsBinTable {
     rowCount,
     columns,
   };
+}
+
+// ─── Row decoding → ParsedRecord ────────────────────────────────────────────
+
+/**
+ * The four DESI DR1 LSS clustering tracers skymap ingests. The short
+ * names abbreviate the upstream filenames (BGS = BGS_BRIGHT,
+ * ELG = ELG_LOPnotqso); each corresponds to one
+ * `<TRACER>_NGC_clustering.dat.fits` file in `data/raw/desi/`.
+ */
+export type DesiTracer = 'BGS' | 'LRG' | 'ELG' | 'QSO';
+
+/**
+ * Decode one scalar floating-point cell, big-endian per the FITS
+ * standard. Only bare/`1`-prefixed `D` (f64) and `E` (f32) forms are
+ * scalar floats; anything else (an array cell like `2D`, or an
+ * integer/char column) throws rather than silently reading garbage —
+ * a tracer file that changes a consumed column's type should fail
+ * loudly at parse time, not paint wrong magnitudes.
+ */
+function readFloatCell(view: DataView, byteOffset: number, col: FitsColumn): number {
+  if (col.form === 'D' || col.form === '1D') return view.getFloat64(byteOffset, false);
+  if (col.form === 'E' || col.form === '1E') return view.getFloat32(byteOffset, false);
+  throw new Error(
+    `parseDesiClustering: column ${col.name} has TFORM "${col.form}", expected a scalar D or E`,
+  );
+}
+
+/** Decode one scalar big-endian i64 cell (TFORM `K`) as a bigint. */
+function readInt64Cell(view: DataView, byteOffset: number, col: FitsColumn): bigint {
+  if (col.form === 'K' || col.form === '1K') return view.getBigInt64(byteOffset, false);
+  throw new Error(
+    `parseDesiClustering: column ${col.name} has TFORM "${col.form}", expected a scalar K`,
+  );
+}
+
+/**
+ * The optical zero-point of the nanomaggy flux unit: an object with flux
+ * 1 nanomaggy has magnitude 22.5 (SDSS/Legacy-Survey convention), so
+ * `mag = 22.5 − 2.5·log10(flux_nmgy)`.
+ */
+const NANOMAGGY_ZEROPOINT_MAG = 22.5;
+
+/**
+ * Parse one DESI LSS clustering catalog (a FITS BINTABLE buffer) into
+ * canonical `ParsedRecord`s.
+ *
+ * Column reality differs per tracer (verified 2026-07-07 against the
+ * live NGC headers): only BGS carries fluxes — lowercase
+ * `flux_g/r/z_dered` (TFORM `E`, nanomaggies) — while LRG/ELG/QSO ship
+ * positions + clustering weights only. So BGS magnitudes are computed
+ * from real fluxes, and the other three tracers synthesize display
+ * magnitudes from the per-population constants in
+ * `DESI_TRACER_DISPLAY`: the tracer's characteristic absolute r
+ * magnitude pushed to apparent via the ΛCDM distance modulus at the
+ * row's redshift, plus a fixed g−r colour. Same magnitude for every
+ * row of a tracer at a given z — honest about what the source data
+ * contains, rather than fabricating per-object scatter.
+ *
+ * Decoding discipline: every consumed cell is read strictly via its
+ * column's own `byteOffset`/`byteLength` from the header layout —
+ * never by assuming the consumed columns are adjacent — so unread
+ * columns (clustering weights, `nA` char columns) are offset-skipped
+ * for free. Column lookup is case-insensitive because BGS's flux
+ * columns are lowercase on disk while everything else is uppercase.
+ *
+ * The optional `keep(raDeg, decDeg)` predicate is the deep-cone filter:
+ * it runs immediately after decoding RA/DEC and before any other cell
+ * is decoded or any record allocated, because the CrB cone keeps only
+ * ~1% of the NGC rows — the common case per row is "decode 16 bytes,
+ * reject". Rejected rows are NOT counted in `skipped`: out-of-cone is
+ * scoping, not data quality. `skipped` counts only BGS rows dropped
+ * for non-positive g or r flux (unplottable photometry); a
+ * non-positive z-band flux keeps the row with `magI = NaN` (the
+ * standard missing-band sentinel, see `common.ts`).
+ *
+ * Field mapping mirrors the other survey parsers: `objID` carries
+ * TARGETID (a bigint, like SDSS objIDs); `spectroscopicZ = z`
+ * verbatim; orientation and diameter are `null` so the build pipeline
+ * applies its deterministic `fallbackOrientation` + default-diameter
+ * paths (the GLADE no-measurement shape); `classByte` carries the
+ * tracer via `DESI_TRACER_CLASS` so the InfoCard can name the
+ * population.
+ */
+export function parseDesiClustering(
+  buf: ArrayBuffer,
+  tracer: DesiTracer,
+  keep?: (raDeg: number, decDeg: number) => boolean,
+): { records: ParsedRecord[]; skipped: number } {
+  const table = parseFitsBinTable(buf);
+  const view = new DataView(buf);
+
+  // Case-insensitive TTYPE lookup, throwing on absence (the sdssCsv
+  // `requireColumn` idiom): a missing required column is a structural
+  // problem no amount of row-skipping can recover from.
+  const requireColumn = (name: string): FitsColumn => {
+    const lower = name.toLowerCase();
+    const col = table.columns.find((c) => c.name.toLowerCase() === lower);
+    if (!col) {
+      throw new Error(
+        `parseDesiClustering: ${tracer} table missing required column "${name}". ` +
+          `Found: ${table.columns.map((c) => c.name).join(', ')}`,
+      );
+    }
+    return col;
+  };
+
+  const colTargetId = requireColumn('TARGETID');
+  const colRa = requireColumn('RA');
+  const colDec = requireColumn('DEC');
+  const colZ = requireColumn('Z');
+
+  // Photometry strategy as a tagged union, decided once before the row
+  // loop: BGS decodes its real (lowercase-on-disk) dered flux columns,
+  // required so a future BGS release that drops them fails loudly; the
+  // fluxless tracers carry their synthetic-display constants instead.
+  const photometry =
+    tracer === 'BGS'
+      ? ({
+          kind: 'flux',
+          g: requireColumn('flux_g_dered'),
+          r: requireColumn('flux_r_dered'),
+          z: requireColumn('flux_z_dered'),
+        } as const)
+      : ({ kind: 'synthetic', ...DESI_TRACER_DISPLAY[tracer] } as const);
+
+  const classByte = DESI_TRACER_CLASS[tracer];
+
+  const records: ParsedRecord[] = [];
+  let skipped = 0;
+
+  for (let r = 0; r < table.rowCount; r++) {
+    const rowStart = table.dataOffset + r * table.rowLengthBytes;
+
+    // Cone predicate first: cheap RA/DEC decode, then bail before
+    // touching any other cell or allocating anything.
+    const ra = readFloatCell(view, rowStart + colRa.byteOffset, colRa);
+    const dec = readFloatCell(view, rowStart + colDec.byteOffset, colDec);
+    if (keep && !keep(ra, dec)) continue;
+
+    const z = readFloatCell(view, rowStart + colZ.byteOffset, colZ);
+
+    let magG: number;
+    let magR: number;
+    let magI: number;
+    if (photometry.kind === 'flux') {
+      // BGS: real photometry, nanomaggy → magnitude. g and r feed the
+      // colour ramp and brightness, so a row without both is
+      // unplottable and gets dropped; the z band only fills the magI
+      // display slot, so its absence degrades to NaN instead.
+      const fluxG = readFloatCell(view, rowStart + photometry.g.byteOffset, photometry.g);
+      const fluxR = readFloatCell(view, rowStart + photometry.r.byteOffset, photometry.r);
+      if (fluxG <= 0 || fluxR <= 0) {
+        skipped++;
+        continue;
+      }
+      const fluxZ = readFloatCell(view, rowStart + photometry.z.byteOffset, photometry.z);
+      magG = NANOMAGGY_ZEROPOINT_MAG - 2.5 * Math.log10(fluxG);
+      magR = NANOMAGGY_ZEROPOINT_MAG - 2.5 * Math.log10(fluxR);
+      magI = fluxZ > 0 ? NANOMAGGY_ZEROPOINT_MAG - 2.5 * Math.log10(fluxZ) : NaN;
+    } else {
+      // LRG/ELG/QSO: no fluxes on disk. Apparent magnitude from the
+      // population's characteristic absolute magnitude via the
+      // distance modulus m − M = 5·log10(d_L / 10 pc), with
+      // d_L = (1 + z)·d_C the luminosity distance and 1e5 the
+      // Mpc → 10 pc unit factor.
+      const dL = (1 + z) * redshiftToDistanceMpc(z);
+      magR = photometry.absMagR + 5 * Math.log10(dL * 1e5);
+      magG = magR + photometry.gMinusR;
+      magI = NaN;
+    }
+
+    records.push({
+      source: Source.DesiDeep,
+      // TARGETID is DESI's stable 64-bit object identifier — same slot
+      // repurposing as GLADE's PGC-in-objID: consumers branch on
+      // `source` to interpret the value.
+      objID: readInt64Cell(view, rowStart + colTargetId.byteOffset, colTargetId),
+      ra,
+      dec,
+      z,
+      spectroscopicZ: z,
+      // DESI's g/r/z optical bands map onto the SDSS-shaped slots as
+      // g → magG, r → magR, z(band) → magI (see DESI_DEEP_ENTRY's
+      // bandLabels); no u or true i coverage exists.
+      magU: NaN,
+      magG,
+      magR,
+      magI,
+      magZ: NaN,
+      // No shape/orientation/size columns in any LSS clustering file —
+      // the GLADE no-measurement shape: nulls route the row through the
+      // pipeline's deterministic fallbackOrientation + default diameter.
+      axisRatio: null,
+      positionAngleDeg: null,
+      diameterKpc: null,
+      classByte,
+      parentSurveyByte: 0,
+    });
+  }
+
+  return { records, skipped };
 }

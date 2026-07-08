@@ -6,7 +6,7 @@
 | Product       | LSS clustering catalogs, `LSScats/v1.5` |
 | Licence       | CC BY 4.0 |
 | Upstream URL  | https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/ |
-| Row stride    | 117 bytes/row, 18 columns |
+| Row layout    | Varies per tracer (see "Columns skymap consumes" below) |
 | Cap           | NGC only (north galactic cap — the CrB cone sits inside it; SGC is not fetched) |
 
 ## Files
@@ -40,20 +40,45 @@ combined `desi_dr1_lss.sha256` sidecar on completion.
 
 ## Columns skymap consumes
 
-Of the 18 columns in each file, skymap's parser (`tools/parsers/desiFits.ts`)
-reads:
+Column sets vary per tracer (verified live 2026-07-07 against the NGC
+extension headers):
+
+| File            | Columns | Bytes/row | Flux columns |
+|-----------------|--------:|----------:|--------------|
+| BGS_BRIGHT      |      18 |       117 | lowercase `flux_g/r/z/w1/w2_dered` (f4) |
+| LRG             |      13 |        97 | none |
+| ELG_LOPnotqso   |      15 |       113 | none |
+| QSO             |      14 |       105 | none |
+
+Skymap's parser (`parseDesiClustering` in `tools/parsers/desiFits.ts`,
+column lookup case-insensitive) reads from **all** tracers:
 
 | Column           | Type | Role |
 |------------------|------|------|
 | `TARGETID`       | i8   | Unique object ID — dedup key into `crossMatch` |
 | `RA`, `DEC`      | f8   | Position, degrees (J2000) |
 | `Z`              | f8   | Spectroscopic redshift — feeds `redshiftToDistanceMpc` |
-| `FLUX_G_DERED`   | f4   | Dust-corrected g-band flux, nanomaggies → magG |
-| `FLUX_R_DERED`   | f4   | Dust-corrected r-band flux, nanomaggies → magR |
-| `FLUX_Z_DERED`   | f4   | Dust-corrected z-band flux, nanomaggies → magI slot |
 
-`mag = 22.5 − 2.5·log10(flux)`; rows with non-positive g or r flux are
-dropped. The remaining columns are clustering weights + random-catalog
+and from **BGS_BRIGHT only** (the other three tracers carry no
+photometry at all — positions + clustering weights only):
+
+| Column           | Type | Role |
+|------------------|------|------|
+| `flux_g_dered`   | f4   | Dust-corrected g-band flux, nanomaggies → magG |
+| `flux_r_dered`   | f4   | Dust-corrected r-band flux, nanomaggies → magR |
+| `flux_z_dered`   | f4   | Dust-corrected z-band flux, nanomaggies → magI slot |
+
+BGS: `mag = 22.5 − 2.5·log10(flux)`; rows with non-positive g or r flux
+are dropped (a non-positive z-band flux keeps the row with a NaN magI).
+
+LRG/ELG/QSO: display magnitudes are synthesized from per-tracer constants
+(`tools/parsers/desiTracerDisplay.ts`, decision 2026-07-07): magR = the
+population's characteristic absolute r magnitude + the ΛCDM distance
+modulus at the row's redshift; magG = magR + a fixed per-population g−r
+colour. Display tuning knobs, not per-object photometry — every row of a
+tracer at a given z gets the same magnitude.
+
+The remaining columns are clustering weights + random-catalog
 bookkeeping that skymap ignores. No shape/orientation columns — DESI rows
 take GLADE's no-PA fallback path (axis ratio 1, fallback flag set).
 
