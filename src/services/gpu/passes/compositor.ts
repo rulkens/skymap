@@ -4,8 +4,12 @@
  * one draw through this factory:
  *
  *   - HDR → swap chain with tone-mapping   (blend 'replace', tone set)
- *   - foreground LDR layer OVER the swap    (blend 'over', tone null)
+ *   - foreground LDR layer OVER the swap    (blend 'over', tone set)
  *   - additive field contribution → HDR     (blend 'additive', tone null)
+ *
+ * Tone-null is the general pass-through for a source that is already
+ * display-ready; the foreground-over composite is the one exception — it
+ * shares the HDR composite's tone object, so it runs tone-enabled too.
  *
  * Before this primitive, each of those lived in its own bespoke pass
  * (`postProcess.ts`, a foreground compositor, `volumeUpsample.ts`) with

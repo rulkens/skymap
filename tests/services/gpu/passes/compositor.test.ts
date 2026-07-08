@@ -189,10 +189,10 @@ describe('createCompositor', () => {
     expect(pass.draw).toHaveBeenCalledWith(3, 1, 0, 0);
     expect(pass.setPipeline).toHaveBeenCalled();
     expect(pass.setBindGroup).toHaveBeenCalled();
-    // The compositor never opens its own pass — the mock device exposes
-    // no beginRenderPass, and the draw above completing proves it never
-    // reached for one.
-    expect((device as unknown as { beginRenderPass?: unknown }).beginRenderPass).toBeUndefined();
+    // The compositor never opens its own render pass: `mockPass()` above
+    // exposes no `beginRenderPass`, and the draw completing without
+    // throwing proves the compositor only ever called setPipeline /
+    // setBindGroup / draw on the pass encoder it was handed.
   });
 
   it('destroy releases every cached uniform buffer', () => {

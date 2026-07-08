@@ -4,14 +4,16 @@
 // 'u.toneEnabled':
 //
 //   toneEnabled == 0 — raw pass-through. The source is already display-
-//     ready (an LDR foreground layer) or is an additive HDR contribution
-//     whose values legitimately exceed 1.0; either way we must NOT clamp
-//     or reshape it. The blend hardware, not the shader, decides how it
-//     lands in the target.
+//     ready, or is an additive HDR contribution whose values legitimately
+//     exceed 1.0; either way we must NOT clamp or reshape it. The blend
+//     hardware, not the shader, decides how it lands in the target.
+//     (The planned foreground-galaxy 'over' composite is the exception:
+//     it runs tone ENABLED, sharing the HDR composite's tone object, so
+//     it does not take this branch.)
 //   toneEnabled == 1 — apply exposure then one of five tone curves to
 //     compress HDR into display range, exactly as the old toneMap pass.
 //
-// Curves, branched on 'u.curve' (unchanged from toneMap/fragment.wesl):
+// Curves, branched on 'u.curve' (unchanged from the tone-map pass this superseded):
 //   curve=0 — Linear / Clamp.  Pre-HDR baseline, no tone mapping.
 //   curve=1 — Reinhard-extended 'c·(1 + c/W²) / (1+c)'.  Default.
 //   curve=2 — Asinh / Lupton 2004 'asinh(k·c) / asinh(k)'.  Lifts dim.

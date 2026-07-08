@@ -5,7 +5,7 @@
  * `const` object in `src/data/toneMapCurve.ts` carries the value-level
  * literals (0..4) that land verbatim in the shader's `curve: u32`
  * uniform.  The numeric values are part of the GPU contract — DON'T
- * renumber without also updating `toneMap.wgsl`.
+ * renumber without also updating the curve dispatch in `src/services/gpu/shaders/compositor/fragment.wesl`.
  *
  * Curves:
  *   - 0 Linear / Clamp — no tone mapping; pre-HDR baseline.

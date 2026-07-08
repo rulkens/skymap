@@ -15,7 +15,9 @@ export type ToneMap = {
   /**
    * Tone-mapping curve selector. Deliberately narrowed from a bare `number`
    * to enforce the existing `ToneMapCurve` literal union (0..4), keeping
-   * this contract with `toneMap.wgsl` synchronized.
+   * this contract synchronized with the curve dispatch in
+   * `src/services/gpu/shaders/compositor/fragment.wesl` and the curve math
+   * in `src/services/gpu/shaders/lib/tonemap.wesl`.
    */
   readonly curve: ToneMapCurve;
 };
