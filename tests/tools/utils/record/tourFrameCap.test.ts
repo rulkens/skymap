@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { tourFrameCap } from '../../../../tools/utils/record/tourFrameCap';
-import { clipDurationSec } from '../../../../tools/utils/animation/clipDurationSec';
 import { dwellDrift } from '../../../../src/state/tour/dwellDrift';
 import type { BeatData } from '../../../../src/@types/animation/tour/BeatData';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
@@ -21,13 +20,13 @@ describe('tourFrameCap', () => {
     ];
     const fps = 30;
 
-    const authoredSec = beats.reduce((sum, beat) => {
-      const enter = beat.enterClip ? clipDurationSec(beat.enterClip) : 0;
-      const dwell = clipDurationSec(beat.dwellClip);
-      return sum + enter + dwell;
-    }, 0);
-    const expected = Math.ceil((authoredSec * 1.25 + 10) * fps);
-
-    expect(tourFrameCap(beats, fps)).toBe(expected);
+    // Hand-computed, NOT re-derived from the implementation's formula:
+    //   beat 1: enter = NARRATION_CLIP (empty timeline)      = 0 s
+    //           dwell = dwellDrift(8) (one 8 s `all` node)    = 8 s
+    //   beat 2: no enterClip                                  = 0 s
+    //           dwell = dwellDrift(5)                         = 5 s
+    //   authoredSec = 13
+    //   cap = ceil((13 × 1.25 + 10) × 30) = ceil(26.25 × 30) = ceil(787.5)
+    expect(tourFrameCap(beats, fps)).toBe(788);
   });
 });

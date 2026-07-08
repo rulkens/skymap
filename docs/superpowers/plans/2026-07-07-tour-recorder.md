@@ -196,10 +196,10 @@ export type SkymapRecorderHook = {
 
 **Files:** `tools/record/README.md` (new), `CLAUDE.md` (one line in Commands), plus whatever the radar names.
 
-- [ ] Run the `entanglement-radar` skill over the full plan diff; fix what it names (candidates to watch: the cinema branch duplicating App JSX; the hook's ready-predicate braiding engine status with load progress; harness flow mixing capture and encode concerns).
-- [ ] `tools/record/README.md` — short: prerequisites (ffmpeg on host, `npm run dev` running, GPU), usage (`record-tour` flags + the `spike-virtual-time` diagnostic), beat indices are the 0-based `tour-length` numbers, take-time expectations (~100–500 ms per 4K frame → a full ~6-min take is 1–3 h; iterate with `--beats`).
-- [ ] `CLAUDE.md` Commands block: one line for `npm run record-tour` (offline tour recorder; see tools/record/README.md).
-- [ ] Full `npm test` + `npm run typecheck` + `npm run build` green. Commit.
+- [x] Run the `entanglement-radar` skill over the full plan diff; fix what it names (candidates to watch: the cinema branch duplicating App JSX; the hook's ready-predicate braiding engine status with load progress; harness flow mixing capture and encode concerns).
+- [x] `tools/record/README.md` — short: prerequisites (ffmpeg on host, `npm run dev` running, GPU), usage (`record-tour` flags + the `spike-virtual-time` diagnostic), beat indices are the 0-based `tour-length` numbers, take-time expectations (~100–500 ms per 4K frame → a full ~6-min take is 1–3 h; iterate with `--beats`).
+- [x] `CLAUDE.md` Commands block: one line for `npm run record-tour` (offline tour recorder; see tools/record/README.md).
+- [x] Full `npm test` + `npm run typecheck` + `npm run build` green. Commit.
 
 ---
 

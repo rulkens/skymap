@@ -80,6 +80,7 @@ npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs
 npm run build-tiers # alias for build-all — emits per-tier .bin variants
 npm run format      # prettier
+npm run record-tour # offline 4K tour recorder → tools/record/README.md
 ```
 
 Currently 590+ tests passing across 76 files. Keep it green.

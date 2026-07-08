@@ -142,6 +142,11 @@ export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
           // no-op), a Prev back to `from` is a live in-tour transition, and a
           // full run's beat-0 fold equals the live baseline. In practice only
           // recorder-driven runs pass a range, so the UI never waits here.
+          //
+          // POSITION MATTERS: the recorder discards exactly this much virtual
+          // time from the START of a take (tools/record/recordTour.ts settle
+          // loop), so this delay must stay a windowed run's FIRST virtual-time
+          // consumer — after any other timer/waitUntil, the film's head desyncs.
           if (firstEntry && range !== undefined && from > 0) {
             yield* delay(FOLD_SETTLE_MS);
           }

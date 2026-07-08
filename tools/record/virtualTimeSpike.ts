@@ -89,11 +89,12 @@
  * is non-zero if either assertion fails.
  */
 
-import { chromium, type Browser, type CDPSession, type Page } from '@playwright/test';
+import { chromium, type Browser, type Page } from '@playwright/test';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { grantAndAwaitExpiry } from './grantAndAwaitExpiry';
 
 // 640x360 keeps screenshot latency low; the recorder itself will run larger.
 const VIEWPORT = { width: 640, height: 360 };
@@ -113,9 +114,6 @@ const DETERMINISM_MEAN_THRESHOLD = 1.0;
 // Real-time boot waits.
 const UPLOAD_LOG_TIMEOUT_MS = 30_000;
 const BOOT_SETTLE_MS = 3_000;
-// A grant whose virtualTimeBudgetExpired never fires means the pipeline is
-// dead — fail loudly instead of hanging.
-const BUDGET_EXPIRED_TIMEOUT_MS = 15_000;
 
 const AUTO_ROTATE_SELECTOR = 'button[aria-label="Start camera auto-rotate"]';
 
@@ -186,45 +184,7 @@ async function waitForConsoleLine(
   return false;
 }
 
-/**
- * Grant one virtual-time budget and await its expiry. The listener is
- * attached before the grant is sent — the event can fire before send()
- * resolves, and attaching after would drop it.
- */
-async function grantAndAwaitExpiry(
-  session: CDPSession,
-  budgetMs: number,
-  label: string,
-): Promise<void> {
-  let onExpired: () => void = () => {};
-  const expired = new Promise<void>((resolve) => {
-    onExpired = () => resolve();
-    session.once('Emulation.virtualTimeBudgetExpired', onExpired);
-  });
-  await session.send('Emulation.setVirtualTimePolicy', {
-    policy: 'pauseIfNetworkFetchesPending',
-    budget: budgetMs,
-  });
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () =>
-        reject(
-          new Error(
-            `virtualTimeBudgetExpired never fired within ${BUDGET_EXPIRED_TIMEOUT_MS} ms ` +
-              `(${label}) — the virtual-time pipeline is stalled`,
-          ),
-        ),
-      BUDGET_EXPIRED_TIMEOUT_MS,
-    );
-  });
-  try {
-    await Promise.race([expired, timeout]);
-  } finally {
-    clearTimeout(timer);
-    session.off('Emulation.virtualTimeBudgetExpired', onExpired);
-  }
-}
+// Virtual-time stepping: grantAndAwaitExpiry.ts carries the CDP invariants.
 
 /**
  * One full capture run in a fresh browser context: boot in real time, pause
@@ -347,6 +307,8 @@ async function main(): Promise<void> {
   // by default is stale on that point. If this channel is not installed
   // (npx playwright install chromium), the known-working fallback is the
   // shell with args ['--enable-unsafe-webgpu', '--use-angle=metal'].
+  // Deliberately NO launch fallback here (unlike recordTour's launchChromium):
+  // the spike diagnoses the canonical channel path, so it must fail on it.
   const browser = await chromium.launch({ channel: 'chromium' });
   let run1: Awaited<ReturnType<typeof captureRun>>;
   let run2: Awaited<ReturnType<typeof captureRun>>;

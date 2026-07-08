@@ -19,7 +19,7 @@
 
 import type { UiState } from '../../@types/ui/UiState';
 import { hasDeepLink } from '../../utils/url/hasDeepLink';
-import { isCinemaMode } from '../../utils/url/isCinemaMode';
+import { isCinemaSearch } from '../../utils/url/isCinemaSearch';
 import { CURRENT_SPLASH_VERSION, readSeenVersion, readUrlAtMount } from './splashStorage';
 
 /**
@@ -36,8 +36,10 @@ export function buildInitialUiState(): UiState {
   const { hash, search } = readUrlAtMount();
   const seen = readSeenVersion();
 
+  // Every gate reads the same readUrlAtMount() capture — no gate takes a
+  // second, live look at window.location that could disagree with it.
   let splashVisible: boolean;
-  if (isCinemaMode()) {
+  if (isCinemaSearch(search)) {
     splashVisible = false;
   } else if (hasDeepLink({ hash, search })) {
     splashVisible = false;

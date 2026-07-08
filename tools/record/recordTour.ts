@@ -74,7 +74,7 @@
  * 'chromium' channel installed.
  */
 
-import { chromium, type Browser, type CDPSession, type Page } from '@playwright/test';
+import { chromium, type Browser, type Page } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -85,6 +85,7 @@ import type { Tour } from '../../src/@types/animation/tour/Tour';
 import type { TourId } from '../../src/@types/animation/tour/TourId';
 import type { BeatRange } from '../../src/@types/animation/tour/BeatRange';
 import type { RecorderWindow } from '../../src/@types/recorder/RecorderWindow';
+import { grantAndAwaitExpiry } from './grantAndAwaitExpiry';
 import { parseBeatRange } from '../utils/record/parseBeatRange';
 import { parseSize } from '../utils/record/parseSize';
 import { buildFfmpegArgs } from '../utils/record/buildFfmpegArgs';
@@ -99,9 +100,6 @@ const HOOK_TIMEOUT_MS = 15_000;
 // awaitCaptureReady); more than a couple means the page is reload-looping,
 // not optimizing.
 const MAX_BOOT_NAVIGATIONS = 2;
-// A grant whose virtualTimeBudgetExpired never fires means the virtual-time
-// pipeline is dead — fail loudly instead of hanging.
-const BUDGET_EXPIRED_TIMEOUT_MS = 15_000;
 // Progress cadence: one 'frame N / cap' line per this many frames.
 const PROGRESS_EVERY_FRAMES = 60;
 // ffmpeg is chatty on stderr; keep only the tail for the failure report.
@@ -199,48 +197,7 @@ async function launchChromium(): Promise<Browser> {
   }
 }
 
-/**
- * Grant one virtual-time budget and await its expiry. The listener is
- * attached before the grant is sent — the event can fire before send()
- * resolves, and attaching after would drop it. Duplicated from
- * virtualTimeSpike.ts deliberately: the extraction rule covers shared PURE
- * pieces only, and this is CDP I/O — the spike stays standalone so the two
- * scripts can evolve their stepping independently.
- */
-async function grantAndAwaitExpiry(
-  session: CDPSession,
-  budgetMs: number,
-  label: string,
-): Promise<void> {
-  let onExpired: () => void = () => {};
-  const expired = new Promise<void>((resolve) => {
-    onExpired = () => resolve();
-    session.once('Emulation.virtualTimeBudgetExpired', onExpired);
-  });
-  await session.send('Emulation.setVirtualTimePolicy', {
-    policy: 'pauseIfNetworkFetchesPending',
-    budget: budgetMs,
-  });
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () =>
-        reject(
-          new Error(
-            `virtualTimeBudgetExpired never fired within ${BUDGET_EXPIRED_TIMEOUT_MS} ms ` +
-              `(${label}) — the virtual-time pipeline is stalled`,
-          ),
-        ),
-      BUDGET_EXPIRED_TIMEOUT_MS,
-    );
-  });
-  try {
-    await Promise.race([expired, timeout]);
-  } finally {
-    clearTimeout(timer);
-    session.off('Emulation.virtualTimeBudgetExpired', onExpired);
-  }
-}
+// Virtual-time stepping: grantAndAwaitExpiry.ts carries the CDP invariants.
 
 type FfmpegHandle = {
   proc: ChildProcess;

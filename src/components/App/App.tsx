@@ -194,6 +194,19 @@ export function App(): React.ReactElement {
     toggleDebugPanelOpen: dispatchToggleDebugPanelOpen,
   });
 
+  // Shared between BOTH return branches (cinema + normal) so the `id="c"`
+  // contract and the mount-only-while-touring rule each live in one place.
+  //
+  // The engine takes over this canvas's GPU context; React never writes to it
+  // after the initial render. `id="c"` matches the fullscreen CSS rule in
+  // index.html. `aria-hidden` is inert in cinema mode — gate 0 of
+  // buildInitialUiState pins the splash hidden there, so it stays undefined.
+  const canvas = <canvas ref={canvasRef} id="c" aria-hidden={splashVisible || undefined} />;
+  // Tour overlay (caption + nav) — mounted only while a tour runs. In the
+  // normal branch it sits as a SIBLING of the HUD stack, not inside it, so the
+  // `uiStackHidden` fade (which the tour triggers) doesn't also fade it.
+  const tourOverlay = tourActive && <TourOverlayContainer />;
+
   // Cinema mode (`?cinema`) — the recorder's capture surface: the canvas plus
   // the tour overlay (captions + nav), nothing else. The recorder harness
   // screenshots this page, so the HUD chrome must not EXIST in the DOM;
@@ -211,18 +224,15 @@ export function App(): React.ReactElement {
   if (isCinemaMode()) {
     return (
       <>
-        <canvas ref={canvasRef} id="c" />
-        {tourActive && <TourOverlayContainer />}
+        {canvas}
+        {tourOverlay}
       </>
     );
   }
 
   return (
     <>
-      {/* The engine takes over this canvas's GPU context; React never
-          writes to it after the initial render.  `id="c"` matches the
-          fullscreen CSS rule in index.html. */}
-      <canvas ref={canvasRef} id="c" aria-hidden={splashVisible || undefined} />
+      {canvas}
 
       {/* HUD wrapper.  All overlay chrome lives inside this single
           `<div>` so `Tab` can fade the whole stack via one CSS
@@ -274,10 +284,7 @@ export function App(): React.ReactElement {
           />
         )}
       </div>
-      {/* Tour overlay — sibling of the HUD stack, not inside it, so the
-          `uiStackHidden` fade (which the tour triggers) doesn't also fade the
-          caption + nav. Mounted only while a tour runs. */}
-      {tourActive && <TourOverlayContainer />}
+      {tourOverlay}
       <SplashContainer />
     </>
   );
