@@ -221,13 +221,13 @@ export function createPostProcess(init: {
 
 **Tests** (`postProcess.test.ts` — mock compositor: `{ label: 'compositor', draw: vi.fn<Compositor['draw']>(), destroy: vi.fn<() => void>() }`; mock encoder: `{ beginRenderPass: vi.fn(() => ({ end: vi.fn<() => void>() })) }`):
 
-- [ ] Update the existing three tests (`exposes view, resize, draw, destroy` / `view reflects the new texture immediately after resize` / destroy-release) to the bag call shape; the destroy test now asserts the HDR texture's destroy fired and `device.createBuffer` was **never called** (the uniform buffer is gone).
-- [ ] Add `draw opens one clearing pass on the swap view and delegates to the compositor` — `beginRenderPass` called once with `colorAttachments[0].view === swapView` and `loadOp: 'clear'`; `compositor.draw` called with the begun pass, the current HDR view, `'replace'`, and `{ exposure: 1.5, curve: 2 }` (raw, unclamped); the pass's `end` called.
-- [ ] Add `timing descriptor is spread into the internal pass only when provided` — with a descriptor, `beginRenderPass` arg has `timestampWrites`; without, the property is absent.
-- [ ] Implement; delete the shader files.
-- [ ] `npm test -- postProcess compositor toneMap initGpu.destroyReachability` → green.
-- [ ] `npm run typecheck` + `npm test` → full suite green.
-- [ ] Commit (stage `postProcess.ts`, `PostProcess.d.ts`, `initGpu.ts`, the test, and the three deletions by path).
+- [x] Update the existing three tests (`exposes view, resize, draw, destroy` / `view reflects the new texture immediately after resize` / destroy-release) to the bag call shape; the destroy test now asserts the HDR texture's destroy fired and `device.createBuffer` was **never called** (the uniform buffer is gone).
+- [x] Add `draw opens one clearing pass on the swap view and delegates to the compositor` — `beginRenderPass` called once with `colorAttachments[0].view === swapView` and `loadOp: 'clear'`; `compositor.draw` called with the begun pass, the current HDR view, `'replace'`, and `{ exposure: 1.5, curve: 2 }` (raw, unclamped); the pass's `end` called.
+- [x] Add `timing descriptor is spread into the internal pass only when provided` — with a descriptor, `beginRenderPass` arg has `timestampWrites`; without, the property is absent.
+- [x] Implement; delete the shader files.
+- [x] `npm test -- postProcess compositor toneMap initGpu.destroyReachability` → green.
+- [x] `npm run typecheck` + `npm test` → full suite green.
+- [x] Commit (stage `postProcess.ts`, `PostProcess.d.ts`, `initGpu.ts`, the test, and the three deletions by path).
 
 ---
 
