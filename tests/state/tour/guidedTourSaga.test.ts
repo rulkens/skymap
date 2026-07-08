@@ -311,6 +311,73 @@ describe('guidedTourSaga', () => {
     expect(store.getState().tour.active).toBe(false);
   });
 
+  it('collapses a reversed out-of-range window onto the clamped last beat', async () => {
+    vi.useFakeTimers();
+
+    const beats: BeatData[] = ['First', 'Second', 'Third'].map((title) => ({
+      enterClip: NARRATION_CLIP,
+      caption: { title },
+      dwellClip: dwellDrift(0.001),
+    }));
+
+    const stub = makeAutoFlyStub();
+    const { store, sagaMiddleware } = buildStore({ playClip: stub });
+    // Each end clamps into the tour bounds INDEPENDENTLY: `from: 5` → 2,
+    // `to: 2` → 2. The pre-clamp reversal disappears and the window is the
+    // single last beat — the "shortened tour" survival path: a saved
+    // recording command whose start index ran past the end still plays the
+    // nearest beat rather than erroring or silently doing nothing.
+    sagaMiddleware.run(guidedTourSaga, makeTour(beats), { from: 5, to: 2 });
+    expect(store.getState().tour.beatIndex).toBe(2);
+
+    await vi.runAllTimersAsync();
+
+    // Exactly beat 2 played (one fly + one blocked drift), then natural
+    // completion.
+    expect(stub.mock.calls.length).toBe(2);
+    expect(store.getState().tour.active).toBe(false);
+  });
+
+  it('plays nothing for an in-bounds reversed range but still completes and restores', async () => {
+    const beats: BeatData[] = ['First', 'Second', 'Third'].map((title) => ({
+      enterClip: NARRATION_CLIP,
+      caption: { title },
+      dwellClip: dwellDrift(0.001),
+    }));
+
+    const stub = makeAutoFlyStub();
+    const { store, sagaMiddleware } = buildStore({ playClip: stub });
+    store.dispatch(setVolumesEnabled(true));
+
+    // `{from: 2, to: 0}` stays reversed AFTER clamping (both ends already in
+    // bounds — contrast the collapse test above), so the window is empty and
+    // the loop body never runs. The saga must still complete its
+    // snapshot/restore sandwich normally: an empty window is a no-op take,
+    // not an error.
+    const task = sagaMiddleware.run(guidedTourSaga, makeTour(beats), { from: 2, to: 0 });
+    await task.toPromise();
+
+    expect(stub.mock.calls.length).toBe(0);
+    expect(store.getState().tour.active).toBe(false);
+    // The finally's restore merged the captured baseline back (a visual no-op
+    // here — nothing mutated mid-run — but the restore path ran to completion).
+    expect(store.getState().settings.volumes.enabled).toBe(true);
+  });
+
+  it('a beat range on an empty tour completes without playing anything', async () => {
+    const stub = makeAutoFlyStub();
+    const { store, sagaMiddleware } = buildStore({ playClip: stub });
+
+    // A zero-beat tour clamps to an empty window (`from` 0 above `to` -1)
+    // whatever the range says — the run must fall straight through to the
+    // restore, never index beats[-1].
+    const task = sagaMiddleware.run(guidedTourSaga, makeTour([]), { from: 0, to: 0 });
+    await task.toPromise();
+
+    expect(stub.mock.calls.length).toBe(0);
+    expect(store.getState().tour.active).toBe(false);
+  });
+
   it('a range take still applies the scene cues of the skipped prefix', async () => {
     // Beat 0 carries a hide cue in its enter clip, but the range starts at
     // beat 1 — beat 0 never plays at all. The reconstruction fold indexes the
