@@ -1,7 +1,8 @@
 # Tour Recorder Design — Playwright + Virtual Time + ffmpeg
 
-**Status:** Draft — approach + output format approved in brainstorm 2026-07-07;
-next step is `writing-plans`.
+**Status:** Shipped — implemented via
+`docs/superpowers/plans/completed/2026-07-07-tour-recorder.md` (PR #418);
+spike verdict + empirical amendments folded in below.
 **Date:** 2026-07-07
 **Author:** Alexander Rulkens (+ Claude)
 
