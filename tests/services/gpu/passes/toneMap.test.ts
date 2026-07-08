@@ -1,6 +1,6 @@
 /**
  * Pure-math tests for all five tone-mapping curves.  Each curve is
- * exported from `postProcess.ts` as a JS helper so it can be unit-tested
+ * exported from `compositor.ts` as a JS helper so it can be unit-tested
  * without spinning up WebGPU.  The shader uses the same arithmetic, so
  * a regression in the JS form is a regression in the shader.
  *
@@ -19,7 +19,7 @@ import {
   asinhStretch,
   gamma2,
   acesFilmic,
-} from '../../../../src/services/gpu/passes/postProcess';
+} from '../../../../src/services/gpu/passes/compositor';
 
 const ALL_CURVES = [linearClamp, reinhardExtended, asinhStretch, gamma2, acesFilmic];
 

@@ -96,6 +96,10 @@ vi.mock('../../../../src/services/gpu/passes/postProcess', () => ({
   createPostProcess: vi.fn(() => makeStub('postProcess')),
 }));
 
+vi.mock('../../../../src/services/gpu/passes/compositor', () => ({
+  createCompositor: vi.fn(() => makeStub('compositor')),
+}));
+
 vi.mock('../../../../src/services/gpu/passes/volumeOffscreen', () => ({
   createVolumeOffscreen: vi.fn(() => makeStub('volumeOffscreen')),
 }));
@@ -204,6 +208,7 @@ function makeState(): EngineState {
       pickRenderer: null,
       milkyWayPickRenderer: null,
       postProcess: null,
+      compositor: null,
       filamentRenderer: null,
       labelRenderer: null,
       markerLineRenderer: null,
@@ -275,6 +280,17 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.horizonShellRenderer).toBe(stubs.horizonShellRenderer);
   });
 
+  it('writes compositor onto state.gpu.*', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    // Same reachability claim as the other GPU-resource owners: the
+    // compositor's cached pipelines' uniform buffers need a live
+    // `state.gpu.*` reference for the destroy chain to find.
+    expect(state.gpu.compositor).toBe(stubs.compositor);
+  });
+
   it('phaseLocals no longer carries the thumbnail/milky-way renderers — they live solely on state.gpu.*', async () => {
     // `phaseLocals` carries no renderer mirror: a renderer set on
     // `state.gpu.*` is visible to every later phase, so mirroring it onto
@@ -328,6 +344,18 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.proceduralDiskRenderer).toBeNull();
     expect(state.gpu.milkyWayCloudRenderer).toBeNull();
     expect(state.gpu.horizonShellRenderer).toBeNull();
+  });
+
+  it('replaying the destroy chain reaches compositor.destroy()', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    state.gpu.compositor?.destroy();
+    state.gpu.compositor = null;
+
+    expect(stubs.compositor!.destroy).toHaveBeenCalledTimes(1);
+    expect(state.gpu.compositor).toBeNull();
   });
 
   it('destroy is safe when initGpu never ran — every state.gpu.* renderer is null and ?.destroy() no-ops', () => {
