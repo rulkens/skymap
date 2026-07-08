@@ -12,11 +12,15 @@
  * Output files: sdss.bin, 2mrs.bin, glade.bin (one per source).
  *
  * Cross-match dedup:
- *   - Priority: SDSS > 2MRS > GLADE. See `tools/crossMatch.ts` for the
- *     full algorithm and tolerances.
+ *   - Priority: SDSS > 2MRS > GLADE > DESI Deep. See `tools/crossMatch.ts`
+ *     for the full algorithm and tolerances.
  *   - GLADE is itself a pre-merged catalogue (2MPZ + 2MASS XSC + HyperLEDA
  *     + GWGC + 6dFGS + SDSS-DR12Q), so we only need to dedup it against
  *     SDSS and against 2MRS — not against its own constituents.
+ *   - DESI Deep is lowest priority: its ultra-deep cone rows are the same
+ *     galaxies the other three surveys already catalogue, so it's fed
+ *     through the same dedup pass rather than bypassing it the way
+ *     Milliquas does below (see `loadDesi` / `crossMatch.ts`).
  *
  * Why are `crossMatch` and the CLI in different files?
  *   This wrapper imports `node:fs`, `node:path`, `node:url`. The main
@@ -48,11 +52,15 @@ import { parseGladeLine, parseGlade2masxPgcLine, parseHyperLedaCsv } from '../pa
 import type { HyperLedaShapeMap } from '../parsers/glade';
 import { parseMilliquas } from '../parsers/milliquas';
 import type { MilliquasParseResult } from '../parsers/milliquas';
+import { parseDesiClustering } from '../parsers/desiFits';
+import type { DesiTracer } from '../parsers/desiFits';
 import type { ParsedRecord } from '../parsers/common';
 import { crossMatch } from './crossMatch';
 import { dropFamousMatches } from './dropFamousMatches';
 import type { FamousSkyPosition } from './dropFamousMatches';
 import { parseFamousSeed } from '../parsers/famousSeed';
+import { DESI_CONE } from './desiCone';
+import { makeConeFilter } from '../utils/math/makeConeFilter';
 
 import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
 import { raDecZToCartesian } from '../../src/utils/math/index';
@@ -338,6 +346,71 @@ function loadMilliquas(path: string | undefined): MilliquasParseResult {
 }
 
 /**
+ * Registry keys for the four DESI DR1 LSS clustering FITS files, keyed by
+ * the same `DesiTracer` union `parseDesiClustering` accepts.
+ */
+type DesiTracerFileKey = 'desi.bgs' | 'desi.lrg' | 'desi.elg' | 'desi.qso';
+
+const DESI_TRACER_FILE_KEYS: Record<DesiTracer, DesiTracerFileKey> = {
+  BGS: 'desi.bgs',
+  LRG: 'desi.lrg',
+  ELG: 'desi.elg',
+  QSO: 'desi.qso',
+};
+
+/**
+ * Load + cone-filter the four DESI DR1 LSS clustering FITS files into one
+ * merged `ParsedRecord[]`, ready to feed into `crossMatch` as `desiDeep`.
+ *
+ * Missing-file tolerant, per-tracer: the combined ~773 MB download is
+ * gitignored (`npm run fetch-desi`), so a fresh checkout without it must
+ * still build every other bin. Each of the four tracers is checked
+ * independently — a partial download (e.g. BGS present, QSO not yet
+ * fetched) still contributes whatever tracers ARE on disk, rather than
+ * an all-or-nothing gate.
+ *
+ * Buffer→ArrayBuffer gotcha: `readFileSync` returns a `Buffer`, which is
+ * a `Uint8Array` *view* over a possibly-pooled underlying `ArrayBuffer`
+ * (Node batches small allocations into shared pools for efficiency). The
+ * FITS parser wants a real `ArrayBuffer` sized to exactly this file's
+ * bytes, not the whole shared pool, so we slice `buf.buffer` down to
+ * `buf.byteOffset .. buf.byteOffset + buf.byteLength` explicitly rather
+ * than handing `buf.buffer` straight through — the naive `buf.buffer`
+ * would (at best) misalign every FITS header-card offset the parser
+ * computes, and (at worst) read a different file's neighbouring pool
+ * bytes.
+ */
+function loadDesi(): ParsedRecord[] {
+  const keep = makeConeFilter(DESI_CONE.raDeg, DESI_CONE.decDeg, DESI_CONE.radiusDeg);
+  const records: ParsedRecord[] = [];
+  let anyFilePresent = false;
+
+  for (const tracer of Object.keys(DESI_TRACER_FILE_KEYS) as DesiTracer[]) {
+    const path = rawDataPath(DESI_TRACER_FILE_KEYS[tracer]);
+    if (!existsSync(path)) {
+      process.stderr.write(`  ${path} not present — ${tracer} tracer skipped\n`);
+      continue;
+    }
+    anyFilePresent = true;
+    const buf = readFileSync(path);
+    const arrayBuf = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+    const { records: tracerRecords, skipped } = parseDesiClustering(arrayBuf, tracer, keep);
+    process.stderr.write(
+      `  ${tracer}: ${tracerRecords.length.toLocaleString()} kept in cone ` +
+        `(skipped ${skipped.toLocaleString()} data-quality drops)\n`,
+    );
+    records.push(...tracerRecords);
+  }
+
+  if (!anyFilePresent) {
+    process.stderr.write(
+      '  no DESI DR1 files present (run `npm run fetch-desi`) — desi-deep.bin will be empty/skipped\n',
+    );
+  }
+  return records;
+}
+
+/**
  * Streaming variant of `loadOrEmpty` for the GLADE catalog.
  *
  * Why a separate code path for GLADE? The released v2.3 file is ~800 MB.
@@ -529,6 +602,9 @@ async function runCli(): Promise<void> {
   process.stderr.write('parsing Milliquas…\n');
   const milliquasResult = loadMilliquas(args.milliquas);
 
+  process.stderr.write('parsing DESI Deep Field (cone-filtered)…\n');
+  const desiDeep = loadDesi();
+
   // ── Cross-pollinate PGCs from GLADE into 2MRS ──────────────────────────
   //
   // 2MRS's source file has no PGC column, so its records initially
@@ -575,10 +651,11 @@ async function runCli(): Promise<void> {
     [Source.SDSS]: sdss.length,
     [Source.TwoMRS]: twoMrs.length,
     [Source.Glade]: glade.length,
+    [Source.DesiDeep]: desiDeep.length,
   };
 
   process.stderr.write('cross-matching…\n');
-  const mergedRaw = crossMatch({ sdss, twoMrs, glade });
+  const mergedRaw = crossMatch({ sdss, twoMrs, glade, desiDeep });
   process.stderr.write(`  ${mergedRaw.length.toLocaleString()} records survived dedup\n`);
 
   // Drop catalog rows that match a famous-galaxy seed position. The famous
@@ -649,7 +726,7 @@ async function runCli(): Promise<void> {
 
   // Per-source dedup report. Subtracting kept from input gives the number
   // of records dropped as duplicates of a higher-priority survey's row.
-  for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade]) {
+  for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.DesiDeep]) {
     const kept = (bySource.get(source) ?? []).length;
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;

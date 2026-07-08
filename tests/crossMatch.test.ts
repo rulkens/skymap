@@ -68,6 +68,7 @@ describe('crossMatch', () => {
       // and dropped in favour of the higher-priority SDSS record.
       twoMrs: [rec(Source.TwoMRS, 180.0001, 0, 0.10005)],
       glade: [],
+      desiDeep: [],
     });
     expect(out).toHaveLength(1);
     expect(out[0]!.source).toBe(Source.SDSS);
@@ -82,6 +83,7 @@ describe('crossMatch', () => {
       sdss: [rec(Source.SDSS, 180, 0, 0.1)],
       twoMrs: [],
       glade: [rec(Source.Glade, 180, 0, 0.5)],
+      desiDeep: [],
     });
     expect(out).toHaveLength(2);
   });
@@ -94,6 +96,7 @@ describe('crossMatch', () => {
       sdss: [],
       twoMrs: [rec(Source.TwoMRS, 180, 0, 0.05)],
       glade: [rec(Source.Glade, 180.0001, 0, 0.05005)],
+      desiDeep: [],
     });
     expect(out).toHaveLength(1);
     expect(out[0]!.source).toBe(Source.TwoMRS);
@@ -107,7 +110,62 @@ describe('crossMatch', () => {
       sdss: [],
       twoMrs: [],
       glade: [rec(Source.Glade, 30, -25, 0.001), rec(Source.Glade, 200, -43, 0.001)],
+      desiDeep: [],
     });
     expect(out).toHaveLength(2);
+  });
+
+  // DESI Deep is the lowest-priority input — concatenated last, so it can
+  // only claim sky+z neighbourhoods nobody else already claimed. These
+  // three tests pin down the three shapes that matter: dedup against a
+  // higher-priority survey, finger-of-god preservation among DESI's own
+  // rows, and the untouched-passthrough case.
+  it('drops a DESI record within 5 arcsec and 1% z of an SDSS record (SDSS wins)', () => {
+    const out = crossMatch({
+      sdss: [rec(Source.SDSS, 180, 0, 0.1)],
+      twoMrs: [],
+      glade: [],
+      // Same ~0.36 arcsec / ~0.05% offsets as the SDSS-vs-2MRS dedup test
+      // above — well within both tolerances, so this DESI row is the
+      // low-z BGS overlap the priority rule exists to collapse away.
+      desiDeep: [rec(Source.DesiDeep, 180.0001, 0, 0.10005)],
+    });
+    expect(out).toHaveLength(1);
+    expect(out[0]!.source).toBe(Source.SDSS);
+  });
+
+  it('keeps a DESI same-sightline pair when Δz is beyond tolerance (finger-of-god survives)', () => {
+    // Two DESI rows at the identical sky position but z 0.07 vs 0.09:
+    // |Δz|/(1+min(z)) = 0.02/1.07 ≈ 1.9%, past the 1% gate, so both are
+    // real distinct cluster members rather than one row seen twice. This
+    // is the exact behaviour the deep-cone source exists to exploit —
+    // dense enough sampling that real fingers of god show up as several
+    // close-but-distinct redshifts along one line of sight.
+    const out = crossMatch({
+      sdss: [],
+      twoMrs: [],
+      glade: [],
+      desiDeep: [
+        rec(Source.DesiDeep, 233.2, 32.3, 0.07),
+        rec(Source.DesiDeep, 233.2, 32.3, 0.09),
+      ],
+    });
+    expect(out).toHaveLength(2);
+  });
+
+  it('passes a DESI-only sky region through untouched', () => {
+    // No other survey contributes anything at these positions — DESI rows
+    // with no candidate match in the grid must survive exactly as parsed.
+    const out = crossMatch({
+      sdss: [],
+      twoMrs: [],
+      glade: [],
+      desiDeep: [
+        rec(Source.DesiDeep, 233.2, 32.3, 0.07),
+        rec(Source.DesiDeep, 234.5, 31.1, 0.7),
+      ],
+    });
+    expect(out).toHaveLength(2);
+    expect(out.every((r) => r.source === Source.DesiDeep)).toBe(true);
   });
 });
