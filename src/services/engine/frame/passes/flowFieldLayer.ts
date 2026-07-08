@@ -1,10 +1,10 @@
 /**
- * flowFieldPass — CF4++ peculiar-velocity ribbon overlay.
+ * flowFieldLayer — CF4++ peculiar-velocity ribbon overlay.
  *
  * ### What it draws
  *
  * Per-particle trail ribbons threaded through the velocity field, advanced by
- * the pre-HDR compute step (`encodeFlowCompute`). This pass only DRAWS the
+ * the pre-HDR compute step (`encodeFlowCompute`). This layer only DRAWS the
  * trails the compute pass already integrated this frame — it owns no compute
  * work itself. Additive into the HDR target, like the other emission overlays.
  *
@@ -15,12 +15,12 @@
  *      with no cube there is nothing to draw, even mid-fade.
  *   2. `state.settings.flow.enabled` OR a non-zero flow fade opacity — the
  *      setting is the user's intent, a non-zero fade is the visual state. The
- *      pass stays alive while EITHER is true so a fade-out keeps drawing after
- *      the user toggles off (until opacity hits 0), mirroring `filamentsPass`.
- * The renderer-null check lives in `draw` (the `Pass.enabled` signature has no
- * `deps`), mirroring `filamentsPass`.
+ *      layer stays alive while EITHER is true so a fade-out keeps drawing after
+ *      the user toggles off (until opacity hits 0), mirroring `filamentsLayer`.
+ * The renderer-null check lives in `draw` (`ContentLayer.enabled` never
+ * receives the GPU handles), mirroring `filamentsLayer`.
  *
- * ### Why after filamentsPass
+ * ### Why after filamentsLayer
  *
  * Flow is a local-universe overlay threaded between the same galaxies the
  * filament skeleton is, so it sits with the structure layers, after filaments
@@ -29,11 +29,15 @@
  * choice (HMR-stable), not a correctness one — same rationale as filaments.
  */
 
-import type { Pass } from '../../../../@types/engine/frame/Pass';
+import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import { COSMO } from '../slabs';
 import { slotReady } from '../../../loading/slotReady';
 
-export const flowFieldPass: Pass = {
+export const flowFieldLayer: ContentLayer = {
   name: 'flow',
+  slab: COSMO,
+  target: 'hdr',
+  blend: 'additive',
 
   enabled(state, ctx) {
     // No cube committed → nothing to draw, even mid-fade.
@@ -45,19 +49,18 @@ export const flowFieldPass: Pass = {
     return state.subsystems.fades.opacityOf({ kind: 'flow' }, ctx.nowMs) > 0;
   },
 
-  draw(pass, ctx, state, deps) {
+  draw(pass, view, ctx, state) {
     // Renderer-null check here rather than in `enabled` because `enabled`
-    // doesn't receive `deps` — same pattern as filamentsPass. The renderer's
-    // own `draw` also early-returns until a field is set, so this is belt +
-    // suspenders against the bootstrap window.
-    if (deps.flowFieldRenderer === null) return;
-    // Hoist the frame clock to a local, matching filamentsPass.
+    // never receives the GPU handles — same pattern as filamentsLayer. The
+    // renderer's own `draw` also early-returns until a field is set, so
+    // this is belt + suspenders against the bootstrap window.
+    if (state.gpu.flowFieldRenderer === null) return;
+    // Hoist the frame clock to a local, matching filamentsLayer.
     const nowMs = ctx.nowMs;
-    const { vp, canvasSize } = ctx;
-    deps.flowFieldRenderer.draw(
+    state.gpu.flowFieldRenderer.draw(
       pass,
-      vp,
-      [canvasSize.width, canvasSize.height],
+      view.vp,
+      view.viewportPx,
       state.settings.flow,
       state.subsystems.fades.opacityOf({ kind: 'flow' }, nowMs),
     );

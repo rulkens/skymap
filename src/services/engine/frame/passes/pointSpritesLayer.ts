@@ -1,6 +1,6 @@
 /**
- * pointSpritesPass — instanced point-billboard draw, the headline
- * HDR pass.
+ * pointSpritesLayer — instanced point-billboard draw, the headline
+ * HDR content layer.
  *
  * ### What it draws
  *
@@ -20,12 +20,12 @@
  * ### What it reads
  *
  * - `ctx.renderer` — the bootstrap-narrowed `PointRenderer`
- * - `ctx.vp` — view-projection matrix
- * - `ctx.canvasSize` — backing-store viewport dimensions
- * - `ctx.drawCamPos` — camera position, fed to the shader's parallax
+ * - `view.vp` — this layer's resolved view-projection matrix
+ * - `view.viewportPx` — backing-store viewport dimensions
+ * - `view.camPos` — camera position, fed to the shader's parallax
  *   + brightness terms
  * - `ctx.drawPxPerRad` — radian→pixel scale for apparent-size
- *   computation
+ *   computation (slab-invariant; no `SlabView` equivalent)
  * - `ctx.visibleSourceMask` — bitmask of currently-visible source codes
  * - `state.settings.galaxyCatalogs.{sizePx,brightness,highlightFallback,realOnly,depthFade}`
  *   — point-billboard appearance knobs
@@ -34,7 +34,7 @@
  *   packed u32 the shader compares per vertex
  * - `PROCEDURAL_DISK_FADE_START_PX` / `PROCEDURAL_DISK_FADE_END_PX` —
  *   module constants from `proceduralDiskSubsystem`; kept in one place so
- *   the fade-in band (disks pass) and fade-out band (points pass) can't
+ *   the fade-in band (disks layer) and fade-out band (points layer) can't
  *   drift apart and recreate the double-bright donut artefact
  *
  * ### Selection-packed encoding
@@ -49,7 +49,8 @@
  * bits would have to encode source code 31, which we don't allocate).
  */
 
-import type { Pass } from '../../../../@types/engine/frame/Pass';
+import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import { COSMO } from '../slabs';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import {
@@ -57,8 +58,11 @@ import {
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../../../data/galaxyLodBands';
 
-export const pointSpritesPass: Pass = {
+export const pointSpritesLayer: ContentLayer = {
   name: 'point-sprites',
+  slab: COSMO,
+  target: 'hdr',
+  blend: 'additive',
 
   // Always-on.  Per-source visibility is shader-side (uniform mask),
   // not CPU-side gating.
@@ -66,9 +70,8 @@ export const pointSpritesPass: Pass = {
     return true;
   },
 
-  draw(pass, ctx, state, _deps) {
-    const { renderer, vp, canvasSize, drawCamPos, drawPxPerRad } = ctx;
-    const { width, height } = canvasSize;
+  draw(pass, view, ctx, state) {
+    const { renderer, drawPxPerRad } = ctx;
 
     // Pack the galaxy selection into the u32 the shader compares
     // against per-vertex `(sourceCode << 27u) | instance_index`.
@@ -91,25 +94,26 @@ export const pointSpritesPass: Pass = {
     // without re-running the per-frame camera drivers, and stash the
     // plain-TS camera facts (position + fovY) beside it for the CPU-side
     // Milky-Way pick helpers — one write site, so both snapshots always
-    // describe the same frame. `drawCamPos` is already a fresh
-    // non-aliasing tuple (frameContext snapshots the assembled camera),
-    // so the stash can hold the reference without a copy. A null return
-    // (zero catalogs) leaves any prior snapshot in place — both pick
-    // paths gate on catalogs.size > 0 and won't consume a stale snapshot.
-    const bytes = renderer.draw(pass, vp, [width, height], {
+    // describe the same frame. `view.camPos` is already a fresh
+    // non-aliasing tuple (`slabViewOf` copies the camera position per
+    // render step), so the stash can hold the reference without a copy.
+    // A null return (zero catalogs) leaves any prior snapshot in place —
+    // both pick paths gate on catalogs.size > 0 and won't consume a stale
+    // snapshot.
+    const bytes = renderer.draw(pass, view.vp, view.viewportPx, {
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
       selectedPacked,
       visibleSourceMask: ctx.visibleSourceMask,
-      camPosWorld: drawCamPos,
+      camPosWorld: view.camPos,
       pxPerRad: drawPxPerRad,
       highlightFallback: state.settings.galaxyCatalogs.highlightFallback,
       realOnlyMode: state.settings.galaxyCatalogs.realOnly,
       biasMode: state.settings.bias.mode,
       absMagLimit: state.settings.bias.absMagLimit,
       depthFadeEnabled: state.settings.galaxyCatalogs.depthFade,
-      // The points-pass fragment fades alpha to zero across the same
-      // apparent-pixel-size band the procedural-disk pass fades IN over.
+      // The points-layer fragment fades alpha to zero across the same
+      // apparent-pixel-size band the procedural-disk layer fades IN over.
       // Both thresholds come from one source of truth so they can't drift
       // apart and re-introduce the double-bright donut artefact.
       pxFadeStart: PROCEDURAL_DISK_FADE_START_PX,
@@ -129,7 +133,7 @@ export const pointSpritesPass: Pass = {
     });
     if (bytes !== null) {
       state.picking.lastFrameUniformBytes = bytes;
-      state.picking.lastFrameCam = { position: drawCamPos, fovYRad: ctx.fovYRad };
+      state.picking.lastFrameCam = { position: view.camPos, fovYRad: ctx.fovYRad };
     }
   },
 };

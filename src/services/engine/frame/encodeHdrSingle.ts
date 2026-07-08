@@ -34,8 +34,8 @@
 
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import { HDR_PASSES } from './passes';
+import { COSMO, slabViewOf } from './slabs';
 import { encodeVolumePrepass } from './encodeVolumePrepass';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { slotReady } from '../../loading/slotReady';
@@ -44,14 +44,13 @@ export function encodeHdrSingle(
   encoder: GPUCommandEncoder,
   ctx: ReadyFrameContext,
   state: EngineState,
-  deps: PassDeps,
 ): void {
   // ── Half-resolution scalar-volume pre-pass ────────────────────────────
   //
   // Runs BEFORE the HDR mega-pass opens.  Encodes one render pass against
   // the half-res offscreen target so every active scalar-field cube can
   // raymarch into a quarter-fragment target.  The downstream
-  // `volumeUpsamplePass` (one of the HDR_PASSES entries) bilinearly samples
+  // `volumeUpsampleLayer` (one of the HDR_PASSES entries) bilinearly samples
   // the half-res target and additively blends into the HDR target.
   //
   // Shared with `encodeHdrSplit` via `encodeVolumePrepass`; this path
@@ -62,7 +61,7 @@ export function encodeHdrSingle(
 
   // ── Flow-field compute pre-pass ───────────────────────────────────────
   // Encodes the particle seed/integrate compute into this same encoder,
-  // before the HDR mega-pass, so the ribbon draw (flowFieldPass) reads
+  // before the HDR mega-pass, so the ribbon draw (flowFieldLayer) reads
   // freshly-advanced trails. Self-gates on enabled + loaded.
   encodeFlowCompute({
     encoder,
@@ -84,15 +83,18 @@ export function encodeHdrSingle(
   });
 
   // `settings.debug.disabledPasses` is the DebugPanel's renderer-toggle
-  // surface — checked AFTER the pass's own `enabled()` gate so the override is
-  // one-way (hides a pass that would otherwise run; can never force-enable a
-  // pass whose gate returned false).  Read once off the live settings snapshot;
+  // surface — checked AFTER the layer's own `enabled()` gate so the override is
+  // one-way (hides a layer that would otherwise run; can never force-enable a
+  // layer whose gate returned false).  Read once off the live settings snapshot;
   // empty in production, so the membership lookup is in the noise.
   const disabledPasses = state.settings.debug.disabledPasses;
-  for (const pass of HDR_PASSES) {
-    if (!pass.enabled(state, ctx)) continue;
-    if (disabledPasses[pass.name] === true) continue;
-    pass.draw(hdrPass, ctx, state, deps);
+  // Every HDR_PASSES entry draws through the same cosmological slab, so the
+  // SlabView is resolved once here rather than per layer.
+  const view = slabViewOf(ctx, COSMO);
+  for (const layer of HDR_PASSES) {
+    if (!layer.enabled(state, ctx)) continue;
+    if (disabledPasses[layer.name] === true) continue;
+    layer.draw(hdrPass, view, ctx, state);
   }
 
   hdrPass.end();

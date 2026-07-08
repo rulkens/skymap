@@ -1,5 +1,5 @@
 /**
- * filamentsPass — cosmic-web filament-skeleton overlay.
+ * filamentsLayer — cosmic-web filament-skeleton overlay.
  *
  * ### What it draws
  *
@@ -12,7 +12,7 @@
  *
  * Gated on TWO conditions:
  *   1. `state.settings.filaments.enabled` — user toggle (off by default).
- *   2. `deps.filamentRenderer !== null` — the binary is an optional
+ *   2. `state.gpu.filamentRenderer !== null` — the binary is an optional
  *      asset.  When the deployment doesn't ship `filaments.bin`,
  *      `state.gpu.filamentRenderer` is constructed but never
  *      populated; we treat that as "disabled" so the toggle's UI
@@ -30,7 +30,7 @@
  *
  * ### Why between thumbnails and Milky Way
  *
- * The pre-D.2 inline order was points → thumbnails → filaments →
+ * The pre-unification inline order was points → thumbnails → filaments →
  * milky-way, and that order is preserved by `HDR_PASSES` in
  * `index.ts`.  Rationale: the filament skeleton is a *local-universe
  * overlay* threaded between the galaxies it was computed from, so
@@ -44,7 +44,8 @@
  * about), not a correctness one.
  */
 
-import type { Pass } from '../../../../@types/engine/frame/Pass';
+import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import { COSMO } from '../slabs';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 /**
@@ -56,16 +57,16 @@ import { resolveLayerOpacity } from '../../presentation/focusRecession';
  */
 const FILAMENT_LINE_HALFWIDTH_PX = 1.5;
 
-export const filamentsPass: Pass = {
+export const filamentsLayer: ContentLayer = {
   name: 'filaments',
+  slab: COSMO,
+  target: 'hdr',
+  blend: 'additive',
 
-  // The renderer-presence check is part of the gate (not a guard
-  // inside `draw`) so tests can assert the gate flips correctly
-  // when the binary fails to load.  We have to look at deps via the
-  // closure — `enabled` doesn't take `deps` directly because most
-  // passes don't need it.  Workaround: read the live setting and
-  // accept that the renderer check happens in `draw` (skipping
-  // there is equivalent CPU cost).
+  // The renderer-presence check belongs in `draw` (see below), not here —
+  // `ContentLayer.enabled` never receives the GPU handles (they live on
+  // `state.gpu.*`, read directly by `draw`), so `enabled` reads the live
+  // setting and accepts that a null renderer is checked at draw time.
   //
   // Update: the runtime `draw` short-circuits anyway via the
   // `filamentRenderer === null` early return; `enabled` returning
@@ -75,29 +76,27 @@ export const filamentsPass: Pass = {
     // state. We render whenever EITHER is true so a fade-out continues
     // drawing after the user toggles off (until opacity hits 0). The
     // toggle handler in engine.ts flips the setting AND fires fadeTo
-    // synchronously; this gate is what keeps the pass alive through the
+    // synchronously; this gate is what keeps the layer alive through the
     // ~100 ms ramp.
     if (state.settings.filaments.enabled) return true;
     return state.subsystems.fades.opacityOf({ kind: 'filament' }, ctx.nowMs) > 0;
   },
 
-  draw(pass, ctx, state, deps) {
+  draw(pass, view, ctx, state) {
     // Renderer-null check lives here rather than in `enabled` because
-    // `enabled` doesn't receive `deps`.  Keeping this as a defensive
-    // early-return makes the `enabled === true → draw runs` invariant
-    // robust against a future deps-bag change that adds the renderer
-    // to a cached snapshot the gate could read.
-    if (deps.filamentRenderer === null) return;
+    // `enabled` doesn't receive the GPU handles.  Keeping this as a
+    // defensive early-return makes the `enabled === true → draw runs`
+    // invariant robust against a future `state.gpu` shape change.
+    if (state.gpu.filamentRenderer === null) return;
 
     // Hoist the frame clock to a local — only one consumer here
     // (filaments is single-instance, not per-source), but the pattern
-    // matches pointSpritesPass.ts so future readers can copy-paste.
+    // matches pointSpritesLayer.ts so future readers can copy-paste.
     const nowMs = ctx.nowMs;
-    const { vp, canvasSize } = ctx;
-    deps.filamentRenderer.draw(
+    state.gpu.filamentRenderer.draw(
       pass,
-      vp,
-      [canvasSize.width, canvasSize.height],
+      view.vp,
+      view.viewportPx,
       FILAMENT_LINE_HALFWIDTH_PX,
       state.settings.filaments.intensity,
       // Focus recession is applied HERE (on the drawn opacity), not on the

@@ -39,6 +39,7 @@ import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { COSMO } from '../../../../src/services/engine/frame/slabs';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
@@ -48,6 +49,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 
 // ── Mock timing service ────────────────────────────────────────────────────
 //
@@ -187,12 +189,23 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const canvasWidth = 1280;
   const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
   const viewProj = new Float32Array(16) as unknown as Mat4;
+  // The HDR encoders resolve one SlabView (COSMO) before the layer loop
+  // via `slabViewOf(ctx, COSMO)`, which indexes `ctx.slabs[COSMO]`
+  // directly — this fixture needs a real row there.
+  const cosmoSlab: Slab = {
+    index: COSMO,
+    nearMpc: 0.01,
+    farMpc: 50000,
+    vp: Float64Array.from(viewProj as unknown as Float32Array),
+    originRelative: false,
+    precision: 'f32',
+  };
 
   const ctx = {
     isReady: true as const,
     cam,
     vp: viewProj,
-    slabs: [],
+    slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: canvasWidth, height: canvasHeight },
     drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
       [number, number, number]
@@ -239,10 +252,18 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         volumeFieldRenderer: null,
         flowFieldRenderer: null,
         structureMarkerRenderer: null,
-        // milkyWayPass.draw reads the generated cloud buffers off this handle.
+        // milkyWayLayer.draw reads the generated cloud buffers off this handle.
         milkyWayCloud: {
           buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }),
         },
+        // The five renderers `ContentLayer.draw` reads straight off
+        // `state.gpu.*` — same mock instances forwarded via the top-level
+        // `input.*` fields below (still read by `PassDeps` for `UI_PASSES`).
+        milkyWayCloudRenderer,
+        horizonShellRenderer,
+        texturedDiskRenderer,
+        proceduralDiskRenderer,
+        filamentRenderer: null,
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
       // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.

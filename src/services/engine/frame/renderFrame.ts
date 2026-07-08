@@ -9,9 +9,9 @@
  * and the post-tone-map UI overlay — see "What the encoder records,
  * in order" below.
  *
- * Each entry in `HDR_PASSES` is a `Pass` const declared in its own
- * file under `passes/`.  See `passes/types.ts` for the interface
- * contract and `passes/index.ts` for the canonical draw order.
+ * Each entry in `HDR_PASSES` is a `ContentLayer` const declared in its own
+ * file under `passes/`.  See `@types/engine/frame/ContentLayer.d.ts` for the
+ * interface contract and `passes/index.ts` for the canonical draw order.
  *
  * ### Why pass an explicit input bag instead of capturing closure?
  *
@@ -106,11 +106,12 @@ export function renderFrame(input: RenderFrameInput): void {
     timingService,
   } = input;
 
-  // Bundle the renderer references each pass might need into a single
-  // `PassDeps` bag.  We build it once per frame rather than rebuilding
-  // it inside the loop because the references are stable for the
-  // duration of `renderFrame`'s execution.  See `passes/types.ts`'s
-  // `PassDeps` declaration for the per-field rationale.
+  // Bundle the renderer references `UI_PASSES` might need into a single
+  // `PassDeps` bag.  The nine HDR layers no longer read this bag — they're
+  // `ContentLayer`s now and read their renderers straight off `state.gpu.*`
+  // (see `passes/index.ts`) — but `UI_PASSES` is still `Pass`-shaped until
+  // a follow-up task converts it, so `encodeUiOverlay` below still needs
+  // `deps`.  See `PassDeps.d.ts` for the per-field rationale.
   const deps: PassDeps = {
     texturedDiskRenderer,
     proceduralDiskRenderer,
@@ -151,9 +152,9 @@ export function renderFrame(input: RenderFrameInput): void {
 
   const timingCtx = timingService.beginFrame();
   if (timingService.enabled) {
-    encodeHdrSplit(encoder, ctx, state, deps, timingService);
+    encodeHdrSplit(encoder, ctx, state, timingService);
   } else {
-    encodeHdrSingle(encoder, ctx, state, deps);
+    encodeHdrSingle(encoder, ctx, state);
   }
   ctx.postProcess.draw(
     encoder,

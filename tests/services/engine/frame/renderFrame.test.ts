@@ -23,6 +23,7 @@ import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import { COSMO } from '../../../../src/services/engine/frame/slabs';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
@@ -30,6 +31,7 @@ import {
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
+import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
 
@@ -287,11 +289,22 @@ function makeInput(
   const canvasWidth = 1280;
   const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
   const viewProj = new Float32Array(16) as unknown as Mat4;
+  // The HDR encoders resolve one SlabView (COSMO) before the layer loop
+  // via `slabViewOf(ctx, COSMO)`, which indexes `ctx.slabs[COSMO]`
+  // directly — this fixture needs a real row there.
+  const cosmoSlab: Slab = {
+    index: COSMO,
+    nearMpc: 0.01,
+    farMpc: 50000,
+    vp: Float64Array.from(viewProj as unknown as Float32Array),
+    originRelative: false,
+    precision: 'f32',
+  };
   const ctx = {
     isReady: true as const,
     cam,
     vp: viewProj,
-    slabs: [],
+    slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: canvasWidth, height: canvasHeight },
     drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
       [number, number, number]
@@ -358,8 +371,18 @@ function makeInput(
           volumeFieldRenderer: null,
           flowFieldRenderer: null,
           structureMarkerRenderer: null,
-          // milkyWayPass.draw reads the generated cloud buffers off this handle.
+          // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud,
+          // The five renderers `ContentLayer.draw` reads straight off
+          // `state.gpu.*` (pre-unification these arrived only via the
+          // `PassDeps` bag built from the top-level `input.*` fields
+          // below). Both need the same mock instances so callLog order
+          // assertions (e.g. milkyWayCloudRenderer.draw) still fire.
+          milkyWayCloudRenderer,
+          horizonShellRenderer,
+          texturedDiskRenderer,
+          proceduralDiskRenderer,
+          filamentRenderer: null,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
         // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the
@@ -482,7 +505,12 @@ describe('renderFrame', () => {
     // Signature: (pass, viewProj, viewportPx, settings: PointDrawSettings).
     // The scalars are named fields on a single settings object.
     expect(args[0]).toBe(fx.env.pass);
-    expect(args[1]).toBe(fx.viewProj);
+    // args[1] is the resolved SlabView's `vp` — a fresh Float32Array
+    // narrowed from the cosmological slab's Float64Array row by
+    // `slabViewOf` (see `slabs.ts`), not the identical `fx.viewProj`
+    // reference the ctx fixture was built from. Value equality is the
+    // right check post-unification.
+    expect(args[1]).toEqual(fx.viewProj);
     expect(args[2]).toEqual([fx.canvasWidth, fx.canvasHeight]);
     const drawSettings = args[3] as Record<string, unknown>;
     expect(drawSettings.pointSizePx).toBe(fx.settings.pointSizePx);

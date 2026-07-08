@@ -59,6 +59,7 @@ import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
+import { COSMO } from '../../src/services/engine/frame/slabs';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
@@ -66,6 +67,7 @@ import {
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
+import type { Slab } from '../../src/@types/engine/frame/Slab';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //
@@ -284,6 +286,18 @@ describe('renderFrame visual baseline', () => {
     const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
     const viewProj = new Float32Array(16) as unknown as Mat4;
     const drawPxPerRad = canvasHeight / (2 * Math.tan(cam.fovYRad / 2));
+    // The HDR encoders resolve one SlabView (COSMO) before the layer loop
+    // via `slabViewOf(ctx, COSMO)`, which indexes `ctx.slabs[COSMO]`
+    // directly — this fixture needs a real row there, not the pre-slab
+    // `slabs: []` shape.
+    const cosmoSlab: Slab = {
+      index: COSMO,
+      nearMpc: 0.01,
+      farMpc: 50000,
+      vp: Float64Array.from(viewProj as unknown as Float32Array),
+      originRelative: false,
+      precision: 'f32',
+    };
 
     // Subsystems with non-empty lastOutput so the LOD-1 / LOD-2 passes'
     // enabled() gates report true.  We populate one item in each list —
@@ -302,6 +316,7 @@ describe('renderFrame visual baseline', () => {
       isReady: true as const,
       cam,
       vp: viewProj,
+      slabs: [cosmoSlab, cosmoSlab],
       canvasSize: { width: canvasWidth, height: canvasHeight },
       drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
         [number, number, number]
@@ -358,10 +373,22 @@ describe('renderFrame visual baseline', () => {
           flowFieldRenderer: null,
           volumeUpsample,
           structureMarkerRenderer: null,
-          // milkyWayPass.draw reads the generated cloud buffers off this handle.
+          // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud: {
             buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }),
           },
+          // The five renderers `ContentLayer.draw` now reads straight off
+          // `state.gpu.*` (pre-unification these arrived via the `PassDeps`
+          // bag built from the top-level `renderFrame` input fields below).
+          // Both need the same mock instances so their `argShape` entries
+          // land in `records` — see the top-level `milkyWayCloudRenderer` /
+          // `horizonShellRenderer` / `proceduralDiskRenderer` /
+          // `texturedDiskRenderer` / `filamentRenderer` locals.
+          milkyWayCloudRenderer,
+          horizonShellRenderer,
+          proceduralDiskRenderer,
+          texturedDiskRenderer,
+          filamentRenderer,
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.

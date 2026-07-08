@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
-import { texturedDisksPass } from '../../../../../src/services/engine/frame/passes/texturedDisksPass';
-import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
+import { texturedDisksLayer } from '../../../../../src/services/engine/frame/passes/texturedDisksLayer';
+import { COSMO } from '../../../../../src/services/engine/frame/slabs';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 
@@ -56,21 +57,30 @@ function makeCtx(): ReadyFrameContext {
   };
 }
 
-function makeDeps(): PassDeps {
+/** Minimal SlabView matching the ctx above — `vp`/`camPos`/`viewportPx` are
+ * what `draw` forwards to the renderer; `slab` is unused by this layer. */
+function makeView(ctx: ReadyFrameContext): SlabView {
   return {
-    texturedDiskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
-    proceduralDiskRenderer: { draw: vi.fn() } as any,
-    filamentRenderer: null,
-    volumeFieldRenderer: null,
-    flowFieldRenderer: null,
-    milkyWayCloudRenderer: { draw: vi.fn() } as any,
-    horizonShellRenderer: { draw: vi.fn() } as any,
-  } as PassDeps;
+    slab: { index: COSMO, nearMpc: 0.01, farMpc: 50000, vp: new Float64Array(16), originRelative: false, precision: 'f32' },
+    vp: ctx.vp as unknown as Float32Array,
+    camPos: [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
+    viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
+  };
 }
 
-describe('texturedDisksPass', () => {
+function makeTexturedDiskRenderer() {
+  return { draw: vi.fn(), bindAtlas: vi.fn() } as any;
+}
+
+describe('texturedDisksLayer', () => {
   it('is named "textured-disks"', () => {
-    expect(texturedDisksPass.name).toBe('textured-disks');
+    expect(texturedDisksLayer.name).toBe('textured-disks');
+  });
+
+  it('carries the hdr/additive/cosmological migration-table fields', () => {
+    expect(texturedDisksLayer.slab).toBe(COSMO);
+    expect(texturedDisksLayer.target).toBe('hdr');
+    expect(texturedDisksLayer.blend).toBe('additive');
   });
 
   it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
@@ -78,7 +88,7 @@ describe('texturedDisksPass', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}], quads: [] } } },
       settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
-    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(false);
+    expect(texturedDisksLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns false when subsystem is null', () => {
@@ -86,7 +96,7 @@ describe('texturedDisksPass', () => {
       subsystems: { texturedDisks: null },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(false);
+    expect(texturedDisksLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns false when disks array is empty', () => {
@@ -94,7 +104,7 @@ describe('texturedDisksPass', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(false);
+    expect(texturedDisksLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns true when disks array is non-empty', () => {
@@ -102,26 +112,41 @@ describe('texturedDisksPass', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}] } } },
       settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(true);
+    expect(texturedDisksLayer.enabled(state, makeCtx())).toBe(true);
   });
 
-  it('draw() invokes texturedDiskRenderer.draw', () => {
+  it('draw() invokes state.gpu.texturedDiskRenderer.draw', () => {
     const disks = [{ x: 1 }];
+    const texturedDiskRenderer = makeTexturedDiskRenderer();
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks } } },
-      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup } },
+      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup }, texturedDiskRenderer },
     } as unknown as EngineState;
-    const deps = makeDeps();
-    texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, deps);
-    expect(deps.texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
+    const ctx = makeCtx();
+    texturedDisksLayer.draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state);
+    expect(texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
   });
 
   it('draw() is a no-op when disks array is empty', () => {
+    const texturedDiskRenderer = makeTexturedDiskRenderer();
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks: [] } } },
+      gpu: { texturedDiskRenderer },
     } as unknown as EngineState;
-    const deps = makeDeps();
-    texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, deps);
-    expect(deps.texturedDiskRenderer.draw).not.toHaveBeenCalled();
+    const ctx = makeCtx();
+    texturedDisksLayer.draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state);
+    expect(texturedDiskRenderer.draw).not.toHaveBeenCalled();
+  });
+
+  it('draw() is a no-op when state.gpu.texturedDiskRenderer is null (pre-bootstrap)', () => {
+    const disks = [{ x: 1 }];
+    const state = {
+      subsystems: { texturedDisks: { lastOutput: { disks } } },
+      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup }, texturedDiskRenderer: null },
+    } as unknown as EngineState;
+    const ctx = makeCtx();
+    expect(() =>
+      texturedDisksLayer.draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state),
+    ).not.toThrow();
   });
 });

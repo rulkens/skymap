@@ -31,9 +31,9 @@
 
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import { HDR_PASSES } from './passes';
+import { COSMO, slabViewOf } from './slabs';
 import { encodeVolumePrepass } from './encodeVolumePrepass';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { slotReady } from '../../loading/slotReady';
@@ -42,7 +42,6 @@ export function encodeHdrSplit(
   encoder: GPUCommandEncoder,
   ctx: ReadyFrameContext,
   state: EngineState,
-  deps: PassDeps,
   timingService: GpuTimingService,
 ): void {
   // ── Clear pass (no draws) ─────────────────────────────────────────
@@ -80,29 +79,32 @@ export function encodeHdrSplit(
     loaded: slotReady(state.assetSlots.flow),
   });
 
-  // ── HDR sub-passes — one beginRenderPass per enabled pass ─────────
+  // ── HDR sub-passes — one beginRenderPass per enabled layer ─────────
   //
-  // Each pass's `name` IS its timing-slot name: the service's slot map
-  // is built from `TIMED_SLOT_NAMES`, which splices in every HDR pass
-  // name, so `descriptorFor(pass.name)` resolves by construction.  No
-  // cast is needed (both are `string`).  Were a pass somehow absent from
-  // the registry, `descriptorFor` would return `undefined` and the pass
+  // Each layer's `name` IS its timing-slot name: the service's slot map
+  // is built from `TIMED_SLOT_NAMES`, which splices in every HDR layer
+  // name, so `descriptorFor(layer.name)` resolves by construction.  No
+  // cast is needed (both are `string`).  Were a layer somehow absent from
+  // the registry, `descriptorFor` would return `undefined` and the layer
   // would simply draw untimed; the optional-spread merge keeps the
   // descriptor byte-identical to the no-timing shape in that case.
   // DebugPanel renderer-toggle override — same one-way semantics as the
   // single-pass branch in `encodeHdrSingle`.  Read once off the live settings
-  // snapshot; the per-pass skip below happens BEFORE opening the render pass so
-  // a disabled pass costs nothing beyond the membership check (no empty
+  // snapshot; the per-layer skip below happens BEFORE opening the render pass so
+  // a disabled layer costs nothing beyond the membership check (no empty
   // `beginRenderPass` round-trip, no timestamp slot written).
   const disabledPasses = state.settings.debug.disabledPasses;
-  for (const pass of HDR_PASSES) {
-    if (!pass.enabled(state, ctx)) continue;
-    if (disabledPasses[pass.name] === true) continue;
+  // Every HDR_PASSES entry draws through the same cosmological slab, so the
+  // SlabView is resolved once here rather than per layer.
+  const view = slabViewOf(ctx, COSMO);
+  for (const layer of HDR_PASSES) {
+    if (!layer.enabled(state, ctx)) continue;
+    if (disabledPasses[layer.name] === true) continue;
 
-    const timestampWrites = timingService.descriptorFor(pass.name);
+    const timestampWrites = timingService.descriptorFor(layer.name);
 
     const passEncoder = encoder.beginRenderPass({
-      label: `hdr-${pass.name}`,
+      label: `hdr-${layer.name}`,
       colorAttachments: [
         {
           view: ctx.postProcess.view,
@@ -112,7 +114,7 @@ export function encodeHdrSplit(
       ],
       ...(timestampWrites ? { timestampWrites } : {}),
     });
-    pass.draw(passEncoder, ctx, state, deps);
+    layer.draw(passEncoder, view, ctx, state);
     passEncoder.end();
   }
 }

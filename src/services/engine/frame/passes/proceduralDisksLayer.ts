@@ -1,41 +1,54 @@
 /**
- * proceduralDisksPass — LOD-1 procedural disk impostors.
+ * proceduralDisksLayer — LOD-1 procedural disk impostors.
  *
  * Reads `state.settings.thumbnails.enabled` as the master gate, then
  * `state.subsystems.proceduralDisks.lastOutput.instances` (populated
  * by the subsystem's `runFrame` earlier in the same frame, called from
- * `runFrame.ts` before the HDR_PASSES loop opens), and issues one draw
- * call against `proceduralDiskRenderer`.
+ * `runFrame.ts` before the render-step loop opens), and issues one draw
+ * call against `state.gpu.proceduralDiskRenderer`.
  *
  * ### Why read from lastOutput instead of running the planner here
  *
  * The legacy `galaxyThumbnailsPass.draw` called `thumbnails.runFrame(...)`
  * inline, conflating "compute the per-frame state" with "issue GPU draw
  * calls".  Post-split, the planner step is hoisted to the frame body
- * (one place that calls every CPU-side subsystem) and each pass file
+ * (one place that calls every CPU-side subsystem) and each layer file
  * stays purely a GPU dispatch.  This decoupling is what makes the
- * follow-up GPU timestamp-query work cheap — each pass can open its
+ * follow-up GPU timestamp-query work cheap — each layer can open its
  * own encoder without re-running its planner.
+ *
+ * ### Why the renderer-null guard
+ *
+ * `state.gpu.proceduralDiskRenderer` is nullable pre-bootstrap (like every
+ * GPU handle on `state.gpu`); `enabled` doesn't check it (it only gates on
+ * settings + pending instances), so `draw` guards defensively — same
+ * pattern as `filamentsLayer.draw`.
  */
 
-import type { Pass } from '../../../../@types/engine/frame/Pass';
+import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import { COSMO } from '../slabs';
 
-export const proceduralDisksPass: Pass = {
+export const proceduralDisksLayer: ContentLayer = {
   name: 'procedural-disks',
+  slab: COSMO,
+  target: 'hdr',
+  blend: 'additive',
+
   enabled(state, _ctx) {
     if (!state.settings.thumbnails.enabled) return false;
     if (state.subsystems.proceduralDisks === null) return false;
     return state.subsystems.proceduralDisks.lastOutput.instances.length > 0;
   },
-  draw(pass, ctx, state, deps) {
+  draw(pass, view, ctx, state) {
     const subsys = state.subsystems.proceduralDisks;
     if (subsys === null) return;
+    if (state.gpu.proceduralDiskRenderer === null) return;
     const instances = subsys.lastOutput.instances;
-    deps.proceduralDiskRenderer.draw(
+    state.gpu.proceduralDiskRenderer.draw(
       pass,
-      ctx.vp as Float32Array,
-      [ctx.canvasSize.width, ctx.canvasSize.height],
-      [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
+      view.vp,
+      view.viewportPx,
+      view.camPos,
       ctx.drawPxPerRad,
       state.gpu.focusUniform!.bindGroup,
       instances,

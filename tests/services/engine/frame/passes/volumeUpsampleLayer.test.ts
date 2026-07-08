@@ -1,13 +1,19 @@
 /**
- * volumeUpsamplePass tests — gate predicate (five enabled() cases) and
+ * volumeUpsampleLayer tests — gate predicate (five enabled() cases) and
  * draw behaviour (the call to volumeUpsample.draw + the defensive null-
  * guard).
  *
  * These tests deliberately do not stand up a real GPUDevice — all
  * GPU-typed values are cast stubs.  The split between `enabled` and
- * `draw` (from the `Pass` interface) lets us assert the gate predicate
- * independently from the actual draw commands, which is the main reason
- * the interface exists.  See `Pass.d.ts` for the rationale.
+ * `draw` (from the `ContentLayer` interface) lets us assert the gate
+ * predicate independently from the actual draw commands, which is the
+ * main reason the interface exists.  See `ContentLayer.d.ts` for the
+ * rationale.
+ *
+ * `draw`'s second argument is a `SlabView`, but `volumeUpsampleLayer`
+ * doesn't read it — the upsample is a screen-space blit of an
+ * already-rendered offscreen target, not a re-projected draw — so the
+ * fixture below is an opaque placeholder.
  *
  * Two things that differ from the plan's code snippet (lines ~1211-1228
  * in the plan file):
@@ -23,15 +29,15 @@
  *      on `postProcess`.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { volumeUpsamplePass } from '../../../../../src/services/engine/frame/passes/volumeUpsamplePass';
+import { volumeUpsampleLayer } from '../../../../../src/services/engine/frame/passes/volumeUpsampleLayer';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
+import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Mat4 } from 'wgpu-matrix';
 
 /**
  * Build a minimal ReadyFrameContext.  The `offscreenView` parameter
- * becomes `ctx.volumeOffscreen.view` — the same value the pass reads when
+ * becomes `ctx.volumeOffscreen.view` — the same value the layer reads when
  * calling `volumeUpsample.draw(pass, ctx.volumeOffscreen.view)`.
  */
 function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFrameContext {
@@ -65,19 +71,22 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
   };
 }
 
+// `volumeUpsampleLayer.draw` never reads `view` — an opaque placeholder
+// documents that this layer is the one HDR content layer with no
+// SlabView-dependent behaviour.
+const VIEW_STUB = {} as SlabView;
+
 const PASS_STUB = {
   setPipeline: vi.fn(),
   setBindGroup: vi.fn(),
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-const DEPS_STUB = {} as PassDeps;
-
 // ---------------------------------------------------------------------------
 // enabled()
 // ---------------------------------------------------------------------------
 
-describe('volumeUpsamplePass.enabled', () => {
+describe('volumeUpsampleLayer.enabled', () => {
   it('returns false when volumes.enabled is false and master fade is fully out', () => {
     const state = {
       gpu: {
@@ -89,7 +98,7 @@ describe('volumeUpsamplePass.enabled', () => {
       subsystems: { fades: { opacityOf: () => 0 } },
       settings: { volumes: { enabled: false } },
     } as unknown as EngineState;
-    expect(volumeUpsamplePass.enabled(state, makeCtx())).toBe(false);
+    expect(volumeUpsampleLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns false when no fields are active and no fade-out tail is in flight', () => {
@@ -107,7 +116,7 @@ describe('volumeUpsamplePass.enabled', () => {
       subsystems: { fades: { opacityOf: () => 0 } },
       settings: { volumes: { enabled: true } },
     } as unknown as EngineState;
-    expect(volumeUpsamplePass.enabled(state, makeCtx())).toBe(false);
+    expect(volumeUpsampleLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns false when volumeUpsample is null (pre-bootstrap)', () => {
@@ -117,7 +126,7 @@ describe('volumeUpsamplePass.enabled', () => {
         volumeUpsample: null,
       },
     } as unknown as EngineState;
-    expect(volumeUpsamplePass.enabled(state, makeCtx())).toBe(false);
+    expect(volumeUpsampleLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns false when volumeFieldRenderer is null (pre-bootstrap)', () => {
@@ -127,7 +136,7 @@ describe('volumeUpsamplePass.enabled', () => {
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
     } as unknown as EngineState;
-    expect(volumeUpsamplePass.enabled(state, makeCtx())).toBe(false);
+    expect(volumeUpsampleLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns true when every gate passes', () => {
@@ -139,7 +148,7 @@ describe('volumeUpsamplePass.enabled', () => {
       subsystems: { fades: { opacityOf: () => 1 } },
       settings: { volumes: { enabled: true } },
     } as unknown as EngineState;
-    expect(volumeUpsamplePass.enabled(state, makeCtx())).toBe(true);
+    expect(volumeUpsampleLayer.enabled(state, makeCtx())).toBe(true);
   });
 });
 
@@ -147,7 +156,7 @@ describe('volumeUpsamplePass.enabled', () => {
 // draw()
 // ---------------------------------------------------------------------------
 
-describe('volumeUpsamplePass.draw', () => {
+describe('volumeUpsampleLayer.draw', () => {
   it('calls volumeUpsample.draw with the HDR pass and ctx.volumeOffscreen.view', () => {
     const offscreenView = {} as GPUTextureView;
     const drawSpy = vi.fn();
@@ -157,7 +166,7 @@ describe('volumeUpsamplePass.draw', () => {
         volumeUpsample: { draw: drawSpy, destroy: vi.fn() },
       },
     } as unknown as EngineState;
-    volumeUpsamplePass.draw(PASS_STUB, makeCtx(offscreenView), state, DEPS_STUB);
+    volumeUpsampleLayer.draw(PASS_STUB, VIEW_STUB, makeCtx(offscreenView), state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBe(PASS_STUB);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(offscreenView);
@@ -170,6 +179,8 @@ describe('volumeUpsamplePass.draw', () => {
         volumeUpsample: null,
       },
     } as unknown as EngineState;
-    expect(() => volumeUpsamplePass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB)).not.toThrow();
+    expect(() =>
+      volumeUpsampleLayer.draw(PASS_STUB, VIEW_STUB, makeCtx(), state),
+    ).not.toThrow();
   });
 });

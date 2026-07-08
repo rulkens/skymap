@@ -1,8 +1,8 @@
 /**
- * filamentsPass tests — focus-recession routing of the filament overlay
+ * filamentsLayer tests — focus-recession routing of the filament overlay
  * opacity (task 1.4).
  *
- * The pass forwards the filament layer's opacity as the 6th argument to
+ * The layer forwards the filament layer's opacity as the 6th argument to
  * `filamentRenderer.draw`.  Pre-1.4 that was the bare toggle opacity
  * (`fades.opacityOf({kind:'filament'})`).  Post-1.4 it is routed through
  * `resolveLayerOpacity(..., ctx.focusBlend, ...)` so the layer recedes
@@ -14,25 +14,36 @@
  * They also pin that the `enabled` gate is *unaffected* by recession —
  * recession ∈ [FILAMENT_RECESSION, 1] can never zero a layer, so the gate
  * must keep reading the pure toggle alone (a toggled-off, fully-faded
- * pass dies regardless of blend).
+ * layer dies regardless of blend).
  *
  * GPU-typed values are cast stubs; the split between `enabled` and `draw`
- * (the `Pass` interface) lets us assert behaviour without a real device.
+ * (the `ContentLayer` interface) lets us assert behaviour without a real
+ * device.
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
-import { filamentsPass } from '../../../../../src/services/engine/frame/passes/filamentsPass';
+import { filamentsLayer } from '../../../../../src/services/engine/frame/passes/filamentsLayer';
+import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { FILAMENT_RECESSION } from '../../../../../src/services/engine/presentation/focusRecession';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
+import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 
 function makeCtx(focusBlend: number): ReadyFrameContext {
+  const vp = new Float32Array(16) as unknown as Mat4;
+  const cosmoSlab: Slab = {
+    index: COSMO,
+    nearMpc: 0.01,
+    farMpc: 50000,
+    vp: Float64Array.from(vp as unknown as Float32Array),
+    originRelative: false,
+    precision: 'f32',
+  };
   return {
     isReady: true,
     cam: {} as never,
-    vp: new Float32Array(16) as unknown as Mat4,
-    slabs: [],
+    vp,
+    slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
@@ -62,12 +73,13 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
  * Build a state whose filament fade reports `opacity` and whose
  * `settings.filaments` matches the supplied overrides.  `opacityOf` is a
  * single stub returning the same value regardless of handle/now — the
- * filaments pass only ever asks for the `{kind:'filament'}` handle, so a
+ * filaments layer only ever asks for the `{kind:'filament'}` handle, so a
  * constant stub faithfully models "the filament layer is at `opacity`".
  */
 function makeState(
   opacity: number,
   filamentsOverrides: Partial<{ enabled: boolean; intensity: number }> = {},
+  filamentRenderer: unknown = null,
 ): EngineState {
   return {
     subsystems: { fades: { opacityOf: () => opacity } },
@@ -78,19 +90,17 @@ function makeState(
         ...filamentsOverrides,
       },
     },
+    gpu: { filamentRenderer },
   } as unknown as EngineState;
-}
-
-function makeDeps(drawSpy = vi.fn()): PassDeps {
-  return { filamentRenderer: { draw: drawSpy } } as unknown as PassDeps;
 }
 
 const PASS_STUB = {} as GPURenderPassEncoder;
 
-describe('filamentsPass.draw focus recession', () => {
+describe('filamentsLayer.draw focus recession', () => {
   it('passes plain opacityOf at blend 0', () => {
     const drawSpy = vi.fn();
-    filamentsPass.draw(PASS_STUB, makeCtx(0), makeState(1), makeDeps(drawSpy));
+    const ctx = makeCtx(0);
+    filamentsLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1, {}, { draw: drawSpy }));
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Args: (pass, vp, viewport, halfwidth, intensity, opacity).
     expect(drawSpy.mock.calls[0]![5]).toBe(1);
@@ -98,17 +108,28 @@ describe('filamentsPass.draw focus recession', () => {
 
   it('passes opacityOf × FILAMENT_RECESSION at blend 1', () => {
     const drawSpy = vi.fn();
-    filamentsPass.draw(PASS_STUB, makeCtx(1), makeState(1), makeDeps(drawSpy));
+    const ctx = makeCtx(1);
+    filamentsLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1, {}, { draw: drawSpy }));
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect(drawSpy.mock.calls[0]![5]).toBeCloseTo(FILAMENT_RECESSION, 6);
   });
 });
 
-describe('filamentsPass.enabled is unaffected by focus recession', () => {
+describe('filamentsLayer.enabled is unaffected by focus recession', () => {
   it('returns false when the toggle is off and opacity is 0, regardless of blend', () => {
-    // Pass enabled=false via state; settings arg is unused by the pass.
+    // Pass enabled=false via state; settings arg is unused by the layer.
     const state = makeState(0, { enabled: false });
-    expect(filamentsPass.enabled(state, makeCtx(0))).toBe(false);
-    expect(filamentsPass.enabled(state, makeCtx(1))).toBe(false);
+    expect(filamentsLayer.enabled(state, makeCtx(0))).toBe(false);
+    expect(filamentsLayer.enabled(state, makeCtx(1))).toBe(false);
+  });
+});
+
+describe('filamentsLayer.draw renderer-null guard', () => {
+  it('skips drawing when state.gpu.filamentRenderer is null even if enabled', () => {
+    const state = makeState(1, { enabled: true }, null);
+    const ctx = makeCtx(0);
+    expect(() =>
+      filamentsLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state),
+    ).not.toThrow();
   });
 });
