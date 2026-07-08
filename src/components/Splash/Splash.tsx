@@ -214,8 +214,8 @@ function Splash({
             ,{' '}
             <a href="https://lambda.gsfc.nasa.gov/product/2mass/" target="_blank" rel="noopener noreferrer">
               2MRS
-            </a>{' '}
-            and{' '}
+            </a>
+            ,{' '}
             <a
               href="https://heasarc.gsfc.nasa.gov/W3Browse/all/milliquas.html"
               target="_blank"
@@ -223,7 +223,11 @@ function Splash({
             >
               Milliquas
             </a>{' '}
-            catalogues.
+            and{' '}
+            <a href="https://data.desi.lbl.gov/" target="_blank" rel="noopener noreferrer">
+              DESI DR1
+            </a>{' '}
+            (CC&nbsp;BY&nbsp;4.0) catalogues.
           </p>
           <p className={styles.attribution}>
             by Alexander Rulkens
