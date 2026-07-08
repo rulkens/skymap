@@ -347,10 +347,12 @@ const NANOMAGGY_ZEROPOINT_MAG = 22.5;
  * is decoded or any record allocated, because the CrB cone keeps only
  * ~1% of the NGC rows — the common case per row is "decode 16 bytes,
  * reject". Rejected rows are NOT counted in `skipped`: out-of-cone is
- * scoping, not data quality. `skipped` counts only BGS rows dropped
- * for non-positive g or r flux (unplottable photometry); a
- * non-positive z-band flux keeps the row with `magI = NaN` (the
- * standard missing-band sentinel, see `common.ts`).
+ * scoping, not data quality. `skipped` counts data-quality drops only:
+ * rows of any tracer with a non-finite or non-positive redshift (the
+ * glade/sdssCsv convention — a safety net, DESI vets its z's
+ * upstream), and BGS rows with non-positive g or r flux (unplottable
+ * photometry). A non-positive z-band flux keeps the row with
+ * `magI = NaN` (the standard missing-band sentinel, see `common.ts`).
  *
  * Field mapping mirrors the other survey parsers: `objID` carries
  * TARGETID (a bigint, like SDSS objIDs); `spectroscopicZ = z`
@@ -417,6 +419,20 @@ export function parseDesiClustering(
     if (keep && !keep(ra, dec)) continue;
 
     const z = readFloatCell(view, rowStart + colZ.byteOffset, colZ);
+
+    // Non-positive / non-finite redshift → drop, same convention as the
+    // sibling parsers (glade.ts, sdssCsv.ts). DESI's LSS clustering
+    // catalogs are redshift-vetted upstream so this should never fire —
+    // it's a safety net: z <= 0 would otherwise flow silently into a
+    // -Infinity (z = 0) or NaN (z < 0) synthetic magnitude here, and
+    // into a degenerate at-origin/mirrored position downstream where
+    // redshiftToDistanceMpc(z) places the record. Applies to ALL
+    // tracers: BGS mags come from fluxes, but its z still drives the
+    // record's 3D position.
+    if (!Number.isFinite(z) || z <= 0) {
+      skipped++;
+      continue;
+    }
 
     let magG: number;
     let magR: number;

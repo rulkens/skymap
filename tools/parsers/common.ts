@@ -87,9 +87,9 @@ export type ParsedRecord = {
 
   /**
    * Milliquas-only parent-survey enum byte (see `milliquasParentSurveyPrefix`
-   * in `src/data/sourceClass.ts`). Other parsers leave it `0`. Milliquas
-   * matches the Name column prefix (`SDSS`, `2MASX`, `GAIA`, …) so the runtime
-   * can reconstruct `"<PARENT> J<RA><Dec>"` at hover time. Same
+   * in `src/data/galaxyCatalog/sourceClass.ts`). Other parsers leave it `0`.
+   * Milliquas matches the Name column prefix (`SDSS`, `2MASX`, `GAIA`, …) so
+   * the runtime can reconstruct `"<PARENT> J<RA><Dec>"` at hover time. Same
    * flat-byte rationale as `classByte`.
    */
   parentSurveyByte: number;

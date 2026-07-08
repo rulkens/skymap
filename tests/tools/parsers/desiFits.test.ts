@@ -321,6 +321,24 @@ describe('parseDesiClustering', () => {
     expect(elg.magI).toBeNaN();
   });
 
+  it('drops rows with non-positive redshift and counts them in skipped', () => {
+    // z = 0 would synthesize magR = -Infinity and z < 0 a NaN — both must
+    // be dropped (the glade/sdssCsv convention), never silently emitted.
+    const buf = buildClusteringBuffer(FLUXLESS_COLUMNS, [
+      [1n, 233.0, 32.0, -0.001],
+      [2n, 233.0, 32.0, 0],
+      [3n, 233.0, 32.0, 0.7],
+    ]);
+    const { records, skipped } = parseDesiClustering(buf, 'LRG');
+    expect(records.length).toBe(1);
+    expect(records[0]!.objID).toBe(3n);
+    expect(skipped).toBe(2);
+    for (const rec of records) {
+      expect(Number.isFinite(rec.magR)).toBe(true);
+      expect(Number.isFinite(rec.magG)).toBe(true);
+    }
+  });
+
   it('emits the GLADE no-orientation fallback shape: axisRatio null, positionAngleDeg null, diameterKpc null', () => {
     const { records } = parseDesiClustering(loadFixture(), 'QSO');
     for (const rec of records) {
