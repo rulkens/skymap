@@ -1,7 +1,8 @@
 # Galaxy impostor LOD — baked rgba16float textures from the generated galaxy renderer
 
-**Status:** design sketch v2 (perf + memory implications, now grounded in
-catalog data), 2026-07-08.
+**Status:** design sketch v3, 2026-07-08 — perf + memory implications
+grounded in measured catalog data (band populations, fly-in churn, per-tier
+memory baseline, Hubble-type coverage). Ready to promote into a spec.
 **Idea (from Alexander):** galaxies below a pixel threshold render from a
 texture baked out of the new GPU galaxy generator; galaxies above it render
 the full generated 3D point cloud. The baked texture becomes the next step up
