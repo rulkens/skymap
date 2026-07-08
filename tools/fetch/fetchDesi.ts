@@ -197,6 +197,50 @@ async function fetchChunkWithRetry(
 }
 
 /**
+ * The slice of `fs/promises.FileHandle` that `writeAll` needs — structural,
+ * so tests can drive the short-write loop with a plain mock instead of a
+ * real file handle.
+ */
+export type PositionalWriter = {
+  write(
+    buffer: Uint8Array,
+    offset: number,
+    length: number,
+    position: number,
+  ): Promise<{ bytesWritten: number }>;
+};
+
+/**
+ * Write ALL of `bytes` at absolute `position`, looping on short writes.
+ *
+ * POSIX write(2) may accept fewer bytes than requested (signal
+ * interruption, disk pressure) and Node surfaces that as `bytesWritten <
+ * length` rather than an error — a single unchecked `handle.write` could
+ * mark a chunk complete with a hole in the middle of the part file. A
+ * write that makes zero progress throws instead of spinning forever.
+ */
+export async function writeAll(
+  handle: PositionalWriter,
+  bytes: Uint8Array,
+  position: number,
+): Promise<number> {
+  let offset = 0;
+  while (offset < bytes.length) {
+    const { bytesWritten } = await handle.write(
+      bytes,
+      offset,
+      bytes.length - offset,
+      position + offset,
+    );
+    if (bytesWritten <= 0) {
+      throw new Error(`short write stalled at offset ${offset}/${bytes.length}`);
+    }
+    offset += bytesWritten;
+  }
+  return bytes.length;
+}
+
+/**
  * Download `opts.url` to `opts.destPath` as a set of parallel `Range:`
  * chunks, resuming from whatever `<destPath>.chunks.json` already records
  * as complete.
@@ -232,8 +276,27 @@ export async function downloadChunked(opts: {
   const partPath = partPathFor(destPath);
   const statePath = statePathFor(destPath);
   const allChunks = planChunks(totalBytes, chunkBytes);
+
+  // Stale-state guard: the chunk state is only meaningful while its .part
+  // file exists — the completed indices describe byte ranges written INTO
+  // that file. A chunks.json with no .part means a previous run crashed in
+  // its completion window. If the final file is already in place, trusting
+  // the stale state would be catastrophic: this run would open a fresh
+  // EMPTY part file, see zero pending chunks, and rename the empty file
+  // over the completed download — silent data loss. Discard the orphaned
+  // state; keep the completed file if present, else fall through to a
+  // fresh full download.
+  if (existsSync(statePath) && !existsSync(partPath)) {
+    rmSync(statePath, { force: true });
+    if (existsSync(destPath)) {
+      return { bytesWritten: totalBytes, chunksFetched: 0, chunksResumed: allChunks.length };
+    }
+  }
+
   const completed = readChunkState(statePath);
-  const chunksResumed = allChunks.filter((c) => completed.has(c.index)).length;
+  const resumedChunks = allChunks.filter((c) => completed.has(c.index));
+  const chunksResumed = resumedChunks.length;
+  const resumedBytes = resumedChunks.reduce((sum, c) => sum + (c.endInclusive - c.start + 1), 0);
   const pending = allChunks.filter((c) => !completed.has(c.index));
 
   // Trivial zero-byte file: nothing to range-request, nothing to resume.
@@ -248,6 +311,7 @@ export async function downloadChunked(opts: {
   const handle = await open(partPath, existsSync(partPath) ? 'r+' : 'w+');
 
   let chunksFetched = 0;
+  let bytesWrittenThisRun = 0;
   let cursor = 0;
 
   async function worker(): Promise<void> {
@@ -256,10 +320,29 @@ export async function downloadChunked(opts: {
       if (my >= pending.length) return;
       const chunk = pending[my]!;
       const bytes = await fetchChunkWithRetry(url, chunk, transport, maxAttempts, baseDelayMs);
-      await handle.write(bytes, 0, bytes.length, chunk.start);
+      // Length check deliberately OUTSIDE the retry loop: a wrong-length
+      // body is not a transient server condition — it means the response
+      // was truncated in a way the transport didn't surface, or the server
+      // mishandled the Range. Retrying would re-download the same wrong
+      // bytes; fail loudly instead.
+      const expectedLength = chunk.endInclusive - chunk.start + 1;
+      if (bytes.length !== expectedLength) {
+        throw new Error(
+          `chunk ${chunk.index} of ${url}: expected ${expectedLength} bytes ` +
+            `(range ${chunk.start}-${chunk.endInclusive}), transport returned ${bytes.length}`,
+        );
+      }
+      // Await FIRST, then accumulate. 'x += await f()' reads x BEFORE the
+      // await suspends, so two workers can both read the same stale value
+      // and the later resume silently overwrites the earlier addition —
+      // the classic read-modify-write race, even single-threaded.
+      const written = await writeAll(handle, bytes, chunk.start);
+      bytesWrittenThisRun += written;
       // Durable "this chunk landed" record — written before moving on to
       // the next chunk this worker slot picks up, so a crash immediately
-      // after never loses a completed chunk's bookkeeping.
+      // after never loses a completed chunk's bookkeeping. (Durability is
+      // process-crash level, not fsync'd power-loss level — deliberate for
+      // a resumable download tool; worst case is re-fetching a chunk.)
       completed.add(chunk.index);
       writeChunkState(statePath, completed);
       chunksFetched++;
@@ -283,12 +366,16 @@ export async function downloadChunked(opts: {
   if (failure) throw failure.reason;
 
   // Every chunk (this run's + prior resumed) is now on disk — the part
-  // file is complete. Rename to the final name and drop the state
-  // sidecar; there is nothing left for a future run to resume.
-  renameSync(partPath, destPath);
+  // file is complete. Delete the state sidecar BEFORE renaming: a crash
+  // between the two then leaves "complete .part, no state", and the next
+  // run merely re-fetches this one file from scratch. The other order
+  // leaves "final file + orphaned state", the exact configuration the
+  // stale-state guard above exists to defuse — a cheap refetch beats any
+  // chance of clobbering a good download.
   rmSync(statePath, { force: true });
+  renameSync(partPath, destPath);
 
-  return { bytesWritten: totalBytes, chunksFetched, chunksResumed };
+  return { bytesWritten: bytesWrittenThisRun + resumedBytes, chunksFetched, chunksResumed };
 }
 
 /**
@@ -337,6 +424,29 @@ export async function upsertSha256Sidecar(
   return digest;
 }
 
+/**
+ * Pre-download guard: when `destPath` already exists, verify it against
+ * the sidecar instead of re-downloading a few hundred MB that is already
+ * on disk. Returns true when the caller should skip the download:
+ *
+ *  - sidecar line matches the file's fresh hash → verified, skip;
+ *  - no sidecar line yet → bootstrap one (first fetch, or a contributor
+ *    who curled the file manually), then skip;
+ *  - sidecar pins a DIFFERENT hash → throws (`upsertSha256Sidecar`'s
+ *    stale/truncated rule; the CLI surfaces it as a non-zero exit).
+ *
+ * Returns false when the file is absent — download it.
+ */
+export async function skipIfAlreadyFetched(
+  destPath: string,
+  filename: string,
+  sidecarPath: string,
+): Promise<boolean> {
+  if (!existsSync(destPath)) return false;
+  await upsertSha256Sidecar(destPath, filename, sidecarPath);
+  return true;
+}
+
 // ─── CLI ────────────────────────────────────────────────────────────────
 
 // `as const` (rather than a `readonly RawDataKey[]` annotation) keeps the
@@ -362,10 +472,18 @@ async function headContentLength(url: string): Promise<number> {
 /** Real `RangeTransport`: a GET with a `Range:` header against the live server. */
 const httpRangeTransport: RangeTransport = async (url, start, endInclusive) => {
   const res = await fetch(url, { headers: { Range: `bytes=${start}-${endInclusive}` } });
-  if (!res.ok && res.status !== 206) {
-    const err = new Error(`HTTP ${res.status} ${res.statusText} for ${url}`) as Error & {
-      status?: number;
-    };
+  // 206 Partial Content is the ONLY acceptable answer to a Range request.
+  // In particular a 200 means the server IGNORED the Range header and is
+  // streaming the entire multi-hundred-MB file — buffering that and writing
+  // it at a chunk offset would corrupt the part file. Carrying status 200
+  // on the error makes it non-retryable (not in the 503/429/5xx set):
+  // a server that ignores Range once will ignore it every time.
+  if (res.status !== 206) {
+    const err = new Error(
+      res.status === 200
+        ? `server ignored the Range header for ${url} (HTTP 200 full body instead of 206)`
+        : `HTTP ${res.status} ${res.statusText} for ${url}`,
+    ) as Error & { status?: number };
     err.status = res.status;
     throw err;
   }
@@ -382,6 +500,15 @@ async function main(): Promise<void> {
   for (const key of DESI_KEYS) {
     const url = RAW_DATA[key].upstream;
     const destPath = rawDataPath(key);
+    const filename = basename(destPath);
+
+    // Already on disk from a prior run → verify (or bootstrap) its sidecar
+    // line and move on instead of re-downloading a few hundred MB. A
+    // pinned-hash mismatch throws through to the CLI catch → exit 1.
+    if (await skipIfAlreadyFetched(destPath, filename, sha256Path)) {
+      process.stderr.write(`fetchDesi: ${filename} already present — verified, skipping\n`);
+      continue;
+    }
 
     process.stderr.write(`fetchDesi: HEAD ${url}\n`);
     const totalBytes = await headContentLength(url);
@@ -394,11 +521,11 @@ async function main(): Promise<void> {
       transport: httpRangeTransport,
     });
     process.stderr.write(
-      `  ${basename(destPath)}: ${result.chunksFetched} chunk(s) fetched, ` +
+      `  ${filename}: ${result.chunksFetched} chunk(s) fetched, ` +
         `${result.chunksResumed} resumed from a prior run\n`,
     );
 
-    const digest = await upsertSha256Sidecar(destPath, basename(destPath), sha256Path);
+    const digest = await upsertSha256Sidecar(destPath, filename, sha256Path);
     process.stderr.write(`  sha256: ${digest}\n`);
   }
 

@@ -19,7 +19,10 @@ import { delay } from '../../../tools/utils/async/delay';
 import {
   downloadChunked,
   planChunks,
+  skipIfAlreadyFetched,
   upsertSha256Sidecar,
+  writeAll,
+  type PositionalWriter,
   type RangeChunk,
   type RangeTransport,
 } from '../../../tools/fetch/fetchDesi';
@@ -211,6 +214,62 @@ describe('downloadChunked', () => {
     expect(new Uint8Array(readFileSync(destPath))).toEqual(expected);
   });
 
+  it('a stale all-complete chunks.json with no .part never clobbers an existing completed file', async () => {
+    // Regression for the completion-window crash: a previous run renamed
+    // the .part into place but died before deleting the state sidecar.
+    // Trusting that state would open a fresh EMPTY part file, see zero
+    // pending chunks, and rename the empty file over the good download.
+    const chunkSize = 10;
+    const totalBytes = 30;
+    const destPath = join(dir, 'stale.fits');
+    const good = new Uint8Array(totalBytes).fill(7);
+    writeFileSync(destPath, good);
+    writeFileSync(`${destPath}.chunks.json`, JSON.stringify({ completed: [0, 1, 2] }));
+    // deliberately NO .part file on disk
+
+    const transport = vi.fn<RangeTransport>(async (_url, start, endInclusive) =>
+      chunkBytes({ index: Math.floor(start / chunkSize), start, endInclusive }),
+    );
+
+    const result = await downloadChunked({
+      url: 'https://example.test/stale.fits',
+      destPath,
+      totalBytes,
+      transport,
+      chunkBytes: chunkSize,
+      concurrency: 2,
+    });
+
+    // The completed file is untouched, byte for byte; nothing was fetched;
+    // the orphaned state sidecar is gone.
+    expect(new Uint8Array(readFileSync(destPath))).toEqual(good);
+    expect(transport).not.toHaveBeenCalled();
+    expect(result).toEqual({ bytesWritten: totalBytes, chunksFetched: 0, chunksResumed: 3 });
+    expect(existsSync(`${destPath}.chunks.json`)).toBe(false);
+  });
+
+  it('a chunk of the wrong length fails without retry', async () => {
+    const totalBytes = 8;
+    // Transport returns 5 bytes where the single chunk's range demands 8 —
+    // a truncated body. Retrying would re-download the same wrong bytes,
+    // so the failure must surface after exactly one transport call.
+    const transport = vi.fn<RangeTransport>(async () => new Uint8Array(5));
+
+    const destPath = join(dir, 'truncated.fits');
+    await expect(
+      downloadChunked({
+        url: 'https://example.test/truncated.fits',
+        destPath,
+        totalBytes,
+        transport,
+        chunkBytes: totalBytes,
+        concurrency: 1,
+      }),
+    ).rejects.toThrow(/expected 8 bytes/);
+
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
   it('never exceeds 6 chunks in flight', async () => {
     const chunkSize = 1;
     const totalBytes = 24; // 24 single-byte chunks
@@ -275,14 +334,103 @@ describe('upsertSha256Sidecar', () => {
     writeFileSync(filePath, 'the current bytes');
     const sidecarPath = join(dir, 'desi_dr1_lss.sha256');
     // Pin a hash that does NOT match the file above — simulates a stale
-    // or truncated re-download.
-    writeFileSync(
-      sidecarPath,
-      '0000000000000000000000000000000000000000000000000000000000000  LRG_NGC_clustering.dat.fits\n',
-    );
+    // or truncated re-download. ('0'.repeat(64) is a well-formed but
+    // impossible sha256 hex digest.)
+    writeFileSync(sidecarPath, `${'0'.repeat(64)}  LRG_NGC_clustering.dat.fits\n`);
 
     await expect(
       upsertSha256Sidecar(filePath, 'LRG_NGC_clustering.dat.fits', sidecarPath),
     ).rejects.toThrow(/mismatch/i);
+  });
+});
+
+describe('skipIfAlreadyFetched', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'fetch-desi-skip-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('returns false when the file is absent (caller should download)', async () => {
+    const sidecarPath = join(dir, 'desi_dr1_lss.sha256');
+    const skip = await skipIfAlreadyFetched(join(dir, 'nope.fits'), 'nope.fits', sidecarPath);
+    expect(skip).toBe(false);
+    expect(existsSync(sidecarPath)).toBe(false); // nothing to hash, nothing written
+  });
+
+  it('verifies an existing file against a matching sidecar line and skips', async () => {
+    const filePath = join(dir, 'QSO_NGC_clustering.dat.fits');
+    writeFileSync(filePath, 'quasar bytes');
+    const sidecarPath = join(dir, 'desi_dr1_lss.sha256');
+    // Seed the sidecar with the file's true hash (via the upsert itself).
+    await upsertSha256Sidecar(filePath, 'QSO_NGC_clustering.dat.fits', sidecarPath);
+    const before = readFileSync(sidecarPath, 'utf8');
+
+    const skip = await skipIfAlreadyFetched(filePath, 'QSO_NGC_clustering.dat.fits', sidecarPath);
+
+    expect(skip).toBe(true);
+    expect(readFileSync(sidecarPath, 'utf8')).toBe(before); // unchanged
+  });
+
+  it('bootstraps a sidecar line for an existing file with no line yet, and skips', async () => {
+    const filePath = join(dir, 'ELG_LOPnotqso_NGC_clustering.dat.fits');
+    writeFileSync(filePath, 'emission line bytes');
+    const sidecarPath = join(dir, 'desi_dr1_lss.sha256');
+
+    const skip = await skipIfAlreadyFetched(
+      filePath,
+      'ELG_LOPnotqso_NGC_clustering.dat.fits',
+      sidecarPath,
+    );
+
+    expect(skip).toBe(true);
+    expect(readFileSync(sidecarPath, 'utf8')).toMatch(
+      /^[0-9a-f]{64} {2}ELG_LOPnotqso_NGC_clustering\.dat\.fits\n$/,
+    );
+  });
+
+  it('throws when the sidecar pins a different hash for the existing file', async () => {
+    const filePath = join(dir, 'BGS_BRIGHT_NGC_clustering.dat.fits');
+    writeFileSync(filePath, 'bright galaxy bytes');
+    const sidecarPath = join(dir, 'desi_dr1_lss.sha256');
+    writeFileSync(sidecarPath, `${'0'.repeat(64)}  BGS_BRIGHT_NGC_clustering.dat.fits\n`);
+
+    await expect(
+      skipIfAlreadyFetched(filePath, 'BGS_BRIGHT_NGC_clustering.dat.fits', sidecarPath),
+    ).rejects.toThrow(/mismatch/i);
+  });
+});
+
+describe('writeAll', () => {
+  it('loops on short writes until every byte lands', async () => {
+    // A mock handle that accepts at most 4 bytes per call — writeAll must
+    // advance both the buffer offset and the file position in lock-step.
+    const write = vi.fn<PositionalWriter['write']>(async (_buffer, _offset, length) => ({
+      bytesWritten: Math.min(4, length),
+    }));
+
+    const n = await writeAll({ write }, new Uint8Array(10), 100);
+
+    expect(n).toBe(10);
+    const calls = write.mock.calls.map(([, offset, length, position]) => [
+      offset,
+      length,
+      position,
+    ]);
+    expect(calls).toEqual([
+      [0, 10, 100],
+      [4, 6, 104],
+      [8, 2, 108],
+    ]);
+  });
+
+  it('throws instead of spinning forever when a write makes no progress', async () => {
+    const write = vi.fn<PositionalWriter['write']>(async () => ({ bytesWritten: 0 }));
+    await expect(writeAll({ write }, new Uint8Array(4), 0)).rejects.toThrow(/short write/);
+    expect(write).toHaveBeenCalledTimes(1);
   });
 });
