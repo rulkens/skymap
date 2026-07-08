@@ -79,7 +79,8 @@
  * a second time (which would advance the clock twice on the same frame — the
  * clock is idempotent for the same descriptor reference, but two calls is still
  * conceptually wrong). `deriveFrameContext` is therefore side-effect-free again:
- * it only calls `assembleOrbitCamera(pose, projection)` and `computeViewProj`.
+ * it only calls `assembleOrbitCamera(pose, projection)`, `computeViewProj`, and
+ * `deriveSlabs` to build the frame's slab table.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

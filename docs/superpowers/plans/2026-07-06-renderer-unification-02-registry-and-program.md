@@ -73,14 +73,14 @@ export function slabViewOf(ctx: ReadyFrameContext, slab: number): SlabView;
 
 `ReadyFrameContext` gains `slabs: readonly Slab[]`; `deriveFrameContext` populates it right where `vp` is computed (`frameContext.ts:141-144`) so there is exactly ONE derivation per frame.
 
-- [ ] Test `deriveSlabs returns two rows with index === array position` (0 then 1).
-- [ ] Test `every slab has nearMpc < farMpc` (try `cam.distance` 5 and 5000).
-- [ ] Test `the cosmological row preserves the given vp exactly` — `Float32Array.from(slabs[1].vp)` byte-equal to the input `Mat4`.
-- [ ] Test `slabViewOf(ctx, COSMO).vp is byte-equal to ctx.vp` and `viewportPx mirrors canvasSize`.
-- [ ] Test `slabViewOf(ctx, NEAR0) exposes the adaptive near/far slab row` (near = distance·1e-4, far = distance·100).
-- [ ] Implement; add `slabs` to the `frameContext.ts` return literal + fixture updates in `frameContext.test.ts`.
-- [ ] `npm run typecheck && npm test` → green.
-- [ ] Commit (`src/@types/engine/frame/ReadyFrameContext.d.ts src/services/engine/frame/slabs.ts src/services/engine/frame/frameContext.ts tests/...`).
+- [x] Test `deriveSlabs returns two rows with index === array position` (0 then 1).
+- [x] Test `every slab has nearMpc < farMpc` (try `cam.distance` 5 and 5000).
+- [x] Test `the cosmological row preserves the given vp exactly` — `Float32Array.from(slabs[1].vp)` byte-equal to the input `Mat4`.
+- [x] Test `slabViewOf(ctx, COSMO).vp is byte-equal to ctx.vp` and `viewportPx mirrors canvasSize`.
+- [x] Test `slabViewOf(ctx, NEAR0) exposes the adaptive near/far slab row` (near = distance·1e-4, far = distance·100).
+- [x] Implement; add `slabs` to the `frameContext.ts` return literal + fixture updates in `frameContext.test.ts`.
+- [x] `npm run typecheck && npm test` → green.
+- [x] Commit (`src/@types/engine/frame/ReadyFrameContext.d.ts src/services/engine/frame/slabs.ts src/services/engine/frame/frameContext.ts tests/...`).
 
 ### Task 3 — convert the nine HDR passes to `ContentLayer` rows
 

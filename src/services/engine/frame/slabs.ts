@@ -72,6 +72,10 @@ export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
     nearMpc,
     farMpc,
     vp: Float64Array.from(nearFieldVp),
+    // `originRelative: true` and the near-field camPos semantics are provisional:
+    // they take effect only once the zoom-to-earth fold defines a `renderOrigin`
+    // for this slab to be relative to. Until then this row hosts no layers and
+    // appears in no frame step, so the flag has no observable effect yet.
     originRelative: true,
     precision: 'f64',
   };
