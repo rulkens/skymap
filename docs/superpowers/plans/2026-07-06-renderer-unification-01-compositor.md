@@ -75,9 +75,9 @@ export type Compositor = {
 
 `ToneMapCurve` is the existing literal union at `src/@types/data/ToneMapCurve.d.ts`. Deep relative imports, no barrels. Docblocks explain the tone-null semantics and the phase-2 destiny (CompositeStep carries `(blend, tone)` as data).
 
-- [ ] Write the three `.d.ts` files.
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit (stage the three new files).
+- [x] Write the three `.d.ts` files.
+- [x] `npm run typecheck` → clean.
+- [x] Commit (stage the three new files).
 
 ---
 
