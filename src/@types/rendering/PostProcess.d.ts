@@ -1,10 +1,12 @@
 /**
- * PostProcess — combined HDR offscreen target + tone-map pass.
+ * PostProcess — HDR offscreen target + the swap-chain tone-map pass.
  *
- * Owns the rgba16float HDR texture every renderer draws into and the
- * fullscreen tone-map blit that compresses it onto the swap chain.
- * Merged into one handle because the two halves have identical
- * lifetimes (HDR pass writes the texture, post-process samples it).
+ * Owns the rgba16float HDR texture every renderer draws into.  Its
+ * `draw` opens the frame's final render pass on the swap chain and
+ * delegates the fullscreen tone-map blit — HDR view → swap chain — to
+ * the shared `Compositor` ('replace' blend + tone curve).  The blit's
+ * pipeline, sampler, and curve uniform live in the compositor, not
+ * here; this handle keeps only the HDR target's lifecycle.
  */
 
 import type { ToneMapCurve } from '../data/ToneMapCurve';
@@ -37,6 +39,6 @@ export type PostProcess = {
     curve: ToneMapCurve,
     timingDescriptor?: GPURenderPassTimestampWrites,
   ): void;
-  /** Tear down — releases the HDR texture and the tone-map uniform buffer. */
+  /** Tear down — releases the HDR texture.  The compositor owns its own uniform buffers. */
   destroy(): void;
 };

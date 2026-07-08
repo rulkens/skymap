@@ -146,9 +146,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const compositor = createCompositor({ device, swapFormat: format, hdrFormat: 'rgba16float' });
   state.gpu.compositor = compositor;
 
-  const postProcess = createPostProcess(device, format, {
-    width: canvas.width,
-    height: canvas.height,
+  const postProcess = createPostProcess({
+    device,
+    size: { width: canvas.width, height: canvas.height },
+    compositor,
   });
   // Mirror into engine state so `destroy()` can release the resources.
   state.gpu.postProcess = postProcess;
