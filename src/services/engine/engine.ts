@@ -258,6 +258,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       focusBgl: null,
       focusUniform: null,
       postProcess: null,
+      compositor: null,
       volumeOffscreen: null,
       filamentRenderer: null,
       // labelRenderer + markerLineRenderer: null until initGpu finishes the
@@ -649,6 +650,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.milkyWayPickRenderer = null;
     state.gpu.postProcess?.destroy();
     state.gpu.postProcess = null;
+    state.gpu.compositor?.destroy();
+    state.gpu.compositor = null;
     state.gpu.volumeOffscreen?.destroy();
     state.gpu.volumeOffscreen = null;
     state.gpu.filamentRenderer?.destroy();

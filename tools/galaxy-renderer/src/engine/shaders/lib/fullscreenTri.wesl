@@ -17,7 +17,7 @@
 // 'fullscreenVertex'. The linker inlines imported functions but is not
 // guaranteed to preserve an imported entry point's NAME for the pipeline's
 // 'entryPoint: 'vs'' lookup — so the entry point must be declared locally
-// in each file. This mirrors the repo's 'toneMap/vertex.wesl' pattern.
+// in each file. This mirrors the repo's 'compositor/vertex.wesl' pattern.
 // Consequently 'fullscreenVertex' is a plain function, not an entry point.
 
 struct FullscreenOut {

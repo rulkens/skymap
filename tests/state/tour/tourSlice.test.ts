@@ -14,6 +14,7 @@ import {
   selectTourDwellNonce,
   selectActiveTour,
   selectTourTotal,
+  selectTourBeatTitles,
   selectTourCanPrev,
 } from '../../../src/state/tour/selectors';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
@@ -174,6 +175,52 @@ describe('tour selectors', () => {
       dwellSec: 0,
     });
     expect(selectTourTotal(st)).toBe(tourRegistry.webShowcase.beats.length);
+  });
+
+  it('selectTourBeatTitles maps beat titles with null for silent beats', () => {
+    const st = asState({
+      active: true,
+      tourId: 'webShowcase',
+      beatIndex: 0,
+      paused: false,
+      dwellNonce: 0,
+      dwellSec: 0,
+    });
+    const titles = selectTourBeatTitles(st);
+    expect(titles).toHaveLength(tourRegistry.webShowcase.beats.length);
+    titles.forEach((title, i) => {
+      expect(title).toBe(tourRegistry.webShowcase.beats[i]?.caption?.title ?? null);
+    });
+  });
+
+  it('selectTourBeatTitles is empty when inactive and referentially stable across the run', () => {
+    expect(
+      selectTourBeatTitles(
+        asState({
+          active: false,
+          tourId: 'webShowcase',
+          beatIndex: 0,
+          paused: false,
+          dwellNonce: 0,
+          dwellSec: 0,
+        }),
+      ),
+    ).toEqual([]);
+
+    // Different runtime states, same registry tour → the memo must hold the
+    // array's identity, or the rail re-renders on every dispatch.
+    const at = (beatIndex: number, paused: boolean) =>
+      selectTourBeatTitles(
+        asState({
+          active: true,
+          tourId: 'webShowcase',
+          beatIndex,
+          paused,
+          dwellNonce: 0,
+          dwellSec: 0,
+        }),
+      );
+    expect(at(0, false)).toBe(at(2, true));
   });
 
   it('selectTourCanPrev is false on the first beat and when inactive', () => {

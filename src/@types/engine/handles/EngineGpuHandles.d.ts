@@ -65,6 +65,7 @@ import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
+import type { Compositor } from '../../rendering/Compositor';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -118,6 +119,18 @@ export type EngineGpuHandles = {
    * See `services/gpu/postProcess.ts` for the rationale.
    */
   postProcess: PostProcess | null;
+  /**
+   * Unified 'merge offscreen texture into target' primitive — the single
+   * pipeline cache every composite draw (tone-mapped HDR→swap, foreground
+   * OVER, additive field→HDR) shares. Constructed once in `initGpu`
+   * immediately before `postProcess`; the blend→dstFormat mapping baked in
+   * at construction is a constructor argument rather than a per-draw one
+   * because a render-pass encoder cannot be queried for its own colour-
+   * attachment format. Null until `initGpu` resolves; released and
+   * re-nulled by `destroy()`, which must reach it because it owns the
+   * cached pipelines' uniform buffers.
+   */
+  compositor: Compositor | null;
   /**
    * Half-resolution intermediate render target consumed by the scalar-
    * volume pass.  Volume fields raymarch into this target at 1/4 the

@@ -56,6 +56,7 @@ import { updateSelectionFocus, clearSelection } from '../../state/selection/sele
 import { refOf } from '../../services/engine/helpers/refOf';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
+import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import TourDebugPillContainer from '../containers/TourDebugPillContainer';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
@@ -285,6 +286,10 @@ export function App(): React.ReactElement {
         )}
       </div>
       {tourOverlay}
+      {/* Beat rail rides the interactive session only — it is progress
+          chrome, so the cinema branch (captions-only film frames) omits it
+          just like TourNav and the beat counter. */}
+      {tourActive && <TourBeatRailContainer />}
       <SplashContainer />
     </>
   );

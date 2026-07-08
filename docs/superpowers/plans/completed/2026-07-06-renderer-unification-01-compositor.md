@@ -75,9 +75,9 @@ export type Compositor = {
 
 `ToneMapCurve` is the existing literal union at `src/@types/data/ToneMapCurve.d.ts`. Deep relative imports, no barrels. Docblocks explain the tone-null semantics and the phase-2 destiny (CompositeStep carries `(blend, tone)` as data).
 
-- [ ] Write the three `.d.ts` files.
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit (stage the three new files).
+- [x] Write the three `.d.ts` files.
+- [x] `npm run typecheck` → clean.
+- [x] Commit (stage the three new files).
 
 ---
 
@@ -143,20 +143,20 @@ export function createCompositor(init: {
 
 **Tests** (`compositor.test.ts` — extend the `postProcess.test.ts:28-56` `mockDevice` shape; mock pass = `{ setPipeline: vi.fn<...>(), setBindGroup: vi.fn<...>(), draw: vi.fn<...>() }`):
 
-- [ ] `exposes label, draw, destroy` — `label === 'compositor'`, both methods are functions.
-- [ ] `builds one pipeline per (blend, dstFormat) key and reuses it across draws` — two `draw(..., 'replace', TONE)` calls → `device.createRenderPipeline` called exactly once.
-- [ ] `distinct blends build distinct pipelines` — `'replace'` then `'additive'` → two `createRenderPipeline` calls.
-- [ ] `replace has no blend state; over is straight-alpha OVER (color src-alpha/one-minus-src-alpha, alpha one/one-minus-src-alpha); additive is one/one` — inspect each captured pipeline descriptor's `fragment.targets[0].blend` against the table above.
-- [ ] `replace and over target the swap format; additive targets the hdr format` — `fragment.targets[0].format` per captured descriptor (`swapFormat: 'bgra8unorm'`, `hdrFormat: 'rgba16float'` in the fixture).
-- [ ] `tone set packs clamped exposure, curve, and toneEnabled=1` — capture `queue.writeBuffer`'s bytes; with `{ exposure: 1e9, curve: 2 }` assert f32@0 === 16 (upper clamp), f32@4 === 16 (whitepoint²), f32@8 === 10, u32@12 === 2, u32@16 === 1. Second draw with `exposure: 1e-9` asserts the 0.05 lower clamp.
-- [ ] `tone null packs toneEnabled=0` — u32@16 === 0.
-- [ ] `preserveAlpha packs from the blend, not the caller` — `draw(..., 'replace', TONE)` → u32@20 === 0; `draw(..., 'over', TONE)` → u32@20 === 1.
-- [ ] `draw encodes the covering triangle` — `pass.draw` called with `(3, 1, 0, 0)`; `setPipeline` + `setBindGroup` called; no `beginRenderPass` anywhere (the mock device has none to call).
-- [ ] `destroy releases every cached uniform buffer` — after draws on two keys, `destroy()` calls `.destroy()` on both `createBuffer` results.
-- [ ] Repoint `toneMap.test.ts:16-22` and `postProcess.test.ts:19-26` curve imports to `'.../compositor'`; delete the now-redundant `postProcess JS-mirror tone-map curves` describe block (`postProcess.test.ts:92-111`) — `toneMap.test.ts` owns that coverage.
-- [ ] `npm test -- compositor toneMap postProcess` → all pass (new suite + repointed suites).
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit (stage the new + modified files by path).
+- [x] `exposes label, draw, destroy` — `label === 'compositor'`, both methods are functions.
+- [x] `builds one pipeline per (blend, dstFormat) key and reuses it across draws` — two `draw(..., 'replace', TONE)` calls → `device.createRenderPipeline` called exactly once.
+- [x] `distinct blends build distinct pipelines` — `'replace'` then `'additive'` → two `createRenderPipeline` calls.
+- [x] `replace has no blend state; over is straight-alpha OVER (color src-alpha/one-minus-src-alpha, alpha one/one-minus-src-alpha); additive is one/one` — inspect each captured pipeline descriptor's `fragment.targets[0].blend` against the table above.
+- [x] `replace and over target the swap format; additive targets the hdr format` — `fragment.targets[0].format` per captured descriptor (`swapFormat: 'bgra8unorm'`, `hdrFormat: 'rgba16float'` in the fixture).
+- [x] `tone set packs clamped exposure, curve, and toneEnabled=1` — capture `queue.writeBuffer`'s bytes; with `{ exposure: 1e9, curve: 2 }` assert f32@0 === 16 (upper clamp), f32@4 === 16 (whitepoint²), f32@8 === 10, u32@12 === 2, u32@16 === 1. Second draw with `exposure: 1e-9` asserts the 0.05 lower clamp.
+- [x] `tone null packs toneEnabled=0` — u32@16 === 0.
+- [x] `preserveAlpha packs from the blend, not the caller` — `draw(..., 'replace', TONE)` → u32@20 === 0; `draw(..., 'over', TONE)` → u32@20 === 1.
+- [x] `draw encodes the covering triangle` — `pass.draw` called with `(3, 1, 0, 0)`; `setPipeline` + `setBindGroup` called; no `beginRenderPass` anywhere (the mock device has none to call).
+- [x] `destroy releases every cached uniform buffer` — after draws on two keys, `destroy()` calls `.destroy()` on both `createBuffer` results.
+- [x] Repoint `toneMap.test.ts:16-22` and `postProcess.test.ts:19-26` curve imports to `'.../compositor'`; delete the now-redundant `postProcess JS-mirror tone-map curves` describe block (`postProcess.test.ts:92-111`) — `toneMap.test.ts` owns that coverage. (postProcess.test.ts imports removed outright — sole consumer block was deleted; toneMap.test.ts repointed.)
+- [x] `npm test -- compositor toneMap postProcess` → all pass (new suite + repointed suites).
+- [x] `npm run typecheck` → clean.
+- [x] Commit (stage the new + modified files by path).
 
 ---
 
@@ -183,12 +183,12 @@ export function createCompositor(init: {
 
 **Tests** (extend the existing suites in that file):
 
-- [ ] `writes compositor onto state.gpu.*` — after `initGpu`, `state.gpu.compositor` is the stub.
-- [ ] `replaying the destroy chain reaches compositor.destroy()` — `state.gpu.compositor?.destroy()` + null-out; stub's destroy called once, field null.
-- [ ] Implement the wiring above.
-- [ ] `npm test -- initGpu.destroyReachability` → green (existing + new assertions).
-- [ ] `npm run typecheck` + `npm test` → full suite green (nothing consumes the handle yet; that is expected and fine for this task).
-- [ ] Commit.
+- [x] `writes compositor onto state.gpu.*` — after `initGpu`, `state.gpu.compositor` is the stub.
+- [x] `replaying the destroy chain reaches compositor.destroy()` — `state.gpu.compositor?.destroy()` + null-out; stub's destroy called once, field null.
+- [x] Implement the wiring above. (Plus forced-minimal `compositor: null` in `tests/@types/engineState.test.ts` strict literals.)
+- [x] `npm test -- initGpu.destroyReachability` → green (existing + new assertions).
+- [x] `npm run typecheck` + `npm test` → full suite green (nothing consumes the handle yet; that is expected and fine for this task).
+- [x] Commit.
 
 ---
 
@@ -221,21 +221,21 @@ export function createPostProcess(init: {
 
 **Tests** (`postProcess.test.ts` — mock compositor: `{ label: 'compositor', draw: vi.fn<Compositor['draw']>(), destroy: vi.fn<() => void>() }`; mock encoder: `{ beginRenderPass: vi.fn(() => ({ end: vi.fn<() => void>() })) }`):
 
-- [ ] Update the existing three tests (`exposes view, resize, draw, destroy` / `view reflects the new texture immediately after resize` / destroy-release) to the bag call shape; the destroy test now asserts the HDR texture's destroy fired and `device.createBuffer` was **never called** (the uniform buffer is gone).
-- [ ] Add `draw opens one clearing pass on the swap view and delegates to the compositor` — `beginRenderPass` called once with `colorAttachments[0].view === swapView` and `loadOp: 'clear'`; `compositor.draw` called with the begun pass, the current HDR view, `'replace'`, and `{ exposure: 1.5, curve: 2 }` (raw, unclamped); the pass's `end` called.
-- [ ] Add `timing descriptor is spread into the internal pass only when provided` — with a descriptor, `beginRenderPass` arg has `timestampWrites`; without, the property is absent.
-- [ ] Implement; delete the shader files.
-- [ ] `npm test -- postProcess compositor toneMap initGpu.destroyReachability` → green.
-- [ ] `npm run typecheck` + `npm test` → full suite green.
-- [ ] Commit (stage `postProcess.ts`, `PostProcess.d.ts`, `initGpu.ts`, the test, and the three deletions by path).
+- [x] Update the existing three tests (`exposes view, resize, draw, destroy` / `view reflects the new texture immediately after resize` / destroy-release) to the bag call shape; the destroy test now asserts the HDR texture's destroy fired and `device.createBuffer` was **never called** (the uniform buffer is gone).
+- [x] Add `draw opens one clearing pass on the swap view and delegates to the compositor` — `beginRenderPass` called once with `colorAttachments[0].view === swapView` and `loadOp: 'clear'`; `compositor.draw` called with the begun pass, the current HDR view, `'replace'`, and `{ exposure: 1.5, curve: 2 }` (raw, unclamped); the pass's `end` called.
+- [x] Add `timing descriptor is spread into the internal pass only when provided` — with a descriptor, `beginRenderPass` arg has `timestampWrites`; without, the property is absent.
+- [x] Implement; delete the shader files.
+- [x] `npm test -- postProcess compositor toneMap initGpu.destroyReachability` → green.
+- [x] `npm run typecheck` + `npm test` → full suite green.
+- [x] Commit (stage `postProcess.ts`, `PostProcess.d.ts`, `initGpu.ts`, the test, and the three deletions by path).
 
 ---
 
 ## Task 5 — gate: full suite, visual baseline, entanglement radar
 
-- [ ] `npm run typecheck` + `npm test` → everything green.
-- [ ] Grep for stragglers: no references to `shaders/toneMap` remain; `linearClamp`/`reinhardExtended`/etc. are imported only from `compositor.ts`; `clampExposure` has exactly one consumer (`compositor.ts`).
-- [ ] Prettier the touched files only.
-- [ ] **User visual gate** on the dev server (leave it running): confirm the scene is unchanged — tone-map curve switching in the settings panel still works across all five curves, exposure slider behaves identically at both extremes (clamp intact), volumes and the pick-buffer debug overlay unchanged. This is the behaviour-neutral acceptance for the phase.
-- [ ] Run the `entanglement-radar` skill over the phase diff. Verify: no mirror state (the compositor caches no settings values — exposure/curve arrive per draw); no per-blend `if`-chains (blend-state and dstFormat resolution are data tables); the `(blend, dstFormat)` cache key is preserved as the spec's un-braided axis pair. Named accepted residue: the constructor-scoped blend→dstFormat mapping (Scope verification item 3) — confirm it is documented at the definition and nowhere else.
-- [ ] Commit any radar fixes; final commit of the plan checkbox state.
+- [x] `npm run typecheck` + `npm test` → everything green.
+- [x] Grep for stragglers: no references to `shaders/toneMap` remain; `linearClamp`/`reinhardExtended`/etc. are imported only from `compositor.ts`; `clampExposure` has exactly one consumer (`compositor.ts`). (Sweep also repointed stale comment pointers in proceduralDisks / pickDebugOverlay / volumeUpsample / fullscreenTri / toneMapCurve.)
+- [x] Prettier the touched files only.
+- [x] **User visual gate** on the dev server (leave it running): confirm the scene is unchanged — tone-map curve switching in the settings panel still works across all five curves, exposure slider behaves identically at both extremes (clamp intact), volumes and the pick-buffer debug overlay unchanged. This is the behaviour-neutral acceptance for the phase.
+- [x] Run the `entanglement-radar` skill over the phase diff. Verify: no mirror state (the compositor caches no settings values — exposure/curve arrive per draw); no per-blend `if`-chains (blend-state and dstFormat resolution are data tables); the `(blend, dstFormat)` cache key is preserved as the spec's un-braided axis pair. Named accepted residue: the constructor-scoped blend→dstFormat mapping (Scope verification item 3) — confirm it is documented at the definition and nowhere else. (All four points verified; one radar finding — the per-entry-buffer race guarantee is per-key, not per-draw — addressed by narrowing the header's claim.)
+- [x] Commit any radar fixes; final commit of the plan checkbox state.

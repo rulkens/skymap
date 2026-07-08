@@ -18,6 +18,7 @@
  * (`selectTourActive(store.getState())`).
  */
 
+import { createSelector } from '@reduxjs/toolkit';
 import { tourRoute } from '../../store/constants';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import type { RootState } from '../../store/types';
@@ -59,6 +60,18 @@ export const selectCurrentBeat = (state: RootState): BeatData | null => {
 
 export const selectTourCaption = (state: RootState): BeatCaption | null =>
   selectCurrentBeat(state)?.caption ?? null;
+
+// The beat-title list for the progress rail (null = a silent beat's dot, which
+// reveals nothing on hover). The one selector here that DERIVES an array, so
+// it is the one that must be memoized: a plain arrow would hand
+// `useAppSelector` a fresh reference on every dispatch and re-render the rail
+// constantly. The memo keys on the registry-resolved tour object, whose
+// reference is stable for the whole run, so the memoization is exact.
+export const selectTourBeatTitles = createSelector(
+  [selectActiveTour],
+  (tour): readonly (string | null)[] =>
+    tour ? tour.beats.map((beat) => beat.caption?.title ?? null) : [],
+);
 
 export const selectTourDwellSec = (state: RootState): number => selectTourRuntime(state).dwellSec;
 

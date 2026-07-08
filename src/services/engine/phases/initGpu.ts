@@ -45,6 +45,7 @@
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
 import { createPostProcess } from '../../gpu/passes/postProcess';
+import { createCompositor } from '../../gpu/passes/compositor';
 import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
@@ -113,29 +114,46 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the pick pass (each at its own group slot). See EngineGpuHandles.
   state.gpu.focusUniform = createFocusUniformBuffer(device, state.gpu.focusBgl!);
 
-  // ── HDR offscreen target + tone-map post-process ──────────────────
+  // ── HDR offscreen target + compositor tone-map ─────────────────────
   //
   // Every visible draw pass (points, quads, disks) writes into a
   // viewport-sized rgba16float texture instead of the swap chain.  The
-  // tone-map pass then samples the HDR target and writes tone-mapped,
-  // compressed-into-[0,1] values into the swap chain.  This eliminates
-  // the saturated-white blown-out cluster cores that pure additive
-  // blending into bgra8unorm suffers from, and gives the user a runtime
-  // curve selector (Linear / Reinhard / Asinh / Gamma 2 / ACES — see
-  // `data/toneMapCurve.ts`).
+  // compositor's tone-map curve then samples the HDR target and writes
+  // tone-mapped, compressed-into-[0,1] values into the swap chain.  This
+  // eliminates the saturated-white blown-out cluster cores that pure
+  // additive blending into bgra8unorm suffers from, and gives the user a
+  // runtime curve selector (Linear / Reinhard / Asinh / Gamma 2 / ACES —
+  // see `data/toneMapCurve.ts`).
   //
   // The HDR target is recreated on resize (in the frame loop's resize
   // branch) so it always tracks the swap chain size 1:1 — that's also
-  // why the tone-map sampler uses 'nearest' (each fragment samples one
-  // texel).  The pick renderer's r32uint integer target is separate and
-  // never wants tone-mapping.
+  // why the compositor's sampler uses 'nearest' for this composite (each
+  // fragment samples one texel).  The pick renderer's r32uint integer
+  // target is separate and never wants tone-mapping.
   //
-  // The target + tone-map pass live in one factory (see
-  // `services/gpu/postProcess.ts`): they share a lifetime and a
-  // swap-chain-format dependency.
-  const postProcess = createPostProcess(device, format, {
-    width: canvas.width,
-    height: canvas.height,
+  // `postProcess.ts` owns only the HDR target's lifetime and begins the
+  // swap-chain render pass each frame — it no longer builds a tone-map
+  // pipeline of its own.  Every offscreen→target merge, including this
+  // tone-mapped HDR→swap composite, is delegated to the shared
+  // `compositor` constructed below; that's why `postProcess` now takes a
+  // `compositor` handle instead of the swap-chain format directly.
+
+  // Unified compositor — one pipeline cache serves every offscreen→target
+  // merge the engine performs (tone-mapped HDR→swap below, plus the
+  // foreground-OVER and additive-field composites other passes will adopt).
+  // The blend→dstFormat table is baked in at construction, as data, rather
+  // than threaded per-draw, because a render-pass encoder cannot be queried
+  // for its own colour-attachment format — the caller has to hand it over
+  // up front. Constructed immediately before `postProcess` so the lexical
+  // order makes the dependency obvious: `postProcess` is about to become
+  // one of this compositor's callers.
+  const compositor = createCompositor({ device, swapFormat: format, hdrFormat: 'rgba16float' });
+  state.gpu.compositor = compositor;
+
+  const postProcess = createPostProcess({
+    device,
+    size: { width: canvas.width, height: canvas.height },
+    compositor,
   });
   // Mirror into engine state so `destroy()` can release the resources.
   state.gpu.postProcess = postProcess;
