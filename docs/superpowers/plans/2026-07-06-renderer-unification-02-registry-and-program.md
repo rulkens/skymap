@@ -52,9 +52,9 @@ Copy the spec's type blocks **verbatim** (field names and order included — `sl
 
 Didactic headers: each file explains its axis and points at the spec section (timeless — no dates).
 
-- [ ] Create the eight files with verbatim signatures.
-- [ ] `npm run typecheck` → green (types have no consumers yet). `npm test` → green.
-- [ ] Commit the eight files.
+- [x] Create the eight files with verbatim signatures.
+- [x] `npm run typecheck` → green (types have no consumers yet). `npm test` → green.
+- [x] Commit the eight files.
 
 ### Task 2 — `slabs.ts`: per-frame slab derivation + `slabViewOf`
 

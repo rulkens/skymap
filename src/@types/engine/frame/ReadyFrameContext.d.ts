@@ -55,6 +55,7 @@ import type { PostProcess } from '../../rendering/PostProcess';
 import type { VolumeOffscreen } from '../../rendering/VolumeOffscreen';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
+import type { Slab } from './Slab';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -63,6 +64,12 @@ export type ReadyFrameContext = {
   cam: OrbitCamera;
   /** Combined view-projection matrix, computed once per frame. */
   vp: Mat4;
+  /**
+   * This frame's slab table (`deriveSlabs`) — array position === `Slab.index`.
+   * `slabViewOf` resolves a `FrameStep`'s `slab: number` into a `SlabView`
+   * by indexing straight into this array.
+   */
+  slabs: readonly Slab[];
   /** Backing-store-pixel viewport size; same as `canvas.{width,height}`. */
   canvasSize: { width: number; height: number };
   /** Snapshot of `cam.position` as a readonly tuple (no live Float32Array aliasing). */

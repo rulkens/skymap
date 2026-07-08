@@ -17,6 +17,7 @@ function makeCtx(): ReadyFrameContext {
     isReady: true,
     cam: {} as never,
     vp: new Float32Array(16) as unknown as Mat4,
+    slabs: [],
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,

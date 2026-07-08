@@ -192,6 +192,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     isReady: true as const,
     cam,
     vp: viewProj,
+    slabs: [],
     canvasSize: { width: canvasWidth, height: canvasHeight },
     drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
       [number, number, number]

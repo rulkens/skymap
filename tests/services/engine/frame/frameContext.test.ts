@@ -26,6 +26,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
+import { deriveSlabs, NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -191,6 +192,20 @@ describe('deriveFrameContext — ready branch', () => {
     if (!ctx.isReady) return;
     const expected = computeViewProj(assembleOrbitCamera(pose, PROJECTION));
     expect(Array.from(ctx.vp)).toEqual(Array.from(expected));
+  });
+
+  it('populates ctx.slabs from deriveSlabs(cam, vp) — the single per-frame derivation', () => {
+    const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION, 0xffffffff, 0);
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+    const cam = assembleOrbitCamera(pose, PROJECTION);
+    const expected = deriveSlabs(cam, computeViewProj(cam));
+    expect(ctx.slabs).toHaveLength(2);
+    expect(ctx.slabs[0]?.index).toBe(NEAR0);
+    expect(ctx.slabs[1]?.index).toBe(COSMO);
+    expect(Array.from(ctx.slabs[0]!.vp)).toEqual(Array.from(expected[0]!.vp));
+    expect(Array.from(ctx.slabs[1]!.vp)).toEqual(Array.from(expected[1]!.vp));
   });
 
   it('populates canvasSize from canvas dimensions', () => {
