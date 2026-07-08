@@ -23,6 +23,12 @@ import { captionAnchor } from '../../utils/animation/captionAnchor';
 import styles from './TourOverlay.module.css';
 
 export type TourCaptionProps = {
+  /**
+   * Interactive-session chrome. `false` (cinema mode) drops the beat-counter
+   * readout from the kicker — a "02 / 14" reads as UI inside a recorded film
+   * — while the series label stays: it's editorial, like the title.
+   */
+  readonly chrome?: boolean;
   readonly caption: BeatCaption;
   readonly label: string | null;
   readonly index: number;
@@ -43,18 +49,21 @@ const HORIZONTAL_CLASS = {
   right: styles.captionRight,
 } as const;
 
-function TourCaption({ caption, label, index, total }: TourCaptionProps): ReactNode {
+function TourCaption({ chrome = true, caption, label, index, total }: TourCaptionProps): ReactNode {
   const { vertical, horizontal } = captionAnchor(caption.position ?? 'bottom-left');
 
   // Zero-padded "01 / 03" readout. The kicker prefixes the tour's label
   // (e.g. "Named Cosmic Web · 01 / 03") unless the tour has no label.
+  // Without chrome the readout is dropped entirely — label alone, or no
+  // kicker at all for an unlabelled tour.
   const current = String(index + 1).padStart(2, '0');
   const grand = String(total).padStart(2, '0');
   const readout = `${current} / ${grand}`;
+  const kicker = chrome ? (label ? `${label} · ${readout}` : readout) : label;
 
   return (
     <div className={cx(styles.caption, VERTICAL_CLASS[vertical], HORIZONTAL_CLASS[horizontal])}>
-      <div className={styles.label}>{label ? `${label} · ${readout}` : readout}</div>
+      {kicker ? <div className={styles.label}>{kicker}</div> : null}
       <h1 className={styles.title}>{caption.title}</h1>
       {caption.body ? (
         <div className={styles.body}>

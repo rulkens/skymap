@@ -184,11 +184,11 @@ export type SkymapRecorderHook = {
 
 **Steps:**
 
-- [ ] Write the harness (the flow above is the contract; Task 2's helpers do all the parsing/math — no new pure logic in this file. Anything that _does_ turn out pure and non-trivial: extract to `tools/utils/record/` with a test, per house rule).
-- [ ] Add the npm script (alphabetical slot, after `r2-cors`) and the `.gitignore` block — own commented section next to the `docs/screenshots` video block (`.gitignore:123-129`): recorder output, huge, regenerable.
-- [ ] `npm run typecheck` green.
-- [ ] **Manual smoke (main session runs this, not CI — needs dev server + GPU + ffmpeg):** `npm run record-tour -- --beats 1..1 --size 640x360 --fps 10` → tiny mp4 exists, ffprobe shows 640×360 and a plausible `nb_frames`, eyeball the clip. Record the result in the commit message.
-- [ ] Commit.
+- [x] Write the harness (the flow above is the contract; Task 2's helpers do all the parsing/math — no new pure logic in this file. Anything that _does_ turn out pure and non-trivial: extract to `tools/utils/record/` with a test, per house rule).
+- [x] Add the npm script (alphabetical slot, after `r2-cors`) and the `.gitignore` block — own commented section next to the `docs/screenshots` video block (`.gitignore:123-129`): recorder output, huge, regenerable.
+- [x] `npm run typecheck` green.
+- [x] **Manual smoke (main session runs this, not CI — needs dev server + GPU + ffmpeg):** `npm run record-tour -- --beats 1..1 --size 640x360 --fps 10` → tiny mp4 exists, ffprobe shows 640×360 and a plausible `nb_frames`, eyeball the clip. Record the result in the commit message.
+- [x] Commit.
 
 ---
 

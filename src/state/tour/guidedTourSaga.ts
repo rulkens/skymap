@@ -46,9 +46,10 @@
  * context for the fade pass. This saga therefore reaches no `getContext` itself.
  */
 
-import { call, put, select, take, race, cancelled } from 'typed-redux-saga';
+import { call, put, select, take, race, cancelled, delay } from 'typed-redux-saga';
 
 import { visitBeatSaga } from './visitBeatSaga';
+import { FOLD_SETTLE_MS } from './foldSettleMs';
 import { captureScene } from './captureScene';
 import { restoreSceneSaga } from './restoreSceneSaga';
 import { computeSceneEntering } from './computeSceneEntering';
@@ -119,6 +120,7 @@ export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
         const to = range ? Math.min(Math.max(range.to, 0), last) : last;
 
         let i = from;
+        let firstEntry = true;
         while (i <= to) {
           // Re-establish beat i's derived scene (see the module header). The
           // fold needs a FULL settings state: the captured baseline laid over
@@ -128,6 +130,22 @@ export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
           const live = yield* select((s: RootState) => s.settings);
           const baseline = mergeSettingsSnapshot(live, snapshot.settings);
           yield* put(mergeSnapshot(computeSceneEntering(baseline, tour.beats, i)));
+
+          // A windowed take opening mid-tour (from > 0) has just re-created
+          // the past in one dispatch — but the store change is not what the
+          // viewer sees: the visibility bridge animates source fades (~600 ms)
+          // and the label-fade envelope (~300 ms) plays the folded diff as a
+          // dissolve. On film the reconstruction must read as "already
+          // happened", so the window's opening beat waits for those bridges
+          // to finish before its clip starts. Only the FIRST entry needs it:
+          // every later fold reproduces cues that just played (a visual
+          // no-op), a Prev back to `from` is a live in-tour transition, and a
+          // full run's beat-0 fold equals the live baseline. In practice only
+          // recorder-driven runs pass a range, so the UI never waits here.
+          if (firstEntry && range !== undefined && from > 0) {
+            yield* delay(FOLD_SETTLE_MS);
+          }
+          firstEntry = false;
 
           // Delegate (not `call`) so the typed `BeatOutcome` return flows back;
           // cancellation from the outer `exit` race still propagates through the

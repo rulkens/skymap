@@ -82,6 +82,7 @@ vi.mock('../../../src/data/animation/tours/tourRegistry', async () => {
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTourSaga } from '../../../src/state/tour/watchTourSaga';
 import { startTour, exitTour } from '../../../src/state/tour/tourActions';
+import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
 import type { FocusCameraRuntime } from '../../../src/store/types';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -230,16 +231,21 @@ describe('watchTourSaga', () => {
   // ── (5) the beat range on the action reaches guidedTourSaga ──────────────
 
   it('the beat range on the action reaches guidedTourSaga', async () => {
+    vi.useFakeTimers();
     const { store } = buildHarness({ playClip: makeAutoFlyStub() });
 
     // webShowcase has two beats; the range selects only the second. The
     // window reaching guidedTourSaga is observable as the first beatChanged:
-    // index 1 — an unranged run would sit at beat 0.
+    // index 1 — an unranged run would sit at beat 0. Windowed from > 0 runs
+    // hold the beat behind the FOLD_SETTLE_MS reconstruction settle, so the
+    // index lands only once that delay has elapsed.
     store.dispatch(startTour('webShowcase', { from: 1, to: 1 }));
+    await vi.advanceTimersByTimeAsync(FOLD_SETTLE_MS);
+    await vi.advanceTimersByTimeAsync(0);
     expect(store.getState().tour.beatIndex).toBe(1);
 
     store.dispatch(exitTour());
-    await flush();
+    await vi.advanceTimersByTimeAsync(0);
     expect(store.getState().tour.active).toBe(false);
   });
 });

@@ -38,6 +38,7 @@ import { beginDrag } from '../../../src/state/camera/cameraSlice';
 import { hide } from '../../../src/services/engine/animation/effectHelpers';
 import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
+import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { Tour } from '../../../src/@types/animation/tour/Tour';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -274,8 +275,10 @@ describe('guidedTourSaga', () => {
     sagaMiddleware.run(guidedTourSaga, makeTour(beats), { from: 1, to: 1 });
 
     // The run starts at the window's `from` in GLOBAL indices — beatChanged(1)
-    // lands synchronously before the first async yield, correcting the 0 that
-    // tourStarted reset.
+    // corrects the 0 that tourStarted reset once the opening settle delay
+    // (FOLD_SETTLE_MS, windowed from > 0 takes only) releases the beat.
+    await vi.advanceTimersByTimeAsync(FOLD_SETTLE_MS);
+    await vi.advanceTimersByTimeAsync(0);
     expect(store.getState().tour.beatIndex).toBe(1);
 
     await vi.runAllTimersAsync();
@@ -328,6 +331,10 @@ describe('guidedTourSaga', () => {
     // recording command whose start index ran past the end still plays the
     // nearest beat rather than erroring or silently doing nothing.
     sagaMiddleware.run(guidedTourSaga, makeTour(beats), { from: 5, to: 2 });
+    // The clamped window opens on beat 2 once the settle delay (windowed
+    // from > 0) releases it.
+    await vi.advanceTimersByTimeAsync(FOLD_SETTLE_MS);
+    await vi.advanceTimersByTimeAsync(0);
     expect(store.getState().tour.beatIndex).toBe(2);
 
     await vi.runAllTimersAsync();
@@ -394,6 +401,7 @@ describe('guidedTourSaga', () => {
       dwellClip: dwellDrift(9999),
     };
 
+    vi.useFakeTimers();
     const { store, sagaMiddleware } = buildStore({ playClip: makeAutoFlyStub() });
     store.dispatch(setVolumesEnabled(true));
     const task = sagaMiddleware.run(guidedTourSaga, makeTour([cueBeat, plainBeat]), {
@@ -401,17 +409,74 @@ describe('guidedTourSaga', () => {
       to: 1,
     });
 
-    await flush();
-    await flush();
-    // In beat 1's dwell: the fold applied beat 0's hide cue on entry despite
-    // beat 0 never having played.
-    expect(store.getState().tour.beatIndex).toBe(1);
+    // The reconstruction fold dispatches synchronously on entry — beat 0's
+    // hide cue is applied before the settle delay even starts ticking.
     expect(store.getState().settings.volumes.enabled).toBe(false);
+
+    // The settle delay gates the beat itself; once it elapses, beat 1 plays.
+    await vi.advanceTimersByTimeAsync(FOLD_SETTLE_MS);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.getState().tour.beatIndex).toBe(1);
 
     store.dispatch(exitTour());
     await task.toPromise();
     // The exit restore winds the cue's effect back to the captured baseline.
     expect(store.getState().settings.volumes.enabled).toBe(true);
+  });
+
+  // ── (2d) windowed takes settle the reconstruction fold before playing ─────
+
+  it('a windowed take settles the reconstruction fold before the first fly', async () => {
+    vi.useFakeTimers();
+
+    const beats: BeatData[] = ['First', 'Second'].map((title) => ({
+      enterClip: NARRATION_CLIP,
+      caption: { title },
+      dwellClip: dwellDrift(0.001),
+    }));
+
+    const stub = makeAutoFlyStub();
+    const { store, sagaMiddleware } = buildStore({ playClip: stub });
+    sagaMiddleware.run(guidedTourSaga, makeTour(beats), { from: 1, to: 1 });
+
+    // The fold's mergeSnapshot lands synchronously, but the visibility bridge
+    // and label-fade envelope animate that diff — the beat's fly must wait
+    // out FOLD_SETTLE_MS so the film opens on a settled scene.
+    expect(stub).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(FOLD_SETTLE_MS - 1);
+    expect(stub).not.toHaveBeenCalled();
+
+    // Crossing the settle boundary releases the fly.
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(stub).toHaveBeenCalled();
+
+    await vi.runAllTimersAsync();
+    expect(store.getState().tour.active).toBe(false);
+  });
+
+  it('a full run reaches the first fly with no settle delay added', async () => {
+    vi.useFakeTimers();
+
+    const beats: BeatData[] = ['First', 'Second'].map((title) => ({
+      enterClip: NARRATION_CLIP,
+      caption: { title },
+      dwellClip: dwellDrift(0.001),
+    }));
+
+    const stub = makeAutoFlyStub();
+    const { store, sagaMiddleware } = buildStore({ playClip: stub });
+    sagaMiddleware.run(guidedTourSaga, makeTour(beats));
+
+    // Zero-length advances flush 0 ms macrotasks but can never fire a
+    // FOLD_SETTLE_MS timer — the first fly must already be through: beat 0's
+    // fold equals the live baseline, so there is nothing to settle.
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(stub).toHaveBeenCalled();
+
+    await vi.runAllTimersAsync();
+    expect(store.getState().tour.active).toBe(false);
   });
 
   // ── (3) natural completion restores the captured scene ────────────────────

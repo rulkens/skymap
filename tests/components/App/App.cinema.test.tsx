@@ -27,7 +27,7 @@ import { render } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { App } from '../../../src/components/App/App';
 import { createAppStore } from '../../../src/store/createAppStore';
-import { tourStarted } from '../../../src/state/tour/tourSlice';
+import { tourStarted, dwellStarted } from '../../../src/state/tour/tourSlice';
 import { isCinemaMode } from '../../../src/utils/url/isCinemaMode';
 import type { UseEngineReturn } from '../../../src/@types/engine/UseEngineReturn';
 
@@ -115,17 +115,24 @@ describe('App cinema mode', () => {
     expect(container.querySelectorAll('button')).toHaveLength(0);
   });
 
-  it('cinema mode mounts TourOverlayContainer while a tour is active', () => {
+  it('cinema mode mounts TourOverlayContainer while a tour is active — captions only', () => {
     vi.mocked(isCinemaMode).mockReturnValue(true);
     const store = makeStore();
     // `webShowcase` is a real registry tour — same seed as the
-    // TourOverlayContainer suite.
+    // TourOverlayContainer suite. The dwell landing (nonce bump) is what
+    // reveals the caption; mid-fly it is hidden by design.
     store.dispatch(tourStarted({ tourId: 'webShowcase' }));
-    const { container } = renderApp(store);
+    store.dispatch(dwellStarted({ dwellSec: 8 }));
+    const { container, getByText, queryByText } = renderApp(store);
 
-    // The overlay's always-on nav proves the container mounted; the HUD
-    // chrome stays absent even with the tour running.
-    expect(container.querySelector('[aria-label="Exit tour"]')).not.toBeNull();
+    // The caption proves the overlay mounted: beat-0 title + the series
+    // label (kicker), the film's only text.
+    expect(getByText('The Milky Way')).toBeInTheDocument();
+    expect(getByText('Named Cosmic Web')).toBeInTheDocument();
+    // Cinema is captions ONLY: no beat counter ("· 01 / 03") and no
+    // transport buttons — they'd render straight into the recording.
+    expect(queryByText(/\d{2} \/ \d{2}/)).toBeNull();
+    expect(container.querySelectorAll('button')).toHaveLength(0);
     for (const selector of HUD_SELECTORS) {
       expect(container.querySelector(selector)).toBeNull();
     }

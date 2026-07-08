@@ -128,6 +128,14 @@ public/images/famous-curated/*/.tmp/
 docs/screenshots/*.mov
 docs/screenshots/*.mp4
 
+# ── Tour recorder output ─────────────────────────────────────────────────────
+# `npm run record-tour` (tools/record/recordTour.ts) encodes takes straight
+# to mp4 here.  A full 4K/60 grand-tour take runs to gigabytes, and every
+# take is regenerable on demand — the tour is authored in code and the
+# recorder is deterministic (CDP virtual time) — so recordings are build
+# artefacts, never repo content.
+recordings/
+
 # ── Firebase CLI per-developer cache ─────────────────────────────────────────
 # `.firebase/hosting.*.cache` records the previously-deployed file hashes so
 # `firebase deploy` can skip files whose content hasn't changed.  The cache

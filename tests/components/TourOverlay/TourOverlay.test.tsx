@@ -34,6 +34,30 @@ describe('TourCaption', () => {
     expect(screen.getByText('03 / 03')).toBeInTheDocument();
   });
 
+  it('drops the beat counter without chrome (cinema) but keeps the series label', () => {
+    const caption: BeatCaption = { title: 'The Virgo Cluster' };
+    render(
+      <TourCaption
+        chrome={false}
+        caption={caption}
+        label="The Local Universe"
+        index={1}
+        total={14}
+      />,
+    );
+
+    expect(screen.getByText('The Local Universe')).toBeInTheDocument();
+    expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
+  });
+
+  it('renders no kicker at all without chrome when the tour has no label', () => {
+    const caption: BeatCaption = { title: 'M87' };
+    render(<TourCaption chrome={false} caption={caption} label={null} index={2} total={3} />);
+
+    expect(screen.getByText('M87')).toBeInTheDocument();
+    expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
+  });
+
   it('renders markdown body: bold becomes <strong>, links open in a new tab', () => {
     const caption: BeatCaption = {
       title: 'The Milky Way',
@@ -135,5 +159,21 @@ describe('TourOverlay', () => {
 
     rerender(<TourOverlay {...baseProps()} dwellNonce={1} />);
     expect(screen.getByText('The Virgo Cluster')).toBeInTheDocument();
+  });
+
+  it('mounts transport + beat counter with chrome (interactive default)', () => {
+    render(<TourOverlay {...baseProps()} dwellNonce={1} />);
+
+    expect(screen.getByRole('button', { name: 'Exit tour' })).toBeInTheDocument();
+    expect(screen.getByText('The Local Universe · 01 / 03')).toBeInTheDocument();
+  });
+
+  it('cinema presentation (chrome=false): caption only — no buttons, no counter', () => {
+    render(<TourOverlay {...baseProps()} chrome={false} dwellNonce={1} />);
+
+    expect(screen.getByText('The Virgo Cluster')).toBeInTheDocument();
+    expect(screen.getByText('The Local Universe')).toBeInTheDocument();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
   });
 });
