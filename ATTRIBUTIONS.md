@@ -59,6 +59,21 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
 - **Reference:** Jarrett et al. 2000, AJ 119, 2498.
 - **Licence:** Publicly released; cite the paper above.
 
+### DESI DR1 — Dark Energy Spectroscopic Instrument
+
+- **Use:** DR1 large-scale-structure clustering catalogs (the four NGC tracer
+  files `BGS_BRIGHT`, `LRG`, `ELG_LOPnotqso`, `QSO`), cone-filtered at build
+  time to a narrow 2.5° deep cone around Corona Borealis. Positions +
+  redshifts feed the point cloud; only `BGS_BRIGHT` carries photometry.
+- **Reference:** DESI Collaboration et al. (2026), "Data Release 1 of the
+  Dark Energy Spectroscopic Instrument", AJ 171, 285
+  (ads: [2026AJ....171..285D](https://ui.adsabs.harvard.edu/abs/2026AJ....171..285D)).
+- **Licence:** CC BY 4.0.
+- **Required acknowledgment** (verbatim, per
+  <https://data.desi.lbl.gov/doc/acknowledgments/>):
+
+  > This research used data obtained with the Dark Energy Spectroscopic Instrument (DESI). DESI construction and operations is managed by the Lawrence Berkeley National Laboratory. This material is based upon work supported by the U.S. Department of Energy, Office of Science, Office of High-Energy Physics, under Contract No. DE–AC02–05CH11231, and by the National Energy Research Scientific Computing Center, a DOE Office of Science User Facility under the same contract. Additional support for DESI was provided by the U.S. National Science Foundation (NSF), Division of Astronomical Sciences under Contract No. AST-0950945 to the NSF's National Optical-Infrared Astronomy Research Laboratory; the Science and Technology Facilities Council of the United Kingdom; the Gordon and Betty Moore Foundation; the Heising-Simons Foundation; the French Alternative Energies and Atomic Energy Commission (CEA); the National Council of Humanities, Science and Technology of Mexico (CONAHCYT); the Ministry of Science and Innovation of Spain (MICINN), and by the DESI Member Institutions.
+
 ## Volume reconstructions
 
 The two scalar-field overlays drawn underneath the point cloud (CF-4 DM

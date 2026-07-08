@@ -104,3 +104,12 @@ would be filtered out immediately after parsing.
 role as `cf4.sha256`, but four files under one key since they're always
 fetched and verified together. Written by the fetcher on completion; a
 mismatch on re-run signals a truncated or stale download.
+
+## Required acknowledgment
+
+DESI DR1 is CC BY 4.0 and carries a required funding-acknowledgment
+paragraph. Cite DESI Collaboration et al. (2026), "Data Release 1 of the
+Dark Energy Spectroscopic Instrument", AJ 171, 285
+(ads: `2026AJ....171..285D`). The full acknowledgment text lives once in
+[`ATTRIBUTIONS.md`](../../../ATTRIBUTIONS.md) (Catalogue data → DESI DR1) —
+that is the canonical copy; it is not duplicated here.
