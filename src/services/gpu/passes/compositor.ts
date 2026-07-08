@@ -226,7 +226,10 @@ export function createCompositor(init: {
   const uniformF32 = new Float32Array(uniformBytes);
   const uniformU32 = new Uint32Array(uniformBytes);
 
-  function entryFor(blend: CompositeBlend): { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer } {
+  function entryFor(blend: CompositeBlend): {
+    pipeline: GPURenderPipeline;
+    uniformBuffer: GPUBuffer;
+  } {
     const dstFormat = dstFormatFor[blend];
     const key = `${blend}:${dstFormat}`;
     const existing = cache.get(key);
@@ -257,7 +260,12 @@ export function createCompositor(init: {
 
   const compositor: Compositor = {
     label: 'compositor',
-    draw(pass: GPURenderPassEncoder, src: GPUTextureView, blend: CompositeBlend, tone: ToneMap | null): void {
+    draw(
+      pass: GPURenderPassEncoder,
+      src: GPUTextureView,
+      blend: CompositeBlend,
+      tone: ToneMap | null,
+    ): void {
       const entry = entryFor(blend);
 
       if (tone) {
