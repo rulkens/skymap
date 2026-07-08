@@ -5,9 +5,10 @@
  * A named intersection instead of a `declare global { interface Window }`
  * augmentation: the house style bans `interface`, and a global augmentation
  * would advertise the slot to every file in the app when its only writer is
- * `installRecorderHook` and its only in-repo reader is that installer's test
- * suite (the harness reads it through untyped `page.evaluate`). Both sides
- * cast through this one name so the shape can't drift between them.
+ * `installRecorderHook`, and its in-repo readers are that installer's test
+ * suite and `tools/record/recordTour.ts` (both read it through untyped
+ * `page.evaluate`). Both sides cast through this one name so the shape can't
+ * drift between them.
  */
 
 import type { SkymapRecorderHook } from './SkymapRecorderHook';

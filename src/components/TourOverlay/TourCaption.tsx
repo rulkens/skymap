@@ -26,7 +26,8 @@ export type TourCaptionProps = {
   /**
    * Interactive-session chrome. `false` (cinema mode) drops the beat-counter
    * readout from the kicker — a "02 / 14" reads as UI inside a recorded film
-   * — while the series label stays: it's editorial, like the title.
+   * — while the series label stays: it's editorial, like the title. Bottom
+   * anchors also shed their nav clearance (`captionNoChrome` in the module).
    */
   readonly chrome?: boolean;
   readonly caption: BeatCaption;
@@ -62,7 +63,16 @@ function TourCaption({ chrome = true, caption, label, index, total }: TourCaptio
   const kicker = chrome ? (label ? `${label} · ${readout}` : readout) : label;
 
   return (
-    <div className={cx(styles.caption, VERTICAL_CLASS[vertical], HORIZONTAL_CLASS[horizontal])}>
+    <div
+      className={cx(
+        styles.caption,
+        VERTICAL_CLASS[vertical],
+        HORIZONTAL_CLASS[horizontal],
+        // Without chrome the nav is unmounted, so bottom anchors drop their
+        // nav clearance and sit at the frame's own margin (see the module).
+        !chrome && styles.captionNoChrome,
+      )}
+    >
       {kicker ? <div className={styles.label}>{kicker}</div> : null}
       <h1 className={styles.title}>{caption.title}</h1>
       {caption.body ? (

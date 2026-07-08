@@ -109,7 +109,10 @@ type RecordOptions = {
   tourId: string;
   beats: BeatRange | undefined;
   fps: number;
+  /** OUTPUT film resolution — the page viewport is size/dpr (see captureTour). */
   size: { width: number; height: number };
+  /** deviceScaleFactor for the page; --size stays the output resolution. */
+  dpr: number;
   out: string;
   url: string;
 };
@@ -135,6 +138,10 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     beats: undefined,
     fps: 60,
     size: parseSize('3840x2160'),
+    // Default 2, not 1: DOM captions are authored in CSS pixels, and a
+    // designer judges them on a 2x display — see the didactic block at the
+    // viewport derivation in captureTour for the full proportion argument.
+    dpr: 2,
     out: 'recordings/grand-tour-4k60.mp4',
     url: 'http://localhost:5173',
   };
@@ -146,6 +153,7 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       arg === '--beats' ||
       arg === '--fps' ||
       arg === '--size' ||
+      arg === '--dpr' ||
       arg === '--out' ||
       arg === '--url'
     ) {
@@ -159,11 +167,21 @@ function parseArgs(argv: readonly string[]): RecordOptions {
         }
       }
       if (arg === '--size') options.size = parseSize(value);
+      if (arg === '--dpr') {
+        // Only 1 or 2: the app clamps devicePixelRatio to 2 when sizing the
+        // canvas backing store (src/services/gpu/device.ts), so a higher dpr
+        // would shrink the viewport without adding a single rendered pixel.
+        if (value !== '1' && value !== '2') {
+          throw new Error(`--dpr must be 1 or 2, got '${value}'`);
+        }
+        options.dpr = Number(value);
+      }
       if (arg === '--out') options.out = value;
       if (arg === '--url') options.url = value.replace(/\/$/, '');
     } else if (arg.startsWith('--')) {
       throw new Error(
-        `unknown flag '${arg}' (known: --beats, --fps, --size, --out, --url; positional: tour id)`,
+        `unknown flag '${arg}' ` +
+          '(known: --beats, --fps, --size, --dpr, --out, --url; positional: tour id)',
       );
     } else if (!positionalSeen) {
       options.tourId = arg;
@@ -171,6 +189,16 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     } else {
       throw new Error(`unexpected extra positional '${arg}' — only one tour id is accepted`);
     }
+  }
+  // The viewport is size/dpr in CSS pixels, and Playwright viewports are
+  // integral — a 4K output divides cleanly by 2, but an odd custom size
+  // would silently round and ship a film at the wrong resolution.
+  if (options.size.width % options.dpr !== 0 || options.size.height % options.dpr !== 0) {
+    throw new Error(
+      `--size ${options.size.width}x${options.size.height} does not divide evenly by ` +
+        `--dpr ${options.dpr} — the page viewport is size/dpr and must be a whole number ` +
+        'of CSS pixels',
+    );
   }
   return options;
 }
@@ -335,7 +363,36 @@ async function captureTour(
   frameCap: number,
   writePng: (png: Buffer) => Promise<void>,
 ): Promise<number> {
-  const context = await browser.newContext({ viewport: options.size, deviceScaleFactor: 1 });
+  // `--size` is the OUTPUT film resolution; the page runs in a viewport of
+  // size/dpr CSS pixels at deviceScaleFactor dpr (default 2). Two reasons:
+  //
+  // - Proportions: DOM captions are typeset in CSS pixels. A 3840x2160
+  //   viewport at dpr 1 sets them against a 4K frame — half the relative size
+  //   a designer sees on a 2x display. A 1920x1080 viewport at dpr 2 yields
+  //   the same 3840x2160 frame with captions at their designed proportions.
+  // - Free fidelity: the app sizes the canvas backing store to
+  //   clientSize x min(devicePixelRatio, 2) (resizeCanvasToDisplay in
+  //   src/services/gpu/device.ts), so both configurations rasterize the very
+  //   same native 4K canvas — dpr 2 costs no extra GPU work. That cap is also
+  //   why --dpr stops at 2.
+  //
+  // Pixel contract — established EMPIRICALLY against headless-new Chromium,
+  // not from docs or Playwright source: an UNCLIPPED fromSurface capture
+  // returns a CSS-px-sized image regardless of deviceScaleFactor (a 640x360
+  // --size at dpr 2, i.e. a 320x180 viewport, came back as a 320x180 mp4).
+  // Device-pixel output must be bought explicitly: the capture loop passes
+  // clip = the full viewport in CSS px with scale = dpr (CDP Viewport;
+  // clip.scale multiplies the capture resolution), making every frame
+  // viewport x dpr = --size exactly. At dpr 1 the scale is 1 and the clip is
+  // a no-op — one code path, no branch. (Playwright's crPage.js scale:'css'
+  // handling suggests raw captures are device-px, but that describes its
+  // CLIPPED path — the unclipped surface capture demonstrably scales to CSS
+  // px here.)
+  const viewport = {
+    width: options.size.width / options.dpr,
+    height: options.size.height / options.dpr,
+  };
+  const context = await browser.newContext({ viewport, deviceScaleFactor: options.dpr });
   const page = await context.newPage();
   // Surface page-side failures immediately — a dead take should explain
   // itself in the harness output, not require reproducing in a headed run.
@@ -435,10 +492,14 @@ async function captureTour(
     }
     await grantAndAwaitExpiry(session, 1000 / options.fps, `frame ${frame}`);
     // Raw CDP capture of the compositor surface (finding 2) — what the
-    // display would show after this grant's present.
+    // display would show after this grant's present. The explicit clip with
+    // scale = dpr is what makes the frame device-pixel-sized (= --size); an
+    // unclipped capture comes back in CSS px — see the pixel-contract note at
+    // the viewport derivation above.
     const shot = await session.send('Page.captureScreenshot', {
       format: 'png',
       fromSurface: true,
+      clip: { x: 0, y: 0, width: viewport.width, height: viewport.height, scale: options.dpr },
     });
     await writePng(Buffer.from(shot.data, 'base64'));
     frame++;
@@ -520,7 +581,9 @@ async function main(): Promise<void> {
       `(${slicedBeats.length} of ${tour.beats.length})`,
   );
   console.log(
-    `  ${options.size.width}x${options.size.height} @ ${options.fps} fps → ${options.out}`,
+    `  ${options.size.width}x${options.size.height} @ ${options.fps} fps ` +
+      `(viewport ${options.size.width / options.dpr}x${options.size.height / options.dpr} ` +
+      `@ dpr ${options.dpr}) → ${options.out}`,
   );
 
   // ffmpeg first: a missing binary should fail in milliseconds, not after a

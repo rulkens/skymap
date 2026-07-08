@@ -78,16 +78,16 @@ recorder-shaped on the render side:
 
 ## Decisions (approved)
 
-| Decision      | Choice                                                           |
-| ------------- | ---------------------------------------------------------------- |
-| Pipeline      | Playwright + CDP virtual time + ffmpeg stdin pipe                |
-| Resolution    | 3840×2160 (viewport 3840×2160 @ `deviceScaleFactor: 1`)          |
-| Frame rate    | 60 fps (budget grant = 1000/60 ms per frame)                     |
-| Codec         | H.264, `libx264 -crf 16 -preset slow -pix_fmt yuv420p`, mp4      |
-| Audio         | none — captions carry the narration                              |
-| Overlays kept | TourOverlay captions only; all other HUD hidden ("cinema mode")  |
-| Output        | `recordings/grand-tour-4k60.mp4` (`recordings/` gitignored)      |
-| ffmpeg        | host prerequisite (`brew install ffmpeg`), not an npm dependency |
+| Decision      | Choice                                                                                                         |
+| ------------- | -------------------------------------------------------------------------------------------------------------- |
+| Pipeline      | Playwright + CDP virtual time + ffmpeg stdin pipe                                                              |
+| Resolution    | 3840×2160 output (viewport 1920×1080 @ `deviceScaleFactor: 2` by default; `--dpr 1` for CSS-px-native capture) |
+| Frame rate    | 60 fps (budget grant = 1000/60 ms per frame)                                                                   |
+| Codec         | H.264, `libx264 -crf 16 -preset slow -pix_fmt yuv420p`, mp4                                                    |
+| Audio         | none — captions carry the narration                                                                            |
+| Overlays kept | TourOverlay captions only; all other HUD hidden ("cinema mode")                                                |
+| Output        | `recordings/grand-tour-4k60.mp4` (`recordings/` gitignored)                                                    |
+| ffmpeg        | host prerequisite (`brew install ffmpeg`), not an npm dependency                                               |
 
 ## Architecture
 

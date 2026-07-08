@@ -17,6 +17,10 @@ import TourCaption from '../../../src/components/TourOverlay/TourCaption';
 import TourNav from '../../../src/components/TourOverlay/TourNav';
 import TourOverlay from '../../../src/components/TourOverlay/TourOverlay';
 import type { BeatCaption } from '../../../src/@types/animation/tour/BeatCaption';
+// Vitest replaces CSS-module imports with a stable name proxy, so class
+// assertions can use the same `styles.x` tokens the component renders
+// instead of hard-coding mangled class names.
+import styles from '../../../src/components/TourOverlay/TourOverlay.module.css';
 
 describe('TourCaption', () => {
   it('renders the title and the zero-padded label readout', () => {
@@ -166,6 +170,9 @@ describe('TourOverlay', () => {
 
     expect(screen.getByRole('button', { name: 'Exit tour' })).toBeInTheDocument();
     expect(screen.getByText('The Local Universe · 01 / 03')).toBeInTheDocument();
+    // Interactive captions keep their nav clearance — no cinema layout class.
+    const captionRoot = screen.getByText('The Virgo Cluster').parentElement!;
+    expect(captionRoot.classList.contains(styles.captionNoChrome!)).toBe(false);
   });
 
   it('cinema presentation (chrome=false): caption only — no buttons, no counter', () => {
@@ -175,5 +182,11 @@ describe('TourOverlay', () => {
     expect(screen.getByText('The Local Universe')).toBeInTheDocument();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
+    // Layout: with the nav unmounted, bottom-anchored captions shed their
+    // nav clearance via the captionNoChrome modifier. Class presence is the
+    // house-appropriate depth — pixel assertions of CSS are brittle in jsdom
+    // (styles aren't computed), the class is the contract.
+    const captionRoot = screen.getByText('The Virgo Cluster').parentElement!;
+    expect(captionRoot.classList.contains(styles.captionNoChrome!)).toBe(true);
   });
 });

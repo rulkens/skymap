@@ -8,10 +8,10 @@
  *
  * The parse itself (presence semantics + malformed-string
  * defensiveness) lives in the pure `searchHasGate`; this wrapper
- * adds only the live `window.location.search` read.  The
- * `typeof window === 'undefined'` guard covers SSR-like environments
- * (jsdom has window, but be defensive — vitest unit-test runs
- * sometimes inject minimal-jsdom shims that lack `location`).
+ * adds only the live `window.location.search` read. The
+ * `typeof window === 'undefined'` guard covers SSR-like environments,
+ * and the `?.search ?? ''` optional-chain covers the narrower case of
+ * minimal-jsdom shims that have a `window` but lack `location`.
  *
  * ### Why "has", not "get"
  *
@@ -26,5 +26,5 @@ import { searchHasGate } from './searchHasGate';
 
 export function hasUrlGate(name: string): boolean {
   if (typeof window === 'undefined') return false;
-  return searchHasGate(window.location.search, name);
+  return searchHasGate(window.location?.search ?? '', name);
 }

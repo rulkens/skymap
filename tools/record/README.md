@@ -23,19 +23,20 @@ design and the spike's findings.
 - **A running dev server**: `npm run dev` (default `http://localhost:5173`).
   The recorder loads `<url>/?cinema`, a mode that skips the splash and mounts
   only the canvas + tour captions.
-- **A GPU.** The recorder launches Playwright's `channel: 'chromium'` (the
-  full Chromium build, not the default headless _shell_ — the shell exposes
-  `navigator.gpu` but yields no adapter). Install it once with
-  `npx playwright install chromium`. Note: a bare shell (e.g. over SSH with no
-  GPU) cannot run this — there is no software-WebGPU fallback, only a flagged
-  headless-shell launch that has _not_ been proven to composite WebGPU
-  reliably.
-- The Playwright **`chromium` channel** installed (see above).
+- **A GPU, and the Playwright `chromium` channel installed.** The recorder
+  launches Playwright's `channel: 'chromium'` (the full Chromium build, not
+  the default headless _shell_ — the shell exposes `navigator.gpu` but yields
+  no adapter). Install it once with `npx playwright install chromium`. Note: a
+  bare shell (e.g. over SSH with no GPU) cannot run this — there is no
+  software-WebGPU fallback, only a flagged headless-shell launch that has
+  _not_ been proven to composite WebGPU reliably.
 
 ## Usage
 
-Full take, defaults (`grandTour`, all beats, 3840×2160 @ 60 fps, H.264
-`-crf 16`, output `recordings/grand-tour-4k60.mp4`):
+Full take, defaults (`grandTour`, all beats, 3840×2160 output @ 60 fps —
+rendered in a 1920×1080 viewport at `deviceScaleFactor: 2` so captions keep
+their designed proportions — H.264 `-crf 16`, output
+`recordings/grand-tour-4k60.mp4`):
 
 ```bash
 npm run record-tour
@@ -47,20 +48,36 @@ Flags (all optional; positional `tour id` defaults to `grandTour`):
 | ---------- | -------------------------------- | ---------------------------------------------------------- |
 | `--beats`  | full tour (`0..lastBeat`)        | `a..b`, inclusive, 0-based                                 |
 | `--fps`    | `60`                             | positive integer                                           |
-| `--size`   | `3840x2160`                      | `WIDTHxHEIGHT`                                             |
+| `--size`   | `3840x2160`                      | `WIDTHxHEIGHT` — the OUTPUT film resolution                |
+| `--dpr`    | `2`                              | viewport = size/dpr; `1` for CSS-px-native capture         |
 | `--out`    | `recordings/grand-tour-4k60.mp4` | directory is created if missing                            |
 | `--url`    | `http://localhost:5173`          | trailing slash stripped; point at a non-default dev server |
 | positional | `grandTour`                      | tour id, must exist in `tourRegistry`                      |
 
+`--size` always means the pixels that land in the mp4; `--dpr` only chooses
+how they are produced. At the default `--dpr 2` the page runs in a size/2
+viewport at `deviceScaleFactor: 2`: DOM captions are typeset in CSS pixels,
+so this renders them at the relative size a designer sees on a 2× display,
+while the app's DPR-capped canvas sizing (`min(devicePixelRatio, 2)` in
+`src/services/gpu/device.ts`) rasterizes the identical native canvas either
+way — dpr 2 costs nothing. The harness captures with an explicit screenshot
+clip at `scale = dpr` (unclipped CDP captures come back in CSS pixels), so
+the output stays size-exact. Both `--size` dimensions must divide evenly by
+`--dpr`.
+
 Beat indices are the 0-based numbers `npm run tour-length` prints for a tour
 — use that command first to find the range you want.
 
-Partial take for iteration, against a dev server on a non-standard port:
+Partial take for iteration, against a dev server on a non-standard port
+(1920×1080 output, i.e. a 960×540 viewport at the default dpr 2):
 
 ```bash
 npm run record-tour -- --beats 4..6 --fps 30 --size 1920x1080 \
   --url http://localhost:5174 --out recordings/beat-4-6.mp4
 ```
+
+Add `--dpr 1` to capture CSS-px-native instead (viewport = `--size` exactly,
+captions proportionally smaller — how the app looks on a 1× monitor).
 
 A windowed take (`--beats` with a nonzero start) automatically burns and
 discards `FOLD_SETTLE_MS` (1 s) of virtual time before capturing — the saga's
