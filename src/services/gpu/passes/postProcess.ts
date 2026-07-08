@@ -82,12 +82,12 @@
  *
  * ### JS-mirror curves for unit tests
  *
- * Each WGSL curve has a JS twin exported below (`linearClamp`,
- * `reinhardExtended`, ...).  Their math matches the shader byte-for-
- * byte so a Vitest unit test catches a regression without booting
- * WebGPU.  Keep them in sync — if the WGSL changes, the JS must
- * change.  The shared `tests/services/gpu/toneMap.test.ts` exercises
- * monotonicity, asymptotic behaviour, and curve-specific shape.
+ * The JS twins of every WGSL curve (`linearClamp`, `reinhardExtended`,
+ * ...) — plus the `DEFAULT_WHITEPOINT` / `DEFAULT_ASINH_SOFTNESS`
+ * constants this pass packs into its uniform — now live in
+ * `compositor.ts`, the module that owns the tone-map draw. This pass
+ * imports the two constants transitionally until Task 4 folds its draw
+ * into the compositor and this file goes away.
  */
 
 // `?static` runs the WESL linker at build time and returns a flat WGSL
@@ -101,68 +101,13 @@ import fsCode from '../shaders/toneMap/fragment.wesl?static';
 import { ToneMapCurve } from '../../../data/toneMapCurve';
 import { clampExposure } from '../../../utils/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+// Transitional import: the tone-map curve mirror + these two default
+// constants moved to compositor.ts (the module that now owns the
+// tone-map draw). This pass still packs its own uniform until Task 4
+// folds it into the compositor, at which point this import is deleted.
+import { DEFAULT_WHITEPOINT, DEFAULT_ASINH_SOFTNESS } from './compositor';
 import type { Size } from '../../../@types/rendering/Size';
 import type { PostProcess } from '../../../@types/rendering/PostProcess';
-
-/** Default whitepoint for Reinhard-extended — input value where the curve reaches 1.0. */
-const DEFAULT_WHITEPOINT = 4.0;
-
-/** Default softness for asinh stretch — higher = more aggressive low-end lift. */
-const DEFAULT_ASINH_SOFTNESS = 10.0;
-
-// ─── JS-mirror tone-map curves ────────────────────────────────────────────
-//
-// JS-mirrors of every WGSL curve.  Kept by-hand-in-sync so the unit
-// tests catch shader regressions before they ship.
-
-export function linearClamp(c: number, exposure: number): number {
-  return Math.max(0, Math.min(1, c * exposure));
-}
-
-export function reinhardExtended(
-  c: number,
-  exposure: number,
-  whitepoint: number = DEFAULT_WHITEPOINT,
-): number {
-  const x = c * exposure;
-  const wsq = whitepoint * whitepoint;
-  // The classic Reinhard-extended formula c·(1 + c/W²) / (1 + c) reaches
-  // exactly 1.0 at the whitepoint; *above* the whitepoint it grows
-  // unboundedly toward c/W² (~6.25 at c=100, W=4).  We clamp for safety
-  // so a runaway peak doesn't produce a supersaturated swap-chain pixel
-  // which (depending on the platform's `bgra8unorm` clipping behaviour)
-  // can end up as a flat white tile rather than a smooth roll-off.
-  const y = (x * (1 + x / wsq)) / (1 + x);
-  return Math.max(0, Math.min(1, y));
-}
-
-export function asinhStretch(
-  c: number,
-  exposure: number,
-  softness: number = DEFAULT_ASINH_SOFTNESS,
-): number {
-  const x = c * exposure;
-  // The Lupton formula `asinh(k·c) / asinh(k)` reaches 1.0 at c=1; for
-  // c>1 it grows logarithmically (slowly, but unbounded).  Clamp so a
-  // bright outlier doesn't produce a >1 swap-chain value — same safety
-  // contract as every other curve here.
-  return Math.max(0, Math.min(1, Math.asinh(softness * x) / Math.asinh(softness)));
-}
-
-export function gamma2(c: number, exposure: number): number {
-  return Math.sqrt(Math.max(0, Math.min(1, c * exposure)));
-}
-
-export function acesFilmic(c: number, exposure: number): number {
-  // Narkowicz 2015 closed-form ACES approximation.
-  const x = c * exposure;
-  const a = 2.51;
-  const b = 0.03;
-  const d = 2.43;
-  const e = 0.59;
-  const f = 0.14;
-  return Math.max(0, Math.min(1, (x * (a * x + b)) / (x * (d * x + e) + f)));
-}
 
 // ─── Aggregate factory ────────────────────────────────────────────────────
 
