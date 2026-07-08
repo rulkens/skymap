@@ -62,7 +62,13 @@ in one sky spot).
   magnitude + g−r colour per population, converted to apparent mags per row
   from the ΛCDM luminosity distance; the InfoCard says "no photometry in
   source catalog" for those tracers. BGS (the finger-of-god population) keeps
-  real fluxes and per-galaxy colour.
+  real fluxes and per-galaxy colour. The constants are tuned to flatten the
+  rendered per-segment intensity profile of the built bin, not to match
+  physical M*: physically-honest values (e.g. ELG M ≈ −20.8) rendered the
+  ELG-dominated 2.75–4.5 Gpc stretch ~3× dimmer than its flanks, drawing a
+  sharp-edged dim block across the cone (tracer boundaries are redshift cuts,
+  so brightness steps land as straight edges). LRG −24.3 / ELG −24.0 /
+  QSO −25.5 flatten the profile to a gentle monotone.
 - **CrB cone (233.2, +32.3, r = 2.5°) estimated rows:** BGS ~14.5k (z 0.03–0.46),
   LRG ~15.1k (0.40–1.10), ELG ~21.3k (0.80–1.60), QSO ~5.5k (0.80–3.47).
   **Total ≈ 56k** — comfortably a tier-agnostic single bin.

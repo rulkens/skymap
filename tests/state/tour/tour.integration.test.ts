@@ -54,6 +54,7 @@ import { createCameraClock } from '../../../src/services/engine/camera/cameraClo
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { resolveLayerOpacity } from '../../../src/services/engine/presentation/focusRecession';
 import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
+import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
 
 import type { ClipPlayer } from '../../../src/@types/engine/subsystems/ClipPlayer';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
@@ -242,16 +243,21 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     expect(surveyClipFactor).toBe(0);
 
     // Confirm intent is untouched: the settings store's galaxyCatalogs.items
-    // must still be in the default-enabled state (no hide(['survey']) dispatched).
-    // The real store initialized with default settings — survey enabled=true.
+    // must still match its boot seed (no hide(['survey']) dispatched). Boot
+    // seed is SOURCE_REGISTRY's `visible` field per catalog (buildInitialSettings),
+    // not a blanket `true` — DesiDeep boots with visible:false. So the fixture
+    // for "untouched" is the registry entry per id, not a hardcoded literal.
     const settings = store.getState().settings;
-    // Every catalog item that the default store seeds should still be enabled.
-    // We check that the settings slice was NOT driven to enabled:false for any item
-    // by the clip's crossfade (which only writes clipOpacity, not intent).
+    // Every catalog item's `enabled` should still equal its registry-seeded
+    // boot value. We check that the settings slice was NOT driven away from
+    // that seed for any item by the clip's crossfade (which only writes
+    // clipOpacity, not intent).
     const catalogItems = settings.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
-    for (const [, item] of Object.entries(catalogItems)) {
-      // Intent stays true — the clip's crossfade only dims via clipOpacity.
-      expect(item.enabled).toBe(true);
+    for (const [id, item] of Object.entries(catalogItems)) {
+      const entry = SOURCE_ENTRIES.find((e) => e.id === id);
+      expect(entry).toBeDefined();
+      // Intent stays at its boot value — the clip's crossfade only dims via clipOpacity.
+      expect(item.enabled).toBe(entry!.visible);
     }
 
     clipPlayer.destroy();

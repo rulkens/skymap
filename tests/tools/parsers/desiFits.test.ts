@@ -264,7 +264,8 @@ describe('parseDesiClustering', () => {
     const rec = records[0]!;
     // Distance modulus at the pinned redshift: m = M + 5·log10(d_L/10pc),
     // with d_L = (1+z)·d_C and 1e5 the Mpc → 10 pc factor. The −25.5 /
-    // 0.3 literals pin DESI_TRACER_DISPLAY.QSO's published values.
+    // 0.3 literals pin DESI_TRACER_DISPLAY.QSO's display-tuned constants
+    // (see that table's rationale — flattening knobs, not physical M*).
     const dL = (1 + QSO_ROW0_Z) * redshiftToDistanceMpc(QSO_ROW0_Z);
     expect(rec.magR).toBeCloseTo(-25.5 + 5 * Math.log10(dL * 1e5), 10);
     expect(rec.magG - rec.magR).toBeCloseTo(0.3, 10);
