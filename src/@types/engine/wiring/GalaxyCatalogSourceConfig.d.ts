@@ -20,7 +20,7 @@ export type GalaxyCatalogCompanionRef = 'famousMeta';
  * that would otherwise hardcode their own per-source lists:
  *
  *  - `survey`    — a large-N tier-fetched catalog (SDSS, 2MRS, GLADE,
- *                  Milliquas).  Reloads on tier change.  Counts toward
+ *                  Milliquas, DESI Deep).  Reloads on tier change.  Counts toward
  *                  the "real galaxy catalog ready" signal that gates the
  *                  synthetic-data fallback at boot.
  *  - `curated`   — a hand-picked auxiliary set whose absence is

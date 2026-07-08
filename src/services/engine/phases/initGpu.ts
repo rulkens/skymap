@@ -247,9 +247,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the `ready` transition (not inside commit) keeps commit free of UI
   // concerns.
   //
-  // The 5 source slots are built from the `GALAXY_CATALOG_SOURCE_REGISTRY`
-  // declarative table; sidecar slots (filaments, famous-meta, pgc-aliases)
-  // stay inline below — see `galaxyCatalogSourceRegistry.ts` for why.
+  // The 7 source slots (6 galaxy catalogs + Synthetic) are built from the
+  // `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table; sidecar slots
+  // (filaments, famous-meta, pgc-aliases) stay inline below — see
+  // `galaxyCatalogSourceRegistry.ts` for why.
   for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
     wireGalaxyCatalogSourceSlot(state, cfg, { cb });
   }

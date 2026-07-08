@@ -202,7 +202,14 @@ function makeSyntheticFallbackState(): {
 } {
   const disabled = new Set<SourceType>();
   const items: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const src of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Milliquas, Source.FamousGalaxy]) {
+  for (const src of [
+    Source.SDSS,
+    Source.TwoMRS,
+    Source.Glade,
+    Source.Milliquas,
+    Source.FamousGalaxy,
+    Source.DesiDeep,
+  ]) {
     items[galaxyCatalogIdOf(src)] = { enabled: !disabled.has(src), labelEnabled: true };
   }
 
@@ -213,7 +220,15 @@ function makeSyntheticFallbackState(): {
   const slots = new Map<SourceType, SlotStub>();
   const assetSlotPoints = new Map<SourceType, AssetSlot<GalaxyCatalog, unknown>>();
 
-  for (const src of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Milliquas, Source.FamousGalaxy, Source.Synthetic]) {
+  for (const src of [
+    Source.SDSS,
+    Source.TwoMRS,
+    Source.Glade,
+    Source.Milliquas,
+    Source.FamousGalaxy,
+    Source.DesiDeep,
+    Source.Synthetic,
+  ]) {
     const listeners = new Set<(s: LoadState<GalaxyCatalog>) => void>();
     const load = vi.fn();
     const stub: SlotStub = {

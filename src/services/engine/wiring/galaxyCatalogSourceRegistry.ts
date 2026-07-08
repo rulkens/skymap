@@ -80,6 +80,14 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
     // JSON fetch.
   },
   {
+    source: Source.DesiDeep,
+    shortName: 'desiDeep',
+    fetcher: galaxyCatalogFetcher,
+    category: 'survey',
+    // No companion sidecars: the deep-cone .bin carries everything the
+    // renderer + InfoCard need, same as Milliquas.
+  },
+  {
     source: Source.Synthetic,
     shortName: 'synthetic',
     fetcher: syntheticPointFetcher,

@@ -172,9 +172,9 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   glade: { enabled: true },
   famousGalaxy: { enabled: true },
   milliquas: { enabled: true },
-  // DesiDeep ships on by default too, matching the real construction seed —
-  // but it has no ASSET_WIRING point row yet (that lands in the engine-wiring
-  // tasks), so this bit is inert here: no test below asserts on it firing.
+  // DesiDeep ships on by default too, matching the real construction seed,
+  // and now has its own ASSET_WIRING point row — it joins the boot-default
+  // fired set below alongside the other survey-category galaxy catalogs.
   desiDeep: { enabled: true },
 };
 
@@ -213,6 +213,7 @@ const ALL_POINT_SOURCES: readonly SourceType[] = [
   Source.Glade,
   Source.Milliquas,
   Source.FamousGalaxy,
+  Source.DesiDeep,
   Source.Synthetic,
 ];
 
@@ -307,16 +308,17 @@ afterEach(() => {
 
 describe('reevaluateDemand demand-table regression', () => {
   /**
-   * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all visible (every galaxy catalog
-   * ships on in SOURCE_REGISTRY). Famous slot is modelled as 'loading' (it was
-   * just triggered by its own demand row before famousMeta's row evaluates), so
-   * famousMeta is also demanded. structureCatalog loads because every structure
-   * category is visible by default. mcpm IS demanded: the predicate checks
-   * `ctx.settings.volumes.items.mcpm?.enabled`, which the construction seed lands as
-   * true (registry visible:true). cf4Density is NOT (seeded enabled:false).
-   * filaments: off. pgcAlias: no request. Synthetic: galaxy catalogs not errored.
+   * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas/DesiDeep all visible (every
+   * galaxy catalog ships on in SOURCE_REGISTRY). Famous slot is modelled as
+   * 'loading' (it was just triggered by its own demand row before famousMeta's
+   * row evaluates), so famousMeta is also demanded. structureCatalog loads
+   * because every structure category is visible by default. mcpm IS demanded:
+   * the predicate checks `ctx.settings.volumes.items.mcpm?.enabled`, which the
+   * construction seed lands as true (registry visible:true). cf4Density is NOT
+   * (seeded enabled:false). filaments: off. pgcAlias: no request. Synthetic:
+   * galaxy catalogs not errored.
    */
-  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousMeta + structureCatalog + mcpm', () => {
+  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + DesiDeep + famousMeta + structureCatalog + mcpm', () => {
     // Famous starts idle: its point row loads it (idle-guard passes), flipping
     // the stub to 'loading', so the later famousMeta row sees Famous non-idle
     // and demands. This is the honest two-phase boot model.
@@ -331,6 +333,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.Glade,
         Source.FamousGalaxy,
         Source.Milliquas,
+        Source.DesiDeep,
         'famousMeta',
         'structureCatalog',
         'mcpm',
@@ -358,6 +361,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.Glade,
         Source.FamousGalaxy,
         Source.Milliquas,
+        Source.DesiDeep,
         'famousMeta',
         'structureCatalog',
         'mcpm',
@@ -419,6 +423,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.Glade,
         Source.FamousGalaxy,
         Source.Milliquas,
+        Source.DesiDeep,
         'famousMeta',
         'structureCatalog',
         'mcpm',
@@ -495,6 +500,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.Glade,
         Source.FamousGalaxy,
         Source.Milliquas,
+        Source.DesiDeep,
         'famousMeta',
         'structureCatalog',
         'mcpm',
