@@ -22,7 +22,7 @@
  * renderer needs the visual frame's packed uniform bytes (the same
  * `lastFrameUniformBytes` the hover-pick driver uses) to reproduce the
  * frame's camera state.  Those bytes are stashed onto `state.picking` by
- * the `pointSpritesPass` just before `renderFrame`'s submit.  Using a
+ * `pointSpritesLayer` just before `renderFrame`'s submit.  Using a
  * separate encoder means the main-frame submit always lands cleanly; the
  * debug overlay is an append-only overlay, never a mid-frame dependency.
  *

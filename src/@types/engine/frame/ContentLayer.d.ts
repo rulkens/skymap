@@ -1,18 +1,15 @@
 /**
  * ContentLayer — one point in the (slab, target, blend) space, plus a
- * renderer call and an enable gate. Replaces the pre-unification
- * `HDR_PASSES` / `UI_PASSES` arrays and the hand-wired foreground draw
- * calls: instead of which array a pass lives in implicitly fixing its
- * projection, precision, blend, and target all at once, a `ContentLayer`
- * states all three axes as data and the executor resolves them uniformly.
- * See the renderer unification design's "ContentLayer" section for the
- * full migration table from today's passes.
+ * renderer call and an enable gate. A layer states its projection slab,
+ * render target, and blend mode as data fields on the row itself, so
+ * grouping by `(target, blend)` — hdr-target layers vs swap-target
+ * layers — is a `.filter()` over `CONTENT_LAYERS` at the call site rather
+ * than a hand-maintained split. See `passes/index.ts` for the registry
+ * and the full layer catalog.
  *
- * There is deliberately no `deps: PassDeps` argument (contrast with the
- * pre-unification `Pass` type in this same directory): a layer reads its
+ * There is deliberately no `deps` bag argument: a layer reads its
  * renderer straight off `state.gpu.*`, which is the end-state the
- * gpu-handle-nullability backlog item wants. `PassDeps` sheds its renderer
- * fields once every current pass has migrated to a `ContentLayer`.
+ * gpu-handle-nullability backlog item wants.
  *
  * `draw` receives a `SlabView` — the executor's single per-render-step slab
  * resolution — instead of a `ctx` the layer would otherwise have to

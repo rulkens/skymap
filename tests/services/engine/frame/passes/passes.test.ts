@@ -408,8 +408,7 @@ describe('filamentsLayer.draw', () => {
   it('threads the SlabView vp/viewport to filamentRenderer.draw when present', () => {
     // This is the representative "draw threads the SlabView" check: the
     // layer must forward the SlabView's `vp`/`viewportPx` — NOT
-    // `ctx.vp`/`ctx.canvasSize` directly — mirroring the pre-unification
-    // `filamentsPass.draw` arg assertions this test replaces.
+    // `ctx.vp`/`ctx.canvasSize` directly.
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);

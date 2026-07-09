@@ -24,7 +24,7 @@
  *
  * ### Why we record at the renderer-mock level, not `pass.draw`
  *
- * Each `Pass.draw` in `passes/` delegates to a renderer's `.draw(...)`
+ * Each `ContentLayer.draw` in `passes/` delegates to a renderer's `.draw(...)`
  * method (`pointRenderer.draw`, `milkyWayCloudRenderer.draw`, etc.) that we
  * stub at the test boundary.  The real renderers internally call
  * `pass.draw(vertexCount, instanceCount, ...)` on the GPU encoder, but
@@ -242,7 +242,7 @@ const MW_ALIVE_DIST_MPC =
 
 function makeCam(): OrbitCamera {
   // Camera close enough that the Milky-Way disc sits safely above its FULL
-  // apparent size (MW_ALIVE_DIST_MPC), so milkyWayPass.draw computes
+  // apparent size (MW_ALIVE_DIST_MPC), so milkyWayLayer.draw computes
   // fadeAlpha > 0 and dispatches the impostor.
   return {
     target: [0, 0, 0] as unknown as Float32Array,
@@ -284,8 +284,8 @@ describe('renderFrame visual baseline', () => {
         });
       }),
     };
-    // volumeUpsample is the state.gpu handle that volumeUpsamplePass.draw
-    // calls directly (not via PassDeps).  Wire it with a logging draw so
+    // volumeUpsample is the state.gpu handle that volumeUpsampleLayer.draw
+    // calls directly off `state.gpu.*`.  Wire it with a logging draw so
     // the snapshot captures the upsample step.
     const volumeUpsample = {
       draw: vi.fn((...args: unknown[]) => {
@@ -387,7 +387,7 @@ describe('renderFrame visual baseline', () => {
         gpu: {
           labelRenderer,
           markerLineRenderer,
-          // Null so clipPathDebugPass stays disabled and the recorded
+          // Null so clipPathDebugLayer stays disabled and the recorded
           // draw-command sequence baseline is unchanged.
           debugLineRenderer: null,
           selectionRingRenderer: null,
@@ -445,7 +445,7 @@ describe('renderFrame visual baseline', () => {
         },
         selection: { select: settings.selected },
         assetSlots: { flow: null },
-        // pointSpritesPass writes the packed uniform bytes + camera
+        // pointSpritesLayer writes the packed uniform bytes + camera
         // snapshot here after each draw — the bag must exist so the
         // assignment doesn't throw.
         picking: {
@@ -479,10 +479,10 @@ describe('renderFrame visual baseline', () => {
 
     // The hash payload — only renderer-level draws, with the order they
     // were emitted.  Render-pass boundaries (beginRenderPass / passEnd),
-    // encoder.finish, and queue.submit are deliberately filtered out:
-    // Future work (e.g. Task 9 wiring `encodeVolumes` before the HDR
-    // mega-pass) will add more begin/end boundaries; filtering them
-    // out here keeps THIS test stable across encoder-shape changes.
+    // encoder.finish, and queue.submit are deliberately filtered out, so
+    // this test stays stable across encoder-shape changes (e.g. the
+    // `frameProgram`'s volume render step opening its own pass before the
+    // HDR render step).
     const drawSequence = records
       .filter((r): r is Extract<DrawRecord, { kind: 'rendererDraw' }> => r.kind === 'rendererDraw')
       .map((r) => ({ renderer: r.renderer, argShape: r.argShape }));

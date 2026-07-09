@@ -299,10 +299,10 @@ Three idioms coexist in `initGpu` today (verified against current code — the s
 
 **Normalize to ONE idiom:** every factory takes an explicit `targetFormat: GPUTextureFormat` (positional arg or named field — match each factory's existing arg style, but the _name_ is `targetFormat` everywhere; `createFlowFieldRenderer`'s `hdrFormat` :346 renames to `targetFormat` for uniformity). Factories that receive a `GpuContext` never read `.format` for their colour target; `uiCtx`-consuming swap-target factories (label/markerLine/debugLine/selectionRing :195-202) pass `targetFormat: format` explicitly at the call site. This is what the registry invariant attaches to: a layer's target format is now legible at its renderer's construction site.
 
-- [ ] Test (per touched factory test file): construction-time pipeline descriptor carries the given `targetFormat` (most factories already have such tests — extend, don't duplicate).
-- [ ] Implement the renames + call-site updates; update `GpuContext.d.ts` docblock (:25-30).
-- [ ] `npm run typecheck && npm test` → green.
-- [ ] Commit.
+- [x] Test (per touched factory test file): construction-time pipeline descriptor carries the given `targetFormat` (most factories already have such tests — extend, don't duplicate).
+- [x] Implement the renames + call-site updates; update `GpuContext.d.ts` docblock (:25-30).
+- [x] `npm run typecheck && npm test` → green.
+- [x] Commit.
 
 ### Task 11 — entanglement radar, full gate, visual sign-off
 

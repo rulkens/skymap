@@ -7,8 +7,8 @@
  * The scalar-volume subsystem draws in two steps: a half-res raymarch into the
  * volume offscreen (the `scalar-volume` layer), then a bilinear upsample of
  * that offscreen into HDR (the `volume-upsample` layer). Pre-unification each
- * step decided independently whether to run — the raymarch via
- * `encodeVolumePrepass`'s gate, the upsample via `volumeUpsampleLayer.enabled`'s
+ * step decided independently whether to run — the raymarch via its own
+ * pre-HDR gate, the upsample via `volumeUpsampleLayer.enabled`'s
  * hand-mirror. Those two gates could drift on three axes (whether they clamped
  * the field settings, whether they folded in focus recession, and how they
  * counted a fade-out tail as "active"), producing the audit's stale-offscreen

@@ -2,7 +2,7 @@
  * diskRadiusRingLayer — developer overlay that rings the SELECTED galaxy
  * at its catalog procedural-disk radius, lying in the disk plane.
  *
- * Lives in `UI_PASSES` (the swap-target, `blend: 'over'` group within
+ * Lives among the swap-target layers (the `blend: 'over'` group within
  * `CONTENT_LAYERS`, drawn post-tone-map) like the selection ring: it is
  * screen overlay, not emissive scene content. Gated on
  * `state.settings.debug.showDiskRadiusRing` plus a galaxy selection, so a

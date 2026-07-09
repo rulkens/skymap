@@ -17,7 +17,7 @@ const newNullDeviceRenderer = () => {
 // A mock device that records writeBuffer calls and hands back stub GPU
 // objects, so the populated `draw` path (pipeline + buffers non-null) runs
 // without a real WebGPU backend.
-function newMockDeviceRenderer() {
+function newMockDeviceRenderer(targetFormat?: GPUTextureFormat) {
   const writeBuffer = vi.fn<(buffer: GPUBuffer, offset: number, data: Float32Array) => void>();
   const stubBuffer = (label: string) => ({ label, destroy: vi.fn() }) as unknown as GPUBuffer;
   const renderPipelines: GPURenderPipelineDescriptor[] = [];
@@ -43,7 +43,11 @@ function newMockDeviceRenderer() {
     format: 'bgra8unorm' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
   };
-  return { renderer: createSelectionRingRenderer(ctx, ctx.format), writeBuffer, renderPipelines };
+  return {
+    renderer: createSelectionRingRenderer(ctx, targetFormat ?? ctx.format),
+    writeBuffer,
+    renderPipelines,
+  };
 }
 
 const newPassSpy = () =>
@@ -54,13 +58,14 @@ const newPassSpy = () =>
   }) as unknown as GPURenderPassEncoder;
 
 describe('SelectionRingRenderer colour target', () => {
-  it('bakes the given targetFormat into the pipeline colour target', () => {
-    const { renderPipelines } = newMockDeviceRenderer();
+  it('bakes the given targetFormat, NOT ctx.format, into the pipeline colour target', () => {
+    // ctx.format ('bgra8unorm') and targetFormat ('rgba16float') deliberately
+    // differ, so a regression to reading ctx.format instead of the explicit
+    // targetFormat argument would fail this assertion.
+    const { renderPipelines } = newMockDeviceRenderer('rgba16float');
     expect(renderPipelines).toHaveLength(1);
     const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
-    // The mock ctx is 'bgra8unorm' and the helper passes ctx.format as
-    // targetFormat, so the swap-chain format reaches the pipeline explicitly.
-    expect(target!.format).toBe('bgra8unorm');
+    expect(target!.format).toBe('rgba16float');
   });
 });
 

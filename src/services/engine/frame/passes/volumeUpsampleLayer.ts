@@ -2,13 +2,13 @@
  * volumeUpsampleLayer — the HDR content layer that bilinearly upsamples
  * the half-resolution scalar-volume target into the HDR target.
  *
- * Replaces the old `scalarVolumePass` (which raymarched directly into
- * the HDR target).  The raymarch itself now happens in `encodeVolumes`
- * — a pre-HDR step that opens its own render pass against the half-res
- * target.  This layer picks up where that step left off: it reads the
- * half-res target (the additive sum of every active field) with a
- * linear sampler and adds the result into the HDR target via the
- * additive-blend pipeline state baked into the upsample factory.
+ * The raymarch itself happens in `scalarVolumeLayer` — a separate content
+ * layer, targeting `'volume'`, that opens its own render pass against the
+ * half-res target before this one runs.  This layer picks up where that
+ * one left off: it reads the half-res target (the additive sum of every
+ * active field) with a linear sampler and adds the result into the HDR
+ * target via the additive-blend pipeline state baked into the upsample
+ * factory.
  *
  * Unlike every sibling HDR layer, `draw` doesn't touch the resolved
  * `SlabView` at all — the upsample is a screen-space 4-tap blit of an
@@ -17,12 +17,11 @@
  *
  * ### Position in the HDR content order
  *
- * Occupies the same slot the old `scalarVolumePass` did — after
- * filaments, before milky-way (see `passes/index.ts`).  Visual hierarchy:
- * the cosmic-web skeleton and density-field halos composite over the
- * brighter milky-way bulge, not vice versa.  Both surrounding layers
- * are additive so the slot choice is a visual rather than correctness
- * concern.
+ * Sits after milky-way, filaments, and flow, before horizon-shell (see
+ * `passes/index.ts`).  Visual hierarchy: the cosmic-web skeleton and
+ * density-field halos composite over the brighter milky-way bulge, not
+ * vice versa.  The surrounding layers are all additive so the slot
+ * choice is a visual rather than correctness concern.
  *
  * ### Why `enabled` shares the volume-liveness projection
  *

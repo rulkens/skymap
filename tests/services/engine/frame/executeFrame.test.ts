@@ -11,8 +11,8 @@
  * The behaviour-neutrality contract these tests pin (program order, one-pass-
  * per-non-empty-group under 'merged', per-layer timed passes under
  * 'perLayerTimed', first-touch clear vs later load, the touched-set composite
- * gate) is the same behaviour the pre-unification `encodeHdrSingle` /
- * `encodeHdrSplit` / inline tone-map + UI-overlay call chain produced.
+ * gate) is the same behaviour the pre-unification hand-wired HDR-encode +
+ * inline tone-map + UI-overlay call chain produced.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -103,8 +103,8 @@ function makeNoTiming(): GpuTimingService {
 // ── Fake content layer ───────────────────────────────────────────────────────
 
 type SpyLayer = ContentLayer & {
-  enabled: ReturnType<typeof vi.fn>;
-  draw: ReturnType<typeof vi.fn>;
+  enabled: ReturnType<typeof vi.fn<ContentLayer['enabled']>>;
+  draw: ReturnType<typeof vi.fn<ContentLayer['draw']>>;
 };
 
 function makeLayer(init: {
@@ -119,11 +119,11 @@ function makeLayer(init: {
     slab: init.slab ?? COSMO,
     target: init.target,
     blend: 'additive',
-    enabled: vi.fn(() => init.enabled ?? true),
-    draw: vi.fn(() => {
+    enabled: vi.fn<ContentLayer['enabled']>(() => init.enabled ?? true),
+    draw: vi.fn<ContentLayer['draw']>(() => {
       init.log?.push(`draw:${init.name}`);
     }),
-  } as SpyLayer;
+  };
 }
 
 // ── Fake ctx / state ─────────────────────────────────────────────────────────

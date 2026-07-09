@@ -1,7 +1,7 @@
 /**
  * selectionRingLayer — per-galaxy selection halo overlay.
  *
- * Lives at the HEAD of `UI_PASSES` (the swap-target, `blend: 'over'` group
+ * Lives at the HEAD of the swap-target layers (the `blend: 'over'` group
  * within `CONTENT_LAYERS`, drawn post-tone-map) so marker-lines and labels
  * composite OVER the ring — labels carry information that should stay
  * legible when they overlap the stroke.

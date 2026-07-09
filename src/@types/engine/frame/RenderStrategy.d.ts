@@ -11,8 +11,8 @@
  * only. That timing/production fork is essential (both encode the exact
  * same draw calls; only the pass boundaries differ) but it varies
  * independently of which layers are in the group — hence a strategy
- * argument the executor applies uniformly, rather than the pre-unification
- * `encodeHdrSingle` / `encodeHdrSplit` pair of near-duplicate functions.
+ * argument the executor applies uniformly, rather than a pair of
+ * near-duplicate encode functions.
  */
 
 export type RenderStrategy = 'merged' | 'perLayerTimed';

@@ -3,13 +3,13 @@
  * a whole offscreen texture into a target with a given blend and optional
  * tone-map.
  *
- * Phase 1 landed the Compositor primitive (`src/@types/rendering/`) as an
- * imperative call with `blend`/`tone` as draw arguments. This type lifts
- * those same parameters into data — plus `source`/`dest` target ids — so a
- * `FrameStep` of kind `'composite'` (see `FrameStep`) can name a whole merge
- * operation without the executor needing bespoke code per merge. `source`
- * and `dest` are `RenderTargetSpec.id` strings (e.g. `'hdr'` → `'swap'`),
- * resolved by the executor to the actual texture views at encode time.
+ * The Compositor (`src/@types/rendering/`) itself is an imperative primitive
+ * that takes `blend`/`tone` as draw arguments. This type lifts those same
+ * parameters into data — plus `source`/`dest` target ids — so a `FrameStep`
+ * of kind `'composite'` (see `FrameStep`) can name a whole merge operation
+ * without the executor needing bespoke code per merge. `source` and `dest`
+ * are `RenderTargetSpec.id` strings (e.g. `'hdr'` → `'swap'`), resolved by
+ * the executor to the actual texture views at encode time.
  */
 
 import type { CompositeBlend } from '../../rendering/CompositeBlend';

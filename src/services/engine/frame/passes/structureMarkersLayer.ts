@@ -2,7 +2,7 @@
  * structureMarkersLayer — halo + ring draws for every structure category
  * (cluster / supercluster / void / group).
  *
- * Lives in `HDR_PASSES` (NOT `UI_PASSES`) because halos are additive
+ * Targets the hdr layer (NOT the swap target) because halos are additive
  * emissive content — they participate in tone-map alongside point
  * sprites, procedural disks, etc.  Rings are premultiplied-OVER but
  * the alpha is already in the linear HDR range; tone-map applies
@@ -10,8 +10,8 @@
  *
  * Position: after volumeUpsampleLayer so halos composite over the
  * cosmic web / volume fields rather than the other way round.  Labels
- * (in UI_PASSES) still draw on top of everything HDR via the post-
- * tone-map overlay pass.
+ * (a swap-target layer) still draw on top of everything HDR via the
+ * post-tone-map swap render step.
  *
  * Enabled when: structureMarkerRenderer is non-null AND has at least
  * one marker queued for this frame.  When the camera is sufficiently

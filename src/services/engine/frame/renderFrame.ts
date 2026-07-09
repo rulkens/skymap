@@ -3,10 +3,10 @@
  * runs the FRAME program into it.
  *
  * Before the renderer unification, ~140 lines of imperative GPU plumbing
- * sprawled here: a two-way HDR-encoder branch (`encodeHdrSingle` vs
- * `encodeHdrSplit`), a tone-map blit, and a post-tone-map UI overlay, each a
- * hand-wired call whose order was implicit in which function called which.
- * That order is now DATA — `frameProgram(tone)` returns the ordered
+ * sprawled here: a two-way HDR-encoder branch, a tone-map blit, and a
+ * post-tone-map UI overlay, each a hand-wired call whose order was implicit
+ * in which function called which. That order is now DATA — `frameProgram(tone)`
+ * returns the ordered
  * `FrameStep[]`, and `executeFrame` is the single imperative site that walks
  * it into one encoder. This module shrank to three responsibilities: the
  * once-per-frame focus-uniform write, the encoder lifecycle (create + swap-view

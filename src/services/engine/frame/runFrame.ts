@@ -314,7 +314,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Per-frame impostor planners ───────────────────────────────────────────
   //
   // CPU-side step that populates the LOD subsystems' `lastOutput` arrays, which
-  // the HDR_PASSES loop reads via proceduralDisksPass / texturedDisksPass. The
+  // `proceduralDisksLayer` / `texturedDisksLayer` read at draw time. The
   // atlas subsystem is mutated transitively by the textured-disk run (slot
   // allocations + fetch enqueues).
   if (state.subsystems.proceduralDisks !== null) {
@@ -364,7 +364,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Like the label flush above: produceStructureMarkers walks the structure
   // store, applies fade math, and hands descriptors to the renderer. Must run
   // BEFORE the GPU dispatch so the instance buffer is uploaded before
-  // structureMarkersPass reads it. Null-checked for the pre-initGpu window.
+  // `structureMarkersLayer` reads it. Null-checked for the pre-initGpu window.
   if (state.gpu.structureMarkerRenderer !== null) {
     const markers = produceStructureMarkers(state, ctx);
     state.gpu.structureMarkerRenderer.setMarkers(markers);
@@ -388,7 +388,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // Composite a colour-mapped pick-buffer overlay over the swap chain.
   // Runs AFTER renderFrame's submit (the packed uniform bytes are stashed
-  // by pointSpritesPass just before that submit). The helper owns its own
+  // by `pointSpritesLayer` just before that submit). The helper owns its own
   // encoder/submit with `loadOp: 'load'` so the OVER blend composites on
   // top of the tone-mapped frame without re-rendering the scene.
   //

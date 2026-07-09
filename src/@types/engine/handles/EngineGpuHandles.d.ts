@@ -145,7 +145,7 @@ export type EngineGpuHandles = {
    * `loadFontAtlas()` fetch and constructs the renderer against the
    * decoded atlas bitmap.  Excluded from the `isEngineReady` predicate
    * — same rationale as `filamentRenderer`: the atlas load is async and
-   * optional from the engine's perspective; the `labelsPass` null-checks
+   * optional from the engine's perspective; the `labelsLayer` null-checks
    * this field at point of use.  Stored here so `destroy()` can release
    * the GPU buffers (uniform + storage + instance + corner + atlas texture).
    */
@@ -154,7 +154,7 @@ export type EngineGpuHandles = {
    * Thick screen-space line overlay renderer.  Null until `initGpu`
    * constructs it alongside `labelRenderer` (same phase, no atlas dep).
    * Excluded from the `isEngineReady` predicate for the same reason as
-   * `labelRenderer`.  The `markerLinesPass` null-checks this field at
+   * `labelRenderer`.  The `markerLinesLayer` null-checks this field at
    * point of use.  Stored here so `destroy()` can release the GPU
    * buffers (uniform + instance + corner).
    */
@@ -163,7 +163,7 @@ export type EngineGpuHandles = {
    * Dedicated debug-draw thick-line renderer — the substrate for the clip-path
    * inspector overlay (speed-coloured route + scrub gizmo). Constructed
    * alongside `markerLineRenderer` (same UI ctx, swap-chain format, no atlas
-   * dep), but decoupled from the label director: the `clipPathDebugPass`
+   * dep), but decoupled from the label director: the `clipPathDebugLayer`
    * null-checks it and feeds it a freshly built `DebugLine[]` each frame.
    * Excluded from `isEngineReady`. Stored here so `destroy()` releases its GPU
    * buffers (uniform + instance + corner).
@@ -172,7 +172,7 @@ export type EngineGpuHandles = {
   /**
    * Selection-ring overlay renderer — draws a white annulus around the
    * currently-selected galaxy on the swap-chain UI overlay. Null until
-   * `initGpu` constructs it; `selectionRingPass` null-checks at point
+   * `initGpu` constructs it; `selectionRingLayer` null-checks at point
    * of use. Stored here so `destroy()` can release the renderer's
    * two uniform buffers and bind group.
    */
@@ -221,8 +221,8 @@ export type EngineGpuHandles = {
   /**
    * The two-pass (additive stars + multiplicative dust) renderer that draws
    * `milkyWayCloud` on the HDR path.  Null until `initGpu` constructs it;
-   * the frame body reads it via `RunFrameDeps`/`PassDeps`.  Stored here so
-   * `destroy()` can release its shared uniform + corner-quad buffers.
+   * `milkyWayLayer` reads it off `state.gpu.*` at draw time.  Stored here
+   * so `destroy()` can release its shared uniform + corner-quad buffers.
    * Excluded from `isEngineReady` (same rationale as the other optional
    * renderers).
    */
@@ -238,7 +238,7 @@ export type EngineGpuHandles = {
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — the renderer is
-   * optional at runtime; the `volumeUpsamplePass.enabled` gate checks
+   * optional at runtime; the `volumeUpsampleLayer.enabled` gate checks
    * the master `volumesEnabled` setting first and then consults
    * `hasActiveFields()`, so a null handle (pre-bootstrap or destroyed)
    * is silently a no-op.  Stored here so `destroy()` can release every
@@ -250,7 +250,7 @@ export type EngineGpuHandles = {
    * CF4++ peculiar-velocity flow-field renderer — the engine's first compute
    * renderer. Null until `initGpu` constructs it (same phase as the other
    * optional renderers). Excluded from the `isEngineReady` predicate: the layer
-   * is default-off and demand-loaded, and `encodeFlowCompute` / `flowFieldPass`
+   * is default-off and demand-loaded, and `encodeFlowCompute` / `flowFieldLayer`
    * null-check the handle alongside the `settings.flow.enabled` +
    * `slotReady(assetSlots.flow)` gate, so a null handle is a silent no-op. Stored here so
    * `destroy()` can release the particle buffers, the three compute pipelines,
@@ -261,7 +261,7 @@ export type EngineGpuHandles = {
    * Half-res-to-HDR volume upsample pass.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — when null, the
-   * `volumeUpsamplePass` skips its draw (so a null handle is a silent
+   * `volumeUpsampleLayer` skips its draw (so a null handle is a silent
    * no-op).  Stored here so `destroy()` can release the pipeline +
    * sampler + bind-group-layout.
    */

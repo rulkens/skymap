@@ -1,12 +1,12 @@
 /**
  * labelsLayer — MSDF text label draw call.
  *
- * Lives in `UI_PASSES`, NOT `HDR_PASSES` — see `passes/index.ts`
+ * A swap-target layer, NOT an hdr-target one — see `passes/index.ts`
  * module header for why marker-lines + labels moved out of the HDR
- * sequence.  `uiOverlay` opens one `beginRenderPass` on the swap-
- * chain texture and iterates `UI_PASSES` inside that single pass,
- * so this layer's `draw` writes directly to the tone-mapped swap
- * chain without further compression.
+ * sequence.  The swap render step opens one `beginRenderPass` on the
+ * swap-chain texture and iterates the swap-target layers inside that
+ * single pass, so this layer's `draw` writes directly to the
+ * tone-mapped swap chain without further compression.
  *
  * ### What it draws
  *
@@ -32,7 +32,7 @@
  *      from the origin the producer emits an empty label set and
  *      `glyphCount()` returns 0, making this layer a cheap early-return.
  *
- * ### Pass position in UI_PASSES
+ * ### Position among the swap-target layers
  *
  * Placed AFTER `markerLinesLayer` so the label text composites over
  * the line where they overlap, preserving readability.

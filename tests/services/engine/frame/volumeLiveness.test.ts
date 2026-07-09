@@ -4,8 +4,8 @@
  * consume to decide whether volume work runs this frame, and with which
  * per-field read closures.
  *
- * Pre-unification the same fact lived in two hand-mirrored gates
- * (`encodeVolumePrepass` vs `volumeUpsampleLayer.enabled`) that could drift
+ * Pre-unification the same fact lived in two hand-mirrored gates (one for
+ * the raymarch, one for `volumeUpsampleLayer.enabled`) that could drift
  * on three axes (clamp, recession, the fade-tail check). These tests pin the
  * ONE derivation: null when there's no live volume work, otherwise the
  * `settingsOf` (clamped) + `fadeOpacityOf` (recessed-master-multiplied)

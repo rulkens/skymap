@@ -21,7 +21,7 @@
  * one place: a future pickable layer is added here once and all callers
  * inherit it.
  *
- * `markerCount()` mirrors `structureMarkersPass`'s enable gate — it drops
+ * `markerCount()` mirrors `structureMarkersLayer`'s enable gate — it drops
  * to 0 when every structure category is hidden or every ring has faded
  * out, so `hasAny` correctly reflects whether a ring is actually on
  * screen to be hit.

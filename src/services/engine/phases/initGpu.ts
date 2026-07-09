@@ -186,9 +186,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // `filamentRenderer`): optional async resources, null-checked at use.
   //
   // They target the swap-chain format, NOT the HDR target: marker-lines +
-  // labels are UI overlays drawn AFTER tone-map onto the swap chain (see
-  // `uiOverlay` in `services/engine/frame/`), so their pipelines need the
-  // swap-chain format for the colorAttachment to validate.
+  // labels are swap-target layers, drawn AFTER tone-map onto the swap chain
+  // (see the swap render step in `services/engine/frame/executeFrame.ts`),
+  // so their pipelines need the swap-chain format for the colorAttachment
+  // to validate.
   const uiCtx = { device, context, format, canvas };
 
   const fontAtlases = await loadFontAtlases();
@@ -312,7 +313,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   //
   // The GPU-generated star/dust cloud (`milkyWayCloud`) owns the per-tier
   // instance buffers; the additive-stars + multiplicative-dust renderer
-  // (`milkyWayCloudRenderer`) draws them from `milkyWayPass`. `state.tier`
+  // (`milkyWayCloudRenderer`) draws them from `milkyWayLayer`. `state.tier`
   // folds the current tier's star budget into the first generation; a tier
   // swap regenerates via `makeRunTierTransition`. Same HDR target
   // ('rgba16float') as the other overlay renderers.
@@ -369,7 +370,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // World-space line-strip drawn in the disk plane around the selected
   // galaxy at its catalog disk radius (a famous-galaxy calibration aid).
   // Swap-chain `format` (post-tone-map UI overlay); the per-frame
-  // `diskRadiusRingPass` gates on `state.settings.debug.showDiskRadiusRing`.
+  // `diskRadiusRingLayer` gates on `state.settings.debug.showDiskRadiusRing`.
   state.gpu.diskRadiusRing = createDiskRadiusRing(device, format);
 
   // ── GPU timing service ────────────────────────────────────────────

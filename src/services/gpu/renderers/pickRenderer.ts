@@ -422,7 +422,7 @@ export function createPickRenderer(
   // by `pick` and `renderForDebug` so a galaxy-empty scene with visible
   // rings still picks (and the pick-debug texture isn't black when every
   // galaxy catalog is toggled off).  `markerCount() > 0` mirrors
-  // `structureMarkersPass`'s enable gate (0 when the category is hidden or
+  // `structureMarkersLayer`'s enable gate (0 when the category is hidden or
   // every ring has faded out).
   const hasAnyPickTarget = (sourceList: readonly PickSourceDraw[]): boolean =>
     sourceList.length > 0 ||

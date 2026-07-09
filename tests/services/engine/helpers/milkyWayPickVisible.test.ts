@@ -113,7 +113,7 @@ describe('milkyWayPickVisible', () => {
 
   it('returns true during the toggle fade-out tail (opacity > 0)', () => {
     // The disk is still drawing its ~100 ms fade-out ramp — a click during
-    // the tail must still land, mirroring milkyWayPass.enabled.
+    // the tail must still land, mirroring milkyWayLayer.enabled.
     const state = makeState({
       lastFrameCam: frameCamAt(FULL_DIST_MPC / 2),
       mwEnabled: false,

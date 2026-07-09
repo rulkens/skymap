@@ -262,19 +262,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       filamentRenderer: null,
       // labelRenderer + markerLineRenderer: null until initGpu finishes the
       // font-atlas fetch.  Excluded from isEngineReady (optional async
-      // resources, null-checked at use by labelsPass / markerLinesPass).
+      // resources, null-checked at use by labelsLayer / markerLinesLayer).
       labelRenderer: null,
       markerLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use by
-      // clipPathDebugPass.
+      // clipPathDebugLayer.
       debugLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
       // texturedDiskRenderer / proceduralDiskRenderer: null until initGpu
-      // constructs them.  The frame body reads them via RunFrameDeps; they
-      // live here so `destroy()` can reach them and so later phases consume
-      // the same identities by reading `state.gpu.X`.
+      // constructs them.  The frame body reads them straight off
+      // `state.gpu.*` (see `passes/index.ts`); they live here so `destroy()`
+      // can reach them and so later phases consume the same identities.
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       // Milky-Way point cloud + its two-pass renderer. null until initGpu.
@@ -282,7 +282,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
-      // null until initGpu; excluded from isEngineReady — volumeUpsamplePass
+      // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
@@ -515,7 +515,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // Debug clip-path inspector seam — `watchClipPathInspectSaga` calls `compute`
   // to sample a clip's camera route into the `clipPathInspector` subsystem (read
-  // each frame by `clipPathDebugPass`) and `clear` to drop it. Shares the same
+  // each frame by `clipPathDebugLayer`) and `clear` to drop it. Shares the same
   // live-pose accessor as `playClip` so a `start:'live'` clip samples from the
   // pose the user sees. 384 samples keeps the route + target polylines smooth
   // through the tight Catmull-Rom corners of a flyPath (must stay within the

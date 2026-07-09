@@ -5,7 +5,7 @@
  * The MW pick billboard must contribute a hit ONLY while the disk is
  * actually drawn, so a faded-out MW never claims a click.  The predicate
  * itself lives in `milkyWayVisible` — the ONE home shared with
- * `milkyWayPass.enabled`, so the pick gate can't drift from the draw gate.
+ * `milkyWayLayer.enabled`, so the pick gate can't drift from the draw gate.
  * This adapter's whole job is choosing the CAMERA the predicate answers
  * for:
  *
@@ -19,7 +19,7 @@
  * nothing has been rendered to pick against — not visible.
  *
  * `viewportHeightPx` is the backing-store canvas height (texture pixels) —
- * the same measure the pick pass renders against and `milkyWayPass` reads
+ * the same measure the pick pass renders against and `milkyWayLayer` reads
  * off `ctx.canvasSize`.
  *
  * Threaded into the pick renderer as a callback so the renderer itself

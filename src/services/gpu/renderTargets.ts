@@ -78,7 +78,7 @@ import type { Size } from '../../@types/rendering/Size';
  * additive raymarch starts from zero coverage — the upsample's additive
  * blend then adds nothing for fragments the volumes didn't reach.
  */
-export const TARGET_CLEAR_VALUES: Record<string, GPUColor> = {
+export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
   hdr: { r: 0, g: 0, b: 0, a: 1 },
   volume: { r: 0, g: 0, b: 0, a: 0 },
   swap: { r: 0, g: 0, b: 0, a: 1 },
@@ -109,8 +109,8 @@ export function createRenderTargets(
   // from the acquired frame view (see the module header).
   const offscreenSpecs = specs.filter((s) => s.id !== 'swap');
 
-  // Per-row allocation state, keyed by spec id. `null` after destroy() so a
-  // stale `viewOf` fails loudly instead of handing back a destroyed view.
+  // Per-row allocation state, keyed by spec id. `destroy()` clears both maps
+  // so a stale `viewOf` fails loudly instead of handing back a destroyed view.
   const textures = new Map<string, GPUTexture>();
   const views = new Map<string, GPUTextureView>();
 

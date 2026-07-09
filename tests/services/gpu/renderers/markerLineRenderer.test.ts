@@ -35,18 +35,21 @@ const newRenderer = () => {
 };
 
 describe('MarkerLineRenderer colour target', () => {
-  it('bakes the given targetFormat into the pipeline colour target', () => {
+  it('bakes the given targetFormat, NOT ctx.format, into the pipeline colour target', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
+    // ctx.format and targetFormat deliberately differ, so a regression to
+    // reading ctx.format (instead of the explicit targetFormat argument)
+    // would fail this assertion.
     const ctx = {
       device: newCapturingDevice(renderPipelines),
       context: null as unknown as GPUCanvasContext,
       format: 'bgra8unorm' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
     };
-    createMarkerLineRenderer(ctx, 'bgra8unorm');
+    createMarkerLineRenderer(ctx, 'rgba16float');
     expect(renderPipelines).toHaveLength(1);
     const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
-    expect(target!.format).toBe('bgra8unorm');
+    expect(target!.format).toBe('rgba16float');
   });
 });
 

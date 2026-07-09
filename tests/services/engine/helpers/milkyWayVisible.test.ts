@@ -1,9 +1,9 @@
 /**
  * milkyWayVisible — the ONE home of the MW visibility predicate, shared by
- * `milkyWayPass.enabled` (frame camera) and `milkyWayPickVisible` (replayed
+ * `milkyWayLayer.enabled` (frame camera) and `milkyWayPickVisible` (replayed
  * pick camera).  These tests pin the predicate itself — the toggle/fade-tail
  * gate and the apparent-size fade band — against an injected camera and
- * clock, the way both callers use it (the pass hands in ctx.nowMs, the pick
+ * clock, the way both callers use it (the layer hands in ctx.nowMs, the pick
  * adapter its event-time now; the fade registry is stubbed here so 0 works).
  */
 

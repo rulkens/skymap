@@ -2,9 +2,9 @@
  * executeFrame — the single imperative site that walks one `FrameStep[]`
  * program into one GPU command encoder. This is the heart of the renderer
  * unification: pre-unification the frame's order lived as an implicit call
- * chain spread across `renderFrame`, `encodeHdrSingle`, `encodeHdrSplit`, and
- * an inline tone-map + UI-overlay sequence. `frameProgram` turned that order
- * into data; this executor is the one loop that consumes it.
+ * chain spread across `renderFrame` and a hand-wired HDR-encode + tone-map +
+ * UI-overlay sequence. `frameProgram` turned that order into data; this
+ * executor is the one loop that consumes it.
  *
  * ### The step-kind switch is the frame's only switch
  *

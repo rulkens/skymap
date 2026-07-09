@@ -28,20 +28,15 @@
  * `state.subsystems.fades.opacityOf` (fade-out tail).  `draw` reads
  * `state.settings.filaments.intensity` (line brightness scale).
  *
- * ### Why between thumbnails and Milky Way
+ * ### Position after Milky Way, before flow / volume
  *
- * The pre-unification inline order was points → thumbnails → filaments →
- * milky-way, and that order is preserved by `HDR_PASSES` in
- * `index.ts`.  Rationale: the filament skeleton is a *local-universe
- * overlay* threaded between the galaxies it was computed from, so
- * it belongs visually on top of the per-galaxy billboards +
- * thumbnails.  The Milky Way point cloud at the galactic centre is a
- * *bright foreground feature*; drawing it last keeps its bulge from
- * being veiled by overlapping filament strands when the camera sits
- * inside the local supercluster.  Additive blending makes per-
- * fragment colour mathematically order-independent, so this is a
- * deterministic-encoder-record decision (HMR-stable, easy to reason
- * about), not a correctness one.
+ * Drawn after `milkyWayLayer` and before `flowFieldLayer` /
+ * `volumeUpsampleLayer` in `CONTENT_LAYERS` (see that module's "Why
+ * milky-way BEFORE filaments / scalar-volume?" section for the visual-
+ * hierarchy rationale).  Additive blending makes per-fragment colour
+ * mathematically order-independent, so this is a deterministic-
+ * encoder-record decision (HMR-stable, easy to reason about), not a
+ * correctness one.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';

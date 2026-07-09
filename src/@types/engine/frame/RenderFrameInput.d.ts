@@ -16,14 +16,9 @@
  *
  * ### Why no renderer fields
  *
- * Pre-unification this type carried seven renderer handles
- * (`milkyWayCloudRenderer`, `horizonShellRenderer`, `filamentRenderer`,
- * `volumeFieldRenderer`, `flowFieldRenderer`, `texturedDiskRenderer`,
- * `proceduralDiskRenderer`) forwarded only so `renderFrame` could bundle
- * them into a `PassDeps` bag for the not-yet-converted UI overlay layers.
- * Every `ContentLayer` — HDR and swap-target alike — now reads its renderer
- * straight off `state.gpu.*` (see `passes/index.ts`), so `PassDeps` and
- * these fields are both gone; `state` is the only per-frame renderer source.
+ * Every `ContentLayer` — hdr-target and swap-target alike — reads its
+ * renderer straight off `state.gpu.*` (see `passes/index.ts`), so `state`
+ * is the only per-frame renderer source this type needs to carry.
  */
 
 import type { EngineState } from '../state/EngineState';

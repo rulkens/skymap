@@ -16,7 +16,7 @@
  * The two callers answer the question for DIFFERENT frames, so the camera
  * facts are injected rather than read off state here:
  *
- * - `milkyWayPass.enabled` asks about the frame being rendered NOW and
+ * - `milkyWayLayer.enabled` asks about the frame being rendered NOW and
  *   passes the frame-frozen `ctx.drawCamPos` / `ctx.fovYRad`.
  * - `milkyWayPickVisible` asks about the frame the pick pass REPLAYS and
  *   passes `state.picking.lastFrameCam` — the snapshot stashed alongside

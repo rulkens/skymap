@@ -96,8 +96,8 @@ export function createStructureMarkerRenderer(
   ctx: GpuContext,
   /**
    * The colour-attachment format the halo + ring pipelines write into.
-   * This renderer is part of `HDR_PASSES`, so the format is the offscreen
-   * HDR target (`rgba16float`) — NOT `ctx.format`, which is the canvas
+   * `structureMarkersLayer` draws into the hdr target, so the format is the
+   * offscreen HDR target (`rgba16float`) — NOT `ctx.format`, which is the canvas
    * swap-chain (`bgra8unorm`).  Halos accumulate additively into the same
    * float buffer the points / quads / disks / filaments write, then the
    * tone-map pass compresses everything onto the swap chain.  Passing
@@ -209,7 +209,7 @@ export function createStructureMarkerRenderer(
     // Why: WebGPU's draw-time validator compares the pipeline layout's
     // BGL at each slot against the BindGroupLayout of whatever
     // BindGroup is currently bound at that slot on the encoder.  Other
-    // HDR_PASSES (filaments, etc.) bind their filaments-fade-bg at
+    // hdr-target layers (filaments, etc.) bind their filaments-fade-bg at
     // @group(1) before our pass runs; the encoder still has that bind
     // group set when our SetPipeline fires.  A placeholder BGL that
     // didn't match the fadeBgl would trip "BindGroupLayout … does not

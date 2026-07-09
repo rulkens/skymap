@@ -2,8 +2,8 @@
  * clipPathDebugLayer — draws the clip-path inspector overlay (the precomputed
  * speed-coloured eye route + the scrub-instant camera gizmo).
  *
- * Lives in `UI_PASSES`, drawn post-tone-map onto the swap chain via the shared
- * `uiOverlay` render pass — same family as `markerLinesLayer`, but fed by the
+ * A swap-target layer, drawn post-tone-map onto the swap chain via the shared
+ * swap render step — same family as `markerLinesLayer`, but fed by the
  * dedicated `debugLineRenderer` (no label-director coupling). The geometry is
  * NOT in Redux: the snapshot is held by the `clipPathInspector` subsystem
  * (precomputed once on the debug panel's "Calculate"), and only the scalar

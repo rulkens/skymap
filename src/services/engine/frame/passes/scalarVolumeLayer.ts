@@ -2,11 +2,11 @@
  * scalarVolumeLayer — the half-resolution scalar-volume raymarch, as a
  * ContentLayer that draws into the volume offscreen target.
  *
- * Replaces the free-standing `encodeVolumes` pre-pass: the raymarch is now a
- * `render` step over the `(target: 'volume', slab: COSMO)` group. The executor
- * owns the pass and the additive-identity `(0, 0, 0, 0)` clear (alpha=0 so the
- * upsample's additive blend adds nothing for any fragment the volumes didn't
- * reach); this layer only issues the draw. The `volume-upsample` HDR layer then
+ * The raymarch is a `render` step over the `(target: 'volume', slab: COSMO)`
+ * group. The executor owns the pass and the additive-identity `(0, 0, 0, 0)`
+ * clear (alpha=0 so the upsample's additive blend adds nothing for any
+ * fragment the volumes didn't reach); this layer only issues the draw. The
+ * `volume-upsample` HDR layer then
  * bilinearly composites the offscreen into HDR — both layers gate on the same
  * `deriveVolumeLiveness`, so producer and consumer of the volume target can
  * never disagree.

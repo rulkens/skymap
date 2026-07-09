@@ -7,10 +7,9 @@
  *
  *   - `'compute'` — a pre-render compute dispatch, looked up by `name` in a
  *     COMPUTE name→fn table (e.g. the flow-field particle seed/integrate
- *     pass). Lifted to a top-level step because on `main` today it's
- *     invoked from *inside* both HDR encoder branches, kept in sync only by
- *     a shared helper — making it a top-level `FrameStep` removes the
- *     duplication risk structurally.
+ *     pass). A top-level step rather than something a render step invokes
+ *     internally, so the compute-before-render ordering is visible as
+ *     program order instead of being implicit in a renderer's draw call.
  *   - `'render'` — draw every enabled `ContentLayer` whose `(target, slab)`
  *     matches this step's, in registry order. The `target`/`slab` pair
  *     selects a layer group out of data the layers already carry, so two

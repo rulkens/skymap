@@ -3,11 +3,10 @@
  * ContentLayer (`target: 'volume'`, `slab: COSMO`, `blend: 'additive'`).
  *
  * The executor owns the pass + the (0,0,0,0) clear (verified in
- * executeFrame.test.ts); this layer only draws. These tests absorb the
- * draw-arg + gate assertions that used to live in `encodeVolumes.test.ts`:
- * the downsampled viewport threaded to `volumeFieldRenderer.draw`, the
- * per-field closures forwarded by identity, and the `enabled` gate tracking
- * `deriveVolumeLiveness`.
+ * executeFrame.test.ts); this layer only draws. These tests pin the
+ * draw-arg + gate contract: the downsampled viewport threaded to
+ * `volumeFieldRenderer.draw`, the per-field closures forwarded by identity,
+ * and the `enabled` gate tracking `deriveVolumeLiveness`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
