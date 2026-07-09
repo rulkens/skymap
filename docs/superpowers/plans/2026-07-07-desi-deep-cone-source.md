@@ -13,7 +13,7 @@
 
 ## Global Constraints
 
-- **Cone center: RA 233.2°, Dec +32.3°, radius 2.5°** (Corona Borealis supercluster). The center constants may shift **≤ 2°** once the real files are local and exact counts are free — Task 7's census diagnostic is the designated re-check; the constants live in exactly one file (`tools/catalog/desiCone.ts`).
+- **Cone center: RA 231.85°, Dec +30.65°, radius 2.5°** (Corona Borealis supercluster). This is the post-fetch census result: the initial density-spike pick (233.2°, +32.3°) left the supercluster's stored `corona-borealis-sc` anchor and its classic Abell clusters outside the beam, and centering exactly on the anchor instead cost half the row count to the DR1 footprint edge — see `tools/catalog/desiCone.ts` for the full rationale. Task 7's census diagnostic is the tool that produced this re-check; the constants live in exactly one file (`tools/catalog/desiCone.ts`).
 - **DESI server limits (verified in the spec's spike):** ~8 MB range-request chunks, **≤ 6 concurrent**, exponential backoff on 503/timeout. Long sequential reads stall after ~10 MB; 24 parallel requests → HTTP 503. These are fetcher requirements, not tuning suggestions.
 - **NGC files only** — CrB is in the north galactic cap; the four SGC files are never fetched.
 - **Append-only `Source` enum codes** — the next free integer is **18** (after `Flow: 17`; code 31 is the reserved pick sentinel, see `src/data/source.ts` + `src/data/selectionEncoding.ts` docstrings). Never renumber.
@@ -349,7 +349,7 @@ export function downloadChunked(opts: {
 
 ```ts
 // tools/catalog/desiCone.ts
-export const DESI_CONE = { raDeg: 233.2, decDeg: 32.3, radiusDeg: 2.5 } as const;
+export const DESI_CONE = { raDeg: 231.85, decDeg: 30.65, radiusDeg: 2.5 } as const;
 ```
 
 **crossMatch:** `CrossMatchInputs` gains `desiDeep: ParsedRecord[]` (required — existing call sites and tests add `desiDeep: []`, which the compiler enforces). Concat order becomes `[...sdss, ...twoMrs, ...glade, ...desiDeep]`: **DESI is lowest priority**, so (a) every existing bin stays byte-stable — SDSS/2MRS/GLADE keep their rows and DESI only contributes rows nobody else has — and (b) the low-z BGS overlap (≈15% already in GLADE/SDSS per the research doc) dedups away. Same-sightline cluster members survive by the existing both-gates rule (5 arcsec AND |Δz|/(1+z) < 1% must BOTH trip) — that is the finger-of-god preservation the whole feature rests on; do not touch the tolerances. Update the module docstring's priority line. **Why through crossMatch when Milliquas bypasses it:** Milliquas AGN cores are physically distinct objects from host-galaxy rows; DESI rows are the same galaxies the other surveys list, so skipping dedup would double-render the cone's low-z end.

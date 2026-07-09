@@ -5,13 +5,29 @@
  * the `desi-cone-census` diagnostic (which re-checks whether a nearby
  * center would pack the cone denser).
  *
- * RA 233.2°, Dec +32.3°, radius 2.5° targets the Corona Borealis
- * supercluster: it packs several rich Abell clusters (A2065, A2061, A2067,
- * A2079) at z ≈ 0.07–0.11 into one line of sight, which is what gives the
- * deep cone its guaranteed fingers-of-god rather than density luck. Chosen
- * by a live sampling spike across all eight DR1 tracer×cap files
- * (see `docs/superpowers/specs/2026-07-07-desi-deep-cone-design.md`) —
- * ~2× denser in every tracer than the runner-up candidates.
+ * RA 231.85°, Dec +30.65°, radius 2.5° targets the Corona Borealis
+ * supercluster. The center is a measured compromise between two candidates
+ * that each fell short on their own:
+ *
+ * - The stored `corona-borealis-sc` seed anchor (RA 230.5005°, Dec +29.0°,
+ *   `data/seeds/structure_anchors.seed.json`) is the supercluster's
+ *   published position, but centering the cone exactly there runs into the
+ *   DESI DR1 footprint edge — the south side of the beam falls outside
+ *   survey coverage, roughly halving the row count.
+ * - The DR1 density peak found by a live sampling spike across all eight
+ *   tracer×cap files (RA 233.2°, Dec +32.3° — see
+ *   `docs/superpowers/specs/2026-07-07-desi-deep-cone-design.md`) packs
+ *   several rich Abell clusters (A2065, A2061, A2067, A2079) at
+ *   z ≈ 0.07–0.11 densely into one line of sight, but sits far enough from
+ *   the seed anchor that neither the anchor nor those clusters land inside
+ *   the 2.5° beam.
+ *
+ * The midpoint of the seed→spike line keeps the anchor 2.0° off-axis
+ * (inside the beam — the supercluster's own 35 Mpc radius spans ~7° at
+ * 290 Mpc, so it envelops the beam regardless of exact centering) and
+ * brings four classic CrB Abell clusters (A2061, A2067, A2079, A2092) into
+ * the cone, at 77% of the density peak's row count (mild thinning at the
+ * far southern rim, where the footprint edge still clips the cone).
  *
  * The center is deliberately isolated in its own module (rather than a
  * literal inside `buildAllBins.ts` or `desiConeCensus.ts`) so a future
@@ -20,7 +36,7 @@
  */
 import type { DesiTracer } from '../parsers/desiFits';
 
-export const DESI_CONE = { raDeg: 233.2, decDeg: 32.3, radiusDeg: 2.5 } as const;
+export const DESI_CONE = { raDeg: 231.85, decDeg: 30.65, radiusDeg: 2.5 } as const;
 
 /**
  * Raw-data registry keys for the four DESI DR1 LSS clustering FITS files,

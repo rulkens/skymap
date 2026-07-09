@@ -30,12 +30,23 @@ deep cone.
 3. **DESI DR1 LSS clustering catalogs** over an SDSS patch query (below z = 0.8 the
    existing SDSS bins already contain everything — same flux limit, so fingers get
    no denser) and over pencil-beam surveys (tiny fields, more parsers, no QSO tail).
-4. **Cone center: Corona Borealis supercluster, RA 233.2°, Dec +32.3°, radius 2.5°.**
-   Chosen by a live density spike over all eight tracer×cap files (methodology
-   below). CrB packs several rich Abell clusters (A2065, A2061, A2067, A2079) at
-   z ≈ 0.07–0.11 — multiple guaranteed fingers, not density luck — and is ~2×
-   denser than the runner-up candidates in every galaxy tracer. The exact center
-   may shift ≤ 2° once the files are local and exact counts are free.
+4. **Cone center: Corona Borealis supercluster, RA 231.85°, Dec +30.65°, radius 2.5°.**
+   The density spike (methodology below) found a packed axis at RA 233.2°,
+   Dec +32.3° — CrB packs several rich Abell clusters (A2065, A2061, A2067,
+   A2079) at z ≈ 0.07–0.11 there, multiple guaranteed fingers rather than
+   density luck, and ~2× denser than the runner-up candidates in every galaxy
+   tracer. Once the files were local, a post-fetch coverage scan found that
+   center leaves the supercluster's own stored anchor (`corona-borealis-sc`
+   in `data/seeds/structure_anchors.seed.json`: RA 230.5005°, Dec +29.0°)
+   and its classic Abell clusters outside the 2.5° beam, while centering
+   exactly on the anchor runs into the DR1 footprint edge and roughly halves
+   the row count (35,292 → 16,396) because the footprint edge slices the
+   cone's south side. The shipped center is the midpoint of the anchor→spike
+   line: it keeps the anchor 2.0° off-axis (inside the beam — the
+   supercluster's stored 35 Mpc radius spans ~7° at 290 Mpc, so it envelops
+   the beam either way) and brings four classic CrB Abell clusters (A2061,
+   A2067, A2079, A2092) into the cone, at 77% of the density peak's row
+   count. See `tools/catalog/desiCone.ts` for the full rationale.
 
 ## Verified facts (2026-07-07 spike, live against data.desi.lbl.gov)
 
@@ -74,7 +85,10 @@ in one sky spot).
   accepted as the survey's real selection function rather than smoothed over.
 - **CrB cone (233.2, +32.3, r = 2.5°) estimated rows:** BGS ~14.5k (z 0.03–0.46),
   LRG ~15.1k (0.40–1.10), ELG ~21.3k (0.80–1.60), QSO ~5.5k (0.80–3.47).
-  **Total ≈ 56k** — comfortably a tier-agnostic single bin.
+  **Total ≈ 56k** — comfortably a tier-agnostic single bin. (The shipped
+  center, chosen post-fetch after a live coverage scan, is (231.85, +30.65)
+  — see decision 4 above; row count at the shipped center is ~27k, 77% of
+  this estimate, from mild footprint thinning at the cone's southern rim.)
 - **Coma is NOT in the DR1 LSS footprint** — a reference disc at (194.95, +27.98)
   returned zero rows in all four tracers. Any Coma-based plan is dead on arrival.
 - **The Stripe 82 bright patch** the user spotted in SDSS at (334.42, +0.15) is a

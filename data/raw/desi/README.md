@@ -87,15 +87,25 @@ take GLADE's no-PA fallback path (axis ratio 1, fallback flag set).
 The full LSS product is all-sky (NGC + SGC, ~9.75M rows across all four
 tracers) — far more than skymap needs for a single deep-field demonstration
 region. Skymap fetches NGC only and, at build time, filters further to a
-narrow cone around Corona Borealis (RA 233.2°, Dec +32.3°, radius 2.5°,
+narrow cone around Corona Borealis (RA 231.85°, Dec +30.65°, radius 2.5°,
 dot-product test against the cone axis before any allocation-heavy work).
-That cone was chosen over two alternatives checked in the same spike:
-Coma (194.95°, +27.98°) returns **zero** rows in DR1 — it's outside the
-survey footprint — and the Stripe 82 cluster complex (334.42°, +0.15°) is
-viable (~30.5k rows/cone) but less dense than CrB (~56k rows/cone total
-across the four tracers). NGC-only keeps the fetch to the half of the sky
-that actually contains the cone, rather than downloading SGC data that
-would be filtered out immediately after parsing.
+That center is a measured compromise, chosen after the real files were
+local: the density spike below found a packed axis at (233.2°, +32.3°),
+but centering there leaves both the stored `corona-borealis-sc` supercluster
+anchor (230.5005°, +29.0°) and its classic Abell clusters outside the 2.5°
+beam; centering exactly on the anchor instead runs into the DR1 footprint
+edge and roughly halves the row count. The midpoint keeps the anchor
+2.0° off-axis (inside the beam) and brings four Abell clusters
+(A2061, A2067, A2079, A2092) into the cone, at 77% of the density peak's
+row count. See `tools/catalog/desiCone.ts` for the full rationale. The cone
+was chosen over two alternatives checked in the same spike: Coma
+(194.95°, +27.98°) returns **zero** rows in DR1 — it's outside the survey
+footprint — and the Stripe 82 cluster complex (334.42°, +0.15°) is viable
+(~30.5k rows/cone) but less dense than CrB (~56k rows/cone total across the
+four tracers, before the final recenter's mild thinning). NGC-only keeps
+the fetch to the half of the sky that actually contains the cone, rather
+than downloading SGC data that would be filtered out immediately after
+parsing.
 
 ## Checksum sidecar
 
