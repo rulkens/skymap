@@ -127,12 +127,12 @@ export type RenderTargets = {
 
 Register in `CONTENT_LAYERS` after the swap group (registry position only affects timing-slot listing — no other layer shares its `(target, slab)`).
 
-- [ ] Test (`passes.test.ts`): extend the migration-table test with the `debug-spheres` row; extend the blend-legality test — `foreground:0` layers are all `'opaque'` (hdr `additive` / swap `over` clauses unchanged).
-- [ ] Test (`debugSpheresLayer.test.ts`): `draw composes one MVP per body from the slab's f64 vp` — spy renderer + real `composeBodyMvp`: `renderer.draw` receives `DEBUG_SPHERE_BODIES.length` `Float32Array`s, and the layer passed `view.slab.vp` (assert via a `view` fixture whose `slab.vp` is a recognisable `Float64Array` and whose `vp` is a deliberately different `Float32Array` — identity-check which one the compose consumed, e.g. by mocking `composeBodyMvp` and asserting its first arg `toBe(view.slab.vp)`).
-- [ ] Test: `enabled is false while the renderer handle is null and true once set`.
-- [ ] Implement + register.
-- [ ] `npm run typecheck && npm test` → green (no program step selects the layer yet — inert until Task 7).
-- [ ] Commit the touched paths.
+- [x] Test (`passes.test.ts`): extend the migration-table test with the `debug-spheres` row; extend the blend-legality test — `foreground:0` layers are all `'opaque'` (hdr `additive` / swap `over` clauses unchanged).
+- [x] Test (`debugSpheresLayer.test.ts`): `draw composes one MVP per body from the slab's f64 vp` — spy renderer + real `composeBodyMvp`: `renderer.draw` receives `DEBUG_SPHERE_BODIES.length` `Float32Array`s, and the layer passed `view.slab.vp` (assert via a `view` fixture whose `slab.vp` is a recognisable `Float64Array` and whose `vp` is a deliberately different `Float32Array` — identity-check which one the compose consumed, e.g. by mocking `composeBodyMvp` and asserting its first arg `toBe(view.slab.vp)`).
+- [x] Test: `enabled is false while the renderer handle is null and true once set`.
+- [x] Implement + register.
+- [x] `npm run typecheck && npm test` → green (no program step selects the layer yet — inert until Task 7).
+- [x] Commit the touched paths.
 
 ### Task 5 — `foregroundLabelsLayer`: captions as a NEAR0 swap row
 

@@ -40,11 +40,16 @@
  *  13. labels              — MSDF text labels
  *  14. clip-path-debug     — debug: clip-path inspector route + gizmo
  *
- * The final row is the first to leave the cosmological slab entirely — the
- * near-field foreground body group, drawn opaque (depth-tested) through the
- * near0 slab into the depth-bearing `foreground:0` target:
+ * The final two rows are the first to leave the cosmological slab entirely —
+ * the near-field foreground group, projected through the near0 slab (whose
+ * near/far track the camera's orbit distance) so the true-scale bodies are
+ * never clipped by the cosmological near plane:
  *
- *  15. debug-spheres       — true-scale Sun / Earth bodies (f64 compose seam)
+ *  15. debug-spheres       — true-scale Sun / Earth bodies (f64 compose seam),
+ *                            opaque (depth-tested) into the `foreground:0` target
+ *  16. foreground-labels   — Sun / Earth name captions, premultiplied-OVER onto
+ *                            the swap chain post-tone-map (like the COSMO labels,
+ *                            but anchored through the near0 vp)
  *
  * `textured-disks` is what remains of the briefly-split (and never-shipped)
  * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
@@ -123,6 +128,7 @@ import { markerLinesLayer } from './markerLinesLayer';
 import { labelsLayer } from './labelsLayer';
 import { clipPathDebugLayer } from './clipPathDebugLayer';
 import { debugSpheresLayer } from './debugSpheresLayer';
+import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 
 /**
  * The flat content-layer registry, in deterministic draw order.  HDR
@@ -160,6 +166,11 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // listing, since no other layer shares its (target, slab). Inert until the
   // frame program appends the foreground render step (task 7).
   debugSpheresLayer,
+  // Near-field captions: the Sun/Earth name labels drawn OVER onto the swap
+  // chain through the near0 slab. Registered after debug-spheres; like it,
+  // inert until the frame program appends the (swap, NEAR0) render step (task
+  // 7) — the existing (swap, COSMO) step selects nothing here by construction.
+  foregroundLabelsLayer,
 ];
 
 export { scalarVolumeLayer } from './scalarVolumeLayer';
@@ -178,3 +189,4 @@ export { markerLinesLayer } from './markerLinesLayer';
 export { labelsLayer } from './labelsLayer';
 export { clipPathDebugLayer } from './clipPathDebugLayer';
 export { debugSpheresLayer } from './debugSpheresLayer';
+export { foregroundLabelsLayer } from './foregroundLabelsLayer';
