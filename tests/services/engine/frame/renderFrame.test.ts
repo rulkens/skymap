@@ -354,18 +354,18 @@ function makeInput(
     settings,
     input: {
       ctx,
-      // Passes read engine state via `input.state`. The label +
-      // marker-line passes read `state.gpu.*` in their `enabled()` gates;
-      // nulling those handles makes the passes skip (enabled → false), so
+      // ContentLayers read engine state via `input.state`. The label +
+      // marker-line layers read `state.gpu.*` in their `enabled()` gates;
+      // nulling those handles makes the layers skip (enabled → false), so
       // these tests stay focused on point + milky-way ordering.
       state: {
         // focusUniform: renderFrame writes it once per frame and
-        // pointSpritesPass binds its group; a no-op write + opaque bind
+        // pointSpritesLayer binds its group; a no-op write + opaque bind
         // group keeps the mock encoder happy.
         gpu: {
           labelRenderer: null,
           markerLineRenderer: null,
-          // clipPathDebugPass.enabled short-circuits on a null renderer.
+          // clipPathDebugLayer.enabled short-circuits on a null renderer.
           debugLineRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer: null,
@@ -373,11 +373,10 @@ function makeInput(
           structureMarkerRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud,
-          // The five renderers `ContentLayer.draw` reads straight off
-          // `state.gpu.*` (pre-unification these arrived only via the
-          // `PassDeps` bag built from the top-level `input.*` fields
-          // below). Both need the same mock instances so callLog order
-          // assertions (e.g. milkyWayCloudRenderer.draw) still fire.
+          // Every `ContentLayer.draw` reads its renderer straight off
+          // `state.gpu.*` — this is the ONLY place these mock instances are
+          // wired in (no top-level `input.*` duplication; see
+          // `RenderFrameInput`'s slimmed shape).
           milkyWayCloudRenderer,
           horizonShellRenderer,
           texturedDiskRenderer,
@@ -410,39 +409,31 @@ function makeInput(
         },
         selection: { select: settings.selected },
         assetSlots: { flow: null },
-        // pointSpritesPass stashes the packed uniform bytes + camera
+        // pointSpritesLayer stashes the packed uniform bytes + camera
         // snapshot onto state.picking after each draw so the pick paths
         // can replay the last frame's camera state.  The bag must exist;
         // all other fields are at their default 'nothing in flight'
-        // values — only the two snapshots are mutated by the pass.
+        // values — only the two snapshots are mutated by the layer.
         picking: {
           lastFrameUniformBytes: null as ArrayBuffer | null,
           lastFrameCam: null,
           pickInFlight: false,
           pointerDown: false,
         },
-        // proceduralDisksPass / texturedDisksPass each read their slot
+        // proceduralDisksLayer / texturedDisksLayer each read their slot
         // off `state.subsystems` in their `enabled()` gate; nulling both
-        // references makes the passes skip cleanly.
+        // references makes the layers skip cleanly.
         subsystems: {
           proceduralDisks: null,
           texturedDisks: null,
-          // filamentsPass.enabled consults the FadeRegistry to keep the
-          // pass alive through fade-out tails. A minimal opacityOf stub
+          // filamentsLayer.enabled consults the FadeRegistry to keep the
+          // layer alive through fade-out tails. A minimal opacityOf stub
           // keeps the gate from crashing.
           fades: { opacityOf: () => 1 },
         },
       } as never,
       device,
       context,
-      milkyWayCloudRenderer,
-      horizonShellRenderer,
-      filamentRenderer: null,
-      volumeFieldRenderer: null,
-      flowFieldRenderer: null,
-      texturedQuadRenderer,
-      texturedDiskRenderer,
-      proceduralDiskRenderer,
       // Disabled stub (`service.enabled === false`) → renderFrame takes
       // the single-pass branch. Active-mode behaviour lives in
       // `renderFrame.timing.test.ts`.
@@ -553,9 +544,9 @@ describe('renderFrame', () => {
   });
 
   // Disk/thumbnail draws are produced by `proceduralDiskSubsystem.runFrame`
-  // and `texturedDiskSubsystem.runFrame` upstream; the downstream passes
-  // just issue renderer draws. Per-pass coverage lives in the matching
-  // `passes/<name>Pass.test.ts` files.
+  // and `texturedDiskSubsystem.runFrame` upstream; the downstream layers
+  // just issue renderer draws. Per-layer coverage lives in the matching
+  // `passes/<name>Layer.test.ts` files.
 
   it('calls postProcess.draw after pass.end with exposure, curve, and the swap-chain view', () => {
     renderFrame(fx.input);
@@ -627,18 +618,16 @@ describe('renderFrame', () => {
     // field, then check that the FIRST beginRenderPass goes against the
     // half-res view.
     const fx2 = makeInput({ settings: { volumesEnabled: true } });
-    // Wire in a volumeFieldRenderer with active fields.
+    // Wire in a volumeFieldRenderer with active fields. encodeVolumePrepass
+    // reads it straight off `state.gpu.volumeFieldRenderer` — no top-level
+    // `input.*` field to mirror it onto.
     const drawSpy = vi.fn();
-    (fx2.input as any).volumeFieldRenderer = {
-      draw: drawSpy,
-      hasActiveFields: () => true,
-    };
     (fx2.input.state as any).gpu.volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
     };
-    // volumeUpsamplePass.enabled gates on volumeUpsample !== null —
-    // keep it null so the upsample pass is skipped; this test only
+    // volumeUpsampleLayer.enabled gates on volumeUpsample !== null —
+    // keep it null so the upsample layer is skipped; this test only
     // cares that the half-res pre-pass fires before the HDR pass.
     (fx2.input.state as any).gpu.volumeUpsample = null;
     // The half-res view comes off ctx.volumeOffscreen.view.  The

@@ -256,9 +256,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         milkyWayCloud: {
           buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }),
         },
-        // The five renderers `ContentLayer.draw` reads straight off
-        // `state.gpu.*` — same mock instances forwarded via the top-level
-        // `input.*` fields below (still read by `PassDeps` for `UI_PASSES`).
+        // Every `ContentLayer.draw` reads its renderer straight off
+        // `state.gpu.*` — this is the ONLY place these mock instances are
+        // wired in (no top-level `input.*` duplication).
         milkyWayCloudRenderer,
         horizonShellRenderer,
         texturedDiskRenderer,
@@ -289,7 +289,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       },
       selection: { select: settings.selected },
       assetSlots: { flow: null },
-      // pointSpritesPass stashes the packed uniform bytes + camera
+      // pointSpritesLayer stashes the packed uniform bytes + camera
       // snapshot here after each draw — the bag must exist so the
       // property write doesn't throw.
       picking: {
@@ -301,22 +301,15 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       subsystems: {
         proceduralDisks: null,
         texturedDisks: null,
-        // filamentsPass.enabled consults the FadeRegistry to keep the
-        // pass alive through fade-out tails. This fixture wants the
-        // pass GATED OFF (the test asserts only point-sprites +
+        // filamentsLayer.enabled consults the FadeRegistry to keep the
+        // layer alive through fade-out tails. This fixture wants the
+        // layer GATED OFF (the test asserts only point-sprites +
         // milky-way fire), so opacityOf returns 0 — no fade-out tail.
         fades: { opacityOf: () => 0 },
       },
     } as never,
     device,
     context,
-    milkyWayCloudRenderer: milkyWayCloudRenderer as never,
-    horizonShellRenderer: horizonShellRenderer as never,
-    filamentRenderer: null,
-    volumeFieldRenderer: null,
-    flowFieldRenderer: null,
-    texturedDiskRenderer: texturedDiskRenderer as never,
-    proceduralDiskRenderer: proceduralDiskRenderer as never,
     timingService,
   };
 
@@ -417,13 +410,11 @@ describe('renderFrame — timing service hookup', () => {
     const { svc, descriptorFor } = makeFakeTimingService();
     const { input, beginCalls } = makeMinimalInputWithTiming(svc);
 
-    // Force volumes on with an active volumeFieldRenderer.
+    // Force volumes on with an active volumeFieldRenderer. encodeVolumePrepass
+    // reads it straight off `state.gpu.volumeFieldRenderer` — no top-level
+    // `input.*` field to mirror it onto.
     (input.state as any).settings.volumes = { enabled: true };
     const drawSpy = vi.fn();
-    (input as any).volumeFieldRenderer = {
-      draw: drawSpy,
-      hasActiveFields: () => true,
-    };
     (input.state as any).gpu.volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
@@ -432,8 +423,8 @@ describe('renderFrame — timing service hookup', () => {
     // path reads ctx.volumeOffscreen.view for the pre-pass attachment.
     const halfView = { __id: 'half' } as unknown as GPUTextureView;
     (input.ctx as any).volumeOffscreen = { view: halfView, resize: vi.fn(), destroy: vi.fn() };
-    // The new volume-upsample pass also reads state.gpu.volumeUpsample —
-    // null-check it so the upsample pass is skipped (we only care about
+    // The volume-upsample layer also reads state.gpu.volumeUpsample —
+    // null-check it so the upsample layer is skipped (we only care about
     // the pre-pass slot billing in this test).
     (input.state as any).gpu.volumeUpsample = null;
 

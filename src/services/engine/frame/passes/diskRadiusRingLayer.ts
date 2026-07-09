@@ -1,11 +1,12 @@
 /**
- * diskRadiusRingPass — developer overlay that rings the SELECTED galaxy
+ * diskRadiusRingLayer — developer overlay that rings the SELECTED galaxy
  * at its catalog procedural-disk radius, lying in the disk plane.
  *
- * Lives in `UI_PASSES` (premultiplied-OVER, post-tone-map) like the
- * selection ring: it is screen overlay, not emissive scene content.
- * Gated on `state.settings.debug.showDiskRadiusRing` plus a galaxy
- * selection, so a default-off build pays one boolean per frame.
+ * Lives in `UI_PASSES` (the swap-target, `blend: 'over'` group within
+ * `CONTENT_LAYERS`, drawn post-tone-map) like the selection ring: it is
+ * screen overlay, not emissive scene content. Gated on
+ * `state.settings.debug.showDiskRadiusRing` plus a galaxy selection, so a
+ * default-off build pays one boolean per frame.
  *
  * ## What it's for
  *
@@ -29,11 +30,15 @@
 import { Source } from '../../../../data/sources';
 import { paddedRadiusMpc } from '../../../../utils/paddedRadiusMpc';
 import { effectiveTilt } from '../../../../utils/render/disk/effectiveTilt';
-import type { Pass } from '../../../../@types/engine/frame/Pass';
+import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import { COSMO } from '../slabs';
 
-export const diskRadiusRingPass: Pass = {
+export const diskRadiusRingLayer: ContentLayer = {
   name: 'disk-radius-ring',
+  slab: COSMO,
+  target: 'swap',
+  blend: 'over',
 
   enabled(state, _ctx) {
     // Handle check first: no ring renderer means nothing to draw, and
@@ -46,11 +51,11 @@ export const diskRadiusRingPass: Pass = {
     return sel !== null && sel.type === 'galaxyCatalog';
   },
 
-  draw(pass, ctx, state, _deps) {
+  draw(pass, view, _ctx, state) {
     const sel = state.selection.select;
     // `enabled()` proved a galaxy ref — narrow accordingly.
     if (sel === null || sel.type !== 'galaxyCatalog') return;
-    // This debug pass still re-indexes the catalog: it needs the tilt /
+    // This debug layer still re-indexes the catalog: it needs the tilt /
     // calibration fields (axisRatio, positionAngleDeg, famous calibration)
     // that aren't carried on GalaxyInfo, only `sel.source` + `sel.index`.
     const catalog = state.data.galaxies.catalogs.get(sel.source);
@@ -83,7 +88,7 @@ export const diskRadiusRingPass: Pass = {
       ? effectiveTilt(cal, catalogAxisRatio, catalogPaDeg)
       : { axisRatio: catalogAxisRatio, positionAngleDeg: catalogPaDeg };
 
-    state.gpu.diskRadiusRing!.draw(pass, ctx.vp as Float32Array, {
+    state.gpu.diskRadiusRing!.draw(pass, view.vp, {
       center,
       radiusWorld,
       axisRatioForTilt: tilt.axisRatio,

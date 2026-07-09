@@ -2,25 +2,25 @@
  * passes/index — the content-layer registry.
  *
  * `CONTENT_LAYERS` is the flat, ordered list of every `ContentLayer` the
- * renderer draws.  It replaces the two `Pass[]` arrays this module used to
- * export (`HDR_PASSES` additive-into-HDR, `UI_PASSES` premultiplied-OVER
- * onto the swap chain) — those were two arrays because a `Pass` baked its
- * target and blend into "which array it lives in"; a `ContentLayer` states
- * `target` and `blend` as data fields on the row itself, so one array is
- * enough and grouping by `(target, blend)` becomes a `.filter()`.
+ * renderer draws — both the nine additive-into-HDR layers and the five
+ * premultiplied-OVER-onto-swap-chain overlays.  It replaces the two `Pass[]`
+ * arrays this module used to export (`HDR_PASSES`, `UI_PASSES`) — those were
+ * two arrays because a `Pass` baked its target and blend into "which array
+ * it lives in"; a `ContentLayer` states `target` and `blend` as data fields
+ * on the row itself, so one array is enough and grouping by `(target,
+ * blend)` becomes a `.filter()`.
  *
- * `HDR_PASSES` below is `CONTENT_LAYERS.filter((l) => l.target === 'hdr')`
- * — a TRANSITIONAL derived export.  It exists only so the two HDR encoders
- * (`encodeHdrSingle`, `encodeHdrSplit`) and `TIMED_SLOT_NAMES` keep working
- * unchanged while `UI_PASSES` (still the pre-unification `Pass[]` shape,
- * converted in a follow-up task) continues to drive the swap-chain overlay
- * pass.  Once every layer — HDR and UI alike — lives in `CONTENT_LAYERS`
- * and the executor walks a `FrameStep[]` program instead of two hand-wired
- * arrays, `HDR_PASSES` (and this file's `Pass`-typed exports) go away.
+ * `HDR_PASSES` and `UI_PASSES` below are both TRANSITIONAL derived exports —
+ * `CONTENT_LAYERS.filter((l) => l.target === 'hdr' | 'swap')` respectively.
+ * They exist only so the two HDR encoders (`encodeHdrSingle`,
+ * `encodeHdrSplit`), `TIMED_SLOT_NAMES`, and `encodeUiOverlay` keep working
+ * unchanged.  Once the frame executor walks a `FrameStep[]` program instead
+ * of these two hand-wired encoders, both derived exports go away in favour
+ * of the executor grouping layers by `(target, slab)` directly.
  *
- * ### CONTENT_LAYERS — additive HDR content, in deterministic draw order
+ * ### CONTENT_LAYERS — draw order
  *
- * All nine entries are additively blended into the HDR `rgba16float`
+ * The first nine entries are additively blended into the HDR `rgba16float`
  * target, projected through the cosmological slab:
  *
  *   1. point-sprites       — instanced billboards (always-on)
@@ -33,6 +33,15 @@
  *                            into the HDR target (when active fields exist)
  *   8. horizon-shell       — translucent sphere at the observable-universe edge
  *   9. structure-markers   — at-rest halo + ring for cluster / SC / void structures
+ *
+ * The remaining five are premultiplied-OVER overlays, projected through the
+ * same cosmological slab but drawn post-tone-map onto the swap chain:
+ *
+ *  10. selection-ring      — per-galaxy / Milky-Way / structure selection halo
+ *  11. disk-radius-ring    — debug: catalog-disk-radius calibration ring
+ *  12. marker-lines        — screen-space thick-line overlay (e.g. label stems)
+ *  13. labels              — MSDF text labels
+ *  14. clip-path-debug     — debug: clip-path inspector route + gizmo
  *
  * `textured-disks` is what remains of the briefly-split (and never-shipped)
  * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
@@ -66,7 +75,7 @@
  *      their blend (`one, one`) doesn't read `dst.color`.
  *
  * Both issues vanish once the OVER overlays live POST-tone-map on
- * the swap chain.  See `services/engine/frame/uiOverlay.ts`.
+ * the swap chain.  See `services/engine/frame/encodeUiOverlay.ts`.
  *
  * ### Why milky-way BEFORE filaments / scalar-volume?
  *
@@ -93,7 +102,6 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
-import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { pointSpritesLayer } from './pointSpritesLayer';
 import { proceduralDisksLayer } from './proceduralDisksLayer';
 import { texturedDisksLayer } from './texturedDisksLayer';
@@ -103,17 +111,18 @@ import { volumeUpsampleLayer } from './volumeUpsampleLayer';
 import { milkyWayLayer } from './milkyWayLayer';
 import { horizonShellLayer } from './horizonShellLayer';
 import { structureMarkersLayer } from './structureMarkersLayer';
-import { markerLinesPass } from './markerLinesPass';
-import { labelsPass } from './labelsPass';
-import { clipPathDebugPass } from './clipPathDebugPass';
-import { selectionRingPass } from './selectionRingPass';
-import { diskRadiusRingPass } from './diskRadiusRingPass';
+import { selectionRingLayer } from './selectionRingLayer';
+import { diskRadiusRingLayer } from './diskRadiusRingLayer';
+import { markerLinesLayer } from './markerLinesLayer';
+import { labelsLayer } from './labelsLayer';
+import { clipPathDebugLayer } from './clipPathDebugLayer';
 
 /**
  * The flat content-layer registry, in deterministic draw order.  HDR
- * layers lead; UI-overlay layers (still `Pass`-typed — see `UI_PASSES`
- * below) join this array once they're converted to `ContentLayer` in a
- * follow-up task.
+ * layers (additive, into the HDR offscreen target) lead; the five
+ * swap-target layers (premultiplied-OVER, post-tone-map onto the swap
+ * chain) follow.  `HDR_PASSES` and `UI_PASSES` below are both derived
+ * `.filter()` views over this one array — see the module header.
  */
 export const CONTENT_LAYERS: readonly ContentLayer[] = [
   pointSpritesLayer,
@@ -125,44 +134,45 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   volumeUpsampleLayer,
   horizonShellLayer,
   structureMarkersLayer,
-  // UI-overlay rows (selectionRingPass, diskRadiusRingPass,
-  // markerLinesPass, labelsPass, clipPathDebugPass) land here once
-  // converted to ContentLayer.
+  // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
+  // ring leads so marker-lines and labels composite over its stroke; the
+  // debug clip-path overlay trails so its route + gizmo draw on top of
+  // everything else.
+  selectionRingLayer,
+  diskRadiusRingLayer,
+  markerLinesLayer,
+  labelsLayer,
+  clipPathDebugLayer,
 ];
 
 /**
  * Transitional derived view: every `CONTENT_LAYERS` row that targets the
  * HDR offscreen target.  Consumed by the two HDR encoders and
- * `TIMED_SLOT_NAMES` so neither needs to change shape while `UI_PASSES`
- * is still a hand-maintained `Pass[]`.  Once every layer lives in
- * `CONTENT_LAYERS` and the frame executor walks a `FrameStep[]` program,
- * this filter (and the encoders that consume it) are deleted in favour of
- * the executor grouping layers by `(target, slab)` directly.
+ * `TIMED_SLOT_NAMES`.  Once the frame executor walks a `FrameStep[]`
+ * program instead of the two hand-wired HDR/UI encoders, this filter (and
+ * `UI_PASSES` below) are deleted in favour of the executor grouping layers
+ * by `(target, slab)` directly.
  */
 export const HDR_PASSES: readonly ContentLayer[] = CONTENT_LAYERS.filter(
   (layer) => layer.target === 'hdr',
 );
 
 /**
- * The UI overlay passes, in deterministic draw order.  The selection
- * ring leads so marker-lines and labels composite over its stroke —
- * labels carry information that must stay legible.  The disk-radius
- * debug ring follows the selection ring (both are world-space strokes
- * around the selected galaxy); it is default-off, so it contributes
- * nothing unless the curator enables it.  All entries share one
- * swap-chain `beginRenderPass` (see `uiOverlay.ts`) and one timing slot
- * (`ui-overlay`).
+ * Transitional derived view: every `CONTENT_LAYERS` row that targets the
+ * swap chain.  The selection ring leads so marker-lines and labels
+ * composite over its stroke — labels carry information that must stay
+ * legible.  The disk-radius debug ring follows the selection ring (both
+ * are world-space strokes around the selected galaxy); it is default-off,
+ * so it contributes nothing unless the curator enables it.  All entries
+ * share one swap-chain `beginRenderPass` (see `encodeUiOverlay.ts`) and
+ * one timing slot (`ui-overlay`).  Once the frame executor walks a
+ * `FrameStep[]` program instead of the two hand-wired HDR/UI encoders,
+ * this filter (and `HDR_PASSES` above) are deleted in favour of the
+ * executor grouping layers by `(target, slab)` directly.
  */
-export const UI_PASSES: readonly Pass[] = [
-  selectionRingPass,
-  diskRadiusRingPass,
-  markerLinesPass,
-  labelsPass,
-  // Debug overlay last so the clip-path route + gizmo draw on top of
-  // everything; default-quiet (no snapshot held) until the curator clicks
-  // "Calculate" in the DebugPanel.
-  clipPathDebugPass,
-];
+export const UI_PASSES: readonly ContentLayer[] = CONTENT_LAYERS.filter(
+  (layer) => layer.target === 'swap',
+);
 
 /**
  * The ordered list of GPU-timing slots — the single source of truth for
@@ -201,8 +211,8 @@ export { volumeUpsampleLayer } from './volumeUpsampleLayer';
 export { milkyWayLayer } from './milkyWayLayer';
 export { horizonShellLayer } from './horizonShellLayer';
 export { structureMarkersLayer } from './structureMarkersLayer';
-export { markerLinesPass } from './markerLinesPass';
-export { labelsPass } from './labelsPass';
-export { clipPathDebugPass } from './clipPathDebugPass';
-export { selectionRingPass } from './selectionRingPass';
-export { diskRadiusRingPass } from './diskRadiusRingPass';
+export { selectionRingLayer } from './selectionRingLayer';
+export { diskRadiusRingLayer } from './diskRadiusRingLayer';
+export { markerLinesLayer } from './markerLinesLayer';
+export { labelsLayer } from './labelsLayer';
+export { clipPathDebugLayer } from './clipPathDebugLayer';

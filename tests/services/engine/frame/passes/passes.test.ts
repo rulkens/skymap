@@ -28,6 +28,7 @@ import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import {
   CONTENT_LAYERS,
   HDR_PASSES,
+  UI_PASSES,
   TIMED_SLOT_NAMES,
   pointSpritesLayer,
   proceduralDisksLayer,
@@ -207,6 +208,18 @@ const HDR_NAMES = [
   'structure-markers',
 ];
 
+// The canonical swap-group (post-tone-map, premultiplied-OVER) name order —
+// see the renderer-unification design's migration table (spec lines
+// 208-212). Selection ring leads so marker-lines and labels composite over
+// its stroke; the debug clip-path overlay trails everything else.
+const SWAP_NAMES = [
+  'selection-ring',
+  'disk-radius-ring',
+  'marker-lines',
+  'labels',
+  'clip-path-debug',
+];
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('CONTENT_LAYERS migration table (hdr group)', () => {
@@ -239,6 +252,52 @@ describe('HDR_PASSES registry', () => {
     // with the structure layers, after filaments.
     expect(HDR_PASSES).toHaveLength(9);
     expect(HDR_PASSES.map((p) => p.name)).toEqual(HDR_NAMES);
+  });
+});
+
+describe('CONTENT_LAYERS migration table (swap group)', () => {
+  it('every swap content layer matches the migration table', () => {
+    // The five post-tone-map UI overlays project through the same
+    // cosmological slab as the HDR group but target the swap chain with
+    // premultiplied-OVER blending — see the renderer-unification design's
+    // migration table (spec lines 208-212).
+    const swapLayers = CONTENT_LAYERS.filter((layer) => SWAP_NAMES.includes(layer.name));
+    expect(swapLayers.map((layer) => layer.name)).toEqual(SWAP_NAMES);
+    for (const layer of swapLayers) {
+      expect(layer.slab).toBe(COSMO);
+      expect(layer.target).toBe('swap');
+      expect(layer.blend).toBe('over');
+    }
+  });
+});
+
+describe('UI_PASSES registry', () => {
+  it('contains the five swap layers in canonical draw order', () => {
+    // Selection ring leads (marker-lines/labels composite over its stroke);
+    // the debug clip-path overlay trails so its route + gizmo draw on top
+    // of everything else.
+    expect(UI_PASSES).toHaveLength(5);
+    expect(UI_PASSES.map((p) => p.name)).toEqual(SWAP_NAMES);
+  });
+});
+
+describe('CONTENT_LAYERS blend legality', () => {
+  it('every layer blends per its target — hdr additive, swap over', () => {
+    // The registry half of the target<->blend invariant (the renderer half
+    // — that the WebGPU pipeline's actual blend state matches — lands in
+    // task 10). A layer whose target/blend pair falls outside this table
+    // is a data-entry bug in its own file, not a new legal combination.
+    for (const layer of CONTENT_LAYERS) {
+      if (layer.target === 'hdr') {
+        expect(layer.blend).toBe('additive');
+      } else if (layer.target === 'swap') {
+        expect(layer.blend).toBe('over');
+      } else {
+        throw new Error(
+          `CONTENT_LAYERS: unexpected target '${layer.target}' on layer '${layer.name}'`,
+        );
+      }
+    }
   });
 });
 

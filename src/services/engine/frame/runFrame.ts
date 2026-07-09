@@ -16,11 +16,14 @@
  *
  * ### Why deps are passed explicitly instead of lifted to EngineState
  *
- * The IIFE-local renderers (`device`, `context`, `milkyWayCloudRenderer`,
- * `filamentRenderer`, `texturedDiskRenderer`) are read *only* by the frame body;
- * promoting them to `state.gpu.*` would widen `EngineState`'s contract for one
- * consumer and force every other reader to null-check fields it never touches.
- * They flow through `RunFrameDeps` instead.
+ * The IIFE-local `device` and `context` GPU handles are read *only* by the
+ * frame body; promoting them to `state.gpu.*` would widen `EngineState`'s
+ * contract for one consumer and force every other reader to null-check
+ * fields it never touches.  They flow through `RunFrameDeps` instead.  Every
+ * per-frame renderer (`milkyWayCloudRenderer`, `filamentRenderer`,
+ * `texturedDiskRenderer`, …) DOES live on `state.gpu.*` already — every
+ * `ContentLayer.draw` reads its renderer straight from there (see
+ * `passes/index.ts`), so `RunFrameDeps` carries no renderer fields.
  *
  * ### Camera produce → commit-on-edge ordering
  *
@@ -380,13 +383,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state,
     device: deps.device,
     context: deps.context,
-    milkyWayCloudRenderer: deps.milkyWayCloudRenderer,
-    horizonShellRenderer: deps.horizonShellRenderer,
-    filamentRenderer: deps.filamentRenderer,
-    volumeFieldRenderer: state.gpu.volumeFieldRenderer,
-    flowFieldRenderer: state.gpu.flowFieldRenderer,
-    texturedDiskRenderer: deps.texturedDiskRenderer,
-    proceduralDiskRenderer: deps.proceduralDiskRenderer,
     timingService: deps.timingService,
   });
 

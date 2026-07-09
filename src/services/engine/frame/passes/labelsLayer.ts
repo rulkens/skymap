@@ -1,11 +1,11 @@
 /**
- * labelsPass — MSDF text label draw call.
+ * labelsLayer — MSDF text label draw call.
  *
  * Lives in `UI_PASSES`, NOT `HDR_PASSES` — see `passes/index.ts`
  * module header for why marker-lines + labels moved out of the HDR
  * sequence.  `uiOverlay` opens one `beginRenderPass` on the swap-
  * chain texture and iterates `UI_PASSES` inside that single pass,
- * so this pass's `draw` writes directly to the tone-mapped swap
+ * so this layer's `draw` writes directly to the tone-mapped swap
  * chain without further compression.
  *
  * ### What it draws
@@ -30,28 +30,29 @@
  *      have called `setLabels` with at least one label this frame
  *      (e.g. from `produceMilkyWayLabel`).  When the camera is far
  *      from the origin the producer emits an empty label set and
- *      `glyphCount()` returns 0, making this pass a cheap early-return.
+ *      `glyphCount()` returns 0, making this layer a cheap early-return.
  *
  * ### Pass position in UI_PASSES
  *
- * Placed AFTER `markerLinesPass` so the label text composites over
+ * Placed AFTER `markerLinesLayer` so the label text composites over
  * the line where they overlap, preserving readability.
  */
 
-import type { Pass } from '../../../../@types/engine/frame/Pass';
+import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import { COSMO } from '../slabs';
 
-export const labelsPass: Pass = {
+export const labelsLayer: ContentLayer = {
   name: 'labels',
+  slab: COSMO,
+  target: 'swap',
+  blend: 'over',
 
   enabled(state, _ctx) {
     if (state.gpu.labelRenderer === null) return false;
     return state.gpu.labelRenderer.glyphCount() > 0;
   },
 
-  draw(pass, ctx, state, _deps) {
-    state.gpu.labelRenderer!.draw(pass, ctx.vp as Float32Array, [
-      ctx.canvasSize.width,
-      ctx.canvasSize.height,
-    ]);
+  draw(pass, view, _ctx, state) {
+    state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx);
   },
 };

@@ -1,17 +1,31 @@
 import { describe, it, expect, vi } from 'vitest';
-import { clipPathDebugPass } from '../../../../../src/services/engine/frame/passes/clipPathDebugPass';
+import { clipPathDebugLayer } from '../../../../../src/services/engine/frame/passes/clipPathDebugLayer';
+import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
+import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ClipPathSnapshot } from '../../../../../src/@types/engine/debug/ClipPathSnapshot';
 import type { Mat4 } from 'wgpu-matrix';
 
+/**
+ * `slabViewOf(ctx, COSMO)` indexes `ctx.slabs[COSMO]` directly (see
+ * `slabs.ts`), so the fixture needs a real cosmological row there.
+ */
 function makeCtx(): ReadyFrameContext {
+  const vp = new Float32Array(16) as unknown as Mat4;
+  const cosmoSlab: Slab = {
+    index: COSMO,
+    nearMpc: 0.01,
+    farMpc: 50000,
+    vp: Float64Array.from(vp),
+    originRelative: false,
+    precision: 'f32',
+  };
   return {
     isReady: true,
     cam: {} as never,
-    vp: new Float32Array(16) as unknown as Mat4,
-    slabs: [],
+    vp,
+    slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
@@ -64,30 +78,30 @@ function makeState(opts: {
 }
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
-const DEPS_STUB = {} as PassDeps;
 
-describe('clipPathDebugPass.enabled', () => {
+describe('clipPathDebugLayer.enabled', () => {
   it('is false when the renderer is null', () => {
     const state = makeState({ renderer: null, snapshot: SNAPSHOT });
-    expect(clipPathDebugPass.enabled(state, makeCtx())).toBe(false);
+    expect(clipPathDebugLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('is false when there is no snapshot', () => {
     const state = makeState({ renderer: makeRendererSpy(), snapshot: null });
-    expect(clipPathDebugPass.enabled(state, makeCtx())).toBe(false);
+    expect(clipPathDebugLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('is true when renderer + snapshot both present', () => {
     const state = makeState({ renderer: makeRendererSpy(), snapshot: SNAPSHOT });
-    expect(clipPathDebugPass.enabled(state, makeCtx())).toBe(true);
+    expect(clipPathDebugLayer.enabled(state, makeCtx())).toBe(true);
   });
 });
 
-describe('clipPathDebugPass.draw', () => {
+describe('clipPathDebugLayer.draw', () => {
   it('builds lines from the snapshot and forwards to setLines + draw', () => {
     const renderer = makeRendererSpy();
     const state = makeState({ renderer, snapshot: SNAPSHOT, scrub01: 0 });
-    clipPathDebugPass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB);
+    const ctx = makeCtx();
+    clipPathDebugLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
 
     expect(renderer.setLines).toHaveBeenCalledOnce();
     const lines = renderer.setLines.mock.calls[0]![0]!;

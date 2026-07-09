@@ -377,13 +377,14 @@ describe('renderFrame visual baseline', () => {
           milkyWayCloud: {
             buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }),
           },
-          // The five renderers `ContentLayer.draw` now reads straight off
-          // `state.gpu.*` (pre-unification these arrived via the `PassDeps`
-          // bag built from the top-level `renderFrame` input fields below).
-          // Both need the same mock instances so their `argShape` entries
-          // land in `records` — see the top-level `milkyWayCloudRenderer` /
-          // `horizonShellRenderer` / `proceduralDiskRenderer` /
-          // `texturedDiskRenderer` / `filamentRenderer` locals.
+          // Every `ContentLayer.draw` reads its renderer straight off
+          // `state.gpu.*` — this is the ONLY place these mock instances are
+          // wired in (no top-level `renderFrame` input field duplication;
+          // see `RenderFrameInput`'s slimmed shape). The local names below
+          // (`milkyWayCloudRenderer`, `horizonShellRenderer`,
+          // `proceduralDiskRenderer`, `texturedDiskRenderer`,
+          // `filamentRenderer`) are the same logging-renderer instances
+          // declared above, so their `argShape` entries land in `records`.
           milkyWayCloudRenderer,
           horizonShellRenderer,
           proceduralDiskRenderer,
@@ -444,13 +445,6 @@ describe('renderFrame visual baseline', () => {
       } as never,
       device,
       context,
-      milkyWayCloudRenderer: milkyWayCloudRenderer as never,
-      horizonShellRenderer: horizonShellRenderer as never,
-      filamentRenderer: filamentRenderer as never,
-      volumeFieldRenderer: volumeFieldRenderer as never,
-      flowFieldRenderer: null,
-      texturedDiskRenderer: texturedDiskRenderer as never,
-      proceduralDiskRenderer: proceduralDiskRenderer as never,
       // Disabled stub forces the single-pass path.  The split-pass
       // (timing-on) shape is exercised in `renderFrame.timing.test.ts`.
       timingService: createDisabledGpuTimingService(),

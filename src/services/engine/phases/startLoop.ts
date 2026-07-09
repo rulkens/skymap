@@ -7,13 +7,14 @@
  *
  *   - Constructs the `RunFrameDeps` object, threading every closure
  *     capture the frame body needs: `canvas`, `cb`, the GPU device +
- *     context (from `phaseLocals`), and every renderer (from
- *     `state.gpu.*`).  The pure `cssToTexPx` helper is imported
- *     directly in `runFrame.ts` rather than threaded through deps —
- *     it captures no per-engine state.  See `runFrame.ts`'s module
- *     header for the dep-vs-state rationale.  Hover/select writes go
- *     through the Redux store via `store.dispatch`. Scale-bar derivation
- *     lives React-side
+ *     context (from `phaseLocals`), the timing service, and the camera
+ *     drivers.  Every renderer is read straight off `state.gpu.*` by the
+ *     `ContentLayer` that draws with it, so none is threaded through this
+ *     bag.  The pure `cssToTexPx` helper is imported directly in
+ *     `runFrame.ts` rather than threaded through deps — it captures no
+ *     per-engine state.  See `runFrame.ts`'s module header for the
+ *     dep-vs-state rationale.  Hover/select writes go through the Redux
+ *     store via `store.dispatch`. Scale-bar derivation lives React-side
  *     (it's a pure function of cam + viewport CSS height) —
  *     the frame loop's per-frame `engineScaleChanged` dispatch drives it.
  *   - Replaces the no-op `frameRef.current` stub with the real frame
@@ -71,19 +72,22 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  */
 export async function startLoop(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals!;
-  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  The
-  // explicit null-checks turn the phase-ordering assumption into a
-  // typed runtime error if `initGpu` is ever skipped/reordered — a `!`
-  // bang would assume the ordering silently.
-  const milkyWayCloudRenderer = state.gpu.milkyWayCloudRenderer;
-  const horizonShellRenderer = state.gpu.horizonShellRenderer;
-  const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
-  const proceduralDiskRenderer = state.gpu.proceduralDiskRenderer;
+  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  This
+  // explicit null-check turns the phase-ordering assumption into a typed
+  // runtime error if `initGpu` is ever skipped/reordered, failing loudly
+  // HERE at the construction site rather than deferring to a `ContentLayer`
+  // silently no-op'ing on a null renderer five frames later.  None of these
+  // renderers are threaded through `RunFrameDeps` any more (every
+  // `ContentLayer.draw` reads its renderer straight off `state.gpu.*` — see
+  // `passes/index.ts`), but the readiness guard itself is still worth
+  // failing fast on: independent of whether the value gets forwarded
+  // anywhere, "was GPU init actually finished before the loop starts?" is
+  // the invariant this phase exists to guarantee.
   if (
-    milkyWayCloudRenderer === null ||
-    horizonShellRenderer === null ||
-    texturedDiskRenderer === null ||
-    proceduralDiskRenderer === null
+    state.gpu.milkyWayCloudRenderer === null ||
+    state.gpu.horizonShellRenderer === null ||
+    state.gpu.texturedDiskRenderer === null ||
+    state.gpu.proceduralDiskRenderer === null
   ) {
     throw new Error(
       'startLoop: milkyWayCloud/horizonShell/texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
@@ -94,20 +98,18 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
 
   // Build the dep bag for `runFrame` once, here in the orchestrator's
   // last phase where every closure-captured local is in scope.  The bag
-  // is stable across frames: the GPU-side renderers (`milkyWayCloudRenderer`,
-  // `texturedDiskRenderer`, …) are read off `state.gpu.*` directly —
-  // mirroring them on `phaseLocals` would be redundant state.  See
-  // runFrame.ts's module header for the dep-vs-state rationale.
+  // carries only what the frame body's non-GPU-state closures need
+  // (`canvas`, `cb`, the raw device/context, the timing service, the
+  // camera drivers) — every renderer (`milkyWayCloudRenderer`,
+  // `texturedDiskRenderer`, …) is read off `state.gpu.*` directly by each
+  // `ContentLayer.draw` (see `passes/index.ts`), so mirroring them here
+  // would be redundant state.  See runFrame.ts's module header for the
+  // dep-vs-state rationale.
   const frameDeps: RunFrameDeps = {
     canvas: deps.canvas,
     cb: deps.cb,
     device: phaseLocals.device,
     context: phaseLocals.context,
-    milkyWayCloudRenderer,
-    horizonShellRenderer,
-    filamentRenderer: state.gpu.filamentRenderer!,
-    texturedDiskRenderer,
-    proceduralDiskRenderer,
     // Forward the timing service hung off `state.gpu` by initGpu.
     // Always non-null; `renderFrame` gates work behind `.enabled`.
     timingService: state.gpu.timingService,

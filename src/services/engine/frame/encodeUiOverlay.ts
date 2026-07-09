@@ -55,24 +55,21 @@
 
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import { UI_PASSES } from './passes';
+import { COSMO, slabViewOf } from './slabs';
 
 export function encodeUiOverlay(
   encoder: GPUCommandEncoder,
   swapView: GPUTextureView,
   ctx: ReadyFrameContext,
   state: EngineState,
-  deps: PassDeps,
   timestampWrites: GPURenderPassTimestampWrites | undefined,
 ): void {
-  // Apply the DebugPanel renderer-toggle override AFTER each pass's
+  // Apply the DebugPanel renderer-toggle override AFTER each layer's
   // own gate — same one-way semantics as the HDR encoders.  Read once off the
   // live settings snapshot; empty in production, so the check is in the noise.
   const disabledPasses = state.settings.debug.disabledPasses;
-  const enabled = UI_PASSES.filter(
-    (p) => p.enabled(state, ctx) && disabledPasses[p.name] !== true,
-  );
+  const enabled = UI_PASSES.filter((l) => l.enabled(state, ctx) && disabledPasses[l.name] !== true);
   if (enabled.length === 0 && !timestampWrites) return;
 
   const pass = encoder.beginRenderPass({
@@ -91,8 +88,12 @@ export function encodeUiOverlay(
     ...(timestampWrites ? { timestampWrites } : {}),
   });
 
-  for (const p of enabled) {
-    p.draw(pass, ctx, state, deps);
+  // Every UI_PASSES entry draws through the same cosmological slab as the
+  // HDR group, so the SlabView is resolved once here rather than per layer
+  // — mirrors `encodeHdrSingle`/`encodeHdrSplit`.
+  const view = slabViewOf(ctx, COSMO);
+  for (const layer of enabled) {
+    layer.draw(pass, view, ctx, state);
   }
 
   pass.end();

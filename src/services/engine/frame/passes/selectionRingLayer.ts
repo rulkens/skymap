@@ -1,9 +1,10 @@
 /**
- * selectionRingPass — per-galaxy selection halo overlay.
+ * selectionRingLayer — per-galaxy selection halo overlay.
  *
- * Lives at the HEAD of `UI_PASSES` (premultiplied-OVER, post-tone-map)
- * so marker-lines and labels composite OVER the ring — labels carry
- * information that should stay legible when they overlap the stroke.
+ * Lives at the HEAD of `UI_PASSES` (the swap-target, `blend: 'over'` group
+ * within `CONTENT_LAYERS`, drawn post-tone-map) so marker-lines and labels
+ * composite OVER the ring — labels carry information that should stay
+ * legible when they overlap the stroke.
  *
  * ## CPU-side ringRadiusPx
  *
@@ -13,27 +14,31 @@
  * from the `selectionHalo` dispatch function, keyed on the row's union tag —
  * a galaxy yields its catalog diameter, the Milky Way its disc radius, a
  * structure `null` (it renders its ring through the cluster marker pass).
- * This pass then defers the apparent-px math to the shared
+ * This layer then defers the apparent-px math to the shared
  * `selectionRingRadiusPx` helper, passing `state.settings.galaxyCatalogs.sizePx`
  * as the minimum-radius floor.  Because a structure is already a table
  * row returning null, no per-kind branch is needed here: a new halo-bearing
- * kind is one table row, and the descriptor carries the position so the pass
+ * kind is one table row, and the descriptor carries the position so the layer
  * never re-narrows the union to read coordinates.
  *
  * ## Why one writeBuffer is fine
  *
- * Only one galaxy is selected per frame.  The pass is gated
+ * Only one galaxy is selected per frame.  The layer is gated
  * `enabled()`-false when nothing is selected, so the 16-byte
  * selection + 80-byte camera upload only fires on frames where the
  * ring is actually visible.
  */
 
-import type { Pass } from '../../../../@types/engine/frame/Pass';
+import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import { COSMO } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
 import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
 
-export const selectionRingPass: Pass = {
+export const selectionRingLayer: ContentLayer = {
   name: 'selection-ring',
+  slab: COSMO,
+  target: 'swap',
+  blend: 'over',
 
   enabled(state, _ctx) {
     if (state.gpu.selectionRingRenderer === null) return false;
@@ -42,7 +47,7 @@ export const selectionRingPass: Pass = {
     return selectionHalo(row) !== null;
   },
 
-  draw(pass, ctx, state, _deps) {
+  draw(pass, view, ctx, state) {
     const row = state.selectionRows.select;
     // A null descriptor is the structure arm (it renders its ring through the
     // cluster marker pass).  The descriptor carries both the radius and the
@@ -63,11 +68,9 @@ export const selectionRingPass: Pass = {
       state.settings.galaxyCatalogs.sizePx,
     );
 
-    state.gpu.selectionRingRenderer!.draw(
-      pass,
-      ctx.vp as Float32Array,
-      [ctx.canvasSize.width, ctx.canvasSize.height],
-      { worldPos, ringRadiusPx },
-    );
+    state.gpu.selectionRingRenderer!.draw(pass, view.vp, view.viewportPx, {
+      worldPos,
+      ringRadiusPx,
+    });
   },
 };

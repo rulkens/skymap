@@ -104,11 +104,11 @@ export const HDR_PASSES = CONTENT_LAYERS.filter((l) => l.target === 'hdr'); // t
 
 **Tests:** update `passes.test.ts` fixtures (drop `makeDeps`, put the renderers the draws read onto the state stub's `gpu` bag) and per-pass test files. Add the registry test that pins the migration table for the hdr group:
 
-- [ ] Test `every hdr content layer matches the migration table` — assert `CONTENT_LAYERS` rows `{name, slab: COSMO, target: 'hdr', blend: 'additive'}` for the nine names in the legacy order (`point-sprites`, `procedural-disks`, `textured-disks`, `milky-way`, `filaments`, `flow`, `volume-upsample`, `horizon-shell`, `structure-markers`).
-- [ ] Test `draw threads the SlabView vp/viewport to the renderer` for one representative layer (mirror the existing `filamentsPass.draw` arg assertions, `passes.test.ts:285-303`).
-- [ ] Convert the nine files + registry + encoder adaptation; migrate existing pass tests mechanically.
-- [ ] `npm run typecheck && npm test` → green (suite still runs through the old encoders).
-- [ ] Commit.
+- [x] Test `every hdr content layer matches the migration table` — assert `CONTENT_LAYERS` rows `{name, slab: COSMO, target: 'hdr', blend: 'additive'}` for the nine names in the legacy order (`point-sprites`, `procedural-disks`, `textured-disks`, `milky-way`, `filaments`, `flow`, `volume-upsample`, `horizon-shell`, `structure-markers`).
+- [x] Test `draw threads the SlabView vp/viewport to the renderer` for one representative layer (mirror the existing `filamentsPass.draw` arg assertions, `passes.test.ts:285-303`).
+- [x] Convert the nine files + registry + encoder adaptation; migrate existing pass tests mechanically.
+- [x] `npm run typecheck && npm test` → green (suite still runs through the old encoders).
+- [x] Commit.
 
 ### Task 4 — convert the five UI passes; delete `PassDeps`; slim the input bags
 
@@ -116,10 +116,10 @@ export const HDR_PASSES = CONTENT_LAYERS.filter((l) => l.target === 'hdr'); // t
 
 Migration-table rows for the five: `selection-ring`, `disk-radius-ring`, `marker-lines`, `labels`, `clip-path-debug` — all `slab: COSMO, target: 'swap', blend: 'over'` (spec lines 208-212).
 
-- [ ] Test `every swap content layer matches the migration table` (five rows, legacy UI order).
-- [ ] Test `CONTENT_LAYERS blends are legal for their target` — hdr layers all `additive`, swap layers all `over` (the registry half of the target↔renderer-profile invariant; the renderer half lands in task 10).
-- [ ] Convert the five files; delete `PassDeps.d.ts` + `Pass.d.ts`; slim `RenderFrameInput`/`RunFrameDeps`; update call sites + fixtures.
-- [ ] `npm run typecheck && npm test` → green.
+- [x] Test `every swap content layer matches the migration table` (five rows, legacy UI order).
+- [x] Test `CONTENT_LAYERS blends are legal for their target` — hdr layers all `additive`, swap layers all `over` (the registry half of the target↔renderer-profile invariant; the renderer half lands in task 10).
+- [x] Convert the five files; delete `PassDeps.d.ts` + `Pass.d.ts`; slim `RenderFrameInput`/`RunFrameDeps`; update call sites + fixtures.
+- [x] `npm run typecheck && npm test` → green.
 - [ ] Commit.
 
 ### Task 5 — `frameProgram.ts`: the FRAME data + derived timing slots

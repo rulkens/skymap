@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { selectionRingPass } from '../../../../../src/services/engine/frame/passes/selectionRingPass';
+import { selectionRingLayer } from '../../../../../src/services/engine/frame/passes/selectionRingLayer';
+import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
+import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { Mat4 } from 'wgpu-matrix';
 import { Source } from '../../../../../src/data/sources';
 import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
@@ -12,12 +13,26 @@ import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacti
 
 // ── fixtures ──────────────────────────────────────────────────────
 
+/**
+ * `slabViewOf(ctx, COSMO)` indexes `ctx.slabs[COSMO]` directly (see
+ * `slabs.ts`), so every fixture needs a real cosmological row there —
+ * mirroring the pattern `passes.test.ts` uses for the HDR layers.
+ */
 function makeCtx(): ReadyFrameContext {
+  const vp = new Float32Array(16) as unknown as Mat4;
+  const cosmoSlab: Slab = {
+    index: COSMO,
+    nearMpc: 0.01,
+    farMpc: 50000,
+    vp: Float64Array.from(vp),
+    originRelative: false,
+    precision: 'f32',
+  };
   return {
     isReady: true,
     cam: {} as never,
-    vp: new Float32Array(16) as unknown as Mat4,
-    slabs: [],
+    vp,
+    slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
@@ -52,8 +67,6 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-const DEPS_STUB = {} as PassDeps;
-
 // A minimal stand-in for the renderer's stateless `draw`.
 function makeRendererSpy() {
   return {
@@ -63,7 +76,7 @@ function makeRendererSpy() {
   };
 }
 
-// A minimal GalaxyRow at a known world position + diameter. The pass reads
+// A minimal GalaxyRow at a known world position + diameter. The layer reads
 // x/y/z and diameterKpc straight from the row via selectionHalo.
 function galaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {
   return {
@@ -114,47 +127,48 @@ function makeStateWithSelection(row: SelectionRow | null): EngineState {
 
 // ── enabled() ─────────────────────────────────────────────────────
 
-describe('selectionRingPass.enabled', () => {
+describe('selectionRingLayer.enabled', () => {
   it('returns false when renderer is null', () => {
     const state = {
       gpu: { selectionRingRenderer: null },
       selectionRows: { select: null, focus: null, hover: null },
     } as unknown as EngineState;
-    expect(selectionRingPass.enabled(state, makeCtx())).toBe(false);
+    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns false when nothing is selected', () => {
     const state = makeStateWithSelection(null);
-    expect(selectionRingPass.enabled(state, makeCtx())).toBe(false);
+    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('returns true when renderer is non-null and a galaxy row is selected', () => {
     const state = makeStateWithSelection(galaxyRow());
-    expect(selectionRingPass.enabled(state, makeCtx())).toBe(true);
+    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(true);
   });
 
   it('is true when the Milky Way row is selected', () => {
     const state = makeStateWithSelection(MILKY_WAY_ROW);
-    expect(selectionRingPass.enabled(state, makeCtx())).toBe(true);
+    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(true);
   });
 
   it('stays false for a structure row (marker pass owns that halo)', () => {
     const state = makeStateWithSelection(structureRow() as SelectionRow);
-    expect(selectionRingPass.enabled(state, makeCtx())).toBe(false);
+    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
   });
 
   it('stays true for a galaxy row (regression)', () => {
     const state = makeStateWithSelection(galaxyRow());
-    expect(selectionRingPass.enabled(state, makeCtx())).toBe(true);
+    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(true);
   });
 });
 
 // ── draw() ────────────────────────────────────────────────────────
 
-describe('selectionRingPass.draw', () => {
+describe('selectionRingLayer.draw', () => {
   it('computes ringRadiusPx from the row and forwards to renderer', () => {
     const state = makeStateWithSizePx(galaxyRow(), 4);
-    selectionRingPass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB);
+    const ctx = makeCtx();
+    selectionRingLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
 
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
@@ -175,8 +189,9 @@ describe('selectionRingPass.draw', () => {
   it('uses apparentPxRadius when galaxy is closer and larger on screen', () => {
     // Galaxy at 10 Mpc so the apparent radius dominates.
     const state = makeStateWithSizePx(galaxyRow({ z: 10 }), 4);
+    const ctx = makeCtx();
 
-    selectionRingPass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB);
+    selectionRingLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;
@@ -188,7 +203,8 @@ describe('selectionRingPass.draw', () => {
 
   it('draws the ring at MILKY_WAY_CENTER_WORLD for a milkyWay row', () => {
     const state = makeStateWithSizePx(MILKY_WAY_ROW, 4);
-    selectionRingPass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB);
+    const ctx = makeCtx();
+    selectionRingLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
 
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
@@ -204,7 +220,8 @@ describe('selectionRingPass.draw', () => {
 
   it('calls renderer.draw() exactly once with viewProj + viewport', () => {
     const state = makeStateWithSizePx(galaxyRow(), 4);
-    selectionRingPass.draw(PASS_STUB, makeCtx(), state, DEPS_STUB);
+    const ctx = makeCtx();
+    selectionRingLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;

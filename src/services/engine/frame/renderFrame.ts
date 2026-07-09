@@ -51,15 +51,18 @@
  * Every pass shares one encoder so the GPU sees them in deterministic
  * order — critical because each pass reads what the previous one wrote.
  *
- * ### Why tone-map and encodeUiOverlay aren't in `HDR_PASSES`
+ * ### Why tone-map and encodeUiOverlay aren't walked by encodeHdrSingle/Split
  *
- * Tone-map and encodeUiOverlay both target the swap chain (not the HDR
- * offscreen target), and encodeUiOverlay's blend is premultiplied OVER
- * rather than additive.  Modelling them as `Pass` entries would
- * require divergent signatures (target view, blend semantics) for
- * the two outliers.  Keeping them as named functions called inline
- * from this orchestrator is the lightest shape that lets `Pass` stay
- * a uniform additive-HDR contract.
+ * Both target the swap chain, not the HDR offscreen target.  Tone-map is a
+ * fixed post-process blit with no `ContentLayer.draw` call to make, so it
+ * has no natural row in the registry and stays a named function.
+ * `encodeUiOverlay` DOES walk `ContentLayer`s now — it's the executor
+ * branch for the `(target: 'swap', slab: COSMO)` group (`UI_PASSES`), the
+ * same way `encodeHdrSingle`/`encodeHdrSplit` are the branch for
+ * `(target: 'hdr', slab: COSMO)`.  Keeping the two groups as separate named
+ * functions called inline from this orchestrator is the interim shape
+ * until the frame executor walks one `FrameStep[]` program grouping every
+ * layer by `(target, slab)` directly.
  *
  * ### What stays in `runFrame()` (NOT here)
  *
@@ -72,7 +75,6 @@
  */
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
-import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import { encodeHdrSingle } from './encodeHdrSingle';
 import { encodeHdrSplit } from './encodeHdrSplit';
 import { encodeUiOverlay } from './encodeUiOverlay';
@@ -91,36 +93,7 @@ import { encodeUiOverlay } from './encodeUiOverlay';
  * one-line shuffle of the `HDR_PASSES` array literal.
  */
 export function renderFrame(input: RenderFrameInput): void {
-  const {
-    ctx,
-    state,
-    device,
-    context,
-    milkyWayCloudRenderer,
-    horizonShellRenderer,
-    filamentRenderer,
-    volumeFieldRenderer,
-    flowFieldRenderer,
-    texturedDiskRenderer,
-    proceduralDiskRenderer,
-    timingService,
-  } = input;
-
-  // Bundle the renderer references `UI_PASSES` might need into a single
-  // `PassDeps` bag.  The nine HDR layers no longer read this bag — they're
-  // `ContentLayer`s now and read their renderers straight off `state.gpu.*`
-  // (see `passes/index.ts`) — but `UI_PASSES` is still `Pass`-shaped until
-  // a follow-up task converts it, so `encodeUiOverlay` below still needs
-  // `deps`.  See `PassDeps.d.ts` for the per-field rationale.
-  const deps: PassDeps = {
-    texturedDiskRenderer,
-    proceduralDiskRenderer,
-    filamentRenderer,
-    volumeFieldRenderer,
-    flowFieldRenderer,
-    milkyWayCloudRenderer,
-    horizonShellRenderer,
-  };
+  const { ctx, state, device, context, timingService } = input;
 
   // Write the single shared cluster-focus uniform once per frame, before
   // any pass (points, impostor disks, and the later pick submit) reads it.
@@ -163,7 +136,7 @@ export function renderFrame(input: RenderFrameInput): void {
     state.settings.tonemap.curve,
     timingService.descriptorFor('tone-map'),
   );
-  encodeUiOverlay(encoder, swapView, ctx, state, deps, timingService.descriptorFor('ui-overlay'));
+  encodeUiOverlay(encoder, swapView, ctx, state, timingService.descriptorFor('ui-overlay'));
   timingService.endFrame(timingCtx, encoder);
 
   device.queue.submit([encoder.finish()]);
