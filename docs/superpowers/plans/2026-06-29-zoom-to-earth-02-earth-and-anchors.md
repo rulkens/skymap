@@ -100,11 +100,11 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 
 **Seed values (from contract + spec §5):** Earth `radiusKm: 6371`; `positionMpc` = `[1 * SCALE_UNITS.AU_TO_MPC, 0, 0]` (1 AU from the Sun, authored in human units, stored Mpc); `textureUrl: '/images/earth/blue-marble-4k.jpg'`; `id: 'earth'`, `label: 'Earth'`. (These match the interim `DEBUG_SPHERE_BODIES` stand-ins — `debugSphereBody.ts:41-52` — whose own header says a real BodyStore retires them; that retirement is Task 12.)
 
-- [ ] Add `sceneBodies.ts` exporting `SCENE_EARTH`. Author the position via `SCALE_UNITS.AU_TO_MPC` (do NOT inline a magic Mpc number — the conversion is the contract).
-- [ ] Test `SCENE_EARTH radius is 6371 km`.
-- [ ] Test `SCENE_EARTH is one AU from the Sun in Mpc` — assert `SCENE_EARTH.positionMpc[0]` ≈ `SCALE_UNITS.AU_TO_MPC` (tight tolerance) and the other two components are 0.
-- [ ] Test `SCENE_EARTH textureUrl points at the Blue Marble asset` — `=== '/images/earth/blue-marble-4k.jpg'`.
-- [ ] `npm test -- sceneBodies` → green. Commit.
+- [x] Add `sceneBodies.ts` exporting `SCENE_EARTH`. Author the position via `SCALE_UNITS.AU_TO_MPC` (do NOT inline a magic Mpc number — the conversion is the contract).
+- [x] Test `SCENE_EARTH radius is 6371 km`.
+- [x] Test `SCENE_EARTH is one AU from the Sun in Mpc` — assert `SCENE_EARTH.positionMpc[0]` ≈ `SCALE_UNITS.AU_TO_MPC` (tight tolerance) and the other two components are 0.
+- [x] Test `SCENE_EARTH textureUrl points at the Blue Marble asset` — `=== '/images/earth/blue-marble-4k.jpg'`.
+- [x] `npm test -- sceneBodies` → green. Commit.
 
 ## Task 3 — `createBodyStore` (Earth-only surface for now)
 
@@ -128,12 +128,12 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 
 **Pattern:** closure over private mutable state + `Object.freeze` of read-only getters + setters — mirror `createGalaxyStore.ts:20-44` and `createStructureStore.ts:25-45`.
 
-- [ ] Add `BodyStore.d.ts` (one type per file) + `createBodyStore.ts`.
-- [ ] Test `createBodyStore starts with empty stars/planets and null earth`.
-- [ ] Test `setEarth then earth getter returns the record` (round-trip).
-- [ ] Test `setStars / setPlanets round-trip` (set an array, read the getter back, identity preserved).
-- [ ] Test `setEarth(null) clears the earth`.
-- [ ] `npm test -- createBodyStore` → green. Commit.
+- [x] Add `BodyStore.d.ts` (one type per file) + `createBodyStore.ts`.
+- [x] Test `createBodyStore starts with empty stars/planets and null earth`.
+- [x] Test `setEarth then earth getter returns the record` (round-trip).
+- [x] Test `setStars / setPlanets round-trip` (set an array, read the getter back, identity preserved).
+- [x] Test `setEarth(null) clears the earth`.
+- [x] `npm test -- createBodyStore` → green. Commit.
 
 ## Task 4 — `earth` source type + entry + registry append
 
@@ -152,14 +152,14 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
   `EARTH_ENTRY` `as const satisfies EarthSourceEntry` (mirror `flow.ts:5-28` / `cluster.ts:4-17` shape: `type`, `code: Source.Earth`, `id: 'earth'`, `label: 'Earth'`, `allSky`, `visible`, `bearsLabel`, `bearsMarker`). Bodies are NOT pickable and carry no COSMO label/marker → `bearsLabel: false`, `bearsMarker: false` — those flags drive the COSMO label/marker systems, which the body captions bypass (Sun/Earth captions already ship through `foregroundLabelsLayer`; see Task 12).
 - Consumes: `SourceEntryBase` (`SourceEntryBase.d.ts:9`), `Source` (`source.ts`).
 
-- [ ] Append `Earth: 23` to the `Source` const with a didactic comment (registry-key-only code, appended after `DesiSgw = 20`, leaving 21/22 for the Phase-3 `Star`/`Planet`; never renumber the codes below).
-- [ ] Add `body/EarthSourceEntry.d.ts`; union it into `SourceEntry.d.ts:14-20`.
-- [ ] Add `sources/earth.ts` → `EARTH_ENTRY`; import + add `[Source.Earth]: EARTH_ENTRY` to `SOURCE_REGISTRY` (`sources.ts:95-117`).
-- [ ] Test (`sources.test.ts`, mirror the `overlay codes (milkyWay/flow)` describe block at `sources.test.ts:175-240`): `appends Earth=23 to the enum` → `expect(Source.Earth).toBe(23)`.
-- [ ] Test `earth row is a non-label, non-marker body source` — `entry.type === 'earth'`, `entry.id === 'earth'`, `bearsLabel === false`, `bearsMarker === false`.
-- [ ] Test `keeps Earth OUT of GALAXY_CATALOG_SOURCES` and `keeps the Earth bit clear of ALL_VISIBLE_MASK` (mirror `sources.test.ts:183-193`; note `ALL_VISIBLE_MASK` derives from `type: 'galaxyCatalog'` rows only, so the exact-mask assertion at `sources.test.ts:103` stays untouched).
-- [ ] Test `every entry carries a unique id` already covers `'earth'` — confirm it still passes (`sources.test.ts:55-67`).
-- [ ] `npm test -- sources` → green. Commit.
+- [x] Append `Earth: 23` to the `Source` const with a didactic comment (registry-key-only code, appended after `DesiSgw = 20`, leaving 21/22 for the Phase-3 `Star`/`Planet`; never renumber the codes below).
+- [x] Add `body/EarthSourceEntry.d.ts`; union it into `SourceEntry.d.ts:14-20`.
+- [x] Add `sources/earth.ts` → `EARTH_ENTRY`; import + add `[Source.Earth]: EARTH_ENTRY` to `SOURCE_REGISTRY` (`sources.ts:95-117`).
+- [x] Test (`sources.test.ts`, mirror the `overlay codes (milkyWay/flow)` describe block at `sources.test.ts:175-240`): `appends Earth=23 to the enum` → `expect(Source.Earth).toBe(23)`.
+- [x] Test `earth row is a non-label, non-marker body source` — `entry.type === 'earth'`, `entry.id === 'earth'`, `bearsLabel === false`, `bearsMarker === false`.
+- [x] Test `keeps Earth OUT of GALAXY_CATALOG_SOURCES` and `keeps the Earth bit clear of ALL_VISIBLE_MASK` (mirror `sources.test.ts:183-193`; note `ALL_VISIBLE_MASK` derives from `type: 'galaxyCatalog'` rows only, so the exact-mask assertion at `sources.test.ts:103` stays untouched).
+- [x] Test `every entry carries a unique id` already covers `'earth'` — confirm it still passes (`sources.test.ts:55-67`).
+- [x] `npm test -- sources` → green. Commit. _(Also gained `case Source.Earth:` in `galaxyType.ts`'s exhaustive non-galaxy switch — appending a Source code extends that switch by construction.)_
 
 ## Task 5 — Wire `BodyStore` into `EngineData`, seed Earth at construction
 
