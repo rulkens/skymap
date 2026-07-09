@@ -1,7 +1,7 @@
-# DESI wedge — a patch table for different ways to drill through the data
+# DESI patches — a patch table for different ways to drill through the data
 
-**Date:** 2026-07-09
-**Status:** Draft — awaiting user review
+**Date:** 2026-07-09 (amended same day: third patch — Sloan Great Wall box)
+**Status:** Implemented on `feat/desi-wedge` — wedge shipped first, SGW box stacked on top
 **Prerequisite:** the shipped DESI deep cone (`docs/superpowers/specs/completed/2026-07-07-desi-deep-cone-design.md`, PR #417)
 
 ## Goal
@@ -172,6 +172,49 @@ Mirrors the DesiDeep test set:
 - Demand-table: DesiWedge absent from boot-fired sets (default-off).
 - Build-side: `DESI_PATCHES` shape test (unique keys, unique sources,
   unique binNames).
+
+## Third patch (same-day amendment): the Sloan Great Wall box
+
+The first *depth-bounded* patch: an RA × dec × redshift box containing
+the Sloan Great Wall — a bounded volume floating in space, versus the
+cone/wedge's infinite drills. User-chosen bounds (2026-07-09, "Gott
+extent + margin"):
+
+- **RA 137°–214°, dec −5°..+8°, z 0.055–0.095** — the published wall
+  (Gott et al. 2005: RA 139.2°–211.8°, median z 0.07804, 433 Mpc long,
+  ~55.7 Mpc thick; the literature's density-analysis region RA 150–210,
+  dec −3..+6, z 0.065–0.09 holds ~84% of its galaxies) plus ~2° / Δz
+  margin so the ends aren't clipped.
+- Measured against local DR1 BGS (2.9M rows): the wall ridge is plainly
+  visible — RA 190–205 columns put 34–38% of their z<0.16 rows in the
+  thin z 0.055–0.095 shell vs ~24–27% background; dec profile peaks
+  −4..+4. **57,124 BGS rows pre-dedup** (~3.7 MB bin). LRG/ELG/QSO
+  contribute nothing at z<0.1, so the box is pure BGS by geometry — real
+  photometry, no synthetic display mags.
+- In physical units the solid is a curved, radially flaring brick: 165
+  Mpc deep (232→398 Mpc comoving), 312→535 Mpc long (arc, flaring with
+  radius), 53→90 Mpc tall, bowing ~70 Mpc toward the observer at
+  mid-arc. The wall's ~430 × 55 Mpc ribbon snakes through the middle;
+  the z window is deliberately thicker than the wall because it wanders
+  in redshift along its length.
+
+Design deltas over the wedge:
+
+- **Patch filters gain depth**: the keep predicate becomes
+  `(raDeg, decDeg, z) => boolean`, and `parseDesiClustering` passes the
+  row's redshift (already decoded) as the third argument. Existing
+  cone/dec-band filters are arity-compatible — they ignore `z` — so
+  nothing changes for them.
+- New util `tools/utils/math/makeRaDecZBoxFilter.ts`
+  (`raMinDeg, raMaxDeg, decMinDeg, decMaxDeg, zMin, zMax`), same
+  no-RA-wraparound stance as `makeDecBandFilter`.
+- `Source.DesiSgw = 20` (append-only), registry entry mirroring the
+  wedge (`visible: false`, tier-agnostic bin `desi-sgw`), UI label
+  **"Sloan Great Wall"**.
+- One `DESI_PATCHES` row (`key: 'sgw'`). The crossMatch patch-isolation
+  semantics already generalize: each patch dedups against the base
+  surveys + itself, never siblings (the SGW box overlaps the SDSS
+  footprint heavily; whatever survives dedup is additive).
 
 ## Out of scope (deferred)
 
