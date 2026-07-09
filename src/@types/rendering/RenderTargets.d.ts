@@ -19,6 +19,12 @@
  * per-frame acquired view instead. Keeping that one asymmetry to a throwing
  * lookup (rather than a nullable return) makes a mis-wired swap resolution a
  * loud failure, not a silent null.
+ *
+ * `depthViewOf` mirrors that shape for the rows whose spec declares `depth`
+ * (`foreground:0` — an opaque pass that occludes by depth-test). Depthless
+ * rows have no depth texture, so `depthViewOf` throws for them just as it
+ * does for unknown ids and `swap` — the executor only calls it for a target
+ * whose spec row carries a non-null `depth`.
  */
 
 import type { RenderTargetSpec } from '../engine/frame/RenderTargetSpec';
@@ -27,18 +33,25 @@ import type { Size } from './Size';
 export type RenderTargets = {
   /**
    * The concrete target table this owner instantiates — the offscreen rows
-   * (`hdr`, `volume`) plus the `swap` row (whose format is the swap-chain
-   * format handed in at construction). The half of the
+   * (`hdr`, `volume`, `foreground:0`) plus the `swap` row (whose format is the
+   * swap-chain format handed in at construction). The half of the
    * target↔renderer-profile invariant that lives on the target side.
    */
   readonly specs: readonly RenderTargetSpec[];
   /**
-   * Current colour-attachment view for an OFFSCREEN row (`hdr`, `volume`).
-   * Stable until the next `resize()`. Throws for `swap` (and any unknown
-   * id): the swap chain is executor-resolved from the acquired frame view,
-   * not an allocated texture this owner holds.
+   * Current colour-attachment view for an OFFSCREEN row (`hdr`, `volume`,
+   * `foreground:0`). Stable until the next `resize()`. Throws for `swap` (and
+   * any unknown id): the swap chain is executor-resolved from the acquired
+   * frame view, not an allocated texture this owner holds.
    */
   viewOf(id: string): GPUTextureView;
+  /**
+   * Current depth-attachment view for a row whose spec declares `depth`
+   * (`foreground:0`). Stable until the next `resize()`. Throws for depthless
+   * rows (`hdr`, `volume`), `swap`, and any unknown id — an absent depth view
+   * means the row has no depth attachment, not a nullable success.
+   */
+  depthViewOf(id: string): GPUTextureView;
   /**
    * Reallocate every offscreen row at `floor(size / spec.scale)` per axis
    * (min 1 px). The ONE resize seam — the frame's resize handler calls this

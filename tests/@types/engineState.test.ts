@@ -178,6 +178,7 @@ describe('EngineState type', () => {
         compositor: null,
         filamentRenderer: null,
         labelRenderer: null,
+        foregroundLabelRenderer: null,
         markerLineRenderer: null,
         debugLineRenderer: null,
         selectionRingRenderer: null,
@@ -192,6 +193,7 @@ describe('EngineState type', () => {
         volumeUpsample: null,
         pickDebugOverlay: null,
         diskRadiusRing: null,
+        debugSphereRenderer: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
@@ -430,6 +432,7 @@ describe('EngineState type', () => {
         compositor: null,
         filamentRenderer: null,
         labelRenderer: null,
+        foregroundLabelRenderer: null,
         markerLineRenderer: null,
         debugLineRenderer: null,
         selectionRingRenderer: null,
@@ -444,6 +447,7 @@ describe('EngineState type', () => {
         volumeUpsample: null,
         pickDebugOverlay: null,
         diskRadiusRing: null,
+        debugSphereRenderer: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {

@@ -40,6 +40,17 @@
  *  13. labels              — MSDF text labels
  *  14. clip-path-debug     — debug: clip-path inspector route + gizmo
  *
+ * The final two rows are the first to leave the cosmological slab entirely —
+ * the near-field foreground group, projected through the near0 slab (whose
+ * near/far track the camera's orbit distance) so the true-scale bodies are
+ * never clipped by the cosmological near plane:
+ *
+ *  15. debug-spheres       — true-scale Sun / Earth bodies (f64 compose seam),
+ *                            opaque (depth-tested) into the `foreground:0` target
+ *  16. foreground-labels   — Sun / Earth name captions, premultiplied-OVER onto
+ *                            the swap chain post-tone-map (like the COSMO labels,
+ *                            but anchored through the near0 vp)
+ *
  * `textured-disks` is what remains of the briefly-split (and never-shipped)
  * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
  * half was deleted along with its renderer because the build-pipeline's
@@ -116,6 +127,8 @@ import { diskRadiusRingLayer } from './diskRadiusRingLayer';
 import { markerLinesLayer } from './markerLinesLayer';
 import { labelsLayer } from './labelsLayer';
 import { clipPathDebugLayer } from './clipPathDebugLayer';
+import { debugSpheresLayer } from './debugSpheresLayer';
+import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 
 /**
  * The flat content-layer registry, in deterministic draw order.  HDR
@@ -147,6 +160,17 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   markerLinesLayer,
   labelsLayer,
   clipPathDebugLayer,
+  // Near-field foreground group: the true-scale bodies (Sun, Earth) drawn
+  // into the depth-bearing 'foreground:0' target through the near0 slab.
+  // Registered after the swap group — position only affects timing-slot
+  // listing, since no other layer shares its (target, slab). The frame
+  // program's foreground render step drives it.
+  debugSpheresLayer,
+  // Near-field captions: the Sun/Earth name labels drawn OVER onto the swap
+  // chain through the near0 slab. Registered after debug-spheres; the frame
+  // program's (swap, NEAR0) render step drives it — the (swap, COSMO) step
+  // selects nothing here by construction.
+  foregroundLabelsLayer,
 ];
 
 export { scalarVolumeLayer } from './scalarVolumeLayer';
@@ -164,3 +188,5 @@ export { diskRadiusRingLayer } from './diskRadiusRingLayer';
 export { markerLinesLayer } from './markerLinesLayer';
 export { labelsLayer } from './labelsLayer';
 export { clipPathDebugLayer } from './clipPathDebugLayer';
+export { debugSpheresLayer } from './debugSpheresLayer';
+export { foregroundLabelsLayer } from './foregroundLabelsLayer';

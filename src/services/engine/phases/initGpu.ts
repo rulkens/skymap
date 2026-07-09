@@ -63,6 +63,8 @@ import { createFlowFieldRenderer } from '../../gpu/renderers/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/passes/diskRadiusRing';
+import { createDebugSphereRenderer } from '../../gpu/renderers/debugSphereRenderer';
+import { debugSphereLabels } from '../presentation/debugSphereLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
@@ -381,6 +383,29 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // behind one `state.gpu.timingService.enabled` check.  The no-op path
   // allocates no GPU resources.
   state.gpu.timingService = createGpuTimingService(device, hasUrlGate('gpuTimings'), TIMED_SLOTS);
+
+  // ── Foreground pass renderers (Plan 01 — zoom-to-Earth) ──────────────
+  //
+  // Two renderer handles for the true-scale foreground bodies.  Constructed
+  // here so `destroy()` can reach their GPU buffers; they stay UNCONSUMED
+  // until the foreground content layers (Tasks 4-5) draw them.
+  //
+  // debugSphereRenderer draws into the `foreground:0` render-target row, so
+  // its ('rgba16float', 'depth32float') pipeline formats MUST match that
+  // row's `format` / `depth` in `renderTargets.ts` — the target↔renderer-
+  // profile invariant.  Nothing is imported from renderTargets to enforce
+  // it: the formats are matched by convention + this comment, exactly like
+  // the bare 'rgba16float' literal every other HDR-target renderer above
+  // passes.
+  state.gpu.debugSphereRenderer = createDebugSphereRenderer(device, 'rgba16float', 'depth32float');
+
+  // foregroundLabelRenderer is a second MSDF label renderer against the
+  // swap-chain `format` (`uiCtx`, like the main `labelRenderer`), holding the
+  // static Sun/Earth caption set uploaded once here; the caption layer
+  // (Task 5) only draws it, projecting through the NEAR0 slab view so the
+  // captions track bodies that sit far inside the main camera's near plane.
+  state.gpu.foregroundLabelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
+  state.gpu.foregroundLabelRenderer.setLabels(debugSphereLabels());
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

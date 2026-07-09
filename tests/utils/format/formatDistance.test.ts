@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { formatDistance } from '../../../src/utils/format/formatDistance';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 
 // PC_TO_LY = 3.26156, so 1 Mpc → 3.26156 Mly, 1 kpc → 3.26156 kly, etc.
 // Tests assert the string shape (parsec value / lightyear value with
@@ -21,5 +22,17 @@ describe('formatDistance', () => {
   it('switches to Gpc / Gly at and above 1000 Mpc', () => {
     expect(formatDistance(1000)).toBe('1.00 Gpc / 3.26 Gly');
     expect(formatDistance(2500)).toBe('2.50 Gpc / 8.15 Gly');
+  });
+  it('switches to pc / ly below 1 kpc', () => {
+    // 1e-6 Mpc == 1 pc; 1 pc == 3.26156 ly.
+    expect(formatDistance(1e-6)).toBe('1.00 pc / 3.26 ly');
+    expect(formatDistance(1e-5)).toBe('10.0 pc / 32.6 ly');
+  });
+  it('switches to a bare AU value below 1 pc (solar-system scale)', () => {
+    expect(formatDistance(SCALE_UNITS.AU_TO_MPC)).toBe('1.00 AU');
+    expect(formatDistance(100 * SCALE_UNITS.AU_TO_MPC)).toBe('100 AU');
+  });
+  it('switches to a bare km value below 1 AU (planetary surface)', () => {
+    expect(formatDistance(1500 * SCALE_UNITS.KM_TO_MPC)).toBe('1,500 km');
   });
 });

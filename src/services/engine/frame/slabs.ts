@@ -21,9 +21,11 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
-import { computeViewProj } from '../../../utils/camera/computeViewProj';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
 
-/** Near-field slab: origin-relative bodies (Sun, Earth). Layerless until PR #386. */
+/** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
 export const NEAR0 = 0;
 /** Cosmological slab: galaxies, Milky Way, filaments — everything at Mpc scale. */
 export const COSMO = 1;
@@ -32,10 +34,20 @@ export const COSMO = 1;
 // a fixed range: whatever the camera is currently orbiting (a planet vs. a
 // galaxy cluster) sits comfortably inside [distance·1e-4, distance·100],
 // which is the ~1e6 near/far ratio a depth buffer can resolve without
-// z-fighting. A fixed near/far would either clip nearby geometry (too far)
-// or waste precision on empty space (too near) depending on current scale.
+// z-fighting. The bracket keeps a ~1-AU body framed through the full descent,
+// and near > 0 always holds because `cam.distance > 0` by the orbit-controls
+// clamp. A fixed near/far would either clip nearby geometry (too far) or waste
+// precision on empty space (too near) depending on current scale.
+//
+// A future adaptive `foregroundFrustum(cam.distance)` will replace both
+// fixed ratios.
 const NEAR0_NEAR_RATIO = 1e-4;
 const NEAR0_FAR_RATIO = 100;
+
+// The near-field lookAt uses world +Y as the image-plane up. Roll parity with
+// the cosmological slab's `computeViewProj` is deferred alongside the
+// zoom-to-earth series.
+const WORLD_UP: Vec3 = [0, 1, 0];
 
 // The cosmological slab's near/far are fixed: 10 kpc keeps the Milky Way's
 // disk from clipping, 50 Gpc comfortably contains every catalogued galaxy.
@@ -49,13 +61,12 @@ const COSMO_FAR_MPC = 50000;
  * Derive this frame's slab table from the live camera and the already-computed
  * cosmological view-proj.
  *
- * The near-field row's vp reuses `computeViewProj`'s lookAt/perspective
- * shape by calling it on a camera clone whose `near`/`far` are overridden to
- * the slab's own adaptive range — this keeps the roll/lookAt math in the one
- * place that owns it (`computeViewProj`) instead of duplicating it here.
- * `computeViewProj` returns a `Float32Array`; widening it to `Float64Array`
- * is exact (every f32 value is representable in f64), so no precision is
- * lost by storing it in the `Slab.vp: Float64Array` slot.
+ * The near-field row's vp is an origin-relative f64 view-projection built by
+ * `computeForegroundViewProj`: eye and target are subtracted from
+ * `RENDER_ORIGIN_MPC` in f64 before `lookAt`, so the translation stays small
+ * and sub-metre bodies (Sun, Earth) survive the eventual narrow to f32 at the
+ * GPU-upload boundary. The result is a native `Float64Array`, stored directly
+ * in the `Slab.vp: Float64Array` slot with no widening.
  *
  * The cosmological row's vp is the caller's already-computed `cosmoVp`,
  * widened the same way. Because f32→f64 widening is exact, narrowing back
@@ -65,17 +76,28 @@ const COSMO_FAR_MPC = 50000;
 export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
   const nearMpc = cam.distance * NEAR0_NEAR_RATIO;
   const farMpc = cam.distance * NEAR0_FAR_RATIO;
-  const nearFieldVp = computeViewProj({ ...cam, near: nearMpc, far: farMpc });
+  const nearFieldVp = computeForegroundViewProj({
+    eyeMpc: cam.position,
+    targetMpc: cam.target,
+    up: WORLD_UP,
+    renderOrigin: RENDER_ORIGIN_MPC,
+    fovYRad: cam.fovYRad,
+    aspect: cam.aspect,
+    near: nearMpc,
+    far: farMpc,
+  });
 
   const near0: Slab = {
     index: NEAR0,
     nearMpc,
     farMpc,
-    vp: Float64Array.from(nearFieldVp),
-    // `originRelative: true` and the near-field camPos semantics are provisional:
-    // they take effect only once the zoom-to-earth fold defines a `renderOrigin`
-    // for this slab to be relative to. Until then this row hosts no layers and
-    // appears in no frame step, so the flag has no observable effect yet.
+    vp: nearFieldVp,
+    // `originRelative: true` is now live: the vp above is expressed relative to
+    // `RENDER_ORIGIN_MPC`, so any layer bound to this slab must upload
+    // origin-relative model matrices. `RENDER_ORIGIN_MPC` is the world origin
+    // today, which makes `ctx.drawCamPos` (derived from `cam.position`) already
+    // origin-relative; a future floating origin would re-derive a per-slab
+    // `camPos` in `slabViewOf`.
     originRelative: true,
     precision: 'f64',
   };

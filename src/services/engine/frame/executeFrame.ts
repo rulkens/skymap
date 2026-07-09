@@ -47,6 +47,14 @@
  * into the first enabled layer's pass is safe here because the group is already
  * filtered to enabled layers — a non-empty group always has a first layer to
  * carry the clear.
+ *
+ * The same `touched` fact drives depth: a render step whose target row declares
+ * `depth` (only `foreground:0` today) attaches a depth texture whose load-op is
+ * `'clear'` (to the far plane, 1.0) on first touch and `'load'` after — one
+ * first-touch fact, two attachments — so a second render step or a
+ * `perLayerTimed` pass reloads the depth already written and inter-layer
+ * occlusion is preserved. Composite steps never attach depth (their dest rows
+ * are depthless).
  */
 
 import type { ExecuteFrameArgs } from '../../../@types/engine/frame/ExecuteFrameArgs';
@@ -98,6 +106,34 @@ function colorAttachment(
     throw new Error(`executeFrame: no clear value for target '${target}'`);
   }
   return { view, loadOp: 'clear', clearValue, storeOp: 'store' };
+}
+
+/**
+ * Depth attachment for a target row that declares `depth`, spread into the
+ * pass descriptor — `{}` (no key) for depthless rows. The SAME first-touch
+ * `touched` fact that flips the colour load-op flips depth: one fact, two
+ * attachments. The first pass against a depth target clears depth to the far
+ * plane (1.0) so the initial depth-test always passes; later passes (a second
+ * render step, or `perLayerTimed` passes after the first) load, preserving the
+ * occlusion already written this frame. Composite steps never call this —
+ * their dest rows are depthless — so the depth budget is confined to the
+ * opaque render passes that own it.
+ */
+function depthAttachment(
+  ctx: ReadyFrameContext,
+  target: string,
+  touched: boolean,
+): { depthStencilAttachment?: GPURenderPassDepthStencilAttachment } {
+  const spec = ctx.renderTargets.specs.find((s) => s.id === target);
+  if (!spec?.depth) return {};
+  return {
+    depthStencilAttachment: {
+      view: ctx.renderTargets.depthViewOf(target),
+      depthClearValue: 1,
+      depthLoadOp: touched ? 'load' : 'clear',
+      depthStoreOp: 'store',
+    },
+  };
 }
 
 /** Spread-if idiom: attach `timestampWrites` only when the service returns one. */
@@ -215,6 +251,7 @@ function renderGroup(
     const pass = encoder.beginRenderPass({
       label: `render-${target}`,
       colorAttachments: [colorAttachment(target, targetView, alreadyTouched)],
+      ...depthAttachment(ctx, target, alreadyTouched),
     });
     for (const layer of group) {
       layer.draw(pass, view, ctx, state);
@@ -233,6 +270,7 @@ function renderGroup(
     const pass = encoder.beginRenderPass({
       label: `render-${target}-${layer.name}`,
       colorAttachments: [colorAttachment(target, targetView, touchedBefore)],
+      ...depthAttachment(ctx, target, touchedBefore),
       ...timestampSpread(timing, layer.name),
     });
     layer.draw(pass, view, ctx, state);

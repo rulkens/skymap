@@ -130,6 +130,8 @@ function makeLayer(init: {
 
 const HDR_VIEW = { __id: 'hdr-view' } as unknown as GPUTextureView;
 const VOLUME_VIEW = { __id: 'volume-view' } as unknown as GPUTextureView;
+const FG_VIEW = { __id: 'foreground-view' } as unknown as GPUTextureView;
+const FG_DEPTH_VIEW = { __id: 'foreground-depth-view' } as unknown as GPUTextureView;
 const SWAP_VIEW = { __id: 'swap-view' } as unknown as GPUTextureView;
 
 function makeCtx(): ReadyFrameContext {
@@ -146,12 +148,25 @@ function makeCtx(): ReadyFrameContext {
     canvasSize: { width: 100, height: 50 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     // Offscreen view resolution goes through the target table's viewOf —
-    // the executor's viewFor keeps only the swap-vs-offscreen branch.
+    // the executor's viewFor keeps only the swap-vs-offscreen branch. `specs`
+    // + `depthViewOf` let the executor discover which target rows declare a
+    // depth attachment (only `foreground:0` here).
     renderTargets: {
+      specs: [
+        { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
+        { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+        { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
+        { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
+      ],
       viewOf: (id: string) => {
         if (id === 'hdr') return HDR_VIEW;
         if (id === 'volume') return VOLUME_VIEW;
+        if (id === 'foreground:0') return FG_VIEW;
         throw new Error(`mock renderTargets: no view for '${id}'`);
+      },
+      depthViewOf: (id: string) => {
+        if (id === 'foreground:0') return FG_DEPTH_VIEW;
+        throw new Error(`mock renderTargets: no depth view for '${id}'`);
       },
     },
   } as unknown as ReadyFrameContext;
@@ -458,5 +473,59 @@ describe('executeFrame', () => {
     executeFrame(args);
     expect(encodeCompute).toHaveBeenCalledTimes(1);
     expect(encodeCompute.mock.calls[0]![0]).toBe(args.encoder);
+  });
+
+  it("attaches a clearing depth attachment on a depth target's first pass and loads on later passes", () => {
+    // Two render steps against foreground:0 (the one depth-declaring row).
+    // The first pass clears depth to the far plane (1.0); the second — target
+    // already touched — loads, preserving the occlusion already written.
+    const env = makeEncoderEnv();
+    const a = makeLayer({ name: 'a', target: 'foreground:0' });
+    const b = makeLayer({ name: 'b', target: 'foreground:0' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: COSMO },
+      { kind: 'render', target: 'foreground:0', slab: COSMO },
+    ];
+    const { args } = makeArgs({ program, layers: [a, b], env });
+    executeFrame(args);
+
+    type DepthDesc = {
+      depthStencilAttachment?: {
+        view: GPUTextureView;
+        depthLoadOp: string;
+        depthClearValue?: number;
+        depthStoreOp: string;
+      };
+    };
+    // a.draw call 0 = first render step's pass (clear); call 1 = second (load).
+    const firstPass = a.draw.mock.calls[0]![0] as GPURenderPassEncoder;
+    const firstDepth = (env.passes.find((p) => p.pass === firstPass)!.desc as DepthDesc)
+      .depthStencilAttachment;
+    expect(firstDepth?.view).toBe(FG_DEPTH_VIEW);
+    expect(firstDepth?.depthLoadOp).toBe('clear');
+    expect(firstDepth?.depthClearValue).toBe(1);
+    expect(firstDepth?.depthStoreOp).toBe('store');
+
+    const secondPass = a.draw.mock.calls[1]![0] as GPURenderPassEncoder;
+    const secondDepth = (env.passes.find((p) => p.pass === secondPass)!.desc as DepthDesc)
+      .depthStencilAttachment;
+    expect(secondDepth?.view).toBe(FG_DEPTH_VIEW);
+    expect(secondDepth?.depthLoadOp).toBe('load');
+  });
+
+  it('opens no depthStencilAttachment for depthless targets', () => {
+    const env = makeEncoderEnv();
+    const hdr = makeLayer({ name: 'hdr', target: 'hdr' });
+    const swap = makeLayer({ name: 'swap', target: 'swap' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'hdr', slab: COSMO },
+      { kind: 'render', target: 'swap', slab: COSMO },
+    ];
+    const { args } = makeArgs({ program, layers: [hdr, swap], env });
+    executeFrame(args);
+    // hdr and swap declare `depth: null` → no depth attachment key at all.
+    for (const rec of env.passes) {
+      expect('depthStencilAttachment' in rec.desc).toBe(false);
+    }
   });
 });

@@ -396,6 +396,13 @@ function makeInput(
           volumeFieldRenderer: null,
           flowFieldRenderer: null,
           structureMarkerRenderer: null,
+          // Near-field foreground handles null → debugSpheresLayer.enabled and
+          // foregroundLabelsLayer.enabled both report false, so the program's
+          // foreground:0 render selects nothing and the foreground:0→swap
+          // composite is touched-set-skipped. These fixtures stay a pure
+          // cosmological-frame trace (see the null-handle skip test below).
+          debugSphereRenderer: null,
+          foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud,
           // Every `ContentLayer.draw` reads its renderer straight off
@@ -622,6 +629,29 @@ describe('renderFrame', () => {
       'encoder.finish',
       'device.queue.submit',
     ]);
+  });
+
+  it('encodes no foreground pass or composite while the foreground handles are null', () => {
+    // The program now carries the near-field tail (foreground:0 render →
+    // foreground:0→swap composite → NEAR0 swap render). With the fixture's
+    // debugSphereRenderer + foregroundLabelRenderer both null, the two
+    // foreground render groups select nothing, so no foreground pass opens; and
+    // because foreground:0 is never touched, the foreground:0→swap composite is
+    // touched-set-skipped. Net: the encoded frame is byte-for-byte the
+    // cosmological trace — exactly two passes (hdr + hdr→swap) and one
+    // compositor draw.
+    renderFrame(fx.input);
+    const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
+    expect(calls).toHaveLength(2);
+    // No pass targets the foreground:0 offscreen or is labelled a foreground
+    // composite.
+    for (const [desc] of calls) {
+      expect((desc as any).label).not.toContain('foreground:0');
+    }
+    // Only the single hdr→swap composite ran — the foreground composite was
+    // skipped.
+    expect(fx.compositor.draw).toHaveBeenCalledTimes(1);
+    expect((fx.compositor.draw as ReturnType<typeof vi.fn>).mock.calls[0]![2]).toBe('replace');
   });
 
   it('draws the Milky Way impostor after pointRenderer.draw for deterministic crossfade composition', () => {

@@ -59,14 +59,14 @@ The branch's own follow-up plans — `docs/superpowers/plans/2026-06-29-zoom-to-
 
 **Files:** the merge commit, plus the deletions and the one re-application below.
 
-- [ ] On `feat/zoom-to-earth-true-scale`: `git fetch origin && git merge origin/main`.
-- [ ] Resolve by policy — **frame-orchestration files take MAIN verbatim** (their branch-side additions are reconstructed by Tasks 2-7): `src/services/engine/frame/renderFrame.ts`, `src/services/engine/frame/frameContext.ts`, `src/@types/engine/frame/ReadyFrameContext.d.ts`, `src/services/engine/frame/runFrame.ts`, `src/services/engine/phases/initGpu.ts`, `src/services/engine/engine.ts`, `src/@types/engine/handles/EngineGpuHandles.d.ts`, `src/services/gpu/passes/postProcess.ts`, `src/services/engine/frame/passes/index.ts`, and every `passes/*Layer.ts` plan 02 converted. Same policy for their tests (`frameContext.test.ts`, `passes.test.ts` + per-layer tests, `renderFrame.test.ts`, `renderFrame.timing.test.ts`, `runFrame.test.ts`, `engineState.test.ts`, `initGpu.destroyReachability.test.ts`); files `main` deleted stay deleted (the `encodeHdr*`/`encodeUiOverlay`/`encodeVolume*` world and their tests), and branch-side fixture additions to them are dropped.
-- [ ] **Branch-only leaf modules keep the branch shape** — the full ride-along inventory above, plus their tests.
-- [ ] **Re-apply the Milky Way edit:** transplant the branch's `milkyWayVisibility` product (branch diff of `passes/milkyWayPass.ts` — the `milkyWayApproachFadeAlpha` import, the module-local `milkyWayVisibility` helper, and its use in both `enabled` and `draw`) onto main's converted `passes/milkyWayLayer.ts`, keeping the layer's plan-02 draw signature (`view.vp`/`view.viewportPx`, `state.gpu.milkyWayRenderer`). Port the branch's header-comment update for the two-sided fade window.
-- [ ] **Delete in the same merge** (all reference the deleted `Pass`/`PassDeps` types or are now consumer-less): `src/services/engine/frame/encodeForegroundPass.ts`, `src/services/engine/frame/encodeForegroundOver.ts`, `src/services/engine/frame/passes/foregroundLabelsPass.ts`; `src/services/gpu/passes/foregroundComposite.ts` + `src/services/gpu/shaders/foregroundComposite/{vertex,fragment,io}.wesl` + `src/@types/rendering/ForegroundComposite.d.ts` (its only consumers were `encodeForegroundOver` and the branch's `initGpu`, both gone — plan-time decision 2); `src/data/toneMapDefaults.ts` (its consumers were `foregroundComposite` and the branch's `postProcess`; main's compositor owns the constants).
-- [ ] Grep for references to every deleted symbol (`encodeForegroundPass`, `encodeForegroundOver`, `foregroundLabelsPass`, `foregroundComposite`, `ForegroundComposite`, `toneMapDefaults`, `TONEMAP_WHITEPOINT`) — zero hits outside `docs/`.
-- [ ] `npm run typecheck && npm test` → green. **State the transient in the merge-commit body:** the foreground is disconnected (no spheres, no captions) until Task 7; the branch never merges alone in this state; the zoom-to-earth plans 02/03 docs are now stale against this fold (see Consequences above).
-- [ ] Commit (the merge commit; stage the resolution + deletions by path).
+- [x] On `feat/zoom-to-earth-true-scale`: `git fetch origin && git merge origin/main`.
+- [x] Resolve by policy — **frame-orchestration files take MAIN verbatim** (their branch-side additions are reconstructed by Tasks 2-7): `src/services/engine/frame/renderFrame.ts`, `src/services/engine/frame/frameContext.ts`, `src/@types/engine/frame/ReadyFrameContext.d.ts`, `src/services/engine/frame/runFrame.ts`, `src/services/engine/phases/initGpu.ts`, `src/services/engine/engine.ts`, `src/@types/engine/handles/EngineGpuHandles.d.ts`, `src/services/gpu/passes/postProcess.ts`, `src/services/engine/frame/passes/index.ts`, and every `passes/*Layer.ts` plan 02 converted. Same policy for their tests (`frameContext.test.ts`, `passes.test.ts` + per-layer tests, `renderFrame.test.ts`, `renderFrame.timing.test.ts`, `runFrame.test.ts`, `engineState.test.ts`, `initGpu.destroyReachability.test.ts`); files `main` deleted stay deleted (the `encodeHdr*`/`encodeUiOverlay`/`encodeVolume*` world and their tests), and branch-side fixture additions to them are dropped.
+- [x] **Branch-only leaf modules keep the branch shape** — the full ride-along inventory above, plus their tests.
+- [x] **Re-apply the Milky Way edit:** transplant the branch's `milkyWayVisibility` product (branch diff of `passes/milkyWayPass.ts` — the `milkyWayApproachFadeAlpha` import, the module-local `milkyWayVisibility` helper, and its use in both `enabled` and `draw`) onto main's converted `passes/milkyWayLayer.ts`, keeping the layer's plan-02 draw signature (`view.vp`/`view.viewportPx`, `state.gpu.milkyWayRenderer`). Port the branch's header-comment update for the two-sided fade window.
+- [x] **Delete in the same merge** (all reference the deleted `Pass`/`PassDeps` types or are now consumer-less): `src/services/engine/frame/encodeForegroundPass.ts`, `src/services/engine/frame/encodeForegroundOver.ts`, `src/services/engine/frame/passes/foregroundLabelsPass.ts`; `src/services/gpu/passes/foregroundComposite.ts` + `src/services/gpu/shaders/foregroundComposite/{vertex,fragment,io}.wesl` + `src/@types/rendering/ForegroundComposite.d.ts` (its only consumers were `encodeForegroundOver` and the branch's `initGpu`, both gone — plan-time decision 2); `src/data/toneMapDefaults.ts` (its consumers were `foregroundComposite` and the branch's `postProcess`; main's compositor owns the constants).
+- [x] Grep for references to every deleted symbol (`encodeForegroundPass`, `encodeForegroundOver`, `foregroundLabelsPass`, `foregroundComposite`, `ForegroundComposite`, `toneMapDefaults`, `TONEMAP_WHITEPOINT`) — zero hits outside `docs/`.
+- [x] `npm run typecheck && npm test` → green. **State the transient in the merge-commit body:** the foreground is disconnected (no spheres, no captions) until Task 7; the branch never merges alone in this state; the zoom-to-earth plans 02/03 docs are now stale against this fold (see Consequences above).
+- [x] Commit (the merge commit; stage the resolution + deletions by path).
 
 ### Task 2 — depth support in `renderTargets` + `executeFrame`; the `foreground:0` row
 
@@ -86,15 +86,15 @@ export type RenderTargets = {
 
 **Executor rule:** when a render step's target row declares depth, `beginRenderPass` gains `depthStencilAttachment: { view: renderTargets.depthViewOf(step.target), depthClearValue: 1.0, depthLoadOp: <first touch ? 'clear' : 'load'>, depthStoreOp: 'store' }` — the same per-frame `touched` set that drives the colour clear drives the depth load-op (one first-touch fact, two attachments). `perLayerTimed` passes after the first therefore re-load depth, preserving inter-layer occlusion. Composite steps never attach depth (their dest rows are depthless).
 
-- [ ] Test (`renderTargets.test.ts`): `allocates and resizes a depth texture alongside colour for rows that declare depth` — `foreground:0` produces two `createTexture` calls (rgba16float + depth32float, both at size·1); `resize` reallocates both.
-- [ ] Test: `depthViewOf returns the depth view for foreground:0 and throws for depthless rows and swap`.
-- [ ] Test: extend the specs-table test with the `foreground:0` row `{format: 'rgba16float', depth: 'depth32float', scale: 1}`.
-- [ ] Test: `destroy destroys depth textures alongside colour`.
-- [ ] Test (`executeFrame.test.ts`): `attaches a clearing depth attachment on a depth target's first pass and loads on later passes` — two passes against a fake depth-bearing target: first descriptor `depthLoadOp: 'clear'` + `depthClearValue: 1.0`, second `'load'`.
-- [ ] Test: `opens no depthStencilAttachment for depthless targets` — the hdr/swap descriptors carry no `depthStencilAttachment` key.
-- [ ] Implement; delete the two `foregroundOffscreen` files.
-- [ ] `npm run typecheck && npm test` → green.
-- [ ] Commit the touched + deleted paths.
+- [x] Test (`renderTargets.test.ts`): `allocates and resizes a depth texture alongside colour for rows that declare depth` — `foreground:0` produces two `createTexture` calls (rgba16float + depth32float, both at size·1); `resize` reallocates both.
+- [x] Test: `depthViewOf returns the depth view for foreground:0 and throws for depthless rows and swap`.
+- [x] Test: extend the specs-table test with the `foreground:0` row `{format: 'rgba16float', depth: 'depth32float', scale: 1}`.
+- [x] Test: `destroy destroys depth textures alongside colour`.
+- [x] Test (`executeFrame.test.ts`): `attaches a clearing depth attachment on a depth target's first pass and loads on later passes` — two passes against a fake depth-bearing target: first descriptor `depthLoadOp: 'clear'` + `depthClearValue: 1.0`, second `'load'`.
+- [x] Test: `opens no depthStencilAttachment for depthless targets` — the hdr/swap descriptors carry no `depthStencilAttachment` key.
+- [x] Implement; delete the two `foregroundOffscreen` files.
+- [x] `npm run typecheck && npm test` → green.
+- [x] Commit the touched + deleted paths.
 
 ### Task 3 — re-add the two renderer handles + the caption presentation wiring
 
@@ -109,11 +109,11 @@ export type RenderTargets = {
 
 **engine.ts:** seed both fields `null` in the state literal with the branch's rationale comments; destroy rows `state.gpu.foregroundLabelRenderer?.destroy()` (adjacent to `labelRenderer`) and `state.gpu.debugSphereRenderer?.destroy()` (adjacent to `diskRadiusRing`), each re-nulled.
 
-- [ ] Test (`initGpu.destroyReachability.test.ts`): add a `vi.mock` for the `debugSphereRenderer` module (same `makeStub` shape as the other renderer mocks — it also keeps its `?static` WESL imports out of JSDOM); add both fields to `makeState()`'s gpu bag; extend the writes-onto-state and destroy-chain-reaches assertions to both handles.
-- [ ] Test (`engineState.test.ts`): the state-literal shape gains the two null seeds.
-- [ ] Implement the wiring + the `targetFormat` rename (update the factory's call site and any factory test asserting the pipeline's colour-target format).
-- [ ] `npm run typecheck && npm test` → green (handles constructed but unconsumed — expected until Tasks 4-5).
-- [ ] Commit the touched paths.
+- [x] Test (`initGpu.destroyReachability.test.ts`): add a `vi.mock` for the `debugSphereRenderer` module (same `makeStub` shape as the other renderer mocks — it also keeps its `?static` WESL imports out of JSDOM); add both fields to `makeState()`'s gpu bag; extend the writes-onto-state and destroy-chain-reaches assertions to both handles.
+- [x] Test (`engineState.test.ts`): the state-literal shape gains the two null seeds.
+- [x] Implement the wiring + the `targetFormat` rename (update the factory's call site and any factory test asserting the pipeline's colour-target format).
+- [x] `npm run typecheck && npm test` → green (handles constructed but unconsumed — expected until Tasks 4-5).
+- [x] Commit the touched paths.
 
 ### Task 4 — `debugSpheresLayer`: the bodies as a `foreground:0` content row
 
@@ -127,12 +127,12 @@ export type RenderTargets = {
 
 Register in `CONTENT_LAYERS` after the swap group (registry position only affects timing-slot listing — no other layer shares its `(target, slab)`).
 
-- [ ] Test (`passes.test.ts`): extend the migration-table test with the `debug-spheres` row; extend the blend-legality test — `foreground:0` layers are all `'opaque'` (hdr `additive` / swap `over` clauses unchanged).
-- [ ] Test (`debugSpheresLayer.test.ts`): `draw composes one MVP per body from the slab's f64 vp` — spy renderer + real `composeBodyMvp`: `renderer.draw` receives `DEBUG_SPHERE_BODIES.length` `Float32Array`s, and the layer passed `view.slab.vp` (assert via a `view` fixture whose `slab.vp` is a recognisable `Float64Array` and whose `vp` is a deliberately different `Float32Array` — identity-check which one the compose consumed, e.g. by mocking `composeBodyMvp` and asserting its first arg `toBe(view.slab.vp)`).
-- [ ] Test: `enabled is false while the renderer handle is null and true once set`.
-- [ ] Implement + register.
-- [ ] `npm run typecheck && npm test` → green (no program step selects the layer yet — inert until Task 7).
-- [ ] Commit the touched paths.
+- [x] Test (`passes.test.ts`): extend the migration-table test with the `debug-spheres` row; extend the blend-legality test — `foreground:0` layers are all `'opaque'` (hdr `additive` / swap `over` clauses unchanged).
+- [x] Test (`debugSpheresLayer.test.ts`): `draw composes one MVP per body from the slab's f64 vp` — spy renderer + real `composeBodyMvp`: `renderer.draw` receives `DEBUG_SPHERE_BODIES.length` `Float32Array`s, and the layer passed `view.slab.vp` (assert via a `view` fixture whose `slab.vp` is a recognisable `Float64Array` and whose `vp` is a deliberately different `Float32Array` — identity-check which one the compose consumed, e.g. by mocking `composeBodyMvp` and asserting its first arg `toBe(view.slab.vp)`).
+- [x] Test: `enabled is false while the renderer handle is null and true once set`.
+- [x] Implement + register.
+- [x] `npm run typecheck && npm test` → green (no program step selects the layer yet — inert until Task 7).
+- [x] Commit the touched paths.
 
 ### Task 5 — `foregroundLabelsLayer`: captions as a NEAR0 swap row
 
@@ -144,12 +144,12 @@ Register in `CONTENT_LAYERS` after the swap group (registry position only affect
 
 Register directly after `debugSpheresLayer`.
 
-- [ ] Test (`passes.test.ts`): migration-table row; the blend-legality swap clause now covers six `over` rows.
-- [ ] Test (`foregroundLabelsLayer.test.ts`): `enabled respects the kiloparsec distance gate` — true at `cam.distance` 5e-4 with glyphs, false at 1e-3 and above, false with `glyphCount() === 0`, false with a null renderer.
-- [ ] Test: `draw threads the SlabView vp and viewport to the label renderer` (arg assertions per the plan-02 layer-test idiom).
-- [ ] Implement + register.
-- [ ] `npm run typecheck && npm test` → green (inert until Task 7 — the existing swap step is `(swap, COSMO)`, which selects nothing here by construction).
-- [ ] Commit the touched paths.
+- [x] Test (`passes.test.ts`): migration-table row; the blend-legality swap clause now covers six `over` rows.
+- [x] Test (`foregroundLabelsLayer.test.ts`): `enabled respects the kiloparsec distance gate` — true at `cam.distance` 5e-4 with glyphs, false at 1e-3 and above, false with `glyphCount() === 0`, false with a null renderer.
+- [x] Test: `draw threads the SlabView vp and viewport to the label renderer` (arg assertions per the plan-02 layer-test idiom).
+- [x] Implement + register.
+- [x] `npm run typecheck && npm test` → green (inert until Task 7 — the existing swap step is `(swap, COSMO)`, which selects nothing here by construction).
+- [x] Commit the touched paths.
 
 ### Task 6 — activate the NEAR0 slab: origin-relative f64 derivation
 
@@ -157,12 +157,12 @@ Register directly after `debugSpheresLayer`.
 
 Swap the near row's provisional vp derivation for the branch's real one (plan-time decision 5): `computeForegroundViewProj({ eyeMpc: cam.position, targetMpc: cam.target, up: [0, 1, 0], renderOrigin: RENDER_ORIGIN_MPC, fovYRad: cam.fovYRad, aspect: cam.aspect, near, far })` with `near = cam.distance · FOREGROUND_NEAR_FRACTION` (1e-4) and `far = cam.distance · FOREGROUND_FAR_MULTIPLIER` (100). The two named constants move from the branch's (merged-away) `frameContext.ts:162-163` into `slabs.ts` — their ONE home — keeping their didactic block: the ratio brackets a 1-AU body through the full descent, near > 0 holds because `cam.distance > 0` by the orbit-controls clamp, and **the zoom-to-earth series' Plan 03** (`docs/superpowers/plans/2026-06-29-zoom-to-earth-03-lod-and-polish.md`) replaces both with an adaptive `foregroundFrustum(cam.distance)`. Delete the row's "provisional"/"layerless until PR #386" marker comments; the row comment now states the live facts: origin-relative f64 (`originRelative: true`, `precision: 'f64'` — unchanged fields, now true in practice), fixed up = world +Y (roll parity deferred with the zoom-to-earth series), and `camPos` note — `RENDER_ORIGIN_MPC` is the world origin today, so `ctx.drawCamPos` is already origin-relative; a future floating origin re-derives per-slab `camPos` in `slabViewOf`.
 
-- [ ] Test: `the near row's vp is the origin-relative computeForegroundViewProj product` — call the util directly in the test with the same camera inputs and assert `Float64Array` equality with `deriveSlabs(...)[0].vp` (pins the util as the derivation — an equal-but-reimplemented matrix would drift on the next util change).
-- [ ] Test: keep/adjust `slabViewOf(ctx, NEAR0) exposes the adaptive near/far slab row` (near = distance·1e-4, far = distance·100 — unchanged numbers).
-- [ ] Test: existing two-row/index-invariant/COSMO tests unchanged.
-- [ ] Implement; grep `FOREGROUND_NEAR_FRACTION` — exactly one definition site.
-- [ ] `npm run typecheck && npm test` → green.
-- [ ] Commit the touched paths.
+- [x] Test: `the near row's vp is the origin-relative computeForegroundViewProj product` — call the util directly in the test with the same camera inputs and assert `Float64Array` equality with `deriveSlabs(...)[0].vp` (pins the util as the derivation — an equal-but-reimplemented matrix would drift on the next util change).
+- [x] Test: keep/adjust `slabViewOf(ctx, NEAR0) exposes the adaptive near/far slab row` (near = distance·1e-4, far = distance·100 — unchanged numbers).
+- [x] Test: existing two-row/index-invariant/COSMO tests unchanged.
+- [x] Implement; grep `FOREGROUND_NEAR_FRACTION` — exactly one definition site.
+- [x] `npm run typecheck && npm test` → green.
+- [x] Commit the touched paths.
 
 ### Task 7 — the three FRAME tail steps
 
@@ -178,22 +178,22 @@ Swap the near row's provisional vp derivation for the branch's real one (plan-ti
 
 `tone` is the **same object** the hdr→swap composite carries — the shared-curve-across-the-limb requirement, now enforced by identity instead of a constants file. `executeFrame` needs zero edits: `viewFor('foreground:0')` resolves through the target table (Task 2's row), the depth attachment rides Task 2's rule, and the touched-set rule skips the `over` composite whenever the foreground render step drew nothing (behaviour delta b). The step order is the visible "captions over bodies, bodies over cosmological labels" decision — carry the spec's one-paragraph rationale into the program's step comments.
 
-- [ ] Test: the main-program deep-equal test grows to the eight-step literal (five plan-02 steps + the tail above).
-- [ ] Test: `the two composites share one tone instance` — `steps[3].step.tone` `toBe` `steps[6].step.tone` (adjust indices to the landed program).
-- [ ] Test: the only-composite assertion becomes `the program's composites are hdr→swap replace and foreground:0→swap over, in that order`.
-- [ ] Test: the every-render-step-references-a-known-slab test now spans both `NEAR0` and `COSMO`.
-- [ ] Test: the real-registry `timedSlotsOf` assertion appends `'debug-spheres'`, `'foreground:0→swap'`, `'foreground-labels'` before `'pick'`.
-- [ ] Update `renderFrame.test.ts` / `renderFrame.timing.test.ts` where the canonical-order or slot-name fixtures pin the old five-step shape (the foreground steps select nothing when the fixtures' gpu bag has null foreground handles — assert that skip once: `no foreground pass or composite is encoded while the foreground handles are null`).
-- [ ] `npm run typecheck && npm test` → green.
-- [ ] Commit the touched paths.
+- [x] Test: the main-program deep-equal test grows to the eight-step literal (five plan-02 steps + the tail above).
+- [x] Test: `the two composites share one tone instance` — `steps[3].step.tone` `toBe` `steps[6].step.tone` (adjust indices to the landed program).
+- [x] Test: the only-composite assertion becomes `the program's composites are hdr→swap replace and foreground:0→swap over, in that order`.
+- [x] Test: the every-render-step-references-a-known-slab test now spans both `NEAR0` and `COSMO`.
+- [x] Test: the real-registry `timedSlotsOf` assertion appends `'debug-spheres'`, `'foreground:0→swap'`, `'foreground-labels'` before `'pick'`.
+- [x] Update `renderFrame.test.ts` / `renderFrame.timing.test.ts` where the canonical-order or slot-name fixtures pin the old five-step shape (the foreground steps select nothing when the fixtures' gpu bag has null foreground handles — assert that skip once: `no foreground pass or composite is encoded while the foreground handles are null`).
+- [x] `npm run typecheck && npm test` → green.
+- [x] Commit the touched paths.
 
 ### Task 8 — gate: full suite, radar, the deferred #386 visual gate, un-draft
 
-- [ ] `npm run typecheck` + `npm test` + `npm run build` → all green. Prettier over touched files only.
-- [ ] Grep the whole of `src/` (comments included) for stragglers: `foregroundVp`, `foregroundNear`, `foregroundFar`, `foregroundOffscreen`, `foregroundComposite`, `toneMapDefaults`, `encodeForeground` — zero hits.
-- [ ] Run the `entanglement-radar` skill over `git diff origin/main...HEAD`. Verify: the slab/target/blend axes stayed independent (no foreground-specific branch in executor or program); the near/far heuristic constants have ONE home (`slabs.ts`); the f64/f32 seam has exactly one reader of `view.slab.vp` (`debugSpheresLayer`) with the why documented there; no mirror state re-grew (the tone identity replaces the deleted constants file, not duplicates it). Fix findings via a dispatched subagent.
-- [ ] **USER VISUAL GATE — the deferred #386 gate, on the folded shape (do not self-certify):** at cosmological zoom nothing changed vs `main`; descend toward the Sun (`MIN_DISTANCE_MPC` allows it) — the Sun/Earth spheres render true-scale, captions appear below 1 kpc and track the bodies, opaque bodies occlude galaxy-level labels and marker-lines behind them, tone parity holds across the Sun's limb while switching all five curves and sweeping exposure (foreground and background respond identically), the Milky Way approach-fade dims the impostor on the dive inside the disc; `?gpuTimings` shows the three new slots.
-- [ ] On pass: mark PR #386 ready for review (`gh pr ready 386`), restate the three behaviour deltas (plan-time decision 3) in the PR body, and hand off per `superpowers:finishing-a-development-branch` / `/feature-done`.
+- [x] `npm run typecheck` + `npm test` + `npm run build` → all green. Prettier over touched files only.
+- [x] Grep the whole of `src/` (comments included) for stragglers: `foregroundVp`, `foregroundNear`, `foregroundFar`, `foregroundOffscreen`, `foregroundComposite`, `toneMapDefaults`, `encodeForeground` — zero hits.
+- [x] Run the `entanglement-radar` skill over `git diff origin/main...HEAD`. Verify: the slab/target/blend axes stayed independent (no foreground-specific branch in executor or program); the near/far heuristic constants have ONE home (`slabs.ts`); the f64/f32 seam has exactly one reader of `view.slab.vp` (`debugSpheresLayer`) with the why documented there; no mirror state re-grew (the tone identity replaces the deleted constants file, not duplicates it). Fix findings via a dispatched subagent.
+- [x] **USER VISUAL GATE — the deferred #386 gate, on the folded shape (do not self-certify):** at cosmological zoom nothing changed vs `main`; descend toward the Sun (`MIN_DISTANCE_MPC` allows it) — the Sun/Earth spheres render true-scale, captions appear below 1 kpc and track the bodies, opaque bodies occlude galaxy-level labels and marker-lines behind them, tone parity holds across the Sun's limb while switching all five curves and sweeping exposure (foreground and background respond identically), the Milky Way approach-fade dims the impostor on the dive inside the disc; `?gpuTimings` shows the three new slots. **(User-confirmed 2026-07-09; also verified the post-gate `?deepZoom` split — plain load stops at the releasable floor, `?deepZoom` descends.)**
+- [x] On pass: mark PR #386 ready for review (`gh pr ready 386`), restate the three behaviour deltas (plan-time decision 3) in the PR body, and hand off per `superpowers:finishing-a-development-branch` / `/feature-done`. **(Un-drafted + PR body restated 2026-07-09; also documented the MW pick-gate delta and the `?deepZoom` gate.)**
 
 ---
 

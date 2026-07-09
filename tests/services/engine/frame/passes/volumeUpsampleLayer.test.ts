@@ -57,6 +57,12 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
         { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
       ],
       viewOf: (id: string) => (id === 'volume' ? offscreenView : ({} as GPUTextureView)),
+      // No row in this fixture declares depth, and the upsample layer never
+      // asks for a depth view — throwing mirrors the real table's behaviour
+      // for depthless rows.
+      depthViewOf: (id: string): GPUTextureView => {
+        throw new Error(`fixture renderTargets: no depth view for '${id}'`);
+      },
       resize: vi.fn(),
       destroy: vi.fn(),
     },

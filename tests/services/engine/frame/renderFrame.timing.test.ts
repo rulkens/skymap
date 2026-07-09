@@ -268,6 +268,13 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         volumeFieldRenderer: null,
         flowFieldRenderer: null,
         structureMarkerRenderer: null,
+        // Near-field foreground handles null → the foreground:0 render and NEAR0
+        // caption render both select nothing, and the foreground:0→swap
+        // composite is touched-set-skipped, so the near-field tail bills no
+        // timing slot. This fixture stays a pure cosmological-frame timing
+        // trace (point-sprites, milky-way, hdr→swap).
+        debugSphereRenderer: null,
+        foregroundLabelRenderer: null,
         // milkyWayLayer.draw reads the generated cloud buffers off this handle.
         milkyWayCloud: {
           buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }),

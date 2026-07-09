@@ -264,6 +264,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // resources, null-checked at use by labelsLayer / markerLinesLayer).
       labelRenderer: null,
       markerLineRenderer: null,
+      // Second MSDF label renderer for the foreground Sun/Earth captions
+      // (Plan 01 — zoom-to-Earth). null until initGpu; excluded from
+      // isEngineReady, null-checked at use like labelRenderer.
+      foregroundLabelRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use by
       // clipPathDebugLayer.
       debugLineRenderer: null,
@@ -290,6 +294,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null-checks each together with its `settings.debug.*` toggle.
       pickDebugOverlay: null,
       diskRadiusRing: null,
+      // UV-sphere foreground debug overlay (Plan 01 — zoom-to-Earth). null
+      // until initGpu; excluded from isEngineReady, null-checked at use.
+      debugSphereRenderer: null,
       // Per-pass GPU timing service.  Always non-null — a no-op stub until
       // initGpu swaps in the device-aware service.  Consumers gate on
       // `.enabled`.
@@ -656,6 +663,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.filamentRenderer = null;
     state.gpu.labelRenderer?.destroy();
     state.gpu.labelRenderer = null;
+    state.gpu.foregroundLabelRenderer?.destroy();
+    state.gpu.foregroundLabelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
     state.gpu.debugLineRenderer?.destroy();
@@ -684,6 +693,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.pickDebugOverlay = null;
     state.gpu.diskRadiusRing?.destroy();
     state.gpu.diskRadiusRing = null;
+    state.gpu.debugSphereRenderer?.destroy();
+    state.gpu.debugSphereRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();

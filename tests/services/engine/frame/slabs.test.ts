@@ -14,6 +14,8 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { deriveSlabs, slabViewOf, NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
+import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
+import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 
@@ -63,6 +65,28 @@ describe('deriveSlabs', () => {
     const slabs = deriveSlabs(makeCam(distance), makeCosmoVp());
     expect(slabs[0]?.nearMpc).toBeCloseTo(distance * 1e-4, 10);
     expect(slabs[0]?.farMpc).toBeCloseTo(distance * 100, 10);
+  });
+
+  it("the near row's vp is the origin-relative computeForegroundViewProj product", () => {
+    const distance = 250;
+    const cam = makeCam(distance);
+    const slabs = deriveSlabs(cam, makeCosmoVp());
+    // Pin the util as the derivation: rebuild the matrix from the same camera
+    // inputs and assert Float64Array equality. A reimplemented-but-equal matrix
+    // would drift the moment computeForegroundViewProj changes, so equality
+    // against the live util — not a hand-rolled expectation — is the contract.
+    const expected = computeForegroundViewProj({
+      eyeMpc: cam.position,
+      targetMpc: cam.target,
+      up: [0, 1, 0],
+      renderOrigin: RENDER_ORIGIN_MPC,
+      fovYRad: cam.fovYRad,
+      aspect: cam.aspect,
+      near: distance * 1e-4,
+      far: distance * 100,
+    });
+    expect(slabs[0]?.vp).toBeInstanceOf(Float64Array);
+    expect(Array.from(slabs[0]!.vp)).toEqual(Array.from(expected));
   });
 
   it('the cosmological row preserves the given vp exactly', () => {

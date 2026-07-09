@@ -24,7 +24,7 @@ import {
   TIMED_SLOTS,
 } from '../../../../src/services/engine/frame/frameProgram';
 import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
-import { COSMO, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
+import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -62,31 +62,57 @@ function fakeLayer(name: string, target: string, slab: number): ContentLayer {
 }
 
 describe('frameProgram', () => {
-  it('emits the five-step main program', () => {
+  it('emits the eight-step main program', () => {
     expect(frameProgram(TONE)).toEqual([
       { kind: 'compute', name: 'flow' },
       { kind: 'render', target: 'volume', slab: COSMO },
       { kind: 'render', target: 'hdr', slab: COSMO },
       { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } },
       { kind: 'render', target: 'swap', slab: COSMO },
+      { kind: 'render', target: 'foreground:0', slab: NEAR0 },
+      {
+        kind: 'composite',
+        step: { source: 'foreground:0', dest: 'swap', blend: 'over', tone: TONE },
+      },
+      { kind: 'render', target: 'swap', slab: NEAR0 },
     ]);
   });
 
-  it('carries the given tone in the only composite step', () => {
+  it('the two composites share one tone instance', () => {
+    // The hdr→swap tone-map and the foreground:0→swap OVER must carry the
+    // SAME tone object — identity, not just equal values — so the tone curve
+    // is guaranteed identical across the Sun's limb. This enforces the
+    // shared-curve requirement by reference rather than a constants file.
+    const program = frameProgram(TONE);
+    const [hdrComposite, foregroundComposite] = program.filter((step) => step.kind === 'composite');
+    // Narrow away both the possibly-undefined index result and the FrameStep
+    // union before touching `.step` — the same guard idiom the sibling
+    // composite assertions use.
+    if (hdrComposite?.kind !== 'composite' || foregroundComposite?.kind !== 'composite') {
+      throw new Error('expected two composite steps');
+    }
+    expect(hdrComposite.step.tone).toBe(foregroundComposite.step.tone);
+  });
+
+  it('the program’s composites are hdr→swap replace and foreground:0→swap over, in that order', () => {
     const program = frameProgram(TONE);
     const composites = program.filter((step) => step.kind === 'composite');
-    expect(composites).toHaveLength(1);
+    expect(composites).toHaveLength(2);
     expect(composites[0]).toEqual({
       kind: 'composite',
       step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE },
     });
+    expect(composites[1]).toEqual({
+      kind: 'composite',
+      step: { source: 'foreground:0', dest: 'swap', blend: 'over', tone: TONE },
+    });
   });
 
-  it('references only slabs present in deriveSlabs’ table', () => {
+  it('references only slabs present in deriveSlabs’ table (NEAR0 and COSMO)', () => {
     const slabs = deriveSlabs(makeCam(), new Float32Array(16) as unknown as Mat4);
     for (const step of frameProgram(TONE)) {
       if (step.kind === 'render') {
-        expect(step.slab).toBe(COSMO);
+        expect([NEAR0, COSMO]).toContain(step.slab);
         expect(slabs[step.slab]).toBeDefined();
       }
     }
@@ -105,12 +131,18 @@ describe('timedSlotsOf', () => {
       fakeLayer('labels', 'swap', COSMO),
     ];
 
+    // The foreground:0→swap slot is emitted from the program's composite STEP
+    // independent of the layers fixture (a composite step always contributes
+    // its '<source>→<dest>' slot). This synthetic fixture has no
+    // debug-spheres / foreground-labels rows, so those two near-field RENDER
+    // slots correctly don't appear — but the composite slot must.
     expect(timedSlotsOf(frameProgram(TONE), layers)).toEqual([
       'point-sprites',
       'milky-way',
       'hdr→swap',
       'selection-ring',
       'labels',
+      'foreground:0→swap',
       'pick',
     ]);
   });
@@ -124,12 +156,14 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, nine hdr, hdr→swap, five swap, pick', () => {
+  it('derives the real registry slot list: scalar-volume, nine hdr, hdr→swap, five swap, near-field tail, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
     // iterates. scalar-volume leads (the volume render step), then the nine
     // hdr layers in registry order, the tone-map composite, the five swap
-    // overlays, and pick last.
+    // overlays, then the near-field tail (the foreground:0 body render →
+    // debug-spheres, the foreground:0→swap composite, and the NEAR0 swap
+    // caption render → foreground-labels), and pick last.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'point-sprites',
@@ -147,6 +181,9 @@ describe('timedSlotsOf', () => {
       'marker-lines',
       'labels',
       'clip-path-debug',
+      'debug-spheres',
+      'foreground:0→swap',
+      'foreground-labels',
       'pick',
     ]);
   });

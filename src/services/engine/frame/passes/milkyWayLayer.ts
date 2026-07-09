@@ -18,9 +18,10 @@
  * ### When it draws
  *
  * `enabled` delegates to `milkyWayVisible` — the ONE home of the MW
- * visibility predicate. The pick program runs this SAME `enabled` gate
- * (against the pick-time camera), so draw and pick share ONE gate and
- * can't drift.  Two gates:
+ * far-side / toggle predicate — AND a near-side approach fade, together
+ * bounding a two-sided visibility window. The pick program runs this
+ * SAME `enabled` gate (against the pick-time camera), so draw and pick
+ * share ONE gate and can't drift.  Three gates:
  *
  *   1. `state.settings.milkyWay.enabled` — user toggle — OR a still-
  *      nonzero toggle fade (`fades.opacityOf`), which keeps the layer
@@ -30,14 +31,22 @@
  *      `services/gpu/galaxy/milkyWayFadeAlpha.ts` (full strength while the
  *      disc spans at least `MILKY_WAY_FADE_FULL_PX` on screen, gone once it
  *      shrinks to `MILKY_WAY_FADE_GONE_PX`).
+ *   3. `milkyWayApproachFadeAlpha(camDist) > 0` — the near-side fade
+ *      (`utils/math/milkyWayApproachFadeAlpha.ts`): full outside ~40 kpc,
+ *      gone by ~8 kpc as the camera dives inside the disc toward the solar
+ *      system. Orthogonal to gate 2's apparent-size band — it is the only
+ *      gate that closes at kpc range. Because it rides `enabled` it also
+ *      makes a fully approach-faded disc unpickable (invisible →
+ *      unpickable) — coherent, but a behaviour the pick program inherits
+ *      for free from the shared gate.
  *
- * Both gates live in `enabled` so that when the camera flies well
- * beyond the local volume the whole layer is skipped — no
- * `beginRenderPass`, no tile-RAM round-trip on M1, and no idle
- * timestamp slot in the GPU-timings panel.  `milkyWayFadeAlpha` is
- * called again inside `draw` to compute the actual alpha to send to
- * the shader; both reads use the frame-frozen `ctx.drawCamPos`, so
- * they return the same value (no race).
+ * All three gates live in `enabled` so that when the camera flies well
+ * beyond the local volume — or all the way inside the disc toward the
+ * Sun — the whole layer is skipped: no `beginRenderPass`, no tile-RAM
+ * round-trip on M1, and no idle timestamp slot in the GPU-timings panel.
+ * Both fades are recomputed inside `draw` to set the shader alpha; every
+ * read uses the frame-frozen `ctx.drawCamPos`, so they return the same
+ * value (no race).
  *
  * ### What it reads
  *
@@ -59,6 +68,7 @@
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { COSMO } from '../slabs';
 import { milkyWayFadeAlpha } from '../../../gpu/galaxy/milkyWayFadeAlpha';
+import { milkyWayApproachFadeAlpha } from '../../../../utils/math/milkyWayApproachFadeAlpha';
 import { milkyWayVisible } from '../../helpers/milkyWayVisible';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
 import { milkyWayModelMatrix } from '../../../gpu/galaxy/milkyWayModelMatrix';
@@ -76,11 +86,18 @@ export const milkyWayLayer: ContentLayer = {
   blend: 'additive',
 
   enabled(state, ctx) {
-    // The shared predicate (toggle-or-fade-tail AND apparent-size band),
-    // answered for THIS frame's camera and clock — the frame-frozen ctx
-    // snapshot (ctx.nowMs is the deterministic time seam; layers never
-    // read the wall clock directly).
-    return milkyWayVisible(state, ctx.drawCamPos, ctx.fovYRad, ctx.canvasSize.height, ctx.nowMs);
+    // The shared far-side/toggle predicate (toggle-or-fade-tail AND
+    // apparent-size band), answered for THIS frame's camera and clock —
+    // the frame-frozen ctx snapshot (ctx.nowMs is the deterministic time
+    // seam; layers never read the wall clock directly).
+    if (!milkyWayVisible(state, ctx.drawCamPos, ctx.fovYRad, ctx.canvasSize.height, ctx.nowMs)) {
+      return false;
+    }
+    // Near-side approach fade: close the gate once the camera has dived
+    // inside the disc toward the solar system. Orthogonal to the far-side
+    // band above — this is the only gate that shuts at kpc range.
+    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
+    return milkyWayApproachFadeAlpha(camDistMpc) > 0;
   },
 
   draw(pass, view, ctx, state) {
@@ -94,14 +111,16 @@ export const milkyWayLayer: ContentLayer = {
     if (cloudRenderer === null) return;
 
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
-    // Composite the apparent-size fade with the registry-supplied
-    // toggle opacity, both on the frame clock (ctx.nowMs). The renderer
-    // accepts a scalar fadeAlpha CPU-side param, so multiplying two
-    // opacities here is the minimal-change path — no shader edits, no
-    // FadeUniforms binding.
+    // Composite the far-side apparent-size fade, the near-side approach
+    // fade, and the registry-supplied toggle opacity, all on the frame
+    // clock (ctx.nowMs). The renderer accepts a scalar fadeAlpha CPU-side
+    // param, so multiplying opacities here is the minimal-change path — no
+    // shader edits, no FadeUniforms binding.
     const toggleOpacity = state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, ctx.nowMs);
     const fadeAlpha =
-      milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, view.viewportPx[1]) * toggleOpacity;
+      milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, view.viewportPx[1]) *
+      milkyWayApproachFadeAlpha(camDistMpc) *
+      toggleOpacity;
 
     // Camera-facing billboard axes for the star/dust sprites (world space),
     // derived from the live camera each frame.

@@ -33,8 +33,10 @@ import {
   filamentsLayer,
   milkyWayLayer,
   horizonShellLayer,
+  debugSpheresLayer,
+  foregroundLabelsLayer,
 } from '../../../../../src/services/engine/frame/passes';
-import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
+import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
@@ -201,6 +203,18 @@ const SWAP_NAMES = [
   'clip-path-debug',
 ];
 
+// The near-field foreground group: the true-scale bodies (Sun, Earth) drawn
+// into the depth-bearing `foreground:0` target through the near0 slab. Opaque
+// (depth-tested), unlike the additive HDR group and the OVER swap group.
+const FOREGROUND_NAMES = ['debug-spheres'];
+
+// The near-field captions group: the Sun/Earth name labels. Like the COSMO
+// swap overlays they target the swap chain with premultiplied-OVER, but they
+// project through the near0 slab so the caption anchors track the true-scale
+// bodies rather than being clipped by the cosmological near plane. Its own
+// (swap, NEAR0) render group, distinct from the (swap, COSMO) overlays above.
+const NEAR_LABEL_NAMES = ['foreground-labels'];
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('CONTENT_LAYERS migration table (hdr group)', () => {
@@ -254,18 +268,68 @@ describe('CONTENT_LAYERS migration table (swap group)', () => {
 });
 
 describe('swap-target layers', () => {
-  it('the target==="swap" filter yields the five swap layers in canonical draw order', () => {
-    // Selection ring leads (marker-lines/labels composite over its stroke);
-    // the debug clip-path overlay trails so its route + gizmo draw on top
-    // of everything else.
-    const swapLayers = CONTENT_LAYERS.filter((layer) => layer.target === 'swap');
+  it('the (swap, COSMO) group yields the five cosmological overlays in canonical draw order', () => {
+    // The swap TARGET now hosts two render groups keyed by (target, slab): the
+    // five COSMO overlays here, and the near-field foreground-labels through
+    // NEAR0 (asserted separately below). Scoping this filter to COSMO pins the
+    // group the (swap, COSMO) render step actually draws. Selection ring leads
+    // (marker-lines/labels composite over its stroke); the debug clip-path
+    // overlay trails so its route + gizmo draw on top of everything else.
+    const swapLayers = CONTENT_LAYERS.filter(
+      (layer) => layer.target === 'swap' && layer.slab === COSMO,
+    );
     expect(swapLayers).toHaveLength(5);
     expect(swapLayers.map((p) => p.name)).toEqual(SWAP_NAMES);
   });
 });
 
+describe('CONTENT_LAYERS migration table (foreground group)', () => {
+  it('every foreground content layer draws into foreground:0 through the near0 slab, opaque', () => {
+    // The near-field bodies (Sun, Earth) are the first rows to leave the
+    // cosmological slab: they project through NEAR0 into the depth-bearing
+    // `foreground:0` target and are opaque (depth-tested), not additive. See
+    // the renderer-unification design's migration table (spec line 215).
+    const fgLayers = CONTENT_LAYERS.filter((layer) => FOREGROUND_NAMES.includes(layer.name));
+    expect(fgLayers.map((layer) => layer.name)).toEqual(FOREGROUND_NAMES);
+    for (const layer of fgLayers) {
+      expect(layer.slab).toBe(NEAR0);
+      expect(layer.target).toBe('foreground:0');
+      expect(layer.blend).toBe('opaque');
+    }
+  });
+});
+
+describe('foreground-target layers', () => {
+  it('the target==="foreground:0" filter yields the near-field bodies group', () => {
+    // Registered after the swap group — position only affects timing-slot
+    // listing, since no other layer shares its (target, slab).
+    const fgLayers = CONTENT_LAYERS.filter((layer) => layer.target === 'foreground:0');
+    expect(fgLayers.map((layer) => layer.name)).toEqual(FOREGROUND_NAMES);
+    expect(fgLayers).toContain(debugSpheresLayer);
+  });
+});
+
+describe('CONTENT_LAYERS migration table (near-field labels group)', () => {
+  it('the Sun/Earth captions draw into swap through the near0 slab, over', () => {
+    // The near-field captions are the second foreground group: like the COSMO
+    // swap overlays they target the swap chain with premultiplied-OVER, but
+    // they project through NEAR0 so the caption anchors track the true-scale
+    // bodies. Registered after debug-spheres — the (swap, NEAR0) render step
+    // that draws them lands in task 7. See the design's migration table (spec
+    // line 216).
+    const nearLabels = CONTENT_LAYERS.filter((layer) => NEAR_LABEL_NAMES.includes(layer.name));
+    expect(nearLabels.map((layer) => layer.name)).toEqual(NEAR_LABEL_NAMES);
+    expect(nearLabels).toContain(foregroundLabelsLayer);
+    for (const layer of nearLabels) {
+      expect(layer.slab).toBe(NEAR0);
+      expect(layer.target).toBe('swap');
+      expect(layer.blend).toBe('over');
+    }
+  });
+});
+
 describe('CONTENT_LAYERS blend legality', () => {
-  it('every layer blends per its target — hdr/volume additive, swap over', () => {
+  it('every layer blends per its target — hdr/volume additive, foreground:0 opaque, swap over', () => {
     // The registry half of the target<->blend invariant (the renderer half
     // — that the WebGPU pipeline's actual blend state matches — lands in
     // task 10). A layer whose target/blend pair falls outside this table
@@ -273,6 +337,8 @@ describe('CONTENT_LAYERS blend legality', () => {
     for (const layer of CONTENT_LAYERS) {
       if (layer.target === 'hdr' || layer.target === 'volume') {
         expect(layer.blend).toBe('additive');
+      } else if (layer.target === 'foreground:0') {
+        expect(layer.blend).toBe('opaque');
       } else if (layer.target === 'swap') {
         expect(layer.blend).toBe('over');
       } else {
@@ -281,6 +347,10 @@ describe('CONTENT_LAYERS blend legality', () => {
         );
       }
     }
+    // Six layers blend OVER: the five COSMO swap overlays plus the near-field
+    // foreground-labels (also swap-target, projected through NEAR0). Was five
+    // before the near-field caption row landed.
+    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(6);
   });
 });
 
