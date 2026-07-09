@@ -290,30 +290,34 @@ export function createPickRenderer(
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /**
-   * Record the shared per-source pick pass into `encoder`.  Both
-   * `pick()` and `renderForDebug()` use this for the common middle —
-   * uniform upload, pick-specific overrides, bind groups, draw loop,
-   * structure ring picks.  The two callers diverge only on the tail
-   * (readback vs return-texture).
+   * Record the point-pick draw into an already-begun render pass — the
+   * extracted point half of the pick pass, callable as a layer surface.
    *
    * `uniformBytes` is built at pick time from the slab view (see
-   * `pickUniformBytesOf`); it is uploaded verbatim, then the three
-   * pick-specific fields are overridden in place on `pickUniformBuffer`.
-   * The bind-group cache is keyed by GPUBuffer identity, so a tier swap
-   * that destroys an old sourceBuffer invalidates the cached bind group
-   * via GC.
+   * `pickUniformBytesOf`); it is uploaded verbatim to the renderer's
+   * OWN `pickUniformBuffer`, then the three pick-specific fields are
+   * overridden in place.  The caller owns the pass lifecycle
+   * (`beginRenderPass` / `pass.end()`) and layers ring / disk /
+   * Milky-Way pick draws after this returns.
+   *
+   * `@group(0)` prefix contract: the ring and Milky-Way pick pipelines
+   * read the point pick uniform via the caller-bound `@group(0)`
+   * CameraUniforms prefix.  So the upload + `@group(0)` bind happen
+   * unconditionally — a galaxy-empty scene (every catalog toggled off)
+   * must still leave slot 0 pointing at the freshly-uploaded pick
+   * camera buffer for those fold-in draws; the per-source loop simply
+   * issues no draws.
+   *
+   * The `@group(2)` bind-group cache is keyed by GPUBuffer identity, so
+   * a tier swap that destroys an old sourceBuffer invalidates the
+   * cached bind group via GC.
    */
-  function recordPickPass(
-    encoder: GPUCommandEncoder,
-    sourceList: readonly PickSourceDraw[],
-    passLabel: string,
+  function drawPoints(
+    pass: GPURenderPassEncoder,
+    sources: readonly PickSourceDraw[],
     pointSizePx: number,
     uniformBytes: ArrayBuffer,
-    timingDescriptor: GPURenderPassTimestampWrites | undefined,
-  ): GPUTexture {
-    const pt = pickTexture!;
-    const dt = depthTexture!;
-
+  ): void {
     // Full upload: reproduce the rendered camera / viewport / settings
     // state on the pick renderer's OWN buffer.  The visual
     // pass's GPU buffer is never touched — this is the invariant that
@@ -339,6 +343,48 @@ export function createPickRenderer(
     );
     device.queue.writeBuffer(pickUniformBuffer, PICK_PASS_BYTE_OFFSET, new Uint32Array([1]));
 
+    // Bind the prebuilt @group(0) bind group (built once at construction
+    // against pickUniformBuffer — avoids per-pass createBindGroup calls).
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, pickUniformBindGroup);
+    pass.setBindGroup(1, dummyFadeBindGroup);
+    pass.setBindGroup(3, focusBindGroup);
+
+    for (const src of sources) {
+      let sourceBindGroup = sourceBindGroupCache.get(src.sourceBuffer);
+      if (!sourceBindGroup) {
+        sourceBindGroup = device.createBindGroup({
+          label: `pick-source-${src.source}`,
+          layout: sourceBgl,
+          entries: [{ binding: 0, resource: { buffer: src.sourceBuffer } }],
+        });
+        sourceBindGroupCache.set(src.sourceBuffer, sourceBindGroup);
+      }
+      pass.setBindGroup(2, sourceBindGroup);
+      pass.setVertexBuffer(0, src.vertexBuffer);
+      pass.draw(6, src.count);
+    }
+  }
+
+  /**
+   * Record the shared per-source pick pass into `encoder`.  Both
+   * `pick()` and `renderForDebug()` use this for the common middle —
+   * the point draw (`drawPoints`: uniform upload, pick overrides, bind
+   * groups, per-source loop) plus the ring / disk / Milky-Way fold-ins.
+   * The two callers diverge only on the tail (readback vs
+   * return-texture).
+   */
+  function recordPickPass(
+    encoder: GPUCommandEncoder,
+    sourceList: readonly PickSourceDraw[],
+    passLabel: string,
+    pointSizePx: number,
+    uniformBytes: ArrayBuffer,
+    timingDescriptor: GPURenderPassTimestampWrites | undefined,
+  ): GPUTexture {
+    const pt = pickTexture!;
+    const dt = depthTexture!;
+
     const pass = encoder.beginRenderPass({
       label: `${passLabel}-pass`,
       colorAttachments: [
@@ -361,27 +407,7 @@ export function createPickRenderer(
       ...(timingDescriptor ? { timestampWrites: timingDescriptor } : {}),
     });
 
-    // Bind the prebuilt @group(0) bind group (built once at construction
-    // against pickUniformBuffer — avoids per-pass createBindGroup calls).
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, pickUniformBindGroup);
-    pass.setBindGroup(1, dummyFadeBindGroup);
-    pass.setBindGroup(3, focusBindGroup);
-
-    for (const src of sourceList) {
-      let sourceBindGroup = sourceBindGroupCache.get(src.sourceBuffer);
-      if (!sourceBindGroup) {
-        sourceBindGroup = device.createBindGroup({
-          label: `${passLabel}-source-${src.source}`,
-          layout: sourceBgl,
-          entries: [{ binding: 0, resource: { buffer: src.sourceBuffer } }],
-        });
-        sourceBindGroupCache.set(src.sourceBuffer, sourceBindGroup);
-      }
-      pass.setBindGroup(2, sourceBindGroup);
-      pass.setVertexBuffer(0, src.vertexBuffer);
-      pass.draw(6, src.count);
-    }
+    drawPoints(pass, sourceList, pointSizePx, uniformBytes);
 
     // Structure ring picks share depth state with the galaxy draws, so a
     // foreground galaxy claims the pixel — clicks through a ring at a
@@ -539,7 +565,13 @@ export function createPickRenderer(
     // engine's destroy() releases it, not the picker.
   }
 
-  const renderer: PickRenderer = { label: 'pickRenderer', pick, renderForDebug, destroy };
+  const renderer: PickRenderer = {
+    label: 'pickRenderer',
+    drawPoints,
+    pick,
+    renderForDebug,
+    destroy,
+  };
   renderer satisfies Renderer;
   return renderer;
 }

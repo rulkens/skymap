@@ -72,6 +72,12 @@ deltas are accepted and must be restated in the PR description:
    ready" (`pickFrameContext` returns null). `lastPose` is seeded in
    `wireInput` before any pick can fire, so a pick in the one-frame window
    between bootstrap and first present hits the same pose frame 1 renders.
+4. **MW-only / zero-catalog scene** (added at Task 5): `lastFrameCam` — the
+   camera snapshot feeding the Milky Way pick gate — now updates on every
+   draw. It was previously preserved-on-null, so a zero-catalog frame left
+   the gate answering for a stale camera. The unconditional stash gates
+   against the actually-rendered pose — a latent-bug fix; behaviour is
+   identical whenever any catalog is loaded.
 
 ## Global Constraints
 
@@ -162,12 +168,12 @@ plumbing: Task 10 absorbs it into `pickProgram`; keep the edits minimal.
 
 **Files:** phase-2 successor of `pointSpritesPass.ts` (the pointSprites layer's `draw`), `src/@types/engine/state/EnginePickingState.d.ts`, `src/services/engine/engine.ts` (state literal, ~line 242), `src/services/gpu/renderers/pointRenderer.ts` (+ `src/@types/rendering/PointRenderer.d.ts`), doc sweeps in `src/@types/rendering/PickRenderer.d.ts`, `src/@types/engine/ClickResolveInput.d.ts`, `src/services/engine/frame/renderFrame.ts` (docblock), matching tests
 
-- [ ] Delete the stash write in the pointSprites layer (today `pointSpritesPass.ts:88-125` tail) and its rationale comment.
-- [ ] Delete `EnginePickingState.lastFrameUniformBytes` + its docblock entries; drop the seed from the `engine.ts` state literal; update `tests/@types/engineState.test.ts` and the other fixtures that seed it (grep `lastFrameUniformBytes` under `tests/` — `runFrame.test`, `renderFrame.test`, `renderFrame.timing.test`, `passes.test`, `renderFrameSplitBaseline.test`, `hoverPickDriver.test`).
-- [ ] `PointRenderer.draw` returned the packed buffer **only** to feed the stash (`pointRenderer.ts:710-762`) — per the delete-proxy-surfaces rule, change it to return `void`; delete the `stashes the packed …` / `leaves state.picking …` tests (today in `passes.test.ts:465-512`) and update `pointRenderer.test.ts`.
-- [ ] Doc sweep: remove every "stashed on `state.picking.lastFrameUniformBytes`" reference (`PickRenderer.d.ts:52,93`, `ClickResolveInput.d.ts:22`, `renderFrame.ts:68`); reword to "built at pick time from the slab view". Timeless comments — no "previously we stashed" history notes.
-- [ ] `npm test` + `npm run typecheck` → green.
-- [ ] Commit the touched paths.
+- [x] Delete the stash write in the pointSprites layer (today `pointSpritesPass.ts:88-125` tail) and its rationale comment.
+- [x] Delete `EnginePickingState.lastFrameUniformBytes` + its docblock entries; drop the seed from the `engine.ts` state literal; update `tests/@types/engineState.test.ts` and the other fixtures that seed it (grep `lastFrameUniformBytes` under `tests/` — `runFrame.test`, `renderFrame.test`, `renderFrame.timing.test`, `passes.test`, `renderFrameSplitBaseline.test`, `hoverPickDriver.test`).
+- [x] `PointRenderer.draw` returned the packed buffer **only** to feed the stash (`pointRenderer.ts:710-762`) — per the delete-proxy-surfaces rule, change it to return `void`; delete the `stashes the packed …` / `leaves state.picking …` tests (today in `passes.test.ts:465-512`) and update `pointRenderer.test.ts`.
+- [x] Doc sweep: remove every "stashed on `state.picking.lastFrameUniformBytes`" reference (`PickRenderer.d.ts:52,93`, `ClickResolveInput.d.ts:22`, `renderFrame.ts:68`); reword to "built at pick time from the slab view". Timeless comments — no "previously we stashed" history notes.
+- [x] `npm test` + `npm run typecheck` → green.
+- [x] Commit the touched paths.
 
 ### Task 6: `pickRenderer.drawPoints` — extract the point pick draw
 

@@ -75,6 +75,38 @@ export type PickRenderer = {
    *          already in flight. See `selectionEncoding.ts` for the
    *          (sourceCode << 27 | localIdx + 1) packing.
    */
+  /**
+   * Record the point-pick draw into an already-begun render pass.
+   *
+   * This is the extracted point half of the pick pass: it uploads
+   * `uniformBytes` to the renderer's OWN pick uniform buffer, applies the
+   * three pick-specific overrides (selectedPacked sentinel, padded
+   * pointSizePx, pickPass = 1), binds `@group(0)` (camera), `@group(1)`
+   * (dummy fade), `@group(3)` (focus), then issues one instanced draw per
+   * source.  The caller owns `beginRenderPass` / `pass.end()` and layers
+   * any ring / disk / Milky-Way pick draws after this returns.
+   *
+   * ### @group(0) prefix contract
+   *
+   * The ring and Milky-Way pick pipelines read the point pick uniform via
+   * the caller-bound `@group(0)` CameraUniforms prefix.  So this method
+   * uploads the camera uniform and binds `@group(0)` **even with zero
+   * sources** — a galaxy-empty scene (every catalog toggled off) must still
+   * leave slot 0 pointing at the freshly-uploaded pick camera buffer for
+   * those fold-in draws.  The per-source loop simply issues no draws.
+   *
+   * @param pass         An already-begun `GPURenderPassEncoder`.
+   * @param sources      Per-source draw records; see `pick()`.
+   * @param pointSizePx  The user's point-size setting; padded internally.
+   * @param uniformBytes Packed uniform bytes for the pick frame; see `pick()`.
+   */
+  drawPoints(
+    pass: GPURenderPassEncoder,
+    sources: readonly PickSourceDraw[],
+    pointSizePx: number,
+    uniformBytes: ArrayBuffer,
+  ): void;
+
   pick(
     viewportPx: Vec2,
     pickXPx: number,

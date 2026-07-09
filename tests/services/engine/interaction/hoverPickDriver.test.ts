@@ -141,6 +141,7 @@ beforeEach(() => {
     state: { picking: pickingState },
     pickRenderer: {
       pick: picker.pick,
+      drawPoints: vi.fn<() => void>(),
       renderForDebug: vi.fn<() => null>(),
       destroy: vi.fn<() => void>(),
       label: 'pickRenderer',

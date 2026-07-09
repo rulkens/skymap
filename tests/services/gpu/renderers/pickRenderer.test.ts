@@ -262,6 +262,117 @@ describe('createPickRenderer', () => {
     expect(pickPassView[0]).toBe(1);
   });
 
+  it('drawPoints applies the three pick overrides to its own buffer', () => {
+    // drawPoints is the extracted point-pick draw surface: it uploads the
+    // caller's uniform bytes to the renderer's OWN pickUniformBuffer, then
+    // applies the same three pick-specific overrides recordPickPass used to
+    // apply inline (selectedPacked sentinel, padded pointSizePx, pickPass=1).
+    // This mirrors the DECOUPLING REGRESSION assertions but drives drawPoints
+    // directly with a stub pass rather than the full pick() path.
+    const { device, writeBufferCalls, getOwnPickBuffer } = makeDrivableDevice();
+    const pickRenderer = createPickRenderer(
+      device,
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+      {} as unknown as GPUBindGroup,
+    );
+
+    const ownPickBuffer = getOwnPickBuffer();
+    expect(ownPickBuffer).not.toBeNull();
+
+    writeBufferCalls.length = 0; // clear construction calls
+
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    const pointSizePx = 3.5;
+    pickRenderer.drawPoints(
+      pass,
+      [
+        {
+          source: Source.SDSS,
+          vertexBuffer: {} as GPUBuffer,
+          count: 10,
+          sourceBuffer: {} as GPUBuffer,
+        },
+      ],
+      pointSizePx,
+      makeUniformBytes(),
+    );
+
+    // Every writeBuffer targets the OWN pick buffer.
+    expect(writeBufferCalls.length).toBeGreaterThan(0);
+    for (const call of writeBufferCalls) {
+      expect(call.buffer).toBe(ownPickBuffer);
+    }
+
+    // Full upload at offset 0.
+    expect(writeBufferCalls.find((c) => c.offset === 0)).toBeDefined();
+
+    // selectedPacked → none-sentinel.
+    const selectedCall = writeBufferCalls.find((c) => c.offset === SELECTED_PACKED_BYTE_OFFSET);
+    expect(selectedCall).toBeDefined();
+    expect((selectedCall!.data as Uint32Array)[0]).toBe(SELECTION_NONE_SENTINEL);
+
+    // pointSizePx + PICK_PADDING_PX (4 px).
+    const sizeCall = writeBufferCalls.find((c) => c.offset === POINT_SIZE_BYTE_OFFSET);
+    expect(sizeCall).toBeDefined();
+    expect((sizeCall!.data as Float32Array)[0]).toBeCloseTo(pointSizePx + 4);
+
+    // pickPass = 1.
+    const pickPassCall = writeBufferCalls.find((c) => c.offset === PICK_PASS_BYTE_OFFSET);
+    expect(pickPassCall).toBeDefined();
+    expect((pickPassCall!.data as Uint32Array)[0]).toBe(1);
+  });
+
+  it('drawPoints uploads the camera uniform and binds @group(0) even with zero sources', () => {
+    // Load-bearing prefix contract: the ring and MW pick pipelines read the
+    // point pick uniform via the @group(0) CameraUniforms prefix this draw
+    // binds.  So drawPoints MUST upload the camera uniform and bind @group(0)
+    // even when there are ZERO galaxy sources to draw — otherwise a
+    // galaxy-empty scene would leave slot 0 unbound (or stale) for the
+    // ring/MW fold-ins that follow.
+    const { device, writeBufferCalls, getOwnPickBuffer } = makeDrivableDevice();
+    const pickRenderer = createPickRenderer(
+      device,
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+      {} as unknown as GPUBindGroup,
+    );
+
+    const ownPickBuffer = getOwnPickBuffer();
+    expect(ownPickBuffer).not.toBeNull();
+
+    writeBufferCalls.length = 0; // clear construction calls
+
+    const bindGroupCalls: Array<{ index: number; group: unknown }> = [];
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn((index: number, group: unknown) => bindGroupCalls.push({ index, group })),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    pickRenderer.drawPoints(pass, [], 2.5, makeUniformBytes());
+
+    // Camera uniform uploaded at offset 0 to the OWN buffer — no sources needed.
+    const fullUpload = writeBufferCalls.find((c) => c.offset === 0);
+    expect(fullUpload).toBeDefined();
+    expect(fullUpload!.buffer).toBe(ownPickBuffer);
+
+    // @group(0) bound — the prefix the ring/MW pipelines depend on.
+    expect(bindGroupCalls.some((c) => c.index === 0)).toBe(true);
+
+    // Zero sources → no per-source draws.
+    expect(pass.draw as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+  });
+
   it('returns null when there are no pick targets (empty source list + no structure markers)', async () => {
     // pick() returns null without issuing any GPU work when the scene has
     // no pickable objects — a performance gate, not a correctness concern.
