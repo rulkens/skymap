@@ -43,13 +43,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
       blend: 0,
     },
     renderer: { draw: vi.fn() } as any,
-    postProcess: {
-      view: {} as GPUTextureView,
-      draw: vi.fn(),
-      resize: vi.fn(),
-      destroy: vi.fn(),
-    } as any,
-    volumeOffscreen: { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any,
+    renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
     texturedDisks: {
       runFrame: vi.fn(),
       lastOutput: { quads: [], disks: [] },
@@ -62,7 +56,14 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
 /** Minimal SlabView matching the ctx above. `slab` is unused by this layer. */
 function makeView(ctx: ReadyFrameContext): SlabView {
   return {
-    slab: { index: COSMO, nearMpc: 0.01, farMpc: 50000, vp: new Float64Array(16), originRelative: false, precision: 'f32' },
+    slab: {
+      index: COSMO,
+      nearMpc: 0.01,
+      farMpc: 50000,
+      vp: new Float64Array(16),
+      originRelative: false,
+      precision: 'f32',
+    },
     vp: ctx.vp as unknown as Float32Array,
     camPos: [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
     viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],

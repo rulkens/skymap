@@ -34,7 +34,7 @@ export type RenderFrameInput = {
   /**
    * Per-frame derived snapshot.  Carries the camera, view-projection
    * matrix, viewport size, camera-position tuple, pixel-per-radian
-   * scalar, plus the post-bootstrap-narrowed `renderer`, `postProcess`,
+   * scalar, plus the post-bootstrap-narrowed `renderer`, `renderTargets`,
    * and `thumbnails` handles.  See `frameContext.ts`.
    */
   ctx: ReadyFrameContext;

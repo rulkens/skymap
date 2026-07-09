@@ -145,8 +145,15 @@ function makeCtx(): ReadyFrameContext {
     slabs: [slab, slab],
     canvasSize: { width: 100, height: 50 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
-    postProcess: { view: HDR_VIEW },
-    volumeOffscreen: { view: VOLUME_VIEW },
+    // Offscreen view resolution goes through the target table's viewOf —
+    // the executor's viewFor keeps only the swap-vs-offscreen branch.
+    renderTargets: {
+      viewOf: (id: string) => {
+        if (id === 'hdr') return HDR_VIEW;
+        if (id === 'volume') return VOLUME_VIEW;
+        throw new Error(`mock renderTargets: no view for '${id}'`);
+      },
+    },
   } as unknown as ReadyFrameContext;
 }
 

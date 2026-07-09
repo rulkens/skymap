@@ -184,14 +184,26 @@ function makeLoggingRenderer(records: DrawRecord[], name: string, method = 'draw
   return { [method]: mock };
 }
 
-function makePostProcess(): any {
-  // Owns the HDR target view only — the tone-map blit is now the FRAME
-  // program's `hdr→swap` composite (see makeCompositor), so `draw` is never
-  // called on postProcess and needn't log.
+function makeRenderTargets(): any {
+  // The offscreen target table — the executor resolves the hdr + volume
+  // colour attachments via viewOf(id); the tone-map blit is the FRAME
+  // program's `hdr→swap` composite (see makeCompositor).
+  const views: Record<string, GPUTextureView> = {
+    hdr: { __id: 'hdr-view' } as unknown as GPUTextureView,
+    volume: { __id: 'volume-view' } as unknown as GPUTextureView,
+  };
   return {
-    view: { __id: 'hdr-view' } as unknown as GPUTextureView,
+    specs: [
+      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
+      { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+      { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
+    ],
+    viewOf: (id: string) => {
+      const view = views[id];
+      if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
+      return view;
+    },
     resize: vi.fn(),
-    draw: vi.fn(),
     destroy: vi.fn(),
   };
 }
@@ -292,7 +304,7 @@ describe('renderFrame visual baseline', () => {
       lineCount: vi.fn(() => 3),
       ...makeLoggingRenderer(records, 'marker-lines'),
     };
-    const postProcess = makePostProcess();
+    const renderTargets = makeRenderTargets();
     const compositor = makeCompositor(records);
 
     const cam = makeCam();
@@ -339,11 +351,10 @@ describe('renderFrame visual baseline', () => {
       nowMs: 0,
       fovYRad: FIXTURE_FOV_Y_RAD,
       renderer: pointRenderer,
-      postProcess,
+      // The executor resolves hdr/volume attachments — and volumeUpsampleLayer
+      // its source texture — via ctx.renderTargets.viewOf(id).
+      renderTargets,
       texturedDisks: texturedDisksSubsystem,
-      // volumeUpsamplePass.draw reads ctx.volumeOffscreen.view to pass
-      // as the source texture to the upsample step.
-      volumeOffscreen: { view: {} as GPUTextureView },
     } as never;
 
     const settings = {
@@ -526,7 +537,7 @@ describe('renderFrame visual baseline', () => {
     // In FRAME-program order: the volume raymarch pass, the HDR mega-pass, the
     // hdr→swap composite pass, and the swap-chain overlay pass (marker-lines +
     // labels). Unlike the old inline path, the tone-map's beginRenderPass is
-    // NOT hidden inside postProcess.draw — the executor opens the composite
+    // NOT hidden inside a bespoke blit helper — the executor opens the composite
     // pass, so it appears here. Counts are asserted SEPARATELY from the inline
     // snapshot: drawSequence captures the renderer-dispatch invariant, these
     // counts capture the pass-boundary structure.

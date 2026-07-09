@@ -33,7 +33,7 @@
  *
  * ### Why the GPU handles ride along on the ready context
  *
- * `state.gpu.renderer`, `state.gpu.postProcess`, and
+ * `state.gpu.renderer`, `state.gpu.renderTargets`, and
  * `state.subsystems.thumbnails` are all part of the 5-way bootstrap
  * gate.  Once the gate passes, downstream code wants to use those
  * handles without re-checking they're non-null — but if we left them
@@ -51,8 +51,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { Vec3 } from '../../math/Vec3';
 import type { PointRenderer } from '../../rendering/PointRenderer';
-import type { PostProcess } from '../../rendering/PostProcess';
-import type { VolumeOffscreen } from '../../rendering/VolumeOffscreen';
+import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Slab } from './Slab';
@@ -100,15 +99,12 @@ export type ReadyFrameContext = {
    * "why these ride along" rationale.
    */
   renderer: PointRenderer;
-  postProcess: PostProcess;
   /**
-   * Half-resolution rgba16float intermediate render target.  Volume
-   * passes write into this target (at 1/4 the fragment count) and the
-   * `volumeUpsamplePass` bilinearly blends it into the HDR view.
-   * Forwarded here from `state.gpu.volumeOffscreen` — same reference,
-   * no allocation — so downstream passes can write
-   * `ctx.volumeOffscreen.view` without reaching back into `state`.
+   * The offscreen render-target table (`hdr`, `volume`, …).  Forwarded
+   * here from `state.gpu.renderTargets` — same reference, no allocation —
+   * so the executor's `viewFor` and any layer that samples an offscreen
+   * (`ctx.renderTargets.viewOf('volume')`) never reach back into `state`.
    */
-  volumeOffscreen: VolumeOffscreen;
+  renderTargets: RenderTargets;
   texturedDisks: TexturedDiskSubsystem;
 };

@@ -16,9 +16,8 @@ import type { EngineState } from './state/EngineState';
 import type { OrbitCamera } from '../camera/OrbitCamera';
 import type { PointRenderer } from '../rendering/PointRenderer';
 import type { PickRenderer } from '../rendering/PickRenderer';
-import type { PostProcess } from '../rendering/PostProcess';
 import type { Compositor } from '../rendering/Compositor';
-import type { VolumeOffscreen } from '../rendering/VolumeOffscreen';
+import type { RenderTargets } from '../rendering/RenderTargets';
 import type { TexturedDiskSubsystem } from './subsystems/TexturedDiskSubsystem';
 
 export type ReadyEngineState = EngineState & {
@@ -26,21 +25,19 @@ export type ReadyEngineState = EngineState & {
   gpu: EngineState['gpu'] & {
     renderer: PointRenderer;
     pickRenderer: PickRenderer;
-    postProcess: PostProcess;
     /**
-     * Non-null after bootstrap: minted in `initGpu` alongside `postProcess`
-     * (which is one of its callers). The FRAME program's `hdr→swap` composite
-     * calls `compositor.draw`, so the ready gate proves it non-null.
+     * Non-null after bootstrap: minted in `initGpu` alongside the render
+     * targets. The FRAME program's `hdr→swap` composite calls
+     * `compositor.draw`, so the ready gate proves it non-null.
      */
     compositor: Compositor;
     /**
-     * Non-null after bootstrap: `initGpu` allocates the half-res target
-     * in lockstep with `postProcess`, so both are non-null at the same
-     * moment.  The narrowing here lets `encodeVolumes` and
-     * `volumeUpsamplePass` read `state.gpu.volumeOffscreen.view` without
-     * a `!` assertion.
+     * Non-null after bootstrap: `initGpu` allocates every offscreen row
+     * (`hdr`, `volume`) in one construction.  The narrowing here lets the
+     * frame body read `state.gpu.renderTargets.viewOf(...)` without a `!`
+     * assertion.
      */
-    volumeOffscreen: VolumeOffscreen;
+    renderTargets: RenderTargets;
   };
   subsystems: EngineState['subsystems'] & {
     texturedDisks: TexturedDiskSubsystem;

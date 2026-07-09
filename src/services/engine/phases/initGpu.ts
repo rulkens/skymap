@@ -10,8 +10,8 @@
  *
  *   - `PointRenderer` — instanced billboards into the HDR offscreen
  *     target.  Stored on `state.gpu.renderer`.
- *   - `PostProcess` — combined HDR offscreen rgba16float texture + the
- *     tone-map pass that compresses linear-light into the swap chain.
+ *   - `RenderTargets` — the offscreen target table (full-res rgba16float
+ *     `hdr` + 1/3-scale `volume`) every content layer draws into.
  *   - `TexturedDiskRenderer`, `ProceduralDiskRenderer`,
  *     `MilkyWayCloudRenderer`, `FilamentRenderer`, … — thumbnail +
  *     overlay renderers that write into the same HDR target as the
@@ -44,9 +44,8 @@
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
-import { createPostProcess } from '../../gpu/passes/postProcess';
 import { createCompositor } from '../../gpu/passes/compositor';
-import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
+import { createRenderTargets } from '../../gpu/renderTargets';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
 import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
@@ -85,7 +84,7 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  * point-source slot wiring.
  *
  * Side effects on `state`:
- *   - writes `state.gpu.renderer`, `state.gpu.postProcess`,
+ *   - writes `state.gpu.renderer`, `state.gpu.renderTargets`,
  *     `state.gpu.filamentRenderer`, and every other renderer handle;
  *   - populates `state.assetSlots.points` via the registry loop.
  *
@@ -114,10 +113,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the pick pass (each at its own group slot). See EngineGpuHandles.
   state.gpu.focusUniform = createFocusUniformBuffer(device, state.gpu.focusBgl!);
 
-  // ── HDR offscreen target + compositor tone-map ─────────────────────
+  // ── Offscreen render-target table + compositor tone-map ────────────
   //
-  // Every visible draw pass (points, quads, disks) writes into a
-  // viewport-sized rgba16float texture instead of the swap chain.  The
+  // Every visible draw pass (points, quads, disks) writes into the
+  // viewport-sized rgba16float `hdr` row instead of the swap chain.  The
   // compositor's tone-map curve then samples the HDR target and writes
   // tone-mapped, compressed-into-[0,1] values into the swap chain.  This
   // eliminates the saturated-white blown-out cluster cores that pure
@@ -125,44 +124,25 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // runtime curve selector (Linear / Reinhard / Asinh / Gamma 2 / ACES —
   // see `data/toneMapCurve.ts`).
   //
-  // The HDR target is recreated on resize (in the frame loop's resize
-  // branch) so it always tracks the swap chain size 1:1 — that's also
-  // why the compositor's sampler uses 'nearest' for this composite (each
-  // fragment samples one texel).  The pick renderer's r32uint integer
-  // target is separate and never wants tone-mapping.
-  //
-  // `postProcess.ts` owns only the HDR target's lifetime and begins the
-  // swap-chain render pass each frame — it no longer builds a tone-map
-  // pipeline of its own.  Every offscreen→target merge, including this
-  // tone-mapped HDR→swap composite, is delegated to the shared
-  // `compositor` constructed below; that's why `postProcess` now takes a
-  // `compositor` handle instead of the swap-chain format directly.
+  // The offscreen rows are recreated on resize (one `renderTargets.resize`
+  // in the frame loop's resize branch) so the HDR row always tracks the
+  // swap chain size 1:1 — that's also why the compositor's sampler uses
+  // 'nearest' for the tone-map composite (each fragment samples one
+  // texel).  The 1/3-scale `volume` row rides in the same table; the pick
+  // renderer's r32uint integer target is separate for now and never wants
+  // tone-mapping.  See `renderTargets.ts` for the per-row rationale.
 
   // Unified compositor — one pipeline cache serves every offscreen→target
-  // merge the engine performs (tone-mapped HDR→swap below, plus the
-  // foreground-OVER and additive-field composites other passes will adopt).
-  // The blend→dstFormat table is baked in at construction, as data, rather
-  // than threaded per-draw, because a render-pass encoder cannot be queried
-  // for its own colour-attachment format — the caller has to hand it over
-  // up front. Constructed immediately before `postProcess` so the lexical
-  // order makes the dependency obvious: `postProcess` is about to become
-  // one of this compositor's callers.
+  // merge the engine performs (the FRAME program's tone-mapped hdr→swap
+  // composite, plus the foreground-OVER and additive-field composites other
+  // passes will adopt).  The blend→dstFormat table is baked in at
+  // construction, as data, rather than threaded per-draw, because a
+  // render-pass encoder cannot be queried for its own colour-attachment
+  // format — the caller has to hand it over up front.
   const compositor = createCompositor({ device, swapFormat: format, hdrFormat: 'rgba16float' });
   state.gpu.compositor = compositor;
 
-  const postProcess = createPostProcess({
-    device,
-    size: { width: canvas.width, height: canvas.height },
-    compositor,
-  });
-  // Mirror into engine state so `destroy()` can release the resources.
-  state.gpu.postProcess = postProcess;
-
-  // Half-res offscreen target for the scalar-volume pass, sized in
-  // lockstep with the HDR target.  Conceptually unrelated to postProcess
-  // (its only consumer is the volume upsample pass), but constructed and
-  // resized at the same sites.
-  state.gpu.volumeOffscreen = createVolumeOffscreen(device, {
+  state.gpu.renderTargets = createRenderTargets(device, format, {
     width: canvas.width,
     height: canvas.height,
   });
@@ -371,8 +351,8 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── Half-res-to-HDR volume upsample pass ──────────────────────────
   //
-  // Built unconditionally; the pipeline is cheap and the half-res target
-  // lives on `postProcess`, so nothing here depends on viewport size.
+  // Built unconditionally; the pipeline is cheap and the 1/3-scale target
+  // lives on `renderTargets`, so nothing here depends on viewport size.
   state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
 
   // ── Pick-buffer debug overlay ────────────────────────────────────

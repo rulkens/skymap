@@ -77,13 +77,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   const cam = makeCam();
   const vp = new Float32Array(16) as unknown as Mat4;
   const renderer = { draw: vi.fn() } as any;
-  const postProcess = {
-    view: {} as GPUTextureView,
-    draw: vi.fn(),
-    resize: vi.fn(),
-    destroy: vi.fn(),
-  } as any;
-  const volumeOffscreen = { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any;
+  const renderTargets = { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any;
   const texturedDisks = {
     runFrame: vi.fn(),
     lastOutput: { quads: [], disks: [] },
@@ -120,8 +114,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
       blend: 0,
     },
     renderer,
-    postProcess,
-    volumeOffscreen,
+    renderTargets,
     texturedDisks,
     ...overrides,
   };

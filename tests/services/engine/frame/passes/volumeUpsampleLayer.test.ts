@@ -15,18 +15,9 @@
  * already-rendered offscreen target, not a re-projected draw — so the
  * fixture below is an opaque placeholder.
  *
- * Two things that differ from the plan's code snippet (lines ~1211-1228
- * in the plan file):
- *
- *   1. The plan's `makeCtx` puts `halfResView` on `postProcess` — that
- *      was the pre-refactor shape.  The current `ReadyFrameContext` has a
- *      `volumeOffscreen: VolumeOffscreen` field at the top level; the
- *      implementation reads `ctx.volumeOffscreen.view`.  Our fixture
- *      reflects the live shape.
- *
- *   2. The draw assertion checks `drawSpy.mock.calls[0]![1]` equals
- *      `offscreenView` (the view on `ctx.volumeOffscreen`) — not anything
- *      on `postProcess`.
+ * The implementation reads `ctx.renderTargets.viewOf('volume')` — the
+ * half-res row of the offscreen target table — and the draw assertion
+ * checks `drawSpy.mock.calls[0]![1]` equals that view.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { volumeUpsampleLayer } from '../../../../../src/services/engine/frame/passes/volumeUpsampleLayer';
@@ -37,8 +28,8 @@ import type { Mat4 } from 'wgpu-matrix';
 
 /**
  * Build a minimal ReadyFrameContext.  The `offscreenView` parameter
- * becomes `ctx.volumeOffscreen.view` — the same value the layer reads when
- * calling `volumeUpsample.draw(pass, ctx.volumeOffscreen.view)`.
+ * becomes the target table's 'volume' row view — the same value the layer
+ * reads when calling `volumeUpsample.draw(pass, ctx.renderTargets.viewOf('volume'))`.
  */
 function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFrameContext {
   return {
@@ -60,13 +51,15 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       blend: 0,
     },
     renderer: {} as never,
-    postProcess: {
-      view: {} as GPUTextureView,
+    renderTargets: {
+      specs: [
+        { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
+        { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+      ],
+      viewOf: (id: string) => (id === 'volume' ? offscreenView : ({} as GPUTextureView)),
       resize: vi.fn(),
-      draw: vi.fn(),
       destroy: vi.fn(),
-    } as never,
-    volumeOffscreen: { view: offscreenView, resize: vi.fn(), destroy: vi.fn() },
+    },
     texturedDisks: {} as never,
   };
 }
@@ -153,7 +146,7 @@ describe('volumeUpsampleLayer.enabled', () => {
 // ---------------------------------------------------------------------------
 
 describe('volumeUpsampleLayer.draw', () => {
-  it('calls volumeUpsample.draw with the HDR pass and ctx.volumeOffscreen.view', () => {
+  it("calls volumeUpsample.draw with the HDR pass and the target table's volume view", () => {
     const offscreenView = {} as GPUTextureView;
     const drawSpy = vi.fn();
     const state = {

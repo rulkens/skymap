@@ -47,8 +47,7 @@ function makeCtx(): ReadyFrameContext {
       blend: 0,
     },
     renderer: {} as never,
-    postProcess: {} as never,
-    volumeOffscreen: {} as never,
+    renderTargets: {} as never,
     texturedDisks: {} as never,
   };
 }

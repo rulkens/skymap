@@ -58,6 +58,6 @@ export const volumeUpsampleLayer: ContentLayer = {
     // null-checking here too means future gate reorderings can't silently
     // skip the guard.  The cost is one reference read.
     if (state.gpu.volumeUpsample === null) return;
-    state.gpu.volumeUpsample.draw(pass, ctx.volumeOffscreen.view);
+    state.gpu.volumeUpsample.draw(pass, ctx.renderTargets.viewOf('volume'));
   },
 };

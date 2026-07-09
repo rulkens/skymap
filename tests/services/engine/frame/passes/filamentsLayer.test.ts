@@ -58,13 +58,7 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
       blend: focusBlend,
     },
     renderer: {} as never,
-    postProcess: {
-      view: {} as GPUTextureView,
-      resize: vi.fn(),
-      draw: vi.fn(),
-      destroy: vi.fn(),
-    } as never,
-    volumeOffscreen: { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as never,
+    renderTargets: {} as never,
     texturedDisks: {} as never,
   };
 }
@@ -100,7 +94,12 @@ describe('filamentsLayer.draw focus recession', () => {
   it('passes plain opacityOf at blend 0', () => {
     const drawSpy = vi.fn();
     const ctx = makeCtx(0);
-    filamentsLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1, {}, { draw: drawSpy }));
+    filamentsLayer.draw(
+      PASS_STUB,
+      slabViewOf(ctx, COSMO),
+      ctx,
+      makeState(1, {}, { draw: drawSpy }),
+    );
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Args: (pass, vp, viewport, halfwidth, intensity, opacity).
     expect(drawSpy.mock.calls[0]![5]).toBe(1);
@@ -109,7 +108,12 @@ describe('filamentsLayer.draw focus recession', () => {
   it('passes opacityOf × FILAMENT_RECESSION at blend 1', () => {
     const drawSpy = vi.fn();
     const ctx = makeCtx(1);
-    filamentsLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1, {}, { draw: drawSpy }));
+    filamentsLayer.draw(
+      PASS_STUB,
+      slabViewOf(ctx, COSMO),
+      ctx,
+      makeState(1, {}, { draw: drawSpy }),
+    );
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect(drawSpy.mock.calls[0]![5]).toBeCloseTo(FILAMENT_RECESSION, 6);
   });
@@ -128,8 +132,6 @@ describe('filamentsLayer.draw renderer-null guard', () => {
   it('skips drawing when state.gpu.filamentRenderer is null even if enabled', () => {
     const state = makeState(1, { enabled: true }, null);
     const ctx = makeCtx(0);
-    expect(() =>
-      filamentsLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state),
-    ).not.toThrow();
+    expect(() => filamentsLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state)).not.toThrow();
   });
 });

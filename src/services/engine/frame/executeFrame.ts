@@ -58,6 +58,7 @@ import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import { slabViewOf } from './slabs';
 import { encodeFlowCompute } from './encodeFlowCompute';
+import { TARGET_CLEAR_VALUES } from '../../gpu/renderTargets';
 
 /**
  * COMPUTE — the name→fn table a `'compute'` step dispatches through. One row
@@ -73,31 +74,16 @@ const COMPUTE: Record<
   flow: (encoder, _ctx, state) => encodeFlowCompute(encoder, state),
 };
 
-// ── Transitional target tables ──────────────────────────────────────────────
-//
-// The clear-value record and the `viewFor` mini-table below are module-internal
-// transitional data: Task 9 repoints both at the render-target registry (a
-// `RenderTargetSpec` table keyed by target id). Until then they encode the
-// plan-time decision-2 clear values and the swap-vs-offscreen view resolution
-// inline. Clear values: `hdr` and `swap` clear opaque black (a=1); `volume`
-// clears to a=0 so the half-res additive raymarch starts from zero coverage.
-const CLEAR_VALUES: Record<string, GPUColor> = {
-  hdr: { r: 0, g: 0, b: 0, a: 1 },
-  volume: { r: 0, g: 0, b: 0, a: 0 },
-  swap: { r: 0, g: 0, b: 0, a: 1 },
-};
-
 /**
  * Resolve a render-target id to its texture view. The swap-vs-offscreen branch
  * is essential — the swap chain is an acquired view (`args.swapView`), not an
- * allocated texture like the HDR / volume offscreens — so it stays confined to
- * this one site.
+ * allocated texture like the offscreen rows — so it stays confined to this one
+ * site: every other id resolves through the render-target table, which throws
+ * for ids it never allocated.
  */
 function viewFor(id: string, ctx: ReadyFrameContext, swapView: GPUTextureView): GPUTextureView {
   if (id === 'swap') return swapView;
-  if (id === 'hdr') return ctx.postProcess.view;
-  if (id === 'volume') return ctx.volumeOffscreen.view;
-  throw new Error(`executeFrame: no view for target '${id}'`);
+  return ctx.renderTargets.viewOf(id);
 }
 
 /** Build a colour attachment that clears (first touch) or loads (later). */
@@ -107,7 +93,7 @@ function colorAttachment(
   touched: boolean,
 ): GPURenderPassColorAttachment {
   if (touched) return { view, loadOp: 'load', storeOp: 'store' };
-  const clearValue = CLEAR_VALUES[target];
+  const clearValue = TARGET_CLEAR_VALUES[target];
   if (!clearValue) {
     throw new Error(`executeFrame: no clear value for target '${target}'`);
   }
@@ -187,11 +173,11 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           ],
           ...timestampSpread(timing, `${source}→${dest}`),
         });
-        // The compositor is minted in the same bootstrap phase as postProcess,
-        // and the executor only runs past that gate (Task 7 wires it in behind
-        // the ready-context check) — so a null here is a wiring bug, not a
-        // frame-skippable condition. Fail loudly rather than silently dropping
-        // the composite (which would present an unmerged frame).
+        // The compositor is minted in the same bootstrap phase as the render
+        // targets, and the executor only runs past the ready-context gate —
+        // so a null here is a wiring bug, not a frame-skippable condition.
+        // Fail loudly rather than silently dropping the composite (which
+        // would present an unmerged frame).
         const compositor = state.gpu.compositor;
         if (!compositor) {
           throw new Error('executeFrame: compositor missing for composite step');

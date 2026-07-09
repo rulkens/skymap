@@ -124,7 +124,7 @@ function makeState(): EngineState {
     gpu: {
       renderer: null,
       pickRenderer: null,
-      postProcess: null,
+      renderTargets: null,
       filamentRenderer: null,
     },
     subsystems: {

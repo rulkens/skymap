@@ -15,7 +15,6 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { scalarVolumeLayer } from '../../../../../src/services/engine/frame/passes/scalarVolumeLayer';
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
-import { VOLUME_RENDER_SCALE_DIVISOR } from '../../../../../src/services/gpu/passes/volumeOffscreen';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -27,6 +26,10 @@ const PASS_STUB = {
   draw: vi.fn(),
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
+
+// The layer reads the downsample divisor off the 'volume' spec row — the
+// fixture mirrors the production table's scale: 3.
+const VOLUME_SCALE = 3;
 
 function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   const vp = new Float32Array(16) as unknown as Mat4;
@@ -57,8 +60,15 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
       blend: 0,
     },
     renderer: {} as never,
-    postProcess: { view: {} as GPUTextureView } as never,
-    volumeOffscreen: { view: {} as GPUTextureView } as never,
+    renderTargets: {
+      specs: [
+        { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
+        { id: 'volume', format: 'rgba16float', depth: null, scale: VOLUME_SCALE },
+      ],
+      viewOf: () => ({}) as GPUTextureView,
+      resize: vi.fn(),
+      destroy: vi.fn(),
+    } as never,
     texturedDisks: {} as never,
     ...over,
   } as unknown as ReadyFrameContext;
@@ -125,10 +135,7 @@ describe('scalarVolumeLayer.draw', () => {
     expect(args[1]).toBe(view.vp);
     // Downsampled viewport — matches the actual fragment count so the
     // raymarch's jitter dither frequency stays stable.
-    expect(args[2]).toEqual([
-      Math.floor(1280 / VOLUME_RENDER_SCALE_DIVISOR),
-      Math.floor(720 / VOLUME_RENDER_SCALE_DIVISOR),
-    ]);
+    expect(args[2]).toEqual([Math.floor(1280 / VOLUME_SCALE), Math.floor(720 / VOLUME_SCALE)]);
     expect(args[3]).toEqual(view.camPos);
   });
 

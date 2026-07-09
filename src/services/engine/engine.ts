@@ -138,8 +138,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //   - `sources`    → loaded `GalaxyCatalog`s + visibility bitmasks + tier
   //                    + optional famous-galaxy sidecars.
   //   - `picking`    → hover / click / drag mutables.
-  //   - `gpu`        → renderers / HDR target / tone-map pass — null until
-  //                    `initGpu` finishes.
+  //   - `gpu`        → renderers / offscreen render-target table /
+  //                    compositor — null until `initGpu` finishes.
   //   - `subsystems` → long-lived helpers; some construct up-front, the rest
   //                    land later.
   //   - `cam`        → orbit camera, null until the first cloud loads.
@@ -257,9 +257,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       sourceBgl: null,
       focusBgl: null,
       focusUniform: null,
-      postProcess: null,
+      renderTargets: null,
       compositor: null,
-      volumeOffscreen: null,
       filamentRenderer: null,
       // labelRenderer + markerLineRenderer: null until initGpu finishes the
       // font-atlas fetch.  Excluded from isEngineReady (optional async
@@ -648,12 +647,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.pickRenderer = null;
     state.gpu.milkyWayPickRenderer?.destroy();
     state.gpu.milkyWayPickRenderer = null;
-    state.gpu.postProcess?.destroy();
-    state.gpu.postProcess = null;
+    state.gpu.renderTargets?.destroy();
+    state.gpu.renderTargets = null;
     state.gpu.compositor?.destroy();
     state.gpu.compositor = null;
-    state.gpu.volumeOffscreen?.destroy();
-    state.gpu.volumeOffscreen = null;
     state.gpu.filamentRenderer?.destroy();
     state.gpu.filamentRenderer = null;
     state.gpu.labelRenderer?.destroy();

@@ -40,8 +40,7 @@
  */
 
 import type { PointRenderer } from '../../rendering/PointRenderer';
-import type { PostProcess } from '../../rendering/PostProcess';
-import type { VolumeOffscreen } from '../../rendering/VolumeOffscreen';
+import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { PickRenderer } from '../../rendering/PickRenderer';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
@@ -113,17 +112,18 @@ export type EngineGpuHandles = {
    */
   focusUniform: FocusUniformBuffer | null;
   /**
-   * Combined HDR offscreen target + tone-map post-process.  One field
-   * because their lifetimes are identical and they're always used
-   * together (HDR pass writes the texture, post-process samples it).
-   * See `services/gpu/postProcess.ts` for the rationale.
+   * The offscreen render-target table — one owner for every offscreen
+   * row's (`hdr`, `volume`, …) texture lifecycle, resized as a unit on
+   * canvas resize.  See `services/gpu/renderTargets.ts` for the target
+   * table + the per-row rationale (why the HDR offscreen exists, why the
+   * volume row renders at 1/3 scale).
    */
-  postProcess: PostProcess | null;
+  renderTargets: RenderTargets | null;
   /**
    * Unified 'merge offscreen texture into target' primitive — the single
    * pipeline cache every composite draw (tone-mapped HDR→swap, foreground
    * OVER, additive field→HDR) shares. Constructed once in `initGpu`
-   * immediately before `postProcess`; the blend→dstFormat mapping baked in
+   * alongside the render targets; the blend→dstFormat mapping baked in
    * at construction is a constructor argument rather than a per-draw one
    * because a render-pass encoder cannot be queried for its own colour-
    * attachment format. Null until `initGpu` resolves; released and
@@ -131,17 +131,6 @@ export type EngineGpuHandles = {
    * cached pipelines' uniform buffers.
    */
   compositor: Compositor | null;
-  /**
-   * Half-resolution intermediate render target consumed by the scalar-
-   * volume pass.  Volume fields raymarch into this target at 1/4 the
-   * fragment count (floor(canvas/2) on each axis), then the upsample
-   * pass bilinearly samples it and additively blends into the HDR
-   * target.  Resized in lockstep with `postProcess`, but kept as a
-   * separate module because conceptually it has nothing to do with
-   * the tone-map (postProcess only ever reads the HDR view).  See
-   * `services/gpu/passes/volumeOffscreen.ts` for the full rationale.
-   */
-  volumeOffscreen: VolumeOffscreen | null;
   /**
    * Cosmic-web filament-skeleton renderer.  Constructed unconditionally
    * during GPU init (the pipeline is cheap), stays empty-segment until

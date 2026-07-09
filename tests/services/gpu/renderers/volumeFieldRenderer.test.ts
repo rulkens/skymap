@@ -29,8 +29,8 @@ function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
  * `device.queue.writeBuffer` / `device.queue.writeTexture` mock calls
  * — the uniform scratch the renderer packs per field, and the palette
  * LUT re-uploads it issues when `settingsOf` returns a changed
- * `paletteId`.  Modelled after the mock in
- * `tests/services/gpu/passes/postProcess.test.ts`.
+ * `paletteId`.  Modelled after the mock-device pattern in
+ * `tests/services/gpu/renderTargets.test.ts`.
  */
 function mockDevice(): GPUDevice {
   const makeTexture = () => ({

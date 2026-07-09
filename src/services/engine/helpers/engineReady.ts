@@ -58,7 +58,7 @@
  * Unlike `filamentRenderer`, `pickRenderer`'s lifecycle matches the
  * other gate-included handles: it's constructed in `phases/wireInput.ts`
  * during the bootstrap IIFE and torn down in `destroy()` alongside
- * `renderer`, `postProcess`, `volumeOffscreen`, and `texturedDisks`.
+ * `renderer`, `renderTargets`, and `texturedDisks`.
  * Either all gate-included handles are present or none are — there is
  * no "engine ran but pickRenderer isn't built" state by design.
  * Including it here lets the per-frame pick branch drop its
@@ -120,24 +120,21 @@ export function isEngineReady(state: EngineState): state is ReadyEngineState {
     state.cam !== null &&
     state.gpu.renderer !== null &&
     state.gpu.pickRenderer !== null &&
-    state.gpu.postProcess !== null &&
-    // `compositor` shares the bootstrap lifecycle of `postProcess`: both are
-    // minted in `initGpu` (the compositor immediately before, since postProcess
-    // is one of its callers) and torn down in `destroy()`. The FRAME program's
-    // `hdr→swap` composite step calls `state.gpu.compositor.draw`, so the frame
-    // must not run until the compositor exists — including it here means
-    // `deriveFrameContext`'s ready gate covers it, and `executeFrame`'s null
-    // guard becomes a wiring-bug backstop rather than a per-frame concern.
+    // `renderTargets` owns every offscreen row (`hdr`, `volume`) the frame
+    // draws into — allocated in `initGpu`, torn down in `destroy()`. The
+    // engine is never "ready" without it: every render step's `viewFor`
+    // resolution would throw. One check replaces the pre-table pair of
+    // per-target handle checks (`postProcess` + `volumeOffscreen`), which
+    // always flipped together anyway.
+    state.gpu.renderTargets !== null &&
+    // `compositor` shares the bootstrap lifecycle of `renderTargets`: both
+    // are minted in `initGpu` and torn down in `destroy()`. The FRAME
+    // program's `hdr→swap` composite step calls `state.gpu.compositor.draw`,
+    // so the frame must not run until the compositor exists — including it
+    // here means `deriveFrameContext`'s ready gate covers it, and
+    // `executeFrame`'s null guard becomes a wiring-bug backstop rather than
+    // a per-frame concern.
     state.gpu.compositor !== null &&
-    // `volumeOffscreen` shares the bootstrap lifecycle of `postProcess`:
-    // both are allocated in `initGpu` and torn down in `destroy()`.
-    // Adding it here ensures `encodeVolumes` and `volumeUpsamplePass`
-    // can read `state.gpu.volumeOffscreen.view` without `!` after this
-    // guard passes.  The "why not filamentRenderer?" rationale in the
-    // module header applies equally here in the *other* direction — we
-    // include it because it is never null when the engine is ready, not
-    // because it's an optional resource.
-    state.gpu.volumeOffscreen !== null &&
     state.subsystems.texturedDisks !== null
   );
 }

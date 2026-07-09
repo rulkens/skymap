@@ -7,14 +7,12 @@
  * Coverage focus:
  *   - encoder lifecycle: createCommandEncoder + finish + submit happen
  *     exactly once each, in the right order
- *   - HDR render-pass colour attachment uses the postProcess aggregate's
- *     `view` (HDR offscreen texture)
+ *   - HDR render-pass colour attachment uses the render-target table's
+ *     `viewOf('hdr')` (HDR offscreen texture)
  *   - pointRenderer.draw is called with the canonical settings record
  *     (selectedIndex sentinel translation included)
- *   - postProcess.draw is called after pass.end with the correct
- *     exposure + curve uniforms
- *   - the swap-chain view is acquired AFTER pass.end (i.e. when the
- *     tone-map pass needs it), not at frame start
+ *   - the hdr→swap composite runs after pass.end with the correct
+ *     exposure + curve tone
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -38,7 +36,7 @@ import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 /**
  * Tracks the chronological order of every interesting call so we can
  * assert ordering relationships (e.g. `pointRenderer.draw` came before
- * `pass.end`, which came before `postProcess.draw`).  The encoder, the
+ * `pass.end`, which came before `compositor.draw`).  The encoder, the
  * pass, and every renderer hand the same array back through their
  * `vi.fn()` impls.
  */
@@ -117,18 +115,24 @@ function makeFakeHdrView(): GPUTextureView {
 }
 
 /**
- * Mock the combined HDR-target + tone-map aggregate. The real
- * `PostProcess` exposes `view`, `resize`, `draw`, and `destroy`. We need
- * a stable view + a spy `draw` that logs into the call log; resize and
- * destroy stay no-op spies to satisfy the type.
+ * Mock the offscreen render-target table. Executor + layers resolve views
+ * via `viewOf(id)`; the backing `views` record is handed in by reference so
+ * a test can swap a row's view (e.g. the volume half-res view) after fixture
+ * construction.
  */
-function makeMockPostProcess(callLog: CallLog, hdrView: GPUTextureView) {
+function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
   return {
-    view: hdrView,
+    specs: [
+      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
+      { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+      { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
+    ],
+    viewOf: (id: string) => {
+      const view = views[id];
+      if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
+      return view;
+    },
     resize: vi.fn(),
-    draw: vi.fn(() => {
-      callLog.push('postProcess.draw');
-    }),
     destroy: vi.fn(),
   } as any;
 }
@@ -136,7 +140,7 @@ function makeMockPostProcess(callLog: CallLog, hdrView: GPUTextureView) {
 /**
  * Mock the unified Compositor. The FRAME program's `hdr→swap` step calls
  * `compositor.draw(pass, srcView, blend, tone)` to tone-map the HDR target onto
- * the swap chain — replacing the old `postProcess.draw` blit.
+ * the swap chain.
  */
 function makeMockCompositor(callLog: CallLog) {
   return {
@@ -261,12 +265,16 @@ function makeInput(
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
   const milkyWayCloud = makeMockMilkyWayCloud();
   const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
-  const postProcess = makeMockPostProcess(callLog, hdrTargetView);
   const compositor = makeMockCompositor(callLog);
-  // Minimal VolumeOffscreen stub — renderFrame's existing tests don't
-  // exercise the volume pass (volumesEnabled is false by default in
-  // makeSettings), so a no-op view is sufficient for fixture satisfaction.
-  const volumeOffscreen = { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any;
+  // The render-target table backing views. The volume row's default view is
+  // an inert stub — renderFrame's baseline tests don't exercise the volume
+  // pass (volumesEnabled is false by default); the volume-ordering test
+  // swaps in its own half-res view via this record.
+  const renderTargetViews: Record<string, GPUTextureView> = {
+    hdr: hdrTargetView,
+    volume: {} as GPUTextureView,
+  };
+  const renderTargets = makeMockRenderTargets(renderTargetViews);
   const thumbnails = makeMockThumbnails(callLog);
   const texturedQuadRenderer = makeMockTexturedQuadRenderer();
   const texturedDiskRenderer = makeMockTexturedDiskRenderer();
@@ -337,8 +345,7 @@ function makeInput(
       blend: 0,
     },
     renderer: pointRenderer,
-    postProcess,
-    volumeOffscreen,
+    renderTargets,
     texturedDisks: thumbnails,
   };
 
@@ -349,7 +356,8 @@ function makeInput(
     context,
     swapView,
     hdrTargetView,
-    postProcess,
+    renderTargetViews,
+    renderTargets,
     compositor,
     pointRenderer,
     milkyWayCloudRenderer,
@@ -486,11 +494,11 @@ describe('renderFrame', () => {
     expect(submitted[0]).toBe((fx.env.finish.mock.results[0] as any).value);
   });
 
-  it("begins the HDR render pass with the postProcess aggregate's view as the colour attachment", () => {
+  it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
     // No-timing path → 'merged' strategy: the HDR render step opens ONE
     // `beginRenderPass(loadOp: 'clear')` holding every enabled HDR draw, then
     // the hdr→swap composite opens a SECOND pass against the swap chain. So two
-    // begins total; the FIRST is the HDR pass this test pins (postProcess view,
+    // begins total; the FIRST is the HDR pass this test pins (viewOf('hdr'),
     // clear, a=1).
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
@@ -567,18 +575,16 @@ describe('renderFrame', () => {
   // `passes/<name>Layer.test.ts` files.
 
   it("runs the hdr→swap composite after the HDR pass with blend 'replace' and the settings tone", () => {
-    // The tone-map is now the FRAME program's single composite step: the
+    // The tone-map is the FRAME program's single composite step: the
     // Compositor merges the HDR target onto the swap chain. It draws INSIDE its
     // own render pass (opened by the executor against the swap view), after the
-    // HDR pass ends — so the log has compositor.draw after pass.end, and
-    // postProcess.draw no longer fires.
+    // HDR pass ends — so the log has compositor.draw after pass.end.
     renderFrame(fx.input);
     const log = fx.callLog;
     const idxEnd = log.indexOf('pass.end');
     const idxComposite = log.indexOf('compositor.draw');
     expect(idxEnd).toBeGreaterThanOrEqual(0);
     expect(idxComposite).toBeGreaterThan(idxEnd);
-    expect(fx.postProcess.draw).not.toHaveBeenCalled();
 
     // Compositor.draw(pass, srcView, blend, tone): the src is the HDR target
     // view, the blend is 'replace', and the tone carries the settings exposure +
@@ -652,13 +658,10 @@ describe('renderFrame', () => {
     // null so the upsample layer draws nothing; this test pins the volume pass
     // ordering. Its enabled() still tracks the SAME liveness (no desync).
     (fx2.input.state as any).gpu.volumeUpsample = null;
-    // The volume offscreen view comes off ctx.volumeOffscreen.view.
+    // The volume offscreen view comes off ctx.renderTargets.viewOf('volume');
+    // swap the backing record's row so the mock table serves it.
     const halfResView = { __id: 'half-res' } as unknown as GPUTextureView;
-    (fx2.input.ctx as any).volumeOffscreen = {
-      view: halfResView,
-      resize: () => {},
-      destroy: () => {},
-    };
+    fx2.renderTargetViews.volume = halfResView;
 
     renderFrame(fx2.input);
 

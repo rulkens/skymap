@@ -121,10 +121,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Resize → projection Resource ─────────────────────────────────────────
   //
   // `resizeCanvasToDisplay` returns `true` only when dimensions changed, so we
-  // patch `cameraRuntime.projection.aspect` + the HDR/volume targets only in
-  // that branch. The HDR texture is sized 1:1 with the swap chain, so a stale
+  // patch `cameraRuntime.projection.aspect` + the offscreen target table only
+  // in that branch. The HDR row is sized 1:1 with the swap chain, so a stale
   // target after resize would smear pixels or render off-canvas; the tone-map
-  // pass rebuilds its bind group each frame so it picks up the new view.
+  // composite rebuilds its bind group each frame so it picks up the new view.
+  // One `renderTargets.resize` reallocates every offscreen row at its own
+  // size/scale — the frame body never enumerates targets by hand.
   //
   // Aspect lives on `projection` (the engine Resource), NOT on `state.cam`.
   // `state.cam` is the drag register; its `aspect` field is set at bootstrap
@@ -135,11 +137,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // cloud lands) — `projection` is always non-null, so no guard is needed.
   if (resizeCanvasToDisplay(deps.canvas)) {
     state.cameraRuntime.projection.aspect = deps.canvas.width / deps.canvas.height;
-    state.gpu.postProcess?.resize({ width: deps.canvas.width, height: deps.canvas.height });
-    state.gpu.volumeOffscreen?.resize({
-      width: deps.canvas.width,
-      height: deps.canvas.height,
-    });
+    state.gpu.renderTargets?.resize({ width: deps.canvas.width, height: deps.canvas.height });
   }
 
   // ── Camera produce → commit-on-edge ──────────────────────────────────────
@@ -374,10 +372,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── GPU dispatch ──────────────────────────────────────────────────────────
   //
-  // The whole encoder lifecycle (createCommandEncoder, beginRenderPass against
-  // the HDR target, the draws, postProcess.draw, queue.submit) lives in
-  // `renderFrame.ts`; every value it reads is forwarded as a field on
-  // `RenderFrameInput` so this site stays free of GPU bookkeeping.
+  // The whole encoder lifecycle (createCommandEncoder, the FRAME program's
+  // render/composite steps, queue.submit) lives in `renderFrame.ts`; every
+  // value it reads is forwarded as a field on `RenderFrameInput` so this
+  // site stays free of GPU bookkeeping.
   renderFrame({
     ctx,
     state,

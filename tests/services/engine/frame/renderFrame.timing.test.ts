@@ -126,11 +126,23 @@ function makeLoggingRenderer() {
   return { draw: vi.fn(), render: vi.fn() };
 }
 
-function makePostProcess() {
+/**
+ * Mock the offscreen render-target table. The backing `views` record is
+ * shared by reference so a test can swap the volume row's view.
+ */
+function makeRenderTargets(views: Record<string, GPUTextureView>) {
   return {
-    view: { __id: 'hdr-view' } as unknown as GPUTextureView,
+    specs: [
+      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
+      { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+      { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
+    ],
+    viewOf: (id: string) => {
+      const view = views[id];
+      if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
+      return view;
+    },
     resize: vi.fn(),
-    draw: vi.fn(),
     destroy: vi.fn(),
   };
 }
@@ -173,7 +185,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   beginCalls: Beg[];
   encoder: GPUCommandEncoder;
   device: GPUDevice;
-  postProcessDraw: ReturnType<typeof vi.fn>;
+  renderTargetViews: Record<string, GPUTextureView>;
 } {
   const env = makeEncoderEnv();
   const device = makeFakeDevice(env.encoder);
@@ -183,7 +195,11 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
-  const postProcess = makePostProcess();
+  const renderTargetViews: Record<string, GPUTextureView> = {
+    hdr: { __id: 'hdr-view' } as unknown as GPUTextureView,
+    volume: { __id: 'volume-view' } as unknown as GPUTextureView,
+  };
+  const renderTargets = makeRenderTargets(renderTargetViews);
 
   const cam = makeCam();
   const canvasWidth = 1280;
@@ -214,7 +230,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     nowMs: 0,
     fovYRad: FIXTURE_FOV_Y_RAD,
     renderer: pointRenderer,
-    postProcess,
+    renderTargets,
     // texturedDisks slot is referenced from frameContext shape;
     // we'll null the matching subsystem on `state` so the pass skips.
     texturedDisks: null,
@@ -320,7 +336,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     beginCalls: env.beginCalls,
     encoder: env.encoder,
     device,
-    postProcessDraw: postProcess.draw,
+    renderTargetViews,
   };
 }
 
@@ -355,7 +371,7 @@ describe('renderFrame — timing service hookup', () => {
     // layer's pass carries the clear AND its own descriptor (no dedicated
     // clear pass in the unified path), so all three begins are tagged. The
     // composite's beginRenderPass is opened by the executor (against the swap
-    // view), so — unlike the old postProcess.draw blit — it DOES appear here.
+    // view), so — unlike the old inline tone-map blit — it DOES appear here.
     expect(beginCalls).toHaveLength(3);
     const stubSlots = beginCalls.map((b) => {
       const tw = (
@@ -397,7 +413,7 @@ describe('renderFrame — timing service hookup', () => {
 
   it('bills the volume raymarch pass against the scalar-volume slot when timings are active', () => {
     const { svc, descriptorFor } = makeFakeTimingService();
-    const { input, beginCalls } = makeMinimalInputWithTiming(svc);
+    const { input, beginCalls, renderTargetViews } = makeMinimalInputWithTiming(svc);
 
     // Force volumes on with an active volumeFieldRenderer. The scalar-volume
     // layer gates on `deriveVolumeLiveness`, which reads the renderer straight
@@ -409,9 +425,10 @@ describe('renderFrame — timing service hookup', () => {
       hasActiveFields: () => true,
       listIds: () => [],
     };
-    // The volume render step reads ctx.volumeOffscreen.view for its attachment.
+    // The volume render step resolves its attachment via
+    // ctx.renderTargets.viewOf('volume'); swap the backing row.
     const halfView = { __id: 'half' } as unknown as GPUTextureView;
-    (input.ctx as any).volumeOffscreen = { view: halfView, resize: vi.fn(), destroy: vi.fn() };
+    renderTargetViews.volume = halfView;
     // volume-upsample draw self-guards on a null volumeUpsample; null it so the
     // upsample layer draws nothing (its enabled() still tracks the same gate).
     (input.state as any).gpu.volumeUpsample = null;

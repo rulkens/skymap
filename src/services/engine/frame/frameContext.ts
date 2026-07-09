@@ -56,7 +56,7 @@
  *
  * ### Why the GPU handles ride along on the ready context
  *
- * `state.gpu.renderer`, `state.gpu.postProcess`, and `state.subsystems.thumbnails`
+ * `state.gpu.renderer`, `state.gpu.renderTargets`, and `state.subsystems.thumbnails`
  * are all part of the 5-way bootstrap gate. Once the gate passes, downstream
  * code wants to use those handles without re-checking they're non-null — but if
  * we left them on `state.gpu.*` and `state.subsystems.*`, every consumer would
@@ -134,8 +134,7 @@ export function deriveFrameContext(
     return { isReady: false };
   }
   const renderer = state.gpu.renderer;
-  const postProcess = state.gpu.postProcess;
-  const volumeOffscreen = state.gpu.volumeOffscreen;
+  const renderTargets = state.gpu.renderTargets;
   const texturedDisks = state.subsystems.texturedDisks;
 
   // Assemble the full OrbitCamera from the already-produced store pose and the
@@ -187,8 +186,7 @@ export function deriveFrameContext(
     visibleSourceMask,
     focus: ZERO_FOCUS,
     renderer,
-    postProcess,
-    volumeOffscreen,
+    renderTargets,
     texturedDisks,
   };
 }
