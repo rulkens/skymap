@@ -188,12 +188,12 @@ upload + the three overrides + `@group(0)/(1)/(3)` binds + the per-source loop
 `pick()`/`renderForDebug()` keep working by calling `drawPoints` then the
 fold-ins, so the app is unbroken until Task 10's cutover.
 
-- [ ] New tests:
+- [x] New tests:
   - `drawPoints applies the three pick overrides to its own buffer` — port the assertion style of the existing `DECOUPLING REGRESSION` test (`pickRenderer.test.ts:180`).
   - `drawPoints uploads the camera uniform and binds @group(0) even with zero sources` — the load-bearing prefix contract for the ring/MW pick pipelines (see Investigation).
-- [ ] Implement; existing `pickRenderer.test.ts` / `.structure` / `.diskPick` suites stay green unchanged.
-- [ ] `npm test -- pickRenderer` → green; `npm run typecheck` → clean.
-- [ ] Commit the touched paths.
+- [x] Implement; existing `pickRenderer.test.ts` / `.structure` / `.diskPick` suites stay green unchanged.
+- [x] `npm test -- pickRenderer` → green; `npm run typecheck` → clean.
+- [x] Commit the touched paths.
 
 ### Task 7: `pickDisks` takes the camera as arguments
 

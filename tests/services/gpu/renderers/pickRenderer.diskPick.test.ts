@@ -18,6 +18,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 import { createProceduralDiskRenderer } from '../../../../src/services/gpu/renderers/proceduralDiskRenderer';
 import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/ProceduralDiskInstance';
+import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // ── 1. Signature pin ────────────────────────────────────────────────────────
 
@@ -83,6 +85,21 @@ function makeStubPass() {
 
 const FOCUS_BG = {} as unknown as GPUBindGroup;
 
+// Camera arguments pickDisks now takes directly (no cached frame value):
+// viewProj / viewport / camPosWorld / pxPerRad / focusBindGroup. The pick
+// pass reads these from the ARGUMENTS, so the caller supplies them per call.
+const PICK_CAMERA: {
+  viewProj: Float32Array;
+  viewport: Vec2;
+  camPos: Vec3;
+  pxPerRad: number;
+} = {
+  viewProj: new Float32Array(16),
+  viewport: [800, 600],
+  camPos: [0, 0, 0],
+  pxPerRad: 100,
+};
+
 function fakeInstance(overrides: Partial<ProceduralDiskInstance> = {}): ProceduralDiskInstance {
   return {
     x: 1,
@@ -114,7 +131,14 @@ describe('proceduralDiskRenderer.pickDisks', () => {
     renderer.draw(visPass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BG, instances);
 
     const pickPass = makeStubPass();
-    renderer.pickDisks(pickPass);
+    renderer.pickDisks(
+      pickPass,
+      PICK_CAMERA.viewProj,
+      PICK_CAMERA.viewport,
+      PICK_CAMERA.camPos,
+      PICK_CAMERA.pxPerRad,
+      FOCUS_BG,
+    );
 
     // Must have set the pick pipeline.
     expect(pickPass.setPipeline).toHaveBeenCalledTimes(1);
@@ -127,7 +151,14 @@ describe('proceduralDiskRenderer.pickDisks', () => {
     const renderer = createProceduralDiskRenderer(init);
 
     const pickPass = makeStubPass();
-    renderer.pickDisks(pickPass);
+    renderer.pickDisks(
+      pickPass,
+      PICK_CAMERA.viewProj,
+      PICK_CAMERA.viewport,
+      PICK_CAMERA.camPos,
+      PICK_CAMERA.pxPerRad,
+      FOCUS_BG,
+    );
 
     // Nothing should have been called — lastPickInstanceCount is 0.
     expect(pickPass.setPipeline).not.toHaveBeenCalled();
@@ -150,14 +181,28 @@ describe('proceduralDiskRenderer.pickDisks', () => {
     ];
     renderer.draw(visPass1, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BG, instances);
     const pickPass1 = makeStubPass();
-    renderer.pickDisks(pickPass1);
+    renderer.pickDisks(
+      pickPass1,
+      PICK_CAMERA.viewProj,
+      PICK_CAMERA.viewport,
+      PICK_CAMERA.camPos,
+      PICK_CAMERA.pxPerRad,
+      FOCUS_BG,
+    );
     expect(pickPass1.draw).toHaveBeenCalledWith(6, 3); // sanity
 
     // Second draw: empty. pickDisks on a fresh pass must be a no-op.
     const visPass2 = makeStubPass();
     renderer.draw(visPass2, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BG, []);
     const pickPass2 = makeStubPass();
-    renderer.pickDisks(pickPass2);
+    renderer.pickDisks(
+      pickPass2,
+      PICK_CAMERA.viewProj,
+      PICK_CAMERA.viewport,
+      PICK_CAMERA.camPos,
+      PICK_CAMERA.pxPerRad,
+      FOCUS_BG,
+    );
     expect(pickPass2.setPipeline).not.toHaveBeenCalled();
     expect(pickPass2.draw).not.toHaveBeenCalled();
   });

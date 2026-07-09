@@ -9,6 +9,7 @@ import {
 import { SELECTION_NONE_SENTINEL } from '../../../../src/data/selectionEncoding';
 import { Source } from '../../../../src/data/sources';
 import type { MilkyWayPickRenderer } from '../../../../src/@types/rendering/MilkyWayPickRenderer';
+import type { ProceduralDiskRenderer } from '../../../../src/@types/rendering/ProceduralDiskRenderer';
 
 beforeAll(() => {
   // GPUBufferUsage / GPUShaderStage / GPUTextureUsage come from the
@@ -675,7 +676,7 @@ describe('createPickRenderer', () => {
     const mwPick = makeMilkyWayPickRenderer();
     mwPick.pickMilkyWay.mockImplementation(() => callLog.push('pickMilkyWay'));
     const diskRenderer = {
-      pickDisks: vi.fn<(pass: GPURenderPassEncoder) => void>(() => callLog.push('pickDisks')),
+      pickDisks: vi.fn<ProceduralDiskRenderer['pickDisks']>(() => callLog.push('pickDisks')),
     };
     const pickRenderer = createPickRenderer(
       device,

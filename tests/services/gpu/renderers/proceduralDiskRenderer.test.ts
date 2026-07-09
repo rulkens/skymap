@@ -157,6 +157,56 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
   });
 });
 
+describe('proceduralDiskRenderer.pickDisks camera', () => {
+  it('pickDisks draws with the caller-supplied camera, not a cached frame value', () => {
+    // The pick uniform is written from pickDisks' ARGUMENTS, not a value
+    // stashed by the last draw(). We prove this by drawing with camera A
+    // (all-zero viewProj, camPos [0,0,0], pxPerRad 100) and then picking
+    // with a DIFFERENT camera B — the pick uniform payload must carry B.
+    const { init, writeBufferCalls } = makeStubInit();
+    const renderer = createProceduralDiskRenderer(init);
+
+    const drawPass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    // draw() with camera A — uploads one instance so pickDisks has content.
+    renderer.draw(drawPass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, [
+      fakeProceduralInstance(),
+    ]);
+
+    // draw() emits three writeBuffer calls (uniforms, visual, pick mirror).
+    // The next writeBuffer is pickDisks' own pick-uniform upload.
+    const beforePick = writeBufferCalls.length;
+
+    // Camera B — a distinctive viewProj[0] plus non-zero camPos / pxPerRad.
+    const viewProjB = new Float32Array(16);
+    viewProjB[0] = 42;
+    const pickPass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    renderer.pickDisks(pickPass, viewProjB, [1024, 768], [7, 8, 9], 250, FOCUS_BIND_GROUP);
+
+    // The pick uniform layout mirrors the visual pipeline's:
+    //   f32[0..15] viewProj  f32[16..17] viewport  f32[20..22] camPos  f32[23] pxPerRad
+    const pickUniform = writeBufferCalls[beforePick]!.data;
+    expect(pickUniform[0]).toBe(42); // viewProj[0] from B, not A's zero
+    expect(pickUniform[16]).toBe(1024);
+    expect(pickUniform[17]).toBe(768);
+    expect(pickUniform[20]).toBe(7);
+    expect(pickUniform[21]).toBe(8);
+    expect(pickUniform[22]).toBe(9);
+    expect(pickUniform[23]).toBe(250);
+  });
+});
+
 describe('proceduralDiskRenderer pack loop (Task R1)', () => {
   it('pack writes 16 floats per instance — last 4 are zero (procedural shader does not read them)', () => {
     const { init, writeBufferCalls } = makeStubInit();

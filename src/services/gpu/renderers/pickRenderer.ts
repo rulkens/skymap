@@ -419,8 +419,26 @@ export function createPickRenderer(
     // Procedural-disk pick: shared depth means a closer point dot or
     // disk claims the pixel; the disk and its companion point carry the
     // SAME packed id, so overlap is harmless.
+    //
+    // pickDisks() now takes the camera as arguments (no cached frame
+    // value). This interim call site is DELETED in plan-03 Task 10, so it
+    // unpacks the camera straight out of the `uniformBytes` the caller
+    // already handed us — the point uniform layout (pointRenderer.ts
+    // docblock) puts viewProj at bytes 0..63, viewport at 64..71, camPos
+    // at 96..107, pxPerRad at 108..111. Crude-but-correct and
+    // self-contained: no new plumbing for a soon-to-vanish call. The
+    // focus bind group is the picker's own shared cluster-focus group
+    // (@group(3) on the point pass), which is the disk pick's @group(1).
     if (proceduralDiskRenderer) {
-      proceduralDiskRenderer.pickDisks(pass);
+      const cam = new Float32Array(uniformBytes);
+      proceduralDiskRenderer.pickDisks(
+        pass,
+        cam.subarray(0, 16),
+        [cam[16]!, cam[17]!],
+        [cam[24]!, cam[25]!, cam[26]!],
+        cam[27]!,
+        focusBindGroup,
+      );
     }
 
     // Milky-Way pick: a single billboard at the galactic centre, drawn
