@@ -43,7 +43,7 @@ export type LabelRenderer = {
    * Issue the label draw call into an in-flight render pass.  Must be
    * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`
    * implementation.  The pass's render target format must match the
-   * `format` field of the `GpuContext` passed to `createLabelRenderer`.
+   * `targetFormat` passed to `createLabelRenderer`.
    */
   draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void;
   /** Total glyph count across all active labels. Used by tests + debug HUD. */

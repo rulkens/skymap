@@ -1,7 +1,30 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labelRenderer';
 import { parseFontMetrics } from '../../../../src/services/gpu/labels/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../src/@types/rendering/LoadedFontAtlases';
+
+// Capturing mock device: records the render-pipeline descriptor so the
+// colour-target format handed to the factory can be asserted at construction.
+// The atlas-bitmap list is empty in the fixture, so the copyExternalImageToTexture
+// upload loop is skipped and the texture stub only needs createView.
+function newCapturingDevice(renderPipelines: GPURenderPipelineDescriptor[]) {
+  return {
+    createBindGroupLayout: vi.fn(() => ({})),
+    createShaderModule: vi.fn(() => ({
+      getCompilationInfo: () => Promise.resolve({ messages: [] }),
+    })),
+    createPipelineLayout: vi.fn(() => ({})),
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
+      renderPipelines.push(desc);
+      return {};
+    }),
+    createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+    createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
+    createSampler: vi.fn(() => ({})),
+    createBindGroup: vi.fn(() => ({})),
+    queue: { writeBuffer: vi.fn(), copyExternalImageToTexture: vi.fn() },
+  } as unknown as GPUDevice;
+}
 
 // Minimal BMFont fixture: just the uppercase A (codepoint 65) so we can
 // test that the renderer counts known glyphs and silently drops
@@ -12,7 +35,18 @@ const FIXTURE_METRICS = parseFontMetrics({
   info: { face: 'X', size: 42 },
   distanceField: { fieldType: 'msdf', distanceRange: 4 },
   chars: [
-    { id: 65, x: 0, y: 0, width: 30, height: 40, xoffset: 0, yoffset: 0, xadvance: 25, page: 0, chnl: 15 },
+    {
+      id: 65,
+      x: 0,
+      y: 0,
+      width: 30,
+      height: 40,
+      xoffset: 0,
+      yoffset: 0,
+      xadvance: 25,
+      page: 0,
+      chnl: 15,
+    },
   ],
 });
 
@@ -35,8 +69,27 @@ const newRenderer = () => {
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
   };
-  return createLabelRenderer(ctx, FIXTURE_ATLASES);
+  return createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES);
 };
+
+describe('LabelRenderer colour target', () => {
+  it('bakes the given targetFormat, NOT ctx.format, into the pipeline colour target', () => {
+    const renderPipelines: GPURenderPipelineDescriptor[] = [];
+    // ctx.format and targetFormat deliberately differ, so a regression to
+    // reading ctx.format (instead of the explicit targetFormat argument)
+    // would fail this assertion.
+    const ctx = {
+      device: newCapturingDevice(renderPipelines),
+      context: null as unknown as GPUCanvasContext,
+      format: 'bgra8unorm' as GPUTextureFormat,
+      canvas: null as unknown as HTMLCanvasElement,
+    };
+    createLabelRenderer(ctx, 'rgba16float', FIXTURE_ATLASES);
+    expect(renderPipelines).toHaveLength(1);
+    const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
+    expect(target!.format).toBe('rgba16float');
+  });
+});
 
 describe('LabelRenderer (CPU state)', () => {
   it('starts with zero glyphs to draw', () => {
@@ -90,11 +143,9 @@ describe('LabelRenderer fontIndex resolution', () => {
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
     };
-    const r = createLabelRenderer(ctx, FIXTURE_ATLASES);
+    const r = createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES);
     expect(() =>
-      r.setLabels([
-        { id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 24, font: 'cormorant' },
-      ]),
+      r.setLabels([{ id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 24, font: 'cormorant' }]),
     ).not.toThrow();
     expect(r.glyphCount()).toBe(1);
   });

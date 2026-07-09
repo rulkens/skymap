@@ -61,7 +61,12 @@ import type { MilkyWayCloudDrawArgs } from '../../../@types/rendering/MilkyWayCl
 
 type Init = {
   device: GPUDevice;
-  format: GPUTextureFormat;
+  /**
+   * The colour-target format both pipelines write into — the HDR offscreen
+   * (`'rgba16float'`), NOT the swap chain. Passed explicitly (never a
+   * `GpuContext.format`, which is always the swap-chain format).
+   */
+  targetFormat: GPUTextureFormat;
 };
 
 /**
@@ -121,7 +126,7 @@ const DUST_INSTANCE_LAYOUT: GPUVertexBufferLayout = {
 };
 
 export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
-  const { device, format } = init;
+  const { device, targetFormat } = init;
 
   const starModule = createShaderModuleWithDevLog(device, starsCode, 'milkyWayCloud.stars');
   const dustModule = createShaderModuleWithDevLog(device, dustCode, 'milkyWayCloud.dust');
@@ -145,7 +150,7 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
       fragment: {
         module,
         entryPoint: 'fs',
-        targets: [{ format, blend }],
+        targets: [{ format: targetFormat, blend }],
       },
       // No depthStencil — see the module header (order-independent glow).
       primitive: { topology: 'triangle-list' },

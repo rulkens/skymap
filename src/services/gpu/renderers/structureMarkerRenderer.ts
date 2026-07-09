@@ -96,16 +96,16 @@ export function createStructureMarkerRenderer(
   ctx: GpuContext,
   /**
    * The colour-attachment format the halo + ring pipelines write into.
-   * This renderer is part of `HDR_PASSES`, so the format is the offscreen
-   * HDR target (`rgba16float`) — NOT `ctx.format`, which is the canvas
+   * `structureMarkersLayer` draws into the hdr target, so the format is the
+   * offscreen HDR target (`rgba16float`) — NOT `ctx.format`, which is the canvas
    * swap-chain (`bgra8unorm`).  Halos accumulate additively into the same
    * float buffer the points / quads / disks / filaments write, then the
    * tone-map pass compresses everything onto the swap chain.  Passing
    * `ctx.format` here would trip a WebGPU validation error at draw time
    * (`attachment state … is not compatible with [RenderPassEncoder]`).
-   * Mirrors the `hdrFormat` parameter on `createFilamentRenderer`.
+   * Mirrors the `targetFormat` parameter on `createFilamentRenderer`.
    */
-  hdrFormat: GPUTextureFormat,
+  targetFormat: GPUTextureFormat,
   /**
    * The shared `FadeUniformsBgl` other HDR renderers (filaments, etc.)
    * use at `@group(1)`.  This renderer's shaders DO NOT reference
@@ -121,7 +121,7 @@ export function createStructureMarkerRenderer(
   initialCapacity = 64,
 ): StructureMarkerRenderer {
   const device = ctx.device as GPUDevice | null;
-  const format = hdrFormat;
+  const format = targetFormat;
 
   // Per-instance capacity.  This is an INITIAL hint, not a hard cap:
   // `setMarkers` grows both the CPU scratch buffer and the GPU vertex
@@ -209,7 +209,7 @@ export function createStructureMarkerRenderer(
     // Why: WebGPU's draw-time validator compares the pipeline layout's
     // BGL at each slot against the BindGroupLayout of whatever
     // BindGroup is currently bound at that slot on the encoder.  Other
-    // HDR_PASSES (filaments, etc.) bind their filaments-fade-bg at
+    // hdr-target layers (filaments, etc.) bind their filaments-fade-bg at
     // @group(1) before our pass runs; the encoder still has that bind
     // group set when our SetPipeline fires.  A placeholder BGL that
     // didn't match the fadeBgl would trip "BindGroupLayout … does not

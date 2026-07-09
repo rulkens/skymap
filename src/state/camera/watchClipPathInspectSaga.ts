@@ -7,7 +7,7 @@
  * `clipRegistry`, waits for its foci + the camera runtime, resolves the foci to
  * world positions, and calls `clipPathInspect.compute(id, resolved)` — the seam
  * samples the route into the `clipPathInspector` subsystem, which the
- * `clipPathDebugPass` reads each frame. `clearClipPath` drops the snapshot.
+ * `clipPathDebugLayer` reads each frame. `clearClipPath` drops the snapshot.
  *
  * ### Why mirror watchClipSaga's foci-wait verbatim
  *

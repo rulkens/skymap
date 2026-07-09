@@ -81,7 +81,7 @@ import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { HDR_PASSES, UI_PASSES } from './frame/passes';
+import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -138,8 +138,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //   - `sources`    → loaded `GalaxyCatalog`s + visibility bitmasks + tier
   //                    + optional famous-galaxy sidecars.
   //   - `picking`    → hover / click / drag mutables.
-  //   - `gpu`        → renderers / HDR target / tone-map pass — null until
-  //                    `initGpu` finishes.
+  //   - `gpu`        → renderers / offscreen render-target table /
+  //                    compositor — null until `initGpu` finishes.
   //   - `subsystems` → long-lived helpers; some construct up-front, the rest
   //                    land later.
   //   - `cam`        → orbit camera, null until the first cloud loads.
@@ -239,8 +239,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // tracks its own `latest`/`picked` locals.
       pickInFlight: false,
       pointerDown: false,
-      lastFrameUniformBytes: null,
-      lastFrameCam: null,
     },
     gpu: {
       // All GPU handles populate during the async IIFE below and
@@ -248,6 +246,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // for the null-until-init lifecycle rationale.
       renderer: null,
       pickRenderer: null,
+      pickProgram: null,
       milkyWayPickRenderer: null,
       // Canonical fade + source + focus bind-group layouts. Built once in
       // initGpu and threaded into every renderer's createPipelineLayout so
@@ -257,25 +256,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       sourceBgl: null,
       focusBgl: null,
       focusUniform: null,
-      postProcess: null,
+      renderTargets: null,
       compositor: null,
-      volumeOffscreen: null,
       filamentRenderer: null,
       // labelRenderer + markerLineRenderer: null until initGpu finishes the
       // font-atlas fetch.  Excluded from isEngineReady (optional async
-      // resources, null-checked at use by labelsPass / markerLinesPass).
+      // resources, null-checked at use by labelsLayer / markerLinesLayer).
       labelRenderer: null,
       markerLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use by
-      // clipPathDebugPass.
+      // clipPathDebugLayer.
       debugLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
       // texturedDiskRenderer / proceduralDiskRenderer: null until initGpu
-      // constructs them.  The frame body reads them via RunFrameDeps; they
-      // live here so `destroy()` can reach them and so later phases consume
-      // the same identities by reading `state.gpu.X`.
+      // constructs them.  The frame body reads them straight off
+      // `state.gpu.*` (see `passes/index.ts`); they live here so `destroy()`
+      // can reach them and so later phases consume the same identities.
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       // Milky-Way point cloud + its two-pass renderer. null until initGpu.
@@ -283,7 +281,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
-      // null until initGpu; excluded from isEngineReady — volumeUpsamplePass
+      // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
@@ -516,7 +514,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // Debug clip-path inspector seam — `watchClipPathInspectSaga` calls `compute`
   // to sample a clip's camera route into the `clipPathInspector` subsystem (read
-  // each frame by `clipPathDebugPass`) and `clear` to drop it. Shares the same
+  // each frame by `clipPathDebugLayer`) and `clear` to drop it. Shares the same
   // live-pose accessor as `playClip` so a `start:'live'` clip samples from the
   // pose the user sees. 384 samples keeps the route + target polylines smooth
   // through the tight Catmull-Rom corners of a flyPath (must stay within the
@@ -646,14 +644,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     //    SDSS deck).
     state.gpu.pickRenderer?.destroy();
     state.gpu.pickRenderer = null;
+    state.gpu.pickProgram?.destroy();
+    state.gpu.pickProgram = null;
     state.gpu.milkyWayPickRenderer?.destroy();
     state.gpu.milkyWayPickRenderer = null;
-    state.gpu.postProcess?.destroy();
-    state.gpu.postProcess = null;
+    state.gpu.renderTargets?.destroy();
+    state.gpu.renderTargets = null;
     state.gpu.compositor?.destroy();
     state.gpu.compositor = null;
-    state.gpu.volumeOffscreen?.destroy();
-    state.gpu.volumeOffscreen = null;
     state.gpu.filamentRenderer?.destroy();
     state.gpu.filamentRenderer = null;
     state.gpu.labelRenderer?.destroy();
@@ -732,8 +730,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // would be null forever.
     //
     // `passOverrides`: read-only pass-name list for the DebugPanel's renderer
-    // toggle section. `allNames` is materialised from HDR_PASSES + UI_PASSES so
-    // the React rows track the encoder's actual pass loop in draw order.
+    // toggle section. `allNames` is materialised from the hdr- and swap-target
+    // `CONTENT_LAYERS` (the volume-target raymarch has no user toggle, so it is
+    // excluded) so the React rows track the frame's actual draw order.
     // The DebugPanel dispatches `setPassDisabled` directly; `watchWakeSaga` wakes
     // the render loop on the store write.
     debug: {
@@ -741,7 +740,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         return state.gpu.timingService;
       },
       passOverrides: {
-        allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
+        allNames: CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name),
       },
     },
 

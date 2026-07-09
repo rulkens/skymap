@@ -3,7 +3,7 @@
  *
  * Each test calls the slice reducer directly with an action creator's output
  * (`reducer(state, actionCreator(payload))`) and asserts the single field the
- * reducer writes. The `base()` factory returns a fresh `EngineState` so tests
+ * reducer writes. The `base()` factory returns a fresh `EngineSliceState` so tests
  * are isolated from one another.
  *
  * The same-state-reference test for `engineScaleChanged` is the load-bearing
@@ -21,10 +21,10 @@ import reducer, {
   engineLoadProgressChanged,
   engineScaleChanged,
 } from '../../../src/state/engine/engineSlice';
-import type { EngineState } from '../../../src/@types/store/EngineState';
+import type { EngineSliceState } from '../../../src/@types/store/EngineSliceState';
 import { Source } from '../../../src/data/source';
 
-const base = (): EngineState => ({
+const base = (): EngineSliceState => ({
   status: { kind: 'initializing' },
   scale: { label: '…', widthPx: 100 },
   sourceCounts: {},
@@ -47,14 +47,8 @@ describe('engineSlice — engineSourceCountReported', () => {
   });
 
   it('engineSourceCountReported merges a second source without dropping the first', () => {
-    const after1 = reducer(
-      base(),
-      engineSourceCountReported({ source: Source.SDSS, count: 5 }),
-    );
-    const after2 = reducer(
-      after1,
-      engineSourceCountReported({ source: Source.TwoMRS, count: 42 }),
-    );
+    const after1 = reducer(base(), engineSourceCountReported({ source: Source.SDSS, count: 5 }));
+    const after2 = reducer(after1, engineSourceCountReported({ source: Source.TwoMRS, count: 42 }));
     expect(after2.sourceCounts[Source.SDSS]).toBe(5);
     expect(after2.sourceCounts[Source.TwoMRS]).toBe(42);
   });
@@ -63,7 +57,7 @@ describe('engineSlice — engineSourceCountReported', () => {
 describe('engineSlice — engineStructureCountsChanged', () => {
   it('engineStructureCountsChanged replaces the whole map', () => {
     // 'cluster' and 'supercluster' are StructureId values from the registry.
-    const payload = { cluster: 12, supercluster: 3 } as EngineState['structureCounts'];
+    const payload = { cluster: 12, supercluster: 3 } as EngineSliceState['structureCounts'];
     const next = reducer(base(), engineStructureCountsChanged(payload));
     expect(next.structureCounts).toEqual(payload);
   });
@@ -77,7 +71,7 @@ describe('engineSlice — engineLoadProgressChanged', () => {
   });
 
   it('engineLoadProgressChanged with null clears loadProgress', () => {
-    const seeded: EngineState = {
+    const seeded: EngineSliceState = {
       ...base(),
       loadProgress: { loadedBytes: 512, totalBytes: 2048, inFlightCount: 1 },
     };
@@ -89,7 +83,7 @@ describe('engineSlice — engineLoadProgressChanged', () => {
 describe('engineSlice — engineScaleChanged', () => {
   it('engineScaleChanged returns the same state reference when label and widthPx are unchanged', () => {
     // Seed a state with a known scale value.
-    const s: EngineState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
+    const s: EngineSliceState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
     // Dispatch with a freshly-allocated ScaleInfo whose fields are identical.
     const next = reducer(s, engineScaleChanged({ label: '500 Mpc', widthPx: 120 }));
     // The DEDUP-ON-WRITE guard must leave the slice reference unchanged so
@@ -98,13 +92,13 @@ describe('engineSlice — engineScaleChanged', () => {
   });
 
   it('engineScaleChanged replaces scale when widthPx differs', () => {
-    const s: EngineState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
+    const s: EngineSliceState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
     const next = reducer(s, engineScaleChanged({ label: '500 Mpc', widthPx: 150 }));
     expect(next.scale.widthPx).toBe(150);
   });
 
   it('engineScaleChanged replaces scale when label differs', () => {
-    const s: EngineState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
+    const s: EngineSliceState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
     const next = reducer(s, engineScaleChanged({ label: '1 Gpc', widthPx: 120 }));
     expect(next.scale.label).toBe('1 Gpc');
   });

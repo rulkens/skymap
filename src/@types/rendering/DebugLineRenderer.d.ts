@@ -24,7 +24,7 @@ export type DebugLineRenderer = {
   /**
    * Issue the draw call into an in-flight render pass. Must run inside a
    * `beginRenderPass` / `pass.end()` block. The pass target format must match
-   * the `format` of the `GpuContext` passed to `createDebugLineRenderer`.
+   * the `targetFormat` passed to `createDebugLineRenderer`.
    */
   draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void;
   /** Number of lines last passed to setLines. Used by tests + the debug pass. */

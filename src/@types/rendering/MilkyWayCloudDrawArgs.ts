@@ -13,7 +13,7 @@
  * every call site.
  *
  * `fadeAlpha` is the already-composed apparent-size-fade × toggle-opacity
- * scalar (`milkyWayPass` composes it per frame). At `fadeAlpha === 0`
+ * scalar (`milkyWayLayer` composes it per frame). At `fadeAlpha === 0`
  * the star pass adds no light and the dust pass collapses to the
  * multiplicative identity, so the cloud contributes nothing — the caller may
  * skip the `draw` entirely for honesty, but a zero-fade draw is a visual

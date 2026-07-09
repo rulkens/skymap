@@ -43,7 +43,7 @@
  *                    Discriminator: `id: OverlayId`.
  *   - volumesMaster — the master enable gate for the whole scalar-
  *                    volume subsystem. Used by setVolumesEnabled and
- *                    the encodeVolumes / volumeUpsamplePass gates to
+ *                    the scalarVolumeLayer / volumeUpsampleLayer gates to
  *                    smooth the master toggle. Multiplied into each
  *                    volumeField's per-frame opacity at the call site,
  *                    so a master fade-out drags every field down with

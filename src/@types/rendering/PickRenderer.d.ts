@@ -1,14 +1,16 @@
 /**
- * PickRenderer — public surface of the offscreen per-point picker.
+ * PickRenderer — public surface of the point-pick draw provider.
  *
  * Create one instance at startup with `createPickRenderer(device, ...)` and
- * keep it alive for the duration of the app.  Call `pick()` whenever you want
- * to know which point is under the cursor.
+ * keep it alive for the duration of the app.  It records the galaxy
+ * point-billboard draw into an r32uint pick pass owned by the pick program
+ * (`pickProgram.ts`); it owns no pass, no texture, and no readback.  The pick
+ * program begins the pass, drives the single-pixel readback, and folds
+ * results across slabs — this renderer is one `drawPick` provider among the
+ * content-layer registry's pickable rows.
  */
 
 import type { PickSourceDraw } from './PickSourceDraw';
-import type { PickResult } from '../data/PickResult';
-import type { Vec2 } from '../math/Vec2';
 
 export type PickRenderer = {
   /**
@@ -16,147 +18,68 @@ export type PickRenderer = {
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;
+
   /**
-   * Identify the 0-based point index under the given screen coordinate.
+   * Record the point-pick draw into an already-begun render pass.
    *
-   * Internally this method:
-   *   1. Lazily (re)allocates the offscreen pick texture and depth texture when
-   *      the viewport size changes.
-   *   2. Builds and submits a GPU command encoder that renders all points into
-   *      the pick texture with the `fsPick` entry point.
-   *   3. Copies the single pixel under `(pickXPx, pickYPx)` into a staging
-   *      buffer.
-   *   4. Awaits `buffer.mapAsync()`, reads the raw u32, unmaps, and returns the
-   *      decoded point index (or -1 for background).
-   *
-   * ### Coordinate contract
-   *
-   * `pickXPx` and `pickYPx` are in *texture-space pixels* (i.e. CSS pixels
-   * already multiplied by DPR, capped at 2 — the same DPR cap used by
-   * `resizeCanvasToDisplay` in `device.ts`).  The typical call site does:
-   *
-   * ```ts
-   * const dpr = Math.min(window.devicePixelRatio || 1, 2);
-   * pickRenderer.pick([canvas.width, canvas.height],
-   *                   e.clientX * dpr, e.clientY * dpr, ...);
-   * ```
+   * Uploads `uniformBytes` VERBATIM to the renderer's OWN pick uniform buffer,
+   * binds `@group(0)` (camera), `@group(1)` (dummy fade), `@group(3)` (focus),
+   * then issues one instanced draw per source.  The caller owns
+   * `beginRenderPass` / `pass.end()`.
    *
    * ### Uniform buffer contract
    *
-   * `pick()` uploads the caller's `uniformBytes` to the pick renderer's
-   * OWN GPU buffer, then applies three pick-specific overrides on top
-   * (selectedPacked sentinel, padded pointSizePx, pickPass = 1).  The
-   * visual pass's GPU buffer is NEVER touched — there is no shared
+   * The visual pass's GPU buffer is NEVER touched — there is no shared
    * buffer, no two-writer hazard, and no dependency on frame ordering.
-   * `uniformBytes` is the CPU copy that `pointRenderer.draw()` returns
-   * after each visual frame (stashed on `state.picking.lastFrameUniformBytes`).
+   * `uniformBytes` is the COMPLETE, already-pick-shaped image built at pick
+   * time from the slab view (see `pickUniformBytesOf` — none-selection
+   * sentinel, `+PICK_PADDING_PX` point size, and `pickPass = 1` all baked in),
+   * so this method uploads it as-is with no post-upload patching. The pick
+   * byte-shaping lives in one place, the pick packer.
    *
-   * ### Concurrency
+   * ### @group(0) prefix contract
    *
-   * This implementation uses a single staging buffer.  If `pick()` is called a
-   * second time before the first call's `mapAsync` resolves, the second call
-   * returns -1 immediately rather than waiting.  This keeps the implementation
-   * simple: hover events fire far more often than frame time, so the caller
-   * should throttle them anyway (Task 17).
+   * This method uploads the camera uniform and binds `@group(0)` **even with
+   * zero sources** — a galaxy-empty scene (every catalog toggled off) must
+   * still leave slot 0 pointing at the freshly-uploaded pick camera buffer
+   * for any sibling `drawPick` that reads the pick camera through that prefix.
+   * The per-source loop simply issues no draws.
    *
-   * @param viewportPx       Physical canvas size `[width, height]` in backing-store
-   *                         pixels (post-DPR, as in `canvas.width`/`canvas.height`).
-   * @param pickXPx          X coordinate in texture-space pixels (clientX × DPR).
-   * @param pickYPx          Y coordinate in texture-space pixels (clientY × DPR).
-   * @param sources          Per-source draw records, one per visible galaxy catalog, in
-   *                         the same enum order as `PointRenderer.loadedSources()`.
-   *                         The caller is responsible for filtering by visibility
-   *                         mask — the picker draws every record it receives.
-   * @returns A {@link PickResult} carrying the front-most fragment's decoded
-   *          identity — its `sourceCode` + per-source `localIdx`. Classifying
-   *          that into a galaxy or a structure ring is `resolvePick`'s
-   *          job. Returns `null` if the cursor is over background or a pick is
-   *          already in flight. See `selectionEncoding.ts` for the
-   *          (sourceCode << 27 | localIdx + 1) packing.
+   * @param pass         An already-begun `GPURenderPassEncoder`.
+   * @param sources      Per-source draw records, one per visible galaxy
+   *                     catalog, in `Source` enum order.  The caller filters
+   *                     by visibility mask — the picker draws every record it
+   *                     receives.
+   * @param uniformBytes The complete pick-shaped uniform bytes for the pick
+   *                     frame (see `pickUniformBytesOf`).
    */
-  pick(
-    viewportPx: Vec2,
-    pickXPx: number,
-    pickYPx: number,
-    sources: Iterable<PickSourceDraw>,
-    /**
-     * The user's current `pointSizePx` setting.  The pick pass uploads
-     * `pointSizePx + PICK_PADDING_PX` onto `pickUniformBuffer` so
-     * distant point-like galaxies have a wider hit-test area without
-     * growing the visible sprites.  See `PICK_PADDING_PX` in
-     * `pickRenderer.ts` for the padding rationale.
-     */
-    pointSizePx: number,
-    /**
-     * Packed uniform bytes from the last visual frame (the value
-     * `pointRenderer.draw()` returned and was stashed on
-     * `state.picking.lastFrameUniformBytes`).  Uploaded verbatim to
-     * the pick renderer's own GPU buffer, then the three pick-specific
-     * fields are overridden.  Reproduces the camera/viewport/settings
-     * state the visual frame rendered without re-running the camera
-     * drivers or sharing any buffer with the visual pass.
-     */
+  drawPoints(
+    pass: GPURenderPassEncoder,
+    sources: readonly PickSourceDraw[],
     uniformBytes: ArrayBuffer,
-    /**
-     * Optional `RenderPassTimestampWrites` descriptor for per-pass GPU
-     * profiling.  When the engine's timing service is active, callers
-     * pass `timingService.descriptorFor('pick')` here and the pick
-     * render pass writes start/end timestamps into the shared query
-     * set's slot pair for the 'pick' slot (currently 18, 19).
-     *
-     * Because the pick pass runs on its own command encoder and its
-     * own `queue.submit`, the resolve+copy of those slots does NOT
-     * ride on the pick encoder — it rides on the next main-frame's
-     * `endFrame` (the timing service owns the singleton query set
-     * shared between the main frame and the pick pass).  Cross-frame
-     * latency is therefore at most one main frame.  When pick doesn't
-     * fire, the slots stay at their sentinel-zero values so the
-     * decoder treats them as "didn't run" and the UI shows `—`.
-     *
-     * Optional — omitting it (or passing `undefined`, e.g. when the
-     * timing service isn't initialised on the active GPU adapter)
-     * preserves byte-for-byte equivalence with the pre-timing pass
-     * descriptor.
-     */
-    timingDescriptor?: GPURenderPassTimestampWrites,
-  ): Promise<PickResult | null>;
+  ): void;
 
   /**
-   * Render the pick pass into the internal pick texture and return the
-   * texture handle for a downstream debug overlay to sample.  Skips
-   * the single-pixel readback `pick()` performs.
+   * Re-bind `@group(0)` to the point-pick camera uniform (the buffer
+   * `drawPoints` last uploaded).
    *
-   * Synchronous (unlike `pick()`) so it can run inside the per-frame
-   * loop without an `await` per frame.  Independent of `pick()`'s
-   * `inFlight` guard — sharing it would make the overlay flicker
-   * whenever a hover-pick was mid-flight.
-   *
-   * Writes the pick renderer's OWN buffer (same as `pick()`) — the
-   * visual pass's buffer is never touched.  Applies the same three
-   * pick-specific overrides (selectedPacked sentinel, padded
-   * pointSizePx, pickPass = 1) so the overlay shows exactly what
-   * `pick()` would hit.
-   *
-   * Returns null when the source list is empty.
-   *
-   * @param viewportPx   Physical canvas size in backing-store pixels.
-   * @param sources      Per-source draw records — same shape `pick()` accepts.
-   * @param pointSizePx  The user's current point-size setting; see `pick()`.
-   * @param uniformBytes Last-frame packed uniform bytes; see `pick()`.
+   * This exists so any `drawPick` that must bind its OWN slot-0 uniform can
+   * restore the shared camera prefix before returning. A sibling pick
+   * pipeline may read the pick camera through the caller-bound `@group(0)`
+   * prefix while binding nothing itself; a `drawPick` that clobbers slot 0
+   * (the procedural-disk pick binds the disk camera there) would leave those
+   * fold-in draws reading the wrong buffer — and once a mirror's read extent
+   * exceeds the disk uniform, that is a hard validation error, not just a
+   * wrong hit. Call `bindCamera(pass)` at the end of such a `drawPick` to put
+   * slot 0 back.
    */
-  renderForDebug(
-    viewportPx: Vec2,
-    sources: Iterable<PickSourceDraw>,
-    pointSizePx: number,
-    uniformBytes: ArrayBuffer,
-  ): GPUTexture | null;
+  bindCamera(pass: GPURenderPassEncoder): void;
 
   /**
    * Release all GPU resources owned by this renderer.
    *
    * Call this if you ever destroy and recreate the renderer (e.g. after a
-   * device loss recovery).  After `destroy()`, calling `pick()` will produce
-   * undefined behaviour.
+   * device loss recovery).
    */
   destroy(): void;
 };

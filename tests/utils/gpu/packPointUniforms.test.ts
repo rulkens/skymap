@@ -229,14 +229,21 @@ describe('packPointUniforms — procedural-disk crossfade + pickPass (bytes 160.
     expect(f32[41]).toBeCloseTo(SETTINGS.pxFadeEnd);
   });
 
-  it('writes pickPass as 0 at PICK_PASS_BYTE_OFFSET (168, u32 index 42)', () => {
-    // The visual pack always writes pickPass = 0.  The pick renderer applies
-    // its three overrides (selectedPacked sentinel, padded pointSizePx,
-    // pickPass = 1) after uploading this buffer — see Task 4.
+  it('defaults pickPass to 0 at PICK_PASS_BYTE_OFFSET (168, u32 index 42)', () => {
+    // The visual pack omits the pickPass arg, so it defaults to 0.  The pick
+    // path (`pickUniformBytesOf`) passes 1 — see the next case.
     const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const u32 = new Uint32Array(buf);
     expect(u32[42]).toBe(0);
     expect(PICK_PASS_BYTE_OFFSET).toBe(168);
+  });
+
+  it('packs pickPass = 1 as a u32 at byte 168 when the pick path passes it', () => {
+    // The pick pack bakes pickPass = 1 directly (no post-upload override).  It
+    // is a u32 field: byte 168 must read 0x00000001, not the float encoding of
+    // 1.0 — the byte-equality guarantee with the old override depends on this.
+    const buf = packPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS, 1);
+    expect(new Uint32Array(buf)[42]).toBe(1);
   });
 
   it('leaves _padFade1 at byte 172 (float index 43) as zero', () => {

@@ -54,15 +54,24 @@ const CORNER_BYTES = CORNER_DATA.byteLength;
  * unit tests that exercise CPU state only — GPU creation is skipped and
  * `draw(...)` is a no-op.
  *
+ * `targetFormat` is the colour-attachment format the pipeline writes into.
+ * The debug overlay draws post-tone-map onto the swap chain, but the format is
+ * passed EXPLICITLY rather than read off `ctx.format`, so the target is legible
+ * at the construction site.
+ *
  * `maxLines` defaults to 1024: a clip-path snapshot draws one route segment AND
  * one target-path segment per sample pair (2·(n−1), hundreds each at the
  * inspector's sampleCount) plus the 9-line scrub gizmo, so the buffer must be
  * far larger than the marker overlay's 64. `setLines` clamps silently, so this
  * ceiling must stay above 2·(sampleCount−1)+9.
  */
-export function createDebugLineRenderer(ctx: GpuContext, maxLines = 1024): DebugLineRenderer {
+export function createDebugLineRenderer(
+  ctx: GpuContext,
+  targetFormat: GPUTextureFormat,
+  maxLines = 1024,
+): DebugLineRenderer {
   const device = ctx.device as GPUDevice | null;
-  const format = ctx.format;
+  const format = targetFormat;
 
   const instanceBuf = new Float32Array(maxLines * (LINE_INSTANCE_BYTES / 4));
   let currentLineCount = 0;

@@ -3,8 +3,8 @@
  * scalar-volume target with bilinear filtering and additively blends
  * the result into the HDR target.
  *
- * Owned by the engine alongside `PostProcess` because both are
- * fullscreen blits with similar lifetimes; constructed once at
+ * Owned by the engine alongside the other fullscreen blits (compositor,
+ * pick-debug overlay) with the same lifetime; constructed once at
  * `initGpu` and torn down by `destroy()`.
  *
  * ### Blend semantics — load-bearing
@@ -44,8 +44,8 @@ export type VolumeUpsample = {
   /**
    * No-op — sampler, bind-group-layout, and pipeline have no explicit
    * destroy methods (they're GC'd when their last reference drops).
-   * Present purely for lifecycle symmetry with `PostProcess` so the
-   * engine's teardown call shape is uniform across GPU-resource owners.
+   * Present purely for lifecycle symmetry so the engine's teardown call
+   * shape is uniform across GPU-resource owners.
    */
   destroy(): void;
 };

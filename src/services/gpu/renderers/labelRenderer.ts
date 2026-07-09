@@ -146,12 +146,18 @@ const CORNER_BYTES = CORNER_DATA.byteLength; // 32 bytes (4 × 2 × 4)
 // ─── factory ──────────────────────────────────────────────────────────────
 
 /**
- * Construct a `LabelRenderer` against the given GPU context, font metrics,
- * and pre-baked atlas bitmap.
+ * Construct a `LabelRenderer` against the given GPU context, colour-target
+ * format, font metrics, and pre-baked atlas bitmap.
  *
  * Pass `device: null` (or a GpuContext whose `device` is null) for unit
  * tests that exercise CPU state only.  GPU resource creation is skipped
  * in that branch and `draw(...)` becomes a no-op.
+ *
+ * `targetFormat` is the colour-attachment format the pipeline writes into.
+ * Labels are a post-tone-map UI overlay, so this is the swap-chain format —
+ * but it is passed EXPLICITLY rather than read off `ctx.format`, so the
+ * target is legible at the construction site (the same one-idiom rule every
+ * renderer follows).
  *
  * `maxLabels` and `maxGlyphsPerLabel` size the static GPU buffers; the
  * defaults (64 × 64 = 4096 glyphs) cover the "you are here" + a few
@@ -159,6 +165,7 @@ const CORNER_BYTES = CORNER_DATA.byteLength; // 32 bytes (4 × 2 × 4)
  */
 export function createLabelRenderer(
   ctx: GpuContext,
+  targetFormat: GPUTextureFormat,
   atlases: LoadedFontAtlases,
   maxLabels = 64,
   maxGlyphsPerLabel = 64,
@@ -167,7 +174,7 @@ export function createLabelRenderer(
   // GPUDevice` through GpuContext without TypeScript complaining at the
   // factory's call site.  Runtime code below null-checks before each use.
   const device = ctx.device as GPUDevice | null;
-  const format = ctx.format;
+  const format = targetFormat;
   const maxGlyphs = maxLabels * maxGlyphsPerLabel;
 
   // Per-font metrics record + pre-computed layer index lookup.  Built

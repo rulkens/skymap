@@ -235,7 +235,7 @@ export function createCompositor(init: {
   const cache = new Map<string, { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer }>();
 
   // Mixed f32/u32 uniform — pack via two views over one 32-byte
-  // ArrayBuffer (the postProcess.ts idiom). Bytes 24..31 are padding and
+  // ArrayBuffer. Bytes 24..31 are padding and
   // stay zero (a fresh ArrayBuffer is zero-filled and we never write
   // those lanes), satisfying the uniform 16-byte-stride requirement.
   const uniformBytes = new ArrayBuffer(32);

@@ -371,7 +371,7 @@ function makeState(
       // renderer is stubbed so CF-4 and synthetic commits can land.
       renderer: { totalCount: () => 0, loadedSources: () => [] as unknown[] } as never,
       pickRenderer: null,
-      postProcess: null,
+      renderTargets: null,
       filamentRenderer: {
         upload: vi.fn(async () => {}),
       } as never,

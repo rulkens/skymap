@@ -5,7 +5,8 @@
  * `loadedSources` returns a fresh generator on each call.
  * Consumers: engine, frame body, bias-correction subsystem.
  * The pick renderer no longer shares the uniform buffer — it owns its
- * own GPU buffer and receives the packed bytes via `draw()`'s return value.
+ * own GPU buffer and rebuilds the packed bytes at pick time from the
+ * slab view (see `pickUniformBytesOf`).
  */
 
 import type { Mat4 } from 'wgpu-matrix';
@@ -75,20 +76,17 @@ export type PointRenderer = {
     sourceBuffer: GPUBuffer;
   }>;
   /**
-   * Issue one instanced draw call per visible source.
-   *
-   * Returns the packed `ArrayBuffer` so the pick renderer can snapshot the
-   * visual-frame uniform state and apply its three overrides (selectedPacked
-   * sentinel, padded pointSizePx, pickPass = 1) without touching the
-   * already-uploaded visual buffer.  Returns `null` when no catalogs are
-   * loaded — the buffer was never packed this frame.
+   * Issue one instanced draw call per visible source.  No-op when no
+   * catalogs are loaded.  The pick pass rebuilds its own uniform bytes at
+   * pick time from the slab view (see `pickUniformBytesOf`), so this draw
+   * owns no cross-pass snapshot.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
     settings: PointDrawSettings,
-  ): ArrayBuffer | null;
+  ): void;
   /** Release every GPU resource this renderer owns. */
   destroy(): void;
 };

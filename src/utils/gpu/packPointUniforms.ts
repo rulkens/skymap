@@ -6,15 +6,16 @@
  * per-frame snapshot call this function so their packing never drifts.
  *
  * Why a separate module rather than an inner function in `pointRenderer.ts`?
- * The pick renderer needs to pack a fresh buffer *without* touching the
- * visual pass's uploaded copy — passing the buffer back from `draw()` lets
- * the pick renderer start from the correctly-packed visual state and apply
- * its three overrides (selectedPacked sentinel, padded pointSizePx,
- * pickPass = 1) without a race.  A top-level function satisfies that
+ * The pick path needs to pack a fresh buffer *without* touching the visual
+ * pass's uploaded copy.  `pickUniformBytesOf` calls this with the pick-shaped
+ * inputs directly — the none-selection sentinel, the `+PICK_PADDING_PX` size,
+ * and `pickPass = 1` — so the complete pick image comes out of one packer and
+ * the pick renderer uploads it verbatim.  A top-level function satisfies that
  * contract while remaining testable without any GPU device.
  *
- * `pickPass` is always packed as 0 here (visual pass).  The pick renderer
- * applies its overrides after uploading this buffer — see `pickRenderer.ts`.
+ * `pickPass` defaults to 0 (visual pass).  The pick path passes 1 so the shared
+ * vertex shader skips the visual-only culls (crossfade-out, intensity floor)
+ * that would make disk-sized galaxies unpickable.
  *
  * Byte layout: see `UNIFORM_BYTES` docblock in `pointRenderer.ts`.
  *
@@ -40,14 +41,23 @@ export const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 
  * Allocate and pack a `Uniforms` buffer for the visual point-sprite pass.
  *
  * `viewProj` and `viewportPx` mirror the positional args `PointRenderer.draw`
- * already receives; `settings` carries every per-frame knob.  The pick
- * renderer may call this independently (after `draw` returns the buffer) to
- * produce a clean starting point for its three-field override.
+ * already receives; `settings` carries every per-frame knob.  `pickPass`
+ * defaults to 0 (visual pass); `pickUniformBytesOf` passes 1 so the shared
+ * vertex shader keeps disk-sized galaxies pickable.
  */
 export function packPointUniforms(
   viewProj: Mat4,
   viewportPx: readonly [number, number],
-  settings: PointDrawSettings,
+  // Only the packed byte-layout fields are read here — never the draw-only
+  // `focusBindGroup` / `fadeOpacityOf` GPU-callback fields or the shader-side
+  // `visibleSourceMask`. Narrowing the parameter lets the pick path assemble a
+  // pure-value input (`pickUniformBytesOf`) without fabricating GPU objects,
+  // while the visual `draw()` still passes its full `PointDrawSettings` (a
+  // superset satisfies the `Omit`).
+  settings: Omit<PointDrawSettings, 'focusBindGroup' | 'fadeOpacityOf' | 'visibleSourceMask'>,
+  // 0 = visual pass, 1 = pick pass. A packed field rather than a post-upload
+  // override so the buffer this returns is the complete image for either pass.
+  pickPass: number = 0,
 ): ArrayBuffer {
   const {
     pointSizePx,
@@ -100,12 +110,12 @@ export function packPointUniforms(
   // left reserved rather than removed to keep the struct's byte offsets
   // (incl. `pickPass`) stable.
 
-  // Procedural-disk crossfade band.  Slot 42 is `pickPass` — stays 0
-  // here (visual pass).  The pick renderer writes 1 at this offset after
-  // uploading this buffer via its three-field override path.
+  // Procedural-disk crossfade band.  Slot 42 is `pickPass` (u32) — 0 for the
+  // visual pass, 1 when `pickUniformBytesOf` packs the pick image directly.
   f32[40] = pxFadeStart; // byte 160
   f32[41] = pxFadeEnd; // byte 164
-  // f32[42] (pickPass, byte 168) / f32[43] (_padFade1, byte 172) stay zero.
+  u32[42] = pickPass >>> 0; // byte 168  pickPass (u32)
+  // f32[43] (_padFade1, byte 172) stays zero.
 
   return buf;
 }

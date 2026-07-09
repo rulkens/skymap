@@ -40,9 +40,9 @@
  */
 
 import type { PointRenderer } from '../../rendering/PointRenderer';
-import type { PostProcess } from '../../rendering/PostProcess';
-import type { VolumeOffscreen } from '../../rendering/VolumeOffscreen';
+import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { PickRenderer } from '../../rendering/PickRenderer';
+import type { PickProgram } from '../frame/PickProgram';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
@@ -71,13 +71,23 @@ export type EngineGpuHandles = {
   renderer: PointRenderer | null;
   pickRenderer: PickRenderer | null;
   /**
+   * The parallel per-slab pick program over the content-layer registry.
+   * Owns the hover / click / debug-overlay pick path: it filters the registry
+   * by `drawPick` presence + `enabled`, re-rasterises each pickable slab into
+   * its own r32uint target, reads back the cursor texel, and folds the results
+   * near→far. Constructed in `wireInput` (alongside `pickRenderer`, from which
+   * it borrows the point-pick draw provider) once the registry + GPU handles
+   * exist; null until then. Destroyed in teardown alongside the other pick
+   * providers — it owns per-slab pick + depth textures and staging buffers.
+   */
+  pickProgram: PickProgram | null;
+  /**
    * Invisible, pick-only Milky-Way billboard.  Stamps the MW identity
    * into the r32uint pick texture so the galactic centre is clickable.
-   * Constructed in `wireInput` alongside `pickRenderer` (it is one of the
-   * pick pass's optional providers) and threaded into `createPickRenderer`.
-   * Null until then; destroyed in teardown alongside the other pick
-   * providers.  Drawn only while the MW disk is on screen (gated by the
-   * callback the pick renderer holds).
+   * Constructed in `wireInput`; null until then.  Drawn by the Milky-Way
+   * layer's own `drawPick` row in the content-layer registry, gated by the
+   * layer's `enabled` predicate so it only stamps while the disk is on
+   * screen.  Destroyed in teardown alongside the other pick providers.
    */
   milkyWayPickRenderer: MilkyWayPickRenderer | null;
   /**
@@ -113,17 +123,18 @@ export type EngineGpuHandles = {
    */
   focusUniform: FocusUniformBuffer | null;
   /**
-   * Combined HDR offscreen target + tone-map post-process.  One field
-   * because their lifetimes are identical and they're always used
-   * together (HDR pass writes the texture, post-process samples it).
-   * See `services/gpu/postProcess.ts` for the rationale.
+   * The offscreen render-target table — one owner for every offscreen
+   * row's (`hdr`, `volume`, …) texture lifecycle, resized as a unit on
+   * canvas resize.  See `services/gpu/renderTargets.ts` for the target
+   * table + the per-row rationale (why the HDR offscreen exists, why the
+   * volume row renders at 1/3 scale).
    */
-  postProcess: PostProcess | null;
+  renderTargets: RenderTargets | null;
   /**
    * Unified 'merge offscreen texture into target' primitive — the single
    * pipeline cache every composite draw (tone-mapped HDR→swap, foreground
    * OVER, additive field→HDR) shares. Constructed once in `initGpu`
-   * immediately before `postProcess`; the blend→dstFormat mapping baked in
+   * alongside the render targets; the blend→dstFormat mapping baked in
    * at construction is a constructor argument rather than a per-draw one
    * because a render-pass encoder cannot be queried for its own colour-
    * attachment format. Null until `initGpu` resolves; released and
@@ -131,17 +142,6 @@ export type EngineGpuHandles = {
    * cached pipelines' uniform buffers.
    */
   compositor: Compositor | null;
-  /**
-   * Half-resolution intermediate render target consumed by the scalar-
-   * volume pass.  Volume fields raymarch into this target at 1/4 the
-   * fragment count (floor(canvas/2) on each axis), then the upsample
-   * pass bilinearly samples it and additively blends into the HDR
-   * target.  Resized in lockstep with `postProcess`, but kept as a
-   * separate module because conceptually it has nothing to do with
-   * the tone-map (postProcess only ever reads the HDR view).  See
-   * `services/gpu/passes/volumeOffscreen.ts` for the full rationale.
-   */
-  volumeOffscreen: VolumeOffscreen | null;
   /**
    * Cosmic-web filament-skeleton renderer.  Constructed unconditionally
    * during GPU init (the pipeline is cheap), stays empty-segment until
@@ -156,7 +156,7 @@ export type EngineGpuHandles = {
    * `loadFontAtlas()` fetch and constructs the renderer against the
    * decoded atlas bitmap.  Excluded from the `isEngineReady` predicate
    * — same rationale as `filamentRenderer`: the atlas load is async and
-   * optional from the engine's perspective; the `labelsPass` null-checks
+   * optional from the engine's perspective; the `labelsLayer` null-checks
    * this field at point of use.  Stored here so `destroy()` can release
    * the GPU buffers (uniform + storage + instance + corner + atlas texture).
    */
@@ -165,7 +165,7 @@ export type EngineGpuHandles = {
    * Thick screen-space line overlay renderer.  Null until `initGpu`
    * constructs it alongside `labelRenderer` (same phase, no atlas dep).
    * Excluded from the `isEngineReady` predicate for the same reason as
-   * `labelRenderer`.  The `markerLinesPass` null-checks this field at
+   * `labelRenderer`.  The `markerLinesLayer` null-checks this field at
    * point of use.  Stored here so `destroy()` can release the GPU
    * buffers (uniform + instance + corner).
    */
@@ -174,7 +174,7 @@ export type EngineGpuHandles = {
    * Dedicated debug-draw thick-line renderer — the substrate for the clip-path
    * inspector overlay (speed-coloured route + scrub gizmo). Constructed
    * alongside `markerLineRenderer` (same UI ctx, swap-chain format, no atlas
-   * dep), but decoupled from the label director: the `clipPathDebugPass`
+   * dep), but decoupled from the label director: the `clipPathDebugLayer`
    * null-checks it and feeds it a freshly built `DebugLine[]` each frame.
    * Excluded from `isEngineReady`. Stored here so `destroy()` releases its GPU
    * buffers (uniform + instance + corner).
@@ -183,7 +183,7 @@ export type EngineGpuHandles = {
   /**
    * Selection-ring overlay renderer — draws a white annulus around the
    * currently-selected galaxy on the swap-chain UI overlay. Null until
-   * `initGpu` constructs it; `selectionRingPass` null-checks at point
+   * `initGpu` constructs it; `selectionRingLayer` null-checks at point
    * of use. Stored here so `destroy()` can release the renderer's
    * two uniform buffers and bind group.
    */
@@ -232,8 +232,8 @@ export type EngineGpuHandles = {
   /**
    * The two-pass (additive stars + multiplicative dust) renderer that draws
    * `milkyWayCloud` on the HDR path.  Null until `initGpu` constructs it;
-   * the frame body reads it via `RunFrameDeps`/`PassDeps`.  Stored here so
-   * `destroy()` can release its shared uniform + corner-quad buffers.
+   * `milkyWayLayer` reads it off `state.gpu.*` at draw time.  Stored here
+   * so `destroy()` can release its shared uniform + corner-quad buffers.
    * Excluded from `isEngineReady` (same rationale as the other optional
    * renderers).
    */
@@ -249,7 +249,7 @@ export type EngineGpuHandles = {
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — the renderer is
-   * optional at runtime; the `volumeUpsamplePass.enabled` gate checks
+   * optional at runtime; the `volumeUpsampleLayer.enabled` gate checks
    * the master `volumesEnabled` setting first and then consults
    * `hasActiveFields()`, so a null handle (pre-bootstrap or destroyed)
    * is silently a no-op.  Stored here so `destroy()` can release every
@@ -261,7 +261,7 @@ export type EngineGpuHandles = {
    * CF4++ peculiar-velocity flow-field renderer — the engine's first compute
    * renderer. Null until `initGpu` constructs it (same phase as the other
    * optional renderers). Excluded from the `isEngineReady` predicate: the layer
-   * is default-off and demand-loaded, and `encodeFlowCompute` / `flowFieldPass`
+   * is default-off and demand-loaded, and `encodeFlowCompute` / `flowFieldLayer`
    * null-check the handle alongside the `settings.flow.enabled` +
    * `slotReady(assetSlots.flow)` gate, so a null handle is a silent no-op. Stored here so
    * `destroy()` can release the particle buffers, the three compute pipelines,
@@ -272,7 +272,7 @@ export type EngineGpuHandles = {
    * Half-res-to-HDR volume upsample pass.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — when null, the
-   * `volumeUpsamplePass` skips its draw (so a null handle is a silent
+   * `volumeUpsampleLayer` skips its draw (so a null handle is a silent
    * no-op).  Stored here so `destroy()` can release the pipeline +
    * sampler + bind-group-layout.
    */

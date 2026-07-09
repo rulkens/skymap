@@ -1,0 +1,140 @@
+/**
+ * pickFrameContext — unit tests for the pick-time camera as a value.
+ *
+ * `pickFrameContext` re-derives a `ReadyFrameContext` from the last RENDERED
+ * pose (`state.cameraRuntime.lastPose.current`) and the live projection, using
+ * the PICK source mask so `ctx.visibleSourceMask` means "pickable sources". It
+ * returns `null` before the engine is ready. These tests pin all three
+ * properties.
+ *
+ * The fixture composes the two upstream fixtures this helper's inputs come from:
+ * the bootstrap-gate handles that `frameContext.test.ts` builds (`cam`, `gpu.*`,
+ * `subsystems.texturedDisks`), plus the `settings.galaxyCatalogs.items` +
+ * `subsystems.fades` stub that `deriveSourceMasks.test.ts` builds, plus a
+ * `cameraRuntime` carrying the last pose and projection.
+ */
+
+import { describe, it, expect } from 'vitest';
+
+import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
+import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
+import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
+import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
+import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
+import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { FadeId } from '../../../../src/@types/animation/FadeId';
+
+const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
+const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
+
+/**
+ * Build an `EngineState`-shaped fixture with every bootstrap-gate handle
+ * populated (so `isEngineReady` passes by default), a `cameraRuntime` carrying
+ * `LAST_POSE` + `PROJECTION`, and the `settings`/`fades` that `deriveSourceMasks`
+ * reads. `enabledOverrides` flips specific galaxy-catalog ids to control the
+ * pick mask; nulling any gate handle exercises the not-ready branch.
+ */
+function makeState(
+  overrides: {
+    cam?: OrbitCamera | null;
+    renderer?: unknown;
+    renderTargets?: unknown;
+    pickRenderer?: unknown;
+    compositor?: unknown;
+    texturedDisks?: unknown;
+    enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
+  } = {},
+): EngineState {
+  const cam =
+    overrides.cam === undefined
+      ? ({
+          target: [0, 0, 0],
+          yaw: 0,
+          pitch: 0,
+          distance: 100,
+          position: new Float32Array(3),
+        } as unknown as OrbitCamera)
+      : overrides.cam;
+  const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
+  const renderTargets =
+    overrides.renderTargets === undefined ? ({} as unknown) : overrides.renderTargets;
+  const pickRenderer =
+    overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
+  const compositor = overrides.compositor === undefined ? ({} as unknown) : overrides.compositor;
+  const texturedDisks =
+    overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
+
+  const items = Object.fromEntries(
+    GALAXY_CATALOG_SOURCES.map((s) => {
+      const id = galaxyCatalogIdOf(s);
+      const enabled = overrides.enabledOverrides?.[id] ?? true;
+      return [id, { enabled, labelEnabled: true }];
+    }),
+  );
+
+  return {
+    cam,
+    gpu: { renderer, renderTargets, pickRenderer, compositor },
+    subsystems: {
+      texturedDisks,
+      // Fully faded by default; pick mask is driven by `enabled` alone anyway.
+      fades: { opacityOf: (id: FadeId) => (id.kind === 'galaxyCatalog' ? 0 : 0) },
+    },
+    settings: { galaxyCatalogs: { items } },
+    cameraRuntime: {
+      lastPose: { current: LAST_POSE },
+      projection: PROJECTION,
+    },
+  } as unknown as EngineState;
+}
+
+function makeCanvas(width = 1920, height = 1080): HTMLCanvasElement {
+  return { width, height } as unknown as HTMLCanvasElement;
+}
+
+describe('pickFrameContext', () => {
+  it('returns null before the engine is ready', () => {
+    // Any missing bootstrap-gate handle → `deriveFrameContext` reports
+    // not-ready → `pickFrameContext` returns null (not a not-ready context).
+    expect(pickFrameContext(makeState({ cam: null }), makeCanvas())).toBeNull();
+    expect(pickFrameContext(makeState({ renderer: null }), makeCanvas())).toBeNull();
+    expect(pickFrameContext(makeState({ pickRenderer: null }), makeCanvas())).toBeNull();
+  });
+
+  it('reproduces the frame’s camera from lastPose + projection', () => {
+    const state = makeState();
+    const canvas = makeCanvas();
+    const ctx = pickFrameContext(state, canvas);
+    expect(ctx).not.toBeNull();
+    if (ctx === null) return;
+
+    // The camera the pick pass draws from must equal the one `deriveFrameContext`
+    // produces for the SAME lastPose + projection the last frame rendered.
+    const expected = deriveFrameContext(
+      state,
+      canvas,
+      state.cameraRuntime.lastPose.current,
+      state.cameraRuntime.projection,
+      deriveSourceMasks(state).pick,
+      0,
+    );
+    expect(expected.isReady).toBe(true);
+    if (!expected.isReady) return;
+    expect(Array.from(ctx.vp)).toEqual(Array.from(expected.vp));
+  });
+
+  it('carries the pick mask as visibleSourceMask', () => {
+    // Disable one catalog: its pick bit clears, so the mask on the ready context
+    // must equal `deriveSourceMasks(state).pick`, NOT `.draw`.
+    const disabledId = galaxyCatalogIdOf(GALAXY_CATALOG_SOURCES[0]!);
+    const state = makeState({ enabledOverrides: { [disabledId]: false } });
+    const ctx = pickFrameContext(state, makeCanvas());
+    expect(ctx).not.toBeNull();
+    if (ctx === null) return;
+    expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state).pick);
+  });
+});

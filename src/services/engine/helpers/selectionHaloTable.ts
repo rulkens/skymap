@@ -13,7 +13,7 @@
  * a GalaxyRow has flat `x/y/z` while the milkyWay row is a bare singleton tag
  * that looks up `MILKY_WAY_CENTER_WORLD` here. Folding the position into the
  * table lets the caller read it off the (non-null) descriptor without
- * re-narrowing the union. selectionRingPass both gates on and sizes from this
+ * re-narrowing the union. `selectionRingLayer` both gates on and sizes from this
  * table, so "which kinds get a halo here, and where" lives in one place: a new
  * halo-bearing kind is one table row.
  */

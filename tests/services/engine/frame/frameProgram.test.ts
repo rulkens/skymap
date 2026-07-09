@@ -1,0 +1,165 @@
+/**
+ * frameProgram — unit tests for the FRAME program literal and the
+ * `timedSlotsOf` derivation.
+ *
+ * The whole point of `frameProgram` is that a frame's order is *data*: an
+ * inspectable `FrameStep[]` rather than a hand-wired call sequence. These
+ * tests exploit exactly that — they deep-equal the program against its
+ * literal and read the derived timing slots straight off the array, with no
+ * GPU device in sight.
+ *
+ * `timedSlotsOf` is driven here with small hand-built fake registries (two
+ * `ContentLayer` rows apiece): at this task the real `scalar-volume` layer
+ * doesn't exist yet, so the real-`CONTENT_LAYERS` assertion is deferred to
+ * task 7. The fakes exercise the same three rules — layers per render step
+ * in registry order, `'<source>→<dest>'` per composite, `'pick'` last.
+ */
+
+import { describe, it, expect, vi } from 'vitest';
+import type { Mat4 } from 'wgpu-matrix';
+
+import {
+  frameProgram,
+  timedSlotsOf,
+  TIMED_SLOTS,
+} from '../../../../src/services/engine/frame/frameProgram';
+import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
+import { COSMO, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
+import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
+import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+
+const TONE: ToneMap = { exposure: 1.5, curve: 4 };
+
+function makeCam(): OrbitCamera {
+  return {
+    target: [0, 0, 0] as unknown as Float32Array,
+    distance: 5,
+    yaw: 0,
+    pitch: 0,
+    fovYRad: (60 * Math.PI) / 180,
+    aspect: 16 / 9,
+    near: 0.001,
+    far: 10000,
+    position: new Float32Array([0, 0, 5]),
+  } as unknown as OrbitCamera;
+}
+
+/**
+ * A minimal `ContentLayer` fixture — only the fields `timedSlotsOf` reads
+ * (`name`, `target`, `slab`) carry meaning; `enabled`/`draw` are typed
+ * stubs so the row satisfies the contract without a renderer.
+ */
+function fakeLayer(name: string, target: string, slab: number): ContentLayer {
+  return {
+    name,
+    slab,
+    target,
+    blend: 'additive',
+    enabled: vi.fn<ContentLayer['enabled']>(() => true),
+    draw: vi.fn<ContentLayer['draw']>(),
+  };
+}
+
+describe('frameProgram', () => {
+  it('emits the five-step main program', () => {
+    expect(frameProgram(TONE)).toEqual([
+      { kind: 'compute', name: 'flow' },
+      { kind: 'render', target: 'volume', slab: COSMO },
+      { kind: 'render', target: 'hdr', slab: COSMO },
+      { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } },
+      { kind: 'render', target: 'swap', slab: COSMO },
+    ]);
+  });
+
+  it('carries the given tone in the only composite step', () => {
+    const program = frameProgram(TONE);
+    const composites = program.filter((step) => step.kind === 'composite');
+    expect(composites).toHaveLength(1);
+    expect(composites[0]).toEqual({
+      kind: 'composite',
+      step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE },
+    });
+  });
+
+  it('references only slabs present in deriveSlabs’ table', () => {
+    const slabs = deriveSlabs(makeCam(), new Float32Array(16) as unknown as Mat4);
+    for (const step of frameProgram(TONE)) {
+      if (step.kind === 'render') {
+        expect(step.slab).toBe(COSMO);
+        expect(slabs[step.slab]).toBeDefined();
+      }
+    }
+  });
+});
+
+describe('timedSlotsOf', () => {
+  it('lists layer slots per render step, composite slots, then pick', () => {
+    // Two hdr layers, two swap layers — same (target, slab) grouping the
+    // real registry uses. The volume render step matches no fake layer, so
+    // it contributes nothing (the real scalar-volume layer lands in task 7).
+    const layers: readonly ContentLayer[] = [
+      fakeLayer('point-sprites', 'hdr', COSMO),
+      fakeLayer('milky-way', 'hdr', COSMO),
+      fakeLayer('selection-ring', 'swap', COSMO),
+      fakeLayer('labels', 'swap', COSMO),
+    ];
+
+    expect(timedSlotsOf(frameProgram(TONE), layers)).toEqual([
+      'point-sprites',
+      'milky-way',
+      'hdr→swap',
+      'selection-ring',
+      'labels',
+      'pick',
+    ]);
+  });
+
+  it('yields unique names', () => {
+    const layers: readonly ContentLayer[] = [
+      fakeLayer('point-sprites', 'hdr', COSMO),
+      fakeLayer('selection-ring', 'swap', COSMO),
+    ];
+    const slots = timedSlotsOf(frameProgram(TONE), layers);
+    expect(new Set(slots).size).toBe(slots.length);
+  });
+
+  it('derives the real registry slot list: scalar-volume, nine hdr, hdr→swap, five swap, pick', () => {
+    // The real CONTENT_LAYERS registry against the real program — the exact
+    // ordered slot list the timing service allocates from and the DebugPanel
+    // iterates. scalar-volume leads (the volume render step), then the nine
+    // hdr layers in registry order, the tone-map composite, the five swap
+    // overlays, and pick last.
+    expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
+      'scalar-volume',
+      'point-sprites',
+      'procedural-disks',
+      'textured-disks',
+      'milky-way',
+      'filaments',
+      'flow',
+      'volume-upsample',
+      'horizon-shell',
+      'structure-markers',
+      'hdr→swap',
+      'selection-ring',
+      'disk-radius-ring',
+      'marker-lines',
+      'labels',
+      'clip-path-debug',
+      'pick',
+    ]);
+  });
+});
+
+describe('TIMED_SLOTS', () => {
+  it('is the tone-invariant derivation of the real program + registry', () => {
+    // Tone values never affect a slot NAME, so the bound const equals the
+    // derivation for any tone.
+    expect(TIMED_SLOTS).toEqual(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS));
+  });
+
+  it('has unique slot names', () => {
+    expect(new Set(TIMED_SLOTS).size).toBe(TIMED_SLOTS.length);
+  });
+});

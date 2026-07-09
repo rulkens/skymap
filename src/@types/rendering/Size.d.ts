@@ -1,5 +1,5 @@
 /**
- * Size — plain `{ width, height }` pair, used by `PostProcess.resize`.
+ * Size — plain `{ width, height }` pair, used by `RenderTargets.resize`.
  *
  * We deliberately don't reuse a DOM type like `DOMRectReadOnly` — those
  * carry extra fields (x, y, top, ...) the GPU descriptor doesn't want,
