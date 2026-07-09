@@ -1,5 +1,16 @@
 # Zoom to Earth — Plan 01: Precision slice (kept if green)
 
+> **SHIPPED** via PR #386 (`504b15dc`). The precision seams landed under their
+> contract names (`renderOrigin`, `narrowMat4`, `composeBodyMvp`,
+> `computeForegroundViewProj`, `uvSphereMesh`, `debugSphereRenderer`), but the
+> frame wiring did **not**: renderer-unification plan 04 folded it onto the
+> compositor before merge, dissolving `encodeForegroundPass`,
+> `foregroundComposite`, and the four `ReadyFrameContext` foreground fields into
+> `debugSpheresLayer` + `foregroundLabelsLayer` + the `foreground:0` target row.
+> The descent floor is gated behind `?deepZoom`. **Plans 02 and 03 are stale
+> against this fold** — they name symbols the fold deleted; re-ground them on the
+> ContentLayer/slab surface before executing.
+
 > **For agentic workers:** this plan is **contract code yes, implementation code no**
 > (`docs/superpowers/conventions/plan-style.md`). Code blocks below pin type
 > signatures + test assertions; you write the bodies from the current files, the
@@ -639,7 +650,7 @@ render origin). `encodeForegroundPass` reads this seed for its single draw.
 
 - [x] `npm run typecheck` (both src + tools tsconfigs) → clean.
 - [x] `npm test` (full suite) → green. (3400 tests; `npm run build` also green.)
-- [ ] **VISUAL gate — STOP and report, do not claim success unattended.** The
+- [x] **VISUAL gate — STOP and report, do not claim success unattended.** The
   spec §10.1 acceptance is a VISUAL property: on the dev server, zoom continuously
   from the galaxy view down to the debug sphere and confirm:
   - the descent is **stable and jitter-free** across the full zoom range (no
@@ -649,9 +660,12 @@ render origin). `encodeForegroundPass` reads this seed for its single draw.
     OVER composite doesn't wash it out).
   Ask the user to look (dev server stays running per CLAUDE.md — do not kill it),
   or describe exactly what they should see.
-- [ ] Note in the commit/PR body that the jitter-free-zoom acceptance is
-  user-verified visually, not by automated tests.
-- [ ] Commit.
+  (Cleared by the user on the **folded** shape — plain load and `?deepZoom` — as
+  renderer-unification plan 04's final gate, not on the bespoke wiring this plan
+  originally built.)
+- [x] Note in the commit/PR body that the jitter-free-zoom acceptance is
+  user-verified visually, not by automated tests. (PR #386.)
+- [x] Commit.
 
 ---
 
