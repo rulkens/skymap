@@ -211,6 +211,7 @@ function makeSyntheticFallbackState(): {
     Source.DesiDeep,
     Source.DesiWedge,
     Source.DesiSgw,
+    Source.DesiSgwShape,
   ]) {
     items[galaxyCatalogIdOf(src)] = { enabled: !disabled.has(src), labelEnabled: true };
   }
@@ -231,6 +232,7 @@ function makeSyntheticFallbackState(): {
     Source.DesiDeep,
     Source.DesiWedge,
     Source.DesiSgw,
+    Source.DesiSgwShape,
     Source.Synthetic,
   ]) {
     const listeners = new Set<(s: LoadState<GalaxyCatalog>) => void>();

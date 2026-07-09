@@ -112,6 +112,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     Source.DesiDeep,
     Source.DesiWedge,
     Source.DesiSgw,
+    Source.DesiSgwShape,
   ]) {
     items[galaxyCatalogIdOf(src)] = { enabled: !disabled.has(src), labelEnabled: true };
   }
@@ -126,6 +127,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     Source.DesiDeep,
     Source.DesiWedge,
     Source.DesiSgw,
+    Source.DesiSgwShape,
     Source.Synthetic,
   ]) {
     slots.set(src, stubSlot());
@@ -182,6 +184,7 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.DesiDeep)?.emit(errored());
     slots.get(Source.DesiWedge)?.emit(errored());
     slots.get(Source.DesiSgw)?.emit(errored());
+    slots.get(Source.DesiSgwShape)?.emit(errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(false);
     expect(slots.get(Source.Synthetic)?.load).not.toHaveBeenCalled();
@@ -206,6 +209,7 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.DesiDeep)?.emit(errored());
     slots.get(Source.DesiWedge)?.emit(errored());
     slots.get(Source.DesiSgw)?.emit(errored());
+    slots.get(Source.DesiSgwShape)?.emit(errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(true);
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
@@ -224,6 +228,7 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.DesiDeep)?.emit(errored());
     slots.get(Source.DesiWedge)?.emit(errored());
     slots.get(Source.DesiSgw)?.emit(errored());
+    slots.get(Source.DesiSgwShape)?.emit(errored());
     // SDSS never emits — it was hidden at boot.
 
     expect(state.requests.has('syntheticFallback')).toBe(true);

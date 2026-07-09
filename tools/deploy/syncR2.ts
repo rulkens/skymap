@@ -127,6 +127,9 @@ export const ALLOW = (name: string): boolean =>
   // RA×Dec×redshift box isolating the Sloan Great Wall) built by
   // `npm run build-tiers` alongside the cone + wedge. Tier-agnostic.
   name === 'desi-sgw.bin' ||
+  // DESI DR1 Sloan Great Wall (sculpted) — the ellipsoid-union sibling of the
+  // box, built by `npm run build-tiers` alongside it. Tier-agnostic.
+  name === 'desi-sgw-shape.bin' ||
   name === 'filaments.bin' ||
   // The small-tier filament variant — built by `npm run build-filaments-small`
   // with a higher DisPerSE persistence cut.  Roughly half the size of the

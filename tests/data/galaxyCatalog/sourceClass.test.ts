@@ -55,11 +55,21 @@ describe('sourceClassLabel', () => {
     expect(sourceClassLabel(Source.DesiSgw, DESI_TRACER_CLASS.QSO)).toContain('QSO');
   });
 
+  it('maps DESI sculpted-sgw tracer bytes with the same tracer labels as the box', () => {
+    // The sculpted SGW is pure BGS by geometry like its box sibling, but flows
+    // through the same tracer label lookup as the other DESI patches.
+    expect(sourceClassLabel(Source.DesiSgwShape, DESI_TRACER_CLASS.BGS)).toContain('BGS');
+    expect(sourceClassLabel(Source.DesiSgwShape, DESI_TRACER_CLASS.LRG)).toContain('LRG');
+    expect(sourceClassLabel(Source.DesiSgwShape, DESI_TRACER_CLASS.ELG)).toContain('ELG');
+    expect(sourceClassLabel(Source.DesiSgwShape, DESI_TRACER_CLASS.QSO)).toContain('QSO');
+  });
+
   it('returns null for DESI byte 0 (unclassified) and unrecognised DESI bytes', () => {
     expect(sourceClassLabel(Source.DesiDeep, 0)).toBeNull();
     expect(sourceClassLabel(Source.DesiDeep, 99)).toBeNull();
     expect(sourceClassLabel(Source.DesiWedge, 0)).toBeNull();
     expect(sourceClassLabel(Source.DesiSgw, 0)).toBeNull();
+    expect(sourceClassLabel(Source.DesiSgwShape, 0)).toBeNull();
   });
 
   it('returns null for any source without class semantics today', () => {

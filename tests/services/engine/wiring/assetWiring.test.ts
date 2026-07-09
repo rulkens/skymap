@@ -61,6 +61,7 @@ describe('ASSET_WIRING membership', () => {
       Source.DesiDeep,
       Source.DesiWedge,
       Source.DesiSgw,
+      Source.DesiSgwShape,
       Source.Synthetic,
       'famousMeta',
       'filaments',
@@ -94,6 +95,7 @@ describe('ASSET_WIRING membership', () => {
       Source.DesiDeep,
       Source.DesiWedge,
       Source.DesiSgw,
+      Source.DesiSgwShape,
       Source.Synthetic,
     ];
     for (const k of pointKeys) {

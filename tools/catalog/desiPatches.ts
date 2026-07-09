@@ -22,6 +22,7 @@ import { Source } from '../../src/data/sources';
 import { makeConeFilter } from '../utils/math/makeConeFilter';
 import { makeDecBandFilter } from '../utils/math/makeDecBandFilter';
 import { makeRaDecZBoxFilter } from '../utils/math/makeRaDecZBoxFilter';
+import { makeEllipsoidUnionFilter } from '../utils/math/makeEllipsoidUnionFilter';
 
 /**
  * One DESI drill geometry.
@@ -133,6 +134,35 @@ export const DESI_PATCHES: readonly DesiPatch[] = [
     key: 'sgw',
     source: Source.DesiSgw,
     makeFilter: () => makeRaDecZBoxFilter(137, 214, -5, 8, 0.055, 0.095),
+  },
+  // ── Sloan Great Wall (sculpted) — the box's ellipsoid-union sibling ──────
+  //
+  // The same wall as the 'sgw' box, but selected by a smooth union of three
+  // ellipsoids instead of a hard RA × Dec × redshift box (see
+  // `makeEllipsoidUnionFilter`). The three centres are the measured density
+  // peaks of the wall's constituent superclusters — SCl 126 (the rich
+  // filament / richest core), SCl 111 (the multispider), plus the poorer
+  // western end (Einasto et al. 2011) — in right-handed equatorial Cartesian
+  // Mpc. The smooth union fuses them into one lumpy ribbon (blend 100 Mpc, well
+  // under the ~150–180 Mpc peak spacing so the clumps merge rather than staying
+  // three beads); the smoothstep feathers the surface over a 50 Mpc band; and a
+  // deterministic per-galaxy hash thins that feather so the edges dissolve into
+  // haze rather than a hard rind. This is the sculpted sibling of the 'sgw' box
+  // — same wall, subset selection — kept a SEPARATE source purely so the two
+  // representations can be toggled against each other. The Cartesian seed
+  // constants come from a density-peak scan of the box's BGS rows.
+  {
+    key: 'sgw-shape',
+    source: Source.DesiSgwShape,
+    makeFilter: () =>
+      makeEllipsoidUnionFilter(
+        [
+          { center: [-310, -108, 3], radii: [95, 130, 55] }, // SCl 126 (richest core)
+          { center: [-285, 67, 3], radii: [90, 120, 50] }, // SCl 111
+          { center: [-310, 217, 3], radii: [85, 110, 48] }, // western end
+        ],
+        { blendMpc: 100, falloffMpc: 25, seed: 20260709 },
+      ),
   },
 ];
 

@@ -22,11 +22,12 @@ describe('DESI_PATCHES', () => {
     expect(new Set(sources).size).toBe(sources.length);
   });
 
-  it('ships the cone (DesiDeep), wedge (DesiWedge), and sgw (DesiSgw) patches', () => {
+  it('ships the cone (DesiDeep), wedge (DesiWedge), sgw (DesiSgw), and sculpted sgw (DesiSgwShape) patches', () => {
     const bySource = new Map(DESI_PATCHES.map((p) => [p.source, p]));
     expect(bySource.has(Source.DesiDeep)).toBe(true);
     expect(bySource.has(Source.DesiWedge)).toBe(true);
     expect(bySource.has(Source.DesiSgw)).toBe(true);
+    expect(bySource.has(Source.DesiSgwShape)).toBe(true);
   });
 
   it("each row's makeFilter builds a callable 3-arg predicate", () => {
@@ -52,5 +53,16 @@ describe('DESI_PATCHES', () => {
     expect(keep(175, 1.5, 0.075)).toBe(true);
     // Same sky position, foreground redshift → out (in front of the wall).
     expect(keep(175, 1.5, 0.02)).toBe(false);
+  });
+
+  it('the sculpted sgw predicate rejects a deep-background galaxy', () => {
+    // The ellipsoid-union sculpt selects a feathered subset of the same wall.
+    // A galaxy at z=0.5 in the same sky direction sits far outside every
+    // ellipsoid → the union field is large-positive → rejected. (The interior
+    // accept is probabilistic per row, so the robust deterministic assertion is
+    // the outside extreme.)
+    const shape = DESI_PATCHES.find((p) => p.key === 'sgw-shape')!;
+    const keep = shape.makeFilter();
+    expect(keep(175, 1.5, 0.5)).toBe(false);
   });
 });

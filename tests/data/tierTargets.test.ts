@@ -140,3 +140,21 @@ describe('tierTarget — DesiSgw', () => {
     expect(tierTarget(Source.DesiSgw, 'large')).toBeUndefined();
   });
 });
+
+describe('tierFilenameForSource — DesiSgwShape', () => {
+  it('emits the shared filename for every tier (tier-agnostic, like the box)', () => {
+    // DesiSgwShape's tierTargets is {} — the sculpted sibling of the box patch,
+    // a fixed bounded volume, not a bulk catalog that needs per-tier subsampling.
+    expect(tierFilenameForSource(Source.DesiSgwShape, 'small')).toBe('desi-sgw-shape.bin');
+    expect(tierFilenameForSource(Source.DesiSgwShape, 'medium')).toBe('desi-sgw-shape.bin');
+    expect(tierFilenameForSource(Source.DesiSgwShape, 'large')).toBe('desi-sgw-shape.bin');
+  });
+});
+
+describe('tierTarget — DesiSgwShape', () => {
+  it('is uncapped in every tier (undefined)', () => {
+    expect(tierTarget(Source.DesiSgwShape, 'small')).toBeUndefined();
+    expect(tierTarget(Source.DesiSgwShape, 'medium')).toBeUndefined();
+    expect(tierTarget(Source.DesiSgwShape, 'large')).toBeUndefined();
+  });
+});

@@ -75,6 +75,18 @@ describe('syncR2 ALLOW', () => {
     // so a tier suffix must not slip through the filter.
     expect(ALLOW('desi-sgw-large.bin')).toBe(false);
   });
+
+  it('accepts desi-sgw-shape.bin', () => {
+    // The sculpted Sloan Great Wall is a fourth tier-agnostic bin (the
+    // ellipsoid-union sibling of the box) — the browser fetches it unsuffixed.
+    expect(ALLOW('desi-sgw-shape.bin')).toBe(true);
+  });
+
+  it('rejects a tier-suffixed desi-sgw-shape variant', () => {
+    // Like its box sibling, the sculpt is a fixed patch, not a tiered
+    // downsample, so a tier suffix must not slip through the filter.
+    expect(ALLOW('desi-sgw-shape-large.bin')).toBe(false);
+  });
 });
 
 describe('syncR2 etagMatches', () => {

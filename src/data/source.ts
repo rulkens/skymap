@@ -133,4 +133,15 @@ export const Source = {
    * its own `.bin`, appended at 20 — never renumber the codes below it.
    */
   DesiSgw: 20,
+  /**
+   * DESI DR1 Sloan Great Wall SCULPTED galaxy catalog — the same wall as
+   * `DesiSgw`, selected not by a hard RA × Dec × redshift box but by a smooth
+   * union of ellipsoids on the wall's density peaks, with a smoothstep-feathered
+   * probabilistic membership that carves away the box's corners and voids and
+   * dissolves the edges into haze (see `makeEllipsoidUnionFilter`). Kept a
+   * SEPARATE source purely so the box and the sculpt can be toggled side-by-side
+   * for visual comparison. Pure BGS by geometry like its box sibling; persisted
+   * to its own `.bin`, appended at 21 — never renumber the codes below it.
+   */
+  DesiSgwShape: 21,
 } as const;
