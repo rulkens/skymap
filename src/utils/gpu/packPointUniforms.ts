@@ -47,7 +47,13 @@ export const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 
 export function packPointUniforms(
   viewProj: Mat4,
   viewportPx: readonly [number, number],
-  settings: PointDrawSettings,
+  // Only the packed byte-layout fields are read here — never the draw-only
+  // `focusBindGroup` / `fadeOpacityOf` GPU-callback fields or the shader-side
+  // `visibleSourceMask`. Narrowing the parameter lets the pick path assemble a
+  // pure-value input (`pickUniformBytesOf`) without fabricating GPU objects,
+  // while the visual `draw()` still passes its full `PointDrawSettings` (a
+  // superset satisfies the `Omit`).
+  settings: Omit<PointDrawSettings, 'focusBindGroup' | 'fadeOpacityOf' | 'visibleSourceMask'>,
 ): ArrayBuffer {
   const {
     pointSizePx,
