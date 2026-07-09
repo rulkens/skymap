@@ -118,4 +118,20 @@ export const milkyWayLayer: ContentLayer = {
       buffers: cloud.buffers(),
     });
   },
+
+  // Pick aspect — stamps the single invisible pick billboard at the
+  // galactic centre. `pickMilkyWay` sizes it on the GPU from the shared
+  // @group(0) pick camera (bound upstream by point-sprites), so there is
+  // no CPU size argument and this row reads neither `view` nor `ctx`.
+  //
+  // Visibility is NOT re-checked here: the pick program filters by
+  // `enabled`, evaluated against the pick-time camera, and
+  // `milkyWayLayer.enabled` shares its predicate (`milkyWayVisible`) with
+  // `milkyWayPickVisible` — so the pick gate can't drift from the draw
+  // gate. The renderer-null guard follows `draw`'s pre-bootstrap pattern.
+  drawPick(pass, _view, _ctx, state) {
+    const pickRenderer = state.gpu.milkyWayPickRenderer;
+    if (pickRenderer === null) return;
+    pickRenderer.pickMilkyWay(pass);
+  },
 };

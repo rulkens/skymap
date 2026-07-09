@@ -54,4 +54,23 @@ export const proceduralDisksLayer: ContentLayer = {
       instances,
     );
   },
+
+  // Pick aspect — replays the retained disk instances (the last-drawn LOD
+  // set, held inside the renderer) through the r32uint pick pipeline. Only
+  // the CAMERA is caller-supplied (from the resolved SlabView), so the pick
+  // uniform reflects the frame being picked, never a stale draw()-time
+  // stash — the content replay is the renderer's own concern. Same
+  // renderer-null guard as `draw`: the GPU handle is nullable pre-bootstrap
+  // and the pick program's `enabled` gate never narrows it.
+  drawPick(pass, view, ctx, state) {
+    if (state.gpu.proceduralDiskRenderer === null) return;
+    state.gpu.proceduralDiskRenderer.pickDisks(
+      pass,
+      view.vp,
+      view.viewportPx,
+      view.camPos,
+      ctx.drawPxPerRad,
+      state.gpu.focusUniform!.bindGroup,
+    );
+  },
 };

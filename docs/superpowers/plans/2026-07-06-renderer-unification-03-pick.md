@@ -201,11 +201,11 @@ fold-ins, so the app is unbroken until Task 10's cutover.
 
 **Signature:** `pickDisks(pass: GPURenderPassEncoder, viewProj: Float32Array, viewport: Vec2, camPosWorld: Readonly<Vec3>, pxPerRad: number, focusBindGroup: GPUBindGroup): void`
 
-- [ ] Delete the five cached camera fields (`proceduralDiskRenderer.ts:194-201`) and the cache writes (`:271-277`); `pickDisks` writes its pick uniform from the arguments (`:309-322` unchanged in layout). Keep `pickInstanceBuffer` + `lastPickInstanceCount` (content replay — essential; document why in the header).
-- [ ] Interim: `pickRenderer.recordPickPass`'s fold-in passes the values it already has (`uniformBytes` fields aren't accessible — pass the caller-visible camera args through; this call site is deleted in Task 10, keep it crude-but-correct).
-- [ ] Update test: `pickDisks draws with the caller-supplied camera, not a cached frame value` (replace the cached-camera assertions).
-- [ ] `npm test -- proceduralDisk` and `-- diskPick` → green; `npm run typecheck` → clean.
-- [ ] Commit the touched paths.
+- [x] Delete the five cached camera fields (`proceduralDiskRenderer.ts:194-201`) and the cache writes (`:271-277`); `pickDisks` writes its pick uniform from the arguments (`:309-322` unchanged in layout). Keep `pickInstanceBuffer` + `lastPickInstanceCount` (content replay — essential; document why in the header).
+- [x] Interim: `pickRenderer.recordPickPass`'s fold-in passes the values it already has (`uniformBytes` fields aren't accessible — pass the caller-visible camera args through; this call site is deleted in Task 10, keep it crude-but-correct).
+- [x] Update test: `pickDisks draws with the caller-supplied camera, not a cached frame value` (replace the cached-camera assertions).
+- [x] `npm test -- proceduralDisk` and `-- diskPick` → green; `npm run typecheck` → clean.
+- [x] Commit the touched paths.
 
 ### Task 8: `drawPick` on the four registry rows
 
@@ -227,10 +227,10 @@ Notes: the layers' existing `enabled` gates already mirror today's pick gates
 null-narrowing pattern for `state.gpu.*` reads. Registry order must keep
 pointSprites first among cosmo pickables (`@group(0)` contract, Task 6).
 
-- [ ] Test: `exactly the migration-table rows expose drawPick` — assert `layers.filter((l) => l.drawPick).map((l) => l.name)` equals the four names (a contract-pinning test; the _code_ stays name-blind).
-- [ ] Test (fake-GPU): `pointSprites drawPick filters loadedSources by ctx.visibleSourceMask` — port `collectPickTargets`' mask-filter assertion (`tests/services/engine/helpers/collectPickTargets.test.ts`).
-- [ ] Implement the four rows.
-- [ ] `npm test` → green; `npm run typecheck` → clean.
+- [x] Test: `exactly the migration-table rows expose drawPick` — assert `layers.filter((l) => l.drawPick).map((l) => l.name)` equals the four names (a contract-pinning test; the _code_ stays name-blind).
+- [x] Test (fake-GPU): `pointSprites drawPick filters loadedSources by ctx.visibleSourceMask` — port `collectPickTargets`' mask-filter assertion (`tests/services/engine/helpers/collectPickTargets.test.ts`).
+- [x] Implement the four rows.
+- [x] `npm test` → green; `npm run typecheck` → clean.
 - [ ] Commit the touched paths.
 
 ### Task 9: `pickProgram.ts` — the parallel per-slab program

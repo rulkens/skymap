@@ -678,3 +678,55 @@ describe('pointSpritesLayer.draw', () => {
     expect(pickingBag.lastFrameCam!.fovYRad).toBe(ctx.fovYRad);
   });
 });
+
+describe('drawPick migration-table rows', () => {
+  it('exactly the four cosmological pickables expose drawPick, in registry order', () => {
+    // Pins the spec's migration table: only pointSprites / proceduralDisks /
+    // milkyWay / structureMarkers participate in picking, and they do so in
+    // registry order (pointSprites first — the @group(0) prefix contract).
+    // The production code stays name-blind: the pick program filters by
+    // `drawPick` presence + `enabled`, never a hardcoded name list — so this
+    // test is the ONLY place the four names are asserted.
+    expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
+      'point-sprites',
+      'procedural-disks',
+      'milky-way',
+      'structure-markers',
+    ]);
+  });
+});
+
+describe('pointSpritesLayer.drawPick', () => {
+  it('filters loadedSources by ctx.visibleSourceMask before drawPoints', () => {
+    // Ported from collectPickTargets' mask-filter assertion: the pick ctx's
+    // `visibleSourceMask` IS the pick mask, so a catalog whose bit is clear
+    // (toggled off / fading out) is dropped before the picker draws it.
+    const drawPointsSpy = vi.fn<(...args: unknown[]) => void>();
+    // renderer.loadedSources yields SDSS + 2MRS + GLADE; only SDSS + GLADE
+    // bits are set in the mask.
+    const loaded = [Source.SDSS, Source.TwoMRS, Source.Glade].map((source) => ({
+      source,
+      vertexBuffer: {} as GPUBuffer,
+      count: 1,
+      sourceBuffer: {} as GPUBuffer,
+    }));
+    const ctx = makeCtx({
+      renderer: { draw: vi.fn(), loadedSources: () => loaded } as any,
+      visibleSourceMask: (1 << Source.SDSS) | (1 << Source.Glade),
+    });
+    const view = slabViewOf(ctx, COSMO);
+    const state = {
+      ...STATE_STUB,
+      selection: { select: null, hover: null, focus: null },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+      gpu: { ...STATE_STUB.gpu, pickRenderer: { drawPoints: drawPointsSpy } },
+    } as unknown as EngineState;
+
+    pointSpritesLayer.drawPick!(PASS_STUB, view, ctx, state);
+
+    expect(drawPointsSpy).toHaveBeenCalledTimes(1);
+    // arg[1] is the filtered `sources` list handed to drawPoints.
+    const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
+    expect(passedSources.map((s) => s.source)).toEqual([Source.SDSS, Source.Glade]);
+  });
+});

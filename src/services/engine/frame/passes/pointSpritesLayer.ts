@@ -53,6 +53,7 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { COSMO } from '../slabs';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
+import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
@@ -127,5 +128,42 @@ export const pointSpritesLayer: ContentLayer = {
     // (`slabViewOf` copies the camera position per render step), so the
     // stash can hold the reference without a copy.
     state.picking.lastFrameCam = { position: view.camPos, fovYRad: ctx.fovYRad };
+  },
+
+  // Pick aspect — the point half of the pick pass. Re-runs the SAME
+  // instanced billboard geometry through the r32uint pick pipeline, which
+  // writes a packed hit id `(sourceCode << 27) | localIdx` instead of
+  // colour. Delegates to `pickRenderer.drawPoints`; the pick camera is
+  // rebuilt as a value by `pickUniformBytesOf` (same byte layout as the
+  // visual pack, minus the selection identity — the pick fragment writes
+  // its own hit id).
+  //
+  // ### @group(0) prefix contract
+  //
+  // This row is first among the cosmological pickables in the registry,
+  // and `drawPoints` uploads + binds @group(0) (the pick CameraUniforms)
+  // even with zero sources. The ring / disk / Milky-Way pick pipelines
+  // read that same @group(0) prefix, so point-sprites running first — and
+  // always leaving slot 0 pointing at the fresh pick camera — is
+  // load-bearing, not incidental ordering.
+  //
+  // ### Mask semantics
+  //
+  // `ctx.visibleSourceMask` is the PICK mask here: the pick program builds
+  // its ctx via `pickFrameContext`, which passes `deriveSourceMasks(state).pick`
+  // as the mask. Filtering `loadedSources()` by it is exactly the old
+  // `collectPickTargets` gate — a fading-out catalog clears its bit and
+  // immediately stops claiming hits.
+  drawPick(pass, view, ctx, state) {
+    if (state.gpu.pickRenderer === null) return;
+    const sources = Array.from(ctx.renderer.loadedSources()).filter(
+      (s) => ((ctx.visibleSourceMask >> s.source) & 1) !== 0,
+    );
+    state.gpu.pickRenderer.drawPoints(
+      pass,
+      sources,
+      state.settings.galaxyCatalogs.sizePx,
+      pickUniformBytesOf(view, ctx, state),
+    );
   },
 };
