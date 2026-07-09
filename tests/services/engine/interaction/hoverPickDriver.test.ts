@@ -18,9 +18,9 @@
  *       resting position after a fast flick. Without it, all mid-flight
  *       moves are dropped and a stopped cursor never gets a pick result.
  *
- *   (c) Null bytes guard: `lastFrameUniformBytes === null` means no visual
- *       frame has run yet — pick is a no-op (no `pick` call) to match the
- *       pre-first-frame behaviour of the old in-frame path.
+ *   (c) Null bytes guard: `uniformBytes()` returning `null` means the engine
+ *       is not ready to pick yet — pick is a no-op (no `pick` call) to match
+ *       the pre-first-frame behaviour of the old in-frame path.
  *
  *   (d) Empty-target guard: when `collectTargets()` returns `hasAny: false`
  *       (all catalogs hidden and no structure markers on screen) a pick pass
@@ -148,6 +148,7 @@ beforeEach(() => {
     },
     store: { dispatch: dispatchSpy },
     resolveDeps: { structures: emptyStructures },
+    uniformBytes: vi.fn<() => ArrayBuffer | null>(() => dummyUniformBytes),
     collectTargets: vi.fn<() => PickTargets>(() => targetsWithSources),
     viewportPx: vi.fn<() => [number, number]>(() => [800, 600]),
     pointSizePx: vi.fn<() => number>(() => 2.5),
@@ -178,9 +179,13 @@ describe('createHoverPickDriver', () => {
     // posB (the coalesced resting position) — that counts as pick call 2.
     // Settle that one too so the test doesn't leave dangling promises.
     picker.resolveLatest(null);
-    await vi.waitFor(() => { expect(picker.callCount()).toBe(2); });
+    await vi.waitFor(() => {
+      expect(picker.callCount()).toBe(2);
+    });
     picker.resolveLatest(null);
-    await vi.waitFor(() => { expect(pickingState.pickInFlight).toBe(false); });
+    await vi.waitFor(() => {
+      expect(pickingState.pickInFlight).toBe(false);
+    });
   });
 
   // (b) Trailing edge
@@ -198,16 +203,20 @@ describe('createHoverPickDriver', () => {
     // Resolve the first pick — the trailing-edge maybeFire should kick off
     // a second pick for posB (the resting position).
     picker.resolveLatest(null);
-    await vi.waitFor(() => { expect(picker.callCount()).toBe(2); });
+    await vi.waitFor(() => {
+      expect(picker.callCount()).toBe(2);
+    });
 
     // Settle the trailing pick.
     picker.resolveLatest(null);
-    await vi.waitFor(() => { expect(pickingState.pickInFlight).toBe(false); });
+    await vi.waitFor(() => {
+      expect(pickingState.pickInFlight).toBe(false);
+    });
   });
 
   // (c) Null uniform bytes guard
-  it('null lastFrameUniformBytes is a no-op (no pick call)', () => {
-    pickingState.lastFrameUniformBytes = null;
+  it('a null uniformBytes() result is a no-op (no pick call)', () => {
+    (deps.uniformBytes as ReturnType<typeof vi.fn>).mockReturnValue(null);
     const driver = createHoverPickDriver(deps);
     driver.onPointerMove(posA);
     expect(picker.callCount()).toBe(0);
@@ -228,7 +237,9 @@ describe('createHoverPickDriver', () => {
 
     // Resolve with null (background click) — resolvePick(null, ...) returns null.
     picker.resolveLatest(null);
-    await vi.waitFor(() => { expect(dispatchSpy.mock.calls.length).toBeGreaterThan(0); });
+    await vi.waitFor(() => {
+      expect(dispatchSpy.mock.calls.length).toBeGreaterThan(0);
+    });
 
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
     // The dispatched action must be the updateSelectionHover action creator's

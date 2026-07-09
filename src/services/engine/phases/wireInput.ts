@@ -41,6 +41,9 @@ import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
+import { pickFrameContext } from '../helpers/pickFrameContext';
+import { pickUniformBytesOf } from '../helpers/pickUniformBytesOf';
+import { slabViewOf, COSMO } from '../frame/slabs';
 import {
   commitCameraPose,
   beginDrag,
@@ -121,6 +124,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         state.gpu.structureMarkerRenderer,
         milkyWayPickVisible(state, canvas.height),
       ),
+    // Rebuild the packed point pick uniform from the pick-time camera on
+    // demand (Task 10 folds this into pickProgram). `null` before the engine
+    // is ready — the driver skips, matching its pre-first-frame no-op.
+    uniformBytes: () => {
+      const ctx = pickFrameContext(state, canvas);
+      if (ctx === null) return null;
+      return pickUniformBytesOf(slabViewOf(ctx, COSMO), ctx, state);
+    },
     viewportPx: () => [canvas.width, canvas.height],
     pointSizePx: () => state.settings.galaxyCatalogs.sizePx,
     timingDescriptor: () => state.gpu.timingService.descriptorFor('pick'),
@@ -257,11 +268,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     );
     if (!hasAny) return null;
 
-    // No frame rendered yet — no camera state to reproduce in the pick
-    // pass.  Resolves to null (background), matching pre-first-frame
-    // click behaviour.
-    const uniformBytes = state.picking.lastFrameUniformBytes;
-    if (uniformBytes === null) return null;
+    // Engine not ready to pick — no camera state to reproduce in the pick
+    // pass.  Resolves to null (background), matching pre-first-frame click
+    // behaviour.  Rebuilt from the pick-time camera rather than a per-frame
+    // stash (Task 10 folds this into pickProgram).
+    const ctx = pickFrameContext(state, canvas);
+    if (ctx === null) return null;
+    const uniformBytes = pickUniformBytesOf(slabViewOf(ctx, COSMO), ctx, state);
 
     return cr.resolveClick({
       pickXPx: cssToTexPx(xCss),
@@ -271,9 +284,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // Threaded through so the pick pass can boost its floor size
       // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
-      // Packed uniform bytes from the last visual frame.  The pick
-      // renderer uploads them to its OWN buffer and applies its three
-      // overrides — the visual buffer is never touched.
+      // Packed uniform bytes for the pick-time camera.  The pick renderer
+      // uploads them to its OWN buffer and applies its three overrides — the
+      // visual buffer is never touched.
       uniformBytes,
       // Per-pass GPU timing.  Resolves to `undefined` when the
       // timing service isn't active on this adapter (no

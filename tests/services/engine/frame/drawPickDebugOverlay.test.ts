@@ -4,12 +4,13 @@
  *
  * Coverage focus:
  *   - No-op when `showPickBuffer` is off.
- *   - No-op when `lastFrameUniformBytes` is null (no frame yet).
+ *   - No-op when the engine is not ready to pick (`pickFrameContext` → null).
  *   - No-op when no pick targets are visible (`hasAny === false`).
  *   - No-op when required GPU handles are null.
  *   - Calls `renderForDebug` and submits an overlay pass when all conditions
- *     are met (non-null bytes, at least one visible source).
- *   - Passes `lastFrameUniformBytes` verbatim to `renderForDebug`.
+ *     are met (ready engine, at least one visible source).
+ *   - Passes the pick-time packed bytes (rebuilt via `pickUniformBytesOf`) to
+ *     `renderForDebug`.
  *
  * The helper is called from `runFrame` AFTER the main `renderFrame` submit,
  * so it uses a separate encoder with `loadOp: 'load'` — the tests assert that
@@ -21,6 +22,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { drawPickDebugOverlay } from '../../../../src/services/engine/frame/drawPickDebugOverlay';
 import type { DrawPickDebugOverlayDeps } from '../../../../src/services/engine/frame/drawPickDebugOverlay';
 import type { SourceMasks } from '../../../../src/@types/engine/frame/SourceMasks';
+import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
+import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 
 // ── Stubs ────────────────────────────────────────────────────────────────────
 
@@ -95,25 +98,26 @@ function makeDeps(callLog: string[]): DrawPickDebugOverlayDeps {
         }),
       })),
     } as unknown as GPUCanvasContext,
-    canvas: { width: 800, height: 600 },
+    canvas: { width: 800, height: 600 } as unknown as HTMLCanvasElement,
   };
 }
 
 /**
- * Build a minimal EngineState fragment with one visible point source, a
- * non-null `pickRenderer`, a non-null `pickDebugOverlay`, and the given
- * `lastFrameUniformBytes` / `showPickBuffer` values.
- *
- * The `renderer` has `loadedSources()` returning one entry so `collectPickTargets`
- * reports `hasAny: true`.
+ * Build a minimal EngineState fragment that is READY to pick: every
+ * `isEngineReady` bootstrap-gate handle is non-null, `cameraRuntime` carries a
+ * last pose + projection so `pickFrameContext` can rebuild the pick-time
+ * camera, and `settings` carries the appearance knobs `pickUniformBytesOf`
+ * reads. `ready: false` nulls `state.cam` so `pickFrameContext` returns null
+ * (the not-ready gate). One visible point source makes `collectPickTargets`
+ * report `hasAny: true`.
  */
 function makeState({
   showPickBuffer = true,
-  uniformBytes = new ArrayBuffer(16) as ArrayBuffer | null,
+  ready = true,
   renderForDebugResult = makePickTex() as GPUTexture | null,
 }: {
   showPickBuffer?: boolean;
-  uniformBytes?: ArrayBuffer | null;
+  ready?: boolean;
   renderForDebugResult?: GPUTexture | null;
 } = {}) {
   const renderForDebug = vi.fn<
@@ -128,18 +132,39 @@ function makeState({
   const overlayDraw = vi.fn<(pass: GPURenderPassEncoder, view: GPUTextureView) => void>();
 
   // A point source with code 0 so collectPickTargets can filter it.
-  const fakeSource = { source: 0 } as unknown as import('../../../../src/@types/rendering/PickSourceDraw').PickSourceDraw;
+  const fakeSource = {
+    source: 0,
+  } as unknown as import('../../../../src/@types/rendering/PickSourceDraw').PickSourceDraw;
+
+  // Every galaxy catalog enabled → deriveSourceMasks(state).pick is non-empty.
+  const items = Object.fromEntries(
+    GALAXY_CATALOG_SOURCES.map((s) => [
+      galaxyCatalogIdOf(s),
+      { enabled: true, labelEnabled: true },
+    ]),
+  );
 
   return {
     settings: {
       debug: { showPickBuffer },
-      galaxyCatalogs: { sizePx: 2.5 },
+      galaxyCatalogs: {
+        sizePx: 2.5,
+        brightness: 1.0,
+        highlightFallback: true,
+        realOnly: false,
+        depthFade: true,
+        items,
+      },
+      bias: { mode: 0, absMagLimit: -18 },
       milkyWay: { enabled: false },
     },
     gpu: {
+      // isEngineReady bootstrap-gate handles — all non-null when ready.
       renderer: {
         loadedSources: vi.fn<() => Iterable<typeof fakeSource>>(() => [fakeSource]),
       },
+      renderTargets: {},
+      compositor: {},
       pickRenderer: {
         renderForDebug,
       },
@@ -154,14 +179,18 @@ function makeState({
         catalogs: { size: 1 } as unknown as Map<unknown, unknown>,
       },
     },
-    picking: {
-      lastFrameUniformBytes: uniformBytes,
-      lastFrameCam: null,
-      pickInFlight: false,
-      pointerDown: false,
+    // `milkyWayPickVisible` reads `picking.lastFrameCam`; null → MW unpickable
+    // (milkyWay is disabled anyway).
+    picking: { lastFrameCam: null },
+    // `cam` is the isEngineReady gate subject — nulling it forces the
+    // not-ready branch (pickFrameContext → null).
+    cam: ready ? ({} as unknown) : null,
+    cameraRuntime: {
+      lastPose: { current: { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 50 } },
+      projection: { fovYRad: 1.0, aspect: 800 / 600, near: 0.1, far: 10000 },
     },
-    cam: null,
     subsystems: {
+      texturedDisks: {},
       fades: { opacityOf: () => 0 },
     },
     // Satisfy EngineState's tier / selection getters (never called here).
@@ -183,10 +212,10 @@ describe('drawPickDebugOverlay', () => {
     expect(callLog).toHaveLength(0);
   });
 
-  it('is a no-op when lastFrameUniformBytes is null', () => {
+  it('is a no-op when the engine is not ready to pick (pickFrameContext → null)', () => {
     const callLog: string[] = [];
     const deps = makeDeps(callLog);
-    const state = makeState({ uniformBytes: null });
+    const state = makeState({ ready: false });
     drawPickDebugOverlay(state, deps, MASKS);
     expect(callLog).toHaveLength(0);
   });
@@ -219,11 +248,10 @@ describe('drawPickDebugOverlay', () => {
     expect(callLog.find((e) => e === 'device.createCommandEncoder')).toBeUndefined();
   });
 
-  it('calls renderForDebug with the viewport, sizePx, and lastFrameUniformBytes', () => {
+  it('calls renderForDebug with the viewport, sizePx, and the rebuilt pick bytes', () => {
     const callLog: string[] = [];
     const deps = makeDeps(callLog);
-    const bytes = new ArrayBuffer(32);
-    const state = makeState({ uniformBytes: bytes });
+    const state = makeState();
     drawPickDebugOverlay(state, deps, MASKS);
 
     const spy = state.gpu.pickRenderer!.renderForDebug as ReturnType<typeof vi.fn>;
@@ -231,7 +259,10 @@ describe('drawPickDebugOverlay', () => {
     const args = spy.mock.calls[0]!;
     expect(args[0]).toEqual([800, 600]); // viewport from deps.canvas
     expect(args[2]).toBe(2.5); // sizePx from settings
-    expect(args[3]).toBe(bytes); // the exact ArrayBuffer reference
+    // Bytes are rebuilt from the pick-time camera (pickUniformBytesOf), not a
+    // stashed reference — assert the packed point-uniform image shape (176 B).
+    expect(args[3]).toBeInstanceOf(ArrayBuffer);
+    expect((args[3] as ArrayBuffer).byteLength).toBe(176);
   });
 
   it('creates a new encoder and submits an overlay pass when bytes are non-null', () => {
@@ -253,8 +284,8 @@ describe('drawPickDebugOverlay', () => {
     const state = makeState();
     drawPickDebugOverlay(state, deps, MASKS);
 
-    const enc = (deps.device.createCommandEncoder as ReturnType<typeof vi.fn>).mock
-      .results[0]!.value as GPUCommandEncoder;
+    const enc = (deps.device.createCommandEncoder as ReturnType<typeof vi.fn>).mock.results[0]!
+      .value as GPUCommandEncoder;
     const beginCalls = (enc.beginRenderPass as ReturnType<typeof vi.fn>).mock.calls as Array<
       [GPURenderPassDescriptor]
     >;

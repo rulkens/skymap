@@ -115,13 +115,13 @@ deltas are accepted and must be restated in the PR description:
 mask so `ctx.visibleSourceMask` means "pickable sources" to every `drawPick`
 (this is what dissolves `collectPickTargets`' filter in Task 8).
 
-- [ ] Tests (reuse the fixture approach of `tests/services/engine/frame/frameContext.test.ts`):
+- [x] Tests (reuse the fixture approach of `tests/services/engine/frame/frameContext.test.ts`):
   - `returns null before the engine is ready`.
   - `reproduces the frame's camera from lastPose + projection` — assert the returned `vp` equals `deriveFrameContext`'s for the same pose/projection inputs.
   - `carries the pick mask as visibleSourceMask`.
-- [ ] Implement. Didactic header: why `lastPose` (the produced pose of the last frame — same value the stash encoded) and why this is side-effect-free (cite `frameContext.ts:109-112`).
-- [ ] `npm test -- pickFrameContext` → pass; `npm run typecheck` → clean.
-- [ ] Commit the two files.
+- [x] Implement. Didactic header: why `lastPose` (the produced pose of the last frame — same value the stash encoded) and why this is side-effect-free (cite `frameContext.ts:109-112`).
+- [x] `npm test -- pickFrameContext` → pass; `npm run typecheck` → clean.
+- [x] Commit the two files.
 
 ### Task 3: `pickUniformBytesOf` — rebuild the pick uniform from values
 
@@ -133,12 +133,12 @@ byte table above (`selectedPacked: SELECTION_NONE_SENTINEL`) and delegates to
 `packPointUniforms(view.vp, view.viewportPx, …)` — the packer stays the single
 byte-layout truth, so drift with the visual pass is structurally impossible.
 
-- [ ] If `PointDrawSettings`' draw-only fields (`focusBindGroup`, `fadeOpacityOf`, `visibleSourceMask`) force fabricating GPU objects here, narrow `packPointUniforms`' parameter to the packed subset with an inline `Omit<…>` (no new type file) — the packer only reads the packed fields (`packPointUniforms.ts:52-65`).
-- [ ] Tests:
+- [x] If `PointDrawSettings`' draw-only fields (`focusBindGroup`, `fadeOpacityOf`, `visibleSourceMask`) force fabricating GPU objects here, narrow `packPointUniforms`' parameter to the packed subset with an inline `Omit<…>` (no new type file) — the packer only reads the packed fields (`packPointUniforms.ts:52-65`).
+- [x] Tests:
   - `matches the visual packer byte-for-byte apart from selectedPacked` — pack the same camera/settings through `packPointUniforms`, overwrite its `u32[20]` with the sentinel, assert `Uint8Array` equality with the helper's output.
   - `packs the none-sentinel at byte 80` — direct offset assertion.
-- [ ] `npm test -- pickUniformBytesOf` → pass; `npm run typecheck` → clean.
-- [ ] Commit the touched files.
+- [x] `npm test -- pickUniformBytesOf` → pass; `npm run typecheck` → clean.
+- [x] Commit the touched files.
 
 ### Task 4: Repoint the three snapshot consumers to pick-time bytes
 

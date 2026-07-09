@@ -10,16 +10,16 @@
  *
  * ### Thunks vs captured values
  *
- * `collectTargets`, `viewportPx`, `pointSizePx`, and `timingDescriptor`
- * are live thunks — called at pick-fire time so they always reflect
- * the engine's current state. A snapshot captured at driver-construction
- * time would be stale the moment the user resizes the window or toggles
- * a catalog layer. Only `lastFrameUniformBytes` is read from `state`
- * (not injected as a thunk) because the visual frame writes it once per
- * tick and the pick driver is the one consumer that must use the same
- * packed image the visual frame saw — a thunk over `state.picking` is
- * equivalent to reading `state.picking.lastFrameUniformBytes` directly,
- * and keeping it on `state` makes the write/read boundary explicit.
+ * `collectTargets`, `viewportPx`, `pointSizePx`, `timingDescriptor`, and
+ * `uniformBytes` are live thunks — called at pick-fire time so they always
+ * reflect the engine's current state. A snapshot captured at
+ * driver-construction time would be stale the moment the user resizes the
+ * window or toggles a catalog layer. `uniformBytes` rebuilds the packed
+ * point pick uniform from the pick-time camera on demand (see
+ * `pickUniformBytesOf`), returning `null` before the engine is ready to
+ * pick; the driver skips a null result to match its pre-first-frame no-op.
+ * `state` is still read directly — but only for the transient
+ * `pickInFlight` / `pointerDown` flags, not for any packed byte image.
  *
  * ### Why no `requestRender` / scheduler field
  *
@@ -36,8 +36,15 @@ import type { PickTargets } from '../../../services/engine/helpers/collectPickTa
 import type { Vec2 } from '../../math/Vec2';
 
 export type HoverPickDeps = {
-  /** The engine's picking sub-state — read for `pickInFlight` and `lastFrameUniformBytes`. */
+  /** The engine's picking sub-state — read for `pickInFlight` and `pointerDown`. */
   readonly state: { picking: EnginePickingState };
+  /**
+   * Packed point pick uniform for the pick-time camera, or `null` before the
+   * engine is ready to pick. Thunk so the bytes are rebuilt from the current
+   * camera + settings at fire time (see `pickUniformBytesOf`) rather than read
+   * from a per-frame stash. Null → skip, matching the pre-first-frame no-op.
+   */
+  readonly uniformBytes: () => ArrayBuffer | null;
   /** The GPU pick renderer — called to fire a pick at pointer position. */
   readonly pickRenderer: PickRenderer;
   /**

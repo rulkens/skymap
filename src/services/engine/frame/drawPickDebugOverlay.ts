@@ -18,13 +18,12 @@
  *
  * ### Why a separate encoder (not folded into renderFrame's encoder)
  *
- * The debug pass must run AFTER `renderFrame`'s submit because the pick
- * renderer needs the visual frame's packed uniform bytes (the same
- * `lastFrameUniformBytes` the hover-pick driver uses) to reproduce the
- * frame's camera state.  Those bytes are stashed onto `state.picking` by
- * `pointSpritesLayer` just before `renderFrame`'s submit.  Using a
- * separate encoder means the main-frame submit always lands cleanly; the
- * debug overlay is an append-only overlay, never a mid-frame dependency.
+ * The debug pass runs AFTER `renderFrame`'s submit so the main-frame submit
+ * always lands cleanly — the debug overlay is an append-only overlay, never a
+ * mid-frame dependency.  The pick-time camera it reproduces is rebuilt from a
+ * value (`pickFrameContext` → `pickUniformBytesOf`, the same path the
+ * hover-pick driver uses), so it does not depend on any render-time byte
+ * stash and could in principle run before the main submit too.
  *
  * The alternative — folding it into renderFrame's encoder as a second pass
  * — would require `renderFrame` to know about the pick texture and the
@@ -43,16 +42,20 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SourceMasks } from '../../../@types/engine/frame/SourceMasks';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
+import { pickFrameContext } from '../helpers/pickFrameContext';
+import { pickUniformBytesOf } from '../helpers/pickUniformBytesOf';
+import { slabViewOf, COSMO } from './slabs';
 
 /**
  * Narrow dep bag for the overlay helper — only the GPU handles and canvas
- * dimensions it actually reads, so the caller does not need to pass the full
- * `RunFrameDeps`.
+ * it actually reads, so the caller does not need to pass the full
+ * `RunFrameDeps`. `canvas` is the live element (`pickFrameContext` reads its
+ * backing-store size to rebuild the pick-time camera).
  */
 export type DrawPickDebugOverlayDeps = {
   readonly device: GPUDevice;
   readonly context: GPUCanvasContext;
-  readonly canvas: { readonly width: number; readonly height: number };
+  readonly canvas: HTMLCanvasElement;
 };
 
 /**
@@ -69,15 +72,16 @@ export type DrawPickDebugOverlayDeps = {
  *   - `pickRenderer` or `pickDebugOverlay` is null
  *   - no galaxy catalogs are loaded
  *   - no pick targets are visible this frame (`hasAny === false`)
- *   - `state.picking.lastFrameUniformBytes` is null (no visual frame yet)
+ *   - `pickFrameContext` returns null (engine not ready to pick yet)
  *
- * ### Why `lastFrameUniformBytes` is required
+ * ### Why the not-ready gate
  *
- * The pick renderer re-executes the visual frame's vertex shader using the
- * packed camera + settings snapshot from the last visual frame so the pick
- * texture is pixel-accurate relative to what is on screen.  Passing null
- * would render an incorrect (or blank) overlay; skipping instead is the
- * safer no-op.
+ * The pick renderer re-executes the visual frame's vertex shader using a
+ * packed camera + settings image rebuilt for the pick-time camera
+ * (`pickFrameContext` → `pickUniformBytesOf`) so the pick texture is
+ * pixel-accurate relative to what is on screen.  Before the engine is ready
+ * `pickFrameContext` has no camera to reproduce; rendering then would produce
+ * an identity-matrix scene, so skipping is the safer no-op.
  */
 export function drawPickDebugOverlay(
   state: EngineState,
@@ -105,12 +109,13 @@ export function drawPickDebugOverlay(
     milkyWayPickVisible(state, deps.canvas.height),
   );
 
-  const debugUniformBytes = state.picking.lastFrameUniformBytes;
-  // Skip until the first visual frame has completed and stashed its bytes.
-  // Without a real camera snapshot the pick vertex shader would produce an
+  // Rebuild the pick-time camera as a value. Null before the engine is ready:
+  // without a real camera the pick vertex shader would produce an
   // identity-matrix scene — every galaxy at (0,0) in clip space, making the
-  // overlay useless and potentially confusing.
-  if (!hasAny || debugUniformBytes === null) return;
+  // overlay useless and potentially confusing — so skip.
+  const ctx = pickFrameContext(state, deps.canvas);
+  if (!hasAny || ctx === null) return;
+  const debugUniformBytes = pickUniformBytesOf(slabViewOf(ctx, COSMO), ctx, state);
 
   const pickTex = state.gpu.pickRenderer.renderForDebug(
     [deps.canvas.width, deps.canvas.height],

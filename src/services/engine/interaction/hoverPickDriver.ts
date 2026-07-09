@@ -15,8 +15,8 @@
  * damage. That created a two-writer hazard: the frame was required merely
  * to clean up after hover. Every `pointermove` over a static scene forced a
  * full 2.5M-point re-render just to rewrite a buffer. This driver eliminates
- * both problems — hover reads its own snapshot (the last-frame uniform bytes
- * on `state.picking`) and writes to the pick renderer's own buffer.
+ * both problems — hover rebuilds its own pick uniform from the pick-time
+ * camera (`deps.uniformBytes`) and writes to the pick renderer's own buffer.
  *
  * ### Trailing-edge re-fire
  *
@@ -77,10 +77,10 @@ export function createHoverPickDriver(deps: HoverPickDeps): {
   }
 
   function fire(pos: CssPx): void {
-    // Snapshot the uniform bytes from the last visual frame. Null means no
-    // frame has run yet — skip to match pre-first-frame behaviour (the old
-    // in-frame path also had no picks before the first frame).
-    const bytes = deps.state.picking.lastFrameUniformBytes;
+    // Rebuild the packed pick uniform from the pick-time camera. Null means
+    // the engine is not ready to pick yet (no camera to reproduce) — skip to
+    // match pre-first-frame behaviour (no picks before the first frame).
+    const bytes = deps.uniformBytes();
     if (bytes === null) return;
 
     // Derive pick targets LIVE at fire time (same rule as the click path).
@@ -107,9 +107,7 @@ export function createHoverPickDriver(deps: HoverPickDeps): {
         bytes,
         deps.timingDescriptor(),
       )
-      .then((hit) =>
-        deps.store.dispatch(updateSelectionHover(resolvePick(hit, deps.resolveDeps))),
-      )
+      .then((hit) => deps.store.dispatch(updateSelectionHover(resolvePick(hit, deps.resolveDeps))))
       .finally(() => {
         deps.state.picking.pickInFlight = false;
         // Trailing edge: fire a new pick if the pointer has moved since we
