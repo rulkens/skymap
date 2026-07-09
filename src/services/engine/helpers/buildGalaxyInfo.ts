@@ -69,8 +69,15 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   // derived quantity (colours, absoluteMagG, galaxyType) is computed, so a
   // synthetic constant can never masquerade as a measurement downstream.
   // The InfoCard renders `photometryNote` in place of the magnitude rows.
+  //
+  // The gate is PER-ROW, not per-source: it fires only for the fluxless
+  // tracers (LRG/ELG/QSO), so a BGS row's REAL photometry is never suppressed.
+  // The Sloan Great Wall box is pure BGS by geometry, so this branch never
+  // suppresses any SGW row — but it is listed alongside the cone/wedge so that
+  // a stray non-BGS SGW row (if the box ever caught one) would still be caught
+  // by the classByte check rather than silently painting synthetic mags.
   const suppressPhotometry =
-    (source === Source.DesiDeep || source === Source.DesiWedge) &&
+    (source === Source.DesiDeep || source === Source.DesiWedge || source === Source.DesiSgw) &&
     DESI_NO_PHOTOMETRY_TRACERS.has(row.classByte);
   const { magU, magG, magR, magI, magZ } = suppressPhotometry
     ? { magU: NaN, magG: NaN, magR: NaN, magI: NaN, magZ: NaN }

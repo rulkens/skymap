@@ -3,7 +3,7 @@
  * source slot wiring helper.
  *
  * The galaxy-catalog source slots (SDSS, 2MRS, GLADE, Famous,
- * Milliquas, DESI Deep, DESI Wedge, Synthetic) all share one slot construction shape:
+ * Milliquas, DESI Deep, DESI Wedge, DESI SGW, Synthetic) all share one slot construction shape:
  * name = `${shortName}-points`, upload-on-commit, `onCatalogReady`
  * echo on the `ready` transition.  The per-source variance lives in a
  * declarative `GALAXY_CATALOG_SOURCE_REGISTRY`; `wireGalaxyCatalogSourceSlot`
@@ -116,7 +116,7 @@ function fakeCloud(count: number): GalaxyCatalog {
 }
 
 describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
-  it('declares exactly the 8 expected sources in Source enum order', () => {
+  it('declares exactly the 9 expected sources in Source enum order', () => {
     const sources = GALAXY_CATALOG_SOURCE_REGISTRY.map((c) => c.source);
     expect(sources).toEqual([
       Source.SDSS,
@@ -126,19 +126,20 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
       Source.Milliquas,
       Source.DesiDeep,
       Source.DesiWedge,
+      Source.DesiSgw,
       Source.Synthetic,
     ]);
   });
 
-  it('uses the shared galaxyCatalogFetcher for the seven real galaxy catalogs and the dedicated synthetic fetcher for Synthetic', () => {
+  it('uses the shared galaxyCatalogFetcher for the eight real galaxy catalogs and the dedicated synthetic fetcher for Synthetic', () => {
     // We don't import the fetchers here to avoid coupling to their
     // implementation — but we can verify the structural invariant
-    // "Synthetic's fetcher is not the same reference as the other four".
+    // "Synthetic's fetcher is not the same reference as the others".
     const real = GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.source !== Source.Synthetic);
     const synthetic = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === Source.Synthetic);
     expect(synthetic).toBeDefined();
     const realFetchers = new Set(real.map((c) => c.fetcher));
-    expect(realFetchers.size).toBe(1); // all seven real galaxy catalogs share one fetcher
+    expect(realFetchers.size).toBe(1); // all eight real galaxy catalogs share one fetcher
     expect(synthetic!.fetcher).not.toBe(real[0]!.fetcher);
   });
 
@@ -153,6 +154,7 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
       Source.Milliquas,
       Source.DesiDeep,
       Source.DesiWedge,
+      Source.DesiSgw,
     ]);
   });
 
@@ -168,6 +170,7 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
       Source.Milliquas,
       Source.DesiDeep,
       Source.DesiWedge,
+      Source.DesiSgw,
     ]);
   });
 });

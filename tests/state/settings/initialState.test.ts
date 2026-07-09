@@ -44,9 +44,9 @@ describe('buildInitialSettings', () => {
     // `enabled` is seeded from each source's SOURCE_REGISTRY `visible` field —
     // the registry is the single source of truth for default visibility — while
     // `labelEnabled` is uniformly true. Every galaxy catalog ships visible:true
-    // except the DESI patches — DesiDeep (pencil-beam cone) and DesiWedge
-    // (dec-band fan) both boot hidden — so those are the rows that seed
-    // enabled:false.
+    // except the DESI patches — DesiDeep (pencil-beam cone), DesiWedge (dec-band
+    // fan), and DesiSgw (Sloan Great Wall box) all boot hidden — so those are
+    // the rows that seed enabled:false.
     for (const id of GALAXY_CATALOG_IDS) {
       const entry = SOURCE_ENTRIES.find((e) => e.id === id);
       expect(entry).toBeDefined();
@@ -54,6 +54,7 @@ describe('buildInitialSettings', () => {
     }
     expect(items.desiDeep).toEqual({ enabled: false, labelEnabled: true });
     expect(items.desiWedge).toEqual({ enabled: false, labelEnabled: true });
+    expect(items.desiSgw).toEqual({ enabled: false, labelEnabled: true });
   });
 
   it('derives exactly one structure item row per id, each ring + label on', () => {

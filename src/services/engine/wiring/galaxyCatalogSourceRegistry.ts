@@ -96,6 +96,14 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
     // + InfoCard need, same as the deep cone.
   },
   {
+    source: Source.DesiSgw,
+    shortName: 'desiSgw',
+    fetcher: galaxyCatalogFetcher,
+    category: 'survey',
+    // No companion sidecars: the Sloan Great Wall box .bin carries everything
+    // the renderer + InfoCard need, same as the other DESI patches.
+  },
+  {
     source: Source.Synthetic,
     shortName: 'synthetic',
     fetcher: syntheticPointFetcher,

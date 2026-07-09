@@ -123,4 +123,14 @@ export const Source = {
    * below it.
    */
   DesiWedge: 19,
+  /**
+   * DESI DR1 Sloan Great Wall box galaxy catalog — the first DEPTH-bounded
+   * patch: an RA × Dec × redshift box (RA 137°–214°, Dec −5°..+8°,
+   * z 0.055–0.095) isolating the Sloan Great Wall, a bounded volume floating in
+   * space rather than the cone/wedge's infinite drills. Pure BGS by geometry
+   * (LRG/ELG/QSO have nothing at z<0.1), so it carries real photometry. A third
+   * drill geometry through the same survey (see `DESI_PATCHES`); persisted to
+   * its own `.bin`, appended at 20 — never renumber the codes below it.
+   */
+  DesiSgw: 20,
 } as const;

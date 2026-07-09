@@ -62,6 +62,19 @@ describe('syncR2 ALLOW', () => {
     // a tier suffix must not slip through the filter.
     expect(ALLOW('desi-wedge-large.bin')).toBe(false);
   });
+
+  it('accepts desi-sgw.bin', () => {
+    // The DESI Sloan Great Wall box is a third tier-agnostic bin (a fixed
+    // depth-bounded patch, like the cone/wedge) — the browser fetches it
+    // unsuffixed.
+    expect(ALLOW('desi-sgw.bin')).toBe(true);
+  });
+
+  it('rejects a tier-suffixed desi-sgw variant', () => {
+    // Like the cone/wedge, the box is a fixed patch, not a tiered downsample,
+    // so a tier suffix must not slip through the filter.
+    expect(ALLOW('desi-sgw-large.bin')).toBe(false);
+  });
 });
 
 describe('syncR2 etagMatches', () => {

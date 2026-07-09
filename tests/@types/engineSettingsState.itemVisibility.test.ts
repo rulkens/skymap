@@ -26,6 +26,7 @@ describe('EngineSettingsState item visibility', () => {
       milliquas: { enabled: true, labelEnabled: true },
       desiDeep: { enabled: true, labelEnabled: true },
       desiWedge: { enabled: true, labelEnabled: true },
+      desiSgw: { enabled: true, labelEnabled: true },
     };
     const c: GalaxyCatalogId = 'famousGalaxy';
     expect(v[c].labelEnabled).toBe(true);

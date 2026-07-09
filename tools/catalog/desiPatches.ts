@@ -21,6 +21,7 @@ import type { SourceType } from '../../src/@types/data/SourceType';
 import { Source } from '../../src/data/sources';
 import { makeConeFilter } from '../utils/math/makeConeFilter';
 import { makeDecBandFilter } from '../utils/math/makeDecBandFilter';
+import { makeRaDecZBoxFilter } from '../utils/math/makeRaDecZBoxFilter';
 
 /**
  * One DESI drill geometry.
@@ -34,14 +35,24 @@ import { makeDecBandFilter } from '../utils/math/makeDecBandFilter';
  *                    (`tierFilenameForSource`) — no separate `binName` field
  *                    here, since a hand-copied duplicate of that name could
  *                    drift from the registry with no test catching it.
- *   - `makeFilter` — builds the RA/Dec membership predicate. A factory (not
- *                    a bare predicate) so a geometry can hoist its trig /
- *                    precompute once, per `makeConeFilter`'s pattern.
+ *   - `makeFilter` — builds the membership predicate. A factory (not a bare
+ *                    predicate) so a geometry can hoist its trig / precompute
+ *                    once, per `makeConeFilter`'s pattern. The predicate takes
+ *                    `(raDeg, decDeg, z)` so a patch can bound the LINE OF SIGHT
+ *                    as well as the sky window — the difference between an
+ *                    infinite drill (cone, dec-band wedge) and a bounded volume
+ *                    floating in space (the Sloan Great Wall box, which clips a
+ *                    redshift shell to isolate one named structure). The two
+ *                    sky-only factories (`makeConeFilter`, `makeDecBandFilter`)
+ *                    return `(raDeg, decDeg) => boolean` and are left untouched:
+ *                    a `(ra, dec) => boolean` is assignable to the 3-arg type
+ *                    (arity-compatible), so a filter that doesn't care about
+ *                    depth simply doesn't name `z`.
  */
 export type DesiPatch = {
   key: string;
   source: SourceType;
-  makeFilter: () => (raDeg: number, decDeg: number) => boolean;
+  makeFilter: () => (raDeg: number, decDeg: number, z: number) => boolean;
 };
 
 /**
@@ -104,6 +115,24 @@ export const DESI_PATCHES: readonly DesiPatch[] = [
     key: 'wedge',
     source: Source.DesiWedge,
     makeFilter: () => makeDecBandFilter(30.65, 1.25, 205, 270),
+  },
+  // ── Sloan Great Wall — a depth-bounded box around one named structure ───
+  //
+  // RA 137°–214°, Dec −5°..+8°, z 0.055–0.095. The first DEPTH-bounded patch:
+  // a closed RA×Dec×redshift volume floating in space, versus the cone/wedge's
+  // infinite drills. The bounds are the Gott et al. (2005) published extent of
+  // the wall (RA 139.2°–211.8°, median z 0.07804, ~433 Mpc long, ~55.7 Mpc
+  // thick; the literature's density-analysis region RA 150–210, Dec −3..+6,
+  // z 0.065–0.09 holds ~84% of its galaxies) plus ~2° / Δz margin so the ends
+  // aren't clipped. Measured locally at 57,124 BGS rows: LRG/ELG/QSO contribute
+  // nothing at z<0.1, so the box is pure BGS by geometry — every row carries
+  // real Legacy-Surveys photometry, no synthetic display magnitudes. The z
+  // window is deliberately thicker than the wall itself because the wall
+  // wanders in redshift along its length.
+  {
+    key: 'sgw',
+    source: Source.DesiSgw,
+    makeFilter: () => makeRaDecZBoxFilter(137, 214, -5, 8, 0.055, 0.095),
   },
 ];
 

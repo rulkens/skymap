@@ -123,6 +123,10 @@ export const ALLOW = (name: string): boolean =>
   // band across the Corona Borealis arm) built by `npm run build-tiers`
   // alongside the cone. Tier-agnostic like desi-deep.bin.
   name === 'desi-wedge.bin' ||
+  // DESI DR1 Sloan Great Wall box — a third fixed patch (a depth-bounded
+  // RA×Dec×redshift box isolating the Sloan Great Wall) built by
+  // `npm run build-tiers` alongside the cone + wedge. Tier-agnostic.
+  name === 'desi-sgw.bin' ||
   name === 'filaments.bin' ||
   // The small-tier filament variant — built by `npm run build-filaments-small`
   // with a higher DisPerSE persistence cut.  Roughly half the size of the

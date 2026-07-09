@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -359,6 +359,40 @@ describe('parseDesiClustering', () => {
       () => false,
     );
     expect(records.length).toBe(0);
+    expect(skipped).toBe(0);
+  });
+
+  it("passes the row's decoded redshift to keep as its third argument", () => {
+    // Depth-bounded patches (the Sloan Great Wall box) filter on redshift, so
+    // the parser must hand keep the row's catalogued z — the SAME value it
+    // stores on the record — alongside RA/DEC.
+    const buf = buildClusteringBuffer(FLUXLESS_COLUMNS, [[7n, 233.0, 32.0, 0.7]]);
+    const keep = vi.fn<(raDeg: number, decDeg: number, z: number) => boolean>(() => true);
+
+    const { records } = parseDesiClustering(buf, 'LRG', Source.DesiDeep, keep);
+
+    expect(keep).toHaveBeenCalledTimes(1);
+    expect(keep).toHaveBeenCalledWith(233.0, 32.0, 0.7);
+    // The third argument is the same z the record carries.
+    expect(records[0]!.z).toBe(0.7);
+  });
+
+  it('filters on the redshift window end-to-end (depth-bounded keep)', () => {
+    // A z-window predicate keeps only rows whose redshift falls in the shell;
+    // out-of-shell rows are scoping (never counted in skipped), same as an
+    // out-of-sky-window rejection.
+    const inShell = (_ra: number, _dec: number, z: number): boolean => z >= 0.055 && z <= 0.095;
+    const buf = buildClusteringBuffer(FLUXLESS_COLUMNS, [
+      [1n, 175.0, 1.5, 0.02], // foreground → rejected
+      [2n, 175.0, 1.5, 0.075], // in shell → kept
+      [3n, 175.0, 1.5, 0.3], // background → rejected
+    ]);
+
+    const { records, skipped } = parseDesiClustering(buf, 'LRG', Source.DesiDeep, inShell);
+
+    expect(records.length).toBe(1);
+    expect(records[0]!.objID).toBe(2n);
+    // Depth rejections are scoping, not data quality.
     expect(skipped).toBe(0);
   });
 
