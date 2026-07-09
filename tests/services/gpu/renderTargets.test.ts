@@ -39,9 +39,10 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(device, SWAP_FORMAT, { width: 900, height: 600 });
 
-    // Construction allocated the two offscreen rows (hdr @ scale 1, volume @
-    // scale 3): 2 textures. hdr at full size, volume at floor(size/3).
-    expect(create.mock.calls).toHaveLength(2);
+    // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
+    // volume @ scale 3 (colour), and foreground:0 @ scale 1 (colour + depth)
+    // → 4 textures. hdr at full size, volume at floor(size/3).
+    expect(create.mock.calls).toHaveLength(4);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     expect(hdrDesc.size).toEqual({ width: 900, height: 600 });
@@ -53,8 +54,8 @@ describe('createRenderTargets', () => {
     const volViewBefore = targets.viewOf('volume');
     targets.resize({ width: 1200, height: 900 });
 
-    // Each offscreen row reallocated at the new size/scale → 2 more textures.
-    expect(create.mock.calls).toHaveLength(4);
+    // Each offscreen row reallocated at the new size/scale → 4 more textures.
+    expect(create.mock.calls).toHaveLength(8);
     const hdrResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
@@ -87,8 +88,62 @@ describe('createRenderTargets', () => {
       depth: null,
       scale: 3,
     });
+    // The foreground row is the first to declare depth: full-res colour +
+    // a depth32float attachment for the opaque occlusion budget.
+    expect(byId.get('foreground:0')).toEqual({
+      id: 'foreground:0',
+      format: 'rgba16float',
+      depth: 'depth32float',
+      scale: 1,
+    });
     // The swap row carries the swap-chain format handed in at construction.
     expect(byId.get('swap')).toEqual({ id: 'swap', format: SWAP_FORMAT, depth: null, scale: 1 });
+  });
+
+  it('allocates and resizes a depth texture alongside colour for rows that declare depth', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 800, height: 600 });
+
+    // foreground:0 declares depth → two textures at full resolution: an
+    // rgba16float colour attachment and a depth32float depth attachment.
+    const fgColour = create.mock.calls.find((c) => c[0].label === 'render-target-foreground:0')![0];
+    const fgDepth = create.mock.calls.find(
+      (c) => c[0].label === 'render-target-foreground:0-depth',
+    )![0];
+    expect(fgColour.format).toBe('rgba16float');
+    expect(fgColour.size).toEqual({ width: 800, height: 600 });
+    expect(fgDepth.format).toBe('depth32float');
+    expect(fgDepth.size).toEqual({ width: 800, height: 600 });
+    // Depth is never sampled downstream — RENDER_ATTACHMENT only, no
+    // TEXTURE_BINDING (contrast the colour attachment, which the compositor
+    // samples).
+    expect(fgDepth.usage).toBe(GPUTextureUsage.RENDER_ATTACHMENT);
+
+    const depthCallsBefore = create.mock.calls.filter(
+      (c) => c[0].label === 'render-target-foreground:0-depth',
+    ).length;
+    targets.resize({ width: 1024, height: 768 });
+    // Resize reallocates both the colour and the depth texture at the new size.
+    const fgDepthResized = create.mock.calls
+      .filter((c) => c[0].label === 'render-target-foreground:0-depth')
+      .at(-1)![0];
+    expect(fgDepthResized.size).toEqual({ width: 1024, height: 768 });
+    expect(
+      create.mock.calls.filter((c) => c[0].label === 'render-target-foreground:0-depth').length,
+    ).toBe(depthCallsBefore + 1);
+  });
+
+  it('depthViewOf returns the depth view for foreground:0 and throws for depthless rows and swap', () => {
+    const targets = createRenderTargets(mockDevice(), SWAP_FORMAT, { width: 800, height: 600 });
+    // The one row that declares depth resolves to a live depth view.
+    expect(targets.depthViewOf('foreground:0')).toBeDefined();
+    // Depthless offscreen rows have no depth attachment.
+    expect(() => targets.depthViewOf('hdr')).toThrow();
+    expect(() => targets.depthViewOf('volume')).toThrow();
+    // swap is executor-resolved and has no depth either; unknown ids throw too.
+    expect(() => targets.depthViewOf('swap')).toThrow();
+    expect(() => targets.depthViewOf('nope')).toThrow();
   });
 
   it('destroy destroys every allocated texture', () => {
@@ -102,5 +157,19 @@ describe('createRenderTargets', () => {
     }
     // After destroy, offscreen views are gone → viewOf throws.
     expect(() => targets.viewOf('hdr')).toThrow();
+  });
+
+  it('destroy destroys depth textures alongside colour', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const targets = createRenderTargets(device, SWAP_FORMAT, { width: 800, height: 600 });
+    const depthResult = create.mock.results.find(
+      (_r, i) => create.mock.calls[i]![0].label === 'render-target-foreground:0-depth',
+    )!;
+    targets.destroy();
+    // The depth texture was torn down like every colour texture.
+    expect(depthResult.value.destroy).toHaveBeenCalled();
+    // After destroy the depth view is gone → depthViewOf throws.
+    expect(() => targets.depthViewOf('foreground:0')).toThrow();
   });
 });
