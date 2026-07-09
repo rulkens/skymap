@@ -107,6 +107,22 @@ export type PickRenderer = {
     uniformBytes: ArrayBuffer,
   ): void;
 
+  /**
+   * Re-bind `@group(0)` to the point-pick camera uniform (the buffer
+   * `drawPoints` last uploaded).
+   *
+   * This exists so any `drawPick` that must bind its OWN slot-0 uniform can
+   * restore the shared camera prefix before returning. The ring / Milky-Way
+   * pick pipelines read the pick camera through the caller-bound `@group(0)`
+   * prefix but bind nothing themselves; a `drawPick` that clobbers slot 0
+   * (the procedural-disk pick binds the disk camera there) would leave those
+   * fold-in draws reading the wrong buffer — and once the MW mirror's read
+   * extent exceeds the disk uniform, that is a hard validation error, not just
+   * a wrong hit. Call `bindCamera(pass)` at the end of such a `drawPick` to
+   * put slot 0 back.
+   */
+  bindCamera(pass: GPURenderPassEncoder): void;
+
   pick(
     viewportPx: Vec2,
     pickXPx: number,

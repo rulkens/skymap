@@ -145,4 +145,53 @@ describe('proceduralDisksLayer', () => {
     const ctx = makeCtx();
     expect(() => proceduralDisksLayer.draw(pass, makeView(ctx), ctx, state)).not.toThrow();
   });
+
+  it('drawPick() restores the @group(0) camera prefix AFTER pickDisks', () => {
+    // pickDisks binds the disk camera at slot 0; the Milky-Way + structure
+    // rows drawn after this one read the shared point-pick camera prefix, so
+    // drawPick must call pickRenderer.bindCamera(pass) to put it back —
+    // ordered strictly after the disk pick. (See ContentLayer.drawPick's
+    // postcondition.)
+    const callLog: string[] = [];
+    const proceduralDiskRenderer = {
+      pickDisks: vi.fn(() => callLog.push('pickDisks')),
+    };
+    const pickRenderer = {
+      bindCamera: vi.fn(() => callLog.push('bindCamera')),
+    };
+    const state = {
+      gpu: {
+        focusUniform: { bindGroup: {} as GPUBindGroup },
+        proceduralDiskRenderer,
+        pickRenderer,
+      },
+    } as unknown as EngineState;
+    const pass = {} as GPURenderPassEncoder;
+    const ctx = makeCtx();
+    proceduralDisksLayer.drawPick!(pass, makeView(ctx), ctx, state);
+
+    expect(proceduralDiskRenderer.pickDisks).toHaveBeenCalledTimes(1);
+    expect(pickRenderer.bindCamera).toHaveBeenCalledTimes(1);
+    expect(pickRenderer.bindCamera).toHaveBeenCalledWith(pass);
+    // Restore lands AFTER the disk pick, never before.
+    expect(callLog).toEqual(['pickDisks', 'bindCamera']);
+  });
+
+  it('drawPick() is a no-op when state.gpu.proceduralDiskRenderer is null', () => {
+    const state = {
+      gpu: {
+        focusUniform: { bindGroup: {} as GPUBindGroup },
+        proceduralDiskRenderer: null,
+        pickRenderer: { bindCamera: vi.fn() },
+      },
+    } as unknown as EngineState;
+    const pass = {} as GPURenderPassEncoder;
+    const ctx = makeCtx();
+    expect(() => proceduralDisksLayer.drawPick!(pass, makeView(ctx), ctx, state)).not.toThrow();
+    // Null disk renderer → early return before the restore.
+    const bindCamera = (
+      state.gpu.pickRenderer as unknown as { bindCamera: ReturnType<typeof vi.fn> }
+    ).bindCamera;
+    expect(bindCamera).not.toHaveBeenCalled();
+  });
 });

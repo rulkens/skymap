@@ -367,6 +367,22 @@ export function createPickRenderer(
   }
 
   /**
+   * Re-bind `@group(0)` to the point-pick camera uniform bind group (built
+   * once at construction against `pickUniformBuffer`, whose bytes `drawPoints`
+   * last uploaded).
+   *
+   * This exists so any `drawPick` that binds its own slot-0 uniform — the
+   * procedural-disk pick binds the disk camera at `@group(0)` — can restore
+   * the shared camera prefix before the ring / Milky-Way fold-ins, which read
+   * that prefix but bind nothing themselves. Without the restore they read the
+   * disk's leftover uniform (and fail validation once the MW mirror's read
+   * extent exceeds it).
+   */
+  function bindCamera(pass: GPURenderPassEncoder): void {
+    pass.setBindGroup(0, pickUniformBindGroup);
+  }
+
+  /**
    * Record the shared per-source pick pass into `encoder`.  Both
    * `pick()` and `renderForDebug()` use this for the common middle —
    * the point draw (`drawPoints`: uniform upload, pick overrides, bind
@@ -454,7 +470,7 @@ export function createPickRenderer(
     // draw left bound would read the wrong buffer (and fails validation
     // outright once the mirror's read extent exceeds that buffer).
     if (milkyWayPickRenderer && mwPickVisible()) {
-      pass.setBindGroup(0, pickUniformBindGroup);
+      bindCamera(pass);
       milkyWayPickRenderer.pickMilkyWay(pass);
     }
 
@@ -586,6 +602,7 @@ export function createPickRenderer(
   const renderer: PickRenderer = {
     label: 'pickRenderer',
     drawPoints,
+    bindCamera,
     pick,
     renderForDebug,
     destroy,

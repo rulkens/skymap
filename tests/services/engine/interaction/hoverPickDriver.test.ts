@@ -142,6 +142,7 @@ beforeEach(() => {
     pickRenderer: {
       pick: picker.pick,
       drawPoints: vi.fn<() => void>(),
+      bindCamera: vi.fn<() => void>(),
       renderForDebug: vi.fn<() => null>(),
       destroy: vi.fn<() => void>(),
       label: 'pickRenderer',

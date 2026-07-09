@@ -68,8 +68,16 @@ export type ContentLayer = {
   ): void;
   /**
    * Issue pick-ID draw calls for this layer, into the parallel pick
-   * program's render pass. Optional: implemented by no layer until the
-   * pick path migrates onto this registry.
+   * program's render pass. Optional: layers that don't participate in
+   * picking simply omit it.
+   *
+   * **Postcondition:** every `drawPick` must leave `@group(0)` bound to the
+   * shared point-pick camera prefix. Most rows satisfy this trivially — they
+   * bind nothing at slot 0 and read the prefix a prior row (point-sprites)
+   * left there. A row that binds its OWN slot-0 uniform (the procedural-disk
+   * pick binds the disk camera) MUST restore the shared prefix before
+   * returning — via `state.gpu.pickRenderer.bindCamera(pass)` — so the
+   * ring / Milky-Way fold-ins drawn after it don't read the wrong buffer.
    */
   drawPick?(
     pass: GPURenderPassEncoder,

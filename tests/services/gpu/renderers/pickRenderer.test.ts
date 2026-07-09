@@ -331,6 +331,52 @@ describe('createPickRenderer', () => {
     expect((pickPassCall!.data as Uint32Array)[0]).toBe(1);
   });
 
+  it('bindCamera re-binds @group(0) to the pick uniform bind group', () => {
+    // bindCamera is the narrow restore surface a disk/ring drawPick calls
+    // after clobbering slot 0: it must bind the SAME @group(0) bind group the
+    // factory built against pickUniformBuffer (labelled 'pick-uniform-bg').
+    const createBindGroupByLabel = new Map<string, unknown>();
+    const device = {
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createPipelineLayout: vi.fn(() => ({})),
+      createBindGroupLayout: vi.fn(() => ({})),
+      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+      createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
+      queue: { writeBuffer: vi.fn(), submit: vi.fn() },
+      createCommandEncoder: vi.fn(() => ({
+        beginRenderPass: () => ({}),
+        copyTextureToBuffer: vi.fn(),
+        finish: vi.fn(() => ({})),
+      })),
+      createBindGroup: vi.fn((desc: { label?: string }) => {
+        const bg = { __label: desc.label };
+        createBindGroupByLabel.set(desc.label ?? '', bg);
+        return bg;
+      }),
+    } as unknown as GPUDevice;
+
+    const pickRenderer = createPickRenderer(
+      device,
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+      {} as unknown as GPUBindGroup,
+    );
+
+    const pickUniformBindGroup = createBindGroupByLabel.get('pick-uniform-bg');
+    expect(pickUniformBindGroup).toBeDefined();
+
+    const setBindGroup = vi.fn();
+    const pass = { setBindGroup } as unknown as GPURenderPassEncoder;
+    pickRenderer.bindCamera(pass);
+
+    expect(setBindGroup).toHaveBeenCalledTimes(1);
+    expect(setBindGroup).toHaveBeenCalledWith(0, pickUniformBindGroup);
+  });
+
   it('drawPoints uploads the camera uniform and binds @group(0) even with zero sources', () => {
     // Load-bearing prefix contract: the ring and MW pick pipelines read the
     // point pick uniform via the @group(0) CameraUniforms prefix this draw

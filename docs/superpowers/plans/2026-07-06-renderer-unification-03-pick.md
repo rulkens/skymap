@@ -231,7 +231,7 @@ pointSprites first among cosmo pickables (`@group(0)` contract, Task 6).
 - [x] Test (fake-GPU): `pointSprites drawPick filters loadedSources by ctx.visibleSourceMask` — port `collectPickTargets`' mask-filter assertion (`tests/services/engine/helpers/collectPickTargets.test.ts`).
 - [x] Implement the four rows.
 - [x] `npm test` → green; `npm run typecheck` → clean.
-- [ ] Commit the touched paths.
+- [x] Commit the touched paths.
 
 ### Task 9: `pickProgram.ts` — the parallel per-slab program
 
@@ -266,7 +266,7 @@ export function createPickProgram(deps: {
 5. One encoder, one submit. `mapAsync` each staging buffer; `frontmostPick(perSlabRaw)`; `unpackPick`. Timing: thread `state.gpu.timingService.descriptorFor('pick')` into the cosmo pass (single 'pick' slot, as today).
 6. `renderForDebug()`: same recording for the cosmological slab, no readback, returns its texture; independent of `inFlight` (port the rationale comment, `pickRenderer.ts:482-509`).
 
-- [ ] Tests (fixture style of `tests/services/gpu/renderers/pickRenderer.test.ts` — fake device/encoder/staging):
+- [x] Tests (fixture style of `tests/services/gpu/renderers/pickRenderer.test.ts` — fake device/encoder/staging):
   - `returns null while a readback is in flight`.
   - `returns null with no enabled pickable layer — no encoder created`.
   - `runs drawPick only for enabled pickable layers, in registry order`.
@@ -275,8 +275,9 @@ export function createPickProgram(deps: {
   - `never allocates pick:near0 at N=1` (no slab-0 pickable layer → one target allocated).
   - `threads the pick timing descriptor into the pass`.
   - `renderForDebug records the same draws without readback and ignores inFlight`.
-- [ ] Implement. Module header: why pick is NOT a `FRAME` member (spec §Pick), and why the resolve is a handful of texel reads + a CPU fold instead of a GPU pick-composite.
-- [ ] `npm test -- pickProgram` → green; `npm run typecheck` → clean.
+- [x] Implement. Module header: why pick is NOT a `FRAME` member (spec §Pick), and why the resolve is a handful of texel reads + a CPU fold instead of a GPU pick-composite.
+- [x] Controller design addition: `PickRenderer.bindCamera(pass)` (type + impl) restores the `@group(0)` pick camera prefix; `proceduralDisksLayer.drawPick` calls it after `pickDisks`; `ContentLayer.drawPick` docblock states the postcondition; tests pin both.
+- [x] `npm test -- pickProgram` → green; `npm run typecheck` → clean.
 - [ ] Commit the touched paths.
 
 ### Task 10: Cutover — hover, click, debug overlay onto the program

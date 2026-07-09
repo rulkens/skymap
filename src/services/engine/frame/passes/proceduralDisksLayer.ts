@@ -62,6 +62,15 @@ export const proceduralDisksLayer: ContentLayer = {
   // stash — the content replay is the renderer's own concern. Same
   // renderer-null guard as `draw`: the GPU handle is nullable pre-bootstrap
   // and the pick program's `enabled` gate never narrows it.
+  //
+  // ### @group(0) prefix restore
+  //
+  // `pickDisks` binds the disk camera at `@group(0)`, clobbering the shared
+  // point-pick camera prefix that the Milky-Way + structure-marker rows drawn
+  // after this one read (they bind nothing at slot 0 themselves). So this row
+  // calls `pickRenderer.bindCamera(pass)` before returning to put the shared
+  // prefix back — the postcondition every `drawPick` owes its successors (see
+  // `ContentLayer.drawPick`). Null-guarded like the disk renderer.
   drawPick(pass, view, ctx, state) {
     if (state.gpu.proceduralDiskRenderer === null) return;
     state.gpu.proceduralDiskRenderer.pickDisks(
@@ -72,5 +81,6 @@ export const proceduralDisksLayer: ContentLayer = {
       ctx.drawPxPerRad,
       state.gpu.focusUniform!.bindGroup,
     );
+    state.gpu.pickRenderer?.bindCamera(pass);
   },
 };
