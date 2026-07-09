@@ -48,8 +48,9 @@ export type ContentLayer = {
    * must match the profile baked into the renderer pipeline its `draw`
    * calls, but nothing enforces that today; a layer↔pipeline parity check
    * is the intended guardrail once a target's layers stop agreeing on
-   * blend — the near-field fold (an opaque near-field body layer sharing a
-   * target with an OVER labels layer) is the first to need one.
+   * blend — no target mixes blends today (the near-field fold kept its
+   * opaque bodies on `foreground:0` and its OVER captions on `swap`), so
+   * the check stays a future guardrail.
    */
   readonly blend: Blend;
   /** Whether this layer should record draw commands this frame. Pure: no side effects. */

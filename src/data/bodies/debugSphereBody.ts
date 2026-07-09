@@ -1,10 +1,9 @@
 /**
- * debugSphereBodies — Plan-01 stand-ins for the foreground debug spheres.
+ * debugSphereBodies — stand-ins for the foreground debug spheres.
  *
- * Seeds the foreground pass with a couple of true-scale bodies so
- * `encodeForegroundPass` has something to draw before the real BodyStore
- * (Plan 02) is wired up.  Plan 02 replaces these constants with live
- * `BodyStore` records; this file is deleted at that point.
+ * A couple of true-scale bodies for `debugSpheresLayer` to draw before a
+ * real BodyStore is wired up. A live `BodyStore` will replace these
+ * constants and retire this file.
  *
  * Two bodies, both authored from `SCALE_UNITS` (no inline magic Mpc
  * numbers) so the physical-units → Mpc relationship stays explicit:
@@ -33,10 +32,10 @@ export type DebugSphereBody = {
 };
 
 /**
- * Plan-01 stand-in bodies for the foreground pass, drawn in array order.
+ * Stand-in foreground bodies, drawn in array order.
  *
- * Each is consumed by `encodeForegroundPass` via:
- *   `composeBodyMvp(ctx.foregroundVp, body.positionMpc, ctx.renderOrigin, body.radiusMpc)`
+ * Each is consumed by `debugSpheresLayer` via:
+ *   `composeBodyMvp(view.slab.vp, body.positionMpc, RENDER_ORIGIN_MPC, body.radiusMpc)`
  */
 export const DEBUG_SPHERE_BODIES: readonly DebugSphereBody[] = [
   {

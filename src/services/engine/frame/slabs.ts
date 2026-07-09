@@ -39,9 +39,8 @@ export const COSMO = 1;
 // clamp. A fixed near/far would either clip nearby geometry (too far) or waste
 // precision on empty space (too near) depending on current scale.
 //
-// Forward reference: the zoom-to-earth series' Plan 03
-// (docs/superpowers/plans/2026-06-29-zoom-to-earth-03-lod-and-polish.md)
-// replaces both ratios with an adaptive `foregroundFrustum(cam.distance)`.
+// A future adaptive `foregroundFrustum(cam.distance)` will replace both
+// fixed ratios.
 const NEAR0_NEAR_RATIO = 1e-4;
 const NEAR0_FAR_RATIO = 100;
 

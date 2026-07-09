@@ -1,5 +1,5 @@
 /**
- * debugSphereLabels — name labels for the Plan-01 foreground debug spheres.
+ * debugSphereLabels — name labels for the foreground debug spheres.
  *
  * The Sun and Earth render true-scale in the foreground pass, so at almost
  * every zoom level they are sub-pixel and impossible to locate by eye.
@@ -11,21 +11,21 @@
  * The main camera projection is pinned at near = 0.01 Mpc.  At solar-system
  * zoom the bodies sit ~1e-13 Mpc from the camera — far inside that near
  * plane — so the normal label path (which projects with `ctx.vp`) would
- * clip them away.  `foregroundLabelsPass` instead draws these through
- * `ctx.foregroundVp`, whose near plane is proportional to `cam.distance`
- * and so always contains the bodies.
+ * clip them away.  `foregroundLabelsLayer` instead draws these through the
+ * NEAR0 slab view (`view.vp`), whose near plane is proportional to
+ * `cam.distance` and so always contains the bodies.
  *
  * ### Why renderOrigin-relative positions
  *
- * `ctx.foregroundVp` is built relative to `renderOrigin`: every position
+ * The NEAR0 slab view is built relative to `renderOrigin`: every position
  * handed to it must already have the origin subtracted (the same contract
  * `composeBodyMvp` honours for the sphere MVPs).  With `RENDER_ORIGIN_MPC`
  * fixed at the Sun ([0, 0, 0]) the subtraction is numerically a no-op
  * today, but doing it here keeps the labels correct by construction if a
  * future floating origin moves.
  *
- * Plan 02 replaces this with labels sourced from the real BodyStore; this
- * file is deleted then, alongside `debugSphereBody.ts`.
+ * A real `BodyStore` will source these labels and retire this file
+ * alongside `debugSphereBody.ts`.
  */
 
 import type { Label } from '../../../@types/rendering/Label';
