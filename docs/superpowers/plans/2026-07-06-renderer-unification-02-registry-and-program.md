@@ -150,13 +150,13 @@ export function timedSlotsOf(
 
 `timedSlotsOf` implements plan-time decision 5 (layers per render step in registry order, `'<source>→<dest>'` per composite, computes skipped, `'pick'` appended). Module header carries the "why data, not imperative code" rationale from the spec (timeless).
 
-- [ ] Test `frameProgram(tone) emits the five-step main program` — deep-equal against the literal above.
-- [ ] Test `the tonemap composite carries the given tone and is the program's only composite`.
-- [ ] Test `every render step references a slab present in deriveSlabs' table` (assert `slab === COSMO`; keeps the program honest when slabs go dynamic).
-- [ ] Test `timedSlotsOf lists layer slots per step, composite slots, then pick` — with the real `CONTENT_LAYERS`: `['scalar-volume'?…]` — at this task the volume layer doesn't exist yet, so drive with fake 2-layer registries; the real-registry assertion lands in task 7.
-- [ ] Test `timedSlotsOf yields unique names` (mirrors `passes.test.ts:187-189`).
-- [ ] Implement; `npm run typecheck && npm test` → green.
-- [ ] Commit.
+- [x] Test `frameProgram(tone) emits the five-step main program` — deep-equal against the literal above.
+- [x] Test `the tonemap composite carries the given tone and is the program's only composite`.
+- [x] Test `every render step references a slab present in deriveSlabs' table` (assert `slab === COSMO`; keeps the program honest when slabs go dynamic).
+- [x] Test `timedSlotsOf lists layer slots per step, composite slots, then pick` — with the real `CONTENT_LAYERS`: `['scalar-volume'?…]` — at this task the volume layer doesn't exist yet, so drive with fake 2-layer registries; the real-registry assertion lands in task 7.
+- [x] Test `timedSlotsOf yields unique names` (mirrors `passes.test.ts:187-189`).
+- [x] Implement; `npm run typecheck && npm test` → green.
+- [x] Commit.
 
 ### Task 6 — `executeFrame.ts`: the strategy-parameterized executor + COMPUTE table
 

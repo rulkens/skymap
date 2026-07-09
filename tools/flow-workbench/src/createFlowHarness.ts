@@ -38,6 +38,7 @@
  */
 import type { Store } from '../@types/state/Store';
 import type { AppState } from '../@types/state/AppState';
+import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { Mat4 } from '../../../src/@types/math/Mat4';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import { initGpu, resizeCanvasToDisplay } from '../../../src/services/gpu/device';
@@ -151,8 +152,15 @@ export async function createFlowHarness(
     const encoder = device.createCommandEncoder();
 
     // Compute pass (seed-when-armed + integrate). The gate skips entirely when
-    // the layer is off or the cube hasn't loaded.
-    encodeFlowCompute({ encoder, flowFieldRenderer: renderer, flow: s.flow, loaded });
+    // the layer is off or the cube hasn't loaded. `encodeFlowCompute` reads its
+    // gates off an `EngineState`; the workbench has no engine, so it assembles
+    // just the slice the gate consumes — the renderer handle, the flow settings,
+    // and a ready-when-loaded asset slot (the shape `slotReady` inspects).
+    encodeFlowCompute(encoder, {
+      gpu: { flowFieldRenderer: renderer },
+      settings: { flow: s.flow },
+      assetSlots: { flow: loaded ? { state: () => ({ kind: 'ready' }) } : null },
+    } as unknown as EngineState);
 
     // HDR accumulation pass — the renderer draws its additive ribbons into it.
     const pass = encoder.beginRenderPass({

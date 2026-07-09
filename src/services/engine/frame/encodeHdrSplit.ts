@@ -36,7 +36,6 @@ import { HDR_PASSES } from './passes';
 import { COSMO, slabViewOf } from './slabs';
 import { encodeVolumePrepass } from './encodeVolumePrepass';
 import { encodeFlowCompute } from './encodeFlowCompute';
-import { slotReady } from '../../loading/slotReady';
 
 export function encodeHdrSplit(
   encoder: GPUCommandEncoder,
@@ -72,12 +71,7 @@ export function encodeHdrSplit(
   // ── Flow-field compute pre-pass ───────────────────────────────────
   // Same pre-HDR compute dispatch as the single-pass branch; runs before
   // the per-pass HDR loop so the ribbon draw reads freshly-advanced trails.
-  encodeFlowCompute({
-    encoder,
-    flowFieldRenderer: state.gpu.flowFieldRenderer,
-    flow: state.settings.flow,
-    loaded: slotReady(state.assetSlots.flow),
-  });
+  encodeFlowCompute(encoder, state);
 
   // ── HDR sub-passes — one beginRenderPass per enabled layer ─────────
   //

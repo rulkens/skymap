@@ -26,10 +26,25 @@
  * common default-off path.
  */
 
-import type { EncodeFlowComputeArgs } from '../../../@types/engine/frame/EncodeFlowComputeArgs';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import { slotReady } from '../../loading/slotReady';
 
-export function encodeFlowCompute(args: EncodeFlowComputeArgs): void {
-  const { encoder, flowFieldRenderer, flow, loaded } = args;
-  if (flowFieldRenderer === null || !flow.enabled || !loaded) return;
+/**
+ * Encode the flow-field compute dispatch into `encoder`, reading its own gate
+ * straight off `state`: the renderer handle (`state.gpu.flowFieldRenderer`),
+ * the user toggle (`state.settings.flow`), and the demand-load status
+ * (`slotReady(state.assetSlots.flow)`). All three must hold — otherwise this is
+ * a no-op, the common default-off path.
+ *
+ * Reading the gate off `state` (rather than a caller-assembled arg bag) is what
+ * lets the frame executor's COMPUTE table hold a uniform
+ * `(encoder, ctx, state) => void` row per compute step: the flow row is just
+ * `(encoder, _ctx, state) => encodeFlowCompute(encoder, state)`, with no bespoke
+ * plumbing at the call site.
+ */
+export function encodeFlowCompute(encoder: GPUCommandEncoder, state: EngineState): void {
+  const flowFieldRenderer = state.gpu.flowFieldRenderer;
+  const flow = state.settings.flow;
+  if (flowFieldRenderer === null || !flow.enabled || !slotReady(state.assetSlots.flow)) return;
   flowFieldRenderer.encodeCompute(encoder, flow);
 }
