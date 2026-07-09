@@ -191,19 +191,19 @@ export function executeFrame(args: ExecuteFrameArgs): void;
 
 **Tests** (fake layers = object literals with spy `enabled`/`draw`; fake compositor; the encoder/pass recorder pattern from `renderFrame.test.ts:63-77`):
 
-- [ ] Test `runs steps in program order into a single encoder`.
-- [ ] Test `selects layers by (target, slab): two render steps over the same registry draw disjoint groups` (two fake layers on different targets).
-- [ ] Test `threads one SlabView instance per render step into every layer in the group` (identity-equal across draws).
-- [ ] Test `clears a target on its first pass of the frame and loads on later passes` (assert `loadOp`/`clearValue` per recorded descriptor; volume clears to a=0, hdr to a=1).
-- [ ] Test `opens no pass for a render step with no enabled layers`.
-- [ ] Test `skips a composite step whose source target was never touched` (compositor spy not called) and `runs it when the source render step drew`.
-- [ ] Test `merged strategy opens exactly one pass per non-empty render step`.
-- [ ] Test `perLayerTimed opens one pass per enabled layer, each carrying descriptorFor(layer.name)` (the `_stub`-tagged descriptor pattern from `renderFrame.timing.test.ts:56-75`).
-- [ ] Test `composite passes carry the source→dest timing descriptor`.
-- [ ] Test `disabledPasses[name] === true hides a layer; false/absent does not` (mirrors `renderFrame.test.ts:600-617`).
-- [ ] Test `compute steps dispatch through the COMPUTE table` (inject a fake table row? — the COMPUTE table is module-internal; assert via the flow renderer spy on `state.gpu.flowFieldRenderer` instead).
-- [ ] Implement; `npm run typecheck && npm test` → green (module not yet wired into `renderFrame`).
-- [ ] Commit.
+- [x] Test `runs steps in program order into a single encoder`.
+- [x] Test `selects layers by (target, slab): two render steps over the same registry draw disjoint groups` (two fake layers on different targets).
+- [x] Test `threads one SlabView instance per render step into every layer in the group` (identity-equal across draws).
+- [x] Test `clears a target on its first pass of the frame and loads on later passes` (assert `loadOp`/`clearValue` per recorded descriptor; volume clears to a=0, hdr to a=1).
+- [x] Test `opens no pass for a render step with no enabled layers`.
+- [x] Test `skips a composite step whose source target was never touched` (compositor spy not called) and `runs it when the source render step drew`.
+- [x] Test `merged strategy opens exactly one pass per non-empty render step`.
+- [x] Test `perLayerTimed opens one pass per enabled layer, each carrying descriptorFor(layer.name)` (the `_stub`-tagged descriptor pattern from `renderFrame.timing.test.ts:56-75`).
+- [x] Test `composite passes carry the source→dest timing descriptor`.
+- [x] Test `disabledPasses[name] === true hides a layer; false/absent does not` (mirrors `renderFrame.test.ts:600-617`).
+- [x] Test `compute steps dispatch through the COMPUTE table` (inject a fake table row? — the COMPUTE table is module-internal; assert via the flow renderer spy on `state.gpu.flowFieldRenderer` instead).
+- [x] Implement; `npm run typecheck && npm test` → green (module not yet wired into `renderFrame`).
+- [x] Commit.
 
 ### Task 7 — flip `renderFrame` to the program; add the scalar-volume layer + shared volume liveness
 

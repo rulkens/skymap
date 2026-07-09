@@ -1,5 +1,9 @@
 /**
- * EngineState — the shape of the Redux 'engine' slice.
+ * EngineSliceState — the shape of the Redux 'engine' slice.
+ *
+ * Named EngineSliceState to be unmistakable next to the engine's
+ * runtime-state bag type (`@types/engine/state/EngineState`), which is a
+ * different, much larger thing.
  *
  * Holds the observable runtime state the engine reports to the store:
  * lifecycle status, per-source galaxy counts, per-structure counts, load
@@ -27,7 +31,7 @@ import type { SourceType } from '../data/SourceType';
 import type { StructureId } from '../data/structure/StructureId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 
-export type EngineState = {
+export type EngineSliceState = {
   status: EngineStatus;
   scale: ScaleInfo;
   sourceCounts: Partial<Record<SourceType, number>>;

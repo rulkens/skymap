@@ -31,7 +31,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { engineRoute } from '../../store/constants';
-import type { EngineState } from '../../@types/store/EngineState';
+import type { EngineSliceState } from '../../@types/store/EngineSliceState';
 import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
@@ -44,7 +44,7 @@ import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
  */
 const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
 
-const initialState: EngineState = {
+const initialState: EngineSliceState = {
   status: { kind: 'initializing' },
   scale: INITIAL_SCALE,
   sourceCounts: {},
