@@ -178,14 +178,14 @@ Swap the near row's provisional vp derivation for the branch's real one (plan-ti
 
 `tone` is the **same object** the hdr→swap composite carries — the shared-curve-across-the-limb requirement, now enforced by identity instead of a constants file. `executeFrame` needs zero edits: `viewFor('foreground:0')` resolves through the target table (Task 2's row), the depth attachment rides Task 2's rule, and the touched-set rule skips the `over` composite whenever the foreground render step drew nothing (behaviour delta b). The step order is the visible "captions over bodies, bodies over cosmological labels" decision — carry the spec's one-paragraph rationale into the program's step comments.
 
-- [ ] Test: the main-program deep-equal test grows to the eight-step literal (five plan-02 steps + the tail above).
-- [ ] Test: `the two composites share one tone instance` — `steps[3].step.tone` `toBe` `steps[6].step.tone` (adjust indices to the landed program).
-- [ ] Test: the only-composite assertion becomes `the program's composites are hdr→swap replace and foreground:0→swap over, in that order`.
-- [ ] Test: the every-render-step-references-a-known-slab test now spans both `NEAR0` and `COSMO`.
-- [ ] Test: the real-registry `timedSlotsOf` assertion appends `'debug-spheres'`, `'foreground:0→swap'`, `'foreground-labels'` before `'pick'`.
-- [ ] Update `renderFrame.test.ts` / `renderFrame.timing.test.ts` where the canonical-order or slot-name fixtures pin the old five-step shape (the foreground steps select nothing when the fixtures' gpu bag has null foreground handles — assert that skip once: `no foreground pass or composite is encoded while the foreground handles are null`).
-- [ ] `npm run typecheck && npm test` → green.
-- [ ] Commit the touched paths.
+- [x] Test: the main-program deep-equal test grows to the eight-step literal (five plan-02 steps + the tail above).
+- [x] Test: `the two composites share one tone instance` — `steps[3].step.tone` `toBe` `steps[6].step.tone` (adjust indices to the landed program).
+- [x] Test: the only-composite assertion becomes `the program's composites are hdr→swap replace and foreground:0→swap over, in that order`.
+- [x] Test: the every-render-step-references-a-known-slab test now spans both `NEAR0` and `COSMO`.
+- [x] Test: the real-registry `timedSlotsOf` assertion appends `'debug-spheres'`, `'foreground:0→swap'`, `'foreground-labels'` before `'pick'`.
+- [x] Update `renderFrame.test.ts` / `renderFrame.timing.test.ts` where the canonical-order or slot-name fixtures pin the old five-step shape (the foreground steps select nothing when the fixtures' gpu bag has null foreground handles — assert that skip once: `no foreground pass or composite is encoded while the foreground handles are null`).
+- [x] `npm run typecheck && npm test` → green.
+- [x] Commit the touched paths.
 
 ### Task 8 — gate: full suite, radar, the deferred #386 visual gate, un-draft
 

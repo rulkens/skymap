@@ -163,13 +163,13 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // Near-field foreground group: the true-scale bodies (Sun, Earth) drawn
   // into the depth-bearing 'foreground:0' target through the near0 slab.
   // Registered after the swap group — position only affects timing-slot
-  // listing, since no other layer shares its (target, slab). Inert until the
-  // frame program appends the foreground render step (task 7).
+  // listing, since no other layer shares its (target, slab). The frame
+  // program's foreground render step drives it.
   debugSpheresLayer,
   // Near-field captions: the Sun/Earth name labels drawn OVER onto the swap
-  // chain through the near0 slab. Registered after debug-spheres; like it,
-  // inert until the frame program appends the (swap, NEAR0) render step (task
-  // 7) — the existing (swap, COSMO) step selects nothing here by construction.
+  // chain through the near0 slab. Registered after debug-spheres; the frame
+  // program's (swap, NEAR0) render step drives it — the (swap, COSMO) step
+  // selects nothing here by construction.
   foregroundLabelsLayer,
 ];
 
