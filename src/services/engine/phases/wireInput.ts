@@ -17,7 +17,7 @@
  * ### State writes
  *
  *   - `state.cam`.
- *   - `state.gpu.pickRenderer`.
+ *   - `state.gpu.pickRenderer`, `state.gpu.pickProgram`.
  *   - `state.subsystems.clickResolver`, `state.subsystems.inputBindings`.
  *
  * ### Side effects on `deps`
@@ -31,6 +31,8 @@ import { zoomedPose } from '../../../utils/camera/zoomedPose';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
+import { createPickProgram } from '../frame/pickProgram';
+import { CONTENT_LAYERS } from '../frame/passes';
 import { createClickResolver } from '../interaction/clickHandler';
 import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
@@ -38,12 +40,7 @@ import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming
 import { poseOf } from '../camera/poseOf';
 import { projectionOf } from '../camera/projectionOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
-import { collectPickTargets } from '../helpers/collectPickTargets';
-import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
-import { pickFrameContext } from '../helpers/pickFrameContext';
-import { pickUniformBytesOf } from '../helpers/pickUniformBytesOf';
-import { slabViewOf, COSMO } from '../frame/slabs';
 import {
   commitCameraPose,
   beginDrag,
@@ -68,9 +65,8 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas } = deps;
 
-  // The visual renderer must exist before we wire picking + the camera. The
-  // `renderer` local is the null-guard subject on the next line and is captured
-  // by the hover-pick `collectTargets` closure below.
+  // The visual renderer must exist before we wire picking + the camera —
+  // `renderer` is the null-guard subject on the next line.
   const renderer = state.gpu.renderer;
   if (!renderer) return;
   // Thread the cluster marker renderer through so the pick pass can
@@ -88,16 +84,31 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state.gpu.focusUniform!.bindGroup,
     state.gpu.structureMarkerRenderer ?? undefined,
     state.gpu.proceduralDiskRenderer ?? undefined,
-    // The Milky-Way pick provider + its disk-visibility gate — the same
-    // `milkyWayPickVisible` predicate `collectPickTargets` below uses, so
-    // the draw gate and the has-targets gate can't drift.  Gate only: the
+    // The Milky-Way pick provider + its disk-visibility gate. Gate only: the
     // hit billboard's SIZE is computed in the MW pick vertex shader from
     // the pick pass's camera uniforms.  A closure over `state` + `canvas`
-    // so the renderer stays free of EngineState; it draws when told.
+    // so the renderer stays free of EngineState; it draws when told. (This
+    // constructor is superseded once the MW pick moves onto its registry
+    // layer's `drawPick` — see plan-03 Task 11.)
     state.gpu.milkyWayPickRenderer ?? undefined,
     () => milkyWayPickVisible(state, canvas.height),
   );
   state.gpu.pickRenderer = pickRenderer;
+
+  // The parallel per-slab pick program over the content-layer registry — the
+  // single owner of the hover / click / debug-overlay pick path. It filters
+  // `CONTENT_LAYERS` by `drawPick` + `enabled`, re-rasterises each pickable
+  // slab into its own r32uint target, reads back the cursor texel, and folds
+  // the results near→far. It derives the pick-time camera, the pickable
+  // sources, the point size, and the timing slot internally from `state`, so
+  // its callers only supply the cursor position.
+  const pickProgram = createPickProgram({
+    device: deps.phaseLocals!.device,
+    canvas,
+    state,
+    layers: CONTENT_LAYERS,
+  });
+  state.gpu.pickProgram = pickProgram;
 
   // ── Hover-pick driver ────────────────────────────────────────────────
   //
@@ -106,35 +117,15 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // coalesces moves (GPU readback latency is the natural throttle),
   // fires an async pick, and dispatches the hover result to the Redux store.
   // Because hover feeds only the React InfoCard text — not a visual halo —
-  // no `requestRender` is ever needed here.
-  //
-  // All thunks are closures over live `state` / `canvas` so viewport size,
-  // sizePx setting, and pick masks are always fresh at fire time, not
-  // captured as stale values at construction.
+  // no `requestRender` is ever needed here. The driver hands the program a
+  // texture-space cursor position and nothing else; the program derives every
+  // other pick input live from `state`.
   const store = deps.cb.store;
   const hoverPickDriver = createHoverPickDriver({
     state,
-    pickRenderer,
+    pickProgram,
     store,
     resolveDeps: { structures: state.data.structures },
-    collectTargets: () =>
-      collectPickTargets(
-        renderer,
-        deriveSourceMasks(state).pick,
-        state.gpu.structureMarkerRenderer,
-        milkyWayPickVisible(state, canvas.height),
-      ),
-    // Rebuild the packed point pick uniform from the pick-time camera on
-    // demand (Task 10 folds this into pickProgram). `null` before the engine
-    // is ready — the driver skips, matching its pre-first-frame no-op.
-    uniformBytes: () => {
-      const ctx = pickFrameContext(state, canvas);
-      if (ctx === null) return null;
-      return pickUniformBytesOf(slabViewOf(ctx, COSMO), ctx, state);
-    },
-    viewportPx: () => [canvas.width, canvas.height],
-    pointSizePx: () => state.settings.galaxyCatalogs.sizePx,
-    timingDescriptor: () => state.gpu.timingService.descriptorFor('pick'),
   });
 
   // The resolver runs the whole pixel → SelectionRef boundary via
@@ -143,7 +134,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // reconciler resolves the cloud at display time. Structure hits resolve
   // the pick index to the record's durable id via the structure store.
   state.subsystems.clickResolver = createClickResolver({
-    pickRenderer,
+    pickProgram,
     structures: state.data.structures,
   });
 
@@ -248,54 +239,18 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     xCss: number,
     yCss: number,
   ): ReturnType<NonNullable<typeof state.subsystems.clickResolver>['resolveClick']> | null => {
-    const r = state.gpu.renderer;
     const cr = state.subsystems.clickResolver;
-    if (!r || state.data.galaxies.catalogs.size === 0 || !cr) return null;
+    if (!cr) return null;
 
-    // Snapshot what's pickable — visible galaxy catalogs (filtered by the
-    // pick mask; a fading-out layer clears its bit immediately so it
-    // can't claim a click while still visually fading) plus whether any
-    // cluster ring is on screen.  Shared with the hover + pick-debug
-    // gates via collectPickTargets so all three agree.  The pick mask is
-    // DERIVED FRESH here at click time — strictly fresher than the
-    // per-frame value `runFrame` computes, so a same-tick toggle is
-    // already reflected.
-    const { visibleSources, hasAny } = collectPickTargets(
-      r,
-      deriveSourceMasks(state).pick,
-      state.gpu.structureMarkerRenderer,
-      milkyWayPickVisible(state, canvas.height),
-    );
-    if (!hasAny) return null;
-
-    // Engine not ready to pick — no camera state to reproduce in the pick
-    // pass.  Resolves to null (background), matching pre-first-frame click
-    // behaviour.  Rebuilt from the pick-time camera rather than a per-frame
-    // stash (Task 10 folds this into pickProgram).
-    const ctx = pickFrameContext(state, canvas);
-    if (ctx === null) return null;
-    const uniformBytes = pickUniformBytesOf(slabViewOf(ctx, COSMO), ctx, state);
-
+    // The pick program owns every other decision — the pick-time camera,
+    // which layers are pickable, the timing slot. It resolves to null for a
+    // not-ready engine or an empty scene, so no pre-pick readiness / target
+    // gate is needed here. A zero-catalog scene with visible rings is now
+    // clickable (matching the hover path, which never had that gate); an
+    // all-hidden scene resolves to null and clears any stale selection.
     return cr.resolveClick({
       pickXPx: cssToTexPx(xCss),
       pickYPx: cssToTexPx(yCss),
-      viewportPx: [canvas.width, canvas.height],
-      visibleSources,
-      // Threaded through so the pick pass can boost its floor size
-      // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
-      pointSizePx: state.settings.galaxyCatalogs.sizePx,
-      // Packed uniform bytes for the pick-time camera.  The pick renderer
-      // uploads them to its OWN buffer and applies its three overrides — the
-      // visual buffer is never touched.
-      uniformBytes,
-      // Per-pass GPU timing.  Resolves to `undefined` when the
-      // timing service isn't active on this adapter (no
-      // `timestamp-query` feature) — in that case the pick render
-      // pass falls back to its pre-timing descriptor shape.  When
-      // present, the descriptor binds the shared query set's 'pick'
-      // slot pair; the resolve+copy rides on the NEXT main-frame
-      // `endFrame`, so cross-frame latency is at most one main frame.
-      timingDescriptor: state.gpu.timingService.descriptorFor('pick'),
     });
   };
 

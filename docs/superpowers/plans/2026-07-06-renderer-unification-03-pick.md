@@ -278,7 +278,7 @@ export function createPickProgram(deps: {
 - [x] Implement. Module header: why pick is NOT a `FRAME` member (spec §Pick), and why the resolve is a handful of texel reads + a CPU fold instead of a GPU pick-composite.
 - [x] Controller design addition: `PickRenderer.bindCamera(pass)` (type + impl) restores the `@group(0)` pick camera prefix; `proceduralDisksLayer.drawPick` calls it after `pickDisks`; `ContentLayer.drawPick` docblock states the postcondition; tests pin both.
 - [x] `npm test -- pickProgram` → green; `npm run typecheck` → clean.
-- [ ] Commit the touched paths.
+- [x] Commit the touched paths.
 
 ### Task 10: Cutover — hover, click, debug overlay onto the program
 

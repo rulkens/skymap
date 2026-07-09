@@ -387,16 +387,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Pick-buffer debug overlay ─────────────────────────────────────────────
   //
   // Composite a colour-mapped pick-buffer overlay over the swap chain.
-  // Runs AFTER renderFrame's submit — placed post-frame so the overlay
-  // reflects the just-rendered frame; it rebuilds the pick uniform bytes at
-  // pick time from the slab view (see `pickUniformBytesOf`), not from any
-  // per-frame stash. The helper owns its own encoder/submit with
-  // `loadOp: 'load'` so the OVER blend composites on top of the tone-mapped
-  // frame without re-rendering the scene.
+  // Runs AFTER renderFrame's submit — placed post-frame purely as a latency
+  // choice (reflect the just-rendered pose with minimal lag), not because it
+  // depends on the frame having drawn: `pickProgram.renderForDebug()` rebuilds
+  // the pick-time camera as a value and re-draws the pickable layers itself.
+  // The helper owns its own encoder/submit with `loadOp: 'load'` so the OVER
+  // blend composites on top of the tone-mapped frame without re-rendering.
   //
   // Hover picking is now fully pointer-driven (hoverPickDriver, wired in
   // wireInput.ts) — there is no longer an in-frame pick block here.
-  drawPickDebugOverlay(state, deps, masks);
+  drawPickDebugOverlay(state, deps);
 
   // ── Render-on-demand: continue ticking ONLY if motion or async work is in
   // flight. Otherwise the loop sleeps until a channel mouth wakes it: input,

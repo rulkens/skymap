@@ -18,13 +18,12 @@
  *       resting position after a fast flick. Without it, all mid-flight
  *       moves are dropped and a stopped cursor never gets a pick result.
  *
- *   (c) Null bytes guard: `uniformBytes()` returning `null` means the engine
- *       is not ready to pick yet — pick is a no-op (no `pick` call) to match
- *       the pre-first-frame behaviour of the old in-frame path.
- *
- *   (d) Empty-target guard: when `collectTargets()` returns `hasAny: false`
- *       (all catalogs hidden and no structure markers on screen) a pick pass
- *       would read garbage — skip it.
+ *   (c) No pre-fire gate: the driver always hands the position to
+ *       `pickProgram.pick` — the program owns the "is the engine ready / is
+ *       anything pickable" decisions and resolves to `null` for a not-ready
+ *       or empty scene, which decodes to "nothing hovered". So even a
+ *       null-resolving pick still FIRES (one `pick` call) and dispatches
+ *       `updateSelectionHover(null)`.
  *
  *   (e) Dispatch: the resolved pick is decoded by `resolvePick` and the
  *       result is dispatched as `updateSelectionHover(...)` on the store.
@@ -40,7 +39,6 @@ import { updateSelectionHover } from '../../../../src/state/selection/selectionS
 import type { HoverPickDeps } from '../../../../src/@types/engine/interaction/HoverPickDeps';
 import type { PickFrameCam } from '../../../../src/@types/engine/state/PickFrameCam';
 import type { PickResult } from '../../../../src/@types/data/PickResult';
-import type { PickTargets } from '../../../../src/services/engine/helpers/collectPickTargets';
 import type { CssPx } from '../../../../src/@types/input/CssPx';
 
 // ---------------------------------------------------------------------------
@@ -64,7 +62,7 @@ function makeDeferred<T>(): Deferred<T> {
   return { promise, resolve, reject };
 }
 
-/** Factory for a fake `PickRenderer` whose `pick` returns a deferred promise.
+/** Factory for a fake `PickProgram` whose `pick` returns a deferred promise.
  * The factory resets the deferred on each call so multi-call tests can track
  * which call is in flight. */
 function makeFakePicker(): {
@@ -89,22 +87,6 @@ function makeFakePicker(): {
     callCount: () => calls,
   };
 }
-
-// Minimal PickTargets with at least one source (hasAny: true).
-const targetsWithSources: PickTargets = {
-  visibleSources: [{ source: 0 } as PickTargets['visibleSources'][number]],
-  hasAny: true,
-};
-
-// PickTargets that represent an empty scene (nothing to pick).
-const emptyTargets: PickTargets = {
-  visibleSources: [],
-  hasAny: false,
-};
-
-// A dummy ArrayBuffer representing the packed uniform bytes the deps thunk
-// builds at pick time (non-null → the engine is ready to pick).
-const dummyUniformBytes = new ArrayBuffer(176);
 
 // A reusable PickStructureStore stub (resolvePick only needs `byCategory`).
 const emptyStructures = { byCategory: () => [] };
@@ -139,21 +121,14 @@ beforeEach(() => {
 
   deps = {
     state: { picking: pickingState },
-    pickRenderer: {
+    pickProgram: {
+      label: 'pickProgram',
       pick: picker.pick,
-      drawPoints: vi.fn<() => void>(),
-      bindCamera: vi.fn<() => void>(),
-      renderForDebug: vi.fn<() => null>(),
+      renderForDebug: vi.fn<() => null>(() => null),
       destroy: vi.fn<() => void>(),
-      label: 'pickRenderer',
     },
     store: { dispatch: dispatchSpy },
     resolveDeps: { structures: emptyStructures },
-    uniformBytes: vi.fn<() => ArrayBuffer | null>(() => dummyUniformBytes),
-    collectTargets: vi.fn<() => PickTargets>(() => targetsWithSources),
-    viewportPx: vi.fn<() => [number, number]>(() => [800, 600]),
-    pointSizePx: vi.fn<() => number>(() => 2.5),
-    timingDescriptor: vi.fn<() => undefined>(() => undefined),
   };
 });
 
@@ -215,20 +190,21 @@ describe('createHoverPickDriver', () => {
     });
   });
 
-  // (c) Null uniform bytes guard
-  it('a null uniformBytes() result is a no-op (no pick call)', () => {
-    (deps.uniformBytes as ReturnType<typeof vi.fn>).mockReturnValue(null);
+  // (c) No pre-fire gate: a null-resolving pick still fires + dispatches null
+  it('fires the pick even when the program resolves null, dispatching hover(null)', async () => {
+    // There is no pre-fire "is anything pickable / is the engine ready" gate
+    // anymore — the program owns that and resolves to null for a not-ready or
+    // empty scene. The driver must still FIRE (one pick call) and dispatch the
+    // decoded result, which is `updateSelectionHover(null)`.
     const driver = createHoverPickDriver(deps);
     driver.onPointerMove(posA);
-    expect(picker.callCount()).toBe(0);
-  });
+    expect(picker.callCount()).toBe(1);
 
-  // (d) Empty-target guard
-  it('an empty-target scene is a no-op (no pick call)', () => {
-    (deps.collectTargets as ReturnType<typeof vi.fn>).mockReturnValue(emptyTargets);
-    const driver = createHoverPickDriver(deps);
-    driver.onPointerMove(posA);
-    expect(picker.callCount()).toBe(0);
+    picker.resolveLatest(null);
+    await vi.waitFor(() => {
+      expect(dispatchSpy.mock.calls.length).toBeGreaterThan(0);
+    });
+    expect(dispatchSpy).toHaveBeenCalledWith(updateSelectionHover(null));
   });
 
   // (e) Dispatch

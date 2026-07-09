@@ -166,6 +166,7 @@ describe('EngineState type', () => {
       gpu: {
         renderer: null,
         pickRenderer: null,
+        pickProgram: null,
         milkyWayPickRenderer: null,
         fadeBgl: null,
         sourceBgl: null,
@@ -412,6 +413,7 @@ describe('EngineState type', () => {
       gpu: {
         renderer: null,
         pickRenderer: null,
+        pickProgram: null,
         milkyWayPickRenderer: null,
         fadeBgl: null,
         sourceBgl: null,

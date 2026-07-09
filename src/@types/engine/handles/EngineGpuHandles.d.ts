@@ -42,6 +42,7 @@
 import type { PointRenderer } from '../../rendering/PointRenderer';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { PickRenderer } from '../../rendering/PickRenderer';
+import type { PickProgram } from '../frame/PickProgram';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
@@ -69,6 +70,17 @@ import type { Compositor } from '../../rendering/Compositor';
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
   pickRenderer: PickRenderer | null;
+  /**
+   * The parallel per-slab pick program over the content-layer registry.
+   * Owns the hover / click / debug-overlay pick path: it filters the registry
+   * by `drawPick` presence + `enabled`, re-rasterises each pickable slab into
+   * its own r32uint target, reads back the cursor texel, and folds the results
+   * near→far. Constructed in `wireInput` (alongside `pickRenderer`, from which
+   * it borrows the point-pick draw provider) once the registry + GPU handles
+   * exist; null until then. Destroyed in teardown alongside the other pick
+   * providers — it owns per-slab pick + depth textures and staging buffers.
+   */
+  pickProgram: PickProgram | null;
   /**
    * Invisible, pick-only Milky-Way billboard.  Stamps the MW identity
    * into the r32uint pick texture so the galactic centre is clickable.
