@@ -47,14 +47,15 @@ import { useEffect, useState, useRef, type ReactElement } from 'react';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
-import { TIMED_SLOT_NAMES } from '../../services/engine/frame/passes';
+import { TIMED_SLOTS } from '../../services/engine/frame/frameProgram';
 import { Sparkline } from './Sparkline';
 
 // Row order = the timing registry's order, which is encoder draw order
-// (scalar-volume pre-pass, the HDR loop, tone-map, ui-overlay, pick).
-// This is the same list the service allocates query-set slots from, so a
-// renderer that joins `HDR_PASSES` gets a row here automatically.
-const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = TIMED_SLOT_NAMES;
+// (scalar-volume, the HDR layers, the hdr→swap composite, the swap overlays,
+// pick). Derived from the FRAME program + content-layer registry, the SAME
+// list the timing service allocates query-set slots from — so a renderer that
+// joins the registry gets a row here automatically.
+const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = TIMED_SLOTS;
 
 const AVG_WINDOW = 60;
 const SPARKLINE_WINDOW = 8;

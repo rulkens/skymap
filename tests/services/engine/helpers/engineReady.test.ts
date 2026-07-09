@@ -48,18 +48,21 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
  * other GPU handles: constructed in `initGpu`, torn down in `destroy()`.
  * Including it here ensures the bootstrap gate checks all of them.
  */
-function makeState(overrides: {
-  cam?: OrbitCamera | null;
-  renderer?: unknown;
-  postProcess?: unknown;
-  pickRenderer?: unknown;
-  volumeOffscreen?: unknown;
-  texturedDisks?: unknown;
-} = {}): EngineState {
+function makeState(
+  overrides: {
+    cam?: OrbitCamera | null;
+    renderer?: unknown;
+    postProcess?: unknown;
+    compositor?: unknown;
+    pickRenderer?: unknown;
+    volumeOffscreen?: unknown;
+    texturedDisks?: unknown;
+  } = {},
+): EngineState {
   const cam = overrides.cam === undefined ? ({} as unknown as OrbitCamera) : overrides.cam;
   const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
-  const postProcess =
-    overrides.postProcess === undefined ? ({} as unknown) : overrides.postProcess;
+  const postProcess = overrides.postProcess === undefined ? ({} as unknown) : overrides.postProcess;
+  const compositor = overrides.compositor === undefined ? ({} as unknown) : overrides.compositor;
   const pickRenderer =
     overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
   const volumeOffscreen =
@@ -68,7 +71,7 @@ function makeState(overrides: {
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
-    gpu: { renderer, postProcess, pickRenderer, volumeOffscreen },
+    gpu: { renderer, postProcess, compositor, pickRenderer, volumeOffscreen },
     subsystems: { texturedDisks },
   } as unknown as EngineState;
 }
@@ -84,6 +87,13 @@ describe('isEngineReady — false branch', () => {
 
   it('returns false when state.gpu.postProcess is null', () => {
     expect(isEngineReady(makeState({ postProcess: null }))).toBe(false);
+  });
+
+  it('returns false when state.gpu.compositor is null', () => {
+    // compositor shares postProcess's bootstrap lifecycle: minted in initGpu,
+    // released in destroy(). The FRAME program's hdr→swap composite calls
+    // compositor.draw, so a frame must never run without it.
+    expect(isEngineReady(makeState({ compositor: null }))).toBe(false);
   });
 
   it('returns false when state.gpu.pickRenderer is null', () => {
@@ -104,7 +114,7 @@ describe('isEngineReady — false branch', () => {
 });
 
 describe('isEngineReady — true branch', () => {
-  it('returns true when all six handles are non-null', () => {
+  it('returns true when all guard handles are non-null', () => {
     expect(isEngineReady(makeState())).toBe(true);
   });
 
@@ -141,6 +151,7 @@ describe('isEngineReady — type narrowing', () => {
       void state.cam.target;
       void state.gpu.renderer.totalCount;
       void state.gpu.postProcess.draw;
+      void state.gpu.compositor.draw;
       void state.gpu.pickRenderer.pick;
       void state.gpu.volumeOffscreen.view;
       void state.subsystems.texturedDisks.runFrame;

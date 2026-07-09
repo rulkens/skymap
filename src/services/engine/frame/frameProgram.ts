@@ -27,6 +27,7 @@ import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import { COSMO } from './slabs';
+import { CONTENT_LAYERS } from './passes';
 
 /**
  * Build this frame's step program. `tone` is threaded into the single
@@ -78,3 +79,19 @@ export function timedSlotsOf(
   slots.push('pick');
   return slots;
 }
+
+/**
+ * The engine's ordered GPU-timing slots — the single source of truth for both
+ * query-set slot allocation (`createGpuTimingService`) and DebugPanel display
+ * order (`GpuTimingsSection`). Derived from the real FRAME program + the
+ * content-layer registry, replacing the hand-maintained `TIMED_SLOT_NAMES`.
+ *
+ * The tone values are placeholders: `timedSlotsOf` only reads step kinds and
+ * `(target, slab)` — the composite's `tone` never affects a slot NAME — so a
+ * fixed `{ exposure: 1, curve: 0 }` yields the same list every real frame's
+ * `frameProgram(tone)` would.
+ */
+export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
+  frameProgram({ exposure: 1, curve: 0 }),
+  CONTENT_LAYERS,
+);

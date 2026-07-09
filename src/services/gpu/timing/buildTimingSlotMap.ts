@@ -6,9 +6,9 @@
  * ### Why this is a function, not a static const
  *
  * The set of timed passes is data-driven, not compile-time-fixed: it's DERIVED
- * from the render-pass registry (`TIMED_SLOT_NAMES` in
- * `services/engine/frame/passes/index.ts`).  Adding a renderer to
- * `HDR_PASSES` is the only edit needed — its timing slot is allocated
+ * from the FRAME program + content-layer registry (`TIMED_SLOTS` in
+ * `services/engine/frame/frameProgram.ts`).  Adding a layer to the registry
+ * is the only edit needed — its timing slot is allocated
  * here automatically, and it appears in the DebugPanel without touching
  * any timing-layer file.  Keeping the allocation *mechanism* here (a
  * pure `gpu/timing` helper) while the *policy* — which passes, in what

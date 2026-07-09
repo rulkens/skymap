@@ -40,8 +40,8 @@
  * the HDR passes' `enabled` gates to return true (subsystems with
  * non-empty lastOutput, optional renderers non-null with positive
  * glyph/line counts, settings toggles on, camera inside the Milky-Way
- * fade band).  Result: one renderer-draw entry per enabled HDR pass +
- * 1 postProcess.draw.
+ * fade band).  Result: one renderer-draw entry per enabled layer +
+ * 1 compositor.draw (the hdr→swap tone-map).
  *
  * The horizon shell is the lone exception: its distance fade is the
  * mirror image of the Milky Way's, so a camera close enough to light
@@ -184,14 +184,27 @@ function makeLoggingRenderer(records: DrawRecord[], name: string, method = 'draw
   return { [method]: mock };
 }
 
-function makePostProcess(records: DrawRecord[]): any {
+function makePostProcess(): any {
+  // Owns the HDR target view only — the tone-map blit is now the FRAME
+  // program's `hdr→swap` composite (see makeCompositor), so `draw` is never
+  // called on postProcess and needn't log.
   return {
     view: { __id: 'hdr-view' } as unknown as GPUTextureView,
     resize: vi.fn(),
+    draw: vi.fn(),
+    destroy: vi.fn(),
+  };
+}
+
+function makeCompositor(records: DrawRecord[]): any {
+  // The FRAME program's single composite step: the Compositor tone-maps the
+  // HDR target onto the swap chain inside a render pass the executor opens.
+  return {
+    label: 'compositor',
     draw: vi.fn((...args: unknown[]) => {
       records.push({
         kind: 'rendererDraw',
-        renderer: 'postProcess',
+        renderer: 'compositor',
         argShape: describeArgs(args),
       });
     }),
@@ -279,7 +292,8 @@ describe('renderFrame visual baseline', () => {
       lineCount: vi.fn(() => 3),
       ...makeLoggingRenderer(records, 'marker-lines'),
     };
-    const postProcess = makePostProcess(records);
+    const postProcess = makePostProcess();
+    const compositor = makeCompositor(records);
 
     const cam = makeCam();
     const canvasWidth = 1280;
@@ -372,6 +386,8 @@ describe('renderFrame visual baseline', () => {
           // the recorded single-vs-split sequence is unchanged.
           flowFieldRenderer: null,
           volumeUpsample,
+          // The FRAME program's hdr→swap composite reads state.gpu.compositor.
+          compositor,
           structureMarkerRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud: {
@@ -412,7 +428,7 @@ describe('renderFrame visual baseline', () => {
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
           filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
-          volumes: { enabled: settings.volumesEnabled },
+          volumes: { enabled: settings.volumesEnabled, items: {} },
           flow: { enabled: false },
           debug: { disabledPasses: {} },
         },
@@ -491,8 +507,8 @@ describe('renderFrame visual baseline', () => {
           "renderer": "volume-upsample",
         },
         {
-          "argShape": "object,object,number,number,undefined",
-          "renderer": "postProcess",
+          "argShape": "pass,object,string,object",
+          "renderer": "compositor",
         },
         {
           "argShape": "pass,Float32Array[16],Array[2]",
@@ -505,18 +521,18 @@ describe('renderFrame visual baseline', () => {
       ]
     `);
 
-    // Boundary-event count for the no-timing path: THREE begin/end
-    // pairs — one for the half-res scalar-volume pre-pass
-    // (`encodeVolumes`, wired in Task 9), one for the HDR mega-pass
-    // (`encodeHdrSingle`), and one for the post-tone-map UI overlay
-    // (`encodeUiOverlay`).  Tone-map's beginRenderPass is hidden inside
-    // postProcess.draw (the mock just records the call), so it doesn't
-    // appear here.  Counts are asserted SEPARATELY from the inline
-    // snapshot above on purpose: drawSequence captures the renderer-
-    // dispatch invariant, these counts capture the pass-boundary structure.
+    // Boundary-event count for the no-timing 'merged' path: FOUR begin/end
+    // pairs — one per non-empty render step's target group plus the composite.
+    // In FRAME-program order: the volume raymarch pass, the HDR mega-pass, the
+    // hdr→swap composite pass, and the swap-chain overlay pass (marker-lines +
+    // labels). Unlike the old inline path, the tone-map's beginRenderPass is
+    // NOT hidden inside postProcess.draw — the executor opens the composite
+    // pass, so it appears here. Counts are asserted SEPARATELY from the inline
+    // snapshot: drawSequence captures the renderer-dispatch invariant, these
+    // counts capture the pass-boundary structure.
     const beginCount = records.filter((r) => r.kind === 'beginRenderPass').length;
     const endCount = records.filter((r) => r.kind === 'passEnd').length;
-    expect(beginCount).toBe(3);
-    expect(endCount).toBe(3);
+    expect(beginCount).toBe(4);
+    expect(endCount).toBe(4);
   });
 });

@@ -65,7 +65,7 @@ import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/passes/diskRadiusRing';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
-import { TIMED_SLOT_NAMES } from '../frame/passes';
+import { TIMED_SLOTS } from '../frame/frameProgram';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import {
@@ -398,11 +398,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // gate is off OR the adapter lacks `timestamp-query`, so consumers gate
   // behind one `state.gpu.timingService.enabled` check.  The no-op path
   // allocates no GPU resources.
-  state.gpu.timingService = createGpuTimingService(
-    device,
-    hasUrlGate('gpuTimings'),
-    TIMED_SLOT_NAMES,
-  );
+  state.gpu.timingService = createGpuTimingService(device, hasUrlGate('gpuTimings'), TIMED_SLOTS);
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

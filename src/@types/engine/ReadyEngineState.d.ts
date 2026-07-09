@@ -17,6 +17,7 @@ import type { OrbitCamera } from '../camera/OrbitCamera';
 import type { PointRenderer } from '../rendering/PointRenderer';
 import type { PickRenderer } from '../rendering/PickRenderer';
 import type { PostProcess } from '../rendering/PostProcess';
+import type { Compositor } from '../rendering/Compositor';
 import type { VolumeOffscreen } from '../rendering/VolumeOffscreen';
 import type { TexturedDiskSubsystem } from './subsystems/TexturedDiskSubsystem';
 
@@ -26,6 +27,12 @@ export type ReadyEngineState = EngineState & {
     renderer: PointRenderer;
     pickRenderer: PickRenderer;
     postProcess: PostProcess;
+    /**
+     * Non-null after bootstrap: minted in `initGpu` alongside `postProcess`
+     * (which is one of its callers). The FRAME program's `hdr→swap` composite
+     * calls `compositor.draw`, so the ready gate proves it non-null.
+     */
+    compositor: Compositor;
     /**
      * Non-null after bootstrap: `initGpu` allocates the half-res target
      * in lockstep with `postProcess`, so both are non-null at the same

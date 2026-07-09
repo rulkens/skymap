@@ -29,7 +29,7 @@ import {
   CONTENT_LAYERS,
   HDR_PASSES,
   UI_PASSES,
-  TIMED_SLOT_NAMES,
+  scalarVolumeLayer,
   pointSpritesLayer,
   proceduralDisksLayer,
   filamentsLayer,
@@ -282,13 +282,13 @@ describe('UI_PASSES registry', () => {
 });
 
 describe('CONTENT_LAYERS blend legality', () => {
-  it('every layer blends per its target — hdr additive, swap over', () => {
+  it('every layer blends per its target — hdr/volume additive, swap over', () => {
     // The registry half of the target<->blend invariant (the renderer half
     // — that the WebGPU pipeline's actual blend state matches — lands in
     // task 10). A layer whose target/blend pair falls outside this table
     // is a data-entry bug in its own file, not a new legal combination.
     for (const layer of CONTENT_LAYERS) {
-      if (layer.target === 'hdr') {
+      if (layer.target === 'hdr' || layer.target === 'volume') {
         expect(layer.blend).toBe('additive');
       } else if (layer.target === 'swap') {
         expect(layer.blend).toBe('over');
@@ -301,24 +301,18 @@ describe('CONTENT_LAYERS blend legality', () => {
   });
 });
 
-describe('TIMED_SLOT_NAMES registry', () => {
-  it('auto-includes every HDR pass name, bracketed by the framework slots', () => {
-    // Auto-registration guarantee: a renderer that joins HDR_PASSES
-    // acquires a GPU-timing slot + a DebugPanel row, because both derive
-    // from this list.
-    expect(TIMED_SLOT_NAMES).toEqual([
-      'scalar-volume',
-      ...HDR_PASSES.map((p) => p.name),
-      'tone-map',
-      'ui-overlay',
-      'pick',
-    ]);
-    // structure-markers is present purely by virtue of being in HDR_PASSES.
-    expect(TIMED_SLOT_NAMES).toContain('structure-markers');
-  });
-
-  it('has unique slot names (no index-pair collisions downstream)', () => {
-    expect(new Set(TIMED_SLOT_NAMES).size).toBe(TIMED_SLOT_NAMES.length);
+describe('scalarVolumeLayer registry row', () => {
+  it('leads CONTENT_LAYERS as the volume-target raymarch', () => {
+    // The half-res raymarch draws into its own 'volume' offscreen before the
+    // hdr group upsamples it, so it sits first in the registry — and is NOT
+    // an HDR_PASSES member (target 'volume', not 'hdr').
+    expect(CONTENT_LAYERS[0]).toBe(scalarVolumeLayer);
+    expect(scalarVolumeLayer.name).toBe('scalar-volume');
+    expect(scalarVolumeLayer.target).toBe('volume');
+    expect(scalarVolumeLayer.slab).toBe(COSMO);
+    expect(scalarVolumeLayer.blend).toBe('additive');
+    expect(HDR_PASSES).not.toContain(scalarVolumeLayer);
+    expect(UI_PASSES).not.toContain(scalarVolumeLayer);
   });
 });
 

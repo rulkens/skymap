@@ -133,6 +133,21 @@ function makeMockPostProcess(callLog: CallLog, hdrView: GPUTextureView) {
   } as any;
 }
 
+/**
+ * Mock the unified Compositor. The FRAME program's `hdr→swap` step calls
+ * `compositor.draw(pass, srcView, blend, tone)` to tone-map the HDR target onto
+ * the swap chain — replacing the old `postProcess.draw` blit.
+ */
+function makeMockCompositor(callLog: CallLog) {
+  return {
+    label: 'compositor',
+    draw: vi.fn(() => {
+      callLog.push('compositor.draw');
+    }),
+    destroy: vi.fn(),
+  } as any;
+}
+
 function makeMockPointRenderer(callLog: CallLog) {
   return {
     draw: vi.fn(() => {
@@ -247,6 +262,7 @@ function makeInput(
   const milkyWayCloud = makeMockMilkyWayCloud();
   const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
   const postProcess = makeMockPostProcess(callLog, hdrTargetView);
+  const compositor = makeMockCompositor(callLog);
   // Minimal VolumeOffscreen stub — renderFrame's existing tests don't
   // exercise the volume pass (volumesEnabled is false by default in
   // makeSettings), so a no-op view is sufficient for fixture satisfaction.
@@ -334,6 +350,7 @@ function makeInput(
     swapView,
     hdrTargetView,
     postProcess,
+    compositor,
     pointRenderer,
     milkyWayCloudRenderer,
     milkyWayCloud,
@@ -382,6 +399,8 @@ function makeInput(
           texturedDiskRenderer,
           proceduralDiskRenderer,
           filamentRenderer: null,
+          // The FRAME program's hdr→swap composite reads state.gpu.compositor.
+          compositor,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
         // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the
@@ -403,7 +422,7 @@ function makeInput(
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
           filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
-          volumes: { enabled: settings.volumesEnabled },
+          volumes: { enabled: settings.volumesEnabled, items: {} },
           flow: { enabled: false },
           debug: { disabledPasses: overrides.disabledPasses ?? {} },
         },
@@ -468,15 +487,14 @@ describe('renderFrame', () => {
   });
 
   it("begins the HDR render pass with the postProcess aggregate's view as the colour attachment", () => {
-    // No-timing path → single mega-pass: one
-    // `beginRenderPass(loadOp: 'clear')` block holds every enabled HDR
-    // draw, closed by one `pass.end`. This is the production shape,
-    // required for OVER-blended overlay passes on tile-based GPUs. The
-    // split shape (one `beginRenderPass` per pass) runs only when
-    // `timingService` is non-null — see `recordHdrSplitPasses.test.ts`.
+    // No-timing path → 'merged' strategy: the HDR render step opens ONE
+    // `beginRenderPass(loadOp: 'clear')` holding every enabled HDR draw, then
+    // the hdr→swap composite opens a SECOND pass against the swap chain. So two
+    // begins total; the FIRST is the HDR pass this test pins (postProcess view,
+    // clear, a=1).
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
 
     const desc = calls[0]![0];
     const attachments = Array.from(desc.colorAttachments as any);
@@ -548,30 +566,36 @@ describe('renderFrame', () => {
   // just issue renderer draws. Per-layer coverage lives in the matching
   // `passes/<name>Layer.test.ts` files.
 
-  it('calls postProcess.draw after pass.end with exposure, curve, and the swap-chain view', () => {
+  it("runs the hdr→swap composite after the HDR pass with blend 'replace' and the settings tone", () => {
+    // The tone-map is now the FRAME program's single composite step: the
+    // Compositor merges the HDR target onto the swap chain. It draws INSIDE its
+    // own render pass (opened by the executor against the swap view), after the
+    // HDR pass ends — so the log has compositor.draw after pass.end, and
+    // postProcess.draw no longer fires.
     renderFrame(fx.input);
     const log = fx.callLog;
     const idxEnd = log.indexOf('pass.end');
-    const idxTm = log.indexOf('postProcess.draw');
+    const idxComposite = log.indexOf('compositor.draw');
     expect(idxEnd).toBeGreaterThanOrEqual(0);
-    expect(idxTm).toBeGreaterThan(idxEnd);
+    expect(idxComposite).toBeGreaterThan(idxEnd);
+    expect(fx.postProcess.draw).not.toHaveBeenCalled();
 
-    // The aggregate owns the HDR view, so the signature is
-    // `postProcess.draw(encoder, swapView, exposure, curve)`.
-    const draw = fx.postProcess.draw as ReturnType<typeof vi.fn>;
+    // Compositor.draw(pass, srcView, blend, tone): the src is the HDR target
+    // view, the blend is 'replace', and the tone carries the settings exposure +
+    // curve.
+    const draw = fx.compositor.draw as ReturnType<typeof vi.fn>;
     expect(draw).toHaveBeenCalledTimes(1);
     const args = draw.mock.calls[0]!;
-    expect(args[0]).toBe(fx.env.encoder);
-    expect(args[1]).toBe(fx.swapView);
-    expect(args[2]).toBe(fx.settings.exposure);
-    expect(args[3]).toBe(fx.settings.toneMapCurve);
+    expect(args[1]).toBe(fx.hdrTargetView);
+    expect(args[2]).toBe('replace');
+    expect(args[3]).toEqual({ exposure: fx.settings.exposure, curve: fx.settings.toneMapCurve });
   });
 
-  it('records full frame in the canonical order: createEncoder → HDR pass (begin + draws + end) → postProcess.draw → encoder.finish → submit', () => {
-    // No-timing path: one `beginRenderPass(loadOp: 'clear')` holds every
-    // enabled HDR draw, one `pass.end` closes it, then tone-map + finish
-    // + submit. Here only point-sprites + milky-way fire (the impostor
-    // subsystems are nulled out).
+  it('records the full frame in canonical order: createEncoder → hdr pass (points → milky-way) → pass.end → composite pass → compositor.draw → pass.end → finish → submit', () => {
+    // No-timing 'merged' path: the HDR render step opens one pass holding the
+    // enabled HDR draws (here point-sprites + milky-way; the impostor
+    // subsystems are nulled out), closes it, then the hdr→swap composite opens
+    // a second pass, draws the tone-map, and closes it — then finish + submit.
     renderFrame(fx.input);
     const interesting = [
       'device.createCommandEncoder',
@@ -579,7 +603,7 @@ describe('renderFrame', () => {
       'pointRenderer.draw',
       'milkyWayCloudRenderer.draw',
       'pass.end',
-      'postProcess.draw',
+      'compositor.draw',
       'encoder.finish',
       'device.queue.submit',
     ];
@@ -590,7 +614,9 @@ describe('renderFrame', () => {
       'pointRenderer.draw',
       'milkyWayCloudRenderer.draw',
       'pass.end',
-      'postProcess.draw',
+      'encoder.beginRenderPass',
+      'compositor.draw',
+      'pass.end',
       'encoder.finish',
       'device.queue.submit',
     ]);
@@ -610,28 +636,23 @@ describe('renderFrame', () => {
     expect(idxEnd).toBeGreaterThan(idxMw);
   });
 
-  it('opens a pre-HDR render pass against the half-res view when volumes are active', () => {
-    // When `state.settings.volumes.enabled` is true AND volumeFieldRenderer
-    // has active fields, `encodeVolumes` must run BEFORE the HDR mega-pass.
-    // The fixture's default state has volumes.enabled=false → no pre-pass
-    // fires.  We force-enable it here and stub a renderer with an active
-    // field, then check that the FIRST beginRenderPass goes against the
-    // half-res view.
+  it('opens the volume pass before the hdr pass when the scalar-volume layer is enabled', () => {
+    // The FRAME program's volume render step precedes the hdr render step, so
+    // when `deriveVolumeLiveness` is non-null the volume offscreen pass is the
+    // FIRST beginRenderPass. The gate is the shared liveness — a
+    // volumeFieldRenderer with active fields + volumes.enabled true drives it.
     const fx2 = makeInput({ settings: { volumesEnabled: true } });
-    // Wire in a volumeFieldRenderer with active fields. encodeVolumePrepass
-    // reads it straight off `state.gpu.volumeFieldRenderer` — no top-level
-    // `input.*` field to mirror it onto.
     const drawSpy = vi.fn();
     (fx2.input.state as any).gpu.volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
+      listIds: () => [],
     };
-    // volumeUpsampleLayer.enabled gates on volumeUpsample !== null —
-    // keep it null so the upsample layer is skipped; this test only
-    // cares that the half-res pre-pass fires before the HDR pass.
+    // volumeUpsampleLayer.draw self-guards on a null volumeUpsample — keep it
+    // null so the upsample layer draws nothing; this test pins the volume pass
+    // ordering. Its enabled() still tracks the SAME liveness (no desync).
     (fx2.input.state as any).gpu.volumeUpsample = null;
-    // The half-res view comes off ctx.volumeOffscreen.view.  The
-    // fixture's mock may not include volumeOffscreen — patch it on.
+    // The volume offscreen view comes off ctx.volumeOffscreen.view.
     const halfResView = { __id: 'half-res' } as unknown as GPUTextureView;
     (fx2.input.ctx as any).volumeOffscreen = {
       view: halfResView,
@@ -641,28 +662,36 @@ describe('renderFrame', () => {
 
     renderFrame(fx2.input);
 
-    // The first beginRenderPass should be the half-res pre-pass.
+    // First beginRenderPass = the volume pass (clear a=0), before the hdr pass.
     const calls = (fx2.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls.length).toBeGreaterThanOrEqual(2);
+    expect(calls.length).toBeGreaterThanOrEqual(3); // volume + hdr + composite
     const firstAtt = Array.from(calls[0]![0].colorAttachments as any)[0] as any;
     expect(firstAtt.view).toBe(halfResView);
     expect(firstAtt.loadOp).toBe('clear');
+    expect(firstAtt.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 0 });
 
-    // The renderer was asked to draw inside that pass.
+    // The renderer drew inside that pass.
     expect(drawSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('skips the pre-HDR half-res pass when volumes are disabled', () => {
-    // Default fixture has volumesEnabled=false → only one HDR pass.
+  it('skips the volume pass and hides the volume-upsample layer when volumes are off', () => {
+    // Default fixture: volumeFieldRenderer null → deriveVolumeLiveness null →
+    // BOTH the scalar-volume producer and the volume-upsample consumer gate
+    // off the same fact, so they cannot disagree. Wire a volumeUpsample spy to
+    // prove the consumer is also hidden. Only the hdr + composite passes open.
+    const upsampleDraw = vi.fn();
+    (fx.input.state as any).gpu.volumeUpsample = { draw: upsampleDraw, destroy: vi.fn() };
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2); // hdr + composite, no volume pass
+    // Neither the raymarch nor the upsample ran — the shared gate hid both.
+    expect(upsampleDraw).not.toHaveBeenCalled();
   });
 
   it('skips a pass whose name appears in settings.debug.disabledPasses', () => {
     // The DebugPanel flips entries in/out of `settings.debug.disabledPasses`.
-    // The encoder loop in `encodeHdrSingle` checks the record after the
-    // pass's own `enabled()` gate, so mapping `point-sprites` to true stops
+    // The executor's render-step group filter checks the record after each
+    // layer's own `enabled()` gate, so mapping `point-sprites` to true stops
     // `pointRenderer.draw` even though every other input would run it.
     const fx2 = makeInput({ disabledPasses: { 'point-sprites': true } });
     renderFrame(fx2.input);

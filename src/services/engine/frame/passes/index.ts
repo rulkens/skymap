@@ -12,11 +12,12 @@
  *
  * `HDR_PASSES` and `UI_PASSES` below are both TRANSITIONAL derived exports —
  * `CONTENT_LAYERS.filter((l) => l.target === 'hdr' | 'swap')` respectively.
- * They exist only so the two HDR encoders (`encodeHdrSingle`,
- * `encodeHdrSplit`), `TIMED_SLOT_NAMES`, and `encodeUiOverlay` keep working
- * unchanged.  Once the frame executor walks a `FrameStep[]` program instead
- * of these two hand-wired encoders, both derived exports go away in favour
- * of the executor grouping layers by `(target, slab)` directly.
+ * They exist only so the two now-unused HDR encoders (`encodeHdrSingle`,
+ * `encodeHdrSplit`) and `encodeUiOverlay` keep compiling until they are
+ * deleted.  The frame executor already walks a `FrameStep[]` program (grouping
+ * layers by `(target, slab)` directly), so both derived exports go away with
+ * those encoders.  The timing-slot list is now derived from that program
+ * (`TIMED_SLOTS` in `frameProgram.ts`), not hand-maintained here.
  *
  * ### CONTENT_LAYERS — draw order
  *
@@ -53,10 +54,10 @@
  * `texturedDiskSubsystem.ts` for the full rationale.
  *
  * Reordering layers is a one-line array shuffle with a clear
- * semantic.  The DebugPanel `GpuTimingsSection` derives its row order
- * from `HDR_PASSES` (plus tone-map, ui-overlay, and pick
- * appended), so a reorder here automatically propagates to the
- * timing UI.
+ * semantic.  The GPU-timing slot order is derived from the FRAME program +
+ * this registry (`TIMED_SLOTS` in `frameProgram.ts`), which the DebugPanel
+ * `GpuTimingsSection` iterates, so a reorder here automatically propagates to
+ * the timing UI.
  *
  * ### Why no marker-lines / labels in the HDR group
  *
@@ -102,6 +103,7 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import { scalarVolumeLayer } from './scalarVolumeLayer';
 import { pointSpritesLayer } from './pointSpritesLayer';
 import { proceduralDisksLayer } from './proceduralDisksLayer';
 import { texturedDisksLayer } from './texturedDisksLayer';
@@ -125,6 +127,10 @@ import { clipPathDebugLayer } from './clipPathDebugLayer';
  * `.filter()` views over this one array — see the module header.
  */
 export const CONTENT_LAYERS: readonly ContentLayer[] = [
+  // Half-res scalar-volume raymarch into the volume offscreen — drawn first
+  // (its own target), before the hdr group upsamples it in. Not an hdr-group
+  // member: it targets 'volume', so HDR_PASSES / the hdr render step exclude it.
+  scalarVolumeLayer,
   pointSpritesLayer,
   proceduralDisksLayer,
   texturedDisksLayer,
@@ -147,11 +153,9 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
 
 /**
  * Transitional derived view: every `CONTENT_LAYERS` row that targets the
- * HDR offscreen target.  Consumed by the two HDR encoders and
- * `TIMED_SLOT_NAMES`.  Once the frame executor walks a `FrameStep[]`
- * program instead of the two hand-wired HDR/UI encoders, this filter (and
- * `UI_PASSES` below) are deleted in favour of the executor grouping layers
- * by `(target, slab)` directly.
+ * HDR offscreen target.  Consumed by the two now-unused HDR encoders.  This
+ * filter (and `UI_PASSES` below) are deleted with those encoders — the frame
+ * executor already groups layers by `(target, slab)` directly.
  */
 export const HDR_PASSES: readonly ContentLayer[] = CONTENT_LAYERS.filter(
   (layer) => layer.target === 'hdr',
@@ -165,43 +169,15 @@ export const HDR_PASSES: readonly ContentLayer[] = CONTENT_LAYERS.filter(
  * are world-space strokes around the selected galaxy); it is default-off,
  * so it contributes nothing unless the curator enables it.  All entries
  * share one swap-chain `beginRenderPass` (see `encodeUiOverlay.ts`) and
- * one timing slot (`ui-overlay`).  Once the frame executor walks a
- * `FrameStep[]` program instead of the two hand-wired HDR/UI encoders,
- * this filter (and `HDR_PASSES` above) are deleted in favour of the
- * executor grouping layers by `(target, slab)` directly.
+ * one timing slot (`ui-overlay`).  This filter (and `HDR_PASSES` above) are
+ * deleted with the now-unused HDR/UI encoders — the frame executor already
+ * groups layers by `(target, slab)` directly.
  */
 export const UI_PASSES: readonly ContentLayer[] = CONTENT_LAYERS.filter(
   (layer) => layer.target === 'swap',
 );
 
-/**
- * The ordered list of GPU-timing slots — the single source of truth for
- * both slot allocation (`gpuTimingService` builds its query-set index
- * map from this) and display order (the DebugPanel iterates it).
- *
- * It is every `HDR_PASSES` entry's name, bracketed by the four framework
- * slots that aren't members of either registry:
- *
- *   - `scalar-volume` — the half-resolution volume pre-pass, encoded in
- *     `encodeVolumes` before the HDR loop.
- *   - `tone-map`      — the post-process tonemap (`renderFrame`).
- *   - `ui-overlay`    — the combined `UI_PASSES` slot; all UI overlays
- *     share one swap-chain render pass, so they bill one slot.
- *   - `pick`          — the r32uint pick pass (`runFrame` / `wireInput`).
- *
- * The order is encoder draw order, so the timing panel reads top-to-
- * bottom as the frame executes.  Adding a layer to `CONTENT_LAYERS` (with
- * `target: 'hdr'`) is the ONLY edit needed: it auto-acquires a query-set
- * slot here and a DebugPanel row, with no timing-layer change.
- */
-export const TIMED_SLOT_NAMES: readonly string[] = [
-  'scalar-volume',
-  ...HDR_PASSES.map((p) => p.name),
-  'tone-map',
-  'ui-overlay',
-  'pick',
-];
-
+export { scalarVolumeLayer } from './scalarVolumeLayer';
 export { pointSpritesLayer } from './pointSpritesLayer';
 export { proceduralDisksLayer } from './proceduralDisksLayer';
 export { texturedDisksLayer } from './texturedDisksLayer';

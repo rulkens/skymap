@@ -24,22 +24,23 @@
  * are additive so the slot choice is a visual rather than correctness
  * concern.
  *
- * ### Why three null-checks in `enabled`
+ * ### Why `enabled` shares the volume-liveness projection
  *
- * The pre-bootstrap window is the only legitimate case where any of the
- * three matters.  `volumeFieldRenderer === null` means initGpu hasn't
- * finished; `volumeUpsample === null` means the same.  `hasActiveFields()`
- * is the per-frame fine-grained gate that skips the upsample when no
- * fields are enabled (since `encodeVolumes` then skipped the half-res
- * raymarch and the half-res target was cleared to zero — adding zero to
- * HDR is wasted work).  The master on/off gate reads
- * `state.settings.volumes.enabled` directly — the old `settings.volumesEnabled`
- * forwarded the same bit; the per-frame bag is being dissolved.
+ * The half-res raymarch (`scalarVolumeLayer`) writes the offscreen this layer
+ * consumes; both gate on the SAME `deriveVolumeLiveness(...) !== null`, so the
+ * producer and consumer of the volume target can never disagree (the audit's
+ * stale-offscreen finding). That single derivation folds in the master
+ * toggle-or-fade gate, focus recession, the read-edge settings clamp, and the
+ * fade-tail-aware `hasActiveFields` check — the three axes the old hand-mirrored
+ * gate here could drift on. The pre-bootstrap `volumeFieldRenderer === null`
+ * case is covered inside the projection; `volumeUpsample === null` is no longer
+ * an `enabled` concern (both handles are minted together in `initGpu`, and
+ * `draw` keeps a defensive null-check regardless).
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { COSMO } from '../slabs';
-import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
+import { deriveVolumeLiveness } from '../volumeLiveness';
 
 export const volumeUpsampleLayer: ContentLayer = {
   name: 'volume-upsample',
@@ -48,26 +49,7 @@ export const volumeUpsampleLayer: ContentLayer = {
   blend: 'additive',
 
   enabled(state, ctx) {
-    // Pre-bootstrap window: either handle null means initGpu hasn't
-    // finished.  Same shape as the old scalarVolumePass gate.
-    if (state.gpu.volumeFieldRenderer === null) return false;
-    if (state.gpu.volumeUpsample === null) return false;
-    // Master gate: state boolean OR a non-zero master fade tail.
-    // While master is fading out, encodeHdr* is still drawing into
-    // the half-res target (each field's opacity multiplied by the
-    // master), so this blit must run to bring those pixels onto HDR.
-    const now = ctx.nowMs;
-    const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, now);
-    if (!state.settings.volumes.enabled && masterOpacity <= 0) return false;
-    // Per-field gate: active fields OR fade-out tails in flight.
-    const settingsOf = (id: VolumeFieldId) => state.settings.volumes.items[id];
-    if (state.gpu.volumeFieldRenderer.hasActiveFields(settingsOf)) return true;
-    for (const id of state.gpu.volumeFieldRenderer.listIds()) {
-      if (state.subsystems.fades.opacityOf({ kind: 'volumeField', id }, now) > 0) {
-        return true;
-      }
-    }
-    return false;
+    return deriveVolumeLiveness(state, ctx) !== null;
   },
 
   draw(pass, _view, ctx, state) {

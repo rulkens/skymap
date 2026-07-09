@@ -86,69 +86,65 @@ const PASS_STUB = {
 // enabled()
 // ---------------------------------------------------------------------------
 
+// `enabled` now delegates entirely to `deriveVolumeLiveness` — the shared
+// projection the half-res raymarch layer also gates on, so producer and
+// consumer of the volume target can't disagree. The exhaustive gate-axis
+// coverage lives in `volumeLiveness.test.ts`; these cases pin that this layer
+// tracks it, and — crucially — that a null `volumeUpsample` NO LONGER gates
+// `enabled` (it's a `draw`-only defensive concern now, since both handles are
+// minted together in initGpu).
+function livenessState(init: {
+  renderer?: unknown;
+  volumesEnabled?: boolean;
+  masterOpacity?: number;
+  hasActiveFields?: () => boolean;
+  volumeUpsample?: unknown;
+}): EngineState {
+  const renderer =
+    init.renderer === undefined
+      ? { hasActiveFields: init.hasActiveFields ?? (() => true), listIds: () => [] }
+      : init.renderer;
+  return {
+    gpu: {
+      volumeFieldRenderer: renderer,
+      volumeUpsample: init.volumeUpsample ?? { draw: vi.fn(), destroy: vi.fn() },
+    },
+    subsystems: { fades: { opacityOf: () => init.masterOpacity ?? 1 } },
+    settings: { volumes: { enabled: init.volumesEnabled ?? true, items: {} } },
+  } as unknown as EngineState;
+}
+
 describe('volumeUpsampleLayer.enabled', () => {
   it('returns false when volumes.enabled is false and master fade is fully out', () => {
-    const state = {
-      gpu: {
-        volumeFieldRenderer: { hasActiveFields: () => true, listIds: () => [] },
-        volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
-      },
-      // Master opacity 0 = no fade-out tail in flight. The gate
-      // short-circuits to false when both gates miss.
-      subsystems: { fades: { opacityOf: () => 0 } },
-      settings: { volumes: { enabled: false } },
-    } as unknown as EngineState;
-    expect(volumeUpsampleLayer.enabled(state, makeCtx())).toBe(false);
+    expect(
+      volumeUpsampleLayer.enabled(
+        livenessState({ volumesEnabled: false, masterOpacity: 0 }),
+        makeCtx(),
+      ),
+    ).toBe(false);
   });
 
   it('returns false when no fields are active and no fade-out tail is in flight', () => {
-    const state = {
-      gpu: {
-        volumeFieldRenderer: {
-          hasActiveFields: () => false,
-          // The fade-tail check iterates listIds and calls
-          // fades.opacityOf for each. Empty list → no tails → gate
-          // stays false.
-          listIds: () => [],
-        },
-        volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
-      },
-      subsystems: { fades: { opacityOf: () => 0 } },
-      settings: { volumes: { enabled: true } },
-    } as unknown as EngineState;
-    expect(volumeUpsampleLayer.enabled(state, makeCtx())).toBe(false);
-  });
-
-  it('returns false when volumeUpsample is null (pre-bootstrap)', () => {
-    const state = {
-      gpu: {
-        volumeFieldRenderer: { hasActiveFields: () => true },
-        volumeUpsample: null,
-      },
-    } as unknown as EngineState;
-    expect(volumeUpsampleLayer.enabled(state, makeCtx())).toBe(false);
+    expect(
+      volumeUpsampleLayer.enabled(livenessState({ hasActiveFields: () => false }), makeCtx()),
+    ).toBe(false);
   });
 
   it('returns false when volumeFieldRenderer is null (pre-bootstrap)', () => {
-    const state = {
-      gpu: {
-        volumeFieldRenderer: null,
-        volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
-      },
-    } as unknown as EngineState;
-    expect(volumeUpsampleLayer.enabled(state, makeCtx())).toBe(false);
+    expect(volumeUpsampleLayer.enabled(livenessState({ renderer: null }), makeCtx())).toBe(false);
   });
 
-  it('returns true when every gate passes', () => {
-    const state = {
-      gpu: {
-        volumeFieldRenderer: { hasActiveFields: () => true, listIds: () => [] },
-        volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
-      },
-      subsystems: { fades: { opacityOf: () => 1 } },
-      settings: { volumes: { enabled: true } },
-    } as unknown as EngineState;
-    expect(volumeUpsampleLayer.enabled(state, makeCtx())).toBe(true);
+  it('stays enabled even when volumeUpsample is null (draw self-guards, not the gate)', () => {
+    // The producer (scalar-volume raymarch) and this consumer share one gate;
+    // volumeUpsample being null is a bootstrap-only case handled defensively in
+    // draw, so it must NOT desync the two by hiding only this layer.
+    expect(volumeUpsampleLayer.enabled(livenessState({ volumeUpsample: null }), makeCtx())).toBe(
+      true,
+    );
+  });
+
+  it('returns true when the shared liveness is non-null', () => {
+    expect(volumeUpsampleLayer.enabled(livenessState({}), makeCtx())).toBe(true);
   });
 });
 
@@ -179,8 +175,6 @@ describe('volumeUpsampleLayer.draw', () => {
         volumeUpsample: null,
       },
     } as unknown as EngineState;
-    expect(() =>
-      volumeUpsampleLayer.draw(PASS_STUB, VIEW_STUB, makeCtx(), state),
-    ).not.toThrow();
+    expect(() => volumeUpsampleLayer.draw(PASS_STUB, VIEW_STUB, makeCtx(), state)).not.toThrow();
   });
 });

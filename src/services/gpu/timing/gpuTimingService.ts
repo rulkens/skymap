@@ -106,10 +106,10 @@ export function createGpuTimingService(
   const listeners = new Set<(frame: GpuTimingFrame) => void>();
 
   // Slot→(begin, end) index map, derived from the injected name list
-  // (the render-pass registry's `TIMED_SLOT_NAMES`).  The query set is
-  // sized to exactly fit it — two timestamp indices per slot.  Deriving
-  // both from one list means a renderer that joins `HDR_PASSES` grows
-  // the query set and acquires a slot with no edit here.
+  // (the FRAME program's `TIMED_SLOTS`).  The query set is sized to exactly
+  // fit it — two timestamp indices per slot.  Deriving both from one list
+  // means a layer that joins the content-layer registry grows the query set
+  // and acquires a slot with no edit here.
   const slotIndices = buildTimingSlotMap(slotNames);
   const querySetSize = slotNames.length * 2;
   const bufferBytes = querySetSize * 8;

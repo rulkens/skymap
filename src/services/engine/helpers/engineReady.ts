@@ -121,6 +121,14 @@ export function isEngineReady(state: EngineState): state is ReadyEngineState {
     state.gpu.renderer !== null &&
     state.gpu.pickRenderer !== null &&
     state.gpu.postProcess !== null &&
+    // `compositor` shares the bootstrap lifecycle of `postProcess`: both are
+    // minted in `initGpu` (the compositor immediately before, since postProcess
+    // is one of its callers) and torn down in `destroy()`. The FRAME program's
+    // `hdr→swap` composite step calls `state.gpu.compositor.draw`, so the frame
+    // must not run until the compositor exists — including it here means
+    // `deriveFrameContext`'s ready gate covers it, and `executeFrame`'s null
+    // guard becomes a wiring-bug backstop rather than a per-frame concern.
+    state.gpu.compositor !== null &&
     // `volumeOffscreen` shares the bootstrap lifecycle of `postProcess`:
     // both are allocated in `initGpu` and torn down in `destroy()`.
     // Adding it here ensures `encodeVolumes` and `volumeUpsamplePass`

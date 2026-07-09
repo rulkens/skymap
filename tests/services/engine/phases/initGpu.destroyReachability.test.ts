@@ -114,9 +114,9 @@ vi.mock('../../../../src/services/gpu/renderers/proceduralDiskRenderer', () => (
 
 vi.mock('../../../../src/services/gpu/renderers/horizonShellRenderer', () => ({
   createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
-  // initGpu imports the pass registry (for TIMED_SLOT_NAMES), which
-  // transitively loads horizonShellPass — that module reads this const,
-  // so the mock must provide it.
+  // initGpu imports the FRAME program (for TIMED_SLOTS), which transitively
+  // loads the content-layer registry incl. horizonShellLayer — that module
+  // reads this const, so the mock must provide it.
   HORIZON_RADIUS_GPC: 14.3,
 }));
 

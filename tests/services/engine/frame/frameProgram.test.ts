@@ -18,7 +18,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { frameProgram, timedSlotsOf } from '../../../../src/services/engine/frame/frameProgram';
+import {
+  frameProgram,
+  timedSlotsOf,
+  TIMED_SLOTS,
+} from '../../../../src/services/engine/frame/frameProgram';
+import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
 import { COSMO, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
@@ -117,5 +122,44 @@ describe('timedSlotsOf', () => {
     ];
     const slots = timedSlotsOf(frameProgram(TONE), layers);
     expect(new Set(slots).size).toBe(slots.length);
+  });
+
+  it('derives the real registry slot list: scalar-volume, nine hdr, hdr→swap, five swap, pick', () => {
+    // The real CONTENT_LAYERS registry against the real program — the exact
+    // ordered slot list the timing service allocates from and the DebugPanel
+    // iterates. scalar-volume leads (the volume render step), then the nine
+    // hdr layers in registry order, the tone-map composite, the five swap
+    // overlays, and pick last.
+    expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
+      'scalar-volume',
+      'point-sprites',
+      'procedural-disks',
+      'textured-disks',
+      'milky-way',
+      'filaments',
+      'flow',
+      'volume-upsample',
+      'horizon-shell',
+      'structure-markers',
+      'hdr→swap',
+      'selection-ring',
+      'disk-radius-ring',
+      'marker-lines',
+      'labels',
+      'clip-path-debug',
+      'pick',
+    ]);
+  });
+});
+
+describe('TIMED_SLOTS', () => {
+  it('is the tone-invariant derivation of the real program + registry', () => {
+    // Tone values never affect a slot NAME, so the bound const equals the
+    // derivation for any tone.
+    expect(TIMED_SLOTS).toEqual(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS));
+  });
+
+  it('has unique slot names', () => {
+    expect(new Set(TIMED_SLOTS).size).toBe(TIMED_SLOTS.length);
   });
 });
