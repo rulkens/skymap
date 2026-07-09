@@ -70,7 +70,8 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   // synthetic constant can never masquerade as a measurement downstream.
   // The InfoCard renders `photometryNote` in place of the magnitude rows.
   const suppressPhotometry =
-    source === Source.DesiDeep && DESI_NO_PHOTOMETRY_TRACERS.has(row.classByte);
+    (source === Source.DesiDeep || source === Source.DesiWedge) &&
+    DESI_NO_PHOTOMETRY_TRACERS.has(row.classByte);
   const { magU, magG, magR, magI, magZ } = suppressPhotometry
     ? { magU: NaN, magG: NaN, magR: NaN, magI: NaN, magZ: NaN }
     : row;

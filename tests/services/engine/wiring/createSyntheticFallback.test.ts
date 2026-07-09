@@ -110,6 +110,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     Source.Milliquas,
     Source.FamousGalaxy,
     Source.DesiDeep,
+    Source.DesiWedge,
   ]) {
     items[galaxyCatalogIdOf(src)] = { enabled: !disabled.has(src), labelEnabled: true };
   }
@@ -122,6 +123,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     Source.Milliquas,
     Source.FamousGalaxy,
     Source.DesiDeep,
+    Source.DesiWedge,
     Source.Synthetic,
   ]) {
     slots.set(src, stubSlot());
@@ -176,6 +178,7 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.Glade)?.emit(errored());
     slots.get(Source.Milliquas)?.emit(errored());
     slots.get(Source.DesiDeep)?.emit(errored());
+    slots.get(Source.DesiWedge)?.emit(errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(false);
     expect(slots.get(Source.Synthetic)?.load).not.toHaveBeenCalled();
@@ -198,6 +201,7 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.Glade)?.emit(errored());
     slots.get(Source.Milliquas)?.emit(errored());
     slots.get(Source.DesiDeep)?.emit(errored());
+    slots.get(Source.DesiWedge)?.emit(errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(true);
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
@@ -214,6 +218,7 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.Glade)?.emit(errored());
     slots.get(Source.Milliquas)?.emit(errored());
     slots.get(Source.DesiDeep)?.emit(errored());
+    slots.get(Source.DesiWedge)?.emit(errored());
     // SDSS never emits — it was hidden at boot.
 
     expect(state.requests.has('syntheticFallback')).toBe(true);

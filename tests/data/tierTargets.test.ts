@@ -104,3 +104,21 @@ describe('tierTarget — DesiDeep', () => {
     expect(tierTarget(Source.DesiDeep, 'large')).toBeUndefined();
   });
 });
+
+describe('tierFilenameForSource — DesiWedge', () => {
+  it('emits the shared filename for every tier (tier-agnostic, like the cone)', () => {
+    // DesiWedge's tierTargets is {} — a fixed dec-band patch, not a bulk
+    // catalog that needs per-tier subsampling.
+    expect(tierFilenameForSource(Source.DesiWedge, 'small')).toBe('desi-wedge.bin');
+    expect(tierFilenameForSource(Source.DesiWedge, 'medium')).toBe('desi-wedge.bin');
+    expect(tierFilenameForSource(Source.DesiWedge, 'large')).toBe('desi-wedge.bin');
+  });
+});
+
+describe('tierTarget — DesiWedge', () => {
+  it('is uncapped in every tier (undefined)', () => {
+    expect(tierTarget(Source.DesiWedge, 'small')).toBeUndefined();
+    expect(tierTarget(Source.DesiWedge, 'medium')).toBeUndefined();
+    expect(tierTarget(Source.DesiWedge, 'large')).toBeUndefined();
+  });
+});

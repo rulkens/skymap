@@ -352,7 +352,12 @@ describe('parseDesiClustering', () => {
   it('applies the keep predicate before record construction', () => {
     // Reject everything: out-of-cone rows are scoping, not data quality,
     // so they must not appear in either the records OR the skipped count.
-    const { records, skipped } = parseDesiClustering(loadFixture(), 'QSO', () => false);
+    const { records, skipped } = parseDesiClustering(
+      loadFixture(),
+      'QSO',
+      Source.DesiDeep,
+      () => false,
+    );
     expect(records.length).toBe(0);
     expect(skipped).toBe(0);
   });

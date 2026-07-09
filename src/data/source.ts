@@ -114,4 +114,13 @@ export const Source = {
    * appended at 18 — never renumber the codes below it.
    */
   DesiDeep: 18,
+  /**
+   * DESI DR1 dec-band wedge galaxy catalog — a 2.5°-thick, 65°-long
+   * declination-band fan (same four BGS/LRG/ELG/QSO tracers, NGC-only)
+   * across the Corona Borealis arm of the DR1 footprint. A second drill
+   * geometry through the same survey as the deep cone (see `DESI_PATCHES`);
+   * persisted to its own `.bin`, appended at 19 — never renumber the codes
+   * below it.
+   */
+  DesiWedge: 19,
 } as const;

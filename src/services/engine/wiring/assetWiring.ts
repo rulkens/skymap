@@ -112,6 +112,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   pointRow(Source.Milliquas),
   pointRow(Source.FamousGalaxy),
   pointRow(Source.DesiDeep),
+  pointRow(Source.DesiWedge),
   {
     // Synthetic fallback: loads only when armed by `createSyntheticFallback`,
     // which runs the precise gate (count-aware, hidden-at-boot-aware) at the

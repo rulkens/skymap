@@ -33,6 +33,7 @@ const SOURCE_NAME: Record<GalaxyCatalogSourceType, string> = {
   [Source.FamousGalaxy]: 'Famous',
   [Source.Milliquas]: 'Milliquas',
   [Source.DesiDeep]: 'DesiDeep',
+  [Source.DesiWedge]: 'DesiWedge',
 };
 
 describe('galaxyCatalogConstants table', () => {

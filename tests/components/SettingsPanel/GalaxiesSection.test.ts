@@ -17,10 +17,10 @@
  *    parsed float value.
  *
  * Source codes from `src/data/source.ts`:
- *   SDSS=1, TwoMRS=2, Glade=3, FamousGalaxy=4, Milliquas=8, DesiDeep=18
+ *   SDSS=1, TwoMRS=2, Glade=3, FamousGalaxy=4, Milliquas=8, DesiDeep=18, DesiWedge=19
  *
- * TOGGLEABLE_SOURCES = [FamousGalaxy(4), TwoMRS(2), SDSS(1), Glade(3), Milliquas(8), DesiDeep(18)]
- * All-on mask = (1<<4)|(1<<2)|(1<<1)|(1<<3)|(1<<8)|(1<<18) = 262430
+ * TOGGLEABLE_SOURCES = [FamousGalaxy(4), TwoMRS(2), SDSS(1), Glade(3), Milliquas(8), DesiDeep(18), DesiWedge(19)]
+ * All-on mask = (1<<4)|(1<<2)|(1<<1)|(1<<3)|(1<<8)|(1<<18)|(1<<19)
  * Partial mask (only SDSS + TwoMRS on): (1<<1)|(1<<2) = 6
  * None-on mask: 0
  */
@@ -34,8 +34,9 @@ import type { BiasMode as BiasModeT } from '../../../src/@types/data/galaxyCatal
 import type { SourceType } from '../../../src/@types/data/SourceType';
 import { Source } from '../../../src/data/source';
 
-// All TOGGLEABLE_SOURCES bits set: FamousGalaxy(4)|TwoMRS(2)|SDSS(1)|Glade(3)|Milliquas(8)|DesiDeep(18)
-const ALL_ON_MASK = (1 << 4) | (1 << 2) | (1 << 1) | (1 << 3) | (1 << 8) | (1 << 18);
+// All TOGGLEABLE_SOURCES bits set: FamousGalaxy(4)|TwoMRS(2)|SDSS(1)|Glade(3)|Milliquas(8)|DesiDeep(18)|DesiWedge(19)
+const ALL_ON_MASK =
+  (1 << 4) | (1 << 2) | (1 << 1) | (1 << 3) | (1 << 8) | (1 << 18) | (1 << 19);
 // Only SDSS + TwoMRS — a strict subset → should produce indeterminate
 const PARTIAL_MASK = (1 << Source.SDSS) | (1 << Source.TwoMRS);
 
@@ -118,6 +119,21 @@ describe('GalaxiesSection', () => {
       expect(desiLabel).not.toBeNull();
       expect(desiLabel!.textContent).toContain('DESI Deep Field');
     });
+
+    it('renders a checkbox row for DESI Wedge', () => {
+      const { container } = render(createElement(GalaxiesSection, baseProps()));
+      const wedgeCheckbox = container.querySelector<HTMLInputElement>(
+        `#toggle-source-${Source.DesiWedge}`,
+      );
+      expect(wedgeCheckbox).not.toBeNull();
+      // DesiWedge's bit is part of ALL_ON_MASK, so the box renders checked.
+      expect(wedgeCheckbox!.checked).toBe(true);
+      const wedgeLabel = container.querySelector(
+        `label[for="toggle-source-${Source.DesiWedge}"]`,
+      );
+      expect(wedgeLabel).not.toBeNull();
+      expect(wedgeLabel!.textContent).toContain('DESI Wedge');
+    });
   });
 
   describe('point-size slider', () => {
@@ -171,14 +187,15 @@ describe('GalaxiesSection', () => {
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
 
-      // Should call once per TOGGLEABLE_SOURCE (6 sources), each with true
-      expect(onToggleSource).toHaveBeenCalledTimes(6);
+      // Should call once per TOGGLEABLE_SOURCE (7 sources), each with true
+      expect(onToggleSource).toHaveBeenCalledTimes(7);
       expect(onToggleSource).toHaveBeenCalledWith(Source.FamousGalaxy, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.TwoMRS, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.Glade, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.Milliquas, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiDeep, true);
+      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiWedge, true);
     });
 
     it('calls onToggleSource with false for all TOGGLEABLE_SOURCES when master is toggled from allOn', () => {
@@ -192,10 +209,11 @@ describe('GalaxiesSection', () => {
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
 
-      expect(onToggleSource).toHaveBeenCalledTimes(6);
+      expect(onToggleSource).toHaveBeenCalledTimes(7);
       expect(onToggleSource).toHaveBeenCalledWith(Source.FamousGalaxy, false);
       expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, false);
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiDeep, false);
+      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiWedge, false);
     });
   });
 });

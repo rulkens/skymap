@@ -66,12 +66,13 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
       const br = mags.magG - mags.magR;
       return Number.isFinite(br) ? galaxyTypeFromBminusJ(br) : UNKNOWN;
     }
-    case Source.DesiDeep: {
-      // DESI Deep: g in g-slot, r in r-slot (DERED optical fluxes; see
-      // BAND_LABELS in sources.ts). g−r is the natural SDSS-like optical
-      // discriminator, so this reuses the SDSS-style colour classifier —
-      // the mixed BGS/LRG/ELG/QSO population doesn't have a single
-      // established red-sequence threshold, but a coarse "red vs blue"
+    case Source.DesiDeep:
+    case Source.DesiWedge: {
+      // DESI patches (deep cone + dec-band wedge): g in g-slot, r in r-slot
+      // (DERED optical fluxes; see BAND_LABELS in sources.ts). g−r is the
+      // natural SDSS-like optical discriminator, so this reuses the SDSS-style
+      // colour classifier — the mixed BGS/LRG/ELG/QSO population doesn't have a
+      // single established red-sequence threshold, but a coarse "red vs blue"
       // InfoCard tag is all this branch needs to provide.
       const gr = mags.magG - mags.magR;
       return Number.isFinite(gr) ? galaxyTypeFromColor(gr) : UNKNOWN;

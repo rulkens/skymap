@@ -209,6 +209,7 @@ function makeSyntheticFallbackState(): {
     Source.Milliquas,
     Source.FamousGalaxy,
     Source.DesiDeep,
+    Source.DesiWedge,
   ]) {
     items[galaxyCatalogIdOf(src)] = { enabled: !disabled.has(src), labelEnabled: true };
   }
@@ -227,6 +228,7 @@ function makeSyntheticFallbackState(): {
     Source.Milliquas,
     Source.FamousGalaxy,
     Source.DesiDeep,
+    Source.DesiWedge,
     Source.Synthetic,
   ]) {
     const listeners = new Set<(s: LoadState<GalaxyCatalog>) => void>();

@@ -88,6 +88,14 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
     // renderer + InfoCard need, same as Milliquas.
   },
   {
+    source: Source.DesiWedge,
+    shortName: 'desiWedge',
+    fetcher: galaxyCatalogFetcher,
+    category: 'survey',
+    // No companion sidecars: the wedge .bin carries everything the renderer
+    // + InfoCard need, same as the deep cone.
+  },
+  {
     source: Source.Synthetic,
     shortName: 'synthetic',
     fetcher: syntheticPointFetcher,

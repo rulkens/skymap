@@ -51,6 +51,7 @@
  */
 
 import type { ParsedRecord } from './common';
+import type { SourceType } from '../../src/@types/data/SourceType';
 import { Source } from '../../src/data/sources';
 import { DESI_TRACER_CLASS } from '../../src/data/galaxyCatalog/sourceClass';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
@@ -342,8 +343,12 @@ const NANOMAGGY_ZEROPOINT_MAG = 22.5;
  * for free. Column lookup is case-insensitive because BGS's flux
  * columns are lowercase on disk while everything else is uppercase.
  *
- * The optional `keep(raDeg, decDeg)` predicate is the deep-cone filter:
- * it runs immediately after decoding RA/DEC and before any other cell
+ * `source` stamps every emitted record's `source` field — the deep cone
+ * defaults it to `Source.DesiDeep`, but each DESI patch (see `DESI_PATCHES`)
+ * passes its own source so its rows bucket + dedup under the right code.
+ *
+ * The optional `keep(raDeg, decDeg)` predicate is the patch's membership
+ * filter: it runs immediately after decoding RA/DEC and before any other cell
  * is decoded or any record allocated, because the CrB cone keeps only
  * ~1% of the NGC rows — the common case per row is "decode 16 bytes,
  * reject". Rejected rows are NOT counted in `skipped`: out-of-cone is
@@ -365,6 +370,7 @@ const NANOMAGGY_ZEROPOINT_MAG = 22.5;
 export function parseDesiClustering(
   buf: ArrayBuffer,
   tracer: DesiTracer,
+  source: SourceType = Source.DesiDeep,
   keep?: (raDeg: number, decDeg: number) => boolean,
 ): { records: ParsedRecord[]; skipped: number } {
   const table = parseFitsBinTable(buf);
@@ -465,7 +471,7 @@ export function parseDesiClustering(
     }
 
     records.push({
-      source: Source.DesiDeep,
+      source,
       // TARGETID is DESI's stable 64-bit object identifier — same slot
       // repurposing as GLADE's PGC-in-objID: consumers branch on
       // `source` to interpret the value.

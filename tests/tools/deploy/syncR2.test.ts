@@ -50,6 +50,18 @@ describe('syncR2 ALLOW', () => {
     // tiered downsample — so a tier suffix must not slip through the filter.
     expect(ALLOW('desi-deep-large.bin')).toBe(false);
   });
+
+  it('accepts desi-wedge.bin', () => {
+    // The DESI dec-band wedge is a second tier-agnostic bin (a fixed patch,
+    // like the cone) — the browser fetches it unsuffixed.
+    expect(ALLOW('desi-wedge.bin')).toBe(true);
+  });
+
+  it('rejects a tier-suffixed desi-wedge variant', () => {
+    // Like the cone, the wedge is a fixed patch, not a tiered downsample, so
+    // a tier suffix must not slip through the filter.
+    expect(ALLOW('desi-wedge-large.bin')).toBe(false);
+  });
 });
 
 describe('syncR2 etagMatches', () => {

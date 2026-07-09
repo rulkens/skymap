@@ -119,6 +119,10 @@ export const ALLOW = (name: string): boolean =>
   // files in data/raw/desi/.  Tier-agnostic like 2mrs.bin (the cone is a
   // fixed region, not a tiered downsample), so there is no desi-deep-*.bin.
   name === 'desi-deep.bin' ||
+  // DESI DR1 dec-band wedge — a second fixed patch (2.5°-thick declination
+  // band across the Corona Borealis arm) built by `npm run build-tiers`
+  // alongside the cone. Tier-agnostic like desi-deep.bin.
+  name === 'desi-wedge.bin' ||
   name === 'filaments.bin' ||
   // The small-tier filament variant — built by `npm run build-filaments-small`
   // with a higher DisPerSE persistence cut.  Roughly half the size of the
