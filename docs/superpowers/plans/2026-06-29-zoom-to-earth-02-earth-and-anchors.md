@@ -8,12 +8,12 @@
 
 ## Goal
 
-Land the visible payoff of the zoom-to-Earth slice on top of Plan 01's precision seams: a **textured round Earth** at true relative scale, plus a small set of correctly-scaled **anchors** (Sun, Moon, Jupiter, Proxima) that make the descent legible.
+Land the visible payoff of the zoom-to-Earth slice on top of Plan 01's precision seams: a **textured round Earth** at true relative scale, plus a small set of correctly-scaled **anchors** (the Sun, a curated **local star map** of the real ~10 pc stellar neighbourhood, the Moon, Jupiter) that ground the descent in its actual surroundings.
 
 Two independently-shippable halves, in order:
 
 - **Phase 2 (Earth) FIRST** — the `earth` data type + seed + `earthRenderer` (Blue Marble) + an `earthLayer` content-layer row. Ships a textured Earth on its own.
-- **Phase 3 (Anchors) SECOND** — the `star` / `planet` data types + seed (Sun, Proxima, Moon, Jupiter) + `starRenderer` / `planetRenderer` / `starPointRenderer` on the shared sphere infra, each drawn by its own content-layer row.
+- **Phase 3 (Anchors) SECOND** — the `star` / `planet` data types + seed (the Sun + a local star map, plus Moon + Jupiter) + `starRenderer` / `planetRenderer` / `starPointRenderer` on the shared sphere infra, each drawn by its own content-layer row.
 
 ## Consumes from main (Plan 01 as folded by renderer-unification 04)
 
@@ -85,9 +85,9 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
   ```
 - Consumes: `Vec3` from `src/@types/math/Vec3` (deep relative import).
 
-- [ ] Add `EarthBody.d.ts` with a didactic docblock: a seeded Earth record; `positionMpc` is canonical Mpc (authored via `SCALE_UNITS`), `radiusKm` resolved to a sphere by `composeBodyMvp`.
-- [ ] Add a minimal type-level test asserting an object literal of the shape assigns to `EarthBody` and that `positionMpc` is a `Vec3` (mirror an existing `@types` shape test if one exists; else a trivial `const x: EarthBody = {…}; expect(x.radiusKm).toBe(6371)`).
-- [ ] `npm test -- EarthBody` → green. Commit.
+- [x] Add `EarthBody.d.ts` with a didactic docblock: a seeded Earth record; `positionMpc` is canonical Mpc (authored via `SCALE_UNITS`), `radiusKm` resolved to a sphere by `composeBodyMvp`.
+- [x] Add a minimal type-level test asserting an object literal of the shape assigns to `EarthBody` and that `positionMpc` is a `Vec3` (mirror an existing `@types` shape test if one exists; else a trivial `const x: EarthBody = {…}; expect(x.radiusKm).toBe(6371)`).
+- [x] `npm test -- EarthBody` → green. Commit.
 
 ## Task 2 — `sceneBodies.ts` seed (Earth only, this phase)
 
@@ -279,22 +279,35 @@ export type PlanetBody = {
 - [ ] Type-shape test for each (assigns a literal; asserts a representative field).
 - [ ] `npm test -- StarBody PlanetBody` → green. Commit.
 
-## Task 9 — Seed Sun / Proxima / Moon / Jupiter in `sceneBodies.ts`
+## Task 9 — Seed the local star map + Moon / Jupiter in `sceneBodies.ts`
 
 **Files:** `src/data/bodies/sceneBodies.ts` (modify — add star + planet exports), `tests/data/bodies/sceneBodies.test.ts` (modify).
 
 **Interfaces:**
 
-- Produces: `export const SCENE_STARS: readonly StarBody[]` (Sun + Proxima); `export const SCENE_PLANETS: readonly PlanetBody[]` (Moon + Jupiter).
-- Consumes: `StarBody` / `PlanetBody` (Task 8), `SCALE_UNITS`.
+- Produces: `export const SCENE_STARS: readonly StarBody[]` (the Sun + a curated local star map); `export const SCENE_PLANETS: readonly PlanetBody[]` (Moon + Jupiter).
+- Consumes: `StarBody` / `PlanetBody` (Task 8), `SCALE_UNITS`, and `raDecDistToCartesian` (`src/utils/math/raDecDistToCartesian.ts:30-43`) — the SAME right-handed equatorial J2000 spherical→Cartesian conversion the galaxy build uses (`buildAllBins.ts:69,160`), so the seeded stars land in the exact frame as the catalogs and the star map is NOT rotated against the real sky.
 
-**Seed values (contract + spec §5):** Sun at `[0,0,0]`, `radiusKm: 696340`; Proxima at `~1.301 pc` via `SCALE_UNITS.PC_TO_MPC` (position a plausible direction, e.g. `[1.301 * SCALE_UNITS.PC_TO_MPC, 0, 0]` — fixed constant, not ephemeris). Moon `radiusKm: 1737`, Jupiter `radiusKm: 69911` — positions fixed plausible constants authored via `SCALE_UNITS` (Moon ~Earth-distance scale; Jupiter ~5.2 AU). `absMag`/`color`/`albedo` plausible constants (Sun absMag ≈ 4.83, yellow-white; Proxima dim red).
+**Coordinate frame (LOCKED — reuse, do not re-derive):** each star is authored in human units — real J2000 `raDeg`, `decDeg`, `distPc` — and its `positionMpc` is `raDecDistToCartesian(raDeg, decDeg, distPc * SCALE_UNITS.PC_TO_MPC)`. That util is directly importable from `src/utils/` (no new helper needed); do NOT inline the spherical→Cartesian formula and do NOT hand-author bare xyz Mpc constants — the RA/Dec authoring is what keeps the neighbourhood aligned with the galaxy sky. The Sun uses `distPc = 0`, which collapses the conversion to the origin `[0,0,0]` regardless of RA/Dec (the zero-distance case noted in `twoMrs.ts:251-252`).
 
-- [ ] Add `SCENE_STARS` + `SCENE_PLANETS`, all positions authored via `SCALE_UNITS` (no inline Mpc magic numbers).
-- [ ] Test `SCENE_STARS contains the Sun at the origin` — Sun's `positionMpc` is `[0,0,0]` and `radiusKm === 696340`.
-- [ ] Test `Proxima sits ~1.301 pc from the Sun` — `|positionMpc| ≈ 1.301 * SCALE_UNITS.PC_TO_MPC` (tight tolerance).
+**Star-selection rule (state it verbatim in the seed header):** the Sun, PLUS **one representative entry per stellar system within ~4 pc** (A/B components merged into their primary — e.g. Alpha Centauri A+B as one entry — EXCEPT Proxima Centauri, kept as its own entry because its ~1.301 pc distance is the parsec-scale f64 anchor the tests pin), PLUS the **naked-eye landmark stars out to ~10 pc** (Sirius, Procyon, Altair, Vega, Fomalhaut, Pollux, …). This yields ~20–30 stars. Representative set (the implementer finalises the numeric values from standard references — see Provenance): Sun; Proxima Cen (1.301 pc); Alpha Cen (1.34 pc); Barnard's Star (1.83 pc); Wolf 359 (2.41 pc); Lalande 21185 (2.55 pc); Sirius (2.64 pc); Luyten 726-8 (2.68 pc); Ross 154 (2.98 pc); Ross 248 (3.16 pc); Epsilon Eridani (3.21 pc); Lacaille 9352 (3.29 pc); Ross 128 (3.37 pc); EZ Aquarii (3.50 pc); 61 Cygni (3.50 pc); Procyon (3.51 pc); Struve 2398 (3.55 pc); Groombridge 34 (3.56 pc); Epsilon Indi (3.64 pc); Tau Ceti (3.65 pc); Kapteyn's Star (3.93 pc); Altair (5.13 pc); Vega (7.68 pc); Fomalhaut (7.70 pc); Pollux (10.34 pc).
+
+**Colour (authored RGB — no new helper):** the CPU side has no B–V → RGB helper — `pickColourIndex` (`colourIndex.ts:40-55`) throws for non-galaxy sources and the colour ramp lives only in WGSL (`lib/colorIndex.wesl`), neither reusable for a `StarBody.color: Vec3`. So author each star's `color` as a linear-RGB constant drawn from a small **stated per-spectral-class palette** in the seed header, e.g. O/B blue-white `[0.6, 0.7, 1.0]`, A/F white `[1.0, 1.0, 0.98]`, G yellow-white `[1.0, 0.97, 0.85]` (the Sun), K orange `[1.0, 0.85, 0.65]`, M red `[1.0, 0.6, 0.4]`. Document the palette; do NOT add a `src/utils/color/*` helper for this fixed table (per the search-before-writing-helpers rule — a new pure helper would earn its own file + test, but a fixed authored palette does not).
+
+**Physical values:** real `absMag` per star (Sun ≈ 4.83; Sirius ≈ 1.45; Proxima ≈ 15.6; Vega ≈ 0.58; …). `radiusKm`: real for the **Sun** (696340 — the only star this plan resolves to a sphere; Task 12's partition keeps every other star a point); for the rest, a **stated placeholder** (e.g. 1 solar radius) is acceptable — say so in the header rather than leaving it silent, because no other star's radius is read until Plan 03's LOD promotion.
+
+**Planets (unchanged from the prior seed):** Moon `radiusKm: 1737`, Jupiter `radiusKm: 69911`; positions fixed plausible constants authored via `SCALE_UNITS` (Moon ~Earth-distance scale; Jupiter ~5.2 AU); `albedo` plausible flat colours.
+
+**Provenance (seed-header comment):** the header documents that RA/Dec/distance/absMag are standard published values (Hipparcos / Gaia-era, as commonly tabulated for the nearest-stars and brightest-stars lists), and states the selection rule + the spectral-class colour palette, so the table is auditable.
+
+- [ ] Add `SCENE_STARS` (Sun + local map) + `SCENE_PLANETS`, all star positions via `raDecDistToCartesian(ra, dec, distPc * SCALE_UNITS.PC_TO_MPC)` and all planet positions via `SCALE_UNITS` (no inline Mpc magic numbers, no inline trig).
+- [ ] Test `SCENE_STARS contains the Sun at the origin` — the Sun entry's `positionMpc` is `[0,0,0]` (each component ≈ 0, tight tolerance) and `radiusKm === 696340`.
+- [ ] Test `Proxima sits ~1.301 pc from the Sun` — `hypot(...Proxima.positionMpc) ≈ 1.301 * SCALE_UNITS.PC_TO_MPC` (tight tolerance — this is the parsec-scale f64 anchor).
+- [ ] Test `the local map covers the neighbourhood` — `SCENE_STARS.length >= 20`; every entry has a finite `positionMpc` (all three components) and a finite `absMag`; every `color` component is in `[0, 1]`.
+- [ ] Test `named stars sit at their catalogued distances` — Alpha Cen `hypot(pos) ≈ 1.34 * SCALE_UNITS.PC_TO_MPC` and Sirius `hypot(pos) ≈ 2.64 * SCALE_UNITS.PC_TO_MPC` (spot checks vs. published values, loose tolerance ~0.02 pc).
+- [ ] Test `star direction matches its RA/Dec through the shared conversion` — pick one star (e.g. Sirius, RA ≈ 101.287°, Dec ≈ −16.716°) and assert its stored `positionMpc` equals `raDecDistToCartesian(raDeg, decDeg, distPc * SCALE_UNITS.PC_TO_MPC)` component-wise. This pins the FRAME (a rotated or bare-xyz seed fails here), not just a magnitude.
 - [ ] Test `SCENE_PLANETS radii` — Moon 1737, Jupiter 69911.
-- [ ] Test `planet positions are authored via SCALE_UNITS` — Jupiter's distance ≈ `5.2 * SCALE_UNITS.AU_TO_MPC` (or whatever constant chosen; assert the SCALE_UNITS relation, not a bare number).
+- [ ] Test `planet positions are authored via SCALE_UNITS` — Jupiter's distance ≈ `5.2 * SCALE_UNITS.AU_TO_MPC` (assert the SCALE_UNITS relation, not a bare number).
 - [ ] `npm test -- sceneBodies` → green. Commit.
 
 ## Task 10 — `star` + `planet` source types + entries + registry append; seed into the store
@@ -320,7 +333,7 @@ export type PlanetBody = {
 - [ ] In `createEngineData.ts`, `setStars(SCENE_STARS)` + `setPlanets(SCENE_PLANETS)` at construction.
 - [ ] Test (`sources.test.ts`): `appends Star=21, Planet=22, Earth=23` — assert all three codes; `keeps star/planet OUT of GALAXY_CATALOG_SOURCES`; `keeps star/planet bits clear of ALL_VISIBLE_MASK`.
 - [ ] Test `star/planet rows are non-label, non-marker body sources`.
-- [ ] Test (`createEngineData.test.ts`): `seeds Sun + Proxima as stars and Moon + Jupiter as planets at construction`.
+- [ ] Test (`createEngineData.test.ts`): `seeds the local star map (SCENE_STARS) and Moon + Jupiter as planets at construction` — `data.bodies.stars` length matches `SCENE_STARS`, `data.bodies.planets` matches `SCENE_PLANETS`.
 - [ ] `npm test -- sources createEngineData` → green. Commit.
 
 ## Task 11 — `starRenderer` / `planetRenderer` / `starPointRenderer` types + factories + shaders
@@ -382,7 +395,7 @@ Sphere factories follow the landed positional idiom (contract-conflict #7), mirr
     slab: NEAR0,
     target: 'hdr',
     blend: 'additive',
-    // far-partition stars (Proxima) → starPointRenderer.draw(pass, view.vp, view.viewportPx)
+    // far-partition stars (Proxima + the rest of the local map) → starPointRenderer.draw(pass, view.vp, view.viewportPx)
   };
   ```
 - Consumes: the three renderers (Task 11), `composeBodyMvp` + `SCALE_UNITS` + `RENDER_ORIGIN_MPC`, `state.data.bodies`, the existing `(foreground:0, NEAR0)` program step (sphere rows) and the NEW `(hdr, NEAR0)` step below (points row).
@@ -395,7 +408,7 @@ Sphere factories follow the landed positional idiom (contract-conflict #7), mirr
 
 **BEFORE the hdr→swap composite** (after the `(hdr, COSMO)` step at `frameProgram.ts:56`), so the star points accumulate into HDR and ride the same tone-map as the galaxies. Why NEAR0→hdr is legal: COSMO's near plane (0.01 Mpc — `slabs.ts:57`) would clip parsec-scale anchors, so the points must project through NEAR0; hdr layers are `'additive'` by the blend-legality test (`passes.test.ts:331-355`), which `starPointsLayer` satisfies, and the additive `hdr` target has no depth (`renderTargets.ts:117`), so no depth attachment is implicated. `executeFrame` needs zero edits — the step rides the existing `(target, slab)` grouping and touched-set rules (the hdr target is already touched by the COSMO step, so this pass loads rather than clears).
 
-**Partition (simple constant, NOT the Plan-03 LOD):** the Sun is always a foreground sphere; Proxima/distant stars are always `star-points`. Partition `bodies.stars` by ONE named distance constant shared by `starSpheresLayer` and `starPointsLayer` (full apparent-size point↔sphere promotion is Plan 03 — do NOT build the adaptive version). Note the constant + its single home explicitly.
+**Partition (simple constant, NOT the Plan-03 LOD):** the Sun is always a foreground sphere; every OTHER seeded star (Proxima and the whole local map) is always a `star-points` additive point. Partition `bodies.stars` by ONE named distance constant shared by `starSpheresLayer` and `starPointsLayer`, chosen so only the Sun (distance 0) falls on the near side and all the real neighbours fall on the far side (full apparent-size point↔sphere promotion is Plan 03 — do NOT build the adaptive version). Note the constant + its single home explicitly.
 
 **Caption repoint (the layer + renderer STAY; only the label source changes):** add `sceneBodyLabels()` in `src/services/engine/presentation/` modelled on `debugSphereLabels.ts` (renderOrigin-relative anchors, per-body colours, the vertical stagger rationale — carry those didactic notes) but sourced from `SCENE_EARTH` / `SCENE_STARS` / `SCENE_PLANETS`; in `initGpu.ts:407-408` swap `setLabels(debugSphereLabels())` → `setLabels(sceneBodyLabels())`. `foregroundLabelsLayer`, `foregroundLabelRenderer`, and the `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` gate are untouched. (The plan's original "bodies are not labelled" non-goal is overtaken — Sun/Earth captions already ship; `bearsLabel`/`bearsMarker` stay `false` on the source entries because those flags drive the COSMO label/marker systems, which the caption path bypasses.)
 
@@ -424,7 +437,7 @@ Sphere factories follow the landed positional idiom (contract-conflict #7), mirr
 - [ ] **VISUAL gate — user-verified on the dev server (NOT automated). Load the app WITH `?deepZoom`** (the descent floor is URL-gated — `clampDistance.ts:50-52`; a plain load stops at 0.05 Mpc and the bodies stay sub-pixel), zoom from the galaxy view down to Earth and confirm:
   - Earth resolves as a **stable, round, correctly-textured** (Blue Marble) sphere — no jitter / swim / clipping.
   - The Sun, Moon, Jupiter render as **believably-sized** spheres relative to Earth on the way down.
-  - Proxima (and the galaxy backdrop) stay as additive points in the HDR accumulation; the backdrop is intact; tone parity holds across the Sun's limb (the two composites share one `tone` object — `frameProgram.ts:65-68`).
+  - The local stars (Proxima and the rest of the seeded neighbourhood) stay as additive points in the HDR accumulation alongside the galaxy backdrop; the recognisable brightest stars (Sirius, Vega, …) are present in roughly their real sky directions; the backdrop is intact; tone parity holds across the Sun's limb (the two composites share one `tone` object — `frameProgram.ts:65-68`).
   - The body captions (now sourced from `sceneBodies`) appear below 1 kpc and track the bodies.
   - An executor running unattended must **STOP and report** that these are visual properties awaiting on-screen confirmation rather than claim success.
 - [ ] Commit.
@@ -435,28 +448,28 @@ Sphere factories follow the landed positional idiom (contract-conflict #7), mirr
 
 ### Spec-coverage map (every Phase 2/3 + §5/§6 bullet → task)
 
-| Spec / contract item                                                                        | Task    |
-| ------------------------------------------------------------------------------------------- | ------- |
-| §5 `EarthBody` type                                                                         | T1      |
-| §5 Earth seed (`SCENE_EARTH`, SCALE_UNITS positions)                                        | T2      |
-| §5 `createBodyStore` (BodyStore surface)                                                    | T3      |
-| §5 `earth` source type + entry + registry append (code 23)                                  | T4      |
-| §5 `createBodyStore` wired into `createEngineData` + seeded at construction                 | T5, T10 |
-| §6 `earthRenderer` (Blue Marble equirectangular texture)                                    | T6      |
-| §6 Blue Marble asset `public/images/earth/blue-marble-4k.jpg` + provenance                  | T7      |
-| §4/§6 per-type body dispatch (earth) — as the `earthLayer` registry row                     | T7      |
-| §5 `StarBody` / `PlanetBody` types                                                          | T8      |
-| §5 anchor seed (Sun, Proxima, Moon, Jupiter, real radii + SCALE_UNITS positions)            | T9      |
-| §5 `star`/`planet` source types + entries + registry append (codes 21/22)                   | T10     |
-| §5 stars/planets seeded into the store at construction                                      | T10     |
-| §6 `starRenderer` (emissive sphere)                                                         | T11     |
-| §6 `planetRenderer` (flat lit albedo)                                                       | T11     |
-| §6 `starPointRenderer` (distant stars as additive HDR points)                               | T11     |
-| §6 anchor renderers wired — handles + initGpu + `star-spheres`/`planets`/`star-points` rows | T12     |
-| The `(hdr, NEAR0)` program step for the star points                                         | T12     |
-| Captions repointed from `debugSphereLabels` to `sceneBodyLabels`                            | T12     |
-| Retire/keep the debug-sphere constellation (explicit, grep-gated decision)                  | T12     |
-| §9/§10 final gate + VISUAL verification (`?deepZoom`)                                       | T13     |
+| Spec / contract item                                                                             | Task    |
+| ------------------------------------------------------------------------------------------------ | ------- |
+| §5 `EarthBody` type                                                                              | T1      |
+| §5 Earth seed (`SCENE_EARTH`, SCALE_UNITS positions)                                             | T2      |
+| §5 `createBodyStore` (BodyStore surface)                                                         | T3      |
+| §5 `earth` source type + entry + registry append (code 23)                                       | T4      |
+| §5 `createBodyStore` wired into `createEngineData` + seeded at construction                      | T5, T10 |
+| §6 `earthRenderer` (Blue Marble equirectangular texture)                                         | T6      |
+| §6 Blue Marble asset `public/images/earth/blue-marble-4k.jpg` + provenance                       | T7      |
+| §4/§6 per-type body dispatch (earth) — as the `earthLayer` registry row                          | T7      |
+| §5 `StarBody` / `PlanetBody` types                                                               | T8      |
+| §5 anchor seed (Sun + local star map via `raDecDistToCartesian`, Moon + Jupiter via SCALE_UNITS) | T9      |
+| §5 `star`/`planet` source types + entries + registry append (codes 21/22)                        | T10     |
+| §5 stars/planets seeded into the store at construction                                           | T10     |
+| §6 `starRenderer` (emissive sphere)                                                              | T11     |
+| §6 `planetRenderer` (flat lit albedo)                                                            | T11     |
+| §6 `starPointRenderer` (distant stars as additive HDR points)                                    | T11     |
+| §6 anchor renderers wired — handles + initGpu + `star-spheres`/`planets`/`star-points` rows      | T12     |
+| The `(hdr, NEAR0)` program step for the star points                                              | T12     |
+| Captions repointed from `debugSphereLabels` to `sceneBodyLabels`                                 | T12     |
+| Retire/keep the debug-sphere constellation (explicit, grep-gated decision)                       | T12     |
+| §9/§10 final gate + VISUAL verification (`?deepZoom`)                                            | T13     |
 
 Deferred (correctly NOT tasked — spec §1 non-goals / Plan 03): pick codes, per-type visibility toggles, InfoCards; adaptive foreground near/far (the fixed NEAR0 ratios live in `slabs.ts:44-45` with their Plan-03 forward-reference); full apparent-size point↔sphere LOD promotion; fly-to-Earth key; the `MIN_DISTANCE_MPC` floor (shipped by Plan 01, `?deepZoom`-gated); the ADR (Plan 03).
 
