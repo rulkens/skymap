@@ -1,7 +1,7 @@
 # GPU renderers folder reorganization — family folders, lib primitives, pointRenderer split — design
 
 > **Status.** Approved design (fully decided). TDD plans will be authored
-> once zoom-to-earth plan 02 lands, and ride this same branch/PR.
+> once zoom-to-earth plan 02 lands.
 > **Date.** 2026-07-10.
 > **Relationship to prior work.** Codifies the family boundaries that
 > renderer-unification (plans 01–04, all shipped 2026-07-09) left implicit,
