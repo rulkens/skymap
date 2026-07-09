@@ -114,6 +114,11 @@ export const ALLOW = (name: string): boolean =>
   /^milliquas-(small|medium|large)\.bin$/.test(name) ||
   name === '2mrs.bin' ||
   name === 'famous.bin' ||
+  // DESI DR1 deep-cone catalog — a single fixed 2.5° patch around Corona
+  // Borealis, built by `npm run build-tiers` from the four DESI LSS tracer
+  // files in data/raw/desi/.  Tier-agnostic like 2mrs.bin (the cone is a
+  // fixed region, not a tiered downsample), so there is no desi-deep-*.bin.
+  name === 'desi-deep.bin' ||
   name === 'filaments.bin' ||
   // The small-tier filament variant — built by `npm run build-filaments-small`
   // with a higher DisPerSE persistence cut.  Roughly half the size of the

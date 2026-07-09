@@ -38,8 +38,8 @@
  *
  * ### Point-source rows are `built: 'external'`
  *
- * The six point slots (5 galaxy catalogs + Synthetic) are minted in `initGpu` by
- * `wireGalaxyCatalogSourceSlot`, alongside the renderer their commit uploads
+ * The seven point slots (6 galaxy catalogs + Synthetic) are minted in `initGpu`
+ * by `wireGalaxyCatalogSourceSlot`, alongside the renderer their commit uploads
  * into. They appear here ONLY so the demand loop can trigger their
  * already-minted slots with the right `req(tier)`; the slot-construction pass
  * skips them (`built: 'external'`). Their `factory` is a guard that throws if
@@ -111,6 +111,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   pointRow(Source.Glade),
   pointRow(Source.Milliquas),
   pointRow(Source.FamousGalaxy),
+  pointRow(Source.DesiDeep),
   {
     // Synthetic fallback: loads only when armed by `createSyntheticFallback`,
     // which runs the precise gate (count-aware, hidden-at-boot-aware) at the

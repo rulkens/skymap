@@ -152,14 +152,16 @@ export type GalaxyInfo = {
   iauName: string;
 
   /**
-   * Human-readable AGN classification for the row, or `undefined`
+   * Human-readable per-source classification for the row, or `undefined`
    * when the source doesn't define one.
    *
-   * Today only `Source.Milliquas` populates this — values come from
-   * `sourceClassLabel(source, classByte)` (e.g. `"Quasar"`,
-   * `"BL Lac"`, `"Seyfert-1 broad"`).  For SDSS / 2MRS / GLADE /
-   * Famous / Synthetic rows the field is `undefined` and InfoCard
-   * consumers are expected to hide the row entirely.
+   * Values come from `sourceClassLabel(source, classByte)`:
+   * `Source.Milliquas` rows carry an AGN class (e.g. `"Quasar"`,
+   * `"BL Lac"`, `"Seyfert-1 broad"`); `Source.DesiDeep` rows carry the
+   * LSS tracer population (e.g. `"Luminous Red Galaxy (LRG)"`,
+   * `"Quasar (QSO)"`).  For SDSS / 2MRS / GLADE / Famous / Synthetic
+   * rows the field is `undefined` and InfoCard consumers are expected
+   * to hide the row entirely.
    *
    * The field is optional rather than `string | null` to match the
    * React-idiomatic absent-row pattern used elsewhere in the type
@@ -168,6 +170,18 @@ export type GalaxyInfo = {
    * identical to every other "this row doesn't apply" field.
    */
   agnClass?: string;
+
+  /**
+   * Set when the row's five mag slots carry no real measurement —
+   * today exactly the DESI LRG/ELG/QSO tracers, whose .bin magnitudes
+   * are per-tracer synthetic display constants baked in for renderer
+   * brightness only.  The builder NaNs the mag fields (which also
+   * empties `colours` and voids `absoluteMagG`) and sets this note;
+   * the InfoCard renders it in place of the magnitude rows so a
+   * constant is never presented as photometry.  `undefined` for every
+   * row with real photometry (absent-row pattern, same as `agnClass`).
+   */
+  photometryNote?: string;
 
   /**
    * The single best human-readable name for this row, suitable as a

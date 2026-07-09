@@ -128,6 +128,12 @@ Re-run order when cluster/supercluster data changes:
 
 The `.ccat` + `structures_meta.json` artefacts are gitignored (build outputs, like the `.bin` files). The raw `.dat`/`ReadMe` files are also gitignored; only the provenance `README.md` + `.dat.sha256` sidecars are committed.
 
+Re-run order when DESI raw data changes:
+
+1. `npm run fetch-desi` — downloads the four DESI DR1 LSS tracer `.fits` files into `data/raw/desi/` and writes the committed `desi_dr1_lss.sha256` sidecar. Same pattern as `npm run fetch-cf4`.
+2. `npm run build-tiers` — re-bakes `desi-deep.bin` (the CrB deep-cone patch) alongside the other catalog bins.
+3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
+
 ### Deploy workflow (Cloudflare Workers Assets + R2)
 
 Two Cloudflare resources serve skymap, and they're updated independently:
@@ -147,7 +153,7 @@ If you only changed code and not catalog bytes, **step 4 alone is enough**. The 
 
 The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitignored). They are pure build artefacts: deterministic outputs of `tools/catalog/buildAllBins.ts` against the raw catalog files in `data/raw/`. Checking them in would inflate every clone by ~150 MB for no informational gain — the same bytes can always be rebuilt from source on demand. Keeping them out also avoids accidental drift between `tools/catalog/buildAllBins.ts` settings (tier targets, abs-mag thresholds) and a stale committed binary; the R2 sync ships a fresh build on demand, so what's hosted is always in sync with the current pipeline code.
 
-The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, `filaments.bin`, `structures.ccat`, and `structures_meta.json`. The `tools/deploy/syncR2.ts` ALLOW filter encodes that set.
+The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, `desi-deep.bin`, `filaments.bin`, `structures.ccat`, and `structures_meta.json`. The `tools/deploy/syncR2.ts` ALLOW filter encodes that set.
 
 ### MCPM Cosmic Web volume
 

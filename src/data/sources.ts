@@ -5,8 +5,9 @@
  * discriminated by `type`:
  *
  *   'galaxyCatalog' — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
- *                     Milliquas, Synthetic).  Codes are baked into the `.bin`
- *                     point-cloud format and packed into the pick texture.
+ *                     Milliquas, DESI Deep, Synthetic).  Codes are baked
+ *                     into the `.bin` point-cloud format and packed into
+ *                     the pick texture.
  *   'structure'     — galaxy-cluster / supercluster / void / group marker rings.
  *                     Codes are also packed into the pick texture (upper 5 bits).
  *   'filament'      — derived line-strip geometry (DisPerSE skeleton).
@@ -57,6 +58,7 @@ import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
 import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
 import { MILKY_WAY_ENTRY } from './sources/milky-way';
 import { FLOW_ENTRY } from './sources/flow';
+import { DESI_DEEP_ENTRY } from './sources/desiDeep';
 
 export { Source } from './source';
 
@@ -107,6 +109,7 @@ export const SOURCE_REGISTRY = {
   [Source.DebugSpherical]: DEBUG_SPHERICAL_ENTRY,
   [Source.MilkyWay]: MILKY_WAY_ENTRY,
   [Source.Flow]: FLOW_ENTRY,
+  [Source.DesiDeep]: DESI_DEEP_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
@@ -159,4 +162,5 @@ export const GALAXY_CATALOG_SOURCES: readonly SourceType[] = [
   Source.SDSS,
   Source.Glade,
   Source.Milliquas,
+  Source.DesiDeep,
 ];

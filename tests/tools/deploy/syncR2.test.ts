@@ -38,6 +38,18 @@ describe('syncR2 ALLOW', () => {
     expect(ALLOW('flowfield-large.scfd')).toBe(false);
     expect(ALLOW('flowfield.bin')).toBe(false);
   });
+
+  it('accepts desi-deep.bin', () => {
+    // The DESI deep-cone catalog is a single tier-agnostic bin (a fixed
+    // 2.5° CrB patch, like 2mrs.bin) — the browser fetches it unsuffixed.
+    expect(ALLOW('desi-deep.bin')).toBe(true);
+  });
+
+  it('rejects a tier-suffixed desi-deep variant', () => {
+    // There is no per-tier DESI variant — the cone is a fixed patch, not a
+    // tiered downsample — so a tier suffix must not slip through the filter.
+    expect(ALLOW('desi-deep-large.bin')).toBe(false);
+  });
 });
 
 describe('syncR2 etagMatches', () => {

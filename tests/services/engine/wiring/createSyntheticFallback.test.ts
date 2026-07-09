@@ -109,6 +109,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     Source.Glade,
     Source.Milliquas,
     Source.FamousGalaxy,
+    Source.DesiDeep,
   ]) {
     items[galaxyCatalogIdOf(src)] = { enabled: !disabled.has(src), labelEnabled: true };
   }
@@ -120,6 +121,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     Source.Glade,
     Source.Milliquas,
     Source.FamousGalaxy,
+    Source.DesiDeep,
     Source.Synthetic,
   ]) {
     slots.set(src, stubSlot());
@@ -173,6 +175,7 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.TwoMRS)?.emit(errored());
     slots.get(Source.Glade)?.emit(errored());
     slots.get(Source.Milliquas)?.emit(errored());
+    slots.get(Source.DesiDeep)?.emit(errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(false);
     expect(slots.get(Source.Synthetic)?.load).not.toHaveBeenCalled();
@@ -194,6 +197,7 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.TwoMRS)?.emit(errored());
     slots.get(Source.Glade)?.emit(errored());
     slots.get(Source.Milliquas)?.emit(errored());
+    slots.get(Source.DesiDeep)?.emit(errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(true);
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
@@ -201,7 +205,7 @@ describe('createSyntheticFallback', () => {
 
   it('counts a hidden-at-boot galaxy catalog as already settled', () => {
     // Disable SDSS's enabled intent: its slot never transitions, but the gate
-    // reads the enabled flag and must not wait on it. Driving the OTHER three
+    // reads the enabled flag and must not wait on it. Driving the OTHER
     // galaxy catalogs to error then arms.
     const { state, slots, cb } = makeState({ disabledSources: [Source.SDSS] });
     createSyntheticFallback(state, cb);
@@ -209,6 +213,7 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.TwoMRS)?.emit(errored());
     slots.get(Source.Glade)?.emit(errored());
     slots.get(Source.Milliquas)?.emit(errored());
+    slots.get(Source.DesiDeep)?.emit(errored());
     // SDSS never emits — it was hidden at boot.
 
     expect(state.requests.has('syntheticFallback')).toBe(true);

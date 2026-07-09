@@ -17,6 +17,7 @@
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
+import { SOURCE_ENTRIES } from '../../data/sourceEntries';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_BIAS_MODE,
@@ -47,7 +48,6 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from '../../services/engine/animation/pathDefaults';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
-import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -58,10 +58,16 @@ import type { StructureItemSettings } from '../../@types/settings/StructureItemS
 export function buildInitialSettings(): EngineSettingsState {
   return {
     // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
-    // one item row per galaxy catalog, each layer + label default-on. Keys are
-    // DERIVED from `GALAXY_CATALOG_IDS` so the seed can't drift from the galaxy catalog set.
-    // `labelEnabled` is inert for every galaxy catalog except famousGalaxy (the only
-    // one that renders a name label) — seeded uniformly true.
+    // one item row per galaxy catalog. Rows are DERIVED from the galaxy-catalog
+    // registry entries so the seed can't drift from the galaxy catalog set — and,
+    // critically, each row's `enabled` is seeded from that entry's `visible`
+    // field, making SOURCE_REGISTRY the single source of truth for default
+    // visibility. The alternative — hardcoding `enabled: true` — silently
+    // overrode a registry entry that asked to boot hidden (DesiDeep's
+    // `visible: false`), so a default-off source came up drawn anyway; seeding
+    // from `visible` closes that gap. `labelEnabled` is inert for every galaxy
+    // catalog except famousGalaxy (the only one that renders a name label) —
+    // seeded uniformly true.
     galaxyCatalogs: {
       enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,
@@ -70,7 +76,10 @@ export function buildInitialSettings(): EngineSettingsState {
       highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
       realOnly: DEFAULT_REAL_ONLY_MODE,
       items: Object.fromEntries(
-        GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+        SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
+          e.id,
+          { enabled: e.visible, labelEnabled: true },
+        ]),
       ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
     },
     tonemap: {

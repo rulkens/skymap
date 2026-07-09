@@ -119,12 +119,14 @@ function GalaxyDetailCard({
       </div>
 
       {/*
-        Above-fold "lean hero": only the two figures a casual reader cares about
-        after the cosmology summary — how far back the redshift puts the galaxy,
-        and how physically large it is.  Coordinates, magnitudes, colour, and
+        Above-fold "lean hero": only the figures a casual reader cares about
+        after the cosmology summary — the per-source class (Milliquas AGN type,
+        DESI tracer population), how far back the redshift puts the galaxy, and
+        how physically large it is.  Coordinates, magnitudes, colour, and
         orientation are reference data for the curious and live below the fold.
       */}
       <div className={styles.cardSection}>
+        {info.agnClass && <CardRow label="Class" value={info.agnClass} />}
         <CardRow
           label={<InfoTip {...TIPS.redshift!}>Redshift z</InfoTip>}
           value={info.redshift.toFixed(4)}
@@ -161,25 +163,38 @@ function GalaxyDetailCard({
               </>
             }
           />
-          {/* Source-aware band label: 2MRS puts J in the g-slot, GLADE puts B. */}
-          <CardRow
-            label={<InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>}
-            value={Number.isFinite(info.magG) ? info.magG.toFixed(2) : 'N/A'}
-          />
-          <CardRow
-            label={<InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${info.bands.g})`}</InfoTip>}
-            value={Number.isFinite(info.absoluteMagG) ? info.absoluteMagG.toFixed(2) : 'N/A'}
-          />
-          {info.colours.length > 0 && (
-            <CardRow
-              label={<InfoTip {...TIPS.colour!}>Colour</InfoTip>}
-              value={info.colours.map((c, idx) => (
-                <span key={c.label}>
-                  {idx > 0 && <>&nbsp;&nbsp;</>}
-                  {c.label}&nbsp;{c.value.toFixed(2)}
-                </span>
-              ))}
-            />
+          {/* Rows with no real photometry (DESI LRG/ELG/QSO — their .bin mags
+              are synthetic display constants) swap the magnitude rows for the
+              builder's note, so a constant is never presented as a measurement. */}
+          {info.photometryNote ? (
+            <CardRow label="Photometry" value={info.photometryNote} />
+          ) : (
+            <>
+              {/* Source-aware band label: 2MRS puts J in the g-slot, GLADE puts B. */}
+              <CardRow
+                label={
+                  <InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>
+                }
+                value={Number.isFinite(info.magG) ? info.magG.toFixed(2) : 'N/A'}
+              />
+              <CardRow
+                label={
+                  <InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${info.bands.g})`}</InfoTip>
+                }
+                value={Number.isFinite(info.absoluteMagG) ? info.absoluteMagG.toFixed(2) : 'N/A'}
+              />
+              {info.colours.length > 0 && (
+                <CardRow
+                  label={<InfoTip {...TIPS.colour!}>Colour</InfoTip>}
+                  value={info.colours.map((c, idx) => (
+                    <span key={c.label}>
+                      {idx > 0 && <>&nbsp;&nbsp;</>}
+                      {c.label}&nbsp;{c.value.toFixed(2)}
+                    </span>
+                  ))}
+                />
+              )}
+            </>
           )}
           <CardRow
             label={<InfoTip {...TIPS.orientation!}>Orientation</InfoTip>}
