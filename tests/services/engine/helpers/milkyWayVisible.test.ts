@@ -1,10 +1,11 @@
 /**
- * milkyWayVisible — the ONE home of the MW visibility predicate, shared by
- * `milkyWayLayer.enabled` (frame camera) and `milkyWayPickVisible` (replayed
- * pick camera).  These tests pin the predicate itself — the toggle/fade-tail
- * gate and the apparent-size fade band — against an injected camera and
- * clock, the way both callers use it (the layer hands in ctx.nowMs, the pick
- * adapter its event-time now; the fade registry is stubbed here so 0 works).
+ * milkyWayVisible — the ONE home of the MW visibility predicate, reached
+ * through `milkyWayLayer.enabled`, which the draw program runs against the
+ * frame camera and the pick program runs against the replayed pick camera.
+ * These tests pin the predicate itself — the toggle/fade-tail gate and the
+ * apparent-size fade band — against an injected camera and clock, the way
+ * both programs use it (each hands in its own ctx camera + nowMs; the fade
+ * registry is stubbed here so 0 works).
  */
 
 import { describe, it, expect } from 'vitest';

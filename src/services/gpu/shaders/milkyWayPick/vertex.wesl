@@ -15,7 +15,8 @@
 // last visual frame's uniform bytes at @group(0), so the camera facts
 // this projection reads (camPosWorld, pxPerRad) are byte-identical to
 // the ones that sized the glow the user sees.  The CPU keeps only the
-// visibility gate ('milkyWayPickVisible').  The 'u.pointSizePx' floor is
+// visibility gate — the pick program's 'enabled' filter, i.e.
+// 'milkyWayLayer.enabled' against the pick-time camera.  The 'u.pointSizePx' floor is
 // the pick-widened value — the CPU overrides that slot to
 // (sizePx + PICK_PADDING_PX) before the pass (pickRenderer.ts) — so the
 // MW floor matches the padded floor every pick point gets.

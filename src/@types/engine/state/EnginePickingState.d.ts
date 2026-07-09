@@ -11,17 +11,12 @@
  *   - `pointerDown` — true while the user is dragging to orbit the
  *                      camera; the `hoverPickDriver` skips picks while
  *                      dragging to avoid a pick storm.
- *   - `lastFrameCam` — the last visual frame's camera position + fovY in
- *                       plain-TS form, for the CPU-side Milky-Way pick
- *                       helpers (gate + billboard size).  Stashed by the
- *                       point-sprites pass so those helpers answer for the
- *                       camera the pick pass replays rather than the
- *                       lagging `state.cam` drag register.  Null until the
- *                       first frame.
  *
- * The point pick pass no longer reads a stashed uniform buffer — it
- * rebuilds its own bytes from plain values at pick time (see
- * `pickUniformBytesOf`), so nothing camera-shaped for the GPU lives here.
+ * Nothing camera-shaped lives here anymore.  The point pick pass rebuilds
+ * its own uniform bytes from plain values at pick time (see
+ * `pickUniformBytesOf`), and the Milky-Way pick gate reads the pick-time
+ * camera directly through `milkyWayLayer.enabled(state, pickCtx)` — so no
+ * frame→pick camera mirror is stashed on this bag.
  *
  * ### What used to live here but doesn't anymore
  *
@@ -44,8 +39,6 @@
  * unrelated state.
  */
 
-import type { PickFrameCam } from './PickFrameCam';
-
 export type EnginePickingState = {
   pickInFlight: boolean;
   /**
@@ -57,11 +50,4 @@ export type EnginePickingState = {
    * Written by `wireInput.ts`; read by `hoverPickDriver.ts`.
    */
   pointerDown: boolean;
-  /**
-   * Camera position + fovY from the last visual frame, stashed by the
-   * point-sprites pass. The Milky-Way pick helpers read this instead of the
-   * `state.cam` drag register so the pick gate and pick-billboard size agree
-   * with the frame the pick pass replays. Null until the first frame.
-   */
-  lastFrameCam: PickFrameCam | null;
 };

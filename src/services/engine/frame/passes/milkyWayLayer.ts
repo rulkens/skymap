@@ -18,8 +18,9 @@
  * ### When it draws
  *
  * `enabled` delegates to `milkyWayVisible` — the ONE home of the MW
- * visibility predicate, shared with the pick gate
- * (`milkyWayPickVisible`) so draw and pick can't drift.  Two gates:
+ * visibility predicate. The pick program runs this SAME `enabled` gate
+ * (against the pick-time camera), so draw and pick share ONE gate and
+ * can't drift.  Two gates:
  *
  *   1. `state.settings.milkyWay.enabled` — user toggle — OR a still-
  *      nonzero toggle fade (`fades.opacityOf`), which keeps the layer
@@ -124,11 +125,11 @@ export const milkyWayLayer: ContentLayer = {
   // @group(0) pick camera (bound upstream by point-sprites), so there is
   // no CPU size argument and this row reads neither `view` nor `ctx`.
   //
-  // Visibility is NOT re-checked here: the pick program filters by
-  // `enabled`, evaluated against the pick-time camera, and
-  // `milkyWayLayer.enabled` shares its predicate (`milkyWayVisible`) with
-  // `milkyWayPickVisible` — so the pick gate can't drift from the draw
-  // gate. The renderer-null guard follows `draw`'s pre-bootstrap pattern.
+  // Visibility is NOT re-checked here: the pick program filters by this
+  // row's `enabled`, evaluated against the pick-time camera — the SAME
+  // gate the draw program runs. Draw and pick share ONE gate, so the pick
+  // answer can't drift from the draw answer for a given camera. The
+  // renderer-null guard follows `draw`'s pre-bootstrap pattern.
   drawPick(pass, _view, _ctx, state) {
     const pickRenderer = state.gpu.milkyWayPickRenderer;
     if (pickRenderer === null) return;

@@ -37,7 +37,6 @@ import {
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { PickFrameCam } from '../../../../../src/@types/engine/state/PickFrameCam';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { SelectionRef } from '../../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -166,14 +165,6 @@ const STATE_STUB = {
     texturedDiskRenderer: null,
     proceduralDiskRenderer: null,
     volumeFieldRenderer: null,
-  },
-  // pointSpritesLayer stashes the last visual frame's camera facts here so
-  // the CPU-side Milky-Way pick helpers answer for the frame the pick pass
-  // replays rather than the lagging drag register.
-  picking: {
-    lastFrameCam: null as PickFrameCam | null,
-    pickInFlight: false,
-    pointerDown: false,
   },
 } as unknown as EngineState;
 
@@ -650,32 +641,6 @@ describe('pointSpritesLayer.draw', () => {
     expect(call[2]).toEqual(view.viewportPx);
     const drawSettings = call[3] as Record<string, unknown>;
     expect(drawSettings.camPosWorld).toEqual(view.camPos);
-  });
-
-  it('stashes lastFrameCam (view.camPos + ctx.fovYRad) each draw', () => {
-    // The Milky-Way pick helpers size/gate against the camera the pick
-    // pass replays, so the plain-TS camera facts must be stashed every
-    // visual frame — the drag register lags driver-driven motion.
-    const drawStub = vi.fn<() => void>();
-    const ctx = makeCtx({ renderer: { draw: drawStub } as any });
-    const view = slabViewOf(ctx, COSMO);
-    const pickingBag = {
-      lastFrameCam: null as PickFrameCam | null,
-      pickInFlight: false,
-      pointerDown: false,
-    };
-    const stateWithPicking = {
-      ...STATE_STUB,
-      selection: { select: null, hover: null, focus: null },
-      settings: POINT_SPRITES_SETTINGS_STUB,
-      picking: pickingBag,
-    } as unknown as EngineState;
-    pointSpritesLayer.draw(PASS_STUB, view, ctx, stateWithPicking);
-    // view.camPos is a fresh per-render-step tuple, so the layer may stash
-    // the reference directly (no defensive copy needed).
-    expect(pickingBag.lastFrameCam).not.toBeNull();
-    expect(pickingBag.lastFrameCam!.position).toBe(view.camPos);
-    expect(pickingBag.lastFrameCam!.fovYRad).toBe(ctx.fovYRad);
   });
 });
 

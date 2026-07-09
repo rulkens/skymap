@@ -120,14 +120,6 @@ export const pointSpritesLayer: ContentLayer = {
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
     });
-
-    // Stash the plain-TS camera facts (position + fovY) for the CPU-side
-    // Milky-Way pick helpers (gate + billboard size), so they answer for
-    // the camera the pick pass replays rather than the lagging `state.cam`
-    // drag register. `view.camPos` is already a fresh non-aliasing tuple
-    // (`slabViewOf` copies the camera position per render step), so the
-    // stash can hold the reference without a copy.
-    state.picking.lastFrameCam = { position: view.camPos, fovYRad: ctx.fovYRad };
   },
 
   // Pick aspect — the point half of the pick pass. Re-runs the SAME

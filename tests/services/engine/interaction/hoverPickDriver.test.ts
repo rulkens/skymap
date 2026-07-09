@@ -37,7 +37,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createHoverPickDriver } from '../../../../src/services/engine/interaction/hoverPickDriver';
 import { updateSelectionHover } from '../../../../src/state/selection/selectionSlice';
 import type { HoverPickDeps } from '../../../../src/@types/engine/interaction/HoverPickDeps';
-import type { PickFrameCam } from '../../../../src/@types/engine/state/PickFrameCam';
 import type { PickResult } from '../../../../src/@types/data/PickResult';
 import type { CssPx } from '../../../../src/@types/input/CssPx';
 
@@ -103,7 +102,6 @@ let picker: ReturnType<typeof makeFakePicker>;
 let pickingState: {
   pickInFlight: boolean;
   pointerDown: boolean;
-  lastFrameCam: PickFrameCam | null;
 };
 let dispatchSpy: ReturnType<typeof vi.fn<(action: unknown) => void>>;
 let deps: HoverPickDeps;
@@ -114,7 +112,6 @@ beforeEach(() => {
   pickingState = {
     pickInFlight: false,
     pointerDown: false,
-    lastFrameCam: null,
   };
 
   dispatchSpy = vi.fn<(action: unknown) => void>();

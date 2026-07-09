@@ -436,13 +436,10 @@ function makeInput(
         },
         selection: { select: settings.selected },
         assetSlots: { flow: null },
-        // pointSpritesLayer stashes the camera snapshot onto state.picking
-        // after each draw so the Milky-Way pick helpers answer for the
-        // rendered frame.  The bag must exist; all other fields are at
-        // their default 'nothing in flight' values — only the snapshot is
-        // mutated by the layer.
+        // Pick-throttle bag; the content passes don't touch it, but the
+        // engine-state shape carries it — fields sit at their default
+        // 'nothing in flight' values.
         picking: {
-          lastFrameCam: null,
           pickInFlight: false,
           pointerDown: false,
         },

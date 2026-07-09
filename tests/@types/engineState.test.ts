@@ -142,7 +142,6 @@ describe('EngineState type', () => {
     const picking: EnginePickingState = {
       pickInFlight: false,
       pointerDown: false,
-      lastFrameCam: null,
     };
 
     // Forward-declare so the bias-correction subsystem's narrow
@@ -408,7 +407,6 @@ describe('EngineState type', () => {
       picking: {
         pickInFlight: false,
         pointerDown: false,
-        lastFrameCam: null,
       },
       gpu: {
         renderer: null,

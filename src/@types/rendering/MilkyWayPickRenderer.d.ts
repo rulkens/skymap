@@ -34,9 +34,10 @@ export type MilkyWayPickRenderer = {
    * Sizing happens on the GPU: the vertex shader projects the disc's
    * world radius to its apparent on-screen half-extent using the same
    * camera uniforms the pick pass replays, so no per-pick size argument
-   * exists. Gating on disk visibility is the CALLER's job (see
-   * `milkyWayPickVisible`) — this renderer is deliberately dumb and draws
-   * whenever told.
+   * exists. Gating on disk visibility is the CALLER's job — the pick
+   * program only invokes this row when `milkyWayLayer.enabled` passes
+   * against the pick-time camera — so this renderer is deliberately dumb
+   * and draws whenever told.
    */
   pickMilkyWay(pass: GPURenderPassEncoder): void;
   /** Release GPU resources. No-op under a null device. */

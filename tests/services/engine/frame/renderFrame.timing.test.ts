@@ -307,10 +307,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       },
       selection: { select: settings.selected },
       assetSlots: { flow: null },
-      // pointSpritesLayer stashes the camera snapshot here after each
-      // draw — the bag must exist so the property write doesn't throw.
+      // Pick-throttle bag; the content passes don't touch it, but the
+      // engine-state shape carries it.
       picking: {
-        lastFrameCam: null,
         pickInFlight: false,
         pointerDown: false,
       },
