@@ -1,8 +1,10 @@
 # Zoom to Earth — Plan 02: Earth & anchors
 
 **Spec:** `docs/superpowers/specs/2026-06-29-zoom-to-earth-true-scale-design.md` (§5 data model, §6 renderers, §10 Phases 2–3).
-**Cross-plan contract (LOCKED source of truth):** `docs/superpowers/specs/` companion contract — every symbol name / path / signature below is verbatim from it. Do NOT rename or re-shape; if current code makes a contract symbol impossible, the task says **STOP and report**.
+**Cross-plan contract (LOCKED source of truth):** `docs/superpowers/specs/` companion contract — every symbol name / path / signature below is verbatim from it, **except where the contract names symbols the renderer-unification fold deleted** (`encodeForegroundPass`, `foregroundOffscreen`, `foregroundComposite`, the `ReadyFrameContext` foreground fields) — for those, THIS re-grounded text supersedes the contract. Do NOT rename or re-shape anything else; if current code makes a contract symbol impossible, the task says **STOP and report**.
 **Plan style (OVERRIDES upstream `writing-plans`):** `docs/superpowers/conventions/plan-style.md` — **contract code yes, implementation code NO.** Cite `path:line`; test names + assertions ARE the acceptance criteria.
+
+> Re-grounded 2026-07-10 onto the unified layer/slab/program renderer (renderer-unification 04 fold, PR #386 merged as `504b15dc`); supersedes the pre-fold wiring this plan originally consumed.
 
 ## Goal
 
@@ -10,23 +12,27 @@ Land the visible payoff of the zoom-to-Earth slice on top of Plan 01's precision
 
 Two independently-shippable halves, in order:
 
-- **Phase 2 (Earth) FIRST** — the `earth` data type + seed + `earthRenderer` (Blue Marble) + foreground-pass table-dispatch for `'earth'`. Ships a textured Earth on its own.
-- **Phase 3 (Anchors) SECOND** — the `star` / `planet` data types + seed (Sun, Proxima, Moon, Jupiter) + `starRenderer` / `planetRenderer` / `starPointRenderer` on the shared sphere infra, extending the same table dispatch.
+- **Phase 2 (Earth) FIRST** — the `earth` data type + seed + `earthRenderer` (Blue Marble) + an `earthLayer` content-layer row. Ships a textured Earth on its own.
+- **Phase 3 (Anchors) SECOND** — the `star` / `planet` data types + seed (Sun, Proxima, Moon, Jupiter) + `starRenderer` / `planetRenderer` / `starPointRenderer` on the shared sphere infra, each drawn by its own content-layer row.
 
-## Consumes from Plan 01 (treat as already existing)
+## Consumes from main (Plan 01 as folded by renderer-unification 04)
 
-These are Plan-01 deliverables. Plan 02 CONSUMES them under their locked names — do not redefine:
+Plan 01 shipped **folded onto the unified layer/slab/program renderer** (see `docs/superpowers/plans/completed/2026-07-06-renderer-unification-04-fold-zoom-to-earth.md`). Plan 02 CONSUMES the landed seams under these names — do not redefine:
 
 - `src/data/scaleUnits.ts` → `SCALE_UNITS` (`KM_TO_MPC`, `AU_TO_MPC`, `PC_TO_MPC`, …).
-- `src/data/renderOrigin.ts` → `RENDER_ORIGIN_MPC: Readonly<Vec3>`.
-- `src/utils/camera/composeBodyMvp.ts` → `composeBodyMvp(foregroundVp, bodyPosMpc, renderOrigin, radiusMpc): Float32Array`.
+- `src/data/renderOrigin.ts` → `RENDER_ORIGIN_MPC: Readonly<Vec3>` — imported directly by whoever needs it (a constant, NOT per-frame ctx state; `ReadyFrameContext` has no `renderOrigin` field).
+- `src/utils/camera/composeBodyMvp.ts` → `composeBodyMvp(foregroundVp: Float64Array, bodyPosMpc, renderOrigin, radiusMpc): Float32Array` (`composeBodyMvp.ts:57-62`). The first argument is the slab's **f64** view-projection — layers pass `view.slab.vp`, never the f32-narrowed `view.vp` (the compose-before-narrow seam; see `debugSpheresLayer.ts:13-25`).
 - `src/utils/math/uvSphereMesh.ts` → `uvSphereMesh(segments, rings): UvSphereMesh` (unit-radius positions, equirectangular uvs, CCW-outward indices).
 - `src/services/gpu/shaders/lib/sphere.wesl` → shared `SphereUniforms { mvp: mat4x4<f32> }` + `clip_from_local(localPos)` helper.
-- `src/services/gpu/passes/foregroundOffscreen.ts` (`ForegroundOffscreen`: rgba16float color + depth32float depth) and `foregroundComposite.ts` (`ForegroundComposite`, OVER blend).
-- `src/services/engine/frame/encodeForegroundPass.ts` → `encodeForegroundPass(encoder, ctx, state, deps)`; Plan 01 draws the debug sphere there. **Plan 02 extends its body to draw earth/planet/star spheres via TABLE DISPATCH by `type`.**
-- `ReadyFrameContext` foreground fields (`foregroundVp`, `foregroundNear`, `foregroundFar`, `renderOrigin`) — `src/@types/engine/frame/ReadyFrameContext.d.ts`.
-- `EngineGpuHandles` foreground slots (`foregroundOffscreen`, `foregroundComposite`, `debugSphereRenderer`) — `src/@types/engine/handles/EngineGpuHandles.d.ts`. Plan 02 ADDS `earthRenderer`, `planetRenderer`, `starRenderer`, `starPointRenderer`.
-- `src/services/gpu/renderers/debugSphereRenderer.ts` → `DebugSphereRenderer` (Plan 02 decides retirement — Task 12).
+- **The content-layer registry**: `CONTENT_LAYERS` in `src/services/engine/frame/passes/index.ts` (flat ordered array; one file per layer under `passes/<name>Layer.ts`) + the `ContentLayer` type (`src/@types/engine/frame/ContentLayer.d.ts`: `{ name, slab, target, blend, enabled(state, ctx), draw(pass, view: SlabView, ctx, state), drawPick? }`). **The registry IS the dispatch table** — Plan 02 adds body layers as rows, not as branches.
+- **Slabs**: `NEAR0` (index 0, origin-relative f64) / `COSMO` (index 1) + `deriveSlabs`/`slabViewOf` in `src/services/engine/frame/slabs.ts`; `SlabView` (`src/@types/engine/frame/SlabView.d.ts`) carries `{slab, vp: Float32Array, camPos, viewportPx}` — f64 consumers read `view.slab.vp`.
+- **The frame program + executor**: `frameProgram(tone)` (`src/services/engine/frame/frameProgram.ts:52-71`) already carries the near-field tail — render `foreground:0` @ NEAR0 → composite `foreground:0→swap` `'over'` (same `tone` object as the hdr composite) → render `swap` @ NEAR0. `executeFrame` (`src/services/engine/frame/executeFrame.ts`) skips a pass AND its composite when no layer in the group is enabled (touched-set rule), auto-attaches depth from the target row, and derives the timing slots — a new layer needs **zero executor edits**.
+- **The `foreground:0` render target row**: `{ id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 }` in `src/services/gpu/renderTargets.ts:119` (clear values at `renderTargets.ts:101-106`). There is NO `foregroundOffscreen` module — the target table owns the lifecycle.
+- **Captions already ship**: `foregroundLabelsLayer` (`src/services/engine/frame/passes/foregroundLabelsLayer.ts` — `'foreground-labels'`, NEAR0, swap, over) draws `state.gpu.foregroundLabelRenderer` (a second MSDF `LabelRenderer`, constructed in `initGpu.ts:407-408` with `setLabels(debugSphereLabels())`), gated below `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC = 1e-3` (`foregroundLabelsLayer.ts:41`). Plan 02 repoints its label SOURCE (Task 12); the layer + renderer stay.
+- **Exemplar layer**: `src/services/engine/frame/passes/debugSpheresLayer.ts` (`'debug-spheres'`, NEAR0, `foreground:0`, opaque) — maps `DEBUG_SPHERE_BODIES` (`src/data/bodies/debugSphereBody.ts`) via `composeBodyMvp(view.slab.vp, …)` and calls `state.gpu.debugSphereRenderer.draw`. Its test (`tests/services/engine/frame/passes/debugSpheresLayer.test.ts`) mocks `composeBodyMvp` and identity-asserts it consumed `view.slab.vp` — the model for every body-layer test below. Registry/migration/blend-legality tests: `tests/services/engine/frame/passes/passes.test.ts` (`foreground:0` layers must be `'opaque'`, hdr layers `'additive'`, swap layers `'over'` — `passes.test.ts:331-355`).
+- `src/services/gpu/renderers/debugSphereRenderer.ts` → `createDebugSphereRenderer(device, targetFormat, depthFormat)` (`debugSphereRenderer.ts:74-78`) — the POSITIONAL factory idiom Plan 02's new renderers mirror. Retirement of the whole debug-sphere constellation is Task 12.
+
+**Deleted by the fold — must NOT appear as consumed seams:** `encodeForegroundPass.ts`, `encodeForegroundOver`, `foregroundLabelsPass`, `foregroundOffscreen.ts`, `foregroundComposite`, `toneMapDefaults`, and the `ReadyFrameContext` foreground fields (`foregroundVp`/`foregroundNear`/`foregroundFar`/`renderOrigin` — the ctx now carries `slabs: readonly Slab[]` instead). Where the locked contract names any of these, this re-grounded text supersedes it.
 
 ## Tech stack
 
@@ -34,25 +40,28 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 
 ## Global constraints (house rules — these override defaults)
 
-- **Append-only `Source` codes.** Codes are persisted/packed; append `Star` / `Planet` / `Earth` AFTER `Flow=17` (→ 18, 19, 20). NEVER renumber. See `source.ts:17-109` docblock.
+- **Append-only `Source` codes.** Codes are persisted/packed; the DESI patches took 18/19/20 after this plan was first written, so append `Star: 21`, `Planet: 22`, `Earth: 23` AFTER `DesiSgw = 20`. NEVER renumber. See the `source.ts:3-16` docblock.
 - **One symbol per file** in `src/@types/` (one `type` per `.d.ts`) and `src/utils/` (filename = exported function). Deep relative imports, no barrels.
 - **`type` aliases, never `interface`.**
 - **`Vec3` / `Vec2` aliases**, never raw `[number, number, number]` tuples (`src/@types/math/Vec3.d.ts`, `Vec2.d.ts`).
-- **Tagged-union TABLE DISPATCH, never an `if (type === …)` chain** — each body `type` maps 1:1 to its renderer through a dispatch table (spec §5, §6; CLAUDE.md memory `feedback_tagged_union_table_dispatch`).
+- **The `CONTENT_LAYERS` registry IS the table dispatch.** Each body type gets its own content-layer row + file (`earthLayer`, `starSpheresLayer`, `planetsLayer`, `starPointsLayer`) — no `if (type === …)` chains, no bespoke dispatch-table module (spec §5, §6; memory `feedback_tagged_union_table_dispatch`, satisfied by the registry rows themselves).
 - **Seed real data early** — `sceneBodies.ts` is authored right after the body types, and `createBodyStore` seeds from it at construction (`feedback_seed_data_early`).
-- **Renderer conventions** (`docs/superpowers/conventions/renderers.md`): factory + `satisfies Renderer` (`label` + `destroy`), GPU resources in the closure, per-frame inputs through `draw()`, nullable `EngineGpuHandles` slot, constructed in `initGpu.ts`.
-- **WESL conventions** (`wesl-shaders` skill): no backticks in comments, literal `package::` prefix, `?static` TS import (see `pointRenderer.ts:45-46`).
+- **Renderer conventions** (`docs/superpowers/conventions/renderers.md`): factory + `satisfies Renderer` (`label` + `destroy`), GPU resources in the closure, per-frame inputs through `draw()`, nullable `EngineGpuHandles` slot, constructed in `initGpu.ts`. Factory signatures follow the **landed positional idiom** — `(device, targetFormat, depthFormat)`, mirroring `createDebugSphereRenderer` (`debugSphereRenderer.ts:74-78`) — see contract-conflict #7.
+- **WESL conventions** (`wesl-shaders` skill): no backticks in comments, literal `package::` prefix, `?static` TS import (see `pointRenderer.ts:43-46`).
 - **Didactic timeless comments** — explain why; no dates / PR refs / "pre-X" history.
 - **Suite stays green** at every task; the **final task gates on `npm run typecheck` (both tsconfigs) + `npm test`**.
-- **VISUAL gates are user-verified** on the dev server, NOT automated: a textured ROUND Earth resolving cleanly with no jitter/swim, and anchors at BELIEVABLE relative sizes. The final task flags exactly what to confirm on screen.
+- **VISUAL gates are user-verified** on the dev server, NOT automated — **with `?deepZoom` in the URL**: the wheel-zoom floor is gated (`clampDistance.ts:50-52` — default 0.05 Mpc, `?deepZoom` 1e-17 Mpc), so without the gate the bodies stay sub-pixel and unreachable. Confirm a textured ROUND Earth resolving cleanly with no jitter/swim, and anchors at BELIEVABLE relative sizes. The final task flags exactly what to confirm on screen.
 
 ## Contract conflicts found (reconcile inline; do not silently diverge)
 
-1. **`code` field.** The contract sketch shows `StarSourceEntry = SourceEntryBase & { readonly type: 'star' }`, but `SourceEntryBase` (`SourceEntryBase.d.ts:9-68`) does NOT carry `code` — every existing variant adds its own (`StructureSourceEntry.d.ts:13`, `FlowSourceEntry.d.ts:17`). Plan 02 therefore adds `readonly code: number` to each of the three new entry types, matching the existing variants. (Tasks 4, 8.)
-2. **`EngineGpuHandles` path.** The contract cites `src/@types/engine/handles/EngineGpuHandles.d.ts`; that is the real path (the spec §11 shorthand `src/@types/engine/EngineGpuHandles.d.ts` is wrong). Use the `handles/` path. (Plan 01 owns the foreground slots; Task 7/11 add the renderer slots.)
-3. **`src/@types/scene/` does not exist yet.** The body record types (`StarBody` / `PlanetBody` / `EarthBody`) create that directory (Tasks 2, 6).
-4. **`EngineData` shape.** `EngineData.d.ts` currently has only `galaxies` + `structures`; its docblock says volumes/flow/filaments have no store. Plan 02 ADDS `readonly bodies: BodyStore` and updates the docblock rationale (bodies ARE app-side seed data the slot can't supply). (Task 5.)
-5. **Next free Source codes: 18 / 19 / 20** (confirmed: `source.ts` ends at `Flow: 17`; pick reserves 0–30, 31 sentinel — three fit). (Tasks 4, 8.)
+1. **`code` field.** The contract sketch shows `StarSourceEntry = SourceEntryBase & { readonly type: 'star' }`, but `SourceEntryBase` (`src/@types/data/SourceEntryBase.d.ts:9-68`) does NOT carry `code` — every existing variant adds its own (`src/@types/data/structure/StructureSourceEntry.d.ts:13`, `src/@types/data/flow/FlowSourceEntry.d.ts:17`). Plan 02 therefore adds `readonly code: number` to each of the three new entry types, matching the existing variants. (Tasks 4, 10.)
+2. **`EngineGpuHandles` path.** The contract cites `src/@types/engine/handles/EngineGpuHandles.d.ts`; that is the real path (the spec §11 shorthand `src/@types/engine/EngineGpuHandles.d.ts` is wrong). Use the `handles/` path. (Tasks 7, 12 add the renderer slots; the fold already owns `debugSphereRenderer` at `EngineGpuHandles.d.ts:327` and `foregroundLabelRenderer` at `:177`.)
+3. **`src/@types/scene/` does not exist yet.** The body record types (`StarBody` / `PlanetBody` / `EarthBody`) create that directory (Tasks 1, 8).
+4. **`EngineData` shape.** `EngineData.d.ts:20-23` currently has only `galaxies` + `structures`; its docblock says volumes/flow/filaments have no store. Plan 02 ADDS `readonly bodies: BodyStore` and updates the docblock rationale (bodies ARE app-side seed data the slot can't supply). (Task 5.)
+5. **Next free Source codes: 21 / 22 / 23.** The plan's original 18/19/20 were taken by the DESI patches (`DesiDeep: 18`, `DesiWedge: 19`, `DesiSgw: 20` — `source.ts:109-136`). Star=21, Planet=22, Earth=23; all fit the 5-bit pick budget (0–30, 31 sentinel). (Tasks 4, 10.)
+6. **Source-entry `.d.ts` files live in per-kind subfolders.** The contract's flat `src/@types/data/EarthSourceEntry.d.ts` paths predate the registry's layout — every variant now lives under `src/@types/data/<kind>/` (`structure/`, `flow/`, `milkyWay/`, …; see the imports in `SourceEntry.d.ts:1-6`). The three new entry types follow suit under `src/@types/data/body/`. A path adjustment only; type names unchanged. (Tasks 4, 10.)
+7. **Renderer factory shape.** The contract's named-bag `createEarthRenderer(init: { device; colorFormat; depthFormat })` predates the fold; the landed foreground idiom is POSITIONAL — `createDebugSphereRenderer(device, targetFormat, depthFormat)` (`debugSphereRenderer.ts:74-78`, constructed at `initGpu.ts:400`). Plan 02's sphere-renderer factories mirror it: `(device: GPUDevice, targetFormat: GPUTextureFormat, depthFormat: GPUTextureFormat)`. (Tasks 6, 11.)
+8. **The contract's `encodeForegroundPass` extension point is gone.** The fold dissolved it into the registry + program (see the Consumes section). Everywhere the contract says "extend `encodeForegroundPass`'s dispatch table", read "add a content-layer row". (Tasks 7, 12.)
 
 ---
 
@@ -63,14 +72,15 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 **Files:** `src/@types/scene/EarthBody.d.ts` (new), `tests/@types/scene/EarthBody.test.ts` (new — a type-shape compile test).
 
 **Interfaces:**
+
 - Produces:
   ```ts
   export type EarthBody = {
     readonly id: string;
     readonly label: string;
-    readonly positionMpc: Vec3;   // absolute heliocentric, f64-valued
-    readonly radiusKm: number;    // 6371
-    readonly textureUrl: string;  // Blue Marble equirectangular
+    readonly positionMpc: Vec3; // absolute heliocentric, f64-valued
+    readonly radiusKm: number; // 6371
+    readonly textureUrl: string; // Blue Marble equirectangular
   };
   ```
 - Consumes: `Vec3` from `src/@types/math/Vec3` (deep relative import).
@@ -84,10 +94,11 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 **Files:** `src/data/bodies/sceneBodies.ts` (new — Earth export now; stars/planets added in Phase 3), `tests/data/bodies/sceneBodies.test.ts` (new).
 
 **Interfaces:**
+
 - Produces: `export const SCENE_EARTH: EarthBody`.
 - Consumes: `EarthBody` (Task 1); `SCALE_UNITS` (`scaleUnits.ts`, Plan 01).
 
-**Seed values (from contract + spec §5):** Earth `radiusKm: 6371`; `positionMpc` = `[1 * SCALE_UNITS.AU_TO_MPC, 0, 0]` (1 AU from the Sun, authored in human units, stored Mpc); `textureUrl: '/images/earth/blue-marble-4k.jpg'`; `id: 'earth'`, `label: 'Earth'`.
+**Seed values (from contract + spec §5):** Earth `radiusKm: 6371`; `positionMpc` = `[1 * SCALE_UNITS.AU_TO_MPC, 0, 0]` (1 AU from the Sun, authored in human units, stored Mpc); `textureUrl: '/images/earth/blue-marble-4k.jpg'`; `id: 'earth'`, `label: 'Earth'`. (These match the interim `DEBUG_SPHERE_BODIES` stand-ins — `debugSphereBody.ts:41-52` — whose own header says a real BodyStore retires them; that retirement is Task 12.)
 
 - [ ] Add `sceneBodies.ts` exporting `SCENE_EARTH`. Author the position via `SCALE_UNITS.AU_TO_MPC` (do NOT inline a magic Mpc number — the conversion is the contract).
 - [ ] Test `SCENE_EARTH radius is 6371 km`.
@@ -100,6 +111,7 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 **Files:** `src/services/engine/data/createBodyStore.ts` (new), `src/@types/engine/data/BodyStore.d.ts` (new), `tests/services/engine/data/createBodyStore.test.ts` (new).
 
 **Interfaces:**
+
 - Produces (`BodyStore.d.ts`, contract verbatim — full surface defined now, stars/planets seeded in Phase 3):
   ```ts
   export type BodyStore = {
@@ -112,9 +124,9 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
   };
   export function createBodyStore(): BodyStore;
   ```
-- Consumes: `StarBody` / `PlanetBody` / `EarthBody`. **NOTE:** `StarBody` / `PlanetBody` land in Phase 3 (Task 6). To keep Phase 2 shippable, this task may import them ahead of their seed — define the FULL `BodyStore` type now (the closure stores empty arrays for stars/planets until Phase 3 seeds them). If forward-importing the not-yet-created `StarBody`/`PlanetBody` types is awkward, create those two `.d.ts` stubs as part of this task and seed them in Task 6 — **STOP and report** if the type files can't be created cleanly ahead of their seed.
+- Consumes: `StarBody` / `PlanetBody` / `EarthBody`. **NOTE:** `StarBody` / `PlanetBody` land in Phase 3 (Task 8). To keep Phase 2 shippable, this task may import them ahead of their seed — define the FULL `BodyStore` type now (the closure stores empty arrays for stars/planets until Phase 3 seeds them). If forward-importing the not-yet-created `StarBody`/`PlanetBody` types is awkward, create those two `.d.ts` stubs as part of this task and seed them in Task 9 — **STOP and report** if the type files can't be created cleanly ahead of their seed.
 
-**Pattern:** closure over private mutable arrays + `Object.freeze` of read-only getters + setters — mirror `createGalaxyStore.ts:20-44` and `createStructureStore.ts:25-45`.
+**Pattern:** closure over private mutable state + `Object.freeze` of read-only getters + setters — mirror `createGalaxyStore.ts:20-44` and `createStructureStore.ts:25-45`.
 
 - [ ] Add `BodyStore.d.ts` (one type per file) + `createBodyStore.ts`.
 - [ ] Test `createBodyStore starts with empty stars/planets and null earth`.
@@ -125,27 +137,28 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 
 ## Task 4 — `earth` source type + entry + registry append
 
-**Files:** `src/@types/data/EarthSourceEntry.d.ts` (new), `src/@types/data/SourceEntry.d.ts` (modify — extend union), `src/data/source.ts` (modify — append `Earth: 20`), `src/data/sources/earth.ts` (new), `src/data/sources.ts` (modify — import + register `EARTH_ENTRY`), `tests/data/sources.test.ts` (modify).
+**Files:** `src/@types/data/body/EarthSourceEntry.d.ts` (new — per-kind subfolder, contract-conflict #6), `src/@types/data/SourceEntry.d.ts` (modify — extend union), `src/data/source.ts` (modify — append `Earth: 23`), `src/data/sources/earth.ts` (new), `src/data/sources.ts` (modify — import + register `EARTH_ENTRY`), `tests/data/sources.test.ts` (modify).
 
 **Interfaces:**
+
 - Produces:
   ```ts
-  // EarthSourceEntry.d.ts
+  // body/EarthSourceEntry.d.ts
   export type EarthSourceEntry = SourceEntryBase & {
     readonly type: 'earth';
-    readonly code: number;   // see contract-conflict #1
+    readonly code: number; // see contract-conflict #1
   };
   ```
-  `EARTH_ENTRY` `as const satisfies EarthSourceEntry` (mirror `flow.ts:5-28` / `cluster.ts:4-17` shape: `type`, `code: Source.Earth`, `id: 'earth'`, `label: 'Earth'`, `allSky`, `visible`, `bearsLabel`, `bearsMarker`). Bodies are NOT yet selectable/labelled (spec §5 "deferred") → `bearsLabel: false`, `bearsMarker: false`.
+  `EARTH_ENTRY` `as const satisfies EarthSourceEntry` (mirror `flow.ts:5-28` / `cluster.ts:4-17` shape: `type`, `code: Source.Earth`, `id: 'earth'`, `label: 'Earth'`, `allSky`, `visible`, `bearsLabel`, `bearsMarker`). Bodies are NOT pickable and carry no COSMO label/marker → `bearsLabel: false`, `bearsMarker: false` — those flags drive the COSMO label/marker systems, which the body captions bypass (Sun/Earth captions already ship through `foregroundLabelsLayer`; see Task 12).
 - Consumes: `SourceEntryBase` (`SourceEntryBase.d.ts:9`), `Source` (`source.ts`).
 
-- [ ] Append `Earth: 20` to the `Source` const with a didactic comment (registry-key-only code, appended after Flow=17; never renumber the codes below).
-- [ ] Add `EarthSourceEntry.d.ts`; union it into `SourceEntry.d.ts:14-20`.
-- [ ] Add `sources/earth.ts` → `EARTH_ENTRY`; import + add `[Source.Earth]: EARTH_ENTRY` to `SOURCE_REGISTRY` (`sources.ts:91-110`).
-- [ ] Test (`sources.test.ts`, mirror the `overlay codes (milkyWay/flow)` describe block at `sources.test.ts:168-233`): `appends Earth=20 to the enum` → `expect(Source.Earth).toBe(20)`.
+- [ ] Append `Earth: 23` to the `Source` const with a didactic comment (registry-key-only code, appended after `DesiSgw = 20`, leaving 21/22 for the Phase-3 `Star`/`Planet`; never renumber the codes below).
+- [ ] Add `body/EarthSourceEntry.d.ts`; union it into `SourceEntry.d.ts:14-20`.
+- [ ] Add `sources/earth.ts` → `EARTH_ENTRY`; import + add `[Source.Earth]: EARTH_ENTRY` to `SOURCE_REGISTRY` (`sources.ts:95-117`).
+- [ ] Test (`sources.test.ts`, mirror the `overlay codes (milkyWay/flow)` describe block at `sources.test.ts:175-240`): `appends Earth=23 to the enum` → `expect(Source.Earth).toBe(23)`.
 - [ ] Test `earth row is a non-label, non-marker body source` — `entry.type === 'earth'`, `entry.id === 'earth'`, `bearsLabel === false`, `bearsMarker === false`.
-- [ ] Test `keeps Earth OUT of GALAXY_CATALOG_SOURCES` and `keeps the Earth bit clear of ALL_VISIBLE_MASK` (mirror `sources.test.ts:176-186`).
-- [ ] Test `every entry carries a unique id` already covers `'earth'` — confirm it still passes (`sources.test.ts:55-68`).
+- [ ] Test `keeps Earth OUT of GALAXY_CATALOG_SOURCES` and `keeps the Earth bit clear of ALL_VISIBLE_MASK` (mirror `sources.test.ts:183-193`; note `ALL_VISIBLE_MASK` derives from `type: 'galaxyCatalog'` rows only, so the exact-mask assertion at `sources.test.ts:103` stays untouched).
+- [ ] Test `every entry carries a unique id` already covers `'earth'` — confirm it still passes (`sources.test.ts:55-67`).
 - [ ] `npm test -- sources` → green. Commit.
 
 ## Task 5 — Wire `BodyStore` into `EngineData`, seed Earth at construction
@@ -153,11 +166,12 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 **Files:** `src/@types/engine/data/EngineData.d.ts` (modify), `src/services/engine/data/createEngineData.ts` (modify), `tests/services/engine/data/createEngineData.test.ts` (new or modify).
 
 **Interfaces:**
-- Produces: `EngineData` gains `readonly bodies: BodyStore`; `createEngineData()` constructs `createBodyStore()` and seeds `setEarth(SCENE_EARTH)` at construction (mirror how galaxies/structures are intended to seed; bodies seed from the static `sceneBodies.ts`, the seed-data-early convention).
+
+- Produces: `EngineData` gains `readonly bodies: BodyStore`; `createEngineData()` constructs `createBodyStore()` and seeds `setEarth(SCENE_EARTH)` at construction (bodies seed from the static `sceneBodies.ts`, the seed-data-early convention).
 - Consumes: `createBodyStore` (Task 3), `SCENE_EARTH` (Task 2).
 
-- [ ] Add `bodies: BodyStore` to `EngineData.d.ts:23-26`; update its docblock to record that bodies ARE app-side seed data (overrides the "two stores" sentence — see contract-conflict #4).
-- [ ] In `createEngineData.ts:16-21`, construct `createBodyStore()`, call `setEarth(SCENE_EARTH)` before returning, add `bodies` to the returned bag.
+- [ ] Add `bodies: BodyStore` to `EngineData.d.ts:20-23`; update its docblock to record that bodies ARE app-side seed data (extends the "two stores" rationale at `EngineData.d.ts:5-18` — see contract-conflict #4).
+- [ ] In `createEngineData.ts:16-21`, construct `createBodyStore()`, call `setEarth(SCENE_EARTH)` before returning, add `bodies` to the returned bag; update the module docblock's "only galaxies and structures" sentence.
 - [ ] Test `createEngineData seeds the Earth body at construction` — `data.bodies.earth?.id === 'earth'`.
 - [ ] Test `createEngineData still exposes galaxies + structures stores` (regression).
 - [ ] `npm test -- createEngineData` → green. Commit.
@@ -167,21 +181,22 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 **Files:** `src/@types/rendering/EarthRenderer.d.ts` (new), `src/services/gpu/renderers/earthRenderer.ts` (new), `src/services/gpu/shaders/earth/vertex.wesl` (new), `src/services/gpu/shaders/earth/fragment.wesl` (new), `tests/services/gpu/renderers/earthRenderer.test.ts` (new — construction + structural asserts only; see VISUAL note).
 
 **Interfaces:**
-- Produces (`EarthRenderer.d.ts`, contract verbatim):
+
+- Produces (`EarthRenderer.d.ts` methods verbatim from the contract; the factory follows the landed positional idiom — contract-conflict #7):
   ```ts
   export type EarthRenderer = Renderer & {
-    setTexture(bitmap: ImageBitmap): void;             // copyExternalImageToTexture
+    setTexture(bitmap: ImageBitmap): void; // copyExternalImageToTexture
     draw(pass: GPURenderPassEncoder, mvp: Float32Array): void;
   };
-  export function createEarthRenderer(init: {
-    device: GPUDevice;
-    colorFormat: GPUTextureFormat;   // 'rgba16float' (foreground offscreen color)
-    depthFormat: GPUTextureFormat;   // 'depth32float'
-  }): EarthRenderer;
+  export function createEarthRenderer(
+    device: GPUDevice,
+    targetFormat: GPUTextureFormat, // 'rgba16float' — must match the foreground:0 row's format
+    depthFormat: GPUTextureFormat, // 'depth32float' — must match the foreground:0 row's depth
+  ): EarthRenderer;
   ```
-- Consumes: `Renderer` (`@types/rendering/Renderer.d.ts:46-49`), `uvSphereMesh` + `lib/sphere.wesl` (Plan 01), the `?static` WESL import idiom (`pointRenderer.ts:45-46`), `copyExternalImageToTexture` (pattern at `textureAtlas.ts:131-145`).
+- Consumes: `Renderer` (`@types/rendering/Renderer.d.ts:33-38`), `uvSphereMesh` + `lib/sphere.wesl` (Plan 01), the `?static` WESL import idiom (`pointRenderer.ts:43-46`), `copyExternalImageToTexture` (pattern at `src/services/gpu/resources/textureAtlas.ts:120-137`), the debug-sphere pipeline as the depth/cull/opaque template (`debugSphereRenderer.ts:153-202` — depth write + `'less'`, CCW front face, back-face cull, no blend descriptor = opaque).
 
-**Shape:** factory takes a named bag (renderers.md "named bag" rule); uploads `uvSphereMesh(…)` VBO/IBO once; owns the texture + sampler + bind group in the closure; `setTexture(bitmap)` does `device.queue.copyExternalImageToTexture(...)` into the equirectangular 2D texture; `draw(pass, mvp)` writes the f32 `mvp` to the `SphereUniforms` buffer and draws indexed. `satisfies Renderer` at the return. Earth fragment shader samples the equirectangular texture at the mesh uvs; vertex shader imports `package::lib::sphere` `clip_from_local`.
+**Shape:** positional factory mirroring `createDebugSphereRenderer` (`debugSphereRenderer.ts:74-78`); uploads `uvSphereMesh(…)` VBO/IBO once; owns the texture + sampler + bind group in the closure; `setTexture(bitmap)` does `device.queue.copyExternalImageToTexture(...)` into the equirectangular 2D texture; `draw(pass, mvp)` writes the f32 `mvp` to the `SphereUniforms` buffer and draws indexed. `satisfies Renderer` at the return. Earth fragment shader samples the equirectangular texture at the mesh uvs; vertex shader imports `package::lib::sphere` `clip_from_local`.
 
 - [ ] Add `EarthRenderer.d.ts`.
 - [ ] Add `earth/vertex.wesl` + `earth/fragment.wesl` (texture sample; share `lib/sphere`). Follow WESL conventions (no backticks, literal `package::`, `?static` on the TS side). Use the `wesl-shaders` skill.
@@ -191,25 +206,42 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 - [ ] **VISUAL gate (deferred to Task 13):** a round, correctly-textured Earth is user-verified on screen — NOT asserted here.
 - [ ] `npm test -- earthRenderer` → green (or typecheck-only if headless GPU construction is infeasible — note which). Commit.
 
-## Task 7 — Blue Marble asset + `EngineGpuHandles.earthRenderer` slot + construct in `initGpu` + dispatch `'earth'`
+## Task 7 — Blue Marble asset + `earthRenderer` handle + `earthLayer` content row
 
-**Files:** `public/images/earth/blue-marble-4k.jpg` (new committed asset), `src/@types/engine/handles/EngineGpuHandles.d.ts` (modify), `src/services/engine/phases/initGpu.ts` (modify — construct + upload), `src/services/engine/frame/encodeForegroundPass.ts` (modify — table-dispatch `'earth'`), `tests/services/engine/frame/encodeForegroundPass.test.ts` (modify/extend Plan 01's test).
+**Files:** `public/images/earth/blue-marble-4k.jpg` (new committed asset), `src/@types/engine/handles/EngineGpuHandles.d.ts` (modify — add the slot), `src/services/engine/engine.ts` (modify — null seed + destroy row), `src/services/engine/phases/initGpu.ts` (modify — construct + fire the texture fetch), `src/services/engine/frame/passes/earthLayer.ts` (new), `src/services/engine/frame/passes/index.ts` (modify — register), `tests/services/engine/frame/passes/earthLayer.test.ts` (new), `tests/services/engine/frame/passes/passes.test.ts` (modify — migration row), `tests/@types/engineState.test.ts` + `tests/services/engine/phases/initGpu.destroyReachability.test.ts` (modify — handle wiring).
 
 **Interfaces:**
-- Produces: `EngineGpuHandles.earthRenderer: EarthRenderer | null`; `initGpu` constructs `createEarthRenderer(...)`, stores it on `state.gpu.earthRenderer`, and kicks off the Blue Marble fetch → `createImageBitmap` → `setTexture` (async, like the font-atlas await at `initGpu.ts:193`); `encodeForegroundPass` draws `state.data.bodies.earth` via the dispatch table using `composeBodyMvp(ctx.foregroundVp, earth.positionMpc, ctx.renderOrigin, earth.radiusKm * SCALE_UNITS.KM_TO_MPC)`.
-- Consumes: `EarthRenderer` + `createEarthRenderer` (Task 6), `composeBodyMvp` + `SCALE_UNITS` + `ForegroundOffscreen` (Plan 01), `state.data.bodies` (Task 5).
 
-**Asset task (STOP-and-report if blocked):** fetch a public-domain NASA Blue Marble **equirectangular** JPG (e.g. NASA Visible Earth "Blue Marble: Next Generation", or the 2002 Blue Marble equirectangular), downscale to ~4k width, write to `public/images/earth/blue-marble-4k.jpg`, and add a provenance note (URL + date + licence) in `data/raw/`-style README OR an inline comment at the fetch site. The asset is committed (it's a small static shell asset, not an R2 `.bin`). If the fetch is blocked (no network / licence unclear), STOP and report — the rest of the earth renderer is buildable + testable headless against a stub texture.
+- Produces: `EngineGpuHandles.earthRenderer: EarthRenderer | null`; `initGpu` constructs `createEarthRenderer(device, 'rgba16float', 'depth32float')`, stores it on `state.gpu.earthRenderer`, and kicks off the Blue Marble fetch → `createImageBitmap` → `setTexture`; and the registry row
+  ```ts
+  export const earthLayer: ContentLayer = {
+    name: 'earth',
+    slab: NEAR0,
+    target: 'foreground:0',
+    blend: 'opaque',
+    enabled(state) {
+      /* earthRenderer non-null AND bodies.earth non-null */
+    },
+    draw(pass, view, _ctx, state) {
+      /* composeBodyMvp(view.slab.vp, …) → earthRenderer.draw */
+    },
+  };
+  ```
+- Consumes: `EarthRenderer` + `createEarthRenderer` (Task 6), `composeBodyMvp` + `SCALE_UNITS` + `RENDER_ORIGIN_MPC` (imported directly — not ctx state), `state.data.bodies` (Task 5), the existing `(foreground:0, NEAR0)` program step (`frameProgram.ts:67`) — **no frameProgram edit**: the earth row rides the step the fold already appended, and `executeFrame`'s touched-set rule keeps the pass + composite skipped while `enabled` is false.
 
-**Dispatch (table, not an if-chain):** introduce a `Record`/`Map` keyed by body `type` → a draw closure `(pass, mvp) => state.gpu.<renderer>?.draw(pass, mvp, …)`. Earth is the first entry (`'earth'`); Phase 3 adds `'star'`/`'planet'`. Each body's mvp comes from `composeBodyMvp`. Cite the contract's `encodeForegroundPass` step-(1) render-pass description.
+**Asset task (STOP-and-report if blocked):** fetch a public-domain NASA Blue Marble **equirectangular** JPG (e.g. NASA Visible Earth "Blue Marble: Next Generation", or the 2002 Blue Marble equirectangular), downscale to ~4k width, write to `public/images/earth/blue-marble-4k.jpg`, and add a provenance note (URL + date + licence) in a `data/raw/`-style README OR an inline comment at the fetch site. The asset is committed (it's a small static shell asset, not an R2 `.bin`). If the fetch is blocked (no network / licence unclear), STOP and report — the rest of the earth renderer is buildable + testable headless against a stub texture.
+
+**Layer body (model on `debugSpheresLayer.ts:45-68`, incl. its f64-seam header):** `composeBodyMvp(view.slab.vp, earth.positionMpc, RENDER_ORIGIN_MPC, earth.radiusKm * SCALE_UNITS.KM_TO_MPC)` — `view.slab.vp` (the slab's `Float64Array`), NOT `view.vp`; feeding the f32 narrowing would resolve the ~1 AU near-cancellation after the precision is gone and mis-place Earth by more than its radius. `initGpu` construction sits with the foreground block (`initGpu.ts:387-408`); the two format literals MUST match the `foreground:0` row (`renderTargets.ts:119`) — the target↔renderer-profile invariant (`ContentLayer.d.ts:21-26`); carry the convention comment `initGpu.ts:393-399` uses. The texture fetch is NOT awaited (bootstrap must not block on a 4k JPG; the sphere draws untextured or is gated until the bitmap lands — pick one and note it in the layer/renderer header).
 
 - [ ] Add the Blue Marble asset + provenance (or STOP-and-report).
-- [ ] Add `earthRenderer: EarthRenderer | null` to `EngineGpuHandles.d.ts` (nullable until `initGpu`); add it to the destroy/teardown path if the handles file or `engine.ts` walks slots for teardown (verify where `foregroundOffscreen` etc. get destroyed — match it).
-- [ ] Construct `createEarthRenderer(...)` in `initGpu.ts` near the other HDR-target renderers (cite the construction block ~`initGpu.ts:249-313`); fire the Blue Marble fetch → `setTexture`.
-- [ ] Extend `encodeForegroundPass.ts` to draw the Earth body via the dispatch table; compose its MVP via `composeBodyMvp`.
-- [ ] Test (`encodeForegroundPass.test.ts`): `earth body is drawn through the dispatch table` — with a stub `earthRenderer` whose `draw` is a `vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array) => void>()`, a ctx carrying a real `foregroundVp` + a seeded `state.data.bodies.earth`, assert `draw` is called once with a `Float32Array` of length 16. (Use a typed `vi.fn` — `feedback_typed_vi_fn`.)
-- [ ] Test `no earth body → earth renderer draw not called` (null-safe path).
-- [ ] `npm test -- encodeForegroundPass` → green. Commit.
+- [ ] Add `earthRenderer: EarthRenderer | null` to `EngineGpuHandles.d.ts` (nullable until `initGpu`; docblock per the bag's lifecycle rule `EngineGpuHandles.d.ts:28-36`); seed `null` in the `engine.ts` state literal and add the destroy + re-null row (mirror `engine.ts:696-697`).
+- [ ] Construct `createEarthRenderer(device, 'rgba16float', 'depth32float')` in `initGpu.ts` beside the foreground block (`initGpu.ts:387-408`); fire the Blue Marble fetch → `setTexture`.
+- [ ] Add `earthLayer.ts` + register it in `CONTENT_LAYERS` (`passes/index.ts:140-174`) in the foreground group beside `debugSpheresLayer`.
+- [ ] Test (`earthLayer.test.ts`, modelled on `debugSpheresLayer.test.ts` — same `vi.mock` of `composeBodyMvp`, typed `vi.fn` per `feedback_typed_vi_fn`): `earth layer draws the seeded earth via composeBodyMvp with the slab f64 vp` — fixture `SlabView` whose `slab.vp` is a recognisable `Float64Array` and whose `vp` is a different `Float32Array`; assert `composeBodyMvp`'s first arg `toBe(view.slab.vp)` (and `not.toBe(view.vp)`), its args carry `earth.positionMpc` / `RENDER_ORIGIN_MPC` / the km→Mpc radius, and `earthRenderer.draw` receives a length-16 `Float32Array`.
+- [ ] Test `enabled is false while earthRenderer is null and while bodies.earth is null; true with both set`.
+- [ ] Test (`passes.test.ts`): extend the foreground migration-table group (`passes.test.ts:206-216, 286-310` — `FOREGROUND_NAMES`) with `'earth'` `{slab: NEAR0, target: 'foreground:0', blend: 'opaque'}`; the blend-legality test (`passes.test.ts:331-355`) already enforces opaque for `foreground:0` rows — confirm it covers the new row without edits to its table.
+- [ ] Test: extend `initGpu.destroyReachability.test.ts` (add a `vi.mock` for the `earthRenderer` module — keeps its `?static` WESL imports out of JSDOM — plus the state-bag field, writes-onto-state and destroy-chain assertions) and `engineState.test.ts` (the null seed).
+- [ ] `npm test -- earthLayer passes initGpu engineState` → green. Commit.
 
 ---
 
@@ -217,18 +249,19 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 
 ## Task 8 — `StarBody` + `PlanetBody` scene record types
 
-**Files:** `src/@types/scene/StarBody.d.ts` (new), `src/@types/scene/PlanetBody.d.ts` (new), `tests/@types/scene/StarBody.test.ts` + `PlanetBody.test.ts` (new type-shape tests). *(If Task 3 already created these as stubs, this task fills in the final shape + tests.)*
+**Files:** `src/@types/scene/StarBody.d.ts` (new), `src/@types/scene/PlanetBody.d.ts` (new), `tests/@types/scene/StarBody.test.ts` + `PlanetBody.test.ts` (new type-shape tests). _(If Task 3 already created these as stubs, this task fills in the final shape + tests.)_
 
 **Interfaces (contract verbatim):**
+
 ```ts
 // StarBody.d.ts
 export type StarBody = {
   readonly id: string;
   readonly label: string;
-  readonly positionMpc: Vec3;  // absolute heliocentric, f64-valued
-  readonly absMag: number;     // drives point brightness/size + LOD
-  readonly color: Vec3;        // B–V → rgb
-  readonly radiusKm: number;   // used once resolved to a sphere (the Sun)
+  readonly positionMpc: Vec3; // absolute heliocentric, f64-valued
+  readonly absMag: number; // drives point brightness/size + LOD
+  readonly color: Vec3; // B–V → rgb
+  readonly radiusKm: number; // used once resolved to a sphere (the Sun)
 };
 // PlanetBody.d.ts
 export type PlanetBody = {
@@ -236,9 +269,10 @@ export type PlanetBody = {
   readonly label: string;
   readonly positionMpc: Vec3;
   readonly radiusKm: number;
-  readonly albedo: Vec3;       // flat lit colour (no texture yet)
+  readonly albedo: Vec3; // flat lit colour (no texture yet)
 };
 ```
+
 - Consumes: `Vec3`.
 
 - [ ] Add both `.d.ts` (one type per file) with didactic docblocks (`absMag` drives the LOD point↔sphere choice — Plan 03; `color` / `albedo` are flat colours, no texture).
@@ -250,6 +284,7 @@ export type PlanetBody = {
 **Files:** `src/data/bodies/sceneBodies.ts` (modify — add star + planet exports), `tests/data/bodies/sceneBodies.test.ts` (modify).
 
 **Interfaces:**
+
 - Produces: `export const SCENE_STARS: readonly StarBody[]` (Sun + Proxima); `export const SCENE_PLANETS: readonly PlanetBody[]` (Moon + Jupiter).
 - Consumes: `StarBody` / `PlanetBody` (Task 8), `SCALE_UNITS`.
 
@@ -264,22 +299,26 @@ export type PlanetBody = {
 
 ## Task 10 — `star` + `planet` source types + entries + registry append; seed into the store
 
-**Files:** `src/@types/data/StarSourceEntry.d.ts` + `PlanetSourceEntry.d.ts` (new), `src/@types/data/SourceEntry.d.ts` (modify — extend union), `src/data/source.ts` (modify — append `Star: 18`, `Planet: 19`), `src/data/sources/star.ts` + `planet.ts` (new), `src/data/sources.ts` (modify — register), `src/services/engine/data/createEngineData.ts` (modify — seed stars/planets), `tests/data/sources.test.ts` (modify), `tests/services/engine/data/createEngineData.test.ts` (modify).
+**Files:** `src/@types/data/body/StarSourceEntry.d.ts` + `body/PlanetSourceEntry.d.ts` (new — per-kind subfolder, contract-conflict #6), `src/@types/data/SourceEntry.d.ts` (modify — extend union), `src/data/source.ts` (modify — append `Star: 21`, `Planet: 22`), `src/data/sources/star.ts` + `planet.ts` (new), `src/data/sources.ts` (modify — register), `src/services/engine/data/createEngineData.ts` (modify — seed stars/planets), `tests/data/sources.test.ts` (modify), `tests/services/engine/data/createEngineData.test.ts` (modify).
 
 **Interfaces:**
+
 - Produces:
   ```ts
-  export type StarSourceEntry   = SourceEntryBase & { readonly type: 'star';   readonly code: number };
-  export type PlanetSourceEntry = SourceEntryBase & { readonly type: 'planet'; readonly code: number };
+  export type StarSourceEntry = SourceEntryBase & { readonly type: 'star'; readonly code: number };
+  export type PlanetSourceEntry = SourceEntryBase & {
+    readonly type: 'planet';
+    readonly code: number;
+  };
   ```
-  `STAR_ENTRY` / `PLANET_ENTRY` `as const satisfies …` (mirror `EARTH_ENTRY` from Task 4: `id: 'star'`/`'planet'`, labels, `allSky`, `visible`, `bearsLabel: false`, `bearsMarker: false`). Codes: `Star: 18`, `Planet: 19` (appended BEFORE `Earth: 20` is fine — but Earth already took 20 in Task 4; append Star=18, Planet=19 between Flow=17 and Earth=20 — **codes are append-only by VALUE, insertion order in the const is cosmetic; do NOT renumber Earth=20**). Confirm Earth stays 20.
+  `STAR_ENTRY` / `PLANET_ENTRY` `as const satisfies …` (mirror `EARTH_ENTRY` from Task 4: `id: 'star'`/`'planet'`, labels, `allSky`, `visible`, `bearsLabel: false`, `bearsMarker: false`). Codes: `Star: 21`, `Planet: 22` (inserted between `DesiSgw = 20` and `Earth = 23` in the const — **codes are append-only by VALUE; insertion order in the const is cosmetic; do NOT renumber Earth=23**). Confirm Earth stays 23.
 - Consumes: `SourceEntryBase`, `Source`; `createEngineData` consumes `SCENE_STARS` / `SCENE_PLANETS`.
 
-- [ ] Append `Star: 18`, `Planet: 19` to `source.ts` (Earth stays 20). Didactic comment.
-- [ ] Add the two `.d.ts`; union into `SourceEntry.d.ts`.
+- [ ] Append `Star: 21`, `Planet: 22` to `source.ts` (Earth stays 23). Didactic comment.
+- [ ] Add the two `.d.ts` under `src/@types/data/body/`; union into `SourceEntry.d.ts`.
 - [ ] Add `sources/star.ts` + `planet.ts`; register `[Source.Star]: STAR_ENTRY`, `[Source.Planet]: PLANET_ENTRY` in `SOURCE_REGISTRY`.
 - [ ] In `createEngineData.ts`, `setStars(SCENE_STARS)` + `setPlanets(SCENE_PLANETS)` at construction.
-- [ ] Test (`sources.test.ts`): `appends Star=18, Planet=19, Earth=20` — assert all three codes; `keeps star/planet OUT of GALAXY_CATALOG_SOURCES`; `keeps star/planet bits clear of ALL_VISIBLE_MASK`.
+- [ ] Test (`sources.test.ts`): `appends Star=21, Planet=22, Earth=23` — assert all three codes; `keeps star/planet OUT of GALAXY_CATALOG_SOURCES`; `keeps star/planet bits clear of ALL_VISIBLE_MASK`.
 - [ ] Test `star/planet rows are non-label, non-marker body sources`.
 - [ ] Test (`createEngineData.test.ts`): `seeds Sun + Proxima as stars and Moon + Jupiter as planets at construction`.
 - [ ] `npm test -- sources createEngineData` → green. Commit.
@@ -288,7 +327,8 @@ export type PlanetBody = {
 
 **Files:** `src/@types/rendering/StarRenderer.d.ts` + `PlanetRenderer.d.ts` + `StarPointRenderer.d.ts` (new), `src/services/gpu/renderers/starRenderer.ts` + `planetRenderer.ts` + `starPointRenderer.ts` (new), `src/services/gpu/shaders/star/{vertex,fragment}.wesl` + `planet/{vertex,fragment}.wesl` (new), `tests/services/gpu/renderers/{starRenderer,planetRenderer,starPointRenderer}.test.ts` (new — construction + structural).
 
-**Interfaces (contract verbatim):**
+**Interfaces (`draw` signatures verbatim from the contract):**
+
 ```ts
 export type StarRenderer = Renderer & {
   draw(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3): void;
@@ -297,16 +337,17 @@ export type PlanetRenderer = Renderer & {
   draw(pass: GPURenderPassEncoder, mvp: Float32Array, albedo: Vec3): void;
 };
 export type StarPointRenderer = Renderer & {
-  // distant stars as points in the ADDITIVE backdrop — reuses the point pipeline,
-  // NOT the foreground depth pass.
+  // distant stars as additive points in the HDR accumulation — reuses the
+  // point pipeline, NOT the opaque foreground pass.
   draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2): void;
 };
 ```
-Factory signatures mirror `createEarthRenderer` (named bag with `device` + `colorFormat` + `depthFormat`) for `starRenderer`/`planetRenderer`; `starPointRenderer` takes whatever the point pipeline needs (read `pointRenderer.ts:340` `createPointRenderer` signature for the reuse seam — additive backdrop, no depth).
+
+Sphere factories follow the landed positional idiom (contract-conflict #7), mirroring `createEarthRenderer` / `createDebugSphereRenderer`: `createStarRenderer(device, targetFormat, depthFormat)` and `createPlanetRenderer(device, targetFormat, depthFormat)` — at the `initGpu` call site the formats must match the `foreground:0` row (`renderTargets.ts:119`). `starPointRenderer`'s factory takes whatever the point-pipeline reuse seam dictates (read `createPointRenderer` — `pointRenderer.ts:361-367` — first); its pipeline profile targets **`'rgba16float'` additive, no depth** (it draws into the depthless `hdr` target — `renderTargets.ts:117`).
 
 - Consumes: `Renderer`, `Vec3`/`Vec2`, `uvSphereMesh` + `lib/sphere.wesl` (star/planet spheres), the point pipeline (`starPointRenderer` reuse — `pointRenderer.ts`).
 
-**Shading:** `star/fragment.wesl` emissive sphere; `planet/fragment.wesl` flat lit albedo; both vertex shaders share `lib/sphere`. `starPointRenderer` reuses the additive point pipeline (cite `pointRenderer.ts`) — it is NOT drawn in the foreground depth pass; it joins the additive HDR backdrop. **Decide and note** whether `starPointRenderer` wraps `createPointRenderer` directly or builds a thin point pipeline — read `pointRenderer.ts` first; if it can't be cleanly reused, STOP and report rather than duplicating the whole pipeline.
+**Shading:** `star/fragment.wesl` emissive sphere; `planet/fragment.wesl` flat lit albedo; both vertex shaders share `lib/sphere`. `starPointRenderer` reuses the additive point pipeline (cite `pointRenderer.ts`) — it is NOT drawn in the opaque foreground pass; it joins the additive HDR accumulation. **Decide and note** whether `starPointRenderer` wraps `createPointRenderer` directly or builds a thin point pipeline — read `pointRenderer.ts` first (note its signature also threads the fade/source/focus BGLs; a thin dedicated pipeline may be simpler than satisfying those); if it can't be cleanly reused, STOP and report rather than duplicating the whole pipeline.
 
 - [ ] Add the three `.d.ts` types.
 - [ ] Add star/planet shader dirs (emissive / flat-lit). `wesl-shaders` skill; share `lib/sphere`.
@@ -314,24 +355,64 @@ Factory signatures mirror `createEarthRenderer` (named bag with `device` + `colo
 - [ ] Tests: each `create…Renderer satisfies Renderer` (label + destroy + method arity), structural like Task 6.
 - [ ] `npm test -- starRenderer planetRenderer starPointRenderer` → green (or typecheck-only with a note, like Task 6). Commit.
 
-## Task 12 — Wire anchor renderers into `EngineGpuHandles` + `initGpu` + foreground dispatch; retire `debugSphereRenderer`?
+## Task 12 — Anchor content-layer rows + handles + the NEAR0→hdr program step; retire the debug-sphere constellation; repoint the captions
 
-**Files:** `src/@types/engine/handles/EngineGpuHandles.d.ts` (modify), `src/services/engine/phases/initGpu.ts` (modify), `src/services/engine/frame/encodeForegroundPass.ts` (modify — extend the dispatch table for `'star'`/`'planet'` + draw `starPointRenderer` for distant stars), `tests/services/engine/frame/encodeForegroundPass.test.ts` (modify); possibly delete `src/services/gpu/renderers/debugSphereRenderer.ts` + its shaders + test.
+**Files:** `src/@types/engine/handles/EngineGpuHandles.d.ts` (modify — three slots), `src/services/engine/engine.ts` (modify — null seeds + destroy rows), `src/services/engine/phases/initGpu.ts` (modify — construct three renderers; repoint the caption label set), `src/services/engine/frame/passes/starSpheresLayer.ts` + `planetsLayer.ts` + `starPointsLayer.ts` (new), `src/services/engine/frame/passes/index.ts` (modify — register three rows), `src/services/engine/frame/frameProgram.ts` (modify — ONE appended step), `src/services/engine/presentation/sceneBodyLabels.ts` (new — replaces `debugSphereLabels.ts` as the caption source), per-layer tests (new) + `tests/services/engine/frame/passes/passes.test.ts` + `tests/services/engine/frame/frameProgram.test.ts` (modify) + `tests/@types/engineState.test.ts` + `tests/services/engine/phases/initGpu.destroyReachability.test.ts` (modify); **deletions (grep-gated):** `passes/debugSpheresLayer.ts` + its registry row + test, `src/data/bodies/debugSphereBody.ts`, `src/services/gpu/renderers/debugSphereRenderer.ts` + `src/@types/rendering/DebugSphereRenderer.d.ts` + `src/services/gpu/shaders/debugSphere/{vertex,fragment}.wesl`, the `EngineGpuHandles.debugSphereRenderer` slot + its `engine.ts` seed/destroy rows, `src/services/engine/presentation/debugSphereLabels.ts`.
 
 **Interfaces:**
-- Produces: `EngineGpuHandles` gains `starRenderer`, `planetRenderer`, `starPointRenderer` (all `| null`); `initGpu` constructs all three; `encodeForegroundPass` dispatch table gains `'star'` → `starRenderer.draw(pass, mvp, color)` and `'planet'` → `planetRenderer.draw(pass, mvp, albedo)`, iterating `state.data.bodies.stars`/`.planets`. For this phase the Sun is always a foreground sphere and Proxima/distant stars render as `starPointRenderer` points in the additive backdrop — **partition by a simple constant** here (full apparent-size LOD is Plan 03; do NOT build the adaptive promotion). Note the simple partition explicitly.
-- Consumes: the three renderers (Task 11), `composeBodyMvp` + `SCALE_UNITS`, `state.data.bodies`.
 
-**`debugSphereRenderer` retirement (explicit decision task):** grep `src`/`tests` for importers of `debugSphereRenderer` / `DebugSphereRenderer` / `state.gpu.debugSphereRenderer`. **Only if zero importers remain** (i.e. `encodeForegroundPass` now draws Earth + anchors and no longer references the debug sphere), delete the renderer + its shaders + its slot + its test. If anything still imports it, KEEP it and note why (e.g. retained as a headless smoke-test fixture). Record the decision in the task notes either way.
+- Produces: `EngineGpuHandles` gains `starRenderer`, `planetRenderer`, `starPointRenderer` (all `| null`); `initGpu` constructs all three; and three registry rows — the registry IS the dispatch table, one row + file per body type:
+  ```ts
+  export const starSpheresLayer: ContentLayer = {
+    name: 'star-spheres',
+    slab: NEAR0,
+    target: 'foreground:0',
+    blend: 'opaque',
+    // near-partition stars (the Sun) → composeBodyMvp(view.slab.vp, …) → starRenderer.draw(pass, mvp, color)
+  };
+  export const planetsLayer: ContentLayer = {
+    name: 'planets',
+    slab: NEAR0,
+    target: 'foreground:0',
+    blend: 'opaque',
+    // bodies.planets → composeBodyMvp(view.slab.vp, …) → planetRenderer.draw(pass, mvp, albedo)
+  };
+  export const starPointsLayer: ContentLayer = {
+    name: 'star-points',
+    slab: NEAR0,
+    target: 'hdr',
+    blend: 'additive',
+    // far-partition stars (Proxima) → starPointRenderer.draw(pass, view.vp, view.viewportPx)
+  };
+  ```
+- Consumes: the three renderers (Task 11), `composeBodyMvp` + `SCALE_UNITS` + `RENDER_ORIGIN_MPC`, `state.data.bodies`, the existing `(foreground:0, NEAR0)` program step (sphere rows) and the NEW `(hdr, NEAR0)` step below (points row).
 
-- [ ] Add the three slots to `EngineGpuHandles.d.ts`; wire teardown.
-- [ ] Construct the three renderers in `initGpu.ts`.
-- [ ] Extend `encodeForegroundPass.ts` dispatch table for `'star'`/`'planet'`; draw the Sun as a foreground sphere, distant stars via `starPointRenderer` (simple constant partition; note it).
-- [ ] Decide debugSphereRenderer retirement (grep first; delete only if zero importers; else keep + note).
-- [ ] Test (`encodeForegroundPass.test.ts`): `the Sun is drawn through the star dispatch entry` — seeded `state.data.bodies.stars` with the Sun, stub `starRenderer.draw` typed `vi.fn`, assert called with a length-16 `Float32Array` + a `Vec3` color.
-- [ ] Test `planets are drawn through the planet dispatch entry` (Moon + Jupiter → two `planetRenderer.draw` calls).
-- [ ] Test `the dispatch is table-driven` — assert no `if (type === …)` chain (structural: a single registry/table object keyed by `type`; assert its keys are exactly `['earth','star','planet']` if the table is exported, OR review-only with a note).
-- [ ] `npm test -- encodeForegroundPass` → green. Commit.
+**The `(hdr, NEAR0)` program step — a data edit to `frameProgram.ts`:** `starPointsLayer`'s `(target: 'hdr', slab: NEAR0)` pair has NO program step today (`frameProgram.ts:52-71` renders hdr only @ COSMO), so this task ALSO appends
+
+```ts
+{ kind: 'render', target: 'hdr', slab: NEAR0 },
+```
+
+**BEFORE the hdr→swap composite** (after the `(hdr, COSMO)` step at `frameProgram.ts:56`), so the star points accumulate into HDR and ride the same tone-map as the galaxies. Why NEAR0→hdr is legal: COSMO's near plane (0.01 Mpc — `slabs.ts:57`) would clip parsec-scale anchors, so the points must project through NEAR0; hdr layers are `'additive'` by the blend-legality test (`passes.test.ts:331-355`), which `starPointsLayer` satisfies, and the additive `hdr` target has no depth (`renderTargets.ts:117`), so no depth attachment is implicated. `executeFrame` needs zero edits — the step rides the existing `(target, slab)` grouping and touched-set rules (the hdr target is already touched by the COSMO step, so this pass loads rather than clears).
+
+**Partition (simple constant, NOT the Plan-03 LOD):** the Sun is always a foreground sphere; Proxima/distant stars are always `star-points`. Partition `bodies.stars` by ONE named distance constant shared by `starSpheresLayer` and `starPointsLayer` (full apparent-size point↔sphere promotion is Plan 03 — do NOT build the adaptive version). Note the constant + its single home explicitly.
+
+**Caption repoint (the layer + renderer STAY; only the label source changes):** add `sceneBodyLabels()` in `src/services/engine/presentation/` modelled on `debugSphereLabels.ts` (renderOrigin-relative anchors, per-body colours, the vertical stagger rationale — carry those didactic notes) but sourced from `SCENE_EARTH` / `SCENE_STARS` / `SCENE_PLANETS`; in `initGpu.ts:407-408` swap `setLabels(debugSphereLabels())` → `setLabels(sceneBodyLabels())`. `foregroundLabelsLayer`, `foregroundLabelRenderer`, and the `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` gate are untouched. (The plan's original "bodies are not labelled" non-goal is overtaken — Sun/Earth captions already ship; `bearsLabel`/`bearsMarker` stay `false` on the source entries because those flags drive the COSMO label/marker systems, which the caption path bypasses.)
+
+**Debug-sphere constellation retirement (explicit decision; grep-gated):** grep `src`/`tests` for importers of `debugSpheresLayer`, `DEBUG_SPHERE_BODIES` / `debugSphereBody`, `debugSphereRenderer` / `DebugSphereRenderer` / `state.gpu.debugSphereRenderer`, and `debugSphereLabels`. **Only if zero importers remain** (i.e. the new body layers + `sceneBodyLabels` have replaced every consumer), delete the whole constellation listed in Files. If anything still imports a piece, KEEP that piece and note why. Record the decision in the task notes either way. Deleting `debugSpheresLayer` also removes its `CONTENT_LAYERS` row and updates `passes.test.ts`'s `FOREGROUND_NAMES` + the `timedSlotsOf` literal (both files already anticipate the swap — `debugSphereBody.ts:3-6` and `debugSphereLabels.ts:27-28` say a live BodyStore retires them).
+
+- [ ] Add the three slots to `EngineGpuHandles.d.ts`; seed `null` + destroy/re-null rows in `engine.ts` (mirror `engine.ts:696-697`); extend `engineState.test.ts` + `initGpu.destroyReachability.test.ts` (per-renderer `vi.mock`s, state-bag fields, destroy-chain assertions).
+- [ ] Construct the three renderers in `initGpu.ts` (sphere renderers with `('rgba16float', 'depth32float')` matching the `foreground:0` row; `starPointRenderer` per its Task-11 seam).
+- [ ] Add the three layer files + register in `CONTENT_LAYERS` (`passes/index.ts:140-174` — sphere rows in the foreground group, `star-points` positioned with the hdr-group ordering comment updated).
+- [ ] Append the `(hdr, NEAR0)` render step to `frameProgram.ts` before the hdr→swap composite, with a step comment carrying the COSMO-near-plane rationale.
+- [ ] Repoint the captions: add `sceneBodyLabels.ts`, swap the `setLabels` call in `initGpu.ts`, delete `debugSphereLabels.ts` (grep-gated).
+- [ ] Retire the debug-sphere constellation (grep first; delete only pieces with zero importers; else keep + note).
+- [ ] Test (`starSpheresLayer.test.ts`, modelled on `debugSpheresLayer.test.ts`): `the Sun is drawn via composeBodyMvp with the slab f64 vp` — mock `composeBodyMvp`, identity-assert first arg `toBe(view.slab.vp)`; `starRenderer.draw` receives `(pass, Float32Array(16), Vec3 color)`; typed `vi.fn`s. Plus `enabled is false while starRenderer is null / no near-partition stars`.
+- [ ] Test (`planetsLayer.test.ts`): `Moon and Jupiter each get a composeBodyMvp call from view.slab.vp and a planetRenderer.draw call` (two draws, per-body albedo); same identity assertion + null-handle gate.
+- [ ] Test (`starPointsLayer.test.ts`): `draw threads view.vp and view.viewportPx to starPointRenderer` (the f32 narrowing suffices for point anchors — same rationale as `foregroundLabelsLayer.ts:56-60`); `enabled is false while starPointRenderer is null / no far-partition stars`.
+- [ ] Test (`passes.test.ts`): foreground migration group becomes exactly `['earth', 'star-spheres', 'planets']` (all NEAR0 / `foreground:0` / opaque); `star-points` asserted as an hdr-target NEAR0 additive row (extend the migration tables — the blend-legality switch needs no new clause).
+- [ ] Test (`frameProgram.test.ts`): the step-list literal grows to nine steps with `{ kind: 'render', target: 'hdr', slab: NEAR0 }` before the hdr→swap composite (`frameProgram.test.ts:65-79`); the slab-coverage test still passes (`:111-119`); the real-registry `timedSlotsOf` literal (`:159-189`) gains `'star-points'` after the COSMO hdr layers and swaps the foreground tail to the new layer names. Check `renderFrame.test.ts` / `renderFrame.timing.test.ts` for fixtures pinning the eight-step shape; update if pinned.
+- [ ] `npm test -- starSpheresLayer planetsLayer starPointsLayer passes frameProgram` → green. Commit.
 
 ## Task 13 — Full gate + VISUAL verification
 
@@ -340,10 +421,11 @@ Factory signatures mirror `createEarthRenderer` (named bag with `device` + `colo
 - [ ] `npm run typecheck` (both src + tools tsconfigs) → clean.
 - [ ] `npm test` (full suite) → green (590+ tests; new tests added).
 - [ ] Placeholder scan: grep the new files for `TODO` / `FIXME` / `throw new Error('not implemented')` → none.
-- [ ] **VISUAL gate — user-verified on the dev server (NOT automated).** Load the app, zoom from the galaxy view down to Earth and confirm:
+- [ ] **VISUAL gate — user-verified on the dev server (NOT automated). Load the app WITH `?deepZoom`** (the descent floor is URL-gated — `clampDistance.ts:50-52`; a plain load stops at 0.05 Mpc and the bodies stay sub-pixel), zoom from the galaxy view down to Earth and confirm:
   - Earth resolves as a **stable, round, correctly-textured** (Blue Marble) sphere — no jitter / swim / clipping.
   - The Sun, Moon, Jupiter render as **believably-sized** spheres relative to Earth on the way down.
-  - Proxima (and the galaxy backdrop) stay as additive-backdrop points; the backdrop is intact.
+  - Proxima (and the galaxy backdrop) stay as additive points in the HDR accumulation; the backdrop is intact; tone parity holds across the Sun's limb (the two composites share one `tone` object — `frameProgram.ts:65-68`).
+  - The body captions (now sourced from `sceneBodies`) appear below 1 kpc and track the bodies.
   - An executor running unattended must **STOP and report** that these are visual properties awaiting on-screen confirmation rather than claim success.
 - [ ] Commit.
 
@@ -353,39 +435,47 @@ Factory signatures mirror `createEarthRenderer` (named bag with `device` + `colo
 
 ### Spec-coverage map (every Phase 2/3 + §5/§6 bullet → task)
 
-| Spec / contract item | Task |
-| --- | --- |
-| §5 `EarthBody` type | T1 |
-| §5 Earth seed (`SCENE_EARTH`, SCALE_UNITS positions) | T2 |
-| §5 `createBodyStore` (BodyStore surface) | T3 |
-| §5 `earth` source type + entry + registry append (code 20) | T4 |
-| §5 `createBodyStore` wired into `createEngineData` + seeded at construction | T5, T10 |
-| §6 `earthRenderer` (Blue Marble equirectangular texture) | T6 |
-| §6 Blue Marble asset `public/images/earth/blue-marble-4k.jpg` + provenance | T7 |
-| §4/§6 `encodeForegroundPass` table-dispatch by `type` (earth) | T7 |
-| §5 `StarBody` / `PlanetBody` types | T8 |
-| §5 anchor seed (Sun, Proxima, Moon, Jupiter, real radii + SCALE_UNITS positions) | T9 |
-| §5 `star`/`planet` source types + entries + registry append (codes 18/19) | T10 |
-| §5 stars/planets seeded into the store at construction | T10 |
-| §6 `starRenderer` (emissive sphere) | T11 |
-| §6 `planetRenderer` (flat lit albedo) | T11 |
-| §6 `starPointRenderer` (distant stars as additive-backdrop points) | T11 |
-| §6 anchor renderers wired (handles + initGpu + dispatch star/planet) | T12 |
-| Retire/keep `debugSphereRenderer` (explicit decision) | T12 |
-| §9/§10 final gate + VISUAL verification | T13 |
+| Spec / contract item                                                                        | Task    |
+| ------------------------------------------------------------------------------------------- | ------- |
+| §5 `EarthBody` type                                                                         | T1      |
+| §5 Earth seed (`SCENE_EARTH`, SCALE_UNITS positions)                                        | T2      |
+| §5 `createBodyStore` (BodyStore surface)                                                    | T3      |
+| §5 `earth` source type + entry + registry append (code 23)                                  | T4      |
+| §5 `createBodyStore` wired into `createEngineData` + seeded at construction                 | T5, T10 |
+| §6 `earthRenderer` (Blue Marble equirectangular texture)                                    | T6      |
+| §6 Blue Marble asset `public/images/earth/blue-marble-4k.jpg` + provenance                  | T7      |
+| §4/§6 per-type body dispatch (earth) — as the `earthLayer` registry row                     | T7      |
+| §5 `StarBody` / `PlanetBody` types                                                          | T8      |
+| §5 anchor seed (Sun, Proxima, Moon, Jupiter, real radii + SCALE_UNITS positions)            | T9      |
+| §5 `star`/`planet` source types + entries + registry append (codes 21/22)                   | T10     |
+| §5 stars/planets seeded into the store at construction                                      | T10     |
+| §6 `starRenderer` (emissive sphere)                                                         | T11     |
+| §6 `planetRenderer` (flat lit albedo)                                                       | T11     |
+| §6 `starPointRenderer` (distant stars as additive HDR points)                               | T11     |
+| §6 anchor renderers wired — handles + initGpu + `star-spheres`/`planets`/`star-points` rows | T12     |
+| The `(hdr, NEAR0)` program step for the star points                                         | T12     |
+| Captions repointed from `debugSphereLabels` to `sceneBodyLabels`                            | T12     |
+| Retire/keep the debug-sphere constellation (explicit, grep-gated decision)                  | T12     |
+| §9/§10 final gate + VISUAL verification (`?deepZoom`)                                       | T13     |
 
-Deferred (correctly NOT tasked — spec §1 non-goals / Plan 03): pick codes, per-type visibility toggles, InfoCards; adaptive foreground near/far; full apparent-size point↔sphere LOD promotion; fly-to-Earth key; lowering `MIN_DISTANCE_MPC` (Plan 01); the ADR (Plan 03).
+Deferred (correctly NOT tasked — spec §1 non-goals / Plan 03): pick codes, per-type visibility toggles, InfoCards; adaptive foreground near/far (the fixed NEAR0 ratios live in `slabs.ts:44-45` with their Plan-03 forward-reference); full apparent-size point↔sphere LOD promotion; fly-to-Earth key; the `MIN_DISTANCE_MPC` floor (shipped by Plan 01, `?deepZoom`-gated); the ADR (Plan 03).
 
 ### Placeholder scan
+
 No `TODO` / `FIXME` / fabricated unit tests for GPU output. GPU renderer/shader/asset tasks (T6, T7, T11) carry explicit VISUAL gates and structural-only asserts; no fake pixel-equality tests. T13 grep gates placeholders.
 
 ### Type-name consistency vs the contract
-`EarthBody`, `StarBody`, `PlanetBody`, `EarthSourceEntry`, `StarSourceEntry`, `PlanetSourceEntry`, `EARTH_ENTRY`, `STAR_ENTRY`, `PLANET_ENTRY`, `BodyStore`, `createBodyStore`, `SCENE_EARTH`, `SCENE_STARS`, `SCENE_PLANETS`, `EarthRenderer`/`createEarthRenderer`, `StarRenderer`, `PlanetRenderer`, `StarPointRenderer`, `Source.Star/Planet/Earth` — spelled identically to the contract across all tasks. Renderer `draw` signatures match the contract verbatim (T6, T11).
+
+`EarthBody`, `StarBody`, `PlanetBody`, `EarthSourceEntry`, `StarSourceEntry`, `PlanetSourceEntry`, `EARTH_ENTRY`, `STAR_ENTRY`, `PLANET_ENTRY`, `BodyStore`, `createBodyStore`, `SCENE_EARTH`, `SCENE_STARS`, `SCENE_PLANETS`, `EarthRenderer`/`createEarthRenderer`, `StarRenderer`, `PlanetRenderer`, `StarPointRenderer`, `Source.Star/Planet/Earth` — spelled identically to the contract across all tasks. Renderer `draw` signatures match the contract verbatim (T6, T11); factory signatures follow the landed positional idiom (contract-conflict #7); the contract's `encodeForegroundPass` dispatch surface is superseded by registry rows (contract-conflict #8).
 
 ### Contract conflicts with current code (flagged inline above)
-1. **`code` not in `SourceEntryBase`** — each new entry type adds `readonly code: number`, matching existing variants (`StructureSourceEntry.d.ts:13`, `FlowSourceEntry.d.ts:17`). (T4, T10.)
+
+1. **`code` not in `SourceEntryBase`** — each new entry type adds `readonly code: number`, matching existing variants (`src/@types/data/structure/StructureSourceEntry.d.ts:13`, `src/@types/data/flow/FlowSourceEntry.d.ts:17`). (T4, T10.)
 2. **`EngineGpuHandles` real path** is `src/@types/engine/handles/EngineGpuHandles.d.ts` (spec §11's shorthand is wrong). (T7, T12.)
 3. **`src/@types/scene/` does not exist yet** — created by the body-type tasks. (T1, T8.)
-4. **`EngineData` only has galaxies + structures today** — Plan 02 adds `bodies` + updates the docblock. (T5.)
-5. **Next free Source codes 18/19/20** confirmed (`source.ts` ends at `Flow: 17`; pick reserves 0–30). Earth=20, Star=18, Planet=19; append-only by value, Earth stays 20 even though it's wired before star/planet. (T4, T10.)
+4. **`EngineData` only has galaxies + structures today** (`EngineData.d.ts:20-23`) — Plan 02 adds `bodies` + updates the docblock. (T5.)
+5. **Next free Source codes 21/22/23** — 18/19/20 were consumed by the DESI patches after this plan was first written (`source.ts:109-136`); pick reserves 0–30, 31 sentinel, so all three still fit. Earth=23, Star=21, Planet=22; append-only by value, Earth stays 23 even though it's wired before star/planet. (T4, T10.)
 6. **`SourceEntryBase` DOES exist** (`SourceEntryBase.d.ts`) — the contract's "first read whether it exists / STOP-and-report if shapes don't factor" is resolved: it factors cleanly, reused as-is.
+7. **Source-entry `.d.ts` subfolders** — new entry types go under `src/@types/data/body/`, matching the registry's per-kind layout. (T4, T10.)
+8. **Renderer factories are positional** `(device, targetFormat, depthFormat)`, per the landed `createDebugSphereRenderer` idiom — supersedes the contract's named bag. (T6, T11.)
+9. **The dispatch surface is the `CONTENT_LAYERS` registry** — `encodeForegroundPass` (and `foregroundOffscreen`, `foregroundComposite`, the ctx foreground fields) were deleted by the renderer-unification 04 fold; body layers are registry rows consuming `view.slab.vp` + `RENDER_ORIGIN_MPC` directly. (T7, T12.)
