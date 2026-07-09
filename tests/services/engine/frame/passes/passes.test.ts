@@ -34,7 +34,8 @@ import {
   milkyWayLayer,
   horizonShellLayer,
 } from '../../../../../src/services/engine/frame/passes';
-import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
+import { debugSpheresLayer } from '../../../../../src/services/engine/frame/passes';
+import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
@@ -201,6 +202,11 @@ const SWAP_NAMES = [
   'clip-path-debug',
 ];
 
+// The near-field foreground group: the true-scale bodies (Sun, Earth) drawn
+// into the depth-bearing `foreground:0` target through the near0 slab. Opaque
+// (depth-tested), unlike the additive HDR group and the OVER swap group.
+const FOREGROUND_NAMES = ['debug-spheres'];
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('CONTENT_LAYERS migration table (hdr group)', () => {
@@ -264,8 +270,34 @@ describe('swap-target layers', () => {
   });
 });
 
+describe('CONTENT_LAYERS migration table (foreground group)', () => {
+  it('every foreground content layer draws into foreground:0 through the near0 slab, opaque', () => {
+    // The near-field bodies (Sun, Earth) are the first rows to leave the
+    // cosmological slab: they project through NEAR0 into the depth-bearing
+    // `foreground:0` target and are opaque (depth-tested), not additive. See
+    // the renderer-unification design's migration table (spec line 215).
+    const fgLayers = CONTENT_LAYERS.filter((layer) => FOREGROUND_NAMES.includes(layer.name));
+    expect(fgLayers.map((layer) => layer.name)).toEqual(FOREGROUND_NAMES);
+    for (const layer of fgLayers) {
+      expect(layer.slab).toBe(NEAR0);
+      expect(layer.target).toBe('foreground:0');
+      expect(layer.blend).toBe('opaque');
+    }
+  });
+});
+
+describe('foreground-target layers', () => {
+  it('the target==="foreground:0" filter yields the near-field bodies group', () => {
+    // Registered after the swap group — position only affects timing-slot
+    // listing, since no other layer shares its (target, slab).
+    const fgLayers = CONTENT_LAYERS.filter((layer) => layer.target === 'foreground:0');
+    expect(fgLayers.map((layer) => layer.name)).toEqual(FOREGROUND_NAMES);
+    expect(fgLayers).toContain(debugSpheresLayer);
+  });
+});
+
 describe('CONTENT_LAYERS blend legality', () => {
-  it('every layer blends per its target — hdr/volume additive, swap over', () => {
+  it('every layer blends per its target — hdr/volume additive, foreground:0 opaque, swap over', () => {
     // The registry half of the target<->blend invariant (the renderer half
     // — that the WebGPU pipeline's actual blend state matches — lands in
     // task 10). A layer whose target/blend pair falls outside this table
@@ -273,6 +305,8 @@ describe('CONTENT_LAYERS blend legality', () => {
     for (const layer of CONTENT_LAYERS) {
       if (layer.target === 'hdr' || layer.target === 'volume') {
         expect(layer.blend).toBe('additive');
+      } else if (layer.target === 'foreground:0') {
+        expect(layer.blend).toBe('opaque');
       } else if (layer.target === 'swap') {
         expect(layer.blend).toBe('over');
       } else {

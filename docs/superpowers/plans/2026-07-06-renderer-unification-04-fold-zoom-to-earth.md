@@ -109,11 +109,11 @@ export type RenderTargets = {
 
 **engine.ts:** seed both fields `null` in the state literal with the branch's rationale comments; destroy rows `state.gpu.foregroundLabelRenderer?.destroy()` (adjacent to `labelRenderer`) and `state.gpu.debugSphereRenderer?.destroy()` (adjacent to `diskRadiusRing`), each re-nulled.
 
-- [ ] Test (`initGpu.destroyReachability.test.ts`): add a `vi.mock` for the `debugSphereRenderer` module (same `makeStub` shape as the other renderer mocks — it also keeps its `?static` WESL imports out of JSDOM); add both fields to `makeState()`'s gpu bag; extend the writes-onto-state and destroy-chain-reaches assertions to both handles.
-- [ ] Test (`engineState.test.ts`): the state-literal shape gains the two null seeds.
-- [ ] Implement the wiring + the `targetFormat` rename (update the factory's call site and any factory test asserting the pipeline's colour-target format).
-- [ ] `npm run typecheck && npm test` → green (handles constructed but unconsumed — expected until Tasks 4-5).
-- [ ] Commit the touched paths.
+- [x] Test (`initGpu.destroyReachability.test.ts`): add a `vi.mock` for the `debugSphereRenderer` module (same `makeStub` shape as the other renderer mocks — it also keeps its `?static` WESL imports out of JSDOM); add both fields to `makeState()`'s gpu bag; extend the writes-onto-state and destroy-chain-reaches assertions to both handles.
+- [x] Test (`engineState.test.ts`): the state-literal shape gains the two null seeds.
+- [x] Implement the wiring + the `targetFormat` rename (update the factory's call site and any factory test asserting the pipeline's colour-target format).
+- [x] `npm run typecheck && npm test` → green (handles constructed but unconsumed — expected until Tasks 4-5).
+- [x] Commit the touched paths.
 
 ### Task 4 — `debugSpheresLayer`: the bodies as a `foreground:0` content row
 

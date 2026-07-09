@@ -40,6 +40,12 @@
  *  13. labels              — MSDF text labels
  *  14. clip-path-debug     — debug: clip-path inspector route + gizmo
  *
+ * The final row is the first to leave the cosmological slab entirely — the
+ * near-field foreground body group, drawn opaque (depth-tested) through the
+ * near0 slab into the depth-bearing `foreground:0` target:
+ *
+ *  15. debug-spheres       — true-scale Sun / Earth bodies (f64 compose seam)
+ *
  * `textured-disks` is what remains of the briefly-split (and never-shipped)
  * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
  * half was deleted along with its renderer because the build-pipeline's
@@ -116,6 +122,7 @@ import { diskRadiusRingLayer } from './diskRadiusRingLayer';
 import { markerLinesLayer } from './markerLinesLayer';
 import { labelsLayer } from './labelsLayer';
 import { clipPathDebugLayer } from './clipPathDebugLayer';
+import { debugSpheresLayer } from './debugSpheresLayer';
 
 /**
  * The flat content-layer registry, in deterministic draw order.  HDR
@@ -147,6 +154,12 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   markerLinesLayer,
   labelsLayer,
   clipPathDebugLayer,
+  // Near-field foreground group: the true-scale bodies (Sun, Earth) drawn
+  // into the depth-bearing 'foreground:0' target through the near0 slab.
+  // Registered after the swap group — position only affects timing-slot
+  // listing, since no other layer shares its (target, slab). Inert until the
+  // frame program appends the foreground render step (task 7).
+  debugSpheresLayer,
 ];
 
 export { scalarVolumeLayer } from './scalarVolumeLayer';
@@ -164,3 +177,4 @@ export { diskRadiusRingLayer } from './diskRadiusRingLayer';
 export { markerLinesLayer } from './markerLinesLayer';
 export { labelsLayer } from './labelsLayer';
 export { clipPathDebugLayer } from './clipPathDebugLayer';
+export { debugSpheresLayer } from './debugSpheresLayer';
