@@ -62,7 +62,8 @@
  *
  *   1. Colour mismatch — LDR-sane label colours (`[1, 1, 1, 1]`) would be
  *      compressed by the tone-map curve to mid-grey, so the UI overlay is
- *      composited after the tone-map (see encodeUiOverlay) instead.
+ *      composited after the tone-map instead, as the program's swap
+ *      render step (see `executeFrame.ts`).
  *   2. OVER-blend coherency — when timing was enabled (per-pass
  *      split for `timestampWrites`), every `pass.end` stored the HDR
  *      target to DRAM and the next `pass.begin` reloaded it.  On M1
@@ -72,7 +73,8 @@
  *      their blend (`one, one`) doesn't read `dst.color`.
  *
  * Both issues vanish once the OVER overlays live POST-tone-map on
- * the swap chain.  See `services/engine/frame/encodeUiOverlay.ts`.
+ * the swap chain.  See the swap render step in
+ * `services/engine/frame/executeFrame.ts`.
  *
  * ### Why milky-way BEFORE filaments / scalar-volume?
  *

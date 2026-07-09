@@ -251,9 +251,9 @@ Extract it from the prepass gate logic (`encodeVolumePrepass.ts:57-97` — rende
 
 All are unreferenced after the flip — verify with a grep for each symbol before deleting. Carry any still-load-bearing didactic content (the tile-local mega-pass rationale, the timestamp-at-pass-boundaries constraint, the M1 coherency history) into `executeFrame.ts`'s header if task 6/7 didn't already.
 
-- [ ] Grep confirms zero imports of each deleted module.
-- [ ] Delete; `npm run typecheck && npm test` → green.
-- [ ] Commit.
+- [x] Grep confirms zero imports of each deleted module.
+- [x] Delete; `npm run typecheck && npm test` → green.
+- [x] Commit.
 
 ### Task 9 — RenderTarget table + consolidated resize (target lifecycle out of `postProcess`/`volumeOffscreen`)
 
