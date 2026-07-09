@@ -30,7 +30,7 @@
  * fade-out tail (see `deriveSourceMasks`'s draw-vs-pick divergence). So this
  * helper threads `deriveSourceMasks(state).pick` — not `.draw` — and the
  * resulting `ctx.visibleSourceMask` means "pickable sources" to every downstream
- * pick draw. (This is what dissolves `collectPickTargets`' bespoke filter.)
+ * pick draw — the one place the pickable-source filter lives.
  *
  * ### Why this is side-effect-free
  *

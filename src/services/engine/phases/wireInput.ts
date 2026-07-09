@@ -40,7 +40,6 @@ import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming
 import { poseOf } from '../camera/poseOf';
 import { projectionOf } from '../camera/projectionOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
-import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
 import {
   commitCameraPose,
   beginDrag,
@@ -69,11 +68,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // `renderer` is the null-guard subject on the next line.
   const renderer = state.gpu.renderer;
   if (!renderer) return;
-  // Thread the cluster marker renderer through so the pick pass can
-  // append structure ring draws after the galaxy per-source loop — see the
-  // structure ring block inside `pick()` for the depth-ordering rationale.  Normalise
-  // `null` → `undefined` so the renderer's param type stays `| undefined`
-  // and the optional-vs-null distinction stays internal to the handle bag.
+  // The point-pick draw provider: it records the galaxy point billboards
+  // into the pick pass the pick program owns. The ring / disk / Milky-Way
+  // pick draws are their own registry `drawPick` rows now — the picker no
+  // longer folds them in, so it takes no marker / disk / MW arguments.
   const pickRenderer = createPickRenderer(
     deps.phaseLocals!.device,
     state.gpu.fadeBgl!,
@@ -82,16 +80,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // The live shared focus buffer — so the pick pass excludes non-members
     // of a focused structure from hit-testing (vertex shader culls them).
     state.gpu.focusUniform!.bindGroup,
-    state.gpu.structureMarkerRenderer ?? undefined,
-    state.gpu.proceduralDiskRenderer ?? undefined,
-    // The Milky-Way pick provider + its disk-visibility gate. Gate only: the
-    // hit billboard's SIZE is computed in the MW pick vertex shader from
-    // the pick pass's camera uniforms.  A closure over `state` + `canvas`
-    // so the renderer stays free of EngineState; it draws when told. (This
-    // constructor is superseded once the MW pick moves onto its registry
-    // layer's `drawPick` — see plan-03 Task 11.)
-    state.gpu.milkyWayPickRenderer ?? undefined,
-    () => milkyWayPickVisible(state, canvas.height),
   );
   state.gpu.pickRenderer = pickRenderer;
 

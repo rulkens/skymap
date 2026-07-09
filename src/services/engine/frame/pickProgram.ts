@@ -81,9 +81,8 @@ type PickSlabTarget = {
 
 /**
  * Construct the pick program bound to `device` + `canvas`, driven by the
- * shared `state` and the content-layer registry `layers`. Nothing calls this
- * until the pick path migrates onto the registry (plan-03 Task 10); the old
- * `pickRenderer.pick` path stays live until then.
+ * shared `state` and the content-layer registry `layers`. This is the single
+ * owner of the hover / click / debug-overlay pick path.
  */
 export function createPickProgram(deps: {
   device: GPUDevice;

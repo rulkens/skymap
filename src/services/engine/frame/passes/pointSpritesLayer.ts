@@ -151,9 +151,8 @@ export const pointSpritesLayer: ContentLayer = {
   //
   // `ctx.visibleSourceMask` is the PICK mask here: the pick program builds
   // its ctx via `pickFrameContext`, which passes `deriveSourceMasks(state).pick`
-  // as the mask. Filtering `loadedSources()` by it is exactly the old
-  // `collectPickTargets` gate — a fading-out catalog clears its bit and
-  // immediately stops claiming hits.
+  // as the mask. Filtering `loadedSources()` by it is the pick gate — a
+  // fading-out catalog clears its bit and immediately stops claiming hits.
   drawPick(pass, view, ctx, state) {
     if (state.gpu.pickRenderer === null) return;
     const sources = Array.from(ctx.renderer.loadedSources()).filter(

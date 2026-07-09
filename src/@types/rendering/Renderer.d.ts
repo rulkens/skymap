@@ -20,8 +20,8 @@
  * ### Why not include `draw()`?
  *
  * Draw signatures vary wildly across renderers — `pointRenderer.draw`
- * takes a `PointDrawSettings` record, `pickRenderer.pick` is async and
- * returns the picked id, `volumeFieldRenderer.draw` reads from a
+ * takes a `PointDrawSettings` record, `pickRenderer.drawPoints` records
+ * into a caller-owned pick pass, `volumeFieldRenderer.draw` reads from a
  * `FrameContext`.  A common base would either force a
  * lowest-common-denominator signature (hurting type clarity) or use a
  * union that's no narrower than the per-renderer types.  Each renderer

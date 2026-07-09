@@ -284,14 +284,14 @@ export function createPickProgram(deps: {
 
 **Files:** `src/services/engine/phases/wireInput.ts`, `src/services/engine/interaction/hoverPickDriver.ts`, `src/@types/engine/interaction/HoverPickDeps.d.ts`, `src/services/engine/interaction/clickHandler.ts`, `src/@types/engine/ClickResolveInput.d.ts`, `src/@types/engine/CreateClickResolverInput.d.ts`, `src/services/engine/frame/drawPickDebugOverlay.ts`, `src/services/engine/frame/runFrame.ts`, the `EngineGpuHandles` type + `engine.ts` destroy path, matching tests
 
-- [ ] `wireInput`: after `createPickRenderer` (now slimmed — see Task 11), `state.gpu.pickProgram = createPickProgram({ device, canvas, state, layers })`. New `EngineGpuHandles.pickProgram` field follows the existing handle pattern (no fresh ad-hoc `| null` threading beyond it — spec §Relationship, gpu-handle-nullability); wire teardown in `engine.destroy` and update `tests/services/engine/phases/initGpu.destroyReachability.test.ts` if it inventories handles.
-- [ ] `hoverPickDriver`: deps slim to `{ state, pickProgram, store, resolveDeps }` — the `collectTargets` / `viewportPx` / `pointSizePx` / `timingDescriptor` / `uniformBytes` thunks all dissolve (the program derives them internally). `fire()` becomes `pickProgram.pick(cssToTexPx(pos.x), cssToTexPx(pos.y))`. Keep `pointerDown` + `pickInFlight` gating and the trailing-edge `maybeFire` untouched. Update `HoverPickDeps.d.ts` docblock (thunks-vs-values section shrinks).
-- [ ] `clickHandler`/`ClickResolveInput`: input slims to `{ pickXPx, pickYPx }`; `CreateClickResolverInput.pickRenderer` → `pickProgram`. `wireInput.runPickAtCss` sheds its target/bytes derivation; keep the resolver-null guard.
-- [ ] `drawPickDebugOverlay`: call `state.gpu.pickProgram.renderForDebug()`; drop the `masks` parameter (update the `runFrame.ts:401` call site) and the collectPickTargets/bytes gates; keep the encoder/loadOp-load/submit tail unchanged (`drawPickDebugOverlay.ts:123-142`) — per the spec it stays a post-frame debug composite by latency choice, not data dependency (update the module header accordingly).
-- [ ] Update tests: `hoverPickDriver.test.ts` (empty-target no-op case becomes "program returns null → dispatches hover(null)"; deps-shape test), `clickHandler.test.ts`, `wireInput*.test.ts`, `drawPickDebugOverlay.test.ts`, `runFrame.test.ts`.
-- [ ] Restate the three documented behaviour deltas (top of this plan) in the commit message body.
-- [ ] `npm test` + `npm run typecheck` → green.
-- [ ] Commit the touched paths.
+- [x] `wireInput`: after `createPickRenderer` (now slimmed — see Task 11), `state.gpu.pickProgram = createPickProgram({ device, canvas, state, layers })`. New `EngineGpuHandles.pickProgram` field follows the existing handle pattern (no fresh ad-hoc `| null` threading beyond it — spec §Relationship, gpu-handle-nullability); wire teardown in `engine.destroy` and update `tests/services/engine/phases/initGpu.destroyReachability.test.ts` if it inventories handles.
+- [x] `hoverPickDriver`: deps slim to `{ state, pickProgram, store, resolveDeps }` — the `collectTargets` / `viewportPx` / `pointSizePx` / `timingDescriptor` / `uniformBytes` thunks all dissolve (the program derives them internally). `fire()` becomes `pickProgram.pick(cssToTexPx(pos.x), cssToTexPx(pos.y))`. Keep `pointerDown` + `pickInFlight` gating and the trailing-edge `maybeFire` untouched. Update `HoverPickDeps.d.ts` docblock (thunks-vs-values section shrinks).
+- [x] `clickHandler`/`ClickResolveInput`: input slims to `{ pickXPx, pickYPx }`; `CreateClickResolverInput.pickRenderer` → `pickProgram`. `wireInput.runPickAtCss` sheds its target/bytes derivation; keep the resolver-null guard.
+- [x] `drawPickDebugOverlay`: call `state.gpu.pickProgram.renderForDebug()`; drop the `masks` parameter (update the `runFrame.ts:401` call site) and the collectPickTargets/bytes gates; keep the encoder/loadOp-load/submit tail unchanged (`drawPickDebugOverlay.ts:123-142`) — per the spec it stays a post-frame debug composite by latency choice, not data dependency (update the module header accordingly).
+- [x] Update tests: `hoverPickDriver.test.ts` (empty-target no-op case becomes "program returns null → dispatches hover(null)"; deps-shape test), `clickHandler.test.ts`, `wireInput*.test.ts`, `drawPickDebugOverlay.test.ts`, `runFrame.test.ts`.
+- [x] Restate the three documented behaviour deltas (top of this plan) in the commit message body.
+- [x] `npm test` + `npm run typecheck` → green.
+- [x] Commit the touched paths.
 
 ### Task 11: Delete the superseded surfaces
 

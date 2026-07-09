@@ -145,7 +145,7 @@ describe('isEngineReady — type narrowing', () => {
       void state.gpu.renderer.totalCount;
       void state.gpu.renderTargets.viewOf;
       void state.gpu.compositor.draw;
-      void state.gpu.pickRenderer.pick;
+      void state.gpu.pickRenderer.drawPoints;
       void state.subsystems.texturedDisks.runFrame;
 
       // Sanity: the runtime value is the same object, only the type

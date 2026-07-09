@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 import {
   SELECTED_PACKED_BYTE_OFFSET,
@@ -8,20 +8,14 @@ import {
 } from '../../../../src/services/gpu/renderers/pointRenderer';
 import { SELECTION_NONE_SENTINEL } from '../../../../src/data/selectionEncoding';
 import { Source } from '../../../../src/data/sources';
-import type { MilkyWayPickRenderer } from '../../../../src/@types/rendering/MilkyWayPickRenderer';
-import type { ProceduralDiskRenderer } from '../../../../src/@types/rendering/ProceduralDiskRenderer';
-
-beforeAll(() => {
-  // GPUBufferUsage / GPUShaderStage / GPUTextureUsage come from the
-  // shared `tests/setup/webgpuGlobals.ts` setupFile. GPUMapMode is only
-  // used by pickRenderer's read-back path, so it stays local.
-  const g = globalThis as unknown as Record<string, unknown>;
-  g.GPUMapMode ??= { READ: 1, WRITE: 2 };
-});
 
 // A minimal stub device with a tracked writeBuffer — allows assertions
-// about which buffer was targeted and at which byte offset.
+// about which buffer was targeted and at which byte offset.  `createBuffer`
+// captures the pick uniform buffer by label so the OWN-buffer assertions are
+// resilient to reordering of factory allocations.
 function makeStubDevice() {
+  let ownPickBuffer: unknown = null;
+
   const writeBufferCalls: Array<{
     buffer: unknown;
     offset: number;
@@ -41,9 +35,11 @@ function makeStubDevice() {
     createRenderPipeline: vi.fn(() => ({
       getBindGroupLayout: () => ({}),
     })),
-    createBuffer: vi.fn(() => ({
-      destroy: vi.fn(),
-    })),
+    createBuffer: vi.fn((desc?: { label?: string }) => {
+      const buf = { destroy: vi.fn(), __label: desc?.label ?? '' };
+      if (desc?.label === 'pick-uniform-buffer') ownPickBuffer = buf;
+      return buf;
+    }),
     createTexture: vi.fn(() => ({
       createView: () => ({}),
       destroy: vi.fn(),
@@ -54,80 +50,7 @@ function makeStubDevice() {
       }),
       submit: vi.fn(),
     },
-    createCommandEncoder: vi.fn(() => ({
-      beginRenderPass: () => ({
-        setPipeline: vi.fn(),
-        setBindGroup: vi.fn(),
-        setVertexBuffer: vi.fn(),
-        draw: vi.fn(),
-        end: vi.fn(),
-      }),
-      copyTextureToBuffer: vi.fn(),
-      finish: vi.fn(),
-    })),
     createBindGroup: vi.fn(),
-  };
-
-  return { device: device as unknown as GPUDevice, writeBufferCalls };
-}
-
-// A drivable device: staging buffer has mapAsync / getMappedRange / unmap so
-// pick() can complete its async readback path.  raw=0 → clean null (no hit).
-function makeDrivableDevice() {
-  let ownPickBuffer: unknown = null; // captured from the first createBuffer call
-
-  const writeBufferCalls: Array<{
-    buffer: unknown;
-    offset: number;
-    data: ArrayBuffer | ArrayBufferView;
-  }> = [];
-
-  let createBufferCallCount = 0;
-
-  const device = {
-    createShaderModule: vi.fn(() => ({
-      getCompilationInfo: () => Promise.resolve({ messages: [] }),
-    })),
-    createPipelineLayout: vi.fn(() => ({})),
-    createBindGroupLayout: vi.fn(() => ({})),
-    createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
-    createBuffer: vi.fn((desc?: { label?: string }) => {
-      createBufferCallCount++;
-      const buf = {
-        mapAsync: vi.fn(() => Promise.resolve()),
-        getMappedRange: vi.fn(() => new Uint32Array([0]).buffer),
-        unmap: vi.fn(),
-        destroy: vi.fn(),
-        __id: createBufferCallCount,
-        __label: desc?.label ?? '',
-      };
-      // The pick uniform buffer is labelled 'pick-uniform-buffer' — capture
-      // it by label rather than by call order so the assertion is resilient
-      // to future reordering of factory allocations.
-      if (desc?.label === 'pick-uniform-buffer') {
-        ownPickBuffer = buf;
-      }
-      return buf;
-    }),
-    createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
-    queue: {
-      writeBuffer: vi.fn((buffer: unknown, offset: number, data: ArrayBuffer | ArrayBufferView) => {
-        writeBufferCalls.push({ buffer, offset, data });
-      }),
-      submit: vi.fn(),
-    },
-    createCommandEncoder: vi.fn(() => ({
-      beginRenderPass: () => ({
-        setPipeline: vi.fn(),
-        setBindGroup: vi.fn(),
-        setVertexBuffer: vi.fn(),
-        draw: vi.fn(),
-        end: vi.fn(),
-      }),
-      copyTextureToBuffer: vi.fn(),
-      finish: vi.fn(() => ({})),
-    })),
-    createBindGroup: vi.fn(() => ({})),
   };
 
   return {
@@ -149,21 +72,26 @@ function makeStubFocusBgl() {
   return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
 }
 
-// A minimal dummy uniform bytes buffer for pick() calls.
+// A minimal dummy uniform bytes buffer for drawPoints calls.
 function makeUniformBytes(): ArrayBuffer {
   return new ArrayBuffer(UNIFORM_BYTES);
 }
 
+// A stub render pass encoder that records setBindGroup / draw calls.
+function makeStubPass() {
+  return {
+    setPipeline: vi.fn(),
+    setBindGroup: vi.fn(),
+    setVertexBuffer: vi.fn(),
+    draw: vi.fn(),
+  } as unknown as GPURenderPassEncoder;
+}
+
 describe('createPickRenderer', () => {
-  it('no longer takes a PointRenderer at construction — factory accepts device + BGLs only', () => {
-    // This test is primarily a compile-time contract: the call below must
-    // type-check without a PointRenderer argument.  The runtime check is
-    // that the returned handle is usable.
-    //
-    // Previously, `createPickRenderer(device, pointRenderer, fadeBgl, ...)`
-    // required a live PointRenderer so it could steal its uniform buffer.
-    // After this task, the factory owns its own pickUniformBuffer; callers
-    // pass the packed bytes per-call.
+  it('constructs from device + BGLs + focus bind group only, exposing the draw surface', () => {
+    // The picker owns its own pickUniformBuffer; callers pass the packed
+    // bytes per `drawPoints` call.  The public surface is the slimmed
+    // point-pick draw provider: `drawPoints`, `bindCamera`, `destroy`.
     const { device } = makeStubDevice();
     const pickRenderer = createPickRenderer(
       device,
@@ -174,103 +102,19 @@ describe('createPickRenderer', () => {
     );
 
     expect(pickRenderer).toBeDefined();
-    expect(typeof pickRenderer.pick).toBe('function');
+    expect(typeof pickRenderer.drawPoints).toBe('function');
+    expect(typeof pickRenderer.bindCamera).toBe('function');
     expect(typeof pickRenderer.destroy).toBe('function');
   });
 
-  it('DECOUPLING REGRESSION: writeBuffer targets the OWN pick buffer only — never an external buffer', async () => {
-    // Why this test exists:
-    //
-    // Before this task, `recordPickPass` called
-    // `pointRenderer.uniformBuffer` and wrote the three pick-specific
-    // fields directly onto the visual renderer's GPU buffer.  The visual
-    // frame was required to undo that damage on the next tick — two
-    // writers on one buffer, with cleanup delegated to an unrelated
-    // subsystem.
-    //
-    // This test proves the invariant is gone: every `writeBuffer` call
-    // made by `pick()` targets the renderer's OWN pickUniformBuffer, and
-    // the buffer it writes is the same object the factory allocated (the
-    // first `createBuffer` call).  No external buffer passed by the caller
-    // is ever written.
-    const { device, writeBufferCalls, getOwnPickBuffer } = makeDrivableDevice();
-
-    const pickRenderer = createPickRenderer(
-      device,
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-      {} as unknown as GPUBindGroup,
-    );
-
-    const ownPickBuffer = getOwnPickBuffer();
-    expect(ownPickBuffer).not.toBeNull();
-
-    // An external buffer that must NEVER be written.
-    const externalBuffer = { __external: true } as unknown as GPUBuffer;
-
-    writeBufferCalls.length = 0; // clear construction calls
-
-    const uniformBytes = makeUniformBytes();
-    const pointSizePx = 3.5;
-    await pickRenderer.pick(
-      [100, 100],
-      50,
-      50,
-      [
-        {
-          source: Source.SDSS,
-          vertexBuffer: {} as GPUBuffer,
-          count: 10,
-          sourceBuffer: {} as GPUBuffer,
-        },
-      ],
-      pointSizePx,
-      uniformBytes,
-    );
-
-    // (a) Every writeBuffer call targets the OWN pick buffer — never the
-    // external buffer.
-    expect(writeBufferCalls.length).toBeGreaterThan(0);
-    for (const call of writeBufferCalls) {
-      expect(call.buffer).not.toBe(externalBuffer);
-      expect(call.buffer).toBe(ownPickBuffer);
-    }
-
-    // (b) Full upload at offset 0 (the base uniformBytes upload).
-    const fullUpload = writeBufferCalls.find((c) => c.offset === 0);
-    expect(fullUpload).toBeDefined();
-
-    // (c) selectedPacked override at SELECTED_PACKED_BYTE_OFFSET with
-    // SELECTION_NONE_SENTINEL.  The data is a Uint32Array (ArrayBufferView).
-    const selectedCall = writeBufferCalls.find((c) => c.offset === SELECTED_PACKED_BYTE_OFFSET);
-    expect(selectedCall).toBeDefined();
-    const selectedView = selectedCall!.data as Uint32Array;
-    expect(selectedView[0]).toBe(SELECTION_NONE_SENTINEL);
-
-    // (d) pointSizePx override at POINT_SIZE_BYTE_OFFSET with pointSizePx
-    // + PICK_PADDING_PX (4 px).  The data is a Float32Array.
-    const sizeCall = writeBufferCalls.find((c) => c.offset === POINT_SIZE_BYTE_OFFSET);
-    expect(sizeCall).toBeDefined();
-    const sizeView = sizeCall!.data as Float32Array;
-    expect(sizeView[0]).toBeCloseTo(pointSizePx + 4);
-
-    // (e) pickPass override at PICK_PASS_BYTE_OFFSET with 1.  The data is
-    // a Uint32Array.
-    const pickPassCall = writeBufferCalls.find((c) => c.offset === PICK_PASS_BYTE_OFFSET);
-    expect(pickPassCall).toBeDefined();
-    const pickPassView = pickPassCall!.data as Uint32Array;
-    expect(pickPassView[0]).toBe(1);
-  });
-
-  it('drawPoints applies the three pick overrides to its own buffer', () => {
-    // drawPoints is the extracted point-pick draw surface: it uploads the
-    // caller's uniform bytes to the renderer's OWN pickUniformBuffer, then
-    // applies the same three pick-specific overrides recordPickPass used to
-    // apply inline (selectedPacked sentinel, padded pointSizePx, pickPass=1).
-    // This mirrors the DECOUPLING REGRESSION assertions but drives drawPoints
-    // directly with a stub pass rather than the full pick() path.
-    const { device, writeBufferCalls, getOwnPickBuffer } = makeDrivableDevice();
+  it('drawPoints applies the three pick overrides to its OWN buffer only', () => {
+    // drawPoints is the point-pick draw surface: it uploads the caller's
+    // uniform bytes to the renderer's OWN pickUniformBuffer, then applies the
+    // three pick-specific overrides (selectedPacked sentinel, padded
+    // pointSizePx, pickPass=1).  This is the decoupling invariant: the visual
+    // pass's GPU buffer is never touched — every writeBuffer targets the OWN
+    // buffer, so there is no two-writer hazard and no cross-frame cleanup.
+    const { device, writeBufferCalls, getOwnPickBuffer } = makeStubDevice();
     const pickRenderer = createPickRenderer(
       device,
       makeStubFadeBgl(),
@@ -283,17 +127,10 @@ describe('createPickRenderer', () => {
     expect(ownPickBuffer).not.toBeNull();
 
     writeBufferCalls.length = 0; // clear construction calls
-
-    const pass = {
-      setPipeline: vi.fn(),
-      setBindGroup: vi.fn(),
-      setVertexBuffer: vi.fn(),
-      draw: vi.fn(),
-    } as unknown as GPURenderPassEncoder;
 
     const pointSizePx = 3.5;
     pickRenderer.drawPoints(
-      pass,
+      makeStubPass(),
       [
         {
           source: Source.SDSS,
@@ -306,7 +143,7 @@ describe('createPickRenderer', () => {
       makeUniformBytes(),
     );
 
-    // Every writeBuffer targets the OWN pick buffer.
+    // Every writeBuffer targets the OWN pick buffer — never an external one.
     expect(writeBufferCalls.length).toBeGreaterThan(0);
     for (const call of writeBufferCalls) {
       expect(call.buffer).toBe(ownPickBuffer);
@@ -346,11 +183,6 @@ describe('createPickRenderer', () => {
       createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
       createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
       queue: { writeBuffer: vi.fn(), submit: vi.fn() },
-      createCommandEncoder: vi.fn(() => ({
-        beginRenderPass: () => ({}),
-        copyTextureToBuffer: vi.fn(),
-        finish: vi.fn(() => ({})),
-      })),
       createBindGroup: vi.fn((desc: { label?: string }) => {
         const bg = { __label: desc.label };
         createBindGroupByLabel.set(desc.label ?? '', bg);
@@ -378,13 +210,13 @@ describe('createPickRenderer', () => {
   });
 
   it('drawPoints uploads the camera uniform and binds @group(0) even with zero sources', () => {
-    // Load-bearing prefix contract: the ring and MW pick pipelines read the
-    // point pick uniform via the @group(0) CameraUniforms prefix this draw
-    // binds.  So drawPoints MUST upload the camera uniform and bind @group(0)
-    // even when there are ZERO galaxy sources to draw — otherwise a
+    // Load-bearing prefix contract: a sibling drawPick that reads the point
+    // pick uniform via the @group(0) CameraUniforms prefix relies on this draw
+    // binding it.  So drawPoints MUST upload the camera uniform and bind
+    // @group(0) even when there are ZERO galaxy sources to draw — otherwise a
     // galaxy-empty scene would leave slot 0 unbound (or stale) for the
-    // ring/MW fold-ins that follow.
-    const { device, writeBufferCalls, getOwnPickBuffer } = makeDrivableDevice();
+    // fold-ins that follow.
+    const { device, writeBufferCalls, getOwnPickBuffer } = makeStubDevice();
     const pickRenderer = createPickRenderer(
       device,
       makeStubFadeBgl(),
@@ -413,110 +245,14 @@ describe('createPickRenderer', () => {
     expect(fullUpload).toBeDefined();
     expect(fullUpload!.buffer).toBe(ownPickBuffer);
 
-    // @group(0) bound — the prefix the ring/MW pipelines depend on.
+    // @group(0) bound — the prefix a sibling drawPick depends on.
     expect(bindGroupCalls.some((c) => c.index === 0)).toBe(true);
 
     // Zero sources → no per-source draws.
     expect(pass.draw as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
-  it('returns null when there are no pick targets (empty source list + no structure markers)', async () => {
-    // pick() returns null without issuing any GPU work when the scene has
-    // no pickable objects — a performance gate, not a correctness concern.
-    const { device } = makeDrivableDevice();
-    const pickRenderer = createPickRenderer(
-      device,
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-      {} as unknown as GPUBindGroup,
-    );
-
-    const result = await pickRenderer.pick(
-      [100, 100],
-      50,
-      50,
-      [], // empty sources
-      2.5,
-      makeUniformBytes(),
-    );
-
-    expect(result).toBeNull();
-  });
-
-  it('returns null when a pick is already in flight (deferred mapAsync)', async () => {
-    // pick() uses a single staging buffer.  Issuing a second pick before
-    // the first mapAsync resolves would try to map an already-mapped buffer
-    // (GPU validation error).  The inFlight guard prevents this: the second
-    // call returns null immediately.
-    let resolveFirstPick!: () => void;
-    const firstPickPromise = new Promise<void>((res) => {
-      resolveFirstPick = res;
-    });
-
-    const device = {
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
-      createPipelineLayout: vi.fn(() => ({})),
-      createBindGroupLayout: vi.fn(() => ({})),
-      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
-      createBuffer: vi.fn(() => ({
-        // Staging buffer: mapAsync defers until we resolve the outer promise.
-        mapAsync: vi.fn(() => firstPickPromise),
-        getMappedRange: vi.fn(() => new Uint32Array([0]).buffer),
-        unmap: vi.fn(),
-        destroy: vi.fn(),
-      })),
-      createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
-      queue: { writeBuffer: vi.fn(), submit: vi.fn() },
-      createCommandEncoder: vi.fn(() => ({
-        beginRenderPass: () => ({
-          setPipeline: vi.fn(),
-          setBindGroup: vi.fn(),
-          setVertexBuffer: vi.fn(),
-          draw: vi.fn(),
-          end: vi.fn(),
-        }),
-        copyTextureToBuffer: vi.fn(),
-        finish: vi.fn(() => ({})),
-      })),
-      createBindGroup: vi.fn(() => ({})),
-    } as unknown as GPUDevice;
-
-    const pickRenderer = createPickRenderer(
-      device,
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-      {} as unknown as GPUBindGroup,
-    );
-
-    const sources = [
-      {
-        source: Source.SDSS,
-        vertexBuffer: {} as GPUBuffer,
-        count: 10,
-        sourceBuffer: {} as GPUBuffer,
-      },
-    ];
-    const uniformBytes = makeUniformBytes();
-
-    // First pick — will hang at mapAsync until we resolve.
-    const firstPick = pickRenderer.pick([100, 100], 50, 50, sources, 2.5, uniformBytes);
-
-    // Second pick fires before first resolves — must return null.
-    const secondResult = await pickRenderer.pick([100, 100], 50, 50, sources, 2.5, uniformBytes);
-    expect(secondResult).toBeNull();
-
-    // Unblock the first pick.
-    resolveFirstPick();
-    const firstResult = await firstPick;
-    // raw=0 → unpackPick returns null (background).
-    expect(firstResult).toBeNull();
-  });
-
-  it('builds @group(2) source bind groups against the CANONICAL sourceBgl layout (regression: cross-pipeline auto-layout incompatibility)', async () => {
+  it('builds @group(2) source bind groups against the CANONICAL sourceBgl layout (regression: cross-pipeline auto-layout incompatibility)', () => {
     // ── Why this test exists ──────────────────────────────────────────
     //
     // PointRenderer and PickRenderer use an explicit pipelineLayout with
@@ -526,8 +262,8 @@ describe('createPickRenderer', () => {
     // auto-derived layouts are pipeline-specific and would not be.
     //
     // The contract, asserted below:
-    //   1. Pass a single canonical sourceBgl to both renderers.
-    //   2. Call `pick()` with two distinct sourceBuffers.
+    //   1. Pass a single canonical sourceBgl to the renderer.
+    //   2. Call `drawPoints` with two distinct sourceBuffers.
     //   3. Every @group(2) `createBindGroup` call uses that canonical
     //      sourceBgl — never a per-pipeline auto-derived layout.
 
@@ -546,28 +282,9 @@ describe('createPickRenderer', () => {
       createRenderPipeline: vi.fn(() => ({
         getBindGroupLayout: (_i: number) => ({}),
       })),
-      createBuffer: vi.fn(() => ({
-        mapAsync: vi.fn(() => Promise.resolve()),
-        getMappedRange: vi.fn(() => new Uint32Array([0]).buffer),
-        unmap: vi.fn(),
-        destroy: vi.fn(),
-      })),
-      createTexture: vi.fn(() => ({
-        createView: () => ({}),
-        destroy: vi.fn(),
-      })),
+      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+      createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
       queue: { writeBuffer: vi.fn(), submit: vi.fn() },
-      createCommandEncoder: vi.fn(() => ({
-        beginRenderPass: () => ({
-          setPipeline: vi.fn(),
-          setBindGroup: vi.fn(),
-          setVertexBuffer: vi.fn(),
-          draw: vi.fn(),
-          end: vi.fn(),
-        }),
-        copyTextureToBuffer: vi.fn(),
-        finish: vi.fn(() => ({})),
-      })),
       createBindGroup: vi.fn(
         (desc: { layout: unknown; entries: Array<{ resource: { buffer: unknown } }> }) => {
           createBindGroupCalls.push({
@@ -595,10 +312,8 @@ describe('createPickRenderer', () => {
     // Reset call capture after construction (constructors build their own bind groups).
     createBindGroupCalls.length = 0;
 
-    await pickRenderer.pick(
-      [100, 100],
-      50,
-      50,
+    pickRenderer.drawPoints(
+      makeStubPass(),
       [
         { source: Source.SDSS, vertexBuffer: vbA, count: 10, sourceBuffer: sourceBufA },
         { source: Source.TwoMRS, vertexBuffer: vbB, count: 20, sourceBuffer: sourceBufB },
@@ -607,217 +322,12 @@ describe('createPickRenderer', () => {
       makeUniformBytes(),
     );
 
-    // Every `createBindGroup` call against the canonical sourceBgl must
-    // use the two sourceBuffers.  The layout identity is the canonical
+    // Every @group(2) `createBindGroup` call against the canonical sourceBgl
+    // must use the two sourceBuffers.  The layout identity is the canonical
     // sourceBgl object passed at construction — not an auto-derived
     // per-pipeline layout.
     const sourceGroup2Calls = createBindGroupCalls.filter((c) => c.layout === canonicalSourceBgl);
     expect(sourceGroup2Calls).toHaveLength(2);
     expect(sourceGroup2Calls.map((c) => c.buffer)).toEqual([sourceBufA, sourceBufB]);
-  });
-
-  // Device that fully drives pick() to completion (staging buffer has
-  // mapAsync / getMappedRange / unmap); raw=0 so the readback is a clean
-  // null — the MW assertions don't depend on the decode.
-  function makeMwDrivableDevice(): GPUDevice {
-    return {
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
-      createPipelineLayout: vi.fn(() => ({})),
-      createBindGroupLayout: vi.fn(() => ({})),
-      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
-      createBuffer: vi.fn(() => ({
-        mapAsync: vi.fn(() => Promise.resolve()),
-        getMappedRange: vi.fn(() => new Uint32Array([0]).buffer),
-        unmap: vi.fn(),
-        destroy: vi.fn(),
-      })),
-      createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
-      queue: { writeBuffer: vi.fn(), submit: vi.fn() },
-      createCommandEncoder: vi.fn(() => ({
-        beginRenderPass: () => ({
-          setPipeline: vi.fn(),
-          setBindGroup: vi.fn(),
-          setVertexBuffer: vi.fn(),
-          draw: vi.fn(),
-          end: vi.fn(),
-        }),
-        copyTextureToBuffer: vi.fn(),
-        finish: vi.fn(() => ({})),
-      })),
-      createBindGroup: vi.fn(() => ({})),
-    } as unknown as GPUDevice;
-  }
-
-  function makeMilkyWayPickRenderer(): MilkyWayPickRenderer & {
-    pickMilkyWay: ReturnType<typeof vi.fn>;
-  } {
-    return {
-      label: 'milkyWayPickRenderer',
-      pickMilkyWay: vi.fn<(pass: GPURenderPassEncoder) => void>(),
-      destroy: vi.fn<() => void>(),
-    };
-  }
-
-  it('invokes pickMilkyWay(pass) — no size argument — when the MW is gated visible', async () => {
-    const device = makeMwDrivableDevice();
-    const mwPick = makeMilkyWayPickRenderer();
-    const pickRenderer = createPickRenderer(
-      device,
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-      {} as unknown as GPUBindGroup,
-      undefined, // no structure markers
-      undefined, // no procedural disks
-      mwPick,
-      () => true, // MW disk visible — gate open
-    );
-
-    await pickRenderer.pick(
-      [100, 100],
-      50,
-      50,
-      [
-        {
-          source: Source.SDSS,
-          vertexBuffer: {} as GPUBuffer,
-          count: 10,
-          sourceBuffer: {} as GPUBuffer,
-        },
-      ],
-      2.5,
-      makeUniformBytes(),
-    );
-
-    expect(mwPick.pickMilkyWay).toHaveBeenCalledTimes(1);
-    // The gate supplies visibility ONLY — sizing lives in the MW vertex
-    // shader, so the call carries just the pass encoder.
-    expect(mwPick.pickMilkyWay.mock.calls[0]).toHaveLength(1);
-  });
-
-  it('re-binds @group(0) to the pick camera uniforms between the disk pick and the MW draw', async () => {
-    // The ring / disk picks bind their own (smaller) uniforms at slot 0;
-    // the MW vertex shader reads the pick camera mirror from slot 0, so
-    // the pass must re-bind its own camera group before the MW draw —
-    // inheriting the disk renderer's group reads the wrong buffer and
-    // fails validation once the mirror's read extent exceeds it.
-    const callLog: string[] = [];
-    const passEncoder = {
-      setPipeline: vi.fn(),
-      setBindGroup: vi.fn((index: number) => {
-        if (index === 0) callLog.push('bind0');
-      }),
-      setVertexBuffer: vi.fn(),
-      draw: vi.fn(),
-      end: vi.fn(),
-    };
-    const device = makeMwDrivableDevice();
-    (device.createCommandEncoder as ReturnType<typeof vi.fn>).mockImplementation(() => ({
-      beginRenderPass: () => passEncoder,
-      copyTextureToBuffer: vi.fn(),
-      finish: vi.fn(() => ({})),
-    }));
-    const mwPick = makeMilkyWayPickRenderer();
-    mwPick.pickMilkyWay.mockImplementation(() => callLog.push('pickMilkyWay'));
-    const diskRenderer = {
-      pickDisks: vi.fn<ProceduralDiskRenderer['pickDisks']>(() => callLog.push('pickDisks')),
-    };
-    const pickRenderer = createPickRenderer(
-      device,
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-      {} as unknown as GPUBindGroup,
-      undefined,
-      diskRenderer as unknown as Parameters<typeof createPickRenderer>[6],
-      mwPick,
-      () => true,
-    );
-
-    await pickRenderer.pick(
-      [100, 100],
-      50,
-      50,
-      [
-        {
-          source: Source.SDSS,
-          vertexBuffer: {} as GPUBuffer,
-          count: 10,
-          sourceBuffer: {} as GPUBuffer,
-        },
-      ],
-      2.5,
-      makeUniformBytes(),
-    );
-
-    const diskAt = callLog.indexOf('pickDisks');
-    const mwAt = callLog.indexOf('pickMilkyWay');
-    expect(diskAt).toBeGreaterThanOrEqual(0);
-    expect(mwAt).toBeGreaterThan(diskAt);
-    // A fresh bind0 must land AFTER the disk pick and BEFORE the MW draw.
-    const rebindAt = callLog.lastIndexOf('bind0');
-    expect(rebindAt).toBeGreaterThan(diskAt);
-    expect(rebindAt).toBeLessThan(mwAt);
-  });
-
-  it('does NOT invoke pickMilkyWay when the MW is gated hidden', async () => {
-    const device = makeMwDrivableDevice();
-    const mwPick = makeMilkyWayPickRenderer();
-    const pickRenderer = createPickRenderer(
-      device,
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-      {} as unknown as GPUBindGroup,
-      undefined,
-      undefined,
-      mwPick,
-      () => false, // MW disk hidden — gate closed
-    );
-
-    // A galaxy source is present so the pass still runs; the MW draw must
-    // be skipped because the gate is closed.
-    await pickRenderer.pick(
-      [100, 100],
-      50,
-      50,
-      [
-        {
-          source: Source.SDSS,
-          vertexBuffer: {} as GPUBuffer,
-          count: 10,
-          sourceBuffer: {} as GPUBuffer,
-        },
-      ],
-      2.5,
-      makeUniformBytes(),
-    );
-
-    expect(mwPick.pickMilkyWay).not.toHaveBeenCalled();
-  });
-
-  it('a visible MW alone counts as a pick target (galaxy-empty scene still picks)', async () => {
-    // hasAnyPickTarget must treat the open MW gate as a target: with every
-    // galaxy catalog toggled off, a click at the galactic centre still has
-    // to run the pass and reach the MW draw.
-    const device = makeMwDrivableDevice();
-    const mwPick = makeMilkyWayPickRenderer();
-    const pickRenderer = createPickRenderer(
-      device,
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-      {} as unknown as GPUBindGroup,
-      undefined,
-      undefined,
-      mwPick,
-      () => true,
-    );
-
-    await pickRenderer.pick([100, 100], 50, 50, [], 2.5, makeUniformBytes());
-
-    expect(mwPick.pickMilkyWay).toHaveBeenCalledTimes(1);
   });
 });

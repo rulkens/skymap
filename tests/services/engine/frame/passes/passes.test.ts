@@ -698,9 +698,9 @@ describe('drawPick migration-table rows', () => {
 
 describe('pointSpritesLayer.drawPick', () => {
   it('filters loadedSources by ctx.visibleSourceMask before drawPoints', () => {
-    // Ported from collectPickTargets' mask-filter assertion: the pick ctx's
-    // `visibleSourceMask` IS the pick mask, so a catalog whose bit is clear
-    // (toggled off / fading out) is dropped before the picker draws it.
+    // The pick ctx's `visibleSourceMask` IS the pick mask, so a catalog whose
+    // bit is clear (toggled off / fading out) is dropped before the picker
+    // draws it.
     const drawPointsSpy = vi.fn<(...args: unknown[]) => void>();
     // renderer.loadedSources yields SDSS + 2MRS + GLADE; only SDSS + GLADE
     // bits are set in the mask.

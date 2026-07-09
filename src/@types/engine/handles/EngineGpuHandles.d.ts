@@ -84,11 +84,10 @@ export type EngineGpuHandles = {
   /**
    * Invisible, pick-only Milky-Way billboard.  Stamps the MW identity
    * into the r32uint pick texture so the galactic centre is clickable.
-   * Constructed in `wireInput` alongside `pickRenderer` (it is one of the
-   * pick pass's optional providers) and threaded into `createPickRenderer`.
-   * Null until then; destroyed in teardown alongside the other pick
-   * providers.  Drawn only while the MW disk is on screen (gated by the
-   * callback the pick renderer holds).
+   * Constructed in `wireInput`; null until then.  Drawn by the Milky-Way
+   * layer's own `drawPick` row in the content-layer registry, gated by the
+   * layer's `enabled` predicate so it only stamps while the disk is on
+   * screen.  Destroyed in teardown alongside the other pick providers.
    */
   milkyWayPickRenderer: MilkyWayPickRenderer | null;
   /**

@@ -1,26 +1,26 @@
 /**
- * PickRenderer — offscreen per-point picking.
+ * PickRenderer — the point-pick draw provider for the pick program.
  *
- * Re-renders the scene into a tiny `r32uint` texture where each
- * fragment encodes `(sourceCode << 27) | localIdx + 1` (see
- * `pickFragment.wesl`).  `pick()` reads back the texel under the
- * cursor and decodes it; 0 is the cleared-background sentinel.
- *
- * Depth test (`depth24plus`, `less`, write-enabled) resolves
- * overlapping billboards so the front-most wins, matching visual
- * occlusion.  The visual pipeline skips depth because additive
- * blending wants every halo to contribute.
+ * Records the galaxy point-billboard draw into an already-begun r32uint
+ * pick pass, where each fragment encodes `(sourceCode << 27) | localIdx + 1`
+ * (see `pickFragment.wesl`). It owns no pass, no texture, and no readback:
+ * the pick program (`pickProgram.ts`) begins the pass, drives the readback,
+ * and folds results across slabs. This renderer is one `drawPick` provider
+ * among the content-layer registry's pickable rows.
  *
  * The pick pipeline owns its OWN uniform buffer (`pickUniformBuffer`,
- * allocated at construction).  Each `pick()` / `renderForDebug()` call
- * receives the caller's `uniformBytes` — built at pick time from the
- * slab view via `pickUniformBytesOf`, which delegates to the same
- * `packPointUniforms` the visual pass uses — uploads them in full,
- * then applies the three pick-specific overrides (selectedPacked
- * sentinel, padded pointSizePx, pickPass = 1) on top.  The visual
- * pass's GPU buffer is NEVER touched; two-writer corruption is gone.
- * Point billboards pick a `pointSizePx`-clamped dot; resolved galaxy
- * disks are picked by the procedural-disk pass at the disk edge.
+ * allocated at construction). `drawPoints` receives the caller's
+ * `uniformBytes` — built at pick time from the slab view via
+ * `pickUniformBytesOf`, which delegates to the same `packPointUniforms` the
+ * visual pass uses — uploads them in full, then applies three pick-specific
+ * overrides (selectedPacked sentinel, padded pointSizePx, pickPass = 1) on
+ * top. The visual pass's GPU buffer is NEVER touched; two-writer corruption
+ * is gone.
+ *
+ * Depth (`depth24plus`, `less`, write-enabled) resolves overlapping
+ * billboards so the front-most wins, matching visual occlusion. The visual
+ * pipeline skips depth because additive blending wants every halo to
+ * contribute.
  *
  * @module
  */
@@ -33,13 +33,9 @@ import pickFsCode from '../shaders/points/pickFragment.wesl?static';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../../../@types/rendering/PickSourceDraw';
 import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
-import type { Vec2 } from '../../../@types/math/Vec2';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
-import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
-import type { MilkyWayPickRenderer } from '../../../@types/rendering/MilkyWayPickRenderer';
 import {
   POINT_STRIDE,
   POINT_VERTEX_ATTRIBUTES,
@@ -49,8 +45,7 @@ import {
   UNIFORM_BYTES,
 } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { SELECTION_NONE_SENTINEL, unpackPick } from '../../../data/selectionEncoding';
-import type { PickResult } from '../../../@types/data/PickResult';
+import { SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
@@ -63,53 +58,22 @@ import type { PickResult } from '../../../@types/data/PickResult';
 const PICK_PADDING_PX = 4;
 
 /**
- * Construct a `PickRenderer` bound to `device`.  Pick textures are
- * allocated lazily and recreated on viewport change.  The renderer
- * owns its own `pickUniformBuffer`; callers pass the last visual
- * frame's packed uniform bytes into each `pick()` / `renderForDebug()`
- * call instead of sharing the point renderer's live GPU buffer.
+ * Construct a `PickRenderer` bound to `device`.  The renderer owns its own
+ * `pickUniformBuffer`; `drawPoints` callers pass the pick frame's packed
+ * uniform bytes per call rather than sharing the point renderer's live GPU
+ * buffer.
+ *
+ * `focusBindGroup` is the engine's shared cluster-focus bind group (live
+ * buffer, written once per frame in renderFrame).  Bound at @group(3) so the
+ * pick pass sees the same focus state the visual pass does and the shared
+ * vertex shader can cull non-members of a focused structure from hit-testing.
  */
 export function createPickRenderer(
   device: GPUDevice,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
   focusBgl: FocusUniformsBgl,
-  // The engine's shared cluster-focus bind group (live buffer, written
-  // once per frame in renderFrame).  Bound at @group(3) so the pick pass
-  // sees the same focus state the visual pass does and the shared vertex
-  // shader can cull non-members of a focused structure from hit-testing.
   focusBindGroup: GPUBindGroup,
-  // Optional structure-ring pick provider.  When present, the pick pass
-  // calls `structureMarkerRenderer.pickRing(pass)` after the galaxy
-  // draws so cluster / supercluster / void ring hits land in the same
-  // texture.  Shared depth state means a foreground galaxy still
-  // claims the pixel — clicks through a ring select the galaxy.
-  // Optional so tests can construct the picker in isolation; passing
-  // `undefined` yields a galaxy-only pick pass.
-  structureMarkerRenderer?: StructureMarkerRenderer,
-  // Optional procedural-disk pick provider.  When present, the pick
-  // pass calls `proceduralDiskRenderer.pickDisks(pass)` so resolved
-  // galaxies (in the 8 px+ band) are pickable via their disk surface
-  // rather than only their companion point billboard.  Optional so
-  // tests and pre-init paths can omit it.
-  proceduralDiskRenderer?: ProceduralDiskRenderer,
-  // Optional Milky-Way pick provider.  When present AND the gate below
-  // reports the disk is on screen, the pick pass calls
-  // `milkyWayPickRenderer.pickMilkyWay(pass)` so the galactic centre is
-  // clickable.  Optional so tests and pre-init paths can omit it.
-  milkyWayPickRenderer?: MilkyWayPickRenderer,
-  // Visibility gate for the Milky-Way pick draw.  The MW must contribute
-  // a hit ONLY while its disk is on screen (the `{ kind: 'milkyWay' }`
-  // fade opacity > 0 AND the camera is inside the distance-fade band) —
-  // otherwise a faded-out MW would still be clickable.  Only the GATE is
-  // supplied: the hit billboard's SIZE is computed in the MW pick vertex
-  // shader from this pass's own camera uniforms (the same apparent-size
-  // derivation galaxy points use), so there is no sizing callback to
-  // thread.  Supplied as data rather than read off EngineState so this
-  // renderer stays dumb: the engine owns the fade/camera state.  Defaults
-  // to "never visible" so a picker constructed without the gate never
-  // draws the MW.
-  mwPickVisible: () => boolean = () => false,
 ): PickRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
   const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
@@ -151,7 +115,7 @@ export function createPickRenderer(
     entries: [{ binding: 0, resource: { buffer: dummyFadeBuffer } }],
   });
 
-  // @group(2) bind groups cached by GPUBuffer identity — pick() fires
+  // @group(2) bind groups cached by GPUBuffer identity — drawPoints fires
   // on every hover/click and the loaded sources are stable between
   // picks.  WeakMap means a tier swap that destroys the old
   // sourceBuffer invalidates the cached bind group via GC.
@@ -198,13 +162,12 @@ export function createPickRenderer(
     },
   });
 
-  // The pick renderer's own uniform buffer.  `pick()` and
-  // `renderForDebug()` upload the caller's `uniformBytes` (built at
-  // pick time from the slab view) here and then apply the three
-  // pick-specific overrides on top — the visual pass's GPU buffer is
-  // never touched.
+  // The pick renderer's own uniform buffer.  `drawPoints` uploads the
+  // caller's `uniformBytes` (built at pick time from the slab view) here and
+  // then applies the three pick-specific overrides on top — the visual
+  // pass's GPU buffer is never touched.
   // Why own the buffer rather than sharing?  Two writers on one buffer
-  // is the bug this change deletes: pick would scribble on the visual
+  // is the bug this design deletes: pick would scribble on the visual
   // uniforms and rely on the next render frame to undo the damage.
   const pickUniformBuffer = device.createBuffer({
     label: 'pick-uniform-buffer',
@@ -213,100 +176,32 @@ export function createPickRenderer(
   });
 
   // @group(0) bind group built once at construction time, bound on
-  // every `recordPickPass`.  Building once avoids the per-pass
-  // `createBindGroup` that the previous per-pass path created, and
-  // lets the pipeline layout's group(0) slot hold a stable object.
+  // every `drawPoints`.  Building once avoids a per-draw `createBindGroup`
+  // and lets the pipeline layout's group(0) slot hold a stable object.
   const pickUniformBindGroup = device.createBindGroup({
     label: 'pick-uniform-bg',
     layout: pipeline.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: pickUniformBuffer } }],
   });
 
-  // `copyTextureToBuffer` requires `bytesPerRow` to be a multiple of
-  // 256.  We only read 4 bytes per pick but must allocate at least
-  // 256.  MAP_READ-only — never written from the CPU.
-  const stagingBuffer = device.createBuffer({
-    label: 'pick-staging-buffer',
-    size: 256,
-    usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-  });
-
-  // Textures allocated on first `pick()` and recreated on viewport
-  // change, so the constructor doesn't need to know the canvas size.
-  let pickTexture: GPUTexture | null = null;
-  let depthTexture: GPUTexture | null = null;
-  let texWidth = 0;
-  let texHeight = 0;
-
-  // `mapAsync` is async; a second pick before the first resolves
-  // would map an already-mapped staging buffer (validation error).
-  // `inFlight` keeps the second call from racing — it returns null.
-  let inFlight = false;
-
-  // `destroy()` can race with an in-flight `mapAsync`; the buffer
-  // teardown rejects the pending map with `AbortError`.  We swallow
-  // that specific abort silently so the harmless teardown race
-  // doesn't surface as an uncaught rejection; other errors still
-  // throw.
-  let destroyed = false;
-
-  /**
-   * Reallocate the pick + depth textures when the viewport changes.
-   * No-op when dimensions already match.
-   *
-   * Pick texture usages:
-   *   - RENDER_ATTACHMENT — written by the pick pass.
-   *   - COPY_SRC — `pick()` reads back a single texel.
-   *   - TEXTURE_BINDING — sampled by the pick-debug overlay's
-   *     fullscreen fragment.  Always included so flipping the debug
-   *     toggle at runtime doesn't require texture recreation.
-   */
-  function ensureTextures(w: number, h: number): void {
-    if (w === texWidth && h === texHeight && pickTexture !== null) return;
-
-    pickTexture?.destroy();
-    depthTexture?.destroy();
-
-    pickTexture = device.createTexture({
-      label: 'pick-target',
-      size: { width: w, height: h },
-      format: 'r32uint',
-      usage:
-        GPUTextureUsage.RENDER_ATTACHMENT |
-        GPUTextureUsage.COPY_SRC |
-        GPUTextureUsage.TEXTURE_BINDING,
-    });
-    depthTexture = device.createTexture({
-      label: 'pick-depth',
-      size: { width: w, height: h },
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-
-    texWidth = w;
-    texHeight = h;
-  }
-
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /**
    * Record the point-pick draw into an already-begun render pass — the
-   * extracted point half of the pick pass, callable as a layer surface.
+   * point half of the pick pass, callable as a `drawPick` layer surface.
    *
    * `uniformBytes` is built at pick time from the slab view (see
    * `pickUniformBytesOf`); it is uploaded verbatim to the renderer's
    * OWN `pickUniformBuffer`, then the three pick-specific fields are
    * overridden in place.  The caller owns the pass lifecycle
-   * (`beginRenderPass` / `pass.end()`) and layers ring / disk /
-   * Milky-Way pick draws after this returns.
+   * (`beginRenderPass` / `pass.end()`).
    *
-   * `@group(0)` prefix contract: the ring and Milky-Way pick pipelines
-   * read the point pick uniform via the caller-bound `@group(0)`
-   * CameraUniforms prefix.  So the upload + `@group(0)` bind happen
-   * unconditionally — a galaxy-empty scene (every catalog toggled off)
-   * must still leave slot 0 pointing at the freshly-uploaded pick
-   * camera buffer for those fold-in draws; the per-source loop simply
-   * issues no draws.
+   * `@group(0)` prefix contract: any sibling pick pipeline that reads the
+   * point pick uniform via the caller-bound `@group(0)` CameraUniforms
+   * prefix relies on the upload + bind happening unconditionally — a
+   * galaxy-empty scene (every catalog toggled off) must still leave slot 0
+   * pointing at the freshly-uploaded pick camera buffer; the per-source loop
+   * simply issues no draws.
    *
    * The `@group(2)` bind-group cache is keyed by GPUBuffer identity, so
    * a tier swap that destroys an old sourceBuffer invalidates the
@@ -344,7 +239,7 @@ export function createPickRenderer(
     device.queue.writeBuffer(pickUniformBuffer, PICK_PASS_BYTE_OFFSET, new Uint32Array([1]));
 
     // Bind the prebuilt @group(0) bind group (built once at construction
-    // against pickUniformBuffer — avoids per-pass createBindGroup calls).
+    // against pickUniformBuffer — avoids per-draw createBindGroup calls).
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, pickUniformBindGroup);
     pass.setBindGroup(1, dummyFadeBindGroup);
@@ -373,226 +268,15 @@ export function createPickRenderer(
    *
    * This exists so any `drawPick` that binds its own slot-0 uniform — the
    * procedural-disk pick binds the disk camera at `@group(0)` — can restore
-   * the shared camera prefix before the ring / Milky-Way fold-ins, which read
-   * that prefix but bind nothing themselves. Without the restore they read the
-   * disk's leftover uniform (and fail validation once the MW mirror's read
-   * extent exceeds it).
+   * the shared camera prefix before sibling fold-ins that read that prefix but
+   * bind nothing themselves. Without the restore they read the disk's leftover
+   * uniform (and fail validation once a mirror's read extent exceeds it).
    */
   function bindCamera(pass: GPURenderPassEncoder): void {
     pass.setBindGroup(0, pickUniformBindGroup);
   }
 
-  /**
-   * Record the shared per-source pick pass into `encoder`.  Both
-   * `pick()` and `renderForDebug()` use this for the common middle —
-   * the point draw (`drawPoints`: uniform upload, pick overrides, bind
-   * groups, per-source loop) plus the ring / disk / Milky-Way fold-ins.
-   * The two callers diverge only on the tail (readback vs
-   * return-texture).
-   */
-  function recordPickPass(
-    encoder: GPUCommandEncoder,
-    sourceList: readonly PickSourceDraw[],
-    passLabel: string,
-    pointSizePx: number,
-    uniformBytes: ArrayBuffer,
-    timingDescriptor: GPURenderPassTimestampWrites | undefined,
-  ): GPUTexture {
-    const pt = pickTexture!;
-    const dt = depthTexture!;
-
-    const pass = encoder.beginRenderPass({
-      label: `${passLabel}-pass`,
-      colorAttachments: [
-        {
-          view: pt.createView(),
-          // 0 = the "no hit" sentinel (everything else is +1-offset).
-          clearValue: { r: 0, g: 0, b: 0, a: 0 },
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-      ],
-      depthStencilAttachment: {
-        view: dt.createView(),
-        depthClearValue: 1.0,
-        depthLoadOp: 'clear',
-        depthStoreOp: 'store',
-      },
-      // Spread-omit so the key never lands as `undefined` (validation
-      // noise varies by implementation).
-      ...(timingDescriptor ? { timestampWrites: timingDescriptor } : {}),
-    });
-
-    drawPoints(pass, sourceList, pointSizePx, uniformBytes);
-
-    // Structure ring picks share depth state with the galaxy draws, so a
-    // foreground galaxy claims the pixel — clicks through a ring at a
-    // galaxy select the galaxy.  Skipped when no marker renderer.
-    if (structureMarkerRenderer) {
-      structureMarkerRenderer.pickRing(pass);
-    }
-
-    // Procedural-disk pick: shared depth means a closer point dot or
-    // disk claims the pixel; the disk and its companion point carry the
-    // SAME packed id, so overlap is harmless.
-    //
-    // pickDisks() now takes the camera as arguments (no cached frame
-    // value). This interim call site is DELETED in plan-03 Task 10, so it
-    // unpacks the camera straight out of the `uniformBytes` the caller
-    // already handed us — the point uniform layout (pointRenderer.ts
-    // docblock) puts viewProj at bytes 0..63, viewport at 64..71, camPos
-    // at 96..107, pxPerRad at 108..111. Crude-but-correct and
-    // self-contained: no new plumbing for a soon-to-vanish call. The
-    // focus bind group is the picker's own shared cluster-focus group
-    // (@group(3) on the point pass), which is the disk pick's @group(1).
-    if (proceduralDiskRenderer) {
-      const cam = new Float32Array(uniformBytes);
-      proceduralDiskRenderer.pickDisks(
-        pass,
-        cam.subarray(0, 16),
-        [cam[16]!, cam[17]!],
-        [cam[24]!, cam[25]!, cam[26]!],
-        cam[27]!,
-        focusBindGroup,
-      );
-    }
-
-    // Milky-Way pick: a single billboard at the galactic centre, drawn
-    // only while the disk is on screen (a closed gate keeps a faded-out
-    // MW unclickable).  Its apparent size is computed in the MW vertex
-    // shader from the SAME pickUniformBuffer bytes uploaded above, so
-    // the hit target always matches the replayed frame.  Shared depth
-    // means a closer galaxy still claims the pixel.
-    //
-    // Re-bind @group(0) first: the ring / disk picks above bind their
-    // own (smaller) uniforms at slot 0, and the MW vertex shader reads
-    // the pick camera mirror — inheriting whatever group the previous
-    // draw left bound would read the wrong buffer (and fails validation
-    // outright once the mirror's read extent exceeds that buffer).
-    if (milkyWayPickRenderer && mwPickVisible()) {
-      bindCamera(pass);
-      milkyWayPickRenderer.pickMilkyWay(pass);
-    }
-
-    pass.end();
-    return pt;
-  }
-
-  // Whether this pick pass has anything to draw — galaxy sources OR
-  // cluster / SC / void ring markers (drawn by
-  // `structureMarkerRenderer.pickRing` inside `recordPickPass`).  Shared
-  // by `pick` and `renderForDebug` so a galaxy-empty scene with visible
-  // rings still picks (and the pick-debug texture isn't black when every
-  // galaxy catalog is toggled off).  `markerCount() > 0` mirrors
-  // `structureMarkersLayer`'s enable gate (0 when the category is hidden or
-  // every ring has faded out).
-  const hasAnyPickTarget = (sourceList: readonly PickSourceDraw[]): boolean =>
-    sourceList.length > 0 ||
-    (structureMarkerRenderer !== undefined && structureMarkerRenderer.markerCount() > 0) ||
-    (milkyWayPickRenderer !== undefined && mwPickVisible());
-
-  async function pick(
-    viewportPx: Vec2,
-    pickXPx: number,
-    pickYPx: number,
-    sources: Iterable<PickSourceDraw>,
-    pointSizePx: number,
-    uniformBytes: ArrayBuffer,
-    timingDescriptor?: GPURenderPassTimestampWrites,
-  ): Promise<PickResult | null> {
-    if (inFlight) return null;
-
-    // Materialise once so we can check emptiness and iterate without
-    // re-walking a one-shot generator.
-    const sourceList = Array.from(sources);
-    if (!hasAnyPickTarget(sourceList)) return null;
-
-    const [vpW, vpH] = viewportPx;
-    ensureTextures(vpW, vpH);
-
-    // Clamp so `copyTextureToBuffer` stays inside the texture (DPR-
-    // scaled CSS coords can land out of range during a resize).
-    const px = Math.max(0, Math.min(vpW - 1, Math.floor(pickXPx)));
-    const py = Math.max(0, Math.min(vpH - 1, Math.floor(pickYPx)));
-
-    const encoder = device.createCommandEncoder();
-    const pt = recordPickPass(
-      encoder,
-      sourceList,
-      'pick',
-      pointSizePx,
-      uniformBytes,
-      timingDescriptor,
-    );
-
-    // `bytesPerRow` must be a multiple of 256; staging buffer is
-    // pre-sized to 256 even though we only read 4 bytes.
-    encoder.copyTextureToBuffer(
-      { texture: pt, origin: { x: px, y: py, z: 0 } },
-      { buffer: stagingBuffer, bytesPerRow: 256 },
-      { width: 1, height: 1, depthOrArrayLayers: 1 },
-    );
-    device.queue.submit([encoder.finish()]);
-
-    inFlight = true;
-    try {
-      try {
-        await stagingBuffer.mapAsync(GPUMapMode.READ);
-      } catch (err) {
-        // Buffer torn down by destroy() during the await — harmless.
-        if (destroyed && (err as Error).name === 'AbortError') return null;
-        throw err;
-      }
-      const mapped = new Uint32Array(stagingBuffer.getMappedRange(0, 4));
-      const raw = mapped[0]!;
-      stagingBuffer.unmap();
-      return unpackPick(raw);
-    } finally {
-      inFlight = false;
-    }
-  }
-
-  /**
-   * Render the pick pass into the texture and return the handle —
-   * same draw work `pick()` does, but no readback.  The pick-debug
-   * overlay samples the result.
-   *
-   * Independent of `pick()`'s `inFlight` guard: that guard protects
-   * the staging buffer, which this path never touches.  Sharing it
-   * would make the overlay flicker whenever a hover-pick was mid-
-   * flight.  Two paths writing the same texture is safe — submits
-   * run in queue order, so a debug write after `pick()`'s
-   * `copyTextureToBuffer` can't disturb the staging snapshot.
-   */
-  function renderForDebug(
-    viewportPx: Vec2,
-    sources: Iterable<PickSourceDraw>,
-    pointSizePx: number,
-    uniformBytes: ArrayBuffer,
-  ): GPUTexture | null {
-    const sourceList = Array.from(sources);
-    if (!hasAnyPickTarget(sourceList)) return null;
-    const [vpW, vpH] = viewportPx;
-    ensureTextures(vpW, vpH);
-
-    const encoder = device.createCommandEncoder({ label: 'pick-debug-encoder' });
-    const pt = recordPickPass(
-      encoder,
-      sourceList,
-      'pick-debug',
-      pointSizePx,
-      uniformBytes,
-      undefined,
-    );
-    device.queue.submit([encoder.finish()]);
-    return pt;
-  }
-
   function destroy(): void {
-    destroyed = true;
-    pickTexture?.destroy();
-    depthTexture?.destroy();
-    stagingBuffer.destroy();
     dummyFadeBuffer.destroy();
     pickUniformBuffer.destroy();
     // focusBindGroup wraps the engine-owned shared focus buffer; the
@@ -603,8 +287,6 @@ export function createPickRenderer(
     label: 'pickRenderer',
     drawPoints,
     bindCamera,
-    pick,
-    renderForDebug,
     destroy,
   };
   renderer satisfies Renderer;

@@ -263,3 +263,113 @@ describe('proceduralDiskRenderer pack loop (Task R1)', () => {
     expect(instancePayload[i1 + 15]).toBe(0);
   });
 });
+
+describe('proceduralDiskRenderer.pickDisks draw count', () => {
+  // Camera arguments pickDisks takes directly (no cached frame value):
+  // viewProj / viewport / camPosWorld / pxPerRad / focusBindGroup.
+  const PICK_VIEW_PROJ = new Float32Array(16);
+  const PICK_VIEWPORT: [number, number] = [800, 600];
+  const PICK_CAM_POS: [number, number, number] = [0, 0, 0];
+  const PICK_PX_PER_RAD = 100;
+
+  function makeStubPass() {
+    return {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+  }
+
+  function pick(
+    renderer: ReturnType<typeof createProceduralDiskRenderer>,
+    pass: GPURenderPassEncoder,
+  ) {
+    renderer.pickDisks(
+      pass,
+      PICK_VIEW_PROJ,
+      PICK_VIEWPORT,
+      PICK_CAM_POS,
+      PICK_PX_PER_RAD,
+      FOCUS_BIND_GROUP,
+    );
+  }
+
+  it('issues draw(6, N) after draw() with N instances', () => {
+    const { init } = makeStubInit();
+    const renderer = createProceduralDiskRenderer(init);
+
+    renderer.draw(
+      makeStubPass(),
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      [
+        fakeProceduralInstance({ sourceCode: 1, localIdx: 42 }),
+        fakeProceduralInstance({ sourceCode: 2, localIdx: 99 }),
+        fakeProceduralInstance({ sourceCode: 3, localIdx: 7 }),
+      ],
+    );
+
+    const pickPass = makeStubPass();
+    pick(renderer, pickPass);
+
+    expect(pickPass.setPipeline).toHaveBeenCalledTimes(1);
+    expect(pickPass.draw).toHaveBeenCalledWith(6, 3);
+  });
+
+  it('is a no-op on a fresh renderer with no prior draw', () => {
+    const { init } = makeStubInit();
+    const renderer = createProceduralDiskRenderer(init);
+
+    const pickPass = makeStubPass();
+    pick(renderer, pickPass);
+
+    // Nothing should have been called — lastPickInstanceCount is 0.
+    expect(pickPass.setPipeline).not.toHaveBeenCalled();
+    expect(pickPass.draw).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op after draw() is called with an empty instances array', () => {
+    // Regression: draw() with 0 instances must zero lastPickInstanceCount
+    // (a stale prior-frame count would make pickDisks() re-draw the
+    // previous frame's disks into the pick texture).
+    const { init } = makeStubInit();
+    const renderer = createProceduralDiskRenderer(init);
+
+    // First draw: 3 instances. pickDisks confirms something was drawn.
+    renderer.draw(
+      makeStubPass(),
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      [
+        fakeProceduralInstance({ sourceCode: 1, localIdx: 10 }),
+        fakeProceduralInstance({ sourceCode: 1, localIdx: 11 }),
+        fakeProceduralInstance({ sourceCode: 1, localIdx: 12 }),
+      ],
+    );
+    const pickPass1 = makeStubPass();
+    pick(renderer, pickPass1);
+    expect(pickPass1.draw).toHaveBeenCalledWith(6, 3); // sanity
+
+    // Second draw: empty. pickDisks on a fresh pass must be a no-op.
+    renderer.draw(
+      makeStubPass(),
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      [],
+    );
+    const pickPass2 = makeStubPass();
+    pick(renderer, pickPass2);
+    expect(pickPass2.setPipeline).not.toHaveBeenCalled();
+    expect(pickPass2.draw).not.toHaveBeenCalled();
+  });
+});

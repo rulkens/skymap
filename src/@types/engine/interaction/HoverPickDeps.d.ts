@@ -11,8 +11,8 @@
  * ### Why so few fields
  *
  * The driver used to receive live thunks for the pick targets, viewport,
- * point size, timing descriptor, and packed camera bytes — everything the
- * old `pickRenderer.pick` needed. `pickProgram.pick` derives all of that
+ * point size, timing descriptor, and packed camera bytes — everything an
+ * imperative pick call needed. `pickProgram.pick` derives all of that
  * internally from the shared `EngineState` + the content-layer registry at
  * fire time, so the driver's job shrinks to "translate a pointer position to
  * texture-space and hand it over". `state` is still read directly — but only
