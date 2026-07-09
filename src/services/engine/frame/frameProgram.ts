@@ -55,9 +55,9 @@ export function frameProgram(tone: ToneMap): readonly FrameStep[] {
  *   - `'compute'`  → nothing; compute dispatches aren't timed as content slots.
  *
  * `'pick'` (the parallel r32uint pick pass) is appended last, matching the
- * frame's execution order. This replaces the hand-maintained
- * `TIMED_SLOT_NAMES` list: the slot order is now a pure function of the same
- * program the executor walks, so it can't drift from what actually runs.
+ * frame's execution order. Deriving the slot order this way rather than
+ * hand-maintaining a list means it's a pure function of the same program the
+ * executor walks, so it can't drift from what actually runs.
  */
 export function timedSlotsOf(
   program: readonly FrameStep[],
@@ -84,7 +84,8 @@ export function timedSlotsOf(
  * The engine's ordered GPU-timing slots — the single source of truth for both
  * query-set slot allocation (`createGpuTimingService`) and DebugPanel display
  * order (`GpuTimingsSection`). Derived from the real FRAME program + the
- * content-layer registry, replacing the hand-maintained `TIMED_SLOT_NAMES`.
+ * content-layer registry rather than hand-maintained, so the two consumers
+ * can never see a different slot list than what the frame actually runs.
  *
  * The tone values are placeholders: `timedSlotsOf` only reads step kinds and
  * `(target, slab)` — the composite's `tone` never affects a slot NAME — so a

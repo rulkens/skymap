@@ -145,13 +145,13 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
       </summary>
       <div style={{ marginTop: 4 }}>
         {/*
-          Iterate `DISPLAY_SLOT_ORDER` (derived from HDR_PASSES + the
-          two trailing passes) rather than `stats` directly so row
-          order is stable regardless of which slot emits first.  Slots
-          that haven't sampled yet are simply skipped (no row).  This
-          keeps the panel in lockstep with the actual renderer draw
-          order — reordering HDR_PASSES in `passes/index.ts`
-          automatically reorders the timing UI.
+          Iterate `DISPLAY_SLOT_ORDER` (derived from the FRAME program +
+          the CONTENT_LAYERS registry via `TIMED_SLOTS`) rather than
+          `stats` directly so row order is stable regardless of which
+          slot emits first.  Slots that haven't sampled yet are simply
+          skipped (no row).  This keeps the panel in lockstep with the
+          actual renderer draw order — reordering CONTENT_LAYERS in
+          `passes/index.ts` automatically reorders the timing UI.
         */}
         {DISPLAY_SLOT_ORDER.map((slot) => {
           const row = stats.get(slot);
