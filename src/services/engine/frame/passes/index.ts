@@ -7,7 +7,7 @@
  * arrays this module once exported — those were two arrays because a `Pass`
  * baked its target and blend into "which array it lives in"; a `ContentLayer`
  * states `target` and `blend` as data fields on the row itself, so one array is
- * enough and grouping by `(target, blend)` becomes a `.filter()`.
+ * enough and grouping by `(target, slab)` becomes a `.filter()`.
  *
  * There is no longer any hand-maintained hdr-vs-swap split here: the frame
  * executor walks a `FrameStep[]` program that groups layers by `(target, slab)`

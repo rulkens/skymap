@@ -9,8 +9,13 @@
  * are opaque and depth-tested; screen-space overlays (rings, labels) draw
  * Porter-Duff OVER on top of whatever is already composited. Those three
  * physics are essential and stay distinct — a layer's `blend` must match
- * the profile baked into the renderer pipeline its `draw` calls, or the
- * two disagree and the frame is wrong.
+ * the profile baked into the renderer pipeline its `draw` calls. Today
+ * that match holds by construction (every layer sharing a `target` also
+ * shares a `blend`), so the field is consumed only as a human-readable
+ * contract; nothing checks it against the pipeline at runtime. A
+ * layer↔pipeline parity check is the intended guardrail once a target's
+ * layers stop agreeing on blend — see `ContentLayer.d.ts`'s `blend` field
+ * for when that first happens.
  *
  * Distinct from `CompositeBlend` (`src/@types/rendering/CompositeBlend.d.ts`):
  * `Blend` describes how a content layer draws its own fragments into a

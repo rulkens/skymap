@@ -2,10 +2,10 @@
  * ContentLayer — one point in the (slab, target, blend) space, plus a
  * renderer call and an enable gate. A layer states its projection slab,
  * render target, and blend mode as data fields on the row itself, so
- * grouping by `(target, blend)` — hdr-target layers vs swap-target
- * layers — is a `.filter()` over `CONTENT_LAYERS` at the call site rather
- * than a hand-maintained split. See `passes/index.ts` for the registry
- * and the full layer catalog.
+ * grouping by `(target, slab)` — the executor's and `timedSlotsOf`'s
+ * grouping key — is a `.filter()` over `CONTENT_LAYERS` at the call site
+ * rather than a hand-maintained split. See `passes/index.ts` for the
+ * registry and the full layer catalog.
  *
  * There is deliberately no `deps` bag argument: a layer reads its
  * renderer straight off `state.gpu.*`, which is the end-state the
@@ -38,7 +38,19 @@ export type ContentLayer = {
   readonly slab: number;
   /** The `RenderTargetSpec.id` this layer draws into. */
   readonly target: string;
-  /** How this layer's fragments combine with what's already in its target. */
+  /**
+   * How this layer's fragments combine with what's already in its target.
+   * Declared now as part of the locked row shape: today every layer sharing
+   * a `target` also shares a `blend` (additive across the nine HDR layers,
+   * OVER across the five swap-chain overlays), so nothing groups or checks
+   * by blend at runtime — it's consumed only as a human-readable contract,
+   * with the renderer pipeline baking the actual blend state. This value
+   * must match the profile baked into the renderer pipeline its `draw`
+   * calls, but nothing enforces that today; a layer↔pipeline parity check
+   * is the intended guardrail once a target's layers stop agreeing on
+   * blend — the near-field fold (an opaque near-field body layer sharing a
+   * target with an OVER labels layer) is the first to need one.
+   */
   readonly blend: Blend;
   /** Whether this layer should record draw commands this frame. Pure: no side effects. */
   enabled(state: EngineState, ctx: ReadyFrameContext): boolean;
