@@ -94,15 +94,15 @@ deltas are accepted and must be restated in the PR description:
 **Signature:** `export function frontmostPick(perSlabRaw: readonly number[]): number`
 **Behaviour:** first non-zero raw pick value in near→far order (ascending slab index, index 0 = nearest per `Slab.d.ts`), else 0. Pure; no decode — `unpackPick` stays the decoder.
 
-- [ ] Grep `src/utils` for an existing first-non-zero helper (none expected); note the result in the test header.
-- [ ] Tests (exhaustive, per the spec's testing section):
+- [x] Grep `src/utils` for an existing first-non-zero helper (none expected); note the result in the test header.
+- [x] Tests (exhaustive, per the spec's testing section):
   - `returns 0 for all-zero readbacks` — `frontmostPick([0, 0])` → 0; also `[]` → 0.
   - `returns the single slab's hit` — `frontmostPick([0, 7])` → 7.
   - `near slab occludes far` — `frontmostPick([5, 9])` → 5.
   - `falls through to a far-only hit` — `frontmostPick([0, 9])` → 9.
-- [ ] Implement (a few lines; didactic header explaining this mirrors the visible far→near OVER composite as a CPU fold).
-- [ ] `npm test -- frontmostPick` → 4 tests pass. `npm run typecheck` → clean.
-- [ ] Commit `src/utils/picking/frontmostPick.ts tests/utils/picking/frontmostPick.test.ts`.
+- [x] Implement (a few lines; didactic header explaining this mirrors the visible far→near OVER composite as a CPU fold).
+- [x] `npm test -- frontmostPick` → 4 tests pass. `npm run typecheck` → clean.
+- [x] Commit `src/utils/picking/frontmostPick.ts tests/utils/picking/frontmostPick.test.ts`.
 
 ### Task 2: `pickFrameContext` — the pick-time camera as a value
 
