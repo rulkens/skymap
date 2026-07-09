@@ -48,8 +48,9 @@ export type PickRenderer = {
    * (selectedPacked sentinel, padded pointSizePx, pickPass = 1).  The
    * visual pass's GPU buffer is NEVER touched — there is no shared
    * buffer, no two-writer hazard, and no dependency on frame ordering.
-   * `uniformBytes` is the CPU copy that `pointRenderer.draw()` returns
-   * after each visual frame (stashed on `state.picking.lastFrameUniformBytes`).
+   * `uniformBytes` is built at pick time from the slab view (see
+   * `pickUniformBytesOf`), so it matches the visual byte layout without a
+   * cross-frame stash.
    *
    * ### Concurrency
    *
@@ -88,13 +89,12 @@ export type PickRenderer = {
      */
     pointSizePx: number,
     /**
-     * Packed uniform bytes from the last visual frame (the value
-     * `pointRenderer.draw()` returned and was stashed on
-     * `state.picking.lastFrameUniformBytes`).  Uploaded verbatim to
-     * the pick renderer's own GPU buffer, then the three pick-specific
-     * fields are overridden.  Reproduces the camera/viewport/settings
-     * state the visual frame rendered without re-running the camera
-     * drivers or sharing any buffer with the visual pass.
+     * Packed uniform bytes for the pick frame, built at pick time from the
+     * slab view (see `pickUniformBytesOf`).  Uploaded verbatim to the pick
+     * renderer's own GPU buffer, then the three pick-specific fields are
+     * overridden.  Reproduces the camera/viewport/settings state the visual
+     * frame rendered without re-running the camera drivers or sharing any
+     * buffer with the visual pass.
      */
     uniformBytes: ArrayBuffer,
     /**

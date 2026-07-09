@@ -741,18 +741,18 @@ export function createPointRenderer(
    * on each source's own 16-byte fade buffer, so writes for one
    * source don't race against draws against another.
    *
-   * Returns the packed `ArrayBuffer` so the pick renderer can snapshot it
-   * (Task 3 of the pick-out-of-frame refactor).  Returns `null` when there
-   * are no catalogs to draw (buffer was never packed this frame).
+   * No-op when there are no catalogs to draw. The pick pass rebuilds its
+   * own uniform bytes from plain values at pick time (see
+   * `pickUniformBytesOf`), so this draw owns no cross-pass snapshot.
    */
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
     settings: PointDrawSettings,
-  ): ArrayBuffer | null {
+  ): void {
     const { visibleSourceMask, focusBindGroup } = settings;
-    if (galaxyCatalogs.size === 0) return null;
+    if (galaxyCatalogs.size === 0) return;
 
     // Pack 176 bytes — see `UNIFORM_BYTES` for the layout, and
     // `points/io.wesl::Uniforms` for the WGSL-side struct.
@@ -785,8 +785,6 @@ export function createPointRenderer(
       pass.setVertexBuffer(0, entry.buffer);
       pass.draw(6, entry.count);
     }
-
-    return buf;
   }
 
   /**

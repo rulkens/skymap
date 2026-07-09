@@ -167,11 +167,10 @@ const STATE_STUB = {
     proceduralDiskRenderer: null,
     volumeFieldRenderer: null,
   },
-  // pointSpritesLayer stashes packed uniform bytes here after each draw so
-  // the pick paths can replay the last frame's camera without re-running
-  // the per-frame camera drivers.
+  // pointSpritesLayer stashes the last visual frame's camera facts here so
+  // the CPU-side Milky-Way pick helpers answer for the frame the pick pass
+  // replays rather than the lagging drag register.
   picking: {
-    lastFrameUniformBytes: null as ArrayBuffer | null,
     lastFrameCam: null as PickFrameCam | null,
     pickInFlight: false,
     pointerDown: false,
@@ -653,43 +652,14 @@ describe('pointSpritesLayer.draw', () => {
     expect(drawSettings.camPosWorld).toEqual(view.camPos);
   });
 
-  it('stashes the packed uniform bytes onto state.picking.lastFrameUniformBytes', () => {
-    // The layer must capture the ArrayBuffer returned by renderer.draw and
-    // write it to state.picking.lastFrameUniformBytes so pick paths can
-    // replay the last frame's camera uniforms without re-running the
-    // per-frame camera drivers.
-    const sentinelBytes = new ArrayBuffer(8);
-    const drawStub = vi.fn<() => ArrayBuffer | null>(() => sentinelBytes);
-    const ctx = makeCtx({ renderer: { draw: drawStub } as any });
-    const view = slabViewOf(ctx, COSMO);
-    // Mutable picking bag so we can observe the write.
-    const pickingBag = {
-      lastFrameUniformBytes: null as ArrayBuffer | null,
-      lastFrameCam: null as PickFrameCam | null,
-      pickInFlight: false,
-      pointerDown: false,
-    };
-    const stateWithPicking = {
-      ...STATE_STUB,
-      selection: { select: null, hover: null, focus: null },
-      settings: POINT_SPRITES_SETTINGS_STUB,
-      picking: pickingBag,
-    } as unknown as EngineState;
-    pointSpritesLayer.draw(PASS_STUB, view, ctx, stateWithPicking);
-    // The layer must stash the exact reference returned by renderer.draw —
-    // no copy, no re-pack. Identity equality (===) enforces this.
-    expect(pickingBag.lastFrameUniformBytes).toBe(sentinelBytes);
-  });
-
-  it('stashes lastFrameCam (view.camPos + ctx.fovYRad) in the same frame as the bytes', () => {
+  it('stashes lastFrameCam (view.camPos + ctx.fovYRad) each draw', () => {
     // The Milky-Way pick helpers size/gate against the camera the pick
-    // pass replays, so the plain-TS camera facts must be stashed at the
-    // same write site as the uniform bytes — one frame, one camera.
-    const drawStub = vi.fn<() => ArrayBuffer | null>(() => new ArrayBuffer(8));
+    // pass replays, so the plain-TS camera facts must be stashed every
+    // visual frame — the drag register lags driver-driven motion.
+    const drawStub = vi.fn<() => void>();
     const ctx = makeCtx({ renderer: { draw: drawStub } as any });
     const view = slabViewOf(ctx, COSMO);
     const pickingBag = {
-      lastFrameUniformBytes: null as ArrayBuffer | null,
       lastFrameCam: null as PickFrameCam | null,
       pickInFlight: false,
       pointerDown: false,
@@ -706,35 +676,5 @@ describe('pointSpritesLayer.draw', () => {
     expect(pickingBag.lastFrameCam).not.toBeNull();
     expect(pickingBag.lastFrameCam!.position).toBe(view.camPos);
     expect(pickingBag.lastFrameCam!.fovYRad).toBe(ctx.fovYRad);
-  });
-
-  it('leaves the picking snapshots untouched when renderer.draw returns null', () => {
-    // When there are zero catalogs loaded, draw returns null — signalling
-    // nothing was packed. The layer must not overwrite a previously-valid
-    // snapshot (bytes OR camera) with a new frame's values; both pick paths
-    // gate on catalogs.size > 0 so the stale snapshot will never be
-    // consumed in that code path anyway, and keeping the pair coherent
-    // means every consumer sees one camera per stashed frame.
-    const priorBytes = new ArrayBuffer(8);
-    const priorCam: PickFrameCam = { position: [0, 0, 7], fovYRad: 1 };
-    const drawStub = vi.fn<() => ArrayBuffer | null>(() => null);
-    const ctx = makeCtx({ renderer: { draw: drawStub } as any });
-    const view = slabViewOf(ctx, COSMO);
-    const pickingBag = {
-      lastFrameUniformBytes: priorBytes,
-      lastFrameCam: priorCam as PickFrameCam | null,
-      pickInFlight: false,
-      pointerDown: false,
-    };
-    const stateWithPicking = {
-      ...STATE_STUB,
-      selection: { select: null, hover: null, focus: null },
-      settings: POINT_SPRITES_SETTINGS_STUB,
-      picking: pickingBag,
-    } as unknown as EngineState;
-    pointSpritesLayer.draw(PASS_STUB, view, ctx, stateWithPicking);
-    // The prior snapshots must survive a null-return frame, as a pair.
-    expect(pickingBag.lastFrameUniformBytes).toBe(priorBytes);
-    expect(pickingBag.lastFrameCam).toBe(priorCam);
   });
 });

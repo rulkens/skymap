@@ -2,14 +2,12 @@
  * pickUniformBytesOf — rebuild the point pick uniform as a value, at pick time.
  *
  * The pick pass needs the same 176-byte `Uniforms` image the visual points pass
- * uploads, minus the fields it always overrode. The old design captured that
- * image as a side effect of the visual `draw()` — the packed buffer was stashed
- * on `state.picking.lastFrameUniformBytes` and replayed at pick time. That braided
- * pick-camera availability into "the points pass has already drawn this frame":
- * a frame-ordering coupling, and a mirror of one renderer's byte layout living in
- * engine state.
+ * uploads, minus the fields it always overrides. Building it as a side effect of
+ * the visual `draw()` would braid pick-camera availability into "the points pass
+ * has already drawn this frame" — a frame-ordering coupling — and mirror one
+ * renderer's byte layout into engine state.
  *
- * This helper dissolves both by rebuilding the buffer from plain values — a
+ * This helper avoids both by rebuilding the buffer from plain values — a
  * `SlabView` (camera), the ready frame `ctx` (`drawPxPerRad`), and `state.settings`
  * (the appearance knobs) — and DELEGATING to `packPointUniforms`. Delegating,
  * rather than re-implementing the byte writes, is the whole point: `packPointUniforms`
@@ -19,9 +17,8 @@
  *
  * The one deliberate difference from a visual pack is `selectedPacked`: the pick
  * fragment writes its own hit id, so the visual selection-halo identity is
- * meaningless here and we pack the `SELECTION_NONE_SENTINEL` (which the old pick
- * pass overrode into the stashed buffer anyway). The remaining two pick overrides
- * — the `+PICK_PADDING_PX` point-size bump and `pickPass = 1` — are applied by the
+ * meaningless here and we pack the `SELECTION_NONE_SENTINEL`. The remaining two
+ * pick overrides — the `+PICK_PADDING_PX` point-size bump and `pickPass = 1` — are applied by the
  * pick renderer AFTER upload, exactly as before; this helper produces the clean
  * visual-shaped starting point.
  *

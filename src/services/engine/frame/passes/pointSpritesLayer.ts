@@ -88,19 +88,7 @@ export const pointSpritesLayer: ContentLayer = {
     const nowMs = ctx.nowMs;
     const fades = state.subsystems.fades;
 
-    // draw returns the packed PointUniforms ArrayBuffer it submitted to
-    // the GPU, or null when there are zero loaded catalogs. Stash a
-    // non-null return so the pick paths can replay this frame's camera
-    // without re-running the per-frame camera drivers, and stash the
-    // plain-TS camera facts (position + fovY) beside it for the CPU-side
-    // Milky-Way pick helpers — one write site, so both snapshots always
-    // describe the same frame. `view.camPos` is already a fresh
-    // non-aliasing tuple (`slabViewOf` copies the camera position per
-    // render step), so the stash can hold the reference without a copy.
-    // A null return (zero catalogs) leaves any prior snapshot in place —
-    // both pick paths gate on catalogs.size > 0 and won't consume a stale
-    // snapshot.
-    const bytes = renderer.draw(pass, view.vp, view.viewportPx, {
+    renderer.draw(pass, view.vp, view.viewportPx, {
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
       selectedPacked,
@@ -131,9 +119,13 @@ export const pointSpritesLayer: ContentLayer = {
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
     });
-    if (bytes !== null) {
-      state.picking.lastFrameUniformBytes = bytes;
-      state.picking.lastFrameCam = { position: view.camPos, fovYRad: ctx.fovYRad };
-    }
+
+    // Stash the plain-TS camera facts (position + fovY) for the CPU-side
+    // Milky-Way pick helpers (gate + billboard size), so they answer for
+    // the camera the pick pass replays rather than the lagging `state.cam`
+    // drag register. `view.camPos` is already a fresh non-aliasing tuple
+    // (`slabViewOf` copies the camera position per render step), so the
+    // stash can hold the reference without a copy.
+    state.picking.lastFrameCam = { position: view.camPos, fovYRad: ctx.fovYRad };
   },
 };

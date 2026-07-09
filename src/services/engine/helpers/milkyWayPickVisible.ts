@@ -10,8 +10,8 @@
  * for:
  *
  * The camera facts come from `state.picking.lastFrameCam` — the snapshot
- * the point-sprites pass stashes alongside `lastFrameUniformBytes` — NOT
- * from the `state.cam` drag register.  The pick pass renders against the
+ * the point-sprites pass stashes each visual frame — NOT from the
+ * `state.cam` drag register.  The pick pass renders against the
  * last visual frame's camera, so the gate must agree with THAT frame; the
  * drag register only re-seeds when a drag starts and lags every
  * driver-driven move (wheel zoom, tweens), which would leave the gate

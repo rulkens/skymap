@@ -59,7 +59,6 @@ function makeState(opts: {
     picking: {
       pickInFlight: false,
       pointerDown: false,
-      lastFrameUniformBytes: null,
       lastFrameCam: opts.lastFrameCam,
     },
     cam: opts.dragRegisterPos ? { position: opts.dragRegisterPos, fovYRad: FOV_Y_RAD } : null,

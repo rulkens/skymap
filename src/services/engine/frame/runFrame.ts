@@ -387,10 +387,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Pick-buffer debug overlay ─────────────────────────────────────────────
   //
   // Composite a colour-mapped pick-buffer overlay over the swap chain.
-  // Runs AFTER renderFrame's submit (the packed uniform bytes are stashed
-  // by `pointSpritesLayer` just before that submit). The helper owns its own
-  // encoder/submit with `loadOp: 'load'` so the OVER blend composites on
-  // top of the tone-mapped frame without re-rendering the scene.
+  // Runs AFTER renderFrame's submit — placed post-frame so the overlay
+  // reflects the just-rendered frame; it rebuilds the pick uniform bytes at
+  // pick time from the slab view (see `pickUniformBytesOf`), not from any
+  // per-frame stash. The helper owns its own encoder/submit with
+  // `loadOp: 'load'` so the OVER blend composites on top of the tone-mapped
+  // frame without re-rendering the scene.
   //
   // Hover picking is now fully pointer-driven (hoverPickDriver, wired in
   // wireInput.ts) — there is no longer an in-frame pick block here.

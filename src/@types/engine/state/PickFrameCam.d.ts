@@ -2,9 +2,9 @@
  * PickFrameCam — the camera facts the Milky-Way pick helpers need from the
  * last VISUAL frame: world position + vertical field of view.
  *
- * Stashed onto `EnginePickingState` beside `lastFrameUniformBytes`, on the
- * same cadence, so every pick input derives from the ONE camera the pick
- * pass actually renders with.  The alternative — reading the live
+ * Stashed onto `EnginePickingState.lastFrameCam` by the point-sprites pass,
+ * so the pick gate derives from the ONE camera the pick pass actually
+ * replays.  The alternative — reading the live
  * `state.cam` drag register — is wrong: `state.cam` is not the rendered
  * pose (the rendered camera is assembled per frame from the camera-driver
  * table), so it lags driver-driven motion like wheel zoom.  A pick gate or

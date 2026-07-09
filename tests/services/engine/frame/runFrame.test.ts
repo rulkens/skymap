@@ -118,7 +118,6 @@ function makeState(): EngineState {
     picking: {
       pickInFlight: false,
       pointerDown: false,
-      lastFrameUniformBytes: null as ArrayBuffer | null,
       lastFrameCam: null,
     },
     gpu: {

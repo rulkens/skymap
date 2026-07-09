@@ -19,8 +19,8 @@
  * - `milkyWayLayer.enabled` asks about the frame being rendered NOW and
  *   passes the frame-frozen `ctx.drawCamPos` / `ctx.fovYRad`.
  * - `milkyWayPickVisible` asks about the frame the pick pass REPLAYS and
- *   passes `state.picking.lastFrameCam` — the snapshot stashed alongside
- *   the replayed uniform bytes.  The pick gate must agree with THAT
+ *   passes `state.picking.lastFrameCam` — the camera the point-sprites
+ *   pass stashed for that frame.  The pick gate must agree with THAT
  *   frame, not the live camera, or a wheel-zoom/tween between frames
  *   would let a vanished disc claim a click (or a visible one miss).
  *

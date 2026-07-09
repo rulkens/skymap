@@ -151,12 +151,12 @@ Replace each read with `pickFrameContext` → `slabViewOf(ctx, COSMO)` →
 phase-2 slabs/frameProgram module — never re-declare it). This is interim
 plumbing: Task 10 absorbs it into `pickProgram`; keep the edits minimal.
 
-- [ ] `HoverPickDeps`: replace the byte read with a `uniformBytes: () => ArrayBuffer | null` thunk (wired in `wireInput` as a closure over `state` + `canvas`); update the module docblock's "Only `lastFrameUniformBytes` is read from state" paragraph. Driver: null thunk result → skip, matching today's null-bytes skip.
-- [ ] `wireInput` click path (`runPickAtCss`): build bytes the same way; keep the null guard shape.
-- [ ] `drawPickDebugOverlay`: derive internally from `state` + `deps.canvas`; replace the `lastFrameUniformBytes` gate (and its docblock section) with the not-ready gate.
-- [ ] Update tests: `hoverPickDriver.test.ts` (`null lastFrameUniformBytes is a no-op` → null-thunk variant), `drawPickDebugOverlay.test.ts` (no-op-when-null + `calls renderForDebug with … lastFrameUniformBytes` cases), `wireInput` tests.
-- [ ] `npm test` → full suite green; `npm run typecheck` → clean.
-- [ ] Commit the touched paths.
+- [x] `HoverPickDeps`: replace the byte read with a `uniformBytes: () => ArrayBuffer | null` thunk (wired in `wireInput` as a closure over `state` + `canvas`); update the module docblock's "Only `lastFrameUniformBytes` is read from state" paragraph. Driver: null thunk result → skip, matching today's null-bytes skip.
+- [x] `wireInput` click path (`runPickAtCss`): build bytes the same way; keep the null guard shape.
+- [x] `drawPickDebugOverlay`: derive internally from `state` + `deps.canvas`; replace the `lastFrameUniformBytes` gate (and its docblock section) with the not-ready gate.
+- [x] Update tests: `hoverPickDriver.test.ts` (`null lastFrameUniformBytes is a no-op` → null-thunk variant), `drawPickDebugOverlay.test.ts` (no-op-when-null + `calls renderForDebug with … lastFrameUniformBytes` cases), `wireInput` tests.
+- [x] `npm test` → full suite green; `npm run typecheck` → clean.
+- [x] Commit the touched paths.
 
 ### Task 5: Delete the stash
 

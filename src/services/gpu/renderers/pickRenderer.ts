@@ -13,8 +13,9 @@
  *
  * The pick pipeline owns its OWN uniform buffer (`pickUniformBuffer`,
  * allocated at construction).  Each `pick()` / `renderForDebug()` call
- * receives the caller's `uniformBytes` — a CPU copy of what the last
- * visual frame packed via `packPointUniforms` — uploads them in full,
+ * receives the caller's `uniformBytes` — built at pick time from the
+ * slab view via `pickUniformBytesOf`, which delegates to the same
+ * `packPointUniforms` the visual pass uses — uploads them in full,
  * then applies the three pick-specific overrides (selectedPacked
  * sentinel, padded pointSizePx, pickPass = 1) on top.  The visual
  * pass's GPU buffer is NEVER touched; two-writer corruption is gone.
@@ -198,9 +199,10 @@ export function createPickRenderer(
   });
 
   // The pick renderer's own uniform buffer.  `pick()` and
-  // `renderForDebug()` upload the caller's `uniformBytes` (last visual
-  // frame's packed image) here and then apply the three pick-specific
-  // overrides on top — the visual pass's GPU buffer is never touched.
+  // `renderForDebug()` upload the caller's `uniformBytes` (built at
+  // pick time from the slab view) here and then apply the three
+  // pick-specific overrides on top — the visual pass's GPU buffer is
+  // never touched.
   // Why own the buffer rather than sharing?  Two writers on one buffer
   // is the bug this change deletes: pick would scribble on the visual
   // uniforms and rely on the next render frame to undo the damage.
@@ -294,8 +296,8 @@ export function createPickRenderer(
    * structure ring picks.  The two callers diverge only on the tail
    * (readback vs return-texture).
    *
-   * `uniformBytes` is the CPU copy of what the last visual frame packed
-   * via `packPointUniforms`; it is uploaded verbatim, then the three
+   * `uniformBytes` is built at pick time from the slab view (see
+   * `pickUniformBytesOf`); it is uploaded verbatim, then the three
    * pick-specific fields are overridden in place on `pickUniformBuffer`.
    * The bind-group cache is keyed by GPUBuffer identity, so a tier swap
    * that destroys an old sourceBuffer invalidates the cached bind group
@@ -312,8 +314,8 @@ export function createPickRenderer(
     const pt = pickTexture!;
     const dt = depthTexture!;
 
-    // Full upload: reproduce the last visual frame's camera / viewport /
-    // settings state on the pick renderer's OWN buffer.  The visual
+    // Full upload: reproduce the rendered camera / viewport / settings
+    // state on the pick renderer's OWN buffer.  The visual
     // pass's GPU buffer is never touched — this is the invariant that
     // eliminates the two-writer bug.
     device.queue.writeBuffer(pickUniformBuffer, 0, uniformBytes);

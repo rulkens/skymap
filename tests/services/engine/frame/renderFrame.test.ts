@@ -436,13 +436,12 @@ function makeInput(
         },
         selection: { select: settings.selected },
         assetSlots: { flow: null },
-        // pointSpritesLayer stashes the packed uniform bytes + camera
-        // snapshot onto state.picking after each draw so the pick paths
-        // can replay the last frame's camera state.  The bag must exist;
-        // all other fields are at their default 'nothing in flight'
-        // values — only the two snapshots are mutated by the layer.
+        // pointSpritesLayer stashes the camera snapshot onto state.picking
+        // after each draw so the Milky-Way pick helpers answer for the
+        // rendered frame.  The bag must exist; all other fields are at
+        // their default 'nothing in flight' values — only the snapshot is
+        // mutated by the layer.
         picking: {
-          lastFrameUniformBytes: null as ArrayBuffer | null,
           lastFrameCam: null,
           pickInFlight: false,
           pointerDown: false,

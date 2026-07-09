@@ -5,22 +5,21 @@
  *
  * A click / hover resolves which galaxy sits under the cursor by drawing the
  * scene into the r32uint pick texture from the SAME camera the user is looking
- * at. The old path carried that camera implicitly: `pointSpritesLayer` stashed
- * the packed per-frame uniform bytes onto `state.picking` at render time, and
- * the pick pass replayed those stashed bytes so its projection matched the last
- * visible frame's. That worked, but it braided the pick camera into a
- * render-time byte side effect — the pick pass could only run if a visual frame
- * had already stashed, and "what camera does the pick use?" had no value you
- * could name, only a buffer you had to have populated at the right moment.
+ * at. The alternative — capturing that camera as a render-time side effect, a
+ * per-frame byte snapshot stashed onto engine state for the pick pass to
+ * replay — braids the pick camera into frame ordering: the pick pass can only
+ * run if a visual frame has already stashed, and "what camera does the pick
+ * use?" has no value you can name, only a buffer that must be populated at
+ * the right moment.
  *
- * `pickFrameContext` replaces the stash with a plain derivation: it re-derives a
- * full `ReadyFrameContext` from the pose the last frame actually rendered
+ * `pickFrameContext` is a plain derivation instead: it re-derives a full
+ * `ReadyFrameContext` from the pose the last frame actually rendered
  * (`state.cameraRuntime.lastPose.current`) and the live projection
- * (`state.cameraRuntime.projection`). The result is the exact same camera the
- * stashed bytes encoded — `lastPose.current` is the produced pose of the last
- * frame (see `CameraRuntime.d.ts`), the value `runFrame` fed into that frame's
- * `deriveFrameContext` — but now it is a value the pick path can ask for on
- * demand, independent of whether a visual frame just ran.
+ * (`state.cameraRuntime.projection`). `lastPose.current` is the produced pose
+ * of the last frame (see `CameraRuntime.d.ts`), the value `runFrame` fed into
+ * that frame's `deriveFrameContext` — so the pick camera matches the frame on
+ * screen exactly, yet it is a value the pick path can ask for on demand,
+ * independent of whether a visual frame just ran.
  *
  * ### Why the pick mask, not the draw mask
  *
@@ -61,8 +60,8 @@ export function pickFrameContext(
     state,
     canvas,
     // The pose the last frame actually rendered — the same value that frame's
-    // `deriveFrameContext` received, and the same value the render-time byte
-    // stash encoded.
+    // `deriveFrameContext` received, so the pick camera matches the frame on
+    // screen.
     state.cameraRuntime.lastPose.current,
     state.cameraRuntime.projection,
     // Pick mask, not draw mask: pickability follows intent (see docblock).

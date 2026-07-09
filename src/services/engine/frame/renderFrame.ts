@@ -39,8 +39,9 @@
  * ### What stays in `runFrame()` (NOT here)
  *
  *   - `drawPickDebugOverlay` — composites the pick-buffer debug overlay over the
- *     swap chain using its own encoder/submit (AFTER this function's submit), so
- *     it can read `state.picking.lastFrameUniformBytes`.
+ *     swap chain using its own encoder/submit (AFTER this function's submit); it
+ *     rebuilds the pick uniform bytes at pick time from the slab view (see
+ *     `pickUniformBytesOf`).
  *   - The render-on-demand scheduler decision.
  *   - Camera state mutation (resize, tween advance, auto-rotate yaw bump).
  */

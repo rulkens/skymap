@@ -17,9 +17,8 @@ export type ClickResolveInput = {
    */
   pointSizePx: number;
   /**
-   * Packed uniform bytes from the last visual frame — the value
-   * `pointRenderer.draw()` returned and was stashed on
-   * `state.picking.lastFrameUniformBytes`.  Forwarded verbatim to
+   * Packed uniform bytes for the pick frame, built at pick time from the
+   * slab view (see `pickUniformBytesOf`).  Forwarded verbatim to
    * `pickRenderer.pick` so the pick pass reproduces the last frame's
    * camera state without re-running the camera drivers or touching the
    * visual pass's GPU buffer.  Required: the new `pick()` signature no

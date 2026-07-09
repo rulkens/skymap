@@ -239,7 +239,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // tracks its own `latest`/`picked` locals.
       pickInFlight: false,
       pointerDown: false,
-      lastFrameUniformBytes: null,
       lastFrameCam: null,
     },
     gpu: {

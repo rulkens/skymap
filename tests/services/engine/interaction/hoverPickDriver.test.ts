@@ -102,7 +102,8 @@ const emptyTargets: PickTargets = {
   hasAny: false,
 };
 
-// A dummy ArrayBuffer representing packed uniform bytes (non-null → first frame ran).
+// A dummy ArrayBuffer representing the packed uniform bytes the deps thunk
+// builds at pick time (non-null → the engine is ready to pick).
 const dummyUniformBytes = new ArrayBuffer(176);
 
 // A reusable PickStructureStore stub (resolvePick only needs `byCategory`).
@@ -120,7 +121,6 @@ let picker: ReturnType<typeof makeFakePicker>;
 let pickingState: {
   pickInFlight: boolean;
   pointerDown: boolean;
-  lastFrameUniformBytes: ArrayBuffer | null;
   lastFrameCam: PickFrameCam | null;
 };
 let dispatchSpy: ReturnType<typeof vi.fn<(action: unknown) => void>>;
@@ -132,7 +132,6 @@ beforeEach(() => {
   pickingState = {
     pickInFlight: false,
     pointerDown: false,
-    lastFrameUniformBytes: dummyUniformBytes,
     lastFrameCam: null,
   };
 

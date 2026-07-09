@@ -11,18 +11,17 @@
  *   - `pointerDown` — true while the user is dragging to orbit the
  *                      camera; the `hoverPickDriver` skips picks while
  *                      dragging to avoid a pick storm.
- *   - `lastFrameUniformBytes` — packed camera + settings snapshot from the
- *                       last visual frame; the hover-pick driver and the
- *                       click resolver both upload this to the pick
- *                       renderer's own buffer so a pick reproduces the
- *                       last frame's camera state without re-running the
- *                       per-frame camera drivers.  Null until the first
- *                       frame.
- *   - `lastFrameCam` — the same frame's camera position + fovY in plain-TS
- *                       form, for the CPU-side Milky-Way pick helpers
- *                       (gate + billboard size).  Same stash site and
- *                       cadence as `lastFrameUniformBytes`, so every pick
- *                       input agrees on one camera.
+ *   - `lastFrameCam` — the last visual frame's camera position + fovY in
+ *                       plain-TS form, for the CPU-side Milky-Way pick
+ *                       helpers (gate + billboard size).  Stashed by the
+ *                       point-sprites pass so those helpers answer for the
+ *                       camera the pick pass replays rather than the
+ *                       lagging `state.cam` drag register.  Null until the
+ *                       first frame.
+ *
+ * The point pick pass no longer reads a stashed uniform buffer — it
+ * rebuilds its own bytes from plain values at pick time (see
+ * `pickUniformBytesOf`), so nothing camera-shaped for the GPU lives here.
  *
  * ### What used to live here but doesn't anymore
  *
@@ -59,18 +58,10 @@ export type EnginePickingState = {
    */
   pointerDown: boolean;
   /**
-   * Packed PointUniforms image from the last visual frame (see
-   * packPointUniforms). The pick paths upload this to the pick renderer's
-   * own buffer so a pick reproduces the last frame's camera without
-   * re-running the per-frame camera drivers. Null until the first frame.
-   */
-  lastFrameUniformBytes: ArrayBuffer | null;
-  /**
-   * Camera position + fovY from the same visual frame, stashed on the same
-   * cadence as `lastFrameUniformBytes` (same write site, same frame). The
-   * Milky-Way pick helpers read this instead of the `state.cam` drag
-   * register so the pick gate and pick-billboard size agree with the frame
-   * the pick pass renders. Null until the first frame.
+   * Camera position + fovY from the last visual frame, stashed by the
+   * point-sprites pass. The Milky-Way pick helpers read this instead of the
+   * `state.cam` drag register so the pick gate and pick-billboard size agree
+   * with the frame the pick pass replays. Null until the first frame.
    */
   lastFrameCam: PickFrameCam | null;
 };

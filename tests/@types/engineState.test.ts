@@ -142,7 +142,6 @@ describe('EngineState type', () => {
     const picking: EnginePickingState = {
       pickInFlight: false,
       pointerDown: false,
-      lastFrameUniformBytes: null,
       lastFrameCam: null,
     };
 
@@ -408,7 +407,6 @@ describe('EngineState type', () => {
       picking: {
         pickInFlight: false,
         pointerDown: false,
-        lastFrameUniformBytes: null,
         lastFrameCam: null,
       },
       gpu: {
