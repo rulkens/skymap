@@ -1,7 +1,11 @@
 # DESI patches — a patch table for different ways to drill through the data
 
-**Date:** 2026-07-09 (amended same day: third patch — Sloan Great Wall box)
-**Status:** Implemented on `feat/desi-wedge` — wedge shipped first, SGW box stacked on top
+**Date:** 2026-07-09 (amended same day: SGW patch, then collapsed box→sculpt)
+**Status:** SHIPPED — PR #421. Three patches: cone (#417), wedge, and the
+Sloan Great Wall. The SGW began as an RA×dec×z box, gained a sculpted
+ellipsoid-union sibling for A/B, and collapsed to the sculpt alone (the box
+geometry + `makeRaDecZBoxFilter` were dropped). A DESI g−r colour-range
+recalibration (0.2–1.8 → 0.35–1.05) landed in the same PR.
 **Prerequisite:** the shipped DESI deep cone (`docs/superpowers/specs/completed/2026-07-07-desi-deep-cone-design.md`, PR #417)
 
 ## Goal
