@@ -1,12 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
-import {
-  SELECTED_PACKED_BYTE_OFFSET,
-  POINT_SIZE_BYTE_OFFSET,
-  PICK_PASS_BYTE_OFFSET,
-  UNIFORM_BYTES,
-} from '../../../../src/services/gpu/renderers/pointRenderer';
-import { SELECTION_NONE_SENTINEL } from '../../../../src/data/selectionEncoding';
+import { UNIFORM_BYTES } from '../../../../src/services/gpu/renderers/pointRenderer';
 import { Source } from '../../../../src/data/sources';
 
 // A minimal stub device with a tracked writeBuffer — allows assertions
@@ -107,13 +101,14 @@ describe('createPickRenderer', () => {
     expect(typeof pickRenderer.destroy).toBe('function');
   });
 
-  it('drawPoints applies the three pick overrides to its OWN buffer only', () => {
+  it('drawPoints uploads the caller bytes VERBATIM to its OWN buffer — no post-upload patching', () => {
     // drawPoints is the point-pick draw surface: it uploads the caller's
-    // uniform bytes to the renderer's OWN pickUniformBuffer, then applies the
-    // three pick-specific overrides (selectedPacked sentinel, padded
-    // pointSizePx, pickPass=1).  This is the decoupling invariant: the visual
-    // pass's GPU buffer is never touched — every writeBuffer targets the OWN
-    // buffer, so there is no two-writer hazard and no cross-frame cleanup.
+    // already-pick-shaped uniform bytes to the renderer's OWN pickUniformBuffer
+    // and does nothing else to it. The pick byte-shaping (sentinel, padded
+    // size, pickPass=1) lives in `pickUniformBytesOf`, so there are NO
+    // post-upload overrides here. Two decoupling invariants asserted together:
+    //   1. a single writeBuffer at offset 0 (verbatim upload, no patch writes);
+    //   2. it targets the OWN buffer — the visual pass's buffer is never touched.
     const { device, writeBufferCalls, getOwnPickBuffer } = makeStubDevice();
     const pickRenderer = createPickRenderer(
       device,
@@ -128,7 +123,7 @@ describe('createPickRenderer', () => {
 
     writeBufferCalls.length = 0; // clear construction calls
 
-    const pointSizePx = 3.5;
+    const uniformBytes = makeUniformBytes();
     pickRenderer.drawPoints(
       makeStubPass(),
       [
@@ -139,33 +134,15 @@ describe('createPickRenderer', () => {
           sourceBuffer: {} as GPUBuffer,
         },
       ],
-      pointSizePx,
-      makeUniformBytes(),
+      uniformBytes,
     );
 
-    // Every writeBuffer targets the OWN pick buffer — never an external one.
-    expect(writeBufferCalls.length).toBeGreaterThan(0);
-    for (const call of writeBufferCalls) {
-      expect(call.buffer).toBe(ownPickBuffer);
-    }
-
-    // Full upload at offset 0.
-    expect(writeBufferCalls.find((c) => c.offset === 0)).toBeDefined();
-
-    // selectedPacked → none-sentinel.
-    const selectedCall = writeBufferCalls.find((c) => c.offset === SELECTED_PACKED_BYTE_OFFSET);
-    expect(selectedCall).toBeDefined();
-    expect((selectedCall!.data as Uint32Array)[0]).toBe(SELECTION_NONE_SENTINEL);
-
-    // pointSizePx + PICK_PADDING_PX (4 px).
-    const sizeCall = writeBufferCalls.find((c) => c.offset === POINT_SIZE_BYTE_OFFSET);
-    expect(sizeCall).toBeDefined();
-    expect((sizeCall!.data as Float32Array)[0]).toBeCloseTo(pointSizePx + 4);
-
-    // pickPass = 1.
-    const pickPassCall = writeBufferCalls.find((c) => c.offset === PICK_PASS_BYTE_OFFSET);
-    expect(pickPassCall).toBeDefined();
-    expect((pickPassCall!.data as Uint32Array)[0]).toBe(1);
+    // Exactly one writeBuffer: the verbatim upload at offset 0 to the OWN
+    // buffer, carrying the caller's bytes unchanged.
+    expect(writeBufferCalls).toHaveLength(1);
+    expect(writeBufferCalls[0]!.offset).toBe(0);
+    expect(writeBufferCalls[0]!.buffer).toBe(ownPickBuffer);
+    expect(writeBufferCalls[0]!.data).toBe(uniformBytes);
   });
 
   it('bindCamera re-binds @group(0) to the pick uniform bind group', () => {
@@ -238,7 +215,7 @@ describe('createPickRenderer', () => {
       draw: vi.fn(),
     } as unknown as GPURenderPassEncoder;
 
-    pickRenderer.drawPoints(pass, [], 2.5, makeUniformBytes());
+    pickRenderer.drawPoints(pass, [], makeUniformBytes());
 
     // Camera uniform uploaded at offset 0 to the OWN buffer — no sources needed.
     const fullUpload = writeBufferCalls.find((c) => c.offset === 0);
@@ -318,7 +295,6 @@ describe('createPickRenderer', () => {
         { source: Source.SDSS, vertexBuffer: vbA, count: 10, sourceBuffer: sourceBufA },
         { source: Source.TwoMRS, vertexBuffer: vbB, count: 20, sourceBuffer: sourceBufB },
       ],
-      2.5,
       makeUniformBytes(),
     );
 

@@ -297,12 +297,12 @@ export function createPickProgram(deps: {
 
 **Files:** `src/services/gpu/renderers/pickRenderer.ts`, `src/@types/rendering/PickRenderer.d.ts`, `src/services/engine/phases/wireInput.ts`, `src/services/engine/helpers/collectPickTargets.ts` (delete), `tests/services/engine/helpers/collectPickTargets.test.ts` (delete), `tests/services/gpu/renderers/pickRenderer*.test.ts`
 
-- [ ] `pickRenderer` becomes the point-pick draw provider only: delete `pick()`, `renderForDebug()`, `recordPickPass`'s fold-in tail, `hasAnyPickTarget`, the textures/depth/staging/`ensureTextures`/`inFlight`/`destroyed` machinery, and the `structureMarkerRenderer` / `proceduralDiskRenderer` / `milkyWayPickRenderer` / `mwHalfExtentPx` constructor params (their `wireInput.ts:79-98` wiring goes too). Surface: `{ label, drawPoints, destroy }`. Rewrite the module + type docblocks (timeless).
-- [ ] Delete `collectPickTargets` + its test — the mask filter lives in pointSprites' `drawPick` (Task 8), the `hasAny` rule in the program's registry filter (Task 9). `milkyWayPickVisible` **stays** (consumed by `milkyWayPickHalfExtentPx`).
-- [ ] Port the still-relevant `pickRenderer.test.ts` / `.structure` / `.diskPick` cases to `drawPoints`/`pickProgram` suites; delete the rest (in-flight, empty-source-null, MW-gating cases now live in `pickProgram.test.ts`).
-- [ ] Grep for dangling imports (`collectPickTargets`, `renderForDebug`, `PickSourceDraw` docs) and sweep comments in every touched file.
-- [ ] `npm test` + `npm run typecheck` → green; prettier the touched files.
-- [ ] Commit the touched paths (deletions staged explicitly).
+- [x] `pickRenderer` becomes the point-pick draw provider only: delete `pick()`, `renderForDebug()`, `recordPickPass`'s fold-in tail, `hasAnyPickTarget`, the textures/depth/staging/`ensureTextures`/`inFlight`/`destroyed` machinery, and the `structureMarkerRenderer` / `proceduralDiskRenderer` / `milkyWayPickRenderer` / `mwHalfExtentPx` constructor params (their `wireInput.ts:79-98` wiring goes too). Surface: `{ label, drawPoints, destroy }`. Rewrite the module + type docblocks (timeless).
+- [x] Delete `collectPickTargets` + its test — the mask filter lives in pointSprites' `drawPick` (Task 8), the `hasAny` rule in the program's registry filter (Task 9). `milkyWayPickVisible` **stays** (consumed by `milkyWayPickHalfExtentPx`).
+- [x] Port the still-relevant `pickRenderer.test.ts` / `.structure` / `.diskPick` cases to `drawPoints`/`pickProgram` suites; delete the rest (in-flight, empty-source-null, MW-gating cases now live in `pickProgram.test.ts`).
+- [x] Grep for dangling imports (`collectPickTargets`, `renderForDebug`, `PickSourceDraw` docs) and sweep comments in every touched file.
+- [x] `npm test` + `npm run typecheck` → green; prettier the touched files.
+- [x] Commit the touched paths (deletions staged explicitly).
 
 ### Task 12: Gate — radar pass + user visual gate
 

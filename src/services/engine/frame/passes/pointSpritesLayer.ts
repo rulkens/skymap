@@ -150,11 +150,6 @@ export const pointSpritesLayer: ContentLayer = {
     const sources = Array.from(ctx.renderer.loadedSources()).filter(
       (s) => ((ctx.visibleSourceMask >> s.source) & 1) !== 0,
     );
-    state.gpu.pickRenderer.drawPoints(
-      pass,
-      sources,
-      state.settings.galaxyCatalogs.sizePx,
-      pickUniformBytesOf(view, ctx, state),
-    );
+    state.gpu.pickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
   },
 };

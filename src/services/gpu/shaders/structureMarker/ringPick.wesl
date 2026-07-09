@@ -19,8 +19,8 @@
 // The visible ring is ~2-3 px thick.  Asking the user to click that
 // precise band is hostile.  Instead the pick fragment renders a FILLED
 // disk at the ring's radius plus PICK_PADDING_PX (matches the galaxy
-// path's PICK_PADDING_PX in pickRenderer.ts — see that constant's doc
-// for the empirical 4-px rationale).  Inside the disk: write the
+// path's PICK_PADDING_PX in data/pickPaddingPx.ts — see that constant's
+// doc for the empirical 4-px rationale).  Inside the disk: write the
 // packed identity.  Outside: discard.
 //
 // Why discard rather than write 0: the pick texture is cleared to 0

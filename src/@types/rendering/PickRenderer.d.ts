@@ -22,21 +22,20 @@ export type PickRenderer = {
   /**
    * Record the point-pick draw into an already-begun render pass.
    *
-   * Uploads `uniformBytes` to the renderer's OWN pick uniform buffer, applies
-   * the three pick-specific overrides (selectedPacked sentinel, padded
-   * pointSizePx, pickPass = 1), binds `@group(0)` (camera), `@group(1)`
-   * (dummy fade), `@group(3)` (focus), then issues one instanced draw per
-   * source.  The caller owns `beginRenderPass` / `pass.end()`.
+   * Uploads `uniformBytes` VERBATIM to the renderer's OWN pick uniform buffer,
+   * binds `@group(0)` (camera), `@group(1)` (dummy fade), `@group(3)` (focus),
+   * then issues one instanced draw per source.  The caller owns
+   * `beginRenderPass` / `pass.end()`.
    *
    * ### Uniform buffer contract
    *
    * The visual pass's GPU buffer is NEVER touched — there is no shared
    * buffer, no two-writer hazard, and no dependency on frame ordering.
-   * `uniformBytes` is built at pick time from the slab view (see
-   * `pickUniformBytesOf`), so it matches the visual byte layout without a
-   * cross-frame stash.  The `pointSizePx` argument is padded internally by
-   * `PICK_PADDING_PX` so distant point-like galaxies have a wider hit-test
-   * area without growing the visible sprites.
+   * `uniformBytes` is the COMPLETE, already-pick-shaped image built at pick
+   * time from the slab view (see `pickUniformBytesOf` — none-selection
+   * sentinel, `+PICK_PADDING_PX` point size, and `pickPass = 1` all baked in),
+   * so this method uploads it as-is with no post-upload patching. The pick
+   * byte-shaping lives in one place, the pick packer.
    *
    * ### @group(0) prefix contract
    *
@@ -51,13 +50,12 @@ export type PickRenderer = {
    *                     catalog, in `Source` enum order.  The caller filters
    *                     by visibility mask — the picker draws every record it
    *                     receives.
-   * @param pointSizePx  The user's point-size setting; padded internally.
-   * @param uniformBytes Packed uniform bytes for the pick frame.
+   * @param uniformBytes The complete pick-shaped uniform bytes for the pick
+   *                     frame (see `pickUniformBytesOf`).
    */
   drawPoints(
     pass: GPURenderPassEncoder,
     sources: readonly PickSourceDraw[],
-    pointSizePx: number,
     uniformBytes: ArrayBuffer,
   ): void;
 

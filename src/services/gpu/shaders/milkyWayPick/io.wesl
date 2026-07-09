@@ -59,9 +59,10 @@ import package::lib::camera::CameraUniforms;
 //   permits: a uniform binding may be bigger than the declared struct.
 //
 // 'pointSizePx' in the PICK buffer is already the pick-widened value —
-// the CPU overrides the slot to (sizePx + PICK_PADDING_PX) before the
-// pass (pickRenderer.ts) — so using it as the MW floor gives the MW the
-// same padded minimum every pick point gets.
+// the pick pack bakes (sizePx + PICK_PADDING_PX) into the slot
+// (pickUniformBytesOf; PICK_PADDING_PX lives in data/pickPaddingPx.ts) —
+// so using it as the MW floor gives the MW the same padded minimum every
+// pick point gets.
 struct Uniforms {
   cam: CameraUniforms,
   selectedPacked: u32,

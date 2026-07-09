@@ -10,12 +10,11 @@
  *
  * The pick pipeline owns its OWN uniform buffer (`pickUniformBuffer`,
  * allocated at construction). `drawPoints` receives the caller's
- * `uniformBytes` — built at pick time from the slab view via
- * `pickUniformBytesOf`, which delegates to the same `packPointUniforms` the
- * visual pass uses — uploads them in full, then applies three pick-specific
- * overrides (selectedPacked sentinel, padded pointSizePx, pickPass = 1) on
- * top. The visual pass's GPU buffer is NEVER touched; two-writer corruption
- * is gone.
+ * `uniformBytes` — the COMPLETE, already-pick-shaped image built at pick time
+ * from the slab view via `pickUniformBytesOf` (none-selection sentinel, padded
+ * point size, `pickPass = 1` all baked in) — and uploads them VERBATIM. No
+ * post-upload patching: the byte-shaping has one home, the pick packer. The
+ * visual pass's GPU buffer is NEVER touched; two-writer corruption is gone.
  *
  * Depth (`depth24plus`, `less`, write-enabled) resolves overlapping
  * billboards so the front-most wins, matching visual occlusion. The visual
@@ -36,26 +35,10 @@ import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import {
-  POINT_STRIDE,
-  POINT_VERTEX_ATTRIBUTES,
-  SELECTED_PACKED_BYTE_OFFSET,
-  POINT_SIZE_BYTE_OFFSET,
-  PICK_PASS_BYTE_OFFSET,
-  UNIFORM_BYTES,
-} from './pointRenderer';
+import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES, UNIFORM_BYTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
-
-/**
- * Extra pixels added to `pointSizePx` for the pick pass.  Widens the
- * click target for distant point-like galaxies (5 px-diameter dots at
- * the default 2.5 px floor → ~9 px with padding) without growing the
- * visible sprites.  Additive so it scales with the user's slider.
- */
-const PICK_PADDING_PX = 4;
 
 /**
  * Construct a `PickRenderer` bound to `device`.  The renderer owns its own
@@ -163,9 +146,9 @@ export function createPickRenderer(
   });
 
   // The pick renderer's own uniform buffer.  `drawPoints` uploads the
-  // caller's `uniformBytes` (built at pick time from the slab view) here and
-  // then applies the three pick-specific overrides on top — the visual
-  // pass's GPU buffer is never touched.
+  // caller's `uniformBytes` (the complete, already-pick-shaped image built at
+  // pick time from the slab view) here verbatim — the visual pass's GPU
+  // buffer is never touched.
   // Why own the buffer rather than sharing?  Two writers on one buffer
   // is the bug this design deletes: pick would scribble on the visual
   // uniforms and rely on the next render frame to undo the damage.
@@ -190,11 +173,12 @@ export function createPickRenderer(
    * Record the point-pick draw into an already-begun render pass — the
    * point half of the pick pass, callable as a `drawPick` layer surface.
    *
-   * `uniformBytes` is built at pick time from the slab view (see
-   * `pickUniformBytesOf`); it is uploaded verbatim to the renderer's
-   * OWN `pickUniformBuffer`, then the three pick-specific fields are
-   * overridden in place.  The caller owns the pass lifecycle
-   * (`beginRenderPass` / `pass.end()`).
+   * `uniformBytes` is the COMPLETE, already-pick-shaped image built at pick
+   * time from the slab view (see `pickUniformBytesOf` — none-selection
+   * sentinel, padded point size, `pickPass = 1` all baked in); it is uploaded
+   * VERBATIM to the renderer's OWN `pickUniformBuffer` with no post-upload
+   * patching.  The caller owns the pass lifecycle (`beginRenderPass` /
+   * `pass.end()`).
    *
    * `@group(0)` prefix contract: any sibling pick pipeline that reads the
    * point pick uniform via the caller-bound `@group(0)` CameraUniforms
@@ -210,33 +194,13 @@ export function createPickRenderer(
   function drawPoints(
     pass: GPURenderPassEncoder,
     sources: readonly PickSourceDraw[],
-    pointSizePx: number,
     uniformBytes: ArrayBuffer,
   ): void {
-    // Full upload: reproduce the rendered camera / viewport / settings
-    // state on the pick renderer's OWN buffer.  The visual
-    // pass's GPU buffer is never touched — this is the invariant that
-    // eliminates the two-writer bug.
+    // Verbatim upload: the caller's bytes are already the complete pick image
+    // (pickUniformBytesOf shaped them).  Write them to the pick renderer's OWN
+    // buffer — the visual pass's GPU buffer is never touched, the invariant
+    // that eliminates the two-writer bug.
     device.queue.writeBuffer(pickUniformBuffer, 0, uniformBytes);
-
-    // Three pick-specific overrides applied on top of the base upload:
-    //   - `selectedPacked` → none-sentinel: stops the 8× selection-ring
-    //     scaling from inflating the hit area for the selected galaxy.
-    //   - `pointSizePx` + PICK_PADDING_PX: widens click targets for
-    //     far-field point-like galaxies without growing visible sprites.
-    //   - `pickPass` = 1: shared vertex shader skips crossfade-OUT and
-    //     intensity-floor culls so disk-sized galaxies stay pickable.
-    device.queue.writeBuffer(
-      pickUniformBuffer,
-      SELECTED_PACKED_BYTE_OFFSET,
-      new Uint32Array([SELECTION_NONE_SENTINEL]),
-    );
-    device.queue.writeBuffer(
-      pickUniformBuffer,
-      POINT_SIZE_BYTE_OFFSET,
-      new Float32Array([pointSizePx + PICK_PADDING_PX]),
-    );
-    device.queue.writeBuffer(pickUniformBuffer, PICK_PASS_BYTE_OFFSET, new Uint32Array([1]));
 
     // Bind the prebuilt @group(0) bind group (built once at construction
     // against pickUniformBuffer — avoids per-draw createBindGroup calls).
