@@ -26,6 +26,5 @@ describe('galaxyCatalogIdOf', () => {
     expect(galaxyCatalogIdOf(Source.DesiDeep)).toBe('desiDeep');
     expect(galaxyCatalogIdOf(Source.DesiWedge)).toBe('desiWedge');
     expect(galaxyCatalogIdOf(Source.DesiSgw)).toBe('desiSgw');
-    expect(galaxyCatalogIdOf(Source.DesiSgwShape)).toBe('desiSgwShape');
   });
 });

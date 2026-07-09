@@ -7,8 +7,9 @@ export const DESI_SGW_ENTRY = {
   id: 'desiSgw',
   label: 'Sloan Great Wall',
   binBaseName: 'desi-sgw',
-  // A depth-bounded RA×Dec×redshift box around the Sloan Great Wall, not a
-  // full-sky catalog — the camera-framing / all-sky treatment other bulk galaxy
+  // A depth-bounded selection around the Sloan Great Wall — a smooth union of
+  // ellipsoids on the wall's density peaks (see `makeEllipsoidUnionFilter`), not
+  // a full-sky catalog. The camera-framing / all-sky treatment other bulk galaxy
   // catalogs get would be misleading for a source that is one floating volume
   // in one slice of sky.
   allSky: false,
@@ -20,8 +21,8 @@ export const DESI_SGW_ENTRY = {
   // is a specialist overlay, not part of the all-sky default scene the other
   // bulk catalogs populate. The GalaxiesSection toggle is the opt-in.
   visible: false,
-  // Pure BGS by geometry: LRG/ELG/QSO contribute nothing at z<0.1, so the box
-  // holds only Bright Galaxy Sample rows, topping out at z ≈ 0.095 (~400 Mpc of
+  // Pure BGS by geometry: LRG/ELG/QSO contribute nothing at z<0.1, so the
+  // selection holds only Bright Galaxy Sample rows, topping out at z ≈ 0.095 (~400 Mpc of
   // line-of-sight comoving distance under the pipeline's flat-ΛCDM conversion).
   // The generous ceiling is the shared DESI-patch camera clamp; a source this
   // shallow never reaches it, so there's nothing patch-specific to tune here.
@@ -37,7 +38,7 @@ export const DESI_SGW_ENTRY = {
   // cone/wedge and puts the green-valley (g−r ≈ 0.7) at the ramp's white
   // midpoint so the blue cloud renders blue and the red sequence red. The
   // earlier 0.2–1.8 span compressed ~99% of real BGS galaxies into the ramp's
-  // blue half. kPerZ is 0: the box spans only z ≈ 0.055–0.095, a thin enough
+  // blue half. kPerZ is 0: the wall spans only z ≈ 0.055–0.095, a thin enough
   // shell that a K-correction coefficient would barely move the ramp.
   colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.35, rangeMax: 1.05, kPerZ: 0.0 },
   // BGS_BRIGHT's r-band selection limit (r < 19.5); the box is pure BGS, so
@@ -52,7 +53,7 @@ export const DESI_SGW_ENTRY = {
   // the way SDSS/2MASX/GLADE have one; 'DESI' matches the survey's own name.
   iauPrefix: 'DESI',
   // Empty ⇒ tier-agnostic single desi-sgw.bin shared across tiers, like 2mrs.bin
-  // and the other DESI patches — the box is already a curated row count (a
+  // and the other DESI patches — the selection is already a curated row count (a
   // bounded volume, not a bulk all-sky catalog), so there's no need to
   // subsample per tier.
   tierTargets: {},

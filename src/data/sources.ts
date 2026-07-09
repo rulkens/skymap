@@ -61,7 +61,6 @@ import { FLOW_ENTRY } from './sources/flow';
 import { DESI_DEEP_ENTRY } from './sources/desiDeep';
 import { DESI_WEDGE_ENTRY } from './sources/desiWedge';
 import { DESI_SGW_ENTRY } from './sources/desiSgw';
-import { DESI_SGW_SHAPE_ENTRY } from './sources/desiSgwShape';
 
 export { Source } from './source';
 
@@ -115,7 +114,6 @@ export const SOURCE_REGISTRY = {
   [Source.DesiDeep]: DESI_DEEP_ENTRY,
   [Source.DesiWedge]: DESI_WEDGE_ENTRY,
   [Source.DesiSgw]: DESI_SGW_ENTRY,
-  [Source.DesiSgwShape]: DESI_SGW_SHAPE_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
@@ -171,5 +169,4 @@ export const GALAXY_CATALOG_SOURCES: readonly SourceType[] = [
   Source.DesiDeep,
   Source.DesiWedge,
   Source.DesiSgw,
-  Source.DesiSgwShape,
 ];

@@ -17,10 +17,10 @@
  *    parsed float value.
  *
  * Source codes from `src/data/source.ts`:
- *   SDSS=1, TwoMRS=2, Glade=3, FamousGalaxy=4, Milliquas=8, DesiDeep=18, DesiWedge=19, DesiSgw=20, DesiSgwShape=21
+ *   SDSS=1, TwoMRS=2, Glade=3, FamousGalaxy=4, Milliquas=8, DesiDeep=18, DesiWedge=19, DesiSgw=20
  *
- * TOGGLEABLE_SOURCES = [FamousGalaxy(4), TwoMRS(2), SDSS(1), Glade(3), Milliquas(8), DesiDeep(18), DesiWedge(19), DesiSgw(20), DesiSgwShape(21)]
- * All-on mask = (1<<4)|(1<<2)|(1<<1)|(1<<3)|(1<<8)|(1<<18)|(1<<19)|(1<<20)|(1<<21)
+ * TOGGLEABLE_SOURCES = [FamousGalaxy(4), TwoMRS(2), SDSS(1), Glade(3), Milliquas(8), DesiDeep(18), DesiWedge(19), DesiSgw(20)]
+ * All-on mask = (1<<4)|(1<<2)|(1<<1)|(1<<3)|(1<<8)|(1<<18)|(1<<19)|(1<<20)
  * Partial mask (only SDSS + TwoMRS on): (1<<1)|(1<<2) = 6
  * None-on mask: 0
  */
@@ -34,7 +34,7 @@ import type { BiasMode as BiasModeT } from '../../../src/@types/data/galaxyCatal
 import type { SourceType } from '../../../src/@types/data/SourceType';
 import { Source } from '../../../src/data/source';
 
-// All TOGGLEABLE_SOURCES bits set: FamousGalaxy(4)|TwoMRS(2)|SDSS(1)|Glade(3)|Milliquas(8)|DesiDeep(18)|DesiWedge(19)|DesiSgw(20)|DesiSgwShape(21)
+// All TOGGLEABLE_SOURCES bits set: FamousGalaxy(4)|TwoMRS(2)|SDSS(1)|Glade(3)|Milliquas(8)|DesiDeep(18)|DesiWedge(19)|DesiSgw(20)
 const ALL_ON_MASK =
   (1 << 4) |
   (1 << 2) |
@@ -43,8 +43,7 @@ const ALL_ON_MASK =
   (1 << 8) |
   (1 << 18) |
   (1 << 19) |
-  (1 << 20) |
-  (1 << 21);
+  (1 << 20);
 // Only SDSS + TwoMRS — a strict subset → should produce indeterminate
 const PARTIAL_MASK = (1 << Source.SDSS) | (1 << Source.TwoMRS);
 
@@ -149,26 +148,11 @@ describe('GalaxiesSection', () => {
         `#toggle-source-${Source.DesiSgw}`,
       );
       expect(sgwCheckbox).not.toBeNull();
-      // DesiSgw's bit is part of ALL_ON_MASK, so the box renders checked.
+      // DesiSgw's bit is part of ALL_ON_MASK, so the row renders checked.
       expect(sgwCheckbox!.checked).toBe(true);
       const sgwLabel = container.querySelector(`label[for="toggle-source-${Source.DesiSgw}"]`);
       expect(sgwLabel).not.toBeNull();
       expect(sgwLabel!.textContent).toContain('Sloan Great Wall');
-    });
-
-    it('renders a checkbox row for the sculpted Sloan Wall', () => {
-      const { container } = render(createElement(GalaxiesSection, baseProps()));
-      const shapeCheckbox = container.querySelector<HTMLInputElement>(
-        `#toggle-source-${Source.DesiSgwShape}`,
-      );
-      expect(shapeCheckbox).not.toBeNull();
-      // DesiSgwShape's bit is part of ALL_ON_MASK, so the row renders checked.
-      expect(shapeCheckbox!.checked).toBe(true);
-      const shapeLabel = container.querySelector(
-        `label[for="toggle-source-${Source.DesiSgwShape}"]`,
-      );
-      expect(shapeLabel).not.toBeNull();
-      expect(shapeLabel!.textContent).toContain('Sloan Wall (sculpted)');
     });
   });
 
@@ -223,8 +207,8 @@ describe('GalaxiesSection', () => {
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
 
-      // Should call once per TOGGLEABLE_SOURCE (9 sources), each with true
-      expect(onToggleSource).toHaveBeenCalledTimes(9);
+      // Should call once per TOGGLEABLE_SOURCE (8 sources), each with true
+      expect(onToggleSource).toHaveBeenCalledTimes(8);
       expect(onToggleSource).toHaveBeenCalledWith(Source.FamousGalaxy, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.TwoMRS, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, true);
@@ -233,7 +217,6 @@ describe('GalaxiesSection', () => {
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiDeep, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiWedge, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiSgw, true);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiSgwShape, true);
     });
 
     it('calls onToggleSource with false for all TOGGLEABLE_SOURCES when master is toggled from allOn', () => {
@@ -247,13 +230,12 @@ describe('GalaxiesSection', () => {
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
 
-      expect(onToggleSource).toHaveBeenCalledTimes(9);
+      expect(onToggleSource).toHaveBeenCalledTimes(8);
       expect(onToggleSource).toHaveBeenCalledWith(Source.FamousGalaxy, false);
       expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, false);
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiDeep, false);
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiWedge, false);
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiSgw, false);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiSgwShape, false);
     });
   });
 });

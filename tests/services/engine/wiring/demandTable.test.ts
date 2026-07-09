@@ -165,7 +165,7 @@ const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = seedVolumeFields();
  * Default-at-boot galaxy catalog items, matching the engine's construction
  * seed: each row's `enabled` comes from its SOURCE_REGISTRY entry's `visible`
  * field — true for every galaxy catalog except the DESI patches
- * (DesiDeep / DesiWedge / DesiSgw / DesiSgwShape).
+ * (DesiDeep / DesiWedge / DesiSgw).
  */
 const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   synthetic: { enabled: true },
@@ -174,7 +174,7 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   glade: { enabled: true },
   famousGalaxy: { enabled: true },
   milliquas: { enabled: true },
-  // DesiDeep + DesiWedge + DesiSgw + DesiSgwShape boot hidden (SOURCE_REGISTRY
+  // DesiDeep + DesiWedge + DesiSgw boot hidden (SOURCE_REGISTRY
   // visible:false — specialist DESI drill patches, not part of the default
   // all-sky scene), so the construction seed lands their enabled bits false and
   // their ASSET_WIRING point rows are NOT demanded at boot. Symmetric with
@@ -183,7 +183,6 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   desiDeep: { enabled: false },
   desiWedge: { enabled: false },
   desiSgw: { enabled: false },
-  desiSgwShape: { enabled: false },
 };
 
 // ── Stub state builder ───────────────────────────────────────────────────────
@@ -224,7 +223,6 @@ const ALL_POINT_SOURCES: readonly SourceType[] = [
   Source.DesiDeep,
   Source.DesiWedge,
   Source.DesiSgw,
-  Source.DesiSgwShape,
   Source.Synthetic,
 ];
 

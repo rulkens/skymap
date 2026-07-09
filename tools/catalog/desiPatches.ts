@@ -21,7 +21,6 @@ import type { SourceType } from '../../src/@types/data/SourceType';
 import { Source } from '../../src/data/sources';
 import { makeConeFilter } from '../utils/math/makeConeFilter';
 import { makeDecBandFilter } from '../utils/math/makeDecBandFilter';
-import { makeRaDecZBoxFilter } from '../utils/math/makeRaDecZBoxFilter';
 import { makeEllipsoidUnionFilter } from '../utils/math/makeEllipsoidUnionFilter';
 
 /**
@@ -42,8 +41,8 @@ import { makeEllipsoidUnionFilter } from '../utils/math/makeEllipsoidUnionFilter
  *                    `(raDeg, decDeg, z)` so a patch can bound the LINE OF SIGHT
  *                    as well as the sky window — the difference between an
  *                    infinite drill (cone, dec-band wedge) and a bounded volume
- *                    floating in space (the Sloan Great Wall box, which clips a
- *                    redshift shell to isolate one named structure). The two
+ *                    floating in space (the Sloan Great Wall's ellipsoid union,
+ *                    which bounds a 3D region to isolate one named structure). The two
  *                    sky-only factories (`makeConeFilter`, `makeDecBandFilter`)
  *                    return `(raDeg, decDeg) => boolean` and are left untouched:
  *                    a `(ra, dec) => boolean` is assignable to the 3-arg type
@@ -117,46 +116,31 @@ export const DESI_PATCHES: readonly DesiPatch[] = [
     source: Source.DesiWedge,
     makeFilter: () => makeDecBandFilter(30.65, 1.25, 205, 270),
   },
-  // ── Sloan Great Wall — a depth-bounded box around one named structure ───
+  // ── Sloan Great Wall — a sculpted ellipsoid union around one structure ──
   //
-  // RA 137°–214°, Dec −5°..+8°, z 0.055–0.095. The first DEPTH-bounded patch:
-  // a closed RA×Dec×redshift volume floating in space, versus the cone/wedge's
-  // infinite drills. The bounds are the Gott et al. (2005) published extent of
-  // the wall (RA 139.2°–211.8°, median z 0.07804, ~433 Mpc long, ~55.7 Mpc
-  // thick; the literature's density-analysis region RA 150–210, Dec −3..+6,
-  // z 0.065–0.09 holds ~84% of its galaxies) plus ~2° / Δz margin so the ends
-  // aren't clipped. Measured locally at 57,124 BGS rows: LRG/ELG/QSO contribute
-  // nothing at z<0.1, so the box is pure BGS by geometry — every row carries
-  // real Legacy-Surveys photometry, no synthetic display magnitudes. The z
-  // window is deliberately thicker than the wall itself because the wall
-  // wanders in redshift along its length.
-  {
-    key: 'sgw',
-    source: Source.DesiSgw,
-    makeFilter: () => makeRaDecZBoxFilter(137, 214, -5, 8, 0.055, 0.095),
-  },
-  // ── Sloan Great Wall (sculpted) — the box's ellipsoid-union sibling ──────
-  //
-  // The same wall as the 'sgw' box, but selected by a smooth union of three
-  // ellipsoids instead of a hard RA × Dec × redshift box (see
+  // The Sloan Great Wall, selected by a smooth union of three ellipsoids on the
+  // wall's density peaks rather than a flat sky-and-redshift box (see
   // `makeEllipsoidUnionFilter`). The three centres are the measured density
   // peaks of the wall's constituent superclusters — SCl 126 (the rich
   // filament / richest core), SCl 111 (the multispider), plus the poorer
   // western end (Einasto et al. 2011) — in right-handed equatorial Cartesian
-  // Mpc. The smooth union fuses them into one lumpy ribbon (blend 100 Mpc, well
-  // under the ~150–180 Mpc peak spacing so the clumps merge rather than staying
-  // three beads); the smoothstep feathers the surface over a 50 Mpc band; and a
-  // deterministic per-galaxy hash thins that feather so the edges dissolve into
-  // haze rather than a hard rind. This is the sculpted sibling of the 'sgw' box:
-  // the same wall selected by its natural 3D extent rather than a hard box, so
-  // it is NOT a strict subset — the ellipsoids follow the wall's true depth and
-  // pick up near/far members the box's flat z-window (0.055–0.095) clips off.
-  // Kept a SEPARATE source purely so the two representations can be toggled
-  // against each other. The Cartesian seed constants come from a density-peak
-  // scan of the box's BGS rows.
+  // Mpc. The smooth `smin` union fuses them into one lumpy ribbon (blend
+  // 100 Mpc, well under the ~150–180 Mpc peak spacing so the clumps merge
+  // rather than staying three beads); a smoothstep feathers the surface over a
+  // 50 Mpc band; and a deterministic per-galaxy hash thins that feather so the
+  // edges dissolve into haze rather than a hard rind. The ellipsoids follow the
+  // wall's true 3D extent, so the selection is NOT clipped to a flat redshift
+  // box — it picks up the near/far members that trail off the wall's median
+  // depth. LRG/ELG/QSO contribute nothing at z<0.1, so the selection is pure
+  // BGS by geometry — every row carries real Legacy-Surveys photometry, no
+  // synthetic display magnitudes. The Cartesian seed constants come from a
+  // density-peak scan of the wall's BGS rows. A hard RA × Dec × redshift box
+  // (RA 137°–214°, Dec −5°..+8°, z 0.055–0.095) was evaluated during
+  // development and dropped in favour of this sculpt, whose feathered edges and
+  // true-depth extent read as a structure rather than a slab.
   {
-    key: 'sgw-shape',
-    source: Source.DesiSgwShape,
+    key: 'sgw',
+    source: Source.DesiSgw,
     makeFilter: () =>
       makeEllipsoidUnionFilter(
         [

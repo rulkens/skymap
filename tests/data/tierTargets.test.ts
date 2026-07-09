@@ -125,7 +125,7 @@ describe('tierTarget — DesiWedge', () => {
 
 describe('tierFilenameForSource — DesiSgw', () => {
   it('emits the shared filename for every tier (tier-agnostic, like the cone)', () => {
-    // DesiSgw's tierTargets is {} — a fixed depth-bounded box patch, not a bulk
+    // DesiSgw's tierTargets is {} — a fixed depth-bounded patch, not a bulk
     // catalog that needs per-tier subsampling.
     expect(tierFilenameForSource(Source.DesiSgw, 'small')).toBe('desi-sgw.bin');
     expect(tierFilenameForSource(Source.DesiSgw, 'medium')).toBe('desi-sgw.bin');
@@ -138,23 +138,5 @@ describe('tierTarget — DesiSgw', () => {
     expect(tierTarget(Source.DesiSgw, 'small')).toBeUndefined();
     expect(tierTarget(Source.DesiSgw, 'medium')).toBeUndefined();
     expect(tierTarget(Source.DesiSgw, 'large')).toBeUndefined();
-  });
-});
-
-describe('tierFilenameForSource — DesiSgwShape', () => {
-  it('emits the shared filename for every tier (tier-agnostic, like the box)', () => {
-    // DesiSgwShape's tierTargets is {} — the sculpted sibling of the box patch,
-    // a fixed bounded volume, not a bulk catalog that needs per-tier subsampling.
-    expect(tierFilenameForSource(Source.DesiSgwShape, 'small')).toBe('desi-sgw-shape.bin');
-    expect(tierFilenameForSource(Source.DesiSgwShape, 'medium')).toBe('desi-sgw-shape.bin');
-    expect(tierFilenameForSource(Source.DesiSgwShape, 'large')).toBe('desi-sgw-shape.bin');
-  });
-});
-
-describe('tierTarget — DesiSgwShape', () => {
-  it('is uncapped in every tier (undefined)', () => {
-    expect(tierTarget(Source.DesiSgwShape, 'small')).toBeUndefined();
-    expect(tierTarget(Source.DesiSgwShape, 'medium')).toBeUndefined();
-    expect(tierTarget(Source.DesiSgwShape, 'large')).toBeUndefined();
   });
 });

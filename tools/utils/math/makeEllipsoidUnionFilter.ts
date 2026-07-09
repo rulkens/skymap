@@ -5,7 +5,7 @@
  * ## Why not a hard box?
  *
  * The obvious way to carve one named structure out of an all-sky catalog is a
- * hard RA × Dec × redshift box (`makeRaDecZBoxFilter`): six comparisons, a row
+ * hard RA × Dec × redshift box: six comparisons, a row
  * is either in or out. That is exactly right when the goal is "clip this
  * rectangular volume" — but it is the WRONG shape when the goal is to expose the
  * *form* of a lumpy structure. A box keeps the interstitial voids between the

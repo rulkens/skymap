@@ -68,10 +68,8 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     }
     case Source.DesiDeep:
     case Source.DesiWedge:
-    case Source.DesiSgw:
-    case Source.DesiSgwShape: {
-      // DESI patches (deep cone + dec-band wedge + Sloan Great Wall box + its
-      // sculpted sibling): g in
+    case Source.DesiSgw: {
+      // DESI patches (deep cone + dec-band wedge + Sloan Great Wall): g in
       // g-slot, r in r-slot (DERED optical fluxes; see BAND_LABELS in
       // sources.ts). g−r is the natural SDSS-like optical discriminator, so
       // this reuses the SDSS-style colour classifier — the mixed BGS/LRG/ELG/QSO

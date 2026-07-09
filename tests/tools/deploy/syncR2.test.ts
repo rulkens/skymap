@@ -64,28 +64,16 @@ describe('syncR2 ALLOW', () => {
   });
 
   it('accepts desi-sgw.bin', () => {
-    // The DESI Sloan Great Wall box is a third tier-agnostic bin (a fixed
+    // The DESI Sloan Great Wall is a third tier-agnostic bin (a fixed
     // depth-bounded patch, like the cone/wedge) — the browser fetches it
     // unsuffixed.
     expect(ALLOW('desi-sgw.bin')).toBe(true);
   });
 
   it('rejects a tier-suffixed desi-sgw variant', () => {
-    // Like the cone/wedge, the box is a fixed patch, not a tiered downsample,
-    // so a tier suffix must not slip through the filter.
-    expect(ALLOW('desi-sgw-large.bin')).toBe(false);
-  });
-
-  it('accepts desi-sgw-shape.bin', () => {
-    // The sculpted Sloan Great Wall is a fourth tier-agnostic bin (the
-    // ellipsoid-union sibling of the box) — the browser fetches it unsuffixed.
-    expect(ALLOW('desi-sgw-shape.bin')).toBe(true);
-  });
-
-  it('rejects a tier-suffixed desi-sgw-shape variant', () => {
-    // Like its box sibling, the sculpt is a fixed patch, not a tiered
+    // Like the cone/wedge, the Sloan Great Wall is a fixed patch, not a tiered
     // downsample, so a tier suffix must not slip through the filter.
-    expect(ALLOW('desi-sgw-shape-large.bin')).toBe(false);
+    expect(ALLOW('desi-sgw-large.bin')).toBe(false);
   });
 });
 
