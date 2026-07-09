@@ -59,6 +59,8 @@ import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
 import { MILKY_WAY_ENTRY } from './sources/milky-way';
 import { FLOW_ENTRY } from './sources/flow';
 import { DESI_DEEP_ENTRY } from './sources/desiDeep';
+import { DESI_WEDGE_ENTRY } from './sources/desiWedge';
+import { DESI_SGW_ENTRY } from './sources/desiSgw';
 
 export { Source } from './source';
 
@@ -110,6 +112,8 @@ export const SOURCE_REGISTRY = {
   [Source.MilkyWay]: MILKY_WAY_ENTRY,
   [Source.Flow]: FLOW_ENTRY,
   [Source.DesiDeep]: DESI_DEEP_ENTRY,
+  [Source.DesiWedge]: DESI_WEDGE_ENTRY,
+  [Source.DesiSgw]: DESI_SGW_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
@@ -163,4 +167,6 @@ export const GALAXY_CATALOG_SOURCES: readonly SourceType[] = [
   Source.Glade,
   Source.Milliquas,
   Source.DesiDeep,
+  Source.DesiWedge,
+  Source.DesiSgw,
 ];

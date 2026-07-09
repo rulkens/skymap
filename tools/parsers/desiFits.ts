@@ -51,7 +51,7 @@
  */
 
 import type { ParsedRecord } from './common';
-import { Source } from '../../src/data/sources';
+import type { SourceType } from '../../src/@types/data/SourceType';
 import { DESI_TRACER_CLASS } from '../../src/data/galaxyCatalog/sourceClass';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { DESI_TRACER_DISPLAY } from './desiTracerDisplay';
@@ -342,12 +342,23 @@ const NANOMAGGY_ZEROPOINT_MAG = 22.5;
  * for free. Column lookup is case-insensitive because BGS's flux
  * columns are lowercase on disk while everything else is uppercase.
  *
- * The optional `keep(raDeg, decDeg)` predicate is the deep-cone filter:
- * it runs immediately after decoding RA/DEC and before any other cell
+ * `source` stamps every emitted record's `source` field and is required, not
+ * defaulted: each DESI patch (see `DESI_PATCHES`) must bucket + dedup its rows
+ * under its own code, and a default would be a silent-misattribution trap — a
+ * future caller that forgets the argument would have every row quietly
+ * stamped with whatever code the default names, discovered only by noticing
+ * the wrong patch's `.bin` grew rows, rather than at the call site where a
+ * missing required argument fails loudly.
+ *
+ * The optional `keep(raDeg, decDeg, z)` predicate is the patch's membership
+ * filter: it runs immediately after decoding RA/DEC/Z and before any other cell
  * is decoded or any record allocated, because the CrB cone keeps only
- * ~1% of the NGC rows — the common case per row is "decode 16 bytes,
- * reject". Rejected rows are NOT counted in `skipped`: out-of-cone is
- * scoping, not data quality. `skipped` counts data-quality drops only:
+ * ~1% of the NGC rows — the common case per row is "decode 24 bytes,
+ * reject". The redshift is passed so a depth-bounded patch (the Sloan Great
+ * Wall box) can bound the line of sight; sky-only patches (cone, dec-band
+ * wedge) are arity-compatible and simply ignore the third argument. Rejected
+ * rows are NOT counted in `skipped`: out-of-region is scoping, not data
+ * quality. `skipped` counts data-quality drops only:
  * rows of any tracer with a non-finite or non-positive redshift (the
  * glade/sdssCsv convention — a safety net, DESI vets its z's
  * upstream), and BGS rows with non-positive g or r flux (unplottable
@@ -365,7 +376,8 @@ const NANOMAGGY_ZEROPOINT_MAG = 22.5;
 export function parseDesiClustering(
   buf: ArrayBuffer,
   tracer: DesiTracer,
-  keep?: (raDeg: number, decDeg: number) => boolean,
+  source: SourceType,
+  keep?: (raDeg: number, decDeg: number, z: number) => boolean,
 ): { records: ParsedRecord[]; skipped: number } {
   const table = parseFitsBinTable(buf);
   const view = new DataView(buf);
@@ -412,13 +424,17 @@ export function parseDesiClustering(
   for (let r = 0; r < table.rowCount; r++) {
     const rowStart = table.dataOffset + r * table.rowLengthBytes;
 
-    // Cone predicate first: cheap RA/DEC decode, then bail before
-    // touching any other cell or allocating anything.
+    // Membership predicate first: decode the cheap RA/DEC/Z cells, then bail
+    // before touching any other cell or allocating anything. Z is decoded here
+    // — ahead of the data-quality gate below — so a depth-bounded patch (the
+    // Sloan Great Wall box) can bound the line of sight; sky-only patches
+    // ignore it. The keep-rejection still precedes, and is accounted
+    // separately from, the data-quality skip below: a keep-rejected row is
+    // scoping (never counted in `skipped`), regardless of its redshift.
     const ra = readFloatCell(view, rowStart + colRa.byteOffset, colRa);
     const dec = readFloatCell(view, rowStart + colDec.byteOffset, colDec);
-    if (keep && !keep(ra, dec)) continue;
-
     const z = readFloatCell(view, rowStart + colZ.byteOffset, colZ);
+    if (keep && !keep(ra, dec, z)) continue;
 
     // Non-positive / non-finite redshift → drop, same convention as the
     // sibling parsers (glade.ts, sdssCsv.ts). DESI's LSS clustering
@@ -465,7 +481,7 @@ export function parseDesiClustering(
     }
 
     records.push({
-      source: Source.DesiDeep,
+      source,
       // TARGETID is DESI's stable 64-bit object identifier — same slot
       // repurposing as GLADE's PGC-in-objID: consumers branch on
       // `source` to interpret the value.

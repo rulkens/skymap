@@ -94,14 +94,17 @@ describe('Source enum — structure codes (cluster/supercluster/void)', () => {
   it('ALL_VISIBLE_MASK covers default-visible galaxy catalog sources only (no structure bits)', () => {
     // Default-visible galaxy catalog bits: 0 (Synthetic), 1 (SDSS), 2 (2MRS),
     // 3 (Glade), 4 (Famous), 8 (Milliquas) = 0b100011111. Milliquas ships on
-    // by default now that the quasar source is stable. DesiDeep (bit 18) is
-    // deliberately CLEAR: the deep pencil-beam cone is a specialist opt-in
-    // overlay, not part of the all-sky default scene, so its bit stays off.
+    // by default now that the quasar source is stable. The DESI patches —
+    // DesiDeep (bit 18), DesiWedge (bit 19), and DesiSgw (bit 20) — are
+    // deliberately CLEAR: all three drill geometries are specialist opt-in
+    // overlays, not part of the all-sky default scene, so their bits stay off.
     // Structure codes 5/6/7 stay clear so the galaxy catalog draw loop
     // doesn't accidentally gate on them.
     expect(ALL_VISIBLE_MASK).toBe(0b100011111);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Milliquas)).toBe(true);
     expect(maskHas(ALL_VISIBLE_MASK, Source.DesiDeep)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.DesiWedge)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.DesiSgw)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Cluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Supercluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Void)).toBe(false);

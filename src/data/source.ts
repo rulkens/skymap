@@ -114,4 +114,24 @@ export const Source = {
    * appended at 18 — never renumber the codes below it.
    */
   DesiDeep: 18,
+  /**
+   * DESI DR1 dec-band wedge galaxy catalog — a 2.5°-thick, 65°-long
+   * declination-band fan (same four BGS/LRG/ELG/QSO tracers, NGC-only)
+   * across the Corona Borealis arm of the DR1 footprint. A second drill
+   * geometry through the same survey as the deep cone (see `DESI_PATCHES`);
+   * persisted to its own `.bin`, appended at 19 — never renumber the codes
+   * below it.
+   */
+  DesiWedge: 19,
+  /**
+   * DESI DR1 Sloan Great Wall galaxy catalog — the first DEPTH-bounded patch:
+   * a bounded volume floating in space rather than the cone/wedge's infinite
+   * drills, sculpted as a smooth union of ellipsoids on the wall's density
+   * peaks (see `makeEllipsoidUnionFilter`) so the selection follows the wall's
+   * true 3D extent with feathered, dissolved edges. Pure BGS by geometry
+   * (LRG/ELG/QSO have nothing at z<0.1), so it carries real photometry. A third
+   * drill geometry through the same survey (see `DESI_PATCHES`); persisted to
+   * its own `.bin`, appended at 20 — never renumber the codes below it.
+   */
+  DesiSgw: 20,
 } as const;

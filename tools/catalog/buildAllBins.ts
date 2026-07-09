@@ -12,15 +12,17 @@
  * Output files: sdss.bin, 2mrs.bin, glade.bin (one per source).
  *
  * Cross-match dedup:
- *   - Priority: SDSS > 2MRS > GLADE > DESI Deep. See `tools/crossMatch.ts`
+ *   - Priority: SDSS > 2MRS > GLADE > DESI patches. See `tools/crossMatch.ts`
  *     for the full algorithm and tolerances.
  *   - GLADE is itself a pre-merged catalogue (2MPZ + 2MASS XSC + HyperLEDA
  *     + GWGC + 6dFGS + SDSS-DR12Q), so we only need to dedup it against
  *     SDSS and against 2MRS — not against its own constituents.
- *   - DESI Deep is lowest priority: its ultra-deep cone rows are the same
- *     galaxies the other three surveys already catalogue, so it's fed
- *     through the same dedup pass rather than bypassing it the way
- *     Milliquas does below (see `loadDesi` / `crossMatch.ts`).
+ *   - The DESI patches (deep cone, dec-band wedge) are lowest priority: their
+ *     rows are the same galaxies the other three surveys already catalogue, so
+ *     they're fed through the same dedup pass rather than bypassing it the way
+ *     Milliquas does below. Each patch dedups against the base surveys and its
+ *     own rows, but NOT against sibling patches (see `loadDesiPatch` /
+ *     `crossMatch.ts`).
  *
  * Why are `crossMatch` and the CLI in different files?
  *   This wrapper imports `node:fs`, `node:path`, `node:url`. The main
@@ -59,8 +61,8 @@ import { crossMatch } from './crossMatch';
 import { dropFamousMatches } from './dropFamousMatches';
 import type { FamousSkyPosition } from './dropFamousMatches';
 import { parseFamousSeed } from '../parsers/famousSeed';
-import { DESI_CONE, DESI_TRACER_FILE_KEYS } from './desiCone';
-import { makeConeFilter } from '../utils/math/makeConeFilter';
+import { DESI_PATCHES, DESI_TRACER_FILE_KEYS } from './desiPatches';
+import type { DesiPatch } from './desiPatches';
 
 import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
 import { raDecZToCartesian } from '../../src/utils/math/index';
@@ -346,8 +348,15 @@ function loadMilliquas(path: string | undefined): MilliquasParseResult {
 }
 
 /**
- * Load + cone-filter the four DESI DR1 LSS clustering FITS files into one
- * merged `ParsedRecord[]`, ready to feed into `crossMatch` as `desiDeep`.
+ * Load + filter the four DESI DR1 LSS clustering FITS files for ONE patch
+ * (the deep cone, the dec-band wedge, …) into a merged `ParsedRecord[]`,
+ * stamped with the patch's source and ready to feed into `crossMatch` as one
+ * of `desiPatches`.
+ *
+ * The patch supplies both its membership filter (`patch.makeFilter()`) and the
+ * `Source` every kept row is stamped with, so the four-tracer read loop is
+ * identical across geometries — a new patch is one `DESI_PATCHES` row, not a
+ * cloned loader.
  *
  * Missing-file tolerant, per-tracer: the combined ~773 MB download is
  * gitignored (`npm run fetch-desi`), so a fresh checkout without it must
@@ -367,23 +376,28 @@ function loadMilliquas(path: string | undefined): MilliquasParseResult {
  * computes, and (at worst) read a different file's neighbouring pool
  * bytes.
  */
-function loadDesi(): ParsedRecord[] {
-  const keep = makeConeFilter(DESI_CONE.raDeg, DESI_CONE.decDeg, DESI_CONE.radiusDeg);
+function loadDesiPatch(patch: DesiPatch): ParsedRecord[] {
+  const keep = patch.makeFilter();
   const records: ParsedRecord[] = [];
   let anyFilePresent = false;
 
   for (const tracer of Object.keys(DESI_TRACER_FILE_KEYS) as DesiTracer[]) {
     const path = rawDataPath(DESI_TRACER_FILE_KEYS[tracer]);
     if (!existsSync(path)) {
-      process.stderr.write(`  ${path} not present — ${tracer} tracer skipped\n`);
+      process.stderr.write(`  [${patch.key}] ${path} not present — ${tracer} tracer skipped\n`);
       continue;
     }
     anyFilePresent = true;
     const buf = readFileSync(path);
     const arrayBuf = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-    const { records: tracerRecords, skipped } = parseDesiClustering(arrayBuf, tracer, keep);
+    const { records: tracerRecords, skipped } = parseDesiClustering(
+      arrayBuf,
+      tracer,
+      patch.source,
+      keep,
+    );
     process.stderr.write(
-      `  ${tracer}: ${tracerRecords.length.toLocaleString()} kept in cone ` +
+      `  [${patch.key}] ${tracer}: ${tracerRecords.length.toLocaleString()} kept ` +
         `(skipped ${skipped.toLocaleString()} data-quality drops)\n`,
     );
     records.push(...tracerRecords);
@@ -391,7 +405,7 @@ function loadDesi(): ParsedRecord[] {
 
   if (!anyFilePresent) {
     process.stderr.write(
-      '  no DESI DR1 files present (run `npm run fetch-desi`) — desi-deep.bin will be empty/skipped\n',
+      `  [${patch.key}] no DESI DR1 files present (run \`npm run fetch-desi\`) — .bin will be empty/skipped\n`,
     );
   }
   return records;
@@ -589,8 +603,12 @@ async function runCli(): Promise<void> {
   process.stderr.write('parsing Milliquas…\n');
   const milliquasResult = loadMilliquas(args.milliquas);
 
-  process.stderr.write('parsing DESI Deep Field (cone-filtered)…\n');
-  const desiDeep = loadDesi();
+  process.stderr.write('parsing DESI DR1 patches (per-geometry filtered)…\n');
+  // One record array per patch, in DESI_PATCHES order. Each already carries
+  // its own source (stamped by loadDesiPatch), so crossMatch dedups it against
+  // the base surveys + its own rows but not against sibling patches, and the
+  // per-source bin-emit loop buckets each patch to its own .bin automatically.
+  const desiPatches = DESI_PATCHES.map((patch) => loadDesiPatch(patch));
 
   // ── Cross-pollinate PGCs from GLADE into 2MRS ──────────────────────────
   //
@@ -638,11 +656,13 @@ async function runCli(): Promise<void> {
     [Source.SDSS]: sdss.length,
     [Source.TwoMRS]: twoMrs.length,
     [Source.Glade]: glade.length,
-    [Source.DesiDeep]: desiDeep.length,
   };
+  DESI_PATCHES.forEach((patch, i) => {
+    inputCounts[patch.source] = desiPatches[i]!.length;
+  });
 
   process.stderr.write('cross-matching…\n');
-  const mergedRaw = crossMatch({ sdss, twoMrs, glade, desiDeep });
+  const mergedRaw = crossMatch({ sdss, twoMrs, glade, desiPatches });
   process.stderr.write(`  ${mergedRaw.length.toLocaleString()} records survived dedup\n`);
 
   // Drop catalog rows that match a famous-galaxy seed position. The famous
@@ -713,7 +733,12 @@ async function runCli(): Promise<void> {
 
   // Per-source dedup report. Subtracting kept from input gives the number
   // of records dropped as duplicates of a higher-priority survey's row.
-  for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.DesiDeep]) {
+  for (const source of [
+    Source.SDSS,
+    Source.TwoMRS,
+    Source.Glade,
+    ...DESI_PATCHES.map((patch) => patch.source),
+  ]) {
     const kept = (bySource.get(source) ?? []).length;
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;

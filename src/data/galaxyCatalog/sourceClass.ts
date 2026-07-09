@@ -124,7 +124,15 @@ const PARENT_SURVEY_LABEL: Record<number, string> = {
  */
 export function sourceClassLabel(source: SourceType, classByte: number): string | null {
   if (source === Source.Milliquas) return MILLIQUAS_CLASS_LABEL[classByte] ?? null;
-  if (source === Source.DesiDeep) return DESI_TRACER_LABEL[classByte] ?? null;
+  // All DESI patches (deep cone + dec-band wedge + Sloan Great Wall) stamp the
+  // same tracer classByte, so they share the tracer-label lookup. (The SGW patch
+  // is pure BGS by geometry, but it flows through the same lookup.)
+  if (
+    source === Source.DesiDeep ||
+    source === Source.DesiWedge ||
+    source === Source.DesiSgw
+  )
+    return DESI_TRACER_LABEL[classByte] ?? null;
   return null;
 }
 

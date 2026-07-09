@@ -2,7 +2,7 @@
 /**
  * desiConeCensus — the designated ≤2°-nudge re-check for `DESI_CONE`.
  *
- * The cone center in `tools/catalog/desiCone.ts` was chosen from a live
+ * The cone center in `tools/catalog/desiPatches.ts` was chosen from a live
  * *sampling* spike against DESI's remote server (200 range-request windows
  * × 400 rows per file — see
  * `docs/superpowers/specs/2026-07-07-desi-deep-cone-design.md`), which
@@ -21,13 +21,13 @@
  *
  * The four files are 83-340 MB each (773 MB combined). This tool reads
  * them ONE AT A TIME — never concatenated, never held in memory
- * simultaneously — mirroring `loadDesi` in `buildAllBins.ts`: read the
+ * simultaneously — mirroring `loadDesiPatch` in `buildAllBins.ts`: read the
  * file, decode RA/DEC directly off the `DataView` (no per-row object
  * allocation, no `ParsedRecord[]` — we only need two f64s per row), tally
  * into a handful of integer counters, then let the file's buffer fall out
  * of scope before the next tracer is read. Peak transient memory is
  * bounded by roughly 2× the largest single file (~680 MB for BGS, from
- * the Buffer→ArrayBuffer slice's copy — see `loadDesi`'s docstring for why
+ * the Buffer→ArrayBuffer slice's copy — see `loadDesiPatch`'s docstring for why
  * that slice is unavoidable), never the sum of all four.
  *
  * ## Why not call `makeConeFilter` per candidate?
@@ -49,7 +49,7 @@ import { parseFitsBinTable } from '../parsers/desiFits';
 import type { DesiTracer, FitsColumn } from '../parsers/desiFits';
 import { eqRaDecToUnitCart } from '../../src/utils/math/eqRaDecToUnitCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
-import { DESI_CONE, DESI_TRACER_FILE_KEYS } from './desiCone';
+import { DESI_CONE, DESI_TRACER_FILE_KEYS } from './desiPatches';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 const RAD = Math.PI / 180;
@@ -121,7 +121,7 @@ function requireColumn(columns: readonly FitsColumn[], name: string, tracer: Des
 function tallyTracer(tracer: DesiTracer, candidates: readonly Candidate[]): number {
   const path = rawDataPath(DESI_TRACER_FILE_KEYS[tracer]);
   const buf = readFileSync(path);
-  // Buffer→ArrayBuffer gotcha (same as `loadDesi` in buildAllBins.ts):
+  // Buffer→ArrayBuffer gotcha (same as `loadDesiPatch` in buildAllBins.ts):
   // `readFileSync` returns a view over a possibly-pooled ArrayBuffer, so
   // slice down to exactly this file's bytes before handing it to the FITS
   // parser's DataView.
@@ -152,7 +152,7 @@ function totalOf(c: Candidate): number {
 /** The full, verbatim operator instruction the brief specifies — do not paraphrase. */
 const RECENTER_INSTRUCTION =
   'If a candidate within 2° beats the configured center by a clear margin in BGS AND LRG ' +
-  '(the finger-of-god tracers), update raDeg/decDeg in tools/catalog/desiCone.ts — one file — ' +
+  '(the finger-of-god tracers), update DESI_CONE raDeg/decDeg in tools/catalog/desiPatches.ts — one file — ' +
   'and re-run npm run build-all.';
 
 export function main(): void {
