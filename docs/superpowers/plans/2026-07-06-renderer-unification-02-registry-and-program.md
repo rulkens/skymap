@@ -235,15 +235,15 @@ Extract it from the prepass gate logic (`encodeVolumePrepass.ts:57-97` — rende
 
 **Test migration** — the existing `renderFrame` tests are the behaviour guard; keep their assertions, re-expressed:
 
-- [ ] `renderFrame.test.ts`: encoder-lifecycle tests unchanged (`creates exactly one command encoder`, `submits exactly once…`); HDR-attachment test unchanged in substance (first hdr pass: postProcess view, clear, a=1); `postProcess.draw` assertions become `compositor.draw` assertions — test `runs the hdr→swap composite with blend 'replace' and the settings tone` (fixture gains a compositor spy on `state.gpu`); canonical-order test asserts the FRAME order `createEncoder → hdr pass (points → milky-way) → pass.end → compositor.draw(replace) → finish → submit`; volume tests: `opens the volume pass before the hdr pass when the scalar-volume layer is enabled` + `skips the volume pass and hides the volume-upsample layer when volumes are off` (both gates are the one `deriveVolumeLiveness` — assert they cannot disagree by driving the same state).
-- [ ] `volumeLiveness.test.ts`: `returns null when the renderer is missing / master off and fully faded / no active fields`; `returns the settingsOf/fadeOpacityOf closures when a field is live` (port the gate assertions being absorbed from `encodeVolumePrepass`'s tests).
-- [ ] `renderFrame.timing.test.ts`: `descriptorFor` slots become `point-sprites`, `milky-way`, `hdr→swap` (no `ui-overlay` call when no swap layer is enabled — assert that); per-pass descriptor tagging updated; the scalar-volume billing test keeps the `'scalar-volume'` slot name.
-- [ ] `frameProgram.test.ts`: add the real-registry slot test — `timedSlotsOf(frameProgram(...), CONTENT_LAYERS)` equals `['scalar-volume', <the nine hdr layer names in registry order>, 'hdr→swap', <five swap layer names>, 'pick']`.
-- [ ] `passes.test.ts`: registry-shape tests updated (scalar-volume row added; the hdr group keeps its nine rows incl. volume-upsample); delete the `TIMED_SLOT_NAMES` describe.
-- [ ] Implement the flip; migrate `encodeVolumes.test.ts` gate/arg assertions into `scalarVolumeLayer` tests; update `encodeFlowCompute` signature + test.
-- [ ] `npm run typecheck && npm test` → green.
+- [x] `renderFrame.test.ts`: encoder-lifecycle tests unchanged (`creates exactly one command encoder`, `submits exactly once…`); HDR-attachment test unchanged in substance (first hdr pass: postProcess view, clear, a=1); `postProcess.draw` assertions become `compositor.draw` assertions — test `runs the hdr→swap composite with blend 'replace' and the settings tone` (fixture gains a compositor spy on `state.gpu`); canonical-order test asserts the FRAME order `createEncoder → hdr pass (points → milky-way) → pass.end → compositor.draw(replace) → finish → submit`; volume tests: `opens the volume pass before the hdr pass when the scalar-volume layer is enabled` + `skips the volume pass and hides the volume-upsample layer when volumes are off` (both gates are the one `deriveVolumeLiveness` — assert they cannot disagree by driving the same state).
+- [x] `volumeLiveness.test.ts`: `returns null when the renderer is missing / master off and fully faded / no active fields`; `returns the settingsOf/fadeOpacityOf closures when a field is live` (port the gate assertions being absorbed from `encodeVolumePrepass`'s tests).
+- [x] `renderFrame.timing.test.ts`: `descriptorFor` slots become `point-sprites`, `milky-way`, `hdr→swap` (no `ui-overlay` call when no swap layer is enabled — assert that); per-pass descriptor tagging updated; the scalar-volume billing test keeps the `'scalar-volume'` slot name.
+- [x] `frameProgram.test.ts`: add the real-registry slot test — `timedSlotsOf(frameProgram(...), CONTENT_LAYERS)` equals `['scalar-volume', <the nine hdr layer names in registry order>, 'hdr→swap', <five swap layer names>, 'pick']`.
+- [x] `passes.test.ts`: registry-shape tests updated (scalar-volume row added; the hdr group keeps its nine rows incl. volume-upsample); delete the `TIMED_SLOT_NAMES` describe.
+- [x] Implement the flip; migrate `encodeVolumes.test.ts` gate/arg assertions into `scalarVolumeLayer` tests; update `encodeFlowCompute` signature + test.
+- [x] `npm run typecheck && npm test` → green.
 - [ ] Ask the user for a quick dev-server sanity look (volumes on/off, labels, markers) before proceeding — the flip is the highest-risk commit.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 8 — delete the dead encoders
 

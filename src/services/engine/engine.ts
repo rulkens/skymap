@@ -81,7 +81,7 @@ import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { HDR_PASSES, UI_PASSES } from './frame/passes';
+import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -732,8 +732,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // would be null forever.
     //
     // `passOverrides`: read-only pass-name list for the DebugPanel's renderer
-    // toggle section. `allNames` is materialised from HDR_PASSES + UI_PASSES so
-    // the React rows track the encoder's actual pass loop in draw order.
+    // toggle section. `allNames` is materialised from the hdr- and swap-target
+    // `CONTENT_LAYERS` (the volume-target raymarch has no user toggle, so it is
+    // excluded) so the React rows track the frame's actual draw order.
     // The DebugPanel dispatches `setPassDisabled` directly; `watchWakeSaga` wakes
     // the render loop on the store write.
     debug: {
@@ -741,7 +742,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         return state.gpu.timingService;
       },
       passOverrides: {
-        allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
+        allNames: CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name),
       },
     },
 

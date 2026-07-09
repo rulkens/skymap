@@ -1,15 +1,15 @@
 /**
- * passes — unit tests for the per-layer `enabled` gates, the
- * `CONTENT_LAYERS` migration-table shape, and the `HDR_PASSES` derived
- * registry order.
+ * passes — unit tests for the per-layer `enabled` gates and the
+ * `CONTENT_LAYERS` migration-table shape.
  *
  * Test surface:
  *   - Each layer's `enabled(state, ctx)` predicate flips correctly for
  *     its gate, with stub state + ctx (no GPU device).
  *   - `CONTENT_LAYERS` holds every hdr-group layer with the migration
  *     table's `{slab, target, blend}` fields.
- *   - `HDR_PASSES` (the derived hdr-only view) holds the layers in
- *     canonical order.
+ *   - The hdr- and swap-target views (a `.filter()` over `CONTENT_LAYERS`,
+ *     the same grouping the frame executor performs) hold the layers in
+ *     canonical draw order.
  *   - A few `draw` calls verified end-to-end with stub renderers,
  *     confirming which renderer method fires and with which args,
  *     including that `draw` threads the resolved `SlabView`'s
@@ -27,8 +27,6 @@ import { Source } from '../../../../../src/data/sources';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import {
   CONTENT_LAYERS,
-  HDR_PASSES,
-  UI_PASSES,
   scalarVolumeLayer,
   pointSpritesLayer,
   proceduralDisksLayer,
@@ -240,18 +238,19 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
   });
 });
 
-describe('HDR_PASSES registry', () => {
-  it('contains the nine HDR passes in canonical draw order', () => {
-    // Order is load-bearing for HMR-stability of the encoder record;
-    // see passes/index.ts module header. Marker-lines and labels live
-    // in UI_PASSES (post-tone-map overlay), not HDR_PASSES, so they
-    // escape tone-map curve compression and dodge the OVER-blend
-    // coherency issue on tile-based GPUs. The horizon shell draws after
-    // the volume upsample (so cosmic-web densities composite over it)
-    // and before structure-markers (so marker rings pop on top). Flow sits
+describe('hdr-target layers', () => {
+  it('the target==="hdr" filter yields the nine HDR passes in canonical draw order', () => {
+    // Order is load-bearing for HMR-stability of the frame program;
+    // see passes/index.ts module header. Marker-lines and labels are
+    // swap-target (post-tone-map overlay), not hdr, so they escape
+    // tone-map curve compression and dodge the OVER-blend coherency
+    // issue on tile-based GPUs. The horizon shell draws after the
+    // volume upsample (so cosmic-web densities composite over it) and
+    // before structure-markers (so marker rings pop on top). Flow sits
     // with the structure layers, after filaments.
-    expect(HDR_PASSES).toHaveLength(9);
-    expect(HDR_PASSES.map((p) => p.name)).toEqual(HDR_NAMES);
+    const hdrLayers = CONTENT_LAYERS.filter((layer) => layer.target === 'hdr');
+    expect(hdrLayers).toHaveLength(9);
+    expect(hdrLayers.map((p) => p.name)).toEqual(HDR_NAMES);
   });
 });
 
@@ -271,13 +270,14 @@ describe('CONTENT_LAYERS migration table (swap group)', () => {
   });
 });
 
-describe('UI_PASSES registry', () => {
-  it('contains the five swap layers in canonical draw order', () => {
+describe('swap-target layers', () => {
+  it('the target==="swap" filter yields the five swap layers in canonical draw order', () => {
     // Selection ring leads (marker-lines/labels composite over its stroke);
     // the debug clip-path overlay trails so its route + gizmo draw on top
     // of everything else.
-    expect(UI_PASSES).toHaveLength(5);
-    expect(UI_PASSES.map((p) => p.name)).toEqual(SWAP_NAMES);
+    const swapLayers = CONTENT_LAYERS.filter((layer) => layer.target === 'swap');
+    expect(swapLayers).toHaveLength(5);
+    expect(swapLayers.map((p) => p.name)).toEqual(SWAP_NAMES);
   });
 });
 
@@ -304,15 +304,15 @@ describe('CONTENT_LAYERS blend legality', () => {
 describe('scalarVolumeLayer registry row', () => {
   it('leads CONTENT_LAYERS as the volume-target raymarch', () => {
     // The half-res raymarch draws into its own 'volume' offscreen before the
-    // hdr group upsamples it, so it sits first in the registry — and is NOT
-    // an HDR_PASSES member (target 'volume', not 'hdr').
+    // hdr group upsamples it, so it sits first in the registry — and its
+    // 'volume' target keeps it out of both the hdr and swap groups.
     expect(CONTENT_LAYERS[0]).toBe(scalarVolumeLayer);
     expect(scalarVolumeLayer.name).toBe('scalar-volume');
     expect(scalarVolumeLayer.target).toBe('volume');
     expect(scalarVolumeLayer.slab).toBe(COSMO);
     expect(scalarVolumeLayer.blend).toBe('additive');
-    expect(HDR_PASSES).not.toContain(scalarVolumeLayer);
-    expect(UI_PASSES).not.toContain(scalarVolumeLayer);
+    expect(CONTENT_LAYERS.filter((l) => l.target === 'hdr')).not.toContain(scalarVolumeLayer);
+    expect(CONTENT_LAYERS.filter((l) => l.target === 'swap')).not.toContain(scalarVolumeLayer);
   });
 });
 
@@ -363,7 +363,7 @@ describe('proceduralDisksLayer.enabled', () => {
 // Coverage for the `textured-disks` layer lives in
 // `texturedDisksLayer.test.ts` (one test file per ContentLayer module,
 // matching the convention used by every other entry in `passes/`). The
-// HDR_PASSES registry check above pins the name in canonical order.
+// hdr-target layers check above pins the name in canonical order.
 
 describe('filamentsLayer.enabled', () => {
   it('returns true when filaments.enabled is true (renderer presence checked in draw)', () => {

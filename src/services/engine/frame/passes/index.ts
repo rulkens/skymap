@@ -4,20 +4,16 @@
  * `CONTENT_LAYERS` is the flat, ordered list of every `ContentLayer` the
  * renderer draws — both the nine additive-into-HDR layers and the five
  * premultiplied-OVER-onto-swap-chain overlays.  It replaces the two `Pass[]`
- * arrays this module used to export (`HDR_PASSES`, `UI_PASSES`) — those were
- * two arrays because a `Pass` baked its target and blend into "which array
- * it lives in"; a `ContentLayer` states `target` and `blend` as data fields
- * on the row itself, so one array is enough and grouping by `(target,
- * blend)` becomes a `.filter()`.
+ * arrays this module once exported — those were two arrays because a `Pass`
+ * baked its target and blend into "which array it lives in"; a `ContentLayer`
+ * states `target` and `blend` as data fields on the row itself, so one array is
+ * enough and grouping by `(target, blend)` becomes a `.filter()`.
  *
- * `HDR_PASSES` and `UI_PASSES` below are both TRANSITIONAL derived exports —
- * `CONTENT_LAYERS.filter((l) => l.target === 'hdr' | 'swap')` respectively.
- * They exist only so the two now-unused HDR encoders (`encodeHdrSingle`,
- * `encodeHdrSplit`) and `encodeUiOverlay` keep compiling until they are
- * deleted.  The frame executor already walks a `FrameStep[]` program (grouping
- * layers by `(target, slab)` directly), so both derived exports go away with
- * those encoders.  The timing-slot list is now derived from that program
- * (`TIMED_SLOTS` in `frameProgram.ts`), not hand-maintained here.
+ * There is no longer any hand-maintained hdr-vs-swap split here: the frame
+ * executor walks a `FrameStep[]` program that groups layers by `(target, slab)`
+ * directly, and the timing-slot list is derived from that program (`TIMED_SLOTS`
+ * in `frameProgram.ts`).  Consumers that need one group take a `.filter()` over
+ * `CONTENT_LAYERS` at the call site (e.g. the DebugPanel's toggle-name list).
  *
  * ### CONTENT_LAYERS — draw order
  *
@@ -123,13 +119,13 @@ import { clipPathDebugLayer } from './clipPathDebugLayer';
  * The flat content-layer registry, in deterministic draw order.  HDR
  * layers (additive, into the HDR offscreen target) lead; the five
  * swap-target layers (premultiplied-OVER, post-tone-map onto the swap
- * chain) follow.  `HDR_PASSES` and `UI_PASSES` below are both derived
- * `.filter()` views over this one array — see the module header.
+ * chain) follow.  Grouping by target is a `.filter()` at the call site —
+ * see the module header.
  */
 export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // Half-res scalar-volume raymarch into the volume offscreen — drawn first
   // (its own target), before the hdr group upsamples it in. Not an hdr-group
-  // member: it targets 'volume', so HDR_PASSES / the hdr render step exclude it.
+  // member: it targets 'volume', so the hdr render step excludes it.
   scalarVolumeLayer,
   pointSpritesLayer,
   proceduralDisksLayer,
@@ -150,32 +146,6 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   labelsLayer,
   clipPathDebugLayer,
 ];
-
-/**
- * Transitional derived view: every `CONTENT_LAYERS` row that targets the
- * HDR offscreen target.  Consumed by the two now-unused HDR encoders.  This
- * filter (and `UI_PASSES` below) are deleted with those encoders — the frame
- * executor already groups layers by `(target, slab)` directly.
- */
-export const HDR_PASSES: readonly ContentLayer[] = CONTENT_LAYERS.filter(
-  (layer) => layer.target === 'hdr',
-);
-
-/**
- * Transitional derived view: every `CONTENT_LAYERS` row that targets the
- * swap chain.  The selection ring leads so marker-lines and labels
- * composite over its stroke — labels carry information that must stay
- * legible.  The disk-radius debug ring follows the selection ring (both
- * are world-space strokes around the selected galaxy); it is default-off,
- * so it contributes nothing unless the curator enables it.  All entries
- * share one swap-chain `beginRenderPass` (see `encodeUiOverlay.ts`) and
- * one timing slot (`ui-overlay`).  This filter (and `HDR_PASSES` above) are
- * deleted with the now-unused HDR/UI encoders — the frame executor already
- * groups layers by `(target, slab)` directly.
- */
-export const UI_PASSES: readonly ContentLayer[] = CONTENT_LAYERS.filter(
-  (layer) => layer.target === 'swap',
-);
 
 export { scalarVolumeLayer } from './scalarVolumeLayer';
 export { pointSpritesLayer } from './pointSpritesLayer';
