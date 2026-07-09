@@ -31,13 +31,16 @@ export const DESI_WEDGE_ENTRY = {
   // redshift) is the closest match to the empty magI slot among the five —
   // no u-band or true i-band exists in the DESI columns.
   bandLabels: { u: '—', g: 'g', r: 'r', i: 'z', z: '—' },
-  // g−r is the natural DESI optical colour. Range tightened relative to
-  // Milliquas's B−R span so the ramp spends its full dynamic range on the g−r
-  // interval the mixed BGS/LRG/ELG/QSO population actually occupies. kPerZ is 0
-  // for the same reason Milliquas's is: the four tracers span z ≈ 0.03–3.5, and
-  // any non-zero K-correction coefficient would clamp most of that range to one
-  // end of the ramp rather than meaningfully correcting it.
-  colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.2, rangeMax: 1.8, kPerZ: 0.0 },
+  // g−r is the natural DESI optical colour, calibrated to the REAL BGS g−r
+  // distribution (p10 ≈ 0.36, median ≈ 0.61, p90 ≈ 0.90): 0.35–1.05 puts the
+  // green-valley (g−r ≈ 0.7) at the ramp's white midpoint so the blue cloud
+  // renders blue and the red sequence red. The earlier 0.2–1.8 span bracketed
+  // the synthetic tracer constants but compressed ~99% of real BGS galaxies
+  // into the ramp's blue half. Tracers still land at the extremes: LRG 1.4 →
+  // red, ELG 0.5 / QSO 0.3 → blue. kPerZ is 0: the tracers span z ≈ 0.03–3.5, so
+  // one K-correction slope would clamp most of that to one ramp end, and the
+  // low-z BGS near-field where colour reads needs little correction.
+  colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.35, rangeMax: 1.05, kPerZ: 0.0 },
   // BGS_BRIGHT's r-band selection limit (r < 19.5) is the tightest of the
   // four tracers; used as a single representative limit for the whole
   // mixed-tracer catalog, same rationale as the deep cone — the exact value

@@ -32,11 +32,14 @@ export const DESI_SGW_ENTRY = {
   // no u-band or true i-band exists in the DESI columns. Unlike the cone and
   // wedge, every row here is real BGS photometry (no synthetic display mags).
   bandLabels: { u: '—', g: 'g', r: 'r', i: 'z', z: '—' },
-  // g−r is the natural DESI optical colour. Range matches the cone/wedge so the
-  // ramp spends its dynamic range on the g−r interval the BGS population
-  // occupies. kPerZ is 0: the box spans only z ≈ 0.055–0.095, a thin enough
+  // g−r is the natural DESI optical colour, calibrated to the REAL BGS g−r
+  // distribution (p10 ≈ 0.36, median ≈ 0.61, p90 ≈ 0.90): 0.35–1.05 matches the
+  // cone/wedge and puts the green-valley (g−r ≈ 0.7) at the ramp's white
+  // midpoint so the blue cloud renders blue and the red sequence red. The
+  // earlier 0.2–1.8 span compressed ~99% of real BGS galaxies into the ramp's
+  // blue half. kPerZ is 0: the box spans only z ≈ 0.055–0.095, a thin enough
   // shell that a K-correction coefficient would barely move the ramp.
-  colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.2, rangeMax: 1.8, kPerZ: 0.0 },
+  colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.35, rangeMax: 1.05, kPerZ: 0.0 },
   // BGS_BRIGHT's r-band selection limit (r < 19.5); the box is pure BGS, so
   // this is the actual limit rather than a representative one. Not load-bearing
   // — vMaxWeight short-circuits rather than upweighting an unphysical volume.
