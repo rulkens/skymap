@@ -61,6 +61,7 @@ import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRendere
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
+import type { DebugSphereRenderer } from '../../rendering/DebugSphereRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
@@ -161,6 +162,19 @@ export type EngineGpuHandles = {
    * the GPU buffers (uniform + storage + instance + corner + atlas texture).
    */
   labelRenderer: LabelRenderer | null;
+  /**
+   * Second MSDF label renderer for the true-scale foreground bodies
+   * (Plan 01 — zoom-to-Earth).  Separate from `labelRenderer` because the
+   * Sun/Earth captions project through the NEAR0 slab view — whose near
+   * plane scales with `cam.distance` so it always contains the bodies —
+   * rather than the galaxy-scale `vp` the main labels use, and one renderer
+   * draws with one view-projection.  Holds the static `debugSphereLabels()`
+   * set, uploaded once at construction.  Null until `initGpu` builds it
+   * against the font atlas; excluded from `isEngineReady` and null-checked
+   * at use, like `labelRenderer`.  Released and re-nulled by `destroy()`.
+   * Plan 02 repoints this at the real BodyStore label source.
+   */
+  foregroundLabelRenderer: LabelRenderer | null;
   /**
    * Thick screen-space line overlay renderer.  Null until `initGpu`
    * constructs it alongside `labelRenderer` (same phase, no atlas dep).
@@ -298,6 +312,19 @@ export type EngineGpuHandles = {
    * uniform buffers, so the `destroy()` chain must release it.
    */
   diskRadiusRing: DiskRadiusRing | null;
+  /**
+   * UV-sphere debug overlay drawn into the `foreground:0` render-target row
+   * (Plan 01 — zoom-to-Earth).  Renders a lat-long-grid sphere so roundness,
+   * jitter, and pole orientation are legible at Earth scale before a real
+   * texture is applied.  That row carries its own `depth32float` attachment,
+   * so the sphere depth-sorts against the other opaque foreground bodies.
+   * Viewport-independent — no resize (the `foreground:0` row's texture
+   * lifecycle is `renderTargets`' job, not this handle's).  Excluded from
+   * `isEngineReady` and null-checked at use.  Null until `initGpu` constructs
+   * it; released and re-nulled by `destroy()` (releases the position VBO,
+   * index IBO, and uniform buffer).
+   */
+  debugSphereRenderer: DebugSphereRenderer | null;
   /**
    * Per-pass GPU timing service.  Always non-null — the engine state
    * is initialized with a no-op stub (see `createDisabledGpuTimingService`)

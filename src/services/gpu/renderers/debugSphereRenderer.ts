@@ -26,7 +26,7 @@
  *
  * ### Pipeline state
  *
- * Color target: whatever `colorFormat` the caller passes (typically
+ * Color target: whatever `targetFormat` the caller passes (typically
  * `rgba16float` for the HDR foreground render target). Depth: the caller's
  * `depthFormat` (typically `depth32float`), with `depthWriteEnabled: true`
  * and `depthCompare: 'less'` so the sphere correctly occludes / is occluded
@@ -73,7 +73,7 @@ const MAX_SPHERES = 8;
 
 export function createDebugSphereRenderer(
   device: GPUDevice,
-  colorFormat: GPUTextureFormat,
+  targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
 ): DebugSphereRenderer {
   // ── Geometry upload ───────────────────────────────────────────────────────
@@ -182,7 +182,7 @@ export function createDebugSphereRenderer(
       entryPoint: 'fs',
       targets: [
         {
-          format: colorFormat,
+          format: targetFormat,
           // No blend descriptor = opaque replace.  The fragment already
           // emits alpha=1; no premultiplied or straight-alpha blending
           // is needed for an opaque foreground draw.
@@ -191,8 +191,8 @@ export function createDebugSphereRenderer(
     },
     primitive: {
       topology: 'triangle-list',
-      frontFace: 'ccw',  // CCW = outward-facing (matches uvSphereMesh winding)
-      cullMode: 'back',  // discard inward-facing (inner-surface) triangles
+      frontFace: 'ccw', // CCW = outward-facing (matches uvSphereMesh winding)
+      cullMode: 'back', // discard inward-facing (inner-surface) triangles
     },
     depthStencil: {
       format: depthFormat,

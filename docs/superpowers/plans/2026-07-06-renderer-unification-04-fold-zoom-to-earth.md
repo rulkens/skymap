@@ -86,15 +86,15 @@ export type RenderTargets = {
 
 **Executor rule:** when a render step's target row declares depth, `beginRenderPass` gains `depthStencilAttachment: { view: renderTargets.depthViewOf(step.target), depthClearValue: 1.0, depthLoadOp: <first touch ? 'clear' : 'load'>, depthStoreOp: 'store' }` — the same per-frame `touched` set that drives the colour clear drives the depth load-op (one first-touch fact, two attachments). `perLayerTimed` passes after the first therefore re-load depth, preserving inter-layer occlusion. Composite steps never attach depth (their dest rows are depthless).
 
-- [ ] Test (`renderTargets.test.ts`): `allocates and resizes a depth texture alongside colour for rows that declare depth` — `foreground:0` produces two `createTexture` calls (rgba16float + depth32float, both at size·1); `resize` reallocates both.
-- [ ] Test: `depthViewOf returns the depth view for foreground:0 and throws for depthless rows and swap`.
-- [ ] Test: extend the specs-table test with the `foreground:0` row `{format: 'rgba16float', depth: 'depth32float', scale: 1}`.
-- [ ] Test: `destroy destroys depth textures alongside colour`.
-- [ ] Test (`executeFrame.test.ts`): `attaches a clearing depth attachment on a depth target's first pass and loads on later passes` — two passes against a fake depth-bearing target: first descriptor `depthLoadOp: 'clear'` + `depthClearValue: 1.0`, second `'load'`.
-- [ ] Test: `opens no depthStencilAttachment for depthless targets` — the hdr/swap descriptors carry no `depthStencilAttachment` key.
-- [ ] Implement; delete the two `foregroundOffscreen` files.
-- [ ] `npm run typecheck && npm test` → green.
-- [ ] Commit the touched + deleted paths.
+- [x] Test (`renderTargets.test.ts`): `allocates and resizes a depth texture alongside colour for rows that declare depth` — `foreground:0` produces two `createTexture` calls (rgba16float + depth32float, both at size·1); `resize` reallocates both.
+- [x] Test: `depthViewOf returns the depth view for foreground:0 and throws for depthless rows and swap`.
+- [x] Test: extend the specs-table test with the `foreground:0` row `{format: 'rgba16float', depth: 'depth32float', scale: 1}`.
+- [x] Test: `destroy destroys depth textures alongside colour`.
+- [x] Test (`executeFrame.test.ts`): `attaches a clearing depth attachment on a depth target's first pass and loads on later passes` — two passes against a fake depth-bearing target: first descriptor `depthLoadOp: 'clear'` + `depthClearValue: 1.0`, second `'load'`.
+- [x] Test: `opens no depthStencilAttachment for depthless targets` — the hdr/swap descriptors carry no `depthStencilAttachment` key.
+- [x] Implement; delete the two `foregroundOffscreen` files.
+- [x] `npm run typecheck && npm test` → green.
+- [x] Commit the touched + deleted paths.
 
 ### Task 3 — re-add the two renderer handles + the caption presentation wiring
 

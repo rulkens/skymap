@@ -41,14 +41,24 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 // enough for `initGpu` to thread through: constructors return objects
 // with `.destroy`, plus the few methods `initGpu` calls synchronously.
 
-const stubs: Record<string, { destroy: ReturnType<typeof vi.fn> }> = {};
+type Stub = {
+  destroy: ReturnType<typeof vi.fn>;
+  upload: ReturnType<typeof vi.fn>;
+  setBiasMode: ReturnType<typeof vi.fn>;
+  setLabels: ReturnType<typeof vi.fn>;
+};
 
-function makeStub(name: string): { destroy: ReturnType<typeof vi.fn> } {
-  const stub = {
+const stubs: Record<string, Stub> = {};
+
+function makeStub(name: string): Stub {
+  const stub: Stub = {
     destroy: vi.fn(),
     // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
+    // `initGpu` calls `foregroundLabelRenderer.setLabels(debugSphereLabels())`
+    // synchronously after constructing the second label renderer.
+    setLabels: vi.fn(),
   };
   stubs[name] = stub;
   return stub;
@@ -172,6 +182,13 @@ vi.mock('../../../../src/services/gpu/passes/diskRadiusRing', () => ({
   createDiskRadiusRing: vi.fn(() => makeStub('diskRadiusRing')),
 }));
 
+// The debug-sphere renderer keeps its `?static` WESL imports out of JSDOM;
+// mock it like the other renderer constructors so initGpu's foreground block
+// runs to completion and writes onto `state.gpu.debugSphereRenderer`.
+vi.mock('../../../../src/services/gpu/renderers/debugSphereRenderer', () => ({
+  createDebugSphereRenderer: vi.fn(() => makeStub('debugSphereRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
   loadFontAtlases: vi.fn(async () => ({
     metricsByFont: { cormorant: { __mockMetrics: true } },
@@ -207,6 +224,7 @@ function makeState(): EngineState {
       compositor: null,
       filamentRenderer: null,
       labelRenderer: null,
+      foregroundLabelRenderer: null,
       markerLineRenderer: null,
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
@@ -220,6 +238,7 @@ function makeState(): EngineState {
       volumeUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,
+      debugSphereRenderer: null,
     },
     subsystems: {
       biasCorrection: {
@@ -359,6 +378,47 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.compositor).toBeNull();
     expect(stubs.renderTargets!.destroy).toHaveBeenCalledTimes(1);
     expect(state.gpu.renderTargets).toBeNull();
+  });
+
+  it('writes debugSphereRenderer + foregroundLabelRenderer onto state.gpu.*', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    // The foreground debug sphere must reach state.gpu.* so the destroy chain
+    // can release its position VBO, index IBO, and uniform buffer.
+    expect(state.gpu.debugSphereRenderer).toBe(stubs.debugSphereRenderer);
+    // The second (foreground) label renderer is built via the same
+    // createLabelRenderer mock as the main labels, so it's the LAST stub the
+    // factory produced (foreground is constructed after the main label pass).
+    // It must reach state.gpu.* and have its static caption set uploaded once.
+    expect(state.gpu.foregroundLabelRenderer).not.toBeNull();
+    expect(state.gpu.foregroundLabelRenderer).toBe(stubs.labelRenderer);
+    expect(stubs.labelRenderer!.setLabels).toHaveBeenCalledTimes(1);
+  });
+
+  it('replaying the destroy chain reaches debugSphereRenderer + foregroundLabelRenderer', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    // Capture the foreground label stub before nulling — it shares the
+    // createLabelRenderer mock with the main labels, so we assert on the live
+    // reference rather than a shared stubs key.
+    const fgLabel = state.gpu.foregroundLabelRenderer;
+
+    state.gpu.debugSphereRenderer?.destroy();
+    state.gpu.debugSphereRenderer = null;
+    state.gpu.foregroundLabelRenderer?.destroy();
+    state.gpu.foregroundLabelRenderer = null;
+
+    expect(stubs.debugSphereRenderer!.destroy).toHaveBeenCalledTimes(1);
+    expect((fgLabel as unknown as Stub).destroy).toHaveBeenCalledTimes(1);
+
+    // Symmetric null-out matches the rest of the bag — see
+    // `EngineGpuHandles.d.ts`'s lifecycle docstring.
+    expect(state.gpu.debugSphereRenderer).toBeNull();
+    expect(state.gpu.foregroundLabelRenderer).toBeNull();
   });
 
   it('destroy is safe when initGpu never ran — every state.gpu.* renderer is null and ?.destroy() no-ops', () => {
