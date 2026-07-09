@@ -147,19 +147,22 @@ export const DESI_PATCHES: readonly DesiPatch[] = [
   // under the ~150–180 Mpc peak spacing so the clumps merge rather than staying
   // three beads); the smoothstep feathers the surface over a 50 Mpc band; and a
   // deterministic per-galaxy hash thins that feather so the edges dissolve into
-  // haze rather than a hard rind. This is the sculpted sibling of the 'sgw' box
-  // — same wall, subset selection — kept a SEPARATE source purely so the two
-  // representations can be toggled against each other. The Cartesian seed
-  // constants come from a density-peak scan of the box's BGS rows.
+  // haze rather than a hard rind. This is the sculpted sibling of the 'sgw' box:
+  // the same wall selected by its natural 3D extent rather than a hard box, so
+  // it is NOT a strict subset — the ellipsoids follow the wall's true depth and
+  // pick up near/far members the box's flat z-window (0.055–0.095) clips off.
+  // Kept a SEPARATE source purely so the two representations can be toggled
+  // against each other. The Cartesian seed constants come from a density-peak
+  // scan of the box's BGS rows.
   {
     key: 'sgw-shape',
     source: Source.DesiSgwShape,
     makeFilter: () =>
       makeEllipsoidUnionFilter(
         [
-          { center: [-310, -108, 3], radii: [95, 130, 55] }, // SCl 126 (richest core)
-          { center: [-285, 67, 3], radii: [90, 120, 50] }, // SCl 111
-          { center: [-310, 217, 3], radii: [85, 110, 48] }, // western end
+          { center: [-310, -108, 3], radii: [82, 112, 47] }, // SCl 126 (richest core)
+          { center: [-285, 67, 3], radii: [78, 103, 43] }, // SCl 111
+          { center: [-310, 217, 3], radii: [73, 95, 41] }, // western end
         ],
         { blendMpc: 100, falloffMpc: 25, seed: 20260709 },
       ),
