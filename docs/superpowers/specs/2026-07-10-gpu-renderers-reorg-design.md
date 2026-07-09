@@ -1,13 +1,15 @@
 # GPU renderers folder reorganization — family folders, lib primitives, pointRenderer split — design
 
-> **Status.** Approved design (fully decided). Awaiting a TDD plan.
+> **Status.** Approved design (fully decided). TDD plans will be authored
+> once zoom-to-earth plan 02 lands, and ride this same branch/PR.
 > **Date.** 2026-07-10.
 > **Relationship to prior work.** Codifies the family boundaries that
 > renderer-unification (plans 01–04, all shipped 2026-07-09) left implicit,
 > and lands the last known outliers in
 > [`renderers.md`](../conventions/renderers.md). **Sequenced _after_
-> zoom-to-earth plan 02** (re-grounded onto current paths in PR #423, next
-> up) so this reorg doesn't stale that plan's file citations — see §10.
+> zoom-to-earth plan 02** (re-grounded in PR #423, in implementation as of
+> 2026-07-10) so this reorg doesn't stale that plan's file citations — see
+> §11.
 
 ## 1. What we're building
 
@@ -407,11 +409,11 @@ construction + `draw` test **during its folder move**.
 
 ## 11. Migration plan — four independently shippable steps
 
-**Sequenced AFTER zoom-to-earth plan 02 executes.** That plan was re-grounded
-onto current paths in PR #423 (2026-07-10) and is next up; this reorg would
-stale its citations if it landed first. When plan 02's solar-system _bodies_
-land, `debugSphere/` becomes `bodies/` and moves once — so debugSphere is
-touched a single time, not twice.
+**Sequenced AFTER zoom-to-earth plan 02 lands.** That plan was re-grounded
+onto current paths in PR #423 (2026-07-10) and is in implementation; this
+reorg would stale its citations if it landed first. When plan 02's
+solar-system _bodies_ land, `debugSphere/` becomes `bodies/` and moves once —
+so debugSphere is touched a single time, not twice.
 
 Each step is independently shippable and lands with the suite green:
 
