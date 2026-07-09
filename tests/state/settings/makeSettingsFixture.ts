@@ -6,11 +6,18 @@
  * `EngineSettingsState`. Rather than re-inline the ~30-line literal in each
  * file (where it would drift the moment a cluster gains a field), they all
  * build it here. The body mirrors the engine's startup construction
- * (`engine.ts` settings literal) so the fixture stays a true shape: defaults
+ * (`buildInitialSettings`) so the fixture stays a true shape: defaults
  * from `data/defaults.ts`, item rows DERIVED from `GALAXY_CATALOG_IDS` /
  * `STRUCTURE_IDS`, volume items from `seedVolumeFields()`. Deriving the
  * item keys (rather than hand-listing them) means adding a galaxy catalog or category
  * can't silently leave the fixture stale.
+ *
+ * One deliberate divergence from the boot seed: every galaxy catalog row is
+ * `enabled: true` here, whereas the real seed derives `enabled` from each
+ * registry entry's `visible` field (so default-off catalogs like desiDeep boot
+ * disabled). Reducer/selector tests want a uniform all-on baseline they can
+ * flip bits off of — a registry-shaped fixture would couple every "toggle X"
+ * test to which catalogs happen to ship visible.
  *
  * `overrides` is a shallow top-level merge for the rare test that wants one
  * cluster swapped wholesale; reducer tests generally take the unmodified
@@ -21,6 +28,17 @@ import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { seedVolumeFields } from '../../../src/data/volume/volumeFieldDefaults';
+import {
+  DEFAULT_ALIGN_SEC,
+  DEFAULT_RAMP_SEC,
+  DEFAULT_LINGER,
+  DEFAULT_LINGER_SEC,
+  DEFAULT_SPLINE,
+  DEFAULT_TURN_DELAY,
+  DEFAULT_LOOK_AHEAD,
+  DEFAULT_PASS_BY_OFFSET,
+  DEFAULT_PASS_BY_DIR,
+} from '../../../src/services/engine/animation/pathDefaults';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_BIAS_MODE,
@@ -74,10 +92,31 @@ export function makeSettingsFixture(
     },
     volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: seedVolumeFields() },
     flow: { ...DEFAULT_FLOW },
+    labels: { focusedOnly: false },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       disabledPasses: {},
+      clipPathInspect: {
+        clipId: null,
+        scrub01: 0,
+        align: DEFAULT_ALIGN_SEC,
+        rampSec: DEFAULT_RAMP_SEC,
+        linger: DEFAULT_LINGER,
+        lingerSec: DEFAULT_LINGER_SEC,
+        spline: DEFAULT_SPLINE,
+        turnDelay: DEFAULT_TURN_DELAY,
+        lookAhead: DEFAULT_LOOK_AHEAD,
+        passByOffset: DEFAULT_PASS_BY_OFFSET,
+        passByDir: DEFAULT_PASS_BY_DIR,
+        active: {
+          align: false,
+          rampSec: false,
+          linger: false,
+          spline: false,
+          passBy: false,
+        },
+      },
     },
     structures: {
       enabled: true,

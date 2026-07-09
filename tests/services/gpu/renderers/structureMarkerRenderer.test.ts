@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createStructureMarkerRenderer } from '../../../../src/services/gpu/renderers/structureMarkerRenderer';
 import type { StructureMarkerDescriptor } from '../../../../src/@types/rendering/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
@@ -99,5 +99,41 @@ describe('StructureMarkerRenderer (CPU state)', () => {
     r.setMarkers([cluster(1), cluster(2), void_(3), group(4), group(5), group(6)]);
     // Total = 6; if any bucket bleed occurred markerCount would be wrong.
     expect(r.markerCount()).toBe(6);
+  });
+});
+
+describe('StructureMarkerRenderer colour target', () => {
+  it('bakes the given targetFormat into the halo + ring pipelines (pick stays r32uint)', () => {
+    const captured: GPURenderPipelineDescriptor[] = [];
+    const device = {
+      createBindGroupLayout: vi.fn(() => ({})),
+      createPipelineLayout: vi.fn(() => ({})),
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
+        captured.push(desc);
+        return { getBindGroupLayout: () => ({}) };
+      }),
+      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+      createBindGroup: vi.fn(() => ({})),
+      queue: { writeBuffer: vi.fn() },
+    } as unknown as GPUDevice;
+    const ctx = {
+      device,
+      context: null as unknown as GPUCanvasContext,
+      format: 'bgra8unorm' as GPUTextureFormat,
+      canvas: null as unknown as HTMLCanvasElement,
+    };
+    createStructureMarkerRenderer(ctx, 'rgba16float', {} as unknown as FadeUniformsBgl);
+
+    const formatByLabel = new Map(
+      captured.map((p) => [p.label, Array.from(p.fragment!.targets!)[0]!.format]),
+    );
+    // Halo + ring write into the HDR target; the pick pipeline is the integer
+    // r32uint texture and must NOT pick up the colour target format.
+    expect(formatByLabel.get('structure-marker-halo-pipeline')).toBe('rgba16float');
+    expect(formatByLabel.get('structure-marker-ring-pipeline')).toBe('rgba16float');
+    expect(formatByLabel.get('structure-marker-ring-pick-pipeline')).toBe('r32uint');
   });
 });

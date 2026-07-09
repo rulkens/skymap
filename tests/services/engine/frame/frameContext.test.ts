@@ -26,14 +26,15 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
+import { deriveSlabs, NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
 
 /**
  * Build an `EngineState`-shaped fixture with the guard fields
- * (`cam`, `gpu.renderer`, `gpu.postProcess`, `gpu.pickRenderer`,
- * `gpu.volumeOffscreen`, `subsystems.texturedDisks`) populated by default.
+ * (`cam`, `gpu.renderer`, `gpu.renderTargets`, `gpu.pickRenderer`,
+ * `gpu.compositor`, `subsystems.texturedDisks`) populated by default.
  * Each test can null any one to exercise the not-ready branch.
  *
  * `state.cam` is only used by the `isEngineReady` bootstrap gate (non-null
@@ -44,9 +45,9 @@ function makeState(
   overrides: {
     cam?: OrbitCamera | null;
     renderer?: unknown;
-    postProcess?: unknown;
+    renderTargets?: unknown;
     pickRenderer?: unknown;
-    volumeOffscreen?: unknown;
+    compositor?: unknown;
     texturedDisks?: unknown;
   } = {},
 ): EngineState {
@@ -61,16 +62,16 @@ function makeState(
         } as unknown as OrbitCamera)
       : overrides.cam;
   const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
-  const postProcess = overrides.postProcess === undefined ? ({} as unknown) : overrides.postProcess;
+  const renderTargets =
+    overrides.renderTargets === undefined ? ({} as unknown) : overrides.renderTargets;
   const pickRenderer =
     overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
-  const volumeOffscreen =
-    overrides.volumeOffscreen === undefined ? ({} as unknown) : overrides.volumeOffscreen;
+  const compositor = overrides.compositor === undefined ? ({} as unknown) : overrides.compositor;
   const texturedDisks =
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
-    gpu: { renderer, postProcess, pickRenderer, volumeOffscreen },
+    gpu: { renderer, renderTargets, pickRenderer, compositor },
     subsystems: { texturedDisks },
   } as unknown as EngineState;
 }
@@ -87,6 +88,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       RESTING_POSE,
       PROJECTION,
       0xffffffff,
+      0,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -98,28 +100,19 @@ describe('deriveFrameContext — not-ready branch', () => {
       RESTING_POSE,
       PROJECTION,
       0xffffffff,
+      0,
     );
     expect(ctx.isReady).toBe(false);
   });
 
-  it('returns isReady:false when gpu.postProcess is null', () => {
+  it('returns isReady:false when gpu.renderTargets is null', () => {
     const ctx = deriveFrameContext(
-      makeState({ postProcess: null }),
+      makeState({ renderTargets: null }),
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
       0xffffffff,
-    );
-    expect(ctx.isReady).toBe(false);
-  });
-
-  it('returns isReady:false when gpu.volumeOffscreen is null', () => {
-    const ctx = deriveFrameContext(
-      makeState({ volumeOffscreen: null }),
-      makeCanvas(),
-      RESTING_POSE,
-      PROJECTION,
-      0xffffffff,
+      0,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -131,6 +124,7 @@ describe('deriveFrameContext — not-ready branch', () => {
       RESTING_POSE,
       PROJECTION,
       0xffffffff,
+      0,
     );
     expect(ctx.isReady).toBe(false);
   });
@@ -140,7 +134,7 @@ describe('deriveFrameContext — ready branch', () => {
   it('assembles ctx.cam from pose + projection (not from state.cam)', () => {
     const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
     const projection: CameraProjection = { fovYRad: 1.2, aspect: 2, near: 0.01, far: 5000 };
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, projection, 0xffffffff);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, projection, 0xffffffff, 0);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     // ctx.cam must reflect the pose and projection.
@@ -155,7 +149,14 @@ describe('deriveFrameContext — ready branch', () => {
     // The projection Resource is the source of fovYRad; state.cam.fovYRad is
     // only the drag register bootstrap value and is never read for rendering.
     const projection: CameraProjection = { fovYRad: 0.9, aspect: 1, near: 0.1, far: 1000 };
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, projection, 0xffffffff);
+    const ctx = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      RESTING_POSE,
+      projection,
+      0xffffffff,
+      0,
+    );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.cam.fovYRad).toBe(0.9);
@@ -164,7 +165,7 @@ describe('deriveFrameContext — ready branch', () => {
   it('drawPxPerRad uses projection.fovYRad', () => {
     const projection: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
     const canvas = makeCanvas(1920, 1080);
-    const ctx = deriveFrameContext(makeState(), canvas, RESTING_POSE, projection, 0xffffffff);
+    const ctx = deriveFrameContext(makeState(), canvas, RESTING_POSE, projection, 0xffffffff, 0);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     // pxPerRad = height / (2 * tan(fovY / 2))
@@ -174,80 +175,81 @@ describe('deriveFrameContext — ready branch', () => {
 
   it('ctx.vp matches computeViewProj(assembleOrbitCamera(pose, projection))', () => {
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION, 0xffffffff);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION, 0xffffffff, 0);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     const expected = computeViewProj(assembleOrbitCamera(pose, PROJECTION));
     expect(Array.from(ctx.vp)).toEqual(Array.from(expected));
   });
 
+  it('populates ctx.slabs from deriveSlabs(cam, vp) — the single per-frame derivation', () => {
+    const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION, 0xffffffff, 0);
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+    const cam = assembleOrbitCamera(pose, PROJECTION);
+    const expected = deriveSlabs(cam, computeViewProj(cam));
+    expect(ctx.slabs).toHaveLength(2);
+    expect(ctx.slabs[0]?.index).toBe(NEAR0);
+    expect(ctx.slabs[1]?.index).toBe(COSMO);
+    expect(Array.from(ctx.slabs[0]!.vp)).toEqual(Array.from(expected[0]!.vp));
+    expect(Array.from(ctx.slabs[1]!.vp)).toEqual(Array.from(expected[1]!.vp));
+  });
+
   it('populates canvasSize from canvas dimensions', () => {
-    const ctx = deriveFrameContext(makeState(), makeCanvas(800, 600), RESTING_POSE, PROJECTION, 0xffffffff);
+    const ctx = deriveFrameContext(
+      makeState(),
+      makeCanvas(800, 600),
+      RESTING_POSE,
+      PROJECTION,
+      0xffffffff,
+      0,
+    );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.canvasSize).toEqual({ width: 800, height: 600 });
   });
 
-  it('forwards renderer, postProcess, texturedDisks references onto the ready context', () => {
+  it('forwards renderer, renderTargets, texturedDisks references onto the ready context', () => {
     const renderer = { tag: 'renderer' };
-    const postProcess = { tag: 'postProcess' };
+    const renderTargets = { tag: 'renderTargets' };
     const texturedDisks = { tag: 'texturedDisks' };
     const ctx = deriveFrameContext(
-      makeState({ renderer, postProcess, texturedDisks }),
+      makeState({ renderer, renderTargets, texturedDisks }),
       makeCanvas(),
       RESTING_POSE,
       PROJECTION,
       0xffffffff,
+      0,
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.renderer).toBe(renderer);
-    expect(ctx.postProcess).toBe(postProcess);
+    expect(ctx.renderTargets).toBe(renderTargets);
     expect(ctx.texturedDisks).toBe(texturedDisks);
-  });
-
-  it('forwards volumeOffscreen reference onto the ready context', () => {
-    const volumeOffscreen = { view: {} as GPUTextureView, resize: () => {}, destroy: () => {} };
-    const ctx = deriveFrameContext(
-      makeState({ volumeOffscreen }),
-      makeCanvas(),
-      RESTING_POSE,
-      PROJECTION,
-      0xffffffff,
-    );
-    expect(ctx.isReady).toBe(true);
-    if (!ctx.isReady) return;
-    expect(ctx.volumeOffscreen).toBe(volumeOffscreen);
   });
 
   it('exposes visibleSourceMask and a seeded focus on the ready context', () => {
     const mask = 0b1011;
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, PROJECTION, mask);
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, PROJECTION, mask, 0);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.visibleSourceMask).toBe(mask);
     expect(ctx.focus.blend).toBe(0);
   });
 
-  it('populates the foreground fields when ready', () => {
-    // Use a non-trivial pose so the foreground vp is definitely non-identity.
-    const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 50 };
-    const projection: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
-    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, projection, 0xffffffff);
+  it('stamps nowMs onto the ready context', () => {
+    const ctx = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+      0xffffffff,
+      1234.5,
+    );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
-
-    // foregroundVp must be a Float64Array of exactly 16 elements (column-major mat4).
-    expect(ctx.foregroundVp).toBeInstanceOf(Float64Array);
-    expect(ctx.foregroundVp.length).toBe(16);
-
-    // renderOrigin must match RENDER_ORIGIN_MPC ([0, 0, 0] for Plan 01).
-    expect(ctx.renderOrigin).toEqual([0, 0, 0]);
-
-    // near and far must both be positive and near < far (frustum is well-formed).
-    expect(ctx.foregroundNear).toBeGreaterThan(0);
-    expect(ctx.foregroundFar).toBeGreaterThan(0);
-    expect(ctx.foregroundNear).toBeLessThan(ctx.foregroundFar);
+    expect(ctx.nowMs).toBe(1234.5);
   });
 });
 
@@ -259,6 +261,7 @@ describe('deriveFrameContext — type narrowing', () => {
       RESTING_POSE,
       PROJECTION,
       0xffffffff,
+      0,
     );
     if (ctx.isReady) {
       // If FrameContext were `{ cam: OrbitCamera | null }` instead of a
@@ -275,6 +278,7 @@ describe('deriveFrameContext — type narrowing', () => {
       RESTING_POSE,
       PROJECTION,
       0xffffffff,
+      0,
     );
     if (ctx.isReady) {
       // @ts-expect-error — drawCamPos is Readonly<[...]>; index assignment is forbidden.

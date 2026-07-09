@@ -1,0 +1,29 @@
+# WESL linker configuration for the Galaxy Renderer tool.
+#
+# Unlike the flow-workbench (which links against the runtime's canonical
+# shader tree, because it drives the one real flow renderer shared with the
+# main app), this tool's DRAW shaders are entirely its own — star sprites,
+# dust, and an HDR bloom chain that have no runtime counterpart to share
+# with. So 'root' points at this tool's own shader directory rather than up
+# into src/services/gpu/shaders, and imports inside those shaders resolve
+# as package::lib::name against that local root. The one exception is the
+# shared galaxyGen/ generation shaders, which live in the runtime tree
+# (src/services/gpu/shaders/galaxyGen) and appear inside this root through
+# the symlink at src/engine/shaders/galaxyGen — WESL package binding is
+# root-driven, so the file must appear inside the root to be addressable as
+# package::galaxyGen:: (see vite.config.ts's resolve block for the alias +
+# preserveSymlinks that keep the id inside this root).
+#
+# wesl-plugin locates this file from the explicit 'weslToml' option in
+# vite.config.ts — NOT from the Vite 'root'. By default the plugin reads
+# '<process.cwd()>/wesl.toml', and 'npm run galaxy-renderer' keeps cwd at
+# the repo root, so without the explicit path the plugin would pick up the
+# runtime toml instead and never find this tool's shaders.
+#
+# '?static' (wired in vite.config.ts) links at build time to a flat WGSL
+# string — zero runtime linker dependency, same shape as the
+# import x from './x.wgsl' string modules it replaces.
+
+edition = "unstable_2025"
+include = ["src/engine/shaders/**/*.wesl"]
+root = "src/engine/shaders"

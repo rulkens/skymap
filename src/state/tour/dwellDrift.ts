@@ -1,7 +1,9 @@
 /**
- * dwellDrift — the ambient camera motion played DURING a beat's dwell, synced to
- * the time the dwell has left so it starts gently and is settled the instant the
- * next beat begins.
+ * dwellDrift — the canonical ambient dwell clip: a gentle orbit + bob sized to
+ * `durationSec`. Beats author it directly (`dwellClip: dwellDrift(8)`); the
+ * clip's compiled duration IS the beat's dwell length. It is one dwell clip
+ * among any — a slow flyPath ring or a push-in are equally valid `dwellClip`s —
+ * this is just the default idle motion.
  *
  * ### Two motions, two layers
  *
@@ -23,18 +25,20 @@
  * Both run concurrently under `all`, both easing their motion in/out, so the
  * drift swells up and settles together.
  *
- * ### Why a duration, not the beat
+ * ### Sized once, at authoring time
  *
- * The motion needs exactly one thing from the dwell: how long it has to play.
- * Taking the REMAINING dwell seconds (not the whole `BeatData`) keeps the
- * dependency minimal and lands the ease-out on the cut even across pauses —
- * `pausableDwellSaga` restarts the drift on every resume with the time still
- * left, so a freshly sized motion always fills exactly what remains.
+ * The ease-out lands exactly on the auto-advance cut for an uninterrupted dwell
+ * (the timer runs for the same `durationSec`). After a pause/resume the saga
+ * replays the clip from its start into the shorter remaining window, so the
+ * motion gets cut mid-ease — see `pausableDwellSaga`'s header for why that
+ * trade was accepted.
  *
- * `rampSec` (the pitch fade) and `cruiseRate` (the yaw's average orbit speed) are
- * arguments with defaults so the caller can tune the bob softness and the orbit
- * speed without editing this file. The pitch fade is clamped to half the window so
- * a short remaining dwell still fades symmetrically in and out.
+ * `rampSec` (the pitch fade) and `cruiseRate` (the yaw's average orbit speed)
+ * are NAMED options with defaults so the caller can tune the bob softness and
+ * the orbit speed without editing this file — named, because as positional
+ * args a beat once fed an orbit rate into the ramp slot and silently got the
+ * default speed with a near-zero fade. The pitch fade is clamped to half the
+ * window so a short dwell still fades symmetrically in and out.
  *
  * ### Finite, and that's fine
  *
@@ -49,7 +53,7 @@ import { all, oscillate, spin } from '../../services/engine/animation/effectHelp
 
 // Yaw's average orbit speed (rad/s — 2π over 45s) and the pitch-bob fade length
 // (s), both overridable. Pitch is a gentle bob: PITCH_AMP radians peak,
-// PITCH_PERIOD seconds per cycle.
+// PITCH_PERIOD the TARGET seconds per cycle (stretched to fit — see below).
 const DEFAULT_CRUISE_RATE = (Math.PI * 2) / 45;
 const DEFAULT_RAMP_SEC = 1.5;
 const PITCH_AMP = 0.05;
@@ -57,10 +61,19 @@ const PITCH_PERIOD = 14;
 
 export function dwellDrift(
   durationSec: number,
-  rampSec: number = DEFAULT_RAMP_SEC,
-  cruiseRate: number = DEFAULT_CRUISE_RATE,
+  opts?: { rampSec?: number; cruiseRate?: number },
 ): ClipData {
+  const rampSec = opts?.rampSec ?? DEFAULT_RAMP_SEC;
+  const cruiseRate = opts?.cruiseRate ?? DEFAULT_CRUISE_RATE;
   const fade = Math.min(rampSec, durationSec / 2);
+  // Fit an INTEGER number of full cycles into the window, as close to the
+  // target period as the duration allows. A free-running sine is mid-swing
+  // wherever the window happens to end, so the amplitude fade drags the
+  // camera back from that displacement — a visible vertical lurch right at
+  // the cut. With whole cycles the sine returns to centre exactly at the
+  // end, and the fade merely softens a settling the bob was doing anyway.
+  const cycles = Math.max(1, Math.round(durationSec / PITCH_PERIOD));
+  const period = durationSec / cycles;
 
   return {
     start: 'live',
@@ -70,8 +83,8 @@ export function dwellDrift(
         // angular speed `cruiseRate`; inOut eases in and out and ends at rest.
         spin('yaw', { by: cruiseRate * durationSec, over: durationSec, ease: 'inOut' }),
         // Pitch: eased oscillation — a bob whose amplitude fades in/out over the
-        // window, zero-mean so it returns to centre.
-        oscillate('pitch', { amp: PITCH_AMP, period: PITCH_PERIOD, over: durationSec, fade }),
+        // window, zero-mean and cycle-fitted so it returns to centre on the cut.
+        oscillate('pitch', { amp: PITCH_AMP, period, over: durationSec, fade }),
       ]),
     ],
   };

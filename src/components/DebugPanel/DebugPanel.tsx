@@ -6,8 +6,11 @@
  * `RenderTogglesSection` (per-pass on/off checkboxes for visual
  * debugging), `FlowTuningSection` + the pick/disk-ring toggles,
  * `DataQualitySection` (catalog-audit diagnostics such as the
- * orientation-fallback toggles), `LabelEffectsSection`, and
- * `ClipTriggersSection` (play/stop a registered clip + launch a guided tour).
+ * orientation-fallback toggles), and two
+ * self-contained sections mounted via their own store containers —
+ * `ClipTriggersSectionContainer` (play/stop a registered clip + launch a guided
+ * tour) and `ClipPathInspectorSectionContainer` (precompute + scrub a clip's
+ * debug camera path) — so their store reach doesn't prop-drill through here.
  * Mount is owned by `App.tsx` (toggled by the `d` keyboard shortcut);
  * when this component renders, all sections always render — section-level
  * visibility (e.g. "GPU timings unavailable") is each section's
@@ -29,16 +32,14 @@
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
-import type { ClipId } from '../../@types/animation/ClipId';
-import type { TourId } from '../../@types/animation/tour/TourId';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
 import { FlowTuningSection } from './FlowTuningSection';
 import { DataQualitySection } from './DataQualitySection';
-import { LabelEffectsSection } from './LabelEffectsSection';
-import { ClipTriggersSection } from './ClipTriggersSection';
+import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
+import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
 
 export type DebugPanelProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
@@ -86,16 +87,6 @@ export type DebugPanelProps = {
    * from the section so it is no longer a leaf-level store reach.
    */
   onTogglePass: (name: string) => void;
-  /**
-   * Clip/tour controls — plain dispatches wired by `DebugPanelContainer`. All
-   * three are fire-and-forget request actions naming a registered clip/tour by
-   * id; `clipActive` (from `selectClipActive`) is the live "is a clip playing"
-   * flag the section uses for its readout instead of awaiting a Promise.
-   */
-  clipActive: boolean;
-  onStartClip: (id: ClipId) => void;
-  onStopClip: () => void;
-  onStartTour: (id: TourId) => void;
 };
 
 export function DebugPanel({
@@ -114,10 +105,6 @@ export function DebugPanel({
   flow,
   onFlowChange,
   onTogglePass,
-  clipActive,
-  onStartClip,
-  onStopClip,
-  onStartTour,
 }: DebugPanelProps) {
   return (
     <div
@@ -172,14 +159,9 @@ export function DebugPanel({
         onRealOnlyModeChange={onRealOnlyModeChange}
       />
       <div style={{ marginTop: 6 }} />
-      <LabelEffectsSection />
+      <ClipTriggersSectionContainer />
       <div style={{ marginTop: 6 }} />
-      <ClipTriggersSection
-        clipActive={clipActive}
-        onStartClip={onStartClip}
-        onStopClip={onStopClip}
-        onStartTour={onStartTour}
-      />
+      <ClipPathInspectorSectionContainer />
     </div>
   );
 }

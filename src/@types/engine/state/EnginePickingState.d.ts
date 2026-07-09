@@ -11,13 +11,12 @@
  *   - `pointerDown` — true while the user is dragging to orbit the
  *                      camera; the `hoverPickDriver` skips picks while
  *                      dragging to avoid a pick storm.
- *   - `lastFrameUniformBytes` — packed camera + settings snapshot from the
- *                       last visual frame; the hover-pick driver and the
- *                       click resolver both upload this to the pick
- *                       renderer's own buffer so a pick reproduces the
- *                       last frame's camera state without re-running the
- *                       per-frame camera drivers.  Null until the first
- *                       frame.
+ *
+ * Nothing camera-shaped lives here anymore.  The point pick pass rebuilds
+ * its own uniform bytes from plain values at pick time (see
+ * `pickUniformBytesOf`), and the Milky-Way pick gate reads the pick-time
+ * camera directly through `milkyWayLayer.enabled(state, pickCtx)` — so no
+ * frame→pick camera mirror is stashed on this bag.
  *
  * ### What used to live here but doesn't anymore
  *
@@ -51,11 +50,4 @@ export type EnginePickingState = {
    * Written by `wireInput.ts`; read by `hoverPickDriver.ts`.
    */
   pointerDown: boolean;
-  /**
-   * Packed PointUniforms image from the last visual frame (see
-   * packPointUniforms). The pick paths upload this to the pick renderer's
-   * own buffer so a pick reproduces the last frame's camera without
-   * re-running the per-frame camera drivers. Null until the first frame.
-   */
-  lastFrameUniformBytes: ArrayBuffer | null;
 };

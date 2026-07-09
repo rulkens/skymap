@@ -103,6 +103,30 @@ describe('createFadeRegistry', () => {
     expect(done).toBe(true);
   });
 
+  it('fadeTo without nowMs starts at the last ticked frame time', () => {
+    const r = makeRegistry();
+    const h: FadeId = { kind: 'filament' };
+    r.register(h, 0);
+    r.tick(1000);
+    // No nowMs argument — the fade must anchor at the last tick (t=1000),
+    // not at the wall clock.
+    r.fadeTo(h, 1, 600);
+    expect(r.opacityOf(h, 1000)).toBeCloseTo(0, 5);
+    expect(r.opacityOf(h, 1300)).toBeCloseTo(0.5, 5); // smoothstep midpoint
+    expect(r.opacityOf(h, 1600)).toBeCloseTo(1, 5);
+  });
+
+  it('opacityOf without a time reads at the last ticked frame time', () => {
+    const r = makeRegistry();
+    const h: FadeId = { kind: 'filament' };
+    r.register(h, 0);
+    r.fadeTo(h, 1, 600, 1000);
+    r.tick(1300);
+    // Argless read must equal an explicit read at the last tick's time.
+    expect(r.opacityOf(h)).toBe(r.opacityOf(h, 1300));
+    expect(r.opacityOf(h)).toBeCloseTo(0.5, 5);
+  });
+
   it('setImmediate skips animation', () => {
     const r = makeRegistry();
     const h: FadeId = { kind: 'milkyWay' };

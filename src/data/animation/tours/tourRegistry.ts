@@ -12,8 +12,10 @@ import type { Tour } from '../../../@types/animation/tour/Tour';
 import type { TourId } from '../../../@types/animation/tour/TourId';
 import { demoTour } from './demoTour';
 import { webShowcase } from './webShowcase';
+import { grandTour } from './grandTour';
 
 export const tourRegistry: Record<TourId, Tour> = {
   demo: demoTour,
   webShowcase,
+  grandTour,
 };

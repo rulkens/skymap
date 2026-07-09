@@ -39,6 +39,15 @@ describe('buildInitialUiState', () => {
       const state = buildInitialUiState();
       expect(state.splash.visible).toBe(false);
     });
+
+    it('is false in cinema mode (?cinema) even on a first visit', () => {
+      // No seenVersion and no deep link — would normally show the splash.
+      // Cinema is gate 0: the recorder must find the page capture-ready
+      // with zero interaction.
+      window.history.replaceState(null, '', '/?cinema');
+      const state = buildInitialUiState();
+      expect(state.splash.visible).toBe(false);
+    });
   });
 
   describe('splash.dismissedVersion', () => {

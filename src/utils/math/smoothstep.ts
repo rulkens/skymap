@@ -5,7 +5,7 @@
  * without the visible kink a linear ramp would leave.
  *
  * This is the one fade primitive every distance/size-based overlay fade
- * leans on (the Milky-Way impostor, the horizon shell, …), so the curve
+ * leans on (the Milky-Way point cloud, the horizon shell, …), so the curve
  * is identical everywhere instead of each renderer hand-rolling the same
  * three-line clamp.  It matches the WGSL/GLSL built-in
  * `smoothstep(edge0, edge1, x)` exactly, so CPU-side fades stay in step

@@ -2,9 +2,9 @@
  * milkyWayPickRenderer — invisible, pick-only billboard that makes the
  * Milky Way clickable.
  *
- * The Milky Way is a first-class selectable source, but its visible disk
- * is drawn by a separate bespoke impostor renderer (milkyWayRenderer)
- * that owns no pick pipeline.  This renderer fills the gap: a single
+ * The Milky Way is a first-class selectable source, but its visible form
+ * is the star/dust point cloud (milkyWayCloudRenderer), which owns no
+ * pick pipeline.  This renderer fills the gap: a single
  * screen-size-clamped billboard at the galactic centre that stamps the
  * MW identity into the r32uint pick texture.  It draws nothing visible.
  *
@@ -13,10 +13,13 @@
  * The MW pick is the sibling of the structure-ring pick path: a small
  * dedicated pipeline writing into the SAME pick texture the galaxy draws
  * use, sharing their depth attachment so a foreground galaxy still claims
- * the pixel.  The engine's pick pass calls `pickMilkyWay(pass, halfExtentPx)`
- * after the galaxy + structure + disk pick draws, reusing the caller's
- * bound `@group(0)` (CameraUniforms) and supplying the disc's apparent
- * on-screen radius as the billboard size.
+ * the pixel.  The engine's pick pass calls `pickMilkyWay(pass)` after the
+ * galaxy + structure + disk pick draws, reusing the caller's bound
+ * `@group(0)` (the points pick uniform buffer).  The billboard's apparent
+ * on-screen size is computed IN the vertex shader from those shared
+ * camera uniforms — the same derivation galaxy points use — so this
+ * renderer's own `@group(2)` uniform is fully static: world centre,
+ * source code, and disc world radius, all written once at construction.
  *
  * ### Pipeline layout (the 'auto'-layout trap)
  *
@@ -42,21 +45,23 @@ import type { MilkyWayPickRenderer } from '../../../@types/rendering/MilkyWayPic
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { Source } from '../../../data/sources';
 import { MILKY_WAY_CENTER_WORLD } from '../../../data/milkyWay/galacticCenter';
+import { MILKY_WAY_RADIUS_MPC } from '../galaxy/milkyWayCalibration';
 import vsCode from '../shaders/milkyWayPick/vertex.wesl?static';
 import pickFsCode from '../shaders/milkyWayPick/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
  * @group(2) MilkyWayPickUniforms — vec3 centreWorld (offset 0) + u32
- * sourceCode (offset 12) + f32 halfExtentPx (offset 16) = 32 bytes (WGSL
- * pads the struct to a 16-byte multiple).  Centre + code are written once
- * at construction; halfExtentPx is rewritten on each `pickMilkyWay` call
- * because it tracks the camera distance.
+ * sourceCode (offset 12) + f32 radiusMpc (offset 16) = 32 bytes (WGSL
+ * pads the struct to a 16-byte multiple).  Every field is a physical
+ * constant of the scene, written once at construction — the vertex
+ * shader projects radiusMpc to apparent pixels itself from the shared
+ * camera uniforms at @group(0).
  */
 const MW_PICK_UNIFORM_BYTES = 32;
 
-/** Byte offset of the per-pick `halfExtentPx` f32 in the @group(2) uniform. */
-const MW_HALF_EXTENT_BYTE_OFFSET = 16;
+/** Byte offset of the disc world-radius f32 in the @group(2) uniform. */
+const MW_RADIUS_MPC_BYTE_OFFSET = 16;
 
 export function createMilkyWayPickRenderer(
   ctx: GpuContext,
@@ -139,23 +144,24 @@ export function createMilkyWayPickRenderer(
       },
     });
 
-    // @group(2) uniform — vec3 centre + u32 source code (written once
-    // here) + f32 halfExtentPx (written per draw by pickMilkyWay).
+    // @group(2) uniform — vec3 centre + u32 source code + f32 disc world
+    // radius.  The whole struct is static scene data, so one write here
+    // covers the buffer's entire lifetime (no COPY_DST traffic per pick).
     mwUniformBuffer = device.createBuffer({
       label: 'milky-way-pick-uniform',
       size: MW_PICK_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    // Write only the static prefix (centre + code) here; halfExtentPx at
-    // offset 16 stays zero until the first pickMilkyWay call supplies it.
-    // Float view for the vec3 centre at bytes 0..11; u32 view for the
-    // source code at byte 12.
-    const scratch = new ArrayBuffer(MW_HALF_EXTENT_BYTE_OFFSET);
+    // Float view for the vec3 centre at bytes 0..11 and radiusMpc at byte
+    // 16 (= f32 index 4); u32 view for the source code at byte 12.  Bytes
+    // 20..31 are WGSL struct padding, left zero.
+    const scratch = new ArrayBuffer(MW_PICK_UNIFORM_BYTES);
     const f32 = new Float32Array(scratch);
     f32[0] = MILKY_WAY_CENTER_WORLD[0];
     f32[1] = MILKY_WAY_CENTER_WORLD[1];
     f32[2] = MILKY_WAY_CENTER_WORLD[2];
     new Uint32Array(scratch, 12, 1)[0] = Source.MilkyWay;
+    f32[MW_RADIUS_MPC_BYTE_OFFSET / 4] = MILKY_WAY_RADIUS_MPC;
     device.queue.writeBuffer(mwUniformBuffer, 0, scratch);
     mwBindGroup = device.createBindGroup({
       label: 'milky-way-pick-source-bg',
@@ -178,22 +184,18 @@ export function createMilkyWayPickRenderer(
     });
   }
 
-  function pickMilkyWay(pass: GPURenderPassEncoder, halfExtentPx: number): void {
-    if (!device || !pickPipeline || !mwBindGroup || !mwUniformBuffer || !dummyFadeBindGroup)
-      return;
-    // The hit-target half-extent is data, not state: the engine computes
-    // it via the shared selectionRingRadiusPx helper (the same value the
-    // visible ring uses) and hands it in, so the renderer stays free of
-    // EngineState — same contract as the visibility boolean.  Upload it to
-    // offset 16 of the @group(2) uniform before the draw.
-    device.queue.writeBuffer(
-      mwUniformBuffer,
-      MW_HALF_EXTENT_BYTE_OFFSET,
-      new Float32Array([halfExtentPx]),
-    );
+  function pickMilkyWay(pass: GPURenderPassEncoder): void {
+    if (!device || !pickPipeline || !mwBindGroup || !dummyFadeBindGroup) return;
+    // No uniform upload here — the @group(2) uniform is fully static
+    // (written once at construction) and the apparent size is derived in
+    // the vertex shader from the caller's @group(0) camera uniforms, so
+    // the draw is pure command recording.
     pass.setPipeline(pickPipeline);
-    // @group(0) is the caller's CameraUniforms (galaxy pick draws bound
-    // it); we bind only @group(1) (dummy fade) + @group(2) (MW uniform).
+    // @group(0) is the pick pass's camera uniform group — the caller
+    // re-binds it immediately before this call (ring / disk picks bind
+    // their own smaller uniforms at slot 0, so inheriting the last-bound
+    // group would read the wrong buffer); we bind only @group(1) (dummy
+    // fade) + @group(2) (MW uniform).
     pass.setBindGroup(1, dummyFadeBindGroup);
     pass.setBindGroup(2, mwBindGroup);
     pass.draw(6, 1);

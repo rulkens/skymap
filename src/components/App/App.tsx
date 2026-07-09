@@ -3,7 +3,7 @@
  *
  * Layout and container-mounting: renders the engine canvas, mounts the HUD
  * chrome (StatusBar, InfoCard, ScaleBar, NavigationPanel, SettingsPanel,
- * CommandPalette, AutoRotateToggleContainer, DebugPanelContainer, Splash),
+ * CommandPaletteContainer, AutoRotateToggleContainer, DebugPanelContainer, Splash),
  * and wires keyboard shortcuts + URL sync.
  *
  * `handleRef` is a ref, not state: engine hooks call methods on it, and
@@ -12,6 +12,10 @@
  * No `React.StrictMode`: the engine creates GPU resources and starts a render
  * loop — it isn't designed for the synthetic double-mount. `useEngine`'s
  * cleanup still runs on real unmounts.
+ *
+ * Cinema mode (`?cinema`): the recorder's capture surface. App renders only
+ * the canvas + the tour overlay; every other piece of HUD chrome is absent
+ * from the DOM, not merely CSS-hidden — see the branch above the main return.
  *
  * Store reach: `selectHoveredFocusable` / `selectSelectedFocusable` drive the
  * InfoCard; `selectPaletteOpen`, `selectUiHidden`, `selectDebugPanelOpen` gate
@@ -29,42 +33,51 @@ import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useStructureMemberCount } from '../../hooks/useStructureMemberCount';
-import { useSplash } from '../../hooks/useSplash';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
 import InfoCard from '../InfoCard/InfoCard';
 import { ScaleBar } from '../ScaleBar/ScaleBar';
 import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
 import NavigationPanel from '../NavigationPanel/NavigationPanel';
-import { CommandPalette } from '../CommandPalette/CommandPalette';
+import CommandPaletteContainer from '../containers/CommandPaletteContainer';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggleContainer from '../containers/AutoRotateToggleContainer';
 import HomeButton from '../HomeButton/HomeButton';
-import Splash from '../Splash/Splash';
+import SplashContainer from '../containers/SplashContainer';
 import AboutPill from '../Splash/AboutPill';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
-import { useFamousMeta } from '../../hooks/useFamousMeta';
-import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectVisibleSourceMask } from '../../state/settings/selectors';
 import { selectTier } from '../../state/tier/selectors';
 import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
 import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
-import { requestFocus } from '../../state/selection/requestFocus';
 import { refOf } from '../../services/engine/helpers/refOf';
-import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
+import TourBeatRailContainer from '../containers/TourBeatRailContainer';
+import TourDebugPillContainer from '../containers/TourDebugPillContainer';
+import { hasUrlGate } from '../../utils/url/hasUrlGate';
+import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
-import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
-import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
 import {
-  selectEngineStatus,
-  selectScale,
-  selectLoadProgress,
-} from '../../state/engine/selectors';
+  selectPaletteOpen,
+  selectUiHidden,
+  selectDebugPanelOpen,
+  selectSplashVisible,
+} from '../../state/ui/selectors';
+import {
+  setPaletteOpen,
+  toggleUiHidden,
+  toggleDebugPanelOpen,
+  reopenSplash,
+} from '../../state/ui/uiSlice';
+import { selectEngineStatus, selectScale, selectLoadProgress } from '../../state/engine/selectors';
+
+// Temporary `?tour` debug gate for the grand-tour pill. Read once at module
+// scope — the search string can't change without a full page reload.
+const TOUR_DEBUG_GATE = hasUrlGate('tour');
 
 export function App(): React.ReactElement {
   const { canvasRef, handleRef } = useEngine();
@@ -96,11 +109,12 @@ export function App(): React.ReactElement {
   const scale = useAppSelector(selectScale);
   const loadProgress = useAppSelector(selectLoadProgress);
 
-  // "Home" frames our own galaxy: the Reset-camera button, the Home pill, and
-  // the palette's Milky-Way entry all route through the standard focus channel
-  // (updateSelectionFocus → watchFocusTweenSaga), so the camera tween, URL hash,
-  // and selection state match every other focus. One stable identity keeps the
-  // memo'd SettingsPanel / HomeButton from re-rendering.
+  // "Home" frames our own galaxy: the Reset-camera button and the Home pill
+  // route through the standard focus channel (updateSelectionFocus →
+  // watchFocusTweenSaga), so the camera tween, URL hash, and selection state
+  // match every other focus. (The palette's Milky-Way row reaches the same
+  // state via requestFocus(MILKY_WAY_FOCUS_ID), the deep-link path.) One stable
+  // identity keeps the memo'd SettingsPanel / HomeButton from re-rendering.
   const focusMilkyWay = useCallback(
     () => dispatch(updateSelectionFocus({ type: 'milkyWay' })),
     [dispatch],
@@ -143,10 +157,9 @@ export function App(): React.ReactElement {
   // separate `setUiHidden` write — see guidedTourSaga's "no setUiHidden" note.
   const tourActive = useAppSelector(selectTourActive);
 
-  // Stable handlers for the `React.memo`'d SearchTrigger — a fresh
+  // Stable handler for the `React.memo`'d SearchTrigger — a fresh
   // inline arrow each render would defeat the memo.
   const openPalette = useCallback(() => dispatch(setPaletteOpen(true)), [dispatch]);
-  const closePalette = useCallback(() => dispatch(setPaletteOpen(false)), [dispatch]);
 
   // Stable dispatching callbacks for the keyboard hook — wrapped in
   // `useCallback([dispatch])` so the arrow identity is stable for the
@@ -163,19 +176,11 @@ export function App(): React.ReactElement {
     [dispatch],
   );
 
-  const { famousMeta, ready: famousMetaReady } = useFamousMeta();
-
-  // Splash hook owns visibility, readiness gate (engine + famous-meta),
-  // localStorage versioning, deep-link bypass, 8 s Continue-anyway timer,
-  // and dismiss/reopen.  `status` and `loadProgress` are now read from the
-  // engine Redux slice inside `useSplash` — only the famous-meta flags are
-  // passed here.  See `useSplash.ts` for rationale.
-  const splash = useSplash({ famousMetaReady });
-
-  const { aliasIndex } = useAliasIndex({
-    paletteOpen,
-    engineHandleRef: handleRef,
-  });
+  // The full splash state surface lives in `SplashContainer` so its churn
+  // re-renders only that subtree. App needs just two facts: whether the splash
+  // is up (to hide the HUD stack) and how to reopen it from the About pill.
+  const splashVisible = useAppSelector(selectSplashVisible);
+  const reopenSplashScreen = useCallback(() => dispatch(reopenSplash()), [dispatch]);
 
   // Deep-link hash read + URL write. Reads focus from the store directly;
   // dispatches `requestFocus` / `clearSelection` for hash changes.
@@ -190,12 +195,45 @@ export function App(): React.ReactElement {
     toggleDebugPanelOpen: dispatchToggleDebugPanelOpen,
   });
 
+  // Shared between BOTH return branches (cinema + normal) so the `id="c"`
+  // contract and the mount-only-while-touring rule each live in one place.
+  //
+  // The engine takes over this canvas's GPU context; React never writes to it
+  // after the initial render. `id="c"` matches the fullscreen CSS rule in
+  // index.html. `aria-hidden` is inert in cinema mode — gate 0 of
+  // buildInitialUiState pins the splash hidden there, so it stays undefined.
+  const canvas = <canvas ref={canvasRef} id="c" aria-hidden={splashVisible || undefined} />;
+  // Tour overlay (caption + nav) — mounted only while a tour runs. In the
+  // normal branch it sits as a SIBLING of the HUD stack, not inside it, so the
+  // `uiStackHidden` fade (which the tour triggers) doesn't also fade it.
+  const tourOverlay = tourActive && <TourOverlayContainer />;
+
+  // Cinema mode (`?cinema`) — the recorder's capture surface: the canvas plus
+  // the tour overlay (captions + nav), nothing else. The recorder harness
+  // screenshots this page, so the HUD chrome must not EXIST in the DOM;
+  // CSS-hiding it (the `uiStackHidden` route) would still leave it findable
+  // and able to bleed into captures. Every hook above still runs — the
+  // engine, URL sync and keyboard wiring are what make the page playable —
+  // only the JSX diverges, which also keeps the hook order unconditional.
+  //
+  // Read per render, unlike the module-scope TOUR_DEBUG_GATE: a module-scope
+  // const is frozen at first import, so tests couldn't flip a mocked
+  // `isCinemaMode` between cinema and normal renders without module-cache
+  // resets. The search string can't change without a full reload, so the two
+  // read styles are behaviourally identical at runtime — and App renders on
+  // user action, not per frame, so the re-read costs nothing.
+  if (isCinemaMode()) {
+    return (
+      <>
+        {canvas}
+        {tourOverlay}
+      </>
+    );
+  }
+
   return (
     <>
-      {/* The engine takes over this canvas's GPU context; React never
-          writes to it after the initial render.  `id="c"` matches the
-          fullscreen CSS rule in index.html. */}
-      <canvas ref={canvasRef} id="c" aria-hidden={splash.splashVisible || undefined} />
+      {canvas}
 
       {/* HUD wrapper.  All overlay chrome lives inside this single
           `<div>` so `Tab` can fade the whole stack via one CSS
@@ -203,7 +241,7 @@ export function App(): React.ReactElement {
       <div
         className={cx(
           appStyles.uiStack,
-          (uiHidden || splash.splashVisible || tourActive) && appStyles.uiStackHidden,
+          (uiHidden || splashVisible || tourActive) && appStyles.uiStackHidden,
           selected != null && isMobile && appStyles.hasSelection,
         )}
       >
@@ -225,38 +263,18 @@ export function App(): React.ReactElement {
             they're added, so we don't need per-panel `bottom:` math. */}
         <div className={appStyles.leftStack}>
           <NavigationPanel defaultOpen={initialPanelsOpen} isMobile={initialMobile} />
-          <SettingsPanel
-            defaultOpen={initialPanelsOpen}
-            onResetCamera={focusMilkyWay}
-          />
+          <SettingsPanel defaultOpen={initialPanelsOpen} onResetCamera={focusMilkyWay} />
         </div>
         {/* Top-center pill row.  SearchTrigger + the pills share a flex
             wrapper so they fade together when the palette opens. */}
         <div className={appStyles.topBar}>
-          <SearchTrigger onClick={openPalette} hidden={paletteOpen || splash.splashVisible} />
-          <HomeButton onClick={focusMilkyWay} hidden={paletteOpen || splash.splashVisible} />
-          <AutoRotateToggleContainer hidden={paletteOpen || splash.splashVisible} />
-          <AboutPill onClick={splash.reopen} hidden={paletteOpen || splash.splashVisible} />
+          <SearchTrigger onClick={openPalette} hidden={paletteOpen || splashVisible} />
+          <HomeButton onClick={focusMilkyWay} hidden={paletteOpen || splashVisible} />
+          <AutoRotateToggleContainer hidden={paletteOpen || splashVisible} />
+          <AboutPill onClick={reopenSplashScreen} hidden={paletteOpen || splashVisible} />
+          {TOUR_DEBUG_GATE && <TourDebugPillContainer hidden={paletteOpen || splashVisible} />}
         </div>
-        <CommandPalette
-          entries={famousMeta}
-          aliasIndex={aliasIndex ?? undefined}
-          open={paletteOpen}
-          onClose={closePalette}
-          onSelect={(id) => dispatch(requestFocus(id))}
-          onSelectAlias={(target) =>
-            dispatch(
-              updateSelectionFocus({
-                type: 'galaxyCatalog',
-                source: target.source as GalaxyCatalogSourceType,
-                index: target.localIdx,
-              }),
-            )
-          }
-          // The Milky Way is a first-class FocusableTarget — focus it through
-          // the same select → focus path every other target uses.
-          onSelectMilkyWay={focusMilkyWay}
-        />
+        <CommandPaletteContainer engineHandleRef={handleRef} />
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (
@@ -267,25 +285,12 @@ export function App(): React.ReactElement {
           />
         )}
       </div>
-      {/* Tour overlay — sibling of the HUD stack, not inside it, so the
-          `uiStackHidden` fade (which the tour triggers) doesn't also fade the
-          caption + nav. Mounted only while a tour runs. */}
-      {tourActive && <TourOverlayContainer />}
-      {splash.splashVisible && (
-        <Splash
-          blocked={splash.blocked}
-          canContinueAnyway={splash.canContinueAnyway}
-          loadProgress={loadProgress}
-          error={splash.error}
-          onExplore={splash.dismissExplore}
-          // Plan 2 (stub tour) replaces this with the real tour wiring.
-          // For now Tour just dismisses like Explore — the splash work
-          // ships independently of the tour itinerary.
-          onTour={splash.dismissTour}
-          onContinueAnyway={splash.dismissExplore}
-          onReload={() => window.location.reload()}
-        />
-      )}
+      {tourOverlay}
+      {/* Beat rail rides the interactive session only — it is progress
+          chrome, so the cinema branch (captions-only film frames) omits it
+          just like TourNav and the beat counter. */}
+      {tourActive && <TourBeatRailContainer />}
+      <SplashContainer />
     </>
   );
 }

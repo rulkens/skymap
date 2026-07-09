@@ -72,13 +72,14 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  *   slot 3     — magnitude (f32)
  *   slot 4     — colorIndex (f32)
  *   slot 5     — axisRatio (f32) — sign bit carries isFallback
- *   slot 6     — positionAngleDeg (f32)
- *   slot 7     — radiusMpc (f32) — padded billboard half-extent
- *   slot 8     — vMaxWeight (f32)
- *   slot 9     — schechterRatio (f32)
- *   slot 10    — angularDensityWeight (f32)
+ *   slot 6,7   — paCos, paSin (f32×2) — cos/sin of the negated position angle
+ *   slot 8     — radiusMpc (f32) — padded billboard half-extent
+ *   slot 9     — vMaxWeight (f32)
+ *   slot 10    — schechterRatio (f32)
+ *   slot 11    — angularDensityWeight (f32)
+ *   slot 12    — absMag (f32) — from the offset-normalised slot-3 magnitude
  *
- * Total: 11 × 4 = 44 bytes per point.  Per-galaxy catalog constants stay out of
+ * Total: 13 × 4 = 52 bytes per point.  Per-galaxy catalog constants stay out of
  * the per-row layout: the K-correction kPerZ lives in the per-galaxy-catalog
  * `SourceUniforms` uniform (k is constant per galaxy catalog, so paying for it
  * per-row would be waste), and instance identity is composed per draw
@@ -90,15 +91,23 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * mask shape (`abs(axisRatio)`) and the flag (`axisRatio < 0`) in one
  * read.  See the slot 5 comment in the writer loop below.
  *
- * Slot 10 (`angularDensityWeight`) is left at 1.0 (multiplicative identity)
+ * Slot 11 (`angularDensityWeight`) is left at 1.0 (multiplicative identity)
  * by every default upload.  Mode 4 of the Malmquist-bias correction —
  * HEALPix angular re-weighting — replaces these defaults via the lazy
  * `setBiasMode(BiasMode.AngularReweight)` flow (mirror of Schechter).  Skipping the
  * eager bake here keeps the .bin-arrival latency low: the per-cloud
  * HEALPix pass costs ~100 ms even at full deck, and the user only pays it
  * if they actually pick mode 4.
+ *
+ * Slots 6/7 (paCosSin) and 12 (absMag) exist so the vertex shader never
+ * recomputes galaxy-static values: the PA rotation and the absolute
+ * magnitude are properties of the row, not the frame, yet the shader used
+ * to spend a cos+sin and a log10+sqrt on them for all 6 vertices of every
+ * instance every frame (~15 M invocations at the large tier).  Baking them
+ * once here is the classic space-for-ALU trade — +8 bytes/row against the
+ * hottest per-frame loop in the app.
  */
-const SLOTS_PER_POINT = 11;
+const SLOTS_PER_POINT = 13;
 
 /** Reference distance used to normalise the per-galaxy 1/V_max weight. */
 const D_REF_MPC = 750;
@@ -262,45 +271,61 @@ export function buildPointInterleavedBuffer(
     const ab = cloud.axisRatio[i]!;
     interleaved[o + 5] = isFallbackArr[i] === 1 ? -Math.abs(ab) : ab;
 
-    // Slot 6 — positionAngleDeg copied through.
-    interleaved[o + 6] = cloud.positionAngleDeg[i]!;
+    // Slots 6/7 — cos/sin of the position-angle rotation, negation folded
+    // in.  Astronomical PA is east-of-north (CCW on sky) but UV-space y
+    // points down on screen, and rotating the UV is the inverse of
+    // rotating the ellipse — hence the minus sign, identical to what the
+    // vertex shader used to apply before calling cos/sin per vertex.
+    // NaN PA (synthetic clouds) bakes to NaN cos/sin, matching the
+    // shader-computed values for those rows bit-for-bit.
+    const paRad = (-cloud.positionAngleDeg[i]! * Math.PI) / 180;
+    interleaved[o + 6] = Math.cos(paRad);
+    interleaved[o + 7] = Math.sin(paRad);
 
-    // Slot 7 — padded billboard radius in Mpc, half-extent (the shader
+    // Slot 8 — padded billboard radius in Mpc, half-extent (the shader
     // uses it directly as the world-space radius for the billboard
     // quad). Shares the helper with the procedural-disk + textured-
     // thumbnail pipelines so the load-fade handoff occupies an
     // identical world-space footprint across all three.
-    interleaved[o + 7] = paddedRadiusMpc(cloud.diameterKpc[i]!);
+    interleaved[o + 8] = paddedRadiusMpc(cloud.diameterKpc[i]!);
 
-    // Slot 8 — per-galaxy 1/V_max weight.  Computed from the *raw*
+    // Slot 9 — per-galaxy 1/V_max weight.  Computed from the *raw*
     // apparent magnitude (NOT `g + magOffset` — the per-galaxy-catalog
     // normalisation is a visualisation cosmetic, not a physical change to
     // the photometry) plus Cartesian distance (already hoisted above).
     // vMaxWeight handles NaN inputs by returning 0.
     const absMag = absoluteFromApparent(g, dMpc);
-    interleaved[o + 8] = vMaxWeight({
+    interleaved[o + 9] = vMaxWeight({
       absMag,
       mLim: galaxyCatalogMLim,
       dRefMpc: D_REF_MPC,
     });
 
-    // Slot 9 — per-galaxy Schechter density-correction ratio.  In fast
+    // Slot 10 — per-galaxy Schechter density-correction ratio.  In fast
     // mode we leave it at the multiplicative identity (1.0); the shader's
     // `select(1.0, schechterRatio, biasMode == 3u)` ignores the slot for
     // modes 0/1/2 anyway, so this matches the rendered output bit-for-bit
     // unless the user actually picks Schechter LF.  When mode ===
     // 'with-schechter' the ratios were computed up-front by
     // `computeSchechterRatios`; we just splice each row in here.
-    interleaved[o + 9] = schechterRatios !== null ? schechterRatios[i]! : 1.0;
+    interleaved[o + 10] = schechterRatios !== null ? schechterRatios[i]! : 1.0;
 
-    // Slot 10 — per-galaxy HEALPix angular re-weight (BiasMode.AngularReweight,
+    // Slot 11 — per-galaxy HEALPix angular re-weight (BiasMode.AngularReweight,
     // mode 4).  Default-write 1.0 (multiplicative identity) so the
     // shader's `select(1.0, angularDensityWeight, biasMode == 4u)`
     // produces no change in the other modes.  The lazy bake path
     // (`pointRenderer.setBiasMode(BiasMode.AngularReweight)`) splices
     // real per-galaxy weights in and re-uploads when the user toggles
     // into mode 4.
-    interleaved[o + 10] = 1.0;
+    interleaved[o + 11] = 1.0;
+
+    // Slot 12 — absolute magnitude for the Malmquist mode-1 gate,
+    // computed from the OFFSET-normalised slot-3 magnitude — NOT the raw
+    // `g` the vMaxWeight above uses.  The shader's gate historically ran
+    // 'distanceModulus(p.magnitude, length(p.position))' where p.magnitude
+    // is slot 3, so the baked value must fold the same per-catalog mean
+    // shift or every mode-1 threshold would move by `magOffset`.
+    interleaved[o + 12] = interleaved[o + 3]! - 5 * Math.log10(dMpc) - 25;
   }
 
   return {

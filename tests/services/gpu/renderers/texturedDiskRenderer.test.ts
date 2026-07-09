@@ -12,7 +12,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createTexturedDiskRenderer } from '../../../../src/services/gpu/renderers/texturedDiskRenderer';
 import { FLOATS_PER_INSTANCE } from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import type { DiskInstance } from '../../../../src/@types/rendering/DiskInstance';
 import type { FocusUniformsBgl } from '../../../../src/@types/rendering/FocusUniformsBgl';
 
@@ -23,11 +22,15 @@ const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 function makeStubCtx() {
   const writeBufferCalls: Array<{ data: Float32Array; offset: number }> = [];
+  const renderPipelines: GPURenderPipelineDescriptor[] = [];
   const device = {
     createShaderModule: vi.fn(() => ({
       getCompilationInfo: () => Promise.resolve({ messages: [] }),
     })),
-    createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
+      renderPipelines.push(desc);
+      return { getBindGroupLayout: () => ({}) };
+    }),
     createPipelineLayout: vi.fn(() => ({})),
     createBindGroupLayout: vi.fn(() => ({})),
     createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
@@ -48,7 +51,8 @@ function makeStubCtx() {
         ) => {
           const ab = (data as ArrayBufferView).buffer ?? (data as ArrayBuffer);
           const offset = dataOff ?? (data as ArrayBufferView).byteOffset ?? 0;
-          const len = size ?? (data as ArrayBufferView).byteLength ?? (ab as ArrayBuffer).byteLength;
+          const len =
+            size ?? (data as ArrayBufferView).byteLength ?? (ab as ArrayBuffer).byteLength;
           const copy = new Uint8Array(len);
           copy.set(new Uint8Array(ab as ArrayBuffer, offset, len));
           writeBufferCalls.push({
@@ -61,14 +65,14 @@ function makeStubCtx() {
     },
   } as unknown as GPUDevice;
 
-  const ctx: GpuContext = {
+  const ctx = {
     device,
     context: null as unknown as GPUCanvasContext,
-    format: 'rgba16float',
+    targetFormat: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
   };
 
-  return { ctx, writeBufferCalls };
+  return { ctx, writeBufferCalls, renderPipelines };
 }
 
 function fakeDiskInstance(overrides: Partial<DiskInstance> = {}): DiskInstance {
@@ -121,7 +125,14 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
       fakeDiskInstance({ hiResLayerIdx: 0, hiResCrossfadeAlpha: 0 }),
     ];
 
-    renderer.draw(pass, new Float32Array(16) as never, [800, 600], [0, 0, 0], FOCUS_BIND_GROUP, instances);
+    renderer.draw(
+      pass,
+      new Float32Array(16) as never,
+      [800, 600],
+      [0, 0, 0],
+      FOCUS_BIND_GROUP,
+      instances,
+    );
 
     // uniforms (1) + instance bytes (1) = 2 writeBuffer calls.
     expect(writeBufferCalls.length).toBe(2);
@@ -147,6 +158,14 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
     expect(instancePayload[i1 + 13]).toBe(0);
     expect(instancePayload[i1 + 14]).toBe(0);
     expect(instancePayload[i1 + 15]).toBe(0);
+  });
+
+  it('forwards init.targetFormat to the inner pipeline colour target', () => {
+    const { ctx, renderPipelines } = makeStubCtx();
+    createTexturedDiskRenderer(ctx, FOCUS_BGL);
+    expect(renderPipelines).toHaveLength(1);
+    const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
+    expect(target!.format).toBe('rgba16float');
   });
 
   it('bindHiResArray forwards to the inner renderer', () => {

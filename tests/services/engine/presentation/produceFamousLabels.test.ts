@@ -21,7 +21,9 @@ function makeRegistry(): FadeRegistry {
 // visibility gate. The fixture supplies all three; the `galaxyNames` handle is
 // registered at 1 so the at-rest opacity is 1. The famous label gate defaults
 // visible.
-function makeState(opts: { fades?: FadeRegistry } = {}): EngineState {
+function makeState(
+  opts: { fades?: FadeRegistry; focusedOnly?: boolean; focus?: object | null } = {},
+): EngineState {
   const fades = opts.fades ?? makeRegistry();
   fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
   return {
@@ -37,8 +39,10 @@ function makeState(opts: { fades?: FadeRegistry } = {}): EngineState {
         destroy: vi.fn<() => void>(),
       },
     },
+    selection: { focus: opts.focus ?? null, select: null, hover: null },
     settings: {
       galaxyCatalogs: { items: { famousGalaxy: { enabled: true, labelEnabled: true } } },
+      labels: { focusedOnly: opts.focusedOnly ?? false },
     },
   } as unknown as EngineState;
 }
@@ -50,6 +54,7 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
+    nowMs: 0,
     ...over,
   } as unknown as ReadyFrameContext;
 }
@@ -210,6 +215,41 @@ describe('produceFamousLabels', () => {
     const out = produceFamousLabels(state, makeCtx({ focusBlend: 1 }));
 
     expect(out.lines[0]!.fadeAlpha).toBeCloseTo(out.labels[0]!.fadeAlpha!, 6);
+  });
+
+  it('focusedOnly mode: emits only the focused famous galaxy', () => {
+    // Two famous galaxies, both above the size gate; the focus ref addresses
+    // catalog row 1 (m87). Only its label (and anchor line) survives.
+    const state = makeState({
+      focusedOnly: true,
+      focus: { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: 1 },
+    });
+    seed(
+      state,
+      [
+        { id: 'm31', names: ['M31'] },
+        { id: 'm87', names: ['M87'] },
+      ],
+      [10, 0, 0, 0, 10, 0],
+      [120, 120],
+    );
+    const out = produceFamousLabels(state, makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['famous-m87']);
+    expect(out.lines.map((m) => m.id)).toEqual(['famous-m87-anchor']);
+  });
+
+  it('focusedOnly mode: emits nothing when the focus is not a famous galaxy', () => {
+    const cases = [
+      null,
+      { type: 'structure', id: 'cluster-virgo' },
+      { type: 'milkyWay' },
+      { type: 'galaxyCatalog', source: Source.SDSS, index: 0 },
+    ];
+    for (const focus of cases) {
+      const state = makeState({ focusedOnly: true, focus });
+      seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+      expect(produceFamousLabels(state, makeCtx()).labels).toEqual([]);
+    }
   });
 
   it('at-rest output is unchanged (galaxyNames at 1, blend 0)', () => {

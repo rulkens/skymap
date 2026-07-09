@@ -56,7 +56,7 @@
  *
  * ### Why the GPU handles ride along on the ready context
  *
- * `state.gpu.renderer`, `state.gpu.postProcess`, and `state.subsystems.thumbnails`
+ * `state.gpu.renderer`, `state.gpu.renderTargets`, and `state.subsystems.thumbnails`
  * are all part of the 5-way bootstrap gate. Once the gate passes, downstream
  * code wants to use those handles without re-checking they're non-null — but if
  * we left them on `state.gpu.*` and `state.subsystems.*`, every consumer would
@@ -79,7 +79,8 @@
  * a second time (which would advance the clock twice on the same frame — the
  * clock is idempotent for the same descriptor reference, but two calls is still
  * conceptually wrong). `deriveFrameContext` is therefore side-effect-free again:
- * it only calls `assembleOrbitCamera(pose, projection)` and `computeViewProj`.
+ * it only calls `assembleOrbitCamera(pose, projection)`, `computeViewProj`, and
+ * `deriveSlabs` to build the frame's slab table.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -88,11 +89,10 @@ import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
-import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
-import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
+import { deriveSlabs } from './slabs';
 
 /**
  * Derive the per-frame context from an already-produced pose and projection.
@@ -111,6 +111,11 @@ import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
  * Side-effect-free: the clock is advanced by `runFrame`'s produce step, not
  * here. Safe to call speculatively; a second call in the same frame is a no-op
  * on clock state.
+ *
+ * `nowMs` is runFrame's single wall-clock sample, stamped onto the ready
+ * context so every animated consumer reads the frame clock instead of
+ * sampling `performance.now()` itself — the seam a frame-by-frame recorder
+ * needs to step time deterministically.
  */
 export function deriveFrameContext(
   state: EngineState,
@@ -118,6 +123,7 @@ export function deriveFrameContext(
   pose: CameraPose,
   projection: CameraProjection,
   visibleSourceMask: number,
+  nowMs: number,
 ): FrameContext {
   // The bootstrap gate. Every site that asks 'is the engine bootstrapped?' —
   // per-frame, slot-commit, public-handle — funnels through the one
@@ -128,8 +134,7 @@ export function deriveFrameContext(
     return { isReady: false };
   }
   const renderer = state.gpu.renderer;
-  const postProcess = state.gpu.postProcess;
-  const volumeOffscreen = state.gpu.volumeOffscreen;
+  const renderTargets = state.gpu.renderTargets;
   const texturedDisks = state.subsystems.texturedDisks;
 
   // Assemble the full OrbitCamera from the already-produced store pose and the
@@ -142,48 +147,13 @@ export function deriveFrameContext(
   // derivations can't drift.
   const canvasSize = { width: canvas.width, height: canvas.height };
   const vp = computeViewProj(cam);
+  // deriveSlabs is called here — alongside vp, not from a separate site —
+  // so there is exactly one per-frame derivation of the slab table (see the
+  // module header's point 2 on why derived scalars must not be recomputed
+  // in two places).
+  const slabs = deriveSlabs(cam, vp);
   const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
   const drawPxPerRad = canvasSize.height / (2 * Math.tan(cam.fovYRad / 2));
-
-  // ── Foreground frustum (Plan 01: coarse distance-proportional heuristic) ──
-  //
-  // near and far are set to simple fractions of cam.distance, wide enough to
-  // bracket a body at ~1 AU ≈ 4.85e-12 Mpc from the origin whose radius is
-  // ~2.06e-16 Mpc (Earth radius ~6,371 km), through the full descent.
-  // Plan 03 replaces both constants with an adaptive call to
-  // `foregroundFrustum(cam.distance)` in `src/utils/camera/foregroundFrustum.ts`
-  // once the near-Earth choreography is defined. For now, a 1e-4 / 100 ratio
-  // keeps a 1-AU object visible from any distance ≥ MIN_DISTANCE_MPC (enforced
-  // by orbit controls) while giving enough far range to show nearby structures.
-  //
-  // Both guards: near must be > 0 (perspective projection is undefined for
-  // near ≤ 0), and near must be < far. Because cam.distance > 0 by the orbit-
-  // controls invariant (clampedDistance), the arithmetic here is always safe.
-  const FOREGROUND_NEAR_FRACTION = 1e-4; // Plan 01 coarse heuristic; Plan 03 replaces
-  const FOREGROUND_FAR_MULTIPLIER = 100; // Plan 01 coarse heuristic; Plan 03 replaces
-  const foregroundNear = cam.distance * FOREGROUND_NEAR_FRACTION;
-  const foregroundFar = cam.distance * FOREGROUND_FAR_MULTIPLIER;
-
-  // cam.position and cam.target are Vec3 tuples; extract to explicit [x,y,z]
-  // number tuples so the call signature matches Readonly<Vec3> exactly and we
-  // don't inadvertently pass a mutable alias into a function that treats the
-  // argument as a pure value.
-  const eyeMpc: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
-  const targetMpc: Readonly<Vec3> = [cam.target[0]!, cam.target[1]!, cam.target[2]!];
-
-  // Plan 01: fixed up = world +Y. Roll-parity with the backdrop is deferred to
-  // Plan 03 / later — the debug sphere descent is roll-0 throughout, so the
-  // fixed-up assumption is safe for now.
-  const foregroundVp = computeForegroundViewProj({
-    eyeMpc,
-    targetMpc,
-    up: [0, 1, 0],
-    renderOrigin: RENDER_ORIGIN_MPC,
-    fovYRad: cam.fovYRad,
-    aspect: cam.aspect,
-    near: foregroundNear,
-    far: foregroundFar,
-  });
 
   // `focusBlend` is seeded to 0 (the at-rest, no-recession value) and then
   // overwritten by `runFrame` with this frame's real blend the moment the ready
@@ -206,20 +176,17 @@ export function deriveFrameContext(
     isReady: true,
     cam,
     vp,
+    slabs,
     canvasSize,
     drawCamPos,
     drawPxPerRad,
+    nowMs,
     fovYRad: cam.fovYRad,
     focusBlend: 0,
     visibleSourceMask,
     focus: ZERO_FOCUS,
     renderer,
-    postProcess,
-    volumeOffscreen,
+    renderTargets,
     texturedDisks,
-    foregroundVp,
-    foregroundNear,
-    foregroundFar,
-    renderOrigin: RENDER_ORIGIN_MPC,
   };
 }

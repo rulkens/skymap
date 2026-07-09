@@ -13,8 +13,10 @@
  *     the O(1)-lookup `FontMetrics` shape the renderer's `setLabels`
  *     call uses for per-glyph UV / size / offset / advance reads.
  *
- *   - `<FONT_BASE>/<id>.png` — the pre-baked ATLAS_PX² MSDF texture.
- *     Decoded via `createImageBitmap` so it arrives as a GPU-uploadable
+ *   - `<FONT_BASE>/<id>.webp` — the pre-baked ATLAS_PX² MSDF texture
+ *     (lossless WebP; lossy would corrupt the per-channel distance
+ *     fields — see the buildFontAtlas.ts doc).  Decoded via
+ *     `createImageBitmap` so it arrives as a GPU-uploadable
  *     `ImageBitmap` that `createLabelRenderer` passes directly to
  *     `device.queue.copyExternalImageToTexture` with
  *     `destination.origin.z = i` to land it in the right array layer.
@@ -60,24 +62,24 @@ import type { FontId } from '../../../@types/data/FontId';
 const FONT_BASE = '/fonts';
 
 /**
- * Fetch + decode the JSON + PNG for one font id.  Returns a tuple
+ * Fetch + decode the JSON + WebP for one font id.  Returns a tuple
  * `[FontMetrics, ImageBitmap]` so the outer Promise.all can keep the
  * positional ordering aligned with `FONT_IDS`.
  */
 async function loadOneFont(id: FontId): Promise<readonly [FontMetrics, ImageBitmap]> {
-  const [json, png] = await Promise.all([
+  const [json, bitmap] = await Promise.all([
     fetch(`${FONT_BASE}/${id}.json`).then((r) => {
       if (!r.ok) throw new Error(`failed to fetch ${id}.json: ${r.status}`);
       return r.json() as Promise<RawBMFont>;
     }),
-    fetch(`${FONT_BASE}/${id}.png`)
+    fetch(`${FONT_BASE}/${id}.webp`)
       .then((r) => {
-        if (!r.ok) throw new Error(`failed to fetch ${id}.png: ${r.status}`);
+        if (!r.ok) throw new Error(`failed to fetch ${id}.webp: ${r.status}`);
         return r.blob();
       })
       .then(createImageBitmap),
   ]);
-  return [parseFontMetrics(json), png] as const;
+  return [parseFontMetrics(json), bitmap] as const;
 }
 
 /**

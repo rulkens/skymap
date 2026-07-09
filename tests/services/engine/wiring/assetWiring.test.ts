@@ -58,6 +58,7 @@ describe('ASSET_WIRING membership', () => {
       Source.Glade,
       Source.Milliquas,
       Source.FamousGalaxy,
+      Source.DesiDeep,
       Source.Synthetic,
       'famousMeta',
       'filaments',
@@ -88,6 +89,7 @@ describe('ASSET_WIRING membership', () => {
       Source.Glade,
       Source.Milliquas,
       Source.FamousGalaxy,
+      Source.DesiDeep,
       Source.Synthetic,
     ];
     for (const k of pointKeys) {

@@ -111,22 +111,32 @@ const CORNER_BYTES = CORNER_DATA.byteLength; // 32 bytes (4 × 2 × 4)
 // ─── factory ──────────────────────────────────────────────────────────────
 
 /**
- * Construct a `MarkerLineRenderer` against the given GPU context.
+ * Construct a `MarkerLineRenderer` against the given GPU context and
+ * colour-target format.
  *
  * Pass `device: null` (or a GpuContext whose `device` is null) for unit
  * tests that exercise CPU state only.  GPU resource creation is skipped
  * in that branch and `draw(...)` becomes a no-op.
  *
+ * `targetFormat` is the colour-attachment format the pipeline writes into.
+ * Marker lines are a post-tone-map UI overlay, so this is the swap-chain
+ * format — but it is passed EXPLICITLY rather than read off `ctx.format`, so
+ * the target is legible at the construction site.
+ *
  * `maxLines` sizes the static GPU instance buffer; the default (64) covers
  * the "you are here" indicator plus any future tagged-object markers without
  * a follow-up resize.
  */
-export function createMarkerLineRenderer(ctx: GpuContext, maxLines = 64): MarkerLineRenderer {
+export function createMarkerLineRenderer(
+  ctx: GpuContext,
+  targetFormat: GPUTextureFormat,
+  maxLines = 64,
+): MarkerLineRenderer {
   // The `as ... | null` cast lets a test pass `device: null as unknown as
   // GPUDevice` through GpuContext without TypeScript complaining at the
   // factory's call site.  Runtime code below null-checks before each use.
   const device = ctx.device as GPUDevice | null;
-  const format = ctx.format;
+  const format = targetFormat;
 
   // ── CPU scratch buffer — always allocated, safe to use with null device ──
   //

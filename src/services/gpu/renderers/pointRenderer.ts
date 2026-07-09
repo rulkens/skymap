@@ -4,8 +4,8 @@
  * Each catalog point renders as a six-vertex quad via WebGPU's instanced
  * draw (`draw(6, N)`).  The vertex stage reads `@builtin(vertex_index)`
  * (0..5, the corner) and per-instance attributes (position, magnitude,
- * colour index, axis ratio + PA, padded radius, three bias weights —
- * see `POINT_VERTEX_ATTRIBUTES`).
+ * colour index, axis ratio, baked PA cos/sin, padded radius, three bias
+ * weights, baked absMag — see `POINT_VERTEX_ATTRIBUTES`).
  *
  * One vertex buffer per loaded galaxy catalog; an engine-supplied bitmask
  * decides which sources draw each frame.  Each source's `@group(2)`
@@ -62,44 +62,51 @@ export { UNIFORM_BYTES };
  *
  *   [x, y, z, magnitude, colorIndex,
  *    axisRatio (sign bit = isFallback flag),
- *    positionAngleDeg, radiusMpc,
- *    vMaxWeight, schechterRatio, angularDensityWeight]
+ *    paCos, paSin, radiusMpc,
+ *    vMaxWeight, schechterRatio, angularDensityWeight, absMag]
  *
  * Every slot is f32; the fallback-orientation bit rides on the sign of
  * axisRatio.  Identity comes from `(sourceCode << 27) | instance_index`
  * in the shader — no per-vertex global ID needed.
+ *
+ * paCos/paSin and absMag are galaxy-static values baked at upload so the
+ * vertex stage skips a cos+sin and a log10+sqrt per invocation — see the
+ * layout docblock in `buildPointInterleavedBuffer.ts` for the trade.
  */
-const SLOTS_PER_POINT = 11;
+const SLOTS_PER_POINT = 13;
 
 /**
- * Byte stride between per-instance records — 11 × 4 = 44.  Both
+ * Byte stride between per-instance records — 13 × 4 = 52.  Both
  * pipelines (point + pick) declare this stride; mismatched values
  * either validate-error or silently read garbage.
  */
-export const POINT_STRIDE = SLOTS_PER_POINT * 4; // 44 bytes
+export const POINT_STRIDE = SLOTS_PER_POINT * 4; // 52 bytes
 
 /** Slot 5: galaxy b/a ratio.  `abs(axisRatio)` for the ellipse mask; sign bit flags a fallback orientation. */
 const AXIS_RATIO_BYTE_OFFSET = 20;
 
-/** Slot 6: east-of-north position angle of the major axis, [0, 180) degrees. */
-const POSITION_ANGLE_BYTE_OFFSET = 24;
+/**
+ * Slots 6/7: cos/sin of the negated east-of-north position angle —
+ * the exact pair the shader forwards as `paRotation`, pre-baked.
+ */
+const PA_COS_SIN_BYTE_OFFSET = 24;
 
 /**
- * Slot 7: padded billboard radius in Mpc.  Baked at upload as
+ * Slot 8: padded billboard radius in Mpc.  Baked at upload as
  * `max(diameterKpc, 30) * 2 / 1000` — folds in 4× thumbnail-footprint
  * padding and the synthetic-fallback floor.  Vertex shader divides by
  * distance_Mpc for angular radius.
  */
-const RADIUS_MPC_BYTE_OFFSET = 28;
+const RADIUS_MPC_BYTE_OFFSET = 32;
 
-/** Slot 8: per-galaxy 1/V_max multiplier (Malmquist mode 2).  Baked from m, distance, and the galaxy catalog flux limit. */
-const VMAX_WEIGHT_BYTE_OFFSET = 32;
+/** Slot 9: per-galaxy 1/V_max multiplier (Malmquist mode 2).  Baked from m, distance, and the galaxy catalog flux limit. */
+const VMAX_WEIGHT_BYTE_OFFSET = 36;
 
-/** Slot 9: Schechter density-correction ratio (Malmquist mode 3).  Default 1.0; real values spliced in lazily when the user picks mode 3. */
-const SCHECHTER_RATIO_BYTE_OFFSET = 36;
+/** Slot 10: Schechter density-correction ratio (Malmquist mode 3).  Default 1.0; real values spliced in lazily when the user picks mode 3. */
+const SCHECHTER_RATIO_BYTE_OFFSET = 40;
 
 /**
- * Slot 10: HEALPix angular re-weight (Malmquist mode 4).  Default
+ * Slot 11: HEALPix angular re-weight (Malmquist mode 4).  Default
  * 1.0; real per-galaxy values spliced in lazily by
  * `biasCorrectionSubsystem` when the user first picks mode 4 (same
  * pattern as Schechter).
@@ -110,7 +117,14 @@ const SCHECHTER_RATIO_BYTE_OFFSET = 36;
  * one sort — ~150 ms for full GLADE, fine for a user-initiated toggle
  * but too slow for the .bin-arrival path.
  */
-const ANGULAR_WEIGHT_BYTE_OFFSET = 40;
+const ANGULAR_WEIGHT_BYTE_OFFSET = 44;
+
+/**
+ * Slot 12: absolute magnitude from the offset-normalised apparent
+ * magnitude (slot 3) — the Malmquist mode-1 gate compares this against
+ * `u.absMagLimit` directly instead of re-deriving it per vertex.
+ */
+const ABS_MAG_BYTE_OFFSET = 48;
 
 /**
  * Vertex buffer attribute table — single source of truth, imported
@@ -120,11 +134,12 @@ const ANGULAR_WEIGHT_BYTE_OFFSET = 40;
  *   1  magnitude (f32)
  *   2  colorIndex (f32)
  *   3  axisRatio (sign bit = isFallback)
- *   4  positionAngleDeg
+ *   4  paCosSin (vec2<f32>)
  *   5  radiusMpc
  *   6  vMaxWeight
  *   7  schechterRatio
  *   8  angularDensityWeight
+ *   9  absMag
  *
  * Named offset constants only exist for slots that other code reads by
  * name (bake / shader); position/magnitude/colorIndex use literal
@@ -135,27 +150,30 @@ export const POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 1, offset: 12, format: 'float32' },
   { shaderLocation: 2, offset: 16, format: 'float32' },
   { shaderLocation: 3, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 4, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 4, offset: PA_COS_SIN_BYTE_OFFSET, format: 'float32x2' },
   { shaderLocation: 5, offset: RADIUS_MPC_BYTE_OFFSET, format: 'float32' },
   { shaderLocation: 6, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
   { shaderLocation: 7, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
   { shaderLocation: 8, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 9, offset: ABS_MAG_BYTE_OFFSET, format: 'float32' },
 ];
 
 // ─── Uniform buffer byte offsets (per-pass partial writes) ──────────────────
 
 /**
- * Byte offsets into the shared `Uniforms` buffer for the slots PickRenderer
- * overwrites per-pass.  Single source of truth for both the full pack and
- * the partial pick writes.
+ * Byte offsets into the shared `Uniforms` buffer for the three slots the pick
+ * pack shapes differently from the visual pack.  `pickUniformBytesOf` bakes all
+ * three at pack time (there is no post-upload override); these named offsets
+ * document the layout and back the byte-equality tests that prove the pick
+ * pack matches the old override end-state.
  *
- *   - `SELECTED_PACKED_BYTE_OFFSET` — picker writes the "no selection"
- *     sentinel so the 8× ring scaling doesn't inflate the pick area.
- *   - `POINT_SIZE_BYTE_OFFSET` — picker pads the visual point size to
- *     widen far-field click targets without growing visible sprites.
- *   - `PICK_PASS_BYTE_OFFSET` — picker flips this to 1 so the shared
- *     vertex shader skips visual-only culls (crossfade-out, intensity
- *     floor) that would make disk-sized galaxies unpickable.
+ *   - `SELECTED_PACKED_BYTE_OFFSET` — the "no selection" sentinel so the 8×
+ *     ring scaling doesn't inflate the pick area.
+ *   - `POINT_SIZE_BYTE_OFFSET` — the `+PICK_PADDING_PX` point size that widens
+ *     far-field click targets without growing visible sprites.
+ *   - `PICK_PASS_BYTE_OFFSET` — 1 in the pick pack so the shared vertex shader
+ *     skips visual-only culls (crossfade-out, intensity floor) that would make
+ *     disk-sized galaxies unpickable.
  */
 export const SELECTED_PACKED_BYTE_OFFSET = 80;
 export const POINT_SIZE_BYTE_OFFSET = 88;
@@ -334,12 +352,15 @@ type LoadedSource = {
  * mutable bits are the per-source `galaxyCatalogs` Map and the
  * bias-correction callbacks.
  *
- * @param device  The WebGPU logical device. Owned by the caller.
- * @param format  The swap-chain texture format (e.g. `'bgra8unorm'`).
+ * @param device        The WebGPU logical device. Owned by the caller.
+ * @param targetFormat  The colour-target format the pipeline writes into —
+ *                      the HDR offscreen (`'rgba16float'`), NOT the swap chain.
+ *                      Handed over explicitly because a render-pass encoder
+ *                      cannot be queried for its own colour-attachment format.
  */
 export function createPointRenderer(
   device: GPUDevice,
-  format: GPUTextureFormat,
+  targetFormat: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
   focusBgl: FocusUniformsBgl,
@@ -396,7 +417,7 @@ export function createPointRenderer(
       entryPoint: 'fs',
       targets: [
         {
-          format,
+          format: targetFormat,
           // Additive blend so overlapping halos brighten (long-exposure style).
           blend: {
             color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
@@ -583,8 +604,10 @@ export function createPointRenderer(
   // ─── Bias-correction splice surface ──────────────────────────────────────
   //
   // Layout-aware writes into the interleaved CPU mirror + re-upload of
-  // the whole GPU buffer.  The bias-correction subsystem owns the
-  // state machine and calls these once its async bakes resolve.
+  // the whole GPU buffer.  Slot indices are `SCHECHTER_RATIO_BYTE_OFFSET
+  // / 4` and `ANGULAR_WEIGHT_BYTE_OFFSET / 4`.  The bias-correction
+  // subsystem owns the state machine and calls these once its async
+  // bakes resolve.
   //
   // No-op on unloaded sources: a subsystem bake can race against
   // `unload()`, and re-checking the map after every await would
@@ -596,7 +619,7 @@ export function createPointRenderer(
   // reached via `ID_OF_CODE`.
 
   /**
-   * Slot 9 ← `ratios[i]`, then re-upload.  `ratios.length` must equal
+   * Slot 10 ← `ratios[i]`, then re-upload.  `ratios.length` must equal
    * the source's `count`.
    */
   function spliceSchechterRatios(source: SourceType, ratios: Float32Array): void {
@@ -609,12 +632,12 @@ export function createPointRenderer(
       );
     }
     for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_POINT + 9] = ratios[i]!;
+      entry.interleaved[i * SLOTS_PER_POINT + 10] = ratios[i]!;
     }
     device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
   }
 
-  /** Slot 10 ← `weights[i]`, then re-upload.  Length must equal `count`. */
+  /** Slot 11 ← `weights[i]`, then re-upload.  Length must equal `count`. */
   function spliceAngularWeights(source: SourceType, weights: Float32Array): void {
     const id = ID_OF_CODE.get(source);
     const entry = id !== undefined ? galaxyCatalogs.get(id) : undefined;
@@ -625,13 +648,13 @@ export function createPointRenderer(
       );
     }
     for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_POINT + 10] = weights[i]!;
+      entry.interleaved[i * SLOTS_PER_POINT + 11] = weights[i]!;
     }
     device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
   }
 
   /**
-   * Zero slots 9 (Schechter ratio) and 10 (angular weight) for one
+   * Zero slots 10 (Schechter ratio) and 11 (angular weight) for one
    * source or all of them.  Written as 0 rather than 1.0 because the
    * shader's `select(1.0, slot, mode==N)` gate substitutes 1.0 when
    * the mode is inactive — so the slot is dead in those modes, and 0
@@ -648,8 +671,8 @@ export function createPointRenderer(
         : Array.from(galaxyCatalogs.values());
     for (const entry of targets) {
       for (let i = 0; i < entry.count; i++) {
-        entry.interleaved[i * SLOTS_PER_POINT + 9] = 0;
         entry.interleaved[i * SLOTS_PER_POINT + 10] = 0;
+        entry.interleaved[i * SLOTS_PER_POINT + 11] = 0;
       }
       device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
     }
@@ -672,6 +695,13 @@ export function createPointRenderer(
   function countOf(source: SourceType): number {
     const id = ID_OF_CODE.get(source);
     return (id !== undefined ? galaxyCatalogs.get(id)?.count : undefined) ?? 0;
+  }
+
+  // Whether a catalog's buffer is committed — the survey fade row guards on
+  // this (same demand-loaded pattern as filamentRenderer.hasCloud): a fade
+  // toward "visible" is suppressed until there is something to fade in.
+  function hasCatalog(id: GalaxyCatalogId): boolean {
+    return galaxyCatalogs.has(id);
   }
 
   /**
@@ -713,23 +743,23 @@ export function createPointRenderer(
    * on each source's own 16-byte fade buffer, so writes for one
    * source don't race against draws against another.
    *
-   * Returns the packed `ArrayBuffer` so the pick renderer can snapshot it
-   * (Task 3 of the pick-out-of-frame refactor).  Returns `null` when there
-   * are no catalogs to draw (buffer was never packed this frame).
+   * No-op when there are no catalogs to draw. The pick pass rebuilds its
+   * own uniform bytes from plain values at pick time (see
+   * `pickUniformBytesOf`), so this draw owns no cross-pass snapshot.
    */
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
     settings: PointDrawSettings,
-  ): ArrayBuffer | null {
+  ): void {
     const { visibleSourceMask, focusBindGroup } = settings;
-    if (galaxyCatalogs.size === 0) return null;
+    if (galaxyCatalogs.size === 0) return;
 
     // Pack 176 bytes — see `UNIFORM_BYTES` for the layout, and
-    // `points/io.wesl::Uniforms` for the WGSL-side struct.
-    // `pickPass` is packed as 0 (visual pass) — the pick renderer applies
-    // its three overrides after uploading this buffer.
+    // `points/io.wesl::Uniforms` for the WGSL-side struct.  `pickPass`
+    // defaults to 0 (visual pass); the pick path packs its own image via
+    // `pickUniformBytesOf`, never this buffer.
     const buf = packPointUniforms(viewProj, viewportPx, settings);
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
@@ -757,8 +787,6 @@ export function createPointRenderer(
       pass.setVertexBuffer(0, entry.buffer);
       pass.draw(6, entry.count);
     }
-
-    return buf;
   }
 
   /**
@@ -796,6 +824,7 @@ export function createPointRenderer(
     clearBiasOverlays,
     totalCount,
     countOf,
+    hasCatalog,
     loadedSources,
     draw,
     destroy,

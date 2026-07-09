@@ -1,19 +1,22 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { produceMilkyWayLabel } from '../../../../src/services/engine/presentation/produceMilkyWayLabel';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import {
-  setLabelStyleOverride,
-  clearLabelStyleOverride,
-} from '../../../../src/services/engine/labelStyleOverride';
 
-// Minimal state: the producer reads settings.milkyWay.labelEnabled, the fade
-// registry (opacityOf only — the producer is a pure reader), the selection
-// focused() is not consulted (single label, no recession), and the label-style
-// override (global module, no stub).
-function makeState(labelEnabled: boolean, layerOpacity: number): EngineState {
+// Minimal state: the producer reads settings.milkyWay.labelEnabled,
+// settings.labels.focusedOnly (+ selection.focus for the solo gate), and the
+// fade registry (opacityOf only — the producer is a pure reader).
+function makeState(
+  labelEnabled: boolean,
+  layerOpacity: number,
+  opts: { focusedOnly?: boolean; focus?: { type: string } | null } = {},
+): EngineState {
   return {
-    settings: { milkyWay: { enabled: true, labelEnabled } },
+    settings: {
+      milkyWay: { enabled: true, labelEnabled },
+      labels: { focusedOnly: opts.focusedOnly ?? false },
+    },
+    selection: { focus: opts.focus ?? null, select: null, hover: null },
     subsystems: {
       fades: {
         opacityOf: () => layerOpacity,
@@ -23,16 +26,10 @@ function makeState(labelEnabled: boolean, layerOpacity: number): EngineState {
 }
 
 function makeCtx(camDistMpc: number): ReadyFrameContext {
-  return { drawCamPos: [camDistMpc, 0, 0] } as unknown as ReadyFrameContext;
+  return { drawCamPos: [camDistMpc, 0, 0], nowMs: 0 } as unknown as ReadyFrameContext;
 }
 
 describe('produceMilkyWayLabel', () => {
-  // Reset the live-tuning override set by the override tests below — otherwise
-  // it leaks forward.
-  afterEach(() => {
-    clearLabelStyleOverride();
-  });
-
   it('emits one label and one line at full alpha when close (<= 0.6 Mpc) and enabled', () => {
     const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
     expect(out.labels).toHaveLength(1);
@@ -42,6 +39,15 @@ describe('produceMilkyWayLabel', () => {
     expect(out.lines[0]!.ownerLabelId).toBe('milkyWay');
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(1);
     expect(out.lines[0]!.fadeAlpha).toBeCloseTo(1);
+  });
+
+  it('outranks every structure label in the declutter (top prominence)', () => {
+    // "You are here" is the orientation anchor: when it is visible at all
+    // (camera within the fade band), overlapping structure labels must yield
+    // to it, never the other way around. Number.MAX_VALUE sorts above any
+    // finite apparent size a producer can emit.
+    const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
+    expect(out.labels[0]!.prominencePx).toBe(Number.MAX_VALUE);
   });
 
   it('emits nothing far away (>= 2 Mpc) even when enabled', () => {
@@ -68,28 +74,27 @@ describe('produceMilkyWayLabel', () => {
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.3);
   });
 
-  it('applies the label-style override outline when targetCategory is milkyWay', () => {
-    setLabelStyleOverride({
-      targetCategory: 'milkyWay',
-      outlineColor: [0.2, 0.4, 0.6, 1],
-      outlineEmFrac: 0.25,
-    });
-    const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
-    expect(out.labels[0]!.outlineColor).toEqual([0.2, 0.4, 0.6, 1]);
-    expect(out.labels[0]!.outlineEmFrac).toBe(0.25);
+  it('focusedOnly mode: emits nothing when something else (or nothing) is focused', () => {
+    const elsewhere = { type: 'structure', id: 'cluster-virgo' };
+    expect(
+      produceMilkyWayLabel(
+        makeState(true, 1, { focusedOnly: true, focus: elsewhere }),
+        makeCtx(0.5),
+      ).labels,
+    ).toEqual([]);
+    expect(
+      produceMilkyWayLabel(makeState(true, 1, { focusedOnly: true, focus: null }), makeCtx(0.5))
+        .labels,
+    ).toEqual([]);
   });
 
-  it('falls back to the baked outline when the override targets another category', () => {
-    // Override is active but aimed at 'cluster', so the milkyWay producer
-    // ignores it and keeps the baked MILKY_WAY_LABEL_STYLE outline.
-    setLabelStyleOverride({
-      targetCategory: 'cluster',
-      outlineColor: [1, 0, 0, 1],
-      outlineEmFrac: 0.9,
-    });
-    const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
-    expect(out.labels[0]!.outlineColor).toEqual([0, 0, 0, 0.1]);
-    expect(out.labels[0]!.outlineEmFrac).toBe(0.16);
+  it('focusedOnly mode: emits the label when the Milky Way is the focused subject', () => {
+    const out = produceMilkyWayLabel(
+      makeState(true, 1, { focusedOnly: true, focus: { type: 'milkyWay' } }),
+      makeCtx(0.5),
+    );
+    expect(out.labels).toHaveLength(1);
+    expect(out.labels[0]!.id).toBe('milkyWay');
   });
 
   it('reports awake: false across the fade band', () => {

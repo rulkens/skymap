@@ -17,6 +17,7 @@
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
+import { SOURCE_ENTRIES } from '../../data/sourceEntries';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_BIAS_MODE,
@@ -35,8 +36,18 @@ import {
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
 } from '../../data/defaults';
+import {
+  DEFAULT_ALIGN_SEC,
+  DEFAULT_RAMP_SEC,
+  DEFAULT_LINGER,
+  DEFAULT_LINGER_SEC,
+  DEFAULT_SPLINE,
+  DEFAULT_TURN_DELAY,
+  DEFAULT_LOOK_AHEAD,
+  DEFAULT_PASS_BY_OFFSET,
+  DEFAULT_PASS_BY_DIR,
+} from '../../services/engine/animation/pathDefaults';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
-import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -47,10 +58,16 @@ import type { StructureItemSettings } from '../../@types/settings/StructureItemS
 export function buildInitialSettings(): EngineSettingsState {
   return {
     // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
-    // one item row per galaxy catalog, each layer + label default-on. Keys are
-    // DERIVED from `GALAXY_CATALOG_IDS` so the seed can't drift from the galaxy catalog set.
-    // `labelEnabled` is inert for every galaxy catalog except famousGalaxy (the only
-    // one that renders a name label) — seeded uniformly true.
+    // one item row per galaxy catalog. Rows are DERIVED from the galaxy-catalog
+    // registry entries so the seed can't drift from the galaxy catalog set — and,
+    // critically, each row's `enabled` is seeded from that entry's `visible`
+    // field, making SOURCE_REGISTRY the single source of truth for default
+    // visibility. The alternative — hardcoding `enabled: true` — silently
+    // overrode a registry entry that asked to boot hidden (DesiDeep's
+    // `visible: false`), so a default-off source came up drawn anyway; seeding
+    // from `visible` closes that gap. `labelEnabled` is inert for every galaxy
+    // catalog except famousGalaxy (the only one that renders a name label) —
+    // seeded uniformly true.
     galaxyCatalogs: {
       enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,
@@ -59,7 +76,10 @@ export function buildInitialSettings(): EngineSettingsState {
       highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
       realOnly: DEFAULT_REAL_ONLY_MODE,
       items: Object.fromEntries(
-        GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+        SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
+          e.id,
+          { enabled: e.visible, labelEnabled: true },
+        ]),
       ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
     },
     tonemap: {
@@ -95,12 +115,40 @@ export function buildInitialSettings(): EngineSettingsState {
     // `DEFAULT_FLOW` seed. Flow has no data-layer store — "loaded" is the asset
     // slot's own `ready` state (`slotReady(assetSlots.flow)`).
     flow: { ...DEFAULT_FLOW },
+    // Cross-cutting label presentation: default OFF — all enabled labels draw.
+    // The guided tour flips focusedOnly on (and its snapshot restores it).
+    labels: { focusedOnly: false },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},
+      // Clip-path inspector idle: no clip chosen, scrubber at the start. The
+      // overlay stays quiet until the curator clicks "Calculate". The pacing
+      // knobs seed from the flyPath defaults but every override is INACTIVE, so a
+      // fresh Calculate previews the clip's own authored pacing until the curator
+      // touches a slider (which activates just that knob).
+      clipPathInspect: {
+        clipId: null,
+        scrub01: 0,
+        align: DEFAULT_ALIGN_SEC,
+        rampSec: DEFAULT_RAMP_SEC,
+        linger: DEFAULT_LINGER,
+        lingerSec: DEFAULT_LINGER_SEC,
+        spline: DEFAULT_SPLINE,
+        turnDelay: DEFAULT_TURN_DELAY,
+        lookAhead: DEFAULT_LOOK_AHEAD,
+        passByOffset: DEFAULT_PASS_BY_OFFSET,
+        passByDir: DEFAULT_PASS_BY_DIR,
+        active: {
+          align: false,
+          rampSec: false,
+          linger: false,
+          spline: false,
+          passBy: false,
+        },
+      },
     },
     // Structure overlay: master gate on + one item row per category, each
     // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`

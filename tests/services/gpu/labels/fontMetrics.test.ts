@@ -83,20 +83,20 @@ describe('loadFontAtlases', () => {
 
     globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
       const url = String(input);
-      // Match `/fonts/<id>.json` or `/fonts/<id>.png`.
-      const match = url.match(/\/fonts\/([^.]+)\.(json|png)$/);
+      // Match `/fonts/<id>.json` or `/fonts/<id>.webp`.
+      const match = url.match(/\/fonts\/([^.]+)\.(json|webp)$/);
       if (!match) throw new Error(`unexpected fetch url ${url}`);
       const id = match[1]!;
       const ext = match[2]!;
       if (ext === 'json') {
         return new Response(JSON.stringify(stubJson(id.charCodeAt(0))), { status: 200 });
       }
-      // For PNGs we return a non-empty body; createImageBitmap is
+      // For the WebP we return a non-empty body; createImageBitmap is
       // stubbed below to look up by id.
       return new Response(new Uint8Array([0]), { status: 200, headers: { 'x-stub-id': id } });
     }) as typeof fetch;
 
-    // createImageBitmap is called on the blob from the PNG fetch.  We
+    // createImageBitmap is called on the blob from the WebP fetch.  We
     // can't easily thread the font id through the blob, so we rely on
     // the FONT_IDS iteration order in the loader matching the order we
     // populate fakeBitmaps — which the loader guarantees by mapping

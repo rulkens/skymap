@@ -2,8 +2,8 @@
  * horizonShellRenderer — translucent observable-universe horizon shell,
  * drawn as an analytic ray-marched sphere.
  *
- * Sibling to `milkyWayRenderer` (both single-instance world-anchored
- * impostors).  Rather than rasterising a UV-sphere mesh — which suffers
+ * A single-instance world-anchored impostor.  Rather than rasterising a
+ * UV-sphere mesh — which suffers
  * fp32 precision dropouts at the 14-Gpc shell radius / 30-Gpc camera
  * distances — this renderer draws ONE fullscreen quad and intersects a
  * per-pixel view ray with the sphere analytically in the fragment
@@ -47,7 +47,12 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 
 type Init = {
   device: GPUDevice;
-  format: GPUTextureFormat;
+  /**
+   * The colour-target format the shell pipeline writes into — the HDR
+   * offscreen (`'rgba16float'`), NOT the swap chain. Passed explicitly (never a
+   * `GpuContext.format`, which is always the swap-chain format).
+   */
+  targetFormat: GPUTextureFormat;
 };
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
@@ -69,7 +74,7 @@ const MPC_PER_GPC = 1000;
 const WORLD_UP: Vec3 = [0, 1, 0];
 
 export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
-  const { device, format } = init;
+  const { device, targetFormat } = init;
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'horizonShell.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'horizonShell.fragment');
@@ -109,10 +114,9 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
       entryPoint: 'fs',
       targets: [
         {
-          format,
+          format: targetFormat,
           // Pure additive — the shell is emissive, contributing light
           // where the Fresnel rim is bright and nothing where it isn't.
-          // Same reasoning as `milkyWayRenderer`'s blend choice.
           blend: {
             color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
             alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },

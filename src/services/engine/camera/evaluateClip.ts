@@ -79,7 +79,12 @@
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
-import type { CompiledClip, BaseSegment, VelRamp } from '../../../@types/animation/CompiledClip';
+import type {
+  CompiledClip,
+  BaseSegment,
+  VelRamp,
+  PathTrack,
+} from '../../../@types/animation/CompiledClip';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
@@ -259,7 +264,16 @@ function oscOffset(compiled: CompiledClip, ch: Channel, t: number): number {
     if (osc.channel !== ch) continue;
     if (t < osc.startSec || t >= osc.endSec) continue; // outside the window → silent
     const env = oscEnvelope(t - osc.startSec, osc.endSec - osc.startSec, osc.fade, osc.ease);
-    total += osc.amp * env * Math.sin((2 * Math.PI * t) / osc.period);
+    // Windowed bobs read their phase WINDOW-LOCALLY, so the sine starts at 0
+    // where the window starts and a period fitted to the window (dwellDrift's
+    // integer-cycle fit) ends at 0 on the cut — the same dwell swings the same
+    // way wherever it sits in the timeline. Absolute-time phase would make the
+    // swing (and the fade's alignment against its zero crossings) depend on
+    // the window's timeline position. Perpetual bobs (startSec = −∞) keep
+    // absolute phase — window-local would be Infinity arithmetic, and with no
+    // window there is nothing to align to anyway.
+    const phaseT = osc.startSec === -Infinity ? t : t - osc.startSec;
+    total += osc.amp * env * Math.sin((2 * Math.PI * phaseT) / osc.period);
   }
   return total;
 }
@@ -388,6 +402,26 @@ function evaluateBaseVec3(segments: BaseSegment[], startVal: Vec3, t: number): V
 }
 
 // ---------------------------------------------------------------------------
+// Path layer — a flyPath supersedes the base layer for all four channels.
+// ---------------------------------------------------------------------------
+
+/**
+ * activePathAt — the path that governs the base layer at time `t`, or null.
+ *
+ * A path governs from its `startSec` onward (not just within its window): once a
+ * flythrough has started, it holds its final pose after `endSec` so the camera
+ * does not snap back to the start pose during a trailing `hold`. When clips
+ * chain multiple paths, the most recently started one wins.
+ */
+function activePathAt(paths: PathTrack[], t: number): PathTrack | null {
+  let best: PathTrack | null = null;
+  for (const p of paths) {
+    if (p.startSec <= t && (best === null || p.startSec > best.startSec)) best = p;
+  }
+  return best;
+}
+
+// ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
 
@@ -409,11 +443,27 @@ export function evaluateClip(data: ClipData, elapsedSec: number): CameraPose {
   const { start, baseTracks } = compiled;
   const t = elapsedSec;
 
-  // --- Base layer ---
-  const baseDistance = evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t);
-  const baseYaw = evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t);
-  const basePitch = evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t);
-  const baseTarget = evaluateBaseVec3(baseTracks['target'], start.target, t);
+  // --- Base layer (a flyPath supersedes it for all four channels) ---
+  const path = activePathAt(compiled.pathTracks, t);
+  let baseDistance: number;
+  let baseYaw: number;
+  let basePitch: number;
+  let baseTarget: Vec3;
+  if (path !== null) {
+    // Clamp into the path's own window: before it starts we never get here
+    // (activePathAt requires startSec ≤ t); after it ends, hold the final pose.
+    const localSec = Math.min(Math.max(t - path.startSec, 0), path.endSec - path.startSec);
+    const pose = path.sample(localSec);
+    baseDistance = pose.distance;
+    baseYaw = pose.yaw;
+    basePitch = pose.pitch;
+    baseTarget = pose.target;
+  } else {
+    baseDistance = evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t);
+    baseYaw = evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t);
+    basePitch = evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t);
+    baseTarget = evaluateBaseVec3(baseTracks['target'], start.target, t);
+  }
 
   // --- Velocity layer (displacement, additive) ---
   const velDist = velDisplacement(compiled, 'distance', t);

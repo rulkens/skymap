@@ -19,7 +19,6 @@ import {
   FLOATS_PER_INSTANCE,
   UNIFORM_BYTES,
 } from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
-import { MILKY_WAY_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gpu/renderers/milkyWayRenderer';
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import type { FocusUniformsBgl } from '../../../../src/@types/rendering/FocusUniformsBgl';
 
@@ -40,6 +39,7 @@ function makeStubContext() {
     createBindGroupLayout: [] as GPUBindGroupLayoutDescriptor[],
     createBuffer: [] as GPUBufferDescriptor[],
     createBindGroup: [] as GPUBindGroupDescriptor[],
+    createRenderPipeline: [] as GPURenderPipelineDescriptor[],
     bufferDestroyed: [] as number[], // indexes into calls.createBuffer
   };
 
@@ -48,9 +48,10 @@ function makeStubContext() {
     createShaderModule: vi.fn(() => ({
       getCompilationInfo: () => Promise.resolve({ messages: [] }),
     })),
-    createRenderPipeline: vi.fn(() => ({
-      getBindGroupLayout: () => ({}),
-    })),
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
+      calls.createRenderPipeline.push(desc);
+      return { getBindGroupLayout: () => ({}) };
+    }),
     createPipelineLayout: vi.fn(() => ({})),
     createBindGroupLayout: vi.fn((desc: GPUBindGroupLayoutDescriptor) => {
       calls.createBindGroupLayout.push(desc);
@@ -88,15 +89,15 @@ describe('createInstancedQuadRenderer', () => {
   describe('bind-group layout shape', () => {
     it('builds a 3-binding BGL when atlas is configured', () => {
       const { ctx, calls } = makeStubContext();
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: {},
         capacity: { kind: 'fixed', max: 256 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
 
       // Exactly one BGL created — the factory builds it explicitly
@@ -114,16 +115,32 @@ describe('createInstancedQuadRenderer', () => {
       expect(entries[2]!.visibility).toBe(GPUShaderStage.FRAGMENT);
     });
 
-    it('builds a 1-binding BGL when atlas is omitted', () => {
+    it('bakes config.targetFormat into the pipeline colour target', () => {
       const { ctx, calls } = makeStubContext();
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
+      });
+      expect(calls.createRenderPipeline).toHaveLength(1);
+      const target = Array.from(calls.createRenderPipeline[0]!.fragment!.targets!)[0]!;
+      expect(target!.format).toBe('rgba16float');
+    });
+
+    it('builds a 1-binding BGL when atlas is omitted', () => {
+      const { ctx, calls } = makeStubContext();
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
+        label: 'test',
+        vertexSource: '@vertex fn vs() {}',
+        fragmentSource: '@fragment fn fs() {}',
+        capacity: { kind: 'grow' },
+        blend: 'additive',
+        targetFormat: 'rgba16float',
       });
 
       expect(calls.createBindGroupLayout).toHaveLength(1);
@@ -135,14 +152,14 @@ describe('createInstancedQuadRenderer', () => {
 
     it('honours uniformVisibility config when overridden', () => {
       const { ctx, calls } = makeStubContext();
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
         // ProceduralDiskRenderer's BGL pre-Spec-G — preserve the
         // VERTEX|FRAGMENT visibility on binding 0 even though only
         // the vertex stage actually reads the uniform.
@@ -156,15 +173,15 @@ describe('createInstancedQuadRenderer', () => {
 
     it('defaults uniformVisibility to VERTEX when not specified', () => {
       const { ctx, calls } = makeStubContext();
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: {},
         capacity: { kind: 'fixed', max: 16 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
 
       const entries = calls.createBindGroupLayout[0]!
@@ -176,41 +193,41 @@ describe('createInstancedQuadRenderer', () => {
   describe('atlas binding', () => {
     it('exposes bindAtlas only when atlas is configured', () => {
       const { ctx } = makeStubContext();
-      const withAtlas = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const withAtlas = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: {},
         capacity: { kind: 'fixed', max: 16 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       expect(typeof withAtlas.bindAtlas).toBe('function');
 
       const { ctx: ctx2 } = makeStubContext();
-      const noAtlas = createInstancedQuadRenderer(ctx2, {
+      const noAtlas = createInstancedQuadRenderer(ctx2.device, {
         focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       expect(noAtlas.bindAtlas).toBeUndefined();
     });
 
     it('prebuilds the bind group at construction when no atlas (no late binding)', () => {
       const { ctx, calls } = makeStubContext();
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       // Bind group built immediately, not waiting for a `bindAtlas`
       // call (there is no atlas to bind).
@@ -219,15 +236,15 @@ describe('createInstancedQuadRenderer', () => {
 
     it('defers bind-group creation until bindAtlas is called when atlas is configured', () => {
       const { ctx, calls } = makeStubContext();
-      const r = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const r = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: {},
         capacity: { kind: 'fixed', max: 16 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       expect(calls.createBindGroup).toHaveLength(0);
 
@@ -249,15 +266,15 @@ describe('createInstancedQuadRenderer', () => {
 
     it('extends the BGL from 3 → 5 entries when atlas.hiResArray is true', () => {
       const { ctx, calls } = makeStubContext();
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: { hiResArray: true },
         capacity: { kind: 'fixed', max: 256 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
 
       expect(calls.createBindGroupLayout).toHaveLength(1);
@@ -281,15 +298,15 @@ describe('createInstancedQuadRenderer', () => {
 
     it('keeps the BGL at 3 entries when atlas is configured without hiResArray', () => {
       const { ctx, calls } = makeStubContext();
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: {},
         capacity: { kind: 'fixed', max: 256 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       const entries = calls.createBindGroupLayout[0]!
         .entries as ReadonlyArray<GPUBindGroupLayoutEntry>;
@@ -298,20 +315,20 @@ describe('createInstancedQuadRenderer', () => {
 
     it('exposes bindHiResArray only when atlas.hiResArray is true', () => {
       const { ctx } = makeStubContext();
-      const withHiRes = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const withHiRes = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: { hiResArray: true },
         capacity: { kind: 'fixed', max: 16 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       expect(typeof withHiRes.bindHiResArray).toBe('function');
 
       const { ctx: ctx2 } = makeStubContext();
-      const atlasOnly = createInstancedQuadRenderer(ctx2, {
+      const atlasOnly = createInstancedQuadRenderer(ctx2.device, {
         focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
@@ -319,34 +336,34 @@ describe('createInstancedQuadRenderer', () => {
         atlas: {},
         capacity: { kind: 'fixed', max: 16 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       expect(atlasOnly.bindHiResArray).toBeUndefined();
 
       const { ctx: ctx3 } = makeStubContext();
-      const noAtlas = createInstancedQuadRenderer(ctx3, {
+      const noAtlas = createInstancedQuadRenderer(ctx3.device, {
         focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       expect(noAtlas.bindHiResArray).toBeUndefined();
     });
 
     it('defers bind-group composition until both bindAtlas + bindHiResArray are called', () => {
       const { ctx, calls } = makeStubContext();
-      const r = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const r = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: { hiResArray: true },
         capacity: { kind: 'fixed', max: 16 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       expect(calls.createBindGroup).toHaveLength(0);
 
@@ -371,15 +388,15 @@ describe('createInstancedQuadRenderer', () => {
   describe('capacity strategies', () => {
     it('preallocates the instance buffer at construction with kind:fixed', () => {
       const { ctx, calls } = makeStubContext();
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: {},
         capacity: { kind: 'fixed', max: 100 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
 
       // Two buffers: uniform (96 bytes) + instance (100 * 48 bytes).
@@ -392,14 +409,14 @@ describe('createInstancedQuadRenderer', () => {
 
     it('does NOT allocate the instance buffer at construction with kind:grow', () => {
       const { ctx, calls } = makeStubContext();
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       // Only the uniform buffer up front.
       expect(calls.createBuffer).toHaveLength(1);
@@ -408,14 +425,14 @@ describe('createInstancedQuadRenderer', () => {
 
     it('lazy-allocates the instance buffer on first non-empty draw with kind:grow', () => {
       const { ctx, calls } = makeStubContext();
-      const r = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const r = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
 
       // Stub render-pass — only the methods draw() actually calls.
@@ -445,14 +462,14 @@ describe('createInstancedQuadRenderer', () => {
 
     it('regrows the instance buffer when subsequent draws exceed capacity', () => {
       const { ctx, calls } = makeStubContext();
-      const r = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const r = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
 
       const pass = {
@@ -505,14 +522,14 @@ describe('createInstancedQuadRenderer', () => {
 
     it('skips draw entirely on instanceCount === 0', () => {
       const { ctx, calls } = makeStubContext();
-      const r = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const r = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       const drawSpy = vi.fn();
       const pass = {
@@ -538,15 +555,15 @@ describe('createInstancedQuadRenderer', () => {
 
     it('skips draw silently when atlas-capable renderer has no atlas bound yet', () => {
       const { ctx, calls } = makeStubContext();
-      const r = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const r = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: {},
         capacity: { kind: 'fixed', max: 16 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       const drawSpy = vi.fn();
       const pass = {
@@ -575,15 +592,15 @@ describe('createInstancedQuadRenderer', () => {
   describe('destroy', () => {
     it('destroys uniform + instance buffers under fixed capacity', () => {
       const { ctx, calls } = makeStubContext();
-      const r = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const r = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         atlas: {},
         capacity: { kind: 'fixed', max: 16 },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       r.destroy();
       // Uniform (index 0) + instance (index 1).
@@ -592,14 +609,14 @@ describe('createInstancedQuadRenderer', () => {
 
     it('destroys only the uniform buffer under grow when no draw has happened', () => {
       const { ctx, calls } = makeStubContext();
-      const r = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const r = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       r.destroy();
       // Only the uniform buffer (index 0) ever existed.
@@ -608,14 +625,14 @@ describe('createInstancedQuadRenderer', () => {
 
     it('destroys uniform + lazily-allocated instance buffer under grow after a draw', () => {
       const { ctx, calls } = makeStubContext();
-      const r = createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      const r = createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       const pass = {
         setPipeline: vi.fn(),
@@ -642,14 +659,14 @@ describe('createInstancedQuadRenderer', () => {
       const createPipelineSpy = (
         ctx.device as unknown as { createRenderPipeline: ReturnType<typeof vi.fn> }
       ).createRenderPipeline;
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'additive',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       const desc = createPipelineSpy.mock.calls[0]![0] as GPURenderPipelineDescriptor;
       const target = desc.fragment!.targets[0]!;
@@ -663,38 +680,19 @@ describe('createInstancedQuadRenderer', () => {
       const createPipelineSpy = (
         ctx.device as unknown as { createRenderPipeline: ReturnType<typeof vi.fn> }
       ).createRenderPipeline;
-      createInstancedQuadRenderer(ctx, {
-      focusBgl: FOCUS_BGL,
+      createInstancedQuadRenderer(ctx.device, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
         capacity: { kind: 'grow' },
         blend: 'alpha',
-        format: 'rgba16float',
+        targetFormat: 'rgba16float',
       });
       const desc = createPipelineSpy.mock.calls[0]![0] as GPURenderPipelineDescriptor;
       const target = desc.fragment!.targets[0]!;
       expect(target!.blend!.color.srcFactor).toBe('src-alpha');
       expect(target!.blend!.color.dstFactor).toBe('one-minus-src-alpha');
     });
-  });
-});
-
-describe('milkyWay uniform layout (co-located)', () => {
-  // MilkyWayRenderer's per-frame uniform buffer is laid out as:
-  //   CameraUniforms prefix (80 B)
-  // + cameraPosWorld vec3   (12 B)
-  // + fadeAlpha f32          (4 B)
-  // + iTime f32              (4 B)
-  // + tail pad              (12 B)
-  // = 112 B total.
-  //
-  // Pinned here (rather than in a milkyWayRenderer-specific test file)
-  // because (a) the rest of the renderer needs a real GPUDevice and
-  // (b) post-Spec G all impostor renderers are factory consumers — the
-  // constant *is* the only externally observable invariant of the
-  // otherwise-stateless renderer.
-  it('size matches the WESL Uniforms struct (80 + 12 + 4 + 4 + 12 = 112)', () => {
-    expect(MILKY_WAY_UNIFORM_BUFFER_SIZE).toBe(112);
   });
 });

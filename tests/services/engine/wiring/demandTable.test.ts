@@ -162,8 +162,9 @@ const BOOT_SETTINGS: SettingsLeaves = {
 const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = seedVolumeFields();
 
 /**
- * Default-at-boot galaxy catalog items: every galaxy catalog enabled, matching the engine's
- * construction seed (one `enabled: true` row per `GALAXY_CATALOG_IDS` entry).
+ * Default-at-boot galaxy catalog items, matching the engine's construction
+ * seed: each row's `enabled` comes from its SOURCE_REGISTRY entry's `visible`
+ * field — true for every galaxy catalog except DesiDeep.
  */
 const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   synthetic: { enabled: true },
@@ -172,6 +173,12 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   glade: { enabled: true },
   famousGalaxy: { enabled: true },
   milliquas: { enabled: true },
+  // DesiDeep boots hidden (SOURCE_REGISTRY visible:false — a specialist
+  // pencil-beam, not part of the default all-sky scene), so the construction
+  // seed lands its enabled bit false and its ASSET_WIRING point row is NOT
+  // demanded at boot. Symmetric with cf4-density among the volume fields:
+  // registry visible:false → seeded enabled:false → absent from the boot set.
+  desiDeep: { enabled: false },
 };
 
 // ── Stub state builder ───────────────────────────────────────────────────────
@@ -188,7 +195,7 @@ type NamedSlotOverrides = Partial<{
 
 type MakeStateOptions = {
   settings?: SettingsLeaves;
-  /** Per-galaxy catalog enabled bits; injected into `settings.galaxyCatalogs.items`. Defaults to boot (all enabled). */
+  /** Per-galaxy catalog enabled bits; injected into `settings.galaxyCatalogs.items`. Defaults to boot (registry `visible` seed). */
   galaxyCatalogItems?: GalaxyCatalogItemLeaves;
   /** Volume-field params; injected into `settings.volumes.items`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
@@ -209,6 +216,7 @@ const ALL_POINT_SOURCES: readonly SourceType[] = [
   Source.Glade,
   Source.Milliquas,
   Source.FamousGalaxy,
+  Source.DesiDeep,
   Source.Synthetic,
 ];
 
@@ -303,16 +311,19 @@ afterEach(() => {
 
 describe('reevaluateDemand demand-table regression', () => {
   /**
-   * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all visible (every galaxy catalog
-   * ships on in SOURCE_REGISTRY). Famous slot is modelled as 'loading' (it was
-   * just triggered by its own demand row before famousMeta's row evaluates), so
-   * famousMeta is also demanded. structureCatalog loads because every structure
-   * category is visible by default. mcpm IS demanded: the predicate checks
-   * `ctx.settings.volumes.items.mcpm?.enabled`, which the construction seed lands as
-   * true (registry visible:true). cf4Density is NOT (seeded enabled:false).
-   * filaments: off. pgcAlias: no request. Synthetic: galaxy catalogs not errored.
+   * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all visible in
+   * SOURCE_REGISTRY. DesiDeep is the one galaxy catalog with visible:false, so
+   * its enabled bit seeds false and its point row is NOT demanded at boot —
+   * symmetric with cf4-density among the volume fields. Famous slot is modelled
+   * as 'loading' (it was just triggered by its own demand row before
+   * famousMeta's row evaluates), so famousMeta is also demanded. structureCatalog
+   * loads because every structure category is visible by default. mcpm IS
+   * demanded: the predicate checks `ctx.settings.volumes.items.mcpm?.enabled`,
+   * which the construction seed lands as true (registry visible:true). cf4Density
+   * is NOT (seeded enabled:false). filaments: off. pgcAlias: no request.
+   * Synthetic: galaxy catalogs not errored.
    */
-  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousMeta + structureCatalog + mcpm', () => {
+  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousMeta + structureCatalog + mcpm (DesiDeep off)', () => {
     // Famous starts idle: its point row loads it (idle-guard passes), flipping
     // the stub to 'loading', so the later famousMeta row sees Famous non-idle
     // and demands. This is the honest two-phase boot model.

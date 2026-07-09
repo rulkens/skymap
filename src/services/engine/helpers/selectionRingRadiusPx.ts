@@ -4,10 +4,10 @@
  *
  * The ring is sized larger than the object it surrounds (`RING_SIZE_SCALE`)
  * to leave visual breathing room.  This is the halo size only — the
- * Milky-Way pick target sizes itself to the impostor's *visible* extent
- * instead (the bare apparent radius, no ring scale; see
- * `milkyWayPickHalfExtentPx`), so the clickable area lands on the glow the
- * user sees rather than the larger ring.
+ * Milky-Way pick target sizes itself to the disc's *visible* extent
+ * instead (the bare apparent radius, no ring scale; computed in the pick
+ * vertex shader — see `milkyWayPick/vertex.wesl`), so the clickable area
+ * lands on the glow the user sees rather than the larger ring.
  *
  * ## The math (mirrors points/vertex.wesl's apparent-size billboard)
  *

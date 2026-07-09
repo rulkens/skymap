@@ -15,7 +15,7 @@
  * `labelEnabled` being false AND the `galaxyNames` opacity having reached 0 — so
  * a toggle-off keeps
  * emitting at the declining `layerAlpha` until the fade-out ramp completes,
- * rather than popping the labels instantly (mirrors `filamentsPass.enabled`).
+ * rather than popping the labels instantly (mirrors `filamentsLayer.enabled`).
  * The OTHER early returns (meta/catalog absent — nothing to fade) stay hard.
  *
  * ### Meta ⋈ catalog alignment
@@ -61,8 +61,8 @@ import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { focusedFamousIndex } from '../helpers/focusedFamousIndex';
 import { famousDisplayName } from '../helpers/famousDisplayName';
-import { getLabelStyleOverride } from '../labelStyleOverride';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
 import { focusRecession } from './focusRecession';
 
@@ -152,11 +152,11 @@ export function produceFamousLabels(
 ): LabelProducerOutput {
   const galaxies = state.data.galaxies;
   const fades = state.subsystems.fades;
-  const now = performance.now();
+  const now = ctx.nowMs;
   const empty: LabelProducerOutput = { labels: [], lines: [], awake: false };
   // Render while the user wants famous labels OR the `galaxyNames` fade-out
   // tail is still non-zero — so a toggle-off fades out smoothly instead of
-  // popping (mirrors `filamentsPass.enabled`). Once opacity hits 0 we stop.
+  // popping (mirrors `filamentsLayer.enabled`). Once opacity hits 0 we stop.
   if (
     !state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled &&
     fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' }, now) === 0
@@ -168,6 +168,14 @@ export function produceFamousLabels(
   const catalog = galaxies.get(Source.FamousGalaxy);
   if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
 
+  // focusedOnly mode: only the focused subject's label draws. A famous focus
+  // is a positional catalog ref; anything else focused (a structure, the
+  // Milky Way, another catalog's galaxy, nothing) silences this producer.
+  const focusedIdx = state.settings.labels.focusedOnly
+    ? focusedFamousIndex(state.selection.focus)
+    : null;
+  if (state.settings.labels.focusedOnly && focusedIdx === null) return empty;
+
   const inputs = deriveFamousLabelInputs(meta, catalog);
   if (inputs.length === 0) return empty;
 
@@ -177,9 +185,6 @@ export function produceFamousLabels(
   const fovYRad = ctx.fovYRad;
   const [cx, cy, cz] = ctx.drawCamPos;
   const style = FAMOUS_LABEL_STYLE;
-  // Snapshot the live-tuning override once so it stays consistent across the
-  // loop. See `labelStyleOverride.ts`.
-  const override = getLabelStyleOverride();
 
   // Snapshot the layer opacity × uniform recession × clip factor ONCE — it's
   // identical for every famous label (the `galaxyNames` handle is shared, and
@@ -194,7 +199,11 @@ export function produceFamousLabels(
     focusRecession({ kind: 'labelLayer', layer: 'galaxyNames' }, ctx.focusBlend) *
     clipFactor;
 
-  for (const p of inputs) {
+  for (let i = 0; i < inputs.length; i += 1) {
+    const p = inputs[i]!;
+    // Input i maps to catalog row i (the meta ⋈ catalog join is index-aligned),
+    // so the positional focus ref selects by loop index.
+    if (focusedIdx !== null && i !== focusedIdx) continue;
     const dx = p.worldPos[0] - cx;
     const dy = p.worldPos[1] - cy;
     const dz = p.worldPos[2] - cz;
@@ -242,13 +251,6 @@ export function produceFamousLabels(
       ownerLabelId: p.id,
     });
 
-    // Per-structure override fields apply only when the override targets the famous
-    // category; otherwise the category-default outline is kept.
-    const overrideFields =
-      override.targetCategory === 'famousGalaxy'
-        ? { outlineColor: override.outlineColor, outlineEmFrac: override.outlineEmFrac }
-        : {};
-
     labels.push({
       id: p.id,
       worldPos: labelWorldPos,
@@ -265,7 +267,6 @@ export function produceFamousLabels(
       outlineColor: [...style.outlineColor],
       outlineEmFrac: style.outlineEmFrac,
       prominencePx,
-      ...overrideFields,
     });
   }
 

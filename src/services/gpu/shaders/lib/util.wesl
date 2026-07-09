@@ -34,11 +34,9 @@
 
 // ── noise / hash ─────────────────────────────────────────────────────
 //
-// Both of these are originally from milkyWayImpostor.wesl's port of
-// mrange's CC0 ShaderToy spiral. They're orphaned (the impostor is
-// the only caller) but the names + signatures are domain-neutral, so
-// any future procedural pass that needs cheap 2D noise can reach for
-// them.
+// hash21 and valueNoise2 come from mrange's CC0 ShaderToy spiral port.
+// The names + signatures are domain-neutral, so any procedural pass
+// that needs cheap 2D noise can reach for them.
 
 // hash21 — deterministic 2D-to-1D hash in [0, 1).
 //
@@ -80,7 +78,7 @@ fn hash21(co: vec2<f32>) -> f32 {
 // fetch.  Cheap enough that screen-space jitter (volume ray-march
 // start offset, dithered alpha) should default to this; reserve hash21
 // for one-shot uses where the input domain is so sparse the banding
-// doesn't manifest (e.g. the milky-way impostor's per-octave seeds).
+// doesn't manifest (e.g. per-octave seeds).
 fn hash21Hq(p: vec2<f32>) -> f32 {
   var p3 = fract(vec3<f32>(p.x, p.y, p.x) * 0.1031);
   p3 = p3 + dot(p3, p3.yzx + vec3<f32>(33.33));
@@ -98,8 +96,8 @@ fn hash21Hq(p: vec2<f32>) -> f32 {
 //
 // The 'p * tanh(0.1 * length(p))' prefix gives radial attenuation:
 // near the origin the noise field flattens (tanh→0 for small length),
-// which is what the impostor's centre needs so the bulge dominates
-// without competing high-frequency arm chatter.
+// which suits a procedural galaxy centre where the bulge should
+// dominate without competing high-frequency arm chatter.
 //
 // Renamed from 'noise1' (a numbered slot — there was never a 'noise2'
 // or 'noise3') to 'valueNoise2' which describes the shape. The '2'

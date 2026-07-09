@@ -148,6 +148,29 @@ const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
+describe('PointRenderer colour target', () => {
+  it('bakes the given targetFormat into the pipeline colour target', () => {
+    const captured: GPURenderPipelineDescriptor[] = [];
+    const device = {
+      ...makeStubDevice(),
+      createRenderPipeline: (desc: GPURenderPipelineDescriptor) => {
+        captured.push(desc);
+        return { getBindGroupLayout: () => ({}) } as unknown as GPURenderPipeline;
+      },
+    } as unknown as GPUDevice;
+    createPointRenderer(
+      device,
+      'rgba16float',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    expect(captured).toHaveLength(1);
+    const target = Array.from(captured[0]!.fragment!.targets!)[0]!;
+    expect(target!.format).toBe('rgba16float');
+  });
+});
+
 describe('PointRenderer.totalCount', () => {
   it('returns 0 before any upload', () => {
     const renderer = createPointRenderer(
@@ -188,6 +211,39 @@ describe('PointRenderer.totalCount', () => {
 
     renderer.unload(idOf(Source.SDSS));
     expect(renderer.totalCount()).toBe(50);
+  });
+});
+
+describe('PointRenderer.hasCatalog', () => {
+  it('is false before upload, true after, false again after unload', async () => {
+    // The survey fade row's guard reads this — it reports whether a catalog's
+    // buffer is committed, independent of the slot lifecycle.
+    const renderer = createPointRenderer(
+      makeStubDevice(),
+      'bgra8unorm',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
+    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
+    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(true);
+    expect(renderer.hasCatalog(idOf(Source.TwoMRS))).toBe(false);
+    renderer.unload(idOf(Source.SDSS));
+    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
+  });
+
+  it('treats a zero-count upload (the unload signal) as not loaded', async () => {
+    const renderer = createPointRenderer(
+      makeStubDevice(),
+      'bgra8unorm',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(0));
+    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
   });
 });
 
@@ -540,7 +596,7 @@ function makeCapturingDevice(
 }
 
 describe('PointRenderer.spliceSchechterRatios', () => {
-  it('writes ratios[i] into slot 9 of row i of the interleaved mirror', async () => {
+  it('writes ratios[i] into slot 10 of row i of the interleaved mirror', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
     const renderer = createPointRenderer(
@@ -559,10 +615,10 @@ describe('PointRenderer.spliceSchechterRatios', () => {
     const last = writeCalls[writeCalls.length - 1]!;
     const view = last.data as Float32Array;
     const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    // SLOTS_PER_POINT = 11; slot 9 = SCHECHTER_RATIO_BYTE_OFFSET / 4.
-    expect(f32[0 * 11 + 9]).toBeCloseTo(0.25);
-    expect(f32[1 * 11 + 9]).toBeCloseTo(0.5);
-    expect(f32[2 * 11 + 9]).toBeCloseTo(0.75);
+    // SLOTS_PER_POINT = 13; slot 10 = SCHECHTER_RATIO_BYTE_OFFSET / 4.
+    expect(f32[0 * 13 + 10]).toBeCloseTo(0.25);
+    expect(f32[1 * 13 + 10]).toBeCloseTo(0.5);
+    expect(f32[2 * 13 + 10]).toBeCloseTo(0.75);
   });
 
   it('throws when ratios.length !== source count', async () => {
@@ -593,7 +649,7 @@ describe('PointRenderer.spliceSchechterRatios', () => {
 });
 
 describe('PointRenderer.spliceAngularWeights', () => {
-  it('writes weights[i] into slot 10 of row i', async () => {
+  it('writes weights[i] into slot 11 of row i', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
     const renderer = createPointRenderer(
@@ -611,9 +667,9 @@ describe('PointRenderer.spliceAngularWeights', () => {
     const last = writeCalls[writeCalls.length - 1]!;
     const view = last.data as Float32Array;
     const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    // slot 10 = ANGULAR_WEIGHT_BYTE_OFFSET / 4.
-    expect(f32[0 * 11 + 10]).toBeCloseTo(0.1);
-    expect(f32[1 * 11 + 10]).toBeCloseTo(0.9);
+    // slot 11 = ANGULAR_WEIGHT_BYTE_OFFSET / 4.
+    expect(f32[0 * 13 + 11]).toBeCloseTo(0.1);
+    expect(f32[1 * 13 + 11]).toBeCloseTo(0.9);
   });
 
   it('throws when weights.length !== source count', async () => {
@@ -632,7 +688,7 @@ describe('PointRenderer.spliceAngularWeights', () => {
 });
 
 describe('PointRenderer.clearBiasOverlays', () => {
-  it('zeroes slots 9 and 10 for the named source', async () => {
+  it('zeroes slots 10 and 11 for the named source', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
     const renderer = createPointRenderer(
@@ -644,7 +700,7 @@ describe('PointRenderer.clearBiasOverlays', () => {
     );
     await renderer.upload(idOf(Source.SDSS), makeCloud(2));
 
-    // Populate slots 9/10 first so we can assert clear actually clears.
+    // Populate slots 10/11 first so we can assert clear actually clears.
     renderer.spliceSchechterRatios(Source.SDSS, new Float32Array([0.5, 0.6]));
     renderer.spliceAngularWeights(Source.SDSS, new Float32Array([0.7, 0.8]));
 
@@ -654,10 +710,10 @@ describe('PointRenderer.clearBiasOverlays', () => {
     const last = writeCalls[writeCalls.length - 1]!;
     const view = last.data as Float32Array;
     const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    expect(f32[0 * 11 + 9]).toBe(0);
-    expect(f32[0 * 11 + 10]).toBe(0);
-    expect(f32[1 * 11 + 9]).toBe(0);
-    expect(f32[1 * 11 + 10]).toBe(0);
+    expect(f32[0 * 13 + 10]).toBe(0);
+    expect(f32[0 * 13 + 11]).toBe(0);
+    expect(f32[1 * 13 + 10]).toBe(0);
+    expect(f32[1 * 13 + 11]).toBe(0);
   });
 
   it('zeroes for every loaded source when called with no argument', async () => {
@@ -882,14 +938,15 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
 });
 
 describe('POINT_VERTEX_ATTRIBUTES — shared layout export', () => {
-  it('has 9 attributes with the expected shader locations and formats', async () => {
+  it('has 10 attributes with the expected shader locations and formats', async () => {
     const { POINT_VERTEX_ATTRIBUTES, POINT_STRIDE } =
       await import('../../../../src/services/gpu/renderers/pointRenderer');
 
-    expect(POINT_STRIDE).toBe(44);
-    expect(POINT_VERTEX_ATTRIBUTES).toHaveLength(9);
+    expect(POINT_STRIDE).toBe(52);
+    expect(POINT_VERTEX_ATTRIBUTES).toHaveLength(10);
 
-    // Slot 0 is the only vec3; slots 1-8 are scalar f32s.  Anyone editing
+    // Location 0 is the position vec3, location 4 is the baked (paCos,
+    // paSin) vec2; everything else is a scalar f32.  Anyone editing
     // pointRenderer's table must update this expectation deliberately,
     // which is the point — a silent shape change here would break the
     // shared invariant with pickRenderer.
@@ -898,12 +955,26 @@ describe('POINT_VERTEX_ATTRIBUTES — shared layout export', () => {
       offset: 0,
       format: 'float32x3',
     });
+    expect(POINT_VERTEX_ATTRIBUTES[4]).toEqual({
+      shaderLocation: 4,
+      offset: 24,
+      format: 'float32x2',
+    });
 
-    const expectedOffsets = [12, 16, 20, 24, 28, 32, 36, 40];
-    for (let i = 1; i <= 8; i++) {
-      expect(POINT_VERTEX_ATTRIBUTES[i]).toEqual({
-        shaderLocation: i,
-        offset: expectedOffsets[i - 1],
+    const scalarExpectations: readonly { location: number; offset: number }[] = [
+      { location: 1, offset: 12 }, // magnitude
+      { location: 2, offset: 16 }, // colorIndex
+      { location: 3, offset: 20 }, // axisRatio
+      { location: 5, offset: 32 }, // radiusMpc
+      { location: 6, offset: 36 }, // vMaxWeight
+      { location: 7, offset: 40 }, // schechterRatio
+      { location: 8, offset: 44 }, // angularDensityWeight
+      { location: 9, offset: 48 }, // absMag
+    ];
+    for (const { location, offset } of scalarExpectations) {
+      expect(POINT_VERTEX_ATTRIBUTES[location]).toEqual({
+        shaderLocation: location,
+        offset,
         format: 'float32',
       });
     }

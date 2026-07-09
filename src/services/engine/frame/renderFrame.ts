@@ -1,193 +1,95 @@
 /**
- * renderFrame — owns the per-frame WebGPU command-encoder lifecycle.
+ * renderFrame — owns the per-frame WebGPU command-encoder lifecycle, and
+ * runs the FRAME program into it.
  *
- * Before this module existed, ~140 lines of imperative GPU plumbing
- * sprawled inside `engine.ts`'s `frame()`.  D.1 (`FrameContext`) cut
- * the ad-hoc snapshot work; D.2 cut the inline draw blocks into the
- * `HDR_PASSES` registry.  What remains in this file is the encoder
- * lifecycle, the conditional HDR-rendering branch, the tone-map blit,
- * and the post-tone-map UI overlay — see "What the encoder records,
- * in order" below.
+ * Before the renderer unification, ~140 lines of imperative GPU plumbing
+ * sprawled here: a two-way HDR-encoder branch, a tone-map blit, and a
+ * post-tone-map UI overlay, each a hand-wired call whose order was implicit
+ * in which function called which. That order is now DATA — `frameProgram(tone)`
+ * returns the ordered
+ * `FrameStep[]`, and `executeFrame` is the single imperative site that walks
+ * it into one encoder. This module shrank to three responsibilities: the
+ * once-per-frame focus-uniform write, the encoder lifecycle (create + swap-view
+ * acquire + submit), and the timing frame window.
  *
- * Each entry in `HDR_PASSES` is a `Pass` const declared in its own
- * file under `passes/`.  See `passes/types.ts` for the interface
- * contract and `passes/index.ts` for the canonical draw order.
+ * ### What this function does, in order
+ *
+ *   1. Write the shared cluster-focus uniform once, before any pass reads it.
+ *   2. Create the frame's single command encoder + acquire the swap-chain view.
+ *   3. Open the timing frame (`beginFrame`) and pick the render strategy:
+ *      `'perLayerTimed'` when timing is enabled (one pass per layer so each can
+ *      carry its own `timestampWrites`), else `'merged'` (one pass per target
+ *      group — the tile-local production path OVER blends need).
+ *   4. `executeFrame` walks `frameProgram(tone)` over `CONTENT_LAYERS`: the flow
+ *      compute, the scalar-volume render, the HDR render, the `hdr→swap`
+ *      tone-map composite, then the swap-chain overlay render.
+ *   5. Record the timing resolve/copy (`endFrame`) and submit.
+ *
+ * The strategy fork, the tile-local coherency rationale, the first-touch clear,
+ * and the single slab resolution per render step all now live in `executeFrame`
+ * — see its module header. `renderFrame` no longer knows about individual
+ * passes; adding, removing, or reordering one is a registry / program edit.
  *
  * ### Why pass an explicit input bag instead of capturing closure?
  *
- * Same rationale as pre-D.2: this module owns no cross-frame state,
- * every variable it reads is recomputed each frame.  A free function
- * taking a struct of inputs is trivially testable and bounds the
- * encoder lifetime to the function body.
- *
- * ### What the encoder records, in order
- *
- *   1. HDR rendering — `encodeHdrSingle` (default) OR `encodeHdrSplit`
- *      (when `timingService.enabled`, so each pass can carry its own
- *      `timestampWrites`).  Both shapes write into the rgba16float
- *      HDR target; the per-pass-split variant pays a tile-RAM round-
- *      trip per boundary on M1, which is acceptable in dev mode but
- *      not in production.
- *
- *   2. Foreground composite (`encodeForegroundPass`).  Renders true-scale
- *      bodies (Earth, Sun, planets) into the HDR target using the f64
- *      view-projection matrix and compose-before-narrow MVP path.
- *
- *   3. Tone-map post-process.  Samples the HDR target and writes the
- *      compressed [0, 1] range to the swap chain.  Begins+ends its
- *      own internal render pass on the same encoder via
- *      `postProcess.draw`.
- *
- *   4. UI overlay (`encodeUiOverlay`).  Composites marker-lines + labels
- *      onto the tone-mapped swap chain via premultiplied OVER blend.
- *      Lives post-tone-map so the OVER overlays bypass the tone-map
- *      curve (no `[8, 8, 8, 1]` overshoot hack needed) and so their
- *      blend reads coherent `dst.color` from the swap-chain target
- *      (the additive HDR passes can't corrupt UI overlay coherency
- *      because they target a different texture).  See `encodeUiOverlay.ts`
- *      for the full coherency / colour-mismatch rationale.
- *
- *   5. (timing path only) `resolveQuerySet` + `copyBufferToBuffer`
- *      recorded via `timingService.endFrame`.
- *
- *   submit: device.queue.submit([encoder.finish()])
- *
- * Every pass shares one encoder so the GPU sees them in deterministic
- * order — critical because each pass reads what the previous one wrote.
- *
- * ### Why tone-map and encodeUiOverlay aren't in `HDR_PASSES`
- *
- * Tone-map and encodeUiOverlay both target the swap chain (not the HDR
- * offscreen target), and encodeUiOverlay's blend is premultiplied OVER
- * rather than additive.  Modelling them as `Pass` entries would
- * require divergent signatures (target view, blend semantics) for
- * the two outliers.  Keeping them as named functions called inline
- * from this orchestrator is the lightest shape that lets `Pass` stay
- * a uniform additive-HDR contract.
+ * This module owns no cross-frame state — every value it reads is recomputed
+ * each frame. A free function taking a struct of inputs is trivially testable
+ * and bounds the encoder lifetime to the function body.
  *
  * ### What stays in `runFrame()` (NOT here)
  *
- *   - `drawPickDebugOverlay` — composites the pick-buffer debug overlay over
- *     the swap chain using its own encoder/submit (AFTER this function's
- *     submit), so it can read `state.picking.lastFrameUniformBytes`.
+ *   - `drawPickDebugOverlay` — composites the pick-buffer debug overlay over the
+ *     swap chain using its own encoder/submit (AFTER this function's submit); it
+ *     rebuilds the pick uniform bytes at pick time from the slab view (see
+ *     `pickUniformBytesOf`).
  *   - The render-on-demand scheduler decision.
- *   - Camera state mutation (resize, tween advance, auto-rotate yaw
- *     bump).
+ *   - Camera state mutation (resize, tween advance, auto-rotate yaw bump).
  */
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
-import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
-import { encodeHdrSingle } from './encodeHdrSingle';
-import { encodeHdrSplit } from './encodeHdrSplit';
-import { encodeUiOverlay } from './encodeUiOverlay';
-import { encodeForegroundPass } from './encodeForegroundPass';
-import { encodeForegroundOver } from './encodeForegroundOver';
+import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
+import { executeFrame } from './executeFrame';
+import { frameProgram } from './frameProgram';
+import { CONTENT_LAYERS } from './passes';
 
 /**
- * Encode and submit one frame's worth of HDR + tone-map work.
- *
- * The function is synchronous: it builds the command encoder,
- * dispatches every enabled HDR pass in `HDR_PASSES` order, runs the
- * tone-map post-process, and submits the buffer.  No part of the
- * encoder lifecycle escapes — by the time `renderFrame` returns,
- * the GPU has the buffer queued.
- *
- * Order of operations matches the pre-D.2 inline body verbatim; the
- * visual output is identical.  Reordering the HDR passes is now a
- * one-line shuffle of the `HDR_PASSES` array literal.
+ * Encode and submit one frame. Synchronous: by the time it returns, the GPU
+ * has the buffer queued. Order of operations is the `frameProgram` step list
+ * walked by `executeFrame`; the visual output is identical to the pre-unification
+ * inline body.
  */
 export function renderFrame(input: RenderFrameInput): void {
-  const {
-    ctx,
-    state,
-    milkyWayITimeSec,
-    device,
-    context,
-    milkyWayRenderer,
-    horizonShellRenderer,
-    filamentRenderer,
-    volumeFieldRenderer,
-    flowFieldRenderer,
-    texturedDiskRenderer,
-    proceduralDiskRenderer,
-    timingService,
-  } = input;
+  const { ctx, state, device, context, timingService } = input;
 
-  // Bundle the renderer references each pass might need into a single
-  // `PassDeps` bag.  We build it once per frame rather than rebuilding
-  // it inside the loop because the references are stable for the
-  // duration of `renderFrame`'s execution.  See `passes/types.ts`'s
-  // `PassDeps` declaration for the per-field rationale.
-  const deps: PassDeps = {
-    texturedDiskRenderer,
-    proceduralDiskRenderer,
-    filamentRenderer,
-    volumeFieldRenderer,
-    flowFieldRenderer,
-    milkyWayRenderer,
-    horizonShellRenderer,
-    milkyWayITimeSec,
-  };
-
-  // Write the single shared cluster-focus uniform once per frame, before
-  // any pass (points, impostor disks, and the later pick submit) reads it.
-  // blend=0 at rest makes the per-vertex multiplier a no-op.
-  // ctx.focus is the per-frame FocusUniformsValue derived in deriveFrameContext.
+  // Write the single shared cluster-focus uniform once per frame, before any
+  // pass (points, impostor disks, and the later pick submit) reads it.
+  // blend=0 at rest makes the per-vertex multiplier a no-op. `ctx.focus` is the
+  // per-frame FocusUniformsValue derived in deriveFrameContext.
   state.gpu.focusUniform?.write(ctx.focus);
 
-  // ── Encoder + HDR rendering ───────────────────────────────────────
-  //
-  // Two HDR-rendering shapes, picked at frame start based on whether
-  // timing is enabled:
-  //
-  //   • `!timingService.enabled` (production path, no `?gpuTimings`):
-  //     one mega-pass via `encodeHdrSingle`.  All HDR draws run inside
-  //     one `beginRenderPass(loadOp: 'clear')` block, keeping the
-  //     target tile-local for the whole pass.
-  //
-  //   • `timingService.enabled` (dev path, `?gpuTimings` active):
-  //     per-pass split via `encodeHdrSplit` — one `beginRenderPass`
-  //     per enabled HDR_PASSES entry so each pass can carry its own
-  //     `timestampWrites` descriptor.  Pays a tile-RAM round-trip per
-  //     boundary on M1, acceptable in dev mode.
-  //
-  // Both shapes are byte-equivalent on a spec-compliant desktop GPU
-  // and feed the same downstream tone-map + UI-overlay sequence.
   const encoder = device.createCommandEncoder();
   const swapView = context.getCurrentTexture().createView();
 
-  const { exposure, curve } = state.settings.tonemap;
-
-  if (timingService.enabled) {
-    const timingCtx = timingService.beginFrame();
-    encodeHdrSplit(encoder, ctx, state, deps, timingService);
-    encodeForegroundPass(encoder, ctx, state, deps);
-    ctx.postProcess.draw(
-      encoder,
-      swapView,
-      exposure,
-      curve,
-      timingService.descriptorFor('tone-map'),
-    );
-    encodeUiOverlay(
-      encoder,
-      swapView,
-      ctx,
-      state,
-      deps,
-      timingService.descriptorFor('ui-overlay'),
-    );
-    // After the UI overlay so the foreground occludes galaxy-level labels.
-    encodeForegroundOver(encoder, swapView, ctx, state, deps, exposure, curve);
-    timingService.endFrame(timingCtx, encoder);
-  } else {
-    encodeHdrSingle(encoder, ctx, state, deps);
-    encodeForegroundPass(encoder, ctx, state, deps);
-    ctx.postProcess.draw(encoder, swapView, exposure, curve, undefined);
-    encodeUiOverlay(encoder, swapView, ctx, state, deps, undefined);
-    // After the UI overlay so the foreground occludes galaxy-level labels.
-    encodeForegroundOver(encoder, swapView, ctx, state, deps, exposure, curve);
-  }
+  const timingCtx = timingService.beginFrame();
+  // The ONLY frame-level branch: per-layer timed passes when timing is enabled
+  // (each carries its own `timestampWrites`), else the merged tile-local passes
+  // OVER blends need on Apple Silicon. `executeFrame` applies the strategy
+  // uniformly across every render step — see its module header.
+  const strategy: RenderStrategy = timingService.enabled ? 'perLayerTimed' : 'merged';
+  executeFrame({
+    encoder,
+    ctx,
+    state,
+    program: frameProgram({
+      exposure: state.settings.tonemap.exposure,
+      curve: state.settings.tonemap.curve,
+    }),
+    layers: CONTENT_LAYERS,
+    strategy,
+    timing: timingService,
+    swapView,
+  });
+  timingService.endFrame(timingCtx, encoder);
 
   device.queue.submit([encoder.finish()]);
 }

@@ -64,8 +64,7 @@ function makeState(over: {
     gpu: {
       renderer: null,
       pickRenderer: null,
-      postProcess: null,
-      volumeOffscreen: null,
+      renderTargets: null,
     },
     cam: null,
     subsystems: {
@@ -131,7 +130,7 @@ describe('shouldKeepTicking', () => {
     const isAwake = vi.fn<(nowMs: number) => boolean>(() => false);
     const state = {
       settings: { flow: { enabled: false } },
-      gpu: { renderer: null, pickRenderer: null, postProcess: null, volumeOffscreen: null },
+      gpu: { renderer: null, pickRenderer: null, renderTargets: null },
       cam: null,
       subsystems: {
         texturedDisks: null,

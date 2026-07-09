@@ -18,48 +18,83 @@
 //
 // ## Bindings the pipeline declares
 //
-//   @group(0) CameraUniforms — the SAME 80-byte prefix the points pick
-//             pass binds.  pickMilkyWay does NOT bind @group(0); it
-//             reuses the caller's CameraUniforms (the galaxy pick draws
-//             bound it immediately before), so the reads here
-//             (viewProj + viewportPx) must stay inside that buffer.
+//   @group(0) Uniforms — a prefix mirror of the points pick uniform
+//             buffer (points/io.wesl::Uniforms).  pickMilkyWay does NOT
+//             bind @group(0); it reuses the caller's bind group (the
+//             galaxy pick draws bound the full 176-byte points pick
+//             buffer immediately before), so the mirrored struct below
+//             must byte-match the points layout for every field it
+//             declares.  Reads extend through 'pxPerRad' at byte 108 —
+//             i.e. the first 112 bytes of that buffer, not just the
+//             80-byte CameraUniforms prefix — because the vertex stage
+//             derives the billboard's apparent size the same way the
+//             points shader does (camPosWorld + pxPerRad + the
+//             pointSizePx floor).
 //   @group(1) FadeUniforms — declared for layout symmetry with the
 //             points / structure pick pipelines (the prior pass left a
 //             fade bind group at slot 1).  This shader never reads it; a
 //             dummy zeroed group is bound at draw time.
 //   @group(2) MilkyWayPickUniforms — carries the world-space galactic
-//             centre + the 5-bit source code, written once at
-//             construction.
+//             centre, the 5-bit source code, and the disc's world
+//             radius; all written once at construction.
 
 import package::lib::camera::CameraUniforms;
 
+// ── @group(0) points-pick uniform mirror ──────────────────────────────
+//
+// Field-for-field prefix of 'points/io.wesl::Uniforms' — same names,
+// same offsets — truncated after the last field this shader reads.
+// Mirroring the points layout (rather than inventing a private camera
+// struct) is what lets the MW draw reuse the caller's bound @group(0)
+// and read the exact uniform bytes the pick pass replays:
+//
+//   offset 0  : cam            CameraUniforms (80 B)
+//   offset 80 : selectedPacked u32   (unread here)
+//   offset 84 : _pad0          u32
+//   offset 88 : pointSizePx    f32   (pick-widened floor — see below)
+//   offset 92 : brightness     f32   (unread here)
+//   offset 96 : camPosWorld    vec3<f32>
+//   offset 108: pxPerRad       f32
+//   total: 112 bytes — the bound buffer (176 B) is larger, which WGSL
+//   permits: a uniform binding may be bigger than the declared struct.
+//
+// 'pointSizePx' in the PICK buffer is already the pick-widened value —
+// the pick pack bakes (sizePx + PICK_PADDING_PX) into the slot
+// (pickUniformBytesOf; PICK_PADDING_PX lives in data/pickPaddingPx.ts) —
+// so using it as the MW floor gives the MW the same padded minimum every
+// pick point gets.
 struct Uniforms {
   cam: CameraUniforms,
+  selectedPacked: u32,
+  _pad0: u32,
+  pointSizePx: f32,
+  brightness: f32,
+  camPosWorld: vec3<f32>,
+  pxPerRad: f32,
 };
 
 // ── @group(2) per-source uniform ──────────────────────────────────────
 //
 // Carries the world-space billboard centre, the source code, and the
-// screen-pixel half-extent of the hit billboard.  The structure ring
-// path keeps the centre in a per-instance vertex buffer and the code in
-// a SourceUniforms block; the MW is a single fixed billboard, so
-// co-locating everything in one tiny uniform is simpler than a
-// one-instance vertex buffer.
+// disc's physical radius.  The structure ring path keeps the centre in
+// a per-instance vertex buffer and the code in a SourceUniforms block;
+// the MW is a single fixed billboard, so co-locating everything in one
+// tiny uniform is simpler than a one-instance vertex buffer.
 //
-//   offset 0  : centerWorld   vec3<f32>  (Sgr A* world position)
-//   offset 12 : sourceCode    u32        (Source.MilkyWay = 16)
-//   offset 16 : halfExtentPx  f32        (apparent radius of the MW disc,
-//                                          floored — matches the ring)
+//   offset 0  : centerWorld  vec3<f32>  (Sgr A* world position)
+//   offset 12 : sourceCode   u32        (Source.MilkyWay = 16)
+//   offset 16 : radiusMpc    f32        (world radius of the rendered
+//                                         disc — MILKY_WAY_RADIUS_MPC)
 //
-// centerWorld + sourceCode fill bytes 0..15; halfExtentPx takes the next
+// centerWorld + sourceCode fill bytes 0..15; radiusMpc takes the next
 // 16-byte slot at offset 16 (WGSL pads the struct to a 16-byte multiple),
-// so the buffer is 32 bytes.  Unlike centre + code (written once at
-// construction), halfExtentPx is rewritten each pick because it tracks
-// the camera distance — the engine supplies it as data per draw.
+// so the buffer is 32 bytes.  Every field is a physical constant of the
+// scene, written once at construction — the vertex stage projects
+// radiusMpc to apparent pixels itself, so nothing here tracks the camera.
 struct MilkyWayPickUniforms {
   centerWorld: vec3<f32>,
   sourceCode: u32,
-  halfExtentPx: f32,
+  radiusMpc: f32,
 };
 
 // ── vertex-to-fragment interface ──────────────────────────────────────

@@ -36,7 +36,6 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
@@ -47,12 +46,24 @@ import vsCode from '../shaders/texturedDisks/vertex.wesl?static';
 import fsCode from '../shaders/texturedDisks/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
+type Init = {
+  device: GPUDevice;
+  context: GPUCanvasContext;
+  /**
+   * The colour-target format the disk pipeline writes into — the HDR offscreen
+   * (`'rgba16float'`), NOT the swap chain. Passed explicitly (never a
+   * `GpuContext.format`, which is always the swap-chain format).
+   */
+  targetFormat: GPUTextureFormat;
+  canvas: HTMLCanvasElement;
+};
+
 export function createTexturedDiskRenderer(
-  ctx: GpuContext,
+  init: Init,
   focusBgl: FocusUniformsBgl,
   maxInstances = 256,
 ): TexturedDiskRenderer {
-  const inner = createInstancedQuadRenderer(ctx, {
+  const inner = createInstancedQuadRenderer(init.device, {
     label: 'disk',
     vertexSource: vsCode,
     fragmentSource: fsCode,
@@ -68,7 +79,7 @@ export function createTexturedDiskRenderer(
     // cutout's dark sky as black rather than alpha 0, producing a
     // fade-to-black at thumbnail edges.
     blend: 'additive',
-    format: ctx.format,
+    targetFormat: init.targetFormat,
   });
 
   function bindAtlas(atlasView: GPUTextureView): void {

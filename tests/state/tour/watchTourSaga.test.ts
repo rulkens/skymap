@@ -6,10 +6,10 @@
  * The registry is MOCKED here with two controlled tours — a `demo` tour whose
  * single narration beat auto-advances, and a `webShowcase` tour whose beat dwells
  * effectively forever — so each test drives timing deterministically without
- * depending on the real (catalog-resolving) tour definitions. Both tours carry a
- * `setup` effect that disables volumes, so the capture → restore round-trip is
- * OBSERVABLE in the store: each test seeds `volumes.enabled = true` first, the
- * setup flips it off during the run, and the finally winds it back on.
+ * depending on the real (catalog-resolving) tour definitions. The capture →
+ * restore round-trip is made OBSERVABLE in the store by each test: seed
+ * `volumes.enabled = true` first, dispatch the flip to off mid-run (standing in
+ * for an in-clip scene cue), and the finally winds it back on.
  *
  * Capture is a pure `select(captureScene)` and restore is `restoreSceneSaga`
  * (two `put`s), so neither watcher nor tour needs a `reconcile` stub — the
@@ -23,6 +23,8 @@
  * 3. The baseline is restored when exitTour cancels a mid-dwell run.
  * 4. A second startTour supersedes a first run (takeLatest): the tour stays active
  *    under the new run and a fresh beat fly fires.
+ * 5. The optional `BeatRange` on the action reaches `guidedTourSaga`: a ranged
+ *    start lands on the window's first beat, not beat 0.
  *
  * ### Timing
  *
@@ -35,30 +37,42 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
-// Controlled registry: `demo` auto-advances (tiny dwell), `webShowcase` dwells
-// forever so a run stays live until exitTour / a superseding startTour. Both
-// carry a volumes-off setup so the restore is observable. Inlined in the factory
-// (vi.mock is hoisted above the imports); the settings action is imported INSIDE
-// the async factory because outer-scope bindings are not visible to it.
+// Controlled registry: `demo` auto-advances (tiny dwell), `webShowcase` has two
+// beats that each dwell forever, so a run stays live until exitTour / a
+// superseding startTour (an unranged run never leaves beat 0; the second beat
+// exists so a BeatRange starting at 1 is observable). The narration beats
+// mutate no settings; restore tests dispatch a volumes flip mid-run (standing
+// in for an in-clip scene cue) so the wind-back is observable. Inlined in the
+// factory (vi.mock is hoisted above the imports).
 vi.mock('../../../src/data/animation/tours/tourRegistry', async () => {
-  const { setVolumesEnabled } = await import('../../../src/state/settings/settingsSlice');
-  const setup = { effects: [setVolumesEnabled(false)] };
+  const { dwellDrift } = await import('../../../src/state/tour/dwellDrift');
   return {
     tourRegistry: {
       demo: {
         id: 'demo',
         label: 'Demo',
-        setup,
         beats: [
-          { clip: { start: 'live', timeline: [] }, caption: { title: 'Test' }, dwellSec: 0.001 },
+          {
+            enterClip: { start: 'live', timeline: [] },
+            caption: { title: 'Test' },
+            dwellClip: dwellDrift(0.001),
+          },
         ],
       },
       webShowcase: {
         id: 'webShowcase',
         label: 'Web',
-        setup,
         beats: [
-          { clip: { start: 'live', timeline: [] }, caption: { title: 'Long' }, dwellSec: 9999 },
+          {
+            enterClip: { start: 'live', timeline: [] },
+            caption: { title: 'Long' },
+            dwellClip: dwellDrift(9999),
+          },
+          {
+            enterClip: { start: 'live', timeline: [] },
+            caption: { title: 'Long 2' },
+            dwellClip: dwellDrift(9999),
+          },
         ],
       },
     },
@@ -68,6 +82,7 @@ vi.mock('../../../src/data/animation/tours/tourRegistry', async () => {
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTourSaga } from '../../../src/state/tour/watchTourSaga';
 import { startTour, exitTour } from '../../../src/state/tour/tourActions';
+import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
 import type { FocusCameraRuntime } from '../../../src/store/types';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -153,7 +168,8 @@ describe('watchTourSaga', () => {
     store.dispatch(setVolumesEnabled(true));
 
     store.dispatch(startTour('demo'));
-    // Setup ran: volumes off during the tour.
+    // Mutate settings mid-run — the stand-in for an in-clip scene cue.
+    store.dispatch(setVolumesEnabled(false));
     expect(store.getState().settings.volumes.enabled).toBe(false);
 
     // Advance timers so the 0.001s dwell expires and the beat + loop complete.
@@ -172,6 +188,8 @@ describe('watchTourSaga', () => {
 
     // webShowcase dwells forever — the beat never auto-advances during this test.
     store.dispatch(startTour('webShowcase'));
+    // Mutate settings mid-run — the stand-in for an in-clip scene cue.
+    store.dispatch(setVolumesEnabled(false));
 
     // Advance to the dwell race inside the beat.
     await flush();
@@ -200,7 +218,7 @@ describe('watchTourSaga', () => {
     const fliesAfterFirst = playClip.mock.calls.length;
 
     // Dispatch a second startTour — takeLatest cancels the first worker (its
-    // finally restores), then launches a fresh run that re-applies setup.
+    // finally restores), then launches a fresh run with its own snapshot.
     store.dispatch(startTour('webShowcase'));
     await flush();
     await flush();
@@ -208,5 +226,26 @@ describe('watchTourSaga', () => {
     // The second run is live and a fresh beat fly fired for it.
     expect(store.getState().tour.active).toBe(true);
     expect(playClip.mock.calls.length).toBeGreaterThan(fliesAfterFirst);
+  });
+
+  // ── (5) the beat range on the action reaches guidedTourSaga ──────────────
+
+  it('the beat range on the action reaches guidedTourSaga', async () => {
+    vi.useFakeTimers();
+    const { store } = buildHarness({ playClip: makeAutoFlyStub() });
+
+    // webShowcase has two beats; the range selects only the second. The
+    // window reaching guidedTourSaga is observable as the first beatChanged:
+    // index 1 — an unranged run would sit at beat 0. Windowed from > 0 runs
+    // hold the beat behind the FOLD_SETTLE_MS reconstruction settle, so the
+    // index lands only once that delay has elapsed.
+    store.dispatch(startTour('webShowcase', { from: 1, to: 1 }));
+    await vi.advanceTimersByTimeAsync(FOLD_SETTLE_MS);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.getState().tour.beatIndex).toBe(1);
+
+    store.dispatch(exitTour());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.getState().tour.active).toBe(false);
   });
 });

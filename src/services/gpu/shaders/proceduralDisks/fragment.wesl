@@ -68,8 +68,8 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   let tinted = base;
 
   // Soft edge fade.  We're outputting LINEAR colour into an rgba16float
-  // HDR target; the tone-map pass converts to sRGB later (see
-  // toneMap/fragment.wesl).  The disk's exponential decay leaves a
+  // HDR target; the compositor's tone-map curve converts to sRGB later
+  // (see compositor/fragment.wesl).  The disk's exponential decay leaves a
   // residual 'exp(-2) ≈ 0.135' at r = 1.0 in LINEAR space, which the
   // gamma curve brightens to ~42% display brightness — that's the hard
   // edge the user sees right before the discard.

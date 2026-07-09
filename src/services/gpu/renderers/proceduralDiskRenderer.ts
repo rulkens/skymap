@@ -27,6 +27,25 @@
  * camera approaches a dense field, and a fixed cap would visually clip
  * impostors mid-flythrough.
  *
+ * ## Pick: retained content, caller-supplied camera
+ *
+ * The pick pass replays the last-drawn disk set. Two kinds of state feed
+ * it, and only one is retained here:
+ *
+ *   - CONTENT ('pickInstanceBuffer' + 'lastPickInstanceCount') — the
+ *     per-instance disk-LOD set the visual 'draw()' uploaded. The picker
+ *     never sees the instance list, so this genuinely can't be
+ *     reconstructed downstream; the renderer keeps a byte-identical mirror
+ *     of the visual upload and replays it. A frame that drops to zero
+ *     disks clears the count so a stale set can't leak into the pick
+ *     texture.
+ *   - CAMERA (viewProj / viewport / camPos / pxPerRad / focusBindGroup) —
+ *     NOT retained. 'pickDisks()' takes it as arguments so the pick
+ *     uniform always reflects the frame the caller is picking. Stashing a
+ *     draw()-time camera invited a stale-frame bug (the pick pass and the
+ *     visual draw could disagree if they ran a frame apart); taking it as
+ *     an argument makes that class of bug unrepresentable.
+ *
  * ## Why uniform binding visibility is VERTEX | FRAGMENT
  *
  * The BGL declares the uniform binding as visible to both stages even
@@ -56,14 +75,19 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 type Init = {
   device: GPUDevice;
   context: GPUCanvasContext;
-  format: GPUTextureFormat;
+  /**
+   * The colour-target format the disk pipeline writes into — the HDR offscreen
+   * (`'rgba16float'`), NOT the swap chain. Passed explicitly (never a
+   * `GpuContext.format`, which is always the swap-chain format).
+   */
+  targetFormat: GPUTextureFormat;
   canvas: HTMLCanvasElement;
   /** Shared cluster-focus layout, bound at @group(1) — see instancedQuadRenderer. */
   focusBgl: FocusUniformsBgl;
 };
 
 export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer {
-  const inner = createInstancedQuadRenderer(init, {
+  const inner = createInstancedQuadRenderer(init.device, {
     label: 'proceduralDisks',
     vertexSource: vsCode,
     fragmentSource: fsCode,
@@ -73,7 +97,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     focusBgl: init.focusBgl,
     // Procedural disks are EMISSIVE; same rationale as quad/disk.
     blend: 'additive',
-    format: init.format,
+    targetFormat: init.targetFormat,
     // Tagged VERTEX | FRAGMENT even though the fragment doesn't read
     // 'u' — keeps the pipeline-layout introspection signature stable
     // across the sibling renderers. See module header.
@@ -187,18 +211,17 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
   // buffer across its visible and pick pipelines, this renderer must
   // allocate a second, byte-identical buffer — the factory gives us no
   // other handle.
+  //
+  // This buffer + 'lastPickInstanceCount' are RETAINED CONTENT — the
+  // last-drawn disk-LOD set, replayed into the pick pass. That is state
+  // the pick pass genuinely can't reconstruct (the picker never sees the
+  // per-instance list). The CAMERA is NOT retained: pickDisks() takes it
+  // as arguments, so the pick uniform always reflects the frame the
+  // caller is picking, never a stale draw()-time stash. See the module
+  // header's content-vs-camera distinction.
   let pickInstanceBuffer: GPUBuffer | null = null;
   let pickInstanceBufferCapacity = 0; // measured in instances
   let lastPickInstanceCount = 0;
-
-  // Cached camera values from the last draw() call. The pick pass runs
-  // AFTER draw() in the same frame, so these are always the current
-  // frame's camera state when pickDisks() is called.
-  let cachedViewProj: Float32Array = new Float32Array(16);
-  let cachedViewport: Vec2 = [0, 0];
-  let cachedCamPosWorld: Readonly<Vec3> = [0, 0, 0];
-  let cachedPxPerRad = 0;
-  let cachedFocusBindGroup: GPUBindGroup | null = null;
 
   function draw(
     pass: GPURenderPassEncoder,
@@ -268,14 +291,6 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       focusBindGroup,
     });
 
-    // Cache camera state for pickDisks() — the pick pass runs after this
-    // draw() in the same frame; caching here avoids re-passing arguments.
-    cachedViewProj = viewProj;
-    cachedViewport = viewport;
-    cachedCamPosWorld = camPosWorld;
-    cachedPxPerRad = pxPerRad;
-    cachedFocusBindGroup = focusBindGroup;
-
     // ── Pick instance buffer (mirror of the visual upload) ─────────────
     //
     // We own a second GPU buffer holding the same byte-identical packed
@@ -300,25 +315,33 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     lastPickInstanceCount = instances.length; // consumed by pickDisks() to issue the instanced draw
   }
 
-  function pickDisks(pass: GPURenderPassEncoder): void {
+  function pickDisks(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewport: Vec2,
+    camPosWorld: Readonly<Vec3>,
+    pxPerRad: number,
+    focusBindGroup: GPUBindGroup,
+  ): void {
     // No-op until draw() has uploaded at least one instance this frame
-    // (so we have live camera values + a populated pick instance buffer).
+    // (a populated pick instance buffer to replay). The CAMERA arrives as
+    // arguments — the caller supplies the frame it is picking, so there is
+    // no draw()-time camera stash that could go stale.
     if (lastPickInstanceCount === 0 || pickInstanceBuffer === null) return;
-    if (cachedFocusBindGroup === null) return;
 
-    // Write the pick uniform buffer with this frame's camera values.
+    // Write the pick uniform buffer from the caller-supplied camera.
     // Same 96-byte layout as the visual pipeline's uniformScratch:
     //   f32[ 0..15] viewProj  f32[16..17] viewport  f32[18..19] reserved
     //   f32[20..22] camPosWorld  f32[23] pxPerRad
-    pickUniformScratch.set(cachedViewProj, 0);
-    pickUniformScratch[16] = cachedViewport[0];
-    pickUniformScratch[17] = cachedViewport[1];
+    pickUniformScratch.set(viewProj, 0);
+    pickUniformScratch[16] = viewport[0];
+    pickUniformScratch[17] = viewport[1];
     pickUniformScratch[18] = 0;
     pickUniformScratch[19] = 0;
-    pickUniformScratch[20] = cachedCamPosWorld[0];
-    pickUniformScratch[21] = cachedCamPosWorld[1];
-    pickUniformScratch[22] = cachedCamPosWorld[2];
-    pickUniformScratch[23] = cachedPxPerRad;
+    pickUniformScratch[20] = camPosWorld[0];
+    pickUniformScratch[21] = camPosWorld[1];
+    pickUniformScratch[22] = camPosWorld[2];
+    pickUniformScratch[23] = pxPerRad;
     init.device.queue.writeBuffer(pickUniformBuffer, 0, pickUniformScratch);
 
     pass.setPipeline(pickPipeline);
@@ -327,7 +350,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     // @group(1): shared focus uniform. Shared depth state means a closer
     // point dot or disk claims the pixel; the disk and its companion point
     // carry the SAME packed id, so overlap is harmless.
-    pass.setBindGroup(1, cachedFocusBindGroup);
+    pass.setBindGroup(1, focusBindGroup);
     pass.setVertexBuffer(0, pickInstanceBuffer);
     pass.draw(6, lastPickInstanceCount);
   }

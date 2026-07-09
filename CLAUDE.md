@@ -66,7 +66,7 @@ tests/                Vitest suite — mirrors src/ tree
 - **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. To verify a UI change, ask the user to look (or describe what they should see).
 - **TDD via plans**: substantial features get a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with bite-sized TDD tasks. Plans are executed via the `subagent-driven-development` workflow (fresh subagent per task + spec + quality reviews). Plans follow [`docs/superpowers/conventions/plan-style.md`](docs/superpowers/conventions/plan-style.md) — **contract code yes, implementation code no** (overrides the upstream `writing-plans` skill's "complete code in every step" default). When a plan ships, run the `/feature-done` audit: it gates on the DoD then relocates the plan + its spec to `plans/completed/` + `specs/completed/`.
 - **Plans coexist**: multiple in-flight plans is normal. Check the file list before starting new work to avoid stomping on something else.
-- **Backlog hygiene**: [`docs/BACKLOG.md`](docs/BACKLOG.md) lists only _unstarted_ work, grouped by subsystem area with a readiness tag; design-bearing items have a `docs/backlog/YYYY-MM-DD-<slug>.md` detail file linked from the index. **Picking up an item removes it in the same change** — whether you implement it directly or write a spec/plan, delete its index line **and** its detail file in that commit/branch (the detail file seeds the spec; the spec/plan is then the source of truth). **Never strike through a done item** — delete it; the completion record is the git log + `*/completed/`. `/feature-done` sweeps the backlog when a plan ships; audit the whole file against the git log periodically to catch stragglers.
+- **Backlog hygiene**: [`docs/BACKLOG.md`](docs/BACKLOG.md) lists only _unstarted_ work, grouped by subsystem area with a readiness tag; design-bearing items have a `docs/backlog/YYYY-MM-DD-<slug>.md` detail file linked from the index. **Keep the index line very short** — title + readiness tag + one terse clause + the `→ [details]` link. Anything longer (file lists, evidence, approach, options) goes in the detail md, NEVER inline in `BACKLOG.md`; the index is a scannable list, not a write-up. **Picking up an item removes it in the same change** — whether you implement it directly or write a spec/plan, delete its index line **and** its detail file in that commit/branch (the detail file seeds the spec; the spec/plan is then the source of truth). **Never strike through a done item** — delete it; the completion record is the git log + `*/completed/`. `/feature-done` sweeps the backlog when a plan ships; audit the whole file against the git log periodically to catch stragglers.
 - **Simplicity over ease**: judge a design by the artifact (what runs and gets changed), not the keystrokes; un-braid concerns that could vary independently. Principles + the known-entanglements backlog live in [`docs/superpowers/conventions/simplicity.md`](docs/superpowers/conventions/simplicity.md) (Rich Hickey's _Simple Made Easy_, applied to skymap). Run the `entanglement-radar` skill to review a diff/module — **and at design time over a spec/plan**: a section that exists to teach handling of an "asymmetry"/"subtlety"/"special-case" is a STOP-and-un-braid signal (classify essential vs accidental), not a note to write more carefully.
 
 ## Commands
@@ -80,6 +80,7 @@ npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs
 npm run build-tiers # alias for build-all — emits per-tier .bin variants
 npm run format      # prettier
+npm run record-tour # offline 4K tour recorder → tools/record/README.md
 ```
 
 Currently 590+ tests passing across 76 files. Keep it green.
@@ -127,6 +128,12 @@ Re-run order when cluster/supercluster data changes:
 
 The `.ccat` + `structures_meta.json` artefacts are gitignored (build outputs, like the `.bin` files). The raw `.dat`/`ReadMe` files are also gitignored; only the provenance `README.md` + `.dat.sha256` sidecars are committed.
 
+Re-run order when DESI raw data changes:
+
+1. `npm run fetch-desi` — downloads the four DESI DR1 LSS tracer `.fits` files into `data/raw/desi/` and writes the committed `desi_dr1_lss.sha256` sidecar. Same pattern as `npm run fetch-cf4`.
+2. `npm run build-tiers` — re-bakes `desi-deep.bin` (the CrB deep-cone patch) alongside the other catalog bins.
+3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
+
 ### Deploy workflow (Cloudflare Workers Assets + R2)
 
 Two Cloudflare resources serve skymap, and they're updated independently:
@@ -146,7 +153,7 @@ If you only changed code and not catalog bytes, **step 4 alone is enough**. The 
 
 The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitignored). They are pure build artefacts: deterministic outputs of `tools/catalog/buildAllBins.ts` against the raw catalog files in `data/raw/`. Checking them in would inflate every clone by ~150 MB for no informational gain — the same bytes can always be rebuilt from source on demand. Keeping them out also avoids accidental drift between `tools/catalog/buildAllBins.ts` settings (tier targets, abs-mag thresholds) and a stale committed binary; the R2 sync ships a fresh build on demand, so what's hosted is always in sync with the current pipeline code.
 
-The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, `filaments.bin`, `structures.ccat`, and `structures_meta.json`. The `tools/deploy/syncR2.ts` ALLOW filter encodes that set.
+The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, `desi-deep.bin`, `filaments.bin`, `structures.ccat`, and `structures_meta.json`. The `tools/deploy/syncR2.ts` ALLOW filter encodes that set.
 
 ### MCPM Cosmic Web volume
 
@@ -196,7 +203,7 @@ A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetc
 
 ## Renderer quick map
 
-- **`pointRenderer.ts` + `shaders/points.wesl`**: instanced billboards. Vertex stride is 48 bytes / 12 slots (xyz, magnitude, colorIndex, kPerZ, axisRatio + sign-bit fallback flag, positionAngleDeg, diameterKpc, vMaxWeight, schechterRatio, angularDensityWeight). Identity is composed on the GPU from a per-draw `SourceUniforms.sourceCode` + `@builtin(instance_index)`, NOT baked per-vertex.
+- **`pointRenderer.ts` + `shaders/points/*.wesl`**: instanced billboards. Vertex stride is 52 bytes / 13 slots (xyz, magnitude, colorIndex, axisRatio + sign-bit fallback flag, baked paCos/paSin, radiusMpc, vMaxWeight, schechterRatio, angularDensityWeight, baked absMag). Galaxy-static values (PA rotation, absolute magnitude) are baked at upload, not recomputed per vertex. Identity is composed on the GPU from a per-draw `SourceUniforms.sourceCode` + `@builtin(instance_index)`, NOT baked per-vertex.
 - **`pickRenderer.ts`**: r32uint pick texture. The fragment writes `(sourceCode << 27) | (localIdx + PICK_SENTINEL_OFFSET)`; see `src/data/selectionEncoding.ts` for the encoding (5 bits source, 27 bits localIdx, code 31 reserved as the all-ones sentinel). Source codes are append-only (the rule lives in `sources.ts`'s docstring) — same hygiene as enum values that get persisted to .bin, applied to POI-only codes too. Read the texture with `copyTextureToBuffer` for hover/click.
 - **`textureAtlas.ts` + `quadRenderer.ts` + `shaders/quads.wgsl`**: 2048×2048 atlas of 128×128 slots for galaxy thumbnails. LRU eviction.
 - **`galaxyImageQueue.ts`**: priority queue + concurrency limiter (max 4) for thumbnail fetches. Idempotent enqueue (don't re-add in-flight keys — see the long comment for the bug history).

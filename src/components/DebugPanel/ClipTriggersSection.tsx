@@ -35,6 +35,7 @@ import type { ClipId } from '../../@types/animation/ClipId';
 import type { TourId } from '../../@types/animation/tour/TourId';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import styles from './ClipTriggersSection.module.css';
 
 export type ClipTriggersSectionProps = {
   /** Live "is a clip playing" flag from the store (`selectClipActive`). */
@@ -51,16 +52,6 @@ export type ClipTriggersSectionProps = {
 // registry entry is a new button.
 const CLIPS = Object.values(clipRegistry);
 const TOURS = Object.values(tourRegistry);
-
-const buttonStyle: React.CSSProperties = {
-  font: 'inherit',
-  color: '#cfc',
-  background: 'rgba(255,255,255,0.08)',
-  border: '1px solid rgba(255,255,255,0.2)',
-  borderRadius: 3,
-  padding: '2px 8px',
-  cursor: 'pointer',
-};
 
 export function ClipTriggersSection({
   clipActive,
@@ -79,35 +70,40 @@ export function ClipTriggersSection({
   };
 
   return (
-    <details>
-      <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>Clips &amp; Tours</summary>
-      <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+    <details className={styles.root}>
+      <summary className={styles.summary}>Clips &amp; Tours</summary>
+      <div className={styles.body}>
+        <div className={styles.buttonRow}>
           {CLIPS.map(({ id, label }) => (
             <button
               key={id}
               type="button"
-              style={buttonStyle}
+              className={styles.button}
               onClick={() => handlePlay(id, label)}
             >
               ▶ {label}
             </button>
           ))}
-          <button type="button" style={buttonStyle} onClick={onStopClip}>
+          <button type="button" className={styles.button} onClick={onStopClip}>
             ■ Stop
           </button>
         </div>
-        <div style={{ opacity: 0.8 }}>
-          Currently playing: {playing ?? <span style={{ opacity: 0.5 }}>—</span>}
+        <div className={styles.readout}>
+          Currently playing: {playing ?? <span className={styles.muted}>—</span>}
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        <div className={styles.buttonRow}>
           {TOURS.map(({ id, label }) => (
-            <button key={id} type="button" style={buttonStyle} onClick={() => onStartTour(id)}>
+            <button
+              key={id}
+              type="button"
+              className={styles.button}
+              onClick={() => onStartTour(id)}
+            >
               ▶ {label}
             </button>
           ))}
         </div>
-        <div style={{ opacity: 0.5 }}>Tour hides the HUD — → next beat, Esc to exit.</div>
+        <div className={styles.muted}>Tour hides the HUD — → next beat, Esc to exit.</div>
       </div>
     </details>
   );

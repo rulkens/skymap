@@ -25,11 +25,15 @@ import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/Pr
 
 function makeStubInit() {
   const writeBufferCalls: Array<{ data: Float32Array; offset: number }> = [];
+  const renderPipelines: GPURenderPipelineDescriptor[] = [];
   const device = {
     createShaderModule: vi.fn(() => ({
       getCompilationInfo: () => Promise.resolve({ messages: [] }),
     })),
-    createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
+      renderPipelines.push(desc);
+      return { getBindGroupLayout: () => ({}) };
+    }),
     createPipelineLayout: vi.fn(() => ({})),
     createBindGroupLayout: vi.fn(() => ({})),
     createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
@@ -49,7 +53,8 @@ function makeStubInit() {
         ) => {
           const ab = (data as ArrayBufferView).buffer ?? (data as ArrayBuffer);
           const offset = dataOff ?? (data as ArrayBufferView).byteOffset ?? 0;
-          const len = size ?? (data as ArrayBufferView).byteLength ?? (ab as ArrayBuffer).byteLength;
+          const len =
+            size ?? (data as ArrayBufferView).byteLength ?? (ab as ArrayBuffer).byteLength;
           // Copy the snapshot — the renderer reuses its scratch
           // Float32Array, so a live view would mutate between draws.
           const copy = new Uint8Array(len);
@@ -68,18 +73,22 @@ function makeStubInit() {
     init: {
       device,
       context: null as unknown as GPUCanvasContext,
-      format: 'rgba16float' as GPUTextureFormat,
+      targetFormat: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
-      focusBgl: {} as unknown as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
+      focusBgl:
+        {} as unknown as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
     },
     writeBufferCalls,
+    renderPipelines,
   };
 }
 
 // Stub shared focus bind group passed into draw() — only bound, never read.
 const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
 
-function fakeProceduralInstance(overrides: Partial<ProceduralDiskInstance> = {}): ProceduralDiskInstance {
+function fakeProceduralInstance(
+  overrides: Partial<ProceduralDiskInstance> = {},
+): ProceduralDiskInstance {
   return {
     x: 1,
     y: 2,
@@ -95,6 +104,17 @@ function fakeProceduralInstance(overrides: Partial<ProceduralDiskInstance> = {})
     ...overrides,
   };
 }
+
+describe('proceduralDiskRenderer colour target', () => {
+  it('forwards init.targetFormat to the inner (visual) pipeline colour target', () => {
+    const { init, renderPipelines } = makeStubInit();
+    createProceduralDiskRenderer(init);
+    // Two pipelines build: the additive visual pipeline (targetFormat) and the
+    // r32uint pick pipeline. The visual one must carry the forwarded format.
+    const formats = renderPipelines.map((p) => Array.from(p.fragment!.targets!)[0]!.format);
+    expect(formats).toContain('rgba16float');
+  });
+});
 
 describe('proceduralDiskRenderer pack loop (Task R2)', () => {
   it('pack writes the packed pick id into slot 6 as u32 bits', () => {
@@ -116,7 +136,15 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
       fakeProceduralInstance({ sourceCode: 3, localIdx: 1_000_000 }),
     ];
 
-    renderer.draw(pass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, instances);
+    renderer.draw(
+      pass,
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      instances,
+    );
 
     // Visual instance payload is always writeBufferCalls[1] (uniforms first,
     // visual instances second, pick mirror third).
@@ -126,6 +154,56 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
 
     expect(u32[6]).toBe(packSelection(1, 7));
     expect(u32[FLOATS_PER_INSTANCE + 6]).toBe(packSelection(3, 1_000_000));
+  });
+});
+
+describe('proceduralDiskRenderer.pickDisks camera', () => {
+  it('pickDisks draws with the caller-supplied camera, not a cached frame value', () => {
+    // The pick uniform is written from pickDisks' ARGUMENTS, not a value
+    // stashed by the last draw(). We prove this by drawing with camera A
+    // (all-zero viewProj, camPos [0,0,0], pxPerRad 100) and then picking
+    // with a DIFFERENT camera B — the pick uniform payload must carry B.
+    const { init, writeBufferCalls } = makeStubInit();
+    const renderer = createProceduralDiskRenderer(init);
+
+    const drawPass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    // draw() with camera A — uploads one instance so pickDisks has content.
+    renderer.draw(drawPass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, [
+      fakeProceduralInstance(),
+    ]);
+
+    // draw() emits three writeBuffer calls (uniforms, visual, pick mirror).
+    // The next writeBuffer is pickDisks' own pick-uniform upload.
+    const beforePick = writeBufferCalls.length;
+
+    // Camera B — a distinctive viewProj[0] plus non-zero camPos / pxPerRad.
+    const viewProjB = new Float32Array(16);
+    viewProjB[0] = 42;
+    const pickPass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    renderer.pickDisks(pickPass, viewProjB, [1024, 768], [7, 8, 9], 250, FOCUS_BIND_GROUP);
+
+    // The pick uniform layout mirrors the visual pipeline's:
+    //   f32[0..15] viewProj  f32[16..17] viewport  f32[20..22] camPos  f32[23] pxPerRad
+    const pickUniform = writeBufferCalls[beforePick]!.data;
+    expect(pickUniform[0]).toBe(42); // viewProj[0] from B, not A's zero
+    expect(pickUniform[16]).toBe(1024);
+    expect(pickUniform[17]).toBe(768);
+    expect(pickUniform[20]).toBe(7);
+    expect(pickUniform[21]).toBe(8);
+    expect(pickUniform[22]).toBe(9);
+    expect(pickUniform[23]).toBe(250);
   });
 });
 
@@ -146,7 +224,15 @@ describe('proceduralDiskRenderer pack loop (Task R1)', () => {
       fakeProceduralInstance({ x: 40, y: 50, z: 60 }),
     ];
 
-    renderer.draw(pass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, instances);
+    renderer.draw(
+      pass,
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      instances,
+    );
 
     // draw emits three writeBuffer calls per frame: uniforms first, then
     // the visual instance payload, then the pick instance buffer mirror.
@@ -175,5 +261,115 @@ describe('proceduralDiskRenderer pack loop (Task R1)', () => {
     expect(instancePayload[i1 + 13]).toBe(0);
     expect(instancePayload[i1 + 14]).toBe(0);
     expect(instancePayload[i1 + 15]).toBe(0);
+  });
+});
+
+describe('proceduralDiskRenderer.pickDisks draw count', () => {
+  // Camera arguments pickDisks takes directly (no cached frame value):
+  // viewProj / viewport / camPosWorld / pxPerRad / focusBindGroup.
+  const PICK_VIEW_PROJ = new Float32Array(16);
+  const PICK_VIEWPORT: [number, number] = [800, 600];
+  const PICK_CAM_POS: [number, number, number] = [0, 0, 0];
+  const PICK_PX_PER_RAD = 100;
+
+  function makeStubPass() {
+    return {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+  }
+
+  function pick(
+    renderer: ReturnType<typeof createProceduralDiskRenderer>,
+    pass: GPURenderPassEncoder,
+  ) {
+    renderer.pickDisks(
+      pass,
+      PICK_VIEW_PROJ,
+      PICK_VIEWPORT,
+      PICK_CAM_POS,
+      PICK_PX_PER_RAD,
+      FOCUS_BIND_GROUP,
+    );
+  }
+
+  it('issues draw(6, N) after draw() with N instances', () => {
+    const { init } = makeStubInit();
+    const renderer = createProceduralDiskRenderer(init);
+
+    renderer.draw(
+      makeStubPass(),
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      [
+        fakeProceduralInstance({ sourceCode: 1, localIdx: 42 }),
+        fakeProceduralInstance({ sourceCode: 2, localIdx: 99 }),
+        fakeProceduralInstance({ sourceCode: 3, localIdx: 7 }),
+      ],
+    );
+
+    const pickPass = makeStubPass();
+    pick(renderer, pickPass);
+
+    expect(pickPass.setPipeline).toHaveBeenCalledTimes(1);
+    expect(pickPass.draw).toHaveBeenCalledWith(6, 3);
+  });
+
+  it('is a no-op on a fresh renderer with no prior draw', () => {
+    const { init } = makeStubInit();
+    const renderer = createProceduralDiskRenderer(init);
+
+    const pickPass = makeStubPass();
+    pick(renderer, pickPass);
+
+    // Nothing should have been called — lastPickInstanceCount is 0.
+    expect(pickPass.setPipeline).not.toHaveBeenCalled();
+    expect(pickPass.draw).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op after draw() is called with an empty instances array', () => {
+    // Regression: draw() with 0 instances must zero lastPickInstanceCount
+    // (a stale prior-frame count would make pickDisks() re-draw the
+    // previous frame's disks into the pick texture).
+    const { init } = makeStubInit();
+    const renderer = createProceduralDiskRenderer(init);
+
+    // First draw: 3 instances. pickDisks confirms something was drawn.
+    renderer.draw(
+      makeStubPass(),
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      [
+        fakeProceduralInstance({ sourceCode: 1, localIdx: 10 }),
+        fakeProceduralInstance({ sourceCode: 1, localIdx: 11 }),
+        fakeProceduralInstance({ sourceCode: 1, localIdx: 12 }),
+      ],
+    );
+    const pickPass1 = makeStubPass();
+    pick(renderer, pickPass1);
+    expect(pickPass1.draw).toHaveBeenCalledWith(6, 3); // sanity
+
+    // Second draw: empty. pickDisks on a fresh pass must be a no-op.
+    renderer.draw(
+      makeStubPass(),
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      [],
+    );
+    const pickPass2 = makeStubPass();
+    pick(renderer, pickPass2);
+    expect(pickPass2.setPipeline).not.toHaveBeenCalled();
+    expect(pickPass2.draw).not.toHaveBeenCalled();
   });
 });

@@ -22,14 +22,17 @@ function makeRegistry(): FadeRegistry {
 // (if any) occupies the focus slot. The items bag defaults all-enabled; tests
 // flip an entry to drive the disabled path.
 function makeState(
-  opts: { focusedStructureId?: string | null; fades?: FadeRegistry } = {},
+  opts: { focusedStructureId?: string | null; fades?: FadeRegistry; focusedOnly?: boolean } = {},
 ): EngineState {
   const fades = opts.fades ?? makeRegistry();
   registerAllCategories(fades);
   const focusedStructureId = opts.focusedStructureId ?? null;
   return {
     data: createEngineData(),
-    settings: { structures: { enabled: true, items: makeStructureItems() } },
+    settings: {
+      structures: { enabled: true, items: makeStructureItems() },
+      labels: { focusedOnly: opts.focusedOnly ?? false },
+    },
     selection: {
       focus: focusedStructureId === null ? null : { type: 'structure', id: focusedStructureId },
       select: null,
@@ -77,6 +80,7 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
+    nowMs: 0,
     ...over,
   } as unknown as ReadyFrameContext;
 }
@@ -98,6 +102,16 @@ describe('produceStructureLabels', () => {
     state.data.structures.setGroup('bulk', [rec('a'), rec('b', { featured: false })]);
     const out = produceStructureLabels(state, makeCtx());
     expect(out.labels.map((l) => l.id)).toEqual(['a']);
+  });
+
+  it('wraps a long name onto two balanced lines; short names stay one line', () => {
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [
+      rec('lan', { name: 'Laniakea Supercluster' }),
+      rec('virgo', { name: 'Virgo Cluster', worldPos: [0, 10, 0] }),
+    ]);
+    const texts = produceStructureLabels(state, makeCtx()).labels.map((l) => l.text);
+    expect(texts).toEqual(['Laniakea\nSupercluster', 'Virgo Cluster']);
   });
 
   it('skips a label category that is disabled AND fully faded', () => {
@@ -225,6 +239,19 @@ describe('produceStructureLabels', () => {
       .fadeAlpha!;
 
     expect(blend1Alpha).toBeCloseTo(blend0Alpha, 6);
+  });
+
+  it('focusedOnly mode: emits only the focused structure label', () => {
+    const state = makeState({ focusedStructureId: 'a', focusedOnly: true });
+    state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
+    const out = produceStructureLabels(state, makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['a']);
+  });
+
+  it('focusedOnly mode: emits nothing when no structure is focused', () => {
+    const state = makeState({ focusedOnly: true });
+    state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
+    expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
   });
 
   it('at-rest output is unchanged (blend 0, all categories at 1, no focus)', () => {

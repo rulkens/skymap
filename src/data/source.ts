@@ -106,4 +106,12 @@ export const Source = {
    * gate plus the look/motion defaults. Appended at 17.
    */
   Flow: 17,
+  /**
+   * DESI DR1 deep-cone galaxy catalog — a narrow, ultra-deep pencil-beam
+   * (BGS_BRIGHT + LRG + ELG_LOPnotqso + QSO tracers, NGC-only, Corona
+   * Borealis cone) reaching z ≈ 3.5, far past every other galaxy catalog
+   * source. Persisted to its own `.bin` like the other galaxy catalogs;
+   * appended at 18 — never renumber the codes below it.
+   */
+  DesiDeep: 18,
 } as const;

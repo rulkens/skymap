@@ -11,8 +11,8 @@
  * types into the browser-side compilation.
  *
  * What the merger actually does:
- *   - Concatenates the three input arrays in priority order
- *     (SDSS > 2MRS > GLADE).
+ *   - Concatenates the four input arrays in priority order
+ *     (SDSS > 2MRS > GLADE > DESI Deep).
  *   - Walks the union and accepts each record unless an already-accepted
  *     record sits within the position+redshift tolerance — angular
  *     separation < 5 arcsec AND |Δz/(1+min(z))| < 1 %.
@@ -24,6 +24,21 @@
  *   objID we carry through `ParsedRecord`. We can't match on the integer
  *   ID, so we fall back to the geometric criterion — which is the same one
  *   GLADE itself uses to pre-merge its constituent catalogues.
+ *
+ * Why is DESI Deep lowest priority, and why through crossMatch at all
+ * (unlike Milliquas, which bypasses it — see `buildAllBins.ts`)?
+ *   DESI's ultra-deep cone rows are the *same galaxies* the other three
+ *   surveys already catalogue within their own footprints — a Milliquas
+ *   point is a physically distinct AGN core from its host-galaxy row, but
+ *   a DESI BGS row at z = 0.07 is the identical object SDSS or GLADE may
+ *   already carry. Skipping dedup would double-render the cone's low-z
+ *   end. Lowest priority keeps every existing bin byte-stable (SDSS/2MRS/
+ *   GLADE rows are decided before DESI is even concatenated in, so DESI
+ *   can only contribute rows nobody else has) while the ~15 % low-z BGS
+ *   overlap with GLADE/SDSS dedups away. Same-sightline cluster members —
+ *   the whole reason this source exists — survive regardless, because the
+ *   AND-gate (position AND redshift) never collapses two real objects at
+ *   different z onto the same accepted slot.
  */
 
 import type { ParsedRecord } from '../parsers/common';
@@ -53,11 +68,12 @@ export type CrossMatchInputs = {
   sdss: ParsedRecord[];
   twoMrs: ParsedRecord[];
   glade: ParsedRecord[];
+  desiDeep: ParsedRecord[];
 };
 
 /**
- * Deduplicate the union of three per-survey record arrays into one merged
- * stream, applying the SDSS > 2MRS > GLADE priority rule.
+ * Deduplicate the union of four per-survey record arrays into one merged
+ * stream, applying the SDSS > 2MRS > GLADE > DESI Deep priority rule.
  *
  * Algorithm:
  *   1. Concatenate the inputs in priority order. The first record reaching
@@ -77,10 +93,16 @@ export type CrossMatchInputs = {
  * cell), so each candidate compares against a tiny constant-bounded set.
  */
 export function crossMatch(inputs: CrossMatchInputs): ParsedRecord[] {
-  // Priority order: SDSS first, then 2MRS, then GLADE. The dedup loop
-  // below uses "first one wins" semantics, so concatenating in priority
-  // order is what enforces the SDSS > 2MRS > GLADE preference.
-  const all: ParsedRecord[] = [...inputs.sdss, ...inputs.twoMrs, ...inputs.glade];
+  // Priority order: SDSS first, then 2MRS, then GLADE, then DESI Deep
+  // last. The dedup loop below uses "first one wins" semantics, so
+  // concatenating in priority order is what enforces the
+  // SDSS > 2MRS > GLADE > DESI Deep preference.
+  const all: ParsedRecord[] = [
+    ...inputs.sdss,
+    ...inputs.twoMrs,
+    ...inputs.glade,
+    ...inputs.desiDeep,
+  ];
 
   // 2D grid keyed by floor(ra),floor(dec); each cell holds the records
   // already accepted in that 1°×1° tile. Using a Map<string, …> rather

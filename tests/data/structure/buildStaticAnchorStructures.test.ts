@@ -33,7 +33,7 @@ describe('buildStaticAnchorStructures', () => {
     // so they're stable regardless of display-name punctuation or encoding.
     expect(byName.get('Virgo (M87)')).toBe('cluster-virgo-m87');
     expect(byName.get('Coma (A1656)')).toBe('cluster-coma-a1656');
-    expect(byName.get('Laniakea SC')).toBe('supercluster-laniakea-sc');
+    expect(byName.get('Laniakea Supercluster')).toBe('supercluster-laniakea-sc');
     // The seed id is `bootes-void` (curated ASCII), so the structure id is
     // `void-bootes-void` — not the slug `bo-tes-void` that a naive
     // [^a-z0-9] strip of 'Boötes' would produce.

@@ -98,7 +98,7 @@ struct Uniforms {
   // The currently-selected point packed as '(sourceCode << 27) | localIdx',
   // or '0xFFFFFFFFu' when nothing is selected. The points pipeline does
   // not read this field — the selection ring is drawn by the dedicated
-  // selectionRingPass — but the picker mutates the slot in place to
+  // selectionRingLayer — but the picker mutates the slot in place to
   // suppress its own self-hit, so the byte layout must stay. See
   // 'pickRenderer.ts' SELECTED_PACKED_OFFSET.
   selectedPacked: u32,
@@ -224,9 +224,13 @@ struct PerVertex {
   // 'axisRatio > 0 is false' round-mask path with the fallback flag clear.
   @location(3) axisRatio: f32,
 
-  // Position angle in degrees, [0, 180). East-of-north convention; we
-  // negate before applying because UV-space y points down on screen.
-  @location(4) positionAngleDeg: f32,
+  // Pre-baked (cos, sin) of the position-angle rotation, negation folded
+  // in at bake time (astronomical PA is east-of-north CCW, UV-space y
+  // points down, and rotating the UV is the inverse of rotating the
+  // ellipse).  Replaces a per-vertex 'positionAngleDeg' + cos/sin: the
+  // angle is a galaxy-static value, so paying two transcendentals for
+  // all 6 vertices of every instance every frame was pure waste.
+  @location(4) paCosSin: vec2<f32>,
 
   // Per-galaxy padded billboard radius in Mpc — equals
   // 'max(diameterKpc, 30) * 2 / 1000' baked at upload time. The 4×
@@ -251,6 +255,15 @@ struct PerVertex {
   // 'clamp(medianCount / localCount, 0.1, 10)' (default 1.0). Read in
   // 'fs' only when 'u.biasMode == 4u'.
   @location(8) angularDensityWeight: f32,
+
+  // Absolute magnitude, baked at upload from the offset-normalised
+  // apparent magnitude (the same slot-3 value 'magnitude' above carries)
+  // and the galaxy's distance from origin.  The Malmquist mode-1 gate
+  // compares this against 'u.absMagLimit' directly — the value is
+  // galaxy-static, so the old per-vertex 'distanceModulus(magnitude,
+  // length(position))' spent a log10 + sqrt per invocation recomputing
+  // a constant.
+  @location(9) absMag: f32,
 };
 
 // ─── vertex-to-fragment interface ───────────────────────────────────

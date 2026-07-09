@@ -9,7 +9,7 @@
  *
  * - **Keys**: `<catalog>.<artifact>`. First segment = catalog/producer
  *   (`2mrs`, `glade`, `hyperleda`, `sdss`, `famous`, `cf4`, `mcpm`,
- *   `milliquas`, `mcxc`, `mscc`, `fonts`, `starnet`, `filaments`).
+ *   `milliquas`, `mcxc`, `mscc`, `desi`, `fonts`, `starnet`, `filaments`).
  * - **`source`**: `'committed'` = in git; `'gitignored'` = fetcher output.
  *   A missing gitignored file → run the fetcher; a missing committed file
  *   → the repo is broken.
@@ -346,6 +346,68 @@ export const RAW_DATA = {
     description:
       'SHA-256 sidecar for mscc.dat — committed so the parser can detect truncated or stale downloads.',
     fetcher: 'tools/fetch/fetchStructureCatalogs.ts',
+  },
+
+  // ─── DESI DR1 (LSS clustering catalogs) — ultra-deep cone ─────────────
+
+  'desi.bgs': {
+    path: 'data/raw/desi/BGS_BRIGHT_NGC_clustering.dat.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'DESI DR1 (iron) LSS clustering catalog, BGS_BRIGHT tracer, NGC — bright-galaxy sample, z < 0.4.',
+    upstream:
+      'https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/BGS_BRIGHT_NGC_clustering.dat.fits',
+    fetcher: 'tools/fetch/fetchDesi.ts',
+    readme: 'desi.readme',
+  },
+  'desi.lrg': {
+    path: 'data/raw/desi/LRG_NGC_clustering.dat.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'DESI DR1 (iron) LSS clustering catalog, LRG tracer, NGC — luminous red galaxies, z 0.4-1.0.',
+    upstream:
+      'https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/LRG_NGC_clustering.dat.fits',
+    fetcher: 'tools/fetch/fetchDesi.ts',
+    readme: 'desi.readme',
+  },
+  'desi.elg': {
+    path: 'data/raw/desi/ELG_LOPnotqso_NGC_clustering.dat.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'DESI DR1 (iron) LSS clustering catalog, ELG_LOPnotqso tracer, NGC — emission-line galaxies (QSO targets excluded), z 0.6-1.6.',
+    upstream:
+      'https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/ELG_LOPnotqso_NGC_clustering.dat.fits',
+    fetcher: 'tools/fetch/fetchDesi.ts',
+    readme: 'desi.readme',
+  },
+  'desi.qso': {
+    path: 'data/raw/desi/QSO_NGC_clustering.dat.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'DESI DR1 (iron) LSS clustering catalog, QSO tracer, NGC — quasars, z 0.4-3.5.',
+    upstream:
+      'https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/QSO_NGC_clustering.dat.fits',
+    fetcher: 'tools/fetch/fetchDesi.ts',
+    readme: 'desi.readme',
+  },
+  'desi.readme': {
+    path: 'data/raw/desi/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the DESI DR1 LSS clustering catalogs — upstream URL, licence, row counts, byte layout, columns skymap consumes.',
+  },
+  'desi.sha256': {
+    path: 'data/raw/desi/desi_dr1_lss.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Combined SHA-256 sidecar for the four DESI .fits files (one `<hex>  <filename>` line each) — committed so the parser can detect truncated or stale downloads.',
+    fetcher: 'tools/fetch/fetchDesi.ts',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────

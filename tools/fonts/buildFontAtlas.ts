@@ -33,15 +33,26 @@
  *
  * ## Output
  *
- *   public/fonts/<id>.png   ATLAS_PX × ATLAS_PX RGB MSDF atlas
+ *   public/fonts/<id>.webp  ATLAS_PX × ATLAS_PX RGB MSDF atlas
  *   public/fonts/<id>.json  glyph metrics in BMFont JSON form
  *
  * Both are committed to git (small enough, deterministic, and rarely
  * regenerated — unlike the catalog .bin files which live in R2).
+ *
+ * ## Why WebP, and why it MUST stay lossless
+ *
+ * msdf-bmfont-xml emits a PNG buffer; we transcode it to *lossless*
+ * WebP, which lands at ~40% of the PNG bytes on this smooth-gradient
+ * data with a bit-exact pixel roundtrip.  Lossy WebP is off the table
+ * no matter the quality setting: it chroma-subsamples, and the three
+ * MSDF channels are independent distance fields whose median the
+ * shader decodes per-texel — cross-channel bleed reads as contour
+ * noise (broken thin strokes, ragged edges), not as gentle blur.
  */
 import generateBMFont from 'msdf-bmfont-xml';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import sharp from 'sharp';
 import { PNG } from 'pngjs';
 import {
   ATLAS_PX,
@@ -70,12 +81,12 @@ const SHARED_OPTIONS = {
   textureSize: [ATLAS_PX, ATLAS_PX],
   // Inter-glyph spacing in the atlas, in pixels.  Must be large enough
   // that a fragment sampling a UV offset outward from a glyph for the
-  // outline+glow falloff never lands in a NEIGHBOURING glyph's pixels.
-  // Worst case at runtime is `glowEmFrac_max * ATLAS_FONT_SIZE`
-  // atlas pixels (LabelEffectsSection caps glowEmFrac at 0.5; with
-  // ATLAS_FONT_SIZE = 42 the worst-case extent is 21 px).  22 leaves
-  // a 1-px safety margin without inflating glyph cells excessively.
-  texturePadding: 12,
+  // outline fringe never lands in a NEIGHBOURING glyph's pixels.
+  // Worst case at runtime is `outlineEmFrac * ATLAS_FONT_SIZE` atlas
+  // pixels past the glyph rect (0.16 em × 84 px ≈ 13.4 px, see
+  // vertex.wesl's fringe expansion).  24 covers that with margin
+  // without inflating glyph cells excessively.
+  texturePadding: 24,
   distanceRange: DISTANCE_RANGE_PX,
   fieldType: 'msdf',
   fontSize: ATLAS_FONT_SIZE,
@@ -149,14 +160,10 @@ function bakeFont(fontId: FontId): Promise<void> {
           return;
         }
 
-        const pngPath = path.join(OUTPUT_DIR, `${fontId}.png`);
-        const jsonPath = path.join(OUTPUT_DIR, `${fontId}.json`);
-        fs.writeFileSync(pngPath, textures[0]!.texture);
-        fs.writeFileSync(jsonPath, font.data);
-
-        // Read the PNG header to validate emitted dimensions.  We use
-        // pngjs (already a transitive dep of msdf-bmfont-xml) for a
-        // header-only parse rather than rolling our own ihdr reader.
+        // Validate emitted dimensions on the generator's PNG buffer
+        // (pre-transcode — same pixels).  We use pngjs (already a
+        // transitive dep of msdf-bmfont-xml) for a header-only parse
+        // rather than rolling our own ihdr reader.
         const parsed = PNG.sync.read(textures[0]!.texture);
         try {
           assertAtlasDimensions(fontId, parsed.width, parsed.height);
@@ -165,11 +172,26 @@ function bakeFont(fontId: FontId): Promise<void> {
           return;
         }
 
-        const pngKb = (fs.statSync(pngPath).size / 1024).toFixed(1);
-        const jsonKb = (fs.statSync(jsonPath).size / 1024).toFixed(1);
-        console.log(`Wrote ${pngPath} (${pngKb} KB)`);
-        console.log(`Wrote ${jsonPath} (${jsonKb} KB)`);
-        resolve();
+        const webpPath = path.join(OUTPUT_DIR, `${fontId}.webp`);
+        const jsonPath = path.join(OUTPUT_DIR, `${fontId}.json`);
+        sharp(textures[0]!.texture)
+          .webp({ lossless: true, effort: 6 })
+          .toBuffer()
+          .then((webp) => {
+            fs.writeFileSync(webpPath, webp);
+            fs.writeFileSync(jsonPath, font.data);
+
+            const webpKb = (webp.length / 1024).toFixed(1);
+            const jsonKb = (fs.statSync(jsonPath).size / 1024).toFixed(1);
+            console.log(`Wrote ${webpPath} (${webpKb} KB)`);
+            console.log(`Wrote ${jsonPath} (${jsonKb} KB)`);
+            resolve();
+          })
+          .catch((webpErr: Error) => {
+            reject(
+              new Error(`[buildFontAtlas] ${fontId}: WebP transcode failed: ${webpErr.message}`),
+            );
+          });
       },
     );
   });

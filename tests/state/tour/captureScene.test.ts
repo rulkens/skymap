@@ -22,6 +22,7 @@ const SNAPSHOT_SETTINGS_KEYS = [
   'filaments',
   'flow',
   'galaxyCatalogs',
+  'labels',
   'milkyWay',
   'structures',
   'volumes',
@@ -50,11 +51,11 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
 }
 
 describe('captureScene', () => {
-  it('captures the six settings clusters + selection.focus', () => {
+  it('captures the seven settings clusters + selection.focus', () => {
     const state = makeState(FOCUS_REF);
     const snap = captureScene(state);
 
-    // Settings half carries exactly the six tour-owned clusters.
+    // Settings half carries exactly the seven tour-owned clusters.
     expect(Object.keys(snap.settings).sort()).toEqual(SNAPSHOT_SETTINGS_KEYS);
     for (const key of SNAPSHOT_SETTINGS_KEYS) {
       expect((snap.settings as Record<string, unknown>)[key]).toEqual(

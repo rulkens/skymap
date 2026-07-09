@@ -47,10 +47,15 @@ import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { StructureId } from '../data/structure/StructureId';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { FlowSettings } from './FlowSettings';
+import type { LabelSettings } from './LabelSettings';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
+import type { ClipId } from '../animation/ClipId';
+import type { SplineMode } from '../animation/SplineMode';
+import type { PassByDir } from '../animation/PassByDir';
+import type { ClipPathTuningActive } from './ClipPathTuningActive';
 
 export type EngineSettingsState = {
   /**
@@ -131,9 +136,9 @@ export type EngineSettingsState = {
 
   /**
    * Scalar-volume overlay master gate and per-item params.  When
-   * `enabled` is false, `volumeUpsamplePass.enabled` short-circuits
-   * before consulting the renderer at zero GPU cost, and `encodeVolumes`
-   * never opens its pre-HDR half-res render pass.  Per-field params
+   * `enabled` is false, `volumeUpsampleLayer.enabled` short-circuits
+   * before consulting the renderer at zero GPU cost, and `scalarVolumeLayer`
+   * never opens its half-res render pass.  Per-field params
    * (enabled / intensity / palette / …) live in `items` — one settings
    * row per registry-known volume field, seeded from `SOURCE_REGISTRY` at
    * construction so the panel can show a field's toggle before its cube
@@ -161,6 +166,13 @@ export type EngineSettingsState = {
   flow: FlowSettings;
 
   /**
+   * Cross-cutting label-presentation knobs — apply across every label
+   * producer at once, multiplying on top of the per-layer label gates.
+   * See `LabelSettings` for the per-field docs.
+   */
+  labels: LabelSettings;
+
+  /**
    * Developer-oriented debug overlays.  Diagnostic lenses on top of
    * the rendered scene rather than knobs on the scene itself — kept
    * in their own cluster so the per-cluster mental model (one cluster
@@ -176,21 +188,72 @@ export type EngineSettingsState = {
    *     disk-radius footprint so the developer can calibrate the
    *     placement against the underlying billboard.  Gated behind the
    *     DebugPanel.
-   *   - `disabledPasses` — pass names the developer has manually toggled
-   *     off in the renderer-toggle section.  Membership is `[name] === true`;
-   *     a name absent from the record (or mapped to `false`) means the pass
-   *     is enabled.  The frame encoders consult this record AFTER each pass's
-   *     own `enabled()` gate and skip the draw when the name maps to `true`,
-   *     so the override is one-way: it can hide a pass that would otherwise
-   *     run but never force-enable one whose gate returned false.  An
-   *     open-world membership record (any pass name) against the closed-world
-   *     `HDR_PASSES` / `UI_PASSES` arrays.  A plain object so the whole
-   *     settings state stays JSON-serializable.
+   *   - `disabledPasses` — content-layer names the developer has manually
+   *     toggled off in the renderer-toggle section.  Membership is
+   *     `[name] === true`; a name absent from the record (or mapped to
+   *     `false`) means the layer is enabled.  `executeFrame` consults this
+   *     record AFTER each layer's own `enabled()` gate and skips the draw
+   *     when the name maps to `true`, so the override is one-way: it can
+   *     hide a layer that would otherwise run but never force-enable one
+   *     whose gate returned false.  An open-world membership record (any
+   *     layer name) against the closed-world `CONTENT_LAYERS` registry.  A
+   *     plain object so the whole settings state stays JSON-serializable.
    */
   debug: {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
     disabledPasses: Record<string, boolean>;
+    /**
+     * Clip-path inspector — the debug overlay that draws a selected clip's
+     * camera route (speed-coloured) plus a scrub gizmo. Only the two scalars
+     * the UI owns live here; the sampled geometry is held off-store in the
+     * `clipPathInspector` subsystem (see its .d.ts for why geometry stays out
+     * of Redux). `clipId` is which clip the held snapshot was computed from
+     * (null = nothing computed); `scrub01` is the scrubber position as a
+     * normalised `[0,1]` fraction (NOT seconds — the UI has no access to the
+     * clip duration, so the scrubber is a pure position).
+     *
+     * `align` / `rampSec` / `linger` / `spline` / `turnDelay` / `lookAhead` are the
+     * live flyPath pacing + shape knobs the inspector can bake into the clip at
+     * Calculate time (via `applyPathTuning`): `align` is the start-aim blend
+     * seconds, `rampSec` the seconds of ease ramp each end (0 = use the named
+     * `ease`), `linger` the per-target dwell depth ∈ [0,1] (0 = cruise straight
+     * through) and `lingerSec` the dwell window width in seconds (both ride the
+     * one `linger` gate), `spline` the basis (centripetal Catmull-Rom ↔ causal
+     * Hermite), `turnDelay` the causal-Hermite overshoot magnitude, `lookAhead` the
+     * seconds the look leads the eye. The last two are scratch scalars the causal
+     * sub-sliders bind to; the saga only reads them when `spline` is causal,
+     * folding them into the one `SplineConfig` override (see `SplineConfig`).
+     *
+     * `active` gates which knobs are baked — align / rampSec / linger / spline.
+     * There is no separate turnDelay/lookAhead gate: they ride the single `spline`
+     * override, so they can't be applied onto a centripetal basis that ignores
+     * them. While a gate is inactive the clip's own authored value flows through
+     * untouched — so Calculating a clip with no slider touched previews its REAL
+     * pacing, not the inspector's defaults. Touching a slider/dropdown flips its
+     * `active` flag on (the causal sub-sliders flip the `spline` gate); the row's
+     * checkbox toggles it back off. The values seed from the flyPath defaults so a
+     * freshly-activated slider starts somewhere sensible.
+     */
+    clipPathInspect: {
+      clipId: ClipId | null;
+      scrub01: number;
+      align: number;
+      rampSec: number;
+      linger: number;
+      lingerSec: number;
+      spline: SplineMode;
+      turnDelay: number;
+      lookAhead: number;
+      // Fly-past scratch scalars: `passByOffset` in subject-radius units (0 =
+      // through centre) and `passByDir` the offset direction. Both ride the single
+      // `passBy` override gate; the saga folds them into one `PassByConfig` (see
+      // `PassByConfig`).
+      passByOffset: number;
+      passByDir: PassByDir;
+      /** Per-knob override gate — only an active knob is baked into the clip. */
+      active: ClipPathTuningActive;
+    };
   };
 
   /**

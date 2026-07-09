@@ -25,9 +25,14 @@ import {
   fade,
   scene,
   focus,
+  focusOnId,
+  lookAtId,
+  strafeId,
   seq,
   all,
   fork,
+  flyPath,
+  atPoint,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
 
@@ -261,6 +266,16 @@ describe('show', () => {
     const e = show(['survey'], 2);
     expect(e.over).toBe(2);
   });
+
+  it('splits scoped entries out of the layer list', () => {
+    const e = show(['flow', 'survey:milliquas', 'label:group']);
+    expect(e.layers).toEqual(['flow']);
+    expect(e.scoped).toEqual(['survey:milliquas', 'label:group']);
+  });
+
+  it('omits the scoped field entirely when no scoped entries are given', () => {
+    expect('scoped' in show(['flow'])).toBe(false);
+  });
 });
 
 describe('hide', () => {
@@ -274,6 +289,13 @@ describe('hide', () => {
   it('forwards over when given', () => {
     const e = hide(['flow'], 1.5);
     expect(e.over).toBe(1.5);
+  });
+
+  it("mixes aggregates and scoped entries: 'labels' expands, scoped separates", () => {
+    const e = hide(['labels', 'survey:milliquas'], 0);
+    expect(e.layers).toEqual(['surveyLabel', 'structureLabel', 'milkyWayLabel']);
+    expect(e.scoped).toEqual(['survey:milliquas']);
+    expect(e.over).toBe(0);
   });
 });
 
@@ -328,8 +350,15 @@ describe('dollyToId', () => {
   });
 
   it('forwards explicit ease', () => {
-    const e = dollyToId(focusId('virgo'), 2, 'in');
+    const e = dollyToId(focusId('virgo'), 2, { ease: 'in' });
     expect(e.ease).toBe('in');
+  });
+
+  it('carries the framing-distance scale when given, omits it otherwise', () => {
+    const scaled = dollyToId(focusId('m31'), 6, { scale: 0.7 });
+    expect(scaled.scale).toBe(0.7);
+    const plain = dollyToId(focusId('m31'), 6);
+    expect(plain.scale).toBeUndefined();
   });
 });
 
@@ -344,6 +373,58 @@ describe('focus', () => {
   it('focus(null) builds a focusId effect with id null', () => {
     const e = focus(null);
     expect(e).toEqual({ kind: 'focusId', id: null });
+  });
+});
+
+describe('focusOnId', () => {
+  it('composes focus-then-fly: a seq of the focusId cue and the concurrent camera move', () => {
+    const id = focusId('m87');
+    const e = focusOnId(id, 5);
+    expect(e).toEqual(seq([focus(id), all([moveTargetId(id, 5), dollyToId(id, 5)])]));
+  });
+
+  it('forwards an explicit ease to both camera writers', () => {
+    const id = focusId('virgo');
+    const e = focusOnId(id, 3, 'out');
+    expect(e).toEqual(
+      seq([focus(id), all([moveTargetId(id, 3, 'out'), dollyToId(id, 3, { ease: 'out' })])]),
+    );
+  });
+});
+
+describe('lookAtId', () => {
+  it('builds the unresolved lookAtId arm with ease defaulting to inOut', () => {
+    const id = focusId('m31');
+    expect(lookAtId(id, 3)).toEqual({ kind: 'lookAtId', id, over: 3, ease: 'inOut' });
+  });
+
+  it('forwards an explicit ease', () => {
+    const id = focusId('m31');
+    expect(lookAtId(id, 2, 'out')).toEqual({ kind: 'lookAtId', id, over: 2, ease: 'out' });
+  });
+});
+
+describe('strafeId', () => {
+  it('builds the unresolved strafeId arm with ease defaulting to inOut', () => {
+    const id = focusId('m31');
+    expect(strafeId(id, 10, 3)).toEqual({
+      kind: 'strafeId',
+      id,
+      byDeg: 10,
+      over: 3,
+      ease: 'inOut',
+    });
+  });
+
+  it('forwards a negative angle and an explicit ease', () => {
+    const id = focusId('m31');
+    expect(strafeId(id, -5, 2, 'out')).toEqual({
+      kind: 'strafeId',
+      id,
+      byDeg: -5,
+      over: 2,
+      ease: 'out',
+    });
   });
 });
 
@@ -364,6 +445,33 @@ describe('all', () => {
     const e = all([dollyTo(100, 3), moveTarget([0, 0, 0], 3)]);
     expect(e.kind).toBe('all');
     expect(e.children).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// flyPath — the cinematographic authoring defaults
+// ---------------------------------------------------------------------------
+
+describe('flyPath', () => {
+  const wps = [atPoint([0, 0, 100], 10), atPoint([100, 0, 100], 10)];
+
+  it('stamps the default dwell (depth 0.7, window 1.4s) when none is authored', () => {
+    const e = flyPath(wps, { over: 20 });
+    expect(e.linger).toBe(0.7);
+    expect(e.lingerSec).toBe(1.4);
+  });
+
+  it('stamps the default pass-by (4 radii, outsideBend) when none is authored', () => {
+    // The authoring default flies the eye BESIDE each galaxy subject. Structures
+    // opt out by resolving to radius 0 (focusFraming), so this is safe to stamp
+    // on every flyPath — a group cloud flies through-centre regardless.
+    const e = flyPath(wps, { over: 20 });
+    expect(e.passBy).toEqual({ offset: 4, dir: 'outsideBend' });
+  });
+
+  it('an authored passBy overrides the default', () => {
+    const e = flyPath(wps, { over: 20, passBy: { offset: 2, dir: 'above' } });
+    expect(e.passBy).toEqual({ offset: 2, dir: 'above' });
   });
 });
 

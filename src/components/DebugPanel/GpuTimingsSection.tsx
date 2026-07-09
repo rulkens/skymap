@@ -47,14 +47,15 @@ import { useEffect, useState, useRef, type ReactElement } from 'react';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
-import { TIMED_SLOT_NAMES } from '../../services/engine/frame/passes';
+import { TIMED_SLOTS } from '../../services/engine/frame/frameProgram';
 import { Sparkline } from './Sparkline';
 
 // Row order = the timing registry's order, which is encoder draw order
-// (scalar-volume pre-pass, the HDR loop, tone-map, ui-overlay, pick).
-// This is the same list the service allocates query-set slots from, so a
-// renderer that joins `HDR_PASSES` gets a row here automatically.
-const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = TIMED_SLOT_NAMES;
+// (scalar-volume, the HDR layers, the hdr→swap composite, the swap overlays,
+// pick). Derived from the FRAME program + content-layer registry, the SAME
+// list the timing service allocates query-set slots from — so a renderer that
+// joins the registry gets a row here automatically.
+const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = TIMED_SLOTS;
 
 const AVG_WINDOW = 60;
 const SPARKLINE_WINDOW = 8;
@@ -144,13 +145,13 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
       </summary>
       <div style={{ marginTop: 4 }}>
         {/*
-          Iterate `DISPLAY_SLOT_ORDER` (derived from HDR_PASSES + the
-          two trailing passes) rather than `stats` directly so row
-          order is stable regardless of which slot emits first.  Slots
-          that haven't sampled yet are simply skipped (no row).  This
-          keeps the panel in lockstep with the actual renderer draw
-          order — reordering HDR_PASSES in `passes/index.ts`
-          automatically reorders the timing UI.
+          Iterate `DISPLAY_SLOT_ORDER` (derived from the FRAME program +
+          the CONTENT_LAYERS registry via `TIMED_SLOTS`) rather than
+          `stats` directly so row order is stable regardless of which
+          slot emits first.  Slots that haven't sampled yet are simply
+          skipped (no row).  This keeps the panel in lockstep with the
+          actual renderer draw order — reordering CONTENT_LAYERS in
+          `passes/index.ts` automatically reorders the timing UI.
         */}
         {DISPLAY_SLOT_ORDER.map((slot) => {
           const row = stats.get(slot);

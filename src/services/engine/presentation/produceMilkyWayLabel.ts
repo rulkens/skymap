@@ -33,7 +33,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { milkyWayLabelAlpha } from '../../gpu/labels/milkyWayLabelVisibility';
-import { getLabelStyleOverride } from '../labelStyleOverride';
 
 // Origin anchor + stem geometry. The label floats just above the Milky Way
 // dot; the stem runs from the origin up to 3/4 of the label anchor height so
@@ -52,7 +51,7 @@ export function produceMilkyWayLabel(
   ctx: ReadyFrameContext,
 ): LabelProducerOutput {
   const fades = state.subsystems.fades;
-  const now = performance.now();
+  const now = ctx.nowMs;
 
   const layerOpacity = fades.opacityOf(LAYER_ID, now);
   const labelEnabled = state.settings.milkyWay.labelEnabled;
@@ -63,6 +62,11 @@ export function produceMilkyWayLabel(
   // structure producer uses.
   if (!labelEnabled && layerOpacity === 0) return { labels: [], lines: [], awake: false };
 
+  // focusedOnly mode: this label only draws while the Milky Way is the
+  // focused subject — same hard suppression the other producers apply.
+  if (state.settings.labels.focusedOnly && state.selection.focus?.type !== 'milkyWay')
+    return { labels: [], lines: [], awake: false };
+
   const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   const distAlpha = milkyWayLabelAlpha(camDist);
   // Far away: emit nothing this frame.
@@ -72,15 +76,6 @@ export function produceMilkyWayLabel(
   // by the visibility bridge). Applied to BOTH the label and the stem so they
   // fade in lock-step.
   const fadeAlpha = distAlpha * layerOpacity;
-
-  // Live-tuning override: when the DebugPanel targets the milkyWay category,
-  // substitute the override's outline fields for the producer defaults. Read
-  // fresh each frame so panel edits apply on the next render.
-  const override = getLabelStyleOverride();
-  const overrideFields =
-    override.targetCategory === 'milkyWay'
-      ? { outlineColor: override.outlineColor, outlineEmFrac: override.outlineEmFrac }
-      : {};
 
   const style = MILKY_WAY_LABEL_STYLE;
 
@@ -101,7 +96,14 @@ export function produceMilkyWayLabel(
       alignX: 'center',
       outlineColor: [...style.outlineColor],
       outlineEmFrac: style.outlineEmFrac,
-      ...overrideFields,
+      // "You are here" is the orientation anchor: whenever it is visible
+      // (camera inside the distance band), overlapping structure labels
+      // yield to it in the director's declutter, never the reverse.
+      // Number.MAX_VALUE sorts above any finite apparent size while
+      // keeping the comparator's subtraction finite (Infinity − Infinity
+      // is NaN, which would corrupt the sort if a second always-wins
+      // label ever appeared).
+      prominencePx: Number.MAX_VALUE,
     },
   ];
   const lines: readonly MarkerLine[] = [

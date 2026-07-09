@@ -39,11 +39,17 @@ import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { COSMO } from '../../../../src/services/engine/frame/slabs';
+import {
+  MILKY_WAY_FADE_FULL_PX,
+  MILKY_WAY_RADIUS_MPC,
+} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 
 // ── Mock timing service ────────────────────────────────────────────────────
 //
@@ -120,26 +126,52 @@ function makeLoggingRenderer() {
   return { draw: vi.fn(), render: vi.fn() };
 }
 
-function makePostProcess() {
+/**
+ * Mock the offscreen render-target table. The backing `views` record is
+ * shared by reference so a test can swap the volume row's view.
+ */
+function makeRenderTargets(views: Record<string, GPUTextureView>) {
   return {
-    view: { __id: 'hdr-view' } as unknown as GPUTextureView,
+    specs: [
+      { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
+      { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+      { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1 },
+    ],
+    viewOf: (id: string) => {
+      const view = views[id];
+      if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
+      return view;
+    },
     resize: vi.fn(),
-    draw: vi.fn(),
     destroy: vi.fn(),
   };
 }
 
+// Fixture camera optics — the ctx built in makeMinimalInputWithTiming()
+// mirrors these.
+const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;
+const FIXTURE_CANVAS_HEIGHT_PX = 720;
+
+// Camera distance DERIVED from the Milky-Way fade knobs: at this distance
+// the disc's apparent diameter is twice MILKY_WAY_FADE_FULL_PX under the
+// fixture optics, so milkyWayFadeAlpha is 1 by construction and the
+// milky-way pass registers its timing slot. A visual-gate re-tune of the
+// fade band moves this distance instead of silently dropping the slot.
+const MW_ALIVE_DIST_MPC =
+  (2 * MILKY_WAY_RADIUS_MPC * (FIXTURE_CANVAS_HEIGHT_PX / (2 * Math.tan(FIXTURE_FOV_Y_RAD / 2)))) /
+  (2 * MILKY_WAY_FADE_FULL_PX);
+
 function makeCam(): OrbitCamera {
   return {
     target: [0, 0, 0] as unknown as Float32Array,
-    distance: 5,
+    distance: MW_ALIVE_DIST_MPC,
     yaw: 0,
     pitch: 0,
-    fovYRad: (60 * Math.PI) / 180,
+    fovYRad: FIXTURE_FOV_Y_RAD,
     aspect: 16 / 9,
     near: 0.001,
     far: 10000,
-    position: new Float32Array([0, 0, 5]),
+    position: new Float32Array([0, 0, MW_ALIVE_DIST_MPC]),
   } as unknown as OrbitCamera;
 }
 
@@ -153,35 +185,52 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   beginCalls: Beg[];
   encoder: GPUCommandEncoder;
   device: GPUDevice;
-  postProcessDraw: ReturnType<typeof vi.fn>;
+  renderTargetViews: Record<string, GPUTextureView>;
 } {
   const env = makeEncoderEnv();
   const device = makeFakeDevice(env.encoder);
   const context = makeFakeContext();
   const pointRenderer = makeLoggingRenderer();
-  const milkyWayRenderer = makeLoggingRenderer();
+  const milkyWayCloudRenderer = makeLoggingRenderer();
   const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
-  const postProcess = makePostProcess();
+  const renderTargetViews: Record<string, GPUTextureView> = {
+    hdr: { __id: 'hdr-view' } as unknown as GPUTextureView,
+    volume: { __id: 'volume-view' } as unknown as GPUTextureView,
+  };
+  const renderTargets = makeRenderTargets(renderTargetViews);
 
   const cam = makeCam();
   const canvasWidth = 1280;
-  const canvasHeight = 720;
+  const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
   const viewProj = new Float32Array(16) as unknown as Mat4;
+  // The HDR encoders resolve one SlabView (COSMO) before the layer loop
+  // via `slabViewOf(ctx, COSMO)`, which indexes `ctx.slabs[COSMO]`
+  // directly — this fixture needs a real row there.
+  const cosmoSlab: Slab = {
+    index: COSMO,
+    nearMpc: 0.01,
+    farMpc: 50000,
+    vp: Float64Array.from(viewProj as unknown as Float32Array),
+    originRelative: false,
+    precision: 'f32',
+  };
 
   const ctx = {
     isReady: true as const,
     cam,
     vp: viewProj,
+    slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: canvasWidth, height: canvasHeight },
     drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
       [number, number, number]
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
-    fovYRad: (60 * Math.PI) / 180,
+    nowMs: 0,
+    fovYRad: FIXTURE_FOV_Y_RAD,
     renderer: pointRenderer,
-    postProcess,
+    renderTargets,
     // texturedDisks slot is referenced from frameContext shape;
     // we'll null the matching subsystem on `state` so the pass skips.
     texturedDisks: null,
@@ -213,12 +262,26 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     state: {
       gpu: {
         labelRenderer: null,
-        foregroundLabelRenderer: null,
         markerLineRenderer: null,
+        debugLineRenderer: null,
         selectionRingRenderer: null,
         volumeFieldRenderer: null,
         flowFieldRenderer: null,
         structureMarkerRenderer: null,
+        // milkyWayLayer.draw reads the generated cloud buffers off this handle.
+        milkyWayCloud: {
+          buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }),
+        },
+        // Every `ContentLayer.draw` reads its renderer straight off
+        // `state.gpu.*` — this is the ONLY place these mock instances are
+        // wired in (no top-level `input.*` duplication).
+        milkyWayCloudRenderer,
+        horizonShellRenderer,
+        texturedDiskRenderer,
+        proceduralDiskRenderer,
+        filamentRenderer: null,
+        // The FRAME program's hdr→swap composite reads state.gpu.compositor.
+        compositor: { label: 'compositor', draw: vi.fn(), destroy: vi.fn() },
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
       // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
@@ -238,39 +301,30 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         thumbnails: { enabled: settings.galaxyTexturesEnabled },
         milkyWay: { enabled: settings.milkyWayEnabled },
         filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
-        volumes: { enabled: settings.volumesEnabled },
+        volumes: { enabled: settings.volumesEnabled, items: {} },
         flow: { enabled: false },
         debug: { disabledPasses: {} },
       },
       selection: { select: settings.selected },
       assetSlots: { flow: null },
-      // pointSpritesPass stashes the packed uniform bytes here after each
-      // draw — the bag must exist so the property write doesn't throw.
+      // Pick-throttle bag; the content passes don't touch it, but the
+      // engine-state shape carries it.
       picking: {
-        lastFrameUniformBytes: null as ArrayBuffer | null,
         pickInFlight: false,
         pointerDown: false,
       },
       subsystems: {
         proceduralDisks: null,
         texturedDisks: null,
-        // filamentsPass.enabled consults the FadeRegistry to keep the
-        // pass alive through fade-out tails. This fixture wants the
-        // pass GATED OFF (the test asserts only point-sprites +
+        // filamentsLayer.enabled consults the FadeRegistry to keep the
+        // layer alive through fade-out tails. This fixture wants the
+        // layer GATED OFF (the test asserts only point-sprites +
         // milky-way fire), so opacityOf returns 0 — no fade-out tail.
         fades: { opacityOf: () => 0 },
       },
     } as never,
-    milkyWayITimeSec: 0,
     device,
     context,
-    milkyWayRenderer: milkyWayRenderer as never,
-    horizonShellRenderer: horizonShellRenderer as never,
-    filamentRenderer: null,
-    volumeFieldRenderer: null,
-    flowFieldRenderer: null,
-    texturedDiskRenderer: texturedDiskRenderer as never,
-    proceduralDiskRenderer: proceduralDiskRenderer as never,
     timingService,
   };
 
@@ -279,12 +333,12 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     beginCalls: env.beginCalls,
     encoder: env.encoder,
     device,
-    postProcessDraw: postProcess.draw,
+    renderTargetViews,
   };
 }
 
 describe('renderFrame — timing service hookup', () => {
-  it('calls beginFrame once, descriptorFor per enabled pass, and endFrame with the encoder', () => {
+  it('calls beginFrame once, descriptorFor per enabled layer + composite, and endFrame with the encoder', () => {
     const { svc, beginFrame, descriptorFor, endFrame } = makeFakeTimingService();
     const { input, beginCalls, encoder } = makeMinimalInputWithTiming(svc);
 
@@ -293,36 +347,30 @@ describe('renderFrame — timing service hookup', () => {
     // beginFrame fires exactly once per frame.
     expect(beginFrame).toHaveBeenCalledTimes(1);
 
-    // descriptorFor fires once per enabled HDR pass PLUS once for the
-    // tone-map pass PLUS once for the combined UI overlay.  In this
-    // fixture the HDR side is point-sprites + milky-way (the others are
-    // gated off via null subsystems / null optional renderers; the
-    // horizon shell is gated off too — its distance fade is 0 at this
-    // fixture's ~5-Mpc camera, the same close-volume framing that lights
-    // the Milky-Way impostor); the tone-map slot is unconditional because
-    // postProcess.draw runs every frame; the ui-overlay slot fires even
-    // with no marker-lines / labels because the timing-enabled path
-    // always opens the UI overlay pass so its slot reports.
+    // 'perLayerTimed' strategy: descriptorFor fires once per enabled layer
+    // (its own timed pass) PLUS once for the hdr→swap composite. In this
+    // fixture the enabled HDR layers are point-sprites + milky-way (the others
+    // are gated off via null subsystems / null optional renderers; the horizon
+    // shell's fade-in band starts at cosmological distances, and
+    // MW_ALIVE_DIST_MPC is the close framing that lights the Milky-Way
+    // impostor). There is NO 'tone-map' or 'ui-overlay' slot anymore — the
+    // tone-map is the 'hdr→swap' composite, and with no swap layer enabled no
+    // swap pass opens.
     const slotsCalled = descriptorFor.mock.calls.map((c) => c[0]);
     expect(slotsCalled).toContain('point-sprites');
     expect(slotsCalled).toContain('milky-way');
-    expect(slotsCalled).toContain('tone-map');
-    expect(slotsCalled).toContain('ui-overlay');
-    expect(descriptorFor).toHaveBeenCalledTimes(4);
+    expect(slotsCalled).toContain('hdr→swap');
+    expect(slotsCalled).not.toContain('ui-overlay');
+    expect(slotsCalled).not.toContain('tone-map');
+    expect(descriptorFor).toHaveBeenCalledTimes(3);
 
-    // The descriptors returned by the mock must land on the
-    // beginRenderPass descriptors.  Each pass's beginRenderPass call
-    // should carry the timestampWrites for its slot — we match via
-    // the `_stub` tag we embedded in the mock's querySet.
-    //
-    // The first beginRenderPass is the dedicated HDR clear pass (no
-    // timestampWrites).  Subsequent visible passes here are:
-    // point-sprites, milky-way (HDR sub-passes), then the ui-overlay
-    // pass.  Tone-map's beginRenderPass is hidden inside postProcess.draw
-    // (mocked away), so it doesn't appear in `beginCalls`.
-    const subPassBegins = beginCalls.slice(1);
-    expect(subPassBegins).toHaveLength(3);
-    const stubSlotsOnDescriptors = subPassBegins.map((b) => {
+    // Every opened pass carries its slot's timestampWrites — the first HDR
+    // layer's pass carries the clear AND its own descriptor (no dedicated
+    // clear pass in the unified path), so all three begins are tagged. The
+    // composite's beginRenderPass is opened by the executor (against the swap
+    // view), so — unlike the old inline tone-map blit — it DOES appear here.
+    expect(beginCalls).toHaveLength(3);
+    const stubSlots = beginCalls.map((b) => {
       const tw = (
         b.desc as GPURenderPassDescriptor & {
           timestampWrites?: GPURenderPassTimestampWrites;
@@ -331,13 +379,7 @@ describe('renderFrame — timing service hookup', () => {
       expect(tw).toBeDefined();
       return (tw!.querySet as unknown as { _stub: TimingSlotName })._stub;
     });
-    expect(stubSlotsOnDescriptors).toEqual(['point-sprites', 'milky-way', 'ui-overlay']);
-
-    // The clear pass at index 0 must have NO timestampWrites field.
-    const clearDesc = beginCalls[0]!.desc as GPURenderPassDescriptor & {
-      timestampWrites?: GPURenderPassTimestampWrites;
-    };
-    expect(clearDesc.timestampWrites).toBeUndefined();
+    expect(stubSlots).toEqual(['point-sprites', 'milky-way', 'hdr→swap']);
 
     // endFrame fires once with the live encoder so the resolve + copy
     // commands ride the same submit as the HDR draws.
@@ -366,39 +408,36 @@ describe('renderFrame — timing service hookup', () => {
     }
   });
 
-  it('bills the half-res pre-pass against the scalar-volume slot when timings are active', () => {
+  it('bills the volume raymarch pass against the scalar-volume slot when timings are active', () => {
     const { svc, descriptorFor } = makeFakeTimingService();
-    const { input, beginCalls } = makeMinimalInputWithTiming(svc);
+    const { input, beginCalls, renderTargetViews } = makeMinimalInputWithTiming(svc);
 
-    // Force volumes on with an active volumeFieldRenderer.
-    (input.state as any).settings.volumes = { enabled: true };
+    // Force volumes on with an active volumeFieldRenderer. The scalar-volume
+    // layer gates on `deriveVolumeLiveness`, which reads the renderer straight
+    // off `state.gpu.volumeFieldRenderer`.
+    (input.state as any).settings.volumes = { enabled: true, items: {} };
     const drawSpy = vi.fn();
-    (input as any).volumeFieldRenderer = {
-      draw: drawSpy,
-      hasActiveFields: () => true,
-    };
     (input.state as any).gpu.volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
+      listIds: () => [],
     };
-    // Provide a half-res view on the volumeOffscreen mock — the split
-    // path reads ctx.volumeOffscreen.view for the pre-pass attachment.
+    // The volume render step resolves its attachment via
+    // ctx.renderTargets.viewOf('volume'); swap the backing row.
     const halfView = { __id: 'half' } as unknown as GPUTextureView;
-    (input.ctx as any).volumeOffscreen = { view: halfView, resize: vi.fn(), destroy: vi.fn() };
-    // The new volume-upsample pass also reads state.gpu.volumeUpsample —
-    // null-check it so the upsample pass is skipped (we only care about
-    // the pre-pass slot billing in this test).
+    renderTargetViews.volume = halfView;
+    // volume-upsample draw self-guards on a null volumeUpsample; null it so the
+    // upsample layer draws nothing (its enabled() still tracks the same gate).
     (input.state as any).gpu.volumeUpsample = null;
 
     renderFrame(input);
 
     const slots = descriptorFor.mock.calls.map((c) => c[0]);
     expect(slots).toContain('scalar-volume');
-    // The pre-pass beginRenderPass should carry the descriptor whose
-    // stub-tag is 'scalar-volume'.  In the split path the clear pass
-    // is first (index 0, no timestampWrites), so the pre-pass comes
-    // at index 1.
-    const preDesc = beginCalls[1]!.desc as GPURenderPassDescriptor & {
+    // The volume render step precedes the hdr step, and there is no dedicated
+    // clear pass in the unified path, so the volume pass is the FIRST
+    // beginRenderPass (index 0) — carrying the scalar-volume descriptor.
+    const preDesc = beginCalls[0]!.desc as GPURenderPassDescriptor & {
       timestampWrites?: GPURenderPassTimestampWrites;
     };
     expect(preDesc.timestampWrites).toBeDefined();

@@ -4,10 +4,11 @@
  *
  * ### What this protects
  *
- * `texturedDiskRenderer`, `proceduralDiskRenderer`, `milkyWayRenderer`,
- * and `horizonShellRenderer` each own GPU resources and expose
+ * `texturedDiskRenderer`, `proceduralDiskRenderer`, `milkyWayCloud`,
+ * `milkyWayCloudRenderer`, and `horizonShellRenderer` each own GPU
+ * resources and expose
  * `.destroy()`. They must live on `state.gpu.*` (alongside `renderer`,
- * `pickRenderer`, `postProcess`, …) so `engine.ts.destroy()` has a
+ * `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()` has a
  * reachable reference to each — otherwise every HMR / StrictMode remount
  * leaks their GPU buffers.
  *
@@ -48,7 +49,6 @@ function makeStub(name: string): { destroy: ReturnType<typeof vi.fn> } {
     // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
-    setLabels: vi.fn(),
   };
   stubs[name] = stub;
   return stub;
@@ -92,12 +92,12 @@ vi.mock('../../../../src/services/gpu/renderers/pointRenderer', () => ({
   createPointRenderer: vi.fn(() => makeStub('pointRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/passes/postProcess', () => ({
-  createPostProcess: vi.fn(() => makeStub('postProcess')),
+vi.mock('../../../../src/services/gpu/renderTargets', () => ({
+  createRenderTargets: vi.fn(() => makeStub('renderTargets')),
 }));
 
-vi.mock('../../../../src/services/gpu/passes/volumeOffscreen', () => ({
-  createVolumeOffscreen: vi.fn(() => makeStub('volumeOffscreen')),
+vi.mock('../../../../src/services/gpu/passes/compositor', () => ({
+  createCompositor: vi.fn(() => makeStub('compositor')),
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/texturedDiskRenderer', () => ({
@@ -108,20 +108,24 @@ vi.mock('../../../../src/services/gpu/renderers/proceduralDiskRenderer', () => (
   createProceduralDiskRenderer: vi.fn(() => makeStub('proceduralDiskRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/milkyWayRenderer', () => ({
-  createMilkyWayRenderer: vi.fn(() => makeStub('milkyWayRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/renderers/horizonShellRenderer', () => ({
   createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
-  // initGpu imports the pass registry (for TIMED_SLOT_NAMES), which
-  // transitively loads horizonShellPass — that module reads this const,
-  // so the mock must provide it.
+  // initGpu imports the FRAME program (for TIMED_SLOTS), which transitively
+  // loads the content-layer registry incl. horizonShellLayer — that module
+  // reads this const, so the mock must provide it.
   HORIZON_RADIUS_GPC: 14.3,
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
+}));
+
+vi.mock('../../../../src/services/gpu/galaxy/milkyWayCloud', () => ({
+  createMilkyWayCloud: vi.fn(() => makeStub('milkyWayCloud')),
+}));
+
+vi.mock('../../../../src/services/gpu/renderers/milkyWayCloudRenderer', () => ({
+  createMilkyWayCloudRenderer: vi.fn(() => makeStub('milkyWayCloudRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/labelRenderer', () => ({
@@ -130,6 +134,10 @@ vi.mock('../../../../src/services/gpu/renderers/labelRenderer', () => ({
 
 vi.mock('../../../../src/services/gpu/renderers/markerLineRenderer', () => ({
   createMarkerLineRenderer: vi.fn(() => makeStub('markerLineRenderer')),
+}));
+
+vi.mock('../../../../src/services/gpu/renderers/debugLineRenderer', () => ({
+  createDebugLineRenderer: vi.fn(() => makeStub('debugLineRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/selectionRingRenderer', () => ({
@@ -164,30 +172,6 @@ vi.mock('../../../../src/services/gpu/passes/diskRadiusRing', () => ({
   createDiskRadiusRing: vi.fn(() => makeStub('diskRadiusRing')),
 }));
 
-vi.mock('../../../../src/services/gpu/passes/foregroundOffscreen', () => ({
-  createForegroundOffscreen: vi.fn(() => ({
-    colorView: {},
-    depthView: {},
-    resize: vi.fn(),
-    destroy: vi.fn(),
-  })),
-}));
-
-vi.mock('../../../../src/services/gpu/passes/foregroundComposite', () => ({
-  createForegroundComposite: vi.fn(() => ({
-    draw: vi.fn(),
-    destroy: vi.fn(),
-  })),
-}));
-
-vi.mock('../../../../src/services/gpu/renderers/debugSphereRenderer', () => ({
-  createDebugSphereRenderer: vi.fn(() => ({
-    label: 'debugSphereRenderer',
-    draw: vi.fn(),
-    destroy: vi.fn(),
-  })),
-}));
-
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
   loadFontAtlases: vi.fn(async () => ({
     metricsByFont: { cormorant: { __mockMetrics: true } },
@@ -219,25 +203,23 @@ function makeState(): EngineState {
       renderer: null,
       pickRenderer: null,
       milkyWayPickRenderer: null,
-      postProcess: null,
+      renderTargets: null,
+      compositor: null,
       filamentRenderer: null,
       labelRenderer: null,
-      foregroundLabelRenderer: null,
       markerLineRenderer: null,
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
-      milkyWayRenderer: null,
+      milkyWayCloud: null,
+      milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,
-      foregroundOffscreen: null,
-      foregroundComposite: null,
-      debugSphereRenderer: null,
     },
     subsystems: {
       biasCorrection: {
@@ -278,7 +260,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     for (const k of Object.keys(stubs)) delete stubs[k];
   });
 
-  it('writes texturedDiskRenderer/proceduralDiskRenderer/milkyWayRenderer onto state.gpu.*', async () => {
+  it('writes texturedDiskRenderer/proceduralDiskRenderer/milkyWayCloudRenderer onto state.gpu.*', async () => {
     const state = makeState();
     const deps = makeDeps();
     await initGpu(state, deps);
@@ -287,8 +269,25 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // reachability claim the destroy chain depends on.
     expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
     expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
-    expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
+    // The cloud + its renderer must also reach state.gpu.* so destroy() can
+    // release the star/dust VBs + the shared uniform/corner buffers.
+    expect(state.gpu.milkyWayCloud).toBe(stubs.milkyWayCloud);
+    expect(state.gpu.milkyWayCloudRenderer).toBe(stubs.milkyWayCloudRenderer);
     expect(state.gpu.horizonShellRenderer).toBe(stubs.horizonShellRenderer);
+  });
+
+  it('writes compositor + renderTargets onto state.gpu.*', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    // Same reachability claim as the other GPU-resource owners: the
+    // compositor's cached pipelines' uniform buffers need a live
+    // `state.gpu.*` reference for the destroy chain to find.
+    expect(state.gpu.compositor).toBe(stubs.compositor);
+    // The render-target table owns the offscreen textures (hdr + volume
+    // rows) — the destroy chain must reach it the same way.
+    expect(state.gpu.renderTargets).toBe(stubs.renderTargets);
   });
 
   it('phaseLocals no longer carries the thumbnail/milky-way renderers — they live solely on state.gpu.*', async () => {
@@ -305,11 +304,11 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // PhaseLocals is exactly { device, context } — no renderer fields.
     expect(deps.phaseLocals!).not.toHaveProperty('texturedDiskRenderer');
     expect(deps.phaseLocals!).not.toHaveProperty('proceduralDiskRenderer');
-    expect(deps.phaseLocals!).not.toHaveProperty('milkyWayRenderer');
+    expect(deps.phaseLocals!).not.toHaveProperty('milkyWayCloudRenderer');
     // The renderers are still reachable for destroy + consumption via state.gpu.*.
     expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
     expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
-    expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
+    expect(state.gpu.milkyWayCloudRenderer).toBe(stubs.milkyWayCloudRenderer);
   });
 
   it('replaying engine.ts.destroy() chain on state.gpu.* invokes each renderer.destroy()', async () => {
@@ -325,22 +324,41 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
     state.gpu.proceduralDiskRenderer = null;
-    state.gpu.milkyWayRenderer?.destroy();
-    state.gpu.milkyWayRenderer = null;
+    state.gpu.milkyWayCloud?.destroy();
+    state.gpu.milkyWayCloud = null;
+    state.gpu.milkyWayCloudRenderer?.destroy();
+    state.gpu.milkyWayCloudRenderer = null;
     state.gpu.horizonShellRenderer?.destroy();
     state.gpu.horizonShellRenderer = null;
 
     expect(stubs.texturedDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.proceduralDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
-    expect(stubs.milkyWayRenderer!.destroy).toHaveBeenCalledTimes(1);
+    expect(stubs.milkyWayCloud!.destroy).toHaveBeenCalledTimes(1);
+    expect(stubs.milkyWayCloudRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.horizonShellRenderer!.destroy).toHaveBeenCalledTimes(1);
 
     // Symmetric null-out matches the rest of the bag — see
     // `EngineGpuHandles.d.ts`'s lifecycle docstring.
     expect(state.gpu.texturedDiskRenderer).toBeNull();
     expect(state.gpu.proceduralDiskRenderer).toBeNull();
-    expect(state.gpu.milkyWayRenderer).toBeNull();
+    expect(state.gpu.milkyWayCloudRenderer).toBeNull();
     expect(state.gpu.horizonShellRenderer).toBeNull();
+  });
+
+  it('replaying the destroy chain reaches compositor.destroy() and renderTargets.destroy()', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    await initGpu(state, deps);
+
+    state.gpu.compositor?.destroy();
+    state.gpu.compositor = null;
+    state.gpu.renderTargets?.destroy();
+    state.gpu.renderTargets = null;
+
+    expect(stubs.compositor!.destroy).toHaveBeenCalledTimes(1);
+    expect(state.gpu.compositor).toBeNull();
+    expect(stubs.renderTargets!.destroy).toHaveBeenCalledTimes(1);
+    expect(state.gpu.renderTargets).toBeNull();
   });
 
   it('destroy is safe when initGpu never ran — every state.gpu.* renderer is null and ?.destroy() no-ops', () => {
@@ -353,8 +371,8 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
       state.gpu.texturedDiskRenderer = null;
       state.gpu.proceduralDiskRenderer?.destroy();
       state.gpu.proceduralDiskRenderer = null;
-      state.gpu.milkyWayRenderer?.destroy();
-      state.gpu.milkyWayRenderer = null;
+      state.gpu.milkyWayCloudRenderer?.destroy();
+      state.gpu.milkyWayCloudRenderer = null;
     }).not.toThrow();
   });
 });

@@ -14,15 +14,20 @@
  *
  * ### Per-arm framing strategy
  *
- *   - galaxyCatalog: physical diameter drives the distance via `galaxyFocusDistance`.
+ *   - galaxyCatalog: physical diameter drives the distance via `galaxyFocusDistance`;
+ *     `radius` is the galaxy's half-diameter (Mpc) — a real pass-by extent.
  *   - structure: apparent extent through the projection FOV via `structureFocusDistance`;
  *     the `apparentRadiusMpc ?? physicalRadiusMpc` fallback ensures every
- *     structure record resolves to a sensible distance.
+ *     structure record resolves to a sensible distance. `radius` is 0 — pass-by
+ *     is a galaxy idiom, so a flyPath flies INTO a cluster, never past it.
  *   - milkyWay: fixed world-space centre at a calibrated view distance — we are
- *     inside the galaxy, so no radius or FOV computation makes sense.
+ *     inside the galaxy, so no radius or FOV computation makes sense; `radius` 0.
  *
- * The return type is `Pick<CameraPose, 'target' | 'distance'>` — just the
- * position-and-depth slice. Callers carry the orientation (yaw/pitch) themselves.
+ * The return type is `Pick<CameraPose, 'target' | 'distance'>` plus the subject's
+ * pass-by `radius` (Mpc) — the position-and-depth slice, with the extent a fly-past
+ * offset scales by (0 = fly through-centre). Callers carry the orientation
+ * (yaw/pitch) themselves; the radius is ignored by the framing consumers and read
+ * only by `flyPath`'s pass-by geometry.
  */
 
 import { galaxyFocusDistance } from './galaxyFocusDistance';
@@ -34,20 +39,40 @@ import {
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 
+/** kpc → Mpc; the fallback diameter mirrors `galaxyFocusDistance`. */
+const KPC_PER_MPC = 1000;
+const FALLBACK_DIAMETER_KPC = 30;
+
+export type FocusFraming = Pick<CameraPose, 'target' | 'distance'> & {
+  /**
+   * The subject's pass-by extent (Mpc) — the unit a fly-past offset scales by.
+   * A galaxy's half-diameter; 0 for structures / the Milky Way (flown into, not
+   * past), which zeroes their lateral offset.
+   */
+  readonly radius: number;
+};
+
 /**
- * Compute the target world position and orbit distance appropriate for a
- * focus on the given resolved row, given the camera's current vertical FOV.
+ * Compute the target world position, orbit distance, and subject radius
+ * appropriate for a focus on the given resolved row, given the camera's current
+ * vertical FOV.
  *
- * Returns the two fields that change on a focus; orientation (yaw/pitch) is
- * the caller's responsibility.
+ * Returns the fields that change on a focus (orientation is the caller's) plus
+ * the subject radius.
  */
-export function focusFraming(
-  row: SelectionRow,
-  fovYRad: number,
-): Pick<CameraPose, 'target' | 'distance'> {
+export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
   switch (row.type) {
-    case 'galaxyCatalog':
-      return { target: [row.x, row.y, row.z], distance: galaxyFocusDistance(row.diameterKpc) };
+    case 'galaxyCatalog': {
+      const dKpc =
+        Number.isFinite(row.diameterKpc) && row.diameterKpc > 0
+          ? row.diameterKpc
+          : FALLBACK_DIAMETER_KPC;
+      return {
+        target: [row.x, row.y, row.z],
+        distance: galaxyFocusDistance(row.diameterKpc),
+        radius: dKpc / 2 / KPC_PER_MPC,
+      };
+    }
     case 'structure':
       return {
         target: [row.worldPos[0], row.worldPos[1], row.worldPos[2]],
@@ -55,11 +80,17 @@ export function focusFraming(
         // fade reads — so the ring + label land just past their fade-out;
         // fall back to the physical core when there is no wider extent.
         distance: structureFocusDistance(row.apparentRadiusMpc ?? row.physicalRadiusMpc, fovYRad),
+        // Pass-by is a galaxy idiom (swoop beside a discrete object). A cluster /
+        // group / supercluster is a volume you fly INTO, so its pass-by extent is
+        // 0 — the flyPath offset loop skips any knot with radius ≤ 0.
+        radius: 0,
       };
     case 'milkyWay':
       return {
         target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
         distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+        // We are inside the galaxy; there is no meaningful fly-past radius.
+        radius: 0,
       };
   }
 }

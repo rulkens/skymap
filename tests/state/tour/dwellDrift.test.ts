@@ -52,13 +52,35 @@ describe('dwellDrift', () => {
 
   it('sizes the yaw rotation so the average speed is the cruise rate', () => {
     // by = cruiseRate × durationSec ⇒ by / durationSec === cruiseRate.
-    const spin = effectsOf(dwellDrift(10, 1.5, 0.2))!.find((e) => e.kind === 'spin');
+    const spin = effectsOf(dwellDrift(10, { cruiseRate: 0.2 }))!.find((e) => e.kind === 'spin');
     if (spin?.kind === 'spin') expect(spin.by / spin.over).toBeCloseTo(0.2);
+  });
+
+  it('applies an authored rampSec to the pitch fade', () => {
+    const osc = effectsOf(dwellDrift(10, { rampSec: 3 }))!.find((e) => e.kind === 'osc');
+    if (osc?.kind === 'osc') expect(osc.fade).toBeCloseTo(3);
   });
 
   it('clamps the pitch fade so a short dwell still fades symmetrically', () => {
     // 2s is shorter than 2 × default ramp (3s), so the fade clamps to half (1s).
     const osc = effectsOf(dwellDrift(2))!.find((e) => e.kind === 'osc');
     if (osc?.kind === 'osc') expect(osc.fade).toBeCloseTo(1);
+  });
+
+  it('fits an integer number of full bob cycles to the dwell window', () => {
+    // The sine must return to centre exactly on the cut, or the amplitude
+    // fade drags the camera back from mid-swing (a visible vertical lurch at
+    // the dwell's end). The period stretches to the nearest integer-cycle fit
+    // of the ~14s target: 12s dwell → one 12s cycle; 30s dwell → two 15s cycles.
+    const osc12 = effectsOf(dwellDrift(12))!.find((e) => e.kind === 'osc');
+    if (osc12?.kind === 'osc') expect(osc12.period).toBeCloseTo(12);
+
+    const osc30 = effectsOf(dwellDrift(30))!.find((e) => e.kind === 'osc');
+    if (osc30?.kind === 'osc') expect(osc30.period).toBeCloseTo(15);
+
+    // A dwell shorter than the target still gets one full (faster) cycle
+    // rather than a fraction of a slow one.
+    const osc6 = effectsOf(dwellDrift(6))!.find((e) => e.kind === 'osc');
+    if (osc6?.kind === 'osc') expect(osc6.period).toBeCloseTo(6);
   });
 });

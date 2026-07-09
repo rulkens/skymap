@@ -5,11 +5,12 @@
  * whose meaning depends on the source:
  *
  *   - `classByte` (uint8) — source-interpreted classification.
- *     Today only Milliquas populates it (AGN class letter →
- *     enum 1..6).  Every other source stores 0 and
- *     `sourceClassLabel` returns null.  Future per-galaxy-catalog class
- *     signals (e.g. GLADE morphology) add a new branch here
- *     without touching the .bin format.
+ *     Milliquas populates it with an AGN class letter (enum 1..6);
+ *     DESI Deep populates it with the LSS tracer (BGS/LRG/ELG/QSO,
+ *     enum 1..4 — see `DESI_TRACER_CLASS` below). Every other source
+ *     stores 0 and `sourceClassLabel` returns null. Future
+ *     per-galaxy-catalog class signals (e.g. GLADE morphology) add a
+ *     new branch here without touching the .bin format.
  *
  *   - `parentSurveyByte` (uint8) — Milliquas-only enum that
  *     records which parent survey the row's Milliquas Name came
@@ -78,6 +79,33 @@ const MILLIQUAS_CLASS_LABEL: Record<number, string> = {
   [MILLIQUAS_CLASS_BYTE.S]: 'Candidate',
 };
 
+/**
+ * DESI Deep tracer enum. The deep-cone LSS clustering catalogs mix four
+ * disjoint target classes (BGS_BRIGHT/LRG/ELG_LOPnotqso/QSO) in one .bin;
+ * this byte is how the InfoCard tells a reader which population a given
+ * point belongs to. `0` stays reserved for "unclassified", matching the
+ * Milliquas convention above.
+ *
+ * Deliberately spelled out here rather than importing the tools-side
+ * `DesiTracer` string-union type: `src/` must not depend on `tools/`
+ * (the browser bundle can't pull in Node-only parser code), so this is
+ * the one place both `parseDesiClustering` (tools/) and the InfoCard
+ * (src/) can share the byte↔tracer mapping without a reverse import.
+ */
+export const DESI_TRACER_CLASS: Record<'BGS' | 'LRG' | 'ELG' | 'QSO', number> = {
+  BGS: 1,
+  LRG: 2,
+  ELG: 3,
+  QSO: 4,
+};
+
+const DESI_TRACER_LABEL: Record<number, string> = {
+  [DESI_TRACER_CLASS.BGS]: 'Bright Galaxy Sample (BGS)',
+  [DESI_TRACER_CLASS.LRG]: 'Luminous Red Galaxy (LRG)',
+  [DESI_TRACER_CLASS.ELG]: 'Emission-Line Galaxy (ELG)',
+  [DESI_TRACER_CLASS.QSO]: 'Quasar (QSO)',
+};
+
 const PARENT_SURVEY_LABEL: Record<number, string> = {
   [MILLIQUAS_PARENT_SURVEY_BYTE.SDSS]: 'SDSS',
   [MILLIQUAS_PARENT_SURVEY_BYTE.TWOMASX]: '2MASX',
@@ -90,12 +118,14 @@ const PARENT_SURVEY_LABEL: Record<number, string> = {
 
 /**
  * Human-readable label for this row's class byte, or null when the
- * source doesn't define one.  Used by the InfoCard's "AGN class"
- * row; non-Milliquas sources never display the row at all.
+ * source doesn't define one.  Used by the InfoCard's "AGN class" /
+ * "DESI tracer" row; sources with no class semantics never display
+ * the row at all.
  */
 export function sourceClassLabel(source: SourceType, classByte: number): string | null {
-  if (source !== Source.Milliquas) return null;
-  return MILLIQUAS_CLASS_LABEL[classByte] ?? null;
+  if (source === Source.Milliquas) return MILLIQUAS_CLASS_LABEL[classByte] ?? null;
+  if (source === Source.DesiDeep) return DESI_TRACER_LABEL[classByte] ?? null;
+  return null;
 }
 
 /**

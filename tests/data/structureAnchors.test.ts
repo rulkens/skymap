@@ -85,13 +85,15 @@ describe('cluster seed — cluster entries', () => {
 
 describe('cluster seed — supercluster entries', () => {
   it('exposes the canonical local-volume superclusters', () => {
+    // Primary names spell "Supercluster" out in full — the scene labels wrap
+    // long names onto two lines rather than abbreviating to "SC".
     const primaryNames = SUPERCLUSTER_ENTRIES.map((a) => a.names[0]);
-    expect(primaryNames).toContain('Laniakea SC');
-    expect(primaryNames).toContain('Perseus-Pisces SC');
-    expect(primaryNames).toContain('Coma SC');
+    expect(primaryNames).toContain('Laniakea Supercluster');
+    expect(primaryNames).toContain('Perseus-Pisces Supercluster');
+    expect(primaryNames).toContain('Coma Supercluster');
     expect(primaryNames).toContain('Hydra Wall');
-    expect(primaryNames).toContain('Hercules SC');
-    expect(primaryNames).toContain('Shapley SC');
+    expect(primaryNames).toContain('Hercules Supercluster');
+    expect(primaryNames).toContain('Shapley Supercluster');
   });
 
   it('every entry has a positive distance', () => {
@@ -147,7 +149,9 @@ describe('cluster seed — physicalRadiusMpc population', () => {
 
     expect(byPrimaryName(CLUSTER_ENTRIES, 'Virgo')?.physicalRadiusMpc).toBe(2.2);
     expect(byPrimaryName(CLUSTER_ENTRIES, 'Coma')?.physicalRadiusMpc).toBe(3.0);
-    expect(byPrimaryName(SUPERCLUSTER_ENTRIES, 'Hercules SC')?.physicalRadiusMpc).toBe(60);
+    expect(byPrimaryName(SUPERCLUSTER_ENTRIES, 'Hercules Supercluster')?.physicalRadiusMpc).toBe(
+      60,
+    );
     expect(byPrimaryName(VOID_ENTRIES, 'Boötes')?.physicalRadiusMpc).toBe(50);
   });
 });

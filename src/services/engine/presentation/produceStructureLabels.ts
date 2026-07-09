@@ -47,9 +47,9 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
-import { getLabelStyleOverride } from '../labelStyleOverride';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
+import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 
 export function produceStructureLabels(
   state: EngineState,
@@ -60,14 +60,10 @@ export function produceStructureLabels(
   const pxPerRad = ctx.drawPxPerRad;
   const [cx, cy, cz] = ctx.drawCamPos;
 
-  // Snapshot the live-tuning override once so it stays consistent across the
-  // loop. See `labelStyleOverride.ts`.
-  const override = getLabelStyleOverride();
-
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.
   const fades = state.subsystems.fades;
-  const now = performance.now();
+  const now = ctx.nowMs;
   const focusedStructureId = structureIdOf(state.selection.focus);
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
@@ -77,8 +73,14 @@ export function produceStructureLabels(
   // maps every structure-label FadeId to this value without discrimination.
   const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('structureLabel', now);
 
+  // focusedOnly mode: only the focused structure's label draws — a hard
+  // suppression, not a recession. With nothing (or a non-structure) focused,
+  // no structure labels draw at all.
+  const focusedOnly = state.settings.labels.focusedOnly;
+
   const structures = state.data.structures;
   for (const p of structures.all()) {
+    if (focusedOnly && p.id !== focusedStructureId) continue;
     // Per-category label opacity: the category toggle's fade, read from the
     // registry. The authoritative gate is the boolean — emit while the
     // category's label is enabled OR still fading out. Skip only when it's both
@@ -170,19 +172,15 @@ export function produceStructureLabels(
           );
     fadeAlpha *= catOpacity * recession * clipFactor;
 
-    // Per-structure override fields: only structures whose category matches the
-    // override's target adopt the outline values; others keep the default.
-    const overrideFields =
-      override.targetCategory === p.category
-        ? { outlineColor: override.outlineColor, outlineEmFrac: override.outlineEmFrac }
-        : {};
-
     labels.push({
       id: p.id,
       // Structures anchor at the ring centre, centred on both axes (only
       // famous galaxies lift their label off the dot).
       worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
-      text: p.name,
+      // Long names ("Perseus-Pisces Supercluster") break onto two balanced
+      // lines here, at the presentation seam — the store keeps the unwrapped
+      // name for the palette / InfoCard, and the layout just honours the '\n'.
+      text: wrapLabelName(p.name),
       font: 'cormorant',
       pixelSize: 0, // unused — superseded by the worldEm sizing model
       color: [...style.labelColor],
@@ -195,7 +193,6 @@ export function produceStructureLabels(
       outlineColor: [...style.outlineColor],
       outlineEmFrac: style.outlineEmFrac,
       prominencePx,
-      ...overrideFields,
     });
   }
 

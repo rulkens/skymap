@@ -28,6 +28,13 @@ export type TexturedDiskFrameInput = {
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
   readonly famousMeta: readonly FamousMetaEntry[];
+  /**
+   * The frame's stamped clock (`ctx.nowMs`). Drives the load-fade ramp and
+   * the arrival timestamps, so crossfade alphas are a pure function of
+   * stamped time — deterministic under a stepped recorder clock — instead
+   * of sampling `performance.now()` inside the planner.
+   */
+  readonly nowMs: number;
 };
 
 export type TexturedDiskFrameOutput = {

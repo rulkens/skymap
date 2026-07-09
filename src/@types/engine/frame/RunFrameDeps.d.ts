@@ -5,14 +5,19 @@
  * `engine.ts:1407–1708` body; the galaxy catalog done in Phase 3 Task 3.1
  * enumerated each one by source (createEngine arg, IIFE-local renderer,
  * createEngine helper, etc.) and confirmed read-only vs. mutated.
+ *
+ * ### Why no renderer fields
+ *
+ * Pre-unification this bag also carried `milkyWayCloudRenderer`,
+ * `horizonShellRenderer`, `filamentRenderer`, `texturedDiskRenderer`, and
+ * `proceduralDiskRenderer` — but `runFrame` only ever forwarded them,
+ * unread, into `RenderFrameInput`.  Now that every `ContentLayer` reads its
+ * renderer straight off `state.gpu.*` (see `passes/index.ts`), those fields
+ * were dead weight here; they're gone along with the matching
+ * `RenderFrameInput` fields.
  */
 
 import type { EngineCallbacks } from '../EngineCallbacks';
-import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
-import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
-import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
-import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
-import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { CameraDriver } from '../camera/CameraDriver';
 
@@ -25,22 +30,6 @@ export type RunFrameDeps = {
   device: GPUDevice;
   /** Swap-chain context handle from `initGpu`. */
   context: GPUCanvasContext;
-  /** Milky-Way impostor renderer; instantiated inside the IIFE. */
-  milkyWayRenderer: MilkyWayRenderer;
-  /** Observable-universe horizon shell renderer; instantiated inside the IIFE. */
-  horizonShellRenderer: HorizonShellRenderer;
-  /** Filament renderer; instantiated inside the IIFE. */
-  filamentRenderer: FilamentRenderer;
-  /** Atlas-bound 3D-oriented disk renderer for large galaxy thumbnails. */
-  texturedDiskRenderer: TexturedDiskRenderer;
-  /** Procedural-disk renderer (LOD-1; synthetic ellipse fill). */
-  proceduralDiskRenderer: ProceduralDiskRenderer;
-  /**
-   * Wall-clock epoch (ms, from `performance.now`) snapshot taken at
-   * engine construction; used to derive the Milky Way impostor's iTime
-   * each frame.
-   */
-  milkyWayITimeEpochMs: number;
   /**
    * Per-pass GPU timing service.  Always non-null — check `.enabled`
    * before doing timing work.  Forwarded straight through to

@@ -22,6 +22,9 @@ import { watchClipSaga } from '../../../src/state/camera/watchClipSaga';
 import { startClip, stopClip } from '../../../src/state/camera/clipActions';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
+import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type { FocusCameraRuntime } from '../../../src/store/types';
+import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
 // Symbol. Cast so we can use it as a property key on the seam Promise stub.
@@ -45,13 +48,29 @@ function blockingSeam(onCancel: () => void): PlayClipStub {
   });
 }
 
-function buildHarness(seam: PlayClipStub) {
+// Default deps resolve nothing — fine for focus-free clips like flyout.
+const EMPTY_DEPS: ResolveDeps = {
+  catalogs: { get: () => undefined },
+  famousMeta: [],
+  structures: { byId: () => null },
+};
+
+const RUNTIME: FocusCameraRuntime = {
+  from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
+  fovYRad: 0.8,
+};
+
+function buildHarness(seam: PlayClipStub, resolveDeps: ResolveDeps = EMPTY_DEPS) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefault) => getDefault().concat(sagaMiddleware),
   });
-  sagaMiddleware.setContext({ playClip: (clip: ClipData) => seam(clip) });
+  sagaMiddleware.setContext({
+    playClip: (clip: ClipData) => seam(clip),
+    resolveDeps: () => resolveDeps,
+    cameraRuntime: () => RUNTIME,
+  });
   sagaMiddleware.run(watchClipSaga);
   return { store };
 }
@@ -88,6 +107,61 @@ describe('watchClipSaga', () => {
 
     // The race's stop arm wins → the run call is cancelled → [CANCEL] fires.
     expect(cancelled).toBe(true);
+  });
+
+  it('resolves a focus-bearing clip before handing it to the seam', async () => {
+    // Regression: the standalone clip-play path must run resolveClipFoci, like
+    // the tour does. A flyPath with atFocus waypoints would otherwise reach
+    // compileClip unresolved and throw at the first frame.
+    const groups: Record<string, StructureInfo> = {
+      'group-m81-group': {
+        type: 'structure',
+        category: 'group',
+        id: 'group-m81-group',
+        name: 'M81 Group',
+        worldPos: [10, 0, 0],
+        featured: true,
+        physicalRadiusMpc: 2,
+      } as StructureInfo,
+      'group-cen-a-group': {
+        type: 'structure',
+        category: 'group',
+        id: 'group-cen-a-group',
+        name: 'Cen A Group',
+        worldPos: [0, 10, 0],
+        featured: true,
+        physicalRadiusMpc: 3,
+      } as StructureInfo,
+      'group-sculptor-group': {
+        type: 'structure',
+        category: 'group',
+        id: 'group-sculptor-group',
+        name: 'Sculptor Group',
+        worldPos: [0, 0, 10],
+        featured: true,
+        physicalRadiusMpc: 2,
+      } as StructureInfo,
+    };
+    const deps: ResolveDeps = {
+      catalogs: { get: () => undefined },
+      famousMeta: [],
+      structures: { byId: (id) => groups[id] ?? null },
+    };
+
+    const seam = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
+    const { store } = buildHarness(seam, deps);
+
+    store.dispatch(startClip('flyPathDemo'));
+    await flush();
+
+    expect(seam).toHaveBeenCalledTimes(1);
+    const handed = seam.mock.calls[0]![0];
+    const fp = handed.timeline[0]!;
+    if (fp.kind !== 'flyPath') throw new Error('expected a flyPath effect');
+    // Every waypoint is resolved to at-form — no id-bearing waypoints survive.
+    for (const w of fp.waypoints) {
+      expect('at' in w).toBe(true);
+    }
   });
 
   it('cancels the prior run when a second startClip arrives (takeLatest)', async () => {

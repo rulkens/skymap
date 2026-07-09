@@ -13,6 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildInitialSettings } from '../../../src/state/settings/initialState';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { seedVolumeFields } from '../../../src/data/volume/volumeFieldDefaults';
 import { DEFAULT_FLOW, DEFAULT_POINT_SIZE_PX } from '../../../src/data/defaults';
@@ -27,6 +28,7 @@ describe('buildInitialSettings', () => {
         'filaments',
         'flow',
         'galaxyCatalogs',
+        'labels',
         'milkyWay',
         'structures',
         'thumbnails',
@@ -36,12 +38,20 @@ describe('buildInitialSettings', () => {
     );
   });
 
-  it('derives exactly one galaxy-catalog item row per id, each layer + label on', () => {
+  it('derives one galaxy-catalog item row per id, enabled seeded from registry visible', () => {
     const { items } = buildInitialSettings().galaxyCatalogs;
     expect(Object.keys(items).sort()).toEqual([...GALAXY_CATALOG_IDS].sort());
+    // `enabled` is seeded from each source's SOURCE_REGISTRY `visible` field —
+    // the registry is the single source of truth for default visibility — while
+    // `labelEnabled` is uniformly true. Every galaxy catalog ships visible:true
+    // except DesiDeep (a specialist pencil-beam that boots hidden), so it is the
+    // one row that must seed enabled:false.
     for (const id of GALAXY_CATALOG_IDS) {
-      expect(items[id]).toEqual({ enabled: true, labelEnabled: true });
+      const entry = SOURCE_ENTRIES.find((e) => e.id === id);
+      expect(entry).toBeDefined();
+      expect(items[id]).toEqual({ enabled: entry!.visible, labelEnabled: true });
     }
+    expect(items.desiDeep).toEqual({ enabled: false, labelEnabled: true });
   });
 
   it('derives exactly one structure item row per id, each ring + label on', () => {

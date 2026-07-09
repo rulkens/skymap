@@ -13,9 +13,9 @@ describe('font registry', () => {
     // These numbers must agree between the bake (tools/buildFontAtlas.ts)
     // and the runtime (loadFontAtlases.ts).  Hard-coding them in two
     // places was the original sin the registry eliminates.
-    expect(ATLAS_PX).toBe(512);
-    expect(DISTANCE_RANGE_PX).toBe(16);
-    expect(ATLAS_FONT_SIZE).toBe(42);
+    expect(ATLAS_PX).toBe(1024);
+    expect(DISTANCE_RANGE_PX).toBe(32);
+    expect(ATLAS_FONT_SIZE).toBe(84);
   });
 
   it('registers cormorant with a TTF filename and a charset', () => {

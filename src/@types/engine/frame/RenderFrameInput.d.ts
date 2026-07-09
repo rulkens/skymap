@@ -11,18 +11,17 @@
  * (`ctx`) plus a flat settings bag — engine state was never read
  * directly here.  The flat bag is now dissolved: every pass reads
  * `state.settings.*` directly, so the only non-state inputs are
- * the GPU handles, the per-frame snapshot (`ctx`), and the timing
- * service.
+ * the GPU device/context, the per-frame snapshot (`ctx`), and the
+ * timing service.
+ *
+ * ### Why no renderer fields
+ *
+ * Every `ContentLayer` — hdr-target and swap-target alike — reads its
+ * renderer straight off `state.gpu.*` (see `passes/index.ts`), so `state`
+ * is the only per-frame renderer source this type needs to carry.
  */
 
 import type { EngineState } from '../state/EngineState';
-import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
-import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
-import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
-import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
-import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
-import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
-import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 
@@ -30,65 +29,20 @@ export type RenderFrameInput = {
   /**
    * Per-frame derived snapshot.  Carries the camera, view-projection
    * matrix, viewport size, camera-position tuple, pixel-per-radian
-   * scalar, plus the post-bootstrap-narrowed `renderer`, `postProcess`,
+   * scalar, plus the post-bootstrap-narrowed `renderer`, `renderTargets`,
    * and `thumbnails` handles.  See `frameContext.ts`.
    */
   ctx: ReadyFrameContext;
   /**
-   * Engine state — forwarded to each `Pass.draw` so per-pass logic
-   * can read selection / picking / source-state / settings.
+   * Engine state — forwarded to each `ContentLayer.draw` so per-layer logic
+   * can read selection / picking / source-state / settings / `state.gpu.*`
+   * renderer handles.
    */
   state: EngineState;
-  /**
-   * Animation time in seconds for the Milky Way impostor, already
-   * scaled by the engine's chosen "slow but alive" factor (0.25× wall
-   * clock).  See `engine.ts` for the epoch-relative calculation.
-   */
-  milkyWayITimeSec: number;
 
   // ── GPU handles ───────────────────────────────────────────────────────
   device: GPUDevice;
   context: GPUCanvasContext;
-  milkyWayRenderer: MilkyWayRenderer;
-  /** Observable-universe horizon shell renderer. */
-  horizonShellRenderer: HorizonShellRenderer;
-  /**
-   * Optional cosmic-web filament-skeleton renderer.  Null when the
-   * GPU init flow hasn't created it yet, or — by design — when the
-   * deployment doesn't ship a `filaments.bin`.  `filamentsPass` gates
-   * its own draw on this being non-null AND the user toggle being on,
-   * so a missing renderer is silently a no-op.
-   */
-  filamentRenderer: FilamentRenderer | null;
-  /**
-   * Optional 3D scalar-field volume renderer.  Null before `initGpu`
-   * constructs it (same brief bootstrap window as the other optional
-   * renderers).  Both `encodeVolumes` (pre-HDR half-res raymarch) and
-   * `volumeUpsamplePass.enabled` null-check this handle so a null
-   * state is silently a no-op — no render pass is opened and no draw
-   * is invoked.
-   */
-  volumeFieldRenderer: VolumeFieldRenderer | null;
-  /**
-   * Optional CF4++ flow-field renderer.  Null before `initGpu` constructs it.
-   * `encodeFlowCompute` (pre-HDR compute) and `flowFieldPass` both null-check
-   * this handle, so a null state is silently a no-op.
-   */
-  flowFieldRenderer: FlowFieldRenderer | null;
-  /**
-   * TexturedDiskRenderer reference forwarded straight to the thumbnail
-   * subsystem.  The subsystem already `bindAtlas`-bound it at
-   * engine-startup; the per-frame `runFrame` input still takes it as
-   * an explicit field (legacy of the pre-extraction inline body) so we
-   * forward it unchanged.  See thumbnailSubsystem.runFrame.
-   */
-  texturedDiskRenderer: TexturedDiskRenderer;
-  /**
-   * Procedural-disk renderer reference forwarded through to the
-   * `PassDeps` bag for the LOD-1 pass.  Same forward-it-as-an-explicit-
-   * field pattern as its disk sibling above.
-   */
-  proceduralDiskRenderer: ProceduralDiskRenderer;
 
   /**
    * Per-pass GPU timing service (always non-null; check `.enabled`

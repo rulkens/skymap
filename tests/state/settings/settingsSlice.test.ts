@@ -30,6 +30,7 @@ import reducer, {
   setFilamentsEnabled,
   setFilamentIntensity,
   setVolumesEnabled,
+  setLabelsFocusedOnly,
   addVolumeField,
   removeVolumeField,
   writeVolumeField,
@@ -38,13 +39,21 @@ import reducer, {
   setShowPickBuffer,
   setShowDiskRadiusRing,
   setPassDisabled,
+  setClipPathLinger,
+  setClipPathLingerSec,
+  setClipPathSpline,
+  setClipPathLookAhead,
+  setClipPathPassByOffset,
+  setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
+  setLabelsEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
 import { buildInitialSettings } from '../../../src/state/settings/initialState';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { STRUCTURE_IDS, isStructureId } from '../../../src/data/structure/structureIds';
+import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 import type { SettingsSnapshot } from '../../../src/@types/engine/settings/SettingsSnapshot';
 
@@ -143,6 +152,10 @@ describe('settingsSlice — overlay layers', () => {
       !before.volumes.enabled,
     );
   });
+  it('setLabelsFocusedOnly updates labels.focusedOnly', () => {
+    expect(reducer(base(), setLabelsFocusedOnly(true)).labels.focusedOnly).toBe(true);
+    expect(reducer(base(), setLabelsFocusedOnly(false)).labels.focusedOnly).toBe(false);
+  });
 });
 
 describe('settingsSlice — structures', () => {
@@ -176,6 +189,62 @@ describe('settingsSlice — debug', () => {
 
     const flipped = reducer(enabled, setPassDisabled({ pass: 'foo', disabled: false }));
     expect(flipped.debug.disabledPasses).toEqual({ foo: false });
+  });
+
+  it('clip-path tuning starts every override inactive', () => {
+    expect(base().debug.clipPathInspect.active).toEqual({
+      align: false,
+      rampSec: false,
+      linger: false,
+      spline: false,
+      passBy: false,
+    });
+  });
+
+  it('setting a tuning value activates that knob (drag-to-activate)', () => {
+    const next = reducer(base(), setClipPathLinger(0.8));
+    expect(next.debug.clipPathInspect.linger).toBe(0.8);
+    expect(next.debug.clipPathInspect.active.linger).toBe(true);
+    // Other knobs stay inactive.
+    expect(next.debug.clipPathInspect.active.align).toBe(false);
+    expect(next.debug.clipPathInspect.active.spline).toBe(false);
+  });
+
+  it('setClipPathLingerSec sets the window and rides the one linger override', () => {
+    // lingerSec is a dwell sub-knob with no gate of its own — it rides the single
+    // `linger` override, so touching it activates `linger`.
+    const next = reducer(base(), setClipPathLingerSec(3.5));
+    expect(next.debug.clipPathInspect.lingerSec).toBe(3.5);
+    expect(next.debug.clipPathInspect.active.linger).toBe(true);
+  });
+
+  it('setClipPathSpline activates the spline override', () => {
+    const next = reducer(base(), setClipPathSpline('causalHermite'));
+    expect(next.debug.clipPathInspect.spline).toBe('causalHermite');
+    expect(next.debug.clipPathInspect.active.spline).toBe(true);
+  });
+
+  it('setClipPathLookAhead sets the value and activates the one spline override', () => {
+    // lookAhead is a causal-only sub-knob with no gate of its own — it rides the
+    // single `spline` override, so touching it activates `spline`.
+    const next = reducer(base(), setClipPathLookAhead(1.5));
+    expect(next.debug.clipPathInspect.lookAhead).toBe(1.5);
+    expect(next.debug.clipPathInspect.active.spline).toBe(true);
+  });
+
+  it('setClipPathPassByOffset activates the passBy override', () => {
+    const next = reducer(base(), setClipPathPassByOffset(4));
+    expect(next.debug.clipPathInspect.passByOffset).toBe(4);
+    expect(next.debug.clipPathInspect.active.passBy).toBe(true);
+  });
+
+  it('setClipPathTuningActive toggles a knob without touching its value', () => {
+    const activated = reducer(base(), setClipPathTuningActive({ knob: 'align', active: true }));
+    expect(activated.debug.clipPathInspect.active.align).toBe(true);
+    expect(activated.debug.clipPathInspect.align).toBe(base().debug.clipPathInspect.align);
+
+    const off = reducer(activated, setClipPathTuningActive({ knob: 'align', active: false }));
+    expect(off.debug.clipPathInspect.active.align).toBe(false);
   });
 });
 
@@ -263,6 +332,28 @@ describe('settingsSlice — mergeSnapshot', () => {
     // Mutating the patch after dispatch must not bleed into state.
     (patch.galaxyCatalogs as { brightness: number }).brightness = 999;
     expect(next.galaxyCatalogs.brightness).toBe(0.5);
+  });
+});
+
+describe('settingsSlice — setLabelsEnabled (master label fan-out)', () => {
+  // The master routes every label-bearing category to its authoritative home:
+  // structure ids → structures.items, milkyWay → milkyWay scalar, else (famous)
+  // → galaxyCatalogs.items. LABEL_CATEGORIES is exactly the label-bearing set.
+  const labelOf = (state: ReturnType<typeof base>, cat: (typeof LABEL_CATEGORIES)[number]) =>
+    isStructureId(cat)
+      ? state.structures.items[cat].labelEnabled
+      : cat === 'milkyWay'
+        ? state.milkyWay.labelEnabled
+        : state.galaxyCatalogs.items[cat].labelEnabled;
+
+  it('disables labels across every label-bearing category', () => {
+    const next = reducer(base(), setLabelsEnabled(false));
+    for (const cat of LABEL_CATEGORIES) expect(labelOf(next, cat)).toBe(false);
+  });
+
+  it('re-enables labels across every label-bearing category', () => {
+    const on = reducer(reducer(base(), setLabelsEnabled(false)), setLabelsEnabled(true));
+    for (const cat of LABEL_CATEGORIES) expect(labelOf(on, cat)).toBe(true);
   });
 });
 

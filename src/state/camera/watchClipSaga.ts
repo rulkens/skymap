@@ -29,19 +29,45 @@
  * `getContext('playClip')` inside the worker (not at fork time) guarantees the
  * context is populated by the time a `playClip` action actually arrives — the
  * same pattern as `visitBeatSaga` / `watchFocusTweenSaga`.
+ *
+ * ### Foci are resolved here too, not just in the tour
+ *
+ * A clip carrying `moveTargetId` / `dollyToId` / `focusId` / `flyPath`-with-
+ * `atFocus` cues cannot be compiled until those ids resolve against loaded
+ * catalog/structure data — `compileClip` throws on an unresolved cue. The tour
+ * path (`visitBeatSaga`) waits on `clipFociReady` then calls `resolveClipFoci`;
+ * the standalone clip-play path must do the same, or any focus-bearing clip
+ * crashes at the first frame. We mirror that step verbatim so both entry points
+ * hand the seam a fully-resolved clip. (Focus-free clips like `flyout` pass
+ * through `resolveClipFoci` as a structural no-op.)
  */
 import { call, race, take, takeLatest, getContext } from 'typed-redux-saga';
 
 import { startClip, stopClip } from './clipActions';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
+import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
+import { clipFociReady } from '../tour/clipFociReady';
+import { waitUntil } from '../tour/waitUntil';
 import type { SagaContext } from '../../store/types';
 
 export function* watchClipSaga() {
   yield* takeLatest(startClip, function* (action) {
     const playClipSeam = yield* getContext<SagaContext['playClip']>('playClip');
+    const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+    const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
     const clip = clipRegistry[action.payload];
     yield* race({
-      run: call(playClipSeam, clip.data),
+      run: call(function* () {
+        // Block until every id-bearing cue resolves AND the camera runtime
+        // (which carries the FOV resolveClipFoci needs) exists.
+        yield* call(
+          waitUntil,
+          () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null,
+        );
+        const rt = cameraRuntime()!;
+        const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from);
+        yield* call(playClipSeam, resolved);
+      }),
       stop: take(stopClip),
     });
   });

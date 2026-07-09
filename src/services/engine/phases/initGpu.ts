@@ -10,11 +10,12 @@
  *
  *   - `PointRenderer` — instanced billboards into the HDR offscreen
  *     target.  Stored on `state.gpu.renderer`.
- *   - `PostProcess` — combined HDR offscreen rgba16float texture + the
- *     tone-map pass that compresses linear-light into the swap chain.
- *   - `TexturedDiskRenderer`, `ProceduralDiskRenderer`, `MilkyWayRenderer`,
- *     `FilamentRenderer`, … — thumbnail + overlay renderers that write
- *     into the same HDR target as the points pass.
+ *   - `RenderTargets` — the offscreen target table (full-res rgba16float
+ *     `hdr` + 1/3-scale `volume`) every content layer draws into.
+ *   - `TexturedDiskRenderer`, `ProceduralDiskRenderer`,
+ *     `MilkyWayCloudRenderer`, `FilamentRenderer`, … — thumbnail +
+ *     overlay renderers that write into the same HDR target as the
+ *     points pass.
  *
  * The 5 galaxy-catalog source asset slots are also wired here via the
  * `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table —
@@ -43,15 +44,17 @@
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
-import { createPostProcess } from '../../gpu/passes/postProcess';
-import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
+import { createCompositor } from '../../gpu/passes/compositor';
+import { createRenderTargets } from '../../gpu/renderTargets';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
-import { createMilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
+import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
+import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
+import { createDebugLineRenderer } from '../../gpu/renderers/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRingRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWayPickRenderer';
@@ -61,7 +64,7 @@ import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/passes/diskRadiusRing';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
-import { TIMED_SLOT_NAMES } from '../frame/passes';
+import { TIMED_SLOTS } from '../frame/frameProgram';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import {
@@ -72,10 +75,6 @@ import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
 import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
-import { createForegroundOffscreen } from '../../gpu/passes/foregroundOffscreen';
-import { createForegroundComposite } from '../../gpu/passes/foregroundComposite';
-import { createDebugSphereRenderer } from '../../gpu/renderers/debugSphereRenderer';
-import { debugSphereLabels } from '../presentation/debugSphereLabels';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -85,7 +84,7 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  * point-source slot wiring.
  *
  * Side effects on `state`:
- *   - writes `state.gpu.renderer`, `state.gpu.postProcess`,
+ *   - writes `state.gpu.renderer`, `state.gpu.renderTargets`,
  *     `state.gpu.filamentRenderer`, and every other renderer handle;
  *   - populates `state.assetSlots.points` via the registry loop.
  *
@@ -114,38 +113,36 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the pick pass (each at its own group slot). See EngineGpuHandles.
   state.gpu.focusUniform = createFocusUniformBuffer(device, state.gpu.focusBgl!);
 
-  // ── HDR offscreen target + tone-map post-process ──────────────────
+  // ── Offscreen render-target table + compositor tone-map ────────────
   //
-  // Every visible draw pass (points, quads, disks) writes into a
-  // viewport-sized rgba16float texture instead of the swap chain.  The
-  // tone-map pass then samples the HDR target and writes tone-mapped,
-  // compressed-into-[0,1] values into the swap chain.  This eliminates
-  // the saturated-white blown-out cluster cores that pure additive
-  // blending into bgra8unorm suffers from, and gives the user a runtime
-  // curve selector (Linear / Reinhard / Asinh / Gamma 2 / ACES — see
-  // `data/toneMapCurve.ts`).
+  // Every visible draw pass (points, quads, disks) writes into the
+  // viewport-sized rgba16float `hdr` row instead of the swap chain.  The
+  // compositor's tone-map curve then samples the HDR target and writes
+  // tone-mapped, compressed-into-[0,1] values into the swap chain.  This
+  // eliminates the saturated-white blown-out cluster cores that pure
+  // additive blending into bgra8unorm suffers from, and gives the user a
+  // runtime curve selector (Linear / Reinhard / Asinh / Gamma 2 / ACES —
+  // see `data/toneMapCurve.ts`).
   //
-  // The HDR target is recreated on resize (in the frame loop's resize
-  // branch) so it always tracks the swap chain size 1:1 — that's also
-  // why the tone-map sampler uses 'nearest' (each fragment samples one
-  // texel).  The pick renderer's r32uint integer target is separate and
-  // never wants tone-mapping.
-  //
-  // The target + tone-map pass live in one factory (see
-  // `services/gpu/postProcess.ts`): they share a lifetime and a
-  // swap-chain-format dependency.
-  const postProcess = createPostProcess(device, format, {
-    width: canvas.width,
-    height: canvas.height,
-  });
-  // Mirror into engine state so `destroy()` can release the resources.
-  state.gpu.postProcess = postProcess;
+  // The offscreen rows are recreated on resize (one `renderTargets.resize`
+  // in the frame loop's resize branch) so the HDR row always tracks the
+  // swap chain size 1:1 — that's also why the compositor's sampler uses
+  // 'nearest' for the tone-map composite (each fragment samples one
+  // texel).  The 1/3-scale `volume` row rides in the same table; the pick
+  // renderer's r32uint integer target is separate for now and never wants
+  // tone-mapping.  See `renderTargets.ts` for the per-row rationale.
 
-  // Half-res offscreen target for the scalar-volume pass, sized in
-  // lockstep with the HDR target.  Conceptually unrelated to postProcess
-  // (its only consumer is the volume upsample pass), but constructed and
-  // resized at the same sites.
-  state.gpu.volumeOffscreen = createVolumeOffscreen(device, {
+  // Unified compositor — one pipeline cache serves every offscreen→target
+  // merge the engine performs (the FRAME program's tone-mapped hdr→swap
+  // composite, plus the foreground-OVER and additive-field composites other
+  // passes will adopt).  The blend→dstFormat table is baked in at
+  // construction, as data, rather than threaded per-draw, because a
+  // render-pass encoder cannot be queried for its own colour-attachment
+  // format — the caller has to hand it over up front.
+  const compositor = createCompositor({ device, swapFormat: format, hdrFormat: 'rgba16float' });
+  state.gpu.compositor = compositor;
+
+  state.gpu.renderTargets = createRenderTargets(device, format, {
     width: canvas.width,
     height: canvas.height,
   });
@@ -189,15 +186,21 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // `filamentRenderer`): optional async resources, null-checked at use.
   //
   // They target the swap-chain format, NOT the HDR target: marker-lines +
-  // labels are UI overlays drawn AFTER tone-map onto the swap chain (see
-  // `uiOverlay` in `services/engine/frame/`), so their pipelines need the
-  // swap-chain format for the colorAttachment to validate.
+  // labels are swap-target layers, drawn AFTER tone-map onto the swap chain
+  // (see the swap render step in `services/engine/frame/executeFrame.ts`),
+  // so their pipelines need the swap-chain format for the colorAttachment
+  // to validate.
   const uiCtx = { device, context, format, canvas };
 
   const fontAtlases = await loadFontAtlases();
-  state.gpu.labelRenderer = createLabelRenderer(uiCtx, fontAtlases);
-  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx);
-  state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx);
+  state.gpu.labelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
+  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx, format);
+  // Dedicated debug-line renderer for the clip-path inspector overlay. Same
+  // swap-chain ctx as the marker lines (UI overlay, drawn post-tone-map), but
+  // its own pipeline + buffers so the debug viz never touches the label
+  // director's reconcile path.
+  state.gpu.debugLineRenderer = createDebugLineRenderer(uiCtx, format);
+  state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx, format);
   // HDR pass — writes into the rgba16float offscreen target, NOT the
   // swap chain.  The fadeBgl placeholder at @group(1) must match what the
   // other HDR passes (filaments) bind at the same slot on the shared
@@ -243,9 +246,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the `ready` transition (not inside commit) keeps commit free of UI
   // concerns.
   //
-  // The 5 source slots are built from the `GALAXY_CATALOG_SOURCE_REGISTRY`
-  // declarative table; sidecar slots (filaments, famous-meta, pgc-aliases)
-  // stay inline below — see `galaxyCatalogSourceRegistry.ts` for why.
+  // The 7 source slots (6 galaxy catalogs + Synthetic) are built from the
+  // `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table; sidecar slots
+  // (filaments, famous-meta, pgc-aliases) stay inline below — see
+  // `galaxyCatalogSourceRegistry.ts` for why.
   for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
     wireGalaxyCatalogSourceSlot(state, cfg, { cb });
   }
@@ -257,7 +261,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // per-galaxy diameter, composited into the same linear-light buffer as
   // the points pass.  Matched by the LOD-2 `texturedDisksPass`.
   const texturedDiskRenderer = createTexturedDiskRenderer(
-    { device, context, format: 'rgba16float', canvas },
+    { device, context, targetFormat: 'rgba16float', canvas },
     state.gpu.focusBgl!,
   );
   // ProceduralDiskRenderer fills the visibility gap between the
@@ -270,25 +274,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const proceduralDiskRenderer = createProceduralDiskRenderer({
     device,
     context,
-    format: 'rgba16float',
+    targetFormat: 'rgba16float',
     canvas,
     focusBgl: state.gpu.focusBgl!,
-  });
-  // Procedural Milky Way impostor at world origin.  See
-  // `services/gpu/milkyWayRenderer.ts` for the rationale on why this
-  // is a sibling renderer rather than tucked into the per-galaxy
-  // procedural-disk pass, and `utils/math/milkyWayFadeAlpha.ts` for the
-  // distance-fade band.
-  const milkyWayRenderer = createMilkyWayRenderer({
-    device,
-    format: 'rgba16float',
   });
   // Observable-universe horizon shell — translucent sphere at the
   // comoving particle-horizon radius (~14.3 Gpc).  Single uniform
   // buffer + baked UV-sphere VBO/IBO, no lifecycle dependencies.
   const horizonShellRenderer = createHorizonShellRenderer({
     device,
-    format: 'rgba16float',
+    targetFormat: 'rgba16float',
   });
   // ── Cosmic-web filament-skeleton renderer ─────────────────────────
   //
@@ -313,8 +308,21 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // black-screen bug class.
   state.gpu.texturedDiskRenderer = texturedDiskRenderer;
   state.gpu.proceduralDiskRenderer = proceduralDiskRenderer;
-  state.gpu.milkyWayRenderer = milkyWayRenderer;
   state.gpu.horizonShellRenderer = horizonShellRenderer;
+
+  // ── Milky-Way point cloud + its two-pass renderer ────────────────────
+  //
+  // The GPU-generated star/dust cloud (`milkyWayCloud`) owns the per-tier
+  // instance buffers; the additive-stars + multiplicative-dust renderer
+  // (`milkyWayCloudRenderer`) draws them from `milkyWayLayer`. `state.tier`
+  // folds the current tier's star budget into the first generation; a tier
+  // swap regenerates via `makeRunTierTransition`. Same HDR target
+  // ('rgba16float') as the other overlay renderers.
+  state.gpu.milkyWayCloud = createMilkyWayCloud(device, state.tier);
+  state.gpu.milkyWayCloudRenderer = createMilkyWayCloudRenderer({
+    device,
+    targetFormat: 'rgba16float',
+  });
 
   // ── 3D scalar-field volume renderer ──────────────────────────────────
   //
@@ -341,12 +349,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Built unconditionally; the pipelines are cheap and the velocity cube
   // arrives later via the demand-loaded flow slot's commit → upload. The
   // HDR format matches the scalar-volume + upsample targets.
-  state.gpu.flowFieldRenderer = createFlowFieldRenderer({ device, hdrFormat: 'rgba16float' });
+  state.gpu.flowFieldRenderer = createFlowFieldRenderer({ device, targetFormat: 'rgba16float' });
 
   // ── Half-res-to-HDR volume upsample pass ──────────────────────────
   //
-  // Built unconditionally; the pipeline is cheap and the half-res target
-  // lives on `postProcess`, so nothing here depends on viewport size.
+  // Built unconditionally; the pipeline is cheap and the 1/3-scale target
+  // lives on `renderTargets`, so nothing here depends on viewport size.
   state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
 
   // ── Pick-buffer debug overlay ────────────────────────────────────
@@ -363,7 +371,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // World-space line-strip drawn in the disk plane around the selected
   // galaxy at its catalog disk radius (a famous-galaxy calibration aid).
   // Swap-chain `format` (post-tone-map UI overlay); the per-frame
-  // `diskRadiusRingPass` gates on `state.settings.debug.showDiskRadiusRing`.
+  // `diskRadiusRingLayer` gates on `state.settings.debug.showDiskRadiusRing`.
   state.gpu.diskRadiusRing = createDiskRadiusRing(device, format);
 
   // ── GPU timing service ────────────────────────────────────────────
@@ -372,46 +380,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // gate is off OR the adapter lacks `timestamp-query`, so consumers gate
   // behind one `state.gpu.timingService.enabled` check.  The no-op path
   // allocates no GPU resources.
-  state.gpu.timingService = createGpuTimingService(
-    device,
-    hasUrlGate('gpuTimings'),
-    TIMED_SLOT_NAMES,
-  );
-
-  // ── Foreground pass resources (Plan 01 — zoom-to-Earth) ──────────
-  //
-  // Three handles required by the foreground depth pass:
-  //
-  //   foregroundOffscreen — full-resolution rgba16float + depth32float target
-  //     pair.  The foreground pass draws opaque geometry (Earth, Moon, Sun)
-  //     into these textures, separately from the additive HDR target, so it
-  //     can carry its own depth buffer without touching any existing pipeline.
-  //     Sized to match the canvas here, then resized in the runFrame resize
-  //     branch alongside postProcess + volumeOffscreen (see runFrame.ts).
-  //
-  //   foregroundComposite — fullscreen OVER-composite pass.  Viewport-
-  //     independent: the foreground colour view is passed per-draw, so this
-  //     handle needs no resize call — the caller always supplies a fresh view
-  //     after a foregroundOffscreen.resize().
-  //
-  //   debugSphereRenderer — UV-sphere mesh for visual correctness checks at
-  //     Earth scale (roundness, jitter, pole orientation) before a real Earth
-  //     texture lands in Plan 02.  Viewport-independent; no resize.
-  state.gpu.foregroundOffscreen = createForegroundOffscreen(device, {
-    width: canvas.width,
-    height: canvas.height,
-  });
-  // Swap-chain format: the composite tone-maps and OVER-blends onto the
-  // swap chain after the UI overlay (not into the HDR target).
-  state.gpu.foregroundComposite = createForegroundComposite(device, format);
-  state.gpu.debugSphereRenderer = createDebugSphereRenderer(device, 'rgba16float', 'depth32float');
-
-  // Name captions for the foreground bodies.  A second label renderer (UI /
-  // swap-chain format, like the main one) drawn with `foregroundVp` so the
-  // captions track the Sun/Earth at solar-system zoom.  The label set is
-  // static, so it's uploaded once here; `foregroundLabelsPass` only draws it.
-  state.gpu.foregroundLabelRenderer = createLabelRenderer(uiCtx, fontAtlases);
-  state.gpu.foregroundLabelRenderer.setLabels(debugSphereLabels());
+  state.gpu.timingService = createGpuTimingService(device, hasUrlGate('gpuTimings'), TIMED_SLOTS);
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

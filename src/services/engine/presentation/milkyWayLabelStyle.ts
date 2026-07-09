@@ -9,12 +9,12 @@
  *
  * ### LDR display colours
  *
- * Marker-lines and labels render in the `uiOverlay` pass AFTER the tone-map
- * blit (see `services/engine/frame/encodeUiOverlay.ts`), so they composite
+ * Marker-lines and labels render in the swap render step AFTER the tone-map
+ * composite (see `services/engine/frame/executeFrame.ts`), so they composite
  * directly onto the swap chain without going through the exposure curve.
  * `[1, 1, 1, 1]` is display white at any tone-map setting — no overshoot hack
  * needed. The soft black drop-shadow keeps the glyphs legible against the
- * starfield; re-tune via the DebugPanel `LabelEffectsSection`.
+ * starfield; re-tune by editing this module.
  *
  * Consolidating these constants into a style module matches the per-producer
  * style-module pattern the structure / famous producers already use, instead

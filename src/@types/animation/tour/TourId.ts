@@ -11,4 +11,4 @@
  * shared link, so renaming one silently breaks those. Add new ids; retire old
  * ones deliberately.
  */
-export type TourId = 'demo' | 'webShowcase';
+export type TourId = 'demo' | 'webShowcase' | 'grandTour';

@@ -44,6 +44,10 @@ import type { StructureItemSettings } from '../../@types/settings/StructureItemS
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { ClipId } from '../../@types/animation/ClipId';
+import type { SplineMode } from '../../@types/animation/SplineMode';
+import type { PassByDir } from '../../@types/animation/PassByDir';
+import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningActive';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
@@ -130,6 +134,42 @@ export const selectShowDiskRadiusRing = (state: RootState): boolean =>
 
 export const selectDisabledPasses = (state: RootState): Record<string, boolean> =>
   selectSettings(state).debug.disabledPasses;
+
+export const selectClipPathInspectId = (state: RootState): ClipId | null =>
+  selectSettings(state).debug.clipPathInspect.clipId;
+
+export const selectClipPathScrub = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.scrub01;
+
+export const selectClipPathAlign = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.align;
+
+export const selectClipPathRampSec = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.rampSec;
+
+export const selectClipPathLinger = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.linger;
+
+export const selectClipPathLingerSec = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.lingerSec;
+
+export const selectClipPathSpline = (state: RootState): SplineMode =>
+  selectSettings(state).debug.clipPathInspect.spline;
+
+export const selectClipPathTurnDelay = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.turnDelay;
+
+export const selectClipPathLookAhead = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.lookAhead;
+
+export const selectClipPathPassByOffset = (state: RootState): number =>
+  selectSettings(state).debug.clipPathInspect.passByOffset;
+
+export const selectClipPathPassByDir = (state: RootState): PassByDir =>
+  selectSettings(state).debug.clipPathInspect.passByDir;
+
+export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
+  selectSettings(state).debug.clipPathInspect.active;
 
 // --- structures cluster -------------------------------------------------------
 

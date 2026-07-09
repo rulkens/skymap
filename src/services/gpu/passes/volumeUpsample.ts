@@ -3,15 +3,15 @@
  * half-resolution scalar-volume offscreen target and additively blends
  * the result into the HDR target.
  *
- * ### Why a dedicated pass rather than a method on PostProcess
+ * ### Why a dedicated pass rather than part of the tone-map composite
  *
  * The upsample pass is conceptually independent of tone-mapping — it
- * runs INSIDE the HDR mega-pass (as one entry in HDR_PASSES), while
- * tone-map runs AFTER the HDR mega-pass against the swap chain.  Their
- * blend semantics and target attachments differ, and folding them into
- * one factory would force the consumer to thread two unrelated
- * descriptors through one call.  Keeping them as siblings under
- * `services/gpu/passes/` keeps each factory single-purpose.
+ * runs INSIDE the HDR render step (the `volume-upsample` content layer),
+ * while tone-map runs AFTER it as the frame's `hdr→swap` composite.
+ * Their blend semantics and target attachments differ, and folding them
+ * into one factory would force the consumer to thread two unrelated
+ * descriptors through one call.  Keeping this a sibling factory under
+ * `services/gpu/passes/` keeps it single-purpose.
  *
  * ### Why additive blend
  *
@@ -93,7 +93,7 @@ export function createVolumeUpsample(
   return {
     draw(pass: GPURenderPassEncoder, halfResView: GPUTextureView): void {
       // Bind group rebuilt per draw because the half-res view is
-      // recreated on every postProcess.resize().  Caching across resize
+      // recreated on every renderTargets.resize().  Caching across resize
       // would bind a destroyed view.  One bind-group alloc per frame is
       // negligible compared to the fullscreen blit it carries.
       const bindGroup = device.createBindGroup({
@@ -112,8 +112,8 @@ export function createVolumeUpsample(
       // No GPUTexture / GPUBuffer to release here — sampler + pipeline +
       // bind-group-layout don't have explicit destroy methods (they're
       // GC'd when their last reference drops).  The destroy method
-      // exists for symmetry with PostProcess and to give the engine a
-      // single teardown call shape across all GPU resource owners.
+      // exists for symmetry with the other GPU resource owners, giving
+      // the engine a single teardown call shape.
     },
   };
 }

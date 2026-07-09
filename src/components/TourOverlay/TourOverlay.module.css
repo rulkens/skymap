@@ -21,61 +21,40 @@
 }
 
 /* ── Vignette ───────────────────────────────────────────────────────
- * One radial ellipse per anchor corner, reusing the splash's
- * bottom-left gradient and mirroring it for the right / top anchors.
- * Anchored under the caption so the text stays legible against the
- * live field without dimming the opposite half of the canvas. */
+ * One radial ellipse anchored under the caption so the text stays
+ * legible against the live field. The ellipse size is EXPLICIT — an
+ * unsized radial-gradient defaults to farthest-corner, which makes the
+ * stops span the whole screen diagonal and reads as a global dim (the
+ * scene visibly muted everywhere whenever a caption shows). Bounding
+ * it keeps the pool local to the caption's quadrant; the anchor point
+ * is the only thing that varies per position. */
 .vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  background: radial-gradient(
+    ellipse 58% 52% at var(--vignette-at),
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.5) 30%,
+    rgba(0, 0, 0, 0.14) 60%,
+    transparent 82%
+  );
 }
 .vignetteBottomLeft {
-  background: radial-gradient(
-    ellipse at 16% 88%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 26%,
-    rgba(0, 0, 0, 0.16) 48%,
-    transparent 66%
-  );
+  --vignette-at: 16% 88%;
 }
 .vignetteBottomRight {
-  background: radial-gradient(
-    ellipse at 84% 88%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 26%,
-    rgba(0, 0, 0, 0.16) 48%,
-    transparent 66%
-  );
+  --vignette-at: 84% 88%;
 }
 .vignetteTopLeft {
-  background: radial-gradient(
-    ellipse at 16% 12%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 26%,
-    rgba(0, 0, 0, 0.16) 48%,
-    transparent 66%
-  );
+  --vignette-at: 16% 12%;
 }
 .vignetteTopRight {
-  background: radial-gradient(
-    ellipse at 84% 12%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 26%,
-    rgba(0, 0, 0, 0.16) 48%,
-    transparent 66%
-  );
+  --vignette-at: 84% 12%;
 }
-/* top-center / bottom-... centred variants share a centred-top ellipse;
- * bottom-center is not an anchor (the nav owns that slot). */
+/* bottom-center is not an anchor (the nav owns that slot). */
 .vignetteTopCenter {
-  background: radial-gradient(
-    ellipse at 50% 12%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 26%,
-    rgba(0, 0, 0, 0.16) 48%,
-    transparent 66%
-  );
+  --vignette-at: 50% 12%;
 }
 
 /* ── Caption block ──────────────────────────────────────────────────
@@ -113,6 +92,18 @@
   right: 44px;
   align-items: flex-end;
   text-align: right;
+}
+
+/* ── Cinema (no-chrome) presentation ────────────────────────────────
+ * .captionBottom's 74px offset is NAV CLEARANCE: the transport cluster
+ * sits at bottom: 20px in a ~40px box, so bottom-anchored captions must
+ * float above it. Without chrome the cluster is unmounted and that
+ * clearance reads as a dead band along the bottom of the film frame —
+ * so bottom anchors drop to the same 44px inset the left/right anchors
+ * use, giving the frame symmetric margins. Top anchors keep 74px: that
+ * offset was never about the nav. */
+.captionNoChrome.captionBottom {
+  bottom: 44px;
 }
 
 /* ── Staggered fade-up reveal (splash register) ─────────────────────
@@ -278,12 +269,19 @@
 
 /* Stop button — a circular sibling to the pause ring, sitting next to it.
  * The square StopIcon replaces the former hairline ✕, and the circle border
- * echoes the dwell ring's track so the two media controls read as a pair. */
+ * echoes the dwell ring's track so the two media controls read as a pair.
+ * 36px, not the pause button's 40: the dwell ring's stroke sits at r=17
+ * INSIDE its 40px box (outer edge ≈ 36px), while this border draws at the
+ * element edge — equal boxes made the stop circle read visibly larger.
+ * The negative margin pulls it toward the pause ring so the pair sits
+ * tighter than the cluster's 22px gap (which also over-reads here because
+ * of the ring's inset). */
 .stopWrap {
   pointer-events: auto;
   display: inline-flex;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
+  margin-left: -10px;
   align-items: center;
   justify-content: center;
   background: none;
@@ -397,6 +395,10 @@
   }
   .captionBottom {
     bottom: 72px;
+  }
+  /* Same nav-clearance drop as desktop, to the mobile 24px side inset. */
+  .captionNoChrome.captionBottom {
+    bottom: 24px;
   }
   .captionTop {
     top: 56px;

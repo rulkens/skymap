@@ -46,9 +46,23 @@ import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Space } from '../../../@types/animation/Space';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
+import type { VisibilityLayerArg } from '../../../@types/animation/VisibilityLayerArg';
+import type { ScopedVisibilityArg } from '../../../@types/animation/ScopedVisibilityArg';
+import { expandVisibilityLayers } from '../../../utils/animation/expandVisibilityLayers';
+import { splitVisibilityArgs } from '../../../utils/animation/splitVisibilityArgs';
 import type { SettingsAction } from '../../../@types/animation/SettingsAction';
+import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
+import type { SplineConfig } from '../../../@types/animation/SplineConfig';
+import type { PassByConfig } from '../../../@types/animation/PassByConfig';
 import { CHANNEL_SPACE } from './channelSpace';
+import {
+  DEFAULT_ALIGN_SEC,
+  DEFAULT_RAMP_SEC,
+  DEFAULT_LINGER,
+  DEFAULT_LINGER_SEC,
+  DEFAULT_SPLINE_CONFIG,
+  DEFAULT_PASS_BY_CONFIG,
+} from './pathDefaults';
 
 // ---------------------------------------------------------------------------
 // Camera-action helpers
@@ -129,20 +143,34 @@ export function moveTargetId(
 }
 
 /**
- * dollyToId — zoom the camera to the distance of the structure or galaxy
- * identified by `id`, over `over` seconds.
+ * dollyToId — zoom the camera to the framing distance of the structure or
+ * galaxy identified by `id`, over `over` seconds.
  *
  * The UNRESOLVED form of `dollyTo`: `resolveClipFoci` rewrites it to a concrete
  * `dollyTo(mpc, over, ease)` before `compileClip` runs. Authors use this when
  * the target distance is not known statically but must be derived from the
  * catalog at play time via a durable `FocusId`.
+ *
+ * `opts.scale` multiplies the resolved framing distance — the knob for "land
+ * tighter (or looser) than the standard framing". Because it scales the
+ * DERIVED distance rather than replacing it, the shot stays proportional if
+ * the framing math or the subject's catalogued size ever changes; an absolute
+ * override is what the concrete `dollyTo(mpc, ...)` is for. Options are named
+ * (not positional) per the dwellDrift lesson — a bare number after the ease
+ * slot is unreadable at the call site.
  */
 export function dollyToId(
   id: FocusId,
   over: number,
-  ease?: Ease,
+  opts?: { ease?: Ease; scale?: number },
 ): FocusBoundEffect & { kind: 'dollyToId' } {
-  return { kind: 'dollyToId', id, over, ease: ease ?? 'inOut' };
+  return {
+    kind: 'dollyToId',
+    id,
+    over,
+    ease: opts?.ease ?? 'inOut',
+    ...(opts?.scale !== undefined ? { scale: opts.scale } : {}),
+  };
 }
 
 /**
@@ -305,17 +333,45 @@ export function fork(child: Effect): Effect & { kind: 'fork' } {
  *
  * Dispatches the same settings actions the UI does. The bridge in
  * `syncVisibilityFades` handles the translation to per-layer fade controllers.
+ *
+ * `layers` accepts three vocabularies in one list: atomic keys, authoring
+ * aggregates (`'labels'` → the three label layers), and `'family:scope'`
+ * scoped entries (`'survey:milliquas'`, `'structureRing:group'`,
+ * `'label:milkyWay'`) that address ONE item where the bare key would fan over
+ * all. `splitVisibilityArgs` resolves the mix at construction: aggregates
+ * flatten to atomic keys, scoped entries move to the effect's `scoped` field.
+ * Scoped fades ride the reactive settings→fade bridge, so `over` applies to
+ * the atomic layers only.
  */
-export function show(layers: VisibilityLayerKey[], over?: number): SceneEffect & { kind: 'show' } {
-  return { kind: 'show', layers, ...(over !== undefined ? { over } : {}) };
+export function show(
+  layers: (VisibilityLayerArg | ScopedVisibilityArg)[],
+  over?: number,
+): SceneEffect & { kind: 'show' } {
+  const split = splitVisibilityArgs(layers);
+  return {
+    kind: 'show',
+    layers: split.layers,
+    ...(split.scoped.length > 0 ? { scoped: split.scoped } : {}),
+    ...(over !== undefined ? { over } : {}),
+  };
 }
 
 /**
  * hide — set visibility INTENT for `layers` to hidden, fading out over `over`
- * seconds (`undefined` → default fade duration; `0` → instant).
+ * seconds (`undefined` → default fade duration; `0` → instant). Accepts
+ * aggregates (`'labels'`) and scoped entries (`'survey:milliquas'`) — see `show`.
  */
-export function hide(layers: VisibilityLayerKey[], over?: number): SceneEffect & { kind: 'hide' } {
-  return { kind: 'hide', layers, ...(over !== undefined ? { over } : {}) };
+export function hide(
+  layers: (VisibilityLayerArg | ScopedVisibilityArg)[],
+  over?: number,
+): SceneEffect & { kind: 'hide' } {
+  const split = splitVisibilityArgs(layers);
+  return {
+    kind: 'hide',
+    layers: split.layers,
+    ...(split.scoped.length > 0 ? { scoped: split.scoped } : {}),
+    ...(over !== undefined ? { over } : {}),
+  };
 }
 
 /**
@@ -328,11 +384,11 @@ export function hide(layers: VisibilityLayerKey[], over?: number): SceneEffect &
  * reveal" idioms.
  */
 export function fade(
-  layers: VisibilityLayerKey[],
+  layers: VisibilityLayerArg[],
   to: number,
   over: number,
 ): SceneEffect & { kind: 'fade' } {
-  return { kind: 'fade', layers, to, over };
+  return { kind: 'fade', layers: expandVisibilityLayers(layers), to, over };
 }
 
 /**
@@ -362,4 +418,159 @@ export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
  */
 export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' } {
   return { kind: 'focusId', id };
+}
+
+/**
+ * focusOnId — focus the id AND fly the camera to its framing: the clip-land
+ * equivalent of `requestFocus`. In interactive-land a focus change plants a
+ * runtime camera tween; inside a clip that path is fenced off (the clip is the
+ * only camera writer, and its duration must be static), so the fused verb has
+ * to be authored as explicit, timed writers. This composite is that authoring:
+ * the `focus` cue fires first so the selection/isolation dim rides along
+ * during the approach, then target + distance glide concurrently over `over`.
+ *
+ * Plain `focus(id)` remains the camera-free half — use it when the clip's own
+ * choreography (a flyPath, a spin) already owns the camera.
+ */
+export function focusOnId(id: FocusId, over: number, ease: Ease = 'inOut'): Effect {
+  return seq([focus(id), all([moveTargetId(id, over, ease), dollyToId(id, over, { ease })])]);
+}
+
+/**
+ * lookAtId — swing the view so the subject identified by `id` drifts to centre
+ * frame, WITHOUT flying to it. The "turn your head before you walk" verb.
+ *
+ * The orbit camera always faces its target, so it cannot literally rotate in
+ * place — "looking at" something else means orbiting the eye around the
+ * CURRENT target until the subject lines up centre-frame beyond it.
+ * `resolveClipFoci` computes that bearing (`orbitAnglesLookingAlong` of the
+ * subject's direction from the live orbit target) and rewrites this arm to an
+ * `aimAt` — concurrent yaw/pitch tweens. Target and distance are untouched.
+ *
+ * The bearing is measured from the orbit target AT RESOLVE TIME (clip start),
+ * so `lookAtId` is only correct as an opening move — anything that moves the
+ * target before it fires (a `moveTarget`, a `flyPath`) invalidates the
+ * precomputed angles. Establish the shot first, then fly (`focusOnId`).
+ *
+ * At the exact bearing the orbit target sits dead on the line to the subject —
+ * the two stack on the boresight. Compose a concurrent `strafeId` into the
+ * same `all` to break the stack: the strafe writes `target` while this writes
+ * yaw/pitch, so the single-writer rule holds.
+ */
+export function lookAtId(
+  id: FocusId,
+  over: number,
+  ease?: Ease,
+): FocusBoundEffect & { kind: 'lookAtId' } {
+  return { kind: 'lookAtId', id, over, ease: ease ?? 'inOut' };
+}
+
+/**
+ * strafeId — slide the camera rig sideways relative to the bearing toward the
+ * subject identified by `id`, WITHOUT turning. The lateral tracking move.
+ *
+ * In the orbit model the eye is derived from the target, so a lateral eye
+ * move IS a target move: `resolveClipFoci` rewrites this arm to a concrete
+ * `moveTarget` — the live orbit target displaced along the bearing's
+ * horizontal right axis (`normalize(forward × worldUp)`). Because it writes
+ * the `target` channel and `lookAtId` writes yaw/pitch, the two compose in
+ * one `all` — aim and sidestep concurrently.
+ *
+ * `byDeg` is ANGULAR, so it reads the same at every scale: the displacement
+ * is `tan(byDeg) × live camera distance`, which slides whatever sat at the
+ * old target ~`byDeg` degrees across the frame. Positive strafes the rig
+ * RIGHT (the old anchor drifts screen-left); negative strafes left. A distant
+ * subject barely moves (parallax shrinks with depth), so `all([lookAtId,
+ * strafeId])` reads as "aim at the subject with the old anchor pushed aside".
+ *
+ * Same resolve-time caveat as `lookAtId`: the axis and displacement are baked
+ * from the live pose at clip start — an opening move, not a mid-clip one.
+ */
+export function strafeId(
+  id: FocusId,
+  byDeg: number,
+  over: number,
+  ease?: Ease,
+): FocusBoundEffect & { kind: 'strafeId' } {
+  return { kind: 'strafeId', id, byDeg, over, ease: ease ?? 'inOut' };
+}
+
+// ---------------------------------------------------------------------------
+// Path helpers — waypoints + the flythrough that flies a spline through them
+// ---------------------------------------------------------------------------
+
+type WaypointOpts = { yaw?: number; pitch?: number; over?: number; linger?: number };
+
+function waypointExtras(opts?: WaypointOpts): WaypointOpts {
+  return {
+    ...(opts?.yaw !== undefined ? { yaw: opts.yaw } : {}),
+    ...(opts?.pitch !== undefined ? { pitch: opts.pitch } : {}),
+    ...(opts?.over !== undefined ? { over: opts.over } : {}),
+    ...(opts?.linger !== undefined ? { linger: opts.linger } : {}),
+  };
+}
+
+/**
+ * atPoint — a `flyPath` waypoint at a concrete world position and distance.
+ *
+ * `opts.over` pins the seconds of the leg leading into this waypoint (omit for
+ * the arc-length share of the path total — uniform speed). `opts.yaw`/`pitch`
+ * pin the approach angle (omit to interpolate it across the leg).
+ */
+export function atPoint(at: Vec3, distance: number, opts?: WaypointOpts): PathWaypoint {
+  return { at, distance, ...waypointExtras(opts) };
+}
+
+/**
+ * atFocus — a `flyPath` waypoint addressed by a durable `FocusId`. The UNRESOLVED
+ * form: `resolveClipFoci` rewrites it to an `atPoint`-shaped waypoint (the
+ * structure/galaxy's framed position + distance) before `compileClip` runs.
+ */
+export function atFocus(id: FocusId, opts?: WaypointOpts): PathWaypoint {
+  return { id, ...waypointExtras(opts) };
+}
+
+/**
+ * flyPath — fly a smooth spline through `waypoints` over `opts.over` total
+ * seconds. The default pacing comes from `pathDefaults`: `align`
+ * (`DEFAULT_ALIGN_SEC`) turns the camera into the path as it launches, and
+ * `rampSec` (`DEFAULT_RAMP_SEC`) gives a trapezoidal speed envelope — short
+ * accel, long constant-speed cruise, short decel — so a flythrough feels right
+ * with no per-clip tuning. The named `opts.ease` is the OPT-OUT: it shapes the
+ * envelope only when `rampSec` is 0, otherwise the trapezoid wins.
+ *
+ * Unlike chained `seq([moveTarget, …])` tweens (which corner at each point),
+ * the path is C1-smooth. It owns all four camera channels for its window, so
+ * don't also drive them with `set` / `dollyTo` / `moveTarget` in the same window.
+ */
+export function flyPath(
+  waypoints: PathWaypoint[],
+  opts: {
+    over: number;
+    ease?: Ease;
+    align?: number;
+    rampSec?: number;
+    linger?: number;
+    lingerSec?: number;
+    spline?: SplineConfig;
+    passBy?: PassByConfig;
+  },
+): Effect & { kind: 'flyPath' } {
+  return {
+    kind: 'flyPath',
+    waypoints,
+    over: opts.over,
+    ease: opts.ease ?? 'inOut',
+    align: opts.align ?? DEFAULT_ALIGN_SEC,
+    rampSec: opts.rampSec ?? DEFAULT_RAMP_SEC,
+    linger: opts.linger ?? DEFAULT_LINGER,
+    lingerSec: opts.lingerSec ?? DEFAULT_LINGER_SEC,
+    // No spline authored → the tuned cinematographic default (causal Hermite
+    // with the turn-delay / look-ahead from pathDefaults).
+    spline: opts.spline ?? DEFAULT_SPLINE_CONFIG,
+    // No passBy authored → the tuned default (swoop 4 radii off the bend). Safe
+    // to stamp on every flyPath: only galaxy waypoints (non-zero radius) are
+    // displaced; structures resolve to radius 0 and fly through-centre.
+    passBy: opts.passBy ?? DEFAULT_PASS_BY_CONFIG,
+  };
 }
