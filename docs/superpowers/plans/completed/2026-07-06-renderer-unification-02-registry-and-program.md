@@ -242,7 +242,7 @@ Extract it from the prepass gate logic (`encodeVolumePrepass.ts:57-97` — rende
 - [x] `passes.test.ts`: registry-shape tests updated (scalar-volume row added; the hdr group keeps its nine rows incl. volume-upsample); delete the `TIMED_SLOT_NAMES` describe.
 - [x] Implement the flip; migrate `encodeVolumes.test.ts` gate/arg assertions into `scalarVolumeLayer` tests; update `encodeFlowCompute` signature + test.
 - [x] `npm run typecheck && npm test` → green.
-- [ ] Ask the user for a quick dev-server sanity look (volumes on/off, labels, markers) before proceeding — the flip is the highest-risk commit.
+- [x] Ask the user for a quick dev-server sanity look (volumes on/off, labels, markers) before proceeding — the flip is the highest-risk commit. (User AFK at flip time — pooled into the final visual gate below, passed 2026-07-09.)
 - [x] Commit.
 
 ### Task 8 — delete the dead encoders
@@ -309,8 +309,8 @@ Three idioms coexist in `initGpu` today (verified against current code — the s
 - [x] Run the `entanglement-radar` skill over the full phase diff (`git diff main...HEAD`). Verify the spec's un-braided axes survived: slab/target/blend independent fields; step selection by `(target, slab)` data; exactly ONE `slabViewOf` call per render step (grep — it must appear only in `executeFrame.ts`); no array whose _membership_ implies blend/target semantics; no `switch`/predicate-chain on layer or step identity outside the executor's step-kind switch; no layer caching state. Fix any findings (delegate edits to a subagent per house convention).
 - [x] Sweep comments in touched files: didactic, timeless, no stale references to `HDR_PASSES`/`UI_PASSES`/`encodeHdr*` (grep the deleted names across `src/` including comments).
 - [x] `npm run typecheck && npm test` → full suite green. Prettier over touched files only.
-- [ ] **User visual gate on the dev server (do not self-certify):** default URL — orbit, toggle volumes/filaments/milky-way, select a galaxy (ring + labels + marker lines), focus a cluster; then `?gpuTimings` — same sweep + DebugPanel timing rows populate under the new slot names (`scalar-volume`, `volume→hdr`, per-layer hdr rows, `hdr→swap`, per-layer swap rows, `pick`). Frame must be visually identical to `main` in the default path.
-- [ ] Commit any final fixes; hand off for review/PR per `superpowers:finishing-a-development-branch`.
+- [x] **User visual gate on the dev server (do not self-certify):** default URL — orbit, toggle volumes/filaments/milky-way, select a galaxy (ring + labels + marker lines), focus a cluster; then `?gpuTimings` — same sweep + DebugPanel timing rows populate under the new slot names (`scalar-volume`, `volume→hdr`, per-layer hdr rows, `hdr→swap`, per-layer swap rows, `pick`). Frame must be visually identical to `main` in the default path. (Passed 2026-07-09.)
+- [x] Commit any final fixes; hand off for review/PR per `superpowers:finishing-a-development-branch`. (Final whole-branch review on the combined plans 02+03 branch: ready to merge; comment stragglers fixed in cb0e9317.)
 
 ---
 
