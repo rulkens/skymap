@@ -52,7 +52,6 @@
 
 import type { ParsedRecord } from './common';
 import type { SourceType } from '../../src/@types/data/SourceType';
-import { Source } from '../../src/data/sources';
 import { DESI_TRACER_CLASS } from '../../src/data/galaxyCatalog/sourceClass';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { DESI_TRACER_DISPLAY } from './desiTracerDisplay';
@@ -343,9 +342,13 @@ const NANOMAGGY_ZEROPOINT_MAG = 22.5;
  * for free. Column lookup is case-insensitive because BGS's flux
  * columns are lowercase on disk while everything else is uppercase.
  *
- * `source` stamps every emitted record's `source` field — the deep cone
- * defaults it to `Source.DesiDeep`, but each DESI patch (see `DESI_PATCHES`)
- * passes its own source so its rows bucket + dedup under the right code.
+ * `source` stamps every emitted record's `source` field and is required, not
+ * defaulted: each DESI patch (see `DESI_PATCHES`) must bucket + dedup its rows
+ * under its own code, and a default would be a silent-misattribution trap — a
+ * future caller that forgets the argument would have every row quietly
+ * stamped with whatever code the default names, discovered only by noticing
+ * the wrong patch's `.bin` grew rows, rather than at the call site where a
+ * missing required argument fails loudly.
  *
  * The optional `keep(raDeg, decDeg)` predicate is the patch's membership
  * filter: it runs immediately after decoding RA/DEC and before any other cell
@@ -370,7 +373,7 @@ const NANOMAGGY_ZEROPOINT_MAG = 22.5;
 export function parseDesiClustering(
   buf: ArrayBuffer,
   tracer: DesiTracer,
-  source: SourceType = Source.DesiDeep,
+  source: SourceType,
   keep?: (raDeg: number, decDeg: number) => boolean,
 ): { records: ParsedRecord[]; skipped: number } {
   const table = parseFitsBinTable(buf);

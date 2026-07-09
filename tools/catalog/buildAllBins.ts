@@ -405,7 +405,7 @@ function loadDesiPatch(patch: DesiPatch): ParsedRecord[] {
 
   if (!anyFilePresent) {
     process.stderr.write(
-      `  no DESI DR1 files present (run \`npm run fetch-desi\`) — ${patch.binName}.bin will be empty/skipped\n`,
+      `  [${patch.key}] no DESI DR1 files present (run \`npm run fetch-desi\`) — .bin will be empty/skipped\n`,
     );
   }
   return records;

@@ -248,7 +248,7 @@ describe('parseDesiClustering', () => {
   const QSO_ROW0_Z = 3.31353326666703;
 
   it('decodes row 0 of the QSO fixture to the pinned RA/DEC/Z', () => {
-    const { records, skipped } = parseDesiClustering(loadFixture(), 'QSO');
+    const { records, skipped } = parseDesiClustering(loadFixture(), 'QSO', Source.DesiDeep);
     expect(records.length).toBe(6);
     expect(skipped).toBe(0);
     const rec = records[0]!;
@@ -260,7 +260,7 @@ describe('parseDesiClustering', () => {
   });
 
   it('QSO fixture row 0 synthesizes magnitudes from the tracer table', () => {
-    const { records } = parseDesiClustering(loadFixture(), 'QSO');
+    const { records } = parseDesiClustering(loadFixture(), 'QSO', Source.DesiDeep);
     const rec = records[0]!;
     // Distance modulus at the pinned redshift: m = M + 5·log10(d_L/10pc),
     // with d_L = (1+z)·d_C and 1e5 the Mpc → 10 pc factor. The −25.5 /
@@ -276,7 +276,7 @@ describe('parseDesiClustering', () => {
 
   it('converts nanomaggy flux to magnitude for BGS: flux 100 → mag 17.5', () => {
     const buf = buildClusteringBuffer(BGS_COLUMNS, [[1n, 150.0, 30.0, 0.2, 100, 100, 100]]);
-    const { records, skipped } = parseDesiClustering(buf, 'BGS');
+    const { records, skipped } = parseDesiClustering(buf, 'BGS', Source.DesiDeep);
     expect(records.length).toBe(1);
     expect(skipped).toBe(0);
     const rec = records[0]!;
@@ -291,7 +291,7 @@ describe('parseDesiClustering', () => {
       [2n, 151.0, 31.0, 0.2, 100, 0, 100], // r flux zero → dropped
       [3n, 152.0, 32.0, 0.2, 100, 100, 100], // clean → kept
     ]);
-    const { records, skipped } = parseDesiClustering(buf, 'BGS');
+    const { records, skipped } = parseDesiClustering(buf, 'BGS', Source.DesiDeep);
     expect(records.length).toBe(1);
     expect(records[0]!.objID).toBe(3n);
     expect(skipped).toBe(2);
@@ -299,7 +299,7 @@ describe('parseDesiClustering', () => {
 
   it('keeps BGS rows with non-positive z-band flux, emitting magI = NaN', () => {
     const buf = buildClusteringBuffer(BGS_COLUMNS, [[1n, 150.0, 30.0, 0.2, 100, 100, -5]]);
-    const { records, skipped } = parseDesiClustering(buf, 'BGS');
+    const { records, skipped } = parseDesiClustering(buf, 'BGS', Source.DesiDeep);
     expect(records.length).toBe(1);
     expect(skipped).toBe(0);
     const rec = records[0]!;
@@ -311,12 +311,12 @@ describe('parseDesiClustering', () => {
   it('LRG and ELG rows synthesize magnitudes from their tracer-table entries', () => {
     const buf = buildClusteringBuffer(FLUXLESS_COLUMNS, [[7n, 233.0, 32.0, 0.7]]);
 
-    const lrg = parseDesiClustering(buf, 'LRG').records[0]!;
+    const lrg = parseDesiClustering(buf, 'LRG', Source.DesiDeep).records[0]!;
     expect(lrg.magR).toBeCloseTo(syntheticMagR('LRG', 0.7), 10);
     expect(lrg.magG - lrg.magR).toBeCloseTo(DESI_TRACER_DISPLAY.LRG.gMinusR, 10);
     expect(lrg.magI).toBeNaN();
 
-    const elg = parseDesiClustering(buf, 'ELG').records[0]!;
+    const elg = parseDesiClustering(buf, 'ELG', Source.DesiDeep).records[0]!;
     expect(elg.magR).toBeCloseTo(syntheticMagR('ELG', 0.7), 10);
     expect(elg.magG - elg.magR).toBeCloseTo(DESI_TRACER_DISPLAY.ELG.gMinusR, 10);
     expect(elg.magI).toBeNaN();
@@ -330,7 +330,7 @@ describe('parseDesiClustering', () => {
       [2n, 233.0, 32.0, 0],
       [3n, 233.0, 32.0, 0.7],
     ]);
-    const { records, skipped } = parseDesiClustering(buf, 'LRG');
+    const { records, skipped } = parseDesiClustering(buf, 'LRG', Source.DesiDeep);
     expect(records.length).toBe(1);
     expect(records[0]!.objID).toBe(3n);
     expect(skipped).toBe(2);
@@ -341,7 +341,7 @@ describe('parseDesiClustering', () => {
   });
 
   it('emits the GLADE no-orientation fallback shape: axisRatio null, positionAngleDeg null, diameterKpc null', () => {
-    const { records } = parseDesiClustering(loadFixture(), 'QSO');
+    const { records } = parseDesiClustering(loadFixture(), 'QSO', Source.DesiDeep);
     for (const rec of records) {
       expect(rec.axisRatio).toBeNull();
       expect(rec.positionAngleDeg).toBeNull();
@@ -363,7 +363,7 @@ describe('parseDesiClustering', () => {
   });
 
   it('carries TARGETID as objID (bigint) and the tracer classByte', () => {
-    const { records } = parseDesiClustering(loadFixture(), 'QSO');
+    const { records } = parseDesiClustering(loadFixture(), 'QSO', Source.DesiDeep);
     const rec = records[0]!;
     expect(rec.objID).toBeTypeOf('bigint');
     expect(rec.objID).toBe(QSO_ROW0_TARGETID);
@@ -376,6 +376,6 @@ describe('parseDesiClustering', () => {
     // A fluxless table parsed as BGS must fail loudly, naming the column —
     // the requireColumn idiom from parseSdssCsv.
     const buf = buildClusteringBuffer(FLUXLESS_COLUMNS, [[1n, 150.0, 30.0, 0.2]]);
-    expect(() => parseDesiClustering(buf, 'BGS')).toThrow(/flux_g_dered/);
+    expect(() => parseDesiClustering(buf, 'BGS', Source.DesiDeep)).toThrow(/flux_g_dered/);
   });
 });

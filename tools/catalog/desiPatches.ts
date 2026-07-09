@@ -29,10 +29,11 @@ import { makeDecBandFilter } from '../utils/math/makeDecBandFilter';
  *                    per-patch build logs and by the census diagnostic to
  *                    find the cone row.
  *   - `source`     — the `Source` this patch's rows are stamped with and
- *                    bucketed under; also picks the registry entry that
- *                    supplies the runtime `.bin` stem.
- *   - `binName`    — the `.bin` stem for build-log messages (the real
- *                    filename comes from `tierFilenameForSource`).
+ *                    bucketed under; also the single source of truth for the
+ *                    runtime `.bin` stem, via `SOURCE_REGISTRY[source].binBaseName`
+ *                    (`tierFilenameForSource`) — no separate `binName` field
+ *                    here, since a hand-copied duplicate of that name could
+ *                    drift from the registry with no test catching it.
  *   - `makeFilter` — builds the RA/Dec membership predicate. A factory (not
  *                    a bare predicate) so a geometry can hoist its trig /
  *                    precompute once, per `makeConeFilter`'s pattern.
@@ -40,7 +41,6 @@ import { makeDecBandFilter } from '../utils/math/makeDecBandFilter';
 export type DesiPatch = {
   key: string;
   source: SourceType;
-  binName: string;
   makeFilter: () => (raDeg: number, decDeg: number) => boolean;
 };
 
@@ -79,7 +79,6 @@ export const DESI_PATCHES: readonly DesiPatch[] = [
   {
     key: 'cone',
     source: Source.DesiDeep,
-    binName: 'desi-deep',
     makeFilter: () => makeConeFilter(DESI_CONE.raDeg, DESI_CONE.decDeg, DESI_CONE.radiusDeg),
   },
   // ── Wedge — a 2.5°-thick, 65°-long dec-band fan through Corona Borealis ─
@@ -104,7 +103,6 @@ export const DESI_PATCHES: readonly DesiPatch[] = [
   {
     key: 'wedge',
     source: Source.DesiWedge,
-    binName: 'desi-wedge',
     makeFilter: () => makeDecBandFilter(30.65, 1.25, 205, 270),
   },
 ];

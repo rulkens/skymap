@@ -4,9 +4,12 @@ import { Source } from '../../src/data/sources';
 
 /**
  * DESI_PATCHES shape — the build loops this table (one `.bin` per row) and
- * buckets crossMatch output by each patch's `source`, so a collision on any of
- * the three identity axes (key / source / binName) would silently merge or
- * overwrite two patches' outputs. These pin the axes are all distinct.
+ * buckets crossMatch output by each patch's `source`, so a collision on either
+ * of the two identity axes (key / source) would silently merge or overwrite
+ * two patches' outputs. `source` uniqueness already guarantees unique `.bin`
+ * stems too — the stem comes from `SOURCE_REGISTRY[source].binBaseName`, one
+ * registry entry per `Source` — so there is no separate binName axis to pin.
+ * These pin the axes are all distinct.
  */
 describe('DESI_PATCHES', () => {
   it('has unique keys', () => {
@@ -19,15 +22,10 @@ describe('DESI_PATCHES', () => {
     expect(new Set(sources).size).toBe(sources.length);
   });
 
-  it('has unique binNames', () => {
-    const binNames = DESI_PATCHES.map((p) => p.binName);
-    expect(new Set(binNames).size).toBe(binNames.length);
-  });
-
   it('ships the cone (DesiDeep) and wedge (DesiWedge) patches', () => {
     const bySource = new Map(DESI_PATCHES.map((p) => [p.source, p]));
-    expect(bySource.get(Source.DesiDeep)?.binName).toBe('desi-deep');
-    expect(bySource.get(Source.DesiWedge)?.binName).toBe('desi-wedge');
+    expect(bySource.has(Source.DesiDeep)).toBe(true);
+    expect(bySource.has(Source.DesiWedge)).toBe(true);
   });
 
   it("each row's makeFilter builds a callable predicate", () => {
