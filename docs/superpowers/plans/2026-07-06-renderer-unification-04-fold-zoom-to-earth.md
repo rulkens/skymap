@@ -144,12 +144,12 @@ Register in `CONTENT_LAYERS` after the swap group (registry position only affect
 
 Register directly after `debugSpheresLayer`.
 
-- [ ] Test (`passes.test.ts`): migration-table row; the blend-legality swap clause now covers six `over` rows.
-- [ ] Test (`foregroundLabelsLayer.test.ts`): `enabled respects the kiloparsec distance gate` — true at `cam.distance` 5e-4 with glyphs, false at 1e-3 and above, false with `glyphCount() === 0`, false with a null renderer.
-- [ ] Test: `draw threads the SlabView vp and viewport to the label renderer` (arg assertions per the plan-02 layer-test idiom).
-- [ ] Implement + register.
-- [ ] `npm run typecheck && npm test` → green (inert until Task 7 — the existing swap step is `(swap, COSMO)`, which selects nothing here by construction).
-- [ ] Commit the touched paths.
+- [x] Test (`passes.test.ts`): migration-table row; the blend-legality swap clause now covers six `over` rows.
+- [x] Test (`foregroundLabelsLayer.test.ts`): `enabled respects the kiloparsec distance gate` — true at `cam.distance` 5e-4 with glyphs, false at 1e-3 and above, false with `glyphCount() === 0`, false with a null renderer.
+- [x] Test: `draw threads the SlabView vp and viewport to the label renderer` (arg assertions per the plan-02 layer-test idiom).
+- [x] Implement + register.
+- [x] `npm run typecheck && npm test` → green (inert until Task 7 — the existing swap step is `(swap, COSMO)`, which selects nothing here by construction).
+- [x] Commit the touched paths.
 
 ### Task 6 — activate the NEAR0 slab: origin-relative f64 derivation
 
