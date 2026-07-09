@@ -157,12 +157,12 @@ Register directly after `debugSpheresLayer`.
 
 Swap the near row's provisional vp derivation for the branch's real one (plan-time decision 5): `computeForegroundViewProj({ eyeMpc: cam.position, targetMpc: cam.target, up: [0, 1, 0], renderOrigin: RENDER_ORIGIN_MPC, fovYRad: cam.fovYRad, aspect: cam.aspect, near, far })` with `near = cam.distance · FOREGROUND_NEAR_FRACTION` (1e-4) and `far = cam.distance · FOREGROUND_FAR_MULTIPLIER` (100). The two named constants move from the branch's (merged-away) `frameContext.ts:162-163` into `slabs.ts` — their ONE home — keeping their didactic block: the ratio brackets a 1-AU body through the full descent, near > 0 holds because `cam.distance > 0` by the orbit-controls clamp, and **the zoom-to-earth series' Plan 03** (`docs/superpowers/plans/2026-06-29-zoom-to-earth-03-lod-and-polish.md`) replaces both with an adaptive `foregroundFrustum(cam.distance)`. Delete the row's "provisional"/"layerless until PR #386" marker comments; the row comment now states the live facts: origin-relative f64 (`originRelative: true`, `precision: 'f64'` — unchanged fields, now true in practice), fixed up = world +Y (roll parity deferred with the zoom-to-earth series), and `camPos` note — `RENDER_ORIGIN_MPC` is the world origin today, so `ctx.drawCamPos` is already origin-relative; a future floating origin re-derives per-slab `camPos` in `slabViewOf`.
 
-- [ ] Test: `the near row's vp is the origin-relative computeForegroundViewProj product` — call the util directly in the test with the same camera inputs and assert `Float64Array` equality with `deriveSlabs(...)[0].vp` (pins the util as the derivation — an equal-but-reimplemented matrix would drift on the next util change).
-- [ ] Test: keep/adjust `slabViewOf(ctx, NEAR0) exposes the adaptive near/far slab row` (near = distance·1e-4, far = distance·100 — unchanged numbers).
-- [ ] Test: existing two-row/index-invariant/COSMO tests unchanged.
-- [ ] Implement; grep `FOREGROUND_NEAR_FRACTION` — exactly one definition site.
-- [ ] `npm run typecheck && npm test` → green.
-- [ ] Commit the touched paths.
+- [x] Test: `the near row's vp is the origin-relative computeForegroundViewProj product` — call the util directly in the test with the same camera inputs and assert `Float64Array` equality with `deriveSlabs(...)[0].vp` (pins the util as the derivation — an equal-but-reimplemented matrix would drift on the next util change).
+- [x] Test: keep/adjust `slabViewOf(ctx, NEAR0) exposes the adaptive near/far slab row` (near = distance·1e-4, far = distance·100 — unchanged numbers).
+- [x] Test: existing two-row/index-invariant/COSMO tests unchanged.
+- [x] Implement; grep `FOREGROUND_NEAR_FRACTION` — exactly one definition site.
+- [x] `npm run typecheck && npm test` → green.
+- [x] Commit the touched paths.
 
 ### Task 7 — the three FRAME tail steps
 
