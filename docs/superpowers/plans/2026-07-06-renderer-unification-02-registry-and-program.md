@@ -120,7 +120,7 @@ Migration-table rows for the five: `selection-ring`, `disk-radius-ring`, `marker
 - [x] Test `CONTENT_LAYERS blends are legal for their target` — hdr layers all `additive`, swap layers all `over` (the registry half of the target↔renderer-profile invariant; the renderer half lands in task 10).
 - [x] Convert the five files; delete `PassDeps.d.ts` + `Pass.d.ts`; slim `RenderFrameInput`/`RunFrameDeps`; update call sites + fixtures.
 - [x] `npm run typecheck && npm test` → green.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5 — `frameProgram.ts`: the FRAME data + derived timing slots
 
