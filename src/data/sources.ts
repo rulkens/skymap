@@ -1,7 +1,7 @@
 /**
  * `Source` enum + `SOURCE_REGISTRY`.
  *
- * The single registry of every data source skymap loads. Six kinds,
+ * The single registry of every data source skymap loads. Seven kinds,
  * discriminated by `type`:
  *
  *   'galaxyCatalog' — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
@@ -20,9 +20,11 @@
  *   'flow'          — CF4++ peculiar-velocity field overlay (single
  *                     flowfield.scfd cube). No per-record identity; carries
  *                     its own look/motion defaults.
+ *   'earth'         — near-field true-scale body (Earth). Seeded record drawn
+ *                     by its own content-layer; not persisted, not pickable.
  *
  * Only `'galaxyCatalog'` and `'structure'` codes are persisted to disk / packed into
- * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, and `'flow'` codes exist
+ * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, and `'earth'` codes exist
  * solely so every data source has one place to look. The visibility-bitmask helpers
  * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
  * galaxy catalog codes only.
@@ -61,6 +63,7 @@ import { FLOW_ENTRY } from './sources/flow';
 import { DESI_DEEP_ENTRY } from './sources/desiDeep';
 import { DESI_WEDGE_ENTRY } from './sources/desiWedge';
 import { DESI_SGW_ENTRY } from './sources/desiSgw';
+import { EARTH_ENTRY } from './sources/earth';
 
 export { Source } from './source';
 
@@ -114,6 +117,7 @@ export const SOURCE_REGISTRY = {
   [Source.DesiDeep]: DESI_DEEP_ENTRY,
   [Source.DesiWedge]: DESI_WEDGE_ENTRY,
   [Source.DesiSgw]: DESI_SGW_ENTRY,
+  [Source.Earth]: EARTH_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────

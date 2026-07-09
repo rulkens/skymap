@@ -238,3 +238,35 @@ describe('Source enum — overlay codes (milkyWay/flow)', () => {
     expect(DEFAULT_FLOW.boundaryFadeWidth).toBe(entry.boundaryFadeWidth);
   });
 });
+
+describe('Source enum — body codes (earth)', () => {
+  it('appends Earth=23 to the enum', () => {
+    // Registry-key-only code (not persisted, not pickable); appended after the
+    // DESI patches — 21/22 are left free for the Phase-3 Star/Planet codes.
+    // Never renumber the codes below it.
+    expect(Source.Earth).toBe(23);
+  });
+
+  it('earth row is a non-label, non-marker body source', () => {
+    // Earth is a near-field body, not a galaxy catalog or a structure ring.
+    // Its caption ships through the foreground-labels layer, bypassing the
+    // COSMO label/marker systems — so both capability flags are false.
+    const entry = SOURCE_REGISTRY[Source.Earth];
+    expect(entry.type).toBe('earth');
+    expect(entry.id).toBe('earth');
+    expect(entry.bearsLabel).toBe(false);
+    expect(entry.bearsMarker).toBe(false);
+  });
+
+  it('keeps Earth OUT of GALAXY_CATALOG_SOURCES', () => {
+    // Bodies render through their own content-layer, not the points
+    // pipeline's visibility bitmask.
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.Earth);
+  });
+
+  it('keeps the Earth bit clear of ALL_VISIBLE_MASK', () => {
+    // ALL_VISIBLE_MASK is the OR of default-visible galaxy-catalog rows only,
+    // so a body code never lands in it.
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Earth)).toBe(false);
+  });
+});

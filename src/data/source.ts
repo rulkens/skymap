@@ -134,4 +134,13 @@ export const Source = {
    * its own `.bin`, appended at 20 — never renumber the codes below it.
    */
   DesiSgw: 20,
+  /**
+   * Textured true-scale Earth in the near-field descent. Registry-key-only
+   * code (not persisted, not pickable); the entry is a body row that renders
+   * through its own content-layer, not the galaxy catalog points pipeline.
+   * Appended at 23 — codes 21/22 are deliberately reserved for the Phase-3
+   * `Star`/`Planet` body codes a later task appends, so the numbering stays
+   * contiguous with those siblings. Never renumber the codes below it.
+   */
+  Earth: 23,
 } as const;

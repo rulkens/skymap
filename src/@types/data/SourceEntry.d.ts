@@ -4,12 +4,13 @@ import type { FilamentSourceEntry } from './filament/FilamentSourceEntry';
 import type { VolumeSourceEntry } from './volume/VolumeSourceEntry';
 import type { MilkyWaySourceEntry } from './milkyWay/MilkyWaySourceEntry';
 import type { FlowSourceEntry } from './flow/FlowSourceEntry';
+import type { EarthSourceEntry } from './body/EarthSourceEntry';
 
 /**
  * One row of the SOURCE_REGISTRY — discriminated by the `type` field
- * across six kinds: per-point galaxy catalogs, marker-ring structures, the
- * filament skeleton, scalar-volume cubes, the Milky-Way disk overlay, and
- * the peculiar-velocity flow field.
+ * across seven kinds: per-point galaxy catalogs, marker-ring structures, the
+ * filament skeleton, scalar-volume cubes, the Milky-Way disk overlay, the
+ * peculiar-velocity flow field, and near-field bodies (Earth).
  */
 export type SourceEntry =
   | GalaxyCatalogSourceEntry
@@ -17,4 +18,5 @@ export type SourceEntry =
   | FilamentSourceEntry
   | VolumeSourceEntry
   | MilkyWaySourceEntry
-  | FlowSourceEntry;
+  | FlowSourceEntry
+  | EarthSourceEntry;
