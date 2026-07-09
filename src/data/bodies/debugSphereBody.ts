@@ -17,8 +17,9 @@
  *     foreground-pass smoke test. At 1 AU the Sun subtends ~0.27° and Earth
  *     ~0.005°, so the Sun resolves first as you zoom in.
  *
- * Earth's radius (6371 km × KM_TO_MPC ≈ 2.07e-16 Mpc) sits far below
- * MIN_DISTANCE_MPC (1e-17 Mpc), so the camera can sit just off the surface.
+ * Earth's radius (6371 km × KM_TO_MPC ≈ 2.07e-16 Mpc) sits far below the
+ * `?deepZoom` floor (1e-17 Mpc), so under that gate the camera can sit just
+ * off the surface.
  */
 
 import { SCALE_UNITS } from '../scaleUnits';

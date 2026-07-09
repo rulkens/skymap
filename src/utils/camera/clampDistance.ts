@@ -7,22 +7,49 @@
  * drift between call sites.
  */
 
+import { hasUrlGate } from '../url/hasUrlGate';
+
 // ─── Distance limits ──────────────────────────────────────────────────────────
+
+/**
+ * The releasable wheel-zoom floor: 0.05 Mpc ≈ 150 kpc.  This is the default
+ * envelope a production page-load runs with.  It sits far below the
+ * galaxy-focus tween's minimum end distance (0.15 Mpc) so focus tweens are
+ * never ratcheted outward, yet it stops the descent before the debug
+ * foreground bodies (Sun/Earth stand-ins) grow past sub-pixel — so nothing
+ * unreleasable is reachable without the gate.
+ */
+const RELEASABLE_MIN_DISTANCE_MPC = 0.05;
+
+/**
+ * The `?deepZoom` wheel-zoom floor: 1e-17 Mpc ≈ Earth-surface scale (Earth's
+ * radius 6371 km ≈ 2.06e-17 Mpc).  Close enough that the orbit camera can sit
+ * just off Earth's surface during the "zoom to Earth" foreground descent.
+ */
+const DEEP_ZOOM_MIN_DISTANCE_MPC = 1e-17;
 
 /**
  * Minimum allowed `cam.distance` in Mpc.
  *
- * 1e-17 Mpc ≈ a few hundred km — close enough that the orbit camera can
- * sit just off Earth's surface (radius 6371 km ≈ 2.06e-17 Mpc) during the
- * "zoom to Earth" foreground pass.  The floor sits far below the
- * galaxy-focus tween's minimum end distance (0.15 Mpc,
- * `galaxyFocusDistance.ts: MIN_FOCUS_DISTANCE_MPC`) so `clampDistance`
- * never ratchets a focus-on tween back outward — `clampDistance(0.15)`
- * returns 0.15 unchanged.  The renderer's near plane and the foreground
- * viewport handle depth precision at sub-kpc scales; this constant is only
- * the wheel-zoom floor, not a depth-buffer guarantee.
+ * The default `0.05` Mpc is the releasable envelope; `?deepZoom` lowers it to
+ * `1e-17` Mpc for the zoom-to-Earth descent past the Milky Way.  Without the
+ * gate the debug foreground bodies stay sub-pixel and unreachable, so nothing
+ * unreleasable is shown.
+ *
+ * The floor is read once at module load — a page-load constant, like the
+ * project's other URL gates, so the value can't change without a reload.
+ *
+ * Both floors sit below the galaxy-focus tween's minimum end distance
+ * (0.15 Mpc, `galaxyFocusDistance.ts: MIN_FOCUS_DISTANCE_MPC`), so
+ * `clampDistance` never ratchets a focus-on tween back outward —
+ * `clampDistance(0.15)` returns 0.15 unchanged under either floor.  The
+ * renderer's near plane and the foreground viewport handle depth precision at
+ * sub-kpc scales; this constant is only the wheel-zoom floor, not a
+ * depth-buffer guarantee.
  */
-export const MIN_DISTANCE_MPC = 1e-17;
+export const MIN_DISTANCE_MPC = hasUrlGate('deepZoom')
+  ? DEEP_ZOOM_MIN_DISTANCE_MPC
+  : RELEASABLE_MIN_DISTANCE_MPC;
 
 /**
  * Maximum allowed `cam.distance` in Mpc.
