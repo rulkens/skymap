@@ -1,6 +1,6 @@
 # DESI Deep Cone Data Source Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Each implementer subagent must be dispatched `run_in_background: true` per project convention; the main thread runs `npm test` / `npm run typecheck` and commits. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Each implementer subagent must be dispatched `run_in_background: true` per project convention; the main thread runs `npm test` / `npm run typecheck` and commits. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Spec:** `docs/superpowers/specs/2026-07-07-desi-deep-cone-design.md` — **plan 1 of 2 (data source only)**. The fly-through clip is plan 2 and is explicitly out of scope here.
 **Research ground truth:** `docs/research/2026-06-05-desi-dr1-as-a-data-source.md` (verified FITS layout, column set, server behaviour).
@@ -60,10 +60,10 @@
 
 **Steps**
 
-- [ ] Extend `tests/tools/utils/io/rawDataRegistry.test.ts` (same shape as the mcxc/mscc block): `desi.qso resolves to an absolute path ending with the registered relative path`; `the four desi .fits entries are gitignored (fetcher-produced)`; `desi.readme is committed`; `desi.sha256 is committed`. Run — the key tests fail to compile (unknown keys).
-- [ ] Add the six registry entries + write `data/raw/desi/README.md`.
-- [ ] `npm test -- rawDataRegistry` → green; `npm run typecheck` → clean.
-- [ ] Commit: `git add tools/utils/io/rawDataRegistry.ts data/raw/desi/README.md tests/tools/utils/io/rawDataRegistry.test.ts`
+- [x] Extend `tests/tools/utils/io/rawDataRegistry.test.ts` (same shape as the mcxc/mscc block): `desi.qso resolves to an absolute path ending with the registered relative path`; `the four desi .fits entries are gitignored (fetcher-produced)`; `desi.readme is committed`; `desi.sha256 is committed`. Run — the key tests fail to compile (unknown keys).
+- [x] Add the six registry entries + write `data/raw/desi/README.md`.
+- [x] `npm test -- rawDataRegistry` → green; `npm run typecheck` → clean.
+- [x] Commit: `git add tools/utils/io/rawDataRegistry.ts data/raw/desi/README.md tests/tools/utils/io/rawDataRegistry.test.ts`
 
 ---
 
@@ -117,11 +117,11 @@ Do **not** touch the engine-wiring / SettingsPanel lists yet (`galaxyCatalogSour
 
 **Steps**
 
-- [ ] Add the tierTargets/mask/id assertions above (failing).
-- [ ] Append `DesiDeep: 18` to `source.ts`; create `desiDeep.ts`; register in `sources.ts` (registry key + `GALAXY_CATALOG_SOURCES`).
-- [ ] `npm run typecheck` — walk every red site (galaxyType switch, exhaustive test Records); fix each by adding the `desiDeep` arm/key, nothing else.
-- [ ] `npm test` → green (including the previously-failing new assertions and the auto-derived boot-items fixtures).
-- [ ] Commit: `git add src/data/source.ts src/data/sources/desiDeep.ts src/data/sources.ts src/utils/math/galaxyType.ts tests/…` (list each touched test file).
+- [x] Add the tierTargets/mask/id assertions above (failing).
+- [x] Append `DesiDeep: 18` to `source.ts`; create `desiDeep.ts`; register in `sources.ts` (registry key + `GALAXY_CATALOG_SOURCES`).
+- [x] `npm run typecheck` — walk every red site (galaxyType switch, exhaustive test Records); fix each by adding the `desiDeep` arm/key, nothing else.
+- [x] `npm test` → green (including the previously-failing new assertions and the auto-derived boot-items fixtures).
+- [x] Commit: `git add src/data/source.ts src/data/sources/desiDeep.ts src/data/sources.ts src/utils/math/galaxyType.ts tests/…` (list each touched test file).
 
 ---
 
@@ -169,10 +169,10 @@ export function parseFitsBinTable(buf: ArrayBuffer): FitsBinTable;
 
 **Steps**
 
-- [ ] Generate + commit the fixture (procedure above); pin row-0 literals.
-- [ ] Write the failing tests; run.
-- [ ] Implement `parseFitsBinTable`; run → green; `npm run typecheck`.
-- [ ] Commit: `git add tools/parsers/desiFits.ts tests/tools/parsers/desiFits.test.ts tests/fixtures/desi/qso_ngc_head6.fits`
+- [x] Generate + commit the fixture (procedure above); pin row-0 literals.
+- [x] Write the failing tests; run.
+- [x] Implement `parseFitsBinTable`; run → green; `npm run typecheck`.
+- [x] Commit: `git add tools/parsers/desiFits.ts tests/tools/parsers/desiFits.test.ts tests/fixtures/desi/qso_ngc_head6.fits`
 
 ---
 
@@ -237,8 +237,8 @@ export const DESI_TRACER_DISPLAY: Record<'LRG' | 'ELG' | 'QSO', { absMagR: numbe
 
 **Steps**
 
-- [ ] Failing tests → run → implement → run → green; `npm run typecheck`.
-- [ ] Commit: `git add tools/parsers/desiFits.ts src/data/galaxyCatalog/sourceClass.ts tests/tools/parsers/desiFits.test.ts tests/data/galaxyCatalog/sourceClass.test.ts`
+- [x] Failing tests → run → implement → run → green; `npm run typecheck`.
+- [x] Commit: `git add tools/parsers/desiFits.ts src/data/galaxyCatalog/sourceClass.ts tests/tools/parsers/desiFits.test.ts tests/data/galaxyCatalog/sourceClass.test.ts`
 
 ---
 
@@ -271,8 +271,8 @@ Factory shape so the trig is hoisted: precompute the center **unit vector** and 
 
 **Steps**
 
-- [ ] Failing tests → run → implement → run → green; `npm run typecheck`.
-- [ ] Commit: `git add tools/utils/math/makeConeFilter.ts tests/tools/utils/math/makeConeFilter.test.ts`
+- [x] Failing tests → run → implement → run → green; `npm run typecheck`.
+- [x] Commit: `git add tools/utils/math/makeConeFilter.ts tests/tools/utils/math/makeConeFilter.test.ts`
 
 ---
 
@@ -328,9 +328,9 @@ export function downloadChunked(opts: {
 
 **Steps**
 
-- [ ] Failing tests → run → implement → run → green; `npm run typecheck`.
-- [ ] Add the npm script.
-- [ ] Commit: `git add tools/fetch/fetchDesi.ts tests/tools/fetch/fetchDesi.test.ts package.json`
+- [x] Failing tests → run → implement → run → green; `npm run typecheck`.
+- [x] Add the npm script.
+- [x] Commit: `git add tools/fetch/fetchDesi.ts tests/tools/fetch/fetchDesi.test.ts package.json`
 
 ---
 
@@ -365,9 +365,9 @@ export const DESI_CONE = { raDeg: 231.85, decDeg: 30.65, radiusDeg: 2.5 } as con
 
 **Steps**
 
-- [ ] Failing tests → run → implement (`desiCone.ts`, crossMatch change, `loadDesi`, census) → run → green; `npm run typecheck`.
-- [ ] Smoke: `npm run build-all` on a checkout **without** the DESI files → every existing bin still builds, DESI logged as skipped.
-- [ ] Commit: `git add tools/catalog/desiCone.ts tools/catalog/crossMatch.ts tools/catalog/buildAllBins.ts tools/catalog/desiConeCensus.ts package.json tests/crossMatch.test.ts tests/catalog/buildAllBins.desiDeep.test.ts`
+- [x] Failing tests → run → implement (`desiCone.ts`, crossMatch change, `loadDesi`, census) → run → green; `npm run typecheck`.
+- [x] Smoke: `npm run build-all` on a checkout **without** the DESI files → every existing bin still builds, DESI logged as skipped.
+- [x] Commit: `git add tools/catalog/desiCone.ts tools/catalog/crossMatch.ts tools/catalog/buildAllBins.ts tools/catalog/desiConeCensus.ts package.json tests/crossMatch.test.ts tests/catalog/buildAllBins.desiDeep.test.ts`
 
 ---
 
@@ -383,9 +383,9 @@ The `/add-data-source` skill's Path-A surface, enumerated explicitly — impleme
 
 **Steps**
 
-- [ ] Update the wiring tests to the 7-source shape (failing) → run.
-- [ ] Add the registry row + `pointRow`; fix comments → run → green; `npm run typecheck`.
-- [ ] Commit: `git add src/services/engine/wiring/galaxyCatalogSourceRegistry.ts src/services/engine/wiring/assetWiring.ts src/services/engine/wiring/buildSlotsFromRegistry.ts tests/services/engine/wiring/…`
+- [x] Update the wiring tests to the 7-source shape (failing) → run.
+- [x] Add the registry row + `pointRow`; fix comments → run → green; `npm run typecheck`.
+- [x] Commit: `git add src/services/engine/wiring/galaxyCatalogSourceRegistry.ts src/services/engine/wiring/assetWiring.ts src/services/engine/wiring/buildSlotsFromRegistry.ts tests/services/engine/wiring/…`
 
 ---
 
@@ -406,8 +406,8 @@ The `/add-data-source` skill's Path-A surface, enumerated explicitly — impleme
 
 **Steps**
 
-- [ ] Failing tests → run → implement → run → green; `npm run typecheck`.
-- [ ] Commit: `git add src/components/SettingsPanel/GalaxiesSection.tsx src/services/engine/helpers/buildGalaxyInfo.ts src/components/Splash/Splash.tsx src/@types/data/SourceEntryBase.d.ts tests/…`
+- [x] Failing tests → run → implement → run → green; `npm run typecheck`.
+- [x] Commit: `git add src/components/SettingsPanel/GalaxiesSection.tsx src/services/engine/helpers/buildGalaxyInfo.ts src/components/Splash/Splash.tsx src/@types/data/SourceEntryBase.d.ts tests/…`
 
 ---
 
@@ -424,9 +424,9 @@ The `/add-data-source` skill's Path-A surface, enumerated explicitly — impleme
 
 **Steps**
 
-- [ ] Add the two failing ALLOW assertions → run → add the ALLOW line → run → green.
-- [ ] CLAUDE.md + BACKLOG edits.
-- [ ] Commit: `git add tools/deploy/syncR2.ts tests/tools/deploy/syncR2.test.ts CLAUDE.md docs/BACKLOG.md`
+- [x] Add the two failing ALLOW assertions → run → add the ALLOW line → run → green.
+- [x] CLAUDE.md + BACKLOG edits.
+- [x] Commit: `git add tools/deploy/syncR2.ts tests/tools/deploy/syncR2.test.ts CLAUDE.md docs/BACKLOG.md`
 
 ---
 
@@ -436,18 +436,18 @@ The ~820 MB fetch and the real build are **human/main-thread steps, not CI and n
 
 **Steps**
 
-- [ ] `npm run typecheck` (both tsconfigs) → clean; `npm test` → whole suite green.
-- [ ] **Human:** `npm run fetch-desi` (~820 MB, four NGC files; resumable — an interrupted run continues). On completion, commit the fetcher-written `data/raw/desi/desi_dr1_lss.sha256` (it's a committed registry entry that can only exist post-fetch).
-- [ ] **Human:** `npm run desi-cone-census` — record the exact per-tracer counts at the configured center (spec estimates: BGS ~14.5k, LRG ~15.1k, ELG ~21.3k, QSO ~5.5k, ±20-40%). If a candidate ≤2° away is clearly better in BGS AND LRG, update `tools/catalog/desiCone.ts` (only file) and note it in the commit message.
-- [ ] **Human:** `npm run build-all` — confirm the log shows per-tracer parse counts, the crossMatch dedup line for DESI, and `wrote N points to …/desi-deep.bin` with N ≈ census total minus dedup (~50-56k ⇒ ~3.5 MB at 64 B/galaxy).
-- [ ] **Visual gate (dev server is already running — ask the user to look):** DESI Deep Field appears in Settings with a count; toggling it on shows the dense low-z CrB spike with visible fingers of god (radial spikes aimed at the origin) and the thinning ELG/QSO tail; the hard cone edge reads as a drill core; flying out to ~7 Gpc keeps camera + scale bar sane; clicking a cone point opens an InfoCard with the DESI J name, tracer population, and g/r/z band labels; toggling off removes the cone.
-- [ ] **Human (main checkout only, per `project_worktree_data_isolation`):** `npm run sync-r2-secure` — confirm `desi-deep.bin` uploads + purges.
-- [ ] Run the entanglement-radar lens over the full diff — expected clean points: one cone-constant file, one tracer-class source of truth, no mirrored source lists beyond the known pre-existing hand-maintained sites this plan already edits.
-- [ ] DoD checklist:
-  - [ ] All tasks committed; suite green; no stray TODOs in the diff.
-  - [ ] `desi-deep.bin` built from real data and visually confirmed.
-  - [ ] `data/raw/desi/README.md` + `.sha256` committed; raw `.fits` files correctly gitignored.
-  - [ ] `buildFilaments` still ingests only 2MRS+GLADE (the spec's DisPerSE exclusion) — verify DESI cannot reach the density field via any "all sources" enumeration.
-  - [ ] R2 synced; CLAUDE.md variant list + BACKLOG cross-reference updated.
-  - [ ] The clip (plan 2) is NOT part of this plan's DoD.
-- [ ] `/feature-done` audit → relocate this plan + the spec to `plans/completed/` + `specs/completed/` (the spec moves when plan 2 ships if the audit prefers keeping it live — note the two-plan split to the auditor).
+- [x] `npm run typecheck` (both tsconfigs) → clean; `npm test` → whole suite green.
+- [x] **Human:** `npm run fetch-desi` (~820 MB, four NGC files; resumable — an interrupted run continues). On completion, commit the fetcher-written `data/raw/desi/desi_dr1_lss.sha256` (it's a committed registry entry that can only exist post-fetch).
+- [x] **Human:** `npm run desi-cone-census` — record the exact per-tracer counts at the configured center (spec estimates: BGS ~14.5k, LRG ~15.1k, ELG ~21.3k, QSO ~5.5k, ±20-40%). If a candidate ≤2° away is clearly better in BGS AND LRG, update `tools/catalog/desiCone.ts` (only file) and note it in the commit message.
+- [x] **Human:** `npm run build-all` — confirm the log shows per-tracer parse counts, the crossMatch dedup line for DESI, and `wrote N points to …/desi-deep.bin` with N ≈ census total minus dedup (~50-56k ⇒ ~3.5 MB at 64 B/galaxy).
+- [x] **Visual gate (dev server is already running — ask the user to look):** DESI Deep Field appears in Settings with a count; toggling it on shows the dense low-z CrB spike with visible fingers of god (radial spikes aimed at the origin) and the thinning ELG/QSO tail; the hard cone edge reads as a drill core; flying out to ~7 Gpc keeps camera + scale bar sane; clicking a cone point opens an InfoCard with the DESI J name, tracer population, and g/r/z band labels; toggling off removes the cone.
+- [x] **Human (main checkout only, per `project_worktree_data_isolation`):** `npm run sync-r2-secure` — confirm `desi-deep.bin` uploads + purges.
+- [x] Run the entanglement-radar lens over the full diff — expected clean points: one cone-constant file, one tracer-class source of truth, no mirrored source lists beyond the known pre-existing hand-maintained sites this plan already edits.
+- [x] DoD checklist:
+  - [x] All tasks committed; suite green; no stray TODOs in the diff.
+  - [x] `desi-deep.bin` built from real data and visually confirmed.
+  - [x] `data/raw/desi/README.md` + `.sha256` committed; raw `.fits` files correctly gitignored.
+  - [x] `buildFilaments` still ingests only 2MRS+GLADE (the spec's DisPerSE exclusion) — verify DESI cannot reach the density field via any "all sources" enumeration.
+  - [x] R2 synced; CLAUDE.md variant list + BACKLOG cross-reference updated.
+  - [x] The clip (plan 2) is NOT part of this plan's DoD.
+- [x] `/feature-done` audit → relocate this plan + the spec to `plans/completed/` + `specs/completed/` (the spec moves when plan 2 ships if the audit prefers keeping it live — note the two-plan split to the auditor).
