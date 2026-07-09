@@ -16,7 +16,7 @@
  *   uniformBuffer               :  96 bytes (CameraUniforms prefix + halfWidth + intensityScale + tail pad)
  *
  * Public API:
- *   - createFilamentRenderer(device, format, fadeBgl)
+ *   - createFilamentRenderer(device, targetFormat, fadeBgl)
  *   - upload(cloud: FilamentCloud)  → builds the instance buffer
  *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensityScale, fadeOpacity)
  *   - clear()                       → drops the instance buffer
@@ -105,15 +105,14 @@ export function createFilamentRenderer(
   device: GPUDevice,
   /**
    * The colour-attachment format the pipeline writes into.  In skymap
-   * this is the HDR offscreen target (`rgba16float`) — see
-   * `src/services/gpu/hdrTarget.ts` and the rationale in
-   * `renderFrame.ts`.  Filaments accumulate additively into the same
-   * float buffer the points/quads/disks write, then the tone-map pass
-   * compresses everything onto the swap chain.  Drawing direct to the
-   * swap chain would clip on overlap — exactly what the visual cosmic-
-   * web scenes need to NOT do.
+   * this is the HDR offscreen target (`rgba16float`).  Filaments
+   * accumulate additively into the same float buffer the points/quads/disks
+   * write, then the tone-map pass compresses everything onto the swap chain.
+   * Drawing direct to the swap chain would clip on overlap — exactly what the
+   * visual cosmic-web scenes need to NOT do.  Passed explicitly (never read
+   * off a `GpuContext.format`, which is always the swap-chain format).
    */
-  hdrFormat: GPUTextureFormat,
+  targetFormat: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
 ): FilamentRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'filaments.vertex');
@@ -194,7 +193,7 @@ export function createFilamentRenderer(
       entryPoint: 'fs',
       targets: [
         {
-          format: hdrFormat,
+          format: targetFormat,
           // Additive blending — filaments glow over the existing scene
           // without occluding the point cloud below them.
           blend: {

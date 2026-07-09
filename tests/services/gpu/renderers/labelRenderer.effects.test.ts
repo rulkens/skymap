@@ -9,10 +9,24 @@ const FIXTURE_METRICS = parseFontMetrics({
   info: { face: 'X', size: 42 },
   distanceField: { fieldType: 'msdf', distanceRange: 16 },
   chars: [
-    { id: 65, x: 0, y: 0, width: 30, height: 40, xoffset: 0, yoffset: 0, xadvance: 25, page: 0, chnl: 15 },
+    {
+      id: 65,
+      x: 0,
+      y: 0,
+      width: 30,
+      height: 40,
+      xoffset: 0,
+      yoffset: 0,
+      xadvance: 25,
+      page: 0,
+      chnl: 15,
+    },
   ],
 });
-const FIXTURE_ATLASES: LoadedFontAtlases = { metricsByFont: { cormorant: FIXTURE_METRICS }, bitmaps: [] };
+const FIXTURE_ATLASES: LoadedFontAtlases = {
+  metricsByFont: { cormorant: FIXTURE_METRICS },
+  bitmaps: [],
+};
 const newRenderer = () =>
   createLabelRenderer(
     {
@@ -21,6 +35,7 @@ const newRenderer = () =>
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
     },
+    'rgba16float',
     FIXTURE_ATLASES,
   );
 

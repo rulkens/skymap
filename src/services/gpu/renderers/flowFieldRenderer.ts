@@ -84,9 +84,14 @@ const CAM_BYTES = 160;
 
 export function createFlowFieldRenderer(init: {
   device: GPUDevice;
-  hdrFormat: GPUTextureFormat;
+  /**
+   * The colour-target format the additive ribbon pipeline writes into — the
+   * HDR offscreen (`'rgba16float'`), matching the scalar-volume target. Passed
+   * explicitly (never a `GpuContext.format`, which is always the swap format).
+   */
+  targetFormat: GPUTextureFormat;
 }): FlowFieldRenderer {
-  const { device, hdrFormat } = init;
+  const { device, targetFormat } = init;
 
   // ── One shared particle buffer set (see module header) ────────────────────
   // part:  xyz + age, one vec4 per particle.            STORAGE | COPY_DST
@@ -185,7 +190,7 @@ export function createFlowFieldRenderer(init: {
       entryPoint: 'fsTrail',
       targets: [
         {
-          format: hdrFormat,
+          format: targetFormat,
           blend: {
             color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
             alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },

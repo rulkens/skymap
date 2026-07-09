@@ -59,7 +59,6 @@
  * (e.g. a future opaque-material impostor) but no current consumer uses it.
  */
 
-import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { InstancedQuadConfig } from '../../../@types/rendering/InstancedQuadConfig';
 import type { InstancedQuadRenderer } from '../../../@types/rendering/InstancedQuadRenderer';
@@ -100,10 +99,13 @@ export const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
 export const UNIFORM_BYTES = 96;
 
 export function createInstancedQuadRenderer(
-  ctx: GpuContext,
+  // Only the device is needed from the GPU context — the colour-target format
+  // arrives through `config.targetFormat`, never off a `GpuContext.format`
+  // (which is always the swap-chain format). Taking a bare device keeps that
+  // separation legible and lets the disk wrappers forward their own target.
+  device: GPUDevice,
   config: InstancedQuadConfig,
 ): InstancedQuadRenderer {
-  const { device } = ctx;
   const {
     label,
     vertexSource,
@@ -111,7 +113,7 @@ export function createInstancedQuadRenderer(
     atlas,
     capacity,
     blend,
-    format,
+    targetFormat,
     focusBgl,
     uniformVisibility = GPUShaderStage.VERTEX,
   } = config;
@@ -197,7 +199,7 @@ export function createInstancedQuadRenderer(
     fragment: {
       module: fsModule,
       entryPoint: 'fs',
-      targets: [{ format, blend: blendDescriptor }],
+      targets: [{ format: targetFormat, blend: blendDescriptor }],
     },
     primitive: { topology: 'triangle-list' },
   });

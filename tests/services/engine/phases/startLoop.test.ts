@@ -142,12 +142,12 @@ describe('startLoop', () => {
     const callArgs = runFrameSpy.mock.calls[0]!;
     expect(callArgs[0]).toBe(state);
     // frameDeps is built inside startLoop — verify it carries the
-    // expected renderer + canvas references threaded from state/deps.
+    // canvas reference threaded from deps.  Renderer handles are NOT part
+    // of `RunFrameDeps` any more — every `ContentLayer.draw` reads its
+    // renderer straight off `state.gpu.*` (see `passes/index.ts`), so
+    // there's nothing renderer-shaped to assert on this bag.
     const calledFrameDeps = callArgs[1] as Record<string, unknown>;
     expect(calledFrameDeps.canvas).toBe(deps.canvas);
-    expect(calledFrameDeps.milkyWayCloudRenderer).toBe(state.gpu.milkyWayCloudRenderer);
-    expect(calledFrameDeps.texturedDiskRenderer).toBe(state.gpu.texturedDiskRenderer);
-    expect(calledFrameDeps.filamentRenderer).toBe(state.gpu.filamentRenderer);
     expect(typeof callArgs[2]).toBe('number'); // performance.now() snapshot
   });
 

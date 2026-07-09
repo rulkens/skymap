@@ -31,10 +31,22 @@ export type ProceduralDiskRenderer = {
   /**
    * Draw the retained procedural-disk instances into the active pick
    * render pass using the r32uint pick pipeline. No-op until 'draw' has
-   * uploaded at least one instance this frame. Caller (pickRenderer) has
-   * already bound the shared camera + focus state on the pick pass.
+   * uploaded at least one instance this frame.
+   *
+   * The disk CONTENT (the last-drawn LOD set) is retained by the renderer
+   * and replayed; the CAMERA is supplied by the caller per call
+   * (`viewProj` / `viewport` / `camPosWorld` / `pxPerRad` /
+   * `focusBindGroup`) so the pick uniform always reflects the frame being
+   * picked, never a stale draw()-time stash.
    */
-  pickDisks(pass: GPURenderPassEncoder): void;
+  pickDisks(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewport: Vec2,
+    camPosWorld: Readonly<Vec3>,
+    pxPerRad: number,
+    focusBindGroup: GPUBindGroup,
+  ): void;
   /** Release the uniform + per-instance vertex buffers. */
   destroy(): void;
 };

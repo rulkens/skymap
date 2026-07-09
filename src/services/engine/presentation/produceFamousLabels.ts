@@ -15,7 +15,7 @@
  * `labelEnabled` being false AND the `galaxyNames` opacity having reached 0 — so
  * a toggle-off keeps
  * emitting at the declining `layerAlpha` until the fade-out ramp completes,
- * rather than popping the labels instantly (mirrors `filamentsPass.enabled`).
+ * rather than popping the labels instantly (mirrors `filamentsLayer.enabled`).
  * The OTHER early returns (meta/catalog absent — nothing to fade) stay hard.
  *
  * ### Meta ⋈ catalog alignment
@@ -156,7 +156,7 @@ export function produceFamousLabels(
   const empty: LabelProducerOutput = { labels: [], lines: [], awake: false };
   // Render while the user wants famous labels OR the `galaxyNames` fade-out
   // tail is still non-zero — so a toggle-off fades out smoothly instead of
-  // popping (mirrors `filamentsPass.enabled`). Once opacity hits 0 we stop.
+  // popping (mirrors `filamentsLayer.enabled`). Once opacity hits 0 we stop.
   if (
     !state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled &&
     fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' }, now) === 0

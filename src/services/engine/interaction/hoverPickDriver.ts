@@ -15,8 +15,9 @@
  * damage. That created a two-writer hazard: the frame was required merely
  * to clean up after hover. Every `pointermove` over a static scene forced a
  * full 2.5M-point re-render just to rewrite a buffer. This driver eliminates
- * both problems — hover reads its own snapshot (the last-frame uniform bytes
- * on `state.picking`) and writes to the pick renderer's own buffer.
+ * both problems — `pickProgram.pick` rebuilds the pick-time camera as a value
+ * and rasterises into its own per-slab targets, never touching the visual
+ * pass's buffers.
  *
  * ### Trailing-edge re-fire
  *
@@ -77,39 +78,22 @@ export function createHoverPickDriver(deps: HoverPickDeps): {
   }
 
   function fire(pos: CssPx): void {
-    // Snapshot the uniform bytes from the last visual frame. Null means no
-    // frame has run yet — skip to match pre-first-frame behaviour (the old
-    // in-frame path also had no picks before the first frame).
-    const bytes = deps.state.picking.lastFrameUniformBytes;
-    if (bytes === null) return;
-
-    // Derive pick targets LIVE at fire time (same rule as the click path).
-    // A snapshot at driver-construction time would be stale the moment a
-    // catalog is toggled or a fade completes.
-    const targets = deps.collectTargets();
-    if (!targets.hasAny) return;
-
     // Record the position we're about to pick so the trailing-edge guard
     // (`latest === picked`) can tell when we've already caught up to the
     // resting position. Set pickInFlight before the async call so a racing
     // pointermove between this line and `pick()`'s first await cannot sneak
     // through the coalesce gate.
+    //
+    // No pre-fire "is anything pickable / is the engine ready" gate: the
+    // program owns those decisions and resolves to `null` for a not-ready
+    // engine or an empty scene, which decodes to "nothing hovered" — the
+    // same result the old collectTargets / uniformBytes gates produced.
     picked = pos;
     deps.state.picking.pickInFlight = true;
 
-    deps.pickRenderer
-      .pick(
-        deps.viewportPx(),
-        cssToTexPx(pos.x),
-        cssToTexPx(pos.y),
-        targets.visibleSources,
-        deps.pointSizePx(),
-        bytes,
-        deps.timingDescriptor(),
-      )
-      .then((hit) =>
-        deps.store.dispatch(updateSelectionHover(resolvePick(hit, deps.resolveDeps))),
-      )
+    deps.pickProgram
+      .pick(cssToTexPx(pos.x), cssToTexPx(pos.y))
+      .then((hit) => deps.store.dispatch(updateSelectionHover(resolvePick(hit, deps.resolveDeps))))
       .finally(() => {
         deps.state.picking.pickInFlight = false;
         // Trailing edge: fire a new pick if the pointer has moved since we

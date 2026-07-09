@@ -136,9 +136,9 @@ export type EngineSettingsState = {
 
   /**
    * Scalar-volume overlay master gate and per-item params.  When
-   * `enabled` is false, `volumeUpsamplePass.enabled` short-circuits
-   * before consulting the renderer at zero GPU cost, and `encodeVolumes`
-   * never opens its pre-HDR half-res render pass.  Per-field params
+   * `enabled` is false, `volumeUpsampleLayer.enabled` short-circuits
+   * before consulting the renderer at zero GPU cost, and `scalarVolumeLayer`
+   * never opens its half-res render pass.  Per-field params
    * (enabled / intensity / palette / …) live in `items` — one settings
    * row per registry-known volume field, seeded from `SOURCE_REGISTRY` at
    * construction so the panel can show a field's toggle before its cube
@@ -188,16 +188,16 @@ export type EngineSettingsState = {
    *     disk-radius footprint so the developer can calibrate the
    *     placement against the underlying billboard.  Gated behind the
    *     DebugPanel.
-   *   - `disabledPasses` — pass names the developer has manually toggled
-   *     off in the renderer-toggle section.  Membership is `[name] === true`;
-   *     a name absent from the record (or mapped to `false`) means the pass
-   *     is enabled.  The frame encoders consult this record AFTER each pass's
-   *     own `enabled()` gate and skip the draw when the name maps to `true`,
-   *     so the override is one-way: it can hide a pass that would otherwise
-   *     run but never force-enable one whose gate returned false.  An
-   *     open-world membership record (any pass name) against the closed-world
-   *     `HDR_PASSES` / `UI_PASSES` arrays.  A plain object so the whole
-   *     settings state stays JSON-serializable.
+   *   - `disabledPasses` — content-layer names the developer has manually
+   *     toggled off in the renderer-toggle section.  Membership is
+   *     `[name] === true`; a name absent from the record (or mapped to
+   *     `false`) means the layer is enabled.  `executeFrame` consults this
+   *     record AFTER each layer's own `enabled()` gate and skips the draw
+   *     when the name maps to `true`, so the override is one-way: it can
+   *     hide a layer that would otherwise run but never force-enable one
+   *     whose gate returned false.  An open-world membership record (any
+   *     layer name) against the closed-world `CONTENT_LAYERS` registry.  A
+   *     plain object so the whole settings state stays JSON-serializable.
    */
   debug: {
     showPickBuffer: boolean;

@@ -22,7 +22,7 @@
  *
  * ### Idempotency / in-flight calls
  *
- * `pickRenderer.pick` already returns null for a second call before the
+ * `pickProgram.pick` already returns null for a second call before the
  * first resolves — a click fired mid-pick resolves to null rather than
  * queueing. Click frequency is low enough the user never notices.
  */
@@ -36,7 +36,7 @@ import type { ResolvePickDeps } from '../../../@types/engine/ResolvePickDeps';
 import { resolvePick } from '../helpers/resolvePick';
 
 export function createClickResolver(input: CreateClickResolverInput): ClickResolver {
-  const { pickRenderer, structures } = input;
+  const { pickProgram, structures } = input;
 
   // Everything `resolvePick` needs, bundled once at construction so the
   // per-click path is a single call. The galaxy arm is positional (no cloud
@@ -49,25 +49,10 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
   // engine.destroy() iterate uniformly across the bag.
   const resolver: ClickResolver = {
     async resolveClick(args: ClickResolveInput): Promise<SelectionRef | null> {
-      const pick = await pickRenderer.pick(
-        args.viewportPx,
-        args.pickXPx,
-        args.pickYPx,
-        args.visibleSources,
-        args.pointSizePx,
-        // Packed uniform bytes from the last visual frame — the pick
-        // renderer uploads this to its OWN buffer, then applies the
-        // three pick-specific overrides (sentinel, padded size, pickPass).
-        // The visual pass's GPU buffer is never touched.
-        args.uniformBytes,
-        // Per-pass GPU timing — undefined when the timing service is
-        // absent (no `timestamp-query` feature or overlay off).  The
-        // pick render pass writes start/end timestamps into the
-        // shared query set's 'pick' slot pair; the next main-frame
-        // `endFrame` resolves and copies those slots.  See
-        // PickRenderer.pick JSDoc.
-        args.timingDescriptor,
-      );
+      // The pick program derives the camera, pickable layers, and timing slot
+      // itself from the shared EngineState + registry — the click resolver
+      // supplies only WHERE the cursor is.
+      const pick = await pickProgram.pick(args.pickXPx, args.pickYPx);
       // Decode + resolve via the shared boundary (same one the hover path
       // uses), so click and hover can't drift on how a pixel resolves.
       return resolvePick(pick, deps);

@@ -143,8 +143,6 @@ describe('EngineState type', () => {
     const picking: EnginePickingState = {
       pickInFlight: false,
       pointerDown: false,
-      lastFrameUniformBytes: null,
-      lastFrameCam: null,
     };
 
     // Forward-declare so the bias-correction subsystem's narrow
@@ -168,14 +166,14 @@ describe('EngineState type', () => {
       gpu: {
         renderer: null,
         pickRenderer: null,
+        pickProgram: null,
         milkyWayPickRenderer: null,
         fadeBgl: null,
         sourceBgl: null,
         focusBgl: null,
         focusUniform: null,
-        postProcess: null,
+        renderTargets: null,
         compositor: null,
-        volumeOffscreen: null,
         filamentRenderer: null,
         labelRenderer: null,
         markerLineRenderer: null,
@@ -412,20 +410,18 @@ describe('EngineState type', () => {
       picking: {
         pickInFlight: false,
         pointerDown: false,
-        lastFrameUniformBytes: null,
-        lastFrameCam: null,
       },
       gpu: {
         renderer: null,
         pickRenderer: null,
+        pickProgram: null,
         milkyWayPickRenderer: null,
         fadeBgl: null,
         sourceBgl: null,
         focusBgl: null,
         focusUniform: null,
-        postProcess: null,
+        renderTargets: null,
         compositor: null,
-        volumeOffscreen: null,
         filamentRenderer: null,
         labelRenderer: null,
         markerLineRenderer: null,

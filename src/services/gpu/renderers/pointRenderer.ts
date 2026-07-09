@@ -161,17 +161,19 @@ export const POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
 // ─── Uniform buffer byte offsets (per-pass partial writes) ──────────────────
 
 /**
- * Byte offsets into the shared `Uniforms` buffer for the slots PickRenderer
- * overwrites per-pass.  Single source of truth for both the full pack and
- * the partial pick writes.
+ * Byte offsets into the shared `Uniforms` buffer for the three slots the pick
+ * pack shapes differently from the visual pack.  `pickUniformBytesOf` bakes all
+ * three at pack time (there is no post-upload override); these named offsets
+ * document the layout and back the byte-equality tests that prove the pick
+ * pack matches the old override end-state.
  *
- *   - `SELECTED_PACKED_BYTE_OFFSET` — picker writes the "no selection"
- *     sentinel so the 8× ring scaling doesn't inflate the pick area.
- *   - `POINT_SIZE_BYTE_OFFSET` — picker pads the visual point size to
- *     widen far-field click targets without growing visible sprites.
- *   - `PICK_PASS_BYTE_OFFSET` — picker flips this to 1 so the shared
- *     vertex shader skips visual-only culls (crossfade-out, intensity
- *     floor) that would make disk-sized galaxies unpickable.
+ *   - `SELECTED_PACKED_BYTE_OFFSET` — the "no selection" sentinel so the 8×
+ *     ring scaling doesn't inflate the pick area.
+ *   - `POINT_SIZE_BYTE_OFFSET` — the `+PICK_PADDING_PX` point size that widens
+ *     far-field click targets without growing visible sprites.
+ *   - `PICK_PASS_BYTE_OFFSET` — 1 in the pick pack so the shared vertex shader
+ *     skips visual-only culls (crossfade-out, intensity floor) that would make
+ *     disk-sized galaxies unpickable.
  */
 export const SELECTED_PACKED_BYTE_OFFSET = 80;
 export const POINT_SIZE_BYTE_OFFSET = 88;
@@ -350,12 +352,15 @@ type LoadedSource = {
  * mutable bits are the per-source `galaxyCatalogs` Map and the
  * bias-correction callbacks.
  *
- * @param device  The WebGPU logical device. Owned by the caller.
- * @param format  The swap-chain texture format (e.g. `'bgra8unorm'`).
+ * @param device        The WebGPU logical device. Owned by the caller.
+ * @param targetFormat  The colour-target format the pipeline writes into —
+ *                      the HDR offscreen (`'rgba16float'`), NOT the swap chain.
+ *                      Handed over explicitly because a render-pass encoder
+ *                      cannot be queried for its own colour-attachment format.
  */
 export function createPointRenderer(
   device: GPUDevice,
-  format: GPUTextureFormat,
+  targetFormat: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
   focusBgl: FocusUniformsBgl,
@@ -412,7 +417,7 @@ export function createPointRenderer(
       entryPoint: 'fs',
       targets: [
         {
-          format,
+          format: targetFormat,
           // Additive blend so overlapping halos brighten (long-exposure style).
           blend: {
             color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
@@ -738,23 +743,23 @@ export function createPointRenderer(
    * on each source's own 16-byte fade buffer, so writes for one
    * source don't race against draws against another.
    *
-   * Returns the packed `ArrayBuffer` so the pick renderer can snapshot it
-   * (Task 3 of the pick-out-of-frame refactor).  Returns `null` when there
-   * are no catalogs to draw (buffer was never packed this frame).
+   * No-op when there are no catalogs to draw. The pick pass rebuilds its
+   * own uniform bytes from plain values at pick time (see
+   * `pickUniformBytesOf`), so this draw owns no cross-pass snapshot.
    */
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
     settings: PointDrawSettings,
-  ): ArrayBuffer | null {
+  ): void {
     const { visibleSourceMask, focusBindGroup } = settings;
-    if (galaxyCatalogs.size === 0) return null;
+    if (galaxyCatalogs.size === 0) return;
 
     // Pack 176 bytes — see `UNIFORM_BYTES` for the layout, and
-    // `points/io.wesl::Uniforms` for the WGSL-side struct.
-    // `pickPass` is packed as 0 (visual pass) — the pick renderer applies
-    // its three overrides after uploading this buffer.
+    // `points/io.wesl::Uniforms` for the WGSL-side struct.  `pickPass`
+    // defaults to 0 (visual pass); the pick path packs its own image via
+    // `pickUniformBytesOf`, never this buffer.
     const buf = packPointUniforms(viewProj, viewportPx, settings);
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
@@ -782,8 +787,6 @@ export function createPointRenderer(
       pass.setVertexBuffer(0, entry.buffer);
       pass.draw(6, entry.count);
     }
-
-    return buf;
   }
 
   /**

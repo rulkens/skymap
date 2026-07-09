@@ -23,9 +23,14 @@ export type GpuContext = {
   context: GPUCanvasContext;
 
   /**
-   * The swap-chain texture format chosen by `getPreferredCanvasFormat()`.
-   * Pipeline descriptors must declare the same format for their colour
-   * attachments, so we store it here for easy access.
+   * The swap-chain texture format chosen by `getPreferredCanvasFormat()` —
+   * always, full stop. This is NEVER an offscreen/colour-target format.
+   * A renderer that draws into an offscreen (HDR) target receives that
+   * target's format as an explicit `targetFormat` argument at construction;
+   * it never reaches through this field for its colour attachment. Even the
+   * post-tone-map UI overlays (labels, marker lines, selection ring) that DO
+   * target the swap chain take `targetFormat` explicitly, so a layer's target
+   * is legible at its renderer's construction site rather than inferred here.
    */
   format: GPUTextureFormat;
 

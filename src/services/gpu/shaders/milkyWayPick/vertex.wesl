@@ -11,14 +11,15 @@
 //   halfExtentPx     = max(u.pointSizePx, apparentPxRadius)
 //
 // Computing the size here rather than on the CPU means the hit target
-// can never disagree with the rendered frame: the pick pass replays the
-// last visual frame's uniform bytes at @group(0), so the camera facts
-// this projection reads (camPosWorld, pxPerRad) are byte-identical to
-// the ones that sized the glow the user sees.  The CPU keeps only the
-// visibility gate ('milkyWayPickVisible').  The 'u.pointSizePx' floor is
-// the pick-widened value — the CPU overrides that slot to
-// (sizePx + PICK_PADDING_PX) before the pass (pickRenderer.ts) — so the
-// MW floor matches the padded floor every pick point gets.
+// can never disagree with the rendered frame: the @group(0) bytes are
+// built at pick time from the slab view (pickUniformBytesOf), already
+// pick-shaped, and the camera facts this projection reads (camPosWorld,
+// pxPerRad) are the same ones that sized the glow the user sees.  The CPU
+// keeps only the visibility gate — the pick program's 'enabled' filter,
+// i.e. 'milkyWayLayer.enabled' against the pick-time camera.  The
+// 'u.pointSizePx' floor is already the pick-widened value — the pick pack
+// bakes (sizePx + PICK_PADDING_PX) into that slot (pickUniformBytesOf) — so
+// the MW floor matches the padded floor every pick point gets.
 //
 // The packed pick identity is composed in the vertex stage (mirroring
 // points/vertex.wesl's 'packSelection(source.sourceCode, ii)') and

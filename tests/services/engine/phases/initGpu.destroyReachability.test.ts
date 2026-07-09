@@ -8,7 +8,7 @@
  * `milkyWayCloudRenderer`, and `horizonShellRenderer` each own GPU
  * resources and expose
  * `.destroy()`. They must live on `state.gpu.*` (alongside `renderer`,
- * `pickRenderer`, `postProcess`, …) so `engine.ts.destroy()` has a
+ * `pickRenderer`, `renderTargets`, …) so `engine.ts.destroy()` has a
  * reachable reference to each — otherwise every HMR / StrictMode remount
  * leaks their GPU buffers.
  *
@@ -92,16 +92,12 @@ vi.mock('../../../../src/services/gpu/renderers/pointRenderer', () => ({
   createPointRenderer: vi.fn(() => makeStub('pointRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/passes/postProcess', () => ({
-  createPostProcess: vi.fn(() => makeStub('postProcess')),
+vi.mock('../../../../src/services/gpu/renderTargets', () => ({
+  createRenderTargets: vi.fn(() => makeStub('renderTargets')),
 }));
 
 vi.mock('../../../../src/services/gpu/passes/compositor', () => ({
   createCompositor: vi.fn(() => makeStub('compositor')),
-}));
-
-vi.mock('../../../../src/services/gpu/passes/volumeOffscreen', () => ({
-  createVolumeOffscreen: vi.fn(() => makeStub('volumeOffscreen')),
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/texturedDiskRenderer', () => ({
@@ -114,9 +110,9 @@ vi.mock('../../../../src/services/gpu/renderers/proceduralDiskRenderer', () => (
 
 vi.mock('../../../../src/services/gpu/renderers/horizonShellRenderer', () => ({
   createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
-  // initGpu imports the pass registry (for TIMED_SLOT_NAMES), which
-  // transitively loads horizonShellPass — that module reads this const,
-  // so the mock must provide it.
+  // initGpu imports the FRAME program (for TIMED_SLOTS), which transitively
+  // loads the content-layer registry incl. horizonShellLayer — that module
+  // reads this const, so the mock must provide it.
   HORIZON_RADIUS_GPC: 14.3,
 }));
 
@@ -207,7 +203,7 @@ function makeState(): EngineState {
       renderer: null,
       pickRenderer: null,
       milkyWayPickRenderer: null,
-      postProcess: null,
+      renderTargets: null,
       compositor: null,
       filamentRenderer: null,
       labelRenderer: null,
@@ -280,7 +276,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.horizonShellRenderer).toBe(stubs.horizonShellRenderer);
   });
 
-  it('writes compositor onto state.gpu.*', async () => {
+  it('writes compositor + renderTargets onto state.gpu.*', async () => {
     const state = makeState();
     const deps = makeDeps();
     await initGpu(state, deps);
@@ -289,6 +285,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // compositor's cached pipelines' uniform buffers need a live
     // `state.gpu.*` reference for the destroy chain to find.
     expect(state.gpu.compositor).toBe(stubs.compositor);
+    // The render-target table owns the offscreen textures (hdr + volume
+    // rows) — the destroy chain must reach it the same way.
+    expect(state.gpu.renderTargets).toBe(stubs.renderTargets);
   });
 
   it('phaseLocals no longer carries the thumbnail/milky-way renderers — they live solely on state.gpu.*', async () => {
@@ -346,16 +345,20 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.horizonShellRenderer).toBeNull();
   });
 
-  it('replaying the destroy chain reaches compositor.destroy()', async () => {
+  it('replaying the destroy chain reaches compositor.destroy() and renderTargets.destroy()', async () => {
     const state = makeState();
     const deps = makeDeps();
     await initGpu(state, deps);
 
     state.gpu.compositor?.destroy();
     state.gpu.compositor = null;
+    state.gpu.renderTargets?.destroy();
+    state.gpu.renderTargets = null;
 
     expect(stubs.compositor!.destroy).toHaveBeenCalledTimes(1);
     expect(state.gpu.compositor).toBeNull();
+    expect(stubs.renderTargets!.destroy).toHaveBeenCalledTimes(1);
+    expect(state.gpu.renderTargets).toBeNull();
   });
 
   it('destroy is safe when initGpu never ran — every state.gpu.* renderer is null and ?.destroy() no-ops', () => {

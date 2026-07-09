@@ -3,7 +3,7 @@ import { selectionRingRadiusPx } from '../../../../src/services/engine/helpers/s
 
 // The shared apparent-px formula behind BOTH the selection ring and the
 // Milky-Way pick billboard.  These cases pin the exact math the
-// selectionRingPass tests already assert (so the extraction stays
+// `selectionRingLayer` tests already assert (so the extraction stays
 // behaviour-identical) plus the two invariants the pick path relies on:
 // the radius grows as the camera approaches, and it never drops below the
 // point-size floor.
