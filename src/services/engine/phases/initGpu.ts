@@ -192,14 +192,14 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const uiCtx = { device, context, format, canvas };
 
   const fontAtlases = await loadFontAtlases();
-  state.gpu.labelRenderer = createLabelRenderer(uiCtx, fontAtlases);
-  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx);
+  state.gpu.labelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
+  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx, format);
   // Dedicated debug-line renderer for the clip-path inspector overlay. Same
   // swap-chain ctx as the marker lines (UI overlay, drawn post-tone-map), but
   // its own pipeline + buffers so the debug viz never touches the label
   // director's reconcile path.
-  state.gpu.debugLineRenderer = createDebugLineRenderer(uiCtx);
-  state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx);
+  state.gpu.debugLineRenderer = createDebugLineRenderer(uiCtx, format);
+  state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx, format);
   // HDR pass — writes into the rgba16float offscreen target, NOT the
   // swap chain.  The fadeBgl placeholder at @group(1) must match what the
   // other HDR passes (filaments) bind at the same slot on the shared
@@ -259,7 +259,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // per-galaxy diameter, composited into the same linear-light buffer as
   // the points pass.  Matched by the LOD-2 `texturedDisksPass`.
   const texturedDiskRenderer = createTexturedDiskRenderer(
-    { device, context, format: 'rgba16float', canvas },
+    { device, context, targetFormat: 'rgba16float', canvas },
     state.gpu.focusBgl!,
   );
   // ProceduralDiskRenderer fills the visibility gap between the
@@ -272,7 +272,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const proceduralDiskRenderer = createProceduralDiskRenderer({
     device,
     context,
-    format: 'rgba16float',
+    targetFormat: 'rgba16float',
     canvas,
     focusBgl: state.gpu.focusBgl!,
   });
@@ -281,7 +281,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // buffer + baked UV-sphere VBO/IBO, no lifecycle dependencies.
   const horizonShellRenderer = createHorizonShellRenderer({
     device,
-    format: 'rgba16float',
+    targetFormat: 'rgba16float',
   });
   // ── Cosmic-web filament-skeleton renderer ─────────────────────────
   //
@@ -319,7 +319,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.milkyWayCloud = createMilkyWayCloud(device, state.tier);
   state.gpu.milkyWayCloudRenderer = createMilkyWayCloudRenderer({
     device,
-    format: 'rgba16float',
+    targetFormat: 'rgba16float',
   });
 
   // ── 3D scalar-field volume renderer ──────────────────────────────────
@@ -347,7 +347,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Built unconditionally; the pipelines are cheap and the velocity cube
   // arrives later via the demand-loaded flow slot's commit → upload. The
   // HDR format matches the scalar-volume + upsample targets.
-  state.gpu.flowFieldRenderer = createFlowFieldRenderer({ device, hdrFormat: 'rgba16float' });
+  state.gpu.flowFieldRenderer = createFlowFieldRenderer({ device, targetFormat: 'rgba16float' });
 
   // ── Half-res-to-HDR volume upsample pass ──────────────────────────
   //

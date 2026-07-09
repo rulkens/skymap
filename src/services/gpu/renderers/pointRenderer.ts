@@ -350,12 +350,15 @@ type LoadedSource = {
  * mutable bits are the per-source `galaxyCatalogs` Map and the
  * bias-correction callbacks.
  *
- * @param device  The WebGPU logical device. Owned by the caller.
- * @param format  The swap-chain texture format (e.g. `'bgra8unorm'`).
+ * @param device        The WebGPU logical device. Owned by the caller.
+ * @param targetFormat  The colour-target format the pipeline writes into —
+ *                      the HDR offscreen (`'rgba16float'`), NOT the swap chain.
+ *                      Handed over explicitly because a render-pass encoder
+ *                      cannot be queried for its own colour-attachment format.
  */
 export function createPointRenderer(
   device: GPUDevice,
-  format: GPUTextureFormat,
+  targetFormat: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
   focusBgl: FocusUniformsBgl,
@@ -412,7 +415,7 @@ export function createPointRenderer(
       entryPoint: 'fs',
       targets: [
         {
-          format,
+          format: targetFormat,
           // Additive blend so overlapping halos brighten (long-exposure style).
           blend: {
             color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },

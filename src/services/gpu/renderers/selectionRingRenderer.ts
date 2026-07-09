@@ -49,11 +49,20 @@ const CAMERA_UNIFORM_BYTES = 80;
 /** SelectionRingUniforms: vec3<f32> worldPos + f32 ringRadiusPx. */
 const SELECTION_UNIFORM_BYTES = 16;
 
-export function createSelectionRingRenderer(ctx: GpuContext): SelectionRingRenderer {
+/**
+ * Construct a `SelectionRingRenderer`. `targetFormat` is the colour-attachment
+ * format the pipeline writes into; the ring is a post-tone-map UI overlay, so
+ * this is the swap-chain format — passed EXPLICITLY rather than read off
+ * `ctx.format`, so the target is legible at the construction site.
+ */
+export function createSelectionRingRenderer(
+  ctx: GpuContext,
+  targetFormat: GPUTextureFormat,
+): SelectionRingRenderer {
   // The cast lets a test pass `device: null as unknown as GPUDevice`
   // through. Runtime null-checks below gate every GPU call.
   const device = ctx.device as GPUDevice | null;
-  const format = ctx.format;
+  const format = targetFormat;
 
   let pipeline: GPURenderPipeline | null = null;
   let cameraBuffer: GPUBuffer | null = null;

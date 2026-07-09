@@ -47,7 +47,12 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 
 type Init = {
   device: GPUDevice;
-  format: GPUTextureFormat;
+  /**
+   * The colour-target format the shell pipeline writes into — the HDR
+   * offscreen (`'rgba16float'`), NOT the swap chain. Passed explicitly (never a
+   * `GpuContext.format`, which is always the swap-chain format).
+   */
+  targetFormat: GPUTextureFormat;
 };
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
@@ -69,7 +74,7 @@ const MPC_PER_GPC = 1000;
 const WORLD_UP: Vec3 = [0, 1, 0];
 
 export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
-  const { device, format } = init;
+  const { device, targetFormat } = init;
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'horizonShell.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'horizonShell.fragment');
@@ -109,7 +114,7 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
       entryPoint: 'fs',
       targets: [
         {
-          format,
+          format: targetFormat,
           // Pure additive — the shell is emissive, contributing light
           // where the Fresnel rim is bright and nothing where it isn't.
           blend: {

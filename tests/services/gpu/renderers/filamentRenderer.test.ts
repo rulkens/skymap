@@ -12,7 +12,7 @@ import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUnifo
  * we only assert construction + upload don't throw and that `hasCloud` reflects
  * the cloud-committed gate the filaments fade row guards on.
  */
-function mockDevice(): GPUDevice {
+function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {
     createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
     createShaderModule: vi.fn(() => ({
@@ -20,9 +20,10 @@ function mockDevice(): GPUDevice {
     })),
     createBindGroupLayout: vi.fn(() => ({})),
     createPipelineLayout: vi.fn(() => ({})),
-    createRenderPipeline: vi.fn(() => ({
-      getBindGroupLayout: vi.fn(() => ({})),
-    })),
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
+      renderPipelines?.push(desc);
+      return { getBindGroupLayout: vi.fn(() => ({})) };
+    }),
     createBindGroup: vi.fn(() => ({})),
     queue: { writeBuffer: vi.fn() },
   } as unknown as GPUDevice;
@@ -48,6 +49,14 @@ describe('createFilamentRenderer.hasCloud', () => {
     expect(renderer.hasCloud()).toBe(true);
     renderer.clear();
     expect(renderer.hasCloud()).toBe(false);
+  });
+
+  it('bakes the given targetFormat into the pipeline colour target', () => {
+    const renderPipelines: GPURenderPipelineDescriptor[] = [];
+    createFilamentRenderer(mockDevice(renderPipelines), 'rgba16float', mockFadeBgl);
+    expect(renderPipelines).toHaveLength(1);
+    const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
+    expect(target!.format).toBe('rgba16float');
   });
 
   it('stays false when the uploaded cloud has zero segments', () => {

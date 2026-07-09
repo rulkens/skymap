@@ -82,7 +82,7 @@ export async function createFlowHarness(
 ): Promise<FlowHarness> {
   const { device, context, format } = await initGpu(canvas);
   const renderGraph = createRenderGraph(device, format, makeShaderFactory(device));
-  const renderer = createFlowFieldRenderer({ device, hdrFormat: renderGraph.hdrFormat });
+  const renderer = createFlowFieldRenderer({ device, targetFormat: renderGraph.hdrFormat });
 
   // Fetch → decode → hand the cube to the renderer (which uploads it to a 3D
   // texture internally and arms the first reseed). We pass the decoded

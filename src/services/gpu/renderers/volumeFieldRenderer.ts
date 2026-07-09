@@ -5,7 +5,7 @@
  *
  * Public surface (factory shape, matching D.2 conventions):
  *
- *   - createVolumeFieldRenderer(device, format, fadeBgl)
+ *   - createVolumeFieldRenderer(device, targetFormat, fadeBgl)
  *   - upload(id, cube)            → upload cube to a 3D r16float
  *                                       texture, read the per-cube static
  *                                       config from the registry, register
@@ -99,7 +99,10 @@ const CUBE_INDICES = new Uint16Array([
 
 export function createVolumeFieldRenderer(
   device: GPUDevice,
-  format: GPUTextureFormat,
+  // The colour-target format the raymarch pipeline writes into — the HDR
+  // offscreen (`'rgba16float'`), NOT the swap chain. Handed over explicitly
+  // (never read off a `GpuContext.format`, which is always the swap format).
+  targetFormat: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
 ): VolumeFieldRenderer {
   const cornerBuffer = device.createBuffer({
@@ -177,7 +180,7 @@ export function createVolumeFieldRenderer(
       entryPoint: 'fs_main',
       targets: [
         {
-          format,
+          format: targetFormat,
           blend: {
             color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
             alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },

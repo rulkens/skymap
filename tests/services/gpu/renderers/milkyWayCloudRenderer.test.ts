@@ -99,7 +99,7 @@ function drawArgs(withDust: boolean): MilkyWayCloudDrawArgs {
 describe('createMilkyWayCloudRenderer — pipeline blend states', () => {
   it('star pipeline blends one/one additive on color and alpha', () => {
     const { device, createRenderPipeline } = mockDevice();
-    createMilkyWayCloudRenderer({ device, format: 'rgba16float' });
+    createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
     const star = findPipeline(createRenderPipeline, 'milkyWayCloud-star-pipeline');
     const blend = Array.from(star.fragment!.targets!)[0]!.blend!;
     expect(blend.color).toEqual({ srcFactor: 'one', dstFactor: 'one', operation: 'add' });
@@ -108,7 +108,7 @@ describe('createMilkyWayCloudRenderer — pipeline blend states', () => {
 
   it('dust pipeline blends srcFactor dst / dstFactor zero on color and zero/one on alpha', () => {
     const { device, createRenderPipeline } = mockDevice();
-    createMilkyWayCloudRenderer({ device, format: 'rgba16float' });
+    createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
     const dust = findPipeline(createRenderPipeline, 'milkyWayCloud-dust-pipeline');
     const blend = Array.from(dust.fragment!.targets!)[0]!.blend!;
     // The load-bearing multiply: src*dst on colour multiplies the sprite's
@@ -119,10 +119,22 @@ describe('createMilkyWayCloudRenderer — pipeline blend states', () => {
   });
 });
 
+describe('createMilkyWayCloudRenderer — colour target', () => {
+  it('bakes the given targetFormat into both pipeline colour targets', () => {
+    const { device, createRenderPipeline } = mockDevice();
+    createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
+    for (const label of ['milkyWayCloud-star-pipeline', 'milkyWayCloud-dust-pipeline']) {
+      const desc = findPipeline(createRenderPipeline, label);
+      const target = Array.from(desc.fragment!.targets!)[0]!;
+      expect(target!.format).toBe('rgba16float');
+    }
+  });
+});
+
 describe('createMilkyWayCloudRenderer — vertex layout & depth', () => {
   it('both pipelines take the instance buffer at arrayStride GEN_RECORD_BYTES', () => {
     const { device, createRenderPipeline } = mockDevice();
-    createMilkyWayCloudRenderer({ device, format: 'rgba16float' });
+    createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
     for (const label of ['milkyWayCloud-star-pipeline', 'milkyWayCloud-dust-pipeline']) {
       const desc = findPipeline(createRenderPipeline, label);
       // Slot 0 is the shared corner quad (stride 8); slot 1 is the per-instance
@@ -135,7 +147,7 @@ describe('createMilkyWayCloudRenderer — vertex layout & depth', () => {
 
   it('neither pipeline declares depthStencil', () => {
     const { device, createRenderPipeline } = mockDevice();
-    createMilkyWayCloudRenderer({ device, format: 'rgba16float' });
+    createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
     for (const label of ['milkyWayCloud-star-pipeline', 'milkyWayCloud-dust-pipeline']) {
       const desc = findPipeline(createRenderPipeline, label);
       expect(desc.depthStencil).toBeUndefined();
@@ -146,7 +158,7 @@ describe('createMilkyWayCloudRenderer — vertex layout & depth', () => {
 describe('createMilkyWayCloudRenderer — draw ordering', () => {
   it('records stars before dust, and skips dust when dustBuf is null', () => {
     const { device } = mockDevice();
-    const renderer = createMilkyWayCloudRenderer({ device, format: 'rgba16float' });
+    const renderer = createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
 
     const withDust = mockPass();
     renderer.draw(withDust.pass, drawArgs(true));
@@ -169,7 +181,7 @@ describe('createMilkyWayCloudRenderer — draw ordering', () => {
 describe('createMilkyWayCloudRenderer — uniform packing', () => {
   it('packs model at f32 20..35, camRight at 36..39, and the params scalars', () => {
     const { device, writeBuffer } = mockDevice();
-    const renderer = createMilkyWayCloudRenderer({ device, format: 'rgba16float' });
+    const renderer = createMilkyWayCloudRenderer({ device, targetFormat: 'rgba16float' });
     const { pass } = mockPass();
     const args = drawArgs(true);
     renderer.draw(pass, args);

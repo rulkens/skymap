@@ -29,7 +29,7 @@ export type MarkerLineRenderer = {
    * Issue the marker-line draw call into an in-flight render pass.  Must be
    * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`
    * implementation.  The pass's render target format must match the
-   * `format` field of the `GpuContext` passed to `createMarkerLineRenderer`.
+   * `targetFormat` passed to `createMarkerLineRenderer`.
    */
   draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void;
   /** Number of lines last passed to setLines. Used by tests + debug HUD. */

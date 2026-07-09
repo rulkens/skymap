@@ -64,9 +64,10 @@ function makePickStubInit() {
     init: {
       device,
       context: null as unknown as GPUCanvasContext,
-      format: 'rgba16float' as GPUTextureFormat,
+      targetFormat: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
-      focusBgl: {} as unknown as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
+      focusBgl:
+        {} as unknown as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
     },
   };
 }
@@ -84,7 +85,9 @@ const FOCUS_BG = {} as unknown as GPUBindGroup;
 
 function fakeInstance(overrides: Partial<ProceduralDiskInstance> = {}): ProceduralDiskInstance {
   return {
-    x: 1, y: 2, z: 3,
+    x: 1,
+    y: 2,
+    z: 3,
     sizeWorldMpc: 0.05,
     axisRatio: 0.6,
     positionAngleDeg: 45,

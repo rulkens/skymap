@@ -103,9 +103,9 @@ export function createStructureMarkerRenderer(
    * tone-map pass compresses everything onto the swap chain.  Passing
    * `ctx.format` here would trip a WebGPU validation error at draw time
    * (`attachment state … is not compatible with [RenderPassEncoder]`).
-   * Mirrors the `hdrFormat` parameter on `createFilamentRenderer`.
+   * Mirrors the `targetFormat` parameter on `createFilamentRenderer`.
    */
-  hdrFormat: GPUTextureFormat,
+  targetFormat: GPUTextureFormat,
   /**
    * The shared `FadeUniformsBgl` other HDR renderers (filaments, etc.)
    * use at `@group(1)`.  This renderer's shaders DO NOT reference
@@ -121,7 +121,7 @@ export function createStructureMarkerRenderer(
   initialCapacity = 64,
 ): StructureMarkerRenderer {
   const device = ctx.device as GPUDevice | null;
-  const format = hdrFormat;
+  const format = targetFormat;
 
   // Per-instance capacity.  This is an INITIAL hint, not a hard cap:
   // `setMarkers` grows both the CPU scratch buffer and the GPU vertex

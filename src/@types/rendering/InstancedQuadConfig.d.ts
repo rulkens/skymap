@@ -29,9 +29,11 @@ export type InstancedQuadConfig = {
   /** Color target blend mode. All three current consumers use
    *  `'additive'`. */
   blend: BlendMode;
-  /** Color target format. All three current consumers target the
-   *  HDR offscreen `'rgba16float'`. */
-  format: GPUTextureFormat;
+  /** Colour-target format the pipeline writes into. All three current
+   *  consumers target the HDR offscreen `'rgba16float'`. Named `targetFormat`
+   *  (not `format`) so it never reads as a `GpuContext.format`, which is
+   *  always the swap-chain format. */
+  targetFormat: GPUTextureFormat;
   /** Canonical cluster-focus bind-group layout, bound at `@group(1)`.
    *  The focus dim (non-members of a focused structure fade to 8%) is computed
    *  per instance in each consumer's vertex stage via

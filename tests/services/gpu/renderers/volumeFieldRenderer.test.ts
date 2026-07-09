@@ -32,7 +32,7 @@ function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
  * `paletteId`.  Modelled after the mock-device pattern in
  * `tests/services/gpu/renderTargets.test.ts`.
  */
-function mockDevice(): GPUDevice {
+function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   const makeTexture = () => ({
     createView: vi.fn(() => ({})),
     destroy: vi.fn(),
@@ -46,12 +46,13 @@ function mockDevice(): GPUDevice {
     })),
     createBindGroupLayout: vi.fn(() => ({})),
     createPipelineLayout: vi.fn(() => ({})),
-    createRenderPipeline: vi.fn(() => ({
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
+      renderPipelines?.push(desc);
       // The renderer derives its bind-group layout from the pipeline (it
       // uses `layout: 'auto'`); mock returns an empty layout the test
       // never inspects.
-      getBindGroupLayout: vi.fn(() => ({})),
-    })),
+      return { getBindGroupLayout: vi.fn(() => ({})) };
+    }),
     createBindGroup: vi.fn(() => ({})),
     queue: { writeBuffer: vi.fn(), writeTexture: vi.fn() },
   } as unknown as GPUDevice;
@@ -95,6 +96,16 @@ function uniformScratch(device: GPUDevice): Float32Array | undefined {
   );
   return hit?.[2] as Float32Array | undefined;
 }
+
+describe('createVolumeFieldRenderer colour target', () => {
+  it('bakes the given targetFormat into the raymarch pipeline colour target', () => {
+    const renderPipelines: GPURenderPipelineDescriptor[] = [];
+    createVolumeFieldRenderer(mockDevice(renderPipelines), 'rgba16float', {} as never);
+    expect(renderPipelines).toHaveLength(1);
+    const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
+    expect(target!.format).toBe('rgba16float');
+  });
+});
 
 describe('createVolumeFieldRenderer draw', () => {
   it('draw reads field values from settingsOf', () => {

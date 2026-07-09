@@ -148,6 +148,29 @@ const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
+describe('PointRenderer colour target', () => {
+  it('bakes the given targetFormat into the pipeline colour target', () => {
+    const captured: GPURenderPipelineDescriptor[] = [];
+    const device = {
+      ...makeStubDevice(),
+      createRenderPipeline: (desc: GPURenderPipelineDescriptor) => {
+        captured.push(desc);
+        return { getBindGroupLayout: () => ({}) } as unknown as GPURenderPipeline;
+      },
+    } as unknown as GPUDevice;
+    createPointRenderer(
+      device,
+      'rgba16float',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    expect(captured).toHaveLength(1);
+    const target = Array.from(captured[0]!.fragment!.targets!)[0]!;
+    expect(target!.format).toBe('rgba16float');
+  });
+});
+
 describe('PointRenderer.totalCount', () => {
   it('returns 0 before any upload', () => {
     const renderer = createPointRenderer(

@@ -56,14 +56,19 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 type Init = {
   device: GPUDevice;
   context: GPUCanvasContext;
-  format: GPUTextureFormat;
+  /**
+   * The colour-target format the disk pipeline writes into — the HDR offscreen
+   * (`'rgba16float'`), NOT the swap chain. Passed explicitly (never a
+   * `GpuContext.format`, which is always the swap-chain format).
+   */
+  targetFormat: GPUTextureFormat;
   canvas: HTMLCanvasElement;
   /** Shared cluster-focus layout, bound at @group(1) — see instancedQuadRenderer. */
   focusBgl: FocusUniformsBgl;
 };
 
 export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer {
-  const inner = createInstancedQuadRenderer(init, {
+  const inner = createInstancedQuadRenderer(init.device, {
     label: 'proceduralDisks',
     vertexSource: vsCode,
     fragmentSource: fsCode,
@@ -73,7 +78,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     focusBgl: init.focusBgl,
     // Procedural disks are EMISSIVE; same rationale as quad/disk.
     blend: 'additive',
-    format: init.format,
+    targetFormat: init.targetFormat,
     // Tagged VERTEX | FRAGMENT even though the fragment doesn't read
     // 'u' — keeps the pipeline-layout introspection signature stable
     // across the sibling renderers. See module header.

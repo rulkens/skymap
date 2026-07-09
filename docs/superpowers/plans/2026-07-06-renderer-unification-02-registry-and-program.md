@@ -279,13 +279,13 @@ export type RenderTargets = {
 
 Rows per the spec's concrete table (spec lines 137-144): `hdr` rgba16float/–/1, `volume` rgba16float/–/3, `swap` (swapFormat)/–/1. Clear values ride here (plan-time decision 2), consumed by the executor. `runFrame`'s hand-enumerated resize pair becomes one `state.gpu.renderTargets.resize(...)` call. `isEngineReady`'s `postProcess` check becomes the `renderTargets` check — a rename, NOT a predicate growth (heed `feedback_lifecycle_vs_teardown_invariants`: do not add the new handle _alongside_; bootstrap progression isn't the inverse of teardown). `ReadyFrameContext` swaps `postProcess`/`volumeOffscreen` for `renderTargets`.
 
-- [ ] Test `viewOf returns a live view per offscreen row and throws for swap`.
-- [ ] Test `resize reallocates offscreen textures at size/scale` (volume at ⌊size/3⌋, min 1 px — the `encodeVolumes.ts:60-61` guard moves here).
-- [ ] Test `specs carry the spec's format/depth/scale table` (the target half of the target↔renderer-profile invariant).
-- [ ] Test `destroy destroys every allocated texture` (mock-device pattern from existing gpu tests).
-- [ ] Implement; repoint executor `viewFor`/clears; update `frameContext.test.ts`, `renderFrame.test.ts` fixtures (ctx field swap), `initGpu.destroyReachability.test.ts`.
-- [ ] `npm run typecheck && npm test` → green.
-- [ ] Commit.
+- [x] Test `viewOf returns a live view per offscreen row and throws for swap`.
+- [x] Test `resize reallocates offscreen textures at size/scale` (volume at ⌊size/3⌋, min 1 px — the `encodeVolumes.ts:60-61` guard moves here).
+- [x] Test `specs carry the spec's format/depth/scale table` (the target half of the target↔renderer-profile invariant).
+- [x] Test `destroy destroys every allocated texture` (mock-device pattern from existing gpu tests).
+- [x] Implement; repoint executor `viewFor`/clears; update `frameContext.test.ts`, `renderFrame.test.ts` fixtures (ctx field swap), `initGpu.destroyReachability.test.ts`.
+- [x] `npm run typecheck && npm test` → green.
+- [x] Commit.
 
 ### Task 10 — renderer-factory `targetFormat` cleanup: `GpuContext.format` means swap-chain format, always
 

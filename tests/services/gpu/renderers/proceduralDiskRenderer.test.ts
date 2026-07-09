@@ -25,11 +25,15 @@ import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/Pr
 
 function makeStubInit() {
   const writeBufferCalls: Array<{ data: Float32Array; offset: number }> = [];
+  const renderPipelines: GPURenderPipelineDescriptor[] = [];
   const device = {
     createShaderModule: vi.fn(() => ({
       getCompilationInfo: () => Promise.resolve({ messages: [] }),
     })),
-    createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
+      renderPipelines.push(desc);
+      return { getBindGroupLayout: () => ({}) };
+    }),
     createPipelineLayout: vi.fn(() => ({})),
     createBindGroupLayout: vi.fn(() => ({})),
     createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
@@ -49,7 +53,8 @@ function makeStubInit() {
         ) => {
           const ab = (data as ArrayBufferView).buffer ?? (data as ArrayBuffer);
           const offset = dataOff ?? (data as ArrayBufferView).byteOffset ?? 0;
-          const len = size ?? (data as ArrayBufferView).byteLength ?? (ab as ArrayBuffer).byteLength;
+          const len =
+            size ?? (data as ArrayBufferView).byteLength ?? (ab as ArrayBuffer).byteLength;
           // Copy the snapshot — the renderer reuses its scratch
           // Float32Array, so a live view would mutate between draws.
           const copy = new Uint8Array(len);
@@ -68,18 +73,22 @@ function makeStubInit() {
     init: {
       device,
       context: null as unknown as GPUCanvasContext,
-      format: 'rgba16float' as GPUTextureFormat,
+      targetFormat: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
-      focusBgl: {} as unknown as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
+      focusBgl:
+        {} as unknown as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
     },
     writeBufferCalls,
+    renderPipelines,
   };
 }
 
 // Stub shared focus bind group passed into draw() — only bound, never read.
 const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
 
-function fakeProceduralInstance(overrides: Partial<ProceduralDiskInstance> = {}): ProceduralDiskInstance {
+function fakeProceduralInstance(
+  overrides: Partial<ProceduralDiskInstance> = {},
+): ProceduralDiskInstance {
   return {
     x: 1,
     y: 2,
@@ -95,6 +104,17 @@ function fakeProceduralInstance(overrides: Partial<ProceduralDiskInstance> = {})
     ...overrides,
   };
 }
+
+describe('proceduralDiskRenderer colour target', () => {
+  it('forwards init.targetFormat to the inner (visual) pipeline colour target', () => {
+    const { init, renderPipelines } = makeStubInit();
+    createProceduralDiskRenderer(init);
+    // Two pipelines build: the additive visual pipeline (targetFormat) and the
+    // r32uint pick pipeline. The visual one must carry the forwarded format.
+    const formats = renderPipelines.map((p) => Array.from(p.fragment!.targets!)[0]!.format);
+    expect(formats).toContain('rgba16float');
+  });
+});
 
 describe('proceduralDiskRenderer pack loop (Task R2)', () => {
   it('pack writes the packed pick id into slot 6 as u32 bits', () => {
@@ -116,7 +136,15 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
       fakeProceduralInstance({ sourceCode: 3, localIdx: 1_000_000 }),
     ];
 
-    renderer.draw(pass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, instances);
+    renderer.draw(
+      pass,
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      instances,
+    );
 
     // Visual instance payload is always writeBufferCalls[1] (uniforms first,
     // visual instances second, pick mirror third).
@@ -146,7 +174,15 @@ describe('proceduralDiskRenderer pack loop (Task R1)', () => {
       fakeProceduralInstance({ x: 40, y: 50, z: 60 }),
     ];
 
-    renderer.draw(pass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, instances);
+    renderer.draw(
+      pass,
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      instances,
+    );
 
     // draw emits three writeBuffer calls per frame: uniforms first, then
     // the visual instance payload, then the pick instance buffer mirror.
