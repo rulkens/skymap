@@ -1,6 +1,13 @@
 # Zoom to Earth at true relative scale — design
 
-> **Status.** Approved design (brainstorm output). Awaiting a TDD plan.
+> **Status.** Approved design. **Phase 1 (the precision slice) SHIPPED to
+> `main` via PR #386 (`504b15dc`, 2026-07-10)**, then folded onto the unified
+> layer/slab/program renderer (see the
+> [renderer-unification design](completed/2026-06-29-renderer-unification-design.md),
+> now in `specs/completed/`, and its
+> [fold plan](../plans/completed/2026-07-06-renderer-unification-04-fold-zoom-to-earth.md)).
+> §§4/7/8/10–12 were re-grounded on the landed architecture on 2026-07-10;
+> Phases 2–5 remain, tracked by plans 02 (Earth + anchors) and 03 (LOD + polish).
 > **Date.** 2026-06-29.
 > **Relationship to prior work.** Refines the precision stance of the
 > 2026-05-08 "Cosmic Zoom — Powers of Ten" plan's
@@ -78,14 +85,27 @@ The audits confirmed the `f32` assumption is baked in end-to-end:
   is expressed relative to. **For this feature it is fixed at the Sun
   `(0,0,0)`** — every body we render (Sun, Earth, Moon, Jupiter, Proxima) sits
   within ~1.3 pc of it, so a moving origin buys nothing here. `renderOrigin`
-  exists as the _named extension point_ where a future shell (zooming into M31,
-  etc.) plugs a moving origin in. We do **not** build threshold-rebasing or
-  per-instance buffer re-upload we won't exercise (YAGNI).
+  landed as `src/data/renderOrigin.ts` (`RENDER_ORIGIN_MPC = [0,0,0]`),
+  consumed directly (as a constant, not per-frame state) by `slabs.ts`'s
+  near-field slab derivation and by `debugSpheresLayer`; it is the _named
+  extension point_ where a future shell (zooming into M31, etc.) plugs a moving
+  origin in. We do **not** build threshold-rebasing or per-instance buffer
+  re-upload we won't exercise (YAGNI).
 - **Per-object MVP composed in `f64`, narrowed to `f32`.** Each foreground body
   composes `MVP = proj · view · model` in `f64` using wgpu-matrix's `mat4d`
   (camera relative to `renderOrigin`, geometry in the body's **native unit**),
   then narrows the resulting `Float64Array` to `f32` for upload. Composing
   _before_ narrowing is what dodges catastrophic cancellation.
+- **Where the `f64` compose is actually load-bearing (measured in the shipped
+  Phase-1 work).** With `renderOrigin` at the Sun, `f32` is adequate all the way
+  down to AU scale — a body at 1 AU keeps a ~700× precision margin, so Earth
+  itself does not _need_ the double-precision compose to sit stably. Catastrophic
+  cancellation only bites at **parsec** scale: Proxima at ~1.3 pc is where the
+  large VP translation swamps the small delta, and separate-narrow loses ~376
+  Earth radii while compose-in-f64-then-narrow holds to ~7×10⁻⁷. The Phase-1
+  cancellation-guard test therefore uses **parsec geometry**, not 1 AU. In short,
+  `f64` necessity shows up visually at the _star anchors_, not at Earth — which is
+  also why the parsec regime is the concrete motivator for a future third slab.
 - **Native units per body** keep model-scale factors sane: Earth/planets in
   **km**, stars in **pc**. Conversions live in one file (`scaleUnits.ts`).
 - **The galaxy backdrop is unchanged.** Its `Float32Array` buffer renders with
@@ -112,40 +132,87 @@ refinement, not a reversal. A short ADR will record the refinement.
   shader complexity; ADR 0001 already rejected it. The per-object snap-and-
   narrow gives the precision we need without GPU-side `f64`.
 
-## 4. Render pipeline — an opaque foreground pass
+## 4. Render pipeline — foreground bodies as content-layer rows (landed)
 
-The audit surfaced the load-bearing constraint: **the main scene has no depth
-buffer.** Every HDR pass uses pure additive blending (A+B = B+A,
-order-independent, no occlusion); depth was deliberately removed
-(`postProcess.ts:48–62`). Opaque solids that occlude and self-occlude (Earth,
-planets, the Sun's disc) therefore cannot live in the existing HDR mega-pass.
+_(Rewritten 2026-07-10: the original section prescribed a bespoke opaque
+foreground pass modelled on the `volumeOffscreen`/`volumeUpsamplePass` pattern,
+slotted by hand into `renderFrame`'s single encoder. That shape shipped in the
+first draft of PR #386 and was then dissolved onto the unified renderer before
+merge — see the renderer-unification design and its fold plan in the References.)_
 
-**Decision: add a new opaque, depth-tested foreground pass, composited over the
-additive backdrop using the existing half-res-volume offscreen pattern.**
+The load-bearing constraint stands: **the cosmological scene has no depth
+buffer.** Every HDR layer uses pure additive blending (A+B = B+A,
+order-independent, no occlusion). Opaque solids that occlude and self-occlude
+(Earth, planets, the Sun's disc) cannot live in the additive HDR group.
 
-- The foreground pass owns **its own depth texture** and **its own adaptive
-  frustum** (near/far sized to the local scene), so its depth precision is
-  good regardless of the cosmic far plane.
-- It renders only **currently-resolved near bodies**. Distant bodies — Proxima
-  when you're at Earth, and all galaxies always — stay **points in the additive
-  backdrop**. This sidesteps trying to fit Earth-surface → Proxima into one
-  depth buffer, and it unifies cleanly with LOD (below).
-- Composite follows `volumeOffscreen` → `volumeUpsamplePass` (allocate target
-  in `initGpu`, render pre-composite, blend into HDR). Unlike the volume
-  (additive), the foreground composites **over** (opaque geometry).
-- The single-encoder frame loop (`renderFrame.ts:150–178`) slots the new pass
-  in without restructuring.
+The answer is no longer a bespoke pass but the unified renderer's **three
+independent axes** — slab (which view-projection + depth range), target (which
+texture), blend (how fragments combine). A visual element is a `ContentLayer`
+row at one point in that space (`src/@types/engine/frame/ContentLayer.d.ts`),
+registered in the flat `CONTENT_LAYERS` registry
+(`src/services/engine/frame/passes/index.ts`, one file per layer under
+`passes/<name>Layer.ts`), and drawn by the `FrameStep` program that
+`frameProgram(tone)` returns (`src/services/engine/frame/frameProgram.ts`),
+executed by `executeFrame.ts`.
+
+How the foreground maps onto those axes (all shipped):
+
+- **Foreground bodies are rows at `(NEAR0, foreground:0, opaque)`.** The
+  Phase-1 slice ships `debugSpheresLayer`
+  (`src/services/engine/frame/passes/debugSpheresLayer.ts`); Earth, planets,
+  and resolved stars become sibling rows drawing their own renderers.
+- **The `foreground:0` target row carries its own depth.** The target table in
+  `src/services/gpu/renderTargets.ts` owns every offscreen's lifecycle; the
+  `foreground:0` row is `{format: 'rgba16float', depth: 'depth32float',
+scale: 1}`, clears colour to `a=0` (so an empty foreground composites to a
+  no-op) and depth to `1.0`. The executor attaches the depth view
+  (`depthViewOf`) automatically whenever a render step's target row declares
+  depth — no per-feature pass code.
+- **The frustum is the NEAR0 slab's.** `deriveSlabs`
+  (`src/services/engine/frame/slabs.ts`) sizes the near-field near/far to the
+  camera's orbit distance (see §7), so foreground depth precision is good
+  regardless of the cosmic far plane.
+- **The composite is a program step, not a second tonemap.** The
+  `foreground:0 → swap` step uses the shared compositor's straight-alpha
+  Porter-Duff `over` (`src/services/gpu/passes/compositor.ts`) and runs
+  **after** the `hdr → swap` tonemap, carrying **the same `tone` object** — so
+  tone parity across the Sun's limb is enforced by identity (see §12).
+- **Captions are a `(NEAR0, swap, over)` row** — `foregroundLabelsLayer`, a
+  second MSDF label renderer projected through the NEAR0 slab (the COSMO near
+  plane would clip the solar system away).
+- **Occlusion ordering is a visible program decision.** In `frameProgram` the
+  foreground render + composite follow the cosmological swap render (so opaque
+  bodies occlude cosmological labels), and the NEAR0 swap render (captions)
+  follows the composite (so captions land on top of the bodies).
+
+The foreground still renders only **currently-resolved near bodies**. Distant
+bodies — Proxima when you're at Earth, and all galaxies always — stay **points
+in the additive backdrop**, sidestepping an Earth-surface → Proxima depth range
+in one buffer and unifying cleanly with LOD (below).
+
+**Adding a new body type (Earth, planets, star spheres) is a data edit**: one
+layer file + one registry row + a renderer — no new frame hooks. A new
+`(target, slab)` pair needs one new program step in `frameProgram`; the
+existing `(foreground:0, NEAR0)` and `(swap, NEAR0)` steps already cover
+resolved spheres and captions.
 
 ### LOD — presentation chosen by apparent size
 
 A body's _presentation_ is chosen by `apparentSizePx()` (the existing util that
 drives the famous-galaxy point→thumbnail promotion at ≥200 px):
 
-- A **star** is a **point** in the additive backdrop when far, and **promotes
-  to a resolved emissive sphere** in the foreground pass when near. The Sun is
-  just an always-resolved star.
+- A **star** is a **point** when far, and **promotes to a resolved emissive
+  sphere** in the foreground group when near. The Sun is just an
+  always-resolved star.
 - **Planets / Earth** are only ever seen up close, so they are always rendered
   as foreground spheres when present.
+
+In layer terms: resolved spheres join the `foreground:0` rows, while the
+distant-star **points** become an **additive layer into the `hdr` target
+through the NEAR0 slab** — they cannot ride the COSMO slab because its near
+plane (0.01 Mpc) would clip parsec-scale anchors away. `(hdr, NEAR0)` is a new
+`(target, slab)` pair, so it needs **one new render step** in `frameProgram`;
+everything else is registry data.
 
 This is the same "point when far, resolved when near" mechanism galaxies
 already use — not a new concept.
@@ -163,7 +230,9 @@ architecture (ADR 0005), add **three new data types**, each a tagged
 | Earth     | `'earth'`  | seed: Earth         | —                                           | textured sphere (atmosphere later)   |
 
 - **Source codes are appended, never renumbered** (the append-only rule in
-  `sources.ts`). Three new codes for `star`/`planet`/`earth`.
+  `source.ts`'s docstring). Three new codes for `star`/`planet`/`earth` —
+  the next free codes are **21/22/23** (Flow took 17; the DESI patches took
+  18–20: DesiDeep 18, DesiWedge 19, DesiSgw 20).
 - **Seeded now** via the structures "featured anchors" pattern: a small static
   data file loaded into a bodies store. The real star `.bin` slots into the
   same fetcher/slot path later (the famous `.bin` + index-aligned
@@ -220,9 +289,12 @@ position unit across all bodies, no per-kind unit braid.
 ## 6. Renderers — shared sphere infrastructure, thin specializations
 
 Per `renderers.md` and the `instancedQuadRenderer`-shared-by-three precedent:
-share a **sphere infrastructure** (a generated UV-sphere mesh util + a
-`sphere`/`camera` WESL lib that does the per-object transform), wrapped by thin
-per-type renderers that differ only in fragment shading.
+share a **sphere infrastructure**, wrapped by thin per-type renderers that
+differ only in fragment shading. That infrastructure **shipped with Phase 1**:
+`src/utils/math/uvSphereMesh.ts` (generated UV-sphere mesh),
+`src/services/gpu/shaders/lib/sphere.wesl` (`SphereUniforms` + the per-object
+transform), and `src/services/gpu/renderers/debugSphereRenderer.ts` as the
+first consumer / reference implementation.
 
 - `earthRenderer` — equirectangular texture sample (Blue Marble); atmosphere
   later.
@@ -231,11 +303,19 @@ per-type renderers that differ only in fragment shading.
   fly up to).
 - `starPointRenderer` — distant stars as points; reuses the point pipeline.
 
-All follow the convention: factory taking a named bag, `satisfies Renderer`,
-GPU resources in the closure, `draw(pass, viewProj, viewportPx, …)`, a nullable
-slot on `EngineGpuHandles`, constructed in `initGpu.ts`. Shader code shares
-`lib/` aggressively (the `package::lib::camera`/`package::lib::sphere` imports);
-follow `wesl-shaders` conventions (no backticks in comments, literal
+All follow the convention: `satisfies Renderer`, GPU resources in the closure,
+a nullable slot on `EngineGpuHandles`
+(`src/@types/engine/handles/EngineGpuHandles.d.ts`), constructed in
+`initGpu.ts`. The factory-signature idiom for foreground renderers is
+**positional `(device, targetFormat, depthFormat)`**, matching
+`createDebugSphereRenderer` — and the two formats must match the
+`foreground:0` target row's `format`/`depth` (`rgba16float`/`depth32float`),
+the target↔renderer-profile invariant the unified registry rests on.
+Renderers stay slab-ignorant GPU-resource owners; they are **drawn by content
+layers**, which thread the slab's view-projection into `draw` (the layer is
+where a `(target, slab, blend)` row meets its renderer). Shader code shares
+`lib/` aggressively (the `package::lib::camera`/`package::lib::sphere`
+imports); follow `wesl-shaders` conventions (no backticks in comments, literal
 `package::` prefix, `?static` on the TS side).
 
 Earth texture upload uses the existing `copyExternalImageToTexture` pattern
@@ -243,117 +323,173 @@ Earth texture upload uses the existing `copyExternalImageToTexture` pattern
 
 ## 7. Camera
 
-- **Lower `MIN_DISTANCE_MPC`** (currently `0.05`, `clampDistance.ts`) toward
-  Earth-surface scale (~`1e-17` Mpc ≈ a few hundred km). Existing exponential
-  wheel/pinch zoom already spans this.
-- **Adaptive foreground near/far** computed from camera-distance-to-focus, so
-  the foreground frustum stays precise at any scale. The galaxy backdrop keeps
-  its existing wide frustum.
-- **Extend the single viewProj chokepoint** (`frameContext.ts:142`); build on
-  the existing camera driver/intent architecture rather than around it. The
-  precision work only adds an `f64`-composed foreground viewProj alongside the
-  existing backdrop one.
-- **Fly-to-Earth** is a **debug key** for now (real UI control deferred).
+- **`MIN_DISTANCE_MPC` is a `?deepZoom`-gated pair (shipped).** In
+  `clampDistance.ts`, `MIN_DISTANCE_MPC = hasUrlGate('deepZoom') ? 1e-17 :
+0.05` — the releasable floor (0.05 Mpc) stops the descent while the deep
+  range shows only debug placeholder bodies; `?deepZoom` opens the full
+  descent to Earth-surface scale. The existing exponential wheel/pinch zoom
+  spans it.
+- **The NEAR0 slab row IS the foreground projection home.** `deriveSlabs` in
+  `src/services/engine/frame/slabs.ts` builds the near-field row's
+  origin-relative `f64` view-projection via `computeForegroundViewProj`, with
+  near/far tracking the orbit distance (`NEAR0_NEAR_RATIO = 1e-4`,
+  `NEAR0_FAR_RATIO = 100` — one home, in `slabs.ts`). Those fixed ratios are
+  the current heuristic; the LOD plan (plan 03) replaces them with an adaptive
+  `foregroundFrustum(cam.distance)`. The galaxy backdrop keeps its fixed wide
+  COSMO frustum (0.01 → 50 000 Mpc).
+- **Fly-to-Earth** is a **debug key** for now (real UI control deferred —
+  still deferred to plan 03).
 
-## 8. New shared pieces
+## 8. Shared pieces (shipped with Phase 1)
+
+All of these exist on `main`:
 
 - **`src/data/scaleUnits.ts`** — `SCALE_UNITS` with `KM_TO_MPC`, `AU_TO_MPC`,
   `PC_TO_MPC`, `KPC_TO_MPC`, `MPC_TO_MPC`, `GPC_TO_MPC` (+ `LY_TO_MPC` for
-  copy only). Single source of truth (ADR 0005 reserved this path; it does not
-  exist yet — today only Hubble/`PC_TO_LY` constants live in
-  `utils/math/constants.ts`).
+  copy only). Single source of truth (the path ADR 0005 reserved).
+- **`src/data/renderOrigin.ts`** — `RENDER_ORIGIN_MPC` (§3), the named
+  floating-origin extension point.
 - **f64 matrix composition via wgpu-matrix `mat4d`/`vec3d`** (no hand-written
   helpers needed — the gl-matrix → wgpu-matrix migration in PR #382 provides the
   `Float64Array` namespaces directly: `mat4d.lookAt`, `mat4d.perspective` (ZO by
-  default), `mat4d.multiply`, `mat4d.translate`, `mat4d.scale`). The only
-  bespoke piece is **`src/utils/math/narrowMat4.ts`** — a one-line `f64 → f32`
-  narrow (`new Float32Array(m)`) for the GPU upload boundary.
+  default), `mat4d.multiply`, `mat4d.translate`, `mat4d.scale`). The bespoke
+  pieces are **`src/utils/camera/composeBodyMvp.ts`** (per-body
+  compose-in-f64-then-narrow), **`src/utils/camera/computeForegroundViewProj.ts`**
+  (the NEAR0 slab's origin-relative f64 view-projection), and
+  **`src/utils/math/narrowMat4.ts`** — a one-line `f64 → f32` narrow
+  (`new Float32Array(m)`) for the GPU upload boundary.
+- **`src/utils/math/uvSphereMesh.ts` + `src/services/gpu/shaders/lib/sphere.wesl`**
+  — the shared sphere infrastructure (§6).
 
 ## 9. Testing
 
 - **Unit:** `mat4d` compose-then-`narrowMat4` round-trip + a
-  **catastrophic-cancellation guard** (a point at Earth's radius placed at 1 AU
-  survives compose-then-narrow with sub-metre error); `SCALE_UNITS` constants
-  snapshot; UV-sphere mesh vertex/winding; foreground composite math.
+  **catastrophic-cancellation guard** (shipped with Plan 01; it uses **parsec
+  geometry** — Proxima-scale, where separate-narrow visibly fails — because at
+  1 AU `f32` still has a ~700× margin and the guard would pass either way, see
+  §3); `SCALE_UNITS` constants snapshot; UV-sphere mesh vertex/winding;
+  foreground composite math.
 - **Visual** (user-verified on the dev server): zoom galaxies → Earth; Earth
   resolves as a stable, round, textured sphere with no jitter / clipping /
   swim; anchors at believable relative sizes; backdrop intact.
 
 ## 10. Phasing
 
-1. **Precision slice (kept if green).** `scaleUnits` + `narrowMat4` + f64
-   compose via `mat4d` + the opaque foreground depth pass + lowered
-   min-distance clamp + `renderOrigin` + a **plain debug sphere** at Earth's
-   true size/position.
-   Acceptance: stable, jitter-free zoom from the galaxy view down to the
-   sphere, galaxy backdrop intact. This is the de-risk; it stays.
+1. **Precision slice — SHIPPED** (kept, green, merged to `main` via PR #386,
+   `504b15dc`, 2026-07-10). `scaleUnits` + `narrowMat4` + f64 compose via
+   `mat4d`/`composeBodyMvp` + the `foreground:0` depth-bearing target + the
+   `?deepZoom`-gated min-distance clamp + `renderOrigin` + **plain debug
+   spheres** (Sun, Earth) at true size/position, folded onto the layer/slab/
+   program renderer before merge. Acceptance held: stable, jitter-free zoom
+   from the galaxy view down to the sphere, galaxy backdrop intact
+   (user-verified visual gate, 2026-07-09).
 2. **Earth.** `earth` type + `earthRenderer` + Blue Marble texture + Earth
-   seed, on the shared sphere infrastructure.
+   seed, on the shared sphere infrastructure. _(Plan 02 — Earth + anchors.)_
 3. **Anchors.** `star`/`planet` types + seed (Sun, Moon, Jupiter, Proxima) +
    `starRenderer` / `starPointRenderer` / `planetRenderer` on the shared lib.
-4. **LOD + depth.** Adaptive foreground near/far; apparent-size point↔sphere
-   promotion for stars; foreground/backdrop partition by apparent size.
+   _(Plan 02.)_
+4. **LOD + depth.** Adaptive foreground near/far (`foregroundFrustum` replacing
+   the fixed slab ratios); apparent-size point↔sphere promotion for stars;
+   foreground/backdrop partition by apparent size. _(Plan 03 — LOD + polish.)_
 5. **Polish.** Fly-to-Earth affordance, tests, docs, `entanglement-radar`
-   pass, short ADR recording the ADR-0001 refinement.
+   pass, short ADR recording the ADR-0001 refinement. _(Plan 03.)_
 
-## 11. File inventory (anticipated)
+Phases 2–5 remain. Their plans
+(`docs/superpowers/plans/2026-06-29-zoom-to-earth-02-earth-and-anchors.md`,
+`...-03-lod-and-polish.md`) were re-grounded onto the layer/slab model on
+2026-07-10, alongside this spec (a foreground body renderer becomes a
+`foreground:0` layer's renderer; the adaptive frustum lands in `slabs.ts`).
 
-New:
+## 11. File inventory
+
+Shipped with Phase 1 (on `main`):
 
 ```
-docs/adrs/00NN-continuous-floating-origin-for-free-zoom.md   (refines ADR 0001)
 src/data/scaleUnits.ts
+src/data/renderOrigin.ts
+src/data/bodies/debugSphereBody.ts             seed: debug Sun + Earth stand-ins
+src/utils/math/narrowMat4.ts                   (f64 → f32 for GPU upload; f64
+                                                compose itself uses wgpu-matrix mat4d)
+src/utils/camera/composeBodyMvp.ts
+src/utils/camera/computeForegroundViewProj.ts
+src/utils/math/uvSphereMesh.ts
+src/services/gpu/renderers/debugSphereRenderer.ts
+src/services/gpu/shaders/lib/sphere.wesl
+src/services/gpu/shaders/debugSphere/*.wesl
+src/services/engine/frame/passes/debugSpheresLayer.ts
+src/services/engine/frame/passes/foregroundLabelsLayer.ts
+src/utils/camera/clampDistance.ts              (?deepZoom-gated MIN_DISTANCE_MPC)
+tests/** mirroring the above
+```
+
+_(The originally-anticipated `encodeForegroundPass.ts` and
+`foregroundOffscreen.ts` were built on the branch and then deleted by the
+unification fold — superseded by the layer files above plus the `foreground:0`
+row in `src/services/gpu/renderTargets.ts`.)_
+
+New (phases 2–5):
+
+```
+docs/adrs/0009-continuous-floating-origin-for-free-zoom.md   (refines ADR 0001;
+                                                              next free ADR number)
 src/data/bodies/sceneBodies.ts                seed: Sun, Earth, Moon, Jupiter, Proxima
 src/@types/data/StarSourceEntry.d.ts          (+ Planet, Earth source entries)
 src/@types/scene/StarBody.d.ts                (+ PlanetBody, EarthBody)
 src/@types/rendering/EarthRenderer.d.ts        (+ Planet, Star, StarPoint renderer types)
-src/utils/math/narrowMat4.ts                   (f64 → f32 for GPU upload; f64
-                                                compose itself uses wgpu-matrix mat4d)
-src/utils/math/uvSphereMesh.ts
 src/services/gpu/renderers/earthRenderer.ts    (+ planet/star/starPoint renderers)
-src/services/gpu/shaders/lib/sphere.wesl
 src/services/gpu/shaders/earth/*.wesl          (+ planet/star shader dirs)
-src/services/engine/frame/encodeForegroundPass.ts
-src/services/gpu/passes/foregroundOffscreen.ts (depth + colour target, initGpu)
-src/services/engine/data/createBodyStore.ts
+src/services/engine/frame/passes/earthLayer.ts (+ planetsLayer, starSpheresLayer,
+                                                starPointsLayer — one ContentLayer
+                                                row per body type)
+src/services/engine/data/createBodyStore.ts    (EngineData grows a bodies store)
 public/images/earth/blue-marble-4k.jpg
 tests/** mirroring the above
 ```
 
-Modified:
+Modified (phases 2–5):
 
 ```
-src/data/sources.ts + src/data/sources/{star,planet,earth}.ts   (append codes + entries)
+src/data/source.ts + src/data/sources/{star,planet,earth}.ts   (append codes 21/22/23 + entries)
 src/@types/.../SourceEntry union
-src/utils/camera/clampDistance.ts              (lower MIN_DISTANCE_MPC)
-src/services/engine/frame/renderFrame.ts        (insert foreground pass)
-src/services/engine/phases/initGpu.ts           (construct renderers + targets)
-src/services/engine/frame/frameContext.ts       (foreground viewProj alongside backdrop)
-src/@types/engine/EngineGpuHandles.d.ts         (new nullable renderer slots)
+src/services/engine/frame/passes/index.ts       (register the new layer rows)
+src/services/engine/frame/frameProgram.ts       (ONE new render step: (hdr, NEAR0)
+                                                 for distant-star points)
+src/services/engine/frame/slabs.ts              (adaptive foregroundFrustum — plan 03)
+src/services/engine/phases/initGpu.ts           (construct the new renderers)
+src/@types/engine/handles/EngineGpuHandles.d.ts (new nullable renderer slots)
 ```
 
-## 12. Open questions
+## 12. Open questions — all resolved
 
-- **Foreground depth format** — `depth24plus` (space) vs `depth32float`
-  (precision across the adaptive near/far spread). Decide in the plan; lean
-  `depth32float` for the wide range.
-- **Composite path** — foreground into the HDR offscreen (then one tonemap) vs
-  directly over the tone-mapped swap chain. The former keeps Earth inside the
-  HDR/tonemap pipeline (preferable); confirm against the additive backdrop's
-  blend.
-- **Camera-intent-slice state** — the audit reports it largely landed on
-  `main`; BACKLOG still lists it as a pickup-able plan. Verify before the plan
-  leans on specifics. Our design depends only on the viewProj chokepoint, which
-  exists either way.
+- **Foreground depth format — resolved: `depth32float`.** Shipped as the
+  `foreground:0` row in `src/services/gpu/renderTargets.ts`
+  (`{format: 'rgba16float', depth: 'depth32float', scale: 1}`), matching this
+  section's original lean (precision across the adaptive near/far spread).
+- **Composite path — resolved: over the tone-mapped swap chain, with the SAME
+  `tone` object as the `hdr → swap` composite.** This differs from the
+  section's original lean (compositing into the HDR offscreen before the
+  single tonemap), but it is equivalent for the requirement that lean was
+  protecting — one shared tone curve across the Sun's limb: `frameProgram`
+  threads one `tone` object by reference into **both** composites, so the
+  curve is identical by identity rather than by passing through one pass. The
+  landed shape is also what lets the opaque bodies occlude the cosmological
+  swap-chain labels (the composite runs after the cosmological swap render —
+  a program-ordering decision the HDR-offscreen path could not express).
+- **Camera-intent-slice state — resolved: landed on `main`.**
+  `cameraSlice`/`startCameraTween` exist; the NEAR0 slab derivation reads the
+  live camera pose the same way the COSMO one does.
 
 ## References
 
+- [Renderer-unification design](completed/2026-06-29-renderer-unification-design.md) — the layer/slab/program model §4 now rests on
+- [Renderer-unification plan 04 — fold zoom-to-earth](../plans/completed/2026-07-06-renderer-unification-04-fold-zoom-to-earth.md) — how PR #386's bespoke wiring dissolved into layer rows + program steps
 - [ADR 0001 — per-shell floating origin](../plans/2026-05-08-cosmic-zoom-powers-of-ten/decisions/0001-floating-origin.md) (refined here)
 - [ADR 0005 — units and scale](../plans/2026-05-08-cosmic-zoom-powers-of-ten/decisions/0005-units-and-scale.md)
 - [ADR 0005 — engine data layer + asset loading](../../adrs/0005-engine-data-layer-and-asset-loading.md) (data-type vs presentation axis)
 - [`renderers.md`](../conventions/renderers.md), [`simplicity.md`](../conventions/simplicity.md), [`intent.md`](../conventions/intent.md)
-- Audit findings (this session): main scene is depthless/additive
-  (`postProcess.ts:48–62`); the default matrix path is `f32`, with `f64`
-  available via wgpu-matrix `mat4d`/`vec3d` (`computeViewProj.ts`, PR #382);
-  `apparentSizePx` LOD precedent; volume-offscreen composite template
-  (`volumeOffscreen.ts` / `volumeUpsamplePass.ts`).
+- Audit findings (2026-06-29 design session — pre-unification file names):
+  main scene is depthless/additive; the default matrix path is `f32`, with
+  `f64` available via wgpu-matrix `mat4d`/`vec3d` (`computeViewProj.ts`,
+  PR #382); `apparentSizePx` LOD precedent; the volume-offscreen composite
+  template (since absorbed into `renderTargets.ts` + the `volume-upsample`
+  layer by the unification).
