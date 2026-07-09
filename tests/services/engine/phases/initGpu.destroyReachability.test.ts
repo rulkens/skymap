@@ -207,6 +207,12 @@ vi.mock('../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry', ()
 
 // Imported AFTER the mocks so initGpu picks up the mocked dependencies.
 import { initGpu } from '../../../../src/services/engine/phases/initGpu';
+// The mocked label-renderer factory itself: the main `labelRenderer` and the
+// foreground caption renderer are both built through it, so tests index its
+// `mock.results` ordinally (call 0 = main, call 1 = foreground) to prove two
+// DISTINCT instances land on state.gpu.* — the shared `stubs.labelRenderer`
+// key is overwritten by the second call and cannot make that distinction.
+import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labelRenderer';
 
 /**
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
@@ -277,6 +283,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // Clear the spy cache so each test sees fresh stubs. The vi.mock
     // factories run per-call, so the map repopulates as initGpu runs.
     for (const k of Object.keys(stubs)) delete stubs[k];
+    // Reset the label-factory call history so `mock.results` indices are
+    // deterministic within each test (call 0 = main, call 1 = foreground).
+    vi.mocked(createLabelRenderer).mockClear();
   });
 
   it('writes texturedDiskRenderer/proceduralDiskRenderer/milkyWayCloudRenderer onto state.gpu.*', async () => {
@@ -388,13 +397,21 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // The foreground debug sphere must reach state.gpu.* so the destroy chain
     // can release its position VBO, index IBO, and uniform buffer.
     expect(state.gpu.debugSphereRenderer).toBe(stubs.debugSphereRenderer);
-    // The second (foreground) label renderer is built via the same
-    // createLabelRenderer mock as the main labels, so it's the LAST stub the
-    // factory produced (foreground is constructed after the main label pass).
-    // It must reach state.gpu.* and have its static caption set uploaded once.
-    expect(state.gpu.foregroundLabelRenderer).not.toBeNull();
-    expect(state.gpu.foregroundLabelRenderer).toBe(stubs.labelRenderer);
-    expect(stubs.labelRenderer!.setLabels).toHaveBeenCalledTimes(1);
+    // Both label renderers come from the same createLabelRenderer factory,
+    // so index its call results ordinally: call 0 built the main
+    // `labelRenderer`, call 1 the foreground caption renderer.  Asserting
+    // each field against its OWN call result — plus the not.toBe below —
+    // proves initGpu constructed two distinct instances rather than
+    // aliasing one renderer onto both fields.
+    const labelResults = vi.mocked(createLabelRenderer).mock.results;
+    expect(labelResults).toHaveLength(2);
+    expect(state.gpu.labelRenderer).toBe(labelResults[0]!.value);
+    expect(state.gpu.foregroundLabelRenderer).toBe(labelResults[1]!.value);
+    expect(state.gpu.foregroundLabelRenderer).not.toBe(state.gpu.labelRenderer);
+    // The static Sun/Earth caption set is uploaded once, at construction,
+    // onto the foreground renderer only.
+    expect(state.gpu.foregroundLabelRenderer!.setLabels).toHaveBeenCalledTimes(1);
+    expect(state.gpu.labelRenderer!.setLabels).not.toHaveBeenCalled();
   });
 
   it('replaying the destroy chain reaches debugSphereRenderer + foregroundLabelRenderer', async () => {
