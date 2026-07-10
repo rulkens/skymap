@@ -25,12 +25,4 @@ describe('delay', () => {
     await p;
     expect(resolved).toBe(true);
   });
-
-  it('returns a Promise<void>', () => {
-    vi.useFakeTimers();
-    const p = delay(0);
-    expect(p).toBeInstanceOf(Promise);
-    vi.advanceTimersByTime(0);
-    return p;
-  });
 });

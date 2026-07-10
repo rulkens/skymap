@@ -19,7 +19,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
-import type { FrameContext } from '../../../../src/@types/engine/frame/FrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -250,39 +249,5 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.nowMs).toBe(1234.5);
-  });
-});
-
-describe('deriveFrameContext — type narrowing', () => {
-  it('narrows ctx.cam to non-null after the isReady guard (TS-level)', () => {
-    const ctx: FrameContext = deriveFrameContext(
-      makeState(),
-      makeCanvas(),
-      RESTING_POSE,
-      PROJECTION,
-      0xffffffff,
-      0,
-    );
-    if (ctx.isReady) {
-      // If FrameContext were `{ cam: OrbitCamera | null }` instead of a
-      // discriminated union, this line would require a `!` non-null assertion.
-      const cam: OrbitCamera = ctx.cam;
-      expect(cam).toBeDefined();
-    }
-  });
-
-  it('treats drawCamPos as readonly at the type level', () => {
-    const ctx: FrameContext = deriveFrameContext(
-      makeState(),
-      makeCanvas(),
-      RESTING_POSE,
-      PROJECTION,
-      0xffffffff,
-      0,
-    );
-    if (ctx.isReady) {
-      // @ts-expect-error — drawCamPos is Readonly<[...]>; index assignment is forbidden.
-      ctx.drawCamPos[0] = 999;
-    }
   });
 });

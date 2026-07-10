@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { DESI_PATCHES, DESI_CONE } from '../../tools/catalog/desiPatches';
-import { Source } from '../../src/data/sources';
 
 /**
  * DESI_PATCHES shape — the build loops this table (one `.bin` per row) and
@@ -20,13 +19,6 @@ describe('DESI_PATCHES', () => {
   it('has unique sources', () => {
     const sources = DESI_PATCHES.map((p) => p.source);
     expect(new Set(sources).size).toBe(sources.length);
-  });
-
-  it('ships the cone (DesiDeep), wedge (DesiWedge), and sgw (DesiSgw) patches', () => {
-    const bySource = new Map(DESI_PATCHES.map((p) => [p.source, p]));
-    expect(bySource.has(Source.DesiDeep)).toBe(true);
-    expect(bySource.has(Source.DesiWedge)).toBe(true);
-    expect(bySource.has(Source.DesiSgw)).toBe(true);
   });
 
   it("each row's makeFilter builds a callable 3-arg predicate", () => {

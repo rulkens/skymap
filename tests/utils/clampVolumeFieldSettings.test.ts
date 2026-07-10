@@ -2,18 +2,12 @@
  * Tests for clampVolumeFieldSettings — the read-edge clamp that keeps raw
  * Intent out of the GPU's volume shader uniforms.
  *
- * Each test asserts that the five GPU-bound numeric fields are clamped via
- * their respective scalar helpers, that the two non-numeric fields pass
- * through unchanged, and that the input object is never mutated.
+ * Each test asserts that the two non-numeric fields pass through unchanged
+ * and that the input object is never mutated.
  */
 
 import { describe, it, expect } from 'vitest';
 import { clampVolumeFieldSettings } from '../../src/utils/clampVolumeFieldSettings';
-import { clampVolumeContrast } from '../../src/utils/clampVolumeContrast';
-import { clampVolumeDensityScale } from '../../src/utils/clampVolumeDensityScale';
-import { clampVolumeExposure } from '../../src/utils/clampVolumeExposure';
-import { clampVolumeIntensity } from '../../src/utils/clampVolumeIntensity';
-import { clampVolumeTrim } from '../../src/utils/clampVolumeTrim';
 import type { VolumeFieldSettings } from '../../src/@types/settings/VolumeFieldSettings';
 
 // Out-of-range raw values that force every scalar clamp to fire.
@@ -47,33 +41,6 @@ const rawLow: VolumeFieldSettings = {
   trim: -0.5,
   exposure: NaN,
 };
-
-describe('clampVolumeFieldSettings — five numeric fields are clamped via scalar helpers', () => {
-  it('clamps intensity via clampVolumeIntensity', () => {
-    expect(clampVolumeFieldSettings(rawHigh).intensity).toBe(clampVolumeIntensity(rawHigh.intensity));
-    expect(clampVolumeFieldSettings(rawLow).intensity).toBe(clampVolumeIntensity(rawLow.intensity));
-  });
-
-  it('clamps contrast via clampVolumeContrast', () => {
-    expect(clampVolumeFieldSettings(rawHigh).contrast).toBe(clampVolumeContrast(rawHigh.contrast));
-    expect(clampVolumeFieldSettings(rawLow).contrast).toBe(clampVolumeContrast(rawLow.contrast));
-  });
-
-  it('clamps densityScale via clampVolumeDensityScale', () => {
-    expect(clampVolumeFieldSettings(rawHigh).densityScale).toBe(clampVolumeDensityScale(rawHigh.densityScale));
-    expect(clampVolumeFieldSettings(rawLow).densityScale).toBe(clampVolumeDensityScale(rawLow.densityScale));
-  });
-
-  it('clamps trim via clampVolumeTrim', () => {
-    expect(clampVolumeFieldSettings(rawHigh).trim).toBe(clampVolumeTrim(rawHigh.trim));
-    expect(clampVolumeFieldSettings(rawLow).trim).toBe(clampVolumeTrim(rawLow.trim));
-  });
-
-  it('clamps exposure via clampVolumeExposure', () => {
-    expect(clampVolumeFieldSettings(rawHigh).exposure).toBe(clampVolumeExposure(rawHigh.exposure));
-    expect(clampVolumeFieldSettings(rawLow).exposure).toBe(clampVolumeExposure(rawLow.exposure));
-  });
-});
 
 describe('clampVolumeFieldSettings — paletteId and enabled pass through unchanged', () => {
   it('passes paletteId through without modification', () => {

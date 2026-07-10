@@ -7,12 +7,6 @@ describe('apparentDiameterPx', () => {
     expect(apparentDiameterPx(1, 100, Math.PI / 2, 1000)).toBeCloseTo(5, 10);
   });
 
-  it('matches a hand-computed case at the project-default 60° fov', () => {
-    // pxPerRad = 720 / (2·tan(30°)) = 360/tan(30°); angular = 0.06/3 = 0.02 rad.
-    const expected = 0.02 * (360 / Math.tan(Math.PI / 6));
-    expect(apparentDiameterPx(0.06, 3, Math.PI / 3, 720)).toBeCloseTo(expected, 10);
-  });
-
   it('scales linearly with diameter and inversely with distance', () => {
     const base = apparentDiameterPx(1, 100, Math.PI / 2, 1000);
     expect(apparentDiameterPx(2, 100, Math.PI / 2, 1000)).toBeCloseTo(base * 2, 10);

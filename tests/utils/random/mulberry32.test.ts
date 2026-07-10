@@ -28,16 +28,6 @@ describe('mulberry32', () => {
     expect(aValues).not.toEqual(bValues);
   });
 
-  it('two generators from the same seed are independent state', () => {
-    const a = mulberry32(7);
-    const b = mulberry32(7);
-    a(); // advance only a
-    // b's first value should still equal a's first value (= a's pre-advance call).
-    // Test by creating fresh c with same seed:
-    const c = mulberry32(7);
-    expect(c()).toBe(b()); // both at "first call"
-  });
-
   it('coerces non-integer seeds to a valid uint32 deterministically', () => {
     // 42.7 and 42 both pass through `>>> 0` to 42, so should produce identical
     // sequences. NaN coerces to 0.

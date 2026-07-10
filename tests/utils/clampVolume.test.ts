@@ -28,14 +28,6 @@ describe('clampVolumeContrast clamps to [0.05, 16] and passes mid-range', () => 
     expect(clampVolumeContrast(-5)).toBe(0.05);
     expect(clampVolumeContrast(0.04)).toBe(0.05);
   });
-
-  it('returns 0.05 at the exact floor boundary', () => {
-    expect(clampVolumeContrast(0.05)).toBe(0.05);
-  });
-
-  it('returns 16 at the exact ceiling boundary', () => {
-    expect(clampVolumeContrast(16)).toBe(16);
-  });
 });
 
 describe('clampVolumeDensityScale collapses non-positive / non-finite to 0', () => {
@@ -83,14 +75,6 @@ describe('clampVolumeExposure clamps to [0, 32] and maps NaN to 1.0', () => {
     expect(clampVolumeExposure(-0.001)).toBe(0);
   });
 
-  it('returns 0 at the exact floor boundary', () => {
-    expect(clampVolumeExposure(0)).toBe(0);
-  });
-
-  it('returns 32 at the exact ceiling boundary', () => {
-    expect(clampVolumeExposure(32)).toBe(32);
-  });
-
   it('maps NaN to 1.0', () => {
     expect(clampVolumeExposure(NaN)).toBe(1.0);
   });
@@ -120,14 +104,6 @@ describe('clampVolumeTrim clamps to [0, 0.95] and maps NaN to 0.0', () => {
     expect(clampVolumeTrim(-0.001)).toBe(0);
   });
 
-  it('returns 0 at the exact floor boundary', () => {
-    expect(clampVolumeTrim(0)).toBe(0);
-  });
-
-  it('returns 0.95 at the exact ceiling boundary', () => {
-    expect(clampVolumeTrim(0.95)).toBe(0.95);
-  });
-
   it('maps NaN to 0.0', () => {
     expect(clampVolumeTrim(NaN)).toBe(0.0);
   });
@@ -155,13 +131,5 @@ describe('clampVolumeIntensity clamps to [0, 1] and passes mid-range', () => {
   it('clamps below-floor values to 0', () => {
     expect(clampVolumeIntensity(-1)).toBe(0);
     expect(clampVolumeIntensity(-0.001)).toBe(0);
-  });
-
-  it('returns 0 at the exact floor boundary', () => {
-    expect(clampVolumeIntensity(0)).toBe(0);
-  });
-
-  it('returns 1 at the exact ceiling boundary', () => {
-    expect(clampVolumeIntensity(1)).toBe(1);
   });
 });

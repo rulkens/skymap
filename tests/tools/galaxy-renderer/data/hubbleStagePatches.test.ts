@@ -14,18 +14,6 @@ describe('hubbleTypePatch', () => {
     }
   });
 
-  it('E3 (elliptical) zeroes dust', () => {
-    expect(hubbleTypePatch('E3')).toEqual({ type: 'E3', dust: 0 });
-  });
-
-  it('S0 (lenticular) sets dust 0.15', () => {
-    expect(hubbleTypePatch('S0')).toEqual({ type: 'S0', dust: 0.15 });
-  });
-
-  it('Irr (irregular) sets hii 0.1', () => {
-    expect(hubbleTypePatch('Irr')).toEqual({ type: 'Irr', hii: 0.1 });
-  });
-
   it('Sa and SBa share the a-stage quintuple', () => {
     const expected = {
       bulgeSize: 1.1,

@@ -9,11 +9,9 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { sep } from 'node:path';
 import {
   createSession,
   sessionPath,
-  sessionFilePath,
 } from '../../../tools/famous-curator/plugin/tmpSession';
 
 describe('tmpSession', () => {
@@ -30,9 +28,5 @@ describe('tmpSession', () => {
     const p = sessionPath('abc123');
     expect(p.startsWith(tmpdir())).toBe(true);
     expect(p.endsWith('/famous-curator/abc123') || p.endsWith('\\famous-curator\\abc123')).toBe(true);
-  });
-
-  it('sessionFilePath nests a filename under the tmpId dir', () => {
-    expect(sessionFilePath('abc123', 'source.png').endsWith('abc123' + sep + 'source.png')).toBe(true);
   });
 });

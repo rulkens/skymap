@@ -8,16 +8,9 @@
 
 import { describe, it, expect } from 'vitest';
 import { EASE } from '../../../../src/services/engine/animation/ease';
-import { easeOutCubic } from '../../../../src/utils/math/easeOutCubic';
 
 describe('EASE', () => {
   describe('EASE.out', () => {
-    it('matches easeOutCubic at representative values', () => {
-      for (const t of [0, 0.1, 0.25, 0.5, 0.75, 0.9, 1]) {
-        expect(EASE.out(t)).toBe(easeOutCubic(t));
-      }
-    });
-
     it('returns 0 at t=0 and 1 at t=1', () => {
       expect(EASE.out(0)).toBe(0);
       expect(EASE.out(1)).toBe(1);

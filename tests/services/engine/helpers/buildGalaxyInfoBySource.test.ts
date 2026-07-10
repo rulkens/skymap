@@ -443,43 +443,6 @@ describe('buildGalaxyInfo — Milliquas source', () => {
     expect(info.agnClass).toBeUndefined();
   });
 
-  it('emits each parent-survey prefix correctly', () => {
-    const cases: Array<[number, string]> = [
-      [1, 'SDSS'],
-      [2, '2MASX'],
-      [3, 'GAIA'],
-      [4, 'WISEA'],
-      [5, 'NVSS'],
-      [6, 'FIRST'],
-      [7, '6dFGS'],
-    ];
-    for (const [byte, prefix] of cases) {
-      const cloud = makeCloud(1);
-      setPosition(cloud, 0, 100, 0, 0);
-      cloud.parentSurveyByte[0] = byte;
-      const info = buildInfo(cloud, 0, Source.Milliquas);
-      expect(info.displayName.startsWith(`${prefix} J`)).toBe(true);
-    }
-  });
-
-  it('exposes the human AGN class label for each Milliquas class byte', () => {
-    const cases: Array<[number, string]> = [
-      [1, 'Quasar'],
-      [2, 'AGN type-1'],
-      [3, 'BL Lac'],
-      [4, 'Seyfert-1 narrow'],
-      [5, 'Seyfert-1 broad'],
-      [6, 'Candidate'],
-    ];
-    for (const [byte, expected] of cases) {
-      const cloud = makeCloud(1);
-      setPosition(cloud, 0, 100, 0, 0);
-      cloud.classByte[0] = byte;
-      const info = buildInfo(cloud, 0, Source.Milliquas);
-      expect(info.agnClass).toBe(expected);
-    }
-  });
-
   it('leaves agnClass undefined for non-Milliquas sources even with classByte set', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);

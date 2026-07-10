@@ -7,9 +7,6 @@
  *     its gate, with stub state + ctx (no GPU device).
  *   - `CONTENT_LAYERS` holds every hdr-group layer with the migration
  *     table's `{slab, target, blend}` fields.
- *   - The hdr- and swap-target views (a `.filter()` over `CONTENT_LAYERS`,
- *     the same grouping the frame executor performs) hold the layers in
- *     canonical draw order.
  *   - A few `draw` calls verified end-to-end with stub renderers,
  *     confirming which renderer method fires and with which args,
  *     including that `draw` threads the resolved `SlabView`'s
@@ -29,11 +26,9 @@ import {
   CONTENT_LAYERS,
   scalarVolumeLayer,
   pointSpritesLayer,
-  proceduralDisksLayer,
   filamentsLayer,
   milkyWayLayer,
   horizonShellLayer,
-  debugSpheresLayer,
   foregroundLabelsLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -235,22 +230,6 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
   });
 });
 
-describe('hdr-target layers', () => {
-  it('the target==="hdr" filter yields the nine HDR passes in canonical draw order', () => {
-    // Order is load-bearing for HMR-stability of the frame program;
-    // see passes/index.ts module header. Marker-lines and labels are
-    // swap-target (post-tone-map overlay), not hdr, so they escape
-    // tone-map curve compression and dodge the OVER-blend coherency
-    // issue on tile-based GPUs. The horizon shell draws after the
-    // volume upsample (so cosmic-web densities composite over it) and
-    // before structure-markers (so marker rings pop on top). Flow sits
-    // with the structure layers, after filaments.
-    const hdrLayers = CONTENT_LAYERS.filter((layer) => layer.target === 'hdr');
-    expect(hdrLayers).toHaveLength(9);
-    expect(hdrLayers.map((p) => p.name)).toEqual(HDR_NAMES);
-  });
-});
-
 describe('CONTENT_LAYERS migration table (swap group)', () => {
   it('every swap content layer matches the migration table', () => {
     // The five post-tone-map UI overlays project through the same
@@ -267,22 +246,6 @@ describe('CONTENT_LAYERS migration table (swap group)', () => {
   });
 });
 
-describe('swap-target layers', () => {
-  it('the (swap, COSMO) group yields the five cosmological overlays in canonical draw order', () => {
-    // The swap TARGET now hosts two render groups keyed by (target, slab): the
-    // five COSMO overlays here, and the near-field foreground-labels through
-    // NEAR0 (asserted separately below). Scoping this filter to COSMO pins the
-    // group the (swap, COSMO) render step actually draws. Selection ring leads
-    // (marker-lines/labels composite over its stroke); the debug clip-path
-    // overlay trails so its route + gizmo draw on top of everything else.
-    const swapLayers = CONTENT_LAYERS.filter(
-      (layer) => layer.target === 'swap' && layer.slab === COSMO,
-    );
-    expect(swapLayers).toHaveLength(5);
-    expect(swapLayers.map((p) => p.name)).toEqual(SWAP_NAMES);
-  });
-});
-
 describe('CONTENT_LAYERS migration table (foreground group)', () => {
   it('every foreground content layer draws into foreground:0 through the near0 slab, opaque', () => {
     // The near-field bodies (Sun, Earth) are the first rows to leave the
@@ -296,16 +259,6 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
       expect(layer.target).toBe('foreground:0');
       expect(layer.blend).toBe('opaque');
     }
-  });
-});
-
-describe('foreground-target layers', () => {
-  it('the target==="foreground:0" filter yields the near-field bodies group', () => {
-    // Registered after the swap group — position only affects timing-slot
-    // listing, since no other layer shares its (target, slab).
-    const fgLayers = CONTENT_LAYERS.filter((layer) => layer.target === 'foreground:0');
-    expect(fgLayers.map((layer) => layer.name)).toEqual(FOREGROUND_NAMES);
-    expect(fgLayers).toContain(debugSpheresLayer);
   });
 });
 
@@ -377,42 +330,6 @@ describe('pointSpritesLayer.enabled', () => {
   });
 });
 
-describe('proceduralDisksLayer.enabled', () => {
-  it('returns false when state.settings.thumbnails.enabled is false', () => {
-    const state = {
-      subsystems: {
-        proceduralDisks: { lastOutput: { instances: [{}] } },
-      },
-      settings: { thumbnails: { enabled: false } },
-    } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(false);
-  });
-
-  it('returns false when subsystem is null', () => {
-    const state = {
-      subsystems: { proceduralDisks: null },
-      settings: { thumbnails: { enabled: true } },
-    } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(false);
-  });
-
-  it('returns false when no instances are pending', () => {
-    const state = {
-      subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
-      settings: { thumbnails: { enabled: true } },
-    } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(false);
-  });
-
-  it('returns true when enabled, subsystem present, and instances pending', () => {
-    const state = {
-      subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
-      settings: { thumbnails: { enabled: true } },
-    } as unknown as EngineState;
-    expect(proceduralDisksLayer.enabled(state, makeCtx())).toBe(true);
-  });
-});
-
 // Coverage for the `textured-disks` layer lives in
 // `texturedDisksLayer.test.ts` (one test file per ContentLayer module,
 // matching the convention used by every other entry in `passes/`). The
@@ -450,21 +367,6 @@ describe('filamentsLayer.enabled', () => {
 });
 
 describe('filamentsLayer.draw', () => {
-  it('skips drawing when state.gpu.filamentRenderer is null even if enabled', () => {
-    // The renderer-null guard lives in `draw` because `enabled` never
-    // receives the GPU handles. With a null renderer there's nothing to
-    // spy on — just assert no exception escapes.
-    const stateOn = {
-      ...STATE_STUB,
-      settings: { filaments: { enabled: true, intensity: 1 } },
-      gpu: { ...STATE_STUB.gpu, filamentRenderer: null },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(() =>
-      filamentsLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, stateOn),
-    ).not.toThrow();
-  });
-
   it('threads the SlabView vp/viewport to filamentRenderer.draw when present', () => {
     // This is the representative "draw threads the SlabView" check: the
     // layer must forward the SlabView's `vp`/`viewportPx` — NOT

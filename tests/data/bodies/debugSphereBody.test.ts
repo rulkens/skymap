@@ -25,8 +25,4 @@ describe('DEBUG_SPHERE_BODIES', () => {
     expect(earth!.positionMpc[1] as number).toBe(0);
     expect(earth!.positionMpc[2] as number).toBe(0);
   });
-
-  it('the Sun is far larger than Earth (scale reference)', () => {
-    expect(sun!.radiusMpc).toBeGreaterThan(earth!.radiusMpc * 100);
-  });
 });

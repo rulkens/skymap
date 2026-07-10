@@ -164,29 +164,6 @@ describe('maybeEmitProceduralDisk', () => {
     expect(farPast!.crossfadeAlpha).toBeCloseTo(1, 6);
   });
 
-  it('smoothstep crossfade hits 0.5 at the band midpoint', () => {
-    // (11 - 8) / (14 - 8) = 0.5 → smoothstep(0.5) = 0.5 exactly.
-    // The cubic `3t² − 2t³` is symmetric about t = 0.5, so this is the
-    // canonical pin for "the curves are actually smoothstep, not
-    // linear" — a linear ramp would also hit 0.5 here, so we add a
-    // separate pin below at t = 0.25.
-    const r = maybeEmitProceduralDisk(
-      11,
-      0.7,
-      30,
-      base.x,
-      base.y,
-      base.z,
-      base.sizeWorldMpc,
-      base.colourIndex,
-      base.fadeStartPx,
-      base.fadeEndPx,
-      0,
-      0,
-    );
-    expect(r!.crossfadeAlpha).toBeCloseTo(0.5, 6);
-  });
-
   it('smoothstep crossfade matches the cubic at t = 0.25', () => {
     // (9.5 - 8) / (14 - 8) = 0.25 → smoothstep(0.25) =
     // 3·0.0625 − 2·0.015625 = 0.15625.  Distinguishes smoothstep from

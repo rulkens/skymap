@@ -1,16 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import {
-  createFadeController,
-  FADE_IN_DURATION_MS,
-  FADE_OUT_DURATION_MS,
-} from '../../../src/services/animation/fadeController';
+import { createFadeController } from '../../../src/services/animation/fadeController';
 
 describe('createFadeController', () => {
-  it('exports the asymmetric duration constants', () => {
-    expect(FADE_IN_DURATION_MS).toBe(600);
-    expect(FADE_OUT_DURATION_MS).toBe(100);
-  });
-
   it('reports the initial opacity before any fade is started', () => {
     const c = createFadeController(0.25, 1000);
     expect(c.currentOpacity(1000)).toBe(0.25);

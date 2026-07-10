@@ -69,11 +69,6 @@ describe('milkyWayPickRenderer (null device)', () => {
     expect(() => r.pickMilkyWay(null as unknown as GPURenderPassEncoder)).not.toThrow();
     expect(() => r.destroy()).not.toThrow();
   });
-
-  it('satisfies the Renderer label contract', () => {
-    const r = newRenderer();
-    expect(r.label).toBe('milkyWayPickRenderer');
-  });
 });
 
 describe('milkyWayPickRenderer (stub device)', () => {

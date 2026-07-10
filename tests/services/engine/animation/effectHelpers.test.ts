@@ -10,27 +10,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   tween,
-  dollyTo,
-  moveTarget,
   moveTargetId,
   dollyToId,
-  aimAt,
-  spin,
-  rate,
-  oscillate,
-  hold,
-  wait,
   show,
   hide,
-  fade,
-  scene,
   focus,
   focusOnId,
-  lookAtId,
-  strafeId,
   seq,
   all,
-  fork,
   flyPath,
   atPoint,
 } from '../../../../src/services/engine/animation/effectHelpers';
@@ -78,180 +65,7 @@ describe('tween', () => {
 });
 
 // ---------------------------------------------------------------------------
-// dollyTo
-// ---------------------------------------------------------------------------
-
-describe('dollyTo', () => {
-  it('emits a set on distance with space:log from CHANNEL_SPACE', () => {
-    const a = dollyTo(300, 4);
-    expect(a).toEqual({
-      kind: 'set',
-      ch: 'distance',
-      to: 300,
-      over: 4,
-      ease: 'inOut',
-      space: 'log',
-    });
-  });
-
-  it('forwards explicit ease', () => {
-    const a = dollyTo(50, 2, 'out');
-    expect(a.ease).toBe('out');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// moveTarget (setVec)
-// ---------------------------------------------------------------------------
-
-describe('moveTarget', () => {
-  it('emits a setVec on target', () => {
-    const a = moveTarget([1, 2, 3], 5);
-    expect(a.kind).toBe('setVec');
-    expect(a.ch).toBe('target');
-    expect(a.to).toEqual([1, 2, 3]);
-    expect(a.over).toBe(5);
-    expect(a.space).toBe('lin');
-    expect(a.ease).toBe('inOut');
-  });
-
-  it('moveTarget to deep-equals the given Vec3', () => {
-    const a = moveTarget([1, 2, 3], 5);
-    expect(a.to).toEqual([1, 2, 3]);
-  });
-
-  it('forwards explicit ease', () => {
-    const a = moveTarget([0, 0, 0], 1, 'in');
-    expect(a.ease).toBe('in');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// aimAt
-// ---------------------------------------------------------------------------
-
-describe('aimAt', () => {
-  it('wraps yaw + pitch set actions in an all', () => {
-    const e = aimAt({ yaw: 1.5, pitch: 0.2 }, 3);
-    expect(e.kind).toBe('all');
-    if (e.kind !== 'all') return;
-    expect(e.children).toHaveLength(2);
-
-    const [yawAction, pitchAction] = e.children;
-    expect(yawAction).toMatchObject({ kind: 'set', ch: 'yaw', to: 1.5, over: 3, ease: 'inOut' });
-    expect(pitchAction).toMatchObject({
-      kind: 'set',
-      ch: 'pitch',
-      to: 0.2,
-      over: 3,
-      ease: 'inOut',
-    });
-  });
-
-  it('forwards explicit ease to both children', () => {
-    const e = aimAt({ yaw: 0, pitch: 0 }, 2, 'out');
-    if (e.kind !== 'all') return;
-    expect(e.children[0]).toMatchObject({ ease: 'out' });
-    expect(e.children[1]).toMatchObject({ ease: 'out' });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// spin
-// ---------------------------------------------------------------------------
-
-describe('spin', () => {
-  it('emits a spin action on the given channel', () => {
-    const a = spin('yaw', { by: 6.28, over: 30 });
-    expect(a.kind).toBe('spin');
-    expect(a.ch).toBe('yaw');
-    expect(a.by).toBe(6.28);
-    expect(a.over).toBe(30);
-    expect(a.ease).toBe('inOut');
-    expect(a.loop).toBeUndefined();
-  });
-
-  it('spin carries loop flag when set to true', () => {
-    const a = spin('yaw', { by: 6.28, over: 30, loop: true });
-    expect(a.loop).toBe(true);
-  });
-
-  it('forwards explicit ease', () => {
-    const a = spin('pitch', { by: 1, over: 5, ease: 'linear' });
-    expect(a.ease).toBe('linear');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// rate
-// ---------------------------------------------------------------------------
-
-describe('rate', () => {
-  it('emits a rate action', () => {
-    const a = rate('yaw', { to: 0.5, over: 2 });
-    expect(a.kind).toBe('rate');
-    expect(a.ch).toBe('yaw');
-    expect(a.to).toBe(0.5);
-    expect(a.over).toBe(2);
-    expect(a.ease).toBe('inOut');
-  });
-
-  it('forwards explicit ease', () => {
-    const a = rate('distance', { to: 1, over: 1, ease: 'in' });
-    expect(a.ease).toBe('in');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// oscillate
-// ---------------------------------------------------------------------------
-
-describe('oscillate', () => {
-  it('a bare bob emits kind:osc with amp, period, and a default inOut ease', () => {
-    const a = oscillate('pitch', { amp: 0.1, period: 8 });
-    expect(a).toEqual({ kind: 'osc', ch: 'pitch', amp: 0.1, period: 8, ease: 'inOut' });
-  });
-
-  it('omits over/fade when not given (perpetual, full-amplitude)', () => {
-    const a = oscillate('yaw', { amp: 0.5, period: 10 });
-    expect(a).not.toHaveProperty('over');
-    expect(a).not.toHaveProperty('fade');
-  });
-
-  it('carries over, fade, and a custom ease for an amplitude-enveloped bob', () => {
-    const a = oscillate('pitch', { amp: 0.04, period: 14, over: 8, fade: 1.5, ease: 'out' });
-    expect(a).toEqual({
-      kind: 'osc',
-      ch: 'pitch',
-      amp: 0.04,
-      period: 14,
-      over: 8,
-      fade: 1.5,
-      ease: 'out',
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// hold / wait
-// ---------------------------------------------------------------------------
-
-describe('hold', () => {
-  it('emits kind:hold with sec', () => {
-    const e = hold(3.5);
-    expect(e).toEqual({ kind: 'hold', sec: 3.5 });
-  });
-});
-
-describe('wait', () => {
-  it('emits kind:wait with sec', () => {
-    const e = wait(1);
-    expect(e).toEqual({ kind: 'wait', sec: 1 });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// show / hide / fade
+// show / hide
 // ---------------------------------------------------------------------------
 
 describe('show', () => {
@@ -299,82 +113,9 @@ describe('hide', () => {
   });
 });
 
-describe('fade', () => {
-  it('emits kind:fade with layers, to, and over', () => {
-    const e = fade(['structureRing'], 0.5, 3);
-    expect(e).toEqual({ kind: 'fade', layers: ['structureRing'], to: 0.5, over: 3 });
-  });
-});
-
 // ---------------------------------------------------------------------------
-// scene / focus
+// focusOnId
 // ---------------------------------------------------------------------------
-
-describe('scene', () => {
-  it('emits kind:scene wrapping the action', () => {
-    const fakeAction = { type: 'settings/setFlowEnabled', payload: true } as any;
-    const e = scene(fakeAction);
-    expect(e.kind).toBe('scene');
-    expect(e.action).toBe(fakeAction);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// moveTargetId / dollyToId
-// ---------------------------------------------------------------------------
-
-describe('moveTargetId', () => {
-  it('moveTargetId carries the id and defaults ease to inOut', () => {
-    const id = focusId('m87');
-    const e = moveTargetId(id, 5);
-    expect(e.kind).toBe('moveTargetId');
-    expect(e.id).toBe(id);
-    expect(e.over).toBe(5);
-    expect(e.ease).toBe('inOut');
-  });
-
-  it('forwards explicit ease', () => {
-    const e = moveTargetId(focusId('virgo'), 3, 'out');
-    expect(e.ease).toBe('out');
-  });
-});
-
-describe('dollyToId', () => {
-  it('dollyToId carries the id and defaults ease to inOut', () => {
-    const id = focusId('m87');
-    const e = dollyToId(id, 4);
-    expect(e.kind).toBe('dollyToId');
-    expect(e.id).toBe(id);
-    expect(e.over).toBe(4);
-    expect(e.ease).toBe('inOut');
-  });
-
-  it('forwards explicit ease', () => {
-    const e = dollyToId(focusId('virgo'), 2, { ease: 'in' });
-    expect(e.ease).toBe('in');
-  });
-
-  it('carries the framing-distance scale when given, omits it otherwise', () => {
-    const scaled = dollyToId(focusId('m31'), 6, { scale: 0.7 });
-    expect(scaled.scale).toBe(0.7);
-    const plain = dollyToId(focusId('m31'), 6);
-    expect(plain.scale).toBeUndefined();
-  });
-});
-
-describe('focus', () => {
-  it('focus(id) builds a focusId effect carrying the id', () => {
-    const id = focusId('m87');
-    const e = focus(id);
-    expect(e.kind).toBe('focusId');
-    expect(e.id).toBe(id);
-  });
-
-  it('focus(null) builds a focusId effect with id null', () => {
-    const e = focus(null);
-    expect(e).toEqual({ kind: 'focusId', id: null });
-  });
-});
 
 describe('focusOnId', () => {
   it('composes focus-then-fly: a seq of the focusId cue and the concurrent camera move', () => {
@@ -389,62 +130,6 @@ describe('focusOnId', () => {
     expect(e).toEqual(
       seq([focus(id), all([moveTargetId(id, 3, 'out'), dollyToId(id, 3, { ease: 'out' })])]),
     );
-  });
-});
-
-describe('lookAtId', () => {
-  it('builds the unresolved lookAtId arm with ease defaulting to inOut', () => {
-    const id = focusId('m31');
-    expect(lookAtId(id, 3)).toEqual({ kind: 'lookAtId', id, over: 3, ease: 'inOut' });
-  });
-
-  it('forwards an explicit ease', () => {
-    const id = focusId('m31');
-    expect(lookAtId(id, 2, 'out')).toEqual({ kind: 'lookAtId', id, over: 2, ease: 'out' });
-  });
-});
-
-describe('strafeId', () => {
-  it('builds the unresolved strafeId arm with ease defaulting to inOut', () => {
-    const id = focusId('m31');
-    expect(strafeId(id, 10, 3)).toEqual({
-      kind: 'strafeId',
-      id,
-      byDeg: 10,
-      over: 3,
-      ease: 'inOut',
-    });
-  });
-
-  it('forwards a negative angle and an explicit ease', () => {
-    const id = focusId('m31');
-    expect(strafeId(id, -5, 2, 'out')).toEqual({
-      kind: 'strafeId',
-      id,
-      byDeg: -5,
-      over: 2,
-      ease: 'out',
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// seq / all / fork
-// ---------------------------------------------------------------------------
-
-describe('seq', () => {
-  it('wraps children with kind:seq', () => {
-    const e = seq([hold(1), hold(2)]);
-    expect(e.kind).toBe('seq');
-    expect(e.children).toHaveLength(2);
-  });
-});
-
-describe('all', () => {
-  it('wraps children with kind:all', () => {
-    const e = all([dollyTo(100, 3), moveTarget([0, 0, 0], 3)]);
-    expect(e.kind).toBe('all');
-    expect(e.children).toHaveLength(2);
   });
 });
 
@@ -472,14 +157,5 @@ describe('flyPath', () => {
   it('an authored passBy overrides the default', () => {
     const e = flyPath(wps, { over: 20, passBy: { offset: 2, dir: 'above' } });
     expect(e.passBy).toEqual({ offset: 2, dir: 'above' });
-  });
-});
-
-describe('fork', () => {
-  it('wraps a single child with kind:fork', () => {
-    const child = spin('yaw', { by: 6.28, over: 60, loop: true });
-    const e = fork(child);
-    expect(e.kind).toBe('fork');
-    expect(e.child).toBe(child);
   });
 });

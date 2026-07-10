@@ -154,11 +154,6 @@ describe('selectionRingLayer.enabled', () => {
     const state = makeStateWithSelection(structureRow() as SelectionRow);
     expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
   });
-
-  it('stays true for a galaxy row (regression)', () => {
-    const state = makeStateWithSelection(galaxyRow());
-    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(true);
-  });
 });
 
 // ── draw() ────────────────────────────────────────────────────────

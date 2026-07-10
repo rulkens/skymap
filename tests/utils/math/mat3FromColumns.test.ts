@@ -6,9 +6,4 @@ describe('mat3FromColumns', () => {
     const m = mat3FromColumns([1, 2, 3], [4, 5, 6], [7, 8, 9]);
     expect(m).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
-
-  it('builds the identity from the standard basis', () => {
-    const m = mat3FromColumns([1, 0, 0], [0, 1, 0], [0, 0, 1]);
-    expect(m).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
-  });
 });

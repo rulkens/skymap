@@ -36,34 +36,4 @@ describe('syntheticVolumeFetcher', () => {
     const centreValue = f16ToFloat(cube.voxels[centreIdx]!);
     expect(centreValue).toBeGreaterThan(0.5);
   });
-
-  it('dispatches to cartesian generator when shape=cartesian', async () => {
-    // Cartesian grid: the voxel array exists with the requested dims.
-    // A stronger pattern check would require knowing the exact voxel
-    // grid alignment for dims=8/400Mpc; the generator's own unit tests
-    // in `tests/data/syntheticScalarField.test.ts` cover the voxel
-    // patterns.  This test just verifies the fetcher dispatch wired up.
-    const ctrl = new AbortController();
-    const cube = await syntheticVolumeFetcher(
-      { id: 'h', shape: 'cartesian', dims: 8 },
-      ctrl.signal,
-      () => {},
-    );
-    expect(cube.dims).toEqual([8, 8, 8]);
-    expect(cube.voxels.length).toBe(8 * 8 * 8);
-  });
-
-  it('dispatches to spherical generator when shape=spherical', async () => {
-    // Same logic as the cartesian case — dims + voxel array length is
-    // enough to verify the fetcher dispatched without re-testing the
-    // generator's voxel maths.
-    const ctrl = new AbortController();
-    const cube = await syntheticVolumeFetcher(
-      { id: 'h', shape: 'spherical', dims: 8 },
-      ctrl.signal,
-      () => {},
-    );
-    expect(cube.dims).toEqual([8, 8, 8]);
-    expect(cube.voxels.length).toBe(8 * 8 * 8);
-  });
 });

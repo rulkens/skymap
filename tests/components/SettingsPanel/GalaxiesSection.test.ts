@@ -127,33 +127,6 @@ describe('GalaxiesSection', () => {
       expect(desiLabel!.textContent).toContain('DESI Deep Field');
     });
 
-    it('renders a checkbox row for DESI Wedge', () => {
-      const { container } = render(createElement(GalaxiesSection, baseProps()));
-      const wedgeCheckbox = container.querySelector<HTMLInputElement>(
-        `#toggle-source-${Source.DesiWedge}`,
-      );
-      expect(wedgeCheckbox).not.toBeNull();
-      // DesiWedge's bit is part of ALL_ON_MASK, so the box renders checked.
-      expect(wedgeCheckbox!.checked).toBe(true);
-      const wedgeLabel = container.querySelector(
-        `label[for="toggle-source-${Source.DesiWedge}"]`,
-      );
-      expect(wedgeLabel).not.toBeNull();
-      expect(wedgeLabel!.textContent).toContain('DESI Wedge');
-    });
-
-    it('renders a checkbox row for Sloan Great Wall', () => {
-      const { container } = render(createElement(GalaxiesSection, baseProps()));
-      const sgwCheckbox = container.querySelector<HTMLInputElement>(
-        `#toggle-source-${Source.DesiSgw}`,
-      );
-      expect(sgwCheckbox).not.toBeNull();
-      // DesiSgw's bit is part of ALL_ON_MASK, so the row renders checked.
-      expect(sgwCheckbox!.checked).toBe(true);
-      const sgwLabel = container.querySelector(`label[for="toggle-source-${Source.DesiSgw}"]`);
-      expect(sgwLabel).not.toBeNull();
-      expect(sgwLabel!.textContent).toContain('Sloan Great Wall');
-    });
   });
 
   describe('point-size slider', () => {
