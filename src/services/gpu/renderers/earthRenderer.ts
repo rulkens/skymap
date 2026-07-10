@@ -35,13 +35,13 @@
  * the bitmap is uploaded with `flipY: true` — texture v=0 becomes the image's
  * bottom (south) row, matching the mesh's south-first v. So v needs no remap.
  *
- * u DOES need a remap. The mesh places longitude on +Z, so increasing u winds
- * clockwise as seen from outside the sphere (the camera side) — the opposite of
- * an equirectangular map's east-increases-left-to-right convention. Sampling the
- * raw u draws the continents east-west mirrored. The fragment shader corrects it
- * at the single sample site by flipping u (`1.0 - uv.x`); see `earth/fragment.wesl`
- * for the two-vertex derivation. The sampler uses `repeat` addressing on u so the
- * flip and the mesh's duplicated seam column both wrap cleanly.
+ * u needs no remap either. The mesh places longitude on +Y (the equatorial
+ * J2000 frame, pole on +Z), so increasing u winds CCW as seen from outside the
+ * sphere — matching an equirectangular map's east-increases-left-to-right
+ * convention, and the raw u draws the continents in the correct orientation.
+ * See `earth/fragment.wesl` for the two-vertex derivation. The sampler still
+ * uses `repeat` addressing on u so the mesh's duplicated seam column wraps
+ * cleanly across the longitude seam.
  *
  * ### Pipeline state
  *
