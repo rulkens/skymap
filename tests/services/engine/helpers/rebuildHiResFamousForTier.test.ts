@@ -25,6 +25,7 @@ import type {
   HiResFamousSubsystem,
 } from '../../../../src/@types/engine/subsystems/HiResFamousSubsystem';
 import type { TexturedDiskSubsystem } from '../../../../src/@types/engine/subsystems/TexturedDiskSubsystem';
+import { noopDiskRowVisitor } from '../subsystems/diskWalkHarness';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -75,6 +76,7 @@ function makeFakeTexturedDisks(): TexturedDiskSubsystem & {
   const __setHiResFamousCalls: Array<HiResFamousSubsystem | undefined> = [];
   return {
     __setHiResFamousCalls,
+    beginFrame: vi.fn<TexturedDiskSubsystem['beginFrame']>(() => noopDiskRowVisitor()),
     runFrame: vi.fn(() => ({ disks: [] })),
     lastOutput: { disks: [] },
     hasInFlightWork: vi.fn(() => false),

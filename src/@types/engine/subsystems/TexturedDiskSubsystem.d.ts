@@ -15,18 +15,20 @@
  */
 
 import type { Destroyable } from '../../rendering/Destroyable';
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { DiskInstance } from '../../rendering/DiskInstance';
-import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { SourceType } from '../../data/SourceType';
+import type { DiskRowVisitor } from './DiskRowVisitor';
+import type { DiskWalkInput } from './DiskWalkInput';
 import type { HiResFamousSubsystem } from './HiResFamousSubsystem';
 
-export type TexturedDiskFrameInput = {
-  readonly cam: OrbitCamera;
-  readonly catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
-  readonly visibleSourceMask: number;
-  readonly pxPerRad: number;
+/**
+ * The textured body IS the one with extras beyond the geometry-bearing walk
+ * input: the per-row famous calibration lookup (`famousMeta`) and the stamped
+ * frame clock (`nowMs`). Everything the shared walk actually reads lives in
+ * `DiskWalkInput`; this type intersects those extras onto it so the walk never
+ * sees fields it doesn't use.
+ */
+export type TexturedDiskFrameInput = DiskWalkInput & {
   readonly famousMeta: readonly FamousMetaEntry[];
   /**
    * The frame's stamped clock (`ctx.nowMs`). Drives the load-fade ramp and
@@ -43,6 +45,21 @@ export type TexturedDiskFrameOutput = {
 };
 
 export type TexturedDiskSubsystem = Destroyable & {
+  /**
+   * Start a frame: returns the `DiskRowVisitor` the shared walk drives for
+   * this frame.  The visitor closes over this subsystem's sticky maps, a
+   * fresh per-frame disk accumulator, and the frame's `famousMeta` / `nowMs`
+   * extras; its `endFrame` sorts back-to-front and stashes the result on
+   * `lastOutput` so the pass file can read it without re-running.
+   */
+  beginFrame(input: TexturedDiskFrameInput): DiskRowVisitor;
+
+  /**
+   * Transitional engine bridge: drives `beginFrame`'s visitor through a
+   * subsystem-private walk (own stride cursor, procedural slot stubbed) so
+   * the frame loop can keep calling `runFrame(input)` until it drives the
+   * shared `DiskPlannerWalk` directly — at which point this method goes.
+   */
   runFrame(input: TexturedDiskFrameInput): TexturedDiskFrameOutput;
 
   readonly lastOutput: TexturedDiskFrameOutput;

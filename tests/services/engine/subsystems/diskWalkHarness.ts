@@ -18,6 +18,11 @@ import type {
   ProceduralDiskFrameOutput,
   ProceduralDiskSubsystem,
 } from '../../../../src/@types/engine/subsystems/ProceduralDiskSubsystem';
+import type {
+  TexturedDiskFrameInput,
+  TexturedDiskFrameOutput,
+  TexturedDiskSubsystem,
+} from '../../../../src/@types/engine/subsystems/TexturedDiskSubsystem';
 
 /** A visitor that ignores every walk callback — the "other slot" in solo runs. */
 export function noopDiskRowVisitor(): DiskRowVisitor {
@@ -42,5 +47,20 @@ export function runProceduralSolo(
   input: DiskWalkInput,
 ): ProceduralDiskFrameOutput {
   walk.runFrame(input, sys.beginFrame(input), noopDiskRowVisitor());
+  return sys.lastOutput;
+}
+
+/**
+ * Run one frame of the textured body alone: the walk drives a no-op in the
+ * procedural slot and the subsystem's visitor in the textured slot. Returns
+ * `sys.lastOutput` (stashed by the visitor's `endFrame`) so call sites read
+ * like the old single-subsystem frame call.
+ */
+export function runTexturedSolo(
+  walk: DiskPlannerWalk,
+  sys: TexturedDiskSubsystem,
+  input: TexturedDiskFrameInput,
+): TexturedDiskFrameOutput {
+  walk.runFrame(input, noopDiskRowVisitor(), sys.beginFrame(input));
   return sys.lastOutput;
 }

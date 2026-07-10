@@ -20,6 +20,8 @@ import { Source } from '../../../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createTexturedDiskSubsystem } from '../../../../src/services/engine/subsystems/texturedDiskSubsystem';
 import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
+import { createDiskPlannerWalk } from '../../../../src/services/engine/subsystems/diskPlannerWalk';
+import { runProceduralSolo, runTexturedSolo } from './diskWalkHarness';
 import { paddedRadiusMpc } from '../../../../src/utils/paddedRadiusMpc';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -129,6 +131,7 @@ async function emitOne(source: SourceType, cloud: GalaxyCatalog, famousMeta: Fam
   const device = makeFakeDevice();
   const fetcher = vi.fn(async () => makeFakeBitmap());
   const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+  const walk = createDiskPlannerWalk({ decimationFactor: 1 });
   const sys = createTexturedDiskSubsystem({
     device,
     atlas,
@@ -136,9 +139,9 @@ async function emitOne(source: SourceType, cloud: GalaxyCatalog, famousMeta: Fam
     decimationFactor: 1,
   });
   const clouds = new Map([[source, cloud]]);
-  sys.runFrame(makeInput(clouds, famousMeta));
+  runTexturedSolo(walk, sys, makeInput(clouds, famousMeta));
   await new Promise((r) => setTimeout(r, 0));
-  const out = sys.runFrame(makeInput(clouds, famousMeta));
+  const out = runTexturedSolo(walk, sys, makeInput(clouds, famousMeta));
   return out.disks;
 }
 
@@ -292,8 +295,9 @@ describe('procedural ↔ textured orientation convergence', () => {
     const texturedDisks = await emitOne(Source.FamousGalaxy, cloud, metaWithCalibration(0, cal));
     expect(texturedDisks.length).toBe(1);
 
-    const proc = createProceduralDiskSubsystem({ decimationFactor: 1 });
-    const procOut = proc.runFrame(makeInput(new Map([[Source.FamousGalaxy, cloud]])));
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const proc = createProceduralDiskSubsystem();
+    const procOut = runProceduralSolo(walk, proc, makeInput(new Map([[Source.FamousGalaxy, cloud]])));
     expect(procOut.instances.length).toBe(1);
 
     const t = texturedDisks[0]!;
