@@ -27,17 +27,11 @@
 //                                       'uvSphereMesh' writes u west-to-east,
 //                                       v south-to-north.
 
+import package::earth::io::VSOut;
 import package::lib::sphere::SphereUniforms;
 import package::lib::sphere::clip_from_local;
 
 @group(0) @binding(0) var<uniform> u: SphereUniforms;
-
-struct VSOut {
-  @builtin(position) clip: vec4<f32>,
-  // Equirectangular uv passed straight through for the texture sample in the
-  // fragment stage. See the fragment module for the v-orientation rationale.
-  @location(0) uv: vec2<f32>,
-};
 
 @vertex
 fn vs(@location(0) position: vec3<f32>, @location(1) uv: vec2<f32>) -> VSOut {

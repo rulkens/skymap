@@ -42,20 +42,13 @@
 // crossover) is plan-03 work, which is also why there is no distance
 // term yet.
 
+import package::starPoints::io::VSOut;
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 
 @group(0) @binding(0) var<uniform> u: CameraUniforms;
-
-struct VSOut {
-  @builtin(position) clip: vec4<f32>,
-  // Quad corner in [-1, +1]^2 — the fragment's distance-from-centre.
-  @location(0) uv: vec2<f32>,
-  // Per-star linear-RGB tint, flat across the quad.
-  @location(1) color: vec3<f32>,
-};
 
 @vertex
 fn vs(

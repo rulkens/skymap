@@ -34,11 +34,7 @@
 // composite handles layer blending. Lit albedo stays in 0..1, comfortably
 // below the star's emissive output.
 
-struct VSOut {
-  @builtin(position) clip: vec4<f32>,
-  @location(0) localPos: vec3<f32>,
-  @location(1) @interpolate(flat) albedo: vec3<f32>,
-};
+import package::planet::io::VSOut;
 
 const AMBIENT: f32 = 0.08;
 

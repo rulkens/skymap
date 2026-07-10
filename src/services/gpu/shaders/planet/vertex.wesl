@@ -36,17 +36,8 @@
 //   @location(4) mvp3: vec4<f32>      — MVP column 3  } (rgb + 1 pad float, 16 B)
 //   @location(5) albedo: vec4<f32>    — surface colour rgb in .xyz, .w unused
 
+import package::planet::io::VSOut;
 import package::lib::sphere::clip_from_local;
-
-struct VSOut {
-  @builtin(position) clip: vec4<f32>,
-  // Local-space position passed through for the lambert term in the fragment
-  // stage. Unit sphere: localPos == outward surface normal.
-  @location(0) localPos: vec3<f32>,
-  // Per-instance albedo forwarded flat — one solid colour per planet, no
-  // cross-vertex interpolation to do.
-  @location(1) @interpolate(flat) albedo: vec3<f32>,
-};
 
 @vertex
 fn vs(

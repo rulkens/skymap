@@ -47,13 +47,10 @@
 // The texture is 'rgba8unorm-srgb', so the hardware linearises the sample on
 // read -- the value handed to us is already linear, correct for the HDR target.
 
+import package::earth::io::VSOut;
+
 @group(0) @binding(1) var earthSampler: sampler;
 @group(0) @binding(2) var earthTexture: texture_2d<f32>;
-
-struct VSOut {
-  @builtin(position) clip: vec4<f32>,
-  @location(0) uv: vec2<f32>,
-};
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
