@@ -272,5 +272,8 @@ export const DEFAULT_FLOW: FlowSettings = {
 /** Pick-buffer debug overlay starts off.  See `EngineSettingsState.debug.showPickBuffer`. */
 export const DEFAULT_SHOW_PICK_BUFFER = false;
 
+/** Quad-billboard A/B spike starts off (triangle is the default path).  See `EngineSettingsState.debug.quadBillboards`.  Delete with the quad path. */
+export const DEFAULT_QUAD_BILLBOARDS = false;
+
 /** Disk-radius debug ring starts off.  See `EngineSettingsState.debug.showDiskRadiusRing`. */
 export const DEFAULT_SHOW_DISK_RADIUS_RING = false;

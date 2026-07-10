@@ -119,6 +119,8 @@ export const pointSpritesLayer: ContentLayer = {
       // registered yet renders at full opacity rather than disappearing.
       fadeOpacityOf: (source) =>
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
+      // Spike A/B toggle: draw the legacy quad pipeline instead of the triangle.
+      debugQuadBillboards: state.settings.debug.quadBillboards,
     });
   },
 

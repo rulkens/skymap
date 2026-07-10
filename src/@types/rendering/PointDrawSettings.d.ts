@@ -55,4 +55,11 @@ export type PointDrawSettings = {
    * id and reads `state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id }, now)`.
    */
   readonly fadeOpacityOf: (source: SourceType) => number;
+  /**
+   * Spike A/B override — `true` draws the legacy 6-vertex quad pipeline
+   * instead of the 3-vertex triangle; `undefined` / `false` = triangle.
+   * Optional so the pick path and existing fixtures don't need it. Delete
+   * with the rest of the quad-vs-triangle A/B instrumentation.
+   */
+  debugQuadBillboards?: boolean;
 };

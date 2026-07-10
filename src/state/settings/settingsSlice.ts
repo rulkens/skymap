@@ -169,6 +169,10 @@ const settingsSlice = createSlice({
     setShowPickBuffer: (settings, action: PayloadAction<boolean>) => {
       settings.debug.showPickBuffer = action.payload;
     },
+    // Spike A/B toggle; delete when the quad path is retired.
+    setDebugQuadBillboards: (settings, action: PayloadAction<boolean>) => {
+      settings.debug.quadBillboards = action.payload;
+    },
     setShowDiskRadiusRing: (settings, action: PayloadAction<boolean>) => {
       settings.debug.showDiskRadiusRing = action.payload;
     },
@@ -330,6 +334,7 @@ export const {
   setFlowEnabled,
   setFlow,
   setShowPickBuffer,
+  setDebugQuadBillboards,
   setShowDiskRadiusRing,
   setPassDisabled,
   inspectClipPath,

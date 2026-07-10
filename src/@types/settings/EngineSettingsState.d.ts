@@ -201,6 +201,8 @@ export type EngineSettingsState = {
    */
   debug: {
     showPickBuffer: boolean;
+    /** Spike A/B toggle — draw the legacy 6-vertex quad billboard pipeline instead of the 3-vertex triangle, so GPU cost can be compared live. Delete with the quad path. */
+    quadBillboards: boolean;
     showDiskRadiusRing: boolean;
     disabledPasses: Record<string, boolean>;
     /**

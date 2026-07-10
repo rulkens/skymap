@@ -24,6 +24,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_QUAD_BILLBOARDS,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
@@ -120,6 +121,7 @@ export function buildInitialSettings(): EngineSettingsState {
     labels: { focusedOnly: false },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
+      quadBillboards: DEFAULT_QUAD_BILLBOARDS,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.

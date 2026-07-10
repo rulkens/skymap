@@ -400,41 +400,53 @@ export function createPointRenderer(
     ],
   });
 
-  const pipeline = device.createRenderPipeline({
-    label: 'points-pipeline',
-    layout: pipelineLayout,
+  // Spike A/B toggle; delete when the quad path is retired. The vertex
+  // module's `useTriangleBillboard` overridable constant is specialized at
+  // pipeline-creation time, so we build TWO pipelines from the SAME modules
+  // + layout — one per value — and the live checkbox picks which to bind
+  // per draw. Each variant compiles its dead branch out and pays zero
+  // runtime cost. Both share the explicit `pipelineLayout`, so a bind group
+  // built against slot 0 is valid across both.
+  const makePipeline = (label: string, useTriangleBillboard: 0 | 1): GPURenderPipeline =>
+    device.createRenderPipeline({
+      label,
+      layout: pipelineLayout,
 
-    vertex: {
-      module: vsModule,
-      entryPoint: 'vs',
-      buffers: [
-        {
-          arrayStride: POINT_STRIDE,
-          stepMode: 'instance',
-          // Spread because `@webgpu/types` declares the field mutable
-          // while the canonical export is readonly.
-          attributes: [...POINT_VERTEX_ATTRIBUTES],
-        },
-      ],
-    },
-
-    fragment: {
-      module: fsModule,
-      entryPoint: 'fs',
-      targets: [
-        {
-          format: targetFormat,
-          // Additive blend so overlapping halos brighten (long-exposure style).
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+      vertex: {
+        module: vsModule,
+        entryPoint: 'vs',
+        constants: { useTriangleBillboard },
+        buffers: [
+          {
+            arrayStride: POINT_STRIDE,
+            stepMode: 'instance',
+            // Spread because `@webgpu/types` declares the field mutable
+            // while the canonical export is readonly.
+            attributes: [...POINT_VERTEX_ATTRIBUTES],
           },
-        },
-      ],
-    },
+        ],
+      },
 
-    primitive: { topology: 'triangle-list' },
-  });
+      fragment: {
+        module: fsModule,
+        entryPoint: 'fs',
+        targets: [
+          {
+            format: targetFormat,
+            // Additive blend so overlapping halos brighten (long-exposure style).
+            blend: {
+              color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+              alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+            },
+          },
+        ],
+      },
+
+      primitive: { topology: 'triangle-list' },
+    });
+
+  const trianglePipeline = makePipeline('points-pipeline-tri', 1);
+  const quadPipeline = makePipeline('points-pipeline-quad', 0);
 
   const uniformBuffer = device.createBuffer({
     label: 'points-uniform-buffer',
@@ -444,7 +456,9 @@ export function createPointRenderer(
 
   const bindGroup = device.createBindGroup({
     label: 'points-bg-uniforms',
-    layout: pipeline.getBindGroupLayout(0),
+    // Both spike pipelines share the same explicit `pipelineLayout`, so
+    // slot 0's layout is identical either way — resolve it from one.
+    layout: trianglePipeline.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
 
@@ -769,7 +783,13 @@ export function createPointRenderer(
     const buf = packPointUniforms(viewProj, viewportPx, settings);
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
-    pass.setPipeline(pipeline);
+    // Spike A/B toggle; delete when the quad path is retired. The live
+    // checkbox flips between the quad and triangle pipeline specializations
+    // of the same shader — the bound pipeline's `useTriangleBillboard`
+    // constant and the `draw()` vertexCount below must agree (6 for quad,
+    // 3 for triangle) or the billboard geometry is malformed.
+    const quad = settings.debugQuadBillboards === true;
+    pass.setPipeline(quad ? quadPipeline : trianglePipeline);
     pass.setBindGroup(0, bindGroup);
     // @group(3) focus is the engine's shared focus bind group (one POI
     // focused at a time, written once per frame in renderFrame). Bind once
@@ -791,7 +811,10 @@ export function createPointRenderer(
       pass.setBindGroup(1, entry.fadeBindGroup);
       pass.setBindGroup(2, entry.sourceBindGroup);
       pass.setVertexBuffer(0, entry.buffer);
-      pass.draw(3, entry.count);
+      // 3 vertices for the circumscribing triangle (the vertex/primitive-
+      // bound default), 6 for the legacy quad — matching the pipeline's
+      // `useTriangleBillboard` constant selected above (spike A/B toggle).
+      pass.draw(quad ? 6 : 3, entry.count);
     }
   }
 

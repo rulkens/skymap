@@ -64,6 +64,13 @@ export type DebugPanelProps = {
   showPickBuffer: boolean;
   onShowPickBufferChange: (enabled: boolean) => void;
   /**
+   * Spike A/B toggle — when on, the points pass draws the legacy 6-vertex
+   * quad billboard pipeline instead of the 3-vertex triangle, so GPU cost
+   * can be compared live in one session.  Delete with the quad path.
+   */
+  quadBillboards: boolean;
+  onQuadBillboardsChange: (enabled: boolean) => void;
+  /**
    * Disk-radius debug ring toggle.  When on, the renderer outlines each
    * famous-galaxy thumbnail's disk-radius footprint so the developer can
    * calibrate the placement against the underlying billboard.
@@ -100,6 +107,8 @@ export function DebugPanel({
   onRealOnlyModeChange,
   showPickBuffer,
   onShowPickBufferChange,
+  quadBillboards,
+  onQuadBillboardsChange,
   showDiskRadiusRing,
   onShowDiskRadiusRingChange,
   flow,
@@ -142,6 +151,15 @@ export function DebugPanel({
           onChange={(e) => onShowPickBufferChange(e.target.checked)}
         />
         <span>Show pick buffer</span>
+      </label>
+      {/* Spike A/B toggle; delete when the quad path is retired. */}
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={quadBillboards}
+          onChange={(e) => onQuadBillboardsChange(e.target.checked)}
+        />
+        <span>Quad billboards (A/B)</span>
       </label>
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
         <input
