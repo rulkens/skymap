@@ -110,9 +110,7 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      fetcher,
-      decimationFactor: 1,
-    });
+      fetcher,    });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
 
     runTexturedSolo(walk, sys, makeInput(clouds));
@@ -131,9 +129,7 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      fetcher,
-      decimationFactor: 1,
-    });
+      fetcher,    });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(2, NaN, NaN)]]);
     runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
@@ -149,9 +145,7 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      fetcher,
-      decimationFactor: 1,
-    });
+      fetcher,    });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
     runTexturedSolo(walk, sys, makeInput(clouds));
     expect(sys.hasInFlightWork()).toBe(true);
@@ -189,9 +183,7 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      fetcher,
-      decimationFactor: 1,
-    });
+      fetcher,    });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
 
     runTexturedSolo(walk, sys, makeInput(clouds));
@@ -214,9 +206,7 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      fetcher,
-      decimationFactor: 1,
-      hiResFamous,
+      fetcher,      hiResFamous,
     });
     const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
 
@@ -249,9 +239,7 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      fetcher,
-      decimationFactor: 1,
-      hiResFamous,
+      fetcher,      hiResFamous,
     });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
 
@@ -282,9 +270,7 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      fetcher,
-      decimationFactor: 1,
-      hiResFamous: initial,
+      fetcher,      hiResFamous: initial,
     });
     const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(1)]]);
     runTexturedSolo(walk, sys, makeInput(clouds));
@@ -319,9 +305,7 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      fetcher,
-      decimationFactor: 1,
-    });
+      fetcher,    });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
     runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));

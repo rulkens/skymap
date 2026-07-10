@@ -136,7 +136,6 @@ async function emitOne(source: SourceType, cloud: GalaxyCatalog, famousMeta: Fam
     device,
     atlas,
     fetcher,
-    decimationFactor: 1,
   });
   const clouds = new Map([[source, cloud]]);
   runTexturedSolo(walk, sys, makeInput(clouds, famousMeta));

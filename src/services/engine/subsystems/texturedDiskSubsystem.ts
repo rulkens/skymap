@@ -40,7 +40,6 @@ import { byDistanceToCamera } from '../../../utils/render/disk/byDistanceToCamer
 import { galaxyCacheKey } from '../../../utils/render/disk/galaxyCacheKey';
 import { resolveDiskPlacement } from '../../../utils/render/disk/resolveDiskPlacement';
 import { hiResLayerFold } from '../../../utils/render/disk/hiResLayerFold';
-import { createDiskPlannerWalk } from './diskPlannerWalk';
 import {
   APPARENT_SIZE_THRESHOLD_PX,
   FADE_BAND_PX,
@@ -60,12 +59,6 @@ export type TexturedDiskDeps = {
     famousId?: string;
   }) => Promise<ImageBitmap | null>;
   /**
-   * Decimation for the transitional self-driven 'runFrame' path only —
-   * when the shared walk drives 'beginFrame' directly, the walk owns
-   * decimation and this field is unused.  Defaults to 8.
-   */
-  readonly decimationFactor?: number;
-  /**
    * Optional LOD-3 source. When provided, the planner folds each famous
    * galaxy's `hiResLayerIdx` + `hiResCrossfadeAlpha` into its `DiskInstance`;
    * when omitted, every instance gets the -1 / 0 sentinel and the shader's
@@ -74,7 +67,11 @@ export type TexturedDiskDeps = {
   readonly hiResFamous?: HiResFamousSubsystem;
 };
 
-/** The stub for the walk slot the transitional bridge doesn't drive. */
+/**
+ * A visitor that ignores every walk callback. Returned by `beginFrame` after
+ * `destroy()` so a post-teardown frame does no work and leaves `lastOutput`
+ * untouched.
+ */
 const NOOP_ROW_VISITOR: DiskRowVisitor = {
   onSourceHidden() {},
   beginSource() {},
@@ -271,20 +268,6 @@ export function createTexturedDiskSubsystem(
     return visitor;
   }
 
-  // ── Transitional engine bridge ──────────────────────────────────────────
-  //
-  // The engine frame loop still calls 'runFrame(input)' on this subsystem;
-  // wiring the ONE shared walk at the frame level (driving the procedural
-  // body and this textured body together) is the step that deletes this
-  // wrapper.  Until then it drives the visitor through a subsystem-private
-  // walk, so decimation behaviour is identical to a solo walk run.
-  const bridgeWalk = createDiskPlannerWalk({ decimationFactor: deps.decimationFactor });
-
-  function runFrame(input: TexturedDiskFrameInput): TexturedDiskFrameOutput {
-    bridgeWalk.runFrame(input, NOOP_ROW_VISITOR, beginFrame(input));
-    return lastOutput;
-  }
-
   function hasInFlightWork(): boolean {
     if (atlas.inFlightCount() > 0) return true;
     if (bitmapReadyTime.size === 0) return false;
@@ -303,7 +286,6 @@ export function createTexturedDiskSubsystem(
     atlas.setEvictHandler(undefined);
     bitmapReadyTime.clear();
     stickyDisksBySource.clear();
-    bridgeWalk.destroy();
     lastOutput = { disks: [] };
   }
 
@@ -313,7 +295,6 @@ export function createTexturedDiskSubsystem(
 
   const subsystem: TexturedDiskSubsystemWithTestSeam = {
     beginFrame,
-    runFrame,
     get lastOutput() {
       return lastOutput;
     },

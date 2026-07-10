@@ -54,14 +54,6 @@ export type TexturedDiskSubsystem = Destroyable & {
    */
   beginFrame(input: TexturedDiskFrameInput): DiskRowVisitor;
 
-  /**
-   * Transitional engine bridge: drives `beginFrame`'s visitor through a
-   * subsystem-private walk (own stride cursor, procedural slot stubbed) so
-   * the frame loop can keep calling `runFrame(input)` until it drives the
-   * shared `DiskPlannerWalk` directly — at which point this method goes.
-   */
-  runFrame(input: TexturedDiskFrameInput): TexturedDiskFrameOutput;
-
   readonly lastOutput: TexturedDiskFrameOutput;
 
   /**

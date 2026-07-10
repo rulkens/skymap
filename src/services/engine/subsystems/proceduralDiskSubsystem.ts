@@ -26,7 +26,6 @@ import { purgeStrideWindow } from '../../../utils/render/disk/purgeStrideWindow'
 import { byDistanceToCamera } from '../../../utils/render/disk/byDistanceToCamera';
 import { galaxyCacheKey } from '../../../utils/render/disk/galaxyCacheKey';
 import { maybeEmitProceduralDisk } from '../../../utils/render/disk/maybeEmitProceduralDisk';
-import { createDiskPlannerWalk } from './diskPlannerWalk';
 import {
   APPARENT_SIZE_THRESHOLD_PX,
   FADE_BAND_PX,
@@ -46,26 +45,11 @@ import type {
 
 export type ProceduralDiskDeps = {
   /**
-   * Decimation for the transitional self-driven 'runFrame' path only —
-   * when the shared walk drives 'beginFrame' directly, the walk owns
-   * decimation and this field is unused.  Defaults to 8.
-   */
-  readonly decimationFactor?: number;
-  /**
    * Optional. Drives the famous-WebP crossfade-out: when a famous galaxy's
    * curated WebP is loaded in the atlas, that instance's `procFadeOut` ramps
    * down. Omit it (e.g. in tests) and `procFadeOut` stays 1.0 throughout.
    */
   readonly atlas?: GalaxyAtlasSubsystem;
-};
-
-/** The stub for the walk slot the transitional bridge doesn't drive. */
-const NOOP_ROW_VISITOR: DiskRowVisitor = {
-  onSourceHidden() {},
-  beginSource() {},
-  onRow() {},
-  endSource() {},
-  endFrame() {},
 };
 
 export function createProceduralDiskSubsystem(
@@ -183,32 +167,16 @@ export function createProceduralDiskSubsystem(
     return visitor;
   }
 
-  // ── Transitional engine bridge ──────────────────────────────────────────
-  //
-  // The engine frame loop still calls 'runFrame(input)' on this subsystem;
-  // wiring the ONE shared walk at the frame level (driving this body and
-  // the textured body together) is the step that deletes this wrapper.
-  // Until then it drives the visitor through a subsystem-private walk, so
-  // decimation behaviour is identical to a solo walk run.
-  const bridgeWalk = createDiskPlannerWalk({ decimationFactor: deps.decimationFactor });
-
-  function runFrame(input: ProceduralDiskFrameInput): ProceduralDiskFrameOutput {
-    bridgeWalk.runFrame(input, beginFrame(input), NOOP_ROW_VISITOR);
-    return lastOutput;
-  }
-
   // Calling beginFrame after destroy is safe: all state here is plain maps
   // and arrays with no external resources, so a post-destroy frame simply
   // starts accumulating into fresh (empty) state again.
   function destroy(): void {
     stickyProcDisksBySource.clear();
-    bridgeWalk.destroy();
     lastOutput = { instances: [] };
   }
 
   const subsystem: ProceduralDiskSubsystem = {
     beginFrame,
-    runFrame,
     get lastOutput() {
       return lastOutput;
     },

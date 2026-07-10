@@ -233,16 +233,4 @@ describe('createProceduralDiskSubsystem', () => {
       for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
     });
   });
-
-  it('transitional runFrame(input) drives the body through a private walk (engine bridge)', () => {
-    // The engine frame loop still calls subsystem.runFrame(input) until the
-    // shared walk is wired at the frame level; the wrapper must behave
-    // exactly like a solo walk run — including decimation via the private
-    // walk's own cursor (default factor 8; 4 rows → window of 1 per frame).
-    const sys = createProceduralDiskSubsystem({ decimationFactor: 1 });
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
-    const out = sys.runFrame(makeInput(clouds));
-    expect(out.instances.length).toBe(4);
-    expect(sys.lastOutput).toBe(out);
-  });
 });

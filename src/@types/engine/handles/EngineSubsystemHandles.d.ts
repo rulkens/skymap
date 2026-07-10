@@ -21,6 +21,7 @@
 import type { GalaxyAtlasSubsystem } from '../subsystems/GalaxyAtlasSubsystem';
 import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
+import type { DiskPlannerWalk } from '../subsystems/DiskPlannerWalk';
 import type { HiResFamousSubsystem } from '../subsystems/HiResFamousSubsystem';
 import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
@@ -39,6 +40,15 @@ export type EngineSubsystemHandles = {
   galaxyAtlas: GalaxyAtlasSubsystem | null;
   proceduralDisks: ProceduralDiskSubsystem | null;
   texturedDisks: TexturedDiskSubsystem | null;
+  /**
+   * The single per-frame catalog walk shared by the two disk planners
+   * above. `runFrame` drives the procedural body then the textured body
+   * over one shared stride cursor, so each surviving row's geometry is
+   * computed once. Wired in `wireImpostorSubsystems` alongside the two
+   * planners; null until then. Holds no GPU resource — just the cursor
+   * map — so teardown order relative to the atlas is irrelevant.
+   */
+  diskPlannerWalk: DiskPlannerWalk | null;
   /**
    * LOD-3 hi-res Famous-galaxy planner. Wired in `wireSlots` alongside
    * `texturedDisks`, which reads `lastOutput.byFamousIdx` to fold

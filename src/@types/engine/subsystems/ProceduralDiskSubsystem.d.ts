@@ -49,14 +49,6 @@ export type ProceduralDiskSubsystem = Destroyable & {
   beginFrame(input: ProceduralDiskFrameInput): DiskRowVisitor;
 
   /**
-   * Transitional engine bridge: drives `beginFrame`'s visitor through a
-   * subsystem-private walk (own stride cursor, textured slot stubbed) so
-   * the frame loop can keep calling `runFrame(input)` until it drives the
-   * shared `DiskPlannerWalk` directly — at which point this method goes.
-   */
-  runFrame(input: ProceduralDiskFrameInput): ProceduralDiskFrameOutput;
-
-  /**
    * Latest output — read by `proceduralDisksPass.draw()` without
    * re-running.  Initialised to empty arrays so the pass reads valid
    * (empty) data before the first frame.

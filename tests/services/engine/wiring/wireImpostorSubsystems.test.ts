@@ -114,6 +114,7 @@ function makeState(
       galaxyAtlas: null,
       texturedDisks: null,
       proceduralDisks: null,
+      diskPlannerWalk: null,
       hiResFamous: null,
       hiResFamousTexture: null,
     },
@@ -143,8 +144,8 @@ describe('wireImpostorSubsystems', () => {
     vi.clearAllMocks();
   });
 
-  it('assigns galaxyAtlas, texturedDisks, proceduralDisks, hiResFamous, hiResFamousTexture onto state.subsystems', () => {
-    // All five subsystem handles must be non-null after the call.
+  it('assigns galaxyAtlas, texturedDisks, proceduralDisks, diskPlannerWalk, hiResFamous, hiResFamousTexture onto state.subsystems', () => {
+    // All six subsystem handles must be non-null after the call.
     // The test verifies assignment without caring about the specific
     // objects returned by the (mocked) factories.
     const state = makeState();
@@ -155,6 +156,7 @@ describe('wireImpostorSubsystems', () => {
     expect(state.subsystems.galaxyAtlas).not.toBeNull();
     expect(state.subsystems.texturedDisks).not.toBeNull();
     expect(state.subsystems.proceduralDisks).not.toBeNull();
+    expect(state.subsystems.diskPlannerWalk).not.toBeNull();
     expect(state.subsystems.hiResFamous).not.toBeNull();
     expect(state.subsystems.hiResFamousTexture).not.toBeNull();
   });

@@ -77,7 +77,6 @@ function makeFakeTexturedDisks(): TexturedDiskSubsystem & {
   return {
     __setHiResFamousCalls,
     beginFrame: vi.fn<TexturedDiskSubsystem['beginFrame']>(() => noopDiskRowVisitor()),
-    runFrame: vi.fn(() => ({ disks: [] })),
     lastOutput: { disks: [] },
     hasInFlightWork: vi.fn(() => false),
     setHiResFamous: vi.fn((next) => {
