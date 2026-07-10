@@ -22,11 +22,12 @@
  *
  * ### Why gated on camera distance
  *
- * The captions are navigation aids for the final descent toward the Sun. Above
- * galaxy scale the two bodies are an irrelevant speck at the galactic centre,
- * and a permanent floating 'Sun'/'Earth' caption there would just clutter the
- * normal view — so the row stays dark until the camera has zoomed well past
- * galaxy scale.
+ * The captions are navigation aids for the final descent into the solar
+ * system — one per seeded scene body (Earth, the Moon, Jupiter, the local
+ * star map). Above galaxy scale those bodies are an irrelevant speck at the
+ * galactic centre, and a permanent field of floating captions there would
+ * just clutter the normal view — so the row stays dark until the camera has
+ * zoomed well past galaxy scale.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';

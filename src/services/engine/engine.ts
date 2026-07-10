@@ -299,7 +299,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // isEngineReady, null-checked at use by earthLayer.
       earthRenderer: null,
       // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
-      // (the Sun), one dynamic-offset planet renderer drawing every seeded
+      // (the Sun), one instanced planet renderer drawing every seeded
       // planet, and the far-star additive points. null until initGpu;
       // excluded from isEngineReady, null-checked at use by their layers.
       starRenderer: null,
