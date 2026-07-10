@@ -10,6 +10,7 @@
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { SceneBody } from '../../@types/scene/SceneBody';
 
 /**
  * Fixed search terms for the always-present Milky Way row.  The matcher
@@ -24,13 +25,17 @@ export const MILKY_WAY_PRIMARY_NAME = 'Milky Way';
 export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as const;
 
 /**
- * One scored row, ready to render.  `kind` discriminates the four payload
- * shapes; `ROW_VIEW` dispatches on it for the rendered text and
- * `utils/focusIdForRow` for the durable focus id.  `milkyWay` carries no
- * payload — it's the singleton FocusableTarget, resolved by the saga.
+ * One scored row, ready to render.  `kind` discriminates the payload shapes;
+ * `ROW_VIEW` dispatches on it for the rendered text and `utils/focusIdForRow`
+ * for the durable focus id.  `milkyWay` carries no payload — it's the singleton
+ * FocusableTarget, resolved by the saga.  `body` carries a seeded scene body
+ * (Earth, the stars, the planets — the `SceneBody` union; the row only reads
+ * the shared `id`/`label` fields); it surfaces only behind the `deepZoom` URL
+ * gate (see `rankPaletteMatches`).
  */
 export type ScoredRow =
   | { kind: 'famous'; entry: FamousMetaEntry; score: number }
   | { kind: 'alias'; entry: AliasIndexEntry; score: number }
   | { kind: 'structure'; entry: StructureSearchEntry; score: number }
-  | { kind: 'milkyWay'; score: number };
+  | { kind: 'milkyWay'; score: number }
+  | { kind: 'body'; body: SceneBody; score: number };

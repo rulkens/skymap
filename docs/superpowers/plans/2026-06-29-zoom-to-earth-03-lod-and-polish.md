@@ -53,6 +53,8 @@ TS, wgpu-matrix (`mat4d`/`vec3d` f64 namespaces), WebGPU + WESL, redux-toolkit +
 
 ## Task 1 — `foregroundFrustum` pure helper
 
+> **Executed early on the plan-02 branch (PR #425, 2026-07-11)** as a defect fix: the fixed NEAR0 ratios clipped the plan-02 orbit-ring quads (far = cam.distance·100 ≈ 0.02 AU at Earth focus vs the Earth ring's 2 AU span → boundary sweep flicker). One amendment to the contract below: `far = max(camDistance·100, FAR_MIN_MPC = 3e-11)` — a scene floor enclosing the largest seeded orbit — so far is monotone non-decreasing rather than strictly proportional. `MIN_NEAR_MPC = 1e-19`. Tests adjusted accordingly (4 tests, incl. the far-floor pin).
+
 **Files:** `src/utils/camera/foregroundFrustum.ts` (new), `tests/utils/camera/foregroundFrustum.test.ts` (new).
 
 **Signature (contract — match exactly):**
@@ -63,13 +65,15 @@ export function foregroundFrustum(camDistanceMpc: number): { near: number; far: 
 
 **Behaviour:** derive a foreground near/far bracket scaled around the camera-distance-to-focus so the depth32float foreground buffer stays precise at any scale. `near` scales DOWN with distance (a fraction of `camDistanceMpc`, floored above 0 so it never collapses to or below zero — the near plane is what z-precision is most sensitive to), `far` scales UP with distance (a multiple of `camDistanceMpc`) to enclose the resolved near bodies. Both strictly positive, `near < far`. Pure — no engine state, no clock.
 
-- [ ] Add `foregroundFrustum.ts` — single function, file named for it. Didactic docblock: WHY the foreground frustum is adaptive (a fixed near/far cannot stay precise across ~17 OOM of zoom; the backdrop is the separate `COSMO` slab row in `slabs.ts`, which keeps its own fixed wide near/far — 10 kpc to 50 Gpc — because the cosmological scene's depth doesn't change as the user zooms, only the near-field `NEAR0` row's does — see spec §4/§7), and WHY near must stay strictly above 0 (the depth32float buffer's precision is dominated by the near plane; `near=0` is a degenerate perspective matrix).
-- [ ] Test `foregroundFrustum returns near < far` — for a representative distance (e.g. galaxy scale `0.43` and Earth-surface scale ~`1e-16`), assert `near < far`.
-- [ ] Test `foregroundFrustum near stays strictly positive at tiny distance` — at an Earth-surface `camDistanceMpc` (~`1e-16`), assert `near > 0` (guards the degenerate-matrix trap).
-- [ ] Test `foregroundFrustum both bounds scale with distance` — assert near and far at a 10× larger distance are each strictly larger than at the base distance (monotone in `camDistanceMpc`).
-- [ ] `npm test -- foregroundFrustum` → all three pass. Commit.
+- [x] Add `foregroundFrustum.ts` — single function, file named for it. Didactic docblock: WHY the foreground frustum is adaptive (a fixed near/far cannot stay precise across ~17 OOM of zoom; the backdrop is the separate `COSMO` slab row in `slabs.ts`, which keeps its own fixed wide near/far — 10 kpc to 50 Gpc — because the cosmological scene's depth doesn't change as the user zooms, only the near-field `NEAR0` row's does — see spec §4/§7), and WHY near must stay strictly above 0 (the depth32float buffer's precision is dominated by the near plane; `near=0` is a degenerate perspective matrix).
+- [x] Test `foregroundFrustum returns near < far` — for a representative distance (e.g. galaxy scale `0.43` and Earth-surface scale ~`1e-16`), assert `near < far`.
+- [x] Test `foregroundFrustum near stays strictly positive at tiny distance` — at an Earth-surface `camDistanceMpc` (~`1e-16`), assert `near > 0` (guards the degenerate-matrix trap).
+- [x] Test `foregroundFrustum both bounds scale with distance` — assert near and far at a 10× larger distance are each strictly larger than at the base distance (monotone in `camDistanceMpc`).
+- [x] `npm test -- foregroundFrustum` → all three pass. Commit.
 
 ## Task 2 — Wire adaptive near/far into `deriveSlabs`, replacing the fixed NEAR0 ratios
+
+> **Executed early on the plan-02 branch (PR #425, 2026-07-11)** together with Task 1 — see the note there. Ratios + forward-reference comment deleted; `slabs.test.ts` repointed exactly as specified below.
 
 **Files:** `src/services/engine/frame/slabs.ts` (modify), `tests/services/engine/frame/slabs.test.ts` (modify).
 
@@ -82,11 +86,11 @@ export function foregroundFrustum(camDistanceMpc: number): { near: number; far: 
 - Consumes: `foregroundFrustum(camDistanceMpc)` (Task 1); `cam.distance` from the `OrbitCamera` argument.
 - Produces: the `NEAR0` slab row's `nearMpc`/`farMpc`/`vp` derived from `foregroundFrustum(cam.distance)` (replaces the two constant ratios — find and delete them, do not leave both).
 
-- [ ] Replace the `nearMpc`/`farMpc` derivation in `deriveSlabs` with `const { near: nearMpc, far: farMpc } = foregroundFrustum(cam.distance);`; delete `NEAR0_NEAR_RATIO`/`NEAR0_FAR_RATIO` and their forward-reference comment. Keep the `computeForegroundViewProj` call and the `COSMO` row exactly as they are (the backdrop keeps its own fixed near/far — that split is essential, see Task 8).
-- [ ] Refresh the `NEAR0` block comment: the near-field near/far are now adaptive via `foregroundFrustum` (Task 1), unlike the `COSMO` row's fixed `COSMO_NEAR_MPC`/`COSMO_FAR_MPC`.
-- [ ] Test (update `slabs.test.ts`): the existing `the near-field row uses an adaptive near/far derived from cam.distance` (`slabs.test.ts:63-68`) and `slabViewOf(ctx, NEAR0) exposes the adaptive near/far slab row` (`slabs.test.ts:138-144`) currently assert against the literal `distance * 1e-4` / `distance * 100`. Repoint both to assert `slab.nearMpc`/`farMpc` equal `foregroundFrustum(cam.distance).near`/`.far`, at two distinct distances (adaptive, not a fixed ratio the test hard-codes).
-- [ ] Test: the NEAR0-vp derivation test (`the near row's vp is the origin-relative computeForegroundViewProj product`, `slabs.test.ts:70-90`) stays structurally the same (it still pins the util as the derivation) — but its `expected` call must feed `foregroundFrustum(distance).near`/`.far` as `near`/`far` so it tracks the new source of truth rather than the deleted literals.
-- [ ] `npm test -- slabs` → green. Commit.
+- [x] Replace the `nearMpc`/`farMpc` derivation in `deriveSlabs` with `const { near: nearMpc, far: farMpc } = foregroundFrustum(cam.distance);`; delete `NEAR0_NEAR_RATIO`/`NEAR0_FAR_RATIO` and their forward-reference comment. Keep the `computeForegroundViewProj` call and the `COSMO` row exactly as they are (the backdrop keeps its own fixed near/far — that split is essential, see Task 8).
+- [x] Refresh the `NEAR0` block comment: the near-field near/far are now adaptive via `foregroundFrustum` (Task 1), unlike the `COSMO` row's fixed `COSMO_NEAR_MPC`/`COSMO_FAR_MPC`.
+- [x] Test (update `slabs.test.ts`): the existing `the near-field row uses an adaptive near/far derived from cam.distance` (`slabs.test.ts:63-68`) and `slabViewOf(ctx, NEAR0) exposes the adaptive near/far slab row` (`slabs.test.ts:138-144`) currently assert against the literal `distance * 1e-4` / `distance * 100`. Repoint both to assert `slab.nearMpc`/`farMpc` equal `foregroundFrustum(cam.distance).near`/`.far`, at two distinct distances (adaptive, not a fixed ratio the test hard-codes).
+- [x] Test: the NEAR0-vp derivation test (`the near row's vp is the origin-relative computeForegroundViewProj product`, `slabs.test.ts:70-90`) stays structurally the same (it still pins the util as the derivation) — but its `expected` call must feed `foregroundFrustum(distance).near`/`.far` as `near`/`far` so it tracks the new source of truth rather than the deleted literals.
+- [x] `npm test -- slabs` → green. Commit.
 
 ## Task 3 — `resolvesToSphere` partition predicate
 

@@ -1,24 +1,29 @@
 /**
- * focusFraming tests — verifies each of the three SelectionRow arms returns
- * the expected { target, distance } pair.
+ * focusFraming tests — verifies each SelectionRow arm returns the expected
+ * { target, distance } pair.
  *
  * These are pure unit tests: no store, no engine, no async. The function is
  * deterministic given a row and a FOV, so we compare against the same helpers
  * that focusTweenDescriptor used (galaxyFocusDistance, structureFocusDistance,
- * MILKY_WAY_VIEW_DISTANCE_MPC) to document the intent without hard-coding the
- * derived numbers.
+ * bodyFocusDistance, MILKY_WAY_VIEW_DISTANCE_MPC) to document the intent
+ * without hard-coding the derived numbers.
  */
 
 import { describe, it, expect } from 'vitest';
 import { focusFraming } from '../../../../src/services/engine/camera/focusFraming';
 import { galaxyFocusDistance } from '../../../../src/services/engine/camera/galaxyFocusDistance';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
+import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../../../src/data/milkyWay/galacticCenter';
 import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
+
+type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 
 const FOVY = 0.8;
 
@@ -109,5 +114,50 @@ describe('focusFraming', () => {
     const result = focusFraming(row, FOVY);
     expect(result.target).not.toBe(row.worldPos);
     expect(result.target).toEqual([10, -20, 30]);
+  });
+
+  // ── body arm ───────────────────────────────────────────────────────────────
+
+  const EARTH_RADIUS_KM = 6371;
+  const bodyRow = (over: Partial<BodyRow> = {}): BodyRow => ({
+    type: 'body',
+    id: 'earth',
+    positionMpc: [4.8481e-12, 0, 0], // ~1 AU in Mpc
+    radiusKm: EARTH_RADIUS_KM,
+    ...over,
+  });
+
+  it('body arm — targets the body position and frames via bodyFocusDistance', () => {
+    const row = bodyRow();
+    const result = focusFraming(row, FOVY);
+    expect(result.target).toEqual([4.8481e-12, 0, 0]);
+    expect(result.distance).toBe(bodyFocusDistance(EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC, FOVY));
+  });
+
+  it('body arm — distance is proportional to the physical radius (no clamp)', () => {
+    // The relation, not a magic number: doubling the radius doubles the
+    // distance, and at Earth scale (~2e-16 Mpc) the result stays proportional
+    // instead of being swallowed by a Mpc-scale minimum like the galaxy /
+    // structure helpers apply.
+    const single = focusFraming(bodyRow({ radiusKm: EARTH_RADIUS_KM }), FOVY).distance;
+    const double = focusFraming(bodyRow({ radiusKm: 2 * EARTH_RADIUS_KM }), FOVY).distance;
+    expect(double / single).toBeCloseTo(2, 10);
+    // Sanity of the regime: framing Earth lands within a handful of Earth
+    // radii, i.e. far below any Mpc-scale clamp floor.
+    const earthRadiusMpc = EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+    expect(single).toBeGreaterThan(earthRadiusMpc);
+    expect(single).toBeLessThan(100 * earthRadiusMpc);
+  });
+
+  it('body arm — radius is the physical radius in Mpc (a real pass-by extent)', () => {
+    const result = focusFraming(bodyRow(), FOVY);
+    expect(result.radius).toBeCloseTo(EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_MPC, 20);
+  });
+
+  it('body arm — target is a fresh array, not aliased from positionMpc', () => {
+    const row = bodyRow();
+    const result = focusFraming(row, FOVY);
+    expect(result.target).not.toBe(row.positionMpc);
+    expect(result.target).toEqual(row.positionMpc);
   });
 });

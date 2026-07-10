@@ -199,3 +199,49 @@ describe('Source enum — overlay codes (milkyWay/flow)', () => {
     expect(DEFAULT_FLOW.boundaryFadeWidth).toBe(entry.boundaryFadeWidth);
   });
 });
+
+describe('Source enum — body codes (star/planet/earth)', () => {
+  it('appends Star=21, Planet=22, Earth=23 to the enum', () => {
+    // Registry-key-only codes (not persisted, not pickable); the three body
+    // codes are contiguous after the DESI patches. Star/Planet fill the 21/22
+    // slots the Earth comment reserved; Earth stays 23 (append-only by VALUE —
+    // insertion order in the const is cosmetic). Never renumber the codes below.
+    expect(Source.Star).toBe(21);
+    expect(Source.Planet).toBe(22);
+    expect(Source.Earth).toBe(23);
+  });
+
+  it('star/planet/earth rows are non-label, non-marker body sources', () => {
+    // Bodies are near-field scene objects, not galaxy catalogs or structure
+    // rings. Their captions ship through the foreground-labels layer, bypassing
+    // the COSMO label/marker systems — so both capability flags are false.
+    const bodyRows = [
+      [Source.Star, 'star'],
+      [Source.Planet, 'planet'],
+      [Source.Earth, 'earth'],
+    ] as const;
+    for (const [code, type] of bodyRows) {
+      const entry = SOURCE_REGISTRY[code];
+      expect(entry.type).toBe(type);
+      expect(entry.id).toBe(type);
+      expect(entry.bearsLabel).toBe(false);
+      expect(entry.bearsMarker).toBe(false);
+    }
+  });
+
+  it('keeps star/planet/earth OUT of GALAXY_CATALOG_SOURCES', () => {
+    // Bodies render through their own content-layer, not the points
+    // pipeline's visibility bitmask.
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.Star);
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.Planet);
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.Earth);
+  });
+
+  it('keeps the star/planet/earth bits clear of ALL_VISIBLE_MASK', () => {
+    // ALL_VISIBLE_MASK is the OR of default-visible galaxy-catalog rows only,
+    // so a body code never lands in it.
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Star)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Planet)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Earth)).toBe(false);
+  });
+});

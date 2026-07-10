@@ -294,9 +294,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null-checks each together with its `settings.debug.*` toggle.
       pickDebugOverlay: null,
       diskRadiusRing: null,
-      // UV-sphere foreground debug overlay (Plan 01 — zoom-to-Earth). null
-      // until initGpu; excluded from isEngineReady, null-checked at use.
-      debugSphereRenderer: null,
+      // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
+      // constructs it + fires the Blue Marble fetch; excluded from
+      // isEngineReady, null-checked at use by earthLayer.
+      earthRenderer: null,
+      // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
+      // (the Sun), one instanced planet renderer drawing every seeded
+      // planet, and the far-star additive points. null until initGpu;
+      // excluded from isEngineReady, null-checked at use by their layers.
+      starRenderer: null,
+      planetRenderer: null,
+      starPointRenderer: null,
+      // Debug orbit rings (Earth / Jupiter / Moon) — additive SDF annuli on
+      // the (hdr, NEAR0) step. null until initGpu; excluded from
+      // isEngineReady, null-checked at use by orbitRingsLayer.
+      orbitRingRenderer: null,
       // Per-pass GPU timing service.  Always non-null — a no-op stub until
       // initGpu swaps in the device-aware service.  Consumers gate on
       // `.enabled`.
@@ -699,8 +711,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.pickDebugOverlay = null;
     state.gpu.diskRadiusRing?.destroy();
     state.gpu.diskRadiusRing = null;
-    state.gpu.debugSphereRenderer?.destroy();
-    state.gpu.debugSphereRenderer = null;
+    state.gpu.earthRenderer?.destroy();
+    state.gpu.earthRenderer = null;
+    state.gpu.starRenderer?.destroy();
+    state.gpu.starRenderer = null;
+    state.gpu.planetRenderer?.destroy();
+    state.gpu.planetRenderer = null;
+    state.gpu.starPointRenderer?.destroy();
+    state.gpu.starPointRenderer = null;
+    state.gpu.orbitRingRenderer?.destroy();
+    state.gpu.orbitRingRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();

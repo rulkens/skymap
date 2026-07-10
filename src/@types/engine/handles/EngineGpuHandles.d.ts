@@ -61,7 +61,11 @@ import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRendere
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
-import type { DebugSphereRenderer } from '../../rendering/DebugSphereRenderer';
+import type { EarthRenderer } from '../../rendering/EarthRenderer';
+import type { StarRenderer } from '../../rendering/StarRenderer';
+import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
+import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
+import type { OrbitRingRenderer } from '../../rendering/OrbitRingRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
@@ -164,15 +168,15 @@ export type EngineGpuHandles = {
   labelRenderer: LabelRenderer | null;
   /**
    * Second MSDF label renderer for the true-scale foreground bodies
-   * (Plan 01 — zoom-to-Earth).  Separate from `labelRenderer` because the
-   * Sun/Earth captions project through the NEAR0 slab view — whose near
-   * plane scales with `cam.distance` so it always contains the bodies —
-   * rather than the galaxy-scale `vp` the main labels use, and one renderer
-   * draws with one view-projection.  Holds the static `debugSphereLabels()`
-   * set, uploaded once at construction.  Null until `initGpu` builds it
-   * against the font atlas; excluded from `isEngineReady` and null-checked
-   * at use, like `labelRenderer`.  Released and re-nulled by `destroy()`.
-   * Plan 02 repoints this at the real BodyStore label source.
+   * (zoom-to-Earth).  Separate from `labelRenderer` because the scene-body
+   * captions project through the NEAR0 slab view — whose near plane scales
+   * with `cam.distance` so it always contains the bodies — rather than the
+   * galaxy-scale `vp` the main labels use, and one renderer draws with one
+   * view-projection.  Holds the static `sceneBodyLabels()` set (Earth, the
+   * local star map, the planets), uploaded once at construction.  Null until
+   * `initGpu` builds it against the font atlas; excluded from
+   * `isEngineReady` and null-checked at use, like `labelRenderer`.
+   * Released and re-nulled by `destroy()`.
    */
   foregroundLabelRenderer: LabelRenderer | null;
   /**
@@ -313,18 +317,74 @@ export type EngineGpuHandles = {
    */
   diskRadiusRing: DiskRadiusRing | null;
   /**
-   * UV-sphere debug overlay drawn into the `foreground:0` render-target row
-   * (Plan 01 — zoom-to-Earth).  Renders a lat-long-grid sphere so roundness,
-   * jitter, and pole orientation are legible at Earth scale before a real
-   * texture is applied.  That row carries its own `depth32float` attachment,
-   * so the sphere depth-sorts against the other opaque foreground bodies.
-   * Viewport-independent — no resize (the `foreground:0` row's texture
-   * lifecycle is `renderTargets`' job, not this handle's).  Excluded from
-   * `isEngineReady` and null-checked at use.  Null until `initGpu` constructs
-   * it; released and re-nulled by `destroy()` (releases the position VBO,
-   * index IBO, and uniform buffer).
+   * True-scale, Blue-Marble-textured Earth drawn into the `foreground:0`
+   * render-target row (Plan 02 — zoom-to-Earth).  Same UV-sphere mesh as the
+   * star/planet renderers below, but shaded by sampling an equirectangular
+   * Blue Marble bitmap. Its ('rgba16float', 'depth32float') pipeline formats
+   * MUST match that row's `format` / `depth` in `renderTargets.ts` — the
+   * target↔renderer-profile invariant. Constructed in `initGpu`, which also
+   * fires the (un-awaited) Blue Marble fetch → `setTexture`; until the bitmap
+   * lands the renderer draws a plain mid-blue placeholder sphere.  Excluded
+   * from `isEngineReady` and null-checked at use by `earthLayer`.  Null until
+   * `initGpu` constructs it; released and re-nulled by `destroy()` (releases
+   * the position + uv VBOs, index IBO, uniform buffer, and the Earth texture).
    */
-  debugSphereRenderer: DebugSphereRenderer | null;
+  earthRenderer: EarthRenderer | null;
+  /**
+   * Flat-emissive resolved star (the near-partition star — today the Sun
+   * alone, per `isNearStar`'s one-parsec split) drawn into the `foreground:0`
+   * render-target row.  Same ('rgba16float', 'depth32float') format
+   * invariant as `earthRenderer`.  Owns a single non-dynamic uniform buffer,
+   * so `starSpheresLayer` may issue at most ONE draw per frame through it —
+   * the partition constant guarantees that today; Plan 03's apparent-size
+   * promotion needs a dynamic-offset upgrade first.  Excluded from
+   * `isEngineReady` and null-checked at use.  Null until `initGpu` constructs
+   * it; released and re-nulled by `destroy()`.
+   */
+  starRenderer: StarRenderer | null;
+  /**
+   * Flat-lit albedo planets — a SINGLE renderer instance that draws every
+   * seeded planet in one frame via GPU instancing: `planetsLayer` packs each
+   * body's MVP + albedo into a per-instance vertex-buffer record and hands
+   * the whole batch to one `draw` call, which does one `queue.writeBuffer`
+   * followed by one instanced `drawIndexed`. Each instance reads its OWN
+   * baked record, so there is no shared per-draw uniform for a later write
+   * to clobber (the writeBuffer-vs-submit landmine that a dynamic-offset or
+   * shared-slot design would have to guard against). Same `foreground:0`
+   * format invariant as the other sphere bodies. Excluded from
+   * `isEngineReady` and null-checked at use. Null until `initGpu` constructs
+   * it; released and re-nulled by `destroy()`.
+   */
+  planetRenderer: PlanetRenderer | null;
+  /**
+   * The far-partition stars (Proxima and the rest of the local map) as
+   * additive point sprites into the depthless HDR target — the far half of
+   * the star LOD (`star-points` layer, drawn by the frame program's
+   * dedicated `(hdr, NEAR0)` render step).  No depth format: the hdr row
+   * has no depth attachment.  Star instances are uploaded once in `initGpu`
+   * via `setStars` (the seeded far partition), mirroring the Earth
+   * texture's post-construction data delivery.  Excluded from
+   * `isEngineReady` and null-checked at use.  Null until `initGpu`
+   * constructs it; released and re-nulled by `destroy()` (releases the
+   * instance + uniform buffers).
+   */
+  starPointRenderer: StarPointRenderer | null;
+  /**
+   * The debug orbit rings (Earth / Jupiter around the Sun, the Moon around
+   * Earth) as analytic SDF annuli into the depthless HDR target — the
+   * `orbit-rings` layer, sharing the frame program's `(hdr, NEAR0)` render
+   * step with `star-points`.  No depth format: the hdr row has no depth
+   * attachment.  ONE instanced draw paints every ring: `orbitRingsLayer`
+   * packs each orbit's f64-composed MVP + tint into a per-instance vertex
+   * record (the `planetRenderer` idiom), so no per-ring bind or mid-frame
+   * uniform exists for the writeBuffer-vs-submit race to clobber.  The
+   * orbit table itself is a static module-level derivation of the body
+   * seeds (`SCENE_ORBITS`), so the renderer needs no data delivery at all.
+   * Excluded from `isEngineReady` and null-checked at use.  Null until
+   * `initGpu` constructs it; released and re-nulled by `destroy()`
+   * (releases the quad VBO/IBO + instance buffer).
+   */
+  orbitRingRenderer: OrbitRingRenderer | null;
   /**
    * Per-pass GPU timing service.  Always non-null — the engine state
    * is initialized with a no-op stub (see `createDisabledGpuTimingService`)

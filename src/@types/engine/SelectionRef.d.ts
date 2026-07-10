@@ -5,7 +5,10 @@ import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalo
  * authoritative reference the URL hash, tween, dedup, and tier re-anchor all
  * key off. Galaxy refs are POSITIONAL (`index`, drifts on a tier swap — the
  * tier saga re-anchors them by durable id); structure refs carry the durable
- * instance `id`; the Milky Way is a singleton needing no per-instance data.
+ * instance `id`; the Milky Way is a singleton needing no per-instance data; a
+ * scene body (Earth, and later stars/planets) carries the durable seed `id`
+ * that keys the static `SCENE_BODIES` table — the body's data is re-looked-up
+ * from that table when the ref is resolved, mirroring the structure arm.
  *
  * Flat serializable primitives only — this is stored in the RTK `selection`
  * slice with the serializability check on, so no bigint and no class instances.
@@ -17,4 +20,5 @@ export type SelectionRef =
       readonly index: number;
     }
   | { readonly type: 'structure'; readonly id: string }
-  | { readonly type: 'milkyWay' };
+  | { readonly type: 'milkyWay' }
+  | { readonly type: 'body'; readonly id: string };

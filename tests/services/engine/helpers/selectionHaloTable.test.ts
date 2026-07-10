@@ -55,6 +55,16 @@ describe('selectionHalo', () => {
     expect(selectionHalo(structureRow() as SelectionRow)).toBeNull();
   });
 
+  it('returns null for a body row (true-scale sphere, no Mpc-scale ring)', () => {
+    const bodyRow: SelectionRow = {
+      type: 'body',
+      id: 'earth',
+      positionMpc: [4.8481e-12, 0, 0],
+      radiusKm: 6371,
+    };
+    expect(selectionHalo(bodyRow)).toBeNull();
+  });
+
   it('returns a descriptor for a galaxy row with a measured diameter', () => {
     const halo = selectionHalo(galaxyRow({ diameterKpc: 60, x: 1, y: 2, z: 3 }));
     expect(halo).not.toBeNull();

@@ -27,6 +27,40 @@ describe('uvSphereMesh', () => {
     expect(indices.length).toBe(segments * rings * 6);
   });
 
+  it('equatorial J2000 axes: north pole +z, south pole -z, equator lon0 +x, lon90 +y', () => {
+    const segments = 12;
+    const rings = 6;
+    const { positions } = uvSphereMesh(segments, rings);
+    const row = segments + 1;
+    const at = (r: number, s: number): [number, number, number] => {
+      const i = (r * row + s) * 3;
+      return [positions[i] as number, positions[i + 1] as number, positions[i + 2] as number];
+    };
+
+    // Ring 0 = south pole = -z; ring `rings` = north pole = +z.
+    const [sx, sy, sz] = at(0, 0);
+    expect(sx).toBeCloseTo(0);
+    expect(sy).toBeCloseTo(0);
+    expect(sz).toBeCloseTo(-1);
+
+    const [nx, ny, nz] = at(rings, 0);
+    expect(nx).toBeCloseTo(0);
+    expect(ny).toBeCloseTo(0);
+    expect(nz).toBeCloseTo(1);
+
+    // Equator ring (rings/2, lat=0). lon 0 -> +x (vernal equinox); lon 90° -> +y.
+    const eqRing = rings / 2;
+    const [ex, ey, ez] = at(eqRing, 0);
+    expect(ex).toBeCloseTo(1);
+    expect(ey).toBeCloseTo(0);
+    expect(ez).toBeCloseTo(0);
+
+    const [qx, qy, qz] = at(eqRing, segments / 4); // lon = 2π·(1/4) = π/2
+    expect(qx).toBeCloseTo(0);
+    expect(qy).toBeCloseTo(1);
+    expect(qz).toBeCloseTo(0);
+  });
+
   it('winding is outward-facing (geometric normal points away from origin)', () => {
     const { positions, indices } = uvSphereMesh(12, 6);
 
@@ -48,8 +82,12 @@ describe('uvSphereMesh', () => {
     const cz = positions[i2 * 3 + 2] as number;
 
     // Edge vectors
-    const e1x = bx - ax; const e1y = by - ay; const e1z = bz - az;
-    const e2x = cx - ax; const e2y = cy - ay; const e2z = cz - az;
+    const e1x = bx - ax;
+    const e1y = by - ay;
+    const e1z = bz - az;
+    const e2x = cx - ax;
+    const e2y = cy - ay;
+    const e2z = cz - az;
 
     // Cross product = geometric normal (CCW → outward for a convex shape)
     const nx = e1y * e2z - e1z * e2y;

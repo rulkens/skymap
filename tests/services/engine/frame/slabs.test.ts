@@ -15,6 +15,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { deriveSlabs, slabViewOf, NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
 import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
+import { foregroundFrustum } from '../../../../src/utils/camera/foregroundFrustum';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -60,12 +61,15 @@ describe('deriveSlabs', () => {
     expect(slabs[1]?.precision).toBe('f32');
   });
 
-  it('the near-field row uses an adaptive near/far derived from cam.distance', () => {
-    const distance = 250;
-    const slabs = deriveSlabs(makeCam(distance), makeCosmoVp());
-    expect(slabs[0]?.nearMpc).toBeCloseTo(distance * 1e-4, 10);
-    expect(slabs[0]?.farMpc).toBeCloseTo(distance * 100, 10);
-  });
+  it.each([250, 5000])(
+    'the near-field row uses an adaptive near/far derived from cam.distance (%d)',
+    (distance) => {
+      const slabs = deriveSlabs(makeCam(distance), makeCosmoVp());
+      const { near, far } = foregroundFrustum(distance);
+      expect(slabs[0]?.nearMpc).toBe(near);
+      expect(slabs[0]?.farMpc).toBe(far);
+    },
+  );
 
   it("the near row's vp is the origin-relative computeForegroundViewProj product", () => {
     const distance = 250;
@@ -75,6 +79,7 @@ describe('deriveSlabs', () => {
     // inputs and assert Float64Array equality. A reimplemented-but-equal matrix
     // would drift the moment computeForegroundViewProj changes, so equality
     // against the live util — not a hand-rolled expectation — is the contract.
+    const { near, far } = foregroundFrustum(distance);
     const expected = computeForegroundViewProj({
       eyeMpc: cam.position,
       targetMpc: cam.target,
@@ -82,8 +87,8 @@ describe('deriveSlabs', () => {
       renderOrigin: RENDER_ORIGIN_MPC,
       fovYRad: cam.fovYRad,
       aspect: cam.aspect,
-      near: distance * 1e-4,
-      far: distance * 100,
+      near,
+      far,
     });
     expect(slabs[0]?.vp).toBeInstanceOf(Float64Array);
     expect(Array.from(slabs[0]!.vp)).toEqual(Array.from(expected));
@@ -139,8 +144,9 @@ describe('slabViewOf', () => {
     const cam = makeCam(100);
     const ctx = makeReadyCtx({ cam });
     const view = slabViewOf(ctx, NEAR0);
-    expect(view.slab.nearMpc).toBeCloseTo(cam.distance * 1e-4, 10);
-    expect(view.slab.farMpc).toBeCloseTo(cam.distance * 100, 10);
+    const { near, far } = foregroundFrustum(cam.distance);
+    expect(view.slab.nearMpc).toBe(near);
+    expect(view.slab.farMpc).toBe(far);
   });
 
   it('throws for an index with no matching slab row', () => {

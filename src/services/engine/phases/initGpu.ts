@@ -63,8 +63,14 @@ import { createFlowFieldRenderer } from '../../gpu/renderers/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/passes/diskRadiusRing';
-import { createDebugSphereRenderer } from '../../gpu/renderers/debugSphereRenderer';
-import { debugSphereLabels } from '../presentation/debugSphereLabels';
+import { createEarthRenderer } from '../../gpu/renderers/earthRenderer';
+import { createStarRenderer } from '../../gpu/renderers/starRenderer';
+import { createPlanetRenderer } from '../../gpu/renderers/planetRenderer';
+import { createStarPointRenderer } from '../../gpu/renderers/starPointRenderer';
+import { createOrbitRingRenderer } from '../../gpu/renderers/orbitRingRenderer';
+import { SCENE_EARTH } from '../../../data/bodies/sceneBodies';
+import { isNearStar } from '../../../utils/scene/isNearStar';
+import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
@@ -384,28 +390,80 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // allocates no GPU resources.
   state.gpu.timingService = createGpuTimingService(device, hasUrlGate('gpuTimings'), TIMED_SLOTS);
 
-  // ── Foreground pass renderers (Plan 01 — zoom-to-Earth) ──────────────
+  // ── Foreground / anchor renderers (Plans 01+02 — zoom-to-Earth) ──────
   //
-  // Two renderer handles for the true-scale foreground bodies.  Constructed
-  // here so `destroy()` can reach their GPU buffers; they stay UNCONSUMED
-  // until the foreground content layers (Tasks 4-5) draw them.
+  // The sphere-body renderers draw into the `foreground:0` render-target
+  // row, so their ('rgba16float', 'depth32float') pipeline formats MUST
+  // match that row's `format` / `depth` in `renderTargets.ts` — the
+  // target↔renderer-profile invariant.  Nothing is imported from
+  // renderTargets to enforce it: the formats are matched by convention +
+  // this comment, exactly like the bare 'rgba16float' literal every other
+  // HDR-target renderer above passes.
   //
-  // debugSphereRenderer draws into the `foreground:0` render-target row, so
-  // its ('rgba16float', 'depth32float') pipeline formats MUST match that
-  // row's `format` / `depth` in `renderTargets.ts` — the target↔renderer-
-  // profile invariant.  Nothing is imported from renderTargets to enforce
-  // it: the formats are matched by convention + this comment, exactly like
-  // the bare 'rgba16float' literal every other HDR-target renderer above
-  // passes.
-  state.gpu.debugSphereRenderer = createDebugSphereRenderer(device, 'rgba16float', 'depth32float');
+  // starRenderer draws the near-partition star (today the Sun alone — see
+  // isNearStar).  ONE planetRenderer draws every seeded planet in a single
+  // instanced draw: each body's MVP + albedo rides in a per-instance vertex
+  // record (planetsLayer packs the batch), so the matrices survive to submit
+  // without a per-body bind or a mid-frame uniform.
+  state.gpu.starRenderer = createStarRenderer(device, 'rgba16float', 'depth32float');
+  state.gpu.planetRenderer = createPlanetRenderer(device, 'rgba16float', 'depth32float');
+
+  // starPointRenderer draws the far-partition stars as additive points into
+  // the depthless HDR target — no depth format, unlike the sphere factories
+  // above (the hdr row has no depth attachment).  The bodies store is
+  // seeded at engine construction, so the far partition is known now:
+  // upload it once here (mirroring the Earth texture's post-construction
+  // data delivery below) so the star-points layer's draw stays a pure draw.
+  state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
+  state.gpu.starPointRenderer.setStars(state.data.bodies.stars.filter((star) => !isNearStar(star)));
+
+  // orbitRingRenderer draws the debug orbit rings (Earth / Jupiter / Moon) as
+  // additive SDF annuli into the same depthless HDR target — no depth format,
+  // like starPointRenderer above.  Unlike the stars, no data-delivery step:
+  // the orbit table (SCENE_ORBITS) is a static module-level derivation of the
+  // body seeds, packed per-frame by orbitRingsLayer.
+  state.gpu.orbitRingRenderer = createOrbitRingRenderer(device, 'rgba16float');
 
   // foregroundLabelRenderer is a second MSDF label renderer against the
-  // swap-chain `format` (`uiCtx`, like the main `labelRenderer`), holding the
-  // static Sun/Earth caption set uploaded once here; the caption layer
-  // (Task 5) only draws it, projecting through the NEAR0 slab view so the
-  // captions track bodies that sit far inside the main camera's near plane.
+  // swap-chain `format` (`uiCtx`, like the main `labelRenderer`), holding
+  // the scene-body caption set (Earth + the local star map + the planets),
+  // projecting through the NEAR0 slab view so the captions track bodies that
+  // sit far inside the main camera's near plane. This bootstrap upload primes
+  // the label set (glyph atlas + the count `foregroundLabelsLayer.enabled`
+  // gates on); the layer then RE-uploads the anchors camera-relative each
+  // frame to dodge the f32 origin-distance cancellation that would otherwise
+  // make the captions flicker at deep zoom — see that layer's f64-seam note.
   state.gpu.foregroundLabelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
-  state.gpu.foregroundLabelRenderer.setLabels(debugSphereLabels());
+  state.gpu.foregroundLabelRenderer.setLabels(sceneBodyLabels());
+
+  // ── Earth (Plan 02 — zoom-to-Earth) ──────────────────────────────────
+  //
+  // The textured landing target of the descent.  Its ('rgba16float',
+  // 'depth32float') pipeline formats MUST match the `foreground:0` row's
+  // `format` / `depth` in `renderTargets.ts` — the same target↔renderer-
+  // profile invariant the sphere bodies above carry, matched by convention
+  // + this comment rather than an import.
+  state.gpu.earthRenderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
+
+  // Kick off the Blue Marble texture fetch WITHOUT awaiting it: bootstrap must
+  // not block on a multi-megabyte JPG.  The renderer draws a mid-blue
+  // placeholder sphere until the bitmap lands; when it does, `setTexture` swaps
+  // in the real equirectangular texture and we wake the render-on-demand loop
+  // so the change presents even with the camera at rest.  A fetch / decode
+  // failure is non-fatal — we log (the codebase's `[engine] … failed to load`
+  // pattern) and leave the placeholder.  The `?.` guards the case where
+  // `destroy()` nulled the handle before the fetch resolved.
+  void (async () => {
+    try {
+      const res = await fetch(SCENE_EARTH.textureUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const bitmap = await createImageBitmap(await res.blob());
+      state.gpu.earthRenderer?.setTexture(bitmap);
+      state.subsystems.scheduler.requestRender();
+    } catch (err) {
+      console.warn('[engine] Blue Marble texture failed to load:', err);
+    }
+  })();
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

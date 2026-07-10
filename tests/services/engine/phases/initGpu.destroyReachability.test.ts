@@ -44,6 +44,7 @@ type Stub = {
   upload: ReturnType<typeof vi.fn>;
   setBiasMode: ReturnType<typeof vi.fn>;
   setLabels: ReturnType<typeof vi.fn>;
+  setStars: ReturnType<typeof vi.fn>;
 };
 
 const stubs: Record<string, Stub> = {};
@@ -54,9 +55,12 @@ function makeStub(name: string): Stub {
     // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
-    // `initGpu` calls `foregroundLabelRenderer.setLabels(debugSphereLabels())`
+    // `initGpu` calls `foregroundLabelRenderer.setLabels(sceneBodyLabels())`
     // synchronously after constructing the second label renderer.
     setLabels: vi.fn(),
+    // `initGpu` calls `starPointRenderer.setStars(<the far partition>)`
+    // synchronously after constructing the star-point renderer.
+    setStars: vi.fn(),
   };
   stubs[name] = stub;
   return stub;
@@ -180,11 +184,42 @@ vi.mock('../../../../src/services/gpu/passes/diskRadiusRing', () => ({
   createDiskRadiusRing: vi.fn(() => makeStub('diskRadiusRing')),
 }));
 
-// The debug-sphere renderer keeps its `?static` WESL imports out of JSDOM;
-// mock it like the other renderer constructors so initGpu's foreground block
-// runs to completion and writes onto `state.gpu.debugSphereRenderer`.
-vi.mock('../../../../src/services/gpu/renderers/debugSphereRenderer', () => ({
-  createDebugSphereRenderer: vi.fn(() => makeStub('debugSphereRenderer')),
+// The earth renderer keeps its `?static` WESL imports out of JSDOM;
+// mock it so initGpu's foreground block constructs a stub on
+// `state.gpu.earthRenderer` (the un-awaited Blue Marble fetch it fires runs
+// after initGpu resolves and fails harmlessly in the test env).
+vi.mock('../../../../src/services/gpu/renderers/earthRenderer', () => ({
+  createEarthRenderer: vi.fn(() => makeStub('earthRenderer')),
+}));
+
+// The anchor renderers likewise keep their `?static` WESL imports out of
+// JSDOM. createPlanetRenderer is called ONCE — a single dynamic-offset
+// renderer draws every seeded planet (see EngineGpuHandles) — so the shared
+// `stubs.planetRenderer` key is the constructed instance.
+vi.mock('../../../../src/services/gpu/renderers/starRenderer', () => ({
+  createStarRenderer: vi.fn(() => makeStub('starRenderer')),
+}));
+// Partial mock: planetsLayer.ts imports the real MAX_PLANETS/INSTANCE_FLOATS
+// constants at module scope to size its staging buffer, so only the factory
+// is stubbed — passing those constants through keeps that sizing real.
+vi.mock('../../../../src/services/gpu/renderers/planetRenderer', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('../../../../src/services/gpu/renderers/planetRenderer')
+  >()),
+  createPlanetRenderer: vi.fn(() => makeStub('planetRenderer')),
+}));
+vi.mock('../../../../src/services/gpu/renderers/starPointRenderer', () => ({
+  createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
+}));
+// Partial mock, same rationale as planetRenderer's above: orbitRingsLayer.ts
+// (loaded transitively via the frame program's registry import) reads the
+// real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its
+// staging buffer, so only the factory is stubbed.
+vi.mock('../../../../src/services/gpu/renderers/orbitRingRenderer', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('../../../../src/services/gpu/renderers/orbitRingRenderer')
+  >()),
+  createOrbitRingRenderer: vi.fn(() => makeStub('orbitRingRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
@@ -211,6 +246,14 @@ import { initGpu } from '../../../../src/services/engine/phases/initGpu';
 // DISTINCT instances land on state.gpu.* — the shared `stubs.labelRenderer`
 // key is overwritten by the second call and cannot make that distinction.
 import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labelRenderer';
+// The single planet-renderer factory: asserted constructed exactly once (one
+// dynamic-offset renderer draws every seeded planet).
+import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/planetRenderer';
+// The real seeded data bag: initGpu reads `state.data.bodies` (the far-star
+// partition for setStars; the seeded planet list drives planetsLayer), so the
+// state fixture carries the real construction-time seeds.
+import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
+import { SCENE_STARS } from '../../../../src/data/bodies/sceneBodies';
 
 /**
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
@@ -242,8 +285,16 @@ function makeState(): EngineState {
       volumeUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,
-      debugSphereRenderer: null,
+      earthRenderer: null,
+      starRenderer: null,
+      planetRenderer: null,
+      starPointRenderer: null,
+      orbitRingRenderer: null,
     },
+    // The real seeded stores: planets draw through a single instanced
+    // planetRenderer fed by bodies.planets, and initGpu partitions
+    // bodies.stars for setStars.
+    data: createEngineData(),
     subsystems: {
       biasCorrection: {
         attachRenderer: vi.fn(),
@@ -282,8 +333,11 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // factories run per-call, so the map repopulates as initGpu runs.
     for (const k of Object.keys(stubs)) delete stubs[k];
     // Reset the label-factory call history so `mock.results` indices are
-    // deterministic within each test (call 0 = main, call 1 = foreground).
+    // deterministic within each test (call 0 = main, call 1 = foreground),
+    // and the planet-factory history so the "constructed exactly once"
+    // assertion holds per test.
     vi.mocked(createLabelRenderer).mockClear();
+    vi.mocked(createPlanetRenderer).mockClear();
   });
 
   it('writes texturedDiskRenderer/proceduralDiskRenderer/milkyWayCloudRenderer onto state.gpu.*', async () => {
@@ -316,14 +370,34 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.renderTargets).toBe(stubs.renderTargets);
   });
 
-  it('writes debugSphereRenderer + foregroundLabelRenderer onto state.gpu.*', async () => {
+  it('writes the anchor renderers + foregroundLabelRenderer onto state.gpu.*', async () => {
     const state = makeState();
     const deps = makeDeps();
     await initGpu(state, deps);
 
-    // The foreground debug sphere must reach state.gpu.* so the destroy chain
-    // can release its position VBO, index IBO, and uniform buffer.
-    expect(state.gpu.debugSphereRenderer).toBe(stubs.debugSphereRenderer);
+    // Reachability claim for the textured Earth — it owns the position +
+    // uv VBOs, index IBO, uniform buffer, and Earth texture.
+    expect(state.gpu.earthRenderer).toBe(stubs.earthRenderer);
+    // The resolved-star renderer (the Sun sphere) must reach state.gpu.* the
+    // same way.
+    expect(state.gpu.starRenderer).toBe(stubs.starRenderer);
+    // A SINGLE planet renderer draws every seeded planet via dynamic-offset
+    // slots (see EngineGpuHandles) — constructed exactly once and landed on
+    // the singular handle.
+    expect(vi.mocked(createPlanetRenderer)).toHaveBeenCalledTimes(1);
+    expect(state.gpu.planetRenderer).toBe(stubs.planetRenderer);
+    // The star-point renderer receives the far partition (everything but
+    // the Sun) exactly once, at construction — the layer's draw stays pure.
+    expect(state.gpu.starPointRenderer).toBe(stubs.starPointRenderer);
+    // The orbit-ring renderer needs no data delivery (SCENE_ORBITS is a
+    // static module-level table) — construction alone lands the handle.
+    expect(state.gpu.orbitRingRenderer).toBe(stubs.orbitRingRenderer);
+    expect(stubs.starPointRenderer!.setStars).toHaveBeenCalledTimes(1);
+    const uploaded = stubs.starPointRenderer!.setStars.mock.calls[0]![0] as ReadonlyArray<{
+      id: string;
+    }>;
+    expect(uploaded).toHaveLength(SCENE_STARS.length - 1);
+    expect(uploaded.map((star) => star.id)).not.toContain('sun');
     // Both label renderers come from the same createLabelRenderer factory,
     // so index its call results ordinally: call 0 built the main
     // `labelRenderer`, call 1 the foreground caption renderer.  Asserting
@@ -335,7 +409,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.labelRenderer).toBe(labelResults[0]!.value);
     expect(state.gpu.foregroundLabelRenderer).toBe(labelResults[1]!.value);
     expect(state.gpu.foregroundLabelRenderer).not.toBe(state.gpu.labelRenderer);
-    // The static Sun/Earth caption set is uploaded once, at construction,
+    // The static scene-body caption set is uploaded once, at construction,
     // onto the foreground renderer only.
     expect(state.gpu.foregroundLabelRenderer!.setLabels).toHaveBeenCalledTimes(1);
     expect(state.gpu.labelRenderer!.setLabels).not.toHaveBeenCalled();

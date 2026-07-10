@@ -61,11 +61,16 @@ function fakeLayer(name: string, target: string, slab: number): ContentLayer {
 }
 
 describe('frameProgram', () => {
-  it('emits the eight-step main program', () => {
+  it('emits the nine-step main program', () => {
+    // The (hdr, NEAR0) step — the near-field star points — sits after the
+    // cosmological hdr render and BEFORE the hdr→swap composite, so the
+    // stars accumulate into HDR and ride the same tone-map as the galaxies
+    // (COSMO's 0.01 Mpc near plane would clip their parsec-scale anchors).
     expect(frameProgram(TONE)).toEqual([
       { kind: 'compute', name: 'flow' },
       { kind: 'render', target: 'volume', slab: COSMO },
       { kind: 'render', target: 'hdr', slab: COSMO },
+      { kind: 'render', target: 'hdr', slab: NEAR0 },
       { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } },
       { kind: 'render', target: 'swap', slab: COSMO },
       { kind: 'render', target: 'foreground:0', slab: NEAR0 },
@@ -118,9 +123,10 @@ describe('timedSlotsOf', () => {
 
     // The foreground:0→swap slot is emitted from the program's composite STEP
     // independent of the layers fixture (a composite step always contributes
-    // its '<source>→<dest>' slot). This synthetic fixture has no
-    // debug-spheres / foreground-labels rows, so those two near-field RENDER
-    // slots correctly don't appear — but the composite slot must.
+    // its '<source>→<dest>' slot). This synthetic fixture has no near-field
+    // rows (no (hdr, NEAR0) star points, no foreground bodies, no NEAR0
+    // captions), so those RENDER slots correctly don't appear — but the
+    // composite slot must.
     expect(timedSlotsOf(frameProgram(TONE), layers)).toEqual([
       'point-sprites',
       'milky-way',
@@ -141,14 +147,16 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, nine hdr, hdr→swap, five swap, near-field tail, pick', () => {
+  it('derives the real registry slot list: scalar-volume, nine hdr, star-points + orbit-rings, hdr→swap, five swap, near-field tail, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
     // iterates. scalar-volume leads (the volume render step), then the nine
-    // hdr layers in registry order, the tone-map composite, the five swap
-    // overlays, then the near-field tail (the foreground:0 body render →
-    // debug-spheres, the foreground:0→swap composite, and the NEAR0 swap
-    // caption render → foreground-labels), and pick last.
+    // COSMO hdr layers in registry order, then star-points + orbit-rings
+    // (the dedicated (hdr, NEAR0) step before the tone-map), the tone-map
+    // composite, the five swap overlays, then the near-field tail (the
+    // foreground:0 body render — one slot per body layer: earth,
+    // star-spheres, planets — the foreground:0→swap composite, and the NEAR0
+    // swap caption render → foreground-labels), and pick last.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'point-sprites',
@@ -160,13 +168,17 @@ describe('timedSlotsOf', () => {
       'volume-upsample',
       'horizon-shell',
       'structure-markers',
+      'star-points',
+      'orbit-rings',
       'hdr→swap',
       'selection-ring',
       'disk-radius-ring',
       'marker-lines',
       'labels',
       'clip-path-debug',
-      'debug-spheres',
+      'earth',
+      'star-spheres',
+      'planets',
       'foreground:0→swap',
       'foreground-labels',
       'pick',

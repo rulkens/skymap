@@ -29,6 +29,8 @@ import {
   filamentsLayer,
   milkyWayLayer,
   horizonShellLayer,
+  starPointsLayer,
+  orbitRingsLayer,
   foregroundLabelsLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -198,12 +200,20 @@ const SWAP_NAMES = [
   'clip-path-debug',
 ];
 
-// The near-field foreground group: the true-scale bodies (Sun, Earth) drawn
-// into the depth-bearing `foreground:0` target through the near0 slab. Opaque
-// (depth-tested), unlike the additive HDR group and the OVER swap group.
-const FOREGROUND_NAMES = ['debug-spheres'];
+// The near-field foreground group: the true-scale bodies (Earth, the Sun
+// sphere, the planets) drawn into the depth-bearing `foreground:0` target
+// through the near0 slab. Opaque (depth-tested), unlike the additive HDR
+// group and the OVER swap group.
+const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets'];
 
-// The near-field captions group: the Sun/Earth name labels. Like the COSMO
+// The near-field hdr rows: the layers that pair the hdr target with the
+// near0 slab — additive like every hdr row, but projected through NEAR0 so
+// parsec-to-AU-scale anchors clear the near plane. One (hdr, NEAR0) render
+// group, driven by the program's dedicated step before the tone-map: the
+// far-partition star points, then the debug orbit rings.
+const NEAR_HDR_NAMES = ['star-points', 'orbit-rings'];
+
+// The near-field captions group: the scene-body name labels. Like the COSMO
 // swap overlays they target the swap chain with premultiplied-OVER, but they
 // project through the near0 slab so the caption anchors track the true-scale
 // bodies rather than being clipped by the cosmological near plane. Its own
@@ -230,6 +240,28 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
   });
 });
 
+describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
+  it('the (hdr, NEAR0) group holds star-points then orbit-rings, additive', () => {
+    // The hdr rows outside the cosmological slab: the far-partition
+    // neighbourhood stars and the debug orbit rings, projected through NEAR0
+    // (COSMO's 0.01 Mpc near plane would clip their parsec-to-AU-scale
+    // anchors) but accumulating into the same HDR target so they ride the
+    // galaxies' tone-map. Drawn by the program's dedicated (hdr, NEAR0) step
+    // before the hdr→swap composite.
+    const nearHdr = CONTENT_LAYERS.filter(
+      (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
+    );
+    expect(nearHdr.map((layer) => layer.name)).toEqual(NEAR_HDR_NAMES);
+    expect(nearHdr).toContain(starPointsLayer);
+    expect(nearHdr).toContain(orbitRingsLayer);
+    for (const layer of nearHdr) {
+      expect(layer.slab).toBe(NEAR0);
+      expect(layer.target).toBe('hdr');
+      expect(layer.blend).toBe('additive');
+    }
+  });
+});
+
 describe('CONTENT_LAYERS migration table (swap group)', () => {
   it('every swap content layer matches the migration table', () => {
     // The five post-tone-map UI overlays project through the same
@@ -248,7 +280,7 @@ describe('CONTENT_LAYERS migration table (swap group)', () => {
 
 describe('CONTENT_LAYERS migration table (foreground group)', () => {
   it('every foreground content layer draws into foreground:0 through the near0 slab, opaque', () => {
-    // The near-field bodies (Sun, Earth) are the first rows to leave the
+    // The near-field bodies (Earth, the Sun sphere, the planets) leave the
     // cosmological slab: they project through NEAR0 into the depth-bearing
     // `foreground:0` target and are opaque (depth-tested), not additive. See
     // the renderer-unification design's migration table (spec line 215).
@@ -263,13 +295,12 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
 });
 
 describe('CONTENT_LAYERS migration table (near-field labels group)', () => {
-  it('the Sun/Earth captions draw into swap through the near0 slab, over', () => {
+  it('the scene-body captions draw into swap through the near0 slab, over', () => {
     // The near-field captions are the second foreground group: like the COSMO
     // swap overlays they target the swap chain with premultiplied-OVER, but
     // they project through NEAR0 so the caption anchors track the true-scale
-    // bodies. Registered after debug-spheres — the (swap, NEAR0) render step
-    // that draws them lands in task 7. See the design's migration table (spec
-    // line 216).
+    // bodies. Drawn by the program's (swap, NEAR0) render step. See the
+    // design's migration table (spec line 216).
     const nearLabels = CONTENT_LAYERS.filter((layer) => NEAR_LABEL_NAMES.includes(layer.name));
     expect(nearLabels.map((layer) => layer.name)).toEqual(NEAR_LABEL_NAMES);
     expect(nearLabels).toContain(foregroundLabelsLayer);
