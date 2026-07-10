@@ -296,7 +296,11 @@ describe('procedural ↔ textured orientation convergence', () => {
 
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const proc = createProceduralDiskSubsystem();
-    const procOut = runProceduralSolo(walk, proc, makeInput(new Map([[Source.FamousGalaxy, cloud]])));
+    const procOut = runProceduralSolo(
+      walk,
+      proc,
+      makeInput(new Map([[Source.FamousGalaxy, cloud]])),
+    );
     expect(procOut.instances.length).toBe(1);
 
     const t = texturedDisks[0]!;
