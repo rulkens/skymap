@@ -122,15 +122,15 @@ TypeScript + Vitest. No WebGPU/WGSL changes — this is pure CPU per-frame plann
 - Test harness (`diskWalkHarness.ts`): `noopDiskRowVisitor(): DiskRowVisitor` (all methods no-op) and `runProceduralSolo(walk, sys, input)` = `walk.runFrame(input, sys.beginFrame(input), noopDiskRowVisitor())` returning `sys.lastOutput`.
 
 **Steps:**
-- [ ] Add the three new `@types` files. `DiskWalkInput` matches the current `ProceduralDiskFrameInput` fields (`ProceduralDiskSubsystem.d.ts:29-34`); reuse the `GalaxyCatalog`/`OrbitCamera`/`SourceType` import paths from that file (`:23-27`).
-- [ ] In `diskPlannerWalk.test.ts`, add:
+- [x] Add the three new `@types` files. `DiskWalkInput` matches the current `ProceduralDiskFrameInput` fields (`ProceduralDiskSubsystem.d.ts:29-34`); reuse the `GalaxyCatalog`/`OrbitCamera`/`SourceType` import paths from that file (`:23-27`).
+- [x] In `diskPlannerWalk.test.ts`, add:
   - `walkDiskRows drives beginSource then onRow per surviving row then endSource then endFrame in order` — feed one stub `DiskRowVisitor` recording call order over a 2-source, few-row catalog; assert the sequence and that a hidden source calls `onSourceHidden` and NOT `beginSource`/`onRow`.
   - `walk early-out uses the 8px bound so a row visible at 8px but not 24px still reaches onRow` — assert `onRow` fires for a row whose `px` is between the 8-px and 24-px distance bounds.
   - `walk applies no px gate — every row past the distance early-out reaches onRow` — a row with `px < 8` still reaches `onRow` (the body, not the walk, drops it).
   - `single shared cursor advances once per frame across both visitor slots` — with `decimationFactor: 2`, two stub visitors, assert both see the SAME `[safeStart, end)` window each frame and the window advances on frame 2.
-- [ ] Adapt `proceduralDiskSubsystem.test.ts`: replace each `sys.runFrame(makeInput(...))` with `runProceduralSolo(walk, sys, makeInput(...))` (construct `walk = createDiskPlannerWalk({ decimationFactor })` alongside `sys`). Keep every existing assertion (`:80-220`) — emit count, source-bit mask, NaN skip, decimation+sticky, `lastOutput`, `(source, localIdx)` identity, and all four `procFadeOut` crossfade cases.
-- [ ] Move `proceduralDiskSubsystem.ts:72-193`'s per-source lifecycle + inner loop into the `beginFrame`-returned visitor: `onSourceHidden`=`:93-96`, `beginSource`=`:108`, `onRow`=`:110-179` (keep the `px <= PROCEDURAL_DISK_FADE_START_PX` gate and the famous `procFadeOut` override), `endSource`=`:184`, `endFrame`=`:189-191`. Implement `diskPlannerWalk.ts` per the Architecture loop contract.
-- [ ] `npm test -- proceduralDiskSubsystem diskPlannerWalk` green; `npm run typecheck` green. Commit.
+- [x] Adapt `proceduralDiskSubsystem.test.ts`: replace each `sys.runFrame(makeInput(...))` with `runProceduralSolo(walk, sys, makeInput(...))` (construct `walk = createDiskPlannerWalk({ decimationFactor })` alongside `sys`). Keep every existing assertion (`:80-220`) — emit count, source-bit mask, NaN skip, decimation+sticky, `lastOutput`, `(source, localIdx)` identity, and all four `procFadeOut` crossfade cases.
+- [x] Move `proceduralDiskSubsystem.ts:72-193`'s per-source lifecycle + inner loop into the `beginFrame`-returned visitor: `onSourceHidden`=`:93-96`, `beginSource`=`:108`, `onRow`=`:110-179` (keep the `px <= PROCEDURAL_DISK_FADE_START_PX` gate and the famous `procFadeOut` override), `endSource`=`:184`, `endFrame`=`:189-191`. Implement `diskPlannerWalk.ts` per the Architecture loop contract.
+- [x] `npm test -- proceduralDiskSubsystem diskPlannerWalk` green; `npm run typecheck` green. Commit.
 
 ## Task 2: Textured body → `DiskRowVisitor`
 
@@ -145,10 +145,10 @@ TypeScript + Vitest. No WebGPU/WGSL changes — this is pure CPU per-frame plann
 - Harness: `runTexturedSolo(walk, sys, input)` = `walk.runFrame(input, noopDiskRowVisitor(), sys.beginFrame(input))` returning `sys.lastOutput`.
 
 **Steps:**
-- [ ] Adapt `texturedDiskSubsystem.test.ts` to drive via `runTexturedSolo`, preserving every assertion (`:104-321`): DiskInstance-per-ready-bitmap, NaN skip, `hasInFlightWork` toggling, hi-res fold-in (all four cases), `setHiResFamous` swap/detach, retry-storm guard.
-- [ ] Adapt `texturedDiskSubsystem.calibration.test.ts`: `emitOne` (`:128-143`) drives `runTexturedSolo`; the convergence test (`:279-307`) drives procedural via `runProceduralSolo`. Keep all calibration + `procedural ↔ textured orientation convergence` assertions bit-for-bit (`:154-307`).
-- [ ] Move `texturedDiskSubsystem.ts:108-269` into the visitor: `frameCounter++`/`lastFrameNowMs = nowMs` and the `destroyed` guard (`:109`) in `beginFrame`; `onSourceHidden`=`:130-133`, `beginSource`=`:142`, `onRow`=`:144-258` (keep the `source !== FamousGalaxy && px < 24` gate, atlas alloc/fetch, load-fade, hi-res fold), `endSource`=`:262`, `endFrame`=`:265-267`. `hasInFlightWork`/`setHiResFamous`/`__testGetState`/`destroy` stay on the subsystem object unchanged (`:271-308`).
-- [ ] `npm test -- texturedDiskSubsystem` green; `npm run typecheck` green. Commit.
+- [x] Adapt `texturedDiskSubsystem.test.ts` to drive via `runTexturedSolo`, preserving every assertion (`:104-321`): DiskInstance-per-ready-bitmap, NaN skip, `hasInFlightWork` toggling, hi-res fold-in (all four cases), `setHiResFamous` swap/detach, retry-storm guard.
+- [x] Adapt `texturedDiskSubsystem.calibration.test.ts`: `emitOne` (`:128-143`) drives `runTexturedSolo`; the convergence test (`:279-307`) drives procedural via `runProceduralSolo`. Keep all calibration + `procedural ↔ textured orientation convergence` assertions bit-for-bit (`:154-307`).
+- [x] Move `texturedDiskSubsystem.ts:108-269` into the visitor: `frameCounter++`/`lastFrameNowMs = nowMs` and the `destroyed` guard (`:109`) in `beginFrame`; `onSourceHidden`=`:130-133`, `beginSource`=`:142`, `onRow`=`:144-258` (keep the `source !== FamousGalaxy && px < 24` gate, atlas alloc/fetch, load-fade, hi-res fold), `endSource`=`:262`, `endFrame`=`:265-267`. `hasInFlightWork`/`setHiResFamous`/`__testGetState`/`destroy` stay on the subsystem object unchanged (`:271-308`).
+- [x] `npm test -- texturedDiskSubsystem` green; `npm run typecheck` green. Commit.
 
 ## Task 3: Wire the shared walk into the engine and collapse the two `runFrame.ts` calls into one
 
@@ -161,11 +161,11 @@ TypeScript + Vitest. No WebGPU/WGSL changes — this is pure CPU per-frame plann
 **Interfaces:** consumes `createDiskPlannerWalk`; produces `state.subsystems.diskPlannerWalk`.
 
 **Steps:**
-- [ ] Add `diskPlannerWalk: DiskPlannerWalk | null` to `EngineSubsystemHandles` (`:40-41` neighbourhood), null-init in `engine.ts` (`:310-314`), and `destroy()` + null it in the impostor teardown block (`engine.ts:633-640`) — it holds no GPU resource, so order relative to atlas is irrelevant; place it with the disk planners.
-- [ ] In `wireImpostorSubsystems.ts` (`:87-114`), `const diskPlannerWalk = createDiskPlannerWalk({});` (default decimation 8) and assign `state.subsystems.diskPlannerWalk = diskPlannerWalk;`.
-- [ ] Replace `runFrame.ts:320-350` with: run `hiResFamous.runFrame(...)` FIRST (unchanged inputs, `:332-340`), then a SINGLE guarded `diskPlannerWalk.runFrame(sharedInput, proceduralDisks.beginFrame(procInput), texturedDisks.beginFrame(texInput))` per the Architecture call-site. Guard on all three of `diskPlannerWalk`/`proceduralDisks`/`texturedDisks` non-null. Keep the didactic comment explaining hiResFamous-before-walk (`:328-331`).
-- [ ] Add an integration assertion in `tests/services/engine/frame/` (or extend an existing frame test if one drives `runFrame`): `runFrame drives the disk walk once, populating both proceduralDisks.lastOutput and texturedDisks.lastOutput` — a spy on `diskPlannerWalk.runFrame` asserting exactly one call per frame. If no such harness exists, cover it in Task 4 instead and note it here.
-- [ ] `npm run typecheck` + full `npm test` green. Commit.
+- [x] Add `diskPlannerWalk: DiskPlannerWalk | null` to `EngineSubsystemHandles` (`:40-41` neighbourhood), null-init in `engine.ts` (`:310-314`), and `destroy()` + null it in the impostor teardown block (`engine.ts:633-640`) — it holds no GPU resource, so order relative to atlas is irrelevant; place it with the disk planners.
+- [x] In `wireImpostorSubsystems.ts` (`:87-114`), `const diskPlannerWalk = createDiskPlannerWalk({});` (default decimation 8) and assign `state.subsystems.diskPlannerWalk = diskPlannerWalk;`.
+- [x] Replace `runFrame.ts:320-350` with: run `hiResFamous.runFrame(...)` FIRST (unchanged inputs, `:332-340`), then a SINGLE guarded `diskPlannerWalk.runFrame(sharedInput, proceduralDisks.beginFrame(procInput), texturedDisks.beginFrame(texInput))` per the Architecture call-site. Guard on all three of `diskPlannerWalk`/`proceduralDisks`/`texturedDisks` non-null. Keep the didactic comment explaining hiResFamous-before-walk (`:328-331`).
+- [x] Add an integration assertion in `tests/services/engine/frame/` (or extend an existing frame test if one drives `runFrame`): `runFrame drives the disk walk once, populating both proceduralDisks.lastOutput and texturedDisks.lastOutput` — a spy on `diskPlannerWalk.runFrame` asserting exactly one call per frame. If no such harness exists, cover it in Task 4 instead and note it here. *(Outcome: no existing test drives `runFrame` past its null guards — walk construction is asserted in `wireImpostorSubsystems.test.ts`; the once-per-frame behaviour is covered by Task 4's integration suite.)*
+- [x] `npm run typecheck` + full `npm test` green. Commit.
 
 ## Task 4: One walk, two bodies — parity + the documented prefetch-earlier behaviour change
 
@@ -174,27 +174,27 @@ TypeScript + Vitest. No WebGPU/WGSL changes — this is pure CPU per-frame plann
 **Interfaces:** consumes `createDiskPlannerWalk`, `createProceduralDiskSubsystem`, `createTexturedDiskSubsystem`, `createGalaxyAtlasSubsystem`.
 
 **Steps:**
-- [ ] `one walk drives both bodies with output identical to running each solo` — build a catalog with a famous row and a non-famous row; run ONE walk with both real visitors; assert `proceduralDisks.lastOutput.instances` and `texturedDisks.lastOutput.disks` match what `runProceduralSolo`/`runTexturedSolo` produce for the same input (parity across the merge).
-- [ ] `both bodies see the same shared stride window each frame` — `decimationFactor: 2`; assert the set of emitted procedural `localIdx` and the set of textured rows advance together (one shared cursor), not independently.
-- [ ] `famous rows prefetch earlier under the shared 8px bound` (the documented behaviour change) — a `Source.FamousGalaxy` row positioned so its `px` is below 24 but above the 8-px distance bound: assert the textured body calls `atlas.enqueueFetch` for it (today's 24-px textured bound would have skipped the distance early-out entirely). Assert the SAME row emits nothing for a non-famous source (`px < 24 → skip`), proving the famous exemption is what changed, not the gate.
-- [ ] `npm test -- diskPlannerWalk.integration` green. Commit.
+- [x] `one walk drives both bodies with output identical to running each solo` — build a catalog with a famous row and a non-famous row; run ONE walk with both real visitors; assert `proceduralDisks.lastOutput.instances` and `texturedDisks.lastOutput.disks` match what `runProceduralSolo`/`runTexturedSolo` produce for the same input (parity across the merge).
+- [x] `both bodies see the same shared stride window each frame` — `decimationFactor: 2`; assert the set of emitted procedural `localIdx` and the set of textured rows advance together (one shared cursor), not independently.
+- [x] `famous rows prefetch earlier under the shared 8px bound` (the documented behaviour change) — a `Source.FamousGalaxy` row positioned so its `px` is below 24 but above the 8-px distance bound: assert the textured body calls `atlas.enqueueFetch` for it (today's 24-px textured bound would have skipped the distance early-out entirely). Assert the SAME row emits nothing for a non-famous source (`px < 24 → skip`), proving the famous exemption is what changed, not the gate.
+- [x] `npm test -- diskPlannerWalk.integration` green. Commit.
 
 ## Task 5: Record the superseded two-walks premise (ADR + spec pointer)
 
 **Files:** create `docs/adrs/0009-<slug>.md` (via the `adr` skill, auto-numbered); modify `docs/superpowers/specs/completed/2026-05-28-procedural-disk-fade-out-design.md`
 
 **Steps:**
-- [ ] Write ADR 0009 "Unified disk-planner catalog walk" recording: the `2026-05-28` spec's "two separate walks; the squared-distance compare neither planner can make cheaper" premise (that spec's Approach section) was **superseded** — one shared walk halves the per-row geometry; two named row-reducers keep the bodies separate (strategy pattern, not interleaved branches). Note the accepted behaviour change: famous-row thumbnail prefetch starts ~3× farther out under the looser 8-px shared bound (≤80 rows).
-- [ ] Add a one-line "**Superseded (2026-07-10):** the two-walks premise below no longer holds — see ADR 0009." note near the top of the completed spec. Do NOT rewrite the archived spec body.
-- [ ] Commit (docs-only).
+- [x] Write ADR 0009 "Unified disk-planner catalog walk" recording: the `2026-05-28` spec's "two separate walks; the squared-distance compare neither planner can make cheaper" premise (that spec's Approach section) was **superseded** — one shared walk halves the per-row geometry; two named row-reducers keep the bodies separate (strategy pattern, not interleaved branches). Note the accepted behaviour change: famous-row thumbnail prefetch starts ~3× farther out under the looser 8-px shared bound (≤80 rows).
+- [x] Add a one-line "**Superseded (2026-07-10):** the two-walks premise below no longer holds — see ADR 0009." note near the top of the completed spec. Do NOT rewrite the archived spec body.
+- [x] Commit (docs-only).
 
 ## Task 6: Backlog hygiene
 
 **Files:** modify `docs/BACKLOG.md`; delete `docs/backlog/2026-06-30-unify-disk-planner-walks.md`
 
 **Steps:**
-- [ ] Delete the `**Unify the two disk-planner catalog walks**` index line (`docs/BACKLOG.md:49`) AND the detail file, in this commit (per the Backlog-hygiene convention: picking up an item removes both in the same change; never strike-through).
-- [ ] Commit.
+- [x] Delete the `**Unify the two disk-planner catalog walks**` index line (`docs/BACKLOG.md:49`) AND the detail file, in this commit (per the Backlog-hygiene convention: picking up an item removes both in the same change; never strike-through).
+- [x] Commit.
 
 ## Task 7: Profile, entanglement-radar, and dev-server visual parity (Definition of Done)
 
