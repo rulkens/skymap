@@ -33,10 +33,15 @@
  * `uvSphereMesh` emits v south-to-north (v=0 south pole, v=1 north pole).
  * Equirectangular Blue Marble imagery stores the north pole in its top row, so
  * the bitmap is uploaded with `flipY: true` — texture v=0 becomes the image's
- * bottom (south) row, matching the mesh's south-first v. That lets the fragment
- * shader sample at the raw mesh uv with no remapping (the contract stated in
- * `uvSphereMesh`'s docstring). u wraps west-to-east; the sampler uses `repeat`
- * addressing on u so the mesh's duplicated seam column blends cleanly.
+ * bottom (south) row, matching the mesh's south-first v. So v needs no remap.
+ *
+ * u DOES need a remap. The mesh places longitude on +Z, so increasing u winds
+ * clockwise as seen from outside the sphere (the camera side) — the opposite of
+ * an equirectangular map's east-increases-left-to-right convention. Sampling the
+ * raw u draws the continents east-west mirrored. The fragment shader corrects it
+ * at the single sample site by flipping u (`1.0 - uv.x`); see `earth/fragment.wesl`
+ * for the two-vertex derivation. The sampler uses `repeat` addressing on u so the
+ * flip and the mesh's duplicated seam column both wrap cleanly.
  *
  * ### Pipeline state
  *

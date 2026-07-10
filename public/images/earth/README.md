@@ -31,5 +31,8 @@ sips -z 2048 4096 world.topo.bathy.200412.3x5400x2700.jpg --out blue-marble-4k.j
 
 Equirectangular: u wraps west→east (0°→360° longitude), the north pole is the
 image's TOP row. `earthRenderer` uploads with `flipY: true` so texture v=0 maps
-to the image's bottom (south) row, matching `uvSphereMesh`'s south-first v — the
-fragment shader samples the raw mesh uv with no remapping.
+to the image's bottom (south) row, matching `uvSphereMesh`'s south-first v — so v
+needs no remap. u, however, is flipped in `earth/fragment.wesl` (`1.0 - uv.x`):
+`uvSphereMesh` winds longitude clockwise as seen from outside the sphere, which
+mirrors the map east-west against the equirectangular east-to-the-right
+convention. See the fragment shader for the two-vertex derivation.
