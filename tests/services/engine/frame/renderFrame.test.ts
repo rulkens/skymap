@@ -404,7 +404,7 @@ function makeInput(
           // null-handle skip test below).
           earthRenderer: null,
           starRenderer: null,
-          planetRenderers: null,
+          planetRenderer: null,
           starPointRenderer: null,
           foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.

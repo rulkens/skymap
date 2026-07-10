@@ -299,12 +299,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // isEngineReady, null-checked at use by earthLayer.
       earthRenderer: null,
       // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
-      // (the Sun), one planet renderer PER seeded planet (single-uniform
-      // writeBuffer race — see EngineGpuHandles), and the far-star additive
-      // points. null until initGpu; excluded from isEngineReady,
-      // null-checked at use by their layers.
+      // (the Sun), one dynamic-offset planet renderer drawing every seeded
+      // planet, and the far-star additive points. null until initGpu;
+      // excluded from isEngineReady, null-checked at use by their layers.
       starRenderer: null,
-      planetRenderers: null,
+      planetRenderer: null,
       starPointRenderer: null,
       // Per-pass GPU timing service.  Always non-null — a no-op stub until
       // initGpu swaps in the device-aware service.  Consumers gate on
@@ -706,10 +705,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.earthRenderer = null;
     state.gpu.starRenderer?.destroy();
     state.gpu.starRenderer = null;
-    // One renderer instance per seeded planet (see EngineGpuHandles) —
-    // release each before re-nulling the set.
-    state.gpu.planetRenderers?.forEach((renderer) => renderer.destroy());
-    state.gpu.planetRenderers = null;
+    state.gpu.planetRenderer?.destroy();
+    state.gpu.planetRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
     state.gpu.timingService.destroy();

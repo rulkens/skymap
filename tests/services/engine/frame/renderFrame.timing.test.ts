@@ -276,7 +276,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // (point-sprites, milky-way, hdr→swap).
         earthRenderer: null,
         starRenderer: null,
-        planetRenderers: null,
+        planetRenderer: null,
         starPointRenderer: null,
         foregroundLabelRenderer: null,
         // milkyWayLayer.draw reads the generated cloud buffers off this handle.

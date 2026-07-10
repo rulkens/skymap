@@ -400,15 +400,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // HDR-target renderer above passes.
   //
   // starRenderer draws the near-partition star (today the Sun alone — see
-  // isNearStar).  One planetRenderer is constructed PER seeded planet
-  // because each instance owns a single non-dynamic uniform buffer, and two
-  // same-frame draws through one instance would race `queue.writeBuffer`
-  // against the pending submit (planetsLayer draws body i through
-  // planetRenderers[i]).
+  // isNearStar).  ONE planetRenderer draws every seeded planet in a single
+  // instanced draw: each body's MVP + albedo rides in a per-instance vertex
+  // record (planetsLayer packs the batch), so the matrices survive to submit
+  // without a per-body bind or a mid-frame uniform.
   state.gpu.starRenderer = createStarRenderer(device, 'rgba16float', 'depth32float');
-  state.gpu.planetRenderers = state.data.bodies.planets.map(() =>
-    createPlanetRenderer(device, 'rgba16float', 'depth32float'),
-  );
+  state.gpu.planetRenderer = createPlanetRenderer(device, 'rgba16float', 'depth32float');
 
   // starPointRenderer draws the far-partition stars as additive points into
   // the depthless HDR target — no depth format, unlike the sphere factories

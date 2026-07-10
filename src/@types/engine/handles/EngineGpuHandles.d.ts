@@ -342,19 +342,17 @@ export type EngineGpuHandles = {
    */
   starRenderer: StarRenderer | null;
   /**
-   * Flat-lit albedo planets, ONE renderer instance per seeded planet,
-   * index-aligned with `state.data.bodies.planets` at construction.  An
-   * array rather than a single handle because each instance owns a single
-   * non-dynamic uniform buffer: two same-frame draws through one instance
-   * would race `queue.writeBuffer` against the pending submit and render
-   * both planets with the last-written MVP (the documented
-   * writeBuffer-vs-submit landmine) — `planetsLayer` draws body i through
-   * `planetRenderers[i]`.  Same `foreground:0` format invariant as the
-   * other sphere bodies.  Excluded from `isEngineReady` and null-checked at
-   * use.  Null until `initGpu` constructs the set; `destroy()` releases
-   * every instance and re-nulls the field.
+   * Flat-lit albedo planets — a SINGLE renderer instance that draws every
+   * seeded planet in one frame via a dynamic-offset uniform buffer (one
+   * 256-byte slot per body). `planetsLayer` passes each body's loop index as
+   * the `draw` slot, so distinct byte ranges survive to submit rather than
+   * one shared block collapsing every planet onto the last (the
+   * writeBuffer-vs-submit landmine). Same `foreground:0` format invariant as
+   * the other sphere bodies. Excluded from `isEngineReady` and null-checked
+   * at use. Null until `initGpu` constructs it; released and re-nulled by
+   * `destroy()`.
    */
-  planetRenderers: readonly PlanetRenderer[] | null;
+  planetRenderer: PlanetRenderer | null;
   /**
    * The far-partition stars (Proxima and the rest of the local map) as
    * additive point sprites into the depthless HDR target — the far half of

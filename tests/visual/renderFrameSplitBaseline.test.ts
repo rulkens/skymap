@@ -407,7 +407,7 @@ describe('renderFrame visual baseline', () => {
           // counts stay the pure cosmological shape this baseline pins.
           earthRenderer: null,
           starRenderer: null,
-          planetRenderers: null,
+          planetRenderer: null,
           starPointRenderer: null,
           foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
