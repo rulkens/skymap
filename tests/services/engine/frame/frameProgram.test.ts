@@ -163,7 +163,8 @@ describe('timedSlotsOf', () => {
     // hdr layers in registry order, the tone-map composite, the five swap
     // overlays, then the near-field tail (the foreground:0 body render →
     // debug-spheres, the foreground:0→swap composite, and the NEAR0 swap
-    // caption render → foreground-labels), and pick last.
+    // caption render → foreground-labels), and pick last. The foreground:0
+    // body render bills one slot per body layer — debug-spheres then earth.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'point-sprites',
@@ -182,6 +183,7 @@ describe('timedSlotsOf', () => {
       'labels',
       'clip-path-debug',
       'debug-spheres',
+      'earth',
       'foreground:0→swap',
       'foreground-labels',
       'pick',

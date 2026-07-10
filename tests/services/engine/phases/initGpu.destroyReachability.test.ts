@@ -189,6 +189,14 @@ vi.mock('../../../../src/services/gpu/renderers/debugSphereRenderer', () => ({
   createDebugSphereRenderer: vi.fn(() => makeStub('debugSphereRenderer')),
 }));
 
+// The earth renderer likewise keeps its `?static` WESL imports out of JSDOM;
+// mock it so initGpu's foreground block constructs a stub on
+// `state.gpu.earthRenderer` (the un-awaited Blue Marble fetch it fires runs
+// after initGpu resolves and fails harmlessly in the test env).
+vi.mock('../../../../src/services/gpu/renderers/earthRenderer', () => ({
+  createEarthRenderer: vi.fn(() => makeStub('earthRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
   loadFontAtlases: vi.fn(async () => ({
     metricsByFont: { cormorant: { __mockMetrics: true } },
@@ -245,6 +253,7 @@ function makeState(): EngineState {
       pickDebugOverlay: null,
       diskRadiusRing: null,
       debugSphereRenderer: null,
+      earthRenderer: null,
     },
     subsystems: {
       biasCorrection: {
@@ -397,6 +406,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // The foreground debug sphere must reach state.gpu.* so the destroy chain
     // can release its position VBO, index IBO, and uniform buffer.
     expect(state.gpu.debugSphereRenderer).toBe(stubs.debugSphereRenderer);
+    // Same reachability claim for the textured Earth — it owns the position +
+    // uv VBOs, index IBO, uniform buffer, and Earth texture.
+    expect(state.gpu.earthRenderer).toBe(stubs.earthRenderer);
     // Both label renderers come from the same createLabelRenderer factory,
     // so index its call results ordinally: call 0 built the main
     // `labelRenderer`, call 1 the foreground caption renderer.  Asserting
@@ -426,15 +438,19 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
 
     state.gpu.debugSphereRenderer?.destroy();
     state.gpu.debugSphereRenderer = null;
+    state.gpu.earthRenderer?.destroy();
+    state.gpu.earthRenderer = null;
     state.gpu.foregroundLabelRenderer?.destroy();
     state.gpu.foregroundLabelRenderer = null;
 
     expect(stubs.debugSphereRenderer!.destroy).toHaveBeenCalledTimes(1);
+    expect(stubs.earthRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect((fgLabel as unknown as Stub).destroy).toHaveBeenCalledTimes(1);
 
     // Symmetric null-out matches the rest of the bag — see
     // `EngineGpuHandles.d.ts`'s lifecycle docstring.
     expect(state.gpu.debugSphereRenderer).toBeNull();
+    expect(state.gpu.earthRenderer).toBeNull();
     expect(state.gpu.foregroundLabelRenderer).toBeNull();
   });
 

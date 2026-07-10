@@ -297,6 +297,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // UV-sphere foreground debug overlay (Plan 01 — zoom-to-Earth). null
       // until initGpu; excluded from isEngineReady, null-checked at use.
       debugSphereRenderer: null,
+      // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
+      // constructs it + fires the Blue Marble fetch; excluded from
+      // isEngineReady, null-checked at use by earthLayer.
+      earthRenderer: null,
       // Per-pass GPU timing service.  Always non-null — a no-op stub until
       // initGpu swaps in the device-aware service.  Consumers gate on
       // `.enabled`.
@@ -695,6 +699,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.diskRadiusRing = null;
     state.gpu.debugSphereRenderer?.destroy();
     state.gpu.debugSphereRenderer = null;
+    state.gpu.earthRenderer?.destroy();
+    state.gpu.earthRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();

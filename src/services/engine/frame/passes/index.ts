@@ -47,7 +47,9 @@
  *
  *  15. debug-spheres       — true-scale Sun / Earth bodies (f64 compose seam),
  *                            opaque (depth-tested) into the `foreground:0` target
- *  16. foreground-labels   — Sun / Earth name captions, premultiplied-OVER onto
+ *  16. earth               — true-scale Blue-Marble-textured Earth (f64 compose
+ *                            seam), opaque into the same `foreground:0` target
+ *  17. foreground-labels   — Sun / Earth name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
  *
@@ -128,6 +130,7 @@ import { markerLinesLayer } from './markerLinesLayer';
 import { labelsLayer } from './labelsLayer';
 import { clipPathDebugLayer } from './clipPathDebugLayer';
 import { debugSpheresLayer } from './debugSpheresLayer';
+import { earthLayer } from './earthLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 
 /**
@@ -166,6 +169,10 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // listing, since no other layer shares its (target, slab). The frame
   // program's foreground render step drives it.
   debugSpheresLayer,
+  // Blue-Marble-textured Earth into the same (foreground:0, NEAR0) group as the
+  // debug spheres. Registered beside debug-spheres; both ride the single
+  // (foreground:0, NEAR0) render step the frame program already appended.
+  earthLayer,
   // Near-field captions: the Sun/Earth name labels drawn OVER onto the swap
   // chain through the near0 slab. Registered after debug-spheres; the frame
   // program's (swap, NEAR0) render step drives it — the (swap, COSMO) step
@@ -189,4 +196,5 @@ export { markerLinesLayer } from './markerLinesLayer';
 export { labelsLayer } from './labelsLayer';
 export { clipPathDebugLayer } from './clipPathDebugLayer';
 export { debugSpheresLayer } from './debugSpheresLayer';
+export { earthLayer } from './earthLayer';
 export { foregroundLabelsLayer } from './foregroundLabelsLayer';

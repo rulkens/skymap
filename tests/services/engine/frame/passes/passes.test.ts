@@ -34,6 +34,7 @@ import {
   milkyWayLayer,
   horizonShellLayer,
   debugSpheresLayer,
+  earthLayer,
   foregroundLabelsLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -206,7 +207,7 @@ const SWAP_NAMES = [
 // The near-field foreground group: the true-scale bodies (Sun, Earth) drawn
 // into the depth-bearing `foreground:0` target through the near0 slab. Opaque
 // (depth-tested), unlike the additive HDR group and the OVER swap group.
-const FOREGROUND_NAMES = ['debug-spheres'];
+const FOREGROUND_NAMES = ['debug-spheres', 'earth'];
 
 // The near-field captions group: the Sun/Earth name labels. Like the COSMO
 // swap overlays they target the swap chain with premultiplied-OVER, but they
@@ -306,6 +307,7 @@ describe('foreground-target layers', () => {
     const fgLayers = CONTENT_LAYERS.filter((layer) => layer.target === 'foreground:0');
     expect(fgLayers.map((layer) => layer.name)).toEqual(FOREGROUND_NAMES);
     expect(fgLayers).toContain(debugSpheresLayer);
+    expect(fgLayers).toContain(earthLayer);
   });
 });
 

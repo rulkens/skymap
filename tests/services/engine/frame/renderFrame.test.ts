@@ -402,6 +402,7 @@ function makeInput(
           // composite is touched-set-skipped. These fixtures stay a pure
           // cosmological-frame trace (see the null-handle skip test below).
           debugSphereRenderer: null,
+          earthRenderer: null,
           foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud,

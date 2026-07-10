@@ -194,6 +194,7 @@ describe('EngineState type', () => {
         pickDebugOverlay: null,
         diskRadiusRing: null,
         debugSphereRenderer: null,
+        earthRenderer: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
@@ -448,6 +449,7 @@ describe('EngineState type', () => {
         pickDebugOverlay: null,
         diskRadiusRing: null,
         debugSphereRenderer: null,
+        earthRenderer: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {

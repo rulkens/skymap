@@ -62,6 +62,7 @@ import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer'
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { DebugSphereRenderer } from '../../rendering/DebugSphereRenderer';
+import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
@@ -325,6 +326,21 @@ export type EngineGpuHandles = {
    * index IBO, and uniform buffer).
    */
   debugSphereRenderer: DebugSphereRenderer | null;
+  /**
+   * True-scale, Blue-Marble-textured Earth drawn into the `foreground:0`
+   * render-target row (Plan 02 — zoom-to-Earth).  The real planet the
+   * `debugSphereRenderer` was a stand-in for: same UV-sphere mesh, but shaded
+   * by sampling an equirectangular Blue Marble bitmap. Its
+   * ('rgba16float', 'depth32float') pipeline formats MUST match that row's
+   * `format` / `depth` in `renderTargets.ts` — the target↔renderer-profile
+   * invariant. Constructed in `initGpu`, which also fires the (un-awaited)
+   * Blue Marble fetch → `setTexture`; until the bitmap lands the renderer
+   * draws a plain mid-blue placeholder sphere.  Excluded from `isEngineReady`
+   * and null-checked at use by `earthLayer`.  Null until `initGpu` constructs
+   * it; released and re-nulled by `destroy()` (releases the position + uv VBOs,
+   * index IBO, uniform buffer, and the Earth texture).
+   */
+  earthRenderer: EarthRenderer | null;
   /**
    * Per-pass GPU timing service.  Always non-null — the engine state
    * is initialized with a no-op stub (see `createDisabledGpuTimingService`)

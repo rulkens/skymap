@@ -274,6 +274,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // timing slot. This fixture stays a pure cosmological-frame timing
         // trace (point-sprites, milky-way, hdr→swap).
         debugSphereRenderer: null,
+        earthRenderer: null,
         foregroundLabelRenderer: null,
         // milkyWayLayer.draw reads the generated cloud buffers off this handle.
         milkyWayCloud: {

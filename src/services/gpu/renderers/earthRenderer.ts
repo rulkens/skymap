@@ -10,6 +10,12 @@
  * the same `clip_from_local` projection helper, so the CPU-side matrix layout
  * and the GPU-side projection stay a single source of truth.
  *
+ * **Precondition — draw at most once per frame:** `draw` writes the MVP into a
+ * single non-dynamic uniform buffer before issuing the indexed draw, so a
+ * second same-frame `draw` with a different MVP would race `queue.writeBuffer`
+ * against the pending `queue.submit` and render both spheres with whichever
+ * matrix won — the caller must issue exactly one Earth draw per frame.
+ *
  * ### Untextured behaviour (placeholder texture)
  *
  * The Blue Marble bitmap is fetched asynchronously by the engine (the NEXT

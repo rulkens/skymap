@@ -406,6 +406,7 @@ describe('renderFrame visual baseline', () => {
           // draw sequence + pass-boundary counts stay the pure cosmological
           // shape this baseline pins.
           debugSphereRenderer: null,
+          earthRenderer: null,
           foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud: {
