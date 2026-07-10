@@ -1,11 +1,17 @@
 /**
  * PointRenderer — GPU pipeline owner for instanced billboard point sprites.
  *
- * Each catalog point renders as a six-vertex quad via WebGPU's instanced
- * draw (`draw(6, N)`).  The vertex stage reads `@builtin(vertex_index)`
- * (0..5, the corner) and per-instance attributes (position, magnitude,
+ * Each catalog point renders as a single 3-vertex triangle that
+ * circumscribes the unit UV circle, via WebGPU's instanced draw
+ * (`draw(3, N)`).  The vertex stage reads `@builtin(vertex_index)`
+ * (0..2, the corner) and per-instance attributes (position, magnitude,
  * colour index, axis ratio, baked PA cos/sin, padded radius, three bias
- * weights, baked absMag — see `POINT_VERTEX_ATTRIBUTES`).
+ * weights, baked absMag — see `POINT_VERTEX_ATTRIBUTES`).  A triangle
+ * rather than the usual 6-vertex quad because this pass is vertex/
+ * primitive-bound at ~2.5M instances: `draw(3, N)` halves the
+ * vertex-shader invocations and the primitive setup, while the fragment
+ * shader's r² > 1 discard keeps visible coverage identical (only the
+ * discarded margin grows — see `triCorner` in `lib/billboard.wesl`).
  *
  * One vertex buffer per loaded galaxy catalog; an engine-supplied bitmask
  * decides which sources draw each frame.  Each source's `@group(2)`
@@ -785,7 +791,7 @@ export function createPointRenderer(
       pass.setBindGroup(1, entry.fadeBindGroup);
       pass.setBindGroup(2, entry.sourceBindGroup);
       pass.setVertexBuffer(0, entry.buffer);
-      pass.draw(6, entry.count);
+      pass.draw(3, entry.count);
     }
   }
 
