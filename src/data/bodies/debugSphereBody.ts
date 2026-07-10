@@ -1,25 +1,19 @@
 /**
- * debugSphereBodies — stand-ins for the foreground debug spheres.
+ * debugSphereBodies — the remaining foreground debug-sphere stand-in.
  *
- * A couple of true-scale bodies for `debugSpheresLayer` to draw before a
- * real BodyStore is wired up. A live `BodyStore` will replace these
- * constants and retire this file.
+ * A single true-scale body for `debugSpheresLayer` to draw. Earth is no
+ * longer here: the live `BodyStore` supplies Earth's pose and `earthLayer`
+ * draws the real textured Blue Marble at that position, so a flat debug
+ * sphere at the identical spot would only occlude it. The Sun stand-in
+ * survives until the star layers land to replace it, at which point this
+ * file retires entirely.
  *
- * Two bodies, both authored from `SCALE_UNITS` (no inline magic Mpc
- * numbers) so the physical-units → Mpc relationship stays explicit:
+ * The one body is authored from `SCALE_UNITS` (no inline magic Mpc numbers)
+ * so the physical-units → Mpc relationship stays explicit:
  *
  *   - **Sun** at the render origin (`[0, 0, 0]`), radius 696 340 km. The
  *     camera focuses here, so a sphere at the origin is the landmark the
- *     descent lands on — it confirms the foreground pass renders at all and
- *     gives a scale reference for finding the (much smaller) Earth.
- *   - **Earth** at 1 AU along +X, radius 6371 km. A fixed placeholder
- *     position — the real Earth orbits, but that is irrelevant to the
- *     foreground-pass smoke test. At 1 AU the Sun subtends ~0.27° and Earth
- *     ~0.005°, so the Sun resolves first as you zoom in.
- *
- * Earth's radius (6371 km × KM_TO_MPC ≈ 2.07e-16 Mpc) sits far below the
- * `?deepZoom` floor (1e-17 Mpc), so under that gate the camera can sit just
- * off the surface.
+ *     descent lands on — it confirms the foreground pass renders at all.
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
@@ -43,10 +37,5 @@ export const DEBUG_SPHERE_BODIES: readonly DebugSphereBody[] = [
     label: 'Sun',
     positionMpc: [0, 0, 0],
     radiusMpc: 696_340 * SCALE_UNITS.KM_TO_MPC,
-  },
-  {
-    label: 'Earth',
-    positionMpc: [1 * SCALE_UNITS.AU_TO_MPC, 0, 0],
-    radiusMpc: 6371 * SCALE_UNITS.KM_TO_MPC,
   },
 ] as const;
