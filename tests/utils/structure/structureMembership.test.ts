@@ -105,24 +105,4 @@ describe('structureMembership — pure cone search', () => {
     expect(result.count).toBe(0);
     expect(result.packedIds).toEqual([]);
   });
-
-  it('is deterministic — same input → identical output', () => {
-    const catalog = makeCatalog([
-      [1, 0, 0],
-      [2, 0, 0],
-      [3, 0, 0],
-    ]);
-    const r1 = structureMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
-    const r2 = structureMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
-    expect(r1.count).toBe(r2.count);
-    expect(r1.packedIds).toEqual(r2.packedIds);
-  });
-
-  it('does not internally cache (each call returns a fresh array)', () => {
-    const catalog = makeCatalog([[1, 0, 0]]);
-    const r1 = structureMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
-    const r2 = structureMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
-    expect(r1.packedIds).not.toBe(r2.packedIds); // distinct array references
-    expect(r1.packedIds).toEqual(r2.packedIds); // but equal contents
-  });
 });

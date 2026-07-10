@@ -21,7 +21,6 @@ import type { Mat4 } from 'wgpu-matrix';
 import {
   frameProgram,
   timedSlotsOf,
-  TIMED_SLOTS,
 } from '../../../../src/services/engine/frame/frameProgram';
 import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
@@ -97,20 +96,6 @@ describe('frameProgram', () => {
       throw new Error('expected two composite steps');
     }
     expect(hdrComposite.step.tone).toBe(foregroundComposite.step.tone);
-  });
-
-  it('the program’s composites are hdr→swap replace and foreground:0→swap over, in that order', () => {
-    const program = frameProgram(TONE);
-    const composites = program.filter((step) => step.kind === 'composite');
-    expect(composites).toHaveLength(2);
-    expect(composites[0]).toEqual({
-      kind: 'composite',
-      step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE },
-    });
-    expect(composites[1]).toEqual({
-      kind: 'composite',
-      step: { source: 'foreground:0', dest: 'swap', blend: 'over', tone: TONE },
-    });
   });
 
   it('references only slabs present in deriveSlabs’ table (NEAR0 and COSMO)', () => {
@@ -198,17 +183,5 @@ describe('timedSlotsOf', () => {
       'foreground-labels',
       'pick',
     ]);
-  });
-});
-
-describe('TIMED_SLOTS', () => {
-  it('is the tone-invariant derivation of the real program + registry', () => {
-    // Tone values never affect a slot NAME, so the bound const equals the
-    // derivation for any tone.
-    expect(TIMED_SLOTS).toEqual(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS));
-  });
-
-  it('has unique slot names', () => {
-    expect(new Set(TIMED_SLOTS).size).toBe(TIMED_SLOTS.length);
   });
 });

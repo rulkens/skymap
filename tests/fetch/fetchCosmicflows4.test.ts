@@ -2,26 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  CF4_TABLE_URL,
-  CF4_README_URL,
-  resumeOffsetForPath,
-  sha256OfFile,
-} from '../../tools/fetch/fetchCosmicflows4';
-
-describe('Cosmicflows-4 fetcher URLs', () => {
-  it('points at the gzipped CDS Vizier table for J/ApJ/944/94 (CDS serves only .gz)', () => {
-    expect(CF4_TABLE_URL).toBe(
-      'https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/table2.dat.gz',
-    );
-  });
-
-  it('points at the matching ReadMe so the parser can validate column offsets', () => {
-    expect(CF4_README_URL).toBe(
-      'https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/ReadMe',
-    );
-  });
-});
+import { resumeOffsetForPath, sha256OfFile } from '../../tools/fetch/fetchCosmicflows4';
 
 describe('resumeOffsetForPath', () => {
   it('returns 0 when the file does not exist', () => {

@@ -322,6 +322,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       galaxyAtlas: null,
       proceduralDisks: null,
       texturedDisks: null,
+      diskPlannerWalk: null,
       hiResFamous: null,
       hiResFamousTexture: null,
 
@@ -650,6 +651,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.hiResFamousTexture = null;
     state.subsystems.proceduralDisks?.destroy();
     state.subsystems.proceduralDisks = null;
+    // The shared walk holds no GPU resource — just the stride cursor — so
+    // its teardown order relative to the atlas is irrelevant; grouped with
+    // the disk planners it drives.
+    state.subsystems.diskPlannerWalk?.destroy();
+    state.subsystems.diskPlannerWalk = null;
     state.subsystems.galaxyAtlas?.destroy();
     state.subsystems.galaxyAtlas = null;
     state.subsystems.clickResolver?.destroy();

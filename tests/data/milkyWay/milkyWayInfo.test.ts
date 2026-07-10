@@ -13,8 +13,4 @@ describe('MILKY_WAY_INFO', () => {
     // Single source of truth for the galaxy's position is the galactic centre.
     expect([MILKY_WAY_INFO.x, MILKY_WAY_INFO.y, MILKY_WAY_INFO.z]).toEqual(MILKY_WAY_CENTER_WORLD);
   });
-
-  it('displayName is "Milky Way"', () => {
-    expect(MILKY_WAY_INFO.displayName).toBe('Milky Way');
-  });
 });

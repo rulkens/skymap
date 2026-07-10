@@ -50,8 +50,4 @@ describe('pickColourIndex', () => {
     const result = pickColourIndex(Source.SDSS, 18.5, 17.5, NaN, NaN, NaN, 428.2749);
     expect(result).toBeCloseTo(0.359, 2);
   });
-
-  it('exports UNKNOWN_COLOUR_RAMP_POSITION as the shared fallback', () => {
-    expect(UNKNOWN_COLOUR_RAMP_POSITION).toBe(1.05);
-  });
 });

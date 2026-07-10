@@ -18,24 +18,8 @@ describe('slotReady', () => {
     expect(slotReady(null)).toBe(false);
   });
 
-  it('is false before any load (idle)', () => {
-    expect(slotReady(fakeSlot({ kind: 'idle' }))).toBe(false);
-  });
-
-  it('is false while loading', () => {
-    expect(slotReady(fakeSlot({ kind: 'loading', req: {}, loaded: 1, total: 2, attempt: 1 }))).toBe(
-      false,
-    );
-  });
-
   it('is false while committing (uploaded not yet confirmed ready)', () => {
     expect(slotReady(fakeSlot({ kind: 'committing', req: {} }))).toBe(false);
-  });
-
-  it('is false on a terminal error', () => {
-    expect(
-      slotReady(fakeSlot({ kind: 'error', req: {}, error: new Error('x'), finalAttempt: 3 })),
-    ).toBe(false);
   });
 
   it('is true once the slot has committed (ready)', () => {

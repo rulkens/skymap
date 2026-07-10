@@ -15,6 +15,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createTexturedDiskSubsystem } from '../../../../src/services/engine/subsystems/texturedDiskSubsystem';
+import { createDiskPlannerWalk } from '../../../../src/services/engine/subsystems/diskPlannerWalk';
+import { runTexturedSolo } from './diskWalkHarness';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
@@ -102,19 +104,19 @@ describe('createTexturedDiskSubsystem', () => {
   });
 
   it('emits a DiskInstance per finite-orientation galaxy once bitmap is ready', async () => {
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       fetcher,
-      decimationFactor: 1,
     });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
 
-    sys.runFrame(makeInput(clouds));
+    runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
-    const out = sys.runFrame(makeInput(clouds));
+    const out = runTexturedSolo(walk, sys, makeInput(clouds));
     expect(out.disks.length).toBe(2);
   });
 
@@ -124,16 +126,16 @@ describe('createTexturedDiskSubsystem', () => {
     // exercises the disks-only defensive guard.
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       fetcher,
-      decimationFactor: 1,
     });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(2, NaN, NaN)]]);
-    sys.runFrame(makeInput(clouds));
+    runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
-    const out = sys.runFrame(makeInput(clouds));
+    const out = runTexturedSolo(walk, sys, makeInput(clouds));
     expect(out.disks.length).toBe(0);
   });
 
@@ -141,14 +143,14 @@ describe('createTexturedDiskSubsystem', () => {
     const pending: Array<(b: ImageBitmap | null) => void> = [];
     const fetcher = vi.fn(() => new Promise<ImageBitmap | null>((res) => pending.push(res)));
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       fetcher,
-      decimationFactor: 1,
     });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
-    sys.runFrame(makeInput(clouds));
+    runTexturedSolo(walk, sys, makeInput(clouds));
     expect(sys.hasInFlightWork()).toBe(true);
     pending[0]!(null);
     await new Promise((r) => setTimeout(r, 0));
@@ -180,17 +182,17 @@ describe('createTexturedDiskSubsystem', () => {
   it('emits hiResLayerIdx -1 and hiResCrossfadeAlpha 0 by default (no hi-res dep)', async () => {
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       fetcher,
-      decimationFactor: 1,
     });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
 
-    sys.runFrame(makeInput(clouds));
+    runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
-    const out = sys.runFrame(makeInput(clouds));
+    const out = runTexturedSolo(walk, sys, makeInput(clouds));
     expect(out.disks.length).toBe(2);
     for (const d of out.disks) {
       expect(d.hiResLayerIdx).toBe(-1);
@@ -204,18 +206,18 @@ describe('createTexturedDiskSubsystem', () => {
     const hiResFamous = makeStubHiResFamous(
       new Map([[0, { hiResLayerIdx: 2, hiResCrossfadeAlpha: 0.7 }]]),
     );
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       fetcher,
-      decimationFactor: 1,
       hiResFamous,
     });
     const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
 
-    sys.runFrame(makeInput(clouds));
+    runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
-    const out = sys.runFrame(makeInput(clouds));
+    const out = runTexturedSolo(walk, sys, makeInput(clouds));
 
     // Row 0 carries the stubbed hi-res state; row 1 (missing from the
     // map) falls back to the -1 / 0 sentinel.
@@ -238,18 +240,18 @@ describe('createTexturedDiskSubsystem', () => {
     const hiResFamous = makeStubHiResFamous(
       new Map([[0, { hiResLayerIdx: 5, hiResCrossfadeAlpha: 1 }]]),
     );
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       fetcher,
-      decimationFactor: 1,
       hiResFamous,
     });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
 
-    sys.runFrame(makeInput(clouds));
+    runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
-    const out = sys.runFrame(makeInput(clouds));
+    const out = runTexturedSolo(walk, sys, makeInput(clouds));
     expect(out.disks.length).toBe(2);
     for (const d of out.disks) {
       expect(d.hiResLayerIdx).toBe(-1);
@@ -270,19 +272,19 @@ describe('createTexturedDiskSubsystem', () => {
     const initial = makeStubHiResFamous(
       new Map([[0, { hiResLayerIdx: 1, hiResCrossfadeAlpha: 0.25 }]]),
     );
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       fetcher,
-      decimationFactor: 1,
       hiResFamous: initial,
     });
     const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(1)]]);
-    sys.runFrame(makeInput(clouds));
+    runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
 
     // Pre-swap: row 0 reflects the initial planner's state.
-    const before = sys.runFrame(makeInput(clouds)).disks;
+    const before = runTexturedSolo(walk, sys, makeInput(clouds)).disks;
     expect(before[0]?.hiResLayerIdx).toBe(1);
     expect(before[0]?.hiResCrossfadeAlpha).toBeCloseTo(0.25);
 
@@ -292,13 +294,13 @@ describe('createTexturedDiskSubsystem', () => {
     );
     sys.setHiResFamous(next);
 
-    const after = sys.runFrame(makeInput(clouds)).disks;
+    const after = runTexturedSolo(walk, sys, makeInput(clouds)).disks;
     expect(after[0]?.hiResLayerIdx).toBe(6);
     expect(after[0]?.hiResCrossfadeAlpha).toBeCloseTo(0.9);
 
     // setHiResFamous(undefined) detaches — emits the -1 / 0 sentinel.
     sys.setHiResFamous(undefined);
-    const detached = sys.runFrame(makeInput(clouds)).disks;
+    const detached = runTexturedSolo(walk, sys, makeInput(clouds)).disks;
     expect(detached[0]?.hiResLayerIdx).toBe(-1);
     expect(detached[0]?.hiResCrossfadeAlpha).toBe(0);
   });
@@ -306,17 +308,17 @@ describe('createTexturedDiskSubsystem', () => {
   it('skips fetches for already-failed keys (retry-storm guard)', async () => {
     const fetcher = vi.fn(async () => null);
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       fetcher,
-      decimationFactor: 1,
     });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
-    sys.runFrame(makeInput(clouds));
+    runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
     const callsBefore = fetcher.mock.calls.length;
-    for (let f = 0; f < 5; f++) sys.runFrame(makeInput(clouds));
+    for (let f = 0; f < 5; f++) runTexturedSolo(walk, sys, makeInput(clouds));
     expect(fetcher.mock.calls.length).toBe(callsBefore);
   });
 });

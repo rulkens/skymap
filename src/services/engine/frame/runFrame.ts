@@ -317,16 +317,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // `proceduralDisksLayer` / `texturedDisksLayer` read at draw time. The
   // atlas subsystem is mutated transitively by the textured-disk run (slot
   // allocations + fetch enqueues).
-  if (state.subsystems.proceduralDisks !== null) {
-    state.subsystems.proceduralDisks.runFrame({
-      cam: ctx.cam,
-      catalogs: state.data.galaxies.catalogs,
-      visibleSourceMask: masks.draw,
-      pxPerRad: ctx.drawPxPerRad,
-    });
-  }
-  // hiResFamous must run BEFORE texturedDisks: the textured-disk planner reads
-  // hiResFamous.lastOutput.byFamousIdx and folds layer indices + crossfade
+  // hiResFamous must run BEFORE the shared disk walk: the textured-disk body
+  // reads hiResFamous.lastOutput.byFamousIdx and folds layer indices + crossfade
   // alphas into the DiskInstance literals it emits. Running it after would lag
   // by a frame and produce a visible flicker on close approach to a famous galaxy.
   if (state.subsystems.hiResFamous !== null) {
@@ -338,15 +330,28 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       famousMeta: state.data.galaxies.famousMeta,
     });
   }
-  if (state.subsystems.texturedDisks !== null) {
-    state.subsystems.texturedDisks.runFrame({
+  // ONE shared catalog walk drives both disk-planner bodies. It computes each
+  // surviving row's geometry once and hands the scalars to the procedural body
+  // (LOD-1) then the textured body (LOD-2) at two fixed call sites; each
+  // subsystem's `beginFrame` returns the per-frame visitor the walk drives, and
+  // that visitor's `endFrame` stashes the sorted result on its `lastOutput`.
+  const { proceduralDisks, texturedDisks, diskPlannerWalk } = state.subsystems;
+  if (proceduralDisks !== null && texturedDisks !== null && diskPlannerWalk !== null) {
+    const sharedInput = {
       cam: ctx.cam,
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
-      famousMeta: state.data.galaxies.famousMeta,
-      nowMs: ctx.nowMs,
-    });
+    };
+    diskPlannerWalk.runFrame(
+      sharedInput,
+      proceduralDisks.beginFrame(sharedInput),
+      texturedDisks.beginFrame({
+        ...sharedInput,
+        famousMeta: state.data.galaxies.famousMeta,
+        nowMs: ctx.nowMs,
+      }),
+    );
   }
 
   // ── Label director per-frame update ──────────────────────────────────────

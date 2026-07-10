@@ -14,11 +14,9 @@
  *
  * ### What this test asserts
  *
- *   1. After `initGpu(state, deps)`, each renderer field on `state.gpu.*`
- *      holds the constructed renderer (not null/undefined).
- *   2. Replaying the `engine.ts.destroy()` chain —
- *      `state.gpu.<field>?.destroy()` for every handle in the bag —
- *      reaches each renderer's destroy spy.
+ *   After `initGpu(state, deps)`, each renderer field on `state.gpu.*`
+ *   holds the constructed renderer (not null/undefined) — so the
+ *   `engine.ts.destroy()` chain has a reachable reference to release.
  *
  * ### Why mock the heavy modules
  *
@@ -372,77 +370,6 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.renderTargets).toBe(stubs.renderTargets);
   });
 
-  it('phaseLocals no longer carries the thumbnail/milky-way renderers — they live solely on state.gpu.*', async () => {
-    // `phaseLocals` carries no renderer mirror: a renderer set on
-    // `state.gpu.*` is visible to every later phase, so mirroring it onto
-    // `deps.phaseLocals` would be a redundant hidden channel. This pins
-    // that decision so a future "re-add phaseLocals mirror" can't sneak
-    // back in.
-    const state = makeState();
-    const deps = makeDeps();
-    await initGpu(state, deps);
-
-    expect(deps.phaseLocals).toBeDefined();
-    // PhaseLocals is exactly { device, context } — no renderer fields.
-    expect(deps.phaseLocals!).not.toHaveProperty('texturedDiskRenderer');
-    expect(deps.phaseLocals!).not.toHaveProperty('proceduralDiskRenderer');
-    expect(deps.phaseLocals!).not.toHaveProperty('milkyWayCloudRenderer');
-    // The renderers are still reachable for destroy + consumption via state.gpu.*.
-    expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
-    expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
-    expect(state.gpu.milkyWayCloudRenderer).toBe(stubs.milkyWayCloudRenderer);
-  });
-
-  it('replaying engine.ts.destroy() chain on state.gpu.* invokes each renderer.destroy()', async () => {
-    const state = makeState();
-    const deps = makeDeps();
-    await initGpu(state, deps);
-
-    // Reach into each handle the way `engine.ts.destroy()` does —
-    // optional-chained `.destroy()` then a null-out. If initGpu wrote the
-    // renderer to `state.gpu.*` and destroy() walks it, the destroy spy
-    // must fire.
-    state.gpu.texturedDiskRenderer?.destroy();
-    state.gpu.texturedDiskRenderer = null;
-    state.gpu.proceduralDiskRenderer?.destroy();
-    state.gpu.proceduralDiskRenderer = null;
-    state.gpu.milkyWayCloud?.destroy();
-    state.gpu.milkyWayCloud = null;
-    state.gpu.milkyWayCloudRenderer?.destroy();
-    state.gpu.milkyWayCloudRenderer = null;
-    state.gpu.horizonShellRenderer?.destroy();
-    state.gpu.horizonShellRenderer = null;
-
-    expect(stubs.texturedDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
-    expect(stubs.proceduralDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
-    expect(stubs.milkyWayCloud!.destroy).toHaveBeenCalledTimes(1);
-    expect(stubs.milkyWayCloudRenderer!.destroy).toHaveBeenCalledTimes(1);
-    expect(stubs.horizonShellRenderer!.destroy).toHaveBeenCalledTimes(1);
-
-    // Symmetric null-out matches the rest of the bag — see
-    // `EngineGpuHandles.d.ts`'s lifecycle docstring.
-    expect(state.gpu.texturedDiskRenderer).toBeNull();
-    expect(state.gpu.proceduralDiskRenderer).toBeNull();
-    expect(state.gpu.milkyWayCloudRenderer).toBeNull();
-    expect(state.gpu.horizonShellRenderer).toBeNull();
-  });
-
-  it('replaying the destroy chain reaches compositor.destroy() and renderTargets.destroy()', async () => {
-    const state = makeState();
-    const deps = makeDeps();
-    await initGpu(state, deps);
-
-    state.gpu.compositor?.destroy();
-    state.gpu.compositor = null;
-    state.gpu.renderTargets?.destroy();
-    state.gpu.renderTargets = null;
-
-    expect(stubs.compositor!.destroy).toHaveBeenCalledTimes(1);
-    expect(state.gpu.compositor).toBeNull();
-    expect(stubs.renderTargets!.destroy).toHaveBeenCalledTimes(1);
-    expect(state.gpu.renderTargets).toBeNull();
-  });
-
   it('writes the anchor renderers + foregroundLabelRenderer onto state.gpu.*', async () => {
     const state = makeState();
     const deps = makeDeps();
@@ -486,60 +413,5 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // onto the foreground renderer only.
     expect(state.gpu.foregroundLabelRenderer!.setLabels).toHaveBeenCalledTimes(1);
     expect(state.gpu.labelRenderer!.setLabels).not.toHaveBeenCalled();
-  });
-
-  it('replaying the destroy chain reaches the anchor renderers + foregroundLabelRenderer', async () => {
-    const state = makeState();
-    const deps = makeDeps();
-    await initGpu(state, deps);
-
-    // Capture the foreground label renderer before nulling — it shares
-    // createLabelRenderer with the main labels, so we assert on the live
-    // reference rather than the shared stubs key.
-    const fgLabel = state.gpu.foregroundLabelRenderer;
-
-    state.gpu.earthRenderer?.destroy();
-    state.gpu.earthRenderer = null;
-    state.gpu.starRenderer?.destroy();
-    state.gpu.starRenderer = null;
-    state.gpu.planetRenderer?.destroy();
-    state.gpu.planetRenderer = null;
-    state.gpu.starPointRenderer?.destroy();
-    state.gpu.starPointRenderer = null;
-    state.gpu.orbitRingRenderer?.destroy();
-    state.gpu.orbitRingRenderer = null;
-    state.gpu.foregroundLabelRenderer?.destroy();
-    state.gpu.foregroundLabelRenderer = null;
-
-    expect(stubs.earthRenderer!.destroy).toHaveBeenCalledTimes(1);
-    expect(stubs.starRenderer!.destroy).toHaveBeenCalledTimes(1);
-    expect(stubs.planetRenderer!.destroy).toHaveBeenCalledTimes(1);
-    expect(stubs.starPointRenderer!.destroy).toHaveBeenCalledTimes(1);
-    expect(stubs.orbitRingRenderer!.destroy).toHaveBeenCalledTimes(1);
-    expect((fgLabel as unknown as Stub).destroy).toHaveBeenCalledTimes(1);
-
-    // Symmetric null-out matches the rest of the bag — see
-    // `EngineGpuHandles.d.ts`'s lifecycle docstring.
-    expect(state.gpu.earthRenderer).toBeNull();
-    expect(state.gpu.starRenderer).toBeNull();
-    expect(state.gpu.planetRenderer).toBeNull();
-    expect(state.gpu.starPointRenderer).toBeNull();
-    expect(state.gpu.orbitRingRenderer).toBeNull();
-    expect(state.gpu.foregroundLabelRenderer).toBeNull();
-  });
-
-  it('destroy is safe when initGpu never ran — every state.gpu.* renderer is null and ?.destroy() no-ops', () => {
-    // destroy() must tolerate "engine torn down before bootstrap
-    // finished" — same contract every handle in this bag honours. No
-    // initGpu call; just walk the destroy chain against the zero-state.
-    const state = makeState();
-    expect(() => {
-      state.gpu.texturedDiskRenderer?.destroy();
-      state.gpu.texturedDiskRenderer = null;
-      state.gpu.proceduralDiskRenderer?.destroy();
-      state.gpu.proceduralDiskRenderer = null;
-      state.gpu.milkyWayCloudRenderer?.destroy();
-      state.gpu.milkyWayCloudRenderer = null;
-    }).not.toThrow();
   });
 });

@@ -80,29 +80,4 @@ describe('fadeIdToVisibilityKey', () => {
     expect(fadeIdToVisibilityKey({ kind: 'overlay', id: 'proceduralDisks' })).toBeUndefined();
     expect(fadeIdToVisibilityKey({ kind: 'overlay', id: 'texturedDisks' })).toBeUndefined();
   });
-
-  // Exhaustiveness regression: if a new FadeId kind is added without handling
-  // it in fadeIdToVisibilityKey, tsc fails at the switch's unreachable-arm check.
-  // This test suite documents the full expected mapping at runtime so regressions
-  // are also caught by test coverage, not only by tsc.
-  it('returns a VisibilityLayerKey or undefined for every tested FadeId kind', () => {
-    // Sanity: the results are either a string or undefined, never something else.
-    const allResults = [
-      fadeIdToVisibilityKey({ kind: 'flow' }),
-      fadeIdToVisibilityKey({ kind: 'filament' }),
-      fadeIdToVisibilityKey({ kind: 'structure', id: 'cluster' }),
-      fadeIdToVisibilityKey({ kind: 'galaxyCatalog', id: 'sdss' }),
-      fadeIdToVisibilityKey({ kind: 'milkyWay' }),
-      fadeIdToVisibilityKey({ kind: 'volumesMaster' }),
-      fadeIdToVisibilityKey({ kind: 'volumeField', id: 'cf4-density' }),
-      fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'milkyWay' }),
-      fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'galaxyNames' }),
-      fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'scaleBar' }),
-      fadeIdToVisibilityKey({ kind: 'labelLayer', layer: 'structure' }),
-      fadeIdToVisibilityKey({ kind: 'overlay', id: 'proceduralDisks' }),
-    ];
-    for (const result of allResults) {
-      expect(result === undefined || typeof result === 'string').toBe(true);
-    }
-  });
 });

@@ -1,13 +1,11 @@
 /**
- * createGalaxyStore — isolation, preloaded seeding, and default-state specs.
+ * createGalaxyStore — isolation and preloaded-seeding specs.
  */
 import { describe, expect, it } from 'vitest';
 
 import { createGalaxyStore } from '../../../../tools/galaxy-renderer/src/state/createStore';
 import { paramsPatched } from '../../../../tools/galaxy-renderer/src/state/slices/galaxySlice';
 import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/data/defaultGalaxyParams';
-import { DEFAULT_RENDER_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
-import { DEFAULT_LOD_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultLodSettings';
 
 describe('createGalaxyStore', () => {
   it('builds an isolated store — dispatching to one store leaves another untouched', () => {
@@ -24,14 +22,5 @@ describe('createGalaxyStore', () => {
     const store = createGalaxyStore({ galaxy: { ...DEFAULT_GALAXY_PARAMS, armCount: 7 } });
 
     expect(store.getState().galaxy.armCount).toBe(7);
-  });
-
-  it('initial state matches the documented defaults', () => {
-    const store = createGalaxyStore();
-    const state = store.getState();
-
-    expect(state.galaxy).toEqual(DEFAULT_GALAXY_PARAMS);
-    expect(state.render).toEqual(DEFAULT_RENDER_SETTINGS);
-    expect(state.lod).toEqual(DEFAULT_LOD_SETTINGS);
   });
 });

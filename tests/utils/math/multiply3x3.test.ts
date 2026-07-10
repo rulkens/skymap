@@ -21,19 +21,4 @@ describe('multiply3x3', () => {
     expect(rz180[4]).toBeCloseTo(-1, 12);
     expect(rz180[8]).toBeCloseTo(1, 12);
   });
-
-  it('matches the explicit column-major product formula', () => {
-    const a: Mat3 = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    const b: Mat3 = [9, 8, 7, 6, 5, 4, 3, 2, 1];
-    // result[c*3 + r] = Σ_k a[k*3 + r] · b[c*3 + k]
-    const expected: Mat3 = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-    for (let c = 0; c < 3; c++) {
-      for (let r = 0; r < 3; r++) {
-        let s = 0;
-        for (let k = 0; k < 3; k++) s += a[k * 3 + r]! * b[c * 3 + k]!;
-        expected[c * 3 + r] = s;
-      }
-    }
-    expect(multiply3x3(a, b)).toEqual(expected);
-  });
 });

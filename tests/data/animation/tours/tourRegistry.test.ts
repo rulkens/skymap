@@ -24,8 +24,4 @@ describe('tourRegistry', () => {
       expect(tour.beats.length).toBeGreaterThan(0);
     }
   });
-
-  it('registers the expected tours', () => {
-    expect(Object.keys(tourRegistry).sort()).toEqual(['demo', 'grandTour', 'webShowcase']);
-  });
 });

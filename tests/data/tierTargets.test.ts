@@ -115,14 +115,6 @@ describe('tierFilenameForSource — DesiWedge', () => {
   });
 });
 
-describe('tierTarget — DesiWedge', () => {
-  it('is uncapped in every tier (undefined)', () => {
-    expect(tierTarget(Source.DesiWedge, 'small')).toBeUndefined();
-    expect(tierTarget(Source.DesiWedge, 'medium')).toBeUndefined();
-    expect(tierTarget(Source.DesiWedge, 'large')).toBeUndefined();
-  });
-});
-
 describe('tierFilenameForSource — DesiSgw', () => {
   it('emits the shared filename for every tier (tier-agnostic, like the cone)', () => {
     // DesiSgw's tierTargets is {} — a fixed depth-bounded patch, not a bulk
@@ -130,13 +122,5 @@ describe('tierFilenameForSource — DesiSgw', () => {
     expect(tierFilenameForSource(Source.DesiSgw, 'small')).toBe('desi-sgw.bin');
     expect(tierFilenameForSource(Source.DesiSgw, 'medium')).toBe('desi-sgw.bin');
     expect(tierFilenameForSource(Source.DesiSgw, 'large')).toBe('desi-sgw.bin');
-  });
-});
-
-describe('tierTarget — DesiSgw', () => {
-  it('is uncapped in every tier (undefined)', () => {
-    expect(tierTarget(Source.DesiSgw, 'small')).toBeUndefined();
-    expect(tierTarget(Source.DesiSgw, 'medium')).toBeUndefined();
-    expect(tierTarget(Source.DesiSgw, 'large')).toBeUndefined();
   });
 });

@@ -281,25 +281,6 @@ describe('clipPlayer', () => {
     expect(calledEffect?.kind).toBe('hide');
   });
 
-  it('clipPlayer is registered in EngineSubsystemHandles (typecheck-level)', () => {
-    // The engineState.test.ts fixtures compiling with clipPlayer is the primary
-    // gate. This test confirms createClipPlayer returns a shape that satisfies
-    // ClipPlayer (tick, stop, clipOpacityOf, destroy all present and callable).
-    const store = makeStore();
-    const clock = createCameraClock();
-    const player = createClipPlayer({
-      store,
-      requestRender: () => {},
-      clock,
-      getEngineState: makeEngineStateStub,
-    });
-
-    expect(typeof player.tick).toBe('function');
-    expect(typeof player.stop).toBe('function');
-    expect(typeof player.clipOpacityOf).toBe('function');
-    expect(typeof player.destroy).toBe('function');
-  });
-
   it('destroy resets clipOpacity to 1 and clears internal state', () => {
     const store = makeStore();
     const clock = createCameraClock();

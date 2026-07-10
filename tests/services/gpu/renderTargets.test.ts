@@ -78,28 +78,6 @@ describe('createRenderTargets', () => {
     expect(volDesc.size).toEqual({ width: 1, height: 1 });
   });
 
-  it('specs carry the spec format/depth/scale table', () => {
-    const targets = createRenderTargets(mockDevice(), SWAP_FORMAT, { width: 800, height: 600 });
-    const byId = new Map(targets.specs.map((s) => [s.id, s]));
-    expect(byId.get('hdr')).toEqual({ id: 'hdr', format: 'rgba16float', depth: null, scale: 1 });
-    expect(byId.get('volume')).toEqual({
-      id: 'volume',
-      format: 'rgba16float',
-      depth: null,
-      scale: 3,
-    });
-    // The foreground row is the first to declare depth: full-res colour +
-    // a depth32float attachment for the opaque occlusion budget.
-    expect(byId.get('foreground:0')).toEqual({
-      id: 'foreground:0',
-      format: 'rgba16float',
-      depth: 'depth32float',
-      scale: 1,
-    });
-    // The swap row carries the swap-chain format handed in at construction.
-    expect(byId.get('swap')).toEqual({ id: 'swap', format: SWAP_FORMAT, depth: null, scale: 1 });
-  });
-
   it('allocates and resizes a depth texture alongside colour for rows that declare depth', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;

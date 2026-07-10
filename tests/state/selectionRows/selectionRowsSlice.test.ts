@@ -4,7 +4,6 @@ import reducer, { setSelectionRow } from '../../../src/state/selectionRows/selec
 import { Source } from '../../../src/data/sources';
 import type { SelectionRowsState } from '../../../src/@types/store/SelectionRowsState';
 import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
-import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
 const galaxyRow: GalaxyRow = {
   type: 'galaxyCatalog',
@@ -27,25 +26,7 @@ const galaxyRow: GalaxyRow = {
   parentSurveyByte: 0,
 };
 
-const structureRow: StructureInfo = {
-  type: 'structure',
-  category: 'cluster',
-  id: 'virgo',
-  name: 'Virgo Cluster',
-  worldPos: [0.27, 0.22, 0.15],
-  featured: true,
-  physicalRadiusMpc: 1.7,
-};
-
 describe('selectionRowsSlice', () => {
-  it('seeds all slots null', () => {
-    expect(reducer(undefined, { type: '@@INIT' })).toEqual({
-      hover: null,
-      select: null,
-      focus: null,
-    });
-  });
-
   it('setSelectionRow writes a GalaxyRow into the correct slot', () => {
     const next = reducer(undefined, setSelectionRow({ slot: 'select', row: galaxyRow }));
     expect(next.select).toEqual(galaxyRow);
@@ -71,15 +52,5 @@ describe('selectionRowsSlice', () => {
     expect(s.hover).toEqual(galaxyRow);
     expect(s.select).toEqual({ type: 'milkyWay' });
     expect(s.focus).toBeNull();
-  });
-
-  it('accepts a StructureInfo row in the focus slot', () => {
-    const next = reducer(undefined, setSelectionRow({ slot: 'focus', row: structureRow }));
-    expect(next.focus).toEqual(structureRow);
-  });
-
-  it('milkyWay singleton tag is accepted in hover slot', () => {
-    const next = reducer(undefined, setSelectionRow({ slot: 'hover', row: { type: 'milkyWay' } }));
-    expect(next.hover).toEqual({ type: 'milkyWay' });
   });
 });

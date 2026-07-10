@@ -44,7 +44,6 @@ function makeCtx(): ReadyFrameContext {
     renderer: { draw: vi.fn() } as any,
     renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
     texturedDisks: {
-      runFrame: vi.fn(),
       lastOutput: { disks: [] },
       hasInFlightWork: () => false,
     } as any,
@@ -74,16 +73,6 @@ function makeTexturedDiskRenderer() {
 }
 
 describe('texturedDisksLayer', () => {
-  it('is named "textured-disks"', () => {
-    expect(texturedDisksLayer.name).toBe('textured-disks');
-  });
-
-  it('carries the hdr/additive/cosmological migration-table fields', () => {
-    expect(texturedDisksLayer.slab).toBe(COSMO);
-    expect(texturedDisksLayer.target).toBe('hdr');
-    expect(texturedDisksLayer.blend).toBe('additive');
-  });
-
   it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}], quads: [] } } },

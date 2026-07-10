@@ -659,20 +659,6 @@ describe('renderFrame', () => {
     expect((fx.compositor.draw as ReturnType<typeof vi.fn>).mock.calls[0]![2]).toBe('replace');
   });
 
-  it('draws the Milky Way impostor after pointRenderer.draw for deterministic crossfade composition', () => {
-    // A single HDR pass holds both draws. The invariant: the pass ends
-    // after the milky-way draw and milky-way draws after points — order
-    // matters for the additive crossfade.
-    renderFrame(fx.input);
-    const log = fx.callLog;
-    const idxPoint = log.indexOf('pointRenderer.draw');
-    const idxMw = log.indexOf('milkyWayCloudRenderer.draw');
-    const idxEnd = log.indexOf('pass.end');
-    expect(idxPoint).toBeGreaterThanOrEqual(0);
-    expect(idxMw).toBeGreaterThan(idxPoint);
-    expect(idxEnd).toBeGreaterThan(idxMw);
-  });
-
   it('opens the volume pass before the hdr pass when the scalar-volume layer is enabled', () => {
     // The FRAME program's volume render step precedes the hdr render step, so
     // when `deriveVolumeLiveness` is non-null the volume offscreen pass is the

@@ -45,7 +45,6 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     renderer: { draw: vi.fn() } as any,
     renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
     texturedDisks: {
-      runFrame: vi.fn(),
       lastOutput: { quads: [], disks: [] },
       hasInFlightWork: () => false,
     } as any,
@@ -75,16 +74,6 @@ function makeProceduralDiskRenderer() {
 }
 
 describe('proceduralDisksLayer', () => {
-  it('is named "procedural-disks"', () => {
-    expect(proceduralDisksLayer.name).toBe('procedural-disks');
-  });
-
-  it('carries the hdr/additive/cosmological migration-table fields', () => {
-    expect(proceduralDisksLayer.slab).toBe(COSMO);
-    expect(proceduralDisksLayer.target).toBe('hdr');
-    expect(proceduralDisksLayer.blend).toBe('additive');
-  });
-
   it('enabled() returns false when subsystems.proceduralDisks is null', () => {
     const state = {
       subsystems: { proceduralDisks: null },

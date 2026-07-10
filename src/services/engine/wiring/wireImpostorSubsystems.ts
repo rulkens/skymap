@@ -22,6 +22,7 @@
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsystem';
 import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem';
+import { createDiskPlannerWalk } from '../subsystems/diskPlannerWalk';
 import { createHiResFamousSubsystem } from '../subsystems/hiResFamousSubsystem';
 import { createHiResFamousTexture } from '../../gpu/resources/hiResFamousTexture';
 import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../data/sources';
@@ -97,6 +98,12 @@ export function wireImpostorSubsystems(state: EngineState, deps: BootstrapDeps):
   // tests that omit the atlas keep procFadeOut at 1.0.
   const proceduralDisks = createProceduralDiskSubsystem({ atlas: galaxyAtlas });
 
+  // The single shared catalog walk that drives BOTH planners' visitors each
+  // frame — one stride cursor, each row's geometry computed once. Default
+  // decimation (8): the walk visits 1/8 of each catalog per frame, the
+  // planners' sticky maps carry the rest.
+  const diskPlannerWalk = createDiskPlannerWalk({});
+
   // ── Renderer bind wires ───────────────────────────────────────────────
   //
   // Bind the atlas view into the LOD-2 disk renderer.  The atlas owns the
@@ -112,6 +119,7 @@ export function wireImpostorSubsystems(state: EngineState, deps: BootstrapDeps):
   state.subsystems.galaxyAtlas = galaxyAtlas;
   state.subsystems.texturedDisks = texturedDisks;
   state.subsystems.proceduralDisks = proceduralDisks;
+  state.subsystems.diskPlannerWalk = diskPlannerWalk;
   state.subsystems.hiResFamous = hiResFamous;
   state.subsystems.hiResFamousTexture = hiResFamousTexture;
 }

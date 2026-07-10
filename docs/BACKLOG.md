@@ -47,13 +47,13 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/2026-06-29-supercluster-shape-focus.md)
 - [ ] **In-scene thumbnail quality (SDSS/DSS)** `needs-design` — the auto-fetched atlas-quad path still uses fixed cutout sizes; mask / sky-sub / per-galaxy size / DESI / brightness-norm. (InfoCard path already got sizing + DSS color.) → [details](backlog/2026-06-29-thumbnail-quality-sdss-dss.md)
 - [ ] **Half-res ↔ post-process resize type-safety** `deferred` — the offscreen-volume and post-process targets resize via two independent `?.resize()` calls in `runFrame.ts`; enforce the coupling in the type system.
-- [ ] **Unify the two disk-planner catalog walks** `ready` — procedural + textured planners walk the catalogs twice per frame, computing each row's geometry twice (~4.2 ms of a 5.1 ms frame, M1 Max); merge into one shared walk feeding two row-reducers. Prerequisite pure helpers shipped in `src/utils/render/disk/`. → [details](backlog/2026-06-30-unify-disk-planner-walks.md)
 - [ ] **Thumbnail-priority loop scaling** `deferred` — the per-frame priority scan (`texturedDiskSubsystem.ts`) is CPU-linear with stride decimation (#79); add a BVH or compute-shader pass for larger tiers. → [details](backlog/2026-06-29-thumbnail-loop-scaling.md)
 - [ ] **Picking GPU resources → own subsystem** `deferred` — `pickRenderer.ts` owns its per-camera pick texture directly; migrate it (parallel to fade per ADR 0001). Pick texture is per-camera, so it needs its own ADR. → [details](backlog/2026-06-29-picking-gpu-subsystem.md)
 - [ ] **galaxy-renderer `dispose()` skips GPU teardown** `ready` — RAF loop + DOM listeners are removed but buffers/pipelines/UBOs (incl. per-extra UBOs) are never `destroy()`ed; spike-era behavior, flagged in the GPU-generation final review.
 - [ ] **MW point-cloud follow-ups** `ready` — five small knots from the T10 radar (orphaned WESL helpers, record-field offsets, billboard-basis mirror, tool↔app constants, pick bind-group injection). → [details](backlog/2026-07-08-mw-point-cloud-follow-ups.md)
 - [ ] **Galaxy impostor LOD** `needs-design` — per-galaxy rgba16f impostors baked from the GPU generator (photo-thumbnail band retires; procedural disk stays as placeholder band), full star+dust geometry above ~128 px; band counts, churn, per-tier memory, and Hubble-type coverage all measured. → [details](backlog/2026-07-08-galaxy-impostor-lod.md)
 - [ ] **Conic orbit trails (real elements)** `needs-design` — replace the circle debug rings with exact Keplerian ellipses projected to a screen-space conic (f64 CPU compose, Sampson-distance stroke); approach user-ratified. → [details](backlog/2026-07-10-conic-orbit-trails.md)
+- [ ] **GPU renderers folder reorg** `blocked` — family folders + lib primitives + pointRenderer split; spec approved, plans + execution gated on zoom-to-earth plan 02 landing. → [spec](superpowers/specs/2026-07-10-gpu-renderers-reorg-design.md)
 
 ## UI & UX
 
@@ -71,6 +71,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Docs & process
 
 - [ ] **Cosmic-zoom plan review** `process` — 60-doc "Powers of Ten" walkthrough plan drafted in worktree `cosmic-zoom-plan` (2026-05-08), awaiting user review (memory `project_cosmic_zoom_plan`).
+- [ ] **Famous-curator suite runtime cost** `deferred` — real sharp encodes + tmpdir I/O dominate suite wall-clock; cache fixtures, shrink images, or tag a slow-suite split. → [details](backlog/2026-07-10-famous-curator-suite-runtime-cost.md)
+- [ ] **Deproject invariant consolidation** `deferred` — square-in/square-out tested 4× across the curator export surface; fold into one parameterized test if that surface is reworked. → [details](backlog/2026-07-10-deproject-invariant-consolidation.md)
 
 ## External / blocked
 

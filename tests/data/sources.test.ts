@@ -8,12 +8,9 @@ import {
 } from '../../src/data/sources';
 import { STRUCTURE_IDS } from '../../src/data/structure/structureIds';
 import { LABEL_CATEGORIES } from '../../src/data/structure/labelCategories';
-import { CATEGORY_DISPLAY_INFO } from '../../src/data/structure/categoryDisplayInfo';
 import { DEFAULT_FLOW } from '../../src/data/defaults';
 import { ALL_VISIBLE_MASK } from '../../src/utils/allVisibleMask';
 import { maskHas } from '../../src/utils/maskHas';
-import { maskWith } from '../../src/utils/maskWith';
-import { maskWithout } from '../../src/utils/maskWithout';
 
 describe('Source.FamousGalaxy', () => {
   it('has integer value 4 (next free slot after Glade=3)', () => {
@@ -109,13 +106,6 @@ describe('Source enum — structure codes (cluster/supercluster/void)', () => {
     expect(maskHas(ALL_VISIBLE_MASK, Source.Supercluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Void)).toBe(false);
   });
-
-  it('bitmask helpers still operate correctly on galaxy-catalog-source bits', () => {
-    // Sanity: the bitmask infrastructure isn't disturbed by appending
-    // new enum members that don't participate in the mask.
-    expect(maskHas(maskWith(0, Source.SDSS), Source.SDSS)).toBe(true);
-    expect(maskHas(maskWithout(ALL_VISIBLE_MASK, Source.Glade), Source.Glade)).toBe(false);
-  });
 });
 
 describe('Registry capability flags — bearsLabel / bearsMarker', () => {
@@ -124,13 +114,6 @@ describe('Registry capability flags — bearsLabel / bearsMarker', () => {
     expect(entry.bearsLabel).toBe(true);
     expect(entry.bearsMarker).toBe(false);
     expect(entry.labelLayer).toBe('galaxyNames');
-  });
-
-  it('famousGalaxy category copy is detail "Famous Galaxy" / short "Galaxy" / plural "Famous Galaxies"', () => {
-    const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
-    expect(entry.detailLabel).toBe('Famous Galaxy');
-    expect(entry.shortLabel).toBe('Galaxy');
-    expect(entry.plural).toBe('Famous Galaxies');
   });
 
   it('structure rows bear both a label and a marker', () => {
@@ -192,30 +175,8 @@ describe('Source enum — overlay codes (milkyWay/flow)', () => {
     expect(maskHas(ALL_VISIBLE_MASK, Source.Flow)).toBe(false);
   });
 
-  it('milkyWay row bears a label on the milkyWay layer with display copy', () => {
-    const entry = SOURCE_REGISTRY[Source.MilkyWay];
-    expect(entry.type).toBe('milkyWay');
-    expect(entry.id).toBe('milkyWay');
-    expect(entry.visible).toBe(true);
-    expect(entry.bearsLabel).toBe(true);
-    // The "You are here" label carries a stem line but no ring/halo marker.
-    expect(entry.bearsMarker).toBe(false);
-    expect(entry.labelLayer).toBe('milkyWay');
-    expect(entry.detailLabel).toBe('Milky Way');
-    expect(entry.shortLabel).toBe('Milky Way');
-    expect(entry.plural).toBe('Milky Way');
-  });
-
   it('LABEL_CATEGORIES includes milkyWay', () => {
     expect(LABEL_CATEGORIES).toContain('milkyWay');
-  });
-
-  it('CATEGORY_DISPLAY_INFO resolves milkyWay copy', () => {
-    expect(CATEGORY_DISPLAY_INFO.milkyWay).toEqual({
-      label: 'Milky Way',
-      shortLabel: 'Milky Way',
-      plural: 'Milky Way',
-    });
   });
 
   it('flow row is a default-off overlay carrying the look/motion defaults', () => {

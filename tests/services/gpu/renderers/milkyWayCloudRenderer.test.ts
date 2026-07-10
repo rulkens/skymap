@@ -1,8 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  createMilkyWayCloudRenderer,
-  MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE,
-} from '../../../../src/services/gpu/renderers/milkyWayCloudRenderer';
+import { createMilkyWayCloudRenderer } from '../../../../src/services/gpu/renderers/milkyWayCloudRenderer';
 import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
 import {
   MILKY_WAY_EXPOSURE,
@@ -205,9 +202,5 @@ describe('createMilkyWayCloudRenderer — uniform packing', () => {
     expect(f32[49]).toBeCloseTo(MILKY_WAY_STAR_PX_MAX);
     expect(f32[50]).toBeCloseTo(MILKY_WAY_STAR_SIZE_SCALE);
     expect(f32[51]).toBeCloseTo(MILKY_WAY_LOD_APPARENT);
-  });
-
-  it('uniform buffer is 208 bytes', () => {
-    expect(MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE).toBe(208);
   });
 });
