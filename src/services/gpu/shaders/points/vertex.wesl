@@ -29,7 +29,7 @@ import package::points::io::Uniforms;
 import package::points::io::PerVertex;
 import package::points::io::VSOut;
 import package::lib::camera::worldToClip;
-import package::lib::billboard::quadCorner;
+import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::colorIndex::ramp;
@@ -78,7 +78,7 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // ─── vertex stage ─────────────────────────────────────────────────────
 //
 // The vertex shader runs once per (instance, vertex) pair.
-//   @builtin(vertex_index)    cycles 0..5 within each instance (per-vertex)
+//   @builtin(vertex_index)    cycles 0..2 within each instance (per-vertex)
 //   @builtin(instance_index)  the 0-based local index of this catalog point
 //   p: PerVertex              carries the per-instance data (position/mag/ci)
 
@@ -92,8 +92,11 @@ fn vs(
   // shared 'worldToClip' helper from 'lib/camera.wesl'.
   let center = worldToClip(u.cam, p.position);
 
-  // Fetch the quad corner for this vertex (in [-1, +1]²).
-  let corner = quadCorner(vi);
+  // Fetch the circumscribing-triangle corner for this vertex — the
+  // equilateral triangle around the unit UV circle, spanning
+  // [-sqrt(3), sqrt(3)] x [-1, 2]. The fragment's r-squared > 1 discard
+  // trims it back to the same disc a quad would show.
+  let corner = triCorner(vi);
 
   // ── Malmquist-bias gating (volume-limited mode) ──────────────────────────
   //
@@ -103,8 +106,8 @@ fn vs(
   // wasted transcendentals per frame at the large tier.
   //
   // 'discard' is fragment-stage only; the vertex stage gates by emitting
-  // a clip-space coordinate outside the unit cube, so all 6 vertices of
-  // the gated quad land at NDC (2,2,2) and the GPU drops the primitive.
+  // a clip-space coordinate outside the unit cube, so all 3 vertices of
+  // the gated triangle land at NDC (2,2,2) and the GPU drops the primitive.
 
   // Recover the per-instance packed identity for the pick path. Bits
   // 27..31 = 5-bit 'source.sourceCode' (this draw's galaxy catalog, set per-
@@ -116,9 +119,9 @@ fn vs(
 
   // Vertex-side cull: galaxies gated out by Malmquist mode 1 (volume-
   // limited) or by realOnlyMode (hide fallback orientations) emit a
-  // degenerate clip position so all 6 vertices of the quad land outside
-  // the NDC cube and the rasteriser drops the primitive — no fragment
-  // work, no pick-texture write.
+  // degenerate clip position so all 3 vertices of the triangle land
+  // outside the NDC cube and the rasteriser drops the primitive — no
+  // fragment work, no pick-texture write.
   let malmquistGated = u.biasMode == 1u && p.absMag > u.absMagLimit;
   let realOnlyGated = u.realOnlyMode == 1u && isFallbackFlag == 1u;
   if (malmquistGated || realOnlyGated) {
@@ -163,7 +166,7 @@ fn vs(
   // Add the screen-space offset to the projected centre — only X/Y move.
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);
 
-  // Quad corner as UV; the fragment uses it for distance-from-centre.
+  // Triangle corner as UV; the fragment uses it for distance-from-centre.
   out.uv = corner;
 
   // p.colorIndex is the rest-frame, sentinel-substituted ramp position

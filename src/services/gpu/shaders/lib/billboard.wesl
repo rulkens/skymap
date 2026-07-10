@@ -117,6 +117,40 @@ fn quadCorner(vid: u32) -> vec2<f32> {
   }
 }
 
+// ── triCorner ────────────────────────────────────────────────────────
+//
+// Map 'vid' (0..2, one triangle per instance) to the corner of the
+// equilateral triangle whose INCIRCLE is the unit circle — i.e. the
+// triangle circumscribes the r = 1 disc in UV space, so its vertices
+// sit at circumradius 2 (twice the inradius, a fixed property of the
+// equilateral). Any fragment shader that discards at r-squared > 1
+// therefore sees coverage identical to the [-1, +1]² quad: the visible
+// disc/ellipse is fully inside both shapes, and everything outside it
+// is discarded either way.
+//
+// The trade versus 'quadCorner': 3 vertex-shader invocations and 1
+// primitive per instance instead of 6 and 2 — halving the vertex and
+// primitive-setup cost — against ~30% more rasterized-then-discarded
+// fragments (the triangle's area is 3 * sqrt(3), about 5.196, versus
+// the quad's 4). The points pipeline uses this because it is vertex/
+// primitive-bound at ~2.5M instances, so paying extra dead fragments
+// to halve vertex work is a net win there; fragment-bound quad
+// renderers keep 'quadCorner'.
+//
+// Same 'switch' spelling as 'quadCorner' — see its comment for why a
+// switch beats a const-array lookup on some WGSL drivers. Ordering is
+// CCW in y-up screen space; the points pipelines run with cullMode
+// 'none', so the winding is cosmetic.
+
+fn triCorner(vid: u32) -> vec2<f32> {
+  switch vid {
+    case 0u: { return vec2<f32>( 0.0,        2.0); }  // top (apex)
+    case 1u: { return vec2<f32>(-1.7320508, -1.0); }  // bottom-left  (-sqrt(3), -1)
+    case 2u: { return vec2<f32>( 1.7320508, -1.0); }  // bottom-right ( sqrt(3), -1)
+    default: { return vec2<f32>( 0.0,        0.0); }  // unreachable
+  }
+}
+
 // ── quadUv ───────────────────────────────────────────────────────────
 //
 // Same vertex-index → corner mapping as 'quadCorner', but remapped from
