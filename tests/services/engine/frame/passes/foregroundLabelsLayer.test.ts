@@ -105,7 +105,7 @@ describe('foregroundLabelsLayer.draw', () => {
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
     // The f32-narrowed near0 vp, NOT the slab's f64 vp — a caption anchor
-    // doesn't need the f64 seam debug-spheres relies on.
+    // doesn't need the f64 seam the sphere-body layers rely on.
     expect(args[1]).toBe(view.vp);
     expect(args[2]).toBe(view.viewportPx);
   });

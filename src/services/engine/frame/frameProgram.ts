@@ -2,7 +2,8 @@
  * frameProgram — the FRAME as data, and the timing slots derived from it.
  *
  * A frame is an ordered sequence of steps: a flow compute, a volume render,
- * an HDR render, a tone-mapping composite, the cosmological swap-chain overlay
+ * an HDR render, a near-field star-point render into that same HDR
+ * accumulation, a tone-mapping composite, the cosmological swap-chain overlay
  * render, then the near-field tail — the foreground bodies, their composite
  * onto the swap chain, and the near-field captions. Pre-unification that
  * sequence lived as an imperative call chain spread across `renderFrame` and
@@ -46,14 +47,21 @@ import { CONTENT_LAYERS } from './passes';
  * the same object reference — so the tone-map curve is identical where the
  * foreground bodies meet the tonemapped cosmological scene. The cosmological
  * body (compute → volume → hdr → tone-map → swap) projects through the COSMO
- * slab; the near-field tail (foreground bodies, their composite, captions)
- * projects through the NEAR0 slab.
+ * slab; the near-field star points and the near-field tail (foreground
+ * bodies, their composite, captions) project through the NEAR0 slab.
  */
 export function frameProgram(tone: ToneMap): readonly FrameStep[] {
   return [
     { kind: 'compute', name: 'flow' },
     { kind: 'render', target: 'volume', slab: COSMO },
     { kind: 'render', target: 'hdr', slab: COSMO },
+    // Near-field star points into the SAME hdr accumulation, but projected
+    // through NEAR0: COSMO's near plane (0.01 Mpc — slabs.ts) would clip the
+    // parsec-scale star anchors, so the points ride their own slab while
+    // still accumulating into HDR BEFORE the tone-map composite below — one
+    // tone curve for stars and galaxies. The hdr target is already touched
+    // by the COSMO step above, so this pass loads rather than clears.
+    { kind: 'render', target: 'hdr', slab: NEAR0 },
     { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone } },
     { kind: 'render', target: 'swap', slab: COSMO },
     // Near-field tail (zoom-to-earth fold). The step ORDER is the visible

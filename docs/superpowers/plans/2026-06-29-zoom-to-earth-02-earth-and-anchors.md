@@ -327,14 +327,15 @@ export type PlanetBody = {
   `STAR_ENTRY` / `PLANET_ENTRY` `as const satisfies …` (mirror `EARTH_ENTRY` from Task 4: `id: 'star'`/`'planet'`, labels, `allSky`, `visible`, `bearsLabel: false`, `bearsMarker: false`). Codes: `Star: 21`, `Planet: 22` (inserted between `DesiSgw = 20` and `Earth = 23` in the const — **codes are append-only by VALUE; insertion order in the const is cosmetic; do NOT renumber Earth=23**). Confirm Earth stays 23.
 - Consumes: `SourceEntryBase`, `Source`; `createEngineData` consumes `SCENE_STARS` / `SCENE_PLANETS`.
 
-- [ ] Append `Star: 21`, `Planet: 22` to `source.ts` (Earth stays 23). Didactic comment.
-- [ ] Add the two `.d.ts` under `src/@types/data/body/`; union into `SourceEntry.d.ts`.
-- [ ] Add `sources/star.ts` + `planet.ts`; register `[Source.Star]: STAR_ENTRY`, `[Source.Planet]: PLANET_ENTRY` in `SOURCE_REGISTRY`.
-- [ ] In `createEngineData.ts`, `setStars(SCENE_STARS)` + `setPlanets(SCENE_PLANETS)` at construction.
-- [ ] Test (`sources.test.ts`): `appends Star=21, Planet=22, Earth=23` — assert all three codes; `keeps star/planet OUT of GALAXY_CATALOG_SOURCES`; `keeps star/planet bits clear of ALL_VISIBLE_MASK`.
-- [ ] Test `star/planet rows are non-label, non-marker body sources`.
-- [ ] Test (`createEngineData.test.ts`): `seeds the local star map (SCENE_STARS) and Moon + Jupiter as planets at construction` — `data.bodies.stars` length matches `SCENE_STARS`, `data.bodies.planets` matches `SCENE_PLANETS`.
-- [ ] `npm test -- sources createEngineData` → green. Commit.
+- [x] Append `Star: 21`, `Planet: 22` to `source.ts` (Earth stays 23). Didactic comment.
+- [x] Add the two `.d.ts` under `src/@types/data/body/`; union into `SourceEntry.d.ts`.
+- [x] Add `sources/star.ts` + `planet.ts`; register `[Source.Star]: STAR_ENTRY`, `[Source.Planet]: PLANET_ENTRY` in `SOURCE_REGISTRY`.
+- [x] In `createEngineData.ts`, `setStars(SCENE_STARS)` + `setPlanets(SCENE_PLANETS)` at construction.
+- [x] Test (`sources.test.ts`): `appends Star=21, Planet=22, Earth=23` — assert all three codes; `keeps star/planet OUT of GALAXY_CATALOG_SOURCES`; `keeps star/planet bits clear of ALL_VISIBLE_MASK`.
+- [x] Test `star/planet rows are non-label, non-marker body sources`.
+- [x] Test (`createEngineData.test.ts`): `seeds the local star map (SCENE_STARS) and Moon + Jupiter as planets at construction` — `data.bodies.stars` length matches `SCENE_STARS`, `data.bodies.planets` matches `SCENE_PLANETS`.
+- [x] Test (`sources.test.ts`): `appends Star=21, Planet=22, Earth=23` covered; `galaxyType` gained the two cases in the non-galaxy throw group.
+- [x] `npm test -- sources createEngineData` → green. Commit.
 
 ## Task 11 — `starRenderer` / `planetRenderer` / `starPointRenderer` types + factories + shaders
 
@@ -362,11 +363,11 @@ Sphere factories follow the landed positional idiom (contract-conflict #7), mirr
 
 **Shading:** `star/fragment.wesl` emissive sphere; `planet/fragment.wesl` flat lit albedo; both vertex shaders share `lib/sphere`. `starPointRenderer` reuses the additive point pipeline (cite `pointRenderer.ts`) — it is NOT drawn in the opaque foreground pass; it joins the additive HDR accumulation. **Decide and note** whether `starPointRenderer` wraps `createPointRenderer` directly or builds a thin point pipeline — read `pointRenderer.ts` first (note its signature also threads the fade/source/focus BGLs; a thin dedicated pipeline may be simpler than satisfying those); if it can't be cleanly reused, STOP and report rather than duplicating the whole pipeline.
 
-- [ ] Add the three `.d.ts` types.
-- [ ] Add star/planet shader dirs (emissive / flat-lit). `wesl-shaders` skill; share `lib/sphere`.
-- [ ] Add the three factories with `satisfies Renderer`.
-- [ ] Tests: each `create…Renderer satisfies Renderer` (label + destroy + method arity), structural like Task 6.
-- [ ] `npm test -- starRenderer planetRenderer starPointRenderer` → green (or typecheck-only with a note, like Task 6). Commit.
+- [x] Add the three `.d.ts` types.
+- [x] Add star/planet shader dirs (emissive / flat-lit). `wesl-shaders` skill; share `lib/sphere`.
+- [x] Add the three factories with `satisfies Renderer`. _(starPointRenderer = thin dedicated additive pipeline reusing lib/camera + lib/billboard, not a createPointRenderer wrap.)_
+- [x] Tests: each `create…Renderer satisfies Renderer` (label + destroy + method arity), structural like Task 6.
+- [x] `npm test -- starRenderer planetRenderer starPointRenderer` → green (or typecheck-only with a note, like Task 6). Commit.
 
 ## Task 12 — Anchor content-layer rows + handles + the NEAR0→hdr program step; retire the debug-sphere constellation; repoint the captions
 

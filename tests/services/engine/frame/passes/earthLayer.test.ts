@@ -1,7 +1,7 @@
 /**
  * earthLayer — unit tests for the true-scale Earth content row.
  *
- * Like `debugSpheresLayer`, the load-bearing assertion is the f64 seam: the
+ * Like the other sphere-body layers, the load-bearing assertion is the f64 seam: the
  * layer MUST feed `composeBodyMvp` the slab's `Float64Array` view-projection
  * (`view.slab.vp`), NOT the f32-narrowed `view.vp` the other layers consume.
  * Earth sits ~1 AU ≈ 4.85e-12 Mpc from the render origin, a tiny number the

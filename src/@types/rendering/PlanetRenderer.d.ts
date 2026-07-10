@@ -2,7 +2,7 @@
  * PlanetRenderer — handle for a flat-lit albedo planet drawn into the opaque
  * near-field foreground target.
  *
- * The planet is the same UV-sphere mesh the Earth and debug sphere use
+ * The planet is the same UV-sphere mesh the Earth and star renderers use
  * (`uvSphereMesh`), shaded by one lambert dot product against a fixed light
  * direction plus a small ambient floor (see `planet/fragment.wesl` — the
  * fixed direction is a documented stand-in for real sun-relative lighting).

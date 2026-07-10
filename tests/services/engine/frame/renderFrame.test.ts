@@ -396,13 +396,16 @@ function makeInput(
           volumeFieldRenderer: null,
           flowFieldRenderer: null,
           structureMarkerRenderer: null,
-          // Near-field foreground handles null → debugSpheresLayer.enabled and
-          // foregroundLabelsLayer.enabled both report false, so the program's
-          // foreground:0 render selects nothing and the foreground:0→swap
-          // composite is touched-set-skipped. These fixtures stay a pure
-          // cosmological-frame trace (see the null-handle skip test below).
-          debugSphereRenderer: null,
+          // Near-field handles null → the body layers, star-points, and
+          // foregroundLabelsLayer all report enabled=false, so the program's
+          // (hdr, NEAR0) render and foreground:0 render select nothing and
+          // the foreground:0→swap composite is touched-set-skipped. These
+          // fixtures stay a pure cosmological-frame trace (see the
+          // null-handle skip test below).
           earthRenderer: null,
+          starRenderer: null,
+          planetRenderers: null,
+          starPointRenderer: null,
           foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud,
@@ -633,14 +636,14 @@ describe('renderFrame', () => {
   });
 
   it('encodes no foreground pass or composite while the foreground handles are null', () => {
-    // The program now carries the near-field tail (foreground:0 render →
-    // foreground:0→swap composite → NEAR0 swap render). With the fixture's
-    // debugSphereRenderer + foregroundLabelRenderer both null, the two
-    // foreground render groups select nothing, so no foreground pass opens; and
-    // because foreground:0 is never touched, the foreground:0→swap composite is
-    // touched-set-skipped. Net: the encoded frame is byte-for-byte the
-    // cosmological trace — exactly two passes (hdr + hdr→swap) and one
-    // compositor draw.
+    // The program carries the near-field steps ((hdr, NEAR0) star points,
+    // then the tail: foreground:0 render → foreground:0→swap composite →
+    // NEAR0 swap render). With the fixture's body/star-point renderers and
+    // foregroundLabelRenderer all null, every near-field render group
+    // selects nothing, so no extra pass opens; and because foreground:0 is
+    // never touched, the foreground:0→swap composite is touched-set-skipped.
+    // Net: the encoded frame is byte-for-byte the cosmological trace —
+    // exactly two passes (hdr + hdr→swap) and one compositor draw.
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
     expect(calls).toHaveLength(2);

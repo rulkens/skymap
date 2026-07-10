@@ -2,13 +2,12 @@
  * earthRenderer — true-scale, texture-mapped Earth drawn into the opaque
  * near-field foreground target.
  *
- * The geometry is the same UV sphere the debug sphere uses (`uvSphereMesh`),
- * but this renderer samples an equirectangular Blue Marble bitmap instead of
- * drawing the lat-long diagnostic grid. It is the Plan 02 "real planet" that
- * `debugSphereRenderer` was a stand-in for — same mesh, same shared
- * `lib/sphere.wesl` uniform (`SphereUniforms`, a 64-byte mat4x4<f32> MVP) and
- * the same `clip_from_local` projection helper, so the CPU-side matrix layout
- * and the GPU-side projection stay a single source of truth.
+ * The geometry is the same UV sphere every body renderer uses
+ * (`uvSphereMesh`), shaded by sampling an equirectangular Blue Marble
+ * bitmap. It shares `lib/sphere.wesl`'s uniform (`SphereUniforms`, a 64-byte
+ * mat4x4<f32> MVP) and the `clip_from_local` projection helper with the
+ * star/planet renderers, so the CPU-side matrix layout and the GPU-side
+ * projection stay a single source of truth.
  *
  * **Precondition — draw at most once per frame:** `draw` writes the MVP into a
  * single non-dynamic uniform buffer before issuing the indexed draw, so a
@@ -72,7 +71,8 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /** UV-sphere tessellation counts — 48 segments × 24 rings gives a smooth
  *  silhouette at close range without overwhelming the vertex throughput.
- *  Matches `debugSphereRenderer` so the two bodies share a mesh shape. */
+ *  Matches `starRenderer` / `planetRenderer` so every sphere body shares a
+ *  mesh shape. */
 const SEGMENTS = 48;
 const RINGS = 24;
 
@@ -86,7 +86,8 @@ export function createEarthRenderer(
 ): EarthRenderer {
   // ── Geometry upload ───────────────────────────────────────────────────────
   //
-  // Both the positions and the uvs are uploaded (the debug sphere skips uvs).
+  // Both the positions and the uvs are uploaded (the untextured star/planet
+  // renderers skip uvs).
   // They go into two tightly-packed VBOs — positions (f32x3, stride 12) at
   // slot 0, uvs (f32x2, stride 8) at slot 1 — matching the two vertex-buffer
   // layouts declared on the pipeline. Two separate buffers (rather than one
@@ -117,9 +118,9 @@ export function createEarthRenderer(
 
   // ── Uniform buffer (one MVP) ──────────────────────────────────────────────
   //
-  // A single Earth is drawn per frame, so — unlike the debug sphere's
-  // multi-slot dynamic-offset buffer — one 64-byte `SphereUniforms` block
-  // suffices. `draw` writes the MVP here before issuing the indexed draw.
+  // A single Earth is drawn per frame, so one 64-byte `SphereUniforms`
+  // block suffices — no multi-slot dynamic-offset buffer needed. `draw`
+  // writes the MVP here before issuing the indexed draw.
   const uniformBuffer = device.createBuffer({
     label: 'earth-uniform-buffer',
     size: UNIFORM_BUFFER_SIZE,

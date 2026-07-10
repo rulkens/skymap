@@ -14,8 +14,9 @@
  *
  * ### The f64 seam — why `view.slab.vp`, NOT `view.vp`
  *
- * Like `debugSpheresLayer`, this is a near-field body that reads the slab's
- * `Float64Array` view-projection (`view.slab.vp`) rather than the f32-narrowed
+ * Like the other sphere-body layers (`starSpheresLayer`, `planetsLayer`),
+ * this is a near-field body that reads the slab's `Float64Array`
+ * view-projection (`view.slab.vp`) rather than the f32-narrowed
  * `view.vp` every cosmological layer consumes. Earth sits ~1 AU ≈ 4.85e-12 Mpc
  * from the render origin, a tiny number the VP's large translation nearly
  * cancels. `composeBodyMvp` must resolve that cancellation in double precision

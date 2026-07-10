@@ -193,8 +193,10 @@ describe('EngineState type', () => {
         volumeUpsample: null,
         pickDebugOverlay: null,
         diskRadiusRing: null,
-        debugSphereRenderer: null,
         earthRenderer: null,
+        starRenderer: null,
+        planetRenderers: null,
+        starPointRenderer: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
@@ -448,8 +450,10 @@ describe('EngineState type', () => {
         volumeUpsample: null,
         pickDebugOverlay: null,
         diskRadiusRing: null,
-        debugSphereRenderer: null,
         earthRenderer: null,
+        starRenderer: null,
+        planetRenderers: null,
+        starPointRenderer: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {

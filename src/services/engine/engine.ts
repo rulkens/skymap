@@ -294,13 +294,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null-checks each together with its `settings.debug.*` toggle.
       pickDebugOverlay: null,
       diskRadiusRing: null,
-      // UV-sphere foreground debug overlay (Plan 01 — zoom-to-Earth). null
-      // until initGpu; excluded from isEngineReady, null-checked at use.
-      debugSphereRenderer: null,
       // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
       // constructs it + fires the Blue Marble fetch; excluded from
       // isEngineReady, null-checked at use by earthLayer.
       earthRenderer: null,
+      // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
+      // (the Sun), one planet renderer PER seeded planet (single-uniform
+      // writeBuffer race — see EngineGpuHandles), and the far-star additive
+      // points. null until initGpu; excluded from isEngineReady,
+      // null-checked at use by their layers.
+      starRenderer: null,
+      planetRenderers: null,
+      starPointRenderer: null,
       // Per-pass GPU timing service.  Always non-null — a no-op stub until
       // initGpu swaps in the device-aware service.  Consumers gate on
       // `.enabled`.
@@ -697,10 +702,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.pickDebugOverlay = null;
     state.gpu.diskRadiusRing?.destroy();
     state.gpu.diskRadiusRing = null;
-    state.gpu.debugSphereRenderer?.destroy();
-    state.gpu.debugSphereRenderer = null;
     state.gpu.earthRenderer?.destroy();
     state.gpu.earthRenderer = null;
+    state.gpu.starRenderer?.destroy();
+    state.gpu.starRenderer = null;
+    // One renderer instance per seeded planet (see EngineGpuHandles) —
+    // release each before re-nulling the set.
+    state.gpu.planetRenderers?.forEach((renderer) => renderer.destroy());
+    state.gpu.planetRenderers = null;
+    state.gpu.starPointRenderer?.destroy();
+    state.gpu.starPointRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();

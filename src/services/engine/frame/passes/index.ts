@@ -2,8 +2,8 @@
  * passes/index — the content-layer registry.
  *
  * `CONTENT_LAYERS` is the flat, ordered list of every `ContentLayer` the
- * renderer draws — both the nine additive-into-HDR layers and the five
- * premultiplied-OVER-onto-swap-chain overlays.  It replaces the two `Pass[]`
+ * renderer draws — the additive-into-HDR layers, the premultiplied-OVER
+ * swap-chain overlays, and the near-field groups.  It replaces the two `Pass[]`
  * arrays this module once exported — those were two arrays because a `Pass`
  * baked its target and blend into "which array it lives in"; a `ContentLayer`
  * states `target` and `blend` as data fields on the row itself, so one array is
@@ -31,25 +31,37 @@
  *   8. horizon-shell       — translucent sphere at the observable-universe edge
  *   9. structure-markers   — at-rest halo + ring for cluster / SC / void structures
  *
- * The remaining five are premultiplied-OVER overlays, projected through the
- * same cosmological slab but drawn post-tone-map onto the swap chain:
+ * One more row accumulates into the same HDR target, but projected through
+ * the near0 slab (its own `(hdr, NEAR0)` render step — COSMO's near plane
+ * would clip parsec-scale anchors):
  *
- *  10. selection-ring      — per-galaxy / Milky-Way / structure selection halo
- *  11. disk-radius-ring    — debug: catalog-disk-radius calibration ring
- *  12. marker-lines        — screen-space thick-line overlay (e.g. label stems)
- *  13. labels              — MSDF text labels
- *  14. clip-path-debug     — debug: clip-path inspector route + gizmo
+ *  10. star-points         — the far-partition neighbourhood stars as additive
+ *                            point sprites, riding the same tone-map as the
+ *                            galaxies
  *
- * The final two rows are the first to leave the cosmological slab entirely —
- * the near-field foreground group, projected through the near0 slab (whose
- * near/far track the camera's orbit distance) so the true-scale bodies are
- * never clipped by the cosmological near plane:
+ * The next five are premultiplied-OVER overlays, projected through the
+ * cosmological slab and drawn post-tone-map onto the swap chain:
  *
- *  15. debug-spheres       — true-scale Sun / Earth bodies (f64 compose seam),
- *                            opaque (depth-tested) into the `foreground:0` target
+ *  11. selection-ring      — per-galaxy / Milky-Way / structure selection halo
+ *  12. disk-radius-ring    — debug: catalog-disk-radius calibration ring
+ *  13. marker-lines        — screen-space thick-line overlay (e.g. label stems)
+ *  14. labels              — MSDF text labels
+ *  15. clip-path-debug     — debug: clip-path inspector route + gizmo
+ *
+ * The final rows leave the cosmological slab entirely — the near-field
+ * foreground group, projected through the near0 slab (whose near/far track
+ * the camera's orbit distance) so the true-scale bodies are never clipped by
+ * the cosmological near plane:
+ *
  *  16. earth               — true-scale Blue-Marble-textured Earth (f64 compose
- *                            seam), opaque into the same `foreground:0` target
- *  17. foreground-labels   — Sun / Earth name captions, premultiplied-OVER onto
+ *                            seam), opaque (depth-tested) into the `foreground:0`
+ *                            target
+ *  17. star-spheres        — the near-partition star (the Sun) as a true-scale
+ *                            flat-emissive sphere (f64 compose seam), opaque into
+ *                            the same `foreground:0` target
+ *  18. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
+ *                            (f64 compose seam), opaque into the same target
+ *  19. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
  *
@@ -129,8 +141,10 @@ import { diskRadiusRingLayer } from './diskRadiusRingLayer';
 import { markerLinesLayer } from './markerLinesLayer';
 import { labelsLayer } from './labelsLayer';
 import { clipPathDebugLayer } from './clipPathDebugLayer';
-import { debugSpheresLayer } from './debugSpheresLayer';
 import { earthLayer } from './earthLayer';
+import { starSpheresLayer } from './starSpheresLayer';
+import { planetsLayer } from './planetsLayer';
+import { starPointsLayer } from './starPointsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 
 /**
@@ -154,6 +168,13 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   volumeUpsampleLayer,
   horizonShellLayer,
   structureMarkersLayer,
+  // The tenth hdr row, alone in its (hdr, NEAR0) group: the far-partition
+  // neighbourhood stars as additive points, drawn by the frame program's
+  // dedicated (hdr, NEAR0) step AFTER the nine COSMO hdr layers above and
+  // before the tone-map — so the stars ride the same tone curve as the
+  // galaxies while projecting through a slab whose near plane admits
+  // parsec-scale anchors.
+  starPointsLayer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
   // ring leads so marker-lines and labels composite over its stroke; the
   // debug clip-path overlay trails so its route + gizmo draw on top of
@@ -163,20 +184,19 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   markerLinesLayer,
   labelsLayer,
   clipPathDebugLayer,
-  // Near-field foreground group: the true-scale bodies (Sun, Earth) drawn
-  // into the depth-bearing 'foreground:0' target through the near0 slab.
-  // Registered after the swap group — position only affects timing-slot
-  // listing, since no other layer shares its (target, slab). The frame
-  // program's foreground render step drives it.
-  debugSpheresLayer,
-  // Blue-Marble-textured Earth into the same (foreground:0, NEAR0) group as the
-  // debug spheres. Registered beside debug-spheres; both ride the single
-  // (foreground:0, NEAR0) render step the frame program already appended.
+  // Near-field foreground group: the true-scale bodies drawn into the
+  // depth-bearing 'foreground:0' target through the near0 slab, all riding
+  // the single (foreground:0, NEAR0) render step. Registered after the swap
+  // group — position only affects timing-slot listing, since no other group
+  // shares this (target, slab). Order within the group is depth-tested
+  // opaque, so it's a listing choice, not a compositing one.
   earthLayer,
-  // Near-field captions: the Sun/Earth name labels drawn OVER onto the swap
-  // chain through the near0 slab. Registered after debug-spheres; the frame
-  // program's (swap, NEAR0) render step drives it — the (swap, COSMO) step
-  // selects nothing here by construction.
+  starSpheresLayer,
+  planetsLayer,
+  // Near-field captions: the scene-body name labels drawn OVER onto the swap
+  // chain through the near0 slab. The frame program's (swap, NEAR0) render
+  // step drives it — the (swap, COSMO) step selects nothing here by
+  // construction.
   foregroundLabelsLayer,
 ];
 
@@ -195,6 +215,8 @@ export { diskRadiusRingLayer } from './diskRadiusRingLayer';
 export { markerLinesLayer } from './markerLinesLayer';
 export { labelsLayer } from './labelsLayer';
 export { clipPathDebugLayer } from './clipPathDebugLayer';
-export { debugSpheresLayer } from './debugSpheresLayer';
 export { earthLayer } from './earthLayer';
+export { starSpheresLayer } from './starSpheresLayer';
+export { planetsLayer } from './planetsLayer';
+export { starPointsLayer } from './starPointsLayer';
 export { foregroundLabelsLayer } from './foregroundLabelsLayer';

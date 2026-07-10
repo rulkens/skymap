@@ -10,9 +10,8 @@
 //
 // The VSOut struct is re-declared here rather than shared through an
 // io.wesl because the interface is two interpolants and is consumed by
-// exactly one fragment module — matching the convention note in
-// 'debugSphere/fragment.wesl' (io.wesl earns its keep only when one
-// vertex stage feeds two or more fragment stages, as points/ does).
+// exactly one fragment module — an io.wesl earns its keep only when one
+// vertex stage feeds two or more fragment stages, as points/ does.
 //
 // ## Blend target
 //

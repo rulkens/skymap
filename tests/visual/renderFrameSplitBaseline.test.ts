@@ -400,13 +400,15 @@ describe('renderFrame visual baseline', () => {
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
           structureMarkerRenderer: null,
-          // Near-field foreground handles null → the program's foreground:0
-          // render and NEAR0 caption render both select nothing, and the
-          // foreground:0→swap composite is touched-set-skipped. The recorded
-          // draw sequence + pass-boundary counts stay the pure cosmological
-          // shape this baseline pins.
-          debugSphereRenderer: null,
+          // Near-field handles null → the program's (hdr, NEAR0) star-point
+          // render, foreground:0 render, and NEAR0 caption render all select
+          // nothing, and the foreground:0→swap composite is
+          // touched-set-skipped. The recorded draw sequence + pass-boundary
+          // counts stay the pure cosmological shape this baseline pins.
           earthRenderer: null,
+          starRenderer: null,
+          planetRenderers: null,
+          starPointRenderer: null,
           foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud: {

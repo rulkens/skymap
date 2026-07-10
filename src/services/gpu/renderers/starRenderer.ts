@@ -19,7 +19,7 @@
  * The geometry uploads positions + indices only — `uvSphereMesh` also
  * emits uvs, but a flat emissive fragment samples nothing, so binding a uv
  * VBO would declare a vertex stream no shader reads (same trimming the
- * debug sphere does).
+ * planet renderer does).
  *
  * **Precondition — draw at most once per frame:** `draw` writes the
  * MVP+colour into a single non-dynamic uniform buffer before issuing the
@@ -39,7 +39,7 @@ import fsCode from '../shaders/star/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /** UV-sphere tessellation counts — matches `earthRenderer` /
- *  `debugSphereRenderer` so every sphere body shares a mesh shape. */
+ *  `planetRenderer` so every sphere body shares a mesh shape. */
 const SEGMENTS = 48;
 const RINGS = 24;
 

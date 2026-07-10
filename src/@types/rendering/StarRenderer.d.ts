@@ -2,7 +2,7 @@
  * StarRenderer — handle for a resolved (sphere-filling) star drawn into the
  * opaque near-field foreground target.
  *
- * The star is the same UV-sphere mesh the Earth and debug sphere use
+ * The star is the same UV-sphere mesh the Earth and planet renderers use
  * (`uvSphereMesh`), shaded flat emissive: every fragment emits the star's
  * spectral colour scaled by a fixed HDR multiplier (see
  * `star/fragment.wesl`) — a star is a light source, not a lit surface, so

@@ -2,10 +2,11 @@
  * foregroundLabelsLayer — name captions for the true-scale foreground bodies.
  *
  * A near-field sibling of `labelsLayer` that draws a SECOND MSDF label
- * renderer (`state.gpu.foregroundLabelRenderer`) holding the Sun/Earth
- * captions. It exists as its own row because the two label sets can't share
- * one draw call: one renderer draws with one view-projection, and these two
- * project through different slabs.
+ * renderer (`state.gpu.foregroundLabelRenderer`) holding the scene-body
+ * captions (`sceneBodyLabels` — Earth, the local star map, the planets). It
+ * exists as its own row because the two label sets can't share one draw
+ * call: one renderer draws with one view-projection, and these two project
+ * through different slabs.
  *
  *   - The main labels (galaxies, structures, Milky Way) project through the
  *     COSMO slab, whose near plane sits at 10 kpc — so the Sun and Earth, which
@@ -56,8 +57,8 @@ export const foregroundLabelsLayer: ContentLayer = {
     // `view.vp` is the near0 slab's f64 vp already narrowed to f32 by
     // `slabViewOf` — and f32 is amply precise for a caption anchor at the
     // zooms where this gate opens (the camera is ~1 AU away), so this row
-    // consumes the narrowed vp rather than the f64 seam `debugSpheresLayer`
-    // needs for sub-radius body placement.
+    // consumes the narrowed vp rather than the f64 seam the sphere-body
+    // layers need for sub-radius body placement.
     state.gpu.foregroundLabelRenderer!.draw(pass, view.vp, view.viewportPx);
   },
 };

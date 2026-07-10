@@ -1,7 +1,7 @@
 // lib/sphere.wesl — shared sphere uniform layout + local-to-clip helper.
 //
-// Every renderer that draws a sphere-shaped body (debug sphere, Earth,
-// planets, stars) ends up needing the same thing: an MVP matrix that
+// Every renderer that draws a sphere-shaped body (Earth, planets,
+// stars) ends up needing the same thing: an MVP matrix that
 // folds model transform + view + projection into one 4x4, and a vertex
 // stage that multiplies a unit-sphere local position by it.
 // Centralising the uniform struct and the helper here means:
@@ -59,9 +59,9 @@ struct SphereUniforms {
 // their CPU-side uploaders.
 //
 // Why not extend 'SphereUniforms' with a colour field?  WGSL has no
-// optional fields — the Earth and debug sphere genuinely bind a 64-byte
-// buffer, and silently growing the shared struct would force a dead
-// 16-byte tail onto every existing uploader.  A second named struct
+// optional fields — the Earth genuinely binds a 64-byte buffer, and
+// silently growing the shared struct would force a dead 16-byte tail
+// onto every existing uploader.  A second named struct
 // keeps each renderer's buffer exactly as large as what its shaders
 // read.
 //

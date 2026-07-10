@@ -1,8 +1,8 @@
 // planet/vertex.wesl — vertex stage for the flat-lit albedo planet.
 //
-// Identical projection wiring to 'debugSphere/vertex.wesl': multiply
-// each unit-sphere local position by the combined MVP, and pass the
-// local position through as an interpolant. For a unit sphere the
+// Identical projection wiring to 'earth/vertex.wesl' and
+// 'star/vertex.wesl': multiply each unit-sphere local position by the
+// combined MVP, and pass the local position through as an interpolant. For a unit sphere the
 // local position IS the outward surface normal, so no separate normal
 // stream is needed — the fragment stage normalises the interpolant and
 // runs its one-dot-product lambert term against a fixed light

@@ -2,12 +2,12 @@
  * EarthRenderer — handle for the true-scale, texture-mapped Earth drawn into
  * the opaque near-field foreground target.
  *
- * The Earth is the same UV-sphere mesh the debug sphere uses (`uvSphereMesh`),
- * but shaded by sampling an equirectangular Blue Marble bitmap rather than the
- * lat-long diagnostic grid. It shares `lib/sphere.wesl`'s `SphereUniforms`
- * (64-byte mat4x4<f32> MVP) and `clip_from_local`, so the CPU-side matrix
- * layout and the GPU-side projection stay a single source of truth across the
- * debug sphere, the Earth, and any future planet body.
+ * The Earth is the same UV-sphere mesh the star and planet renderers use
+ * (`uvSphereMesh`), shaded by sampling an equirectangular Blue Marble
+ * bitmap. It shares `lib/sphere.wesl`'s `SphereUniforms` (64-byte
+ * mat4x4<f32> MVP) and `clip_from_local`, so the CPU-side matrix layout and
+ * the GPU-side projection stay a single source of truth across every
+ * sphere-shaped body.
  *
  * ### Texture lifecycle
  *

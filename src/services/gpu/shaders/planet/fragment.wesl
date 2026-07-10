@@ -23,9 +23,8 @@
 // ## Ambient floor
 //
 // 'AMBIENT' (0.08) keeps the night hemisphere faintly visible so the
-// silhouette never dissolves into the black background — same rationale
-// as the debug sphere's 0.15 floor, slightly darker because a real
-// planet's night side should read as night.
+// silhouette never dissolves into the black background, kept low so a
+// real planet's night side still reads as night.
 //
 // ## Bindings / blend target
 //

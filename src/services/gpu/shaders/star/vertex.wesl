@@ -1,9 +1,9 @@
 // star/vertex.wesl — vertex stage for the resolved (sphere-filling) star.
 //
 // Identical projection wiring to 'earth/vertex.wesl' and
-// 'debugSphere/vertex.wesl': multiply each unit-sphere local position by
+// 'planet/vertex.wesl': multiply each unit-sphere local position by
 // the combined MVP. The star is flat emissive — the fragment stage reads
-// only the uniform colour, so unlike the debug sphere no local position
+// only the uniform colour, so unlike the planet no local position
 // is forwarded and unlike the Earth no uv is forwarded. The vertex
 // output is the bare clip position.
 //

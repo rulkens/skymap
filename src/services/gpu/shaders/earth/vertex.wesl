@@ -1,10 +1,11 @@
 // earth/vertex.wesl — vertex stage for the true-scale textured Earth.
 //
-// Identical projection wiring to 'debugSphere/vertex.wesl': multiply each
-// unit-sphere local position by the combined MVP from 'SphereUniforms'.
-// The only difference is what gets passed through to the fragment stage --
-// here it is the mesh's equirectangular uv, not the local position, because
-// the Earth fragment samples a texture rather than deriving a normal.
+// Identical projection wiring to 'star/vertex.wesl' and
+// 'planet/vertex.wesl': multiply each unit-sphere local position by the
+// combined MVP from 'SphereUniforms'. The only difference is what gets
+// passed through to the fragment stage -- here it is the mesh's
+// equirectangular uv, not the local position, because the Earth fragment
+// samples a texture rather than deriving a normal.
 //
 // ## Bindings
 //
@@ -12,9 +13,10 @@
 // visible in the vertex stage only. The texture + sampler live at
 // bindings 1 and 2 for the fragment stage (declared in the fragment module).
 //
-// As with the debug sphere, the '@group/@binding' declaration is module-local
-// (WESL has no global state), so we declare 'u' here and pass 'u.mvp' into the
-// imported 'clip_from_local' helper -- the 'pass cam, don't capture' idiom.
+// As with the other sphere bodies, the '@group/@binding' declaration is
+// module-local (WESL has no global state), so we declare 'u' here and pass
+// 'u.mvp' into the imported 'clip_from_local' helper -- the 'pass cam,
+// don't capture' idiom.
 //
 // ## Attribute layout
 //

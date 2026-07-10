@@ -33,8 +33,10 @@ import {
   filamentsLayer,
   milkyWayLayer,
   horizonShellLayer,
-  debugSpheresLayer,
   earthLayer,
+  starSpheresLayer,
+  planetsLayer,
+  starPointsLayer,
   foregroundLabelsLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -204,12 +206,19 @@ const SWAP_NAMES = [
   'clip-path-debug',
 ];
 
-// The near-field foreground group: the true-scale bodies (Sun, Earth) drawn
-// into the depth-bearing `foreground:0` target through the near0 slab. Opaque
-// (depth-tested), unlike the additive HDR group and the OVER swap group.
-const FOREGROUND_NAMES = ['debug-spheres', 'earth'];
+// The near-field foreground group: the true-scale bodies (Earth, the Sun
+// sphere, the planets) drawn into the depth-bearing `foreground:0` target
+// through the near0 slab. Opaque (depth-tested), unlike the additive HDR
+// group and the OVER swap group.
+const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets'];
 
-// The near-field captions group: the Sun/Earth name labels. Like the COSMO
+// The near-field star points: the ONE layer that pairs the hdr target with
+// the near0 slab — additive like every hdr row, but projected through NEAR0
+// so parsec-scale anchors clear the near plane. Its own (hdr, NEAR0) render
+// group, driven by the program's dedicated step before the tone-map.
+const NEAR_HDR_NAMES = ['star-points'];
+
+// The near-field captions group: the scene-body name labels. Like the COSMO
 // swap overlays they target the swap chain with premultiplied-OVER, but they
 // project through the near0 slab so the caption anchors track the true-scale
 // bodies rather than being clipped by the cosmological near plane. Its own
@@ -237,7 +246,7 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
 });
 
 describe('hdr-target layers', () => {
-  it('the target==="hdr" filter yields the nine HDR passes in canonical draw order', () => {
+  it('the (hdr, COSMO) group yields the nine cosmological HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the frame program;
     // see passes/index.ts module header. Marker-lines and labels are
     // swap-target (post-tone-map overlay), not hdr, so they escape
@@ -245,10 +254,34 @@ describe('hdr-target layers', () => {
     // issue on tile-based GPUs. The horizon shell draws after the
     // volume upsample (so cosmic-web densities composite over it) and
     // before structure-markers (so marker rings pop on top). Flow sits
-    // with the structure layers, after filaments.
-    const hdrLayers = CONTENT_LAYERS.filter((layer) => layer.target === 'hdr');
+    // with the structure layers, after filaments. The hdr TARGET now
+    // hosts two render groups keyed by (target, slab): these nine COSMO
+    // layers, and the near-field star-points through NEAR0 (asserted
+    // separately below) — scoping the filter to COSMO pins the group the
+    // (hdr, COSMO) render step actually draws.
+    const hdrLayers = CONTENT_LAYERS.filter(
+      (layer) => layer.target === 'hdr' && layer.slab === COSMO,
+    );
     expect(hdrLayers).toHaveLength(9);
     expect(hdrLayers.map((p) => p.name)).toEqual(HDR_NAMES);
+  });
+
+  it('the (hdr, NEAR0) group holds exactly the star-points row, additive', () => {
+    // The one hdr row outside the cosmological slab: the far-partition
+    // neighbourhood stars, projected through NEAR0 (COSMO's 0.01 Mpc near
+    // plane would clip parsec-scale anchors) but accumulating into the same
+    // HDR target so they ride the galaxies' tone-map. Drawn by the program's
+    // dedicated (hdr, NEAR0) step before the hdr→swap composite.
+    const nearHdr = CONTENT_LAYERS.filter(
+      (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
+    );
+    expect(nearHdr.map((layer) => layer.name)).toEqual(NEAR_HDR_NAMES);
+    expect(nearHdr).toContain(starPointsLayer);
+    for (const layer of nearHdr) {
+      expect(layer.slab).toBe(NEAR0);
+      expect(layer.target).toBe('hdr');
+      expect(layer.blend).toBe('additive');
+    }
   });
 });
 
@@ -286,7 +319,7 @@ describe('swap-target layers', () => {
 
 describe('CONTENT_LAYERS migration table (foreground group)', () => {
   it('every foreground content layer draws into foreground:0 through the near0 slab, opaque', () => {
-    // The near-field bodies (Sun, Earth) are the first rows to leave the
+    // The near-field bodies (Earth, the Sun sphere, the planets) leave the
     // cosmological slab: they project through NEAR0 into the depth-bearing
     // `foreground:0` target and are opaque (depth-tested), not additive. See
     // the renderer-unification design's migration table (spec line 215).
@@ -306,19 +339,19 @@ describe('foreground-target layers', () => {
     // listing, since no other layer shares its (target, slab).
     const fgLayers = CONTENT_LAYERS.filter((layer) => layer.target === 'foreground:0');
     expect(fgLayers.map((layer) => layer.name)).toEqual(FOREGROUND_NAMES);
-    expect(fgLayers).toContain(debugSpheresLayer);
     expect(fgLayers).toContain(earthLayer);
+    expect(fgLayers).toContain(starSpheresLayer);
+    expect(fgLayers).toContain(planetsLayer);
   });
 });
 
 describe('CONTENT_LAYERS migration table (near-field labels group)', () => {
-  it('the Sun/Earth captions draw into swap through the near0 slab, over', () => {
+  it('the scene-body captions draw into swap through the near0 slab, over', () => {
     // The near-field captions are the second foreground group: like the COSMO
     // swap overlays they target the swap chain with premultiplied-OVER, but
     // they project through NEAR0 so the caption anchors track the true-scale
-    // bodies. Registered after debug-spheres — the (swap, NEAR0) render step
-    // that draws them lands in task 7. See the design's migration table (spec
-    // line 216).
+    // bodies. Drawn by the program's (swap, NEAR0) render step. See the
+    // design's migration table (spec line 216).
     const nearLabels = CONTENT_LAYERS.filter((layer) => NEAR_LABEL_NAMES.includes(layer.name));
     expect(nearLabels.map((layer) => layer.name)).toEqual(NEAR_LABEL_NAMES);
     expect(nearLabels).toContain(foregroundLabelsLayer);
