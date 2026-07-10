@@ -10,10 +10,21 @@ describe('selection types', () => {
   });
   it('SelectionRef discriminates on type', () => {
     const ref: SelectionRef = { type: 'milkyWay' };
-    expectTypeOf(ref).toMatchTypeOf<{ type: 'galaxyCatalog' | 'structure' | 'milkyWay' }>();
+    expectTypeOf(ref).toMatchTypeOf<{
+      type: 'galaxyCatalog' | 'structure' | 'milkyWay' | 'body';
+    }>();
   });
   it('SelectionRow milkyWay arm is the tag', () => {
     const row: SelectionRow = { type: 'milkyWay' };
+    expectTypeOf(row).toMatchTypeOf<SelectionRow>();
+  });
+  it('SelectionRow body arm carries the framing fields', () => {
+    const row: SelectionRow = {
+      type: 'body',
+      id: 'earth',
+      positionMpc: [4.8481e-12, 0, 0],
+      radiusKm: 6371,
+    };
     expectTypeOf(row).toMatchTypeOf<SelectionRow>();
   });
 });

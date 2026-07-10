@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { extractSelectionRow } from '../../../../src/services/engine/helpers/extractSelectionRow';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneBodies';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
@@ -64,5 +65,29 @@ describe('extractSelectionRow', () => {
     expect(
       extractSelectionRow({ type: 'galaxyCatalog', source: Source.Glade, index: 0 }, deps),
     ).toBeNull();
+  });
+
+  it('body ref → a self-contained body row from the static SCENE_BODIES seed', () => {
+    const row = extractSelectionRow({ type: 'body', id: 'earth' }, deps);
+    expect(row).toEqual({
+      type: 'body',
+      id: SCENE_EARTH.id,
+      positionMpc: SCENE_EARTH.positionMpc,
+      radiusKm: SCENE_EARTH.radiusKm,
+    });
+  });
+
+  it('body row position is copied, not aliased to the shared seed constant', () => {
+    // The row lands in the RTK store, whose immutability middleware freezes
+    // state — an aliased Vec3 would freeze SCENE_EARTH.positionMpc for every
+    // other consumer of the seed.
+    const row = extractSelectionRow({ type: 'body', id: 'earth' }, deps);
+    expect(row !== null && row.type === 'body' && row.positionMpc).not.toBe(
+      SCENE_EARTH.positionMpc,
+    );
+  });
+
+  it('body ref with an unknown seed id → null (garbage, not "loading")', () => {
+    expect(extractSelectionRow({ type: 'body', id: 'krypton' }, deps)).toBeNull();
   });
 });

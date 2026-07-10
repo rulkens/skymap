@@ -185,6 +185,24 @@ describe('resolveFocusId', () => {
     expect(resolveFocusId(id as string, deps)).toEqual({ type: 'milkyWay' });
   });
 
+  // ── scene bodies ─────────────────────────────────────────────────────────
+
+  it('body-<seedId> → body ref for a seeded scene body', () => {
+    // SCENE_BODIES is a static import, so resolution needs no loaded catalog:
+    // the fixture deps are irrelevant to this branch.
+    expect(resolveFocusId('body-earth', deps)).toEqual({ type: 'body', id: 'earth' });
+  });
+
+  it('body-<unknownSeed> → null (garbage id, never "not loaded yet")', () => {
+    expect(resolveFocusId('body-krypton', deps)).toBeNull();
+  });
+
+  it('round-trips a body ref through encode → decode', () => {
+    const id = focusIdOf({ type: 'body', id: 'earth' }, deps);
+    expect(id).toBe('body-earth');
+    expect(resolveFocusId(id as string, deps)).toEqual({ type: 'body', id: 'earth' });
+  });
+
   // ── structure ────────────────────────────────────────────────────────────
 
   it('structure id with invalid chars → null', () => {

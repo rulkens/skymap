@@ -170,11 +170,11 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 - Produces: `EngineData` gains `readonly bodies: BodyStore`; `createEngineData()` constructs `createBodyStore()` and seeds `setEarth(SCENE_EARTH)` at construction (bodies seed from the static `sceneBodies.ts`, the seed-data-early convention).
 - Consumes: `createBodyStore` (Task 3), `SCENE_EARTH` (Task 2).
 
-- [ ] Add `bodies: BodyStore` to `EngineData.d.ts:20-23`; update its docblock to record that bodies ARE app-side seed data (extends the "two stores" rationale at `EngineData.d.ts:5-18` — see contract-conflict #4).
-- [ ] In `createEngineData.ts:16-21`, construct `createBodyStore()`, call `setEarth(SCENE_EARTH)` before returning, add `bodies` to the returned bag; update the module docblock's "only galaxies and structures" sentence.
-- [ ] Test `createEngineData seeds the Earth body at construction` — `data.bodies.earth?.id === 'earth'`.
-- [ ] Test `createEngineData still exposes galaxies + structures stores` (regression).
-- [ ] `npm test -- createEngineData` → green. Commit.
+- [x] Add `bodies: BodyStore` to `EngineData.d.ts:20-23`; update its docblock to record that bodies ARE app-side seed data (extends the "two stores" rationale at `EngineData.d.ts:5-18` — see contract-conflict #4).
+- [x] In `createEngineData.ts:16-21`, construct `createBodyStore()`, call `setEarth(SCENE_EARTH)` before returning, add `bodies` to the returned bag; update the module docblock's "only galaxies and structures" sentence.
+- [x] Test `createEngineData seeds the Earth body at construction` — `data.bodies.earth?.id === 'earth'`.
+- [x] Test `createEngineData still exposes galaxies + structures stores` (regression).
+- [x] `npm test -- createEngineData` → green. Commit.
 
 ## Task 6 — `EarthRenderer` type + `earthRenderer` factory + earth shaders
 
@@ -198,13 +198,13 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 
 **Shape:** positional factory mirroring `createDebugSphereRenderer` (`debugSphereRenderer.ts:74-78`); uploads `uvSphereMesh(…)` VBO/IBO once; owns the texture + sampler + bind group in the closure; `setTexture(bitmap)` does `device.queue.copyExternalImageToTexture(...)` into the equirectangular 2D texture; `draw(pass, mvp)` writes the f32 `mvp` to the `SphereUniforms` buffer and draws indexed. `satisfies Renderer` at the return. Earth fragment shader samples the equirectangular texture at the mesh uvs; vertex shader imports `package::lib::sphere` `clip_from_local`.
 
-- [ ] Add `EarthRenderer.d.ts`.
-- [ ] Add `earth/vertex.wesl` + `earth/fragment.wesl` (texture sample; share `lib/sphere`). Follow WESL conventions (no backticks, literal `package::`, `?static` on the TS side). Use the `wesl-shaders` skill.
-- [ ] Add `earthRenderer.ts` factory with `satisfies Renderer`.
-- [ ] Test `createEarthRenderer satisfies Renderer` — has a non-empty `label`, a `destroy` function (construct against a mocked/headless `GPUDevice` the way existing renderer tests mock it — read an existing renderer test for the device-stub style first; if no renderer is unit-tested headlessly in this repo, assert only the module exports + type-shape and rely on the VISUAL gate).
-- [ ] Test `setTexture and draw are callable` (structural: methods exist with the right arity).
-- [ ] **VISUAL gate (deferred to Task 13):** a round, correctly-textured Earth is user-verified on screen — NOT asserted here.
-- [ ] `npm test -- earthRenderer` → green (or typecheck-only if headless GPU construction is infeasible — note which). Commit.
+- [x] Add `EarthRenderer.d.ts`.
+- [x] Add `earth/vertex.wesl` + `earth/fragment.wesl` (texture sample; share `lib/sphere`). Follow WESL conventions (no backticks, literal `package::`, `?static` on the TS side). Use the `wesl-shaders` skill.
+- [x] Add `earthRenderer.ts` factory with `satisfies Renderer`.
+- [x] Test `createEarthRenderer satisfies Renderer` — has a non-empty `label`, a `destroy` function (construct against a mocked/headless `GPUDevice` the way existing renderer tests mock it — read an existing renderer test for the device-stub style first; if no renderer is unit-tested headlessly in this repo, assert only the module exports + type-shape and rely on the VISUAL gate).
+- [x] Test `setTexture and draw are callable` (structural: methods exist with the right arity).
+- [x] **VISUAL gate (deferred to Task 13):** a round, correctly-textured Earth is user-verified on screen — NOT asserted here.
+- [x] `npm test -- earthRenderer` → green (or typecheck-only if headless GPU construction is infeasible — note which). Commit.
 
 ## Task 7 — Blue Marble asset + `earthRenderer` handle + `earthLayer` content row
 
@@ -233,15 +233,15 @@ TS + Vite + React shell, raw WebGPU + WESL (linked via `?static`). wgpu-matrix (
 
 **Layer body (model on `debugSpheresLayer.ts:45-68`, incl. its f64-seam header):** `composeBodyMvp(view.slab.vp, earth.positionMpc, RENDER_ORIGIN_MPC, earth.radiusKm * SCALE_UNITS.KM_TO_MPC)` — `view.slab.vp` (the slab's `Float64Array`), NOT `view.vp`; feeding the f32 narrowing would resolve the ~1 AU near-cancellation after the precision is gone and mis-place Earth by more than its radius. `initGpu` construction sits with the foreground block (`initGpu.ts:387-408`); the two format literals MUST match the `foreground:0` row (`renderTargets.ts:119`) — the target↔renderer-profile invariant (`ContentLayer.d.ts:21-26`); carry the convention comment `initGpu.ts:393-399` uses. The texture fetch is NOT awaited (bootstrap must not block on a 4k JPG; the sphere draws untextured or is gated until the bitmap lands — pick one and note it in the layer/renderer header).
 
-- [ ] Add the Blue Marble asset + provenance (or STOP-and-report).
-- [ ] Add `earthRenderer: EarthRenderer | null` to `EngineGpuHandles.d.ts` (nullable until `initGpu`; docblock per the bag's lifecycle rule `EngineGpuHandles.d.ts:28-36`); seed `null` in the `engine.ts` state literal and add the destroy + re-null row (mirror `engine.ts:696-697`).
-- [ ] Construct `createEarthRenderer(device, 'rgba16float', 'depth32float')` in `initGpu.ts` beside the foreground block (`initGpu.ts:387-408`); fire the Blue Marble fetch → `setTexture`.
-- [ ] Add `earthLayer.ts` + register it in `CONTENT_LAYERS` (`passes/index.ts:140-174`) in the foreground group beside `debugSpheresLayer`.
-- [ ] Test (`earthLayer.test.ts`, modelled on `debugSpheresLayer.test.ts` — same `vi.mock` of `composeBodyMvp`, typed `vi.fn` per `feedback_typed_vi_fn`): `earth layer draws the seeded earth via composeBodyMvp with the slab f64 vp` — fixture `SlabView` whose `slab.vp` is a recognisable `Float64Array` and whose `vp` is a different `Float32Array`; assert `composeBodyMvp`'s first arg `toBe(view.slab.vp)` (and `not.toBe(view.vp)`), its args carry `earth.positionMpc` / `RENDER_ORIGIN_MPC` / the km→Mpc radius, and `earthRenderer.draw` receives a length-16 `Float32Array`.
-- [ ] Test `enabled is false while earthRenderer is null and while bodies.earth is null; true with both set`.
-- [ ] Test (`passes.test.ts`): extend the foreground migration-table group (`passes.test.ts:206-216, 286-310` — `FOREGROUND_NAMES`) with `'earth'` `{slab: NEAR0, target: 'foreground:0', blend: 'opaque'}`; the blend-legality test (`passes.test.ts:331-355`) already enforces opaque for `foreground:0` rows — confirm it covers the new row without edits to its table.
-- [ ] Test: extend `initGpu.destroyReachability.test.ts` (add a `vi.mock` for the `earthRenderer` module — keeps its `?static` WESL imports out of JSDOM — plus the state-bag field, writes-onto-state and destroy-chain assertions) and `engineState.test.ts` (the null seed).
-- [ ] `npm test -- earthLayer passes initGpu engineState` → green. Commit.
+- [x] Add the Blue Marble asset + provenance (or STOP-and-report).
+- [x] Add `earthRenderer: EarthRenderer | null` to `EngineGpuHandles.d.ts` (nullable until `initGpu`; docblock per the bag's lifecycle rule `EngineGpuHandles.d.ts:28-36`); seed `null` in the `engine.ts` state literal and add the destroy + re-null row (mirror `engine.ts:696-697`).
+- [x] Construct `createEarthRenderer(device, 'rgba16float', 'depth32float')` in `initGpu.ts` beside the foreground block (`initGpu.ts:387-408`); fire the Blue Marble fetch → `setTexture`.
+- [x] Add `earthLayer.ts` + register it in `CONTENT_LAYERS` (`passes/index.ts:140-174`) in the foreground group beside `debugSpheresLayer`.
+- [x] Test (`earthLayer.test.ts`, modelled on `debugSpheresLayer.test.ts` — same `vi.mock` of `composeBodyMvp`, typed `vi.fn` per `feedback_typed_vi_fn`): `earth layer draws the seeded earth via composeBodyMvp with the slab f64 vp` — fixture `SlabView` whose `slab.vp` is a recognisable `Float64Array` and whose `vp` is a different `Float32Array`; assert `composeBodyMvp`'s first arg `toBe(view.slab.vp)` (and `not.toBe(view.vp)`), its args carry `earth.positionMpc` / `RENDER_ORIGIN_MPC` / the km→Mpc radius, and `earthRenderer.draw` receives a length-16 `Float32Array`.
+- [x] Test `enabled is false while earthRenderer is null and while bodies.earth is null; true with both set`.
+- [x] Test (`passes.test.ts`): extend the foreground migration-table group (`passes.test.ts:206-216, 286-310` — `FOREGROUND_NAMES`) with `'earth'` `{slab: NEAR0, target: 'foreground:0', blend: 'opaque'}`; the blend-legality test (`passes.test.ts:331-355`) already enforces opaque for `foreground:0` rows — confirm it covers the new row without edits to its table.
+- [x] Test: extend `initGpu.destroyReachability.test.ts` (add a `vi.mock` for the `earthRenderer` module — keeps its `?static` WESL imports out of JSDOM — plus the state-bag field, writes-onto-state and destroy-chain assertions) and `engineState.test.ts` (the null seed).
+- [x] `npm test -- earthLayer passes initGpu engineState` → green. Commit.
 
 ---
 

@@ -35,3 +35,12 @@ export const SCENE_EARTH: EarthBody = {
   radiusKm: 6371,
   textureUrl: '/images/earth/blue-marble-4k.jpg',
 };
+
+/**
+ * SCENE_BODIES — the flat registry every body-aware consumer reads from: the
+ * command-palette search rows, the `body-<id>` focus-id resolver, and the
+ * selection-row extractor all iterate / look up this one list. Seeding a new
+ * body (a star, another planet) is a one-line push here — no parallel list to
+ * keep in sync. Earth is the only entry for now.
+ */
+export const SCENE_BODIES: readonly EarthBody[] = [SCENE_EARTH];

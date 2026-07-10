@@ -41,8 +41,10 @@
 
 import { Source, GALAXY_CATALOG_SOURCES } from '../../data/sources';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
+import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
 import { cartesianToRaDec } from '../../utils/math/cartesianToRaDec';
 import { MILKY_WAY_FOCUS_ID } from './milkyWayFocusId';
+import { BODY_FOCUS_PREFIX } from './bodyFocusId';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
@@ -105,6 +107,19 @@ export function resolveFocusId(focusId: string, deps: ResolveDeps): SelectionRef
   // famousMeta.  The encoders (focusIdOf, urlHashFor) emit the same constant.
 
   if (focusId === MILKY_WAY_FOCUS_ID) return { type: 'milkyWay' };
+
+  // ── scene bodies (`body-<seedId>`) ────────────────────────────────────────
+  //
+  // Seeded scene bodies (Earth, later stars/planets). Like the structure loop,
+  // this must run before the famous fallback — `body-earth` passes the famous
+  // character class. Unlike catalogs, SCENE_BODIES is a static import, so an
+  // unknown seed id is definitively garbage (null forever), never "not loaded
+  // yet" — the saga's catalogLoaded retry loop simply never resolves it.
+
+  if (focusId.startsWith(BODY_FOCUS_PREFIX)) {
+    const seedId = focusId.slice(BODY_FOCUS_PREFIX.length);
+    return SCENE_BODIES.some((b) => b.id === seedId) ? { type: 'body', id: seedId } : null;
+  }
 
   // ── famous id fallback ───────────────────────────────────────────────────
   //

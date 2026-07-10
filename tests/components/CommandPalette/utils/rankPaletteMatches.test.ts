@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
+// @vitest-environment jsdom
+// jsdom (rather than node) because the body-row gate reads the LIVE
+// window.location.search via hasUrlGate — the gated tests below flip it.
+// The ranking itself is DOM-free; jsdom's default empty search keeps the
+// gate off for every non-body test.
+import { describe, it, expect, afterEach } from 'vitest';
 import { rankPaletteMatches } from '../../../../src/components/CommandPalette/utils/rankPaletteMatches';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneBodies';
 import { Source } from '../../../../src/data/sources';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
@@ -90,5 +96,51 @@ describe('rankPaletteMatches', () => {
   it('yields no Milky Way row for a query that matches nothing', () => {
     const rows = rankPaletteMatches([M31], [], [], 'zzznotathing');
     expect(rows.some((r) => r.kind === 'milkyWay')).toBe(false);
+  });
+});
+
+describe('rankPaletteMatches — scene-body rows (deepZoom gate)', () => {
+  // Same live-location mutation trick as hasUrlGate.test.ts: the property is
+  // writable in jsdom (not in real browsers), which is exactly what we need to
+  // flip the gate per test.
+  const originalLocation = window.location;
+
+  function setSearch(s: string): void {
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...window.location, search: s },
+    });
+  }
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+  });
+
+  it("surfaces Earth for the query 'earth' when ?deepZoom is set", () => {
+    setSearch('?deepZoom');
+    const rows = rankPaletteMatches([M31], [], [], 'earth');
+    const hit = rows.find((r) => r.kind === 'body');
+    expect(hit?.kind === 'body' && hit.body.id).toBe('earth');
+    expect(hit?.kind === 'body' && hit.body).toBe(SCENE_EARTH);
+  });
+
+  it("yields NO body row for 'earth' without the deepZoom gate", () => {
+    // Without the gate the wheel-zoom floor (0.05 Mpc) stops the flight while
+    // Earth is still sub-pixel — a dead-end UX, so the row must not surface.
+    setSearch('');
+    const rows = rankPaletteMatches([M31], [], [], 'earth');
+    expect(rows.some((r) => r.kind === 'body')).toBe(false);
+  });
+
+  it('shows no body rows on an empty query even when gated (browse = famous + MW)', () => {
+    setSearch('?deepZoom');
+    const rows = rankPaletteMatches([M31], [], [], '');
+    expect(rows.some((r) => r.kind === 'body')).toBe(false);
+  });
+
+  it('yields no body row for a query that matches no body label', () => {
+    setSearch('?deepZoom');
+    const rows = rankPaletteMatches([M31], [], [], 'andromeda');
+    expect(rows.some((r) => r.kind === 'body')).toBe(false);
   });
 });
