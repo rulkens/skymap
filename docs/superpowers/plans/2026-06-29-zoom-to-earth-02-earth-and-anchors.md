@@ -275,9 +275,9 @@ export type PlanetBody = {
 
 - Consumes: `Vec3`.
 
-- [ ] Add both `.d.ts` (one type per file) with didactic docblocks (`absMag` drives the LOD point↔sphere choice — Plan 03; `color` / `albedo` are flat colours, no texture).
-- [ ] Type-shape test for each (assigns a literal; asserts a representative field).
-- [ ] `npm test -- StarBody PlanetBody` → green. Commit.
+- [x] Add both `.d.ts` (one type per file) with didactic docblocks (`absMag` drives the LOD point↔sphere choice — Plan 03; `color` / `albedo` are flat colours, no texture). _(Created early by Task 3 with the locked shapes; Task 8 verified field-for-field.)_
+- [x] Type-shape test for each (assigns a literal; asserts a representative field).
+- [x] `npm test -- StarBody PlanetBody` → green. Commit.
 
 ## Task 9 — Seed the local star map + Moon / Jupiter in `sceneBodies.ts`
 
@@ -300,15 +300,15 @@ export type PlanetBody = {
 
 **Provenance (seed-header comment):** the header documents that RA/Dec/distance/absMag are standard published values (Hipparcos / Gaia-era, as commonly tabulated for the nearest-stars and brightest-stars lists), and states the selection rule + the spectral-class colour palette, so the table is auditable.
 
-- [ ] Add `SCENE_STARS` (Sun + local map) + `SCENE_PLANETS`, all star positions via `raDecDistToCartesian(ra, dec, distPc * SCALE_UNITS.PC_TO_MPC)` and all planet positions via `SCALE_UNITS` (no inline Mpc magic numbers, no inline trig).
-- [ ] Test `SCENE_STARS contains the Sun at the origin` — the Sun entry's `positionMpc` is `[0,0,0]` (each component ≈ 0, tight tolerance) and `radiusKm === 696340`.
-- [ ] Test `Proxima sits ~1.301 pc from the Sun` — `hypot(...Proxima.positionMpc) ≈ 1.301 * SCALE_UNITS.PC_TO_MPC` (tight tolerance — this is the parsec-scale f64 anchor).
-- [ ] Test `the local map covers the neighbourhood` — `SCENE_STARS.length >= 20`; every entry has a finite `positionMpc` (all three components) and a finite `absMag`; every `color` component is in `[0, 1]`.
-- [ ] Test `named stars sit at their catalogued distances` — Alpha Cen `hypot(pos) ≈ 1.34 * SCALE_UNITS.PC_TO_MPC` and Sirius `hypot(pos) ≈ 2.64 * SCALE_UNITS.PC_TO_MPC` (spot checks vs. published values, loose tolerance ~0.02 pc).
-- [ ] Test `star direction matches its RA/Dec through the shared conversion` — pick one star (e.g. Sirius, RA ≈ 101.287°, Dec ≈ −16.716°) and assert its stored `positionMpc` equals `raDecDistToCartesian(raDeg, decDeg, distPc * SCALE_UNITS.PC_TO_MPC)` component-wise. This pins the FRAME (a rotated or bare-xyz seed fails here), not just a magnitude.
-- [ ] Test `SCENE_PLANETS radii` — Moon 1737, Jupiter 69911.
-- [ ] Test `planet positions are authored via SCALE_UNITS` — Jupiter's distance ≈ `5.2 * SCALE_UNITS.AU_TO_MPC` (assert the SCALE_UNITS relation, not a bare number).
-- [ ] `npm test -- sceneBodies` → green. Commit.
+- [x] Add `SCENE_STARS` (Sun + local map) + `SCENE_PLANETS`, all star positions via `raDecDistToCartesian(ra, dec, distPc * SCALE_UNITS.PC_TO_MPC)` and all planet positions via `SCALE_UNITS` (no inline Mpc magic numbers, no inline trig).
+- [x] Test `SCENE_STARS contains the Sun at the origin` — the Sun entry's `positionMpc` is `[0,0,0]` (each component ≈ 0, tight tolerance) and `radiusKm === 696340`.
+- [x] Test `Proxima sits ~1.301 pc from the Sun` — `hypot(...Proxima.positionMpc) ≈ 1.301 * SCALE_UNITS.PC_TO_MPC` (tight tolerance — this is the parsec-scale f64 anchor).
+- [x] Test `the local map covers the neighbourhood` — `SCENE_STARS.length >= 20`; every entry has a finite `positionMpc` (all three components) and a finite `absMag`; every `color` component is in `[0, 1]`.
+- [x] Test `named stars sit at their catalogued distances` — Alpha Cen `hypot(pos) ≈ 1.34 * SCALE_UNITS.PC_TO_MPC` and Sirius `hypot(pos) ≈ 2.64 * SCALE_UNITS.PC_TO_MPC` (spot checks vs. published values, loose tolerance ~0.02 pc).
+- [x] Test `star direction matches its RA/Dec through the shared conversion` — pick one star (e.g. Sirius, RA ≈ 101.287°, Dec ≈ −16.716°) and assert its stored `positionMpc` equals `raDecDistToCartesian(raDeg, decDeg, distPc * SCALE_UNITS.PC_TO_MPC)` component-wise. This pins the FRAME (a rotated or bare-xyz seed fails here), not just a magnitude.
+- [x] Test `SCENE_PLANETS radii` — Moon 1737, Jupiter 69911.
+- [x] Test `planet positions are authored via SCALE_UNITS` — Jupiter's distance ≈ `5.2 * SCALE_UNITS.AU_TO_MPC` (assert the SCALE_UNITS relation, not a bare number).
+- [x] `npm test -- sceneBodies` → green. Commit.
 
 ## Task 10 — `star` + `planet` source types + entries + registry append; seed into the store
 

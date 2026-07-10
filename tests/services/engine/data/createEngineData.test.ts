@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
+import { SCENE_STARS, SCENE_PLANETS } from '../../../../src/data/bodies/sceneBodies';
 
 describe('createEngineData', () => {
   it('still exposes galaxies + structures stores', () => {
@@ -11,9 +12,16 @@ describe('createEngineData', () => {
   it('seeds the Earth body at construction', () => {
     const d = createEngineData();
     expect(d.bodies.earth?.id).toBe('earth');
-    // Star/planet seeds are a later phase — the store stays otherwise empty.
-    expect(d.bodies.stars).toEqual([]);
-    expect(d.bodies.planets).toEqual([]);
+  });
+
+  it('seeds the local star map (SCENE_STARS) and Moon + Jupiter as planets at construction', () => {
+    // Seed-data-early: the body store is filled the moment it exists, not at a
+    // later wiring phase. Stars and planets flow in from their authored seed
+    // tables alongside Earth.
+    const d = createEngineData();
+    expect(d.bodies.stars).toEqual(SCENE_STARS);
+    expect(d.bodies.planets).toEqual(SCENE_PLANETS);
+    expect(d.bodies.planets.map((p) => p.id)).toEqual(['moon', 'jupiter']);
   });
 
   it('has no store for types whose status/state lives elsewhere', () => {

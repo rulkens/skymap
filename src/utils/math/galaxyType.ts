@@ -90,9 +90,11 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.DebugSpherical:
     case Source.MilkyWay:
     case Source.Flow:
+    case Source.Star:
+    case Source.Planet:
     case Source.Earth:
       // Non-galaxy catalog sources (structure markers, filaments, volumes,
-      // the Milky-Way + flow overlays, and body sources like Earth) have no
+      // the Milky-Way + flow overlays, and body sources like star/planet/Earth) have no
       // per-record photometry and no galaxy type. Reaching this branch
       // indicates the InfoCard is rendering a galaxy row for a
       // non-galaxy catalog pick / handle; route those through their own info
