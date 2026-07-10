@@ -48,6 +48,42 @@ struct SphereUniforms {
   mvp: mat4x4<f32>,
 };
 
+// ── TintedSphereUniforms ─────────────────────────────────────────────
+//
+// 'SphereUniforms' plus one solid colour — the uniform layout shared by
+// the star (emissive colour) and planet (albedo) renderers.  Both draw
+// the same unit-sphere mesh through 'clip_from_local' but need a single
+// per-draw RGB alongside the MVP; centralising the struct here (rather
+// than duplicating it in star/ and planet/) keeps the byte layout a
+// single source of truth across both vertex/fragment module pairs and
+// their CPU-side uploaders.
+//
+// Why not extend 'SphereUniforms' with a colour field?  WGSL has no
+// optional fields — the Earth and debug sphere genuinely bind a 64-byte
+// buffer, and silently growing the shared struct would force a dead
+// 16-byte tail onto every existing uploader.  A second named struct
+// keeps each renderer's buffer exactly as large as what its shaders
+// read.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset  0..63: mvp  (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75: tint (vec3<f32> — 16-byte ALIGNED, starting at the
+//                        already-aligned offset 64; 12 bytes of data)
+//   offset 76..79: implicit trailing pad — a struct's size rounds up
+//                  to its alignment (16), so 76 rounds to 80.
+//   total: 80 bytes.
+//
+// The CPU side therefore uploads 20 f32s: 16 for the mvp, 3 for the
+// tint, one zeroed pad float.  'tint' carries the star's spectral
+// emissive colour or the planet's albedo — both linear RGB, correct
+// for the rgba16float HDR foreground target.
+
+struct TintedSphereUniforms {
+  mvp: mat4x4<f32>,
+  tint: vec3<f32>,
+};
+
 // ── clip_from_local ──────────────────────────────────────────────────
 //
 // Transform a unit-sphere local-space position to homogeneous clip
