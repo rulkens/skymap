@@ -30,7 +30,6 @@ import package::points::io::PerVertex;
 import package::points::io::VSOut;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
-import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::colorIndex::ramp;
@@ -76,15 +75,6 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // is focused). See lib/focusUniforms.wesl for the math.
 @group(3) @binding(0) var<uniform> focus: FocusUniforms;
 
-// ── spike A/B toggle; delete when the quad path is retired ──────────────
-//
-// Pipeline-creation-time specialization (a WGSL overridable constant): the
-// JS side builds one pipeline per value so the live quad-vs-triangle perf
-// A/B compiles the dead branch out and pays zero runtime cost. Default
-// true so a pipeline that never sets it (the pick pipeline) gets the
-// triangle.
-override useTriangleBillboard: bool = true;
-
 // ─── vertex stage ─────────────────────────────────────────────────────
 //
 // The vertex shader runs once per (instance, vertex) pair.
@@ -102,14 +92,11 @@ fn vs(
   // shared 'worldToClip' helper from 'lib/camera.wesl'.
   let center = worldToClip(u.cam, p.position);
 
-  // Fetch the billboard corner for this vertex. Both shapes fully
-  // contain the unit UV disc the fragment's r-squared > 1 discard trims
-  // to, so the visible coverage is identical; the quad needs 6 vertices
-  // (spanning [-1, 1]^2), the triangle 3 (the equilateral around the
-  // disc, spanning [-sqrt(3), sqrt(3)] x [-1, 2]). Spike A/B toggle: the
-  // draw call's vertexCount must match the pipeline's overridable
-  // 'useTriangleBillboard' constant (6 for quad, 3 for triangle).
-  let corner = select(quadCorner(vi), triCorner(vi), useTriangleBillboard);
+  // Fetch the circumscribing-triangle corner for this vertex — the
+  // equilateral triangle around the unit UV circle, spanning
+  // [-sqrt(3), sqrt(3)] x [-1, 2]. The fragment's r-squared > 1 discard
+  // trims it back to the same disc a quad would show.
+  let corner = triCorner(vi);
 
   // ── Malmquist-bias gating (volume-limited mode) ──────────────────────────
   //

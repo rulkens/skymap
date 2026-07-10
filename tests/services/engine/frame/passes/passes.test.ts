@@ -549,8 +549,6 @@ const POINT_SPRITES_SETTINGS_STUB = {
     mode: BiasMode.None,
     absMagLimit: -19,
   },
-  // Spike A/B toggle: the layer reads debug.quadBillboards each draw.
-  debug: { quadBillboards: false },
 } as unknown as EngineState['settings'];
 
 describe('pointSpritesLayer.draw', () => {

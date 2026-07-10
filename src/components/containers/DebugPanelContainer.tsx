@@ -23,7 +23,6 @@ import { DebugPanel } from '../DebugPanel/DebugPanel';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectShowPickBuffer,
-  selectDebugQuadBillboards,
   selectShowDiskRadiusRing,
   selectDisabledPasses,
   selectHighlightFallback,
@@ -32,7 +31,6 @@ import {
 } from '../../state/settings/selectors';
 import {
   setShowPickBuffer,
-  setDebugQuadBillboards,
   setShowDiskRadiusRing,
   setHighlightFallback,
   setRealOnly,
@@ -57,7 +55,6 @@ function DebugPanelContainer({
   const dispatch = useAppDispatch();
 
   const showPickBuffer = useAppSelector(selectShowPickBuffer);
-  const quadBillboards = useAppSelector(selectDebugQuadBillboards);
   const showDiskRadiusRing = useAppSelector(selectShowDiskRadiusRing);
   const disabledPasses = useAppSelector(selectDisabledPasses);
   const highlightFallback = useAppSelector(selectHighlightFallback);
@@ -66,12 +63,6 @@ function DebugPanelContainer({
 
   const onShowPickBufferChange = useCallback(
     (enabled: boolean) => dispatch(setShowPickBuffer(enabled)),
-    [dispatch],
-  );
-
-  // Spike A/B toggle; delete when the quad path is retired.
-  const onQuadBillboardsChange = useCallback(
-    (enabled: boolean) => dispatch(setDebugQuadBillboards(enabled)),
     [dispatch],
   );
 
@@ -114,8 +105,6 @@ function DebugPanelContainer({
       onRealOnlyModeChange={onRealOnlyModeChange}
       showPickBuffer={showPickBuffer}
       onShowPickBufferChange={onShowPickBufferChange}
-      quadBillboards={quadBillboards}
-      onQuadBillboardsChange={onQuadBillboardsChange}
       showDiskRadiusRing={showDiskRadiusRing}
       onShowDiskRadiusRingChange={onShowDiskRadiusRingChange}
       flow={flow}

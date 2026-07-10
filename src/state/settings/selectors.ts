@@ -129,10 +129,6 @@ export const selectFlow = (state: RootState): FlowSettings => selectSettings(sta
 export const selectShowPickBuffer = (state: RootState): boolean =>
   selectSettings(state).debug.showPickBuffer;
 
-// Spike A/B toggle; delete when the quad path is retired.
-export const selectDebugQuadBillboards = (state: RootState): boolean =>
-  selectSettings(state).debug.quadBillboards;
-
 export const selectShowDiskRadiusRing = (state: RootState): boolean =>
   selectSettings(state).debug.showDiskRadiusRing;
 

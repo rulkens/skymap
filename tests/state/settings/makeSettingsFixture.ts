@@ -54,7 +54,6 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_PICK_BUFFER,
-  DEFAULT_QUAD_BILLBOARDS,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
@@ -96,7 +95,6 @@ export function makeSettingsFixture(
     labels: { focusedOnly: false },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
-      quadBillboards: DEFAULT_QUAD_BILLBOARDS,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       disabledPasses: {},
       clipPathInspect: {

@@ -165,13 +165,9 @@ describe('PointRenderer colour target', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    // Two pipelines — the triangle + quad specializations of the spike A/B
-    // toggle — both baked with the same colour target format.
-    expect(captured).toHaveLength(2);
-    for (const desc of captured) {
-      const target = Array.from(desc.fragment!.targets!)[0]!;
-      expect(target!.format).toBe('rgba16float');
-    }
+    expect(captured).toHaveLength(1);
+    const target = Array.from(captured[0]!.fragment!.targets!)[0]!;
+    expect(target!.format).toBe('rgba16float');
   });
 });
 
@@ -861,72 +857,6 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
 
     expect(calls).toContain('setPipeline');
     expect(calls).toContain('draw');
-  });
-
-  // Spike A/B toggle: `debugQuadBillboards` picks the quad pipeline +
-  // 6-vertex draw; its absence picks the triangle pipeline + 3-vertex draw.
-  // The vertexCount MUST match the bound pipeline's `useTriangleBillboard`
-  // specialization, so both halves are asserted together.
-  it('binds the quad pipeline and draws 6 vertices when debugQuadBillboards is true', async () => {
-    // Tag each pipeline by its label so setPipeline records which of the two
-    // spike specializations the draw bound.
-    const device = {
-      ...makeStubDevice(),
-      createRenderPipeline: (desc: GPURenderPipelineDescriptor) =>
-        ({
-          label: desc.label,
-          getBindGroupLayout: () => ({}) as unknown as GPUBindGroupLayout,
-        }) as unknown as GPURenderPipeline,
-    } as unknown as GPUDevice;
-
-    const renderer = createPointRenderer(
-      device,
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
-    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
-
-    const boundPipelines: (string | undefined)[] = [];
-    const drawArgs: [number, number | undefined][] = [];
-    const pass = {
-      setPipeline: (p: GPURenderPipeline) => boundPipelines.push((p as { label?: string }).label),
-      setBindGroup: () => {},
-      setVertexBuffer: () => {},
-      draw: (vertexCount: number, instanceCount?: number) =>
-        drawArgs.push([vertexCount, instanceCount]),
-    } as unknown as GPURenderPassEncoder;
-
-    const viewProj = new Float32Array(16) as unknown as Mat4;
-    const baseSettings = {
-      pointSizePx: 1,
-      brightness: 1,
-      selectedPacked: 0xffffffff >>> 0,
-      visibleSourceMask: 0xffffffff,
-      camPosWorld: [0, 0, 0] as [number, number, number],
-      pxPerRad: 1,
-      highlightFallback: false,
-      realOnlyMode: false,
-      biasMode: 0,
-      absMagLimit: 0,
-      depthFadeEnabled: false,
-      pxFadeStart: 0,
-      pxFadeEnd: 0,
-      focusBindGroup: FOCUS_BIND_GROUP,
-      fadeOpacityOf: () => 1,
-    };
-
-    renderer.draw(pass, viewProj, [800, 600], { ...baseSettings, debugQuadBillboards: true });
-    expect(boundPipelines).toEqual(['points-pipeline-quad']);
-    expect(drawArgs).toEqual([[6, 10]]);
-
-    // Flag absent → triangle pipeline + 3-vertex draw.
-    boundPipelines.length = 0;
-    drawArgs.length = 0;
-    renderer.draw(pass, viewProj, [800, 600], baseSettings);
-    expect(boundPipelines).toEqual(['points-pipeline-tri']);
-    expect(drawArgs).toEqual([[3, 10]]);
   });
 });
 
