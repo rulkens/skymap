@@ -12,6 +12,10 @@
 > at the end of the file for the rationale and the actual shape of the
 > shipped change.
 
+> **Superseded (2026-07-10):** the two-walks premise below no longer holds —
+> one shared walk now feeds both planners; see
+> [ADR 0009](../../../adrs/0009-unified-disk-planner-walk.md).
+
 ## Problem
 
 When the camera flies close enough to a famous galaxy that its curated
