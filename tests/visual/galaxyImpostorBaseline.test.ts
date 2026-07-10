@@ -1,11 +1,12 @@
 /**
  * Visual baseline — galaxy-impostor draw-call sequence.
  *
- * Drives the three impostor-side subsystems (galaxyAtlas +
- * proceduralDisk + texturedDisk) through one runFrame each, then
- * asserts the resulting `lastOutput` arrays hash to a recorded baseline.
- * Guards the per-galaxy emission order, the fade-alpha math, and the
- * atlas-slot bookkeeping against silent regressions.
+ * Drives the impostor-side subsystems (galaxyAtlas + proceduralDisk +
+ * texturedDisk) through the shared `diskPlannerWalk` — the same one call
+ * that drives both bodies in the engine frame loop — then asserts the
+ * resulting `lastOutput` arrays hash to a recorded baseline. Guards the
+ * per-galaxy emission order, the fade-alpha math, and the atlas-slot
+ * bookkeeping against silent regressions.
  *
  * ## NOTE on the synthetic frame clock
  *
@@ -22,6 +23,7 @@ import { Source } from '../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../../src/services/engine/subsystems/proceduralDiskSubsystem';
 import { createTexturedDiskSubsystem } from '../../src/services/engine/subsystems/texturedDiskSubsystem';
+import { createDiskPlannerWalk } from '../../src/services/engine/subsystems/diskPlannerWalk';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 
@@ -111,29 +113,35 @@ describe('galaxy-impostor visual baseline', () => {
     try {
       const device = makeFakeDevice();
       const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
-      const procSys = createProceduralDiskSubsystem({ decimationFactor: 1 });
+      const procSys = createProceduralDiskSubsystem();
       const texSys = createTexturedDiskSubsystem({
         device,
         atlas,
         fetcher: async () =>
           ({ width: 128, height: 128, close: () => {} }) as unknown as ImageBitmap,
-        decimationFactor: 1,
       });
+      // decimationFactor 1 so a single frame visits every row — this baseline
+      // asserts the full emission set, not a decimated window.
+      const walk = createDiskPlannerWalk({ decimationFactor: 1 });
 
       const cam = makeCam();
       const catalogs = new Map([[Source.SDSS, makeCloud(8)]]);
       const pxPerRad = 720 / (2 * Math.tan(cam.fovYRad / 2));
 
+      // One shared walk drives both bodies per frame — the same call the engine
+      // frame loop makes. `nowFakeAtFrame` is captured per frame so the textured
+      // body's stamped clock matches the advancing synthetic clock.
+      const driveFrame = (nowMs: number): void => {
+        const sharedInput = { cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad };
+        walk.runFrame(
+          sharedInput,
+          procSys.beginFrame(sharedInput),
+          texSys.beginFrame({ ...sharedInput, famousMeta: [], nowMs }),
+        );
+      };
+
       // Frame 1: kick off fetches; bitmaps land via microtask drain.
-      procSys.runFrame({ cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad });
-      texSys.runFrame({
-        cam,
-        catalogs,
-        visibleSourceMask: 0xffffffff,
-        pxPerRad,
-        famousMeta: [],
-        nowMs: nowFake,
-      });
+      driveFrame(nowFake);
       await new Promise((r) => setTimeout(r, 0));
 
       // Advance the frame clock by 50 ms — the arrival stamp quantized to
@@ -142,15 +150,9 @@ describe('galaxy-impostor visual baseline', () => {
       nowFake += 50;
 
       // Frame 2: bitmaps ready; disk path fires.
-      const procOut = procSys.runFrame({ cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad });
-      const texOut = texSys.runFrame({
-        cam,
-        catalogs,
-        visibleSourceMask: 0xffffffff,
-        pxPerRad,
-        famousMeta: [],
-        nowMs: nowFake,
-      });
+      driveFrame(nowFake);
+      const procOut = procSys.lastOutput;
+      const texOut = texSys.lastOutput;
 
       const summary = {
         procDisks: { count: procOut.instances.length, hash: hashInstances(procOut.instances) },

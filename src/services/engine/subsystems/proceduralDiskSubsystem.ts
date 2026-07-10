@@ -1,30 +1,27 @@
 /**
- * proceduralDiskSubsystem — LOD-1 per-frame planner.
+ * proceduralDiskSubsystem — LOD-1 per-frame planner body.
  *
- * Owns the catalog walk, apparent-size + finite-orientation gating,
- * stride decimation, per-source sticky map, back-to-front sort, and
- * the `ProceduralDiskInstance[]` output array.
+ * The shared catalog walk ('diskPlannerWalk.ts') owns the loop, the stride
+ * cursor, and the per-row geometry (camDist, px); this subsystem owns
+ * everything LOD-1-specific: the apparent-size + finite-orientation gate,
+ * the per-source sticky map, the famous-WebP crossfade-out, the
+ * back-to-front sort, and the 'ProceduralDiskInstance[]' output array.
+ * 'beginFrame(input)' returns the DiskRowVisitor the walk drives; the
+ * visitor's endFrame stashes the sorted result on 'lastOutput'.
  *
  * No GPU work: reads catalog buffers and emits a sorted array;
- * `proceduralDisksPass` consumes it next frame. Shares the per-row
- * helpers in `utils/render/disk/` with the LOD-2 textured planner.
+ * 'proceduralDisksPass' consumes it next frame. Shares the per-row
+ * helpers in 'utils/render/disk/' with the LOD-2 textured body.
  *
- * This planner and the textured one currently walk the catalogs
- * separately (own stride cursor each); folding them into one shared walk
- * is the deferred perf item `backlog/2026-06-30-unify-disk-planner-walks.md`.
- *
- * The LOD-aligned fade constants live in `data/galaxyLodBands.ts` and the
- * pure emission helper `maybeEmitProceduralDisk` in `utils/render/disk/`;
+ * The LOD-aligned fade constants live in 'data/galaxyLodBands.ts' and the
+ * pure emission helper 'maybeEmitProceduralDisk' in 'utils/render/disk/';
  * this planner imports both.
  */
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
 import { cartesianToRaDec, smoothstep } from '../../../utils/math';
-import { apparentSizePxAtDistance } from '../../../utils/render/disk/apparentSizePxAtDistance';
-import { maxVisibleCamDistSq } from '../../../utils/render/disk/maxVisibleCamDistSq';
 import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
-import { strideWindow } from '../../../utils/render/disk/strideWindow';
 import { purgeStrideWindow } from '../../../utils/render/disk/purgeStrideWindow';
 import { byDistanceToCamera } from '../../../utils/render/disk/byDistanceToCamera';
 import { galaxyCacheKey } from '../../../utils/render/disk/galaxyCacheKey';
@@ -36,6 +33,7 @@ import {
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../../data/galaxyLodBands';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
+import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
 import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type { SourceType } from '../../../@types/data/SourceType';
@@ -46,8 +44,6 @@ import type {
 } from '../../../@types/engine/subsystems/ProceduralDiskSubsystem';
 
 export type ProceduralDiskDeps = {
-  /** Defaults to 8.  Tests pass 1 to disable decimation. */
-  readonly decimationFactor?: number;
   /**
    * Optional. Drives the famous-WebP crossfade-out: when a famous galaxy's
    * curated WebP is loaded in the atlas, that instance's `procFadeOut` ramps
@@ -59,72 +55,50 @@ export type ProceduralDiskDeps = {
 export function createProceduralDiskSubsystem(
   deps: ProceduralDiskDeps = {},
 ): ProceduralDiskSubsystem {
-  const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
   const atlas = deps.atlas;
 
   const stickyProcDisksBySource = new Map<SourceType, Map<number, ProceduralDiskInstance>>();
-  const strideStartBySource = new Map<SourceType, number>();
 
   // Initialised to a frozen empty output so consumers that read
-  // `lastOutput` before the first runFrame see valid data.
+  // `lastOutput` before the first frame see valid data.
   let lastOutput: ProceduralDiskFrameOutput = { instances: [] };
 
-  function runFrame(input: ProceduralDiskFrameInput): ProceduralDiskFrameOutput {
-    const { cam, catalogs, visibleSourceMask, pxPerRad } = input;
+  function stickyFor(source: SourceType): Map<number, ProceduralDiskInstance> {
+    let sticky = stickyProcDisksBySource.get(source);
+    if (!sticky) {
+      sticky = new Map();
+      stickyProcDisksBySource.set(source, sticky);
+    }
+    return sticky;
+  }
 
-    // Below PROCEDURAL_DISK_FADE_START_PX a galaxy doesn't enter the loop body
-    // at all (the LOD-1 gate).  The squared-distance early-out uses this band's
-    // lower edge as the px threshold so we don't skip anything that could emit.
-    const maxCamDistSqUpper = maxVisibleCamDistSq(PROCEDURAL_DISK_FADE_START_PX, pxPerRad);
-
-    const cx = cam.position[0];
-    const cy = cam.position[1];
-    const cz = cam.position[2];
-
+  function beginFrame(input: ProceduralDiskFrameInput): DiskRowVisitor {
+    const camPosition = input.cam.position;
     const proceduralDisks: ProceduralDiskInstance[] = [];
 
-    for (const [source, catalog] of catalogs.entries()) {
-      let stickyProcDisks = stickyProcDisksBySource.get(source);
-      if (!stickyProcDisks) {
-        stickyProcDisks = new Map();
-        stickyProcDisksBySource.set(source, stickyProcDisks);
-      }
+    // Hoisted per source by beginSource so onRow does no map lookup — the
+    // walk guarantees beginSource precedes every onRow for that source.
+    let stickyProcDisks: Map<number, ProceduralDiskInstance> = new Map();
 
-      if (((visibleSourceMask >> source) & 1) === 0) {
-        stickyProcDisks.clear();
-        continue;
-      }
+    const visitor: DiskRowVisitor = {
+      onSourceHidden(source) {
+        stickyFor(source).clear();
+      },
 
-      const positions = catalog.positions;
-      const count = catalog.count;
-      const { safeStart, end, nextStart } = strideWindow(
-        count,
-        decimationFactor,
-        strideStartBySource.get(source) ?? 0,
-      );
+      beginSource(source, safeStart, end) {
+        stickyProcDisks = stickyFor(source);
+        // Purge sticky entries inside the current stride window — the
+        // row visits are authoritative for those indices.
+        purgeStrideWindow(stickyProcDisks, safeStart, end);
+      },
 
-      // Purge sticky entries inside the current stride window — the
-      // inner loop is authoritative for those indices.
-      purgeStrideWindow(stickyProcDisks, safeStart, end);
-
-      for (let i = safeStart; i < end; i++) {
-        const i3 = i * 3;
-        const x = positions[i3 + 0]!;
-        const y = positions[i3 + 1]!;
-        const z = positions[i3 + 2]!;
-
-        const dx = cx - x;
-        const dy = cy - y;
-        const dz = cz - z;
-        const camDistSq = dx * dx + dy * dy + dz * dz;
-        if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
+      onRow(source, catalog, i, x, y, z, _camDist, px) {
+        // The LOD-1 gate: below the fade start the point sprite carries and
+        // the disk is skipped.  The walk applies no px gate — this threshold
+        // is the body's own policy.
+        if (px <= PROCEDURAL_DISK_FADE_START_PX) return;
 
         const dKpcRow = catalog.diameterKpc[i]!;
-        const camDist = Math.sqrt(camDistSq);
-        const px = apparentSizePxAtDistance(dKpcRow, camDist, pxPerRad);
-
-        if (px <= PROCEDURAL_DISK_FADE_START_PX) continue;
-
         const sizeWorldMpc = diskQuadExtentMpc(dKpcRow);
         const ar = catalog.axisRatio[i]!;
         const pa = catalog.positionAngleDeg[i]!;
@@ -177,29 +151,32 @@ export function createProceduralDiskSubsystem(
           }
           stickyProcDisks.set(i, final);
         }
-      }
+      },
 
-      strideStartBySource.set(source, nextStart);
+      endSource(source) {
+        for (const p of stickyFor(source).values()) proceduralDisks.push(p);
+      },
 
-      for (const p of stickyProcDisks.values()) proceduralDisks.push(p);
-    }
-
-    // Back-to-front sort for correct alpha compositing — same idiom
-    // as texturedDiskSubsystem's disk sort.
-    proceduralDisks.sort(byDistanceToCamera(cam.position));
-
-    lastOutput = { instances: proceduralDisks };
-    return lastOutput;
+      endFrame() {
+        // Back-to-front sort for correct alpha compositing — same idiom
+        // as the textured body's disk sort.
+        proceduralDisks.sort(byDistanceToCamera(camPosition));
+        lastOutput = { instances: proceduralDisks };
+      },
+    };
+    return visitor;
   }
 
+  // Calling beginFrame after destroy is safe: all state here is plain maps
+  // and arrays with no external resources, so a post-destroy frame simply
+  // starts accumulating into fresh (empty) state again.
   function destroy(): void {
     stickyProcDisksBySource.clear();
-    strideStartBySource.clear();
     lastOutput = { instances: [] };
   }
 
   const subsystem: ProceduralDiskSubsystem = {
-    runFrame,
+    beginFrame,
     get lastOutput() {
       return lastOutput;
     },

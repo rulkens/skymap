@@ -45,7 +45,6 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     renderer: { draw: vi.fn() } as any,
     renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
     texturedDisks: {
-      runFrame: vi.fn(),
       lastOutput: { quads: [], disks: [] },
       hasInFlightWork: () => false,
     } as any,

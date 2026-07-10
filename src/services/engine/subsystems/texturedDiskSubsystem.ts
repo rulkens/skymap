@@ -1,10 +1,14 @@
 /**
- * texturedDiskSubsystem — LOD-2 per-frame planner.
+ * texturedDiskSubsystem — LOD-2 per-frame planner body.
  *
- * Walks the catalogs, applies the px ≥ 24 gate, allocates atlas slots,
- * schedules fetches, computes load-fade × distance-fade, sorts back-to-front,
- * and emits the sorted disk array. Shares the per-row helpers in
- * `utils/render/disk/` with the LOD-1 procedural planner.
+ * The shared catalog walk ('diskPlannerWalk.ts') owns the loop, the stride
+ * cursor, and the per-row geometry (camDist, px); this subsystem owns
+ * everything LOD-2-specific: the px ≥ 24 gate (famous rows exempt), atlas
+ * slot allocation + fetch scheduling, load-fade × distance-fade, the hi-res
+ * LOD-3 fold, the per-source sticky map, the back-to-front sort, and the
+ * 'DiskInstance[]' output array. 'beginFrame(input)' returns the
+ * DiskRowVisitor the walk drives; the visitor's endFrame stashes the sorted
+ * result on 'lastOutput'.
  *
  * Disks-only (no screen-aligned quad fallback): every encoded galaxy has finite
  * orientation via the build-pipeline fallback, so the `Number.isFinite` checks
@@ -18,6 +22,7 @@
 import { Source } from '../../../data/sources';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
+import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
 import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
 import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
 import type { SourceType } from '../../../@types/data/SourceType';
@@ -28,11 +33,8 @@ import type {
 } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
 import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
 import { cartesianToRaDec, smoothstep } from '../../../utils/math';
-import { apparentSizePxAtDistance } from '../../../utils/render/disk/apparentSizePxAtDistance';
-import { maxVisibleCamDistSq } from '../../../utils/render/disk/maxVisibleCamDistSq';
 import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
 import { loadFadeAlpha } from '../../../utils/render/disk/loadFadeAlpha';
-import { strideWindow } from '../../../utils/render/disk/strideWindow';
 import { purgeStrideWindow } from '../../../utils/render/disk/purgeStrideWindow';
 import { byDistanceToCamera } from '../../../utils/render/disk/byDistanceToCamera';
 import { galaxyCacheKey } from '../../../utils/render/disk/galaxyCacheKey';
@@ -56,7 +58,6 @@ export type TexturedDiskDeps = {
     dec: number;
     famousId?: string;
   }) => Promise<ImageBitmap | null>;
-  readonly decimationFactor?: number;
   /**
    * Optional LOD-3 source. When provided, the planner folds each famous
    * galaxy's `hiResLayerIdx` + `hiResCrossfadeAlpha` into its `DiskInstance`;
@@ -66,6 +67,19 @@ export type TexturedDiskDeps = {
   readonly hiResFamous?: HiResFamousSubsystem;
 };
 
+/**
+ * A visitor that ignores every walk callback. Returned by `beginFrame` after
+ * `destroy()` so a post-teardown frame does no work and leaves `lastOutput`
+ * untouched.
+ */
+const NOOP_ROW_VISITOR: DiskRowVisitor = {
+  onSourceHidden() {},
+  beginSource() {},
+  onRow() {},
+  endSource() {},
+  endFrame() {},
+};
+
 export function createTexturedDiskSubsystem(
   deps: TexturedDiskDeps,
 ): TexturedDiskSubsystemWithTestSeam {
@@ -73,7 +87,6 @@ export function createTexturedDiskSubsystem(
   // arrivals wake the loop via the atlas subsystem's onResult.
   const { atlas } = deps;
   const fetcher = deps.fetcher ?? fetchGalaxyBitmap;
-  const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
   // Mutable binding rather than `const` so `setHiResFamous(...)` can
   // swap the planner reference on tier change without rebuilding the
   // whole subsystem (which would discard per-key load-fade timestamps
@@ -91,7 +104,6 @@ export function createTexturedDiskSubsystem(
   });
 
   const stickyDisksBySource = new Map<SourceType, Map<number, DiskInstance>>();
-  const strideStartBySource = new Map<SourceType, number>();
 
   let frameCounter = 0;
   let destroyed = false;
@@ -105,60 +117,47 @@ export function createTexturedDiskSubsystem(
 
   let lastOutput: TexturedDiskFrameOutput = { disks: [] };
 
-  function runFrame(input: TexturedDiskFrameInput): TexturedDiskFrameOutput {
-    if (destroyed) return lastOutput;
+  function stickyFor(source: SourceType): Map<number, DiskInstance> {
+    let sticky = stickyDisksBySource.get(source);
+    if (!sticky) {
+      sticky = new Map();
+      stickyDisksBySource.set(source, sticky);
+    }
+    return sticky;
+  }
 
-    const { cam, catalogs, visibleSourceMask, pxPerRad, famousMeta, nowMs } = input;
+  function beginFrame(input: TexturedDiskFrameInput): DiskRowVisitor {
+    // Post-destroy frames start no work and leave lastOutput untouched — the
+    // walk drives a no-op visitor and returns the last good result.
+    if (destroyed) return NOOP_ROW_VISITOR;
+
+    const { famousMeta, nowMs } = input;
+    const camPosition = input.cam.position;
     frameCounter++;
     lastFrameNowMs = nowMs;
 
-    const maxCamDistSqUpper = maxVisibleCamDistSq(APPARENT_SIZE_THRESHOLD_PX, pxPerRad);
-
-    const cx = cam.position[0];
-    const cy = cam.position[1];
-    const cz = cam.position[2];
-
     const disks: DiskInstance[] = [];
 
-    for (const [source, catalog] of catalogs.entries()) {
-      let stickyDisks = stickyDisksBySource.get(source);
-      if (!stickyDisks) {
-        stickyDisks = new Map();
-        stickyDisksBySource.set(source, stickyDisks);
-      }
+    // Hoisted per source by beginSource so onRow does no map lookup — the
+    // walk guarantees beginSource precedes every onRow for that source.
+    let stickyDisks: Map<number, DiskInstance> = new Map();
 
-      if (((visibleSourceMask >> source) & 1) === 0) {
-        stickyDisks.clear();
-        continue;
-      }
+    const visitor: DiskRowVisitor = {
+      onSourceHidden(source) {
+        stickyFor(source).clear();
+      },
 
-      const positions = catalog.positions;
-      const count = catalog.count;
-      const { safeStart, end, nextStart } = strideWindow(
-        count,
-        decimationFactor,
-        strideStartBySource.get(source) ?? 0,
-      );
-      purgeStrideWindow(stickyDisks, safeStart, end);
+      beginSource(source, safeStart, end) {
+        stickyDisks = stickyFor(source);
+        // Purge sticky entries inside the current stride window — the
+        // row visits are authoritative for those indices.
+        purgeStrideWindow(stickyDisks, safeStart, end);
+      },
 
-      for (let i = safeStart; i < end; i++) {
-        const i3 = i * 3;
-        const x = positions[i3 + 0]!;
-        const y = positions[i3 + 1]!;
-        const z = positions[i3 + 2]!;
-
-        const dx = cx - x;
-        const dy = cy - y;
-        const dz = cz - z;
-        const camDistSq = dx * dx + dy * dy + dz * dz;
-        if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
+      onRow(source, catalog, i, x, y, z, _camDist, px) {
+        if (source !== Source.FamousGalaxy && px < APPARENT_SIZE_THRESHOLD_PX) return;
 
         const dKpcRow = catalog.diameterKpc[i]!;
-        const camDist = Math.sqrt(camDistSq);
-        const px = apparentSizePxAtDistance(dKpcRow, camDist, pxPerRad);
-
-        if (source !== Source.FamousGalaxy && px < APPARENT_SIZE_THRESHOLD_PX) continue;
-
         const sizeWorldMpc = diskQuadExtentMpc(dKpcRow);
         const ar = catalog.axisRatio[i]!;
         const pa = catalog.positionAngleDeg[i]!;
@@ -177,9 +176,9 @@ export function createTexturedDiskSubsystem(
         const key = galaxyCacheKey(ra, dec);
 
         const slot = atlas.allocate(key, frameCounter);
-        if (slot === null) continue;
+        if (slot === null) return;
 
-        if (atlas.isFailed(key)) continue;
+        if (atlas.isFailed(key)) return;
 
         if (!atlas.isLoaded(key)) {
           const sourceForFetch = source;
@@ -211,7 +210,7 @@ export function createTexturedDiskSubsystem(
               bitmap.close();
             },
           });
-          continue;
+          return;
         }
 
         const [u0, v0, u1, v1] = atlas.slotUv(slot);
@@ -255,17 +254,18 @@ export function createTexturedDiskSubsystem(
             nucleusOffset: placement.nucleusOffset,
           });
         }
-      }
+      },
 
-      strideStartBySource.set(source, nextStart);
+      endSource(source) {
+        for (const d of stickyFor(source).values()) disks.push(d);
+      },
 
-      for (const d of stickyDisks.values()) disks.push(d);
-    }
-
-    disks.sort(byDistanceToCamera(cam.position));
-
-    lastOutput = { disks };
-    return lastOutput;
+      endFrame() {
+        disks.sort(byDistanceToCamera(camPosition));
+        lastOutput = { disks };
+      },
+    };
+    return visitor;
   }
 
   function hasInFlightWork(): boolean {
@@ -286,7 +286,6 @@ export function createTexturedDiskSubsystem(
     atlas.setEvictHandler(undefined);
     bitmapReadyTime.clear();
     stickyDisksBySource.clear();
-    strideStartBySource.clear();
     lastOutput = { disks: [] };
   }
 
@@ -295,7 +294,7 @@ export function createTexturedDiskSubsystem(
   }
 
   const subsystem: TexturedDiskSubsystemWithTestSeam = {
-    runFrame,
+    beginFrame,
     get lastOutput() {
       return lastOutput;
     },

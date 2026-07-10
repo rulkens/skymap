@@ -2,10 +2,10 @@
  * proceduralDisksLayer — LOD-1 procedural disk impostors.
  *
  * Reads `state.settings.thumbnails.enabled` as the master gate, then
- * `state.subsystems.proceduralDisks.lastOutput.instances` (populated
- * by the subsystem's `runFrame` earlier in the same frame, called from
- * `runFrame.ts` before the render-step loop opens), and issues one draw
- * call against `state.gpu.proceduralDiskRenderer`.
+ * `state.subsystems.proceduralDisks.lastOutput.instances` (populated by
+ * the shared `diskPlannerWalk` driving this subsystem's visitor earlier in
+ * the same frame, called from `runFrame.ts` before the render-step loop
+ * opens), and issues one draw call against `state.gpu.proceduralDiskRenderer`.
  *
  * ### Why read from lastOutput instead of running the planner here
  *
