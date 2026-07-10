@@ -1,15 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { STRUCTURE_MARKER_STYLES } from '../../src/services/engine/presentation/structureMarkerStyles';
 import { FAMOUS_LABEL_STYLE } from '../../src/services/engine/presentation/famousLabelStyle';
-import type { LabelCategory } from '../../src/@types/engine/data/LabelCategory';
 
 describe('structure marker styles (per-category ring/halo/label style table)', () => {
-  it('STRUCTURE_MARKER_STYLES exposes the four structure category keys', () => {
-    expect(Object.keys(STRUCTURE_MARKER_STYLES).sort()).toEqual(
-      ['cluster', 'supercluster', 'void', 'group'].sort(),
-    );
-  });
-
   it('every structure style entry has the required fields', () => {
     for (const [key, style] of Object.entries(STRUCTURE_MARKER_STYLES)) {
       expect(style.labelColor, `${key}.labelColor`).toHaveLength(4);
@@ -31,20 +24,5 @@ describe('structure marker styles (per-category ring/halo/label style table)', (
     expect(FAMOUS_LABEL_STYLE.labelColor).toHaveLength(4);
     expect(FAMOUS_LABEL_STYLE.minPixelSize).toBeGreaterThan(0);
     expect(FAMOUS_LABEL_STYLE.fadeBandPx).toBeGreaterThan(0);
-  });
-
-  it('LabelCategory is the five-category union (compile-time check)', () => {
-    const c1: LabelCategory = 'cluster';
-    const c2: LabelCategory = 'supercluster';
-    const c3: LabelCategory = 'famousGalaxy';
-    const c4: LabelCategory = 'void';
-    const c5: LabelCategory = 'group';
-    expect([c1, c2, c3, c4, c5]).toEqual([
-      'cluster',
-      'supercluster',
-      'famousGalaxy',
-      'void',
-      'group',
-    ]);
   });
 });

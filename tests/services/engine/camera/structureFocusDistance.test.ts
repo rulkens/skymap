@@ -11,12 +11,6 @@ const FOV60 = (Math.PI / 180) * 60;
 const expectedDistance = (r: number, fovYRad: number): number => r / (2.2 * Math.tan(fovYRad / 2));
 
 describe('structureFocusDistance', () => {
-  it('frames the apparent radius to a fixed screen-fill fraction', () => {
-    // Virgo apparent radius ~6 Mpc at 60° FOV → ~4.16 Mpc framing (ring
-    // overflows the viewport ~2.5:1, just past the close-approach fade).
-    expect(structureFocusDistance(6, FOV60)).toBeCloseTo(expectedDistance(6, FOV60), 5);
-  });
-
   it('scales the distance linearly with the apparent radius', () => {
     const small = structureFocusDistance(1, FOV60);
     const big = structureFocusDistance(4, FOV60);

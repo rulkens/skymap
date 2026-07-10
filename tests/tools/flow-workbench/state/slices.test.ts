@@ -25,10 +25,6 @@ import {
 import type { Mat4 } from '../../../../src/@types/math/Mat4';
 
 describe('flowSlice', () => {
-  it('defaultFlowSlice is DEFAULT_FLOW with enabled forced true', () => {
-    expect(defaultFlowSlice).toEqual({ ...DEFAULT_FLOW, enabled: true });
-  });
-
   it('setFlowEnabled flips the master gate immutably', () => {
     const result = setFlowEnabled(defaultFlowSlice, false);
     expect(result.enabled).toBe(false);

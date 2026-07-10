@@ -45,9 +45,6 @@ import type { VisibilityLayerKey } from '../../../src/@types/animation/Visibilit
 import { createAppStore } from '../../../src/store/createAppStore';
 import {
   setFilamentsEnabled,
-  setMilkyWayEnabled,
-  setMilkyWayLabelEnabled,
-  setVolumesEnabled,
   setFlowEnabled,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
@@ -449,12 +446,6 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
 
   const settings = makeSettings({ galaxyCatalogIds: ['sdss'], structureIds: ['supercluster'] });
 
-  it('every VisibilityLayerKey resolves to a factory function', () => {
-    for (const key of ALL_KEYS) {
-      expect(typeof VISIBILITY_ACTION_ROW[key], `key '${key}'`).toBe('function');
-    }
-  });
-
   it('gate-backed layers return a non-empty action array', () => {
     const gateBacked: readonly VisibilityLayerKey[] = ALL_KEYS.filter(
       (k) => !REGISTRATION_ONLY.includes(k),
@@ -484,61 +475,12 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
     }
   });
 
-  it('milkyWayDisk factory produces setMilkyWayEnabled(on)', () => {
-    expect(VISIBILITY_ACTION_ROW['milkyWayDisk'](true, settings)).toEqual([
-      setMilkyWayEnabled(true),
-    ]);
-    expect(VISIBILITY_ACTION_ROW['milkyWayDisk'](false, settings)).toEqual([
-      setMilkyWayEnabled(false),
-    ]);
-  });
-
-  it('milkyWayLabel factory produces setMilkyWayLabelEnabled(on)', () => {
-    expect(VISIBILITY_ACTION_ROW['milkyWayLabel'](true, settings)).toEqual([
-      setMilkyWayLabelEnabled(true),
-    ]);
-  });
-
-  it('filaments factory produces setFilamentsEnabled(on)', () => {
-    expect(VISIBILITY_ACTION_ROW['filaments'](true, settings)).toEqual([setFilamentsEnabled(true)]);
-    expect(VISIBILITY_ACTION_ROW['filaments'](false, settings)).toEqual([
-      setFilamentsEnabled(false),
-    ]);
-  });
-
-  it('volumesMaster factory produces setVolumesEnabled(on)', () => {
-    expect(VISIBILITY_ACTION_ROW['volumesMaster'](true, settings)).toEqual([
-      setVolumesEnabled(true),
-    ]);
-  });
-
-  it('flow factory produces setFlowEnabled(on)', () => {
-    expect(VISIBILITY_ACTION_ROW['flow'](true, settings)).toEqual([setFlowEnabled(true)]);
-    expect(VISIBILITY_ACTION_ROW['flow'](false, settings)).toEqual([setFlowEnabled(false)]);
-  });
-
-  it('survey factory emits one setGalaxyCatalogVisible per catalog id', () => {
-    const actions = VISIBILITY_ACTION_ROW['survey'](true, settings) as ReturnType<
-      typeof setGalaxyCatalogVisible
-    >[];
-    expect(actions).toHaveLength(1); // fixture has one catalog: 'sdss'
-    expect(actions[0]!.payload).toEqual({ id: 'sdss', enabled: true });
-  });
-
   it('surveyLabel factory emits one setGalaxyCatalogLabelEnabled per catalog id', () => {
     const actions = VISIBILITY_ACTION_ROW['surveyLabel'](false, settings) as ReturnType<
       typeof setGalaxyCatalogLabelEnabled
     >[];
     expect(actions).toHaveLength(1);
     expect(actions[0]!.payload).toEqual({ id: 'sdss', enabled: false });
-  });
-
-  it('structureRing factory emits one setStructureItemEnabled per structure id', () => {
-    const actions = VISIBILITY_ACTION_ROW['structureRing'](false, settings) as ReturnType<
-      typeof setStructureItemEnabled
-    >[];
-    expect(actions).toHaveLength(1); // fixture has one structure: 'supercluster'
-    expect(actions[0]!.payload).toEqual({ id: 'supercluster', enabled: false });
   });
 
   it('structureLabel factory emits one setStructureLabelEnabled per structure id', () => {

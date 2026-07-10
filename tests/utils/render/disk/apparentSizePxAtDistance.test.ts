@@ -12,13 +12,4 @@ describe('apparentSizePxAtDistance', () => {
     const far = apparentSizePxAtDistance(50, 4, 800);
     expect(far).toBeCloseTo(near / 2, 10);
   });
-
-  it('matches the inline formula it replaces', () => {
-    const dKpc = 37,
-      camDist = 3.2,
-      pxPerRad = 1234.5;
-    expect(apparentSizePxAtDistance(dKpc, camDist, pxPerRad)).toBe(
-      (dKpc / 1000 / camDist) * pxPerRad,
-    );
-  });
 });

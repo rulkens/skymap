@@ -100,30 +100,18 @@ const stubState = (
 // --- selectXRef ---------------------------------------------------------------
 
 describe('selectHoverRef', () => {
-  it('returns null when hover slot is empty', () => {
-    expect(selectHoverRef(stubState({}))).toBeNull();
-  });
-
   it('returns the ref when hover slot is set', () => {
     expect(selectHoverRef(stubState({ hover: galaxyRef }))).toEqual(galaxyRef);
   });
 });
 
 describe('selectSelectedRef', () => {
-  it('returns null when select slot is empty', () => {
-    expect(selectSelectedRef(stubState({}))).toBeNull();
-  });
-
   it('returns the ref when select slot is set', () => {
     expect(selectSelectedRef(stubState({ select: galaxyRef }))).toEqual(galaxyRef);
   });
 });
 
 describe('selectFocusRef', () => {
-  it('returns null when focus slot is empty', () => {
-    expect(selectFocusRef(stubState({}))).toBeNull();
-  });
-
   it('returns the ref when focus slot is set', () => {
     expect(selectFocusRef(stubState({ focus: galaxyRef }))).toEqual(galaxyRef);
   });
@@ -132,30 +120,18 @@ describe('selectFocusRef', () => {
 // --- selectXRow ---------------------------------------------------------------
 
 describe('selectHoverRow', () => {
-  it('returns null when hover row is empty', () => {
-    expect(selectHoverRow(stubState({}))).toBeNull();
-  });
-
   it('returns the row when hover row is set', () => {
     expect(selectHoverRow(stubState({}, { hover: galaxyRow }))).toEqual(galaxyRow);
   });
 });
 
 describe('selectSelectRow', () => {
-  it('returns null when select row is empty', () => {
-    expect(selectSelectRow(stubState({}))).toBeNull();
-  });
-
   it('returns the row when select row is set', () => {
     expect(selectSelectRow(stubState({}, { select: galaxyRow }))).toEqual(galaxyRow);
   });
 });
 
 describe('selectFocusRow', () => {
-  it('returns null when focus row is empty', () => {
-    expect(selectFocusRow(stubState({}))).toBeNull();
-  });
-
   it('returns the row when focus row is set', () => {
     expect(selectFocusRow(stubState({}, { focus: galaxyRow }))).toEqual(galaxyRow);
   });

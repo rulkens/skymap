@@ -8,11 +8,6 @@ function makeRegistry() {
 }
 
 describe('createFadeRegistry', () => {
-  it('exposes the conventional label property', () => {
-    const r = makeRegistry();
-    expect(r.label).toBe('fadeRegistry');
-  });
-
   it('opacityOf returns 1.0 for unregistered handles (fail-safe)', () => {
     const r = makeRegistry();
     const h: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };

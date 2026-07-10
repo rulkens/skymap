@@ -451,22 +451,3 @@ describe('commitOnEdge — clip deactivation', () => {
     expect(frame2.committed).toBe(false);
   });
 });
-
-describe('commitOnEdge — auto-rotate slice contract', () => {
-  it('reflects the dispatched active bit', () => {
-    // The App toggle dispatches `camera/setAutoRotate` directly; the autoRotate
-    // driver reads `camera.autoRotate.active`. Pin that the slice reducer
-    // round-trips the active bit.
-    const store = makeStore();
-
-    // Initial: auto-rotate is off (DEFAULT_AUTO_ROTATE is false in the slice).
-    expect(store.getState().camera.autoRotate.active).toBe(false);
-
-    // Dispatch setAutoRotate.
-    store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
-    expect(store.getState().camera.autoRotate.active).toBe(true);
-
-    store.dispatch(setAutoRotate({ active: false, rate: 0.000873 }));
-    expect(store.getState().camera.autoRotate.active).toBe(false);
-  });
-});

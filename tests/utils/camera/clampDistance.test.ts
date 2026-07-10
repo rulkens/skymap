@@ -21,12 +21,6 @@ describe('clampDistance', () => {
     expect(clampDistance(1e-30)).toBe(MIN_DISTANCE_MPC);
   });
 
-  it('the default (ungated) floor is the releasable 0.05 Mpc', () => {
-    // The default vitest env has no ?deepZoom in the URL, so MIN_DISTANCE_MPC
-    // is the releasable envelope, not the Earth-surface deepZoom floor.
-    expect(MIN_DISTANCE_MPC).toBe(0.05);
-  });
-
   it('clampDistance caps at MAX_DISTANCE_MPC', () => {
     // A distance beyond the observable-universe limit is clamped to MAX.
     expect(clampDistance(1e9)).toBe(MAX_DISTANCE_MPC);

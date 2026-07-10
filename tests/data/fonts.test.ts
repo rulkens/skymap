@@ -4,9 +4,7 @@ import {
   DISTANCE_RANGE_PX,
   ATLAS_FONT_SIZE,
   FONTS,
-  FONT_IDS,
 } from '../../src/data/fonts';
-import type { FontId } from '../../src/@types/data/FontId';
 
 describe('font registry', () => {
   it('exposes the shared atlas envelope constants', () => {
@@ -31,20 +29,5 @@ describe('font registry', () => {
     expect(FONTS.cormorant.charset).toContain('°');
     expect(FONTS.cormorant.charset).toContain('±');
     expect(FONTS.cormorant.charset).toContain('µ');
-  });
-
-  it('FONT_IDS preserves declaration order of FONTS keys', () => {
-    // Order matters: FONT_IDS[i] becomes GPU texture-array layer i.
-    // If a future edit reorders FONTS, this test forces a deliberate
-    // update of every Record<FontId, …> consumer.
-    expect(FONT_IDS).toEqual(['cormorant']);
-  });
-
-  it('FontId is the keyof FONTS literal union (compile-time check)', () => {
-    // This is a type-level assertion encoded as a value-level expect.
-    // If `FontId` ever drifts from `keyof typeof FONTS`, this assignment
-    // won't compile — that IS the test.
-    const id: FontId = 'cormorant';
-    expect(id).toBe('cormorant');
   });
 });

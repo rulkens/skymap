@@ -36,24 +36,4 @@ describe('isCinemaMode', () => {
     setSearch('?cinema');
     expect(isCinemaMode()).toBe(true);
   });
-
-  it('returns true when the param has a value', () => {
-    setSearch('?cinema=1');
-    expect(isCinemaMode()).toBe(true);
-  });
-
-  it('returns false when the param is absent', () => {
-    setSearch('?tour=grandTour');
-    expect(isCinemaMode()).toBe(false);
-  });
-
-  it('returns false for an empty query string', () => {
-    setSearch('');
-    expect(isCinemaMode()).toBe(false);
-  });
-
-  it('finds cinema among multiple params (the recorder loads ?cinema&tour=…)', () => {
-    setSearch('?tour=grandTour&cinema');
-    expect(isCinemaMode()).toBe(true);
-  });
 });

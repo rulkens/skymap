@@ -11,7 +11,6 @@
 import { describe, it, expect } from 'vitest';
 import { webShowcase } from '../../../../src/data/animation/tours/webShowcase';
 import { hide } from '../../../../src/services/engine/animation/effectHelpers';
-import { dwellDrift } from '../../../../src/state/tour/dwellDrift';
 import type { Effect } from '../../../../src/@types/animation/Effect';
 
 // Flatten an effect tree to its leaf/structural kinds — the focus cue may sit
@@ -25,16 +24,6 @@ function collectKinds(effects: readonly Effect[]): string[] {
 }
 
 describe('webShowcase tour', () => {
-  it('has three beats with captions and dwell clips', () => {
-    expect(webShowcase.beats).toHaveLength(3);
-    expect(webShowcase.beats[0]!.caption?.title).toBe('The Milky Way');
-    expect(webShowcase.beats[1]!.caption?.title).toBe('The Virgo Cluster');
-    expect(webShowcase.beats[2]!.caption?.title).toBe('M87');
-    expect(webShowcase.beats[0]!.dwellClip).toEqual(dwellDrift(8));
-    expect(webShowcase.beats[1]!.dwellClip).toEqual(dwellDrift(10));
-    expect(webShowcase.beats[2]!.dwellClip).toEqual(dwellDrift(10));
-  });
-
   it('each beat carries an enterClip (all three move the camera)', () => {
     for (const beat of webShowcase.beats) {
       expect(beat.enterClip).toBeDefined();

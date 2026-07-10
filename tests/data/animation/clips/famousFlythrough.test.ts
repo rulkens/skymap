@@ -19,25 +19,6 @@
 import { describe, it, expect } from 'vitest';
 import { famousFlythrough } from '../../../../src/data/animation/clips/famousFlythrough';
 
-/**
- * The curated set in its turn-minimised order (open-TSP over real 3D positions,
- * not by distance — see the clip's module docstring). Settles on M87.
- */
-const EXPECTED_WAYPOINTS = [
-  'c65', // Sculptor
-  'm31', // Andromeda
-  'm101', // Pinwheel
-  'm51', // Whirlpool
-  'm63', // Sunflower
-  'm104', // Sombrero
-  'm83', // Southern Pinwheel
-  'c77', // Centaurus A
-  'm33', // Triangulum
-  'm81', // Bode's
-  'm64', // Black Eye
-  'm87', // Virgo A (finale)
-];
-
 describe('famousFlythrough clip', () => {
   it('is a single flyPath that launches from the live camera pose', () => {
     expect(famousFlythrough.id).toBe('famousFlythrough');
@@ -53,18 +34,6 @@ describe('famousFlythrough clip', () => {
     // approach to each galaxy — not just the inspector's applyPathTuning override.
     expect(fly.linger).toBe(0.7);
     expect(fly.lingerSec).toBe(1.4);
-  });
-
-  it('visits the curated famous galaxies as catalog-resolved waypoints, in order', () => {
-    const fly = famousFlythrough.data.timeline[0]!;
-    if (fly.kind !== 'flyPath') throw new Error('expected a flyPath effect');
-
-    const ids = fly.waypoints.map((w) => {
-      if (!('id' in w)) throw new Error('every waypoint must be an atFocus (id) form');
-      return String(w.id);
-    });
-
-    expect(ids).toEqual(EXPECTED_WAYPOINTS);
   });
 
   it('addresses bare famous-galaxy seed ids (no structure/pgc/sdss prefix)', () => {

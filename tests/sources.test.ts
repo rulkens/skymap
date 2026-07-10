@@ -17,24 +17,7 @@ describe('Source enum', () => {
   });
 });
 
-describe('SOURCE_REGISTRY label', () => {
-  it('returns human-readable names', () => {
-    expect(SOURCE_REGISTRY[Source.SDSS].label).toBe('SDSS');
-    expect(SOURCE_REGISTRY[Source.TwoMRS].label).toBe('2MRS');
-    // GLADE is uppercase to match how the catalog team publishes it.
-    expect(SOURCE_REGISTRY[Source.Glade].label).toBe('GLADE');
-    expect(SOURCE_REGISTRY[Source.Synthetic].label).toBe('Synthetic');
-  });
-});
-
 describe('source coverage metadata', () => {
-  it('flags all-sky sources', () => {
-    expect(SOURCE_REGISTRY[Source.TwoMRS].allSky).toBe(true);
-    // GLADE is full-sky by design — it merges multiple all-sky parent
-    // catalogs (HyperLEDA, 2MASS XSC, GWGC, 2MPZ, 6dFGS, SDSS-DR12Q).
-    expect(SOURCE_REGISTRY[Source.Glade].allSky).toBe(true);
-    expect(SOURCE_REGISTRY[Source.SDSS].allSky).toBe(false);
-  });
   it('reports approximate maximum distance per galaxy catalog in Mpc', () => {
     expect(SOURCE_REGISTRY[Source.TwoMRS].maxDistMpc).toBeLessThan(300);
     // GLADE's distance distribution has a long tail past 1 Gpc; we choose

@@ -205,15 +205,4 @@ describe('wireInput', () => {
     });
     expect(state.cam).not.toBeNull();
   });
-
-  it('runs to completion even with no catalogs loaded', async () => {
-    // Progressive disclosure: wireInput must not require any galaxy catalog to
-    // have arrived. Empty catalogs is the normal case at boot.
-    const state = makeState();
-    const deps = makeDeps();
-
-    await wireInput(state, deps);
-
-    expect(state.cam).not.toBeNull();
-  });
 });

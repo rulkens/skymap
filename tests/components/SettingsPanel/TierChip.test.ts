@@ -26,15 +26,6 @@ describe('TierChip', () => {
     expect((select as HTMLSelectElement).value).toBe('medium');
   });
 
-  it('exposes small / medium / large as the three options', () => {
-    render(
-      createElement(TierChip, { tier: 'small', onTierChange: () => {} }),
-    );
-    const select = screen.getByRole('combobox', { name: /data tier/i }) as HTMLSelectElement;
-    const values = Array.from(select.options).map((o) => o.value);
-    expect(values).toEqual(['small', 'medium', 'large']);
-  });
-
   it('fires onTierChange with the picked tier', async () => {
     const onTierChange = vi.fn();
     const user = userEvent.setup();

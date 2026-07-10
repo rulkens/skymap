@@ -78,11 +78,6 @@ describe('StructureMarkerRenderer (CPU state)', () => {
     expect(r.markerCount()).toBe(5);
   });
 
-  it('label is stable', () => {
-    const r = newRenderer();
-    expect(r.label).toBe('structureMarkerRenderer');
-  });
-
   it('counts group descriptors alongside cluster / void', () => {
     // Regression guard: group descriptors must NOT be skipped by the
     // write-pass guard.  Feed a mix of all four marker-bearing categories

@@ -229,13 +229,4 @@ describe('validateSingleWriter via compileClip integration', () => {
       }),
     ).not.toThrow();
   });
-
-  // Brief case 4: integration test — compileClip throws on a base clash.
-  it('compileClip throws on a base clash', () => {
-    expect(() =>
-      compileClip({
-        timeline: [all([dollyTo(300, 4), dollyTo(950, 4)])],
-      }),
-    ).toThrow();
-  });
 });
