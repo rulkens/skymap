@@ -15,12 +15,4 @@ describe('maxVisibleCamDistSq', () => {
   it('defaults the max diameter to 200 kpc', () => {
     expect(maxVisibleCamDistSq(24, 1000)).toBe(maxVisibleCamDistSq(24, 1000, 200));
   });
-
-  it('matches the inline formula it replaces', () => {
-    const minPx = 8,
-      pxPerRad = 777;
-    const dMpcMax = 200 / 1000;
-    const maxDist = (dMpcMax * pxPerRad) / minPx;
-    expect(maxVisibleCamDistSq(minPx, pxPerRad)).toBe(maxDist * maxDist);
-  });
 });

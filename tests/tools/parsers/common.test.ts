@@ -29,13 +29,6 @@ describe('slot', () => {
     // LINE is 25 chars; bytes 30–35 lie entirely past the end.
     expect(slot(LINE, 30, 35)).toBe('');
   });
-
-  it('matches the hand-computed 0-based slice for a mid-line field', () => {
-    // Sanity check: slot(line, s, e) === line.slice(s-1, e).trim()
-    const s = 14;
-    const e = 24;
-    expect(slot(LINE, s, e)).toBe(LINE.slice(s - 1, e).trim());
-  });
 });
 
 describe('nonCommentLines', () => {

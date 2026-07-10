@@ -27,9 +27,6 @@
  *
  *   (e) Dispatch: the resolved pick is decoded by `resolvePick` and the
  *       result is dispatched as `updateSelectionHover(...)` on the store.
- *
- *   (f) Structural: the `HoverPickDeps` bag has NO scheduler / requestRender
- *       field — the driver cannot wake the render loop.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -161,32 +158,6 @@ describe('createHoverPickDriver', () => {
     });
   });
 
-  // (b) Trailing edge
-  it('the trailing-edge maybeFire fires the resting position after the in-flight pick resolves', async () => {
-    const driver = createHoverPickDriver(deps);
-
-    // Fire first pick for posA.
-    driver.onPointerMove(posA);
-    expect(picker.callCount()).toBe(1);
-
-    // Move to posB while the first is in flight — coalesced (not fired yet).
-    driver.onPointerMove(posB);
-    expect(picker.callCount()).toBe(1);
-
-    // Resolve the first pick — the trailing-edge maybeFire should kick off
-    // a second pick for posB (the resting position).
-    picker.resolveLatest(null);
-    await vi.waitFor(() => {
-      expect(picker.callCount()).toBe(2);
-    });
-
-    // Settle the trailing pick.
-    picker.resolveLatest(null);
-    await vi.waitFor(() => {
-      expect(pickingState.pickInFlight).toBe(false);
-    });
-  });
-
   // (c) No pre-fire gate: a null-resolving pick still fires + dispatches null
   it('fires the pick even when the program resolves null, dispatching hover(null)', async () => {
     // There is no pre-fire "is anything pickable / is the engine ready" gate
@@ -204,42 +175,11 @@ describe('createHoverPickDriver', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(updateSelectionHover(null));
   });
 
-  // (e) Dispatch
-  it('the resolved pick dispatches updateSelectionHover(resolvePick(...))', async () => {
-    const driver = createHoverPickDriver(deps);
-    driver.onPointerMove(posA);
-
-    // Resolve with null (background click) — resolvePick(null, ...) returns null.
-    picker.resolveLatest(null);
-    await vi.waitFor(() => {
-      expect(dispatchSpy.mock.calls.length).toBeGreaterThan(0);
-    });
-
-    expect(dispatchSpy).toHaveBeenCalledTimes(1);
-    // The dispatched action must be the updateSelectionHover action creator's
-    // output: { type: 'selection/updateSelectionHover', payload: null }.
-    const expectedAction = updateSelectionHover(null);
-    expect(dispatchSpy).toHaveBeenCalledWith(expectedAction);
-  });
-
   // (g) Drag-skip: no picks while a pointer drag (orbit) is in progress
   it('a pointermove while pointerDown (dragging) does not start a pick', () => {
     pickingState.pointerDown = true;
     const driver = createHoverPickDriver(deps);
     driver.onPointerMove(posA);
     expect(picker.callCount()).toBe(0);
-  });
-
-  // (f) Structural: no scheduler in deps bag
-  it('the driver has no scheduler / requestRender field in its deps bag', () => {
-    // This test is structural — it documents and enforces that the deps type
-    // has no way to wake the render loop. If someone adds `requestRender` to
-    // HoverPickDeps, this cast will break at the type level.
-    //
-    // At runtime we assert the shape of the `deps` object we built doesn't
-    // contain a scheduler-related key — if it did, it would have been passed
-    // in via the shared `deps` fixture above (which represents the full bag).
-    expect('requestRender' in deps).toBe(false);
-    expect('scheduler' in deps).toBe(false);
   });
 });

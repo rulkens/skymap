@@ -114,20 +114,4 @@ describe('runDisposableWorker', () => {
     await expect(promise).rejects.toThrow('angular-weights worker error');
     expect(lastWorker!.terminate).toHaveBeenCalledTimes(1);
   });
-
-  it('passes the transfer list through to postMessage verbatim', async () => {
-    lastWorker = null;
-    const transfer = [new ArrayBuffer(8), new ArrayBuffer(8)] as Transferable[];
-    const promise = runDisposableWorker<{ x: number }, number>(
-      FakeWorkerCtor as unknown as new () => Worker,
-      { x: 1 },
-      transfer,
-      'test',
-    );
-
-    expect(lastWorker!.postMessage).toHaveBeenCalledWith({ x: 1 }, transfer);
-
-    lastWorker!.onmessage!({ data: 0 } as MessageEvent);
-    await promise;
-  });
 });

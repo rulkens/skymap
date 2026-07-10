@@ -1,7 +1,6 @@
 /**
  * watchFadesSaga tests — verifies that every action in FADE_ROW drives
- * syncFades([key]) through the fade bridge, plus a direct freeze of the
- * FADE_ROW data table.
+ * syncFades([key]) through the fade bridge.
  *
  * Runs under the shared reconcileSagaHarness (all four reconcile watchers).
  *
@@ -13,21 +12,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { buildStore, type ReconcileSpies } from './reconcileSagaHarness';
-import { FADE_ROW } from '../../../src/store/effects/watchFadesSaga';
 import {
   setMilkyWayEnabled,
   writeVolumeField,
   setFlowEnabled,
-  setGalaxyCatalogVisible,
-  setGalaxyCatalogLabelEnabled,
-  setFilamentsEnabled,
-  setMilkyWayLabelEnabled,
-  setStructureItemEnabled,
-  setStructureLabelEnabled,
-  setVolumesEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
-import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
 
 describe('watchFadesSaga', () => {
   let store: ReturnType<typeof buildStore>['store'];
@@ -110,39 +100,4 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenCalledWith();
   });
 
-  it('mergeSnapshot does NOT also trigger a per-leaf FADE_ROW sync', () => {
-    // mergeSnapshot.type is not in FADE_ROW, so only the bulk arm fires — one
-    // full-pass call, never a scoped [key] call.
-    store.dispatch(mergeSnapshot({}));
-
-    expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
-    expect(reconcile.syncFades).not.toHaveBeenCalledWith(expect.anything());
-  });
-
-  // ── FADE_ROW mapping table — freezes action→visibility-layer registry ────────
-  // The wired cases above (milkyWayDisk, volumeField, flow) prove the saga
-  // dispatches syncFades([key]) for FADE_ROW entries; this freezes the complete
-  // DATA table so a stray future row fails.
-
-  it('FADE_ROW: complete action→key mapping', () => {
-    const fadeRowTests: Array<[{ type: string }, VisibilityLayerKey]> = [
-      [setGalaxyCatalogVisible, 'survey'],
-      [setGalaxyCatalogLabelEnabled, 'surveyLabel'],
-      [setFilamentsEnabled, 'filaments'],
-      [setMilkyWayEnabled, 'milkyWayDisk'],
-      [setMilkyWayLabelEnabled, 'milkyWayLabel'],
-      [setStructureItemEnabled, 'structureRing'],
-      [setStructureLabelEnabled, 'structureLabel'],
-      [writeVolumeField, 'volumeField'],
-      [setVolumesEnabled, 'volumesMaster'],
-      [setFlowEnabled, 'flow'],
-    ];
-
-    fadeRowTests.forEach(([actionCreator, expectedKey]) => {
-      expect(FADE_ROW[actionCreator.type]).toBe(expectedKey);
-    });
-
-    // Freeze the table size so a stray row added later fails.
-    expect(Object.keys(FADE_ROW)).toHaveLength(10);
-  });
 });

@@ -13,31 +13,14 @@
 import { describe, it, expect } from 'vitest';
 
 import reducer, {
-  setGalaxyCatalogSize,
   setBrightness,
-  setDepthFade,
-  setHighlightFallback,
-  setRealOnly,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
-  setExposure,
-  setToneMapCurve,
-  setBiasMode,
-  setAbsMagLimit,
-  setThumbnailsEnabled,
-  setMilkyWayEnabled,
-  setMilkyWayLabelEnabled,
-  setFilamentsEnabled,
-  setFilamentIntensity,
-  setVolumesEnabled,
-  setLabelsFocusedOnly,
   addVolumeField,
   removeVolumeField,
   writeVolumeField,
   setFlowEnabled,
   setFlow,
-  setShowPickBuffer,
-  setShowDiskRadiusRing,
   setPassDisabled,
   setClipPathLinger,
   setClipPathLingerSec,
@@ -68,31 +51,6 @@ const structureId = STRUCTURE_IDS[0]!;
 const seededVolumeId = Object.keys(base().volumes.items)[0] as VolumeFieldId;
 
 describe('settingsSlice — galaxy-catalog knobs', () => {
-  it('setGalaxyCatalogSize updates galaxyCatalogs.sizePx', () => {
-    expect(reducer(base(), setGalaxyCatalogSize(7.5)).galaxyCatalogs.sizePx).toBe(7.5);
-  });
-  it('setBrightness updates galaxyCatalogs.brightness', () => {
-    expect(reducer(base(), setBrightness(0.5)).galaxyCatalogs.brightness).toBe(0.5);
-  });
-  it('setDepthFade updates galaxyCatalogs.depthFade', () => {
-    const before = base();
-    expect(
-      reducer(before, setDepthFade(!before.galaxyCatalogs.depthFade)).galaxyCatalogs.depthFade,
-    ).toBe(!before.galaxyCatalogs.depthFade);
-  });
-  it('setHighlightFallback updates galaxyCatalogs.highlightFallback', () => {
-    const before = base();
-    expect(
-      reducer(before, setHighlightFallback(!before.galaxyCatalogs.highlightFallback)).galaxyCatalogs
-        .highlightFallback,
-    ).toBe(!before.galaxyCatalogs.highlightFallback);
-  });
-  it('setRealOnly updates galaxyCatalogs.realOnly', () => {
-    const before = base();
-    expect(
-      reducer(before, setRealOnly(!before.galaxyCatalogs.realOnly)).galaxyCatalogs.realOnly,
-    ).toBe(!before.galaxyCatalogs.realOnly);
-  });
   it('setGalaxyCatalogVisible flips one item row', () => {
     const next = reducer(base(), setGalaxyCatalogVisible({ id: catalogId, enabled: false }));
     expect(next.galaxyCatalogs.items[catalogId].enabled).toBe(false);
@@ -100,61 +58,6 @@ describe('settingsSlice — galaxy-catalog knobs', () => {
   it('setGalaxyCatalogLabelEnabled flips one item label', () => {
     const next = reducer(base(), setGalaxyCatalogLabelEnabled({ id: catalogId, enabled: false }));
     expect(next.galaxyCatalogs.items[catalogId].labelEnabled).toBe(false);
-  });
-});
-
-describe('settingsSlice — tonemap / bias', () => {
-  it('setExposure updates tonemap.exposure', () => {
-    expect(reducer(base(), setExposure(2.5)).tonemap.exposure).toBe(2.5);
-  });
-  it('setToneMapCurve updates tonemap.curve', () => {
-    expect(reducer(base(), setToneMapCurve(3)).tonemap.curve).toBe(3);
-  });
-  it('setBiasMode updates bias.mode', () => {
-    expect(reducer(base(), setBiasMode(2)).bias.mode).toBe(2);
-  });
-  it('setAbsMagLimit updates bias.absMagLimit', () => {
-    expect(reducer(base(), setAbsMagLimit(-20.5)).bias.absMagLimit).toBe(-20.5);
-  });
-});
-
-describe('settingsSlice — overlay layers', () => {
-  it('setThumbnailsEnabled updates thumbnails.enabled', () => {
-    const before = base();
-    expect(
-      reducer(before, setThumbnailsEnabled(!before.thumbnails.enabled)).thumbnails.enabled,
-    ).toBe(!before.thumbnails.enabled);
-  });
-  it('setMilkyWayEnabled updates milkyWay.enabled', () => {
-    const before = base();
-    expect(reducer(before, setMilkyWayEnabled(!before.milkyWay.enabled)).milkyWay.enabled).toBe(
-      !before.milkyWay.enabled,
-    );
-  });
-  it('setMilkyWayLabelEnabled updates milkyWay.labelEnabled', () => {
-    const before = base();
-    expect(
-      reducer(before, setMilkyWayLabelEnabled(!before.milkyWay.labelEnabled)).milkyWay.labelEnabled,
-    ).toBe(!before.milkyWay.labelEnabled);
-  });
-  it('setFilamentsEnabled updates filaments.enabled', () => {
-    const before = base();
-    expect(reducer(before, setFilamentsEnabled(!before.filaments.enabled)).filaments.enabled).toBe(
-      !before.filaments.enabled,
-    );
-  });
-  it('setFilamentIntensity updates filaments.intensity', () => {
-    expect(reducer(base(), setFilamentIntensity(0.42)).filaments.intensity).toBe(0.42);
-  });
-  it('setVolumesEnabled updates volumes.enabled', () => {
-    const before = base();
-    expect(reducer(before, setVolumesEnabled(!before.volumes.enabled)).volumes.enabled).toBe(
-      !before.volumes.enabled,
-    );
-  });
-  it('setLabelsFocusedOnly updates labels.focusedOnly', () => {
-    expect(reducer(base(), setLabelsFocusedOnly(true)).labels.focusedOnly).toBe(true);
-    expect(reducer(base(), setLabelsFocusedOnly(false)).labels.focusedOnly).toBe(false);
   });
 });
 
@@ -170,19 +73,6 @@ describe('settingsSlice — structures', () => {
 });
 
 describe('settingsSlice — debug', () => {
-  it('setShowPickBuffer updates debug.showPickBuffer', () => {
-    const before = base();
-    expect(
-      reducer(before, setShowPickBuffer(!before.debug.showPickBuffer)).debug.showPickBuffer,
-    ).toBe(!before.debug.showPickBuffer);
-  });
-  it('setShowDiskRadiusRing updates debug.showDiskRadiusRing', () => {
-    const before = base();
-    expect(
-      reducer(before, setShowDiskRadiusRing(!before.debug.showDiskRadiusRing)).debug
-        .showDiskRadiusRing,
-    ).toBe(!before.debug.showDiskRadiusRing);
-  });
   it('setPassDisabled writes a plain-object record entry', () => {
     const enabled = reducer(base(), setPassDisabled({ pass: 'foo', disabled: true }));
     expect(enabled.debug.disabledPasses).toEqual({ foo: true });

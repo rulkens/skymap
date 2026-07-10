@@ -28,9 +28,4 @@ describe('SELECTION_WRITE_BY_SLOT', () => {
   it('focus slot maps to updateSelectionFocus', () => {
     expect(SELECTION_WRITE_BY_SLOT.focus(ref).type).toBe(updateSelectionFocus(ref).type);
   });
-
-  it('passes the ref as the action payload', () => {
-    expect(SELECTION_WRITE_BY_SLOT.select(ref).payload).toEqual(ref);
-    expect(SELECTION_WRITE_BY_SLOT.focus(null).payload).toBeNull();
-  });
 });

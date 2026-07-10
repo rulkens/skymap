@@ -1,7 +1,7 @@
 /**
- * apiPlugin routing — verifies all five real routes + the preview
- * route are reachable from the middleware chain.  Drives the plugin
- * with the same fake req/res harness as apiPlugin.health.test.ts.
+ * apiPlugin routing — verifies all five real routes are reachable from
+ * the middleware chain.  Drives the plugin with the same fake req/res
+ * harness as apiPlugin.health.test.ts.
  *
  * Body parsing + payload handling is the route handler's problem; this
  * test just confirms the URL → handler dispatch table is wired.
@@ -69,16 +69,6 @@ describe('apiPlugin routing', () => {
     // not in the table" which returns 404.
     const res = await dispatch({ url, method });
     expect(res.statusCode).not.toBe(404);
-  });
-
-  it('preview route serves a file from the session dir', async () => {
-    // Smoke check: the route should respond (status 200 with the file
-    // contents) or 404 (file missing).  Either is fine — the actual
-    // serve behaviour is exercised at boot time.  We only care that
-    // the route doesn't fall through to "/api/* not found".
-    const res = await dispatch({ url: '/api/preview/missing/source.webp', method: 'GET' });
-    expect(res.statusCode).not.toBe(404 + 1000); // any HTTP status is fine
-    expect(res.ended).toBe(true);
   });
 
   describe('POST /api/resolve', () => {

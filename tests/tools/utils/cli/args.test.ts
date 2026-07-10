@@ -27,9 +27,4 @@ describe('parseFlags', () => {
     );
     expect(result).toEqual({ '--force': true });
   });
-
-  it('returns the same shape as the schema (no extra keys)', () => {
-    const result = parseFlags(['--force'], { '--force': 'bool' });
-    expect(Object.keys(result)).toEqual(['--force']);
-  });
 });

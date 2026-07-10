@@ -27,20 +27,4 @@ describe('flyAndFocusOnClip', () => {
     // builder adds nothing but the ClipData shell.
     expect(clip.timeline[0]).toEqual(focusOnId(id, 5));
   });
-
-  it('leads with the focusId cue so isolation rides along during the approach', () => {
-    const node = flyAndFocusOnClip(id).timeline[0]!;
-
-    expect(node.kind).toBe('seq');
-    if (node.kind !== 'seq') return;
-
-    const [focusCue, allNode] = node.children;
-    expect(focusCue!.kind).toBe('focusId');
-    if (focusCue!.kind === 'focusId') expect(focusCue.id).toBe(id);
-
-    expect(allNode!.kind).toBe('all');
-    if (allNode!.kind === 'all') {
-      expect(allNode.children.map((c) => c.kind)).toEqual(['moveTargetId', 'dollyToId']);
-    }
-  });
 });

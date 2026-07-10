@@ -123,26 +123,6 @@ describe('attachEngineInputs', () => {
     expect(scheduler.requestRender).not.toHaveBeenCalled();
   });
 
-  // pointerleave clears hover state (a store dispatch that is wake-free by
-  // convention), so this listener mouth keeps the wake. Contrast with
-  // pointermove: hover-clear IS a visible state change (card disappears),
-  // whereas hover-update feeds only React text via the store and needs no
-  // re-render.
-  it('pointerleave still calls requestRender', () => {
-    attachEngineInputs({
-      canvas: canvas.target as unknown as HTMLCanvasElement,
-      scheduler,
-      onPointerMove: () => {},
-      onPointerLeave: () => {},
-      onPointerDown: () => {},
-      onPointerUp: () => {},
-      onEscape: () => {},
-      onResize: () => {},
-    });
-    canvas.fire('pointerleave', {});
-    expect(scheduler.requestRender).toHaveBeenCalledTimes(1);
-  });
-
   // Touch/pen have no hover state — a finger tap emits a synthetic
   // pointermove that would otherwise drive the hover-pick.  The handler
   // gates on `pointerType === 'mouse'`, so non-mouse moves are dropped

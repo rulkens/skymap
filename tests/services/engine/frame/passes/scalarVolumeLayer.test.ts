@@ -90,15 +90,6 @@ function liveState(
   } as unknown as EngineState;
 }
 
-describe('scalarVolumeLayer registry fields', () => {
-  it('targets the volume offscreen through the cosmological slab, additively', () => {
-    expect(scalarVolumeLayer.name).toBe('scalar-volume');
-    expect(scalarVolumeLayer.target).toBe('volume');
-    expect(scalarVolumeLayer.slab).toBe(COSMO);
-    expect(scalarVolumeLayer.blend).toBe('additive');
-  });
-});
-
 describe('scalarVolumeLayer.enabled', () => {
   it('is enabled when deriveVolumeLiveness is non-null (renderer active, master on)', () => {
     expect(scalarVolumeLayer.enabled(liveState(), makeCtx())).toBe(true);

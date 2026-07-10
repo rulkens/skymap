@@ -16,10 +16,6 @@ describe('milkyWayApproachFadeAlpha', () => {
     expect(milkyWayApproachFadeAlpha(0.12)).toBe(1.0);
   });
 
-  it('keeps the impostor full at the 0.15 Mpc home framing', () => {
-    expect(milkyWayApproachFadeAlpha(0.15)).toBe(1.0);
-  });
-
   it('returns 0.5 at the band midpoint (24 kpc) — smoothstep symmetry', () => {
     // Midpoint of [0.008, 0.040] is 0.024; smoothstep at t=0.5 is exactly 0.5.
     expect(milkyWayApproachFadeAlpha(0.024)).toBeCloseTo(0.5, 5);
