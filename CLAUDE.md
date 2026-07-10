@@ -67,6 +67,7 @@ tests/                Vitest suite — mirrors src/ tree
 - **TDD via plans**: substantial features get a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with bite-sized TDD tasks. Plans are executed via the `subagent-driven-development` workflow (fresh subagent per task + spec + quality reviews). Plans follow [`docs/superpowers/conventions/plan-style.md`](docs/superpowers/conventions/plan-style.md) — **contract code yes, implementation code no** (overrides the upstream `writing-plans` skill's "complete code in every step" default). When a plan ships, run the `/feature-done` audit: it gates on the DoD then relocates the plan + its spec to `plans/completed/` + `specs/completed/`.
 - **Plans coexist**: multiple in-flight plans is normal. Check the file list before starting new work to avoid stomping on something else.
 - **Backlog hygiene**: [`docs/BACKLOG.md`](docs/BACKLOG.md) lists only _unstarted_ work, grouped by subsystem area with a readiness tag; design-bearing items have a `docs/backlog/YYYY-MM-DD-<slug>.md` detail file linked from the index. **Keep the index line very short** — title + readiness tag + one terse clause + the `→ [details]` link. Anything longer (file lists, evidence, approach, options) goes in the detail md, NEVER inline in `BACKLOG.md`; the index is a scannable list, not a write-up. **Picking up an item removes it in the same change** — whether you implement it directly or write a spec/plan, delete its index line **and** its detail file in that commit/branch (the detail file seeds the spec; the spec/plan is then the source of truth). **Never strike through a done item** — delete it; the completion record is the git log + `*/completed/`. `/feature-done` sweeps the backlog when a plan ships; audit the whole file against the git log periodically to catch stragglers.
+- **Test what can break**: judge every test by "will it ever fail on a real bug no other test or compiler check catches?" — no runtime type tests, constant/registry restatements, clamp-boundary or mirror tests. See [`docs/superpowers/conventions/testing.md`](docs/superpowers/conventions/testing.md).
 - **Simplicity over ease**: judge a design by the artifact (what runs and gets changed), not the keystrokes; un-braid concerns that could vary independently. Principles + the known-entanglements backlog live in [`docs/superpowers/conventions/simplicity.md`](docs/superpowers/conventions/simplicity.md) (Rich Hickey's _Simple Made Easy_, applied to skymap). Run the `entanglement-radar` skill to review a diff/module — **and at design time over a spec/plan**: a section that exists to teach handling of an "asymmetry"/"subtlety"/"special-case" is a STOP-and-un-braid signal (classify essential vs accidental), not a note to write more carefully.
 
 ## Commands
@@ -83,7 +84,7 @@ npm run format      # prettier
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 ```
 
-Currently 590+ tests passing across 76 files. Keep it green.
+The suite is large (600+ test files) and must stay green. Tests follow [`docs/superpowers/conventions/testing.md`](docs/superpowers/conventions/testing.md) — what _not_ to test matters as much as what to test.
 
 ### Tmux workflow helpers
 
