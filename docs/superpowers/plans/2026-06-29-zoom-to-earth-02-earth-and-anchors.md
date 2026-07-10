@@ -432,9 +432,9 @@ Sphere factories follow the landed positional idiom (contract-conflict #7), mirr
 
 **Files:** none new (verification + notes only).
 
-- [ ] `npm run typecheck` (both src + tools tsconfigs) → clean.
-- [ ] `npm test` (full suite) → green (590+ tests; new tests added).
-- [ ] Placeholder scan: grep the new files for `TODO` / `FIXME` / `throw new Error('not implemented')` → none.
+- [x] `npm run typecheck` (both src + tools tsconfigs) → clean.
+- [x] `npm test` (full suite) → green (4222 tests across 664 files).
+- [x] Placeholder scan: grep the new files for `TODO` / `FIXME` / `throw new Error('not implemented')` → none.
 - [ ] **VISUAL gate — user-verified on the dev server (NOT automated). Load the app WITH `?deepZoom`** (the descent floor is URL-gated — `clampDistance.ts:50-52`; a plain load stops at 0.05 Mpc and the bodies stay sub-pixel), zoom from the galaxy view down to Earth and confirm:
   - Earth resolves as a **stable, round, correctly-textured** (Blue Marble) sphere — no jitter / swim / clipping.
   - The Sun, Moon, Jupiter render as **believably-sized** spheres relative to Earth on the way down.
