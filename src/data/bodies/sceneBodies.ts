@@ -49,6 +49,7 @@
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
+import { ECLIPTIC_BASIS } from './eclipticBasis';
 import { raDecDistToCartesian } from '../../utils/math/raDecDistToCartesian';
 import type { EarthBody } from '../../@types/scene/EarthBody';
 import type { StarBody } from '../../@types/scene/StarBody';
@@ -142,16 +143,24 @@ export const SCENE_STARS: readonly StarBody[] = [
 /**
  * Planet seeds: fixed plausible positions (the real bodies orbit), authored
  * in AU / km via `SCALE_UNITS`. The Moon sits its real ~384,400 km from
- * Earth's seed, offset along +Y (a first-quarter geometry, so it is not
- * hidden exactly on the Sun–Earth line); Jupiter sits at its ~5.2 AU orbital
- * radius. Albedos are plausible flat linear-RGB colours (no textures yet):
+ * Earth's seed, offset along `ECLIPTIC_BASIS.yAxis` (a first-quarter
+ * geometry, so it is not hidden exactly on the Sun–Earth line) rather than
+ * frame +y, so the Moon lands in the ecliptic — where its real ~5°-inclined
+ * orbit actually stays — instead of 23.4° out of it. Earth and Jupiter need
+ * no such transform: both sit on the equinox line (frame +x), which is
+ * shared by the equatorial and ecliptic planes, so they are already in the
+ * ecliptic. Albedos are plausible flat linear-RGB colours (no textures yet):
  * lunar grey, Jovian tan.
  */
 export const SCENE_PLANETS: readonly PlanetBody[] = [
   {
     id: 'moon',
     label: 'Moon',
-    positionMpc: [1 * SCALE_UNITS.AU_TO_MPC, 384400 * SCALE_UNITS.KM_TO_MPC, 0],
+    positionMpc: [
+      1 * SCALE_UNITS.AU_TO_MPC + 384400 * SCALE_UNITS.KM_TO_MPC * ECLIPTIC_BASIS.yAxis[0],
+      384400 * SCALE_UNITS.KM_TO_MPC * ECLIPTIC_BASIS.yAxis[1],
+      384400 * SCALE_UNITS.KM_TO_MPC * ECLIPTIC_BASIS.yAxis[2],
+    ],
     radiusKm: 1737,
     albedo: [0.35, 0.34, 0.33],
   },

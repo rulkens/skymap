@@ -197,6 +197,7 @@ describe('EngineState type', () => {
         starRenderer: null,
         planetRenderer: null,
         starPointRenderer: null,
+        orbitRingRenderer: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
@@ -454,6 +455,7 @@ describe('EngineState type', () => {
         starRenderer: null,
         planetRenderer: null,
         starPointRenderer: null,
+        orbitRingRenderer: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {

@@ -213,6 +213,16 @@ vi.mock('../../../../src/services/gpu/renderers/planetRenderer', async (importOr
 vi.mock('../../../../src/services/gpu/renderers/starPointRenderer', () => ({
   createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
 }));
+// Partial mock, same rationale as planetRenderer's above: orbitRingsLayer.ts
+// (loaded transitively via the frame program's registry import) reads the
+// real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its
+// staging buffer, so only the factory is stubbed.
+vi.mock('../../../../src/services/gpu/renderers/orbitRingRenderer', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('../../../../src/services/gpu/renderers/orbitRingRenderer')
+  >()),
+  createOrbitRingRenderer: vi.fn(() => makeStub('orbitRingRenderer')),
+}));
 
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
   loadFontAtlases: vi.fn(async () => ({
@@ -281,6 +291,7 @@ function makeState(): EngineState {
       starRenderer: null,
       planetRenderer: null,
       starPointRenderer: null,
+      orbitRingRenderer: null,
     },
     // The real seeded stores: planets draw through a single instanced
     // planetRenderer fed by bodies.planets, and initGpu partitions
@@ -451,6 +462,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // The star-point renderer receives the far partition (everything but
     // the Sun) exactly once, at construction — the layer's draw stays pure.
     expect(state.gpu.starPointRenderer).toBe(stubs.starPointRenderer);
+    // The orbit-ring renderer needs no data delivery (SCENE_ORBITS is a
+    // static module-level table) — construction alone lands the handle.
+    expect(state.gpu.orbitRingRenderer).toBe(stubs.orbitRingRenderer);
     expect(stubs.starPointRenderer!.setStars).toHaveBeenCalledTimes(1);
     const uploaded = stubs.starPointRenderer!.setStars.mock.calls[0]![0] as ReadonlyArray<{
       id: string;
@@ -492,6 +506,8 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     state.gpu.planetRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
+    state.gpu.orbitRingRenderer?.destroy();
+    state.gpu.orbitRingRenderer = null;
     state.gpu.foregroundLabelRenderer?.destroy();
     state.gpu.foregroundLabelRenderer = null;
 
@@ -499,6 +515,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(stubs.starRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.planetRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.starPointRenderer!.destroy).toHaveBeenCalledTimes(1);
+    expect(stubs.orbitRingRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect((fgLabel as unknown as Stub).destroy).toHaveBeenCalledTimes(1);
 
     // Symmetric null-out matches the rest of the bag — see
@@ -507,6 +524,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.starRenderer).toBeNull();
     expect(state.gpu.planetRenderer).toBeNull();
     expect(state.gpu.starPointRenderer).toBeNull();
+    expect(state.gpu.orbitRingRenderer).toBeNull();
     expect(state.gpu.foregroundLabelRenderer).toBeNull();
   });
 

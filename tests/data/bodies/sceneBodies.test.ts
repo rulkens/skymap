@@ -6,6 +6,7 @@ import {
   SCENE_BODIES,
 } from '../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { ECLIPTIC_BASIS } from '../../../src/data/bodies/eclipticBasis';
 import { raDecDistToCartesian } from '../../../src/utils/math/raDecDistToCartesian';
 
 const findStar = (id: string) => {
@@ -120,6 +121,30 @@ describe('SCENE_PLANETS', () => {
     // Math.hypot's ~1 ulp (~5e-26 at this magnitude) rounding noise.
     const jupiter = findPlanet('jupiter');
     expect(hypot3(jupiter.positionMpc)).toBeCloseTo(5.2 * SCALE_UNITS.AU_TO_MPC, 20);
+  });
+
+  it('the Moon is offset from Earth along the ecliptic, not frame +y', () => {
+    // Regression guard for the equatorial/ecliptic mixup: a bare frame-+y
+    // offset would sit 23.4° out of the ecliptic, where the real Moon never
+    // strays more than ~5°. The offset from Earth must be parallel to
+    // ECLIPTIC_BASIS.yAxis and exactly 384,400 km long in Mpc.
+    const moon = findPlanet('moon');
+    const earthPos = SCENE_EARTH.positionMpc;
+    const offset: readonly [number, number, number] = [
+      (moon.positionMpc[0] as number) - (earthPos[0] as number),
+      (moon.positionMpc[1] as number) - (earthPos[1] as number),
+      (moon.positionMpc[2] as number) - (earthPos[2] as number),
+    ];
+
+    const expectedLenMpc = 384400 * SCALE_UNITS.KM_TO_MPC;
+    expect(hypot3(offset)).toBeCloseTo(expectedLenMpc, 20);
+
+    // Parallel to ECLIPTIC_BASIS.yAxis: offset normalized equals yAxis
+    // (both unit-length, same direction) within floating-point tolerance.
+    const len = hypot3(offset);
+    expect(offset[0] / len).toBeCloseTo(ECLIPTIC_BASIS.yAxis[0], 12);
+    expect(offset[1] / len).toBeCloseTo(ECLIPTIC_BASIS.yAxis[1], 12);
+    expect(offset[2] / len).toBeCloseTo(ECLIPTIC_BASIS.yAxis[2], 12);
   });
 });
 

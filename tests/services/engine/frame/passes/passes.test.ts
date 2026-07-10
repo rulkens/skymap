@@ -37,6 +37,7 @@ import {
   starSpheresLayer,
   planetsLayer,
   starPointsLayer,
+  orbitRingsLayer,
   foregroundLabelsLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -212,11 +213,12 @@ const SWAP_NAMES = [
 // group and the OVER swap group.
 const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets'];
 
-// The near-field star points: the ONE layer that pairs the hdr target with
-// the near0 slab — additive like every hdr row, but projected through NEAR0
-// so parsec-scale anchors clear the near plane. Its own (hdr, NEAR0) render
-// group, driven by the program's dedicated step before the tone-map.
-const NEAR_HDR_NAMES = ['star-points'];
+// The near-field hdr rows: the layers that pair the hdr target with the
+// near0 slab — additive like every hdr row, but projected through NEAR0 so
+// parsec-to-AU-scale anchors clear the near plane. One (hdr, NEAR0) render
+// group, driven by the program's dedicated step before the tone-map: the
+// far-partition star points, then the debug orbit rings.
+const NEAR_HDR_NAMES = ['star-points', 'orbit-rings'];
 
 // The near-field captions group: the scene-body name labels. Like the COSMO
 // swap overlays they target the swap chain with premultiplied-OVER, but they
@@ -266,17 +268,19 @@ describe('hdr-target layers', () => {
     expect(hdrLayers.map((p) => p.name)).toEqual(HDR_NAMES);
   });
 
-  it('the (hdr, NEAR0) group holds exactly the star-points row, additive', () => {
-    // The one hdr row outside the cosmological slab: the far-partition
-    // neighbourhood stars, projected through NEAR0 (COSMO's 0.01 Mpc near
-    // plane would clip parsec-scale anchors) but accumulating into the same
-    // HDR target so they ride the galaxies' tone-map. Drawn by the program's
-    // dedicated (hdr, NEAR0) step before the hdr→swap composite.
+  it('the (hdr, NEAR0) group holds star-points then orbit-rings, additive', () => {
+    // The hdr rows outside the cosmological slab: the far-partition
+    // neighbourhood stars and the debug orbit rings, projected through NEAR0
+    // (COSMO's 0.01 Mpc near plane would clip their parsec-to-AU-scale
+    // anchors) but accumulating into the same HDR target so they ride the
+    // galaxies' tone-map. Drawn by the program's dedicated (hdr, NEAR0) step
+    // before the hdr→swap composite.
     const nearHdr = CONTENT_LAYERS.filter(
       (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
     );
     expect(nearHdr.map((layer) => layer.name)).toEqual(NEAR_HDR_NAMES);
     expect(nearHdr).toContain(starPointsLayer);
+    expect(nearHdr).toContain(orbitRingsLayer);
     for (const layer of nearHdr) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('hdr');

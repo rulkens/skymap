@@ -31,37 +31,40 @@
  *   8. horizon-shell       — translucent sphere at the observable-universe edge
  *   9. structure-markers   — at-rest halo + ring for cluster / SC / void structures
  *
- * One more row accumulates into the same HDR target, but projected through
- * the near0 slab (its own `(hdr, NEAR0)` render step — COSMO's near plane
- * would clip parsec-scale anchors):
+ * Two more rows accumulate into the same HDR target, but projected through
+ * the near0 slab (their shared `(hdr, NEAR0)` render step — COSMO's near
+ * plane would clip parsec-to-AU-scale anchors):
  *
  *  10. star-points         — the far-partition neighbourhood stars as additive
  *                            point sprites, riding the same tone-map as the
  *                            galaxies
+ *  11. orbit-rings         — debug: analytic SDF orbit rings (Earth / Jupiter /
+ *                            Moon) with a brightness lobe at the body's
+ *                            position (f64 compose seam)
  *
  * The next five are premultiplied-OVER overlays, projected through the
  * cosmological slab and drawn post-tone-map onto the swap chain:
  *
- *  11. selection-ring      — per-galaxy / Milky-Way / structure selection halo
- *  12. disk-radius-ring    — debug: catalog-disk-radius calibration ring
- *  13. marker-lines        — screen-space thick-line overlay (e.g. label stems)
- *  14. labels              — MSDF text labels
- *  15. clip-path-debug     — debug: clip-path inspector route + gizmo
+ *  12. selection-ring      — per-galaxy / Milky-Way / structure selection halo
+ *  13. disk-radius-ring    — debug: catalog-disk-radius calibration ring
+ *  14. marker-lines        — screen-space thick-line overlay (e.g. label stems)
+ *  15. labels              — MSDF text labels
+ *  16. clip-path-debug     — debug: clip-path inspector route + gizmo
  *
  * The final rows leave the cosmological slab entirely — the near-field
  * foreground group, projected through the near0 slab (whose near/far track
  * the camera's orbit distance) so the true-scale bodies are never clipped by
  * the cosmological near plane:
  *
- *  16. earth               — true-scale Blue-Marble-textured Earth (f64 compose
+ *  17. earth               — true-scale Blue-Marble-textured Earth (f64 compose
  *                            seam), opaque (depth-tested) into the `foreground:0`
  *                            target
- *  17. star-spheres        — the near-partition star (the Sun) as a true-scale
+ *  18. star-spheres        — the near-partition star (the Sun) as a true-scale
  *                            flat-emissive sphere (f64 compose seam), opaque into
  *                            the same `foreground:0` target
- *  18. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
+ *  19. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
  *                            (f64 compose seam), opaque into the same target
- *  19. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *  20. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
  *
@@ -145,6 +148,7 @@ import { earthLayer } from './earthLayer';
 import { starSpheresLayer } from './starSpheresLayer';
 import { planetsLayer } from './planetsLayer';
 import { starPointsLayer } from './starPointsLayer';
+import { orbitRingsLayer } from './orbitRingsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 
 /**
@@ -168,13 +172,15 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   volumeUpsampleLayer,
   horizonShellLayer,
   structureMarkersLayer,
-  // The tenth hdr row, alone in its (hdr, NEAR0) group: the far-partition
-  // neighbourhood stars as additive points, drawn by the frame program's
-  // dedicated (hdr, NEAR0) step AFTER the nine COSMO hdr layers above and
-  // before the tone-map — so the stars ride the same tone curve as the
-  // galaxies while projecting through a slab whose near plane admits
-  // parsec-scale anchors.
+  // The (hdr, NEAR0) group: rows that accumulate into the HDR target but
+  // project through NEAR0 (COSMO's near plane would clip their parsec-to-AU
+  // scale anchors), drawn by the frame program's dedicated (hdr, NEAR0) step
+  // AFTER the nine COSMO hdr layers above and before the tone-map — so they
+  // ride the same tone curve as the galaxies. Star points first, then the
+  // debug orbit rings (both additive, so within-group order is a listing
+  // choice, not a compositing one).
   starPointsLayer,
+  orbitRingsLayer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
   // ring leads so marker-lines and labels composite over its stroke; the
   // debug clip-path overlay trails so its route + gizmo draw on top of
@@ -219,4 +225,5 @@ export { earthLayer } from './earthLayer';
 export { starSpheresLayer } from './starSpheresLayer';
 export { planetsLayer } from './planetsLayer';
 export { starPointsLayer } from './starPointsLayer';
+export { orbitRingsLayer } from './orbitRingsLayer';
 export { foregroundLabelsLayer } from './foregroundLabelsLayer';

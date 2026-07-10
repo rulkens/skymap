@@ -406,6 +406,7 @@ function makeInput(
           starRenderer: null,
           planetRenderer: null,
           starPointRenderer: null,
+          orbitRingRenderer: null,
           foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud,

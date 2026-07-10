@@ -67,6 +67,7 @@ import { createEarthRenderer } from '../../gpu/renderers/earthRenderer';
 import { createStarRenderer } from '../../gpu/renderers/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/starPointRenderer';
+import { createOrbitRingRenderer } from '../../gpu/renderers/orbitRingRenderer';
 import { SCENE_EARTH } from '../../../data/bodies/sceneBodies';
 import { isNearStar } from '../../../utils/scene/isNearStar';
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
@@ -415,6 +416,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // data delivery below) so the star-points layer's draw stays a pure draw.
   state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
   state.gpu.starPointRenderer.setStars(state.data.bodies.stars.filter((star) => !isNearStar(star)));
+
+  // orbitRingRenderer draws the debug orbit rings (Earth / Jupiter / Moon) as
+  // additive SDF annuli into the same depthless HDR target — no depth format,
+  // like starPointRenderer above.  Unlike the stars, no data-delivery step:
+  // the orbit table (SCENE_ORBITS) is a static module-level derivation of the
+  // body seeds, packed per-frame by orbitRingsLayer.
+  state.gpu.orbitRingRenderer = createOrbitRingRenderer(device, 'rgba16float');
 
   // foregroundLabelRenderer is a second MSDF label renderer against the
   // swap-chain `format` (`uiCtx`, like the main `labelRenderer`), holding
