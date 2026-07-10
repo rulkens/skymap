@@ -24,25 +24,12 @@ import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
+import { foregroundFrustum } from '../../../utils/camera/foregroundFrustum';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
 export const NEAR0 = 0;
 /** Cosmological slab: galaxies, Milky Way, filaments — everything at Mpc scale. */
 export const COSMO = 1;
-
-// The near-field slab's near/far track the camera's orbit distance instead of
-// a fixed range: whatever the camera is currently orbiting (a planet vs. a
-// galaxy cluster) sits comfortably inside [distance·1e-4, distance·100],
-// which is the ~1e6 near/far ratio a depth buffer can resolve without
-// z-fighting. The bracket keeps a ~1-AU body framed through the full descent,
-// and near > 0 always holds because `cam.distance > 0` by the orbit-controls
-// clamp. A fixed near/far would either clip nearby geometry (too far) or waste
-// precision on empty space (too near) depending on current scale.
-//
-// A future adaptive `foregroundFrustum(cam.distance)` will replace both
-// fixed ratios.
-const NEAR0_NEAR_RATIO = 1e-4;
-const NEAR0_FAR_RATIO = 100;
 
 // The near-field lookAt uses world +Y as the image-plane up. Roll parity with
 // the cosmological slab's `computeViewProj` is deferred alongside the
@@ -74,8 +61,13 @@ const COSMO_FAR_MPC = 50000;
  * matrix — which is why `slabViewOf` needs no COSMO special case below.
  */
 export function deriveSlabs(cam: OrbitCamera, cosmoVp: Mat4): readonly Slab[] {
-  const nearMpc = cam.distance * NEAR0_NEAR_RATIO;
-  const farMpc = cam.distance * NEAR0_FAR_RATIO;
+  // The near-field slab's near/far are adaptive, sized from the camera's orbit
+  // distance by `foregroundFrustum` so depth precision holds from galaxy scale
+  // down to Earth's surface (and its far floor keeps the seeded orbit rings
+  // inside the frustum). This is unlike the COSMO row's fixed
+  // `COSMO_NEAR_MPC`/`COSMO_FAR_MPC`: the cosmological scene's depth doesn't
+  // change as the user zooms, only the near-field's does.
+  const { near: nearMpc, far: farMpc } = foregroundFrustum(cam.distance);
   const nearFieldVp = computeForegroundViewProj({
     eyeMpc: cam.position,
     targetMpc: cam.target,

@@ -16,12 +16,15 @@
  *
  * The sphere-body layers feed `composeBodyMvp` the slab's `Float64Array`
  * vp because camera-relative f32 error is visible as surface swim on a
- * sphere-filling body. A star drawn as a point subtends under a pixel by
- * definition, so the f32 narrowing error (relative eps ~1e-7) stays
- * sub-pixel at any camera distance that shows it as a point at all — the
- * same rationale as the caption anchors in `foregroundLabelsLayer`. The
- * renderer's instance buffer already carries f32 positions for the same
- * reason (see `starPointRenderer`'s precision note).
+ * sphere-filling body. This layer draws only the FAR partition of the
+ * stars — the near ones become spheres via `starSpheresLayer` — so its
+ * anchors stay parsecs from the camera, where a point subtends under a
+ * pixel and the f32 narrowing error (relative eps ~1e-7) stays sub-pixel.
+ * (The captions in `foregroundLabelsLayer` do NOT get this pass: their
+ * anchors close to within metres of the camera at surface zoom, so they
+ * rebase to a camera-relative f64 frame — see that layer's f64-seam note.)
+ * The renderer's instance buffer already carries f32 positions for the
+ * same point-sprite reason (see `starPointRenderer`'s precision note).
  *
  * ### When it draws
  *

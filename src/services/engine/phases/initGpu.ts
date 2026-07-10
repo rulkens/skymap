@@ -426,10 +426,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // foregroundLabelRenderer is a second MSDF label renderer against the
   // swap-chain `format` (`uiCtx`, like the main `labelRenderer`), holding
-  // the static scene-body caption set (Earth + the local star map + the
-  // planets) uploaded once here; the caption layer only draws it,
-  // projecting through the NEAR0 slab view so the captions track bodies
-  // that sit far inside the main camera's near plane.
+  // the scene-body caption set (Earth + the local star map + the planets),
+  // projecting through the NEAR0 slab view so the captions track bodies that
+  // sit far inside the main camera's near plane. This bootstrap upload primes
+  // the label set (glyph atlas + the count `foregroundLabelsLayer.enabled`
+  // gates on); the layer then RE-uploads the anchors camera-relative each
+  // frame to dodge the f32 origin-distance cancellation that would otherwise
+  // make the captions flicker at deep zoom — see that layer's f64-seam note.
   state.gpu.foregroundLabelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
   state.gpu.foregroundLabelRenderer.setLabels(sceneBodyLabels());
 
