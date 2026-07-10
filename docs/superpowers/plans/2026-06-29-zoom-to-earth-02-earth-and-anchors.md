@@ -435,13 +435,13 @@ Sphere factories follow the landed positional idiom (contract-conflict #7), mirr
 - [x] `npm run typecheck` (both src + tools tsconfigs) → clean.
 - [x] `npm test` (full suite) → green (4222 tests across 664 files).
 - [x] Placeholder scan: grep the new files for `TODO` / `FIXME` / `throw new Error('not implemented')` → none.
-- [ ] **VISUAL gate — user-verified on the dev server (NOT automated). Load the app WITH `?deepZoom`** (the descent floor is URL-gated — `clampDistance.ts:50-52`; a plain load stops at 0.05 Mpc and the bodies stay sub-pixel), zoom from the galaxy view down to Earth and confirm:
+- [x] **VISUAL gate — user-verified on the dev server (NOT automated). Load the app WITH `?deepZoom`** (the descent floor is URL-gated — `clampDistance.ts:50-52`; a plain load stops at 0.05 Mpc and the bodies stay sub-pixel), zoom from the galaxy view down to Earth and confirm:
   - Earth resolves as a **stable, round, correctly-textured** (Blue Marble) sphere — no jitter / swim / clipping.
   - The Sun, Moon, Jupiter render as **believably-sized** spheres relative to Earth on the way down.
   - The local stars (Proxima and the rest of the seeded neighbourhood) stay as additive points in the HDR accumulation alongside the galaxy backdrop; the recognisable brightest stars (Sirius, Vega, …) are present in roughly their real sky directions; the backdrop is intact; tone parity holds across the Sun's limb (the two composites share one `tone` object — `frameProgram.ts:65-68`).
   - The body captions (now sourced from `sceneBodies`) appear below 1 kpc and track the bodies.
   - An executor running unattended must **STOP and report** that these are visual properties awaiting on-screen confirmation rather than claim success.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
