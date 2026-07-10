@@ -4,22 +4,57 @@
  * These are data, not runtime state: constants the descent renders against
  * once the zoom reaches the local (sub-kiloparsec) neighbourhood. Positions
  * are authored in the units a human reads them in — Earth "1 AU from the
- * Sun" — and stored canonically in Megaparsecs via `SCALE_UNITS`, the same
- * absolute heliocentric frame every catalogue position lives in. Keeping the
- * conversion explicit (never an inline magic Mpc number) means the physical
- * relationship stays legible at the seed site, and every position speaks the
- * one draw-space language the renderer expects.
+ * Sun", a star "RA/Dec at so many parsecs" — and stored canonically in
+ * Megaparsecs via `SCALE_UNITS`, the same absolute heliocentric frame every
+ * catalogue position lives in. Keeping the conversion explicit (never an
+ * inline magic Mpc number) means the physical relationship stays legible at
+ * the seed site, and every position speaks the one draw-space language the
+ * renderer expects.
+ *
+ * Star positions go through `raDecDistToCartesian` — the SAME right-handed
+ * equatorial J2000 spherical→Cartesian conversion the galaxy build pipeline
+ * uses — so the seeded neighbourhood is NOT rotated against the real sky the
+ * catalogues paint. Hand-authored bare-xyz constants or an inlined formula
+ * would silently break that alignment; the RA/Dec authoring is the contract.
+ * The Sun is seeded with distPc = 0, which collapses the conversion to the
+ * origin [0, 0, 0] regardless of RA/Dec — the frame is heliocentric.
+ *
+ * Star-selection rule: the Sun, PLUS one representative entry per stellar
+ * system within ~4 pc (A/B components merged into their primary — e.g.
+ * Alpha Centauri A+B as one entry — EXCEPT Proxima Centauri, kept as its own
+ * entry because its ~1.301 pc distance is the parsec-scale f64 anchor the
+ * tests pin), PLUS the naked-eye landmark stars out to ~10 pc (Sirius,
+ * Procyon, Altair, Vega, Fomalhaut, Pollux, …).
+ *
+ * Provenance: RA/Dec (J2000), distances, and absolute magnitudes are standard
+ * published values (Hipparcos / Gaia-era, as commonly tabulated in the
+ * nearest-stars and brightest-stars compilations). Merged systems carry the
+ * primary's absMag and the system position at the primary's precision.
+ *
+ * Colour: authored linear-RGB constants from a small per-spectral-class
+ * palette (the CPU side has no B–V → RGB helper — the colour ramp lives only
+ * in WGSL — and a fixed authored table does not earn one):
+ *   O/B blue-white [0.6, 0.7, 1.0]   (no O/B star within 10 pc — unused here)
+ *   A/F white      [1.0, 1.0, 0.98]  Sirius, Procyon, Altair, Vega, Fomalhaut
+ *   G yellow-white [1.0, 0.97, 0.85] the Sun, Alpha Cen, Tau Ceti
+ *   K orange       [1.0, 0.85, 0.65] Eps Eridani, 61 Cygni, Eps Indi, Pollux
+ *   M red          [1.0, 0.6, 0.4]   the red dwarfs
  *
  * `radiusKm` stays in kilometres — the body's native unit — and is resolved
  * into a draw-space sphere at render time, so the authored number remains the
- * one a reader recognises (Earth's 6371 km) rather than a pre-scaled decimal.
- *
- * Only Earth is seeded here for now; star and planet seeds join this module in
- * a later phase, which is why it is a data table rather than a single const.
+ * one a reader recognises (Earth's 6371 km, the Sun's 696340 km). The Sun is
+ * the only star this phase resolves to a sphere; every OTHER star carries a
+ * stated placeholder of one solar radius, which nothing reads until a later
+ * LOD promotion — stated here rather than left silent.
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
+import { raDecDistToCartesian } from '../../utils/math/raDecDistToCartesian';
 import type { EarthBody } from '../../@types/scene/EarthBody';
+import type { StarBody } from '../../@types/scene/StarBody';
+import type { PlanetBody } from '../../@types/scene/PlanetBody';
+import type { SceneBody } from '../../@types/scene/SceneBody';
+import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
  * Earth at 1 AU along +X from the Sun (the render origin), Earth-sized.
@@ -36,11 +71,105 @@ export const SCENE_EARTH: EarthBody = {
   textureUrl: '/images/earth/blue-marble-4k.jpg',
 };
 
+// The spectral-class palette (linear RGB) documented in the module header.
+const A_F_WHITE: Vec3 = [1.0, 1.0, 0.98];
+const G_YELLOW_WHITE: Vec3 = [1.0, 0.97, 0.85];
+const K_ORANGE: Vec3 = [1.0, 0.85, 0.65];
+const M_RED: Vec3 = [1.0, 0.6, 0.4];
+
+// The Sun's real radius; also the stated one-solar-radius placeholder every
+// other star carries until a later LOD promotion resolves them to spheres.
+const SOLAR_RADIUS_KM = 696340;
+
+/**
+ * Row maker for the star table: keeps each entry a single legible line of
+ * human-unit values (J2000 RA/Dec in degrees, distance in parsecs) while the
+ * Mpc conversion and the frame contract live in exactly one place. Module
+ * local — a fixed authored table does not earn a `src/utils/` helper.
+ */
+function star(
+  id: string,
+  label: string,
+  raDeg: number,
+  decDeg: number,
+  distPc: number,
+  absMag: number,
+  color: Vec3,
+): StarBody {
+  return {
+    id,
+    label,
+    positionMpc: raDecDistToCartesian(raDeg, decDeg, distPc * SCALE_UNITS.PC_TO_MPC),
+    absMag,
+    color,
+    radiusKm: SOLAR_RADIUS_KM,
+  };
+}
+
+/**
+ * The local star map, per the selection rule and provenance in the module
+ * header. Columns: id, label, RA° (J2000), Dec° (J2000), distance pc, absMag,
+ * spectral-class colour.
+ */
+export const SCENE_STARS: readonly StarBody[] = [
+  star('sun', 'Sun', 0, 0, 0, 4.83, G_YELLOW_WHITE),
+  star('proxima-centauri', 'Proxima Centauri', 217.4289, -62.6795, 1.301, 15.6, M_RED),
+  star('alpha-centauri', 'Alpha Centauri', 219.9021, -60.8339, 1.339, 4.38, G_YELLOW_WHITE),
+  star('barnards-star', "Barnard's Star", 269.4521, 4.6934, 1.834, 13.21, M_RED),
+  star('wolf-359', 'Wolf 359', 164.1204, 7.0147, 2.409, 16.65, M_RED),
+  star('lalande-21185', 'Lalande 21185', 165.8341, 35.9699, 2.547, 10.48, M_RED),
+  star('sirius', 'Sirius', 101.2871, -16.7161, 2.64, 1.45, A_F_WHITE),
+  star('luyten-726-8', 'Luyten 726-8', 24.7554, -17.9503, 2.68, 15.47, M_RED),
+  star('ross-154', 'Ross 154', 282.4558, -23.8361, 2.98, 13.07, M_RED),
+  star('ross-248', 'Ross 248', 355.4779, 44.175, 3.16, 14.79, M_RED),
+  star('epsilon-eridani', 'Epsilon Eridani', 53.2325, -9.4583, 3.22, 6.19, K_ORANGE),
+  star('lacaille-9352', 'Lacaille 9352', 346.4667, -35.8531, 3.29, 9.75, M_RED),
+  star('ross-128', 'Ross 128', 176.935, 0.8044, 3.37, 13.51, M_RED),
+  star('ez-aquarii', 'EZ Aquarii', 339.6392, -15.2992, 3.5, 15.33, M_RED),
+  star('61-cygni', '61 Cygni', 316.7246, 38.7494, 3.5, 7.49, K_ORANGE),
+  star('procyon', 'Procyon', 114.8254, 5.225, 3.51, 2.66, A_F_WHITE),
+  star('struve-2398', 'Struve 2398', 280.6946, 59.6303, 3.55, 11.16, M_RED),
+  star('groombridge-34', 'Groombridge 34', 4.5954, 44.0231, 3.56, 10.32, M_RED),
+  star('epsilon-indi', 'Epsilon Indi', 330.8404, -56.7861, 3.64, 6.89, K_ORANGE),
+  star('tau-ceti', 'Tau Ceti', 26.0171, -15.9375, 3.65, 5.68, G_YELLOW_WHITE),
+  star('kapteyns-star', "Kapteyn's Star", 77.9192, -45.0183, 3.93, 10.87, M_RED),
+  star('altair', 'Altair', 297.6958, 8.8683, 5.13, 2.22, A_F_WHITE),
+  star('vega', 'Vega', 279.2346, 38.7836, 7.68, 0.58, A_F_WHITE),
+  star('fomalhaut', 'Fomalhaut', 344.4125, -29.6222, 7.7, 1.72, A_F_WHITE),
+  star('pollux', 'Pollux', 116.3289, 28.0261, 10.34, 1.08, K_ORANGE),
+];
+
+/**
+ * Planet seeds: fixed plausible positions (the real bodies orbit), authored
+ * in AU / km via `SCALE_UNITS`. The Moon sits its real ~384,400 km from
+ * Earth's seed, offset along +Y (a first-quarter geometry, so it is not
+ * hidden exactly on the Sun–Earth line); Jupiter sits at its ~5.2 AU orbital
+ * radius. Albedos are plausible flat linear-RGB colours (no textures yet):
+ * lunar grey, Jovian tan.
+ */
+export const SCENE_PLANETS: readonly PlanetBody[] = [
+  {
+    id: 'moon',
+    label: 'Moon',
+    positionMpc: [1 * SCALE_UNITS.AU_TO_MPC, 384400 * SCALE_UNITS.KM_TO_MPC, 0],
+    radiusKm: 1737,
+    albedo: [0.35, 0.34, 0.33],
+  },
+  {
+    id: 'jupiter',
+    label: 'Jupiter',
+    positionMpc: [5.2 * SCALE_UNITS.AU_TO_MPC, 0, 0],
+    radiusKm: 69911,
+    albedo: [0.8, 0.65, 0.45],
+  },
+];
+
 /**
  * SCENE_BODIES — the flat registry every body-aware consumer reads from: the
  * command-palette search rows, the `body-<id>` focus-id resolver, and the
  * selection-row extractor all iterate / look up this one list. Seeding a new
- * body (a star, another planet) is a one-line push here — no parallel list to
- * keep in sync. Earth is the only entry for now.
+ * body is a one-line push into its seed table above — no parallel list to
+ * keep in sync. Consumers only touch the fields the `SceneBody` union shares
+ * (`id`, `label`, `positionMpc`, `radiusKm`).
  */
-export const SCENE_BODIES: readonly EarthBody[] = [SCENE_EARTH];
+export const SCENE_BODIES: readonly SceneBody[] = [SCENE_EARTH, ...SCENE_STARS, ...SCENE_PLANETS];

@@ -10,7 +10,7 @@
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
-import type { EarthBody } from '../../@types/scene/EarthBody';
+import type { SceneBody } from '../../@types/scene/SceneBody';
 
 /**
  * Fixed search terms for the always-present Milky Way row.  The matcher
@@ -29,12 +29,13 @@ export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as con
  * `ROW_VIEW` dispatches on it for the rendered text and `utils/focusIdForRow`
  * for the durable focus id.  `milkyWay` carries no payload — it's the singleton
  * FocusableTarget, resolved by the saga.  `body` carries a seeded scene body
- * (Earth, later stars/planets); it surfaces only behind the `deepZoom` URL gate
- * (see `rankPaletteMatches`).
+ * (Earth, the stars, the planets — the `SceneBody` union; the row only reads
+ * the shared `id`/`label` fields); it surfaces only behind the `deepZoom` URL
+ * gate (see `rankPaletteMatches`).
  */
 export type ScoredRow =
   | { kind: 'famous'; entry: FamousMetaEntry; score: number }
   | { kind: 'alias'; entry: AliasIndexEntry; score: number }
   | { kind: 'structure'; entry: StructureSearchEntry; score: number }
   | { kind: 'milkyWay'; score: number }
-  | { kind: 'body'; body: EarthBody; score: number };
+  | { kind: 'body'; body: SceneBody; score: number };
