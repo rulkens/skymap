@@ -400,20 +400,21 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // this comment, exactly like the bare 'rgba16float' literal every other
   // HDR-target renderer above passes.
   //
-  // starRenderer draws the near-partition star (today the Sun alone — see
-  // isNearStar).  ONE planetRenderer draws every seeded planet in a single
+  // starRenderer draws the resolved-partition stars (the Sun + any star
+  // crossing STAR_RESOLVE_PX — see partitionStarsByResolution).  ONE
+  // planetRenderer draws every seeded planet in a single
   // instanced draw: each body's MVP + albedo rides in a per-instance vertex
   // record (planetsLayer packs the batch), so the matrices survive to submit
   // without a per-body bind or a mid-frame uniform.
   state.gpu.starRenderer = createStarRenderer(device, 'rgba16float', 'depth32float');
   state.gpu.planetRenderer = createPlanetRenderer(device, 'rgba16float', 'depth32float');
 
-  // starPointRenderer draws the far-partition stars as additive points into
-  // the depthless HDR target — no depth format, unlike the sphere factories
-  // above (the hdr row has no depth attachment).  The bodies store is
-  // seeded at engine construction, so the far partition is known now:
-  // upload it once here (mirroring the Earth texture's post-construction
-  // data delivery below) so the star-points layer's draw stays a pure draw.
+  // starPointRenderer draws the unresolved-partition stars as additive
+  // points into the depthless HDR target — no depth format, unlike the
+  // sphere factories above (the hdr row has no depth attachment).  The
+  // camera-free isNearStar seed uploaded here covers the window before the
+  // first frame; from the first draw on, starPointsLayer owns the point-set
+  // membership via partitionStarsByResolution and re-uploads on change.
   state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
   state.gpu.starPointRenderer.setStars(state.data.bodies.stars.filter((star) => !isNearStar(star)));
 

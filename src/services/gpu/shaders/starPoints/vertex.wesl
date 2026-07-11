@@ -23,13 +23,14 @@
 //   @location(1) color:    vec3<f32>  — linear-RGB spectral tint, offset 12.
 //   @location(2) absMag:   f32        — absolute magnitude, offset 24.
 //
-// Positions are f32 (narrowed from the seed's f64 Mpc values). That is
-// deliberate: the f64 compose path matters for sphere-filling bodies,
-// where sub-metre camera-relative error is visible on a surface — but a
-// star drawn AS A POINT subtends less than a pixel by definition, so
-// f32 position error (relative eps ~1e-7 of the ~1e-6 Mpc coordinate)
-// stays far below a pixel at any camera distance that shows the point
-// at all. The caller passes the slab's f32 narrow view-projection.
+// Positions are f32, but the caller ('starPointsLayer') hands them in
+// already CAMERA-RELATIVE: it subtracts the eye from each anchor and folds
+// the eye offset into 'viewProj' (via 'rebaseViewProj'), both in f64, before
+// upload. Without that rebase the raw parsec-scale anchor (~1e-6 Mpc from the
+// render origin) and the raw view translation would be near-equal large
+// numbers whose f32 subtraction here cancels catastrophically, jittering the
+// sprite centre as the camera closes on a local star. Rebased, both operands
+// of 'worldToClip' are small and well-conditioned, so f32 suffices.
 //
 // ## Point size
 //

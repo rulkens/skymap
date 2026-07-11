@@ -30,16 +30,20 @@
  * parameter, unlike the sphere-body factories that draw into the
  * depth-bearing `foreground:0` row.
  *
- * ### Precision — f32 positions are fine for points
+ * ### Precision — camera-relative inputs, then f32 narrowing
  *
- * Star positions live at parsec scale (~1e-6 Mpc) in the absolute
- * heliocentric frame. The f64 compose path exists for SPHERE-FILLING
- * bodies, where camera-relative f32 error is visible as surface swim; a
- * star drawn as a point subtends under a pixel by definition, so the f32
- * narrowing error (relative eps ~1e-7) stays sub-pixel at any camera
- * distance that shows it as a point at all. `setStars` therefore narrows
- * `positionMpc` straight into the f32 instance buffer, and `draw` takes
- * the slab's f32 narrow view-projection (`view.vp`).
+ * Both the instance positions and the view-projection arrive already rebased
+ * into the CAMERA-RELATIVE frame — the caller (`starPointsLayer`) subtracts the
+ * eye from each anchor and folds the eye offset into the vp via
+ * `rebaseViewProj`, both in f64, before handing them here. That matters because
+ * during the final approach to a local-map star the raw anchor (~1e-6 Mpc from
+ * the render origin) and the raw view translation are near-equal large numbers
+ * whose f32 subtraction cancels catastrophically, jittering the sprite centre.
+ * Rebasing turns both operands into small, well-conditioned numbers, so
+ * `setStars` narrows the (already camera-relative) `positionMpc` straight into
+ * the f32 instance buffer and `draw` uploads the (already rebased) f32
+ * view-projection with no precision loss. This renderer stays a dumb pipeline:
+ * it narrows whatever frame it is handed — the seam lives in the layer.
  *
  * ### Late-bound star data
  *
