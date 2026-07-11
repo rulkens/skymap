@@ -561,6 +561,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             fovYRad: state.cameraRuntime.projection.fovYRad,
           }
         : null,
+    // The live Earth record `watchFlyToEarthKeySaga` frames its descent tween
+    // on. Read lazily (like `resolveDeps`) because the scene-body seed installs
+    // Earth after the root saga forks; null until then, so the fly-to key
+    // no-ops rather than tween toward a body that isn't there.
+    earthBody: () => state.data.bodies.earth,
     playClip,
     clipPathInspect,
   });
