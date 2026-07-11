@@ -36,7 +36,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Engine & State
 
 - [ ] **Source-registry factory** `needs-design` — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry; today each source is hand-wired across `slots/`, `assetWiring.ts`, `initGpu`. → [details](backlog/2026-06-29-source-registry-factory.md)
-- [ ] **Blue Marble texture load → asset slot** `ready` — the Earth texture fetch is a fire-and-forget IIFE in `initGpu` (uncancellable, unconditional at boot, untestable); move to a `createEarthTextureSlot` + `ASSET_WIRING` row. → [details](backlog/2026-07-11-earth-texture-loading-out-of-initgpu.md)
 - [ ] **GPU-handle nullability follow-on** `deferred` — `EngineGpuHandles` fields are all `T | null` (a transient bootstrap fact as a perpetual null-check); narrow into a non-null "ready GPU" view and shed `PassDeps`' renderer fields. → [details](backlog/2026-06-29-gpu-handle-nullability.md)
 - [ ] **`useStructureMemberCount` honest invalidation** `deferred` — the hook's `sourceCounts`/`tier` args are memo tripwires for live GPU catalog state; swap for a real catalog-generation signal. → [details](backlog/2026-06-29-usestructuremembercount-invalidation.md)
 - [ ] **Derive `BULK_CATALOG_CATEGORIES` from a registry flag** `deferred` — add `hasBulkCatalog` to `SOURCE_REGISTRY` rows so the hand-listed `['cluster','supercluster','void']` in `assetWiring.ts` derives from it. Keep the three category lists (UI / marker / bulk-fetch) separate — membership genuinely differs. (`bearsMarker` + `DEFAULT_CATEGORY_VISIBILITY` already shipped.)
@@ -52,8 +51,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **galaxy-renderer `dispose()` skips GPU teardown** `ready` — RAF loop + DOM listeners are removed but buffers/pipelines/UBOs (incl. per-extra UBOs) are never `destroy()`ed; spike-era behavior, flagged in the GPU-generation final review.
 - [ ] **MW point-cloud follow-ups** `ready` — five small knots from the T10 radar (orphaned WESL helpers, record-field offsets, billboard-basis mirror, tool↔app constants, pick bind-group injection). → [details](backlog/2026-07-08-mw-point-cloud-follow-ups.md)
 - [ ] **Galaxy impostor LOD** `needs-design` — per-galaxy rgba16f impostors baked from the GPU generator (photo-thumbnail band retires; procedural disk stays as placeholder band), full star+dust geometry above ~128 px; band counts, churn, per-tier memory, and Hubble-type coverage all measured. → [details](backlog/2026-07-08-galaxy-impostor-lod.md)
-- [ ] **Conic orbit trails (real elements)** `needs-design` — replace the circle debug rings with exact Keplerian ellipses projected to a screen-space conic (f64 CPU compose, Sampson-distance stroke); approach user-ratified. → [details](backlog/2026-07-10-conic-orbit-trails.md)
-- [ ] **GPU renderers folder reorg** `blocked` — family folders + lib primitives + pointRenderer split; spec approved, plans + execution gated on zoom-to-earth plan 02 landing. → [spec](superpowers/specs/2026-07-10-gpu-renderers-reorg-design.md)
+- [ ] **GPU renderers folder reorg** `ready` — family folders + lib primitives + pointRenderer split; spec approved (zoom-to-earth plan 02 landed), plans still to be written. → [spec](superpowers/specs/2026-07-10-gpu-renderers-reorg-design.md)
 
 ## UI & UX
 
