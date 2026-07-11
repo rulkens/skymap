@@ -420,6 +420,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       mcpm: null,
       // Default-off velocity flow field; demand-loaded like cf4Density.
       flow: null,
+      // Blue Marble Earth texture; descent-gated on cameraDistanceMpc.
+      earthTexture: null,
     },
     // ── One-shot transient request flags ────────────────────────────────
     //

@@ -68,7 +68,6 @@ import { createStarRenderer } from '../../gpu/renderers/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/starPointRenderer';
 import { createOrbitRingRenderer } from '../../gpu/renderers/orbitRingRenderer';
-import { SCENE_EARTH } from '../../../data/bodies/sceneBodies';
 import { isNearStar } from '../../../utils/scene/isNearStar';
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
@@ -446,25 +445,11 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // + this comment rather than an import.
   state.gpu.earthRenderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
 
-  // Kick off the Blue Marble texture fetch WITHOUT awaiting it: bootstrap must
-  // not block on a multi-megabyte JPG.  The renderer draws a mid-blue
-  // placeholder sphere until the bitmap lands; when it does, `setTexture` swaps
-  // in the real equirectangular texture and we wake the render-on-demand loop
-  // so the change presents even with the camera at rest.  A fetch / decode
-  // failure is non-fatal — we log (the codebase's `[engine] … failed to load`
-  // pattern) and leave the placeholder.  The `?.` guards the case where
-  // `destroy()` nulled the handle before the fetch resolved.
-  void (async () => {
-    try {
-      const res = await fetch(SCENE_EARTH.textureUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const bitmap = await createImageBitmap(await res.blob());
-      state.gpu.earthRenderer?.setTexture(bitmap);
-      state.subsystems.scheduler.requestRender();
-    } catch (err) {
-      console.warn('[engine] Blue Marble texture failed to load:', err);
-    }
-  })();
+  // The Blue Marble texture that re-skins this placeholder sphere loads via a
+  // first-class demand-gated asset row (`createEarthTextureSlot` + the
+  // `earthTexture` ASSET_WIRING row), NOT a fire-and-forget fetch here — so the
+  // ~MB JPG is paid on the descent, not at boot, and its lifecycle (abort on
+  // release, render wake on ready) is owned by the slot machinery.
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

@@ -16,6 +16,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
+import { EARTH_TEXTURE_MAX_DISTANCE_MPC } from '../../../../src/services/loading/slots/earthTextureSlot';
 import { Source } from '../../../../src/data/sources';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
@@ -41,11 +42,15 @@ function makeCtx(over: {
   settings?: unknown;
   requests?: Set<RequestKey>;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
+  cameraDistanceMpc?: number;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
     request: (k) => over.requests?.has(k) ?? false,
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
+    // Default far away (never within the descent gate) so unrelated demand
+    // tests aren't accidentally in the Earth-texture proximity window.
+    cameraDistanceMpc: over.cameraDistanceMpc ?? Infinity,
   };
 }
 
@@ -69,6 +74,7 @@ describe('ASSET_WIRING membership', () => {
       'flow',
       'structureCatalog',
       'pgcAlias',
+      'earthTexture',
     ];
     expect(new Set(keys)).toEqual(new Set(expected));
     // No duplicate rows.
@@ -102,6 +108,15 @@ describe('ASSET_WIRING membership', () => {
     // The sidecar rows are registry-built (no marker).
     expect(rowFor('filaments').built).toBeUndefined();
     expect(rowFor('famousMeta').built).toBeUndefined();
+  });
+
+  it('includes a registry-built earthTexture row', () => {
+    // The Earth texture is a first-class registry-built sidecar (not
+    // `built: 'external'` like the point slots), with a void request — one
+    // tier-agnostic texture, neither tiered nor per-source.
+    const earth = rowFor('earthTexture');
+    expect(earth.built).toBeUndefined();
+    expect(earth.req('medium')).toBeUndefined();
   });
 
   it('external point rows carry a factory that throws if the builder calls it', () => {
@@ -214,6 +229,19 @@ describe('ASSET_WIRING demand predicates', () => {
         }),
       ),
     ).toBe(true);
+  });
+
+  it('the earthTexture row demands the texture only within the descent threshold', () => {
+    // Descent-gated: demanded once the camera drops below the threshold, not
+    // at boot (far away / no camera field ⇒ false).
+    const earth = rowFor('earthTexture');
+    expect(earth.demand(makeCtx({ cameraDistanceMpc: EARTH_TEXTURE_MAX_DISTANCE_MPC / 2 }))).toBe(
+      true,
+    );
+    expect(earth.demand(makeCtx({ cameraDistanceMpc: EARTH_TEXTURE_MAX_DISTANCE_MPC * 10 }))).toBe(
+      false,
+    );
+    expect(earth.demand(makeCtx({}))).toBe(false);
   });
 
   it('pgcAlias demands only when the paletteOpened request is set', () => {

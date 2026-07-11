@@ -38,6 +38,13 @@ import type { SourceType } from '../data/SourceType';
  *     slot lives as a named field on `state.assetSlots` and needs a string
  *     asset key to route through `slotFor`.
  *
+ *   - `'earthTexture'` — the Blue Marble equirectangular texture that skins the
+ *     true-scale Earth on deep descent. A single tier-agnostic asset with no
+ *     point-`Source` code, descent-gated (`cameraDistanceMpc < threshold`)
+ *     rather than settings-toggled. Its slot lives as a named field on
+ *     `state.assetSlots` and needs a string asset key to route through
+ *     `slotFor`.
+ *
  * The asymmetry cuts both ways: some `Source`s are NOT fetched individually
  * (Cluster / Supercluster / Void all arrive via `'structureCatalog'`), and the
  * string keys are NOT all `Source`s. "Source" (stable identity code, persisted
@@ -54,4 +61,5 @@ export type AssetKey =
   | 'filaments'
   | 'cf4Density'
   | 'mcpm'
-  | 'flow';
+  | 'flow'
+  | 'earthTexture';

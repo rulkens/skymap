@@ -49,6 +49,17 @@
  *      this surface provides, without exposing the full `AssetSlot<T>`
  *      internals (value, req object, retry policy) to the predicate.
  *
+ *   4. `cameraDistanceMpc` — the orbit distance-to-focus of the last produced
+ *      camera pose. Exists because one asset — the Blue Marble Earth texture —
+ *      legitimately loads on proximity, not on a settings toggle or a slot-state
+ *      join: it is a ~MB JPG only distinguishable after a deep-zoom descent, so
+ *      its row descent-gates on `cameraDistanceMpc < threshold`. It reads the
+ *      LAST produced pose because `reevaluateDemand` runs at the frame top,
+ *      before this frame's camera is derived; the boxed `lastPose` is the live
+ *      cross-driver distance (wheel-zoom, tour clips, and the fly-to-Earth tween
+ *      all converge to `CameraPose`), and a one-frame-stale distance is
+ *      immaterial for a multi-frame async fetch.
+ *
  * Singleton overlay layers (filaments, milkyWay, flow) need no surface of
  * their own: their enable gate lives in `settings.<layer>.enabled`, read
  * through surface 1. See
@@ -78,4 +89,9 @@ export type DemandCtx = {
    * sibling slot states without exposing the full slot internals.
    */
   slotState: (k: AssetKey) => LoadState<unknown>['kind'];
+  /**
+   * Orbit distance-to-focus of the last produced camera pose, in Mpc.
+   * The one proximity read surface: the Earth-texture row descent-gates on it.
+   */
+  cameraDistanceMpc: number;
 };

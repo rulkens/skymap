@@ -125,6 +125,22 @@ export type EngineAssetSlots = {
    */
   flow: AssetSlot<ScalarCube, void> | null;
   /**
+   * Blue Marble equirectangular texture that skins the true-scale Earth on
+   * deep descent (`SCENE_EARTH.textureUrl`).
+   *
+   * Descent-gated (unlike the settings-toggled `flow` / `cf4Density`): the slot
+   * stays idle until the camera's orbit distance-to-focus drops below
+   * `EARTH_TEXTURE_MAX_DISTANCE_MPC`, at which point the per-frame
+   * `reevaluateDemand` fires `earthTextureFetcher` and the commit re-skins the
+   * already-visible placeholder sphere via `earthRenderer.setTexture`. The ~MB
+   * JPG fetch + decode is therefore paid on the way down, not at boot.
+   *
+   * Null until `wireSlots` mints it (matches `flow` for the same lifecycle
+   * reason — the renderer must exist before the slot can commit). A 404 / decode
+   * failure surfaces as a never-fires commit; the blue placeholder stays.
+   */
+  earthTexture: AssetSlot<ImageBitmap, void> | null;
+  /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being
    * null) in production builds — the `wireSlots` phase only mints
