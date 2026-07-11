@@ -179,10 +179,10 @@ export function earthSurfaceFraming(earth: EarthBody): { target: Vec3; distance:
 
 **Behaviour:** `target` is Earth's `positionMpc` (copied into a fresh array so the result never aliases the body record — same discipline as `focusTweenDescriptor.ts:26`). `distance` is a small multiple of Earth's radius in Mpc (`radiusKm * SCALE_UNITS.KM_TO_MPC`, e.g. ~2–3 Earth radii) so the descent ends with Earth filling much of the frame without clipping the foreground near plane. No engine state.
 
-- [ ] Add `earthSurfaceFraming.ts` — single function, file named for it. Didactic docblock: WHY a few Earth-radii distance (close enough that Earth fills the frame, far enough that `foregroundFrustum(distance)`'s near plane clears the surface — ties the framing distance to the Task 1 frustum so the two can't drift into clipping); WHY only target+distance change (preserve the user's orientation, mirroring `focusTweenDescriptor`).
-- [ ] Test `earthSurfaceFraming targets Earth's position` — assert `target` equals Earth's `positionMpc` element-wise AND is a distinct array (not the same reference as `earth.positionMpc`).
-- [ ] Test `earthSurfaceFraming distance is a small multiple of Earth's radius in Mpc` — assert `distance` is within an expected band of `earth.radiusKm * SCALE_UNITS.KM_TO_MPC` (e.g. `2× .. 4×`), proving it's surface-scale, not galaxy-scale.
-- [ ] `npm test -- earthSurfaceFraming` → both pass. Commit.
+- [x] Add `earthSurfaceFraming.ts` — single function, file named for it. Didactic docblock: WHY a few Earth-radii distance (close enough that Earth fills the frame, far enough that `foregroundFrustum(distance)`'s near plane clears the surface — ties the framing distance to the Task 1 frustum so the two can't drift into clipping); WHY only target+distance change (preserve the user's orientation, mirroring `focusTweenDescriptor`).
+- [x] Test `earthSurfaceFraming targets Earth's position` — assert `target` equals Earth's `positionMpc` element-wise AND is a distinct array (not the same reference as `earth.positionMpc`).
+- [x] Test `earthSurfaceFraming distance is a small multiple of Earth's radius in Mpc` — assert `distance` is within an expected band of `earth.radiusKm * SCALE_UNITS.KM_TO_MPC` (e.g. `2× .. 4×`), proving it's surface-scale, not galaxy-scale.
+- [x] `npm test -- earthSurfaceFraming` → both pass. Commit.
 
 ## Task 6 — Fly-to-Earth debug-key saga
 
