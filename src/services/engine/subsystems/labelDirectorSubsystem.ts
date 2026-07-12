@@ -151,7 +151,8 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   }
 
   function signatureOf(labels: readonly Label[], lines: readonly MarkerLine[]): string {
-    // Cheap stable signature: per-entry `id:fadeAlpha`, joined.
+    // Cheap stable signature: per-label `id:fadeAlpha`, per-line
+    // `id:fadeAlpha:toWorld`, joined.
     //
     // Re-upload triggers when ids/count change OR when any entry's
     // `fadeAlpha` differs from the prior frame.  Including `fadeAlpha`
@@ -163,17 +164,30 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     // appears at e.g. 0.1 alpha and never brightens as the camera
     // closes in.)
     //
-    // We deliberately DON'T include world positions or colours — the
+    // We deliberately DON'T include LABEL world positions or colours — the
     // glyph layout in `labelRenderer.setLabels` is the expensive
-    // step we're protecting; static-position producers (milkyWayLabel,
-    // structures) keep their positions stable and benefit from the skip.
+    // step we're protecting; static-position producers (structures) keep
+    // their positions stable and benefit from the skip.
+    //
+    // LINE signatures DO include `toWorld`: the leader lines (famous-galaxy
+    // connectors, the Milky Way stem) are camera-derived per frame
+    // (`labelLeaderLine` lifts in screen space and un-projects), so their
+    // tips move with the camera while id and fadeAlpha stay constant —
+    // without this term a connector would freeze at whatever geometry was
+    // uploaded the first visible frame.  One signature gates BOTH renderers'
+    // flushes, so the moved label anchor (derived from the same lift) rides
+    // along with its line's re-upload; and because the endpoints only move
+    // while the camera does, the skip still fires on every static frame —
+    // exactly when it pays.
     //
     // Edge case: a producer mutating a label's `text` while keeping
     // the same `id` will NOT trigger re-upload.  No current producer
     // does this — the Milky Way label has constant text; structures derive text
     // from the structure name which is part of the id space.
     const lIds = labels.map((l) => `${l.id}:${l.fadeAlpha ?? 1}`).join('|');
-    const mIds = lines.map((m) => `${m.id}:${m.fadeAlpha ?? 1}`).join('|');
+    const mIds = lines
+      .map((m) => `${m.id}:${m.fadeAlpha ?? 1}:${m.toWorld[0]},${m.toWorld[1]},${m.toWorld[2]}`)
+      .join('|');
     return `L:${labels.length}:${lIds};M:${lines.length}:${mIds}`;
   }
 

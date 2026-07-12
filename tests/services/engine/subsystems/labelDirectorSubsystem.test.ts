@@ -187,6 +187,42 @@ describe('labelDirectorSubsystem', () => {
     expect(lineStub.setLines).toHaveBeenCalledTimes(3);
   });
 
+  it('re-uploads a marker line when its endpoints move', () => {
+    // Regression test for the famous-galaxy leader line: `labelLeaderLine`
+    // derives the connector's toWorld from the camera each frame, so the
+    // endpoints move while id and fadeAlpha stay constant.  If the signature
+    // ignored endpoints, the GPU buffer would freeze the connector at
+    // whatever geometry was uploaded the first visible frame.
+    const dir = createLabelDirectorSubsystem();
+    const labelStub = makeLabelStub();
+    const lineStub = makeLineStub();
+    dir.attachRenderers(labelStub as never, lineStub as never);
+
+    // Unowned line (bypasses the appear/disappear envelope) whose toWorld
+    // the producer moves between frames — the camera-derived connector case.
+    let tipY = 0.5;
+    const producer: LabelProducer = {
+      id: 'p',
+      produceLabels: () => ({
+        labels: [],
+        lines: [{ ...SAMPLE_LINE, toWorld: [0, tipY, 0] }],
+        awake: false,
+      }),
+    };
+    dir.registerProducer(producer);
+
+    dir.runFrame(makeState(), makeCtx(0));
+    expect(lineStub.setLines).toHaveBeenCalledTimes(1);
+
+    dir.runFrame(makeState(), makeCtx(100)); // identical endpoints → skip
+    expect(lineStub.setLines).toHaveBeenCalledTimes(1);
+
+    tipY = 0.6; // camera moved: the lifted tip lands elsewhere in world space
+    dir.runFrame(makeState(), makeCtx(200));
+    expect(lineStub.setLines).toHaveBeenCalledTimes(2);
+    expect(lineStub.setLines).toHaveBeenLastCalledWith([{ ...SAMPLE_LINE, toWorld: [0, 0.6, 0] }]);
+  });
+
   it('flushes empty when no producers contribute, then skips subsequent empties', () => {
     const dir = createLabelDirectorSubsystem();
     const labelStub = makeLabelStub();

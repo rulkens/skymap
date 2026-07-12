@@ -1,22 +1,49 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { mat4 } from 'wgpu-matrix';
 import { produceMilkyWayLabel } from '../../../../src/services/engine/presentation/produceMilkyWayLabel';
+import { MILKY_WAY_LABEL_STYLE } from '../../../../src/services/engine/presentation/milkyWayLabelStyle';
+import {
+  LEADER_LINE_PADDING_PX,
+  MIN_LABEL_LIFT_PX,
+} from '../../../../src/services/engine/presentation/leaderLineStyle';
+import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Label } from '../../../../src/@types/rendering/Label';
+import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
+
+// Measured ink bbox the labelRenderer stub reports (atlas px, anchor-relative,
+// +Y down). maxY = 12 puts the text's true bottom 12 atlas px below the
+// baseline anchor (a descender — 'You are here' has one), which the producer
+// scales by the em clamp to place the stem top.
+const MEASURED_BBOX: LabelBBox = { minX: -60, minY: -40, maxX: 60, maxY: 12 };
+
+// Screen offset of the text's true bottom BELOW the label anchor. At the
+// fixture distances the projected em (worldEm/clipW · h/2 ≤ ~14 px) sits far
+// below the style's minPixelSize (45), so the clamp pins displayEmPx there.
+const TEXT_BOTTOM_BELOW_ANCHOR_PX =
+  MEASURED_BBOX.maxY * (MILKY_WAY_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
 
 // Minimal state: the producer reads settings.milkyWay.labelEnabled,
-// settings.labels.focusedOnly (+ selection.focus for the solo gate), and the
-// fade registry (opacityOf only — the producer is a pure reader).
+// settings.labels.focusedOnly (+ selection.focus for the solo gate), the fade
+// registry (opacityOf only — the producer is a pure reader), and
+// state.gpu.labelRenderer.measure for the caption's ink bbox (which places
+// the stem top).
 function makeState(
   labelEnabled: boolean,
   layerOpacity: number,
-  opts: { focusedOnly?: boolean; focus?: { type: string } | null } = {},
+  opts: { focusedOnly?: boolean; focus?: { type: string } | null; bbox?: LabelBBox } = {},
 ): EngineState {
+  const bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     settings: {
       milkyWay: { enabled: true, labelEnabled },
       labels: { focusedOnly: opts.focusedOnly ?? false },
     },
     selection: { focus: opts.focus ?? null, select: null, hover: null },
+    gpu: { labelRenderer: { measure: vi.fn<(label: Label) => LabelBBox>(() => bbox) } },
     subsystems: {
       fades: {
         opacityOf: () => layerOpacity,
@@ -25,8 +52,49 @@ function makeState(
   } as unknown as EngineState;
 }
 
-function makeCtx(camDistMpc: number): ReadyFrameContext {
-  return { drawCamPos: [camDistMpc, 0, 0], nowMs: 0 } as unknown as ReadyFrameContext;
+// The producer now projects the origin through ctx.vp for the screen-space
+// lift, so the fixture carries a real view-projection: camera at
+// [camDistMpc, 0, 0] looking at the origin, 60° vertical fov. `up` tilts the
+// camera (roll) for the orientation-independence test; `height` shrinks the
+// viewport until the lift leaves no room for a stem below the text.
+function makeCtx(
+  camDistMpc: number,
+  opts: { up?: Vec3; width?: number; height?: number } = {},
+): ReadyFrameContext {
+  const width = opts.width ?? 1920;
+  const height = opts.height ?? 1080;
+  const fovYRad = (60 * Math.PI) / 180;
+  const vp = mat4.multiply(
+    mat4.perspective(fovYRad, width / height, 0.01, 100),
+    mat4.lookAt([camDistMpc, 0, 0], [0, 0, 0], opts.up ?? [0, 1, 0]),
+  );
+  return {
+    drawCamPos: [camDistMpc, 0, 0],
+    vp,
+    canvasSize: { width, height },
+    fovYRad,
+    nowMs: 0,
+  } as unknown as ReadyFrameContext;
+}
+
+/** Project a world point through the ctx's vp to screen pixels (+Y down). */
+function screenOf(ctx: ReadyFrameContext, p: readonly number[]): Vec2 {
+  const m = ctx.vp;
+  const clipX = m[0]! * p[0]! + m[4]! * p[1]! + m[8]! * p[2]! + m[12]!;
+  const clipY = m[1]! * p[0]! + m[5]! * p[1]! + m[9]! * p[2]! + m[13]!;
+  const clipW = m[3]! * p[0]! + m[7]! * p[1]! + m[11]! * p[2]! + m[15]!;
+  const { width, height } = ctx.canvasSize;
+  return [(clipX / clipW / 2 + 0.5) * width, (1 - (clipY / clipW / 2 + 0.5)) * height];
+}
+
+/**
+ * The producer's PROPORTIONAL lift: 1.5 × apparent size of the MW's 30 kpc
+ * disk. Only valid above the MIN_LABEL_LIFT_PX floor — callers in the floored
+ * regime assert against the constant instead.
+ */
+function expectedLiftPx(camDistMpc: number, viewportHeightPx: number): number {
+  const pxPerRad = viewportHeightPx / (2 * Math.tan((30 * Math.PI) / 180));
+  return 1.5 * (30 / (camDistMpc * 1000)) * pxPerRad;
 }
 
 describe('produceMilkyWayLabel', () => {
@@ -102,5 +170,47 @@ describe('produceMilkyWayLabel', () => {
       const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(r));
       expect(out.awake).toBe(false);
     }
+  });
+
+  it('lifts the label straight up in screen space under a rolled camera', () => {
+    // A rolled camera is exactly where the retired world +Y anchor failed:
+    // world-up projects diagonally, so a world offset would lay the stem over
+    // the text. The screen-space lift must hold regardless — label straight
+    // above the origin dot at the proportional lift, stem top exactly the
+    // padding below the text's measured bottom.
+    // Precision 2 (±0.005 px) absorbs the f32 project→un-project round trip.
+    const ctx = makeCtx(0.5, { up: [Math.sin(0.6), Math.cos(0.6), 0] });
+    const out = produceMilkyWayLabel(makeState(true, 1), ctx);
+
+    const liftPx = expectedLiftPx(0.5, 1080);
+    const dot = screenOf(ctx, [0, 0, 0]);
+    const anchor = screenOf(ctx, out.labels[0]!.worldPos);
+    expect(anchor[0]).toBeCloseTo(dot[0], 2);
+    expect(dot[1] - anchor[1]).toBeCloseTo(liftPx, 2);
+
+    expect(out.lines).toHaveLength(1);
+    expect(out.lines[0]!.fromWorld).toEqual([0, 0, 0]);
+    const tip = screenOf(ctx, out.lines[0]!.toWorld);
+    expect(tip[0]).toBeCloseTo(dot[0], 2);
+    expect(tip[1] - anchor[1]).toBeCloseTo(TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX, 2);
+  });
+
+  it('emits no stem when the derived line height is zero or negative', () => {
+    // Small viewport (200 px tall) at 1.5 Mpc: the proportional lift (~5.2 px)
+    // floors to MIN_LABEL_LIFT_PX, but a caption whose ink extends deep below
+    // its anchor (bbox maxY 60 atlas px → ~32 px on screen at the 45 px em
+    // clamp) leaves the derived stem height negative (28 − 32 − 6 < 0) — so
+    // no line is emitted. The caption is still emitted at the floored lift.
+    const ctx = makeCtx(1.5, { width: 320, height: 200 });
+    const out = produceMilkyWayLabel(
+      makeState(true, 1, { bbox: { minX: -60, minY: -40, maxX: 60, maxY: 60 } }),
+      ctx,
+    );
+
+    expect(out.labels).toHaveLength(1);
+    expect(out.lines).toEqual([]);
+    const dot = screenOf(ctx, [0, 0, 0]);
+    const anchor = screenOf(ctx, out.labels[0]!.worldPos);
+    expect(dot[1] - anchor[1]).toBeCloseTo(MIN_LABEL_LIFT_PX, 2);
   });
 });
