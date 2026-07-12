@@ -25,9 +25,11 @@ export const TIPS: Record<string, TipContent> = {
     title: 'Recession velocity',
     body: (
       <>
-        Speed at which the galaxy appears to move away from us, due to the expansion of space.
-        Estimated from its redshift via Hubble's law: <code>v ≈ H₀ × d</code>, with H₀ ≈ 70
-        km/s/Mpc.
+        How fast the distance between us and this object grows right now, due to the expansion of
+        space. Hubble's law applied at its present-day distance: <code>v = H₀ × d</code>, with H₀ ≈
+        70 km/s/Mpc. Beyond z ≈ 1.5 this <em>exceeds the speed of light</em> — that's real
+        cosmology, not a bug: space itself is expanding, and nothing is moving <em>through</em>{' '}
+        space faster than light.
       </>
     ),
   },
@@ -117,10 +119,10 @@ export const TIPS: Record<string, TipContent> = {
     title: 'Physical diameter',
     body: (
       <>
-        The galaxy's size in physical units (kpc / kly, matching decades). For galaxy catalogs without a
-        measured isophotal diameter, we estimate it from the absolute B-magnitude via the Tully
-        size–luminosity relation. The provenance line below the value says which source we used for
-        this row.
+        The galaxy's size in physical units (kpc / kly, matching decades). For galaxy catalogs
+        without a measured isophotal diameter, we estimate it from the absolute B-magnitude via the
+        Tully size–luminosity relation. The provenance line below the value says which source we
+        used for this row.
       </>
     ),
   },
@@ -161,8 +163,8 @@ export const TIPS: Record<string, TipContent> = {
     body: (
       <>
         How many catalogued galaxies fall inside this structure's sphere at your current tier and
-        galaxy catalog selection. It rises as you load larger tiers or enable more galaxy catalogs — read it as "how
-        many we can show", not the true population.
+        galaxy catalog selection. It rises as you load larger tiers or enable more galaxy catalogs —
+        read it as "how many we can show", not the true population.
       </>
     ),
   },
