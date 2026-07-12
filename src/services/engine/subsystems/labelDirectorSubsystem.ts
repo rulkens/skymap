@@ -151,7 +151,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   }
 
   function signatureOf(labels: readonly Label[], lines: readonly MarkerLine[]): string {
-    // Cheap stable signature: per-label `id:fadeAlpha`, per-line
+    // Cheap stable signature: per-label `id:fadeAlpha:worldPos`, per-line
     // `id:fadeAlpha:toWorld`, joined.
     //
     // Re-upload triggers when ids/count change OR when any entry's
@@ -164,27 +164,41 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     // appears at e.g. 0.1 alpha and never brightens as the camera
     // closes in.)
     //
-    // We deliberately DON'T include LABEL world positions or colours — the
-    // glyph layout in `labelRenderer.setLabels` is the expensive
-    // step we're protecting; static-position producers (structures) keep
-    // their positions stable and benefit from the skip.
+    // LABEL signatures include `worldPos` because labels are placed by a
+    // screen-space lift (`liftedLabelPlacement`): a lifted label's anchor is
+    // camera-derived and moves every frame the camera does, while its `id`
+    // and `fadeAlpha` stay constant.  Without this term the anchor would
+    // freeze at whatever world point was uploaded the first visible frame,
+    // and that fixed point would reproject and DRIFT over the glyphs as the
+    // camera orbits.  A moving owned leader line would mask the gap — its
+    // `toWorld` is in the signature, so a moved line already forces a
+    // re-flush of the whole set — but the lift SUPPRESSES the line when its
+    // height ≤ 0, and then nothing else keys the label's motion.  Keying the
+    // label's own position closes that gap: a camera-derived label
+    // re-uploads on its own, independent of whether its line is present.
+    // The glyph layout in `labelRenderer.setLabels` is cheap and label
+    // counts are tiny, so the per-orbit-frame re-upload this implies is the
+    // intended cost; static-position producers (structures) keep their
+    // positions stable and still benefit from the skip.  Colours are still
+    // excluded — no producer varies a label's colour at fixed id.
     //
-    // LINE signatures DO include `toWorld`: the leader lines (famous-galaxy
-    // connectors, the Milky Way stem) are camera-derived per frame
-    // (`labelLeaderLine` lifts in screen space and un-projects), so their
-    // tips move with the camera while id and fadeAlpha stay constant —
-    // without this term a connector would freeze at whatever geometry was
-    // uploaded the first visible frame.  One signature gates BOTH renderers'
-    // flushes, so the moved label anchor (derived from the same lift) rides
-    // along with its line's re-upload; and because the endpoints only move
-    // while the camera does, the skip still fires on every static frame —
-    // exactly when it pays.
+    // LINE signatures include `toWorld` for the same camera-derived reason:
+    // the leader lines (famous-galaxy connectors, the Milky Way stem) lift
+    // in screen space and un-project (`labelLeaderLine`), so their tips move
+    // with the camera while id and fadeAlpha stay constant — without this
+    // term a connector would freeze at whatever geometry was uploaded the
+    // first visible frame.  Endpoints only move while the camera does, so
+    // the skip still fires on every static frame — exactly when it pays.
     //
     // Edge case: a producer mutating a label's `text` while keeping
     // the same `id` will NOT trigger re-upload.  No current producer
     // does this — the Milky Way label has constant text; structures derive text
     // from the structure name which is part of the id space.
-    const lIds = labels.map((l) => `${l.id}:${l.fadeAlpha ?? 1}`).join('|');
+    const lIds = labels
+      .map(
+        (l) => `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}`,
+      )
+      .join('|');
     const mIds = lines
       .map((m) => `${m.id}:${m.fadeAlpha ?? 1}:${m.toWorld[0]},${m.toWorld[1]},${m.toWorld[2]}`)
       .join('|');
