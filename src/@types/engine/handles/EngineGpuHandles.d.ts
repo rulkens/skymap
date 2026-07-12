@@ -180,6 +180,22 @@ export type EngineGpuHandles = {
    */
   foregroundLabelRenderer: LabelRenderer | null;
   /**
+   * Second thick screen-space line renderer, the leader-line sibling of
+   * `foregroundLabelRenderer`.  A SEPARATE instance from `markerLineRenderer`
+   * for the same reason `foregroundLabelRenderer` is separate from
+   * `labelRenderer`: the scene-body leader lines project through the NEAR0
+   * slab (whose near plane scales with `cam.distance` so it always contains
+   * the AU-scale bodies), while `markerLineRenderer`'s director-driven lines
+   * project through the galaxy-scale COSMO `vp` that would clip the bodies
+   * away — and one renderer draws with one view-projection.  Drawn by
+   * `foregroundLabelsLayer`, which rebases its connectors into the
+   * camera-relative frame each frame exactly as it rebases the captions.
+   * Null until `initGpu` builds it (same UI ctx / swap-chain format as the
+   * caption renderer, no atlas dep); excluded from `isEngineReady` and
+   * null-checked at use.  Released and re-nulled by `destroy()`.
+   */
+  foregroundMarkerLineRenderer: MarkerLineRenderer | null;
+  /**
    * Thick screen-space line overlay renderer.  Null until `initGpu`
    * constructs it alongside `labelRenderer` (same phase, no atlas dep).
    * Excluded from the `isEngineReady` predicate for the same reason as

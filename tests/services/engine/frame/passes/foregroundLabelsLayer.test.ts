@@ -31,14 +31,21 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
+import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label } from '../../../../../src/@types/rendering/Label';
+import type { MarkerLine } from '../../../../../src/@types/rendering/MarkerLine';
 
 // Mock rebaseViewProj so the draw test can (a) assert which vp it consumed by
-// object identity — the load-bearing f64 seam — and (b) hand the renderer a
-// recognisable Float32Array. The rebase math is covered by rebaseViewProj's own
-// precision tests.
+// object identity — the load-bearing f64 seam — and (b) hand the layer a REAL
+// (identity) projection: the leader-line placement projects each anchor through
+// this matrix and un-projects it (via mat4.inverse), so an all-42 singular
+// matrix would give NaN endpoints. Identity keeps every near-origin anchor in
+// front of the camera (clip-w = 1) and lifts the caption purely on screen-Y.
+// The rebase math itself is covered by rebaseViewProj's own precision tests.
 vi.mock('../../../../../src/utils/camera/rebaseViewProj', () => ({
-  rebaseViewProj: vi.fn<() => Float32Array>(() => Float32Array.from({ length: 16 }, () => 42)),
+  rebaseViewProj: vi.fn<() => Float32Array>(
+    () => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+  ),
 }));
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 
@@ -46,26 +53,46 @@ const rebaseMock = rebaseViewProj as unknown as ReturnType<typeof vi.fn>;
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 
-// `enabled` reads only `ctx.cam.distance`; a bare cast at the requested
-// distance satisfies the signature without a full frame-context fixture.
+// `enabled` reads only `ctx.cam.distance`; `draw` also reads `ctx.fovYRad` to
+// size the body's apparent diameter for the proportional lift. A bare cast with
+// both fields satisfies the signature without a full frame-context fixture.
 function makeCtx(distance: number): ReadyFrameContext {
-  return { cam: { distance } } as unknown as ReadyFrameContext;
+  return { cam: { distance }, fovYRad: 1 } as unknown as ReadyFrameContext;
 }
 
-// A foreground label renderer whose glyphCount is fixed per test. `setLabels`
-// and `draw` are spies the draw test inspects; the rest of LabelRenderer is
-// unused.
+// A foreground label renderer whose glyphCount is fixed per test. `setLabels`,
+// `draw`, and `measure` are spies the draw test inspects; `measure` returns null
+// (the lifted-label chain degrades to a bottom at the anchor). The rest of
+// LabelRenderer is unused.
 function makeRenderer(glyphCount: number): LabelRenderer {
   return {
     label: 'foregroundLabelRenderer',
     setLabels: vi.fn<(labels: readonly Label[]) => void>(),
     draw: vi.fn<(...args: unknown[]) => void>(),
+    measure: vi.fn<() => null>(() => null),
     glyphCount: () => glyphCount,
   } as unknown as LabelRenderer;
 }
 
-function makeState(renderer: LabelRenderer | null): EngineState {
-  return { gpu: { foregroundLabelRenderer: renderer } } as unknown as EngineState;
+// The leader-line sibling renderer. `setLines` + `draw` are spies the connector
+// test inspects; the rest is unused.
+function makeLineRenderer(): MarkerLineRenderer {
+  return {
+    label: 'foregroundMarkerLineRenderer',
+    setLines: vi.fn<(lines: MarkerLine[]) => void>(),
+    draw: vi.fn<(...args: unknown[]) => void>(),
+    lineCount: () => 0,
+    destroy: vi.fn<() => void>(),
+  } as unknown as MarkerLineRenderer;
+}
+
+function makeState(
+  renderer: LabelRenderer | null,
+  lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
+): EngineState {
+  return {
+    gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
+  } as unknown as EngineState;
 }
 
 /**
@@ -129,17 +156,25 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(rebaseArgs[0]).not.toBe(view.vp);
     expect(rebaseArgs[1]).toBe(view.camPos);
 
-    // ── Anchors uploaded camera-relative (pos − camPos), in f64 before narrow ──
+    // ── Anchors uploaded camera-relative (pos − camPos) AND lifted ──
+    // Every body stays in the set (glyphCount stability — the enabled gate must
+    // not latch off), so the length is preserved. Under the identity test vp the
+    // lift is purely screen-vertical, so X and Z stay EXACTLY the camera-relative
+    // anchor (proving the rebase, not the raw ~1-AU body position) while Y rises
+    // by the screen-space lift (proving the caption now hangs OFF the body).
     const setSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     expect(setSpy).toHaveBeenCalledTimes(1);
     const rebasedLabels = setSpy.mock.calls[0]![0] as readonly Label[];
     const base = sceneBodyLabels();
     expect(rebasedLabels).toHaveLength(base.length);
     for (let i = 0; i < base.length; i++) {
-      expect(rebasedLabels[i]!.worldPos[0]).toBe(base[i]!.worldPos[0] - view.camPos[0]);
-      expect(rebasedLabels[i]!.worldPos[1]).toBe(base[i]!.worldPos[1] - view.camPos[1]);
-      expect(rebasedLabels[i]!.worldPos[2]).toBe(base[i]!.worldPos[2] - view.camPos[2]);
-      // Text/styling carried through untouched — only the anchor is rebased.
+      const anchorX = base[i]!.worldPos[0] - view.camPos[0];
+      const anchorY = base[i]!.worldPos[1] - view.camPos[1];
+      const anchorZ = base[i]!.worldPos[2] - view.camPos[2];
+      expect(rebasedLabels[i]!.worldPos[0]).toBe(anchorX);
+      expect(rebasedLabels[i]!.worldPos[2]).toBe(anchorZ);
+      expect(rebasedLabels[i]!.worldPos[1]).toBeGreaterThan(anchorY); // lifted up
+      // Text/styling carried through untouched — only the anchor is rebased+lifted.
       expect(rebasedLabels[i]!.text).toBe(base[i]!.text);
     }
 
@@ -151,6 +186,55 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(args[1]).toBe(rebaseMock.mock.results[0]!.value);
     expect(args[1]).not.toBe(view.vp);
     expect(args[2]).toBe(view.viewportPx);
+  });
+
+  it('draws a leader line per caption, rebased into the camera-relative frame', () => {
+    rebaseMock.mockClear();
+    const renderer = makeRenderer(6);
+    const lineRenderer = makeLineRenderer();
+    const state = makeState(renderer, lineRenderer);
+    const view = makeNear0View();
+
+    foregroundLabelsLayer.draw(PASS_STUB, view, makeCtx(5e-4), state);
+
+    // ── One connector per emitted caption ──
+    // Under the identity vp every body projects in front (clip-w = 1), so the
+    // lifted-label chain emits a connector for each — the leader-line treatment
+    // brought to the foreground captions.
+    const setLinesSpy = lineRenderer.setLines as unknown as ReturnType<typeof vi.fn>;
+    expect(setLinesSpy).toHaveBeenCalledTimes(1);
+    const lines = setLinesSpy.mock.calls[0]![0] as MarkerLine[];
+    const base = sceneBodyLabels();
+    expect(lines).toHaveLength(base.length);
+
+    // ── The connectors are REBASED, not drawn from raw ~1-AU anchors ──
+    // fromWorld is the body dot expressed camera-relative (pos − camPos), the
+    // same rebase the captions ride — feeding the renderer the raw anchor would
+    // reintroduce the f32 origin-distance cancellation this layer exists to dodge.
+    for (let i = 0; i < base.length; i++) {
+      expect(lines[i]!.fromWorld[0]).toBe(base[i]!.worldPos[0] - view.camPos[0]);
+      expect(lines[i]!.fromWorld[1]).toBe(base[i]!.worldPos[1] - view.camPos[1]);
+      expect(lines[i]!.fromWorld[2]).toBe(base[i]!.worldPos[2] - view.camPos[2]);
+      // Distinctly NOT the raw body anchor (camPos is a non-zero eye).
+      expect(lines[i]!.fromWorld).not.toEqual([...base[i]!.worldPos]);
+    }
+
+    // ── The line renderer draws with the rebased vp (NOT view.vp), before text ──
+    const lineDrawSpy = lineRenderer.draw as unknown as ReturnType<typeof vi.fn>;
+    expect(lineDrawSpy).toHaveBeenCalledTimes(1);
+    expect(lineDrawSpy.mock.calls[0]![0]).toBe(PASS_STUB);
+    expect(lineDrawSpy.mock.calls[0]![1]).toBe(rebaseMock.mock.results[0]!.value);
+    expect(lineDrawSpy.mock.calls[0]![1]).not.toBe(view.vp);
+  });
+
+  it('draws captions even when the leader-line renderer is null (bootstrap gap)', () => {
+    const renderer = makeRenderer(6);
+    const view = makeNear0View();
+    // Line renderer not yet constructed: the captions must still draw, the
+    // connectors just skipped — the line handle is an optional bootstrap resource.
+    const state = makeState(renderer, null);
+    foregroundLabelsLayer.draw(PASS_STUB, view, makeCtx(5e-4), state);
+    expect(renderer.draw as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
   });
 
   it('is a no-op when the foreground renderer is null (pre-bootstrap)', () => {

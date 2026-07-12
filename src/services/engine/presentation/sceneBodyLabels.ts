@@ -39,6 +39,19 @@ import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { SCENE_EARTH, SCENE_STARS, SCENE_PLANETS } from '../../../data/bodies/sceneBodies';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
+
+/**
+ * A scene-body caption always authors its tint, em height, and pixel clamps —
+ * unlike the general `Label` shape, where those fields are optional and fall
+ * back to renderer defaults. Narrowing the return type states that guarantee
+ * once at the producer, so consumers that need the fields (the foreground
+ * layer feeds them to `liftedLabelPlacement`, whose input requires plain
+ * `number`s) read them directly — no per-field `?? default` at the read site
+ * that would silently mask a caption built without its colour or clamps.
+ */
+export type SceneBodyLabel = Label &
+  Required<Pick<Label, 'color' | 'worldEmMpc' | 'minPixelSize' | 'maxPixelSize'>>;
 
 /**
  * Earth's caption tint. `EarthBody` carries a texture rather than a colour,
@@ -67,7 +80,7 @@ const BODY_ALIGN_Y: Readonly<Record<string, Label['alignY']>> = {
  * per-type derivation (spectral colour / albedo / Earth blue), widened to
  * straight RGBA at full alpha.
  */
-function bodyLabel(body: SceneBody, tint: Readonly<Vec3>): Label {
+function bodyLabel(body: SceneBody, tint: Readonly<Vec3>): SceneBodyLabel {
   const o = RENDER_ORIGIN_MPC;
   const p = body.positionMpc;
   const worldPos: Vec3 = [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
@@ -84,10 +97,14 @@ function bodyLabel(body: SceneBody, tint: Readonly<Vec3>): Label {
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
     // Em height tracks the body's true size; the pixel clamps below keep
-    // it readable even though that em is microscopic at most zooms.
+    // it readable even though that em is microscopic at most zooms. The clamp
+    // band is BORROWED from `FAMOUS_LABEL_STYLE` (not a private 13/44 pair) so
+    // a scene-body caption reads at the same size as a nearby famous-galaxy
+    // label — the "adopt the famous treatment" parity — and a future retune of
+    // the famous band carries here automatically instead of silently drifting.
     worldEmMpc: body.radiusKm * SCALE_UNITS.KM_TO_MPC,
-    minPixelSize: 13,
-    maxPixelSize: 44,
+    minPixelSize: FAMOUS_LABEL_STYLE.minPixelSize,
+    maxPixelSize: FAMOUS_LABEL_STYLE.maxPixelSize,
     alignX: 'center',
     alignY: BODY_ALIGN_Y[body.id] ?? 'baseline',
   };
@@ -98,7 +115,7 @@ function bodyLabel(body: SceneBody, tint: Readonly<Vec3>): Label {
  * `RENDER_ORIGIN_MPC` for the foreground view-projection.  Static — the
  * bodies don't move — so the caller sets these once at construction.
  */
-export function sceneBodyLabels(): Label[] {
+export function sceneBodyLabels(): SceneBodyLabel[] {
   return [
     bodyLabel(SCENE_EARTH, EARTH_TINT),
     ...SCENE_STARS.map((star) => bodyLabel(star, star.color)),

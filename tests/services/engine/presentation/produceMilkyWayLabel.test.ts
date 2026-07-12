@@ -4,7 +4,7 @@ import { produceMilkyWayLabel } from '../../../../src/services/engine/presentati
 import { MILKY_WAY_LABEL_STYLE } from '../../../../src/services/engine/presentation/milkyWayLabelStyle';
 import {
   LEADER_LINE_PADDING_PX,
-  MIN_LABEL_LIFT_PX,
+  MIN_LABEL_CLEARANCE_PX,
 } from '../../../../src/services/engine/presentation/leaderLineStyle';
 import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -89,8 +89,9 @@ function screenOf(ctx: ReadyFrameContext, p: readonly number[]): Vec2 {
 
 /**
  * The producer's PROPORTIONAL lift: 1.5 × apparent size of the MW's 30 kpc
- * disk. Only valid above the MIN_LABEL_LIFT_PX floor — callers in the floored
- * regime assert against the constant instead.
+ * disk. Only valid above the ink-clearance floor (MIN_LABEL_CLEARANCE_PX +
+ * the measured ink drop) — callers in the floored regime assert against the
+ * constants instead.
  */
 function expectedLiftPx(camDistMpc: number, viewportHeightPx: number): number {
   const pxPerRad = viewportHeightPx / (2 * Math.tan((30 * Math.PI) / 180));
@@ -195,12 +196,16 @@ describe('produceMilkyWayLabel', () => {
     expect(tip[1] - anchor[1]).toBeCloseTo(TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX, 2);
   });
 
-  it('emits no stem when the derived line height is zero or negative', () => {
+  it('keeps a deep-hanging caption clear of the dot and keeps its stem', () => {
     // Small viewport (200 px tall) at 1.5 Mpc: the proportional lift (~5.2 px)
-    // floors to MIN_LABEL_LIFT_PX, but a caption whose ink extends deep below
-    // its anchor (bbox maxY 60 atlas px → ~32 px on screen at the 45 px em
-    // clamp) leaves the derived stem height negative (28 − 32 − 6 < 0) — so
-    // no line is emitted. The caption is still emitted at the floored lift.
+    // is floored, and a caption whose ink extends deep below its anchor (bbox
+    // maxY 60 atlas px → ~32 px on screen at the 45 px em clamp) would — under
+    // an anchor-only 28 px floor — swallow the whole lift, land the text on
+    // the dot, and suppress its own stem (28 − 32 − 6 < 0). The clearance
+    // guarantee raises the lift by the deficit instead: the measured ink
+    // bottom stays MIN_LABEL_CLEARANCE_PX above the dot and the stem is
+    // present with the exact padding gap.
+    const inkDropPx = 60 * (MILKY_WAY_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
     const ctx = makeCtx(1.5, { width: 320, height: 200 });
     const out = produceMilkyWayLabel(
       makeState(true, 1, { bbox: { minX: -60, minY: -40, maxX: 60, maxY: 60 } }),
@@ -208,9 +213,14 @@ describe('produceMilkyWayLabel', () => {
     );
 
     expect(out.labels).toHaveLength(1);
-    expect(out.lines).toEqual([]);
     const dot = screenOf(ctx, [0, 0, 0]);
     const anchor = screenOf(ctx, out.labels[0]!.worldPos);
-    expect(dot[1] - anchor[1]).toBeCloseTo(MIN_LABEL_LIFT_PX, 2);
+    // The ink bottom (anchor + ink drop, screen +Y down) clears the dot by
+    // exactly the guaranteed minimum.
+    expect(dot[1] - (anchor[1] + inkDropPx)).toBeCloseTo(MIN_LABEL_CLEARANCE_PX, 2);
+    // The stem is present, top at the padding below the ink bottom.
+    expect(out.lines).toHaveLength(1);
+    const tip = screenOf(ctx, out.lines[0]!.toWorld);
+    expect(tip[1] - anchor[1]).toBeCloseTo(inkDropPx + LEADER_LINE_PADDING_PX, 2);
   });
 });

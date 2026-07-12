@@ -268,6 +268,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // (Plan 01 — zoom-to-Earth). null until initGpu; excluded from
       // isEngineReady, null-checked at use like labelRenderer.
       foregroundLabelRenderer: null,
+      // Leader-line sibling of foregroundLabelRenderer — the NEAR0-slab
+      // connectors under the scene-body captions. null until initGpu;
+      // excluded from isEngineReady, null-checked at use.
+      foregroundMarkerLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use by
       // clipPathDebugLayer.
       debugLineRenderer: null,
@@ -690,6 +694,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.foregroundLabelRenderer?.destroy();
     state.gpu.foregroundLabelRenderer = null;
+    state.gpu.foregroundMarkerLineRenderer?.destroy();
+    state.gpu.foregroundMarkerLineRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
     state.gpu.debugLineRenderer?.destroy();

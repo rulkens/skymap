@@ -5,7 +5,7 @@ import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/fo
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import {
   LEADER_LINE_PADDING_PX,
-  MIN_LABEL_LIFT_PX,
+  MIN_LABEL_CLEARANCE_PX,
 } from '../../../../src/services/engine/presentation/leaderLineStyle';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
@@ -136,7 +136,8 @@ describe('produceFamousLabels', () => {
     const state = makeState();
     // 120 kpc galaxy at 5 Mpc → ~22.4 px apparent size: comfortably above the
     // 6 px gate AND in the proportional-lift regime (1.5 × 22.4 ≈ 33.7 px sits
-    // above the 28 px floor, so the floor stays out of this test's way).
+    // above the clearance-raised floor of 28 + ~4.3 px ink drop, so neither
+    // floor bites in this test).
     seed(state, [{ id: 'm31', names: ['M31'] }], [5, 0, 0], [120]);
     const out = produceFamousLabels(state, makeCtx());
 
@@ -187,40 +188,53 @@ describe('produceFamousLabels', () => {
     }
   });
 
-  it('floors the lift so a tiny galaxy caption clears the galaxy', () => {
+  it('floors the lift so a tiny galaxy caption keeps the ink clearance', () => {
     // 120 kpc at 17 Mpc → ~6.6 px apparent size (the M110 case): the
     // proportional lift would be ~9.9 px — the caption would sit on the
-    // galaxy and its thumbnail. The floor pushes the label to exactly
-    // MIN_LABEL_LIFT_PX; the line still derives from the text bottom, so the
-    // padding invariant holds under the floor too.
+    // galaxy and its thumbnail. The clearance guarantee holds for the
+    // measured INK bottom, so the anchor lands at exactly clearance + ink
+    // drop (the descender hangs below the baseline anchor) — the text's true
+    // bottom clears the dot by MIN_LABEL_CLEARANCE_PX. The line still
+    // derives from the text bottom, so the padding invariant holds under the
+    // floor too.
     const state = makeState();
     seed(state, [{ id: 'm110', names: ['M110'] }], [17, 0, 0], [120]);
     const out = produceFamousLabels(state, makeCtx());
 
     const dot = screenOf([17, 0, 0]);
     const anchor = screenOf(out.labels[0]!.worldPos);
-    expect(dot[1] - anchor[1]).toBeCloseTo(MIN_LABEL_LIFT_PX, 2);
+    expect(dot[1] - anchor[1]).toBeCloseTo(
+      MIN_LABEL_CLEARANCE_PX + TEXT_BOTTOM_BELOW_ANCHOR_PX,
+      2,
+    );
     const tip = screenOf(out.lines[0]!.toWorld);
     expect(tip[1] - anchor[1]).toBeCloseTo(TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX, 2);
   });
 
-  it('emits no line when the derived line height is zero or negative', () => {
-    // A caption whose ink extends deep below its anchor (e.g. a centre-
-    // aligned multi-liner: bbox maxY 70 atlas px → 25 px on screen at the
-    // 30 px em clamp) on a tiny galaxy at the floored 28 px lift: 28 − 25 − 6
-    // leaves no room below the dot — the line's derived height is negative,
-    // so no line is emitted. The vanish behaviour falls out of the
-    // derivation; there is no separate threshold.
+  it('keeps a deep-hanging caption clear of the galaxy and keeps its line', () => {
+    // A caption whose ink extends deep below its anchor (a top-aligned or
+    // centre-aligned block: bbox maxY 70 atlas px → 25 px on screen at the
+    // 30 px em clamp) on a tiny galaxy: an anchor-only 28 px floor would let
+    // the ink reach within 3 px of the galaxy AND suppress the line
+    // (28 − 25 − 6 < 0) — the caption painted over its subject with no
+    // connector. The clearance guarantee instead raises the lift by the
+    // deficit: the measured ink bottom stays MIN_LABEL_CLEARANCE_PX above
+    // the dot, and the line is present with the exact padding gap.
+    const inkDropPx = 70 * (FAMOUS_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
     const state = makeState({ bbox: { minX: -50, minY: -30, maxX: 50, maxY: 70 } });
     seed(state, [{ id: 'm31', names: ['M31'] }], [17, 0, 0], [120]);
     const out = produceFamousLabels(state, makeCtx());
 
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
-    expect(out.lines).toEqual([]);
-    // The caption still gets its (floored) lift — only the line is suppressed.
     const dot = screenOf([17, 0, 0]);
     const anchor = screenOf(out.labels[0]!.worldPos);
-    expect(dot[1] - anchor[1]).toBeCloseTo(MIN_LABEL_LIFT_PX, 2);
+    // The ink bottom (anchor + ink drop, screen +Y down) clears the dot by
+    // exactly the guaranteed minimum.
+    expect(dot[1] - (anchor[1] + inkDropPx)).toBeCloseTo(MIN_LABEL_CLEARANCE_PX, 2);
+    // The connector reappears, top at the padding below the ink bottom.
+    expect(out.lines.map((m) => m.id)).toEqual(['famous-m31-anchor']);
+    const tip = screenOf(out.lines[0]!.toWorld);
+    expect(tip[1] - anchor[1]).toBeCloseTo(inkDropPx + LEADER_LINE_PADDING_PX, 2);
   });
 
   it('skips a galaxy whose apparent size is below the threshold', () => {

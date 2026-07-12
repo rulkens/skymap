@@ -436,6 +436,19 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.foregroundLabelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
   state.gpu.foregroundLabelRenderer.setLabels(sceneBodyLabels());
 
+  // foregroundMarkerLineRenderer is the leader-line sibling of the caption
+  // renderer above: a second `createMarkerLineRenderer` against the swap-chain
+  // `format`, drawing the short connectors that hang each caption off its
+  // body. It is SEPARATE from `markerLineRenderer` (the director's COSMO-slab
+  // lines) for the identical reason `foregroundLabelRenderer` is separate from
+  // `labelRenderer` — the connectors project through the NEAR0 slab so they
+  // track bodies far inside the main camera's near plane. `foregroundLabelsLayer`
+  // rebases the connector endpoints camera-relative each frame, the same f32
+  // origin-distance cancellation dodge it applies to the caption anchors. No
+  // bootstrap seed: the connectors are geometry derived per frame from the
+  // caption anchors, not a static set.
+  state.gpu.foregroundMarkerLineRenderer = createMarkerLineRenderer(uiCtx, format);
+
   // ── Earth (Plan 02 — zoom-to-Earth) ──────────────────────────────────
   //
   // The textured landing target of the descent.  Its ('rgba16float',

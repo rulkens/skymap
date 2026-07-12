@@ -18,25 +18,35 @@
  * zoom — the proportion the retired world-space offsets (1.5 × physical
  * diameter for famous galaxies) produced when world +Y happened to project to
  * screen-up, now guaranteed at every camera orientation because the lift is
- * measured in screen space. Floored by `MIN_LABEL_LIFT_PX` so tiny subjects
- * still get a caption that clears them.
+ * measured in screen space. Floored via `MIN_LABEL_CLEARANCE_PX` so tiny
+ * subjects still get a caption that clears them.
  */
 export const LEADER_LIFT_FACTOR = 1.5;
 
 /**
- * Floor on the LABEL's lift, in screen pixels. A barely-resolved galaxy
- * (M110 near the emission gate: a few px of apparent size) would get a
- * proportional lift of single-digit pixels — the caption would sit on top of
- * the galaxy itself and its close-approach thumbnail. This floors where the
- * TEXT sits, clearing a small thumbnail plus a breath.
+ * Guaranteed minimum screen distance, in pixels, between a caption's measured
+ * GLYPH-INK BOTTOM and the dot it labels. A barely-resolved subject (M110
+ * near the famous emission gate, a sub-pixel star at solar-system zoom) gets
+ * a proportional lift of single-digit pixels — without this guarantee the
+ * caption would sit on top of the subject and its close-approach thumbnail.
+ *
+ * The guarantee holds for the INK, not the label anchor: the anchor is an
+ * alignment artifact. A baseline-aligned caption keeps its ink bottom only a
+ * descender below the anchor, but a TOP-aligned caption (the scene-body
+ * sun/moon stagger) hangs its ENTIRE glyph block below — an anchor-only
+ * floor would let the text swallow the whole lift, cover the dot, and
+ * (through the derived line height going ≤ 0) suppress its own leader line.
+ * `liftedLabelPlacement` therefore floors the anchor lift at this value AND
+ * raises it further by the exact deficit whenever the measured ink bottom
+ * would come within this clearance of the dot.
  *
  * Distinct from the DELETED line-length floor, which fought the proportional
  * lift by inflating the line; the line's visibility stays purely the
- * derived-height > 0 rule. (With this floor the derived line usually has
- * positive height even for small galaxies — expected: a short pointer under
- * a clear caption.)
+ * derived-height > 0 rule. (Under the clearance guarantee the derived line
+ * height is `clearance − padding` at minimum — a short pointer under a clear
+ * caption.)
  */
-export const MIN_LABEL_LIFT_PX = 28;
+export const MIN_LABEL_CLEARANCE_PX = 28;
 
 /**
  * Exact screen gap, in pixels, between the leader line's TOP and the caption
