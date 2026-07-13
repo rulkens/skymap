@@ -100,17 +100,17 @@ iteration to a tight tolerance). Pure. Used CPU-side to place the body at its
 seed position (Task 3) — NOT on the GPU (the fragment goes the forward, closed
 direction `M = E − e·sin E`, spec §3.3).
 
-- [ ] Add `eccentricAnomalyFromMean.ts` — single function. Didactic docblock:
+- [x] Add `eccentricAnomalyFromMean.ts` — single function. Didactic docblock:
   WHY Newton (fast quadratic convergence for `e < 1`), WHY only the CPU needs the
   inverse (the fragment uses the trivial forward direction — spec §3.3).
-- [ ] Test `eccentricAnomalyFromMean returns M when e is 0` — `e = 0` ⇒ `E = M`
+- [x] Test `eccentricAnomalyFromMean returns M when e is 0` — `e = 0` ⇒ `E = M`
   for a couple of `M` values (hand-obvious, independent of the iteration).
-- [ ] Test `eccentricAnomalyFromMean satisfies Kepler's equation` — for a few
+- [x] Test `eccentricAnomalyFromMean satisfies Kepler's equation` — for a few
   `(M, e)` with `e ∈ {0.05, 0.5}`, assert `E − e·sin(E) − M` is within `1e-10`
   (an independent residual property, not a mirror of the solver).
-- [ ] Test `eccentricAnomalyFromMean round-trips a known E` — pick `E`, form
+- [x] Test `eccentricAnomalyFromMean round-trips a known E` — pick `E`, form
   `M = E − e·sin E` by hand, assert the solver returns `E` within `1e-10`.
-- [ ] `npm test -- eccentricAnomalyFromMean` → green. Commit.
+- [x] `npm test -- eccentricAnomalyFromMean` → green. Commit.
 
 ## Task 2 — `keplerianEllipse` (elements → world `A`, `B`, `C`)
 
