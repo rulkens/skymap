@@ -394,10 +394,10 @@ The low-detail MW impostor fades out too early as the camera dives toward the so
 
 **Files:** `src/utils/math/milkyWayApproachFadeAlpha.ts` (modify — lower the two band constants) + `tests/utils/math/milkyWayApproachFadeAlpha.test.ts` (repoint to the new constants). Primarily a VISUAL-gate task.
 
-- [ ] Lower `APPROACH_FADE_INNER_MPC` / `APPROACH_FADE_OUTER_MPC` so the impostor holds full strength far deeper toward the disc (the band closes only close to / inside the Sun's galactocentric radius). Update the docblock's kpc-scale rationale (`milkyWayApproachFadeAlpha.ts:19-34`) to the new band; keep the smoothstep shape. Named constants, no inline magic.
-- [ ] Repoint the existing `milkyWayApproachFadeAlpha.test.ts` cases to the new constants (endpoint + a mid-band value that tracks the retuned band) — do NOT add clamp-boundary/mirror tests (testing.md); the test's job is to pin that the band moved, not to restate `smoothstep`.
-- [ ] `npm test -- milkyWayApproachFadeAlpha` → green.
-- [ ] **VISUAL GATE — STOP and ask the user to confirm on the dev server:** the low-detail MW impostor stays visible far deeper into the dive toward the solar system than before, fading only close to the disc, with no hard pop. Commit after the user confirms.
+- [x] Lower `APPROACH_FADE_INNER_MPC` / `APPROACH_FADE_OUTER_MPC` so the impostor holds full strength far deeper toward the disc (the band closes only close to / inside the Sun's galactocentric radius). Update the docblock's kpc-scale rationale (`milkyWayApproachFadeAlpha.ts:19-34`) to the new band; keep the smoothstep shape. Named constants, no inline magic.
+- [x] Repoint the existing `milkyWayApproachFadeAlpha.test.ts` cases to the new constants (endpoint + a mid-band value that tracks the retuned band) — do NOT add clamp-boundary/mirror tests (testing.md); the test's job is to pin that the band moved, not to restate `smoothstep`.
+- [x] `npm test -- milkyWayApproachFadeAlpha` → green.
+- [x] **VISUAL GATE — STOP and ask the user to confirm on the dev server:** the low-detail MW impostor stays visible far deeper into the dive toward the solar system than before, fading only close to the disc, with no hard pop. Commit after the user confirms.
 
 ## Task 13 — INVESTIGATE a deep-zoom survey-galaxy fade (decision point)
 

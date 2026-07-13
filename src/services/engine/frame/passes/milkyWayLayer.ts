@@ -32,10 +32,12 @@
  *      disc spans at least `MILKY_WAY_FADE_FULL_PX` on screen, gone once it
  *      shrinks to `MILKY_WAY_FADE_GONE_PX`).
  *   3. `milkyWayApproachFadeAlpha(camDist) > 0` — the near-side fade
- *      (`utils/math/milkyWayApproachFadeAlpha.ts`): full outside ~40 kpc,
- *      gone by ~8 kpc as the camera dives inside the disc toward the solar
- *      system. Orthogonal to gate 2's apparent-size band — it is the only
- *      gate that closes at kpc range. Because it rides `enabled` it also
+ *      (`utils/math/milkyWayApproachFadeAlpha.ts`): the impostor rides the
+ *      whole descent into the disc at full strength and yields only once
+ *      the camera closes on the Sun's own galactocentric radius, headed
+ *      for the solar system (the exact band lives with that function's
+ *      constants). Orthogonal to gate 2's apparent-size band — it is the
+ *      only gate that closes at kpc range. Because it rides `enabled` it also
  *      makes a fully approach-faded disc unpickable (invisible →
  *      unpickable) — coherent, but a behaviour the pick program inherits
  *      for free from the shared gate.
@@ -93,9 +95,11 @@ export const milkyWayLayer: ContentLayer = {
     if (!milkyWayVisible(state, ctx.drawCamPos, ctx.fovYRad, ctx.canvasSize.height, ctx.nowMs)) {
       return false;
     }
-    // Near-side approach fade: close the gate once the camera has dived
-    // inside the disc toward the solar system. Orthogonal to the far-side
-    // band above — this is the only gate that shuts at kpc range.
+    // Near-side approach fade: close the gate only once the camera nears
+    // the Sun's own galactocentric radius on the way to the solar system
+    // (band constants live with milkyWayApproachFadeAlpha). Orthogonal to
+    // the far-side band above — this is the only gate that shuts at kpc
+    // range.
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     return milkyWayApproachFadeAlpha(camDistMpc) > 0;
   },
