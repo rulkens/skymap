@@ -323,13 +323,13 @@ resolution: `centerMpc = parentWorld + keplerianEllipse(el).centerOffsetMpc`,
 `null` → `RENDER_ORIGIN_MPC`; `'earth'` → `SCENE_EARTH.positionMpc` (Task 5,
 already derived).
 
-- [ ] Add `OrbitConic.d.ts` — one type, exactly the spec §5 sketch.
-- [ ] Add `sceneOrbitConics.ts` — `SCENE_ORBIT_CONICS: readonly OrbitConic[]`.
+- [x] Add `OrbitConic.d.ts` — one type, exactly the spec §5 sketch.
+- [x] Add `sceneOrbitConics.ts` — `SCENE_ORBIT_CONICS: readonly OrbitConic[]`.
   Didactic docblock: derived-from-elements (single source of truth, spec §5), the
   parent-resolution rule (Sun origin vs Earth for the Moon), and that this REPLACES
   the outgoing `sceneOrbits.ts` (`SCENE_ORBITS` derived from body seeds — the
   inverted dependency).
-- [ ] Test `SCENE_ORBIT_CONICS places each body on its own ellipse` — for each
+- [x] Test `SCENE_ORBIT_CONICS places each body on its own ellipse` — for each
   conic, take the matching body's world position `X_body` (`SCENE_BODIES`), form
   plane coords by projecting onto the `A`,`B` basis — `s = (X_body − C)·A / |A|²`,
   `t = (X_body − C)·B / |B|²` (the solution of `X_body = C + s·A + t·B` since
@@ -337,9 +337,9 @@ already derived).
   body-on-trail invariant
   (spec §5), an independent check (uses `keplerianPositionMpc`'s output via the
   body seed, verified against the ellipse basis, not a formula mirror).
-- [ ] Test `SCENE_ORBIT_CONICS resolves the Moon's centre to Earth` — assert the
+- [x] Test `SCENE_ORBIT_CONICS resolves the Moon's centre to Earth` — assert the
   Moon conic's `centerMpc ≈ SCENE_EARTH.positionMpc` (parent resolution, spec §5).
-- [ ] `npm test -- sceneOrbitConics` → green. Commit.
+- [x] `npm test -- sceneOrbitConics` → green. Commit.
 
 ## Task 8 — `orbitTrailRenderer` + WESL shader family
 
