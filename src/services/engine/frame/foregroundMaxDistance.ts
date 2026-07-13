@@ -1,7 +1,7 @@
 /**
  * FOREGROUND_MAX_DISTANCE_MPC — the shared camera-distance gate for every
  * NEAR0 foreground layer (`earthLayer`, `starSpheresLayer`, `planetsLayer`,
- * `starPointsLayer`, `orbitRingsLayer`, `foregroundLabelsLayer`).
+ * `starPointsLayer`, `orbitTrailsLayer`, `foregroundLabelsLayer`).
  *
  * ### Why a gate at all
  *

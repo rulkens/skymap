@@ -18,10 +18,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import {
-  frameProgram,
-  timedSlotsOf,
-} from '../../../../src/services/engine/frame/frameProgram';
+import { frameProgram, timedSlotsOf } from '../../../../src/services/engine/frame/frameProgram';
 import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
@@ -147,11 +144,11 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, nine hdr, star-points + orbit-rings, hdr→swap, five swap, near-field tail, pick', () => {
+  it('derives the real registry slot list: scalar-volume, nine hdr, star-points + orbit-trails, hdr→swap, five swap, near-field tail, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
     // iterates. scalar-volume leads (the volume render step), then the nine
-    // COSMO hdr layers in registry order, then star-points + orbit-rings
+    // COSMO hdr layers in registry order, then star-points + orbit-trails
     // (the dedicated (hdr, NEAR0) step before the tone-map), the tone-map
     // composite, the five swap overlays, then the near-field tail (the
     // foreground:0 body render — one slot per body layer: earth,
@@ -169,7 +166,7 @@ describe('timedSlotsOf', () => {
       'horizon-shell',
       'structure-markers',
       'star-points',
-      'orbit-rings',
+      'orbit-trails',
       'hdr→swap',
       'selection-ring',
       'disk-radius-ring',

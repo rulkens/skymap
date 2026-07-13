@@ -65,7 +65,7 @@ import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
-import type { OrbitRingRenderer } from '../../rendering/OrbitRingRenderer';
+import type { OrbitTrailRenderer } from '../../rendering/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
@@ -390,21 +390,21 @@ export type EngineGpuHandles = {
    */
   starPointRenderer: StarPointRenderer | null;
   /**
-   * The debug orbit rings (Earth / Jupiter around the Sun, the Moon around
-   * Earth) as analytic SDF annuli into the depthless HDR target — the
-   * `orbit-rings` layer, sharing the frame program's `(hdr, NEAR0)` render
-   * step with `star-points`.  No depth format: the hdr row has no depth
-   * attachment.  ONE instanced draw paints every ring: `orbitRingsLayer`
-   * packs each orbit's f64-composed MVP + tint into a per-instance vertex
-   * record (the `planetRenderer` idiom), so no per-ring bind or mid-frame
-   * uniform exists for the writeBuffer-vs-submit race to clobber.  The
-   * orbit table itself is a static module-level derivation of the body
-   * seeds (`SCENE_ORBITS`), so the renderer needs no data delivery at all.
-   * Excluded from `isEngineReady` and null-checked at use.  Null until
-   * `initGpu` constructs it; released and re-nulled by `destroy()`
-   * (releases the quad VBO/IBO + instance buffer).
+   * The accurate Keplerian orbit trails (Earth / Jupiter around the Sun, the
+   * Moon around Earth) as additive screen-space conics into the depthless HDR
+   * target — the `orbit-trails` layer, sharing the frame program's
+   * `(hdr, NEAR0)` render step with `star-points`.  No depth format: the hdr
+   * row has no depth attachment.  ONE instanced draw paints every trail:
+   * `orbitTrailsLayer` packs each orbit's f64-composed inverse homography
+   * `Ginv` + trail params into a per-instance vertex record, so no per-orbit
+   * bind or mid-frame uniform exists for the writeBuffer-vs-submit race to
+   * clobber.  The conic table itself is a static module-level derivation of
+   * the orbital elements (`SCENE_ORBIT_CONICS`), so the renderer needs no data
+   * delivery at all.  Excluded from `isEngineReady` and null-checked at use.
+   * Null until `initGpu` constructs it; released and re-nulled by `destroy()`
+   * (releases the instance buffer).
    */
-  orbitRingRenderer: OrbitRingRenderer | null;
+  orbitTrailRenderer: OrbitTrailRenderer | null;
   /**
    * Per-pass GPU timing service.  Always non-null — the engine state
    * is initialized with a no-op stub (see `createDisabledGpuTimingService`)

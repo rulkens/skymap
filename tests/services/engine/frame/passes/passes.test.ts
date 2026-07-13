@@ -30,7 +30,7 @@ import {
   milkyWayLayer,
   horizonShellLayer,
   starPointsLayer,
-  orbitRingsLayer,
+  orbitTrailsLayer,
   foregroundLabelsLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -210,8 +210,8 @@ const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets'];
 // near0 slab — additive like every hdr row, but projected through NEAR0 so
 // parsec-to-AU-scale anchors clear the near plane. One (hdr, NEAR0) render
 // group, driven by the program's dedicated step before the tone-map: the
-// far-partition star points, then the debug orbit rings.
-const NEAR_HDR_NAMES = ['star-points', 'orbit-rings'];
+// far-partition star points, then the orbit trails.
+const NEAR_HDR_NAMES = ['star-points', 'orbit-trails'];
 
 // The near-field captions group: the scene-body name labels. Like the COSMO
 // swap overlays they target the swap chain with premultiplied-OVER, but they
@@ -241,9 +241,9 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
 });
 
 describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
-  it('the (hdr, NEAR0) group holds star-points then orbit-rings, additive', () => {
+  it('the (hdr, NEAR0) group holds star-points then orbit-trails, additive', () => {
     // The hdr rows outside the cosmological slab: the far-partition
-    // neighbourhood stars and the debug orbit rings, projected through NEAR0
+    // neighbourhood stars and the orbit trails, projected through NEAR0
     // (COSMO's 0.01 Mpc near plane would clip their parsec-to-AU-scale
     // anchors) but accumulating into the same HDR target so they ride the
     // galaxies' tone-map. Drawn by the program's dedicated (hdr, NEAR0) step
@@ -253,7 +253,7 @@ describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
     );
     expect(nearHdr.map((layer) => layer.name)).toEqual(NEAR_HDR_NAMES);
     expect(nearHdr).toContain(starPointsLayer);
-    expect(nearHdr).toContain(orbitRingsLayer);
+    expect(nearHdr).toContain(orbitTrailsLayer);
     for (const layer of nearHdr) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('hdr');

@@ -1,10 +1,10 @@
 // orbitTrail/vertex.wesl — vertex stage for the instanced screen-space conic
 // orbit trail.
 //
-// Unlike 'orbitRing/vertex.wesl' (which projected a quad in the orbital plane),
-// this stage emits NO projected geometry: it draws a single oversized triangle
-// in clip space that covers the whole viewport, and forwards the per-orbit
-// conic constants unchanged. All the real geometry lives in the fragment, which
+// This stage emits a fullscreen triangle from '@builtin(vertex_index)' rather
+// than projecting plane geometry: it draws a single oversized triangle in clip
+// space that covers the whole viewport, and forwards the per-orbit conic
+// constants unchanged. All the real geometry lives in the fragment, which
 // back-projects each pixel through 'Ginv' (spec 3.3).
 //
 // ## Why a fullscreen triangle, not a projected bounding quad
@@ -26,7 +26,7 @@
 // orbit's 'Ginv' columns + colour + eccentricity + mean anomaly arrive as
 // instance-step vertex attributes (one record per '@builtin(instance_index)'),
 // not a uniform mutated between draws. That is the house idiom
-// ('orbitRingRenderer' / 'planetRenderer'): one 'writeBuffer' + one draw beats
+// ('planetRenderer'): one 'writeBuffer' + one draw beats
 // N per-orbit binds, and it dodges the writeBuffer-vs-submit race by
 // construction, since every instance reads its own baked record. WESL has no
 // mat3 vertex-attribute type, so 'Ginv' streams as three vec4<f32> (the padded

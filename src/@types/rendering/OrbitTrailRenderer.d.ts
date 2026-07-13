@@ -4,8 +4,8 @@
  *
  * ### Why `draw` takes a raw `Float32Array` + count
  *
- * Same shape as `OrbitRingRenderer` (the twin this replaces): the caller packs
- * up to `MAX_ORBITS` per-instance records — the pixel→plane inverse homography
+ * The caller packs one per-instance record per orbit: up to `MAX_ORBITS`
+ * per-instance records — the pixel→plane inverse homography
  * `Ginv` (three padded `mat3x3` columns) plus the trail params — into one flat
  * `Float32Array` and hands it over with a live `count`. The renderer streams it
  * as instance-step vertex attributes in ONE `writeBuffer` + ONE instanced

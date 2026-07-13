@@ -1,15 +1,15 @@
 /**
  * orbitTrailRenderer — the accurate Keplerian orbit trails as screen-space
  * conics, drawn additively into the depthless HDR accumulation with ONE
- * instanced draw. Replaces the interim circle-SDF `orbitRingRenderer` (spec
- * `2026-07-11-conic-orbit-trails.md` §6).
+ * instanced draw (spec `2026-07-11-conic-orbit-trails.md` §6).
  *
- * Structural twin of `orbitRingRenderer` on the pipeline profile (the caller's
- * rgba16float `hdr` target, one/one additive blend, NO depthStencil — the hdr
- * row has no depth attachment, and declaring a depth format for a depthless
- * pass is a validation error; `cullMode: 'none'` because an orbital plane is
- * viewed from both sides; an explicit EMPTY pipeline layout keeps this off the
- * 'auto'-layout path). Two deliberate divergences from that twin:
+ * Shares its pipeline profile with `planetRenderer` and `starPointRenderer`
+ * (the caller's rgba16float `hdr` target, one/one additive blend, NO
+ * depthStencil — the hdr row has no depth attachment, and declaring a depth
+ * format for a depthless pass is a validation error; `cullMode: 'none'`
+ * because an orbital plane is viewed from both sides; an explicit EMPTY
+ * pipeline layout keeps this off the 'auto'-layout path). Two deliberate
+ * divergences from that shared profile:
  *
  * ### Geometry is a fullscreen triangle, generated in the vertex shader
  *

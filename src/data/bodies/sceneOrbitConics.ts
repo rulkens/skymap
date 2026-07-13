@@ -4,16 +4,13 @@
  *
  * ### Single source of truth: elements → shape, not body → ring
  *
- * This REPLACES the outgoing `sceneOrbits.ts` (`SCENE_ORBITS`, circles derived
- * from the body seeds via `|body − parent|`). That old dependency ran the wrong
- * way: a ring fitted to a body's placeholder position only stays a circle, and
- * a real Keplerian body is not generally *on* a circle through it. We invert
- * the dependency — elements are authored once in `ORBITAL_ELEMENTS`, and BOTH
- * the body's rendered position (`keplerianPositionMpc`, in `sceneBodies.ts`) and
- * its trail ellipse (`keplerianEllipse`, here) derive from that one table. So
- * the body sitting on its own trail is structural, not a sync invariant to
- * remember. (`sceneOrbits.ts` stays on disk until Task 10 removes it under a
- * grep gate; nothing here imports it.)
+ * Fitting a ring to a body's placeholder position runs the dependency the wrong
+ * way: such a ring only stays a circle, and a real Keplerian body is not
+ * generally *on* a circle through it. We invert the dependency — elements are
+ * authored once in `ORBITAL_ELEMENTS`, and BOTH the body's rendered position
+ * (`keplerianPositionMpc`, in `sceneBodies.ts`) and its trail ellipse
+ * (`keplerianEllipse`, here) derive from that one table. So the body sitting on
+ * its own trail is structural, not a sync invariant to remember.
  *
  * ### Parent resolution: focus-relative shape → absolute-world centre
  *

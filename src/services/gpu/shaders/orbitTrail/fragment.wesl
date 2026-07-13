@@ -50,7 +50,7 @@ import package::lib::math::PI;
 const STROKE_PX: f32 = 1.5;
 // Decay rate of the trail brightness per radian of mean anomaly behind the
 // body. Larger values shrink the visible tail; 1.2 spans roughly a third of
-// the orbit before bottoming out at TRAIL_FLOOR (carried from orbitRing).
+// the orbit before bottoming out at TRAIL_FLOOR.
 const TRAIL_DECAY: f32 = 1.2;
 // Brightness floor for the arc far behind / just ahead of the body. The whole
 // orbit must stay clearly visible — the trail gradient is a direction cue

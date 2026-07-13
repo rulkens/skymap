@@ -67,7 +67,7 @@ import { createEarthRenderer } from '../../gpu/renderers/earthRenderer';
 import { createStarRenderer } from '../../gpu/renderers/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/starPointRenderer';
-import { createOrbitRingRenderer } from '../../gpu/renderers/orbitRingRenderer';
+import { createOrbitTrailRenderer } from '../../gpu/renderers/orbitTrailRenderer';
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
@@ -419,12 +419,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
   state.gpu.starPointRenderer.setStars(state.data.bodies.stars);
 
-  // orbitRingRenderer draws the debug orbit rings (Earth / Jupiter / Moon) as
-  // additive SDF annuli into the same depthless HDR target — no depth format,
-  // like starPointRenderer above.  Unlike the stars, no data-delivery step:
-  // the orbit table (SCENE_ORBITS) is a static module-level derivation of the
-  // body seeds, packed per-frame by orbitRingsLayer.
-  state.gpu.orbitRingRenderer = createOrbitRingRenderer(device, 'rgba16float');
+  // orbitTrailRenderer draws the accurate Keplerian orbit trails (Earth /
+  // Jupiter / Moon) as additive screen-space conics into the same depthless
+  // HDR target — no depth format, like starPointRenderer above.  Unlike the
+  // stars, no data-delivery step: the conic table (SCENE_ORBIT_CONICS) is a
+  // static module-level derivation of the orbital elements, packed per-frame
+  // by orbitTrailsLayer.
+  state.gpu.orbitTrailRenderer = createOrbitTrailRenderer(device, 'rgba16float');
 
   // foregroundLabelRenderer is a second MSDF label renderer against the
   // swap-chain `format` (`uiCtx`, like the main `labelRenderer`), holding

@@ -2,8 +2,8 @@
  * orbitTrailRenderer construction + structural tests.
  *
  * Vitest runs in Node without a WebGPU surface, so every `create*` call the
- * renderer issues at construction returns a plausibly-shaped stand-in (mirrors
- * `orbitRingRenderer.test.ts`). These tests pin the `Renderer` contract, the
+ * renderer issues at construction returns a plausibly-shaped stand-in. These
+ * tests pin the `Renderer` contract, the
  * `draw(pass, instances, count)` arity, the GPU-instancing mechanism (one
  * `writeBuffer` of the caller's array + one `draw(3, count)`), the count guard,
  * and — the divergence from the ring twin — the FULL single-instance-buffer

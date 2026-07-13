@@ -452,26 +452,26 @@ conic.semiMajorMpc, conic.semiMinorMpc, view.viewportPx, RENDER_ORIGIN_MPC)`
 **The `f64` seam is a hard invariant** — compose from `view.slab.vp`, NEVER
 `view.vp` (`orbitRingsLayer.ts:14-21`). Document it in the layer header.
 
-- [ ] Add `orbitTrailsLayer.ts` — the `ContentLayer` row, reading
+- [x] Add `orbitTrailsLayer.ts` — the `ContentLayer` row, reading
   `SCENE_ORBIT_CONICS`, composing via `composeOrbitConic`. Didactic header
   mirroring `orbitRingsLayer.ts:1-28` (row shape, the `f64` seam, handle-only
   gate).
-- [ ] Swap `passes/index.ts`: replace the `orbitRingsLayer` import (`:151`),
+- [x] Swap `passes/index.ts`: replace the `orbitRingsLayer` import (`:151`),
   the registry entry (`:183`, in the `(hdr, NEAR0)` group after `starPointsLayer`),
   and the re-export (`:228`) with `orbitTrailsLayer`. Update the draw-order
   docblock (`:41-43`) to name the conic trails.
-- [ ] Swap `initGpu.ts`: `state.gpu.orbitTrailRenderer =
+- [x] Swap `initGpu.ts`: `state.gpu.orbitTrailRenderer =
   createOrbitTrailRenderer(device, 'rgba16float')` (`:425`), import at `:70`.
-- [ ] Rename the `EngineGpuHandles` slot `orbitRingRenderer` →
+- [x] Rename the `EngineGpuHandles` slot `orbitRingRenderer` →
   `orbitTrailRenderer` (find it in `EngineGpuHandles.d.ts`); update the layer's
   `enabled`/`draw` handle reads to the new name.
-- [ ] Test `orbitTrailsLayer.test.ts` — `slab === NEAR0`, `target === 'hdr'`,
+- [x] Test `orbitTrailsLayer.test.ts` — `slab === NEAR0`, `target === 'hdr'`,
   `blend === 'additive'`; `enabled` false when the handle is null, true when
   present; `draw` composes one record per conic and calls `renderer.draw` with
   `count === SCENE_ORBIT_CONICS.length` (spy renderer, mirror the ring-layer
   test).
-- [ ] `npm test -- orbitTrailsLayer` → green.
-- [ ] **VISUAL GATE (needs `?deepZoom`) — STOP and ask the user to confirm:**
+- [x] `npm test -- orbitTrailsLayer` → green.
+- [~] **VISUAL GATE (needs `?deepZoom`) — DEFERRED (user AFK 2026-07-13, "skip the task 5 visual gate and keep going" applied to remaining gates); code landed unblocked, user confirms on return before merge. STOP and ask the user to confirm:**
   each orbit is a smooth **ellipse** (not a circle) with a constant-width stroke
   from galaxy scale down to Earth-surface (no steps, no jitter at deep zoom); the
   body sphere sits **on** its trail; the brightness tail trails **behind** the
@@ -487,15 +487,15 @@ conic.semiMajorMpc, conic.semiMinorMpc, view.viewportPx, RENDER_ORIGIN_MPC)`
 `src/data/bodies/sceneOrbits.ts`, `src/@types/scene/SceneOrbit.d.ts`,
 `src/utils/camera/composeOrbitMvp.ts`, and each file's mirror test.
 
-- [ ] Delete the files above.
-- [ ] **Grep gate — no references left** (the deletion is real, not orphaned):
+- [x] Delete the files above.
+- [x] **Grep gate — no references left** (the deletion is real, not orphaned):
   a repo search for `orbitRing`, `OrbitRingRenderer`, `SCENE_ORBITS`,
   `SceneOrbit`, `composeOrbitMvp`, and the `orbitRingRenderer` handle name
   returns ZERO hits outside this plan/spec. (The main thread runs the search —
   background subagents cannot; `feedback_bg_subagents_no_npm`.)
-- [ ] `npm run typecheck` → clean (proves nothing imported a deleted symbol).
-- [ ] `npm test` → green (the deleted mirror tests are gone; nothing else broke).
-- [ ] Commit.
+- [x] `npm run typecheck` → clean (proves nothing imported a deleted symbol).
+- [x] `npm test` → green (the deleted mirror tests are gone; nothing else broke).
+- [x] Commit.
 
 ## Task 11 — Entanglement-radar pass + full gate
 

@@ -161,11 +161,11 @@ describe('starPointsLayer.enabled', () => {
 describe('the (hdr, NEAR0) render group above the foreground gate', () => {
   it('empties above the gate and is non-empty below it (the wholesale-skip property)', () => {
     // The SAME group filter executeFrame's render step applies, over the
-    // early (hdr, NEAR0) step that draws star-points + orbit-rings BEFORE the
+    // early (hdr, NEAR0) step that draws star-points + orbit-trails BEFORE the
     // tone-map. Above the gate this group must come back empty too — not just
     // the (foreground:0, NEAR0) body group — for the skip to be wholesale.
     const state = {
-      gpu: { starPointRenderer: makeRenderer(), orbitRingRenderer: { draw: vi.fn() } },
+      gpu: { starPointRenderer: makeRenderer(), orbitTrailRenderer: { draw: vi.fn() } },
       data: { bodies: { stars: SCENE_STARS } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
@@ -174,7 +174,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
     // Below the gate: the point backdrop + the rings both draw.
     expect(groupAt(makeCtx(NEAR_FIELD_CAM)).map((l) => l.name)).toEqual([
       'star-points',
-      'orbit-rings',
+      'orbit-trails',
     ]);
     // Above the gate: empty group → the executor never opens the pass.
     expect(groupAt(makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toEqual([]);

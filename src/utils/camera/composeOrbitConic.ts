@@ -14,7 +14,7 @@
  *
  * ### Why compose the FULL H in f64 before inverting
  *
- * Identical cancellation to `composeOrbitMvp` (see its header).  The orbit
+ * Identical cancellation to `composeBodyMvp` (see its header).  The orbit
  * centres sit ~5e-12 down to ~1e-14 Mpc from the render origin — tiny numbers
  * the view-projection's large translation column very nearly cancels.  If we
  * narrowed the view-projection, or the individual clip columns, to f32 BEFORE
@@ -79,7 +79,7 @@ export function composeOrbitConic(
   renderOriginMpc: Readonly<Vec3>,
 ): Float32Array {
   // Origin-relative ellipse centre — the frame the slab VP was built for (same
-  // subtraction composeOrbitMvp performs). Done in f64 so the ~1e-12 Mpc
+  // subtraction composeBodyMvp performs). Done in f64 so the ~1e-12 Mpc
   // separation survives the large-VP-translation cancellation downstream.
   const cx = centerMpc[0] - renderOriginMpc[0];
   const cy = centerMpc[1] - renderOriginMpc[1];

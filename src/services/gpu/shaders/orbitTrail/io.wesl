@@ -12,8 +12,8 @@
 // ## Why the struct lives here
 //
 // One authoritative inter-stage declaration makes vertex/fragment @location
-// drift structurally impossible — the same reasoning 'orbitRing/io.wesl' and
-// 'planet/io.wesl' state. EVERY varying below is per-orbit constant (the three
+// drift structurally impossible — the same reasoning 'planet/io.wesl' states.
+// EVERY varying below is per-orbit constant (the three
 // 'Ginv' columns, the tint, the eccentricity, the mean anomaly), so all are
 // '@interpolate(flat)': there is nothing to interpolate across the fullscreen
 // triangle, and declaring the flat qualifier once here means it cannot silently

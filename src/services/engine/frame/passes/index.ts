@@ -39,9 +39,9 @@
  *                            stars (partitionStarsByResolution) as additive
  *                            point sprites, riding the same tone-map as the
  *                            galaxies
- *  11. orbit-rings         — debug: analytic SDF orbit rings (Earth / Jupiter /
- *                            Moon) with a brightness lobe at the body's
- *                            position (f64 compose seam)
+ *  11. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
+ *                            Moon) as screen-space conics with a brightness
+ *                            lobe at the body's position (f64 compose seam)
  *
  * The next five are premultiplied-OVER overlays, projected through the
  * cosmological slab and drawn post-tone-map onto the swap chain:
@@ -150,7 +150,7 @@ import { earthLayer } from './earthLayer';
 import { starSpheresLayer } from './starSpheresLayer';
 import { planetsLayer } from './planetsLayer';
 import { starPointsLayer } from './starPointsLayer';
-import { orbitRingsLayer } from './orbitRingsLayer';
+import { orbitTrailsLayer } from './orbitTrailsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 
 /**
@@ -179,10 +179,10 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // scale anchors), drawn by the frame program's dedicated (hdr, NEAR0) step
   // AFTER the nine COSMO hdr layers above and before the tone-map — so they
   // ride the same tone curve as the galaxies. Star points first, then the
-  // debug orbit rings (both additive, so within-group order is a listing
+  // conic orbit trails (both additive, so within-group order is a listing
   // choice, not a compositing one).
   starPointsLayer,
-  orbitRingsLayer,
+  orbitTrailsLayer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
   // ring leads so marker-lines and labels composite over its stroke; the
   // debug clip-path overlay trails so its route + gizmo draw on top of
@@ -227,5 +227,5 @@ export { earthLayer } from './earthLayer';
 export { starSpheresLayer } from './starSpheresLayer';
 export { planetsLayer } from './planetsLayer';
 export { starPointsLayer } from './starPointsLayer';
-export { orbitRingsLayer } from './orbitRingsLayer';
+export { orbitTrailsLayer } from './orbitTrailsLayer';
 export { foregroundLabelsLayer } from './foregroundLabelsLayer';
