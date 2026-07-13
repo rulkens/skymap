@@ -49,25 +49,53 @@
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
-import { ECLIPTIC_BASIS } from './eclipticBasis';
+import { RENDER_ORIGIN_MPC } from '../renderOrigin';
+import { ORBITAL_ELEMENTS } from './orbitalElements';
+import { keplerianPositionMpc } from '../../utils/orbit/keplerianPositionMpc';
 import { raDecDistToCartesian } from '../../utils/math/raDecDistToCartesian';
 import type { EarthBody } from '../../@types/scene/EarthBody';
 import type { StarBody } from '../../@types/scene/StarBody';
 import type { PlanetBody } from '../../@types/scene/PlanetBody';
 import type { SceneBody } from '../../@types/scene/SceneBody';
+import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
- * Earth at 1 AU along +X from the Sun (the render origin), Earth-sized.
- *
- * The real Earth orbits; this fixed placeholder position is what the descent
- * lands on. Authored `1 * SCALE_UNITS.AU_TO_MPC` so the AU → Mpc conversion is
- * the contract, not a buried constant.
+ * Look up a body's J2000 Keplerian seed in `ORBITAL_ELEMENTS` (the single
+ * source of truth for both body positions and their trails). Throws on an
+ * unknown id so a typo fails loudly at module load rather than silently
+ * seeding a body at `undefined`/NaN. Module-local — a fixed authored table
+ * does not earn a `src/utils/` export (same status as `star()` below).
  */
+function elementsById(id: string): OrbitalElements {
+  const found = ORBITAL_ELEMENTS.find((e) => e.id === id);
+  if (!found) throw new Error(`sceneBodies: no ORBITAL_ELEMENTS entry for id '${id}'`);
+  return found;
+}
+
+/**
+ * Earth (strictly the Earth–Moon barycentre) at its real J2000 mean
+ * heliocentric position, Earth-sized.
+ *
+ * DERIVED from `ORBITAL_ELEMENTS` — the single source of truth — via
+ * `keplerianPositionMpc`, then anchored to the render origin (the Sun). The
+ * old hand-placed '1 AU along +x' literal is gone: a placeholder position is
+ * not generally *on* the Keplerian ellipse the orbit trail draws, so the
+ * sphere would float off its own trail. `keplerianPositionMpc` returns a
+ * focus-relative offset; adding `RENDER_ORIGIN_MPC` keeps the seed correct if
+ * the heliocentric anchor ever moves (ADR-0010 extension point). Component-wise
+ * because there is no vec3-add helper and the sum is only needed at seed sites.
+ */
+const EARTH_OFFSET_MPC = keplerianPositionMpc(elementsById('earth'));
+
 export const SCENE_EARTH: EarthBody = {
   id: 'earth',
   label: 'Earth',
-  positionMpc: [1 * SCALE_UNITS.AU_TO_MPC, 0, 0],
+  positionMpc: [
+    RENDER_ORIGIN_MPC[0] + EARTH_OFFSET_MPC[0],
+    RENDER_ORIGIN_MPC[1] + EARTH_OFFSET_MPC[1],
+    RENDER_ORIGIN_MPC[2] + EARTH_OFFSET_MPC[2],
+  ],
   radiusKm: 6371,
   textureUrl: '/images/earth/blue-marble-4k.jpg',
 };
@@ -141,25 +169,29 @@ export const SCENE_STARS: readonly StarBody[] = [
 ];
 
 /**
- * Planet seeds: fixed plausible positions (the real bodies orbit), authored
- * in AU / km via `SCALE_UNITS`. The Moon sits its real ~384,400 km from
- * Earth's seed, offset along `ECLIPTIC_BASIS.yAxis` (a first-quarter
- * geometry, so it is not hidden exactly on the Sun–Earth line) rather than
- * frame +y, so the Moon lands in the ecliptic — where its real ~5°-inclined
- * orbit actually stays — instead of 23.4° out of it. Earth and Jupiter need
- * no such transform: both sit on the equinox line (frame +x), which is
- * shared by the equatorial and ecliptic planes, so they are already in the
- * ecliptic. Albedos are plausible flat linear-RGB colours (no textures yet):
- * lunar grey, Jovian tan.
+ * Planet seeds at their real J2000 mean positions, DERIVED from
+ * `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — no hand-placed literals.
+ * Jupiter is heliocentric: its focus is the render origin (the Sun). The Moon
+ * is geocentric, so its focus is Earth's OWN derived world position and it
+ * follows Earth by construction (spec §5 Moon gotcha) — this is why the Moon
+ * seed adds `SCENE_EARTH.positionMpc`, not the render origin. The element table
+ * already carries each orbit's real inclination, so the Moon lands in its true
+ * ~5°-inclined plane and each body sits exactly on the ellipse its trail draws
+ * (both read the one table). Component-wise focus addition because there is no
+ * vec3-add helper. Albedos are plausible flat linear-RGB colours (no textures
+ * yet): lunar grey, Jovian tan.
  */
+const JUPITER_OFFSET_MPC = keplerianPositionMpc(elementsById('jupiter'));
+const MOON_OFFSET_MPC = keplerianPositionMpc(elementsById('moon'));
+
 export const SCENE_PLANETS: readonly PlanetBody[] = [
   {
     id: 'moon',
     label: 'Moon',
     positionMpc: [
-      1 * SCALE_UNITS.AU_TO_MPC + 384400 * SCALE_UNITS.KM_TO_MPC * ECLIPTIC_BASIS.yAxis[0],
-      384400 * SCALE_UNITS.KM_TO_MPC * ECLIPTIC_BASIS.yAxis[1],
-      384400 * SCALE_UNITS.KM_TO_MPC * ECLIPTIC_BASIS.yAxis[2],
+      SCENE_EARTH.positionMpc[0] + MOON_OFFSET_MPC[0],
+      SCENE_EARTH.positionMpc[1] + MOON_OFFSET_MPC[1],
+      SCENE_EARTH.positionMpc[2] + MOON_OFFSET_MPC[2],
     ],
     radiusKm: 1737,
     albedo: [0.35, 0.34, 0.33],
@@ -167,7 +199,11 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
   {
     id: 'jupiter',
     label: 'Jupiter',
-    positionMpc: [5.2 * SCALE_UNITS.AU_TO_MPC, 0, 0],
+    positionMpc: [
+      RENDER_ORIGIN_MPC[0] + JUPITER_OFFSET_MPC[0],
+      RENDER_ORIGIN_MPC[1] + JUPITER_OFFSET_MPC[1],
+      RENDER_ORIGIN_MPC[2] + JUPITER_OFFSET_MPC[2],
+    ],
     radiusKm: 69911,
     albedo: [0.8, 0.65, 0.45],
   },

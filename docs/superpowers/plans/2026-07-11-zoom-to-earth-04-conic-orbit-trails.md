@@ -231,17 +231,20 @@ target). A literal-tuple assertion is a constant-restatement (`testing.md`) —
 delete it, don't preserve the old value. If a NON-test consumer hard-codes the
 axis, STOP and report rather than silently relocating it.
 
-- [ ] Re-point the three seeds to the derived positions; update the docblocks at
+- [x] Re-point the three seeds to the derived positions; update the docblocks at
   `sceneBodies.ts:60-66` / `:143-154` (the "fixed placeholder" / "first-quarter
   geometry" prose is now stale — the positions are real J2000 mean positions
   derived from `ORBITAL_ELEMENTS`, single source of truth).
-- [ ] Delete any test asserting a literal placeholder position (constant
+- [x] Delete any test asserting a literal placeholder position (constant
   restatement). Keep/extend a **structural** test: `sceneBodies derives the Moon
   relative to Earth` — assert `|Moon − Earth|` ≈ `MOON semiMajor`-scale (a
   lunar-distance order-of-magnitude band), proving the parent-relative derivation
   (not a value pin).
-- [ ] `npm test -- sceneBodies` → green.
-- [ ] **VISUAL GATE (needs `?deepZoom`) — STOP and ask the user to confirm:** the
+- [x] `npm test -- sceneBodies` → green.
+- [~] **VISUAL GATE (needs `?deepZoom`) — DEFERRED (user AFK 2026-07-13, "skip
+  the task 5 visual gate and keep going"):** code committed unblocked; the user
+  will eyeball the relocation on return before the branch merges. NOT yet
+  confirmed. **STOP and ask the user to confirm:** the
   bodies now sit at their true J2000 relative positions (Earth off the old `+x`
   axis); the descent still reaches Earth and the Sun/Earth/Moon/Jupiter sit at
   believable relative places. Confirm the relocation is acceptable (spec §5
