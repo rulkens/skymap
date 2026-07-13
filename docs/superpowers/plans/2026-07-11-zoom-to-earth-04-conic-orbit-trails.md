@@ -283,11 +283,11 @@ export function composeOrbitConic(
 ): Float32Array; // Ginv as a 12-element padded mat3x3<f32> (column-major, std140)
 ```
 
-- [ ] Add `narrowMat3.ts` + test `narrowMat3 preserves the 12-element padded
+- [x] Add `narrowMat3.ts` + test `narrowMat3 preserves the 12-element padded
   layout` — assert length 12 and element-wise equality to the source under f32
   rounding (this is the on-GPU-boundary contract, load-bearing like the
   `narrowMat4` narrow).
-- [ ] Add `composeOrbitConic.ts`. Didactic docblock: WHY compose the FULL `H` in
+- [x] Add `composeOrbitConic.ts`. Didactic docblock: WHY compose the FULL `H` in
   `f64` before inverting (identical cancellation argument to
   `composeOrbitMvp.ts:15-27` — the large-`VP`-translation vs tiny-`Crel`
   cancellation is resolved at double precision), WHY only `x,y,w` clip rows
@@ -295,19 +295,19 @@ export function composeOrbitConic(
   alone (the fragment derives the conic value, the Sampson gradient, AND the
   back-projection from the single `q = Ginv·x` — spec §3.3). Note the `mat3d`
   zero-init landmine.
-- [ ] Test `composeOrbitConic back-projects the periapsis to plane (1,0)` — build
+- [x] Test `composeOrbitConic back-projects the periapsis to plane (1,0)` — build
   a simple `f64` `VP` (e.g. `mat4d.perspective` ∘ `mat4d.lookAt`) + a viewport;
   forward-project the world point `C + A` to a pixel by the **standard pipeline**
   (clip = `VP·[Crel+A;1]`, NDC, viewport — computed independently of the util);
   feed the pixel to the returned `Ginv` as `q = Ginv·(px,py,1)`; assert
   `q.z > 0` and `(q.x/q.z, q.y/q.z) ≈ (1, 0)`. (Round-trip property — the forward
   projection is not the inverse under test, so this is not a mirror.)
-- [ ] Test `composeOrbitConic back-projects the E=90° point to plane (0,1)` — same
+- [x] Test `composeOrbitConic back-projects the E=90° point to plane (0,1)` — same
   construction with `C + B` → `(0, 1)`.
-- [ ] Test `composeOrbitConic places an off-ellipse point outside the unit
+- [x] Test `composeOrbitConic places an off-ellipse point outside the unit
   circle` — forward-project `C + 2A` → back-project → `(s,t) ≈ (2,0)`,
   `s² + t² ≈ 4 > 1` (the conic's inside/outside sign is correct).
-- [ ] `npm test -- narrowMat3 composeOrbitConic` → green. Commit.
+- [x] `npm test -- narrowMat3 composeOrbitConic` → green. Commit.
 
 ## Task 7 — `OrbitConic` type + `SCENE_ORBIT_CONICS` derived table
 
