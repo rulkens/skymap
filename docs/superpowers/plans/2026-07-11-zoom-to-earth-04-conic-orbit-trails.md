@@ -136,21 +136,21 @@ affine-image-of-the-unit-circle ellipse, in the equatorial frame, **focus at the
 origin** (the caller adds the parent's absolute world position — Task 7). Uses
 `ECLIPTIC_BASIS` for the ecliptic→equatorial map.
 
-- [ ] Add `keplerianEllipse.ts`. Didactic docblock: the affine-image-of-circle
+- [x] Add `keplerianEllipse.ts`. Didactic docblock: the affine-image-of-circle
   fact (spec §3.1 — real orbit geometry is entirely in `A`, `B`, `C`, the curve
   is always the unit circle), and WHY focus-relative (the parent add is the
   caller's job so the same math serves heliocentric and geocentric orbits).
-- [ ] Test `keplerianEllipse of a circular equatorial orbit spans equal axes in
+- [x] Test `keplerianEllipse of a circular equatorial orbit spans equal axes in
   the ecliptic` — `e = 0, i = 0, Ω = 0, ω = 0`: assert `|A| = |B| = a`,
   `A · B ≈ 0`, both `A`, `B` dotted with `ECLIPTIC_BASIS.normal ≈ 0` (in-plane),
   `centerOffsetMpc ≈ [0,0,0]`, and `A` along `+x` (the equinox, since `ω=Ω=0`).
-- [ ] Test `keplerianEllipse centre-offset is a·e along −A for an eccentric
+- [x] Test `keplerianEllipse centre-offset is a·e along −A for an eccentric
   orbit` — `e = 0.5`: assert `|centerOffsetMpc| ≈ a·e` and it is antiparallel to
   `A` (dot < 0, `|cross| ≈ 0`).
-- [ ] Test `keplerianEllipse tilts the plane by the inclination` — `i = 90°`:
+- [x] Test `keplerianEllipse tilts the plane by the inclination` — `i = 90°`:
   assert the plane normal `A × B` is orthogonal to what a `0°` orbit gives (the
   inclination actually rotates the plane, not a no-op).
-- [ ] `npm test -- keplerianEllipse` → green. Commit.
+- [x] `npm test -- keplerianEllipse` → green. Commit.
 
 ## Task 3 — `keplerianPositionMpc` (elements → focus-relative position)
 
