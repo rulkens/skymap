@@ -430,8 +430,9 @@ row in `src/services/gpu/renderTargets.ts`.)_
 New (phases 2–5):
 
 ```
-docs/adrs/0009-continuous-floating-origin-for-free-zoom.md   (refines ADR 0001;
-                                                              next free ADR number)
+docs/adrs/0010-continuous-floating-origin-for-free-zoom.md   (refines ADR 0001;
+                                                              0009 was taken by the
+                                                              disk-planner-walk ADR)
 src/data/bodies/sceneBodies.ts                seed: Sun, Earth, Moon, Jupiter, Proxima
 src/@types/data/StarSourceEntry.d.ts          (+ Planet, Earth source entries)
 src/@types/scene/StarBody.d.ts                (+ PlanetBody, EarthBody)

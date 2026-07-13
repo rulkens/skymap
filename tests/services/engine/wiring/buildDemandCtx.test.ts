@@ -31,6 +31,7 @@ function makeState(
     requests?: Set<RequestKey>;
     points?: Map<SourceType, AssetSlot<unknown, unknown>>;
     famousMetaState?: LoadState<unknown>['kind'];
+    cameraDistance?: number;
   } = {},
 ): EngineState {
   const famousMeta =
@@ -51,6 +52,7 @@ function makeState(
       points: opts.points ?? new Map(),
       famousMeta,
     },
+    cameraRuntime: { lastPose: { current: { distance: opts.cameraDistance ?? 100 } } },
   } as unknown as EngineState;
 }
 
@@ -82,5 +84,12 @@ describe('buildDemandCtx', () => {
 
     const empty = buildDemandCtx(makeState());
     expect(empty.request('paletteOpened')).toBe(false);
+  });
+
+  it("surfaces the last produced pose's orbit distance as cameraDistanceMpc", () => {
+    // The descent gate reads the previous frame's produced distance; the
+    // builder threads it straight off the boxed lastPose.
+    const ctx = buildDemandCtx(makeState({ cameraDistance: 5e-4 }));
+    expect(ctx.cameraDistanceMpc).toBe(5e-4);
   });
 });

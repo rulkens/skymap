@@ -67,7 +67,7 @@ describe('mergeSettingsSnapshot', () => {
       filaments: { ...state.filaments, intensity: 0.123 },
       milkyWay: { ...state.milkyWay, enabled: !state.milkyWay.enabled },
       flow: { ...state.flow, flowSpeed: 7 },
-      labels: { focusedOnly: !state.labels.focusedOnly },
+      labels: { ...state.labels, focusedOnly: !state.labels.focusedOnly },
     };
 
     const next = mergeSettingsSnapshot(state, full);

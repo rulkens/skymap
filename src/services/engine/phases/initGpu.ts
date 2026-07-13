@@ -68,8 +68,6 @@ import { createStarRenderer } from '../../gpu/renderers/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/starPointRenderer';
 import { createOrbitRingRenderer } from '../../gpu/renderers/orbitRingRenderer';
-import { SCENE_EARTH } from '../../../data/bodies/sceneBodies';
-import { isNearStar } from '../../../utils/scene/isNearStar';
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
@@ -400,22 +398,26 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // this comment, exactly like the bare 'rgba16float' literal every other
   // HDR-target renderer above passes.
   //
-  // starRenderer draws the near-partition star (today the Sun alone — see
-  // isNearStar).  ONE planetRenderer draws every seeded planet in a single
+  // starRenderer draws the resolved-partition stars (the Sun + any star
+  // crossing STAR_RESOLVE_PX — see partitionStarsByResolution).  ONE
+  // planetRenderer draws every seeded planet in a single
   // instanced draw: each body's MVP + albedo rides in a per-instance vertex
   // record (planetsLayer packs the batch), so the matrices survive to submit
   // without a per-body bind or a mid-frame uniform.
   state.gpu.starRenderer = createStarRenderer(device, 'rgba16float', 'depth32float');
   state.gpu.planetRenderer = createPlanetRenderer(device, 'rgba16float', 'depth32float');
 
-  // starPointRenderer draws the far-partition stars as additive points into
-  // the depthless HDR target — no depth format, unlike the sphere factories
-  // above (the hdr row has no depth attachment).  The bodies store is
-  // seeded at engine construction, so the far partition is known now:
-  // upload it once here (mirroring the Earth texture's post-construction
-  // data delivery below) so the star-points layer's draw stays a pure draw.
+  // starPointRenderer draws the unresolved-partition stars as additive
+  // points into the depthless HDR target — no depth format, unlike the
+  // sphere factories above (the hdr row has no depth attachment).  The
+  // camera-free seed uploaded here is the FULL star list: the camera boots
+  // at galaxy scale, where partitionStarsByResolution classifies every star
+  // (the Sun included) as a sub-pixel point, so the whole seed IS the boot
+  // partition. It only covers the window before the first frame — from the
+  // first draw on, starPointsLayer owns the point-set membership via the
+  // partition and re-uploads per frame.
   state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
-  state.gpu.starPointRenderer.setStars(state.data.bodies.stars.filter((star) => !isNearStar(star)));
+  state.gpu.starPointRenderer.setStars(state.data.bodies.stars);
 
   // orbitRingRenderer draws the debug orbit rings (Earth / Jupiter / Moon) as
   // additive SDF annuli into the same depthless HDR target — no depth format,
@@ -436,6 +438,19 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.foregroundLabelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
   state.gpu.foregroundLabelRenderer.setLabels(sceneBodyLabels());
 
+  // foregroundMarkerLineRenderer is the leader-line sibling of the caption
+  // renderer above: a second `createMarkerLineRenderer` against the swap-chain
+  // `format`, drawing the short connectors that hang each caption off its
+  // body. It is SEPARATE from `markerLineRenderer` (the director's COSMO-slab
+  // lines) for the identical reason `foregroundLabelRenderer` is separate from
+  // `labelRenderer` — the connectors project through the NEAR0 slab so they
+  // track bodies far inside the main camera's near plane. `foregroundLabelsLayer`
+  // rebases the connector endpoints camera-relative each frame, the same f32
+  // origin-distance cancellation dodge it applies to the caption anchors. No
+  // bootstrap seed: the connectors are geometry derived per frame from the
+  // caption anchors, not a static set.
+  state.gpu.foregroundMarkerLineRenderer = createMarkerLineRenderer(uiCtx, format);
+
   // ── Earth (Plan 02 — zoom-to-Earth) ──────────────────────────────────
   //
   // The textured landing target of the descent.  Its ('rgba16float',
@@ -445,25 +460,11 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // + this comment rather than an import.
   state.gpu.earthRenderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
 
-  // Kick off the Blue Marble texture fetch WITHOUT awaiting it: bootstrap must
-  // not block on a multi-megabyte JPG.  The renderer draws a mid-blue
-  // placeholder sphere until the bitmap lands; when it does, `setTexture` swaps
-  // in the real equirectangular texture and we wake the render-on-demand loop
-  // so the change presents even with the camera at rest.  A fetch / decode
-  // failure is non-fatal — we log (the codebase's `[engine] … failed to load`
-  // pattern) and leave the placeholder.  The `?.` guards the case where
-  // `destroy()` nulled the handle before the fetch resolved.
-  void (async () => {
-    try {
-      const res = await fetch(SCENE_EARTH.textureUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const bitmap = await createImageBitmap(await res.blob());
-      state.gpu.earthRenderer?.setTexture(bitmap);
-      state.subsystems.scheduler.requestRender();
-    } catch (err) {
-      console.warn('[engine] Blue Marble texture failed to load:', err);
-    }
-  })();
+  // The Blue Marble texture that re-skins this placeholder sphere loads via a
+  // first-class demand-gated asset row (`createEarthTextureSlot` + the
+  // `earthTexture` ASSET_WIRING row), NOT a fire-and-forget fetch here — so the
+  // ~MB JPG is paid on the descent, not at boot, and its lifecycle (abort on
+  // release, render wake on ready) is owned by the slot machinery.
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

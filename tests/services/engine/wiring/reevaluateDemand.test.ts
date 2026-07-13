@@ -65,6 +65,9 @@ function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): Engine
     settings: {},
     requests: new Set(),
     assetSlots: { points },
+    // Far from Earth — buildDemandCtx reads the pose box unconditionally, and
+    // Infinity keeps the descent-gated earthTexture row out of the demand set.
+    cameraRuntime: { lastPose: { current: { distance: Infinity } } },
   } as unknown as EngineState;
 }
 

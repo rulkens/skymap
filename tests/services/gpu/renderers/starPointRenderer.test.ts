@@ -22,7 +22,7 @@ function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice 
     createShaderModule: vi.fn(() => ({
       getCompilationInfo: () => Promise.resolve({ messages: [] }),
     })),
-    createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+    createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
     createBindGroupLayout: vi.fn(() => ({})),
     createBindGroup: vi.fn(() => ({})),
     createPipelineLayout: vi.fn(() => ({})),
@@ -102,6 +102,32 @@ describe('createStarPointRenderer', () => {
     const cleared = mockPass();
     renderer.draw(cleared, new Float32Array(16), [1920, 1080]);
     expect(cleared.draw).not.toHaveBeenCalled();
+  });
+
+  it('reuses the instance buffer across same-length setStars — one createBuffer, one writeBuffer per upload', () => {
+    const device = mockDevice();
+    const renderer = createStarPointRenderer(device, 'rgba16float');
+
+    const createBuffer = device.createBuffer as unknown as ReturnType<typeof vi.fn>;
+    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+
+    const instanceCreates = () =>
+      createBuffer.mock.calls.filter(
+        ([desc]) => (desc as GPUBufferDescriptor).label === 'star-points-instance-buffer',
+      ).length;
+    const instanceUploads = () =>
+      writeBuffer.mock.calls.filter(
+        ([buffer]) => (buffer as { label?: string }).label === 'star-points-instance-buffer',
+      ).length;
+
+    // Per-frame `starPointsLayer.draw` re-hands camera-relative anchors each
+    // frame, so `setStars` fires every frame with the same star count. That
+    // must NOT churn a fresh GPU buffer per call: allocate once, re-upload.
+    renderer.setStars([SUN, SIRIUS]);
+    renderer.setStars([SUN, SIRIUS]);
+
+    expect(instanceCreates()).toBe(1);
+    expect(instanceUploads()).toBe(2);
   });
 
   it('bakes the additive depthless profile — targetFormat + one/one blend, no depthStencil', () => {

@@ -23,13 +23,14 @@
 //   @location(1) color:    vec3<f32>  — linear-RGB spectral tint, offset 12.
 //   @location(2) absMag:   f32        — absolute magnitude, offset 24.
 //
-// Positions are f32 (narrowed from the seed's f64 Mpc values). That is
-// deliberate: the f64 compose path matters for sphere-filling bodies,
-// where sub-metre camera-relative error is visible on a surface — but a
-// star drawn AS A POINT subtends less than a pixel by definition, so
-// f32 position error (relative eps ~1e-7 of the ~1e-6 Mpc coordinate)
-// stays far below a pixel at any camera distance that shows the point
-// at all. The caller passes the slab's f32 narrow view-projection.
+// Positions are f32, but the caller ('starPointsLayer') hands them in
+// already CAMERA-RELATIVE: it subtracts the eye from each anchor and folds
+// the eye offset into 'viewProj' (via 'rebaseViewProj'), both in f64, before
+// upload. Without that rebase the raw parsec-scale anchor (~1e-6 Mpc from the
+// render origin) and the raw view translation would be near-equal large
+// numbers whose f32 subtraction here cancels catastrophically, jittering the
+// sprite centre as the camera closes on a local star. Rebased, both operands
+// of 'worldToClip' are small and well-conditioned, so f32 suffices.
 //
 // ## Point size
 //
@@ -50,6 +51,10 @@ import package::lib::billboard::expandBillboardScreen;
 
 @group(0) @binding(0) var<uniform> u: CameraUniforms;
 
+// Depth epsilon: pull the clamped clip-z this far inside the far plane (in
+// ndc-z terms) so a point sitting exactly ON it still passes the clip test.
+const CLIP_Z_EPS: f32 = 1e-4;
+
 @vertex
 fn vs(
   @builtin(vertex_index) vi: u32,
@@ -67,6 +72,17 @@ fn vs(
 
   var out: VSOut;
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);
+
+  // Survive the adaptive foreground far plane on a deep descent. The NEAR0 far
+  // plane tracks camera distance ('foregroundFrustum': far = camDist * 100), so
+  // diving onto one star collapses it to just past that star and the OTHER
+  // parsec-scale points fall beyond it and frustum-clip. Clamping clip-z to just
+  // inside the far plane keeps them on screen. This is safe ONLY because this is
+  // the depthless additive HDR point pass — no depth test or write — so a
+  // clamped z perturbs no depth comparison; the depth-tested bodies (Earth /
+  // star spheres / planets) keep the tight far plane for their depth precision.
+  out.clip.z = min(out.clip.z, out.clip.w * (1.0 - CLIP_Z_EPS));
+
   out.uv = corner;
   out.color = color;
   return out;

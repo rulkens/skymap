@@ -257,6 +257,9 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       volumes: { items: volumeFields },
     } as unknown as EngineSettingsState,
     requests: requests as Set<import('../../../../src/@types/loading/RequestKey').RequestKey>,
+    // Far from Earth — buildDemandCtx reads the pose box unconditionally, and
+    // Infinity keeps the descent-gated earthTexture row out of the demand set.
+    cameraRuntime: { lastPose: { current: { distance: Infinity } } },
     assetSlots: {
       points,
       filaments: (namedSlots.filaments ?? stubSlot()) as AssetSlot<unknown, unknown> as never,

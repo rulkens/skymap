@@ -37,5 +37,9 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // slot has never been asked to load, which is exactly what `idle` means.
     slotState: (k: AssetKey): LoadState<unknown>['kind'] =>
       slotFor(state, k)?.state().kind ?? 'idle',
+    // The previous frame's produced orbit distance-to-focus — the live
+    // cross-driver descent signal (see DemandCtx surface 4). `lastPose` is
+    // constructed + placeholder-seeded in `engine.ts`, so it is never null.
+    cameraDistanceMpc: state.cameraRuntime.lastPose.current.distance,
   };
 }

@@ -65,6 +65,8 @@ function baseProps() {
   return {
     labelCategoryVisibility: allOnVisibility(),
     onSetLabelCategoryVisibility: vi.fn<(category: LabelCategory, visible: boolean) => void>(),
+    starLabelsEnabled: true,
+    onSetStarLabelsEnabled: vi.fn<(enabled: boolean) => void>(),
   };
 }
 

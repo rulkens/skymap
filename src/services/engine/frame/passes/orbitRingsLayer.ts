@@ -22,9 +22,13 @@
  *
  * ### When it draws
  *
- * `enabled` gates on the `orbitRingRenderer` GPU handle alone (null in the
- * pre-bootstrap window): the orbits are static module-level seeds
- * (`SCENE_ORBITS` always holds the three rings), so there is no data gate.
+ * `enabled` gates on the `orbitRingRenderer` GPU handle (null in the
+ * pre-bootstrap window) AND the shared near-field distance gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC`) — beyond it every AU-to-lunar-scale ring
+ * is deep sub-pixel, and gating with the NEAR0 siblings lets the executor
+ * skip the whole `(hdr, NEAR0)` render step as empty. The orbits are static
+ * module-level seeds (`SCENE_ORBITS` always holds the three rings), so
+ * there is no data gate.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -33,6 +37,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCENE_ORBITS } from '../../../../data/bodies/sceneOrbits';
 import { composeOrbitMvp } from '../../../../utils/camera/composeOrbitMvp';
 import { MAX_ORBITS, INSTANCE_FLOATS } from '../../../gpu/renderers/orbitRingRenderer';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized
 // for the renderer's cap; each ring's 20-float record (MVP + colour + pad) is
@@ -45,10 +50,11 @@ export const orbitRingsLayer: ContentLayer = {
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state) {
-    // Handle-only gate: SCENE_ORBITS is a static module-level table (always
-    // three rings), so the renderer's presence is the whole condition.
-    return state.gpu.orbitRingRenderer !== null;
+  enabled(state, ctx) {
+    // Handle first (pre-bootstrap fixtures carry a bare ctx), then the shared
+    // near-field distance gate. SCENE_ORBITS is a static module-level table
+    // (always three rings), so there is no data condition.
+    return state.gpu.orbitRingRenderer !== null && ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC;
   },
 
   draw(pass, view, _ctx, state) {

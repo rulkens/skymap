@@ -28,11 +28,15 @@
  *
  * ### When it draws
  *
- * `enabled` gates on TWO handles: the `earthRenderer` GPU handle (null in the
+ * `enabled` gates on TWO handles — the `earthRenderer` GPU handle (null in the
  * pre-bootstrap window) AND the seeded `bodies.earth` record (null until the
- * scene-body seed installs it). The `foreground:0` target is a bootstrap-
- * guaranteed `renderTargets` row, so there is no separate offscreen-null gate.
- * `draw` re-checks both so a stale call is a harmless no-op.
+ * scene-body seed installs it) — plus the shared near-field distance gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC`): beyond it Earth is a deep-sub-pixel speck
+ * at the galactic centre, and gating here (with every NEAR0 sibling) lets the
+ * executor skip the whole foreground pass group as empty. The `foreground:0`
+ * target is a bootstrap-guaranteed `renderTargets` row, so there is no
+ * separate offscreen-null gate. `draw` re-checks both handles so a stale call
+ * is a harmless no-op.
  *
  * `RENDER_ORIGIN_MPC` is imported directly as a constant (not threaded through
  * ctx state) — the render origin is fixed at the Sun for the zoom-to-earth
@@ -44,6 +48,7 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 export const earthLayer: ContentLayer = {
   name: 'earth',
@@ -51,10 +56,15 @@ export const earthLayer: ContentLayer = {
   target: 'foreground:0',
   blend: 'opaque',
 
-  enabled(state) {
-    // Both the GPU handle and the seeded body must be present. The target is a
-    // bootstrap-guaranteed renderTargets row, so those two are the only gates.
-    return state.gpu.earthRenderer !== null && state.data.bodies.earth !== null;
+  enabled(state, ctx) {
+    // Handle first (pre-bootstrap fixtures carry a bare ctx), then the shared
+    // near-field distance gate, then the seeded body. The target is a
+    // bootstrap-guaranteed renderTargets row, so these are the only gates.
+    return (
+      state.gpu.earthRenderer !== null &&
+      ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC &&
+      state.data.bodies.earth !== null
+    );
   },
 
   draw(pass, view, _ctx, state) {

@@ -53,6 +53,7 @@
 
 import type { Label } from '../../../@types/rendering/Label';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -64,22 +65,10 @@ import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { focusedFamousIndex } from '../helpers/focusedFamousIndex';
 import { famousDisplayName } from '../helpers/famousDisplayName';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
+import { liftedLabelPlacement } from './liftedLabelPlacement';
 import { focusRecession } from './focusRecession';
 
 const FAMOUS_MIN_APPARENT_PX = 6;
-
-/**
- * Minimum vertical lift, in Mpc, applied to a famous-galaxy label. Tiny
- * galaxies (<~33 kpc) get this fixed offset so the label clears the dot even
- * when the galaxy itself is barely resolved.
- */
-const FAMOUS_LABEL_MIN_OFFSET_MPC = 0.05;
-/**
- * Multiplier on the galaxy's physical diameter when computing the label lift.
- * 1.5× means the label sits ~1.5 galaxy-diameters above the dot — so the lift
- * scales with apparent size at any zoom.
- */
-const FAMOUS_LABEL_OFFSET_FACTOR = 1.5;
 
 /**
  * Label-size scaling for famous-galaxy labels:
@@ -107,7 +96,6 @@ type FamousLabelInput = {
   readonly worldPos: Vec3;
   readonly apparentDiameterKpc: number;
   readonly minApparentSizePx: number;
-  readonly labelAnchorOffsetMpc: number;
   readonly labelWorldEmMpc: number;
 };
 
@@ -128,17 +116,12 @@ function deriveFamousLabelInputs(
     const y = catalog.positions[catalogIdx * 3 + 1]!;
     const z = catalog.positions[catalogIdx * 3 + 2]!;
     const diameterKpc = catalog.diameterKpc[catalogIdx]!;
-    const diameterMpc = diameterKpc / 1000;
     out.push({
       id: `famous-${e.id}`,
       name: famousDisplayName(e),
       worldPos: [x, y, z],
       apparentDiameterKpc: diameterKpc,
       minApparentSizePx: FAMOUS_MIN_APPARENT_PX,
-      labelAnchorOffsetMpc: Math.max(
-        FAMOUS_LABEL_MIN_OFFSET_MPC,
-        FAMOUS_LABEL_OFFSET_FACTOR * diameterMpc,
-      ),
       labelWorldEmMpc: famousLabelWorldEmMpc(diameterKpc),
     });
     catalogIdx += 1;
@@ -185,6 +168,14 @@ export function produceFamousLabels(
   const fovYRad = ctx.fovYRad;
   const [cx, cy, cz] = ctx.drawCamPos;
   const style = FAMOUS_LABEL_STYLE;
+  // Hoisted once — every label this frame lifts through the same vp/viewport.
+  const vp: Float32Array = ctx.vp;
+  const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
+  // The renderer owns the font metrics, so its memoized `measure` is the one
+  // source for the caption's true ink bbox (which places the line top). Null
+  // only during bootstrap, when the director isn't flushing anyway — the
+  // chain then degrades to a bottom at the label anchor.
+  const labelRenderer = state.gpu.labelRenderer;
 
   // Snapshot the layer opacity × uniform recession × clip factor ONCE — it's
   // identical for every famous label (the `galaxyNames` handle is shared, and
@@ -232,28 +223,14 @@ export function produceFamousLabels(
     // fades in lockstep with its label.
     const labelAlpha = fadeAlpha * layerAlpha;
 
-    // Lift the label a static world-space distance above the dot, with a
-    // short connecting line from the dot to 75% of the lift. The offset is
-    // static world-space (not a per-frame camera-distance conversion) because
-    // the labelDirector's signature optimisation excludes worldPos — a
-    // per-frame-derived position would freeze at the first-visible distance.
-    const offset = p.labelAnchorOffsetMpc;
-    const labelWorldPos: Vec3 = [p.worldPos[0], p.worldPos[1] + offset, p.worldPos[2]];
-    lines.push({
-      id: `${p.id}-anchor`,
-      fromWorld: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
-      toWorld: [p.worldPos[0], p.worldPos[1] + offset * 0.75, p.worldPos[2]],
-      pixelWidth: style.pixelWidth,
-      color: [...style.lineColor],
-      fadeAlpha: labelAlpha,
-      // Anchor for this label — the director drops the connector if the label
-      // loses an overlap during declutter.
-      ownerLabelId: p.id,
-    });
-
-    labels.push({
+    // Build the label BEFORE its geometry so `measure` reads the same font /
+    // text / alignment fields the final label carries — the measured ink
+    // bottom that positions the line top can never drift from what is drawn.
+    // `worldPos` here is provisional (the dot); the push below replaces it
+    // with the lifted anchor.
+    const label: Label = {
       id: p.id,
-      worldPos: labelWorldPos,
+      worldPos: p.worldPos,
       text: p.name,
       font: 'cormorant',
       pixelSize: 0, // unused — superseded by the worldEm sizing model
@@ -267,7 +244,42 @@ export function produceFamousLabels(
       outlineColor: [...style.outlineColor],
       outlineEmFrac: style.outlineEmFrac,
       prominencePx,
+    };
+
+    // Single derivation chain (see `liftedLabelPlacement`): the lift is
+    // screen-space (world +Y offsets foreshorten or fall over the text), the
+    // line top derives from the measured text bottom minus the shared
+    // padding, and the line vanishes when no room remains. The endpoints are
+    // camera-derived per frame — safe because the labelDirector's re-upload
+    // signature keys on each line's `toWorld`, so moved geometry re-uploads
+    // instead of freezing at first-visible distance.
+    const placement = liftedLabelPlacement({
+      anchorWorldPos: p.worldPos,
+      vp,
+      viewportPx,
+      subjectSizePx: sizePx,
+      textBbox: labelRenderer?.measure(label) ?? null,
+      worldEmMpc: p.labelWorldEmMpc,
+      minPixelSize: style.minPixelSize,
+      maxPixelSize: style.maxPixelSize,
     });
+    // Behind the camera the projection is undefined — nothing visible to label.
+    if (placement === null) continue;
+
+    labels.push({ ...label, worldPos: placement.labelWorldPos });
+    if (placement.line !== null) {
+      lines.push({
+        id: `${p.id}-anchor`,
+        fromWorld: placement.line.fromWorld,
+        toWorld: placement.line.toWorld,
+        pixelWidth: style.pixelWidth,
+        color: [...style.lineColor],
+        fadeAlpha: labelAlpha,
+        // Anchor for this label — the director drops the connector if the
+        // label loses an overlap during declutter.
+        ownerLabelId: p.id,
+      });
+    }
   }
 
   return { labels, lines, awake: false };

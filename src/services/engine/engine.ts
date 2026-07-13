@@ -268,6 +268,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // (Plan 01 — zoom-to-Earth). null until initGpu; excluded from
       // isEngineReady, null-checked at use like labelRenderer.
       foregroundLabelRenderer: null,
+      // Leader-line sibling of foregroundLabelRenderer — the NEAR0-slab
+      // connectors under the scene-body captions. null until initGpu;
+      // excluded from isEngineReady, null-checked at use.
+      foregroundMarkerLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use by
       // clipPathDebugLayer.
       debugLineRenderer: null,
@@ -420,6 +424,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       mcpm: null,
       // Default-off velocity flow field; demand-loaded like cf4Density.
       flow: null,
+      // Blue Marble Earth texture; descent-gated on cameraDistanceMpc.
+      earthTexture: null,
     },
     // ── One-shot transient request flags ────────────────────────────────
     //
@@ -561,6 +567,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             fovYRad: state.cameraRuntime.projection.fovYRad,
           }
         : null,
+    // The live Earth record `watchFlyToEarthKeySaga` frames its descent tween
+    // on. Read lazily (like `resolveDeps`) because the scene-body seed installs
+    // Earth after the root saga forks; null until then, so the fly-to key
+    // no-ops rather than tween toward a body that isn't there.
+    earthBody: () => state.data.bodies.earth,
     playClip,
     clipPathInspect,
   });
@@ -683,6 +694,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.foregroundLabelRenderer?.destroy();
     state.gpu.foregroundLabelRenderer = null;
+    state.gpu.foregroundMarkerLineRenderer?.destroy();
+    state.gpu.foregroundMarkerLineRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
     state.gpu.debugLineRenderer?.destroy();

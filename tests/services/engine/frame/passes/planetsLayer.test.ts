@@ -16,6 +16,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { planetsLayer } from '../../../../../src/services/engine/frame/passes/planetsLayer';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/sceneBodies';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -45,9 +46,18 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-// ctx is unread by this layer (it composes from view.slab.vp + the
-// RENDER_ORIGIN_MPC constant), so a bare cast satisfies the signature.
+// Bare ctx for the null-handle and draw cases: draw never reads ctx, and
+// enabled's handle check must short-circuit BEFORE the ctx.cam read
+// (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as ReadyFrameContext;
+
+// enabled reads only ctx.cam.distance beyond the handle checks.
+function makeCtx(distance: number): ReadyFrameContext {
+  return { cam: { distance } } as unknown as ReadyFrameContext;
+}
+
+// A camera comfortably inside the shared foreground gate.
+const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
 
 /**
  * A SlabView whose f64 `slab.vp` and f32 `vp` are deliberately DIFFERENT
@@ -89,16 +99,25 @@ function makeRendererSpy() {
 
 describe('planetsLayer.enabled', () => {
   it('is false while planetRenderer is null and while no planets are seeded; true with both', () => {
-    // Null handle. NOTE: deliberately no state.data — the handle check must
-    // short-circuit BEFORE the bodies read (renderFrame fixtures carry no
-    // bodies bag).
+    // Null handle. NOTE: deliberately no state.data and a bare ctx — the
+    // handle check must short-circuit BEFORE either is touched (renderFrame
+    // fixtures carry null handles and no bodies bag).
     expect(
       planetsLayer.enabled({ gpu: { planetRenderer: null } } as unknown as EngineState, CTX_STUB),
     ).toBe(false);
-    // Renderer only, nothing seeded.
-    expect(planetsLayer.enabled(makeState(makeRendererSpy(), []), CTX_STUB)).toBe(false);
-    // Both present.
-    expect(planetsLayer.enabled(makeState(makeRendererSpy(), SCENE_PLANETS), CTX_STUB)).toBe(true);
+    // Renderer only, nothing seeded (camera inside the gate).
+    expect(planetsLayer.enabled(makeState(makeRendererSpy(), []), NEAR_CTX)).toBe(false);
+    // Both present, camera inside the gate.
+    expect(planetsLayer.enabled(makeState(makeRendererSpy(), SCENE_PLANETS), NEAR_CTX)).toBe(true);
+  });
+
+  it('is disabled beyond the foreground gate even with planets seeded', () => {
+    // At galaxy scale every planet is a deep-sub-pixel speck: the shared gate
+    // turns the row off so the (foreground:0, NEAR0) step can be skipped
+    // wholesale.
+    const state = makeState(makeRendererSpy(), SCENE_PLANETS);
+    expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
+    expect(planetsLayer.enabled(state, makeCtx(0.43))).toBe(false);
   });
 });
 

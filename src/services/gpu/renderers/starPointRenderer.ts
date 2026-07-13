@@ -30,16 +30,20 @@
  * parameter, unlike the sphere-body factories that draw into the
  * depth-bearing `foreground:0` row.
  *
- * ### Precision — f32 positions are fine for points
+ * ### Precision — camera-relative inputs, then f32 narrowing
  *
- * Star positions live at parsec scale (~1e-6 Mpc) in the absolute
- * heliocentric frame. The f64 compose path exists for SPHERE-FILLING
- * bodies, where camera-relative f32 error is visible as surface swim; a
- * star drawn as a point subtends under a pixel by definition, so the f32
- * narrowing error (relative eps ~1e-7) stays sub-pixel at any camera
- * distance that shows it as a point at all. `setStars` therefore narrows
- * `positionMpc` straight into the f32 instance buffer, and `draw` takes
- * the slab's f32 narrow view-projection (`view.vp`).
+ * Both the instance positions and the view-projection arrive already rebased
+ * into the CAMERA-RELATIVE frame — the caller (`starPointsLayer`) subtracts the
+ * eye from each anchor and folds the eye offset into the vp via
+ * `rebaseViewProj`, both in f64, before handing them here. That matters because
+ * during the final approach to a local-map star the raw anchor (~1e-6 Mpc from
+ * the render origin) and the raw view translation are near-equal large numbers
+ * whose f32 subtraction cancels catastrophically, jittering the sprite centre.
+ * Rebasing turns both operands into small, well-conditioned numbers, so
+ * `setStars` narrows the (already camera-relative) `positionMpc` straight into
+ * the f32 instance buffer and `draw` uploads the (already rebased) f32
+ * view-projection with no precision loss. This renderer stays a dumb pipeline:
+ * it narrows whatever frame it is handed — the seam lives in the layer.
  *
  * ### Late-bound star data
  *
@@ -153,21 +157,30 @@ export function createStarPointRenderer(
   });
 
   // ── Star instance buffer (late-bound via setStars) ────────────────────────
+  //
+  // Grow-only reuse, NOT replace-on-upload. `starPointsLayer.draw` calls
+  // `setStars` EVERY frame — the camera-relative anchors it hands us change
+  // per frame (the eye is subtracted in f64 before narrowing here). A
+  // create/destroy of the GPU buffer per call would mean a fresh allocation
+  // and release 60×/sec on a hot path. Instead the buffer is allocated once
+  // sized to the first non-empty set and reallocated ONLY when a later set
+  // exceeds the current capacity; each call re-uploads the live subset via
+  // `writeBuffer`. With the static `SCENE_STARS` seed the star count never
+  // grows post-boot, so this is one bounded allocation for the process
+  // lifetime. `capacityStars` (buffer capacity) is tracked separately from
+  // `starCount` (the live count `draw` instances) so a shrink reuses the
+  // larger buffer and draws the smaller subset.
 
   let instanceBuffer: GPUBuffer | null = null;
+  let capacityStars = 0;
   let starCount = 0;
 
   function setStars(stars: readonly StarBody[]): void {
-    // Replace-on-upload: GPU buffers are fixed-size, so a new star set
-    // means a fresh buffer. `destroy()` on the old one is safe even if a
-    // prior frame referenced it — WebGPU defers the actual release until
-    // in-flight work completes.
-    instanceBuffer?.destroy();
-    instanceBuffer = null;
-    starCount = 0;
-    // Empty set clears the renderer; `createBuffer({ size: 0 })` is
-    // forbidden by the spec, so short-circuit (same guard as the survey
-    // pipeline's empty-cloud unload signal).
+    starCount = stars.length;
+    // Empty set clears the renderer to the no-op draw state; keep any
+    // existing buffer allocated (it is bounded, and a later non-empty set
+    // reuses it). `createBuffer({ size: 0 })` is forbidden by the spec, so
+    // never allocate here.
     if (stars.length === 0) return;
 
     const interleaved = new Float32Array(stars.length * FLOATS_PER_STAR);
@@ -185,13 +198,19 @@ export function createStarPointRenderer(
       interleaved[base + 6] = star.absMag;
     }
 
-    instanceBuffer = device.createBuffer({
-      label: 'star-points-instance-buffer',
-      size: interleaved.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
+    // Reallocate only when the current buffer can't hold the new set.
+    // `destroy()` on the old one is safe even if a prior frame referenced
+    // it — WebGPU defers the actual release until in-flight work completes.
+    if (instanceBuffer === null || stars.length > capacityStars) {
+      instanceBuffer?.destroy();
+      capacityStars = stars.length;
+      instanceBuffer = device.createBuffer({
+        label: 'star-points-instance-buffer',
+        size: capacityStars * STAR_STRIDE,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+    }
     device.queue.writeBuffer(instanceBuffer, 0, interleaved);
-    starCount = stars.length;
   }
 
   // ── draw ──────────────────────────────────────────────────────────────────
@@ -218,6 +237,7 @@ export function createStarPointRenderer(
   function destroy(): void {
     instanceBuffer?.destroy();
     instanceBuffer = null;
+    capacityStars = 0;
     starCount = 0;
     uniformBuffer.destroy();
   }

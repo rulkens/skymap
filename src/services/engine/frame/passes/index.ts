@@ -35,7 +35,8 @@
  * the near0 slab (their shared `(hdr, NEAR0)` render step — COSMO's near
  * plane would clip parsec-to-AU-scale anchors):
  *
- *  10. star-points         — the far-partition neighbourhood stars as additive
+ *  10. star-points         — the unresolved partition of the neighbourhood
+ *                            stars (partitionStarsByResolution) as additive
  *                            point sprites, riding the same tone-map as the
  *                            galaxies
  *  11. orbit-rings         — debug: analytic SDF orbit rings (Earth / Jupiter /
@@ -59,9 +60,10 @@
  *  17. earth               — true-scale Blue-Marble-textured Earth (f64 compose
  *                            seam), opaque (depth-tested) into the `foreground:0`
  *                            target
- *  18. star-spheres        — the near-partition star (the Sun) as a true-scale
- *                            flat-emissive sphere (f64 compose seam), opaque into
- *                            the same `foreground:0` target
+ *  18. star-spheres        — the resolved partition of the stars (the Sun +
+ *                            any star crossing STAR_RESOLVE_PX) as true-scale
+ *                            flat-emissive spheres (f64 compose seam), opaque
+ *                            into the same `foreground:0` target
  *  19. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
  *                            (f64 compose seam), opaque into the same target
  *  20. foreground-labels   — scene-body name captions, premultiplied-OVER onto

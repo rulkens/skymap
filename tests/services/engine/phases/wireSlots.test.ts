@@ -410,6 +410,10 @@ function makeState(
       },
     } as never,
     cam: null,
+    // Far from Earth — buildDemandCtx reads the pose box unconditionally, and
+    // Infinity keeps the descent-gated earthTexture row out of the demand set
+    // (boot-load expectations stay sdss/2mrs/glade/…, no Blue Marble fetch).
+    cameraRuntime: { lastPose: { current: { distance: Infinity } } },
     assetSlots: {
       points: points as Map<SourceType, never>,
       filaments: null,

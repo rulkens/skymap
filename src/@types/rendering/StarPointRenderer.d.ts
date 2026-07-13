@@ -13,9 +13,10 @@
  *
  * Star data is late-bound like the Earth's texture: the factory builds the
  * pipeline immediately, and the layer calls `setStars` once the seeded
- * bodies are known. Positions upload as f32 — sub-pixel error for anything
- * drawn as a point; the f64 compose path matters only for sphere-filling
- * bodies (see the renderer module header).
+ * bodies are known. Positions upload as f32, but the layer hands them in
+ * already camera-relative (and pairs them with a rebased view-projection) so
+ * the narrowing carries no catastrophic cancellation — see the renderer
+ * module header's precision note.
  */
 
 import type { Renderer } from './Renderer';
@@ -25,16 +26,18 @@ import type { StarBody } from '../scene/StarBody';
 export type StarPointRenderer = Renderer & {
   /**
    * Upload the instance buffer from the seeded star bodies — position
-   * (`positionMpc` narrowed to f32), linear-RGB `color`, and `absMag` per
-   * star, 28 bytes each. Replaces any previous upload; an empty array
-   * clears the renderer back to drawing nothing.
+   * (`positionMpc` narrowed to f32, camera-relative per the layer's rebase),
+   * linear-RGB `color`, and `absMag` per star, 28 bytes each. Replaces any
+   * previous upload; an empty array clears the renderer back to drawing
+   * nothing.
    */
   setStars(stars: readonly StarBody[]): void;
   /**
    * Draw every uploaded star as an instanced billboard into the current
-   * (depthless, additive) pass. `viewProj` is the slab's f32 length-16
-   * view-projection; `viewportPx` feeds the pixel-size-to-clip-offset
-   * conversion. No-op until `setStars` has delivered a non-empty upload.
+   * (depthless, additive) pass. `viewProj` is the length-16 view-projection
+   * rebased into the same camera-relative frame as the uploaded positions;
+   * `viewportPx` feeds the pixel-size-to-clip-offset conversion. No-op until
+   * `setStars` has delivered a non-empty upload.
    */
   draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2): void;
 };
