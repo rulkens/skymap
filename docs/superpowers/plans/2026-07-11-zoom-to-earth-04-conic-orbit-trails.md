@@ -189,20 +189,21 @@ the verified J2000 elements in spec §7 (Earth EMB, Jupiter — heliocentric,
 (au/km → Mpc) and `deg → rad`, with the `ω = ϖ − Ω`, `M = L − ϖ` arithmetic shown
 in a comment at the seed site.
 
-- [ ] Add `OrbitalElements.d.ts` — one type, exactly the spec §5 shape (`type`,
-  not `interface`; `Vec3` alias).
-- [ ] Add `orbitalElements.ts` — `ORBITAL_ELEMENTS: readonly OrbitalElements[]`
+- [x] Add `OrbitalElements.d.ts` — one type, exactly the spec §5 shape (`type`,
+  not `interface`; `Vec3` alias). _(Pre-satisfied by Task 2, which needed the
+  type ahead of this task; no reshape required — all 9 fields present.)_
+- [x] Add `orbitalElements.ts` — `ORBITAL_ELEMENTS: readonly OrbitalElements[]`
   (earth, jupiter, moon). Didactic docblock: this table is THE source of truth
   (bodies AND trails derive from it — spec §5), the frames (planets = ecliptic
   heliocentric, Moon = ecliptic geocentric), and the JPL provenance (spec §7
   URLs). No buried literals — every number is `<human value> * SCALE_UNITS.…` or
   `<deg> * DEG_TO_RAD`.
-- [ ] Test `ORBITAL_ELEMENTS has a valid structure` — the load-bearing
+- [x] Test `ORBITAL_ELEMENTS has a valid structure` — the load-bearing
   invariants only (per `testing.md` — NOT a value restatement): every `id` is
   unique; every non-null `parentId` resolves to another entry's `id` OR to a
   seeded body id (the Moon's `'earth'`); `0 ≤ eccentricity < 1` for each;
   `semiMajorMpc > 0`.
-- [ ] `npm test -- orbitalElements` → green. Commit.
+- [x] `npm test -- orbitalElements` → green. Commit.
 
 ## Task 5 — Re-seed `sceneBodies` Earth / Jupiter / Moon from elements
 
