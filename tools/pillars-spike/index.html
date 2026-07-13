@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pillars of Creation — volumetric spike</title>
+    <style>
+      /* Minimal, dependency-free chrome: the spike's UI is a translucent
+         control strip over a fullscreen canvas. All layout is plain CSS so
+         the tool has zero framework weight. */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        color: #cfd6e4;
+        font:
+          12px/1.45 system-ui,
+          sans-serif;
+        overflow: hidden;
+      }
+      #view {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+      }
+      #panel {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        width: 240px;
+        padding: 12px 14px;
+        background: rgba(10, 14, 22, 0.72);
+        border: 1px solid rgba(120, 150, 200, 0.18);
+        border-radius: 10px;
+        backdrop-filter: blur(8px);
+        user-select: none;
+      }
+      #panel h1 {
+        margin: 0 0 2px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #e8edf7;
+      }
+      #panel .sub {
+        margin: 0 0 10px;
+        color: #7d8aa3;
+        font-size: 11px;
+      }
+      #panel label {
+        display: grid;
+        grid-template-columns: 86px 1fr 34px;
+        align-items: center;
+        gap: 8px;
+        margin: 5px 0;
+      }
+      #panel label span.val {
+        text-align: right;
+        color: #93a3c0;
+        font-variant-numeric: tabular-nums;
+      }
+      #panel input[type='range'] {
+        width: 100%;
+        accent-color: #d98a5a;
+        height: 14px;
+      }
+      #panel select,
+      #panel button {
+        background: rgba(30, 40, 60, 0.9);
+        color: #cfd6e4;
+        border: 1px solid rgba(120, 150, 200, 0.25);
+        border-radius: 6px;
+        padding: 3px 6px;
+        font: inherit;
+      }
+      #panel .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+        justify-content: space-between;
+      }
+      #fps {
+        color: #7d8aa3;
+        font-variant-numeric: tabular-nums;
+      }
+      #hint {
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: rgba(190, 200, 220, 0.45);
+        font-size: 11px;
+        pointer-events: none;
+      }
+      #fatal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        place-items: center;
+        text-align: center;
+        color: #e8b0a0;
+        padding: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <aside id="panel">
+      <h1>Pillars of Creation</h1>
+      <p class="sub">volumetric spike — drag to orbit, wheel to zoom</p>
+      <!-- Sliders are populated from main.ts so the labels, ranges and
+           defaults live next to the engine settings they drive. -->
+      <div id="sliders"></div>
+      <div class="row">
+        <select id="tonemap" title="Tone-mapping curve">
+          <option value="0" selected>ACES</option>
+          <option value="1">Reinhard</option>
+          <option value="2">Reinhard ext.</option>
+          <option value="3">Uncharted 2</option>
+          <option value="4">Linear</option>
+        </select>
+        <select id="quality" title="Nebula render scale">
+          <option value="0.5">Fast</option>
+          <option value="0.75" selected>Balanced</option>
+          <option value="1">Quality</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="reseed" title="Regenerate the cloud with a new random seed">↻ new cloud</button>
+        <label style="display: flex; gap: 5px; margin: 0; grid-template-columns: none">
+          <input type="checkbox" id="rotate" checked /> auto-orbit
+        </label>
+        <span id="fps">— fps</span>
+      </div>
+    </aside>
+    <div id="hint">
+      M16-inspired star-forming pillars · baked starlight transmittance · HDR + bloom
+    </div>
+    <div id="fatal"></div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+# WESL linker configuration for the Pillars-of-Creation volumetric spike.
+#
+# Like the galaxy-renderer (and unlike the flow-workbench), this tool's
+# shaders are entirely its own — a procedural nebula density bake, a
+# starlight transmittance bake, a physically-based volumetric raymarcher,
+# and an HDR bloom chain. None of them are shared with the runtime, so
+# 'root' points at this tool's own shader directory and imports resolve as
+# package::lib::name against that local root.
+#
+# wesl-plugin locates this file from the explicit 'weslToml' option in
+# vite.config.ts — NOT from the Vite 'root'. By default the plugin reads
+# '<process.cwd()>/wesl.toml', and 'npm run pillars-spike' keeps cwd at the
+# repo root, so without the explicit path the plugin would pick up the
+# runtime toml instead and never find this tool's shaders.
+#
+# '?static' (wired in vite.config.ts) links at build time to a flat WGSL
+# string — zero runtime linker dependency.
+
+edition = "unstable_2025"
+include = ["src/shaders/**/*.wesl"]
+root = "src/shaders"
