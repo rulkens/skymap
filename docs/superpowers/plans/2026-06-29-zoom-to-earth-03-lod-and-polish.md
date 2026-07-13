@@ -453,11 +453,11 @@ Run the `entanglement-radar` skill over the full feature diff per `docs/superpow
 - Two declutter mechanisms after Task 10: the director's greedy screen-space cull (`labelDirectorSubsystem.ts:197-294`, COSMO/`ctx.vp`) and the new `declutterByScreenSeparation` (NEAR0 foreground path). Is the split essential (genuinely different slabs / producer sets, so one cull can't serve both — Task 9's slab tension) or accidental (could the director's cull be generalised to take a vp + candidate set)? Classify; if accidental-but-large, capture rather than force-merge.
 - The Task 13 survey-fade factor (if landed) vs the per-source FadeRegistry opacity (`pointSpritesLayer.ts:114-121`) — confirm the camera-distance factor composes as ONE multiply at the `fadeOpacityOf` seam and does not fork fade ownership away from `syncVisibilityFades`.
 
-- [ ] Run `entanglement-radar` over the feature diff; for each finding classify essential vs accidental and record the verdict (in the PR body or a short notes block). If an accidental braid surfaces, either un-braid it (small) or capture it in `docs/BACKLOG.md` (if it's a larger follow-up) — do not silently ship it.
-- [ ] Run `npm run typecheck` (both src + tools tsconfigs) → clean.
-- [ ] Run `npm test` (full suite) → green.
-- [ ] Note in the PR body EVERY visual property confirmed by the user across the visual-gate tasks — the four LOD/descent gates (Tasks 4/6/7: smooth promotion, fly-to-Earth motion, believable LOD, descent-gated texture arrival) PLUS the polish gates (Tasks 8-12: marker-line geometry, foreground label parity, star-label declutter, foreground-pass skip, Milky Way persistence; and Task 13's galaxy fade only if its minimal version landed) — none of these are covered by automated tests.
-- [ ] Commit.
+- [x] Run `entanglement-radar` over the feature diff; for each finding classify essential vs accidental and record the verdict (in the PR body or a short notes block). If an accidental braid surfaces, either un-braid it (small) or capture it in `docs/BACKLOG.md` (if it's a larger follow-up) — do not silently ship it.
+- [x] Run `npm run typecheck` (both src + tools tsconfigs) → clean.
+- [x] Run `npm test` (full suite) → green.
+- [x] Note in the PR body EVERY visual property confirmed by the user across the visual-gate tasks — the four LOD/descent gates (Tasks 4/6/7: smooth promotion, fly-to-Earth motion, believable LOD, descent-gated texture arrival) PLUS the polish gates (Tasks 8-12: marker-line geometry, foreground label parity, star-label declutter, foreground-pass skip, Milky Way persistence; and Task 13's galaxy fade only if its minimal version landed) — none of these are covered by automated tests.
+- [x] Commit.
 
 ---
 

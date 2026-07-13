@@ -65,6 +65,17 @@ a declared band, not a new mechanism.
   return; the factor is spatial so camera motion's existing render-wake
   suffices — zero `shouldKeepTicking` changes.
 
+## Folded-in from the plan 03 entanglement radar
+
+- `EARTH_TEXTURE_MAX_DISTANCE_MPC` (`earthTextureSlot.ts`) and
+  `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` (`foregroundLabelsLayer.ts`) are the
+  same 1e-3 literal in two homes, related only by "same order as" prose.
+  When building the band table, decide: if the "captions appear ≈ texture
+  starts loading" simultaneity is intended, give the descent-onset distance
+  ONE home (the table is the natural place — a loading slot importing from a
+  frame pass would cross layers); if independence is intended, replace the
+  prose with a sentence saying so and why.
+
 ## Known non-goals / follow-ups
 
 - **Disk sprites**: `ProceduralDiskRenderer`/`TexturedDiskRenderer` expose
