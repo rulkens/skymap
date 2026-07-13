@@ -38,9 +38,12 @@
 //
 // ## Output
 //
-// 'color * brightness * stroke' with alpha 1 for the one/one additive blend —
-// the rgb IS the added light (the HDR convention every additive layer shares);
-// alpha is ignored by the blend but kept at 1 for consistency.
+// 'color * brightness * stroke * in.fade' with alpha 1 for the one/one additive
+// blend — the rgb IS the added light (the HDR convention every additive layer
+// shares); alpha is ignored by the blend but kept at 1 for consistency. The
+// 'in.fade' factor is the per-orbit CPU-side visibility fade (see
+// orbitTrailsLayer): it drives the whole trail smoothly to zero as the camera
+// enters the orbit or the ellipse falls sub-pixel, instead of popping off.
 
 import package::orbitTrail::io::VSOut;
 import package::lib::math::PI;
@@ -103,5 +106,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let delta = raw - twoPi * floor(raw / twoPi);
   let brightness = TRAIL_FLOOR + (1.0 - TRAIL_FLOOR) * exp(-TRAIL_DECAY * delta);
 
-  return vec4<f32>(in.color * brightness * stroke, 1.0);
+  return vec4<f32>(in.color * brightness * stroke * in.fade, 1.0);
 }
