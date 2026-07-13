@@ -14,16 +14,23 @@
  * this one table. Body-on-trail consistency is then structural — not a
  * "remember to keep them in sync" invariant.
  *
- * ### Frames
+ * ### Frames — heliocentric vs geocentric, ecliptic vs equatorial
  *
- * Every solar-system body orbits near the **ecliptic**, so all elements are
- * referenced to the ecliptic J2000 frame; the ecliptic→equatorial rotation into
- * the scene's frame is `ECLIPTIC_BASIS`, applied downstream where the ellipse is
- * built. The eight major planets (Mercury through Neptune, Earth as the EMB) are
- * **heliocentric** — `parentId: null`, focus at the Sun (the render origin). The
- * Moon's elements are **geocentric** — `parentId: 'earth'`, so its focus
- * resolves to Earth's own derived world position and its trail follows Earth by
- * construction.
+ * Two independent frame choices per row:
+ *
+ * - **Focus** (`parentId`): the eight major planets (Mercury through Neptune,
+ *   Earth as the EMB) are **heliocentric** — `parentId: null`, focus at the Sun
+ *   (the render origin). A moon is **geocentric** to its planet — `parentId`
+ *   names it — so its focus resolves to that planet's own derived world position
+ *   and its trail follows the planet by construction.
+ * - **Reference plane** (`plane`, see `orbitPlaneFrames.ts`): the planets AND
+ *   Earth's Moon are referenced to the **ecliptic** (JPL publishes them there),
+ *   the default when `plane` is omitted. But a planet's OWN moons are referenced
+ *   to that planet's **equatorial (Laplace) plane** — Saturn's is tilted ~27° to
+ *   the ecliptic, which is why its regular moons ride visibly tilted — so each
+ *   satellite row carries an explicit `plane` (`{MARS,JUPITER,SATURN}_EQUATORIAL_FRAME`).
+ *   The ecliptic→equatorial rotation into the scene's frame is `ECLIPTIC_BASIS`,
+ *   applied downstream where the ellipse is built.
  *
  * The scene is static at a single epoch (J2000, no clock), so only the epoch
  * column of the mean elements is stored; JPL's element rates are recorded in the
