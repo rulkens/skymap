@@ -416,11 +416,11 @@ Once stars fill the near field the galaxy point cloud clutters the view. Investi
 
 ## Task 14 — ADR: continuous floating origin for free zoom
 
-**Files:** `docs/adrs/0009-continuous-floating-origin-for-free-zoom.md` (new).
+**Files:** `docs/adrs/0010-continuous-floating-origin-for-free-zoom.md` (new; the plan originally reserved 0009, but the unified-disk-planner-walk ADR merged via #427 took it — the verify-the-number gate below resolved to 0010).
 
-Record the refinement of ADR-0001 (per-shell floating origin) for the interactive free-zoom case. **Next free ADR number is 0009** (existing: 0001-fade-ownership, 0002-tiered-thumbnail-textures, 0003-cluster-catalog-loading, 0004-famous-calibration, 0005-engine-data-layer, 0006-volume-field-settings, 0007-intent-centric-state, 0008-effects-layer-vehicle). The contract's filename placeholder `00NN-continuous-floating-origin-for-free-zoom.md` resolves to **0009**.
+Record the refinement of ADR-0001 (per-shell floating origin) for the interactive free-zoom case. The contract's filename placeholder `00NN-continuous-floating-origin-for-free-zoom.md` resolves to **0010** (0009 = unified-disk-planner-walk, merged mid-plan).
 
-Follow the house ADR template (`docs/adrs/0007-...md` and `0003-...md` for the field set): `# ADR 0009 — …`, `**Status:** Accepted`, `**Date:** 2026-06-29`, `**Decision-makers:**`, `**Amends (does not reverse):**` ADR-0001, then `## Context`, `## Decision`, `## Consequences` (Positive / Negative / Neutral), `## References`.
+Follow the house ADR template (`docs/adrs/0007-...md` and `0003-...md` for the field set): `# ADR 0010 — …`, `**Status:** Accepted`, `**Date:** 2026-06-29`, `**Decision-makers:**`, `**Amends (does not reverse):**` ADR-0001, then `## Context`, `## Decision`, `## Consequences` (Positive / Negative / Neutral), `## References`.
 
 **Content (the refinement to record, from spec §3 "Relationship to ADR 0001"):**
 
@@ -432,9 +432,9 @@ Follow the house ADR template (`docs/adrs/0007-...md` and `0003-...md` for the f
 
 **Citation note:** ADR-0001's source doc (`docs/superpowers/plans/2026-05-08-cosmic-zoom-powers-of-ten/decisions/0001-floating-origin.md`) lives on the `cosmic-zoom-plan` worktree, **not on `main`**. Reference it by that path (the spec already does, §References) and note in the ADR that the source lives on the cosmic-zoom-plan branch. If a reviewer needs it on `main`, STOP and report — do not copy it in.
 
-- [ ] Write the ADR per the template + content above. Cite the spec (`docs/superpowers/specs/2026-06-29-zoom-to-earth-true-scale-design.md` §3) and ADR-0005 (units/data-layer) in References.
-- [ ] (Optional) use the `adr` skill to scaffold the numbered file if it picks 0009 automatically; otherwise write directly. **Verify the chosen number is 0009** before finalising (re-list `docs/adrs/` — it currently ends at 0008-effects-layer-vehicle).
-- [ ] This is a docs-only task — typecheck/test gates do not apply. Commit. (Ask the user, per house convention, whether the ADR rides this plan's PR or a separate docs-only PR — default: rides this plan's PR.)
+- [x] Write the ADR per the template + content above. Cite the spec (`docs/superpowers/specs/2026-06-29-zoom-to-earth-true-scale-design.md` §3) and ADR-0005 (units/data-layer) in References.
+- [x] (Optional) use the `adr` skill to scaffold the numbered file; otherwise write directly. **Verify the chosen number** before finalising by re-listing `docs/adrs/` — this gate is what caught the mid-plan collision and resolved the number to 0010.
+- [x] This is a docs-only task — typecheck/test gates do not apply. Commit. (Ask the user, per house convention, whether the ADR rides this plan's PR or a separate docs-only PR — default: rides this plan's PR.)
 
 ## Task 15 — Entanglement-radar pass + full gate
 
@@ -473,7 +473,7 @@ Run the `entanglement-radar` skill over the full feature diff per `docs/superpow
 | §10 Phase 5 — fly-to-Earth affordance (debug key)                       | T5 (`earthSurfaceFraming`) + T6 (`watchFlyToEarthKeySaga`)                                                                                                       |
 | Backlog 2026-07-11 — Blue Marble texture out of `initGpu`'s IIFE (folded in) | T7 (`createEarthTextureSlot` + `ASSET_WIRING` row + `DemandCtx.cameraDistanceMpc` surface); NOT a spec bullet — folded from `docs/backlog/`                  |
 | §10 Phase 5 — tests                                                     | T1/T3/T5 unit tests; T4 partition + layer tests; T6 saga tests; T7 slot + demand tests; T15 full gate                                                            |
-| §10 Phase 5 — docs (ADR recording ADR-0001 refinement)                  | T14 (ADR 0009)                                                                                                                                                   |
+| §10 Phase 5 — docs (ADR recording ADR-0001 refinement)                  | T14 (ADR 0010)                                                                                                                                                   |
 | §10 Phase 5 — entanglement-radar pass                                   | T15                                                                                                                                                              |
 | User-requested polish (2026-07-11, folded in) — marker-line geometry fix | T8 (`produceFamousLabels` leader-line geometry + `markerLineRenderer`); NOT a spec bullet — folded from live-foreground feedback                                 |
 | User-requested polish (2026-07-11, folded in) — foreground label parity  | T9 (`foregroundLabelsLayer` / `sceneBodyLabels` adopt famous size + leader line); NOT a spec bullet                                                              |
@@ -503,7 +503,7 @@ None. Every task has concrete files, signatures, and test names. Task 13 is a de
 
 - **Foreground is now DATA, not a bespoke pass:** the fold deleted `encodeForegroundPass`, `foregroundOffscreen`, `foregroundComposite`, and the four `ReadyFrameContext` foreground fields. T2 lands the adaptive frustum in `slabs.ts` (not `frameContext.ts`); T4 re-homes the star partition to the two Plan-02 layers (not a dispatch inside a hand-encoded pass). No task references any deleted symbol.
 - **Keyboard/tween seam (real, re-verified):** `watchFocusTweenSaga` (`src/state/selection/watchFocusTweenSaga.ts`, bails on null runtime at `:46-47`) is the canonical "read `cameraRuntime` from getContext → build a tween via a pure framing helper → `put(startCameraTween)`" pattern; `watchTourKeyboardSaga` (`src/state/tour/watchTourKeyboardSaga.ts`, `routeKeys` at `:42-48`) + `createKeyboardListener` (`src/services/input/createKeyboardListener.ts`) is the canonical keyboard-channel pattern. The fly-to-Earth key (T6) composes both. Sagas are forked from `src/store/rootSaga.ts` (the `all([...])` array + docblock list — re-verify line ranges before editing). The tween descriptor is `CameraTweenDescriptor` (`src/@types/camera/CameraTweenDescriptor.d.ts`: `from`/`to`/`durationMs`/`easing: 'easeOutCubic'`), built exactly as `focusTweenDescriptor.ts:48-53`; `startCameraTween` is `cameraSlice.ts:90`. The plan does NOT invent a new effect method (reuses `startCameraTween`).
-- **Next ADR number:** **0009** (`docs/adrs/` ends at `0008-effects-layer-vehicle.md`; the contract's `00NN` resolves to 0009). T14 re-verifies before finalising.
+- **Next ADR number:** resolved to **0010** by T14's re-verify gate — the plan reserved 0009 when `docs/adrs/` ended at `0008-effects-layer-vehicle.md`, but `0009-unified-disk-planner-walk.md` merged mid-plan (#427) and took it.
 - **ADR-0001 source path is off-`main`:** the cosmic-zoom-plan dir (`docs/superpowers/plans/2026-05-08-cosmic-zoom-powers-of-ten/`) does NOT exist on `main` (it's on the `cosmic-zoom-plan` worktree per project memory). The ADR (T14) references it by path and notes the branch; it does not depend on the file being present.
 - **`MIN_DISTANCE_MPC` is `?deepZoom`-gated on `main`:** `hasUrlGate('deepZoom') ? 1e-17 : 0.05` (`clampDistance.ts:50-52`). Plan 03 must NOT touch the gate — un-gating is a release decision. Stated in Global Constraints + Consumes + T4 notes; every VISUAL gate needs `?deepZoom` in the URL. No conflict, just a guardrail.
 - **Fixed NEAR0 ratios vs Plan 03 adaptive:** the fold's `slabs.ts` derives `NEAR0`'s near/far from `NEAR0_NEAR_RATIO`/`NEAR0_FAR_RATIO` (1e-4 / 100) and carries a forward-reference comment naming this plan as the replacement; T2 REPLACES that derivation with `foregroundFrustum(cam.distance)` and DELETES the two constants + the comment (this plan is the referenced future). Called out explicitly so the executor removes rather than duplicates.

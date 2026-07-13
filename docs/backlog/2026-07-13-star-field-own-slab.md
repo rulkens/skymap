@@ -74,5 +74,5 @@ the clamps are the compensations.
 - `src/utils/camera/foregroundFrustum.ts` (bracket + FAR_MIN_MPC history)
 - zoom-to-earth plan 03 Task 10 report (`.superpowers/sdd/task-10-report.md`,
   session-local) — the defect chain that motivated this
-- ADR 0009 (continuous floating origin, plan 03 Task 14) should
+- ADR 0010 (continuous floating origin, plan 03 Task 14) should
   cross-reference this item as the anticipated slab-tiling follow-up
