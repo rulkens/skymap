@@ -171,6 +171,11 @@ export const selectClipPathPassByDir = (state: RootState): PassByDir =>
 export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
   selectSettings(state).debug.clipPathInspect.active;
 
+// --- labels cluster -----------------------------------------------------------
+
+export const selectStarLabelsEnabled = (state: RootState): boolean =>
+  selectSettings(state).labels.starLabelsEnabled;
+
 // --- structures cluster -------------------------------------------------------
 
 export const selectStructureItems = (

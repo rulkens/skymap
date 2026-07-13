@@ -18,4 +18,13 @@ export type LabelSettings = {
    * tour snapshot on exit.
    */
   focusedOnly: boolean;
+  /**
+   * Master gate for the local-star captions in the true-scale foreground
+   * (`foregroundLabelsLayer`). Default ON. When false the dense neighbourhood
+   * star names are suppressed while the Earth and planet captions keep showing
+   * — the star map is the only caption set thick enough to want a mute switch
+   * on the final descent. Distinct from `focusedOnly`: that is a cross-cutting
+   * COSMO declutter, this is the near-field scene-body caption toggle.
+   */
+  starLabelsEnabled: boolean;
 };

@@ -59,3 +59,16 @@ export const MIN_LABEL_CLEARANCE_PX = 28;
  * subtraction instead of needing a separate threshold constant.
  */
 export const LEADER_LINE_PADDING_PX = 6;
+
+/**
+ * TUNING KNOB: the visible screen gap, in pixels, between a foreground body's
+ * EDGE and its connector line's BOTTOM. The foreground caption layer lifts
+ * each connector's bottom by the body's apparent RADIUS plus this gap
+ * (`subjectSizePx / 2 + LEADER_LINE_BOTTOM_GAP_PX`), so an unresolved point
+ * keeps a small clear space under the line, and a resolved sphere keeps the
+ * SAME clear space above its top rim — the offset tracks the body's apparent
+ * size automatically. The famous / Milky-Way producers pass no bottom lift
+ * (their line starts at the dot itself), so this knob only moves the
+ * foreground bodies' connectors.
+ */
+export const LEADER_LINE_BOTTOM_GAP_PX = 4;

@@ -25,7 +25,12 @@
 export function resolvesToSphere(input: {
   apparentSizePx: number;
   thresholdPx: number;
-  alwaysResolved: boolean; // the Sun is always a sphere regardless of size
+  /**
+   * Degenerate-case override — the camera sitting exactly ON the star
+   * (distance 0), where the apparent-size guard returns 0 and a bare size
+   * test would demote a star the camera is inside.
+   */
+  alwaysResolved: boolean;
 }): boolean {
   const { apparentSizePx, thresholdPx, alwaysResolved } = input;
   return alwaysResolved || apparentSizePx >= thresholdPx;

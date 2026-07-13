@@ -35,8 +35,10 @@ describe('resolvesToSphere', () => {
   });
 
   it('resolvesToSphere is true when alwaysResolved regardless of size', () => {
-    // The Sun: a sphere even when its apparent size is well below threshold.
-    expect(resolvesToSphere({ apparentSizePx: 0.01, thresholdPx: 4, alwaysResolved: true })).toBe(
+    // The degenerate camera-on-the-star case: apparentSizePx's distance<=0
+    // guard reports 0, and the override keeps the star the camera is inside
+    // resolved.
+    expect(resolvesToSphere({ apparentSizePx: 0, thresholdPx: 4, alwaysResolved: true })).toBe(
       true,
     );
   });

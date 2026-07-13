@@ -35,7 +35,7 @@ function makeSnapshot(focus: SelectionRef | null = FOCUS_REF): SceneSnapshot {
       filaments: { ...f.filaments, intensity: 0.42 },
       milkyWay: { ...f.milkyWay, enabled: !f.milkyWay.enabled },
       flow: { ...f.flow, flowSpeed: 7 },
-      labels: { focusedOnly: !f.labels.focusedOnly },
+      labels: { ...f.labels, focusedOnly: !f.labels.focusedOnly },
     },
     focus,
   };

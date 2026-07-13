@@ -68,7 +68,6 @@ import { createStarRenderer } from '../../gpu/renderers/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/starPointRenderer';
 import { createOrbitRingRenderer } from '../../gpu/renderers/orbitRingRenderer';
-import { isNearStar } from '../../../utils/scene/isNearStar';
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
@@ -411,11 +410,14 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // starPointRenderer draws the unresolved-partition stars as additive
   // points into the depthless HDR target — no depth format, unlike the
   // sphere factories above (the hdr row has no depth attachment).  The
-  // camera-free isNearStar seed uploaded here covers the window before the
-  // first frame; from the first draw on, starPointsLayer owns the point-set
-  // membership via partitionStarsByResolution and re-uploads on change.
+  // camera-free seed uploaded here is the FULL star list: the camera boots
+  // at galaxy scale, where partitionStarsByResolution classifies every star
+  // (the Sun included) as a sub-pixel point, so the whole seed IS the boot
+  // partition. It only covers the window before the first frame — from the
+  // first draw on, starPointsLayer owns the point-set membership via the
+  // partition and re-uploads per frame.
   state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
-  state.gpu.starPointRenderer.setStars(state.data.bodies.stars.filter((star) => !isNearStar(star)));
+  state.gpu.starPointRenderer.setStars(state.data.bodies.stars);
 
   // orbitRingRenderer draws the debug orbit rings (Earth / Jupiter / Moon) as
   // additive SDF annuli into the same depthless HDR target — no depth format,

@@ -23,8 +23,16 @@
  *                  the TRUE visual bottom of the glyph stack, descenders and
  *                  alignment shifts included, not a baseline approximation
  *   5. line top  = text bottom − LEADER_LINE_PADDING_PX
- *   6. line      = dot → line top; NOT emitted when the padded top lands at
- *                  or below the dot (no room for a line to mean anything)
+ *   6. line bottom = the dot lifted `lineBottomLiftPx` px straight up on
+ *                  screen. Default 0 — the line starts at the dot, the
+ *                  famous/Milky-Way behaviour, bit-identical to before the
+ *                  input existed. The foreground body captions pass apparent
+ *                  radius + LEADER_LINE_BOTTOM_GAP_PX so the line ends a
+ *                  constant visible gap above the body's rim, point and
+ *                  resolved sphere alike.
+ *   7. line      = line bottom → line top; NOT emitted when the padded top
+ *                  lands at or below the bottom (no room for a line to mean
+ *                  anything — a short lift under a large body can cross)
  *
  * Deriving the line top FROM the measured text bottom (instead of computing
  * both independently, e.g. "line stops at 75 % of the lift") makes the
@@ -32,18 +40,20 @@
  * and zoom. The vanish behaviour falls out of the same subtraction — no
  * separate threshold constant to keep in tune with the gap. With the
  * clearance guarantee the padded top always clears the dot by
- * `clearance − padding`, so step 6's omission arises only if the constants
- * are ever retuned to padding ≥ clearance — the rule stays derived rather
- * than becoming an assumption about today's numbers.
+ * `clearance − padding`, so with a zero bottom lift step 7's omission arises
+ * only if the constants are ever retuned to padding ≥ clearance — the rule
+ * stays derived rather than becoming an assumption about today's numbers.
  *
  * Returns null when the dot is behind the camera (no projection → nothing to
  * place). A null `textBbox` (text laid out to no ink) degrades to a bottom at
  * the label anchor itself.
  *
  * Both leader endpoints share the dot's depth (same clip-w), so placing the
- * line top is a plain world-space lerp along the leader segment — parameter
- * fractions survive projection when the endpoints' w are equal, so
- * `lineTopPx / liftPx` in world space IS `lineTopPx / liftPx` on screen.
+ * line top AND the line bottom is a plain world-space lerp along the leader
+ * segment — parameter fractions survive projection when the endpoints' w are
+ * equal, so `px / liftPx` in world space IS `px / liftPx` on screen. That is
+ * also why the bottom lift needs no second `labelLeaderLine` projection: the
+ * bottom is the same segment sampled at `lineBottomLiftPx / liftPx`.
  */
 
 import type { Vec2 } from '../../../@types/math/Vec2';
@@ -60,8 +70,14 @@ import {
 export function liftedLabelPlacement(input: {
   /** The dot (galaxy / body) position in the layer's world frame. */
   anchorWorldPos: Vec3;
-  /** The view-projection the layer draws through (column-major, length 16). */
-  vp: Float32Array;
+  /**
+   * The view-projection the layer draws through (column-major, length 16).
+   * Prefer the f64 matrix when one exists (the NEAR0 foreground path): the
+   * chain un-projects through its inverse, and an f32 NEAR0 matrix at deep
+   * zoom inverts to garbage (see `labelLeaderLine`). f32 COSMO callers widen
+   * losslessly and are behaviour-identical.
+   */
+  vp: Float32Array | Float64Array;
   /** Backing-store viewport size in pixels, `[width, height]`. */
   viewportPx: Vec2;
   /** The subject's apparent size (px) — drives the proportional lift. */
@@ -73,6 +89,13 @@ export function liftedLabelPlacement(input: {
   /** The caption's projected-em pixel clamp, as the shader applies it. */
   minPixelSize: number;
   maxPixelSize: number;
+  /**
+   * Screen-px lift of the LINE'S BOTTOM off the dot (chain step 6). Default
+   * 0 — the line starts at the dot. The foreground body captions pass
+   * `subjectSizePx / 2 + LEADER_LINE_BOTTOM_GAP_PX` so the connector ends a
+   * visible gap above the body's rim instead of piercing it.
+   */
+  lineBottomLiftPx?: number;
 }): { labelWorldPos: Vec3; line: { fromWorld: Vec3; toWorld: Vec3 } | null } | null {
   const proposedLiftPx = Math.max(MIN_LABEL_CLEARANCE_PX, LEADER_LIFT_FACTOR * input.subjectSizePx);
   const proposed = labelLeaderLine({
@@ -122,21 +145,28 @@ export function liftedLabelPlacement(input: {
   // this many px above the dot (≥ the clearance, by step 2):
   const textBottomAboveDotPx = liftPx - inkDropPx;
   const lineTopPx = textBottomAboveDotPx - LEADER_LINE_PADDING_PX;
+  const lineBottomPx = input.lineBottomLiftPx ?? 0;
 
-  // No room below the padded text bottom → caption alone, no line. (The lerp
-  // below never divides by zero: liftPx is floored at MIN_LABEL_CLEARANCE_PX.)
-  if (lineTopPx <= 0) {
+  // No room between the raised bottom and the padded text bottom → caption
+  // alone, no line. (The lerps below never divide by zero: liftPx is floored
+  // at MIN_LABEL_CLEARANCE_PX.)
+  if (lineTopPx <= lineBottomPx) {
     return { labelWorldPos: leader.toWorld, line: null };
   }
 
-  const t = lineTopPx / liftPx;
+  // Both line endpoints are the leader segment sampled at their pixel height
+  // over the lift (see the module header: equal clip-w makes the fraction
+  // exact on screen). `tBottom` = 0 reproduces the dot itself, so producers
+  // that pass no bottom lift get the original fromWorld bit-for-bit.
+  const tTop = lineTopPx / liftPx;
+  const tBottom = lineBottomPx / liftPx;
   const [fx, fy, fz] = leader.fromWorld;
   const [tx, ty, tz] = leader.toWorld;
   return {
     labelWorldPos: leader.toWorld,
     line: {
-      fromWorld: leader.fromWorld,
-      toWorld: [fx + (tx - fx) * t, fy + (ty - fy) * t, fz + (tz - fz) * t],
+      fromWorld: [fx + (tx - fx) * tBottom, fy + (ty - fy) * tBottom, fz + (tz - fz) * tBottom],
+      toWorld: [fx + (tx - fx) * tTop, fy + (ty - fy) * tTop, fz + (tz - fz) * tTop],
     },
   };
 }

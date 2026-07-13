@@ -24,8 +24,14 @@ import {
   foregroundLabelsLayer,
   SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
 } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
-import { sceneBodyLabels } from '../../../../../src/services/engine/presentation/sceneBodyLabels';
+import {
+  sceneBodyLabels,
+  sceneBodyLabelId,
+  SCENE_STAR_LABEL_IDS,
+  SUN_SCENE_LABEL_ID,
+} from '../../../../../src/services/engine/presentation/sceneBodyLabels';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -34,17 +40,20 @@ import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRen
 import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label } from '../../../../../src/@types/rendering/Label';
 import type { MarkerLine } from '../../../../../src/@types/rendering/MarkerLine';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 // Mock rebaseViewProj so the draw test can (a) assert which vp it consumed by
 // object identity — the load-bearing f64 seam — and (b) hand the layer a REAL
 // (identity) projection: the leader-line placement projects each anchor through
-// this matrix and un-projects it (via mat4.inverse), so an all-42 singular
+// this matrix and un-projects it (via mat4d.inverse), so an all-42 singular
 // matrix would give NaN endpoints. Identity keeps every near-origin anchor in
 // front of the camera (clip-w = 1) and lifts the caption purely on screen-Y.
-// The rebase math itself is covered by rebaseViewProj's own precision tests.
+// Float64Array, like the real function: the layer keeps it f64 for the
+// placement math and narrows to f32 only at the renderer draws. The rebase
+// math itself is covered by rebaseViewProj's own precision tests.
 vi.mock('../../../../../src/utils/camera/rebaseViewProj', () => ({
-  rebaseViewProj: vi.fn<() => Float32Array>(
-    () => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+  rebaseViewProj: vi.fn<() => Float64Array>(
+    () => new Float64Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
   ),
 }));
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
@@ -53,11 +62,22 @@ const rebaseMock = rebaseViewProj as unknown as ReturnType<typeof vi.fn>;
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 
-// `enabled` reads only `ctx.cam.distance`; `draw` also reads `ctx.fovYRad` to
-// size the body's apparent diameter for the proportional lift. A bare cast with
-// both fields satisfies the signature without a full frame-context fixture.
-function makeCtx(distance: number): ReadyFrameContext {
-  return { cam: { distance }, fovYRad: 1 } as unknown as ReadyFrameContext;
+// `enabled` reads only `ctx.cam.distance`; `draw` also reads `ctx.fovYRad`
+// (apparent-size math for the lift) and `ctx.nowMs` (the caption alpha
+// envelope's frame clock). The envelope keeps MODULE-LEVEL state across draws,
+// so the test clock auto-advances by a full minute per ctx — hundreds of
+// envelope time constants — making every default-clock draw settle exactly on
+// its targets. The envelope test passes explicit nowMs values to observe the
+// mid-ramp behaviour instead.
+let testClockMs = 0;
+function makeCtx(distance: number, nowMs?: number): ReadyFrameContext {
+  if (nowMs === undefined) {
+    testClockMs += 60_000;
+    nowMs = testClockMs;
+  } else {
+    testClockMs = Math.max(testClockMs, nowMs);
+  }
+  return { cam: { distance }, fovYRad: 1, nowMs } as unknown as ReadyFrameContext;
 }
 
 // A foreground label renderer whose glyphCount is fixed per test. `setLabels`,
@@ -89,9 +109,14 @@ function makeLineRenderer(): MarkerLineRenderer {
 function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
+  starLabelsEnabled = true,
 ): EngineState {
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
+    settings: { labels: { starLabelsEnabled } },
+    // The envelope wakes the render loop while alphas ramp — the layer calls
+    // this spy on mid-ramp frames and stays quiet once settled.
+    subsystems: { scheduler: { requestRender: vi.fn<() => void>() } },
   } as unknown as EngineState;
 }
 
@@ -101,7 +126,7 @@ function makeState(
  * `rebaseViewProj`. `camPos` is a recognisable non-zero eye so the anchor
  * rebase (`pos − camPos`) is observable in the setLabels call.
  */
-function makeNear0View(): SlabView {
+function makeNear0View(camPos: Vec3 = [2, 3, 5]): SlabView {
   const slab: Slab = {
     index: NEAR0,
     nearMpc: 0.0005,
@@ -113,9 +138,18 @@ function makeNear0View(): SlabView {
   return {
     slab,
     vp: new Float32Array(16),
-    camPos: [2, 3, 5],
+    camPos,
     viewportPx: [1280, 720],
   };
+}
+
+// A rebased vp that scales x/y hugely (diag(1e12, 1e12, 1, 1)): real
+// parsec-scale sky separations become thousands of px, spreading the caption
+// set across the screen instead of piling every anchor onto the centre the
+// identity vp produces — so declutter keeps every name. Used (via
+// mockReturnValueOnce) by the fixtures that need the whole set emitted.
+function makeSpreadVp(): Float64Array {
+  return new Float64Array([1e12, 0, 0, 0, 0, 1e12, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 }
 
 describe('foregroundLabelsLayer.enabled', () => {
@@ -131,6 +165,15 @@ describe('foregroundLabelsLayer.enabled', () => {
       false,
     );
     expect(foregroundLabelsLayer.enabled(state, makeCtx(1e-2))).toBe(false);
+
+    // The two distance gates compose, and the caption gate is the TIGHTER
+    // one: between them (bodies/backdrop already on, captions not yet) the
+    // row stays off, so on descent the captions enter after the bodies. If a
+    // retune ever flipped the order, the caption gate would become dead code
+    // behind the shared foreground gate — this pins the intended ordering.
+    expect(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+    const betweenGatesMpc = (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + FOREGROUND_MAX_DISTANCE_MPC) / 2;
+    expect(foregroundLabelsLayer.enabled(state, makeCtx(betweenGatesMpc))).toBe(false);
 
     // No glyphs → nothing to draw even when close.
     expect(foregroundLabelsLayer.enabled(makeState(makeRenderer(0)), makeCtx(5e-4))).toBe(false);
@@ -157,38 +200,42 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(rebaseArgs[1]).toBe(view.camPos);
 
     // ── Anchors uploaded camera-relative (pos − camPos) AND lifted ──
-    // Every body stays in the set (glyphCount stability — the enabled gate must
-    // not latch off), so the length is preserved. Under the identity test vp the
-    // lift is purely screen-vertical, so X and Z stay EXACTLY the camera-relative
-    // anchor (proving the rebase, not the raw ~1-AU body position) while Y rises
-    // by the screen-space lift (proving the caption now hangs OFF the body).
+    // Under the identity test vp every caption projects onto the same screen
+    // point, so the declutter collapses the pile to its top-priority survivors
+    // — which captions emit is pinned by the declutter tests below; HERE the
+    // seam is what matters, so assert it on every emitted caption: X and Z
+    // stay EXACTLY the camera-relative anchor (proving the rebase, not the raw
+    // ~1-AU body position) while Y rises by the screen-space lift (proving the
+    // caption hangs OFF the body).
     const setSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     expect(setSpy).toHaveBeenCalledTimes(1);
     const rebasedLabels = setSpy.mock.calls[0]![0] as readonly Label[];
     const base = sceneBodyLabels();
-    expect(rebasedLabels).toHaveLength(base.length);
-    for (let i = 0; i < base.length; i++) {
-      const anchorX = base[i]!.worldPos[0] - view.camPos[0];
-      const anchorY = base[i]!.worldPos[1] - view.camPos[1];
-      const anchorZ = base[i]!.worldPos[2] - view.camPos[2];
-      expect(rebasedLabels[i]!.worldPos[0]).toBe(anchorX);
-      expect(rebasedLabels[i]!.worldPos[2]).toBe(anchorZ);
-      expect(rebasedLabels[i]!.worldPos[1]).toBeGreaterThan(anchorY); // lifted up
-      // Text/styling carried through untouched — only the anchor is rebased+lifted.
-      expect(rebasedLabels[i]!.text).toBe(base[i]!.text);
+    expect(rebasedLabels.length).toBeGreaterThan(0);
+    for (const emitted of rebasedLabels) {
+      const src = base.find((l) => l.id === emitted.id)!;
+      const anchorX = src.worldPos[0] - view.camPos[0];
+      const anchorY = src.worldPos[1] - view.camPos[1];
+      const anchorZ = src.worldPos[2] - view.camPos[2];
+      expect(emitted.worldPos[0]).toBe(anchorX);
+      expect(emitted.worldPos[2]).toBe(anchorZ);
+      expect(emitted.worldPos[1]).toBeGreaterThan(anchorY); // lifted up
+      expect(emitted.text).toBe(src.text);
     }
 
-    // ── draw receives the pass + the rebased f32 vp (NOT view.vp) + viewport ──
+    // ── draw receives the pass + the f32 NARROW of the rebased vp (NOT
+    // view.vp) + viewport. The narrow happens at the upload boundary, so the
+    // uploaded matrix is a Float32Array with the mock's element values. ──
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
-    expect(args[1]).toBe(rebaseMock.mock.results[0]!.value);
+    expect(args[1]).toEqual(new Float32Array(rebaseMock.mock.results[0]!.value as Float64Array));
     expect(args[1]).not.toBe(view.vp);
     expect(args[2]).toBe(view.viewportPx);
   });
 
-  it('draws a leader line per caption, rebased into the camera-relative frame', () => {
+  it('draws a leader line per emitted caption, rebased into the camera-relative frame', () => {
     rebaseMock.mockClear();
     const renderer = makeRenderer(6);
     const lineRenderer = makeLineRenderer();
@@ -197,34 +244,228 @@ describe('foregroundLabelsLayer.draw', () => {
 
     foregroundLabelsLayer.draw(PASS_STUB, view, makeCtx(5e-4), state);
 
-    // ── One connector per emitted caption ──
-    // Under the identity vp every body projects in front (clip-w = 1), so the
-    // lifted-label chain emits a connector for each — the leader-line treatment
-    // brought to the foreground captions.
+    // ── One connector per emitted caption, rebased + bottom-lifted ──
+    // Under the identity vp every emitted body projects in front (clip-w = 1),
+    // so the lifted-label chain emits a connector for each declutter survivor.
+    // fromWorld is the dot expressed camera-relative (pos − camPos) — feeding
+    // the renderer the raw ~1-AU anchor would reintroduce the f32
+    // origin-distance cancellation this layer exists to dodge — then lifted a
+    // small screen distance (apparent radius + LEADER_LINE_BOTTOM_GAP_PX) so
+    // the line's bottom ends ABOVE the body instead of at its centre. The lift
+    // is purely screen-vertical under the identity vp, so X and Z stay exactly
+    // the camera-relative anchor while Y sits strictly above it.
     const setLinesSpy = lineRenderer.setLines as unknown as ReturnType<typeof vi.fn>;
     expect(setLinesSpy).toHaveBeenCalledTimes(1);
     const lines = setLinesSpy.mock.calls[0]![0] as MarkerLine[];
     const base = sceneBodyLabels();
-    expect(lines).toHaveLength(base.length);
-
-    // ── The connectors are REBASED, not drawn from raw ~1-AU anchors ──
-    // fromWorld is the body dot expressed camera-relative (pos − camPos), the
-    // same rebase the captions ride — feeding the renderer the raw anchor would
-    // reintroduce the f32 origin-distance cancellation this layer exists to dodge.
-    for (let i = 0; i < base.length; i++) {
-      expect(lines[i]!.fromWorld[0]).toBe(base[i]!.worldPos[0] - view.camPos[0]);
-      expect(lines[i]!.fromWorld[1]).toBe(base[i]!.worldPos[1] - view.camPos[1]);
-      expect(lines[i]!.fromWorld[2]).toBe(base[i]!.worldPos[2] - view.camPos[2]);
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      const src = base.find((l) => `${l.id}-anchor` === line.id)!;
+      expect(line.fromWorld[0]).toBe(src.worldPos[0] - view.camPos[0]);
+      expect(line.fromWorld[1]).toBeGreaterThan(src.worldPos[1] - view.camPos[1]);
+      expect(line.fromWorld[2]).toBe(src.worldPos[2] - view.camPos[2]);
       // Distinctly NOT the raw body anchor (camPos is a non-zero eye).
-      expect(lines[i]!.fromWorld).not.toEqual([...base[i]!.worldPos]);
+      expect(line.fromWorld).not.toEqual([...src.worldPos]);
     }
 
-    // ── The line renderer draws with the rebased vp (NOT view.vp), before text ──
+    // ── The line renderer draws with the f32 narrow of the rebased vp (NOT
+    // view.vp), before the text ──
     const lineDrawSpy = lineRenderer.draw as unknown as ReturnType<typeof vi.fn>;
     expect(lineDrawSpy).toHaveBeenCalledTimes(1);
     expect(lineDrawSpy.mock.calls[0]![0]).toBe(PASS_STUB);
-    expect(lineDrawSpy.mock.calls[0]![1]).toBe(rebaseMock.mock.results[0]!.value);
+    expect(lineDrawSpy.mock.calls[0]![1]).toEqual(
+      new Float32Array(rebaseMock.mock.results[0]!.value as Float64Array),
+    );
     expect(lineDrawSpy.mock.calls[0]![1]).not.toBe(view.vp);
+  });
+
+  it('suppresses star captions when the toggle is off', () => {
+    const renderer = makeRenderer(6);
+    const lineRenderer = makeLineRenderer();
+    // Park the camera ~1e-12 Mpc from Proxima — deep inside the neighbourhood,
+    // so its caption is at full alpha and WOULD show — the toggle-off must drop
+    // it anyway, while Earth/planets keep showing.
+    const base = sceneBodyLabels();
+    const proxima = base.find((l) => l.id === sceneBodyLabelId('proxima-centauri'))!;
+    const camPos: Vec3 = [proxima.worldPos[0] - 1e-12, proxima.worldPos[1], proxima.worldPos[2]];
+
+    // Toggle ON: at least one star caption (Proxima) is emitted.
+    const onView = makeNear0View(camPos);
+    foregroundLabelsLayer.draw(PASS_STUB, onView, makeCtx(5e-4), makeState(renderer, lineRenderer));
+    const onSpy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const onLabels = onSpy.mock.calls[0]![0] as readonly Label[];
+    expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id))).toBe(true);
+
+    // Toggle OFF: no star caption at all (the Sun is a star too), but Earth still shows.
+    const offRenderer = makeRenderer(6);
+    const offView = makeNear0View(camPos);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      offView,
+      makeCtx(5e-4),
+      makeState(offRenderer, makeLineRenderer(), false),
+    );
+    const offSpy = offRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const offLabels = offSpy.mock.calls[0]![0] as readonly Label[];
+    expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id))).toBe(false);
+    expect(offLabels.some((l) => l.id === sceneBodyLabelId('earth'))).toBe(true);
+  });
+
+  it('shows the whole star map at full alpha from Earth and none beyond the neighbourhood', () => {
+    const base = sceneBodyLabels();
+    const starLabels = (labels: readonly Label[]) =>
+      labels.filter((l) => SCENE_STAR_LABEL_IDS.has(l.id));
+    const nonSunStar = (labels: readonly Label[]) =>
+      starLabels(labels).filter((l) => l.id !== SUN_SCENE_LABEL_ID);
+
+    // ── Camera at Earth: the LOCAL STAR MAP — every seeded star (Pollux, the
+    // farthest, is 10.34 pc out) is inside the full-alpha band, so ALL star
+    // captions emit at fadeAlpha 1. The spread vp keeps the declutter from
+    // eating any of them (see makeSpreadVp).
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
+    const nearRenderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View([...earth.worldPos] as Vec3),
+      makeCtx(5e-4),
+      makeState(nearRenderer, makeLineRenderer()),
+    );
+    const nearSpy = nearRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const nearLabels = nearSpy.mock.calls[0]![0] as readonly Label[];
+    const mapLabels = starLabels(nearLabels);
+    expect(mapLabels).toHaveLength(SCENE_STAR_LABEL_IDS.size);
+    for (const star of mapLabels) {
+      expect(star.fadeAlpha, `expected ${star.id} at full alpha from Earth`).toBe(1);
+    }
+
+    // ── Camera far outside the neighbourhood (Mpc-scale, ≥ the gone edge from
+    // every seed): every non-Sun star caption fades to 0 and is dropped; only
+    // the pinned Sun (the descent's aim point) survives of the star set.
+    const farRenderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View([2, 3, 5]),
+      makeCtx(5e-4),
+      makeState(farRenderer, makeLineRenderer()),
+    );
+    const farSpy = farRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const farLabels = farSpy.mock.calls[0]![0] as readonly Label[];
+    expect(nonSunStar(farLabels)).toHaveLength(0);
+    expect(farLabels.some((l) => l.id === SUN_SCENE_LABEL_ID)).toBe(true);
+  });
+
+  it('prefers the higher CAPTION_PRIORITY tier when captions collide', () => {
+    // Camera parked on Proxima: its apparent size is enormous while the Sun,
+    // 1.3 pc away, is sub-pixel — pure apparent-size priority would keep
+    // Proxima. Under the identity vp every caption piles onto one screen
+    // point, and the pile's survivor is the SUN: the kind tier (sun 40 >
+    // earth 30 > planet 20 > star 10) dominates the composed declutter score;
+    // apparent size only breaks ties within a tier.
+    const base = sceneBodyLabels();
+    const proxima = base.find((l) => l.id === sceneBodyLabelId('proxima-centauri'))!;
+    const camPos: Vec3 = [proxima.worldPos[0] - 1e-12, proxima.worldPos[1], proxima.worldPos[2]];
+    const renderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer()),
+    );
+    const spy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const labels = spy.mock.calls[0]![0] as readonly Label[];
+    expect(labels.some((l) => l.id === SUN_SCENE_LABEL_ID)).toBe(true);
+    expect(labels.some((l) => l.id === proxima.id)).toBe(false);
+  });
+
+  it('eases a declutter flip instead of popping, then settles and goes quiet', () => {
+    const base = sceneBodyLabels();
+    const proxima = base.find((l) => l.id === sceneBodyLabelId('proxima-centauri'))!;
+    const camPos: Vec3 = [proxima.worldPos[0] - 1e-12, proxima.worldPos[1], proxima.worldPos[2]];
+    const renderer = makeRenderer(6);
+    const lastLabels = () => {
+      const spy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+      return spy.mock.calls.at(-1)![0] as readonly Label[];
+    };
+    const wakeSpy = (state: EngineState) =>
+      (
+        state as unknown as {
+          subsystems: { scheduler: { requestRender: ReturnType<typeof vi.fn> } };
+        }
+      ).subsystems.scheduler.requestRender;
+
+    // Settle: the spread vp separates every caption, so Proxima survives
+    // declutter and (deep inside the neighbourhood) settles at exactly 1.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer()),
+    );
+    expect(lastLabels().find((l) => l.id === proxima.id)!.fadeAlpha).toBe(1);
+    const t0 = testClockMs;
+
+    // FLIP: back on the identity vp everything piles onto one screen point and
+    // the Sun's tier wins — Proxima's declutter survival flips to 0. One
+    // envelope time constant (100 ms) later the drawn alpha has moved
+    // FRACTIONALLY toward 0, not jumped: still emitted, strictly inside (0,1).
+    const rampState = makeState(renderer, makeLineRenderer());
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4, t0 + 100),
+      rampState,
+    );
+    const mid = lastLabels().find((l) => l.id === proxima.id);
+    expect(mid).toBeDefined();
+    expect(mid!.fadeAlpha).toBeGreaterThan(0);
+    expect(mid!.fadeAlpha).toBeLessThan(1);
+    // Mid-ramp frames wake the render loop so the fade animates under
+    // render-on-demand.
+    expect(wakeSpy(rampState)).toHaveBeenCalled();
+
+    // Another step: still easing monotonically toward 0.
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4, t0 + 200),
+      makeState(renderer, makeLineRenderer()),
+    );
+    const later = lastLabels().find((l) => l.id === proxima.id);
+    expect(later).toBeDefined();
+    expect(later!.fadeAlpha).toBeLessThan(mid!.fadeAlpha!);
+
+    // Far in the future the ramp completes: Proxima's caption is gone.
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(renderer, makeLineRenderer()),
+    );
+    expect(lastLabels().find((l) => l.id === proxima.id)).toBeUndefined();
+
+    // A settled caption stops changing AND stops waking the loop: the Sun (the
+    // pile's survivor) holds exactly 1 across consecutive small-dt draws, and
+    // neither draw requests another frame.
+    const settledA = makeState(renderer, makeLineRenderer());
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4, testClockMs + 50),
+      settledA,
+    );
+    expect(lastLabels().find((l) => l.id === SUN_SCENE_LABEL_ID)!.fadeAlpha).toBe(1);
+    expect(wakeSpy(settledA)).not.toHaveBeenCalled();
+    const settledB = makeState(renderer, makeLineRenderer());
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4, testClockMs + 50),
+      settledB,
+    );
+    expect(lastLabels().find((l) => l.id === SUN_SCENE_LABEL_ID)!.fadeAlpha).toBe(1);
+    expect(wakeSpy(settledB)).not.toHaveBeenCalled();
   });
 
   it('draws captions even when the leader-line renderer is null (bootstrap gap)', () => {

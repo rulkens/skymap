@@ -91,9 +91,11 @@ describe('rebaseViewProj', () => {
   it('reproduces the f64 clip while a plain f32-narrowed projection cancels', () => {
     const truth = ndcTruth();
 
-    // Rebase path (the fix): fold the eye into the vp in f64, feed the anchor
-    // camera-relative (pos − eye, a tiny well-represented f32 vector).
-    const rebasedVp = rebaseViewProj(vpF64, eye);
+    // Rebase path (the fix): fold the eye into the vp in f64, narrow at the
+    // upload boundary (as the layers do — the rebase itself stays f64 for the
+    // placement math that inverts it), feed the anchor camera-relative
+    // (pos − eye, a tiny well-represented f32 vector).
+    const rebasedVp = narrowMat4(rebaseViewProj(vpF64, eye));
     const relPos = Float32Array.from([
       anchor[0] - eye[0],
       anchor[1] - eye[1],

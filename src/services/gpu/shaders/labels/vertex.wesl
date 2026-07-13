@@ -30,6 +30,9 @@ const ATLAS_EM_PX: f32 = 84.0;
 // src/data/fonts.ts.  Sets the SDF's encoded headroom past the glyph
 // contour; tighter ranges clamp the tail and produce banded edges.
 const DISTANCE_RANGE_PX: f32 = 32.0;
+// Depth epsilon: pull the clamped clip-z this far inside the far plane (in
+// ndc-z terms) so an anchor sitting exactly ON it still passes the clip test.
+const CLIP_Z_EPS: f32 = 1e-4;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 @group(0) @binding(1) var<storage, read> labels: array<LabelData>;
@@ -69,7 +72,16 @@ fn vs(input: VsIn) -> VsOut {
   );
 
   let ndcOffset = pxToClipOffset(u.cam, cornerAtlasPx * pxScale, clip.w);
-  let outPos = vec4<f32>(clip.x + ndcOffset.x, clip.y + ndcOffset.y, clip.z, clip.w);
+
+  // Survive any far plane. The NEAR0 foreground captions keep anchors far
+  // beyond the adaptive far plane ('foregroundFrustum' collapses it to
+  // camDist * 100 on a deep descent) and would frustum-clip without this,
+  // mirroring the star-point backdrop's clamp in 'starPoints/vertex.wesl'.
+  // Inert for depth on every path this shader serves (the COSMO director
+  // labels included): the label pass is a depthless OVER composite — no depth
+  // test or write — so a clamped z perturbs no depth comparison.
+  let clampedClipZ = min(clip.z, clip.w * (1.0 - CLIP_Z_EPS));
+  let outPos = vec4<f32>(clip.x + ndcOffset.x, clip.y + ndcOffset.y, clampedClipZ, clip.w);
 
   // UV expansion to match the corner expansion.  The UV rect coordinates
   // are already normalised; the fringe in atlas px maps to UV space via

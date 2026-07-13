@@ -39,6 +39,10 @@ type LabelsSectionProps = {
   labelCategoryVisibility: Readonly<Record<LabelCategory, boolean>>;
   /** Called when the user toggles a single label category on or off. */
   onSetLabelCategoryVisibility: (category: LabelCategory, visible: boolean) => void;
+  /** Whether the local-star captions in the true-scale foreground are shown. */
+  starLabelsEnabled: boolean;
+  /** Called when the user toggles the local-star captions on or off. */
+  onSetStarLabelsEnabled: (enabled: boolean) => void;
 };
 
 // ── LabelsSection ──────────────────────────────────────────────────────────────
@@ -54,6 +58,8 @@ type LabelsSectionProps = {
 function LabelsSection({
   labelCategoryVisibility,
   onSetLabelCategoryVisibility,
+  starLabelsEnabled,
+  onSetStarLabelsEnabled,
 }: LabelsSectionProps) {
   // ── Master tri-state derivation ──────────────────────────────────────────────
   // Tri-state master = how many LABEL_CATEGORIES are currently label-visible.
@@ -97,6 +103,18 @@ function LabelsSection({
           />
         </div>
       ))}
+      {/* The local-star captions are a foreground scene-body set, not a COSMO
+          label category, so they get their own row rather than joining the
+          category map above. */}
+      <div className={styles.panelRow}>
+        <label htmlFor="toggle-label-stars">Star names</label>
+        <input
+          id="toggle-label-stars"
+          type="checkbox"
+          checked={starLabelsEnabled}
+          onChange={(e) => onSetStarLabelsEnabled(e.target.checked)}
+        />
+      </div>
     </CollapsibleSection>
   );
 }

@@ -115,9 +115,11 @@ export function buildInitialSettings(): EngineSettingsState {
     // `DEFAULT_FLOW` seed. Flow has no data-layer store — "loaded" is the asset
     // slot's own `ready` state (`slotReady(assetSlots.flow)`).
     flow: { ...DEFAULT_FLOW },
-    // Cross-cutting label presentation: default OFF — all enabled labels draw.
-    // The guided tour flips focusedOnly on (and its snapshot restores it).
-    labels: { focusedOnly: false },
+    // Cross-cutting label presentation: focusedOnly default OFF — all enabled
+    // labels draw (the guided tour flips it on and its snapshot restores it).
+    // starLabelsEnabled default ON — the local-star captions show on the final
+    // descent until the user mutes them.
+    labels: { focusedOnly: false, starLabelsEnabled: true },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,

@@ -386,8 +386,10 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // the singular handle.
     expect(vi.mocked(createPlanetRenderer)).toHaveBeenCalledTimes(1);
     expect(state.gpu.planetRenderer).toBe(stubs.planetRenderer);
-    // The star-point renderer receives the far partition (everything but
-    // the Sun) exactly once, at construction — the layer's draw stays pure.
+    // The star-point renderer receives the FULL star list exactly once, at
+    // construction — at the galaxy-scale boot camera every star (the Sun
+    // included) is a sub-pixel point, so the whole seed IS the boot
+    // partition; the layer's draw stays pure.
     expect(state.gpu.starPointRenderer).toBe(stubs.starPointRenderer);
     // The orbit-ring renderer needs no data delivery (SCENE_ORBITS is a
     // static module-level table) — construction alone lands the handle.
@@ -396,8 +398,8 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     const uploaded = stubs.starPointRenderer!.setStars.mock.calls[0]![0] as ReadonlyArray<{
       id: string;
     }>;
-    expect(uploaded).toHaveLength(SCENE_STARS.length - 1);
-    expect(uploaded.map((star) => star.id)).not.toContain('sun');
+    expect(uploaded).toHaveLength(SCENE_STARS.length);
+    expect(uploaded.map((star) => star.id)).toContain('sun');
     // Both label renderers come from the same createLabelRenderer factory,
     // so index its call results ordinally: call 0 built the main
     // `labelRenderer`, call 1 the foreground caption renderer.  Asserting

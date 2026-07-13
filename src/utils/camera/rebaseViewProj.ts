@@ -1,6 +1,7 @@
 /**
  * rebaseViewProj — re-express a view-projection so it consumes positions
- * measured RELATIVE to a chosen origin, and narrow it to f32 for GPU upload.
+ * measured RELATIVE to a chosen origin. Stays f64; callers narrow at the
+ * GPU-upload boundary.
  *
  * ### The precision problem this solves
  *
@@ -39,29 +40,38 @@
  * anchor into a per-body MVP in f64; this one leaves the anchor as a shader
  * input but hands the shader a frame in which f32 suffices.
  *
+ * ### Why the return stays f64
+ *
+ * The rebased matrix has TWO consumers with different precision needs. The GPU
+ * upload wants f32 — callers narrow via `narrowMat4` at the upload boundary,
+ * the same convention every other f64 matrix seam follows. But the CPU-side
+ * caption placement (`labelLeaderLine` via `liftedLabelPlacement`) INVERTS the
+ * matrix, and at deep zoom the NEAR0 frustum is brutally ill-conditioned
+ * (near down at `MIN_NEAR_MPC` with anchors up to ~1e-6 Mpc beyond the far
+ * floor): inverting the f32-narrowed matrix loses the depth structure and the
+ * un-projected leader-line geometry distorts by tens of pixels. Returning f64
+ * keeps the inversion path exact; narrowing INSIDE this function would poison
+ * it before the caller could choose.
+ *
  * @param vpF64         The slab's f64 proj·view (`view.slab.vp` — never the
  *                      f32-narrowed `view.vp`, whose bits are already lost).
  * @param rebaseOrigin  The origin to measure positions relative to, in the
  *                      same frame as `vpF64` (the camera position zeroes the
  *                      view translation and is the strongest choice).
- * @returns  A length-16 column-major `Float32Array`, ready for GPU upload,
- *           that pairs with `pos - rebaseOrigin` position inputs.
+ * @returns  A length-16 column-major `Float64Array` that pairs with
+ *           `pos - rebaseOrigin` position inputs. Narrow via `narrowMat4` at
+ *           the GPU-upload boundary; keep it f64 for any CPU-side inversion.
  */
 
 import { mat4d } from 'wgpu-matrix';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { narrowMat4 } from '../math/narrowMat4';
 
-export function rebaseViewProj(vpF64: Float64Array, rebaseOrigin: Readonly<Vec3>): Float32Array {
+export function rebaseViewProj(vpF64: Float64Array, rebaseOrigin: Readonly<Vec3>): Float64Array {
   // vp · translate(O): a column-vector v transforms as (vp·T)·v, so applying
   // this to vec4(pos - O, 1) first re-adds O (recovering pos) then projects —
-  // identical math to vp·vec4(pos,1), but composed in f64 before any narrowing.
-  const rebased = mat4d.multiply(
+  // identical math to vp·vec4(pos,1), composed in f64 with no narrowing.
+  return mat4d.multiply(
     vpF64,
     mat4d.translation([rebaseOrigin[0], rebaseOrigin[1], rebaseOrigin[2]]),
   ) as Float64Array;
-
-  // Narrow once at the GPU-upload boundary. With the cancellation resolved in
-  // f64, each f32 element is well-conditioned (2^-24 relative rounding at worst).
-  return narrowMat4(rebased);
 }

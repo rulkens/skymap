@@ -3,12 +3,12 @@
  *
  * The partition is the ONE branch point deciding whether a star draws as a
  * foreground sphere (`starSpheresLayer`) or an additive backdrop point
- * (`starPointsLayer`), so these tests pin the two behaviours the layers
- * lean on: apparent size drives membership (a star you are practically on
- * top of resolves, a star parsecs away stays a point), and the Sun is
- * `alwaysResolved` — it lands in `spheres` even at galaxy scale where its
- * apparent size is deep sub-pixel (and where `apparentSizePx`'s
- * distance<=0 guard would otherwise return 0 with the camera sitting on it).
+ * (`starPointsLayer`), so these tests pin the behaviours the layers lean
+ * on: apparent size drives membership for EVERY star — the Sun included, so
+ * a sub-resolve Sun demotes to a point instead of vanishing — with one
+ * narrow degenerate guard: at zero camera distance (`apparentSizePx`'s
+ * distance<=0 guard returns 0) the star the camera sits inside resolves
+ * unconditionally.
  *
  * Fixtures come from the real `SCENE_STARS` seed so the predicate is
  * exercised against real solar radii and parsec-scale positions rather
@@ -43,9 +43,8 @@ function halfAuFrom(positionMpc: Readonly<Vec3>): Vec3 {
 
 describe('partitionStarsByResolution', () => {
   it('partitionStarsByResolution puts a near large star in spheres and a far small star in points', () => {
-    // Both fixtures are ordinary (not alwaysResolved) stars, so membership
-    // comes purely from the apparent-size threshold: the camera hovers half
-    // an AU off Proxima while Sirius sits parsecs away.
+    // Membership comes purely from the apparent-size threshold: the camera
+    // hovers half an AU off Proxima while Sirius sits parsecs away.
     const { spheres, points } = partitionStarsByResolution({
       stars: [PROXIMA, SIRIUS],
       camPosMpc: halfAuFrom(PROXIMA.positionMpc),
@@ -62,13 +61,30 @@ describe('partitionStarsByResolution', () => {
     expect(points[0]).toBe(SIRIUS);
   });
 
-  it('partitionStarsByResolution always resolves the Sun', () => {
-    // Galaxy-scale camera: 0.43 Mpc out, every star (Sun included) subtends
-    // far below a pixel — only the alwaysResolved override keeps the Sun a
-    // sphere.
+  it('demotes a sub-resolve Sun to the points branch so it stays visible', () => {
+    // Camera parked on Proxima: the Sun is 1.3 pc away, deep sub-pixel. It
+    // must land in POINTS — a blanket always-resolve override kept it a
+    // (sub-pixel, invisible) sphere here, which is exactly the "no Sun when
+    // zoomed out" bug: never a point, its sphere unseeable.
+    const { spheres, points } = partitionStarsByResolution({
+      stars: [SUN, PROXIMA, SIRIUS],
+      camPosMpc: halfAuFrom(PROXIMA.positionMpc),
+      thresholdPx: STAR_RESOLVE_PX,
+      viewportHeightPx: VIEWPORT_HEIGHT_PX,
+      fovYRad: FOV_Y_RAD,
+    });
+
+    expect(points.map((star) => star.id)).toEqual(['sun', 'sirius']);
+    expect(spheres.map((star) => star.id)).toEqual(['proxima-centauri']);
+  });
+
+  it('resolves a star at degenerate zero camera distance', () => {
+    // Camera exactly ON the Sun: apparentSizePx's distance<=0 guard returns 0,
+    // so a bare size test would demote the star the camera sits inside — the
+    // narrow degenerate guard keeps it a sphere.
     const { spheres, points } = partitionStarsByResolution({
       stars: SCENE_STARS,
-      camPosMpc: [0, 0, 0.43],
+      camPosMpc: SUN.positionMpc,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: VIEWPORT_HEIGHT_PX,
       fovYRad: FOV_Y_RAD,

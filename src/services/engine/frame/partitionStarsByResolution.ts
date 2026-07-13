@@ -44,19 +44,20 @@ import { resolvesToSphere } from '../../../utils/scene/resolvesToSphere';
 export const STAR_RESOLVE_PX = 4;
 
 /**
- * The Sun's seed id (`sceneBodies.ts`). The Sun is `alwaysResolved`: it has
- * no meaningful "far point" presentation at the scales we ship, and with
- * the camera parked on it (distance 0) `apparentSizePx`'s divide-by-zero
- * guard returns 0 — the override is what keeps the Sun a sphere exactly
- * where a size test would drop it.
- */
-const SUN_ID = 'sun';
-
-/**
  * Split `stars` into the resolved (`spheres`) and unresolved (`points`)
  * partitions for the current camera. Seed order is preserved within each
  * branch, and the returned arrays reference the input records (no copies) —
  * the sphere layer composes MVPs straight off `positionMpc`.
+ *
+ * EVERY star — the Sun included — rides the same apparent-size predicate: a
+ * star whose sphere is sub-pixel demotes to an additive point, so it stays
+ * visible from any distance inside the foreground gate. (A blanket
+ * always-resolve-the-Sun override was tried first and made the Sun VANISH
+ * beyond ~tens of AU — never a point, its sphere sub-pixel.) The one narrow
+ * guard kept from that override is the degenerate camera-ON-the-star case:
+ * at distance 0 `apparentSizePx`'s divide-by-zero guard returns 0, so a bare
+ * size test would demote the star the camera sits inside — zero distance
+ * resolves unconditionally instead.
  */
 export function partitionStarsByResolution(input: {
   stars: readonly StarBody[];
@@ -79,7 +80,8 @@ export function partitionStarsByResolution(input: {
     const resolved = resolvesToSphere({
       apparentSizePx: apparentSizePx({ diameterKpc, distanceMpc, viewportHeightPx, fovYRad }),
       thresholdPx,
-      alwaysResolved: star.id === SUN_ID,
+      // Degenerate guard only (see the docblock) — no per-star special case.
+      alwaysResolved: distanceMpc <= 0,
     });
     (resolved ? spheres : points).push(star);
   }

@@ -74,20 +74,72 @@
  * galactic centre, and a permanent field of floating captions there would
  * just clutter the normal view — so the row stays dark until the camera has
  * zoomed well past galaxy scale.
+ *
+ * ### How caption visibility is decided (fade target → declutter → envelope)
+ *
+ * The two-dozen-name local map is dense: viewed from outside the neighbourhood
+ * every star name projects onto the same sub-pixel spot, so an always-on set
+ * would pile into an unreadable clump. Each frame every caption's drawn alpha
+ * comes out of three stages:
+ *   1. FADE TARGET — stars ride a DISTANCE band (`starCaptionFadeAlpha`): full
+ *      alpha inside the stellar neighbourhood (the whole map reads from
+ *      Earth), gone beyond it — a LOCAL STAR MAP, not per-body approach
+ *      labels. The Sun is pinned to 1 (the descent's aim point, named all the
+ *      way down from the kiloparsec gate); Earth + the planets are always-on.
+ *      The star-labels toggle (`settings.labels.starLabelsEnabled`) zeroes the
+ *      star map's target (Sun included).
+ *   2. DECLUTTER — EVERY visible caption contends in one screen-space cull
+ *      (`declutterByScreenSeparation`), Earth and the planets included. The
+ *      collision winner is the higher `CAPTION_PRIORITY` kind tier (sun >
+ *      earth > planet > star — the order lives as data, user-tweakable), with
+ *      apparent size only breaking ties within a tier; the layer composes the
+ *      two into the cull's single `priorityPx` score so the helper stays pure.
+ *   3. TEMPORAL ENVELOPE — the drawn alpha EASES toward target × survival
+ *      over the frame clock instead of jumping, so a declutter flip or toggle
+ *      change fades over ~0.3 s rather than popping — the same treatment the
+ *      label director gives the galaxy labels, expressed as an exponential
+ *      (`CAPTION_ENVELOPE_TAU_MS`) because this target moves continuously
+ *      with the distance band. Mid-ramp frames wake the render loop
+ *      (`scheduler.requestRender`, the director's own hook); a settled
+ *      caption snaps exactly onto its target and goes quiet.
+ *
+ * ### Why the overlay shaders clamp clip-z (Defect 2, decision A)
+ *
+ * The NEAR0 far plane is adaptive (`foregroundFrustum`: far = camDist·100,
+ * floored at `FAR_MIN_MPC`), so on a deep descent it collapses to just past
+ * the orbited body — while this layer deliberately keeps captions visible at
+ * anchors parsecs beyond it (the star map viewed from inside the
+ * neighbourhood) and AU beyond it (the solar-system set while orbiting
+ * another star). Rather than couple the fade band to the frustum, the
+ * depthless overlay vertex stages clamp their clip-space depth to just inside
+ * the far plane (`labels/vertex.wesl`, `markerLines/vertex.wesl`, mirroring
+ * the star-point backdrop's `starPoints/vertex.wesl`), so a caption or
+ * connector can never frustum-clip. Caption visibility is therefore a PURE
+ * presentation decision — the fade band, the declutter, the toggle —
+ * independent of where the far plane happens to sit this frame. The clamp is
+ * inert for depth: both passes are depthless OVER composites on every path
+ * (the COSMO director labels included), so no depth comparison is perturbed.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import type { Label } from '../../../../@types/rendering/Label';
 import type { MarkerLine } from '../../../../@types/rendering/MarkerLine';
+import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import type { SceneBodyLabel } from '../../presentation/sceneBodyLabels';
 import { sceneBodyLabels } from '../../presentation/sceneBodyLabels';
+import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from '../../presentation/captionPriority';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { liftedLabelPlacement } from '../../presentation/liftedLabelPlacement';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from '../../presentation/famousLabelStyle';
+import { LEADER_LINE_BOTTOM_GAP_PX } from '../../presentation/leaderLineStyle';
+import { starCaptionFadeAlpha } from '../../../../utils/scene/starCaptionFadeAlpha';
+import { declutterByScreenSeparation } from '../../../../utils/scene/declutterByScreenSeparation';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 /**
  * Show the Sun/Earth captions only once the camera is closer than a
@@ -95,8 +147,52 @@ import { FAMOUS_LABEL_STYLE } from '../../presentation/famousLabelStyle';
  * heading for the solar system. Generous on purpose: it turns the captions on
  * for the last several decades of zoom, where the bodies are still sub-pixel
  * and hardest to find.
+ *
+ * This is deliberately TIGHTER than the shared foreground gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC`, ~a decade wider): on descent the bodies and
+ * the star-point backdrop appear first, the captions later. `enabled` ANDs
+ * both — the shared gate is what lets the executor skip the whole NEAR0
+ * foreground group (this row included) in one sweep at galaxy zoom, while
+ * this constant keeps the captions' own later entrance.
  */
 export const SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC = 1e-3;
+
+/**
+ * Minimum on-screen gap (px) between two foreground captions before the lower-
+ * priority one is culled. Sized a little above the clamped caption pixel height
+ * (`FAMOUS_LABEL_STYLE.maxPixelSize`) so overlapping names de-collide instead
+ * of stacking into an unreadable pile from far out.
+ */
+const STAR_CAPTION_MIN_SEPARATION_PX = 48;
+
+/**
+ * Time constant (ms) of the caption alpha envelope: each caption's drawn
+ * alpha approaches its target exponentially, covering ~63% of the remaining
+ * gap per tau and ~95% within 3·tau (300 ms) — the same perceptual duration
+ * as the label director's `ENVELOPE_MS` ramp. Exponential rather than the
+ * director's closed-form smoothstep because this target MOVES continuously
+ * (the distance band shifts every frame the camera flies); an exponential
+ * tracks a moving target with no per-change re-basing.
+ */
+const CAPTION_ENVELOPE_TAU_MS = 100;
+
+/**
+ * Settle snap for the envelope: within this distance of the target the alpha
+ * lands EXACTLY on it. Sub-visible (half a percent), and the exact landing is
+ * load-bearing — a settled caption compares equal frame-to-frame, so it stops
+ * waking the render loop.
+ */
+const CAPTION_ENVELOPE_SETTLE_EPS = 0.005;
+
+/**
+ * The envelope's cross-frame state: caption id → drawn alpha, plus the frame
+ * clock of the last draw (for the dt). Module-level for the same reason
+ * `BASE_LABELS` is — this layer is a module singleton. The map is bounded by
+ * the static seed set; the prune in `draw` keeps it honest should the seed
+ * list ever become dynamic.
+ */
+const captionAlpha = new Map<string, number>();
+let captionClockMs: number | null = null;
 
 /**
  * The render-origin-relative caption set, built once. `sceneBodyLabels` reads
@@ -110,6 +206,32 @@ export const SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC = 1e-3;
  */
 const BASE_LABELS: readonly SceneBodyLabel[] = sceneBodyLabels();
 
+/** The caption-id universe, for the envelope prune. */
+const BASE_LABEL_IDS: ReadonlySet<string> = new Set(BASE_LABELS.map((l) => l.id));
+
+/**
+ * Project a camera-relative anchor through the rebased vp to backing-store
+ * screen pixels, or null when it sits on/behind the camera plane (no screen
+ * position). Column-major mat4·vec4 by hand — the same forward projection
+ * `labelLeaderLine` does, but returning the 2D screen point the declutter needs
+ * rather than a lifted world endpoint. Screen +Y points DOWN, matching the
+ * declutter's separation metric (pure pixel distance, orientation-agnostic).
+ */
+function projectToScreenPx(
+  anchor: Vec3,
+  vp: Float32Array | Float64Array,
+  viewportPx: Vec2,
+): Vec2 | null {
+  const [x, y, z] = anchor;
+  const clipX = vp[0]! * x + vp[4]! * y + vp[8]! * z + vp[12]!;
+  const clipY = vp[1]! * x + vp[5]! * y + vp[9]! * z + vp[13]!;
+  const clipW = vp[3]! * x + vp[7]! * y + vp[11]! * z + vp[15]!;
+  if (clipW <= 0) return null;
+  const ndcX = clipX / clipW;
+  const ndcY = clipY / clipW;
+  return [(ndcX * 0.5 + 0.5) * viewportPx[0], (0.5 - ndcY * 0.5) * viewportPx[1]];
+}
+
 export const foregroundLabelsLayer: ContentLayer = {
   name: 'foreground-labels',
   slab: NEAR0,
@@ -119,7 +241,13 @@ export const foregroundLabelsLayer: ContentLayer = {
   enabled(state, ctx) {
     const renderer = state.gpu.foregroundLabelRenderer;
     if (renderer === null || renderer.glyphCount() === 0) return false;
-    return ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC;
+    // Both distance gates compose: the shared foreground gate (so this row
+    // empties with its NEAR0 siblings at galaxy zoom) AND the tighter caption
+    // gate (see SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC's docblock).
+    return (
+      ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC &&
+      ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC
+    );
   },
 
   draw(pass, view, ctx, state) {
@@ -138,11 +266,24 @@ export const foregroundLabelsLayer: ContentLayer = {
     // Fold the eye offset into the vp ONCE. Uses the slab's f64 `vp`, NOT the
     // f32-narrowed `view.vp`. Reused as the projection for the leader-line
     // placement AND for both renderers' draw, so the captions and their
-    // connectors share one frame.
+    // connectors share one frame. It stays f64 for the placement math — the
+    // lifted-label chain INVERTS it, and at deep zoom an f32 inverse of the
+    // ill-conditioned NEAR0 frustum distorts the leader lines by tens of px
+    // (see `labelLeaderLine`); only the renderer uploads get the f32 narrow.
     const rebasedVp = rebaseViewProj(view.slab.vp, camPos);
+    const rebasedVpF32 = narrowMat4(rebasedVp);
+    const starLabelsEnabled = state.settings.labels.starLabelsEnabled;
 
-    const liftedLabels: Label[] = [];
-    const lines: MarkerLine[] = [];
+    // ── Pass 1: rebase + size every body, and derive each caption's fade TARGET ──
+    // (Stage 1 of the module header's three-stage pipeline.)
+    type Entry = {
+      label: SceneBodyLabel;
+      anchor: Vec3;
+      subjectSizePx: number;
+      baseTarget: number;
+      screenPx: Vec2 | null;
+    };
+    const entries: Entry[] = [];
 
     for (const label of BASE_LABELS) {
       // Re-express the anchor as a small camera-relative vector. The
@@ -155,9 +296,11 @@ export const foregroundLabelsLayer: ContentLayer = {
         label.worldPos[2] - camPos[2],
       ];
 
-      // The body's apparent on-screen size drives the proportional lift, same
-      // as a famous galaxy's apparent diameter. The em height is the body's
-      // radius in Mpc (`sceneBodyLabels`), so its diameter is `2 · worldEmMpc`.
+      // The body's apparent on-screen size drives the proportional lift (and
+      // the within-tier declutter tiebreak below), same as a famous galaxy's
+      // apparent diameter. The em height is the body's radius in Mpc
+      // (`sceneBodyLabels`), so its diameter is `2 · worldEmMpc`. The FADE does
+      // not read it — that is the distance band's whole point.
       const distanceMpc = Math.hypot(anchor[0], anchor[1], anchor[2]);
       const subjectSizePx = apparentSizePx({
         diameterKpc: (2 * label.worldEmMpc) / SCALE_UNITS.KPC_TO_MPC,
@@ -166,6 +309,104 @@ export const foregroundLabelsLayer: ContentLayer = {
         fovYRad: ctx.fovYRad,
       });
 
+      // The fade TARGET before declutter: the star map rides the neighbourhood
+      // distance band (Mpc → pc through the named scale-unit); the Sun is
+      // pinned to 1 (the descent's aim point, named all the way down from the
+      // kiloparsec 'enabled' gate); Earth + the planets are always-on. The
+      // star-labels toggle zeroes the star map's target (Sun included) —
+      // through the envelope below, so flipping it fades rather than pops.
+      const isStarMap = label.kind === 'star' || label.kind === 'sun';
+      const baseTarget = !isStarMap
+        ? 1
+        : !starLabelsEnabled
+          ? 0
+          : label.kind === 'sun'
+            ? 1
+            : starCaptionFadeAlpha(distanceMpc / SCALE_UNITS.PC_TO_MPC);
+
+      // Screen position for the declutter. Behind the camera there is none —
+      // those captions bypass the cull (the shader clips them anyway; pass 2
+      // keeps them for glyph-count stability).
+      entries.push({
+        label,
+        anchor,
+        subjectSizePx,
+        baseTarget,
+        screenPx: projectToScreenPx(anchor, rebasedVp, viewportPx),
+      });
+    }
+
+    // ── Stage 2: de-collide EVERY visible caption in one cull ──
+    // Priority = kind tier · scale + clamped apparent size: the tier always
+    // dominates (see `captionPriority.ts`), apparent size only breaks ties
+    // within a tier. Composing the score here keeps the cull's one-number
+    // contract pure. Fully-faded or behind-camera captions don't contend.
+    const candidateEntryIdx: number[] = [];
+    const candidates: { screenPx: Vec2; priorityPx: number }[] = [];
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i]!;
+      if (e.baseTarget === 0 || e.screenPx === null) continue;
+      candidateEntryIdx.push(i);
+      candidates.push({
+        screenPx: e.screenPx,
+        priorityPx:
+          CAPTION_PRIORITY[e.label.kind] * CAPTION_TIER_SCALE +
+          Math.min(e.subjectSizePx, CAPTION_TIER_SCALE - 1),
+      });
+    }
+    const survived = new Set(
+      declutterByScreenSeparation({
+        candidates,
+        minSeparationPx: STAR_CAPTION_MIN_SEPARATION_PX,
+      }).map((k) => candidateEntryIdx[k]!),
+    );
+
+    // ── Stage 3: temporal envelope — ease each drawn alpha toward its target ──
+    // target = fade target × declutter survival (behind-camera captions bypass
+    // the cull). The ease is exponential over the frame clock; exp(-Infinity)
+    // is 0, so the first-ever frame lands every caption exactly on its target
+    // — the layer's gate turning on paints the steady state rather than
+    // ramping two dozen captions up from black. A caption never seen before
+    // seeds AT its target for the same reason: only CHANGES animate.
+    const nowMs = ctx.nowMs;
+    const dtMs =
+      captionClockMs === null ? Number.POSITIVE_INFINITY : Math.max(0, nowMs - captionClockMs);
+    captionClockMs = nowMs;
+    const approach = 1 - Math.exp(-dtMs / CAPTION_ENVELOPE_TAU_MS);
+    let anyRamping = false;
+
+    type Emit = { label: SceneBodyLabel; anchor: Vec3; subjectSizePx: number; fadeAlpha: number };
+    const toEmit: Emit[] = [];
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i]!;
+      const target = e.screenPx === null ? e.baseTarget : survived.has(i) ? e.baseTarget : 0;
+      const prev = captionAlpha.get(e.label.id);
+      let alpha = prev === undefined ? target : prev + (target - prev) * approach;
+      if (Math.abs(alpha - target) < CAPTION_ENVELOPE_SETTLE_EPS) alpha = target;
+      else anyRamping = true;
+      captionAlpha.set(e.label.id, alpha);
+      if (alpha > 0) {
+        toEmit.push({
+          label: e.label,
+          anchor: e.anchor,
+          subjectSizePx: e.subjectSizePx,
+          fadeAlpha: alpha,
+        });
+      }
+    }
+
+    // Prune envelope state for ids that left the caption universe. The
+    // universe is the static `BASE_LABELS` today, so this never fires — it is
+    // the leak guard that keeps the map honest if the seed list ever becomes
+    // dynamic.
+    for (const id of captionAlpha.keys()) {
+      if (!BASE_LABEL_IDS.has(id)) captionAlpha.delete(id);
+    }
+
+    // ── Pass 2: lift each survivor and emit its caption + connector ──
+    const liftedLabels: Label[] = [];
+    const lines: MarkerLine[] = [];
+    for (const { label, anchor, subjectSizePx, fadeAlpha } of toEmit) {
       // The single lifted-label chain (see `liftedLabelPlacement`) — identical
       // to the famous + Milky-Way producers: screen-space proportional lift
       // with the MIN_LABEL_CLEARANCE_PX ink-bottom guarantee (load-bearing for
@@ -183,6 +424,11 @@ export const foregroundLabelsLayer: ContentLayer = {
         worldEmMpc: label.worldEmMpc,
         minPixelSize: label.minPixelSize,
         maxPixelSize: label.maxPixelSize,
+        // End the connector a constant gap ABOVE the body instead of at its
+        // centre: apparent radius + the tuning-knob gap, so an unresolved
+        // point keeps a small clear space under the line and a resolved
+        // sphere keeps that same space above its top rim.
+        lineBottomLiftPx: subjectSizePx / 2 + LEADER_LINE_BOTTOM_GAP_PX,
       });
 
       // Behind the camera the projection is undefined. Keep the caption in the
@@ -192,11 +438,11 @@ export const foregroundLabelsLayer: ContentLayer = {
       // off. There is no valid projection to derive a connector from, so none
       // is emitted for it.
       if (placement === null) {
-        liftedLabels.push({ ...label, worldPos: anchor });
+        liftedLabels.push({ ...label, worldPos: anchor, fadeAlpha });
         continue;
       }
 
-      liftedLabels.push({ ...label, worldPos: placement.labelWorldPos });
+      liftedLabels.push({ ...label, worldPos: placement.labelWorldPos, fadeAlpha });
       if (placement.line !== null) {
         lines.push({
           id: `${label.id}-anchor`,
@@ -204,10 +450,12 @@ export const foregroundLabelsLayer: ContentLayer = {
           toWorld: placement.line.toWorld,
           // Adopt the famous connector width for parity; tint the line with the
           // caption's own colour so each connector reads as part of its body's
-          // caption (straight RGBA == premultiplied at the captions' constant
-          // alpha 1).
+          // caption (straight RGBA == premultiplied at alpha 1). The shader
+          // premultiplies `fadeAlpha` on top, so the connector fades in lockstep
+          // with its caption.
           pixelWidth: FAMOUS_LABEL_STYLE.pixelWidth,
           color: [...label.color],
+          fadeAlpha,
         });
       }
     }
@@ -222,8 +470,13 @@ export const foregroundLabelsLayer: ContentLayer = {
     // just skips the connectors while the captions still draw.
     if (lineRenderer !== null) {
       lineRenderer.setLines(lines);
-      lineRenderer.draw(pass, rebasedVp, viewportPx);
+      lineRenderer.draw(pass, rebasedVpF32, viewportPx);
     }
-    renderer.draw(pass, rebasedVp, viewportPx);
+    renderer.draw(pass, rebasedVpF32, viewportPx);
+
+    // Mid-ramp envelopes need another frame to keep easing under
+    // render-on-demand — the same wake hook the label director uses while its
+    // ramps run. Settled frames stay quiet.
+    if (anyRamping) state.subsystems.scheduler.requestRender();
   },
 };

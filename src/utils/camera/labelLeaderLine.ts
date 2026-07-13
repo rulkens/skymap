@@ -30,19 +30,36 @@
  * returned `toWorld` therefore projects to exactly `liftPx` above `fromWorld`
  * on screen, while remaining a legal world endpoint the renderer can pack.
  *
+ * ### Why the inverse runs in f64 (`mat4d`)
+ *
+ * The un-project inverts the caller's vp. The COSMO label matrix is benign,
+ * but the NEAR0 foreground vp at deep zoom is brutally ill-conditioned (near
+ * down at `MIN_NEAR_MPC` while caption anchors sit ~1e-6 Mpc out, far beyond
+ * the `FAR_MIN_MPC` far floor): inverting it at f32 precision collapses the
+ * depth structure — the two huge w-row coefficients round to the SAME f32
+ * value — and the un-projected point lands at a garbage depth, distorting the
+ * lerped leader-line geometry by tens of pixels. `mat4d.inverse` keeps every
+ * inverse element at f64, which is why `vp` also accepts `Float64Array`: the
+ * NEAR0 layer passes its rebased f64 matrix straight through, while the f32
+ * COSMO callers widen exactly (f32 → f64 is lossless), behaviour-identical.
+ *
  * Pure geometry — no engine state, no clock. The forward-projection math
  * mirrors the declutter projection in `labelDirectorSubsystem`.
  */
 
-import { mat4 } from 'wgpu-matrix';
+import { mat4d } from 'wgpu-matrix';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 export function labelLeaderLine(input: {
   /** The dot (galaxy / body) position in the layer's world frame. Not mutated. */
   anchorWorldPos: Vec3;
-  /** The view-projection the layer draws through (column-major, length 16). */
-  vp: Float32Array;
+  /**
+   * The view-projection the layer draws through (column-major, length 16).
+   * Pass the f64 matrix when one exists (the NEAR0 foreground path) — the
+   * inverse below wants the full precision; f32 inputs widen losslessly.
+   */
+  vp: Float32Array | Float64Array;
   /** Backing-store viewport size in pixels, `[width, height]`. */
   viewportPx: Vec2;
   /** Screen-space vertical lift, in pixels, from the dot to the text baseline. */
@@ -83,7 +100,9 @@ export function labelLeaderLine(input: {
   // Un-project: world = inv(vp) · targetClip, then perspective-divide. The
   // inverse is allocated per call — there is no shared inverse seam to reuse,
   // and this runs for a handful of labels per frame, so the cost is immaterial.
-  const inv = mat4.inverse(m);
+  // mat4d (f64) — an f32 inverse collapses the ill-conditioned NEAR0 depth
+  // rows; see the module header.
+  const inv = mat4d.inverse(m);
   const ox =
     inv[0]! * targetClipX + inv[4]! * targetClipY + inv[8]! * targetClipZ + inv[12]! * targetClipW;
   const oy =

@@ -23,7 +23,10 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { starPointsLayer } from '../../../../../src/services/engine/frame/passes/starPointsLayer';
+import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
+import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
@@ -51,17 +54,26 @@ const PASS_STUB = {
 const CTX_STUB = {} as ReadyFrameContext;
 
 /**
- * The partition inputs a layer reads off the frame context: the absolute
- * camera position, the vertical fov, and the viewport height. 60° fov +
- * 720-px viewport matches the SlabView fixture below.
+ * The gate + partition inputs a layer reads off the frame context: the orbit
+ * distance (the shared foreground gate reads `ctx.cam.distance`), the
+ * absolute camera position, the vertical fov, and the viewport height.
+ * 60° fov + 720-px viewport matches the SlabView fixture below. The orbit
+ * distance is |camPos| — these fixtures orbit the heliocentric origin, so
+ * the two coincide.
  */
 function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
   return {
+    cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
     fovYRad: Math.PI / 3,
     canvasSize: { width: 1280, height: 720 },
   } as unknown as ReadyFrameContext;
 }
+
+// A below-gate camera 5 kpc down +z: inside FOREGROUND_MAX_DISTANCE_MPC
+// (~10 kpc), so the distance gate passes — yet still parsecs beyond every
+// seeded star, so all 24 non-Sun neighbours stay sub-pixel points.
+const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
 
 /**
  * A camera half an AU from the given position: a solar-diameter sphere at
@@ -124,13 +136,49 @@ describe('starPointsLayer.enabled', () => {
         CTX_STUB,
       ),
     ).toBe(false);
-    // Renderer + the Sun alone: the alwaysResolved Sun is entirely in the
-    // spheres branch, so the points branch is empty.
-    const galaxyCtx = makeCtx([0, 0, 0.43]);
+    // Renderer + the Sun alone with the camera half an AU off it: the Sun
+    // resolves to a sphere, so the points branch is empty.
     const sunOnly = SCENE_STARS.filter((star) => star.id === 'sun');
-    expect(starPointsLayer.enabled(makeState(renderer, sunOnly), galaxyCtx)).toBe(false);
-    // Renderer + the full seed at galaxy scale: 24 sub-pixel neighbours.
-    expect(starPointsLayer.enabled(makeState(renderer, SCENE_STARS), galaxyCtx)).toBe(true);
+    const onSunCtx = makeCtx(
+      halfAuFrom(SCENE_STARS.find((star) => star.id === 'sun')!.positionMpc),
+    );
+    expect(starPointsLayer.enabled(makeState(renderer, sunOnly), onSunCtx)).toBe(false);
+    // Renderer + the full seed inside the gate at 5 kpc: every star — the
+    // Sun included — is a sub-pixel point.
+    const nearCtx = makeCtx(NEAR_FIELD_CAM);
+    expect(starPointsLayer.enabled(makeState(renderer, SCENE_STARS), nearCtx)).toBe(true);
+  });
+
+  it('is disabled beyond the foreground gate even with point stars present', () => {
+    // At galaxy scale (0.43 Mpc) the whole neighbourhood is far below a
+    // pixel: the shared gate turns the backdrop off before the partition is
+    // even computed, so the (hdr, NEAR0) step can be skipped wholesale.
+    const state = makeState(makeRenderer(), SCENE_STARS);
+    expect(starPointsLayer.enabled(state, makeCtx([0, 0, 0.43]))).toBe(false);
+  });
+});
+
+describe('the (hdr, NEAR0) render group above the foreground gate', () => {
+  it('empties above the gate and is non-empty below it (the wholesale-skip property)', () => {
+    // The SAME group filter executeFrame's render step applies, over the
+    // early (hdr, NEAR0) step that draws star-points + orbit-rings BEFORE the
+    // tone-map. Above the gate this group must come back empty too — not just
+    // the (foreground:0, NEAR0) body group — for the skip to be wholesale.
+    const state = {
+      gpu: { starPointRenderer: makeRenderer(), orbitRingRenderer: { draw: vi.fn() } },
+      data: { bodies: { stars: SCENE_STARS } },
+    } as unknown as EngineState;
+    const groupAt = (ctx: ReadyFrameContext) =>
+      CONTENT_LAYERS.filter((l) => l.target === 'hdr' && l.slab === NEAR0 && l.enabled(state, ctx));
+
+    // Below the gate: the point backdrop + the rings both draw.
+    expect(groupAt(makeCtx(NEAR_FIELD_CAM)).map((l) => l.name)).toEqual([
+      'star-points',
+      'orbit-rings',
+    ]);
+    // Above the gate: empty group → the executor never opens the pass.
+    expect(groupAt(makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toEqual([]);
+    expect(groupAt(makeCtx([0, 0, 0.43]))).toEqual([]);
   });
 });
 
@@ -148,9 +196,11 @@ describe('starPointsLayer.draw', () => {
     expect(passArg).toBe(PASS_STUB);
     // The vp is rebased into the camera-relative frame off the f64 slab vp —
     // NOT the f32-narrowed view.vp, whose translation bits are already gone and
-    // which would leave the sprite centre to cancel catastrophically.
+    // which would leave the sprite centre to cancel catastrophically. The
+    // rebase stays f64; the layer narrows at this upload boundary, so the
+    // uploaded matrix is the f32 narrow of the f64 rebase.
     expect(vpArg).not.toBe(view.vp);
-    expect(vpArg).toEqual(rebaseViewProj(view.slab.vp, camPos));
+    expect(vpArg).toEqual(narrowMat4(rebaseViewProj(view.slab.vp, camPos)));
     expect(viewportArg).toBe(view.viewportPx);
   });
 
@@ -165,24 +215,27 @@ describe('starPointsLayer.draw', () => {
     starPointsLayer.draw(PASS_STUB, view, makeCtx(camPos), state);
 
     const uploaded = renderer.setStars.mock.calls[0]![0];
-    // Same membership + order as the raw points branch (Sun always resolves).
-    expect(uploaded.map((star) => star.id)).toEqual([PROXIMA.id, SIRIUS.id]);
+    // Same membership + order as the raw points branch — parsecs from
+    // everything, the Sun is a sub-pixel point like its neighbours.
+    expect(uploaded.map((star) => star.id)).toEqual([SUN.id, PROXIMA.id, SIRIUS.id]);
     // Each anchor is rebased: pos − camPos, computed in f64 before narrowing.
     // A raw upload would leave positionMpc equal to PROXIMA.positionMpc.
-    expect(uploaded[0]!.positionMpc).toEqual([
+    const uploadedProxima = uploaded.find((star) => star.id === PROXIMA.id)!;
+    expect(uploadedProxima.positionMpc).toEqual([
       PROXIMA.positionMpc[0] - camPos[0],
       PROXIMA.positionMpc[1] - camPos[1],
       PROXIMA.positionMpc[2] - camPos[2],
     ]);
-    expect(uploaded[0]!.positionMpc).not.toEqual(PROXIMA.positionMpc);
+    expect(uploadedProxima.positionMpc).not.toEqual(PROXIMA.positionMpc);
   });
 
   it('starPointsLayer draws only the point stars', () => {
     const renderer = makeRenderer();
-    // Mixed fixture, camera half an AU off Proxima: the Sun (alwaysResolved)
-    // and Proxima (resolved) belong to starSpheresLayer — its suite asserts
-    // exactly that set over this same fixture — leaving Sirius as the one
-    // point star. Disjoint + covering by construction: the structural XOR.
+    // Mixed fixture, camera half an AU off Proxima: only Proxima resolves
+    // and belongs to starSpheresLayer — its suite asserts exactly that set
+    // over this same fixture — leaving the Sun (1.3 pc out, sub-pixel: a
+    // point is what keeps it VISIBLE from here) and Sirius as the point
+    // stars. Disjoint + covering by construction: the structural XOR.
     const camPos = halfAuFrom(PROXIMA.positionMpc);
     const view = makeNear0View(camPos);
     const state = makeState(renderer, [SUN, PROXIMA, SIRIUS]);
@@ -190,7 +243,7 @@ describe('starPointsLayer.draw', () => {
     starPointsLayer.draw(PASS_STUB, view, makeCtx(camPos), state);
 
     expect(renderer.setStars).toHaveBeenCalledTimes(1);
-    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([SIRIUS.id]);
+    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([SUN.id, SIRIUS.id]);
     expect(renderer.draw).toHaveBeenCalledTimes(1);
   });
 
@@ -205,16 +258,18 @@ describe('starPointsLayer.draw', () => {
     starPointsLayer.draw(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state);
     expect(renderer.setStars).toHaveBeenCalledTimes(2);
     expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([
+      SUN.id,
       PROXIMA.id,
       SIRIUS.id,
     ]);
 
     // The camera closes on Proxima: it resolves, so it must LEAVE the
-    // uploaded point set — otherwise it would draw as point AND sphere.
+    // uploaded point set — otherwise it would draw as point AND sphere. The
+    // Sun stays a point (1.3 pc away, sub-pixel).
     const nearCam = halfAuFrom(PROXIMA.positionMpc);
     starPointsLayer.draw(PASS_STUB, makeNear0View(nearCam), makeCtx(nearCam), state);
     expect(renderer.setStars).toHaveBeenCalledTimes(3);
-    expect(renderer.setStars.mock.calls[2]![0].map((star) => star.id)).toEqual([SIRIUS.id]);
+    expect(renderer.setStars.mock.calls[2]![0].map((star) => star.id)).toEqual([SUN.id, SIRIUS.id]);
     expect(renderer.draw).toHaveBeenCalledTimes(3);
   });
 

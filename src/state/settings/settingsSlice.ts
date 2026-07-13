@@ -164,6 +164,9 @@ const settingsSlice = createSlice({
     setLabelsFocusedOnly: (settings, action: PayloadAction<boolean>) => {
       settings.labels.focusedOnly = action.payload;
     },
+    setStarLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.labels.starLabelsEnabled = action.payload;
+    },
 
     // ── debug ───────────────────────────────────────────────────────────────
     setShowPickBuffer: (settings, action: PayloadAction<boolean>) => {
@@ -350,6 +353,7 @@ export const {
   setStructureLabelEnabled,
   setLabelsEnabled,
   setLabelsFocusedOnly,
+  setStarLabelsEnabled,
   mergeSnapshot,
 } = settingsSlice.actions;
 

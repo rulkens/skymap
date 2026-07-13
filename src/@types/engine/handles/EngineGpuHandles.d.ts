@@ -348,14 +348,14 @@ export type EngineGpuHandles = {
   earthRenderer: EarthRenderer | null;
   /**
    * Flat-emissive resolved stars (the `spheres` branch of
-   * `partitionStarsByResolution` — the Sun plus any star whose apparent
-   * size crosses `STAR_RESOLVE_PX`) drawn into the `foreground:0`
+   * `partitionStarsByResolution` — any star whose apparent size crosses
+   * `STAR_RESOLVE_PX`, the Sun included) drawn into the `foreground:0`
    * render-target row.  Same ('rgba16float', 'depth32float') format
    * invariant as `earthRenderer`.  Owns a single non-dynamic uniform
    * buffer, so same-frame draws through it clobber each other's uniforms
-   * (last write wins) — a known gap when the alwaysResolved Sun co-occurs
-   * with a closely-approached star; see `starSpheresLayer`'s module header
-   * for why the artefact is invisible today and what the real fix is.
+   * (last write wins) — a known gap should two stars ever resolve at once;
+   * see `starSpheresLayer`'s module header for why the case is out of
+   * reach today and what the real fix is.
    * Excluded from `isEngineReady` and null-checked at use.  Null until
    * `initGpu` constructs it; released and re-nulled by `destroy()`.
    */
@@ -380,9 +380,10 @@ export type EngineGpuHandles = {
    * depthless HDR target — the far half of the star LOD (`star-points`
    * layer, drawn by the frame program's dedicated `(hdr, NEAR0)` render
    * step).  No depth format: the hdr row has no depth attachment.  Star
-   * instances are seeded in `initGpu` via `setStars` (the camera-free
-   * `isNearStar` split) and re-uploaded by `starPointsLayer` whenever the
-   * apparent-size partition changes membership.  Excluded from
+   * instances are seeded in `initGpu` via `setStars` (the full star list —
+   * at the galaxy-scale boot camera every star is a sub-pixel point) and
+   * re-uploaded by `starPointsLayer` per frame from the
+   * apparent-size partition.  Excluded from
    * `isEngineReady` and null-checked at use.  Null until `initGpu`
    * constructs it; released and re-nulled by `destroy()` (releases the
    * instance + uniform buffers).

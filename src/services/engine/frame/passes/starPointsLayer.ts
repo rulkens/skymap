@@ -5,11 +5,12 @@
  * ### What it draws
  *
  * The `points` branch of `partitionStarsByResolution` — every seeded star
- * whose apparent size stays below `STAR_RESOLVE_PX` (the alwaysResolved Sun
- * never appears here). `starSpheresLayer` draws the complementary `spheres`
- * branch of the SAME partition call, so a star is a point XOR a sphere by
- * construction — see the partition module's docblock for the
- * structural-disjointness argument.
+ * whose apparent size stays below `STAR_RESOLVE_PX`, the Sun included (its
+ * sphere is sub-pixel beyond ~tens of AU, and a point is what keeps it
+ * visible from the rest of the neighbourhood). `starSpheresLayer` draws the
+ * complementary `spheres` branch of the SAME partition call, so a star is a
+ * point XOR a sphere by construction — see the partition module's docblock
+ * for the structural-disjointness argument.
  *
  * ### The odd row out: `hdr` target, NEAR0 slab
  *
@@ -57,14 +58,21 @@
  * ### When it draws
  *
  * `enabled` gates on the `starPointRenderer` GPU handle (null in the
- * pre-bootstrap window) AND a non-empty `points` branch — the same
- * partition `draw` consumes, so the enable gate and the uploaded set
- * cannot disagree. The handle check short-circuits first so pre-bootstrap
- * fixtures (null renderer, no bodies bag, bare ctx) never touch
- * `state.data` or `ctx`. `enabled` reads the camera from `ctx.drawCamPos`
- * (absolute frame) while `draw` reads `view.camPos` (NEAR0's
- * origin-relative frame); the two coincide because `RENDER_ORIGIN_MPC` is
- * the heliocentric origin [0,0,0].
+ * pre-bootstrap window), the shared near-field distance gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC`), AND a non-empty `points` branch — the
+ * same partition `draw` consumes, so the enable gate and the uploaded set
+ * cannot disagree. The distance gate's derived margin is deliberately
+ * generous (see its module header): the points are the local starfield
+ * BACKDROP, so they must survive well past the seed extent — the gate cuts
+ * them only once the whole neighbourhood is far below a pixel, which also
+ * empties the `(hdr, NEAR0)` render step the executor then skips. The
+ * handle check short-circuits first so pre-bootstrap fixtures (null
+ * renderer, no bodies bag, bare ctx) never touch `state.data` or `ctx`;
+ * the distance gate runs second so the per-star partition is not computed
+ * at all when the camera is far. `enabled` reads the camera from
+ * `ctx.drawCamPos` (absolute frame) while `draw` reads `view.camPos`
+ * (NEAR0's origin-relative frame); the two coincide because
+ * `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -72,6 +80,8 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 export const starPointsLayer: ContentLayer = {
   name: 'star-points',
@@ -80,8 +90,10 @@ export const starPointsLayer: ContentLayer = {
   blend: 'additive',
 
   enabled(state, ctx) {
-    // Handle first, partition second — see the module header's gate note.
+    // Handle first, distance second, partition last — see the module
+    // header's gate note.
     if (state.gpu.starPointRenderer === null) return false;
+    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     return (
       partitionStarsByResolution({
         stars: state.data.bodies.stars,
@@ -128,8 +140,10 @@ export const starPointsLayer: ContentLayer = {
     renderer.setStars(rebasedPoints);
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
-    // anchors. Uses the slab's f64 `vp`, NOT the f32-narrowed `view.vp`.
-    const rebasedVp = rebaseViewProj(view.slab.vp, camPos);
+    // anchors. Uses the slab's f64 `vp`, NOT the f32-narrowed `view.vp` —
+    // narrowed HERE, at the GPU-upload boundary (`rebaseViewProj` stays f64
+    // for consumers that must invert it).
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
     renderer.draw(pass, rebasedVp, view.viewportPx);
   },
 };
