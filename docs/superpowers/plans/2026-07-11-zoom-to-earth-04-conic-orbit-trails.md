@@ -389,18 +389,18 @@ Fullscreen-triangle geometry is generated in the vertex shader from
 `@builtin(vertex_index)` — **no position VBO**; the pipeline's only vertex buffer
 is the instance-step record above.
 
-- [ ] Add `orbitTrail/io.wesl` — `struct VSOut` with `@builtin(position) clip`
+- [x] Add `orbitTrail/io.wesl` — `struct VSOut` with `@builtin(position) clip`
   and flat varyings: three `vec3<f32>` `Ginv` columns, `vec3<f32>` color, `f32`
   eccentricity, `f32` meanAnomaly. Didactic comment (single quotes, NO
   backticks): one authoritative inter-stage decl makes location drift impossible
   (mirror `orbitRing/io.wesl`), and every varying is `@interpolate(flat)` (all
   per-instance constants).
-- [ ] Add `orbitTrail/vertex.wesl` — emit the fullscreen triangle from
+- [x] Add `orbitTrail/vertex.wesl` — emit the fullscreen triangle from
   `@builtin(vertex_index)`; pass the per-instance `Ginv` columns + color + e + M
   through flat. Didactic comment: WHY fullscreen (the projected conic lands
   anywhere on screen — spec §2 rejected bounding-quad), WHY per-instance
   attributes not a uniform (the writeBuffer-vs-submit house idiom).
-- [ ] Add `orbitTrail/fragment.wesl` — implement spec §3.3 EXACTLY:
+- [x] Add `orbitTrail/fragment.wesl` — implement spec §3.3 EXACTLY:
   `q = Ginv · vec3(pos.xy, 1)`; `discard`/skip where `q.z <= 0` (behind camera);
   `f = q.x*q.x + q.y*q.y − q.z*q.z`; `d = transpose(Ginv) * vec3(q.x, q.y, −q.z)`
   (or the explicit column form); `sampson = abs(f) / (2 * length(d.xy))`;
@@ -415,19 +415,19 @@ is the instance-step record above.
   degeneracy — spec §3.3), WHY forward Kepler `M = E − e sin E` needs no GPU
   solve, WHY the `f32` back-projection is harmless (feeds only slowly-varying
   brightness — spec §3.3). NO backticks anywhere.
-- [ ] Add `orbitTrailRenderer.ts` — pipeline + `draw` + `destroy` per the ring
+- [x] Add `orbitTrailRenderer.ts` — pipeline + `draw` + `destroy` per the ring
   renderer's structure, fullscreen-triangle geometry, the instance layout above.
   Didactic module header mirroring `orbitRingRenderer.ts:1-42` but for the conic
   (spec §2 rationale — exact ellipse, no tessellation, pixel-space numerically
   benign).
-- [ ] Add `OrbitTrailRenderer.d.ts` — one type.
-- [ ] Test `orbitTrailRenderer.test.ts` — whatever headless shape the ring
+- [x] Add `OrbitTrailRenderer.d.ts` — one type.
+- [x] Test `orbitTrailRenderer.test.ts` — whatever headless shape the ring
   renderer's test used (handle shape: `label`, `draw`, `destroy`; `draw` clamps
   `count` to `MAX_ORBITS`; a zero-count `draw` is a no-op). If the ring renderer
   had no test, add only the `draw`-clamp/no-op behaviour (no pipeline
   restatement).
-- [ ] `npm test -- orbitTrailRenderer` → green.
-- [ ] **VISUAL GATE (needs `?deepZoom`) — deferred to Task 9** (the renderer is
+- [x] `npm test -- orbitTrailRenderer` → green.
+- [x] **VISUAL GATE (needs `?deepZoom`) — deferred to Task 9** (the renderer is
   not wired until the layer swap). Commit the renderer + shaders.
 
 ## Task 9 — `orbitTrailsLayer`, wire it in, swap the handle
