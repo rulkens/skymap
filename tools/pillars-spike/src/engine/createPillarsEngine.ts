@@ -56,6 +56,9 @@ import { packLightStarsUniform } from './packLightStarsUniform';
 import { packSceneUniforms } from './packSceneUniforms';
 
 import generateFieldWgsl from '../shaders/generateField.wesl?static';
+import generateDetailWgsl from '../shaders/generateDetail.wesl?static';
+import bakeOccupancyWgsl from '../shaders/bakeOccupancy.wesl?static';
+import bakeSkipWgsl from '../shaders/bakeSkip.wesl?static';
 import bakeLightWgsl from '../shaders/bakeLight.wesl?static';
 import backgroundWgsl from '../shaders/background.wesl?static';
 import nebulaWgsl from '../shaders/nebula.wesl?static';
@@ -85,12 +88,22 @@ const SLAB_DEPTH = 8;
 const BLOOM_MIPS = 6;
 /** Fainter cluster members around the 3 light stars. */
 const CLUSTER_STARS = 24;
+const PILLAR_STARS = 40;
+
+/** Tiling detail-noise texture edge (see generateDetail.wesl). */
+const DETAIL_DIM = 64;
+/** Fine→coarse divisor for the empty-space-skip grid (bakeOccupancy /
+ * bakeSkip). 4 keeps each coarse brick ~4 fine voxels, small enough that
+ * the 4^3 brick subsample never misses a thin column. */
+const COARSE_FACTOR = 4;
 
 const DEFAULT_SETTINGS: PillarsSettings = {
   densityMul: 1.0,
   emissionMul: 6.0,
   scatterMul: 2.5,
   ambientMul: 0.8,
+  detailErosion: 0.55,
+  detailScale: 5.0,
   starBrightness: 1.0,
   phaseG: 0.45,
   exposure: 1.05,
@@ -143,6 +156,45 @@ export async function createPillarsEngine(
     addressModeV: 'clamp-to-edge',
     addressModeW: 'clamp-to-edge',
   });
+  // Tiling detail-erosion noise (generateDetail.wesl): tiny, baked once,
+  // sampled with REPEAT addressing so world coordinates run unbounded.
+  const detailTex = device.createTexture({
+    label: 'pillars:detail',
+    size: [DETAIL_DIM, DETAIL_DIM, DETAIL_DIM],
+    dimension: '3d',
+    format: 'rgba8unorm',
+    usage: volumeUsage,
+  });
+  const detailSampler = device.createSampler({
+    label: 'pillars:detailSampler',
+    magFilter: 'linear',
+    minFilter: 'linear',
+    addressModeU: 'repeat',
+    addressModeV: 'repeat',
+    addressModeW: 'repeat',
+  });
+  // Coarse empty-space-skip grid: occupancy (max dust+gas per brick) feeds
+  // the conservative distance field the marcher leaps by. Both sampled/read
+  // with clamp addressing (the shared volSampler suffices for skipField).
+  const COARSE_DIMS: [number, number, number] = [
+    Math.ceil(VOLUME_DIMS[0] / COARSE_FACTOR),
+    Math.ceil(VOLUME_DIMS[1] / COARSE_FACTOR),
+    Math.ceil(VOLUME_DIMS[2] / COARSE_FACTOR),
+  ];
+  const occTex = device.createTexture({
+    label: 'pillars:occupancy',
+    size: COARSE_DIMS,
+    dimension: '3d',
+    format: 'rgba8unorm',
+    usage: volumeUsage,
+  });
+  const skipTex = device.createTexture({
+    label: 'pillars:skip',
+    size: COARSE_DIMS,
+    dimension: '3d',
+    format: 'rgba8unorm',
+    usage: volumeUsage,
+  });
 
   // ---- uniform buffers -----------------------------------------------
   const sceneBuf = device.createBuffer({
@@ -178,6 +230,19 @@ export async function createPillarsEngine(
     device.queue.writeBuffer(b, 0, new Uint32Array([i * SLAB_DEPTH, 0, 0, 0]));
     return b;
   });
+  // Coarse-grid z-slab uniforms (zBase only) — shared by the occupancy and
+  // skip passes, which run sequentially and never rewrite them, so one set
+  // is race-free (same policy as bakeSlabBufs).
+  const coarseSlabCount = Math.ceil(COARSE_DIMS[2] / SLAB_DEPTH);
+  const coarseSlabBufs = Array.from({ length: coarseSlabCount }, (_, i) => {
+    const b = device.createBuffer({
+      label: `pillars:coarseSlab${i}`,
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(b, 0, new Uint32Array([i * SLAB_DEPTH, 0, 0, 0]));
+    return b;
+  });
   const brightBuf = device.createBuffer({
     label: 'pillars:bright',
     size: 16,
@@ -201,7 +266,7 @@ export async function createPillarsEngine(
   );
 
   // ---- star instance buffer ------------------------------------------
-  const starData = buildStarInstances(LIGHT_STARS, CLUSTER_STARS, 1337);
+  const starData = buildStarInstances(LIGHT_STARS, CLUSTER_STARS, PILLAR_STARS, 1337);
   const starCount = starData.length / 8;
   const starVB = device.createBuffer({
     label: 'pillars:starVB',
@@ -238,6 +303,24 @@ export async function createPillarsEngine(
     label: 'pillars:bakePipe',
     layout: 'auto',
     compute: { module: makeShader(bakeLightWgsl, 'pillars:bakeLight'), entryPoint: 'main' },
+  });
+  const detailPipe = device.createComputePipeline({
+    label: 'pillars:detailPipe',
+    layout: 'auto',
+    compute: {
+      module: makeShader(generateDetailWgsl, 'pillars:generateDetail'),
+      entryPoint: 'main',
+    },
+  });
+  const occPipe = device.createComputePipeline({
+    label: 'pillars:occPipe',
+    layout: 'auto',
+    compute: { module: makeShader(bakeOccupancyWgsl, 'pillars:bakeOccupancy'), entryPoint: 'main' },
+  });
+  const skipPipe = device.createComputePipeline({
+    label: 'pillars:skipPipe',
+    layout: 'auto',
+    compute: { module: makeShader(bakeSkipWgsl, 'pillars:bakeSkip'), entryPoint: 'main' },
   });
 
   const bgMod = makeShader(backgroundWgsl, 'pillars:background');
@@ -337,6 +420,34 @@ export async function createPillarsEngine(
     minFilter: 'linear',
   });
 
+  const detailBG = device.createBindGroup({
+    label: 'pillars:detailBG',
+    layout: detailPipe.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: detailTex.createView() }],
+  });
+  const occBGs = coarseSlabBufs.map((buf, i) =>
+    device.createBindGroup({
+      label: `pillars:occBG${i}`,
+      layout: occPipe.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: buf } },
+        { binding: 1, resource: fieldTex.createView() },
+        { binding: 2, resource: volSampler },
+        { binding: 3, resource: occTex.createView() },
+      ],
+    }),
+  );
+  const skipBGs = coarseSlabBufs.map((buf, i) =>
+    device.createBindGroup({
+      label: `pillars:skipBG${i}`,
+      layout: skipPipe.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: buf } },
+        { binding: 1, resource: occTex.createView() },
+        { binding: 2, resource: skipTex.createView() },
+      ],
+    }),
+  );
   const genBGs = genSlabBufs.map((buf, i) =>
     device.createBindGroup({
       label: `pillars:genBG${i}`,
@@ -374,6 +485,9 @@ export async function createPillarsEngine(
       { binding: 2, resource: fieldTex.createView() },
       { binding: 3, resource: lightTex.createView() },
       { binding: 4, resource: volSampler },
+      { binding: 5, resource: detailTex.createView() },
+      { binding: 6, resource: detailSampler },
+      { binding: 7, resource: skipTex.createView() },
     ],
   });
   const starBG = device.createBindGroup({
@@ -404,27 +518,48 @@ export async function createPillarsEngine(
         new Uint32Array(data, 12, 1)[0] = i * SLAB_DEPTH;
         device.queue.writeBuffer(buf, 0, data);
       });
-      const wgX = Math.ceil(VOLUME_DIMS[0] / WG);
-      const wgY = Math.ceil(VOLUME_DIMS[1] / WG);
-      const wgZ = Math.ceil(SLAB_DEPTH / WG);
-      const dispatchSlab = (pipe: GPUComputePipeline, bg: GPUBindGroup, label: string): void => {
+      const dispatchSlab = (
+        pipe: GPUComputePipeline,
+        bg: GPUBindGroup,
+        label: string,
+        gx: number,
+        gy: number,
+        gz: number,
+      ): void => {
         const enc = device.createCommandEncoder({ label });
         const pass = enc.beginComputePass({ label });
         pass.setPipeline(pipe);
         pass.setBindGroup(0, bg);
-        pass.dispatchWorkgroups(wgX, wgY, wgZ);
+        pass.dispatchWorkgroups(gx, gy, gz);
         pass.end();
         device.queue.submit([enc.finish()]);
       };
+      const fineX = Math.ceil(VOLUME_DIMS[0] / WG);
+      const fineY = Math.ceil(VOLUME_DIMS[1] / WG);
+      const slabZ = Math.ceil(SLAB_DEPTH / WG);
+      const coarseX = Math.ceil(COARSE_DIMS[0] / WG);
+      const coarseY = Math.ceil(COARSE_DIMS[1] / WG);
       // Awaiting each slab keeps every command buffer's GPU time tiny
       // (watchdog headroom — see module header) at the cost of a few
       // round-trips, irrelevant for a boot-time bake.
       for (let s = 0; s < slabCount; s++) {
-        dispatchSlab(genPipe, genBGs[s]!, `pillars:generate${s}`);
+        dispatchSlab(genPipe, genBGs[s]!, `pillars:generate${s}`, fineX, fineY, slabZ);
+        await device.queue.onSubmittedWorkDone();
+      }
+      // Empty-space-skip bake: occupancy (needs the whole field) then the
+      // conservative distance field (needs the whole occupancy grid). Each
+      // stage fully precedes the next via the awaited submits, so the
+      // shared coarse-slab uniforms are never in flight for two readers.
+      for (let s = 0; s < coarseSlabCount; s++) {
+        dispatchSlab(occPipe, occBGs[s]!, `pillars:occupancy${s}`, coarseX, coarseY, slabZ);
+        await device.queue.onSubmittedWorkDone();
+      }
+      for (let s = 0; s < coarseSlabCount; s++) {
+        dispatchSlab(skipPipe, skipBGs[s]!, `pillars:skip${s}`, coarseX, coarseY, slabZ);
         await device.queue.onSubmittedWorkDone();
       }
       for (let s = 0; s < slabCount; s++) {
-        dispatchSlab(bakePipe, bakeBGs[s]!, `pillars:bake${s}`);
+        dispatchSlab(bakePipe, bakeBGs[s]!, `pillars:bake${s}`, fineX, fineY, slabZ);
         await device.queue.onSubmittedWorkDone();
       }
     } finally {
@@ -433,6 +568,18 @@ export async function createPillarsEngine(
   }
   function regenerate(seed: number): void {
     void runBakes(seed);
+  }
+  // Detail-noise bake: seed-independent, so exactly once at boot rather
+  // than per regenerate. One dispatch is fine — 64^3 texels is the same
+  // work as a single field z-slab, the empirically watchdog-safe unit.
+  {
+    const enc = device.createCommandEncoder({ label: 'pillars:generateDetail' });
+    const pass = enc.beginComputePass({ label: 'pillars:generateDetail' });
+    pass.setPipeline(detailPipe);
+    pass.setBindGroup(0, detailBG);
+    pass.dispatchWorkgroups(DETAIL_DIM / WG, DETAIL_DIM / WG, DETAIL_DIM / WG);
+    pass.end();
+    device.queue.submit([enc.finish()]);
   }
   regenerate(1);
 
@@ -521,47 +668,131 @@ export async function createPillarsEngine(
     });
   }
 
-  // ---- camera (orbit) --------------------------------------------------
+  // ---- camera (orbit + pan) --------------------------------------------
   const cam = { az: -0.42, el: 0.1, dist: 5.8 };
   const camAnim = { ...cam };
-  const target: readonly [number, number, number] = [0, -0.05, 0];
+  // Mutable pivot: LMB/1-finger orbits AROUND it; RMB/2-finger pan SLIDES
+  // it in the camera's screen plane (see the pan() helper).
+  const target: [number, number, number] = [0, -0.05, 0];
   const fovY = (40 * Math.PI) / 180;
   let autoRotate = true;
   let lastInteract = performance.now();
+  // Last frame's world-space camera basis (drawFrame stashes it), so pan()
+  // can move the pivot along screen right/up without recomputing it.
+  let camRightW: [number, number, number] = [1, 0, 0];
+  let camUpW: [number, number, number] = [0, 1, 0];
 
-  let dragging = false;
-  let lx = 0;
-  let ly = 0;
+  const clampEl = (): void => {
+    cam.el = Math.max(-1.25, Math.min(1.4, cam.el));
+  };
+  const clampDist = (): void => {
+    cam.dist = Math.max(2.2, Math.min(20, cam.dist));
+  };
+  const orbit = (dx: number, dy: number): void => {
+    cam.az -= dx * 0.006;
+    cam.el += dy * 0.006;
+    clampEl();
+  };
+  // Slide the pivot in the camera's screen plane. k is the world distance
+  // one CSS pixel spans at the pivot depth (perspective 1:1 grab), so the
+  // scene tracks the cursor at any zoom. Screen-right drag → scene right
+  // (pivot moves left); screen-down drag → scene down.
+  const pan = (dx: number, dy: number): void => {
+    const k = (2 * cam.dist * Math.tan(fovY / 2)) / Math.max(1, canvas.clientHeight);
+    target[0] += (-camRightW[0] * dx + camUpW[0] * dy) * k;
+    target[1] += (-camRightW[1] * dx + camUpW[1] * dy) * k;
+    target[2] += (-camRightW[2] * dx + camUpW[2] * dy) * k;
+  };
+
+  // Pointer-id → last position. Unifies mouse, pen and multi-touch: 1
+  // active pointer orbits (or pans on RMB/MMB), 2 pointers pinch-zoom about
+  // their centroid AND pan by the centroid's drift (native map-style gesture).
+  const pointers = new Map<number, { x: number; y: number }>();
+  let pinchDist = 0;
+  let pinchCx = 0;
+  let pinchCy = 0;
+  const reseedPinch = (): void => {
+    if (pointers.size < 2) {
+      pinchDist = 0;
+      return;
+    }
+    const pts = [...pointers.values()];
+    const a = pts[0]!;
+    const b = pts[1]!;
+    pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+    pinchCx = (a.x + b.x) / 2;
+    pinchCy = (a.y + b.y) / 2;
+  };
+
+  // touch-action:none routes pinch/scroll gestures to pointer events rather
+  // than letting the browser page-zoom or scroll the canvas away.
+  canvas.style.touchAction = 'none';
+
   const onDown = (e: PointerEvent): void => {
-    dragging = true;
-    lx = e.clientX;
-    ly = e.clientY;
-    lastInteract = performance.now();
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     canvas.setPointerCapture?.(e.pointerId);
+    reseedPinch();
+    lastInteract = performance.now();
   };
   const onMove = (e: PointerEvent): void => {
-    if (!dragging) return;
-    cam.az += (e.clientX - lx) * 0.006;
-    cam.el += (e.clientY - ly) * 0.006;
-    cam.el = Math.max(-1.25, Math.min(1.4, cam.el));
-    lx = e.clientX;
-    ly = e.clientY;
+    const p = pointers.get(e.pointerId);
+    if (!p) return;
+    const px = e.clientX;
+    const py = e.clientY;
+
+    if (pointers.size >= 2) {
+      p.x = px;
+      p.y = py;
+      const pts = [...pointers.values()];
+      const a = pts[0]!;
+      const b = pts[1]!;
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const cx = (a.x + b.x) / 2;
+      const cy = (a.y + b.y) / 2;
+      if (pinchDist > 0) {
+        // Spread apart (dist grows) → zoom in (cam.dist shrinks).
+        cam.dist *= Math.exp((pinchDist - dist) * 0.005);
+        clampDist();
+        pan(cx - pinchCx, cy - pinchCy);
+      }
+      pinchDist = dist;
+      pinchCx = cx;
+      pinchCy = cy;
+      lastInteract = performance.now();
+      return;
+    }
+
+    const dx = px - p.x;
+    const dy = py - p.y;
+    p.x = px;
+    p.y = py;
+    // RMB (bit 2) or MMB (bit 4) pans; anything else (LMB, touch, pen) orbits.
+    if ((e.buttons & 2) !== 0 || (e.buttons & 4) !== 0) {
+      pan(dx, dy);
+    } else {
+      orbit(dx, dy);
+    }
     lastInteract = performance.now();
   };
-  const onUp = (): void => {
-    dragging = false;
+  const onUp = (e: PointerEvent): void => {
+    pointers.delete(e.pointerId);
+    reseedPinch();
     lastInteract = performance.now();
   };
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
     cam.dist *= Math.exp(e.deltaY * 0.0011);
-    cam.dist = Math.max(2.2, Math.min(20, cam.dist));
+    clampDist();
     lastInteract = performance.now();
   };
+  // Suppress the RMB context menu so right-drag can pan uninterrupted.
+  const onContextMenu = (e: Event): void => e.preventDefault();
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onUp);
   canvas.addEventListener('wheel', onWheel, { passive: false });
+  canvas.addEventListener('contextmenu', onContextMenu);
 
   // ---- resize ----------------------------------------------------------
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -593,7 +824,7 @@ export async function createPillarsEngine(
     const dt = Math.min(0.05, (now - prev) / 1000);
     prev = now;
     frame = (frame + 1) % 1e6;
-    if (autoRotate && now - lastInteract > 3000 && !dragging) cam.az += dt * 0.06;
+    if (autoRotate && now - lastInteract > 3000 && pointers.size === 0) cam.az += dt * 0.06;
     const k = Math.min(1, dt * 10);
     camAnim.az += (cam.az - camAnim.az) * k;
     camAnim.el += (cam.el - camAnim.el) * k;
@@ -610,6 +841,9 @@ export async function createPillarsEngine(
     const fwd = norm3(sub3(target, eye));
     const right = norm3(cross3(fwd, [0, 1, 0]));
     const up = cross3(right, fwd);
+    // Stash for the pan handlers (next pointer move slides the pivot here).
+    camRightW = right;
+    camUpW = up;
     const view = mat4.lookAt(eye, [target[0], target[1], target[2]], [0, 1, 0]);
     const proj = mat4.perspective(fovY, canvas.width / canvas.height, 0.05, 100);
     const viewProj = mat4.multiply(proj, view) as Float32Array;
@@ -631,6 +865,8 @@ export async function createPillarsEngine(
         ambientMul: settings.ambientMul,
         starBrightness: settings.starBrightness,
         phaseG: settings.phaseG,
+        detailErosion: settings.detailErosion,
+        detailScale: settings.detailScale,
       },
       sceneData,
     );
@@ -828,7 +1064,9 @@ export async function createPillarsEngine(
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
       canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('contextmenu', onContextMenu);
     },
   };
 }

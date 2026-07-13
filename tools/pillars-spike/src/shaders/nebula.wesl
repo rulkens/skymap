@@ -69,12 +69,32 @@ import package::lib::starfield::bgColor;
 @group(0) @binding(2) var field: texture_3d<f32>;
 @group(0) @binding(3) var light: texture_3d<f32>;
 @group(0) @binding(4) var volSampler: sampler;
+// Tiling detail-erosion noise (generateDetail.wesl), sampled with a
+// REPEAT sampler so world coordinates can run unbounded across it.
+@group(0) @binding(5) var detail: texture_3d<f32>;
+@group(0) @binding(6) var detailSampler: sampler;
+// Coarse conservative distance-to-dust field (bakeSkip.wesl): the marcher
+// leaps empty space by the fetched distance instead of stepping through it.
+@group(0) @binding(7) var skipField: texture_3d<f32>;
 
-const STEP_COUNT = 128;
-// View-path optical depth per unit dust density per scene unit. The light
-// bake uses a slightly HIGHER sigma (9.0) so shadows fully develop before
-// the view path saturates — see bakeLight.wesl.
-const SIGMA_VIEW = 6.5;
+// Iteration cap. Higher than the 128 a fixed march would use: empty-space
+// leaping (skipField) means most iterations now land IN the dust, so the
+// step becomes rayLen/STEP_COUNT ≈ 1.5x finer than before WITHOUT extra
+// cost on empty-heavy views — the detail-erosion skin (nebula's whole
+// point) needs that finer step to resolve. Full ray coverage still holds:
+// each dust step advances stepLen and each leap advances further, so t
+// reaches the exit within STEP_COUNT iterations (the t-bound break).
+const STEP_COUNT = 192;
+// World distance a skipField value of 1.0 encodes — MUST equal
+// bakeSkip.wesl's MAX_LEAP.
+const MAX_LEAP = 0.35;
+// View-path optical depth per unit dust density per scene unit. High on
+// purpose: full-density dust goes opaque within ~0.25 units, so column
+// silhouettes cut hard against the glow (the photoevaporation-front look)
+// instead of staying translucent. The light bake uses a slightly HIGHER
+// sigma (16.0) so shadows fully develop before the view path saturates —
+// see bakeLight.wesl. stars.wesl's SIGMA_VIEW must stay equal to this one.
+const SIGMA_VIEW = 12.0;
 // Dust single-scattering albedo, bluish: interstellar grains scatter blue
 // more efficiently than they absorb it (why reflection nebulae are blue).
 const DUST_ALBEDO = vec3<f32>(0.52, 0.60, 0.74);
@@ -163,9 +183,40 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   var trans = vec3<f32>(1.0);
 
   for (var i = 0; i < STEP_COUNT; i = i + 1) {
+    if (t >= tRange.y) {
+      break;
+    }
     let p = scene.camPos + rd * t;
+
+    // Empty-space leap: the baked distance field says how far the nearest
+    // dust is (conservatively — see bakeSkip.wesl). When that exceeds a
+    // step, jump the whole gap in one iteration rather than stepping
+    // through vacuum. Costs one fetch; frees the step budget for dust.
+    let skip = textureSampleLevel(skipField, volSampler, worldToVolumeUv(p), 0.0).r * MAX_LEAP;
+    if (skip > stepLen) {
+      t = t + skip;
+      continue;
+    }
+
     let f = textureSampleLevel(field, volSampler, worldToVolumeUv(p), 0.0);
-    let dust = f.r * scene.densityMul;
+
+    // Detail erosion (the Nubis technique): remap the field's dust
+    // profile against high-frequency tiling noise,
+    //   d = (profile - w·n) / (1 - w·n),
+    // which leaves saturated cores at 1 (profile=1 ⇒ d=1 for any n) and
+    // carves the gradient skin into sub-voxel tendrils — detail the field
+    // texture itself is far too coarse to hold. Noise flavour blends
+    // wispy (g) at thin skirts into billowy (r) toward dense cores, per
+    // the Nubis recipe. Sampled only where there is dust to erode: the
+    // fetch is the expensive part and empty space needs none.
+    var profile = f.r;
+    if (profile > 0.004 && scene.detailErosion > 0.001) {
+      let n = textureSampleLevel(detail, detailSampler, p * scene.detailScale, 0.0);
+      let noise = mix(n.g, n.r, clamp(profile * 1.4, 0.0, 1.0));
+      let wn = scene.detailErosion * noise;
+      profile = clamp((profile - wn) / max(1.0 - wn, 0.05), 0.0, 1.0);
+    }
+    let dust = profile * scene.densityMul;
     let gas = f.g;
 
     if (dust + gas > 0.004) {

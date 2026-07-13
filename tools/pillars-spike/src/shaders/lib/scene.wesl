@@ -34,8 +34,8 @@ struct SceneUniforms {
   ambientMul: f32,            // bytes 140..143 sky/ambient fill strength
   starBrightness: f32,        // bytes 144..147 billboard star intensity multiplier
   phaseG: f32,                // bytes 148..151 Henyey-Greenstein forward anisotropy
-  _pad0: f32,                 // bytes 152..155
-  _pad1: f32,                 // bytes 156..159
+  detailErosion: f32,         // bytes 152..155 detail-noise erosion strength [0,1]
+  detailScale: f32,           // bytes 156..159 detail texture cycles per world unit
 }
 
 // ## LightStars — the ionizing sources, written once at boot

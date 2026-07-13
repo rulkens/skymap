@@ -10,6 +10,8 @@
  *   ambientMul     sky/ambient fill strength
  *   starBrightness billboard star intensity multiplier
  *   phaseG         Henyey-Greenstein forward anisotropy [0, ~0.85]
+ *   detailErosion  detail-noise erosion strength [0,1] (0 disables)
+ *   detailScale    detail texture cycles per world unit
  *
  * Display terms (consumed by composite.wesl):
  *   exposure, bloom, saturation, vignette, tonemap (0 ACES, 1 Reinhard,
@@ -26,6 +28,8 @@ export type PillarsSettings = {
   ambientMul: number;
   starBrightness: number;
   phaseG: number;
+  detailErosion: number;
+  detailScale: number;
   exposure: number;
   bloom: number;
   saturation: number;

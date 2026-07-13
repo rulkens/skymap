@@ -7,7 +7,7 @@
  *   [24..26] camUp           [27] aspect
  *   [28..30] camFwd          [31] frame
  *   [32] densityMul  [33] emissionMul  [34] scatterMul  [35] ambientMul
- *   [36] starBrightness  [37] phaseG   [38..39] pad
+ *   [36] starBrightness  [37] phaseG   [38] detailErosion  [39] detailScale
  *
  * Writes into a caller-owned `out` (40 floats) so the frame loop reuses
  * one scratch array with zero per-frame allocation. Offsets are locked by
@@ -31,6 +31,8 @@ export function packSceneUniforms(
     ambientMul: number;
     starBrightness: number;
     phaseG: number;
+    detailErosion: number;
+    detailScale: number;
   },
   out: Float32Array,
 ): Float32Array {
@@ -60,7 +62,7 @@ export function packSceneUniforms(
   out[35] = args.ambientMul;
   out[36] = args.starBrightness;
   out[37] = args.phaseG;
-  out[38] = 0;
-  out[39] = 0;
+  out[38] = args.detailErosion;
+  out[39] = args.detailScale;
   return out;
 }

@@ -34,7 +34,7 @@ import package::lib::volume::EXTINCTION_TINT;
 const OCCLUSION_STEPS = 16;
 // Must match nebula.wesl's SIGMA_VIEW so a star dims at the same rate the
 // dust in front of it darkens the background.
-const SIGMA_VIEW = 6.5;
+const SIGMA_VIEW = 12.0;
 
 struct VsOut {
   @builtin(position) clip: vec4<f32>,

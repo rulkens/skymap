@@ -28,7 +28,14 @@
 //    Warp is weaker along y so the columns stay coherent vertically.
 // 3. A second fbm is FOLDED INTO the SDF threshold (surface erosion),
 //    which eats wispy bays into the silhouette — the photo-evaporated
-//    look — instead of just displacing it.
+//    look — instead of just displacing it. Toward the cluster-facing tops
+//    the erosion noise is STREAKED (space squashed along the direction to
+//    the ionizing cluster before sampling, elongating its features ~4x):
+//    photoevaporating gas flows along that axis, so its wisps do too.
+// 3b. EGG knots — a fixed set of small dense spheres unioned near each
+//    pillar head: the 'evaporating gaseous globules' that stud the real
+//    heads. Fixed like the pillar skeleton (reseeding restyles the noise,
+//    not the anatomy); the domain warp gnarls them like everything else.
 // 4. Interior density is modulated by a third fbm so lit faces show
 //    internal clumping rather than a flat wall.
 // 5. Everything fades to zero near the volume boundary (edgeEnvelope) so
@@ -100,14 +107,49 @@ fn main(@builtin(global_invocation_id) gid_in: vec3<u32>) {
   let mound = qw.y + 1.46 - 0.34 * fbm3(vec3<f32>(q.x, 0.0, q.z) * 1.35 + gen.seed);
   var sd = min(min(d0, d1), min(d2, mound));
 
-  // (3) surface erosion folded into the threshold.
-  let erosion = fbm3(qw * 4.2 + gen.seed * 1.3) - 0.5;
+  // (3b) EGG knots near the pillar heads — centre.xyz, w = radius.
+  // Function-scope 'var': WGSL only guarantees dynamic indexing on
+  // addressable storage (same reason as nebula.wesl's cube array).
+  // The FIRST egg of each head is a protostar cocoon (its centre mirrored
+  // by buildStarInstances.ts's PROTOSTARS) — chunkier so the embedded
+  // billboard reads as glowing through real dust. The rest are plain EGGs.
+  var eggs = array<vec4<f32>, 7>(
+    // head of the tall left pillar (tip -0.30, 1.02, -0.10)
+    vec4<f32>(-0.36, 0.90, -0.04, 0.13),
+    vec4<f32>(-0.20, 1.06, -0.16, 0.075),
+    vec4<f32>(-0.46, 0.72, 0.02, 0.06),
+    // head of the middle pillar (tip 0.34, 0.40, -0.16)
+    vec4<f32>(0.28, 0.36, -0.10, 0.10),
+    vec4<f32>(0.42, 0.30, -0.22, 0.055),
+    // head of the small right pillar (tip 0.80, 0.02, 0.30)
+    vec4<f32>(0.75, -0.03, 0.25, 0.085),
+    vec4<f32>(0.87, -0.12, 0.35, 0.045),
+  );
+  for (var e = 0; e < 7; e = e + 1) {
+    sd = min(sd, length(qw - eggs[e].xyz) - eggs[e].w);
+  }
+
+  // (3) surface erosion folded into the threshold. Isotropic in the low
+  // shielded regions; toward the irradiated tops it blends into STREAK
+  // noise — the same fbm sampled in a space squashed along the direction
+  // to the ionizing cluster, so its features elongate along the
+  // photoevaporation flow (mean of the three light-star directions,
+  // fixed like the lighting rig itself).
+  let streamDir = vec3<f32>(0.20, 0.92, 0.34);
+  let along = dot(qw, streamDir);
+  let qStreak = qw - streamDir * (along * 0.78);
+  let isoErosion = fbm3(qw * 4.2 + gen.seed * 1.3) - 0.5;
+  let streakErosion = fbm3(qStreak * 5.5 + gen.seed * 1.3) - 0.5;
+  let streamW = smoothstep(-0.3, 1.0, along);
+  let erosion = mix(isoErosion, streakErosion, streamW * 0.7);
   sd = sd + erosion * 0.19;
 
   // Density transfer: a narrow smoothstep across the (noisy) zero level
   // set. The negative inner edge gives the columns a solid core rather
-  // than a hollow shell.
-  var dust = smoothstep(0.05, -0.16, sd);
+  // than a hollow shell. The band is deliberately TIGHT (~0.09 units,
+  // ~6 voxels): the real pillars' photoevaporation fronts are sharp, and
+  // a wide ramp here reads as fog no matter how the marcher is tuned.
+  var dust = smoothstep(0.02, -0.07, sd);
   // (4) internal clumping — lit faces show structure, not a flat wall.
   dust = dust * (0.42 + 0.58 * fbm3(qw * 6.5 + vec3<f32>(3.7) + gen.seed));
 

@@ -62,7 +62,7 @@ struct BakeUniforms {
 // per scene unit to STARLIGHT. Higher = harder shadows, brighter rims by
 // contrast. Kept slightly above the view-path extinction so shadow cores
 // read fully dark before the view path saturates.
-const SIGMA_LIGHT = 9.0;
+const SIGMA_LIGHT = 16.0;
 const LIGHT_STEPS = 28;
 const AO_STEPS = 8;
 const AO_STEP_LEN = 0.10;

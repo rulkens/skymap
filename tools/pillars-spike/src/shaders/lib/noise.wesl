@@ -72,6 +72,56 @@ fn fbm3(p_in: vec3<f32>) -> f32 {
   return sum;
 }
 
+// valueNoise3Tile — periodic value noise: identical to valueNoise3 except
+// every lattice corner is wrapped modulo 'period', so the pattern tiles
+// seamlessly with that period. Exists for the DETAIL texture bake, which
+// is sampled with a repeat-mode sampler at high frequency — non-periodic
+// noise would show a wall of seams at every texture repeat.
+fn valueNoise3Tile(p: vec3<f32>, period: f32) -> f32 {
+  let i = floor(p);
+  let f = fract(p);
+  let u = f * f * (3.0 - 2.0 * f);
+  // Wrap each corner onto [0, period) before hashing. The '+ period'
+  // guards tiny negative floats from floor() at the origin.
+  let pv = vec3<f32>(period);
+  let w000 = (i + vec3<f32>(0.0, 0.0, 0.0) + pv) % pv;
+  let w100 = (i + vec3<f32>(1.0, 0.0, 0.0) + pv) % pv;
+  let w010 = (i + vec3<f32>(0.0, 1.0, 0.0) + pv) % pv;
+  let w110 = (i + vec3<f32>(1.0, 1.0, 0.0) + pv) % pv;
+  let w001 = (i + vec3<f32>(0.0, 0.0, 1.0) + pv) % pv;
+  let w101 = (i + vec3<f32>(1.0, 0.0, 1.0) + pv) % pv;
+  let w011 = (i + vec3<f32>(0.0, 1.0, 1.0) + pv) % pv;
+  let w111 = (i + vec3<f32>(1.0, 1.0, 1.0) + pv) % pv;
+  let nx00 = mix(hash31(w000), hash31(w100), u.x);
+  let nx10 = mix(hash31(w010), hash31(w110), u.x);
+  let nx01 = mix(hash31(w001), hash31(w101), u.x);
+  let nx11 = mix(hash31(w011), hash31(w111), u.x);
+  let nxy0 = mix(nx00, nx10, u.y);
+  let nxy1 = mix(nx01, nx11, u.y);
+  return mix(nxy0, nxy1, u.z);
+}
+
+// fbm3Tile — periodic fbm over valueNoise3Tile. Lacunarity is EXACTLY 2
+// (not fbm3's 2.02): tiling demands every octave's period be an integer
+// multiple of the base period, so the anti-alignment trick is unavailable.
+// At only 3 octaves inside a 64-texel texture the aligned lattices never
+// get the run length to read as ridges.
+fn fbm3Tile(p_in: vec3<f32>, period_in: f32, octaves: i32) -> f32 {
+  var p = p_in;
+  var period = period_in;
+  var amp = 0.5;
+  var sum = 0.0;
+  var norm = 0.0;
+  for (var i = 0; i < octaves; i = i + 1) {
+    sum = sum + amp * valueNoise3Tile(p, period);
+    norm = norm + amp;
+    p = p * 2.0;
+    period = period * 2.0;
+    amp = amp * 0.5;
+  }
+  return sum / norm;
+}
+
 // fbm3Vec — three decorrelated fbm channels for domain warping. The fixed
 // offsets are arbitrary large constants that put each channel in a distant
 // region of the hash lattice, so the warp vector's components don't

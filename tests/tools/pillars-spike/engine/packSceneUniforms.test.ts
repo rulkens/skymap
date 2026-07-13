@@ -23,6 +23,8 @@ function args() {
     ambientMul: 4.4,
     starBrightness: 5.5,
     phaseG: 0.6,
+    detailErosion: 0.7,
+    detailScale: 8.8,
   };
 }
 
@@ -43,6 +45,8 @@ describe('packSceneUniforms', () => {
     expect(out[35]).toBeCloseTo(4.4);
     expect(out[36]).toBeCloseTo(5.5);
     expect(out[37]).toBeCloseTo(0.6);
+    expect(out[38]).toBeCloseTo(0.7);
+    expect(out[39]).toBeCloseTo(8.8);
   });
 
   it('rejects an undersized scratch buffer', () => {

@@ -29,6 +29,8 @@ const SLIDERS: readonly SliderSpec[] = [
   { key: 'ambientMul', label: 'ambient', min: 0, max: 4, step: 0.05, value: 0.8 },
   { key: 'starBrightness', label: 'stars', min: 0, max: 3, step: 0.05, value: 1.0 },
   { key: 'phaseG', label: 'anisotropy', min: 0, max: 0.85, step: 0.01, value: 0.45 },
+  { key: 'detailErosion', label: 'detail erosion', min: 0, max: 1, step: 0.01, value: 0.55 },
+  { key: 'detailScale', label: 'detail scale', min: 1, max: 14, step: 0.1, value: 5.0 },
 ];
 
 async function boot(): Promise<void> {
