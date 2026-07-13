@@ -211,15 +211,15 @@ vi.mock('../../../../src/services/gpu/renderers/planetRenderer', async (importOr
 vi.mock('../../../../src/services/gpu/renderers/starPointRenderer', () => ({
   createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
 }));
-// Partial mock, same rationale as planetRenderer's above: orbitRingsLayer.ts
+// Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
 // real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its
 // staging buffer, so only the factory is stubbed.
-vi.mock('../../../../src/services/gpu/renderers/orbitRingRenderer', async (importOriginal) => ({
+vi.mock('../../../../src/services/gpu/renderers/orbitTrailRenderer', async (importOriginal) => ({
   ...(await importOriginal<
-    typeof import('../../../../src/services/gpu/renderers/orbitRingRenderer')
+    typeof import('../../../../src/services/gpu/renderers/orbitTrailRenderer')
   >()),
-  createOrbitRingRenderer: vi.fn(() => makeStub('orbitRingRenderer')),
+  createOrbitTrailRenderer: vi.fn(() => makeStub('orbitTrailRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
@@ -289,7 +289,7 @@ function makeState(): EngineState {
       starRenderer: null,
       planetRenderer: null,
       starPointRenderer: null,
-      orbitRingRenderer: null,
+      orbitTrailRenderer: null,
     },
     // The real seeded stores: planets draw through a single instanced
     // planetRenderer fed by bodies.planets, and initGpu partitions
@@ -391,9 +391,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // included) is a sub-pixel point, so the whole seed IS the boot
     // partition; the layer's draw stays pure.
     expect(state.gpu.starPointRenderer).toBe(stubs.starPointRenderer);
-    // The orbit-ring renderer needs no data delivery (SCENE_ORBITS is a
+    // The orbit-trail renderer needs no data delivery (SCENE_ORBIT_CONICS is a
     // static module-level table) — construction alone lands the handle.
-    expect(state.gpu.orbitRingRenderer).toBe(stubs.orbitRingRenderer);
+    expect(state.gpu.orbitTrailRenderer).toBe(stubs.orbitTrailRenderer);
     expect(stubs.starPointRenderer!.setStars).toHaveBeenCalledTimes(1);
     const uploaded = stubs.starPointRenderer!.setStars.mock.calls[0]![0] as ReadonlyArray<{
       id: string;

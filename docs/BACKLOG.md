@@ -56,6 +56,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **starRenderer per-instance uniforms** `ready` — the star-sphere renderer's single non-dynamic uniform means two same-frame resolved stars share the last-written MVP (benign with today's seeds, documented in `starSpheresLayer`); upgrade to the `planetRenderer` instanced shape, natural fold candidate for the renderers reorg.
 - [ ] **Galaxy impostor LOD** `needs-design` — per-galaxy rgba16f impostors baked from the GPU generator (photo-thumbnail band retires; procedural disk stays as placeholder band), full star+dust geometry above ~128 px; band counts, churn, per-tier memory, and Hubble-type coverage all measured. → [details](backlog/2026-07-08-galaxy-impostor-lod.md)
 - [ ] **GPU renderers folder reorg** `ready` — family folders + lib primitives + pointRenderer split; spec approved (zoom-to-earth plan 02 landed), plans still to be written. → [spec](superpowers/specs/2026-07-10-gpu-renderers-reorg-design.md)
+- [ ] **`data/bodies/` cleanup + reorg** `needs-design` — extract duplicated helpers (`DEG_TO_RAD`), move maker fns + palette out of the data tables, one-symbol-per-file; grew fast adding planets + moons. → [details](backlog/2026-07-14-data-bodies-cleanup.md)
 - [ ] **Star-bin ↔ MW-cloud crossfade density calibration** `deferred` — calibrate the procedural cloud's inner density/colors to Gaia counts if the v1 hand-tuned crossfade band shows a seam; gated on the star bin shipping. → [details](backlog/2026-07-13-star-bin-crossfade-density-calibration.md)
 
 ## UI & UX

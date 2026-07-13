@@ -100,17 +100,17 @@ iteration to a tight tolerance). Pure. Used CPU-side to place the body at its
 seed position (Task 3) — NOT on the GPU (the fragment goes the forward, closed
 direction `M = E − e·sin E`, spec §3.3).
 
-- [ ] Add `eccentricAnomalyFromMean.ts` — single function. Didactic docblock:
+- [x] Add `eccentricAnomalyFromMean.ts` — single function. Didactic docblock:
   WHY Newton (fast quadratic convergence for `e < 1`), WHY only the CPU needs the
   inverse (the fragment uses the trivial forward direction — spec §3.3).
-- [ ] Test `eccentricAnomalyFromMean returns M when e is 0` — `e = 0` ⇒ `E = M`
+- [x] Test `eccentricAnomalyFromMean returns M when e is 0` — `e = 0` ⇒ `E = M`
   for a couple of `M` values (hand-obvious, independent of the iteration).
-- [ ] Test `eccentricAnomalyFromMean satisfies Kepler's equation` — for a few
+- [x] Test `eccentricAnomalyFromMean satisfies Kepler's equation` — for a few
   `(M, e)` with `e ∈ {0.05, 0.5}`, assert `E − e·sin(E) − M` is within `1e-10`
   (an independent residual property, not a mirror of the solver).
-- [ ] Test `eccentricAnomalyFromMean round-trips a known E` — pick `E`, form
+- [x] Test `eccentricAnomalyFromMean round-trips a known E` — pick `E`, form
   `M = E − e·sin E` by hand, assert the solver returns `E` within `1e-10`.
-- [ ] `npm test -- eccentricAnomalyFromMean` → green. Commit.
+- [x] `npm test -- eccentricAnomalyFromMean` → green. Commit.
 
 ## Task 2 — `keplerianEllipse` (elements → world `A`, `B`, `C`)
 
@@ -136,21 +136,21 @@ affine-image-of-the-unit-circle ellipse, in the equatorial frame, **focus at the
 origin** (the caller adds the parent's absolute world position — Task 7). Uses
 `ECLIPTIC_BASIS` for the ecliptic→equatorial map.
 
-- [ ] Add `keplerianEllipse.ts`. Didactic docblock: the affine-image-of-circle
+- [x] Add `keplerianEllipse.ts`. Didactic docblock: the affine-image-of-circle
   fact (spec §3.1 — real orbit geometry is entirely in `A`, `B`, `C`, the curve
   is always the unit circle), and WHY focus-relative (the parent add is the
   caller's job so the same math serves heliocentric and geocentric orbits).
-- [ ] Test `keplerianEllipse of a circular equatorial orbit spans equal axes in
+- [x] Test `keplerianEllipse of a circular equatorial orbit spans equal axes in
   the ecliptic` — `e = 0, i = 0, Ω = 0, ω = 0`: assert `|A| = |B| = a`,
   `A · B ≈ 0`, both `A`, `B` dotted with `ECLIPTIC_BASIS.normal ≈ 0` (in-plane),
   `centerOffsetMpc ≈ [0,0,0]`, and `A` along `+x` (the equinox, since `ω=Ω=0`).
-- [ ] Test `keplerianEllipse centre-offset is a·e along −A for an eccentric
+- [x] Test `keplerianEllipse centre-offset is a·e along −A for an eccentric
   orbit` — `e = 0.5`: assert `|centerOffsetMpc| ≈ a·e` and it is antiparallel to
   `A` (dot < 0, `|cross| ≈ 0`).
-- [ ] Test `keplerianEllipse tilts the plane by the inclination` — `i = 90°`:
+- [x] Test `keplerianEllipse tilts the plane by the inclination` — `i = 90°`:
   assert the plane normal `A × B` is orthogonal to what a `0°` orbit gives (the
   inclination actually rotates the plane, not a no-op).
-- [ ] `npm test -- keplerianEllipse` → green. Commit.
+- [x] `npm test -- keplerianEllipse` → green. Commit.
 
 ## Task 3 — `keplerianPositionMpc` (elements → focus-relative position)
 
@@ -166,16 +166,16 @@ origin** (the caller adds the parent's absolute world position — Task 7). Uses
 export function keplerianPositionMpc(elements: OrbitalElements): Vec3;
 ```
 
-- [ ] Add `keplerianPositionMpc.ts` — composes `keplerianEllipse` +
+- [x] Add `keplerianPositionMpc.ts` — composes `keplerianEllipse` +
   `eccentricAnomalyFromMean`. Didactic docblock: this is the ONE evaluation that
   makes the body sit on its own trail (spec §5) — both the body seed and the
   trail derive from the same `A`, `B`, `C`.
-- [ ] Test `keplerianPositionMpc at M=0 is periapsis` — `M = 0`: assert the
+- [x] Test `keplerianPositionMpc at M=0 is periapsis` — `M = 0`: assert the
   returned vector's length equals `a(1 − e)` within tolerance (periapsis
   distance — hand-derived, not via the source).
-- [ ] Test `keplerianPositionMpc at M=π is apoapsis` — `M = π`: length equals
+- [x] Test `keplerianPositionMpc at M=π is apoapsis` — `M = π`: length equals
   `a(1 + e)`.
-- [ ] `npm test -- keplerianPositionMpc` → green. Commit.
+- [x] `npm test -- keplerianPositionMpc` → green. Commit.
 
 ## Task 4 — `ORBITAL_ELEMENTS` table + `OrbitalElements` type
 
@@ -189,20 +189,21 @@ the verified J2000 elements in spec §7 (Earth EMB, Jupiter — heliocentric,
 (au/km → Mpc) and `deg → rad`, with the `ω = ϖ − Ω`, `M = L − ϖ` arithmetic shown
 in a comment at the seed site.
 
-- [ ] Add `OrbitalElements.d.ts` — one type, exactly the spec §5 shape (`type`,
-  not `interface`; `Vec3` alias).
-- [ ] Add `orbitalElements.ts` — `ORBITAL_ELEMENTS: readonly OrbitalElements[]`
+- [x] Add `OrbitalElements.d.ts` — one type, exactly the spec §5 shape (`type`,
+  not `interface`; `Vec3` alias). _(Pre-satisfied by Task 2, which needed the
+  type ahead of this task; no reshape required — all 9 fields present.)_
+- [x] Add `orbitalElements.ts` — `ORBITAL_ELEMENTS: readonly OrbitalElements[]`
   (earth, jupiter, moon). Didactic docblock: this table is THE source of truth
   (bodies AND trails derive from it — spec §5), the frames (planets = ecliptic
   heliocentric, Moon = ecliptic geocentric), and the JPL provenance (spec §7
   URLs). No buried literals — every number is `<human value> * SCALE_UNITS.…` or
   `<deg> * DEG_TO_RAD`.
-- [ ] Test `ORBITAL_ELEMENTS has a valid structure` — the load-bearing
+- [x] Test `ORBITAL_ELEMENTS has a valid structure` — the load-bearing
   invariants only (per `testing.md` — NOT a value restatement): every `id` is
   unique; every non-null `parentId` resolves to another entry's `id` OR to a
   seeded body id (the Moon's `'earth'`); `0 ≤ eccentricity < 1` for each;
   `semiMajorMpc > 0`.
-- [ ] `npm test -- orbitalElements` → green. Commit.
+- [x] `npm test -- orbitalElements` → green. Commit.
 
 ## Task 5 — Re-seed `sceneBodies` Earth / Jupiter / Moon from elements
 
@@ -230,21 +231,21 @@ target). A literal-tuple assertion is a constant-restatement (`testing.md`) —
 delete it, don't preserve the old value. If a NON-test consumer hard-codes the
 axis, STOP and report rather than silently relocating it.
 
-- [ ] Re-point the three seeds to the derived positions; update the docblocks at
+- [x] Re-point the three seeds to the derived positions; update the docblocks at
   `sceneBodies.ts:60-66` / `:143-154` (the "fixed placeholder" / "first-quarter
   geometry" prose is now stale — the positions are real J2000 mean positions
   derived from `ORBITAL_ELEMENTS`, single source of truth).
-- [ ] Delete any test asserting a literal placeholder position (constant
+- [x] Delete any test asserting a literal placeholder position (constant
   restatement). Keep/extend a **structural** test: `sceneBodies derives the Moon
   relative to Earth` — assert `|Moon − Earth|` ≈ `MOON semiMajor`-scale (a
   lunar-distance order-of-magnitude band), proving the parent-relative derivation
   (not a value pin).
-- [ ] `npm test -- sceneBodies` → green.
-- [ ] **VISUAL GATE (needs `?deepZoom`) — STOP and ask the user to confirm:** the
-  bodies now sit at their true J2000 relative positions (Earth off the old `+x`
-  axis); the descent still reaches Earth and the Sun/Earth/Moon/Jupiter sit at
-  believable relative places. Confirm the relocation is acceptable (spec §5
-  visible consequence). Commit after the user confirms.
+- [x] `npm test -- sceneBodies` → green.
+- [x] **VISUAL GATE (needs `?deepZoom`) — CONFIRMED 2026-07-14:** the bodies sit
+  at their true J2000 relative positions (Earth off the old `+x` axis); the descent
+  still reaches Earth and the Sun/Earth/Moon/Jupiter (and the added planets) sit at
+  believable relative places. Confirmed through the live dev-server iteration loop
+  and the user's go-ahead to land the PR.
 
 ## Task 6 — `narrowMat3` + `composeOrbitConic` (the `f64` conic composer)
 
@@ -279,11 +280,11 @@ export function composeOrbitConic(
 ): Float32Array; // Ginv as a 12-element padded mat3x3<f32> (column-major, std140)
 ```
 
-- [ ] Add `narrowMat3.ts` + test `narrowMat3 preserves the 12-element padded
+- [x] Add `narrowMat3.ts` + test `narrowMat3 preserves the 12-element padded
   layout` — assert length 12 and element-wise equality to the source under f32
   rounding (this is the on-GPU-boundary contract, load-bearing like the
   `narrowMat4` narrow).
-- [ ] Add `composeOrbitConic.ts`. Didactic docblock: WHY compose the FULL `H` in
+- [x] Add `composeOrbitConic.ts`. Didactic docblock: WHY compose the FULL `H` in
   `f64` before inverting (identical cancellation argument to
   `composeOrbitMvp.ts:15-27` — the large-`VP`-translation vs tiny-`Crel`
   cancellation is resolved at double precision), WHY only `x,y,w` clip rows
@@ -291,19 +292,19 @@ export function composeOrbitConic(
   alone (the fragment derives the conic value, the Sampson gradient, AND the
   back-projection from the single `q = Ginv·x` — spec §3.3). Note the `mat3d`
   zero-init landmine.
-- [ ] Test `composeOrbitConic back-projects the periapsis to plane (1,0)` — build
+- [x] Test `composeOrbitConic back-projects the periapsis to plane (1,0)` — build
   a simple `f64` `VP` (e.g. `mat4d.perspective` ∘ `mat4d.lookAt`) + a viewport;
   forward-project the world point `C + A` to a pixel by the **standard pipeline**
   (clip = `VP·[Crel+A;1]`, NDC, viewport — computed independently of the util);
   feed the pixel to the returned `Ginv` as `q = Ginv·(px,py,1)`; assert
   `q.z > 0` and `(q.x/q.z, q.y/q.z) ≈ (1, 0)`. (Round-trip property — the forward
   projection is not the inverse under test, so this is not a mirror.)
-- [ ] Test `composeOrbitConic back-projects the E=90° point to plane (0,1)` — same
+- [x] Test `composeOrbitConic back-projects the E=90° point to plane (0,1)` — same
   construction with `C + B` → `(0, 1)`.
-- [ ] Test `composeOrbitConic places an off-ellipse point outside the unit
+- [x] Test `composeOrbitConic places an off-ellipse point outside the unit
   circle` — forward-project `C + 2A` → back-project → `(s,t) ≈ (2,0)`,
   `s² + t² ≈ 4 > 1` (the conic's inside/outside sign is correct).
-- [ ] `npm test -- narrowMat3 composeOrbitConic` → green. Commit.
+- [x] `npm test -- narrowMat3 composeOrbitConic` → green. Commit.
 
 ## Task 7 — `OrbitConic` type + `SCENE_ORBIT_CONICS` derived table
 
@@ -319,13 +320,13 @@ resolution: `centerMpc = parentWorld + keplerianEllipse(el).centerOffsetMpc`,
 `null` → `RENDER_ORIGIN_MPC`; `'earth'` → `SCENE_EARTH.positionMpc` (Task 5,
 already derived).
 
-- [ ] Add `OrbitConic.d.ts` — one type, exactly the spec §5 sketch.
-- [ ] Add `sceneOrbitConics.ts` — `SCENE_ORBIT_CONICS: readonly OrbitConic[]`.
+- [x] Add `OrbitConic.d.ts` — one type, exactly the spec §5 sketch.
+- [x] Add `sceneOrbitConics.ts` — `SCENE_ORBIT_CONICS: readonly OrbitConic[]`.
   Didactic docblock: derived-from-elements (single source of truth, spec §5), the
   parent-resolution rule (Sun origin vs Earth for the Moon), and that this REPLACES
   the outgoing `sceneOrbits.ts` (`SCENE_ORBITS` derived from body seeds — the
   inverted dependency).
-- [ ] Test `SCENE_ORBIT_CONICS places each body on its own ellipse` — for each
+- [x] Test `SCENE_ORBIT_CONICS places each body on its own ellipse` — for each
   conic, take the matching body's world position `X_body` (`SCENE_BODIES`), form
   plane coords by projecting onto the `A`,`B` basis — `s = (X_body − C)·A / |A|²`,
   `t = (X_body − C)·B / |B|²` (the solution of `X_body = C + s·A + t·B` since
@@ -333,9 +334,9 @@ already derived).
   body-on-trail invariant
   (spec §5), an independent check (uses `keplerianPositionMpc`'s output via the
   body seed, verified against the ellipse basis, not a formula mirror).
-- [ ] Test `SCENE_ORBIT_CONICS resolves the Moon's centre to Earth` — assert the
+- [x] Test `SCENE_ORBIT_CONICS resolves the Moon's centre to Earth` — assert the
   Moon conic's `centerMpc ≈ SCENE_EARTH.positionMpc` (parent resolution, spec §5).
-- [ ] `npm test -- sceneOrbitConics` → green. Commit.
+- [x] `npm test -- sceneOrbitConics` → green. Commit.
 
 ## Task 8 — `orbitTrailRenderer` + WESL shader family
 
@@ -385,18 +386,18 @@ Fullscreen-triangle geometry is generated in the vertex shader from
 `@builtin(vertex_index)` — **no position VBO**; the pipeline's only vertex buffer
 is the instance-step record above.
 
-- [ ] Add `orbitTrail/io.wesl` — `struct VSOut` with `@builtin(position) clip`
+- [x] Add `orbitTrail/io.wesl` — `struct VSOut` with `@builtin(position) clip`
   and flat varyings: three `vec3<f32>` `Ginv` columns, `vec3<f32>` color, `f32`
   eccentricity, `f32` meanAnomaly. Didactic comment (single quotes, NO
   backticks): one authoritative inter-stage decl makes location drift impossible
   (mirror `orbitRing/io.wesl`), and every varying is `@interpolate(flat)` (all
   per-instance constants).
-- [ ] Add `orbitTrail/vertex.wesl` — emit the fullscreen triangle from
+- [x] Add `orbitTrail/vertex.wesl` — emit the fullscreen triangle from
   `@builtin(vertex_index)`; pass the per-instance `Ginv` columns + color + e + M
   through flat. Didactic comment: WHY fullscreen (the projected conic lands
   anywhere on screen — spec §2 rejected bounding-quad), WHY per-instance
   attributes not a uniform (the writeBuffer-vs-submit house idiom).
-- [ ] Add `orbitTrail/fragment.wesl` — implement spec §3.3 EXACTLY:
+- [x] Add `orbitTrail/fragment.wesl` — implement spec §3.3 EXACTLY:
   `q = Ginv · vec3(pos.xy, 1)`; `discard`/skip where `q.z <= 0` (behind camera);
   `f = q.x*q.x + q.y*q.y − q.z*q.z`; `d = transpose(Ginv) * vec3(q.x, q.y, −q.z)`
   (or the explicit column form); `sampson = abs(f) / (2 * length(d.xy))`;
@@ -411,19 +412,19 @@ is the instance-step record above.
   degeneracy — spec §3.3), WHY forward Kepler `M = E − e sin E` needs no GPU
   solve, WHY the `f32` back-projection is harmless (feeds only slowly-varying
   brightness — spec §3.3). NO backticks anywhere.
-- [ ] Add `orbitTrailRenderer.ts` — pipeline + `draw` + `destroy` per the ring
+- [x] Add `orbitTrailRenderer.ts` — pipeline + `draw` + `destroy` per the ring
   renderer's structure, fullscreen-triangle geometry, the instance layout above.
   Didactic module header mirroring `orbitRingRenderer.ts:1-42` but for the conic
   (spec §2 rationale — exact ellipse, no tessellation, pixel-space numerically
   benign).
-- [ ] Add `OrbitTrailRenderer.d.ts` — one type.
-- [ ] Test `orbitTrailRenderer.test.ts` — whatever headless shape the ring
+- [x] Add `OrbitTrailRenderer.d.ts` — one type.
+- [x] Test `orbitTrailRenderer.test.ts` — whatever headless shape the ring
   renderer's test used (handle shape: `label`, `draw`, `destroy`; `draw` clamps
   `count` to `MAX_ORBITS`; a zero-count `draw` is a no-op). If the ring renderer
   had no test, add only the `draw`-clamp/no-op behaviour (no pipeline
   restatement).
-- [ ] `npm test -- orbitTrailRenderer` → green.
-- [ ] **VISUAL GATE (needs `?deepZoom`) — deferred to Task 9** (the renderer is
+- [x] `npm test -- orbitTrailRenderer` → green.
+- [x] **VISUAL GATE (needs `?deepZoom`) — deferred to Task 9** (the renderer is
   not wired until the layer swap). Commit the renderer + shaders.
 
 ## Task 9 — `orbitTrailsLayer`, wire it in, swap the handle
@@ -448,31 +449,33 @@ conic.semiMajorMpc, conic.semiMinorMpc, view.viewportPx, RENDER_ORIGIN_MPC)`
 **The `f64` seam is a hard invariant** — compose from `view.slab.vp`, NEVER
 `view.vp` (`orbitRingsLayer.ts:14-21`). Document it in the layer header.
 
-- [ ] Add `orbitTrailsLayer.ts` — the `ContentLayer` row, reading
+- [x] Add `orbitTrailsLayer.ts` — the `ContentLayer` row, reading
   `SCENE_ORBIT_CONICS`, composing via `composeOrbitConic`. Didactic header
   mirroring `orbitRingsLayer.ts:1-28` (row shape, the `f64` seam, handle-only
   gate).
-- [ ] Swap `passes/index.ts`: replace the `orbitRingsLayer` import (`:151`),
+- [x] Swap `passes/index.ts`: replace the `orbitRingsLayer` import (`:151`),
   the registry entry (`:183`, in the `(hdr, NEAR0)` group after `starPointsLayer`),
   and the re-export (`:228`) with `orbitTrailsLayer`. Update the draw-order
   docblock (`:41-43`) to name the conic trails.
-- [ ] Swap `initGpu.ts`: `state.gpu.orbitTrailRenderer =
+- [x] Swap `initGpu.ts`: `state.gpu.orbitTrailRenderer =
   createOrbitTrailRenderer(device, 'rgba16float')` (`:425`), import at `:70`.
-- [ ] Rename the `EngineGpuHandles` slot `orbitRingRenderer` →
+- [x] Rename the `EngineGpuHandles` slot `orbitRingRenderer` →
   `orbitTrailRenderer` (find it in `EngineGpuHandles.d.ts`); update the layer's
   `enabled`/`draw` handle reads to the new name.
-- [ ] Test `orbitTrailsLayer.test.ts` — `slab === NEAR0`, `target === 'hdr'`,
+- [x] Test `orbitTrailsLayer.test.ts` — `slab === NEAR0`, `target === 'hdr'`,
   `blend === 'additive'`; `enabled` false when the handle is null, true when
   present; `draw` composes one record per conic and calls `renderer.draw` with
   `count === SCENE_ORBIT_CONICS.length` (spy renderer, mirror the ring-layer
   test).
-- [ ] `npm test -- orbitTrailsLayer` → green.
-- [ ] **VISUAL GATE (needs `?deepZoom`) — STOP and ask the user to confirm:**
-  each orbit is a smooth **ellipse** (not a circle) with a constant-width stroke
-  from galaxy scale down to Earth-surface (no steps, no jitter at deep zoom); the
-  body sphere sits **on** its trail; the brightness tail trails **behind** the
-  moving body; no phantom arc appears behind the camera as a plane goes edge-on.
-  Commit after the user confirms.
+- [x] `npm test -- orbitTrailsLayer` → green.
+- [x] **VISUAL GATE (needs `?deepZoom`) — CONFIRMED 2026-07-14:** each orbit is a
+  smooth **ellipse** (not a circle) with a constant-width stroke from galaxy scale
+  down to Earth-surface (no steps, no jitter at deep zoom); the body sphere sits
+  **on** its trail; the brightness tail trails **behind** the moving body; no
+  phantom arc appears behind the camera as a plane goes edge-on. Confirmed through
+  the live iteration loop that also fixed the near-edge-on flare (plane-space
+  stroke metric), the grazing-angle horizon line (Newton-consistency reject), and
+  added the apparent-size fade — plus the per-planet moon tilt.
 
 ## Task 10 — Delete the circle-SDF ring version (grep-gated)
 
@@ -483,15 +486,15 @@ conic.semiMajorMpc, conic.semiMinorMpc, view.viewportPx, RENDER_ORIGIN_MPC)`
 `src/data/bodies/sceneOrbits.ts`, `src/@types/scene/SceneOrbit.d.ts`,
 `src/utils/camera/composeOrbitMvp.ts`, and each file's mirror test.
 
-- [ ] Delete the files above.
-- [ ] **Grep gate — no references left** (the deletion is real, not orphaned):
+- [x] Delete the files above.
+- [x] **Grep gate — no references left** (the deletion is real, not orphaned):
   a repo search for `orbitRing`, `OrbitRingRenderer`, `SCENE_ORBITS`,
   `SceneOrbit`, `composeOrbitMvp`, and the `orbitRingRenderer` handle name
   returns ZERO hits outside this plan/spec. (The main thread runs the search —
   background subagents cannot; `feedback_bg_subagents_no_npm`.)
-- [ ] `npm run typecheck` → clean (proves nothing imported a deleted symbol).
-- [ ] `npm test` → green (the deleted mirror tests are gone; nothing else broke).
-- [ ] Commit.
+- [x] `npm run typecheck` → clean (proves nothing imported a deleted symbol).
+- [x] `npm test` → green (the deleted mirror tests are gone; nothing else broke).
+- [x] Commit.
 
 ## Task 11 — Entanglement-radar pass + full gate
 
@@ -530,18 +533,29 @@ to un-braid):**
   record, verified by the Task 8 offset table (invisible-until-iOS-drops-the-frame
   class, `testing.md` keep-rule).
 
-- [ ] Run `entanglement-radar`; for each candidate record essential/accidental +
-  the verdict (PR body or a short notes block). Un-braid any accidental braid
-  (small) or capture a larger follow-up in `docs/BACKLOG.md` — do NOT touch
-  `docs/BACKLOG.md` in THIS plan's worktree if another agent owns it; capture via
-  the controller instead.
-- [ ] `npm run typecheck` (both src + tools tsconfigs) → clean.
-- [ ] `npm test` (full suite) → green.
-- [ ] Note in the PR body the visual properties the user confirmed (Tasks 5, 9) —
-  NOT covered by automated tests: body relocation acceptable; smooth exact
-  ellipses at deep zoom; body-on-trail; trailing brightness; no behind-camera
-  phantom arc.
-- [ ] Commit.
+- [x] Ran `entanglement-radar` over the feature diff. All five flagged candidates
+  are **essential + un-braided** (verdicts in the PR body): (1) the element table
+  is the single source — both `sceneBodies` (`keplerianPositionMpc`) and
+  `sceneOrbitConics` (`keplerianEllipse`) derive from it, no surviving placeholder
+  literal; (2) a moon's parent resolves through one `SCENE_BODIES` lookup, not two
+  Earth references; (3) `orbitTrailsLayer` composes from `view.slab.vp` only,
+  never `view.vp`; (4) the fragment carries one `Ginv`, deriving stroke + trail +
+  back-projection from `q = Ginv·x`; (5) `INSTANCE_FLOATS`/`STRIDE`/`MAX_ORBITS`
+  have one home in `orbitTrailRenderer`, imported by the layer. New surfaces from
+  the post-plan planet/moon work are also clean: the optional `plane` field has one
+  reader (`keplerianEllipse`), and the `satellite()` maker's fixed `Ω/ω/M = 0` is an
+  ESSENTIAL asymmetry (moon angular phase is not tabulated), not an accidental
+  mirror of the planet rows. Follow-up (`data/bodies/` reorg — duplicated
+  `DEG_TO_RAD`, inline makers, scattered palette) captured in
+  `docs/backlog/2026-07-14-data-bodies-cleanup.md`.
+- [x] `npm run typecheck` (both src + tools tsconfigs) → clean.
+- [x] `npm test` (full suite) → 3922 passed.
+- [x] PR body records the user-confirmed visual properties (Tasks 5, 9), confirmed
+  through the live dev-server iteration loop (flare fix, trail brightness, horizon
+  reject, apparent-size fade, all-8-planets "looks great", per-planet moon tilt):
+  body relocation acceptable; smooth exact ellipses at deep zoom; body-on-trail;
+  trailing brightness; no behind-camera phantom arc.
+- [x] Commit.
 
 ---
 

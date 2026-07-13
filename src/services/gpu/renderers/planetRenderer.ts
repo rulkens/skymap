@@ -55,9 +55,10 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 const SEGMENTS = 48;
 const RINGS = 24;
 
-/** Upper bound on planets drawn per frame. The descent only ever seeds a
- *  handful of bodies (Moon, Jupiter, …); this caps the instance buffer size. */
-export const MAX_PLANETS = 8;
+/** Upper bound on planet/moon spheres drawn per frame. 21 bodies ship today
+ *  (the seven non-Earth major planets + the Moon + Mars/Jupiter/Saturn's major
+ *  moons); this caps the instance buffer size with headroom for more. */
+export const MAX_PLANETS = 24;
 
 /**
  * Float32 slots per per-instance record: four `vec4<f32>` MVP columns (16) +

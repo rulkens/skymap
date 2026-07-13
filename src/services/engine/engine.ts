@@ -309,10 +309,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       starRenderer: null,
       planetRenderer: null,
       starPointRenderer: null,
-      // Debug orbit rings (Earth / Jupiter / Moon) — additive SDF annuli on
-      // the (hdr, NEAR0) step. null until initGpu; excluded from
-      // isEngineReady, null-checked at use by orbitRingsLayer.
-      orbitRingRenderer: null,
+      // Keplerian orbit trails (Earth / Jupiter / Moon) — additive screen-space
+      // conics on the (hdr, NEAR0) step. null until initGpu; excluded from
+      // isEngineReady, null-checked at use by orbitTrailsLayer.
+      orbitTrailRenderer: null,
       // Per-pass GPU timing service.  Always non-null — a no-op stub until
       // initGpu swaps in the device-aware service.  Consumers gate on
       // `.enabled`.
@@ -732,8 +732,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.planetRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
-    state.gpu.orbitRingRenderer?.destroy();
-    state.gpu.orbitRingRenderer = null;
+    state.gpu.orbitTrailRenderer?.destroy();
+    state.gpu.orbitTrailRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
