@@ -54,6 +54,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Galaxy impostor LOD** `needs-design` — per-galaxy rgba16f impostors baked from the GPU generator (photo-thumbnail band retires; procedural disk stays as placeholder band), full star+dust geometry above ~128 px; band counts, churn, per-tier memory, and Hubble-type coverage all measured. → [details](backlog/2026-07-08-galaxy-impostor-lod.md)
 - [ ] **Conic orbit trails (real elements)** `needs-design` — replace the circle debug rings with exact Keplerian ellipses projected to a screen-space conic (f64 CPU compose, Sampson-distance stroke); approach user-ratified. → [details](backlog/2026-07-10-conic-orbit-trails.md)
 - [ ] **GPU renderers folder reorg** `blocked` — family folders + lib primitives + pointRenderer split; spec approved, plans + execution gated on zoom-to-earth plan 02 landing. → [spec](superpowers/specs/2026-07-10-gpu-renderers-reorg-design.md)
+- [ ] **Star-bin ↔ MW-cloud crossfade density calibration** `deferred` — calibrate the procedural cloud's inner density/colors to Gaia counts if the v1 hand-tuned crossfade band shows a seam; gated on the star bin shipping. → [details](backlog/2026-07-13-star-bin-crossfade-density-calibration.md)
 
 ## UI & UX
 
