@@ -241,14 +241,11 @@ axis, STOP and report rather than silently relocating it.
   lunar-distance order-of-magnitude band), proving the parent-relative derivation
   (not a value pin).
 - [x] `npm test -- sceneBodies` → green.
-- [~] **VISUAL GATE (needs `?deepZoom`) — DEFERRED (user AFK 2026-07-13, "skip
-  the task 5 visual gate and keep going"):** code committed unblocked; the user
-  will eyeball the relocation on return before the branch merges. NOT yet
-  confirmed. **STOP and ask the user to confirm:** the
-  bodies now sit at their true J2000 relative positions (Earth off the old `+x`
-  axis); the descent still reaches Earth and the Sun/Earth/Moon/Jupiter sit at
-  believable relative places. Confirm the relocation is acceptable (spec §5
-  visible consequence). Commit after the user confirms.
+- [x] **VISUAL GATE (needs `?deepZoom`) — CONFIRMED 2026-07-14:** the bodies sit
+  at their true J2000 relative positions (Earth off the old `+x` axis); the descent
+  still reaches Earth and the Sun/Earth/Moon/Jupiter (and the added planets) sit at
+  believable relative places. Confirmed through the live dev-server iteration loop
+  and the user's go-ahead to land the PR.
 
 ## Task 6 — `narrowMat3` + `composeOrbitConic` (the `f64` conic composer)
 
@@ -471,12 +468,14 @@ conic.semiMajorMpc, conic.semiMinorMpc, view.viewportPx, RENDER_ORIGIN_MPC)`
   `count === SCENE_ORBIT_CONICS.length` (spy renderer, mirror the ring-layer
   test).
 - [x] `npm test -- orbitTrailsLayer` → green.
-- [~] **VISUAL GATE (needs `?deepZoom`) — DEFERRED (user AFK 2026-07-13, "skip the task 5 visual gate and keep going" applied to remaining gates); code landed unblocked, user confirms on return before merge. STOP and ask the user to confirm:**
-  each orbit is a smooth **ellipse** (not a circle) with a constant-width stroke
-  from galaxy scale down to Earth-surface (no steps, no jitter at deep zoom); the
-  body sphere sits **on** its trail; the brightness tail trails **behind** the
-  moving body; no phantom arc appears behind the camera as a plane goes edge-on.
-  Commit after the user confirms.
+- [x] **VISUAL GATE (needs `?deepZoom`) — CONFIRMED 2026-07-14:** each orbit is a
+  smooth **ellipse** (not a circle) with a constant-width stroke from galaxy scale
+  down to Earth-surface (no steps, no jitter at deep zoom); the body sphere sits
+  **on** its trail; the brightness tail trails **behind** the moving body; no
+  phantom arc appears behind the camera as a plane goes edge-on. Confirmed through
+  the live iteration loop that also fixed the near-edge-on flare (plane-space
+  stroke metric), the grazing-angle horizon line (Newton-consistency reject), and
+  added the apparent-size fade — plus the per-planet moon tilt.
 
 ## Task 10 — Delete the circle-SDF ring version (grep-gated)
 
@@ -534,18 +533,29 @@ to un-braid):**
   record, verified by the Task 8 offset table (invisible-until-iOS-drops-the-frame
   class, `testing.md` keep-rule).
 
-- [ ] Run `entanglement-radar`; for each candidate record essential/accidental +
-  the verdict (PR body or a short notes block). Un-braid any accidental braid
-  (small) or capture a larger follow-up in `docs/BACKLOG.md` — do NOT touch
-  `docs/BACKLOG.md` in THIS plan's worktree if another agent owns it; capture via
-  the controller instead.
-- [ ] `npm run typecheck` (both src + tools tsconfigs) → clean.
-- [ ] `npm test` (full suite) → green.
-- [ ] Note in the PR body the visual properties the user confirmed (Tasks 5, 9) —
-  NOT covered by automated tests: body relocation acceptable; smooth exact
-  ellipses at deep zoom; body-on-trail; trailing brightness; no behind-camera
-  phantom arc.
-- [ ] Commit.
+- [x] Ran `entanglement-radar` over the feature diff. All five flagged candidates
+  are **essential + un-braided** (verdicts in the PR body): (1) the element table
+  is the single source — both `sceneBodies` (`keplerianPositionMpc`) and
+  `sceneOrbitConics` (`keplerianEllipse`) derive from it, no surviving placeholder
+  literal; (2) a moon's parent resolves through one `SCENE_BODIES` lookup, not two
+  Earth references; (3) `orbitTrailsLayer` composes from `view.slab.vp` only,
+  never `view.vp`; (4) the fragment carries one `Ginv`, deriving stroke + trail +
+  back-projection from `q = Ginv·x`; (5) `INSTANCE_FLOATS`/`STRIDE`/`MAX_ORBITS`
+  have one home in `orbitTrailRenderer`, imported by the layer. New surfaces from
+  the post-plan planet/moon work are also clean: the optional `plane` field has one
+  reader (`keplerianEllipse`), and the `satellite()` maker's fixed `Ω/ω/M = 0` is an
+  ESSENTIAL asymmetry (moon angular phase is not tabulated), not an accidental
+  mirror of the planet rows. Follow-up (`data/bodies/` reorg — duplicated
+  `DEG_TO_RAD`, inline makers, scattered palette) captured in
+  `docs/backlog/2026-07-14-data-bodies-cleanup.md`.
+- [x] `npm run typecheck` (both src + tools tsconfigs) → clean.
+- [x] `npm test` (full suite) → 3922 passed.
+- [x] PR body records the user-confirmed visual properties (Tasks 5, 9), confirmed
+  through the live dev-server iteration loop (flare fix, trail brightness, horizon
+  reject, apparent-size fade, all-8-planets "looks great", per-planet moon tilt):
+  body relocation acceptable; smooth exact ellipses at deep zoom; body-on-trail;
+  trailing brightness; no behind-camera phantom arc.
+- [x] Commit.
 
 ---
 
