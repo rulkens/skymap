@@ -221,7 +221,11 @@ export function createPickRenderer(
       }
       pass.setBindGroup(2, sourceBindGroup);
       pass.setVertexBuffer(0, src.vertexBuffer);
-      pass.draw(6, src.count);
+      // 3 vertices per instance — the circumscribing-triangle billboard.
+      // Must stay in lockstep with pointRenderer's draw(3, N): both
+      // pipelines compile the same points vertex shader, whose triCorner
+      // lookup only defines corners for vertex_index 0..2.
+      pass.draw(3, src.count);
     }
   }
 
