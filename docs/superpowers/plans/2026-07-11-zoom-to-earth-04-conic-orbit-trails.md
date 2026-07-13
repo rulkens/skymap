@@ -166,16 +166,16 @@ origin** (the caller adds the parent's absolute world position — Task 7). Uses
 export function keplerianPositionMpc(elements: OrbitalElements): Vec3;
 ```
 
-- [ ] Add `keplerianPositionMpc.ts` — composes `keplerianEllipse` +
+- [x] Add `keplerianPositionMpc.ts` — composes `keplerianEllipse` +
   `eccentricAnomalyFromMean`. Didactic docblock: this is the ONE evaluation that
   makes the body sit on its own trail (spec §5) — both the body seed and the
   trail derive from the same `A`, `B`, `C`.
-- [ ] Test `keplerianPositionMpc at M=0 is periapsis` — `M = 0`: assert the
+- [x] Test `keplerianPositionMpc at M=0 is periapsis` — `M = 0`: assert the
   returned vector's length equals `a(1 − e)` within tolerance (periapsis
   distance — hand-derived, not via the source).
-- [ ] Test `keplerianPositionMpc at M=π is apoapsis` — `M = π`: length equals
+- [x] Test `keplerianPositionMpc at M=π is apoapsis` — `M = π`: length equals
   `a(1 + e)`.
-- [ ] `npm test -- keplerianPositionMpc` → green. Commit.
+- [x] `npm test -- keplerianPositionMpc` → green. Commit.
 
 ## Task 4 — `ORBITAL_ELEMENTS` table + `OrbitalElements` type
 
