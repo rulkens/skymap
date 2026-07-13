@@ -31,12 +31,12 @@
  *
  * ### The rotations
  *
- * The perifocal→ecliptic rotation is `R = Rz(Ω)·Rx(i)·Rz(ω)`; its first two
- * columns are the unit perifocal axes in ecliptic coordinates — `P̂` (toward
- * periapsis) and `Q̂` (90° ahead in the orbit plane). Those are then mapped
- * ecliptic→equatorial through `ECLIPTIC_BASIS` (the equinox line +x is shared by
- * both planes; the other two axes rotate by the obliquity). With
- * `b = a·√(1 − e²)`:
+ * The perifocal→reference-plane rotation is `R = Rz(Ω)·Rx(i)·Rz(ω)`; its first
+ * two columns are the unit perifocal axes in the reference plane's coordinates —
+ * `P̂` (toward periapsis) and `Q̂` (90° ahead in the orbit plane). Those are then
+ * mapped into the scene's equatorial-world frame through the orbit's reference
+ * plane basis (`elements.plane`, default `ECLIPTIC_FRAME`): each perifocal
+ * component scales the frame's matching world axis. With `b = a·√(1 − e²)`:
  *
  *     A     = a · P̂w            (semi-major, toward periapsis)
  *     B     = b · Q̂w            (semi-minor, prograde)
@@ -53,20 +53,22 @@
  */
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
+import type { OrbitPlaneFrame } from '../../@types/scene/OrbitPlaneFrame';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { ECLIPTIC_BASIS } from '../../data/bodies/eclipticBasis';
+import { ECLIPTIC_FRAME } from '../../data/bodies/orbitPlaneFrames';
 
 /**
- * Map a vector's ecliptic components to the scene's equatorial frame:
- * `vx·[1,0,0] + vy·yAxis + vz·normal`. The equinox line +x is shared, so its
- * component passes through untouched; y and z rotate by the obliquity.
+ * Map a vector's reference-plane components into the scene's equatorial-world
+ * frame: `vx·xAxis + vy·yAxis + vz·normal`. For the ecliptic frame `xAxis` is
+ * the shared equinox `[1,0,0]`; for a planet's equatorial frame all three axes
+ * are tilted, so the general three-axis combination is used.
  */
-function eclipticToEquatorial(vx: number, vy: number, vz: number): Vec3 {
-  const { yAxis, normal } = ECLIPTIC_BASIS;
+function frameToWorld(frame: OrbitPlaneFrame, vx: number, vy: number, vz: number): Vec3 {
+  const { xAxis, yAxis, normal } = frame;
   return [
-    vx + vy * yAxis[0] + vz * normal[0],
-    vy * yAxis[1] + vz * normal[1],
-    vy * yAxis[2] + vz * normal[2],
+    vx * xAxis[0] + vy * yAxis[0] + vz * normal[0],
+    vx * xAxis[1] + vy * yAxis[1] + vz * normal[1],
+    vx * xAxis[2] + vy * yAxis[2] + vz * normal[2],
   ];
 }
 
@@ -84,7 +86,7 @@ export function keplerianEllipse(elements: OrbitalElements): {
   const cosW = Math.cos(elements.argPeriapsisRad);
   const sinW = Math.sin(elements.argPeriapsisRad);
 
-  // Columns of R = Rz(Ω)·Rx(i)·Rz(ω), in ecliptic coordinates.
+  // Columns of R = Rz(Ω)·Rx(i)·Rz(ω), in the reference plane's coordinates.
   // P̂ — the periapsis direction.
   const px = cosO * cosW - sinO * cosI * sinW;
   const py = sinO * cosW + cosO * cosI * sinW;
@@ -94,8 +96,9 @@ export function keplerianEllipse(elements: OrbitalElements): {
   const qy = -sinO * sinW + cosO * cosI * cosW;
   const qz = sinI * cosW;
 
-  const pWorld = eclipticToEquatorial(px, py, pz);
-  const qWorld = eclipticToEquatorial(qx, qy, qz);
+  const frame = elements.plane ?? ECLIPTIC_FRAME;
+  const pWorld = frameToWorld(frame, px, py, pz);
+  const qWorld = frameToWorld(frame, qx, qy, qz);
 
   const b = a * Math.sqrt(1 - e * e);
   const aE = a * e;

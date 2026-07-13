@@ -24,7 +24,6 @@ import { orbitTrailsLayer } from '../../../../../src/services/engine/frame/passe
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_ORBIT_CONICS } from '../../../../../src/data/bodies/sceneOrbitConics';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
-import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/orbitTrailRenderer';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -59,20 +58,17 @@ function makeCtx(distance: number): ReadyFrameContext {
 }
 
 // draw reads ctx.drawCamPos + ctx.fovYRad for the per-orbit apparent-size
-// cull/fade. Park the camera a hair off the (smallest) Moon orbit's centre so
-// every conic projects far above the cull threshold and none is dropped —
-// isolating the layout/seam assertions from the cull logic.
+// cull/fade. Park the camera a hair off the Sun (render origin): the
+// heliocentric planet orbits then project large (uncalled) while the tiny
+// geocentric moon orbits — centred at their distant planets — stay sub-pixel
+// and cull. No single pose can show every orbit (planets and their moons want
+// opposite zooms), so the test asserts the seam for ALL composed conics and the
+// layout for the first (Mercury, SCENE_ORBIT_CONICS[0], always visible here).
 function makeDrawCtx(): ReadyFrameContext {
-  const moon = SCENE_ORBIT_CONICS.find((c) => c.id === 'moon') ?? SCENE_ORBIT_CONICS[0]!;
-  const camPos: [number, number, number] = [
-    moon.centerMpc[0] + 1e-15,
-    moon.centerMpc[1],
-    moon.centerMpc[2],
-  ];
   return {
-    drawCamPos: camPos,
+    drawCamPos: [1e-13, 0, 0],
     fovYRad: Math.PI / 4,
-    cam: { distance: 1e-15 },
+    cam: { distance: 1e-13 },
   } as unknown as ReadyFrameContext;
 }
 
@@ -135,50 +131,49 @@ describe('orbitTrailsLayer.enabled', () => {
 });
 
 describe('orbitTrailsLayer.draw', () => {
-  it('composes one Ginv per conic from view.slab.vp and issues ONE instanced draw', () => {
+  it('composes each visible conic from view.slab.vp and issues ONE instanced draw', () => {
     composeMock.mockClear();
     const renderer = makeRendererSpy();
     const view = makeNear0View();
 
     orbitTrailsLayer.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
 
-    // One Ginv composed per conic, each from the f64 slab vp — NOT view.vp.
-    expect(composeMock).toHaveBeenCalledTimes(SCENE_ORBIT_CONICS.length);
-    SCENE_ORBIT_CONICS.forEach((conic, i) => {
-      const call = composeMock.mock.calls[i]!;
-      // The load-bearing seam: first arg is the slab's Float64Array vp.
+    const n = composeMock.mock.calls.length;
+    expect(n).toBeGreaterThan(0);
+    // The load-bearing seam: EVERY composed Ginv comes from the slab's
+    // Float64Array vp — NOT the f32-narrowed view.vp.
+    for (const call of composeMock.mock.calls) {
       expect(call[0]).toBe(view.slab.vp);
       expect(call[0]).not.toBe(view.vp);
-      expect(call[1]).toBe(conic.centerMpc);
-      expect(call[2]).toBe(conic.semiMajorMpc);
-      expect(call[3]).toBe(conic.semiMinorMpc);
-      expect(call[4]).toBe(view.viewportPx);
-      expect(call[5]).toBe(RENDER_ORIGIN_MPC);
-    });
+    }
+    // Conics compose in table order skipping culled ones, so call 0 is the
+    // first conic (Mercury), which is visible from the Sun — check its wiring.
+    const first = SCENE_ORBIT_CONICS[0]!;
+    const call0 = composeMock.mock.calls[0]!;
+    expect(call0[1]).toBe(first.centerMpc);
+    expect(call0[2]).toBe(first.semiMajorMpc);
+    expect(call0[3]).toBe(first.semiMinorMpc);
+    expect(call0[4]).toBe(view.viewportPx);
+    expect(call0[5]).toBe(RENDER_ORIGIN_MPC);
 
-    // Exactly one draw for the whole batch, with count == conic count.
+    // Exactly one draw for the whole batch, count == number composed.
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [passArg, staging, count] = renderer.draw.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
-    expect(count).toBe(SCENE_ORBIT_CONICS.length);
+    expect(count).toBe(n);
     expect(staging).toBeInstanceOf(Float32Array);
 
-    // The staging layout: each conic's colour + eccentricity sit at floats
-    // base+12..15, the mean anomaly at base+16, the fade alpha at base+17, the
-    // pad at base+18..19. At this close pose every orbit is far above the cull
-    // threshold, so its fade alpha saturates at 1.
-    SCENE_ORBIT_CONICS.forEach((conic, i) => {
-      const base = i * INSTANCE_FLOATS;
-      expect(base).toBe(i * 20);
-      expect(staging[base + 12]).toBeCloseTo(conic.color[0]);
-      expect(staging[base + 13]).toBeCloseTo(conic.color[1]);
-      expect(staging[base + 14]).toBeCloseTo(conic.color[2]);
-      expect(staging[base + 15]).toBeCloseTo(conic.eccentricity);
-      expect(staging[base + 16]).toBeCloseTo(conic.meanAnomalyRad);
-      expect(staging[base + 17]).toBe(1); // fade alpha saturated (large on screen)
-      expect(staging[base + 18]).toBe(0); // trailing pad stays zeroed
-      expect(staging[base + 19]).toBe(0);
-    });
+    // Staging layout for the first conic (instance 0, stride 20): colour +
+    // eccentricity at floats 12..15, mean anomaly at 16, fade alpha at 17
+    // (saturated — Mercury's orbit is large from the Sun), pad at 18..19.
+    expect(staging[12]).toBeCloseTo(first.color[0]);
+    expect(staging[13]).toBeCloseTo(first.color[1]);
+    expect(staging[14]).toBeCloseTo(first.color[2]);
+    expect(staging[15]).toBeCloseTo(first.eccentricity);
+    expect(staging[16]).toBeCloseTo(first.meanAnomalyRad);
+    expect(staging[17]).toBe(1);
+    expect(staging[18]).toBe(0);
+    expect(staging[19]).toBe(0);
   });
 
   it('is a no-op when the orbitTrailRenderer handle is null (pre-bootstrap)', () => {

@@ -22,7 +22,6 @@ describe('createEngineData', () => {
     expect(d.bodies.stars).toEqual(SCENE_STARS);
     expect(d.bodies.planets).toEqual(SCENE_PLANETS);
     expect(d.bodies.planets.map((p) => p.id)).toEqual([
-      'moon',
       'mercury',
       'venus',
       'mars',
@@ -30,6 +29,20 @@ describe('createEngineData', () => {
       'saturn',
       'uranus',
       'neptune',
+      'moon',
+      'phobos',
+      'deimos',
+      'io',
+      'europa',
+      'ganymede',
+      'callisto',
+      'mimas',
+      'enceladus',
+      'tethys',
+      'dione',
+      'rhea',
+      'titan',
+      'iapetus',
     ]);
   });
 

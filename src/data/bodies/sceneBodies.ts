@@ -168,6 +168,11 @@ export const SCENE_STARS: readonly StarBody[] = [
   star('pollux', 'Pollux', 116.3289, 28.0261, 10.34, 1.08, K_ORANGE),
 ];
 
+/** Shared spec for the body row makers — the fields a seeded sphere needs
+ *  beyond what `ORBITAL_ELEMENTS` already carries (its position derives from
+ *  the elements). Named fields so the numeric columns can't be mis-ordered. */
+type BodySpec = { id: string; label: string; radiusKm: number; albedo: Vec3 };
+
 /**
  * Row maker for a HELIOCENTRIC planet: its focus is the render origin (the
  * Sun), so its world position is the render origin plus the element table's
@@ -175,54 +180,96 @@ export const SCENE_STARS: readonly StarBody[] = [
  * already carries each orbit's real inclination, so each body sits exactly on
  * the ellipse its trail draws (both read the one table). Component-wise focus
  * addition lives here (there is no vec3-add helper), the same one-place idiom
- * `star()` uses. The Moon is NOT built through this — it is geocentric.
+ * `star()` uses. Moons are NOT built through this — they are geocentric
+ * (`satelliteBody`).
  */
-function heliocentricPlanet(id: string, label: string, radiusKm: number, albedo: Vec3): PlanetBody {
-  const offset = keplerianPositionMpc(elementsById(id));
+function heliocentricPlanet(spec: BodySpec): PlanetBody {
+  const offset = keplerianPositionMpc(elementsById(spec.id));
   return {
-    id,
-    label,
+    id: spec.id,
+    label: spec.label,
     positionMpc: [
       RENDER_ORIGIN_MPC[0] + offset[0],
       RENDER_ORIGIN_MPC[1] + offset[1],
       RENDER_ORIGIN_MPC[2] + offset[2],
     ],
-    radiusKm,
-    albedo,
+    radiusKm: spec.radiusKm,
+    albedo: spec.albedo,
   };
 }
 
 /**
- * Planet seeds at their real J2000 mean positions, DERIVED from
- * `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — no hand-placed literals. The
- * seven non-Earth major planets are heliocentric (`heliocentricPlanet`). The
- * Moon is geocentric, so its focus is Earth's OWN derived world position and it
- * follows Earth by construction (spec §5 Moon gotcha) — this is why the Moon
- * seed adds `SCENE_EARTH.positionMpc`, not the render origin, and is authored
- * inline rather than through the heliocentric maker. Albedos are plausible flat
- * linear-RGB colours (no textures yet).
+ * Row maker for a MOON: its focus is its parent PLANET's world position, so its
+ * world position is the render origin plus the parent's heliocentric offset plus
+ * the moon's own offset from the parent — both from `keplerianPositionMpc`, each
+ * honouring its row's `plane` (a moon's is its parent's equatorial frame). Every
+ * moon parent (Earth, Mars, Jupiter, Saturn) is itself heliocentric, so one
+ * parent hop suffices; there is no moon-of-a-moon. This subsumes Earth's Moon
+ * too — its parent 'earth' resolves to the same position `SCENE_EARTH` derives.
  */
-const MOON_OFFSET_MPC = keplerianPositionMpc(elementsById('moon'));
-
-export const SCENE_PLANETS: readonly PlanetBody[] = [
-  {
-    id: 'moon',
-    label: 'Moon',
+function satelliteBody(spec: BodySpec): PlanetBody {
+  const el = elementsById(spec.id);
+  const parentOffset = keplerianPositionMpc(elementsById(el.parentId!));
+  const moonOffset = keplerianPositionMpc(el);
+  return {
+    id: spec.id,
+    label: spec.label,
     positionMpc: [
-      SCENE_EARTH.positionMpc[0] + MOON_OFFSET_MPC[0],
-      SCENE_EARTH.positionMpc[1] + MOON_OFFSET_MPC[1],
-      SCENE_EARTH.positionMpc[2] + MOON_OFFSET_MPC[2],
+      RENDER_ORIGIN_MPC[0] + parentOffset[0] + moonOffset[0],
+      RENDER_ORIGIN_MPC[1] + parentOffset[1] + moonOffset[1],
+      RENDER_ORIGIN_MPC[2] + parentOffset[2] + moonOffset[2],
     ],
-    radiusKm: 1737,
-    albedo: [0.35, 0.34, 0.33],
-  },
-  heliocentricPlanet('mercury', 'Mercury', 2440, [0.3, 0.29, 0.27]),
-  heliocentricPlanet('venus', 'Venus', 6052, [0.85, 0.8, 0.6]),
-  heliocentricPlanet('mars', 'Mars', 3390, [0.6, 0.32, 0.23]),
-  heliocentricPlanet('jupiter', 'Jupiter', 69911, [0.8, 0.65, 0.45]),
-  heliocentricPlanet('saturn', 'Saturn', 58232, [0.8, 0.7, 0.5]),
-  heliocentricPlanet('uranus', 'Uranus', 25362, [0.6, 0.8, 0.82]),
-  heliocentricPlanet('neptune', 'Neptune', 24622, [0.3, 0.42, 0.75]),
+    radiusKm: spec.radiusKm,
+    albedo: spec.albedo,
+  };
+}
+
+/**
+ * Planet + moon seeds at their real J2000 mean positions, DERIVED from
+ * `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — no hand-placed literals. The
+ * seven non-Earth major planets are heliocentric (`heliocentricPlanet`); the
+ * Moon and the planets' major moons are geocentric (`satelliteBody`), riding
+ * their parent by construction (spec §5 Moon gotcha). Each body sits exactly on
+ * the ellipse its trail draws, both reading the one element table. Albedos are
+ * plausible flat linear-RGB colours (no textures yet).
+ */
+export const SCENE_PLANETS: readonly PlanetBody[] = [
+  heliocentricPlanet({
+    id: 'mercury',
+    label: 'Mercury',
+    radiusKm: 2440,
+    albedo: [0.3, 0.29, 0.27],
+  }),
+  heliocentricPlanet({ id: 'venus', label: 'Venus', radiusKm: 6052, albedo: [0.85, 0.8, 0.6] }),
+  heliocentricPlanet({ id: 'mars', label: 'Mars', radiusKm: 3390, albedo: [0.6, 0.32, 0.23] }),
+  heliocentricPlanet({
+    id: 'jupiter',
+    label: 'Jupiter',
+    radiusKm: 69911,
+    albedo: [0.8, 0.65, 0.45],
+  }),
+  heliocentricPlanet({ id: 'saturn', label: 'Saturn', radiusKm: 58232, albedo: [0.8, 0.7, 0.5] }),
+  heliocentricPlanet({ id: 'uranus', label: 'Uranus', radiusKm: 25362, albedo: [0.6, 0.8, 0.82] }),
+  heliocentricPlanet({
+    id: 'neptune',
+    label: 'Neptune',
+    radiusKm: 24622,
+    albedo: [0.3, 0.42, 0.75],
+  }),
+  satelliteBody({ id: 'moon', label: 'Moon', radiusKm: 1737, albedo: [0.35, 0.34, 0.33] }),
+  satelliteBody({ id: 'phobos', label: 'Phobos', radiusKm: 11, albedo: [0.3, 0.29, 0.28] }),
+  satelliteBody({ id: 'deimos', label: 'Deimos', radiusKm: 6, albedo: [0.32, 0.3, 0.28] }),
+  satelliteBody({ id: 'io', label: 'Io', radiusKm: 1822, albedo: [0.6, 0.55, 0.32] }),
+  satelliteBody({ id: 'europa', label: 'Europa', radiusKm: 1561, albedo: [0.75, 0.75, 0.72] }),
+  satelliteBody({ id: 'ganymede', label: 'Ganymede', radiusKm: 2634, albedo: [0.55, 0.52, 0.48] }),
+  satelliteBody({ id: 'callisto', label: 'Callisto', radiusKm: 2410, albedo: [0.4, 0.38, 0.35] }),
+  satelliteBody({ id: 'mimas', label: 'Mimas', radiusKm: 198, albedo: [0.72, 0.73, 0.73] }),
+  satelliteBody({ id: 'enceladus', label: 'Enceladus', radiusKm: 252, albedo: [0.92, 0.92, 0.92] }),
+  satelliteBody({ id: 'tethys', label: 'Tethys', radiusKm: 531, albedo: [0.76, 0.77, 0.77] }),
+  satelliteBody({ id: 'dione', label: 'Dione', radiusKm: 561, albedo: [0.72, 0.72, 0.72] }),
+  satelliteBody({ id: 'rhea', label: 'Rhea', radiusKm: 764, albedo: [0.7, 0.71, 0.71] }),
+  satelliteBody({ id: 'titan', label: 'Titan', radiusKm: 2575, albedo: [0.8, 0.6, 0.35] }),
+  satelliteBody({ id: 'iapetus', label: 'Iapetus', radiusKm: 735, albedo: [0.4, 0.37, 0.32] }),
 ];
 
 /**

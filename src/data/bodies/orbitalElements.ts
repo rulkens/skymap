@@ -51,7 +51,13 @@
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
+import {
+  MARS_EQUATORIAL_FRAME,
+  JUPITER_EQUATORIAL_FRAME,
+  SATURN_EQUATORIAL_FRAME,
+} from './orbitPlaneFrames';
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
+import type { OrbitPlaneFrame } from '../../@types/scene/OrbitPlaneFrame';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 // Degrees → radians. A one-line local rather than a `src/utils/` export: this
@@ -72,11 +78,55 @@ const URANUS_CYAN: Vec3 = [0.3, 0.47, 0.5];
 const NEPTUNE_BLUE: Vec3 = [0.2, 0.3, 0.55];
 const MOON_GREY: Vec3 = [0.35, 0.35, 0.4];
 
+// Satellite trail tints — a small shared palette (the guidance moons cluster
+// tightly around their planet, so a per-moon colour would not read apart):
+// rocky grey, icy white, Io's sulfur yellow, Titan's haze orange.
+const SAT_ROCK: Vec3 = [0.35, 0.34, 0.32];
+const SAT_ICE: Vec3 = [0.45, 0.47, 0.5];
+const IO_SULFUR: Vec3 = [0.5, 0.45, 0.22];
+const TITAN_ORANGE: Vec3 = [0.5, 0.38, 0.2];
+
+/**
+ * Row maker for a planet's guidance MOON: a satellite in its parent's
+ * equatorial (Laplace) `plane`. The scene is static and per-moon epoch phases
+ * are not tabulated, so Ω/ω/M are 0 — the moon's angular position is NOT
+ * modelled; what matters is the trail's SIZE and TILT (its plane), which the
+ * semi-major axis, eccentricity, inclination-to-equator, and `plane` carry. The
+ * body then sits at periapsis on that ring (a valid point on its own trail).
+ * Takes a named-field spec (in the units JPL publishes — km, degrees) so the
+ * many numeric columns can't be mis-ordered at the call site.
+ */
+function satellite(spec: {
+  id: string;
+  parentId: string;
+  plane: OrbitPlaneFrame;
+  semiMajorKm: number;
+  eccentricity: number;
+  inclinationDeg: number;
+  color: Vec3;
+}): OrbitalElements {
+  return {
+    id: spec.id,
+    parentId: spec.parentId,
+    semiMajorMpc: spec.semiMajorKm * SCALE_UNITS.KM_TO_MPC,
+    eccentricity: spec.eccentricity,
+    inclinationRad: spec.inclinationDeg * DEG_TO_RAD,
+    ascendingNodeRad: 0,
+    argPeriapsisRad: 0,
+    meanAnomalyRad: 0,
+    color: spec.color,
+    plane: spec.plane,
+  };
+}
+
 /**
  * The guidance orbits: the eight major planets (heliocentric, in order outward
- * from the Sun) plus the Moon (geocentric). Columns are authored in the units
- * JPL publishes (au / km, degrees) and converted at the seed site; `ω` and `M`
- * show their `ϖ`/`L`/`Ω` derivation inline.
+ * from the Sun), then the Moon (geocentric, ecliptic), then each planet's own
+ * major moons (geocentric, in that planet's equatorial `plane` — see
+ * `satellite`). Planet columns are authored in the units JPL publishes (au /
+ * km, degrees) and converted at the seed site; `ω` and `M` show their `ϖ`/`L`/`Ω`
+ * derivation inline. Moon rows go through `satellite` (angular phase not
+ * modelled — the trail's size and tilt are what matter).
  */
 export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
@@ -212,4 +262,127 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     meanAnomalyRad: 135.27 * DEG_TO_RAD,
     color: MOON_GREY,
   },
+
+  // Mars' moons (semi-major km, e, inclination° to Mars' equator).
+  satellite({
+    id: 'phobos',
+    parentId: 'mars',
+    plane: MARS_EQUATORIAL_FRAME,
+    semiMajorKm: 9376,
+    eccentricity: 0.0151,
+    inclinationDeg: 1.08,
+    color: SAT_ROCK,
+  }),
+  satellite({
+    id: 'deimos',
+    parentId: 'mars',
+    plane: MARS_EQUATORIAL_FRAME,
+    semiMajorKm: 23463,
+    eccentricity: 0.00033,
+    inclinationDeg: 1.79,
+    color: SAT_ROCK,
+  }),
+
+  // Jupiter's Galilean moons (inclination° to Jupiter's equator).
+  satellite({
+    id: 'io',
+    parentId: 'jupiter',
+    plane: JUPITER_EQUATORIAL_FRAME,
+    semiMajorKm: 421800,
+    eccentricity: 0.0041,
+    inclinationDeg: 0.036,
+    color: IO_SULFUR,
+  }),
+  satellite({
+    id: 'europa',
+    parentId: 'jupiter',
+    plane: JUPITER_EQUATORIAL_FRAME,
+    semiMajorKm: 671100,
+    eccentricity: 0.0094,
+    inclinationDeg: 0.466,
+    color: SAT_ICE,
+  }),
+  satellite({
+    id: 'ganymede',
+    parentId: 'jupiter',
+    plane: JUPITER_EQUATORIAL_FRAME,
+    semiMajorKm: 1070400,
+    eccentricity: 0.0013,
+    inclinationDeg: 0.177,
+    color: SAT_ROCK,
+  }),
+  satellite({
+    id: 'callisto',
+    parentId: 'jupiter',
+    plane: JUPITER_EQUATORIAL_FRAME,
+    semiMajorKm: 1882700,
+    eccentricity: 0.0074,
+    inclinationDeg: 0.192,
+    color: SAT_ROCK,
+  }),
+
+  // Saturn's major moons (inclination° to Saturn's equator; Iapetus rides ~15° out).
+  satellite({
+    id: 'mimas',
+    parentId: 'saturn',
+    plane: SATURN_EQUATORIAL_FRAME,
+    semiMajorKm: 185540,
+    eccentricity: 0.0196,
+    inclinationDeg: 1.574,
+    color: SAT_ICE,
+  }),
+  satellite({
+    id: 'enceladus',
+    parentId: 'saturn',
+    plane: SATURN_EQUATORIAL_FRAME,
+    semiMajorKm: 238040,
+    eccentricity: 0.0047,
+    inclinationDeg: 0.009,
+    color: SAT_ICE,
+  }),
+  satellite({
+    id: 'tethys',
+    parentId: 'saturn',
+    plane: SATURN_EQUATORIAL_FRAME,
+    semiMajorKm: 294670,
+    eccentricity: 0.0001,
+    inclinationDeg: 1.091,
+    color: SAT_ICE,
+  }),
+  satellite({
+    id: 'dione',
+    parentId: 'saturn',
+    plane: SATURN_EQUATORIAL_FRAME,
+    semiMajorKm: 377420,
+    eccentricity: 0.0022,
+    inclinationDeg: 0.028,
+    color: SAT_ICE,
+  }),
+  satellite({
+    id: 'rhea',
+    parentId: 'saturn',
+    plane: SATURN_EQUATORIAL_FRAME,
+    semiMajorKm: 527070,
+    eccentricity: 0.001,
+    inclinationDeg: 0.345,
+    color: SAT_ICE,
+  }),
+  satellite({
+    id: 'titan',
+    parentId: 'saturn',
+    plane: SATURN_EQUATORIAL_FRAME,
+    semiMajorKm: 1221870,
+    eccentricity: 0.0288,
+    inclinationDeg: 0.348,
+    color: TITAN_ORANGE,
+  }),
+  satellite({
+    id: 'iapetus',
+    parentId: 'saturn',
+    plane: SATURN_EQUATORIAL_FRAME,
+    semiMajorKm: 3560840,
+    eccentricity: 0.0286,
+    inclinationDeg: 15.47,
+    color: SAT_ROCK,
+  }),
 ];

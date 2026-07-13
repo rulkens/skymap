@@ -8,12 +8,13 @@
  * rates recorded in the spec's provenance table are deliberately omitted
  * (YAGNI: a future animated ephemeris is the named extension point).
  *
- * Elements are referenced to the **ecliptic** J2000 frame (the plane every
- * solar-system body orbits near); the ecliptic→equatorial rotation into the
- * scene's frame is `ECLIPTIC_BASIS`. Angles are stored in radians and
- * distances in Mpc, authored via `SCALE_UNITS` and `deg → rad` at the seed
- * site rather than as buried literals — the same discipline `sceneBodies.ts`
- * observes.
+ * Elements are referenced to the plane named by `plane`, defaulting to the
+ * **ecliptic** J2000 frame (the plane the planets and Earth's Moon orbit near);
+ * a planet's own moons instead reference that planet's equatorial (Laplace)
+ * frame — see `plane` and `data/bodies/orbitPlaneFrames`. Angles are stored in
+ * radians and distances in Mpc, authored via `SCALE_UNITS` and `deg → rad` at
+ * the seed site rather than as buried literals — the same discipline
+ * `sceneBodies.ts` observes.
  *
  * `parentId` resolves the orbit's focus: `null` is heliocentric (the Sun at
  * the render origin); a body id (e.g. `'earth'`) makes the focus that parent's
@@ -22,6 +23,7 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
+import type { OrbitPlaneFrame } from './OrbitPlaneFrame';
 
 export type OrbitalElements = {
   /** Stable identifier (e.g. `'earth'`, `'jupiter'`, `'moon'`). */
@@ -42,4 +44,10 @@ export type OrbitalElements = {
   readonly meanAnomalyRad: number;
   /** Dim linear-RGB tint for the additive HDR draw. */
   readonly color: Vec3;
+  /**
+   * Reference plane the angles (i, Ω, ω) are measured in. Omitted → the
+   * ecliptic (planets, Earth's Moon). A planet's own moons set this to that
+   * planet's equatorial (Laplace) frame so their trails ride tilted with it.
+   */
+  readonly plane?: OrbitPlaneFrame;
 };
