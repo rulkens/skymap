@@ -145,3 +145,98 @@ export function buildHipXmatchQuery(): string {
 FROM gaiadr3.hipparcos2_best_neighbour
 ORDER BY source_id`;
 }
+
+/**
+ * What a fetch run still has to download after the resume scan. The main
+ * catalog is counted in *slices remaining* (pages already on disk are
+ * skipped), the four supplements as booleans (each is one all-or-nothing
+ * file). `estimateRemainingBytes` turns this into the number printed for
+ * consent; `totalPageSlices` is carried alongside `pageSlicesRemaining` so
+ * the estimate can pro-rate the catalog's byte envelope by the fraction of
+ * pages that actually remain — a resume with most pages cached quotes the
+ * remainder, not the full ~1.7 GB.
+ */
+export type FetchWorkPlan = {
+  pageSlicesRemaining: number;
+  totalPageSlices: number;
+  gcnsNeeded: boolean;
+  hip2Needed: boolean;
+  hipReadmeNeeded: boolean;
+  xmatchNeeded: boolean;
+};
+
+// Byte envelopes for the size estimate. These are deliberately approximate:
+// the number gates human consent, it does not meter the transfer, so a
+// round-ish figure that is right to a few percent is all that's warranted.
+//   - Main catalog: 16.84 M rows surviving the G<14 cut x ~100 B/row CSV.
+//   - GCNS: ~331 k rows, ~30 MB observed.
+//   - hip2.dat: fixed-width, exactly 117,955 rows x 277 B/line = 32,673,535 B.
+//   - Hipparcos ReadMe: a small VizieR byte-layout doc, ~20 KB.
+//   - hip xmatch: ~99.5 k rows, ~3 MB.
+const GAIA_CATALOG_BYTES = 16_840_000 * 100;
+const GCNS_BYTES = 30_000_000;
+const HIP2_BYTES = 117_955 * 277;
+const HIP_README_BYTES = 20_000;
+const XMATCH_BYTES = 3_000_000;
+
+/** Rough remaining bytes: pages ≈ remaining/total share of ~1.7 GB
+ *  (16.84 M rows × ~100 B/row CSV), GCNS ~30 MB, hip2 32,673,535 B exact
+ *  (117,955 × 277), ReadMe ~20 KB, xmatch ~3 MB. An estimate, printed as
+ *  such — it gates consent, it does not meter the transfer. */
+export function estimateRemainingBytes(work: FetchWorkPlan): number {
+  const pagesBytes =
+    work.totalPageSlices === 0
+      ? 0
+      : Math.round((work.pageSlicesRemaining / work.totalPageSlices) * GAIA_CATALOG_BYTES);
+  return (
+    pagesBytes +
+    (work.gcnsNeeded ? GCNS_BYTES : 0) +
+    (work.hip2Needed ? HIP2_BYTES : 0) +
+    (work.hipReadmeNeeded ? HIP_README_BYTES : 0) +
+    (work.xmatchNeeded ? XMATCH_BYTES : 0)
+  );
+}
+
+/**
+ * The tight-network consent gate as a pure decision. TTY-ness is the
+ * caller's input (this function never touches process.stdin), so the rule is
+ * trivially testable: `--yes` is explicit consent and always proceeds; an
+ * interactive terminal falls through to the y/N prompt; everything else — a
+ * background/CI run with no `--yes` — aborts rather than hang forever on an
+ * unanswerable prompt or, worse, let a piped "y" green-light a 2 GB pull.
+ */
+export function gateDecision(yesFlag: boolean, isTTY: boolean): 'proceed' | 'prompt' | 'abort' {
+  if (yesFlag) return 'proceed';
+  if (isTTY) return 'prompt';
+  return 'abort';
+}
+
+/** Human-readable byte size for the consent preamble (MB below 1 GB, else GB). */
+function formatBytes(bytes: number): string {
+  const mb = bytes / 1_000_000;
+  return mb >= 1000 ? `${(mb / 1000).toFixed(2)} GB` : `${mb.toFixed(1)} MB`;
+}
+
+/**
+ * Print the pre-gate preamble: per-artifact remaining-vs-cached status, the
+ * total byte estimate, and the `--yes` hint. `main()` (Task 9) calls this
+ * after the resume scan and before `gateDecision`, so the numbers reflect
+ * what actually remains to download, not the full catalog.
+ */
+export function printFetchPreamble(work: FetchWorkPlan): void {
+  const cachedPages = work.totalPageSlices - work.pageSlicesRemaining;
+  const supplement = (label: string, needed: boolean): string =>
+    `  ${needed ? 'fetch' : 'cached'}  ${label}`;
+
+  console.log('Gaia DR3 bright-star fetch — remaining work after resume scan:');
+  console.log(
+    `  ${work.pageSlicesRemaining} of ${work.totalPageSlices} main-catalog pages to fetch ` +
+      `(${cachedPages} cached)`,
+  );
+  console.log(supplement('GCNS (nearby-stars supplement)', work.gcnsNeeded));
+  console.log(supplement('Hipparcos-2 (hip2.dat)', work.hip2Needed));
+  console.log(supplement('Hipparcos-2 ReadMe', work.hipReadmeNeeded));
+  console.log(supplement('Hipparcos↔Gaia cross-match', work.xmatchNeeded));
+  console.log(`Estimated download: ~${formatBytes(estimateRemainingBytes(work))} (approximate).`);
+  console.log('This is a large transfer on a metered/tight network. Pass --yes to proceed.');
+}

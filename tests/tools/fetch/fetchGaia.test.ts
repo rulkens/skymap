@@ -6,6 +6,7 @@ import {
   buildGaiaPageQuery,
   buildGcnsQuery,
   buildHipXmatchQuery,
+  gateDecision,
 } from '../../../tools/fetch/fetchGaia';
 
 describe('planRandomIndexSlices', () => {
@@ -80,5 +81,21 @@ describe('buildGcnsQuery and buildHipXmatchQuery', () => {
     // across re-fetches (gcns) and diffs stay stable (xmatch).
     expect(buildGcnsQuery()).toContain('ORDER BY source_id');
     expect(buildHipXmatchQuery()).toContain('ORDER BY source_id');
+  });
+});
+
+describe('gateDecision', () => {
+  it('aborts when stdin is not a TTY and --yes is absent', () => {
+    // The real bug this guards: a dispatched background run (no TTY) must
+    // never hang on an unanswerable prompt, and a piped "y" must never be
+    // able to green-light a 2 GB pull nobody approved. Without --yes and
+    // without a TTY the only safe answer is to stop with instructions.
+    expect(gateDecision(false, false)).toBe('abort');
+    // A real interactive terminal falls through to the y/N prompt.
+    expect(gateDecision(false, true)).toBe('prompt');
+    // --yes is explicit consent — it proceeds regardless of TTY-ness, so the
+    // same flag works in CI and at an interactive shell.
+    expect(gateDecision(true, false)).toBe('proceed');
+    expect(gateDecision(true, true)).toBe('proceed');
   });
 });
