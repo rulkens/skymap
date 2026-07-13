@@ -407,12 +407,12 @@ Once stars fill the near field the galaxy point cloud clutters the view. Investi
 
 **This is an investigation task — the checkboxes fork:**
 
-- [ ] Investigate: confirm the multiply-at-`fadeOpacityOf` seam holds (the callback is the ONLY place per-source opacity enters the draw; `pointRenderer.ts:782` is the sole consumer), and sketch the fade band (where should galaxies begin dimming on descent — tie it to the local-volume / foreground scale, not a hand-picked number). Note whether the disks layers (`proceduralDisksLayer` / `texturedDisksLayer`) need the same factor for coherence, and how it composes with the existing FadeRegistry opacity.
-- [ ] **STOP and present findings to the user** — the seam, the proposed band, the disks-coherence question, and a land-vs-defer recommendation. The user decides.
-- [ ] **FORK (per the user's decision):**
+- [x] Investigate: confirm the multiply-at-`fadeOpacityOf` seam holds (the callback is the ONLY place per-source opacity enters the draw; `pointRenderer.ts:782` is the sole consumer), and sketch the fade band (where should galaxies begin dimming on descent — tie it to the local-volume / foreground scale, not a hand-picked number). Note whether the disks layers (`proceduralDisksLayer` / `texturedDisksLayer`) need the same factor for coherence, and how it composes with the existing FadeRegistry opacity.
+- [x] **STOP and present findings to the user** — the seam, the proposed band, the disks-coherence question, and a land-vs-defer recommendation. The user decides.
+- [x] **FORK (per the user's decision):**
   - **Land the minimal version** if it is genuinely a small uniform multiply: add `src/utils/math/surveyDeepZoomFade.ts` (pure, one symbol) + test, and multiply it into `pointSpritesLayer.draw`'s `fadeOpacityOf` return. Test `surveyDeepZoomFade fades survey points on deep descent` (full above the local volume, ramping to 0 as the camera descends). `npm test -- surveyDeepZoomFade pointSpritesLayer` → green. Then a VISUAL GATE (needs `?deepZoom`): galaxies dim smoothly on descent rather than cluttering; commit after the user confirms.
   - **OR capture the design** if it wants disks-coherence / per-source thresholds / FadeRegistry interplay: write `docs/backlog/2026-07-11-deep-zoom-survey-fade.md` (seam + options + evidence) and add ONE terse index line to `docs/BACKLOG.md` under the rendering area (title + readiness tag + one clause + `→ [details]`). No code lands. Commit the backlog capture.
-- [ ] Either branch ends in a commit; record which branch was taken in the PR body.
+- [x] Either branch ends in a commit; record which branch was taken in the PR body.
 
 ## Task 14 — ADR: continuous floating origin for free zoom
 
