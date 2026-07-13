@@ -31,8 +31,11 @@
  *
  * ### When it draws
  *
- * `enabled` gates on the `planetRenderer` GPU handle (null pre-bootstrap)
- * AND a non-empty seeded planet list. The `foreground:0` target is a
+ * `enabled` gates on the `planetRenderer` GPU handle (null pre-bootstrap),
+ * the shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC` —
+ * beyond it every planet is a deep-sub-pixel speck, and gating with the
+ * NEAR0 siblings lets the executor skip the whole foreground pass group as
+ * empty), AND a non-empty seeded planet list. The `foreground:0` target is a
  * bootstrap-guaranteed `renderTargets` row, so those are the only gates;
  * `draw` re-checks the handle so a stale call is a harmless no-op.
  */
@@ -43,6 +46,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/planetRenderer';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized for
 // the renderer's cap; each planet's 20-float record (MVP + albedo + pad) is
@@ -55,11 +59,16 @@ export const planetsLayer: ContentLayer = {
   target: 'foreground:0',
   blend: 'opaque',
 
-  enabled(state) {
-    // Handle first, bodies second: the handle check short-circuits so
-    // pre-bootstrap fixtures (null renderer, no bodies bag) never touch
-    // state.data. The target is a bootstrap-guaranteed renderTargets row.
-    return state.gpu.planetRenderer !== null && state.data.bodies.planets.length > 0;
+  enabled(state, ctx) {
+    // Handle first, distance second, bodies last: the handle check
+    // short-circuits so pre-bootstrap fixtures (null renderer, bare ctx, no
+    // bodies bag) never touch ctx or state.data. The target is a
+    // bootstrap-guaranteed renderTargets row.
+    return (
+      state.gpu.planetRenderer !== null &&
+      ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC &&
+      state.data.bodies.planets.length > 0
+    );
   },
 
   draw(pass, view, _ctx, state) {

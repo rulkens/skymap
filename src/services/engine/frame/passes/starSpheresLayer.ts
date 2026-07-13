@@ -5,11 +5,12 @@
  * ### What it draws
  *
  * The `spheres` branch of `partitionStarsByResolution` — every seeded star
- * whose apparent size clears `STAR_RESOLVE_PX`, plus the alwaysResolved
- * Sun — each composed as a unit sphere scaled to the body's radius
- * (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and translated to its
- * `positionMpc` in the `RENDER_ORIGIN_MPC`-relative frame, tinted by its
- * spectral-class colour. `starPointsLayer` draws the complementary
+ * whose apparent size clears `STAR_RESOLVE_PX` (the Sun included: below the
+ * threshold it demotes to an additive point like any other star, so it
+ * never vanishes) — each composed as a unit sphere scaled to the body's
+ * radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and translated to
+ * its `positionMpc` in the `RENDER_ORIGIN_MPC`-relative frame, tinted by
+ * its spectral-class colour. `starPointsLayer` draws the complementary
  * `points` branch of the SAME partition call, so a star is a sphere XOR a
  * point by construction — see the partition module's docblock for the
  * structural-disjointness argument.
@@ -17,12 +18,13 @@
  * ### Renderer uniform caveat (known gap)
  *
  * `starRenderer.draw` writes MVP+colour into a single non-dynamic uniform
- * buffer, so with the Sun alwaysResolved a camera parked within ~an AU of
- * another star yields TWO sphere draws whose `queue.writeBuffer` calls both
- * land before the frame's submit — both draws read the LAST uniform. The
- * visible cost is nil today (the mis-placed Sun subtends deep sub-pixel at
- * parsec range, and the duplicate is an identical overdraw), but the real
- * fix is a dynamic-offset or per-instance uniform upgrade in the renderer.
+ * buffer, so a camera pose that resolves TWO stars at once yields two
+ * sphere draws whose `queue.writeBuffer` calls both land before the frame's
+ * submit — both draws read the LAST uniform. Since the size gate now
+ * demotes every distant star (a second simultaneously-resolved star needs
+ * the camera within ~AU of two stars at once), the case is out of reach in
+ * the seeded scene, but the real fix is a dynamic-offset or per-instance
+ * uniform upgrade in the renderer.
  *
  * ### The f64 seam — why `view.slab.vp`, NOT `view.vp`
  *
@@ -38,12 +40,17 @@
  * ### When it draws
  *
  * `enabled` gates on the `starRenderer` GPU handle (null in the
- * pre-bootstrap window) AND a non-empty `spheres` branch — the same
- * partition `draw` consumes, so the enable gate and the draw set cannot
- * disagree. The handle check short-circuits first so pre-bootstrap fixtures
- * (null renderer, no bodies bag, bare ctx) never touch `state.data` or
- * `ctx`. `enabled` reads the camera from `ctx.drawCamPos` (absolute frame)
- * while `draw` reads `view.camPos` (NEAR0's origin-relative frame); the two
+ * pre-bootstrap window), the shared near-field distance gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC` — beyond it every seeded star is a
+ * deep-sub-pixel speck, and gating with the NEAR0 siblings lets the executor
+ * skip the whole foreground pass group as empty), AND a non-empty `spheres`
+ * branch — the same partition `draw` consumes, so the enable gate and the
+ * draw set cannot disagree. The handle check short-circuits first so
+ * pre-bootstrap fixtures (null renderer, no bodies bag, bare ctx) never
+ * touch `state.data` or `ctx`; the distance gate runs second so the
+ * per-star partition is not computed at all when the camera is far.
+ * `enabled` reads the camera from `ctx.drawCamPos` (absolute frame) while
+ * `draw` reads `view.camPos` (NEAR0's origin-relative frame); the two
  * coincide because `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
  *
  * `RENDER_ORIGIN_MPC` is imported directly as a constant (not threaded
@@ -57,6 +64,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 export const starSpheresLayer: ContentLayer = {
   name: 'star-spheres',
@@ -65,8 +73,10 @@ export const starSpheresLayer: ContentLayer = {
   blend: 'opaque',
 
   enabled(state, ctx) {
-    // Handle first, partition second — see the module header's gate note.
+    // Handle first, distance second, partition last — see the module
+    // header's gate note.
     if (state.gpu.starRenderer === null) return false;
+    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     return (
       partitionStarsByResolution({
         stars: state.data.bodies.stars,

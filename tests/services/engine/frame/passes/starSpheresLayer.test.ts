@@ -13,16 +13,18 @@
  *
  * The partition matters here too: the layer draws EXACTLY the `spheres`
  * branch of `partitionStarsByResolution` — the stars whose apparent size
- * crosses `STAR_RESOLVE_PX`, plus the alwaysResolved Sun — while
- * `starPointsLayer` draws the complementary `points` branch of the same
- * call. The two layer suites share the camera-half-an-AU-off-Proxima
- * mixed fixture, so the sphere set asserted here and the point set asserted
- * there are disjoint and cover the input (the structural XOR).
+ * crosses `STAR_RESOLVE_PX`, the Sun included (sub-resolve it demotes to a
+ * point like any other star) — while `starPointsLayer` draws the
+ * complementary `points` branch of the same call. The two layer suites
+ * share the camera-half-an-AU-off-Proxima mixed fixture, so the sphere set
+ * asserted here and the point set asserted there are disjoint and cover the
+ * input (the structural XOR).
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 import { starSpheresLayer } from '../../../../../src/services/engine/frame/passes/starSpheresLayer';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneBodies';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -61,17 +63,26 @@ const PASS_STUB = {
 const CTX_STUB = {} as ReadyFrameContext;
 
 /**
- * The partition inputs a layer reads off the frame context: the absolute
- * camera position, the vertical fov, and the viewport height. 60° fov +
- * 720-px viewport matches the SlabView fixture below.
+ * The gate + partition inputs a layer reads off the frame context: the orbit
+ * distance (the shared foreground gate reads `ctx.cam.distance`), the
+ * absolute camera position, the vertical fov, and the viewport height.
+ * 60° fov + 720-px viewport matches the SlabView fixture below. The orbit
+ * distance is |camPos| — these fixtures orbit the heliocentric origin, so
+ * the two coincide.
  */
 function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
   return {
+    cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
     fovYRad: Math.PI / 3,
     canvasSize: { width: 1280, height: 720 },
   } as unknown as ReadyFrameContext;
 }
+
+// A below-gate camera 5 kpc down +z: inside FOREGROUND_MAX_DISTANCE_MPC
+// (~10 kpc), so the distance gate passes — yet still parsecs beyond every
+// seeded star (the Sun included), so nothing resolves to a sphere.
+const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
 
 /**
  * A camera half an AU from the given position: a solar-diameter sphere at
@@ -123,14 +134,26 @@ describe('starSpheresLayer.enabled', () => {
     expect(
       starSpheresLayer.enabled({ gpu: { starRenderer: null } } as unknown as EngineState, CTX_STUB),
     ).toBe(false);
-    // Renderer + galaxy-scale camera + no Sun: every star is sub-pixel and
-    // none is alwaysResolved, so the spheres branch is empty.
-    const galaxyCtx = makeCtx([0, 0, 0.43]);
-    const farOnly = SCENE_STARS.filter((star) => star.id !== 'sun');
-    expect(starSpheresLayer.enabled(makeState(renderer, farOnly), galaxyCtx)).toBe(false);
-    // Renderer + the full seed: the alwaysResolved Sun populates the spheres
-    // branch at any camera distance.
-    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), galaxyCtx)).toBe(true);
+    // Renderer + below-gate camera: every star — the Sun included — is
+    // sub-pixel at 5 kpc, so the spheres branch is empty (the Sun demotes to
+    // a point rather than holding a row alive with an invisible sphere).
+    const nearCtx = makeCtx(NEAR_FIELD_CAM);
+    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), nearCtx)).toBe(false);
+    // Renderer + a camera half an AU off the Sun: the Sun resolves and the
+    // spheres branch is non-empty.
+    const sunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
+    expect(starSpheresLayer.enabled(makeState(renderer, SCENE_STARS), sunCtx)).toBe(true);
+  });
+
+  it('is disabled beyond the foreground gate', () => {
+    // At galaxy scale the Sun sphere is a deep-sub-pixel speck: the shared
+    // gate turns the row off before the partition is computed, so the
+    // (foreground:0, NEAR0) step can be skipped wholesale.
+    const state = makeState({ draw: vi.fn() }, SCENE_STARS);
+    expect(starSpheresLayer.enabled(state, makeCtx([0, 0, 0.43]))).toBe(false);
+    expect(starSpheresLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toBe(
+      false,
+    );
   });
 });
 
@@ -138,9 +161,10 @@ describe('starSpheresLayer.draw', () => {
   it('the Sun is drawn via composeBodyMvp with the slab f64 vp', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
-    // Galaxy-scale camera: only the alwaysResolved Sun is in the spheres
-    // branch, matching starRenderer's one-draw-per-frame uniform layout.
-    const camPos: Vec3 = [0, 0, 5];
+    // Camera half an AU off the Sun: it resolves while every other star stays
+    // parsecs away and sub-pixel — exactly one sphere draw, matching
+    // starRenderer's one-draw-per-frame uniform layout.
+    const camPos: Vec3 = halfAuFrom(SUN.positionMpc);
     const view = makeNear0View(camPos);
     const state = makeState({ draw: drawSpy }, SCENE_STARS);
 
@@ -169,21 +193,21 @@ describe('starSpheresLayer.draw', () => {
   it('starSpheresLayer draws only the resolved stars', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
-    // Mixed fixture, camera half an AU off Proxima: the spheres branch is
-    // the Sun (alwaysResolved) + Proxima (resolved); Sirius stays a point
-    // and belongs to starPointsLayer — the complementary set its suite
-    // asserts over this same fixture (the structural XOR).
+    // Mixed fixture, camera half an AU off Proxima: only Proxima resolves.
+    // The Sun (1.3 pc away, sub-pixel) and Sirius stay points and belong to
+    // starPointsLayer — the complementary set its suite asserts over this
+    // same fixture (the structural XOR).
     const camPos = halfAuFrom(PROXIMA.positionMpc);
     const view = makeNear0View(camPos);
     const state = makeState({ draw: drawSpy }, [SUN, PROXIMA, SIRIUS]);
 
     starSpheresLayer.draw(PASS_STUB, view, makeCtx(camPos), state);
 
-    // Exactly the resolved stars composed, in seed order, by identity.
-    expect(composeMock).toHaveBeenCalledTimes(2);
-    expect(composeMock.mock.calls.map((c) => c[1])).toEqual([SUN.positionMpc, PROXIMA.positionMpc]);
-    expect(drawSpy).toHaveBeenCalledTimes(2);
-    expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([SUN.color, PROXIMA.color]);
+    // Exactly the resolved star composed, by identity.
+    expect(composeMock).toHaveBeenCalledTimes(1);
+    expect(composeMock.mock.calls.map((c) => c[1])).toEqual([PROXIMA.positionMpc]);
+    expect(drawSpy).toHaveBeenCalledTimes(1);
+    expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([PROXIMA.color]);
   });
 
   it('is a no-op when the starRenderer handle is null (pre-bootstrap)', () => {

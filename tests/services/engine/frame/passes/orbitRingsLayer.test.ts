@@ -18,6 +18,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { orbitRingsLayer } from '../../../../../src/services/engine/frame/passes/orbitRingsLayer';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_ORBITS } from '../../../../../src/data/bodies/sceneOrbits';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/orbitRingRenderer';
@@ -45,9 +46,15 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-// ctx is unread by this layer (it composes from view.slab.vp + module-level
-// constants), so a bare cast satisfies the signature.
+// Bare ctx for the null-handle and draw cases: draw never reads ctx, and
+// enabled's handle check must short-circuit BEFORE the ctx.cam read
+// (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as ReadyFrameContext;
+
+// enabled reads only ctx.cam.distance beyond the handle check.
+function makeCtx(distance: number): ReadyFrameContext {
+  return { cam: { distance } } as unknown as ReadyFrameContext;
+}
 
 /**
  * A SlabView whose f64 `slab.vp` and f32 `vp` are deliberately DIFFERENT
@@ -93,11 +100,17 @@ describe('orbitRingsLayer registry row', () => {
 });
 
 describe('orbitRingsLayer.enabled', () => {
-  it('gates on the renderer handle alone — orbits are static seeds', () => {
-    // Null handle (pre-bootstrap). NOTE: deliberately no state.data — the
-    // gate reads nothing beyond state.gpu.
+  it('gates on the renderer handle + the foreground distance — orbits are static seeds', () => {
+    const state = makeState(makeRendererSpy());
+    // Null handle (pre-bootstrap). NOTE: deliberately no state.data and a
+    // bare ctx — the handle check short-circuits before the ctx.cam read.
     expect(orbitRingsLayer.enabled(makeState(null), CTX_STUB)).toBe(false);
-    expect(orbitRingsLayer.enabled(makeState(makeRendererSpy()), CTX_STUB)).toBe(true);
+    // Handle present, camera inside the shared foreground gate.
+    expect(orbitRingsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2))).toBe(true);
+    // Beyond the gate the AU-to-lunar-scale rings are deep sub-pixel: off, so
+    // the (hdr, NEAR0) step can be skipped wholesale at galaxy zoom.
+    expect(orbitRingsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
+    expect(orbitRingsLayer.enabled(state, makeCtx(0.43))).toBe(false);
   });
 });
 

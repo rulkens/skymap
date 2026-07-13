@@ -13,12 +13,19 @@
  * `Float32Array`.
  *
  * The layer also gates on TWO handles — the `earthRenderer` GPU handle and the
- * seeded `bodies.earth` record — so `enabled` is false until both are present.
+ * seeded `bodies.earth` record — so `enabled` is false until both are present,
+ * AND on the shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC`).
+ * This suite carries the representative executor-group check: above the gate
+ * the whole `(foreground:0, NEAR0)` group must come back empty from the SAME
+ * filter `executeFrame` uses, which is what lets the frame skip the
+ * foreground render pass + its composite wholesale at galaxy zoom.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 import { earthLayer } from '../../../../../src/services/engine/frame/passes/earthLayer';
+import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneBodies';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -47,9 +54,18 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-// ctx is unread by this layer (it composes from view.slab.vp + the
-// RENDER_ORIGIN_MPC constant), so a bare cast satisfies the signature.
+// Bare ctx for the null-handle and draw cases: draw never reads ctx, and
+// enabled's handle check must short-circuit BEFORE the ctx.cam read
+// (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as ReadyFrameContext;
+
+// enabled reads only ctx.cam.distance beyond the handle checks.
+function makeCtx(distance: number): ReadyFrameContext {
+  return { cam: { distance } } as unknown as ReadyFrameContext;
+}
+
+// A camera comfortably inside the shared foreground gate.
+const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
 
 /**
  * A SlabView whose f64 `slab.vp` and f32 `vp` are deliberately DIFFERENT
@@ -87,14 +103,50 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
 describe('earthLayer.enabled', () => {
   it('is false while earthRenderer is null and while bodies.earth is null; true with both set', () => {
     const renderer = { draw: vi.fn() };
-    // Neither present.
+    // Neither present. Bare ctx: the handle check short-circuits first.
     expect(earthLayer.enabled(makeState(null, null), CTX_STUB)).toBe(false);
-    // Renderer only.
-    expect(earthLayer.enabled(makeState(renderer, null), CTX_STUB)).toBe(false);
-    // Body only.
+    // Renderer only (camera inside the gate — the body is the missing gate).
+    expect(earthLayer.enabled(makeState(renderer, null), NEAR_CTX)).toBe(false);
+    // Body only. Bare ctx: the handle check short-circuits first.
     expect(earthLayer.enabled(makeState(null, SCENE_EARTH), CTX_STUB)).toBe(false);
-    // Both present.
-    expect(earthLayer.enabled(makeState(renderer, SCENE_EARTH), CTX_STUB)).toBe(true);
+    // Both present, camera inside the gate.
+    expect(earthLayer.enabled(makeState(renderer, SCENE_EARTH), NEAR_CTX)).toBe(true);
+  });
+
+  it('is disabled beyond the foreground gate and enabled below it', () => {
+    const state = makeState({ draw: vi.fn() }, SCENE_EARTH);
+    // Below the gate → the handle + body gates decide (both pass).
+    expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2))).toBe(true);
+    // At and above the gate → off, however present the handles are: Earth is
+    // a deep-sub-pixel speck at the galactic centre.
+    expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
+    expect(earthLayer.enabled(state, makeCtx(0.43))).toBe(false);
+  });
+});
+
+describe('the (foreground:0, NEAR0) render group above the foreground gate', () => {
+  it('empties above the gate and is non-empty below it (the wholesale-skip property)', () => {
+    // The SAME group filter executeFrame's render step applies: (target, slab)
+    // match + the layer's own enabled gate. An empty group means the executor
+    // never opens the foreground render pass, and the untouched foreground:0
+    // source then skips its composite too. Earth's handle + body are present;
+    // the sibling handles are null (their handle gates short-circuit).
+    const state = {
+      gpu: { earthRenderer: { draw: vi.fn() }, starRenderer: null, planetRenderer: null },
+      data: { bodies: { earth: SCENE_EARTH } },
+    } as unknown as EngineState;
+    const groupAt = (ctx: ReadyFrameContext) =>
+      CONTENT_LAYERS.filter(
+        (l) => l.target === 'foreground:0' && l.slab === NEAR0 && l.enabled(state, ctx),
+      );
+
+    // Below the gate: earth draws (its two gates pass), so the group is
+    // non-empty and the foreground pass runs.
+    expect(groupAt(makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2)).map((l) => l.name)).toEqual(['earth']);
+    // Above the gate: EVERY foreground:0 layer is off — the group is empty
+    // and the executor skips the pass + composite wholesale.
+    expect(groupAt(makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toEqual([]);
+    expect(groupAt(makeCtx(0.43))).toEqual([]);
   });
 });
 
