@@ -7,12 +7,11 @@
  *      `Float64Array` view-projection (`view.slab.vp`), NOT the f32-narrowed
  *      `view.vp` (identity-pinned via a mocked `composeOrbitConic`).
  *   2. The single instanced draw — ONE `renderer.draw(pass, staging, n)`
- *      paints every VISIBLE conic, with each conic's trail params packed at
+ *      paints every VISIBLE conic, with conic i's trail params packed at
  *      instance stride 20 floats (Ginv at floats base+0..11, colour +
- *      eccentricity at base+12..15, mean anomaly at base+16, per-orbit fade at
- *      base+17, pad at base+18..19). A per-orbit `orbitTrailFade` (mocked here)
- *      culls orbits the camera is inside / that are sub-pixel, packing the
- *      survivors CONTIGUOUSLY from base 0 via a running write index.
+ *      eccentricity at base+12..15, mean anomaly at base+16, apparent-size fade
+ *      alpha at base+17, pad at base+18..19), and orbits below the cull
+ *      threshold dropped from the batch entirely.
  *
  * Plus the handle gates: `enabled` is renderer-presence AND the shared
  * foreground distance gate (the conic table is a static module-level seed —
@@ -43,17 +42,6 @@ import { composeOrbitConic } from '../../../../../src/utils/camera/composeOrbitC
 
 const composeMock = composeOrbitConic as unknown as ReturnType<typeof vi.fn>;
 
-// Mock orbitTrailFade too, so this test isolates PACKING + the f64 seam from
-// the fade math (owned by orbitTrailFade's own test). Without it, the mock
-// geometry (camPos ~5 Mpc from the ~1e-12 Mpc orbits) would make the REAL fade
-// cull everything. Default return 1 = fully visible; individual tests drive it.
-vi.mock('../../../../../src/utils/camera/orbitTrailFade', () => ({
-  orbitTrailFade: vi.fn<() => number>(() => 1),
-}));
-import { orbitTrailFade } from '../../../../../src/utils/camera/orbitTrailFade';
-
-const fadeMock = orbitTrailFade as unknown as ReturnType<typeof vi.fn>;
-
 const PASS_STUB = {
   setPipeline: vi.fn(),
   setVertexBuffer: vi.fn(),
@@ -68,6 +56,24 @@ const CTX_STUB = {} as ReadyFrameContext;
 // enabled reads only ctx.cam.distance beyond the handle check.
 function makeCtx(distance: number): ReadyFrameContext {
   return { cam: { distance } } as unknown as ReadyFrameContext;
+}
+
+// draw reads ctx.drawCamPos + ctx.fovYRad for the per-orbit apparent-size
+// cull/fade. Park the camera a hair off the (smallest) Moon orbit's centre so
+// every conic projects far above the cull threshold and none is dropped —
+// isolating the layout/seam assertions from the cull logic.
+function makeDrawCtx(): ReadyFrameContext {
+  const moon = SCENE_ORBIT_CONICS.find((c) => c.id === 'moon') ?? SCENE_ORBIT_CONICS[0]!;
+  const camPos: [number, number, number] = [
+    moon.centerMpc[0] + 1e-15,
+    moon.centerMpc[1],
+    moon.centerMpc[2],
+  ];
+  return {
+    drawCamPos: camPos,
+    fovYRad: Math.PI / 4,
+    cam: { distance: 1e-15 },
+  } as unknown as ReadyFrameContext;
 }
 
 /**
@@ -131,12 +137,10 @@ describe('orbitTrailsLayer.enabled', () => {
 describe('orbitTrailsLayer.draw', () => {
   it('composes one Ginv per conic from view.slab.vp and issues ONE instanced draw', () => {
     composeMock.mockClear();
-    fadeMock.mockClear();
-    fadeMock.mockReturnValue(1); // every conic visible → count == length
     const renderer = makeRendererSpy();
     const view = makeNear0View();
 
-    orbitTrailsLayer.draw(PASS_STUB, view, CTX_STUB, makeState(renderer));
+    orbitTrailsLayer.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
 
     // One Ginv composed per conic, each from the f64 slab vp — NOT view.vp.
     expect(composeMock).toHaveBeenCalledTimes(SCENE_ORBIT_CONICS.length);
@@ -160,8 +164,9 @@ describe('orbitTrailsLayer.draw', () => {
     expect(staging).toBeInstanceOf(Float32Array);
 
     // The staging layout: each conic's colour + eccentricity sit at floats
-    // base+12..15, the mean anomaly at base+16, the per-orbit fade at base+17,
-    // the trailing pad at base+18..19.
+    // base+12..15, the mean anomaly at base+16, the fade alpha at base+17, the
+    // pad at base+18..19. At this close pose every orbit is far above the cull
+    // threshold, so its fade alpha saturates at 1.
     SCENE_ORBIT_CONICS.forEach((conic, i) => {
       const base = i * INSTANCE_FLOATS;
       expect(base).toBe(i * 20);
@@ -170,50 +175,29 @@ describe('orbitTrailsLayer.draw', () => {
       expect(staging[base + 14]).toBeCloseTo(conic.color[2]);
       expect(staging[base + 15]).toBeCloseTo(conic.eccentricity);
       expect(staging[base + 16]).toBeCloseTo(conic.meanAnomalyRad);
-      expect(staging[base + 17]).toBe(1); // the per-orbit fade (mocked to 1 here)
+      expect(staging[base + 17]).toBe(1); // fade alpha saturated (large on screen)
       expect(staging[base + 18]).toBe(0); // trailing pad stays zeroed
       expect(staging[base + 19]).toBe(0);
     });
   });
 
-  it('skips orbits whose fade is below the floor (camera inside / sub-pixel)', () => {
-    // The wedge-bug guard at the layer level: an orbit the camera is inside of
-    // (fade 0) must never be composed or packed, and the survivors must pack
-    // contiguously from base 0 — a naive `i * INSTANCE_FLOATS` write index would
-    // leave a hole where the culled conic was.
-    expect(SCENE_ORBIT_CONICS.length).toBeGreaterThanOrEqual(2);
-    composeMock.mockClear();
-    fadeMock.mockReset();
-    fadeMock.mockReturnValueOnce(0).mockReturnValue(1); // conic 0 culled, rest visible
-    const renderer = makeRendererSpy();
-    const view = makeNear0View();
-
-    orbitTrailsLayer.draw(PASS_STUB, view, CTX_STUB, makeState(renderer));
-
-    const survivors = SCENE_ORBIT_CONICS.length - 1;
-
-    // Only the survivors are composed, and the culled conic never is.
-    expect(composeMock).toHaveBeenCalledTimes(survivors);
-    const composedCentres = composeMock.mock.calls.map((call) => call[1]);
-    expect(composedCentres).not.toContain(SCENE_ORBIT_CONICS[0]!.centerMpc);
-
-    // One draw for the survivors, count reflecting only the visible orbits.
-    expect(renderer.draw).toHaveBeenCalledTimes(1);
-    const [, staging, count] = renderer.draw.mock.calls[0]!;
-    expect(count).toBe(survivors);
-
-    // Running write index: the FIRST survivor (SCENE_ORBIT_CONICS[1]) lands at
-    // base 0, not at its source index 1 — the property a naive index breaks.
-    const survivor = SCENE_ORBIT_CONICS[1]!;
-    expect(staging[12]).toBeCloseTo(survivor.color[0]);
-    expect(staging[13]).toBeCloseTo(survivor.color[1]);
-    expect(staging[14]).toBeCloseTo(survivor.color[2]);
-    expect(staging[15]).toBeCloseTo(survivor.eccentricity);
-    expect(staging[17]).toBe(1); // survivor's fade
-  });
-
   it('is a no-op when the orbitTrailRenderer handle is null (pre-bootstrap)', () => {
     const view = makeNear0View();
     expect(() => orbitTrailsLayer.draw(PASS_STUB, view, CTX_STUB, makeState(null))).not.toThrow();
+  });
+
+  it('culls every orbit and skips the draw when all are deep sub-pixel', () => {
+    composeMock.mockClear();
+    const renderer = makeRendererSpy();
+    // Camera 1 Mpc from the Sun — the AU-to-lunar orbits are far below the
+    // apparent-size cull threshold, so nothing is packed and no draw is issued.
+    const farCtx = {
+      drawCamPos: [1, 0, 0],
+      fovYRad: Math.PI / 4,
+      cam: { distance: 1 },
+    } as unknown as ReadyFrameContext;
+    orbitTrailsLayer.draw(PASS_STUB, makeNear0View(), farCtx, makeState(renderer));
+    expect(renderer.draw).not.toHaveBeenCalled();
+    expect(composeMock).not.toHaveBeenCalled(); // culled before composing Ginv
   });
 });

@@ -40,9 +40,7 @@ struct VSOut {
   // The body's mean anomaly at the scene epoch (J2000) — the phase the trail
   // brightness fades away from.
   @location(5) @interpolate(flat) meanAnomaly: f32,
-  // Per-orbit visibility fade in [0,1], CPU-computed in orbitTrailsLayer from
-  // the camera-to-orbit geometry: 0 as the camera enters the orbit (the conic
-  // degenerates) or the ellipse falls sub-pixel. Multiplied into the additive
-  // output so orbits fade smoothly in/out instead of popping.
-  @location(6) @interpolate(flat) fade: f32,
+  // Per-orbit apparent-size fade (CPU-side): 1 well above the cull threshold,
+  // ramping to 0 as the orbit shrinks toward it. Multiplies the final colour.
+  @location(6) @interpolate(flat) alpha: f32,
 };

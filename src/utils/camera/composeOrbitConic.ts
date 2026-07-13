@@ -127,6 +127,33 @@ export function composeOrbitConic(
   const G = mat3d.multiply(V, H) as Float64Array;
   const Ginv = mat3d.inverse(G) as Float64Array;
 
+  // Rescale so Ginv's largest entry is 1. The fragment reads ONLY scale-
+  // invariant quantities off Ginv — the conic zero set (f = qᵀ·conic·q = 0), the
+  // Sampson distance |f|/|∇f|, the plane coords s = qx/qz and t = qy/qz, and the
+  // sign of qz — and every one is unchanged when Ginv is multiplied by a nonzero
+  // constant (f and ∇f both scale by the SAME power, so their ratio is fixed).
+  // But the raw inverse of a near-degenerate G (camera near the orbit's plane)
+  // has entries up to ~1e15, so the fragment's f32 `q = Ginv·pixel` reaches
+  // ~1e15, `f = qx²+qy²−qz²` and |∇f| reach ~1e30, and at that magnitude f32
+  // loses the precision the Sampson RATIO needs — the corrupted ratio stays
+  // below the stroke width across the WHOLE q.z>0 region, flooding it with faint
+  // additive colour instead of a thin ring (and a hair more degenerate,
+  // q² overflows to Inf → NaN). Normalising to O(1) keeps every fragment
+  // quantity in f32's precise range at every pose, so the stroke stays a ring.
+  // Real entries live at the padded-column indices 0,1,2 / 4,5,6 / 8,9,10 (see
+  // narrowMat3); the pad lanes are irrelevant. A singular G (exact edge-on)
+  // gives a non-finite max — skip rather than divide by ∞, leaving the fragment
+  // discard to swallow that measure-zero pose.
+  const realIndices = [0, 1, 2, 4, 5, 6, 8, 9, 10];
+  let maxAbs = 0;
+  for (const i of realIndices) {
+    const v = Math.abs(Ginv[i]!);
+    if (v > maxAbs) maxAbs = v;
+  }
+  if (maxAbs > 0 && Number.isFinite(maxAbs)) {
+    for (const i of realIndices) Ginv[i]! /= maxAbs;
+  }
+
   // Narrow once at the GPU-upload boundary.
   return narrowMat3(Ginv);
 }

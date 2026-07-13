@@ -169,19 +169,39 @@ export const SCENE_STARS: readonly StarBody[] = [
 ];
 
 /**
- * Planet seeds at their real J2000 mean positions, DERIVED from
- * `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — no hand-placed literals.
- * Jupiter is heliocentric: its focus is the render origin (the Sun). The Moon
- * is geocentric, so its focus is Earth's OWN derived world position and it
- * follows Earth by construction (spec §5 Moon gotcha) — this is why the Moon
- * seed adds `SCENE_EARTH.positionMpc`, not the render origin. The element table
- * already carries each orbit's real inclination, so the Moon lands in its true
- * ~5°-inclined plane and each body sits exactly on the ellipse its trail draws
- * (both read the one table). Component-wise focus addition because there is no
- * vec3-add helper. Albedos are plausible flat linear-RGB colours (no textures
- * yet): lunar grey, Jovian tan.
+ * Row maker for a HELIOCENTRIC planet: its focus is the render origin (the
+ * Sun), so its world position is the render origin plus the element table's
+ * `keplerianPositionMpc` offset — no hand-placed literals. The element table
+ * already carries each orbit's real inclination, so each body sits exactly on
+ * the ellipse its trail draws (both read the one table). Component-wise focus
+ * addition lives here (there is no vec3-add helper), the same one-place idiom
+ * `star()` uses. The Moon is NOT built through this — it is geocentric.
  */
-const JUPITER_OFFSET_MPC = keplerianPositionMpc(elementsById('jupiter'));
+function heliocentricPlanet(id: string, label: string, radiusKm: number, albedo: Vec3): PlanetBody {
+  const offset = keplerianPositionMpc(elementsById(id));
+  return {
+    id,
+    label,
+    positionMpc: [
+      RENDER_ORIGIN_MPC[0] + offset[0],
+      RENDER_ORIGIN_MPC[1] + offset[1],
+      RENDER_ORIGIN_MPC[2] + offset[2],
+    ],
+    radiusKm,
+    albedo,
+  };
+}
+
+/**
+ * Planet seeds at their real J2000 mean positions, DERIVED from
+ * `ORBITAL_ELEMENTS` via `keplerianPositionMpc` — no hand-placed literals. The
+ * seven non-Earth major planets are heliocentric (`heliocentricPlanet`). The
+ * Moon is geocentric, so its focus is Earth's OWN derived world position and it
+ * follows Earth by construction (spec §5 Moon gotcha) — this is why the Moon
+ * seed adds `SCENE_EARTH.positionMpc`, not the render origin, and is authored
+ * inline rather than through the heliocentric maker. Albedos are plausible flat
+ * linear-RGB colours (no textures yet).
+ */
 const MOON_OFFSET_MPC = keplerianPositionMpc(elementsById('moon'));
 
 export const SCENE_PLANETS: readonly PlanetBody[] = [
@@ -196,17 +216,13 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
     radiusKm: 1737,
     albedo: [0.35, 0.34, 0.33],
   },
-  {
-    id: 'jupiter',
-    label: 'Jupiter',
-    positionMpc: [
-      RENDER_ORIGIN_MPC[0] + JUPITER_OFFSET_MPC[0],
-      RENDER_ORIGIN_MPC[1] + JUPITER_OFFSET_MPC[1],
-      RENDER_ORIGIN_MPC[2] + JUPITER_OFFSET_MPC[2],
-    ],
-    radiusKm: 69911,
-    albedo: [0.8, 0.65, 0.45],
-  },
+  heliocentricPlanet('mercury', 'Mercury', 2440, [0.3, 0.29, 0.27]),
+  heliocentricPlanet('venus', 'Venus', 6052, [0.85, 0.8, 0.6]),
+  heliocentricPlanet('mars', 'Mars', 3390, [0.6, 0.32, 0.23]),
+  heliocentricPlanet('jupiter', 'Jupiter', 69911, [0.8, 0.65, 0.45]),
+  heliocentricPlanet('saturn', 'Saturn', 58232, [0.8, 0.7, 0.5]),
+  heliocentricPlanet('uranus', 'Uranus', 25362, [0.6, 0.8, 0.82]),
+  heliocentricPlanet('neptune', 'Neptune', 24622, [0.3, 0.42, 0.75]),
 ];
 
 /**

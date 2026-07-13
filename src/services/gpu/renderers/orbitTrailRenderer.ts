@@ -42,9 +42,10 @@ import vsCode from '../shaders/orbitTrail/vertex.wesl?static';
 import fsCode from '../shaders/orbitTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
-/** Upper bound on orbit trails drawn per frame. Three orbits ship today (Earth,
- *  Jupiter, Moon); the cap sizes the instance buffer with headroom. */
-export const MAX_ORBITS = 8;
+/** Upper bound on orbit trails drawn per frame. Nine orbits ship today (the
+ *  eight major planets + the Moon); the cap sizes the instance buffer with
+ *  headroom for further satellites/dwarfs. */
+export const MAX_ORBITS = 12;
 
 /**
  * Float32 slots per per-instance record: three `vec4<f32>` `Ginv` columns (12)

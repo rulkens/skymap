@@ -38,8 +38,7 @@
 //   @location(2) ginv1: vec4<f32>  — Ginv column 1                       } instance
 //   @location(3) ginv2: vec4<f32>  — Ginv column 2                       } record,
 //   @location(4) params: vec4<f32> — color.rgb in .xyz, eccentricity .w  } stride
-//   @location(5) phase: vec4<f32>  — meanAnomalyRad in .x, fade in .y,   } 80 B
-//                                    .zw pad                              }
+//   @location(5) phase: vec4<f32>  — meanAnomalyRad .x, fade alpha .y, .zw pad } 80 B
 
 import package::orbitTrail::io::VSOut;
 
@@ -69,6 +68,6 @@ fn vs(
   out.color = params.xyz;
   out.eccentricity = params.w;
   out.meanAnomaly = phase.x;
-  out.fade = phase.y;
+  out.alpha = phase.y;
   return out;
 }

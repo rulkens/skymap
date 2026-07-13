@@ -19,10 +19,11 @@
  * Every solar-system body orbits near the **ecliptic**, so all elements are
  * referenced to the ecliptic J2000 frame; the ecliptic→equatorial rotation into
  * the scene's frame is `ECLIPTIC_BASIS`, applied downstream where the ellipse is
- * built. The planets (Earth EMB, Jupiter) are **heliocentric** — `parentId:
- * null`, focus at the Sun (the render origin). The Moon's elements are
- * **geocentric** — `parentId: 'earth'`, so its focus resolves to Earth's own
- * derived world position and its trail follows Earth by construction.
+ * built. The eight major planets (Mercury through Neptune, Earth as the EMB) are
+ * **heliocentric** — `parentId: null`, focus at the Sun (the render origin). The
+ * Moon's elements are **geocentric** — `parentId: 'earth'`, so its focus
+ * resolves to Earth's own derived world position and its trail follows Earth by
+ * construction.
  *
  * The scene is static at a single epoch (J2000, no clock), so only the epoch
  * column of the mean elements is stored; JPL's element rates are recorded in the
@@ -59,18 +60,55 @@ import type { Vec3 } from '../../@types/math/Vec3';
 const DEG_TO_RAD = Math.PI / 180;
 
 // Dim, distinct linear-RGB trail tints (max channel ≲ 0.5 for the additive HDR
-// draw), carried over from the orbit rings these ellipses replace: soft blue
-// (Earth), warm tan (Jupiter), neutral grey (Moon).
+// draw): one per body, chosen to read apart at a glance — warm greys and golds
+// for the rocky/gas giants, cool blues for the ice giants and Earth.
+const MERCURY_GREY: Vec3 = [0.42, 0.4, 0.36];
+const VENUS_CREAM: Vec3 = [0.5, 0.47, 0.33];
 const EARTH_BLUE: Vec3 = [0.15, 0.25, 0.5];
+const MARS_RED: Vec3 = [0.5, 0.2, 0.12];
 const JUPITER_TAN: Vec3 = [0.5, 0.38, 0.2];
+const SATURN_GOLD: Vec3 = [0.5, 0.43, 0.25];
+const URANUS_CYAN: Vec3 = [0.3, 0.47, 0.5];
+const NEPTUNE_BLUE: Vec3 = [0.2, 0.3, 0.55];
 const MOON_GREY: Vec3 = [0.35, 0.35, 0.4];
 
 /**
- * The three guidance orbits. Columns are authored in the units JPL publishes
- * (au / km, degrees) and converted at the seed site; `ω` and `M` show their
- * `ϖ`/`L`/`Ω` derivation inline.
+ * The guidance orbits: the eight major planets (heliocentric, in order outward
+ * from the Sun) plus the Moon (geocentric). Columns are authored in the units
+ * JPL publishes (au / km, degrees) and converted at the seed site; `ω` and `M`
+ * show their `ϖ`/`L`/`Ω` derivation inline.
  */
 export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
+  {
+    // Mercury, heliocentric. JPL: L = 252.25032350°, ϖ = 77.45779628°,
+    // Ω = 48.33076593°.
+    id: 'mercury',
+    parentId: null,
+    semiMajorMpc: 0.38709927 * SCALE_UNITS.AU_TO_MPC,
+    eccentricity: 0.20563593,
+    inclinationRad: 7.00497902 * DEG_TO_RAD,
+    ascendingNodeRad: 48.33076593 * DEG_TO_RAD,
+    // ω = ϖ − Ω = 77.45779628 − 48.33076593
+    argPeriapsisRad: (77.45779628 - 48.33076593) * DEG_TO_RAD,
+    // M = L − ϖ = 252.25032350 − 77.45779628
+    meanAnomalyRad: (252.2503235 - 77.45779628) * DEG_TO_RAD,
+    color: MERCURY_GREY,
+  },
+  {
+    // Venus, heliocentric. JPL: L = 181.97909950°, ϖ = 131.60246718°,
+    // Ω = 76.67984255°.
+    id: 'venus',
+    parentId: null,
+    semiMajorMpc: 0.72333566 * SCALE_UNITS.AU_TO_MPC,
+    eccentricity: 0.00677672,
+    inclinationRad: 3.39467605 * DEG_TO_RAD,
+    ascendingNodeRad: 76.67984255 * DEG_TO_RAD,
+    // ω = ϖ − Ω = 131.60246718 − 76.67984255
+    argPeriapsisRad: (131.60246718 - 76.67984255) * DEG_TO_RAD,
+    // M = L − ϖ = 181.97909950 − 131.60246718
+    meanAnomalyRad: (181.9790995 - 131.60246718) * DEG_TO_RAD,
+    color: VENUS_CREAM,
+  },
   {
     // Earth–Moon barycenter, heliocentric. JPL: L = 100.46457166°,
     // ϖ = 102.93768193°, Ω = 0.0°.
@@ -87,6 +125,21 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: EARTH_BLUE,
   },
   {
+    // Mars, heliocentric. JPL: L = −4.55343205°, ϖ = −23.94362959°,
+    // Ω = 49.55953891°.
+    id: 'mars',
+    parentId: null,
+    semiMajorMpc: 1.52371034 * SCALE_UNITS.AU_TO_MPC,
+    eccentricity: 0.0933941,
+    inclinationRad: 1.84969142 * DEG_TO_RAD,
+    ascendingNodeRad: 49.55953891 * DEG_TO_RAD,
+    // ω = ϖ − Ω = −23.94362959 − 49.55953891
+    argPeriapsisRad: (-23.94362959 - 49.55953891) * DEG_TO_RAD,
+    // M = L − ϖ = −4.55343205 − (−23.94362959)
+    meanAnomalyRad: (-4.55343205 - -23.94362959) * DEG_TO_RAD,
+    color: MARS_RED,
+  },
+  {
     // Jupiter, heliocentric. JPL: L = 34.39644051°, ϖ = 14.72847983°,
     // Ω = 100.47390909°.
     id: 'jupiter',
@@ -100,6 +153,51 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // M = L − ϖ = 34.39644051 − 14.72847983
     meanAnomalyRad: (34.39644051 - 14.72847983) * DEG_TO_RAD,
     color: JUPITER_TAN,
+  },
+  {
+    // Saturn, heliocentric. JPL: L = 49.95424423°, ϖ = 92.59887831°,
+    // Ω = 113.66242448°.
+    id: 'saturn',
+    parentId: null,
+    semiMajorMpc: 9.53667594 * SCALE_UNITS.AU_TO_MPC,
+    eccentricity: 0.05386179,
+    inclinationRad: 2.48599187 * DEG_TO_RAD,
+    ascendingNodeRad: 113.66242448 * DEG_TO_RAD,
+    // ω = ϖ − Ω = 92.59887831 − 113.66242448
+    argPeriapsisRad: (92.59887831 - 113.66242448) * DEG_TO_RAD,
+    // M = L − ϖ = 49.95424423 − 92.59887831
+    meanAnomalyRad: (49.95424423 - 92.59887831) * DEG_TO_RAD,
+    color: SATURN_GOLD,
+  },
+  {
+    // Uranus, heliocentric. JPL: L = 313.23810451°, ϖ = 170.95427630°,
+    // Ω = 74.01692503°.
+    id: 'uranus',
+    parentId: null,
+    semiMajorMpc: 19.18916464 * SCALE_UNITS.AU_TO_MPC,
+    eccentricity: 0.04725744,
+    inclinationRad: 0.77263783 * DEG_TO_RAD,
+    ascendingNodeRad: 74.01692503 * DEG_TO_RAD,
+    // ω = ϖ − Ω = 170.95427630 − 74.01692503
+    argPeriapsisRad: (170.9542763 - 74.01692503) * DEG_TO_RAD,
+    // M = L − ϖ = 313.23810451 − 170.95427630
+    meanAnomalyRad: (313.23810451 - 170.9542763) * DEG_TO_RAD,
+    color: URANUS_CYAN,
+  },
+  {
+    // Neptune, heliocentric. JPL: L = −55.12002969°, ϖ = 44.96476227°,
+    // Ω = 131.78422574°.
+    id: 'neptune',
+    parentId: null,
+    semiMajorMpc: 30.06992276 * SCALE_UNITS.AU_TO_MPC,
+    eccentricity: 0.00859048,
+    inclinationRad: 1.77004347 * DEG_TO_RAD,
+    ascendingNodeRad: 131.78422574 * DEG_TO_RAD,
+    // ω = ϖ − Ω = 44.96476227 − 131.78422574
+    argPeriapsisRad: (44.96476227 - 131.78422574) * DEG_TO_RAD,
+    // M = L − ϖ = −55.12002969 − 44.96476227
+    meanAnomalyRad: (-55.12002969 - 44.96476227) * DEG_TO_RAD,
+    color: NEPTUNE_BLUE,
   },
   {
     // The Moon, geocentric — its focus is Earth's derived position. JPL gives ω

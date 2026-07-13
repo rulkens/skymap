@@ -21,7 +21,16 @@ describe('createEngineData', () => {
     const d = createEngineData();
     expect(d.bodies.stars).toEqual(SCENE_STARS);
     expect(d.bodies.planets).toEqual(SCENE_PLANETS);
-    expect(d.bodies.planets.map((p) => p.id)).toEqual(['moon', 'jupiter']);
+    expect(d.bodies.planets.map((p) => p.id)).toEqual([
+      'moon',
+      'mercury',
+      'venus',
+      'mars',
+      'jupiter',
+      'saturn',
+      'uranus',
+      'neptune',
+    ]);
   });
 
   it('has no store for types whose status/state lives elsewhere', () => {
