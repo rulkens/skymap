@@ -223,18 +223,18 @@ export function compressStarBin(plain: Uint8Array): Promise<Uint8Array>;
 export function decompressStarBin(packed: Uint8Array): Promise<Uint8Array>;
 ```
 
-- [ ] Run the browser-native zstd check; record the (a)/(b) decision + evidence in the
+- [x] Run the browser-native zstd check; record the (a)/(b) decision + evidence in the
   module docblock.
-- [ ] Implement `starBinCodec.ts` with the sealed constant + compress/decompress over
+- [x] Implement `starBinCodec.ts` with the sealed constant + compress/decompress over
   `CompressionStream`/`DecompressionStream` (async; feed bytes → collect chunks →
   concat). Didactic docblock explains why the codec is sealed here and why web-streams
   over `node:zlib` (isomorphic Node+browser).
-- [ ] Test `round-trips arbitrary bytes` — `decompressStarBin(await compressStarBin(x))`
+- [x] Test `round-trips arbitrary bytes` — `decompressStarBin(await compressStarBin(x))`
   equals `x` for a non-trivial buffer (include an incompressible random slice and a
   highly-compressible run so the test exercises real inflate, not a no-op).
-- [ ] Test `compressed output differs from plaintext` for a compressible input (an
+- [x] Test `compressed output differs from plaintext` for a compressible input (an
   independent sanity property that the codec is actually engaged — not a mirror).
-- [ ] `npm test -- starBinCodec` → green. Commit.
+- [x] `npm test -- starBinCodec` → green. Commit.
 
 ## Task 2 — Morton helpers `mortonEncode3` / `mortonDecode3`
 
@@ -246,18 +246,18 @@ each), `tests/utils/math/mortonEncode3.test.ts` + `mortonDecode3.test.ts` (new).
 a `Vec3`. These are the shared spatial primitive for the encoder AND the plan-03 walker
 — that is why they live in `src/utils/math/`, not `tools/`.
 
-- [ ] Add both files with didactic docblocks (Z-order curve; bit-interleave; why a
+- [x] Add both files with didactic docblocks (Z-order curve; bit-interleave; why a
   uint32 suffices at ≤10 bits/axis; the frame is the octree grid index, not a spatial
   vector).
-- [ ] Test `round-trips grid coordinates` — `mortonDecode3(mortonEncode3(x, y, z))`
+- [x] Test `round-trips grid coordinates` — `mortonDecode3(mortonEncode3(x, y, z))`
   equals `[x, y, z]` across a spread of coordinate triples including 0, max
   (`1023,1023,1023`), and asymmetric axes.
-- [ ] Test `encodes known adversarial bit patterns` with **hand-computed** codes: e.g.
+- [x] Test `encodes known adversarial bit patterns` with **hand-computed** codes: e.g.
   `mortonEncode3(1,0,0)`, `mortonEncode3(0,1,0)`, `mortonEncode3(0,0,1)` land on the
   three lowest interleave bits (values `1`, `2`, `4`); `mortonEncode3(1,1,1) === 7`.
   These pin the axis→bit assignment, which the walker depends on — a swapped axis fails
   here but round-trips clean, so the round-trip test alone is insufficient.
-- [ ] `npm test -- morton` → green. Commit.
+- [x] `npm test -- morton` → green. Commit.
 
 ## Task 3 — `bvToBpRp` colour-transform helper
 
@@ -272,14 +272,14 @@ documentation chapter "Photometric relationships with other photometric systems"
 (record the source URL + table in the module docblock). Tool-only (Hipparcos is a
 build-time input), so it lives under `tools/utils/`.
 
-- [ ] Add `bvToBpRp.ts` with the cited polynomial + didactic docblock (why Hipparcos
+- [x] Add `bvToBpRp.ts` with the cited polynomial + didactic docblock (why Hipparcos
   colour must be transposed onto the BP−RP axis; where the coefficients come from).
-- [ ] Test `matches the published relation at reference colours` — assert against
+- [x] Test `matches the published relation at reference colours` — assert against
   **hand-taken** values from the source table (e.g. a Sun-like B−V and a red-star B−V →
   the paper's tabulated BP−RP, loose tolerance). Not a mirror of the implementation.
-- [ ] Test `is monotonic across the valid B−V range` (independent property: redder
+- [x] Test `is monotonic across the valid B−V range` (independent property: redder
   B−V → larger BP−RP).
-- [ ] `npm test -- bvToBpRp` → green. Commit.
+- [x] `npm test -- bvToBpRp` → green. Commit.
 
 ## Task 4 — Format constants, LUT quantizers, and 6-byte record pack/unpack
 
@@ -341,27 +341,27 @@ verify against the data: absMag ≈ `−6.0 … +18.32` (24.32 span); BP−RP �
 At encode time (Task 11) the quantizers count + log every value that clamps (the
 counted-clamp log), so a wrong endpoint surfaces loudly instead of silently saturating.
 
-- [ ] Add the format-module skeleton: magic (`"SKST"` → `0x54534b53`), `VERSION = 1`,
+- [x] Add the format-module skeleton: magic (`"SKST"` → `0x54534b53`), `VERSION = 1`,
   `HEADER_BYTES = 64`, `NODE_BYTES = 16`, `RECORD_BYTES = 6`, the LUT constants, the
   quantizer fns, and `packStarRecord` / `unpackStarRecord`. Didactic module header in
   the `galaxyCatalogFormat.ts` style (why cell-quantized, why the mip, why sealed codec,
   the loud regenerate contract).
-- [ ] Test `pack/unpack round-trips a record` — `unpackStarRecord(packStarRecord(o, a, c), 0)`
+- [x] Test `pack/unpack round-trips a record` — `unpackStarRecord(packStarRecord(o, a, c), 0)`
   returns the same `offset` / `absMagIdx` / `colorIdx` across corner values (all-zero,
   all-max `[1023,1023,1023], 127, 63`, and an asymmetric mix). Packing is lossless on
   already-quantized inputs, so this pins the **bit layout**, not the quantization.
-- [ ] Test `packed record is 6 bytes and the spare bits are zero` — length 6; bits
+- [x] Test `packed record is 6 bytes and the spare bits are zero` — length 6; bits
   43–47 of the packed value are 0 (independent check of the reserved-bit contract).
-- [ ] Test `quantizers clamp out-of-range inputs` with **hand-computed** expectations:
+- [x] Test `quantizers clamp out-of-range inputs` with **hand-computed** expectations:
   a value below `STAR_ABSMAG_MIN` → index 0, a value above the span → index 127; the
   same for `bpRpToColorIdx` at `STAR_COLORIDX_MIN`/`_MAX`. (These endpoints are a
   contract with the shipped bytes — testing.md keep-rule #1 — and `<`/`>` clamp is
   observationally distinguishable at saturation, so this is not a vacuous
   clamp-boundary test.)
-- [ ] Test `lutIndexToAbsMag returns bin centres` — a hand-computed mid-range index
+- [x] Test `lutIndexToAbsMag returns bin centres` — a hand-computed mid-range index
   maps back within `STAR_ABSMAG_STEP/2` of a chosen magnitude (round-trip
   quantize→dequantize within tolerance).
-- [ ] `npm test -- starCatalogRecord` → green. Commit.
+- [x] `npm test -- starCatalogRecord` → green. Commit.
 
 ## Task 5 — Format module: `StarCatalog` types + `encodeStarCatalog` / `decodeStarCatalog` / `emptyStarCatalog`
 
@@ -409,24 +409,24 @@ the .bin via "npm run build-stars"` error, mirror `galaxyCatalogFormat.ts:145-15
 then parses the header + node table + record blob back into a `StarCatalog`. Mirror the
 `DataView` + typed-view idiom of `galaxyCatalogFormat.ts:99-140`.
 
-- [ ] Add `StarCatalogNode.d.ts` + `StarCatalog.d.ts` (verbatim from the Interfaces
+- [x] Add `StarCatalogNode.d.ts` + `StarCatalog.d.ts` (verbatim from the Interfaces
   section) with didactic docblocks.
-- [ ] Grow `starCatalogFormat.ts` with `encodeStarCatalog` / `decodeStarCatalog` /
+- [x] Grow `starCatalogFormat.ts` with `encodeStarCatalog` / `decodeStarCatalog` /
   `emptyStarCatalog` against the header + node tables above.
-- [ ] Test `round-trips a synthetic catalog` — build a small hand-authored
+- [x] Test `round-trips a synthetic catalog` — build a small hand-authored
   `StarCatalog` (a few nodes: one aggregate + two leaves, a handful of packed records
   via `packStarRecord`, a non-axis-aligned f64 `gridOrigin`); assert
   `await decodeStarCatalog(await encodeStarCatalog(cat))` deep-equals it field-for-field
   (header scalars exact; `gridOrigin` exact through f64; every node; `records` bytes
   equal). This is the load-bearing on-disk-format test (keep-rule #1).
-- [ ] Test `rejects a wrong magic` — corrupt the first 4 bytes (post-decompress) →
+- [x] Test `rejects a wrong magic` — corrupt the first 4 bytes (post-decompress) →
   `decodeStarCatalog` throws `/not a SKST file/`.
-- [ ] Test `rejects a stale version with the regenerate message` — encode, decompress,
+- [x] Test `rejects a stale version with the regenerate message` — encode, decompress,
   overwrite the version field with `VERSION + 1`, recompress, decode → throws
   `/regenerate the .bin via "npm run build-stars"/`.
-- [ ] Test `emptyStarCatalog encodes and decodes to an empty catalog` — `starCount`,
+- [x] Test `emptyStarCatalog encodes and decodes to an empty catalog` — `starCount`,
   `nodeCount` 0; `records.length` 0 (round-trip).
-- [ ] `npm test -- starCatalogFormat` → green. Commit.
+- [x] `npm test -- starCatalogFormat` → green. Commit.
 
 ## Task 6 — Hipparcos-2 fixed-width parser
 
@@ -452,16 +452,16 @@ Return `{ rows, skipped }` with `skipped` counting **non-positive parallax** row
 counted, logged drop — a parallax ≤ 0 has no physical distance). RA/Dec are converted to
 degrees at the parser boundary so downstream feeds `raDecDistToCartesian` unchanged.
 
-- [ ] Add `hipparcos2.ts` with a didactic header documenting the byte table + the
+- [x] Add `hipparcos2.ts` with a didactic header documenting the byte table + the
   radians→degrees + mas→parsec conversions + the non-positive-parallax skip rule.
-- [ ] Test `parses a ReadMe-accurate fixed-width record` — feed one hand-built 276-char
+- [x] Test `parses a ReadMe-accurate fixed-width record` — feed one hand-built 276-char
   line with known field values at the exact byte columns; assert the decoded
   `hip`/`raDeg`/`decDeg`/`distPc`/`hpMag`/`bv` (hand-computed: `raDeg` from a known
   radian value, `distPc` from a known mas value). This is a contract-with-upstream-bytes
   parser test (keep-rule #3).
-- [ ] Test `skips a non-positive-parallax row and counts it` — a line with `Plx ≤ 0`
+- [x] Test `skips a non-positive-parallax row and counts it` — a line with `Plx ≤ 0`
   is dropped and `skipped` increments.
-- [ ] `npm test -- hipparcos2` → green. Commit.
+- [x] `npm test -- hipparcos2` → green. Commit.
 
 ## Task 7 — FamousStar → Gaia `source_id` curated table
 
@@ -481,14 +481,14 @@ export const FAMOUS_STAR_GAIA_IDS: Readonly<Record<string, bigint | null>>;
 SIMBAD; document provenance per row. Known nulls to expect: `'sun'` (no Gaia row);
 Sirius / α Cen are likely absent too — record whatever the resolution finds.
 
-- [ ] Add `famousStarGaiaIds.ts` with per-row provenance comments.
-- [ ] Test `covers every SCENE_STARS id` — the table's keys are exactly the
+- [x] Add `famousStarGaiaIds.ts` with per-row provenance comments.
+- [x] Test `covers every SCENE_STARS id` — the table's keys are exactly the
   `SCENE_STARS.map(s => s.id)` set (a **structural invariant** — no missing/extra keys —
   which catches a curation drift bug, not a constant restatement). Import `SCENE_STARS`
   for the key set.
-- [ ] Test `the Sun maps to null` — `FAMOUS_STAR_GAIA_IDS['sun'] === null` (a pinned
+- [x] Test `the Sun maps to null` — `FAMOUS_STAR_GAIA_IDS['sun'] === null` (a pinned
   branch: the Sun has no Gaia row, so the dedup must not try to subtract one).
-- [ ] `npm test -- famousStarGaiaIds` → green. Commit.
+- [x] `npm test -- famousStarGaiaIds` → green. Commit.
 
 ## Task 8 — Position-source resolution (pure)
 
@@ -510,12 +510,12 @@ export function resolveStarDistancePc(d: StarDistanceInputs): number | null;
 The empty-string `r_med_*` from the paged CSV parses to `null` upstream, so a Gaia row
 with no Bailer-Jones join resolves to `null` here — the ~0.76 % drop.
 
-- [ ] Add `resolveStarDistancePc.ts` with a didactic docblock (why photogeo is the
+- [x] Add `resolveStarDistancePc.ts` with a didactic docblock (why photogeo is the
   default, why null is a drop not a zero).
-- [ ] Test `prefers photogeo, then geo, then GCNS` — three cases each exercising one
+- [x] Test `prefers photogeo, then geo, then GCNS` — three cases each exercising one
   branch winning over the others present (hand-set inputs, assert the chosen value).
-- [ ] Test `returns null when no distance is available` — all three `null` → `null`.
-- [ ] `npm test -- resolveStarDistancePc` → green. Commit.
+- [x] Test `returns null when no distance is available` — all three `null` → `null`.
+- [x] `npm test -- resolveStarDistancePc` → green. Commit.
 
 ## Task 9 — Star selection + dedup set algebra (pure)
 
@@ -553,20 +553,20 @@ The `HIP < 4.0` cut and the Bailer-Jones/non-positive-plx drops are applied by t
 callers that build `gaia` / `hipparcosBright` (Tasks 6, 8, 11); `selectStars` owns the
 **set algebra + subtraction counters** only — keep the concerns un-braided.
 
-- [ ] Add `selectStars.ts` with a didactic docblock stating the set formula and why the
+- [x] Add `selectStars.ts` with a didactic docblock stating the set formula and why the
   subtraction happens once in the encoder (downstream never sees a duplicate).
-- [ ] Test `subtracts Hipparcos-matched Gaia rows` — a Gaia row whose `source_id` is in
+- [x] Test `subtracts Hipparcos-matched Gaia rows` — a Gaia row whose `source_id` is in
   `hipToSourceId` is removed; the Hipparcos bright row replaces it; `hipGaiaSubtracted`
   counts it.
-- [ ] Test `subtracts famous-star Gaia rows` — a Gaia row in `famousGaiaIds` is removed;
+- [x] Test `subtracts famous-star Gaia rows` — a Gaia row in `famousGaiaIds` is removed;
   `famousSubtracted` counts it. A famous id that is `null` (absent from Gaia) subtracts
   nothing.
-- [ ] Test `unions Hipparcos-bright rows that Gaia lacks` — a bright Hipparcos row with
+- [x] Test `unions Hipparcos-bright rows that Gaia lacks` — a bright Hipparcos row with
   no Gaia match appears in `stars`.
-- [ ] Test `a Hipparcos-bright row that is ALSO a famous star is subtracted` — exercises
+- [x] Test `a Hipparcos-bright row that is ALSO a famous star is subtracted` — exercises
   the `∖ famousStarSet` applying to the union, not just to `gaiaSelected` (the formula's
   outer subtraction).
-- [ ] `npm test -- selectStars` → green. Commit.
+- [x] `npm test -- selectStars` → green. Commit.
 
 ## Task 10 — Flux-mip aggregate math + octree assembly (pure)
 
@@ -592,21 +592,21 @@ constants). Signature is the implementer's to shape from the encode needs, but i
 emit a structure that satisfies `StarCatalog` (nodes reference records; aggregate nodes
 carry `recordCount: 1`; Morton order preserved). Reuse `mortonEncode3`/`mortonDecode3`.
 
-- [ ] Add `mergeFluxAggregate.ts` with a didactic docblock (why flux-weighting, not
+- [x] Add `mergeFluxAggregate.ts` with a didactic docblock (why flux-weighting, not
   magnitude-averaging — magnitudes are logarithmic so averaging them is wrong).
-- [ ] Test `sums flux to a brighter magnitude` — two equal-magnitude children merge to a
+- [x] Test `sums flux to a brighter magnitude` — two equal-magnitude children merge to a
   magnitude exactly `2.5·log10(2)` (≈0.753) brighter (**hand-computed** from the flux
   sum). This fails on a magnitude-average bug; a mirror would not.
-- [ ] Test `centroid and colour are flux-weighted` — a bright child and a faint child at
+- [x] Test `centroid and colour are flux-weighted` — a bright child and a faint child at
   different positions/colours → the aggregate position + `bpRp` sit near the bright one,
   matching a hand-computed weighted mean (not the arithmetic mean).
-- [ ] Test (`buildStarOctree`) `builds nodes over a handful of synthetic stars` — a few
+- [x] Test (`buildStarOctree`) `builds nodes over a handful of synthetic stars` — a few
   stars in two adjacent cells → assert leaf node count, that aggregate nodes carry
   `recordCount === 1` and `level > 0`, that Morton order is non-decreasing across leaf
   nodes, and that the emitted `{ nodes, records }` round-trips through
   `encodeStarCatalog`/`decodeStarCatalog` (ties the assembly to the format contract
   without restating byte offsets).
-- [ ] `npm test -- mergeFluxAggregate buildStarOctree` → green. Commit.
+- [x] `npm test -- mergeFluxAggregate buildStarOctree` → green. Commit.
 
 ## Task 11 — `buildStars.ts` orchestration + `build-stars` script + per-tier logging
 
@@ -657,20 +657,20 @@ one GCNS row, one Hipparcos-bright row, one famous match) — assert the resulti
 per-tier file write are driven only by the CLI entry (guarded by the
 `import.meta.url === argv[1]` idiom, `buildAllBins.ts:803-812`), NOT by the test.
 
-- [ ] Add `buildStars.ts` composing the pure stages; guard the CLI entry so importing
+- [x] Add `buildStars.ts` composing the pure stages; guard the CLI entry so importing
   the module for the test doesn't run it or touch the filesystem.
-- [ ] Add the `build-stars` script to `package.json`.
-- [ ] Test `produces a round-trippable catalog from a synthetic fixture` — feed the
+- [x] Add the `build-stars` script to `package.json`.
+- [x] Test `produces a round-trippable catalog from a synthetic fixture` — feed the
   in-memory stages a handful of rows; assert `decodeStarCatalog(encodeStarCatalog(cat))`
   matches and the star count is the expected post-dedup number.
-- [ ] Test `reports the drop counters` — the synthetic fixture includes one no-BJ Gaia
+- [x] Test `reports the drop counters` — the synthetic fixture includes one no-BJ Gaia
   row, one non-positive-plx Hipparcos row, one famous match, and one Hipparcos-wins
   subtraction; assert each counter equals its hand-counted value.
 - [ ] **Real-data build (logged-assertion task, NOT a vitest):** run `npm run build-stars`
   against plan-01 data; confirm the three `.bin` files appear, the per-tier logs show
   each budget met (Resolved item #6), the counted-clamp totals are near-zero (else
   retune the LUT endpoints in Task 4's constants), and the codec ratio gate passes.
-- [ ] `npm test -- buildStars` → green. Commit.
+- [x] `npm test -- buildStars` → green. Commit.
 
 ## Task 12 — Pipeline docs + `add-data-source` skill refresh
 
@@ -716,14 +716,14 @@ Note **inside the skill edit** that the runtime surface (the `starCatalog`
 `SOURCE_REGISTRY` variant, loader, renderer) lands with plan 03 and the skill gets
 a second pass then.
 
-- [ ] Extend `README.md` with the build-step docs — names `npm run build-stars`,
+- [x] Extend `README.md` with the build-step docs — names `npm run build-stars`,
   `data/raw/gaia/` inputs, and the `public/data/stars-{small,medium,large}.bin`
   outputs. No download-table rows, no ATTRIBUTIONS edits, no functionality blurb.
-- [ ] Update `.claude/skills/add-data-source/SKILL.md` with the five pipeline-surface
+- [x] Update `.claude/skills/add-data-source/SKILL.md` with the five pipeline-surface
   points above + the plan-03 second-pass note, matching the file's structure.
-- [ ] Grep-verify the skill edit: confirm `rawDataPath('gaia.` and `build-stars`
+- [x] Grep-verify the skill edit: confirm `rawDataPath('gaia.` and `build-stars`
   both appear in `.claude/skills/add-data-source/SKILL.md` (use the Grep tool).
-- [ ] Commit (docs only — no test run needed beyond the final gate in Task 13).
+- [x] Commit (docs only — no test run needed beyond the final gate in Task 13).
 
 ## Task 13 — Extend the R2 `ALLOW` filter (final gate)
 
@@ -734,11 +734,11 @@ a second pass then.
 predicate with a didactic comment (the star bins are tiered gitignored build artefacts,
 shipped only via R2 — same rationale as the `sdss|glade` tier pattern immediately above).
 
-- [ ] Add the `stars-<tier>.bin` clause to `ALLOW` with a comment.
-- [ ] Test `ALLOW accepts stars-{small,medium,large}.bin and rejects stars-huge.bin` —
+- [x] Add the `stars-<tier>.bin` clause to `ALLOW` with a comment.
+- [x] Test `ALLOW accepts stars-{small,medium,large}.bin and rejects stars-huge.bin` —
   the three valid names pass, an out-of-set tier name fails (an independent behavioural
   check of the regex, not a restatement of the filter list).
-- [ ] **Final gate:** `npm run typecheck` (both src + tools tsconfigs) + full `npm test`
+- [x] **Final gate:** `npm run typecheck` (both src + tools tsconfigs) + full `npm test`
   → green. Commit.
 
 ---
