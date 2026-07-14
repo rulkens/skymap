@@ -26,7 +26,7 @@ import {
   SELECTED_PACKED_BYTE_OFFSET,
   POINT_SIZE_BYTE_OFFSET,
   PICK_PASS_BYTE_OFFSET,
-} from '../../../../src/services/gpu/renderers/pointVertexLayout';
+} from '../../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,

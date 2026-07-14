@@ -54,24 +54,24 @@
  * silently change the layout signature across the three sibling renderers.
  */
 
-import vsCode from '../shaders/proceduralDisks/vertex.wesl?static';
-import fsCode from '../shaders/proceduralDisks/fragment.wesl?static';
-import pickFsCode from '../shaders/proceduralDisks/pickFragment.wesl?static';
-import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
-import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import vsCode from '../../shaders/proceduralDisks/vertex.wesl?static';
+import fsCode from '../../shaders/proceduralDisks/fragment.wesl?static';
+import pickFsCode from '../../shaders/proceduralDisks/pickFragment.wesl?static';
+import type { ProceduralDiskInstance } from '../../../../@types/rendering/ProceduralDiskInstance';
+import type { ProceduralDiskRenderer } from '../../../../@types/rendering/ProceduralDiskRenderer';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniformsBgl';
 import {
   FLOATS_PER_INSTANCE,
   BYTES_PER_INSTANCE,
   UNIFORM_BYTES,
   createInstancedQuadRenderer,
 } from './instancedQuadRenderer';
-import { packSelection } from '../../../data/selectionEncoding';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { writeCameraPrefix } from '../lib/cameraUniforms';
+import { packSelection } from '../../../../data/selectionEncoding';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { writeCameraPrefix } from '../../lib/cameraUniforms';
 
 type Init = {
   device: GPUDevice;

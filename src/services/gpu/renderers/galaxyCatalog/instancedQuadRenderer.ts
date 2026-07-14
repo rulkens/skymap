@@ -59,14 +59,14 @@
  * (e.g. a future opaque-material impostor) but no current consumer uses it.
  */
 
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { InstancedQuadConfig } from '../../../@types/rendering/InstancedQuadConfig';
-import type { InstancedQuadRenderer } from '../../../@types/rendering/InstancedQuadRenderer';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { writeCameraPrefix } from '../lib/cameraUniforms';
-import { ADDITIVE_BLEND } from '../lib/blendStates';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { InstancedQuadConfig } from '../../../../@types/rendering/InstancedQuadConfig';
+import type { InstancedQuadRenderer } from '../../../../@types/rendering/InstancedQuadRenderer';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { writeCameraPrefix } from '../../lib/cameraUniforms';
+import { ADDITIVE_BLEND } from '../../lib/blendStates';
 
 /**
  * Per-instance vertex layout shared by all three consumers: four

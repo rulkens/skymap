@@ -30,7 +30,7 @@ import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import { zoomedPose } from '../../../utils/camera/zoomedPose';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
-import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
+import { createPickRenderer } from '../../gpu/renderers/galaxyCatalog/pickRenderer';
 import { createPickProgram } from '../frame/pickProgram';
 import { CONTENT_LAYERS } from '../frame/passes';
 import { createClickResolver } from '../interaction/clickHandler';

@@ -19,13 +19,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createPointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
+import { createPointRenderer } from '../../../../../src/services/gpu/renderers/galaxyCatalog/pointRenderer';
 // `BuildRunner` belongs to the store; the renderer only forwards it.
-import type { BuildRunner } from '../../../../src/services/gpu/renderers/catalogStore';
-import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { BuildRunner } from '../../../../../src/services/gpu/renderers/galaxyCatalog/catalogStore';
+import { buildPointInterleavedBuffer } from '../../../../../src/services/engine/bake/buildPointInterleavedBuffer';
+import { Source, SOURCE_REGISTRY } from '../../../../../src/data/sources';
+import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { Mat4 } from 'wgpu-matrix';
 
 // PointRenderer keys its catalogs by the string `GalaxyCatalogId`; these
@@ -123,13 +123,13 @@ function makeStubDevice(): GPUDevice {
 // focusBgl as canonical shared layouts. These stubs satisfy the branded
 // opaque-newtype shape structurally.
 function makeStubFadeBgl() {
-  return {} as import('../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
+  return {} as import('../../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
 }
 function makeStubSourceBgl() {
-  return {} as import('../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
+  return {} as import('../../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
 }
 function makeStubFocusBgl() {
-  return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
+  return {} as import('../../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
 }
 
 // Stub shared focus bind group passed into draw() — the renderer only

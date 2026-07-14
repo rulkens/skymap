@@ -46,16 +46,16 @@
  * @module
  */
 
-import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { SourceType } from '../../../@types/data/SourceType';
-import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
-import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
-import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
-import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
-import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
-import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
+import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { SourceType } from '../../../../@types/data/SourceType';
+import type { BuildPointInterleavedBufferInput } from '../../../../@types/engine/BuildPointInterleavedBufferInput';
+import type { BuildPointInterleavedBufferResult } from '../../../../@types/engine/BuildPointInterleavedBufferResult';
+import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
+import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUniformsBgl';
+import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../data/sources';
+import { cloneGalaxyCatalogForTransfer } from '../../../../data/galaxyCatalog/galaxyCatalogTransfer';
+import { runDisposableWorker } from '../../../../utils/worker/runDisposableWorker';
 import { SLOTS_PER_POINT } from './pointVertexLayout';
 
 // `?worker` emits the worker as a separate chunk and exports a class
@@ -63,7 +63,7 @@ import { SLOTS_PER_POINT } from './pointVertexLayout';
 // 10-second main-thread freeze on .bin arrival.  Node-only tests
 // can't resolve `?worker`; they inject a synchronous fallback through
 // the factory's `buildRunner` param.
-import BuildPointBufferWorker from '../../engine/bake/buildPointInterleavedBuffer.worker?worker';
+import BuildPointBufferWorker from '../../../engine/bake/buildPointInterleavedBuffer.worker?worker';
 
 /**
  * Off-thread bake runner.  Spawns a fresh worker per call, ships the

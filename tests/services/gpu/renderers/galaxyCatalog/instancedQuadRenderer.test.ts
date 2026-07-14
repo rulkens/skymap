@@ -18,9 +18,9 @@ import {
   BYTES_PER_INSTANCE,
   FLOATS_PER_INSTANCE,
   UNIFORM_BYTES,
-} from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
-import type { FocusUniformsBgl } from '../../../../src/@types/rendering/FocusUniformsBgl';
+} from '../../../../../src/services/gpu/renderers/galaxyCatalog/instancedQuadRenderer';
+import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
+import type { FocusUniformsBgl } from '../../../../../src/@types/rendering/FocusUniformsBgl';
 
 // Stub focus BGL — the factory only forwards it into the pipeline layout;
 // the mock device returns {} for it, so a branded empty object suffices.

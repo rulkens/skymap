@@ -100,7 +100,7 @@ vi.mock('../../../../src/services/gpu/resources/createFocusUniformBuffer', () =>
   })),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/pointRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/pointRenderer', () => ({
   createPointRenderer: vi.fn(() => makeStub('pointRenderer')),
 }));
 
@@ -112,11 +112,11 @@ vi.mock('../../../../src/services/gpu/passes/compositor', () => ({
   createCompositor: vi.fn(() => makeStub('compositor')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/texturedDiskRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/texturedDiskRenderer', () => ({
   createTexturedDiskRenderer: vi.fn(() => makeStub('texturedDiskRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/proceduralDiskRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/proceduralDiskRenderer', () => ({
   createProceduralDiskRenderer: vi.fn(() => makeStub('proceduralDiskRenderer')),
 }));
 

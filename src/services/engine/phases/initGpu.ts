@@ -43,11 +43,11 @@
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
-import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
+import { createPointRenderer } from '../../gpu/renderers/galaxyCatalog/pointRenderer';
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
-import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
-import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
+import { createTexturedDiskRenderer } from '../../gpu/renderers/galaxyCatalog/texturedDiskRenderer';
+import { createProceduralDiskRenderer } from '../../gpu/renderers/galaxyCatalog/proceduralDiskRenderer';
 import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShellRenderer';

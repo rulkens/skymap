@@ -36,21 +36,21 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { PointDrawSettings } from '../../../@types/rendering/PointDrawSettings';
-import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { PointDrawSettings } from '../../../../@types/rendering/PointDrawSettings';
+import type { PointRenderer } from '../../../../@types/rendering/PointRenderer';
+import type { Vec2 } from '../../../../@types/math/Vec2';
 
 // `?static` runs the WESL linker at build time and hands back a plain
 // WGSL string with imports resolved.
-import vsCode from '../shaders/points/vertex.wesl?static';
-import colorFsCode from '../shaders/points/colorFragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
-import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import { packPointUniforms } from '../../../utils/gpu/packPointUniforms';
-import { ADDITIVE_BLEND } from '../lib/blendStates';
+import vsCode from '../../shaders/points/vertex.wesl?static';
+import colorFsCode from '../../shaders/points/colorFragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
+import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUniformsBgl';
+import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniformsBgl';
+import { packPointUniforms } from '../../../../utils/gpu/packPointUniforms';
+import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES, UNIFORM_BYTES } from './pointVertexLayout';
 import { createCatalogStore, type BuildRunner } from './catalogStore';
 

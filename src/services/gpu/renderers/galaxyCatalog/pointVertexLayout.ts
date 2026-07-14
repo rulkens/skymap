@@ -198,4 +198,4 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * re-exported from here so callers that already import the layout don't
  * need a second import path.
  */
-export { UNIFORM_BYTES } from '../../../utils/gpu/packPointUniforms';
+export { UNIFORM_BYTES } from '../../../../utils/gpu/packPointUniforms';

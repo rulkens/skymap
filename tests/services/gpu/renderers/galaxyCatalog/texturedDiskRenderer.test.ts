@@ -10,10 +10,10 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { createTexturedDiskRenderer } from '../../../../src/services/gpu/renderers/texturedDiskRenderer';
-import { FLOATS_PER_INSTANCE } from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
-import type { DiskInstance } from '../../../../src/@types/rendering/DiskInstance';
-import type { FocusUniformsBgl } from '../../../../src/@types/rendering/FocusUniformsBgl';
+import { createTexturedDiskRenderer } from '../../../../../src/services/gpu/renderers/galaxyCatalog/texturedDiskRenderer';
+import { FLOATS_PER_INSTANCE } from '../../../../../src/services/gpu/renderers/galaxyCatalog/instancedQuadRenderer';
+import type { DiskInstance } from '../../../../../src/@types/rendering/DiskInstance';
+import type { FocusUniformsBgl } from '../../../../../src/@types/rendering/FocusUniformsBgl';
 
 // Stub focus BGL (forwarded into the pipeline layout) + shared focus bind
 // group (passed into draw, only bound). Both are opaque to the mock device.

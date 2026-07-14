@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 describe('POINT_VERTEX_ATTRIBUTES — shared layout export', () => {
   it('has 10 attributes with the expected shader locations and formats', async () => {
     const { POINT_VERTEX_ATTRIBUTES, POINT_STRIDE } =
-      await import('../../../../src/services/gpu/renderers/pointVertexLayout');
+      await import('../../../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout');
 
     expect(POINT_STRIDE).toBe(52);
     expect(POINT_VERTEX_ATTRIBUTES).toHaveLength(10);

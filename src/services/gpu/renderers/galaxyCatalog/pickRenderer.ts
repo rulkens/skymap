@@ -27,17 +27,17 @@
 // Vertex source is textually shared with PointRenderer but compiled
 // into our own GPUShaderModule — never share modules across pipelines
 // (see the `auto` bind-group-layout trap in pointRenderer.ts).
-import vsCode from '../shaders/points/vertex.wesl?static';
-import pickFsCode from '../shaders/points/pickFragment.wesl?static';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { PickSourceDraw } from '../../../@types/rendering/PickSourceDraw';
-import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
-import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
-import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import { createDummyFadeBindGroup } from '../lib/dummyFade';
+import vsCode from '../../shaders/points/vertex.wesl?static';
+import pickFsCode from '../../shaders/points/pickFragment.wesl?static';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { PickSourceDraw } from '../../../../@types/rendering/PickSourceDraw';
+import type { PickRenderer } from '../../../../@types/rendering/PickRenderer';
+import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
+import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUniformsBgl';
+import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniformsBgl';
+import { createDummyFadeBindGroup } from '../../lib/dummyFade';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES, UNIFORM_BYTES } from './pointVertexLayout';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 

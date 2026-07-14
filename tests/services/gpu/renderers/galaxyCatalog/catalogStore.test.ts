@@ -19,15 +19,15 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import {
   createCatalogStore,
   type BuildRunner,
-} from '../../../../src/services/gpu/renderers/catalogStore';
-import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+} from '../../../../../src/services/gpu/renderers/galaxyCatalog/catalogStore';
+import { buildPointInterleavedBuffer } from '../../../../../src/services/engine/bake/buildPointInterleavedBuffer';
+import { Source, SOURCE_REGISTRY } from '../../../../../src/data/sources';
+import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 
 // The store keys its catalogs by the string `GalaxyCatalogId`; these tests
 // still reason in terms of the numeric `Source` codes (the `loadedSources()`
@@ -111,10 +111,10 @@ function makeStubDevice(): GPUDevice {
 // shared layouts (it mints the per-source bind groups against them). These
 // stubs satisfy the branded opaque-newtype shape structurally.
 function makeStubFadeBgl() {
-  return {} as import('../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
+  return {} as import('../../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
 }
 function makeStubSourceBgl() {
-  return {} as import('../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
+  return {} as import('../../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

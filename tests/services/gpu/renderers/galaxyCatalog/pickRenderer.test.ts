@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
-import { UNIFORM_BYTES } from '../../../../src/services/gpu/renderers/pointVertexLayout';
-import { Source } from '../../../../src/data/sources';
+import { createPickRenderer } from '../../../../../src/services/gpu/renderers/galaxyCatalog/pickRenderer';
+import { UNIFORM_BYTES } from '../../../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout';
+import { Source } from '../../../../../src/data/sources';
 
 // A minimal stub device with a tracked writeBuffer — allows assertions
 // about which buffer was targeted and at which byte offset.  `createBuffer`
@@ -57,13 +57,13 @@ function makeStubDevice() {
 // Stub BGLs — PickRenderer requires fadeBgl + sourceBgl + focusBgl as
 // canonical shared layouts.
 function makeStubFadeBgl() {
-  return {} as import('../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
+  return {} as import('../../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
 }
 function makeStubSourceBgl() {
-  return {} as import('../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
+  return {} as import('../../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
 }
 function makeStubFocusBgl() {
-  return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
+  return {} as import('../../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
 }
 
 // A minimal dummy uniform bytes buffer for drawPoints calls.

@@ -36,14 +36,14 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
-import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import vsCode from '../shaders/texturedDisks/vertex.wesl?static';
-import fsCode from '../shaders/texturedDisks/fragment.wesl?static';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { DiskInstance } from '../../../../@types/rendering/DiskInstance';
+import type { TexturedDiskRenderer } from '../../../../@types/rendering/TexturedDiskRenderer';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniformsBgl';
+import vsCode from '../../shaders/texturedDisks/vertex.wesl?static';
+import fsCode from '../../shaders/texturedDisks/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
 type Init = {

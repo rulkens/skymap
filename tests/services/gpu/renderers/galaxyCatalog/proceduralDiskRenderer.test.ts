@@ -18,10 +18,10 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { createProceduralDiskRenderer } from '../../../../src/services/gpu/renderers/proceduralDiskRenderer';
-import { FLOATS_PER_INSTANCE } from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
-import { packSelection } from '../../../../src/data/selectionEncoding';
-import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/ProceduralDiskInstance';
+import { createProceduralDiskRenderer } from '../../../../../src/services/gpu/renderers/galaxyCatalog/proceduralDiskRenderer';
+import { FLOATS_PER_INSTANCE } from '../../../../../src/services/gpu/renderers/galaxyCatalog/instancedQuadRenderer';
+import { packSelection } from '../../../../../src/data/selectionEncoding';
+import type { ProceduralDiskInstance } from '../../../../../src/@types/rendering/ProceduralDiskInstance';
 
 function makeStubInit() {
   const writeBufferCalls: Array<{ data: Float32Array; offset: number }> = [];
@@ -76,7 +76,7 @@ function makeStubInit() {
       targetFormat: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
       focusBgl:
-        {} as unknown as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
+        {} as unknown as import('../../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
     },
     writeBufferCalls,
     renderPipelines,
