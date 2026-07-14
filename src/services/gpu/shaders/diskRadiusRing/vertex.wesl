@@ -30,7 +30,7 @@ import package::lib::orientation::diskAxes;
 // Segment count for the line strip.  The CPU draws SEGMENTS + 1 = 97
 // vertices: vertex 'SEGMENTS' wraps to theta = 2*pi, landing back on
 // vertex 0 so the strip closes.  This literal MUST stay in lockstep with
-// the 'SEGMENTS_PLUS_ONE = 97' draw count in passes/diskRadiusRing.ts —
+// the 'SEGMENTS_PLUS_ONE = 97' draw count in renderers/devTools/diskRadiusRing.ts —
 // a mismatch leaves the ring open or overruns the loop.
 const SEGMENTS: u32 = 96u;
 

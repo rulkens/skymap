@@ -6,7 +6,7 @@
  * ## Why a registry instead of one TS module per font?
  *
  * The bake step (`tools/buildFontAtlas.ts`) and the runtime loader
- * (`src/services/gpu/labels/loadFontAtlas.ts`) both need the font
+ * (`src/services/gpu/labelLayout/loadFontAtlases.ts`) both need the font
  * list.  Per-side constants would mean adding a font requires
  * parallel edits, getting the order right by hand, and hoping the
  * atlas envelope (size, distance range, font size) stays in sync

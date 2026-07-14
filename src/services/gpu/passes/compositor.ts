@@ -73,6 +73,7 @@ import vsCode from '../shaders/compositor/vertex.wesl?static';
 import fsCode from '../shaders/compositor/fragment.wesl?static';
 import { clampExposure } from '../../../utils/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { ADDITIVE_BLEND } from '../lib/blendStates';
 import type { Compositor } from '../../../@types/rendering/Compositor';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
@@ -171,10 +172,7 @@ const BLEND_TABLE: Record<
   // (see volumeUpsample.ts). Source coverage is carried straight
   // (preserveAlpha 1) so the sum of contributions is order-independent.
   additive: {
-    blend: {
-      color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-      alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-    },
+    blend: ADDITIVE_BLEND,
     preserveAlpha: 1,
   },
 };

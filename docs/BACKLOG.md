@@ -42,7 +42,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Foreground-body picking** `ready` **HIGH PRIORITY** — Sun/Earth/planets/stars aren't click-pickable; `pickProgram` already anticipates `pick:near0`, codes 21/22/23 reserved, body SelectionRow arm shipped — add pickable NEAR0 rows + code→ref mapping. → [details](backlog/2026-07-12-foreground-body-picking.md)
+- [ ] **Foreground-body picking** `blocked` (on #436 reorg + Gaia plan 03) — make bodies/stars new families on the existing pick spine once the Gaia renderer lands; 2026-07-14 design notes captured in the detail file. → [details](backlog/2026-07-12-foreground-body-picking.md)
 - [ ] **Star field → own slab** `needs-design` — the depthless star map (points/captions/connectors) inherits NEAR0's Earth-scale depth bracket; a STARS slab row deletes the three clip-z clamps + far-plane coupling. → [details](backlog/2026-07-13-star-field-own-slab.md)
 - [ ] **Milliquas AGN colormap** `needs-design` — AGN reuse the galaxy B−R ramp and misread as blue star-forming; give them their own encoding. Only the kPerZ=0 clamp shipped (#282). → [details](backlog/2026-06-29-milliquas-agn-colormap.md)
 - [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/2026-06-29-supercluster-shape-focus.md)
@@ -54,8 +54,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **MW point-cloud follow-ups** `ready` — five small knots from the T10 radar (orphaned WESL helpers, record-field offsets, billboard-basis mirror, tool↔app constants, pick bind-group injection). → [details](backlog/2026-07-08-mw-point-cloud-follow-ups.md)
 - [ ] **starRenderer per-instance uniforms** `ready` — the star-sphere renderer's single non-dynamic uniform means two same-frame resolved stars share the last-written MVP (benign with today's seeds, documented in `starSpheresLayer`); upgrade to the `planetRenderer` instanced shape, natural fold candidate for the renderers reorg.
 - [ ] **Galaxy impostor LOD** `needs-design` — per-galaxy rgba16f impostors baked from the GPU generator (photo-thumbnail band retires; procedural disk stays as placeholder band), full star+dust geometry above ~128 px; band counts, churn, per-tier memory, and Hubble-type coverage all measured. → [details](backlog/2026-07-08-galaxy-impostor-lod.md)
-- [ ] **GPU renderers folder reorg** `ready` — family folders + lib primitives + pointRenderer split; spec approved (zoom-to-earth plan 02 landed), plans still to be written. → [spec](superpowers/specs/2026-07-10-gpu-renderers-reorg-design.md)
 - [ ] **`degToRad`/`addVec3` sweep + `data/<domain>/palette.ts` convention** `deferred` — migrate the ~5 remaining inline `Math.PI/180` sites and audit other data folders against the palette convention the bodies cleanup set. → [details](backlog/2026-07-14-scale-helpers-palette-convention-sweep.md)
+- [ ] **`CatalogDrawEntry` bind-group coverage** `deferred` — a wrong-source `fadeBindGroup`/`sourceBindGroup` on a `catalogStore.entries()` entry would pass every test (the draw test only smoke-checks the command list). → [details](backlog/2026-07-14-catalog-draw-entry-coverage.md)
 - [ ] **Star-bin ↔ MW-cloud crossfade density calibration** `deferred` — calibrate the procedural cloud's inner density/colors to Gaia counts if the v1 hand-tuned crossfade band shows a seam; gated on the star bin shipping. → [details](backlog/2026-07-13-star-bin-crossfade-density-calibration.md)
 
 ## UI & UX
@@ -76,6 +76,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Cosmic-zoom plan review** `process` — 60-doc "Powers of Ten" walkthrough plan drafted in worktree `cosmic-zoom-plan` (2026-05-08), awaiting user review (memory `project_cosmic_zoom_plan`).
 - [ ] **Famous-curator suite runtime cost** `deferred` — real sharp encodes + tmpdir I/O dominate suite wall-clock; cache fixtures, shrink images, or tag a slow-suite split. → [details](backlog/2026-07-10-famous-curator-suite-runtime-cost.md)
 - [ ] **Deproject invariant consolidation** `deferred` — square-in/square-out tested 4× across the curator export surface; fold into one parameterized test if that surface is reworked. → [details](backlog/2026-07-10-deproject-invariant-consolidation.md)
+- [ ] **move-files: untracked references** `ready` — ts-morph skips `?worker`/`?static` specifiers + `vi.mock` literals; a stale `?worker` is silent on BOTH tsc and vite build. Rewrite them, then fail loudly on anything still dangling. → [details](backlog/2026-07-14-move-files-untracked-references.md)
 
 ## External / blocked
 

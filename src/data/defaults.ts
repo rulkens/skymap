@@ -108,7 +108,7 @@ export const DEFAULT_DEPTH_FADE_ENABLED = true;
  * gives a visceral "you are here" sense before the user flies out into the
  * cosmic-web view. Derived from the SOURCE_REGISTRY milkyWay row's `visible`
  * gate, so the registry is the single source of truth; see
- * `services/gpu/renderers/milkyWayCloudRenderer.ts` +
+ * `services/gpu/renderers/milkyWay/milkyWayCloudRenderer.ts` +
  * `services/gpu/galaxy/milkyWayFadeAlpha.ts` for the apparent-size fade band.
  */
 export const DEFAULT_MILKY_WAY_ENABLED = SOURCE_REGISTRY[Source.MilkyWay].visible;

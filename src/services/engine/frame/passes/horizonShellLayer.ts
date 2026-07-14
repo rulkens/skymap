@@ -45,7 +45,7 @@
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { COSMO } from '../slabs';
 import { horizonShellFadeAlpha } from '../../../../utils/math/horizonShellFadeAlpha';
-import { HORIZON_RADIUS_GPC } from '../../../gpu/renderers/horizonShellRenderer';
+import { HORIZON_RADIUS_GPC } from '../../../gpu/renderers/horizonShell/horizonShellRenderer';
 
 /** Shell radius in Mpc — the fade band is a fraction of this. */
 const HORIZON_RADIUS_MPC = HORIZON_RADIUS_GPC * 1000;

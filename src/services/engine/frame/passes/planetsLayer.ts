@@ -54,7 +54,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
-import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/planetRenderer';
+import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 

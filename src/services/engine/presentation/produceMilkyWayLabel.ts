@@ -35,7 +35,7 @@ import type { LabelProducerOutput } from '../../../@types/engine/subsystems/Labe
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from './liftedLabelPlacement';
-import { milkyWayLabelAlpha } from '../../gpu/labels/milkyWayLabelVisibility';
+import { milkyWayLabelAlpha } from '../../gpu/labelLayout/milkyWayLabelVisibility';
 
 /**
  * Physical diameter driving the label's proportional screen-space lift. The

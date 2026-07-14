@@ -43,35 +43,35 @@
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
-import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
+import { createPointRenderer } from '../../gpu/renderers/galaxyCatalog/pointRenderer';
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
-import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
-import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
+import { createTexturedDiskRenderer } from '../../gpu/renderers/galaxyCatalog/texturedDiskRenderer';
+import { createProceduralDiskRenderer } from '../../gpu/renderers/galaxyCatalog/proceduralDiskRenderer';
 import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
-import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWayCloudRenderer';
-import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShellRenderer';
-import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
-import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
-import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
-import { createDebugLineRenderer } from '../../gpu/renderers/debugLineRenderer';
-import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRingRenderer';
-import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarkerRenderer';
-import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWayPickRenderer';
-import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeFieldRenderer';
-import { createFlowFieldRenderer } from '../../gpu/renderers/flowFieldRenderer';
+import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
+import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
+import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
+import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
+import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
+import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
+import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
+import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
+import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
+import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
+import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
-import { createDiskRadiusRing } from '../../gpu/passes/diskRadiusRing';
-import { createEarthRenderer } from '../../gpu/renderers/earthRenderer';
-import { createStarRenderer } from '../../gpu/renderers/starRenderer';
-import { createPlanetRenderer } from '../../gpu/renderers/planetRenderer';
-import { createStarPointRenderer } from '../../gpu/renderers/starPointRenderer';
-import { createOrbitTrailRenderer } from '../../gpu/renderers/orbitTrailRenderer';
+import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
+import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
+import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
+import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
+import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
+import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
-import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
+import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
@@ -157,13 +157,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // rgba16float texture, not the swap-chain `format`.  Their pipelines
   // bake this into a fixed colour-target descriptor at construction
   // time, so the format choice has to land here.
-  const renderer = createPointRenderer(
+  const renderer = createPointRenderer({
     device,
-    'rgba16float',
-    state.gpu.fadeBgl!,
-    state.gpu.sourceBgl!,
-    state.gpu.focusBgl!,
-  );
+    targetFormat: 'rgba16float',
+    fadeBgl: state.gpu.fadeBgl!,
+    sourceBgl: state.gpu.sourceBgl!,
+    focusBgl: state.gpu.focusBgl!,
+  });
   state.gpu.renderer = renderer;
 
   // ── Wire the bias-correction subsystem to the freshly-built renderer ──
