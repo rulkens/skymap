@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   planRandomIndexSlices,
@@ -7,6 +10,9 @@ import {
   buildGcnsQuery,
   buildHipXmatchQuery,
   gateDecision,
+  fetchPagedCatalog,
+  verifyPageRowTotal,
+  type TapTransport,
 } from '../../../tools/fetch/fetchGaia';
 
 describe('planRandomIndexSlices', () => {
@@ -97,5 +103,161 @@ describe('gateDecision', () => {
     // same flag works in CI and at an interactive shell.
     expect(gateDecision(true, false)).toBe('proceed');
     expect(gateDecision(true, true)).toBe('proceed');
+  });
+});
+
+describe('fetchPagedCatalog', () => {
+  let dir: string;
+
+  // A tiny deterministic page body: the pinned header line plus `rows` data
+  // lines. countDataRows must return exactly `rows` — the header never counts.
+  const pageBody = (rows: number): string => {
+    const header =
+      'source_id,ra,dec,phot_g_mean_mag,bp_rp,r_med_geo,r_med_photogeo,random_index';
+    const lines = [header];
+    for (let r = 0; r < rows; r++) {
+      lines.push(`${r},10.0,20.0,13.5,0.5,100,101,${r}`);
+    }
+    return lines.join('\n') + '\n';
+  };
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'fetch-gaia-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('skips slices whose final page file exists: transport not called for them, skipped counted', async () => {
+    const slices = planRandomIndexSlices(100, 2);
+    // Slice 0 is already fully cached; the resume scan must never re-download it.
+    writeFileSync(join(dir, pageFileName(0)), pageBody(2));
+    const transport = vi.fn<TapTransport>(async () => pageBody(2));
+
+    const result = await fetchPagedCatalog({ slices, dir, transport });
+
+    expect(result.skipped).toBe(1);
+    expect(result.fetched).toBe(1);
+    // Transport ran once — for slice 1 only — and never saw slice 0's bounds.
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(transport.mock.calls[0]![0]).toContain(`random_index >= ${slices[1]!.start}`);
+    expect(existsSync(join(dir, pageFileName(1)))).toBe(true);
+  });
+
+  it('a leftover .part file does not count as complete: the slice is refetched and the .part replaced by the final file', async () => {
+    const slices = planRandomIndexSlices(100, 1);
+    // A crash left a partial write behind. A `.part` is never a completion
+    // signal — the slice must refetch and the final file must appear.
+    writeFileSync(join(dir, `${pageFileName(0)}.part`), 'truncated garbage');
+    const transport = vi.fn<TapTransport>(async () => pageBody(2));
+
+    const result = await fetchPagedCatalog({ slices, dir, transport });
+
+    expect(result.fetched).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(existsSync(join(dir, pageFileName(0)))).toBe(true);
+    expect(existsSync(join(dir, `${pageFileName(0)}.part`))).toBe(false);
+  });
+
+  it('on success no .part remains; on transport failure no final file exists for that slice', async () => {
+    const slices = planRandomIndexSlices(100, 2);
+    // Slice 1 (start 50) fails; slice 0 succeeds. Both halves of the
+    // atomicity contract: the good slice leaves no .part, the bad slice
+    // leaves no final file (a half-written page must never look complete).
+    const transport = vi.fn<TapTransport>(async (query) => {
+      if (query.includes(`random_index >= ${slices[1]!.start}`)) {
+        throw new Error('HTTP 503: service unavailable');
+      }
+      return pageBody(2);
+    });
+
+    await fetchPagedCatalog({ slices, dir, transport });
+
+    expect(existsSync(join(dir, pageFileName(0)))).toBe(true);
+    expect(existsSync(join(dir, `${pageFileName(0)}.part`))).toBe(false);
+    expect(existsSync(join(dir, pageFileName(1)))).toBe(false);
+    expect(existsSync(join(dir, `${pageFileName(1)}.part`))).toBe(false);
+  });
+
+  it('a failing slice is counted and logged but does not stop the remaining slices', async () => {
+    const slices = planRandomIndexSlices(300, 3);
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // The middle slice fails; the fetcher must count it and carry on so a
+    // single flaky page never aborts a multi-hour run.
+    const transport = vi.fn<TapTransport>(async (query) => {
+      if (query.includes(`random_index >= ${slices[1]!.start}`)) {
+        throw new Error('HTTP 500: boom');
+      }
+      return pageBody(2);
+    });
+
+    const result = await fetchPagedCatalog({ slices, dir, transport });
+
+    expect(result.failed).toBe(1);
+    expect(result.fetched).toBe(2);
+    // Slices after the failure still ran and landed on disk.
+    expect(existsSync(join(dir, pageFileName(2)))).toBe(true);
+    // The first failure was logged verbatim, not swallowed.
+    expect(warn).toHaveBeenCalled();
+    expect(warn.mock.calls.some((c) => String(c[0]).includes('HTTP 500: boom'))).toBe(true);
+    warn.mockRestore();
+  });
+
+  it('rowsFetched excludes each page CSV header line', async () => {
+    const slices = planRandomIndexSlices(100, 2);
+    // Two pages, each a header + 2 data rows. The header must not count:
+    // 2 pages x 2 data rows = 4, never 6.
+    const transport = vi.fn<TapTransport>(async () => pageBody(2));
+
+    const result = await fetchPagedCatalog({ slices, dir, transport });
+
+    expect(result.rowsFetched).toBe(4);
+  });
+
+  it('resume against a pages plan sliced for a different partition throws instead of mixing partitions', async () => {
+    // First run pins (totalCount, sliceCount) in the plan sidecar.
+    const firstSlices = planRandomIndexSlices(100, 2);
+    const transport = vi.fn<TapTransport>(async () => pageBody(2));
+    await fetchPagedCatalog({ slices: firstSlices, dir, transport });
+
+    // A second run with a different totalCount would tile a different range —
+    // resuming against the old pages would silently mix two partitions.
+    const drifted = planRandomIndexSlices(200, 2);
+    await expect(fetchPagedCatalog({ slices: drifted, dir, transport })).rejects.toThrow(
+      /partition/i,
+    );
+  });
+});
+
+describe('verifyPageRowTotal', () => {
+  let dir: string;
+
+  const pageBody = (rows: number): string => {
+    const header =
+      'source_id,ra,dec,phot_g_mean_mag,bp_rp,r_med_geo,r_med_photogeo,random_index';
+    const lines = [header];
+    for (let r = 0; r < rows; r++) lines.push(`${r},10.0,20.0,13.5,0.5,100,101,${r}`);
+    return lines.join('\n') + '\n';
+  };
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'verify-gaia-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('sums data rows across pages and throws on mismatch', async () => {
+    // Three pages of 2 data rows each: hand-computed total is 6, headers excluded.
+    writeFileSync(join(dir, pageFileName(0)), pageBody(2));
+    writeFileSync(join(dir, pageFileName(1)), pageBody(2));
+    writeFileSync(join(dir, pageFileName(2)), pageBody(2));
+
+    await expect(verifyPageRowTotal(dir, 6)).resolves.toBe(6);
+
+    // Drop one data row from one page → 5 rows now; the guard must reject and
+    // name both the actual (5) and expected (6) counts.
+    writeFileSync(join(dir, pageFileName(1)), pageBody(1));
+    await expect(verifyPageRowTotal(dir, 6)).rejects.toThrow(/5.*6|6.*5/s);
   });
 });

@@ -45,6 +45,10 @@
  * quietly fill the disk with the wrong catalog.
  */
 
+import { existsSync } from 'node:fs';
+import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
 /** One half-open `random_index` range: rows with `start <= random_index < endExclusive`. */
 export type RandomIndexSlice = { index: number; start: number; endExclusive: number };
 
@@ -239,4 +243,185 @@ export function printFetchPreamble(work: FetchWorkPlan): void {
   console.log(supplement('Hipparcos↔Gaia cross-match', work.xmatchNeeded));
   console.log(`Estimated download: ~${formatBytes(estimateRemainingBytes(work))} (approximate).`);
   console.log('This is a large transfer on a metered/tight network. Pass --yes to proceed.');
+}
+
+/**
+ * Injected fetch so tests never touch the network. Given one page's ADQL it
+ * resolves to the raw CSV body, or rejects on an HTTP/network error whose
+ * message carries the status and a body snippet (the fetch2massXsc TAP-error
+ * spelling). `main()` supplies a real POST-to-TAP transport; tests supply a
+ * `vi.fn<TapTransport>()` returning deterministic tiny bodies.
+ */
+export type TapTransport = (query: string) => Promise<string>;
+
+/**
+ * The tally a paged run returns. `fetched`/`skipped`/`failed` partition the
+ * slices this run touched; `rowsFetched` sums the data rows (CSV header
+ * excluded per page) actually written this run. A failed slice contributes to
+ * `failed` only — it is logged, never written, and picked up by the next run.
+ */
+export type PagedFetchResult = {
+  fetched: number;
+  skipped: number;
+  failed: number;
+  rowsFetched: number;
+};
+
+/**
+ * The expected number of DR3 rows surviving the G < 14 cut across the whole
+ * paged catalog. `verifyPageRowTotal` asserts the summed page rows equal this
+ * once every slice is present and none failed — a short count means a
+ * truncated or missing page, a long count means the cut or upstream table
+ * changed. Measured against DR3; bump it only when the cut or catalog moves.
+ */
+export const EXPECTED_G14_ROWS = 16_844_156;
+
+/**
+ * The slice partition is identified by `(totalCount, sliceCount)`: change
+ * either and the half-open ranges retile [0, totalCount) differently, so
+ * previously-cached pages no longer line up with the current slices and a
+ * resume would silently interleave two partitions. This sidecar, written into
+ * the pages directory on the first run, pins those two numbers so a later run
+ * with drifted inputs fails loudly instead of mixing partitions. It lives with
+ * the cache it describes, so it needs no registry key and no gitignore edit —
+ * deleting the pages directory deletes it too.
+ */
+const PLAN_SIDECAR_NAME = 'pages.plan.json';
+
+/** The `(totalCount, sliceCount)` identity of the partition the cached pages belong to. */
+type PagesPlan = { totalCount: number; sliceCount: number };
+
+/**
+ * Count the data rows in one page's CSV body: non-empty lines minus the header
+ * line. An empty body or a header-only page is zero data rows. This is the one
+ * place the "header never counts" rule lives, shared by the fetch tally and
+ * the completion-time verification.
+ */
+function countDataRows(csvBody: string): number {
+  const nonEmpty = csvBody.split(/\r?\n/).filter((line) => line.length > 0);
+  return Math.max(0, nonEmpty.length - 1);
+}
+
+/** Zero-padded page index/total for the per-slice progress line (0042/0256). */
+function progressLabel(index: number, total: number): string {
+  const width = Math.max(4, String(total).length);
+  return `${String(index).padStart(width, '0')}/${String(total).padStart(width, '0')}`;
+}
+
+/**
+ * Fetch every slice sequentially — one request in flight at a time, so a lost
+ * connection wastes one page's minutes, not the whole run's hours, and the TAP
+ * endpoint is never hammered with parallel heavy scans. Resume is filename-per-
+ * slice: a slice whose final page file already exists is skipped without
+ * calling the transport; otherwise the body is written to `<file>.part` and
+ * renamed to its final name only once the write completed, so a crash mid-write
+ * leaves a `.part` that the next run overwrites rather than a truncated file
+ * that masquerades as complete.
+ *
+ * A transport rejection is counted, its first occurrence logged verbatim
+ * (the fetchHyperLeda counted-failure discipline), and the run continues — the
+ * resume path is the retry mechanism, so a re-run fetches only the slices that
+ * failed. Before any fetch, the partition identity `(totalCount, sliceCount)`
+ * derived from the slices is checked against (or written to) the plan sidecar;
+ * a mismatch throws rather than resume against a differently-tiled cache.
+ */
+export async function fetchPagedCatalog(opts: {
+  slices: readonly RandomIndexSlice[];
+  dir: string;
+  transport: TapTransport;
+}): Promise<PagedFetchResult> {
+  const { slices, dir, transport } = opts;
+  await mkdir(dir, { recursive: true });
+
+  // The slices carry their own partition identity: the last slice's
+  // endExclusive is the totalCount they were cut from, and their length is the
+  // slice count. Pin (or verify) that identity before touching any page.
+  const derived: PagesPlan = {
+    totalCount: slices.length > 0 ? slices[slices.length - 1]!.endExclusive : 0,
+    sliceCount: slices.length,
+  };
+  const sidecarPath = join(dir, PLAN_SIDECAR_NAME);
+  if (existsSync(sidecarPath)) {
+    const saved = JSON.parse(await readFile(sidecarPath, 'utf8')) as PagesPlan;
+    if (saved.totalCount !== derived.totalCount || saved.sliceCount !== derived.sliceCount) {
+      throw new Error(
+        `Gaia page partition drift: cached pages in ${dir} were sliced for ` +
+          `(totalCount=${saved.totalCount}, slices=${saved.sliceCount}), but this run ` +
+          `derives (totalCount=${derived.totalCount}, slices=${derived.sliceCount}). ` +
+          `Resuming would mix two partitions. Delete the page files and ${PLAN_SIDECAR_NAME} ` +
+          `in ${dir}, then re-run to fetch a fresh partition.`,
+      );
+    }
+  } else {
+    await writeFile(sidecarPath, `${JSON.stringify(derived, null, 2)}\n`);
+  }
+
+  let fetched = 0;
+  let skipped = 0;
+  let failed = 0;
+  let rowsFetched = 0;
+  let firstError: string | undefined;
+
+  for (const slice of slices) {
+    const finalPath = join(dir, pageFileName(slice.index));
+    if (existsSync(finalPath)) {
+      skipped++;
+      continue;
+    }
+    const partPath = `${finalPath}.part`;
+    try {
+      const body = await transport(buildGaiaPageQuery(slice));
+      // Write to `.part`, then rename — an interrupted write leaves the
+      // `.part` (overwritten next run), never a truncated final file.
+      await writeFile(partPath, body);
+      await rename(partPath, finalPath);
+      const rows = countDataRows(body);
+      rowsFetched += rows;
+      fetched++;
+      console.log(
+        `page ${progressLabel(slice.index, slices.length)}: ` +
+          `${rows.toLocaleString()} rows (${failed} failed so far)`,
+      );
+    } catch (error) {
+      // Network/HTTP failure: DO NOT write a page — resume retries it next
+      // run. Count it and log the first one verbatim; a silent catch would let
+      // an outage wipe a run with no visible error.
+      failed++;
+      const message = (error as Error).message;
+      if (firstError === undefined) {
+        firstError = message;
+        console.error(`  WARN first page fetch failure for slice ${slice.index}: ${firstError}`);
+      }
+    }
+  }
+
+  return { fetched, skipped, failed, rowsFetched };
+}
+
+/**
+ * Sum the data rows across every `gaia_page_*.csv` in `dir` (each file's header
+ * line excluded) and throw a loud, actionable message unless the total equals
+ * `expected`. Call this only once a run reports zero failures and no missing
+ * slice — it is the completion gate that catches a truncated page or a silently
+ * changed cut before the pages feed the downstream binary builder.
+ */
+export async function verifyPageRowTotal(dir: string, expected: number): Promise<number> {
+  const entries = await readdir(dir);
+  const pageFiles = entries.filter((name) => /^gaia_page_\d+\.csv$/.test(name)).sort();
+
+  let total = 0;
+  for (const name of pageFiles) {
+    total += countDataRows(await readFile(join(dir, name), 'utf8'));
+  }
+
+  if (total !== expected) {
+    throw new Error(
+      `Gaia page row-count mismatch: summed ${total.toLocaleString()} data rows across ` +
+        `${pageFiles.length} page file(s) in ${dir}, expected ${expected.toLocaleString()}. ` +
+        `A short count means a page is truncated or a slice is missing; a long count means ` +
+        `the G<14 cut or the upstream table changed. Delete the pages + ${PLAN_SIDECAR_NAME} ` +
+        `and re-fetch, or update EXPECTED_G14_ROWS if the catalog legitimately moved.`,
+    );
+  }
+  return total;
 }
