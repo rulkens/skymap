@@ -410,6 +410,70 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchDesi.ts',
   },
 
+  // ─── Gaia DR3 star bin (G<14 main + GCNS + Hipparcos-2 bright patch) ──
+
+  'gaia.dir': {
+    path: 'data/raw/gaia',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Gaia DR3 raw-data directory. Holds the paged main-catalog CSVs `gaia_page_<NNNN>.csv` (one file per contiguous random_index slice; consumers join(rawDataPath(...), pageFileName(i))) plus the GCNS + Hipparcos artifacts.',
+    upstream: 'https://gea.esac.esa.int/tap-server/tap/sync',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+  },
+  'gaia.gcns': {
+    path: 'data/raw/gaia/gcns_main.csv',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Gaia Catalogue of Nearby Stars (100 pc supplement) — external.gaiaedr3_gcns_main_1, 331,312 rows. Single TAP-sync CSV, ORDER BY source_id for a stable sha256.',
+    upstream: 'https://gea.esac.esa.int/tap-server/tap/sync',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+  },
+  'gaia.hipparcos': {
+    path: 'data/raw/gaia/hip2.dat',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Hipparcos-2 astrometric catalogue (van Leeuwen 2007, VizieR I/311) — 117,955 fixed-width records, the bright-star patch above the Gaia saturation limit. CDS serves it only gzipped (hip2.dat.gz); the fetcher decompresses to this path.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/I/311/hip2.dat.gz',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+    readme: 'gaia.hipparcos-readme',
+  },
+  'gaia.hipparcos-readme': {
+    path: 'data/raw/gaia/ReadMe',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'VizieR ReadMe for I/311 — byte-offset spec for hip2.dat. Downloaded alongside the table per the "ReadMes live next to the file they describe" convention.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/I/311/ReadMe',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+  },
+  'gaia.hip-xmatch': {
+    path: 'data/raw/gaia/hip2_best_neighbour.csv',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Hipparcos↔Gaia cross-match — gaiadr3.hipparcos2_best_neighbour, 99,525 rows (source_id ↔ HIP number). Single TAP-sync CSV, ORDER BY source_id; the dedup key for the Hipparcos bright patch.',
+    upstream: 'https://gea.esac.esa.int/tap-server/tap/sync',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+  },
+  'gaia.readme': {
+    path: 'data/raw/gaia/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Gaia DR3 star bin — upstream services + tables, SELECT column lists, the G<14 cut + row counts, the paging scheme, and the fetch command.',
+  },
+  'gaia.sha256': {
+    path: 'data/raw/gaia/gaia.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Combined SHA-256 sidecar for the two stable single-file Gaia artifacts (`gcns_main.csv`, `hip2.dat`), one `<hex>  <filename>` line each — committed so the fetcher can detect truncated or stale downloads. The paged CSVs get a fetch-completion row-count check instead.',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+  },
+
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────
 
   'starnet.weights': {

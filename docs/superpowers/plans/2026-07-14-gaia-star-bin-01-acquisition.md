@@ -1,6 +1,6 @@
 # Gaia Star Bin — Plan 01: Acquisition Pipeline (`npm run fetch-gaia`)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Each implementer subagent must be dispatched `run_in_background: true` per project convention; the main thread runs `npm test` / `npm run typecheck` and commits. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Each implementer subagent must be dispatched `run_in_background: true` per project convention; the main thread runs `npm test` / `npm run typecheck` and commits. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Spec:** `docs/superpowers/specs/2026-07-13-gaia-star-bin-design.md` — **plan 1 of 3 (acquisition only, spec §4 fetch half)**. Plan 02 (binary format + encoder + `build-stars`) and plan 03 (renderer + registry integration) are explicitly out of scope here. Plan 02 was written **in parallel against the registry keys and column lists pinned below** — where this plan and spec §4's provisional names differ (e.g. `gaia.dir` vs the spec's `gaia.source-dir`, `hip2.dat` vs `hipparcos2.dat`), the pinned contracts here win.
 
@@ -106,10 +106,10 @@ Embed these in the code as named constants / assertions where marked. They are c
 
 **Steps**
 
-- [ ] Add the seven registry entries with didactic descriptions; write `data/raw/gaia/README.md`.
-- [ ] Sanity: `git check-ignore data/raw/gaia/gcns_main.csv` → ignored; `git check-ignore data/raw/gaia/README.md` and `…/gaia.sha256` → NOT ignored (create empty throwaway files to check if needed, then delete the throwaways — not the README).
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit: `git add tools/utils/io/rawDataRegistry.ts data/raw/gaia/README.md`
+- [x] Add the seven registry entries with didactic descriptions; write `data/raw/gaia/README.md`.
+- [x] Sanity: `git check-ignore data/raw/gaia/gcns_main.csv` → ignored; `git check-ignore data/raw/gaia/README.md` and `…/gaia.sha256` → NOT ignored (create empty throwaway files to check if needed, then delete the throwaways — not the README).
+- [x] `npm run typecheck` → clean.
+- [x] Commit: `git add tools/utils/io/rawDataRegistry.ts data/raw/gaia/README.md`
 
 ---
 
@@ -146,8 +146,8 @@ export function pageFileName(index: number): string;
 
 **Steps**
 
-- [ ] Failing tests → run → implement → run → green; `npm run typecheck`.
-- [ ] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts`
+- [x] Failing tests → run → implement → run → green; `npm run typecheck`.
+- [x] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts`
 
 ---
 
@@ -209,9 +209,9 @@ No `ORDER BY` on the page query — a server-side sort over 16.8 M rows per slic
 
 **Steps**
 
-- [ ] Failing tests → run → implement → run → green; `npm run typecheck`.
-- [ ] Live join-syntax check (procedure above); record the outcome in the builder's comment.
-- [ ] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts`
+- [x] Failing tests → run → implement → run → green; `npm run typecheck`.
+- [x] Live join-syntax check (procedure above); record the outcome in the builder's comment.
+- [x] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts`
 
 ---
 
@@ -256,8 +256,8 @@ No test for `estimateRemainingBytes` — it is arithmetic over constants (a test
 
 **Steps**
 
-- [ ] Failing test → run → implement `gateDecision`, `estimateRemainingBytes`, the preamble printer → run → green; `npm run typecheck`.
-- [ ] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts`
+- [x] Failing test → run → implement `gateDecision`, `estimateRemainingBytes`, the preamble printer → run → green; `npm run typecheck`.
+- [x] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts`
 
 ---
 
@@ -314,8 +314,8 @@ export function verifyPageRowTotal(dir: string, expected: number): Promise<numbe
 
 **Steps**
 
-- [ ] Failing tests → run → implement → run → green; `npm run typecheck`.
-- [ ] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts`
+- [x] Failing tests → run → implement → run → green; `npm run typecheck`.
+- [x] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts`
 
 ---
 
@@ -351,8 +351,8 @@ export const EXPECTED_GCNS_ROWS = 331_312;
 
 **Steps**
 
-- [ ] Failing tests → run → implement → run → green; `npm run typecheck`.
-- [ ] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts`
+- [x] Failing tests → run → implement → run → green; `npm run typecheck`.
+- [x] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts`
 
 ---
 
@@ -373,8 +373,8 @@ export const EXPECTED_GCNS_ROWS = 331_312;
 
 **Steps**
 
-- [ ] Implement; `npm run typecheck`; `npm test` stays green.
-- [ ] Commit: `git add tools/fetch/fetchGaia.ts`
+- [x] Implement; `npm run typecheck`; `npm test` stays green.
+- [x] Commit: `git add tools/fetch/fetchGaia.ts`
 
 ---
 
@@ -390,8 +390,8 @@ export const EXPECTED_GCNS_ROWS = 331_312;
 
 **Steps**
 
-- [ ] Implement (extract the shared helper if it falls out cleanly per the note above); `npm run typecheck`; `npm test` green.
-- [ ] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts` (second path only if the helper extraction moved tests)
+- [x] Implement (extract the shared helper if it falls out cleanly per the note above); `npm run typecheck`; `npm test` green.
+- [x] Commit: `git add tools/fetch/fetchGaia.ts tests/tools/fetch/fetchGaia.test.ts` (second path only if the helper extraction moved tests)
 
 ---
 
@@ -417,10 +417,10 @@ The real `fetch`-backed `TapTransport` (POST `URLSearchParams` per `fetch2massXs
 
 **Steps**
 
-- [ ] Implement `main()` + transport; add the npm script.
-- [ ] Smoke without network cost: `npm run fetch-gaia` (no `--yes`, non-interactive) → prints the estimate and aborts cleanly, exit non-zero, zero bytes fetched.
-- [ ] `npm run typecheck`; `npm test` green.
-- [ ] Commit: `git add tools/fetch/fetchGaia.ts package.json`
+- [x] Implement `main()` + transport; add the npm script.
+- [x] Smoke without network cost: `npm run fetch-gaia` (no `--yes`, non-interactive) → prints the estimate and aborts cleanly, exit non-zero, zero bytes fetched.
+- [x] `npm run typecheck`; `npm test` green.
+- [x] Commit: `git add tools/fetch/fetchGaia.ts package.json`
 
 ---
 
@@ -442,9 +442,9 @@ The real `fetch`-backed `TapTransport` (POST `URLSearchParams` per `fetch2massXs
 
 **Steps**
 
-- [ ] Fetch the canonical ESA credit text; write the four ATTRIBUTIONS entries.
-- [ ] Make the two README edits in the file's existing voice.
-- [ ] Commit: `git add ATTRIBUTIONS.md README.md`
+- [x] Fetch the canonical ESA credit text; write the four ATTRIBUTIONS entries.
+- [x] Make the two README edits in the file's existing voice.
+- [x] Commit: `git add ATTRIBUTIONS.md README.md`
 
 ---
 

@@ -112,6 +112,10 @@ export const ALLOW = (name: string): boolean =>
   // SDSS/GLADE.  Class + parent-survey metadata rides on the bin
   // itself — no JSON sidecar to upload.
   /^milliquas-(small|medium|large)\.bin$/.test(name) ||
+  // Gaia star bin — same tiered-gitignored-build-artefact pattern as the
+  // SDSS/GLADE galaxy bins above, built by `npm run build-stars` from the
+  // Gaia DR3 raw tables.  Shipped only via R2, never committed.
+  /^stars-(small|medium|large)\.bin$/.test(name) ||
   name === '2mrs.bin' ||
   name === 'famous.bin' ||
   // DESI DR1 deep-cone catalog — a single fixed 2.5° patch around Corona
