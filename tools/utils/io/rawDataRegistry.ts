@@ -435,8 +435,8 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'Hipparcos-2 astrometric catalogue (van Leeuwen 2007, VizieR I/311) — 117,955 fixed-width records, the bright-star patch above the Gaia saturation limit. Plain HTTP file from CDS.',
-    upstream: 'https://cdsarc.cds.unistra.fr/ftp/I/311/hip2.dat',
+      'Hipparcos-2 astrometric catalogue (van Leeuwen 2007, VizieR I/311) — 117,955 fixed-width records, the bright-star patch above the Gaia saturation limit. CDS serves it only gzipped (hip2.dat.gz); the fetcher decompresses to this path.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/I/311/hip2.dat.gz',
     fetcher: 'tools/fetch/fetchGaia.ts',
     readme: 'gaia.hipparcos-readme',
   },

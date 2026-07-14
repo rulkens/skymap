@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 
 import {
   planRandomIndexSlices,
@@ -13,6 +14,8 @@ import {
   fetchPagedCatalog,
   verifyPageRowTotal,
   fetchGcns,
+  fetchHip2,
+  HIP2_URL,
   verifyOrRecordSha256,
   type TapTransport,
 } from '../../../tools/fetch/fetchGaia';
@@ -305,6 +308,62 @@ describe('fetchGcns', () => {
     expect(result).toBe('skipped');
     expect(transport).not.toHaveBeenCalled();
     expect(readFileSync(csvPath, 'utf8')).toBe(cached);
+  });
+});
+
+describe('fetchHip2', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'hip2-gaia-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+    vi.unstubAllGlobals();
+  });
+
+  // A fetch stub that serves the ReadMe as plain bytes and the table URL as a
+  // gzipped body — the shape CDS actually returns. Everything runs through
+  // downloadWithResume's global-fetch transport, so stubbing fetch exercises the
+  // real download→gunzip→gate order rather than a hand-rolled seam.
+  const stubFetch = (gzBody: Buffer): ReturnType<typeof vi.fn> => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const body = url.endsWith('.gz') ? gzBody : Buffer.from('hip2 ReadMe\n');
+      // Buffer IS a Uint8Array at runtime; the lib.dom BodyInit union just
+      // doesn't name Node's subclass, so re-wrap to the type it does name.
+      return new Response(new Uint8Array(body), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  };
+
+  it('downloads the .gz URL, gunzips it, and gates on the decompressed line count', async () => {
+    // A gz whose decompressed body has far fewer lines than a real hip2.dat: the
+    // download→gunzip→line-count-gate order is the whole contract. If the code
+    // gated the compressed bytes instead of the decompressed file (the class of
+    // bug that shipped the plain-URL 404), this would not throw the line-count
+    // mismatch — and the decompressed file would not exist to inspect.
+    const gz = gzipSync(Buffer.from('one star line\ntwo star line\n'));
+    const fetchMock = stubFetch(gz);
+    const hip2Path = join(dir, 'hip2.dat');
+
+    await expect(
+      fetchHip2({
+        hip2Path,
+        readmePath: join(dir, 'ReadMe'),
+        sidecarPath: join(dir, 'gaia.sha256'),
+      }),
+    ).rejects.toThrow(/line-count mismatch/i);
+
+    // The download landed as a .gz and was decompressed to the final path before
+    // the gate fired — both must be on disk, proving the order.
+    expect(existsSync(`${hip2Path}.gz`)).toBe(true);
+    expect(existsSync(hip2Path)).toBe(true);
+
+    // The table request went to the gzipped URL, not a plain hip2.dat that 404s.
+    const requestedUrls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(requestedUrls).toContain(HIP2_URL);
+    expect(HIP2_URL.endsWith('.dat.gz')).toBe(true);
   });
 });
 

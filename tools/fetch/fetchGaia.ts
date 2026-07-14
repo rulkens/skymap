@@ -53,7 +53,7 @@ import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 import { rawDataPath } from '../utils/io/rawDataRegistry';
-import { downloadWithResume, sha256OfFile } from './fetchCosmicflows4';
+import { downloadWithResume, gunzipToFile, sha256OfFile } from './fetchCosmicflows4';
 
 /** One half-open `random_index` range: rows with `start <= random_index < endExclusive`. */
 export type RandomIndexSlice = { index: number; start: number; endExclusive: number };
@@ -159,16 +159,20 @@ ORDER BY source_id`;
 /**
  * The Hipparcos-2 fixed-width table and its byte-layout ReadMe are plain HTTP
  * files on CDS — not TAP queries — so they use `downloadWithResume` rather than
- * the TAP transport. VizieR serves them uncompressed at these ftp/ paths.
+ * the TAP transport. The ReadMe is served uncompressed, but CDS serves the
+ * TABLE only gzipped (there is no plain `hip2.dat` in the I/311 directory), so
+ * `HIP2_URL` points at `hip2.dat.gz` and `fetchHip2` decompresses it — the same
+ * gz-then-gunzip shape the CF4 fetcher uses for its own `table2.dat.gz`.
  */
-export const HIP2_URL = 'https://cdsarc.cds.unistra.fr/ftp/I/311/hip2.dat';
+export const HIP2_URL = 'https://cdsarc.cds.unistra.fr/ftp/I/311/hip2.dat.gz';
 export const HIP2_README_URL = 'https://cdsarc.cds.unistra.fr/ftp/I/311/ReadMe';
 
 /**
  * The exact record count of the Hipparcos-2 catalogue (van Leeuwen 2007, VizieR
- * I/311): one fixed-width line per star. A truncated Range-resume — the failure
- * mode a dumb-HTTP download risks — surfaces as a short line count here, so the
- * download is only accepted once the file carries exactly this many lines.
+ * I/311): one fixed-width line per star. A truncated Range-resume of the gzipped
+ * download — the failure mode a dumb-HTTP fetch risks — surfaces as a gunzip
+ * error or a short line count here, so the download is only accepted once the
+ * decompressed file carries exactly this many lines.
  */
 export const EXPECTED_HIP2_LINES = 117_955;
 
@@ -196,19 +200,21 @@ export type FetchWorkPlan = {
 // round-ish figure that is right to a few percent is all that's warranted.
 //   - Main catalog: 16.84 M rows surviving the G<14 cut x ~100 B/row CSV.
 //   - GCNS: ~331 k rows, ~30 MB observed.
-//   - hip2.dat: fixed-width, exactly 117,955 rows x 277 B/line = 32,673,535 B.
+//   - hip2.dat.gz: the gzipped fixed-width table is the thing transferred,
+//     ~10 MB (the decompressed file is exactly 117,955 rows x 277 B/line, but
+//     that never crosses the wire).
 //   - Hipparcos ReadMe: a small VizieR byte-layout doc, ~20 KB.
 //   - hip xmatch: ~99.5 k rows, ~3 MB.
 const GAIA_CATALOG_BYTES = 16_840_000 * 100;
 const GCNS_BYTES = 30_000_000;
-const HIP2_BYTES = 117_955 * 277;
+const HIP2_BYTES = 10_000_000;
 const HIP_README_BYTES = 20_000;
 const XMATCH_BYTES = 3_000_000;
 
 /** Rough remaining bytes: pages ≈ remaining/total share of ~1.7 GB
- *  (16.84 M rows × ~100 B/row CSV), GCNS ~30 MB, hip2 32,673,535 B exact
- *  (117,955 × 277), ReadMe ~20 KB, xmatch ~3 MB. An estimate, printed as
- *  such — it gates consent, it does not meter the transfer. */
+ *  (16.84 M rows × ~100 B/row CSV), GCNS ~30 MB, hip2.dat.gz ~10 MB gzipped,
+ *  ReadMe ~20 KB, xmatch ~3 MB. An estimate, printed as such — it gates
+ *  consent, it does not meter the transfer. */
 export function estimateRemainingBytes(work: FetchWorkPlan): number {
   const pagesBytes =
     work.totalPageSlices === 0
@@ -643,16 +649,21 @@ export async function fetchHipXmatch(opts: {
  * provenance README is the layout contract, and the ReadMe's byte size is logged
  * for a sanity glance only.
  *
- * The table is accepted in two gated steps. First a line count must equal
- * `EXPECTED_HIP2_LINES` — a Range-resume that stopped short lands here as a
- * short count. On mismatch this throws with a delete-and-re-run instruction but
- * does NOT delete the file: on a metered/tight connection the operator's bytes
- * are precious, and a deliberate re-fetch beats a silent redownload loop. Only
- * once the count matches is the digest reconciled against the combined sidecar.
+ * The table is served only gzipped, so it is downloaded to a `hip2.dat.gz`
+ * sibling (the CF4 `table2.dat.gz` convention — kept on disk so a re-run hits
+ * the Range-416 fast path) and decompressed with `gunzipToFile` before any
+ * gate. It is then accepted in two gated steps. First a line count on the
+ * decompressed file must equal `EXPECTED_HIP2_LINES` — a Range-resume that
+ * stopped short surfaces as a gunzip error or, past that, a short line count.
+ * On mismatch this throws with a delete-and-re-run instruction naming the
+ * `.gz` (the thing to remove) but does NOT delete it: on a metered/tight
+ * connection the operator's bytes are precious, and a deliberate re-fetch beats
+ * a silent redownload loop. Only once the count matches is the digest reconciled
+ * against the combined sidecar.
  *
- * Returns 'fetched' when the table download added bytes this run, 'skipped'
- * when it was already complete on disk (a resume that pulled nothing). Either
- * way the line-count and sha256 checks below run unconditionally — a fully
+ * Returns 'fetched' when the gz download added bytes this run, 'skipped' when it
+ * was already complete on disk (a resume that pulled nothing). Either way the
+ * decompress, line-count, and sha256 checks below run unconditionally — a fully
  * cached file is still re-validated — so the return value only steers the
  * completion summary's wording, never the gating.
  */
@@ -672,13 +683,17 @@ export async function fetchHip2(opts: {
         : ' (already complete).'),
   );
 
-  const tableResult = await downloadWithResume(HIP2_URL, hip2Path);
+  // CDS serves the table only gzipped: download the .gz (kept for re-run
+  // resume), then decompress to the final path the parser reads.
+  const hip2GzPath = `${hip2Path}.gz`;
+  const tableResult = await downloadWithResume(HIP2_URL, hip2GzPath);
   console.log(
-    `Hipparcos-2 hip2.dat: ${tableResult.totalBytes.toLocaleString()} bytes` +
+    `Hipparcos-2 hip2.dat.gz: ${tableResult.totalBytes.toLocaleString()} bytes` +
       (tableResult.bytesAdded > 0
         ? ` (+${tableResult.bytesAdded.toLocaleString()}).`
         : ' (already complete).'),
   );
+  await gunzipToFile(hip2GzPath, hip2Path);
 
   const lineCount = (await readFile(hip2Path, 'utf8'))
     .split(/\r?\n/)
@@ -687,7 +702,7 @@ export async function fetchHip2(opts: {
     throw new Error(
       `Hipparcos-2 line-count mismatch: hip2.dat has ${lineCount.toLocaleString()} lines, ` +
         `expected ${EXPECTED_HIP2_LINES.toLocaleString()}. The download is truncated (a Range- ` +
-        `resume stopped short) or the upstream table changed. Delete ${hip2Path} and re-run to ` +
+        `resume stopped short) or the upstream table changed. Delete ${hip2GzPath} and re-run to ` +
         `force a fresh download — it is left in place so no bytes are wasted re-fetching what is ` +
         `already on disk.`,
     );
@@ -723,8 +738,8 @@ const PROBE_QUERY =
  * `REQUEST/LANG/FORMAT/QUERY` and streams back CSV (the fetch2massXsc VizieR
  * spelling). A non-2xx status throws with the status + body snippet so a TAP
  * error surfaces verbatim rather than as an opaque parse failure downstream.
- * hip2.dat + its ReadMe are plain CDS HTTP files, so `fetchHip2` bypasses this
- * transport and uses `downloadWithResume` directly.
+ * hip2.dat.gz + its ReadMe are plain CDS HTTP files, so `fetchHip2` bypasses
+ * this transport and uses `downloadWithResume` (+ gunzip) directly.
  */
 function createTapTransport(url: string): TapTransport {
   return async (query: string): Promise<string> => {
