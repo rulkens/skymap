@@ -65,7 +65,11 @@ import { mergeFluxAggregate, type FluxNode } from './mergeFluxAggregate';
 
 /** One leaf star ready to place: its leaf cell, in-cell offset, and photometry. */
 export type OctreeLeafStar = {
-  /** Leaf-cell Morton code; the input must be sorted ascending on this. */
+  /**
+   * Leaf-cell Morton code; the input must be sorted ascending on this.
+   * buildStarOctree throws if a later star's code is less than an earlier
+   * one's.
+   */
   readonly mortonIndex: number;
   /** In-cell integer offset per axis, 0..1023 (quantized upstream). */
   readonly offset: Vec3;
@@ -121,8 +125,20 @@ export function buildStarOctree(
 
   // ── Level 0: linear scan of the sorted input into leaf-cell runs ──────────
   let i = 0;
+  // Sentinel below any real Morton code (codes are non-negative), so the
+  // first star never trips the descending check below.
+  let previousMorton = -1;
   while (i < stars.length) {
     const morton = stars[i]!.mortonIndex;
+    if (morton < previousMorton) {
+      throw new Error(
+        `buildStarOctree: input violates its ascending-Morton-order precondition — ` +
+          `star at index ${i} has mortonIndex ${morton}, which is less than the ` +
+          `previous star's mortonIndex ${previousMorton}. Sort stars ascending by ` +
+          `mortonIndex before calling buildStarOctree.`,
+      );
+    }
+    previousMorton = morton;
     const firstRecord = leafRecords.length;
     const [cx, cy, cz] = mortonDecode3(morton);
     const cellFluxNodes: FluxNode[] = [];

@@ -35,7 +35,8 @@
  *
  * Pure and unit-agnostic in `position`: the caller passes positions in whatever
  * frame it will re-quantize the result back into (the octree build works in
- * leaf-cell grid units).
+ * leaf-cell grid units). Throws on an empty `children` array — a flux merge of
+ * nothing has no meaningful centroid or magnitude, so it is a caller bug.
  */
 import type { Vec3 } from '../../src/@types/math/Vec3';
 
@@ -50,6 +51,12 @@ export type FluxNode = {
 };
 
 export function mergeFluxAggregate(children: readonly FluxNode[]): FluxNode {
+  if (children.length === 0) {
+    throw new Error(
+      'mergeFluxAggregate: cannot merge an empty children array — an aggregate ' +
+        'must stand in for at least one node, so an empty merge is a caller bug.',
+    );
+  }
   let totalFlux = 0;
   let x = 0;
   let y = 0;
