@@ -69,6 +69,35 @@ work (memory `feedback_seed_data_early`). Order: type union → parser/seed →
 5. Surveys carry photometry/orientation — mind the per-catalog gotchas in
    CLAUDE.md (2MRS negative cz, GLADE PGC cross-match, SDSS column variance).
 
+### Sidebar: the star-catalog pipeline (Gaia) is a third shape
+
+The Milky-Way star bin (Gaia DR3 + GCNS + Hipparcos-2) is neither a Path A
+survey nor a Path B POI category — it's a distinct catalog with its own
+binary format family. Treat it as a sibling precedent, not a Path A instance:
+
+- **Raw-data registry** — `gaia.*` keys in `rawDataRegistry.ts` follow the
+  same registry pattern (CLAUDE.md → "Adding a new raw data source"), but the
+  fetcher is TAP-paged (ADQL queries against the ESA Gaia archive) with an
+  on-disk resume cache, not a single-file download. Consumers reach the paged
+  directory via `rawDataPath('gaia.dir')` plus per-artifact keys for the
+  fixed files (`gaia.gcns`, `gaia.hipparcos`, …).
+- **Binary format** — `src/data/starCatalog/` is a *separate* format module
+  from `galaxyCatalogFormat.ts`: cell-quantized + compressed, sized for tens
+  of millions of stars rather than millions of galaxies. Don't reuse
+  `galaxyCatalogFormat.ts` machinery for star data — the encodings diverge.
+- **Build entry** — `tools/stars/buildStars.ts`, run via `npm run
+  build-stars`, emits the per-tier `public/data/stars-{small,medium,large}.bin`.
+- **R2 sync** — a new binary family needs its own `ALLOW` entries in
+  `tools/deploy/syncR2.ts`, same step as adding a new galaxy-catalog tier.
+- **Attribution** — add an `ATTRIBUTIONS.md` checklist item for the new
+  upstream catalog (Gaia DR3 / GCNS / Hipparcos-2); the entries themselves are
+  a data-acquisition concern, not this skill's.
+
+**Scope note:** this sidebar covers the *pipeline* surface only — raw data →
+build → `.bin`. The runtime surface (a `starCatalog` variant in
+`SOURCE_REGISTRY`, the loader, the renderer) doesn't exist yet; this skill
+gets a second pass once the star catalog gains that runtime surface.
+
 ## Path B — a new featured structure category
 
 Worked against adding `group`. Replace `X` / `Xs` with your category. Do them

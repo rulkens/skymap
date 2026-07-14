@@ -454,6 +454,20 @@ README, but the rough shape is:
 Skip the maintainer flow unless you're refreshing the upstream cubes
 — the R2-hosted tiers stay current with each release.
 
+## Milky Way star field (Gaia DR3)
+
+The star-bin build turns the Gaia DR3 + GCNS + Hipparcos-2 raw inputs (see
+the download table above) into the runtime binary format:
+
+```bash
+npm run build-stars
+```
+
+Consumes `data/raw/gaia/` — the paged Gaia DR3 CSVs, the GCNS 100 pc
+supplement (`gcns_main.csv`), and the Hipparcos-2 bright-star patch
+(`hip2.dat` + `hip2_best_neighbour.csv`) — and emits the per-tier binaries
+`public/data/stars-small.bin`, `stars-medium.bin`, and `stars-large.bin`.
+
 ## Brightness controls
 
 Real catalogue galaxies span ~10 magnitudes of apparent brightness — the
