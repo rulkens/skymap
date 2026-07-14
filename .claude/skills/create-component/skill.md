@@ -12,7 +12,7 @@ Without rules, components in `src/components/` drift toward god-files: a 250-lin
 focus-trap effect, error rendering, the CTA cluster, and the footer — all in
 one file. Reviewing it is hard, testing pieces in isolation is harder, and
 reusing the `ProgressRow` somewhere else means a copy-paste. This skill encodes
-the small, boring conventions that prevent that drift and the *posture* of
+the small, boring conventions that prevent that drift and the _posture_ of
 creating new components early rather than letting one balloon.
 
 ## The conventions
@@ -63,7 +63,9 @@ If the component needs `memo` (high-frequency parent re-renders), wrap on
 the way out:
 
 ```tsx
-function ComponentName(props: ComponentNameProps): ReactNode { /* … */ }
+function ComponentName(props: ComponentNameProps): ReactNode {
+  /* … */
+}
 export default memo(ComponentName);
 ```
 
@@ -93,8 +95,12 @@ when needed). All other class names live underneath `.root` in the file:
   gap: 12px;
 }
 
-.title { /* … */ }
-.body  { /* … */ }
+.title {
+  /* … */
+}
+.body {
+  /* … */
+}
 ```
 
 Why a fixed name: when a parent needs to compose a component (style its
@@ -106,7 +112,7 @@ answers it differently.
 
 ### 5b. Shared vocabulary → a minimal shared module, composed in (never `:global`)
 
-A *family* of closely-related components sometimes shares a real styling
+A _family_ of closely-related components sometimes shares a real styling
 vocabulary — the InfoCard detail cards (galaxy / structure / Milky-Way) and
 their compact hover variants all draw the same glass panel, headline row,
 section separators, and source badge. Three ways to handle that; only one is
@@ -121,11 +127,11 @@ right:
 
 A shared module:
 
-- Is named for the *concept*, not a component, so it's obvious it has no
+- Is named for the _concept_, not a component, so it's obvious it has no
   eponymous `.tsx`: `cardChrome.module.css`, not `DetailCard.module.css`.
 - Lives at the family's folder root (e.g. `InfoCard/cardChrome.module.css`),
   beside the router component whose children share it.
-- Holds *only* genuinely-shared rules. A rule used by a single component
+- Holds _only_ genuinely-shared rules. A rule used by a single component
   belongs in that component's own module — keep the shared module minimal, it's
   a vocabulary, not a dumping ground.
 - Has no `.root` (it isn't a component).
@@ -139,7 +145,9 @@ composes the shared bits into it:
   composes: panel from '../cardChrome.module.css';
 }
 
-.summary { /* galaxy-only */ }
+.summary {
+  /* galaxy-only */
+}
 ```
 
 Why `composes` over `:global`: the dependency becomes a real import the build
@@ -213,19 +221,19 @@ of any styling decision matches the blast radius of the component.
 
 `src/styles/global.css` is for design tokens (CSS custom properties)
 and the body / html reset only. If you find yourself wanting to add a
-*rule* there to support a component, the rule belongs in the
+_rule_ there to support a component, the rule belongs in the
 component's module instead.
 
 ### 9. Comments: minimal, timeless, didactic
 
 Default to no comments. A module-header docblock is welcome when the
-component's *purpose* or *non-obvious constraint* is worth recording; the
+component's _purpose_ or _non-obvious constraint_ is worth recording; the
 rest of the file should be self-explanatory through naming.
 
 When you do write a comment, follow the project's comment style:
 
 - **Terse over verbose.** A punchy line beats a paragraph.
-- **Explain the *why* and what the alternative was**, not the *what* — the
+- **Explain the _why_ and what the alternative was**, not the _what_ — the
   code already shows what (this is the project's didactic-comments
   convention; see CLAUDE.md).
 - **Timeless.** No dates, no PR references, no "previously this was X"
@@ -239,6 +247,33 @@ When you do write a comment, follow the project's comment style:
 
 In short: write the comment only if removing it would confuse a future
 reader. Erring on the side of fewer is correct.
+
+## Redux Container components (store boundaries)
+
+Presentational components (everything above) import nothing from `store/` or
+`state/` — they take plain props and are testable with no Provider. The store gets
+reached from a paired **Container** in `src/components/containers/`. See that
+folder's `README.md` and `docs/superpowers/specs/2026-06-19-react-store-containers-design.md`
+for the full rationale; the conventions:
+
+- **Pairing:** `<Name>Container` renders the `<Name>` presentational component (the
+  same name minus `Container`) — `GalaxiesSectionContainer` → `GalaxiesSection`,
+  keeping the pairing trivially scannable. The presentational half can live in any
+  feature folder (`SettingsPanel/GalaxiesSection.tsx`); the container always lives in
+  `containers/`. Diverge from the 1:1 name only when one reusable presentational
+  component is rendered by several different containers.
+- **Split:** the container owns ALL store reach — every `useAppSelector` and every
+  handler as `useCallback(..., [dispatch])` (`dispatch` from `useAppDispatch()` is
+  the invariant `store.dispatch`, so a `[dispatch]`-only dep array gives each handler
+  permanent stable identity, which lets the child's `memo` bail). The presentational
+  component receives the reads and handlers as props and imports zero store/state.
+- **`memo` is load-bearing, not polish.** Containers are `React.memo`'d by default:
+  the memo is what localizes a store change's re-render to the subscribing subtree
+  instead of cascading from App. Same idiom as rule 3 — `import { memo } from 'react'`,
+  define `function Name(...)`, `export default memo(Name)`.
+- **Purpose = push-down.** Subscribe at each component boundary, not in one top-level
+  container that grabs everything — App keeps only genuinely app-level subscriptions.
+  A settings-section container means a slider drag re-renders only its own section.
 
 ## When to create a new component (the posture)
 
@@ -258,7 +293,7 @@ reader. Erring on the side of fewer is correct.
 **Layout primitives live in `src/components/common/`.** Currently present:
 `Panel`, `PaletteSelect`. Generic things like `Button`, `Stack`, `Row`,
 `Pill`, `IconButton`, `Badge`, `ErrorBox`, `Spinner` belong here when they
-land. Look in `common/` *before* writing a layout chunk in a feature folder
+land. Look in `common/` _before_ writing a layout chunk in a feature folder
 — there's a good chance the primitive already exists or is one step away
 from existing.
 
@@ -300,7 +335,6 @@ from existing.
 
 8. **If extracting from an existing component** (the common case), also
    do the extraction on the parent in this order:
-
    1. Write the new component file (steps 4–6 above).
    2. Add the import to the parent.
    3. Replace the inline JSX with `<NewComponent {...props} />`.
@@ -308,7 +342,7 @@ from existing.
       parent.
    5. Run `npm run typecheck` and `npm test -- <Parent>`.
    6. Commit with a single-purpose message (`refactor(<parent>): extract
-      <NewComponent>`).
+<NewComponent>`).
 
    Doing the import + replacement in one pass before removing the dead
    code prevents leaving the parent half-broken if something goes wrong
@@ -322,7 +356,7 @@ re-encode the JSX in a different syntax. Skip them.
 A test file is warranted only when the component carries real logic
 the user can observe: a focus trap, an Esc handler, an error-state
 branch, a derived counter, a click-outside dismiss. In other words —
-*behaviour* the parent's test wouldn't naturally cover. Splash and
+_behaviour_ the parent's test wouldn't naturally cover. Splash and
 SettingsPanel are examples; AboutPill, AutoRotateToggle, PillButton,
 PlayIcon are not.
 
@@ -359,9 +393,7 @@ function ProgressRow({ progress }: ProgressRowProps): ReactNode {
   if (!progress) return null;
   const indeterminate = progress.totalBytes === 0;
   const fraction =
-    progress.totalBytes > 0
-      ? Math.min(1, progress.loadedBytes / progress.totalBytes)
-      : 0;
+    progress.totalBytes > 0 ? Math.min(1, progress.loadedBytes / progress.totalBytes) : 0;
   return (
     <div
       className={styles.root}
@@ -414,18 +446,17 @@ export default ProgressRow;
 .indeterminate {
   height: 100%;
   width: 30%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--color-accent),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
   animation: indeterminate 1.4s ease-in-out infinite;
 }
 
 @keyframes indeterminate {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(400%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
 }
 ```
 
@@ -499,7 +530,7 @@ to each one.
 ## Anti-patterns (quick-reference card)
 
 Reinforcement of the rules above — handy during PR review and when reading
-existing code. Each one points back to a rule explaining the *why*.
+existing code. Each one points back to a rule explaining the _why_.
 
 - **Arrow-function components** (`export const X = () => …`) — see rule 3.
 - **`interface` for props** — `type` only. Rule 4.
