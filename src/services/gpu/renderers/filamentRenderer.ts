@@ -43,6 +43,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { clampFilamentIntensity } from '../../../utils/clampFilamentIntensity';
 import { writeCameraPrefix } from './lib/cameraUniforms';
+import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from './lib/unitQuad';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
 
@@ -135,13 +136,12 @@ export function createFilamentRenderer(
   device.queue.writeBuffer(indexBuffer, 0, indices);
 
   // Static quad-corner buffer: 4 vertices × vec2 = 32 bytes.
-  const quadCorners = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]);
   const quadVertexBuffer = device.createBuffer({
     label: 'filaments-quad-vertex-buffer',
-    size: quadCorners.byteLength,
+    size: UNIT_QUAD_STRIP_CORNERS.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
-  device.queue.writeBuffer(quadVertexBuffer, 0, quadCorners);
+  device.queue.writeBuffer(quadVertexBuffer, 0, UNIT_QUAD_STRIP_CORNERS);
 
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'filaments-bgl-uniforms',
@@ -171,11 +171,7 @@ export function createFilamentRenderer(
       entryPoint: 'vs',
       buffers: [
         // Per-quad-vertex: uv vec2
-        {
-          arrayStride: 8,
-          stepMode: 'vertex',
-          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
-        },
+        UNIT_QUAD_VERTEX_LAYOUT,
         // Per-instance: startxyz + startDensity + endxyz + endDensity
         {
           arrayStride: FLOATS_PER_SEGMENT * 4,

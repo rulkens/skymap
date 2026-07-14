@@ -72,6 +72,7 @@ import vsCode from '../shaders/markerLines/vertex.wesl?static';
 import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
+import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from './lib/unitQuad';
 
 // ─── buffer constants ──────────────────────────────────────────────────────
 
@@ -92,17 +93,11 @@ const LINE_INSTANCE_BYTES = 48;
 
 // ─── corner buffer ────────────────────────────────────────────────────────
 
-/**
- * Four (x,y) corners of the unit quad in triangle-strip order:
- *   (0,0), (1,0), (0,1), (1,1)
- * These are broadcast across all line instances via `stepMode: 'vertex'`.
- * The vertex shader uses `uv.x` to select which endpoint (from vs to) and
- * `uv.y` to offset by ±half-width in screen-space perpendicular.
- *
- * Identical to `labelRenderer.ts`'s CORNER_DATA — same unit-quad geometry.
- */
-const CORNER_DATA = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]);
-const CORNER_BYTES = CORNER_DATA.byteLength; // 32 bytes (4 × 2 × 4)
+// The unit-quad corners + their slot-0 layout come from `lib/unitQuad.ts`,
+// shared byte-for-byte with the label and debug-line overlays.  The vertex
+// shader uses `uv.x` to select which endpoint (from vs to) and `uv.y` to
+// offset by ±half-width in the screen-space perpendicular.
+const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 4)
 
 // ─── factory ──────────────────────────────────────────────────────────────
 
@@ -184,11 +179,7 @@ export function createMarkerLineRenderer(
           // Buffer 0: unit-corner quad, 4 vertices, stepMode 'vertex'.
           // Provides (x,y) unit-square corners to location 0 (`uv`).
           // uv.x selects endpoint (from vs to); uv.y selects side (±half-width).
-          {
-            arrayStride: 8, // 2 × f32
-            stepMode: 'vertex',
-            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
-          },
+          UNIT_QUAD_VERTEX_LAYOUT,
           // Buffer 1: per-instance line data, stepMode 'instance'.
           // Provides fromAndWidth, toAndAlpha, color to locations 1–3.
           {
@@ -248,7 +239,7 @@ export function createMarkerLineRenderer(
       size: CORNER_BYTES,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-    device.queue.writeBuffer(cornerBuffer, 0, CORNER_DATA);
+    device.queue.writeBuffer(cornerBuffer, 0, UNIT_QUAD_STRIP_CORNERS);
 
     // ── Bind group ────────────────────────────────────────────────────────
     bindGroup = device.createBindGroup({

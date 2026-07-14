@@ -82,6 +82,7 @@ import vsCode from '../shaders/labels/vertex.wesl?static';
 import fsCode from '../shaders/labels/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
+import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from './lib/unitQuad';
 
 // ─── sizing defaults ───────────────────────────────────────────────────────
 
@@ -130,15 +131,9 @@ const GLYPH_INSTANCE_BYTES = 40;
 
 // ─── corner buffer ────────────────────────────────────────────────────────
 
-/**
- * Four (x,y) corners of the unit quad in triangle-strip order:
- *   (0,0), (1,0), (0,1), (1,1)
- * These are broadcast across all glyph instances via `stepMode: 'vertex'`.
- * The vertex shader expands each corner into a glyph pixel position relative
- * to the label anchor in clip space.
- */
-const CORNER_DATA = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]);
-const CORNER_BYTES = CORNER_DATA.byteLength; // 32 bytes (4 × 2 × 4)
+// The unit-quad corners + their slot-0 layout come from `lib/unitQuad.ts`,
+// shared byte-for-byte with the marker- and debug-line overlays.
+const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 4)
 
 // ─── factory ──────────────────────────────────────────────────────────────
 
@@ -271,11 +266,7 @@ export function createLabelRenderer(
         buffers: [
           // Buffer 0: unit-corner quad, 4 vertices, stepMode 'vertex'.
           // Provides the (x,y) unit-square corners to location 0 (`corner`).
-          {
-            arrayStride: 8, // 2 × f32
-            stepMode: 'vertex',
-            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
-          },
+          UNIT_QUAD_VERTEX_LAYOUT,
           // Buffer 1: per-glyph instance data, stepMode 'instance'.
           // Provides localOffset, localSize, uvRect, labelIndex to locations 1–4.
           {
@@ -343,7 +334,7 @@ export function createLabelRenderer(
       size: CORNER_BYTES,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-    device.queue.writeBuffer(cornerBuffer, 0, CORNER_DATA);
+    device.queue.writeBuffer(cornerBuffer, 0, UNIT_QUAD_STRIP_CORNERS);
 
     // ── Atlas texture + sampler ──────────────────────────────────────────
     //

@@ -33,6 +33,7 @@ import vsCode from '../shaders/markerLines/vertex.wesl?static';
 import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
+import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from './lib/unitQuad';
 
 /**
  * Per-instance stride, matching `VsIn` attributes 1–3 in markerLines/io.wesl:
@@ -43,9 +44,7 @@ import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
  */
 const LINE_INSTANCE_BYTES = 48;
 
-/** Unit-quad corners in triangle-strip order — see markerLineRenderer.ts. */
-const CORNER_DATA = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]);
-const CORNER_BYTES = CORNER_DATA.byteLength;
+const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength;
 
 /**
  * Construct a `DebugLineRenderer`. Pass a null `device` (via GpuContext) for
@@ -99,11 +98,7 @@ export function createDebugLineRenderer(
         module: vsModule,
         entryPoint: 'vs',
         buffers: [
-          {
-            arrayStride: 8,
-            stepMode: 'vertex',
-            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
-          },
+          UNIT_QUAD_VERTEX_LAYOUT,
           {
             arrayStride: LINE_INSTANCE_BYTES,
             stepMode: 'instance',
@@ -149,7 +144,7 @@ export function createDebugLineRenderer(
       size: CORNER_BYTES,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-    device.queue.writeBuffer(cornerBuffer, 0, CORNER_DATA);
+    device.queue.writeBuffer(cornerBuffer, 0, UNIT_QUAD_STRIP_CORNERS);
 
     bindGroup = device.createBindGroup({
       label: 'debug-line-bg',
