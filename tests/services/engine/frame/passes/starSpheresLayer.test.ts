@@ -25,7 +25,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { starSpheresLayer } from '../../../../../src/services/engine/frame/passes/starSpheresLayer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneBodies';
+import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';

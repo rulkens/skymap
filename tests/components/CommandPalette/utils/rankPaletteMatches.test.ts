@@ -5,7 +5,7 @@
 // gate off for every non-body test.
 import { describe, it, expect, afterEach } from 'vitest';
 import { rankPaletteMatches } from '../../../../src/components/CommandPalette/utils/rankPaletteMatches';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';

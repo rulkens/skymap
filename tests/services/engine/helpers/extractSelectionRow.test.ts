@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { extractSelectionRow } from '../../../../src/services/engine/helpers/extractSelectionRow';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';

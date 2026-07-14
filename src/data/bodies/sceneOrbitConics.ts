@@ -22,33 +22,27 @@
  * body id (the Moon's `'earth'`) resolves to that parent's already-derived
  * world position, so the Moon's ellipse rides on Earth by construction. A
  * `parentId` that names no seeded body throws loudly at module load: a typo must
- * fail, not silently place the orbit at the origin. Component-wise addition
- * because there is no vec3-add helper and the sum is only needed at seed sites
- * (the same inline idiom `sceneBodies.ts` uses).
+ * fail, not silently place the orbit at the origin.
  */
 
 import { RENDER_ORIGIN_MPC } from '../renderOrigin';
 import { ORBITAL_ELEMENTS } from './orbitalElements';
 import { SCENE_BODIES } from './sceneBodies';
 import { keplerianEllipse } from '../../utils/orbit/keplerianEllipse';
+import { addVec3 } from '../../utils/math/addVec3';
+import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import type { OrbitConic } from '../../@types/scene/OrbitConic';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
  * Resolve an orbit's focus to an absolute-world position: `null` is the render
  * origin (heliocentric), any other id is the matching seeded body's world
- * position (geocentric etc.). Throws on an unknown id so a typo fails loudly at
- * module load rather than silently anchoring the orbit at the origin.
- * Module-local — a fixed authored derivation does not earn a `src/utils/`
- * export (same status as `sceneBodies.ts`'s `elementsById`).
+ * position (geocentric etc.). `findByIdOrThrow` fails loudly on an unknown id so
+ * a typo can't silently anchor the orbit at the origin.
  */
 function parentWorldMpc(parentId: string | null): Readonly<Vec3> {
   if (parentId === null) return RENDER_ORIGIN_MPC;
-  const parent = SCENE_BODIES.find((body) => body.id === parentId);
-  if (!parent) {
-    throw new Error(`sceneOrbitConics: no SCENE_BODIES entry for parentId '${parentId}'`);
-  }
-  return parent.positionMpc;
+  return findByIdOrThrow(SCENE_BODIES, parentId, 'sceneOrbitConics').positionMpc;
 }
 
 /**
@@ -62,11 +56,7 @@ export const SCENE_ORBIT_CONICS: readonly OrbitConic[] = ORBITAL_ELEMENTS.map((e
   const parent = parentWorldMpc(elements.parentId);
   return {
     id: elements.id,
-    centerMpc: [
-      parent[0] + centerOffsetMpc[0],
-      parent[1] + centerOffsetMpc[1],
-      parent[2] + centerOffsetMpc[2],
-    ],
+    centerMpc: addVec3(parent, centerOffsetMpc),
     semiMajorMpc,
     semiMinorMpc,
     eccentricity: elements.eccentricity,

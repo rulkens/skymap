@@ -21,7 +21,7 @@
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import { SCENE_EARTH } from '../../../data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 
 export const earthTextureFetcher: Fetcher<ImageBitmap, void> = async (_req, signal) => {
   const res = await fetch(SCENE_EARTH.textureUrl, { signal });
