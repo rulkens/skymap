@@ -64,6 +64,18 @@ const FULL_PX = 20;
 // instanced draw.
 const staging = new Float32Array(MAX_ORBITS * INSTANCE_FLOATS);
 
+// The system's reach from the heliocentric origin: the farthest any orbit
+// extends is its centre offset plus its semi-major axis. Precomputed once
+// (the conic table is static) so `enabled` can bound EVERY orbit's apparent
+// size with one comparison instead of walking the table per frame.
+const MAX_ORBIT_EXTENT_MPC = Math.max(
+  ...SCENE_ORBIT_CONICS.map(
+    (conic) =>
+      Math.hypot(conic.centerMpc[0], conic.centerMpc[1], conic.centerMpc[2]) +
+      Math.hypot(conic.semiMajorMpc[0], conic.semiMajorMpc[1], conic.semiMajorMpc[2]),
+  ),
+);
+
 export const orbitTrailsLayer: ContentLayer = {
   name: 'orbit-trails',
   slab: NEAR0,
@@ -74,7 +86,30 @@ export const orbitTrailsLayer: ContentLayer = {
     // Handle first (pre-bootstrap fixtures carry a bare ctx), then the shared
     // near-field distance gate. SCENE_ORBIT_CONICS is a static module-level
     // table (derived once from the elements), so there is no data condition.
-    return state.gpu.orbitTrailRenderer !== null && ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC;
+    if (state.gpu.orbitTrailRenderer === null) return false;
+    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+    // Whole-layer sub-pixel cull, the conservative bound of the per-orbit
+    // CULL_PX loop in `draw`: at the camera's NEAREST possible distance to
+    // any orbit point (origin distance minus the system's reach — clamped to
+    // 0 when the camera is at/inside the reach, which always stays enabled),
+    // even the LARGEST orbit's apparent diameter is an upper bound for every
+    // orbit. Below CULL_PX for that bound, the draw loop would cull every
+    // conic anyway — gating here lets the executor drop the layer instead of
+    // packing zero records.
+    const nearestMpc = Math.max(
+      Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]) - MAX_ORBIT_EXTENT_MPC,
+      0,
+    );
+    if (nearestMpc > 0) {
+      const maxDiameterPx = apparentSizePx({
+        diameterKpc: 2 * MAX_ORBIT_EXTENT_MPC * 1000,
+        distanceMpc: nearestMpc,
+        viewportHeightPx: ctx.canvasSize.height,
+        fovYRad: ctx.fovYRad,
+      });
+      if (maxDiameterPx < CULL_PX) return false;
+    }
+    return true;
   },
 
   draw(pass, view, ctx, state) {

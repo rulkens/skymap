@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { focusIdForRow } from '../../../../src/components/CommandPalette/utils/focusIdForRow';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';

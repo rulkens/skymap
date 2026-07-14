@@ -28,24 +28,59 @@ Branch: `grand-tour`, draft PR #400. Full suite must stay green.
 
 ## File map
 
-| What | Where |
-|---|---|
-| Storyboard (beat order, captions, dwellClips) | `src/data/animation/tours/grandTour.ts` |
-| One choreography per beat | `src/data/animation/tours/grandTour/<beat>.ts` |
-| Debugger clip wrappers (ids `tour*`) | `src/data/animation/clips/grandTourBeats.ts` |
-| Clip id union (append-only) | `src/@types/animation/ClipId.ts` |
-| Clip registry | `src/data/animation/clips/clipRegistry.ts` |
-| Registry key-freeze test | `tests/data/animation/clips/clipRegistry.test.ts` |
-| Authoring vocabulary (all helpers) | `src/services/engine/animation/effectHelpers.ts` |
-| Default dwell (`dwellDrift(sec, { rampSec, cruiseRate })`) | `src/state/tour/dwellDrift.ts` |
-| Scene cues union (`SettingsAction`) | grep `SettingsAction` in `src/@types/animation/` |
-| Tour script + stage docs | `docs/tour/script.md`, `docs/tour/stages/` |
+| What                                                       | Where                                             |
+| ---------------------------------------------------------- | ------------------------------------------------- |
+| Storyboard (beat order, captions, dwellClips)              | `src/data/animation/tours/grandTour.ts`           |
+| One choreography per beat                                  | `src/data/animation/tours/grandTour/<beat>.ts`    |
+| Debugger clip wrappers (ids `tour*`)                       | `src/data/animation/clips/grandTourBeats.ts`      |
+| Clip id union (append-only)                                | `src/@types/animation/ClipId.ts`                  |
+| Clip registry                                              | `src/data/animation/clips/clipRegistry.ts`        |
+| Registry key-freeze test                                   | `tests/data/animation/clips/clipRegistry.test.ts` |
+| Authoring vocabulary (all helpers)                         | `src/services/engine/animation/effectHelpers.ts`  |
+| Default dwell (`dwellDrift(sec, { rampSec, cruiseRate })`) | `src/state/tour/dwellDrift.ts`                    |
+| Scene cues union (`SettingsAction`)                        | grep `SettingsAction` in `src/@types/animation/`  |
+| Tour script + stage docs                                   | `docs/tour/script.md`, `docs/tour/stages/`        |
 
 Focus ids: structures are `${category}-${seedId}` (`cluster-virgo-m87`,
 `group-m81-group`, `void-bootes-void`); famous galaxies are bare (`m31`,
 `m87`); the Milky Way is `milkyWay` (resolves with no catalog loaded).
 Scoped visibility: `'survey:<catalogId>'`, `'structureRing:<category>'`,
 `'label:milkyWay'|'label:survey'|'label:structure'|'label:<category>'`.
+
+## flyPath plumbing chains
+
+`clip-primitives.md` documents what each knob _does_; this maps the seams a knob
+_passes through_, so tuning or adding one you know every file to touch. Two chains,
+because a knob is authored on the clip and separately exposed as an inspector
+override (A/B live-tuning before it's baked as a default).
+
+**The plumbing chain for a new flyPath knob** (author → runtime path):
+
+1. `pathDefaults.ts` — the `DEFAULT_*` constant (e.g. `DEFAULT_LINGER`,
+   `DEFAULT_SPLINE_CONFIG`, `DEFAULT_PASS_BY_OFFSET`). flyPath stamps these when the
+   node authors nothing, so both clips inherit the tuned-by-eye default.
+2. `src/@types/animation/Effect.d.ts` — the `kind: 'flyPath'` node type carries the
+   knob's field.
+3. `effectHelpers.ts` — the `flyPath(...)` authoring helper reads the opt and stamps
+   the default onto each waypoint.
+4. `resolveClipFoci.ts` — carry-through: the knob rides the resolved foci from
+   `id`-form to `at`-form.
+5. `compileClip.ts` — passes the value into `buildPathTrack.ts` (the flythrough
+   builder; `sample(localSec)` closure), which does the geometry.
+6. `applyPathTuning.ts` — the optional per-clip override merge.
+
+**The inspector chain** (live A/B override, defaults to no-op):
+
+1. `src/@types/settings/EngineSettingsState.d.ts` — the `clipPathInspect` state
+   (knob scalars + an `active` gate per knob).
+2. `src/state/settings/selectors.ts` — reads it back out.
+3. `src/state/settings/settingsSlice.ts` — the drag-to-activate setters (a setter
+   flips `active.<knob> = true` as it writes the value).
+4. `src/@types/settings/ClipPathTuningActive.ts` — the union of override-able knobs
+   (`{align, rampSec, linger, spline}`).
+5. `src/components/DebugPanel/ClipPathInspectorSection.tsx`
+   (+ `ClipPathInspectorSectionContainer.tsx`) — the slider UI; sub-sliders render
+   only when their parent gate is on.
 
 ## Add-a-beat checklist
 

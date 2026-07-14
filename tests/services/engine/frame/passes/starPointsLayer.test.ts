@@ -27,7 +27,7 @@ import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes'
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneBodies';
+import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -74,6 +74,16 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
 // (~10 kpc), so the distance gate passes — yet still parsecs beyond every
 // seeded star, so all 24 non-Sun neighbours stay sub-pixel points.
 const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
+
+// A camera within MAX_ORBIT_EXTENT_MPC of the origin — Neptune's ~30 AU orbit
+// is the system's farthest reach, ~1.5e-10 Mpc — so orbitTrailsLayer's
+// whole-layer sub-pixel bound (its module header) clamps the camera's nearest
+// possible distance to any orbit point to 0 and treats every orbit as
+// always-visible, regardless of apparent size. NEAR_FIELD_CAM (5 kpc out) is
+// many orders of magnitude too far for that — orbit-trails legitimately
+// disables there — so the group assertion that needs BOTH star-points and
+// orbit-trails enabled needs this much closer camera instead.
+const NEAR_ORBIT_CAM: Readonly<Vec3> = [0, 0, 1e-10];
 
 /**
  * A camera half an AU from the given position: a solar-diameter sphere at
@@ -171,8 +181,12 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
     const groupAt = (ctx: ReadyFrameContext) =>
       CONTENT_LAYERS.filter((l) => l.target === 'hdr' && l.slab === NEAR0 && l.enabled(state, ctx));
 
-    // Below the gate: the point backdrop + the rings both draw.
-    expect(groupAt(makeCtx(NEAR_FIELD_CAM)).map((l) => l.name)).toEqual([
+    // Below the gate: the point backdrop + the rings both draw. Uses
+    // NEAR_ORBIT_CAM, not NEAR_FIELD_CAM — orbit-trails additionally requires
+    // the camera within MAX_ORBIT_EXTENT_MPC of the system (see that
+    // constant's comment), a far tighter bound than the shared foreground
+    // gate NEAR_FIELD_CAM alone satisfies.
+    expect(groupAt(makeCtx(NEAR_ORBIT_CAM)).map((l) => l.name)).toEqual([
       'star-points',
       'orbit-trails',
     ]);

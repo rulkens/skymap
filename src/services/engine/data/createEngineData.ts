@@ -2,7 +2,9 @@ import type { EngineData } from '../../../@types/engine/data/EngineData';
 import { createGalaxyStore } from './createGalaxyStore';
 import { createStructureStore } from './createStructureStore';
 import { createBodyStore } from './createBodyStore';
-import { SCENE_EARTH, SCENE_STARS, SCENE_PLANETS } from '../../../data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
+import { SCENE_STARS } from '../../../data/bodies/sceneStars';
+import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 
 /**
  * createEngineData — assemble the per-type stores into the `EngineData` bag

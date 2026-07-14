@@ -858,6 +858,53 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
     expect(calls).toContain('setPipeline');
     expect(calls).toContain('draw');
   });
+
+  it('skips a source whose resolved fade opacity is exactly 0', async () => {
+    // Alpha-0 instances into the additive target are pure GPU cost for zero
+    // contribution, so the per-source loop drops the draw call entirely when
+    // the fadeOpacityOf callback resolves to exactly 0 (a fade reaches 0
+    // continuously before the skip engages, so no pop is possible).
+    const renderer = createPointRenderer(
+      makeStubDevice(),
+      'bgra8unorm',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
+    await renderer.upload(idOf(Source.Glade), makeCloud(10));
+
+    const drawnCounts: number[] = [];
+    const pass = {
+      setPipeline: () => {},
+      setBindGroup: () => {},
+      setVertexBuffer: () => {},
+      draw: (_verts: number, instances: number) => drawnCounts.push(instances),
+    } as unknown as GPURenderPassEncoder;
+
+    renderer.draw(pass, new Float32Array(16) as unknown as Mat4, [800, 600], {
+      pointSizePx: 1,
+      brightness: 1,
+      selectedPacked: 0xffffffff >>> 0,
+      visibleSourceMask: 0xffffffff,
+      camPosWorld: [0, 0, 0],
+      pxPerRad: 1,
+      highlightFallback: false,
+      realOnlyMode: false,
+      biasMode: 0,
+      absMagLimit: 0,
+      depthFadeEnabled: false,
+      pxFadeStart: 0,
+      pxFadeEnd: 0,
+      focusBindGroup: FOCUS_BIND_GROUP,
+      // SDSS fully faded → skipped; GLADE at partial opacity → drawn.
+      fadeOpacityOf: (source) => (source === Source.SDSS ? 0 : 0.5),
+    });
+
+    // Exactly one instanced draw fired (GLADE's 10 instances); SDSS's was
+    // dropped by the skip, not merely drawn at alpha 0.
+    expect(drawnCounts).toEqual([10]);
+  });
 });
 
 describe('POINT_VERTEX_ATTRIBUTES — shared layout export', () => {

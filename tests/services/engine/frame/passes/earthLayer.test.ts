@@ -26,7 +26,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { earthLayer } from '../../../../../src/services/engine/frame/passes/earthLayer';
 import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
-import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
@@ -59,9 +59,23 @@ const PASS_STUB = {
 // (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as ReadyFrameContext;
 
-// enabled reads only ctx.cam.distance beyond the handle checks.
+// Beyond the handle checks, enabled reads ctx.cam.distance (the shared
+// foreground gate — orbit distance-to-focus) AND the camera POSITION +
+// projection knobs (the sub-pixel cull — a separate quantity). The fixture
+// camera hovers 1e-13 Mpc from Earth's centre, where the ~4e-16 Mpc globe
+// subtends ~2.6 px on this 720-tall/60° viewport, so the cull passes and the
+// `distance` argument alone drives the foreground-gate assertions.
 function makeCtx(distance: number): ReadyFrameContext {
-  return { cam: { distance } } as unknown as ReadyFrameContext;
+  return {
+    cam: { distance },
+    drawCamPos: [
+      SCENE_EARTH.positionMpc[0] + 1e-13,
+      SCENE_EARTH.positionMpc[1],
+      SCENE_EARTH.positionMpc[2],
+    ],
+    canvasSize: { width: 1280, height: 720 },
+    fovYRad: (60 * Math.PI) / 180,
+  } as unknown as ReadyFrameContext;
 }
 
 // A camera comfortably inside the shared foreground gate.
@@ -121,6 +135,25 @@ describe('earthLayer.enabled', () => {
     // a deep-sub-pixel speck at the galactic centre.
     expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
     expect(earthLayer.enabled(state, makeCtx(0.43))).toBe(false);
+  });
+
+  it('is disabled while Earth is sub-pixel, even inside the foreground band', () => {
+    // Camera inside the foreground gate (cam.distance small) but positioned
+    // ~1e-6 Mpc from Earth — the ~4e-16 Mpc globe subtends ~3e-7 px there,
+    // far under SUB_PIXEL_BODY_CULL_PX, so the layer must leave the pass
+    // plan: a sub-pixel sphere adds nothing the star backdrop doesn't.
+    const state = makeState({ draw: vi.fn() }, SCENE_EARTH);
+    const subPixelCtx = {
+      cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
+      drawCamPos: [
+        SCENE_EARTH.positionMpc[0] + 1e-6,
+        SCENE_EARTH.positionMpc[1],
+        SCENE_EARTH.positionMpc[2],
+      ],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+    expect(earthLayer.enabled(state, subPixelCtx)).toBe(false);
   });
 });
 

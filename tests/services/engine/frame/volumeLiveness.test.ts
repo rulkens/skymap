@@ -40,7 +40,8 @@ function rawSettings(over: Partial<VolumeFieldSettings> = {}): VolumeFieldSettin
 
 /**
  * Build a minimal ReadyFrameContext — deriveVolumeLiveness reads only
- * `nowMs` and `focusBlend`.
+ * `nowMs`, `focusBlend`, and `drawCamPos` (the survey-fade key; the 5 Mpc
+ * default sits far outside the band so it is factor 1 unless overridden).
  */
 function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   return {
@@ -137,5 +138,26 @@ describe('deriveVolumeLiveness', () => {
     const state = makeState({ fieldOpacity: 0.5, masterOpacity: 1 });
     const liveness = deriveVolumeLiveness(state, makeCtx({ focusBlend: 0 }))!;
     expect(liveness.fadeOpacityOf(FIELD_ID)).toBeCloseTo(0.5, 6);
+  });
+
+  it('returns null at deep zoom — the survey fade zeroes every field through the closure', () => {
+    // Camera inside the surveyDeepZoom goneAt edge (0.002 Mpc from origin):
+    // the band factor multiplies into fadeOpacityOf, so a hasActiveFields
+    // that reads through the closure (as the real renderer does) sees 0 for
+    // every field — liveness null, BOTH volume layers disabled by
+    // construction. The field is otherwise fully active (toggle on, master
+    // 1), so the band is the only thing shutting it. No famous-style
+    // exemption exists for volumes.
+    const state = makeState({
+      hasActiveFields: (_settingsOf, fadeOpacityOf) =>
+        (fadeOpacityOf as (id: VolumeFieldId) => number)(FIELD_ID) > 0,
+      items: { [FIELD_ID]: rawSettings() },
+    });
+    const deepCtx = makeCtx({
+      drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
+    });
+    expect(deriveVolumeLiveness(state, deepCtx)).toBeNull();
+    // Same state, far camera → live (proves the band, not the fixture).
+    expect(deriveVolumeLiveness(state, makeCtx())).not.toBeNull();
   });
 });

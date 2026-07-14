@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import { SCENE_STARS, SCENE_PLANETS } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 
 describe('createEngineData', () => {
   it('still exposes galaxies + structures stores', () => {

@@ -47,7 +47,7 @@ import { useEffect, useState, useRef, type ReactElement } from 'react';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
-import { TIMED_SLOTS } from '../../services/engine/frame/frameProgram';
+import { TIMED_SLOTS, TIMED_SLOT_SLABS } from '../../services/engine/frame/frameProgram';
 import { Sparkline } from './Sparkline';
 
 // Row order = the timing registry's order, which is encoder draw order
@@ -59,6 +59,17 @@ const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = TIMED_SLOTS;
 
 const AVG_WINDOW = 60;
 const SPARKLINE_WINDOW = 8;
+
+// Fixed, subtle per-slab badge colours so a row's projection slab (which depth
+// slab its layer/pass renders through) is identifiable at a glance. A tiny
+// inline palette matches this debug panel's inline-style approach. Slots with
+// no single slab (the whole-texture composites, the pick pass — they carry the
+// NO_SLAB_BADGE marker from the derivation) fall through to the muted default.
+const SLAB_BADGE_COLORS: Readonly<Record<string, string>> = {
+  COSMO: '#6f9fd8',
+  NEAR0: '#d8a06f',
+};
+const NO_SLAB_BADGE_COLOR = '#7a7a7a';
 
 type SlotStats = {
   recent: number[]; // up to AVG_WINDOW entries; newest at the end.
@@ -163,6 +174,10 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
           // avg + sparkline visible (so the user can see what it cost
           // when it was on) but dimmed so they don't read it as live.
           const isIdle = row.staleFrames > 0;
+          // Which depth slab this slot renders through, derived from the same
+          // program+registry walk that orders the rows — so a new layer's
+          // badge appears here with no edit to this component.
+          const slab = TIMED_SLOT_SLABS.get(slot) ?? '';
           return (
             <div key={slot} style={isIdle ? { opacity: 0.4 } : undefined}>
               <span style={{ display: 'inline-block', width: 130 }}>{slot}</span>
@@ -177,6 +192,21 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
               </span>
               <span style={{ marginLeft: 8 }}>
                 <Sparkline samples={row.spark} />
+              </span>
+              {/*
+                Slab badge trails the sparkline (the last column) so it never
+                shifts the fixed-width name/ms/sparkline alignment.
+              */}
+              <span
+                style={{
+                  marginLeft: 8,
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                  opacity: 0.75,
+                  color: SLAB_BADGE_COLORS[slab] ?? NO_SLAB_BADGE_COLOR,
+                }}
+              >
+                {slab}
               </span>
             </div>
           );

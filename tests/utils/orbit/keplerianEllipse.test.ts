@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { keplerianEllipse } from '../../../src/utils/orbit/keplerianEllipse';
-import { ECLIPTIC_BASIS } from '../../../src/data/bodies/eclipticBasis';
+import { ECLIPTIC_FRAME } from '../../../src/data/bodies/orbitPlaneFrames';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
@@ -48,8 +48,8 @@ describe('keplerianEllipse', () => {
     expect(dot(A, B)).toBeCloseTo(0, 12);
 
     // Both axes lie in the ecliptic plane (⟂ its normal).
-    expect(dot(A, ECLIPTIC_BASIS.normal)).toBeCloseTo(0, 12);
-    expect(dot(B, ECLIPTIC_BASIS.normal)).toBeCloseTo(0, 12);
+    expect(dot(A, ECLIPTIC_FRAME.normal)).toBeCloseTo(0, 12);
+    expect(dot(B, ECLIPTIC_FRAME.normal)).toBeCloseTo(0, 12);
 
     // A circle has its centre at the focus.
     expect(len(C)).toBeCloseTo(0, 12);

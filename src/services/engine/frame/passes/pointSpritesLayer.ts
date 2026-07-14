@@ -15,7 +15,10 @@
  * Always — there's no user-facing toggle for "hide all the points".
  * Per-source visibility is gated inside the shader via the
  * `visibleSourceMask` uniform, so disabling SDSS is a 4-byte uniform
- * write, not a CPU-side skip.
+ * write, not a CPU-side skip. (The renderer's own per-source loop skips
+ * a source whose resolved fade opacity is exactly 0 — see
+ * `pointRenderer.draw` — which is what keeps a completed deep-zoom
+ * survey fade from rasterizing millions of alpha-0 instances.)
  *
  * ### What it reads
  *
@@ -51,6 +54,7 @@
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { COSMO } from '../slabs';
+import { Source } from '../../../../data/sources';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
@@ -58,6 +62,8 @@ import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../../../data/galaxyLodBands';
+import { fadeBand } from '../../../../utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 
 export const pointSpritesLayer: ContentLayer = {
   name: 'point-sprites',
@@ -73,6 +79,15 @@ export const pointSpritesLayer: ContentLayer = {
 
   draw(pass, view, ctx, state) {
     const { renderer, drawPxPerRad } = ctx;
+
+    // Deep-zoom survey fade: the survey point clouds recede as the camera
+    // descends toward the solar system, yielding once the local starfield
+    // fills the near field. Keyed on distance from the heliocentric render
+    // origin (NOT cam.distance, the orbit-to-focus radius). Spatial, so it is
+    // the same for every source this frame — compute it ONCE here, not
+    // per-source inside the closure.
+    const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
+    const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
 
     // Pack the galaxy selection into the u32 the shader compares
     // against per-vertex `(sourceCode << 27u) | instance_index`.
@@ -117,8 +132,15 @@ export const pointSpritesLayer: ContentLayer = {
       // registry's fade-id discriminator). The registry returns 1.0 for
       // unregistered handles — a safe fallback so a source that hasn't
       // registered yet renders at full opacity rather than disappearing.
+      // The frame-wide deep-zoom survey fade (hoisted above) multiplies in
+      // on top for every SURVEY source — both factors are in [0, 1], and the
+      // pass is additive, so a 0 product means invisible. The famous catalog
+      // is exempt: its ~20 curated galaxies stay visible inside the Milky Way
+      // and near Earth as reference points, so the deep zoom keeps its
+      // landmarks while the millions of survey points yield.
       fadeOpacityOf: (source) =>
-        fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
+        fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs) *
+        (source === Source.FamousGalaxy ? 1 : surveyFade),
     });
   },
 
@@ -145,11 +167,28 @@ export const pointSpritesLayer: ContentLayer = {
   // its ctx via `pickFrameContext`, which passes `deriveSourceMasks(state).pick`
   // as the mask. Filtering `loadedSources()` by it is the pick gate — a
   // fading-out catalog clears its bit and immediately stops claiming hits.
+  // The deep-zoom survey fade composes into the same gate: a survey source
+  // whose band-multiplied opacity has reached exactly 0 is invisible, so it
+  // must not claim hits either (invisible → unpickable, the same coherence
+  // the Milky-Way gate keeps). The famous catalog is exempt, mirroring the
+  // visual draw — its galaxies stay visible at deep zoom, so they stay
+  // pickable.
+  //
+  // `drawPoints` is called even when the filter empties the list — the
+  // @group(0) pick-camera upload/bind it performs is the prefix contract
+  // above, and the ring / disk / Milky-Way pick pipelines still need it.
   drawPick(pass, view, ctx, state) {
     if (state.gpu.pickRenderer === null) return;
-    const sources = Array.from(ctx.renderer.loadedSources()).filter(
-      (s) => ((ctx.visibleSourceMask >> s.source) & 1) !== 0,
-    );
+    const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
+    const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
+    const fades = state.subsystems.fades;
+    const sources = Array.from(ctx.renderer.loadedSources()).filter((s) => {
+      if (((ctx.visibleSourceMask >> s.source) & 1) === 0) return false;
+      const opacity =
+        fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(s.source) }, ctx.nowMs) *
+        (s.source === Source.FamousGalaxy ? 1 : surveyFade);
+      return opacity !== 0;
+    });
     state.gpu.pickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
   },
 };

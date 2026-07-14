@@ -784,8 +784,16 @@ export function createPointRenderer(
       // it alongside the id resolved for the map lookup.
       if (((visibleSourceMask >> source) & 1) === 0) continue;
 
+      // Fully faded (exactly 0) → skip the source outright: every instance
+      // would rasterize at alpha 0 into an additive target — pure GPU cost
+      // for zero contribution. No pop is possible: a fade reaches 0
+      // continuously before this skip engages, so the last drawn frame was
+      // already invisible.
+      const fadeOpacity = settings.fadeOpacityOf(source);
+      if (fadeOpacity === 0) continue;
+
       // One 16-byte fade writeBuffer per visible galaxy catalog per frame.
-      fadeScratchF32[0] = settings.fadeOpacityOf(source);
+      fadeScratchF32[0] = fadeOpacity;
       device.queue.writeBuffer(entry.fadeBuffer, 0, fadeScratchBuffer);
 
       pass.setBindGroup(1, entry.fadeBindGroup);

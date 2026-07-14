@@ -41,7 +41,7 @@ vi.mock('../../../src/services/input/createKeyboardListener', async () => {
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchFlyToEarthKeySaga } from '../../../src/state/scene/watchFlyToEarthKeySaga';
 import { earthSurfaceFraming } from '../../../src/utils/camera/earthSurfaceFraming';
-import { SCENE_EARTH } from '../../../src/data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { cameraRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { EarthBody } from '../../../src/@types/scene/EarthBody';

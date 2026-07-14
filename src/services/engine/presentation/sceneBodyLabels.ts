@@ -37,7 +37,9 @@ import type { Label } from '../../../@types/rendering/Label';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { CaptionKind } from './captionPriority';
-import { SCENE_EARTH, SCENE_STARS, SCENE_PLANETS } from '../../../data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
+import { SCENE_STARS } from '../../../data/bodies/sceneStars';
+import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
@@ -103,15 +105,6 @@ export function sceneBodyLabelId(bodyId: string): string {
 export const SCENE_STAR_LABEL_IDS: ReadonlySet<string> = new Set(
   SCENE_STARS.map((star) => sceneBodyLabelId(star.id)),
 );
-
-/**
- * The Sun's caption id. The Sun's caption is pinned to full alpha rather than
- * run through the neighbourhood distance band — it is the descent's aim
- * point, so its name holds all the way down from the foreground layer's
- * kiloparsec gate while the rest of the star map fades at the neighbourhood
- * edge.
- */
-export const SUN_SCENE_LABEL_ID = sceneBodyLabelId('sun');
 
 /**
  * Build the common label shape for one body. The colour is the caller's
