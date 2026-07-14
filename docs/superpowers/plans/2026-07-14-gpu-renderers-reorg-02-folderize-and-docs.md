@@ -23,19 +23,20 @@ exist; `pointVertexLayout.ts` + `catalogStore.ts` sit flat beside `pointRenderer
 
 ## Architecture
 
-Pure mechanical movement. Every task is `git mv` (so history follows the file) plus
-the import / `vi.mock` / consumer-constant rewrites the move forces. **Zero runtime
-logic changes** — the reorg is behaviour-neutral, and every renderer already has
+Pure mechanical movement. Every task is one `npm run move-files` invocation (ts-morph
+moves the file, rewrites every resolving TS import, and drags the `tests/` mirror
+along) plus the hand-fixes for what it provably cannot track — `?static` shader
+specifiers and `vi.mock` string literals. **Zero runtime logic changes** — the reorg is behaviour-neutral, and every renderer already has
 tests whose imports move with it (23 test files under `tests/services/gpu/renderers/`).
 Family boundaries and the target tree are the spec's §3 / §4 verbatim; the shader
 moves are §7; the blast-radius counts are §8.
 
 ## Tech stack
 
-TypeScript + Vite + WebGPU + WESL (wesl-plugin build-time linker) + Vitest. No new
-dependencies; no new files except the two shader nest directories, the family
-folders `git mv` creates, and Task A7's `buildSegmentInstances.ts` extraction (+ its
-mirrored test file).
+TypeScript + Vite + WebGPU + WESL (wesl-plugin build-time linker) + Vitest, plus
+`npm run move-files` (ts-morph) as the move tool. No new dependencies; no new files
+except the two shader nest directories, the family folders the moves create, and Task
+A7's `buildSegmentInstances.ts` extraction (+ its mirrored test file).
 
 ## Global constraints
 
@@ -45,9 +46,9 @@ mirrored test file).
   extraction is Task A7's `buildSegmentInstances` cut-out (an already-exported pure
   function moving files, user-confirmed 2026-07-14); any other "fix" or "extract"
   temptation is STOP — that belongs to a different plan.
-- **`git mv`, don't rewrite.** Preserve every didactic module docblock and comment
-  through the move — move the file, then touch only the import lines. Do not
-  reformat or re-flow moved files.
+- **Move, don't rewrite.** Preserve every didactic module docblock and comment
+  through the move — move the file, then touch only the import lines the tool
+  cannot reach. Do not reformat or re-flow moved files.
 - **`type` aliases, never `interface`.** (No new types here, but hold the line.)
 - **`@types` files do NOT move.** Per the one-type-per-file convention, the
   `src/@types/rendering/*` renderer type files stay put (spec §8); only the
@@ -62,21 +63,40 @@ mirrored test file).
 Each family-move task is the same shape — the task lines only name the files and the
 task-specific consumers. For every task:
 
-1. `git mv` the renderer `.ts` file(s) from `src/services/gpu/renderers/<name>.ts`
-   into `src/services/gpu/renderers/<family>/<name>.ts`.
-2. `git mv` the mirroring test file(s) from `tests/services/gpu/renderers/<name>.test.ts`
-   into `tests/services/gpu/renderers/<family>/<name>.test.ts`.
-3. In each moved renderer, add one `../` to every relative import that now points a
-   level up: its **`?static` shader imports** (spec §8: 47 across 20 files), its
-   `../lib/*` imports into the hoisted `gpu/lib/` (now `../../lib/*`), and any
-   sibling-renderer or `../../` imports.
-4. Re-point every **external consumer** of the moved files — the `initGpu.ts` factory
-   import for this family (`phases/initGpu.ts:46–70`), any `vi.mock('.../renderers/<name>')`
-   literal (spec §8: 20 total — 19 in
-   `tests/services/engine/phases/initGpu.destroyReachability.test.ts`, 1 in
-   `wireInput.test.ts`), and the task-specific cross-folder **constant** consumers
-   the task names (each gains one `../`).
-5. Main thread: `npm run typecheck` + `npm test` green → commit.
+1. **Move with `npm run move-files`, never `git mv` + hand-edited imports.** The
+   ts-morph CLI (`tools/dev/moveFiles.ts`, landed in `main` as #440) re-parses the
+   module graph and rewrites every TS import that resolves to the moved file, in both
+   directions — the mechanical `../` re-derivation an agent gets subtly wrong. It also
+   **auto-expands the `tests/` mirror**, so naming the source file moves its
+   `.test.ts` too; do NOT list the test file yourself.
+
+   ```bash
+   npm run move-files -- --manifest moves.json --dry   # preview first, always
+   npm run move-files -- --manifest moves.json
+   ```
+
+   with `moves.json` a `[{ "from": "src/services/gpu/renderers/<name>.ts",
+"to": "src/services/gpu/renderers/<family>/<name>.ts" }, …]` array. A single-file
+   move can use the positional form `npm run move-files -- <from> <to>`.
+
+2. **Hand-fix what ts-morph provably does not track** (its docblock names these):
+   - **`?static` shader imports** (spec §8: 47 across 20 files) — the `.wesl?static`
+     specifier is not a TS module, so it is NOT rewritten. Each moved renderer's
+     shader imports gain one `../`.
+   - **`vi.mock('…/renderers/<name>')` string literals** (spec §8: 20 — 19 in
+     `tests/services/engine/phases/initGpu.destroyReachability.test.ts`, 1 in
+     `wireInput.test.ts`) — a string, not a module specifier. Not rewritten.
+   - Any other **string-literal path** naming the moved file.
+
+   After moving, `grep` for the moved file's basename and old path to catch stragglers
+   — the tool's own docblock prescribes exactly this check.
+
+3. Verify the task-specific **cross-folder constant consumers** the task names: these
+   ARE real TS imports, so `move-files` should have rewritten them. Confirm rather
+   than re-edit; a hand-edit on top of the AST rewrite is how double-`../` bugs land.
+
+4. Main thread: `npm run typecheck` + `npm test` green → commit. Keep the pure move in
+   its own commit so git's rename detection links old→new and `git blame` survives.
 
 The blast-radius table (spec §8) is the master checklist — every `?static`, `vi.mock`,
 test-file, and constant-consumer row must be owned by exactly one task by the end of
@@ -89,14 +109,31 @@ Phase A. Re-read the current file before editing; cite lines, don't trust these.
 Kills the name-twin with the new `renderers/labels/` renderer folder (spec §3, last
 subsection). Not a renderer move — a supplier rename.
 
-**Files:** `git mv src/services/gpu/labels/` (5 files: `fontMetrics.ts`,
-`labelLayout.ts`, `loadFontAtlases.ts`, `measureLabel.ts`, `milkyWayLabelVisibility.ts`)
-→ `src/services/gpu/labelLayout/`, plus the mirroring test dir if one exists.
+**Files:** `src/services/gpu/labels/` (5 files: `fontMetrics.ts`, `labelLayout.ts`,
+`loadFontAtlases.ts`, `measureLabel.ts`, `milkyWayLabelVisibility.ts`)
+→ `src/services/gpu/labelLayout/`.
 
-- [ ] `git mv` the folder + its tests.
-- [ ] Re-point the four consumer groups (spec §3): `labelRenderer.ts:76–77`
-      (`../labels/` → `../labelLayout/` — this path also shifts again in A5 when
-      `labelRenderer` itself moves; do the rename half here), `src/data/fonts.ts`,
+- [ ] Move the 5 files with a manifest (`--dry` first):
+
+      ```json
+      [
+        { "from": "src/services/gpu/labels/fontMetrics.ts", "to": "src/services/gpu/labelLayout/fontMetrics.ts" },
+        { "from": "src/services/gpu/labels/labelLayout.ts", "to": "src/services/gpu/labelLayout/labelLayout.ts" },
+        { "from": "src/services/gpu/labels/loadFontAtlases.ts", "to": "src/services/gpu/labelLayout/loadFontAtlases.ts" },
+        { "from": "src/services/gpu/labels/measureLabel.ts", "to": "src/services/gpu/labelLayout/measureLabel.ts" },
+        { "from": "src/services/gpu/labels/milkyWayLabelVisibility.ts", "to": "src/services/gpu/labelLayout/milkyWayLabelVisibility.ts" }
+      ]
+      ```
+
+      ```bash
+      npm run move-files -- --manifest moves.json --dry
+      npm run move-files -- --manifest moves.json
+      ```
+
+- [ ] Verify the tests mirror moved to `tests/services/gpu/labelLayout/`.
+- [ ] Verify the four consumer groups (spec §3) now point at `labelLayout/`:
+      `labelRenderer.ts:76–77` (`../labels/` → `../labelLayout/` — this path also
+      shifts again in A5 when `labelRenderer` itself moves), `src/data/fonts.ts`,
       `phases/initGpu.ts`, and `presentation/produceMilkyWayLabel.ts`.
 - [ ] typecheck + suite green.
 - [ ] Commit: `refactor(gpu): rename gpu/labels supplier to gpu/labelLayout`.
@@ -110,19 +147,38 @@ The LOD chain of one conceptual renderer (spec §3). Members (spec §4):
 
 Apply the recipe. Task-specific consumers:
 
-- [ ] `git mv` the 7 renderer files → `renderers/galaxyCatalog/` and their test files
-      → `tests/services/gpu/renderers/galaxyCatalog/`. (Intra-family imports —
-      `pickRenderer` → `pointVertexLayout`, the two disk renderers → `instancedQuadRenderer` —
-      stay same-folder, no `../` change.)
-- [ ] `?static` rewrites: `point`/`proceduralDisk` carry 3 each (spec §8); the disk
-      and pick files the rest.
-- [ ] `createPickRenderer` consumer is **`wireInput.ts:33`**, NOT `initGpu.ts` (spec §8)
-      — re-point it + its test's `vi.fn` stub. The other 4 factories re-point in
-      `initGpu.ts:46–70`.
-- [ ] `FLOATS_PER_INSTANCE` consumers gain `../`: `texturedDiskRenderer.ts:47`,
+- [ ] Move the 7 renderer files → `renderers/galaxyCatalog/` with a manifest
+      (`--dry` first). (Intra-family imports — `pickRenderer` → `pointVertexLayout`,
+      the two disk renderers → `instancedQuadRenderer` — stay same-folder, no `../`
+      change.)
+
+      ```json
+      [
+        { "from": "src/services/gpu/renderers/pointRenderer.ts", "to": "src/services/gpu/renderers/galaxyCatalog/pointRenderer.ts" },
+        { "from": "src/services/gpu/renderers/proceduralDiskRenderer.ts", "to": "src/services/gpu/renderers/galaxyCatalog/proceduralDiskRenderer.ts" },
+        { "from": "src/services/gpu/renderers/texturedDiskRenderer.ts", "to": "src/services/gpu/renderers/galaxyCatalog/texturedDiskRenderer.ts" },
+        { "from": "src/services/gpu/renderers/instancedQuadRenderer.ts", "to": "src/services/gpu/renderers/galaxyCatalog/instancedQuadRenderer.ts" },
+        { "from": "src/services/gpu/renderers/pickRenderer.ts", "to": "src/services/gpu/renderers/galaxyCatalog/pickRenderer.ts" },
+        { "from": "src/services/gpu/renderers/pointVertexLayout.ts", "to": "src/services/gpu/renderers/galaxyCatalog/pointVertexLayout.ts" },
+        { "from": "src/services/gpu/renderers/catalogStore.ts", "to": "src/services/gpu/renderers/galaxyCatalog/catalogStore.ts" }
+      ]
+      ```
+
+      ```bash
+      npm run move-files -- --manifest moves.json --dry
+      npm run move-files -- --manifest moves.json
+      ```
+
+- [ ] Verify the tests mirror landed in `tests/services/gpu/renderers/galaxyCatalog/`.
+- [ ] `?static` rewrites (hand-edit): `point`/`proceduralDisk` carry 3 each (spec §8);
+      the disk and pick files the rest.
+- [ ] Verify the `createPickRenderer` consumer — **`wireInput.ts:33`**, NOT `initGpu.ts`
+      (spec §8) — was rewritten; hand-fix its test's `vi.fn` stub. The other 4 factories
+      re-point in `initGpu.ts:46–70`.
+- [ ] Verify the `FLOATS_PER_INSTANCE` consumers: `texturedDiskRenderer.ts:47`,
       `proceduralDiskRenderer.ts:67`, and their tests (spec §8). NOT
       `rebuildHiResFamousForTier` — comment-only.
-- [ ] `pointVertexLayout` external consumers (3 test files per spec §8) gain `../`.
+- [ ] Verify the `pointVertexLayout` external consumers (3 test files per spec §8).
 - [ ] `vi.mock` literals for all 5 factory-visible members in
       `initGpu.destroyReachability.test.ts` + the `wireInput.test.ts` pick literal.
 - [ ] typecheck + suite green.
@@ -134,7 +190,9 @@ Apply the recipe. Task-specific consumers:
 (spec §7). WESL import paths change: `package::points::io` →
 `package::galaxyCatalog::points::io`, etc.
 
-- [ ] `git mv` the three shader dirs under a new `shaders/galaxyCatalog/`.
+- [ ] `git mv` the three shader dirs under a new `shaders/galaxyCatalog/`. (`git mv`,
+      not `move-files`: the tool moves `.ts`/`.tsx` and rewrites the TS module graph
+      only — WESL is a separate module graph it does not parse.)
 - [ ] Rewrite the **14** `package::` import lines across the `.wesl` files under
       those three dirs (spec §7).
 - [ ] Rewrite the **9** `?static` TS import lines: `pointRenderer.ts:51–52`,
@@ -153,8 +211,22 @@ Apply the recipe. Task-specific consumers:
 footprint reads shared calibration). Apply the recipe. `gpu/galaxy/` stays a sibling
 supplier — do **not** move it.
 
-- [ ] `git mv` the 2 files → `renderers/milkyWay/` + their tests.
-- [ ] Recipe steps 3–5; re-point `initGpu.ts` + the two `vi.mock` literals.
+- [ ] Move the 2 files → `renderers/milkyWay/` with a manifest (`--dry` first):
+
+      ```json
+      [
+        { "from": "src/services/gpu/renderers/milkyWayCloudRenderer.ts", "to": "src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer.ts" },
+        { "from": "src/services/gpu/renderers/milkyWayPickRenderer.ts", "to": "src/services/gpu/renderers/milkyWay/milkyWayPickRenderer.ts" }
+      ]
+      ```
+
+      ```bash
+      npm run move-files -- --manifest moves.json --dry
+      npm run move-files -- --manifest moves.json
+      ```
+
+- [ ] Verify the tests mirror landed in `tests/services/gpu/renderers/milkyWay/`.
+- [ ] Recipe steps 2–4; hand-fix the two `vi.mock` literals; verify `initGpu.ts`.
 - [ ] Commit: `refactor(gpu): move milkyWay cloud + pick renderers into a family folder`.
 
 ### Task A5 — `labels/` family move (2 files)
@@ -162,12 +234,26 @@ supplier — do **not** move it.
 `labelRenderer.ts`, `markerLineRenderer.ts` — the label subsystem's two draw calls
 (spec §3). Apply the recipe.
 
-- [ ] `git mv` the 2 files → `renderers/labels/` + their tests.
-- [ ] `labelRenderer.ts` import of the (already-renamed) `labelLayout/` supplier gains
-      `../` on top of A1's rename.
-- [ ] `LABEL_*_DEFAULT` (`MIN_PX`, `MAX_PX`, `WORLD_EM_MPC`) consumer gains `../`:
+- [ ] Move the 2 files → `renderers/labels/` with a manifest (`--dry` first):
+
+      ```json
+      [
+        { "from": "src/services/gpu/renderers/labelRenderer.ts", "to": "src/services/gpu/renderers/labels/labelRenderer.ts" },
+        { "from": "src/services/gpu/renderers/markerLineRenderer.ts", "to": "src/services/gpu/renderers/labels/markerLineRenderer.ts" }
+      ]
+      ```
+
+      ```bash
+      npm run move-files -- --manifest moves.json --dry
+      npm run move-files -- --manifest moves.json
+      ```
+
+- [ ] Verify the tests mirror landed in `tests/services/gpu/renderers/labels/`.
+- [ ] Verify `labelRenderer.ts`'s import of the (already-renamed) `labelLayout/`
+      supplier gained `../` on top of A1's rename.
+- [ ] Verify the `LABEL_*_DEFAULT` (`MIN_PX`, `MAX_PX`, `WORLD_EM_MPC`) consumer:
       `subsystems/labelDirectorSubsystem.ts:83–85` (spec §8).
-- [ ] Re-point `initGpu.ts` + the two `vi.mock` literals.
+- [ ] Verify `initGpu.ts`; hand-fix the two `vi.mock` literals.
 - [ ] Commit: `refactor(gpu): move label + markerLine renderers into a family folder`.
 
 ### Task A6 — `structureMarker/` singleton move (1 file)
@@ -175,8 +261,15 @@ supplier — do **not** move it.
 `structureMarkerRenderer.ts` — genuine singleton (spec §3). It carries **6** `?static`
 imports (the most — spec §8). Apply the recipe.
 
-- [ ] `git mv` → `renderers/structureMarker/` + its test; +`../` on all 6 `?static`.
-- [ ] Re-point `initGpu.ts` + its `vi.mock` literal.
+- [ ] ````bash
+          npm run move-files -- src/services/gpu/renderers/structureMarkerRenderer.ts src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts
+          ```
+
+      ````
+
+- [ ] Verify the test landed in `tests/services/gpu/renderers/structureMarker/`.
+- [ ] Hand-fix: +`../` on all 6 `?static` imports.
+- [ ] Verify `initGpu.ts`; hand-fix its `vi.mock` literal.
 - [ ] Commit: `refactor(gpu): move structureMarker renderer into its own folder`.
 
 ### Task A7 — `filaments/` family move + `buildSegmentInstances` extraction (2 files)
@@ -187,8 +280,14 @@ directly-tested pure function (`filamentRenderer.ts:72`, tested at
 `tests/services/gpu/renderers/filamentRenderer.test.ts:76`), so the extraction is
 mechanical and behaviour-neutral (user-confirmed 2026-07-14).
 
-- [ ] `git mv filamentRenderer.ts` → `renderers/filaments/filamentRenderer.ts` + its
-      test → `tests/services/gpu/renderers/filaments/filamentRenderer.test.ts`.
+- [ ] ````bash
+          npm run move-files -- src/services/gpu/renderers/filamentRenderer.ts src/services/gpu/renderers/filaments/filamentRenderer.ts
+          ```
+
+      ````
+
+- [ ] Verify the test landed at
+      `tests/services/gpu/renderers/filaments/filamentRenderer.test.ts`.
 - [ ] Cut the `buildSegmentInstances` function — with its docblock and the
       `FilamentCloud`-related imports it needs (read the current file to enumerate) —
       into `renderers/filaments/buildSegmentInstances.ts`; `filamentRenderer.ts` imports
@@ -196,7 +295,7 @@ mechanical and behaviour-neutral (user-confirmed 2026-07-14).
 - [ ] Move the `buildSegmentInstances` describe block (`filamentRenderer.test.ts:76`)
       into a new `tests/services/gpu/renderers/filaments/buildSegmentInstances.test.ts`
       so tests mirror src, re-pointing its import to the new file.
-- [ ] Recipe steps 3–5; re-point `initGpu.ts` + its `vi.mock` literal.
+- [ ] Recipe steps 2–4; verify `initGpu.ts`; hand-fix its `vi.mock` literal.
 - [ ] typecheck + suite green — the whole task lands as one commit.
 - [ ] Commit: `refactor(gpu): move filamentRenderer into a filaments folder, extract buildSegmentInstances`.
 
@@ -205,36 +304,62 @@ mechanical and behaviour-neutral (user-confirmed 2026-07-14).
 `volumeFieldRenderer.ts`. Apply the recipe. (Note: shares only the `buildCubeModelMatrix`
 util with `flowField`, not each other — they stay separate singles, spec §3.)
 
-- [ ] `git mv` → `renderers/volumeField/` + its test.
-- [ ] Re-point `initGpu.ts` + its `vi.mock` literal.
+- [ ] ````bash
+          npm run move-files -- src/services/gpu/renderers/volumeFieldRenderer.ts src/services/gpu/renderers/volumeField/volumeFieldRenderer.ts
+          ```
+
+      ````
+
+- [ ] Verify the test landed in `tests/services/gpu/renderers/volumeField/`.
+- [ ] Verify `initGpu.ts`; hand-fix its `vi.mock` literal.
 - [ ] Commit: `refactor(gpu): move volumeFieldRenderer into its own folder`.
 
 ### Task A9 — `flowField/` singleton move (1 file)
 
 `flowFieldRenderer.ts`. It carries **3** `?static` imports (spec §8). Apply the recipe.
 
-- [ ] `git mv` → `renderers/flowField/` + its test.
-- [ ] External consumer `tools/flow-workbench/src/createFlowHarness.ts:48`
-      (`createFlowFieldRenderer`) gains its new path (spec §8).
-- [ ] Re-point `initGpu.ts` + its `vi.mock` literal.
+- [ ] ````bash
+          npm run move-files -- src/services/gpu/renderers/flowFieldRenderer.ts src/services/gpu/renderers/flowField/flowFieldRenderer.ts
+          ```
+
+      ````
+
+- [ ] Verify the test landed in `tests/services/gpu/renderers/flowField/`.
+- [ ] Verify the external consumer `tools/flow-workbench/src/createFlowHarness.ts:48`
+      (`createFlowFieldRenderer`) — the tool's Project spans `tools/`, so this rewrites
+      too (spec §8).
+- [ ] Hand-fix: +`../` on the 3 `?static` imports. Verify `initGpu.ts`; hand-fix its
+      `vi.mock` literal.
 - [ ] Commit: `refactor(gpu): move flowFieldRenderer into its own folder`.
 
 ### Task A10 — `selectionRing/` singleton move (1 file)
 
 `selectionRingRenderer.ts` — verified zero coupling to any body renderer (spec §3).
 
-- [ ] `git mv` → `renderers/selectionRing/` + its test.
-- [ ] Re-point `initGpu.ts` + its `vi.mock` literal.
+- [ ] ````bash
+          npm run move-files -- src/services/gpu/renderers/selectionRingRenderer.ts src/services/gpu/renderers/selectionRing/selectionRingRenderer.ts
+          ```
+
+      ````
+
+- [ ] Verify the test landed in `tests/services/gpu/renderers/selectionRing/`.
+- [ ] Verify `initGpu.ts`; hand-fix its `vi.mock` literal.
 - [ ] Commit: `refactor(gpu): move selectionRingRenderer into its own folder`.
 
 ### Task A11 — `horizonShell/` singleton move (1 file)
 
 `horizonShellRenderer.ts`. Apply the recipe.
 
-- [ ] `git mv` → `renderers/horizonShell/` + its test.
-- [ ] `HORIZON_RADIUS_GPC` consumer gains `../`: `frame/passes/horizonShellLayer.ts:48`
-      (spec §8).
-- [ ] Re-point `initGpu.ts` + its `vi.mock` literal.
+- [ ] ````bash
+          npm run move-files -- src/services/gpu/renderers/horizonShellRenderer.ts src/services/gpu/renderers/horizonShell/horizonShellRenderer.ts
+          ```
+
+      ````
+
+- [ ] Verify the test landed in `tests/services/gpu/renderers/horizonShell/`.
+- [ ] Verify the `HORIZON_RADIUS_GPC` consumer:
+      `frame/passes/horizonShellLayer.ts:48` (spec §8).
+- [ ] Verify `initGpu.ts`; hand-fix its `vi.mock` literal.
 - [ ] Commit: `refactor(gpu): move horizonShellRenderer into its own folder`.
 
 ### Task A12 — `devTools/` family move (2 files incl. `diskRadiusRing` out of `passes/`)
@@ -243,14 +368,27 @@ util with `flowField`, not each other — they stay separate singles, spec §3.)
 `gpu/passes/`** into `renderers/devTools/` — it is a renderer, not a texture-operator
 (spec §3, `passes/index.ts:159`).
 
-- [ ] `git mv renderers/debugLineRenderer.ts` → `renderers/devTools/debugLineRenderer.ts`.
-- [ ] `git mv src/services/gpu/passes/diskRadiusRing.ts` →
-      `renderers/devTools/diskRadiusRing.ts` (this is a two-folder-deep move — its
-      `?static`, `lib/`, and any `../../` imports change accordingly).
-- [ ] `git mv` both test files → `tests/services/gpu/renderers/devTools/`.
-- [ ] Re-point the `diskRadiusRing` consumer in the compositor/pass wiring (it sits in
+- [ ] Move both files with a manifest (`--dry` first). `diskRadiusRing` is a
+      two-folder-deep move — the tool re-derives its TS imports; its `?static`
+      specifiers do not follow.
+
+      ```json
+      [
+        { "from": "src/services/gpu/renderers/debugLineRenderer.ts", "to": "src/services/gpu/renderers/devTools/debugLineRenderer.ts" },
+        { "from": "src/services/gpu/passes/diskRadiusRing.ts", "to": "src/services/gpu/renderers/devTools/diskRadiusRing.ts" }
+      ]
+      ```
+
+      ```bash
+      npm run move-files -- --manifest moves.json --dry
+      npm run move-files -- --manifest moves.json
+      ```
+
+- [ ] Verify both test files landed in `tests/services/gpu/renderers/devTools/`.
+- [ ] Hand-fix `diskRadiusRing`'s `?static` shader imports for the new depth.
+- [ ] Verify the `diskRadiusRing` consumer in the compositor/pass wiring (it sits in
       `CONTENT_LAYERS` as `diskRadiusRingLayer`, `passes/index.ts:159`) and the
-      `debugLineRenderer` consumer in `initGpu.ts` + both `vi.mock` literals.
+      `debugLineRenderer` consumer in `initGpu.ts`; hand-fix both `vi.mock` literals.
 - [ ] Commit: `refactor(gpu): group debug renderers under devTools, move diskRadiusRing out of passes`.
 
 ### Task A13 — `bodies/` family move (5 files)
@@ -259,12 +397,29 @@ util with `flowField`, not each other — they stay separate singles, spec §3.)
 `orbitTrailRenderer.ts` — the solar-system foreground, one unit (spec §3). Apply the
 recipe. Their `utils/math/uvSphereMesh` + `src/data/bodies/` imports gain `../`.
 
-- [ ] `git mv` the 5 files → `renderers/bodies/` + their 5 test files.
-- [ ] `MAX_ORBITS` + `INSTANCE_FLOATS` consumer gains `../`:
+- [ ] Move the 5 files → `renderers/bodies/` with a manifest (`--dry` first):
+
+      ```json
+      [
+        { "from": "src/services/gpu/renderers/earthRenderer.ts", "to": "src/services/gpu/renderers/bodies/earthRenderer.ts" },
+        { "from": "src/services/gpu/renderers/planetRenderer.ts", "to": "src/services/gpu/renderers/bodies/planetRenderer.ts" },
+        { "from": "src/services/gpu/renderers/starRenderer.ts", "to": "src/services/gpu/renderers/bodies/starRenderer.ts" },
+        { "from": "src/services/gpu/renderers/starPointRenderer.ts", "to": "src/services/gpu/renderers/bodies/starPointRenderer.ts" },
+        { "from": "src/services/gpu/renderers/orbitTrailRenderer.ts", "to": "src/services/gpu/renderers/bodies/orbitTrailRenderer.ts" }
+      ]
+      ```
+
+      ```bash
+      npm run move-files -- --manifest moves.json --dry
+      npm run move-files -- --manifest moves.json
+      ```
+
+- [ ] Verify the 5 test files landed in `tests/services/gpu/renderers/bodies/`.
+- [ ] Verify the `MAX_ORBITS` + `INSTANCE_FLOATS` consumer:
       `frame/passes/orbitTrailsLayer.ts:50` (spec §8).
-- [ ] `MAX_PLANETS` + `INSTANCE_FLOATS` consumer gains `../`:
+- [ ] Verify the `MAX_PLANETS` + `INSTANCE_FLOATS` consumer:
       `frame/passes/planetsLayer.ts:48` (spec §8).
-- [ ] Re-point all 5 `initGpu.ts:66–70` factory imports + all 5 `vi.mock` literals.
+- [ ] Verify all 5 `initGpu.ts:66–70` factory imports; hand-fix all 5 `vi.mock` literals.
 - [ ] Commit: `refactor(gpu): move the five body renderers into a bodies family folder`.
 
 ### Task A14 — Nest body shaders under `shaders/bodies/`
@@ -272,7 +427,9 @@ recipe. Their `utils/math/uvSphereMesh` + `src/data/bodies/` imports gain `../`.
 `shaders/{earth,planet,star,starPoints,orbitTrail}/` → `shaders/bodies/{…}/`
 (spec §7, USER-APPROVED 2026-07-14).
 
-- [ ] `git mv` the five shader dirs under a new `shaders/bodies/`.
+- [ ] `git mv` the five shader dirs under a new `shaders/bodies/`. (`git mv`, not
+      `move-files`: the tool moves `.ts`/`.tsx` and rewrites the TS module graph only —
+      WESL is a separate module graph it does not parse.)
 - [ ] Rewrite the **8** WESL self-import lines (`package::<dir>::io::VSOut` →
       `package::bodies::<dir>::io::VSOut`): `earth/vertex.wesl:30`, `earth/fragment.wesl:50`,
       `planet/vertex.wesl:39`, `planet/fragment.wesl:37`, `starPoints/vertex.wesl:46`,
