@@ -133,7 +133,9 @@ describe('ASSET_WIRING demand predicates', () => {
   it("galaxy catalog rows demand the galaxy catalog's enabled settings bit", () => {
     const sdss = rowFor(Source.SDSS);
     expect(
-      sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } })),
+      sdss.demand(
+        makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } }),
+      ),
     ).toBe(true);
     // Absent items row (or disabled bit) ⇒ not demanded.
     expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: {} } } }))).toBe(false);

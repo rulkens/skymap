@@ -31,12 +31,12 @@
  *      `services/gpu/galaxy/milkyWayFadeAlpha.ts` (full strength while the
  *      disc spans at least `MILKY_WAY_FADE_FULL_PX` on screen, gone once it
  *      shrinks to `MILKY_WAY_FADE_GONE_PX`).
- *   3. `milkyWayApproachFadeAlpha(camDist) > 0` — the near-side fade
- *      (`utils/math/milkyWayApproachFadeAlpha.ts`): the impostor rides the
- *      whole descent into the disc at full strength and yields only once
- *      the camera closes on the Sun's own galactocentric radius, headed
- *      for the solar system (the exact band lives with that function's
- *      constants). Orthogonal to gate 2's apparent-size band — it is the
+ *   3. `fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDist) > 0` — the
+ *      near-side fade: the impostor rides the whole descent into the disc at
+ *      full strength and yields only once the camera closes on the Sun's own
+ *      galactocentric radius, headed for the solar system (the exact band is
+ *      the `milkyWayApproach` row in `presentation/scaleFadeBands.ts`).
+ *      Orthogonal to gate 2's apparent-size band — it is the
  *      only gate that closes at kpc range. Because it rides `enabled` it also
  *      makes a fully approach-faded disc unpickable (invisible →
  *      unpickable) — coherent, but a behaviour the pick program inherits
@@ -70,7 +70,8 @@
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import { COSMO } from '../slabs';
 import { milkyWayFadeAlpha } from '../../../gpu/galaxy/milkyWayFadeAlpha';
-import { milkyWayApproachFadeAlpha } from '../../../../utils/math/milkyWayApproachFadeAlpha';
+import { fadeBand } from '../../../../utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { milkyWayVisible } from '../../helpers/milkyWayVisible';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
 import { milkyWayModelMatrix } from '../../../gpu/galaxy/milkyWayModelMatrix';
@@ -97,11 +98,11 @@ export const milkyWayLayer: ContentLayer = {
     }
     // Near-side approach fade: close the gate only once the camera nears
     // the Sun's own galactocentric radius on the way to the solar system
-    // (band constants live with milkyWayApproachFadeAlpha). Orthogonal to
-    // the far-side band above — this is the only gate that shuts at kpc
+    // (the band is the milkyWayApproach row in scaleFadeBands.ts). Orthogonal
+    // to the far-side band above — this is the only gate that shuts at kpc
     // range.
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return milkyWayApproachFadeAlpha(camDistMpc) > 0;
+    return fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc) > 0;
   },
 
   draw(pass, view, ctx, state) {
@@ -123,7 +124,7 @@ export const milkyWayLayer: ContentLayer = {
     const toggleOpacity = state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, ctx.nowMs);
     const fadeAlpha =
       milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, view.viewportPx[1]) *
-      milkyWayApproachFadeAlpha(camDistMpc) *
+      fadeBand(SCALE_FADE_BANDS.milkyWayApproach, camDistMpc) *
       toggleOpacity;
 
     // Camera-facing billboard axes for the star/dust sprites (world space),

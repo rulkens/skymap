@@ -236,4 +236,47 @@ describe('createVolumeFieldRenderer draw', () => {
     );
     expect(pass.drawIndexed).not.toHaveBeenCalled();
   });
+
+  it('draw skips an ENABLED field whose resolved opacity is 0', () => {
+    // Opacity is the sole visibility truth: an enabled field spatially faded
+    // to 0 (the deep-zoom band) must not burn a raymarch. The old rule let
+    // `enabled` override a zero opacity and drew anyway.
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    r.upload('mcpm', fixture());
+    const pass = makeFakePass();
+    r.draw(
+      pass,
+      new Float32Array(16) as unknown as Mat4,
+      [320, 180],
+      [0, 0, 5],
+      () => fullSettings({ enabled: true }),
+      () => 0,
+    );
+    expect(pass.drawIndexed).not.toHaveBeenCalled();
+    expect(uniformScratch(device)).toBeUndefined();
+  });
+});
+
+describe('createVolumeFieldRenderer hasActiveFields', () => {
+  it('is false when the only enabled field has opacity 0, true through a fade-out tail', () => {
+    // The liveness projection must see an enabled-but-fully-faded field as
+    // INACTIVE (deep zoom: deriveVolumeLiveness goes null, both volume
+    // layers disable), while a disabled field mid-fade-out stays ACTIVE so
+    // its tail draws to completion — both from the single opacity test.
+    const r = createVolumeFieldRenderer(mockDevice(), 'bgra8unorm', {} as never);
+    r.upload('mcpm', fixture());
+    expect(
+      r.hasActiveFields(
+        () => fullSettings({ enabled: true }),
+        () => 0,
+      ),
+    ).toBe(false);
+    expect(
+      r.hasActiveFields(
+        () => fullSettings({ enabled: false }),
+        () => 0.5,
+      ),
+    ).toBe(true);
+  });
 });

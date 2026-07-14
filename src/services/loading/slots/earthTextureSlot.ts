@@ -37,10 +37,14 @@ import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 /**
  * The descent gate: the Earth texture demand fires only once the camera's
- * orbit distance-to-focus drops below this. `1e-3` Mpc is the same order as
- * `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` (the solar-system caption gate) —
- * ~13 decades of zoom above the ~1e-13 Mpc where Earth first subtends a pixel,
- * so the Blue Marble always resolves before the surface is visible.
+ * orbit distance-to-focus drops below this. `1e-3` Mpc sits ~13 decades of
+ * zoom above the ~1e-13 Mpc where Earth first subtends a pixel, so the Blue
+ * Marble always resolves before the surface is visible.
+ *
+ * Intentionally independent of `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` (the
+ * solar-system caption gate): the two are separate tuning knobs that
+ * currently coincide at 1e-3 — texture-load onset and caption onset may be
+ * tuned apart.
  */
 export const EARTH_TEXTURE_MAX_DISTANCE_MPC = 1e-3;
 

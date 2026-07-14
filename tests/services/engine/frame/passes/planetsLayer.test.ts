@@ -51,9 +51,20 @@ const PASS_STUB = {
 // (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as ReadyFrameContext;
 
-// enabled reads only ctx.cam.distance beyond the handle checks.
+// Beyond the handle checks, enabled reads ctx.cam.distance (the shared
+// foreground gate) AND the camera position + projection knobs (the per-body
+// sub-pixel gate — the same predicate draw's pack loop applies). The fixture
+// camera parks just off Mercury's centre (the first seeded body) so, whenever
+// `distance` is inside the foreground gate, at least one body resolves and
+// the `distance` argument alone drives the foreground-gate assertions below.
 function makeCtx(distance: number): ReadyFrameContext {
-  return { cam: { distance } } as unknown as ReadyFrameContext;
+  const mercury = SCENE_PLANETS[0]!.positionMpc;
+  return {
+    cam: { distance },
+    drawCamPos: [mercury[0] + 1e-14, mercury[1], mercury[2]],
+    canvasSize: { width: 1280, height: 720 },
+    fovYRad: (60 * Math.PI) / 180,
+  } as unknown as ReadyFrameContext;
 }
 
 // A camera comfortably inside the shared foreground gate.
@@ -63,6 +74,13 @@ const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
  * A SlabView whose f64 `slab.vp` and f32 `vp` are deliberately DIFFERENT
  * arrays, so a first-arg identity check unambiguously reveals which one the
  * layer fed to composeBodyMvp.
+ *
+ * The viewport is an astronomically TALL stub (1e12 px): the pack loop culls
+ * bodies under SUB_PIXEL_BODY_CULL_PX apparent diameter, and the layout pins
+ * below want EVERY seeded body packed — from one camera position that is
+ * impossible on a real viewport (Mercury is sub-pixel from Neptune), so the
+ * stub buys pixels instead of bending the scene data. The cull itself has a
+ * dedicated test on a real 720-px viewport.
  */
 function makeNear0View(): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
@@ -79,9 +97,17 @@ function makeNear0View(): SlabView {
     slab,
     vp: f32Vp,
     camPos: [0, 0, 5],
-    viewportPx: [1280, 720],
+    viewportPx: [1280, 1e12],
   };
 }
+
+// Draw ctx: camera at the origin (the Sun), 60° fov — the pack loop's
+// sub-pixel cull reads ctx.drawCamPos + ctx.fovYRad (paired with the
+// fixture's tall viewport above so every seeded body resolves).
+const DRAW_CTX = {
+  drawCamPos: [0, 0, 0],
+  fovYRad: (60 * Math.PI) / 180,
+} as unknown as ReadyFrameContext;
 
 /** State with a `planetRenderer` handle set and a seeded planet list. */
 function makeState(planetRenderer: unknown, planets: readonly PlanetBody[]): EngineState {
@@ -119,6 +145,39 @@ describe('planetsLayer.enabled', () => {
     expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
     expect(planetsLayer.enabled(state, makeCtx(0.43))).toBe(false);
   });
+
+  it('is disabled while every seeded body is sub-pixel, even inside the foreground band', () => {
+    // Camera ~0.002 Mpc (~400 AU) from the Sun — comfortably inside the
+    // foreground distance gate (~1e-2 Mpc) but far outside every planet's
+    // orbit, so every body's apparent diameter is far under
+    // SUB_PIXEL_BODY_CULL_PX. A row that would pack zero bodies must not
+    // stay in the pass plan just because its own draw-loop guard makes the
+    // eventual draw a no-op.
+    const state = makeState(makeRendererSpy(), SCENE_PLANETS);
+    const subPixelCtx = {
+      cam: { distance: 0.002 },
+      drawCamPos: [0, 0, 0.002],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+    expect(planetsLayer.enabled(state, subPixelCtx)).toBe(false);
+  });
+
+  it('is enabled once the camera is close enough for at least one body to resolve', () => {
+    // Camera parked just off Mercury's centre (the first seeded body), still
+    // inside the foreground gate: Mercury alone resolving is enough to keep
+    // the row in the pass plan even though every other body stays sub-pixel
+    // from here.
+    const state = makeState(makeRendererSpy(), SCENE_PLANETS);
+    const mercury = SCENE_PLANETS[0]!.positionMpc;
+    const resolvingCtx = {
+      cam: { distance: 0.002 },
+      drawCamPos: [mercury[0] + 1e-14, mercury[1], mercury[2]],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+    expect(planetsLayer.enabled(state, resolvingCtx)).toBe(true);
+  });
 });
 
 describe('planetsLayer.draw', () => {
@@ -128,7 +187,7 @@ describe('planetsLayer.draw', () => {
     const view = makeNear0View();
     const state = makeState(renderer, SCENE_PLANETS);
 
-    planetsLayer.draw(PASS_STUB, view, CTX_STUB, state);
+    planetsLayer.draw(PASS_STUB, view, DRAW_CTX, state);
 
     // One MVP composed per planet, each from the f64 slab vp — NOT view.vp.
     expect(composeMock).toHaveBeenCalledTimes(SCENE_PLANETS.length);
@@ -163,6 +222,49 @@ describe('planetsLayer.draw', () => {
     expect(staging[36]).toBeCloseTo(SCENE_PLANETS[1]!.albedo[0]);
     expect(staging[37]).toBeCloseTo(SCENE_PLANETS[1]!.albedo[1]);
     expect(staging[38]).toBeCloseTo(SCENE_PLANETS[1]!.albedo[2]);
+  });
+
+  it('packs only the bodies that resolve past the sub-pixel cull', () => {
+    // Real 720-px viewport, camera parked 1e-14 Mpc (~300,000 km — outside
+    // even Jupiter) from the FIRST seeded body: that body subtends whole
+    // pixels (the smallest seeded planet, Mercury, is ~10 px there) while
+    // every other body (≥ tenths of an AU away, at most planet-sized) is
+    // deep sub-pixel — so exactly one record is packed and the instanced
+    // draw gets count 1. Fails if the cull is dropped (count == all bodies)
+    // or applied to the wrong body.
+    composeMock.mockClear();
+    const renderer = makeRendererSpy();
+    const view: SlabView = { ...makeNear0View(), viewportPx: [1280, 720] };
+    const state = makeState(renderer, SCENE_PLANETS);
+    const nearFirst = SCENE_PLANETS[0]!.positionMpc;
+    const ctx = {
+      drawCamPos: [nearFirst[0] + 1e-14, nearFirst[1], nearFirst[2]],
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+
+    planetsLayer.draw(PASS_STUB, view, ctx, state);
+
+    expect(composeMock).toHaveBeenCalledTimes(1);
+    expect(composeMock.mock.calls[0]![1]).toBe(SCENE_PLANETS[0]!.positionMpc);
+    expect(renderer.draw).toHaveBeenCalledTimes(1);
+    expect(renderer.draw.mock.calls[0]![2]).toBe(1);
+  });
+
+  it('issues no draw when every body is sub-pixel', () => {
+    // Camera 1e-3 Mpc from the origin on a real viewport: every AU-scale
+    // body is far under a pixel, so nothing packs and the layer must not
+    // call the renderer at all (an n=0 instanced draw is dead GPU work).
+    const renderer = makeRendererSpy();
+    const view: SlabView = { ...makeNear0View(), viewportPx: [1280, 720] };
+    const state = makeState(renderer, SCENE_PLANETS);
+    const ctx = {
+      drawCamPos: [0, 0, 1e-3],
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+
+    planetsLayer.draw(PASS_STUB, view, ctx, state);
+
+    expect(renderer.draw).not.toHaveBeenCalled();
   });
 
   it('is a no-op when the planetRenderer handle is null (pre-bootstrap)', () => {

@@ -18,7 +18,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { frameProgram, timedSlotsOf } from '../../../../src/services/engine/frame/frameProgram';
+import {
+  frameProgram,
+  timedSlotsOf,
+  TIMED_SLOTS,
+  TIMED_SLOT_SLABS,
+} from '../../../../src/services/engine/frame/frameProgram';
 import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
@@ -133,6 +138,27 @@ describe('timedSlotsOf', () => {
       'foreground:0→swap',
       'pick',
     ]);
+  });
+
+  it('badges every timed slot: content layers resolve to a real slab, composites and pick to the marker', () => {
+    // The DebugPanel derives each row's slab badge from TIMED_SLOT_SLABS. Its
+    // keys must cover exactly the ordered slot list — no unbadged row, no
+    // orphan badge.
+    expect(new Set(TIMED_SLOT_SLABS.keys())).toEqual(new Set(TIMED_SLOTS));
+
+    // The load-bearing invariant: every registry layer projects through a slab
+    // index SLAB_NAME knows, so its badge is a real slab name — never the
+    // no-slab marker. A new slab index added without a SLAB_NAME entry would
+    // silently regress that layer's badge to the marker and trip this.
+    for (const layer of CONTENT_LAYERS) {
+      expect(TIMED_SLOT_SLABS.get(layer.name)).toMatch(/^(COSMO|NEAR0)$/);
+    }
+
+    // The slab-less slots — whole-texture composites and the parallel pick
+    // pass — carry the marker rather than a slab name.
+    expect(TIMED_SLOT_SLABS.get('hdr→swap')).toBe('—');
+    expect(TIMED_SLOT_SLABS.get('foreground:0→swap')).toBe('—');
+    expect(TIMED_SLOT_SLABS.get('pick')).toBe('—');
   });
 
   it('yields unique names', () => {
