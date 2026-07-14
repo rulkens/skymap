@@ -42,10 +42,11 @@ moves and no shader-path changes — those are plan 02.
 
 ---
 
-## Phase A — `renderers/lib/` extractions (spec §5)
+## Phase A — `gpu/lib/` extractions (spec §5)
 
 Order within the phase is free; each task is independent. All four new files live
-under `src/services/gpu/renderers/lib/`.
+under `src/services/gpu/lib/` (hoisted from `renderers/lib/` mid-execution when the
+passes/ audit found four more byte-identical blend sites — see Global Constraints).
 
 ### Task A1 — `lib/cameraUniforms.ts`
 
@@ -166,7 +167,7 @@ UNIT_QUAD_STRIP_CORNERS.byteLength` if it reads it).
 
 ### Task A3 — `lib/blendStates.ts`
 
-**Files:** `src/services/gpu/renderers/lib/blendStates.ts` (new); re-point 15 sites.
+**Files:** `src/services/gpu/lib/blendStates.ts` (new); re-point 15 sites.
 
 **Public surface:**
 
@@ -203,13 +204,16 @@ bug):**
 - `milkyWayCloudRenderer`'s dust-multiply blend (`dst`/`zero`) — physically
   load-bearing + test-pinned.
 
-- [ ] Create `lib/blendStates.ts`.
-- [ ] Re-point the 10 additive + 5 over sites; verify byte-identity before each swap.
-- [ ] Confirm the two exclusions stay inline.
-- [ ] No test — do NOT restate the blend-state constants back at themselves
+- [x] Create `lib/blendStates.ts`.
+- [x] Re-point the 10 additive + 5 over sites; verify byte-identity before each swap.
+- [x] Confirm the two exclusions stay inline.
+      (Execution note: the sweep found 4 more byte-identical sites in `gpu/passes/`;
+      user decided to hoist the lib to `gpu/lib/` and fold them — done in the
+      follow-on A3.5 commit `afc3135f`.)
+- [x] No test — do NOT restate the blend-state constants back at themselves
       (`testing.md`: constant restatement is a change-detector, not a bug-catcher).
-- [ ] `npm run typecheck` + `npm test` green.
-- [ ] Commit: `refactor(renderers): extract lib/blendStates additive + over`
+- [x] `npm run typecheck` + `npm test` green. (3923 tests)
+- [x] Commit: `refactor(renderers): extract lib/blendStates additive + over` (`35697ce8`)
 
 ### Task A4 — `lib/dummyFade.ts`
 
