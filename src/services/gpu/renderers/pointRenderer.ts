@@ -40,8 +40,8 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 // `?worker` emits the worker as a separate chunk and exports a class
 // whose `new` spawns it.  The bake runs off-thread to dodge the
 // 10-second main-thread freeze on .bin arrival.  Node-only tests
-// can't resolve `?worker`; they inject a synchronous fallback via
-// `setBuildBufferRunner`.
+// can't resolve `?worker`; they inject a synchronous fallback through
+// the factory's `buildRunner` param.
 import BuildPointBufferWorker from '../../engine/bake/buildPointInterleavedBuffer.worker?worker';
 import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
@@ -92,23 +92,14 @@ function defaultWorkerRunner(
   );
 }
 
-// Module-level binding (not a class static) so Vitest can override it
-// via `setBuildBufferRunner` — `Worker` doesn't exist in Node, and
-// statics tempt callers to treat the renderer as a global registry.
-type BuildRunner = (
+/**
+ * How a catalog's interleaved vertex buffer gets baked.  Production
+ * hands over `defaultWorkerRunner`; Node tests inject a synchronous
+ * function (`Worker` doesn't exist there).
+ */
+export type BuildRunner = (
   input: BuildPointInterleavedBufferInput,
 ) => Promise<BuildPointInterleavedBufferResult>;
-
-let buildRunner: BuildRunner = defaultWorkerRunner;
-
-/**
- * Override the off-thread vertex-buffer bake runner.  Pass a
- * synchronous function (used by Vitest) or `null` to restore the
- * worker-based default.
- */
-export function setBuildBufferRunner(runner: BuildRunner | null): void {
-  buildRunner = runner ?? defaultWorkerRunner;
-}
 
 // The `schechter*` uniform slots at byte offsets 140..155 are
 // dead-but-reserved: the Schechter integral bakes into the per-vertex
@@ -177,19 +168,37 @@ type LoadedSource = {
  * mutable bits are the per-source `galaxyCatalogs` Map and the
  * bias-correction callbacks.
  *
- * @param device        The WebGPU logical device. Owned by the caller.
- * @param targetFormat  The colour-target format the pipeline writes into —
- *                      the HDR offscreen (`'rgba16float'`), NOT the swap chain.
- *                      Handed over explicitly because a render-pass encoder
- *                      cannot be queried for its own colour-attachment format.
+ * A named bag rather than a positional list: the five construction
+ * dependencies are all opaque handles (three of them structurally
+ * indistinguishable bind-group layouts), so a mis-ordered call would
+ * typecheck and fail at pipeline-creation time instead of at the call
+ * site.
+ *
+ * @param init.device        The WebGPU logical device. Owned by the caller.
+ * @param init.targetFormat  The colour-target format the pipeline writes into —
+ *                           the HDR offscreen (`'rgba16float'`), NOT the swap
+ *                           chain.  Handed over explicitly because a render-pass
+ *                           encoder cannot be queried for its own
+ *                           colour-attachment format.
+ * @param init.buildRunner   The vertex-buffer bake runner, defaulting to the
+ *                           worker-spawning `defaultWorkerRunner`.  Injected
+ *                           per renderer rather than swapped through a
+ *                           module-global setter: a module-global is shared by
+ *                           every renderer instance in the process and leaks
+ *                           between tests, so an override installed for one
+ *                           case silently governs the next.
  */
-export function createPointRenderer(
-  device: GPUDevice,
-  targetFormat: GPUTextureFormat,
-  fadeBgl: FadeUniformsBgl,
-  sourceBgl: SourceUniformsBgl,
-  focusBgl: FocusUniformsBgl,
-): PointRenderer {
+export function createPointRenderer(init: {
+  device: GPUDevice;
+  targetFormat: GPUTextureFormat;
+  fadeBgl: FadeUniformsBgl;
+  sourceBgl: SourceUniformsBgl;
+  focusBgl: FocusUniformsBgl;
+  buildRunner?: BuildRunner;
+}): PointRenderer {
+  const { device, targetFormat, fadeBgl, sourceBgl, focusBgl } = init;
+  const buildRunner = init.buildRunner ?? defaultWorkerRunner;
+
   // Each renderer compiles its own GPUShaderModule from the shared
   // vertex source — sharing modules across pipelines hits the WebGPU
   // 'auto' bind-group-layout trap (auto layouts have pipeline-specific
@@ -342,7 +351,7 @@ export function createPointRenderer(
     }
 
     // `buildRunner` is either the worker spawner (production) or an
-    // inline pure-function (Node tests, via `setBuildBufferRunner`).
+    // inline pure-function (Node tests, via the factory's `buildRunner`).
     // The renderer always uploads in 'fast' mode; the bias-correction
     // subsystem fires a per-source bake via `biasUploadCallback`
     // below if a mode is active when this resolves.

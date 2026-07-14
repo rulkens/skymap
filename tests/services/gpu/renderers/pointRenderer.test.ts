@@ -17,11 +17,11 @@
  * sufficient. Pixel-level assertions need a real browser harness.
  */
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import {
   createPointRenderer,
-  setBuildBufferRunner,
+  type BuildRunner,
 } from '../../../../src/services/gpu/renderers/pointRenderer';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
@@ -38,19 +38,14 @@ function idOf(source: (typeof Source)[keyof typeof Source]): GalaxyCatalogId {
 }
 
 // `GPUBufferUsage` and friends come from the shared
-// `tests/setup/webgpuGlobals.ts` setupFile. The beforeAll below only
-// wires the bake-runner override.
-beforeAll(() => {
-  // Production `upload()` spawns a Vite `?worker` chunk to bake
-  // off-thread, but `Worker` doesn't exist in Vitest's Node environment.
-  // Route the bake through the same pure function the worker would call —
-  // bit-identical behaviour without a structured-clone round-trip.
-  setBuildBufferRunner(async (input) => buildPointInterleavedBuffer(input));
-});
-
-afterAll(() => {
-  setBuildBufferRunner(null);
-});
+// `tests/setup/webgpuGlobals.ts` setupFile.
+//
+// Production `upload()` spawns a Vite `?worker` chunk to bake off-thread, but
+// `Worker` doesn't exist in Vitest's Node environment.  Every renderer below is
+// therefore constructed with this runner, which routes the bake through the
+// same pure function the worker would call — bit-identical behaviour without a
+// structured-clone round-trip.
+const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(input);
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
@@ -158,13 +153,14 @@ describe('PointRenderer colour target', () => {
         return { getBindGroupLayout: () => ({}) } as unknown as GPURenderPipeline;
       },
     } as unknown as GPUDevice;
-    createPointRenderer(
+    createPointRenderer({
       device,
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     expect(captured).toHaveLength(1);
     const target = Array.from(captured[0]!.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
@@ -173,24 +169,26 @@ describe('PointRenderer colour target', () => {
 
 describe('PointRenderer.totalCount', () => {
   it('returns 0 before any upload', () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     expect(renderer.totalCount()).toBe(0);
   });
 
   it('sums counts across multiple sources', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(100));
     await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
     await renderer.upload(idOf(Source.Glade), makeCloud(25));
@@ -198,13 +196,14 @@ describe('PointRenderer.totalCount', () => {
   });
 
   it('updates after a source is unloaded', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(100));
     await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
     expect(renderer.totalCount()).toBe(150);
@@ -218,13 +217,14 @@ describe('PointRenderer.hasCatalog', () => {
   it('is false before upload, true after, false again after unload', async () => {
     // The survey fade row's guard reads this — it reports whether a catalog's
     // buffer is committed, independent of the slot lifecycle.
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
     await renderer.upload(idOf(Source.SDSS), makeCloud(10));
     expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(true);
@@ -234,13 +234,14 @@ describe('PointRenderer.hasCatalog', () => {
   });
 
   it('treats a zero-count upload (the unload signal) as not loaded', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(10));
     await renderer.upload(idOf(Source.SDSS), makeCloud(0));
     expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
@@ -249,13 +250,14 @@ describe('PointRenderer.hasCatalog', () => {
 
 describe('PointRenderer.loadedSources', () => {
   it('iterates clouds in `GALAXY_CATALOG_SOURCES` order regardless of upload order', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     // Upload in non-iteration order on purpose — the renderer must re-sort.
     // GALAXY_CATALOG_SOURCES is ordered smallest-catalogue → largest:
     //   [Synthetic, Famous, TwoMRS, SDSS, Glade]
@@ -272,13 +274,14 @@ describe('PointRenderer.loadedSources', () => {
   });
 
   it('drops an unloaded source from the iterator', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
     await renderer.upload(idOf(Source.SDSS), makeCloud(100));
     await renderer.upload(idOf(Source.Glade), makeCloud(25));
@@ -305,13 +308,14 @@ describe('PointRenderer.upload — regression: replace, not append', () => {
   it('destroys the prior buffer for a source on second upload', async () => {
     // Two clouds with different counts: an "append" bug would leave the
     // sum (1500) in the bookkeeping; a correct "replace" leaves only 500.
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     const cloudA = makeCloud(1000);
     const cloudB = makeCloud(500);
 
@@ -353,13 +357,14 @@ describe('PointRenderer.upload — regression: replace, not append', () => {
 // excluded source.
 describe('PointRenderer.upload — regression: empty-cloud unload', () => {
   it('destroys the prior buffer and removes the entry on a count=0 upload', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(1000));
 
     const firstEntry = Array.from(renderer.loadedSources()).find((e) => e.source === Source.SDSS);
@@ -384,13 +389,14 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
   it('survives upload(0) when no prior cloud exists', async () => {
     // Pathological-but-legal: the engine could in principle call setTier
     // before any cloud has loaded.  Should be a no-op, not a crash.
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await expect(renderer.upload(idOf(Source.SDSS), makeCloud(0))).resolves.toBeUndefined();
     expect(renderer.totalCount()).toBe(0);
   });
@@ -399,13 +405,14 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
     // small → medium swap: SDSS goes from count=0 (excluded) back to count>0
     // (the medium tier file).  The empty-cloud path must leave the renderer
     // in a state where a subsequent real upload works normally.
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(1000));
     await renderer.upload(idOf(Source.SDSS), makeCloud(0));
     await renderer.upload(idOf(Source.SDSS), makeCloud(750));
@@ -437,52 +444,50 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
 // catch any residual staleness with the correct (current) cloud reference.
 describe('PointRenderer.upload — regression: parallel-upload rebake race', () => {
   it('does not overwrite a concurrent upload during rebake', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    // Per-source delays: SDSS bakes fast (50 ms), GLADE bakes slow (200 ms).
+    // SDSS's post-bake rebake fires while GLADE's worker is still running.
+    // Without the fix, SDSS's rebake re-bakes GLADE using the OLD (1.9M)
+    // cloud reference and stomps the in-flight GLADE-medium upload.
+    const delaysMs = new Map<SourceType, number>([
+      [Source.SDSS, 50],
+      [Source.Glade, 200],
+    ]);
+    const delayedRunner: BuildRunner = async (input) => {
+      const ms = delaysMs.get(input.source) ?? 0;
+      if (ms > 0) await new Promise((r) => setTimeout(r, ms));
+      return buildPointInterleavedBuffer(input);
+    };
+
+    // The delayed runner is scoped to this renderer, so no sibling test can
+    // pick it up — the whole point of injecting it at construction.
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: delayedRunner,
+    });
 
     // Seed with the "prior tier" layout so the rebake has stale offsets to act on.
     await renderer.upload(idOf(Source.SDSS), makeCloud(498_227));
     await renderer.upload(idOf(Source.Glade), makeCloud(1_995_421));
 
-    // Build per-source delays: SDSS bakes fast (50 ms), GLADE bakes slow
-    // (200 ms).  SDSS's post-bake rebake fires while GLADE's worker is still
-    // running.  Without the fix, SDSS's rebake re-bakes GLADE using the OLD
-    // (1.9M) cloud reference and stomps the in-flight GLADE-medium upload.
-    const delaysMs = new Map<SourceType, number>([
-      [Source.SDSS, 50],
-      [Source.Glade, 200],
-    ]);
-    setBuildBufferRunner(async (input) => {
-      const ms = delaysMs.get(input.source) ?? 0;
-      if (ms > 0) await new Promise((r) => setTimeout(r, ms));
-      return buildPointInterleavedBuffer(input);
-    });
+    // Tier swap: kick off both in parallel, the way `engine.setTier` does.
+    const sdssPromise = renderer.upload(idOf(Source.SDSS), makeCloud(156_000));
+    const gladePromise = renderer.upload(idOf(Source.Glade), makeCloud(400_000));
 
-    try {
-      // Tier swap: kick off both in parallel, the way `engine.setTier` does.
-      const sdssPromise = renderer.upload(idOf(Source.SDSS), makeCloud(156_000));
-      const gladePromise = renderer.upload(idOf(Source.Glade), makeCloud(400_000));
+    await Promise.all([sdssPromise, gladePromise]);
 
-      await Promise.all([sdssPromise, gladePromise]);
+    const entries = Array.from(renderer.loadedSources());
+    const sdss = entries.find((e) => e.source === Source.SDSS);
+    const glade = entries.find((e) => e.source === Source.Glade);
 
-      const entries = Array.from(renderer.loadedSources());
-      const sdss = entries.find((e) => e.source === Source.SDSS);
-      const glade = entries.find((e) => e.source === Source.Glade);
-
-      expect(sdss?.count).toBe(156_000);
-      // The bug surfaced as `glade.count === 1_995_421` here — the rebake
-      // resurrected the old large cloud.  The fix keeps GLADE on the new
-      // medium cloud the user actually requested.
-      expect(glade?.count).toBe(400_000);
-    } finally {
-      // Restore the no-delay default for sibling tests.
-      setBuildBufferRunner(async (input) => buildPointInterleavedBuffer(input));
-    }
+    expect(sdss?.count).toBe(156_000);
+    // The bug surfaced as `glade.count === 1_995_421` here — the rebake
+    // resurrected the old large cloud.  The fix keeps GLADE on the new
+    // medium cloud the user actually requested.
+    expect(glade?.count).toBe(400_000);
   });
 });
 
@@ -522,13 +527,14 @@ describe('PointRenderer.spliceSchechterRatios', () => {
   it('writes ratios[i] into slot 10 of row i of the interleaved mirror', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer(
+    const renderer = createPointRenderer({
       device,
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(3));
 
     const ratios = new Float32Array([0.25, 0.5, 0.75]);
@@ -545,13 +551,14 @@ describe('PointRenderer.spliceSchechterRatios', () => {
   });
 
   it('throws when ratios.length !== source count', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(5));
     expect(() => renderer.spliceSchechterRatios(Source.SDSS, new Float32Array(4))).toThrow(
       /length/i,
@@ -559,13 +566,14 @@ describe('PointRenderer.spliceSchechterRatios', () => {
   });
 
   it('is a no-op when the source is not loaded', () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     // Should not throw — subsystem may call this for a stale source mid-bake.
     expect(() => renderer.spliceSchechterRatios(Source.Glade, new Float32Array(0))).not.toThrow();
   });
@@ -575,13 +583,14 @@ describe('PointRenderer.spliceAngularWeights', () => {
   it('writes weights[i] into slot 11 of row i', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer(
+    const renderer = createPointRenderer({
       device,
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(2));
 
     const weights = new Float32Array([0.1, 0.9]);
@@ -596,13 +605,14 @@ describe('PointRenderer.spliceAngularWeights', () => {
   });
 
   it('throws when weights.length !== source count', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(5));
     expect(() => renderer.spliceAngularWeights(Source.SDSS, new Float32Array(6))).toThrow(
       /length/i,
@@ -614,13 +624,14 @@ describe('PointRenderer.clearBiasOverlays', () => {
   it('zeroes slots 10 and 11 for the named source', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer(
+    const renderer = createPointRenderer({
       device,
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(2));
 
     // Populate slots 10/11 first so we can assert clear actually clears.
@@ -642,13 +653,14 @@ describe('PointRenderer.clearBiasOverlays', () => {
   it('zeroes for every loaded source when called with no argument', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer(
+    const renderer = createPointRenderer({
       device,
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(1));
     await renderer.upload(idOf(Source.Glade), makeCloud(1));
 
@@ -659,13 +671,14 @@ describe('PointRenderer.clearBiasOverlays', () => {
   });
 
   it('is a no-op when no sources are loaded', () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     expect(() => renderer.clearBiasOverlays()).not.toThrow();
   });
 });
@@ -723,13 +736,14 @@ describe('PointRenderer.destroy', () => {
   it("releases the renderer's uniform buffer", () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createPointRenderer(
+    const renderer = createPointRenderer({
       device,
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     // The constructor allocates one buffer: the renderer's own uniform.
     // The cluster-focus uniform is shared and owned by the engine
     // (state.gpu.focusUniform), not the renderer.
@@ -744,13 +758,14 @@ describe('PointRenderer.destroy', () => {
   it('releases each per-source buffer + fade uniform', async () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createPointRenderer(
+    const renderer = createPointRenderer({
       device,
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     // Constructor allocates 1 buffer: the renderer's own uniform (the
     // cluster-focus uniform is shared/engine-owned, not per renderer).
     expect(buffers).toHaveLength(1);
@@ -776,13 +791,14 @@ describe('PointRenderer.destroy', () => {
   });
 
   it('clears the galaxyCatalogs map', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(2));
     await renderer.upload(idOf(Source.TwoMRS), makeCloud(3));
     expect(Array.from(renderer.loadedSources())).toHaveLength(2);
@@ -795,13 +811,14 @@ describe('PointRenderer.destroy', () => {
   it('is idempotent — safe to call twice without throwing', async () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createPointRenderer(
+    const renderer = createPointRenderer({
       device,
-      'rgba16float',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+      targetFormat: 'rgba16float',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(1));
 
     expect(() => renderer.destroy()).not.toThrow();
@@ -816,13 +833,14 @@ describe('PointRenderer.destroy', () => {
 
 describe('PointRenderer.draw — PointDrawSettings shape', () => {
   it('accepts a single PointDrawSettings record', async () => {
-    const renderer = createPointRenderer(
-      makeStubDevice(),
-      'bgra8unorm',
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-    );
+    const renderer = createPointRenderer({
+      device: makeStubDevice(),
+      targetFormat: 'bgra8unorm',
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      focusBgl: makeStubFocusBgl(),
+      buildRunner: testRunner,
+    });
     await renderer.upload(idOf(Source.SDSS), makeCloud(10));
 
     // Stub the encoder.  draw() must call setPipeline + setBindGroup + draw

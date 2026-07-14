@@ -157,13 +157,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // rgba16float texture, not the swap-chain `format`.  Their pipelines
   // bake this into a fixed colour-target descriptor at construction
   // time, so the format choice has to land here.
-  const renderer = createPointRenderer(
+  const renderer = createPointRenderer({
     device,
-    'rgba16float',
-    state.gpu.fadeBgl!,
-    state.gpu.sourceBgl!,
-    state.gpu.focusBgl!,
-  );
+    targetFormat: 'rgba16float',
+    fadeBgl: state.gpu.fadeBgl!,
+    sourceBgl: state.gpu.sourceBgl!,
+    focusBgl: state.gpu.focusBgl!,
+  });
   state.gpu.renderer = renderer;
 
   // ── Wire the bias-correction subsystem to the freshly-built renderer ──
