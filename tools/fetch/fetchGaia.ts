@@ -36,10 +36,11 @@
  *
  * ## Size gate
  *
- * `totalCount` is probed live (a `COUNT(*)`-shaped ADQL query) rather than
- * hardcoded, so the partitioner below stays pure and the upstream row count
- * is never baked into source. Before committing to the multi-hour paged
- * fetch, the probe's implied download size is checked against an expected
+ * `totalCount` is probed live (a `MAX(random_index)` aggregate ADQL query, +1
+ * for the 0-based dense index) rather than hardcoded, so the partitioner below
+ * stays pure and the upstream row count is never baked into source. Before
+ * committing to the multi-hour paged fetch, the probe's implied download size
+ * is checked against an expected
  * envelope — a wildly-off count means the cut or the table changed
  * upstream, and the right response is to stop and investigate, not to
  * quietly fill the disk with the wrong catalog.
@@ -244,7 +245,7 @@ function formatBytes(bytes: number): string {
 
 /**
  * Print the pre-gate preamble: per-artifact remaining-vs-cached status, the
- * total byte estimate, and the `--yes` hint. `main()` (Task 9) calls this
+ * total byte estimate, and the `--yes` hint. The CLI entry point calls this
  * after the resume scan and before `gateDecision`, so the numbers reflect
  * what actually remains to download, not the full catalog.
  */
@@ -314,9 +315,10 @@ type PagesPlan = { totalCount: number; sliceCount: number };
 
 /**
  * Count the data rows in one page's CSV body: non-empty lines minus the header
- * line. An empty body or a header-only page is zero data rows. This is the one
- * place the "header never counts" rule lives, shared by the fetch tally and
- * the completion-time verification.
+ * line. An empty body or a header-only page is zero data rows. Every TAP CSV
+ * body carries a header line that is not a data row, so this is the one home
+ * for the "header never counts" rule — any code turning a TAP response into a
+ * row count goes through here rather than re-deriving the off-by-one.
  */
 function countDataRows(csvBody: string): number {
   const nonEmpty = csvBody.split(/\r?\n/).filter((line) => line.length > 0);
@@ -413,6 +415,14 @@ export async function fetchPagedCatalog(opts: {
         firstError = message;
         console.error(`  WARN first page fetch failure for slice ${slice.index}: ${firstError}`);
       }
+      // Mirror the success branch's progress line so the running failed count
+      // stays visible even across a tail of consecutive failures — the last
+      // success may be many slices back, and the returned counts (not this log)
+      // remain authoritative.
+      console.log(
+        `page ${progressLabel(slice.index, slices.length)}: ` +
+          `FAILED (${failed} failed so far)`,
+      );
     }
   }
 
@@ -639,12 +649,18 @@ export async function fetchHipXmatch(opts: {
  * does NOT delete the file: on a metered/tight connection the operator's bytes
  * are precious, and a deliberate re-fetch beats a silent redownload loop. Only
  * once the count matches is the digest reconciled against the combined sidecar.
+ *
+ * Returns 'fetched' when the table download added bytes this run, 'skipped'
+ * when it was already complete on disk (a resume that pulled nothing). Either
+ * way the line-count and sha256 checks below run unconditionally — a fully
+ * cached file is still re-validated — so the return value only steers the
+ * completion summary's wording, never the gating.
  */
 export async function fetchHip2(opts: {
   hip2Path: string;
   readmePath: string;
   sidecarPath: string;
-}): Promise<void> {
+}): Promise<'fetched' | 'skipped'> {
   const { hip2Path, readmePath, sidecarPath } = opts;
 
   // ReadMe first — tiny, fail-fast, no digest line (see the docstring).
@@ -683,6 +699,11 @@ export async function fetchHip2(opts: {
     `Hipparcos-2: ${lineCount.toLocaleString()} lines in ${basename(hip2Path)}; ` +
       `sha256 ${digest} (${outcome}).`,
   );
+
+  // 'skipped' only when the table download pulled nothing — the file was
+  // already complete on disk. The GCNS/xmatch fetchers report the same word for
+  // an already-present file, so the summary line reads consistently.
+  return tableResult.bytesAdded > 0 ? 'fetched' : 'skipped';
 }
 
 /**
@@ -795,11 +816,11 @@ type ArtifactOutcome = { label: string; state: 'fetched' | 'skipped' | 'failed' 
  */
 async function runSupplement(
   label: string,
-  run: () => Promise<'fetched' | 'skipped' | void>,
+  run: () => Promise<'fetched' | 'skipped'>,
 ): Promise<ArtifactOutcome> {
   try {
-    const result = await run();
-    return { label, state: result === 'skipped' ? 'skipped' : 'fetched' };
+    const state = await run();
+    return { label, state };
   } catch (error) {
     console.error(`  ${label} FAILED: ${(error as Error).message}`);
     return { label, state: 'failed' };

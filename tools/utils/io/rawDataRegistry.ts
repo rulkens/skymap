@@ -417,7 +417,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Gaia DR3 raw-data directory. Holds the paged main-catalog CSVs `gaia_page_<NNNN>.csv` (one file per contiguous random_index slice; consumers join(rawDataPath(...), pageFileName(i))) plus the GCNS + Hipparcos artifacts. Populated by fetchGaia.',
+      'Gaia DR3 raw-data directory. Holds the paged main-catalog CSVs `gaia_page_<NNNN>.csv` (one file per contiguous random_index slice; consumers join(rawDataPath(...), pageFileName(i))) plus the GCNS + Hipparcos artifacts.',
     upstream: 'https://gea.esac.esa.int/tap-server/tap/sync',
     fetcher: 'tools/fetch/fetchGaia.ts',
   },
