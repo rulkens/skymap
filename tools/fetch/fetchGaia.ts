@@ -49,7 +49,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 
-import { sha256OfFile } from './fetchCosmicflows4';
+import { downloadWithResume, sha256OfFile } from './fetchCosmicflows4';
 
 /** One half-open `random_index` range: rows with `start <= random_index < endExclusive`. */
 export type RandomIndexSlice = { index: number; start: number; endExclusive: number };
@@ -151,6 +151,22 @@ export function buildHipXmatchQuery(): string {
 FROM gaiadr3.hipparcos2_best_neighbour
 ORDER BY source_id`;
 }
+
+/**
+ * The Hipparcos-2 fixed-width table and its byte-layout ReadMe are plain HTTP
+ * files on CDS — not TAP queries — so they use `downloadWithResume` rather than
+ * the TAP transport. VizieR serves them uncompressed at these ftp/ paths.
+ */
+export const HIP2_URL = 'https://cdsarc.cds.unistra.fr/ftp/I/311/hip2.dat';
+export const HIP2_README_URL = 'https://cdsarc.cds.unistra.fr/ftp/I/311/ReadMe';
+
+/**
+ * The exact record count of the Hipparcos-2 catalogue (van Leeuwen 2007, VizieR
+ * I/311): one fixed-width line per star. A truncated Range-resume — the failure
+ * mode a dumb-HTTP download risks — surfaces as a short line count here, so the
+ * download is only accepted once the file carries exactly this many lines.
+ */
+export const EXPECTED_HIP2_LINES = 117_955;
 
 /**
  * What a fetch run still has to download after the resume scan. The main
@@ -529,4 +545,67 @@ export async function fetchGcns(opts: {
       `sha256 ${digest} (${outcome}).`,
   );
   return 'fetched';
+}
+
+/**
+ * Fetch the Hipparcos-2 fixed-width table and its VizieR ReadMe over plain HTTP,
+ * reusing the Range-resume download discipline the CDS FTP fetchers already use.
+ *
+ * The ReadMe goes first: it is tiny, so failing there fails fast, and the
+ * byte-offset spec it carries is what the downstream parser validates against.
+ * It gets no digest line — VizieR occasionally revises the prose without touching
+ * the byte layout, so pinning its hash would raise false alarms; the committed
+ * provenance README is the layout contract, and the ReadMe's byte size is logged
+ * for a sanity glance only.
+ *
+ * The table is accepted in two gated steps. First a line count must equal
+ * `EXPECTED_HIP2_LINES` — a Range-resume that stopped short lands here as a
+ * short count. On mismatch this throws with a delete-and-re-run instruction but
+ * does NOT delete the file: on a metered/tight connection the operator's bytes
+ * are precious, and a deliberate re-fetch beats a silent redownload loop. Only
+ * once the count matches is the digest reconciled against the combined sidecar.
+ */
+export async function fetchHip2(opts: {
+  hip2Path: string;
+  readmePath: string;
+  sidecarPath: string;
+}): Promise<void> {
+  const { hip2Path, readmePath, sidecarPath } = opts;
+
+  // ReadMe first — tiny, fail-fast, no digest line (see the docstring).
+  const readmeResult = await downloadWithResume(HIP2_README_URL, readmePath);
+  console.log(
+    `Hipparcos-2 ReadMe: ${readmeResult.totalBytes.toLocaleString()} bytes` +
+      (readmeResult.bytesAdded > 0
+        ? ` (+${readmeResult.bytesAdded.toLocaleString()}).`
+        : ' (already complete).'),
+  );
+
+  const tableResult = await downloadWithResume(HIP2_URL, hip2Path);
+  console.log(
+    `Hipparcos-2 hip2.dat: ${tableResult.totalBytes.toLocaleString()} bytes` +
+      (tableResult.bytesAdded > 0
+        ? ` (+${tableResult.bytesAdded.toLocaleString()}).`
+        : ' (already complete).'),
+  );
+
+  const lineCount = (await readFile(hip2Path, 'utf8'))
+    .split(/\r?\n/)
+    .filter((line) => line.length > 0).length;
+  if (lineCount !== EXPECTED_HIP2_LINES) {
+    throw new Error(
+      `Hipparcos-2 line-count mismatch: hip2.dat has ${lineCount.toLocaleString()} lines, ` +
+        `expected ${EXPECTED_HIP2_LINES.toLocaleString()}. The download is truncated (a Range- ` +
+        `resume stopped short) or the upstream table changed. Delete ${hip2Path} and re-run to ` +
+        `force a fresh download — it is left in place so no bytes are wasted re-fetching what is ` +
+        `already on disk.`,
+    );
+  }
+
+  const digest = await sha256OfFile(hip2Path);
+  const outcome = verifyOrRecordSha256(sidecarPath, basename(hip2Path), digest);
+  console.log(
+    `Hipparcos-2: ${lineCount.toLocaleString()} lines in ${basename(hip2Path)}; ` +
+      `sha256 ${digest} (${outcome}).`,
+  );
 }
