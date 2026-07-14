@@ -48,7 +48,10 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { createInterface } from 'node:readline';
+import { fileURLToPath } from 'node:url';
 
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { downloadWithResume, sha256OfFile } from './fetchCosmicflows4';
 
 /** One half-open `random_index` range: rows with `start <= random_index < endExclusive`. */
@@ -680,4 +683,240 @@ export async function fetchHip2(opts: {
     `Hipparcos-2: ${lineCount.toLocaleString()} lines in ${basename(hip2Path)}; ` +
       `sha256 ${digest} (${outcome}).`,
   );
+}
+
+/**
+ * The live upstream row count as the maximum random_index, +1. random_index is
+ * a dense 0-based shuffle over [0, totalCount), so its maximum is totalCount-1;
+ * a MAX() aggregate is the cheapest way to read it (one row, no table scan of
+ * substance). Probing it — rather than baking a constant — keeps the partitioner
+ * pure and lets a legitimate DR-count change flow through without a source edit,
+ * while `estimateRemainingBytes`/the size gate still catch a wildly-off value.
+ */
+const PROBE_QUERY =
+  'SELECT MAX(random_index) AS max_random_index FROM gaiadr3.gaia_source_lite';
+
+/**
+ * The real POST-to-TAP transport injected into every TAP-backed fetcher here.
+ * ESA's TAP sync endpoint takes an `application/x-www-form-urlencoded` body of
+ * `REQUEST/LANG/FORMAT/QUERY` and streams back CSV (the fetch2massXsc VizieR
+ * spelling). A non-2xx status throws with the status + body snippet so a TAP
+ * error surfaces verbatim rather than as an opaque parse failure downstream.
+ * hip2.dat + its ReadMe are plain CDS HTTP files, so `fetchHip2` bypasses this
+ * transport and uses `downloadWithResume` directly.
+ */
+function createTapTransport(url: string): TapTransport {
+  return async (query: string): Promise<string> => {
+    const body = new URLSearchParams({
+      REQUEST: 'doQuery',
+      LANG: 'ADQL',
+      FORMAT: 'csv',
+      QUERY: query,
+    });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    if (!res.ok) throw new Error(`TAP ${res.status}: ${await res.text()}`);
+    return res.text();
+  };
+}
+
+/**
+ * Read `totalCount` from the MAX(random_index) probe. The response is a two-line
+ * CSV — header then the single aggregate value — so the data row is line 1. A
+ * body that doesn't parse to a positive integer means the probe query or table
+ * changed upstream, which must stop the run before the partitioner divides by a
+ * bad count, so it throws with the raw body for diagnosis.
+ */
+async function probeTotalCount(transport: TapTransport): Promise<number> {
+  const body = await transport(PROBE_QUERY);
+  const lines = body.split(/\r?\n/).filter((line) => line.length > 0);
+  const maxRandomIndex = Number.parseInt(lines[1] ?? '', 10);
+  if (!Number.isFinite(maxRandomIndex) || maxRandomIndex <= 0) {
+    throw new Error(
+      `Gaia random_index probe returned an unparseable body — expected a header line ` +
+        `plus one integer, got:\n${body}`,
+    );
+  }
+  // random_index ∈ [0, totalCount): the maximum is totalCount-1, so add one.
+  return maxRandomIndex + 1;
+}
+
+/**
+ * The resume scan as a pure disk read: how many of `slices` already have their
+ * page file, and which single-file supplements are still missing. Feeds the
+ * preamble + size gate before any bulk transport call, so the numbers the
+ * operator consents to are exactly what remains to download.
+ */
+async function scanWorkPlan(
+  dir: string,
+  slices: readonly RandomIndexSlice[],
+): Promise<FetchWorkPlan> {
+  let present = 0;
+  if (existsSync(dir)) {
+    const entries = await readdir(dir);
+    const pages = new Set(entries.filter((name) => /^gaia_page_\d+\.csv$/.test(name)));
+    for (const slice of slices) {
+      if (pages.has(pageFileName(slice.index))) present++;
+    }
+  }
+  return {
+    pageSlicesRemaining: slices.length - present,
+    totalPageSlices: slices.length,
+    gcnsNeeded: !existsSync(rawDataPath('gaia.gcns')),
+    hip2Needed: !existsSync(rawDataPath('gaia.hipparcos')),
+    hipReadmeNeeded: !existsSync(rawDataPath('gaia.hipparcos-readme')),
+    xmatchNeeded: !existsSync(rawDataPath('gaia.hip-xmatch')),
+  };
+}
+
+/** Ask a single y/N question on the interactive terminal; anything but y/yes is no. */
+async function promptYesNo(question: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await new Promise<string>((resolve) => rl.question(question, resolve));
+    return /^y(es)?$/i.test(answer.trim());
+  } finally {
+    rl.close();
+  }
+}
+
+/** One artifact's outcome for the completion summary. */
+type ArtifactOutcome = { label: string; state: 'fetched' | 'skipped' | 'failed' };
+
+/**
+ * Run one supplement fetcher, turning a throw into a counted `failed` outcome
+ * rather than an aborted run — so a single flaky supplement never strands the
+ * cheaper artifacts that already landed, and the completion summary can name
+ * every failure at once. The thrown message is logged verbatim (the loud,
+ * actionable text the fetchers already compose); the resume path is the retry.
+ */
+async function runSupplement(
+  label: string,
+  run: () => Promise<'fetched' | 'skipped' | void>,
+): Promise<ArtifactOutcome> {
+  try {
+    const result = await run();
+    return { label, state: result === 'skipped' ? 'skipped' : 'fetched' };
+  } catch (error) {
+    console.error(`  ${label} FAILED: ${(error as Error).message}`);
+    return { label, state: 'failed' };
+  }
+}
+
+/**
+ * Orchestrate a full resumable fetch: probe the live row count (the one pre-gate
+ * request — a single metadata row, not bulk), plan the slice partition, scan the
+ * resume cache, print the preamble + run the size gate, then fetch ascending by
+ * size so the cheap artifacts land even if the operator kills the bulk phase.
+ * Exits non-zero on gate abort (before any bulk byte) and on any completion-time
+ * failure; verifies the summed page row count once every slice is present.
+ */
+async function main(): Promise<void> {
+  const yesFlag = process.argv.slice(2).includes('--yes');
+  const transport = createTapTransport(GAIA_TAP_SYNC_URL);
+  const dir = rawDataPath('gaia.dir');
+
+  // Pre-gate probe: one metadata row, effectively free. It happens before the
+  // consent gate because the partition (and therefore the size estimate the
+  // operator consents to) depends on the live row count.
+  const totalCount = await probeTotalCount(transport);
+  console.log(
+    `Probed upstream random_index: totalCount = ${totalCount.toLocaleString()} ` +
+      `(one metadata row — the only request made before the consent gate).`,
+  );
+
+  const slices = planRandomIndexSlices(totalCount, PAGE_SLICE_COUNT);
+  const work = await scanWorkPlan(dir, slices);
+  printFetchPreamble(work);
+
+  // The gate runs before any bulk transport call. Estimate 0 → everything is
+  // already cached, so there is nothing to consent to; fall through to the
+  // fetch phase (which skips every artifact) and the row-count verification.
+  if (estimateRemainingBytes(work) > 0) {
+    const decision = gateDecision(yesFlag, process.stdin.isTTY === true);
+    if (decision === 'abort') {
+      console.error(
+        'Aborting: non-interactive run without consent. Re-run with --yes to proceed. ' +
+          'No bulk data was downloaded.',
+      );
+      process.exit(1);
+    }
+    if (decision === 'prompt') {
+      const consented = await promptYesNo('Proceed with the download? [y/N] ');
+      if (!consented) {
+        console.error('Aborted by operator. Re-run with --yes to skip this prompt.');
+        process.exit(1);
+      }
+    }
+  }
+
+  // Ascending by size: xmatch (~3 MB), GCNS (~30 MB), hip2 + its ReadMe
+  // (~33 MB, one call), then the paged main catalog (~1.7 GB) last.
+  const outcomes: ArtifactOutcome[] = [];
+  outcomes.push(
+    await runSupplement('Hipparcos↔Gaia xmatch', () =>
+      fetchHipXmatch({ csvPath: rawDataPath('gaia.hip-xmatch'), transport }),
+    ),
+  );
+  outcomes.push(
+    await runSupplement('GCNS', () =>
+      fetchGcns({
+        csvPath: rawDataPath('gaia.gcns'),
+        sidecarPath: rawDataPath('gaia.sha256'),
+        transport,
+      }),
+    ),
+  );
+  outcomes.push(
+    await runSupplement('Hipparcos-2 (ReadMe + hip2.dat)', () =>
+      fetchHip2({
+        hip2Path: rawDataPath('gaia.hipparcos'),
+        readmePath: rawDataPath('gaia.hipparcos-readme'),
+        sidecarPath: rawDataPath('gaia.sha256'),
+      }),
+    ),
+  );
+
+  const pages = await fetchPagedCatalog({ slices, dir, transport });
+
+  console.log('\nFetch complete — per-artifact status:');
+  for (const outcome of outcomes) {
+    console.log(`  ${outcome.state.padEnd(7)} ${outcome.label}`);
+  }
+  console.log(
+    `  pages: ${pages.fetched} fetched, ${pages.skipped} skipped, ` +
+      `${pages.failed} failed of ${work.totalPageSlices} slices`,
+  );
+
+  // Only verify the summed page row count when every slice is present and none
+  // failed this run — otherwise a short total is expected, not a defect. The
+  // verify throws loudly on a mismatch (a truncated page); that throw is the
+  // intended failure, so it is not caught here.
+  const pagesComplete =
+    pages.failed === 0 && pages.fetched + pages.skipped === work.totalPageSlices;
+  if (pagesComplete) {
+    const total = await verifyPageRowTotal(dir, EXPECTED_G14_ROWS);
+    console.log(`Gaia page row-count check PASSED: ${total.toLocaleString()}`);
+  }
+
+  const supplementFailures = outcomes.filter((outcome) => outcome.state === 'failed').length;
+  const totalFailed = supplementFailures + pages.failed;
+  if (totalFailed > 0) {
+    console.error(
+      `\n${totalFailed} artifact(s)/slice(s) failed. ` +
+        'Re-run npm run fetch-gaia to retry the failed slices — already-present files are skipped.',
+    );
+    process.exit(1);
+  }
+}
+
+const invokedDirectly = process.argv[1] === fileURLToPath(import.meta.url);
+if (invokedDirectly) {
+  main().catch((err) => {
+    process.stderr.write(`error: ${(err as Error).stack ?? (err as Error).message}\n`);
+    process.exit(1);
+  });
 }

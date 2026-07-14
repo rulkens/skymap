@@ -61,6 +61,7 @@
     "fetch-desi": "tsx tools/fetch/fetchDesi.ts",
     "fetch-structures": "tsx tools/fetch/fetchStructureCatalogs.ts",
     "fetch-famous-images": "tsx tools/famous/fetchFamousImages.ts",
+    "fetch-gaia": "tsx tools/fetch/fetchGaia.ts",
     "fetch-hyperleda": "tsx tools/fetch/fetchHyperLeda.ts",
     "fetch-milliquas": "tsx tools/fetch/fetchMilliquas.ts",
     "format": "prettier --write .",
