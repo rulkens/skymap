@@ -42,7 +42,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Foreground-body picking** `ready` **HIGH PRIORITY** — Sun/Earth/planets/stars aren't click-pickable; `pickProgram` already anticipates `pick:near0`, codes 21/22/23 reserved, body SelectionRow arm shipped — add pickable NEAR0 rows + code→ref mapping. → [details](backlog/2026-07-12-foreground-body-picking.md)
+- [ ] **Foreground-body picking** `blocked` (on #436 reorg + Gaia plan 03) — make bodies/stars new families on the existing pick spine once the Gaia renderer lands; 2026-07-14 design notes captured in the detail file. → [details](backlog/2026-07-12-foreground-body-picking.md)
 - [ ] **Star field → own slab** `needs-design` — the depthless star map (points/captions/connectors) inherits NEAR0's Earth-scale depth bracket; a STARS slab row deletes the three clip-z clamps + far-plane coupling. → [details](backlog/2026-07-13-star-field-own-slab.md)
 - [ ] **Milliquas AGN colormap** `needs-design` — AGN reuse the galaxy B−R ramp and misread as blue star-forming; give them their own encoding. Only the kPerZ=0 clamp shipped (#282). → [details](backlog/2026-06-29-milliquas-agn-colormap.md)
 - [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/2026-06-29-supercluster-shape-focus.md)
