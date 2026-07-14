@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createFlowFieldRenderer } from '../../../../src/services/gpu/renderers/flowFieldRenderer';
-import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
+import { createFlowFieldRenderer } from '../../../../../src/services/gpu/renderers/flowField/flowFieldRenderer';
+import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
 
 /**
  * Minimal GPUDevice mock for renderer-construction tests.

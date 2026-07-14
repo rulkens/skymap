@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createSelectionRingRenderer } from '../../../../src/services/gpu/renderers/selectionRingRenderer';
+import { createSelectionRingRenderer } from '../../../../../src/services/gpu/renderers/selectionRing/selectionRingRenderer';
 
 // Build a renderer with a null device — the factory guards all GPU calls
 // behind `if (device)`, so the null-device no-op path is exercisable without

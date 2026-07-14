@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createHorizonShellRenderer } from '../../../../src/services/gpu/renderers/horizonShellRenderer';
+import { createHorizonShellRenderer } from '../../../../../src/services/gpu/renderers/horizonShell/horizonShellRenderer';
 
 /**
  * Minimal GPUDevice mock for construction-time assertions. Vitest runs in Node

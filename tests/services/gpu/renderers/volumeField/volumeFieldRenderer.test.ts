@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
-import { createVolumeFieldRenderer } from '../../../../src/services/gpu/renderers/volumeFieldRenderer';
-import { getVolumeFieldDefaults } from '../../../../src/data/volume/volumeFieldDefaults';
-import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
-import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
+import { createVolumeFieldRenderer } from '../../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer';
+import { getVolumeFieldDefaults } from '../../../../../src/data/volume/volumeFieldDefaults';
+import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
+import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 
 function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
   return {

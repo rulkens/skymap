@@ -120,7 +120,7 @@ vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/proceduralDiskRend
   createProceduralDiskRenderer: vi.fn(() => makeStub('proceduralDiskRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/horizonShellRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRenderer', () => ({
   createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
   // initGpu imports the FRAME program (for TIMED_SLOTS), which transitively
   // loads the content-layer registry incl. horizonShellLayer — that module
@@ -152,7 +152,7 @@ vi.mock('../../../../src/services/gpu/renderers/debugLineRenderer', () => ({
   createDebugLineRenderer: vi.fn(() => makeStub('debugLineRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/selectionRingRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRenderer', () => ({
   createSelectionRingRenderer: vi.fn(() => makeStub('selectionRingRenderer')),
 }));
 
@@ -164,11 +164,11 @@ vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayPickRenderer', 
   createMilkyWayPickRenderer: vi.fn(() => makeStub('milkyWayPickRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/volumeFieldRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer', () => ({
   createVolumeFieldRenderer: vi.fn(() => makeStub('volumeFieldRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/flowFieldRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/flowField/flowFieldRenderer', () => ({
   createFlowFieldRenderer: vi.fn(() => makeStub('flowFieldRenderer')),
 }));
 

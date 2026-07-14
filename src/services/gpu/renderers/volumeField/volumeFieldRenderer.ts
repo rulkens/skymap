@@ -46,21 +46,21 @@
  */
 
 import { mat4 } from 'wgpu-matrix';
-import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
-import type { ScalarFieldPaletteId } from '../../../@types/data/volume/ScalarFieldPaletteId';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { VolumeFieldRenderer } from '../../../@types/rendering/VolumeFieldRenderer';
-import type { FieldEntry } from '../../../@types/rendering/FieldEntry';
-import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
-import { getVolumeFieldDefaults } from '../../../data/volume/volumeFieldDefaults';
-import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/volume/scalarFieldPalettes';
-import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
-import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { buildCubeModelMatrix } from '../../../utils/math/buildCubeModelMatrix';
-import { writeCameraPrefix } from '../lib/cameraUniforms';
-import { ADDITIVE_BLEND } from '../lib/blendStates';
+import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../../../@types/data/volume/ScalarFieldPaletteId';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
+import type { FieldEntry } from '../../../../@types/rendering/FieldEntry';
+import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
+import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
+import { getVolumeFieldDefaults } from '../../../../data/volume/volumeFieldDefaults';
+import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
+import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
+import fsCode from '../../shaders/scalarVolume/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
+import { writeCameraPrefix } from '../../lib/cameraUniforms';
+import { ADDITIVE_BLEND } from '../../lib/blendStates';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
 // + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
