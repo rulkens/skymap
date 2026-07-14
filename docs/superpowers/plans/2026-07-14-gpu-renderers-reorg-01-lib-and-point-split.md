@@ -501,13 +501,15 @@ stub BGLs + `makeDestroyTrackingDevice`):
   with the SAME stub device, so `makeDestroyTrackingDevice` still observes every
   `createBuffer` (pipeline uniform + per-source vertex/fade/source).
 
-- [ ] Create `catalogStore.ts` with `createCatalogStore` + `CatalogStore` +
+- [x] Create `catalogStore.ts` with `createCatalogStore` + `CatalogStore` +
       `CatalogDrawEntry` + `BuildRunner`; move `defaultWorkerRunner` + the ID maps +
       `LoadedSource` + upload/unload/splice/counts/loadedSources/entries/destroy.
-- [ ] Rewrite `pointRenderer.ts` to compose the store; `draw()` iterates
+- [x] Rewrite `pointRenderer.ts` to compose the store; `draw()` iterates
       `store.entries()`; `destroy()` calls `store.destroy()` + `uniformBuffer.destroy()`.
-- [ ] Move the nine store-bookkeeping describe blocks to `catalogStore.test.ts`,
-      retargeting to `createCatalogStore`.
-- [ ] Keep colour-target / draw / destroy blocks in `pointRenderer.test.ts`.
-- [ ] `npm run typecheck` + `npm test` green.
-- [ ] Commit: `refactor(pointRenderer): extract catalogStore, compose in draw`
+      (840 → 287 lines.)
+- [x] Move the nine store-bookkeeping describe blocks to `catalogStore.test.ts`,
+      retargeting to `createCatalogStore`. Reviewer diffed all nine against the
+      originals: zero assertions weakened or dropped.
+- [x] Keep colour-target / draw / destroy blocks in `pointRenderer.test.ts`.
+- [x] `npm run typecheck` + `npm test` green (655 files / 3923 tests).
+- [x] Commit: `159e696d`
