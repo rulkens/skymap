@@ -20,18 +20,20 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import {
-  foregroundLabelsLayer,
-  SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
-} from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
+import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import {
   sceneBodyLabels,
   sceneBodyLabelId,
   SCENE_STAR_LABEL_IDS,
-  SUN_SCENE_LABEL_ID,
 } from '../../../../../src/services/engine/presentation/sceneBodyLabels';
+
+// The Sun's caption id — its own file no longer exports one (the layer routes
+// the caption by `kind === 'sun'`, and the Sun now rides a fade band rather
+// than a pinned constant), so the test derives it from the shared id helper.
+const SUN_LABEL_ID = sceneBodyLabelId('sun');
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -315,8 +317,6 @@ describe('foregroundLabelsLayer.draw', () => {
     const base = sceneBodyLabels();
     const starLabels = (labels: readonly Label[]) =>
       labels.filter((l) => SCENE_STAR_LABEL_IDS.has(l.id));
-    const nonSunStar = (labels: readonly Label[]) =>
-      starLabels(labels).filter((l) => l.id !== SUN_SCENE_LABEL_ID);
 
     // ── Camera at Earth: the LOCAL STAR MAP — every seeded star (Pollux, the
     // farthest, is 10.34 pc out) is inside the full-alpha band, so ALL star
@@ -339,9 +339,10 @@ describe('foregroundLabelsLayer.draw', () => {
       expect(star.fadeAlpha, `expected ${star.id} at full alpha from Earth`).toBe(1);
     }
 
-    // ── Camera far outside the neighbourhood (Mpc-scale, ≥ the gone edge from
-    // every seed): every non-Sun star caption fades to 0 and is dropped; only
-    // the pinned Sun (the descent's aim point) survives of the star set.
+    // ── Camera far outside the neighbourhood (Mpc-scale, past every seed's
+    // gone edge AND past the Sun's own fade band's gone edge): every star
+    // caption fades to 0 and is dropped — the Sun included, now that it rides
+    // `sunCaption` (gone at the layer's enable gate) rather than a pinned 1.
     const farRenderer = makeRenderer(6);
     foregroundLabelsLayer.draw(
       PASS_STUB,
@@ -351,8 +352,46 @@ describe('foregroundLabelsLayer.draw', () => {
     );
     const farSpy = farRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     const farLabels = farSpy.mock.calls[0]![0] as readonly Label[];
-    expect(nonSunStar(farLabels)).toHaveLength(0);
-    expect(farLabels.some((l) => l.id === SUN_SCENE_LABEL_ID)).toBe(true);
+    expect(starLabels(farLabels)).toHaveLength(0);
+  });
+
+  it('fades the Sun caption in on descent — exactly 0 at the enable gate, no pop', () => {
+    // The Sun sits at the render origin, so parking the eye `originDistMpc` out
+    // along +X makes the Sun caption's own distance-from-camera equal that value
+    // — the quantity `sunCaption` keys on. The identity rebase vp piles every
+    // caption onto screen centre, where the Sun (top declutter tier) is the
+    // survivor, so it is the emitted star caption to read. The auto-advancing
+    // test clock settles each draw exactly onto its target.
+    const renderer = makeRenderer(6);
+    const sunFade = (originDistMpc: number): number | undefined => {
+      foregroundLabelsLayer.draw(
+        PASS_STUB,
+        makeNear0View([originDistMpc, 0, 0]),
+        makeCtx(5e-4),
+        makeState(renderer, makeLineRenderer()),
+      );
+      const spy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+      const labels = spy.mock.calls.at(-1)![0] as readonly Label[];
+      return labels.find((l) => l.id === SUN_LABEL_ID)?.fadeAlpha;
+    };
+
+    // At the enable gate the caption is EXACTLY 0 — the no-pop anchor. `goneAt`
+    // is the layer's gate BY IMPORT, so the Sun is invisible the frame the layer
+    // switches on (target 0 → dropped from the emit set) and can only fade UP
+    // from there. A drifted goneAt would surface the Sun with a hard edge here.
+    expect(sunFade(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC)).toBeUndefined();
+
+    // Mid-band (three-quarters of the way to the gate): a genuine FRACTION,
+    // strictly inside (0, 1) — the pin that fails if the band is inverted or
+    // left pinned at a constant.
+    const mid = sunFade(0.75 * SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC);
+    expect(mid).toBeGreaterThan(0);
+    expect(mid).toBeLessThan(1);
+
+    // At and below the full edge (half the gate distance) the name holds at full
+    // alpha all the way down.
+    expect(sunFade(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC / 2)).toBe(1);
+    expect(sunFade(1e-5)).toBe(1);
   });
 
   it('prefers the higher CAPTION_PRIORITY tier when captions collide', () => {
@@ -374,7 +413,7 @@ describe('foregroundLabelsLayer.draw', () => {
     );
     const spy = renderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     const labels = spy.mock.calls[0]![0] as readonly Label[];
-    expect(labels.some((l) => l.id === SUN_SCENE_LABEL_ID)).toBe(true);
+    expect(labels.some((l) => l.id === SUN_LABEL_ID)).toBe(true);
     expect(labels.some((l) => l.id === proxima.id)).toBe(false);
   });
 
@@ -455,7 +494,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeCtx(5e-4, testClockMs + 50),
       settledA,
     );
-    expect(lastLabels().find((l) => l.id === SUN_SCENE_LABEL_ID)!.fadeAlpha).toBe(1);
+    expect(lastLabels().find((l) => l.id === SUN_LABEL_ID)!.fadeAlpha).toBe(1);
     expect(wakeSpy(settledA)).not.toHaveBeenCalled();
     const settledB = makeState(renderer, makeLineRenderer());
     foregroundLabelsLayer.draw(
@@ -464,7 +503,7 @@ describe('foregroundLabelsLayer.draw', () => {
       makeCtx(5e-4, testClockMs + 50),
       settledB,
     );
-    expect(lastLabels().find((l) => l.id === SUN_SCENE_LABEL_ID)!.fadeAlpha).toBe(1);
+    expect(lastLabels().find((l) => l.id === SUN_LABEL_ID)!.fadeAlpha).toBe(1);
     expect(wakeSpy(settledB)).not.toHaveBeenCalled();
   });
 

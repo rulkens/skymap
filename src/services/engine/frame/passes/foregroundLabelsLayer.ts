@@ -85,9 +85,12 @@
  *      via `fadeBand`): full
  *      alpha inside the stellar neighbourhood (the whole map reads from
  *      Earth), gone beyond it — a LOCAL STAR MAP, not per-body approach
- *      labels. The Sun is pinned to 1 (the descent's aim point, named all the
- *      way down from the kiloparsec gate); Earth + the planets are always-on.
- *      The star-labels toggle (`settings.labels.starLabelsEnabled`) zeroes the
+ *      labels. The Sun — the descent's aim point — rides its OWN band
+ *      (`SCALE_FADE_BANDS.sunCaption`, keyed on the camera's distance from the
+ *      heliocentric origin) so its name FADES IN smoothly as the camera
+ *      descends: exactly 0 at the layer's enable gate (no pop) up to full alpha
+ *      by half that distance. Earth + the planets are always-on. The
+ *      star-labels toggle (`settings.labels.starLabelsEnabled`) zeroes the
  *      star map's target (Sun included).
  *   2. DECLUTTER — EVERY visible caption contends in one screen-space cull
  *      (`declutterByScreenSeparation`), Earth and the planets included. The
@@ -142,26 +145,7 @@ import { fadeBand } from '../../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { declutterByScreenSeparation } from '../../../../utils/scene/declutterByScreenSeparation';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
-
-/**
- * Show the Sun/Earth captions only once the camera is closer than a
- * kiloparsec — by then the user has zoomed far past the galaxy and is clearly
- * heading for the solar system. Generous on purpose: it turns the captions on
- * for the last several decades of zoom, where the bodies are still sub-pixel
- * and hardest to find.
- *
- * This is deliberately TIGHTER than the shared foreground gate
- * (`FOREGROUND_MAX_DISTANCE_MPC`, ~a decade wider): on descent the bodies and
- * the star-point backdrop appear first, the captions later. `enabled` ANDs
- * both — the shared gate is what lets the executor skip the whole NEAR0
- * foreground group (this row included) in one sweep at galaxy zoom, while
- * this constant keeps the captions' own later entrance.
- *
- * Intentionally independent of `EARTH_TEXTURE_MAX_DISTANCE_MPC` (the Blue
- * Marble demand gate): the two are separate tuning knobs that currently
- * coincide at 1e-3 — caption onset and texture-load onset may be tuned apart.
- */
-export const SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC = 1e-3;
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../solarSystemLabelMaxDistance';
 
 /**
  * Minimum on-screen gap (px) between two foreground captions before the lower-
@@ -316,18 +300,22 @@ export const foregroundLabelsLayer: ContentLayer = {
       });
 
       // The fade TARGET before declutter: the star map rides the neighbourhood
-      // distance band (Mpc → pc through the named scale-unit); the Sun is
-      // pinned to 1 (the descent's aim point, named all the way down from the
-      // kiloparsec 'enabled' gate); Earth + the planets are always-on. The
-      // star-labels toggle zeroes the star map's target (Sun included) —
-      // through the envelope below, so flipping it fades rather than pops.
+      // distance band (Mpc → pc through the named scale-unit); the Sun — the
+      // descent's aim point — rides its OWN distance band (`sunCaption`) so its
+      // name FADES IN as the camera descends toward the solar system rather than
+      // popping to full alpha the frame the layer's gate switches on. For the
+      // Sun `distanceMpc` IS the camera's distance from the heliocentric origin
+      // (the Sun sits there), which is what that band keys on. Earth + the
+      // planets are always-on. The star-labels toggle zeroes the star map's
+      // target (Sun included) — through the envelope below, so flipping it fades
+      // rather than pops.
       const isStarMap = label.kind === 'star' || label.kind === 'sun';
       const baseTarget = !isStarMap
         ? 1
         : !starLabelsEnabled
           ? 0
           : label.kind === 'sun'
-            ? 1
+            ? fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc)
             : fadeBand(SCALE_FADE_BANDS.starCaption, distanceMpc / SCALE_UNITS.PC_TO_MPC);
 
       // Screen position for the declutter. Behind the camera there is none —

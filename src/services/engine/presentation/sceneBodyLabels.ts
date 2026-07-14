@@ -107,15 +107,6 @@ export const SCENE_STAR_LABEL_IDS: ReadonlySet<string> = new Set(
 );
 
 /**
- * The Sun's caption id. The Sun's caption is pinned to full alpha rather than
- * run through the neighbourhood distance band — it is the descent's aim
- * point, so its name holds all the way down from the foreground layer's
- * kiloparsec gate while the rest of the star map fades at the neighbourhood
- * edge.
- */
-export const SUN_SCENE_LABEL_ID = sceneBodyLabelId('sun');
-
-/**
  * Build the common label shape for one body. The colour is the caller's
  * per-type derivation (spectral colour / albedo / Earth blue), widened to
  * straight RGBA at full alpha; `kind` is the caller's structural knowledge of

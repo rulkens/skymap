@@ -14,7 +14,7 @@
  *
  * The rows do NOT all key on the same number, and that is deliberate — the
  * distinction is carried per-row by the comment naming WHICH quantity feeds
- * the band, not by splitting the table. Two rows key on the camera's distance
+ * the band, not by splitting the table. Three rows key on the camera's distance
  * from the heliocentric render origin (`hypot(view.camPos)`, Mpc); one keys on
  * a star's OWN distance from the camera (pc). Keeping them one table is the
  * point: they are all "the descent's fades", and a reader tuning the descent
@@ -23,6 +23,7 @@
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
 
 export const SCALE_FADE_BANDS = {
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc.
@@ -52,4 +53,17 @@ export const SCALE_FADE_BANDS = {
   // Earth), gone beyond 25 pc (so the two dozen names don't clobber into one
   // pile viewed from far outside the neighbourhood).
   starCaption: { fullAt: 12, goneAt: 25 },
+
+  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the Sun
+  // sits at the origin, so the Sun caption's own distance-from-camera IS that
+  // quantity). The Sun's name FADES IN as the camera descends toward the solar
+  // system — the descent's aim point, drawn early to orient. `goneAt` equals
+  // `foregroundLabelsLayer`'s enable gate BY IMPORT: the caption is exactly 0
+  // the frame the layer switches on, so the fade-in can never pop. `fullAt` =
+  // half the gate distance is the taste knob (how early the name reaches full
+  // alpha on the way down).
+  sunCaption: {
+    fullAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC / 2,
+    goneAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
+  },
 } as const satisfies Readonly<Record<string, FadeBand>>;
