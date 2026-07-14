@@ -59,6 +59,9 @@
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
+import type { StarCatalogNode } from '../../@types/data/starCatalog/StarCatalogNode';
+import { compressStarBin, decompressStarBin } from './starBinCodec';
 
 /** File magic "SKST" (little-endian ASCII), distinct from the galaxy "SKMP". */
 export const MAGIC = 0x54534b53;
@@ -213,4 +216,167 @@ export function unpackStarRecord(
   const colorIdx = (hi >>> 13) & 0x3f;
 
   return { offset: [ox, oy, oz], absMagIdx, colorIdx };
+}
+
+/**
+ * ── File-level serialization ──────────────────────────────────────────────
+ *
+ * On-disk order is header (`HEADER_BYTES`) → node table
+ * (`nodeCount × NODE_BYTES`) → the packed record blob, and the whole
+ * uncompressed image is then run through the sealed `compressStarBin`
+ * codec (this module never names a compression algorithm — that decision
+ * lives sealed in `starBinCodec.ts`, which is why encode/decode are
+ * async).
+ *
+ * `totalRecords` is deliberately *not* a header field: the record blob
+ * simply runs to the end of the decompressed buffer, and its record count
+ * is recovered on decode as `remainingBytes / RECORD_BYTES`. A file whose
+ * record region is not a whole multiple of `RECORD_BYTES` is truncated or
+ * corrupt, so decode throws rather than silently mis-parsing the tail.
+ *
+ * Header layout (little-endian):
+ *
+ *      0   4   magic = "SKST" (uint32)
+ *      4   4   version (uint32)
+ *      8   4   starCount — leaf star records (uint32)
+ *     12   4   nodeCount — octree nodes, leaf + aggregate (uint32)
+ *     16   4   mortonBitsPerAxis (uint32)
+ *     20   4   cellEdgePc (float32, parsecs)
+ *     24   8   gridOriginX (float64, parsecs — kept f64 for the precision story)
+ *     32   8   gridOriginY (float64)
+ *     40   8   gridOriginZ (float64)
+ *     48  16   reserved (zeroed)
+ *
+ * Node layout (16 bytes, little-endian):
+ *
+ *      0   4   mortonIndex (uint32)
+ *      4   1   level (uint8)
+ *      5   3   childMask — 24-bit uint, three LE bytes (byte 5 = bits 0-7,
+ *              byte 6 = bits 8-15, byte 7 = bits 16-23)
+ *      8   4   firstRecord (uint32)
+ *     12   4   recordCount (uint32)
+ */
+
+/**
+ * Serialize `cat` into a compressed `.bin` payload: header + node table +
+ * record blob through `compressStarBin`. Async because the codec is.
+ */
+export async function encodeStarCatalog(cat: StarCatalog): Promise<ArrayBuffer> {
+  const { starCount, nodeCount, mortonBitsPerAxis, cellEdgePc, gridOrigin, nodes, records } = cat;
+  if (nodes.length !== nodeCount) throw new Error('nodes length mismatch');
+  if (records.length % RECORD_BYTES !== 0) throw new Error('records length not a whole number of records');
+
+  const buf = new ArrayBuffer(HEADER_BYTES + nodeCount * NODE_BYTES + records.length);
+  const dv = new DataView(buf);
+
+  dv.setUint32(0, MAGIC, true);
+  dv.setUint32(4, VERSION, true);
+  dv.setUint32(8, starCount, true);
+  dv.setUint32(12, nodeCount, true);
+  dv.setUint32(16, mortonBitsPerAxis, true);
+  dv.setFloat32(20, cellEdgePc, true);
+  dv.setFloat64(24, gridOrigin[0], true);
+  dv.setFloat64(32, gridOrigin[1], true);
+  dv.setFloat64(40, gridOrigin[2], true);
+  // reserved bytes 48..63 stay zero from the fresh ArrayBuffer.
+
+  for (let i = 0; i < nodeCount; i++) {
+    const node = nodes[i]!;
+    const base = HEADER_BYTES + i * NODE_BYTES;
+    dv.setUint32(base + 0, node.mortonIndex, true);
+    dv.setUint8(base + 4, node.level & 0xff);
+    // childMask as three little-endian bytes composing a 24-bit uint.
+    dv.setUint8(base + 5, node.childMask & 0xff);
+    dv.setUint8(base + 6, (node.childMask >>> 8) & 0xff);
+    dv.setUint8(base + 7, (node.childMask >>> 16) & 0xff);
+    dv.setUint32(base + 8, node.firstRecord, true);
+    dv.setUint32(base + 12, node.recordCount, true);
+  }
+
+  // Copy the packed record blob in right after the node table.
+  new Uint8Array(buf).set(records, HEADER_BYTES + nodeCount * NODE_BYTES);
+
+  const packed = await compressStarBin(new Uint8Array(buf));
+  // `compressStarBin` returns a freshly allocated Uint8Array (offset 0,
+  // exactly sized); slice hands back an owned buffer. The `as ArrayBuffer`
+  // narrows the lib's `ArrayBufferLike` union — our buffers are never
+  // SharedArrayBuffer-backed.
+  return packed.buffer.slice(
+    packed.byteOffset,
+    packed.byteOffset + packed.byteLength,
+  ) as ArrayBuffer;
+}
+
+/**
+ * Inflate and parse a `.bin` payload produced by {@link encodeStarCatalog}.
+ * Fails loudly on a wrong magic or an unknown version — the header is the
+ * single source of truth for "do I understand this file?". Async because
+ * the codec is.
+ */
+export async function decodeStarCatalog(buf: ArrayBuffer): Promise<StarCatalog> {
+  const plain = await decompressStarBin(new Uint8Array(buf));
+  const dv = new DataView(plain.buffer, plain.byteOffset, plain.byteLength);
+
+  if (dv.getUint32(0, true) !== MAGIC) throw new Error('bad magic — not a SKST file');
+
+  // A version mismatch surfaces as the documented "regenerate" error —
+  // stale bins fail on every load until the build pipeline re-emits them.
+  const version = dv.getUint32(4, true);
+  if (version !== VERSION) {
+    throw new Error(
+      `unsupported version: ${version} — please regenerate the .bin via "npm run build-stars"`,
+    );
+  }
+
+  const starCount = dv.getUint32(8, true);
+  const nodeCount = dv.getUint32(12, true);
+  const mortonBitsPerAxis = dv.getUint32(16, true);
+  const cellEdgePc = dv.getFloat32(20, true);
+  const gridOrigin: Vec3 = [
+    dv.getFloat64(24, true),
+    dv.getFloat64(32, true),
+    dv.getFloat64(40, true),
+  ];
+
+  const nodes: StarCatalogNode[] = new Array(nodeCount);
+  for (let i = 0; i < nodeCount; i++) {
+    const base = HEADER_BYTES + i * NODE_BYTES;
+    const mortonIndex = dv.getUint32(base + 0, true);
+    const level = dv.getUint8(base + 4);
+    // childMask: three little-endian bytes composing a 24-bit uint.
+    const childMask =
+      dv.getUint8(base + 5) | (dv.getUint8(base + 6) << 8) | (dv.getUint8(base + 7) << 16);
+    const firstRecord = dv.getUint32(base + 8, true);
+    const recordCount = dv.getUint32(base + 12, true);
+    nodes[i] = { mortonIndex, level, childMask, firstRecord, recordCount };
+  }
+
+  // The record blob runs from the end of the node table to EOF. Its byte
+  // length must be a whole number of records or the file is truncated —
+  // fail loudly rather than mis-parse the tail.
+  const recordsStart = HEADER_BYTES + nodeCount * NODE_BYTES;
+  const recordBytes = plain.byteLength - recordsStart;
+  if (recordBytes < 0 || recordBytes % RECORD_BYTES !== 0) {
+    throw new Error(
+      `truncated SKST file — record region is ${recordBytes} bytes, not a multiple of ${RECORD_BYTES}`,
+    );
+  }
+  // A fresh copy (not a view): contiguous, zero byteOffset, GPU-upload-ready
+  // and decoupled from the transient decompression buffer.
+  const records = plain.slice(recordsStart, recordsStart + recordBytes);
+
+  return { starCount, nodeCount, mortonBitsPerAxis, cellEdgePc, gridOrigin, nodes, records };
+}
+
+/** The empty catalog — zero stars, zero nodes. The renderer's initial state. */
+export function emptyStarCatalog(): StarCatalog {
+  return {
+    starCount: 0,
+    nodeCount: 0,
+    mortonBitsPerAxis: 0,
+    cellEdgePc: 0,
+    gridOrigin: [0, 0, 0],
+    nodes: [],
+    records: new Uint8Array(0),
+  };
 }
