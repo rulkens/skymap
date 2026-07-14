@@ -43,6 +43,12 @@ These four kinds of code are the contract. Include them, exactly.
    the table can.
 4. **Tiny before / after sketches** when the prose alone can't make the
    intended diff obvious. Keep these to a few lines each.
+5. **The `npm run move-files` invocation, spelled out, in any task that moves
+   or renames TS files.** Implementers who aren't told otherwise default to
+   `git mv` + hand-editing every import path (observed, repeatedly); naming
+   the tool in the task text is the only channel that reliably reaches a
+   subagent, since they never load project skills. See
+   `.claude/skills/move-files/SKILL.md`.
 
 ## What doesn't
 
