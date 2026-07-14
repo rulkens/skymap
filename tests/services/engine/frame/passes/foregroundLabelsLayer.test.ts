@@ -20,8 +20,10 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { foregroundLabelsLayer } from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
-import { DESCENT_ONSET_MPC } from '../../../../../src/services/engine/presentation/scaleFadeBands';
+import {
+  foregroundLabelsLayer,
+  SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
+} from '../../../../../src/services/engine/frame/passes/foregroundLabelsLayer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import {
@@ -159,16 +161,18 @@ describe('foregroundLabelsLayer.enabled', () => {
     expect(foregroundLabelsLayer.enabled(state, makeCtx(5e-4))).toBe(true);
 
     // At and above the threshold → captions hidden (no clutter at galaxy scale).
-    expect(foregroundLabelsLayer.enabled(state, makeCtx(DESCENT_ONSET_MPC))).toBe(false);
+    expect(foregroundLabelsLayer.enabled(state, makeCtx(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC))).toBe(
+      false,
+    );
     expect(foregroundLabelsLayer.enabled(state, makeCtx(1e-2))).toBe(false);
 
-    // The two distance gates compose, and the descent-onset gate is the
-    // TIGHTER one: between them (bodies/backdrop already on, captions not yet)
-    // the row stays off, so on descent the captions enter after the bodies. If
-    // a retune ever flipped the order, the caption gate would become dead code
+    // The two distance gates compose, and the caption gate is the TIGHTER
+    // one: between them (bodies/backdrop already on, captions not yet) the
+    // row stays off, so on descent the captions enter after the bodies. If a
+    // retune ever flipped the order, the caption gate would become dead code
     // behind the shared foreground gate — this pins the intended ordering.
-    expect(DESCENT_ONSET_MPC).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
-    const betweenGatesMpc = (DESCENT_ONSET_MPC + FOREGROUND_MAX_DISTANCE_MPC) / 2;
+    expect(SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+    const betweenGatesMpc = (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + FOREGROUND_MAX_DISTANCE_MPC) / 2;
     expect(foregroundLabelsLayer.enabled(state, makeCtx(betweenGatesMpc))).toBe(false);
 
     // No glyphs → nothing to draw even when close.

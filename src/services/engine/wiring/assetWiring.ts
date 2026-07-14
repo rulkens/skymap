@@ -57,8 +57,10 @@ import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
-import { createEarthTextureSlot } from '../../loading/slots/earthTextureSlot';
-import { DESCENT_ONSET_MPC } from '../presentation/scaleFadeBands';
+import {
+  createEarthTextureSlot,
+  EARTH_TEXTURE_MAX_DISTANCE_MPC,
+} from '../../loading/slots/earthTextureSlot';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 
@@ -207,14 +209,13 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── Blue Marble Earth texture ────────────────────────────────────
   // Descent-gated (the only proximity-loaded asset): fires when the camera's
-  // orbit distance-to-focus drops below the shared descent-onset threshold
-  // (the same gate that turns on the solar-system captions), deferring the
-  // ~MB JPG off the boot budget. Void request (single tier-agnostic texture).
-  // The renderer's mid-blue placeholder covers the in-flight window.
+  // orbit distance-to-focus drops below the threshold, deferring the ~MB JPG
+  // off the boot budget. Void request (single tier-agnostic texture). The
+  // renderer's mid-blue placeholder covers the in-flight window.
   {
     key: 'earthTexture',
     factory: (deps) => createEarthTextureSlot(deps.state, deps.cb),
     req: () => undefined,
-    demand: (ctx) => ctx.cameraDistanceMpc < DESCENT_ONSET_MPC,
+    demand: (ctx) => ctx.cameraDistanceMpc < EARTH_TEXTURE_MAX_DISTANCE_MPC,
   },
 ];

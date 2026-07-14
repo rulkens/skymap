@@ -21,13 +21,10 @@
  * at page load for a texture only distinguishable after a deep-zoom descent
  * (Earth subtends a pixel only around ~1e-13 Mpc). The `ASSET_WIRING` row's
  * `demand` predicate defers the cost to the descent — mirroring the thumbnail
- * pipeline's defer-until-visible posture. The gate is `DESCENT_ONSET_MPC`
- * (`presentation/scaleFadeBands.ts`) — the shared "you've descended into the
- * solar system" threshold, so the texture starts loading at the same moment
- * the solar-system captions appear. The renderer's mid-blue placeholder
+ * pipeline's defer-until-visible posture. The renderer's mid-blue placeholder
  * sphere (its pre-texture state) covers the in-flight window, and the descent
- * from that gate down to the surface spans ~13 decades of zoom — orders of
- * magnitude more lead time than the fetch + decode needs.
+ * from EARTH_TEXTURE_MAX_DISTANCE_MPC down to the surface spans ~13 decades of
+ * zoom — orders of magnitude more lead time than the fetch + decode needs.
  *
  * Construction-pure: builds + subscribes + RETURNS the slot. The orchestrator
  * (`installSlots`) owns the write to `state.assetSlots`; `reevaluateDemand`
@@ -37,6 +34,19 @@
 import { createAssetSlot } from '../AssetSlot';
 import { earthTextureFetcher } from '../fetchers/earthTextureFetcher';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
+
+/**
+ * The descent gate: the Earth texture demand fires only once the camera's
+ * orbit distance-to-focus drops below this. `1e-3` Mpc sits ~13 decades of
+ * zoom above the ~1e-13 Mpc where Earth first subtends a pixel, so the Blue
+ * Marble always resolves before the surface is visible.
+ *
+ * Intentionally independent of `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` (the
+ * solar-system caption gate): the two are separate tuning knobs that
+ * currently coincide at 1e-3 — texture-load onset and caption onset may be
+ * tuned apart.
+ */
+export const EARTH_TEXTURE_MAX_DISTANCE_MPC = 1e-3;
 
 export const createEarthTextureSlot: SlotFactory<ImageBitmap, void> = (state, _cb) => {
   const slot = createAssetSlot({

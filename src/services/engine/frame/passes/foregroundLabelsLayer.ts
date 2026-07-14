@@ -139,9 +139,29 @@ import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from '../../presentation/famousLabelStyle';
 import { LEADER_LINE_BOTTOM_GAP_PX } from '../../presentation/leaderLineStyle';
 import { fadeBand } from '../../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS, DESCENT_ONSET_MPC } from '../../presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { declutterByScreenSeparation } from '../../../../utils/scene/declutterByScreenSeparation';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+
+/**
+ * Show the Sun/Earth captions only once the camera is closer than a
+ * kiloparsec — by then the user has zoomed far past the galaxy and is clearly
+ * heading for the solar system. Generous on purpose: it turns the captions on
+ * for the last several decades of zoom, where the bodies are still sub-pixel
+ * and hardest to find.
+ *
+ * This is deliberately TIGHTER than the shared foreground gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC`, ~a decade wider): on descent the bodies and
+ * the star-point backdrop appear first, the captions later. `enabled` ANDs
+ * both — the shared gate is what lets the executor skip the whole NEAR0
+ * foreground group (this row included) in one sweep at galaxy zoom, while
+ * this constant keeps the captions' own later entrance.
+ *
+ * Intentionally independent of `EARTH_TEXTURE_MAX_DISTANCE_MPC` (the Blue
+ * Marble demand gate): the two are separate tuning knobs that currently
+ * coincide at 1e-3 — caption onset and texture-load onset may be tuned apart.
+ */
+export const SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC = 1e-3;
 
 /**
  * Minimum on-screen gap (px) between two foreground captions before the lower-
@@ -228,14 +248,12 @@ export const foregroundLabelsLayer: ContentLayer = {
     const renderer = state.gpu.foregroundLabelRenderer;
     if (renderer === null || renderer.glyphCount() === 0) return false;
     // Both distance gates compose: the shared foreground gate (so this row
-    // empties with its NEAR0 siblings at galaxy zoom) AND the tighter
-    // descent-onset gate — `DESCENT_ONSET_MPC` (~1 kpc) is a decade below the
-    // foreground gate, so on descent the true-scale bodies and the star-point
-    // backdrop appear first and the captions enter later, once the camera is
-    // clearly heading for the solar system. The shared gate lets the executor
-    // skip the whole NEAR0 foreground group at galaxy zoom; this one keeps the
-    // captions' own later entrance.
-    return ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC && ctx.cam.distance < DESCENT_ONSET_MPC;
+    // empties with its NEAR0 siblings at galaxy zoom) AND the tighter caption
+    // gate (see SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC's docblock).
+    return (
+      ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC &&
+      ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC
+    );
   },
 
   draw(pass, view, ctx, state) {

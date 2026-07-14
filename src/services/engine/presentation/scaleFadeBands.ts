@@ -47,24 +47,3 @@ export const SCALE_FADE_BANDS = {
   // pile viewed from far outside the neighbourhood).
   starCaption: { fullAt: 12, goneAt: 25 },
 } as const satisfies Readonly<Record<string, FadeBand>>;
-
-/**
- * DESCENT_ONSET_MPC — the camera orbit-distance-to-focus at which "you've
- * descended into the solar system": the solar-system captions appear AND the
- * Blue Marble Earth texture starts loading, together. Not a fade band but a
- * hard gate, so it lives beside the bands rather than in the table.
- *
- * One home for one threshold. The caption gate (`foregroundLabelsLayer`) and
- * the Earth-texture demand gate (the `earthTexture` `ASSET_WIRING` row) were
- * two `1e-3` literals in two files, related only by "same order as" prose —
- * both key on the same quantity (orbit distance-to-focus) and both mark the
- * same moment of the descent, so the simultaneity is the intent, not a
- * coincidence to keep in sync by hand. 1e-3 Mpc (~1 kpc) sits ~13 decades of
- * zoom above the ~1e-13 Mpc where Earth first subtends a pixel — orders of
- * magnitude more lead time than the texture fetch + decode needs, so the Blue
- * Marble always resolves before the surface is visible; and it is a decade
- * below the shared foreground gate (`FOREGROUND_MAX_DISTANCE_MPC`), so on
- * descent the true-scale bodies and star backdrop appear first, the captions
- * later.
- */
-export const DESCENT_ONSET_MPC = 1e-3;
