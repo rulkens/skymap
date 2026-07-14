@@ -140,7 +140,7 @@ type LoadedSource = {
   /**
    * Mirror of the interleaved Float32Array baked into `buffer`, held
    * on the JS side so the bias-correction subsystem's splice methods
-   * (`spliceSchechterRatios` etc.) can rewrite slots 9 / 10 of every
+   * (`spliceSchechterRatios` etc.) can rewrite slots 10 / 11 of every
    * row and re-upload the whole buffer in one `writeBuffer` call.
    * Single full re-upload (~50 ms PCIe for 17 MB SDSS) beats N sparse
    * writes — WebGPU has no scatter primitive, and per-call overhead
@@ -273,12 +273,12 @@ export function createCatalogStore(init: {
     // intensityFloor + falloffHalfMpc, and the discriminant we narrow on.
     const source = CODE_OF_ID.get(id);
     if (source === undefined) {
-      throw new Error(`PointRenderer cannot upload unknown galaxy catalog id '${id}'`);
+      throw new Error(`catalogStore cannot upload unknown galaxy catalog id '${id}'`);
     }
     const entry = SOURCE_REGISTRY[source];
     if (entry.type !== 'galaxyCatalog') {
       throw new Error(
-        `PointRenderer cannot upload non-galaxy catalog id '${id}' (type=${entry.type})`,
+        `catalogStore cannot upload non-galaxy catalog id '${id}' (type=${entry.type})`,
       );
     }
 

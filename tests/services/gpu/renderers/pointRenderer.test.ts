@@ -20,8 +20,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { createPointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
-// `BuildRunner` moved to the store when the per-catalog resources did — the
-// renderer only forwards it.
+// `BuildRunner` belongs to the store; the renderer only forwards it.
 import type { BuildRunner } from '../../../../src/services/gpu/renderers/catalogStore';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
