@@ -40,6 +40,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import vsCode from '../shaders/horizonShell/vertex.wesl?static';
 import fsCode from '../shaders/horizonShell/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { ADDITIVE_BLEND } from './lib/blendStates';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { HorizonShellRenderer } from '../../../@types/rendering/HorizonShellRenderer';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
@@ -117,10 +118,7 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
           format: targetFormat,
           // Pure additive — the shell is emissive, contributing light
           // where the Fresnel rim is bright and nothing where it isn't.
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
+          blend: ADDITIVE_BLEND,
         },
       ],
     },

@@ -59,6 +59,7 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { MilkyWayCloudRenderer } from '../../../@types/rendering/MilkyWayCloudRenderer';
 import type { MilkyWayCloudDrawArgs } from '../../../@types/rendering/MilkyWayCloudDrawArgs';
 import { writeCameraPrefix } from './lib/cameraUniforms';
+import { ADDITIVE_BLEND } from './lib/blendStates';
 
 type Init = {
   device: GPUDevice;
@@ -84,12 +85,10 @@ export const MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE = 208;
 // into a camera-facing billboard by pushing these corners along camRight/camUp.
 const CORNER_QUAD = new Float32Array([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1]);
 
-// Blend states — pinned by the Global Constraints (and the tool's star/dust
-// pipelines). See the module header for the dust multiply algebra.
-const STAR_BLEND: GPUBlendState = {
-  color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-  alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-};
+// The star pass uses the shared additive emission blend (ADDITIVE_BLEND). The
+// dust pass is a pinned per-channel MULTIPLY (see the module header for the
+// extinction algebra) whose factors match no shared descriptor, so it stays
+// inline here.
 const DUST_BLEND: GPUBlendState = {
   color: { srcFactor: 'dst', dstFactor: 'zero', operation: 'add' },
   alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' },
@@ -161,7 +160,7 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
     'milkyWayCloud-star-pipeline',
     starModule,
     STAR_INSTANCE_LAYOUT,
-    STAR_BLEND,
+    ADDITIVE_BLEND,
   );
   const dustPipeline = makePipeline(
     'milkyWayCloud-dust-pipeline',

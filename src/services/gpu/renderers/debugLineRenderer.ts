@@ -34,6 +34,7 @@ import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from './lib/unitQuad';
+import { PREMULTIPLIED_OVER_BLEND } from './lib/blendStates';
 
 /**
  * Per-instance stride, matching `VsIn` attributes 1–3 in markerLines/io.wesl:
@@ -117,10 +118,7 @@ export function createDebugLineRenderer(
           {
             format,
             // Premultiplied-alpha OVER — debug lines occlude, not accumulate.
-            blend: {
-              color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            },
+            blend: PREMULTIPLIED_OVER_BLEND,
           },
         ],
       },

@@ -66,6 +66,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { writeCameraPrefix } from './lib/cameraUniforms';
+import { ADDITIVE_BLEND } from './lib/blendStates';
 
 /**
  * Per-instance vertex layout shared by all three consumers: four
@@ -158,11 +159,11 @@ export function createInstancedQuadRenderer(
   // opaque-material consumers (none today).
   const blendDescriptor: GPUBlendState =
     blend === 'additive'
-      ? {
-          color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-        }
-      : {
+      ? ADDITIVE_BLEND
+      : // Straight-alpha OVER — the 'src-alpha' colour factor (NOT premultiplied
+        // 'one') is load-bearing for the forward-compat opaque-material variant,
+        // so this branch stays inline rather than folding into a shared OVER.
+        {
           color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
           alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
         };

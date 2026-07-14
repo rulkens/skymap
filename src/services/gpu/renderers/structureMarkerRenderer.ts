@@ -63,6 +63,7 @@ import ringPickVsCode from '../shaders/structureMarker/ring.wesl?static';
 import ringPickFsCode from '../shaders/structureMarker/ringPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
+import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from './lib/blendStates';
 
 /**
  * 12 floats per instance × 4 bytes = 48 bytes/instance.
@@ -247,10 +248,7 @@ export function createStructureMarkerRenderer(
           {
             format,
             // Additive — halo is emissive glow, not occluding overlay.
-            blend: {
-              color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            },
+            blend: ADDITIVE_BLEND,
           },
         ],
       },
@@ -270,10 +268,7 @@ export function createStructureMarkerRenderer(
             format,
             // Premultiplied-alpha OVER — ring is an opaque indicator
             // edge, must occlude rather than accumulate.
-            blend: {
-              color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            },
+            blend: PREMULTIPLIED_OVER_BLEND,
           },
         ],
       },

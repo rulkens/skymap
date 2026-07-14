@@ -73,6 +73,7 @@ import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from './lib/unitQuad';
+import { PREMULTIPLIED_OVER_BLEND } from './lib/blendStates';
 
 // ─── buffer constants ──────────────────────────────────────────────────────
 
@@ -204,10 +205,7 @@ export function createMarkerLineRenderer(
             // transparent against whatever's behind them, not additive.
             // Using 'one-minus-src-alpha' for dst preserves the existing
             // HDR content at line-free pixels while the line alpha fades.
-            blend: {
-              color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            },
+            blend: PREMULTIPLIED_OVER_BLEND,
           },
         ],
       },

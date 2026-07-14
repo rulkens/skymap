@@ -60,6 +60,7 @@ import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { buildCubeModelMatrix } from '../../../utils/math/buildCubeModelMatrix';
 import { writeCameraPrefix } from './lib/cameraUniforms';
+import { ADDITIVE_BLEND } from './lib/blendStates';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
 // + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
@@ -182,10 +183,7 @@ export function createVolumeFieldRenderer(
       targets: [
         {
           format: targetFormat,
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
+          blend: ADDITIVE_BLEND,
         },
       ],
     },

@@ -64,6 +64,7 @@ import vsCode from '../shaders/starPoints/vertex.wesl?static';
 import fsCode from '../shaders/starPoints/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
+import { ADDITIVE_BLEND } from './lib/blendStates';
 
 /**
  * Per-star instance record: position (f32x3) + colour (f32x3) + absMag
@@ -140,10 +141,7 @@ export function createStarPointRenderer(
           format: targetFormat,
           // One/one additive blend on premultiplied output — overlapping
           // stars brighten, matching the survey points' HDR convention.
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
+          blend: ADDITIVE_BLEND,
         },
       ],
     },

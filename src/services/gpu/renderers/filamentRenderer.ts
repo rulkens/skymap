@@ -44,6 +44,7 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { clampFilamentIntensity } from '../../../utils/clampFilamentIntensity';
 import { writeCameraPrefix } from './lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from './lib/unitQuad';
+import { ADDITIVE_BLEND } from './lib/blendStates';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
 
@@ -193,10 +194,7 @@ export function createFilamentRenderer(
           format: targetFormat,
           // Additive blending — filaments glow over the existing scene
           // without occluding the point cloud below them.
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
+          blend: ADDITIVE_BLEND,
         },
       ],
     },

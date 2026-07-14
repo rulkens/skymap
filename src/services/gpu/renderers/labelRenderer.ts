@@ -83,6 +83,7 @@ import fsCode from '../shaders/labels/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from './lib/unitQuad';
+import { PREMULTIPLIED_OVER_BLEND } from './lib/blendStates';
 
 // ─── sizing defaults ───────────────────────────────────────────────────────
 
@@ -293,10 +294,7 @@ export function createLabelRenderer(
             // transparent against whatever's behind them, not additive.
             // Using 'one-minus-src-alpha' for dst preserves the existing
             // HDR content at label-free pixels while the label alpha fades.
-            blend: {
-              color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            },
+            blend: PREMULTIPLIED_OVER_BLEND,
           },
         ],
       },
