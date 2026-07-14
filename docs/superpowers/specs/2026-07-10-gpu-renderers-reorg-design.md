@@ -45,8 +45,8 @@ One-folder-per-file re-encodes the flat list with more indentation and teaches
 nothing. The value is in naming the coupling: when a folder groups
 `pointRenderer` + `proceduralDiskRenderer` + `texturedDiskRenderer`, a reader
 learns "these are the LOD stages of one renderer" for free. A folder that holds
-a single file (`horizonShell/`, `filaments/`) is honest: it says "this one is
-genuinely alone," which is also information.
+a single file (`horizonShell/`, `structureMarker/`) is honest: it says "this one
+is genuinely alone," which is also information.
 
 ## 2. Non-goals (explicitly out of scope)
 
@@ -202,8 +202,13 @@ and the planetary orbit trails. Each edge below is verified 2026-07-14.
   mutual mentions are comments at `flowFieldRenderer.ts:253` and
   `volumeFieldRenderer.ts:235`). Grouping them would encode "both are volumes,"
   which is subject-matter, not coupling. They stay separate singles.
-- **`filaments/`, `horizonShell/`, `structureMarker/`** are genuine singletons.
-  Their folders hold one file each — honest loneliness.
+- **`horizonShell/`, `structureMarker/`, `selectionRing/`** are genuine
+  singletons. Their folders hold one file each — honest loneliness.
+- **`filaments/`** is a two-file family, not a singleton: the renderer plus the
+  pure `buildSegmentInstances` builder extracted out of it. The builder is CPU
+  geometry with no GPU handle, so it tests without a device — the coupling edge
+  is "the renderer is the builder's only consumer," which is exactly what a
+  family folder is for.
 
 ### `gpu/labels/` → `gpu/labelLayout/` rename
 
