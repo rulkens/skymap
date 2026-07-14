@@ -51,9 +51,20 @@ const PASS_STUB = {
 // (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as ReadyFrameContext;
 
-// enabled reads only ctx.cam.distance beyond the handle checks.
+// Beyond the handle checks, enabled reads ctx.cam.distance (the shared
+// foreground gate) AND the camera position + projection knobs (the per-body
+// sub-pixel gate — the same predicate draw's pack loop applies). The fixture
+// camera parks just off Mercury's centre (the first seeded body) so, whenever
+// `distance` is inside the foreground gate, at least one body resolves and
+// the `distance` argument alone drives the foreground-gate assertions below.
 function makeCtx(distance: number): ReadyFrameContext {
-  return { cam: { distance } } as unknown as ReadyFrameContext;
+  const mercury = SCENE_PLANETS[0]!.positionMpc;
+  return {
+    cam: { distance },
+    drawCamPos: [mercury[0] + 1e-14, mercury[1], mercury[2]],
+    canvasSize: { width: 1280, height: 720 },
+    fovYRad: (60 * Math.PI) / 180,
+  } as unknown as ReadyFrameContext;
 }
 
 // A camera comfortably inside the shared foreground gate.
@@ -133,6 +144,39 @@ describe('planetsLayer.enabled', () => {
     const state = makeState(makeRendererSpy(), SCENE_PLANETS);
     expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
     expect(planetsLayer.enabled(state, makeCtx(0.43))).toBe(false);
+  });
+
+  it('is disabled while every seeded body is sub-pixel, even inside the foreground band', () => {
+    // Camera ~0.002 Mpc (~400 AU) from the Sun — comfortably inside the
+    // foreground distance gate (~1e-2 Mpc) but far outside every planet's
+    // orbit, so every body's apparent diameter is far under
+    // SUB_PIXEL_BODY_CULL_PX. A row that would pack zero bodies must not
+    // stay in the pass plan just because its own draw-loop guard makes the
+    // eventual draw a no-op.
+    const state = makeState(makeRendererSpy(), SCENE_PLANETS);
+    const subPixelCtx = {
+      cam: { distance: 0.002 },
+      drawCamPos: [0, 0, 0.002],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+    expect(planetsLayer.enabled(state, subPixelCtx)).toBe(false);
+  });
+
+  it('is enabled once the camera is close enough for at least one body to resolve', () => {
+    // Camera parked just off Mercury's centre (the first seeded body), still
+    // inside the foreground gate: Mercury alone resolving is enough to keep
+    // the row in the pass plan even though every other body stays sub-pixel
+    // from here.
+    const state = makeState(makeRendererSpy(), SCENE_PLANETS);
+    const mercury = SCENE_PLANETS[0]!.positionMpc;
+    const resolvingCtx = {
+      cam: { distance: 0.002 },
+      drawCamPos: [mercury[0] + 1e-14, mercury[1], mercury[2]],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: (60 * Math.PI) / 180,
+    } as unknown as ReadyFrameContext;
+    expect(planetsLayer.enabled(state, resolvingCtx)).toBe(true);
   });
 });
 
