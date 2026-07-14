@@ -17,7 +17,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { planetsLayer } from '../../../../../src/services/engine/frame/passes/planetsLayer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
-import { SCENE_PLANETS } from '../../../../../src/data/bodies/sceneBodies';
+import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/planetRenderer';

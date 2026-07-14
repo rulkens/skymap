@@ -253,7 +253,7 @@ import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/pla
 // partition for setStars; the seeded planet list drives planetsLayer), so the
 // state fixture carries the real construction-time seeds.
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 
 /**
  * Build a minimal `EngineState` covering the slices `initGpu` reads and

@@ -1,12 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
-import {
-  SCENE_BODIES,
-  SCENE_EARTH,
-  SCENE_STARS,
-  SCENE_PLANETS,
-} from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 
 describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels();

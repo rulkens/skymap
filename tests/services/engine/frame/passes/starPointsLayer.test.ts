@@ -27,7 +27,7 @@ import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes'
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneBodies';
+import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';

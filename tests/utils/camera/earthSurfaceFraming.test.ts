@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { earthSurfaceFraming } from '../../../src/utils/camera/earthSurfaceFraming';
-import { SCENE_EARTH } from '../../../src/data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 
 describe('earthSurfaceFraming', () => {

@@ -21,7 +21,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { SCENE_ORBIT_CONICS } from '../../../src/data/bodies/sceneOrbitConics';
-import { SCENE_BODIES, SCENE_EARTH } from '../../../src/data/bodies/sceneBodies';
+import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { ORBITAL_ELEMENTS } from '../../../src/data/bodies/orbitalElements';
 import { RENDER_ORIGIN_MPC } from '../../../src/data/renderOrigin';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
