@@ -45,7 +45,7 @@ import { initGpu, resizeCanvasToDisplay } from '../../../src/services/gpu/device
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
-import { createFlowFieldRenderer } from '../../../src/services/gpu/renderers/flowFieldRenderer';
+import { createFlowFieldRenderer } from '../../../src/services/gpu/renderers/flowField/flowFieldRenderer';
 import { encodeFlowCompute } from '../../../src/services/engine/frame/encodeFlowCompute';
 import { decodeScalarField } from '../../../src/data/volume/scalarFieldFormat';
 import { makeShaderFactory } from './engine/gpu/makeShaderFactory';

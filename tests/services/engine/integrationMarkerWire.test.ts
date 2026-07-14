@@ -24,7 +24,7 @@
 import { describe, it, expect } from 'vitest';
 import { produceStructureMarkers } from '../../../src/services/engine/presentation/produceStructureMarkers';
 import { createEngineData } from '../../../src/services/engine/data/createEngineData';
-import { createStructureMarkerRenderer } from '../../../src/services/gpu/renderers/structureMarkerRenderer';
+import { createStructureMarkerRenderer } from '../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 

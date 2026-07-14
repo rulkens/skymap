@@ -100,7 +100,7 @@ vi.mock('../../../../src/services/gpu/resources/createFocusUniformBuffer', () =>
   })),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/pointRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/pointRenderer', () => ({
   createPointRenderer: vi.fn(() => makeStub('pointRenderer')),
 }));
 
@@ -112,15 +112,15 @@ vi.mock('../../../../src/services/gpu/passes/compositor', () => ({
   createCompositor: vi.fn(() => makeStub('compositor')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/texturedDiskRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/texturedDiskRenderer', () => ({
   createTexturedDiskRenderer: vi.fn(() => makeStub('texturedDiskRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/proceduralDiskRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/proceduralDiskRenderer', () => ({
   createProceduralDiskRenderer: vi.fn(() => makeStub('proceduralDiskRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/horizonShellRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRenderer', () => ({
   createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
   // initGpu imports the FRAME program (for TIMED_SLOTS), which transitively
   // loads the content-layer registry incl. horizonShellLayer — that module
@@ -128,7 +128,7 @@ vi.mock('../../../../src/services/gpu/renderers/horizonShellRenderer', () => ({
   HORIZON_RADIUS_GPC: 14.3,
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/filamentRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/filaments/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
 }));
 
@@ -136,39 +136,39 @@ vi.mock('../../../../src/services/gpu/galaxy/milkyWayCloud', () => ({
   createMilkyWayCloud: vi.fn(() => makeStub('milkyWayCloud')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/milkyWayCloudRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer', () => ({
   createMilkyWayCloudRenderer: vi.fn(() => makeStub('milkyWayCloudRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/labelRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/labels/labelRenderer', () => ({
   createLabelRenderer: vi.fn(() => makeStub('labelRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/markerLineRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/labels/markerLineRenderer', () => ({
   createMarkerLineRenderer: vi.fn(() => makeStub('markerLineRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/debugLineRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/devTools/debugLineRenderer', () => ({
   createDebugLineRenderer: vi.fn(() => makeStub('debugLineRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/selectionRingRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRenderer', () => ({
   createSelectionRingRenderer: vi.fn(() => makeStub('selectionRingRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/structureMarkerRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer', () => ({
   createStructureMarkerRenderer: vi.fn(() => makeStub('structureMarkerRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/milkyWayPickRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayPickRenderer', () => ({
   createMilkyWayPickRenderer: vi.fn(() => makeStub('milkyWayPickRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/volumeFieldRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer', () => ({
   createVolumeFieldRenderer: vi.fn(() => makeStub('volumeFieldRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/flowFieldRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/flowField/flowFieldRenderer', () => ({
   createFlowFieldRenderer: vi.fn(() => makeStub('flowFieldRenderer')),
 }));
 
@@ -180,7 +180,7 @@ vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub('pickDebugOverlay')),
 }));
 
-vi.mock('../../../../src/services/gpu/passes/diskRadiusRing', () => ({
+vi.mock('../../../../src/services/gpu/renderers/devTools/diskRadiusRing', () => ({
   createDiskRadiusRing: vi.fn(() => makeStub('diskRadiusRing')),
 }));
 
@@ -188,7 +188,7 @@ vi.mock('../../../../src/services/gpu/passes/diskRadiusRing', () => ({
 // mock it so initGpu's foreground block constructs a stub on
 // `state.gpu.earthRenderer` (the un-awaited Blue Marble fetch it fires runs
 // after initGpu resolves and fails harmlessly in the test env).
-vi.mock('../../../../src/services/gpu/renderers/earthRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/bodies/earthRenderer', () => ({
   createEarthRenderer: vi.fn(() => makeStub('earthRenderer')),
 }));
 
@@ -196,33 +196,36 @@ vi.mock('../../../../src/services/gpu/renderers/earthRenderer', () => ({
 // JSDOM. createPlanetRenderer is called ONCE — a single dynamic-offset
 // renderer draws every seeded planet (see EngineGpuHandles) — so the shared
 // `stubs.planetRenderer` key is the constructed instance.
-vi.mock('../../../../src/services/gpu/renderers/starRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/bodies/starRenderer', () => ({
   createStarRenderer: vi.fn(() => makeStub('starRenderer')),
 }));
 // Partial mock: planetsLayer.ts imports the real MAX_PLANETS/INSTANCE_FLOATS
 // constants at module scope to size its staging buffer, so only the factory
 // is stubbed — passing those constants through keeps that sizing real.
-vi.mock('../../../../src/services/gpu/renderers/planetRenderer', async (importOriginal) => ({
+vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (importOriginal) => ({
   ...(await importOriginal<
-    typeof import('../../../../src/services/gpu/renderers/planetRenderer')
+    typeof import('../../../../src/services/gpu/renderers/bodies/planetRenderer')
   >()),
   createPlanetRenderer: vi.fn(() => makeStub('planetRenderer')),
 }));
-vi.mock('../../../../src/services/gpu/renderers/starPointRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/bodies/starPointRenderer', () => ({
   createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
 }));
 // Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
 // real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its
 // staging buffer, so only the factory is stubbed.
-vi.mock('../../../../src/services/gpu/renderers/orbitTrailRenderer', async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import('../../../../src/services/gpu/renderers/orbitTrailRenderer')
-  >()),
-  createOrbitTrailRenderer: vi.fn(() => makeStub('orbitTrailRenderer')),
-}));
+vi.mock(
+  '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer')
+    >()),
+    createOrbitTrailRenderer: vi.fn(() => makeStub('orbitTrailRenderer')),
+  }),
+);
 
-vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
+vi.mock('../../../../src/services/gpu/labelLayout/loadFontAtlases', () => ({
   loadFontAtlases: vi.fn(async () => ({
     metricsByFont: { cormorant: { __mockMetrics: true } },
     bitmaps: [{ __mockBitmap: true } as unknown as ImageBitmap],
@@ -245,10 +248,10 @@ import { initGpu } from '../../../../src/services/engine/phases/initGpu';
 // `mock.results` ordinally (call 0 = main, call 1 = foreground) to prove two
 // DISTINCT instances land on state.gpu.* — the shared `stubs.labelRenderer`
 // key is overwritten by the second call and cannot make that distinction.
-import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labelRenderer';
+import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labels/labelRenderer';
 // The single planet-renderer factory: asserted constructed exactly once (one
 // dynamic-offset renderer draws every seeded planet).
-import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/planetRenderer';
+import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/bodies/planetRenderer';
 // The real seeded data bag: initGpu reads `state.data.bodies` (the far-star
 // partition for setStars; the seeded planet list drives planetsLayer), so the
 // state fixture carries the real construction-time seeds.

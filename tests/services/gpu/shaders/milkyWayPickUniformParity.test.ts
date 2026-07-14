@@ -34,7 +34,7 @@ import { packPointUniforms } from '../../../../src/utils/gpu/packPointUniforms';
 import {
   SELECTED_PACKED_BYTE_OFFSET,
   POINT_SIZE_BYTE_OFFSET,
-} from '../../../../src/services/gpu/renderers/pointRenderer';
+} from '../../../../src/services/gpu/renderers/galaxyCatalog/pointVertexLayout';
 
 // ─── WESL side: scrape the struct text and compute WGSL offsets ─────────────
 

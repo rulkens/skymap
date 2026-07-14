@@ -40,6 +40,7 @@
 import vsCode from '../shaders/volumeUpsample/vertex.wesl?static';
 import fsCode from '../shaders/volumeUpsample/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { ADDITIVE_BLEND } from '../lib/blendStates';
 import type { VolumeUpsample } from '../../../@types/rendering/VolumeUpsample';
 
 export function createVolumeUpsample(
@@ -80,10 +81,7 @@ export function createVolumeUpsample(
           // Additive blend for BOTH color and alpha — matches the
           // scalar-volume pipeline's blend state byte-for-byte.  Module
           // header explains why this is load-bearing.
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
+          blend: ADDITIVE_BLEND,
         },
       ],
     },
