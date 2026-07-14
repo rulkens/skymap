@@ -47,24 +47,24 @@
  * against every pipeline (which `layout:'auto'` does NOT guarantee).
  */
 
-import type { GpuContext } from '../../../@types/rendering/GpuContext';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
-import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
-import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
-import type { StructureId } from '../../../@types/data/structure/StructureId';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import haloVsCode from '../shaders/structureMarker/halo.wesl?static';
-import haloFsCode from '../shaders/structureMarker/halo.wesl?static';
-import ringVsCode from '../shaders/structureMarker/ring.wesl?static';
-import ringFsCode from '../shaders/structureMarker/ring.wesl?static';
-import ringPickVsCode from '../shaders/structureMarker/ring.wesl?static';
-import ringPickFsCode from '../shaders/structureMarker/ringPick.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../lib/cameraUniforms';
-import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
-import { createDummyFadeBindGroup } from '../lib/dummyFade';
+import type { GpuContext } from '../../../../@types/rendering/GpuContext';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { StructureMarkerRenderer } from '../../../../@types/rendering/StructureMarkerRenderer';
+import type { StructureMarkerDescriptor } from '../../../../@types/rendering/StructureMarkerDescriptor';
+import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
+import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../../data/structure/structureIds';
+import type { StructureId } from '../../../../@types/data/structure/StructureId';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import haloVsCode from '../../shaders/structureMarker/halo.wesl?static';
+import haloFsCode from '../../shaders/structureMarker/halo.wesl?static';
+import ringVsCode from '../../shaders/structureMarker/ring.wesl?static';
+import ringFsCode from '../../shaders/structureMarker/ring.wesl?static';
+import ringPickVsCode from '../../shaders/structureMarker/ring.wesl?static';
+import ringPickFsCode from '../../shaders/structureMarker/ringPick.wesl?static';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
+import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
+import { createDummyFadeBindGroup } from '../../lib/dummyFade';
 
 /**
  * 12 floats per instance × 4 bytes = 48 bytes/instance.

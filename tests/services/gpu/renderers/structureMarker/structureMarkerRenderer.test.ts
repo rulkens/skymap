@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createStructureMarkerRenderer } from '../../../../src/services/gpu/renderers/structureMarkerRenderer';
-import type { StructureMarkerDescriptor } from '../../../../src/@types/rendering/StructureMarkerDescriptor';
-import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
+import { createStructureMarkerRenderer } from '../../../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer';
+import type { StructureMarkerDescriptor } from '../../../../../src/@types/rendering/StructureMarkerDescriptor';
+import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
 
 // Null-device pattern, mirrors markerLineRenderer.test.ts.
 const newRenderer = (initialCapacity?: number) => {

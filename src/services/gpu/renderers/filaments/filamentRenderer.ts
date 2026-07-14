@@ -32,21 +32,20 @@
  * carries `let` bindings that the upload state machine mutates rather than
  * the constants of stateless drawers.
  */
-import vsCode from '../shaders/filaments/vertex.wesl?static';
-import fsCode from '../shaders/filaments/fragment.wesl?static';
-import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { FilamentRenderer } from '../../../@types/rendering/FilamentRenderer';
+import vsCode from '../../shaders/filaments/vertex.wesl?static';
+import fsCode from '../../shaders/filaments/fragment.wesl?static';
+import type { FilamentCloud } from '../../../../@types/data/filament/FilamentCloud';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { FilamentRenderer } from '../../../../@types/rendering/FilamentRenderer';
 import type { Mat4 } from 'wgpu-matrix';
-import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { clampFilamentIntensity } from '../../../utils/clampFilamentIntensity';
-import { writeCameraPrefix } from '../lib/cameraUniforms';
-import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../lib/unitQuad';
-import { ADDITIVE_BLEND } from '../lib/blendStates';
-
-const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
+import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { clampFilamentIntensity } from '../../../../utils/clampFilamentIntensity';
+import { writeCameraPrefix } from '../../lib/cameraUniforms';
+import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
+import { ADDITIVE_BLEND } from '../../lib/blendStates';
+import { buildSegmentInstances, FLOATS_PER_SEGMENT } from './buildSegmentInstances';
 
 // Uniform block layout, mirroring 'struct Uniforms' in
 // 'shaders/filaments.wesl'. The first 80 bytes are the shared
@@ -64,45 +63,6 @@ const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
 //   offset 88..95 : _pad0, _pad1   2 × f32       (Uniforms tail pad)
 // Total: 96 bytes.
 const UNIFORM_BYTES = 96;
-
-/**
- * Build a flat per-segment instance array from a `FilamentCloud`.  One
- * instance per consecutive (v_i, v_{i+1}) pair within each strip.
- *
- * Public so tests can exercise the layout without instantiating the
- * full GPU pipeline.
- */
-export function buildSegmentInstances(cloud: FilamentCloud): {
-  segmentCount: number;
-  data: Float32Array;
-} {
-  // Total segment count = sum over strips of (verts - 1) = totalVerts - stripCount.
-  const segmentCount = cloud.vertexCount - cloud.stripCount;
-  if (segmentCount <= 0) {
-    return { segmentCount: 0, data: new Float32Array(0) };
-  }
-  const data = new Float32Array(segmentCount * FLOATS_PER_SEGMENT);
-
-  let outIdx = 0;
-  for (let s = 0; s < cloud.stripCount; s++) {
-    const lo = cloud.stripOffsets[s]!;
-    const hi = cloud.stripOffsets[s + 1]!;
-    for (let v = lo; v < hi - 1; v++) {
-      const a = v * 4;
-      const b = (v + 1) * 4;
-      data[outIdx + 0] = cloud.vertices[a + 0]!;
-      data[outIdx + 1] = cloud.vertices[a + 1]!;
-      data[outIdx + 2] = cloud.vertices[a + 2]!;
-      data[outIdx + 3] = cloud.vertices[a + 3]!;
-      data[outIdx + 4] = cloud.vertices[b + 0]!;
-      data[outIdx + 5] = cloud.vertices[b + 1]!;
-      data[outIdx + 6] = cloud.vertices[b + 2]!;
-      data[outIdx + 7] = cloud.vertices[b + 3]!;
-      outIdx += FLOATS_PER_SEGMENT;
-    }
-  }
-  return { segmentCount, data };
-}
 
 export function createFilamentRenderer(
   device: GPUDevice,

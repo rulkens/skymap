@@ -51,12 +51,12 @@ import { createProceduralDiskRenderer } from '../../gpu/renderers/galaxyCatalog/
 import { createMilkyWayCloud } from '../../gpu/galaxy/milkyWayCloud';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShellRenderer';
-import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
+import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
 import { createDebugLineRenderer } from '../../gpu/renderers/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRingRenderer';
-import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarkerRenderer';
+import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeFieldRenderer';
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowFieldRenderer';

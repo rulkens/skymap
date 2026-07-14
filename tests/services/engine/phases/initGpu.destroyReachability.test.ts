@@ -128,7 +128,7 @@ vi.mock('../../../../src/services/gpu/renderers/horizonShellRenderer', () => ({
   HORIZON_RADIUS_GPC: 14.3,
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/filamentRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/filaments/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
 }));
 
@@ -156,7 +156,7 @@ vi.mock('../../../../src/services/gpu/renderers/selectionRingRenderer', () => ({
   createSelectionRingRenderer: vi.fn(() => makeStub('selectionRingRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/structureMarkerRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer', () => ({
   createStructureMarkerRenderer: vi.fn(() => makeStub('structureMarkerRenderer')),
 }));
 
