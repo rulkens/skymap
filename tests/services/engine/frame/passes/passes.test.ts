@@ -32,6 +32,7 @@ import {
   starPointsLayer,
   orbitTrailsLayer,
   foregroundLabelsLayer,
+  structureMarkersLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -632,7 +633,7 @@ describe('pointSpritesLayer.draw', () => {
     // surveyDeepZoom band, keyed on the camera's distance from the
     // heliocentric origin. The default fixture camera sits 5 Mpc out — far
     // outside the band — so the callback must return the registry value
-    // unchanged; a camera inside the band's goneAt edge must zero it.
+    // unchanged; a camera mid-band must scale it to a strict fraction.
     const state = {
       ...STATE_STUB,
       selection: { select: null, hover: null, focus: null },
@@ -646,7 +647,34 @@ describe('pointSpritesLayer.draw', () => {
     const farFadeOf = farSettings.fadeOpacityOf as (source: number) => number;
     expect(farFadeOf(Source.SDSS)).toBe(1);
 
-    // Inside SCALE_FADE_BANDS.surveyDeepZoom.goneAt (0.002 Mpc from origin).
+    // Mid-band: 0.005 Mpc from origin sits strictly between the band's goneAt
+    // (0.002) and fullAt (FOREGROUND_MAX_DISTANCE_MPC ≈ 0.0103), so the fade
+    // factor must be a strict fraction — proving the multiply, not just the
+    // fully-faded skip below.
+    const midCtx = makeCtx({
+      drawCamPos: [0, 0, 0.005] as Readonly<[number, number, number]>,
+    });
+    pointSpritesLayer.draw(PASS_STUB, slabViewOf(midCtx, COSMO), midCtx, state);
+    const midSettings = (midCtx.renderer.draw as ReturnType<typeof vi.fn>).mock
+      .calls[0]![3] as Record<string, unknown>;
+    const midFadeOf = midSettings.fadeOpacityOf as (source: number) => number;
+    const midFade = midFadeOf(Source.SDSS);
+    expect(midFade).toBeGreaterThan(0);
+    expect(midFade).toBeLessThan(1);
+  });
+
+  it('exempts the famous catalog from the survey fade at deep zoom', () => {
+    // Inside the band's goneAt edge the survey sources resolve to 0 (the
+    // renderer's per-source loop then skips them), but the famous catalog
+    // keeps its raw registry opacity — its curated galaxies stay visible
+    // inside the Milky Way and near Earth as reference points. The layer
+    // still calls renderer.draw: famous may be loaded.
+    const state = {
+      ...STATE_STUB,
+      selection: { select: null, hover: null, focus: null },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+    } as unknown as EngineState;
+
     const deepCtx = makeCtx({
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });
@@ -655,6 +683,8 @@ describe('pointSpritesLayer.draw', () => {
       .calls[0]![3] as Record<string, unknown>;
     const deepFadeOf = deepSettings.fadeOpacityOf as (source: number) => number;
     expect(deepFadeOf(Source.SDSS)).toBe(0);
+    // Registry stub returns 1 — famous must pass it through untouched.
+    expect(deepFadeOf(Source.FamousGalaxy)).toBe(1);
   });
 
   it('threads view.vp / view.viewportPx / view.camPos to renderer.draw', () => {
@@ -695,6 +725,28 @@ describe('drawPick migration-table rows', () => {
   });
 });
 
+describe('structureMarkersLayer.enabled', () => {
+  it('disables once the surveyDeepZoom fade completes (opacity-zero principle)', () => {
+    // Every marker fragment resolves to alpha 0 past the goneAt edge, so the
+    // layer must leave the pass plan entirely — the executor drops the
+    // render step, and the pick program (which runs this same gate) stops
+    // the rings claiming hits.
+    const state = {
+      ...STATE_STUB,
+      gpu: { ...STATE_STUB.gpu, structureMarkerRenderer: { markerCount: () => 3 } },
+    } as unknown as EngineState;
+    // Default fixture camera: 5 Mpc from origin, far outside the band.
+    expect(structureMarkersLayer.enabled(state, makeCtx())).toBe(true);
+    // Inside goneAt (0.002 Mpc) → disabled despite queued markers.
+    expect(
+      structureMarkersLayer.enabled(
+        state,
+        makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> }),
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('pointSpritesLayer.drawPick', () => {
   it('filters loadedSources by ctx.visibleSourceMask before drawPoints', () => {
     // The pick ctx's `visibleSourceMask` IS the pick mask, so a catalog whose
@@ -727,5 +779,38 @@ describe('pointSpritesLayer.drawPick', () => {
     // arg[1] is the filtered `sources` list handed to drawPoints.
     const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
     expect(passedSources.map((s) => s.source)).toEqual([Source.SDSS, Source.Glade]);
+  });
+
+  it('drops band-faded survey sources from the pick, famous exempt, but still calls drawPoints', () => {
+    // Invisible → unpickable: inside the surveyDeepZoom goneAt edge a survey
+    // source's band-multiplied opacity is exactly 0, so it must stop claiming
+    // hits. Famous rides its exemption (still pickable). drawPoints is called
+    // regardless — its @group(0) pick-camera bind is the prefix contract the
+    // ring / disk / Milky-Way pick pipelines depend on.
+    const drawPointsSpy = vi.fn<(...args: unknown[]) => void>();
+    const loaded = [Source.SDSS, Source.FamousGalaxy].map((source) => ({
+      source,
+      vertexBuffer: {} as GPUBuffer,
+      count: 1,
+      sourceBuffer: {} as GPUBuffer,
+    }));
+    const ctx = makeCtx({
+      renderer: { draw: vi.fn(), loadedSources: () => loaded } as any,
+      visibleSourceMask: 0xffffffff,
+      drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
+    });
+    const view = slabViewOf(ctx, COSMO);
+    const state = {
+      ...STATE_STUB,
+      selection: { select: null, hover: null, focus: null },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+      gpu: { ...STATE_STUB.gpu, pickRenderer: { drawPoints: drawPointsSpy } },
+    } as unknown as EngineState;
+
+    pointSpritesLayer.drawPick!(PASS_STUB, view, ctx, state);
+
+    expect(drawPointsSpy).toHaveBeenCalledTimes(1);
+    const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
+    expect(passedSources.map((s) => s.source)).toEqual([Source.FamousGalaxy]);
   });
 });

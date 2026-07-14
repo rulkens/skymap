@@ -14,8 +14,10 @@
  *      threshold dropped from the batch entirely.
  *
  * Plus the handle gates: `enabled` is renderer-presence AND the shared
- * foreground distance gate (the conic table is a static module-level seed —
- * derived once from the elements), and `draw` no-ops on a null handle.
+ * foreground distance gate AND the whole-layer sub-pixel bound (the largest
+ * orbit's apparent size at the camera's nearest possible approach — the
+ * conservative envelope of the per-orbit cull), and `draw` no-ops on a null
+ * handle. The conic table is a static module-level seed.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -52,9 +54,18 @@ const PASS_STUB = {
 // (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as ReadyFrameContext;
 
-// enabled reads only ctx.cam.distance beyond the handle check.
+// Beyond the handle check, enabled reads ctx.cam.distance (the shared
+// foreground gate) and the camera POSITION + projection knobs (the
+// whole-layer sub-pixel cull). The fixture camera sits AT the origin —
+// inside the system's reach — where the cull always stays enabled, so the
+// `distance` argument alone drives the foreground-gate assertions.
 function makeCtx(distance: number): ReadyFrameContext {
-  return { cam: { distance } } as unknown as ReadyFrameContext;
+  return {
+    cam: { distance },
+    drawCamPos: [0, 0, 0],
+    canvasSize: { width: 1280, height: 720 },
+    fovYRad: Math.PI / 4,
+  } as unknown as ReadyFrameContext;
 }
 
 // draw reads ctx.drawCamPos + ctx.fovYRad for the per-orbit apparent-size
@@ -127,6 +138,22 @@ describe('orbitTrailsLayer.enabled', () => {
     // the (hdr, NEAR0) step can be skipped wholesale at galaxy zoom.
     expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
     expect(orbitTrailsLayer.enabled(state, makeCtx(0.43))).toBe(false);
+  });
+
+  it('disables when even the largest orbit is sub-CULL_PX (whole-layer cull)', () => {
+    // Camera 1e-6 Mpc from the origin — inside the shared foreground gate,
+    // but the whole system's reach (Neptune's orbit, ~1.5e-9 Mpc) subtends
+    // only ~2.5 px there, under the 10-px CULL_PX floor. The per-orbit loop
+    // would cull every conic, so `enabled` must drop the layer from the
+    // pass plan instead of packing zero records.
+    const state = makeState(makeRendererSpy());
+    const ctx = {
+      cam: { distance: 1e-6 },
+      drawCamPos: [1e-6, 0, 0],
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: Math.PI / 4,
+    } as unknown as ReadyFrameContext;
+    expect(orbitTrailsLayer.enabled(state, ctx)).toBe(false);
   });
 });
 

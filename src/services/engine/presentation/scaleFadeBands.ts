@@ -26,11 +26,17 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
 
 export const SCALE_FADE_BANDS = {
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc.
-  // The galaxy point cloud recedes on deep zoom so it yields once the local
+  // Cosmic-scale content recedes on deep zoom so it yields once the local
   // starfield fills the near field. Outer edge = FOREGROUND_MAX_DISTANCE_MPC
   // (exactly where that starfield switches on); inner edge = the MW approach
-  // fade's inner edge, so survey points and the MW impostor dissolve together
-  // into the solar-system foreground.
+  // fade's inner edge, so everything dissolves together with the MW impostor
+  // into the solar-system foreground. Consumers: the survey point clouds
+  // (pointSpritesLayer, draw + pick — the famous catalog is exempt, its
+  // galaxies stay visible as deep-zoom reference points), the structure
+  // marker rings + halos and their pick (structureMarkersLayer), the
+  // structure labels (produceStructureLabels — famous labels are exempt
+  // with their points), and scalar-volume liveness (deriveVolumeLiveness,
+  // which zeroes every field so both volume layers disable by construction).
   surveyDeepZoom: { fullAt: FOREGROUND_MAX_DISTANCE_MPC, goneAt: 0.002 },
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc.

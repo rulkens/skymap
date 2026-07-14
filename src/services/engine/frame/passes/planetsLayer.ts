@@ -45,8 +45,10 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/planetRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized for
 // the renderer's cap; each planet's 20-float record (MVP + albedo + pad) is
@@ -71,30 +73,52 @@ export const planetsLayer: ContentLayer = {
     );
   },
 
-  draw(pass, view, _ctx, state) {
+  draw(pass, view, ctx, state) {
     const renderer = state.gpu.planetRenderer;
     if (renderer === null) return;
     const planets = state.data.bodies.planets;
-    const n = Math.min(planets.length, MAX_PLANETS);
+    const limit = Math.min(planets.length, MAX_PLANETS);
 
-    // Pack one 20-float instance record per planet: floats 0..15 the MVP
-    // composed from the slab's f64 vp (see the module header's "f64 seam"
-    // note), 16..18 the albedo, 19 the pad. Then ONE instanced draw.
-    for (let i = 0; i < n; i++) {
+    // Pack one 20-float instance record per RESOLVED planet: floats 0..15 the
+    // MVP composed from the slab's f64 vp (see the module header's "f64 seam"
+    // note), 16..18 the albedo, 19 the pad. Then ONE instanced draw. Bodies
+    // under SUB_PIXEL_BODY_CULL_PX apparent diameter are skipped — a
+    // sub-pixel sphere adds nothing the star backdrop doesn't (see that
+    // constant's docblock) — so `n` counts only the packed records. Unlike
+    // earthLayer this cull is per-body, not whole-layer: the planets span
+    // AU-to-lunar distances, so one resolving while another is sub-pixel is
+    // the normal case, and a whole-layer test would either draw all or cull
+    // all.
+    let n = 0;
+    for (let i = 0; i < limit; i++) {
       const planet = planets[i]!;
+      const dx = planet.positionMpc[0] - ctx.drawCamPos[0];
+      const dy = planet.positionMpc[1] - ctx.drawCamPos[1];
+      const dz = planet.positionMpc[2] - ctx.drawCamPos[2];
+      const distanceMpc = Math.hypot(dx, dy, dz);
+      // Zero distance = camera inside the body; apparentSizePx defensively
+      // returns 0 there, which would read as sub-pixel — keep it packed.
+      const diameterPx = apparentSizePx({
+        diameterKpc: (2 * planet.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
+        distanceMpc,
+        viewportHeightPx: view.viewportPx[1],
+        fovYRad: ctx.fovYRad,
+      });
+      if (distanceMpc > 0 && diameterPx < SUB_PIXEL_BODY_CULL_PX) continue;
       const mvp = composeBodyMvp(
         view.slab.vp,
         planet.positionMpc,
         RENDER_ORIGIN_MPC,
         planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
       );
-      const base = i * INSTANCE_FLOATS;
+      const base = n * INSTANCE_FLOATS;
       staging.set(mvp, base);
       staging[base + 16] = planet.albedo[0];
       staging[base + 17] = planet.albedo[1];
       staging[base + 18] = planet.albedo[2];
       staging[base + 19] = 0; // trailing pad — kept zeroed across frames
+      n++;
     }
-    renderer.draw(pass, staging, n);
+    if (n > 0) renderer.draw(pass, staging, n);
   },
 };
