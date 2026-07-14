@@ -289,6 +289,23 @@ describe('fetchGcns', () => {
     expect(existsSync(csvPath)).toBe(false);
     expect(existsSync(`${csvPath}.part`)).toBe(false);
   });
+
+  it('gcns: a pre-existing final file short-circuits to skipped without calling the transport', async () => {
+    const csvPath = join(dir, 'gcns_main.csv');
+    const sidecarPath = join(dir, 'gaia.sha256');
+    // The "never re-download" tight-network guarantee: an already-present final
+    // file must skip the whole fetch — the transport is never called (no bytes
+    // over the wire) and the cached content is left byte-for-byte untouched.
+    const cached = 'source_id,ra,dec\n1,10.0,20.0\n';
+    writeFileSync(csvPath, cached);
+    const transport = vi.fn<TapTransport>(async () => 'unused body\n');
+
+    const result = await fetchGcns({ csvPath, sidecarPath, transport });
+
+    expect(result).toBe('skipped');
+    expect(transport).not.toHaveBeenCalled();
+    expect(readFileSync(csvPath, 'utf8')).toBe(cached);
+  });
 });
 
 describe('verifyOrRecordSha256', () => {
