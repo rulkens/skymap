@@ -371,13 +371,15 @@ runner in the bag instead of calling `setBuildBufferRunner` mid-test.
 doesn't affect a full mock, but confirm the mock still exports `createPointRenderer`
 (and no longer references `setBuildBufferRunner`).
 
-- [ ] Convert `createPointRenderer` to the named bag; add `buildRunner`.
-- [ ] Delete the `buildRunner` module-global + `setBuildBufferRunner` export.
-- [ ] Update `initGpu.ts:160`.
-- [ ] Update all `pointRenderer.test.ts` call sites + runner injection.
-- [ ] Confirm the `destroyReachability` mock still lines up.
-- [ ] `npm run typecheck` + `npm test` green.
-- [ ] Commit: `refactor(pointRenderer): named-bag factory, drop setBuildBufferRunner`
+- [x] Convert `createPointRenderer` to the named bag; add `buildRunner`. (`BuildRunner`
+      is now exported — it types a public factory member.)
+- [x] Delete the `buildRunner` module-global + `setBuildBufferRunner` export.
+- [x] Update `initGpu.ts:160`.
+- [x] Update all `pointRenderer.test.ts` call sites (26) + runner injection.
+- [x] Confirm the `destroyReachability` mock still lines up (full module replacement —
+      no edit needed).
+- [x] `npm run typecheck` + `npm test` green (654 files / 3923 tests).
+- [x] Commit: `81d51dd0`
 
 ### Task B3 — extract `catalogStore.ts`; compose it in `pointRenderer`
 
