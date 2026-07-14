@@ -40,6 +40,18 @@
  * setFlow / clampFlowParams pattern). Passing `fadeOpacityOf` to
  * `hasActiveFields` widens "active" to include fields whose toggle is off but
  * whose fade-out tail is still in flight.
+ *
+ * ### The deep-zoom survey fade rides the same closure
+ *
+ * The `surveyDeepZoom` band (`presentation/scaleFadeBands.ts`) multiplies into
+ * `fadeOpacityOf` alongside the recessed master, so every scalar field —
+ * MCPM included — dissolves with the survey points on the descent into the
+ * solar system. Because `hasActiveFields` reads through this same closure, a
+ * camera deep inside the band's goneAt edge sees every field at 0 and liveness
+ * returns null — BOTH the raymarch and upsample layers then disable by
+ * construction, which is this module's whole design: no per-layer band checks
+ * to drift. Unlike the point sprites, no source is exempt here — the volumes
+ * are cosmic-scale context, not landmarks.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -48,6 +60,8 @@ import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
 import { clampVolumeFieldSettings } from '../../../utils/clampVolumeFieldSettings';
+import { fadeBand } from '../../../utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 
 /**
  * Derive this frame's volume liveness.
@@ -80,8 +94,16 @@ export function deriveVolumeLiveness(
     nowMs,
     state.subsystems.clipPlayer,
   );
+  // Deep-zoom survey fade — keyed on the camera's distance from the
+  // heliocentric render origin (`ctx.drawCamPos`, the same quantity the
+  // point sprites key on). Multiplied per-field like the recessed master so
+  // `hasActiveFields` sees the zeros too (see the module header).
+  const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
+  const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
   const fadeOpacityOf = (id: VolumeFieldId) =>
-    state.subsystems.fades.opacityOf({ kind: 'volumeField', id }, nowMs) * recessedMaster;
+    state.subsystems.fades.opacityOf({ kind: 'volumeField', id }, nowMs) *
+    recessedMaster *
+    surveyFade;
   const settingsOf = (id: VolumeFieldId) => {
     const raw = state.settings.volumes.items[id];
     return raw === undefined ? undefined : clampVolumeFieldSettings(raw);

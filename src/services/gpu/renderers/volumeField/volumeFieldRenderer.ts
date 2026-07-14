@@ -348,11 +348,14 @@ export function createVolumeFieldRenderer(
         const s = settingsOf(e.id);
         if (!s) continue;
         if (s.intensity <= 0) continue;
-        if (s.enabled) return true;
-        // If a fade-out tail is in flight (enabled flipped false, but
-        // opacity hasn't reached 0 yet) the field is still producing
-        // visible pixels — keep upstream gates alive.
-        if (fadeOpacityOf && fadeOpacityOf(e.id) > 0) return true;
+        // Opacity is the SOLE visibility truth: a field is active iff its
+        // resolved opacity is non-zero. The enabled toggle doesn't override
+        // a zero — it only SEEDS fade intent through the visibility bridge,
+        // so an enabled field spatially faded to 0 (deep zoom) must not
+        // burn a full raymarch. This one test also covers the fade-out
+        // tail (toggle off, opacity still ramping down) for free: the tail
+        // IS a non-zero opacity.
+        if ((fadeOpacityOf ? fadeOpacityOf(e.id) : 1) > 0) return true;
       }
       return false;
     },
@@ -407,14 +410,18 @@ export function createVolumeFieldRenderer(
           writePaletteLut(e.paletteTexture, s.paletteId);
           e.residentPaletteId = s.paletteId;
         }
-        // Skip iff the field is fully off — meaning user toggled it
-        // disabled AND the fade-out tail has fully settled. While
-        // opacity > 0 we keep drawing so the ~100 ms fade-out is
-        // visible. s.intensity is the user's intensity slider; 0
-        // there means "fully transparent regardless of fade", so we
-        // skip the GPU work entirely.
+        // Skip iff the field resolves invisible: opacity is the sole
+        // visibility truth (the enabled toggle only seeds fade intent via
+        // the visibility bridge — it never overrides a zero, so an enabled
+        // field spatially faded to 0 at deep zoom skips its raymarch).
+        // While opacity > 0 we keep drawing so the ~100 ms fade-out tail is
+        // visible. A just-enabled field is skipped only for its first tick
+        // (opacity still 0) — the in-flight fade wakes the loop, so the
+        // fade-in proceeds without a stall. s.intensity is the user's
+        // intensity slider; 0 there means "fully transparent regardless of
+        // fade", so we skip the GPU work entirely.
         const opacity = fadeOpacityOf(e.id);
-        if ((!s.enabled && opacity <= 0) || s.intensity <= 0) continue;
+        if (opacity <= 0 || s.intensity <= 0) continue;
         writeCameraPrefix(scratch, viewProj, viewportPx);
         // Explicit pad zeroing — the scratch is reused across the field
         // loop, so the pads can't rely on Float32Array zero-init.
@@ -435,9 +442,9 @@ export function createVolumeFieldRenderer(
         scratch[62] = s.trim;
         scratch[63] = frame;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
-        // Per-field fade.opacity write: read from the registry for this
-        // field's id, write into the 16-byte fadeBuffer.
-        fadeScratchF32[0] = fadeOpacityOf(e.id);
+        // Per-field fade.opacity write: the resolved opacity from the skip
+        // gate above, written into the 16-byte fadeBuffer.
+        fadeScratchF32[0] = opacity;
         device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
         pass.setBindGroup(0, e.bindGroup);
         pass.setBindGroup(1, e.fadeBindGroup);
