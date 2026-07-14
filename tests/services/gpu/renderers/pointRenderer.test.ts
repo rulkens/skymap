@@ -1,38 +1,37 @@
 /**
- * PointRenderer — unit tests for the multi-source bookkeeping API.
+ * PointRenderer — unit tests for the pipeline half of the point program.
  *
- * The renderer owns one `GPUBuffer` per `Source`, with per-source draw
- * calls toggled by a bitmask. These tests cover the bookkeeping side
- * (count tracking, unload, recompute of `instanceIdOffset`), not the GPU
- * draw.
+ * The renderer owns what exists once per pipeline: the shader modules, the
+ * render pipeline (and its colour target), the per-frame `@group(0)` uniform
+ * buffer, and the draw call. The per-catalog GPU resources it delegates to
+ * `catalogStore` — their upload / unload / splice / count contracts are
+ * pinned in `catalogStore.test.ts`, not here. What remains here is the
+ * pipeline descriptor, the composed `draw()`, and the composed teardown
+ * (which must reach through the store as well as its own uniform buffer).
  *
  * ### Why a stub `GPUDevice`
  *
- * `PointRenderer`'s constructor calls real WebGPU APIs
+ * `createPointRenderer`'s constructor calls real WebGPU APIs
  * (`createShaderModule`, `createRenderPipeline`, `createBuffer`, …) that
- * only exist on a live device. The stub's `createBuffer` returns a
- * sentinel (no VRAM) and the pipeline factories return just enough shape
- * for construction. The tests only call methods that don't touch GPU
- * pipeline state — `upload()`, `unload()`, `totalCount()` — so this is
- * sufficient. Pixel-level assertions need a real browser harness.
+ * only exist on a live device. The stub's `createBuffer` returns a sentinel
+ * (no VRAM) and the pipeline factories return just enough shape for
+ * construction. Pixel-level assertions need a real browser harness.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
-import {
-  createPointRenderer,
-  type BuildRunner,
-} from '../../../../src/services/gpu/renderers/pointRenderer';
+import { describe, it, expect } from 'vitest';
+import { createPointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
+// `BuildRunner` moved to the store when the per-catalog resources did — the
+// renderer only forwards it.
+import type { BuildRunner } from '../../../../src/services/gpu/renderers/catalogStore';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { Mat4 } from 'wgpu-matrix';
 
-// PointRenderer keys its catalogs by the string `GalaxyCatalogId` now;
-// these tests still reason in terms of the numeric `Source` codes (the
-// `loadedSources()` iterator still yields `source`), so resolve the id at
-// each upload/unload call site through the registry.
+// PointRenderer keys its catalogs by the string `GalaxyCatalogId`; these
+// tests still reason in terms of the numeric `Source` codes, so resolve the
+// id at each upload call site through the registry.
 function idOf(source: (typeof Source)[keyof typeof Source]): GalaxyCatalogId {
   return SOURCE_REGISTRY[source].id as GalaxyCatalogId;
 }
@@ -51,8 +50,8 @@ const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(inp
 
 /**
  * Build a minimal `GalaxyCatalog` with `count` points. All photometry arrays are
- * filled with safe defaults (zeros) — the renderer's bookkeeping path never
- * inspects their values, only their lengths.
+ * filled with safe defaults (zeros) — neither the upload path nor the draw
+ * path inspects their values here, only their lengths.
  */
 function makeCloud(count: number): GalaxyCatalog {
   return {
@@ -64,15 +63,13 @@ function makeCloud(count: number): GalaxyCatalog {
     magR: new Float32Array(count),
     magI: new Float32Array(count),
     magZ: new Float32Array(count),
-    // Orientation fields — the bookkeeping path doesn't read their values,
-    // so zero-filled arrays of the right length suffice.
+    // Orientation fields — zero-filled arrays of the right length suffice.
     axisRatio: new Float32Array(count),
     positionAngleDeg: new Float32Array(count),
     // Fill with the 30 kpc project default so apparent-size logic never
     // divides by zero.
     diameterKpc: new Float32Array(count).fill(30),
-    // Per-record metadata bytes; zero-filled (the bookkeeping path
-    // doesn't read them).
+    // Per-record metadata bytes; zero-filled.
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
@@ -81,9 +78,9 @@ function makeCloud(count: number): GalaxyCatalog {
 
 /**
  * A skeletal stand-in for `GPUDevice` — just enough surface area for the
- * `PointRenderer` constructor and `upload()` / `unload()` to run without
- * throwing. Returned `GPUBuffer`s carry a `destroy` method (called during
- * unload) and a `size` field, but no real GPU memory backs them.
+ * `PointRenderer` constructor (and the store it composes) to run without
+ * throwing. Returned `GPUBuffer`s carry a `destroy` method and a `size`
+ * field, but no real GPU memory backs them.
  */
 function makeStubDevice(): GPUDevice {
   // Each helper mints a sentinel object that satisfies the structural type
@@ -117,8 +114,7 @@ function makeStubDevice(): GPUDevice {
     createBuffer: () => stubBuffer(),
     createBindGroup: () => ({}) as unknown as GPUBindGroup,
     queue: {
-      // `writeBuffer` is invoked from `upload()` (and per-frame from `draw()`).
-      // The stub is a no-op — none of the tests below call `draw()`.
+      // `writeBuffer` is invoked from `upload()` and per-frame from `draw()`.
       writeBuffer: () => {},
     },
   } as unknown as GPUDevice;
@@ -167,540 +163,25 @@ describe('PointRenderer colour target', () => {
   });
 });
 
-describe('PointRenderer.totalCount', () => {
-  it('returns 0 before any upload', () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    expect(renderer.totalCount()).toBe(0);
-  });
-
-  it('sums counts across multiple sources', async () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(100));
-    await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
-    await renderer.upload(idOf(Source.Glade), makeCloud(25));
-    expect(renderer.totalCount()).toBe(175);
-  });
-
-  it('updates after a source is unloaded', async () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(100));
-    await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
-    expect(renderer.totalCount()).toBe(150);
-
-    renderer.unload(idOf(Source.SDSS));
-    expect(renderer.totalCount()).toBe(50);
-  });
-});
-
-describe('PointRenderer.hasCatalog', () => {
-  it('is false before upload, true after, false again after unload', async () => {
-    // The survey fade row's guard reads this — it reports whether a catalog's
-    // buffer is committed, independent of the slot lifecycle.
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
-    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
-    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(true);
-    expect(renderer.hasCatalog(idOf(Source.TwoMRS))).toBe(false);
-    renderer.unload(idOf(Source.SDSS));
-    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
-  });
-
-  it('treats a zero-count upload (the unload signal) as not loaded', async () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
-    await renderer.upload(idOf(Source.SDSS), makeCloud(0));
-    expect(renderer.hasCatalog(idOf(Source.SDSS))).toBe(false);
-  });
-});
-
-describe('PointRenderer.loadedSources', () => {
-  it('iterates clouds in `GALAXY_CATALOG_SOURCES` order regardless of upload order', async () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    // Upload in non-iteration order on purpose — the renderer must re-sort.
-    // GALAXY_CATALOG_SOURCES is ordered smallest-catalogue → largest:
-    //   [Synthetic, Famous, TwoMRS, SDSS, Glade]
-    // so TwoMRS comes before SDSS.
-    await renderer.upload(idOf(Source.SDSS), makeCloud(100));
-    await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
-
-    const entries = Array.from(renderer.loadedSources());
-
-    // TwoMRS comes before SDSS regardless of upload order.
-    expect(entries.map((e) => e.source)).toEqual([Source.TwoMRS, Source.SDSS]);
-    expect(entries[0]!.count).toBe(50);
-    expect(entries[1]!.count).toBe(100);
-  });
-
-  it('drops an unloaded source from the iterator', async () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
-    await renderer.upload(idOf(Source.SDSS), makeCloud(100));
-    await renderer.upload(idOf(Source.Glade), makeCloud(25));
-
-    renderer.unload(idOf(Source.TwoMRS));
-
-    const entries = Array.from(renderer.loadedSources());
-    expect(entries.map((e) => e.source)).toEqual([Source.SDSS, Source.Glade]);
-    expect(entries[0]!.count).toBe(100);
-    expect(entries[1]!.count).toBe(25);
-  });
-});
-
-// ─── Regression: replace, not append ──────────────────────────────────────────
-//
-// `engine.setTier` reuses the same `upload(source, cloud)` path that the
-// initial load uses to swap a source's data when the user picks a different
-// data tier.  The contract is that the *prior* GPU buffer for that source
-// is destroyed before the new one is uploaded — anything else would either
-// leak VRAM or, worse, leave the union of (oldCount + newCount) galaxies
-// "live" on the GPU and visually doubled-up on screen.  This test pins
-// that behaviour so a future refactor can't silently regress it.
-describe('PointRenderer.upload — regression: replace, not append', () => {
-  it('destroys the prior buffer for a source on second upload', async () => {
-    // Two clouds with different counts: an "append" bug would leave the
-    // sum (1500) in the bookkeeping; a correct "replace" leaves only 500.
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    const cloudA = makeCloud(1000);
-    const cloudB = makeCloud(500);
-
-    await renderer.upload(idOf(Source.SDSS), cloudA);
-    const firstEntry = Array.from(renderer.loadedSources()).find((e) => e.source === Source.SDSS);
-    expect(firstEntry).toBeDefined();
-    const firstBuffer = firstEntry!.vertexBuffer;
-
-    // Spy on the prior buffer's `destroy` so we observe the lifecycle event.
-    // `makeStubDevice` mints a fresh GPUBuffer per `createBuffer` call, so
-    // each upload's buffer has its own `destroy` we can spy on independently.
-    const destroySpy = vi.spyOn(firstBuffer, 'destroy');
-
-    await renderer.upload(idOf(Source.SDSS), cloudB);
-    expect(destroySpy).toHaveBeenCalledTimes(1);
-
-    // Bookkeeping reflects the second upload's count, not the sum.
-    const secondEntry = Array.from(renderer.loadedSources()).find((e) => e.source === Source.SDSS);
-    expect(secondEntry?.count).toBe(500);
-
-    // And the buffer reference itself has changed — replaced, not patched.
-    expect(secondEntry?.vertexBuffer).not.toBe(firstBuffer);
-  });
-});
-
-// ─── Regression: empty-cloud upload (small-tier exclusion path) ──────────────
-//
-// `engine.setTier('small')` excludes SDSS (TIER_TARGETS.small[SDSS] === 0)
-// and `cloudLoader.reloadSource` fires an empty-cloud (count: 0) callback so
-// the renderer can clear the source's GPU buffer.  The naive path would call
-// `device.createBuffer({ size: 0, ... })` which the WebGPU spec forbids
-// (OperationError on `size === 0`); the prior buffer would already be
-// destroyed by then, leaving the entry in the galaxyCatalogs Map with a destroyed
-// buffer reference and the next frame's draw call would fault.
-//
-// Contract: a count=0 upload destroys the prior buffer, REMOVES the entry
-// from `loadedSources()` entirely, and never calls `createBuffer`.  The
-// draw loop's existing `if (!entry) continue;` then naturally skips the
-// excluded source.
-describe('PointRenderer.upload — regression: empty-cloud unload', () => {
-  it('destroys the prior buffer and removes the entry on a count=0 upload', async () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(1000));
-
-    const firstEntry = Array.from(renderer.loadedSources()).find((e) => e.source === Source.SDSS);
-    expect(firstEntry).toBeDefined();
-    const destroySpy = vi.spyOn(firstEntry!.vertexBuffer, 'destroy');
-
-    // Empty cloud — same shape `cloudLoader.reloadSource` builds when
-    // `TIER_TARGETS[tier][source] === 0`.
-    await renderer.upload(idOf(Source.SDSS), makeCloud(0));
-
-    // Prior buffer destroyed (VRAM freed).
-    expect(destroySpy).toHaveBeenCalledTimes(1);
-
-    // Entry is GONE from the bookkeeping — not lingering with a broken
-    // buffer reference, not lingering with count=0.  Either of those would
-    // produce a different failure mode on the next frame.
-    const lookup = Array.from(renderer.loadedSources()).find((e) => e.source === Source.SDSS);
-    expect(lookup).toBeUndefined();
-    expect(renderer.totalCount()).toBe(0);
-  });
-
-  it('survives upload(0) when no prior cloud exists', async () => {
-    // Pathological-but-legal: the engine could in principle call setTier
-    // before any cloud has loaded.  Should be a no-op, not a crash.
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await expect(renderer.upload(idOf(Source.SDSS), makeCloud(0))).resolves.toBeUndefined();
-    expect(renderer.totalCount()).toBe(0);
-  });
-
-  it('allows re-uploading a real cloud after an empty-cloud unload', async () => {
-    // small → medium swap: SDSS goes from count=0 (excluded) back to count>0
-    // (the medium tier file).  The empty-cloud path must leave the renderer
-    // in a state where a subsequent real upload works normally.
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(1000));
-    await renderer.upload(idOf(Source.SDSS), makeCloud(0));
-    await renderer.upload(idOf(Source.SDSS), makeCloud(750));
-
-    const entries = Array.from(renderer.loadedSources());
-    expect(entries.length).toBe(1);
-    expect(entries[0]!.source).toBe(Source.SDSS);
-    expect(entries[0]!.count).toBe(750);
-  });
-});
-
-// ─── Regression: parallel-upload rebake race ─────────────────────────────────
-//
-// Tier swap fires two `upload()` calls in parallel — typically SDSS and GLADE
-// reloading their new-tier `.bin`s simultaneously.  Whichever finishes its
-// worker bake first runs `recomputeInstanceIdOffsets()` and then calls
-// `rebakeStaleSources()`, which re-bakes the OTHER source via
-// `await this.upload(other, entry.cloud)`.  The bug: `entry.cloud` is the
-// *prior* tier's cloud (the in-flight new upload hasn't replaced it yet).
-// The slow rebake of the prior cloud finishes after the fresh in-flight
-// upload, overwriting the new buffer with old data.
-//
-// Manifested as: medium → large → medium leaves GLADE drawing the LARGE
-// cloud because SDSS's medium-upload's rebake stomped the GLADE-medium
-// buffer that had just landed.
-//
-// Fix: track in-flight uploads per source and skip them in
-// `rebakeStaleSources` — the in-flight upload's own post-bake rebake will
-// catch any residual staleness with the correct (current) cloud reference.
-describe('PointRenderer.upload — regression: parallel-upload rebake race', () => {
-  it('does not overwrite a concurrent upload during rebake', async () => {
-    // Per-source delays: SDSS bakes fast (50 ms), GLADE bakes slow (200 ms).
-    // SDSS's post-bake rebake fires while GLADE's worker is still running.
-    // Without the fix, SDSS's rebake re-bakes GLADE using the OLD (1.9M)
-    // cloud reference and stomps the in-flight GLADE-medium upload.
-    const delaysMs = new Map<SourceType, number>([
-      [Source.SDSS, 50],
-      [Source.Glade, 200],
-    ]);
-    const delayedRunner: BuildRunner = async (input) => {
-      const ms = delaysMs.get(input.source) ?? 0;
-      if (ms > 0) await new Promise((r) => setTimeout(r, ms));
-      return buildPointInterleavedBuffer(input);
-    };
-
-    // The delayed runner is scoped to this renderer, so no sibling test can
-    // pick it up — the whole point of injecting it at construction.
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: delayedRunner,
-    });
-
-    // Seed with the "prior tier" layout so the rebake has stale offsets to act on.
-    await renderer.upload(idOf(Source.SDSS), makeCloud(498_227));
-    await renderer.upload(idOf(Source.Glade), makeCloud(1_995_421));
-
-    // Tier swap: kick off both in parallel, the way `engine.setTier` does.
-    const sdssPromise = renderer.upload(idOf(Source.SDSS), makeCloud(156_000));
-    const gladePromise = renderer.upload(idOf(Source.Glade), makeCloud(400_000));
-
-    await Promise.all([sdssPromise, gladePromise]);
-
-    const entries = Array.from(renderer.loadedSources());
-    const sdss = entries.find((e) => e.source === Source.SDSS);
-    const glade = entries.find((e) => e.source === Source.Glade);
-
-    expect(sdss?.count).toBe(156_000);
-    // The bug surfaced as `glade.count === 1_995_421` here — the rebake
-    // resurrected the old large cloud.  The fix keeps GLADE on the new
-    // medium cloud the user actually requested.
-    expect(glade?.count).toBe(400_000);
-  });
-});
-
-// ─── Bias-mode bake coverage lives elsewhere ─────────────────────────────────
-//
-// The bias-bake state machine lives in `biasCorrectionSubsystem.ts`, not
-// PointRenderer. Its scenarios — fast toggle, cache hit on re-toggle,
-// no-bake for identity modes, mid-bake source upload — are covered in
-// `tests/services/engine/subsystems/biasCorrectionSubsystem.test.ts`.
-
-// ─── Splice surface ──────────────────────────────────────────────────────────
-//
-// Three public methods carry the layout-aware splice contract that
-// biasCorrectionSubsystem calls into. The tests below assert their
-// byte-write semantics.
-
-/**
- * Build a stub device whose `queue.writeBuffer` calls are captured into the
- * supplied array.  Otherwise identical to `makeStubDevice()` — same
- * createShaderModule / createRenderPipeline / createBuffer surface.
- */
-function makeCapturingDevice(
-  writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[],
-): GPUDevice {
-  const device = makeStubDevice();
-  (
-    device.queue as unknown as {
-      writeBuffer: (b: GPUBuffer, o: number, d: ArrayBufferView) => void;
-    }
-  ).writeBuffer = (buffer, offset, data) => {
-    writeCalls.push({ buffer, offset, data });
-  };
-  return device;
-}
-
-describe('PointRenderer.spliceSchechterRatios', () => {
-  it('writes ratios[i] into slot 10 of row i of the interleaved mirror', async () => {
-    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
-    const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer({
-      device,
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(3));
-
-    const ratios = new Float32Array([0.25, 0.5, 0.75]);
-    renderer.spliceSchechterRatios(Source.SDSS, ratios);
-
-    // The most-recent writeBuffer call carries the spliced mirror.
-    const last = writeCalls[writeCalls.length - 1]!;
-    const view = last.data as Float32Array;
-    const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    // SLOTS_PER_POINT = 13; slot 10 = SCHECHTER_RATIO_BYTE_OFFSET / 4.
-    expect(f32[0 * 13 + 10]).toBeCloseTo(0.25);
-    expect(f32[1 * 13 + 10]).toBeCloseTo(0.5);
-    expect(f32[2 * 13 + 10]).toBeCloseTo(0.75);
-  });
-
-  it('throws when ratios.length !== source count', async () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(5));
-    expect(() => renderer.spliceSchechterRatios(Source.SDSS, new Float32Array(4))).toThrow(
-      /length/i,
-    );
-  });
-
-  it('is a no-op when the source is not loaded', () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    // Should not throw — subsystem may call this for a stale source mid-bake.
-    expect(() => renderer.spliceSchechterRatios(Source.Glade, new Float32Array(0))).not.toThrow();
-  });
-});
-
-describe('PointRenderer.spliceAngularWeights', () => {
-  it('writes weights[i] into slot 11 of row i', async () => {
-    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
-    const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer({
-      device,
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(2));
-
-    const weights = new Float32Array([0.1, 0.9]);
-    renderer.spliceAngularWeights(Source.SDSS, weights);
-
-    const last = writeCalls[writeCalls.length - 1]!;
-    const view = last.data as Float32Array;
-    const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    // slot 11 = ANGULAR_WEIGHT_BYTE_OFFSET / 4.
-    expect(f32[0 * 13 + 11]).toBeCloseTo(0.1);
-    expect(f32[1 * 13 + 11]).toBeCloseTo(0.9);
-  });
-
-  it('throws when weights.length !== source count', async () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(5));
-    expect(() => renderer.spliceAngularWeights(Source.SDSS, new Float32Array(6))).toThrow(
-      /length/i,
-    );
-  });
-});
-
-describe('PointRenderer.clearBiasOverlays', () => {
-  it('zeroes slots 10 and 11 for the named source', async () => {
-    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
-    const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer({
-      device,
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(2));
-
-    // Populate slots 10/11 first so we can assert clear actually clears.
-    renderer.spliceSchechterRatios(Source.SDSS, new Float32Array([0.5, 0.6]));
-    renderer.spliceAngularWeights(Source.SDSS, new Float32Array([0.7, 0.8]));
-
-    writeCalls.length = 0; // reset capture
-    renderer.clearBiasOverlays(Source.SDSS);
-
-    const last = writeCalls[writeCalls.length - 1]!;
-    const view = last.data as Float32Array;
-    const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    expect(f32[0 * 13 + 10]).toBe(0);
-    expect(f32[0 * 13 + 11]).toBe(0);
-    expect(f32[1 * 13 + 10]).toBe(0);
-    expect(f32[1 * 13 + 11]).toBe(0);
-  });
-
-  it('zeroes for every loaded source when called with no argument', async () => {
-    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
-    const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer({
-      device,
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(1));
-    await renderer.upload(idOf(Source.Glade), makeCloud(1));
-
-    const before = writeCalls.length;
-    renderer.clearBiasOverlays();
-    // One writeBuffer per loaded source.
-    expect(writeCalls.length - before).toBe(2);
-  });
-
-  it('is a no-op when no sources are loaded', () => {
-    const renderer = createPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    expect(() => renderer.clearBiasOverlays()).not.toThrow();
-  });
-});
-
 // ─── PointRenderer.destroy() ─────────────────────────────────────────────────
 //
-// PointRenderer owns the app's largest GPU allocations (per-source vertex
-// buffers ~14 MB each plus per-source fade + source uniform buffers plus
-// its own per-frame uniform buffer).  WebGPU buffers don't release via JS GC alone —
-// `GPUBuffer.destroy()` is mandatory.  These tests assert that
-// `PointRenderer.destroy()` actually fires destroy on every owned buffer
-// and clears the per-source map, so the engine.ts teardown chain plateaus
-// browser GPU memory across HMR / StrictMode remount cycles instead of
-// climbing.
+// PointRenderer owns the app's largest GPU allocations (via the store: the
+// per-source vertex buffers ~14 MB each plus per-source fade + source uniform
+// buffers; and directly: its own per-frame uniform buffer).  WebGPU buffers
+// don't release via JS GC alone — `GPUBuffer.destroy()` is mandatory.  These
+// tests assert that `PointRenderer.destroy()` fires destroy on every owned
+// buffer across BOTH halves of the composition and clears the store's map, so
+// the engine.ts teardown chain plateaus browser GPU memory across HMR /
+// StrictMode remount cycles instead of climbing.
 //
 // We extend the stub device with a *tracking* buffer factory: every
 // `createBuffer` call returns a fresh stub whose `destroy()` increments a
-// shared counter we can assert against.  The renderer creates three buffers
-// per upload (vertex buffer, FadeUniforms 16-byte uniform, SourceUniforms
-// 16-byte uniform — unified-fade architecture) and one buffer up-front for
-// its own `uniformBuffer_internal`.  We can therefore predict the exact
-// destroy fan-out for any given upload sequence.
+// counter we can assert against.  Because the renderer hands its own device to
+// the store, the tracking factory observes the store's allocations too — three
+// buffers per upload (vertex buffer, FadeUniforms 16-byte uniform,
+// SourceUniforms 16-byte uniform) plus the renderer's own uniform buffer
+// up-front.  We can therefore predict the exact destroy fan-out for any given
+// upload sequence.
 
 /**
  * Build a stub device whose `createBuffer` returns *trackable* stub
