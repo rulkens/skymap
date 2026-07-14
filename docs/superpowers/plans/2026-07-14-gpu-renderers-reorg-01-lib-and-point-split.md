@@ -314,14 +314,15 @@ Sequenced B1 → B2 → B3; each lands green. `pointRenderer.ts` starts at 840 l
   `POINT_VERTEX_ATTRIBUTES` has 10 entries with the exact `shaderLocation`/`offset`/
   `format` triples that must stay locked with `pickRenderer` + the shader).
 
-- [ ] Create `pointVertexLayout.ts`; move the constants + `POINT_VERTEX_ATTRIBUTES` +
+- [x] Create `pointVertexLayout.ts`; move the constants + `POINT_VERTEX_ATTRIBUTES` +
       the re-export; export `SLOTS_PER_POINT`.
-- [ ] `pointRenderer.ts` imports the layout consts it still uses; delete the moved
-      exports + the `export { UNIFORM_BYTES }` line.
-- [ ] Re-point `pickRenderer.ts:38` + the four test files.
-- [ ] Move the layout describe block to `pointVertexLayout.test.ts`.
-- [ ] `npm run typecheck` + `npm test` green.
-- [ ] Commit: `refactor(pointRenderer): extract pointVertexLayout constants`
+- [x] `pointRenderer.ts` imports the layout consts it still uses; delete the moved
+      exports + the `export { UNIFORM_BYTES }` line. (Also imports `SLOTS_PER_POINT` —
+      its splice methods use it; required fallout of the move.)
+- [x] Re-point `pickRenderer.ts:38` + the four test files.
+- [x] Move the layout describe block to `pointVertexLayout.test.ts`.
+- [x] `npm run typecheck` + `npm test` green (654 files / 3923 tests).
+- [x] Commit: `3b052b7c` (message says `refactor(gpu): …` — same substance).
 
 ### Task B2 — named-bag `createPointRenderer` + kill `setBuildBufferRunner`
 
