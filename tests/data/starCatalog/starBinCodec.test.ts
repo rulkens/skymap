@@ -53,4 +53,19 @@ describe('starBinCodec', () => {
     expect(packed.length).toBeLessThan(plain.length);
     expect(packed).not.toEqual(plain);
   });
+
+  it('rejects on non-gzip bytes without an unhandled rejection', async () => {
+    // Deterministic garbage that is not a valid gzip stream (gzip payloads
+    // start with the magic bytes 0x1f 0x8b; this pattern never does). Stands
+    // in for the realistic failure mode: a corrupted or truncated fetch of a
+    // network-hosted .bin. `pumpThrough` fires its write without awaiting it,
+    // so this assertion resolving at all — rather than crashing the test
+    // process under Node's default unhandled-rejection=throw — is itself the
+    // evidence that the discarded write-chain promise is handled.
+    const garbage = new Uint8Array(64);
+    for (let i = 0; i < garbage.length; i++) {
+      garbage[i] = (i * 37 + 11) & 0xff;
+    }
+    await expect(decompressStarBin(garbage)).rejects.toThrow();
+  });
 });

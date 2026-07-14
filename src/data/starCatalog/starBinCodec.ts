@@ -67,7 +67,16 @@ export const STAR_BIN_CODEC: 'gzip' | 'zstd' = 'gzip';
  * The write is fired without awaiting so the readable side can be drained
  * concurrently: a `CompressionStream` may buffer its whole output until the
  * writable end closes, and awaiting `write()` before reading could deadlock a
- * large single chunk against an unread readable buffer.
+ * large single chunk against an unread readable buffer. The discarded
+ * write-chain promise still needs a rejection handler, though: if the
+ * transform errors mid-flight (e.g. `decompressStarBin` fed truncated or
+ * non-gzip bytes), both `write()` and the chained `close()` reject, and the
+ * read loop below rejects with that same stream error — which is the
+ * function's one canonical error surface, already propagated to the caller
+ * via the returned promise. An unhandled rejection on the write side would
+ * just be a second, redundant signal for the identical failure, and Node
+ * terminates a process on an unhandled rejection by default — so it is
+ * caught and swallowed here rather than left to surface twice.
  */
 async function pumpThrough(
   bytes: Uint8Array,
@@ -78,7 +87,13 @@ async function pumpThrough(
   // non-shared `ArrayBuffer`-backed view; a plain `Uint8Array` is `ArrayBufferLike`
   // (potentially `SharedArrayBuffer`-backed). Our buffers never are, so the cast
   // just bridges that lib-level over-strictness, not a real runtime difference.
-  void writer.write(bytes as BufferSource).then(() => writer.close());
+  void writer
+    .write(bytes as BufferSource)
+    .then(() => writer.close())
+    .catch(() => {
+      /* swallowed: the read loop below rejects with the same stream error
+       * and is the canonical surface for it. */
+    });
 
   const reader = transform.readable.getReader();
   const chunks: Uint8Array[] = [];
