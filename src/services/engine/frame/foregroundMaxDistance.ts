@@ -33,8 +33,8 @@
  *     must not cut the points while the ~10 pc neighbourhood is still being
  *     framed (camera within a few hundred parsecs), so a tight bound over the
  *     seed extent would pop the backdrop mid-shot.
- *   - It stays a decade ABOVE the caption gate
- *     (`SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`, 1 kpc), preserving the intended
+ *   - It stays a decade ABOVE the descent-onset gate (`DESCENT_ONSET_MPC`,
+ *     1 kpc — the solar-system caption entrance), preserving the intended
  *     order: the bodies/backdrop appear first on descent, the captions later.
  *   - It stays two decades BELOW 1 Mpc, so at galaxy scale the foreground
  *     passes are provably idle — the property the constant's test pins.

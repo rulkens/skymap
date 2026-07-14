@@ -626,6 +626,37 @@ describe('pointSpritesLayer.draw', () => {
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
   });
 
+  it('multiplies the deep-zoom survey fade into fadeOpacityOf', () => {
+    // The whole point cloud recedes on descent into the solar system: the
+    // per-source registry opacity (stubbed to 1) is multiplied by the
+    // surveyDeepZoom band, keyed on the camera's distance from the
+    // heliocentric origin. The default fixture camera sits 5 Mpc out — far
+    // outside the band — so the callback must return the registry value
+    // unchanged; a camera inside the band's goneAt edge must zero it.
+    const state = {
+      ...STATE_STUB,
+      selection: { select: null, hover: null, focus: null },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+    } as unknown as EngineState;
+
+    const farCtx = makeCtx();
+    pointSpritesLayer.draw(PASS_STUB, slabViewOf(farCtx, COSMO), farCtx, state);
+    const farSettings = (farCtx.renderer.draw as ReturnType<typeof vi.fn>).mock
+      .calls[0]![3] as Record<string, unknown>;
+    const farFadeOf = farSettings.fadeOpacityOf as (source: number) => number;
+    expect(farFadeOf(Source.SDSS)).toBe(1);
+
+    // Inside SCALE_FADE_BANDS.surveyDeepZoom.goneAt (0.002 Mpc from origin).
+    const deepCtx = makeCtx({
+      drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
+    });
+    pointSpritesLayer.draw(PASS_STUB, slabViewOf(deepCtx, COSMO), deepCtx, state);
+    const deepSettings = (deepCtx.renderer.draw as ReturnType<typeof vi.fn>).mock
+      .calls[0]![3] as Record<string, unknown>;
+    const deepFadeOf = deepSettings.fadeOpacityOf as (source: number) => number;
+    expect(deepFadeOf(Source.SDSS)).toBe(0);
+  });
+
   it('threads view.vp / view.viewportPx / view.camPos to renderer.draw', () => {
     // The SlabView-threading check for the point-sprites layer specifically:
     // it must forward the resolved SlabView, not ctx.vp/ctx.canvasSize.

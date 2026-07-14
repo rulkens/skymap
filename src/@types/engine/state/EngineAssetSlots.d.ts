@@ -130,7 +130,7 @@ export type EngineAssetSlots = {
    *
    * Descent-gated (unlike the settings-toggled `flow` / `cf4Density`): the slot
    * stays idle until the camera's orbit distance-to-focus drops below
-   * `EARTH_TEXTURE_MAX_DISTANCE_MPC`, at which point the per-frame
+   * `DESCENT_ONSET_MPC` (`presentation/scaleFadeBands.ts`), at which point the per-frame
    * `reevaluateDemand` fires `earthTextureFetcher` and the commit re-skins the
    * already-visible placeholder sphere via `earthRenderer.setTexture`. The ~MB
    * JPG fetch + decode is therefore paid on the way down, not at boot.

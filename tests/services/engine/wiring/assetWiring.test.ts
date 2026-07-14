@@ -16,7 +16,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
-import { EARTH_TEXTURE_MAX_DISTANCE_MPC } from '../../../../src/services/loading/slots/earthTextureSlot';
+import { DESCENT_ONSET_MPC } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { Source } from '../../../../src/data/sources';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
@@ -133,7 +133,9 @@ describe('ASSET_WIRING demand predicates', () => {
   it("galaxy catalog rows demand the galaxy catalog's enabled settings bit", () => {
     const sdss = rowFor(Source.SDSS);
     expect(
-      sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } })),
+      sdss.demand(
+        makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } }),
+      ),
     ).toBe(true);
     // Absent items row (or disabled bit) ⇒ not demanded.
     expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: {} } } }))).toBe(false);
@@ -235,12 +237,8 @@ describe('ASSET_WIRING demand predicates', () => {
     // Descent-gated: demanded once the camera drops below the threshold, not
     // at boot (far away / no camera field ⇒ false).
     const earth = rowFor('earthTexture');
-    expect(earth.demand(makeCtx({ cameraDistanceMpc: EARTH_TEXTURE_MAX_DISTANCE_MPC / 2 }))).toBe(
-      true,
-    );
-    expect(earth.demand(makeCtx({ cameraDistanceMpc: EARTH_TEXTURE_MAX_DISTANCE_MPC * 10 }))).toBe(
-      false,
-    );
+    expect(earth.demand(makeCtx({ cameraDistanceMpc: DESCENT_ONSET_MPC / 2 }))).toBe(true);
+    expect(earth.demand(makeCtx({ cameraDistanceMpc: DESCENT_ONSET_MPC * 10 }))).toBe(false);
     expect(earth.demand(makeCtx({}))).toBe(false);
   });
 

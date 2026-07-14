@@ -58,6 +58,8 @@ import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../../../data/galaxyLodBands';
+import { fadeBand } from '../../../../utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 
 export const pointSpritesLayer: ContentLayer = {
   name: 'point-sprites',
@@ -89,6 +91,15 @@ export const pointSpritesLayer: ContentLayer = {
     const nowMs = ctx.nowMs;
     const fades = state.subsystems.fades;
 
+    // Deep-zoom survey fade: the whole point cloud recedes as the camera
+    // descends toward the solar system, yielding once the local starfield
+    // fills the near field. Keyed on distance from the heliocentric render
+    // origin (NOT cam.distance, the orbit-to-focus radius). Spatial, so it is
+    // the same for every source this frame — compute it ONCE here, not
+    // per-source inside the closure.
+    const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
+    const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
+
     renderer.draw(pass, view.vp, view.viewportPx, {
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
@@ -117,8 +128,12 @@ export const pointSpritesLayer: ContentLayer = {
       // registry's fade-id discriminator). The registry returns 1.0 for
       // unregistered handles — a safe fallback so a source that hasn't
       // registered yet renders at full opacity rather than disappearing.
+      // The frame-wide deep-zoom survey fade (hoisted above) multiplies in
+      // on top — both factors are in [0, 1], and the pass is additive, so
+      // a 0 product means invisible without touching the draw/pick masks.
       fadeOpacityOf: (source) =>
-        fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
+        fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs) *
+        surveyFade,
     });
   },
 
