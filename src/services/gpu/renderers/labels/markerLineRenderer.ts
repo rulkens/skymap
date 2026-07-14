@@ -63,17 +63,17 @@
  * accumulate rather than replace, which is wrong for an opaque indicator line.
  */
 
-import type { GpuContext } from '../../../@types/rendering/GpuContext';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
-import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import vsCode from '../shaders/markerLines/vertex.wesl?static';
-import fsCode from '../shaders/markerLines/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../lib/cameraUniforms';
-import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../lib/unitQuad';
-import { PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
+import type { GpuContext } from '../../../../@types/rendering/GpuContext';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { MarkerLine } from '../../../../@types/rendering/MarkerLine';
+import type { MarkerLineRenderer } from '../../../../@types/rendering/MarkerLineRenderer';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import vsCode from '../../shaders/markerLines/vertex.wesl?static';
+import fsCode from '../../shaders/markerLines/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
+import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
+import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 
 // ─── buffer constants ──────────────────────────────────────────────────────
 

@@ -83,7 +83,7 @@ import {
   LABEL_MIN_PX_DEFAULT,
   LABEL_MAX_PX_DEFAULT,
   LABEL_WORLD_EM_MPC_DEFAULT,
-} from '../../gpu/renderers/labelRenderer';
+} from '../../gpu/renderers/labels/labelRenderer';
 
 /**
  * Breathing margin, in screen pixels, added around every label's measured

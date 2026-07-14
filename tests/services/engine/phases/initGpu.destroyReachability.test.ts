@@ -136,15 +136,15 @@ vi.mock('../../../../src/services/gpu/galaxy/milkyWayCloud', () => ({
   createMilkyWayCloud: vi.fn(() => makeStub('milkyWayCloud')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/milkyWayCloudRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer', () => ({
   createMilkyWayCloudRenderer: vi.fn(() => makeStub('milkyWayCloudRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/labelRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/labels/labelRenderer', () => ({
   createLabelRenderer: vi.fn(() => makeStub('labelRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/markerLineRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/labels/markerLineRenderer', () => ({
   createMarkerLineRenderer: vi.fn(() => makeStub('markerLineRenderer')),
 }));
 
@@ -160,7 +160,7 @@ vi.mock('../../../../src/services/gpu/renderers/structureMarkerRenderer', () => 
   createStructureMarkerRenderer: vi.fn(() => makeStub('structureMarkerRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/milkyWayPickRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayPickRenderer', () => ({
   createMilkyWayPickRenderer: vi.fn(() => makeStub('milkyWayPickRenderer')),
 }));
 
@@ -245,7 +245,7 @@ import { initGpu } from '../../../../src/services/engine/phases/initGpu';
 // `mock.results` ordinally (call 0 = main, call 1 = foreground) to prove two
 // DISTINCT instances land on state.gpu.* — the shared `stubs.labelRenderer`
 // key is overwritten by the second call and cannot make that distinction.
-import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labelRenderer';
+import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labels/labelRenderer';
 // The single planet-renderer factory: asserted constructed exactly once (one
 // dynamic-offset renderer draws every seeded planet).
 import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/planetRenderer';

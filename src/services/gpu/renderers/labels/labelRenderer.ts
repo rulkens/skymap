@@ -66,24 +66,24 @@
  * filter + clamp-to-edge gives smooth sub-pixel glyph rendering.
  */
 
-import type { GpuContext } from '../../../@types/rendering/GpuContext';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { Label } from '../../../@types/rendering/Label';
-import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
-import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
-import type { LoadedFontAtlases } from '../../../@types/rendering/LoadedFontAtlases';
-import { FONT_IDS } from '../../../data/fonts';
-import type { FontId } from '../../../@types/data/FontId';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import { layoutLabel } from '../labelLayout/labelLayout';
-import { measureLabel } from '../labelLayout/measureLabel';
-import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
-import vsCode from '../shaders/labels/vertex.wesl?static';
-import fsCode from '../shaders/labels/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../lib/cameraUniforms';
-import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../lib/unitQuad';
-import { PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
+import type { GpuContext } from '../../../../@types/rendering/GpuContext';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { Label } from '../../../../@types/rendering/Label';
+import type { LabelRenderer } from '../../../../@types/rendering/LabelRenderer';
+import type { FontMetrics } from '../../../../@types/rendering/FontMetrics';
+import type { LoadedFontAtlases } from '../../../../@types/rendering/LoadedFontAtlases';
+import { FONT_IDS } from '../../../../data/fonts';
+import type { FontId } from '../../../../@types/data/FontId';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import { layoutLabel } from '../../labelLayout/labelLayout';
+import { measureLabel } from '../../labelLayout/measureLabel';
+import type { LabelBBox } from '../../../../@types/rendering/LabelBBox';
+import vsCode from '../../shaders/labels/vertex.wesl?static';
+import fsCode from '../../shaders/labels/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
+import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
+import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 
 // ─── sizing defaults ───────────────────────────────────────────────────────
 

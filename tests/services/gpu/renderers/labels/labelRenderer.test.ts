@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labelRenderer';
-import { parseFontMetrics } from '../../../../src/services/gpu/labelLayout/fontMetrics';
-import type { LoadedFontAtlases } from '../../../../src/@types/rendering/LoadedFontAtlases';
+import { createLabelRenderer } from '../../../../../src/services/gpu/renderers/labels/labelRenderer';
+import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
+import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
 
 // Capturing mock device: records the render-pipeline descriptor so the
 // colour-target format handed to the factory can be asserted at construction.

@@ -39,17 +39,17 @@
  * structureMarkerRenderer's null-device pattern.
  */
 
-import type { GpuContext } from '../../../@types/rendering/GpuContext';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { MilkyWayPickRenderer } from '../../../@types/rendering/MilkyWayPickRenderer';
-import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import { createDummyFadeBindGroup } from '../lib/dummyFade';
-import { Source } from '../../../data/sources';
-import { MILKY_WAY_CENTER_WORLD } from '../../../data/milkyWay/galacticCenter';
-import { MILKY_WAY_RADIUS_MPC } from '../galaxy/milkyWayCalibration';
-import vsCode from '../shaders/milkyWayPick/vertex.wesl?static';
-import pickFsCode from '../shaders/milkyWayPick/pick.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import type { GpuContext } from '../../../../@types/rendering/GpuContext';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { MilkyWayPickRenderer } from '../../../../@types/rendering/MilkyWayPickRenderer';
+import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
+import { createDummyFadeBindGroup } from '../../lib/dummyFade';
+import { Source } from '../../../../data/sources';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
+import { MILKY_WAY_RADIUS_MPC } from '../../galaxy/milkyWayCalibration';
+import vsCode from '../../shaders/milkyWayPick/vertex.wesl?static';
+import pickFsCode from '../../shaders/milkyWayPick/pick.wesl?static';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 
 /**
  * @group(2) MilkyWayPickUniforms — vec3 centreWorld (offset 0) + u32

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createMilkyWayCloudRenderer } from '../../../../src/services/gpu/renderers/milkyWayCloudRenderer';
-import { GEN_RECORD_BYTES } from '../../../../src/services/gpu/galaxy/genRecordBytes';
+import { createMilkyWayCloudRenderer } from '../../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer';
+import { GEN_RECORD_BYTES } from '../../../../../src/services/gpu/galaxy/genRecordBytes';
 import {
   MILKY_WAY_EXPOSURE,
   MILKY_WAY_LOD_APPARENT,
@@ -8,9 +8,9 @@ import {
   MILKY_WAY_STAR_PX_MIN,
   MILKY_WAY_STAR_PX_MAX,
   MILKY_WAY_STAR_SIZE_SCALE,
-} from '../../../../src/services/gpu/galaxy/milkyWayCalibration';
-import type { MilkyWayCloudBuffers } from '../../../../src/@types/galaxy/MilkyWayCloudBuffers';
-import type { MilkyWayCloudDrawArgs } from '../../../../src/@types/rendering/MilkyWayCloudDrawArgs';
+} from '../../../../../src/services/gpu/galaxy/milkyWayCalibration';
+import type { MilkyWayCloudBuffers } from '../../../../../src/@types/galaxy/MilkyWayCloudBuffers';
+import type { MilkyWayCloudDrawArgs } from '../../../../../src/@types/rendering/MilkyWayCloudDrawArgs';
 
 /**
  * The pipeline descriptors the renderer hands to `createRenderPipeline`, keyed

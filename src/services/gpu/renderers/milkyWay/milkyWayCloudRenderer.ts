@@ -43,10 +43,10 @@
  * sprites behind nearer ones that should still sum/multiply.
  */
 
-import starsCode from '../shaders/milkyWayCloud/stars.wesl?static';
-import dustCode from '../shaders/milkyWayCloud/dust.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { GEN_RECORD_BYTES } from '../galaxy/genRecordBytes';
+import starsCode from '../../shaders/milkyWayCloud/stars.wesl?static';
+import dustCode from '../../shaders/milkyWayCloud/dust.wesl?static';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { GEN_RECORD_BYTES } from '../../galaxy/genRecordBytes';
 import {
   MILKY_WAY_EXPOSURE,
   MILKY_WAY_LOD_APPARENT,
@@ -54,12 +54,12 @@ import {
   MILKY_WAY_STAR_PX_MIN,
   MILKY_WAY_STAR_PX_MAX,
   MILKY_WAY_STAR_SIZE_SCALE,
-} from '../galaxy/milkyWayCalibration';
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { MilkyWayCloudRenderer } from '../../../@types/rendering/MilkyWayCloudRenderer';
-import type { MilkyWayCloudDrawArgs } from '../../../@types/rendering/MilkyWayCloudDrawArgs';
-import { writeCameraPrefix } from '../lib/cameraUniforms';
-import { ADDITIVE_BLEND } from '../lib/blendStates';
+} from '../../galaxy/milkyWayCalibration';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { MilkyWayCloudRenderer } from '../../../../@types/rendering/MilkyWayCloudRenderer';
+import type { MilkyWayCloudDrawArgs } from '../../../../@types/rendering/MilkyWayCloudDrawArgs';
+import { writeCameraPrefix } from '../../lib/cameraUniforms';
+import { ADDITIVE_BLEND } from '../../lib/blendStates';
 
 type Init = {
   device: GPUDevice;

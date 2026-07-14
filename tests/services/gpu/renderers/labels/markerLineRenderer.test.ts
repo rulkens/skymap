@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createMarkerLineRenderer } from '../../../../src/services/gpu/renderers/markerLineRenderer';
+import { createMarkerLineRenderer } from '../../../../../src/services/gpu/renderers/labels/markerLineRenderer';
 
 // Capturing mock device: records the render-pipeline descriptor so the
 // colour-target format handed to the factory can be asserted at construction.
