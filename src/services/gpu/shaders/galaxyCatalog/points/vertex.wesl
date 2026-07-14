@@ -25,9 +25,9 @@
 // '@group(1)' (FadeUniforms). PickRenderer binds a no-op fade buffer
 // at '@group(1)' so its pipeline layout matches the visual pipeline.
 
-import package::points::io::Uniforms;
-import package::points::io::PerVertex;
-import package::points::io::VSOut;
+import package::galaxyCatalog::points::io::Uniforms;
+import package::galaxyCatalog::points::io::PerVertex;
+import package::galaxyCatalog::points::io::VSOut;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;

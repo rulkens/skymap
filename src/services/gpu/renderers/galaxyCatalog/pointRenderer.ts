@@ -43,8 +43,8 @@ import type { Vec2 } from '../../../../@types/math/Vec2';
 
 // `?static` runs the WESL linker at build time and hands back a plain
 // WGSL string with imports resolved.
-import vsCode from '../../shaders/points/vertex.wesl?static';
-import colorFsCode from '../../shaders/points/colorFragment.wesl?static';
+import vsCode from '../../shaders/galaxyCatalog/points/vertex.wesl?static';
+import colorFsCode from '../../shaders/galaxyCatalog/points/colorFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUniformsBgl';

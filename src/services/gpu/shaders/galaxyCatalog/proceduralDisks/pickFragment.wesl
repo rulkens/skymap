@@ -30,7 +30,7 @@
 // it), but this fragment module doesn't redeclare them. Same pattern as
 // 'points/pickFragment.wesl'.
 
-import package::proceduralDisks::io::VsOut;
+import package::galaxyCatalog::proceduralDisks::io::VsOut;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 
 @fragment

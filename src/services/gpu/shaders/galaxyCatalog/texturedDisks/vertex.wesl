@@ -38,9 +38,9 @@
 // the @group/@binding declaration lives in the consuming file. Atlas
 // texture / sampler bindings are fragment-only and stay in fragment.wesl.
 
-import package::texturedDisks::io::Uniforms;
-import package::texturedDisks::io::InstanceIn;
-import package::texturedDisks::io::VsOut;
+import package::galaxyCatalog::texturedDisks::io::Uniforms;
+import package::galaxyCatalog::texturedDisks::io::InstanceIn;
+import package::galaxyCatalog::texturedDisks::io::VsOut;
 import package::lib::camera::worldToClip;
 // Shared unit-quad helpers from 'lib/billboard.wesl' — the orientation-
 // aligned disk-plane basis (PA + inclination → 'major' / 'minor_3d' in

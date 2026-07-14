@@ -17,7 +17,7 @@
 // pipeline-layout introspection then keeps binding 0's visibility
 // as VERTEX-only, matching the renderer's BGL.
 
-import package::texturedDisks::io::VsOut;
+import package::galaxyCatalog::texturedDisks::io::VsOut;
 // Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
 // rationale (three smoothstep patterns recurred across four shaders,
 // naming the shapes makes the intent visible at the call site).

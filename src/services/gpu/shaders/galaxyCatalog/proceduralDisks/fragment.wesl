@@ -28,7 +28,7 @@
 // linked WGSL output minimal — only the symbols the entry point
 // actually references end up emitted.
 
-import package::proceduralDisks::io::VsOut;
+import package::galaxyCatalog::proceduralDisks::io::VsOut;
 import package::lib::colorIndex::ramp;
 // Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
 // rationale (three smoothstep patterns recurred across four shaders,

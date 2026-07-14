@@ -27,8 +27,8 @@
 // Vertex source is textually shared with PointRenderer but compiled
 // into our own GPUShaderModule — never share modules across pipelines
 // (see the `auto` bind-group-layout trap in pointRenderer.ts).
-import vsCode from '../../shaders/points/vertex.wesl?static';
-import pickFsCode from '../../shaders/points/pickFragment.wesl?static';
+import vsCode from '../../shaders/galaxyCatalog/points/vertex.wesl?static';
+import pickFsCode from '../../shaders/galaxyCatalog/points/pickFragment.wesl?static';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../../../../@types/rendering/PickSourceDraw';
 import type { PickRenderer } from '../../../../@types/rendering/PickRenderer';

@@ -32,7 +32,7 @@
 // layout matches the visual pipeline's exactly. See pickRenderer.ts
 // for the shared-fade-buffer wiring.
 
-import package::points::io::VSOut;
+import package::galaxyCatalog::points::io::VSOut;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 
 // ─── pick fragment stage ──────────────────────────────────────────────

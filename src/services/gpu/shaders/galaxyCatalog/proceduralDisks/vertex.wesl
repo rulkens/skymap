@@ -23,9 +23,9 @@
 // builds. The fragment stage doesn't declare the binding because it
 // doesn't read 'u' — only the vertex stage consumes 'cam.viewProj'.
 
-import package::proceduralDisks::io::Uniforms;
-import package::proceduralDisks::io::InstanceIn;
-import package::proceduralDisks::io::VsOut;
+import package::galaxyCatalog::proceduralDisks::io::Uniforms;
+import package::galaxyCatalog::proceduralDisks::io::InstanceIn;
+import package::galaxyCatalog::proceduralDisks::io::VsOut;
 import package::lib::camera::worldToClip;
 // Shared unit-quad helper from 'lib/billboard.wesl' — replaces the
 // inline 'CORNERS' const that used to live in this file. The

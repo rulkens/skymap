@@ -15,7 +15,7 @@
 // stage still binds @group(0) Uniforms for its own use; the pipeline
 // layout's @group(0) entry stays VERTEX-visibility-only.
 
-import package::points::io::VSOut;
+import package::galaxyCatalog::points::io::VSOut;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::fadeUniforms::applyFade;
 

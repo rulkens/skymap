@@ -4,7 +4,7 @@
  * Sibling to texturedDiskRenderer (texture-based) and texturedQuadRenderer
  * (screen-aligned + texture-based). Activates for galaxies in the
  * apparent-size band 8..∞ px, with a crossfade against the points pass
- * across 8..14 px. The shader ('shaders/proceduralDisks/') is documented
+ * across 8..14 px. The shader ('shaders/galaxyCatalog/proceduralDisks/') is documented
  * in detail; this file is the JS-side glue.
  *
  * ## Per-instance attributes (64 bytes / 16 floats)
@@ -54,9 +54,9 @@
  * silently change the layout signature across the three sibling renderers.
  */
 
-import vsCode from '../../shaders/proceduralDisks/vertex.wesl?static';
-import fsCode from '../../shaders/proceduralDisks/fragment.wesl?static';
-import pickFsCode from '../../shaders/proceduralDisks/pickFragment.wesl?static';
+import vsCode from '../../shaders/galaxyCatalog/proceduralDisks/vertex.wesl?static';
+import fsCode from '../../shaders/galaxyCatalog/proceduralDisks/fragment.wesl?static';
+import pickFsCode from '../../shaders/galaxyCatalog/proceduralDisks/pickFragment.wesl?static';
 import type { ProceduralDiskInstance } from '../../../../@types/rendering/ProceduralDiskInstance';
 import type { ProceduralDiskRenderer } from '../../../../@types/rendering/ProceduralDiskRenderer';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
