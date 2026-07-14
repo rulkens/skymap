@@ -21,7 +21,7 @@ import {
   partitionStarsByResolution,
   STAR_RESOLVE_PX,
 } from '../../../../src/services/engine/frame/partitionStarsByResolution';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 

@@ -52,6 +52,13 @@ where the checks are independent.
 - If the plan's own DoD section is missing, flag this as a finding:
   the plan should have been authored with one. Don't fail the audit
   for it (older plans pre-date the convention) — just note it.
+- Backstop: locate the plan's spec (linked in its header, or the
+  same-date/slug file in `docs/superpowers/specs/`) and check it has a
+  "Ground preparation" section (filled, or "none needed — because X" —
+  produced by the `refactor-ground` skill). The load-bearing gate for
+  this is at plan-writing time (`plan-style.md`); here it's
+  defense-in-depth. Missing section = a finding, not a failure; specs
+  pre-dating 2026-07-14 are exempt.
 
 ### 3. Modified-file inventory
 
@@ -139,7 +146,7 @@ OVERALL: <READY / NOT READY: <reason>>
 ```
 
 If `READY`, **execute the housekeeping moves immediately** as part of
-the same response — no separate confirmation step. The audit *is* the
+the same response — no separate confirmation step. The audit _is_ the
 gate; reaching READY is the user's signal to move the files. State
 what's being moved in one line, then do it:
 
@@ -158,7 +165,7 @@ what's being moved in one line, then do it:
     the shipped plan/spec supersedes it.
   - **Never leave a `~~struck-through~~` "done" line** — delete it. The
     completion record is the git log + `*/completed/`, not the backlog.
-  - If the plan referenced a *separate* deferred item that's still open,
+  - If the plan referenced a _separate_ deferred item that's still open,
     leave that one — it stays in the backlog until independently picked up.
 
 Then **commit and push** the moves so the "this plan shipped" record
@@ -179,7 +186,7 @@ lands on the feature branch / PR without a manual follow-up:
 
 Don't update CLAUDE.md, and don't commit anything beyond the completion
 moves — the implementation should already be committed; this commit is
-*only* the plan/spec relocation + checkbox ticks + BACKLOG/`docs/backlog`
+_only_ the plan/spec relocation + checkbox ticks + BACKLOG/`docs/backlog`
 sweep.
 
 If the user explicitly says "audit only" / "don't move" / similar

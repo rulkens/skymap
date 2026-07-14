@@ -26,7 +26,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { earthLayer } from '../../../../../src/services/engine/frame/passes/earthLayer';
 import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
-import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneBodies';
+import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
