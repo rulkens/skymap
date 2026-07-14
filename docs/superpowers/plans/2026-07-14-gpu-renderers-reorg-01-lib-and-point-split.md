@@ -115,13 +115,16 @@ Do NOT add blend/const-restatement tests.
 
 **Verification & commit:**
 
-- [ ] Create `lib/cameraUniforms.ts` with the two exports.
-- [ ] Re-point the six pure-prefix sites; delete each local 80-byte const.
-- [ ] Re-point the four larger-struct prefix writes; keep tails + explicit pad lines.
-- [ ] Add the one `cameraUniforms.test.ts` test.
-- [ ] Confirm `starRenderer.ts:154–160` and `packPointUniforms.ts` are untouched.
-- [ ] Main thread: `npm run typecheck` + `npm test` green.
-- [ ] Commit: `refactor(renderers): extract lib/cameraUniforms writeCameraPrefix`
+- [x] Create `lib/cameraUniforms.ts` with the two exports.
+- [x] Re-point the six pure-prefix sites; delete each local 80-byte const.
+- [x] Re-point the four larger-struct prefix writes; keep tails + explicit pad lines.
+      (Execution note: an 11th site — `proceduralDiskRenderer` pick path — was
+      found and converted in the same style; `texturedDiskRenderer` verified
+      to have none.)
+- [x] Add the one `cameraUniforms.test.ts` test.
+- [x] Confirm `starRenderer.ts:154–160` and `packPointUniforms.ts` are untouched.
+- [x] Main thread: `npm run typecheck` + `npm test` green. (653 files / 3923 tests)
+- [x] Commit: `refactor(renderers): extract lib/cameraUniforms writeCameraPrefix` (`1f268d28`)
 
 ### Task A2 — `lib/unitQuad.ts`
 
@@ -143,18 +146,21 @@ byte-identical at three sites (verified: `debugLineRenderer` `CORNER_DATA:49` +
 layout `:105–108`; `labelRenderer` `CORNER_DATA:143` + layout `:277–280`;
 `markerLineRenderer` `CORNER_DATA:108` + layout `:191–195`).
 
-- [ ] Create `lib/unitQuad.ts`.
-- [ ] Replace each `const CORNER_DATA = new Float32Array([…])` with the imported
+- [x] Create `lib/unitQuad.ts`.
+- [x] Replace each `const CORNER_DATA = new Float32Array([…])` with the imported
       `UNIT_QUAD_STRIP_CORNERS` (keep each site's local `CORNER_BYTES =
 UNIT_QUAD_STRIP_CORNERS.byteLength` if it reads it).
-- [ ] Replace each inline corner-buffer `{ arrayStride: 8, … }` layout literal with
+      (Execution note: a fourth byte-identical site — `filamentRenderer`'s
+      `quadCorners` + layout — was found and folded, user-confirmed; its
+      triangle-list topology/index buffer untouched.)
+- [x] Replace each inline corner-buffer `{ arrayStride: 8, … }` layout literal with
       `UNIT_QUAD_VERTEX_LAYOUT`.
-- [ ] **Exclusion:** `milkyWayCloudRenderer`'s `CORNER_QUAD` (`:84`) is a 6-vertex
+- [x] **Exclusion:** `milkyWayCloudRenderer`'s `CORNER_QUAD` (`:84`) is a 6-vertex
       triangle-**list** in NDC `[-1,1]` — different topology + coordinate space. Leave it.
-- [ ] No test (behaviour-neutral; the three renderers' existing tests cover
+- [x] No test (behaviour-neutral; the three renderers' existing tests cover
       construction, and this is a constant — no runtime test earns its place).
-- [ ] `npm run typecheck` + `npm test` green.
-- [ ] Commit: `refactor(renderers): extract lib/unitQuad corners + layout`
+- [x] `npm run typecheck` + `npm test` green. (3923 tests)
+- [x] Commit: `refactor(renderers): extract lib/unitQuad corners + layout` (`4c5a5828`)
 
 ### Task A3 — `lib/blendStates.ts`
 
