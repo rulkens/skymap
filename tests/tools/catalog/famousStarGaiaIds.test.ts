@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { FAMOUS_STAR_GAIA_IDS } from '../../../tools/catalog/famousStarGaiaIds';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneBodies';
+import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 
 describe('FAMOUS_STAR_GAIA_IDS', () => {
   // Structural invariant, not a constant restatement: the dedup key must cover

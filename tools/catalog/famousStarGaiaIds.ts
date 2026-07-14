@@ -4,7 +4,7 @@
  * foreground bodies.
  *
  * The scene renders a hand-authored local star map (`SCENE_STARS` in
- * `src/data/bodies/sceneBodies.ts`) as true-scale spheres/points. The Gaia
+ * `src/data/bodies/sceneStars.ts`) as true-scale spheres/points. The Gaia
  * star bin is a separate, catalogue-wide point layer. Without a dedup key the
  * two would double-render the same photons for every nearby naked-eye star —
  * a Sirius drawn once as a scene body and again as a Gaia point. This table is
