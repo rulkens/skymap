@@ -87,6 +87,11 @@ export type SelectStarsResult = {
 };
 
 const toStarInput = (row: StarInput): StarInput => ({
+  // `position` is carried through BY REFERENCE, not copied. The orchestrator
+  // (`buildStars.ts`) re-associates each surviving star's truncation tag
+  // across this dedup via a `Map` keyed on the position array's identity — a
+  // defensive copy here would silently break that join (every lookup would
+  // miss) with no signal at this call site.
   position: row.position,
   absMag: row.absMag,
   bpRp: row.bpRp,

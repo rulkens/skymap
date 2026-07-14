@@ -86,7 +86,7 @@ import {
   STAR_ABSMAG_STEP,
   STAR_ABSMAG_LEVELS,
   STAR_COLORIDX_MIN,
-  STAR_COLORIDX_MAX,
+  STAR_COLORIDX_STEP,
   STAR_COLORIDX_LEVELS,
 } from '../../src/data/starCatalog/starCatalogFormat';
 import { STAR_BIN_CODEC } from '../../src/data/starCatalog/starBinCodec';
@@ -386,13 +386,12 @@ async function buildTier(
 
 /** Count values that saturate the frozen absMag / colour LUT windows. */
 function countClamps(stars: readonly StarInput[]): StarClampCounts {
-  const colorStep = (STAR_COLORIDX_MAX - STAR_COLORIDX_MIN) / STAR_COLORIDX_LEVELS;
   let absMag = 0;
   let colorIdx = 0;
   for (const s of stars) {
     const iA = Math.floor((s.absMag - STAR_ABSMAG_MIN) / STAR_ABSMAG_STEP);
     if (iA < 0 || iA > STAR_ABSMAG_LEVELS - 1) absMag++;
-    const iC = Math.floor((s.bpRp - STAR_COLORIDX_MIN) / colorStep);
+    const iC = Math.floor((s.bpRp - STAR_COLORIDX_MIN) / STAR_COLORIDX_STEP);
     if (iC < 0 || iC > STAR_COLORIDX_LEVELS - 1) colorIdx++;
   }
   return { absMag, colorIdx };
@@ -606,6 +605,19 @@ async function runCli(): Promise<void> {
   });
 
   const { drops, clamps } = result;
+
+  // These counters are tallied once over the whole deduped population (before
+  // any tier's brightest-first truncation) — not per tier — so they are
+  // reported once here rather than repeated under each tier's line below.
+  process.stderr.write(
+    `population (${result.totalStars.toLocaleString()} stars): ` +
+      `drops noBailerJones ${drops.noBailerJones.toLocaleString()}, ` +
+      `hipNonPositivePlx ${drops.hipNonPositivePlx.toLocaleString()}, ` +
+      `famousSubtracted ${drops.famousSubtracted.toLocaleString()}, ` +
+      `hipGaiaSubtracted ${drops.hipGaiaSubtracted.toLocaleString()}; ` +
+      `clamps absMag ${clamps.absMag.toLocaleString()}, colorIdx ${clamps.colorIdx.toLocaleString()}\n`,
+  );
+
   let anyOverBudget = false;
   for (const t of result.tiers) {
     if (t.overBudget) anyOverBudget = true;
@@ -619,11 +631,6 @@ async function runCli(): Promise<void> {
         `(budget ${t.budgetBytes.toLocaleString()} B)` +
         (t.overBudget ? '  ⚠ OVER BUDGET' : '') +
         `\n` +
-        `  drops: noBailerJones ${drops.noBailerJones.toLocaleString()}, ` +
-        `hipNonPositivePlx ${drops.hipNonPositivePlx.toLocaleString()}, ` +
-        `famousSubtracted ${drops.famousSubtracted.toLocaleString()}, ` +
-        `hipGaiaSubtracted ${drops.hipGaiaSubtracted.toLocaleString()}` +
-        `  clamps: absMag ${clamps.absMag.toLocaleString()}, colorIdx ${clamps.colorIdx.toLocaleString()}\n` +
         `  wrote ${outPath}\n`,
     );
   }

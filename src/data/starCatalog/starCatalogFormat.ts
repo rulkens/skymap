@@ -120,7 +120,7 @@ export const STAR_COLORIDX_MIN = -0.6;
 export const STAR_COLORIDX_MAX = 4.4;
 
 /** Width of one BP-RP colour bin, derived from the frozen window. */
-const STAR_COLORIDX_STEP = (STAR_COLORIDX_MAX - STAR_COLORIDX_MIN) / STAR_COLORIDX_LEVELS;
+export const STAR_COLORIDX_STEP = (STAR_COLORIDX_MAX - STAR_COLORIDX_MIN) / STAR_COLORIDX_LEVELS;
 
 /**
  * Clamp `value` into the inclusive integer range `[0, maxIndex]`.
