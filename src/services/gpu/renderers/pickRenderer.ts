@@ -35,6 +35,7 @@ import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import { createDummyFadeBindGroup } from '../lib/dummyFade';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES, UNIFORM_BYTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
@@ -87,16 +88,11 @@ export function createPickRenderer(
   // The shared vertex shader's layout declares @group(1) FadeUniforms
   // even though the pick fragment never reads fade.opacity.  Zeroed
   // dummy buffer keeps the bind group valid.
-  const dummyFadeBuffer = device.createBuffer({
-    label: 'pick-fade-uniform-dummy',
-    size: 16,
-    usage: GPUBufferUsage.UNIFORM,
-  });
-  const dummyFadeBindGroup = device.createBindGroup({
-    label: 'pick-fade-bg-dummy',
-    layout: fadeBgl,
-    entries: [{ binding: 0, resource: { buffer: dummyFadeBuffer } }],
-  });
+  const { buffer: dummyFadeBuffer, bindGroup: dummyFadeBindGroup } = createDummyFadeBindGroup(
+    device,
+    fadeBgl,
+    'pick',
+  );
 
   // @group(2) bind groups cached by GPUBuffer identity — drawPoints fires
   // on every hover/click and the loaded sources are stable between

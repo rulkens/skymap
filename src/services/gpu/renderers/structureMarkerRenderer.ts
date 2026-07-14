@@ -64,6 +64,7 @@ import ringPickFsCode from '../shaders/structureMarker/ringPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../lib/cameraUniforms';
 import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
+import { createDummyFadeBindGroup } from '../lib/dummyFade';
 
 /**
  * 12 floats per instance × 4 bytes = 48 bytes/instance.
@@ -174,9 +175,10 @@ export function createStructureMarkerRenderer(
   let cameraBindGroup: GPUBindGroup | null = null;
   const sourceBindGroups = byCategory<GPUBindGroup | null>(null);
   // Scratch arrays for the per-frame fade.opacity write.  Same shape
-  // as filamentRenderer's fadeScratchF32: a single f32 sliced into the
-  // 16-byte fade uniform buffer at offset 0.
-  const fadeScratchBuffer = new ArrayBuffer(4);
+  // as filamentRenderer's fadeScratchF32: a 16-byte staging buffer that
+  // matches the fade uniform's footprint, with the opacity f32 at offset
+  // 0 and the trailing 12 bytes held at zero.
+  const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   if (device) {
@@ -334,16 +336,9 @@ export function createStructureMarkerRenderer(
     // bind a layout-compatible group there.  Allocated GPUBufferUsage.
     // UNIFORM only (no COPY_DST): we never write to it, the default-
     // zero contents are what we want.
-    pickDummyFadeBuffer = device.createBuffer({
-      label: 'structure-marker-pick-fade-dummy',
-      size: 16,
-      usage: GPUBufferUsage.UNIFORM,
-    });
-    pickDummyFadeBindGroup = device.createBindGroup({
-      label: 'structure-marker-pick-fade-bg-dummy',
-      layout: fadeBgl,
-      entries: [{ binding: 0, resource: { buffer: pickDummyFadeBuffer } }],
-    });
+    const pickDummyFade = createDummyFadeBindGroup(device, fadeBgl, 'structure-marker-pick');
+    pickDummyFadeBuffer = pickDummyFade.buffer;
+    pickDummyFadeBindGroup = pickDummyFade.bindGroup;
 
     uniformBuffer = device.createBuffer({
       label: 'structure-marker-uniforms',

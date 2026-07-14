@@ -43,6 +43,7 @@ import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { MilkyWayPickRenderer } from '../../../@types/rendering/MilkyWayPickRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
+import { createDummyFadeBindGroup } from '../lib/dummyFade';
 import { Source } from '../../../data/sources';
 import { MILKY_WAY_CENTER_WORLD } from '../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_RADIUS_MPC } from '../galaxy/milkyWayCalibration';
@@ -172,16 +173,9 @@ export function createMilkyWayPickRenderer(
     // 16-byte zeroed FadeUniforms — bound at @group(1) for layout
     // symmetry; the shader never reads it.  UNIFORM-only (no COPY_DST):
     // the default-zero contents are what we want.
-    dummyFadeBuffer = device.createBuffer({
-      label: 'milky-way-pick-fade-dummy',
-      size: 16,
-      usage: GPUBufferUsage.UNIFORM,
-    });
-    dummyFadeBindGroup = device.createBindGroup({
-      label: 'milky-way-pick-fade-bg-dummy',
-      layout: fadeBgl,
-      entries: [{ binding: 0, resource: { buffer: dummyFadeBuffer } }],
-    });
+    const dummyFade = createDummyFadeBindGroup(device, fadeBgl, 'milky-way-pick');
+    dummyFadeBuffer = dummyFade.buffer;
+    dummyFadeBindGroup = dummyFade.bindGroup;
   }
 
   function pickMilkyWay(pass: GPURenderPassEncoder): void {
