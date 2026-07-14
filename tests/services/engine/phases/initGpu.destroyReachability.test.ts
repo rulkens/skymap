@@ -222,7 +222,7 @@ vi.mock('../../../../src/services/gpu/renderers/orbitTrailRenderer', async (impo
   createOrbitTrailRenderer: vi.fn(() => makeStub('orbitTrailRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
+vi.mock('../../../../src/services/gpu/labelLayout/loadFontAtlases', () => ({
   loadFontAtlases: vi.fn(async () => ({
     metricsByFont: { cormorant: { __mockMetrics: true } },
     bitmaps: [{ __mockBitmap: true } as unknown as ImageBitmap],

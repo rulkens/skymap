@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { measureLabel } from '../../../../src/services/gpu/labels/measureLabel';
-import { parseFontMetrics } from '../../../../src/services/gpu/labels/fontMetrics';
+import { measureLabel } from '../../../../src/services/gpu/labelLayout/measureLabel';
+import { parseFontMetrics } from '../../../../src/services/gpu/labelLayout/fontMetrics';
 
 // Same two-glyph fixture as labelLayout.test.ts: A is 30×40 at xoffset 1 /
 // yoffset 2 advancing 25, B is 28×40 at xoffset 0 / yoffset 2 advancing 26,

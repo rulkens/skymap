@@ -75,8 +75,8 @@ import type { LoadedFontAtlases } from '../../../@types/rendering/LoadedFontAtla
 import { FONT_IDS } from '../../../data/fonts';
 import type { FontId } from '../../../@types/data/FontId';
 import type { Vec2 } from '../../../@types/math/Vec2';
-import { layoutLabel } from '../labels/labelLayout';
-import { measureLabel } from '../labels/measureLabel';
+import { layoutLabel } from '../labelLayout/labelLayout';
+import { measureLabel } from '../labelLayout/measureLabel';
 import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
 import vsCode from '../shaders/labels/vertex.wesl?static';
 import fsCode from '../shaders/labels/fragment.wesl?static';

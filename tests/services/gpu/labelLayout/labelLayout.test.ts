@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { layoutLabel } from '../../../../src/services/gpu/labels/labelLayout';
+import { layoutLabel } from '../../../../src/services/gpu/labelLayout/labelLayout';
 import type { GlyphQuad } from '../../../../src/@types/rendering/GlyphQuad';
-import { parseFontMetrics } from '../../../../src/services/gpu/labels/fontMetrics';
+import { parseFontMetrics } from '../../../../src/services/gpu/labelLayout/fontMetrics';
 
 const FIXTURE = {
   pages: ['atlas.png'],

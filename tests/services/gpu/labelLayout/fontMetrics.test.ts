@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { parseFontMetrics, lookupGlyph } from '../../../../src/services/gpu/labels/fontMetrics';
+import {
+  parseFontMetrics,
+  lookupGlyph,
+} from '../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { FontMetrics } from '../../../../src/@types/rendering/FontMetrics';
 
 const FIXTURE = {
@@ -8,8 +11,30 @@ const FIXTURE = {
   info: { face: 'JetBrains Mono', size: 42 },
   distanceField: { fieldType: 'msdf', distanceRange: 4 },
   chars: [
-    { id: 65, x: 0, y: 0, width: 30, height: 40, xoffset: 1, yoffset: 2, xadvance: 25, page: 0, chnl: 15 },
-    { id: 66, x: 32, y: 0, width: 28, height: 40, xoffset: 0, yoffset: 2, xadvance: 25, page: 0, chnl: 15 },
+    {
+      id: 65,
+      x: 0,
+      y: 0,
+      width: 30,
+      height: 40,
+      xoffset: 1,
+      yoffset: 2,
+      xadvance: 25,
+      page: 0,
+      chnl: 15,
+    },
+    {
+      id: 66,
+      x: 32,
+      y: 0,
+      width: 28,
+      height: 40,
+      xoffset: 0,
+      yoffset: 2,
+      xadvance: 25,
+      page: 0,
+      chnl: 15,
+    },
   ],
   kernings: [{ first: 65, second: 66, amount: -1 }],
 };
@@ -53,7 +78,7 @@ describe('parseFontMetrics', () => {
 // fetched JSON, ordered by FONT_IDS".  Stubs `fetch` and
 // `createImageBitmap` so the test runs offline.
 
-import { loadFontAtlases } from '../../../../src/services/gpu/labels/loadFontAtlases';
+import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFontAtlases';
 import { FONT_IDS } from '../../../../src/data/fonts';
 
 describe('loadFontAtlases', () => {
@@ -67,7 +92,18 @@ describe('loadFontAtlases', () => {
       info: { face: 'X', size: 42 },
       distanceField: { fieldType: 'msdf', distanceRange: 4 },
       chars: [
-        { id: 65, x: 0, y: 0, width: 30, height: 40, xoffset: 0, yoffset: 0, xadvance: 25, page: 0, chnl: 15 },
+        {
+          id: 65,
+          x: 0,
+          y: 0,
+          width: 30,
+          height: 40,
+          xoffset: 0,
+          yoffset: 0,
+          xadvance: 25,
+          page: 0,
+          chnl: 15,
+        },
       ],
     });
 

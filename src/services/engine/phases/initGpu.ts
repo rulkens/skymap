@@ -71,7 +71,7 @@ import { createOrbitTrailRenderer } from '../../gpu/renderers/orbitTrailRenderer
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
-import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
+import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,

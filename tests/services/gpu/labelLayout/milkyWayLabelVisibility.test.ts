@@ -3,7 +3,7 @@ import {
   milkyWayLabelAlpha,
   MILKY_WAY_LABEL_NEAR_MPC,
   MILKY_WAY_LABEL_FAR_MPC,
-} from '../../../../src/services/gpu/labels/milkyWayLabelVisibility';
+} from '../../../../src/services/gpu/labelLayout/milkyWayLabelVisibility';
 
 describe('milkyWayLabelAlpha', () => {
   it('is 1.0 when camera is closer than NEAR threshold', () => {

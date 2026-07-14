@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labelRenderer';
-import { parseFontMetrics } from '../../../../src/services/gpu/labels/fontMetrics';
+import { parseFontMetrics } from '../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../src/@types/rendering/LoadedFontAtlases';
 
 const FIXTURE_METRICS = parseFontMetrics({
