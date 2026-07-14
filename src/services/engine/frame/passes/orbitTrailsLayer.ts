@@ -47,7 +47,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCENE_ORBIT_CONICS } from '../../../../data/bodies/sceneOrbitConics';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
-import { MAX_ORBITS, INSTANCE_FLOATS } from '../../../gpu/renderers/orbitTrailRenderer';
+import { MAX_ORBITS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 // Apparent-size fade band, in on-screen orbit DIAMETER pixels. Below CULL_PX an

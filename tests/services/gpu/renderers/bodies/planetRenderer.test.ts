@@ -18,8 +18,8 @@ import {
   MAX_PLANETS,
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
-} from '../../../../src/services/gpu/renderers/planetRenderer';
-import type { Renderer } from '../../../../src/@types/rendering/Renderer';
+} from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
+import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 type BufferDesc = { label?: string; size: number };
 

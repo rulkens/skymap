@@ -12,8 +12,8 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { createEarthRenderer } from '../../../../src/services/gpu/renderers/earthRenderer';
-import type { Renderer } from '../../../../src/@types/rendering/Renderer';
+import { createEarthRenderer } from '../../../../../src/services/gpu/renderers/bodies/earthRenderer';
+import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {

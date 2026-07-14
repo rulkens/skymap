@@ -13,9 +13,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { createStarPointRenderer } from '../../../../src/services/gpu/renderers/starPointRenderer';
-import type { Renderer } from '../../../../src/@types/rendering/Renderer';
-import type { StarBody } from '../../../../src/@types/scene/StarBody';
+import { createStarPointRenderer } from '../../../../../src/services/gpu/renderers/bodies/starPointRenderer';
+import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
+import type { StarBody } from '../../../../../src/@types/scene/StarBody';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {

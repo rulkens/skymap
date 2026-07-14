@@ -30,13 +30,13 @@
  * @module
  */
 
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { StarRenderer } from '../../../@types/rendering/StarRenderer';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { uvSphereMesh } from '../../../utils/math/uvSphereMesh';
-import vsCode from '../shaders/star/vertex.wesl?static';
-import fsCode from '../shaders/star/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { StarRenderer } from '../../../../@types/rendering/StarRenderer';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import vsCode from '../../shaders/star/vertex.wesl?static';
+import fsCode from '../../shaders/star/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 
 /** UV-sphere tessellation counts — matches `earthRenderer` /
  *  `planetRenderer` so every sphere body shares a mesh shape. */

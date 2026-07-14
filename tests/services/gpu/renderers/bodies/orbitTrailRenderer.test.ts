@@ -20,8 +20,8 @@ import {
   MAX_ORBITS,
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
-} from '../../../../src/services/gpu/renderers/orbitTrailRenderer';
-import type { Renderer } from '../../../../src/@types/rendering/Renderer';
+} from '../../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
+import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 type BufferDesc = { label?: string; size: number };
 

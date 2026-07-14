@@ -56,15 +56,15 @@
  * @module
  */
 
-import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { StarPointRenderer } from '../../../@types/rendering/StarPointRenderer';
-import type { StarBody } from '../../../@types/scene/StarBody';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import vsCode from '../shaders/starPoints/vertex.wesl?static';
-import fsCode from '../shaders/starPoints/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../lib/cameraUniforms';
-import { ADDITIVE_BLEND } from '../lib/blendStates';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { StarPointRenderer } from '../../../../@types/rendering/StarPointRenderer';
+import type { StarBody } from '../../../../@types/scene/StarBody';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import vsCode from '../../shaders/starPoints/vertex.wesl?static';
+import fsCode from '../../shaders/starPoints/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
+import { ADDITIVE_BLEND } from '../../lib/blendStates';
 
 /**
  * Per-star instance record: position (f32x3) + colour (f32x3) + absMag

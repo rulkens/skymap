@@ -54,7 +54,7 @@ import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/hor
 import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
-import { createDebugLineRenderer } from '../../gpu/renderers/debugLineRenderer';
+import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
@@ -62,12 +62,12 @@ import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volum
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
-import { createDiskRadiusRing } from '../../gpu/passes/diskRadiusRing';
-import { createEarthRenderer } from '../../gpu/renderers/earthRenderer';
-import { createStarRenderer } from '../../gpu/renderers/starRenderer';
-import { createPlanetRenderer } from '../../gpu/renderers/planetRenderer';
-import { createStarPointRenderer } from '../../gpu/renderers/starPointRenderer';
-import { createOrbitTrailRenderer } from '../../gpu/renderers/orbitTrailRenderer';
+import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
+import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
+import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
+import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
+import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
+import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';

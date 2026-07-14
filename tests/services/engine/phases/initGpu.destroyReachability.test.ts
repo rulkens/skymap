@@ -148,7 +148,7 @@ vi.mock('../../../../src/services/gpu/renderers/labels/markerLineRenderer', () =
   createMarkerLineRenderer: vi.fn(() => makeStub('markerLineRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/debugLineRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/devTools/debugLineRenderer', () => ({
   createDebugLineRenderer: vi.fn(() => makeStub('debugLineRenderer')),
 }));
 
@@ -180,7 +180,7 @@ vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub('pickDebugOverlay')),
 }));
 
-vi.mock('../../../../src/services/gpu/passes/diskRadiusRing', () => ({
+vi.mock('../../../../src/services/gpu/renderers/devTools/diskRadiusRing', () => ({
   createDiskRadiusRing: vi.fn(() => makeStub('diskRadiusRing')),
 }));
 
@@ -188,7 +188,7 @@ vi.mock('../../../../src/services/gpu/passes/diskRadiusRing', () => ({
 // mock it so initGpu's foreground block constructs a stub on
 // `state.gpu.earthRenderer` (the un-awaited Blue Marble fetch it fires runs
 // after initGpu resolves and fails harmlessly in the test env).
-vi.mock('../../../../src/services/gpu/renderers/earthRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/bodies/earthRenderer', () => ({
   createEarthRenderer: vi.fn(() => makeStub('earthRenderer')),
 }));
 
@@ -196,31 +196,34 @@ vi.mock('../../../../src/services/gpu/renderers/earthRenderer', () => ({
 // JSDOM. createPlanetRenderer is called ONCE — a single dynamic-offset
 // renderer draws every seeded planet (see EngineGpuHandles) — so the shared
 // `stubs.planetRenderer` key is the constructed instance.
-vi.mock('../../../../src/services/gpu/renderers/starRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/bodies/starRenderer', () => ({
   createStarRenderer: vi.fn(() => makeStub('starRenderer')),
 }));
 // Partial mock: planetsLayer.ts imports the real MAX_PLANETS/INSTANCE_FLOATS
 // constants at module scope to size its staging buffer, so only the factory
 // is stubbed — passing those constants through keeps that sizing real.
-vi.mock('../../../../src/services/gpu/renderers/planetRenderer', async (importOriginal) => ({
+vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (importOriginal) => ({
   ...(await importOriginal<
-    typeof import('../../../../src/services/gpu/renderers/planetRenderer')
+    typeof import('../../../../src/services/gpu/renderers/bodies/planetRenderer')
   >()),
   createPlanetRenderer: vi.fn(() => makeStub('planetRenderer')),
 }));
-vi.mock('../../../../src/services/gpu/renderers/starPointRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/bodies/starPointRenderer', () => ({
   createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
 }));
 // Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
 // real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its
 // staging buffer, so only the factory is stubbed.
-vi.mock('../../../../src/services/gpu/renderers/orbitTrailRenderer', async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import('../../../../src/services/gpu/renderers/orbitTrailRenderer')
-  >()),
-  createOrbitTrailRenderer: vi.fn(() => makeStub('orbitTrailRenderer')),
-}));
+vi.mock(
+  '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer')
+    >()),
+    createOrbitTrailRenderer: vi.fn(() => makeStub('orbitTrailRenderer')),
+  }),
+);
 
 vi.mock('../../../../src/services/gpu/labelLayout/loadFontAtlases', () => ({
   loadFontAtlases: vi.fn(async () => ({
@@ -248,7 +251,7 @@ import { initGpu } from '../../../../src/services/engine/phases/initGpu';
 import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labels/labelRenderer';
 // The single planet-renderer factory: asserted constructed exactly once (one
 // dynamic-offset renderer draws every seeded planet).
-import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/planetRenderer';
+import { createPlanetRenderer } from '../../../../src/services/gpu/renderers/bodies/planetRenderer';
 // The real seeded data bag: initGpu reads `state.data.bodies` (the far-star
 // partition for setStars; the seeded planet list drives planetsLayer), so the
 // state fixture carries the real construction-time seeds.

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createDebugLineRenderer } from '../../../../src/services/gpu/renderers/debugLineRenderer';
-import type { DebugLine } from '../../../../src/@types/rendering/DebugLine';
+import { createDebugLineRenderer } from '../../../../../src/services/gpu/renderers/devTools/debugLineRenderer';
+import type { DebugLine } from '../../../../../src/@types/rendering/DebugLine';
 
 // Capturing mock device: records the render-pipeline descriptor so the
 // colour-target format handed to the factory can be asserted at construction.

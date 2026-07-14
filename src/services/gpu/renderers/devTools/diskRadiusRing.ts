@@ -14,7 +14,7 @@
  *
  * ### Why a `(device, swapChainFormat)` factory (not GpuContext)
  *
- * Matches the sibling `pickDebugOverlay` pass shape — a self-contained
+ * Matches the `passes/pickDebugOverlay` shape — a self-contained
  * overlay that takes only what it needs and returns `{ draw, destroy }`.
  * (The older `selectionRingRenderer` takes a full `GpuContext` + a
  * `device: null` testability cast; this pass's contract pins a non-null
@@ -40,12 +40,12 @@
  * Both numbers carry a comment pinning them together.
  */
 
-import vsCode from '../shaders/diskRadiusRing/vertex.wesl?static';
-import fsCode from '../shaders/diskRadiusRing/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
-import type { DiskRadiusRing } from '../../../@types/rendering/DiskRadiusRing';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import vsCode from '../../shaders/diskRadiusRing/vertex.wesl?static';
+import fsCode from '../../shaders/diskRadiusRing/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
+import type { DiskRadiusRing } from '../../../../@types/rendering/DiskRadiusRing';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /** Shared CameraUniforms prefix — viewProj(64) + viewportPx(8) + pads(8). */
 const CAMERA_UNIFORM_BYTES = 80;

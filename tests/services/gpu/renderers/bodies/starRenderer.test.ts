@@ -11,8 +11,8 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { createStarRenderer } from '../../../../src/services/gpu/renderers/starRenderer';
-import type { Renderer } from '../../../../src/@types/rendering/Renderer';
+import { createStarRenderer } from '../../../../../src/services/gpu/renderers/bodies/starRenderer';
+import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {
