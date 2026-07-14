@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
-import { UNIFORM_BYTES } from '../../../../src/services/gpu/renderers/pointRenderer';
+import { UNIFORM_BYTES } from '../../../../src/services/gpu/renderers/pointVertexLayout';
 import { Source } from '../../../../src/data/sources';
 
 // A minimal stub device with a tracked writeBuffer — allows assertions

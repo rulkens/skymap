@@ -36,7 +36,7 @@ import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl'
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import { createDummyFadeBindGroup } from '../lib/dummyFade';
-import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES, UNIFORM_BYTES } from './pointRenderer';
+import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES, UNIFORM_BYTES } from './pointVertexLayout';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
