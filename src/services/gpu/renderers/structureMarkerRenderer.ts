@@ -62,8 +62,8 @@ import ringFsCode from '../shaders/structureMarker/ring.wesl?static';
 import ringPickVsCode from '../shaders/structureMarker/ring.wesl?static';
 import ringPickFsCode from '../shaders/structureMarker/ringPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
-import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from './lib/blendStates';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../lib/cameraUniforms';
+import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
 
 /**
  * 12 floats per instance × 4 bytes = 48 bytes/instance.

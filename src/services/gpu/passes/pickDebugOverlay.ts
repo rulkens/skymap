@@ -22,6 +22,7 @@
 import vsCode from '../shaders/pickDebugOverlay/vertex.wesl?static';
 import fsCode from '../shaders/pickDebugOverlay/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
 import type { PickDebugOverlay } from '../../../@types/rendering/PickDebugOverlay';
 
 export function createPickDebugOverlay(
@@ -64,10 +65,7 @@ export function createPickDebugOverlay(
           // the standard "src on top of dst" composite.  Background
           // pixels emit alpha = 0, which evaluates to a no-op blend
           // (preserves the underlying scene exactly).
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          },
+          blend: PREMULTIPLIED_OVER_BLEND,
         },
       ],
     },

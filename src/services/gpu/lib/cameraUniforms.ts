@@ -44,15 +44,16 @@
  * buffer to, and what larger-struct renderers' tails start after.
  *
  * (This file exports a const AND a function — the one-symbol-per-file
- * rule is a `utils/` and `@types/` rule; `renderers/lib/` modules group
- * one byte-layout's constants with its writer, like `camera.wesl` groups
- * the struct with its helpers.)
+ * rule is a `utils/` and `@types/` rule; the gpu-wide shared-primitives
+ * `lib/` (a sibling to `renderers/` and `passes/`) groups one byte-layout's
+ * constants with its writer, like `camera.wesl` groups the struct with its
+ * helpers.)
  *
  * @module
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 /**
  * Byte size of the shared `CameraUniforms` prefix:

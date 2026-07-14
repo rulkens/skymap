@@ -30,13 +30,15 @@ moves and no shader-path changes — those are plan 02.
   `catalogStore` composition. Every extraction is a byte-identical re-point.
 - **House conventions.** `type` aliases never `interface`; didactic comments
   (explain _why_, match the existing module-header density). **The one-symbol-per-file
-  `utils/` rule does NOT apply to `renderers/lib/`** — the spec deliberately locks
+  `utils/` rule does NOT apply to `gpu/lib/`** — the spec deliberately locks
   multi-export files there (`cameraUniforms` exports a const + a fn, `blendStates`
   two consts, `unitQuad` two consts). Deep relative imports, no barrels.
 - **Cite, don't paste.** The current code is the source of truth; every task points
   at line ranges to read, not snapshots to copy.
-- **`renderers/lib/` is a NEW folder** created by Phase A. Renderers stay flat this
-  plan; folderizing (`git mv` into family folders) is plan 02.
+- **`gpu/lib/` is a NEW folder** — a sibling to `renderers/` and `passes/` (hoisted
+  there once the passes/ audit found four more byte-identical blend sites; see spec
+  §5). Renderers stay flat this plan; folderizing (`git mv` into family folders) is
+  plan 02.
 
 ---
 
@@ -211,7 +213,7 @@ bug):**
 
 ### Task A4 — `lib/dummyFade.ts`
 
-**Files:** `src/services/gpu/renderers/lib/dummyFade.ts` (new); re-point three sites +
+**Files:** `src/services/gpu/lib/dummyFade.ts` (new); re-point three sites +
 one consistency fix.
 
 **Public surface:**

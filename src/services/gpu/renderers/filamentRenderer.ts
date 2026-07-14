@@ -42,9 +42,9 @@ import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl'
 import type { Vec2 } from '../../../@types/math/Vec2';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { clampFilamentIntensity } from '../../../utils/clampFilamentIntensity';
-import { writeCameraPrefix } from './lib/cameraUniforms';
-import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from './lib/unitQuad';
-import { ADDITIVE_BLEND } from './lib/blendStates';
+import { writeCameraPrefix } from '../lib/cameraUniforms';
+import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../lib/unitQuad';
+import { ADDITIVE_BLEND } from '../lib/blendStates';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
 

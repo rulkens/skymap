@@ -58,8 +58,8 @@ import {
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { MilkyWayCloudRenderer } from '../../../@types/rendering/MilkyWayCloudRenderer';
 import type { MilkyWayCloudDrawArgs } from '../../../@types/rendering/MilkyWayCloudDrawArgs';
-import { writeCameraPrefix } from './lib/cameraUniforms';
-import { ADDITIVE_BLEND } from './lib/blendStates';
+import { writeCameraPrefix } from '../lib/cameraUniforms';
+import { ADDITIVE_BLEND } from '../lib/blendStates';
 
 type Init = {
   device: GPUDevice;

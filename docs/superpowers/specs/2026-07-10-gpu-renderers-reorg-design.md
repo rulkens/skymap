@@ -25,7 +25,7 @@ shell). This reorganization does four things:
 1. **Family folders** whose boundaries follow **real coupling edges** — code
    imports, shared shaders, shared feeders — not one-folder-per-file and not
    subject-matter kinship. A folder means "these files change together."
-2. **`renderers/lib/`** for the four genuinely-shared primitives that are
+2. **`gpu/lib/`** for the genuinely-shared primitives that are
    currently copy-pasted byte-identically across 3–8 sites each.
 3. **Split `pointRenderer.ts`** (840 lines, 13 methods, the system's first
    renderer) into draw / layout / store — the one real surgery in this reorg.
@@ -219,13 +219,14 @@ stays a sibling supplier rather than folding into the renderer folder.
 
 ```
 src/services/gpu/
+  lib/                    cameraUniforms.ts, unitQuad.ts, blendStates.ts, dummyFade.ts
+                          (gpu-wide shared primitives — sibling to renderers/ AND passes/)
   labelLayout/            renamed from gpu/labels/ (fontMetrics, labelLayout,
                           loadFontAtlases, measureLabel, milkyWayLabelVisibility)
   galaxy/                 unchanged — sibling supplier to renderers/milkyWay/
   passes/                 compositor, volumeUpsample, pickDebugOverlay only
                           (true texture-operators; diskRadiusRing moves out)
   renderers/
-    lib/                  cameraUniforms.ts, unitQuad.ts, blendStates.ts, dummyFade.ts
     galaxyCatalog/        pointRenderer.ts, proceduralDiskRenderer.ts, texturedDiskRenderer.ts,
                           instancedQuadRenderer.ts, pickRenderer.ts, pointVertexLayout.ts, catalogStore.ts
     milkyWay/             milkyWayCloudRenderer.ts, milkyWayPickRenderer.ts
@@ -251,6 +252,13 @@ Each extraction is a byte-identical duplicate today, verified site-by-site. The
 skeptic's bar: **extract only what is genuinely identical AND load-bearing to
 keep in sync.** Where a near-duplicate is _semantically_ different, it stays
 inline — folding it in would invite a silent visual bug.
+
+The lib lives at `gpu/lib/`, a sibling to `renderers/` and `passes/`, not
+nested under `renderers/`: the passes/ audit found four more byte-identical
+blend sites (`volumeUpsample`, `pickDebugOverlay`, `diskRadiusRing`, the
+compositor's additive `BLEND_TABLE` entry), so the shared primitives serve
+`gpu/` broadly and can't sit below one of their consumers (user-decided
+2026-07-14).
 
 ### 5.1 `cameraUniforms.ts`
 

@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { writeCameraPrefix } from '../../../../../src/services/gpu/renderers/lib/cameraUniforms';
+import { writeCameraPrefix } from '../../../../src/services/gpu/lib/cameraUniforms';
 
 describe('writeCameraPrefix', () => {
   it('writes viewProj to floats 0..15 and viewportPx to floats 16/17', () => {

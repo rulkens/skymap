@@ -55,7 +55,7 @@ import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl'
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import { packPointUniforms, UNIFORM_BYTES } from '../../../utils/gpu/packPointUniforms';
-import { ADDITIVE_BLEND } from './lib/blendStates';
+import { ADDITIVE_BLEND } from '../lib/blendStates';
 
 // Re-export so the pick renderer and tests can obtain the buffer size
 // from the canonical renderer import path without a separate import.

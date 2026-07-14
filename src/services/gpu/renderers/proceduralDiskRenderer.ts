@@ -71,7 +71,7 @@ import {
 } from './instancedQuadRenderer';
 import { packSelection } from '../../../data/selectionEncoding';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { writeCameraPrefix } from './lib/cameraUniforms';
+import { writeCameraPrefix } from '../lib/cameraUniforms';
 
 type Init = {
   device: GPUDevice;

@@ -68,7 +68,7 @@ import flowComputeWgsl from '../shaders/flow/compute.wesl?static';
 import flowVertexWgsl from '../shaders/flow/vertex.wesl?static';
 import flowFragmentWgsl from '../shaders/flow/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { ADDITIVE_BLEND } from './lib/blendStates';
+import { ADDITIVE_BLEND } from '../lib/blendStates';
 
 const WORKGROUP_SIZE = 64;
 

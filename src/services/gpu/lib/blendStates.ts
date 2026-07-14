@@ -42,8 +42,9 @@
  * visual bug, so they stay inline at their single call site.
  *
  * (This file exports two consts — the one-symbol-per-file rule is a `utils/`
- * and `@types/` rule; `renderers/lib/` modules group one domain's constants,
- * like `lib/unitQuad.ts` groups the corner data with its layout.)
+ * and `@types/` rule; the gpu-wide shared-primitives `lib/` (a sibling to
+ * `renderers/` and `passes/`) groups one domain's constants, like
+ * `lib/unitQuad.ts` groups the corner data with its layout.)
  *
  * @module
  */

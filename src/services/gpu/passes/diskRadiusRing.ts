@@ -43,6 +43,7 @@
 import vsCode from '../shaders/diskRadiusRing/vertex.wesl?static';
 import fsCode from '../shaders/diskRadiusRing/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
 import type { DiskRadiusRing } from '../../../@types/rendering/DiskRadiusRing';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
@@ -91,10 +92,9 @@ export function createDiskRadiusRing(
       targets: [
         {
           format: swapChainFormat,
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          },
+          // Premultiplied-alpha OVER — a UI overlay drawn post-tone-map;
+          // the fragment emits 'rgb * alpha, alpha' (see module header).
+          blend: PREMULTIPLIED_OVER_BLEND,
         },
       ],
     },

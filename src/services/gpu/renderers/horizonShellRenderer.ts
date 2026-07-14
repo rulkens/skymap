@@ -40,7 +40,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import vsCode from '../shaders/horizonShell/vertex.wesl?static';
 import fsCode from '../shaders/horizonShell/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { ADDITIVE_BLEND } from './lib/blendStates';
+import { ADDITIVE_BLEND } from '../lib/blendStates';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { HorizonShellRenderer } from '../../../@types/rendering/HorizonShellRenderer';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';

@@ -41,7 +41,7 @@ import type { OrbitTrailRenderer } from '../../../@types/rendering/OrbitTrailRen
 import vsCode from '../shaders/orbitTrail/vertex.wesl?static';
 import fsCode from '../shaders/orbitTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { ADDITIVE_BLEND } from './lib/blendStates';
+import { ADDITIVE_BLEND } from '../lib/blendStates';
 
 /** Upper bound on orbit trails drawn per frame. 22 orbits ship today (the eight
  *  major planets + the Moon + Mars/Jupiter/Saturn's major moons); the cap sizes

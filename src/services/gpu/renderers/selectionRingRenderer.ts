@@ -42,8 +42,8 @@ import type { SelectionRingRenderer } from '../../../@types/rendering/SelectionR
 import vsCode from '../shaders/selectionRing/vertex.wesl?static';
 import fsCode from '../shaders/selectionRing/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
-import { PREMULTIPLIED_OVER_BLEND } from './lib/blendStates';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../lib/cameraUniforms';
+import { PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
 
 /** SelectionRingUniforms: vec3<f32> worldPos + f32 ringRadiusPx. */
 const SELECTION_UNIFORM_BYTES = 16;

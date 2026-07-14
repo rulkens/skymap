@@ -81,9 +81,9 @@ import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
 import vsCode from '../shaders/labels/vertex.wesl?static';
 import fsCode from '../shaders/labels/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
-import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from './lib/unitQuad';
-import { PREMULTIPLIED_OVER_BLEND } from './lib/blendStates';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../lib/cameraUniforms';
+import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../lib/unitQuad';
+import { PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
 
 // ─── sizing defaults ───────────────────────────────────────────────────────
 

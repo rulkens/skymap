@@ -16,7 +16,7 @@ shaders under `shaders/galaxyCatalog/` + `shaders/bodies/`, rename the
 [`renderers.md`](../conventions/renderers.md).
 
 **This plan assumes plan 01 (`…reorg-01-lib-and-point-split`) has already shipped.**
-Its end state is a precondition: `renderers/lib/{cameraUniforms,unitQuad,blendStates,dummyFade}.ts`
+Its end state is a precondition: `gpu/lib/{cameraUniforms,unitQuad,blendStates,dummyFade}.ts`
 exist; `pointVertexLayout.ts` + `catalogStore.ts` sit flat beside `pointRenderer.ts`;
 `setBuildBufferRunner` is gone; `pickRenderer` imports the vertex layout from
 `pointVertexLayout.ts`. If any of those are missing, STOP — plan 01 is not done.
@@ -68,7 +68,8 @@ task-specific consumers. For every task:
    into `tests/services/gpu/renderers/<family>/<name>.test.ts`.
 3. In each moved renderer, add one `../` to every relative import that now points a
    level up: its **`?static` shader imports** (spec §8: 47 across 20 files), its
-   `./lib/*` imports (now `../lib/*`), and any sibling-renderer or `../../` imports.
+   `../lib/*` imports into the hoisted `gpu/lib/` (now `../../lib/*`), and any
+   sibling-renderer or `../../` imports.
 4. Re-point every **external consumer** of the moved files — the `initGpu.ts` factory
    import for this family (`phases/initGpu.ts:46–70`), any `vi.mock('.../renderers/<name>')`
    literal (spec §8: 20 total — 19 in

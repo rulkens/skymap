@@ -43,9 +43,9 @@
  * to fold in.
  *
  * (This file exports a data const AND its layout — the one-symbol-per-file rule
- * is a `utils/` and `@types/` rule; `renderers/lib/` modules group one
- * geometry's constants together, like `lib/cameraUniforms.ts` groups the byte
- * size with its writer.)
+ * is a `utils/` and `@types/` rule; the gpu-wide shared-primitives `lib/` (a
+ * sibling to `renderers/` and `passes/`) groups one geometry's constants
+ * together, like `lib/cameraUniforms.ts` groups the byte size with its writer.)
  *
  * @module
  */

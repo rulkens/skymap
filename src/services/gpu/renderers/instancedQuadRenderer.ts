@@ -65,8 +65,8 @@ import type { InstancedQuadRenderer } from '../../../@types/rendering/InstancedQ
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { writeCameraPrefix } from './lib/cameraUniforms';
-import { ADDITIVE_BLEND } from './lib/blendStates';
+import { writeCameraPrefix } from '../lib/cameraUniforms';
+import { ADDITIVE_BLEND } from '../lib/blendStates';
 
 /**
  * Per-instance vertex layout shared by all three consumers: four
