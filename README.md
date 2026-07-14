@@ -467,6 +467,9 @@ Consumes `data/raw/gaia/` — the paged Gaia DR3 CSVs, the GCNS 100 pc
 supplement (`gcns_main.csv`), and the Hipparcos-2 bright-star patch
 (`hip2.dat` + `hip2_best_neighbour.csv`) — and emits the per-tier binaries
 `public/data/stars-small.bin`, `stars-medium.bin`, and `stars-large.bin`.
+The full build holds the ~16.8 M-row Gaia superset in memory at once, so
+run it on a machine with roughly 16 GB of free RAM — the npm script raises
+Node's heap limit accordingly.
 
 ## Brightness controls
 

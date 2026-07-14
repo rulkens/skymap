@@ -113,7 +113,7 @@ export const ALLOW = (name: string): boolean =>
   // itself — no JSON sidecar to upload.
   /^milliquas-(small|medium|large)\.bin$/.test(name) ||
   // Gaia star bin — same tiered-gitignored-build-artefact pattern as the
-  // SDSS/GLADE galaxy bins above, built by `npm run build-tiers` from the
+  // SDSS/GLADE galaxy bins above, built by `npm run build-stars` from the
   // Gaia DR3 raw tables.  Shipped only via R2, never committed.
   /^stars-(small|medium|large)\.bin$/.test(name) ||
   name === '2mrs.bin' ||

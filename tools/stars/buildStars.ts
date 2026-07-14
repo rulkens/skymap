@@ -9,6 +9,17 @@
  * real inputs, tier the result to fit each transfer budget, and report the
  * drop/clamp counters an operator watches during a build.
  *
+ * ── Memory profile ─────────────────────────────────────────────────────────
+ *
+ * The real build holds the full parsed Gaia superset (~16.8 M rows at the
+ * G<14 magnitude cut) plus the derived per-star structures — distance
+ * resolution, dedup set algebra, Morton sort, octree flux-mip — all live in
+ * memory at once, on the order of 10 GB. That is why the `build-stars` npm
+ * script raises Node's `--max-old-space-size` above the default heap ceiling
+ * rather than relying on it; without the raised ceiling the process OOMs
+ * partway through. A machine without roughly that much free RAM should not
+ * run the real build — use the tiny in-memory fixture below instead.
+ *
  * ── The pure/impure seam ──────────────────────────────────────────────────
  *
  * `buildStarCatalog` is a *pure function over parsed rows*: given the Gaia
