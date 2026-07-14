@@ -45,9 +45,11 @@
  * quietly fill the disk with the wrong catalog.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+
+import { sha256OfFile } from './fetchCosmicflows4';
 
 /** One half-open `random_index` range: rows with `start <= random_index < endExclusive`. */
 export type RandomIndexSlice = { index: number; start: number; endExclusive: number };
@@ -424,4 +426,107 @@ export async function verifyPageRowTotal(dir: string, expected: number): Promise
     );
   }
   return total;
+}
+
+/**
+ * The exact row count of the Gaia Catalogue of Nearby Stars supplement
+ * (`external.gaiaedr3_gcns_main_1`). Unlike the paged main catalog — sampled
+ * live and only bounded by an envelope — GCNS is a small fixed table fetched in
+ * one shot, so its row count is known and pinned. `fetchGcns` asserts the
+ * downloaded body carries exactly this many data rows before it commits the
+ * file, catching a truncated response that would otherwise look complete.
+ */
+export const EXPECTED_GCNS_ROWS = 331_312;
+
+/**
+ * Upsert-or-verify one `<hex>  <filename>` line in a combined sha256 sidecar
+ * (the `shasum -a 256` two-space convention, the same shape as the committed
+ * cf4/desi sidecars). The sidecar holds one line per stable single-file Gaia
+ * artifact, so this reads the whole file, finds the line for `fileName`, and:
+ *
+ *   - no line yet → append the digest and report 'recorded';
+ *   - line present and matching → report 'verified' (the file is unchanged);
+ *   - line present but differing → throw. A changed digest means the upstream
+ *     table moved or the download truncated; re-pinning it silently would
+ *     destroy the very signal the sidecar exists to raise, so the operator must
+ *     delete the file and re-fetch deliberately.
+ *
+ * Other artifacts' lines are preserved untouched. Synchronous because it
+ * touches one tiny text file and callers already await the hash upstream.
+ */
+export function verifyOrRecordSha256(
+  sidecarPath: string,
+  fileName: string,
+  actualHexDigest: string,
+): 'recorded' | 'verified' {
+  const existing = existsSync(sidecarPath) ? readFileSync(sidecarPath, 'utf8') : '';
+  const lines = existing.split(/\r?\n/).filter((line) => line.length > 0);
+
+  for (const line of lines) {
+    // `<hex>  <filename>`: hex is the first whitespace-delimited token, the
+    // filename is the remainder (filenames here never contain spaces).
+    const match = line.match(/^(\S+)\s+(.+)$/);
+    if (match === null || match[2] !== fileName) continue;
+    if (match[1] === actualHexDigest) return 'verified';
+    throw new Error(
+      `sha256 mismatch for ${fileName} in ${sidecarPath}:\n` +
+        `    pinned: ${match[1]}\n` +
+        `    actual: ${actualHexDigest}\n` +
+        `  The upstream table may have changed, or the download was truncated. ` +
+        `Delete the file and re-fetch deliberately — do not overwrite the pinned digest.`,
+    );
+  }
+
+  writeFileSync(sidecarPath, `${[...lines, `${actualHexDigest}  ${fileName}`].join('\n')}\n`);
+  return 'recorded';
+}
+
+/**
+ * Fetch the GCNS supplement (`buildGcnsQuery`) in a single TAP-sync request and
+ * commit it to `csvPath` only if the body is complete. Resume-friendly: if
+ * `csvPath` already exists the fetch is skipped entirely.
+ *
+ * The completeness gate is a row-count assertion applied to the in-memory body
+ * *before anything is written* — a short response (the classic truncated TAP
+ * reply that still parses as CSV) never becomes a `.part`, let alone the final
+ * file, so a resume can never mistake it for a finished download. Only once the
+ * count matches `EXPECTED_GCNS_ROWS` is the body written to `.part` and renamed
+ * into place, then hashed and reconciled against the combined sha256 sidecar.
+ * The deterministic `ORDER BY source_id` in the query is what makes that digest
+ * stable across re-fetches.
+ */
+export async function fetchGcns(opts: {
+  csvPath: string;
+  sidecarPath: string;
+  transport: TapTransport;
+}): Promise<'fetched' | 'skipped'> {
+  const { csvPath, sidecarPath, transport } = opts;
+  if (existsSync(csvPath)) {
+    console.log(`GCNS: ${basename(csvPath)} already present — skipping.`);
+    return 'skipped';
+  }
+
+  const body = await transport(buildGcnsQuery());
+  const rows = countDataRows(body);
+  if (rows !== EXPECTED_GCNS_ROWS) {
+    // Gate before any write: nothing has touched disk yet, so a truncated body
+    // leaves neither a final file nor a stray `.part` for a resume to misread.
+    throw new Error(
+      `GCNS row-count mismatch: got ${rows.toLocaleString()} data rows, expected ` +
+        `${EXPECTED_GCNS_ROWS.toLocaleString()}. The TAP response was truncated or the ` +
+        `upstream table changed — no file written. Re-run to retry the fetch.`,
+    );
+  }
+
+  const partPath = `${csvPath}.part`;
+  await writeFile(partPath, body);
+  await rename(partPath, csvPath);
+
+  const digest = await sha256OfFile(csvPath);
+  const outcome = verifyOrRecordSha256(sidecarPath, basename(csvPath), digest);
+  console.log(
+    `GCNS: ${rows.toLocaleString()} rows written to ${basename(csvPath)}; ` +
+      `sha256 ${digest} (${outcome}).`,
+  );
+  return 'fetched';
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -12,6 +12,8 @@ import {
   gateDecision,
   fetchPagedCatalog,
   verifyPageRowTotal,
+  fetchGcns,
+  verifyOrRecordSha256,
   type TapTransport,
 } from '../../../tools/fetch/fetchGaia';
 
@@ -259,5 +261,66 @@ describe('verifyPageRowTotal', () => {
     // name both the actual (5) and expected (6) counts.
     writeFileSync(join(dir, pageFileName(1)), pageBody(1));
     await expect(verifyPageRowTotal(dir, 6)).rejects.toThrow(/5.*6|6.*5/s);
+  });
+});
+
+describe('fetchGcns', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gcns-gaia-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('gcns: a row-count mismatch leaves no final file', async () => {
+    const csvPath = join(dir, 'gcns_main.csv');
+    const sidecarPath = join(dir, 'gaia.sha256');
+    // A truncated response: a header plus two data rows — nowhere near the
+    // 331,312 GCNS rows. The gate must reject it and, crucially, never let the
+    // short body become the final file (nor a `.part` that a resume misreads).
+    const transport = vi.fn<TapTransport>(
+      async () => 'source_id,ra,dec\n1,10.0,20.0\n2,11.0,21.0\n',
+    );
+
+    await expect(fetchGcns({ csvPath, sidecarPath, transport })).rejects.toThrow(/331,?312/);
+
+    expect(existsSync(csvPath)).toBe(false);
+    expect(existsSync(`${csvPath}.part`)).toBe(false);
+  });
+});
+
+describe('verifyOrRecordSha256', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gaia-sidecar-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('verifyOrRecordSha256 records on first sight, verifies on match, throws on mismatch', () => {
+    const sidecarPath = join(dir, 'gaia.sha256');
+
+    // First sight of gcns_main.csv: no pinned line, so the digest is appended
+    // and the call reports 'recorded'. The written line uses the shasum -a 256
+    // two-space '<hex>  <filename>' convention.
+    expect(verifyOrRecordSha256(sidecarPath, 'gcns_main.csv', 'aaaa')).toBe('recorded');
+    expect(readFileSync(sidecarPath, 'utf8')).toContain('aaaa  gcns_main.csv');
+
+    // A second artifact coexists as its own line without disturbing the first.
+    expect(verifyOrRecordSha256(sidecarPath, 'hip2.dat', 'bbbb')).toBe('recorded');
+
+    // Same digest as the pinned line → 'verified', no throw, no rewrite churn.
+    expect(verifyOrRecordSha256(sidecarPath, 'gcns_main.csv', 'aaaa')).toBe('verified');
+
+    // A changed digest for a pinned file must throw and name the file — this is
+    // the guard against silently re-pinning a truncated or upstream-changed
+    // download.
+    expect(() => verifyOrRecordSha256(sidecarPath, 'gcns_main.csv', 'cccc')).toThrow(
+      /gcns_main\.csv/,
+    );
   });
 });
