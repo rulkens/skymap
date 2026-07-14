@@ -254,13 +254,13 @@ ArrayBuffer(16)`), matching every other renderer. Behaviour-neutral — the extr
 bytes stay zero and the 16-byte fade buffer's tail was already zero-init. This is
 NOT the dummy-fade extraction; it's the "normalize when touched" fix riding along.
 
-- [ ] Create `lib/dummyFade.ts`.
-- [ ] Re-point the three alloc sites; keep each site's nullable local + destroy.
-- [ ] Normalize `structureMarkerRenderer.ts:180` fade scratch to 16 bytes.
-- [ ] No test (behaviour-neutral GPU-resource helper; the three pick renderers'
+- [x] Create `lib/dummyFade.ts`.
+- [x] Re-point the three alloc sites; keep each site's nullable local + destroy.
+- [x] Normalize `structureMarkerRenderer.ts:180` fade scratch to 16 bytes.
+- [x] No test (behaviour-neutral GPU-resource helper; the three pick renderers'
       existing tests cover construction).
-- [ ] `npm run typecheck` + `npm test` green.
-- [ ] Commit: `refactor(renderers): extract lib/dummyFade + normalize fade scratch`
+- [x] `npm run typecheck` + `npm test` green. (3923 tests)
+- [x] Commit: `refactor(gpu): extract lib/dummyFade, normalize structureMarker fade scratch` (`7ecbb8bc`)
 
 ---
 
