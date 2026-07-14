@@ -71,6 +71,7 @@ import {
 } from './instancedQuadRenderer';
 import { packSelection } from '../../../data/selectionEncoding';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { writeCameraPrefix } from './lib/cameraUniforms';
 
 type Init = {
   device: GPUDevice;
@@ -333,9 +334,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     // Same 96-byte layout as the visual pipeline's uniformScratch:
     //   f32[ 0..15] viewProj  f32[16..17] viewport  f32[18..19] reserved
     //   f32[20..22] camPosWorld  f32[23] pxPerRad
-    pickUniformScratch.set(viewProj, 0);
-    pickUniformScratch[16] = viewport[0];
-    pickUniformScratch[17] = viewport[1];
+    writeCameraPrefix(pickUniformScratch, viewProj, viewport);
     pickUniformScratch[18] = 0;
     pickUniformScratch[19] = 0;
     pickUniformScratch[20] = camPosWorld[0];

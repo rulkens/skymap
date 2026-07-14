@@ -32,9 +32,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import vsCode from '../shaders/markerLines/vertex.wesl?static';
 import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-
-/** 80 bytes = the shared CameraUniforms prefix (viewProj + viewportPx + pad). */
-const UNIFORM_BYTES = 80;
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
 
 /**
  * Per-instance stride, matching `VsIn` attributes 1–3 in markerLines/io.wesl:
@@ -138,7 +136,7 @@ export function createDebugLineRenderer(
 
     uniformBuffer = device.createBuffer({
       label: 'debug-line-uniforms',
-      size: UNIFORM_BYTES,
+      size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     gpuInstanceBuffer = device.createBuffer({
@@ -208,10 +206,8 @@ export function createDebugLineRenderer(
     }
     if (currentLineCount === 0) return;
 
-    const uni = new Float32Array(UNIFORM_BYTES / 4);
-    uni.set(viewProj, 0);
-    uni[16] = viewportSize[0];
-    uni[17] = viewportSize[1];
+    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    writeCameraPrefix(uni, viewProj, viewportSize);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     pass.setPipeline(pipeline);

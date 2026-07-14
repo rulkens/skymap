@@ -42,6 +42,7 @@ import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl'
 import type { Vec2 } from '../../../@types/math/Vec2';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { clampFilamentIntensity } from '../../../utils/clampFilamentIntensity';
+import { writeCameraPrefix } from './lib/cameraUniforms';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
 
@@ -288,9 +289,7 @@ export function createFilamentRenderer(
     // intensityScale at 21; the two trailing pads at 22..23).
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
-    f32.set(viewProj as Float32Array, 0);
-    f32[16] = viewportPx[0];
-    f32[17] = viewportPx[1];
+    writeCameraPrefix(f32, viewProj, viewportPx);
     f32[20] = halfWidthPx;
     // Clamp to [0,1] at point of use: a negative value would drive a negative
     // additive-blend alpha (undefined). The store holds raw intent.

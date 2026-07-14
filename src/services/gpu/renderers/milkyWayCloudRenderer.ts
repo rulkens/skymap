@@ -58,6 +58,7 @@ import {
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { MilkyWayCloudRenderer } from '../../../@types/rendering/MilkyWayCloudRenderer';
 import type { MilkyWayCloudDrawArgs } from '../../../@types/rendering/MilkyWayCloudDrawArgs';
+import { writeCameraPrefix } from './lib/cameraUniforms';
 
 type Init = {
   device: GPUDevice;
@@ -209,9 +210,9 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
     // viewProj 0..15, viewportPx 16..17, pad 18..19, model 20..35,
     // camRight 36..39, camUp 40..43, params0 44..47,
     // params1 48..51 (starPxMin, starPxMax, starSizeScale, lodApparent).
-    f32.set(vp, 0);
-    f32[16] = viewportPx[0];
-    f32[17] = viewportPx[1];
+    writeCameraPrefix(f32, vp, viewportPx);
+    // Explicit pad zeroing — this scratch is reused across frames, so the
+    // pads can't rely on zero-init the way a fresh Float32Array can.
     f32[18] = 0;
     f32[19] = 0;
     f32.set(model, 20);

@@ -65,6 +65,7 @@ import type { InstancedQuadRenderer } from '../../../@types/rendering/InstancedQ
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { writeCameraPrefix } from './lib/cameraUniforms';
 
 /**
  * Per-instance vertex layout shared by all three consumers: four
@@ -351,9 +352,9 @@ export function createInstancedQuadRenderer(
     //   f32[18..19] reserved pad     (must stay zero)
     //   f32[20..22] camPosWorld
     //   f32[23]     pxPerRad
-    uniformScratch.set(args.viewProj, 0);
-    uniformScratch[16] = args.viewport[0];
-    uniformScratch[17] = args.viewport[1];
+    writeCameraPrefix(uniformScratch, args.viewProj, args.viewport);
+    // Explicit pad zeroing — this scratch is reused across frames, so the
+    // pads can't rely on zero-init the way a fresh Float32Array can.
     uniformScratch[18] = 0;
     uniformScratch[19] = 0;
     uniformScratch[20] = args.camPosWorld?.[0] ?? 0;

@@ -44,9 +44,11 @@
  *   bytes 64..71  viewportPx   vec2<f32>
  *   bytes 72..79  _pad0, _pad1 two reserved f32s (must stay zero)
  *
- * If `CameraUniforms` ever grows past 80 bytes, the constant and write
- * site here must both be updated.  See `texturedQuadRenderer.ts` for the same
- * 80-byte comment with the per-renderer tail that comes after.
+ * The size const and the prefix write both come from
+ * `lib/cameraUniforms.ts`, the TS twin of the WESL struct — if
+ * `CameraUniforms` ever grows past 80 bytes, that one module is the
+ * place to change.  See `instancedQuadRenderer.ts` for the same prefix
+ * with a per-renderer tail after it.
  *
  * ## Blend mode
  *
@@ -79,6 +81,7 @@ import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
 import vsCode from '../shaders/labels/vertex.wesl?static';
 import fsCode from '../shaders/labels/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
 
 // ─── sizing defaults ───────────────────────────────────────────────────────
 
@@ -94,12 +97,6 @@ export const LABEL_MIN_PX_DEFAULT = 8;
 export const LABEL_MAX_PX_DEFAULT = 64;
 
 // ─── buffer constants ──────────────────────────────────────────────────────
-
-/**
- * Uniform buffer size: 80 bytes = exactly the shared CameraUniforms prefix.
- * No renderer-specific tail is needed by the labels shaders at this time.
- */
-const UNIFORM_BYTES = 80;
 
 /**
  * Per-label storage buffer stride, matching `struct LabelData` in io.wesl:
@@ -323,7 +320,7 @@ export function createLabelRenderer(
     // ── Buffers ──────────────────────────────────────────────────────────
     uniformBuffer = device.createBuffer({
       label: 'label-uniforms',
-      size: UNIFORM_BYTES,
+      size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -546,18 +543,11 @@ export function createLabelRenderer(
     }
     if (currentGlyphCount === 0) return;
 
-    // Pack uniforms (80 bytes = CameraUniforms prefix only).
-    //
-    //   f32[0..15]   viewProj     — CameraUniforms.viewProj (bytes 0..63)
-    //   f32[16..17]  viewportPx   — CameraUniforms.viewportPx (bytes 64..71)
-    //   f32[18..19]  reserved pad — must remain zero (bytes 72..79)
-    //
-    // Float32Array zero-initialises on construction, so f32[18..19] stay zero
-    // without an explicit write — consistent with `texturedQuadRenderer.ts`'s approach.
-    const uni = new Float32Array(UNIFORM_BYTES / 4);
-    uni.set(viewProj, 0);
-    uni[16] = viewportSize[0];
-    uni[17] = viewportSize[1];
+    // Pack uniforms (80 bytes = CameraUniforms prefix only).  The pad
+    // floats 18..19 stay zero via Float32Array zero-init — the shared
+    // writer leaves them untouched by design.
+    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    writeCameraPrefix(uni, viewProj, viewportSize);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     pass.setPipeline(pipeline);

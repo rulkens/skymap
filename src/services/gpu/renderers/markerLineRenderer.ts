@@ -50,9 +50,10 @@
  *   bytes 64..71  viewportPx   vec2<f32>
  *   bytes 72..79  _pad0, _pad1 two reserved f32s (must stay zero)
  *
- * If `CameraUniforms` ever grows past 80 bytes, the constant and write
- * site here must both be updated.  See `texturedQuadRenderer.ts` for the same
- * 80-byte comment.
+ * The size const and the prefix write both come from
+ * `lib/cameraUniforms.ts`, the TS twin of the WESL struct — if
+ * `CameraUniforms` ever grows past 80 bytes, that one module is the
+ * place to change.
  *
  * ## Blend mode
  *
@@ -70,14 +71,9 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import vsCode from '../shaders/markerLines/vertex.wesl?static';
 import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
 
 // ─── buffer constants ──────────────────────────────────────────────────────
-
-/**
- * Uniform buffer size: 80 bytes = exactly the shared CameraUniforms prefix.
- * No renderer-specific tail is needed by the marker-line shaders at this time.
- */
-const UNIFORM_BYTES = 80;
 
 /**
  * Per-instance vertex buffer stride, matching `VsIn` attributes 1–3 in io.wesl:
@@ -235,7 +231,7 @@ export function createMarkerLineRenderer(
     // ── Buffers ───────────────────────────────────────────────────────────
     uniformBuffer = device.createBuffer({
       label: 'marker-line-uniforms',
-      size: UNIFORM_BYTES,
+      size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -326,18 +322,11 @@ export function createMarkerLineRenderer(
     }
     if (currentLineCount === 0) return;
 
-    // Pack uniforms (80 bytes = CameraUniforms prefix only).
-    //
-    //   f32[0..15]   viewProj     — CameraUniforms.viewProj (bytes 0..63)
-    //   f32[16..17]  viewportPx   — CameraUniforms.viewportPx (bytes 64..71)
-    //   f32[18..19]  reserved pad — must remain zero (bytes 72..79)
-    //
-    // Float32Array zero-initialises on construction, so f32[18..19] stay zero
-    // without an explicit write — consistent with `texturedQuadRenderer.ts`'s approach.
-    const uni = new Float32Array(UNIFORM_BYTES / 4);
-    uni.set(viewProj, 0);
-    uni[16] = viewportSize[0];
-    uni[17] = viewportSize[1];
+    // Pack uniforms (80 bytes = CameraUniforms prefix only).  The pad
+    // floats 18..19 stay zero via Float32Array zero-init — the shared
+    // writer leaves them untouched by design.
+    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    writeCameraPrefix(uni, viewProj, viewportSize);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     pass.setPipeline(pipeline);

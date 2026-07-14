@@ -63,6 +63,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import vsCode from '../shaders/starPoints/vertex.wesl?static';
 import fsCode from '../shaders/starPoints/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
 
 /**
  * Per-star instance record: position (f32x3) + colour (f32x3) + absMag
@@ -72,12 +73,6 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
  */
 const FLOATS_PER_STAR = 7;
 const STAR_STRIDE = FLOATS_PER_STAR * 4; // 28 bytes
-
-/**
- * `CameraUniforms` byte size (see `lib/camera.wesl`): mat4x4<f32>
- * viewProj (64) + vec2<f32> viewportPx (8) + two pad floats (8) = 80.
- */
-const UNIFORM_BUFFER_SIZE = 80;
 
 export function createStarPointRenderer(
   device: GPUDevice,
@@ -89,10 +84,10 @@ export function createStarPointRenderer(
   // 16..17 = viewportPx, 18..19 = named pads (stay 0).
   const uniformBuffer = device.createBuffer({
     label: 'star-points-uniform-buffer',
-    size: UNIFORM_BUFFER_SIZE,
+    size: CAMERA_UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const uniformScratch = new Float32Array(UNIFORM_BUFFER_SIZE / 4);
+  const uniformScratch = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
 
   // ── Bind group (explicit layout, not 'auto') ──────────────────────────────
   const bindGroupLayout = device.createBindGroupLayout({
@@ -218,10 +213,9 @@ export function createStarPointRenderer(
   function draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2): void {
     if (instanceBuffer === null || starCount === 0) return;
 
-    uniformScratch.set(viewProj, 0);
-    uniformScratch[16] = viewportPx[0];
-    uniformScratch[17] = viewportPx[1];
-    // uniformScratch[18..19] are CameraUniforms' named pads — left at 0.
+    // uniformScratch[18..19] are CameraUniforms' named pads — never
+    // written, so they hold their construction-time zeros across frames.
+    writeCameraPrefix(uniformScratch, viewProj, viewportPx);
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
     pass.setPipeline(pipeline);

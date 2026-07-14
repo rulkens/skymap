@@ -42,9 +42,7 @@ import type { SelectionRingRenderer } from '../../../@types/rendering/SelectionR
 import vsCode from '../shaders/selectionRing/vertex.wesl?static';
 import fsCode from '../shaders/selectionRing/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-
-/** Shared CameraUniforms prefix — viewProj(64) + viewportPx(8) + pads(8). */
-const CAMERA_UNIFORM_BYTES = 80;
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
 
 /** SelectionRingUniforms: vec3<f32> worldPos + f32 ringRadiusPx. */
 const SELECTION_UNIFORM_BYTES = 16;
@@ -138,9 +136,7 @@ export function createSelectionRingRenderer(
     // Camera UBO: viewProj at [0..15], viewportPx at [16..17], pads zero
     // by virtue of Float32Array zero-init.
     const camUni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
-    camUni.set(viewProj, 0);
-    camUni[16] = viewportSize[0];
-    camUni[17] = viewportSize[1];
+    writeCameraPrefix(camUni, viewProj, viewportSize);
     device.queue.writeBuffer(cameraBuffer, 0, camUni);
 
     const selUni = new Float32Array(SELECTION_UNIFORM_BYTES / 4);

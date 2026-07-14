@@ -62,6 +62,7 @@ import ringFsCode from '../shaders/structureMarker/ring.wesl?static';
 import ringPickVsCode from '../shaders/structureMarker/ring.wesl?static';
 import ringPickFsCode from '../shaders/structureMarker/ringPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from './lib/cameraUniforms';
 
 /**
  * 12 floats per instance × 4 bytes = 48 bytes/instance.
@@ -80,9 +81,6 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
  */
 const MARKER_INSTANCE_FLOATS = 12;
 const MARKER_INSTANCE_BYTES = MARKER_INSTANCE_FLOATS * 4;
-
-/** Shared CameraUniforms prefix size — same 80 bytes as markerLineRenderer. */
-const UNIFORM_BYTES = 80;
 
 /** SourceUniforms = u32 sourceCode + 12 bytes pad = 16 bytes. */
 const SOURCE_UNIFORM_BYTES = 16;
@@ -354,7 +352,7 @@ export function createStructureMarkerRenderer(
 
     uniformBuffer = device.createBuffer({
       label: 'structure-marker-uniforms',
-      size: UNIFORM_BYTES,
+      size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -507,11 +505,9 @@ export function createStructureMarkerRenderer(
     if (currentMarkerCount === 0) return;
 
     // Write the 80-byte CameraUniforms prefix.  Same shape as markerLineRenderer.
-    const uni = new Float32Array(UNIFORM_BYTES / 4);
-    uni.set(viewProj, 0);
-    uni[16] = viewportSize[0];
-    uni[17] = viewportSize[1];
-    // uni[18], uni[19] stay zero (the two reserved pads).
+    // The two reserved pads (floats 18..19) stay zero via Float32Array zero-init.
+    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    writeCameraPrefix(uni, viewProj, viewportSize);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Per-frame fade.opacity write — same pattern as filamentRenderer.
