@@ -75,6 +75,15 @@ describe('syncR2 ALLOW', () => {
     // downsample, so a tier suffix must not slip through the filter.
     expect(ALLOW('desi-sgw-large.bin')).toBe(false);
   });
+
+  it('accepts stars-{small,medium,large}.bin and rejects stars-huge.bin', () => {
+    // Gaia star bins follow the same tier-suffixed pattern as SDSS/GLADE —
+    // this exercises the regex's tier alternation, not just the filter list.
+    expect(ALLOW('stars-small.bin')).toBe(true);
+    expect(ALLOW('stars-medium.bin')).toBe(true);
+    expect(ALLOW('stars-large.bin')).toBe(true);
+    expect(ALLOW('stars-huge.bin')).toBe(false);
+  });
 });
 
 describe('syncR2 etagMatches', () => {
