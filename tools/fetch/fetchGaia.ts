@@ -455,6 +455,17 @@ export async function verifyPageRowTotal(dir: string, expected: number): Promise
 export const EXPECTED_GCNS_ROWS = 331_312;
 
 /**
+ * The exact row count of the Hipparcos↔Gaia best-neighbour cross-match
+ * (`gaiadr3.hipparcos2_best_neighbour`) — plan 02's dedup key, one row per
+ * Hipparcos source Gaia saturates on. Like GCNS it is a small fixed table
+ * fetched in one shot, so its row count is known and pinned; `fetchHipXmatch`
+ * asserts the downloaded body carries exactly this many data rows before it
+ * commits the file, catching a truncated response that would otherwise look
+ * complete.
+ */
+export const EXPECTED_HIP_XMATCH_ROWS = 99_525;
+
+/**
  * Upsert-or-verify one `<hex>  <filename>` line in a combined sha256 sidecar
  * (the `shasum -a 256` two-space convention, the same shape as the committed
  * cf4/desi sidecars). The sidecar holds one line per stable single-file Gaia
@@ -498,38 +509,46 @@ export function verifyOrRecordSha256(
 }
 
 /**
- * Fetch the GCNS supplement (`buildGcnsQuery`) in a single TAP-sync request and
- * commit it to `csvPath` only if the body is complete. Resume-friendly: if
- * `csvPath` already exists the fetch is skipped entirely.
+ * Fetch one single-shot TAP-sync CSV and commit it to `csvPath` only if the
+ * in-memory body carries exactly `expectedRows` data rows. Shared by every
+ * fixed-table Gaia supplement (GCNS, the Hipparcos↔Gaia cross-match): they
+ * differ only in query, path, expected count, and what they do *after* the file
+ * lands — a sha256 sidecar line, or nothing — so those post-write steps stay
+ * with each caller and this helper owns the one invariant they share.
  *
- * The completeness gate is a row-count assertion applied to the in-memory body
- * *before anything is written* — a short response (the classic truncated TAP
- * reply that still parses as CSV) never becomes a `.part`, let alone the final
- * file, so a resume can never mistake it for a finished download. Only once the
- * count matches `EXPECTED_GCNS_ROWS` is the body written to `.part` and renamed
- * into place, then hashed and reconciled against the combined sha256 sidecar.
- * The deterministic `ORDER BY source_id` in the query is what makes that digest
- * stable across re-fetches.
+ * That invariant is the completeness gate: the row-count assertion runs on the
+ * in-memory body *before anything is written*, so a short response (the classic
+ * truncated TAP reply that still parses as CSV) never becomes a `.part`, let
+ * alone the final file, and a resume can never mistake it for a finished
+ * download. Only once the count matches is the body written to `.part` and
+ * renamed into place.
+ *
+ * Resume-friendly: an already-present `csvPath` short-circuits to `skipped`
+ * without ever calling the transport. `label` prefixes the skip log and the
+ * mismatch error so each caller's artifact is named without this helper knowing
+ * anything about it.
  */
-export async function fetchGcns(opts: {
+export async function fetchTapCsv(opts: {
+  label: string;
   csvPath: string;
-  sidecarPath: string;
+  query: string;
+  expectedRows: number;
   transport: TapTransport;
-}): Promise<'fetched' | 'skipped'> {
-  const { csvPath, sidecarPath, transport } = opts;
+}): Promise<{ status: 'skipped' } | { status: 'fetched'; rows: number }> {
+  const { label, csvPath, query, expectedRows, transport } = opts;
   if (existsSync(csvPath)) {
-    console.log(`GCNS: ${basename(csvPath)} already present — skipping.`);
-    return 'skipped';
+    console.log(`${label}: ${basename(csvPath)} already present — skipping.`);
+    return { status: 'skipped' };
   }
 
-  const body = await transport(buildGcnsQuery());
+  const body = await transport(query);
   const rows = countDataRows(body);
-  if (rows !== EXPECTED_GCNS_ROWS) {
+  if (rows !== expectedRows) {
     // Gate before any write: nothing has touched disk yet, so a truncated body
     // leaves neither a final file nor a stray `.part` for a resume to misread.
     throw new Error(
-      `GCNS row-count mismatch: got ${rows.toLocaleString()} data rows, expected ` +
-        `${EXPECTED_GCNS_ROWS.toLocaleString()}. The TAP response was truncated or the ` +
+      `${label} row-count mismatch: got ${rows.toLocaleString()} data rows, expected ` +
+        `${expectedRows.toLocaleString()}. The TAP response was truncated or the ` +
         `upstream table changed — no file written. Re-run to retry the fetch.`,
     );
   }
@@ -537,12 +556,65 @@ export async function fetchGcns(opts: {
   const partPath = `${csvPath}.part`;
   await writeFile(partPath, body);
   await rename(partPath, csvPath);
+  return { status: 'fetched', rows };
+}
+
+/**
+ * Fetch the GCNS supplement (`buildGcnsQuery`) in a single TAP-sync request via
+ * `fetchTapCsv`'s count-gated write, then hash the committed file and reconcile
+ * it against the combined sha256 sidecar. The deterministic `ORDER BY source_id`
+ * in the query is what makes that digest stable across re-fetches; a skip (the
+ * file was already present) records no digest, since nothing was written.
+ */
+export async function fetchGcns(opts: {
+  csvPath: string;
+  sidecarPath: string;
+  transport: TapTransport;
+}): Promise<'fetched' | 'skipped'> {
+  const { csvPath, sidecarPath, transport } = opts;
+  const result = await fetchTapCsv({
+    label: 'GCNS',
+    csvPath,
+    query: buildGcnsQuery(),
+    expectedRows: EXPECTED_GCNS_ROWS,
+    transport,
+  });
+  if (result.status === 'skipped') return 'skipped';
 
   const digest = await sha256OfFile(csvPath);
   const outcome = verifyOrRecordSha256(sidecarPath, basename(csvPath), digest);
   console.log(
-    `GCNS: ${rows.toLocaleString()} rows written to ${basename(csvPath)}; ` +
+    `GCNS: ${result.rows.toLocaleString()} rows written to ${basename(csvPath)}; ` +
       `sha256 ${digest} (${outcome}).`,
+  );
+  return 'fetched';
+}
+
+/**
+ * Fetch the Hipparcos↔Gaia best-neighbour cross-match (`buildHipXmatchQuery`) in
+ * a single TAP-sync request via `fetchTapCsv`'s count-gated write. Unlike GCNS
+ * this artifact carries no sha256 sidecar line — the dispatch pins the sidecar
+ * to gcns + hip2 only — so the count gate against `EXPECTED_HIP_XMATCH_ROWS` is
+ * the whole completeness contract, and a skip (file already present) is a no-op
+ * beyond the log. ~3 MB; plan 02's dedup subtraction (spec §2) consumes it.
+ */
+export async function fetchHipXmatch(opts: {
+  csvPath: string;
+  transport: TapTransport;
+}): Promise<'fetched' | 'skipped'> {
+  const { csvPath, transport } = opts;
+  const result = await fetchTapCsv({
+    label: 'Hipparcos↔Gaia xmatch',
+    csvPath,
+    query: buildHipXmatchQuery(),
+    expectedRows: EXPECTED_HIP_XMATCH_ROWS,
+    transport,
+  });
+  if (result.status === 'skipped') return 'skipped';
+
+  console.log(
+    `Hipparcos↔Gaia xmatch: ${result.rows.toLocaleString()} rows written to ` +
+      `${basename(csvPath)}.`,
   );
   return 'fetched';
 }
