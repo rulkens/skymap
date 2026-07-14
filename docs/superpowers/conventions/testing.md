@@ -139,6 +139,41 @@ Deleting them loses real coverage. Keep them.
   _independently_ of the implementation. Simplicity is not a reason to skip it; a
   mirror is (see above).
 
+## React component test gotchas
+
+Two mechanical traps that waste a full debug-fix loop in `@testing-library/react`
+tests. Neither is about _what_ to test — both are about a test that asserts the
+right thing but drives the component wrong, so it fails (or silently passes) for a
+reason that has nothing to do with the code under test.
+
+### Toggle controlled checkboxes with `fireEvent.click`, never `fireEvent.change`
+
+For a **controlled checkbox**, use `fireEvent.click(checkbox)` — NOT
+`fireEvent.change(checkbox, { target: { checked } })`.
+
+React reads the checkbox's native DOM `checked` property inside its synthetic
+`onChange`; a `{ target: { checked } }` stub never sets that native property, so
+`e.target.checked` is wrong and the handler effectively never fires the asserted
+value (the assertion sees 0 calls). `fireEvent.change` _does_ work for
+range / `<select>` / text inputs, because those carry a string `value` — checkboxes
+are the exception, because their signal is a boolean property, not `value`.
+
+`fireEvent.click` toggles the DOM `checked` **before** `onChange` fires (checked →
+click → `false`, unchecked → click → `true`), so seed the initial prop/store state
+such that a single click produces the value you assert.
+
+### Type mock callbacks — `vi.fn<() => void>()`, never bare `vi.fn()`
+
+A bare `vi.fn()` has type `Mock<Procedure | Constructable>`, which is **not**
+assignable where a concrete callback signature is expected — a subsystem's
+`requestRender: () => void` dep, a `SelectionSubsystem` method, any injected
+callback field. `tsc` rejects it at the construction literal, so the failure is a
+typecheck break, not a test failure.
+
+Type the mock at creation against the target signature —
+`vi.fn<() => void>()`, `vi.fn<(sel: Selection | null) => void>()` — and type helper
+options as that signature, not `ReturnType<typeof vi.fn>`.
+
 ## When a test is flagged
 
 When a reviewer (or the `entanglement-radar` / `code-review` pass) flags a test as

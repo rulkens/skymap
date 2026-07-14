@@ -16,24 +16,43 @@ src/
                       imports are deep + relative.
   components/         React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
   data/               Static data definitions: sources enum, colourIndex spec, binary format
+  hooks/              React hooks (useEngine, useSplash, useUrlSync,
+                      useKeyboardShortcuts, alias/structure indexes)
   services/
     camera/           OrbitCamera, OrbitControls (mouse pan/orbit), tweens
     engine/           Top-level engine orchestrator, autoLod, cloud loader
     gpu/              Renderers, texture atlas, image queue/fetcher, WGSL shaders
     input/            SpaceMouse + raw input → camera deltas
+  state/              Framework-agnostic RTK slices + selectors + sagas, one
+                      subdir per domain (camera/, settings/, selection/, tour/,
+                      ui/, …). Forbids react-redux — see store/ for the wiring.
+  store/              RTK store wiring: createAppStore, root reducer/saga,
+                      react-redux hooks, effects, SagaContextProvider
+  styles/             global.css — design tokens + body/html reset only
   utils/              Pure helpers (math, format, random) — heavily tested
 tools/
+  animation/          tourLength — beat-sheet / clip-length reporting for tours
   catalog/            buildAllBins (pipeline entry point), crossMatch dedup,
                       subsampleByAbsMag
+  curation/           shared curation helpers (dedupeByProximity, writeMetaSidecar)
+  dev/                tmux + worktree helpers — see "Tmux workflow helpers" below
   famous/             famous-galaxy seed expansion + image fetcher cluster
                       (buildFamous, expandFamousFromCatalogs, fetchFamousImages,
                       famousImageProcessor)
+  famous-curator/     local-only Vite dev tool for hand-curating Famous
+                      thumbnails (npm run curate-famous)
   filaments/          buildFilaments — DisPerSE wrapper
+  flow/               CF4++ peculiar-velocity flow-field builder + verifier
+  flow-workbench/     "Cosmic Flow" WebGPU dev tool visualising the flow field
+  galaxy-renderer/    WebGPU dev tool drawing a single procedural Hubble-sequence
+                      galaxy behind an HDR bloom pipeline
   volumes/            scalar-field volume builders (CF-4, MCPM) + diagnostics
                       (auditCf4Anchors, verifyCf4Scfd, buildScalarVolumeFixture,
                       extractMcpmCube.py)
   fonts/              buildFontAtlas — MSDF multi-font atlas generator
+  record/             offline tour recorder → mp4 (npm run record-tour)
   site/               makeFavicon, makeOgImage
+  structures/         buildStructures — cluster/supercluster catalog builder
   deploy/             syncR2 + r2Cors.json + r2-static/ static assets
   fetch/              fetch2massXsc, fetchHyperLeda, buildPgcAliases — long-running
                       external-catalog fetchers with on-disk resume caches
@@ -207,9 +226,8 @@ A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetc
 
 - **`pointRenderer.ts` + `shaders/points/*.wesl`**: instanced billboards. Vertex stride is 52 bytes / 13 slots (xyz, magnitude, colorIndex, axisRatio + sign-bit fallback flag, baked paCos/paSin, radiusMpc, vMaxWeight, schechterRatio, angularDensityWeight, baked absMag). Galaxy-static values (PA rotation, absolute magnitude) are baked at upload, not recomputed per vertex. Identity is composed on the GPU from a per-draw `SourceUniforms.sourceCode` + `@builtin(instance_index)`, NOT baked per-vertex.
 - **`pickRenderer.ts`**: r32uint pick texture. The fragment writes `(sourceCode << 27) | (localIdx + PICK_SENTINEL_OFFSET)`; see `src/data/selectionEncoding.ts` for the encoding (5 bits source, 27 bits localIdx, code 31 reserved as the all-ones sentinel). Source codes are append-only (the rule lives in `sources.ts`'s docstring) — same hygiene as enum values that get persisted to .bin, applied to POI-only codes too. Read the texture with `copyTextureToBuffer` for hover/click.
-- **`textureAtlas.ts` + `quadRenderer.ts` + `shaders/quads.wgsl`**: 2048×2048 atlas of 128×128 slots for galaxy thumbnails. LRU eviction.
-- **`galaxyImageQueue.ts`**: priority queue + concurrency limiter (max 4) for thumbnail fetches. Idempotent enqueue (don't re-add in-flight keys — see the long comment for the bug history).
-- **`galaxyImageFetcher.ts`**: SDSS DR18 ImgCutout (CORS-safe) for SDSS galaxies; CDS hips2fits (CORS-safe DSS proxy) for 2MRS/GLADE.
+- **`textureAtlas.ts` + `texturedDiskRenderer.ts` + `shaders/texturedDisks/*.wesl`**: 2048×2048 atlas of 128×128 slots for galaxy thumbnails. LRU eviction.
+- **`engine/subsystems/galaxyAtlasSubsystem.ts`**: the shared atlas + fetch infrastructure — LRU clock, priority-queued concurrency-limited bitmap fetcher, and the `bitmapReady`/`bitmapFailed` memoisation pair. Enqueue is idempotent (don't re-add in-flight keys — see the module header for the bug history). Thumbnail URLs are built by `src/utils/math/{sdss,dss}ThumbnailUrl.ts`: SDSS DR18 ImgCutout (CORS-safe) for SDSS galaxies; CDS hips2fits (CORS-safe DSS proxy) for 2MRS/GLADE.
 - **`engine.ts`**: per-frame loop. Per-galaxy `apparentSizePx` gates thumbnail enqueue — but the inner loop hoists `Math.tan` and pre-computes `maxCamDistForVisibility` to avoid 2.5M trig calls per frame.
 - **`renderScheduler.ts` + `engine.ts` frame tail**: render-on-demand. `requestRender()` from event handlers wakes the loop; the frame body re-schedules only while `autoRotate || currentTween || hasAnyAxis || queue.inFlightCount > 0 || recent-fade` is true.
 
