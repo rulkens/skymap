@@ -358,9 +358,10 @@ export function createStructureMarkerRenderer(
       entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
     });
 
-    // @group(1) FadeUniforms — 16-byte buffer; we write the per-frame
-    // fade.opacity scalar into the first 4 bytes each frame.  Bind
-    // group lives forever; only the buffer contents change.
+    // @group(1) FadeUniforms — 16-byte buffer.  Each frame the whole
+    // 16-byte scratch is uploaded; only its first 4 bytes carry the
+    // fade.opacity scalar, the trailing 12 are struct pad and stay zero.
+    // Bind group lives forever; only the buffer contents change.
     fadeBuffer = device.createBuffer({
       label: 'structure-marker-fade-uniform',
       size: 16,
@@ -501,8 +502,9 @@ export function createStructureMarkerRenderer(
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Per-frame fade.opacity write — same pattern as filamentRenderer.
-    // Only the first 4 bytes carry data; the trailing 12 bytes of the
-    // 16-byte uniform are pad and stay zero.
+    // The upload spans the full 16-byte scratch (one writeBuffer of a
+    // whole struct, not a partial write): opacity occupies floats [0],
+    // the trailing 12 bytes are pad and stay zero from the zero-init.
     fadeScratchF32[0] = fadeOpacity;
     device.queue.writeBuffer(fadeBuffer, 0, fadeScratchBuffer);
 

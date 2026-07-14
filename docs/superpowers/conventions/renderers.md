@@ -84,12 +84,28 @@ Two rules follow from that:
 - **Put a new renderer in the family it will change with.** If none fits, give it its own
   folder. A one-file folder is information, not a smell; a renderer dumped into a family it
   shares no edge with is a lie the next reader has to disprove.
-- **Shaders mirror the renderers.** A family with nested shader dirs nests them the same way
-  (`shaders/galaxyCatalog/{points,proceduralDisks,texturedDisks}/`,
-  `shaders/bodies/{earth,planet,star,starPoints,orbitTrail}/`). Genuinely shared WESL stays
-  in `shaders/lib/`; genuinely shared TS primitives (camera-uniform prefix, unit quad, blend
-  states, dummy fade group) stay in `gpu/lib/`, a sibling of `renderers/` and `passes/` —
-  they serve `gpu/` broadly, so they can't sit below one of their consumers.
+- **Nest a family's shader dirs only when nesting adds meaning.** `shaders/` is a flat
+  namespace by default. Nest under `shaders/<family>/` when both hold: the family owns those
+  dirs **exclusively**, and their names only read _in context_ —
+  `shaders/galaxyCatalog/{points,proceduralDisks,texturedDisks}/` and
+  `shaders/bodies/{earth,planet,star,starPoints,orbitTrail}/` qualify, because a bare
+  `points/` or `star/` at the top level says nothing about which renderer it belongs to.
+  Dirs that already **name themselves** stay flat: `milkyWayCloud/`, `milkyWayPick/`,
+  `selectionRing/`, `structureMarker/` need no parent folder to be unambiguous, and wrapping
+  them in one would only add a path segment that repeats the prefix. Dirs **shared across
+  families** cannot nest at all without lying about ownership — `shaders/markerLines/` is
+  consumed by both `labels/markerLineRenderer.ts` and `devTools/debugLineRenderer.ts`, so
+  filing it under either family would mislead the next reader who greps for its other caller.
+
+  Two renderer↔shader-dir names are deliberately _not_ the same word: `volumeField/` reads
+  `shaders/scalarVolume/`, and `flowField/` reads `shaders/flow/`. Both are known mismatches
+  (the shader dirs pre-date the renderer names), harmless because the import path in the
+  renderer file is the only way anyone finds a shader anyway.
+
+  Genuinely shared WESL stays in `shaders/lib/`; genuinely shared TS primitives (camera-uniform
+  prefix, unit quad, blend states, dummy fade group) stay in `gpu/lib/`, a sibling of
+  `renderers/` and `passes/` — they serve `gpu/` broadly, so they can't sit below one of their
+  consumers.
 
 `renderers/` is also not `passes/`: a renderer draws **world-space content** and appears in
 `CONTENT_LAYERS`; a pass operates on **textures** (compositor, volume upsample, pick-debug
@@ -369,7 +385,9 @@ up as a separate field on `state.gpu`.
 
 ## Checklist for a new renderer
 
-- [ ] Lives in the family folder it changes with (its own, if none fits); shaders mirror it.
+- [ ] Lives in the family folder it changes with (its own, if none fits). Shader dirs stay flat
+      in `shaders/` unless the family owns them exclusively AND their names only read in
+      context — never nest a dir two families share.
 - [ ] File reads in anatomy order; methods are named functions.
 - [ ] Public type extends `Renderer` (`label`, `destroy`).
 - [ ] `satisfies Renderer` clause at the factory return.

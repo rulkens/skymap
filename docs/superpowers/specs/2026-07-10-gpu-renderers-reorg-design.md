@@ -520,8 +520,9 @@ The same doc-update pass **refreshes two stale claims**:
 The original passing-fix here — `debugSphereRenderer` was the only renderer with
 zero tests — has **self-resolved**. That placeholder renderer was deleted when
 zoom-to-earth landed, and every one of the current 21 renderers now has at least
-one test (`tests/services/gpu/renderers/` holds 23 test files). So nothing
-remains to fix in passing under this heading. The one live consistency fix — the
+one test (`tests/services/gpu/renderers/` holds 27 test files — the last gap,
+`devTools/diskRadiusRing`, got a uniform-packing test as this reorg landed). So
+nothing remains to fix in passing under this heading. The one live consistency fix — the
 `structureMarkerRenderer` 4-byte fade scratch normalized to 16 on touch — is
 already recorded in §5.5 and stays there.
 
