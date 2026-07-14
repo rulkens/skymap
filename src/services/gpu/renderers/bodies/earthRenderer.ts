@@ -65,8 +65,8 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { EarthRenderer } from '../../../../@types/rendering/EarthRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
-import vsCode from '../../shaders/earth/vertex.wesl?static';
-import fsCode from '../../shaders/earth/fragment.wesl?static';
+import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';
+import fsCode from '../../shaders/bodies/earth/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 
 /** UV-sphere tessellation counts — 48 segments × 24 rings gives a smooth

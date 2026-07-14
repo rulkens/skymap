@@ -46,8 +46,8 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PlanetRenderer } from '../../../../@types/rendering/PlanetRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
-import vsCode from '../../shaders/planet/vertex.wesl?static';
-import fsCode from '../../shaders/planet/fragment.wesl?static';
+import vsCode from '../../shaders/bodies/planet/vertex.wesl?static';
+import fsCode from '../../shaders/bodies/planet/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 
 /** UV-sphere tessellation counts — matches `earthRenderer` /

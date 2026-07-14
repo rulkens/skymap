@@ -14,7 +14,7 @@
 // the same convention as the survey points, so overlapping stars
 // brighten long-exposure style.
 
-import package::starPoints::io::VSOut;
+import package::bodies::starPoints::io::VSOut;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {

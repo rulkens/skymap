@@ -34,7 +34,7 @@
 // composite handles layer blending. Lit albedo stays in 0..1, comfortably
 // below the star's emissive output.
 
-import package::planet::io::VSOut;
+import package::bodies::planet::io::VSOut;
 
 const AMBIENT: f32 = 0.08;
 

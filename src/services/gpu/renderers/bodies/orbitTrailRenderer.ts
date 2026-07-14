@@ -38,8 +38,8 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { OrbitTrailRenderer } from '../../../../@types/rendering/OrbitTrailRenderer';
-import vsCode from '../../shaders/orbitTrail/vertex.wesl?static';
-import fsCode from '../../shaders/orbitTrail/fragment.wesl?static';
+import vsCode from '../../shaders/bodies/orbitTrail/vertex.wesl?static';
+import fsCode from '../../shaders/bodies/orbitTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 

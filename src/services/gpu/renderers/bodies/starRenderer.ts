@@ -34,8 +34,8 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { StarRenderer } from '../../../../@types/rendering/StarRenderer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
-import vsCode from '../../shaders/star/vertex.wesl?static';
-import fsCode from '../../shaders/star/fragment.wesl?static';
+import vsCode from '../../shaders/bodies/star/vertex.wesl?static';
+import fsCode from '../../shaders/bodies/star/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 
 /** UV-sphere tessellation counts — matches `earthRenderer` /

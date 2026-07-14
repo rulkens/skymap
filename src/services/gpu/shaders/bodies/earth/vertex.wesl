@@ -27,7 +27,7 @@
 //                                       'uvSphereMesh' writes u west-to-east,
 //                                       v south-to-north.
 
-import package::earth::io::VSOut;
+import package::bodies::earth::io::VSOut;
 import package::lib::sphere::SphereUniforms;
 import package::lib::sphere::clip_from_local;
 

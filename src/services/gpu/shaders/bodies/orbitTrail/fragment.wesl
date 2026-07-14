@@ -64,7 +64,7 @@
 // the off-stroke pixels and any non-finite one, so the triangle can only ever
 // deposit light on the ring itself, never a filled blob.
 
-import package::orbitTrail::io::VSOut;
+import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::PI;
 
 // Stroke width in PIXELS — the plane-space distance below is converted to a

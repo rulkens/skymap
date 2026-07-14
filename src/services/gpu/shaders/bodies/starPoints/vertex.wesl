@@ -43,7 +43,7 @@
 // crossover) is plan-03 work, which is also why there is no distance
 // term yet.
 
-import package::starPoints::io::VSOut;
+import package::bodies::starPoints::io::VSOut;
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;

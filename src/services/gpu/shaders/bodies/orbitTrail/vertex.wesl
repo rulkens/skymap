@@ -40,7 +40,7 @@
 //   @location(4) params: vec4<f32> — color.rgb in .xyz, eccentricity .w  } stride
 //   @location(5) phase: vec4<f32>  — meanAnomalyRad .x, fade alpha .y, .zw pad } 80 B
 
-import package::orbitTrail::io::VSOut;
+import package::bodies::orbitTrail::io::VSOut;
 
 @vertex
 fn vs(

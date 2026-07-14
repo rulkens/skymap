@@ -36,7 +36,7 @@
 //   @location(4) mvp3: vec4<f32>      — MVP column 3  } (rgb + 1 pad float, 16 B)
 //   @location(5) albedo: vec4<f32>    — surface colour rgb in .xyz, .w unused
 
-import package::planet::io::VSOut;
+import package::bodies::planet::io::VSOut;
 import package::lib::sphere::clip_from_local;
 
 @vertex
