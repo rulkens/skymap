@@ -31,6 +31,18 @@ export const NEAR0 = 0;
 /** Cosmological slab: galaxies, Milky Way, filaments — everything at Mpc scale. */
 export const COSMO = 1;
 
+/**
+ * Human-readable slab names, keyed by slab index, for debug surfaces (the
+ * GPU-timings slab badge). Kept beside the NEAR0/COSMO index constants so a new
+ * slab row names itself here in the same edit that assigns its index — the
+ * badge derivation reads this, so an unnamed slab surfaces as a missing badge
+ * rather than a wrong one.
+ */
+export const SLAB_NAME: Readonly<Record<number, string>> = {
+  [NEAR0]: 'NEAR0',
+  [COSMO]: 'COSMO',
+};
+
 // The near-field lookAt uses world +Y as the image-plane up. Roll parity with
 // the cosmological slab's `computeViewProj` is deferred alongside the
 // zoom-to-earth series.

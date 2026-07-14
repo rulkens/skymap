@@ -39,8 +39,16 @@
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ContentLayer } from '../../../@types/engine/frame/ContentLayer';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
-import { COSMO, NEAR0 } from './slabs';
+import { COSMO, NEAR0, SLAB_NAME } from './slabs';
 import { CONTENT_LAYERS } from './passes';
+
+/**
+ * Badge shown for a slot that doesn't project through a single slab — the
+ * whole-texture composites and the parallel pick program (which spans both
+ * slabs). A render slot always resolves to a real `SLAB_NAME`; only these
+ * slab-less slots carry the marker.
+ */
+export const NO_SLAB_BADGE = '—';
 
 /**
  * Build this frame's step program. `tone` is threaded into BOTH composites —
@@ -97,21 +105,50 @@ export function timedSlotsOf(
   program: readonly FrameStep[],
   layers: readonly ContentLayer[],
 ): readonly string[] {
-  const slots: string[] = [];
+  return timedSlotRowsOf(program, layers).map((row) => row.name);
+}
+
+/**
+ * One derived timing slot: its `name` (what the timing service allocates a
+ * query pair for and the DebugPanel rows on) plus the `slab` badge it renders
+ * through. `slab` is a real `SLAB_NAME` for a render slot and the
+ * `NO_SLAB_BADGE` marker for the slab-less composite/pick slots.
+ */
+type TimedSlotRow = { readonly name: string; readonly slab: string };
+
+/**
+ * The single walk both projections share: the ordered slot list
+ * (`timedSlotsOf`) and the slot→slab badge map (`TIMED_SLOT_SLABS`) are each a
+ * projection of this one derivation, so the badge for a slot can't drift from
+ * the slot's position in the row order — a new layer joins both at once.
+ */
+function timedSlotRowsOf(
+  program: readonly FrameStep[],
+  layers: readonly ContentLayer[],
+): readonly TimedSlotRow[] {
+  const rows: TimedSlotRow[] = [];
   for (const step of program) {
     if (step.kind === 'render') {
+      // Every layer matched by this step shares the step's slab, so the badge
+      // is the step's slab name — `?? NO_SLAB_BADGE` degrades gracefully if a
+      // step ever references a slab index `SLAB_NAME` doesn't cover.
+      const slab = SLAB_NAME[step.slab] ?? NO_SLAB_BADGE;
       for (const layer of layers) {
         if (layer.target === step.target && layer.slab === step.slab) {
-          slots.push(layer.name);
+          rows.push({ name: layer.name, slab });
         }
       }
     } else if (step.kind === 'composite') {
-      slots.push(`${step.step.source}→${step.step.dest}`);
+      // A composite merges whole textures rather than projecting geometry, so
+      // it belongs to no single slab.
+      rows.push({ name: `${step.step.source}→${step.step.dest}`, slab: NO_SLAB_BADGE });
     }
     // 'compute' steps contribute no timing slot.
   }
-  slots.push('pick');
-  return slots;
+  // Pick is a parallel program over the whole registry (both slabs), so it too
+  // has no single slab.
+  rows.push({ name: 'pick', slab: NO_SLAB_BADGE });
+  return rows;
 }
 
 /**
@@ -129,4 +166,20 @@ export function timedSlotsOf(
 export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
   frameProgram({ exposure: 1, curve: 0 }),
   CONTENT_LAYERS,
+);
+
+/**
+ * Slot name → slab badge, for the DebugPanel GPU-timings rows. Derived from
+ * the SAME program + registry walk that orders `TIMED_SLOTS` (both are
+ * projections of `timedSlotRowsOf`), so the badges inherit that list's
+ * self-maintaining property: a renderer that joins `CONTENT_LAYERS` gets both
+ * a row AND its slab badge with zero DebugPanel edits. Render slots carry their
+ * projection slab's name; the whole-texture composites and the parallel pick
+ * pass carry `NO_SLAB_BADGE`.
+ */
+export const TIMED_SLOT_SLABS: ReadonlyMap<string, string> = new Map(
+  timedSlotRowsOf(frameProgram({ exposure: 1, curve: 0 }), CONTENT_LAYERS).map((row) => [
+    row.name,
+    row.slab,
+  ]),
 );
