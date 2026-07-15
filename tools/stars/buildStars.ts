@@ -166,6 +166,15 @@ export type BuildStarInputs = {
   famousGaiaIds: ReadonlySet<bigint>;
   mortonBitsPerAxis?: number;
   tierBudgets?: Readonly<Record<Tier, number>>;
+  /**
+   * Optional progress sink for the tier search. The tier phase is otherwise
+   * silent for tens of minutes on the real catalog (every probe is a
+   * multi-second octree-build + gzip), so `buildTier` emits one preformatted
+   * line per probe and one per tier completion. It is threaded *in* rather than
+   * writing `process.stderr` directly to keep `buildStarCatalog` pure over its
+   * inputs — the CLI supplies a stderr sink, tests omit it and stay silent.
+   */
+  onProgress?: (line: string) => void;
 };
 
 /** Drop counters gathered across the parse/resolve/dedup stages. */
@@ -225,6 +234,7 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
     famousGaiaIds,
     mortonBitsPerAxis = DEFAULT_MORTON_BITS,
     tierBudgets = TIER_BUDGET_BYTES,
+    onProgress,
   } = inputs;
 
   // ── Gaia main rows: resolve distance, drop the placeless ones ─────────────
@@ -330,9 +340,29 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
   mainWithMag.sort((a, b) => a.appMag - b.appMag);
   const mainLeaves = mainWithMag.map((m) => m.leaf);
 
+  // One `k → compressedBytes` probe cache shared across all three tier searches.
+  // Compressed size is monotonic non-decreasing in `k`, so the three budgets are
+  // three thresholds on a single `size(k)` curve; every search starts at the same
+  // high midpoints and only narrows toward its own budget boundary near the end.
+  // Sharing the cache means those expensive high-`k` probes (the multi-million-
+  // star encodes each search would otherwise repeat) are measured once, not once
+  // per tier — the bulk of the wall-clock saving. See `buildTier` for the
+  // byte-determinism argument that this sharing is safe.
+  const sizeCache = new Map<number, number>();
   const tiers: StarTierResult[] = [];
   for (const tier of TIERS) {
-    tiers.push(await buildTier(tier, tierBudgets[tier], supplement, mainWithMag, mainLeaves, grid));
+    tiers.push(
+      await buildTier(
+        tier,
+        tierBudgets[tier],
+        supplement,
+        mainWithMag,
+        mainLeaves,
+        grid,
+        sizeCache,
+        onProgress,
+      ),
+    );
   }
 
   return { tiers, drops, clamps, totalStars: stars.length, grid };
@@ -347,6 +377,26 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
  * budget boundary in ~log₂(mainCount) encodes. The always-included supplement
  * means `k = 0` is a valid floor; if even that overshoots the budget by >20%
  * the tier is flagged over-budget for the codec-ratio gate.
+ *
+ * ── The shared probe cache and why it is byte-identical ────────────────────
+ *
+ * The three tier searches are independent binary searches over the *same*
+ * monotonic `size(k)` curve, so they re-probe many identical `k` — in
+ * particular every search opens on the same high midpoints (`mainCount/2`,
+ * `/4`, …) whose multi-million-star encodes are the single most expensive
+ * probes in the whole build. `sizeCache` (keyed on `k`, shared across all three
+ * tiers by the caller) measures each such `k` exactly once.
+ *
+ * This caches ONLY the measured byte size — a number — and the binary search
+ * below is byte-for-byte the search that ran before: same range `[0, mainCount]`,
+ * same `mid = (lo + hi) >> 1`, same `size(mid) <= budget` comparison, same
+ * largest-passing-`k` result. `encodeFor` is a deterministic pure function of
+ * `k`, so a cached size equals a freshly measured one; the search therefore
+ * selects the identical `k` per tier and the emitted `.bin` bytes + reported
+ * `gCutMag` are unchanged. The determinism guarantee rests on sharing only the
+ * exact size at a given `k` — never a narrowed search range and never a cheaper
+ * proxy codec (e.g. gzip level 1), either of which could pick a neighbouring
+ * `k` at a gzip non-monotonicity and change the locked output bytes.
  */
 async function buildTier(
   tier: Tier,
@@ -355,7 +405,10 @@ async function buildTier(
   mainWithMag: readonly { leaf: OctreeLeafStar; appMag: number }[],
   mainLeaves: readonly OctreeLeafStar[],
   grid: StarOctreeGrid,
+  sizeCache: Map<number, number>,
+  onProgress?: (line: string) => void,
 ): Promise<StarTierResult> {
+  const report = onProgress ?? (() => {});
   const encodeFor = async (k: number) => {
     const selection = [...supplement, ...mainLeaves.slice(0, k)];
     // buildStarOctree throws unless input is ascending by Morton code.
@@ -366,24 +419,60 @@ async function buildTier(
     return { catalog, encoded, rawBytes, compressedBytes: encoded.byteLength };
   };
 
+  // Compressed size at brightest-`k`, memoized across every tier's search. A
+  // miss pays the full octree-build + gzip to *measure* the size; only the size
+  // is retained (the catalog + encoded blob for the chosen `k` is materialized
+  // once after the search, keeping the cache to a handful of numbers rather than
+  // multiple gigabytes of held-open catalogs at the real 16.5 M-star scale).
+  const probeSize = async (k: number): Promise<number> => {
+    const cached = sizeCache.get(k);
+    if (cached !== undefined) return cached;
+    const size = (await encodeFor(k)).compressedBytes;
+    sizeCache.set(k, size);
+    return size;
+  };
+
   const mainCount = mainLeaves.length;
   let best = 0;
-  let bestEnc = await encodeFor(0);
   let lo = 0;
   let hi = mainCount;
+  let encodes = 0; // fresh octree+gzip probes this tier paid for (cache misses)
+  let hits = 0; // probes served from the shared cross-tier cache
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    const enc = await encodeFor(mid);
-    if (enc.compressedBytes <= budgetBytes) {
+    const cached = sizeCache.has(mid);
+    const t0 = performance.now();
+    const size = await probeSize(mid);
+    const ms = performance.now() - t0;
+    if (cached) hits++;
+    else encodes++;
+    report(
+      `  [stars ${tier}] probe k=${mid.toLocaleString()} → ` +
+        `${size.toLocaleString()} B ${size <= budgetBytes ? '≤' : '>'} ` +
+        `budget ${budgetBytes.toLocaleString()} B  ` +
+        `[${cached ? 'cache-hit' : 'encode'} ${ms.toFixed(0)}ms]\n`,
+    );
+    if (size <= budgetBytes) {
       best = mid;
-      bestEnc = enc;
       lo = mid + 1;
     } else {
       hi = mid - 1;
     }
   }
 
+  // Materialize the chosen `k` once: the search retained only measured sizes, so
+  // the winner's catalog + encoded payload is produced here by a single encode
+  // at `best` (a small, in-budget selection). `best = 0` reproduces the original
+  // supplement-only floor when even the empty main set overshoots the budget.
+  const bestEnc = await encodeFor(best);
+
   const gCutMag = best > 0 ? mainWithMag[best - 1]!.appMag : null;
+  report(
+    `  [stars ${tier}] selected k=${best.toLocaleString()}, ` +
+      `${gCutMag === null ? 'supplement-only' : `G≤${gCutMag.toFixed(2)}`}, ` +
+      `${bestEnc.compressedBytes.toLocaleString()} B ` +
+      `(${encodes} encodes, ${hits} cache hits, +1 final encode)\n`,
+  );
   return {
     tier,
     starCount: bestEnc.catalog.starCount,
@@ -615,6 +704,10 @@ async function runCli(): Promise<void> {
     hipNonPositivePlx: hip.skipped,
     hipToSourceId,
     famousGaiaIds,
+    // Stream the tier-search progress to stderr so the minutes-long probe phase
+    // is no longer silent. The sink lives here (the impure CLI), keeping
+    // `buildStarCatalog` pure over its inputs.
+    onProgress: (line) => process.stderr.write(line),
   });
 
   const { drops, clamps } = result;
