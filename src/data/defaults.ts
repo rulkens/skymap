@@ -125,6 +125,18 @@ export const DEFAULT_MILKY_WAY_ENABLED = SOURCE_REGISTRY[Source.MilkyWay].visibl
  */
 export const DEFAULT_MILKY_WAY_LABEL_ENABLED: boolean = true;
 
+/**
+ * Gaia star-catalog overlay default — the wide-field near-star bin that forms
+ * the real-data middle of the descent. Derived from the SOURCE_REGISTRY
+ * starCatalog row's `visible` gate, so the registry is the single source of
+ * truth (mirroring `DEFAULT_MILKY_WAY_ENABLED`); to flip the boot default edit
+ * `sources/star-catalog.ts`, not here. Singleton-overlay convention: state
+ * lives here in settings, "loaded" is the asset slot's readiness — no data store.
+ */
+export const DEFAULT_STAR_CATALOG = {
+  enabled: SOURCE_REGISTRY[Source.StarCatalog].visible,
+} as const;
+
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
 
 /**

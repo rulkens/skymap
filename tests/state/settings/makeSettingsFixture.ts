@@ -54,6 +54,7 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_STAR_CATALOG,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
@@ -90,6 +91,7 @@ export function makeSettingsFixture(
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
+    starCatalog: { ...DEFAULT_STAR_CATALOG },
     volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: seedVolumeFields() },
     flow: { ...DEFAULT_FLOW },
     labels: { focusedOnly: false, starLabelsEnabled: true },

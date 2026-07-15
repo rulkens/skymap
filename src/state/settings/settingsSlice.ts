@@ -122,6 +122,11 @@ const settingsSlice = createSlice({
       settings.filaments.intensity = action.payload;
     },
 
+    // ── star catalog (singleton overlay) ────────────────────────────────────
+    setStarCatalogEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.starCatalog.enabled = action.payload;
+    },
+
     // ── volumes ─────────────────────────────────────────────────────────────
     setVolumesEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.volumes.enabled = action.payload;
@@ -326,6 +331,7 @@ export const {
   setMilkyWayLabelEnabled,
   setFilamentsEnabled,
   setFilamentIntensity,
+  setStarCatalogEnabled,
   setVolumesEnabled,
   addVolumeField,
   removeVolumeField,

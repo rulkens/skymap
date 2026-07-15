@@ -135,6 +135,21 @@ export type EngineSettingsState = {
   };
 
   /**
+   * Gaia star-catalog singleton overlay — the wide-field near-star bin drawn
+   * by the star renderer (see
+   * `docs/superpowers/conventions/singleton-overlay-layers.md`).  All of its
+   * user-facing state lives here in `settings`, exactly as `filaments` and
+   * `milkyWay` do; the layer has a single on/off knob and no data-layer store.
+   * Its "loaded" status is the asset slot's own readiness (Tasks 5–6 wire the
+   * slot), NOT a bit on a store — so this cluster carries `enabled` only.  The
+   * asset-demand predicate reads `settings.starCatalog.enabled`, and the renderer
+   * reads this slice each frame.
+   */
+  starCatalog: {
+    enabled: boolean;
+  };
+
+  /**
    * Scalar-volume overlay master gate and per-item params.  When
    * `enabled` is false, `volumeUpsampleLayer.enabled` short-circuits
    * before consulting the renderer at zero GPU cost, and `scalarVolumeLayer`

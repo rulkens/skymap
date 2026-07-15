@@ -21,6 +21,7 @@ import reducer, {
   writeVolumeField,
   setFlowEnabled,
   setFlow,
+  setStarCatalogEnabled,
   setPassDisabled,
   setClipPathLinger,
   setClipPathLingerSec,
@@ -186,6 +187,14 @@ describe('settingsSlice — flow', () => {
     expect(next.flow.flowSpeed).toBe(9.5);
     // An untouched leaf is preserved.
     expect(next.flow.count).toBe(before.flow.count);
+  });
+});
+
+describe('settingsSlice — star catalog', () => {
+  it('setStarCatalogEnabled toggles the flag', () => {
+    // Seeds true from SOURCE_REGISTRY[Source.StarCatalog].visible; dispatch false.
+    const next = reducer(base(), setStarCatalogEnabled(false));
+    expect(next.starCatalog.enabled).toBe(false);
   });
 });
 

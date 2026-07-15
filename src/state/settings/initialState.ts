@@ -35,6 +35,7 @@ import {
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
+  DEFAULT_STAR_CATALOG,
 } from '../../data/defaults';
 import {
   DEFAULT_ALIGN_SEC,
@@ -106,6 +107,10 @@ export function buildInitialSettings(): EngineSettingsState {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
+    // Gaia star catalog is a singleton overlay layer: its one on/off knob lives
+    // here, spread from the registry-derived `DEFAULT_STAR_CATALOG` seed. No
+    // data-layer store — "loaded" is the asset slot's own readiness.
+    starCatalog: { ...DEFAULT_STAR_CATALOG },
     volumes: {
       enabled: DEFAULT_VOLUMES_ENABLED,
       items: seedVolumeFields(),
