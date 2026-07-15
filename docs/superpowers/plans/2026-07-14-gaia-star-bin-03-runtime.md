@@ -159,6 +159,15 @@ reshape (rename + `StarCatalogId` / `STAR_CATALOG_IDS` + `StarCatalogItemSetting
 is unchanged except for the per-source dimension now threaded through the fetcher `req`,
 the slot/wiring, the renderer `upload`/`draw`, and the layer.
 
+### Amendment (2026-07-16)
+
+User requested SettingsPanel UI toggles for the star catalogs (the runtime as
+planned wires the `starCatalogs` cluster but exposed no HUD control). **Task 11b**
+added — a presentational `StarsSection` + `StarsSectionContainer` mirroring the
+Galaxies settings section, wired into the `SettingsPanel` shell after the Galaxies
+section. Pure UI mirror over the already-landed Task 5 state; **no renumbering**
+(11b keeps Tasks 12/13 at their numbers, which the ledger + self-review reference).
+
 ### Plan-time decisions (spec §8 delegated these to the plan — DECIDED here)
 
 1. **BP−RP → colour = a dedicated stellar ramp in WESL, NOT the galaxy `colourIndex`
@@ -506,26 +515,26 @@ Reducers mirror the galaxy cluster (`settingsSlice.ts:75-86`): the master
 `Object.fromEntries(SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [e.id,
 { enabled: e.visible, labelEnabled: true }]))`.
 
-- [ ] Run the controller-issued `npm run move-files` for the row (`--dry` first); rename
+- [x] Run the controller-issued `npm run move-files` for the row (`--dry` first); rename
       the symbols (`GAIA_STARS_ENTRY`, `code`, `id`, `label`) + the `Source.GaiaStars`
       key + the `galaxyType.ts` case + the `sources.ts` stitch by hand. Grep-for-stragglers
       (`StarCatalog`, `'starCatalog'` the *id*, `STAR_CATALOG_ENTRY`) under `src/data` +
       `src/@types/data` — the TYPE `StarCatalogSourceEntry` + the `type: 'starCatalog'`
       discriminant stay (kind-naming), so filter those out.
-- [ ] Add `StarCatalogId.d.ts` + `starCatalogIds.ts` + `StarCatalogItemSettings.d.ts`
+- [x] Add `StarCatalogId.d.ts` + `starCatalogIds.ts` + `StarCatalogItemSettings.d.ts`
       (didactic docblocks mirroring their galaxy twins).
-- [ ] Reshape `EngineSettingsState.starCatalog` → `starCatalogs` (+ the three "→ four"
+- [x] Reshape `EngineSettingsState.starCatalog` → `starCatalogs` (+ the three "→ four"
       docblock bumps); drop `DEFAULT_STAR_CATALOG`; seed `initialState.starCatalogs`
       inline from the registry; rework `setStarCatalogEnabled` + add the two per-item
       reducers with their exports.
-- [ ] Test `setStarCatalogVisible toggles a catalog's enabled` — dispatch
+- [x] Test `setStarCatalogVisible toggles a catalog's enabled` — dispatch
       `{ id: 'gaiaStars', enabled: false }` from the seeded `true`, assert
       `state.starCatalogs.items.gaiaStars.enabled === false` (behavioural per-item reducer
       test, mirroring the galaxy `setGalaxyCatalogVisible` test — not a default restatement).
       Keep a `setStarCatalogEnabled toggles the master gate` reducer test.
-- [ ] Update `tests/data/sources.test.ts`'s bitmask-exclusion invariant to the renamed
+- [x] Update `tests/data/sources.test.ts`'s bitmask-exclusion invariant to the renamed
       `Source.GaiaStars` (still asserting it is NOT in `GALAXY_CATALOG_SOURCES`).
-- [ ] `npm test -- settingsSlice sources` + `npm run typecheck` (both tsconfigs) → green.
+- [x] `npm test -- settingsSlice sources` + `npm run typecheck` (both tsconfigs) → green.
       Commit.
 
 ## Task 6 — `starCatalogFetcher` (parameterized by source)
@@ -649,20 +658,20 @@ level-`L` node `M` are level-`L-1` nodes `M<<3 .. (M<<3)+7` present per `childMa
 The refine/coarsen threshold (a screen-error or camera-distance-per-box-edge heuristic)
 is the implementer's to shape and is one of the budget knobs Task 13 tunes.
 
-- [ ] Add `walkStarOctreeCut.ts` with a didactic docblock (why nearest-first + budget;
+- [x] Add `walkStarOctreeCut.ts` with a didactic docblock (why nearest-first + budget;
       why aggregates for far/sub-pixel nodes; the covering-partition invariant).
-- [ ] Test `covers every leaf star exactly once` — build a synthetic catalog (a handful
+- [x] Test `covers every leaf star exactly once` — build a synthetic catalog (a handful
       of leaf cells across ≥2 octree levels via `buildStarOctree`), run the cut, and
       assert `Σ recordCount` over the returned draws equals the true leaf-star count
       reachable, with no leaf star double-counted (walk the chosen nodes' subtrees). An
       independent covering-partition property — fails on a double-draw or a gap.
-- [ ] Test `respects the hard cap` — a budget with `hardCap` below the leaf-star count
+- [x] Test `respects the hard cap` — a budget with `hardCap` below the leaf-star count
       forces aggregate substitution so `Σ recordCount ≤ hardCap`.
-- [ ] Test `refines near the camera, coarsens far` — a camera placed inside one leaf
+- [x] Test `refines near the camera, coarsens far` — a camera placed inside one leaf
       cell draws that cell as a leaf while a distant cluster of cells collapses to an
       aggregate (hand-constructed two-cluster fixture; assert the near `nodeIndex` is a
       `level === 0` node and the far draw is `level > 0`).
-- [ ] `npm test -- walkStarOctreeCut` → green. Commit.
+- [x] `npm test -- walkStarOctreeCut` → green. Commit.
 
 ## Task 9 — Camera-relative node origin (the pc→Mpc f64 seam, pure, un-gated)
 
@@ -692,17 +701,17 @@ at upload (like `starPointsLayer.ts:120-139`). Handles both leaves (`level 0`) a
 aggregates (`level > 0`) via the `2^level` box scale (the same reconstruction
 `buildStarOctree.ts` inverts — see its "Coordinate frame" docblock).
 
-- [ ] Add `starNodeOriginRelCamMpc.ts` with a didactic docblock (why f64 subtract before
+- [x] Add `starNodeOriginRelCamMpc.ts` with a didactic docblock (why f64 subtract before
       narrow; the shared reconstruction formula; leaf vs aggregate via `2^level`).
-- [ ] Test `computes a leaf origin relative to the camera` — hand-authored node
+- [x] Test `computes a leaf origin relative to the camera` — hand-authored node
       (`mortonIndex`, `level 0`, known `gridOrigin`/`cellEdgePc`); assert
       `originRelCamMpc` + `cellScaleMpc` against **hand-computed** values.
-- [ ] Test `scales an aggregate box by 2^level` — same node at `level 2` gives a
+- [x] Test `scales an aggregate box by 2^level` — same node at `level 2` gives a
       4× `cellScaleMpc` and the correct box origin (hand-computed).
-- [ ] Test `is finite for a coincident (zero-distance) node` — a node whose world origin
+- [x] Test `is finite for a coincident (zero-distance) node` — a node whose world origin
       equals `camPosMpc` yields `originRelCamMpc === [0,0,0]` and a finite `cellScaleMpc`
       (the Sun-exclusion robustness guard — Decision 3; no divide-by-zero).
-- [ ] `npm test -- starNodeOriginRelCamMpc` → green. Commit.
+- [x] `npm test -- starNodeOriginRelCamMpc` → green. Commit.
 
 ## Task 10 — `starCatalogRenderer` + WESL shaders (GPU shell, typecheck-gated + visual)
 
@@ -837,6 +846,110 @@ export const starCatalogLayer: ContentLayer = {
       the master gate OR the per-item toggle is off.
 - [ ] `npm test -- starCatalogLayer` + `npm run typecheck` → green. Commit.
 
+## Task 11b — Stars settings section (SettingsPanel UI)
+
+A small mechanical mirror of the Galaxies settings section for the new
+`starCatalogs` cluster — a presentational `StarsSection` + its store-boundary
+`StarsSectionContainer`, wired into the `SettingsPanel` shell right after the
+Galaxies section. The section lists star catalogs (just `gaiaStars` today) with a
+per-catalog toggle + a tri-state master, dispatching the Task 5 reducers.
+
+**READ FIRST (precedents — this task is a mirror, not a fresh design):**
+`src/components/SettingsPanel/GalaxiesSection.tsx` (presentational precedent —
+tri-state master derivation + per-source rows over `TOGGLEABLE_SOURCES`),
+`src/components/containers/GalaxiesSectionContainer.tsx` (container precedent —
+`useAppSelector`/`useAppDispatch` from `../../store/hooks`, `useCallback`-wrapped
+dispatches with `[dispatch]` deps, `memo` at both layers),
+`tests/components/SettingsPanel/GalaxiesSection.test.ts` +
+`tests/components/containers/GalaxiesSectionContainer.test.ts` (test precedents —
+`createElement` (no JSX), `@vitest-environment jsdom`, `fireEvent.click` for
+controlled checkboxes, container asserts on `store.getState()` via a selector),
+`src/components/SettingsPanel/SettingsPanel.tsx:51-84` (wiring point — import +
+JSX line). **House rule (hard gate):** BEFORE writing or editing ANY
+`src/components/**` file, load and follow the `create-component` skill
+(`.claude/skills/create-component/SKILL.md`) — one folder + `<Name>.tsx` +
+`<Name>.module.css`, `function Name()` + `export default memo(Name)`, no barrels;
+the section reuses `SettingsPanel.module.css` + `CollapsibleSection` like the
+galaxies twin (no new CSS vocabulary).
+
+**Files:** `src/components/SettingsPanel/StarsSection.tsx` (new, presentational),
+`src/components/containers/StarsSectionContainer.tsx` (new, store boundary),
+`tests/components/SettingsPanel/StarsSection.test.ts` (new — plain-props),
+`tests/components/containers/StarsSectionContainer.test.ts` (new — `createAppStore`
++ `<Provider>`); modify `src/components/SettingsPanel/SettingsPanel.tsx` (one
+import + one JSX line — place `<StarsSectionContainer />` immediately AFTER
+`<GalaxiesSectionContainer />` at `:81`, so the two point-source families read
+adjacently; state that placement explicitly in the diff).
+
+**Interfaces consumed (all landed on this branch by Task 5 — do NOT hunt):**
+
+```ts
+// settings shape — src/@types/settings/EngineSettingsState.d.ts
+settings.starCatalogs: {
+  enabled: boolean;                                        // master gate
+  items: Record<StarCatalogId, StarCatalogItemSettings>;   // per-catalog
+};
+// StarCatalogItemSettings = DataItemSettings & { labelEnabled: boolean }
+
+// reducers / action creators — src/state/settings/settingsSlice.ts
+setStarCatalogEnabled(enabled: boolean)                    // master gate
+setStarCatalogVisible({ id: StarCatalogId; enabled: boolean })
+setStarCatalogLabelEnabled({ id: StarCatalogId; enabled: boolean })  // NOT wired to UI here
+
+// id domain + labels
+STAR_CATALOG_IDS  // src/data/starCatalog/starCatalogIds.ts (['gaiaStars'] today)
+SOURCE_REGISTRY[Source.GaiaStars].label === 'Gaia Stars'  // per-catalog label
+```
+
+**Access pattern (mirror `GalaxiesSectionContainer` exactly):** `useAppDispatch` +
+`useAppSelector` from `src/store/hooks`; read the cluster via a minimal passthrough
+selector mirroring `selectGalaxyCatalogItems` (`state/settings/selectors.ts:75-77`)
+— add a `selectStarCatalogs` (or `selectStarCatalogItems` + the master read) ONLY
+if no existing selector covers it (the container's sole new selector need — nothing
+else); dispatch `setStarCatalogEnabled` / `setStarCatalogVisible` from the imported
+action creators, each wrapped in `useCallback(…, [dispatch])`.
+
+**Scope guards:**
+
+- **One section per source-type family** — this section lists STAR CATALOGS only
+  (currently just `gaiaStars`); the `STAR_CATALOG_IDS.map(...)` over per-catalog
+  rows IS the extension point for a future second catalog (famous stars, Decision
+  A) — no per-catalog special-casing.
+- **No label-rendering UI.** `labelEnabled` wiring exists in state
+  (`setStarCatalogLabelEnabled`) but the Galaxies section exposes NO per-catalog
+  label toggle (labels live in the separate LabelsSection) — mirror that: the Stars
+  section renders NO label toggle. Leave `setStarCatalogLabelEnabled` unwired.
+- **No new state, no new reducers, no new selectors** beyond the one passthrough the
+  container needs. Master tri-state is derived section-local from the per-item
+  `enabled` flags (like `galaxiesMaster` in `GalaxiesSection.tsx:106-125`), not
+  stored.
+
+**Steps (TDD — mirror what the galaxy twins actually assert; no restatement tests):**
+
+- [ ] Failing container test first (`StarsSectionContainer.test.ts`, mirroring
+      `GalaxiesSectionContainer.test.ts`): `createAppStore()` + `<Provider>` +
+      `createElement(StarsSectionContainer, null)`. Assert (a) toggling the master
+      checkbox dispatches `setStarCatalogEnabled` so
+      `selectStarCatalogs(store.getState()).enabled` flips; (b) toggling the
+      `gaiaStars` per-catalog row dispatches `setStarCatalogVisible` with
+      `id: 'gaiaStars'` so `store.getState()` reflects
+      `starCatalogs.items.gaiaStars.enabled` cleared. `fireEvent.click` for the
+      controlled checkboxes (the jsdom gotcha the galaxy test documents).
+- [ ] Add the presentational `StarsSection.tsx` (plain-props: master `enabled` +
+      derived tri-state, `items` map, `onToggleMaster`/`onToggleCatalog` callbacks;
+      `CollapsibleSection` header master + a default-open "Star catalogs" sub-section
+      with a per-`STAR_CATALOG_IDS` checkbox row labelled from `SOURCE_REGISTRY`).
+      Plain-props test (`StarsSection.test.ts`, mirroring `GalaxiesSection.test.ts`):
+      per-catalog checkbox reflects `items[id].enabled`; clicking it fires
+      `onToggleCatalog('gaiaStars', false)`; master reflects allOn / mixed
+      (indeterminate) / noneOn and fires the right callbacks.
+- [ ] Add `StarsSectionContainer.tsx` (selectors + `useCallback` dispatches) → the
+      failing container test goes green.
+- [ ] Wire the SettingsPanel line: import `StarsSectionContainer`, render it
+      immediately after `<GalaxiesSectionContainer />`.
+- [ ] `npm test -- StarsSection` + `npm run typecheck` (both tsconfigs) → green.
+      Commit.
+
 ## Task 12 — README blurb + entanglement-radar + final gate (un-gated; ends the mergeable unit)
 
 **Files:** `README.md` (modify — user-facing functionality blurb only). Docs + review;
@@ -867,7 +980,7 @@ pipeline / build rows plans 01/02 already added.
       mirroring the galaxy cluster (no divergent per-item accessor), and the walker/origin
       split staying un-braided (cut ≠ dequant).
 - [ ] **Final gate:** `npm run typecheck` (both src + tools tsconfigs) + full `npm test`
-      → green. Commit. **Tasks 1–12 are a complete, mergeable unit** — the runtime is
+      → green. Commit. **Tasks 1–12 (including 11b) are a complete, mergeable unit** — the runtime is
       wired, compiles, tests green, and draws nothing only because no real bin has loaded.
 
 ## Task 13 — Real-data bring-up + tuning (GATED on the real fetch + build; LAST)
@@ -905,7 +1018,8 @@ new vitest** (the logic is covered by Tasks 8–11; this is eyes-on calibration)
   per-source slot+wiring, tier-reload); §7 renderer → Tasks 8–11 (walker, origin seam,
   per-source GPU renderer+shaders, layer+crossfade); §8 plan-time items → Decisions 1–3
   (colour ramp = Task 10, slab = Task 11, Sun = Task 9) + budget/crossfade tuning =
-  Task 13; docs blurb + skill = Task 12. Not-pickable (§6) honoured (no `drawPick`).
+  Task 13; docs blurb + skill = Task 12; SettingsPanel UI toggles = Task 11b
+  (2026-07-16 amendment). Not-pickable (§6) honoured (no `drawPick`).
 - **Amendment coverage.** Decision A (famous stars = a future second star catalog) →
   the inert `labelEnabled` axis on `StarCatalogItemSettings` (Task 5). Decision B (mirror
   the galaxy-catalog family) → `StarCatalogId`/`STAR_CATALOG_IDS` + `settings.starCatalogs`
@@ -930,7 +1044,7 @@ new vitest** (the logic is covered by Tasks 8–11; this is eyes-on calibration)
   row/`STAR_CATALOG_IDS` contents), no GPU-pipeline unit test (Task 10 is typecheck +
   visual); the covering-partition, hand-computed origin, and coincident-node tests are
   independent properties.
-- **Mergeable boundary.** Tasks 1–12 form a complete, green, mergeable unit; Task 13
+- **Mergeable boundary.** Tasks 1–12 (including 11b) form a complete, green, mergeable unit; Task 13
   (real-data tuning) is last and gated, structured so nothing in 1–12 depends on it.
 - **Contract, not implementation.** No function bodies pasted; existing code cited by
   `path:line`; only type signatures, the uniform/record layout references, and test
