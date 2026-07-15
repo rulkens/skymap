@@ -50,18 +50,22 @@
  * but scientifically load-bearing for a *local* star map, so it is never the
  * star a tier drops to hit its byte budget. Every other star is truncatable.
  *
- * ── Recovering per-star tags across `selectStars` ─────────────────────────
+ * ── Carrying per-star tags through `selectStars` ──────────────────────────
  *
  * The tier logic needs each surviving star's apparent magnitude (the truncation
- * sort key) and its supplement flag — but `selectStars` returns bare
- * `StarInput`s (position + absMag + bpRp), by design: it owns the set algebra,
- * not the build's bookkeeping. Rather than reimplement its dedup to re-derive
- * the tags (which would braid the set formula through two places), we exploit
- * that `selectStars` copies each surviving row's `position` array *by
- * reference* into its output. So a `Map` keyed on the position array's identity
- * recovers the tag for every output star without `selectStars` knowing the tag
- * exists. One owner for the dedup; one owner for the tags; a reference join
- * between them.
+ * sort key) and its supplement flag. Those two tags ride *on the `StarInput`
+ * row itself* (`appMag`/`isSupplement`), so they survive `selectStars`'s dedup
+ * with no re-join: the same object that carries a star's position and photometry
+ * carries its truncation tag. `selectStars` still owns the set algebra and never
+ * interprets the tags — it only forwards them, exactly as it forwards
+ * `absMag`/`bpRp`.
+ *
+ * An earlier design instead re-joined the tags after the fact via a `Map` keyed
+ * on each output position array's identity. That crashed on the real catalog:
+ * V8 caps both `Map` and `Set` at 2^24 = 16,777,216 entries, and the real build
+ * deduplicates ~16.8 M stars — one entry per star overflows the cap. Any
+ * collection whose size scales with the total star count is off the table here;
+ * the tag-on-the-row form has no such collection at all.
  */
 
 import { createReadStream, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -207,9 +211,6 @@ function absoluteMagnitude(apparentMag: number, distPc: number): number {
   return apparentMag - 5 * Math.log10(distPc) + 5;
 }
 
-/** A truncation tag carried alongside a star, recovered via position identity. */
-type StarTag = { appMag: number; isSupplement: boolean };
-
 /**
  * Build the three tiered star catalogs from parsed rows. Pure over its inputs
  * (no I/O, no `process`); async only because the format encoder compresses.
@@ -226,19 +227,20 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
     tierBudgets = TIER_BUDGET_BYTES,
   } = inputs;
 
-  // Position arrays double as the identity key that carries each star's
-  // truncation tag across `selectStars` (see the module header).
-  const tagByPosition = new Map<Vec3, StarTag>();
-
   // ── Gaia main rows: resolve distance, drop the placeless ones ─────────────
   const gcnsBySourceId = new Map<bigint, number>();
   for (const row of gcns) gcnsBySourceId.set(row.sourceId, row.distPc);
 
   const gaiaCandidates: GaiaSelectedRow[] = [];
   let noBailerJones = 0;
-  const mainSourceIds = new Set<bigint>();
+  // The GCNS-only loop below must skip any GCNS row whose source_id already
+  // appears as a main row. The obvious form — a Set of ALL ~16.8 M main ids —
+  // overflows V8's 2^24-entry Set cap and crashes the real build. So invert the
+  // membership: record only the GCNS ids (≤~331 k) that are ALSO seen among the
+  // main rows. Same predicate at the skip site, ~50× smaller, and ~1 GB lighter.
+  const gcnsSeenInMain = new Set<bigint>();
   for (const row of gaia) {
-    mainSourceIds.add(row.sourceId);
+    if (gcnsBySourceId.has(row.sourceId)) gcnsSeenInMain.add(row.sourceId);
     const distPc = resolveStarDistancePc({
       rMedPhotogeo: row.rMedPhotogeo,
       rMedGeo: row.rMedGeo,
@@ -249,13 +251,13 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
       noBailerJones++;
       continue;
     }
-    const position = raDecDistToCartesian(row.raDeg, row.decDeg, distPc);
-    tagByPosition.set(position, { appMag: row.gMag, isSupplement: false });
     gaiaCandidates.push({
       sourceId: row.sourceId,
-      position,
+      position: raDecDistToCartesian(row.raDeg, row.decDeg, distPc),
       absMag: absoluteMagnitude(row.gMag, distPc),
       bpRp: row.bpRp,
+      appMag: row.gMag,
+      isSupplement: false,
     });
   }
 
@@ -264,14 +266,14 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
   // distance (joined above); here we add the ones with no main counterpart as
   // supplement stars, tagged so tier truncation never drops them.
   for (const row of gcns) {
-    if (mainSourceIds.has(row.sourceId)) continue;
-    const position = raDecDistToCartesian(row.raDeg, row.decDeg, row.distPc);
-    tagByPosition.set(position, { appMag: row.gMag, isSupplement: true });
+    if (gcnsSeenInMain.has(row.sourceId)) continue;
     gaiaCandidates.push({
       sourceId: row.sourceId,
-      position,
+      position: raDecDistToCartesian(row.raDeg, row.decDeg, row.distPc),
       absMag: absoluteMagnitude(row.gMag, row.distPc),
       bpRp: row.bpRp,
+      appMag: row.gMag,
+      isSupplement: true,
     });
   }
 
@@ -279,13 +281,13 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
   const hipBright: HipBrightRow[] = [];
   for (const row of hipparcos) {
     if (row.hpMag >= HP_BRIGHT_CUT) continue;
-    const position = raDecDistToCartesian(row.raDeg, row.decDeg, row.distPc);
-    tagByPosition.set(position, { appMag: row.hpMag, isSupplement: false });
     hipBright.push({
       hip: row.hip,
-      position,
+      position: raDecDistToCartesian(row.raDeg, row.decDeg, row.distPc),
       absMag: absoluteMagnitude(row.hpMag, row.distPc),
       bpRp: bvToBpRp(row.bv),
+      appMag: row.hpMag,
+      isSupplement: false,
     });
   }
 
@@ -321,9 +323,9 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
   const supplement: OctreeLeafStar[] = [];
   const mainWithMag: { leaf: OctreeLeafStar; appMag: number }[] = [];
   for (let i = 0; i < stars.length; i++) {
-    const tag = tagByPosition.get(stars[i]!.position)!;
-    if (tag.isSupplement) supplement.push(quantized[i]!);
-    else mainWithMag.push({ leaf: quantized[i]!, appMag: tag.appMag });
+    const star = stars[i]!;
+    if (star.isSupplement) supplement.push(quantized[i]!);
+    else mainWithMag.push({ leaf: quantized[i]!, appMag: star.appMag });
   }
   mainWithMag.sort((a, b) => a.appMag - b.appMag);
   const mainLeaves = mainWithMag.map((m) => m.leaf);
