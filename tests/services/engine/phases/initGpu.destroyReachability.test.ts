@@ -211,6 +211,13 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (i
 vi.mock('../../../../src/services/gpu/renderers/bodies/starPointRenderer', () => ({
   createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
 }));
+// The survey star-catalog renderer's constructor uses the full device API
+// (limits + createBuffer + bind groups + pipeline), so a `limits` patch on
+// the plain stub device wouldn't survive the next line — mock the factory
+// like every other renderer here.
+vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogRenderer', () => ({
+  createStarCatalogRenderer: vi.fn(() => makeStub('starCatalogRenderer')),
+}));
 // Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
 // real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its

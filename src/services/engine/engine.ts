@@ -416,6 +416,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // born there.
     assetSlots: {
       points: new Map(),
+      // Per-source star catalogs — registry-built (wireSlots), unlike points'
+      // initGpu minting; the star slot's commit null-guards the renderer.
+      starCatalogs: new Map(),
       filaments: null,
       famousMeta: null,
       structureCatalog: null,

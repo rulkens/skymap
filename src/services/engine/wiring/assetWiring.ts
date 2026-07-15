@@ -57,12 +57,15 @@ import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
+import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import {
   createEarthTextureSlot,
   EARTH_TEXTURE_MAX_DISTANCE_MPC,
 } from '../../loading/slots/earthTextureSlot';
+import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 
 /**
  * The categories backed by the bulk `.ccat` catalog — their visibility
@@ -105,6 +108,38 @@ function pointRow(source: SourceType): AssetWiringRow {
     factory: externalFactory,
     req: (tier) => ({ source, tier }),
     demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
+  };
+}
+
+/**
+ * Star-catalog sources, derived from the registry's `type: 'starCatalog'` rows
+ * rather than re-spelled, so a future famous-star catalog joins the demand
+ * table automatically — the same auto-widening `STAR_CATALOG_IDS` gives the
+ * settings key domain. `code` is the numeric `Source` twin of each row (it IS
+ * a `SourceType` at the entry literal; the union type widens it to `number`
+ * once read through `SOURCE_ENTRIES`, so the cast re-narrows it).
+ */
+const STAR_CATALOG_SOURCES: readonly SourceType[] = SOURCE_ENTRIES.filter(
+  (e) => e.type === 'starCatalog',
+).map((e) => e.code);
+
+/**
+ * One demand+req row for a star catalog. Unlike the galaxy `pointRow` family,
+ * these are registry-built (no `built: 'external'`): `createStarCatalogSlot`
+ * null-guards the `starCatalogRenderer` handle at commit time, so the slot
+ * needs no `initGpu` co-minting. Demand is the source-type-cluster gate — the
+ * coarse `starCatalogs.enabled` master AND the per-catalog `items[id].enabled`
+ * bit, mirroring the galaxy/structure/volume clusters. Tier reload is inherent:
+ * `reevaluateDemand` re-issues `req(newTier)` on any state change.
+ */
+function starCatalogRow(source: SourceType): AssetWiringRow {
+  const id = SOURCE_REGISTRY[source].id as StarCatalogId;
+  return {
+    key: source,
+    factory: (deps) => createStarCatalogSlot(source, deps.state, deps.cb),
+    req: (tier) => ({ source, tier }),
+    demand: (ctx) =>
+      ctx.settings.starCatalogs.enabled && ctx.settings.starCatalogs.items[id]?.enabled === true,
   };
 }
 
@@ -218,4 +253,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     req: () => undefined,
     demand: (ctx) => ctx.cameraDistanceMpc < EARTH_TEXTURE_MAX_DISTANCE_MPC,
   },
+
+  // ── Survey star catalogs (Gaia bin today) ────────────────────────
+  // Per-source, tier-aware, registry-built. One row per `type: 'starCatalog'`
+  // registry entry; a new star catalog joins the table with no edit here.
+  ...STAR_CATALOG_SOURCES.map(starCatalogRow),
 ];
