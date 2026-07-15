@@ -58,7 +58,9 @@ export function starNodeOriginRelCamMpc(
 ): { originRelCamMpc: Vec3; cellScaleMpc: number } {
   // Box edge in leaf cells: 1 for a leaf, 2^level for an aggregate.
   const boxCells = 2 ** node.level;
-  const cellEdgePc = catalog.cellEdgePc * boxCells;
+  // Box edge in parsecs: the leaf cell edge scaled up by the box's leaf span.
+  // (Distinct from `catalog.cellEdgePc`, the leaf-only field it derives from.)
+  const boxEdgePc = catalog.cellEdgePc * boxCells;
 
   const [gx, gy, gz] = catalog.gridOrigin;
   const [cx, cy, cz] = mortonDecode3(node.mortonIndex);
@@ -68,12 +70,12 @@ export function starNodeOriginRelCamMpc(
   // camera-relative result keeps every significant bit the f32 upload needs.
   const pcToMpc = SCALE_UNITS.PC_TO_MPC;
   const originRelCamMpc: Vec3 = [
-    (gx + cx * cellEdgePc) * pcToMpc - camPosMpc[0],
-    (gy + cy * cellEdgePc) * pcToMpc - camPosMpc[1],
-    (gz + cz * cellEdgePc) * pcToMpc - camPosMpc[2],
+    (gx + cx * boxEdgePc) * pcToMpc - camPosMpc[0],
+    (gy + cy * boxEdgePc) * pcToMpc - camPosMpc[1],
+    (gz + cz * boxEdgePc) * pcToMpc - camPosMpc[2],
   ];
 
-  const cellScaleMpc = cellEdgePc * pcToMpc;
+  const cellScaleMpc = boxEdgePc * pcToMpc;
 
   return { originRelCamMpc, cellScaleMpc };
 }
