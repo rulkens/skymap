@@ -41,6 +41,8 @@ import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCata
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
+import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
@@ -181,6 +183,20 @@ export const selectStarLabelsEnabled = (state: RootState): boolean =>
 export const selectStructureItems = (
   state: RootState,
 ): Record<StructureId, StructureItemSettings> => selectSettings(state).structures.items;
+
+// --- starCatalogs cluster -----------------------------------------------------
+
+/**
+ * Passthrough read of the whole star-catalogs cluster (`{ enabled, items }`).
+ * Returns the raw Immer-stable reference — no fresh object — so react-redux
+ * bails on unrelated writes. The `StarsSectionContainer` needs both the master
+ * gate and the per-catalog items, so it reads the cluster once here rather than
+ * through two split selectors.
+ */
+export const selectStarCatalogs = (
+  state: RootState,
+): { enabled: boolean; items: Record<StarCatalogId, StarCatalogItemSettings> } =>
+  selectSettings(state).starCatalogs;
 
 // --- derived ------------------------------------------------------------------
 
