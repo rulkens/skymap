@@ -309,6 +309,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       starRenderer: null,
       planetRenderer: null,
       starPointRenderer: null,
+      starCatalogRenderer: null,
       // Keplerian orbit trails (Earth / Jupiter / Moon) — additive screen-space
       // conics on the (hdr, NEAR0) step. null until initGpu; excluded from
       // isEngineReady, null-checked at use by orbitTrailsLayer.
@@ -732,6 +733,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.planetRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
+    state.gpu.starCatalogRenderer?.destroy();
+    state.gpu.starCatalogRenderer = null;
     state.gpu.orbitTrailRenderer?.destroy();
     state.gpu.orbitTrailRenderer = null;
     state.gpu.timingService.destroy();

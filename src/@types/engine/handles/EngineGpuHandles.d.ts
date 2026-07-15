@@ -65,6 +65,7 @@ import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
+import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
@@ -389,6 +390,18 @@ export type EngineGpuHandles = {
    * instance + uniform buffers).
    */
   starPointRenderer: StarPointRenderer | null;
+  /**
+   * The survey (Gaia bin) stars as additive point sprites into the depthless
+   * HDR target — the wide-field twin of `starPointRenderer`, fed from an
+   * in-file octree of cell-quantized records rather than a flat seed list.
+   * Records upload once per source (`upload`); the star layer walks each
+   * octree per frame (`loadedCatalogs`) and draws the per-frame cut.  No depth
+   * format: the hdr row has no depth attachment.  Excluded from
+   * `isEngineReady` and null-checked at use.  Null until `initGpu` constructs
+   * it; released and re-nulled by `destroy()` (releases the per-source records
+   * + node-params buffers and the shared camera uniform).
+   */
+  starCatalogRenderer: StarCatalogRenderer | null;
   /**
    * The accurate Keplerian orbit trails (Earth / Jupiter around the Sun, the
    * Moon around Earth) as additive screen-space conics into the depthless HDR

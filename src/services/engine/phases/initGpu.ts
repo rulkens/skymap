@@ -67,6 +67,7 @@ import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
+import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
@@ -418,6 +419,14 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // partition and re-uploads per frame.
   state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
   state.gpu.starPointRenderer.setStars(state.data.bodies.stars);
+
+  // starCatalogRenderer draws the survey (Gaia bin) stars — the wide-field
+  // twin of starPointRenderer — as additive points into the same depthless
+  // HDR target (no depth format).  It owns only the pipeline here; the star
+  // layer uploads each catalog's records once as the .bin lands and walks the
+  // octree per frame.  Constructed unconditionally (the pipeline is cheap);
+  // stays a no-op draw until a catalog is uploaded.
+  state.gpu.starCatalogRenderer = createStarCatalogRenderer(device, 'rgba16float');
 
   // orbitTrailRenderer draws the accurate Keplerian orbit trails (Earth /
   // Jupiter / Moon) as additive screen-space conics into the same depthless
