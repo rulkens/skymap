@@ -37,7 +37,9 @@ export const GAIA_STARS_ENTRY = {
   // to key off before the perf pass lands.
   drawBudget: { typical: 1_000_000, hardCap: 2_000_000 },
   // Camera-distance band (parsecs) over which the survey stars crossfade to
-  // the procedural Milky-Way cloud (spec §7, ~2→5 kpc). Starting values —
-  // Task 12 tunes the endpoints.
-  crossfadePc: { inner: 2_000, outer: 5_000 },
+  // the procedural Milky-Way cloud. Chosen so the stellar bubble starts
+  // fading in while the cloud still dominates the view, reaching full
+  // strength well inside the disk. First-pass eye-tuning from real-data
+  // bring-up — this is the knob the tuning task iterates.
+  crossfadePc: { inner: 8_000, outer: 25_000 },
 } as const satisfies StarCatalogSourceEntry;
