@@ -396,8 +396,9 @@ function makeInput(
           volumeFieldRenderer: null,
           flowFieldRenderer: null,
           structureMarkerRenderer: null,
-          // Near-field handles null → the body layers, star-points, and
-          // foregroundLabelsLayer all report enabled=false, so the program's
+          // Near-field handles null → the body layers, star-points,
+          // star-catalog, and foregroundLabelsLayer all report enabled=false,
+          // so the program's
           // (hdr, NEAR0) render and foreground:0 render select nothing and
           // the foreground:0→swap composite is touched-set-skipped. These
           // fixtures stay a pure cosmological-frame trace (see the
@@ -407,6 +408,7 @@ function makeInput(
           planetRenderer: null,
           starPointRenderer: null,
           orbitTrailRenderer: null,
+          starCatalogRenderer: null,
           foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud,

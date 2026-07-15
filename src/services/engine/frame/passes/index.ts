@@ -42,31 +42,35 @@
  *  11. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
  *                            Moon) as screen-space conics with a brightness
  *                            lobe at the body's position (f64 compose seam)
+ *  12. star-catalog        — the survey (Gaia bin) stars, streamed as an
+ *                            in-file octree and drawn as a per-frame flux-mip
+ *                            cut of additive point sprites (f64 rebase seam),
+ *                            crossfading to the procedural Milky-Way cloud
  *
  * The next five are premultiplied-OVER overlays, projected through the
  * cosmological slab and drawn post-tone-map onto the swap chain:
  *
- *  12. selection-ring      — per-galaxy / Milky-Way / structure selection halo
- *  13. disk-radius-ring    — debug: catalog-disk-radius calibration ring
- *  14. marker-lines        — screen-space thick-line overlay (e.g. label stems)
- *  15. labels              — MSDF text labels
- *  16. clip-path-debug     — debug: clip-path inspector route + gizmo
+ *  13. selection-ring      — per-galaxy / Milky-Way / structure selection halo
+ *  14. disk-radius-ring    — debug: catalog-disk-radius calibration ring
+ *  15. marker-lines        — screen-space thick-line overlay (e.g. label stems)
+ *  16. labels              — MSDF text labels
+ *  17. clip-path-debug     — debug: clip-path inspector route + gizmo
  *
  * The final rows leave the cosmological slab entirely — the near-field
  * foreground group, projected through the near0 slab (whose near/far track
  * the camera's orbit distance) so the true-scale bodies are never clipped by
  * the cosmological near plane:
  *
- *  17. earth               — true-scale Blue-Marble-textured Earth (f64 compose
+ *  18. earth               — true-scale Blue-Marble-textured Earth (f64 compose
  *                            seam), opaque (depth-tested) into the `foreground:0`
  *                            target
- *  18. star-spheres        — the resolved partition of the stars (the Sun +
+ *  19. star-spheres        — the resolved partition of the stars (the Sun +
  *                            any star crossing STAR_RESOLVE_PX) as true-scale
  *                            flat-emissive spheres (f64 compose seam), opaque
  *                            into the same `foreground:0` target
- *  19. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
+ *  20. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
  *                            (f64 compose seam), opaque into the same target
- *  20. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *  21. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
  *
@@ -150,6 +154,7 @@ import { earthLayer } from './earthLayer';
 import { starSpheresLayer } from './starSpheresLayer';
 import { planetsLayer } from './planetsLayer';
 import { starPointsLayer } from './starPointsLayer';
+import { starCatalogLayer } from './starCatalogLayer';
 import { orbitTrailsLayer } from './orbitTrailsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 
@@ -179,10 +184,11 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // scale anchors), drawn by the frame program's dedicated (hdr, NEAR0) step
   // AFTER the nine COSMO hdr layers above and before the tone-map — so they
   // ride the same tone curve as the galaxies. Star points first, then the
-  // conic orbit trails (both additive, so within-group order is a listing
-  // choice, not a compositing one).
+  // conic orbit trails, then the survey (Gaia bin) star catalog (all additive,
+  // so within-group order is a listing choice, not a compositing one).
   starPointsLayer,
   orbitTrailsLayer,
+  starCatalogLayer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
   // ring leads so marker-lines and labels composite over its stroke; the
   // debug clip-path overlay trails so its route + gizmo draw on top of
@@ -227,5 +233,6 @@ export { earthLayer } from './earthLayer';
 export { starSpheresLayer } from './starSpheresLayer';
 export { planetsLayer } from './planetsLayer';
 export { starPointsLayer } from './starPointsLayer';
+export { starCatalogLayer } from './starCatalogLayer';
 export { orbitTrailsLayer } from './orbitTrailsLayer';
 export { foregroundLabelsLayer } from './foregroundLabelsLayer';

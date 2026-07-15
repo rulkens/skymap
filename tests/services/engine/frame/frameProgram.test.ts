@@ -170,12 +170,12 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, nine hdr, star-points + orbit-trails, hdr→swap, five swap, near-field tail, pick', () => {
+  it('derives the real registry slot list: scalar-volume, nine hdr, star-points + orbit-trails + star-catalog, hdr→swap, five swap, near-field tail, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
     // iterates. scalar-volume leads (the volume render step), then the nine
-    // COSMO hdr layers in registry order, then star-points + orbit-trails
-    // (the dedicated (hdr, NEAR0) step before the tone-map), the tone-map
+    // COSMO hdr layers in registry order, then star-points + orbit-trails +
+    // star-catalog (the dedicated (hdr, NEAR0) step before the tone-map), the tone-map
     // composite, the five swap overlays, then the near-field tail (the
     // foreground:0 body render — one slot per body layer: earth,
     // star-spheres, planets — the foreground:0→swap composite, and the NEAR0
@@ -193,6 +193,7 @@ describe('timedSlotsOf', () => {
       'structure-markers',
       'star-points',
       'orbit-trails',
+      'star-catalog',
       'hdr→swap',
       'selection-ring',
       'disk-radius-ring',

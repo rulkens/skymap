@@ -410,6 +410,7 @@ describe('renderFrame visual baseline', () => {
           planetRenderer: null,
           starPointRenderer: null,
           orbitTrailRenderer: null,
+          starCatalogRenderer: null,
           foregroundLabelRenderer: null,
           // milkyWayLayer.draw reads the generated cloud buffers off this handle.
           milkyWayCloud: {

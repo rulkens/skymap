@@ -175,7 +175,14 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
     // tone-map. Above the gate this group must come back empty too — not just
     // the (foreground:0, NEAR0) body group — for the skip to be wholesale.
     const state = {
-      gpu: { starPointRenderer: makeRenderer(), orbitTrailRenderer: { draw: vi.fn() } },
+      // starCatalogRenderer null (like the real gpu bag pre-load): no Gaia bin
+      // committed here, so starCatalogLayer — the group's third (hdr, NEAR0)
+      // row — short-circuits its handle gate and stays out of this assertion.
+      gpu: {
+        starPointRenderer: makeRenderer(),
+        orbitTrailRenderer: { draw: vi.fn() },
+        starCatalogRenderer: null,
+      },
       data: { bodies: { stars: SCENE_STARS } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
