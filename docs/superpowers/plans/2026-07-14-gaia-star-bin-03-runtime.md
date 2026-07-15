@@ -562,16 +562,16 @@ lookup) — NOT `tierFilenameForSource` (that narrows to galaxyCatalog,
 dimension is what lets a future famous-star catalog reuse it unchanged.
 `decodeStarCatalog` is async (sealed codec) — the fetcher awaits it.
 
-- [ ] Rework `StarCatalogReq` to `{ source, tier }` + `starCatalogFetcher` to the
+- [x] Rework `StarCatalogReq` to `{ source, tier }` + `starCatalogFetcher` to the
       source-parameterized filename (didactic docblock: one fetcher per star catalog;
       tiered vs untiered branch; async decode because the codec inflates).
-- [ ] Test `fetches <binBaseName>-<tier>.bin and decodes it` — stub `fetchWithProgress`
+- [x] Test `fetches <binBaseName>-<tier>.bin and decodes it` — stub `fetchWithProgress`
       (or the global `fetch`) to return `await encodeStarCatalog(<synthetic catalog>)`;
       assert the resolved `StarCatalog` round-trips (star/node counts + a spot-checked
       node), and that the requested URL contains `stars-medium.bin` for
       `{ source: Source.GaiaStars, tier: 'medium' }`. Synthetic in-memory bin — no
       network, no real data.
-- [ ] `npm test -- starCatalogFetcher` + `npm run typecheck` → green. Commit.
+- [x] `npm test -- starCatalogFetcher` + `npm run typecheck` → green. Commit.
 
 ## Task 7 — `starCatalogSlot` + per-source `ASSET_WIRING` rows (tier-reload)
 
@@ -926,7 +926,7 @@ action creators, each wrapped in `useCallback(…, [dispatch])`.
 
 **Steps (TDD — mirror what the galaxy twins actually assert; no restatement tests):**
 
-- [ ] Failing container test first (`StarsSectionContainer.test.ts`, mirroring
+- [x] Failing container test first (`StarsSectionContainer.test.ts`, mirroring
       `GalaxiesSectionContainer.test.ts`): `createAppStore()` + `<Provider>` +
       `createElement(StarsSectionContainer, null)`. Assert (a) toggling the master
       checkbox dispatches `setStarCatalogEnabled` so
@@ -935,7 +935,7 @@ action creators, each wrapped in `useCallback(…, [dispatch])`.
       `id: 'gaiaStars'` so `store.getState()` reflects
       `starCatalogs.items.gaiaStars.enabled` cleared. `fireEvent.click` for the
       controlled checkboxes (the jsdom gotcha the galaxy test documents).
-- [ ] Add the presentational `StarsSection.tsx` (plain-props: master `enabled` +
+- [x] Add the presentational `StarsSection.tsx` (plain-props: master `enabled` +
       derived tri-state, `items` map, `onToggleMaster`/`onToggleCatalog` callbacks;
       `CollapsibleSection` header master + a default-open "Star catalogs" sub-section
       with a per-`STAR_CATALOG_IDS` checkbox row labelled from `SOURCE_REGISTRY`).
@@ -943,11 +943,11 @@ action creators, each wrapped in `useCallback(…, [dispatch])`.
       per-catalog checkbox reflects `items[id].enabled`; clicking it fires
       `onToggleCatalog('gaiaStars', false)`; master reflects allOn / mixed
       (indeterminate) / noneOn and fires the right callbacks.
-- [ ] Add `StarsSectionContainer.tsx` (selectors + `useCallback` dispatches) → the
+- [x] Add `StarsSectionContainer.tsx` (selectors + `useCallback` dispatches) → the
       failing container test goes green.
-- [ ] Wire the SettingsPanel line: import `StarsSectionContainer`, render it
+- [x] Wire the SettingsPanel line: import `StarsSectionContainer`, render it
       immediately after `<GalaxiesSectionContainer />`.
-- [ ] `npm test -- StarsSection` + `npm run typecheck` (both tsconfigs) → green.
+- [x] `npm test -- StarsSection` + `npm run typecheck` (both tsconfigs) → green.
       Commit.
 
 ## Task 12 — README blurb + entanglement-radar + final gate (un-gated; ends the mergeable unit)

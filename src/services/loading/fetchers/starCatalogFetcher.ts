@@ -53,12 +53,15 @@ export const starCatalogFetcher: Fetcher<StarCatalog, StarCatalogReq> = async (
   if (entry.type !== 'starCatalog') {
     throw new Error(`starCatalogFetcher: source ${req.source} is not a star catalog`);
   }
-  // Widen from the concrete Gaia row to the general StarCatalogSourceEntry
-  // contract (`tiered: boolean`): the current sole star source pins
-  // `tiered: true` as a const literal, which would render the untiered
-  // `${base}.bin` branch below dead code (an unreachable `never`). Binding
-  // to the type keeps both branches live so a future untiered star catalog
-  // fetches correctly.
+  // Re-bind to the general StarCatalogSourceEntry contract before branching
+  // on 'tiered'. Several registry rows (the volume entries) also carry a
+  // literal 'tiered' field, which makes 'tiered' a discriminant of the
+  // registry union — so a ternary on the guard-narrowed entry's literal
+  // 'tiered: true' narrows the entry itself to 'never' in the untiered
+  // branch and 'entry.binBaseName' fails to typecheck there. Widening to
+  // 'tiered: boolean' keeps both branches live; the untiered `${base}.bin`
+  // path mirrors the galaxy side's famous.bin and serves the next,
+  // untiered star catalog.
   const starEntry: StarCatalogSourceEntry = entry;
   const name = starEntry.tiered
     ? `${starEntry.binBaseName}-${req.tier}.bin`
