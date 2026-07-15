@@ -69,6 +69,7 @@ import { DESI_SGW_ENTRY } from './sources/desiSgw';
 import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
+import { STAR_CATALOG_ENTRY } from './sources/star-catalog';
 
 export { Source } from './source';
 
@@ -125,6 +126,7 @@ export const SOURCE_REGISTRY = {
   [Source.FamousStar]: FAMOUS_STAR_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
+  [Source.StarCatalog]: STAR_CATALOG_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
