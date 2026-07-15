@@ -37,6 +37,7 @@ import { isStructureId } from '../../data/structure/structureIds';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
@@ -122,9 +123,24 @@ const settingsSlice = createSlice({
       settings.filaments.intensity = action.payload;
     },
 
-    // ── star catalog (singleton overlay) ────────────────────────────────────
+    // ── star catalogs (fourth source-type cluster) ──────────────────────────
+    // Master gate + per-catalog items, mirroring the galaxy-catalog cluster:
+    // `setStarCatalogEnabled` writes the coarse "hide all star catalogs" gate,
+    // and the two per-item reducers write one row's visibility / label axis.
     setStarCatalogEnabled: (settings, action: PayloadAction<boolean>) => {
-      settings.starCatalog.enabled = action.payload;
+      settings.starCatalogs.enabled = action.payload;
+    },
+    setStarCatalogVisible: (
+      settings,
+      action: PayloadAction<{ id: StarCatalogId; enabled: boolean }>,
+    ) => {
+      settings.starCatalogs.items[action.payload.id].enabled = action.payload.enabled;
+    },
+    setStarCatalogLabelEnabled: (
+      settings,
+      action: PayloadAction<{ id: StarCatalogId; enabled: boolean }>,
+    ) => {
+      settings.starCatalogs.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
 
     // ── volumes ─────────────────────────────────────────────────────────────
@@ -332,6 +348,8 @@ export const {
   setFilamentsEnabled,
   setFilamentIntensity,
   setStarCatalogEnabled,
+  setStarCatalogVisible,
+  setStarCatalogLabelEnabled,
   setVolumesEnabled,
   addVolumeField,
   removeVolumeField,

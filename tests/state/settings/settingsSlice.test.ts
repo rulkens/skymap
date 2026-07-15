@@ -22,6 +22,7 @@ import reducer, {
   setFlowEnabled,
   setFlow,
   setStarCatalogEnabled,
+  setStarCatalogVisible,
   setPassDisabled,
   setClipPathLinger,
   setClipPathLingerSec,
@@ -190,11 +191,19 @@ describe('settingsSlice — flow', () => {
   });
 });
 
-describe('settingsSlice — star catalog', () => {
-  it('setStarCatalogEnabled toggles the flag', () => {
-    // Seeds true from SOURCE_REGISTRY[Source.StarCatalog].visible; dispatch false.
+describe('settingsSlice — star catalogs', () => {
+  it('setStarCatalogEnabled toggles the master gate', () => {
+    // Master gate seeds true; dispatch false collapses the whole cluster.
     const next = reducer(base(), setStarCatalogEnabled(false));
-    expect(next.starCatalog.enabled).toBe(false);
+    expect(next.starCatalogs.enabled).toBe(false);
+  });
+
+  it('setStarCatalogVisible toggles a catalog’s enabled', () => {
+    // gaiaStars seeds enabled: true from SOURCE_REGISTRY[Source.GaiaStars].visible;
+    // the per-item reducer flips one row without touching the master gate.
+    const next = reducer(base(), setStarCatalogVisible({ id: 'gaiaStars', enabled: false }));
+    expect(next.starCatalogs.items.gaiaStars.enabled).toBe(false);
+    expect(next.starCatalogs.enabled).toBe(true);
   });
 });
 

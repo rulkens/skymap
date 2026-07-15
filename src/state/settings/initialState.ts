@@ -35,7 +35,6 @@ import {
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
-  DEFAULT_STAR_CATALOG,
 } from '../../data/defaults';
 import {
   DEFAULT_ALIGN_SEC,
@@ -55,6 +54,8 @@ import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCata
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
+import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
 
 export function buildInitialSettings(): EngineSettingsState {
   return {
@@ -107,10 +108,24 @@ export function buildInitialSettings(): EngineSettingsState {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
-    // Gaia star catalog is a singleton overlay layer: its one on/off knob lives
-    // here, spread from the registry-derived `DEFAULT_STAR_CATALOG` seed. No
-    // data-layer store — "loaded" is the asset slot's own readiness.
-    starCatalog: { ...DEFAULT_STAR_CATALOG },
+    // Star-catalog layer: master gate on + one item row per star catalog. Rows
+    // are DERIVED from the star-catalog registry entries (mirroring
+    // `galaxyCatalogs`), so the seed can't drift from the star-catalog set, and
+    // each row's `enabled` is seeded from that entry's `visible` field —
+    // SOURCE_REGISTRY stays the single source of truth for default visibility.
+    // `labelEnabled` is inert for the survey-wide Gaia bin (the star renderer
+    // draws no per-star names); seeded uniformly true for a future label-bearing
+    // famous-star catalog. Per-row "loaded" is the asset slot's own readiness —
+    // no data-layer store.
+    starCatalogs: {
+      enabled: true,
+      items: Object.fromEntries(
+        SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [
+          e.id,
+          { enabled: e.visible, labelEnabled: true },
+        ]),
+      ) as Record<StarCatalogId, StarCatalogItemSettings>,
+    },
     volumes: {
       enabled: DEFAULT_VOLUMES_ENABLED,
       items: seedVolumeFields(),

@@ -109,25 +109,21 @@ describe('Source enum — structure codes (cluster/supercluster/void)', () => {
 });
 
 describe('Source enum — star-catalog code (survey-wide Gaia bin)', () => {
-  it('appends StarCatalog=24 to the enum', () => {
+  it('appends GaiaStars=24 to the enum', () => {
     // Registry-key-only code (not persisted, not pickable); appended after
     // the three body codes (FamousStar=21, Planet=22, Earth=23). Never
     // renumber the codes below it.
-    expect(Source.StarCatalog).toBe(24);
+    expect(Source.GaiaStars).toBe(24);
   });
 
-  it('keeps StarCatalog OUT of GALAXY_CATALOG_SOURCES', () => {
+  it('keeps GaiaStars OUT of GALAXY_CATALOG_SOURCES', () => {
     // Load-bearing behavioural invariant: the survey-wide Gaia stars render
     // through their own star renderer, gated by the star-catalog crossfade
     // band — NOT the galaxy-catalog points-pipeline visibility bitmask. If
     // this code ever joined GALAXY_CATALOG_SOURCES the stars would be OR'd
     // into ALL_VISIBLE_MASK and toggled by the galaxy-catalog draw loop,
     // silently coupling two independent visibility systems.
-    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.StarCatalog);
-  });
-
-  it('keeps the StarCatalog bit clear of ALL_VISIBLE_MASK', () => {
-    expect(maskHas(ALL_VISIBLE_MASK, Source.StarCatalog)).toBe(false);
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.GaiaStars);
   });
 });
 

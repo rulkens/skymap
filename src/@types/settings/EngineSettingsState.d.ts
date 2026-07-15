@@ -52,6 +52,8 @@ import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
+import type { StarCatalogId } from '../data/starCatalog/StarCatalogId';
+import type { StarCatalogItemSettings } from './StarCatalogItemSettings';
 import type { ClipId } from '../animation/ClipId';
 import type { SplineMode } from '../animation/SplineMode';
 import type { PassByDir } from '../animation/PassByDir';
@@ -66,9 +68,9 @@ export type EngineSettingsState = {
    * Per-galaxy catalog state lives in `items` — one row per `GalaxyCatalogId`, each carrying
    * the layer-visibility axis (`enabled`) and the text-label axis
    * (`labelEnabled`). Only the famous-galaxy catalog actually renders a label;
-   * the other galaxy catalogs carry `labelEnabled` inertly so all three source-type
-   * clusters share the one per-item shape (galaxy catalogs / structures / volumes all
-   * expose `items[id].enabled`).
+   * the other galaxy catalogs carry `labelEnabled` inertly so all four source-type
+   * clusters share the one per-item shape (galaxy catalogs / structures / volumes /
+   * star catalogs all expose `items[id].enabled`).
    */
   galaxyCatalogs: {
     enabled: boolean;
@@ -135,18 +137,25 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Gaia star-catalog singleton overlay — the wide-field near-star bin drawn
-   * by the star renderer (see
-   * `docs/superpowers/conventions/singleton-overlay-layers.md`).  All of its
-   * user-facing state lives here in `settings`, exactly as `filaments` and
-   * `milkyWay` do; the layer has a single on/off knob and no data-layer store.
-   * Its "loaded" status is the asset slot's own readiness (Tasks 5–6 wire the
-   * slot), NOT a bit on a store — so this cluster carries `enabled` only.  The
-   * asset-demand predicate reads `settings.starCatalog.enabled`, and the renderer
-   * reads this slice each frame.
+   * Star-catalog master gate and per-catalog items — the FOURTH source-type
+   * cluster, symmetric with `galaxyCatalogs` / `structures` / `volumes`.
+   * `enabled` is the coarse "hide all star catalogs" gate; per-catalog state
+   * lives in `items` — one row per `StarCatalogId`, each carrying the
+   * layer-visibility axis (`enabled`) and the text-label axis (`labelEnabled`).
+   * Today the sole row is the survey-wide Gaia bin (`gaiaStars`), which carries
+   * `labelEnabled` inertly (the star renderer draws no per-star names); the
+   * curated famous-star map will add a label-bearing row later, so all four
+   * source-type clusters expose the same per-item shape.
+   *
+   * Singleton-overlay convention still holds per row: a star catalog's "loaded"
+   * status is its asset slot's own readiness (Tasks 5–6 wire the slot), NOT a
+   * bit on a store. The asset-demand predicate reads
+   * `settings.starCatalogs.items[id].enabled`, and the renderer reads this slice
+   * each frame.
    */
-  starCatalog: {
+  starCatalogs: {
     enabled: boolean;
+    items: Record<StarCatalogId, StarCatalogItemSettings>;
   };
 
   /**
@@ -157,8 +166,8 @@ export type EngineSettingsState = {
    * (enabled / intensity / palette / …) live in `items` — one settings
    * row per registry-known volume field, seeded from `SOURCE_REGISTRY` at
    * construction so the panel can show a field's toggle before its cube
-   * lazy-loads.  `items` is the same per-item accessor that galaxy catalogs and
-   * structures expose, so all three source-type clusters share one shape.
+   * lazy-loads.  `items` is the same per-item accessor that galaxy catalogs,
+   * structures, and star catalogs expose, so all four source-type clusters share one shape.
    */
   volumes: {
     enabled: boolean;
@@ -280,8 +289,8 @@ export type EngineSettingsState = {
    * parallel root records that previously held the same booleans in different
    * shapes: a reader walks one `items[cat]` entry to learn everything about a
    * category's visibility instead of cross-indexing two records by the same
-   * key.  `items` is the same per-item accessor galaxy catalogs and volumes expose, so
-   * all three source-type clusters share one shape.  Defaults to every
+   * key.  `items` is the same per-item accessor galaxy catalogs, volumes, and star
+   * catalogs expose, so all four source-type clusters share one shape.  Defaults to every
    * category fully visible.
    */
   structures: {

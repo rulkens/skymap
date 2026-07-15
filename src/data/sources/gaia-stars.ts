@@ -12,11 +12,11 @@ import { Source } from '../source';
  * draw budget and the crossfade band that hands off to the procedural Milky-Way
  * cloud sit next to the `binBaseName` they govern.
  */
-export const STAR_CATALOG_ENTRY = {
+export const GAIA_STARS_ENTRY = {
   type: 'starCatalog',
-  code: Source.StarCatalog,
-  id: 'starCatalog',
-  label: 'Stars',
+  code: Source.GaiaStars,
+  id: 'gaiaStars',
+  label: 'Gaia Stars',
   // A near-field bubble of stars around the observer, not a sky patch —
   // allSky:true matches the other non-catalog rows (the coverage-mask logic
   // only consults this flag for galaxy-catalog footprints).

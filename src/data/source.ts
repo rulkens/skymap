@@ -173,5 +173,5 @@ export const Source = {
    * the first code after the three contiguous body codes (FamousStar=21,
    * Planet=22, Earth=23). Never renumber the codes below it.
    */
-  StarCatalog: 24,
+  GaiaStars: 24,
 } as const;
