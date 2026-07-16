@@ -28,6 +28,7 @@
 import { createAssetSlot } from '../AssetSlot';
 import { starCatalogFetcher } from '../fetchers/starCatalogFetcher';
 import { SOURCE_REGISTRY } from '../../../data/sources';
+import { engineSourceCountReported } from '../../../state/engine/engineSlice';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
@@ -38,7 +39,7 @@ import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 export function createStarCatalogSlot(
   source: SourceType,
   state: EngineState,
-  _cb: EngineCallbacks,
+  cb: EngineCallbacks,
 ): AssetSlot<StarCatalog, StarCatalogReq> {
   const id = SOURCE_REGISTRY[source].id;
   const slot = createAssetSlot<StarCatalog, StarCatalogReq>({
@@ -59,6 +60,13 @@ export function createStarCatalogSlot(
         `[engine] ${id}: ${s.value.starCount.toLocaleString()} stars, ` +
           `${s.value.nodeCount.toLocaleString()} nodes`,
       );
+      // Report the loaded star count to the engine slice — the same lifecycle
+      // moment the galaxy-catalog slots report theirs, so the SettingsPanel's
+      // per-catalog count chip lights up and a tier reload re-reports the new
+      // tier's population. The star catalog's `source` is a `SourceType`
+      // (Source.GaiaStars), so it keys into the shared `sourceCounts` map with
+      // no separate key domain.
+      cb.store.dispatch(engineSourceCountReported({ source, count: s.value.starCount }));
     }
   });
   return slot;

@@ -50,6 +50,12 @@ type StarsSectionProps = {
   enabled: boolean;
   /** Per-catalog visibility (+ inert `labelEnabled`), keyed by star catalog id. */
   items: Record<StarCatalogId, StarCatalogItemSettings>;
+  /**
+   * Per-catalog loaded star counts, keyed by star catalog id. Absent entries
+   * (catalog not yet loaded) render the row without a count rather than a
+   * misleading "0" — the same contract the Galaxies section's count chip keeps.
+   */
+  counts?: Partial<Record<StarCatalogId, number>>;
   /** Current star-billboard size in pixels (shared across every star catalog). */
   sizePx: number;
   /** Current star-brightness trim (shared; 1.0 = identity). */
@@ -89,6 +95,7 @@ type StarsSectionProps = {
 function StarsSection({
   enabled,
   items,
+  counts,
   sizePx,
   brightness,
   refineThreshold,
@@ -119,9 +126,15 @@ function StarsSection({
       <CollapsibleSection title="Star catalogs" defaultOpen>
         {STAR_CATALOG_IDS.map((id) => {
           const label = SOURCE_ENTRIES.find((e) => e.id === id)?.label ?? id;
+          const count = counts?.[id];
           return (
             <div className={styles.panelRow} key={id}>
-              <label htmlFor={`toggle-star-catalog-${id}`}>{label}</label>
+              <label htmlFor={`toggle-star-catalog-${id}`}>
+                {label}
+                {count !== undefined && (
+                  <span className={styles.sourceCount}>{count.toLocaleString()}</span>
+                )}
+              </label>
               <input
                 id={`toggle-star-catalog-${id}`}
                 type="checkbox"

@@ -82,6 +82,24 @@ describe('StarsSection', () => {
     });
   });
 
+  describe('loaded-count chip', () => {
+    it('renders the formatted count next to the catalog label when present', () => {
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), counts: { gaiaStars: 1234567 } }),
+      );
+      const label = container.querySelector('label[for="toggle-star-catalog-gaiaStars"]')!;
+      const chip = label.querySelector('span');
+      expect(chip).not.toBeNull();
+      expect(chip!.textContent).toBe((1234567).toLocaleString());
+    });
+
+    it('renders no chip when the count is absent (not yet loaded)', () => {
+      const { container } = render(createElement(StarsSection, baseProps()));
+      const label = container.querySelector('label[for="toggle-star-catalog-gaiaStars"]')!;
+      expect(label.querySelector('span')).toBeNull();
+    });
+  });
+
   describe('master tri-state', () => {
     it('is checked and not indeterminate when the gate is on and every catalog is enabled (allOn)', () => {
       const { container } = render(createElement(StarsSection, baseProps()));
