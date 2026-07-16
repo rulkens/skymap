@@ -175,6 +175,14 @@ export type EngineSettingsState = {
    * stage divides the Gaussian peak by the same factor (flux-conserving), so it
    * softens the seam without changing total luminance. Rides the shared GPU
    * uniform beside `sizePx` / `brightness`.
+   *
+   * `exposureNearX` / `exposureFarX` are the two ABSOLUTE display exposures the
+   * scale-dependent `starExposureRamp` targets at its distance anchors (1 pc and
+   * 10 kpc). Unlike `brightness` (a flat trim), these shape the cross-scale
+   * ramp: the layer feeds both to `starExposureRamp` per frame. Live so the ramp
+   * can be re-eye-tuned against the current star bins' local flux; defaults 15 /
+   * 70, the shipped anchors (15 is also baked into the shader's
+   * STAR_FLUX_EXPOSURE, so the ramp returns 1.0 at the near anchor there).
    */
   starCatalogs: {
     enabled: boolean;
@@ -182,6 +190,8 @@ export type EngineSettingsState = {
     brightness: number;
     refineThreshold: number;
     glowOverlap: number;
+    exposureNearX: number;
+    exposureFarX: number;
     items: Record<StarCatalogId, StarCatalogItemSettings>;
   };
 

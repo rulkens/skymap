@@ -14,6 +14,7 @@ import {
   RAMP_NEAR_MPC,
   RAMP_FAR_MPC,
   RAMP_FAR_SCALE,
+  SHADER_BAKED_NEAR_EXPOSURE,
 } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
 
 describe('starExposureRamp', () => {
@@ -54,5 +55,37 @@ describe('starExposureRamp', () => {
   it('treats a zero or negative distance as the near case (returns 1)', () => {
     expect(starExposureRamp(0)).toBe(1.0);
     expect(starExposureRamp(-1)).toBe(1.0);
+  });
+
+  describe('live-tunable anchors', () => {
+    it('scales the near-end multiplier by nearX / SHADER_BAKED_NEAR_EXPOSURE', () => {
+      // The shader bakes SHADER_BAKED_NEAR_EXPOSURE (15) into STAR_FLUX_EXPOSURE,
+      // so the CPU ramp's near end is nearX relative to that baked constant:
+      // nearX = 30 (double the baked 15) doubles the near-end multiplier from the
+      // default 1.0 to 2.0.
+      const nearX = 2 * SHADER_BAKED_NEAR_EXPOSURE;
+      expect(starExposureRamp(RAMP_NEAR_MPC, nearX, 70)).toBeCloseTo(2.0, 12);
+      expect(starExposureRamp(RAMP_NEAR_MPC / 10, nearX, 70)).toBeCloseTo(2.0, 12);
+    });
+
+    it('changes only the far end when farX moves and nearX stays at the default', () => {
+      // farX only sets the far-anchor multiplier; the near clamp is untouched.
+      expect(starExposureRamp(RAMP_NEAR_MPC, SHADER_BAKED_NEAR_EXPOSURE, 300)).toBe(1.0);
+      // At/beyond the far anchor the multiplier is farX / baked-near, so a farX
+      // of 150 (10× the baked 15) reads back 10.
+      expect(starExposureRamp(RAMP_FAR_MPC, SHADER_BAKED_NEAR_EXPOSURE, 150)).toBeCloseTo(10, 12);
+      expect(starExposureRamp(RAMP_FAR_MPC * 10, SHADER_BAKED_NEAR_EXPOSURE, 150)).toBeCloseTo(
+        10,
+        12,
+      );
+    });
+
+    it('reproduces the fixed ramp exactly when both anchors are left at the defaults', () => {
+      // The explicit (15, 70) call must match the default-argument call, which is
+      // the regression guard pinned by the tests above (near = 1, far = 70/15).
+      const explicit = starExposureRamp(RAMP_FAR_MPC, SHADER_BAKED_NEAR_EXPOSURE, 70);
+      expect(explicit).toBe(RAMP_FAR_SCALE);
+      expect(explicit).toBe(starExposureRamp(RAMP_FAR_MPC));
+    });
   });
 });

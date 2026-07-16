@@ -217,9 +217,17 @@ export const starCatalogLayer: ContentLayer = {
     // can't dark-adapt (see that module). It reuses the SAME `camDistPc` the
     // crossfade keyed off (converted to Mpc, the ramp's unit), so there is no
     // second distance. The user slider stays a PURE trim on top of the ramp.
+    //
+    // The ramp's two anchors are live tuning knobs (`exposureNearX` / `farX`):
+    // the absolute display exposures at the near/far distance anchors, dialled
+    // against the running renderer as the star bins' local flux changes.
     const brightness =
       state.settings.starCatalogs.brightness *
-      starExposureRamp(camDistPc * SCALE_UNITS.PC_TO_MPC);
+      starExposureRamp(
+        camDistPc * SCALE_UNITS.PC_TO_MPC,
+        state.settings.starCatalogs.exposureNearX,
+        state.settings.starCatalogs.exposureFarX,
+      );
 
     // The "Detail" knob — CPU walk input, NOT a GPU uniform. Read once and feed
     // it to every source's `walkStarOctreeCut` (lower ⇒ boxes split earlier).

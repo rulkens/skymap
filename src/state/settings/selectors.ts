@@ -204,6 +204,8 @@ export const selectStarCatalogs = (
   brightness: number;
   refineThreshold: number;
   glowOverlap: number;
+  exposureNearX: number;
+  exposureFarX: number;
   items: Record<StarCatalogId, StarCatalogItemSettings>;
 } => selectSettings(state).starCatalogs;
 
@@ -238,6 +240,23 @@ export const selectStarCatalogRefineThreshold = (state: RootState): number =>
  */
 export const selectStarCatalogGlowOverlap = (state: RootState): number =>
   selectSettings(state).starCatalogs.glowOverlap;
+
+/**
+ * Near-anchor star display exposure — the "Exposure (near)" tuning knob. A
+ * primitive read, so no memoization. The layer feeds it (with `exposureFarX`) to
+ * `starExposureRamp` each frame; it is the absolute exposure the ramp targets at
+ * its near (solar-system) anchor.
+ */
+export const selectStarCatalogExposureNearX = (state: RootState): number =>
+  selectSettings(state).starCatalogs.exposureNearX;
+
+/**
+ * Far-anchor star display exposure — the "Exposure (far)" tuning knob. A
+ * primitive read, so no memoization. The absolute exposure `starExposureRamp`
+ * targets at its far (whole-galaxy) anchor.
+ */
+export const selectStarCatalogExposureFarX = (state: RootState): number =>
+  selectSettings(state).starCatalogs.exposureFarX;
 
 // --- derived ------------------------------------------------------------------
 

@@ -104,6 +104,27 @@ export const DEFAULT_STAR_BRIGHTNESS = 1.0;
 export const DEFAULT_STAR_GLOW_OVERLAP = 4.7;
 
 /**
+ * Default near-anchor star display exposure — seeds
+ * `settings.starCatalogs.exposureNearX`. The ABSOLUTE exposure multiplier the
+ * scale-dependent `starExposureRamp` targets at solar-system scale (1 pc). 15 is
+ * the shipped near anchor that the shader already bakes into STAR_FLUX_EXPOSURE
+ * (6000 = 400 × 15), so at this default the CPU ramp returns exactly 1.0 there.
+ * Live-tunable (UI range 1–60) so the near end can be re-eye-tuned against the
+ * current star bins' local flux without a rebuild.
+ */
+export const DEFAULT_STAR_EXPOSURE_NEAR_X = 15;
+
+/**
+ * Default far-anchor star display exposure — seeds
+ * `settings.starCatalogs.exposureFarX`. The ABSOLUTE exposure multiplier
+ * `starExposureRamp` targets at whole-galaxy scale (10 kpc), where the star bin
+ * reads as the Milky Way's diffuse surface brightness and the un-adapting
+ * monitor needs the field lifted. 70 is the shipped far anchor; live-tunable (UI
+ * range 5–300) alongside the near anchor.
+ */
+export const DEFAULT_STAR_EXPOSURE_FAR_X = 70;
+
+/**
  * Default global brightness multiplier.  1.0 = "intensity exactly as the
  * shader computes it from the apparent magnitude".  Range 0.2–3.0.
  */

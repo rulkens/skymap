@@ -44,12 +44,16 @@ import {
   selectStarCatalogBrightness,
   selectStarCatalogRefineThreshold,
   selectStarCatalogGlowOverlap,
+  selectStarCatalogExposureNearX,
+  selectStarCatalogExposureFarX,
 } from '../../../src/state/settings/selectors';
 import {
   setStarCatalogSize,
   setStarCatalogBrightness,
   setStarCatalogRefineThreshold,
   setStarCatalogGlowOverlap,
+  setStarCatalogExposureNearX,
+  setStarCatalogExposureFarX,
 } from '../../../src/state/settings/settingsSlice';
 import type { AppStore } from '../../../src/store/types';
 
@@ -197,5 +201,55 @@ describe('StarsSectionContainer', () => {
     fireEvent.change(slider, { target: { value: '2.2' } });
 
     expect(selectStarCatalogGlowOverlap(store.getState())).toBeCloseTo(2.2);
+  });
+
+  it('reflects seeded exposureNearX in the Exposure (near) slider value', () => {
+    const { store } = createAppStore();
+    store.dispatch(setStarCatalogExposureNearX(30));
+
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-near');
+    expect(slider).not.toBeNull();
+    expect(slider!.value).toBe('30');
+  });
+
+  it('dispatches setStarCatalogExposureNearX and updates the store when the slider moves', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-near')!;
+    fireEvent.change(slider, { target: { value: '22.5' } });
+
+    expect(selectStarCatalogExposureNearX(store.getState())).toBeCloseTo(22.5);
+  });
+
+  it('reflects seeded exposureFarX in the Exposure (far) slider value', () => {
+    const { store } = createAppStore();
+    store.dispatch(setStarCatalogExposureFarX(120));
+
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-far');
+    expect(slider).not.toBeNull();
+    expect(slider!.value).toBe('120');
+  });
+
+  it('dispatches setStarCatalogExposureFarX and updates the store when the slider moves', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-far')!;
+    fireEvent.change(slider, { target: { value: '140' } });
+
+    expect(selectStarCatalogExposureFarX(store.getState())).toBeCloseTo(140);
   });
 });

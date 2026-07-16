@@ -58,6 +58,10 @@ type StarsSectionProps = {
   refineThreshold: number;
   /** Current aggregate glow-overlap spread (shared; 1.0 = identity). */
   glowOverlap: number;
+  /** Current near-anchor display exposure — the "Exposure (near)" tuning knob. */
+  exposureNearX: number;
+  /** Current far-anchor display exposure — the "Exposure (far)" tuning knob. */
+  exposureFarX: number;
   /** Called when the user toggles the master gate on or off. */
   onToggleMaster: (enabled: boolean) => void;
   /** Called when the user toggles a single star catalog on or off. */
@@ -70,6 +74,10 @@ type StarsSectionProps = {
   onRefineThresholdChange: (v: number) => void;
   /** Called when the user moves the glow-overlap slider. */
   onGlowOverlapChange: (v: number) => void;
+  /** Called when the user moves the Exposure (near) slider. */
+  onExposureNearXChange: (v: number) => void;
+  /** Called when the user moves the Exposure (far) slider. */
+  onExposureFarXChange: (v: number) => void;
 };
 
 // ── StarsSection ─────────────────────────────────────────────────────────────
@@ -85,12 +93,16 @@ function StarsSection({
   brightness,
   refineThreshold,
   glowOverlap,
+  exposureNearX,
+  exposureFarX,
   onToggleMaster,
   onToggleCatalog,
   onSizeChange,
   onBrightnessChange,
   onRefineThresholdChange,
   onGlowOverlapChange,
+  onExposureNearXChange,
+  onExposureFarXChange,
 }: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
   // "gate on, but not every catalog is individually enabled" (mixed).
@@ -196,6 +208,44 @@ function StarsSection({
             step={0.1}
             value={glowOverlap}
             onChange={(e) => onGlowOverlapChange(parseFloat(e.target.value))}
+          />
+        </div>
+
+        {/* Exposure (near) — the absolute display exposure the scale-dependent
+            starExposureRamp targets at its near (solar-system) anchor. A live
+            tuning knob; the value gets frozen once re-eye-tuned. Range 1–60. */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-star-exposure-near">Exposure (near)</label>
+          <span className={styles.panelValue}>{exposureNearX.toFixed(1)}×</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-star-exposure-near"
+            type="range"
+            min={1}
+            max={60}
+            step={0.5}
+            value={exposureNearX}
+            onChange={(e) => onExposureNearXChange(parseFloat(e.target.value))}
+          />
+        </div>
+
+        {/* Exposure (far) — the absolute display exposure the ramp targets at its
+            far (whole-galaxy) anchor, where the field reads as diffuse surface
+            brightness. Live tuning knob; range 5–300. */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-star-exposure-far">Exposure (far)</label>
+          <span className={styles.panelValue}>{exposureFarX.toFixed(0)}×</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-star-exposure-far"
+            type="range"
+            min={5}
+            max={300}
+            step={1}
+            value={exposureFarX}
+            onChange={(e) => onExposureFarXChange(parseFloat(e.target.value))}
           />
         </div>
       </CollapsibleSection>

@@ -146,6 +146,16 @@ const settingsSlice = createSlice({
     setStarCatalogGlowOverlap: (settings, action: PayloadAction<number>) => {
       settings.starCatalogs.glowOverlap = action.payload;
     },
+    // The "Exposure (near)" knob — absolute display exposure the scale-dependent
+    // ramp targets at the near (solar-system) anchor. Fed to `starExposureRamp`.
+    setStarCatalogExposureNearX: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.exposureNearX = action.payload;
+    },
+    // The "Exposure (far)" knob — absolute display exposure the ramp targets at
+    // the far (whole-galaxy) anchor. Fed to `starExposureRamp`.
+    setStarCatalogExposureFarX: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.exposureFarX = action.payload;
+    },
     setStarCatalogVisible: (
       settings,
       action: PayloadAction<{ id: StarCatalogId; enabled: boolean }>,
@@ -371,6 +381,8 @@ export const {
   setStarCatalogBrightness,
   setStarCatalogRefineThreshold,
   setStarCatalogGlowOverlap,
+  setStarCatalogExposureNearX,
+  setStarCatalogExposureFarX,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,
   setVolumesEnabled,

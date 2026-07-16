@@ -34,6 +34,8 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
+  DEFAULT_STAR_EXPOSURE_NEAR_X,
+  DEFAULT_STAR_EXPOSURE_FAR_X,
   DEFAULT_STAR_SIZE_PX,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
@@ -129,6 +131,8 @@ export function buildInitialSettings(): EngineSettingsState {
       brightness: DEFAULT_STAR_BRIGHTNESS,
       refineThreshold: DEFAULT_REFINE_THRESHOLD,
       glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
+      exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
+      exposureFarX: DEFAULT_STAR_EXPOSURE_FAR_X,
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [
           e.id,
