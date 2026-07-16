@@ -92,8 +92,16 @@ export const DEFAULT_STAR_BRIGHTNESS = 1.0;
  * stage divides the Gaussian peak by the square, so total luminance is
  * conserved (only the spread changes). User range 1.0–2.5. Leaves (point
  * sources) are untouched.
+ *
+ * 4.0 is eye-tuned, not the 1.0 physical identity: at 1.0 the far field still
+ * shows the octree's box lattice as faceted seams between aggregates (see
+ * `walkStarOctreeCut`'s `DEFAULT_REFINE_THRESHOLD` header for why a proxy
+ * threshold alone can't fully hide it). Spreading each aggregate's glow to 4x
+ * its box radius overlaps neighbours enough to dissolve the lattice into a
+ * continuous far field. Tuned together with `DEFAULT_REFINE_THRESHOLD` — see
+ * that constant's comment for how the two compensate.
  */
-export const DEFAULT_STAR_GLOW_OVERLAP = 1.0;
+export const DEFAULT_STAR_GLOW_OVERLAP = 4.0;
 
 /**
  * Default global brightness multiplier.  1.0 = "intensity exactly as the

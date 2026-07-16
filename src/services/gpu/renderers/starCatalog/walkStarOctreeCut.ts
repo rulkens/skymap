@@ -95,8 +95,8 @@ export type StarNodeDraw = {
  * this fraction of its distance (`edgePc / distancePc > threshold`) — a
  * dimensionless distance-per-box-edge proxy for on-screen angle (radians-ish;
  * small-angle `edge/distance ≈ tan(angle) ≈ angle`). Below it the box is treated
- * as sub-pixel and drawn as one aggregate. 0.05 ≈ a box refines once it would
- * subtend more than ~3°, keeping every drawn aggregate visually small so the
+ * as sub-pixel and drawn as one aggregate. 0.16 ≈ a box refines once it would
+ * subtend more than ~9°, keeping every drawn aggregate visually small so the
  * octree's box lattice stays invisible instead of showing through as
  * faceted seams. That trades more draw calls (more refined nodes at a given
  * distance) for far-field continuity — it's the eye-tuning knob for that
@@ -106,8 +106,17 @@ export type StarNodeDraw = {
  * *structure* — the aggregate's box edge itself becomes a visible seam
  * before it's small enough to read as a point. Task 13 replaces the proxy
  * with a viewport-accurate screen-error metric behind the same predicate.
+ *
+ * 0.16 was eye-tuned together with `DEFAULT_STAR_GLOW_OVERLAP` (1.0 → 4.0),
+ * not in isolation: the two knobs compensate for each other. A coarser cut
+ * (higher threshold) collapses more of the far field into aggregates —
+ * fewer drawn nodes, cheaper frame — but leaves bigger, more visible box
+ * seams; the wider glow overlap then smooths those seams away. Retuning one
+ * without the other reintroduces either a visible lattice (glow too narrow
+ * for this coarse a cut) or a soft, aggregate-count-heavy far field (cut too
+ * fine for this wide a glow) — check both together.
  */
-export const DEFAULT_REFINE_THRESHOLD = 0.05;
+export const DEFAULT_REFINE_THRESHOLD = 0.16;
 
 /** Guards the `edge / distance` ratio when the camera sits inside a box. */
 const MIN_DISTANCE_PC = 1e-6;

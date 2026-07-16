@@ -131,8 +131,8 @@ describe('walkStarOctreeCut', () => {
 
   it('refines strictly more at a lower threshold (the Detail knob)', () => {
     // Same fixture as above: a near cell plus a far octant cluster ~170 pc off,
-    // whose level-1 box subtends ~0.012 of its distance. The default 0.05
-    // threshold treats that as sub-pixel and collapses it to one aggregate; a
+    // whose level-1 box subtends ~0.012 of its distance. A 0.05 threshold
+    // treats that as sub-pixel and collapses it to one aggregate; a
     // threshold below ~0.012 clears the `angularSize >= threshold` gate, so the
     // cluster refines all the way to its eight leaf stars. Lower ⇒ more (and
     // deeper) drawn nodes — the "Detail" slider's whole contract.
