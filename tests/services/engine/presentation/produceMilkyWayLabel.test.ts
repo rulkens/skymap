@@ -125,6 +125,17 @@ describe('produceMilkyWayLabel', () => {
     expect(out.lines).toEqual([]);
   });
 
+  it('emits nothing on the deep-zoom descent (inside the survey band)', () => {
+    // At solar-system zoom the origin-anchored "You are here" annotation is COSMO
+    // content the near plane can no longer project, and leaving it emitting keeps
+    // the director's marker-line set non-empty — so the whole marker-lines pass
+    // runs every frame drawing a near-degenerate stem. The surveyDeepZoom band
+    // (gone by 2 kpc = 0.002 Mpc) must cull it: no label AND no leader stem.
+    const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(1e-6));
+    expect(out.labels).toEqual([]);
+    expect(out.lines).toEqual([]);
+  });
+
   it('emits nothing when the label axis is disabled and faded out', () => {
     const out = produceMilkyWayLabel(makeState(false, 0), makeCtx(0.5));
     expect(out.labels).toEqual([]);

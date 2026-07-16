@@ -210,6 +210,19 @@ const STAR_SIZE_REF_PX: f32 = 2.5;
 // 'sizeScale' with every other radius here.
 const STAR_GLOW_MIN_PX: f32 = 1.5;
 
+// Ceiling on the glow radius in px, bounding per-star FILL. Additive-blend
+// overdraw scales with the SUM of pi*rPx^2 across drawn quads, so at
+// solar-neighbourhood zoom a few dozen near stars whose glows expand to
+// thousands of px each dominate the whole pass. Clamping rPx from above caps
+// each quad at pi*MAX^2 regardless of proximity. The photometry is preserved
+// for free: the peak is EXPOSURE*fluxApp/(K_GAUSS*rPx^2) (fact 2 in the
+// header), so a smaller clamped rPx RAISES the peak by exactly rPx^-2 --
+// total integrated luminance is invariant to rPx (the same mechanism the
+// header documents for the 'glowOverlap' fold). The ceiling therefore turns a
+// huge dim halo into a COMPACT BRIGHT CORE with the SAME total light; the
+// raised peak then rides the fragment stage's existing hue-preserving knee.
+const STAR_GLOW_MAX_PX: f32 = 384.0;
+
 // Glow shape integral over the unit uv-disc of the RIM-ZEROED profile the
 // fragment paints: g(r2) = (exp(-r2 * 4.0) - EDGE) / (1 - EDGE), EDGE = e^-4.
 // Shifting the bare Gaussian down by its rim value and rescaling makes g reach
@@ -335,7 +348,12 @@ fn vs(
   // 'rPx' here, so the peak's /(K*rPx^2) below divides by 'glowOverlap^2' too --
   // total luminance stays conserved (header 'Glow overlap' + fact 2).
   let overlap = select(1.0, u.glowOverlap, node.isAggregate != 0u);
-  let rPx = max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale * overlap;
+  // Floor first (legibility), then the size/overlap spread, then the absolute
+  // px CEILING last -- so STAR_GLOW_MAX_PX bounds the FINAL radius regardless of
+  // 'sizeScale' or 'overlap', capping per-star fill at pi*MAX^2. The peak below
+  // divides by this same clamped rPx^2, so clamping conserves total luminance
+  // (header fact 2) -- a compact bright core, not a huge dim halo.
+  let rPx = min(STAR_GLOW_MAX_PX, max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale * overlap);
 
   // Peak so the dot's INTEGRATED luminance equals STAR_FLUX_EXPOSURE * fluxApp
   // regardless of rPx: I_peak * K_GAUSS * rPx^2 == EXPOSURE * fluxApp. Refining

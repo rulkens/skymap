@@ -38,7 +38,12 @@ export const SCALE_FADE_BANDS = {
   // galaxies stay visible as deep-zoom reference points), the structure
   // marker rings + halos and their pick (structureMarkersLayer), the
   // structure labels (produceStructureLabels — famous labels are exempt
-  // with their points), and scalar-volume liveness (deriveVolumeLiveness,
+  // with their points), the Milky-Way "You are here" label + leader stem
+  // (produceMilkyWayLabel — a COSMO-slab annotation anchored at the world
+  // origin, which can't project once the camera is inside the cosmological near
+  // plane; the MW IMPOSTOR itself outlives this band on its deeper
+  // `milkyWayApproach` row, since it lives on NEAR0 and CAN draw inside 10 kpc),
+  // and scalar-volume liveness (deriveVolumeLiveness,
   // which zeroes every field so both volume layers disable by construction).
   surveyDeepZoom: { fullAt: FOREGROUND_MAX_DISTANCE_MPC, goneAt: 0.002 },
 
