@@ -141,8 +141,10 @@ function StarsSection({
         </div>
 
         {/* Star brightness — shared exposure trim, twin of the Galaxies
-            brightness control (0.01–100 range). 1.0 is identity: the
-            flux-glow shader's calibrated STAR_FLUX_EXPOSURE baseline unchanged. */}
+            brightness control (0.01–4 range). 1.0 is identity: the
+            flux-glow shader's calibrated STAR_FLUX_EXPOSURE baseline unchanged.
+            A scale-dependent exposure ramp handles the big cross-scale swing,
+            so this stays a trim rather than a wide-range knob. */}
         <div className={styles.panelRow}>
           <label htmlFor="slider-star-brightness">Star brightness</label>
           <span className={styles.panelValue}>{brightness.toFixed(1)}×</span>
@@ -152,8 +154,8 @@ function StarsSection({
             id="slider-star-brightness"
             type="range"
             min={0.01}
-            max={100}
-            step={0.1}
+            max={4}
+            step={0.05}
             value={brightness}
             onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
           />
