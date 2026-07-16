@@ -106,6 +106,43 @@ function makeTwoLevelCatalog(): StarCatalog {
   };
 }
 
+/**
+ * A single FAT LEAF catalog: one node, childMask 0 at level > 0 holding several
+ * real stars. Exercises the leaf-vs-aggregate discriminant — level would
+ * misclassify this as an aggregate, but childMask (0) marks it a leaf.
+ */
+function makeFatLeafCatalog(): StarCatalog {
+  return {
+    starCount: 5,
+    nodeCount: 1,
+    mortonBitsPerAxis: 9,
+    cellEdgePc: 78,
+    gridOrigin: [0, 0, 0],
+    nodes: [{ mortonIndex: 0, level: 2, childMask: 0, firstRecord: 0, recordCount: 5 }],
+    records: new Uint8Array(5 * 6),
+  };
+}
+
+/**
+ * A dense level-0 leaf (3 real stars) under a level-1 aggregate root, shifted
+ * 10 kpc out like `makeTwoLevelCatalog` so `FAR_PC` coarsens the cut to the
+ * aggregate. The aggregate's subtree count is 3 (distinct from a leaf's 1).
+ */
+function makeAggregateCatalog(): StarCatalog {
+  return {
+    starCount: 3,
+    nodeCount: 2,
+    mortonBitsPerAxis: 9,
+    cellEdgePc: 78,
+    gridOrigin: [10_000, 0, 0],
+    nodes: [
+      { mortonIndex: 0, level: 0, childMask: 0, firstRecord: 0, recordCount: 3 },
+      { mortonIndex: 0, level: 1, childMask: 0b1, firstRecord: 3, recordCount: 1 },
+    ],
+    records: new Uint8Array(4 * 6),
+  };
+}
+
 /** The per-node draw opacity of a given node index, or undefined if not drawn. */
 function opacityOfNode(args: StarCatalogDrawArgs, nodeIndex: number): number | undefined {
   const i = args.nodeDraws.findIndex((d) => d.nodeIndex === nodeIndex);
@@ -257,9 +294,9 @@ describe('starCatalogLayer.draw', () => {
     expect(call0.originRelCamMpc.length).toBe(call0.nodeDraws.length);
     expect(call0.cellScaleMpc.length).toBe(call0.nodeDraws.length);
     // The flux-glow leaf/aggregate discriminant rides parallel too; the
-    // single-leaf fixture's one node is level 0 (a point-source leaf).
-    expect(call0.level.length).toBe(call0.nodeDraws.length);
-    expect(call0.level[0]).toBe(0);
+    // single-leaf fixture's one node is a leaf (childMask 0 → isAggregate 0).
+    expect(call0.isAggregate.length).toBe(call0.nodeDraws.length);
+    expect(call0.isAggregate[0]).toBe(0);
     // The flux-reconstruction multiplier rides parallel too; the single-leaf
     // fixture's one node is a leaf, so its record stands in for one real star.
     expect(call0.subtreeStarCount.length).toBe(call0.nodeDraws.length);
@@ -427,6 +464,42 @@ describe('starCatalogLayer.draw per-node LOD fades', () => {
     // Distinct per-node fades under one shared crossfade: the drawn ratio is the
     // fade ratio, so the crossfade cancels and the multiply is unambiguous.
     expect(leafOp / rootOp).toBeCloseTo(0.4 / 0.6, 6);
+  });
+
+  it('draws a fat leaf with isAggregate 0 and multiplier 1 despite level > 0', () => {
+    // A fat leaf lives above level 0 yet is a leaf: the layer must read the
+    // discriminant off childMask (0), not level, and send multiplier 1 (its
+    // records are real stars), not the record count.
+    const catalog = makeFatLeafCatalog();
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
+    const camPos = camAtPc(inner + (outer - inner) * 0.5);
+    starCatalogLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), makeState(renderer));
+
+    const args = lastDrawArgs(renderer);
+    const i = args.nodeDraws.findIndex((d) => d.nodeIndex === 0);
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(args.isAggregate[i]).toBe(0);
+    expect(args.subtreeStarCount[i]).toBe(1);
+  });
+
+  it('draws an aggregate with isAggregate 1 and its subtree star count', () => {
+    // The far camera coarsens the cut to the level-1 aggregate root (childMask
+    // != 0): isAggregate 1, and the multiplier is its subtree total (3), the
+    // count the shader multiplies the record's mean flux by.
+    const catalog = makeAggregateCatalog();
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
+    starCatalogLayer.draw(
+      PASS_STUB,
+      makeNear0View(camAtPcVec(FAR_PC)),
+      makeCtx(camAtPcVec(FAR_PC), 0),
+      makeState(renderer),
+    );
+
+    const args = lastDrawArgs(renderer);
+    const i = args.nodeDraws.findIndex((d) => d.nodeIndex === ROOT_INDEX);
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(args.isAggregate[i]).toBe(1);
+    expect(args.subtreeStarCount[i]).toBe(3);
   });
 
   it('wakes the render loop while a node fade is in flight', () => {

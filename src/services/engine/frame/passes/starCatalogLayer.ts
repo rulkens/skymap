@@ -283,7 +283,7 @@ export const starCatalogLayer: ContentLayer = {
       const nodeDraws: StarNodeDraw[] = [];
       const originRelCamMpc: Vec3[] = [];
       const cellScaleMpc: number[] = [];
-      const level: number[] = [];
+      const isAggregate: number[] = [];
       const subtreeStarCount: number[] = [];
       const opacity: number[] = [];
       for (const [idx, f] of fades) {
@@ -313,11 +313,13 @@ export const starCatalogLayer: ContentLayer = {
         originRelCamMpc.push(seam.originRelCamMpc);
         cellScaleMpc.push(seam.cellScaleMpc);
         // The leaf-vs-aggregate discriminant the flux-glow vertex stage needs:
-        // 0 = a point-source leaf star, >0 = a box-filling aggregate.
-        level.push(node.level);
+        // 0 = a childless leaf (point-source stars), 1 = a box-filling aggregate.
+        // Keyed on `childMask`, NOT `level`: a fat leaf lives at level > 0 yet is
+        // a leaf whose records are real stars (see `buildStarOctree`).
+        isAggregate.push(node.childMask === 0 ? 0 : 1);
         // Flux-reconstruction multiplier: a leaf record is one real star (1),
         // an aggregate record stands in for its whole subtree (its star count).
-        subtreeStarCount.push(node.level === 0 ? 1 : counts[idx]!);
+        subtreeStarCount.push(node.childMask === 0 ? 1 : counts[idx]!);
         // Per-node draw opacity = the source crossfade times this node's LOD fade.
         opacity.push(sourceCrossfade * f.opacity);
       }
@@ -330,7 +332,7 @@ export const starCatalogLayer: ContentLayer = {
         nodeDraws,
         originRelCamMpc,
         cellScaleMpc,
-        level,
+        isAggregate,
         subtreeStarCount,
         opacity,
         sizePx,

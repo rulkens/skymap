@@ -87,18 +87,21 @@ struct VSOut {
 //   offset 12  cellScaleMpc     f32        (box edge in Mpc; offset unit = /1024)
 //   offset 16  firstRecord      u32        (base index into the records blob)
 //   offset 20  opacity          f32        (crossfade alpha x node LOD fade)
-//   offset 24  level            u32        (octree level: 0 = leaf, >0 aggregate)
+//   offset 24  isAggregate      u32        (0 = leaf, 1 = aggregate)
 //   offset 28  subtreeStarCount f32        (stars this record stands in for)
-//   struct size 32 (rounded up to the vec3's 16-byte alignment — 'level' and
-//   'subtreeStarCount' ride the pad the vec3 alignment already reserved, so the
-//   stride is unchanged).
+//   struct size 32 (rounded up to the vec3's 16-byte alignment — 'isAggregate'
+//   and 'subtreeStarCount' ride the pad the vec3 alignment already reserved, so
+//   the stride is unchanged).
 //
-// 'level' is the leaf-vs-aggregate discriminant the format deliberately keeps
-// OUT of the record (the record's 5 spare bits stay zero — see
-// starCatalogFormat.ts), recovered instead from the owning node. The vertex
-// stage needs it because a leaf record is a POINT source (one star) while an
-// aggregate record is an EXTENDED source (a whole subtree collapsed to its
-// box): the glow fills the box footprint for the latter but not the former.
+// 'isAggregate' is the leaf-vs-aggregate discriminant the format deliberately
+// keeps OUT of the record (the record's 5 spare bits stay zero — see
+// starCatalogFormat.ts). The layer sends an EXPLICIT flag derived from the
+// node's childMask (0 ⇒ leaf); it can no longer be read off the octree level,
+// because a fat leaf (a sparse subtree merged into one node) lives at level > 0
+// yet is a leaf whose records are real stars. The vertex stage needs the flag
+// because a leaf record is a POINT source (its real stars) while an aggregate
+// record is an EXTENDED source (a whole subtree collapsed to its box): the glow
+// fills the box footprint for the latter but not the former.
 //
 // 'subtreeStarCount' is the flux-reconstruction multiplier: an aggregate record
 // stores its subtree's MEAN star flux (a summed magnitude would clamp the 7-bit
@@ -111,6 +114,6 @@ struct NodeParams {
   cellScaleMpc: f32,
   firstRecord: u32,
   opacity: f32,
-  level: u32,
+  isAggregate: u32,
   subtreeStarCount: f32,
 };

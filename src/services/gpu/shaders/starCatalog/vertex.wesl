@@ -115,10 +115,12 @@
 // EXTENDED source -- its subtree fills its octree box -- so its radius grows
 // to the box's on-screen footprint ('worldLenToPx' of the box edge), which is
 // what makes adjacent far aggregates' glows meet edge-to-edge into a
-// continuous field instead of a lattice of lone dots. 'node.level' is the
-// discriminant (0 = leaf point, >0 = aggregate box); a 'select' picks the box
+// continuous field instead of a lattice of lone dots. 'node.isAggregate' is the
+// discriminant (0 = leaf point, 1 = aggregate box); a 'select' picks the box
 // extent for aggregates and 0 for leaves, so the leaf falls out as the
-// extent = 0 case of one formula. Everything scales by the user's live
+// extent = 0 case of one formula. The layer derives that flag from the node's
+// childMask, NOT its octree level -- a fat leaf sits at level > 0 yet is a leaf
+// whose records are real point-source stars. Everything scales by the user's live
 // 'sizePx' slider, which therefore acts as a global spread/sharpness control
 // (total luminance is unaffected -- see fact 2).
 //
@@ -291,17 +293,17 @@ fn vs(
   // 'worldLenToPx' of the box edge gives its full on-screen span; half of that
   // is the dot radius (diameter == box edge), and the Gaussian's soft tail
   // spills a little past the box so adjacent glows overlap. 'select' picks the
-  // box extent only for aggregates (level > 0); a leaf gets extent 0 -> floor.
-  // All scaled by the user's size slider (spread control; luminance is
-  // invariant to radius -- header fact 2).
+  // box extent only for aggregates ('node.isAggregate' != 0); a leaf gets
+  // extent 0 -> floor. All scaled by the user's size slider (spread control;
+  // luminance is invariant to radius -- header fact 2).
   let sizeScale = u.sizePx / STAR_SIZE_REF_PX;
-  let extentMpc = select(0.0, node.cellScaleMpc, node.level > 0u);
+  let extentMpc = select(0.0, node.cellScaleMpc, node.isAggregate != 0u);
   let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * 0.5;
   // Glow overlap spreads AGGREGATE glows past their box footprint so the lattice
   // dissolves; leaves (point sources) select 1.0 and are untouched. Folded into
   // 'rPx' here, so the peak's /(K*rPx^2) below divides by 'glowOverlap^2' too --
   // total luminance stays conserved (header 'Glow overlap' + fact 2).
-  let overlap = select(1.0, u.glowOverlap, node.level > 0u);
+  let overlap = select(1.0, u.glowOverlap, node.isAggregate != 0u);
   let rPx = max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale * overlap;
 
   // Peak so the dot's INTEGRATED luminance equals STAR_FLUX_EXPOSURE * fluxApp

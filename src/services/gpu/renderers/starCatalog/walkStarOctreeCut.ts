@@ -74,10 +74,13 @@
  * subtree — never by both, never by neither. This falls out of the walk being
  * a frontier (antichain) of the octree that covers the root: descent replaces a
  * node by the complete set of its present children (`childMask` names every
- * populated octant), and each descent path terminates either at a leaf or at an
- * aggregate we commit. Double-drawing a star (an ancestor *and* its descendant
- * both drawn) or dropping one (a subtree neither refined nor aggregated) is the
- * bug class the tests guard against.
+ * populated octant), and each descent path terminates either at a committed
+ * aggregate or at a leaf — a childless node whose records are real stars,
+ * whether a level-0 finest cell or a fat leaf merged above level 0. A fat leaf
+ * never refines (it has no children), so it is drawn as-is exactly like a
+ * level-0 leaf. Double-drawing a star (an ancestor *and* its descendant both
+ * drawn) or dropping one (a subtree neither refined nor aggregated) is the bug
+ * class the tests guard against.
  */
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
@@ -148,7 +151,7 @@ export function walkStarOctreeCut(
   // The load-time index: flat child links + box geometry + scalar node fields,
   // all in typed arrays (built once per catalog, memoised). The hot loop below
   // reads only these arrays — no Map, no object property chains.
-  const { childIndex, level, firstRecord, recordCount, boxOriginPc, boxEdgePc } =
+  const { childIndex, firstRecord, recordCount, boxOriginPc, boxEdgePc } =
     starOctreeIndex(catalog);
   const [camX, camY, camZ] = camPosPc;
 
@@ -173,19 +176,7 @@ export function walkStarOctreeCut(
     // `distanceToBox`). For a leaf it is unused.
     const angularSize = heap.poppedPriority;
 
-    // Leaves cannot be refined — they are the real stars; always draw as-is.
-    // Their recordCount is already folded into instanceCount (added either as
-    // the root's own cost or via a parent's childCost when it was refined).
-    if (level[nodeIndex] === 0) {
-      committed.push({
-        nodeIndex,
-        firstRecord: firstRecord[nodeIndex]!,
-        recordCount: recordCount[nodeIndex]!,
-      });
-      continue;
-    }
-
-    // Cost of replacing this aggregate (recordCount 1) with its present
+    // Cost of replacing this node (an aggregate, recordCount 1) with its present
     // children drawn as-is (leaf children add their full star count).
     const cbase = nodeIndex * 8;
     let childCost = 0;
@@ -196,10 +187,26 @@ export function walkStarOctreeCut(
       childCost += recordCount[c]!;
       childCount++;
     }
+
+    // A childless node is a LEAF — its records are real stars, so it cannot be
+    // refined; draw it as-is. This is the terminal case at ANY level: a level-0
+    // finest cell OR a fat leaf (a sparse subtree merged into one node above
+    // level 0). The discriminant is the absence of children, never the octree
+    // level — a fat leaf sits at level > 0 yet is a leaf. Its recordCount is
+    // already in instanceCount (added as the root's own cost or a parent's
+    // childCost when it was refined).
+    if (childCount === 0) {
+      committed.push({
+        nodeIndex,
+        firstRecord: firstRecord[nodeIndex]!,
+        recordCount: recordCount[nodeIndex]!,
+      });
+      continue;
+    }
+
     const refineDelta = childCost - recordCount[nodeIndex]!;
 
     const shouldRefine =
-      childCount > 0 &&
       angularSize >= refineThreshold && // near/large enough to resolve
       instanceCount < budget.typical && // refinement target not yet reached
       instanceCount + refineDelta <= budget.hardCap; // stays under the ceiling

@@ -25,21 +25,24 @@
  * ── One pass, shared with the flux-count derivation ────────────────────────
  *
  * `subtreeStarCounts` needs the *same* child resolution over the *same* node
- * table, in the *same* leaves-first / ascending-level order — its bottom-up sum
- * visits every child before its parent. So the subtree star count is folded into
- * this one forward scan rather than duplicating the map build and child walk in a
- * second module: once `childIndex` is resolved, `subtreeCounts[i]` is a leaf's
- * own `recordCount` or the sum of its present children's counts (all already
- * filled, because children precede parents on disk). `subtreeStarCounts` is now a
- * thin accessor onto `subtreeCounts` here.
+ * table, in the *same* ascending-(level, morton) order — its bottom-up sum
+ * visits every child before its parent (children sit one level below). So the
+ * subtree star count is folded into this one forward scan rather than
+ * duplicating the map build and child walk in a second module: once `childIndex`
+ * is resolved, `subtreeCounts[i]` is a childless node's own `recordCount`
+ * (leaf) or the sum of its present children's counts (aggregate — all already
+ * filled, because children precede parents on disk). `subtreeStarCounts` is now
+ * a thin accessor onto `subtreeCounts` here.
  *
  * ── Layout invariants relied on (from `buildStarOctree`) ───────────────────
  *
- * `catalog.nodes` holds all leaves first in ascending Morton order, then the
- * aggregate pyramid by ascending `(level, mortonIndex)`, so the *final* node is
- * the single root and a forward scan visits children before parents. A level-`L`
- * node with Morton `M` has its present children (named by `childMask`) at level
- * `L-1` with Morton `(M << 3) | k` for each set bit `k`. The box origin is
+ * `catalog.nodes` holds every node in ascending `(level, mortonIndex)` order —
+ * leaves (level-0 and fat) and aggregates interleaved by level — so the *final*
+ * node is the single root and a forward scan visits children before parents. A
+ * level-`L` aggregate with Morton `M` has its present children (named by
+ * `childMask`) one level below at level `L-1` with Morton `(M << 3) | k` for
+ * each set bit `k`; a childless node (`childMask === 0`) is a leaf. The box
+ * origin is
  * `gridOrigin + mortonDecode3(M) · (cellEdgePc · 2^L)` — the same reconstruction
  * `walkStarOctreeCut`'s `distanceToBox` and `starNodeOriginRelCamMpc` invert.
  */
@@ -59,7 +62,12 @@ export type StarOctreeIndex = {
    * hashing — replaces the per-call `(level, morton) → index` Map.
    */
   readonly childIndex: Int32Array;
-  /** Per-node octree level (0 = leaf), lifted out of the node objects. */
+  /**
+   * Per-node octree level, lifted out of the node objects. Sizes the node's box
+   * (`cellEdgePc · 2^level`); it does NOT discriminate leaf from aggregate — a
+   * fat leaf lives at `level > 0` yet is a leaf. `childMask === 0` is the
+   * leaf-vs-aggregate test (see `buildStarOctree`).
+   */
   readonly level: Uint8Array;
   /** Per-node record-slice base (`node.firstRecord`). */
   readonly firstRecord: Uint32Array;
@@ -139,8 +147,10 @@ export function starOctreeIndex(catalog: StarCatalog): StarOctreeIndex {
     boxOriginPc[o3 + 1] = gy + cy * edgePc;
     boxOriginPc[o3 + 2] = gz + cz * edgePc;
 
-    if (lvl === 0) {
-      // A leaf's records ARE its real stars; it has no children.
+    if (node.childMask === 0) {
+      // A childless node is a leaf (level-0 cell OR a fat leaf at level > 0):
+      // its records ARE its real stars, so its subtree count is its recordCount.
+      // Level does NOT discriminate — a fat leaf lives above level 0.
       subtreeCounts[i] = node.recordCount;
       continue;
     }
