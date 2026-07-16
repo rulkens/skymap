@@ -86,6 +86,22 @@ function alignUp(value: number, align: number): number {
   return Math.ceil(value / align) * align;
 }
 
+/**
+ * Byte size of the star `StarUniforms` @group(0) buffer: the shared
+ * `CameraUniforms` prefix + `sizePx` f32, rounded up to the prefix's 16-byte
+ * alignment = 96 (mirrors `struct StarUniforms` in shaders/starCatalog/io.wesl).
+ * Derived from `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced —
+ * this pipeline just appends one scalar after it, the way the galaxy points
+ * `Uniforms` struct does.
+ */
+const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 4, 16);
+
+/**
+ * Float index of `sizePx` in the `StarUniforms` scratch: byte 80 (right after
+ * the camera prefix) / 4. Floats 21..23 stay zero-init pad.
+ */
+const SIZE_PX_FLOAT_INDEX = CAMERA_UNIFORM_BYTES / 4;
+
 /** One committed catalog's GPU resources + the octree kept for the layer. */
 type LoadedStarSource = {
   catalog: StarCatalog;
@@ -118,12 +134,14 @@ export function createStarCatalogRenderer(
   );
 
   // ── Camera uniform (shared across sources — see the module header) ────────
+  // Sized to STAR_UNIFORM_BYTES: the 80-byte CameraUniforms prefix plus the
+  // source-independent `sizePx` scalar, matching `struct StarUniforms`.
   const cameraBuffer = device.createBuffer({
     label: 'star-catalog-camera-uniform',
-    size: CAMERA_UNIFORM_BYTES,
+    size: STAR_UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const cameraScratch = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+  const cameraScratch = new Float32Array(STAR_UNIFORM_BYTES / 4);
 
   // ── Bind-group layouts (explicit, not 'auto' — layouts don't cross pipelines) ─
   const cameraBgl = device.createBindGroupLayout({
@@ -288,13 +306,20 @@ export function createStarCatalogRenderer(
   }
 
   function draw(pass: GPURenderPassEncoder, args: StarCatalogDrawArgs): void {
-    const { source, vp, viewportPx, nodeDraws, originRelCamMpc, cellScaleMpc, opacity } = args;
+    const { source, vp, viewportPx, nodeDraws, originRelCamMpc, cellScaleMpc, opacity, sizePx } =
+      args;
     const entry = sources.get(source);
     if (!entry || nodeDraws.length === 0) return;
 
     // Camera uniform: identical bytes every source, so this repeated write is
     // idempotent (see the module header). floats 18/19 stay zero-init.
+    // `sizePx` rides this buffer too — it is source-independent (the same base
+    // star-dot size for every source this frame), so appending it to the shared
+    // camera prefix is safe: each source's repeated write lands the identical
+    // value. Written here, ONCE per source before its draws, so there is no
+    // mid-frame mutation for the writeBuffer/submit ordering race to corrupt.
     writeCameraPrefix(cameraScratch, vp, viewportPx);
+    cameraScratch[SIZE_PX_FLOAT_INDEX] = sizePx;
     device.queue.writeBuffer(cameraBuffer, 0, cameraScratch);
 
     // Pack every node's params into the strided scratch, once, then one write.

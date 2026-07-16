@@ -82,13 +82,17 @@ function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[
 
 function makeState(
   renderer: unknown,
-  opts: { master?: boolean; item?: boolean } = {},
+  opts: { master?: boolean; item?: boolean; size?: number } = {},
 ): EngineState {
-  const { master = true, item = true } = opts;
+  const { master = true, item = true, size = 2.5 } = opts;
   return {
     gpu: { starCatalogRenderer: renderer },
     settings: {
-      starCatalogs: { enabled: master, items: { gaiaStars: { enabled: item, labelEnabled: false } } },
+      starCatalogs: {
+        enabled: master,
+        sizePx: size,
+        items: { gaiaStars: { enabled: item, labelEnabled: false } },
+      },
     },
   } as unknown as EngineState;
 }
@@ -175,6 +179,26 @@ describe('starCatalogLayer.draw', () => {
     expect(call0.nodeDraws.length).toBe(1);
     expect(call0.originRelCamMpc.length).toBe(call0.nodeDraws.length);
     expect(call0.cellScaleMpc.length).toBe(call0.nodeDraws.length);
+  });
+
+  it('forwards the live star-size setting to every source draw', () => {
+    // The user's `settings.starCatalogs.sizePx` must reach the renderer so the
+    // vertex ramp can rescale the star dots. Change it in the store fixture and
+    // assert the stubbed renderer receives the new value (source-independent —
+    // the same value on each draw).
+    const loaded = [
+      { source: Source.GaiaStars, catalog: makeCatalog() },
+      { source: Source.GaiaStars, catalog: makeCatalog() },
+    ];
+    const renderer = makeRenderer(loaded);
+    const camPos = camAtPc(inner + (outer - inner) * 0.5);
+    const view = makeNear0View(camPos);
+
+    starCatalogLayer.draw(PASS_STUB, view, makeCtx(camPos), makeState(renderer, { size: 6.25 }));
+
+    expect(renderer.draw).toHaveBeenCalledTimes(2);
+    expect(renderer.draw.mock.calls[0]![1].sizePx).toBe(6.25);
+    expect(renderer.draw.mock.calls[1]![1].sizePx).toBe(6.25);
   });
 
   it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {

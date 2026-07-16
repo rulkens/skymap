@@ -44,19 +44,22 @@
 // ## Point size
 //
 // A placeholder absMag → pixel-radius ramp identical to bodies/starPoints —
-// brighter star, bigger dot, no distance/flux term. Task 13 replaces it with
-// the real flux-based LOD (and the crossfade to the procedural Milky-Way
-// cloud) once the survey bin is bringing up against live timings.
+// brighter star, bigger dot, no distance/flux term — SCALED by the user's
+// live 'sizePx' setting (settings.starCatalogs.sizePx). The mirror of the
+// galaxy points layer, where 'u.pointSizePx' is the base billboard size the
+// per-record term modulates: here the base rides 'u.sizePx' and the ramp is
+// its per-record modulation. Task 13 replaces the ramp with the real
+// flux-based LOD once the survey bin is bringing up against live timings.
 
 import package::starCatalog::io::VSOut;
 import package::starCatalog::io::NodeParams;
+import package::starCatalog::io::StarUniforms;
 import package::starCatalog::tint::starTint;
-import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;
 
-@group(0) @binding(0) var<uniform> cam: CameraUniforms;
+@group(0) @binding(0) var<uniform> u: StarUniforms;
 @group(1) @binding(0) var<uniform> node: NodeParams;
 @group(2) @binding(0) var<storage, read> records: array<u32>;
 
@@ -77,6 +80,13 @@ const OFFSET_SCALE: f32 = 0.0009765625; // 1.0 / 1024.0
 // Depth epsilon: pull the clamped clip-z this far inside the far plane so a
 // point sitting exactly ON it still passes the clip test.
 const CLIP_Z_EPS: f32 = 1e-4;
+
+// Reference star-dot size in px — mirrors DEFAULT_STAR_SIZE_PX
+// (src/data/defaults.ts; consume, never diverge). Dividing the user's
+// 'u.sizePx' by it makes the DEFAULT setting reproduce the placeholder ramp
+// unscaled (identity), so the ramp's tuned look is preserved at the default
+// and only slider movement away from it rescales the whole starfield.
+const STAR_SIZE_REF_PX: f32 = 2.5;
 
 @vertex
 fn vs(
@@ -102,15 +112,19 @@ fn vs(
   let offset = vec3<f32>(ox, oy, oz) * OFFSET_SCALE;
   let worldRelCam = node.originRelCamMpc + offset * node.cellScaleMpc;
 
-  let center = worldToClip(cam, worldRelCam);
+  let center = worldToClip(u.cam, worldRelCam);
   let corner = triCorner(vi);
 
   // Dequant absolute magnitude (bin centre), then the placeholder legibility
-  // ramp — brighter (lower absMag) → bigger dot.
+  // ramp — brighter (lower absMag) → bigger dot — scaled by the user's base
+  // star-dot size. 'u.sizePx / STAR_SIZE_REF_PX' is 1.0 at the default, so the
+  // ramp is the per-record modulation of the 'u.sizePx' base (the galaxy
+  // pointSizePx mirror), and the live slider rescales every star's dot.
   let absMag = STAR_ABSMAG_MIN + (f32(absMagIdx) + 0.5) * STAR_ABSMAG_STEP;
-  let sizePx = clamp(6.0 - 0.45 * absMag, 1.5, 8.0);
+  let ramp = clamp(6.0 - 0.45 * absMag, 1.5, 8.0);
+  let sizePx = ramp * (u.sizePx / STAR_SIZE_REF_PX);
 
-  let screenOffset = expandBillboardScreen(cam, center, sizePx, corner);
+  let screenOffset = expandBillboardScreen(u.cam, center, sizePx, corner);
 
   var out: VSOut;
   out.clip = center + vec4<f32>(screenOffset, 0.0, 0.0);

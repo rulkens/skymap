@@ -28,6 +28,28 @@
 //                submit ordering trap); the per-node draw selects its block
 //                purely by changing the dynamic offset, not by a buffer
 //                write.
+//   StarUniforms — the @group(0) per-frame uniform: the shared 80-byte
+//                'CameraUniforms' prefix (rebased vp + viewportPx) followed
+//                by the user's base star-dot size 'sizePx'. The mirror of
+//                the galaxy points 'Uniforms { cam: CameraUniforms, ...,
+//                pointSizePx, ... }' shape — sizePx is source-independent, so
+//                it rides the camera uniform that is already shared/idempotent
+//                across every source's draw this frame (see the renderer
+//                header) rather than being duplicated into every NodeParams
+//                block.
+
+import package::lib::camera::CameraUniforms;
+
+// Per-frame @group(0) uniform. Byte layout (WGSL std140 uniform rules) must
+// stay byte-exact with the renderer's camera-uniform write:
+//
+//   offset  0  cam    CameraUniforms  (80 B; viewProj + viewportPx + 2 pads)
+//   offset 80  sizePx f32             (user base star-dot size in px)
+//   struct size 96 (rounded up to the prefix's 16-byte alignment).
+struct StarUniforms {
+  cam: CameraUniforms,
+  sizePx: f32,
+};
 
 struct VSOut {
   @builtin(position) clip: vec4<f32>,

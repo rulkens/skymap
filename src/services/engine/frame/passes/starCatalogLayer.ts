@@ -131,6 +131,12 @@ export const starCatalogLayer: ContentLayer = {
     const camPosPc: Vec3 = [camPos[0] * MPC_TO_PC, camPos[1] * MPC_TO_PC, camPos[2] * MPC_TO_PC];
     const camDistPc = Math.hypot(camPosPc[0], camPosPc[1], camPosPc[2]);
 
+    // User's live base star-dot size — the twin of `galaxyCatalogs.sizePx` read
+    // by pointSpritesLayer. Source-independent, so read it ONCE here and hand
+    // the same value to every source's draw (the renderer writes it into the
+    // shared camera uniform; the vertex ramp scales by it).
+    const sizePx = state.settings.starCatalogs.sizePx;
+
     for (const { source, catalog } of renderer.loadedCatalogs()) {
       const entry = SOURCE_REGISTRY[source];
       if (entry.type !== 'starCatalog') continue;
@@ -162,6 +168,7 @@ export const starCatalogLayer: ContentLayer = {
         originRelCamMpc,
         cellScaleMpc,
         opacity,
+        sizePx,
       });
     }
   },

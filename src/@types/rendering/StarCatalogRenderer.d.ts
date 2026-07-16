@@ -61,6 +61,13 @@ export type StarCatalogDrawArgs = {
   readonly cellScaleMpc: readonly number[];
   /** Source crossfade alpha (Task 11's band to the procedural Milky-Way cloud). */
   readonly opacity: number;
+  /**
+   * User's base star-dot size in px (`settings.starCatalogs.sizePx`, default
+   * 2.5) — the twin of the galaxy points' `pointSizePx`. Source-independent
+   * (identical for every source this frame), so the renderer writes it into
+   * the shared camera uniform, where the per-record legibility ramp scales it.
+   */
+  readonly sizePx: number;
 };
 
 export type StarCatalogRenderer = Renderer & {
