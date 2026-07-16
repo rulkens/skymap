@@ -67,6 +67,15 @@ import { SOURCE_REGISTRY, Source } from './sources';
 export const DEFAULT_POINT_SIZE_PX = 2.5;
 
 /**
+ * Default star-billboard pixel radius — the star-catalog twin of
+ * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx`. Same 2.5 px
+ * sweet spot and same 1–8 px user range as the galaxy point size; kept a
+ * separate constant so the two layers can diverge without one silently
+ * dragging the other.
+ */
+export const DEFAULT_STAR_SIZE_PX = 2.5;
+
+/**
  * Default global brightness multiplier.  1.0 = "intensity exactly as the
  * shader computes it from the apparent magnitude".  Range 0.2–3.0.
  */

@@ -18,6 +18,8 @@
  *  - Master reflects allOn (checked, not indeterminate) / mixed (checked +
  *    indeterminate) / noneOn (unchecked), and clicking it fires `onToggleMaster`
  *    with the flipped gate value.
+ *  - The Advanced star-size slider echoes the `sizePx` prop and fires
+ *    `onSizeChange` with the parsed float when moved.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -35,8 +37,10 @@ function baseProps() {
   return {
     enabled: true,
     items: items(true),
+    sizePx: 2.5,
     onToggleMaster: vi.fn<(enabled: boolean) => void>(),
     onToggleCatalog: vi.fn<(id: StarCatalogId, enabled: boolean) => void>(),
+    onSizeChange: vi.fn<(v: number) => void>(),
   };
 }
 
@@ -111,6 +115,24 @@ describe('StarsSection', () => {
       fireEvent.click(header);
       expect(onToggleMaster).toHaveBeenCalledOnce();
       expect(onToggleMaster).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe('star-size slider', () => {
+    it('has value matching the sizePx prop', () => {
+      const { container } = render(createElement(StarsSection, { ...baseProps(), sizePx: 4.5 }));
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-size');
+      expect(slider).not.toBeNull();
+      expect(slider!.value).toBe('4.5');
+    });
+
+    it('fires onSizeChange with the parsed float when the slider moves', () => {
+      const onSizeChange = vi.fn<(v: number) => void>();
+      const { container } = render(createElement(StarsSection, { ...baseProps(), onSizeChange }));
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-size')!;
+      fireEvent.change(slider, { target: { value: '3.7' } });
+      expect(onSizeChange).toHaveBeenCalledOnce();
+      expect(onSizeChange).toHaveBeenCalledWith(3.7);
     });
   });
 });

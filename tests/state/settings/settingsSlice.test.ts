@@ -22,6 +22,7 @@ import reducer, {
   setFlowEnabled,
   setFlow,
   setStarCatalogEnabled,
+  setStarCatalogSize,
   setStarCatalogVisible,
   setPassDisabled,
   setClipPathLinger,
@@ -204,6 +205,11 @@ describe('settingsSlice — star catalogs', () => {
     const next = reducer(base(), setStarCatalogVisible({ id: 'gaiaStars', enabled: false }));
     expect(next.starCatalogs.items.gaiaStars.enabled).toBe(false);
     expect(next.starCatalogs.enabled).toBe(true);
+  });
+
+  it('setStarCatalogSize writes the shared star-billboard size', () => {
+    const next = reducer(base(), setStarCatalogSize(5.5));
+    expect(next.starCatalogs.sizePx).toBe(5.5);
   });
 });
 

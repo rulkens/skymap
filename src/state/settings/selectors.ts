@@ -195,8 +195,15 @@ export const selectStructureItems = (
  */
 export const selectStarCatalogs = (
   state: RootState,
-): { enabled: boolean; items: Record<StarCatalogId, StarCatalogItemSettings> } =>
+): { enabled: boolean; sizePx: number; items: Record<StarCatalogId, StarCatalogItemSettings> } =>
   selectSettings(state).starCatalogs;
+
+/**
+ * Star-billboard pixel radius — the star-catalog twin of
+ * `selectGalaxyCatalogSize`. A primitive read, so no memoization.
+ */
+export const selectStarCatalogSize = (state: RootState): number =>
+  selectSettings(state).starCatalogs.sizePx;
 
 // --- derived ------------------------------------------------------------------
 

@@ -16,6 +16,9 @@
  *    the `starCatalogs.enabled` field landed in Task 5.
  *  - Toggling the `gaiaStars` per-catalog row dispatches `setStarCatalogVisible`
  *    with `id: 'gaiaStars'`, so `starCatalogs.items.gaiaStars.enabled` clears.
+ *  - The Advanced star-size slider reflects the seeded `starCatalogs.sizePx`,
+ *    and moving it dispatches `setStarCatalogSize`, so
+ *    `selectStarCatalogSize(store.getState())` reflects the new value.
  *
  * Why assert on `store.getState()` rather than re-reading the DOM: RTK
  * `dispatch` is synchronous, so the store reflects the new value immediately —
@@ -31,7 +34,11 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import StarsSectionContainer from '../../../src/components/containers/StarsSectionContainer';
 import { createAppStore } from '../../../src/store/createAppStore';
-import { selectStarCatalogs } from '../../../src/state/settings/selectors';
+import {
+  selectStarCatalogs,
+  selectStarCatalogSize,
+} from '../../../src/state/settings/selectors';
+import { setStarCatalogSize } from '../../../src/state/settings/settingsSlice';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
@@ -74,5 +81,32 @@ describe('StarsSectionContainer', () => {
     fireEvent.click(gaiaCheckbox!);
 
     expect(selectStarCatalogs(store.getState()).items.gaiaStars.enabled).toBe(false);
+  });
+
+  it('reflects seeded sizePx in the star-size slider value', () => {
+    // Dispatch a non-default size before rendering so the slider must read from
+    // the store rather than a hard-coded default.
+    const { store } = createAppStore();
+    store.dispatch(setStarCatalogSize(6.0));
+
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-size');
+    expect(slider).not.toBeNull();
+    expect(slider!.value).toBe('6');
+  });
+
+  it('dispatches setStarCatalogSize and updates the store when the slider moves', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-size')!;
+    fireEvent.change(slider, { target: { value: '5.2' } });
+
+    expect(selectStarCatalogSize(store.getState())).toBeCloseTo(5.2);
   });
 });

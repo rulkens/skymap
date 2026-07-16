@@ -6,7 +6,9 @@
  * Owns the star-catalogs group UI: a master gate toggle on the section header
  * and per-catalog visibility checkboxes (just `gaiaStars` today; the
  * `STAR_CATALOG_IDS.map(...)` row loop is the extension point for a future
- * second catalog). It renders NO per-catalog label toggle — mirroring the
+ * second catalog), plus a default-closed "Advanced" sub-section carrying the
+ * shared star-size slider — the star-catalog twin of the Galaxies section's
+ * point-size control. It renders NO per-catalog label toggle — mirroring the
  * Galaxies section, star-label visibility lives in the separate Labels section.
  *
  * ### Master: a real gate, not a per-source fan-out
@@ -45,10 +47,14 @@ type StarsSectionProps = {
   enabled: boolean;
   /** Per-catalog visibility (+ inert `labelEnabled`), keyed by star catalog id. */
   items: Record<StarCatalogId, StarCatalogItemSettings>;
+  /** Current star-billboard size in pixels (shared across every star catalog). */
+  sizePx: number;
   /** Called when the user toggles the master gate on or off. */
   onToggleMaster: (enabled: boolean) => void;
   /** Called when the user toggles a single star catalog on or off. */
   onToggleCatalog: (id: StarCatalogId, enabled: boolean) => void;
+  /** Called when the user moves the star-size slider. */
+  onSizeChange: (v: number) => void;
 };
 
 // ── StarsSection ─────────────────────────────────────────────────────────────
@@ -57,7 +63,14 @@ type StarsSectionProps = {
  * Renders the star-catalogs group: a master gate toggle on the section header
  * and a default-open "Star catalogs" sub-section of per-catalog checkboxes.
  */
-function StarsSection({ enabled, items, onToggleMaster, onToggleCatalog }: StarsSectionProps) {
+function StarsSection({
+  enabled,
+  items,
+  sizePx,
+  onToggleMaster,
+  onToggleCatalog,
+  onSizeChange,
+}: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
   // "gate on, but not every catalog is individually enabled" (mixed).
   const allEnabled = STAR_CATALOG_IDS.every((id) => items[id].enabled);
@@ -85,6 +98,26 @@ function StarsSection({ enabled, items, onToggleMaster, onToggleCatalog }: Stars
             </div>
           );
         })}
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Advanced">
+        {/* Star size — shared star-billboard knob, twin of the Galaxies
+            section's point-size slider (same 1–8 px range). */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-star-size">Star size</label>
+          <span className={styles.panelValue}>{sizePx.toFixed(1)} px</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-star-size"
+            type="range"
+            min={1.0}
+            max={8.0}
+            step={0.1}
+            value={sizePx}
+            onChange={(e) => onSizeChange(parseFloat(e.target.value))}
+          />
+        </div>
       </CollapsibleSection>
     </CollapsibleSection>
   );

@@ -55,6 +55,7 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_STAR_SIZE_PX,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
@@ -95,6 +96,7 @@ export function makeSettingsFixture(
     },
     starCatalogs: {
       enabled: true,
+      sizePx: DEFAULT_STAR_SIZE_PX,
       items: Object.fromEntries(
         STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,

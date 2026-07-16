@@ -130,6 +130,10 @@ const settingsSlice = createSlice({
     setStarCatalogEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.starCatalogs.enabled = action.payload;
     },
+    // Shared star-billboard size knob, twin of `setGalaxyCatalogSize`.
+    setStarCatalogSize: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.sizePx = action.payload;
+    },
     setStarCatalogVisible: (
       settings,
       action: PayloadAction<{ id: StarCatalogId; enabled: boolean }>,
@@ -348,6 +352,7 @@ export const {
   setFilamentsEnabled,
   setFilamentIntensity,
   setStarCatalogEnabled,
+  setStarCatalogSize,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,
   setVolumesEnabled,

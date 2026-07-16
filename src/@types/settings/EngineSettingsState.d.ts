@@ -152,9 +152,15 @@ export type EngineSettingsState = {
    * bit on a store. The asset-demand predicate reads
    * `settings.starCatalogs.items[id].enabled`, and the renderer reads this slice
    * each frame.
+   *
+   * `sizePx` is the star-billboard pixel radius — the star-catalog twin of
+   * `galaxyCatalogs.sizePx`. It rides on the cluster (a shared appearance knob
+   * across every star catalog, like the galaxy size knob) rather than per-item,
+   * and the star renderer reads it into its size uniform each frame.
    */
   starCatalogs: {
     enabled: boolean;
+    sizePx: number;
     items: Record<StarCatalogId, StarCatalogItemSettings>;
   };
 
