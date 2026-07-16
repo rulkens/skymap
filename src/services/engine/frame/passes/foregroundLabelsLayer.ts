@@ -471,6 +471,8 @@ export const foregroundLabelsLayer: ContentLayer = {
     // Mid-ramp envelopes need another frame to keep easing under
     // render-on-demand — the same wake hook the label director uses while its
     // ramps run. Settled frames stay quiet.
-    if (anyRamping) state.subsystems.scheduler.requestRender();
+    // TODO(wake-probe): remove after T13 — reason tag for the dev-only
+    // requestRender() call-count diagnostic in runFrame.ts.
+    if (anyRamping) state.subsystems.scheduler.requestRender('foregroundLabelsLayer:anyRamping');
   },
 };

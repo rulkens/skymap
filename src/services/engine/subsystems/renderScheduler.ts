@@ -47,6 +47,13 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { RenderScheduler } from '../../../@types/engine/subsystems/RenderScheduler';
 import type { RenderSchedulerOptions } from '../../../@types/engine/subsystems/RenderSchedulerOptions';
 
+// TODO(wake-probe): remove after T13. Shared empty map returned by
+// `getRequestReasonCounts()` in production builds, so the getter never
+// allocates there — the bring-up bug is dev-only, and this keeps the prod
+// hot path (`requestRender()`, called from many per-frame layers) free of
+// any Map bookkeeping.
+const EMPTY_REASON_COUNTS: ReadonlyMap<string, number> = new Map();
+
 export function createRenderScheduler(opts: RenderSchedulerOptions): RenderScheduler {
   const raf = opts.rafImpl ?? requestAnimationFrame.bind(window);
   const caf = opts.cafImpl ?? cancelAnimationFrame.bind(window);
@@ -56,12 +63,23 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
   // sentinel.
   let token = 0;
 
+  // TODO(wake-probe): remove after T13. Dev-only tally of `requestRender()`
+  // calls by caller-supplied `reason`, reset at the start of every `tick()`
+  // (i.e. right before `onFrame()` runs) so the map reflects only the calls
+  // made during — or on the way into — the CURRENT frame. `runFrame.ts`
+  // reads a snapshot of this near the end of its own body, after per-frame
+  // layers (which may call `requestRender()` directly, bypassing
+  // `shouldKeepTicking`) have already run — see its wake-probe comment for
+  // why that ordering matters for finding the RAF-loop-won't-sleep bug.
+  const reasonCounts: Map<string, number> | null = import.meta.env.DEV ? new Map() : null;
+
   function tick(): void {
     // Clear the token BEFORE running the frame body so that a
     // `requestRender()` call from inside `onFrame` (e.g. the engine's
     // "still animating" tail) is allowed to schedule the *next* frame
     // rather than being short-circuited as a duplicate of this one.
     token = 0;
+    reasonCounts?.clear();
     opts.onFrame();
   }
 
@@ -71,7 +89,12 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
   // anything else releases GPU state), and the latch makes the
   // "scheduler always exposes destroy()" invariant a compile-time check.
   const scheduler: RenderScheduler = {
-    requestRender(): void {
+    requestRender(reason = 'unspecified'): void {
+      // TODO(wake-probe): remove after T13. Tally BEFORE the coalescing
+      // check — a coalesced call still tells us a caller wanted a frame.
+      if (reasonCounts !== null) {
+        reasonCounts.set(reason, (reasonCounts.get(reason) ?? 0) + 1);
+      }
       if (token !== 0) return; // already queued — coalesce
       token = raf(tick);
     },
@@ -82,6 +105,9 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
     },
     isScheduled(): boolean {
       return token !== 0;
+    },
+    getRequestReasonCounts(): ReadonlyMap<string, number> {
+      return reasonCounts ?? EMPTY_REASON_COUNTS;
     },
   };
   scheduler satisfies Destroyable;
