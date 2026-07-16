@@ -178,6 +178,9 @@ export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActi
 export const selectStarLabelsEnabled = (state: RootState): boolean =>
   selectSettings(state).labels.starLabelsEnabled;
 
+export const selectPlanetLabelsEnabled = (state: RootState): boolean =>
+  selectSettings(state).labels.planetLabelsEnabled;
+
 // --- structures cluster -------------------------------------------------------
 
 export const selectStructureItems = (

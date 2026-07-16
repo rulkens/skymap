@@ -112,10 +112,11 @@ function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
   starLabelsEnabled = true,
+  planetLabelsEnabled = true,
 ): EngineState {
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
-    settings: { labels: { starLabelsEnabled } },
+    settings: { labels: { starLabelsEnabled, planetLabelsEnabled } },
     // The envelope wakes the render loop while alphas ramp — the layer calls
     // this spy on mid-ramp frames and stays quiet once settled.
     subsystems: { scheduler: { requestRender: vi.fn<() => void>() } },
@@ -311,6 +312,44 @@ describe('foregroundLabelsLayer.draw', () => {
     const offLabels = offSpy.mock.calls[0]![0] as readonly Label[];
     expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id))).toBe(false);
     expect(offLabels.some((l) => l.id === sceneBodyLabelId('earth'))).toBe(true);
+  });
+
+  it('suppresses Earth + planet captions when the planet toggle is off', () => {
+    // Camera at Earth, spread vp so declutter keeps every separated caption:
+    // with the planet toggle ON the Earth caption emits; with it OFF the Earth
+    // + planet set drops while the star map keeps showing. The two mute switches
+    // are independent.
+    const base = sceneBodyLabels();
+    const earthId = sceneBodyLabelId('earth');
+    const earth = base.find((l) => l.id === earthId)!;
+    const camPos: Vec3 = [...earth.worldPos] as Vec3;
+
+    // Toggle ON: the Earth caption is emitted.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const onRenderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(onRenderer, makeLineRenderer()),
+    );
+    const onSpy = onRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const onLabels = onSpy.mock.calls[0]![0] as readonly Label[];
+    expect(onLabels.some((l) => l.id === earthId)).toBe(true);
+
+    // Toggle OFF (planet): no Earth/planet caption, but the star map still shows.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const offRenderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(offRenderer, makeLineRenderer(), true, false),
+    );
+    const offSpy = offRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const offLabels = offSpy.mock.calls[0]![0] as readonly Label[];
+    expect(offLabels.some((l) => l.id === earthId)).toBe(false);
+    expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id))).toBe(true);
   });
 
   it('shows the whole star map at full alpha from Earth and none beyond the neighbourhood', () => {

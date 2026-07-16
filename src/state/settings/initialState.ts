@@ -148,8 +148,9 @@ export function buildInitialSettings(): EngineSettingsState {
     // Cross-cutting label presentation: focusedOnly default OFF — all enabled
     // labels draw (the guided tour flips it on and its snapshot restores it).
     // starLabelsEnabled default ON — the local-star captions show on the final
-    // descent until the user mutes them.
-    labels: { focusedOnly: false, starLabelsEnabled: true },
+    // descent until the user mutes them. planetLabelsEnabled default ON — the
+    // Earth + planet captions show on that same descent until muted.
+    labels: { focusedOnly: false, starLabelsEnabled: true, planetLabelsEnabled: true },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,

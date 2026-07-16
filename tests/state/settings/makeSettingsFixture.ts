@@ -109,7 +109,7 @@ export function makeSettingsFixture(
     },
     volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: seedVolumeFields() },
     flow: { ...DEFAULT_FLOW },
-    labels: { focusedOnly: false, starLabelsEnabled: true },
+    labels: { focusedOnly: false, starLabelsEnabled: true, planetLabelsEnabled: true },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,

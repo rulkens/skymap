@@ -204,6 +204,9 @@ const settingsSlice = createSlice({
     setStarLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.labels.starLabelsEnabled = action.payload;
     },
+    setPlanetLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.labels.planetLabelsEnabled = action.payload;
+    },
 
     // ── debug ───────────────────────────────────────────────────────────────
     setShowPickBuffer: (settings, action: PayloadAction<boolean>) => {
@@ -398,6 +401,7 @@ export const {
   setLabelsEnabled,
   setLabelsFocusedOnly,
   setStarLabelsEnabled,
+  setPlanetLabelsEnabled,
   mergeSnapshot,
 } = settingsSlice.actions;
 
