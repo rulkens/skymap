@@ -180,7 +180,7 @@ function StarsSection({
 
         {/* Glow overlap — spreads far aggregate glows past their octree-box
             footprint so the box lattice dissolves. 1.0 = identity (flux-
-            conserving; the shader divides the peak by the square). Range 1.0–2.5. */}
+            conserving; the shader divides the peak by the square). Range 1.0–6.0. */}
         <div className={styles.panelRow}>
           <label htmlFor="slider-star-glow-overlap">Glow overlap</label>
           <span className={styles.panelValue}>{glowOverlap.toFixed(1)}×</span>
@@ -190,7 +190,7 @@ function StarsSection({
             id="slider-star-glow-overlap"
             type="range"
             min={1.0}
-            max={2.5}
+            max={6.0}
             step={0.1}
             value={glowOverlap}
             onChange={(e) => onGlowOverlapChange(parseFloat(e.target.value))}
