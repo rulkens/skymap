@@ -62,6 +62,11 @@
 //      (L = EXPOSURE * mean * N) equals drawing its refined children
 //      (sum of EXPOSURE * flux_child) -- identical total. The cut is a covering
 //      partition (walkStarOctreeCut), so no double-count.
+//      This exactness holds in the SUB-KNEE regime, where the fragment's
+//      hue-preserving compression is ~linear (fragment.wesl); once a parent or
+//      its children cross the knee the concave rolloff makes the refined sum
+//      slightly brighter than the compressed parent -- an accepted LOD-seam
+//      wobble in already-bright cores, the price of preserving hue there.
 //
 //   2. THE GAUSSIAN DOT'S INTEGRAL IS PEAK * AREA * SHAPE.
 //      A dot of peak I and pixel-radius rPx deposits I * rPx^2 * K_GAUSS of
