@@ -216,18 +216,23 @@ const MIN_D2_MPC2: f32 = 1e-14; // (1e-7)^2
 // A record deposits screen luminance STAR_FLUX_EXPOSURE * brightness * fluxApp,
 // where fluxApp = 10^(-0.4 * absMag) * subtreeStarCount * D_REF^2/d2 is the
 // APPARENT flux -- the intrinsic LUT flux dimmed by inverse-square (header
-// 'Apparent flux'). The 400.0 baseline restores the pre-attenuation near-field
-// look: a star ~100 pc away now carries D_REF^2/d2 = (10pc / 100pc)^2 = 1e-2,
-// so the old EXPOSURE 4.0 x intrinsic ~= the new 400.0 x (intrinsic x 1e-2).
+// 'Apparent flux'). The 6000.0 baseline folds the user's eye-tuned near-field
+// display exposure (15x over the raw inverse-square calibration, was 400.0) into
+// the constant, so brightness-slider 1.0 IS the tuned near-field look. The scale
+// DEPENDENCE of that display exposure -- ~15x near (solar-system scale) rising to
+// ~70x at whole-galaxy scale, a legibility need a monitor can't meet by
+// dark-adapting like the eye -- rides in on the 'brightness' the layer forwards:
+// starCatalogLayer multiplies a camera-distance ramp (starExposureRamp) into it,
+// so 'brightness' here already carries the scale trim (see that module).
 // Reference points at the default, for a star at ~100 pc (fluxApp = intrinsic x
 // 1e-2): a bright star (absMag ~= 1, intrinsic flux ~= 0.4) peaks around
-// 400 * 4e-3 ~= 1.6 at the floor radius; a blue giant (absMag ~= -3, intrinsic
+// 6000 * 4e-3 ~= 24 at the floor radius; a blue giant (absMag ~= -3, intrinsic
 // flux ~= 16) peaks ~40x higher and blooms in the HDR pipeline; a red dwarf
 // (absMag ~= 12, intrinsic flux ~= 2e-5) stays a near-invisible point whose
 // light shows up summed in its ancestor aggregate. Nearer stars brighten as
 // 1/d2, farther ones dim; the user eye-tunes the overall level here + via the
 // brightness slider. Every other constant here is structural.
-const STAR_FLUX_EXPOSURE: f32 = 400.0;
+const STAR_FLUX_EXPOSURE: f32 = 6000.0;
 
 @vertex
 fn vs(

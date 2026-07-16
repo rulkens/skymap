@@ -90,6 +90,7 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { walkStarOctreeCut } from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
 import { starNodeOriginRelCamMpc } from '../../../gpu/renderers/starCatalog/starNodeOriginRelCamMpc';
+import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
 import { subtreeStarCounts } from '../../../gpu/renderers/starCatalog/subtreeStarCounts';
 import { SOURCE_REGISTRY } from '../../../../data/sources';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -209,7 +210,16 @@ export const starCatalogLayer: ContentLayer = {
     // User's live star-brightness trim — the twin of `galaxyCatalogs.brightness`.
     // Also source-independent, so read ONCE and forward the same value to every
     // draw (the vertex stage multiplies the flux-glow peak by it; 1.0 = identity).
-    const brightness = state.settings.starCatalogs.brightness;
+    //
+    // Scale-dependent DISPLAY exposure rides in here: `starExposureRamp` lifts the
+    // whole starfield from its near-field baseline (1x) toward the whole-galaxy
+    // anchor as the camera pulls back — the perceptual fix for a monitor that
+    // can't dark-adapt (see that module). It reuses the SAME `camDistPc` the
+    // crossfade keyed off (converted to Mpc, the ramp's unit), so there is no
+    // second distance. The user slider stays a PURE trim on top of the ramp.
+    const brightness =
+      state.settings.starCatalogs.brightness *
+      starExposureRamp(camDistPc * SCALE_UNITS.PC_TO_MPC);
 
     // The "Detail" knob — CPU walk input, NOT a GPU uniform. Read once and feed
     // it to every source's `walkStarOctreeCut` (lower ⇒ boxes split earlier).

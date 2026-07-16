@@ -26,6 +26,7 @@ import { starCatalogLayer } from '../../../../../src/services/engine/frame/passe
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
+import { starExposureRamp } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
@@ -285,29 +286,35 @@ describe('starCatalogLayer.draw', () => {
     expect(renderer.draw.mock.calls[1]![1].sizePx).toBe(6.25);
   });
 
-  it('forwards the live star-brightness setting to every source draw', () => {
-    // The user's `settings.starCatalogs.brightness` must reach the renderer so
-    // the flux-glow peak is scaled by it. Change it in the store fixture and
-    // assert the stubbed renderer receives the new value (source-independent —
-    // the same value on each draw).
+  it('forwards the slider brightness times the scale-exposure ramp to every source draw', () => {
+    // The forwarded brightness is the user's `settings.starCatalogs.brightness`
+    // slider (a pure trim) multiplied by the scale-dependent display-exposure
+    // ramp keyed on camera distance. Source-independent — the SAME value on each
+    // draw. Camera at 1_000 pc: full inside the crossfade band (so the source
+    // draws) and inside the ramp's interpolation region (1 pc → 10 kpc), so the
+    // ramp is a genuine interior value (not either clamp) — the multiply is
+    // observable. Expected is computed from the ramp over the SAME distance the
+    // layer keys off, converted to the ramp's Mpc unit.
     const loaded = [
       { source: Source.GaiaStars, catalog: makeCatalog() },
       { source: Source.GaiaStars, catalog: makeCatalog() },
     ];
     const renderer = makeRenderer(loaded);
-    const camPos = camAtPc(inner + (outer - inner) * 0.5);
+    const distPc = 1_000;
+    const camPos = camAtPc(distPc);
     const view = makeNear0View(camPos);
 
     starCatalogLayer.draw(
       PASS_STUB,
       view,
       makeCtx(camPos),
-      makeState(renderer, { brightness: 2.5 }),
+      makeState(renderer, { brightness: 2.0 }),
     );
 
+    const expected = 2.0 * starExposureRamp(distPc * SCALE_UNITS.PC_TO_MPC);
     expect(renderer.draw).toHaveBeenCalledTimes(2);
-    expect(renderer.draw.mock.calls[0]![1].brightness).toBe(2.5);
-    expect(renderer.draw.mock.calls[1]![1].brightness).toBe(2.5);
+    expect(renderer.draw.mock.calls[0]![1].brightness).toBeCloseTo(expected, 10);
+    expect(renderer.draw.mock.calls[1]![1].brightness).toBeCloseTo(expected, 10);
   });
 
   it('forwards the live glow-overlap setting to every source draw', () => {
