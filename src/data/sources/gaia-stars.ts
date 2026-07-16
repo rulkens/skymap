@@ -32,10 +32,14 @@ export const GAIA_STARS_ENTRY = {
   bearsMarker: false,
   binBaseName: 'stars',
   tiered: true, // small / medium / large `.bin` variants
-  // Per-frame drawn-point budget. Starting values (grill Q9) — Task 12 tunes
-  // these against real GPU timings; frozen here so the renderer has a contract
-  // to key off before the perf pass lands.
-  drawBudget: { typical: 1_000_000, hardCap: 2_000_000 },
+  // Per-frame drawn-point budget: bounds Σ recordCount of the cut
+  // `walkStarOctreeCut` emits. Sized so the small/medium tiers can refine to
+  // (near-)all leaves when the camera is close, while `hardCap` protects the
+  // draw-call count on the large tier. Starting values (grill Q9), raised
+  // alongside `REFINE_ANGULAR_THRESHOLD`'s tightening (0.3 → 0.05): a lower
+  // threshold refines more nodes at a given distance, so it wants more
+  // headroom. Task 12 tunes both against real GPU timings.
+  drawBudget: { typical: 1_500_000, hardCap: 2_500_000 },
   // Camera-distance band (parsecs) over which the survey stars crossfade to
   // the procedural Milky-Way cloud. Chosen so the stellar bubble starts
   // fading in while the cloud still dominates the view, reaching full
