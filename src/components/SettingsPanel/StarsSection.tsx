@@ -66,6 +66,8 @@ type StarsSectionProps = {
   glowOverlap: number;
   /** Current near-anchor display exposure — the "Exposure (near)" tuning knob. */
   exposureNearX: number;
+  /** Current middle-anchor display exposure — the "Exposure (mid)" tuning knob. */
+  exposureMidX: number;
   /** Current far-anchor display exposure — the "Exposure (far)" tuning knob. */
   exposureFarX: number;
   /** Called when the user toggles the master gate on or off. */
@@ -82,6 +84,8 @@ type StarsSectionProps = {
   onGlowOverlapChange: (v: number) => void;
   /** Called when the user moves the Exposure (near) slider. */
   onExposureNearXChange: (v: number) => void;
+  /** Called when the user moves the Exposure (mid) slider. */
+  onExposureMidXChange: (v: number) => void;
   /** Called when the user moves the Exposure (far) slider. */
   onExposureFarXChange: (v: number) => void;
 };
@@ -101,6 +105,7 @@ function StarsSection({
   refineThreshold,
   glowOverlap,
   exposureNearX,
+  exposureMidX,
   exposureFarX,
   onToggleMaster,
   onToggleCatalog,
@@ -109,6 +114,7 @@ function StarsSection({
   onRefineThresholdChange,
   onGlowOverlapChange,
   onExposureNearXChange,
+  onExposureMidXChange,
   onExposureFarXChange,
 }: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
@@ -240,6 +246,25 @@ function StarsSection({
             step={0.5}
             value={exposureNearX}
             onChange={(e) => onExposureNearXChange(parseFloat(e.target.value))}
+          />
+        </div>
+
+        {/* Exposure (mid) — the absolute display exposure the ramp targets at its
+            middle (few-kpc) anchor. Pull it down to darken the over-exposed
+            central clump without touching either end. Range 5–150. */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-star-exposure-mid">Exposure (mid)</label>
+          <span className={styles.panelValue}>{exposureMidX.toFixed(0)}×</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-star-exposure-mid"
+            type="range"
+            min={5}
+            max={150}
+            step={1}
+            value={exposureMidX}
+            onChange={(e) => onExposureMidXChange(parseFloat(e.target.value))}
           />
         </div>
 

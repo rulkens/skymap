@@ -151,6 +151,12 @@ const settingsSlice = createSlice({
     setStarCatalogExposureNearX: (settings, action: PayloadAction<number>) => {
       settings.starCatalogs.exposureNearX = action.payload;
     },
+    // The "Exposure (mid)" knob — absolute display exposure the ramp targets at
+    // the middle (few-kpc) anchor. Fed to `starExposureRamp`; bends only the
+    // intermediate segment.
+    setStarCatalogExposureMidX: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.exposureMidX = action.payload;
+    },
     // The "Exposure (far)" knob — absolute display exposure the ramp targets at
     // the far (whole-galaxy) anchor. Fed to `starExposureRamp`.
     setStarCatalogExposureFarX: (settings, action: PayloadAction<number>) => {
@@ -382,6 +388,7 @@ export const {
   setStarCatalogRefineThreshold,
   setStarCatalogGlowOverlap,
   setStarCatalogExposureNearX,
+  setStarCatalogExposureMidX,
   setStarCatalogExposureFarX,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,

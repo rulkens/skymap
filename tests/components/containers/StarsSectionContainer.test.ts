@@ -45,6 +45,7 @@ import {
   selectStarCatalogRefineThreshold,
   selectStarCatalogGlowOverlap,
   selectStarCatalogExposureNearX,
+  selectStarCatalogExposureMidX,
   selectStarCatalogExposureFarX,
 } from '../../../src/state/settings/selectors';
 import {
@@ -53,6 +54,7 @@ import {
   setStarCatalogRefineThreshold,
   setStarCatalogGlowOverlap,
   setStarCatalogExposureNearX,
+  setStarCatalogExposureMidX,
   setStarCatalogExposureFarX,
 } from '../../../src/state/settings/settingsSlice';
 import type { AppStore } from '../../../src/store/types';
@@ -226,6 +228,31 @@ describe('StarsSectionContainer', () => {
     fireEvent.change(slider, { target: { value: '22.5' } });
 
     expect(selectStarCatalogExposureNearX(store.getState())).toBeCloseTo(22.5);
+  });
+
+  it('reflects seeded exposureMidX in the Exposure (mid) slider value', () => {
+    const { store } = createAppStore();
+    store.dispatch(setStarCatalogExposureMidX(40));
+
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-mid');
+    expect(slider).not.toBeNull();
+    expect(slider!.value).toBe('40');
+  });
+
+  it('dispatches setStarCatalogExposureMidX and updates the store when the slider moves', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-mid')!;
+    fireEvent.change(slider, { target: { value: '33' } });
+
+    expect(selectStarCatalogExposureMidX(store.getState())).toBeCloseTo(33);
   });
 
   it('reflects seeded exposureFarX in the Exposure (far) slider value', () => {

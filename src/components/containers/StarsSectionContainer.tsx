@@ -4,8 +4,8 @@
  *
  * Owns all Redux reach for the star-catalogs group: reads the cluster via
  * `selectStarCatalogs` (master gate + shared size + shared brightness + refine
- * threshold + glow overlap + the two exposure-ramp anchors + per-catalog items)
- * and wraps its dispatch calls in `useCallback`. The presentational
+ * threshold + glow overlap + the three exposure-ramp anchors + per-catalog
+ * items) and wraps its dispatch calls in `useCallback`. The presentational
  * `StarsSection` imports nothing from `store/` or `state/`.
  *
  * The master toggle maps to `setStarCatalogEnabled` (a real gate on
@@ -16,9 +16,10 @@
  * `setStarCatalogBrightness` (the twins of the Galaxies point-size + brightness
  * dispatches). The two lattice knobs unique to the octree-cut renderer map to
  * `setStarCatalogRefineThreshold` (the "Detail" slider) and
- * `setStarCatalogGlowOverlap` (the "Glow overlap" slider). The two
+ * `setStarCatalogGlowOverlap` (the "Glow overlap" slider). The three
  * exposure-ramp anchors map to `setStarCatalogExposureNearX` /
- * `setStarCatalogExposureFarX` (the "Exposure (near/far)" tuning sliders).
+ * `setStarCatalogExposureMidX` / `setStarCatalogExposureFarX` (the
+ * "Exposure (near/mid/far)" tuning sliders).
  * `setStarCatalogLabelEnabled` is intentionally left unwired here: star labels
  * live in the separate Labels section, mirroring how the Galaxies section
  * exposes no per-catalog label toggle.
@@ -48,6 +49,7 @@ import {
   setStarCatalogRefineThreshold,
   setStarCatalogGlowOverlap,
   setStarCatalogExposureNearX,
+  setStarCatalogExposureMidX,
   setStarCatalogExposureFarX,
   setStarCatalogVisible,
 } from '../../state/settings/settingsSlice';
@@ -66,6 +68,7 @@ function StarsSectionContainer(): React.ReactElement {
     refineThreshold,
     glowOverlap,
     exposureNearX,
+    exposureMidX,
     exposureFarX,
     items,
   } = useAppSelector(selectStarCatalogs);
@@ -120,6 +123,11 @@ function StarsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onExposureMidXChange = useCallback(
+    (next: number) => dispatch(setStarCatalogExposureMidX(next)),
+    [dispatch],
+  );
+
   const onExposureFarXChange = useCallback(
     (next: number) => dispatch(setStarCatalogExposureFarX(next)),
     [dispatch],
@@ -135,6 +143,7 @@ function StarsSectionContainer(): React.ReactElement {
       refineThreshold={refineThreshold}
       glowOverlap={glowOverlap}
       exposureNearX={exposureNearX}
+      exposureMidX={exposureMidX}
       exposureFarX={exposureFarX}
       onToggleMaster={onToggleMaster}
       onToggleCatalog={onToggleCatalog}
@@ -143,6 +152,7 @@ function StarsSectionContainer(): React.ReactElement {
       onRefineThresholdChange={onRefineThresholdChange}
       onGlowOverlapChange={onGlowOverlapChange}
       onExposureNearXChange={onExposureNearXChange}
+      onExposureMidXChange={onExposureMidXChange}
       onExposureFarXChange={onExposureFarXChange}
     />
   );

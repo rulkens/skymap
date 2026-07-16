@@ -176,13 +176,16 @@ export type EngineSettingsState = {
    * softens the seam without changing total luminance. Rides the shared GPU
    * uniform beside `sizePx` / `brightness`.
    *
-   * `exposureNearX` / `exposureFarX` are the two ABSOLUTE display exposures the
-   * scale-dependent `starExposureRamp` targets at its distance anchors (1 pc and
-   * 10 kpc). Unlike `brightness` (a flat trim), these shape the cross-scale
-   * ramp: the layer feeds both to `starExposureRamp` per frame. Live so the ramp
-   * can be re-eye-tuned against the current star bins' local flux; defaults 15 /
-   * 70, the shipped anchors (15 is also baked into the shader's
-   * STAR_FLUX_EXPOSURE, so the ramp returns 1.0 at the near anchor there).
+   * `exposureNearX` / `exposureMidX` / `exposureFarX` are the three ABSOLUTE
+   * display exposures the scale-dependent `starExposureRamp` targets at its
+   * distance anchors (1 pc, 3 kpc, 10 kpc). Unlike `brightness` (a flat trim),
+   * these shape the cross-scale ramp: the layer feeds all three to
+   * `starExposureRamp` per frame. Live so the ramp can be re-eye-tuned against
+   * the current star bins' local flux; defaults 15 / 57 / 70. 15 is also baked
+   * into the shader's STAR_FLUX_EXPOSURE, so the ramp returns 1.0 at the near
+   * anchor there; the 57 mid anchor sits on the old near→far continuation, so the
+   * defaults reproduce the two-anchor look and pulling `exposureMidX` down bends
+   * only the intermediate few-kpc segment.
    */
   starCatalogs: {
     enabled: boolean;
@@ -191,6 +194,7 @@ export type EngineSettingsState = {
     refineThreshold: number;
     glowOverlap: number;
     exposureNearX: number;
+    exposureMidX: number;
     exposureFarX: number;
     items: Record<StarCatalogId, StarCatalogItemSettings>;
   };

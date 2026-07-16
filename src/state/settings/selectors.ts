@@ -205,6 +205,7 @@ export const selectStarCatalogs = (
   refineThreshold: number;
   glowOverlap: number;
   exposureNearX: number;
+  exposureMidX: number;
   exposureFarX: number;
   items: Record<StarCatalogId, StarCatalogItemSettings>;
 } => selectSettings(state).starCatalogs;
@@ -249,6 +250,15 @@ export const selectStarCatalogGlowOverlap = (state: RootState): number =>
  */
 export const selectStarCatalogExposureNearX = (state: RootState): number =>
   selectSettings(state).starCatalogs.exposureNearX;
+
+/**
+ * Middle-anchor star display exposure — the "Exposure (mid)" tuning knob. A
+ * primitive read, so no memoization. The absolute exposure `starExposureRamp`
+ * targets at its middle (few-kpc) anchor; pulling it down darkens the
+ * intermediate zone without touching either end.
+ */
+export const selectStarCatalogExposureMidX = (state: RootState): number =>
+  selectSettings(state).starCatalogs.exposureMidX;
 
 /**
  * Far-anchor star display exposure — the "Exposure (far)" tuning knob. A

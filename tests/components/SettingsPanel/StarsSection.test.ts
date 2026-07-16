@@ -44,6 +44,7 @@ function baseProps() {
     refineThreshold: 0.05,
     glowOverlap: 1.0,
     exposureNearX: 15,
+    exposureMidX: 57,
     exposureFarX: 70,
     onToggleMaster: vi.fn<(enabled: boolean) => void>(),
     onToggleCatalog: vi.fn<(id: StarCatalogId, enabled: boolean) => void>(),
@@ -52,6 +53,7 @@ function baseProps() {
     onRefineThresholdChange: vi.fn<(v: number) => void>(),
     onGlowOverlapChange: vi.fn<(v: number) => void>(),
     onExposureNearXChange: vi.fn<(v: number) => void>(),
+    onExposureMidXChange: vi.fn<(v: number) => void>(),
     onExposureFarXChange: vi.fn<(v: number) => void>(),
   };
 }
@@ -251,6 +253,28 @@ describe('StarsSection', () => {
       fireEvent.change(slider, { target: { value: '22.5' } });
       expect(onExposureNearXChange).toHaveBeenCalledOnce();
       expect(onExposureNearXChange).toHaveBeenCalledWith(22.5);
+    });
+  });
+
+  describe('Exposure (mid) slider', () => {
+    it('has value matching the exposureMidX prop', () => {
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), exposureMidX: 40 }),
+      );
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-mid');
+      expect(slider).not.toBeNull();
+      expect(slider!.value).toBe('40');
+    });
+
+    it('fires onExposureMidXChange with the parsed float when the slider moves', () => {
+      const onExposureMidXChange = vi.fn<(v: number) => void>();
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), onExposureMidXChange }),
+      );
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-exposure-mid')!;
+      fireEvent.change(slider, { target: { value: '33' } });
+      expect(onExposureMidXChange).toHaveBeenCalledOnce();
+      expect(onExposureMidXChange).toHaveBeenCalledWith(33);
     });
   });
 

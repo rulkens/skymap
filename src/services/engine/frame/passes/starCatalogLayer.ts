@@ -309,6 +309,7 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
     starExposureRamp(
       camDistPc * SCALE_UNITS.PC_TO_MPC,
       state.settings.starCatalogs.exposureNearX,
+      state.settings.starCatalogs.exposureMidX,
       state.settings.starCatalogs.exposureFarX,
     );
 

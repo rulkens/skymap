@@ -115,6 +115,23 @@ export const DEFAULT_STAR_GLOW_OVERLAP = 4.7;
 export const DEFAULT_STAR_EXPOSURE_NEAR_X = 15;
 
 /**
+ * Default middle-anchor star display exposure — seeds
+ * `settings.starCatalogs.exposureMidX`. The ABSOLUTE exposure multiplier the
+ * scale-dependent `starExposureRamp` targets at the intermediate few-kpc scale
+ * (3 kpc), the knot that splits the ramp so the dense central clump can be
+ * darkened without touching either end.
+ *
+ * 57 is the OLD two-point (near→far) curve's own value at 3 kpc:
+ * 15·(70/15)^(log₁₀(3000)/4) = 57.23 (the 3 kpc anchor sits at log-fraction
+ * log₁₀(3000)/4 ≈ 0.869 of the way from 1 pc to 10 kpc). Seeding the mid anchor
+ * ON that continuation makes the three-anchor ramp reproduce today's look at the
+ * defaults — a knot on a straight line doesn't bend it. 57 vs the exact 57.23 is
+ * visually indistinguishable. Live-tunable (UI range 5–150) so the middle can be
+ * pulled down against the running renderer.
+ */
+export const DEFAULT_STAR_EXPOSURE_MID_X = 57;
+
+/**
  * Default far-anchor star display exposure — seeds
  * `settings.starCatalogs.exposureFarX`. The ABSOLUTE exposure multiplier
  * `starExposureRamp` targets at whole-galaxy scale (10 kpc), where the star bin
