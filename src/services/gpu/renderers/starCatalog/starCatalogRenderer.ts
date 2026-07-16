@@ -90,14 +90,15 @@ function alignUp(value: number, align: number): number {
 
 /**
  * Byte size of the star `StarUniforms` @group(0) buffer: the shared
- * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32, rounded up to the
- * prefix's 16-byte alignment = 96 (mirrors `struct StarUniforms` in
- * shaders/starCatalog/io.wesl). The two appended scalars fit inside the same
- * 16-byte rounding tail as `sizePx` alone did, so the buffer size is unchanged;
- * derived from `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced,
- * the way the galaxy points `Uniforms` struct appends its own scalars.
+ * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32 + `glowOverlap` f32,
+ * rounded up to the prefix's 16-byte alignment = 96 (mirrors `struct
+ * StarUniforms` in shaders/starCatalog/io.wesl). The three appended scalars fit
+ * inside the same 16-byte rounding tail as `sizePx` alone did (80 + 12 → 96), so
+ * the buffer size is unchanged; derived from `CAMERA_UNIFORM_BYTES` so the
+ * prefix size stays single-sourced, the way the galaxy points `Uniforms` struct
+ * appends its own scalars.
  */
-const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 8, 16);
+const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 12, 16);
 
 /**
  * Float index of `sizePx` in the `StarUniforms` scratch: byte 80 (right after
@@ -107,9 +108,15 @@ const SIZE_PX_FLOAT_INDEX = CAMERA_UNIFORM_BYTES / 4;
 
 /**
  * Float index of `brightness` in the `StarUniforms` scratch: byte 84 (right
- * after `sizePx`) / 4. Floats 22..23 stay zero-init pad.
+ * after `sizePx`) / 4.
  */
 const BRIGHTNESS_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 4) / 4;
+
+/**
+ * Float index of `glowOverlap` in the `StarUniforms` scratch: byte 88 (right
+ * after `brightness`) / 4. Float 23 stays zero-init pad.
+ */
+const GLOW_OVERLAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 8) / 4;
 
 /** One committed catalog's GPU resources + the octree kept for the layer. */
 type LoadedStarSource = {
@@ -144,8 +151,8 @@ export function createStarCatalogRenderer(
 
   // ── Camera uniform (shared across sources — see the module header) ────────
   // Sized to STAR_UNIFORM_BYTES: the 80-byte CameraUniforms prefix plus the
-  // source-independent `sizePx` + `brightness` scalars, matching `struct
-  // StarUniforms`.
+  // source-independent `sizePx` + `brightness` + `glowOverlap` scalars, matching
+  // `struct StarUniforms`.
   const cameraBuffer = device.createBuffer({
     label: 'star-catalog-camera-uniform',
     size: STAR_UNIFORM_BYTES,
@@ -327,21 +334,23 @@ export function createStarCatalogRenderer(
       opacity,
       sizePx,
       brightness,
+      glowOverlap,
     } = args;
     const entry = sources.get(source);
     if (!entry || nodeDraws.length === 0) return;
 
     // Camera uniform: identical bytes every source, so this repeated write is
     // idempotent (see the module header). floats 18/19 stay zero-init.
-    // `sizePx` and `brightness` ride this buffer too — both are
-    // source-independent (the same base star-dot size + exposure trim for every
-    // source this frame), so appending them to the shared camera prefix is safe:
-    // each source's repeated write lands the identical values. Written here,
-    // ONCE per source before its draws, so there is no mid-frame mutation for
-    // the writeBuffer/submit ordering race to corrupt.
+    // `sizePx`, `brightness` and `glowOverlap` ride this buffer too — all three
+    // are source-independent (the same base star-dot size + exposure trim + glow
+    // spread for every source this frame), so appending them to the shared
+    // camera prefix is safe: each source's repeated write lands the identical
+    // values. Written here, ONCE per source before its draws, so there is no
+    // mid-frame mutation for the writeBuffer/submit ordering race to corrupt.
     writeCameraPrefix(cameraScratch, vp, viewportPx);
     cameraScratch[SIZE_PX_FLOAT_INDEX] = sizePx;
     cameraScratch[BRIGHTNESS_FLOAT_INDEX] = brightness;
+    cameraScratch[GLOW_OVERLAP_FLOAT_INDEX] = glowOverlap;
     device.queue.writeBuffer(cameraBuffer, 0, cameraScratch);
 
     // Pack every node's params into the strided scratch, once, then one write.

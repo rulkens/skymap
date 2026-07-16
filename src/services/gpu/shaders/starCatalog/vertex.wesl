@@ -86,6 +86,20 @@
 // untouched and the slider scales the whole starfield's luminance up or down.
 // Unlike 'sizePx' (which redistributes a FIXED luminance across a wider/narrower
 // dot -- fact 2), 'brightness' changes the total luminance itself.
+//
+// ## Glow overlap: dissolving the box lattice (aggregates only)
+//
+// An aggregate's glow is sized to its box footprint (above), so at the refine
+// threshold adjacent aggregates meet edge-to-edge -- but a box edge that lands
+// on a hard falloff still reads as a faint lattice cell. 'u.glowOverlap'
+// ('settings.starCatalogs.glowOverlap', 1.0 = identity) multiplies the AGGREGATE
+// radius so each glow spills PAST its box and overlaps its neighbours, melting
+// the lattice into a continuous field. It is a 'sizePx'-style spread, not a
+// 'brightness': because the peak is computed from the FINAL 'rPx' (peak =
+// EXPOSURE*flux / (K*rPx^2), fact 2), folding 'glowOverlap' into 'rPx' divides
+// the peak by 'glowOverlap^2' automatically, so total luminance is conserved --
+// no separate peak term is needed. Leaves are POINT sources with no box to spill
+// past, so they select 1.0 and stay exactly as they were.
 
 import package::starCatalog::io::VSOut;
 import package::starCatalog::io::NodeParams;
@@ -194,7 +208,12 @@ fn vs(
   let sizeScale = u.sizePx / STAR_SIZE_REF_PX;
   let extentMpc = select(0.0, node.cellScaleMpc, node.level > 0u);
   let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * 0.5;
-  let rPx = max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale;
+  // Glow overlap spreads AGGREGATE glows past their box footprint so the lattice
+  // dissolves; leaves (point sources) select 1.0 and are untouched. Folded into
+  // 'rPx' here, so the peak's /(K*rPx^2) below divides by 'glowOverlap^2' too --
+  // total luminance stays conserved (header 'Glow overlap' + fact 2).
+  let overlap = select(1.0, u.glowOverlap, node.level > 0u);
+  let rPx = max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale * overlap;
 
   // Peak so the dot's INTEGRATED luminance equals STAR_FLUX_EXPOSURE * flux
   // regardless of rPx: I_peak * K_GAUSS * rPx^2 == EXPOSURE * flux. Refining an

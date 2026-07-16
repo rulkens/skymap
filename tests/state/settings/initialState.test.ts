@@ -18,8 +18,10 @@ import {
   DEFAULT_FLOW,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_STAR_BRIGHTNESS,
+  DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_SIZE_PX,
 } from '../../../src/data/defaults';
+import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
 
 describe('buildInitialSettings', () => {
   it('derives one galaxy-catalog item row per id, enabled seeded from registry visible', () => {
@@ -54,6 +56,8 @@ describe('buildInitialSettings', () => {
     expect(s.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(s.starCatalogs.sizePx).toBe(DEFAULT_STAR_SIZE_PX);
     expect(s.starCatalogs.brightness).toBe(DEFAULT_STAR_BRIGHTNESS);
+    expect(s.starCatalogs.refineThreshold).toBe(DEFAULT_REFINE_THRESHOLD);
+    expect(s.starCatalogs.glowOverlap).toBe(DEFAULT_STAR_GLOW_OVERLAP);
     expect(s.flow).toEqual(DEFAULT_FLOW);
     // Spread, not aliased — mutating the result must not write the seed.
     expect(s.flow).not.toBe(DEFAULT_FLOW);

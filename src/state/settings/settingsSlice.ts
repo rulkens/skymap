@@ -138,6 +138,14 @@ const settingsSlice = createSlice({
     setStarCatalogBrightness: (settings, action: PayloadAction<number>) => {
       settings.starCatalogs.brightness = action.payload;
     },
+    // The "Detail" knob — CPU octree-cut refine threshold (not a GPU uniform).
+    setStarCatalogRefineThreshold: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.refineThreshold = action.payload;
+    },
+    // The "Glow overlap" knob — aggregate glow spread (1.0 = identity).
+    setStarCatalogGlowOverlap: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.glowOverlap = action.payload;
+    },
     setStarCatalogVisible: (
       settings,
       action: PayloadAction<{ id: StarCatalogId; enabled: boolean }>,
@@ -358,6 +366,8 @@ export const {
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,
+  setStarCatalogRefineThreshold,
+  setStarCatalogGlowOverlap,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,
   setVolumesEnabled,

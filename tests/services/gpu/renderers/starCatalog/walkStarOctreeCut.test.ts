@@ -128,4 +128,30 @@ describe('walkStarOctreeCut', () => {
     expect(farDraws.length).toBe(1);
     expect(catalog.nodes[farDraws[0]!.nodeIndex]!.level).toBeGreaterThan(0);
   });
+
+  it('refines strictly more at a lower threshold (the Detail knob)', () => {
+    // Same fixture as above: a near cell plus a far octant cluster ~170 pc off,
+    // whose level-1 box subtends ~0.012 of its distance. The default 0.05
+    // threshold treats that as sub-pixel and collapses it to one aggregate; a
+    // threshold below ~0.012 clears the `angularSize >= threshold` gate, so the
+    // cluster refines all the way to its eight leaf stars. Lower ⇒ more (and
+    // deeper) drawn nodes — the "Detail" slider's whole contract.
+    const near: OctreeLeafStar = { mortonIndex: 0, offset: [512, 512, 512], absMag: 2, bpRp: 0.5 };
+    const far = octantCluster([50, 50, 50]);
+    const catalog = buildStarOctree(sortedStars([near, ...far]), GRID);
+    const cam: Vec3 = [0.5, 0.5, 0.5];
+    const budget = { typical: 10000, hardCap: 10000 };
+
+    const coarse = walkStarOctreeCut(catalog, cam, budget, 0.05);
+    const fine = walkStarOctreeCut(catalog, cam, budget, 0.005);
+
+    const leaves = (draws: readonly { nodeIndex: number }[]) =>
+      draws.filter((d) => catalog.nodes[d.nodeIndex]!.level === 0).length;
+
+    // Strictly more total draws AND strictly more leaf-level (fully refined)
+    // draws at the lower threshold — the far cluster went from 1 aggregate to 8
+    // leaves.
+    expect(fine.length).toBeGreaterThan(coarse.length);
+    expect(leaves(fine)).toBeGreaterThan(leaves(coarse));
+  });
 });

@@ -56,10 +56,12 @@ import {
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_STAR_BRIGHTNESS,
+  DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_SIZE_PX,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
+import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -99,6 +101,8 @@ export function makeSettingsFixture(
       enabled: true,
       sizePx: DEFAULT_STAR_SIZE_PX,
       brightness: DEFAULT_STAR_BRIGHTNESS,
+      refineThreshold: DEFAULT_REFINE_THRESHOLD,
+      glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
       items: Object.fromEntries(
         STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,

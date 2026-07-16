@@ -8,7 +8,9 @@
  * `STAR_CATALOG_IDS.map(...)` row loop is the extension point for a future
  * second catalog), plus a default-closed "Advanced" sub-section carrying the
  * shared star-size and star-brightness sliders — the star-catalog twins of the
- * Galaxies section's point-size and brightness controls. It renders NO
+ * Galaxies section's point-size and brightness controls — plus two lattice
+ * controls unique to the octree-cut star renderer: "Detail" (the CPU refine
+ * threshold) and "Glow overlap" (the aggregate glow spread). It renders NO
  * per-catalog label toggle — mirroring the
  * Galaxies section, star-label visibility lives in the separate Labels section.
  *
@@ -52,6 +54,10 @@ type StarsSectionProps = {
   sizePx: number;
   /** Current star-brightness trim (shared; 1.0 = identity). */
   brightness: number;
+  /** Current octree-cut refine threshold — the "Detail" knob (lower = more detail). */
+  refineThreshold: number;
+  /** Current aggregate glow-overlap spread (shared; 1.0 = identity). */
+  glowOverlap: number;
   /** Called when the user toggles the master gate on or off. */
   onToggleMaster: (enabled: boolean) => void;
   /** Called when the user toggles a single star catalog on or off. */
@@ -60,6 +66,10 @@ type StarsSectionProps = {
   onSizeChange: (v: number) => void;
   /** Called when the user moves the star-brightness slider. */
   onBrightnessChange: (v: number) => void;
+  /** Called when the user moves the Detail (refine-threshold) slider. */
+  onRefineThresholdChange: (v: number) => void;
+  /** Called when the user moves the glow-overlap slider. */
+  onGlowOverlapChange: (v: number) => void;
 };
 
 // ── StarsSection ─────────────────────────────────────────────────────────────
@@ -73,10 +83,14 @@ function StarsSection({
   items,
   sizePx,
   brightness,
+  refineThreshold,
+  glowOverlap,
   onToggleMaster,
   onToggleCatalog,
   onSizeChange,
   onBrightnessChange,
+  onRefineThresholdChange,
+  onGlowOverlapChange,
 }: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
   // "gate on, but not every catalog is individually enabled" (mixed).
@@ -142,6 +156,44 @@ function StarsSection({
             step={0.1}
             value={brightness}
             onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
+          />
+        </div>
+
+        {/* Detail — the CPU octree-cut refine threshold. LOWER = far boxes split
+            earlier = fewer visible lattice cells (more detail), at the cost of
+            more drawn nodes. Range 0.01–0.30; NOT a GPU uniform. */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-star-detail">Detail</label>
+          <span className={styles.panelValue}>{refineThreshold.toFixed(2)}</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-star-detail"
+            type="range"
+            min={0.01}
+            max={0.3}
+            step={0.01}
+            value={refineThreshold}
+            onChange={(e) => onRefineThresholdChange(parseFloat(e.target.value))}
+          />
+        </div>
+
+        {/* Glow overlap — spreads far aggregate glows past their octree-box
+            footprint so the box lattice dissolves. 1.0 = identity (flux-
+            conserving; the shader divides the peak by the square). Range 1.0–2.5. */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-star-glow-overlap">Glow overlap</label>
+          <span className={styles.panelValue}>{glowOverlap.toFixed(1)}×</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-star-glow-overlap"
+            type="range"
+            min={1.0}
+            max={2.5}
+            step={0.1}
+            value={glowOverlap}
+            onChange={(e) => onGlowOverlapChange(parseFloat(e.target.value))}
           />
         </div>
       </CollapsibleSection>

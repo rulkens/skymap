@@ -89,11 +89,13 @@ export type StarNodeDraw = {
 };
 
 /**
- * Refine a node while its box edge subtends more than this fraction of its
- * distance (`edgePc / distancePc > threshold`) — a dimensionless
- * distance-per-box-edge proxy for on-screen angle (radians-ish; small-angle
- * `edge/distance ≈ tan(angle) ≈ angle`). Below it the box is treated as
- * sub-pixel and drawn as one aggregate. 0.05 ≈ a box refines once it would
+ * Default refine threshold — seeds `settings.starCatalogs.refineThreshold` (the
+ * "Detail" slider) and is the fallback when `walkStarOctreeCut` is called with
+ * no explicit threshold. A node refines while its box edge subtends more than
+ * this fraction of its distance (`edgePc / distancePc > threshold`) — a
+ * dimensionless distance-per-box-edge proxy for on-screen angle (radians-ish;
+ * small-angle `edge/distance ≈ tan(angle) ≈ angle`). Below it the box is treated
+ * as sub-pixel and drawn as one aggregate. 0.05 ≈ a box refines once it would
  * subtend more than ~3°, keeping every drawn aggregate visually small so the
  * octree's box lattice stays invisible instead of showing through as
  * faceted seams. That trades more draw calls (more refined nodes at a given
@@ -105,7 +107,7 @@ export type StarNodeDraw = {
  * before it's small enough to read as a point. Task 13 replaces the proxy
  * with a viewport-accurate screen-error metric behind the same predicate.
  */
-const REFINE_ANGULAR_THRESHOLD = 0.05;
+export const DEFAULT_REFINE_THRESHOLD = 0.05;
 
 /** Guards the `edge / distance` ratio when the camera sits inside a box. */
 const MIN_DISTANCE_PC = 1e-6;
@@ -114,6 +116,13 @@ export function walkStarOctreeCut(
   catalog: StarCatalog,
   camPosPc: Vec3,
   budget: { typical: number; hardCap: number },
+  // The user's live "Detail" knob (`settings.starCatalogs.refineThreshold`).
+  // LOWER threshold ⇒ a box passes the `angularSize >= threshold` gate at a
+  // greater distance ⇒ boxes SPLIT EARLIER ⇒ fewer far aggregates whose box
+  // edge reads as a visible lattice cell, at the cost of MORE drawn nodes
+  // (deeper refinement everywhere). Defaults to the documented tuning above so
+  // callers that don't expose the knob (tests) keep the old behaviour.
+  refineThreshold: number = DEFAULT_REFINE_THRESHOLD,
 ): readonly StarNodeDraw[] {
   const { nodes } = catalog;
   if (nodes.length === 0) return [];
@@ -169,7 +178,7 @@ export function walkStarOctreeCut(
 
     const shouldRefine =
       childIndices.length > 0 &&
-      angularSize >= REFINE_ANGULAR_THRESHOLD && // near/large enough to resolve
+      angularSize >= refineThreshold && // near/large enough to resolve
       instanceCount < budget.typical && // refinement target not yet reached
       instanceCount + refineDelta <= budget.hardCap; // stays under the ceiling
 

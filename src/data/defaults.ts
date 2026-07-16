@@ -85,6 +85,17 @@ export const DEFAULT_STAR_SIZE_PX = 2.5;
 export const DEFAULT_STAR_BRIGHTNESS = 1.0;
 
 /**
+ * Default star glow-overlap — seeds `settings.starCatalogs.glowOverlap`. 1.0 =
+ * identity: an aggregate's flux-glow exactly fills its octree-box footprint (no
+ * spread). Above it the aggregate radius is multiplied by this factor so far
+ * glows overlap their neighbours and the box lattice dissolves; the vertex
+ * stage divides the Gaussian peak by the square, so total luminance is
+ * conserved (only the spread changes). User range 1.0–2.5. Leaves (point
+ * sources) are untouched.
+ */
+export const DEFAULT_STAR_GLOW_OVERLAP = 1.0;
+
+/**
  * Default global brightness multiplier.  1.0 = "intensity exactly as the
  * shader computes it from the apparent magnitude".  Range 0.2–3.0.
  */

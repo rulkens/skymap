@@ -142,6 +142,14 @@ export const starCatalogLayer: ContentLayer = {
     // draw (the vertex stage multiplies the flux-glow peak by it; 1.0 = identity).
     const brightness = state.settings.starCatalogs.brightness;
 
+    // The "Detail" knob — CPU walk input, NOT a GPU uniform. Read once and feed
+    // it to every source's `walkStarOctreeCut` (lower ⇒ boxes split earlier).
+    const refineThreshold = state.settings.starCatalogs.refineThreshold;
+
+    // The "Glow overlap" knob — source-independent GPU uniform, rides beside
+    // `sizePx` / `brightness`. The vertex stage spreads aggregate glows by it.
+    const glowOverlap = state.settings.starCatalogs.glowOverlap;
+
     for (const { source, catalog } of renderer.loadedCatalogs()) {
       const entry = SOURCE_REGISTRY[source];
       if (entry.type !== 'starCatalog') continue;
@@ -153,7 +161,7 @@ export const starCatalogLayer: ContentLayer = {
       // Walk this frame's cut, then rebase each chosen node's box origin into
       // the camera-relative f64 frame (parallel to the cut) before the renderer
       // narrows to f32.
-      const nodeDraws = walkStarOctreeCut(catalog, camPosPc, entry.drawBudget);
+      const nodeDraws = walkStarOctreeCut(catalog, camPosPc, entry.drawBudget, refineThreshold);
       if (nodeDraws.length === 0) continue; // empty catalog / degenerate cut
 
       const originRelCamMpc: Vec3[] = [];
@@ -180,6 +188,7 @@ export const starCatalogLayer: ContentLayer = {
         opacity,
         sizePx,
         brightness,
+        glowOverlap,
       });
     }
   },

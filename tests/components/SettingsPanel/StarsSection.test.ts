@@ -41,10 +41,14 @@ function baseProps() {
     items: items(true),
     sizePx: 2.5,
     brightness: 1.0,
+    refineThreshold: 0.05,
+    glowOverlap: 1.0,
     onToggleMaster: vi.fn<(enabled: boolean) => void>(),
     onToggleCatalog: vi.fn<(id: StarCatalogId, enabled: boolean) => void>(),
     onSizeChange: vi.fn<(v: number) => void>(),
     onBrightnessChange: vi.fn<(v: number) => void>(),
+    onRefineThresholdChange: vi.fn<(v: number) => void>(),
+    onGlowOverlapChange: vi.fn<(v: number) => void>(),
   };
 }
 
@@ -159,6 +163,50 @@ describe('StarsSection', () => {
       fireEvent.change(slider, { target: { value: '0.6' } });
       expect(onBrightnessChange).toHaveBeenCalledOnce();
       expect(onBrightnessChange).toHaveBeenCalledWith(0.6);
+    });
+  });
+
+  describe('Detail (refine-threshold) slider', () => {
+    it('has value matching the refineThreshold prop', () => {
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), refineThreshold: 0.12 }),
+      );
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-detail');
+      expect(slider).not.toBeNull();
+      expect(slider!.value).toBe('0.12');
+    });
+
+    it('fires onRefineThresholdChange with the parsed float when the slider moves', () => {
+      const onRefineThresholdChange = vi.fn<(v: number) => void>();
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), onRefineThresholdChange }),
+      );
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-detail')!;
+      fireEvent.change(slider, { target: { value: '0.03' } });
+      expect(onRefineThresholdChange).toHaveBeenCalledOnce();
+      expect(onRefineThresholdChange).toHaveBeenCalledWith(0.03);
+    });
+  });
+
+  describe('glow-overlap slider', () => {
+    it('has value matching the glowOverlap prop', () => {
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), glowOverlap: 1.8 }),
+      );
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-glow-overlap');
+      expect(slider).not.toBeNull();
+      expect(slider!.value).toBe('1.8');
+    });
+
+    it('fires onGlowOverlapChange with the parsed float when the slider moves', () => {
+      const onGlowOverlapChange = vi.fn<(v: number) => void>();
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), onGlowOverlapChange }),
+      );
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-glow-overlap')!;
+      fireEvent.change(slider, { target: { value: '2.2' } });
+      expect(onGlowOverlapChange).toHaveBeenCalledOnce();
+      expect(onGlowOverlapChange).toHaveBeenCalledWith(2.2);
     });
   });
 });

@@ -199,6 +199,8 @@ export const selectStarCatalogs = (
   enabled: boolean;
   sizePx: number;
   brightness: number;
+  refineThreshold: number;
+  glowOverlap: number;
   items: Record<StarCatalogId, StarCatalogItemSettings>;
 } => selectSettings(state).starCatalogs;
 
@@ -216,6 +218,23 @@ export const selectStarCatalogSize = (state: RootState): number =>
  */
 export const selectStarCatalogBrightness = (state: RootState): number =>
   selectSettings(state).starCatalogs.brightness;
+
+/**
+ * Octree-cut refine threshold — the "Detail" knob. A primitive read, so no
+ * memoization. Unlike the size/brightness twins this is NOT a GPU uniform: the
+ * layer feeds it to `walkStarOctreeCut`. Lower ⇒ boxes split earlier.
+ */
+export const selectStarCatalogRefineThreshold = (state: RootState): number =>
+  selectSettings(state).starCatalogs.refineThreshold;
+
+/**
+ * Aggregate glow-overlap spread — the "Glow overlap" knob. A primitive read, so
+ * no memoization. The vertex stage multiplies an aggregate's radius by it (and
+ * divides the peak by the square, so total luminance is conserved); 1.0 =
+ * identity.
+ */
+export const selectStarCatalogGlowOverlap = (state: RootState): number =>
+  selectSettings(state).starCatalogs.glowOverlap;
 
 // --- derived ------------------------------------------------------------------
 

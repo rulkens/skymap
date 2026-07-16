@@ -24,6 +24,8 @@ import reducer, {
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,
+  setStarCatalogRefineThreshold,
+  setStarCatalogGlowOverlap,
   setStarCatalogVisible,
   setPassDisabled,
   setClipPathLinger,
@@ -216,6 +218,16 @@ describe('settingsSlice — star catalogs', () => {
   it('setStarCatalogBrightness writes the shared star-brightness trim', () => {
     const next = reducer(base(), setStarCatalogBrightness(2.2));
     expect(next.starCatalogs.brightness).toBe(2.2);
+  });
+
+  it('setStarCatalogRefineThreshold writes the octree-cut Detail knob', () => {
+    const next = reducer(base(), setStarCatalogRefineThreshold(0.12));
+    expect(next.starCatalogs.refineThreshold).toBe(0.12);
+  });
+
+  it('setStarCatalogGlowOverlap writes the aggregate glow-overlap spread', () => {
+    const next = reducer(base(), setStarCatalogGlowOverlap(1.8));
+    expect(next.starCatalogs.glowOverlap).toBe(1.8);
   });
 });
 

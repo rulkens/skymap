@@ -42,10 +42,14 @@ import {
   selectStarCatalogs,
   selectStarCatalogSize,
   selectStarCatalogBrightness,
+  selectStarCatalogRefineThreshold,
+  selectStarCatalogGlowOverlap,
 } from '../../../src/state/settings/selectors';
 import {
   setStarCatalogSize,
   setStarCatalogBrightness,
+  setStarCatalogRefineThreshold,
+  setStarCatalogGlowOverlap,
 } from '../../../src/state/settings/settingsSlice';
 import type { AppStore } from '../../../src/store/types';
 
@@ -143,5 +147,55 @@ describe('StarsSectionContainer', () => {
     fireEvent.change(slider, { target: { value: '0.6' } });
 
     expect(selectStarCatalogBrightness(store.getState())).toBeCloseTo(0.6);
+  });
+
+  it('reflects seeded refineThreshold in the Detail slider value', () => {
+    const { store } = createAppStore();
+    store.dispatch(setStarCatalogRefineThreshold(0.12));
+
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-detail');
+    expect(slider).not.toBeNull();
+    expect(slider!.value).toBe('0.12');
+  });
+
+  it('dispatches setStarCatalogRefineThreshold and updates the store when the Detail slider moves', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-detail')!;
+    fireEvent.change(slider, { target: { value: '0.03' } });
+
+    expect(selectStarCatalogRefineThreshold(store.getState())).toBeCloseTo(0.03);
+  });
+
+  it('reflects seeded glowOverlap in the glow-overlap slider value', () => {
+    const { store } = createAppStore();
+    store.dispatch(setStarCatalogGlowOverlap(1.8));
+
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-glow-overlap');
+    expect(slider).not.toBeNull();
+    expect(slider!.value).toBe('1.8');
+  });
+
+  it('dispatches setStarCatalogGlowOverlap and updates the store when the slider moves', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-glow-overlap')!;
+    fireEvent.change(slider, { target: { value: '2.2' } });
+
+    expect(selectStarCatalogGlowOverlap(store.getState())).toBeCloseTo(2.2);
   });
 });

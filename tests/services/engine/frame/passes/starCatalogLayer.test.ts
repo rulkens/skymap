@@ -82,9 +82,23 @@ function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[
 
 function makeState(
   renderer: unknown,
-  opts: { master?: boolean; item?: boolean; size?: number; brightness?: number } = {},
+  opts: {
+    master?: boolean;
+    item?: boolean;
+    size?: number;
+    brightness?: number;
+    refineThreshold?: number;
+    glowOverlap?: number;
+  } = {},
 ): EngineState {
-  const { master = true, item = true, size = 2.5, brightness = 1.0 } = opts;
+  const {
+    master = true,
+    item = true,
+    size = 2.5,
+    brightness = 1.0,
+    refineThreshold = 0.05,
+    glowOverlap = 1.0,
+  } = opts;
   return {
     gpu: { starCatalogRenderer: renderer },
     settings: {
@@ -92,6 +106,8 @@ function makeState(
         enabled: master,
         sizePx: size,
         brightness,
+        refineThreshold,
+        glowOverlap,
         items: { gaiaStars: { enabled: item, labelEnabled: false } },
       },
     },
@@ -229,6 +245,31 @@ describe('starCatalogLayer.draw', () => {
     expect(renderer.draw).toHaveBeenCalledTimes(2);
     expect(renderer.draw.mock.calls[0]![1].brightness).toBe(2.5);
     expect(renderer.draw.mock.calls[1]![1].brightness).toBe(2.5);
+  });
+
+  it('forwards the live glow-overlap setting to every source draw', () => {
+    // The user's `settings.starCatalogs.glowOverlap` must reach the renderer so
+    // the vertex stage can spread aggregate glows. Source-independent — the same
+    // value on each draw. (refineThreshold, by contrast, is a CPU walk input and
+    // never reaches renderer.draw; its behaviour is covered in walkStarOctreeCut.)
+    const loaded = [
+      { source: Source.GaiaStars, catalog: makeCatalog() },
+      { source: Source.GaiaStars, catalog: makeCatalog() },
+    ];
+    const renderer = makeRenderer(loaded);
+    const camPos = camAtPc(inner + (outer - inner) * 0.5);
+    const view = makeNear0View(camPos);
+
+    starCatalogLayer.draw(
+      PASS_STUB,
+      view,
+      makeCtx(camPos),
+      makeState(renderer, { glowOverlap: 2.2 }),
+    );
+
+    expect(renderer.draw).toHaveBeenCalledTimes(2);
+    expect(renderer.draw.mock.calls[0]![1].glowOverlap).toBe(2.2);
+    expect(renderer.draw.mock.calls[1]![1].glowOverlap).toBe(2.2);
   });
 
   it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {

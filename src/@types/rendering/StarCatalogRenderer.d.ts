@@ -86,6 +86,16 @@ export type StarCatalogDrawArgs = {
    * source-independent, so it rides the shared camera uniform beside `sizePx`.
    */
   readonly brightness: number;
+  /**
+   * User's aggregate glow-overlap spread (`settings.starCatalogs.glowOverlap`,
+   * default 1.0 = identity). For AGGREGATE nodes only, the vertex stage
+   * multiplies the glow radius by it so far glows overlap their neighbours and
+   * the octree-box lattice dissolves; the Gaussian peak is divided by the
+   * square, so total luminance is conserved. Leaves (point sources) are
+   * untouched. Source-independent, so it rides the shared camera uniform beside
+   * `sizePx` / `brightness`.
+   */
+  readonly glowOverlap: number;
 };
 
 export type StarCatalogRenderer = Renderer & {

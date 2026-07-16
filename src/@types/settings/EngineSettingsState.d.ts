@@ -162,11 +162,26 @@ export type EngineSettingsState = {
    * twin of `galaxyCatalogs.brightness`. 1.0 is identity (the shader's calibrated
    * `STAR_FLUX_EXPOSURE` baseline unchanged); the renderer multiplies the
    * flux-glow peak by it, so it rides the same shared uniform as `sizePx`.
+   *
+   * `refineThreshold` is the "Detail" knob — the CPU octree-cut refine gate
+   * (`walkStarOctreeCut`'s `DEFAULT_REFINE_THRESHOLD`). Unlike `sizePx` /
+   * `brightness` it is NOT a GPU uniform: the layer reads it once per frame and
+   * feeds it to the walk. Lower ⇒ far boxes split earlier ⇒ fewer visible
+   * lattice cells at the cost of more drawn nodes.
+   *
+   * `glowOverlap` is the "Glow overlap" knob — an AGGREGATE-only radius spread.
+   * 1.0 is identity; above it a far aggregate's glow grows past its octree-box
+   * footprint so neighbours overlap and the box lattice dissolves. The vertex
+   * stage divides the Gaussian peak by the same factor (flux-conserving), so it
+   * softens the seam without changing total luminance. Rides the shared GPU
+   * uniform beside `sizePx` / `brightness`.
    */
   starCatalogs: {
     enabled: boolean;
     sizePx: number;
     brightness: number;
+    refineThreshold: number;
+    glowOverlap: number;
     items: Record<StarCatalogId, StarCatalogItemSettings>;
   };
 
