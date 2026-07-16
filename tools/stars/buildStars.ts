@@ -110,8 +110,32 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 /** Hipparcos-2 bright-star cut: Gaia saturates on stars brighter than this. */
 const HP_BRIGHT_CUT = 4.0;
 
-/** Octree grid resolution — 9 bits/axis = 512³ leaf cells. */
-const DEFAULT_MORTON_BITS = 9;
+/**
+ * Maximum heliocentric distance a star may sit at and still join the built
+ * population; farther stars are dropped before the grid is derived.
+ *
+ * The quantization grid divides the population's bounding box into a fixed
+ * `2^bits` cells per axis, so its leaf size is set by the FARTHEST star, not the
+ * typical one. Measured on the real catalog the star-weighted radial
+ * distribution is sharply peaked at the Sun — p50 ≈ 1 kpc, p99 ≈ 7.3 kpc,
+ * p99.9 ≈ 11 kpc, farthest occupied leaf 63 kpc — yet a handful of LMC/SMC
+ * members and bad-parallax junk stretch the box to ~98 kpc. Those outliers make
+ * every leaf cell 4–8× larger than the local sample needs (192 pc, so the Sun's
+ * own leaf holds 228 k stars and the renderer suffers giant LOD pops). Beyond
+ * ~12 kpc the sample is dominated by those extragalactic contaminants and
+ * parallax errors, so dropping (not clamping) them keeps the grid tight around
+ * the population that matters. Positions are heliocentric parsecs, so a star's
+ * distance is simply `|position|`.
+ */
+const MAX_STAR_DISTANCE_PC = 12_000;
+
+/**
+ * Octree grid resolution — 10 bits/axis = 1024³ leaf cells. This fits the
+ * locked SKST format with no version bump: a node's `mortonIndex` is a uint32
+ * and 3×10 = 30 bits stay inside it, and the runtime reads `mortonBitsPerAxis`
+ * + `cellEdgePc` from the header rather than assuming a resolution.
+ */
+const DEFAULT_MORTON_BITS = 10;
 
 /**
  * Per-tier compressed-transfer budgets, in *decimal* megabytes (matching the
@@ -197,6 +221,7 @@ export type StarDropCounts = {
   hipNonPositivePlx: number; // Hipparcos rows the parser dropped (non-positive plx / malformed)
   famousSubtracted: number; // rows removed as a famous-star duplicate
   hipGaiaSubtracted: number; // Gaia rows a bright Hipparcos row replaced
+  farDistance: number; // stars past MAX_STAR_DISTANCE_PC, dropped before grid derivation
 };
 
 /** LUT-saturation counters — near-zero means the frozen windows fit the data. */
@@ -322,13 +347,25 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
     hipToSourceId,
     famousGaiaIds,
   });
-  const stars = selected.stars;
+
+  // ── Distance cap: drop far outliers before the grid is derived ────────────
+  // The grid, the pre-quantized leaves, and every tier below are all built from
+  // THIS `stars` array, so capping it here guarantees no surviving star can land
+  // outside the tightened grid (see MAX_STAR_DISTANCE_PC for the measured
+  // evidence). `filter` preserves order, which the later stable sorts observe.
+  const maxDistSqPc = MAX_STAR_DISTANCE_PC * MAX_STAR_DISTANCE_PC;
+  const stars = selected.stars.filter((s) => {
+    const [x, y, z] = s.position;
+    return x * x + y * y + z * z <= maxDistSqPc;
+  });
+  const farDistance = selected.stars.length - stars.length;
 
   const drops: StarDropCounts = {
     noBailerJones,
     hipNonPositivePlx,
     famousSubtracted: selected.drops.famousSubtracted,
     hipGaiaSubtracted: selected.drops.hipGaiaSubtracted,
+    farDistance,
   };
 
   // ── Counted-clamp totals over the whole deduped population ─────────────────
@@ -737,7 +774,8 @@ async function runCli(): Promise<void> {
       `drops noBailerJones ${drops.noBailerJones.toLocaleString()}, ` +
       `hipNonPositivePlx ${drops.hipNonPositivePlx.toLocaleString()}, ` +
       `famousSubtracted ${drops.famousSubtracted.toLocaleString()}, ` +
-      `hipGaiaSubtracted ${drops.hipGaiaSubtracted.toLocaleString()}; ` +
+      `hipGaiaSubtracted ${drops.hipGaiaSubtracted.toLocaleString()}, ` +
+      `farDistance ${drops.farDistance.toLocaleString()}; ` +
       `clamps absMag ${clamps.absMag.toLocaleString()}, colorIdx ${clamps.colorIdx.toLocaleString()}\n`,
   );
 
