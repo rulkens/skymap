@@ -146,12 +146,26 @@ export type GaiaMainRow = {
   rMedPhotogeo: number | null;
 };
 
-/** One parsed GCNS supplement row (the `gcns_main.csv` schema). */
+/**
+ * One parsed GCNS supplement row (the `gcns_main.csv` schema).
+ *
+ * `distPc` is already converted to parsecs at parse time: the upstream
+ * `dist_50` column is in *kiloparsecs* (verified against `parallax` for
+ * several rows — e.g. source_id 41888816866304 has parallax 11.0285 mas ⇒
+ * ~90.7 pc, and its `dist_50` cell reads `0.090678625`), while every other
+ * distance in this pipeline (`GaiaMainRow.rMedGeo`/`rMedPhotogeo`, the
+ * Hipparcos rows, the encoded `.bin` positions) is in parsecs. Converting
+ * once in `parseGcns` — where the raw cell enters — means `distPc` on this
+ * type is unconditionally in the pipeline's parsec frame, so every
+ * consumer (the `gcnsBySourceId` distance fallback and the GCNS-only
+ * supplement rows) can treat it like any other distance without carrying
+ * a unit caveat past the parse boundary.
+ */
 export type GcnsRow = {
   sourceId: bigint;
   raDeg: number;
   decDeg: number;
-  distPc: number; // dist_50
+  distPc: number; // dist_50, kpc → pc converted at parse time
   gMag: number;
   bpRp: number; // phot_bp_mean_mag − phot_rp_mean_mag
 };
@@ -622,13 +636,16 @@ function parseGcns(text: string): GcnsRow[] {
       continue; // header or malformed
     }
     // source_id, ra, dec, parallax, dist_50, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag
+    // dist_50 is in kiloparsecs upstream; convert to parsecs here, at the
+    // point the raw cell enters the pipeline, so `GcnsRow.distPc` is in the
+    // same unit as every other distance in the build (see the type's doc).
     const bp = numOrNull(f[6]);
     const rp = numOrNull(f[7]);
     rows.push({
       sourceId,
       raDeg: Number.parseFloat(f[1]!),
       decDeg: Number.parseFloat(f[2]!),
-      distPc: Number.parseFloat(f[4]!),
+      distPc: Number.parseFloat(f[4]!) * 1000,
       gMag: Number.parseFloat(f[5]!),
       bpRp: bp !== null && rp !== null ? bp - rp : 0,
     });
