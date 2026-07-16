@@ -35,8 +35,7 @@ import type { FetchGalaxyBitmapInput } from '../../@types/loading/FetchGalaxyBit
 // ticking, more work is coming." A cutout endpoint that stalls (SDSS
 // ImgCutout or CDS hips2fits under load) therefore never settles, the
 // in-flight entry never clears, and the RAF loop spins forever even though
-// nothing is happening — found via the T13 wake probe (thumbs=true with no
-// visible activity). The queue itself can't fix this: it's generic over any
+// nothing is visibly happening. The queue itself can't fix this: it's generic over any
 // fetcher and has no opinion on what "too long" means for a given task.
 // Settlement is the fetcher's contract, so the deadline lives here. 30 s is
 // generous — hips2fits legitimately takes 5-15 s under load — the goal is

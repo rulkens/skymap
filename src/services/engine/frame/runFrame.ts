@@ -65,14 +65,6 @@ import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { commitCameraPose, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import { computeScaleInfo } from '../helpers/scaleBar';
 import { engineScaleChanged } from '../../../state/engine/engineSlice';
-// TODO(wake-probe): remove after T13. Only referenced inside the DEV-gated
-// wake-probe block near the end of `runFrame` — these three re-derive the
-// individual arms of `shouldKeepTicking`'s predicate for logging, so we can
-// see WHICH arm is sustaining the RAF loop instead of just the combined
-// boolean.
-import { selectCameraActive } from '../../../state/camera/selectors';
-import { isEngineReady } from '../helpers/engineReady';
-import { slotReady } from '../../loading/slotReady';
 
 /**
  * Desired scale-bar width in CSS pixels. The engine computes this per-frame
@@ -82,14 +74,6 @@ import { slotReady } from '../../loading/slotReady';
  * collide with the InfoCard.
  */
 const SCALE_TARGET_PX = 150;
-
-// TODO(wake-probe): remove after T13. Rate-limit state for the DEV-only
-// wake-probe diagnostic near the end of `runFrame` — module-level so the
-// 1 Hz cadence persists across calls without threading a timer through
-// `EngineState`. Harmless in production (never read there; `import.meta.env.DEV`
-// guards every access).
-let lastWakeProbeLogMs = 0;
-const WAKE_PROBE_INTERVAL_MS = 1000;
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -295,7 +279,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (!ctx.isReady) {
     // Essential wake: bootstrap populates cam/GPU handles without waking any
     // channel — keep re-polling until the gate opens.
-    state.subsystems.scheduler.requestRender('runFrame:notReady');
+    state.subsystems.scheduler.requestRender();
     return;
   }
 
@@ -433,41 +417,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   state.subsystems.fades.tick(nowMs);
   const keepTicking = shouldKeepTicking(state, rootState, nowMs);
 
-  // TODO(wake-probe): remove after T13. Bring-up diagnostic for a reported
-  // bug: the RAF loop keeps ticking after auto-rotate stops. Two probes,
-  // sharing one 1 Hz rate limit so the console stays readable:
-  //   (a) whenever `shouldKeepTicking` is true, log which of its five arms
-  //       are individually true (recomputed here — see the import comment
-  //       above — rather than reused from the combined boolean).
-  //   (b) whenever the camera is NOT active, log the scheduler's per-reason
-  //       `requestRender()` tally for this frame. This is independent of (a)
-  //       on purpose: a layer draw earlier in this same frame (inside
-  //       `renderFrame()` above — e.g. `foregroundLabelsLayer`,
-  //       `starCatalogLayer`) can call `requestRender()` directly, bypassing
-  //       `shouldKeepTicking` entirely. If the loop won't sleep with the
-  //       camera at rest, THAT bypass is the prime suspect, and (a) alone
-  //       would never show it.
-  if (import.meta.env.DEV && nowMs - lastWakeProbeLogMs >= WAKE_PROBE_INTERVAL_MS) {
-    lastWakeProbeLogMs = nowMs;
-    const camera = selectCameraActive(rootState);
-    if (keepTicking) {
-      const thumbs = isEngineReady(state) && state.subsystems.texturedDisks.hasInFlightWork();
-      const fadesAnimating = state.subsystems.fades.isAnyAnimating(nowMs);
-      const focus = state.subsystems.structureFocus.isAwake(nowMs);
-      const flow = state.settings.flow.enabled && slotReady(state.assetSlots.flow);
-      // eslint-disable-next-line no-console
-      console.debug('[wake]', { camera, thumbs, fades: fadesAnimating, focus, flow });
-    }
-    if (!camera) {
-      const reasons = state.subsystems.scheduler.getRequestReasonCounts?.();
-      if (reasons !== undefined && reasons.size > 0) {
-        // eslint-disable-next-line no-console
-        console.debug('[wake] requestRender reasons', Object.fromEntries(reasons));
-      }
-    }
-  }
-
   if (keepTicking) {
-    state.subsystems.scheduler.requestRender('runFrame:shouldKeepTicking');
+    state.subsystems.scheduler.requestRender();
   }
 }
