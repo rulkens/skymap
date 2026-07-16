@@ -365,7 +365,9 @@ export function createStarCatalogRenderer(
       nodeScratchView.setFloat32(base + 8, o[2], true);
       nodeScratchView.setFloat32(base + 12, cellScaleMpc[i]!, true);
       nodeScratchView.setUint32(base + 16, nodeDraws[i]!.firstRecord >>> 0, true);
-      nodeScratchView.setFloat32(base + 20, opacity, true);
+      // Per-node opacity = source crossfade × this node's LOD fade (see the
+      // draw-args docblock). Parallel to `nodeDraws`, so index `i` here.
+      nodeScratchView.setFloat32(base + 20, opacity[i]!, true);
       nodeScratchView.setUint32(base + 24, level[i]! >>> 0, true);
       nodeScratchView.setFloat32(base + 28, subtreeStarCount[i]!, true);
     }

@@ -81,8 +81,20 @@ export type StarCatalogDrawArgs = {
    * deliberately omits (recovered from the owning node's level).
    */
   readonly level: readonly number[];
-  /** Source crossfade alpha (Task 11's band to the procedural Milky-Way cloud). */
-  readonly opacity: number;
+  /**
+   * Per-node draw opacity (parallel to `nodeDraws`): the product of the
+   * source crossfade alpha (Task 11's recede band to the procedural Milky-Way
+   * cloud, identical for every node this frame) and the node's own LOD fade
+   * (0→1 as it enters the octree cut, 1→0 as it leaves). Per node rather than
+   * one scalar because the temporal LOD fade is what dissolves the box-pop when
+   * the best-first cut swaps a parent aggregate for its children: during the
+   * transition BOTH draw, at complementary opacities. The vertex stage forwards
+   * `node.opacity` and the fragment multiplies the Gaussian by it, so a node at
+   * opacity 0 deposits no light (additive) — the layer keeps a fading-out node
+   * in the draw list until it reaches 0. The renderer writes `opacity[i]` into
+   * node `i`'s `NodeParams` block.
+   */
+  readonly opacity: readonly number[];
   /**
    * User's base star-dot size in px (`settings.starCatalogs.sizePx`, default
    * 2.5) — the twin of the galaxy points' `pointSizePx`. Source-independent

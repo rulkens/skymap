@@ -22,8 +22,9 @@
 //                the record itself: the node box origin (already rebased
 //                camera-relative in f64 by starNodeOriginRelCamMpc, then
 //                narrowed to f32), the box scale, the record-blob base
-//                offset for this node's slice, and the source crossfade
-//                opacity. Written ONCE per frame per source (never mutated
+//                offset for this node's slice, and the per-node draw opacity
+//                (source crossfade times the node's octree-cut LOD fade).
+//                Written ONCE per frame per source (never mutated
 //                mid-frame — see the renderer header on the writeBuffer /
 //                submit ordering trap); the per-node draw selects its block
 //                purely by changing the dynamic offset, not by a buffer
@@ -85,7 +86,7 @@ struct VSOut {
 //   offset  0  originRelCamMpc  vec3<f32>  (box origin, camera-relative Mpc)
 //   offset 12  cellScaleMpc     f32        (box edge in Mpc; offset unit = /1024)
 //   offset 16  firstRecord      u32        (base index into the records blob)
-//   offset 20  opacity          f32        (source crossfade alpha)
+//   offset 20  opacity          f32        (crossfade alpha x node LOD fade)
 //   offset 24  level            u32        (octree level: 0 = leaf, >0 aggregate)
 //   offset 28  subtreeStarCount f32        (stars this record stands in for)
 //   struct size 32 (rounded up to the vec3's 16-byte alignment — 'level' and

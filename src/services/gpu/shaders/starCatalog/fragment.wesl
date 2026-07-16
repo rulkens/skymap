@@ -25,9 +25,9 @@
 // PREMULTIPLIED output '(rgb * a, a)' into the depthless rgba16float HDR
 // accumulation with one/one additive blending (configured pipeline-side in
 // starCatalogRenderer.ts) — the survey-point convention, so overlapping
-// stars brighten long-exposure style. The source crossfade 'opacity'
-// (Task 11's band that hands off to the procedural Milky-Way cloud)
-// multiplies the Gaussian alpha, staying premultiplied.
+// stars brighten long-exposure style. The per-node 'opacity' (the source
+// crossfade that hands off to the procedural Milky-Way cloud, times the node's
+// octree-cut LOD fade) multiplies the Gaussian alpha, staying premultiplied.
 
 import package::starCatalog::io::VSOut;
 
@@ -36,7 +36,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let r2 = dot(in.uv, in.uv);
   // Discard outside the inscribed unit disc so the dot is round.
   if (r2 > 1.0) { discard; }
-  // Flux-derived peak * Gaussian falloff * source crossfade alpha.
+  // Flux-derived peak * Gaussian falloff * per-node opacity (crossfade x LOD fade).
   // Premultiplied; 'intensity' is the HDR amplitude and may exceed 1.
   let a = in.intensity * exp(-r2 * 4.0) * in.opacity;
   return vec4<f32>(in.color * a, a);

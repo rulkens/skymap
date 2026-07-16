@@ -39,6 +39,7 @@ import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/St
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const MPC_TO_PC = 1 / SCALE_UNITS.PC_TO_MPC;
+const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC;
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -54,8 +55,13 @@ function camAtPc(distPc: number): Vec3 {
   return [0, 0, distPc * SCALE_UNITS.PC_TO_MPC];
 }
 
-function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
-  return { drawCamPos: camPos } as unknown as ReadyFrameContext;
+/** A parsec-frame camera position expressed in the scene's Mpc frame. */
+function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
+  return [pc[0] * PC_TO_MPC, pc[1] * PC_TO_MPC, pc[2] * PC_TO_MPC];
+}
+
+function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
+  return { drawCamPos: camPos, nowMs } as unknown as ReadyFrameContext;
 }
 
 /** A single-leaf catalog: `walkStarOctreeCut` returns one leaf draw. */
@@ -69,6 +75,53 @@ function makeCatalog(): StarCatalog {
     nodes: [{ mortonIndex: 0, level: 0, childMask: 0, firstRecord: 0, recordCount: 1 }],
     records: new Uint8Array(6),
   };
+}
+
+// ── A two-level octree for the LOD-fade tests ────────────────────────────────
+// A single leaf (index 0) parented by a level-1 aggregate (index 1, the root),
+// with `gridOrigin` shifted 10 kpc from the Sun. Placed so the walk REFINES to
+// the leaf when the camera sits on the box (`CLOSE_PC`) and COARSENS to the root
+// aggregate when it pulls to the side (`FAR_PC`) — both heliocentric distances
+// stay inside the Gaia crossfade band, so the source draws in either regime and
+// only the cut MEMBERSHIP flips. That flip is exactly the split/merge the
+// per-node fade smooths, and moving between the two cameras drives it.
+const LEAF_INDEX = 0;
+const ROOT_INDEX = 1;
+const CLOSE_PC: Vec3 = [10_000, 0, 0]; // on the box → refine → cut = { leaf }
+const FAR_PC: Vec3 = [10_000, 5_000, 0]; // to the side → coarsen → cut = { root }
+
+function makeTwoLevelCatalog(): StarCatalog {
+  return {
+    starCount: 1,
+    nodeCount: 2,
+    mortonBitsPerAxis: 9,
+    cellEdgePc: 78,
+    gridOrigin: [10_000, 0, 0],
+    nodes: [
+      { mortonIndex: 0, level: 0, childMask: 0, firstRecord: 0, recordCount: 1 }, // leaf
+      { mortonIndex: 0, level: 1, childMask: 0b1, firstRecord: 1, recordCount: 1 }, // root
+    ],
+    records: new Uint8Array(12),
+  };
+}
+
+/** The per-node draw opacity of a given node index, or undefined if not drawn. */
+function opacityOfNode(args: StarCatalogDrawArgs, nodeIndex: number): number | undefined {
+  const i = args.nodeDraws.findIndex((d) => d.nodeIndex === nodeIndex);
+  return i === -1 ? undefined : args.opacity[i];
+}
+
+/** The args of the most recent `renderer.draw` call. */
+function lastDrawArgs(
+  renderer: { draw: { mock: { calls: [GPURenderPassEncoder, StarCatalogDrawArgs][] } } },
+): StarCatalogDrawArgs {
+  const { calls } = renderer.draw.mock;
+  return calls[calls.length - 1]![1];
+}
+
+/** Source crossfade at a parsec-frame camera position (its heliocentric dist). */
+function crossfadeAt(pc: Readonly<Vec3>): number {
+  return fadeBand({ fullAt: inner, goneAt: outer }, Math.hypot(pc[0], pc[1], pc[2]));
 }
 
 /** A spy renderer over the StarCatalogRenderer draw surface. */
@@ -101,6 +154,9 @@ function makeState(
   } = opts;
   return {
     gpu: { starCatalogRenderer: renderer },
+    // The LOD-fade wake hook: the layer calls scheduler.requestRender() while any
+    // node is mid-fade (same channel foregroundLabelsLayer uses for captions).
+    subsystems: { scheduler: { requestRender: vi.fn() } },
     settings: {
       starCatalogs: {
         enabled: master,
@@ -182,11 +238,14 @@ describe('starCatalogLayer.draw', () => {
     expect(call0.vp).not.toBe(view.vp);
     expect(call0.vp).toEqual(expectedVp);
 
-    // Opacity is this source's recede-direction crossfade at the camera's
-    // heliocentric parsec distance — partial mid-band (0 < opacity < 1).
+    // Per-node opacity is parallel to nodeDraws. On a catalog's FIRST frame every
+    // node snaps straight to its LOD target (fade = 1), so the drawn value is the
+    // pure source crossfade at the camera's heliocentric distance — partial
+    // mid-band (0 < opacity < 1).
     const camDistPc = Math.hypot(...camPos) * MPC_TO_PC;
     const expectedOpacity = fadeBand({ fullAt: inner, goneAt: outer }, camDistPc);
-    expect(call0.opacity).toBeCloseTo(expectedOpacity, 10);
+    expect(call0.opacity.length).toBe(call0.nodeDraws.length);
+    expect(call0.opacity[0]).toBeCloseTo(expectedOpacity, 10);
     expect(expectedOpacity).toBeGreaterThan(0);
     expect(expectedOpacity).toBeLessThan(1);
 
@@ -280,5 +339,103 @@ describe('starCatalogLayer.draw', () => {
     const view = makeNear0View(camAtPc(inner));
     const state = makeState(null);
     expect(() => starCatalogLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
+  });
+});
+
+describe('starCatalogLayer.draw per-node LOD fades', () => {
+  // Every test builds a FRESH catalog object: the fade state is keyed by catalog,
+  // so a fresh catalog starts with empty fade state and its first draw snaps —
+  // the tests are isolated with no shared-clock bookkeeping. Each test's first
+  // frame establishes the steady state; later frames drive the membership flip.
+
+  it('fades a node IN over ~250 ms when it newly enters the cut', () => {
+    const catalog = makeTwoLevelCatalog();
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
+    const state = makeState(renderer);
+    const farView = makeNear0View(camAtPcVec(FAR_PC));
+    const closeView = makeNear0View(camAtPcVec(CLOSE_PC));
+
+    // Frame 1 (first frame of this catalog): far → only the root aggregate is in
+    // the cut, snapped to full on the steady-state first paint. The leaf is absent.
+    starCatalogLayer.draw(PASS_STUB, farView, makeCtx(camAtPcVec(FAR_PC), 0), state);
+    expect(opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX)).toBeUndefined();
+
+    // Frame 2: camera closes → the leaf newly enters the cut. Only 50 ms of dt,
+    // so on its FIRST frame it is drawn PARTWAY through its fade, below full.
+    starCatalogLayer.draw(PASS_STUB, closeView, makeCtx(camAtPcVec(CLOSE_PC), 50), state);
+    const crossfadeClose = crossfadeAt(CLOSE_PC);
+    const leafEntering = opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX);
+    expect(leafEntering).toBeGreaterThan(0);
+    expect(leafEntering).toBeLessThan(crossfadeClose); // faded in, not yet full
+    expect(leafEntering).toBeCloseTo(crossfadeClose * (50 / 250), 6);
+
+    // Frame 3: ≥250 ms more of dt → the leaf reaches full (crossfade × fade 1).
+    starCatalogLayer.draw(PASS_STUB, closeView, makeCtx(camAtPcVec(CLOSE_PC), 350), state);
+    expect(opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX)).toBeCloseTo(crossfadeClose, 6);
+  });
+
+  it('keeps a leaving node drawn while it fades OUT, then drops it once faded', () => {
+    const catalog = makeTwoLevelCatalog();
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
+    const state = makeState(renderer);
+    const farView = makeNear0View(camAtPcVec(FAR_PC));
+    const closeView = makeNear0View(camAtPcVec(CLOSE_PC));
+
+    // Frame 1: close → the leaf is in the cut, snapped to full.
+    starCatalogLayer.draw(PASS_STUB, closeView, makeCtx(camAtPcVec(CLOSE_PC), 0), state);
+    expect(opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX)).toBeGreaterThan(0);
+
+    // Frame 2: camera pulls back → the leaf LEAVES the cut (the root aggregate
+    // takes over). Small dt → the leaf is STILL drawn, now fading out below full.
+    starCatalogLayer.draw(PASS_STUB, farView, makeCtx(camAtPcVec(FAR_PC), 50), state);
+    const leafLeaving = opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX);
+    expect(leafLeaving).toBeGreaterThan(0); // still drawn while fading
+    expect(leafLeaving).toBeCloseTo(crossfadeAt(FAR_PC) * (1 - 50 / 250), 6);
+
+    // Frame 3: ≥250 ms more of dt → the leaf reaches 0 and is dropped entirely.
+    starCatalogLayer.draw(PASS_STUB, farView, makeCtx(camAtPcVec(FAR_PC), 350), state);
+    expect(opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX)).toBeUndefined();
+  });
+
+  it('multiplies each node opacity by its own LOD fade times the shared crossfade', () => {
+    const catalog = makeTwoLevelCatalog();
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
+    const state = makeState(renderer);
+    const farView = makeNear0View(camAtPcVec(FAR_PC));
+    const closeView = makeNear0View(camAtPcVec(CLOSE_PC));
+
+    // Frame 1: far → root snapped to full.
+    starCatalogLayer.draw(PASS_STUB, farView, makeCtx(camAtPcVec(FAR_PC), 0), state);
+
+    // Frame 2: close with 100 ms of dt → the leaf enters (fade 0.4) as the root
+    // leaves (fade 0.6). BOTH draw this frame; each opacity is the SAME source
+    // crossfade times its OWN node fade — the product this test pins.
+    starCatalogLayer.draw(PASS_STUB, closeView, makeCtx(camAtPcVec(CLOSE_PC), 100), state);
+    const args = lastDrawArgs(renderer);
+    const crossfade = crossfadeAt(CLOSE_PC);
+    const leafOp = opacityOfNode(args, LEAF_INDEX)!;
+    const rootOp = opacityOfNode(args, ROOT_INDEX)!;
+    expect(leafOp).toBeCloseTo(crossfade * (100 / 250), 6); // fade 0.4
+    expect(rootOp).toBeCloseTo(crossfade * (1 - 100 / 250), 6); // fade 0.6
+    // Distinct per-node fades under one shared crossfade: the drawn ratio is the
+    // fade ratio, so the crossfade cancels and the multiply is unambiguous.
+    expect(leafOp / rootOp).toBeCloseTo(0.4 / 0.6, 6);
+  });
+
+  it('wakes the render loop while a node fade is in flight', () => {
+    const catalog = makeTwoLevelCatalog();
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
+    const state = makeState(renderer);
+    const requestRender = vi.mocked(state.subsystems.scheduler.requestRender);
+    const farView = makeNear0View(camAtPcVec(FAR_PC));
+    const closeView = makeNear0View(camAtPcVec(CLOSE_PC));
+
+    // Frame 1: snap (first paint) — nothing is mid-fade, so no wake.
+    starCatalogLayer.draw(PASS_STUB, farView, makeCtx(camAtPcVec(FAR_PC), 0), state);
+    expect(requestRender).not.toHaveBeenCalled();
+
+    // Frame 2: the cut flips → nodes are mid-fade → the loop must keep ticking.
+    starCatalogLayer.draw(PASS_STUB, closeView, makeCtx(camAtPcVec(CLOSE_PC), 50), state);
+    expect(requestRender).toHaveBeenCalled();
   });
 });
