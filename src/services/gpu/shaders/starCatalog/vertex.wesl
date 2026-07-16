@@ -65,10 +65,45 @@
 //
 //   2. THE GAUSSIAN DOT'S INTEGRAL IS PEAK * AREA * SHAPE.
 //      A dot of peak I and pixel-radius rPx deposits I * rPx^2 * K_GAUSS of
-//      luminance (K_GAUSS = the exp(-4 r2) integral over the unit disc). To
-//      hit L = EXPOSURE * flux we set I = EXPOSURE * flux / (K_GAUSS * rPx^2).
+//      luminance (K_GAUSS = the integral over the unit disc of the RIM-ZEROED
+//      glow profile the fragment paints -- see the K_GAUSS constant + fragment.wesl).
+//      To hit L = EXPOSURE * fluxApp we set I = EXPOSURE * fluxApp / (K_GAUSS * rPx^2).
 //      Total luminance is then INVARIANT to rPx -- rPx only chooses how the
 //      fixed light spreads (a bright core vs a soft glow), never how much.
+//      ('fluxApp' is the apparent, inverse-square-dimmed flux -- next section.)
+//
+// ## Apparent flux: inverse-square dimming
+//
+// Fact 1's 'flux' is INTRINSIC luminosity (10^(-0.4*absMag) * subtreeStarCount)
+// -- the light the star or subtree emits, independent of the camera. What
+// reaches the eye falls off as 1/d^2; depositing the intrinsic value blows the
+// far field to white when zoomed out (the whole galaxy's light arrives
+// un-dimmed) while the near-Sun view still looks right. So we convert to
+// APPARENT flux before sizing the dot:
+//
+//   fluxApp = flux * D_REF_MPC^2 / max(d2, MIN_D2_MPC2)
+//
+// where d2 = dot(worldRelCam, worldRelCam) is the record's squared camera
+// distance in Mpc^2. 'worldRelCam' is the record's camera-relative position,
+// computed BEFORE the billboard corner expansion, so it is the true node
+// distance rather than a corner's.
+//
+//   D_REF_MPC = 1e-5 Mpc = 10 parsecs -- the distance at which ABSOLUTE
+//     magnitude is DEFINED. A record's LUT flux is therefore exactly its
+//     apparent flux seen from 10 pc, which makes the factor D_REF^2/d2 equal 1
+//     at 10 pc and dim or brighten honestly from there. Anchoring on the
+//     magnitude system's own zero distance keeps the attenuation dimensionally
+//     grounded rather than an arbitrary tuning constant.
+//   MIN_D2_MPC2 = (1e-7)^2 = 1e-14 Mpc^2 = (0.1 pc)^2 -- a floor on d2 guarding
+//     the fly-through singularity. The alternative -- letting 1/d2 diverge as
+//     the camera passes through a star -- spikes the peak toward infinity and
+//     flashes the whole frame white; 0.1 pc is closer than any camera approach
+//     needs, so the clamp never bites a real view and only tames the pole.
+//
+// f32 range: the brightest aggregate reaches intrinsic flux ~2.5e9; times
+// D_REF^2 = 1e-10 the numerator is ~0.25, safely inside f32 BEFORE the /d2
+// (which only shrinks it). A faint leaf far away underflows toward 0 harmlessly
+// -- its light shows up summed in an ancestor aggregate instead.
 //
 // The only place the two record species differ is the RADIUS. A leaf is a
 // POINT source, so its radius is a legibility floor. An aggregate is an
@@ -88,7 +123,7 @@
 // makes the starfield read right at the default setting. On top of it the user
 // gets a live 'brightness' trim ('u.brightness', settings.starCatalogs.brightness,
 // the twin of the galaxy points' brightness): the deposited luminance is
-// STAR_FLUX_EXPOSURE * u.brightness * flux, so 1.0 leaves the calibrated look
+// STAR_FLUX_EXPOSURE * u.brightness * fluxApp, so 1.0 leaves the calibrated look
 // untouched and the slider scales the whole starfield's luminance up or down.
 // Unlike 'sizePx' (which redistributes a FIXED luminance across a wider/narrower
 // dot -- fact 2), 'brightness' changes the total luminance itself.
@@ -102,7 +137,7 @@
 // radius so each glow spills PAST its box and overlaps its neighbours, melting
 // the lattice into a continuous field. It is a 'sizePx'-style spread, not a
 // 'brightness': because the peak is computed from the FINAL 'rPx' (peak =
-// EXPOSURE*flux / (K*rPx^2), fact 2), folding 'glowOverlap' into 'rPx' divides
+// EXPOSURE*fluxApp / (K*rPx^2), fact 2), folding 'glowOverlap' into 'rPx' divides
 // the peak by 'glowOverlap^2' automatically, so total luminance is conserved --
 // no separate peak term is needed. Leaves are POINT sources with no box to spill
 // past, so they select 1.0 and stay exactly as they were.
@@ -151,22 +186,48 @@ const STAR_SIZE_REF_PX: f32 = 2.5;
 // 'sizeScale' with every other radius here.
 const STAR_GLOW_MIN_PX: f32 = 1.5;
 
-// Gaussian shape integral: integral over the unit uv-disc of exp(-r2 * 4.0),
-// = (pi/4) * (1 - e^-4) ~= 0.7711. The dot deposits I_peak * rPx^2 * K_GAUSS
-// of screen luminance (fact 2 in the header); dividing the target luminance by
-// it recovers the peak. Structural, not a knob.
-const K_GAUSS: f32 = 0.7711;
+// Glow shape integral over the unit uv-disc of the RIM-ZEROED profile the
+// fragment paints: g(r2) = (exp(-r2 * 4.0) - EDGE) / (1 - EDGE), EDGE = e^-4.
+// Shifting the bare Gaussian down by its rim value and rescaling makes g reach
+// exactly 0 at r = 1 (no hard-edged disc) while keeping g(0) = 1. Its integral:
+//   K_GAUSS = (K_OLD - pi*EDGE) / (1 - EDGE)
+// where K_OLD = (pi/4) * (1 - e^-4) ~= 0.7711 is the bare Gaussian's disc
+// integral and pi*EDGE ~= 0.05754 is the subtracted pedestal over the unit disc
+// (area pi). Numerically:
+//   K_GAUSS = (0.7711 - 0.05754) / (1 - 0.018316) = 0.71357 / 0.98168 ~= 0.7268.
+// The dot deposits I_peak * rPx^2 * K_GAUSS of screen luminance (fact 2 in the
+// header); dividing the target luminance by it recovers the peak. Structural,
+// not a knob -- MUST mirror EDGE and the profile in fragment.wesl.
+const K_GAUSS: f32 = 0.7268;
 
-// THE exposure knob (eye-tuned via HMR). A record deposits screen luminance
-// STAR_FLUX_EXPOSURE * flux, with flux = 10^(-0.4 * absMag) on the format's
-// zero-point (absMag 0 -> flux 1). Turn UP to brighten the whole starfield,
-// DOWN to dim it. Reference points at the default: a bright star (absMag ~= 1,
-// flux ~= 0.4) at the floor radius peaks around EXPOSURE * 0.23; a blue giant
-// (absMag ~= -3, flux ~= 16) peaks ~40x higher and blooms in the HDR pipeline;
-// a red dwarf (absMag ~= 12, flux ~= 2e-5) is a near-invisible point whose
-// light instead shows up summed in its ancestor aggregate. Every other
-// constant here is structural.
-const STAR_FLUX_EXPOSURE: f32 = 4.0;
+// Inverse-square apparent-flux reference distance (Mpc). 1e-5 Mpc = 10 parsecs,
+// the distance at which ABSOLUTE magnitude is defined -- so a record's LUT flux
+// is its apparent flux from 10 pc and the factor D_REF^2/d2 is 1 there (header
+// 'Apparent flux'). Squared once at the callsite.
+const D_REF_MPC: f32 = 1e-5;
+
+// Floor on squared camera distance (Mpc^2), guarding the fly-through 1/d2 pole.
+// (1e-7)^2 = (0.1 pc)^2 -- closer than any camera approach, so it tames the
+// singularity without dimming a legitimate view. The unclamped alternative lets
+// the peak diverge and flashes the whole frame white on pass-through.
+const MIN_D2_MPC2: f32 = 1e-14; // (1e-7)^2
+
+// THE exposure knob (eye-tuned via HMR, on top of the live 'brightness' slider).
+// A record deposits screen luminance STAR_FLUX_EXPOSURE * brightness * fluxApp,
+// where fluxApp = 10^(-0.4 * absMag) * subtreeStarCount * D_REF^2/d2 is the
+// APPARENT flux -- the intrinsic LUT flux dimmed by inverse-square (header
+// 'Apparent flux'). The 400.0 baseline restores the pre-attenuation near-field
+// look: a star ~100 pc away now carries D_REF^2/d2 = (10pc / 100pc)^2 = 1e-2,
+// so the old EXPOSURE 4.0 x intrinsic ~= the new 400.0 x (intrinsic x 1e-2).
+// Reference points at the default, for a star at ~100 pc (fluxApp = intrinsic x
+// 1e-2): a bright star (absMag ~= 1, intrinsic flux ~= 0.4) peaks around
+// 400 * 4e-3 ~= 1.6 at the floor radius; a blue giant (absMag ~= -3, intrinsic
+// flux ~= 16) peaks ~40x higher and blooms in the HDR pipeline; a red dwarf
+// (absMag ~= 12, intrinsic flux ~= 2e-5) stays a near-invisible point whose
+// light shows up summed in its ancestor aggregate. Nearer stars brighten as
+// 1/d2, farther ones dim; the user eye-tunes the overall level here + via the
+// brightness slider. Every other constant here is structural.
+const STAR_FLUX_EXPOSURE: f32 = 400.0;
 
 @vertex
 fn vs(
@@ -192,6 +253,14 @@ fn vs(
   let offset = vec3<f32>(ox, oy, oz) * OFFSET_SCALE;
   let worldRelCam = node.originRelCamMpc + offset * node.cellScaleMpc;
 
+  // Inverse-square attenuation: 'worldRelCam' is the record's camera-relative
+  // position (Mpc), computed here BEFORE corner expansion, so its squared length
+  // is the squared camera distance. D_REF^2/d2 dims the intrinsic LUT flux to
+  // the apparent flux the eye receives -- = 1 at 10 pc -- with the floor guarding
+  // the fly-through pole (header 'Apparent flux').
+  let d2 = dot(worldRelCam, worldRelCam);
+  let atten = (D_REF_MPC * D_REF_MPC) / max(d2, MIN_D2_MPC2);
+
   let center = worldToClip(u.cam, worldRelCam);
   let corner = triCorner(vi);
 
@@ -203,6 +272,8 @@ fn vs(
   // is 1.0 for a leaf, so leaf and aggregate share one formula (header fact 1).
   let absMag = STAR_ABSMAG_MIN + (f32(absMagIdx) + 0.5) * STAR_ABSMAG_STEP;
   let flux = pow(10.0, -0.4 * absMag) * node.subtreeStarCount;
+  // Intrinsic -> apparent: dim by the inverse-square factor computed above.
+  let fluxApp = flux * atten;
 
   // Radius (px). A leaf is a POINT source -> the legibility floor. An aggregate
   // is an EXTENDED source -> its glow fills the box's on-screen footprint so
@@ -223,12 +294,13 @@ fn vs(
   let overlap = select(1.0, u.glowOverlap, node.level > 0u);
   let rPx = max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale * overlap;
 
-  // Peak so the dot's INTEGRATED luminance equals STAR_FLUX_EXPOSURE * flux
-  // regardless of rPx: I_peak * K_GAUSS * rPx^2 == EXPOSURE * flux. Refining an
-  // aggregate or not therefore deposits identical total light (header fact 2).
+  // Peak so the dot's INTEGRATED luminance equals STAR_FLUX_EXPOSURE * fluxApp
+  // regardless of rPx: I_peak * K_GAUSS * rPx^2 == EXPOSURE * fluxApp. Refining
+  // an aggregate or not therefore deposits identical total light (header fact 2).
   // 'u.brightness' is the user's exposure trim ON TOP of the calibrated
-  // STAR_FLUX_EXPOSURE baseline (1.0 = identity -- see the header).
-  let intensity = STAR_FLUX_EXPOSURE * u.brightness * flux / (K_GAUSS * rPx * rPx);
+  // STAR_FLUX_EXPOSURE baseline (1.0 = identity -- see the header). 'fluxApp' is
+  // the inverse-square-dimmed apparent flux (header 'Apparent flux').
+  let intensity = STAR_FLUX_EXPOSURE * u.brightness * fluxApp / (K_GAUSS * rPx * rPx);
 
   let screenOffset = expandBillboardScreen(u.cam, center, rPx, corner);
 
