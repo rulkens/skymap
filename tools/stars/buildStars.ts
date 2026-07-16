@@ -90,6 +90,7 @@ import {
   type StarOctreeGrid,
 } from './buildStarOctree';
 import { FAMOUS_STAR_GAIA_IDS } from '../catalog/famousStarGaiaIds';
+import { keepStar } from './supplementTaper';
 import { bvToBpRp } from '../utils/color/bvToBpRp';
 import { mortonEncode3 } from '../../src/utils/math/mortonEncode3';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
@@ -314,8 +315,17 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
   // A GCNS row whose source_id is already a main row contributed only its
   // distance (joined above); here we add the ones with no main counterpart as
   // supplement stars, tagged so tier truncation never drops them.
+  //
+  // Before a supplement row joins the population it passes the outer-edge taper
+  // (`keepStar`): the supplement stops abruptly at ~100 pc, so its members are
+  // thinned probabilistically over the outer 30 pc to fade into the survey floor
+  // rather than end in a hard shell (see supplementTaper.ts for the measured
+  // step). The decision is a pure hash of `source_id`, so it is taken ONCE here —
+  // before tier selection — and every tier sees the same tapered set. `distPc`
+  // is the GCNS row's already-parsec distance, equal to `|position|`.
   for (const row of gcns) {
     if (gcnsSeenInMain.has(row.sourceId)) continue;
+    if (!keepStar({ sourceId: row.sourceId, distPc: row.distPc, isSupplement: true })) continue;
     gaiaCandidates.push({
       sourceId: row.sourceId,
       position: raDecDistToCartesian(row.raDeg, row.decDeg, row.distPc),
