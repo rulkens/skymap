@@ -48,14 +48,20 @@
 // it, so the LOD transition is photometrically invisible. Two facts make this
 // a single continuous formula rather than a leaf/aggregate special case:
 //
-//   1. FLUX IS ADDITIVE, AND THE RECORD ALREADY CARRIES THE SUM.
-//      flux = 10^(-0.4 * absMag) is the exact inverse of mergeFluxAggregate's
-//      absMag = -2.5*log10(sum of child fluxes). So a leaf's flux is its one
-//      star's light and an aggregate's flux is its whole subtree's SUMMED
-//      light. If every record deposits screen luminance L = EXPOSURE * flux,
-//      then drawing an aggregate (L = EXPOSURE * sum) equals drawing its
-//      refined children (sum of EXPOSURE * flux_child) -- identical total. The
-//      cut is a covering partition (walkStarOctreeCut), so no double-count.
+//   1. FLUX IS ADDITIVE, AND THE RECORD + COUNT RECONSTRUCT THE SUM.
+//      flux = 10^(-0.4 * absMag) dequantizes the record's magnitude. For a leaf
+//      that is its one star's flux; for an aggregate it is the subtree's MEAN
+//      star flux, because mergeFluxAggregate stores absMag = -2.5*log10(sum/N),
+//      the mean -- NOT the sum. A summed magnitude of thousands of stars is 10+
+//      mag past the LUT's single-star floor and would clamp to one brightness
+//      (a visible box lattice, and a flux jump when the LOD refines a clamped
+//      node); a mean stays in-window and never clamps. Multiplying the mean
+//      flux by 'node.subtreeStarCount' (the runtime-derived leaf-star count of
+//      the subtree, 1.0 for a leaf) recovers the subtree's SUMMED light. So if
+//      every record deposits L = EXPOSURE * flux, drawing an aggregate
+//      (L = EXPOSURE * mean * N) equals drawing its refined children
+//      (sum of EXPOSURE * flux_child) -- identical total. The cut is a covering
+//      partition (walkStarOctreeCut), so no double-count.
 //
 //   2. THE GAUSSIAN DOT'S INTEGRAL IS PEAK * AREA * SHAPE.
 //      A dot of peak I and pixel-radius rPx deposits I * rPx^2 * K_GAUSS of
@@ -190,11 +196,13 @@ fn vs(
   let corner = triCorner(vi);
 
   // Dequant absolute magnitude (bin centre), then the linear flux it stands
-  // for. For a leaf this is one star's flux; for an aggregate it is the whole
-  // subtree's summed flux (mergeFluxAggregate stored -2.5*log10(sum flux)) --
-  // so leaf and aggregate share one formula (header fact 1).
+  // for. For a leaf this is one star's flux; for an aggregate it is the
+  // subtree's MEAN star flux (mergeFluxAggregate stores -2.5*log10(sum/N), the
+  // mean, because a summed magnitude would clamp the 7-bit LUT). Multiplying by
+  // 'node.subtreeStarCount' recovers the subtree's SUMMED flux -- and that count
+  // is 1.0 for a leaf, so leaf and aggregate share one formula (header fact 1).
   let absMag = STAR_ABSMAG_MIN + (f32(absMagIdx) + 0.5) * STAR_ABSMAG_STEP;
-  let flux = pow(10.0, -0.4 * absMag);
+  let flux = pow(10.0, -0.4 * absMag) * node.subtreeStarCount;
 
   // Radius (px). A leaf is a POINT source -> the legibility floor. An aggregate
   // is an EXTENDED source -> its glow fills the box's on-screen footprint so

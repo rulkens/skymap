@@ -20,10 +20,23 @@
  * the low 3 bits (`child & 7`). So grouping the previous level's nodes by
  * `morton >> 3` yields the parents; each parent's `childMask` ORs in
  * `1 << (childMorton & 7)` per present octant, and its single record is the
- * flux-merge of its children (see `mergeFluxAggregate` for why the merge is
- * flux-weighted, not magnitude-averaged). Aggregation repeats until a level
- * collapses to a single root node; a catalog of one leaf cell needs no
- * aggregates and emits just that leaf.
+ * flux-merge of its children. Aggregation repeats until a level collapses to a
+ * single root node; a catalog of one leaf cell needs no aggregates and emits
+ * just that leaf.
+ *
+ * ── Why the aggregate record stores a MEAN magnitude ──────────────────────
+ *
+ * The merge carries `(totalFlux, starCount)` up the tree unquantized (see
+ * `mergeFluxAggregate`), and the aggregate record is encoded from the
+ * subtree's *mean* star flux — `aggregateMeanAbsMag = -2.5·log10(Σf / N)` — not
+ * its summed flux. The record's 7-bit magnitude LUT is sized for a single star
+ * (`[-6.0, +18.32]` mag); a summed-flux magnitude of thousands of stars is 10+
+ * mag past the floor and would saturate index 0, flattening whole far-field
+ * regions to one brightness. A mean of in-window fluxes stays in-window, so the
+ * mean encode never clamps; the renderer multiplies the record's per-star flux
+ * back up by the subtree star count (derived at runtime) to recover the exact
+ * summed light. Position and colour stay the flux-weighted centroid the merge
+ * computed.
  *
  * ── Coordinate frame for the flux merge ───────────────────────────────────
  *
@@ -58,10 +71,16 @@ import { mortonDecode3 } from '../../src/utils/math/mortonDecode3';
 import {
   packStarRecord,
   absMagToLutIndex,
+  lutIndexToAbsMag,
   bpRpToColorIdx,
   RECORD_BYTES,
 } from '../../src/data/starCatalog/starCatalogFormat';
-import { mergeFluxAggregate, type FluxNode } from './mergeFluxAggregate';
+import {
+  mergeFluxAggregate,
+  fluxFromAbsMag,
+  aggregateMeanAbsMag,
+  type FluxNode,
+} from './mergeFluxAggregate';
 
 /** One leaf star ready to place: its leaf cell, in-cell offset, and photometry. */
 export type OctreeLeafStar = {
@@ -148,13 +167,24 @@ export function buildStarOctree(
       const ox = clampOffset(Math.floor(s.offset[0]));
       const oy = clampOffset(Math.floor(s.offset[1]));
       const oz = clampOffset(Math.floor(s.offset[2]));
-      leafRecords.push(
-        packStarRecord([ox, oy, oz], absMagToLutIndex(s.absMag), bpRpToColorIdx(s.bpRp)),
-      );
-      // Star position in leaf-cell grid units, for the flux centroid.
+      const absMagIdx = absMagToLutIndex(s.absMag);
+      leafRecords.push(packStarRecord([ox, oy, oz], absMagIdx, bpRpToColorIdx(s.bpRp)));
+      // Star position in leaf-cell grid units, for the flux centroid. A single
+      // star is a subtree of one: its flux is `totalFlux`, its `starCount` 1.
+      //
+      // The flux is the one the RECORD represents — `fluxFromAbsMag` of the
+      // *dequantized* stored index, NOT the raw `s.absMag`. This is exactly the
+      // flux the shader reconstructs from the leaf record, so an aggregate's
+      // summed flux equals what its refined leaves would deposit (flux
+      // conservation across the LOD transition). Using the raw magnitude would
+      // let a star whose true absMag falls below the LUT's bright floor (a bad
+      // parallax → an absurd luminosity) contribute an astronomically larger
+      // flux to the mean than its clamped record ever deposits, dragging every
+      // ancestor aggregate's mean to the bright floor.
       cellFluxNodes.push({
         position: [cx + ox / 1024, cy + oy / 1024, cz + oz / 1024],
-        absMag: s.absMag,
+        totalFlux: fluxFromAbsMag(lutIndexToAbsMag(absMagIdx)),
+        starCount: 1,
         bpRp: s.bpRp,
       });
       i++;
@@ -206,7 +236,8 @@ export function buildStarOctree(
       aggregateRecords.push(
         packStarRecord(
           aggregateOffset(flux.position, parentMorton, level),
-          absMagToLutIndex(flux.absMag),
+          // MEAN-flux magnitude — in-window by construction, so it never clamps.
+          absMagToLutIndex(aggregateMeanAbsMag(flux)),
           bpRpToColorIdx(flux.bpRp),
         ),
       );

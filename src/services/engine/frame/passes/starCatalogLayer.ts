@@ -75,6 +75,7 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { walkStarOctreeCut } from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
 import { starNodeOriginRelCamMpc } from '../../../gpu/renderers/starCatalog/starNodeOriginRelCamMpc';
+import { subtreeStarCounts } from '../../../gpu/renderers/starCatalog/subtreeStarCounts';
 import { SOURCE_REGISTRY } from '../../../../data/sources';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 
@@ -164,9 +165,15 @@ export const starCatalogLayer: ContentLayer = {
       const nodeDraws = walkStarOctreeCut(catalog, camPosPc, entry.drawBudget, refineThreshold);
       if (nodeDraws.length === 0) continue; // empty catalog / degenerate cut
 
+      // Per-node leaf-star counts, derived once per catalog (memoised), so an
+      // aggregate draw can hand the shader the multiplier that rebuilds its
+      // subtree's summed flux from the record's stored MEAN flux.
+      const counts = subtreeStarCounts(catalog);
+
       const originRelCamMpc: Vec3[] = [];
       const cellScaleMpc: number[] = [];
       const level: number[] = [];
+      const subtreeStarCount: number[] = [];
       for (const nodeDraw of nodeDraws) {
         const node = catalog.nodes[nodeDraw.nodeIndex]!;
         const seam = starNodeOriginRelCamMpc(catalog, node, camPos);
@@ -175,6 +182,9 @@ export const starCatalogLayer: ContentLayer = {
         // The leaf-vs-aggregate discriminant the flux-glow vertex stage needs:
         // 0 = a point-source leaf star, >0 = a box-filling aggregate.
         level.push(node.level);
+        // Flux-reconstruction multiplier: a leaf record is one real star (1),
+        // an aggregate record stands in for its whole subtree (its star count).
+        subtreeStarCount.push(node.level === 0 ? 1 : counts[nodeDraw.nodeIndex]!);
       }
 
       renderer.draw(pass, {
@@ -185,6 +195,7 @@ export const starCatalogLayer: ContentLayer = {
         originRelCamMpc,
         cellScaleMpc,
         level,
+        subtreeStarCount,
         opacity,
         sizePx,
         brightness,

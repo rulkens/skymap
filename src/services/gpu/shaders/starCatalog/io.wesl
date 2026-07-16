@@ -72,21 +72,25 @@ struct VSOut {
   // matching peak here; the fragment scales the Gaussian by it so a record's
   // INTEGRATED screen luminance is proportional to its flux (see
   // starCatalog/vertex.wesl's photometric derivation). A leaf carries one
-  // star's flux; an aggregate carries its whole subtree's summed flux — so the
-  // two deposit the same total whether or not the walker refined the node.
+  // star's flux; an aggregate carries its subtree's MEAN star flux, which the
+  // vertex stage multiplies by the subtree star count to recover the summed
+  // light — so the two deposit the same total whether or not the walker refined
+  // the node.
   @location(3) intensity: f32,
 };
 
 // Per-drawn-node uniform. Byte layout (WGSL std140 uniform rules) must stay
 // byte-exact with the renderer's per-node write:
 //
-//   offset  0  originRelCamMpc vec3<f32>  (box origin, camera-relative Mpc)
-//   offset 12  cellScaleMpc    f32        (box edge in Mpc; offset unit = /1024)
-//   offset 16  firstRecord     u32        (base index into the records blob)
-//   offset 20  opacity         f32        (source crossfade alpha)
-//   offset 24  level           u32        (octree level: 0 = leaf, >0 aggregate)
-//   struct size 32 (rounded up to the vec3's 16-byte alignment — 'level' rides
-//   the pad the vec3 alignment already reserved, so the stride is unchanged).
+//   offset  0  originRelCamMpc  vec3<f32>  (box origin, camera-relative Mpc)
+//   offset 12  cellScaleMpc     f32        (box edge in Mpc; offset unit = /1024)
+//   offset 16  firstRecord      u32        (base index into the records blob)
+//   offset 20  opacity          f32        (source crossfade alpha)
+//   offset 24  level            u32        (octree level: 0 = leaf, >0 aggregate)
+//   offset 28  subtreeStarCount f32        (stars this record stands in for)
+//   struct size 32 (rounded up to the vec3's 16-byte alignment — 'level' and
+//   'subtreeStarCount' ride the pad the vec3 alignment already reserved, so the
+//   stride is unchanged).
 //
 // 'level' is the leaf-vs-aggregate discriminant the format deliberately keeps
 // OUT of the record (the record's 5 spare bits stay zero — see
@@ -94,10 +98,18 @@ struct VSOut {
 // stage needs it because a leaf record is a POINT source (one star) while an
 // aggregate record is an EXTENDED source (a whole subtree collapsed to its
 // box): the glow fills the box footprint for the latter but not the former.
+//
+// 'subtreeStarCount' is the flux-reconstruction multiplier: an aggregate record
+// stores its subtree's MEAN star flux (a summed magnitude would clamp the 7-bit
+// LUT — see mergeFluxAggregate), so the vertex stage multiplies the dequantized
+// mean flux by this count to recover the subtree's summed light. It is 1 for a
+// leaf (each leaf record is one star), which makes the multiply a branchless
+// identity there. The runtime derives it from the node table (subtreeStarCounts).
 struct NodeParams {
   originRelCamMpc: vec3<f32>,
   cellScaleMpc: f32,
   firstRecord: u32,
   opacity: f32,
   level: u32,
+  subtreeStarCount: f32,
 };

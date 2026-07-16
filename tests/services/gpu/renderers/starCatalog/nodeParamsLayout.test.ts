@@ -102,6 +102,7 @@ function fieldForExpr(expr: string): string {
   if (/cellScaleMpc/.test(expr)) return 'cellScaleMpc';
   if (/firstRecord/.test(expr)) return 'firstRecord';
   if (/opacity/.test(expr)) return 'opacity';
+  if (/subtreeStarCount/.test(expr)) return 'subtreeStarCount';
   if (/level/.test(expr)) return 'level';
   throw new Error(`writer expression maps to no known NodeParams field: '${expr}'`);
 }

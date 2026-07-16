@@ -75,11 +75,12 @@ import { ADDITIVE_BLEND } from '../../lib/blendStates';
 /**
  * Meaningful bytes of the `NodeParams` uniform struct (WGSL std140):
  * originRelCamMpc vec3 (0..11) + cellScaleMpc f32 (12..15) + firstRecord u32
- * (16..19) + opacity f32 (20..23) + level u32 (24..27), rounded up to the
- * vec3's 16-byte alignment = 32. `level` rides the pad that alignment already
- * reserved, so adding it did NOT change this size. This is the bound window
- * SIZE; the per-node dynamic offset strides by `nodeParamStride` (>= this,
- * aligned to the device limit).
+ * (16..19) + opacity f32 (20..23) + level u32 (24..27) + subtreeStarCount f32
+ * (28..31), rounded up to the vec3's 16-byte alignment = 32. `level` and
+ * `subtreeStarCount` ride the pad that alignment already reserved, so adding
+ * them did NOT change this size. This is the bound window SIZE; the per-node
+ * dynamic offset strides by `nodeParamStride` (>= this, aligned to the device
+ * limit).
  */
 const NODE_PARAMS_BYTES = 32;
 
@@ -331,6 +332,7 @@ export function createStarCatalogRenderer(
       originRelCamMpc,
       cellScaleMpc,
       level,
+      subtreeStarCount,
       opacity,
       sizePx,
       brightness,
@@ -365,6 +367,7 @@ export function createStarCatalogRenderer(
       nodeScratchView.setUint32(base + 16, nodeDraws[i]!.firstRecord >>> 0, true);
       nodeScratchView.setFloat32(base + 20, opacity, true);
       nodeScratchView.setUint32(base + 24, level[i]! >>> 0, true);
+      nodeScratchView.setFloat32(base + 28, subtreeStarCount[i]!, true);
     }
     ensureNodeParamsBuffer(entry, nodeDraws.length);
     device.queue.writeBuffer(

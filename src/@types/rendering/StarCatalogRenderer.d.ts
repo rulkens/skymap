@@ -62,6 +62,18 @@ export type StarCatalogDrawArgs = {
   /** Per-node box edge in Mpc, the in-cell offset unit (parallel to `nodeDraws`). */
   readonly cellScaleMpc: readonly number[];
   /**
+   * Per-node flux-reconstruction multiplier (parallel to `nodeDraws`): the
+   * number of real stars each of the node's records stands in for. A leaf's
+   * records are individual stars, so it is `1`; an aggregate's single record
+   * stands in for its whole subtree, so it is that subtree's star count. The
+   * vertex stage multiplies the record's dequantized *mean*-star flux by this to
+   * recover the subtree's summed light (aggregate records store the mean, never
+   * the sum — the 7-bit magnitude LUT would clamp a summed encode; see
+   * `mergeFluxAggregate`). `1` for a leaf makes the multiply a branchless
+   * identity there.
+   */
+  readonly subtreeStarCount: readonly number[];
+  /**
    * Per-node octree level (parallel to `nodeDraws`): 0 = leaf (a point-source
    * star), >0 = aggregate (a subtree collapsed to its flux mip). The vertex
    * stage fills an aggregate's box footprint with its glow but draws a leaf as

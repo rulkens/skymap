@@ -200,6 +200,10 @@ describe('starCatalogLayer.draw', () => {
     // single-leaf fixture's one node is level 0 (a point-source leaf).
     expect(call0.level.length).toBe(call0.nodeDraws.length);
     expect(call0.level[0]).toBe(0);
+    // The flux-reconstruction multiplier rides parallel too; the single-leaf
+    // fixture's one node is a leaf, so its record stands in for one real star.
+    expect(call0.subtreeStarCount.length).toBe(call0.nodeDraws.length);
+    expect(call0.subtreeStarCount[0]).toBe(1);
   });
 
   it('forwards the live star-size setting to every source draw', () => {
