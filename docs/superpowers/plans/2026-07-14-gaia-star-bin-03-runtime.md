@@ -616,16 +616,16 @@ from `state.gpu` at commit time, so no `initGpu` co-minting is needed. Tier relo
 inherent: `reevaluateDemand` re-runs the table on any state change including a tier flip,
 re-issuing `req(newTier)`. No bespoke `DemandCtx` surface.
 
-- [ ] Add `starCatalogSlot` (per-source commit uploads to the renderer handle;
+- [x] Add `starCatalogSlot` (per-source commit uploads to the renderer handle;
       subscribe-log the loaded star/node counts, like mcpmSlot's ready log).
-- [ ] Add the `starCatalogRow` helper + map it over the `starCatalog` registry sources
+- [x] Add the `starCatalogRow` helper + map it over the `starCatalog` registry sources
       into `ASSET_WIRING`.
-- [ ] Test `gaiaStars demand follows settings.starCatalogs` — the row's `demand` returns
+- [x] Test `gaiaStars demand follows settings.starCatalogs` — the row's `demand` returns
       true only when BOTH `ctx.settings.starCatalogs.enabled` and
       `.items.gaiaStars.enabled` are true, false when either is false (behavioural
       predicate check over the row, matching the existing per-row demand tests — not a
       table restatement).
-- [ ] `npm test -- assetWiring` + `npm run typecheck` → green. Commit.
+- [x] `npm test -- assetWiring` + `npm run typecheck` → green. Commit.
 
 ## Task 8 — Octree draw-cut walker (pure, un-gated)
 
@@ -772,16 +772,16 @@ match `bodies/starPoints/fragment.wesl`), tinted by the **stellar BP−RP ramp**
 palette anchor table (`palette.ts:41-52`). Premultiplied output into the additive HDR
 target. `opacity` multiplies alpha.
 
-- [ ] Add `StarCatalogRenderer` type + the renderer factory (pipeline, per-source records
+- [x] Add `StarCatalogRenderer` type + the renderer factory (pipeline, per-source records
       storage buffers on `upload` + `loadedCatalogs()` iterator, per-frame node-params
       buffer, `draw`, `destroy` — mirror the per-source storage discipline of
       `catalogStore.ts` + the pipeline lifecycle of `starPointRenderer.ts`).
-- [ ] Add the WESL `vertex.wesl` + `fragment.wesl` (`?static`, literal `package::`
+- [x] Add the WESL `vertex.wesl` + `fragment.wesl` (`?static`, literal `package::`
       imports, NO backticks in comments). Verify the unpack matches `unpackStarRecord`
       bit-for-bit (the offsetZ split across the 24-bit halves is the trap).
-- [ ] Wire the `starCatalogRenderer` handle into `EngineGpuHandles` + `initGpu`
+- [x] Wire the `starCatalogRenderer` handle into `EngineGpuHandles` + `initGpu`
       construction + `destroy` teardown.
-- [ ] **No vitest** (WebGPU is unavailable in the runner; the CPU cut/origin logic is
+- [x] **No vitest** (WebGPU is unavailable in the runner; the CPU cut/origin logic is
       tested in Tasks 8–9). Acceptance = `npm run typecheck` (both tsconfigs) green +
       the shader compiles with no `createShaderModuleWithDevLog` error in the running
       dev server. **Visual bring-up is Task 13** (needs real bins). Commit.
@@ -830,21 +830,21 @@ export const starCatalogLayer: ContentLayer = {
 - **No `drawPick`** — the Gaia bin is not pickable (spec §6; keeps the parked
   foreground-body-picking item untouched).
 
-- [ ] Add `starCatalogLayer` with a didactic docblock (why NEAR0 + the f64 rebase seam;
+- [x] Add `starCatalogLayer` with a didactic docblock (why NEAR0 + the f64 rebase seam;
       the per-source loop; the crossfade direction; not pickable; the Sun-exclusion note
       from Decision 3).
-- [ ] Register it in `CONTENT_LAYERS` in the `(hdr, NEAR0)` group (after
+- [x] Register it in `CONTENT_LAYERS` in the `(hdr, NEAR0)` group (after
       `starPointsLayer`/`orbitTrailsLayer` — within-group order is a listing choice,
       additive), and add the matching `export`.
-- [ ] Ensure the slot commit (Task 7) uploads to `state.gpu.starCatalogRenderer` so the
+- [x] Ensure the slot commit (Task 7) uploads to `state.gpu.starCatalogRenderer` so the
       layer reads live catalogs via `loadedCatalogs()`.
-- [ ] Test `enabled follows the toggles and the crossfade band` — with the renderer handle
+- [x] Test `enabled follows the toggles and the crossfade band` — with the renderer handle
       stubbed non-null, one loaded catalog, `settings.starCatalogs.enabled = true`, and
       `items.gaiaStars.enabled = true`: `enabled` is true when `ctx.drawCamPos` is inside
       the crossfade band and false when the camera is past `crossfadePc.outer` (a
       behavioural gate test; drives `enabled` via a stub state, no GPU). Also false when
       the master gate OR the per-item toggle is off.
-- [ ] `npm test -- starCatalogLayer` + `npm run typecheck` → green. Commit.
+- [x] `npm test -- starCatalogLayer` + `npm run typecheck` → green. Commit.
 
 ## Task 11b — Stars settings section (SettingsPanel UI)
 
@@ -961,17 +961,17 @@ pipeline surface; **plan 03 = the user-facing functionality blurb** (what the st
 looks like on screen) + the skill's runtime surface. Do NOT duplicate the data-source /
 pipeline / build rows plans 01/02 already added.
 
-- [ ] Add a short functionality blurb to `README.md` (the star-field feature: a
+- [x] Add a short functionality blurb to `README.md` (the star-field feature: a
       real-Gaia stellar bubble as the descent's real-data middle, crossfading into the
       Milky-Way cloud), matching the README's existing voice. No download/build rows.
-- [ ] Update `.claude/skills/add-data-source/SKILL.md`'s runtime surface (the second-pass
+- [x] Update `.claude/skills/add-data-source/SKILL.md`'s runtime surface (the second-pass
       note plan 02 left): the `starCatalog` source-type family (the `StarCatalogId` /
       `STAR_CATALOG_IDS` id domain + `settings.starCatalogs` cluster mirroring
       `galaxyCatalogs`), the source-parameterized `starCatalogFetcher` + per-source
       `starCatalogRow`/`starCatalogSlot`, and the dedicated per-source `starCatalog/`
       renderer family — so a future star-like source (famous stars — Decision A) finds the
       runtime edit surface. Grep-verify `starCatalog` appears in the skill file.
-- [ ] **entanglement-radar pass** (house convention): run the `entanglement-radar` skill
+- [x] **entanglement-radar pass** (house convention): run the `entanglement-radar` skill
       over this plan's cumulative diff (Tasks 1–11). Record findings; fold any cheap
       un-braiding in (or capture it as a follow-up if it's out of scope). Pay attention
       to: the rename leaving no half-renamed `Star`/`GaiaStars`/`starCatalog` ambiguity
@@ -979,7 +979,7 @@ pipeline / build rows plans 01/02 already added.
       the crossfade band living in exactly one home (the row), the star cluster genuinely
       mirroring the galaxy cluster (no divergent per-item accessor), and the walker/origin
       split staying un-braided (cut ≠ dequant).
-- [ ] **Final gate:** `npm run typecheck` (both src + tools tsconfigs) + full `npm test`
+- [x] **Final gate:** `npm run typecheck` (both src + tools tsconfigs) + full `npm test`
       → green. Commit. **Tasks 1–12 (including 11b) are a complete, mergeable unit** — the runtime is
       wired, compiles, tests green, and draws nothing only because no real bin has loaded.
 
