@@ -157,10 +157,16 @@ export type EngineSettingsState = {
    * `galaxyCatalogs.sizePx`. It rides on the cluster (a shared appearance knob
    * across every star catalog, like the galaxy size knob) rather than per-item,
    * and the star renderer reads it into its size uniform each frame.
+   *
+   * `brightness` is the user's exposure trim on the starfield — the star-catalog
+   * twin of `galaxyCatalogs.brightness`. 1.0 is identity (the shader's calibrated
+   * `STAR_FLUX_EXPOSURE` baseline unchanged); the renderer multiplies the
+   * flux-glow peak by it, so it rides the same shared uniform as `sizePx`.
    */
   starCatalogs: {
     enabled: boolean;
     sizePx: number;
+    brightness: number;
     items: Record<StarCatalogId, StarCatalogItemSettings>;
   };
 

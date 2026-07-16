@@ -23,6 +23,7 @@ import reducer, {
   setFlow,
   setStarCatalogEnabled,
   setStarCatalogSize,
+  setStarCatalogBrightness,
   setStarCatalogVisible,
   setPassDisabled,
   setClipPathLinger,
@@ -210,6 +211,11 @@ describe('settingsSlice — star catalogs', () => {
   it('setStarCatalogSize writes the shared star-billboard size', () => {
     const next = reducer(base(), setStarCatalogSize(5.5));
     expect(next.starCatalogs.sizePx).toBe(5.5);
+  });
+
+  it('setStarCatalogBrightness writes the shared star-brightness trim', () => {
+    const next = reducer(base(), setStarCatalogBrightness(2.2));
+    expect(next.starCatalogs.brightness).toBe(2.2);
   });
 });
 

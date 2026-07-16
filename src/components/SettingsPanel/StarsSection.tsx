@@ -7,8 +7,9 @@
  * and per-catalog visibility checkboxes (just `gaiaStars` today; the
  * `STAR_CATALOG_IDS.map(...)` row loop is the extension point for a future
  * second catalog), plus a default-closed "Advanced" sub-section carrying the
- * shared star-size slider — the star-catalog twin of the Galaxies section's
- * point-size control. It renders NO per-catalog label toggle — mirroring the
+ * shared star-size and star-brightness sliders — the star-catalog twins of the
+ * Galaxies section's point-size and brightness controls. It renders NO
+ * per-catalog label toggle — mirroring the
  * Galaxies section, star-label visibility lives in the separate Labels section.
  *
  * ### Master: a real gate, not a per-source fan-out
@@ -49,12 +50,16 @@ type StarsSectionProps = {
   items: Record<StarCatalogId, StarCatalogItemSettings>;
   /** Current star-billboard size in pixels (shared across every star catalog). */
   sizePx: number;
+  /** Current star-brightness trim (shared; 1.0 = identity). */
+  brightness: number;
   /** Called when the user toggles the master gate on or off. */
   onToggleMaster: (enabled: boolean) => void;
   /** Called when the user toggles a single star catalog on or off. */
   onToggleCatalog: (id: StarCatalogId, enabled: boolean) => void;
   /** Called when the user moves the star-size slider. */
   onSizeChange: (v: number) => void;
+  /** Called when the user moves the star-brightness slider. */
+  onBrightnessChange: (v: number) => void;
 };
 
 // ── StarsSection ─────────────────────────────────────────────────────────────
@@ -67,9 +72,11 @@ function StarsSection({
   enabled,
   items,
   sizePx,
+  brightness,
   onToggleMaster,
   onToggleCatalog,
   onSizeChange,
+  onBrightnessChange,
 }: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
   // "gate on, but not every catalog is individually enabled" (mixed).
@@ -116,6 +123,25 @@ function StarsSection({
             step={0.1}
             value={sizePx}
             onChange={(e) => onSizeChange(parseFloat(e.target.value))}
+          />
+        </div>
+
+        {/* Star brightness — shared exposure trim, twin of the Galaxies
+            brightness control (same 0.2–3.0 range). 1.0 is identity: the
+            flux-glow shader's calibrated STAR_FLUX_EXPOSURE baseline unchanged. */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-star-brightness">Star brightness</label>
+          <span className={styles.panelValue}>{brightness.toFixed(1)}×</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-star-brightness"
+            type="range"
+            min={0.2}
+            max={3.0}
+            step={0.1}
+            value={brightness}
+            onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
           />
         </div>
       </CollapsibleSection>

@@ -20,6 +20,8 @@
  *    with the flipped gate value.
  *  - The Advanced star-size slider echoes the `sizePx` prop and fires
  *    `onSizeChange` with the parsed float when moved.
+ *  - The Advanced star-brightness slider echoes the `brightness` prop and fires
+ *    `onBrightnessChange` with the parsed float when moved.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -38,9 +40,11 @@ function baseProps() {
     enabled: true,
     items: items(true),
     sizePx: 2.5,
+    brightness: 1.0,
     onToggleMaster: vi.fn<(enabled: boolean) => void>(),
     onToggleCatalog: vi.fn<(id: StarCatalogId, enabled: boolean) => void>(),
     onSizeChange: vi.fn<(v: number) => void>(),
+    onBrightnessChange: vi.fn<(v: number) => void>(),
   };
 }
 
@@ -133,6 +137,28 @@ describe('StarsSection', () => {
       fireEvent.change(slider, { target: { value: '3.7' } });
       expect(onSizeChange).toHaveBeenCalledOnce();
       expect(onSizeChange).toHaveBeenCalledWith(3.7);
+    });
+  });
+
+  describe('star-brightness slider', () => {
+    it('has value matching the brightness prop', () => {
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), brightness: 2.2 }),
+      );
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-brightness');
+      expect(slider).not.toBeNull();
+      expect(slider!.value).toBe('2.2');
+    });
+
+    it('fires onBrightnessChange with the parsed float when the slider moves', () => {
+      const onBrightnessChange = vi.fn<(v: number) => void>();
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), onBrightnessChange }),
+      );
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-brightness')!;
+      fireEvent.change(slider, { target: { value: '0.6' } });
+      expect(onBrightnessChange).toHaveBeenCalledOnce();
+      expect(onBrightnessChange).toHaveBeenCalledWith(0.6);
     });
   });
 });

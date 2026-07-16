@@ -137,6 +137,11 @@ export const starCatalogLayer: ContentLayer = {
     // shared camera uniform; the vertex ramp scales by it).
     const sizePx = state.settings.starCatalogs.sizePx;
 
+    // User's live star-brightness trim — the twin of `galaxyCatalogs.brightness`.
+    // Also source-independent, so read ONCE and forward the same value to every
+    // draw (the vertex stage multiplies the flux-glow peak by it; 1.0 = identity).
+    const brightness = state.settings.starCatalogs.brightness;
+
     for (const { source, catalog } of renderer.loadedCatalogs()) {
       const entry = SOURCE_REGISTRY[source];
       if (entry.type !== 'starCatalog') continue;
@@ -174,6 +179,7 @@ export const starCatalogLayer: ContentLayer = {
         level,
         opacity,
         sizePx,
+        brightness,
       });
     }
   },

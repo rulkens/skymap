@@ -74,8 +74,18 @@
 // extent for aggregates and 0 for leaves, so the leaf falls out as the
 // extent = 0 case of one formula. Everything scales by the user's live
 // 'sizePx' slider, which therefore acts as a global spread/sharpness control
-// (total luminance is unaffected -- see fact 2). STAR_FLUX_EXPOSURE is the
-// single brightness knob, tuned by eye via HMR.
+// (total luminance is unaffected -- see fact 2).
+//
+// ## Brightness: the calibrated baseline and the user's trim
+//
+// STAR_FLUX_EXPOSURE is the eye-tuned CALIBRATED baseline -- the exposure that
+// makes the starfield read right at the default setting. On top of it the user
+// gets a live 'brightness' trim ('u.brightness', settings.starCatalogs.brightness,
+// the twin of the galaxy points' brightness): the deposited luminance is
+// STAR_FLUX_EXPOSURE * u.brightness * flux, so 1.0 leaves the calibrated look
+// untouched and the slider scales the whole starfield's luminance up or down.
+// Unlike 'sizePx' (which redistributes a FIXED luminance across a wider/narrower
+// dot -- fact 2), 'brightness' changes the total luminance itself.
 
 import package::starCatalog::io::VSOut;
 import package::starCatalog::io::NodeParams;
@@ -189,7 +199,9 @@ fn vs(
   // Peak so the dot's INTEGRATED luminance equals STAR_FLUX_EXPOSURE * flux
   // regardless of rPx: I_peak * K_GAUSS * rPx^2 == EXPOSURE * flux. Refining an
   // aggregate or not therefore deposits identical total light (header fact 2).
-  let intensity = STAR_FLUX_EXPOSURE * flux / (K_GAUSS * rPx * rPx);
+  // 'u.brightness' is the user's exposure trim ON TOP of the calibrated
+  // STAR_FLUX_EXPOSURE baseline (1.0 = identity -- see the header).
+  let intensity = STAR_FLUX_EXPOSURE * u.brightness * flux / (K_GAUSS * rPx * rPx);
 
   let screenOffset = expandBillboardScreen(u.cam, center, rPx, corner);
 

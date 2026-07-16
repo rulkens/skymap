@@ -76,6 +76,15 @@ export const DEFAULT_POINT_SIZE_PX = 2.5;
 export const DEFAULT_STAR_SIZE_PX = 2.5;
 
 /**
+ * Default star-brightness trim — the star-catalog twin of `DEFAULT_BRIGHTNESS`.
+ * Seeds `settings.starCatalogs.brightness`. 1.0 = identity: the flux-glow
+ * shader's calibrated `STAR_FLUX_EXPOSURE` baseline unchanged. Same 0.2–3.0
+ * user range as the galaxy brightness; kept a separate constant so the two
+ * layers can diverge without one silently dragging the other.
+ */
+export const DEFAULT_STAR_BRIGHTNESS = 1.0;
+
+/**
  * Default global brightness multiplier.  1.0 = "intensity exactly as the
  * shader computes it from the apparent magnitude".  Range 0.2–3.0.
  */

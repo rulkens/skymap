@@ -134,6 +134,10 @@ const settingsSlice = createSlice({
     setStarCatalogSize: (settings, action: PayloadAction<number>) => {
       settings.starCatalogs.sizePx = action.payload;
     },
+    // Shared star-brightness trim, twin of `setBrightness` (1.0 = identity).
+    setStarCatalogBrightness: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.brightness = action.payload;
+    },
     setStarCatalogVisible: (
       settings,
       action: PayloadAction<{ id: StarCatalogId; enabled: boolean }>,
@@ -353,6 +357,7 @@ export const {
   setFilamentIntensity,
   setStarCatalogEnabled,
   setStarCatalogSize,
+  setStarCatalogBrightness,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,
   setVolumesEnabled,

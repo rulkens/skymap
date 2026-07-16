@@ -32,6 +32,7 @@ import {
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
+  DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_SIZE_PX,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
@@ -121,6 +122,7 @@ export function buildInitialSettings(): EngineSettingsState {
     starCatalogs: {
       enabled: true,
       sizePx: DEFAULT_STAR_SIZE_PX,
+      brightness: DEFAULT_STAR_BRIGHTNESS,
       items: Object.fromEntries(
         SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [
           e.id,

@@ -90,19 +90,26 @@ function alignUp(value: number, align: number): number {
 
 /**
  * Byte size of the star `StarUniforms` @group(0) buffer: the shared
- * `CameraUniforms` prefix + `sizePx` f32, rounded up to the prefix's 16-byte
- * alignment = 96 (mirrors `struct StarUniforms` in shaders/starCatalog/io.wesl).
- * Derived from `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced —
- * this pipeline just appends one scalar after it, the way the galaxy points
- * `Uniforms` struct does.
+ * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32, rounded up to the
+ * prefix's 16-byte alignment = 96 (mirrors `struct StarUniforms` in
+ * shaders/starCatalog/io.wesl). The two appended scalars fit inside the same
+ * 16-byte rounding tail as `sizePx` alone did, so the buffer size is unchanged;
+ * derived from `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced,
+ * the way the galaxy points `Uniforms` struct appends its own scalars.
  */
-const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 4, 16);
+const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 8, 16);
 
 /**
  * Float index of `sizePx` in the `StarUniforms` scratch: byte 80 (right after
- * the camera prefix) / 4. Floats 21..23 stay zero-init pad.
+ * the camera prefix) / 4.
  */
 const SIZE_PX_FLOAT_INDEX = CAMERA_UNIFORM_BYTES / 4;
+
+/**
+ * Float index of `brightness` in the `StarUniforms` scratch: byte 84 (right
+ * after `sizePx`) / 4. Floats 22..23 stay zero-init pad.
+ */
+const BRIGHTNESS_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 4) / 4;
 
 /** One committed catalog's GPU resources + the octree kept for the layer. */
 type LoadedStarSource = {
@@ -137,7 +144,8 @@ export function createStarCatalogRenderer(
 
   // ── Camera uniform (shared across sources — see the module header) ────────
   // Sized to STAR_UNIFORM_BYTES: the 80-byte CameraUniforms prefix plus the
-  // source-independent `sizePx` scalar, matching `struct StarUniforms`.
+  // source-independent `sizePx` + `brightness` scalars, matching `struct
+  // StarUniforms`.
   const cameraBuffer = device.createBuffer({
     label: 'star-catalog-camera-uniform',
     size: STAR_UNIFORM_BYTES,
@@ -318,19 +326,22 @@ export function createStarCatalogRenderer(
       level,
       opacity,
       sizePx,
+      brightness,
     } = args;
     const entry = sources.get(source);
     if (!entry || nodeDraws.length === 0) return;
 
     // Camera uniform: identical bytes every source, so this repeated write is
     // idempotent (see the module header). floats 18/19 stay zero-init.
-    // `sizePx` rides this buffer too — it is source-independent (the same base
-    // star-dot size for every source this frame), so appending it to the shared
-    // camera prefix is safe: each source's repeated write lands the identical
-    // value. Written here, ONCE per source before its draws, so there is no
-    // mid-frame mutation for the writeBuffer/submit ordering race to corrupt.
+    // `sizePx` and `brightness` ride this buffer too — both are
+    // source-independent (the same base star-dot size + exposure trim for every
+    // source this frame), so appending them to the shared camera prefix is safe:
+    // each source's repeated write lands the identical values. Written here,
+    // ONCE per source before its draws, so there is no mid-frame mutation for
+    // the writeBuffer/submit ordering race to corrupt.
     writeCameraPrefix(cameraScratch, vp, viewportPx);
     cameraScratch[SIZE_PX_FLOAT_INDEX] = sizePx;
+    cameraScratch[BRIGHTNESS_FLOAT_INDEX] = brightness;
     device.queue.writeBuffer(cameraBuffer, 0, cameraScratch);
 
     // Pack every node's params into the strided scratch, once, then one write.

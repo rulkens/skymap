@@ -78,6 +78,14 @@ export type StarCatalogDrawArgs = {
    * the shared camera uniform, where the per-record legibility ramp scales it.
    */
   readonly sizePx: number;
+  /**
+   * User's star-brightness trim (`settings.starCatalogs.brightness`, default
+   * 1.0 = identity) — the twin of the galaxy points' `brightness`. A user
+   * exposure trim ON TOP of the shader's calibrated `STAR_FLUX_EXPOSURE`
+   * baseline: the vertex stage multiplies the flux-glow peak by it. Also
+   * source-independent, so it rides the shared camera uniform beside `sizePx`.
+   */
+  readonly brightness: number;
 };
 
 export type StarCatalogRenderer = Renderer & {

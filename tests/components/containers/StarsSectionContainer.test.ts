@@ -19,6 +19,10 @@
  *  - The Advanced star-size slider reflects the seeded `starCatalogs.sizePx`,
  *    and moving it dispatches `setStarCatalogSize`, so
  *    `selectStarCatalogSize(store.getState())` reflects the new value.
+ *  - The Advanced star-brightness slider reflects the seeded
+ *    `starCatalogs.brightness`, and moving it dispatches
+ *    `setStarCatalogBrightness`, so `selectStarCatalogBrightness(store.getState())`
+ *    reflects the new value.
  *
  * Why assert on `store.getState()` rather than re-reading the DOM: RTK
  * `dispatch` is synchronous, so the store reflects the new value immediately —
@@ -37,8 +41,12 @@ import { createAppStore } from '../../../src/store/createAppStore';
 import {
   selectStarCatalogs,
   selectStarCatalogSize,
+  selectStarCatalogBrightness,
 } from '../../../src/state/settings/selectors';
-import { setStarCatalogSize } from '../../../src/state/settings/settingsSlice';
+import {
+  setStarCatalogSize,
+  setStarCatalogBrightness,
+} from '../../../src/state/settings/settingsSlice';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
@@ -108,5 +116,32 @@ describe('StarsSectionContainer', () => {
     fireEvent.change(slider, { target: { value: '5.2' } });
 
     expect(selectStarCatalogSize(store.getState())).toBeCloseTo(5.2);
+  });
+
+  it('reflects seeded brightness in the star-brightness slider value', () => {
+    // Dispatch a non-default brightness before rendering so the slider must read
+    // from the store rather than a hard-coded default.
+    const { store } = createAppStore();
+    store.dispatch(setStarCatalogBrightness(2.0));
+
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-brightness');
+    expect(slider).not.toBeNull();
+    expect(slider!.value).toBe('2');
+  });
+
+  it('dispatches setStarCatalogBrightness and updates the store when the slider moves', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-brightness')!;
+    fireEvent.change(slider, { target: { value: '0.6' } });
+
+    expect(selectStarCatalogBrightness(store.getState())).toBeCloseTo(0.6);
   });
 });

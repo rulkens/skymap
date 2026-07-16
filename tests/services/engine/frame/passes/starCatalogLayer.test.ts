@@ -82,15 +82,16 @@ function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[
 
 function makeState(
   renderer: unknown,
-  opts: { master?: boolean; item?: boolean; size?: number } = {},
+  opts: { master?: boolean; item?: boolean; size?: number; brightness?: number } = {},
 ): EngineState {
-  const { master = true, item = true, size = 2.5 } = opts;
+  const { master = true, item = true, size = 2.5, brightness = 1.0 } = opts;
   return {
     gpu: { starCatalogRenderer: renderer },
     settings: {
       starCatalogs: {
         enabled: master,
         sizePx: size,
+        brightness,
         items: { gaiaStars: { enabled: item, labelEnabled: false } },
       },
     },
@@ -203,6 +204,31 @@ describe('starCatalogLayer.draw', () => {
     expect(renderer.draw).toHaveBeenCalledTimes(2);
     expect(renderer.draw.mock.calls[0]![1].sizePx).toBe(6.25);
     expect(renderer.draw.mock.calls[1]![1].sizePx).toBe(6.25);
+  });
+
+  it('forwards the live star-brightness setting to every source draw', () => {
+    // The user's `settings.starCatalogs.brightness` must reach the renderer so
+    // the flux-glow peak is scaled by it. Change it in the store fixture and
+    // assert the stubbed renderer receives the new value (source-independent —
+    // the same value on each draw).
+    const loaded = [
+      { source: Source.GaiaStars, catalog: makeCatalog() },
+      { source: Source.GaiaStars, catalog: makeCatalog() },
+    ];
+    const renderer = makeRenderer(loaded);
+    const camPos = camAtPc(inner + (outer - inner) * 0.5);
+    const view = makeNear0View(camPos);
+
+    starCatalogLayer.draw(
+      PASS_STUB,
+      view,
+      makeCtx(camPos),
+      makeState(renderer, { brightness: 2.5 }),
+    );
+
+    expect(renderer.draw).toHaveBeenCalledTimes(2);
+    expect(renderer.draw.mock.calls[0]![1].brightness).toBe(2.5);
+    expect(renderer.draw.mock.calls[1]![1].brightness).toBe(2.5);
   });
 
   it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {

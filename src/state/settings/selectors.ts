@@ -195,8 +195,12 @@ export const selectStructureItems = (
  */
 export const selectStarCatalogs = (
   state: RootState,
-): { enabled: boolean; sizePx: number; items: Record<StarCatalogId, StarCatalogItemSettings> } =>
-  selectSettings(state).starCatalogs;
+): {
+  enabled: boolean;
+  sizePx: number;
+  brightness: number;
+  items: Record<StarCatalogId, StarCatalogItemSettings>;
+} => selectSettings(state).starCatalogs;
 
 /**
  * Star-billboard pixel radius — the star-catalog twin of
@@ -204,6 +208,14 @@ export const selectStarCatalogs = (
  */
 export const selectStarCatalogSize = (state: RootState): number =>
   selectSettings(state).starCatalogs.sizePx;
+
+/**
+ * Star-brightness trim — the star-catalog twin of `selectBrightness`. A
+ * primitive read, so no memoization. The renderer multiplies the flux-glow
+ * peak by it (1.0 = identity).
+ */
+export const selectStarCatalogBrightness = (state: RootState): number =>
+  selectSettings(state).starCatalogs.brightness;
 
 // --- derived ------------------------------------------------------------------
 
