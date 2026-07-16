@@ -176,14 +176,21 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
     // the (foreground:0, NEAR0) body group — for the skip to be wholesale.
     const state = {
       // starCatalogRenderer null (like the real gpu bag pre-load): no Gaia bin
-      // committed here, so starCatalogLayer — the group's third (hdr, NEAR0)
-      // row — short-circuits its handle gate and stays out of this assertion.
+      // committed here, so starCatalogLayer — one of the group's (hdr, NEAR0)
+      // rows — short-circuits its handle gate and stays out of this assertion.
       gpu: {
         starPointRenderer: makeRenderer(),
         orbitTrailRenderer: { draw: vi.fn() },
         starCatalogRenderer: null,
       },
       data: { bodies: { stars: SCENE_STARS } },
+      // The milky-way impostor also rides this group now (its slab moved to
+      // NEAR0), but its visibility window is far WIDER than the foreground
+      // gate — at galaxy scale it legitimately draws while the star rows
+      // skip. Toggle it off (and zero its fade tail) so this test keeps
+      // pinning the STAR rows' wholesale-skip property.
+      settings: { milkyWay: { enabled: false } },
+      subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
       CONTENT_LAYERS.filter((l) => l.target === 'hdr' && l.slab === NEAR0 && l.enabled(state, ctx));

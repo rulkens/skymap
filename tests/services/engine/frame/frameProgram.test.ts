@@ -170,27 +170,29 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, nine hdr, star-points + orbit-trails + star-catalog, hdr→swap, five swap, near-field tail, pick', () => {
+  it('derives the real registry slot list: scalar-volume, eight hdr, the (hdr, NEAR0) four, hdr→swap, five swap, near-field tail, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
-    // iterates. scalar-volume leads (the volume render step), then the nine
-    // COSMO hdr layers in registry order, then star-points + orbit-trails +
-    // star-catalog (the dedicated (hdr, NEAR0) step before the tone-map), the tone-map
-    // composite, the five swap overlays, then the near-field tail (the
-    // foreground:0 body render — one slot per body layer: earth,
-    // star-spheres, planets — the foreground:0→swap composite, and the NEAR0
-    // swap caption render → foreground-labels), and pick last.
+    // iterates. scalar-volume leads (the volume render step), then the eight
+    // COSMO hdr layers in registry order, then milky-way + star-points +
+    // orbit-trails + star-catalog (the dedicated (hdr, NEAR0) step before the
+    // tone-map — milky-way leads that group so its multiplicative dust never
+    // darkens the local starfield), the tone-map composite, the five swap
+    // overlays, then the near-field tail (the foreground:0 body render — one
+    // slot per body layer: earth, star-spheres, planets — the
+    // foreground:0→swap composite, and the NEAR0 swap caption render →
+    // foreground-labels), and pick last.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'point-sprites',
       'procedural-disks',
       'textured-disks',
-      'milky-way',
       'filaments',
       'flow',
       'volume-upsample',
       'horizon-shell',
       'structure-markers',
+      'milky-way',
       'star-points',
       'orbit-trails',
       'star-catalog',

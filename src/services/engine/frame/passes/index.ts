@@ -17,24 +17,28 @@
  *
  * ### CONTENT_LAYERS — draw order
  *
- * The first nine entries are additively blended into the HDR `rgba16float`
+ * The first eight entries are additively blended into the HDR `rgba16float`
  * target, projected through the cosmological slab:
  *
  *   1. point-sprites       — instanced billboards (always-on)
  *   2. procedural-disks    — LOD-1 procedural-disk impostors
  *   3. textured-disks      — LOD-2 3D-oriented textured-disk impostors
- *   4. milky-way           — star/dust point cloud at the galactic centre
- *   5. filaments           — cosmic-web skeleton overlay
- *   6. flow                — CF4++ peculiar-velocity ribbon overlay
- *   7. volume-upsample     — upsamples the half-res volume offscreen target
+ *   4. filaments           — cosmic-web skeleton overlay
+ *   5. flow                — CF4++ peculiar-velocity ribbon overlay
+ *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
- *   8. horizon-shell       — translucent sphere at the observable-universe edge
- *   9. structure-markers   — at-rest halo + ring for cluster / SC / void structures
+ *   7. horizon-shell       — translucent sphere at the observable-universe edge
+ *   8. structure-markers   — at-rest halo + ring for cluster / SC / void structures
  *
- * Two more rows accumulate into the same HDR target, but projected through
- * the near0 slab (their shared `(hdr, NEAR0)` render step — COSMO's near
- * plane would clip parsec-to-AU-scale anchors):
+ * Four more rows accumulate into the same HDR target, but projected through
+ * the near0 slab (their shared `(hdr, NEAR0)` render step — COSMO's fixed
+ * near plane would clip their kpc-to-AU-scale anchors):
  *
+ *   9. milky-way           — star/dust point cloud at the galactic centre
+ *                            (the fixed 10 kpc COSMO near plane clipped the
+ *                            disc mid-descent; drawn FIRST in the group so
+ *                            its multiplicative dust never darkens the local
+ *                            starfield below)
  *  10. star-points         — the unresolved partition of the neighbourhood
  *                            stars (partitionStarsByResolution) as additive
  *                            point sprites, riding the same tone-map as the
@@ -110,17 +114,17 @@
  * the swap chain.  See the swap render step in
  * `services/engine/frame/executeFrame.ts`.
  *
- * ### Why milky-way BEFORE filaments / scalar-volume?
+ * ### Why milky-way LEADS the (hdr, NEAR0) group
  *
- * The Milky Way point cloud is the densest, brightest near-field
- * additive contributor.  Drawing it early lets the broader large-
- * scale-structure overlays (filaments, scalar volumes) composite
- * over its bulge rather than the other way round — the cosmic-web
- * skeleton and density fields read clearly against a bright MW
- * backdrop, and the bulge doesn't visually swallow the thin
- * filament lines or wispy volume haloes.  All three are additively
- * blended so this is a visual-hierarchy choice rather than a
- * correctness constraint.
+ * The Milky Way rode the COSMO group until its fixed 10 kpc near plane
+ * clipped the disc mid-descent (the disc's near edge is ~9.5 kpc from
+ * the origin) — see milkyWayLayer's module header.  Living in the NEAR0
+ * step means the whole cloud now draws AFTER the cosmological group, so
+ * its multiplicative dust pass darkens the full COSMO accumulation behind
+ * it (physically reasonable extinction of background light).  Within the
+ * NEAR0 group it draws FIRST so the local starfield (star-points /
+ * star-catalog) is never darkened by the dust — during the descent those
+ * stars sit between the camera and the disc.
  *
  * ### Why a single-purpose `index.ts` despite the project's
  * "no barrel exports" convention
@@ -173,19 +177,22 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   pointSpritesLayer,
   proceduralDisksLayer,
   texturedDisksLayer,
-  milkyWayLayer,
   filamentsLayer,
   flowFieldLayer,
   volumeUpsampleLayer,
   horizonShellLayer,
   structureMarkersLayer,
   // The (hdr, NEAR0) group: rows that accumulate into the HDR target but
-  // project through NEAR0 (COSMO's near plane would clip their parsec-to-AU
-  // scale anchors), drawn by the frame program's dedicated (hdr, NEAR0) step
-  // AFTER the nine COSMO hdr layers above and before the tone-map — so they
-  // ride the same tone curve as the galaxies. Star points first, then the
-  // conic orbit trails, then the survey (Gaia bin) star catalog (all additive,
-  // so within-group order is a listing choice, not a compositing one).
+  // project through NEAR0 (COSMO's fixed near plane would clip their
+  // kpc-to-AU scale anchors), drawn by the frame program's dedicated
+  // (hdr, NEAR0) step AFTER the eight COSMO hdr layers above and before the
+  // tone-map — so they ride the same tone curve as the galaxies. Milky Way
+  // FIRST — its dust pass is multiplicative, and leading the group keeps the
+  // local starfield below out of that multiply (see the header) — then star
+  // points, the conic orbit trails, and the survey (Gaia bin) star catalog
+  // (those three are additive, so their relative order is a listing choice,
+  // not a compositing one).
+  milkyWayLayer,
   starPointsLayer,
   orbitTrailsLayer,
   starCatalogLayer,

@@ -505,14 +505,15 @@ describe('renderFrame', () => {
   });
 
   it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
-    // No-timing path → 'merged' strategy: the HDR render step opens ONE
-    // `beginRenderPass(loadOp: 'clear')` holding every enabled HDR draw, then
-    // the hdr→swap composite opens a SECOND pass against the swap chain. So two
-    // begins total; the FIRST is the HDR pass this test pins (viewOf('hdr'),
-    // clear, a=1).
+    // No-timing path → 'merged' strategy: the (hdr, COSMO) render step opens
+    // ONE `beginRenderPass(loadOp: 'clear')` holding the enabled COSMO hdr
+    // draws, the (hdr, NEAR0) step opens a SECOND hdr pass (loadOp: 'load')
+    // for the milky-way draw, then the hdr→swap composite opens a THIRD pass
+    // against the swap chain. So three begins total; the FIRST is the COSMO
+    // HDR pass this test pins (viewOf('hdr'), clear, a=1).
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
 
     const desc = calls[0]![0];
     const attachments = Array.from(desc.colorAttachments as any);
@@ -607,11 +608,14 @@ describe('renderFrame', () => {
     expect(args[3]).toEqual({ exposure: fx.settings.exposure, curve: fx.settings.toneMapCurve });
   });
 
-  it('records the full frame in canonical order: createEncoder → hdr pass (points → milky-way) → pass.end → composite pass → compositor.draw → pass.end → finish → submit', () => {
-    // No-timing 'merged' path: the HDR render step opens one pass holding the
-    // enabled HDR draws (here point-sprites + milky-way; the impostor
-    // subsystems are nulled out), closes it, then the hdr→swap composite opens
-    // a second pass, draws the tone-map, and closes it — then finish + submit.
+  it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → hdr NEAR0 pass (milky-way) → composite pass → compositor.draw → finish → submit', () => {
+    // No-timing 'merged' path: the (hdr, COSMO) render step opens one pass
+    // holding the enabled COSMO hdr draws (here point-sprites; the impostor
+    // subsystems are nulled out), closes it, the (hdr, NEAR0) step opens a
+    // second hdr pass for the milky-way draw (the impostor's slab since the
+    // fixed COSMO near plane clipped its disc mid-descent), closes it, then
+    // the hdr→swap composite opens a third pass, draws the tone-map, and
+    // closes it — then finish + submit.
     renderFrame(fx.input);
     const interesting = [
       'device.createCommandEncoder',
@@ -628,6 +632,8 @@ describe('renderFrame', () => {
       'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'pointRenderer.draw',
+      'pass.end',
+      'encoder.beginRenderPass',
       'milkyWayCloudRenderer.draw',
       'pass.end',
       'encoder.beginRenderPass',
@@ -639,17 +645,17 @@ describe('renderFrame', () => {
   });
 
   it('encodes no foreground pass or composite while the foreground handles are null', () => {
-    // The program carries the near-field steps ((hdr, NEAR0) star points,
-    // then the tail: foreground:0 render → foreground:0→swap composite →
-    // NEAR0 swap render). With the fixture's body/star-point renderers and
-    // foregroundLabelRenderer all null, every near-field render group
-    // selects nothing, so no extra pass opens; and because foreground:0 is
-    // never touched, the foreground:0→swap composite is touched-set-skipped.
-    // Net: the encoded frame is byte-for-byte the cosmological trace —
-    // exactly two passes (hdr + hdr→swap) and one compositor draw.
+    // The program carries the near-field steps ((hdr, NEAR0), then the tail:
+    // foreground:0 render → foreground:0→swap composite → NEAR0 swap render).
+    // With the fixture's body/star renderers and foregroundLabelRenderer all
+    // null, the (hdr, NEAR0) group selects only milky-way (one extra hdr
+    // pass); the foreground:0 render selects nothing, so foreground:0 is
+    // never touched and the foreground:0→swap composite is
+    // touched-set-skipped. Net: exactly three passes (hdr COSMO + hdr NEAR0
+    // + hdr→swap) and one compositor draw — no foreground:0 anywhere.
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
     // No pass targets the foreground:0 offscreen or is labelled a foreground
     // composite.
     for (const [desc] of calls) {
@@ -705,7 +711,7 @@ describe('renderFrame', () => {
     (fx.input.state as any).gpu.volumeUpsample = { draw: upsampleDraw, destroy: vi.fn() };
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls).toHaveLength(2); // hdr + composite, no volume pass
+    expect(calls).toHaveLength(3); // hdr COSMO + hdr NEAR0 (milky-way) + composite, no volume pass
     // Neither the raymarch nor the upsample ran — the shared gate hid both.
     expect(upsampleDraw).not.toHaveBeenCalled();
   });

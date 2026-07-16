@@ -515,16 +515,16 @@ describe('renderFrame visual baseline', () => {
           "renderer": "textured-disks",
         },
         {
-          "argShape": "pass,object",
-          "renderer": "milky-way",
-        },
-        {
           "argShape": "pass,Float32Array[16],Array[2],number,number,number",
           "renderer": "filaments",
         },
         {
           "argShape": "pass,object",
           "renderer": "volume-upsample",
+        },
+        {
+          "argShape": "pass,object",
+          "renderer": "milky-way",
         },
         {
           "argShape": "pass,object,string,object",
@@ -541,18 +541,21 @@ describe('renderFrame visual baseline', () => {
       ]
     `);
 
-    // Boundary-event count for the no-timing 'merged' path: FOUR begin/end
+    // Boundary-event count for the no-timing 'merged' path: FIVE begin/end
     // pairs — one per non-empty render step's target group plus the composite.
-    // In FRAME-program order: the volume raymarch pass, the HDR mega-pass, the
-    // hdr→swap composite pass, and the swap-chain overlay pass (marker-lines +
-    // labels). Unlike the old inline path, the tone-map's beginRenderPass is
-    // NOT hidden inside a bespoke blit helper — the executor opens the composite
-    // pass, so it appears here. Counts are asserted SEPARATELY from the inline
-    // snapshot: drawSequence captures the renderer-dispatch invariant, these
-    // counts capture the pass-boundary structure.
+    // In FRAME-program order: the volume raymarch pass, the (hdr, COSMO)
+    // mega-pass, the (hdr, NEAR0) pass (the milky-way impostor, on its own
+    // slab since the fixed COSMO near plane clipped the disc mid-descent),
+    // the hdr→swap composite pass, and the swap-chain overlay pass
+    // (marker-lines + labels). Unlike the old inline path, the tone-map's
+    // beginRenderPass is NOT hidden inside a bespoke blit helper — the
+    // executor opens the composite pass, so it appears here. Counts are
+    // asserted SEPARATELY from the inline snapshot: drawSequence captures the
+    // renderer-dispatch invariant, these counts capture the pass-boundary
+    // structure.
     const beginCount = records.filter((r) => r.kind === 'beginRenderPass').length;
     const endCount = records.filter((r) => r.kind === 'passEnd').length;
-    expect(beginCount).toBe(4);
-    expect(endCount).toBe(4);
+    expect(beginCount).toBe(5);
+    expect(endCount).toBe(5);
   });
 });
