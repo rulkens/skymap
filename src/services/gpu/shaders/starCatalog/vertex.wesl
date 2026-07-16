@@ -41,15 +41,41 @@
 //
 //   worldRelCam = originRelCamMpc + (offset / 1024) * cellScaleMpc
 //
-// ## Point size
+// ## Flux-integrated glow (the LOD-invisible sizing)
 //
-// A placeholder absMag → pixel-radius ramp identical to bodies/starPoints —
-// brighter star, bigger dot, no distance/flux term — SCALED by the user's
-// live 'sizePx' setting (settings.starCatalogs.sizePx). The mirror of the
-// galaxy points layer, where 'u.pointSizePx' is the base billboard size the
-// per-record term modulates: here the base rides 'u.sizePx' and the ramp is
-// its per-record modulation. Task 13 replaces the ramp with the real
-// flux-based LOD once the survey bin is bringing up against live timings.
+// The physical target: an aggregate drawn at distance D deposits the same
+// integrated on-screen luminance as its children would if the walker refined
+// it, so the LOD transition is photometrically invisible. Two facts make this
+// a single continuous formula rather than a leaf/aggregate special case:
+//
+//   1. FLUX IS ADDITIVE, AND THE RECORD ALREADY CARRIES THE SUM.
+//      flux = 10^(-0.4 * absMag) is the exact inverse of mergeFluxAggregate's
+//      absMag = -2.5*log10(sum of child fluxes). So a leaf's flux is its one
+//      star's light and an aggregate's flux is its whole subtree's SUMMED
+//      light. If every record deposits screen luminance L = EXPOSURE * flux,
+//      then drawing an aggregate (L = EXPOSURE * sum) equals drawing its
+//      refined children (sum of EXPOSURE * flux_child) -- identical total. The
+//      cut is a covering partition (walkStarOctreeCut), so no double-count.
+//
+//   2. THE GAUSSIAN DOT'S INTEGRAL IS PEAK * AREA * SHAPE.
+//      A dot of peak I and pixel-radius rPx deposits I * rPx^2 * K_GAUSS of
+//      luminance (K_GAUSS = the exp(-4 r2) integral over the unit disc). To
+//      hit L = EXPOSURE * flux we set I = EXPOSURE * flux / (K_GAUSS * rPx^2).
+//      Total luminance is then INVARIANT to rPx -- rPx only chooses how the
+//      fixed light spreads (a bright core vs a soft glow), never how much.
+//
+// The only place the two record species differ is the RADIUS. A leaf is a
+// POINT source, so its radius is a legibility floor. An aggregate is an
+// EXTENDED source -- its subtree fills its octree box -- so its radius grows
+// to the box's on-screen footprint ('worldLenToPx' of the box edge), which is
+// what makes adjacent far aggregates' glows meet edge-to-edge into a
+// continuous field instead of a lattice of lone dots. 'node.level' is the
+// discriminant (0 = leaf point, >0 = aggregate box); a 'select' picks the box
+// extent for aggregates and 0 for leaves, so the leaf falls out as the
+// extent = 0 case of one formula. Everything scales by the user's live
+// 'sizePx' slider, which therefore acts as a global spread/sharpness control
+// (total luminance is unaffected -- see fact 2). STAR_FLUX_EXPOSURE is the
+// single brightness knob, tuned by eye via HMR.
 
 import package::starCatalog::io::VSOut;
 import package::starCatalog::io::NodeParams;
@@ -58,6 +84,7 @@ import package::starCatalog::tint::starTint;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;
+import package::lib::billboard::worldLenToPx;
 
 @group(0) @binding(0) var<uniform> u: StarUniforms;
 @group(1) @binding(0) var<uniform> node: NodeParams;
@@ -83,10 +110,33 @@ const CLIP_Z_EPS: f32 = 1e-4;
 
 // Reference star-dot size in px — mirrors DEFAULT_STAR_SIZE_PX
 // (src/data/defaults.ts; consume, never diverge). Dividing the user's
-// 'u.sizePx' by it makes the DEFAULT setting reproduce the placeholder ramp
-// unscaled (identity), so the ramp's tuned look is preserved at the default
-// and only slider movement away from it rescales the whole starfield.
+// 'u.sizePx' by it makes the DEFAULT setting the identity ('sizeScale' == 1),
+// so the tuned look holds at the default and only slider movement away from it
+// rescales the whole starfield's spread.
 const STAR_SIZE_REF_PX: f32 = 2.5;
+
+// Legibility floor for a POINT source in px (at the default size). A leaf star
+// -- and any aggregate whose box has shrunk below this on screen -- is drawn
+// no smaller than this so a lone record stays a visible dot. Scaled by
+// 'sizeScale' with every other radius here.
+const STAR_GLOW_MIN_PX: f32 = 1.5;
+
+// Gaussian shape integral: integral over the unit uv-disc of exp(-r2 * 4.0),
+// = (pi/4) * (1 - e^-4) ~= 0.7711. The dot deposits I_peak * rPx^2 * K_GAUSS
+// of screen luminance (fact 2 in the header); dividing the target luminance by
+// it recovers the peak. Structural, not a knob.
+const K_GAUSS: f32 = 0.7711;
+
+// THE exposure knob (eye-tuned via HMR). A record deposits screen luminance
+// STAR_FLUX_EXPOSURE * flux, with flux = 10^(-0.4 * absMag) on the format's
+// zero-point (absMag 0 -> flux 1). Turn UP to brighten the whole starfield,
+// DOWN to dim it. Reference points at the default: a bright star (absMag ~= 1,
+// flux ~= 0.4) at the floor radius peaks around EXPOSURE * 0.23; a blue giant
+// (absMag ~= -3, flux ~= 16) peaks ~40x higher and blooms in the HDR pipeline;
+// a red dwarf (absMag ~= 12, flux ~= 2e-5) is a near-invisible point whose
+// light instead shows up summed in its ancestor aggregate. Every other
+// constant here is structural.
+const STAR_FLUX_EXPOSURE: f32 = 4.0;
 
 @vertex
 fn vs(
@@ -115,16 +165,33 @@ fn vs(
   let center = worldToClip(u.cam, worldRelCam);
   let corner = triCorner(vi);
 
-  // Dequant absolute magnitude (bin centre), then the placeholder legibility
-  // ramp — brighter (lower absMag) → bigger dot — scaled by the user's base
-  // star-dot size. 'u.sizePx / STAR_SIZE_REF_PX' is 1.0 at the default, so the
-  // ramp is the per-record modulation of the 'u.sizePx' base (the galaxy
-  // pointSizePx mirror), and the live slider rescales every star's dot.
+  // Dequant absolute magnitude (bin centre), then the linear flux it stands
+  // for. For a leaf this is one star's flux; for an aggregate it is the whole
+  // subtree's summed flux (mergeFluxAggregate stored -2.5*log10(sum flux)) --
+  // so leaf and aggregate share one formula (header fact 1).
   let absMag = STAR_ABSMAG_MIN + (f32(absMagIdx) + 0.5) * STAR_ABSMAG_STEP;
-  let ramp = clamp(6.0 - 0.45 * absMag, 1.5, 8.0);
-  let sizePx = ramp * (u.sizePx / STAR_SIZE_REF_PX);
+  let flux = pow(10.0, -0.4 * absMag);
 
-  let screenOffset = expandBillboardScreen(u.cam, center, sizePx, corner);
+  // Radius (px). A leaf is a POINT source -> the legibility floor. An aggregate
+  // is an EXTENDED source -> its glow fills the box's on-screen footprint so
+  // neighbouring far aggregates blend into a continuous field, not a lattice.
+  // 'worldLenToPx' of the box edge gives its full on-screen span; half of that
+  // is the dot radius (diameter == box edge), and the Gaussian's soft tail
+  // spills a little past the box so adjacent glows overlap. 'select' picks the
+  // box extent only for aggregates (level > 0); a leaf gets extent 0 -> floor.
+  // All scaled by the user's size slider (spread control; luminance is
+  // invariant to radius -- header fact 2).
+  let sizeScale = u.sizePx / STAR_SIZE_REF_PX;
+  let extentMpc = select(0.0, node.cellScaleMpc, node.level > 0u);
+  let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * 0.5;
+  let rPx = max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale;
+
+  // Peak so the dot's INTEGRATED luminance equals STAR_FLUX_EXPOSURE * flux
+  // regardless of rPx: I_peak * K_GAUSS * rPx^2 == EXPOSURE * flux. Refining an
+  // aggregate or not therefore deposits identical total light (header fact 2).
+  let intensity = STAR_FLUX_EXPOSURE * flux / (K_GAUSS * rPx * rPx);
+
+  let screenOffset = expandBillboardScreen(u.cam, center, rPx, corner);
 
   var out: VSOut;
   out.clip = center + vec4<f32>(screenOffset, 0.0, 0.0);
@@ -140,5 +207,6 @@ fn vs(
   let bpRp = STAR_COLORIDX_MIN + (f32(colorIdx) + 0.5) * STAR_COLORIDX_STEP;
   out.color = starTint(bpRp);
   out.opacity = node.opacity;
+  out.intensity = intensity;
   return out;
 }

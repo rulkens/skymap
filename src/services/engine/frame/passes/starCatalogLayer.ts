@@ -153,11 +153,15 @@ export const starCatalogLayer: ContentLayer = {
 
       const originRelCamMpc: Vec3[] = [];
       const cellScaleMpc: number[] = [];
+      const level: number[] = [];
       for (const nodeDraw of nodeDraws) {
         const node = catalog.nodes[nodeDraw.nodeIndex]!;
         const seam = starNodeOriginRelCamMpc(catalog, node, camPos);
         originRelCamMpc.push(seam.originRelCamMpc);
         cellScaleMpc.push(seam.cellScaleMpc);
+        // The leaf-vs-aggregate discriminant the flux-glow vertex stage needs:
+        // 0 = a point-source leaf star, >0 = a box-filling aggregate.
+        level.push(node.level);
       }
 
       renderer.draw(pass, {
@@ -167,6 +171,7 @@ export const starCatalogLayer: ContentLayer = {
         nodeDraws,
         originRelCamMpc,
         cellScaleMpc,
+        level,
         opacity,
         sizePx,
       });

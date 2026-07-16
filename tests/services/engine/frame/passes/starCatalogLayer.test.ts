@@ -179,6 +179,10 @@ describe('starCatalogLayer.draw', () => {
     expect(call0.nodeDraws.length).toBe(1);
     expect(call0.originRelCamMpc.length).toBe(call0.nodeDraws.length);
     expect(call0.cellScaleMpc.length).toBe(call0.nodeDraws.length);
+    // The flux-glow leaf/aggregate discriminant rides parallel too; the
+    // single-leaf fixture's one node is level 0 (a point-source leaf).
+    expect(call0.level.length).toBe(call0.nodeDraws.length);
+    expect(call0.level[0]).toBe(0);
   });
 
   it('forwards the live star-size setting to every source draw', () => {

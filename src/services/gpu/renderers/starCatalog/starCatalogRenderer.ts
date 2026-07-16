@@ -75,9 +75,11 @@ import { ADDITIVE_BLEND } from '../../lib/blendStates';
 /**
  * Meaningful bytes of the `NodeParams` uniform struct (WGSL std140):
  * originRelCamMpc vec3 (0..11) + cellScaleMpc f32 (12..15) + firstRecord u32
- * (16..19) + opacity f32 (20..23), rounded up to the vec3's 16-byte
- * alignment = 32. This is the bound window SIZE; the per-node dynamic offset
- * strides by `nodeParamStride` (>= this, aligned to the device limit).
+ * (16..19) + opacity f32 (20..23) + level u32 (24..27), rounded up to the
+ * vec3's 16-byte alignment = 32. `level` rides the pad that alignment already
+ * reserved, so adding it did NOT change this size. This is the bound window
+ * SIZE; the per-node dynamic offset strides by `nodeParamStride` (>= this,
+ * aligned to the device limit).
  */
 const NODE_PARAMS_BYTES = 32;
 
@@ -306,8 +308,17 @@ export function createStarCatalogRenderer(
   }
 
   function draw(pass: GPURenderPassEncoder, args: StarCatalogDrawArgs): void {
-    const { source, vp, viewportPx, nodeDraws, originRelCamMpc, cellScaleMpc, opacity, sizePx } =
-      args;
+    const {
+      source,
+      vp,
+      viewportPx,
+      nodeDraws,
+      originRelCamMpc,
+      cellScaleMpc,
+      level,
+      opacity,
+      sizePx,
+    } = args;
     const entry = sources.get(source);
     if (!entry || nodeDraws.length === 0) return;
 
@@ -333,6 +344,7 @@ export function createStarCatalogRenderer(
       nodeScratchView.setFloat32(base + 12, cellScaleMpc[i]!, true);
       nodeScratchView.setUint32(base + 16, nodeDraws[i]!.firstRecord >>> 0, true);
       nodeScratchView.setFloat32(base + 20, opacity, true);
+      nodeScratchView.setUint32(base + 24, level[i]! >>> 0, true);
     }
     ensureNodeParamsBuffer(entry, nodeDraws.length);
     device.queue.writeBuffer(

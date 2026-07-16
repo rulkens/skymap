@@ -60,6 +60,14 @@ struct VSOut {
   @location(1) color: vec3<f32>,
   // Source crossfade alpha, constant across the triangle.
   @location(2) opacity: f32,
+  // Flux-derived peak intensity, constant across the triangle. The vertex
+  // stage sizes the dot from the record's flux + apparent extent and hands the
+  // matching peak here; the fragment scales the Gaussian by it so a record's
+  // INTEGRATED screen luminance is proportional to its flux (see
+  // starCatalog/vertex.wesl's photometric derivation). A leaf carries one
+  // star's flux; an aggregate carries its whole subtree's summed flux — so the
+  // two deposit the same total whether or not the walker refined the node.
+  @location(3) intensity: f32,
 };
 
 // Per-drawn-node uniform. Byte layout (WGSL std140 uniform rules) must stay
@@ -69,10 +77,20 @@ struct VSOut {
 //   offset 12  cellScaleMpc    f32        (box edge in Mpc; offset unit = /1024)
 //   offset 16  firstRecord     u32        (base index into the records blob)
 //   offset 20  opacity         f32        (source crossfade alpha)
-//   struct size 32 (rounded up to the vec3's 16-byte alignment).
+//   offset 24  level           u32        (octree level: 0 = leaf, >0 aggregate)
+//   struct size 32 (rounded up to the vec3's 16-byte alignment — 'level' rides
+//   the pad the vec3 alignment already reserved, so the stride is unchanged).
+//
+// 'level' is the leaf-vs-aggregate discriminant the format deliberately keeps
+// OUT of the record (the record's 5 spare bits stay zero — see
+// starCatalogFormat.ts), recovered instead from the owning node. The vertex
+// stage needs it because a leaf record is a POINT source (one star) while an
+// aggregate record is an EXTENDED source (a whole subtree collapsed to its
+// box): the glow fills the box footprint for the latter but not the former.
 struct NodeParams {
   originRelCamMpc: vec3<f32>,
   cellScaleMpc: f32,
   firstRecord: u32,
   opacity: f32,
+  level: u32,
 };
