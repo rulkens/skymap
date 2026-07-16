@@ -9,6 +9,21 @@
  * per chosen node. It touches no GPU state and does no I/O; the renderer turns
  * the returned `StarNodeDraw[]` into instanced draw calls.
  *
+ * ── The load-time-index / per-frame-walk split (was the dominant cost) ──────
+ *
+ * Descending the tree needs a `(childLevel, childMorton) → nodeIndex` lookup:
+ * the Morton layout names *where* a child sits, not its array slot. This walk
+ * used to rebuild that mapping as a fresh `Map` on *every call* — ~300k
+ * `Map.set` inserts per frame on the large tier (one per node), plus a hashed
+ * `Map.get` per descent step. That per-call rebuild dominated the walk's cost
+ * (the "N1" finding). It is a pure function of the immutable node table, so it
+ * now lives at load time in `starOctreeIndex`, which resolves every child link
+ * once into a flat `childIndex[nodeIdx*8 + octant]` array (`-1` for absent) and
+ * lifts the box geometry + scalar node fields into parallel typed arrays. The
+ * per-frame walk here reads only those typed arrays and scalar locals — O(1)
+ * array reads, no hashing, no object property chains, no per-node allocation.
+ * The refinement heap is reused across calls (module-level scratch; see below).
+ *
  * ── Why nearest-first, and why a budget ────────────────────────────────────
  *
  * The Gaia catalog holds far more stars than can be drawn every frame, and the
@@ -45,6 +60,12 @@
  * view; Task 13 swaps in a viewport-accurate screen-error metric behind the
  * same refine predicate.
  *
+ * The node's on-screen-size proxy is its `edge/distance` ratio — the very same
+ * value that keys the best-first heap. So it is computed *once*, when the node
+ * is pushed onto the heap, and carried back out on pop (the heap returns the
+ * priority alongside the index). The main loop reuses that value as its refine
+ * `angularSize` instead of recomputing `distanceToBox` a second time per node.
+ *
  * ── The covering-partition invariant (load-bearing) ────────────────────────
  *
  * The returned draws are a *covering partition* of the catalog's leaf stars:
@@ -57,22 +78,10 @@
  * aggregate we commit. Double-drawing a star (an ancestor *and* its descendant
  * both drawn) or dropping one (a subtree neither refined nor aggregated) is the
  * bug class the tests guard against.
- *
- * ── Layout invariants this walk relies on ──────────────────────────────────
- *
- * From `buildStarOctree`'s "On-disk layout invariants": `catalog.nodes` holds
- * all leaves first in ascending Morton order, then the aggregate pyramid by
- * ascending `(level, mortonIndex)`, so the *final* node is the single root the
- * descent starts from. A parent's Morton code is `child >> 3` and a child's
- * octant is `child & 7`; inverting that, a level-`L` node with Morton `M` has
- * its present children at level `L-1` with Morton `(M << 3) | k` for each bit
- * `k` set in `childMask`. A `(level, morton) → nodeIndex` map built once from
- * the node table resolves those children. Each node already names its own
- * record slice (`firstRecord`, `recordCount`), so a draw is just that slice.
  */
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
-import { mortonDecode3 } from '../../../../utils/math/mortonDecode3';
+import { starOctreeIndex } from './starOctreeIndex';
 
 /**
  * One instanced draw the cut selected: a contiguous slice of the catalog's
@@ -133,17 +142,15 @@ export function walkStarOctreeCut(
   // callers that don't expose the knob (tests) keep the old behaviour.
   refineThreshold: number = DEFAULT_REFINE_THRESHOLD,
 ): readonly StarNodeDraw[] {
-  const { nodes } = catalog;
-  if (nodes.length === 0) return [];
+  const n = catalog.nodes.length;
+  if (n === 0) return [];
 
-  // ── Children lookup: (level, morton) → nodeIndex, built once ──────────────
-  // A node's present children are level-1 nodes at Morton (M << 3) | k for each
-  // octant k set in childMask; this map resolves those (level, morton) keys to
-  // their node index without scanning the table per descent step.
-  const nodeByKey = new Map<number, number>();
-  for (let i = 0; i < nodes.length; i++) {
-    nodeByKey.set(nodeKey(nodes[i]!.level, nodes[i]!.mortonIndex), i);
-  }
+  // The load-time index: flat child links + box geometry + scalar node fields,
+  // all in typed arrays (built once per catalog, memoised). The hot loop below
+  // reads only these arrays — no Map, no object property chains.
+  const { childIndex, level, firstRecord, recordCount, boxOriginPc, boxEdgePc } =
+    starOctreeIndex(catalog);
+  const [camX, camY, camZ] = camPosPc;
 
   // ── Best-first frontier: a max-heap keyed by on-screen size ───────────────
   // Refinement always advances the largest-on-screen node, so budget is spent
@@ -151,55 +158,65 @@ export function walkStarOctreeCut(
   // set (frontier nodes + committed nodes drawn as-is); refining a node swaps
   // its own cost for its children's, keeping the count exact so the final total
   // is known before the walk ends.
-  const heap = new MaxHeap();
+  const heap = scratchHeap;
+  heap.reset();
   const committed: StarNodeDraw[] = [];
 
-  const rootIndex = nodes.length - 1; // layout invariant: root is the last node
-  let instanceCount = nodes[rootIndex]!.recordCount;
-  heap.push(rootIndex, nodePriority(catalog, rootIndex, camPosPc));
+  const rootIndex = n - 1; // layout invariant: root is the last node
+  let instanceCount = recordCount[rootIndex]!;
+  heap.push(rootIndex, priorityOf(rootIndex, boxOriginPc, boxEdgePc, camX, camY, camZ));
 
   while (heap.size > 0) {
     const nodeIndex = heap.pop();
-    const node = nodes[nodeIndex]!;
+    // The `edge/distance` proxy computed when this node was pushed — the same
+    // value the refine gate needs, so it is NOT recomputed here (no second
+    // `distanceToBox`). For a leaf it is unused.
+    const angularSize = heap.poppedPriority;
 
     // Leaves cannot be refined — they are the real stars; always draw as-is.
     // Their recordCount is already folded into instanceCount (added either as
     // the root's own cost or via a parent's childCost when it was refined).
-    if (node.level === 0) {
+    if (level[nodeIndex] === 0) {
       committed.push({
         nodeIndex,
-        firstRecord: node.firstRecord,
-        recordCount: node.recordCount,
+        firstRecord: firstRecord[nodeIndex]!,
+        recordCount: recordCount[nodeIndex]!,
       });
       continue;
     }
 
-    const edgePc = catalog.cellEdgePc * 2 ** node.level;
-    const distPc = distanceToBox(catalog, node.mortonIndex, node.level, camPosPc);
-    const angularSize = edgePc / Math.max(distPc, MIN_DISTANCE_PC);
-
     // Cost of replacing this aggregate (recordCount 1) with its present
     // children drawn as-is (leaf children add their full star count).
-    const childIndices = presentChildren(nodeByKey, node);
+    const cbase = nodeIndex * 8;
     let childCost = 0;
-    for (const c of childIndices) childCost += nodes[c]!.recordCount;
-    const refineDelta = childCost - node.recordCount;
+    let childCount = 0;
+    for (let k = 0; k < 8; k++) {
+      const c = childIndex[cbase + k]!;
+      if (c < 0) continue;
+      childCost += recordCount[c]!;
+      childCount++;
+    }
+    const refineDelta = childCost - recordCount[nodeIndex]!;
 
     const shouldRefine =
-      childIndices.length > 0 &&
+      childCount > 0 &&
       angularSize >= refineThreshold && // near/large enough to resolve
       instanceCount < budget.typical && // refinement target not yet reached
       instanceCount + refineDelta <= budget.hardCap; // stays under the ceiling
 
     if (shouldRefine) {
       instanceCount += refineDelta;
-      for (const c of childIndices) heap.push(c, nodePriority(catalog, c, camPosPc));
+      for (let k = 0; k < 8; k++) {
+        const c = childIndex[cbase + k]!;
+        if (c < 0) continue;
+        heap.push(c, priorityOf(c, boxOriginPc, boxEdgePc, camX, camY, camZ));
+      }
     } else {
       // Far, sub-pixel, or budget-limited: draw the subtree's single aggregate.
       committed.push({
         nodeIndex,
-        firstRecord: node.firstRecord,
-        recordCount: node.recordCount,
+        firstRecord: firstRecord[nodeIndex]!,
+        recordCount: recordCount[nodeIndex]!,
       });
     }
   }
@@ -207,72 +224,70 @@ export function walkStarOctreeCut(
   return committed;
 }
 
-/** Pack (level, morton) into one integer key for the children lookup map. */
-function nodeKey(level: number, morton: number): number {
-  // level is a single on-disk byte (0..255); shift morton clear of it.
-  return level * 0x100000000 + morton;
-}
-
-/** The present child node indices of an aggregate, via the (level, morton) map. */
-function presentChildren(
-  nodeByKey: Map<number, number>,
-  node: { level: number; mortonIndex: number; childMask: number },
-): number[] {
-  const children: number[] = [];
-  const childLevel = node.level - 1;
-  const baseMorton = node.mortonIndex << 3;
-  for (let k = 0; k < 8; k++) {
-    if ((node.childMask & (1 << k)) === 0) continue;
-    const idx = nodeByKey.get(nodeKey(childLevel, baseMorton | k));
-    if (idx !== undefined) children.push(idx);
-  }
-  return children;
-}
-
-/** Refinement priority: a node's on-screen size proxy, larger = refine sooner. */
-function nodePriority(catalog: StarCatalog, nodeIndex: number, camPosPc: Vec3): number {
-  const node = catalog.nodes[nodeIndex]!;
-  const edgePc = catalog.cellEdgePc * 2 ** node.level;
-  const distPc = distanceToBox(catalog, node.mortonIndex, node.level, camPosPc);
-  return edgePc / Math.max(distPc, MIN_DISTANCE_PC);
-}
-
 /**
- * Euclidean distance in parsecs from the camera to a node's axis-aligned box
- * (0 when the camera is inside). The box origin is `gridOrigin + gridCoords ·
- * edgePc`, where `gridCoords = mortonDecode3(morton)` and the box spans
- * `2^level` leaf cells per axis — the same reconstruction `buildStarOctree`
- * and `starNodeOriginRelCamMpc` use. `camPosPc` is in the same heliocentric
- * parsec frame `gridOrigin` lives in.
+ * Refinement priority: a node's on-screen-size proxy `edgePc / distanceToBox`,
+ * larger = refine sooner. Reads the box geometry from the load-time index's
+ * typed arrays; the distance to the axis-aligned box is 0 when the camera is
+ * inside it. This is the ONLY place `distanceToBox` runs — the value is carried
+ * through the heap to the refine gate (see the header's "computed once" note).
  */
-function distanceToBox(catalog: StarCatalog, morton: number, level: number, camPosPc: Vec3): number {
-  const edgePc = catalog.cellEdgePc * 2 ** level;
-  const [gx, gy, gz] = catalog.gridOrigin;
-  const [cx, cy, cz] = mortonDecode3(morton);
-  const originPc: Vec3 = [gx + cx * edgePc, gy + cy * edgePc, gz + cz * edgePc];
+function priorityOf(
+  i: number,
+  boxOriginPc: Float64Array,
+  boxEdgePc: Float64Array,
+  camX: number,
+  camY: number,
+  camZ: number,
+): number {
+  const edgePc = boxEdgePc[i]!;
+  const o3 = i * 3;
 
+  // Euclidean distance in parsecs from the camera to the node's box (0 inside).
+  // The box origin is `gridOrigin + gridCoords · edgePc`, baked at load time.
   let sq = 0;
-  for (let axis = 0; axis < 3; axis++) {
-    const lo = originPc[axis]!;
+  {
+    const lo = boxOriginPc[o3]!;
     const hi = lo + edgePc;
-    const c = camPosPc[axis]!;
-    const d = c < lo ? lo - c : c > hi ? c - hi : 0;
+    const d = camX < lo ? lo - camX : camX > hi ? camX - hi : 0;
     sq += d * d;
   }
-  return Math.sqrt(sq);
+  {
+    const lo = boxOriginPc[o3 + 1]!;
+    const hi = lo + edgePc;
+    const d = camY < lo ? lo - camY : camY > hi ? camY - hi : 0;
+    sq += d * d;
+  }
+  {
+    const lo = boxOriginPc[o3 + 2]!;
+    const hi = lo + edgePc;
+    const d = camZ < lo ? lo - camZ : camZ > hi ? camZ - hi : 0;
+    sq += d * d;
+  }
+  const distPc = Math.sqrt(sq);
+  return edgePc / Math.max(distPc, MIN_DISTANCE_PC);
 }
 
 /**
  * A binary max-heap of node indices keyed by a float priority. Best-first
  * refinement pops the largest-on-screen node next; a heap keeps that O(log n)
- * instead of an O(n) scan of the frontier each step.
+ * instead of an O(n) scan of the frontier each step. `pop` also exposes the
+ * popped node's priority via `poppedPriority`, so the caller reuses the
+ * on-screen-size proxy it was keyed by without recomputing it.
  */
 class MaxHeap {
   private readonly indices: number[] = [];
   private readonly priorities: number[] = [];
+  /** Priority of the node returned by the most recent `pop` (m7: carried out). */
+  poppedPriority = 0;
 
   get size(): number {
     return this.indices.length;
+  }
+
+  /** Drop all entries, keeping the backing arrays' capacity for reuse. */
+  reset(): void {
+    this.indices.length = 0;
+    this.priorities.length = 0;
   }
 
   push(nodeIndex: number, priority: number): void {
@@ -289,6 +304,7 @@ class MaxHeap {
 
   pop(): number {
     const top = this.indices[0]!;
+    this.poppedPriority = this.priorities[0]!;
     const last = this.indices.length - 1;
     this.swap(0, last);
     this.indices.pop();
@@ -317,3 +333,12 @@ class MaxHeap {
     this.priorities[b] = tp;
   }
 }
+
+/**
+ * The best-first refinement heap, reused across calls. The walk is synchronous
+ * and non-reentrant (each per-source call fully completes before the next), so a
+ * single module-level heap is safe and skips reallocating its two backing arrays
+ * every frame — `reset()` keeps their capacity. It stores `(nodeIndex, priority)`
+ * pairs so a popped node carries its already-computed on-screen-size proxy.
+ */
+const scratchHeap = new MaxHeap();
