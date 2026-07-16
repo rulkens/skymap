@@ -42,7 +42,10 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Foreground-body picking** `blocked` (on #436 reorg + Gaia plan 03) — make bodies/stars new families on the existing pick spine once the Gaia renderer lands; 2026-07-14 design notes captured in the detail file. → [details](backlog/2026-07-12-foreground-body-picking.md)
+- [ ] **Foreground-body + star picking** `ready` **(high prio)** — blockers cleared (#436 merged, Gaia runtime landed); make bodies/stars new families on the existing pick spine, stars first per user 2026-07-17. → [details](backlog/2026-07-12-foreground-body-picking.md)
+- [ ] **Improve planet rendering** `needs-design` — the procedural planet bodies need a visual-quality pass (surfaces, lighting, atmosphere); brainstorm scope first.
+- [ ] **Lower-res offscreen star-aggregate pass** `ready` — try `STAR_AGGREGATE_DIVISOR` 2 → 4 (`renderTargets.ts`); ~4× further fill cut if the upsampled glow field survives visually.
+- [ ] **Bright star clump at ~5.9 kpc** `deferred` — flux verified conserved; residual over-exposure is display policy (mid-anchor slider + summed knee shipped; retune or tone-map shoulder next). → [details](backlog/2026-07-17-star-clump-brightness-5-9kpc.md)
 - [ ] **Star field → own slab** `needs-design` — the depthless star map (points/captions/connectors) inherits NEAR0's Earth-scale depth bracket; a STARS slab row deletes the three clip-z clamps + far-plane coupling. → [details](backlog/2026-07-13-star-field-own-slab.md)
 - [ ] **Milliquas AGN colormap** `needs-design` — AGN reuse the galaxy B−R ramp and misread as blue star-forming; give them their own encoding. Only the kPerZ=0 clamp shipped (#282). → [details](backlog/2026-06-29-milliquas-agn-colormap.md)
 - [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/2026-06-29-supercluster-shape-focus.md)
