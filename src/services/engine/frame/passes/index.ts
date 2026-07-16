@@ -30,9 +30,12 @@
  *   7. horizon-shell       — translucent sphere at the observable-universe edge
  *   8. structure-markers   — at-rest halo + ring for cluster / SC / void structures
  *
- * Four more rows accumulate into the same HDR target, but projected through
- * the near0 slab (their shared `(hdr, NEAR0)` render step — COSMO's fixed
- * near plane would clip their kpc-to-AU-scale anchors):
+ * Six more near-field rows follow, projected through the near0 slab (COSMO's
+ * fixed near plane would clip their kpc-to-AU-scale anchors). Five accumulate
+ * into the HDR target via the shared `(hdr, NEAR0)` render step (milky-way,
+ * star-points, orbit-trails, star-catalog, star-upsample); the sixth,
+ * `star-aggregates`, has its OWN `(star-aggregates, NEAR0)` render step into the
+ * half-res offscreen that `star-upsample` then composites back:
  *
  *   9. milky-way           — star/dust point cloud at the galactic centre
  *                            (the fixed 10 kpc COSMO near plane clipped the
@@ -46,35 +49,42 @@
  *  11. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
  *                            Moon) as screen-space conics with a brightness
  *                            lobe at the body's position (f64 compose seam)
- *  12. star-catalog        — the survey (Gaia bin) stars, streamed as an
- *                            in-file octree and drawn as a per-frame flux-mip
+ *  12. star-aggregates     — the survey (Gaia bin) AGGREGATE stream (interior
+ *                            flux-mip glows), drawn LINEAR into the half-res
+ *                            `star-aggregates` offscreen by its own render step
+ *                            (the fill-bound half of the star pass)
+ *  13. star-catalog        — the survey LEAF stream (real point-source stars),
+ *                            drawn full-res into HDR as a per-frame flux-mip
  *                            cut of additive point sprites (f64 rebase seam),
  *                            crossfading to the procedural Milky-Way cloud
+ *  14. star-upsample       — composites the half-res `star-aggregates` offscreen
+ *                            back into HDR, applying the hue-preserving knee to
+ *                            the summed aggregate field (the LOD-symmetry fix)
  *
  * The next five are premultiplied-OVER overlays, projected through the
  * cosmological slab and drawn post-tone-map onto the swap chain:
  *
- *  13. selection-ring      — per-galaxy / Milky-Way / structure selection halo
- *  14. disk-radius-ring    — debug: catalog-disk-radius calibration ring
- *  15. marker-lines        — screen-space thick-line overlay (e.g. label stems)
- *  16. labels              — MSDF text labels
- *  17. clip-path-debug     — debug: clip-path inspector route + gizmo
+ *  15. selection-ring      — per-galaxy / Milky-Way / structure selection halo
+ *  16. disk-radius-ring    — debug: catalog-disk-radius calibration ring
+ *  17. marker-lines        — screen-space thick-line overlay (e.g. label stems)
+ *  18. labels              — MSDF text labels
+ *  19. clip-path-debug     — debug: clip-path inspector route + gizmo
  *
  * The final rows leave the cosmological slab entirely — the near-field
  * foreground group, projected through the near0 slab (whose near/far track
  * the camera's orbit distance) so the true-scale bodies are never clipped by
  * the cosmological near plane:
  *
- *  18. earth               — true-scale Blue-Marble-textured Earth (f64 compose
+ *  20. earth               — true-scale Blue-Marble-textured Earth (f64 compose
  *                            seam), opaque (depth-tested) into the `foreground:0`
  *                            target
- *  19. star-spheres        — the resolved partition of the stars (the Sun +
+ *  21. star-spheres        — the resolved partition of the stars (the Sun +
  *                            any star crossing STAR_RESOLVE_PX) as true-scale
  *                            flat-emissive spheres (f64 compose seam), opaque
  *                            into the same `foreground:0` target
- *  20. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
+ *  22. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
  *                            (f64 compose seam), opaque into the same target
- *  21. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *  23. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
  *
@@ -159,6 +169,8 @@ import { starSpheresLayer } from './starSpheresLayer';
 import { planetsLayer } from './planetsLayer';
 import { starPointsLayer } from './starPointsLayer';
 import { starCatalogLayer } from './starCatalogLayer';
+import { starAggregatesLayer } from './starAggregatesLayer';
+import { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
 import { orbitTrailsLayer } from './orbitTrailsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 
@@ -182,20 +194,27 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   volumeUpsampleLayer,
   horizonShellLayer,
   structureMarkersLayer,
-  // The (hdr, NEAR0) group: rows that accumulate into the HDR target but
-  // project through NEAR0 (COSMO's fixed near plane would clip their
-  // kpc-to-AU scale anchors), drawn by the frame program's dedicated
-  // (hdr, NEAR0) step AFTER the eight COSMO hdr layers above and before the
-  // tone-map — so they ride the same tone curve as the galaxies. Milky Way
-  // FIRST — its dust pass is multiplicative, and leading the group keeps the
-  // local starfield below out of that multiply (see the header) — then star
-  // points, the conic orbit trails, and the survey (Gaia bin) star catalog
-  // (those three are additive, so their relative order is a listing choice,
-  // not a compositing one).
+  // The near-field NEAR0 rows: they project through NEAR0 (COSMO's fixed near
+  // plane would clip their kpc-to-AU scale anchors), drawn AFTER the eight COSMO
+  // hdr layers above and before the tone-map — so the HDR-target members ride
+  // the same tone curve as the galaxies. Milky Way FIRST — its dust pass is
+  // multiplicative, and leading the group keeps the local starfield below out of
+  // that multiply (see the header) — then star points, the conic orbit trails,
+  // and the survey (Gaia bin) star streams. All the HDR members are additive, so
+  // their relative order is a listing choice, not a compositing one.
   milkyWayLayer,
   starPointsLayer,
   orbitTrailsLayer,
+  // The survey (Gaia bin) stars split into two streams sharing one per-frame
+  // walk: the AGGREGATE glow field draws LINEAR into the half-res
+  // `star-aggregates` offscreen by its OWN render step (so its position here is
+  // a listing choice — a different target); the `star-catalog` LEAF dots draw
+  // full-res into HDR; then `star-upsample` composites the offscreen back in
+  // with the knee applied to the summed field. star-upsample sits adjacent to
+  // the leaf draw for GPU-timing legibility (additive order is commutative).
+  starAggregatesLayer,
   starCatalogLayer,
+  starAggregateUpsampleLayer,
   // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
   // ring leads so marker-lines and labels composite over its stroke; the
   // debug clip-path overlay trails so its route + gizmo draw on top of
@@ -241,5 +260,7 @@ export { starSpheresLayer } from './starSpheresLayer';
 export { planetsLayer } from './planetsLayer';
 export { starPointsLayer } from './starPointsLayer';
 export { starCatalogLayer } from './starCatalogLayer';
+export { starAggregatesLayer } from './starAggregatesLayer';
+export { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
 export { orbitTrailsLayer } from './orbitTrailsLayer';
 export { foregroundLabelsLayer } from './foregroundLabelsLayer';

@@ -49,9 +49,28 @@ import type { StarNodeDraw } from '../../services/gpu/renderers/starCatalog/walk
  * stage needs to size a point-source leaf differently from a box-filling
  * aggregate.
  */
+/**
+ * Which of the two star draw streams a `draw` call records. The survey stars
+ * split at the octree cut: `'leaf'` nodes (childless, real point-source stars)
+ * draw full-resolution into the HDR target with the per-fragment hue-preserving
+ * knee; `'aggregate'` nodes (interior flux-mip glows) draw LINEAR into the
+ * half-res `star-aggregates` offscreen, whose upsample composite applies the
+ * knee to the summed field. The renderer keeps a DEDICATED per-source buffer
+ * pair per stream (never one shared pair) so the two draws — encoded into
+ * different passes in the same frame — cannot clobber each other's data before
+ * submit (the writeBuffer/submit ordering landmine).
+ */
+export type StarDrawStream = 'aggregate' | 'leaf';
+
 export type StarCatalogDrawArgs = {
   /** Which loaded catalog's records buffer to bind. */
   readonly source: SourceType;
+  /**
+   * Which draw stream this call records — selects the fragment pipeline (leaf =
+   * knee'd into HDR, aggregate = linear into the half-res offscreen) and the
+   * per-source buffer pair the params are uploaded to.
+   */
+  readonly stream: StarDrawStream;
   /** Rebased camera-relative view-projection (`narrowMat4(rebaseViewProj(...))`). */
   readonly vp: Float32Array;
   /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */

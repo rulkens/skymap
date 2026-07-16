@@ -53,6 +53,7 @@ import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRen
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
+import type { StarAggregateUpsample } from '../../rendering/StarAggregateUpsample';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
@@ -312,6 +313,17 @@ export type EngineGpuHandles = {
    * sampler + bind-group-layout.
    */
   volumeUpsample: VolumeUpsample | null;
+  /**
+   * Half-res-to-HDR survey-star aggregate upsample composite. Reads the
+   * `star-aggregates` offscreen the aggregate stream drew LINEAR into,
+   * re-applies the star pass's hue-preserving knee to the summed field, and
+   * additively blends the result into HDR (the LOD-symmetry fix). Null until
+   * `initGpu` constructs it (same phase as `volumeUpsample`). Excluded from
+   * `isEngineReady` — when null, `starAggregateUpsampleLayer` skips its draw, so
+   * a null handle is a silent no-op. Stored here so `destroy()` can release the
+   * pipeline + sampler + bind-group-layout via the pass's no-op destroy method.
+   */
+  starAggregateUpsample: StarAggregateUpsample | null;
   /**
    * Pick-buffer debug overlay — fullscreen colour-map of the r32uint
    * pick texture over the tone-mapped frame.  Null until `initGpu`

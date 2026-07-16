@@ -176,6 +176,10 @@ vi.mock('../../../../src/services/gpu/passes/volumeUpsample', () => ({
   createVolumeUpsample: vi.fn(() => makeStub('volumeUpsample')),
 }));
 
+vi.mock('../../../../src/services/gpu/passes/starAggregateUpsample', () => ({
+  createStarAggregateUpsample: vi.fn(() => makeStub('starAggregateUpsample')),
+}));
+
 vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub('pickDebugOverlay')),
 }));
@@ -293,6 +297,7 @@ function makeState(): EngineState {
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
+      starAggregateUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,
       earthRenderer: null,

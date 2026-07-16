@@ -1,4 +1,22 @@
-// starCatalog/fragment.wesl — additive soft-dot fragment for survey stars.
+// starCatalog/fragment.wesl — additive soft-dot fragments for survey stars.
+//
+// Two entry points share the rim-zeroed Gaussian glow profile below:
+//
+//   fs        — the LEAF stream. Applies the hue-preserving soft-knee
+//               ('starKnee', knee.wesl) per glow, at deposit time, and writes
+//               premultiplied '(tint * a, a)' into the HDR accumulation. This
+//               is the full-resolution point-star path; its output is unchanged
+//               by the aggregate split.
+//   fsLinear  — the AGGREGATE stream. Same glow profile, NO knee: it writes the
+//               LINEAR premultiplied glow '(tint * I, I)' into the half-res
+//               'star-aggregates' offscreen, storing the raw pre-knee scalar 'I'
+//               in the ALPHA channel. The offscreen additive-sums both, so its
+//               alpha holds the SUMMED scalar and its rgb the summed tinted
+//               light; the 'star-upsample' composite then applies 'starKnee' to
+//               that summed scalar (starAggregateUpsample/fragment.wesl). Moving
+//               the knee to the summed field is the LOD-symmetry fix — a stack
+//               of sub-knee aggregate quads now compresses like a concentrated
+//               bright leaf does, instead of escaping compression entirely.
 //
 // A soft additive dot like the survey galaxy points and seeded scene stars,
 // but with a RIM-ZEROED Gaussian falloff. The bare 'exp(-r2 * 4.0)' still holds
@@ -30,49 +48,32 @@
 // ## Hue-preserving intensity compression (the whole point of this pass's math)
 //
 // Each glow paints 'tint * scalar', where the tint's channel RATIOS carry the
-// star's colour (blue-white halo aggregates near BP-RP 0.7, reddened disc
-// plane 1.8-2.3). Every tint anchor has r = 1.0 (tint.wesl), so under the
-// shared per-channel tonemap (lib/tonemap.wesl -- all five curves are
-// component-wise, with a final per-channel clamp) a glow whose scalar is far
-// over the displayable range clips red first, then green, collapsing every
-// hue toward yellow-white. At the eye-tuned exposures the survey's peaks sit
-// well into that regime, so the real colour structure -- faithful in the data
-// -- dies at the DISPLAY step.
+// star's colour. Under the shared per-channel tonemap (lib/tonemap.wesl -- all
+// five curves component-wise, with a final per-channel clamp) a glow whose
+// scalar runs far over the displayable range clips its channels one at a time,
+// collapsing every hue toward white; the survey's real colour structure would
+// die at the DISPLAY step. So the LEAF path ('fs') compresses the SCALAR with
+// the soft knee BEFORE the tint multiply -- 'starKnee' in knee.wesl, which owns
+// the curve and its derivation -- keeping the channel ratios (the hue) intact
+// at any exposure. Compressing the shared scalar, not per-channel after the
+// multiply, is what keeps 'tint' pristine (the red channel would otherwise
+// saturate first and drift the ratios); scoping it to this pass, not the shared
+// tonemap, keeps the galaxy + volume calibration untouched.
 //
-// The fix is to compress the SCALAR intensity with a soft rolloff BEFORE the
-// tint multiply, so the channel ratios (i.e. the hue) survive any exposure:
+// ## The two-stream LOD symmetry
 //
-//   compress(I) = KNEE * (1 - exp(-I / KNEE))
-//
-// Linear for I << KNEE (compress(I) ~= I): the faint regime is untouched, so
-// photometric invariance and flux conservation hold EXACTLY there -- which is
-// exactly where an LOD swap must stay invisible (a just-refined child and its
-// share of the parent are both sub-knee and both linear, so the swap deposits
-// the same light). As I grows the output saturates smoothly toward the
-// asymptote KNEE instead of clipping, so a bright CORE whitens the honest way
-// -- by ACCUMULATION of many compressed, still-tinted glows summing past white
-// in the additive target -- not by per-channel clipping of a single glow.
-//
-// WHY on the scalar, before the tint: compressing per-channel AFTER the
-// multiply (compress(tint*I) componentwise) is just a softer version of the
-// same hue collapse -- the red channel, starting highest, saturates first and
-// the ratios still drift. Only compressing the shared scalar keeps 'tint'
-// pristine.
-//
-// WHY here and not the shared tonemap: the tonemap serves galaxies and volumes
-// too, which have their own calibrated look; this compression is scoped to the
-// star layer that needs it, applied per-glow at deposit time.
-//
-// The trade: exact flux LINEARITY is given up in the SATURATED regime -- once
-// either a parent aggregate or its children cross the knee, the children can
-// sum slightly brighter than the compressed parent (compress is concave, so
-// sum of compressed children >= compress of summed parent). That LOD-seam
-// brightness wobble in already-bright cores is the accepted cost; the
-// alternative was hue collapse across the entire bright field.
-//
-// KNEE sits comfortably above 1.0 so bloom still sees genuine HDR values and
-// bright cores still bloom, yet well below the old unbounded peaks so the
-// rolloff actually engages where the colour was dying.
+// The knee is CONCAVE, so where it is applied changes what an LOD swap looks
+// like. In the SUB-knee regime it is ~linear, so a refined child and its share
+// of the parent both deposit the same light -- an LOD swap is invisible there
+// regardless. The break was in the SATURATED regime with a SINGLE stream: many
+// sub-knee AGGREGATE quads, each escaping compression, summed additively to a
+// region far brighter than the same region drawn as one concentrated leaf that
+// DID cross the knee. Splitting the streams fixes it: aggregates draw LINEAR
+// ('fsLinear') into the half-res offscreen and the composite applies 'starKnee'
+// to their SUMMED field, so an aggregate-covered region now compresses exactly
+// like a bright leaf does. The only residual is the genuine concavity across a
+// cross-knee refine (sum of compressed children >= compress of the summed
+// parent) -- an accepted seam wobble in already-bright cores.
 //
 // ## Blend target
 //
@@ -84,38 +85,58 @@
 // octree-cut LOD fade) scales the raw scalar BEFORE compression (below).
 
 import package::starCatalog::io::VSOut;
+import package::starCatalog::knee::starKnee;
 
 // Rim value of the bare Gaussian: exp(-4), the profile's height at r = 1. We
 // subtract it and rescale (below) so the dot fades to exactly 0 at the disc edge
 // -- see the header. Mirrors K_GAUSS's shifted-profile derivation in vertex.wesl.
 const EDGE: f32 = 0.0183156; // exp(-4)
 
-// Soft-knee for the hue-preserving scalar compression (header). The asymptote
-// the compressed scalar saturates toward, and the scale of the linear->
-// saturating transition: I << KNEE is ~linear (faint regime exact), I >> KNEE
-// flattens toward KNEE. 8.0 -- above 1.0 (bright cores still exceed display
-// range and bloom) yet far below the old unbounded peaks (the rolloff engages
-// where hue was collapsing). Eye-tunable via HMR.
-const KNEE: f32 = 8.0;
+// The rim-zeroed Gaussian glow scalar, shared by both entry points: the
+// flux-derived peak 'intensity' spread by the profile and faded by the per-node
+// 'opacity'. Opacity multiplies HERE, before any compression: it is a fade -- a
+// fraction of the glow's light -- so a half-faded bright glow is a dimmed bright
+// glow (compressed as such), NOT a compressed glow then re-dimmed. The returned
+// 'I' is the HDR amplitude and may be far above 1. 'r2' is the squared
+// distance-from-centre the caller already computed for the unit-disc discard, so
+// this helper contains NO discard (each entry point keeps its own, matching the
+// original single-entry shader exactly).
+fn glowScalar(r2: f32, intensity: f32, opacity: f32) -> f32 {
+  // Rim-zeroed Gaussian: (exp(-4 r2) - EDGE) / (1 - EDGE) reaches exactly 0 at
+  // the rim (r2 = 1) so saturated peaks show no hard edge, while g(0) = 1.
+  // K_GAUSS in vertex.wesl integrates THIS profile, keeping total flux conserved.
+  let g = (exp(-r2 * 4.0) - EDGE) / (1.0 - EDGE);
+  return intensity * g * opacity;
+}
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let r2 = dot(in.uv, in.uv);
   // Discard outside the inscribed unit disc so the dot is round.
   if (r2 > 1.0) { discard; }
-  // Rim-zeroed Gaussian: (exp(-4 r2) - EDGE) / (1 - EDGE) reaches exactly 0 at
-  // the rim (r2 = 1) so saturated peaks show no hard edge, while g(0) = 1.
-  // K_GAUSS in vertex.wesl integrates THIS profile, keeping total flux conserved.
-  let g = (exp(-r2 * 4.0) - EDGE) / (1.0 - EDGE);
-  // Raw per-pixel scalar: flux-derived peak * rim-zeroed falloff, faded by the
-  // per-node 'opacity'. Opacity multiplies HERE, before compression: it is a
-  // fade -- a fraction of the glow's light -- so a half-faded bright glow is a
-  // dimmed bright glow (still compressed as such), NOT a compressed glow then
-  // re-dimmed. 'I' is the HDR amplitude and may be far above 1.
-  let I = in.intensity * g * in.opacity;
+  let I = glowScalar(r2, in.intensity, in.opacity);
   // Hue-preserving soft-knee compression on the SCALAR, tint applied AFTER, so
   // the tint's channel ratios (the colour) survive any exposure instead of
-  // clipping toward yellow-white in the shared per-channel tonemap (header).
-  let a = KNEE * (1.0 - exp(-I / KNEE));
+  // clipping toward yellow-white in the shared per-channel tonemap. The curve
+  // lives in knee.wesl, shared with the aggregate-upsample composite.
+  let a = starKnee(I);
   return vec4<f32>(in.color * a, a);
+}
+
+// The AGGREGATE stream's LINEAR variant: same glow, NO knee. rgb is the
+// premultiplied tinted light 'tint * I'; alpha is the RAW pre-knee scalar 'I'.
+// The half-res 'star-aggregates' offscreen additive-sums both channels, so its
+// alpha ends the frame holding the SUMMED scalar and its rgb the summed tinted
+// light. The 'star-upsample' composite reads that back and applies 'starKnee'
+// to the summed scalar -- so overlapping aggregate quads compress as one bright
+// region, the LOD-symmetry fix. Storing the scalar in alpha (rather than reading
+// it back off a channel) keeps the composite independent of the tint's
+// normalization -- the blue O/B tint is NOT r = 1, so a channel proxy would be
+// wrong.
+@fragment
+fn fsLinear(in: VSOut) -> @location(0) vec4<f32> {
+  let r2 = dot(in.uv, in.uv);
+  if (r2 > 1.0) { discard; }
+  let I = glowScalar(r2, in.intensity, in.opacity);
+  return vec4<f32>(in.color * I, I);
 }

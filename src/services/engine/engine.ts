@@ -294,6 +294,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
+      // null until initGpu; excluded from isEngineReady —
+      // starAggregateUpsampleLayer null-checks it in draw, so a null no-ops.
+      starAggregateUpsample: null,
       // Debug overlays. null until initGpu; the per-frame consumer
       // null-checks each together with its `settings.debug.*` toggle.
       pickDebugOverlay: null,
@@ -724,6 +727,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.flowFieldRenderer = null;
     state.gpu.volumeUpsample?.destroy();
     state.gpu.volumeUpsample = null;
+    state.gpu.starAggregateUpsample?.destroy();
+    state.gpu.starAggregateUpsample = null;
     state.gpu.pickDebugOverlay?.destroy();
     state.gpu.pickDebugOverlay = null;
     state.gpu.diskRadiusRing?.destroy();

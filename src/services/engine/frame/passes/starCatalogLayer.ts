@@ -2,15 +2,35 @@
  * starCatalogLayer — the survey (Gaia bin) stars as additive point sprites in
  * the depthless HDR accumulation, the wide-field twin of `starPointsLayer`.
  *
- * ### What it draws
+ * ### The two-stream split (leaf here, aggregate + composite in siblings)
  *
- * Every catalog committed to the star renderer (`loadedCatalogs()`), drawn one
- * source at a time. Each source's octree is walked CPU-side per frame
- * (`walkStarOctreeCut`) into a flux-mip cut — near cells refined to their real
- * leaf stars, far/sub-pixel subtrees collapsed to one aggregate record — so the
- * drawn instance count stays inside the source's `drawBudget` regardless of the
- * millions of stars on disk. Where `starPointsLayer` draws a handful of
- * hand-seeded neighbourhood stars, this row draws the bulk near-field Gaia bin.
+ * The octree cut splits into two visual species with very different GPU cost.
+ * LEAF nodes (childless, real point-source stars, ~1.5 px dots) are trivial
+ * fill; AGGREGATE nodes (interior flux-mip glows whose radius fills the box
+ * footprint × the glow-overlap spread) are the fill-bound bulk of the pass —
+ * measured at tens-to-hundreds of full screens of additive overdraw at
+ * kpc-scale zoom. So the streams draw into different targets:
+ *
+ *   - `starCatalogLayer` (this file) draws the LEAF stream at full resolution
+ *     into the HDR target, keeping the per-fragment hue-preserving knee. Its
+ *     output is unchanged from the single-stream era.
+ *   - `starAggregatesLayer` draws the AGGREGATE stream LINEAR into the half-res
+ *     `star-aggregates` offscreen (quartering its fragment cost).
+ *   - `starAggregateUpsampleLayer` composites that offscreen back into HDR,
+ *     applying the knee to the SUMMED aggregate field — which also fixes the
+ *     LOD compression asymmetry (a stack of sub-knee aggregate quads now
+ *     compresses like a concentrated bright leaf does).
+ *
+ * All three share ONE per-frame CPU pass — `prepareStarCut` — which runs the
+ * octree walk, advances the LOD fades, and PARTITIONS each drawn node into the
+ * leaf or aggregate stream by its `childMask` (0 ⇒ leaf). It is memoised on the
+ * frame's `ctx` so whichever of the two consuming layers draws first triggers
+ * the walk + fade advance exactly once, and the other reads the cache — the
+ * walk is the pass's dominant CPU cost and the fade advance MUST tick once per
+ * frame (a second dt-step would double-advance the ramps). All three layers
+ * gate on the SAME `starCatalogVisible` projection, so the aggregate producer
+ * and its upsample consumer can never disagree (the stale-offscreen trap the
+ * volume liveness projection also guards against).
  *
  * ### Why NEAR0 + the f64 rebase seam (same trap as `starPointsLayer`)
  *
@@ -20,19 +40,19 @@
  * point anchors, each octree node's box origin is a parsec-scale coordinate
  * near-equal to the NEAR0 view translation during the local-map approach: an
  * f32 subtraction cancels catastrophically and jitters the sprites. So the
- * layer rebases in f64 before narrowing — the node origins via
- * `starNodeOriginRelCamMpc` (each box origin re-expressed camera-relative), and
- * the vp via `narrowMat4(rebaseViewProj(view.slab.vp, camPos))`. The renderer
- * stays a dumb f32 pipeline; the precision seam lives here.
+ * walk rebases in f64 before narrowing — the node origins via
+ * `starNodeOriginRelCamMpc` (each box origin re-expressed camera-relative,
+ * keyed on `ctx.drawCamPos` which equals the NEAR0 view origin) — and each
+ * layer narrows the vp via `narrowMat4(rebaseViewProj(view.slab.vp, camPos))`.
+ * The renderer stays a dumb f32 pipeline; the precision seam lives here.
  *
  * ### The shared-vp invariant (load-bearing)
  *
  * The star renderer's camera uniform is ONE shared buffer rewritten on every
  * `draw` call — safe only because every source in a frame receives the
- * IDENTICAL rebased vp. So the rebased vp (and the camera-relative parsec
- * position the walker uses) is computed ONCE per frame, before the per-source
- * loop, and the same matrix reference is handed to every source's draw. There
- * is deliberately no per-source rebase.
+ * IDENTICAL rebased vp. So each layer computes the rebased vp ONCE per frame,
+ * before its per-source loop, and hands the same matrix reference to every
+ * source's draw. There is deliberately no per-source rebase.
  *
  * ### The crossfade — a recede band to the procedural Milky-Way cloud
  *
@@ -52,7 +72,7 @@
  * every frame, so it is VIEW-DEPENDENT: rotating changes which nodes make the
  * cut, and a split/merge transition swaps a parent aggregate for its children
  * instantly. Left alone, every membership change is a hard one-frame pop — the
- * user sees octree boxes flicker in and out while navigating. So the layer keeps
+ * user sees octree boxes flicker in and out while navigating. So the walk keeps
  * a persistent per-node fade (`fadeStateByCatalog`) and ramps each node's opacity
  * 0→1 as it enters the cut and 1→0 as it leaves, holding a leaving node in the
  * draw list until it reaches 0. The per-node draw opacity handed to the renderer
@@ -61,14 +81,15 @@
  *
  * ### When it draws (house rule: gate at `enabled`, opacity 0 ⇒ no render)
  *
- * `enabled` gates on the `starCatalogRenderer` handle (null pre-bootstrap), the
- * `starCatalogs.enabled` master gate, and at least one loaded catalog whose
- * per-item toggle is on AND whose crossfade opacity is still > 0. An additive
- * pass drawing nothing is correctly invisible, but skipping it wholesale also
- * skips the `beginRenderPass` and the tile-RAM round-trip — so a fully-faded or
- * toggled-off bubble costs zero GPU. `enabled` reads the absolute camera
- * (`ctx.drawCamPos`) while `draw` reads NEAR0's origin-relative `view.camPos`;
- * the two coincide because `RENDER_ORIGIN_MPC` is the heliocentric origin.
+ * `starCatalogVisible` gates on the `starCatalogRenderer` handle (null
+ * pre-bootstrap), the `starCatalogs.enabled` master gate, and at least one
+ * loaded catalog whose per-item toggle is on AND whose crossfade opacity is
+ * still > 0. An additive pass drawing nothing is correctly invisible, but
+ * skipping it wholesale also skips the `beginRenderPass` and the tile-RAM
+ * round-trip — so a fully-faded or toggled-off bubble costs zero GPU. It reads
+ * the absolute camera (`ctx.drawCamPos`) while `draw` reads NEAR0's
+ * origin-relative `view.camPos`; the two coincide because `RENDER_ORIGIN_MPC`
+ * is the heliocentric origin.
  *
  * ### Not pickable, and the Sun-exclusion note
  *
@@ -81,9 +102,15 @@
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { SourceType } from '../../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
 import type { StarCatalogSourceEntry } from '../../../../@types/data/starCatalog/StarCatalogSourceEntry';
+import type { StarDrawStream } from '../../../../@types/rendering/StarCatalogRenderer';
 import type { StarNodeDraw } from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
+import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { SlabView } from '../../../../@types/engine/frame/SlabView';
+import type { StarCatalogRenderer } from '../../../../@types/rendering/StarCatalogRenderer';
 import { NEAR0 } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -158,205 +185,283 @@ function crossfadeOpacity(entry: StarCatalogSourceEntry, camDistPc: number): num
   return fadeBand({ fullAt: entry.crossfadePc.inner, goneAt: entry.crossfadePc.outer }, camDistPc);
 }
 
+/**
+ * The shared visibility gate for all three star layers (leaf, aggregate,
+ * upsample). Enabled if the renderer exists, the master toggle is on, and ANY
+ * loaded catalog is toggled on and still inside its crossfade band. All three
+ * layers delegate their `enabled` here so the aggregate producer and its
+ * upsample consumer never disagree — the same shared-projection discipline the
+ * volume liveness gate uses.
+ */
+export function starCatalogVisible(state: EngineState, ctx: ReadyFrameContext): boolean {
+  const renderer = state.gpu.starCatalogRenderer;
+  if (renderer === null) return false;
+  if (!state.settings.starCatalogs.enabled) return false;
+
+  const camDistPc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]) * MPC_TO_PC;
+
+  for (const { source } of renderer.loadedCatalogs()) {
+    const entry = SOURCE_REGISTRY[source];
+    if (entry.type !== 'starCatalog') continue;
+    if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
+    if (crossfadeOpacity(entry, camDistPc) > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * One draw stream's per-source node arrays, parallel to `nodeDraws`. The leaf
+ * stream carries only childless (real-star) nodes with `isAggregate` all 0; the
+ * aggregate stream only interior flux-mip nodes with `isAggregate` all 1. Each
+ * layer assembles `StarCatalogDrawArgs` from one of these plus the per-frame
+ * shared scalars.
+ */
+export type StarNodeStream = {
+  nodeDraws: StarNodeDraw[];
+  originRelCamMpc: Vec3[];
+  cellScaleMpc: number[];
+  isAggregate: number[];
+  subtreeStarCount: number[];
+  opacity: number[];
+};
+
+/** One source's partitioned cut: the leaf stream and the aggregate stream. */
+export type PreparedStarSource = {
+  source: SourceType;
+  leaf: StarNodeStream;
+  aggregate: StarNodeStream;
+};
+
+/**
+ * The per-frame star cut, shared by the leaf / aggregate / upsample layers. The
+ * per-source partitioned streams plus the source-independent shader scalars
+ * (base dot size, exposure-ramped brightness trim, aggregate glow spread) —
+ * each computed once and forwarded identically to every source's draw.
+ */
+export type PreparedStarCut = {
+  sources: PreparedStarSource[];
+  sizePx: number;
+  brightness: number;
+  glowOverlap: number;
+};
+
+function emptyStream(): StarNodeStream {
+  return {
+    nodeDraws: [],
+    originRelCamMpc: [],
+    cellScaleMpc: [],
+    isAggregate: [],
+    subtreeStarCount: [],
+    opacity: [],
+  };
+}
+
+/**
+ * Per-frame memo: `prepareStarCut` runs the walk + fade advance exactly once
+ * per frame even though both the aggregate and leaf layers call it. Keyed on
+ * the frame's `ctx` object — `deriveFrameContext` mints a fresh one each frame —
+ * so a new frame recomputes and the previous entry is GC'd with its `ctx`. The
+ * fade advance mutating `fadeStateByCatalog` is what makes the once-per-frame
+ * guarantee load-bearing: a second dt-step would double-advance the ramps.
+ */
+const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
+
+/**
+ * Walk every loaded catalog's octree, advance its per-node LOD fades, and
+ * PARTITION the resulting cut into a leaf stream (childless real-star nodes)
+ * and an aggregate stream (interior flux-mip nodes) by `childMask`. Returns the
+ * per-source streams plus the shared shader scalars, or `null` when the star
+ * pass is not live (no renderer, master off). Memoised on `ctx` (see
+ * `preparedByCtx`); the fade advance and the render-on-demand wake fire on the
+ * first call for a frame only.
+ */
+export function prepareStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedStarCut | null {
+  if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
+
+  const result = computeStarCut(state, ctx);
+  preparedByCtx.set(ctx, result);
+  return result;
+}
+
+function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedStarCut | null {
+  const renderer = state.gpu.starCatalogRenderer;
+  if (renderer === null) return null;
+  if (!state.settings.starCatalogs.enabled) return null;
+
+  // The camera-relative parsec position the walk keys off, and the heliocentric
+  // distance the crossfade + exposure ramp read. `ctx.drawCamPos` equals the
+  // NEAR0 view origin (RENDER_ORIGIN_MPC is the heliocentric origin), so the
+  // walk is a pure function of (state, ctx) — no SlabView needed here.
+  const camPos: Vec3 = [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]];
+  const camPosPc: Vec3 = [camPos[0] * MPC_TO_PC, camPos[1] * MPC_TO_PC, camPos[2] * MPC_TO_PC];
+  const camDistPc = Math.hypot(camPosPc[0], camPosPc[1], camPosPc[2]);
+
+  const nowMs = ctx.nowMs;
+  const sizePx = state.settings.starCatalogs.sizePx;
+
+  // Scale-dependent DISPLAY exposure rides on `brightness`: `starExposureRamp`
+  // lifts the whole starfield from its near-field baseline (1x) toward the
+  // whole-galaxy anchor as the camera pulls back — the perceptual fix for a
+  // monitor that can't dark-adapt. It reuses the SAME `camDistPc` the crossfade
+  // keyed off (converted to Mpc). The user slider stays a PURE trim on top.
+  const brightness =
+    state.settings.starCatalogs.brightness *
+    starExposureRamp(
+      camDistPc * SCALE_UNITS.PC_TO_MPC,
+      state.settings.starCatalogs.exposureNearX,
+      state.settings.starCatalogs.exposureFarX,
+    );
+
+  const refineThreshold = state.settings.starCatalogs.refineThreshold;
+  const glowOverlap = state.settings.starCatalogs.glowOverlap;
+
+  const sources: PreparedStarSource[] = [];
+  // Tracks whether ANY node is mid-fade across ALL sources this frame, to keep
+  // the render-on-demand loop ticking. One flag per frame — a single request
+  // wakes the whole loop.
+  let anyNodeFading = false;
+
+  for (const { source, catalog } of renderer.loadedCatalogs()) {
+    const entry = SOURCE_REGISTRY[source];
+    if (entry.type !== 'starCatalog') continue;
+    if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
+
+    const sourceCrossfade = crossfadeOpacity(entry, camDistPc);
+    if (sourceCrossfade <= 0) continue; // faded out — additive draw of nothing
+
+    const cut = walkStarOctreeCut(catalog, camPosPc, entry.drawBudget, refineThreshold);
+
+    // ── Advance this catalog's per-node LOD fades ──────────────────────────
+    const fadeState = fadeStateFor(catalog);
+    const dtMs =
+      fadeState.clockMs === null
+        ? Number.POSITIVE_INFINITY
+        : Math.max(0, nowMs - fadeState.clockMs);
+    fadeState.clockMs = nowMs;
+    const step = Math.min(1, dtMs / NODE_FADE_MS);
+    const fades = fadeState.fades;
+
+    // Retarget: nodes in the cut head to full (seeding newcomers at 0), nodes
+    // that left the cut head to 0. The cut is a reused SoA snapshot (invalidated
+    // by the next walk), so its indices are copied here before the next source.
+    const inCut = new Set<number>();
+    for (let i = 0; i < cut.count; i++) {
+      const nodeIndex = cut.nodeIndex[i]!;
+      inCut.add(nodeIndex);
+      const f = fades.get(nodeIndex);
+      if (f === undefined) fades.set(nodeIndex, { opacity: 0, target: 1 });
+      else f.target = 1;
+    }
+    for (const [idx, f] of fades) if (!inCut.has(idx)) f.target = 0;
+
+    const counts = subtreeStarCounts(catalog);
+
+    // Advance + prune + PARTITION in ONE pass over the fade map. A node routes
+    // to the leaf or aggregate stream by its `childMask` (0 ⇒ leaf, records are
+    // real stars; !== 0 ⇒ aggregate, a subtree collapsed to its flux mip) —
+    // NOT its level: a fat leaf sits at level > 0 yet is a leaf. A fading-out
+    // node draws BEYOND the walk's budget for a few frames; that overdraw is
+    // bounded by cut churn and accepted rather than capped (capping would
+    // reintroduce the box-pop the fade exists to remove).
+    const leaf = emptyStream();
+    const aggregate = emptyStream();
+    for (const [idx, f] of fades) {
+      if (f.opacity < f.target) f.opacity = Math.min(f.target, f.opacity + step);
+      else if (f.opacity > f.target) f.opacity = Math.max(f.target, f.opacity - step);
+      if (f.opacity !== f.target) anyNodeFading = true;
+
+      // Fully faded out: drop it from the map (and it draws in neither stream).
+      if (f.opacity <= 0 && f.target === 0) {
+        fades.delete(idx);
+        continue;
+      }
+
+      // A node index outlives its catalog only across a tier swap, which hands
+      // a fresh catalog object (and fade state) — so this is belt-and-braces
+      // against a stale index; drop it rather than deref undefined.
+      const node = catalog.nodes[idx];
+      if (node === undefined) {
+        fades.delete(idx);
+        continue;
+      }
+
+      const isAgg = node.childMask !== 0;
+      const stream = isAgg ? aggregate : leaf;
+      const seam = starNodeOriginRelCamMpc(catalog, node, camPos);
+      stream.nodeDraws.push({
+        nodeIndex: idx,
+        firstRecord: node.firstRecord,
+        recordCount: node.recordCount,
+      });
+      stream.originRelCamMpc.push(seam.originRelCamMpc);
+      stream.cellScaleMpc.push(seam.cellScaleMpc);
+      stream.isAggregate.push(isAgg ? 1 : 0);
+      // Flux-reconstruction multiplier: a leaf record is one real star (1); an
+      // aggregate record stands in for its whole subtree (its star count).
+      stream.subtreeStarCount.push(isAgg ? counts[idx]! : 1);
+      stream.opacity.push(sourceCrossfade * f.opacity);
+    }
+
+    sources.push({ source, leaf, aggregate });
+  }
+
+  if (anyNodeFading) state.subsystems.scheduler.requestRender();
+
+  return { sources, sizePx, brightness, glowOverlap };
+}
+
+/**
+ * Draw one stream of a prepared cut into the open pass: compute the rebased vp
+ * once (the shared-vp invariant) and issue one `renderer.draw` per source that
+ * has nodes in the stream. Shared by the leaf and aggregate layers — the only
+ * difference is which `StarDrawStream` (and which per-source sub-stream) each
+ * selects.
+ */
+function drawStream(
+  renderer: StarCatalogRenderer,
+  pass: GPURenderPassEncoder,
+  view: SlabView,
+  prep: PreparedStarCut,
+  stream: StarDrawStream,
+): void {
+  const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+  for (const s of prep.sources) {
+    const nodes = s[stream];
+    if (nodes.nodeDraws.length === 0) continue;
+    renderer.draw(pass, {
+      source: s.source,
+      stream,
+      vp: rebasedVp,
+      viewportPx: view.viewportPx,
+      nodeDraws: nodes.nodeDraws,
+      originRelCamMpc: nodes.originRelCamMpc,
+      cellScaleMpc: nodes.cellScaleMpc,
+      isAggregate: nodes.isAggregate,
+      subtreeStarCount: nodes.subtreeStarCount,
+      opacity: nodes.opacity,
+      sizePx: prep.sizePx,
+      brightness: prep.brightness,
+      glowOverlap: prep.glowOverlap,
+    });
+  }
+}
+
+export { drawStream };
+
 export const starCatalogLayer: ContentLayer = {
   name: 'star-catalog',
   slab: NEAR0,
   target: 'hdr',
   blend: 'additive',
 
-  enabled(state, ctx) {
-    const renderer = state.gpu.starCatalogRenderer;
-    if (renderer === null) return false;
-    if (!state.settings.starCatalogs.enabled) return false;
-
-    const camDistPc =
-      Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]) * MPC_TO_PC;
-
-    // Enabled if ANY loaded catalog is toggled on and still inside its
-    // crossfade band. Per-source endpoints, so the fade is evaluated per row.
-    for (const { source } of renderer.loadedCatalogs()) {
-      const entry = SOURCE_REGISTRY[source];
-      if (entry.type !== 'starCatalog') continue;
-      if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
-      if (crossfadeOpacity(entry, camDistPc) > 0) return true;
-    }
-    return false;
-  },
+  enabled: starCatalogVisible,
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.starCatalogRenderer;
     if (renderer === null) return;
-
-    const camPos = view.camPos;
-
-    // SHARED-VP INVARIANT: the renderer's camera uniform is ONE buffer rewritten
-    // per draw call — safe only because every source this frame gets the
-    // IDENTICAL rebased vp. Compute it (and the camera-relative parsec position
-    // the walker keys off) ONCE, here, and hand the same values to every source.
-    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
-    const camPosPc: Vec3 = [camPos[0] * MPC_TO_PC, camPos[1] * MPC_TO_PC, camPos[2] * MPC_TO_PC];
-    const camDistPc = Math.hypot(camPosPc[0], camPosPc[1], camPosPc[2]);
-
-    // The frame clock the per-node LOD fades advance against (see the fade-state
-    // note). One value for every source this frame.
-    const nowMs = ctx.nowMs;
-
-    // User's live base star-dot size — the twin of `galaxyCatalogs.sizePx` read
-    // by pointSpritesLayer. Source-independent, so read it ONCE here and hand
-    // the same value to every source's draw (the renderer writes it into the
-    // shared camera uniform; the vertex ramp scales by it).
-    const sizePx = state.settings.starCatalogs.sizePx;
-
-    // User's live star-brightness trim — the twin of `galaxyCatalogs.brightness`.
-    // Also source-independent, so read ONCE and forward the same value to every
-    // draw (the vertex stage multiplies the flux-glow peak by it; 1.0 = identity).
-    //
-    // Scale-dependent DISPLAY exposure rides in here: `starExposureRamp` lifts the
-    // whole starfield from its near-field baseline (1x) toward the whole-galaxy
-    // anchor as the camera pulls back — the perceptual fix for a monitor that
-    // can't dark-adapt (see that module). It reuses the SAME `camDistPc` the
-    // crossfade keyed off (converted to Mpc, the ramp's unit), so there is no
-    // second distance. The user slider stays a PURE trim on top of the ramp.
-    //
-    // The ramp's two anchors are live tuning knobs (`exposureNearX` / `farX`):
-    // the absolute display exposures at the near/far distance anchors, dialled
-    // against the running renderer as the star bins' local flux changes.
-    const brightness =
-      state.settings.starCatalogs.brightness *
-      starExposureRamp(
-        camDistPc * SCALE_UNITS.PC_TO_MPC,
-        state.settings.starCatalogs.exposureNearX,
-        state.settings.starCatalogs.exposureFarX,
-      );
-
-    // The "Detail" knob — CPU walk input, NOT a GPU uniform. Read once and feed
-    // it to every source's `walkStarOctreeCut` (lower ⇒ boxes split earlier).
-    const refineThreshold = state.settings.starCatalogs.refineThreshold;
-
-    // The "Glow overlap" knob — source-independent GPU uniform, rides beside
-    // `sizePx` / `brightness`. The vertex stage spreads aggregate glows by it.
-    const glowOverlap = state.settings.starCatalogs.glowOverlap;
-
-    // Tracks whether ANY node is mid-fade across ALL sources this frame, to keep
-    // the render-on-demand loop ticking (wake below). One flag per frame, not
-    // per source, because a single request wakes the whole loop.
-    let anyNodeFading = false;
-
-    for (const { source, catalog } of renderer.loadedCatalogs()) {
-      const entry = SOURCE_REGISTRY[source];
-      if (entry.type !== 'starCatalog') continue;
-      if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
-
-      const sourceCrossfade = crossfadeOpacity(entry, camDistPc);
-      if (sourceCrossfade <= 0) continue; // faded out — additive draw of nothing
-
-      // Walk this frame's cut — the set of nodes the budget-limited best-first
-      // walk chose. This is the view-dependent membership the fade smooths over.
-      const cut = walkStarOctreeCut(catalog, camPosPc, entry.drawBudget, refineThreshold);
-
-      // ── Advance this catalog's per-node LOD fades ────────────────────────────
-      // Per-catalog frame clock → dt (see StarFadeState). The first frame a
-      // catalog is seen has `clockMs === null`, giving dt = +Infinity, which
-      // snaps every node to its target — the steady-state first paint.
-      const fadeState = fadeStateFor(catalog);
-      const dtMs =
-        fadeState.clockMs === null ? Number.POSITIVE_INFINITY : Math.max(0, nowMs - fadeState.clockMs);
-      fadeState.clockMs = nowMs;
-      const step = Math.min(1, dtMs / NODE_FADE_MS);
-      const fades = fadeState.fades;
-
-      // Retarget: nodes in the cut head to full (seeding newcomers at 0), nodes
-      // that left the cut head to 0. Membership is by node index. The cut is a
-      // reused SoA snapshot (invalidated by the next walk), so its indices are
-      // copied into `inCut` + the fade map here, before this source's walk is
-      // superseded by the next source's.
-      const inCut = new Set<number>();
-      for (let i = 0; i < cut.count; i++) {
-        const nodeIndex = cut.nodeIndex[i]!;
-        inCut.add(nodeIndex);
-        const f = fades.get(nodeIndex);
-        if (f === undefined) fades.set(nodeIndex, { opacity: 0, target: 1 });
-        else f.target = 1;
-      }
-      for (const [idx, f] of fades) if (!inCut.has(idx)) f.target = 0;
-
-      // Per-node leaf-star counts, derived once per catalog (memoised), so an
-      // aggregate draw can hand the shader the multiplier that rebuilds its
-      // subtree's summed flux from the record's stored MEAN flux.
-      const counts = subtreeStarCounts(catalog);
-
-      // Advance + prune + assemble the draw in ONE pass over the fade map. The
-      // draw list is every node still fading (cut nodes fading in, plus nodes
-      // that left the cut still fading out) — so a fading-out node draws BEYOND
-      // the walk's budget for a few frames. That overdraw is bounded by cut
-      // churn (a rotation swaps only the nodes near the frustum edge) and is
-      // accepted rather than capped: capping would reintroduce the pop the fade
-      // exists to remove.
-      const nodeDraws: StarNodeDraw[] = [];
-      const originRelCamMpc: Vec3[] = [];
-      const cellScaleMpc: number[] = [];
-      const isAggregate: number[] = [];
-      const subtreeStarCount: number[] = [];
-      const opacity: number[] = [];
-      for (const [idx, f] of fades) {
-        if (f.opacity < f.target) f.opacity = Math.min(f.target, f.opacity + step);
-        else if (f.opacity > f.target) f.opacity = Math.max(f.target, f.opacity - step);
-        if (f.opacity !== f.target) anyNodeFading = true;
-
-        // Fully faded out: drop it from the map AND the draw list.
-        if (f.opacity <= 0 && f.target === 0) {
-          fades.delete(idx);
-          continue;
-        }
-
-        // A node index outlives its catalog only across a tier swap, which hands
-        // us a fresh catalog object (and fade state) — so this is belt-and-braces
-        // against a stale index; drop it rather than deref undefined.
-        const node = catalog.nodes[idx];
-        if (node === undefined) {
-          fades.delete(idx);
-          continue;
-        }
-
-        // Rebase the node's box origin into the camera-relative f64 frame before
-        // the renderer narrows to f32 (parallel to the draw arrays).
-        const seam = starNodeOriginRelCamMpc(catalog, node, camPos);
-        nodeDraws.push({ nodeIndex: idx, firstRecord: node.firstRecord, recordCount: node.recordCount });
-        originRelCamMpc.push(seam.originRelCamMpc);
-        cellScaleMpc.push(seam.cellScaleMpc);
-        // The leaf-vs-aggregate discriminant the flux-glow vertex stage needs:
-        // 0 = a childless leaf (point-source stars), 1 = a box-filling aggregate.
-        // Keyed on `childMask`, NOT `level`: a fat leaf lives at level > 0 yet is
-        // a leaf whose records are real stars (see `buildStarOctree`).
-        isAggregate.push(node.childMask === 0 ? 0 : 1);
-        // Flux-reconstruction multiplier: a leaf record is one real star (1),
-        // an aggregate record stands in for its whole subtree (its star count).
-        subtreeStarCount.push(node.childMask === 0 ? 1 : counts[idx]!);
-        // Per-node draw opacity = the source crossfade times this node's LOD fade.
-        opacity.push(sourceCrossfade * f.opacity);
-      }
-      if (nodeDraws.length === 0) continue; // empty catalog / nothing left fading
-
-      renderer.draw(pass, {
-        source,
-        vp: rebasedVp,
-        viewportPx: view.viewportPx,
-        nodeDraws,
-        originRelCamMpc,
-        cellScaleMpc,
-        isAggregate,
-        subtreeStarCount,
-        opacity,
-        sizePx,
-        brightness,
-        glowOverlap,
-      });
-    }
-
-    // Render-on-demand wake: a mid-ramp LOD fade needs another frame to keep
-    // advancing, or it freezes until the next input. Reuses the same
-    // `scheduler.requestRender` hook `foregroundLabelsLayer` (caption envelope)
-    // and the label director use for their own fades — no new wake channel.
-    if (anyNodeFading) state.subsystems.scheduler.requestRender();
+    const prep = prepareStarCut(state, ctx);
+    if (prep === null) return;
+    // The LEAF stream: full-resolution point stars into HDR, per-glow knee.
+    drawStream(renderer, pass, view, prep, 'leaf');
   },
 };

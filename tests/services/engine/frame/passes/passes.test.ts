@@ -32,6 +32,8 @@ import {
   starPointsLayer,
   orbitTrailsLayer,
   starCatalogLayer,
+  starAggregatesLayer,
+  starAggregateUpsampleLayer,
   foregroundLabelsLayer,
   structureMarkersLayer,
 } from '../../../../../src/services/engine/frame/passes';
@@ -214,8 +216,11 @@ const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets'];
 // group, driven by the program's dedicated step before the tone-map: the
 // Milky-Way impostor first (its multiplicative dust must never darken the
 // local starfield drawn after it), then the far-partition star points, the
-// orbit trails, and the survey star catalog (the Gaia bin).
-const NEAR_HDR_NAMES = ['milky-way', 'star-points', 'orbit-trails', 'star-catalog'];
+// orbit trails, the survey star LEAF catalog, and the survey aggregate
+// UPSAMPLE composite (adjacent to the leaf draw it composites). The survey
+// aggregate STREAM itself targets 'star-aggregates', not hdr, so it is not in
+// this group.
+const NEAR_HDR_NAMES = ['milky-way', 'star-points', 'orbit-trails', 'star-catalog', 'star-upsample'];
 
 // The near-field captions group: the scene-body name labels. Like the COSMO
 // swap overlays they target the swap chain with premultiplied-OVER, but they
@@ -263,6 +268,7 @@ describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
     expect(nearHdr).toContain(starPointsLayer);
     expect(nearHdr).toContain(orbitTrailsLayer);
     expect(nearHdr).toContain(starCatalogLayer);
+    expect(nearHdr).toContain(starAggregateUpsampleLayer);
     for (const layer of nearHdr) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('hdr');
@@ -328,7 +334,11 @@ describe('CONTENT_LAYERS blend legality', () => {
     // task 10). A layer whose target/blend pair falls outside this table
     // is a data-entry bug in its own file, not a new legal combination.
     for (const layer of CONTENT_LAYERS) {
-      if (layer.target === 'hdr' || layer.target === 'volume') {
+      if (
+        layer.target === 'hdr' ||
+        layer.target === 'volume' ||
+        layer.target === 'star-aggregates'
+      ) {
         expect(layer.blend).toBe('additive');
       } else if (layer.target === 'foreground:0') {
         expect(layer.blend).toBe('opaque');
@@ -359,6 +369,25 @@ describe('scalarVolumeLayer registry row', () => {
     expect(scalarVolumeLayer.blend).toBe('additive');
     expect(CONTENT_LAYERS.filter((l) => l.target === 'hdr')).not.toContain(scalarVolumeLayer);
     expect(CONTENT_LAYERS.filter((l) => l.target === 'swap')).not.toContain(scalarVolumeLayer);
+  });
+});
+
+describe('starAggregatesLayer registry row', () => {
+  it('draws into the star-aggregates offscreen through NEAR0, additive, and stays out of the hdr group', () => {
+    // The survey-star AGGREGATE stream draws LINEAR into its own half-res
+    // offscreen via a dedicated (star-aggregates, NEAR0) render step, so its
+    // 'star-aggregates' target keeps it out of both the hdr and swap groups —
+    // the same isolation `scalar-volume` gets from its 'volume' target.
+    expect(starAggregatesLayer.name).toBe('star-aggregates');
+    expect(starAggregatesLayer.target).toBe('star-aggregates');
+    expect(starAggregatesLayer.slab).toBe(NEAR0);
+    expect(starAggregatesLayer.blend).toBe('additive');
+    expect(CONTENT_LAYERS.filter((l) => l.target === 'hdr')).not.toContain(starAggregatesLayer);
+    expect(CONTENT_LAYERS.filter((l) => l.target === 'swap')).not.toContain(starAggregatesLayer);
+    // The upsample consumer and the aggregate producer share ONE visibility
+    // gate, so a frame can never composite a stale offscreen the producer
+    // skipped clearing.
+    expect(starAggregateUpsampleLayer.enabled).toBe(starAggregatesLayer.enabled);
   });
 });
 

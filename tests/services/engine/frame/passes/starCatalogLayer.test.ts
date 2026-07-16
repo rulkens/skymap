@@ -1,23 +1,19 @@
 /**
- * starCatalogLayer — unit tests for the survey (Gaia bin) star content row.
+ * starCatalogLayer — unit tests for the survey (Gaia bin) star LEAF content
+ * row. The walk / fade / partition that feeds both streams lives in
+ * `prepareStarCut` and is tested in `prepareStarCut.test.ts`; here we pin only
+ * the layer's own behaviour:
  *
- * Two behaviours are load-bearing and asserted here:
+ *   1. `enabled` delegates to `starCatalogVisible` — the toggles AND the
+ *      recede-direction crossfade band that IS the far gate (full inside
+ *      `crossfadePc.inner`, gone past `crossfadePc.outer`). A camera past
+ *      `outer`, the master gate off, the per-item toggle off, or a null
+ *      renderer all close the gate — opacity 0 ⇒ no render work.
  *
- *   1. The `enabled` gate follows the toggles AND the recede-direction
- *      crossfade band. The band IS the far gate (there is no
- *      FOREGROUND_MAX_DISTANCE_MPC cut — the bubble extends well past the
- *      ≤25 pc scene stars): full inside `crossfadePc.inner`, gone past
- *      `crossfadePc.outer`, where the procedural Milky-Way cloud takes over.
- *      A camera past `outer` (or the master gate off, or the per-item toggle
- *      off, or a null renderer) closes the gate — opacity 0 ⇒ no render work
- *      (house rule: gate at `enabled`, not inside `draw`).
- *
- *   2. `draw` computes the rebased view-projection ONCE per frame and hands
- *      the IDENTICAL matrix to every source's `renderer.draw`. The renderer's
- *      camera uniform is one shared buffer rewritten on every draw call, safe
- *      only because every source in a frame receives the same rebased vp — the
- *      test yields two loaded catalogs and asserts both draws got the same
- *      matrix reference (never a per-source rebase).
+ *   2. `draw` records the LEAF stream only, computing the rebased vp ONCE and
+ *      handing the IDENTICAL matrix to every source's `renderer.draw` (the
+ *      shared-camera-uniform invariant), tagged `stream: 'leaf'`, forwarding
+ *      the live size / brightness / glow-overlap scalars.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -39,9 +35,6 @@ import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/Sta
 import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/StarCatalogRenderer';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-const MPC_TO_PC = 1 / SCALE_UNITS.PC_TO_MPC;
-const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC;
-
 const PASS_STUB = {
   setPipeline: vi.fn(),
   setVertexBuffer: vi.fn(),
@@ -56,11 +49,10 @@ function camAtPc(distPc: number): Vec3 {
   return [0, 0, distPc * SCALE_UNITS.PC_TO_MPC];
 }
 
-/** A parsec-frame camera position expressed in the scene's Mpc frame. */
-function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
-  return [pc[0] * PC_TO_MPC, pc[1] * PC_TO_MPC, pc[2] * PC_TO_MPC];
-}
-
+/**
+ * A fresh ctx per call — `prepareStarCut` memoises on the ctx object, so a
+ * distinct object per frame keeps every draw a clean recompute.
+ */
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
   return { drawCamPos: camPos, nowMs } as unknown as ReadyFrameContext;
 }
@@ -76,90 +68,6 @@ function makeCatalog(): StarCatalog {
     nodes: [{ mortonIndex: 0, level: 0, childMask: 0, firstRecord: 0, recordCount: 1 }],
     records: new Uint8Array(6),
   };
-}
-
-// ── A two-level octree for the LOD-fade tests ────────────────────────────────
-// A single leaf (index 0) parented by a level-1 aggregate (index 1, the root),
-// with `gridOrigin` shifted 10 kpc from the Sun. Placed so the walk REFINES to
-// the leaf when the camera sits on the box (`CLOSE_PC`) and COARSENS to the root
-// aggregate when it pulls to the side (`FAR_PC`) — both heliocentric distances
-// stay inside the Gaia crossfade band, so the source draws in either regime and
-// only the cut MEMBERSHIP flips. That flip is exactly the split/merge the
-// per-node fade smooths, and moving between the two cameras drives it.
-const LEAF_INDEX = 0;
-const ROOT_INDEX = 1;
-const CLOSE_PC: Vec3 = [10_000, 0, 0]; // on the box → refine → cut = { leaf }
-const FAR_PC: Vec3 = [10_000, 5_000, 0]; // to the side → coarsen → cut = { root }
-
-function makeTwoLevelCatalog(): StarCatalog {
-  return {
-    starCount: 1,
-    nodeCount: 2,
-    mortonBitsPerAxis: 9,
-    cellEdgePc: 78,
-    gridOrigin: [10_000, 0, 0],
-    nodes: [
-      { mortonIndex: 0, level: 0, childMask: 0, firstRecord: 0, recordCount: 1 }, // leaf
-      { mortonIndex: 0, level: 1, childMask: 0b1, firstRecord: 1, recordCount: 1 }, // root
-    ],
-    records: new Uint8Array(12),
-  };
-}
-
-/**
- * A single FAT LEAF catalog: one node, childMask 0 at level > 0 holding several
- * real stars. Exercises the leaf-vs-aggregate discriminant — level would
- * misclassify this as an aggregate, but childMask (0) marks it a leaf.
- */
-function makeFatLeafCatalog(): StarCatalog {
-  return {
-    starCount: 5,
-    nodeCount: 1,
-    mortonBitsPerAxis: 9,
-    cellEdgePc: 78,
-    gridOrigin: [0, 0, 0],
-    nodes: [{ mortonIndex: 0, level: 2, childMask: 0, firstRecord: 0, recordCount: 5 }],
-    records: new Uint8Array(5 * 6),
-  };
-}
-
-/**
- * A dense level-0 leaf (3 real stars) under a level-1 aggregate root, shifted
- * 10 kpc out like `makeTwoLevelCatalog` so `FAR_PC` coarsens the cut to the
- * aggregate. The aggregate's subtree count is 3 (distinct from a leaf's 1).
- */
-function makeAggregateCatalog(): StarCatalog {
-  return {
-    starCount: 3,
-    nodeCount: 2,
-    mortonBitsPerAxis: 9,
-    cellEdgePc: 78,
-    gridOrigin: [10_000, 0, 0],
-    nodes: [
-      { mortonIndex: 0, level: 0, childMask: 0, firstRecord: 0, recordCount: 3 },
-      { mortonIndex: 0, level: 1, childMask: 0b1, firstRecord: 3, recordCount: 1 },
-    ],
-    records: new Uint8Array(4 * 6),
-  };
-}
-
-/** The per-node draw opacity of a given node index, or undefined if not drawn. */
-function opacityOfNode(args: StarCatalogDrawArgs, nodeIndex: number): number | undefined {
-  const i = args.nodeDraws.findIndex((d) => d.nodeIndex === nodeIndex);
-  return i === -1 ? undefined : args.opacity[i];
-}
-
-/** The args of the most recent `renderer.draw` call. */
-function lastDrawArgs(
-  renderer: { draw: { mock: { calls: [GPURenderPassEncoder, StarCatalogDrawArgs][] } } },
-): StarCatalogDrawArgs {
-  const { calls } = renderer.draw.mock;
-  return calls[calls.length - 1]![1];
-}
-
-/** Source crossfade at a parsec-frame camera position (its heliocentric dist). */
-function crossfadeAt(pc: Readonly<Vec3>): number {
-  return fadeBand({ fullAt: inner, goneAt: outer }, Math.hypot(pc[0], pc[1], pc[2]));
 }
 
 /** A spy renderer over the StarCatalogRenderer draw surface. */
@@ -192,8 +100,6 @@ function makeState(
   } = opts;
   return {
     gpu: { starCatalogRenderer: renderer },
-    // The LOD-fade wake hook: the layer calls scheduler.requestRender() while any
-    // node is mid-fade (same channel foregroundLabelsLayer uses for captions).
     subsystems: { scheduler: { requestRender: vi.fn() } },
     settings: {
       starCatalogs: {
@@ -235,22 +141,19 @@ describe('starCatalogLayer.enabled', () => {
 
   it('follows the master gate, the per-item toggle, and the crossfade band', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
-    // Inside the band (a hair past inner, still well before outer) → opacity > 0.
     const insideCtx = makeCtx(camAtPc(inner + (outer - inner) * 0.25));
     expect(starCatalogLayer.enabled(makeState(renderer), insideCtx)).toBe(true);
 
-    // Past outer → the recede band has faded to zero → the far gate closes.
     const beyondCtx = makeCtx(camAtPc(outer + 1000));
     expect(starCatalogLayer.enabled(makeState(renderer), beyondCtx)).toBe(false);
 
-    // Master gate off, per-item toggle off → false even inside the band.
     expect(starCatalogLayer.enabled(makeState(renderer, { master: false }), insideCtx)).toBe(false);
     expect(starCatalogLayer.enabled(makeState(renderer, { item: false }), insideCtx)).toBe(false);
   });
 });
 
 describe('starCatalogLayer.draw', () => {
-  it('hands every loaded catalog the SAME rebased vp and its crossfade opacity', () => {
+  it('draws the LEAF stream, handing every source the SAME rebased vp', () => {
     // Two loaded catalogs (same source) exercise the shared-buffer invariant:
     // the rebased vp must be computed once and passed identically to each draw.
     const loaded = [
@@ -264,80 +167,37 @@ describe('starCatalogLayer.draw', () => {
     starCatalogLayer.draw(PASS_STUB, view, makeCtx(camPos), makeState(renderer));
 
     expect(renderer.draw).toHaveBeenCalledTimes(2);
-    const [firstArgs] = renderer.draw.mock.calls[0]! as [GPURenderPassEncoder, StarCatalogDrawArgs];
     const call0 = renderer.draw.mock.calls[0]![1];
     const call1 = renderer.draw.mock.calls[1]![1];
 
-    // Same rebased-vp REFERENCE to both draws (computed once per frame), and
-    // it is the f32 narrow of the f64 rebase off the slab vp — not the raw
-    // pre-narrowed view.vp.
+    // Every leaf draw is tagged 'leaf' and carries only leaf nodes (isAggregate 0).
+    expect(call0.stream).toBe('leaf');
+    expect(call0.isAggregate.every((v) => v === 0)).toBe(true);
+
+    // Same rebased-vp REFERENCE to both draws, and it is the f32 narrow of the
+    // f64 rebase off the slab vp — not the raw pre-narrowed view.vp.
     const expectedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
     expect(call0.vp).toBe(call1.vp);
     expect(call0.vp).not.toBe(view.vp);
     expect(call0.vp).toEqual(expectedVp);
 
-    // Per-node opacity is parallel to nodeDraws. On a catalog's FIRST frame every
-    // node snaps straight to its LOD target (fade = 1), so the drawn value is the
-    // pure source crossfade at the camera's heliocentric distance — partial
-    // mid-band (0 < opacity < 1).
-    const camDistPc = Math.hypot(...camPos) * MPC_TO_PC;
+    // Per-node opacity is parallel to nodeDraws; the single-leaf fixture's one
+    // node snaps to full on its first frame, so opacity is the pure crossfade.
+    const camDistPc = Math.hypot(...camPos) / SCALE_UNITS.PC_TO_MPC;
     const expectedOpacity = fadeBand({ fullAt: inner, goneAt: outer }, camDistPc);
     expect(call0.opacity.length).toBe(call0.nodeDraws.length);
     expect(call0.opacity[0]).toBeCloseTo(expectedOpacity, 10);
-    expect(expectedOpacity).toBeGreaterThan(0);
-    expect(expectedOpacity).toBeLessThan(1);
-
-    // The walked cut and its parallel per-node arrays are non-empty + aligned.
-    expect(firstArgs).toBe(PASS_STUB);
     expect(call0.source).toBe(Source.GaiaStars);
     expect(call0.nodeDraws.length).toBe(1);
-    expect(call0.originRelCamMpc.length).toBe(call0.nodeDraws.length);
-    expect(call0.cellScaleMpc.length).toBe(call0.nodeDraws.length);
-    // The flux-glow leaf/aggregate discriminant rides parallel too; the
-    // single-leaf fixture's one node is a leaf (childMask 0 → isAggregate 0).
-    expect(call0.isAggregate.length).toBe(call0.nodeDraws.length);
-    expect(call0.isAggregate[0]).toBe(0);
-    // The flux-reconstruction multiplier rides parallel too; the single-leaf
-    // fixture's one node is a leaf, so its record stands in for one real star.
-    expect(call0.subtreeStarCount.length).toBe(call0.nodeDraws.length);
-    expect(call0.subtreeStarCount[0]).toBe(1);
   });
 
-  it('forwards the live star-size setting to every source draw', () => {
-    // The user's `settings.starCatalogs.sizePx` must reach the renderer so the
-    // vertex ramp can rescale the star dots. Change it in the store fixture and
-    // assert the stubbed renderer receives the new value (source-independent —
-    // the same value on each draw).
+  it('forwards the live size / brightness-ramp / glow-overlap scalars to every leaf draw', () => {
     const loaded = [
       { source: Source.GaiaStars, catalog: makeCatalog() },
       { source: Source.GaiaStars, catalog: makeCatalog() },
     ];
     const renderer = makeRenderer(loaded);
-    const camPos = camAtPc(inner + (outer - inner) * 0.5);
-    const view = makeNear0View(camPos);
-
-    starCatalogLayer.draw(PASS_STUB, view, makeCtx(camPos), makeState(renderer, { size: 6.25 }));
-
-    expect(renderer.draw).toHaveBeenCalledTimes(2);
-    expect(renderer.draw.mock.calls[0]![1].sizePx).toBe(6.25);
-    expect(renderer.draw.mock.calls[1]![1].sizePx).toBe(6.25);
-  });
-
-  it('forwards the slider brightness times the scale-exposure ramp to every source draw', () => {
-    // The forwarded brightness is the user's `settings.starCatalogs.brightness`
-    // slider (a pure trim) multiplied by the scale-dependent display-exposure
-    // ramp keyed on camera distance. Source-independent — the SAME value on each
-    // draw. Camera at 1_000 pc: full inside the crossfade band (so the source
-    // draws) and inside the ramp's interpolation region (1 pc → 10 kpc), so the
-    // ramp is a genuine interior value (not either clamp) — the multiply is
-    // observable. Expected is computed from the ramp over the SAME distance the
-    // layer keys off, converted to the ramp's Mpc unit.
-    const loaded = [
-      { source: Source.GaiaStars, catalog: makeCatalog() },
-      { source: Source.GaiaStars, catalog: makeCatalog() },
-    ];
-    const renderer = makeRenderer(loaded);
-    const distPc = 1_000;
+    const distPc = 1_000; // inside the crossfade band AND the ramp's interior
     const camPos = camAtPc(distPc);
     const view = makeNear0View(camPos);
 
@@ -345,177 +205,21 @@ describe('starCatalogLayer.draw', () => {
       PASS_STUB,
       view,
       makeCtx(camPos),
-      makeState(renderer, { brightness: 2.0 }),
+      makeState(renderer, { size: 6.25, brightness: 2.0, glowOverlap: 2.2 }),
     );
 
-    const expected = 2.0 * starExposureRamp(distPc * SCALE_UNITS.PC_TO_MPC);
+    const expectedBrightness = 2.0 * starExposureRamp(distPc * SCALE_UNITS.PC_TO_MPC);
     expect(renderer.draw).toHaveBeenCalledTimes(2);
-    expect(renderer.draw.mock.calls[0]![1].brightness).toBeCloseTo(expected, 10);
-    expect(renderer.draw.mock.calls[1]![1].brightness).toBeCloseTo(expected, 10);
-  });
-
-  it('forwards the live glow-overlap setting to every source draw', () => {
-    // The user's `settings.starCatalogs.glowOverlap` must reach the renderer so
-    // the vertex stage can spread aggregate glows. Source-independent — the same
-    // value on each draw. (refineThreshold, by contrast, is a CPU walk input and
-    // never reaches renderer.draw; its behaviour is covered in walkStarOctreeCut.)
-    const loaded = [
-      { source: Source.GaiaStars, catalog: makeCatalog() },
-      { source: Source.GaiaStars, catalog: makeCatalog() },
-    ];
-    const renderer = makeRenderer(loaded);
-    const camPos = camAtPc(inner + (outer - inner) * 0.5);
-    const view = makeNear0View(camPos);
-
-    starCatalogLayer.draw(
-      PASS_STUB,
-      view,
-      makeCtx(camPos),
-      makeState(renderer, { glowOverlap: 2.2 }),
-    );
-
-    expect(renderer.draw).toHaveBeenCalledTimes(2);
-    expect(renderer.draw.mock.calls[0]![1].glowOverlap).toBe(2.2);
-    expect(renderer.draw.mock.calls[1]![1].glowOverlap).toBe(2.2);
+    for (const call of renderer.draw.mock.calls) {
+      expect(call[1].sizePx).toBe(6.25);
+      expect(call[1].glowOverlap).toBe(2.2);
+      expect(call[1].brightness).toBeCloseTo(expectedBrightness, 10);
+    }
   });
 
   it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {
     const view = makeNear0View(camAtPc(inner));
     const state = makeState(null);
     expect(() => starCatalogLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
-  });
-});
-
-describe('starCatalogLayer.draw per-node LOD fades', () => {
-  // Every test builds a FRESH catalog object: the fade state is keyed by catalog,
-  // so a fresh catalog starts with empty fade state and its first draw snaps —
-  // the tests are isolated with no shared-clock bookkeeping. Each test's first
-  // frame establishes the steady state; later frames drive the membership flip.
-
-  it('fades a node IN over ~250 ms when it newly enters the cut', () => {
-    const catalog = makeTwoLevelCatalog();
-    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
-    const state = makeState(renderer);
-    const farView = makeNear0View(camAtPcVec(FAR_PC));
-    const closeView = makeNear0View(camAtPcVec(CLOSE_PC));
-
-    // Frame 1 (first frame of this catalog): far → only the root aggregate is in
-    // the cut, snapped to full on the steady-state first paint. The leaf is absent.
-    starCatalogLayer.draw(PASS_STUB, farView, makeCtx(camAtPcVec(FAR_PC), 0), state);
-    expect(opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX)).toBeUndefined();
-
-    // Frame 2: camera closes → the leaf newly enters the cut. Only 50 ms of dt,
-    // so on its FIRST frame it is drawn PARTWAY through its fade, below full.
-    starCatalogLayer.draw(PASS_STUB, closeView, makeCtx(camAtPcVec(CLOSE_PC), 50), state);
-    const crossfadeClose = crossfadeAt(CLOSE_PC);
-    const leafEntering = opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX);
-    expect(leafEntering).toBeGreaterThan(0);
-    expect(leafEntering).toBeLessThan(crossfadeClose); // faded in, not yet full
-    expect(leafEntering).toBeCloseTo(crossfadeClose * (50 / 250), 6);
-
-    // Frame 3: ≥250 ms more of dt → the leaf reaches full (crossfade × fade 1).
-    starCatalogLayer.draw(PASS_STUB, closeView, makeCtx(camAtPcVec(CLOSE_PC), 350), state);
-    expect(opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX)).toBeCloseTo(crossfadeClose, 6);
-  });
-
-  it('keeps a leaving node drawn while it fades OUT, then drops it once faded', () => {
-    const catalog = makeTwoLevelCatalog();
-    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
-    const state = makeState(renderer);
-    const farView = makeNear0View(camAtPcVec(FAR_PC));
-    const closeView = makeNear0View(camAtPcVec(CLOSE_PC));
-
-    // Frame 1: close → the leaf is in the cut, snapped to full.
-    starCatalogLayer.draw(PASS_STUB, closeView, makeCtx(camAtPcVec(CLOSE_PC), 0), state);
-    expect(opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX)).toBeGreaterThan(0);
-
-    // Frame 2: camera pulls back → the leaf LEAVES the cut (the root aggregate
-    // takes over). Small dt → the leaf is STILL drawn, now fading out below full.
-    starCatalogLayer.draw(PASS_STUB, farView, makeCtx(camAtPcVec(FAR_PC), 50), state);
-    const leafLeaving = opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX);
-    expect(leafLeaving).toBeGreaterThan(0); // still drawn while fading
-    expect(leafLeaving).toBeCloseTo(crossfadeAt(FAR_PC) * (1 - 50 / 250), 6);
-
-    // Frame 3: ≥250 ms more of dt → the leaf reaches 0 and is dropped entirely.
-    starCatalogLayer.draw(PASS_STUB, farView, makeCtx(camAtPcVec(FAR_PC), 350), state);
-    expect(opacityOfNode(lastDrawArgs(renderer), LEAF_INDEX)).toBeUndefined();
-  });
-
-  it('multiplies each node opacity by its own LOD fade times the shared crossfade', () => {
-    const catalog = makeTwoLevelCatalog();
-    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
-    const state = makeState(renderer);
-    const farView = makeNear0View(camAtPcVec(FAR_PC));
-    const closeView = makeNear0View(camAtPcVec(CLOSE_PC));
-
-    // Frame 1: far → root snapped to full.
-    starCatalogLayer.draw(PASS_STUB, farView, makeCtx(camAtPcVec(FAR_PC), 0), state);
-
-    // Frame 2: close with 100 ms of dt → the leaf enters (fade 0.4) as the root
-    // leaves (fade 0.6). BOTH draw this frame; each opacity is the SAME source
-    // crossfade times its OWN node fade — the product this test pins.
-    starCatalogLayer.draw(PASS_STUB, closeView, makeCtx(camAtPcVec(CLOSE_PC), 100), state);
-    const args = lastDrawArgs(renderer);
-    const crossfade = crossfadeAt(CLOSE_PC);
-    const leafOp = opacityOfNode(args, LEAF_INDEX)!;
-    const rootOp = opacityOfNode(args, ROOT_INDEX)!;
-    expect(leafOp).toBeCloseTo(crossfade * (100 / 250), 6); // fade 0.4
-    expect(rootOp).toBeCloseTo(crossfade * (1 - 100 / 250), 6); // fade 0.6
-    // Distinct per-node fades under one shared crossfade: the drawn ratio is the
-    // fade ratio, so the crossfade cancels and the multiply is unambiguous.
-    expect(leafOp / rootOp).toBeCloseTo(0.4 / 0.6, 6);
-  });
-
-  it('draws a fat leaf with isAggregate 0 and multiplier 1 despite level > 0', () => {
-    // A fat leaf lives above level 0 yet is a leaf: the layer must read the
-    // discriminant off childMask (0), not level, and send multiplier 1 (its
-    // records are real stars), not the record count.
-    const catalog = makeFatLeafCatalog();
-    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
-    const camPos = camAtPc(inner + (outer - inner) * 0.5);
-    starCatalogLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), makeState(renderer));
-
-    const args = lastDrawArgs(renderer);
-    const i = args.nodeDraws.findIndex((d) => d.nodeIndex === 0);
-    expect(i).toBeGreaterThanOrEqual(0);
-    expect(args.isAggregate[i]).toBe(0);
-    expect(args.subtreeStarCount[i]).toBe(1);
-  });
-
-  it('draws an aggregate with isAggregate 1 and its subtree star count', () => {
-    // The far camera coarsens the cut to the level-1 aggregate root (childMask
-    // != 0): isAggregate 1, and the multiplier is its subtree total (3), the
-    // count the shader multiplies the record's mean flux by.
-    const catalog = makeAggregateCatalog();
-    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
-    starCatalogLayer.draw(
-      PASS_STUB,
-      makeNear0View(camAtPcVec(FAR_PC)),
-      makeCtx(camAtPcVec(FAR_PC), 0),
-      makeState(renderer),
-    );
-
-    const args = lastDrawArgs(renderer);
-    const i = args.nodeDraws.findIndex((d) => d.nodeIndex === ROOT_INDEX);
-    expect(i).toBeGreaterThanOrEqual(0);
-    expect(args.isAggregate[i]).toBe(1);
-    expect(args.subtreeStarCount[i]).toBe(3);
-  });
-
-  it('wakes the render loop while a node fade is in flight', () => {
-    const catalog = makeTwoLevelCatalog();
-    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
-    const state = makeState(renderer);
-    const requestRender = vi.mocked(state.subsystems.scheduler.requestRender);
-    const farView = makeNear0View(camAtPcVec(FAR_PC));
-    const closeView = makeNear0View(camAtPcVec(CLOSE_PC));
-
-    // Frame 1: snap (first paint) — nothing is mid-fade, so no wake.
-    starCatalogLayer.draw(PASS_STUB, farView, makeCtx(camAtPcVec(FAR_PC), 0), state);
-    expect(requestRender).not.toHaveBeenCalled();
-
-    // Frame 2: the cut flips → nodes are mid-fade → the loop must keep ticking.
-    starCatalogLayer.draw(PASS_STUB, closeView, makeCtx(camAtPcVec(CLOSE_PC), 50), state);
-    expect(requestRender).toHaveBeenCalled();
   });
 });

@@ -63,15 +63,19 @@ function fakeLayer(name: string, target: string, slab: number): ContentLayer {
 }
 
 describe('frameProgram', () => {
-  it('emits the nine-step main program', () => {
-    // The (hdr, NEAR0) step — the near-field star points — sits after the
-    // cosmological hdr render and BEFORE the hdr→swap composite, so the
-    // stars accumulate into HDR and ride the same tone-map as the galaxies
-    // (COSMO's 0.01 Mpc near plane would clip their parsec-scale anchors).
+  it('emits the ten-step main program', () => {
+    // The survey-star AGGREGATE render (into its own half-res offscreen) sits
+    // BEFORE the hdr NEAR0 step, so the `star-upsample` layer inside that step
+    // can composite it — the twin of the volume render preceding volume-upsample.
+    // The (hdr, NEAR0) step then sits after the cosmological hdr render and
+    // BEFORE the hdr→swap composite, so the stars accumulate into HDR and ride
+    // the same tone-map as the galaxies (COSMO's 0.01 Mpc near plane would clip
+    // their parsec-scale anchors).
     expect(frameProgram(TONE)).toEqual([
       { kind: 'compute', name: 'flow' },
       { kind: 'render', target: 'volume', slab: COSMO },
       { kind: 'render', target: 'hdr', slab: COSMO },
+      { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
       { kind: 'render', target: 'hdr', slab: NEAR0 },
       { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE } },
       { kind: 'render', target: 'swap', slab: COSMO },
@@ -170,18 +174,20 @@ describe('timedSlotsOf', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('derives the real registry slot list: scalar-volume, eight hdr, the (hdr, NEAR0) four, hdr→swap, five swap, near-field tail, pick', () => {
+  it('derives the real registry slot list: scalar-volume, eight hdr, star-aggregates, the (hdr, NEAR0) five, hdr→swap, five swap, near-field tail, pick', () => {
     // The real CONTENT_LAYERS registry against the real program — the exact
     // ordered slot list the timing service allocates from and the DebugPanel
     // iterates. scalar-volume leads (the volume render step), then the eight
-    // COSMO hdr layers in registry order, then milky-way + star-points +
-    // orbit-trails + star-catalog (the dedicated (hdr, NEAR0) step before the
-    // tone-map — milky-way leads that group so its multiplicative dust never
-    // darkens the local starfield), the tone-map composite, the five swap
-    // overlays, then the near-field tail (the foreground:0 body render — one
-    // slot per body layer: earth, star-spheres, planets — the
-    // foreground:0→swap composite, and the NEAR0 swap caption render →
-    // foreground-labels), and pick last.
+    // COSMO hdr layers in registry order, then star-aggregates (its OWN NEAR0
+    // render step, before the hdr NEAR0 step), then milky-way + star-points +
+    // orbit-trails + star-catalog + star-upsample (the dedicated (hdr, NEAR0)
+    // step before the tone-map — milky-way leads that group so its
+    // multiplicative dust never darkens the local starfield, and star-upsample
+    // sits adjacent to the star-catalog leaf draw it composites), the tone-map
+    // composite, the five swap overlays, then the near-field tail (the
+    // foreground:0 body render — one slot per body layer: earth, star-spheres,
+    // planets — the foreground:0→swap composite, and the NEAR0 swap caption
+    // render → foreground-labels), and pick last.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'point-sprites',
@@ -192,10 +198,12 @@ describe('timedSlotsOf', () => {
       'volume-upsample',
       'horizon-shell',
       'structure-markers',
+      'star-aggregates',
       'milky-way',
       'star-points',
       'orbit-trails',
       'star-catalog',
+      'star-upsample',
       'hdr→swap',
       'selection-ring',
       'disk-radius-ring',

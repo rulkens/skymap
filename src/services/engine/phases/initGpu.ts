@@ -61,6 +61,7 @@ import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWa
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
+import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
@@ -363,6 +364,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Built unconditionally; the pipeline is cheap and the 1/3-scale target
   // lives on `renderTargets`, so nothing here depends on viewport size.
   state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
+
+  // ── Half-res survey-star aggregate upsample composite ─────────────
+  //
+  // Built unconditionally alongside the volume upsample; the pipeline is cheap
+  // and the half-res `star-aggregates` target lives on `renderTargets`. Reads
+  // that offscreen, re-applies the star pass's hue-preserving knee to the
+  // summed aggregate field, and adds it into HDR. Targets 'rgba16float' — both
+  // the HDR and the star-aggregates rows share that format.
+  state.gpu.starAggregateUpsample = createStarAggregateUpsample(device, 'rgba16float');
 
   // ── Pick-buffer debug overlay ────────────────────────────────────
   //

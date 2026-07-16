@@ -58,6 +58,23 @@
  * frame with the exact bound SIZE (`count` elements), so the shader's
  * `arrayLength(&prefix)` yields the live draw count — no separate count uniform.
  *
+ * ### Two streams — leaf into HDR, aggregate into a half-res offscreen
+ *
+ * The octree cut splits into a LEAF stream (childless real-star nodes) and an
+ * AGGREGATE stream (interior flux-mip glows). Aggregate glow FILL is the star
+ * pass's dominant GPU cost, so the two streams draw into different targets: the
+ * leaf stream into the full-res HDR accumulation (fragment `fs`, per-glow knee),
+ * the aggregate stream LINEAR into the half-res `star-aggregates` offscreen
+ * (fragment `fsLinear`), which the `star-upsample` composite then knees and adds
+ * back. Both targets are `rgba16float`, so ONE `targetFormat` builds BOTH
+ * pipelines — they differ only in fragment entry point. The two per-source
+ * storage-buffer pairs multiply per stream (aggregate + leaf), and for the SAME
+ * writeBuffer/submit reason: the aggregate draw (into the offscreen pass) and
+ * the leaf draw (into the HDR pass) are encoded in the same frame, so a shared
+ * pair would read only the last-written stream's bytes. Each stream owns its
+ * pair, written once before its draw. `stream` on the draw args picks the
+ * pipeline + the pair.
+ *
  * ### Record repack at upload — 6 bytes → two u32
  *
  * The on-disk record is a 48-bit field stored as two independent 24-bit
@@ -75,6 +92,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type {
   StarCatalogRenderer,
   StarCatalogDrawArgs,
+  StarDrawStream,
 } from '../../../../@types/rendering/StarCatalogRenderer';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
@@ -135,6 +153,29 @@ const BRIGHTNESS_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 4) / 4;
  */
 const GLOW_OVERLAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 8) / 4;
 
+/**
+ * One draw stream's per-source storage buffers: the contiguous NodeParams block
+ * and the parallel prefix sum, plus their shared grow-only capacity. A stream
+ * (leaf or aggregate) owns its OWN pair — the two streams draw into different
+ * passes in the same frame, so a shared pair would read only the last-written
+ * stream's bytes at submit (the writeBuffer/submit landmine).
+ */
+type StreamBuffers = {
+  /**
+   * Per-source `array<NodeParams>` storage buffer, grown as this stream's draw
+   * count grows. Written once per frame (in this stream's `draw`).
+   */
+  nodeParamsBuffer: GPUBuffer | null;
+  /** Per-source `array<u32>` prefix-sum storage buffer, grown alongside. */
+  prefixBuffer: GPUBuffer | null;
+  /** Capacity of the pair in draw slots (grow-only). */
+  drawCapacity: number;
+};
+
+function emptyStreamBuffers(): StreamBuffers {
+  return { nodeParamsBuffer: null, prefixBuffer: null, drawCapacity: 0 };
+}
+
 /** One committed catalog's GPU resources + the octree kept for the layer. */
 type LoadedStarSource = {
   catalog: StarCatalog;
@@ -142,17 +183,8 @@ type LoadedStarSource = {
   recordsBuffer: GPUBuffer;
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
   recordsBindGroup: GPUBindGroup;
-  /**
-   * Per-source `array<NodeParams>` storage buffer, grown as the frame's draw
-   * count grows. Written once per frame (in this source's `draw`). Per-source
-   * (not shared) so a second source's write cannot clobber this one's data
-   * before submit.
-   */
-  nodeParamsBuffer: GPUBuffer | null;
-  /** Per-source `array<u32>` prefix-sum storage buffer, grown alongside. */
-  prefixBuffer: GPUBuffer | null;
-  /** Capacity of `nodeParamsBuffer`/`prefixBuffer` in draw slots (grow-only). */
-  drawCapacity: number;
+  /** The two draw streams' per-source buffer pairs (see `StreamBuffers`). */
+  streams: Record<StarDrawStream, StreamBuffers>;
 };
 
 export function createStarCatalogRenderer(
@@ -216,23 +248,35 @@ export function createStarCatalogRenderer(
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'starCatalog.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'starCatalog.fragment');
 
-  const pipeline = device.createRenderPipeline({
-    label: 'star-catalog-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'star-catalog-pipeline-layout',
-      bindGroupLayouts: [cameraBgl, drawBgl, recordsBgl],
-    }),
-    vertex: { module: vsModule, entryPoint: 'vs' }, // records vertex-pulled, no vertex buffers
-    fragment: {
-      module: fsModule,
-      entryPoint: 'fs',
-      // One/one additive on premultiplied output — overlapping stars brighten.
-      targets: [{ format: targetFormat, blend: ADDITIVE_BLEND }],
-    },
-    // Three vertices per instanced circumscribing-triangle billboard.
-    primitive: { topology: 'triangle-list' },
-    // NO depthStencil: the hdr target has no depth attachment.
+  // Both streams share the vertex stage + the three bind-group layouts, and
+  // both targets (HDR + the star-aggregates offscreen) are rgba16float, so one
+  // pipeline layout + one `targetFormat` builds both. They differ ONLY in the
+  // fragment entry point: `fs` (leaf) applies the per-glow knee, `fsLinear`
+  // (aggregate) writes the linear glow + raw scalar for the composite to knee.
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'star-catalog-pipeline-layout',
+    bindGroupLayouts: [cameraBgl, drawBgl, recordsBgl],
   });
+  function makePipeline(label: string, entryPoint: 'fs' | 'fsLinear'): GPURenderPipeline {
+    return device.createRenderPipeline({
+      label,
+      layout: pipelineLayout,
+      vertex: { module: vsModule, entryPoint: 'vs' }, // records vertex-pulled, no vertex buffers
+      fragment: {
+        module: fsModule,
+        entryPoint,
+        // One/one additive on premultiplied output — overlapping stars brighten.
+        targets: [{ format: targetFormat, blend: ADDITIVE_BLEND }],
+      },
+      // Three vertices per instanced circumscribing-triangle billboard.
+      primitive: { topology: 'triangle-list' },
+      // NO depthStencil: neither the hdr nor the star-aggregates target has depth.
+    });
+  }
+  const pipelines: Record<StarDrawStream, GPURenderPipeline> = {
+    leaf: makePipeline('star-catalog-leaf-pipeline', 'fs'),
+    aggregate: makePipeline('star-catalog-aggregate-pipeline', 'fsLinear'),
+  };
 
   // ── Per-source store ──────────────────────────────────────────────────────
   const sources = new Map<SourceType, LoadedStarSource>();
@@ -262,8 +306,7 @@ export function createStarCatalogRenderer(
       const stale = sources.get(source);
       if (stale) {
         stale.recordsBuffer.destroy();
-        stale.nodeParamsBuffer?.destroy();
-        stale.prefixBuffer?.destroy();
+        destroyStreams(stale);
         sources.delete(source);
       }
       return;
@@ -286,18 +329,23 @@ export function createStarCatalogRenderer(
     const prev = sources.get(source);
     if (prev) {
       prev.recordsBuffer.destroy();
-      prev.nodeParamsBuffer?.destroy();
-      prev.prefixBuffer?.destroy();
+      destroyStreams(prev);
     }
 
     sources.set(source, {
       catalog,
       recordsBuffer,
       recordsBindGroup,
-      nodeParamsBuffer: null,
-      prefixBuffer: null,
-      drawCapacity: 0,
+      streams: { leaf: emptyStreamBuffers(), aggregate: emptyStreamBuffers() },
     });
+  }
+
+  /** Release both stream buffer pairs of a source (replace / unload / teardown). */
+  function destroyStreams(entry: LoadedStarSource): void {
+    for (const stream of ['leaf', 'aggregate'] as const) {
+      entry.streams[stream].nodeParamsBuffer?.destroy();
+      entry.streams[stream].prefixBuffer?.destroy();
+    }
   }
 
   function* loadedCatalogsGen(): IterableIterator<{ source: SourceType; catalog: StarCatalog }> {
@@ -329,24 +377,24 @@ export function createStarCatalogRenderer(
   }
 
   /**
-   * Grow a source's NodeParams + prefix storage buffers to hold `drawCount`
+   * Grow one stream's NodeParams + prefix storage buffers to hold `drawCount`
    * slots (grow-only — GPU buffers are fixed-size, so re-create only when the
    * count exceeds capacity). The bind group over them is NOT built here: it is
    * rebuilt each frame with the exact bound size so `arrayLength(&prefix)` reads
    * the live draw count.
    */
-  function ensureDrawBuffers(entry: LoadedStarSource, drawCount: number): void {
-    if (entry.nodeParamsBuffer !== null && entry.drawCapacity >= drawCount) return;
-    entry.nodeParamsBuffer?.destroy();
-    entry.prefixBuffer?.destroy();
-    entry.drawCapacity = drawCount;
-    entry.nodeParamsBuffer = device.createBuffer({
-      label: 'star-catalog-node-params',
+  function ensureDrawBuffers(buffers: StreamBuffers, stream: StarDrawStream, drawCount: number): void {
+    if (buffers.nodeParamsBuffer !== null && buffers.drawCapacity >= drawCount) return;
+    buffers.nodeParamsBuffer?.destroy();
+    buffers.prefixBuffer?.destroy();
+    buffers.drawCapacity = drawCount;
+    buffers.nodeParamsBuffer = device.createBuffer({
+      label: `star-catalog-${stream}-node-params`,
       size: drawCount * NODE_PARAMS_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    entry.prefixBuffer = device.createBuffer({
-      label: 'star-catalog-prefix',
+    buffers.prefixBuffer = device.createBuffer({
+      label: `star-catalog-${stream}-prefix`,
       size: drawCount * PREFIX_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
@@ -355,6 +403,7 @@ export function createStarCatalogRenderer(
   function draw(pass: GPURenderPassEncoder, args: StarCatalogDrawArgs): void {
     const {
       source,
+      stream,
       vp,
       viewportPx,
       nodeDraws,
@@ -370,6 +419,7 @@ export function createStarCatalogRenderer(
     const entry = sources.get(source);
     const drawCount = nodeDraws.length;
     if (!entry || drawCount === 0) return;
+    const buffers = entry.streams[stream];
 
     // Camera uniform: identical bytes every source, so this repeated write is
     // idempotent (see the module header). floats 18/19 stay zero-init.
@@ -410,25 +460,25 @@ export function createStarCatalogRenderer(
       totalInstances += nodeDraws[i]!.recordCount;
     }
 
-    ensureDrawBuffers(entry, drawCount);
-    device.queue.writeBuffer(entry.nodeParamsBuffer!, 0, nodeScratch, 0, drawCount * NODE_PARAMS_BYTES);
-    device.queue.writeBuffer(entry.prefixBuffer!, 0, prefixScratch, 0, drawCount);
+    ensureDrawBuffers(buffers, stream, drawCount);
+    device.queue.writeBuffer(buffers.nodeParamsBuffer!, 0, nodeScratch, 0, drawCount * NODE_PARAMS_BYTES);
+    device.queue.writeBuffer(buffers.prefixBuffer!, 0, prefixScratch, 0, drawCount);
 
     // Bind group rebuilt per frame with the EXACT bound size (grow-only buffers
     // may over-allocate) so `arrayLength(&prefix)` yields exactly `drawCount`.
     const drawBindGroup = device.createBindGroup({
-      label: 'star-catalog-draw-bg',
+      label: `star-catalog-${stream}-draw-bg`,
       layout: drawBgl,
       entries: [
         {
           binding: 0,
-          resource: { buffer: entry.nodeParamsBuffer!, size: drawCount * NODE_PARAMS_BYTES },
+          resource: { buffer: buffers.nodeParamsBuffer!, size: drawCount * NODE_PARAMS_BYTES },
         },
-        { binding: 1, resource: { buffer: entry.prefixBuffer!, size: drawCount * PREFIX_BYTES } },
+        { binding: 1, resource: { buffer: buffers.prefixBuffer!, size: drawCount * PREFIX_BYTES } },
       ],
     });
 
-    pass.setPipeline(pipeline);
+    pass.setPipeline(pipelines[stream]);
     pass.setBindGroup(0, cameraBindGroup);
     pass.setBindGroup(1, drawBindGroup);
     pass.setBindGroup(2, entry.recordsBindGroup);
@@ -440,8 +490,7 @@ export function createStarCatalogRenderer(
   function destroy(): void {
     for (const entry of sources.values()) {
       entry.recordsBuffer.destroy();
-      entry.nodeParamsBuffer?.destroy();
-      entry.prefixBuffer?.destroy();
+      destroyStreams(entry);
     }
     sources.clear();
     cameraBuffer.destroy();
