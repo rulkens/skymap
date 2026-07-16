@@ -43,10 +43,11 @@ import type { StarNodeDraw } from '../../services/gpu/renderers/starCatalog/walk
 /**
  * One source's per-frame octree cut, as the layer assembles it. The per-node
  * arrays are parallel — index `i` of `originRelCamMpc` / `cellScaleMpc` /
- * `level` describes `nodeDraws[i]`: the first two are the node origin + box
- * scale from `starNodeOriginRelCamMpc`, and `level` is the node's octree level
- * (0 = leaf, >0 = aggregate), which the flux-glow vertex stage needs to size a
- * point-source leaf differently from a box-filling aggregate.
+ * `isAggregate` describes `nodeDraws[i]`: the first two are the node origin +
+ * box scale from `starNodeOriginRelCamMpc`, and `isAggregate` is the
+ * leaf-vs-aggregate flag (0 = leaf, 1 = aggregate), which the flux-glow vertex
+ * stage needs to size a point-source leaf differently from a box-filling
+ * aggregate.
  */
 export type StarCatalogDrawArgs = {
   /** Which loaded catalog's records buffer to bind. */
@@ -74,13 +75,15 @@ export type StarCatalogDrawArgs = {
    */
   readonly subtreeStarCount: readonly number[];
   /**
-   * Per-node octree level (parallel to `nodeDraws`): 0 = leaf (a point-source
-   * star), >0 = aggregate (a subtree collapsed to its flux mip). The vertex
-   * stage fills an aggregate's box footprint with its glow but draws a leaf as
-   * a floor-sized point — the leaf/aggregate discriminant the record itself
-   * deliberately omits (recovered from the owning node's level).
+   * Per-node leaf-vs-aggregate flag (parallel to `nodeDraws`): 0 = leaf (a
+   * point-source star), 1 = aggregate (a subtree collapsed to its flux mip).
+   * The vertex stage fills an aggregate's box footprint with its glow but draws
+   * a leaf as a floor-sized point — the leaf/aggregate discriminant the record
+   * itself deliberately omits. The layer derives it from the owning node's
+   * `childMask` (`0 ⇒ leaf`), NOT its `level`: a fat leaf lives at `level > 0`
+   * yet is a leaf, so level would misclassify it as an aggregate.
    */
-  readonly level: readonly number[];
+  readonly isAggregate: readonly number[];
   /**
    * Per-node draw opacity (parallel to `nodeDraws`): the product of the
    * source crossfade alpha (Task 11's recede band to the procedural Milky-Way

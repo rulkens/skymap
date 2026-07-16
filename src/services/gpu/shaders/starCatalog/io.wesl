@@ -16,19 +16,20 @@
 //   VSOut      — the vertex/fragment contract (one authoritative
 //                declaration makes @location drift structurally impossible,
 //                the same reasoning bodies/starPoints/io.wesl states).
-//   NodeParams — the per-node uniform the renderer binds with a DYNAMIC
-//                OFFSET, one 256-byte-strided block per drawn octree node.
-//                It carries everything a node's records need that is NOT in
-//                the record itself: the node box origin (already rebased
-//                camera-relative in f64 by starNodeOriginRelCamMpc, then
-//                narrowed to f32), the box scale, the record-blob base
-//                offset for this node's slice, and the per-node draw opacity
-//                (source crossfade times the node's octree-cut LOD fade).
-//                Written ONCE per frame per source (never mutated
-//                mid-frame — see the renderer header on the writeBuffer /
-//                submit ordering trap); the per-node draw selects its block
-//                purely by changing the dynamic offset, not by a buffer
-//                write.
+//   NodeParams — one element of the per-source 'array<NodeParams>' storage
+//                buffer, one 32-byte block per drawn octree node, packed
+//                CONTIGUOUSLY (index = draw slot). It carries everything a
+//                node's records need that is NOT in the record itself: the
+//                node box origin (already rebased camera-relative in f64 by
+//                starNodeOriginRelCamMpc, then narrowed to f32), the box
+//                scale, the record-blob base offset for this node's slice,
+//                and the per-node draw opacity (source crossfade times the
+//                node's octree-cut LOD fade). Written ONCE per frame per
+//                source (never mutated mid-frame — see the renderer header on
+//                the writeBuffer / submit ordering trap). The whole cut is
+//                drawn in one instanced call; the vertex stage finds a
+//                record's owning slot by binary-searching the parallel
+//                'prefix' sum, not by a dynamic offset.
 //   StarUniforms — the @group(0) per-frame uniform: the shared 80-byte
 //                'CameraUniforms' prefix (rebased vp + viewportPx) followed
 //                by the user's base star-dot size 'sizePx', star-brightness
@@ -80,8 +81,8 @@ struct VSOut {
   @location(3) intensity: f32,
 };
 
-// Per-drawn-node uniform. Byte layout (WGSL std140 uniform rules) must stay
-// byte-exact with the renderer's per-node write:
+// Per-drawn-node storage element. Byte layout (WGSL std430 storage rules) must
+// stay byte-exact with the renderer's per-draw write:
 //
 //   offset  0  originRelCamMpc  vec3<f32>  (box origin, camera-relative Mpc)
 //   offset 12  cellScaleMpc     f32        (box edge in Mpc; offset unit = /1024)
@@ -90,8 +91,9 @@ struct VSOut {
 //   offset 24  isAggregate      u32        (0 = leaf, 1 = aggregate)
 //   offset 28  subtreeStarCount f32        (stars this record stands in for)
 //   struct size 32 (rounded up to the vec3's 16-byte alignment — 'isAggregate'
-//   and 'subtreeStarCount' ride the pad the vec3 alignment already reserved, so
-//   the stride is unchanged).
+//   and 'subtreeStarCount' ride the pad the vec3 alignment already reserved).
+//   Under std430 the array stride is that 32, so draws pack back-to-back with
+//   no gaps (the std140 window this replaced was the same 32 bytes).
 //
 // 'isAggregate' is the leaf-vs-aggregate discriminant the format deliberately
 // keeps OUT of the record (the record's 5 spare bits stay zero — see

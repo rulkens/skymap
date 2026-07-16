@@ -25,25 +25,38 @@
  * so the layer can walk each octree per frame. Keeping the two apart is the
  * same seam `catalogStore` draws for the galaxy points.
  *
- * ### How each per-node draw reads its params, and the writeBuffer trap
+ * ### One instanced draw per source, via a prefix-sum instance router
  *
  * Every drawn node needs three things NOT in the record: its box origin
  * (camera-relative), its box scale, and its record-slice base. Those go in a
- * `NodeParams` uniform the pipeline binds at `@group(1)` with a DYNAMIC
- * OFFSET — one 256-byte-strided block per node in a single per-source buffer,
- * written ONCE per frame before any draw. The per-node draw then selects its
- * block by changing only the dynamic offset (a bind, not a buffer write), so
- * there is no mid-frame uniform mutation for the WebGPU writeBuffer/submit
- * ordering race to corrupt (CLAUDE.md's landmine — all `queue.writeBuffer`
- * calls execute before the frame's single `submit`, so a per-draw-mutated
- * shared uniform would read only its LAST written value at draw time).
+ * `NodeParams` struct — but instead of one dynamic-offset uniform block per
+ * node bound with a separate draw, the whole cut is drawn in ONE
+ * `draw(3, totalInstances)`. Two per-source read-only storage buffers make
+ * that possible, both written ONCE per frame:
  *
- * That same ordering rule is why the node-params buffer is PER SOURCE, not
- * one shared buffer written per source: two sources writing one buffer would
- * both land before submit, and the first source's draws would read the
- * second source's data. Distinct per-source buffers each retain their own
- * data. (The camera uniform IS shared across sources — its bytes are
- * identical every source in a frame, so the repeated write is idempotent.)
+ *   - `nodeParams`: `array<NodeParams>`, the cut's per-draw params packed
+ *     CONTIGUOUSLY (32 B each, index = draw slot — std430 stride equals the
+ *     std140 size here, so the packing is the same bytes the dynamic-offset
+ *     path used, just tightly packed instead of 256-strided).
+ *   - `prefix`: `array<u32>`, each draw slot's EXCLUSIVE starting global
+ *     instance index (the prefix sum of the per-draw record counts).
+ *
+ * The vertex stage binary-searches `prefix` by `@builtin(instance_index)` to
+ * find its owning draw slot `s`, then reads `nodeParams[s]` and record index
+ * `firstRecord + (instance - prefix[s])`. So 40k `setBindGroup + draw` pairs
+ * collapse to three `setBindGroup`s and one `draw` — the CPU no longer touches
+ * the pass per node.
+ *
+ * The two storage buffers are PER SOURCE, and this is the same WebGPU
+ * writeBuffer/submit landmine as before (CLAUDE.md): all `queue.writeBuffer`
+ * calls execute before the frame's single `submit`, so a buffer SHARED across
+ * sources and written per source would, at draw time, read only the LAST
+ * source's data for every source's draw. Distinct per-source buffers each
+ * retain their own bytes. (The camera uniform IS shared across sources — its
+ * bytes are identical every source in a frame, so the repeated write is
+ * idempotent.) The bind group over the two storage buffers is rebuilt each
+ * frame with the exact bound SIZE (`count` elements), so the shader's
+ * `arrayLength(&prefix)` yields the live draw count — no separate count uniform.
  *
  * ### Record repack at upload — 6 bytes → two u32
  *
@@ -73,16 +86,19 @@ import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniform
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 
 /**
- * Meaningful bytes of the `NodeParams` uniform struct (WGSL std140):
+ * Bytes of one `NodeParams` element in the `array<NodeParams>` storage buffer:
  * originRelCamMpc vec3 (0..11) + cellScaleMpc f32 (12..15) + firstRecord u32
  * (16..19) + opacity f32 (20..23) + isAggregate u32 (24..27) + subtreeStarCount
- * f32 (28..31), rounded up to the vec3's 16-byte alignment = 32. `isAggregate`
- * and `subtreeStarCount` ride the pad that alignment already reserved, so adding
- * them did NOT change this size. This is the bound window SIZE; the per-node
- * dynamic offset strides by `nodeParamStride` (>= this, aligned to the device
- * limit).
+ * f32 (28..31), rounded up to the vec3's 16-byte alignment = 32. Under WGSL
+ * std430 (storage) the array stride is that 16-byte-aligned struct size — the
+ * same 32 the std140 window was — so the CPU packs draws back-to-back at this
+ * stride with no gaps. `isAggregate` and `subtreeStarCount` ride the pad the
+ * vec3 alignment already reserved, so adding them did NOT change this size.
  */
 const NODE_PARAMS_BYTES = 32;
+
+/** Bytes of one `prefix` element (a `u32` exclusive instance-start index). */
+const PREFIX_BYTES = 4;
 
 /** Round `value` up to the next multiple of `align` (a power of two). */
 function alignUp(value: number, align: number): number {
@@ -127,29 +143,22 @@ type LoadedStarSource = {
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
   recordsBindGroup: GPUBindGroup;
   /**
-   * Per-source `NodeParams` uniform, grown as the frame's node count grows.
-   * Written once per frame (in this source's `draw`); the per-node draw
-   * selects a block via dynamic offset. Per-source (not shared) so a second
-   * source's write cannot clobber this one's data before submit.
+   * Per-source `array<NodeParams>` storage buffer, grown as the frame's draw
+   * count grows. Written once per frame (in this source's `draw`). Per-source
+   * (not shared) so a second source's write cannot clobber this one's data
+   * before submit.
    */
   nodeParamsBuffer: GPUBuffer | null;
-  /** `@group(1)` dynamic-offset bind group over `nodeParamsBuffer`. */
-  nodeParamsBindGroup: GPUBindGroup | null;
-  /** Capacity of `nodeParamsBuffer` in node blocks (grow-only). */
-  nodeCapacity: number;
+  /** Per-source `array<u32>` prefix-sum storage buffer, grown alongside. */
+  prefixBuffer: GPUBuffer | null;
+  /** Capacity of `nodeParamsBuffer`/`prefixBuffer` in draw slots (grow-only). */
+  drawCapacity: number;
 };
 
 export function createStarCatalogRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
 ): StarCatalogRenderer {
-  // Dynamic-offset stride: the device's uniform-offset alignment (256 on most
-  // hardware), never smaller than the struct itself.
-  const nodeParamStride = alignUp(
-    NODE_PARAMS_BYTES,
-    device.limits.minUniformBufferOffsetAlignment,
-  );
-
   // ── Camera uniform (shared across sources — see the module header) ────────
   // Sized to STAR_UNIFORM_BYTES: the 80-byte CameraUniforms prefix plus the
   // source-independent `sizePx` + `brightness` + `glowOverlap` scalars, matching
@@ -166,14 +175,22 @@ export function createStarCatalogRenderer(
     label: 'star-catalog-camera-bgl',
     entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
   });
-  const nodeParamsBgl = device.createBindGroupLayout({
-    label: 'star-catalog-node-bgl',
+  const drawBgl = device.createBindGroupLayout({
+    label: 'star-catalog-draw-bgl',
     entries: [
       {
         binding: 0,
         visibility: GPUShaderStage.VERTEX,
-        // Dynamic offset: one bind group, re-pointed per node by offset alone.
-        buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: NODE_PARAMS_BYTES },
+        // The cut's per-draw NodeParams, packed contiguously. Read-only storage
+        // so it is vertex-stage readable and can hold the whole cut (tens of
+        // thousands of draws), which a uniform's 64 KB cap could not.
+        buffer: { type: 'read-only-storage', minBindingSize: NODE_PARAMS_BYTES },
+      },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.VERTEX,
+        // The per-draw exclusive prefix sum; `arrayLength(&prefix)` = draw count.
+        buffer: { type: 'read-only-storage', minBindingSize: PREFIX_BYTES },
       },
     ],
   });
@@ -203,7 +220,7 @@ export function createStarCatalogRenderer(
     label: 'star-catalog-pipeline',
     layout: device.createPipelineLayout({
       label: 'star-catalog-pipeline-layout',
-      bindGroupLayouts: [cameraBgl, nodeParamsBgl, recordsBgl],
+      bindGroupLayouts: [cameraBgl, drawBgl, recordsBgl],
     }),
     vertex: { module: vsModule, entryPoint: 'vs' }, // records vertex-pulled, no vertex buffers
     fragment: {
@@ -246,6 +263,7 @@ export function createStarCatalogRenderer(
       if (stale) {
         stale.recordsBuffer.destroy();
         stale.nodeParamsBuffer?.destroy();
+        stale.prefixBuffer?.destroy();
         sources.delete(source);
       }
       return;
@@ -269,6 +287,7 @@ export function createStarCatalogRenderer(
     if (prev) {
       prev.recordsBuffer.destroy();
       prev.nodeParamsBuffer?.destroy();
+      prev.prefixBuffer?.destroy();
     }
 
     sources.set(source, {
@@ -276,8 +295,8 @@ export function createStarCatalogRenderer(
       recordsBuffer,
       recordsBindGroup,
       nodeParamsBuffer: null,
-      nodeParamsBindGroup: null,
-      nodeCapacity: 0,
+      prefixBuffer: null,
+      drawCapacity: 0,
     });
   }
 
@@ -290,36 +309,46 @@ export function createStarCatalogRenderer(
     return loadedCatalogsGen();
   }
 
-  // ── Per-node params scratch (CPU), grown as node counts grow ──────────────
-  // One reused ArrayBuffer for the whole strided upload; queue.writeBuffer
-  // copies it synchronously, so reuse across sources within a frame is safe.
+  // ── Per-draw upload scratch (CPU), grown as the frame's draw count grows ───
+  // Two reused CPU buffers copied by queue.writeBuffer (which snapshots
+  // synchronously, so reuse across sources within a frame is safe): the
+  // contiguous NodeParams block scratch, and the parallel prefix-sum scratch.
   let nodeScratch = new ArrayBuffer(0);
   let nodeScratchView = new DataView(nodeScratch);
+  let prefixScratch = new Uint32Array(0);
 
-  function ensureScratch(nodeCount: number): void {
-    const needed = nodeCount * nodeParamStride;
+  function ensureScratch(drawCount: number): void {
+    const needed = drawCount * NODE_PARAMS_BYTES;
     if (nodeScratch.byteLength < needed) {
       nodeScratch = new ArrayBuffer(needed);
       nodeScratchView = new DataView(nodeScratch);
     }
+    if (prefixScratch.length < drawCount) {
+      prefixScratch = new Uint32Array(drawCount);
+    }
   }
 
-  /** Grow a source's node-params buffer + bind group to hold `nodeCount` blocks. */
-  function ensureNodeParamsBuffer(entry: LoadedStarSource, nodeCount: number): void {
-    if (entry.nodeParamsBuffer !== null && entry.nodeCapacity >= nodeCount) return;
+  /**
+   * Grow a source's NodeParams + prefix storage buffers to hold `drawCount`
+   * slots (grow-only — GPU buffers are fixed-size, so re-create only when the
+   * count exceeds capacity). The bind group over them is NOT built here: it is
+   * rebuilt each frame with the exact bound size so `arrayLength(&prefix)` reads
+   * the live draw count.
+   */
+  function ensureDrawBuffers(entry: LoadedStarSource, drawCount: number): void {
+    if (entry.nodeParamsBuffer !== null && entry.drawCapacity >= drawCount) return;
     entry.nodeParamsBuffer?.destroy();
-    entry.nodeCapacity = nodeCount;
+    entry.prefixBuffer?.destroy();
+    entry.drawCapacity = drawCount;
     entry.nodeParamsBuffer = device.createBuffer({
       label: 'star-catalog-node-params',
-      size: nodeCount * nodeParamStride,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      size: drawCount * NODE_PARAMS_BYTES,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    entry.nodeParamsBindGroup = device.createBindGroup({
-      label: 'star-catalog-node-bg',
-      layout: nodeParamsBgl,
-      entries: [
-        { binding: 0, resource: { buffer: entry.nodeParamsBuffer, size: NODE_PARAMS_BYTES } },
-      ],
+    entry.prefixBuffer = device.createBuffer({
+      label: 'star-catalog-prefix',
+      size: drawCount * PREFIX_BYTES,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
   }
 
@@ -339,7 +368,8 @@ export function createStarCatalogRenderer(
       glowOverlap,
     } = args;
     const entry = sources.get(source);
-    if (!entry || nodeDraws.length === 0) return;
+    const drawCount = nodeDraws.length;
+    if (!entry || drawCount === 0) return;
 
     // Camera uniform: identical bytes every source, so this repeated write is
     // idempotent (see the module header). floats 18/19 stay zero-init.
@@ -347,7 +377,7 @@ export function createStarCatalogRenderer(
     // are source-independent (the same base star-dot size + exposure trim + glow
     // spread for every source this frame), so appending them to the shared
     // camera prefix is safe: each source's repeated write lands the identical
-    // values. Written here, ONCE per source before its draws, so there is no
+    // values. Written here, ONCE per source before its draw, so there is no
     // mid-frame mutation for the writeBuffer/submit ordering race to corrupt.
     writeCameraPrefix(cameraScratch, vp, viewportPx);
     cameraScratch[SIZE_PX_FLOAT_INDEX] = sizePx;
@@ -355,10 +385,13 @@ export function createStarCatalogRenderer(
     cameraScratch[GLOW_OVERLAP_FLOAT_INDEX] = glowOverlap;
     device.queue.writeBuffer(cameraBuffer, 0, cameraScratch);
 
-    // Pack every node's params into the strided scratch, once, then one write.
-    ensureScratch(nodeDraws.length);
-    for (let i = 0; i < nodeDraws.length; i++) {
-      const base = i * nodeParamStride;
+    // Pack every draw's params contiguously and build the exclusive prefix sum
+    // of record counts in the same pass; `totalInstances` is the running sum's
+    // end — the single draw's instance count.
+    ensureScratch(drawCount);
+    let totalInstances = 0;
+    for (let i = 0; i < drawCount; i++) {
+      const base = i * NODE_PARAMS_BYTES;
       const o = originRelCamMpc[i]!;
       nodeScratchView.setFloat32(base + 0, o[0], true);
       nodeScratchView.setFloat32(base + 4, o[1], true);
@@ -370,30 +403,45 @@ export function createStarCatalogRenderer(
       nodeScratchView.setFloat32(base + 20, opacity[i]!, true);
       nodeScratchView.setUint32(base + 24, isAggregate[i]! >>> 0, true);
       nodeScratchView.setFloat32(base + 28, subtreeStarCount[i]!, true);
+      // Exclusive prefix: this draw's first global instance index is the sum of
+      // all earlier draws' record counts. Strictly increasing (every draw has
+      // ≥ 1 record), so the shader's binary search resolves a unique slot.
+      prefixScratch[i] = totalInstances;
+      totalInstances += nodeDraws[i]!.recordCount;
     }
-    ensureNodeParamsBuffer(entry, nodeDraws.length);
-    device.queue.writeBuffer(
-      entry.nodeParamsBuffer!,
-      0,
-      nodeScratch,
-      0,
-      nodeDraws.length * nodeParamStride,
-    );
+
+    ensureDrawBuffers(entry, drawCount);
+    device.queue.writeBuffer(entry.nodeParamsBuffer!, 0, nodeScratch, 0, drawCount * NODE_PARAMS_BYTES);
+    device.queue.writeBuffer(entry.prefixBuffer!, 0, prefixScratch, 0, drawCount);
+
+    // Bind group rebuilt per frame with the EXACT bound size (grow-only buffers
+    // may over-allocate) so `arrayLength(&prefix)` yields exactly `drawCount`.
+    const drawBindGroup = device.createBindGroup({
+      label: 'star-catalog-draw-bg',
+      layout: drawBgl,
+      entries: [
+        {
+          binding: 0,
+          resource: { buffer: entry.nodeParamsBuffer!, size: drawCount * NODE_PARAMS_BYTES },
+        },
+        { binding: 1, resource: { buffer: entry.prefixBuffer!, size: drawCount * PREFIX_BYTES } },
+      ],
+    });
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, cameraBindGroup);
+    pass.setBindGroup(1, drawBindGroup);
     pass.setBindGroup(2, entry.recordsBindGroup);
-    for (let i = 0; i < nodeDraws.length; i++) {
-      // Dynamic offset selects this node's block — a bind, not a write.
-      pass.setBindGroup(1, entry.nodeParamsBindGroup!, [i * nodeParamStride]);
-      pass.draw(3, nodeDraws[i]!.recordCount);
-    }
+    // ONE instanced draw for the whole cut: the vertex stage routes each instance
+    // to its owning draw slot by binary-searching the prefix sum (see vertex.wesl).
+    pass.draw(3, totalInstances);
   }
 
   function destroy(): void {
     for (const entry of sources.values()) {
       entry.recordsBuffer.destroy();
       entry.nodeParamsBuffer?.destroy();
+      entry.prefixBuffer?.destroy();
     }
     sources.clear();
     cameraBuffer.destroy();

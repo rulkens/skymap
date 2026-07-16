@@ -2,18 +2,25 @@
  * NodeParams layout parity — the CPU writer and the WESL struct must agree
  * byte-for-byte.
  *
- * The per-drawn-node uniform is declared in TWO places that a compiler never
- * cross-checks: the WESL `struct NodeParams` (shaders/starCatalog/io.wesl),
- * whose field order + types the GPU uses to address bytes under std140 uniform
- * rules, and the CPU packer in starCatalogRenderer.ts, which writes those same
- * bytes with hand-literal offsets (`setFloat32(base + 12, …)`) plus the
- * `NODE_PARAMS_BYTES` stride constant. Reorder a field, retype one, or shift an
- * offset on either side and the shader silently reads scrambled origins/scales
- * — a class of bug the record round-trip guard (starCatalogRecord.test.ts)
- * catches for the RECORD bytes but nothing catches for the NODE bytes.
+ * The per-drawn-node storage element is declared in TWO places that a compiler
+ * never cross-checks: the WESL `struct NodeParams` (shaders/starCatalog/io.wesl),
+ * whose field order + types the GPU uses to address bytes in the
+ * `array<NodeParams>` storage buffer, and the CPU packer in
+ * starCatalogRenderer.ts, which writes those same bytes contiguously (one
+ * `NODE_PARAMS_BYTES` block per draw slot) with hand-literal offsets
+ * (`setFloat32(base + 12, …)`). Reorder a field, retype one, or shift an offset
+ * on either side and the shader silently reads scrambled origins/scales — a
+ * class of bug the record round-trip guard (starCatalogRecord.test.ts) catches
+ * for the RECORD bytes but nothing catches for the NODE bytes.
+ *
+ * The struct's field offsets and its 16-byte-aligned size are identical under
+ * WGSL std430 (storage) and std140 (uniform) — a lone vec3<f32> followed by
+ * scalars — so this test's std140 offset math is also the true std430 layout the
+ * storage array now uses; the array stride equals the struct size (32), which is
+ * the `NODE_PARAMS_BYTES` the packer strides by.
  *
  * This test derives the canonical layout from the WESL struct (parse the field
- * order + types out of the file text, then apply std140 offsets) and asserts
+ * order + types out of the file text, then apply the offsets) and asserts
  * the writer's actual `setFloat32/setUint32` calls — parsed from the renderer
  * source — cover exactly those offsets with the matching scalar kind and feed
  * each field from the JS expression that names it. So a rename or reorder in

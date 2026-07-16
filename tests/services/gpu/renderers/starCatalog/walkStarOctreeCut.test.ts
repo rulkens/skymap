@@ -4,7 +4,29 @@ import type { OctreeLeafStar, StarOctreeGrid } from '../../../../../tools/stars/
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { mortonEncode3 } from '../../../../../src/utils/math/mortonEncode3';
-import { walkStarOctreeCut } from '../../../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
+import {
+  walkStarOctreeCut,
+  type StarCutSnapshot,
+  type StarNodeDraw,
+} from '../../../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
+
+/**
+ * Materialise the walk's reused SoA snapshot into a plain draw array. The
+ * snapshot's typed arrays are INVALIDATED by the next `walkStarOctreeCut` call
+ * (they are module-level scratch), so every walk below is wrapped here to copy
+ * its cut out before any subsequent walk can overwrite it.
+ */
+function toDraws(cut: StarCutSnapshot): StarNodeDraw[] {
+  const draws: StarNodeDraw[] = [];
+  for (let i = 0; i < cut.count; i++) {
+    draws.push({
+      nodeIndex: cut.nodeIndex[i]!,
+      firstRecord: cut.firstRecord[i]!,
+      recordCount: cut.recordCount[i]!,
+    });
+  }
+  return draws;
+}
 
 // A leaf-cell edge of 1 pc with a zero grid origin makes grid coordinates read
 // directly as parsecs, so cameras below are placed in the same frame.
@@ -70,7 +92,7 @@ describe('walkStarOctreeCut', () => {
     // level 0) — otherwise the property below would be vacuous.
     expect(catalog.nodes.some((n) => n.level > 0 && n.childMask === 0)).toBe(true);
 
-    const draws = walkStarOctreeCut(catalog, [0.5, 0.5, 0.5], BIG);
+    const draws = toDraws(walkStarOctreeCut(catalog, [0.5, 0.5, 0.5], BIG));
 
     // Each committed node's subtree of terminal leaves, unioned, must be every
     // terminal leaf exactly once, and the reachable star total must equal
@@ -98,7 +120,7 @@ describe('walkStarOctreeCut', () => {
     // Camera sitting right on the fat leaf's box (grid cells 2..3 on x) with a
     // fine threshold: a refinable node here would split, but a fat leaf has no
     // children, so it commits as ONE draw carrying its whole star count.
-    const draws = walkStarOctreeCut(catalog, [2.5, 0.5, 0.5], BIG, 0.0001);
+    const draws = toDraws(walkStarOctreeCut(catalog, [2.5, 0.5, 0.5], BIG, 0.0001));
     const fatDraws = draws.filter((d) => d.nodeIndex === fatLeafIndex);
     expect(fatDraws.length).toBe(1);
     expect(fatDraws[0]!.recordCount).toBe(fatLeaf.recordCount);
@@ -118,11 +140,13 @@ describe('walkStarOctreeCut', () => {
     const cam: Vec3 = [6.5, 0.5, 0.5]; // on the box (grid 6..7 on x)
 
     // Generous budget fully refines to the two dense leaves.
-    const generous = walkStarOctreeCut(catalog, cam, BIG);
+    const generous = toDraws(walkStarOctreeCut(catalog, cam, BIG));
     expect(generous.reduce((s, d) => s + d.recordCount, 0)).toBe(catalog.starCount);
 
     // A hard cap below the star count forces the parent aggregate (1 instance).
-    const capped = walkStarOctreeCut(catalog, cam, { typical: BIG.typical, hardCap: STAR_LEAF_CAPACITY });
+    const capped = toDraws(
+      walkStarOctreeCut(catalog, cam, { typical: BIG.typical, hardCap: STAR_LEAF_CAPACITY }),
+    );
     const cappedInstances = capped.reduce((s, d) => s + d.recordCount, 0);
     expect(cappedInstances).toBeLessThanOrEqual(STAR_LEAF_CAPACITY);
     expect(cappedInstances).toBeLessThan(catalog.starCount);
@@ -141,7 +165,7 @@ describe('walkStarOctreeCut', () => {
       GRID,
     );
 
-    const draws = walkStarOctreeCut(far, [0.5, 0.5, 0.5], BIG);
+    const draws = toDraws(walkStarOctreeCut(far, [0.5, 0.5, 0.5], BIG));
     const nearDraws = draws.filter((d) => far.nodes[d.nodeIndex]!.childMask === 0);
     const farDraws = draws.filter((d) => far.nodes[d.nodeIndex]!.childMask !== 0);
 
@@ -166,8 +190,8 @@ describe('walkStarOctreeCut', () => {
     );
     const cam: Vec3 = [0.5, 0.5, 0.5];
 
-    const coarse = walkStarOctreeCut(catalog, cam, BIG, 0.05);
-    const fine = walkStarOctreeCut(catalog, cam, BIG, 0.0005);
+    const coarse = toDraws(walkStarOctreeCut(catalog, cam, BIG, 0.05));
+    const fine = toDraws(walkStarOctreeCut(catalog, cam, BIG, 0.0005));
 
     const terminals = (draws: readonly { nodeIndex: number }[]) =>
       draws.filter((d) => catalog.nodes[d.nodeIndex]!.childMask === 0).length;

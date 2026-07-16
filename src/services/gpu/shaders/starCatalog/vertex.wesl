@@ -2,22 +2,38 @@
 // (Gaia bin) stars.
 //
 // One instance = one octree record (a leaf star, or an interior node's
-// flux-mip aggregate). The record is not a vertex attribute: it is PULLED
-// from a per-source read-only storage blob at index 'firstRecord +
-// instance_index', so the renderer uploads the record bytes once and the
-// per-frame cost is just per-node draw calls, not a re-baked instance
-// buffer. See the starCatalogRenderer module header for the storage /
-// dynamic-offset discipline.
+// flux-mip aggregate). The whole cut is drawn in ONE instanced call, so an
+// instance is not owned by a per-draw bind: the vertex stage ROUTES itself to
+// its owning octree node by binary-searching the 'prefix' sum (below), then
+// PULLS its record from the per-source storage blob at 'node.firstRecord +
+// localIdx'. The renderer uploads the record bytes once, so the per-frame cost
+// is one NodeParams + prefix write and a single draw — no per-node draw calls.
+// See the starCatalogRenderer module header for the storage discipline.
 //
 // ## Bindings
 //
-//   @group(0) @binding(0)  cam     CameraUniforms — the rebased,
-//                                   camera-relative view-projection + viewport.
-//   @group(1) @binding(0)  node    NodeParams (DYNAMIC OFFSET) — this draw's
-//                                   octree node: box origin (camera-relative),
-//                                   box scale, record-slice base, opacity.
-//   @group(2) @binding(0)  records array<u32> — the source's whole record
-//                                   blob, two u32 halves per 6-byte record.
+//   @group(0) @binding(0)  cam        CameraUniforms — the rebased,
+//                                      camera-relative view-projection + viewport.
+//   @group(1) @binding(0)  nodeParams array<NodeParams> — every drawn node's
+//                                      box origin, scale, record-slice base,
+//                                      opacity, packed one element per draw slot.
+//   @group(1) @binding(1)  prefix     array<u32> — each draw slot's exclusive
+//                                      starting global instance index (a prefix
+//                                      sum of record counts). 'arrayLength' of it
+//                                      is the draw count.
+//   @group(2) @binding(0)  records    array<u32> — the source's whole record
+//                                      blob, two u32 halves per 6-byte record.
+//
+// ## Instance routing (the prefix-sum binary search)
+//
+// 'prefix' is strictly increasing from prefix[0] == 0 (every draw has >= 1
+// record). For an instance index 'ii', its owning draw slot is the LARGEST s
+// with prefix[s] <= ii; then the in-node record index is 'ii - prefix[s]'. A
+// binary search finds s in ~log2(drawCount) <= 32 steps. The loop invariant
+// 'prefix[slotLo] <= ii' holds at entry (slotLo starts 0, prefix[0] == 0 <= ii)
+// and is preserved by only moving slotLo up to a mid whose prefix is still <= ii,
+// so on exit (slotLo == slotHi) slotLo is that largest s — never out of range at
+// ii == 0 or the last instance.
 //
 // ## Record unpack (bit-for-bit the inverse of packStarRecord)
 //
@@ -159,7 +175,8 @@ import package::lib::billboard::expandBillboardScreen;
 import package::lib::billboard::worldLenToPx;
 
 @group(0) @binding(0) var<uniform> u: StarUniforms;
-@group(1) @binding(0) var<uniform> node: NodeParams;
+@group(1) @binding(0) var<storage, read> nodeParams: array<NodeParams>;
+@group(1) @binding(1) var<storage, read> prefix: array<u32>;
 @group(2) @binding(0) var<storage, read> records: array<u32>;
 
 // Magnitude / colour LUT dequant constants — mirror the frozen windows in
@@ -246,10 +263,24 @@ fn vs(
   @builtin(vertex_index) vi: u32,
   @builtin(instance_index) ii: u32,
 ) -> VSOut {
-  // Vertex-pull this instance's record: 'firstInstance' stays 0, so
-  // 'instance_index' is the in-node record index; the base offset is the
-  // node's slice start. Two u32 per record in the repacked blob.
-  let base = node.firstRecord + ii;
+  // Route this instance to its owning draw slot: the largest 'slotLo' with
+  // prefix[slotLo] <= ii (see the header). Bounded at 32 iterations — more than
+  // log2 of any u32 draw count — so the loop always terminates on the GPU.
+  let drawCount = arrayLength(&prefix);
+  var slotLo = 0u;
+  var slotHi = drawCount - 1u;
+  for (var iter = 0u; iter < 32u; iter = iter + 1u) {
+    if (slotLo >= slotHi) { break; }
+    // Upper mid so slotLo can advance; invariant keeps prefix[slotLo] <= ii.
+    let mid = (slotLo + slotHi + 1u) >> 1u;
+    if (prefix[mid] <= ii) { slotLo = mid; } else { slotHi = mid - 1u; }
+  }
+  let node = nodeParams[slotLo];
+
+  // Vertex-pull this instance's record: 'ii - prefix[slotLo]' is the in-node
+  // record index; 'node.firstRecord' is the node's slice start. Two u32 per
+  // record in the repacked blob.
+  let base = node.firstRecord + (ii - prefix[slotLo]);
   let lo = records[base * 2u + 0u];
   let hi = records[base * 2u + 1u];
 

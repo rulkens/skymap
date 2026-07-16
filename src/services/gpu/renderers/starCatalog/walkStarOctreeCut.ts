@@ -5,24 +5,20 @@
  *
  * This is the pure CPU heart of the star renderer. It takes a decoded
  * `StarCatalog` (the octree the `.bin` format serializes) plus the camera and a
- * budget, and returns a flat list of draws — one contiguous record-buffer slice
- * per chosen node. It touches no GPU state and does no I/O; the renderer turns
- * the returned `StarNodeDraw[]` into instanced draw calls.
+ * budget, and returns a flat cut — one contiguous record-buffer slice per chosen
+ * node. It touches no GPU state and does no I/O; the layer turns the returned cut
+ * into a single instanced draw.
  *
- * ── The load-time-index / per-frame-walk split (was the dominant cost) ──────
+ * ── The load-time-index / per-frame-walk split ─────────────────────────────
  *
  * Descending the tree needs a `(childLevel, childMorton) → nodeIndex` lookup:
- * the Morton layout names *where* a child sits, not its array slot. This walk
- * used to rebuild that mapping as a fresh `Map` on *every call* — ~300k
- * `Map.set` inserts per frame on the large tier (one per node), plus a hashed
- * `Map.get` per descent step. That per-call rebuild dominated the walk's cost
- * (the "N1" finding). It is a pure function of the immutable node table, so it
- * now lives at load time in `starOctreeIndex`, which resolves every child link
- * once into a flat `childIndex[nodeIdx*8 + octant]` array (`-1` for absent) and
- * lifts the box geometry + scalar node fields into parallel typed arrays. The
- * per-frame walk here reads only those typed arrays and scalar locals — O(1)
- * array reads, no hashing, no object property chains, no per-node allocation.
- * The refinement heap is reused across calls (module-level scratch; see below).
+ * the Morton layout names *where* a child sits, not its array slot. That mapping
+ * is a pure function of the immutable node table, so it lives at load time in
+ * `starOctreeIndex`, which resolves every child link once into a flat
+ * `childIndex[nodeIdx*8 + octant]` array (`-1` for absent) and lifts the box
+ * geometry + scalar node fields into parallel typed arrays. The per-frame walk
+ * here reads only those typed arrays and scalar locals — O(1) array reads, no
+ * hashing, no object property chains, no per-node allocation.
  *
  * ── Why nearest-first, and why a budget ────────────────────────────────────
  *
@@ -42,33 +38,46 @@
  * is the inviolable ceiling: a refinement that would push the instance count
  * past it is refused even for a near node, so `Σ recordCount ≤ hardCap` always
  * holds (barring a degenerate single-leaf catalog whose one unavoidable leaf
- * already exceeds the cap). Task 13 tunes both knobs and the threshold below
- * against live frame timing.
+ * already exceeds the cap).
+ *
+ * ── Commit-at-push: only refine CANDIDATES transit the heap ─────────────────
+ *
+ * The heap is the cut's dominant cost, and most of what used to pass through it
+ * never refined: on a full budget the cut commits tens of thousands of nodes,
+ * and ~85% of pops were immediate commits (a leaf, or a sub-pixel box) that did
+ * no work but a push + pop + two sift passes. That round trip is pure overhead,
+ * because *once a parent refines, every child is drawn* — the cut is a covering
+ * partition (below), so a non-refinable child has no budget decision left to
+ * make. A child is non-refinable when it is a leaf (childless — its records are
+ * real stars) or its on-screen-size proxy is below the refine threshold
+ * (sub-pixel — drawn as one aggregate regardless of budget). So the walk
+ * *commits such a node the moment it is reached* and pushes only the true refine
+ * CANDIDATES — childful AND above threshold — onto the heap. The root gets the
+ * same classification before the loop. The budget gates are untouched: they
+ * govern only whether a popped candidate actually refines, and they read the
+ * same running instance count in the same order (commits never change it), so
+ * the cut is byte-identical to routing every node through the heap — just far
+ * cheaper.
  *
  * ── Why aggregates for the far / sub-pixel field ───────────────────────────
  *
  * Each interior node carries one flux-weighted centroid record (`recordCount
- * === 1`) that is the whole subtree's light collapsed to a point — see
- * `buildStarOctree`'s flux-merge. Drawing that single record instead of the
- * subtree's thousands of leaf stars is exactly right when the box is smaller
- * than a pixel: the summed flux lands one glow where the cluster is, at a
- * cost of one instance instead of thousands. The refine/coarsen decision here
- * uses a distance-per-box-edge proxy for that on-screen size — a node is
- * refined only while its box edge subtends more than `REFINE_ANGULAR_THRESHOLD`
- * relative to its distance (`edgePc / distancePc`). It is a proxy, not a true
- * pixel error, because this pure function is given no viewport or field of
- * view; Task 13 swaps in a viewport-accurate screen-error metric behind the
- * same refine predicate.
- *
- * The node's on-screen-size proxy is its `edge/distance` ratio — the very same
- * value that keys the best-first heap. So it is computed *once*, when the node
- * is pushed onto the heap, and carried back out on pop (the heap returns the
- * priority alongside the index). The main loop reuses that value as its refine
- * `angularSize` instead of recomputing `distanceToBox` a second time per node.
+ * === 1`) that is the whole subtree's light collapsed to a point. Drawing that
+ * single record instead of the subtree's thousands of leaf stars is exactly
+ * right when the box is smaller than a pixel: the summed flux lands one glow
+ * where the cluster is, at a cost of one instance instead of thousands. The
+ * refine/coarsen decision uses a distance-per-box-edge proxy for on-screen size:
+ * a node refines only while its box edge subtends more than `refineThreshold`
+ * relative to its distance. That proxy is compared in SQUARED form — the walk
+ * orders and gates by `edge² / distance²` and squares `refineThreshold` once at
+ * the start, so the hot `priorityOf` avoids a `Math.sqrt` per node. Both sides
+ * are positive, so squaring preserves the heap order and the gate outcome
+ * exactly; the public `refineThreshold` stays in LINEAR units for the settings
+ * slider.
  *
  * ── The covering-partition invariant (load-bearing) ────────────────────────
  *
- * The returned draws are a *covering partition* of the catalog's leaf stars:
+ * The returned cut is a *covering partition* of the catalog's leaf stars:
  * every leaf star is represented exactly once — either by its own refined leaf
  * draw, or by exactly one ancestor aggregate that stands in for its whole
  * subtree — never by both, never by neither. This falls out of the walk being
@@ -81,6 +90,19 @@
  * level-0 leaf. Double-drawing a star (an ancestor *and* its descendant both
  * drawn) or dropping one (a subtree neither refined nor aggregated) is the bug
  * class the tests guard against.
+ *
+ * ── Output: a reused struct-of-arrays snapshot (NON-REENTRANT) ─────────────
+ *
+ * A full-budget cut is tens of thousands of draws, so returning an array of
+ * `{ nodeIndex, firstRecord, recordCount }` objects allocated tens of thousands
+ * of short-lived objects every frame. Instead the walk fills three grow-only
+ * module-level typed arrays and returns a `StarCutSnapshot` view over them
+ * (`count` valid entries). The buffers are REUSED across calls, so a snapshot is
+ * INVALIDATED by the next `walkStarOctreeCut` call — a consumer must read (or
+ * copy out) the entries it needs before walking again. This mirrors the
+ * synchronous, non-reentrant contract the scratch heap already relies on: each
+ * per-source call fully completes (and the layer copies the cut into its fade
+ * bookkeeping) before the next call starts.
  */
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
@@ -89,7 +111,9 @@ import { starOctreeIndex } from './starOctreeIndex';
 /**
  * One instanced draw the cut selected: a contiguous slice of the catalog's
  * record buffer. A leaf draw's `recordCount` is its cell's real star count; an
- * aggregate draw's is always 1 (its single flux-mip record).
+ * aggregate draw's is always 1 (its single flux-mip record). This is the shape
+ * the layer's per-node draw list carries; the walk itself returns the parallel
+ * `StarCutSnapshot` below.
  */
 export type StarNodeDraw = {
   /** Index into `catalog.nodes` of the chosen node. */
@@ -98,6 +122,23 @@ export type StarNodeDraw = {
   readonly firstRecord: number;
   /** Instance count: leaf → N stars in the cell; aggregate → 1. */
   readonly recordCount: number;
+};
+
+/**
+ * The per-frame cut as a struct-of-arrays view over the walk's reused scratch:
+ * `count` valid draws, each described by index `i ∈ [0, count)` of the three
+ * parallel arrays. The arrays are the full grow-only capacity — read only the
+ * first `count` — and are INVALIDATED by the next `walkStarOctreeCut` call.
+ */
+export type StarCutSnapshot = {
+  /** Number of valid draws — only `[0, count)` of the arrays below are live. */
+  readonly count: number;
+  /** Per-draw node index (`catalog.nodes` slot). */
+  readonly nodeIndex: Int32Array;
+  /** Per-draw record-slice base (`node.firstRecord`). */
+  readonly firstRecord: Uint32Array;
+  /** Per-draw instance count (leaf → N stars; aggregate → 1). */
+  readonly recordCount: Uint32Array;
 };
 
 /**
@@ -116,8 +157,7 @@ export type StarNodeDraw = {
  * of a coarse aggregate is already correct at any threshold (it's the
  * subtree's summed flux); what a threshold this loose exposes is the
  * *structure* — the aggregate's box edge itself becomes a visible seam
- * before it's small enough to read as a point. Task 13 replaces the proxy
- * with a viewport-accurate screen-error metric behind the same predicate.
+ * before it's small enough to read as a point.
  *
  * 0.16 was eye-tuned together with `DEFAULT_STAR_GLOW_OVERLAP` (1.0 → 4.0),
  * not in isolation: the two knobs compensate for each other. A coarser cut
@@ -132,21 +172,24 @@ export const DEFAULT_REFINE_THRESHOLD = 0.16;
 
 /** Guards the `edge / distance` ratio when the camera sits inside a box. */
 const MIN_DISTANCE_PC = 1e-6;
+/** Squared guard, for the squared-proxy compare (see the header). */
+const MIN_DISTANCE_PC_SQ = MIN_DISTANCE_PC * MIN_DISTANCE_PC;
 
 export function walkStarOctreeCut(
   catalog: StarCatalog,
   camPosPc: Vec3,
   budget: { typical: number; hardCap: number },
   // The user's live "Detail" knob (`settings.starCatalogs.refineThreshold`).
-  // LOWER threshold ⇒ a box passes the `angularSize >= threshold` gate at a
-  // greater distance ⇒ boxes SPLIT EARLIER ⇒ fewer far aggregates whose box
-  // edge reads as a visible lattice cell, at the cost of MORE drawn nodes
-  // (deeper refinement everywhere). Defaults to the documented tuning above so
-  // callers that don't expose the knob (tests) keep the old behaviour.
+  // LOWER threshold ⇒ a box passes the refine gate at a greater distance ⇒
+  // boxes SPLIT EARLIER ⇒ fewer far aggregates whose box edge reads as a visible
+  // lattice cell, at the cost of MORE drawn nodes (deeper refinement
+  // everywhere). Defaults to the documented tuning above so callers that don't
+  // expose the knob (tests) keep the old behaviour. Stays in LINEAR units; it is
+  // squared once here to match the squared on-screen-size proxy.
   refineThreshold: number = DEFAULT_REFINE_THRESHOLD,
-): readonly StarNodeDraw[] {
+): StarCutSnapshot {
   const n = catalog.nodes.length;
-  if (n === 0) return [];
+  if (n === 0) return emptySnapshot();
 
   // The load-time index: flat child links + box geometry + scalar node fields,
   // all in typed arrays (built once per catalog, memoised). The hot loop below
@@ -155,59 +198,72 @@ export function walkStarOctreeCut(
     starOctreeIndex(catalog);
   const [camX, camY, camZ] = camPosPc;
 
-  // ── Best-first frontier: a max-heap keyed by on-screen size ───────────────
-  // Refinement always advances the largest-on-screen node, so budget is spent
-  // nearest-first. `instanceCount` tracks Σ recordCount over the current draw
-  // set (frontier nodes + committed nodes drawn as-is); refining a node swaps
-  // its own cost for its children's, keeping the count exact so the final total
-  // is known before the walk ends.
+  // Squared threshold: `priorityOf` returns `edge² / distance²`, so the linear
+  // gate `edge/distance ≥ threshold` becomes `proxy ≥ threshold²`. Both sides
+  // positive, so this is the identical outcome without the per-node sqrt.
+  const refineThresholdSq = refineThreshold * refineThreshold;
+
   const heap = scratchHeap;
   heap.reset();
-  const committed: StarNodeDraw[] = [];
+
+  // Reset the output SoA scratch; `commit` appends into it (growing as needed).
+  cutCount = 0;
+
+  // `commit` records a node as a final draw. It never touches `instanceCount`:
+  // a committed node's cost is already in the running total (added as the root's
+  // own cost, or as a parent's `childCost` when that parent refined). So which
+  // nodes commit — and in what order — cannot perturb the budget arithmetic.
+  const commit = (i: number): void => {
+    if (cutCount >= cutNodeIndex.length) growCut(cutCount + 1);
+    cutNodeIndex[cutCount] = i;
+    cutFirstRecord[cutCount] = firstRecord[i]!;
+    cutRecordCount[cutCount] = recordCount[i]!;
+    cutCount++;
+  };
+
+  // Classify a node the walk has reached: a leaf (childless) or a sub-pixel box
+  // commits immediately (it can never refine — see the header's commit-at-push);
+  // only a childful, above-threshold refine CANDIDATE enters the heap.
+  const pushOrCommit = (i: number): void => {
+    const cbase = i * 8;
+    let hasChild = false;
+    for (let k = 0; k < 8; k++) {
+      if (childIndex[cbase + k]! >= 0) {
+        hasChild = true;
+        break;
+      }
+    }
+    if (!hasChild) {
+      commit(i); // leaf (level-0 cell OR fat leaf) — records are real stars
+      return;
+    }
+    const proxy = priorityOf(i, boxOriginPc, boxEdgePc, camX, camY, camZ);
+    if (proxy < refineThresholdSq) {
+      commit(i); // sub-pixel box → one aggregate, regardless of budget
+      return;
+    }
+    heap.push(i, proxy); // refine candidate: childful AND above threshold
+  };
 
   const rootIndex = n - 1; // layout invariant: root is the last node
   let instanceCount = recordCount[rootIndex]!;
-  heap.push(rootIndex, priorityOf(rootIndex, boxOriginPc, boxEdgePc, camX, camY, camZ));
+  pushOrCommit(rootIndex);
 
   while (heap.size > 0) {
     const nodeIndex = heap.pop();
-    // The `edge/distance` proxy computed when this node was pushed — the same
-    // value the refine gate needs, so it is NOT recomputed here (no second
-    // `distanceToBox`). For a leaf it is unused.
-    const angularSize = heap.poppedPriority;
-
-    // Cost of replacing this node (an aggregate, recordCount 1) with its present
-    // children drawn as-is (leaf children add their full star count).
+    // The heap holds only refine candidates, so this node IS childful and above
+    // threshold — the only decision left is the budget. Cost of replacing this
+    // node (an aggregate, recordCount 1) with its present children drawn as-is.
     const cbase = nodeIndex * 8;
     let childCost = 0;
-    let childCount = 0;
     for (let k = 0; k < 8; k++) {
       const c = childIndex[cbase + k]!;
       if (c < 0) continue;
       childCost += recordCount[c]!;
-      childCount++;
     }
-
-    // A childless node is a LEAF — its records are real stars, so it cannot be
-    // refined; draw it as-is. This is the terminal case at ANY level: a level-0
-    // finest cell OR a fat leaf (a sparse subtree merged into one node above
-    // level 0). The discriminant is the absence of children, never the octree
-    // level — a fat leaf sits at level > 0 yet is a leaf. Its recordCount is
-    // already in instanceCount (added as the root's own cost or a parent's
-    // childCost when it was refined).
-    if (childCount === 0) {
-      committed.push({
-        nodeIndex,
-        firstRecord: firstRecord[nodeIndex]!,
-        recordCount: recordCount[nodeIndex]!,
-      });
-      continue;
-    }
-
     const refineDelta = childCost - recordCount[nodeIndex]!;
 
     const shouldRefine =
-      angularSize >= refineThreshold && // near/large enough to resolve
       instanceCount < budget.typical && // refinement target not yet reached
       instanceCount + refineDelta <= budget.hardCap; // stays under the ceiling
 
@@ -216,27 +272,24 @@ export function walkStarOctreeCut(
       for (let k = 0; k < 8; k++) {
         const c = childIndex[cbase + k]!;
         if (c < 0) continue;
-        heap.push(c, priorityOf(c, boxOriginPc, boxEdgePc, camX, camY, camZ));
+        pushOrCommit(c);
       }
     } else {
-      // Far, sub-pixel, or budget-limited: draw the subtree's single aggregate.
-      committed.push({
-        nodeIndex,
-        firstRecord: firstRecord[nodeIndex]!,
-        recordCount: recordCount[nodeIndex]!,
-      });
+      // Budget-limited: draw the subtree's single aggregate instead of refining.
+      commit(nodeIndex);
     }
   }
 
-  return committed;
+  return { count: cutCount, nodeIndex: cutNodeIndex, firstRecord: cutFirstRecord, recordCount: cutRecordCount };
 }
 
 /**
- * Refinement priority: a node's on-screen-size proxy `edgePc / distanceToBox`,
- * larger = refine sooner. Reads the box geometry from the load-time index's
- * typed arrays; the distance to the axis-aligned box is 0 when the camera is
- * inside it. This is the ONLY place `distanceToBox` runs — the value is carried
- * through the heap to the refine gate (see the header's "computed once" note).
+ * Refinement priority: a node's SQUARED on-screen-size proxy `edgePc² /
+ * distanceToBox²`, larger = refine sooner. Reads the box geometry from the
+ * load-time index's typed arrays; the distance to the axis-aligned box is 0 when
+ * the camera is inside it. Squared so the heap order and the refine gate need no
+ * `Math.sqrt` — `edge²/dist²` is monotonic in `edge/dist` for positive values,
+ * so ordering and the `≥ threshold²` gate are exact.
  */
 function priorityOf(
   i: number,
@@ -249,8 +302,9 @@ function priorityOf(
   const edgePc = boxEdgePc[i]!;
   const o3 = i * 3;
 
-  // Euclidean distance in parsecs from the camera to the node's box (0 inside).
-  // The box origin is `gridOrigin + gridCoords · edgePc`, baked at load time.
+  // Squared Euclidean distance in parsecs from the camera to the node's box
+  // (0 inside). The box origin is `gridOrigin + gridCoords · edgePc`, baked at
+  // load time.
   let sq = 0;
   {
     const lo = boxOriginPc[o3]!;
@@ -270,22 +324,50 @@ function priorityOf(
     const d = camZ < lo ? lo - camZ : camZ > hi ? camZ - hi : 0;
     sq += d * d;
   }
-  const distPc = Math.sqrt(sq);
-  return edgePc / Math.max(distPc, MIN_DISTANCE_PC);
+  return (edgePc * edgePc) / Math.max(sq, MIN_DISTANCE_PC_SQ);
+}
+
+// ── Output SoA scratch, reused across calls (see the header's non-reentrancy) ─
+// Grow-only typed arrays the walk appends draws into; the returned snapshot is
+// a view over `[0, cutCount)`. A fresh call resets `cutCount` and overwrites,
+// so the previous snapshot is invalidated.
+let cutNodeIndex = new Int32Array(1024);
+let cutFirstRecord = new Uint32Array(1024);
+let cutRecordCount = new Uint32Array(1024);
+let cutCount = 0;
+
+/** Grow the output scratch (copying live contents) to hold at least `min` draws. */
+function growCut(min: number): void {
+  let cap = cutNodeIndex.length;
+  while (cap < min) cap *= 2;
+  const ni = new Int32Array(cap);
+  ni.set(cutNodeIndex);
+  cutNodeIndex = ni;
+  const fr = new Uint32Array(cap);
+  fr.set(cutFirstRecord);
+  cutFirstRecord = fr;
+  const rc = new Uint32Array(cap);
+  rc.set(cutRecordCount);
+  cutRecordCount = rc;
+}
+
+/** The empty cut (no nodes) — a view over the current scratch with `count` 0. */
+function emptySnapshot(): StarCutSnapshot {
+  cutCount = 0;
+  return { count: 0, nodeIndex: cutNodeIndex, firstRecord: cutFirstRecord, recordCount: cutRecordCount };
 }
 
 /**
  * A binary max-heap of node indices keyed by a float priority. Best-first
  * refinement pops the largest-on-screen node next; a heap keeps that O(log n)
- * instead of an O(n) scan of the frontier each step. `pop` also exposes the
- * popped node's priority via `poppedPriority`, so the caller reuses the
- * on-screen-size proxy it was keyed by without recomputing it.
+ * instead of an O(n) scan of the frontier each step. It holds only refine
+ * candidates (commit-at-push keeps leaves and sub-pixel boxes out), so the pop
+ * side does not carry the priority back out — the threshold was already decided
+ * at push time.
  */
 class MaxHeap {
   private readonly indices: number[] = [];
   private readonly priorities: number[] = [];
-  /** Priority of the node returned by the most recent `pop` (m7: carried out). */
-  poppedPriority = 0;
 
   get size(): number {
     return this.indices.length;
@@ -311,7 +393,6 @@ class MaxHeap {
 
   pop(): number {
     const top = this.indices[0]!;
-    this.poppedPriority = this.priorities[0]!;
     const last = this.indices.length - 1;
     this.swap(0, last);
     this.indices.pop();
@@ -345,7 +426,6 @@ class MaxHeap {
  * The best-first refinement heap, reused across calls. The walk is synchronous
  * and non-reentrant (each per-source call fully completes before the next), so a
  * single module-level heap is safe and skips reallocating its two backing arrays
- * every frame — `reset()` keeps their capacity. It stores `(nodeIndex, priority)`
- * pairs so a popped node carries its already-computed on-screen-size proxy.
+ * every frame — `reset()` keeps their capacity.
  */
 const scratchHeap = new MaxHeap();

@@ -258,12 +258,16 @@ export const starCatalogLayer: ContentLayer = {
       const fades = fadeState.fades;
 
       // Retarget: nodes in the cut head to full (seeding newcomers at 0), nodes
-      // that left the cut head to 0. Membership is by node index.
+      // that left the cut head to 0. Membership is by node index. The cut is a
+      // reused SoA snapshot (invalidated by the next walk), so its indices are
+      // copied into `inCut` + the fade map here, before this source's walk is
+      // superseded by the next source's.
       const inCut = new Set<number>();
-      for (const nodeDraw of cut) {
-        inCut.add(nodeDraw.nodeIndex);
-        const f = fades.get(nodeDraw.nodeIndex);
-        if (f === undefined) fades.set(nodeDraw.nodeIndex, { opacity: 0, target: 1 });
+      for (let i = 0; i < cut.count; i++) {
+        const nodeIndex = cut.nodeIndex[i]!;
+        inCut.add(nodeIndex);
+        const f = fades.get(nodeIndex);
+        if (f === undefined) fades.set(nodeIndex, { opacity: 0, target: 1 });
         else f.target = 1;
       }
       for (const [idx, f] of fades) if (!inCut.has(idx)) f.target = 0;
