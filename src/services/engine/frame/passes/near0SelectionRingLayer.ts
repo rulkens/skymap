@@ -55,10 +55,12 @@
  * distance. Once the sphere resolves, the 1.5×-apparent term takes over and the
  * ring hugs the silhouette instead of sitting as a fixed dot lost inside it.
  *
- * It deliberately does NOT reuse the galaxy `selectionRingRadiusPx`: that helper
- * bakes billboard provenance (a 2× padded footprint input, a `× 0.5`
- * padding-cancel, then a × 6 ring scale — a NET × 3 on apparent radius) sized
- * for a soft point glow, which would balloon around a hard sphere. The 1.5×
+ * For the apparent-size term it deliberately does NOT reuse the galaxy
+ * `selectionRingRadiusPx` (the far floor DOES delegate to it — `selectionRingRadiusPx(0, …)`
+ * reproduces the fixed-px dot): that helper bakes billboard provenance (a 2×
+ * padded footprint input, a `× 0.5` padding-cancel, then a × 6 ring scale — a
+ * NET × 3 on apparent radius) sized for a soft point glow, which would balloon
+ * around a hard sphere. The 1.5×
  * apparent term matches how the sphere is actually drawn (r/d radians, see
  * `bodyApparentDiameterPx`), so the ring meets the sphere at the resolve
  * handoff. `camDist` is the camera-relative centre's length — the target's

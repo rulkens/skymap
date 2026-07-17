@@ -7,6 +7,7 @@ import {
 } from '../../../../src/data/milkyWay/galacticCenter';
 import { Source } from '../../../../src/data/sources';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -97,11 +98,17 @@ describe('selectionHalo', () => {
       positionMpc: [0.001, -0.002, 0.0005],
       absMag: 4.8,
       bpRp: 0.65,
-      radiusKm: 696340,
+      radiusKm: SOLAR_RADIUS_KM,
     };
     expect(selectionHalo(galaxyRow())!.slab).toBe(COSMO);
     expect(selectionHalo({ type: 'milkyWay' } as SelectionRow)!.slab).toBe(COSMO);
-    expect(selectionHalo(star)!.slab).toBe(NEAR0);
+    const starHalo = selectionHalo(star)!;
+    expect(starHalo.slab).toBe(NEAR0);
+    // The star arm must ride its REAL physical radius (radiusKm → Mpc), not the
+    // old radiusMpc:0 fixed-px dot — mirror the body arm's assertion so this
+    // FAILS if the star arm ever regresses to 0 while keeping its NEAR0 tag.
+    expect(starHalo.radiusMpc).toBeCloseTo(SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_MPC, 24);
+    expect(starHalo.radiusMpc).toBeGreaterThan(0);
   });
 
   it('applies the synthetic-fallback floor (diameterKpc = 0) for galaxies', () => {
