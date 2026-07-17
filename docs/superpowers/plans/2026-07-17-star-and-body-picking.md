@@ -1021,20 +1021,25 @@ body: (row) => ({
 Filling the `body` halo arm with the NEAR0 tag lets the **existing** `near0SelectionRingLayer`
 (Task 5) draw the body ring with no new layer — its slab-exclusivity is already tested there.
 
-- [ ] Add the three `RESOLVE_PICK` arms (import `SCENE_STARS` / `SCENE_PLANETS` / `SCENE_EARTH` —
+- [x] Add the three `RESOLVE_PICK` arms (import `SCENE_STARS` / `SCENE_PLANETS` / `SCENE_EARTH` —
       static, like `extractSelectionRow` imports `SCENE_BODIES`). Fill `selectionHaloTable.body`
       with the NEAR0-tagged descriptor.
-- [ ] Add the test `RESOLVE_PICK body arms recover the seed id` — `famousStar`/`planet`/`earth`
+- [x] Add the test `RESOLVE_PICK body arms recover the seed id` — `famousStar`/`planet`/`earth`
       picks at known seed indices resolve to `{ type: 'body', id }` with the right id; an
       out-of-range index → null.
-- [ ] Add the test `a body's seed index is stable when a sibling is culled` (§8.1 regression) —
+- [x] Add the test `a body's seed index is stable when a sibling is culled` (§8.1 regression) —
       assert `seedIndexOfBody('jupiter', SCENE_PLANETS)` is unchanged when an earlier planet is
       dropped from the drawn set, and differs from `'jupiter'`'s position in that culled list —
       proving the pick id is the seed index, not the pack-loop slot. Names the bug it guards.
-- [ ] Add the test `selectionHalo returns a NEAR0 descriptor for a body row` (was null) — the body
+      _Executed deviation (review-driven): the drafted form was true-by-construction; the shipped
+      regression lives at the real call site instead — `starSpheresLayer.drawPick` with a stub
+      renderer capturing packedIds, Sirius resolving while earlier seeds cull (seed 6 vs slot 0),
+      perturbation-proven to bite. Plus the slab-exclusivity table gained the `body` row
+      (NEAR0-only)._
+- [x] Add the test `selectionHalo returns a NEAR0 descriptor for a body row` (was null) — the body
       arm now yields `{ radiusMpc: 0, worldPos, slab: NEAR0 }` at the body position.
-- [ ] `npx vitest run tests/services/engine/helpers/resolvePickTable.test.ts tests/services/engine/helpers/selectionHaloTable.test.ts tests/services/engine/frame/passes/seedIndexOfBody.test.ts` → fail, implement, pass.
-- [ ] Commit.
+- [x] `npx vitest run tests/services/engine/helpers/resolvePickTable.test.ts tests/services/engine/helpers/selectionHaloTable.test.ts tests/services/engine/frame/passes/seedIndexOfBody.test.ts` → fail, implement, pass.
+- [x] Commit.
 
 ## Task 13 — Body cards render non-star bodies + §12 body doc cleanup (spec §8.4, §12)
 
