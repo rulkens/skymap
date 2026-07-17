@@ -220,14 +220,14 @@ mosaics). **Load the `create-component` skill before editing this component**
 **Files:** `package.json` (modify — `fetch-textures`, `build-textures` scripts),
 `CLAUDE.md` (modify — "Re-run order when planet textures change" block).
 
-- [ ] Add `"fetch-textures": "tsx tools/fetch/fetchTextures.ts"` and
+- [x] Add `"fetch-textures": "tsx tools/fetch/fetchTextures.ts"` and
   `"build-textures": "tsx tools/textures/buildTextures.ts"` to `package.json`
   (match the existing `fetch-cf4` / `build-mcpm` script shapes).
-- [ ] Add a "Re-run order when planet textures change" block to CLAUDE.md's
+- [x] Add a "Re-run order when planet textures change" block to CLAUDE.md's
   data-pipeline section (alongside the CF4/DESI/structures blocks): `fetch-textures`
   → `build-textures` → `sync-r2-secure`, with the note that the full-res pull +
   build + sync run POST-MERGE from the MAIN worktree (spec §12).
-- [ ] `npm run typecheck` → clean (the scripts don't affect it, but confirm the
+- [x] `npm run typecheck` → clean (the scripts don't affect it, but confirm the
   tools tsconfig still passes). Commit.
 
 ## Task 7 — Dev-subset visual verification (spec §12 DoD)
