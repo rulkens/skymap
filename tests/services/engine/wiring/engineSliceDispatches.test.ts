@@ -186,6 +186,8 @@ function makeProgressState(): EngineState {
       points: new Map<SourceType, AssetSlot<unknown, unknown>>([
         [Source.SDSS, stubSlot('sdss-points')],
       ]),
+      // Real (empty) map: installLoadProgress walks it like points.
+      starCatalogs: new Map<SourceType, AssetSlot<unknown, unknown>>(),
       filaments: stubSlot('filaments'),
       famousMeta: stubSlot('famous-meta'),
       structureCatalog: stubSlot('structure-catalog'),

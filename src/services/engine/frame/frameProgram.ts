@@ -2,10 +2,12 @@
  * frameProgram — the FRAME as data, and the timing slots derived from it.
  *
  * A frame is an ordered sequence of steps: a flow compute, a volume render,
- * an HDR render, a near-field star-point render into that same HDR
- * accumulation, a tone-mapping composite, the cosmological swap-chain overlay
- * render, then the near-field tail — the foreground bodies, their composite
- * onto the swap chain, and the near-field captions. Pre-unification that
+ * an HDR render, a half-res survey-star-aggregate render into its own
+ * offscreen, a near-field star-point render into that same HDR accumulation
+ * (which also composites the aggregate offscreen back in), a tone-mapping
+ * composite, the cosmological swap-chain overlay render, then the near-field
+ * tail — the foreground bodies, their composite onto the swap chain, and the
+ * near-field captions. Pre-unification that
  * sequence lived as an imperative call chain spread across `renderFrame` and
  * two hand-wired HDR encoders — the order was implicit in which function
  * called which, and untestable without a GPU device. `frameProgram` returns
@@ -29,7 +31,10 @@
  *
  * There is no `volume→hdr` composite — the volume offscreen is merged into
  * HDR by the `volume-upsample` *layer* inside the HDR render step, not a
- * separate whole-texture composite (plan-time decision 3). The two composites
+ * separate whole-texture composite (plan-time decision 3). The
+ * `star-aggregates` offscreen is merged the same way — by the `star-upsample`
+ * layer inside the hdr NEAR0 render step, adjacent to the `star-catalog` leaf
+ * draw — so there is no `star-aggregates→hdr` composite step either. The two composites
  * in the program share one `tone` object by reference: the tone-map `hdr→swap`
  * (where the HDR scene is compressed to display range before the overlay
  * layers draw on top) and the `foreground:0→swap` OVER, so the tone curve is
@@ -63,6 +68,13 @@ export function frameProgram(tone: ToneMap): readonly FrameStep[] {
     { kind: 'compute', name: 'flow' },
     { kind: 'render', target: 'volume', slab: COSMO },
     { kind: 'render', target: 'hdr', slab: COSMO },
+    // Survey-star AGGREGATE stream into its own half-res offscreen, projected
+    // through NEAR0 (the same parsec-scale anchors as the star catalog). Drawn
+    // BEFORE the hdr NEAR0 step so the `star-upsample` layer inside that step
+    // can composite this offscreen — the twin of the volume render preceding
+    // its `volume-upsample` layer. The aggregate glow field is the fill-bound
+    // half of the star pass; half-res quarters its fragment cost.
+    { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
     // Near-field star points into the SAME hdr accumulation, but projected
     // through NEAR0: COSMO's near plane (0.01 Mpc — slabs.ts) would clip the
     // parsec-scale star anchors, so the points ride their own slab while

@@ -25,6 +25,13 @@ reports the result. The user decides whether to ship.
   executing is at the finish line, run this audit before announcing
   completion.
 
+**Timing: always on the feature branch, BEFORE the PR merges.** The
+completion commit (plan/spec moves + backlog sweep) ships with the PR —
+that's why the housekeeping step pushes to the branch's upstream.
+Sequencing the audit as a post-merge follow-up is an error: it needs a
+second PR and detaches the "this plan shipped" record from the feature
+that shipped it.
+
 ## Inputs
 
 - Plan path. Either provided as an arg (`/feature-done docs/superpowers/plans/2026-05-27-foo.md`)

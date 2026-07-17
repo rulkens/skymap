@@ -666,10 +666,14 @@ per-tier file write are driven only by the CLI entry (guarded by the
 - [x] Test `reports the drop counters` — the synthetic fixture includes one no-BJ Gaia
   row, one non-positive-plx Hipparcos row, one famous match, and one Hipparcos-wins
   subtraction; assert each counter equals its hand-counted value.
-- [ ] **Real-data build (logged-assertion task, NOT a vitest):** run `npm run build-stars`
+- [x] **Real-data build (logged-assertion task, NOT a vitest):** run `npm run build-stars`
   against plan-01 data; confirm the three `.bin` files appear, the per-tier logs show
   each budget met (Resolved item #6), the counted-clamp totals are near-zero (else
   retune the LUT endpoints in Task 4's constants), and the codec ratio gate passes.
+  (Done via the Rust port of this pipeline — PR #443 — which built all three tiers
+  from the real plan-01 data within their gzip budgets: 9.99/29.99/74.99 MB,
+  large tier 12.85M stars; rebuild verified byte-identical to the shipping bins.
+  T13's visual bring-up ran against exactly these bins.)
 - [x] `npm test -- buildStars` → green. Commit.
 
 ## Task 12 — Pipeline docs + `add-data-source` skill refresh

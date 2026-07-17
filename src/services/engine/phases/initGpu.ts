@@ -61,12 +61,14 @@ import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWa
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
+import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
+import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
@@ -363,6 +365,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // lives on `renderTargets`, so nothing here depends on viewport size.
   state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
 
+  // ── Half-res survey-star aggregate upsample composite ─────────────
+  //
+  // Built unconditionally alongside the volume upsample; the pipeline is cheap
+  // and the half-res `star-aggregates` target lives on `renderTargets`. Reads
+  // that offscreen, re-applies the star pass's hue-preserving knee to the
+  // summed aggregate field, and adds it into HDR. Targets 'rgba16float' — both
+  // the HDR and the star-aggregates rows share that format.
+  state.gpu.starAggregateUpsample = createStarAggregateUpsample(device, 'rgba16float');
+
   // ── Pick-buffer debug overlay ────────────────────────────────────
   //
   // Fullscreen pass that samples the r32uint pick texture and writes a
@@ -418,6 +429,14 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // partition and re-uploads per frame.
   state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
   state.gpu.starPointRenderer.setStars(state.data.bodies.stars);
+
+  // starCatalogRenderer draws the survey (Gaia bin) stars — the wide-field
+  // twin of starPointRenderer — as additive points into the same depthless
+  // HDR target (no depth format).  It owns only the pipeline here; the star
+  // layer uploads each catalog's records once as the .bin lands and walks the
+  // octree per frame.  Constructed unconditionally (the pipeline is cheap);
+  // stays a no-op draw until a catalog is uploaded.
+  state.gpu.starCatalogRenderer = createStarCatalogRenderer(device, 'rgba16float');
 
   // orbitTrailRenderer draws the accurate Keplerian orbit trails (Earth /
   // Jupiter / Moon) as additive screen-space conics into the same depthless

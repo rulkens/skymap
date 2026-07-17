@@ -72,13 +72,16 @@ export type ContentLayer = {
    * program's render pass. Optional: layers that don't participate in
    * picking simply omit it.
    *
-   * **Postcondition:** every `drawPick` must leave `@group(0)` bound to the
-   * shared point-pick camera prefix. Most rows satisfy this trivially — they
-   * bind nothing at slot 0 and read the prefix a prior row (point-sprites)
-   * left there. A row that binds its OWN slot-0 uniform (the procedural-disk
-   * pick binds the disk camera) MUST restore the shared prefix before
-   * returning — via `state.gpu.pickRenderer.bindCamera(pass)` — so the
-   * ring / Milky-Way fold-ins drawn after it don't read the wrong buffer.
+   * **Postcondition (COSMO pick pass):** every `drawPick` must leave
+   * `@group(0)` bound to the shared point-pick camera prefix. Most rows
+   * satisfy this trivially — they bind nothing at slot 0 and read the prefix
+   * a prior row (point-sprites) left there. A row that binds its OWN slot-0
+   * uniform (the procedural-disk pick binds the disk camera) MUST restore
+   * the shared prefix before returning — via
+   * `state.gpu.pickRenderer.bindCamera(pass)` — so the ring fold-ins drawn
+   * after it don't read the wrong buffer. A row alone in its slab's pick
+   * pass (the Milky-Way on NEAR0) has no shared prefix to inherit or
+   * preserve — it binds its own complete slot-0 camera instead.
    */
   drawPick?(
     pass: GPURenderPassEncoder,

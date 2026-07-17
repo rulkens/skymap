@@ -67,6 +67,81 @@ import { SOURCE_REGISTRY, Source } from './sources';
 export const DEFAULT_POINT_SIZE_PX = 2.5;
 
 /**
+ * Default star-billboard pixel radius — the star-catalog twin of
+ * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx`. Same 2.5 px
+ * sweet spot and same 1–8 px user range as the galaxy point size; kept a
+ * separate constant so the two layers can diverge without one silently
+ * dragging the other.
+ */
+export const DEFAULT_STAR_SIZE_PX = 2.5;
+
+/**
+ * Default star-brightness trim — the star-catalog twin of `DEFAULT_BRIGHTNESS`.
+ * Seeds `settings.starCatalogs.brightness`. 1.0 = identity: the flux-glow
+ * shader's calibrated `STAR_FLUX_EXPOSURE` baseline unchanged. Same 0.2–3.0
+ * user range as the galaxy brightness; kept a separate constant so the two
+ * layers can diverge without one silently dragging the other.
+ */
+export const DEFAULT_STAR_BRIGHTNESS = 1.0;
+
+/**
+ * Default star glow-overlap — seeds `settings.starCatalogs.glowOverlap`. 1.0 =
+ * identity: an aggregate's flux-glow exactly fills its octree-box footprint (no
+ * spread). Above it the aggregate radius is multiplied by this factor so far
+ * glows overlap their neighbours and the box lattice dissolves; the vertex
+ * stage divides the Gaussian peak by the square, so total luminance is
+ * conserved (only the spread changes). User range 1.0–2.5. Leaves (point
+ * sources) are untouched.
+ *
+ * 4.7 is eye-tuned, not the 1.0 physical identity: at 1.0 the far field still
+ * shows the octree's box lattice as faceted seams between aggregates (see
+ * `walkStarOctreeCut`'s `DEFAULT_REFINE_THRESHOLD` header for why a proxy
+ * threshold alone can't fully hide it). Spreading each aggregate's glow to
+ * 4.7x its box radius overlaps neighbours enough to dissolve the lattice into
+ * a continuous far field. Tuned together with `DEFAULT_REFINE_THRESHOLD` — see
+ * that constant's comment for how the two compensate.
+ */
+export const DEFAULT_STAR_GLOW_OVERLAP = 4.7;
+
+/**
+ * Default near-anchor star display exposure — seeds
+ * `settings.starCatalogs.exposureNearX`. The ABSOLUTE exposure multiplier the
+ * scale-dependent `starExposureRamp` targets at solar-system scale (1 pc). 15 is
+ * the shipped near anchor that the shader already bakes into STAR_FLUX_EXPOSURE
+ * (6000 = 400 × 15), so at this default the CPU ramp returns exactly 1.0 there.
+ * Live-tunable (UI range 1–60) so the near end can be re-eye-tuned against the
+ * current star bins' local flux without a rebuild.
+ */
+export const DEFAULT_STAR_EXPOSURE_NEAR_X = 15;
+
+/**
+ * Default middle-anchor star display exposure — seeds
+ * `settings.starCatalogs.exposureMidX`. The ABSOLUTE exposure multiplier the
+ * scale-dependent `starExposureRamp` targets at the intermediate few-kpc scale
+ * (3 kpc), the knot that splits the ramp so the dense central clump can be
+ * darkened without touching either end.
+ *
+ * 57 is the OLD two-point (near→far) curve's own value at 3 kpc:
+ * 15·(70/15)^(log₁₀(3000)/4) = 57.23 (the 3 kpc anchor sits at log-fraction
+ * log₁₀(3000)/4 ≈ 0.869 of the way from 1 pc to 10 kpc). Seeding the mid anchor
+ * ON that continuation makes the three-anchor ramp reproduce today's look at the
+ * defaults — a knot on a straight line doesn't bend it. 57 vs the exact 57.23 is
+ * visually indistinguishable. Live-tunable (UI range 5–150) so the middle can be
+ * pulled down against the running renderer.
+ */
+export const DEFAULT_STAR_EXPOSURE_MID_X = 57;
+
+/**
+ * Default far-anchor star display exposure — seeds
+ * `settings.starCatalogs.exposureFarX`. The ABSOLUTE exposure multiplier
+ * `starExposureRamp` targets at whole-galaxy scale (10 kpc), where the star bin
+ * reads as the Milky Way's diffuse surface brightness and the un-adapting
+ * monitor needs the field lifted. 70 is the shipped far anchor; live-tunable (UI
+ * range 5–300) alongside the near anchor.
+ */
+export const DEFAULT_STAR_EXPOSURE_FAR_X = 70;
+
+/**
  * Default global brightness multiplier.  1.0 = "intensity exactly as the
  * shader computes it from the apparent magnitude".  Range 0.2–3.0.
  */

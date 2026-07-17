@@ -48,10 +48,14 @@ export const SLAB_NAME: Readonly<Record<number, string>> = {
 // zoom-to-earth series.
 const WORLD_UP: Vec3 = [0, 1, 0];
 
-// The cosmological slab's near/far are fixed: 10 kpc keeps the Milky Way's
-// disk from clipping, 50 Gpc comfortably contains every catalogued galaxy.
-// Unlike the near-field slab, "how far back does the cosmological scene go"
-// doesn't change as the user zooms — only the near-field slab's range is
+// The cosmological slab's near/far are fixed: 10 kpc sits safely below the
+// nearest cosmological content (the closest satellite galaxies at tens of
+// kpc), 50 Gpc comfortably contains every catalogued galaxy. Anything that
+// draws INSIDE 10 kpc cannot live on this slab — the Milky Way impostor
+// learned that the hard way (the fixed plane clipped its disc mid-descent)
+// and moved to NEAR0, joining the star/orbit/caption rows there. Unlike the
+// near-field slab, "how far back does the cosmological scene go" doesn't
+// change as the user zooms — only the near-field slab's range is
 // camera-relative.
 const COSMO_NEAR_MPC = 0.01;
 const COSMO_FAR_MPC = 50000;

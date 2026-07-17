@@ -17,13 +17,17 @@
  *
  * ### Why the distance fade stays a producer concern
  *
- * The Milky Way label fades with camera distance (full ≤ 0.6 Mpc, gone ≥
- * 2 Mpc) — a pure function of where the camera is, not a layer-machinery
- * concept. Keeping `milkyWayLabelAlpha` here and multiplying it by the layer
- * opacity (`fadeAlpha = distAlpha × layerOpacity`) composes the two cleanly
- * without the fade registry learning a Milky-Way special case. The layer
- * opacity carries the user toggle; the distance alpha carries the
- * orientation-usefulness gate.
+ * The Milky Way label fades with camera distance on BOTH sides — gone ≥ 2 Mpc
+ * (too far, large-scale structure) via `milkyWayLabelAlpha`, and gone on the
+ * near side as the camera descends past the survey band (`surveyDeepZoom`,
+ * fully gone by 2 kpc) because this origin-anchored annotation cannot be
+ * projected once the camera is inside the cosmological near plane — see the
+ * deep-zoom cull note in `produceMilkyWayLabel`. Both are pure functions of
+ * where the camera is, not a layer-machinery concept. Keeping the two bands
+ * here and multiplying them by the layer opacity (`fadeAlpha = distAlpha ×
+ * deepZoomFade × layerOpacity`) composes them cleanly without the fade registry
+ * learning a Milky-Way special case. The layer opacity carries the user toggle;
+ * the distance alphas carry the orientation-usefulness gate.
  */
 
 import type { Label } from '../../../@types/rendering/Label';
@@ -36,6 +40,8 @@ import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from './liftedLabelPlacement';
 import { milkyWayLabelAlpha } from '../../gpu/labelLayout/milkyWayLabelVisibility';
+import { fadeBand } from '../../../utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from './scaleFadeBands';
 
 /**
  * Physical diameter driving the label's proportional screen-space lift. The
@@ -76,13 +82,28 @@ export function produceMilkyWayLabel(
 
   const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   const distAlpha = milkyWayLabelAlpha(camDist);
-  // Far away: emit nothing this frame.
-  if (distAlpha <= 0) return { labels: [], lines: [], awake: false };
+  // Deep-zoom cull (near side). This label is COSMO-slab content anchored at the
+  // world origin (our own position). Once the camera descends INSIDE the
+  // cosmological near plane (COSMO_NEAR_MPC, 0.01 Mpc) the origin can no longer
+  // be validly projected on that slab -- the exact reason the Milky-Way IMPOSTOR
+  // moved to NEAR0 (slabs.ts), except the impostor could relocate and this
+  // origin-anchored annotation cannot. Left emitting, its stem's endpoints
+  // project at a near-degenerate clip-w and blow up into a screen-filling quad,
+  // and -- because the director's marker-line set is then non-empty -- the whole
+  // 'marker-lines' pass runs every frame drawing that degenerate geometry.
+  // Riding surveyDeepZoom dissolves the annotation with the structure labels on
+  // descent (fully gone by 2 kpc, well above the pathological range), which
+  // empties the director's line set so markerLinesLayer skips entirely. The
+  // impostor OUTLIVES this band on its NEAR0 home; this label, bound to COSMO,
+  // cannot -- so it rides the shallower survey band by construction.
+  const deepZoomFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDist);
+  // Far away (>= 2 Mpc) or descended past the survey band: emit nothing.
+  if (distAlpha <= 0 || deepZoomFade <= 0) return { labels: [], lines: [], awake: false };
 
   // The distance fade composes with the layer opacity (the user toggle, driven
-  // by the visibility bridge). Applied to BOTH the label and the stem so they
-  // fade in lock-step.
-  const fadeAlpha = distAlpha * layerOpacity;
+  // by the visibility bridge) and the deep-zoom band. Applied to BOTH the label
+  // and the stem so they fade in lock-step.
+  const fadeAlpha = distAlpha * deepZoomFade * layerOpacity;
 
   const style = MILKY_WAY_LABEL_STYLE;
 

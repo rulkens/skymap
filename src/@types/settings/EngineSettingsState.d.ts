@@ -52,6 +52,8 @@ import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
+import type { StarCatalogId } from '../data/starCatalog/StarCatalogId';
+import type { StarCatalogItemSettings } from './StarCatalogItemSettings';
 import type { ClipId } from '../animation/ClipId';
 import type { SplineMode } from '../animation/SplineMode';
 import type { PassByDir } from '../animation/PassByDir';
@@ -66,9 +68,9 @@ export type EngineSettingsState = {
    * Per-galaxy catalog state lives in `items` — one row per `GalaxyCatalogId`, each carrying
    * the layer-visibility axis (`enabled`) and the text-label axis
    * (`labelEnabled`). Only the famous-galaxy catalog actually renders a label;
-   * the other galaxy catalogs carry `labelEnabled` inertly so all three source-type
-   * clusters share the one per-item shape (galaxy catalogs / structures / volumes all
-   * expose `items[id].enabled`).
+   * the other galaxy catalogs carry `labelEnabled` inertly so all four source-type
+   * clusters share the one per-item shape (galaxy catalogs / structures / volumes /
+   * star catalogs all expose `items[id].enabled`).
    */
   galaxyCatalogs: {
     enabled: boolean;
@@ -135,6 +137,69 @@ export type EngineSettingsState = {
   };
 
   /**
+   * Star-catalog master gate and per-catalog items — the FOURTH source-type
+   * cluster, symmetric with `galaxyCatalogs` / `structures` / `volumes`.
+   * `enabled` is the coarse "hide all star catalogs" gate; per-catalog state
+   * lives in `items` — one row per `StarCatalogId`, each carrying the
+   * layer-visibility axis (`enabled`) and the text-label axis (`labelEnabled`).
+   * Today the sole row is the survey-wide Gaia bin (`gaiaStars`), which carries
+   * `labelEnabled` inertly (the star renderer draws no per-star names); the
+   * curated famous-star map will add a label-bearing row later, so all four
+   * source-type clusters expose the same per-item shape.
+   *
+   * Singleton-overlay convention still holds per row: a star catalog's "loaded"
+   * status is its asset slot's own readiness (Tasks 5–6 wire the slot), NOT a
+   * bit on a store. The asset-demand predicate reads
+   * `settings.starCatalogs.items[id].enabled`, and the renderer reads this slice
+   * each frame.
+   *
+   * `sizePx` is the star-billboard pixel radius — the star-catalog twin of
+   * `galaxyCatalogs.sizePx`. It rides on the cluster (a shared appearance knob
+   * across every star catalog, like the galaxy size knob) rather than per-item,
+   * and the star renderer reads it into its size uniform each frame.
+   *
+   * `brightness` is the user's exposure trim on the starfield — the star-catalog
+   * twin of `galaxyCatalogs.brightness`. 1.0 is identity (the shader's calibrated
+   * `STAR_FLUX_EXPOSURE` baseline unchanged); the renderer multiplies the
+   * flux-glow peak by it, so it rides the same shared uniform as `sizePx`.
+   *
+   * `refineThreshold` is the "Detail" knob — the CPU octree-cut refine gate
+   * (`walkStarOctreeCut`'s `DEFAULT_REFINE_THRESHOLD`). Unlike `sizePx` /
+   * `brightness` it is NOT a GPU uniform: the layer reads it once per frame and
+   * feeds it to the walk. Lower ⇒ far boxes split earlier ⇒ fewer visible
+   * lattice cells at the cost of more drawn nodes.
+   *
+   * `glowOverlap` is the "Glow overlap" knob — an AGGREGATE-only radius spread.
+   * 1.0 is identity; above it a far aggregate's glow grows past its octree-box
+   * footprint so neighbours overlap and the box lattice dissolves. The vertex
+   * stage divides the Gaussian peak by the same factor (flux-conserving), so it
+   * softens the seam without changing total luminance. Rides the shared GPU
+   * uniform beside `sizePx` / `brightness`.
+   *
+   * `exposureNearX` / `exposureMidX` / `exposureFarX` are the three ABSOLUTE
+   * display exposures the scale-dependent `starExposureRamp` targets at its
+   * distance anchors (1 pc, 3 kpc, 10 kpc). Unlike `brightness` (a flat trim),
+   * these shape the cross-scale ramp: the layer feeds all three to
+   * `starExposureRamp` per frame. Live so the ramp can be re-eye-tuned against
+   * the current star bins' local flux; defaults 15 / 57 / 70. 15 is also baked
+   * into the shader's STAR_FLUX_EXPOSURE, so the ramp returns 1.0 at the near
+   * anchor there; the 57 mid anchor sits on the old near→far continuation, so the
+   * defaults reproduce the two-anchor look and pulling `exposureMidX` down bends
+   * only the intermediate few-kpc segment.
+   */
+  starCatalogs: {
+    enabled: boolean;
+    sizePx: number;
+    brightness: number;
+    refineThreshold: number;
+    glowOverlap: number;
+    exposureNearX: number;
+    exposureMidX: number;
+    exposureFarX: number;
+    items: Record<StarCatalogId, StarCatalogItemSettings>;
+  };
+
+  /**
    * Scalar-volume overlay master gate and per-item params.  When
    * `enabled` is false, `volumeUpsampleLayer.enabled` short-circuits
    * before consulting the renderer at zero GPU cost, and `scalarVolumeLayer`
@@ -142,8 +207,8 @@ export type EngineSettingsState = {
    * (enabled / intensity / palette / …) live in `items` — one settings
    * row per registry-known volume field, seeded from `SOURCE_REGISTRY` at
    * construction so the panel can show a field's toggle before its cube
-   * lazy-loads.  `items` is the same per-item accessor that galaxy catalogs and
-   * structures expose, so all three source-type clusters share one shape.
+   * lazy-loads.  `items` is the same per-item accessor that galaxy catalogs,
+   * structures, and star catalogs expose, so all four source-type clusters share one shape.
    */
   volumes: {
     enabled: boolean;
@@ -265,8 +330,8 @@ export type EngineSettingsState = {
    * parallel root records that previously held the same booleans in different
    * shapes: a reader walks one `items[cat]` entry to learn everything about a
    * category's visibility instead of cross-indexing two records by the same
-   * key.  `items` is the same per-item accessor galaxy catalogs and volumes expose, so
-   * all three source-type clusters share one shape.  Defaults to every
+   * key.  `items` is the same per-item accessor galaxy catalogs, volumes, and star
+   * catalogs expose, so all four source-type clusters share one shape.  Defaults to every
    * category fully visible.
    */
   structures: {

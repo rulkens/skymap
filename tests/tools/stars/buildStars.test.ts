@@ -170,6 +170,7 @@ describe('buildStarCatalog', () => {
       hipNonPositivePlx: 1, // HIP 99 — non-positive parallax, dropped by the parser
       famousSubtracted: 1, // Proxima — matched the famous-star set
       hipGaiaSubtracted: 1, // Gaia 4004 — replaced by bright HIP 42
+      farDistance: 0, // every fixture star sits within MAX_STAR_DISTANCE_PC
     });
   });
 });

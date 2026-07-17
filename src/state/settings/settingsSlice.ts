@@ -37,6 +37,7 @@ import { isStructureId } from '../../data/structure/structureIds';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
@@ -122,6 +123,58 @@ const settingsSlice = createSlice({
       settings.filaments.intensity = action.payload;
     },
 
+    // ── star catalogs (fourth source-type cluster) ──────────────────────────
+    // Master gate + per-catalog items, mirroring the galaxy-catalog cluster:
+    // `setStarCatalogEnabled` writes the coarse "hide all star catalogs" gate,
+    // and the two per-item reducers write one row's visibility / label axis.
+    setStarCatalogEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.starCatalogs.enabled = action.payload;
+    },
+    // Shared star-billboard size knob, twin of `setGalaxyCatalogSize`.
+    setStarCatalogSize: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.sizePx = action.payload;
+    },
+    // Shared star-brightness trim, twin of `setBrightness` (1.0 = identity).
+    setStarCatalogBrightness: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.brightness = action.payload;
+    },
+    // The "Detail" knob — CPU octree-cut refine threshold (not a GPU uniform).
+    setStarCatalogRefineThreshold: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.refineThreshold = action.payload;
+    },
+    // The "Glow overlap" knob — aggregate glow spread (1.0 = identity).
+    setStarCatalogGlowOverlap: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.glowOverlap = action.payload;
+    },
+    // The "Exposure (near)" knob — absolute display exposure the scale-dependent
+    // ramp targets at the near (solar-system) anchor. Fed to `starExposureRamp`.
+    setStarCatalogExposureNearX: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.exposureNearX = action.payload;
+    },
+    // The "Exposure (mid)" knob — absolute display exposure the ramp targets at
+    // the middle (few-kpc) anchor. Fed to `starExposureRamp`; bends only the
+    // intermediate segment.
+    setStarCatalogExposureMidX: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.exposureMidX = action.payload;
+    },
+    // The "Exposure (far)" knob — absolute display exposure the ramp targets at
+    // the far (whole-galaxy) anchor. Fed to `starExposureRamp`.
+    setStarCatalogExposureFarX: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.exposureFarX = action.payload;
+    },
+    setStarCatalogVisible: (
+      settings,
+      action: PayloadAction<{ id: StarCatalogId; enabled: boolean }>,
+    ) => {
+      settings.starCatalogs.items[action.payload.id].enabled = action.payload.enabled;
+    },
+    setStarCatalogLabelEnabled: (
+      settings,
+      action: PayloadAction<{ id: StarCatalogId; enabled: boolean }>,
+    ) => {
+      settings.starCatalogs.items[action.payload.id].labelEnabled = action.payload.enabled;
+    },
+
     // ── volumes ─────────────────────────────────────────────────────────────
     setVolumesEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.volumes.enabled = action.payload;
@@ -166,6 +219,9 @@ const settingsSlice = createSlice({
     },
     setStarLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.labels.starLabelsEnabled = action.payload;
+    },
+    setPlanetLabelsEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.labels.planetLabelsEnabled = action.payload;
     },
 
     // ── debug ───────────────────────────────────────────────────────────────
@@ -326,6 +382,16 @@ export const {
   setMilkyWayLabelEnabled,
   setFilamentsEnabled,
   setFilamentIntensity,
+  setStarCatalogEnabled,
+  setStarCatalogSize,
+  setStarCatalogBrightness,
+  setStarCatalogRefineThreshold,
+  setStarCatalogGlowOverlap,
+  setStarCatalogExposureNearX,
+  setStarCatalogExposureMidX,
+  setStarCatalogExposureFarX,
+  setStarCatalogVisible,
+  setStarCatalogLabelEnabled,
   setVolumesEnabled,
   addVolumeField,
   removeVolumeField,
@@ -354,6 +420,7 @@ export const {
   setLabelsEnabled,
   setLabelsFocusedOnly,
   setStarLabelsEnabled,
+  setPlanetLabelsEnabled,
   mergeSnapshot,
 } = settingsSlice.actions;
 

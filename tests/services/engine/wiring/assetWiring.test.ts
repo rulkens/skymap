@@ -78,6 +78,7 @@ describe('ASSET_WIRING membership', () => {
       'structureCatalog',
       'pgcAlias',
       'earthTexture',
+      Source.GaiaStars,
     ];
     expect(new Set(keys)).toEqual(new Set(expected));
     // No duplicate rows.
@@ -234,6 +235,24 @@ describe('ASSET_WIRING demand predicates', () => {
         }),
       ),
     ).toBe(true);
+  });
+
+  it('gaiaStars demand follows settings.starCatalogs (master gate AND per-item bit)', () => {
+    // The star-catalog cluster mirrors the galaxy-catalog cluster: a coarse
+    // master gate (`starCatalogs.enabled`) AND a per-catalog `items[id].enabled`
+    // bit must BOTH be true for the layer to load — the source-type-cluster
+    // convention. Exercised as a predicate over ctx variations, not a
+    // restatement of the row literal.
+    const gaia = rowFor(Source.GaiaStars);
+    const on = (starCatalogs: unknown) => gaia.demand(makeCtx({ settings: { starCatalogs } }));
+    // Master on + item on ⇒ demanded.
+    expect(on({ enabled: true, items: { gaiaStars: { enabled: true } } })).toBe(true);
+    // Master off overrides an enabled item ⇒ not demanded.
+    expect(on({ enabled: false, items: { gaiaStars: { enabled: true } } })).toBe(false);
+    // Item off under an on master ⇒ not demanded.
+    expect(on({ enabled: true, items: { gaiaStars: { enabled: false } } })).toBe(false);
+    // Absent item row (nothing seeded) ⇒ not demanded.
+    expect(on({ enabled: true, items: {} })).toBe(false);
   });
 
   it('the earthTexture row demands the texture only within the descent threshold', () => {

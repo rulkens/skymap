@@ -31,6 +31,13 @@ playwright-report/
 # Playwright's per-machine `.cache/` lives outside the repo (in
 # ~/Library/Caches/ms-playwright on macOS), so we don't need to ignore it.
 
+# ── Rust build output ─────────────────────────────────────────────────────────
+# The stars-rs crate (tools/stars-rs) compiles into a per-crate target/ dir
+# holding gigabytes of intermediate object files and the release binary — a pure
+# build artefact rebuilt by `cargo build`, never repo content. Cargo.lock IS
+# committed (it pins the exact dependency graph the reproducible builder needs).
+/tools/stars-rs/target/
+
 # ── Environment files ─────────────────────────────────────────────────────────
 # Default-deny `.env*` keeps secrets out by accident.  The carve-out below
 # is `.env.production`: it carries `VITE_DATA_BASE_URL`, the public R2 URL

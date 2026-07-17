@@ -66,7 +66,9 @@ describe('milkyWayPickRenderer (null device)', () => {
     const r = newRenderer();
     expect(r).toBeDefined();
     // pickMilkyWay / destroy are callable no-ops with no GPU device.
-    expect(() => r.pickMilkyWay(null as unknown as GPURenderPassEncoder)).not.toThrow();
+    expect(() =>
+      r.pickMilkyWay(null as unknown as GPURenderPassEncoder, new ArrayBuffer(176)),
+    ).not.toThrow();
     expect(() => r.destroy()).not.toThrow();
   });
 });
@@ -105,10 +107,13 @@ describe('milkyWayPickRenderer (stub device)', () => {
     expect(f32[4]).toBeCloseTo(MILKY_WAY_RADIUS_MPC);
   });
 
-  it('pickMilkyWay records the draw with NO uniform upload', () => {
-    // The per-pick writeBuffer is gone: sizing moved into the shader, so
-    // the draw is pure command recording (setPipeline + bind groups +
-    // draw(6, 1)).
+  it('pickMilkyWay self-binds @group(0): uploads the caller bytes to its OWN camera buffer', () => {
+    // The MW is the sole pickable in the NEAR0 pick pass, so there is no
+    // earlier draw to inherit a slot-0 camera from — pickMilkyWay must
+    // upload the caller's complete pick image to its own buffer and bind
+    // @group(0) itself. A regression back to the old inherit pattern
+    // (no upload, no slot-0 bind) leaves the pass with an unbound camera
+    // group — a validation error that silently drops the whole pick submit.
     const { device, writeBufferCalls } = makeStubDevice();
     const ctx = {
       device,
@@ -120,9 +125,21 @@ describe('milkyWayPickRenderer (stub device)', () => {
 
     writeBufferCalls.length = 0; // discard the construction write
     const pass = makeStubPass();
-    r.pickMilkyWay(pass);
+    const uniformBytes = new ArrayBuffer(176);
+    r.pickMilkyWay(pass, uniformBytes);
 
-    expect(writeBufferCalls).toHaveLength(0);
+    // Exactly one upload — the caller's bytes, verbatim, at offset 0.
+    expect(writeBufferCalls).toHaveLength(1);
+    expect(writeBufferCalls[0]!.offset).toBe(0);
+    expect(writeBufferCalls[0]!.data).toBe(uniformBytes);
+
+    // Slot 0 is bound by THIS draw (self-bind), alongside the dummy fade (1)
+    // and the static MW uniform (2).
+    const setBindGroup = pass.setBindGroup as unknown as ReturnType<typeof vi.fn>;
+    const slots = setBindGroup.mock.calls.map((c) => c[0]);
+    expect(slots).toContain(0);
+    expect(slots).toContain(1);
+    expect(slots).toContain(2);
     expect(pass.draw).toHaveBeenCalledWith(6, 1);
   });
 });

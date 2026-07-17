@@ -13,6 +13,8 @@ const gaiaRow = (sourceId: bigint, tag: number): GaiaSelectedRow => ({
   position: [tag, tag, tag] as Vec3,
   absMag: tag,
   bpRp: tag / 10,
+  appMag: tag,
+  isSupplement: false,
 });
 
 const brightRow = (hip: number, tag: number): HipBrightRow => ({
@@ -20,6 +22,8 @@ const brightRow = (hip: number, tag: number): HipBrightRow => ({
   position: [tag, tag, tag] as Vec3,
   absMag: tag,
   bpRp: tag / 10,
+  appMag: tag,
+  isSupplement: false,
 });
 
 describe('selectStars', () => {

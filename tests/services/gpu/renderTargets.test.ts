@@ -40,33 +40,45 @@ describe('createRenderTargets', () => {
     const targets = createRenderTargets(device, SWAP_FORMAT, { width: 900, height: 600 });
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
-    // volume @ scale 3 (colour), and foreground:0 @ scale 1 (colour + depth)
-    // → 4 textures. hdr at full size, volume at floor(size/3).
-    expect(create.mock.calls).toHaveLength(4);
+    // volume @ scale 3 (colour), star-aggregates @ scale 2 (colour), and
+    // foreground:0 @ scale 1 (colour + depth) → 5 textures. hdr at full size,
+    // volume at floor(size/3), star-aggregates at floor(size/2).
+    expect(create.mock.calls).toHaveLength(5);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
+    const aggDesc = create.mock.calls.find(
+      (c) => c[0].label === 'render-target-star-aggregates',
+    )![0];
     expect(hdrDesc.size).toEqual({ width: 900, height: 600 });
     expect(volDesc.size).toEqual({ width: 300, height: 200 });
+    expect(aggDesc.size).toEqual({ width: 450, height: 300 });
     expect(hdrDesc.format).toBe('rgba16float');
     expect(volDesc.format).toBe('rgba16float');
+    expect(aggDesc.format).toBe('rgba16float');
 
     const hdrViewBefore = targets.viewOf('hdr');
     const volViewBefore = targets.viewOf('volume');
+    const aggViewBefore = targets.viewOf('star-aggregates');
     targets.resize({ width: 1200, height: 900 });
 
-    // Each offscreen row reallocated at the new size/scale → 4 more textures.
-    expect(create.mock.calls).toHaveLength(8);
+    // Each offscreen row reallocated at the new size/scale → 5 more textures.
+    expect(create.mock.calls).toHaveLength(10);
     const hdrResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
     const volResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-volume')
       .at(-1)![0];
+    const aggResized = create.mock.calls
+      .filter((c) => c[0].label === 'render-target-star-aggregates')
+      .at(-1)![0];
     expect(hdrResized.size).toEqual({ width: 1200, height: 900 });
     expect(volResized.size).toEqual({ width: 400, height: 300 });
+    expect(aggResized.size).toEqual({ width: 600, height: 450 });
     // New views replaced the old ones.
     expect(targets.viewOf('hdr')).not.toBe(hdrViewBefore);
     expect(targets.viewOf('volume')).not.toBe(volViewBefore);
+    expect(targets.viewOf('star-aggregates')).not.toBe(aggViewBefore);
   });
 
   it('clamps volume to a 1 px minimum when floor(size/scale) is 0', () => {

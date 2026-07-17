@@ -27,4 +27,14 @@ export type LabelSettings = {
    * COSMO declutter, this is the near-field scene-body caption toggle.
    */
   starLabelsEnabled: boolean;
+  /**
+   * Master gate for the Earth + planet captions in the true-scale foreground
+   * (`foregroundLabelsLayer`) — the Moon rides the 'planet' caption kind, so it
+   * follows this switch too. Default ON. The sibling of `starLabelsEnabled`:
+   * one mutes the dense local star map, this one mutes the solar-system body
+   * set, so a viewer flying the final descent can silence either caption group
+   * on its own. Distinct from `focusedOnly`: that is a cross-cutting COSMO
+   * declutter, this is the near-field scene-body caption toggle.
+   */
+  planetLabelsEnabled: boolean;
 };

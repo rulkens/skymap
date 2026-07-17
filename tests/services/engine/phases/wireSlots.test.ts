@@ -421,6 +421,9 @@ function makeState(
     },
     assetSlots: {
       points: points as Map<SourceType, never>,
+      // Real (empty) map: installSlots routes the registry-built star-catalog
+      // slots here, so the fixture must carry the destination.
+      starCatalogs: new Map(),
       filaments: null,
       famousMeta: null,
       structureCatalog: null,

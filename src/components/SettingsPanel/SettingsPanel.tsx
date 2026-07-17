@@ -49,6 +49,7 @@ import { Panel } from '../common/Panel/Panel';
 import Button from '../common/Button/Button';
 import TierChipContainer from '../containers/TierChipContainer';
 import GalaxiesSectionContainer from '../containers/GalaxiesSectionContainer';
+import StarsSectionContainer from '../containers/StarsSectionContainer';
 import CosmicWebSectionContainer from '../containers/CosmicWebSectionContainer';
 import FlowSectionContainer from '../containers/FlowSectionContainer';
 import StructuresSectionContainer from '../containers/StructuresSectionContainer';
@@ -79,6 +80,7 @@ export const SettingsPanel = memo(function SettingsPanel({
       headerExtra={<TierChipContainer />}
     >
       <GalaxiesSectionContainer />
+      <StarsSectionContainer />
       <CosmicWebSectionContainer />
       <FlowSectionContainer />
       <StructuresSectionContainer />

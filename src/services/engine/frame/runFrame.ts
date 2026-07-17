@@ -415,7 +415,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // fade-out in galaxy-catalog visibility changes and tier-swap commits would
   // hang forever.
   state.subsystems.fades.tick(nowMs);
-  if (shouldKeepTicking(state, rootState, nowMs)) {
+  const keepTicking = shouldKeepTicking(state, rootState, nowMs);
+
+  if (keepTicking) {
     state.subsystems.scheduler.requestRender();
   }
 }

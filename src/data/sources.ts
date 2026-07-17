@@ -1,7 +1,7 @@
 /**
  * `Source` enum + `SOURCE_REGISTRY`.
  *
- * The single registry of every data source skymap loads. Seven kinds,
+ * The single registry of every data source skymap loads. Eight kinds,
  * discriminated by `type`:
  *
  *   'galaxyCatalog' — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
@@ -20,14 +20,17 @@
  *   'flow'          — CF4++ peculiar-velocity field overlay (single
  *                     flowfield.scfd cube). No per-record identity; carries
  *                     its own look/motion defaults.
- *   'star'/'planet'/'earth'
- *                   — near-field true-scale bodies (the stellar neighbourhood,
- *                     Solar-System planets, Earth). Seeded records drawn by their
- *                     own content-layer; not persisted, not pickable.
+ *   'famousStar'/'planet'/'earth'
+ *                   — near-field true-scale bodies (the curated stellar
+ *                     neighbourhood, Solar-System planets, Earth). Seeded records
+ *                     drawn by their own content-layer; not persisted, not pickable.
+ *   'starCatalog'   — survey-wide stellar point clouds (the Gaia bin today).
+ *                     Streamed as tiered `.bin` clouds and drawn by the star
+ *                     renderer; registry-key-only code, not persisted, not pickable.
  *
  * Only `'galaxyCatalog'` and `'structure'` codes are persisted to disk / packed into
- * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, and the body codes
- * (`'star'`, `'planet'`, `'earth'`) exist
+ * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, `'starCatalog'`, and
+ * the body codes (`'famousStar'`, `'planet'`, `'earth'`) exist
  * solely so every data source has one place to look. The visibility-bitmask helpers
  * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
  * galaxy catalog codes only.
@@ -66,9 +69,10 @@ import { FLOW_ENTRY } from './sources/flow';
 import { DESI_DEEP_ENTRY } from './sources/desiDeep';
 import { DESI_WEDGE_ENTRY } from './sources/desiWedge';
 import { DESI_SGW_ENTRY } from './sources/desiSgw';
-import { STAR_ENTRY } from './sources/star';
+import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
+import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
 
 export { Source } from './source';
 
@@ -122,9 +126,10 @@ export const SOURCE_REGISTRY = {
   [Source.DesiDeep]: DESI_DEEP_ENTRY,
   [Source.DesiWedge]: DESI_WEDGE_ENTRY,
   [Source.DesiSgw]: DESI_SGW_ENTRY,
-  [Source.Star]: STAR_ENTRY,
+  [Source.FamousStar]: FAMOUS_STAR_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
+  [Source.GaiaStars]: GAIA_STARS_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────

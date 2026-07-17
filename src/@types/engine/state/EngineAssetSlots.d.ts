@@ -33,10 +33,27 @@ import type { MCPMReq } from '../../loading/MCPMReq';
 import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
 import type { StructureCatalogPayload } from '../../loading/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
+import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
+import type { StarCatalogReq } from '../../loading/StarCatalogReq';
 import type { SourceType } from '../../data/SourceType';
 
 export type EngineAssetSlots = {
   points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
+  /**
+   * Per-source survey star catalogs (the Gaia bin today) — the star twin of
+   * `points`, keyed by the numeric `Source` code so any consumer can look up
+   * a star row's slot without iterating. A SEPARATE map rather than a widened
+   * `points` because the payload/request types differ (`StarCatalog` /
+   * `StarCatalogReq` vs the galaxy pair) — one shared map would erase both to
+   * a union every consumer re-narrows. Unlike `points` (minted and
+   * self-installed in initGpu, next to the renderer the commit closes over),
+   * these slots are registry-built: `installSlots` routes numeric keys whose
+   * registry entry is `type: 'starCatalog'` into this map, and the slot's
+   * commit null-guards `state.gpu.starCatalogRenderer` instead of closing
+   * over it. Declared up-front as an empty Map (like `points`) so consumers
+   * need no null check.
+   */
+  starCatalogs: Map<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
   /**
    * Null until the GPU init IIFE constructs the filament renderer and
    * mints this slot — same lifecycle pattern as `state.gpu.renderer`.

@@ -43,7 +43,7 @@
  * the NEAR0 vp's view translation (≈ −4.85×10⁻¹²) are BOTH ~1 AU from the
  * render origin. Their f32 subtraction cancels to ~4 digits, quantising the
  * camera-relative anchor onto a ~13 km grid — so the caption visibly hops
- * (~1 px at cam.distance 1e-15, ~24 px at the 1e-17 deepZoom floor) as the
+ * (~1 px at cam.distance 1e-15, ~24 px at the 1e-17 Mpc distance floor) as the
  * camera moves. The precision killer is each term's distance FROM THE ORIGIN,
  * not the (tiny) camera-to-anchor distance: two points metres apart but 1 AU
  * from the origin still cancel. Consuming the f32-narrowed `view.vp` — whose
@@ -89,9 +89,13 @@
  *      (`SCALE_FADE_BANDS.sunCaption`, keyed on the camera's distance from the
  *      heliocentric origin) so its name FADES IN smoothly as the camera
  *      descends: exactly 0 at the layer's enable gate (no pop) up to full alpha
- *      by half that distance. Earth + the planets are always-on. The
- *      star-labels toggle (`settings.labels.starLabelsEnabled`) zeroes the
- *      star map's target (Sun included).
+ *      by half that distance. Earth + the planets ride the planet-labels toggle
+ *      (`settings.labels.planetLabelsEnabled`). Two independent mute switches
+ *      gate the two caption groups: the star-labels toggle
+ *      (`settings.labels.starLabelsEnabled`) zeroes the star map's target (Sun
+ *      included); the planet-labels toggle zeroes the Earth + planet (+ Moon,
+ *      which rides the 'planet' kind) target. Both flow through the envelope
+ *      below, so flipping either fades rather than pops.
  *   2. DECLUTTER — EVERY visible caption contends in one screen-space cull
  *      (`declutterByScreenSeparation`), Earth and the planets included. The
  *      collision winner is the higher `CAPTION_PRIORITY` kind tier (sun >
@@ -263,6 +267,7 @@ export const foregroundLabelsLayer: ContentLayer = {
     const rebasedVp = rebaseViewProj(view.slab.vp, camPos);
     const rebasedVpF32 = narrowMat4(rebasedVp);
     const starLabelsEnabled = state.settings.labels.starLabelsEnabled;
+    const planetLabelsEnabled = state.settings.labels.planetLabelsEnabled;
 
     // ── Pass 1: rebase + size every body, and derive each caption's fade TARGET ──
     // (Stage 1 of the module header's three-stage pipeline.)
@@ -306,12 +311,14 @@ export const foregroundLabelsLayer: ContentLayer = {
       // popping to full alpha the frame the layer's gate switches on. For the
       // Sun `distanceMpc` IS the camera's distance from the heliocentric origin
       // (the Sun sits there), which is what that band keys on. Earth + the
-      // planets are always-on. The star-labels toggle zeroes the star map's
-      // target (Sun included) — through the envelope below, so flipping it fades
-      // rather than pops.
+      // planets ride the planet-labels toggle. Both toggles feed the target that
+      // flows through the envelope below, so flipping either fades rather than
+      // pops.
       const isStarMap = label.kind === 'star' || label.kind === 'sun';
       const baseTarget = !isStarMap
-        ? 1
+        ? planetLabelsEnabled
+          ? 1
+          : 0
         : !starLabelsEnabled
           ? 0
           : label.kind === 'sun'

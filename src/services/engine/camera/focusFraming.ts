@@ -102,8 +102,9 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
       // Physical radius in Mpc (Earth: 6371 km ≈ 2.06e-16 Mpc). The distance
       // is pure screen-fill math with NO clamp — the wheel-zoom / descent
       // clamps own the floor, and any Mpc-scale minimum here would park the
-      // camera ~5e14 body-radii out. Deep-zoom gating (the palette only
-      // surfaces body rows behind '?deepZoom') keeps this reachable in practice.
+      // camera ~5e14 body-radii out. The wheel-zoom floor (clampDistance.ts:
+      // MIN_DISTANCE_MPC) reaches Earth-surface scale, keeping this reachable
+      // in practice.
       const radiusMpc = row.radiusKm * SCALE_UNITS.KM_TO_MPC;
       return {
         target: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
