@@ -225,19 +225,19 @@ applies `litShade` (Task 3), then attenuates by the ring-on-planet shadow when
 task's fragment ships the texture + `litShade`, leaving `ringOuterRatio == 0` a
 clean no-op skip).
 
-- [ ] Add `TexturedBodyRenderer.d.ts` (one type).
-- [ ] Add `texturedBody/{io,vertex,fragment}.wesl` — io holds the inter-stage
+- [x] Add `TexturedBodyRenderer.d.ts` (one type).
+- [x] Add `texturedBody/{io,vertex,fragment}.wesl` — io holds the inter-stage
   varyings (clip, uv, local normal); vertex mirrors `earth/vertex.wesl` binding
   `TexturedBodyUniforms`; fragment samples + `litShade`. WESL constraints
   (no backticks, `texture_2d`, `?static`, verify with the dev logger).
-- [ ] Add `texturedBodyRenderer.ts` with `satisfies Renderer`. Didactic module
+- [x] Add `texturedBodyRenderer.ts` with `satisfies Renderer`. Didactic module
   header: per-body uniform buffers = the single-uniform-clobber fix by
   construction (spec §6.4); the binding-3 placeholder trick; per-body mip gen.
-- [ ] Test `createTexturedBodyRenderer satisfies Renderer` — non-empty `label`,
+- [x] Test `createTexturedBodyRenderer satisfies Renderer` — non-empty `label`,
   `destroy` fn, `setTexture`/`setRingTexture`/`draw` callable with the right
   arity, against the headless device stub (mirror `earthRenderer.test.ts`; or
   typecheck-only with a note if headless construction is infeasible).
-- [ ] `npm test -- texturedBodyRenderer` → green. Commit.
+- [x] `npm test -- texturedBodyRenderer` → green. Commit.
 
 ## Task 5 — `partitionBodiesByPresentation` + `EngineGpuHandles` slot + commit dispatch extension
 
