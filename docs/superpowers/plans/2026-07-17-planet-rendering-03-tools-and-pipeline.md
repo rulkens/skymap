@@ -73,14 +73,17 @@ CLAUDE.md "register the directory as `<catalog>.dir`" rule). Each row:
 globs), a one-line `description`, the `upstream` URL, and `fetcher:
 'tools/fetch/fetchTextures.ts'`.
 
-- [ ] Add the `textures.*` rows (SSS bodies + ring, NASA BMNG full + dev sibling,
+- [x] Add the `textures.*` rows (SSS bodies + ring, NASA BMNG full + dev sibling,
   USGS ×4, `textures.dir`). Keys dotted-lowercase (`textures.sssMars8k`,
   `textures.usgsIo`, `textures.nasaBmng`, `textures.nasaBmngDev`,
   `textures.sssRing`, `textures.dir`, …); URLs verbatim from spec §3.
-- [ ] Test (if `rawDataRegistry` has a structural test) `textures rows resolve` —
+- [x] Test (if `rawDataRegistry` has a structural test) `textures rows resolve` —
   every `textures.*` key resolves through `rawDataPath` and carries an `upstream`
-  URL (structural invariant, not a listing restatement).
-- [ ] `npm test -- rawDataRegistry` → green (or typecheck-only if untested).
+  URL (structural invariant, not a listing restatement). NOTE: `textures.dir`
+  resolves to the RAW dir `data/raw/textures` (fetcher output target), not the
+  build output — the registry's "inputs only" rule + every `.dir` precedent
+  governs over this plan's "built-output directory" phrasing.
+- [x] `npm test -- rawDataRegistry` → green (or typecheck-only if untested).
   Commit.
 
 ## Task 2 — `fetchTextures` (GET-only, resume, sha256, size-gated)
