@@ -351,16 +351,16 @@ export function tierToTexturePx(tier: Tier): number;
 export function clampTier(tier: Tier, ceiling: Tier): Tier;
 ```
 
-- [ ] Add `BodyTextureReq.d.ts` (one type).
-- [ ] Add `tierToTexturePx.ts` + `clampTier.ts`. Didactic docblocks: the tier →
+- [x] Add `BodyTextureReq.d.ts` (one type).
+- [x] Add `tierToTexturePx.ts` + `clampTier.ts`. Didactic docblocks: the tier →
   pixel mapping is the fetch filename contract; `clampTier` never upscales.
-- [ ] Test `tierToTexturePx maps each tier` — `small→2048, medium→4096,
+- [x] Test `tierToTexturePx maps each tier` — `small→2048, medium→4096,
   large→8192` (hand values — the on-disk filename contract).
-- [ ] Test `clampTier caps to the ceiling` — `clampTier('large', 'small') ===
+- [x] Test `clampTier caps to the ceiling` — `clampTier('large', 'small') ===
   'small'` (Uranus ceiling) and `clampTier('small', 'large') === 'small'` (never
   upscales). These are NOT clamp-boundary tests — `small`/`large` are
   observationally distinct on either side of the cap.
-- [ ] `npm test -- tierToTexturePx clampTier` → green. Commit.
+- [x] `npm test -- tierToTexturePx clampTier` → green. Commit.
 
 ## Task 8 — `bodyTextureFetcher`
 
