@@ -82,7 +82,7 @@ export const bodyGlintsLayer: ContentLayer = {
   enabled(state, ctx) {
     // Handle first (short-circuits before any ctx / state.data read — matches
     // starPointsLayer), distance second, partition last.
-    if (state.gpu.bodyGlintRenderer == null) return false;
+    if (state.gpu.bodyGlintRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     return sceneBodyPartition(state, ctx).glints.length > 0;
   },

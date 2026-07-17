@@ -24,6 +24,7 @@
 import type { FadeBand } from '../../../@types/math/FadeBand';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
+import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
 
 export const SCALE_FADE_BANDS = {
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc.
@@ -80,12 +81,14 @@ export const SCALE_FADE_BANDS = {
 
   // Keyed on: a scene BODY's apparent diameter, px. The sub-pixel glint
   // cross-fade: a body renders as a brightness-scaled additive point that is at
-  // FULL strength at/below 1 px and GONE at/above 3 px (a recede fade — full at
-  // the low edge). The mesh keeps its hard `SUB_PIXEL_BODY_CULL_PX = 1` cull and
-  // the partition sends everything below `BODY_GLINT_MAX_PX = 3` to the glint, so
-  // over the 3->1 px band the glint fades IN while the mesh still draws: at 3 px
-  // the glint is ~0 (the mesh carries), by 1 px it is full (the mesh is about to
-  // cull) — a popless handoff. `goneAt` equals `BODY_GLINT_MAX_PX` so the
-  // partition boundary and this fade edge cannot drift.
-  bodyGlint: { fullAt: 1, goneAt: 3 },
+  // FULL strength at/below 1 px and GONE at/above `BODY_GLINT_MAX_PX` (a recede
+  // fade — full at the low edge). The mesh keeps its hard `SUB_PIXEL_BODY_CULL_PX
+  // = 1` cull and the partition sends everything below `BODY_GLINT_MAX_PX` to the
+  // glint, so over the (BODY_GLINT_MAX_PX)->1 px band the glint fades IN while the
+  // mesh still draws: at the top edge the glint is ~0 (the mesh carries), by 1 px
+  // it is full (the mesh is about to cull) — a popless handoff. `goneAt` IS the
+  // partition-boundary symbol `BODY_GLINT_MAX_PX`, not a hardcoded copy of it: the
+  // handoff is popless BY CONSTRUCTION only while the fade edge and the partition
+  // boundary are the SAME value, so they share one source and cannot drift.
+  bodyGlint: { fullAt: 1, goneAt: BODY_GLINT_MAX_PX },
 } as const satisfies Readonly<Record<string, FadeBand>>;
