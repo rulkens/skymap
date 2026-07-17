@@ -390,14 +390,23 @@ sibling gates the SAME way but is the layer that actually shows the star ring (a
 concern). Two thin layers over one renderer is acceptable; a **third** slab flavour would be
 the consolidation trigger (spec §10 "Adjacent").
 
-- [ ] Add `near0SelectionRingLayer` with a didactic docblock (why a NEAR0 sibling; the f64
+> **Executed deviation (user-adjudicated):** the identical-gate design above is a
+> writeBuffer/submit race — both layers share the one renderer's uniform buffers, all
+> `writeBuffer`s land before the frame's single `submit`, so both draws read the last
+> (NEAR0) write and the COSMO galaxy/Milky-Way halo vanishes. Fixed by **slab-tagged
+> halo gating**: each `selectionHalo` arm declares its slab (`star` → NEAR0,
+> `galaxyCatalog`/`milkyWay` → COSMO) and each layer draws only its own slab's halos —
+> exactly one uniform writer per frame. Stage 2 body halo arms must carry the NEAR0 tag.
+
+- [x] Add `near0SelectionRingLayer` with a didactic docblock (why a NEAR0 sibling; the f64
       rebase + camera-relative ring centre; renderer reused unchanged). Register it in
       `CONTENT_LAYERS`.
-- [ ] Add the test `enabled only when the selected row yields a NEAR0 halo` — a star row
+- [x] Add the test `enabled only when the selected row yields a NEAR0 halo` — a star row
       makes `enabled` true (renderer present); a null row / structure row makes it false.
       Behavioural gate check, mirroring the COSMO ring layer's gate.
-- [ ] `npx vitest run tests/services/engine/frame/passes/near0SelectionRingLayer.test.ts` → fail, implement, pass.
-- [ ] Commit.
+      _Executed: plus a slab-exclusivity table test — never both layers enabled for any row kind._
+- [x] `npx vitest run tests/services/engine/frame/passes/near0SelectionRingLayer.test.ts` → fail, implement, pass.
+- [x] Commit.
 
 ## Task 6 — Star pick shaders + `starCatalogPickRenderer` (spec §5)
 
