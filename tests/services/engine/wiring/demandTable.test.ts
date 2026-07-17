@@ -99,8 +99,10 @@ function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
     current: () => null,
     state: () => ({ kind: current }) as LoadState<unknown>,
     subscribe: () => () => {},
+    lastRequest: () => null,
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
   };
 }
 
@@ -257,9 +259,13 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       volumes: { items: volumeFields },
     } as unknown as EngineSettingsState,
     requests: requests as Set<import('../../../../src/@types/loading/RequestKey').RequestKey>,
-    // Far from Earth — buildDemandCtx reads the pose box unconditionally, and
-    // Infinity keeps the descent-gated earthTexture row out of the demand set.
-    cameraRuntime: { lastPose: { current: { distance: Infinity } } },
+    // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
+    // so both must be present; a far resting pose keeps the proximity-gated
+    // body-texture rows out of the demand set.
+    cameraRuntime: {
+      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
+      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+    },
     assetSlots: {
       points,
       filaments: (namedSlots.filaments ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
@@ -271,6 +277,9 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       pgcAlias: (namedSlots.pgcAlias ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       cf4Density: (namedSlots.cf4Density ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       mcpm: (namedSlots.mcpm ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
+      // Empty keyed family: the body-texture rows resolve to undefined slots
+      // (far resting pose ⇒ none demanded anyway), so none fires.
+      bodyTextures: new Map(),
     },
   } as unknown as EngineState;
 }

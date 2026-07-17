@@ -63,7 +63,7 @@ import { defaultRetryPolicy } from './retryPolicy';
 import { consoleAdapterFor } from './consoleAdapter';
 
 export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): AssetSlot<T, Req> {
-  const { name, fetch: fetchFn, commit, retry = defaultRetryPolicy } = args;
+  const { name, fetch: fetchFn, commit, onRelease, retry = defaultRetryPolicy } = args;
 
   // ── Mutable cell.  The entire stateful surface of the loading system. ──
   let generation = 0;
@@ -138,15 +138,11 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
     // ── Retry loop ────────────────────────────────────────────────────
     while (true) {
       try {
-        value = await fetchFn(
-          req,
-          ctrl.signal,
-          (loaded, total) => {
-            // Drop late progress events from superseded fetches.
-            if (myGen !== generation) return;
-            dispatch({ kind: 'bytes', loaded, total });
-          },
-        );
+        value = await fetchFn(req, ctrl.signal, (loaded, total) => {
+          // Drop late progress events from superseded fetches.
+          if (myGen !== generation) return;
+          dispatch({ kind: 'bytes', loaded, total });
+        });
         dispatch({ kind: 'fetch-succeeded' });
         break;
       } catch (err) {
@@ -237,6 +233,9 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       subscribers.add(fn);
       return () => subscribers.delete(fn);
     },
+    lastRequest(): Req | null {
+      return lastRequest;
+    },
     forceReload(): void {
       if (lastRequest !== null) this.load(lastRequest);
     },
@@ -246,6 +245,40 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       controller = null;
       // Roll back to last ready state, or idle if there was none.
       state = lastReady ?? { kind: 'idle' };
+      for (const sub of subscribers) sub(state);
+    },
+    release(): void {
+      // The evict edge of two-way demand — the inverse of load().
+      //
+      // Like cancel(), it bumps the generation and aborts the controller: the
+      // generation bump is what composes with the slot's race machinery, so a
+      // fetch or commit that resolves after this call fails its race-check and
+      // is discarded (a late commit must not resurrect a released slot). The
+      // abort unwinds any in-flight fetch promptly rather than leaving it to run
+      // to completion behind a dead generation.
+      //
+      // Unlike cancel() — which rolls back to `lastReady` — release() drops to
+      // idle unconditionally and runs the un-commit hook. We snapshot whether a
+      // payload was committed BEFORE transitioning, so `onRelease` fires exactly
+      // once with the committed value only when one existed (state 'ready'), and
+      // never when we merely aborted a still-loading fetch (nothing to free).
+      // Clearing `lastReady` means a subsequent cancel() can't resurrect the
+      // released value, and a second release() finds nothing to release — the
+      // exactly-once guarantee holds across repeated calls.
+      //
+      // Gating on the `ready` discriminant rather than a non-null `current()`
+      // keeps the hook correct for a slot whose committed payload is itself null.
+      const releasing = state.kind === 'ready' ? { value: state.value } : null;
+      generation += 1;
+      controller?.abort();
+      controller = null;
+      lastReady = null;
+      // Clear the committed request too: a released slot holds nothing, so the
+      // stale-tier check reads `null` and `forceReload()` is a no-op until the
+      // demand loop re-loads it at the current tier.
+      lastRequest = null;
+      state = { kind: 'idle' };
+      if (releasing && onRelease) onRelease(releasing.value);
       for (const sub of subscribers) sub(state);
     },
   };

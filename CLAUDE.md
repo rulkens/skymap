@@ -156,6 +156,14 @@ Re-run order when DESI raw data changes:
 2. `npm run build-tiers` — re-bakes `desi-deep.bin` (the CrB deep-cone patch) alongside the other catalog bins.
 3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
 
+Re-run order when planet textures change:
+
+1. `npm run fetch-textures` — pulls the source planet maps (~700 MB full; `--dev` fetches the ~7 MB 2k subset). GET-only fetcher, resumes by completed files.
+2. `npm run build-textures` — tiers the maps into `public/data/images/textures/`.
+3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
+
+The full-res pull, build, and sync run post-merge from the main worktree.
+
 ### Deploy workflow (Cloudflare Workers Assets + R2)
 
 Two Cloudflare resources serve skymap, and they're updated independently:

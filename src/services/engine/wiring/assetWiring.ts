@@ -58,14 +58,21 @@ import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
-import {
-  createEarthTextureSlot,
-  EARTH_TEXTURE_MAX_DISTANCE_MPC,
-} from '../../loading/slots/earthTextureSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
+import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
+import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { clampTier } from '../../../utils/math/clampTier';
+import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { hostBodyId } from '../../../utils/scene/hostBodyId';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
+import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
+import type { RingTextureId } from '../../../@types/data/RingTextureId';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 /**
  * The categories backed by the bulk `.ccat` catalog — their visibility
@@ -140,6 +147,40 @@ function starCatalogRow(source: SourceType): AssetWiringRow {
     req: (tier) => ({ source, tier }),
     demand: (ctx) =>
       ctx.settings.starCatalogs.enabled && ctx.settings.starCatalogs.items[id]?.enabled === true,
+  };
+}
+
+/** The body's world position (the ring rides its host body's). */
+function bodyPosOf(id: BodyTextureId | RingTextureId): Readonly<Vec3> {
+  return findByIdOrThrow(SCENE_BODIES, hostBodyId(id), 'bodyTextureRow').positionMpc;
+}
+
+/** The body's tier ceiling from the texture registry (the ring's is its host's). */
+function ceilingOf(
+  id: BodyTextureId | RingTextureId,
+): (typeof BODY_TEXTURE_REGISTRY)[BodyTextureId]['maxTier'] {
+  return BODY_TEXTURE_REGISTRY[hostBodyId(id)].maxTier;
+}
+
+/**
+ * One demand+release row for a body-surface texture, generated per family key,
+ * mirroring `pointRow`: `built: 'external'` (minted in `initGpu` next to the
+ * body renderer), demand+req only here. The slot is DEMANDED once the camera
+ * closes inside the body's own load radius and RELEASED once it retreats past
+ * twice that radius. `release` is separate from `!demand` on purpose — the band
+ * between `X` and `2X` is the hysteresis gap where neither fires, so a camera
+ * dithering at the boundary never thrashes a multi-MB texture load/free cycle
+ * (see `AssetWiringRow`). `req` clamps the current tier to the body's ceiling so
+ * a body that only ships a `small` texture is never asked for a `large` one.
+ */
+function bodyTextureRow(id: BodyTextureId | RingTextureId): AssetWiringRow {
+  return {
+    key: id,
+    built: 'external',
+    factory: externalFactory,
+    req: (tier) => ({ bodyId: id, tier: clampTier(tier, ceilingOf(id)) }),
+    demand: (ctx) => distanceMpc(ctx.cameraPosMpc, bodyPosOf(id)) < loadRadiusMpc(id),
+    release: (ctx) => distanceMpc(ctx.cameraPosMpc, bodyPosOf(id)) > 2 * loadRadiusMpc(id),
   };
 }
 
@@ -242,17 +283,12 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     demand: (ctx) => ctx.request('paletteOpened'),
   },
 
-  // ── Blue Marble Earth texture ────────────────────────────────────
-  // Descent-gated (the only proximity-loaded asset): fires when the camera's
-  // orbit distance-to-focus drops below the threshold, deferring the ~MB JPG
-  // off the boot budget. Void request (single tier-agnostic texture). The
-  // renderer's mid-blue placeholder covers the in-flight window.
-  {
-    key: 'earthTexture',
-    factory: (deps) => createEarthTextureSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: (ctx) => ctx.cameraDistanceMpc < EARTH_TEXTURE_MAX_DISTANCE_MPC,
-  },
+  // ── Body-surface textures (proximity-demanded + released) ────────
+  // One row per textured body + the Saturn ring, each minted in initGpu
+  // (`built: 'external'`) and gated on the camera closing inside that body's
+  // own load radius — the proximity family that replaces Earth's bespoke
+  // descent-gated texture. See `bodyTextureRow` for the hysteresis rationale.
+  ...ALL_BODY_TEXTURE_KEYS.map(bodyTextureRow),
 
   // ── Survey star catalogs (Gaia bin today) ────────────────────────
   // Per-source, tier-aware, registry-built. One row per `type: 'starCatalog'`

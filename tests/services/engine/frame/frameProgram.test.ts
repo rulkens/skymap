@@ -186,9 +186,9 @@ describe('timedSlotsOf', () => {
     // sits adjacent to the star-catalog leaf draw it composites), the tone-map
     // composite, the five swap overlays, then the near-field tail (the
     // foreground:0 body render — one slot per body layer: earth, star-spheres,
-    // focused-field-star-sphere, planets — the foreground:0→swap composite, and
-    // the (swap, NEAR0) render
-    // group → near0-selection-ring then foreground-labels), and pick last.
+    // focused-field-star-sphere, planets, textured-bodies, then the translucent
+    // rings overlay last — the foreground:0→swap composite, and the (swap, NEAR0)
+    // render group → near0-selection-ring then foreground-labels), and pick last.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'point-sprites',
@@ -203,6 +203,7 @@ describe('timedSlotsOf', () => {
       'milky-way',
       'star-points',
       'orbit-trails',
+      'body-glints',
       'star-catalog',
       'star-upsample',
       'hdr→swap',
@@ -215,6 +216,8 @@ describe('timedSlotsOf', () => {
       'star-spheres',
       'focused-field-star-sphere',
       'planets',
+      'textured-bodies',
+      'rings',
       'foreground:0→swap',
       'near0-selection-ring',
       'foreground-labels',

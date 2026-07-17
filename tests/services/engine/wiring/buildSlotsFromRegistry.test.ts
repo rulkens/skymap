@@ -29,8 +29,10 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> {
     current: () => null,
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
+    lastRequest: () => null,
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
   };
 }
 
@@ -92,6 +94,6 @@ describe('buildSlotsFromRegistry', () => {
     expect(factory).toHaveBeenCalledTimes(1);
     expect(factory).toHaveBeenCalledWith(deps);
     // Purity: construction never triggers a load.
-    expect((slots.get('filaments')!.load as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(slots.get('filaments')!.load as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 });

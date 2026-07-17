@@ -65,7 +65,10 @@ import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
+import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
+import type { RingRenderer } from '../../rendering/RingRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
+import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
 import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
 import type { StarCatalogPickRenderer } from '../../rendering/StarCatalogPickRenderer';
 import type { BodyPickRenderer } from '../../rendering/BodyPickRenderer';
@@ -354,8 +357,10 @@ export type EngineGpuHandles = {
    * Blue Marble bitmap. Its ('rgba16float', 'depth32float') pipeline formats
    * MUST match that row's `format` / `depth` in `renderTargets.ts` — the
    * target↔renderer-profile invariant. Constructed in `initGpu`, which also
-   * fires the (un-awaited) Blue Marble fetch → `setTexture`; until the bitmap
-   * lands the renderer draws a plain mid-blue placeholder sphere.  Excluded
+   * mints its surface texture into the `bodyTextures` slot family (key
+   * `'earth'`); that slot is proximity-demanded on descent and its commit calls
+   * `setTexture`. Until the bitmap lands the renderer draws a plain mid-blue
+   * placeholder sphere.  Excluded
    * from `isEngineReady` and null-checked at use by `earthLayer`.  Null until
    * `initGpu` constructs it; released and re-nulled by `destroy()` (releases
    * the position + uv VBOs, index IBO, uniform buffer, and the Earth texture).
@@ -390,6 +395,35 @@ export type EngineGpuHandles = {
    */
   planetRenderer: PlanetRenderer | null;
   /**
+   * The shared textured-sphere renderer for the twelve non-Earth textured
+   * bodies (the seven other major planets, the Moon, and the four Galilean
+   * moons) — one UV-sphere pipeline whose per-body `Map` gives each body its
+   * own uniform buffer + bind group + surface texture, so no shared uniform can
+   * be clobbered mid-frame. `texturedBodiesLayer` draws the `textured` branch of
+   * `partitionBodiesByPresentation` through it; the `bodyTextures` slot family's
+   * commit routes each non-Earth body's bitmap to `setTexture`, and its
+   * onRelease frees that body's texture via `clearTexture`. Same `foreground:0`
+   * ('rgba16float', 'depth32float') format invariant as `earthRenderer` /
+   * `planetRenderer`. Excluded from `isEngineReady` and null-checked at use.
+   * Null until `initGpu` constructs it; released and re-nulled by `destroy()`
+   * (which also frees every per-body uniform buffer + surface/ring texture).
+   */
+  texturedBodyRenderer: TexturedBodyRenderer | null;
+  /**
+   * The translucent planetary-ring renderer (Saturn's rings) — the overlay half
+   * of the ring system, drawn LAST in the `(foreground:0, NEAR0)` group as a
+   * two-sided translucent annulus that depth-tests against the opaque spheres
+   * but writes no depth and blends straight-alpha OVER. Its ('rgba16float',
+   * 'depth32float') pipeline formats match the `foreground:0` row like the sphere
+   * bodies. `ringsLayer` draws each resident `SCENE_RINGS` entry through it; the
+   * `bodyTextures` family's `saturn-ring` commit routes the radial strip to
+   * `setTexture` (alongside `texturedBodyRenderer.setRingTexture` for the
+   * ring-on-planet shadow half). Excluded from `isEngineReady` and null-checked
+   * at use. Null until `initGpu` constructs it; released and re-nulled by
+   * `destroy()` (releases the disc VBO/IBO, uniform buffer, and strip texture).
+   */
+  ringRenderer: RingRenderer | null;
+  /**
    * The unresolved stars (the `points` branch of
    * `partitionStarsByResolution`) as additive point sprites into the
    * depthless HDR target — the far half of the star LOD (`star-points`
@@ -404,6 +438,22 @@ export type EngineGpuHandles = {
    * instance + uniform buffers).
    */
   starPointRenderer: StarPointRenderer | null;
+  /**
+   * The sub-pixel scene bodies (the `glints` branch of
+   * `partitionBodiesByPresentation`) as brightness-scaled additive point sprites
+   * into the depthless HDR target — the far half of the body LOD (`body-glints`
+   * layer, sharing the frame program's `(hdr, NEAR0)` render step with
+   * `star-points`).  Its brightness encodes apparent size x albedo x phase, and
+   * cross-fades with the resolved mesh over 1-3 px so bodies stop popping in/out
+   * on descent.  The close sibling of `starPointRenderer` — a separate renderer
+   * for this feature by design (the fold candidate is deferred, spec §14).  No
+   * depth format: the hdr row has no depth attachment.  Needs no data-delivery
+   * step: `bodyGlintsLayer` packs and hands the whole batch every frame.
+   * Excluded from `isEngineReady` and null-checked at use.  Null until `initGpu`
+   * constructs it; released and re-nulled by `destroy()` (releases the instance +
+   * uniform buffers).
+   */
+  bodyGlintRenderer: BodyGlintRenderer | null;
   /**
    * The survey (Gaia bin) stars as additive point sprites into the depthless
    * HDR target — the wide-field twin of `starPointRenderer`, fed from an

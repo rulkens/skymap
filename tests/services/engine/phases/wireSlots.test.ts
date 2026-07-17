@@ -243,8 +243,10 @@ function makeFakeSlot(name: string): FakeSlot {
         subs.delete(fn);
       };
     },
+    lastRequest: () => null,
     forceReload: vi.fn(),
     cancel: vi.fn(),
+    release: vi.fn(),
     fire(s) {
       current = s;
       // Subs may unsubscribe themselves during dispatch — iterate a copy.
@@ -410,10 +412,14 @@ function makeState(
       },
     } as never,
     cam: null,
-    // Far from Earth — buildDemandCtx reads the pose box unconditionally, and
-    // Infinity keeps the descent-gated earthTexture row out of the demand set
-    // (boot-load expectations stay sdss/2mrs/glade/…, no Blue Marble fetch).
-    cameraRuntime: { lastPose: { current: { distance: Infinity } } },
+    // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
+    // so both must be present; a far resting pose keeps the proximity-gated
+    // body-texture rows out of the demand set (boot-load expectations stay
+    // sdss/2mrs/glade/…, no Blue Marble fetch).
+    cameraRuntime: {
+      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
+      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+    },
     assetSlots: {
       points: points as Map<SourceType, never>,
       // Real (empty) map: installSlots routes the registry-built star-catalog
@@ -425,6 +431,9 @@ function makeState(
       pgcAlias: null,
       cf4Density: null,
       mcpm: null,
+      // Real (empty) map: installLoadProgress walks it, and the body-texture
+      // rows are `built: 'external'` so the construction pass skips them.
+      bodyTextures: new Map(),
     },
   } as unknown as EngineState;
 }

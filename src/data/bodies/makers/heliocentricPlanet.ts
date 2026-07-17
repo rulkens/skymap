@@ -14,6 +14,7 @@
 
 import { RENDER_ORIGIN_MPC } from '../../renderOrigin';
 import { elementsById } from '../orbitalElements';
+import { orientationForBody } from '../orientationForBody';
 import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { addVec3 } from '../../../utils/math/addVec3';
 import type { BodySpec } from '../../../@types/scene/BodySpec';
@@ -26,5 +27,6 @@ export function heliocentricPlanet(spec: BodySpec): PlanetBody {
     positionMpc: addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(elementsById(spec.id))),
     radiusKm: spec.radiusKm,
     albedo: spec.albedo,
+    orientation: orientationForBody(spec.id),
   };
 }

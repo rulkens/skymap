@@ -33,8 +33,10 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> {
     current: () => null,
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
+    lastRequest: () => null,
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
   };
 }
 
@@ -122,7 +124,9 @@ describe('installSlots', () => {
     // …and the galaxy resolution path is unchanged: a numeric galaxy key still
     // reads the points map that initGpu self-installs into.
     const pointSlot = stubSlot('sdss-points');
-    state.assetSlots.points.set(Source.SDSS, pointSlot);
+    // The points map is typed for the galaxy payload/request pair; the erased
+    // stub is fine for this resolution check (slotFor reads only the identity).
+    state.assetSlots.points.set(Source.SDSS, pointSlot as never);
     expect(slotFor(state, Source.SDSS)).toBe(pointSlot);
   });
 });

@@ -65,9 +65,12 @@ import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsam
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
+import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
+import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
 import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
+import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRenderer';
 import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
 import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
@@ -81,6 +84,7 @@ import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   wireGalaxyCatalogSourceSlot,
 } from '../wiring/galaxyCatalogSourceRegistry';
+import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
 import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
@@ -432,6 +436,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
   state.gpu.starPointRenderer.setStars(state.data.bodies.stars);
 
+  // bodyGlintRenderer draws the sub-pixel scene bodies (the glints branch of the
+  // body partition) as brightness-scaled additive points into the same depthless
+  // HDR target — no depth format, like starPointRenderer above. The close
+  // sibling of starPointRenderer (kept a separate pipeline by design, spec §14).
+  // No construction-time data delivery: bodyGlintsLayer recomputes every glint's
+  // brightness + camera-relative anchor per frame and hands the whole batch to
+  // draw, so the renderer stays a dumb pipeline with nothing to seed.
+  state.gpu.bodyGlintRenderer = createBodyGlintRenderer(device, 'rgba16float');
+
   // starCatalogRenderer draws the survey (Gaia bin) stars — the wide-field
   // twin of starPointRenderer — as additive points into the same depthless
   // HDR target (no depth format).  It owns only the pipeline here; the star
@@ -513,11 +526,42 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // + this comment rather than an import.
   state.gpu.earthRenderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
 
-  // The Blue Marble texture that re-skins this placeholder sphere loads via a
-  // first-class demand-gated asset row (`createEarthTextureSlot` + the
-  // `earthTexture` ASSET_WIRING row), NOT a fire-and-forget fetch here — so the
-  // ~MB JPG is paid on the descent, not at boot, and its lifecycle (abort on
-  // release, render wake on ready) is owned by the slot machinery.
+  // ── Textured bodies (Plan 02 — the twelve non-Earth textured bodies) ─
+  //
+  // One shared UV-sphere pipeline draws the seven other major planets, the Moon,
+  // and the four Galilean moons; each body id owns its own uniform buffer + bind
+  // group + surface texture inside the renderer's per-body Map. Same
+  // ('rgba16float', 'depth32float') `foreground:0` format invariant as the Earth
+  // + sphere-body renderers above. The bodyTextures slot family (minted just
+  // below) routes each non-Earth body's committed bitmap to `setTexture` and its
+  // eviction to `clearTexture`.
+  state.gpu.texturedBodyRenderer = createTexturedBodyRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+  );
+
+  // ── Saturn's rings (Plan 02 — the translucent overlay half) ──────────
+  //
+  // The ring renderer draws the annulus itself (the ring-on-planet shadow half
+  // rides `texturedBodyRenderer`). Its pipeline bakes the `foreground:0` format
+  // invariant AND the ring-specific profile: straight-alpha OVER, two-sided
+  // (`cullMode: 'none'`), depth-tested but no depth write — so it overlays the
+  // opaque spheres already in the target. The `saturn-ring` bodyTextures slot
+  // (minted just below) routes the radial strip to `setTexture`.
+  state.gpu.ringRenderer = createRingRenderer(device, 'rgba16float', 'depth32float');
+
+  // ── Body-surface texture slot family ─────────────────────────────────
+  //
+  // One demand-gated asset slot per textured body + the Saturn ring, minted
+  // here (after the body renderers exist — the commit uploads into them) just
+  // like the per-source point slots. The Blue Marble texture that re-skins this
+  // placeholder Earth is now key `'earth'` in that family, NOT a bespoke
+  // fire-and-forget fetch: each surface is paid on proximity (per-body load
+  // radius), and its lifecycle (abort on release, render wake on ready) is owned
+  // by the slot machinery. Commit routes `'earth'` today; Plan 02 extends the
+  // dispatch to the planet/moon/ring renderers.
+  wireBodyTextureSlots(state);
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

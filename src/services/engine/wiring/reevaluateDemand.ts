@@ -49,9 +49,34 @@
 import { buildDemandCtx } from './buildDemandCtx';
 import { slotFor } from './slotFor';
 import { ASSET_WIRING } from './assetWiring';
+import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
+import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { Tier } from '../../../@types/data/Tier';
+import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
+
+/**
+ * Stale-tier evict test for the `bodyTextures` family: a `ready` slot whose
+ * last-committed request tier no longer matches the freshly-clamped
+ * `req(state.tier)` tier is holding the wrong-resolution texture and must be
+ * re-fetched at the new tier. This lives in the loop (not in a `release(ctx)`
+ * predicate) because a ctx predicate cannot see the slot's committed request,
+ * and only here are `slotFor` + `state.tier` both in hand. It resolves to the
+ * SAME `slot.release()` → idle → re-demand machinery as the distance edge — one
+ * release concept with two reasons, not a second mechanism (spec §5.4).
+ */
+function staleTierEvict(
+  slot: AssetSlot<unknown, unknown>,
+  row: AssetWiringRow,
+  tier: Tier,
+): boolean {
+  if (!isBodyTextureKey(row.key)) return false;
+  const committed = (slot.lastRequest() as BodyTextureReq | null)?.tier;
+  if (committed === undefined) return false;
+  return committed !== (row.req(tier) as BodyTextureReq).tier;
+}
 
 /**
  * Evaluate a specific set of rows against `state`. The public
@@ -62,15 +87,32 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
   const ctx = buildDemandCtx(state);
   for (const row of rows) {
     try {
-      // Load only an idle slot whose demand is true. A loading/ready/error
-      // slot is left alone — see the module docstring on why the idle-guard
-      // lives here rather than inside load() (which stays a re-fetch primitive).
       const slot = slotFor(state, row.key);
-      if (slot && row.demand(ctx) && slot.state().kind === 'idle') {
+      if (!slot) continue;
+      const kind = slot.state().kind;
+      // ── Load edge ────────────────────────────────────────────────────────
+      // Load only an idle slot whose demand is true. A loading/ready/error slot
+      // is left alone — see the module docstring on why the idle-guard lives
+      // here rather than inside load() (which stays a re-fetch primitive).
+      if (kind === 'idle' && row.demand(ctx)) {
         slot.load(row.req(state.tier));
       }
+      // ── Evict edge ───────────────────────────────────────────────────────
+      // Release a ready slot for either reason a resident asset should be
+      // dropped, unified into one `release()` call: (1) the distance edge — the
+      // optional `release` predicate (omitted ⇒ never evict, so every load-once
+      // row is untouched), separate from `demand` to encode hysteresis (load
+      // inside X, evict outside 2X — see AssetWiringRow); or (2) a stale
+      // committed tier for the bodyTextures family (spec §5.4). Both drop the
+      // slot to idle so the load edge re-demands it (at the new tier for the
+      // stale case). The two edges are mutually exclusive by slot state
+      // (idle XOR ready), so an else-if is exact.
+      else if (kind === 'ready' && (staleTierEvict(slot, row, state.tier) || row.release?.(ctx))) {
+        slot.release();
+      }
     } catch (err) {
-      // Contain the failure to this row so later rows still evaluate.
+      // Contain the failure to this row so later rows still evaluate — the same
+      // per-row guard the load edge has always had, now covering release too.
       console.warn(`reevaluateDemand: row '${String(row.key)}' threw during evaluation`, err);
     }
   }

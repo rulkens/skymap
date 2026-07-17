@@ -70,6 +70,7 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { resolvesToSphere } from '../../../../utils/scene/resolvesToSphere';
@@ -126,13 +127,16 @@ export const focusedFieldStarSphereLayer: ContentLayer = {
     if (row === null || row.type !== 'star') return;
 
     // Compose from the slab's f64 vp — see the module header's f64 seam. Radius
-    // is the stamped solar radius resolved into Mpc; no oblateness (a field
-    // star carries no measured spin), so the default sphere compose applies.
+    // is the stamped solar radius resolved into Mpc. A field star is a flat-
+    // emissive, rotation-invariant sphere, so it carries `IDENTITY_MAT3` for
+    // orientation; no oblateness (a field star carries no measured spin), so the
+    // default sphere compose applies.
     const mvp = composeBodyMvp(
       view.slab.vp,
       row.positionMpc,
       RENDER_ORIGIN_MPC,
       row.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      IDENTITY_MAT3,
     );
     renderer.draw(pass, mvp, starTintFromBpRp(row.bpRp));
   },

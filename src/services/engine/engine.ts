@@ -302,7 +302,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pickDebugOverlay: null,
       diskRadiusRing: null,
       // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
-      // constructs it + fires the Blue Marble fetch; excluded from
+      // constructs it + mints its 'earth' texture slot in the bodyTextures
+      // family (proximity-demanded, commits via setTexture); excluded from
       // isEngineReady, null-checked at use by earthLayer.
       earthRenderer: null,
       // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
@@ -311,7 +312,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // excluded from isEngineReady, null-checked at use by their layers.
       starRenderer: null,
       planetRenderer: null,
+      // Shared textured-sphere renderer for the twelve non-Earth textured bodies
+      // (planets + Moon + Galilean moons). null until initGpu; excluded from
+      // isEngineReady, null-checked at use by texturedBodiesLayer; the
+      // bodyTextures family's commit/onRelease call its setTexture/clearTexture.
+      texturedBodyRenderer: null,
+      // Saturn's rings — the translucent overlay half of the ring system, drawn
+      // last in the (foreground:0, NEAR0) group. null until initGpu; excluded
+      // from isEngineReady, null-checked at use by ringsLayer.
+      ringRenderer: null,
       starPointRenderer: null,
+      // Sub-pixel bodies (the glints branch of the body partition) as
+      // brightness-scaled additive points on the (hdr, NEAR0) step — the far
+      // half of the body LOD, sibling of starPointRenderer. null until initGpu;
+      // excluded from isEngineReady, null-checked at use by bodyGlintsLayer.
+      bodyGlintRenderer: null,
       starCatalogRenderer: null,
       starCatalogPickRenderer: null,
       // r32uint pick provider for the NEAR0 foreground bodies (Earth / planets /
@@ -436,8 +451,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       mcpm: null,
       // Default-off velocity flow field; demand-loaded like cf4Density.
       flow: null,
-      // Blue Marble Earth texture; descent-gated on cameraDistanceMpc.
-      earthTexture: null,
+      // Keyed body-surface texture family (Earth + planets/moons + Saturn ring),
+      // minted in initGpu beside the body renderers. Empty map at construction —
+      // proximity-demanded + released per body (mirrors the `points` map).
+      bodyTextures: new Map(),
     },
     // ── One-shot transient request flags ────────────────────────────────
     //
@@ -756,8 +773,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.starRenderer = null;
     state.gpu.planetRenderer?.destroy();
     state.gpu.planetRenderer = null;
+    state.gpu.texturedBodyRenderer?.destroy();
+    state.gpu.texturedBodyRenderer = null;
+    state.gpu.ringRenderer?.destroy();
+    state.gpu.ringRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
+    state.gpu.bodyGlintRenderer?.destroy();
+    state.gpu.bodyGlintRenderer = null;
     state.gpu.starCatalogRenderer?.destroy();
     state.gpu.starCatalogRenderer = null;
     state.gpu.starCatalogPickRenderer?.destroy();

@@ -49,16 +49,16 @@
  *      this surface provides, without exposing the full `AssetSlot<T>`
  *      internals (value, req object, retry policy) to the predicate.
  *
- *   4. `cameraDistanceMpc` — the orbit distance-to-focus of the last produced
- *      camera pose. Exists because one asset — the Blue Marble Earth texture —
- *      legitimately loads on proximity, not on a settings toggle or a slot-state
- *      join: it is a ~MB JPG only distinguishable after a deep-zoom descent, so
- *      its row descent-gates on `cameraDistanceMpc < threshold`. It reads the
- *      LAST produced pose because `reevaluateDemand` runs at the frame top,
- *      before this frame's camera is derived; the boxed `lastPose` is the live
- *      cross-driver distance (wheel-zoom, tour clips, and the fly-to-Earth tween
- *      all converge to `CameraPose`), and a one-frame-stale distance is
- *      immaterial for a multi-frame async fetch.
+ *   4. `cameraPosMpc` — the world-space camera eye position of the last produced
+ *      pose. Exists because the body-surface texture family loads on proximity,
+ *      not on a settings toggle or a slot-state join: each `bodyTextures` row
+ *      demands its texture once the camera closes inside that body's load radius
+ *      and releases it on retreat, both measured as `distanceMpc(cameraPosMpc,
+ *      bodyPos)`. It reads the LAST produced pose because `reevaluateDemand` runs
+ *      at the frame top, before this frame's camera is derived; the boxed
+ *      `lastPose` is the live cross-driver position (wheel-zoom, tour clips, and
+ *      the fly-to-Earth tween all converge to `CameraPose`), and a
+ *      one-frame-stale position is immaterial for a multi-frame async fetch.
  *
  * Singleton overlay layers (filaments, milkyWay, flow) need no surface of
  * their own: their enable gate lives in `settings.<layer>.enabled`, read
@@ -77,6 +77,7 @@ import type { EngineSettingsState } from '../settings/EngineSettingsState';
 import type { AssetKey } from './AssetKey';
 import type { LoadState } from './LoadState';
 import type { RequestKey } from './RequestKey';
+import type { Vec3 } from '../math/Vec3';
 
 export type DemandCtx = {
   /** Read-only view of the user-facing rendering settings. */
@@ -90,8 +91,13 @@ export type DemandCtx = {
    */
   slotState: (k: AssetKey) => LoadState<unknown>['kind'];
   /**
-   * Orbit distance-to-focus of the last produced camera pose, in Mpc.
-   * The one proximity read surface: the Earth-texture row descent-gates on it.
+   * World-space camera eye position of the last produced pose, in Mpc — the one
+   * proximity read surface. The body-surface texture family's demand/release
+   * predicates gate on `distanceMpc(cameraPosMpc, bodyPos)` against a per-body
+   * load radius, loading a texture as the camera closes on its body and evicting
+   * it as the camera leaves the neighbourhood. Derived from the same
+   * `assembleOrbitCamera(pose, projection)` the frame uses for `drawCamPos`, so
+   * demand-time proximity and draw-time position agree.
    */
-  cameraDistanceMpc: number;
+  cameraPosMpc: Readonly<Vec3>;
 };

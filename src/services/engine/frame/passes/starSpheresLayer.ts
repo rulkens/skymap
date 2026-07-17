@@ -69,6 +69,7 @@ import { Source } from '../../../../data/sources';
 import { SCENE_STARS } from '../../../../data/bodies/sceneStars';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { visibleStars } from '../visibleStars';
 import { seedIndexOfBody } from './seedIndexOfBody';
@@ -110,14 +111,17 @@ export const starSpheresLayer: ContentLayer = {
 
     // Compose each resolved star's MVP from the slab's f64 vp — see the
     // module header's "f64 seam" note for why `view.slab.vp`, not `view.vp`.
-    // Radius is the authored kilometres resolved into Mpc at the draw site;
-    // `oblateness` (absent ⇒ 0 ⇒ sphere) flattens the polar axis in the compose.
+    // Radius is the authored kilometres resolved into Mpc at the draw site. A
+    // star is a flat-emissive sphere — rotation-invariant — so it carries the
+    // identity orientation rather than a baked facing; `oblateness` (absent ⇒
+    // 0 ⇒ sphere) flattens the polar axis in the compose.
     for (const star of spheres) {
       const mvp = composeBodyMvp(
         view.slab.vp,
         star.positionMpc,
         RENDER_ORIGIN_MPC,
         star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        IDENTITY_MAT3,
         star.oblateness,
       );
       renderer.draw(pass, mvp, star.color);
@@ -163,6 +167,7 @@ export const starSpheresLayer: ContentLayer = {
         star.positionMpc,
         RENDER_ORIGIN_MPC,
         star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        IDENTITY_MAT3,
         star.oblateness,
       );
       pickRenderer.drawSphere(pass, {

@@ -205,13 +205,22 @@ const SWAP_NAMES = [
   'clip-path-debug',
 ];
 
-// The near-field foreground group: the true-scale bodies (Earth, the Sun
-// sphere, the focused field-star sphere, the planets) drawn into the
-// depth-bearing `foreground:0` target through the near0 slab. Opaque
+// The near-field foreground group: the true-scale bodies drawn into the
+// depth-bearing `foreground:0` target through the near0 slab — Earth, the Sun
+// sphere, the selection-gated focused field-star sphere, the partition's
+// flat-lit `planets` branch, and its `textured-bodies` branch. Opaque
 // (depth-tested), unlike the additive HDR group and the OVER swap group. The
 // focused-field-star sphere sits right after star-spheres — a selection-gated
-// sibling reusing the same star renderer.
-const FOREGROUND_NAMES = ['earth', 'star-spheres', 'focused-field-star-sphere', 'planets'];
+// sibling reusing the same star renderer. The translucent `rings` overlay is
+// NOT in this list: it targets foreground:0 but blends OVER, so it is pinned
+// separately (see the ringsLayer registry-row test below).
+const FOREGROUND_NAMES = [
+  'earth',
+  'star-spheres',
+  'focused-field-star-sphere',
+  'planets',
+  'textured-bodies',
+];
 
 // The near-field hdr rows: the layers that pair the hdr target with the
 // near0 slab — additive like every hdr row, but projected through NEAR0 so
@@ -227,6 +236,7 @@ const NEAR_HDR_NAMES = [
   'milky-way',
   'star-points',
   'orbit-trails',
+  'body-glints',
   'star-catalog',
   'star-upsample',
 ];
@@ -356,7 +366,18 @@ describe('CONTENT_LAYERS blend legality', () => {
       ) {
         expect(layer.blend).toBe('additive');
       } else if (layer.target === 'foreground:0') {
-        expect(layer.blend).toBe('opaque');
+        // The `foreground:0` group is opaque bodies EXCEPT the ring: it is the
+        // one translucent overlay there, drawn LAST (after the opaque spheres),
+        // depth-tested against them but writing no depth, straight-alpha OVER
+        // (spec §8 / grill Q9). Its pipeline bakes exactly that profile
+        // (foreground:0 formats, depth read / no write, over blend), so the row
+        // legitimately carries `over` where its siblings carry `opaque` — the
+        // sole target that admits two blends today.
+        if (layer.name === 'rings') {
+          expect(layer.blend).toBe('over');
+        } else {
+          expect(layer.blend).toBe('opaque');
+        }
       } else if (layer.target === 'swap') {
         expect(layer.blend).toBe('over');
       } else {
@@ -365,9 +386,32 @@ describe('CONTENT_LAYERS blend legality', () => {
         );
       }
     }
-    // Seven layers blend OVER: the five COSMO swap overlays plus the two
-    // (swap, NEAR0) overlays — the star selection ring and foreground-labels.
-    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(7);
+    // Eight layers blend OVER: the five COSMO swap overlays, the two (swap,
+    // NEAR0) overlays (the near0 star selection ring and foreground-labels), and
+    // the translucent ring (the sole OVER member of the otherwise-opaque
+    // foreground group). The star-picking branch adds near0-selection-ring and
+    // the planet-rendering branch adds the ring, so both merged in raise the
+    // count from the pre-merge six to eight.
+    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(8);
+  });
+});
+
+describe('ringsLayer registry row', () => {
+  it('draws into foreground:0 through NEAR0 with over, AFTER the opaque bodies', () => {
+    // The ring is the translucent overlay half of Saturn's rings: it shares the
+    // opaque bodies' (foreground:0, NEAR0) render step but blends OVER, so it
+    // must be ordered after them to depth-test against their stamped z (far ring
+    // half occluded). It is deliberately NOT in FOREGROUND_NAMES (that group's
+    // opaque assertion), it is the exception.
+    const rings = CONTENT_LAYERS.find((layer) => layer.name === 'rings')!;
+    expect(rings).toBeDefined();
+    expect(rings.slab).toBe(NEAR0);
+    expect(rings.target).toBe('foreground:0');
+    expect(rings.blend).toBe('over');
+
+    const idxTextured = CONTENT_LAYERS.findIndex((layer) => layer.name === 'textured-bodies');
+    const idxRings = CONTENT_LAYERS.findIndex((layer) => layer.name === 'rings');
+    expect(idxRings).toBeGreaterThan(idxTextured);
   });
 });
 

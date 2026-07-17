@@ -29,6 +29,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -167,7 +168,15 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
     // source then skips its composite too. Earth's handle + body are present;
     // the sibling handles are null (their handle gates short-circuit).
     const state = {
-      gpu: { earthRenderer: { draw: vi.fn() }, starRenderer: null, planetRenderer: null },
+      gpu: {
+        earthRenderer: { draw: vi.fn() },
+        starRenderer: null,
+        planetRenderer: null,
+        texturedBodyRenderer: null,
+        // The ring shares this group; its null handle short-circuits enabled, so
+        // it stays out of the group below and above the gate (like the siblings).
+        ringRenderer: null,
+      },
       data: { bodies: { earth: SCENE_EARTH } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
@@ -204,13 +213,37 @@ describe('earthLayer.draw', () => {
     expect(call[1]).toBe(SCENE_EARTH.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
     expect(call[3]).toBe(SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC);
+    // The body's baked orientation is forwarded as the model's rotation factor.
+    expect(call[4]).toBe(SCENE_EARTH.orientation);
 
-    // The renderer receives the pass + the composed length-16 f32 MVP.
+    // The renderer receives the pass + the packed length-20 LitBodyUniforms
+    // record (16 mvp + 3 sunDirLocal + 1 pad), not the bare 16-float MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    const [passArg, mvp] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
+    const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
-    expect(mvp).toBeInstanceOf(Float32Array);
-    expect(mvp).toHaveLength(16);
+    expect(uniforms).toBeInstanceOf(Float32Array);
+    expect(uniforms).toHaveLength(20);
+  });
+
+  it('packs sunDirLocal into the lit uniform', () => {
+    // The lit-body seam: earthLayer must rotate the sun direction into Earth's
+    // local frame (via the sunDirLocal util with Earth's baked orientation and
+    // the render origin) and pack it at f32 slots 16..18 (bytes 64..75). We pin
+    // it by recomputing sunDirLocal independently — NOT through the layer — so a
+    // drift in the layer's rotate/pack lands as a failure here.
+    composeMock.mockClear();
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const view = makeNear0View();
+    const state = makeState({ draw: drawSpy }, SCENE_EARTH);
+
+    earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
+
+    const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
+    expect(uniforms).toHaveLength(20);
+    const expected = sunDirLocal(SCENE_EARTH.positionMpc, RENDER_ORIGIN_MPC, SCENE_EARTH.orientation);
+    expect(uniforms[16]).toBeCloseTo(expected[0]);
+    expect(uniforms[17]).toBeCloseTo(expected[1]);
+    expect(uniforms[18]).toBeCloseTo(expected[2]);
   });
 
   it('is a no-op when the earthRenderer handle is null (pre-bootstrap)', () => {

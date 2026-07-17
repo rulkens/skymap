@@ -1,17 +1,19 @@
 // earth/vertex.wesl — vertex stage for the true-scale textured Earth.
 //
 // Identical projection wiring to 'star/vertex.wesl' and
-// 'planet/vertex.wesl': multiply each unit-sphere local position by the
-// combined MVP from 'SphereUniforms'. The only difference is what gets
-// passed through to the fragment stage -- here it is the mesh's
-// equirectangular uv, not the local position, because the Earth fragment
-// samples a texture rather than deriving a normal.
+// 'texturedBody/vertex.wesl': multiply each unit-sphere local position by the
+// combined MVP from 'LitBodyUniforms'. The Earth is now lit, so the fragment
+// needs the surface normal in the body's local frame -- and on a unit sphere
+// the local position IS that normal, so it is forwarded unchanged alongside the
+// mesh's equirectangular uv (which the fragment samples the Blue Marble at).
 //
 // ## Bindings
 //
-// '@group(0) @binding(0)' holds 'SphereUniforms' (64 bytes, one mat4x4<f32>),
-// visible in the vertex stage only. The texture + sampler live at
-// bindings 1 and 2 for the fragment stage (declared in the fragment module).
+// '@group(0) @binding(0)' holds 'LitBodyUniforms' (80 bytes: the mat4x4<f32>
+// MVP plus the local sun direction), visible in BOTH stages:
+// the vertex reads 'u.mvp', the fragment reads 'u.sunDirLocal'. The texture +
+// sampler live at bindings 1 and 2 for the fragment stage (declared in the
+// fragment module).
 //
 // As with the other sphere bodies, the '@group/@binding' declaration is
 // module-local (WESL has no global state), so we declare 'u' here and pass
@@ -28,15 +30,17 @@
 //                                       v south-to-north.
 
 import package::bodies::earth::io::VSOut;
-import package::lib::sphere::SphereUniforms;
+import package::lib::sphere::LitBodyUniforms;
 import package::lib::sphere::clip_from_local;
 
-@group(0) @binding(0) var<uniform> u: SphereUniforms;
+@group(0) @binding(0) var<uniform> u: LitBodyUniforms;
 
 @vertex
 fn vs(@location(0) position: vec3<f32>, @location(1) uv: vec2<f32>) -> VSOut {
   var out: VSOut;
   out.clip = clip_from_local(u.mvp, position);
   out.uv = uv;
+  // Unit-sphere local position IS the outward normal; the fragment renormalizes.
+  out.normalLocal = position;
   return out;
 }

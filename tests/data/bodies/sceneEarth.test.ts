@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
+import { rotationById } from '../../../src/data/bodies/rotationElements';
 
 const hypot3 = (v: readonly [number, number, number]) => Math.hypot(v[0], v[1], v[2]);
 
@@ -21,7 +23,12 @@ describe('SCENE_EARTH', () => {
     expect(distAu).toBeLessThan(1.03);
   });
 
-  it('textureUrl points at the Blue Marble asset', () => {
-    expect(SCENE_EARTH.textureUrl).toBe('/images/earth/blue-marble-4k.jpg');
+  it('carries a baked orientation and no textureUrl', () => {
+    // Earth's facing is baked from its IAU rotation elements through the same
+    // util the maker calls — this pins the wiring, not a matrix restatement.
+    // The Blue Marble no longer rides a per-body URL: it joins the keyed
+    // `bodyTextures` slot family, so `textureUrl` is gone from the record.
+    expect(SCENE_EARTH.orientation).toEqual(rotationFromIau(rotationById('earth')));
+    expect('textureUrl' in SCENE_EARTH).toBe(false);
   });
 });
