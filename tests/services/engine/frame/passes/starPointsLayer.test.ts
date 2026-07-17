@@ -29,6 +29,7 @@ import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentatio
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
+import { starExposureRamp } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
@@ -125,15 +126,36 @@ function makeNear0View(camPos: Vec3): SlabView {
 function makeRenderer() {
   return {
     setStars: vi.fn<(stars: readonly StarBody[]) => void>(),
-    draw: vi.fn<(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2) => void>(),
+    draw: vi.fn<
+      (
+        pass: GPURenderPassEncoder,
+        viewProj: Float32Array,
+        viewportPx: Vec2,
+        opts: { sizePx: number; brightness: number },
+      ) => void
+    >(),
   };
 }
 
-/** State with a `starPointRenderer` handle and a seeded star list. */
+/**
+ * The `starCatalogs` appearance slice the layer reads: the shared sizePx slider,
+ * the brightness trim, and the three exposure-ramp anchors. Concrete non-default
+ * values so the ramp fold is observable (a raw-brightness bug would show).
+ */
+const STAR_CATALOG_SETTINGS = {
+  sizePx: 3.25,
+  brightness: 0.8,
+  exposureNearX: 15,
+  exposureMidX: 57,
+  exposureFarX: 70,
+};
+
+/** State with a `starPointRenderer` handle, a seeded star list, and settings. */
 function makeState(starPointRenderer: unknown, stars: readonly StarBody[]): EngineState {
   return {
     gpu: { starPointRenderer },
     data: { bodies: { stars } },
+    settings: { starCatalogs: STAR_CATALOG_SETTINGS },
   } as unknown as EngineState;
 }
 
@@ -351,6 +373,34 @@ describe('starPointsLayer.draw', () => {
     ]);
     // Distinctly NOT the raw colour — the scale actually happened.
     expect(uploadedProxima.color).not.toEqual([...PROXIMA.color]);
+  });
+
+  it('hands the renderer the sizePx slider and brightness × exposure-ramp factor', () => {
+    // Camera parked mid-band so the roster uploads and the exposure ramp is a
+    // genuine non-trivial factor. The layer must forward `starCatalogs.sizePx`
+    // verbatim and `brightness × starExposureRamp(camDistMpc, near, mid, far)` —
+    // the SAME fold `starCatalogLayer` applies — NOT the raw brightness trim.
+    const camDistMpc =
+      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const renderer = makeRenderer();
+    const camPos: Vec3 = [0, 0, camDistMpc];
+    const state = makeState(renderer, SCENE_STARS);
+
+    starPointsLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
+
+    const opts = renderer.draw.mock.calls[0]![3];
+    const expectedBrightness =
+      STAR_CATALOG_SETTINGS.brightness *
+      starExposureRamp(
+        camDistMpc,
+        STAR_CATALOG_SETTINGS.exposureNearX,
+        STAR_CATALOG_SETTINGS.exposureMidX,
+        STAR_CATALOG_SETTINGS.exposureFarX,
+      );
+    expect(opts.sizePx).toBe(STAR_CATALOG_SETTINGS.sizePx);
+    expect(opts.brightness).toBeCloseTo(expectedBrightness, 12);
+    // The ramp actually bent the trim — a raw-brightness bug would fail here.
+    expect(opts.brightness).not.toBeCloseTo(STAR_CATALOG_SETTINGS.brightness, 6);
   });
 
   it('is a no-op when the starPointRenderer handle is null (pre-bootstrap)', () => {

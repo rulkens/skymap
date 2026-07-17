@@ -87,6 +87,7 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
+import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
 
 export const starPointsLayer: ContentLayer = {
   name: 'star-points',
@@ -179,6 +180,24 @@ export const starPointsLayer: ContentLayer = {
     // narrowed HERE, at the GPU-upload boundary (`rebaseViewProj` stays f64
     // for consumers that must invert it).
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
-    renderer.draw(pass, rebasedVp, view.viewportPx);
+
+    // The same shared star appearance the survey (Gaia bin) leaf stage reads, so
+    // a famous star obeys the identical sizePx slider and exposure model. NOT
+    // gated on `starCatalogs.enabled` — that flag is the Gaia survey's master
+    // toggle, and the famous layer has its own visibility gate. `brightness`
+    // folds the SAME scale-dependent `starExposureRamp` `starCatalogLayer`
+    // applies: the user trim times the camera-distance ramp, keyed on the
+    // camera's heliocentric Mpc distance (the ramp's own input unit).
+    const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
+    const { sizePx, brightness: brightnessTrim } = state.settings.starCatalogs;
+    const brightness =
+      brightnessTrim *
+      starExposureRamp(
+        camDistMpc,
+        state.settings.starCatalogs.exposureNearX,
+        state.settings.starCatalogs.exposureMidX,
+        state.settings.starCatalogs.exposureFarX,
+      );
+    renderer.draw(pass, rebasedVp, view.viewportPx, { sizePx, brightness });
   },
 };
