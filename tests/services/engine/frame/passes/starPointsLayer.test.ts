@@ -160,11 +160,14 @@ describe('starPointsLayer.enabled', () => {
   });
 
   it('is disabled beyond the foreground gate even with point stars present', () => {
-    // At galaxy scale (0.43 Mpc) the whole neighbourhood is far below a
-    // pixel: the shared gate turns the backdrop off before the partition is
-    // even computed, so the (hdr, NEAR0) step can be skipped wholesale.
+    // A decade beyond the gate (cosmic scale) the whole neighbourhood is far
+    // below a pixel: the shared gate turns the backdrop off before the
+    // partition is even computed, so the (hdr, NEAR0) step can be skipped
+    // wholesale. Derived from the gate so a farther seed growing it carries.
     const state = makeState(makeRenderer(), SCENE_STARS);
-    expect(starPointsLayer.enabled(state, makeCtx([0, 0, 0.43]))).toBe(false);
+    expect(starPointsLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]))).toBe(
+      false,
+    );
   });
 });
 
@@ -204,9 +207,10 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       'star-points',
       'orbit-trails',
     ]);
-    // Above the gate: empty group → the executor never opens the pass.
+    // Above the gate: empty group → the executor never opens the pass. Gate
+    // edge + a decade beyond, both derived from the gate.
     expect(groupAt(makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toEqual([]);
-    expect(groupAt(makeCtx([0, 0, 0.43]))).toEqual([]);
+    expect(groupAt(makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]))).toEqual([]);
   });
 });
 

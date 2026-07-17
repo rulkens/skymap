@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import {
+  sceneBodyLabels,
+  FOREGROUND_LABEL_CAPACITY,
+} from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
@@ -14,11 +17,13 @@ describe('sceneBodyLabels', () => {
     expect(labels).toHaveLength(1 + SCENE_STARS.length + SCENE_PLANETS.length);
   });
 
-  it('stays inside the foreground label renderer default capacity (maxLabels 64)', () => {
-    // initGpu constructs the caption renderer with createLabelRenderer's
-    // defaults; setLabels silently clamps at maxLabels, so a seed-table
-    // growth past the cap would otherwise drop captions without a trace.
-    expect(labels.length).toBeLessThanOrEqual(64);
+  it('fits inside the foreground label renderer capacity (no silent caption drop)', () => {
+    // initGpu sizes the caption renderer with FOREGROUND_LABEL_CAPACITY (not
+    // createLabelRenderer's 64-label default); setLabels silently clamps at
+    // maxLabels, so a roster that outgrew the buffer would drop captions
+    // without a trace. Both the capacity and this label set derive from the
+    // same roster, so this pins that the derived buffer actually covers it.
+    expect(labels.length).toBeLessThanOrEqual(FOREGROUND_LABEL_CAPACITY);
   });
 
   it('anchors each label at its body position (renderOrigin is the Sun, so == positionMpc)', () => {
