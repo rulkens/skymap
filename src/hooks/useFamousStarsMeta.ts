@@ -29,9 +29,7 @@ import type { FamousStarMetaEntry } from '../@types/loading/FamousStarMetaEntry'
 import type { UseFamousStarsMetaReturn } from '../@types/engine/UseFamousStarsMetaReturn';
 
 export function useFamousStarsMeta(): UseFamousStarsMetaReturn {
-  const [famousStarsMeta, setFamousStarsMeta] = useState<readonly FamousStarMetaEntry[]>(
-    [],
-  );
+  const [famousStarsMeta, setFamousStarsMeta] = useState<readonly FamousStarMetaEntry[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {

@@ -41,7 +41,7 @@ authority:
    origin; the maker collapses it to `[0,0,0]`).
 3. **`names[1]` is NOT required to be a Bayer designation.** Many nearest stars
    (Barnard's Star, Ross 154, Luyten 726-8, Wolf 359) have none. Enforce only: `names`
-   non-empty and `names[0] === commonName`. `names[1]` is Bayer *by convention* when one
+   non-empty and `names[0] === commonName`. `names[1]` is Bayer _by convention_ when one
    exists.
 4. **Schema optionality follows the omit-unknown rule.** `massSolar?`,
    `luminositySolar?`, `ageGyr?` are OPTIONAL (genuinely unknown for some entries —
@@ -83,10 +83,10 @@ data/seeds/famous_stars.seed.json  ─build-famous-stars─▶  famousStars.gene
   `data/raw/...` or `data/seeds/...`.
 - **Committed-together workflow (state it in every touching task):** the seed and its
   generated table are one commit — `edit seed → npm run build-famous-stars →
-  git add data/seeds/famous_stars.seed.json src/data/bodies/famousStars.generated.ts →
-  commit both`. The generated file carries a top-of-file GENERATED banner; never
+git add data/seeds/famous_stars.seed.json src/data/bodies/famousStars.generated.ts →
+commit both`. The generated file carries a top-of-file GENERATED banner; never
   hand-edited. `famous_stars_meta.json` is gitignored (build artefact).
-- **Didactic timeless comments** — explain *why* / *what the alternative was*; no dates
+- **Didactic timeless comments** — explain _why_ / _what the alternative was_; no dates
   or PR refs. Match the multi-paragraph module-header style of the files you touch.
 - **Subagent implementers run bash sequentially**, cannot use `sed`/`awk`/`grep` (use
   Read/Grep tools), cannot run npm — the main thread verifies + commits.
@@ -99,16 +99,16 @@ data/seeds/famous_stars.seed.json  ─build-famous-stars─▶  famousStars.gene
 // src/@types/data/FamousStarRow.d.ts        (one type per file)
 export type FamousStarRow = {
   readonly id: string;
-  readonly commonName: string;        // → StarBody.label
-  readonly names: readonly string[];  // palette aliases (Bayer, catalogue names)
-  readonly constellation: string;     // palette secondary chip
-  readonly raDeg: number;             // → positionMpc via the star maker
+  readonly commonName: string; // → StarBody.label
+  readonly names: readonly string[]; // palette aliases (Bayer, catalogue names)
+  readonly constellation: string; // palette secondary chip
+  readonly raDeg: number; // → positionMpc via the star maker
   readonly decDeg: number;
   readonly distancePc: number;
   readonly absMag: number;
-  readonly temperatureK: number;      // → color via temperatureToLinearRgb
-  readonly radiusSolar: number;       // → radiusKm
-  readonly oblateness?: number;       // → StarBody.oblateness (per-axis MVP scale)
+  readonly temperatureK: number; // → color via temperatureToLinearRgb
+  readonly radiusSolar: number; // → radiusKm
+  readonly oblateness?: number; // → StarBody.oblateness (per-axis MVP scale)
 };
 
 // src/@types/engine/StarInfo.d.ts           (one type per file)
@@ -129,18 +129,20 @@ export type FamousStarMetaEntry = {
   distancePc: number;
   magV: number;
   absMag: number;
-  radiusSolar: number;      // required
-  temperatureK: number;     // required
-  massSolar?: number;       // optional — card omits the line when absent
+  radiusSolar: number; // required
+  temperatureK: number; // required
+  massSolar?: number; // optional — card omits the line when absent
   luminositySolar?: number; // optional
-  ageGyr?: number;          // optional
+  ageGyr?: number; // optional
   oblateness?: number;
   variable?: { type: string; magRange: [number, number] };
   description: string;
 };
 
 // tools/parsers/famousStarsSeed.ts           (the authoring shape — co-located, tool-local)
-export type FamousStarEntry = { /* spec §2, corrections 2–4 applied */ };
+export type FamousStarEntry = {
+  /* spec §2, corrections 2–4 applied */
+};
 export function validateFamousStarEntry(e: FamousStarEntry): FamousStarEntry;
 export function parseFamousStarsSeed(rawJson: string): FamousStarEntry[];
 
@@ -188,7 +190,7 @@ inlined in the maker (spec §6).
 - [x] Test `cooler stars are redder than the Sun` — `temperatureToLinearRgb(3000)`
       (M dwarf) has a higher red:blue ratio than the Sun.
 - [x] Test `the Sun is near-neutral` — at 5772 K the three channels sit within a modest
-      band of each other (no channel dominates). **Assert channel *relationships*, never
+      band of each other (no channel dominates). **Assert channel _relationships_, never
       literal RGB constants** (spec §6 pins directional realism, not magic numbers).
 - [x] `npm test -- temperatureToLinearRgb` → green. Commit.
 
@@ -225,13 +227,13 @@ throws naming the offending `id`, mirroring `validateFamousEntry`, `famousSeed.t
       (`distancePc: -1` throws; `distancePc: 0` is ACCEPTED — the Sun).
 - [x] `throws when names[0] !== commonName`.
 - [x] `accepts an entry with no names[1]` — a single-name entry (`names: ['Barnard's
-      Star']`, `commonName` equal) validates (correction 3 regression guard).
+    Star']`, `commonName` equal) validates (correction 3 regression guard).
 - [x] `accepts an entry omitting massSolar/luminositySolar/ageGyr` (correction 4).
 - [x] **Coverage invariant (migrated from the deleted `famousStarGaiaIds.test.ts`):**
-      `every parsed entry carries gaiaDr3, and the Sun's is null` — parse the *real*
+      `every parsed entry carries gaiaDr3, and the Sun's is null` — parse the _real_
       committed seed (once it lands in Task 5) via `rawDataPath('famous-stars.seed')`,
       assert every entry has the property and `entries.find(e => e.id === 'sun').gaiaDr3
-      === null`. (Structural invariant over curated data — a keep-rule test.)
+    === null`. (Structural invariant over curated data — a keep-rule test.)
 - [x] `npm test -- famousStarsSeed` → green. Commit.
 
 > **Ordering note:** the coverage-invariant test reads the real seed, which Task 5
@@ -345,10 +347,10 @@ FAMOUS_STARS_GENERATED.map(star);` (spec §5). `SCENE_BODIES` composition
 
 **`makers/star.ts` — new signature `star(row: FamousStarRow): StarBody`** (spec §5). The
 "positional signature is deliberate" rationale in its header (`star.ts:1-14`) retires — the
-table is now *generated*, so per-row legibility is no longer the maker's job. It computes:
+table is now _generated_, so per-row legibility is no longer the maker's job. It computes:
 
 - `positionMpc = raDecDistToCartesian(row.raDeg, row.decDeg, row.distancePc *
-  SCALE_UNITS.PC_TO_MPC)` (unchanged frame contract, `star.ts:39`).
+SCALE_UNITS.PC_TO_MPC)` (unchanged frame contract, `star.ts:39`).
 - `color = temperatureToLinearRgb(row.temperatureK)` (Task 2) — replacing the four
   spectral-bucket palette constants.
 - `radiusKm = row.radiusSolar * SOLAR_RADIUS_KM` — retiring the hardcoded 1 R☉
@@ -369,7 +371,7 @@ only what the derivation shifts:
       (colour now blackbody, radius now real per-star).
 - [x] Delete the four star-bucket constants + comment from `palette.ts`.
 - [x] Keep `contains the Sun at the origin` — but the Sun's radius is now `1 R☉ ×
-      SOLAR_RADIUS_KM = 696340` **by derivation** (seed `radiusSolar: 1.0`); keep the
+    SOLAR_RADIUS_KM = 696340` **by derivation** (seed `radiusSolar: 1.0`); keep the
       exact-radius assertion — it now proves the `radiusSolar → radiusKm` path
       (`sceneStars.test.ts:22`).
 - [x] Keep `Proxima sits ~1.301 pc` (the f64 anchor, tol 1e-3 pc,
@@ -456,7 +458,7 @@ Replace both:
 - [x] Delete `famousStarGaiaIds.ts` and `tests/tools/catalog/famousStarGaiaIds.test.ts`.
       Grep for any other importer of `FAMOUS_STAR_GAIA_IDS` and confirm none remain.
 - [x] Test (in `buildStars.test.ts`, extending the existing synthetic-fixture test) `a
-      seed entry's non-null gaiaDr3 is subtracted and a null entry subtracts nothing` —
+    seed entry's non-null gaiaDr3 is subtracted and a null entry subtracts nothing` —
       feed a tiny fixture seed (one Gaia-matched entry, one `null` entry) through the
       seed→set path and assert the matched `source_id` is removed while the `null` entry
       contributes no subtraction (the behaviour the deleted table's coverage test guarded,
@@ -489,8 +491,11 @@ Replace both:
 
 ```ts
 // src/data/bodies/famousStarsIndex.ts — derived once from FAMOUS_STARS_GENERATED
-export const FAMOUS_STAR_IDS: ReadonlySet<string>;                                  // Task 11 consumes
-export const FAMOUS_STAR_SEARCH: ReadonlyMap<string, { names: readonly string[]; constellation: string }>;
+export const FAMOUS_STAR_IDS: ReadonlySet<string>; // Task 11 consumes
+export const FAMOUS_STAR_SEARCH: ReadonlyMap<
+  string,
+  { names: readonly string[]; constellation: string }
+>;
 ```
 
 **`rankPaletteMatches` (spec §8, addendum 3):**
@@ -502,7 +507,7 @@ export const FAMOUS_STAR_SEARCH: ReadonlyMap<string, { names: readonly string[];
   and "Betelgeuse" both hit). For Earth/planets (not in the map), fall back to
   `[body.label]` — current behaviour.
 - The `ScoredRow` body variant carries the resolved `names` + secondary label so
-  `ROW_VIEW.body` can render them (spec §8 — one row-view branch, no new row *kind*). Grow
+  `ROW_VIEW.body` can render them (spec §8 — one row-view branch, no new row _kind_). Grow
   the `body` variant in `paletteRowModel.ts:36-41` minimally if needed to carry
   `names`/`constellation` (or resolve them in `ROW_VIEW` from the index — implementer's
   call, keep it one place).
@@ -543,7 +548,7 @@ Mirror the galaxy twins (spec §7 decision (b) — React-side lazy fetch, engine
 - [x] Add both files with didactic headers matching their galaxy twins (why throw on 404 in
       the fetcher; why catch → fail-soft in the hook).
 - [x] Test `parseFamousStarsMeta rejects a non-array root` and `parses an array of
-      entries` (mirror `famousMetaFetcher`'s parse contract — a genuine parse boundary, not
+    entries` (mirror `famousMetaFetcher`'s parse contract — a genuine parse boundary, not
       a type restatement).
 - [x] `npm test -- famousStarsMetaFetcher` → green. Commit. (The hook is exercised by the
       card test in Task 12; a standalone hook test that only asserts fail-soft state is fine
@@ -565,8 +570,8 @@ tests. Spec §7 "The `body` FocusableTarget arm" + **correction 1**.
   arm adds `label: body.label` (still no `ResolveDeps` member, still compile-time seed).
 - **`buildFocusable`** body arm (`buildFocusable.ts:26`, today `() => null`) becomes
   **star-only per correction 1**: `(row) => FAMOUS_STAR_IDS.has(row.id) ? { type:'body',
-  id: row.id, label: row.label, positionMpc: row.positionMpc, radiusKm: row.radiusKm } :
-  null`, importing `FAMOUS_STAR_IDS` from `famousStarsIndex.ts` (Task 9 — static sync
+id: row.id, label: row.label, positionMpc: row.positionMpc, radiusKm: row.radiusKm } :
+null`, importing `FAMOUS_STAR_IDS` from `famousStarsIndex.ts` (Task 9 — static sync
   import, `buildFocusable` stays pure). Non-star bodies (Earth, planets) return `null`.
   Update the module header (the body arm is star-only; Earth/planets stay body-unaware).
 - **`URL_HASH_FOR`** (`urlHashFor.ts:21-30`) gains a `body` row →
@@ -585,7 +590,7 @@ tests. Spec §7 "The `body` FocusableTarget arm" + **correction 1**.
       with `type:'body'`, `label`, `positionMpc`, `radiusKm`; a body row for `'earth'` →
       `null` (correction 1's star-only guard — the load-bearing branch).
 - [x] Test `#focus=body-<id> round-trips for a star` — `URL_HASH_FOR.body({type:'body',
-      id:'sirius', …})` yields `'sirius'`, and `resolveFocusId('body-sirius')` yields
+    id:'sirius', …})` yields `'sirius'`, and `resolveFocusId('body-sirius')` yields
       `{type:'body', id:'sirius'}` (reuse the existing focus-id codec test shape; spec
       §10 deep-link test).
 - [x] `npm test` for the touched suites → green. Commit. (If `DETAIL_CARD`'s missing `body`
@@ -614,7 +619,7 @@ component gets its own folder, `<Name>.tsx` + `<Name>.module.css`, one component
 - **`CompactStarCard`** — the hover preview: headline + constellation, **no** fetch
   dependency (name comes from `StarInfo.label`).
 - **`DETAIL_CARD`** (`detailCardTable.ts:64-110`) gains a `body` row → `Detail:
-  StarDetailCard`, `Compact: CompactStarCard`, each narrowing `target.type === 'body'`
+StarDetailCard`, `Compact: CompactStarCard`, each narrowing `target.type === 'body'`
   (mirror the existing arms). This completes the `Record<FocusableTargetType, …>`
   exhaustiveness from Task 11.
 
@@ -625,7 +630,7 @@ component gets its own folder, `<Name>.tsx` + `<Name>.module.css`, one component
       `useFamousStarsMeta` to return one entry; assert the headline, an alias from
       `names.slice(1)`, and the description text appear.
 - [x] Test `renders headline only before meta resolves` — mock the hook `{ meta: [], ready:
-      false }` (or `ready:true` empty); assert the headline shows and no properties block /
+    false }` (or `ready:true` empty); assert the headline shows and no properties block /
       no crash (fail-soft).
 - [x] Test `omits absent optional properties` — a meta entry without `massSolar`/`ageGyr`
       renders no mass/age line (correction 4 — the card drops absent lines).

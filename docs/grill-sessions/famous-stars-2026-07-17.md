@@ -33,11 +33,12 @@ incoming Gaia star bin (anonymous, non-pickable). Where does the new seed sit �
 a third parallel layer, or the source of truth the existing layers derive from?
 
 **Considerations:**
+
 - **Option A (separate new layer):** `famous_stars.seed.json` → own bin + meta
-  + renderer path; `SCENE_STARS` stays a hand-authored TS constant. Pros: no
-  churn in existing files. Cons: Sirius defined twice (TS constant AND seed),
-  dedup needed in three directions (famous↔scene, famous↔Gaia, scene↔Gaia),
-  classic two-sources-of-truth entanglement the simplicity conventions flag.
+  - renderer path; `SCENE_STARS` stays a hand-authored TS constant. Pros: no
+    churn in existing files. Cons: Sirius defined twice (TS constant AND seed),
+    dedup needed in three directions (famous↔scene, famous↔Gaia, scene↔Gaia),
+    classic two-sources-of-truth entanglement the simplicity conventions flag.
 - **Option B (seed absorbs SCENE_STARS):** one seed is the single source of
   truth for every named star; the descent's foreground bodies become a derived
   view of it. Pros: position/magnitude/metadata can never disagree between the
@@ -55,6 +56,7 @@ with the derivation.
 ranging from ~93 to ~480 entries — which selection rule bounds the curation?
 
 **Considerations:**
+
 - **Option A (Wikipedia brightest-stars table):** ~93 stars down to apparent
   V +2.50. Every one has a proper name and rich Wikipedia coverage. Cons:
   misses faint-but-famous stars (Proxima, Barnard's) the scene already draws.
@@ -77,6 +79,7 @@ list reaches Betelgeuse (~170 pc), Rigel (~260 pc), Deneb (~800 pc). Which
 render path draws them?
 
 **Considerations:**
+
 - **Option A (extend the foreground body path):** all seed stars become scene
   bodies — `starPointsLayer` backdrop points, `sceneBodyLabels` captions,
   `starSpheresLayer` true-scale spheres on approach, and they inherit
@@ -109,6 +112,7 @@ path, whose input is a tiny synchronous TS structure at engine init
 but ~100 KB of descriptions shouldn't ride in the JS bundle.
 
 **Considerations:**
+
 - **Option A (split at build):** committed seed → `buildFamousStars` emits
   (1) a compact **committed generated** star table (id, label, ra, dec,
   distPc, absMag, spectral class…) that `sceneStars.ts` imports synchronously
@@ -135,6 +139,7 @@ Capella's quadruple, Sirius A+B, Acrux, Castor ×6). What does one seed entry
 model?
 
 **Considerations:**
+
 - **Option A (one entry per naked-eye point of light):** the seed models what
   you see; properties (`massSolar`/`temperatureK`/`ageGyr`) are the
   primary's, companions live in the description. Matches `SCENE_STARS`'
@@ -159,6 +164,7 @@ carry **all the info needed to generate a "realistic" 3D star model**.
 **Considerations:** the base proposal (id, commonName, names[], constellation,
 ra/dec J2000 deg, distancePc, magV, absMag, spectralType, massSolar,
 temperatureK, ageGyr, description) was amended by the realism requirement:
+
 - `temperatureK` becomes load-bearing: surface colour derives from blackbody
   temperature (real chromaticity), not the 4-bucket spectral palette.
 - `luminositySolar` (bolometric) promoted to a field — absMag is V-band and
@@ -186,6 +192,7 @@ spectralType`; descriptions carry etymology/companions/fun facts.
 (the CMB-velocity boilerplate gives it away). Same trick, or curated prose?
 
 **Considerations:**
+
 - **Option A (Wikipedia leads):** consistent, fast, zero hallucination risk —
   but star leads are drier/more repetitive than galaxy leads, against the
   stated "nice description" bar.
@@ -207,11 +214,12 @@ the Gaia bin via `FAMOUS_STAR_GAIA_IDS` (hand-maintained TS, keyed by
 ~120 means ~95 new SIMBAD resolutions — where does that fact belong?
 
 **Considerations:**
+
 - **Option A (in the seed):** required `"gaiaDr3": "<digits>" | null` on every
   entry — string because DR3 source_ids exceed `Number.MAX_SAFE_INTEGER`
   (JSON numbers would silently corrupt them); `null` keeps its meaning
   ("SIMBAD confirms no Gaia DR3 row" — the Sun, saturated bright stars); a
-  *missing* field fails seed validation so "not yet resolved" can't read as
+  _missing_ field fails seed validation so "not yet resolved" can't read as
   "nothing to subtract". Optional `"gaiaDr3Note"` carries provenance for
   non-obvious resolutions (component choice in multiples). Cons: loses the
   TS table's comment culture (mitigated by the note field).
@@ -232,6 +240,7 @@ description? Click-picking is the parked foreground-body-picking item; what
 ships now?
 
 **Considerations:**
+
 - **Option A (rendering only):** smallest PR, but the descriptions ship dark —
   invisible until picking lands.
 - **Option B (rendering + search fly-to):** seed names feed the alias index;
@@ -257,6 +266,7 @@ body-selection seams. Picking itself remains the parked backlog item;
 star-map zoom is planetarium-dense. Gate by magnitude from day one?
 
 **Considerations:**
+
 - **Option A (ship all-on, tune later):** keep existing gates, judge clutter
   in the visual pass; add a `magV` threshold only if needed (the seed carries
   the field either way). ~120 labels is roughly Stellarium's default density
@@ -274,6 +284,7 @@ add a one-line `magV` threshold follow-up.
 PR/docs structure?
 
 **Decision (accepted as proposed):**
+
 1. This transcript saved to `docs/grill-sessions/famous-stars-2026-07-17.md`.
 2. `refactor-ground` runs next, ruling on the ground-prep candidates:
    `sceneStars.ts` → seed derivation seam, `FOREGROUND_MAX_DISTANCE_MPC`
@@ -315,7 +326,7 @@ checkpoint:
    Headroom to the 1 Mpc ceiling shrinks ~100× → ~4×; spec notes it, no code
    change.
 2. **Q4 split-at-build RECONFIRMED after a genuine challenge.** The repo's
-   only seed-consumption precedent is a *direct* Vite JSON import
+   only seed-consumption precedent is a _direct_ Vite JSON import
    (`src/data/structure/buildStaticAnchorStructures.ts:67`) and there is zero
    committed-codegen precedent — so direct import was proposed at checkpoint.
    User rejected it on forward-looking grounds: planets/Earth will want their

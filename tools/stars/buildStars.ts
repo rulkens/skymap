@@ -84,11 +84,7 @@ import {
   type HipBrightRow,
   type StarInput,
 } from './selectStars';
-import {
-  buildStarOctree,
-  type OctreeLeafStar,
-  type StarOctreeGrid,
-} from './buildStarOctree';
+import { buildStarOctree, type OctreeLeafStar, type StarOctreeGrid } from './buildStarOctree';
 import {
   parseFamousStarsSeed,
   selectDedupEntries,

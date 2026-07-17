@@ -159,10 +159,7 @@ describe('buildStarCatalog', () => {
     // FAMOUS_STAR_GAIA_IDS table is gone). A matched entry's DR3 id joins the
     // set as a bigint; a `null` entry (the Sun, saturated bright stars) is a
     // real "no row to subtract" value and must add nothing.
-    const set = seedToFamousGaiaIds([
-      { gaiaDr3: PROXIMA_ID.toString() },
-      { gaiaDr3: null },
-    ]);
+    const set = seedToFamousGaiaIds([{ gaiaDr3: PROXIMA_ID.toString() }, { gaiaDr3: null }]);
 
     expect(set.has(PROXIMA_ID)).toBe(true);
     expect(set.size).toBe(1);

@@ -82,10 +82,7 @@ function StarDetailCard({
               <CardRow label="Mass" value={`${entry.massSolar.toLocaleString()} M☉`} />
             )}
             {entry.luminositySolar != null && (
-              <CardRow
-                label="Luminosity"
-                value={`${entry.luminositySolar.toLocaleString()} L☉`}
-              />
+              <CardRow label="Luminosity" value={`${entry.luminositySolar.toLocaleString()} L☉`} />
             )}
             {entry.ageGyr != null && (
               <CardRow label="Age" value={`${entry.ageGyr.toLocaleString()} Gyr`} />

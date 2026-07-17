@@ -55,9 +55,7 @@ describe('famousStarsMetaFetcher', () => {
     fetch.mock.mockImplementation((_url, init) => {
       const sig = (init as RequestInit | undefined)?.signal;
       if (sig?.aborted) {
-        return Promise.reject(
-          new DOMException('The operation was aborted.', 'AbortError'),
-        );
+        return Promise.reject(new DOMException('The operation was aborted.', 'AbortError'));
       }
       return Promise.resolve(new Response('[]', { status: 200 }));
     });

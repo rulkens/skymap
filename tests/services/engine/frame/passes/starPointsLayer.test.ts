@@ -271,7 +271,10 @@ describe('starPointsLayer.draw', () => {
     starPointsLayer.draw(PASS_STUB, view, makeCtx(camPos), state);
 
     expect(renderer.setStars).toHaveBeenCalledTimes(1);
-    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([SUN.id, PROXIMA.id]);
+    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([
+      SUN.id,
+      PROXIMA.id,
+    ]);
     expect(renderer.draw).toHaveBeenCalledTimes(1);
   });
 
@@ -297,7 +300,10 @@ describe('starPointsLayer.draw', () => {
     const nearCam = halfAuFrom(SIRIUS.positionMpc);
     starPointsLayer.draw(PASS_STUB, makeNear0View(nearCam), makeCtx(nearCam), state);
     expect(renderer.setStars).toHaveBeenCalledTimes(3);
-    expect(renderer.setStars.mock.calls[2]![0].map((star) => star.id)).toEqual([SUN.id, PROXIMA.id]);
+    expect(renderer.setStars.mock.calls[2]![0].map((star) => star.id)).toEqual([
+      SUN.id,
+      PROXIMA.id,
+    ]);
     expect(renderer.draw).toHaveBeenCalledTimes(3);
   });
 

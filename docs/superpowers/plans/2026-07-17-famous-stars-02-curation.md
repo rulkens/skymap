@@ -119,7 +119,7 @@ Per batch task:
 - [ ] (main thread) `npm test` — the suite stays green (the `sceneStars` length lower-bound
       and the parser coverage invariant absorb the growth; no per-batch test to write).
 - [ ] (main thread) `git add data/seeds/famous_stars.seed.json
-      src/data/bodies/famousStars.generated.ts` and commit both together.
+    src/data/bodies/famousStars.generated.ts` and commit both together.
 
 > **Batch count** is driven by Task 1's roster size (~90–100 net-new ÷ ~18 ≈ 5 batches).
 > Tasks 2–6 are the nominal five; add a sixth only if the roster + extras exceed ~100
@@ -140,7 +140,7 @@ Per batch task:
       plan 01 Task 7's code path.
 - [ ] **Timing note (spec §9, grill Q8/Q11 item 5) — LOAD-BEARING.** The complete seed
       (every entry's resolved `gaiaDr3`) MUST land **before the first real `npm run
-      build-stars`** run, so the Gaia bin's dedup is complete on its first build and no
+    build-stars`** run, so the Gaia bin's dedup is complete on its first build and no
       rebuild is needed. Record in the close-out that this plan's completion is that
       gate — the Gaia fetch being still in flight is why the window is ideal.
 - [ ] **R2 sync reminder (do NOT run here).** The regenerated `famous_stars_meta.json` (and

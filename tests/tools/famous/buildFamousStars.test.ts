@@ -134,9 +134,7 @@ describe('serializeGeneratedTable', () => {
 
     expect(text).toContain('!!! GENERATED FILE — DO NOT EDIT BY HAND !!!');
     expect(text).toContain('npm run build-famous-stars');
-    expect(text).toContain(
-      "import type { FamousStarRow } from '../../@types/data/FamousStarRow';",
-    );
+    expect(text).toContain("import type { FamousStarRow } from '../../@types/data/FamousStarRow';");
     expect(text).toContain('export const FAMOUS_STARS_GENERATED: readonly FamousStarRow[] = [');
     // Single-quoted strings, no oblateness key for the spherical Sirius row.
     expect(text).toContain("id: 'sirius',");

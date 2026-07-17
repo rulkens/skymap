@@ -34,7 +34,7 @@ the night sky's most recognisable stars.
 
 Rather than add a third parallel layer (Sirius defined in two places, dedup in
 three directions), the seed **absorbs** `SCENE_STARS`: the descent's foreground
-stars become a *derived view* of one seed, so the sphere you fly past and the
+stars become a _derived view_ of one seed, so the sphere you fly past and the
 labelled point you see from afar can never disagree, and the Gaia dedup runs in
 exactly one direction (seed ↔ Gaia) (grill Q1, Option B).
 
@@ -150,7 +150,7 @@ export type FamousStarEntry = {
   watch). No runtime use, so no field.
 - The **model-generation vector** the seed must carry for a "realistic" 3D star
   is `radiusSolar + temperatureK + luminositySolar + oblateness? + variable? +
-  spectralType` (grill Q6).
+spectralType` (grill Q6).
 
 ---
 
@@ -177,7 +177,7 @@ seed at build time into two artefacts:
 ```
 
 **Why a committed generated file (the repo's first committed-codegen file).**
-Reconfirmed at the checkpoint against a genuine challenge (addendum 2): a *direct*
+Reconfirmed at the checkpoint against a genuine challenge (addendum 2): a _direct_
 Vite JSON import (the `buildStaticAnchorStructures.ts:67` precedent) was proposed
 and rejected on forward-looking grounds — planets/Earth will want their own meta
 sidecars later, so the sidecar is the durable pattern, and a direct import would
@@ -199,7 +199,9 @@ consumer (`sceneStars.ts`) and the maker in `src/data/bodies/`:
 // Regenerate with:  npm run build-famous-stars
 // Source of truth:  data/seeds/famous_stars.seed.json
 import type { FamousStarRow } from '../../@types/data/FamousStarRow';
-export const FAMOUS_STARS_GENERATED: readonly FamousStarRow[] = [ /* … */ ];
+export const FAMOUS_STARS_GENERATED: readonly FamousStarRow[] = [
+  /* … */
+];
 ```
 
 The compact row is the render + search projection of the seed — enough to build a
@@ -210,16 +212,16 @@ in the sidecar):
 // src/@types/data/FamousStarRow.d.ts   (one type per file — CLAUDE.md)
 export type FamousStarRow = {
   readonly id: string;
-  readonly commonName: string;      // → StarBody.label
+  readonly commonName: string; // → StarBody.label
   readonly names: readonly string[]; // palette aliases (Bayer, catalogue names)
-  readonly constellation: string;    // palette secondary chip
-  readonly raDeg: number;            // → positionMpc via the star maker
+  readonly constellation: string; // palette secondary chip
+  readonly raDeg: number; // → positionMpc via the star maker
   readonly decDeg: number;
   readonly distancePc: number;
   readonly absMag: number;
-  readonly temperatureK: number;     // → color via temperatureToLinearRgb
-  readonly radiusSolar: number;      // → radiusKm
-  readonly oblateness?: number;      // → StarBody.oblateness (per-axis MVP scale)
+  readonly temperatureK: number; // → color via temperatureToLinearRgb
+  readonly radiusSolar: number; // → radiusKm
+  readonly oblateness?: number; // → StarBody.oblateness (per-axis MVP scale)
 };
 ```
 
@@ -266,7 +268,9 @@ New `tools/parsers/famousStarsSeed.ts`, modelled on
 fail-loud validation, no zod (house convention). Public surface:
 
 ```ts
-export type FamousStarEntry = { /* §2 */ };
+export type FamousStarEntry = {
+  /* §2 */
+};
 export function validateFamousStarEntry(e: FamousStarEntry): FamousStarEntry;
 export function parseFamousStarsSeed(rawJson: string): FamousStarEntry[];
 ```
@@ -285,7 +289,7 @@ Validation rules the parser enforces (each throws naming the offending `id`):
   in sane physical ranges; when absent, accepted (genuinely unknown).
 - `oblateness`, when present, finite in `(0, 0.5)`.
 - **`gaiaDr3` is a REQUIRED property** whose value is `string` (digits) or `null`.
-  A *missing* field throws (the Q8 invariant: "not yet resolved" must not read as
+  A _missing_ field throws (the Q8 invariant: "not yet resolved" must not read as
   "nothing to subtract"). A present `string` must be all-digits.
 - The **coverage invariant** that lived in `famousStarGaiaIds.test.ts` moves here:
   every entry carries `gaiaDr3`; the Sun's is `null`. (The deleted table's test is
@@ -313,7 +317,7 @@ by name (grill Q1).
 **Maker.** `makers/star.ts` changes from a positional column-signature to
 `star(row: FamousStarRow): StarBody` — the "positional signature is deliberate,
 the table is a dense grid of columns" rationale in its module header retires,
-because the table is now *generated*, not hand-authored, so per-row legibility is
+because the table is now _generated_, not hand-authored, so per-row legibility is
 no longer the maker's job. The maker computes:
 
 - `positionMpc` = `raDecDistToCartesian(raDeg, decDeg, distancePc · PC_TO_MPC)`
@@ -329,7 +333,7 @@ no longer the maker's job. The maker computes:
 **`StarBody` field delta** (`src/@types/scene/StarBody.d.ts:23-30`, spec decision):
 add exactly one field, `oblateness?: number` — the render body stays render-only
 (search/prose live in the generated table + sidecar, not here). `color` and
-`radiusKm` keep their shapes; only their *provenance* changes (blackbody util,
+`radiusKm` keep their shapes; only their _provenance_ changes (blackbody util,
 real radius). The module header updates to note colour now comes from blackbody
 temperature and radius is the real per-star value.
 
@@ -412,7 +416,7 @@ InfoCard directly.
 
 **Chosen: (b).** The galaxy chain is engine-side only because
 `extractGalaxyRow` runs engine-side — a galaxy's identity (which galaxy at index
-N) is knowable *only* by reading the loaded cloud, so the enrichment must happen
+N) is knowable _only_ by reading the loaded cloud, so the enrichment must happen
 where the cloud lives, and it bakes `deps.famousMeta` into the `GalaxyRow`. A
 star's identity is just its `id`, already present React-side in the body
 `SelectionRow` — so its meta lookup is a pure function of the id, doable anywhere.
@@ -434,11 +438,11 @@ export type FamousStarMetaEntry = {
   distancePc: number;
   magV: number;
   absMag: number;
-  radiusSolar: number;      // required (render input)
-  temperatureK: number;     // required (render input)
-  massSolar?: number;       // optional — omitted when unknown; card drops the line
+  radiusSolar: number; // required (render input)
+  temperatureK: number; // required (render input)
+  massSolar?: number; // optional — omitted when unknown; card drops the line
   luminositySolar?: number; // optional
-  ageGyr?: number;          // optional
+  ageGyr?: number; // optional
   oblateness?: number;
   variable?: { type: string; magRange: [number, number] };
   description: string;
@@ -486,7 +490,7 @@ grows exactly one row/variant:
   that set, so the arm still returns `null` for them, preserving today's behaviour
   (no InfoCard for Earth/planets; their meta sidecars are a future feature). So
   the arm is `(row) => STAR_IDS.has(row.id) ? { type:'body', id, label,
-  positionMpc, radiusKm } : null`. Still pure; the memoized
+positionMpc, radiusKm } : null`. Still pure; the memoized
   `selectFocusedFocusable`/`Hovered`/`Selected` selectors
   (`state/selection/selectors.ts:88-111`) need no change — they already pass the
   body row through `buildFocusable`. Because `URL_HASH_FOR`'s `body` row keys off
@@ -546,7 +550,7 @@ recognisable, most-searched context for a star; Bayer/other aliases render as th
 the planets keep "Solar System". Concretely: the `ScoredRow` body variant carries
 the resolved `names` + secondary label, and `ROW_VIEW.body` renders
 `names[0]` primary, `names.slice(1)` + constellation-or-"Solar System" secondary
-— one row-view branch, no new row *kind*.
+— one row-view branch, no new row _kind_.
 
 **Search → selection is already wired** end-to-end (verified): palette pick →
 `focusIdForRow.ts:52` (`body-<id>`) → `requestFocus` →
@@ -593,7 +597,7 @@ constant restatement, no clamp-boundary or mirror tests.
   entry carries `gaiaDr3`; the Sun's is `null`).
 - `src/utils/color/temperatureToLinearRgb.test.ts` — directional realism (§6): hot
   bluer than Sun, cool redder than Sun, Sun near-neutral. Asserts channel
-  *relationships*, not literal RGB constants.
+  _relationships_, not literal RGB constants.
 - `buildFamousStars` — a fixture seed round-trips: the emitted generated table
   matches the render+search projection and the sidecar carries the physical
   fields + description (one golden-ish assertion over a 2–3 entry fixture, not the

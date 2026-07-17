@@ -85,11 +85,7 @@ export function temperatureToLinearRgb(kelvin: number): Vec3 {
 
   // Clamp to the display range, normalise to [0,1], then linearise.
   const clamp = (c: number) => Math.min(255, Math.max(0, c)) / 255;
-  const lin: Vec3 = [
-    srgbToLinear(clamp(r)),
-    srgbToLinear(clamp(g)),
-    srgbToLinear(clamp(b)),
-  ];
+  const lin: Vec3 = [srgbToLinear(clamp(r)), srgbToLinear(clamp(g)), srgbToLinear(clamp(b))];
 
   // Pin the brightest channel to 1.0 so this is a pure tint; the star's
   // absolute brightness is applied downstream, not here.
