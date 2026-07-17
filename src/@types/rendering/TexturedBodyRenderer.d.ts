@@ -40,6 +40,16 @@ export type TexturedBodyRenderer = Renderer & {
    */
   setTexture(bodyId: BodyTextureId, bitmap: ImageBitmap): void;
   /**
+   * Free a body's surface texture and revert its binding to the shared 1×1
+   * placeholder — the eviction inverse of `setTexture`. Called from the
+   * `bodyTextures` slot's `onRelease` when the body leaves its proximity radius,
+   * so the (up to ~135 MB at 8 k) GPU texture is actually released rather than
+   * leaked. Destroys the body's `GPUTexture`, rebuilds its bind group against the
+   * placeholder, and leaves the per-body uniform buffer intact (cheap, and the
+   * body stays drawable-but-plain). A no-op for a body that was never textured.
+   */
+  clearTexture(bodyId: BodyTextureId): void;
+  /**
    * Swap a body's ring-alpha texture (binding 3) — Saturn's radial ring strip
    * for the ring-on-planet shadow. Every other body keeps the shared 1×1
    * transparent placeholder (never sampled, since `ringOuterRatio == 0`).

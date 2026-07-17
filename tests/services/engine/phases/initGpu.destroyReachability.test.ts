@@ -203,6 +203,12 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/earthRenderer', () => ({
 vi.mock('../../../../src/services/gpu/renderers/bodies/starRenderer', () => ({
   createStarRenderer: vi.fn(() => makeStub('starRenderer')),
 }));
+// The shared textured-body renderer keeps its `?static` WESL imports out of
+// JSDOM; mock it so initGpu's foreground block lands a stub on
+// `state.gpu.texturedBodyRenderer`.
+vi.mock('../../../../src/services/gpu/renderers/bodies/texturedBodyRenderer', () => ({
+  createTexturedBodyRenderer: vi.fn(() => makeStub('texturedBodyRenderer')),
+}));
 // Partial mock: planetsLayer.ts imports the real MAX_PLANETS/INSTANCE_FLOATS
 // constants at module scope to size its staging buffer, so only the factory
 // is stubbed — passing those constants through keeps that sizing real.
@@ -303,6 +309,7 @@ function makeState(): EngineState {
       earthRenderer: null,
       starRenderer: null,
       planetRenderer: null,
+      texturedBodyRenderer: null,
       starPointRenderer: null,
       orbitTrailRenderer: null,
     },
@@ -409,6 +416,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // the singular handle.
     expect(vi.mocked(createPlanetRenderer)).toHaveBeenCalledTimes(1);
     expect(state.gpu.planetRenderer).toBe(stubs.planetRenderer);
+    // The shared textured-body renderer owns per-body uniform buffers + surface
+    // textures — the destroy chain must reach it the same way.
+    expect(state.gpu.texturedBodyRenderer).toBe(stubs.texturedBodyRenderer);
     // The star-point renderer receives the FULL star list exactly once, at
     // construction — at the galaxy-scale boot camera every star (the Sun
     // included) is a sub-pixel point, so the whole seed IS the boot

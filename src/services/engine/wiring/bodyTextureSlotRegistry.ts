@@ -11,28 +11,42 @@
  * written into `state.assetSlots.bodyTextures`. The demand loop then triggers
  * and evicts the already-minted slots via those external rows.
  *
- * ### Commit dispatch by key
+ * ### Commit + release dispatch by key
  *
  * A single fetcher feeds the whole family, but each key commits into a different
- * resident renderer. In THIS plan the only wired-up target is Earth: key
- * `'earth'` re-skins the placeholder sphere through `earthRenderer.setTexture`.
- * Every other key's commit is a documented no-op — `texturedBodyRenderer` /
- * `ringRenderer` (the resident targets for the planets, moons, and ring) arrive
- * in Plan 02, which extends this one dispatch rather than adding a second. A
- * non-Earth texture demanded before then fetches and commits harmlessly to
- * nothing; the renderer that will consume it does not exist yet.
+ * resident renderer, chosen by registry membership rather than an `if (id ===
+ * …)` ladder:
+ *
+ *  - `'earth'` re-skins its dedicated placeholder sphere through
+ *    `earthRenderer.setTexture` (Earth keeps its own renderer — the planned
+ *    atmosphere/day-night divergence).
+ *  - every other `BodyTextureId` (the twelve non-Earth textured bodies) routes to
+ *    the shared `texturedBodyRenderer.setTexture(bodyId, …)`; its `onRelease`
+ *    frees that body's GPU texture via `clearTexture(bodyId)` — the slot family's
+ *    eviction premise, so a body leaving its proximity radius actually releases
+ *    its (up to ~135 MB) surface texture rather than leaking it.
+ *  - the ring keys (`RingTextureId`, currently `'saturn-ring'`) stay a documented
+ *    no-op: `setRingTexture` routing lands in Plan 02 Task 8. A ring texture
+ *    demanded before then commits harmlessly to nothing.
+ *
+ * Earth's `onRelease` is likewise a no-op — `earthRenderer` has no clear surface
+ * (its texture lifecycle is a Plan-02 follow-up), so the descent texture is not
+ * evicted. Membership in `BODY_TEXTURE_REGISTRY` (via `bodyTextureSpec`)
+ * distinguishes a body key from a ring key without hardcoding the ring id, so a
+ * second ring joins the family with no dispatch edit.
  *
  * ### Destroy-race posture (same as `wireGalaxyCatalogSourceSlot`)
  *
- * `commit` re-reads `state.gpu.earthRenderer` and null-guards it: the handle can
+ * `commit` / `onRelease` re-read `state.gpu.*` and null-guard the handle: it can
  * be null mid-bootstrap (commit fires before the renderer is assigned) or after
- * teardown (StrictMode unmount / hot-reload). A null handle drops the upload
- * silently — the slot still transitions to `ready`.
+ * teardown (StrictMode unmount / hot-reload). A null handle drops the upload /
+ * clear silently — the slot still transitions to `ready` / `idle`.
  */
 
 import { createAssetSlot } from '../../loading/AssetSlot';
 import { bodyTextureFetcher } from '../../loading/fetchers/bodyTextureFetcher';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
+import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
@@ -42,17 +56,41 @@ import type { RingTextureId } from '../../../@types/data/RingTextureId';
 type BodyTextureKey = BodyTextureId | RingTextureId;
 
 /**
- * Route a committed bitmap to the resident renderer for `key`. Only `'earth'`
- * has one this plan; the rest are documented no-ops until Plan 02 (see header).
+ * True iff `key` names a textured SPHERE body other than Earth — the set the
+ * shared `texturedBodyRenderer` owns. Earth (its own renderer) and the ring keys
+ * (no `BODY_TEXTURE_REGISTRY` row) are excluded, so a `true` here narrows `key`
+ * to a `BodyTextureId` the textured renderer accepts.
+ */
+function isTexturedBodyKey(key: BodyTextureKey): key is BodyTextureId {
+  return key !== 'earth' && bodyTextureSpec(key) !== null;
+}
+
+/**
+ * Route a committed bitmap to the resident renderer for `key`. Earth →
+ * `earthRenderer`; the twelve other bodies → the shared `texturedBodyRenderer`;
+ * ring keys → no-op until Task 8 (see header).
  */
 function commitBodyTexture(state: EngineState, key: BodyTextureKey, bitmap: ImageBitmap): void {
+  // Destroy race: each handle may be null mid-bootstrap or post-teardown — a
+  // null-guarded drop keeps the slot's `ready` transition intact.
   if (key === 'earth') {
-    // Destroy race: the handle may be null mid-bootstrap or post-teardown — a
-    // null-guarded drop keeps the slot's `ready` transition intact.
     state.gpu.earthRenderer?.setTexture(bitmap);
-    return;
+  } else if (isTexturedBodyKey(key)) {
+    state.gpu.texturedBodyRenderer?.setTexture(key, bitmap);
   }
-  // No resident target yet — texturedBodyRenderer / ringRenderer land in Plan 02.
+  // Ring keys have no resident target yet — setRingTexture routing is Task 8.
+}
+
+/**
+ * The inverse of commit: free the resident texture on eviction. Only the shared
+ * textured bodies have a clear surface — Earth's renderer has none (its texture
+ * lifecycle is a Plan-02 follow-up) and the ring keys route in Task 8 — so a
+ * body key frees via `clearTexture` and every other key is a no-op.
+ */
+function releaseBodyTexture(state: EngineState, key: BodyTextureKey): void {
+  if (isTexturedBodyKey(key)) {
+    state.gpu.texturedBodyRenderer?.clearTexture(key);
+  }
 }
 
 /**
@@ -66,12 +104,9 @@ export function wireBodyTextureSlots(state: EngineState): void {
       name: `${key}-texture`,
       fetch: bodyTextureFetcher,
       commit: async (bitmap) => commitBodyTexture(state, key, bitmap),
-      // The inverse of commit: free the resident texture on eviction. No renderer
-      // exposes a texture-clear surface this plan (earthRenderer has none, and the
-      // other keys' renderers arrive in Plan 02 with the placeholder swap-back),
-      // so it is a documented no-op — kept as the symmetric hook Plan 02's
-      // texture lifecycle extends, not omitted, so the extension point is obvious.
-      onRelease: () => {},
+      // The committed value (the bitmap) is ignored — the key alone selects the
+      // renderer + body to clear, so the whole family shares one release path.
+      onRelease: () => releaseBodyTexture(state, key),
     });
     state.assetSlots.bodyTextures.set(key, slot);
   }

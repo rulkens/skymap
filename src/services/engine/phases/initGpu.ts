@@ -65,6 +65,7 @@ import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsam
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
+import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
 import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
@@ -480,6 +481,21 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // profile invariant the sphere bodies above carry, matched by convention
   // + this comment rather than an import.
   state.gpu.earthRenderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
+
+  // ── Textured bodies (Plan 02 — the twelve non-Earth textured bodies) ─
+  //
+  // One shared UV-sphere pipeline draws the seven other major planets, the Moon,
+  // and the four Galilean moons; each body id owns its own uniform buffer + bind
+  // group + surface texture inside the renderer's per-body Map. Same
+  // ('rgba16float', 'depth32float') `foreground:0` format invariant as the Earth
+  // + sphere-body renderers above. The bodyTextures slot family (minted just
+  // below) routes each non-Earth body's committed bitmap to `setTexture` and its
+  // eviction to `clearTexture`.
+  state.gpu.texturedBodyRenderer = createTexturedBodyRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+  );
 
   // ── Body-surface texture slot family ─────────────────────────────────
   //

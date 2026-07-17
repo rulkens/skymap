@@ -292,6 +292,26 @@ export function createTexturedBodyRenderer(
     res.bindGroup = buildBindGroup(res);
   }
 
+  // ── clearTexture ──────────────────────────────────────────────────────────
+  //
+  // The eviction inverse of `setTexture`: free the body's surface texture and
+  // rebind the shared placeholder. The `bodyTextures` slot's onRelease calls
+  // this so a body leaving its proximity radius actually releases its (up to
+  // ~135 MB) GPU texture — the slot family's eviction premise, not a leak. The
+  // ring texture and the per-body uniform buffer are left intact: the ring rides
+  // its OWN slot key (freed by that slot's onRelease), and keeping the uniform
+  // buffer keeps the body drawable-but-plain without a realloc on re-approach.
+
+  function clearTexture(bodyId: BodyTextureId): void {
+    const res = bodies.get(bodyId);
+    // A body that never textured (only ever drew the placeholder) has nothing to
+    // free — a no-op keeps onRelease honest without a residency check upstream.
+    if (res === undefined || res.texture === null) return;
+    res.texture.destroy();
+    res.texture = null;
+    res.bindGroup = buildBindGroup(res);
+  }
+
   // ── setRingTexture ────────────────────────────────────────────────────────
 
   function setRingTexture(bodyId: BodyTextureId, bitmap: ImageBitmap): void {
@@ -346,6 +366,7 @@ export function createTexturedBodyRenderer(
   const renderer: TexturedBodyRenderer = {
     label: 'texturedBodyRenderer',
     setTexture,
+    clearTexture,
     setRingTexture,
     draw,
     destroy,

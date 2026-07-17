@@ -312,6 +312,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // excluded from isEngineReady, null-checked at use by their layers.
       starRenderer: null,
       planetRenderer: null,
+      // Shared textured-sphere renderer for the twelve non-Earth textured bodies
+      // (planets + Moon + Galilean moons). null until initGpu; excluded from
+      // isEngineReady, null-checked at use by texturedBodiesLayer; the
+      // bodyTextures family's commit/onRelease call its setTexture/clearTexture.
+      texturedBodyRenderer: null,
       starPointRenderer: null,
       starCatalogRenderer: null,
       // Keplerian orbit trails (Earth / Jupiter / Moon) — additive screen-space
@@ -742,6 +747,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.starRenderer = null;
     state.gpu.planetRenderer?.destroy();
     state.gpu.planetRenderer = null;
+    state.gpu.texturedBodyRenderer?.destroy();
+    state.gpu.texturedBodyRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
     state.gpu.starCatalogRenderer?.destroy();

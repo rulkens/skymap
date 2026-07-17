@@ -65,6 +65,7 @@ import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
+import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
 import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/OrbitTrailRenderer';
@@ -389,6 +390,21 @@ export type EngineGpuHandles = {
    * it; released and re-nulled by `destroy()`.
    */
   planetRenderer: PlanetRenderer | null;
+  /**
+   * The shared textured-sphere renderer for the twelve non-Earth textured
+   * bodies (the seven other major planets, the Moon, and the four Galilean
+   * moons) — one UV-sphere pipeline whose per-body `Map` gives each body its
+   * own uniform buffer + bind group + surface texture, so no shared uniform can
+   * be clobbered mid-frame. `texturedBodiesLayer` draws the `textured` branch of
+   * `partitionBodiesByPresentation` through it; the `bodyTextures` slot family's
+   * commit routes each non-Earth body's bitmap to `setTexture`, and its
+   * onRelease frees that body's texture via `clearTexture`. Same `foreground:0`
+   * ('rgba16float', 'depth32float') format invariant as `earthRenderer` /
+   * `planetRenderer`. Excluded from `isEngineReady` and null-checked at use.
+   * Null until `initGpu` constructs it; released and re-nulled by `destroy()`
+   * (which also frees every per-body uniform buffer + surface/ring texture).
+   */
+  texturedBodyRenderer: TexturedBodyRenderer | null;
   /**
    * The unresolved stars (the `points` branch of
    * `partitionStarsByResolution`) as additive point sprites into the

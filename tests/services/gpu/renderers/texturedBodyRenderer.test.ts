@@ -183,6 +183,48 @@ describe('createTexturedBodyRenderer', () => {
     const strip = { width: 512, height: 1 } as unknown as ImageBitmap;
     expect(() => renderer.setRingTexture('saturn', strip)).not.toThrow();
   });
+
+  it('clearTexture destroys the body surface texture and reverts to the placeholder', () => {
+    // clearTexture is the eviction inverse of setTexture: releasing a body's
+    // bodyTextures slot must actually free its (up to ~135 MB) GPU texture, not
+    // leak it. Structural proof: after setTexture the body owns a real texture
+    // whose `.destroy()` clearTexture calls; the bind group is then rebuilt.
+    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
+    const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
+    renderer.setTexture('mars', bitmap);
+    // Reaching into the just-created body texture's destroy spy is not exposed;
+    // instead assert clearTexture is callable, idempotent, and non-throwing —
+    // and that a subsequent draw still works (placeholder rebind succeeded).
+    expect(renderer.clearTexture.length).toBe(1);
+    expect(() => renderer.clearTexture('mars')).not.toThrow();
+    // Idempotent: clearing an already-cleared (or never-textured) body is a no-op.
+    expect(() => renderer.clearTexture('mars')).not.toThrow();
+    expect(() => renderer.clearTexture('venus')).not.toThrow();
+    // The body still draws after its texture is freed — the bind group reverted
+    // to the shared placeholder rather than dangling at a destroyed view.
+    expect(() => renderer.draw(stubPass(), 'mars', new Float32Array(24))).not.toThrow();
+  });
+
+  it('clearTexture calls destroy on the body surface texture (no leak)', () => {
+    // Track the textures created so we can assert the surface texture's destroy
+    // spy fires on clear — the concrete free the slot's onRelease relies on.
+    const created: Array<{ destroy: ReturnType<typeof vi.fn>; desc: GPUTextureDescriptor }> = [];
+    const device = {
+      ...(mockDevice() as unknown as Record<string, unknown>),
+      createTexture: vi.fn((desc: GPUTextureDescriptor) => {
+        const destroy = vi.fn();
+        created.push({ destroy, desc });
+        return { createView: () => ({}), destroy, mipLevelCount: desc.mipLevelCount ?? 1, format: desc.format };
+      }),
+    } as unknown as GPUDevice;
+    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float');
+    const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
+    renderer.setTexture('mars', bitmap);
+    const surface = created.find((t) => Array.isArray(t.desc.size) && t.desc.size[0] === 8)!;
+    expect(surface).toBeDefined();
+    renderer.clearTexture('mars');
+    expect(surface.destroy).toHaveBeenCalledTimes(1);
+  });
 });
 
 function stubPass(): GPURenderPassEncoder & { drawIndexed: ReturnType<typeof vi.fn> } {

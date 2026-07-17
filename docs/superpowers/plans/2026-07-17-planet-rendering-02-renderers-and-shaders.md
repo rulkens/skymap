@@ -277,23 +277,23 @@ commit now routes any non-`'earth'` `BodyTextureId` →
 destroy race), with `onRelease` freeing that body's GPU texture. The `'earth'`
 key stays `earthRenderer.setTexture`. (`'saturn-ring'` routing is Task 8.)
 
-- [ ] Add `partitionBodiesByPresentation.ts`. Didactic docblock: one partition,
+- [x] Add `partitionBodiesByPresentation.ts`. Didactic docblock: one partition,
   three disjoint branches consumed by three layers (the smooth-handoff invariant,
   mirroring the star partition's header); Earth is its own renderer.
-- [ ] Add `texturedBodyRenderer: TexturedBodyRenderer | null` to
+- [x] Add `texturedBodyRenderer: TexturedBodyRenderer | null` to
   `EngineGpuHandles.d.ts` (nullable-until-`initGpu` docblock); construct in
   `initGpu.ts` beside the foreground block; null-seed + destroy row in
   `engine.ts`.
-- [ ] Extend `bodyTextureSlotRegistry` commit dispatch to route non-Earth ids to
+- [x] Extend `bodyTextureSlotRegistry` commit dispatch to route non-Earth ids to
   `texturedBodyRenderer.setTexture` with an `onRelease` that frees the texture.
-- [ ] Test `partitionBodiesByPresentation is disjoint and covering` — for a fixed
+- [x] Test `partitionBodiesByPresentation is disjoint and covering` — for a fixed
   camera, every input body lands in exactly one branch; a registry body with a
   non-resident texture lands in `flat`, resident in `textured`; Titan + an
   irregular moon (Phobos) always `flat` (not registry keys); a sub-3px body lands
   in `glints`.
-- [ ] Test the `initGpu.destroyReachability` + `engineState` wiring for the new
+- [x] Test the `initGpu.destroyReachability` + `engineState` wiring for the new
   handle (mirror the `earthRenderer` rows).
-- [ ] `npm test -- partitionBodiesByPresentation initGpu engineState` → green.
+- [x] `npm test -- partitionBodiesByPresentation initGpu engineState` → green.
   Commit.
 
 ## Task 6 — Earth Lambert (dedicated renderer keeps + gains lighting)

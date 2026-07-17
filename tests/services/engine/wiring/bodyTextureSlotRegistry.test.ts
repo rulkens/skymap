@@ -3,9 +3,11 @@
  * `bodyTextures` slot family.
  *
  * Structural: every family key gets a slot in `state.assetSlots.bodyTextures`.
- * Behavioural: the `'earth'` slot's commit dispatches to `earthRenderer.setTexture`
- * (the one resident target this plan), driven through the real slot machinery
- * with a stubbed fetch + decode.
+ * Behavioural: commit routes each key to its resident renderer — `'earth'` to
+ * `earthRenderer.setTexture`, every other (non-ring) body to
+ * `texturedBodyRenderer.setTexture(bodyId, …)` — and a non-Earth body's
+ * onRelease frees its texture via `texturedBodyRenderer.clearTexture`. Driven
+ * through the real slot machinery with a stubbed fetch + decode.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,11 +18,26 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 
 const fetch = useFetchMock();
 
-function makeState(setTexture: ReturnType<typeof vi.fn>): EngineState {
+type Gpu = {
+  earthRenderer: { setTexture: ReturnType<typeof vi.fn> };
+  texturedBodyRenderer: {
+    setTexture: ReturnType<typeof vi.fn>;
+    clearTexture: ReturnType<typeof vi.fn>;
+  };
+};
+
+function makeState(gpu: Gpu): EngineState {
   return {
-    gpu: { earthRenderer: { setTexture } },
+    gpu,
     assetSlots: { bodyTextures: new Map() },
   } as unknown as EngineState;
+}
+
+function makeGpu(): Gpu {
+  return {
+    earthRenderer: { setTexture: vi.fn() },
+    texturedBodyRenderer: { setTexture: vi.fn(), clearTexture: vi.fn() },
+  };
 }
 
 describe('wireBodyTextureSlots', () => {
@@ -40,7 +57,7 @@ describe('wireBodyTextureSlots', () => {
   });
 
   it('mints one slot per textured body + the ring', () => {
-    const state = makeState(vi.fn());
+    const state = makeState(makeGpu());
     wireBodyTextureSlots(state);
     expect(new Set(state.assetSlots.bodyTextures.keys())).toEqual(new Set(ALL_BODY_TEXTURE_KEYS));
     // Sanity: 13 bodies + the Saturn ring.
@@ -48,28 +65,60 @@ describe('wireBodyTextureSlots', () => {
   });
 
   it("the 'earth' slot's commit dispatches the bitmap to earthRenderer.setTexture", async () => {
-    const setTexture = vi.fn();
-    const state = makeState(setTexture);
+    const gpu = makeGpu();
+    const state = makeState(gpu);
     wireBodyTextureSlots(state);
 
     const slot = state.assetSlots.bodyTextures.get('earth')!;
     slot.load({ bodyId: 'earth', tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    expect(setTexture).toHaveBeenCalledTimes(1);
-    expect(setTexture).toHaveBeenCalledWith(bitmap);
+    expect(gpu.earthRenderer.setTexture).toHaveBeenCalledTimes(1);
+    expect(gpu.earthRenderer.setTexture).toHaveBeenCalledWith(bitmap);
+    // Earth keeps its own renderer — the shared textured renderer is untouched.
+    expect(gpu.texturedBodyRenderer.setTexture).not.toHaveBeenCalled();
   });
 
-  it("a non-'earth' slot commits harmlessly (no resident target this plan)", async () => {
-    const setTexture = vi.fn();
-    const state = makeState(setTexture);
+  it("a non-'earth' body slot's commit dispatches to texturedBodyRenderer.setTexture(bodyId, …)", async () => {
+    const gpu = makeGpu();
+    const state = makeState(gpu);
     wireBodyTextureSlots(state);
 
     const slot = state.assetSlots.bodyTextures.get('mars')!;
     slot.load({ bodyId: 'mars', tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    // Earth's renderer is untouched — Mars has no resident target until Plan 02.
-    expect(setTexture).not.toHaveBeenCalled();
+    expect(gpu.texturedBodyRenderer.setTexture).toHaveBeenCalledTimes(1);
+    expect(gpu.texturedBodyRenderer.setTexture).toHaveBeenCalledWith('mars', bitmap);
+    // Mars is not Earth's — Earth's renderer stays untouched.
+    expect(gpu.earthRenderer.setTexture).not.toHaveBeenCalled();
+  });
+
+  it("a non-'earth' body slot's onRelease frees its texture via texturedBodyRenderer.clearTexture", async () => {
+    const gpu = makeGpu();
+    const state = makeState(gpu);
+    wireBodyTextureSlots(state);
+
+    const slot = state.assetSlots.bodyTextures.get('mars')!;
+    slot.load({ bodyId: 'mars', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    // Eviction: releasing the slot must actually free Mars's GPU texture.
+    slot.release();
+    expect(gpu.texturedBodyRenderer.clearTexture).toHaveBeenCalledTimes(1);
+    expect(gpu.texturedBodyRenderer.clearTexture).toHaveBeenCalledWith('mars');
+  });
+
+  it("the ring slot commits harmlessly (its resident target lands in Task 8)", async () => {
+    const gpu = makeGpu();
+    const state = makeState(gpu);
+    wireBodyTextureSlots(state);
+
+    const slot = state.assetSlots.bodyTextures.get('saturn-ring')!;
+    slot.load({ bodyId: 'saturn-ring', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    // The ring's setRingTexture routing is Task 8 — no body renderer is touched.
+    expect(gpu.texturedBodyRenderer.setTexture).not.toHaveBeenCalled();
+    expect(gpu.earthRenderer.setTexture).not.toHaveBeenCalled();
   });
 });
