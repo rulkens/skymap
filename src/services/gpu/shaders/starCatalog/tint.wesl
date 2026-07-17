@@ -44,7 +44,7 @@
 import package::lib::math::saturate;
 
 fn starTint(bpRp: f32) -> vec3<f32> {
-  // Spectral-class anchors (linear RGB) — see src/data/bodies/palette.ts.
+  // Spectral-class anchors (linear RGB), authored here — see the module header.
   let ob = vec3<f32>(0.6, 0.7, 1.0);   // O/B blue-white
   let af = vec3<f32>(1.0, 1.0, 0.98);  // A/F white
   let gc = vec3<f32>(1.0, 0.97, 0.85); // G yellow-white
