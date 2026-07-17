@@ -7,7 +7,8 @@ import { spectralClassFromBpRp } from '../../../../src/utils/star/spectralClassF
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { StarInfo } from '../../../../src/@types/engine/StarInfo';
+import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
+import type { FieldStarInfo } from '../../../../src/@types/engine/FieldStarInfo';
 import { Source } from '../../../../src/data/sources';
 
 const galaxyRow: GalaxyRow = {
@@ -41,6 +42,24 @@ const structure: StructureInfo = {
   physicalRadiusMpc: 5,
 } as unknown as StructureInfo;
 
+// A star body row (id in FAMOUS_STARS_GENERATED) vs a non-star scene body
+// (Earth). buildFocusable's body arm is star-only — the load-bearing guard.
+const starRow: SelectionRow = {
+  type: 'body',
+  id: 'sirius',
+  label: 'Sirius',
+  positionMpc: [1e-6, 2e-6, 3e-6],
+  radiusKm: 1_192_000,
+};
+
+const earthRow: SelectionRow = {
+  type: 'body',
+  id: 'earth',
+  label: 'Earth',
+  positionMpc: [0, 0, 0],
+  radiusKm: 6371,
+};
+
 describe('buildFocusable', () => {
   it('null → null', () => expect(buildFocusable(null)).toBeNull());
   it('galaxy row → GalaxyInfo', () => {
@@ -54,7 +73,22 @@ describe('buildFocusable', () => {
     expect(buildFocusable({ type: 'milkyWay' })).toBe(MILKY_WAY_INFO);
   });
 
-  it('star builds a StarInfo with derived fields', () => {
+  it('star body row → StarInfo', () => {
+    expect(buildFocusable(starRow)).toEqual({
+      type: 'body',
+      id: 'sirius',
+      label: 'Sirius',
+      positionMpc: [1e-6, 2e-6, 3e-6],
+      radiusKm: 1_192_000,
+    });
+  });
+  it('non-star body row (earth) → null', () => {
+    // The star-only guard: Earth is a scene body but not a famous star, so it
+    // never becomes a focusable — no InfoCard, no URL hash.
+    expect(buildFocusable(earthRow)).toBeNull();
+  });
+
+  it('survey-star row builds a FieldStarInfo with derived fields', () => {
     // A star placed exactly 10 pc away (10 pc = 10 · PC_TO_MPC Mpc, laid on one
     // axis) so the distance modulus is zero and apparentMag === absMag — the
     // hand-checkable anchor for the derivation.
@@ -66,7 +100,7 @@ describe('buildFocusable', () => {
       positionMpc: [10 * SCALE_UNITS.PC_TO_MPC, 0, 0],
       absMag,
       bpRp,
-    }) as StarInfo;
+    }) as FieldStarInfo;
 
     expect(info.distancePc).toBeCloseTo(10, 9);
     expect(info.apparentMag).toBeCloseTo(absMag, 9);

@@ -40,9 +40,26 @@ import type { CaptionKind } from './captionPriority';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
+
+/**
+ * GPU buffer capacity for the foreground caption renderer — the `maxLabels`
+ * `initGpu` hands `createLabelRenderer`. `setLabels` silently CLAMPS at
+ * `maxLabels` (`Math.min(labels.length, maxLabels)`), so a roster that outgrew
+ * a fixed cap would drop captions with NO error: a body would seed, render
+ * true-scale in the foreground, and simply never get a name.
+ *
+ * Deriving the capacity from the roster — one caption per `SCENE_BODIES` entry
+ * — and rounding UP to the next power of two keeps the buffer ahead of the seed
+ * table by construction. The famous-stars seed climbs toward ~130 bodies across
+ * the five expansion batches; each power-of-two step (…, 128, 256, …) absorbs a
+ * whole batch of growth without a hand-retuned number, and the constant can
+ * never lag the roster because it is computed FROM it at module load.
+ */
+export const FOREGROUND_LABEL_CAPACITY = 2 ** Math.ceil(Math.log2(SCENE_BODIES.length));
 
 /**
  * A scene-body caption always authors its tint, em height, and pixel clamps —

@@ -4,11 +4,15 @@
  *
  * Colour retuning is a single activity: when the additive HDR trail draw looks
  * too hot or two tints stop reading apart, the fix touches colours and nothing
- * else. Keeping every named colour here — the per-planet trail tints, the
- * shared satellite tints, and the star spectral-class palette — means that
- * activity has one place to happen, and the shared brightness constraint (a
- * trail tint's max channel stays ≲ 0.5 so the additive HDR draw doesn't blow
- * out) is stated once here instead of re-derived per row.
+ * else. Keeping every named colour here — the per-planet trail tints and the
+ * shared satellite tints — means that activity has one place to happen, and the
+ * shared brightness constraint (a trail tint's max channel stays ≲ 0.5 so the
+ * additive HDR draw doesn't blow out) is stated once here instead of re-derived
+ * per row.
+ *
+ * Star colours are NOT here: a famous star is tinted from its own blackbody
+ * temperature via `temperatureToLinearRgb` in the star maker, not from a fixed
+ * spectral-class bucket.
  *
  * The boundary: only SHARED, reusable colours live here. The planets' per-body
  * albedos stay inline in `scenePlanets.ts` — they are per-body data, not a
@@ -37,16 +41,3 @@ export const SAT_ROCK: Vec3 = [0.35, 0.34, 0.32];
 export const SAT_ICE: Vec3 = [0.45, 0.47, 0.5];
 export const IO_SULFUR: Vec3 = [0.5, 0.45, 0.22];
 export const TITAN_ORANGE: Vec3 = [0.5, 0.38, 0.2];
-
-// The star spectral-class palette (linear RGB), one colour per class:
-//   O/B blue-white [0.6, 0.7, 1.0]   (no O/B star within 10 pc — unused here)
-//   A/F white      [1.0, 1.0, 0.98]  Sirius, Procyon, Altair, Vega, Fomalhaut
-//   G yellow-white [1.0, 0.97, 0.85] the Sun, Alpha Cen, Tau Ceti
-//   K orange       [1.0, 0.85, 0.65] Eps Eridani, 61 Cygni, Eps Indi, Pollux
-//   M red          [1.0, 0.6, 0.4]   the red dwarfs
-// The CPU side has no B–V → RGB helper — the colour ramp lives only in WGSL —
-// and a fixed authored table does not earn one.
-export const A_F_WHITE: Vec3 = [1.0, 1.0, 0.98];
-export const G_YELLOW_WHITE: Vec3 = [1.0, 0.97, 0.85];
-export const K_ORANGE: Vec3 = [1.0, 0.85, 0.65];
-export const M_RED: Vec3 = [1.0, 0.6, 0.4];

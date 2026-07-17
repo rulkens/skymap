@@ -70,7 +70,7 @@ import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer'
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
 import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
-import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
+import { sceneBodyLabels, FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
@@ -455,7 +455,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // gates on); the layer then RE-uploads the anchors camera-relative each
   // frame to dodge the f32 origin-distance cancellation that would otherwise
   // make the captions flicker at deep zoom — see that layer's f64-seam note.
-  state.gpu.foregroundLabelRenderer = createLabelRenderer(uiCtx, format, fontAtlases);
+  // Sized to the whole scene-body roster (FOREGROUND_LABEL_CAPACITY), NOT the
+  // 64-label default: setLabels clamps at maxLabels, so the default would
+  // silently drop captions once the seed table outgrew it (the roster already
+  // exceeds 64 and climbs toward ~130). The derived capacity tracks the roster.
+  state.gpu.foregroundLabelRenderer = createLabelRenderer(
+    uiCtx,
+    format,
+    fontAtlases,
+    FOREGROUND_LABEL_CAPACITY,
+  );
   state.gpu.foregroundLabelRenderer.setLabels(sceneBodyLabels());
 
   // foregroundMarkerLineRenderer is the leader-line sibling of the caption

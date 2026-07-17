@@ -22,8 +22,15 @@
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
+import { FARTHEST_BODY_MPC, FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
+
+// The roster's farthest seed expressed in parsecs — the derivation source for
+// the star-caption band, which keys on a star's own distance from the camera in
+// pc. Eta Carinae at ~2300 pc is the current extent; growing the roster carries
+// this and the band edges below with it.
+const FARTHEST_STAR_PC = FARTHEST_BODY_MPC / SCALE_UNITS.PC_TO_MPC;
 
 export const SCALE_FADE_BANDS = {
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc.
@@ -59,11 +66,31 @@ export const SCALE_FADE_BANDS = {
   milkyWayApproach: { fullAt: 0.002, goneAt: 0.0002 },
 
   // Keyed on: the STAR's own distance from the camera, pc.
-  // Local-star captions read as a neighbourhood MAP: full alpha within 12 pc
-  // (past Pollux at 10.34 pc, the farthest seed, so the whole map shows from
-  // Earth), gone beyond 25 pc (so the two dozen names don't clobber into one
-  // pile viewed from far outside the neighbourhood).
-  starCaption: { fullAt: 12, goneAt: 25 },
+  // Local-star captions read as a neighbourhood MAP whose edges scale with the
+  // roster: full alpha within `FARTHEST_STAR_PC * 1.1` (≈ 2530 pc — a hair past
+  // the farthest seed, so from Earth every star, Eta Carinae at 2300 pc
+  // included, sits inside the full-alpha band and the whole map reads at target
+  // alpha with the declutter alone deciding what shows), gone beyond
+  // `FARTHEST_STAR_PC * 2` (≈ 4600 pc, so names don't clobber into one pile
+  // viewed from far outside the neighbourhood). `goneAt` is tied to the caption
+  // gate by the pop-free inequality
+  // `goneAt·PC_TO_MPC + 2·FARTHEST_BODY_MPC ≤ SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`
+  // (with goneAt = 2·FARTHEST it holds with equality) — so a star's caption
+  // always reaches 0 before the layer's gate cuts it, and the cut cannot pop.
+  starCaption: { fullAt: FARTHEST_STAR_PC * 1.1, goneAt: FARTHEST_STAR_PC * 2 },
+
+  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (same
+  // quantity as `surveyDeepZoom`). Consumer: `starPointsLayer`. The point
+  // backdrop is a minimum-size additive sprite field, so at galaxy framing the
+  // whole roster collapses into one bright blob — this band dissolves it
+  // smoothly instead of letting the hard `FOREGROUND_MAX_DISTANCE_MPC` gate pop
+  // it off. Full while composing the deep-neighbourhood shot a couple of seed
+  // extents out (`FARTHEST_BODY_MPC * 2` ≈ 4.6e-3 Mpc), fully dissolved by
+  // `FARTHEST_BODY_MPC * 10` ≈ 0.023 Mpc (~23 kpc), well before Milky-Way
+  // framing. The band completing STRICTLY inside the gate (goneAt ≪
+  // FOREGROUND_MAX_DISTANCE_MPC = FARTHEST_BODY_MPC × 100) is what makes the
+  // gate cut invisible.
+  starBackdrop: { fullAt: FARTHEST_BODY_MPC * 2, goneAt: FARTHEST_BODY_MPC * 10 },
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the Sun
   // sits at the origin, so the Sun caption's own distance-from-camera IS that

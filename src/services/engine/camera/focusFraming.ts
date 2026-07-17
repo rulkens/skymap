@@ -54,7 +54,7 @@ const FALLBACK_DIAMETER_KPC = 30;
  * carries no per-star radius — the bin quantises position + photometry only —
  * so a single representative solar radius (Sun ≈ 6.957e5 km) frames every star
  * as a discrete near-field body through the shared `bodyFocusDistance`. The
- * StarInfo view-model derives distance / photometry / spectral class but no
+ * FieldStarInfo view-model derives distance / photometry / spectral class but no
  * physical size (the photometry can't support one), so framing stays on this
  * representative radius rather than an absMag-derived guess.
  */

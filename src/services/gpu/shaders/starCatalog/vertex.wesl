@@ -87,7 +87,8 @@
 //   2. THE GAUSSIAN DOT'S INTEGRAL IS PEAK * AREA * SHAPE.
 //      A dot of peak I and pixel-radius rPx deposits I * rPx^2 * K_GAUSS of
 //      luminance (K_GAUSS = the integral over the unit disc of the RIM-ZEROED
-//      glow profile the fragment paints -- see the K_GAUSS constant + fragment.wesl).
+//      glow profile the fragment paints -- see K_GAUSS in lib/starPhotometry.wesl
+//      + fragment.wesl).
 //      To hit L = EXPOSURE * fluxApp we set I = EXPOSURE * fluxApp / (K_GAUSS * rPx^2).
 //      Total luminance is then INVARIANT to rPx -- rPx only chooses how the
 //      fixed light spreads (a bright core vs a soft glow), never how much.
@@ -173,6 +174,12 @@ import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::billboard::worldLenToPx;
+import package::lib::starPhotometry::STAR_SIZE_REF_PX;
+import package::lib::starPhotometry::STAR_GLOW_MIN_PX;
+import package::lib::starPhotometry::STAR_GLOW_MAX_PX;
+import package::lib::starPhotometry::D_REF_MPC;
+import package::lib::starPhotometry::MIN_D2_MPC2;
+import package::lib::starPhotometry::starPeakIntensity;
 
 @group(0) @binding(0) var<uniform> u: StarUniforms;
 @group(1) @binding(0) var<storage, read> nodeParams: array<NodeParams>;
@@ -197,79 +204,12 @@ const OFFSET_SCALE: f32 = 0.0009765625; // 1.0 / 1024.0
 // point sitting exactly ON it still passes the clip test.
 const CLIP_Z_EPS: f32 = 1e-4;
 
-// Reference star-dot size in px — mirrors DEFAULT_STAR_SIZE_PX
-// (src/data/defaults.ts; consume, never diverge). Dividing the user's
-// 'u.sizePx' by it makes the DEFAULT setting the identity ('sizeScale' == 1),
-// so the tuned look holds at the default and only slider movement away from it
-// rescales the whole starfield's spread.
-const STAR_SIZE_REF_PX: f32 = 2.5;
-
-// Legibility floor for a POINT source in px (at the default size). A leaf star
-// -- and any aggregate whose box has shrunk below this on screen -- is drawn
-// no smaller than this so a lone record stays a visible dot. Scaled by
-// 'sizeScale' with every other radius here.
-const STAR_GLOW_MIN_PX: f32 = 1.5;
-
-// Ceiling on the glow radius in px, bounding per-star FILL. Additive-blend
-// overdraw scales with the SUM of pi*rPx^2 across drawn quads, so at
-// solar-neighbourhood zoom a few dozen near stars whose glows expand to
-// thousands of px each dominate the whole pass. Clamping rPx from above caps
-// each quad at pi*MAX^2 regardless of proximity. The photometry is preserved
-// for free: the peak is EXPOSURE*fluxApp/(K_GAUSS*rPx^2) (fact 2 in the
-// header), so a smaller clamped rPx RAISES the peak by exactly rPx^-2 --
-// total integrated luminance is invariant to rPx (the same mechanism the
-// header documents for the 'glowOverlap' fold). The ceiling therefore turns a
-// huge dim halo into a COMPACT BRIGHT CORE with the SAME total light; the
-// raised peak then rides the fragment stage's existing hue-preserving knee.
-const STAR_GLOW_MAX_PX: f32 = 384.0;
-
-// Glow shape integral over the unit uv-disc of the RIM-ZEROED profile the
-// fragment paints: g(r2) = (exp(-r2 * 4.0) - EDGE) / (1 - EDGE), EDGE = e^-4.
-// Shifting the bare Gaussian down by its rim value and rescaling makes g reach
-// exactly 0 at r = 1 (no hard-edged disc) while keeping g(0) = 1. Its integral:
-//   K_GAUSS = (K_OLD - pi*EDGE) / (1 - EDGE)
-// where K_OLD = (pi/4) * (1 - e^-4) ~= 0.7711 is the bare Gaussian's disc
-// integral and pi*EDGE ~= 0.05754 is the subtracted pedestal over the unit disc
-// (area pi). Numerically:
-//   K_GAUSS = (0.7711 - 0.05754) / (1 - 0.018316) = 0.71357 / 0.98168 ~= 0.7268.
-// The dot deposits I_peak * rPx^2 * K_GAUSS of screen luminance (fact 2 in the
-// header); dividing the target luminance by it recovers the peak. Structural,
-// not a knob -- MUST mirror EDGE and the profile in fragment.wesl.
-const K_GAUSS: f32 = 0.7268;
-
-// Inverse-square apparent-flux reference distance (Mpc). 1e-5 Mpc = 10 parsecs,
-// the distance at which ABSOLUTE magnitude is defined -- so a record's LUT flux
-// is its apparent flux from 10 pc and the factor D_REF^2/d2 is 1 there (header
-// 'Apparent flux'). Squared once at the callsite.
-const D_REF_MPC: f32 = 1e-5;
-
-// Floor on squared camera distance (Mpc^2), guarding the fly-through 1/d2 pole.
-// (1e-7)^2 = (0.1 pc)^2 -- closer than any camera approach, so it tames the
-// singularity without dimming a legitimate view. The unclamped alternative lets
-// the peak diverge and flashes the whole frame white on pass-through.
-const MIN_D2_MPC2: f32 = 1e-14; // (1e-7)^2
-
-// THE exposure knob (eye-tuned via HMR, on top of the live 'brightness' slider).
-// A record deposits screen luminance STAR_FLUX_EXPOSURE * brightness * fluxApp,
-// where fluxApp = 10^(-0.4 * absMag) * subtreeStarCount * D_REF^2/d2 is the
-// APPARENT flux -- the intrinsic LUT flux dimmed by inverse-square (header
-// 'Apparent flux'). The 6000.0 baseline folds the user's eye-tuned near-field
-// display exposure (15x over the raw inverse-square calibration, was 400.0) into
-// the constant, so brightness-slider 1.0 IS the tuned near-field look. The scale
-// DEPENDENCE of that display exposure -- ~15x near (solar-system scale) rising to
-// ~70x at whole-galaxy scale, a legibility need a monitor can't meet by
-// dark-adapting like the eye -- rides in on the 'brightness' the layer forwards:
-// starCatalogLayer multiplies a camera-distance ramp (starExposureRamp) into it,
-// so 'brightness' here already carries the scale trim (see that module).
-// Reference points at the default, for a star at ~100 pc (fluxApp = intrinsic x
-// 1e-2): a bright star (absMag ~= 1, intrinsic flux ~= 0.4) peaks around
-// 6000 * 4e-3 ~= 24 at the floor radius; a blue giant (absMag ~= -3, intrinsic
-// flux ~= 16) peaks ~40x higher and blooms in the HDR pipeline; a red dwarf
-// (absMag ~= 12, intrinsic flux ~= 2e-5) stays a near-invisible point whose
-// light shows up summed in its ancestor aggregate. Nearer stars brighten as
-// 1/d2, farther ones dim; the user eye-tunes the overall level here + via the
-// brightness slider. Every other constant here is structural.
-const STAR_FLUX_EXPOSURE: f32 = 6000.0;
+// The sizing floor/ceiling + size reference, the inverse-square apparent-flux
+// reference distance + its fly-through floor, the calibrated exposure baseline,
+// and the peak-from-flux relation now live in lib/starPhotometry.wesl, shared
+// with the famous / scene star vertex stage so the two render leaf stars
+// pixel-identically. This stage imports them (above) and keeps only its
+// aggregate-specific + record-unpack constants here.
 
 @vertex
 fn vs(
@@ -360,8 +300,10 @@ fn vs(
   // an aggregate or not therefore deposits identical total light (header fact 2).
   // 'u.brightness' is the user's exposure trim ON TOP of the calibrated
   // STAR_FLUX_EXPOSURE baseline (1.0 = identity -- see the header). 'fluxApp' is
-  // the inverse-square-dimmed apparent flux (header 'Apparent flux').
-  let intensity = STAR_FLUX_EXPOSURE * u.brightness * fluxApp / (K_GAUSS * rPx * rPx);
+  // the inverse-square-dimmed apparent flux (header 'Apparent flux'). The
+  // peak-from-flux relation is shared with the famous / scene star stage
+  // (lib/starPhotometry.wesl).
+  let intensity = starPeakIntensity(u.brightness, fluxApp, rPx);
 
   let screenOffset = expandBillboardScreen(u.cam, center, rPx, corner);
 

@@ -6,16 +6,20 @@
 // of lib/colorIndex.wesl's galaxy g−r ramp — a piecewise-linear
 // interpolation over five spectral-class anchors.
 //
-// ## Why the anchors live here (and match palette.ts)
+// ## Why the anchors live here
 //
-// The anchor colours are the star spectral-class palette authored in
-// src/data/bodies/palette.ts (A_F_WHITE … M_RED, plus the O/B blue-white
-// that palette.ts documents as 'unused' on the CPU side — no O/B star sits
-// within 10 pc of the hand-seeded neighbourhood). The Gaia survey bin DOES
-// carry hot early-type stars, so the blue end of the ramp is live here. The
-// CPU side has no BP−RP → RGB helper by design (palette.ts: 'the colour ramp
-// lives only in WGSL'), so this shader function is the single home of the
-// star tint — no CPU twin to drift against.
+// The five spectral-class anchor colours are authored inline below — this is
+// the ramp's own definition, not a mirror of any CPU table. The survey-star
+// tint is keyed on Gaia BP−RP, an input this shader alone consumes, so there
+// is no CPU twin to drift against: this function is the single home of the
+// BP−RP → RGB mapping. The Gaia survey bin carries hot early-type stars, so
+// the blue end of the ramp (the O/B anchor) is live rather than decorative.
+//
+// A separate, intentionally independent CPU path colours the hand-seeded
+// foreground scene stars: temperatureToLinearRgb turns each star's kelvin
+// temperatureK into a blackbody linear-RGB fit. That path keys on a different
+// input domain (kelvin, not BP−RP), so the two ramps share no source of truth
+// and are free to differ — they answer different questions from different data.
 //
 // ## Why chained saturating mixes
 //
@@ -40,7 +44,7 @@
 import package::lib::math::saturate;
 
 fn starTint(bpRp: f32) -> vec3<f32> {
-  // Spectral-class anchors (linear RGB) — see src/data/bodies/palette.ts.
+  // Spectral-class anchors (linear RGB), authored here — see the module header.
   let ob = vec3<f32>(0.6, 0.7, 1.0);   // O/B blue-white
   let af = vec3<f32>(1.0, 1.0, 0.98);  // A/F white
   let gc = vec3<f32>(1.0, 0.97, 0.85); // G yellow-white

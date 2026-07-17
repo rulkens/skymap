@@ -40,6 +40,7 @@
     "build-stars": "NODE_OPTIONS=--max-old-space-size=16384 tsx tools/stars/buildStars.ts",
     "build-stars-rs": "cargo run --manifest-path tools/stars-rs/Cargo.toml --release -- --out public/data",
     "build-famous": "tsx tools/famous/buildFamous.ts",
+    "build-famous-stars": "tsx tools/famous/buildFamousStars.ts",
     "build-famous-hires": "tsx tools/famous/copyHiResToPublic.ts",
     "build-famous-thumbs": "tsx tools/famous/buildFamousThumbs.ts",
     "build-pgc-aliases": "tsx tools/fetch/buildPgcAliases.ts",

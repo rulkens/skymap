@@ -31,10 +31,12 @@ import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
 import StructureDetailCard from './StructureDetailCard/StructureDetailCard';
 import MilkyWayDetailCard from './MilkyWayDetailCard/MilkyWayDetailCard';
 import StarDetailCard from './StarDetailCard/StarDetailCard';
+import FieldStarDetailCard from './FieldStarDetailCard/FieldStarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
 import CompactStructureCard from './CompactStructureCard/CompactStructureCard';
 import CompactMilkyWayCard from './CompactMilkyWayCard/CompactMilkyWayCard';
 import CompactStarCard from './CompactStarCard/CompactStarCard';
+import CompactFieldStarCard from './CompactFieldStarCard/CompactFieldStarCard';
 
 /** Props InfoCard passes to a detail-card variant, identical across arms. */
 export type DetailCardProps = {
@@ -109,9 +111,9 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
     Compact: ({ target }) =>
       target.type === 'milkyWay' ? createElement(CompactMilkyWayCard, { target }) : null,
   },
-  star: {
+  body: {
     Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
-      if (target.type !== 'star') return null;
+      if (target.type !== 'body') return null;
       return createElement(StarDetailCard, {
         target,
         pinned,
@@ -121,6 +123,20 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
       });
     },
     Compact: ({ target }) =>
-      target.type === 'star' ? createElement(CompactStarCard, { info: target }) : null,
+      target.type === 'body' ? createElement(CompactStarCard, { target }) : null,
+  },
+  star: {
+    Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
+      if (target.type !== 'star') return null;
+      return createElement(FieldStarDetailCard, {
+        target,
+        pinned,
+        chrome,
+        onFocus,
+        onClose,
+      });
+    },
+    Compact: ({ target }) =>
+      target.type === 'star' ? createElement(CompactFieldStarCard, { info: target }) : null,
   },
 };

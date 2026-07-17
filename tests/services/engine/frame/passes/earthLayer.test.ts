@@ -132,9 +132,11 @@ describe('earthLayer.enabled', () => {
     // Below the gate → the handle + body gates decide (both pass).
     expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2))).toBe(true);
     // At and above the gate → off, however present the handles are: Earth is
-    // a deep-sub-pixel speck at the galactic centre.
+    // a deep-sub-pixel speck at the galactic centre. Both the gate edge and a
+    // full decade beyond it (cosmic scale) are derived, so the seed roster
+    // growing the gate carries this assertion instead of stranding a literal.
     expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
-    expect(earthLayer.enabled(state, makeCtx(0.43))).toBe(false);
+    expect(earthLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toBe(false);
   });
 
   it('is disabled while Earth is sub-pixel, even inside the foreground band', () => {
@@ -179,7 +181,7 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
     // Above the gate: EVERY foreground:0 layer is off — the group is empty
     // and the executor skips the pass + composite wholesale.
     expect(groupAt(makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toEqual([]);
-    expect(groupAt(makeCtx(0.43))).toEqual([]);
+    expect(groupAt(makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toEqual([]);
   });
 });
 

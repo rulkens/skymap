@@ -38,6 +38,7 @@ const EXTRACT_ROW: {
     return {
       type: 'body' as const,
       id: body.id,
+      label: body.label,
       positionMpc: [body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]],
       radiusKm: body.radiusKm,
     };

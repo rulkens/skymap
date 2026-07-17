@@ -105,6 +105,16 @@ export const selectMilkyWayEnabled = (state: RootState): boolean =>
 export const selectMilkyWayLabelEnabled = (state: RootState): boolean =>
   selectSettings(state).milkyWay.labelEnabled;
 
+// --- famousStars cluster ------------------------------------------------------
+
+/**
+ * Master gate on the seeded famous-star map. A primitive read, so no
+ * memoization. Distinct from `selectStarCatalogs(...).enabled` (the Gaia survey
+ * gate) — this gates only the curated near-field scene bodies.
+ */
+export const selectFamousStarsEnabled = (state: RootState): boolean =>
+  selectSettings(state).famousStars.enabled;
+
 // --- filaments cluster --------------------------------------------------------
 
 export const selectFilamentsEnabled = (state: RootState): boolean =>

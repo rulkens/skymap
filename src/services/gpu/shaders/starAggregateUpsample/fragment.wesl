@@ -42,7 +42,7 @@
 // below returns 0.
 
 import package::starAggregateUpsample::io::VSOut;
-import package::starCatalog::knee::starKnee;
+import package::lib::starKnee::starKnee;
 
 @group(0) @binding(0) var halfTex: texture_2d<f32>;
 @group(0) @binding(1) var halfSamp: sampler;

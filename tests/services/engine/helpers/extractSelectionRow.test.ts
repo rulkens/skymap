@@ -92,6 +92,7 @@ describe('extractSelectionRow', () => {
     expect(row).toEqual({
       type: 'body',
       id: SCENE_EARTH.id,
+      label: SCENE_EARTH.label,
       positionMpc: SCENE_EARTH.positionMpc,
       radiusKm: SCENE_EARTH.radiusKm,
     });

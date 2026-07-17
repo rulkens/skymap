@@ -59,6 +59,7 @@ describe('selectionHalo', () => {
     const bodyRow: SelectionRow = {
       type: 'body',
       id: 'earth',
+      label: 'Earth',
       positionMpc: [4.8481e-12, 0, 0],
       radiusKm: 6371,
     };

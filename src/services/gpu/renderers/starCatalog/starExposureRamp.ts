@@ -74,7 +74,7 @@
  */
 
 // The near-anchor exposure the SHADER already bakes into STAR_FLUX_EXPOSURE
-// (6000 = 400 × 15 in `shaders/starCatalog/vertex.wesl`). The CPU ramp divides
+// (6000 = 400 × 15 in `shaders/lib/starPhotometry.wesl`). The CPU ramp divides
 // the live `nearX` by this baked constant so that at the shipped default
 // (nearX = 15) the near end returns exactly 1.0 — the shader carries the whole
 // near exposure — and a user-dialled nearX hands the DIFFERENCE back out.

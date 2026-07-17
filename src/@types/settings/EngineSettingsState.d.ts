@@ -200,6 +200,26 @@ export type EngineSettingsState = {
   };
 
   /**
+   * Famous-stars singleton overlay — the master gate on the SEEDED near-field
+   * star map (the Sun plus its ~130 named neighbours drawn by the star
+   * point/sphere layers and captioned by `foregroundLabelsLayer`). A flat
+   * `enabled` field, mirroring the `milkyWay` / `filaments` / `flow` singleton
+   * overlays rather than the per-record source-type clusters — there is no
+   * `items` row because the seed is one static set, not a per-catalog fan-out.
+   *
+   * This is DISTINCT from `starCatalogs.enabled`: that gates the survey-wide
+   * Gaia bin, this gates the curated famous-star scene bodies. When it is off
+   * the star layers fall back to drawing the Sun ALONE — the Sun anchors the
+   * final descent and Earth/planets ride their own layers, so muting the map
+   * never hides the solar system (see the star layers' `visibleStars`
+   * derivation). The star-map captions zero to 0 in lockstep (the Sun caption
+   * excepted), fading rather than popping via the caption envelope.
+   */
+  famousStars: {
+    enabled: boolean;
+  };
+
+  /**
    * Scalar-volume overlay master gate and per-item params.  When
    * `enabled` is false, `volumeUpsampleLayer.enabled` short-circuits
    * before consulting the renderer at zero GPU cost, and `scalarVolumeLayer`
