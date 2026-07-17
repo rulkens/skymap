@@ -66,6 +66,7 @@ import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
+import type { RingRenderer } from '../../rendering/RingRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
 import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/OrbitTrailRenderer';
@@ -405,6 +406,20 @@ export type EngineGpuHandles = {
    * (which also frees every per-body uniform buffer + surface/ring texture).
    */
   texturedBodyRenderer: TexturedBodyRenderer | null;
+  /**
+   * The translucent planetary-ring renderer (Saturn's rings) — the overlay half
+   * of the ring system, drawn LAST in the `(foreground:0, NEAR0)` group as a
+   * two-sided translucent annulus that depth-tests against the opaque spheres
+   * but writes no depth and blends straight-alpha OVER. Its ('rgba16float',
+   * 'depth32float') pipeline formats match the `foreground:0` row like the sphere
+   * bodies. `ringsLayer` draws each resident `SCENE_RINGS` entry through it; the
+   * `bodyTextures` family's `saturn-ring` commit routes the radial strip to
+   * `setTexture` (alongside `texturedBodyRenderer.setRingTexture` for the
+   * ring-on-planet shadow half). Excluded from `isEngineReady` and null-checked
+   * at use. Null until `initGpu` constructs it; released and re-nulled by
+   * `destroy()` (releases the disc VBO/IBO, uniform buffer, and strip texture).
+   */
+  ringRenderer: RingRenderer | null;
   /**
    * The unresolved stars (the `points` branch of
    * `partitionStarsByResolution`) as additive point sprites into the

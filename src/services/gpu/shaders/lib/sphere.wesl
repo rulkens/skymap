@@ -168,6 +168,52 @@ struct TexturedBodyUniforms {
   _pad1: f32,
 };
 
+// ── RingUniforms ─────────────────────────────────────────────────────
+//
+// The uniform layout for the ring renderer -- the OTHER half of Saturn's
+// rings. The textured body draws the ring's shadow ON the planet
+// ('TexturedBodyUniforms' above); this draws the translucent annulus itself,
+// with the planet's shadow cast ON the ring.
+//
+// It carries the same MVP + body-local sun direction prefix as 'LitBodyUniforms'
+// (the ring rides the host body's exact 'composeBodyMvp' frame, and the sun is
+// rotated into that local frame CPU-side), then two ring-shape scalars the
+// fragment needs:
+//
+//   - 'planetRadiusRatio' = planet radius / ring OUTER radius (in (0, 1)).
+//     The annulus is authored at unit outer radius, so in that mesh frame the
+//     planet is a sphere of this radius. Dividing a ring point by it rescales
+//     into BODY-RADIUS units, where the planet is the UNIT sphere and the ring
+//     radii exceed 1 -- the frame the planet-on-ring shadow ray-sphere test runs
+//     in. It fills the vec3's trailing 4-byte slot, so it is a REAL field, not a
+//     pad (contrast 'LitBodyUniforms._pad').
+//   - 'innerRatio' = ring inner radius / ring OUTER radius (in (0, 1)). The ring
+//     geometry is a ring-agnostic disc; this punches the hole per-draw (the
+//     fragment discards radii below it) and normalizes the radius for the strip
+//     u, so ONE geometry serves any ring's proportions.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset  0..63: mvp               (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75: sunDirLocal       (vec3<f32> -- 16-byte aligned at 64)
+//   offset 76..79: planetRadiusRatio (f32 -- fills the vec3's 4th slot)
+//   offset 80..83: innerRatio        (f32)
+//   offset 84..95: _pad0/1/2         (f32 x3 -- rounds the struct to 96 / 16-byte)
+//   total: 96 bytes.
+//
+// The CPU side uploads 24 f32s. The single source of truth for that packing is
+// 'utils/gpu/packRingUniforms.ts'.
+
+struct RingUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  planetRadiusRatio: f32,
+  innerRatio: f32,
+  _pad0: f32,
+  _pad1: f32,
+  _pad2: f32,
+};
+
 // ── clip_from_local ──────────────────────────────────────────────────
 //
 // Transform a unit-sphere local-space position to homogeneous clip

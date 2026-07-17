@@ -209,6 +209,11 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/starRenderer', () => ({
 vi.mock('../../../../src/services/gpu/renderers/bodies/texturedBodyRenderer', () => ({
   createTexturedBodyRenderer: vi.fn(() => makeStub('texturedBodyRenderer')),
 }));
+// The ring renderer keeps its `?static` WESL imports out of JSDOM; mock it so
+// initGpu's foreground block lands a stub on `state.gpu.ringRenderer`.
+vi.mock('../../../../src/services/gpu/renderers/bodies/ringRenderer', () => ({
+  createRingRenderer: vi.fn(() => makeStub('ringRenderer')),
+}));
 // Partial mock: planetsLayer.ts imports the real MAX_PLANETS/INSTANCE_FLOATS
 // constants at module scope to size its staging buffer, so only the factory
 // is stubbed — passing those constants through keeps that sizing real.
@@ -310,6 +315,7 @@ function makeState(): EngineState {
       starRenderer: null,
       planetRenderer: null,
       texturedBodyRenderer: null,
+      ringRenderer: null,
       starPointRenderer: null,
       orbitTrailRenderer: null,
     },
@@ -419,6 +425,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // The shared textured-body renderer owns per-body uniform buffers + surface
     // textures — the destroy chain must reach it the same way.
     expect(state.gpu.texturedBodyRenderer).toBe(stubs.texturedBodyRenderer);
+    // The ring renderer owns the disc VBO/IBO + strip texture — the destroy chain
+    // must reach it the same way.
+    expect(state.gpu.ringRenderer).toBe(stubs.ringRenderer);
     // The star-point renderer receives the FULL star list exactly once, at
     // construction — at the galaxy-scale boot camera every star (the Sun
     // included) is a sub-pixel point, so the whole seed IS the boot

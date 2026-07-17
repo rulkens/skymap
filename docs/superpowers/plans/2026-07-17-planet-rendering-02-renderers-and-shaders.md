@@ -475,26 +475,26 @@ construction.
 from the ring point toward `sunDirLocal` against the unit planet sphere
 (`RingUniforms.planetRadiusRatio`); a hit dims the ring sample.
 
-- [ ] Add `annulusMesh.ts` + `AnnulusMesh` type (or reuse the mesh-type shape of
+- [x] Add `annulusMesh.ts` + `AnnulusMesh` type (or reuse the mesh-type shape of
   `uvSphereMesh`). Didactic docblock: outer=1, inner=innerRatio, radial-u uv for
   the strip.
-- [ ] Test `annulusMesh spans the ratio` — every generated vertex radius is
+- [x] Test `annulusMesh spans the ratio` — every generated vertex radius is
   within `[innerRatio, 1]`, the min radius ≈ `innerRatio` and max ≈ 1, and uv u
   spans `[0,1]` monotonically with radius (hand-checkable geometric properties,
   not a vertex-list restatement).
-- [ ] Add `ring/{io,vertex,fragment}.wesl` (fragment: strip sample by radius +
+- [x] Add `ring/{io,vertex,fragment}.wesl` (fragment: strip sample by radius +
   planet-on-ring ray-sphere shadow), `RingRenderer.d.ts`, `ringRenderer.ts`
   (`satisfies Renderer`, N×1 `texture_2d` ring strip). WESL constraints; verify
   visually (Task 11).
-- [ ] Add `ringsLayer.ts` + register in `CONTENT_LAYERS` AFTER the opaque
+- [x] Add `ringsLayer.ts` + register in `CONTENT_LAYERS` AFTER the opaque
   foreground sphere rows; add the `ringRenderer` handle + construct in `initGpu` +
   null-seed/destroy in `engine.ts`; route `'saturn-ring'` commits to
   `ringRenderer.setTexture` (alongside the `texturedBodyRenderer.setRingTexture`
   from Task 8) in `bodyTextureSlotRegistry`.
-- [ ] Test `ringRenderer.test.ts` — `satisfies Renderer` + `RingUniforms` byte
+- [x] Test `ringRenderer.test.ts` — `satisfies Renderer` + `RingUniforms` byte
   offsets (`sunDirLocal`@64, `planetRadiusRatio`@76, `innerRatio`@80, size 96 —
   the uniform-layout keep-rule).
-- [ ] Test `ringsLayer.test.ts` — composes from `view.slab.vp` (not `view.vp`)
+- [x] Test `ringsLayer.test.ts` — composes from `view.slab.vp` (not `view.vp`)
   with Saturn's `orientation`; `enabled` false when the ring texture is
   non-resident or the handle is null; the migration row in `passes.test.ts`
   (`'rings'` `{slab: NEAR0, target: 'foreground:0', blend: 'over'}` — note this
@@ -502,7 +502,7 @@ from the ring point toward `sunDirLocal` against the unit planet sphere
   row; if the table forbids it, STOP and report — the ring is the first
   alpha-over `foreground:0` layer, spec §8, so the legality assertion may need the
   ring row added to its allow-set).
-- [ ] `npm test -- annulusMesh ringRenderer ringsLayer passes initGpu` → green.
+- [x] `npm test -- annulusMesh ringRenderer ringsLayer passes initGpu` → green.
   Commit.
 
 ## Task 10 — `bodyGlintRenderer` + `bodyGlintsLayer` + `bodyGlint` fade band

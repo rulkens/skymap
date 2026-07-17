@@ -317,6 +317,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // isEngineReady, null-checked at use by texturedBodiesLayer; the
       // bodyTextures family's commit/onRelease call its setTexture/clearTexture.
       texturedBodyRenderer: null,
+      // Saturn's rings — the translucent overlay half of the ring system, drawn
+      // last in the (foreground:0, NEAR0) group. null until initGpu; excluded
+      // from isEngineReady, null-checked at use by ringsLayer.
+      ringRenderer: null,
       starPointRenderer: null,
       starCatalogRenderer: null,
       // Keplerian orbit trails (Earth / Jupiter / Moon) — additive screen-space
@@ -749,6 +753,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.planetRenderer = null;
     state.gpu.texturedBodyRenderer?.destroy();
     state.gpu.texturedBodyRenderer = null;
+    state.gpu.ringRenderer?.destroy();
+    state.gpu.ringRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
     state.gpu.starCatalogRenderer?.destroy();

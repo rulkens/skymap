@@ -342,7 +342,18 @@ describe('CONTENT_LAYERS blend legality', () => {
       ) {
         expect(layer.blend).toBe('additive');
       } else if (layer.target === 'foreground:0') {
-        expect(layer.blend).toBe('opaque');
+        // The `foreground:0` group is opaque bodies EXCEPT the ring: it is the
+        // one translucent overlay there, drawn LAST (after the opaque spheres),
+        // depth-tested against them but writing no depth, straight-alpha OVER
+        // (spec §8 / grill Q9). Its pipeline bakes exactly that profile
+        // (foreground:0 formats, depth read / no write, over blend), so the row
+        // legitimately carries `over` where its siblings carry `opaque` — the
+        // sole target that admits two blends today.
+        if (layer.name === 'rings') {
+          expect(layer.blend).toBe('over');
+        } else {
+          expect(layer.blend).toBe('opaque');
+        }
       } else if (layer.target === 'swap') {
         expect(layer.blend).toBe('over');
       } else {
@@ -351,10 +362,30 @@ describe('CONTENT_LAYERS blend legality', () => {
         );
       }
     }
-    // Six layers blend OVER: the five COSMO swap overlays plus the near-field
-    // foreground-labels (also swap-target, projected through NEAR0). Was five
-    // before the near-field caption row landed.
-    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(6);
+    // Seven layers blend OVER: the five COSMO swap overlays, the near-field
+    // foreground-labels (swap-target, NEAR0), and the translucent ring (the sole
+    // OVER member of the otherwise-opaque foreground group). Was six before the
+    // ring row landed.
+    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(7);
+  });
+});
+
+describe('ringsLayer registry row', () => {
+  it('draws into foreground:0 through NEAR0 with over, AFTER the opaque bodies', () => {
+    // The ring is the translucent overlay half of Saturn's rings: it shares the
+    // opaque bodies' (foreground:0, NEAR0) render step but blends OVER, so it
+    // must be ordered after them to depth-test against their stamped z (far ring
+    // half occluded). It is deliberately NOT in FOREGROUND_NAMES (that group's
+    // opaque assertion), it is the exception.
+    const rings = CONTENT_LAYERS.find((layer) => layer.name === 'rings')!;
+    expect(rings).toBeDefined();
+    expect(rings.slab).toBe(NEAR0);
+    expect(rings.target).toBe('foreground:0');
+    expect(rings.blend).toBe('over');
+
+    const idxTextured = CONTENT_LAYERS.findIndex((layer) => layer.name === 'textured-bodies');
+    const idxRings = CONTENT_LAYERS.findIndex((layer) => layer.name === 'rings');
+    expect(idxRings).toBeGreaterThan(idxTextured);
   });
 });
 

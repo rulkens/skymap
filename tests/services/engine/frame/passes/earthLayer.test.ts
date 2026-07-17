@@ -171,6 +171,9 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
         starRenderer: null,
         planetRenderer: null,
         texturedBodyRenderer: null,
+        // The ring shares this group; its null handle short-circuits enabled, so
+        // it stays out of the group below and above the gate (like the siblings).
+        ringRenderer: null,
       },
       data: { bodies: { earth: SCENE_EARTH } },
     } as unknown as EngineState;

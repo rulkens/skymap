@@ -175,6 +175,7 @@ import { earthLayer } from './earthLayer';
 import { starSpheresLayer } from './starSpheresLayer';
 import { planetsLayer } from './planetsLayer';
 import { texturedBodiesLayer } from './texturedBodiesLayer';
+import { ringsLayer } from './ringsLayer';
 import { starPointsLayer } from './starPointsLayer';
 import { starCatalogLayer } from './starCatalogLayer';
 import { starAggregatesLayer } from './starAggregatesLayer';
@@ -242,6 +243,12 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   starSpheresLayer,
   planetsLayer,
   texturedBodiesLayer,
+  // Saturn's rings: the translucent overlay half of the ring system, drawn LAST
+  // in the (foreground:0, NEAR0) group so it depth-tests against the opaque
+  // spheres already stamped there (far ring half occluded), writing no depth and
+  // blending straight-alpha OVER — the one blend exception in the otherwise
+  // opaque foreground group (spec §8).
+  ringsLayer,
   // Near-field captions: the scene-body name labels drawn OVER onto the swap
   // chain through the near0 slab. The frame program's (swap, NEAR0) render
   // step drives it — the (swap, COSMO) step selects nothing here by
@@ -268,6 +275,7 @@ export { earthLayer } from './earthLayer';
 export { starSpheresLayer } from './starSpheresLayer';
 export { planetsLayer } from './planetsLayer';
 export { texturedBodiesLayer } from './texturedBodiesLayer';
+export { ringsLayer } from './ringsLayer';
 export { starPointsLayer } from './starPointsLayer';
 export { starCatalogLayer } from './starCatalogLayer';
 export { starAggregatesLayer } from './starAggregatesLayer';

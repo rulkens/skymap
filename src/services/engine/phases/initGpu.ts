@@ -66,6 +66,7 @@ import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
+import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
 import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
@@ -496,6 +497,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     'rgba16float',
     'depth32float',
   );
+
+  // ── Saturn's rings (Plan 02 — the translucent overlay half) ──────────
+  //
+  // The ring renderer draws the annulus itself (the ring-on-planet shadow half
+  // rides `texturedBodyRenderer`). Its pipeline bakes the `foreground:0` format
+  // invariant AND the ring-specific profile: straight-alpha OVER, two-sided
+  // (`cullMode: 'none'`), depth-tested but no depth write — so it overlays the
+  // opaque spheres already in the target. The `saturn-ring` bodyTextures slot
+  // (minted just below) routes the radial strip to `setTexture`.
+  state.gpu.ringRenderer = createRingRenderer(device, 'rgba16float', 'depth32float');
 
   // ── Body-surface texture slot family ─────────────────────────────────
   //
