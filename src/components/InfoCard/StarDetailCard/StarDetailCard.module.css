@@ -1,0 +1,11 @@
+/*
+ * StarDetailCard.module.css — the star detail card's outer hook.
+ *
+ * The card's chrome comes from the shared cardChrome vocabulary; like the
+ * structure card its content is short (a handful of derived rows), so it
+ * composes the `structure` width-pin too, keeping the panel width stable across
+ * galaxy ↔ star swaps instead of collapsing to the min-width.
+ */
+.root {
+  composes: infoCardFull structure from '../cardChrome.module.css';
+}

@@ -285,24 +285,27 @@ star: (ref) => `${STAR_FOCUS_PREFIX}${ref.index}`,
 star: () => null,
 ```
 
-- [ ] Add the `star` arms to `SelectionRef` + `SelectionRow` + `ResolveDeps` and fill
+- [x] Add the `star` arms to `SelectionRef` + `SelectionRow` + `ResolveDeps` and fill
       `engine.ts`'s `resolveDeps().stars`.
-- [ ] Add the compiler-forced arms: `EXTRACT_ROW.star`, `selectionHaloTable.star`,
+- [x] Add the compiler-forced arms: `EXTRACT_ROW.star`, `selectionHaloTable.star`,
       `focusIdOf.ENCODE.star`, `buildFocusable.star` (`null`). Add the non-forced
       `RESOLVE_PICK.starCatalog` arm and the `resolveFocusId` decoder row + `starFocusId.ts`.
-- [ ] Add the test `RESOLVE_PICK starCatalog maps a pick to a star ref` — a
+      (Executed note: `focusFraming.ts`'s exhaustive switch was also compiler-forced — a
+      placeholder star framing via bodyFocusDistance + NOMINAL_STAR_RADIUS_KM landed there,
+      marked for Task 4 refinement. Reviewer-adjudicated sound.)
+- [x] Add the test `RESOLVE_PICK starCatalog maps a pick to a star ref` — a
       `{ sourceCode: Source.GaiaStars, localIdx: 42 }` pick resolves to
       `{ type: 'star', index: 42 }`.
-- [ ] Add the test `resolveFocusId round-trips star-<index> and beats the famous fallback` —
+- [x] Add the test `resolveFocusId round-trips star-<index> and beats the famous fallback` —
       `resolveFocusId('star-42', deps)` → `{ type: 'star', index: 42 }` (asserting it does NOT
       fall through to the famous scan for a `star-…` token), and `focusIdOf({type:'star',index:42})`
       → `'star-42'` (encode↔decode round-trip).
-- [ ] Add the test `EXTRACT_ROW star resolves against the loaded catalog` — a `deps.stars`
+- [x] Add the test `EXTRACT_ROW star resolves against the loaded catalog` — a `deps.stars`
       stub returning a synthetic catalog; `EXTRACT_ROW.star({type:'star',index:k}, deps)`
       yields the row `resolveStarRecord` produces; a null catalog → null.
-- [ ] `npx vitest run tests/services/engine/helpers/resolvePickTable.test.ts tests/services/engine/helpers/extractSelectionRow.test.ts tests/services/url/resolveFocusId.test.ts`
+- [x] `npx vitest run tests/services/engine/helpers/resolvePickTable.test.ts tests/services/engine/helpers/extractSelectionRow.test.ts tests/services/url/resolveFocusId.test.ts`
       (create/extend the mirror files) → fail, implement, pass. `npm run typecheck` → green.
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 4 — `StarInfo` focusable + cards + fill the four focusable tables (spec §6, §7)
 

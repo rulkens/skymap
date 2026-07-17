@@ -53,10 +53,10 @@ const FALLBACK_DIAMETER_KPC = 30;
  * Nominal stellar radius (km) for framing a picked survey star. The star row
  * carries no per-star radius — the bin quantises position + photometry only —
  * so a single representative solar radius (Sun ≈ 6.957e5 km) frames every star
- * as a discrete near-field body through the shared `bodyFocusDistance`. This is
- * a placeholder framing: Task 4 owns the StarInfo view-model and may refine it
- * (e.g. an absMag-derived radius). It only matters for a `star-<index>`
- * deep-link, the one path that reaches focusFraming before Task 4 lands.
+ * as a discrete near-field body through the shared `bodyFocusDistance`. The
+ * StarInfo view-model derives distance / photometry / spectral class but no
+ * physical size (the photometry can't support one), so framing stays on this
+ * representative radius rather than an absMag-derived guess.
  */
 const NOMINAL_STAR_RADIUS_KM = 6.957e5;
 
@@ -127,8 +127,8 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
     }
     case 'star': {
       // A survey star is a discrete near-field point framed like a body, using
-      // a nominal stellar radius (the row has no per-star size). Placeholder —
-      // see NOMINAL_STAR_RADIUS_KM; reachable only via a star deep-link today.
+      // a nominal stellar radius (the row has no per-star size) — see
+      // NOMINAL_STAR_RADIUS_KM.
       const radiusMpc = NOMINAL_STAR_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
       return {
         target: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],

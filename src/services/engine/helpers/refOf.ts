@@ -24,11 +24,13 @@ import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
+import type { StarInfo } from '../../../@types/engine/StarInfo';
 
 const REF_OF: {
   galaxyCatalog: (t: GalaxyInfo) => SelectionRef;
   structure: (t: StructureInfo) => SelectionRef;
   milkyWay: (t: MilkyWayInfo) => SelectionRef;
+  star: (t: StarInfo) => SelectionRef;
 } = {
   galaxyCatalog: (t) => ({
     type: 'galaxyCatalog',
@@ -37,6 +39,8 @@ const REF_OF: {
   }),
   structure: (t) => ({ type: 'structure', id: t.id }),
   milkyWay: () => ({ type: 'milkyWay' }),
+  // A star ref is positional — the bin-stable record index the pick names.
+  star: (t) => ({ type: 'star', index: t.index }),
 };
 
 export function refOf(target: FocusableTarget): SelectionRef {

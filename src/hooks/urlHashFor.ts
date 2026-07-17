@@ -17,6 +17,7 @@ import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { FocusableTargetType } from '../@types/engine/FocusableTargetType';
 import { selectionToFocusId } from '../services/url/focusUrl';
 import { MILKY_WAY_FOCUS_ID } from '../services/url/milkyWayFocusId';
+import { STAR_FOCUS_PREFIX } from '../services/url/starFocusId';
 
 export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => string | null> = {
   // Galaxy ids ride the codec's priority ladder (famous → PGC → SDSS objID →
@@ -27,4 +28,7 @@ export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => s
   // Milky Way singleton → the fixed deep-link literal; resolveFocusId decodes
   // it back to `{ type: 'milkyWay' }`, closing the `#focus=milkyWay` round-trip.
   milkyWay: () => MILKY_WAY_FOCUS_ID,
+  // A star's id is the `star-<index>` token; resolveFocusId strips the prefix
+  // back to the record index, closing the `#focus=star-<index>` round-trip.
+  star: (t) => (t.type === 'star' ? `${STAR_FOCUS_PREFIX}${t.index}` : null),
 };

@@ -14,4 +14,6 @@ export const TARGET_IDENTITY_KEY: Record<FocusableTargetType, (t: FocusableTarge
   structure: (t) => (t.type === 'structure' ? `structure:${t.id}` : ''),
   // The Milky Way is a singleton — its identity is the tag itself.
   milkyWay: () => 'milkyWay',
+  // A star's identity is its bin-stable record index.
+  star: (t) => (t.type === 'star' ? `star:${t.index}` : ''),
 };
