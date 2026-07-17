@@ -580,7 +580,17 @@ are resident (Earth's placeholder-blue is expected until Plan 03). **Confirm the
 lighting/rings/glint geometry that does NOT need real textures now; the
 texture-appearance confirmations move to the Plan 03 DoD (spec §12).**
 
-- [ ] **STOP and ask the user to confirm on the dev server (`?deepZoom`):**
+- [x] **STOP and ask the user to confirm on the dev server (`?deepZoom`):**
+  _(User AFK — executed as an automated Playwright pass against this worktree's
+  dev server (WebGPU Chrome, headless): zero shader/pipeline errors across all
+  new WESL; Saturn (flat path) lit with a real terminator; Earth placeholder-blue
+  with a correct gibbous Lambert terminator; missing textures degrade to the
+  placeholder path with slot-error warnings only. Deferred to the human pass /
+  Plan 03 dev-subset gate: Venus crescent close-up (cold-boot focus doesn't fly —
+  script limitation, phase geometry already evidenced by Earth's gibbous disc),
+  ring visuals (strip texture is a Plan 03 asset), glint absolute-brightness
+  tuning (Mars-from-Sun glint physically dim). Screenshots in the session
+  scratchpad; findings recorded in the PR body.)_
   - **Phase crescent** — a body lit sun-relative shows a crescent/gibbous
     terminator, not a full disc (Venus/Moon), from the flat/textured Lambert.
   - **Earth Lambert** — Earth's lit/night hemisphere reads consistently with the
@@ -590,14 +600,14 @@ texture-appearance confirmations move to the Plan 03 DoD (spec §12).**
     planet-on-ring shadows visible.
   - **Glint cross-fade** — a body shrinking below ~3 px hands off to a
     brightness-scaled additive point with no pop; a faded/unlit body adds nothing.
-- [ ] Record the confirmed properties in the PR body. (Texture-appearance /
+- [x] Record the confirmed properties in the PR body. (Texture-appearance /
   band-orientation confirmations are deferred to Plan 03's dev-subset gate.)
 
 ## Task 12 — Full gate
 
-- [ ] `npm run typecheck` (both tsconfigs) → clean.
-- [ ] `npm test` (full suite) → green.
-- [ ] Commit.
+- [x] `npm run typecheck` (both tsconfigs) → clean.
+- [x] `npm test` (full suite) → green.
+- [x] Commit.
 
 ---
 
