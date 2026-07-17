@@ -111,9 +111,10 @@ fn vs(
   // 'z = w * (1 - PICK_BAND_SCENE_STAR_EPS)' — still the SHALLOWEST band, so it
   // beats every survey star while staying pickable instead of being clipped
   // away. This is the shared scene-star clamp value the survey pick stage names
-  // as its front band too, single-sourced so the two can never diverge. Glints
-  // (planets/moons) share this shader; their AU-scale true depth keeps them in
-  // front of every band automatically — that IS the planets/moons priority.
+  // as its front band too, single-sourced so the two can never diverge. This
+  // 'vs' entry is scene-star ONLY; glints (planets, moons, the Earth stamp) use
+  // 'vsGlint' below, which forces its own shallower band instead of min-clamping
+  // true depth — see that entry's doc block for why.
   out.clip.z = min(out.clip.z, out.clip.w * (1.0 - PICK_BAND_SCENE_STAR_EPS));
 
   out.uv = corner;
