@@ -709,20 +709,20 @@ UNCHANGED (the `starSpheresLayer` idiom, `starSpheresLayer.ts:95-121`).
 Didactic docblock: why option B not A (spec amendment); why the camera-to-star
 gate; why the f64 `composeBodyMvp` seam kills the wobble; renderer reused unchanged.
 
-- [ ] Add `focusedFieldStarSphereLayer`; register + re-export in `passes/index.ts`
+- [x] Add `focusedFieldStarSphereLayer`; register + re-export in `passes/index.ts`
       (update the header's foreground-group draw-order list to name the new row).
-- [ ] Add the test `enabled only for a star row within sphere-resolve range` — a
+- [x] Add the test `enabled only for a star row within sphere-resolve range` — a
       `star` row with the camera close (sphere ≥ `STAR_RESOLVE_PX`) → true; the
       same row with the camera far (sphere sub-pixel) → false; a non-`star` row
       (or null) → false; a null `starRenderer` → false. Behavioural gate, mirroring
       `starSpheresLayer` / `near0SelectionRingLayer`.
-- [ ] `npx vitest run tests/services/engine/frame/passes/focusedFieldStarSphereLayer.test.ts`
+- [x] `npx vitest run tests/services/engine/frame/passes/focusedFieldStarSphereLayer.test.ts`
       → fail, implement, pass. `npm run typecheck` (both tsconfigs) → green.
 - [ ] **Visual verification (dev server):** double-click a Gaia field star and let
       the focus descend; expect a resolved emissive sphere of the BP−RP-derived
       colour filling the frame — where before there was only a dot. (The sprite
       handoff is verified in 8e.)
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 8e — Retire the wobbling near sprite in-shader (spec amendment, constraint 3)
 
