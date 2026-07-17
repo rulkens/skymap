@@ -579,17 +579,38 @@ distance the sphere is the visible body, but the wobbling Gaia sprite for the
 same star does **not** hide behind it — the opaque foreground sphere composites
 over the additive HDR sprite only *at the sphere's own pixels*, while the swum
 sprite lands elsewhere as a bright floating dot. So the sprite must be suppressed,
-not occluded. The chosen mechanism is an **in-shader near-distance dissolve** in
-`vertex.wesl`: on the **visual pass only** (`u.pickPass == 0u`), a star whose
-reconstructed camera-relative distance falls inside a near-fade band collapses
-its billboard radius to zero (a `smoothstep` over the band). The reconstructed
-distance `length(worldRelCam)` is already in hand (`vertex.wesl:262,269`), so this
-is pure vertex math plus one WESL constant — **it adds no uniform field and does
-not touch the shared `starCatalogLayout` packing surface** (which a concurrent
-refactor owns). The band's outer edge is set so the sphere is already comfortably
-resolved before the sprite finishes dissolving, giving a seamless crossover with
-no gap and no double-image. The pick pass is left unfaded, so the star stays
-pickable at close range.
+not occluded. The chosen mechanism is an **in-shader apparent-size dissolve** in
+`vertex.wesl`: on the **visual pass only** (`u.pickPass == 0u`), the vertex stage
+computes the star's would-be solar-diameter sphere size in px — from the
+camera-relative depth already in hand (`worldRelCam` → `center.w`) and the
+already-bound viewport, via the shared `worldLenToPx` path — and collapses the
+billboard radius to zero as that size crosses the sphere-resolve threshold (a
+`smoothstep` from `STAR_RESOLVE_PX` to a fixed ratio above it). This is pure
+vertex math plus WESL consts mirroring their TS twins (`SOLAR_RADIUS_KM`,
+`STAR_RESOLVE_PX`) — **it adds no uniform field and does not touch the shared
+`starCatalogLayout` packing surface** (which a concurrent refactor owns). Because
+the fade keys on the same apparent-size threshold the sphere layer gates on, the
+sphere is resolved before the sprite starts dissolving **at every viewport
+size**, giving a seamless crossover with no gap and no double-image. The pick
+pass is left unfaded, so the star stays pickable at close range.
+
+  Numeric anchor (1080 px viewport, the 60° default fov): a solar-diameter
+  sphere (2 · 696340 km ≈ 4.513e-14 Mpc) subtends `STAR_RESOLVE_PX` = 4 px at
+  ≈ 1.06e-11 Mpc ≈ 2.18 AU — matching the "wobble within ~a couple of AU"
+  observation above. The shader's `worldLenToPx` estimate omits the projection's
+  1/tan(fovY/2) factor (it has only clip.w + the viewport), so at 60° the fade
+  in practice begins once the true sphere size is ~1.7× the threshold (~1.3 AU)
+  and completes at 4× the fade start (~0.3 AU) — comfortably outside the
+  ~0.02 AU focus-framing distance, with the sphere always resolved before the
+  fade begins (the safe direction for any fov below 90°).
+
+  _Amended during execution (Task 8e):_ the original draft specified a fixed
+  near/far distance band in Mpc (`STAR_SPRITE_NEAR_FADE`). A fixed band agrees
+  with the sphere layer's gate at exactly one viewport height + fov (the gate's
+  resolve distance scales with both), producing a double-image on larger
+  viewports and a gap on smaller ones; the px-keyed fade is viewport-exact and
+  single-sources the handoff threshold (`STAR_RESOLVE_PX`) with the sphere layer
+  it hands off to.
 
 - *Why distance, not a focused-record match.* Fading **any** near star (not just
   the focused one) targets exactly the set that wobbles — a star only wobbles

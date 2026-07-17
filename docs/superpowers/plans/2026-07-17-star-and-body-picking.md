@@ -727,27 +727,41 @@ gate; why the f64 `composeBodyMvp` seam kills the wobble; renderer reused unchan
 ## Task 8e — Retire the wobbling near sprite in-shader (spec amendment, constraint 3)
 
 **Files:** `src/services/gpu/shaders/starCatalog/vertex.wesl` (add a
-visual-pass-only near-distance billboard dissolve).
+visual-pass-only apparent-size billboard dissolve).
 
-**Contract (spec amendment "sprite→sphere handoff"):** on the VISUAL pass only
-(`u.pickPass == 0u`), a star whose reconstructed camera-relative distance
-`length(worldRelCam)` (already computed at `vertex.wesl:262,269` — reuse it, do
-NOT recompute) falls inside a near-fade band collapses its billboard radius to
-zero via a `smoothstep` over the band. Pure vertex math + one WESL const
-(`STAR_SPRITE_NEAR_FADE` — near/far edges in Mpc). **No uniform field added — do
-NOT touch `StarUniforms` / the `starCatalogLayout` packing surface.** The pick
-pass (`u.pickPass == 1u`) is UNFADED so the star stays clickable at close range.
-Set the band's outer edge so the sphere (8d, `STAR_RESOLVE_PX`) is already
-resolved before the sprite finishes dissolving — a seamless crossover, no gap,
-no double-image. WESL comments single-quoted, no backticks; be meticulous
-(shared shader — the visual math must stay byte-identical outside the band).
+**Contract (spec amendment "sprite→sphere handoff", amended during execution):**
+on the VISUAL pass only (`u.pickPass == 0u`), a star whose would-be solar-radius
+sphere is approaching on-screen resolution collapses its billboard radius to
+zero via a `smoothstep`: the vertex stage computes the sphere's apparent
+diameter in px from the already-computed camera-relative depth (`center.w`,
+derived from the existing `worldRelCam` — reuse those values, do NOT recompute)
+and the already-bound viewport via the shared `worldLenToPx` path, and fades the
+visual radius as that px size crosses the sphere-resolve threshold up to a fixed
+ratio above it. Pure vertex math + WESL consts mirroring their TS twins
+(`SOLAR_RADIUS_KM`, `STAR_RESOLVE_PX`) with a documented keep-in-sync
+obligation. **No uniform field added — do NOT touch `StarUniforms` / the
+`starCatalogLayout` packing surface.** The pick pass (`u.pickPass == 1u`) is
+UNFADED so the star stays clickable at close range. Because the fade keys on the
+same apparent-size threshold the 8d sphere layer gates on (`STAR_RESOLVE_PX`),
+the sphere is resolved before the sprite starts dissolving at every viewport
+size — a seamless crossover, no gap, no double-image. WESL comments
+single-quoted, no backticks; be meticulous (shared shader — the visual math must
+stay byte-identical outside the band).
 
-- [ ] Add the near-fade band const + the `pickPass == 0u` `smoothstep` collapse
-      of the billboard radius (fold it into `rPxDraw` / the visual radius so the
-      pick floor path at `:326-327` is untouched). Didactic comment: why fade any
-      near star (targets exactly the wobble set), the non-focused fly-through
-      trade-off, and why in-shader not per-record (packing-surface avoidance).
-- [ ] No unit test (WebGPU is unavailable in vitest; shader correctness is a
+_Amended during execution:_ the originally drafted fixed-Mpc band
+(`STAR_SPRITE_NEAR_FADE` near/far edges in Mpc) agreed with the 8d sphere gate
+at exactly one viewport height + fov — that gate's resolve distance scales with
+both, a fixed distance band does not (double-image on larger viewports, a gap on
+smaller). The px-keyed fade is viewport-exact and single-sources the handoff
+threshold with the layer it hands off to.
+
+- [x] Add the sphere-size fade consts + the `pickPass == 0u` `smoothstep`
+      collapse of the billboard radius (fold it into `rPxDraw` / the visual
+      radius so the pick floor path at `:326-327` is untouched). Didactic
+      comment: why fade any near star (targets exactly the wobble set), the
+      non-focused fly-through trade-off, and why in-shader not per-record
+      (packing-surface avoidance).
+- [x] No unit test (WebGPU is unavailable in vitest; shader correctness is a
       visual concern). `npm run typecheck` (both tsconfigs) → green.
 - [ ] **Visual verification (dev server):** descend into a focused field star and
       confirm the wobbling sprite is GONE at close range (no swimming dot beside

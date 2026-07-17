@@ -216,6 +216,33 @@ const CLIP_Z_EPS: f32 = 1e-4;
 // byte-identical. Mirrors the galaxy points pick's clamp-to-'pointSizePx' floor.
 const STAR_PICK_MIN_RADIUS_PX: f32 = 1.5; // ~3 px diameter
 
+// Near-sprite dissolve constants (visual pass only -- see the fade block in
+// 'vs'). Close to a star, the f32 reconstruction 'originRelCamMpc + offset *
+// cellScaleMpc' is a near-cancellation whose ulp error is AU-scale for
+// parsec-scale cells, so at solar-radius framing distance the sprite visibly
+// SWIMS by screen-widths. The focused star gets a true-scale sphere composed
+// in f64 instead (focusedFieldStarSphereLayer), so the near sprite must
+// dissolve as that sphere resolves. The fade keys on the star's WOULD-BE
+// solar-diameter sphere size in px -- the same apparent-size quantity the
+// sphere layer gates on ('apparentSizePx' vs 'STAR_RESOLVE_PX') -- so the
+// handoff threshold is single-sourced with the layer the sprite hands off to,
+// and the crossover stays seamless at EVERY viewport size. A fixed distance
+// band would agree with that gate at exactly one viewport height + fov.
+//
+// TS twins (keep in sync -- same discipline as the dequant constants above):
+//   SOLAR_RADIUS_MPC       = SOLAR_RADIUS_KM (696340, data/bodies/solarRadiusKm.ts)
+//                            * KM_TO_MPC (data/scaleUnits.ts)
+//   STAR_SPHERE_RESOLVE_PX = STAR_RESOLVE_PX
+//                            (services/engine/frame/partitionStarsByResolution.ts)
+const SOLAR_RADIUS_MPC: f32 = 2.25668425e-14;
+const STAR_SPHERE_RESOLVE_PX: f32 = 4.0;
+// Fade width: the sprite starts dissolving when the estimated sphere size
+// crosses the resolve threshold and is fully gone at 4x it. Wide enough that
+// the dissolve spans many frames of a focus descent (no visible pop), narrow
+// enough that the sprite is long gone by framing distance (numbers in the
+// fade block below).
+const STAR_SPRITE_FADE_END_RATIO: f32 = 4.0;
+
 // The sizing floor/ceiling + size reference, the inverse-square apparent-flux
 // reference distance + its fly-through floor, the calibrated exposure baseline,
 // and the peak-from-flux relation now live in lib/starPhotometry.wesl, shared
@@ -317,14 +344,50 @@ fn vs(
   // (lib/starPhotometry.wesl).
   let intensity = starPeakIntensity(u.brightness, fluxApp, rPx);
 
+  // Near-sprite dissolve -- retire the wobbling sprite as its would-be sphere
+  // resolves (constants block above). Why fade ANY near record and not just the
+  // focused star: the wobble is a property of PROXIMITY (the f32
+  // near-cancellation at 'worldRelCam'), so this distance-keyed fade targets
+  // exactly the set that swims -- leaves and aggregates alike -- and needs no
+  // per-focus uniform. A focused-record match would be more precise but adds a
+  // field to StarUniforms, the packing surface a concurrent layout refactor
+  // owns; the local band covers the case without that coupling. Accepted
+  // trade-off: free-flying into a NON-focused star's band fades its sprite with
+  // no sphere to replace it -- AU-proximity is reached essentially only by
+  // focus-framing, so the transient gap is unobtrusive.
+  //
+  // 'worldLenToPx' under-reports the true apparent size by tan(fovY/2) (it has
+  // no access to the fov, only clip.w + viewport; at the app's fixed 60-degree
+  // fov that is x0.58), so the fade begins only once the TRUE sphere size is
+  // ~1.7x the resolve threshold -- the sphere is always resolved BEFORE the
+  // sprite starts dissolving (the safe direction for any fov below 90 degrees).
+  // At a 1080 px viewport the band runs from ~1.3 AU (fade start) to ~0.3 AU
+  // (sprite gone), well outside the ~0.02 AU focus-framing distance.
+  //
+  // The peak intensity above stays on the UNFADED 'rPx': deposited light then
+  // falls as spriteFade^2 (fixed peak, shrinking area) -- a smooth dim-out.
+  // Folding the fade into the peak's radius instead would CONSERVE luminance
+  // into an ever-brighter shrinking dot that pops out at zero. Outside the band
+  // smoothstep returns 0, 'spriteFade' is 1.0, and 'rPx * 1.0 == rPx' exactly
+  // -- the visual math is untouched there. The pick pass selects 1.0
+  // unconditionally, so a near star stays clickable at close range.
+  let sphereDiamPx = worldLenToPx(u.cam, 2.0 * SOLAR_RADIUS_MPC, center.w);
+  let fadeIn = smoothstep(
+    STAR_SPHERE_RESOLVE_PX,
+    STAR_SPHERE_RESOLVE_PX * STAR_SPRITE_FADE_END_RATIO,
+    sphereDiamPx
+  );
+  let spriteFade = select(1.0 - fadeIn, 1.0, u.pickPass == 1u);
+  let rPxVisual = rPx * spriteFade;
+
   // Pick pass only: floor the BILLBOARD radius so a sub-pixel star still covers
   // a clickable pixel at its true screen position. The floor rides a select()
-  // that is 0.0 in the visual pass, and max(rPx, 0.0) == rPx (rPx > 0 always),
-  // so the visual geometry is byte-identical -- only the pick draw inflates. The
+  // that is 0.0 in the visual pass, and max(rPxVisual, 0.0) == rPxVisual, so
+  // the visual geometry is byte-identical -- only the pick draw inflates. The
   // peak above stays on the UNCLAMPED rPx: the pick fragment ignores intensity,
   // and leaving the visual peak untouched keeps the two paths provably disjoint.
   let pickFloorPx = select(0.0, STAR_PICK_MIN_RADIUS_PX, u.pickPass == 1u);
-  let rPxDraw = max(rPx, pickFloorPx);
+  let rPxDraw = max(rPxVisual, pickFloorPx);
 
   let screenOffset = expandBillboardScreen(u.cam, center, rPxDraw, corner);
 
