@@ -35,6 +35,7 @@ import {
   starAggregatesLayer,
   starAggregateUpsampleLayer,
   foregroundLabelsLayer,
+  near0SelectionRingLayer,
   structureMarkersLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -220,14 +221,22 @@ const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets'];
 // UPSAMPLE composite (adjacent to the leaf draw it composites). The survey
 // aggregate STREAM itself targets 'star-aggregates', not hdr, so it is not in
 // this group.
-const NEAR_HDR_NAMES = ['milky-way', 'star-points', 'orbit-trails', 'star-catalog', 'star-upsample'];
+const NEAR_HDR_NAMES = [
+  'milky-way',
+  'star-points',
+  'orbit-trails',
+  'star-catalog',
+  'star-upsample',
+];
 
-// The near-field captions group: the scene-body name labels. Like the COSMO
-// swap overlays they target the swap chain with premultiplied-OVER, but they
-// project through the near0 slab so the caption anchors track the true-scale
-// bodies rather than being clipped by the cosmological near plane. Its own
-// (swap, NEAR0) render group, distinct from the (swap, COSMO) overlays above.
-const NEAR_LABEL_NAMES = ['foreground-labels'];
+// The near-field swap group: the overlays that pair the swap target with the
+// near0 slab. Like the COSMO swap overlays they premultiply-OVER post-tone-map,
+// but they project through the near0 slab so their anchors track true-scale
+// near-field content rather than being clipped by the cosmological near plane.
+// Its own (swap, NEAR0) render group, distinct from the (swap, COSMO) overlays
+// above: the star selection ring first (so its stroke sits under the caption,
+// mirroring the COSMO ring→labels order), then the scene-body name captions.
+const NEAR_SWAP_NAMES = ['near0-selection-ring', 'foreground-labels'];
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
@@ -309,17 +318,21 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
   });
 });
 
-describe('CONTENT_LAYERS migration table (near-field labels group)', () => {
-  it('the scene-body captions draw into swap through the near0 slab, over', () => {
-    // The near-field captions are the second foreground group: like the COSMO
-    // swap overlays they target the swap chain with premultiplied-OVER, but
-    // they project through NEAR0 so the caption anchors track the true-scale
-    // bodies. Drawn by the program's (swap, NEAR0) render step. See the
-    // design's migration table (spec line 216).
-    const nearLabels = CONTENT_LAYERS.filter((layer) => NEAR_LABEL_NAMES.includes(layer.name));
-    expect(nearLabels.map((layer) => layer.name)).toEqual(NEAR_LABEL_NAMES);
-    expect(nearLabels).toContain(foregroundLabelsLayer);
-    for (const layer of nearLabels) {
+describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
+  it('the star selection ring and scene-body captions draw into swap through the near0 slab, over', () => {
+    // The (swap, NEAR0) group: like the COSMO swap overlays these target the
+    // swap chain with premultiplied-OVER, but they project through NEAR0 so
+    // their anchors track true-scale near-field content (a picked star, a body
+    // caption) rather than being clipped by the cosmological near plane. Drawn
+    // by the program's (swap, NEAR0) render step, filtered here by (target,
+    // slab) so a mis-registered member surfaces — the ring leads the caption.
+    const nearSwap = CONTENT_LAYERS.filter(
+      (layer) => layer.target === 'swap' && layer.slab === NEAR0,
+    );
+    expect(nearSwap.map((layer) => layer.name)).toEqual(NEAR_SWAP_NAMES);
+    expect(nearSwap).toContain(near0SelectionRingLayer);
+    expect(nearSwap).toContain(foregroundLabelsLayer);
+    for (const layer of nearSwap) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('swap');
       expect(layer.blend).toBe('over');
@@ -350,10 +363,9 @@ describe('CONTENT_LAYERS blend legality', () => {
         );
       }
     }
-    // Six layers blend OVER: the five COSMO swap overlays plus the near-field
-    // foreground-labels (also swap-target, projected through NEAR0). Was five
-    // before the near-field caption row landed.
-    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(6);
+    // Seven layers blend OVER: the five COSMO swap overlays plus the two
+    // (swap, NEAR0) overlays — the star selection ring and foreground-labels.
+    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(7);
   });
 });
 

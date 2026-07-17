@@ -64,27 +64,30 @@
  * The next five are premultiplied-OVER overlays, projected through the
  * cosmological slab and drawn post-tone-map onto the swap chain:
  *
- *  15. selection-ring      — per-galaxy / Milky-Way / structure selection halo
- *  16. disk-radius-ring    — debug: catalog-disk-radius calibration ring
- *  17. marker-lines        — screen-space thick-line overlay (e.g. label stems)
- *  18. labels              — MSDF text labels
- *  19. clip-path-debug     — debug: clip-path inspector route + gizmo
+ *  15. selection-ring      — per-galaxy / Milky-Way selection halo (COSMO slab)
+ *  16. near0-selection-ring — the same halo for a NEAR0-slab pick (a survey
+ *                            star): shared renderer + selectionHalo gate,
+ *                            projected through near0 with the f64 rebase seam
+ *  17. disk-radius-ring    — debug: catalog-disk-radius calibration ring
+ *  18. marker-lines        — screen-space thick-line overlay (e.g. label stems)
+ *  19. labels              — MSDF text labels
+ *  20. clip-path-debug     — debug: clip-path inspector route + gizmo
  *
  * The final rows leave the cosmological slab entirely — the near-field
  * foreground group, projected through the near0 slab (whose near/far track
  * the camera's orbit distance) so the true-scale bodies are never clipped by
  * the cosmological near plane:
  *
- *  20. earth               — true-scale Blue-Marble-textured Earth (f64 compose
+ *  21. earth               — true-scale Blue-Marble-textured Earth (f64 compose
  *                            seam), opaque (depth-tested) into the `foreground:0`
  *                            target
- *  21. star-spheres        — the resolved partition of the stars (the Sun +
+ *  22. star-spheres        — the resolved partition of the stars (the Sun +
  *                            any star crossing STAR_RESOLVE_PX) as true-scale
  *                            flat-emissive spheres (f64 compose seam), opaque
  *                            into the same `foreground:0` target
- *  22. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
+ *  23. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
  *                            (f64 compose seam), opaque into the same target
- *  23. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *  24. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
  *
@@ -160,6 +163,7 @@ import { milkyWayLayer } from './milkyWayLayer';
 import { horizonShellLayer } from './horizonShellLayer';
 import { structureMarkersLayer } from './structureMarkersLayer';
 import { selectionRingLayer } from './selectionRingLayer';
+import { near0SelectionRingLayer } from './near0SelectionRingLayer';
 import { diskRadiusRingLayer } from './diskRadiusRingLayer';
 import { markerLinesLayer } from './markerLinesLayer';
 import { labelsLayer } from './labelsLayer';
@@ -220,6 +224,13 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // debug clip-path overlay trails so its route + gizmo draw on top of
   // everything else.
   selectionRingLayer,
+  // The NEAR0 sibling of selection-ring: same shared renderer + `selectionHalo`
+  // gate, but projected through the near0 slab (with the f64 rebase the other
+  // NEAR0 rows do) so a picked star — whose parsec-scale anchor COSMO's fixed
+  // near plane would clip — rings cleanly. Each ring lands only in the slab
+  // whose frustum contains its anchor, so the two identical gates never
+  // double-draw. Ordered right after its COSMO sibling for legibility.
+  near0SelectionRingLayer,
   diskRadiusRingLayer,
   markerLinesLayer,
   labelsLayer,
@@ -251,6 +262,7 @@ export { milkyWayLayer } from './milkyWayLayer';
 export { horizonShellLayer } from './horizonShellLayer';
 export { structureMarkersLayer } from './structureMarkersLayer';
 export { selectionRingLayer } from './selectionRingLayer';
+export { near0SelectionRingLayer } from './near0SelectionRingLayer';
 export { diskRadiusRingLayer } from './diskRadiusRingLayer';
 export { markerLinesLayer } from './markerLinesLayer';
 export { labelsLayer } from './labelsLayer';
