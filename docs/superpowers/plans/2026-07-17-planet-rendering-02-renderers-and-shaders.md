@@ -85,15 +85,15 @@ normalize(renderOrigin − bodyPos)`; rotated into the body-local frame it is
 Pure; computed CPU-side per body per frame so the shader stays a dot product even
 with tilt (spec §6.2).
 
-- [ ] Add `sunDirLocal.ts`. Didactic docblock: WHY transpose (orthonormal
+- [x] Add `sunDirLocal.ts`. Didactic docblock: WHY transpose (orthonormal
   inverse), WHY CPU-side (keeps the shader a plain Lambert dot even under tilt).
-- [ ] Test `sunDirLocal of a body on +x with identity orientation points −x` —
+- [x] Test `sunDirLocal of a body on +x with identity orientation points −x` —
   body at world `+x`, `IDENTITY_MAT3` → local sun direction `≈ (−1, 0, 0)`
   (hand-derived: the Sun is toward the origin, i.e. `−x` from the body).
-- [ ] Test `sunDirLocal rotates by a 90° orientation` — same body, a
+- [x] Test `sunDirLocal rotates by a 90° orientation` — same body, a
   90°-about-`+z` orientation → the sun direction rotates correspondingly
   (hand-checked: `−x` world becomes `−y` local under `Rzᵀ(90°)`).
-- [ ] `npm test -- sunDirLocal` → green. Commit.
+- [x] `npm test -- sunDirLocal` → green. Commit.
 
 ## Task 2 — `generateMipChain` + `mipBlit.wesl`
 
