@@ -74,6 +74,7 @@ import { selectionHalo } from '../../helpers/selectionHaloTable';
 import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
 
 export const near0SelectionRingLayer: ContentLayer = {
   name: 'near0-selection-ring',
@@ -111,6 +112,10 @@ export const near0SelectionRingLayer: ContentLayer = {
     const camDist = Math.hypot(centre[0], centre[1], centre[2]);
     const ringRadiusPx = near0RingRadiusPx(
       radiusMpc,
+      // The TRUE camera distance — NOT the far-plane-clamped length below. The
+      // ring's apparent size (the 1.5×-apparent term) must stay physical, so it
+      // reads where the anchor really is, even when we pull the centre inward
+      // for depth.
       camDist,
       // The same apparent-size scale the COSMO sibling passes — the NEAR0 draw
       // shares the canvas, so `drawPxPerRad` (height / 2·tan(fovY/2)) applies
@@ -119,13 +124,29 @@ export const near0SelectionRingLayer: ContentLayer = {
       state.settings.galaxyCatalogs.sizePx,
     );
 
+    // Pull the centre inside the NEAR0 far plane when the pinned anchor sits
+    // beyond it. The adaptive far plane is `max(orbit·100, 3e-11)` Mpc
+    // (`foregroundFrustum`), so orbiting something much nearer than the pinned
+    // halo anchor drops the far plane below the anchor's distance and the ring
+    // quad — unlike the star SPRITE, which clamps clip-z inside the far plane
+    // (the sibling `CLIP_Z_EPS` far-clamp solves this same sweep) — has no clamp
+    // and gets frustum-clipped, so the halo vanishes mid-zoom. Scaling the
+    // camera-relative centre is EXACTLY correct here: with the rebased vp (view
+    // translation folded out) a uniform scale moves camera-space x/y/z together,
+    // so the projected NDC x/y (ratios against w ∝ z) are IDENTICAL — only depth
+    // moves inward — and the OVER-blended ring pass never depth-tests, so depth
+    // is otherwise unobserved. Far side only: in practice the orbit target is
+    // always at or beyond the anchor's scale when zoomed out, so the anchor can
+    // only ever exit the FAR plane, never the near — no symmetric near clamp.
+    const clampedCentre = clampVec3Length(centre, view.slab.farMpc * 0.99);
+
     // Fold the eye offset into the vp so it pairs with the camera-relative
     // centre. Uses the slab's f64 `vp`, narrowed HERE at the GPU-upload
     // boundary (`rebaseViewProj` stays f64 for consumers that must invert it).
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
 
     state.gpu.selectionRingRenderer!.draw(pass, rebasedVp, view.viewportPx, {
-      worldPos: centre,
+      worldPos: clampedCentre,
       ringRadiusPx,
     });
   },
