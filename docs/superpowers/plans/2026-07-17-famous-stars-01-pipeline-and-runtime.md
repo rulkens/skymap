@@ -513,17 +513,17 @@ export const FAMOUS_STAR_SEARCH: ReadonlyMap<string, { names: readonly string[];
 
 **Tests (spec §10):**
 
-- [ ] Add `famousStarsIndex.ts` (didactic header: single derivation feeding search +
+- [x] Add `famousStarsIndex.ts` (didactic header: single derivation feeding search +
       focusable).
-- [ ] Remove the gate + add the alias/constellation resolution in `rankPaletteMatches`.
-- [ ] Update `ROW_VIEW.body` for the star constellation/aliases secondary.
-- [ ] Test `a star is findable by its Bayer alias without the deepZoom gate` — with **no**
+- [x] Remove the gate + add the alias/constellation resolution in `rankPaletteMatches`.
+- [x] Update `ROW_VIEW.body` for the star constellation/aliases secondary.
+- [x] Test `a star is findable by its Bayer alias without the deepZoom gate` — with **no**
       `deepZoom` URL gate set, a query for a Bayer name (e.g. "Alpha Canis Majoris")
       surfaces the Sirius body row. (Regression: pins both the ungate AND the alias
       scoring.)
-- [ ] Test `a body row appears without the gate` — a query matching a body label returns a
+- [x] Test `a body row appears without the gate` — a query matching a body label returns a
       `kind: 'body'` row with no gate present (the addendum-3 ungate).
-- [ ] `npm test -- rankPaletteMatches` → green. Commit.
+- [x] `npm test -- rankPaletteMatches` → green. Commit.
 
 ## Task 10 — InfoCard meta: fetcher + hook
 
