@@ -42,7 +42,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Foreground-body + star picking** `ready` **(high prio)** — blockers cleared (#436 merged, Gaia runtime landed); make bodies/stars new families on the existing pick spine, stars first per user 2026-07-17. → [details](backlog/2026-07-12-foreground-body-picking.md)
 - [ ] **Improve planet rendering** `needs-design` — the procedural planet bodies need a visual-quality pass (surfaces, lighting, atmosphere); brainstorm scope first.
 - [ ] **Lower-res offscreen star-aggregate pass** `ready` — try `STAR_AGGREGATE_DIVISOR` 2 → 4 (`renderTargets.ts`); ~4× further fill cut if the upsampled glow field survives visually.
 - [ ] **Bright star clump at ~5.9 kpc** `deferred` — flux verified conserved; residual over-exposure is display policy (mid-anchor slider + summed knee shipped; retune or tone-map shoulder next). → [details](backlog/2026-07-17-star-clump-brightness-5-9kpc.md)
