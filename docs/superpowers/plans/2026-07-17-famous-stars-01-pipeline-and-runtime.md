@@ -325,12 +325,12 @@ derive from the generated table.
 sidecar; verify the validator passes; **commit the seed + generated table together** (the
 sidecar is gitignored). Add/enable the real-seed coverage-invariant assertion from Task 3.
 
-- [ ] Author all 26 seed entries per the migration + fact-check rules above.
-- [ ] (main thread) `npm run build-famous-stars` → validator green; `famousStars.generated.ts`
+- [x] Author all 26 (=25) seed entries per the migration + fact-check rules above.
+- [x] (main thread) `npm run build-famous-stars` → validator green; `famousStars.generated.ts`
       emitted with the 26 rows.
-- [ ] Enable the Task 3 real-seed coverage test (every entry has `gaiaDr3`; the Sun is
+- [x] Enable the Task 3 real-seed coverage test (every entry has `gaiaDr3`; the Sun is
       `null`).
-- [ ] `git add data/seeds/famous_stars.seed.json src/data/bodies/famousStars.generated.ts`
+- [x] `git add data/seeds/famous_stars.seed.json src/data/bodies/famousStars.generated.ts`
       and commit both.
 
 ## Task 6 — `SCENE_STARS` derivation + `star` maker + palette deletion
@@ -363,24 +363,24 @@ addendum 6).
 **`sceneStars.test.ts` — the load-bearing assertions MUST survive** (spec §10); update
 only what the derivation shifts:
 
-- [ ] Rewrite `sceneStars.ts` as the `.map(star)` derivation; update its module header
+- [x] Rewrite `sceneStars.ts` as the `.map(star)` derivation; update its module header
       (derived from the generated seed table, not hand-authored).
-- [ ] Change `makers/star.ts` to `star(row: FamousStarRow): StarBody`; update the header
+- [x] Change `makers/star.ts` to `star(row: FamousStarRow): StarBody`; update the header
       (colour now blackbody, radius now real per-star).
-- [ ] Delete the four star-bucket constants + comment from `palette.ts`.
-- [ ] Keep `contains the Sun at the origin` — but the Sun's radius is now `1 R☉ ×
+- [x] Delete the four star-bucket constants + comment from `palette.ts`.
+- [x] Keep `contains the Sun at the origin` — but the Sun's radius is now `1 R☉ ×
       SOLAR_RADIUS_KM = 696340` **by derivation** (seed `radiusSolar: 1.0`); keep the
       exact-radius assertion — it now proves the `radiusSolar → radiusKm` path
       (`sceneStars.test.ts:22`).
-- [ ] Keep `Proxima sits ~1.301 pc` (the f64 anchor, tol 1e-3 pc,
+- [x] Keep `Proxima sits ~1.301 pc` (the f64 anchor, tol 1e-3 pc,
       `sceneStars.test.ts:25-32`), `named stars sit at their catalogued distances`
       (Sirius/α Cen, `:48-58`), and `star direction matches its RA/Dec` (frame pin,
       `:60-80`) — all unchanged (the seed carried the exact `sceneStars.ts` values, Task 5).
-- [ ] Update `the local map covers the neighbourhood` (`:34-46`): the colour check was a
+- [x] Update `the local map covers the neighbourhood` (`:34-46`): the colour check was a
       palette-bucket `[0,1]`-range assertion — either keep the finite/range check (colours
       now come from the blackbody util) or drop the colour clause to the util's own test
       (Task 2). Keep the `>= 20` length lower-bound.
-- [ ] `npm test -- sceneStars` → green. Commit. (Seed + generated already committed in
+- [x] `npm test -- sceneStars` → green. Commit. (Seed + generated already committed in
       Task 5; this is the derivation switch only.)
 
 > **Also update the mechanical `SCENE_STARS.length` mirrors** that the derivation shifts
@@ -423,6 +423,16 @@ plan 02's oblate entries (Achernar ~0.35). None of the 26 initial stars are obla
 - [ ] `npm test -- composeBodyMvp` → green. Commit.
 
 ## Task 8 — Gaia dedup reads the seed; delete the standalone table
+
+> **Post-merge rescope (origin/main merged mid-plan, PRs #442/#443):** the Rust
+> star-catalog builder now hardcodes a 17-id copy of the dedup set
+> (`tools/stars-rs/src/population.rs` `FAMOUS_STAR_GAIA_IDS: [u64; 17]`) — a second
+> source of truth this task must also eliminate. Additional scope:
+> `buildFamousStars` gains a third emit target — a generated, committed Rust const
+> (e.g. `tools/stars-rs/src/famous_ids.generated.rs`, same GENERATED-banner
+> pattern as the TS table) — `population.rs` consumes it via `include!`/module and
+> the hardcoded array is deleted. Verify with `cargo check` in `tools/stars-rs/`.
+> The TS import site moved to `buildStars.ts:92` (set build ~`:759`) after the merge.
 
 **Files:** `tools/stars/buildStars.ts` (modify — replace the import + set build),
 `tools/catalog/famousStarGaiaIds.ts` (**DELETE**),
