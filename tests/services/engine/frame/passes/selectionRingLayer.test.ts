@@ -118,6 +118,17 @@ function structureRow(): StructureInfo {
 // The milkyWay singleton row (bare tag — position resolved from the constant).
 const MILKY_WAY_ROW: SelectionRow = { type: 'milkyWay' };
 
+// A scene-body row (planet / famous star / Earth). Like a survey star its halo
+// is NEAR0-tagged (radiusMpc 0, floored to a pixel ring), so the COSMO layer
+// must ignore it and the NEAR0 sibling must own it.
+const BODY_ROW: SelectionRow = {
+  type: 'body',
+  id: 'jupiter',
+  label: 'Jupiter',
+  positionMpc: [1e-9, 2e-9, -3e-9],
+  radiusKm: 69911,
+};
+
 // A survey-star row — its halo is NEAR0-tagged, so the COSMO layer must ignore
 // it and the NEAR0 sibling must own it.
 const STAR_ROW: SelectionRow = {
@@ -193,6 +204,7 @@ describe('selection-ring slab exclusivity (COSMO vs NEAR0)', () => {
     { name: 'galaxy', row: galaxyRow(), cosmo: true, near0: false },
     { name: 'milkyWay', row: MILKY_WAY_ROW, cosmo: true, near0: false },
     { name: 'star', row: STAR_ROW, cosmo: false, near0: true },
+    { name: 'body', row: BODY_ROW, cosmo: false, near0: true },
     { name: 'structure', row: structureRow() as SelectionRow, cosmo: false, near0: false },
   ];
 
