@@ -1065,21 +1065,23 @@ renders the lean name + radius card. `CompactBodyCard` likewise shows the label 
 rows) for a non-star body. `BodyInfo` already carries `radiusKm`, so no new field. Preserve the
 outer-wrapper-stable contract (no `<details>` remount on hover, CLAUDE.md).
 
-- [ ] Extend `BodyDetailCard` / `CompactBodyCard` (via `create-component`) to render a non-star
+- [x] Extend `BodyDetailCard` / `CompactBodyCard` (via `create-component`) to render a non-star
       body (name + radius, body eyebrow, no meta lookup) while keeping the famous-star rich path.
       Rewrite the §12 body "not pickable" doc sites — state what IS true: scene bodies pick via
       `drawPick` on the NEAR0 pick pass; a body's identity is its stable seed id.
-- [ ] Add the test `BodyDetailCard shows a planet's radius and omits the stellar rows` — render a
+      _Executed note: CompactBodyCard needed no change — its optional-chain already fails soft
+      to name-only, pinned by an existing test (reviewer-verified)._
+- [x] Add the test `BodyDetailCard shows a planet's radius and omits the stellar rows` — render a
       `body-jupiter` `BodyInfo`; assert the radius row is present and the spectral/meta rows are
       absent (the branch worth pinning; a famous-star render still shows the meta rows once loaded).
-- [ ] `npx vitest run tests/components/InfoCard/BodyDetailCard.test.tsx` → fail, implement, pass.
+- [x] `npx vitest run tests/components/InfoCard/BodyDetailCard.test.tsx` → fail, implement, pass.
       `npm run typecheck` (both tsconfigs) → green.
 - [ ] **Visual verification (dev server):** in the near-field descent, hover Earth / a planet /
       the Sun / Sirius → expect a body InfoCard + a NEAR0 ring at the body; click → expect the
       `#focus=body-<id>` hash + a focus tween; confirm a Moon in front of Earth picks the Moon
       (depth-tested), a sub-pixel scene-star dot is still pickable at its true position, and Earth /
       a planet shows a body card (name + radius), not a blank "Star" card.
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 14 — Entanglement-radar over the Stage 2 diff
 
