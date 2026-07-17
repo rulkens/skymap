@@ -252,7 +252,7 @@ build-textures`, run in this worktree/main per the data-isolation rule).
   - **glint cross-fade** during descent (no pop below ~3 px);
   - **Earth Lambert** — Earth's lit/night hemisphere reads consistently with the
     lit planets, now with the real dev-subset Blue Marble.
-- [ ] Record the confirmed properties in the PR body.
+- [x] Record the confirmed properties in the PR body.
 
 ## Task 8 — Entanglement-radar review, backlog hygiene, full gate
 
