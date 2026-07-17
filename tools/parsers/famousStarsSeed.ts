@@ -127,11 +127,20 @@ export function validateFamousStarEntry(e: FamousStarEntry): FamousStarEntry {
   if (!Number.isFinite(e.distancePc) || e.distancePc < 0) {
     throw new Error(`famous stars seed: ${e.id} has negative distancePc ${e.distancePc}`);
   }
-  if (!Number.isFinite(e.magV)) {
-    throw new Error(`famous stars seed: ${e.id} has non-finite magV ${e.magV}`);
+  // Apparent V spans the Sun (-26.74) at the bright end to the faintest curated
+  // naked-ish targets (Proxima at +11.1); [-27, 16] keeps a mistyped value loud
+  // without clipping any real entry.
+  if (!Number.isFinite(e.magV) || e.magV < -27 || e.magV > 16) {
+    throw new Error(
+      `famous stars seed: ${e.id} has out-of-range magV ${e.magV} (expected [-27, 16])`,
+    );
   }
-  if (!Number.isFinite(e.absMag)) {
-    throw new Error(`famous stars seed: ${e.id} has non-finite absMag ${e.absMag}`);
+  // Absolute V runs from luminous supergiants (~-12) to dim M dwarfs (~+17);
+  // [-12, 20] leaves headroom while catching a sign/units slip.
+  if (!Number.isFinite(e.absMag) || e.absMag < -12 || e.absMag > 20) {
+    throw new Error(
+      `famous stars seed: ${e.id} has out-of-range absMag ${e.absMag} (expected [-12, 20])`,
+    );
   }
   if (typeof e.spectralType !== 'string' || e.spectralType.length === 0) {
     throw new Error(`famous stars seed: ${e.id} has empty spectralType`);
@@ -159,6 +168,24 @@ export function validateFamousStarEntry(e: FamousStarEntry): FamousStarEntry {
     if (!Number.isFinite(e.oblateness) || e.oblateness <= 0 || e.oblateness >= 0.5) {
       throw new Error(
         `famous stars seed: ${e.id} has out-of-range oblateness ${e.oblateness} (expected (0, 0.5))`,
+      );
+    }
+  }
+  // Optional structured variability: when present, `type` must name the class
+  // and `magRange` must be exactly two finite magnitudes, bright-first.
+  if (e.variable !== undefined) {
+    if (typeof e.variable.type !== 'string' || e.variable.type.length === 0) {
+      throw new Error(`famous stars seed: ${e.id} has empty variable.type`);
+    }
+    const range = e.variable.magRange;
+    if (!Array.isArray(range) || range.length !== 2 || !range.every((n) => Number.isFinite(n))) {
+      throw new Error(
+        `famous stars seed: ${e.id} has invalid variable.magRange ${JSON.stringify(range)} (expected two finite numbers)`,
+      );
+    }
+    if (range[0] > range[1]) {
+      throw new Error(
+        `famous stars seed: ${e.id} has variable.magRange out of order ${JSON.stringify(range)} (expected [min, max])`,
       );
     }
   }

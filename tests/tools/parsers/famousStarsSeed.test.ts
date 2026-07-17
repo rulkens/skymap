@@ -84,6 +84,42 @@ describe('famousStarsSeed', () => {
     expect(validateFamousStarEntry(e).id).toBe('betelgeuse');
   });
 
+  it('throws on a malformed variable', () => {
+    // Wrong-length magRange, non-finite member, and empty type are all loud.
+    expect(() =>
+      validateFamousStarEntry(baseEntry({ variable: { type: 'SRC', magRange: [0.0] as never } })),
+    ).toThrow(/variable/);
+    expect(() =>
+      validateFamousStarEntry(
+        baseEntry({ variable: { type: 'SRC', magRange: [0.0, Number.NaN] } }),
+      ),
+    ).toThrow(/variable/);
+    expect(() =>
+      validateFamousStarEntry(baseEntry({ variable: { type: '', magRange: [0.0, 1.3] } })),
+    ).toThrow(/variable/);
+    // magRange[0] must not exceed magRange[1].
+    expect(() =>
+      validateFamousStarEntry(baseEntry({ variable: { type: 'SRC', magRange: [1.3, 0.0] } })),
+    ).toThrow(/variable/);
+  });
+
+  it('accepts a well-formed variable', () => {
+    const e = baseEntry({ variable: { type: 'SRC', magRange: [0.0, 1.3] } });
+    expect(validateFamousStarEntry(e).variable).toEqual({ type: 'SRC', magRange: [0.0, 1.3] });
+  });
+
+  it('throws on out-of-range magV / absMag', () => {
+    expect(() => validateFamousStarEntry(baseEntry({ magV: -40 }))).toThrow(/magV/);
+    expect(() => validateFamousStarEntry(baseEntry({ magV: 20 }))).toThrow(/magV/);
+    expect(() => validateFamousStarEntry(baseEntry({ absMag: -20 }))).toThrow(/absMag/);
+    expect(() => validateFamousStarEntry(baseEntry({ absMag: 25 }))).toThrow(/absMag/);
+  });
+
+  it("accepts the Sun's magV -26.74", () => {
+    const e = baseEntry({ id: 'sun', magV: -26.74, absMag: 4.83, gaiaDr3: null });
+    expect(validateFamousStarEntry(e).magV).toBe(-26.74);
+  });
+
   it('parseFamousStarsSeed carries entries through the array', () => {
     const json = JSON.stringify([baseEntry({ id: 'sirius' }), baseEntry({ id: 'vega' })]);
     const out = parseFamousStarsSeed(json);
