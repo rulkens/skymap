@@ -69,13 +69,13 @@ describe('createPlanetRenderer', () => {
     expect(() => renderer.destroy()).not.toThrow();
   });
 
-  it('allocates an instance buffer sized MAX_PLANETS × 80 bytes', () => {
+  it('allocates an instance buffer sized MAX_PLANETS × 96 bytes', () => {
     const buffers: BufferDesc[] = [];
     createPlanetRenderer(mockDevice({ buffers }), 'rgba16float', 'depth32float');
     const instance = buffers.find((b) => b.label === 'planet-instance-vbo');
     expect(instance).toBeDefined();
-    expect(INSTANCE_STRIDE).toBe(80);
-    expect(instance!.size).toBe(MAX_PLANETS * 80);
+    expect(INSTANCE_STRIDE).toBe(96);
+    expect(instance!.size).toBe(MAX_PLANETS * 96);
   });
 
   it('draw is callable with (pass, instances, count) and records ONE indexed draw', () => {
@@ -91,7 +91,7 @@ describe('createPlanetRenderer', () => {
     expect((pass.drawIndexed as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(2);
   });
 
-  it('draw does exactly one writeBuffer of the caller`s array with count × 20 float elements', () => {
+  it('draw does exactly one writeBuffer of the caller`s array with count × 24 float elements', () => {
     const device = mockDevice();
     const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float');
     const pass = mockPass();
@@ -106,7 +106,7 @@ describe('createPlanetRenderer', () => {
     expect(byteOffset).toBe(0);
     expect(data).toBe(instances); // the caller's array, uploaded directly
     expect(dataOffset).toBe(0);
-    // Element counts (not bytes): 3 records × 20 floats.
+    // Element counts (not bytes): 3 records × 24 floats.
     expect(size).toBe(3 * INSTANCE_FLOATS);
 
     // Both vertex buffers bound (per-vertex position + per-instance records).
@@ -153,10 +153,17 @@ describe('createPlanetRenderer', () => {
       depthCompare: 'less',
     });
     // Two vertex buffers: per-vertex position (stride 12) + per-instance
-    // records (stride 80, instance-stepped).
+    // records (stride 96, instance-stepped).
     const vbs = Array.from(desc.vertex.buffers!);
     expect(vbs).toHaveLength(2);
     expect(vbs[1]!.stepMode).toBe('instance');
     expect(vbs[1]!.arrayStride).toBe(INSTANCE_STRIDE);
+    // The vertex-stride keep-rule: sunDirLocal rides at @location(6), byte
+    // offset 80 (four MVP columns 0..63 + albedo 64..79 + sunDir 80..95). This
+    // MUST match planet/vertex.wesl's attribute or the shader reads garbage.
+    const sunAttr = Array.from(vbs[1]!.attributes).find((a) => a.shaderLocation === 6);
+    expect(sunAttr).toBeDefined();
+    expect(sunAttr!.offset).toBe(80);
+    expect(sunAttr!.format).toBe('float32x4');
   });
 });

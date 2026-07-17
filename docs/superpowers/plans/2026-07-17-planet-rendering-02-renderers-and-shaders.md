@@ -357,21 +357,21 @@ body.orientation)` per body and packing it at f32 offset 20. Update
 `INSTANCE_FLOATS` (20→24), `INSTANCE_STRIDE` (80→96), and the location-6 vertex
 attribute (`planetRenderer.ts:79-86`).
 
-- [ ] Update `planet/io.wesl` (add `sunDirLocal` flat varying) +
+- [x] Update `planet/io.wesl` (add `sunDirLocal` flat varying) +
   `planet/vertex.wesl` (location 6 attribute → varying) + `planet/fragment.wesl`
   (delete `LIGHT_DIR`, call `litShade`). WESL constraints. Update the shader
   headers — the fixed-light stand-in note becomes real sun-relative lighting.
-- [ ] Grow `planetRenderer`'s `INSTANCE_FLOATS`/`INSTANCE_STRIDE` + the location-6
+- [x] Grow `planetRenderer`'s `INSTANCE_FLOATS`/`INSTANCE_STRIDE` + the location-6
   attribute descriptor; keep the byte offsets matching the shader.
-- [ ] `planetsLayer` consumes the `flat` partition and packs per-body
+- [x] `planetsLayer` consumes the `flat` partition and packs per-body
   `sunDirLocal`.
-- [ ] Test (`planetsLayer.test.ts`) `planets layer packs per-body sunDirLocal` —
+- [x] Test (`planetsLayer.test.ts`) `planets layer packs per-body sunDirLocal` —
   the record for a known body carries `sunDirLocal(pos, RENDER_ORIGIN_MPC,
   orientation)` at f32 offset 20 (computed independently) and the stride is 96.
-- [ ] Test (`planetRenderer.test.ts`) — update the stride/offset structural
+- [x] Test (`planetRenderer.test.ts`) — update the stride/offset structural
   assertion to 24 f32 / 96 B / location-6 at offset 80 (the vertex-stride
   keep-rule).
-- [ ] `npm test -- planetRenderer planetsLayer` → green. Commit.
+- [x] `npm test -- planetRenderer planetsLayer` → green. Commit.
 
 ## Task 8 — `texturedBodiesLayer` + ring-on-planet shadow; wire the textured path
 

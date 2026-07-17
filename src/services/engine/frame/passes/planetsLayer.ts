@@ -53,14 +53,15 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized for
-// the renderer's cap; each planet's 20-float record (MVP + albedo + pad) is
-// rewritten in place before the single instanced draw.
+// the renderer's cap; each planet's 24-float record (MVP + albedo + pad +
+// sunDirLocal + pad) is rewritten in place before the single instanced draw.
 const staging = new Float32Array(MAX_PLANETS * INSTANCE_FLOATS);
 
 // The single per-body sub-pixel test `enabled` and `draw`'s pack loop both
@@ -113,9 +114,10 @@ export const planetsLayer: ContentLayer = {
     const planets = state.data.bodies.planets;
     const limit = Math.min(planets.length, MAX_PLANETS);
 
-    // Pack one 20-float instance record per RESOLVED planet: floats 0..15 the
+    // Pack one 24-float instance record per RESOLVED planet: floats 0..15 the
     // MVP composed from the slab's f64 vp (see the module header's "f64 seam"
-    // note), 16..18 the albedo, 19 the pad. Then ONE instanced draw. Bodies
+    // note), 16..18 the albedo, 19 the pad, 20..22 the sun direction rotated
+    // into the body's local frame, 23 the pad. Then ONE instanced draw. Bodies
     // under SUB_PIXEL_BODY_CULL_PX apparent diameter are skipped — a
     // sub-pixel sphere adds nothing the star backdrop doesn't (see that
     // constant's docblock) — so `n` counts only the packed records. Unlike
@@ -134,12 +136,20 @@ export const planetsLayer: ContentLayer = {
         planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
         planet.orientation,
       );
+      // Rotate the sun direction into the body's local frame (its baked
+      // orientation carries any axial tilt) so the fragment's Lambert term
+      // stays a plain co-framed dot product — same rotate earthLayer does.
+      const sun = sunDirLocal(planet.positionMpc, RENDER_ORIGIN_MPC, planet.orientation);
       const base = n * INSTANCE_FLOATS;
       staging.set(mvp, base);
       staging[base + 16] = planet.albedo[0];
       staging[base + 17] = planet.albedo[1];
       staging[base + 18] = planet.albedo[2];
-      staging[base + 19] = 0; // trailing pad — kept zeroed across frames
+      staging[base + 19] = 0; // albedo pad — kept zeroed across frames
+      staging[base + 20] = sun[0];
+      staging[base + 21] = sun[1];
+      staging[base + 22] = sun[2];
+      staging[base + 23] = 0; // sunDir pad — kept zeroed across frames
       n++;
     }
     if (n > 0) renderer.draw(pass, staging, n);
