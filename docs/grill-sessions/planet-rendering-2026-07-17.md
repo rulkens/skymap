@@ -256,6 +256,27 @@ divergence.
 
 ---
 
+## Q12 (post-checkpoint): Earth consistency + delivery
+
+Two decisions made at the refactor-ground checkpoint (2026-07-17):
+
+**Earth Lambert now.** Earth's fragment shader is full-bright today (samples the
+Blue Marble with no lighting term). Sun-lit planets next to an unlit Earth would
+look inconsistent, so the same Lambert + ambient-floor treatment folds into this
+feature (~10 lines in earth shaders + sun-dir in its uniform). The full
+ultra-real Earth treatment (atmosphere, day/night, oceans) remains future work in
+Earth's dedicated renderer (Q6 unchanged).
+
+**Earth texture rides R2.** The Blue Marble moves off the committed
+`public/images/earth/` + bespoke `earthTexture` slot and into the same pipeline
+as the other 13 bodies: Earth becomes a 14th body in the texture fetch/build/R2
+chain and the keyed `bodyTextures` slot family (per-body proximity demand +
+eviction + tiers included). The dedicated `earthTexture` wiring row, fetcher, and
+slot are deleted; `earthRenderer.setTexture` stays as the commit target. One
+delivery path for the whole asset class; Earth gains 2k/4k/8k tiers (NASA
+Visible Earth ships Blue Marble well past 8k — source to be verified with the
+other 13).
+
 ## Out of scope (explicit)
 
 - **Animated ephemeris / clock** — separate future feature; `orbitalElements.ts`
