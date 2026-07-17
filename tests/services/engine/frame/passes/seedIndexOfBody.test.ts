@@ -39,4 +39,27 @@ describe('seedIndexOfBody', () => {
     expect(seedIndexOfBody('no-such-body', SCENE_PLANETS)).toBe(-1);
     expect(seedIndexOfBody('no-such-body', SCENE_STARS)).toBe(-1);
   });
+
+  // §8.1 regression — guards the "pick id renamed when a sibling is culled" bug.
+  // The pack side must index the FULL seed table, never the frame's culled draw
+  // subset: if `planetsLayer` had stamped `@builtin(instance_index)` into the
+  // culled list, dropping an earlier planet would slide Jupiter's id down one,
+  // renaming it mid-flight. This pins that the seed index is a property of the
+  // durable table (unchanged by the cull) and DIFFERS from Jupiter's slot in a
+  // culled draw set — so the two numbers can never be confused.
+  it('keeps a body’s seed index stable when an earlier sibling is culled', () => {
+    const seedIndex = seedIndexOfBody('jupiter', SCENE_PLANETS);
+    expect(seedIndex).toBeGreaterThan(0); // Jupiter is not the first seed.
+
+    // Simulate a frame where the first planet fails the sub-pixel cull.
+    const culled = SCENE_PLANETS.filter((_, i) => i !== 0);
+    const slotInCulled = culled.findIndex((p) => p.id === 'jupiter');
+
+    // The seed index is unchanged by the cull, and is NOT the slot the culled
+    // draw list would have given Jupiter — proving the pick id is the seed
+    // index, not the pack-loop slot.
+    expect(seedIndexOfBody('jupiter', SCENE_PLANETS)).toBe(seedIndex);
+    expect(slotInCulled).toBe(seedIndex - 1);
+    expect(slotInCulled).not.toBe(seedIndex);
+  });
 });

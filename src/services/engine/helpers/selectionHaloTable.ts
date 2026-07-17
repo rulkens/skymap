@@ -5,9 +5,11 @@
  * that position lives in.
  *
  * A galaxy uses its catalog diameter (with a synthetic-fallback floor); the
- * Milky Way its disc radius anchored at the galactic centre; a structure
- * returns null because it renders its ring through the cluster marker pass,
- * not this one.
+ * Milky Way its disc radius anchored at the galactic centre; a scene body (a
+ * planet, a famous star, Earth) has no physical Mpc extent to size a ring by, so
+ * radiusMpc is 0 and the px-based NEAR0 ring layer floors it to a pixel minimum
+ * — the same treatment as a survey star. A structure returns null because it
+ * renders its ring through the cluster marker pass, not this one.
  *
  * Radius, position, and slab travel together because all three are per-kind
  * facts the halo needs, and because galaxy/Milky-Way carry their world position
@@ -23,10 +25,11 @@
  * draws only the halos tagged with its own slab, so exactly one writes the
  * renderer's shared uniform buffers per frame (see `near0SelectionRingLayer`'s
  * header for the full writeBuffer/submit argument). A galaxy or the Milky Way
- * rings through COSMO (Mpc scale); a survey star rings through NEAR0 (its
- * parsec-scale anchor falls inside COSMO's fixed near plane and outside its far
- * plane once rebased). The slab value reuses the `NEAR0`/`COSMO` index
- * constants a layer's `slab:` field already carries — not a parallel union.
+ * rings through COSMO (Mpc scale); a survey star and the foreground scene bodies
+ * (planet / famous star / Earth) ring through NEAR0 (their parsec/AU-scale
+ * anchors fall inside COSMO's fixed near plane and outside its far plane once
+ * rebased). The slab value reuses the `NEAR0`/`COSMO` index constants a layer's
+ * `slab:` field already carries — not a parallel union.
  */
 import {
   MILKY_WAY_DISC_RADIUS_KPC,
@@ -56,7 +59,7 @@ const SELECTION_HALO_TABLE: {
   galaxyCatalog: (row: GalaxyRow) => SelectionHalo;
   milkyWay: (row: MilkyWayRow) => SelectionHalo;
   structure: (row: StructureInfo) => null;
-  body: (row: BodyRow) => null;
+  body: (row: BodyRow) => SelectionHalo;
   star: (row: StarRow) => SelectionHalo;
 } = {
   // `max(diameterKpc, 30)` handles the synthetic-fallback source and any
@@ -75,9 +78,17 @@ const SELECTION_HALO_TABLE: {
   }),
   // Structures render their ring through the cluster marker pass.
   structure: (_row) => null,
-  // Scene bodies render as true-scale spheres in the deep-zoom foreground; a
-  // Mpc-scale halo ring around a ~2e-16 Mpc planet would be meaningless chrome.
-  body: (_row) => null,
+  // A scene body (planet / famous star / Earth) is a discrete foreground body
+  // with no Mpc-scale extent to size a ring by, so radiusMpc is 0 — the px-based
+  // NEAR0 ring layer (§9) floors it to a pixel minimum, exactly like a survey
+  // star, and centres the ring on the body's world position carried by the row.
+  // The NEAR0 slab tag routes it through `near0SelectionRingLayer` (not the
+  // COSMO layer), so the two layers stay slab-exclusive on the shared renderer.
+  body: (row) => ({
+    radiusMpc: 0,
+    worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
+    slab: NEAR0,
+  }),
   // A star is a point with no physical extent to size a ring by, so radiusMpc
   // is 0: the px-based ring layer (§9) floors it to a pixel minimum, and the
   // ring centres on the star's world position carried by the row.

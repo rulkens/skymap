@@ -56,7 +56,12 @@ describe('selectionHalo', () => {
     expect(selectionHalo(structureRow() as SelectionRow)).toBeNull();
   });
 
-  it('returns null for a body row (true-scale sphere, no Mpc-scale ring)', () => {
+  // A body's px-scale ring rides the NEAR0 slab (its parsec/AU-scale anchor
+  // falls inside COSMO's near plane once rebased), so the body arm must yield a
+  // NEAR0-tagged descriptor centred on the body — not null. A null here (the old
+  // COSMO-era "meaningless chrome" assumption) would leave a picked planet with
+  // no ring; a COSMO tag would revive the writeBuffer/submit race.
+  it('returns a NEAR0 descriptor for a body row centred on the body position', () => {
     const bodyRow: SelectionRow = {
       type: 'body',
       id: 'earth',
@@ -64,7 +69,11 @@ describe('selectionHalo', () => {
       positionMpc: [4.8481e-12, 0, 0],
       radiusKm: 6371,
     };
-    expect(selectionHalo(bodyRow)).toBeNull();
+    const halo = selectionHalo(bodyRow);
+    expect(halo).not.toBeNull();
+    expect(halo!.radiusMpc).toBe(0);
+    expect(halo!.worldPos).toEqual([4.8481e-12, 0, 0]);
+    expect(halo!.slab).toBe(NEAR0);
   });
 
   it('returns a descriptor for a galaxy row with a measured diameter', () => {

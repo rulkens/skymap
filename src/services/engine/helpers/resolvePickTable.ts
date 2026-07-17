@@ -6,6 +6,9 @@
  * row is materialized later by the reconciler — the pick only commits identity.
  */
 import { resolveStructureFromPick } from './resolveStructureFromPick';
+import { SCENE_STARS } from '../../../data/bodies/sceneStars';
+import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
+import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import type { SourceEntry } from '../../../@types/data/SourceEntry';
 import type { PickResult } from '../../../@types/data/PickResult';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
@@ -45,4 +48,23 @@ export const RESOLVE_PICK: Partial<
   // the bin-stable global star-record index. No catalog read here; the
   // reconciler resolves the record to a row at display time.
   starCatalog: (_entry, pick) => ({ type: 'star', index: pick.localIdx }),
+  // Body arms are the decode side of the foreground `drawPick`s (Task 11): the
+  // pack side stamped `seedIndexOfBody(body, seeds) + PICK_SENTINEL_OFFSET`, and
+  // `unpackPick` has already subtracted the offset, so `pick.localIdx` indexes
+  // the SAME durable seed array. That seed index is order-stable (a property of
+  // the authored table, not the camera-dependent draw subset), so it round-trips
+  // to `seeds[localIdx].id` — the durable `{ type: 'body', id }` ref the body
+  // half of the selection path already resolves against SCENE_BODIES. A localIdx
+  // past the array (a seed/draw-set desync) yields null rather than a ghost hit.
+  famousStar: (_entry, pick) => {
+    const body = SCENE_STARS[pick.localIdx];
+    return body ? { type: 'body', id: body.id } : null;
+  },
+  planet: (_entry, pick) => {
+    const body = SCENE_PLANETS[pick.localIdx];
+    return body ? { type: 'body', id: body.id } : null;
+  },
+  // Earth is a singleton seed: only index 0 names it; any other localIdx is a
+  // desync and drops out of picking.
+  earth: (_entry, pick) => (pick.localIdx === 0 ? { type: 'body', id: SCENE_EARTH.id } : null),
 };
