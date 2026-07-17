@@ -117,18 +117,18 @@ use it must be created with `RENDER_ATTACHMENT` usage. Both
 6), and both samplers set `mipmapFilter: 'linear'` — so surfaces don't shimmer as
 a body shrinks toward the glint handoff (spec §6.5).
 
-- [ ] Add `mipBlit.wesl` (fullscreen-triangle vertex from `@builtin(vertex_index)`
+- [x] Add `mipBlit.wesl` (fullscreen-triangle vertex from `@builtin(vertex_index)`
   + linear-downsample fragment sampling the parent level). WESL constraints
   above. Didactic comment: WHY a render-pass chain (no built-in mipmap gen).
-- [ ] Add `generateMipChain.ts`. Didactic docblock: the `RENDER_ATTACHMENT`
+- [x] Add `generateMipChain.ts`. Didactic docblock: the `RENDER_ATTACHMENT`
   usage requirement + the full-mip-count derivation.
-- [ ] Test `generateMipChain constructs against the headless device` — mirror
+- [x] Test `generateMipChain constructs against the headless device` — mirror
   `earthRenderer.test.ts`'s device-stub style: assert the function runs without
   throwing and issues the expected number of render passes for a known
   power-of-two size (structural — the real downsample quality is the VISUAL
   gate). If headless construction is infeasible in this repo's test harness,
   assert the module export + type shape and note reliance on the VISUAL gate.
-- [ ] `npm test -- generateMipChain` → green. Commit.
+- [x] `npm test -- generateMipChain` → green. Commit.
 
 ## Task 3 — `bodyLighting.wesl` + `sphere.wesl` uniform structs (byte tables)
 
