@@ -9,6 +9,8 @@ import {
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
+import { Source } from '../../../src/data/sources';
 import { cameraRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
@@ -69,6 +71,31 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
+  });
+
+  // Regression: the body / milkyWay / star deep-link bug. A statically-
+  // resolvable focus id dispatches updateSelectionFocus during engine bootstrap,
+  // BEFORE initGpu has built state.cam — so cameraRuntime() is null. The tween
+  // must not be silently dropped; it must fire once the engine emits its
+  // readiness pulse (by when wireInput has installed the camera). Galaxy deep
+  // links dodge this because their updateSelectionFocus is itself deferred on
+  // catalogLoaded, which only fires after the camera exists.
+  it('defers the tween when the camera is not ready, then plants it on the engine-ready pulse', async () => {
+    cameraRuntime = () => null;
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    // The camera comes online during wireInput; the engine then emits a status
+    // pulse as the first catalog arrives (or the synthetic fallback fires).
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8 });
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 1, source: Source.SDSS }));
+    await flush();
+
+    const tween = store.getState()[cameraRoute].tween;
+    expect(tween).not.toBeNull();
+    expect(tween!.from).toEqual(FROM);
+    expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
   });
 
   it('a null focus ref (release) resolves to no row → no tween', async () => {
