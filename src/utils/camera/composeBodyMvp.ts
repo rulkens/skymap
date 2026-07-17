@@ -34,6 +34,23 @@
  * The `foregroundVp` produced by `computeForegroundViewProj` is already
  * renderOrigin-relative, so the model's translation delta must be expressed
  * in the same frame: `bodyPosMpc − renderOrigin`.
+ *
+ * ### Oblateness — a per-axis model scale, not a shader change
+ *
+ * A rotating star is an oblate spheroid: its equatorial radius exceeds its
+ * polar radius. Rather than teach the sphere renderer (its mat4 + tint uniform
+ * is deliberately minimal) about flattening, the spheroid is baked into the
+ * CPU-side model scale — the two equatorial axes scale by `radiusMpc`, the
+ * polar axis by `radiusMpc·(1 − oblateness)`. A sphere is just the
+ * `oblateness = 0` case, so the default leaves every uniform-radius caller
+ * (Earth, planets) composing exactly the matrix they did before.
+ *
+ * The seed carries no pole orientation, so the polar axis is fixed to model
+ * **Z**. That is a deliberate simplification: it renders the flattening but
+ * points every star's pole the same way in model space. A per-star pole vector
+ * (rotating the scaled spheroid to the real spin axis) is a future field; until
+ * it exists, oblateness reads as a flattening along Z, which is the visually
+ * dominant effect for a lone resolved star.
  */
 
 import { mat4d } from 'wgpu-matrix';
@@ -49,7 +66,11 @@ import { narrowMat4 } from '../math/narrowMat4';
  * @param bodyPosMpc    Absolute body position in world-space Mpc (heliocentric).
  * @param renderOrigin  The render origin (same value passed to
  *                      `computeForegroundViewProj`).
- * @param radiusMpc     Body radius in Mpc (e.g. `6371 * SCALE_UNITS.KM_TO_MPC`).
+ * @param radiusMpc     Equatorial body radius in Mpc (e.g.
+ *                      `6371 * SCALE_UNITS.KM_TO_MPC`).
+ * @param oblateness    Flattening `(a − c)/a`; the polar (model-Z) axis scales
+ *                      by `radiusMpc·(1 − oblateness)`. Defaults to `0` (a true
+ *                      sphere), leaving uniform-radius callers unchanged.
  * @returns  A `Float32Array` of 16 values (column-major proj·view·model),
  *           composed entirely in f64 before narrowing to preserve sub-metre
  *           accuracy at 1-AU distances.
@@ -59,6 +80,7 @@ export function composeBodyMvp(
   bodyPosMpc: Readonly<Vec3>,
   renderOrigin: Readonly<Vec3>,
   radiusMpc: number,
+  oblateness = 0,
 ): Float32Array {
   // Delta in Mpc, expressed in the renderOrigin-relative frame that foregroundVp
   // was built for. Subtracting renderOrigin here mirrors what computeForegroundViewProj
@@ -70,13 +92,15 @@ export function composeBodyMvp(
     bodyPosMpc[2] - renderOrigin[2],
   ];
 
-  // Unit sphere → scale by radiusMpc → translate to body centre.
+  // Unit sphere → scale per axis → translate to body centre. Equatorial axes
+  // (X, Y) take the full radius; the polar axis (Z) is shortened by
+  // `1 − oblateness`, so oblateness 0 collapses to the uniform sphere.
   // mat4d.translation and mat4d.scaling each return a fresh Float64Array.
   // mat4d.multiply(T, S) = T * S; a column-vector v transforms as (T·S)·v,
-  // which first scales then translates — correct for "unit sphere at delta".
+  // which first scales then translates — correct for "spheroid at delta".
   const model = mat4d.multiply(
     mat4d.translation(delta),
-    mat4d.scaling([radiusMpc, radiusMpc, radiusMpc]),
+    mat4d.scaling([radiusMpc, radiusMpc, radiusMpc * (1 - oblateness)]),
   ) as Float64Array;
 
   // Full compose in f64: the cancellation between the large VP translation and

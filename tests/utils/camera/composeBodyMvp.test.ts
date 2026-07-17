@@ -271,4 +271,30 @@ describe('composeBodyMvp', () => {
 
     expect(errorBadMpc).toBeGreaterThan(radiusMpc);
   });
+
+  it('oblate body flattens the polar axis (model-Z) to (1 − oblateness) of the equatorial radius', () => {
+    // Drive the per-axis scale path in isolation: an identity VP with the render
+    // origin AT the body centre collapses the MVP to the model matrix alone
+    // (scale · translate(0)), so a transformed unit point reads the per-axis
+    // scale directly — no perspective distortion to unpick. A clean unit radius
+    // keeps the ratio (the property under test) scale-independent and f32-exact.
+    const r = 1;
+    const centre: [number, number, number] = [0, 0, 0];
+    const identityVp = mat4d.identity() as Float64Array;
+
+    const oblateMvp = composeBodyMvp(identityVp, centre, centre, r, 0.5);
+    const sphereMvp = composeBodyMvp(identityVp, centre, centre, r);
+
+    // +X is an equatorial point, +Z the polar point (the polar-Z simplification
+    // composeBodyMvp documents). Compare the transformed extents, not the compose
+    // maths: for oblateness 0.5 the polar extent must be exactly half the
+    // equatorial extent, and the spherical control must keep the two equal.
+    const oblateEquator = vec4.transformMat4([1, 0, 0, 1], oblateMvp)[0] as number;
+    const oblatePolar = vec4.transformMat4([0, 0, 1, 1], oblateMvp)[2] as number;
+    expect(oblatePolar / oblateEquator).toBeCloseTo(0.5, 6);
+
+    const sphereEquator = vec4.transformMat4([1, 0, 0, 1], sphereMvp)[0] as number;
+    const spherePolar = vec4.transformMat4([0, 0, 1, 1], sphereMvp)[2] as number;
+    expect(spherePolar / sphereEquator).toBeCloseTo(1, 6);
+  });
 });
