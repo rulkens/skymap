@@ -10,7 +10,7 @@
 // ## Bindings
 //
 // '@group(0) @binding(0)' holds 'LitBodyUniforms' (80 bytes: the mat4x4<f32>
-// MVP plus the local sun direction + ambient floor), visible in BOTH stages:
+// MVP plus the local sun direction), visible in BOTH stages:
 // the vertex reads 'u.mvp', the fragment reads 'u.sunDirLocal'. The texture +
 // sampler live at bindings 1 and 2 for the fragment stage (declared in the
 // fragment module).

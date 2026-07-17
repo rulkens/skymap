@@ -93,8 +93,9 @@ const SEGMENTS = 48;
 const RINGS = 24;
 
 /** `LitBodyUniforms` is 80 bytes (20 f32): the 64-byte mat4x4<f32> MVP plus the
- *  body-local sun direction (vec3, 16-byte aligned at offset 64) and the ambient
- *  floor folded into the vec4 tail. Written from `packLitBodyUniforms`. */
+ *  body-local sun direction (vec3, 16-byte aligned at offset 64) and a zeroed
+ *  pad tail — the ambient floor lives in `lib/bodyLighting.wesl`'s `AMBIENT`
+ *  const, not a uniform field. Written from `packLitBodyUniforms`. */
 const UNIFORM_BUFFER_SIZE = 80;
 
 export function createEarthRenderer(

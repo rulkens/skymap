@@ -58,7 +58,7 @@ export type TexturedBodyRenderer = Renderer & {
   /**
    * Draw one body into the current pass. `uniforms` is the 24-float
    * `TexturedBodyUniforms` block (96 bytes) from `packTexturedBodyUniforms`:
-   * MVP + `sunDirLocal` + ambient + the two ring ratios. Written to that body's
+   * MVP + `sunDirLocal` + the two ring ratios. Written to that body's
    * own uniform buffer, then drawn indexed. Draw each body at most once per
    * frame.
    */

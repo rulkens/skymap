@@ -207,7 +207,7 @@ describe('earthLayer.draw', () => {
     expect(call[4]).toBe(SCENE_EARTH.orientation);
 
     // The renderer receives the pass + the packed length-20 LitBodyUniforms
-    // record (16 mvp + 3 sunDirLocal + 1 ambient), not the bare 16-float MVP.
+    // record (16 mvp + 3 sunDirLocal + 1 pad), not the bare 16-float MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
