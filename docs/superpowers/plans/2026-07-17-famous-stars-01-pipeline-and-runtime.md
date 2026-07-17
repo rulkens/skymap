@@ -540,12 +540,12 @@ Mirror the galaxy twins (spec §7 decision (b) — React-side lazy fetch, engine
   `{ meta, ready }`, **fail-soft** (empty + `ready=true` on 404 so a build without the
   sidecar doesn't deadlock).
 
-- [ ] Add both files with didactic headers matching their galaxy twins (why throw on 404 in
+- [x] Add both files with didactic headers matching their galaxy twins (why throw on 404 in
       the fetcher; why catch → fail-soft in the hook).
-- [ ] Test `parseFamousStarsMeta rejects a non-array root` and `parses an array of
+- [x] Test `parseFamousStarsMeta rejects a non-array root` and `parses an array of
       entries` (mirror `famousMetaFetcher`'s parse contract — a genuine parse boundary, not
       a type restatement).
-- [ ] `npm test -- famousStarsMetaFetcher` → green. Commit. (The hook is exercised by the
+- [x] `npm test -- famousStarsMetaFetcher` → green. Commit. (The hook is exercised by the
       card test in Task 12; a standalone hook test that only asserts fail-soft state is fine
       if it drives a mocked fetcher — implementer's call, but don't test React state that
       the card test already covers.)
