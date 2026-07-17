@@ -36,6 +36,16 @@ const rigelTarget: BodyInfo = {
   radiusKm: 5.5e7,
 };
 
+// Jupiter is a non-star body: its id misses FAMOUS_STAR_IDS, so the card takes
+// the lean branch (name + physical radius, no star-sidecar lookup).
+const jupiterTarget: BodyInfo = {
+  type: 'body',
+  id: 'jupiter',
+  label: 'Jupiter',
+  positionMpc: [0, 0, 0],
+  radiusKm: 69911,
+};
+
 const rigelMeta: FamousStarMetaEntry = {
   id: 'rigel',
   names: ['Rigel', 'Beta Orionis', 'β Ori'],
@@ -76,6 +86,22 @@ describe('BodyDetailCard', () => {
     // No properties block resolved, no crash.
     expect(container.textContent).not.toMatch(/Spectral/);
     expect(container.textContent).not.toMatch(/Temperature/);
+  });
+
+  it("shows a planet's radius and omits the stellar rows", () => {
+    // The hook still runs (rules-of-hooks forbid a conditional call), but a
+    // non-star body must not consume it — even when the sidecar returns a
+    // stellar entry, no meta rows leak onto a planet card.
+    stubMeta({ famousStarsMeta: [rigelMeta], ready: true });
+    const { container } = render(createElement(BodyDetailCard, { target: jupiterTarget }));
+
+    expect(screen.getByText('Jupiter')).toBeInTheDocument();
+    expect(screen.getByText('Radius')).toBeInTheDocument();
+    expect(screen.getByText(`${jupiterTarget.radiusKm.toLocaleString()} km`)).toBeInTheDocument();
+    // No stellar / meta rows on a non-star body.
+    expect(container.textContent).not.toMatch(/Spectral/);
+    expect(container.textContent).not.toMatch(/Temperature/);
+    expect(container.textContent).not.toMatch(/Constellation/);
   });
 
   it('omits absent optional properties', () => {

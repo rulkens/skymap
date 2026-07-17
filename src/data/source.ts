@@ -139,23 +139,26 @@ export const Source = {
    * nearby-star map) in the near-field descent — the overlay twin of the
    * survey-wide Gaia star bin, named for the dedup story (famous stars are the
    * curated overlay, the Gaia bin is the survey), mirroring FamousGalaxy.
-   * Registry-key-only code (not persisted, not pickable); the entry is a body
-   * row that renders through its own content-layer, not the galaxy catalog
-   * points pipeline. Value 21 — the first of the three contiguous body codes.
-   * Never renumber the codes below it.
+   * Not persisted to any `.bin` — a body's identity is its stable seed id, not a
+   * record index — but pickable: scene bodies draw into the NEAR0 pick texture
+   * via `drawPick`, tagged with this code. The entry is a body row that renders
+   * through its own content-layer, not the galaxy catalog points pipeline.
+   * Value 21 — the first of the three contiguous body codes. Never renumber the
+   * codes below it.
    */
   FamousStar: 21,
   /**
    * True-scale Solar-System bodies (Moon, Jupiter, …) in the near-field
-   * descent. Registry-key-only code (not persisted, not pickable); a body row
-   * that renders through its own content-layer. Value 22. Never renumber the
-   * codes below it.
+   * descent. Not persisted (identity is the stable seed id) but pickable on the
+   * NEAR0 pick pass via `drawPick`; a body row that renders through its own
+   * content-layer. Value 22. Never renumber the codes below it.
    */
   Planet: 22,
   /**
-   * Textured true-scale Earth in the near-field descent. Registry-key-only
-   * code (not persisted, not pickable); the entry is a body row that renders
-   * through its own content-layer, not the galaxy catalog points pipeline.
+   * Textured true-scale Earth in the near-field descent. Not persisted (identity
+   * is the stable seed id) but pickable on the NEAR0 pick pass via `drawPick`;
+   * the entry is a body row that renders through its own content-layer, not the
+   * galaxy catalog points pipeline.
    * Value 23, the last of the three contiguous body codes (FamousStar=21, Planet=22,
    * Earth=23). Codes are append-only by VALUE; the insertion order in this
    * const is cosmetic, so Earth keeps 23 even though its two siblings are

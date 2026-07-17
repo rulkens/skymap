@@ -23,7 +23,9 @@
  *   'famousStar'/'planet'/'earth'
  *                   — near-field true-scale bodies (the curated stellar
  *                     neighbourhood, Solar-System planets, Earth). Seeded records
- *                     drawn by their own content-layer; not persisted, not pickable.
+ *                     drawn by their own content-layer; not persisted (a body's
+ *                     identity is its stable seed id), but pickable on the NEAR0
+ *                     pick pass via `drawPick`.
  *   'starCatalog'   — survey-wide stellar point clouds (the Gaia bin today).
  *                     Streamed as tiered `.bin` clouds and drawn by the star
  *                     renderer. Leaf stars are pickable on the NEAR0 pick pass
