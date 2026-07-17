@@ -107,7 +107,20 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // reads as distinctly coloured against the background scene while the
   // hue stays legible.
   let hash = f32((localIdx * 2654435761u) >> 24u) / 255.0;
-  let value = 0.55 + 0.45 * hash;
+  var value = 0.55 + 0.45 * hash;
+
+  // GaiaStars (source code 24 — see TS Source.GaiaStars) is a survey-wide
+  // point cloud: thousands of star footprints blanket the overlay, and at
+  // the golden-angle value band above they drown out the sparse sources
+  // (bodies, famous stars) that this debug view exists to make readable.
+  // Dim just this one dense source to ~[0.14, 0.25], keeping its hue and
+  // the per-instance hash variation so individual stars still separate up
+  // close. A general per-source brightness table would be over-engineering
+  // for a single outlier — one dense source doesn't warrant enumerating
+  // brightness for the self-maintaining golden-angle set.
+  if (srcCode == 24u) {
+    value = value * 0.25;
+  }
 
   return vec4<f32>(rgb * value * alpha, alpha);
 }
