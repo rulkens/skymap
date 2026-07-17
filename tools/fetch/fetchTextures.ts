@@ -173,6 +173,22 @@ export function requiresConfirm(dev: boolean, confirm: boolean): boolean {
 }
 
 /**
+ * Fetches `url` and resolves with the response's completeness signals plus
+ * its streaming body. Injected so tests never touch the network — production
+ * wires this to the global `fetch` (the default below); tests substitute a
+ * fake that yields a scripted body (or an erroring stream) without a socket.
+ * Structural rather than `typeof fetch` so a fake needs only the handful of
+ * fields `downloadGetOnly` reads, the same way `fetchDesi`'s `RangeTransport`
+ * keeps its mock surface minimal.
+ */
+export type FetchTransport = (url: string) => Promise<{
+  readonly ok: boolean;
+  readonly status: number;
+  readonly statusText: string;
+  readonly body: ReadableStream<Uint8Array> | null;
+}>;
+
+/**
  * Download `url` to `destPath` with a plain `GET` — no `HEAD`, no `Range`
  * (see the module header for why SSS breaks both). The body streams into a
  * `<destPath>.part` sibling and is renamed into place only on a clean
@@ -180,16 +196,18 @@ export function requiresConfirm(dev: boolean, confirm: boolean): boolean {
  * scratch next run) and never a truncated file passing as complete.
  *
  * The `node:stream/promises` pipeline surfaces a mid-transfer connection
- * drop as a rejected promise rather than a silent truncation.
+ * drop as a rejected promise rather than a silent truncation — so the
+ * `renameSync` past it only runs when the whole body has landed.
  */
 export async function downloadGetOnly(
   url: string,
   destPath: string,
+  transport: FetchTransport = fetch,
 ): Promise<{ totalBytes: number }> {
   mkdirSync(dirname(destPath), { recursive: true });
   const partPath = `${destPath}.part`;
 
-  const res = await fetch(url);
+  const res = await transport(url);
   if (!res.ok) {
     throw new Error(`Download failed: HTTP ${res.status} ${res.statusText} (${url})`);
   }

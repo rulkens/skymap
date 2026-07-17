@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { basename } from 'node:path';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
 
 import {
+  downloadGetOnly,
   requiresConfirm,
   textureSourcesFor,
+  type FetchTransport,
   type TextureSource,
 } from '../../../tools/fetch/fetchTextures';
 
@@ -74,6 +78,98 @@ describe('textureSourcesFor', () => {
     );
     expect(devUranus?.destPath).toBe(fullUranus?.destPath);
     expect(devUranus?.url).toBe(fullUranus?.url);
+  });
+});
+
+/** A transport whose body streams `chunks` then closes cleanly. */
+function completingTransport(chunks: Uint8Array[]): FetchTransport {
+  return async () => ({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const c of chunks) controller.enqueue(c);
+        controller.close();
+      },
+    }),
+  });
+}
+
+/** A transport that emits `prefix`, then errors the stream mid-flight —
+ *  the "connection dropped after a partial body" case. */
+function erroringTransport(prefix: Uint8Array): FetchTransport {
+  return async () => ({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(prefix);
+        controller.error(new Error('connection reset mid-stream'));
+      },
+    }),
+  });
+}
+
+describe('downloadGetOnly', () => {
+  // The whole point of the .part -> renameSync dance: the final path only
+  // ever appears when the body fully streamed. These drive that gate with a
+  // fake transport, no network.
+  it('a clean stream lands the exact bytes at the final path, leaving no .part behind', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fetchTextures-ok-'));
+    try {
+      const dest = join(dir, 'body.jpg');
+      const bytes = new Uint8Array([1, 2, 3, 4, 5]);
+      const { totalBytes } = await downloadGetOnly(
+        'https://example.test/body.jpg',
+        dest,
+        completingTransport([bytes.subarray(0, 2), bytes.subarray(2)]),
+      );
+      expect(totalBytes).toBe(5);
+      expect(new Uint8Array(readFileSync(dest))).toEqual(bytes);
+      expect(existsSync(`${dest}.part`)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('a stream that errors mid-flight never produces the final file (no truncated pass-through)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fetchTextures-err-'));
+    try {
+      const dest = join(dir, 'body.jpg');
+      await expect(
+        downloadGetOnly(
+          'https://example.test/body.jpg',
+          dest,
+          erroringTransport(new Uint8Array([9, 9, 9])),
+        ),
+      ).rejects.toThrow();
+      // The rename is gated on a clean finish — a half-streamed body must
+      // not masquerade as a complete download. (A .part remnant is fine.)
+      expect(existsSync(dest)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('a non-2xx response throws and writes no final file', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fetchTextures-404-'));
+    try {
+      const dest = join(dir, 'body.jpg');
+      const notFound: FetchTransport = async () => ({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        body: null,
+      });
+      await expect(
+        downloadGetOnly('https://example.test/missing.jpg', dest, notFound),
+      ).rejects.toThrow(/404/);
+      expect(existsSync(dest)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
