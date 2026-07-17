@@ -620,16 +620,16 @@ component gets its own folder, `<Name>.tsx` + `<Name>.module.css`, one component
 
 **Tests (spec §10 — targeted branch assertions, NOT a full-object snapshot):**
 
-- [ ] Build both cards via the create-component skill; add the `DETAIL_CARD` `body` row.
-- [ ] Test `renders headline + also-known-as + description from resolved meta` — mock
+- [x] Build both cards via the create-component skill; add the `DETAIL_CARD` `body` row.
+- [x] Test `renders headline + also-known-as + description from resolved meta` — mock
       `useFamousStarsMeta` to return one entry; assert the headline, an alias from
       `names.slice(1)`, and the description text appear.
-- [ ] Test `renders headline only before meta resolves` — mock the hook `{ meta: [], ready:
+- [x] Test `renders headline only before meta resolves` — mock the hook `{ meta: [], ready:
       false }` (or `ready:true` empty); assert the headline shows and no properties block /
       no crash (fail-soft).
-- [ ] Test `omits absent optional properties` — a meta entry without `massSolar`/`ageGyr`
+- [x] Test `omits absent optional properties` — a meta entry without `massSolar`/`ageGyr`
       renders no mass/age line (correction 4 — the card drops absent lines).
-- [ ] `npm test -- StarDetailCard` → green. Commit.
+- [x] `npm test -- StarDetailCard` → green. Commit.
 
 ## Task 13 — R2 `ALLOW` row + docstring
 
