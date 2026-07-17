@@ -22,10 +22,12 @@
  *     is a galaxy idiom, so a flyPath flies INTO a cluster, never past it.
  *   - milkyWay: fixed world-space centre at a calibrated view distance — we are
  *     inside the galaxy, so no radius or FOV computation makes sense; `radius` 0.
- *   - body: the seeded body's absolute position, framed on its physical radius
- *     through the FOV via `bodyFocusDistance` — unclamped pure math, because at
- *     ~2e-16 Mpc (Earth) any Mpc-scale floor would swallow the framing. `radius`
- *     is the body's physical radius — a discrete object, so a real pass-by extent.
+ *   - body / star: both are discrete near-field objects framed on a physical
+ *     radius through the FOV, so they share `bodyLikeFraming` — unclamped pure
+ *     math, because at ~2e-16 Mpc (Earth) any Mpc-scale floor would swallow the
+ *     framing. `radius` is the physical radius, a real pass-by extent. Their row
+ *     shapes differ (body: id/label; star: index/photometry + a nominal solar
+ *     radius, the bin having no per-star size), so the cases stay separate.
  *
  * The return type is `Pick<CameraPose, 'target' | 'distance'>` plus the subject's
  * pass-by `radius` (Mpc) — the position-and-depth slice, with the extent a fly-past
@@ -36,8 +38,7 @@
 
 import { galaxyFocusDistance } from './galaxyFocusDistance';
 import { structureFocusDistance } from './structureFocusDistance';
-import { bodyFocusDistance } from './bodyFocusDistance';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { bodyLikeFraming } from './bodyLikeFraming';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
@@ -48,17 +49,6 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 /** kpc → Mpc; the fallback diameter mirrors `galaxyFocusDistance`. */
 const KPC_PER_MPC = 1000;
 const FALLBACK_DIAMETER_KPC = 30;
-
-/**
- * Nominal stellar radius (km) for framing a picked survey star. The star row
- * carries no per-star radius — the bin quantises position + photometry only —
- * so a single representative solar radius (Sun ≈ 6.957e5 km) frames every star
- * as a discrete near-field body through the shared `bodyFocusDistance`. The
- * FieldStarInfo view-model derives distance / photometry / spectral class but no
- * physical size (the photometry can't support one), so framing stays on this
- * representative radius rather than an absMag-derived guess.
- */
-const NOMINAL_STAR_RADIUS_KM = 6.957e5;
 
 export type FocusFraming = Pick<CameraPose, 'target' | 'distance'> & {
   /**
@@ -109,32 +99,13 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
         // We are inside the galaxy; there is no meaningful fly-past radius.
         radius: 0,
       };
-    case 'body': {
-      // Physical radius in Mpc (Earth: 6371 km ≈ 2.06e-16 Mpc). The distance
-      // is pure screen-fill math with NO clamp — the wheel-zoom / descent
-      // clamps own the floor, and any Mpc-scale minimum here would park the
-      // camera ~5e14 body-radii out. The wheel-zoom floor (clampDistance.ts:
-      // MIN_DISTANCE_MPC) reaches Earth-surface scale, keeping this reachable
-      // in practice.
-      const radiusMpc = row.radiusKm * SCALE_UNITS.KM_TO_MPC;
-      return {
-        target: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
-        distance: bodyFocusDistance(radiusMpc, fovYRad),
-        // A body is a discrete object like a galaxy, so its physical radius is
-        // a real pass-by extent for flyPath's offset geometry.
-        radius: radiusMpc,
-      };
-    }
-    case 'star': {
-      // A survey star is a discrete near-field point framed like a body, using
-      // a nominal stellar radius (the row has no per-star size) — see
-      // NOMINAL_STAR_RADIUS_KM.
-      const radiusMpc = NOMINAL_STAR_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
-      return {
-        target: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
-        distance: bodyFocusDistance(radiusMpc, fovYRad),
-        radius: radiusMpc,
-      };
-    }
+    // A seeded body and a survey star differ in row shape but frame identically:
+    // a discrete near-field object sized on its physical radius. Both delegate
+    // to the shared bodyLikeFraming; the star's radius is the extractor-stamped
+    // nominal solar radius (the bin has no per-star size).
+    case 'body':
+      return bodyLikeFraming(row.positionMpc, row.radiusKm, fovYRad);
+    case 'star':
+      return bodyLikeFraming(row.positionMpc, row.radiusKm, fovYRad);
   }
 }

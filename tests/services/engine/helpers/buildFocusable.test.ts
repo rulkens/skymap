@@ -100,6 +100,7 @@ describe('buildFocusable', () => {
       positionMpc: [10 * SCALE_UNITS.PC_TO_MPC, 0, 0],
       absMag,
       bpRp,
+      radiusKm: 696340,
     }) as FieldStarInfo;
 
     expect(info.distancePc).toBeCloseTo(10, 9);

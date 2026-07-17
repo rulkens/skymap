@@ -15,6 +15,7 @@ import { galaxyFocusDistance } from '../../../../src/services/engine/camera/gala
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
@@ -22,6 +23,7 @@ import {
 import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 
@@ -160,5 +162,25 @@ describe('focusFraming', () => {
     const result = focusFraming(row, FOVY);
     expect(result.target).not.toBe(row.positionMpc);
     expect(result.target).toEqual(row.positionMpc);
+  });
+
+  // ── shared body/star framing (bodyLikeFraming) ───────────────────────────────
+
+  it('frames a star and a body identically for equal position + radius', () => {
+    // Star and body rows differ in shape (the essential asymmetry the switch
+    // keeps), but both delegate their framing to the one bodyLikeFraming helper.
+    // Given the same position + physical radius they must yield the same pose —
+    // pinning that the two arms share a single framing body, not two drifting copies.
+    const positionMpc: Vec3 = [4.8481e-12, 0, 0];
+    const radiusKm = SOLAR_RADIUS_KM;
+    const bodyResult = focusFraming(
+      { type: 'body', id: 'x', label: 'X', positionMpc, radiusKm },
+      FOVY,
+    );
+    const starResult = focusFraming(
+      { type: 'star', index: 3, positionMpc, absMag: 4, bpRp: 0.5, radiusKm },
+      FOVY,
+    );
+    expect(starResult).toEqual(bodyResult);
   });
 });

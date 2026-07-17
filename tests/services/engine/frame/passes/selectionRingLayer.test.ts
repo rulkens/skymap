@@ -126,6 +126,7 @@ const STAR_ROW: SelectionRow = {
   positionMpc: [0.001, -0.002, 0.0005],
   absMag: 4.8,
   bpRp: 0.65,
+  radiusKm: 696340,
 };
 
 function makeStateWithSelection(row: SelectionRow | null): EngineState {

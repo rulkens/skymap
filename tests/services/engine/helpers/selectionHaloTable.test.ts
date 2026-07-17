@@ -85,6 +85,7 @@ describe('selectionHalo', () => {
       positionMpc: [0.001, -0.002, 0.0005],
       absMag: 4.8,
       bpRp: 0.65,
+      radiusKm: 696340,
     };
     expect(selectionHalo(galaxyRow())!.slab).toBe(COSMO);
     expect(selectionHalo({ type: 'milkyWay' } as SelectionRow)!.slab).toBe(COSMO);

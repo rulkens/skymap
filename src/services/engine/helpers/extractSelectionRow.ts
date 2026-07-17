@@ -15,6 +15,7 @@
 import { extractGalaxyRow } from './extractGalaxyRow';
 import { resolveStarRecord } from './resolveStarRecord';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
@@ -59,6 +60,9 @@ const EXTRACT_ROW: {
           positionMpc: record.positionMpc,
           absMag: record.absMag,
           bpRp: record.bpRp,
+          // No per-star size in the bin — stamp the one representative radius
+          // (the Sun's) so framing/gating treat the star as a discrete body.
+          radiusKm: SOLAR_RADIUS_KM,
         }
       : null;
   },

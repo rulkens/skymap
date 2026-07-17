@@ -41,4 +41,9 @@ export type SelectionRow =
       readonly positionMpc: Vec3;
       readonly absMag: number;
       readonly bpRp: number;
+      // Nominal solar radius (km), stamped by the extractor. The bin quantises
+      // position + photometry only, so a field star carries no measured size;
+      // this representative radius is the one framing (bodyLikeFraming) and the
+      // sphere gate read for a discrete near-field star.
+      readonly radiusKm: number;
     };

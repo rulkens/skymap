@@ -8,6 +8,7 @@ import {
   decodeStarCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
@@ -122,7 +123,18 @@ describe('extractSelectionRow', () => {
       positionMpc: record.positionMpc,
       absMag: record.absMag,
       bpRp: record.bpRp,
+      radiusKm: SOLAR_RADIUS_KM,
     });
+  });
+
+  it('star snapshots the nominal solar radius', async () => {
+    // The bin quantises position + photometry only, so the extractor stamps the
+    // one representative radius (the Sun's) onto every star row — the size
+    // downstream framing/gating read for a field star that carries no measured one.
+    const catalog = await makeStarCatalog();
+    const starDeps: ResolveDeps = { ...deps, stars: { current: () => catalog } };
+    const row = extractSelectionRow({ type: 'star', index: 0 }, starDeps);
+    expect(row !== null && row.type === 'star' && row.radiusKm).toBe(SOLAR_RADIUS_KM);
   });
 
   it('star ref with no loaded catalog → null (cloud not loaded yet)', () => {
