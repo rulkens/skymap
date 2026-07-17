@@ -199,8 +199,10 @@ describe('bodyGlintsLayer.draw', () => {
 // Glint bodies with REAL seed ids so `seedIndexOfBody(id, SCENE_PLANETS)` resolves
 // to a stable index (radius 160 km at ~1e5 km keeps both sub-3 px, so both land in
 // the glints branch). JUPITER sits farther from the Sun than the camera (lit);
-// MARS sits closer (unlit far side) — the pick must include BOTH, since brightness
-// is a visual-only concern the pick omits (unlike `draw`, which skips MARS).
+// MARS sits closer (unlit far side, brightness → 0). The pick mirrors `draw`'s
+// per-body visibility skip, so JUPITER IS picked and the invisible MARS is NOT —
+// an unlit glint renders nothing and must not stay clickable (pick follows
+// visibility). The lit sibling stays in so the skip can't over-drop.
 const JUPITER = bodyAt('jupiter', 1_100_000, [0.8, 0.8, 0.8]); // SCENE_PLANETS index 3
 const MARS = bodyAt('mars', 900_000, [0.6, 0.32, 0.23]); // SCENE_PLANETS index 2, unlit phase
 // An id absent from SCENE_PLANETS: seedIndexOfBody returns −1, so it is DROPPED
@@ -227,11 +229,11 @@ function makePickState(
 }
 
 describe('bodyGlintsLayer.drawPick', () => {
-  it('stamps every glint body (phase-independent) with its stable SCENE_PLANETS id, dropping unknowns', () => {
+  it('picks the lit glint but skips the invisible (unlit) one, dropping unknowns', () => {
     const pickRenderer = makePickRenderer();
-    // MARS is unlit here — `draw` would skip it, but the pick keeps it (a body on
-    // its unlit far side is still THERE to click). UNKNOWN is not in the seed
-    // table → dropped.
+    // MARS is unlit here (brightness → 0) — `draw` skips it and so must the pick,
+    // since it renders no pixels (pick follows visibility). JUPITER is lit and IS
+    // picked. UNKNOWN is not in the seed table → dropped.
     const state = makePickState(pickRenderer, [JUPITER, MARS, UNKNOWN]);
     const view = makeNear0View(CAM_POS);
 
@@ -241,8 +243,8 @@ describe('bodyGlintsLayer.drawPick', () => {
     const [passArg, args] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
 
-    // Both seeded bodies present (JUPITER lit + MARS unlit); UNKNOWN dropped.
-    expect(args.points).toHaveLength(2);
+    // Only the lit JUPITER survives: the invisible MARS is skipped, UNKNOWN dropped.
+    expect(args.points).toHaveLength(1);
 
     // Jupiter's packed id, hand-computed: (Source.Planet=22 << 27) | (seedIndex 3 +
     // PICK_SENTINEL_OFFSET 1) = 2952790016 | 4 = 2952790020.
@@ -254,11 +256,13 @@ describe('bodyGlintsLayer.drawPick', () => {
     // Its anchor is rebased into the camera-relative frame (pos − camPos), f64.
     expect(jupiter.posRelCamMpc[0]).toBeCloseTo(JUPITER.positionMpc[0] - CAM_POS[0], 20);
 
-    // Mars carries its own stable index (2), NOT its slot in the partition.
+    // The invisible MARS (unlit far side) is NOT clickable — no pick point carries
+    // its stable index (2). This is the inverse of the old behaviour: pick now
+    // mirrors `draw`'s per-body visibility skip.
     const mars = args.points.find(
       (p) => p.packedId === packSelection(Source.Planet, 2 + PICK_SENTINEL_OFFSET),
-    )!;
-    expect(mars).toBeDefined();
+    );
+    expect(mars).toBeUndefined();
 
     // The vp is the f32 narrow of the f64 rebase — NOT the raw f32 view.vp.
     expect(args.vp).not.toBe(view.vp);

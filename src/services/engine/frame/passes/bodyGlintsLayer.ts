@@ -75,8 +75,11 @@ import { MAX_GLINTS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/bodyG
 // albedo tint + brightness) is rewritten in place before the single draw.
 const staging = new Float32Array(MAX_GLINTS * INSTANCE_FLOATS);
 
-// A glint whose final brightness is at or below this rounds to nothing in the
-// HDR accumulation — skip its draw (the opacity-0 house rule).
+// A glint whose final brightness (phase x cross-fade) is at or below this rounds
+// to nothing in the HDR accumulation — it contributes no pixels. Both sites read
+// this ONE constant so their skip thresholds cannot drift: `draw` omits the
+// instance, and `drawPick` omits the pick footprint (pick follows visibility — an
+// invisible body must not stay clickable). The opacity-0 house rule.
 const GLINT_MIN_BRIGHTNESS = 1e-4;
 
 export const bodyGlintsLayer: ContentLayer = {
@@ -161,11 +164,16 @@ export const bodyGlintsLayer: ContentLayer = {
   // `draw` packs — a body is pickable-as-a-glint exactly when it draws as one; its
   // resolved complement (`flat` ∪ `textured`) rides `planetsLayer`'s sphere pick.
   //
-  // The per-frame brightness (phase + cross-fade) is VISUAL-ONLY and omitted here:
-  // pick has no opacity, and a body turned to its unlit far side or mid-fade at the
-  // 3 px crossover is still THERE to click — the same reasoning `starPointsLayer`'s
-  // pick uses to omit the backdrop-dissolve colour scale. The `enabled` gate
-  // already drops the whole layer above the foreground distance.
+  // The per-body `brightness` term (phase x cross-fade) IS mirrored here, unlike
+  // other visual-only concerns pick ignores (a whole-layer opacity fade, or
+  // `starPointsLayer`'s backdrop-dissolve colour scale — pick has no opacity). The
+  // distinction is that this is a PER-BODY invisibility, not a whole-layer fade: a
+  // glint whose `brightness · fadeBand(apparentPx)` drops to `GLINT_MIN_BRIGHTNESS`
+  // (turned to its unlit far side, OR fully faded at the 3 px crossover) renders NO
+  // pixels in `draw`, and pick follows visibility — an invisible body must not claim
+  // an ~18 px pick footprint. This recomputes `draw`'s EXACT condition from the same
+  // inputs against the shared `GLINT_MIN_BRIGHTNESS`, so the two skips cannot drift.
+  // The `enabled` gate already drops the whole layer above the foreground distance.
   //
   // Each body's packed id carries its STABLE `SCENE_PLANETS` index (the same seed
   // table + `Source.Planet` code `planetsLayer`'s sphere pick stamps, so a body
@@ -191,6 +199,27 @@ export const bodyGlintsLayer: ContentLayer = {
     for (const body of glints) {
       const seedIndex = seedIndexOfBody(body.id, SCENE_PLANETS);
       if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+
+      // Mirror `draw`'s per-body visibility skip from the SAME inputs: a glint that
+      // renders no pixels (unlit far side, or fully faded at the 3 px crossover)
+      // must not claim a pick footprint. Same threshold constant as `draw`.
+      const diameterPx = bodyApparentDiameterPx({
+        positionMpc: body.positionMpc,
+        radiusKm: body.radiusKm,
+        camPosMpc: camPos,
+        viewportHeightPx: view.viewportPx[1],
+        fovYRad: ctx.fovYRad,
+      });
+      const brightness =
+        bodyGlintBrightness({
+          albedo: body.albedo,
+          positionMpc: body.positionMpc,
+          camPosMpc: camPos,
+          renderOriginMpc: RENDER_ORIGIN_MPC,
+          apparentDiameterPx: diameterPx,
+        }) * fadeBand(SCALE_FADE_BANDS.bodyGlint, diameterPx);
+      if (brightness <= GLINT_MIN_BRIGHTNESS) continue;
+
       pickPoints.push({
         posRelCamMpc: [
           body.positionMpc[0] - camPos[0],
