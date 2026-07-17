@@ -162,19 +162,19 @@ fn litShade(normalLocal: vec3<f32>, sunDirLocal: vec3<f32>) -> f32; // AMBIENT +
 | 84..87 | `ringOuterRatio` f32 | ring outer / planet radius; **`0` ⇒ no ring** (default) |
 | 88..95 | pad ×2 | zeroed |
 
-- [ ] Add `bodyLighting.wesl` — `AMBIENT` + `litShade`. WESL constraints.
+- [x] Add `bodyLighting.wesl` — `AMBIENT` + `litShade`. WESL constraints.
   Didactic comment: the shared ambient floor keeps night sides legible (spec
   §6.2/§7); one definition read by flat + textured + Earth fragments.
-- [ ] Add `LitBodyUniforms` + `TexturedBodyUniforms` to `sphere.wesl` with byte
+- [x] Add `LitBodyUniforms` + `TexturedBodyUniforms` to `sphere.wesl` with byte
   tables in the comment (the file's "one struct per exact buffer size" discipline
   — see its existing `TintedSphereUniforms` header). WESL constraints.
-- [ ] Test `LitBodyUniforms / TexturedBodyUniforms byte offsets` — pin
+- [x] Test `LitBodyUniforms / TexturedBodyUniforms byte offsets` — pin
   `sunDirLocal` at byte 64, `ambient` at 76, `ringInnerRatio` at 80,
   `ringOuterRatio` at 84, and total sizes 80 / 96 (the WGSL↔TS uniform-layout
   keep-rule — invisible until iOS drops the frame). Assert the CPU-side writer
   packs those offsets (drive whatever pack helper the renderers expose; NOT a
   source-text grep).
-- [ ] `npm test -- sphereUniforms` → green. Commit.
+- [x] `npm test -- sphereUniforms` → green. Commit.
 
 ## Task 4 — `texturedBodyRenderer` + shaders (per-body bind group + per-body uniform buffer)
 

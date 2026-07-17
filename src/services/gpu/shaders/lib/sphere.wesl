@@ -88,6 +88,77 @@ struct TintedSphereUniforms {
   tint: vec3<f32>,
 };
 
+// ── LitBodyUniforms ──────────────────────────────────────────────────
+//
+// 'SphereUniforms' plus the per-body sun direction and ambient floor — the
+// uniform layout for a lit sphere drawn through its own per-draw uniform
+// buffer. Earth is the current consumer: its fragment reads a real
+// sun-relative Lambert term ('lib/bodyLighting.wesl') instead of a fixed light
+// direction, so the terminator tracks the body's actual position relative to
+// the Sun.
+//
+// Why carry 'sunDirLocal' on the uniform rather than derive it in the shader?
+// The sun direction is rotated into the body's LOCAL frame CPU-side
+// ('utils/camera/sunDirLocal.ts') so the fragment stays a plain dot product
+// even when the body carries an axial tilt — no per-fragment matrix. See the
+// 'sunDirLocal' util header for why the transpose is the inverse.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset  0..63: mvp         (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75: sunDirLocal (vec3<f32> — 16-byte ALIGNED at offset 64;
+//                               12 bytes of data)
+//   offset 76..79: ambient     (f32 — folds into the vec4 tail the vec3 would
+//                               otherwise leave as pad, so no byte is wasted)
+//   total: 80 bytes.
+//
+// The CPU side uploads 20 f32s: 16 mvp + 3 sunDirLocal + 1 ambient. The single
+// source of truth for that packing is 'utils/gpu/packLitBodyUniforms.ts'.
+
+struct LitBodyUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  ambient: f32,
+};
+
+// ── TexturedBodyUniforms ─────────────────────────────────────────────
+//
+// 'LitBodyUniforms' plus the two ring radii — the uniform layout for a
+// textured planet or moon drawn through the 'texturedBodyRenderer'. The ring
+// ratios are DATA, not a Saturn-only code path: 'ringOuterRatio == 0' means
+// 'this body has no ring', which cleanly short-circuits the ring-on-planet
+// shadow branch in the fragment. Only Saturn ships non-zero ratios; every
+// other body packs zeros and pays nothing.
+//
+// Both ratios are expressed in planet-radius units (ring radius / planet
+// radius), so the shadow-march maths is unit-free and rides the body's local
+// sphere directly.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset  0..63: mvp            (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75: sunDirLocal    (vec3<f32> — 16-byte aligned)
+//   offset 76..79: ambient        (f32 — the vec4 tail, as in LitBodyUniforms)
+//   offset 80..83: ringInnerRatio (f32 — ring inner radius / planet radius)
+//   offset 84..87: ringOuterRatio (f32 — ring outer / planet radius; 0 = none)
+//   offset 88..91: _pad0          (f32 — zeroed; rounds the struct to 16)
+//   offset 92..95: _pad1          (f32 — zeroed)
+//   total: 96 bytes.
+//
+// The CPU side uploads 24 f32s. The single source of truth for that packing is
+// 'utils/gpu/packTexturedBodyUniforms.ts', which reuses 'packLitBodyUniforms'
+// for the shared 80-byte prefix so the two layouts can never drift.
+
+struct TexturedBodyUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  ambient: f32,
+  ringInnerRatio: f32,
+  ringOuterRatio: f32,
+  _pad0: f32,
+  _pad1: f32,
+};
+
 // ── clip_from_local ──────────────────────────────────────────────────
 //
 // Transform a unit-sphere local-space position to homogeneous clip
