@@ -206,10 +206,12 @@ const SWAP_NAMES = [
 ];
 
 // The near-field foreground group: the true-scale bodies (Earth, the Sun
-// sphere, the planets) drawn into the depth-bearing `foreground:0` target
-// through the near0 slab. Opaque (depth-tested), unlike the additive HDR
-// group and the OVER swap group.
-const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets'];
+// sphere, the focused field-star sphere, the planets) drawn into the
+// depth-bearing `foreground:0` target through the near0 slab. Opaque
+// (depth-tested), unlike the additive HDR group and the OVER swap group. The
+// focused-field-star sphere sits right after star-spheres — a selection-gated
+// sibling reusing the same star renderer.
+const FOREGROUND_NAMES = ['earth', 'star-spheres', 'focused-field-star-sphere', 'planets'];
 
 // The near-field hdr rows: the layers that pair the hdr target with the
 // near0 slab — additive like every hdr row, but projected through NEAR0 so

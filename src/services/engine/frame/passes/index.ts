@@ -85,9 +85,13 @@
  *                            any star crossing STAR_RESOLVE_PX) as true-scale
  *                            flat-emissive spheres (f64 compose seam), opaque
  *                            into the same `foreground:0` target
- *  23. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
+ *  23. focused-field-star-sphere — the close-range sphere for the ONE focused
+ *                            Gaia field star (selection-gated), reusing the same
+ *                            star renderer + f64 compose seam, opaque into the
+ *                            same target
+ *  24. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
  *                            (f64 compose seam), opaque into the same target
- *  24. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *  25. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
  *
@@ -170,6 +174,7 @@ import { labelsLayer } from './labelsLayer';
 import { clipPathDebugLayer } from './clipPathDebugLayer';
 import { earthLayer } from './earthLayer';
 import { starSpheresLayer } from './starSpheresLayer';
+import { focusedFieldStarSphereLayer } from './focusedFieldStarSphereLayer';
 import { planetsLayer } from './planetsLayer';
 import { starPointsLayer } from './starPointsLayer';
 import { starCatalogLayer } from './starCatalogLayer';
@@ -243,6 +248,12 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // opaque, so it's a listing choice, not a compositing one.
   earthLayer,
   starSpheresLayer,
+  // The focused field star's close-range sphere: a thin selection-gated sibling
+  // reusing the same star renderer + f64 compose seam as star-spheres, but
+  // scoped to the ONE picked Gaia star at close range (a runtime-selection
+  // layer, not an authored scene body). Order within this opaque depth-tested
+  // group is a listing choice — placed right after star-spheres for legibility.
+  focusedFieldStarSphereLayer,
   planetsLayer,
   // Near-field captions: the scene-body name labels drawn OVER onto the swap
   // chain through the near0 slab. The frame program's (swap, NEAR0) render
@@ -269,6 +280,7 @@ export { labelsLayer } from './labelsLayer';
 export { clipPathDebugLayer } from './clipPathDebugLayer';
 export { earthLayer } from './earthLayer';
 export { starSpheresLayer } from './starSpheresLayer';
+export { focusedFieldStarSphereLayer } from './focusedFieldStarSphereLayer';
 export { planetsLayer } from './planetsLayer';
 export { starPointsLayer } from './starPointsLayer';
 export { starCatalogLayer } from './starCatalogLayer';
