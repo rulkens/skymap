@@ -30,7 +30,8 @@
 // so fragments past r = 1 fall outside the disc and are discarded anyway; the
 // rim-zero removes the residual edge just inside it. Flux stays conserved
 // because K_GAUSS in lib/starPhotometry.wesl integrates THIS shifted profile
-// (~0.7268), not the bare Gaussian -- the files mirror EDGE and the profile shape.
+// (~0.7268), not the bare Gaussian -- and both live in that one lib module
+// (EDGE + starGlowProfile), so the shape and its integral cannot drift apart.
 //
 // ## Flux-integrated peak
 //
@@ -86,12 +87,7 @@
 
 import package::starCatalog::io::VSOut;
 import package::lib::starKnee::starKnee;
-
-// Rim value of the bare Gaussian: exp(-4), the profile's height at r = 1. We
-// subtract it and rescale (below) so the dot fades to exactly 0 at the disc edge
-// -- see the header. Mirrors K_GAUSS's shifted-profile derivation in
-// lib/starPhotometry.wesl.
-const EDGE: f32 = 0.0183156; // exp(-4)
+import package::lib::starPhotometry::starGlowProfile;
 
 // The rim-zeroed Gaussian glow scalar, shared by both entry points: the
 // flux-derived peak 'intensity' spread by the profile and faded by the per-node
@@ -103,10 +99,10 @@ const EDGE: f32 = 0.0183156; // exp(-4)
 // this helper contains NO discard (each entry point keeps its own, matching the
 // original single-entry shader exactly).
 fn glowScalar(r2: f32, intensity: f32, opacity: f32) -> f32 {
-  // Rim-zeroed Gaussian: (exp(-4 r2) - EDGE) / (1 - EDGE) reaches exactly 0 at
-  // the rim (r2 = 1) so saturated peaks show no hard edge, while g(0) = 1.
-  // K_GAUSS (lib/starPhotometry.wesl) integrates THIS profile, flux conserved.
-  let g = (exp(-r2 * 4.0) - EDGE) / (1.0 - EDGE);
+  // Rim-zeroed Gaussian profile (starGlowProfile, lib/starPhotometry.wesl):
+  // reaches exactly 0 at the rim (r2 = 1) so saturated peaks show no hard edge,
+  // while g(0) = 1. K_GAUSS there integrates THIS profile, flux conserved.
+  let g = starGlowProfile(r2);
   return intensity * g * opacity;
 }
 

@@ -13,8 +13,9 @@
 // The vertex stage's flux-derived 'intensity' is the peak amplitude, so the
 // deposited scalar 'I = intensity * g' makes the dot's INTEGRATED screen
 // luminance proportional to the star's apparent flux (K_GAUSS in
-// lib/starPhotometry.wesl integrates THIS profile — the two mirror EDGE and the
-// shape). Faint stars deposit almost nothing while bright stars deposit a lot
+// lib/starPhotometry.wesl integrates THIS profile, and EDGE + starGlowProfile
+// live there too, so the shape and its integral cannot drift apart). Faint
+// stars deposit almost nothing while bright stars deposit a lot
 // (and bloom in the HDR pipeline). 'I' can exceed 1 — that is the HDR amplitude
 // the tone-map + bloom downstream compress.
 //
@@ -45,21 +46,17 @@
 
 import package::bodies::starPoints::io::VSOut;
 import package::lib::starKnee::starKnee;
-
-// Rim value of the bare Gaussian: exp(-4), the profile's height at r = 1. We
-// subtract it and rescale so the dot fades to exactly 0 at the disc edge — see
-// the header. Mirrors K_GAUSS's shifted-profile derivation in
-// lib/starPhotometry.wesl.
-const EDGE: f32 = 0.0183156; // exp(-4)
+import package::lib::starPhotometry::starGlowProfile;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let r2 = dot(in.uv, in.uv);
   // Discard the billboard's corners so the dot is round.
   if (r2 > 1.0) { discard; }
-  // Rim-zeroed Gaussian: (exp(-4 r2) - EDGE) / (1 - EDGE) reaches exactly 0 at
-  // the rim (r2 = 1) so saturated peaks show no hard edge, while g(0) = 1.
-  let g = (exp(-r2 * 4.0) - EDGE) / (1.0 - EDGE);
+  // Rim-zeroed Gaussian profile (starGlowProfile, lib/starPhotometry.wesl):
+  // reaches exactly 0 at the rim (r2 = 1) so saturated peaks show no hard edge,
+  // while g(0) = 1.
+  let g = starGlowProfile(r2);
   let I = in.intensity * g;
   // Hue-preserving soft-knee on the SCALAR, tint applied AFTER, so the tint's
   // channel ratios survive any exposure instead of clipping toward white.

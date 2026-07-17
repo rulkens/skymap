@@ -53,6 +53,12 @@ const STAR_GLOW_MIN_PX: f32 = 1.5;
 // peak then rides the fragment stage's hue-preserving knee.
 const STAR_GLOW_MAX_PX: f32 = 384.0;
 
+// Rim value of the bare Gaussian: exp(-4), the profile's height at r = 1. The
+// rim-zeroed profile (starGlowProfile below) subtracts it and rescales so the
+// dot fades to exactly 0 at the disc edge while keeping g(0) = 1; K_GAUSS
+// integrates that shifted profile.
+const EDGE: f32 = 0.0183156; // exp(-4)
+
 // Glow shape integral over the unit uv-disc of the RIM-ZEROED profile the
 // fragment paints: g(r2) = (exp(-r2 * 4.0) - EDGE) / (1 - EDGE), EDGE = e^-4.
 // Shifting the bare Gaussian down by its rim value and rescaling makes g reach
@@ -64,8 +70,20 @@ const STAR_GLOW_MAX_PX: f32 = 384.0;
 //   K_GAUSS = (0.7711 - 0.05754) / (1 - 0.018316) = 0.71357 / 0.98168 ~= 0.7268.
 // The dot deposits I_peak * rPx^2 * K_GAUSS of screen luminance; dividing the
 // target luminance by it recovers the peak (starPeakIntensity). Structural, not
-// a knob -- MUST mirror EDGE and the profile in the fragment stages.
+// a knob -- the shape it integrates is EDGE (above) + starGlowProfile (below),
+// which both fragment stages import.
 const K_GAUSS: f32 = 0.7268;
+
+// The rim-zeroed Gaussian glow profile both fragment stages paint, shared here
+// so its shape can never drift from the K_GAUSS that integrates it. The bare
+// 'exp(-r2 * 4.0)' still holds EDGE = e^-4 ~= 1.83% of its peak at the disc edge
+// (r2 = 1); on saturated peaks that residue reads as a hard-edged bright disc.
+// Shifting down by EDGE and rescaling by 1/(1 - EDGE) lands the profile exactly
+// on 0 at the rim while keeping g(0) = 1. 'r2' is the squared distance-from-centre
+// the caller already computed for its own unit-disc discard.
+fn starGlowProfile(r2: f32) -> f32 {
+  return (exp(-r2 * 4.0) - EDGE) / (1.0 - EDGE);
+}
 
 // Inverse-square apparent-flux reference distance (Mpc). 1e-5 Mpc = 10 parsecs,
 // the distance at which ABSOLUTE magnitude is DEFINED -- so a record's LUT flux
