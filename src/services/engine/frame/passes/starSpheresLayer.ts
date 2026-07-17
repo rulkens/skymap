@@ -10,7 +10,8 @@
  * never vanishes) — each composed as a unit sphere scaled to the body's
  * equatorial radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and
  * translated to its `positionMpc` in the `RENDER_ORIGIN_MPC`-relative frame,
- * tinted by its spectral-class colour. A star's optional `oblateness` flattens
+ * tinted by its blackbody colour — derived from its `temperatureK` via
+ * `temperatureToLinearRgb`. A star's optional `oblateness` flattens
  * the polar (model-Z) axis via `composeBodyMvp` — the sphere is the
  * `oblateness` absent (⇒ 0) case. `starPointsLayer` draws the complementary
  * `points` branch of the SAME partition call, so a star is a sphere XOR a

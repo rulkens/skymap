@@ -33,9 +33,10 @@ const VIEWPORT_HEIGHT_PX = 720;
 const FOV_Y_RAD = Math.PI / 3;
 
 /**
- * A camera half an AU from the given position: a solar-diameter sphere at
- * that range subtends ~12 px in a 720-px, 60°-fov viewport — comfortably
- * above STAR_RESOLVE_PX — while every star parsecs away stays sub-pixel.
+ * A camera half an AU from the given position: a sphere the size of the near
+ * fixture (Sirius, 1.71 R☉) at that range subtends tens of pixels in a 720-px,
+ * 60°-fov viewport — comfortably above STAR_RESOLVE_PX — while every star
+ * parsecs away stays sub-pixel.
  */
 function halfAuFrom(positionMpc: Readonly<Vec3>): Vec3 {
   return [positionMpc[0] + 0.5 * SCALE_UNITS.AU_TO_MPC, positionMpc[1], positionMpc[2]];

@@ -181,7 +181,7 @@ describe('starSpheresLayer.draw', () => {
     expect(call[3]).toBe(SUN.radiusKm * SCALE_UNITS.KM_TO_MPC);
 
     // The renderer receives the pass + the composed f32 MVP + the Sun's
-    // spectral colour.
+    // blackbody colour.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, mvp, color] = drawSpy.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);

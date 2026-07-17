@@ -415,6 +415,7 @@
     "temperatureK": 7700,
     "massSolar": 1.86,
     "luminositySolar": 10.6,
+    "oblateness": 0.2,
     "ageGyr": 0.088,
     "gaiaDr3": null,
     "gaiaDr3Note": "SIMBAD 'Altair' lists no Gaia DR3 source among its identifiers (saturated bright-star hole).",

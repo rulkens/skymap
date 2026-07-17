@@ -268,6 +268,7 @@ export const FAMOUS_STARS_GENERATED: readonly FamousStarRow[] = [
     absMag: 2.22,
     temperatureK: 7700,
     radiusSolar: 1.8,
+    oblateness: 0.2,
   },
   {
     id: 'vega',
