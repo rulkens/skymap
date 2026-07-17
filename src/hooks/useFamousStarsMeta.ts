@@ -9,7 +9,7 @@
  *
  * ### Why we expose a `ready` flag
  *
- * A consumer (the StarDetailCard) needs to know when the fetch has settled
+ * A consumer (the BodyDetailCard) needs to know when the fetch has settled
  * so it can distinguish "still loading" from "loaded, but this star has no
  * sidecar entry".  `ready` flips true on both success AND swallowed-error
  * paths so a deployment without a `famous_stars_meta.json` doesn't leave the

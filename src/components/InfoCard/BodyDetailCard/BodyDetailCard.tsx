@@ -1,12 +1,13 @@
 /**
- * StarDetailCard — rich panel for a focused famous star.
+ * BodyDetailCard — rich panel for a focused scene body.
  *
- * The engine hands React a lean `StarInfo` (id + label + position) so a star is
+ * The engine hands React a lean `BodyInfo` (id + label + position) so a body is
  * always immediately selectable; the narrative/physical rows live in the async
  * `famous_stars_meta.json` sidecar.  This card looks its entry up by `id` in
  * `useFamousStarsMeta()` and fills in the properties block + description once the
- * fetch settles.  Before that (or on a dev clone with no sidecar) it renders the
- * headline alone — the fail-soft path the hook's `ready` contract guarantees.
+ * fetch settles.  A body with no meta entry (a planet, or before the fetch
+ * settles, or a dev clone with no sidecar) renders the headline alone — the
+ * fail-soft path the hook's `ready` contract guarantees.
  *
  * Optional physical fields (mass, luminosity, age, variability) drop their row
  * entirely when absent rather than showing a blank — the same absent-row pattern
@@ -16,7 +17,7 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { StarInfo } from '../../../@types/engine/StarInfo';
+import type { BodyInfo } from '../../../@types/engine/BodyInfo';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { formatDistance } from '../../../utils/format/formatDistance';
@@ -25,23 +26,23 @@ import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import styles from '../cardChrome.module.css';
-import local from './StarDetailCard.module.css';
+import local from './BodyDetailCard.module.css';
 
-export type StarDetailCardProps = {
-  target: StarInfo;
+export type BodyDetailCardProps = {
+  target: BodyInfo;
   pinned?: boolean;
   chrome?: boolean;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
 
-function StarDetailCard({
+function BodyDetailCard({
   target,
   pinned = false,
   chrome = true,
   onFocus,
   onClose,
-}: StarDetailCardProps): ReactNode {
+}: BodyDetailCardProps): ReactNode {
   const { famousStarsMeta } = useFamousStarsMeta();
   const entry = famousStarsMeta.find((m) => m.id === target.id);
 
@@ -104,4 +105,4 @@ function StarDetailCard({
   );
 }
 
-export default StarDetailCard;
+export default BodyDetailCard;

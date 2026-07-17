@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 //
-// StarDetailCard — rendering tests for the rich focused-star panel.
+// BodyDetailCard — rendering tests for the rich focused-body panel.
 //
 // The card resolves its narrative/physical rows from the async
 // `useFamousStarsMeta` sidecar by looking up `target.id`.  We mock the hook so
@@ -12,8 +12,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
-import StarDetailCard from '../../../src/components/InfoCard/StarDetailCard/StarDetailCard';
-import type { StarInfo } from '../../../src/@types/engine/StarInfo';
+import BodyDetailCard from '../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard';
+import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
 import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStarMetaEntry';
 import type { UseFamousStarsMetaReturn } from '../../../src/@types/engine/UseFamousStarsMetaReturn';
 import { useFamousStarsMeta } from '../../../src/hooks/useFamousStarsMeta';
@@ -28,7 +28,7 @@ function stubMeta(ret: UseFamousStarsMetaReturn): void {
   mockedHook.mockReturnValue(ret);
 }
 
-const rigelTarget: StarInfo = {
+const rigelTarget: BodyInfo = {
   type: 'body',
   id: 'rigel',
   label: 'Rigel',
@@ -52,14 +52,14 @@ const rigelMeta: FamousStarMetaEntry = {
   description: 'Rigel is a blue supergiant and the brightest star in Orion.',
 };
 
-describe('StarDetailCard', () => {
+describe('BodyDetailCard', () => {
   beforeEach(() => {
     mockedHook.mockReset();
   });
 
   it('renders headline + also-known-as + description from resolved meta', () => {
     stubMeta({ famousStarsMeta: [rigelMeta], ready: true });
-    render(createElement(StarDetailCard, { target: rigelTarget }));
+    render(createElement(BodyDetailCard, { target: rigelTarget }));
 
     expect(screen.getByText('Rigel')).toBeInTheDocument();
     // Aliases come from names.slice(1) — the primary name heads the card.
@@ -69,9 +69,9 @@ describe('StarDetailCard', () => {
 
   it('renders headline only before meta resolves', () => {
     stubMeta({ famousStarsMeta: [], ready: false });
-    const { container } = render(createElement(StarDetailCard, { target: rigelTarget }));
+    const { container } = render(createElement(BodyDetailCard, { target: rigelTarget }));
 
-    // Headline still shows from StarInfo.label — a star is always selectable.
+    // Headline still shows from BodyInfo.label — a body is always selectable.
     expect(screen.getByText('Rigel')).toBeInTheDocument();
     // No properties block resolved, no crash.
     expect(container.textContent).not.toMatch(/Spectral/);
@@ -84,7 +84,7 @@ describe('StarDetailCard', () => {
     void luminositySolar;
     void ageGyr;
     stubMeta({ famousStarsMeta: [lean], ready: true });
-    const { container } = render(createElement(StarDetailCard, { target: rigelTarget }));
+    const { container } = render(createElement(BodyDetailCard, { target: rigelTarget }));
 
     // Required rows still render…
     expect(screen.getByText('Spectral type')).toBeInTheDocument();

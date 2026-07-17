@@ -13,7 +13,7 @@ import { selectionToFocusId } from '../../src/services/url/focusUrl';
 import { resolveFocusId } from '../../src/services/url/resolveFocusId';
 import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../src/@types/data/structure/StructureInfo';
-import type { StarInfo } from '../../src/@types/engine/StarInfo';
+import type { BodyInfo } from '../../src/@types/engine/BodyInfo';
 import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
 import { Source } from '../../src/data/sources';
 
@@ -62,12 +62,12 @@ describe('URL_HASH_FOR', () => {
   });
 
   it('#focus=body-<id> round-trips for a star', () => {
-    // A focused star (StarInfo) encodes to `body-<id>` under the shared prefix,
+    // A focused body (BodyInfo) encodes to `body-<id>` under the shared prefix,
     // and resolveFocusId decodes it back to the body ref — the deep-link
     // round-trip the feature exists for. 'sirius' is a seeded famous star, so
     // resolveFocusId validates it against the static SCENE_BODIES table (no
     // loaded catalog needed — the minimal deps below suffice).
-    const star: StarInfo = {
+    const star: BodyInfo = {
       type: 'body',
       id: 'sirius',
       label: 'Sirius',
