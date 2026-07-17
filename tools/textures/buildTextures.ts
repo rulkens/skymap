@@ -145,9 +145,43 @@ async function sourceWidth(srcPath: string): Promise<number> {
 }
 
 /**
+ * Multiply a grayscale tint into a single-channel mono source and write the
+ * JPEG. Europa and Callisto ship one-channel USGS mosaics with no global colour;
+ * the tint restores a plausible per-channel hue the map lacks.
+ *
+ * This runs as TWO sharp passes, not one, because libvips fixes its internal
+ * operation order: within a single pipeline `linear` executes BEFORE the
+ * band-expansion that `toColourspace('srgb')` implies for a 1-band image, so a
+ * `linear` with three coefficients on a still-mono pipeline throws
+ * 'Band expansion using linear is unsupported'. Splitting the work sidesteps the
+ * ordering entirely — pass 1 resizes-to-tier (keeping the raw buffer small; the
+ * full Europa source is 19631×9816, a ~578 MB raw buffer at native width) and
+ * band-expands mono→sRGB into a raw RGB buffer; pass 2 re-reads that already
+ * 3-channel buffer, where `linear` with three coefficients is well-defined, and
+ * applies the per-channel multiply (`a·input + b` with b = 0) before encoding.
+ */
+export async function writeTintedMonoTier(
+  srcPath: string,
+  tint: Vec3,
+  widthPx: number,
+  outPath: string,
+): Promise<void> {
+  const rgb = await sharp(srcPath, { limitInputPixels: false })
+    .resize({ width: widthPx })
+    .toColourspace('srgb')
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  await sharp(rgb.data, { raw: rgb.info })
+    .linear([tint[0], tint[1], tint[2]], [0, 0, 0])
+    .jpeg({ quality: JPEG_QUALITY })
+    .toFile(outPath);
+}
+
+/**
  * Downsample one body source to a tier and write the JPEG. Resizes by width
- * only (the sources are exactly 2:1, so height follows), optionally multiplies
- * the grayscale tint into a mono source, and encodes at `JPEG_QUALITY`.
+ * only (the sources are exactly 2:1, so height follows). Mono sources carrying a
+ * grayscale tint take the two-pass tint path (`writeTintedMonoTier`); full-colour
+ * RGB sources encode in a single pass at `JPEG_QUALITY`.
  */
 async function writeBodyTier(
   srcPath: string,
@@ -155,13 +189,14 @@ async function writeBodyTier(
   widthPx: number,
   outPath: string,
 ): Promise<void> {
-  let pipeline = sharp(srcPath, { limitInputPixels: false }).resize({ width: widthPx });
   if (tint !== undefined) {
-    // Expand the single-channel mono source to sRGB, then multiply the tint per
-    // channel (`a·input + b` with b = 0). RGB sources never reach this branch.
-    pipeline = pipeline.toColourspace('srgb').linear([tint[0], tint[1], tint[2]], [0, 0, 0]);
+    await writeTintedMonoTier(srcPath, tint, widthPx, outPath);
+    return;
   }
-  await pipeline.jpeg({ quality: JPEG_QUALITY }).toFile(outPath);
+  await sharp(srcPath, { limitInputPixels: false })
+    .resize({ width: widthPx })
+    .jpeg({ quality: JPEG_QUALITY })
+    .toFile(outPath);
 }
 
 /**
