@@ -31,7 +31,6 @@ function makeState(
     requests?: Set<RequestKey>;
     points?: Map<SourceType, AssetSlot<unknown, unknown>>;
     famousMetaState?: LoadState<unknown>['kind'];
-    cameraDistance?: number;
     pose?: { target: [number, number, number]; yaw: number; pitch: number; distance: number };
   } = {},
 ): EngineState {
@@ -46,7 +45,7 @@ function makeState(
     target: [0, 0, 0],
     yaw: 0,
     pitch: 0,
-    distance: opts.cameraDistance ?? 100,
+    distance: 100,
   };
   return {
     settings: {
@@ -94,13 +93,6 @@ describe('buildDemandCtx', () => {
 
     const empty = buildDemandCtx(makeState());
     expect(empty.request('paletteOpened')).toBe(false);
-  });
-
-  it("surfaces the last produced pose's orbit distance as cameraDistanceMpc", () => {
-    // The descent gate reads the previous frame's produced distance; the
-    // builder threads it straight off the boxed lastPose.
-    const ctx = buildDemandCtx(makeState({ cameraDistance: 5e-4 }));
-    expect(ctx.cameraDistanceMpc).toBe(5e-4);
   });
 
   it('derives cameraPosMpc as the world eye position, not the focus target', () => {

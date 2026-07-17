@@ -47,16 +47,12 @@ function makeCtx(over: {
   settings?: unknown;
   requests?: Set<RequestKey>;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
-  cameraDistanceMpc?: number;
   cameraPosMpc?: Vec3;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
     request: (k) => over.requests?.has(k) ?? false,
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
-    // Default far away so unrelated demand tests aren't accidentally in any
-    // proximity window.
-    cameraDistanceMpc: over.cameraDistanceMpc ?? Infinity,
     // The body-texture rows read the eye position; a far-away default keeps the
     // surface present without demanding any body texture.
     cameraPosMpc: over.cameraPosMpc ?? [Infinity, Infinity, Infinity],

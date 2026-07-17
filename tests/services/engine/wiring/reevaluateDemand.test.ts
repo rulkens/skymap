@@ -247,13 +247,21 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
     demand: () => false,
   };
 
-  /** State with the 'earth' slot in the keyed bodyTextures map at the given tier. */
-  function makeBodyState(earthSlot: AssetSlot<unknown, unknown>, tier: Tier): EngineState {
+  /** A low-ceiling body-texture row (Uranus ships only up to 'small'). */
+  const uranusRow: AssetWiringRow = {
+    key: 'uranus',
+    factory: () => stubSlot(),
+    req: (tier) => ({ bodyId: 'uranus', tier: clampTier(tier, 'small') }),
+    demand: () => false,
+  };
+
+  /** State with `slot` in the keyed bodyTextures map under `key` at the given tier. */
+  function makeBodyState(key: string, slot: AssetSlot<unknown, unknown>, tier: Tier): EngineState {
     return {
       tier,
       settings: {},
       requests: new Set(),
-      assetSlots: { points: new Map(), bodyTextures: new Map([['earth', earthSlot]]) },
+      assetSlots: { points: new Map(), bodyTextures: new Map([[key, slot]]) },
       cameraRuntime: {
         lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 } },
         projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
@@ -265,13 +273,24 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
     // Resident at 'medium', current tier 'small' ⇒ clamped req tier 'small' ≠
     // 'medium' ⇒ release so it re-fetches at the new tier.
     const slot = stubSlot('ready', { bodyId: 'earth', tier: 'medium' });
-    evaluateRows(makeBodyState(slot, 'small'), [earthRow]);
+    evaluateRows(makeBodyState('earth', slot, 'small'), [earthRow]);
     expect(slot.release).toHaveBeenCalledTimes(1);
   });
 
   it('leaves a ready slot whose committed tier already matches alone', () => {
     const slot = stubSlot('ready', { bodyId: 'earth', tier: 'small' });
-    evaluateRows(makeBodyState(slot, 'small'), [earthRow]);
+    evaluateRows(makeBodyState('earth', slot, 'small'), [earthRow]);
+    expect(slot.release).not.toHaveBeenCalled();
+  });
+
+  it('does NOT thrash a slot resident at its ceiling while the tier sits above it', () => {
+    // Uranus tops out at 'small'. Resident at 'small' with the data-volume tier
+    // at 'large': the comparison must be against the CLAMPED req tier
+    // (clampTier('large','small') === 'small'), so committed === wanted and the
+    // slot is left alone. Comparing against the raw tier ('large') would release
+    // and re-load every re-evaluation forever — the bug the clamp prevents.
+    const slot = stubSlot('ready', { bodyId: 'uranus', tier: 'small' });
+    evaluateRows(makeBodyState('uranus', slot, 'large'), [uranusRow]);
     expect(slot.release).not.toHaveBeenCalled();
   });
 });

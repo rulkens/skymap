@@ -352,8 +352,10 @@ export type EngineGpuHandles = {
    * Blue Marble bitmap. Its ('rgba16float', 'depth32float') pipeline formats
    * MUST match that row's `format` / `depth` in `renderTargets.ts` — the
    * target↔renderer-profile invariant. Constructed in `initGpu`, which also
-   * fires the (un-awaited) Blue Marble fetch → `setTexture`; until the bitmap
-   * lands the renderer draws a plain mid-blue placeholder sphere.  Excluded
+   * mints its surface texture into the `bodyTextures` slot family (key
+   * `'earth'`); that slot is proximity-demanded on descent and its commit calls
+   * `setTexture`. Until the bitmap lands the renderer draws a plain mid-blue
+   * placeholder sphere.  Excluded
    * from `isEngineReady` and null-checked at use by `earthLayer`.  Null until
    * `initGpu` constructs it; released and re-nulled by `destroy()` (releases
    * the position + uv VBOs, index IBO, uniform buffer, and the Earth texture).

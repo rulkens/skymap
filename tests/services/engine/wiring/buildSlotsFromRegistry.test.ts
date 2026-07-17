@@ -94,6 +94,6 @@ describe('buildSlotsFromRegistry', () => {
     expect(factory).toHaveBeenCalledTimes(1);
     expect(factory).toHaveBeenCalledWith(deps);
     // Purity: construction never triggers a load.
-    expect((slots.get('filaments')!.load as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(slots.get('filaments')!.load as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 });

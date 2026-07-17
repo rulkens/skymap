@@ -302,7 +302,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pickDebugOverlay: null,
       diskRadiusRing: null,
       // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
-      // constructs it + fires the Blue Marble fetch; excluded from
+      // constructs it + mints its 'earth' texture slot in the bodyTextures
+      // family (proximity-demanded, commits via setTexture); excluded from
       // isEngineReady, null-checked at use by earthLayer.
       earthRenderer: null,
       // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star

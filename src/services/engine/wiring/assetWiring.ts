@@ -156,7 +156,9 @@ function bodyPosOf(id: BodyTextureId | RingTextureId): Readonly<Vec3> {
 }
 
 /** The body's tier ceiling from the texture registry (the ring's is its host's). */
-function ceilingOf(id: BodyTextureId | RingTextureId): (typeof BODY_TEXTURE_REGISTRY)[BodyTextureId]['maxTier'] {
+function ceilingOf(
+  id: BodyTextureId | RingTextureId,
+): (typeof BODY_TEXTURE_REGISTRY)[BodyTextureId]['maxTier'] {
   return BODY_TEXTURE_REGISTRY[hostBodyId(id)].maxTier;
 }
 

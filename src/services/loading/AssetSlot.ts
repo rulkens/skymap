@@ -138,15 +138,11 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
     // ── Retry loop ────────────────────────────────────────────────────
     while (true) {
       try {
-        value = await fetchFn(
-          req,
-          ctrl.signal,
-          (loaded, total) => {
-            // Drop late progress events from superseded fetches.
-            if (myGen !== generation) return;
-            dispatch({ kind: 'bytes', loaded, total });
-          },
-        );
+        value = await fetchFn(req, ctrl.signal, (loaded, total) => {
+          // Drop late progress events from superseded fetches.
+          if (myGen !== generation) return;
+          dispatch({ kind: 'bytes', loaded, total });
+        });
         dispatch({ kind: 'fetch-succeeded' });
         break;
       } catch (err) {
