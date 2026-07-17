@@ -2,8 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { near0SelectionRingLayer } from '../../../../../src/services/engine/frame/passes/near0SelectionRingLayer';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
+import { Source } from '../../../../../src/data/sources';
 
 // The enable gate never touches ctx — a bare cast stands in for the frame ctx.
 const CTX = {} as unknown as ReadyFrameContext;
@@ -21,6 +23,29 @@ const STAR_ROW: SelectionRow = {
   absMag: 4.8,
   bpRp: 0.65,
 };
+
+// A galaxy row — yields a NON-null halo, but tagged COSMO. It exercises the
+// distinction between "no halo" and "halo for the other slab".
+const GALAXY_ROW: SelectionRow = {
+  type: 'galaxyCatalog',
+  source: Source.Glade,
+  index: 0,
+  objId: '1',
+  x: 0,
+  y: 0,
+  z: 100,
+  redshift: 0,
+  magU: 0,
+  magG: 0,
+  magR: 0,
+  magI: 0,
+  magZ: 0,
+  diameterKpc: 60,
+  axisRatio: 1,
+  positionAngleDeg: 0,
+  classByte: 0,
+  parentSurveyByte: 0,
+} as GalaxyRow;
 
 // A structure row — drives the cluster marker pass, never this halo.
 const STRUCTURE_ROW: StructureInfo = {
@@ -57,5 +82,13 @@ describe('near0SelectionRingLayer.enabled', () => {
     expect(near0SelectionRingLayer.enabled(stateWith(STRUCTURE_ROW as SelectionRow), CTX)).toBe(
       false,
     );
+  });
+
+  // The race guard: a galaxy yields a NON-null halo, but tagged COSMO. If this
+  // layer gated on halo-presence alone it would enable here, and both ring
+  // layers would write the shared renderer in one frame. Gating on the slab
+  // keeps it disabled so only the COSMO sibling draws.
+  it('is false for a galaxy row (COSMO-tagged halo present, but not this slab)', () => {
+    expect(near0SelectionRingLayer.enabled(stateWith(GALAXY_ROW), CTX)).toBe(false);
   });
 });

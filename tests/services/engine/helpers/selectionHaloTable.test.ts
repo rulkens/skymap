@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { selectionHalo } from '../../../../src/services/engine/helpers/selectionHaloTable';
+import { COSMO, NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_DISC_RADIUS_KPC,
@@ -72,6 +73,22 @@ describe('selectionHalo', () => {
     // radiusMpc = (60 * 2) / 1000 = 0.12
     expect(halo!.radiusMpc).toBeCloseTo(0.12, 6);
     expect(halo!.worldPos).toEqual([1, 2, 3]);
+  });
+
+  // The slab tags are what partition the two ring layers (COSMO vs NEAR0) so
+  // only one writes the shared renderer per frame — a swapped tag would revive
+  // the writeBuffer/submit race with no compiler or other test to catch it.
+  it('tags Mpc-scale kinds (galaxy, Milky Way) COSMO and a survey star NEAR0', () => {
+    const star: SelectionRow = {
+      type: 'star',
+      index: 3,
+      positionMpc: [0.001, -0.002, 0.0005],
+      absMag: 4.8,
+      bpRp: 0.65,
+    };
+    expect(selectionHalo(galaxyRow())!.slab).toBe(COSMO);
+    expect(selectionHalo({ type: 'milkyWay' } as SelectionRow)!.slab).toBe(COSMO);
+    expect(selectionHalo(star)!.slab).toBe(NEAR0);
   });
 
   it('applies the synthetic-fallback floor (diameterKpc = 0) for galaxies', () => {

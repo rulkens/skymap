@@ -2,20 +2,34 @@
  * near0SelectionRingLayer — the selection halo for a picked NEAR0-slab thing
  * (today: a survey star), drawn OVER onto the swap chain post-tone-map.
  *
- * ## Why a NEAR0 sibling to `selectionRingLayer`
+ * ## Why a NEAR0 sibling to `selectionRingLayer`, and why they partition by slab
  *
  * The COSMO `selectionRingLayer` and this layer feed the SAME
- * `state.gpu.selectionRingRenderer` and gate on the SAME `selectionHalo`
- * table — the difference is the slab their ring projects through. A picked
- * galaxy sits at Mpc scale and rings cleanly in COSMO, whose fixed 10 kpc near
- * plane a parsec-scale star anchor would fall inside of; a picked star sits at
+ * `state.gpu.selectionRingRenderer` and read the SAME `selectionHalo` table —
+ * the difference is the slab their ring projects through. A picked galaxy sits
+ * at Mpc scale and rings cleanly in COSMO, whose fixed 10 kpc near plane a
+ * parsec-scale star anchor would fall inside of; a picked star sits at
  * AU-to-parsec scale and rings cleanly in NEAR0, whose adaptive far plane a
- * 100 Mpc galaxy falls outside of. Both layers gate identically (the table
- * yields a descriptor for both kinds), and each ring lands only in the slab
- * whose frustum actually contains its anchor — so the shared gate needs no
- * per-kind branch, and the geometry sorts itself into the right slab. Two thin
- * layers over one renderer is the accepted shape here; a THIRD slab flavour
- * would be the trigger to fold the slab into the table (spec §10 "Adjacent").
+ * 100 Mpc galaxy falls outside of.
+ *
+ * Each layer therefore gates on its OWN slab: this one draws only halos tagged
+ * `slab === NEAR0`, the COSMO sibling only `slab === COSMO`. The `selectionHalo`
+ * table stamps that affiliation per kind (star → NEAR0; galaxy/Milky-Way →
+ * COSMO). That partition is load-bearing, not cosmetic. Both layers share one
+ * renderer whose `draw` calls `queue.writeBuffer` on a shared camera + selection
+ * uniform buffer, and the whole frame records into ONE command encoder with ONE
+ * `queue.submit`. Under WebGPU's queue timeline every `writeBuffer` is applied
+ * before the submit runs, so if both layers drew in a frame, BOTH recorded draws
+ * would read the LAST-written uniforms — the NEAR0 rebased view-projection —
+ * and the COSMO galaxy, now outside NEAR0's far plane, would clip away and its
+ * halo vanish. This is the documented "writeBuffer/submit race" landmine. The
+ * tempting alternative — gate both layers identically and rely on each
+ * wrong-slab draw self-clipping against its frustum — assumes per-draw uniforms;
+ * with a shared buffer the last write wins for both draws, so it fails exactly
+ * when a galaxy or the Milky Way is selected. Partitioning by slab makes exactly
+ * one layer enabled per frame, so exactly one `writeBuffer` lands and the race
+ * is gone by construction. A THIRD slab flavour would be the trigger to fold the
+ * slab into the table (spec §10 "Adjacent").
  *
  * ## The f64 rebase seam — why `view.slab.vp` + a camera-relative centre
  *
@@ -57,11 +71,12 @@ export const near0SelectionRingLayer: ContentLayer = {
   enabled(state, _ctx) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const row = state.selectionRows.select;
-    // A row drives the halo iff the table yields a descriptor for its kind —
-    // the same gate the COSMO sibling uses. Each ring lands only in the slab
-    // whose frustum contains its anchor (see the module header), so gating
-    // identically is correct.
-    return selectionHalo(row) !== null;
+    // A row drives THIS ring iff the table yields a NEAR0-slab descriptor for
+    // its kind. The slab test is the whole point (see the module header): it
+    // keeps this layer and the COSMO sibling from both writing the shared
+    // renderer's uniforms in one frame.
+    const halo = selectionHalo(row);
+    return halo !== null && halo.slab === NEAR0;
   },
 
   draw(pass, view, ctx, state) {
