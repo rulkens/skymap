@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { near0RingRadiusPx } from '../../../../src/services/engine/helpers/near0RingRadiusPx';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
 // The NEAR0 halo px math: `max(farFloor, 1.5 × apparentRadiusPx)`, where the
 // far floor is the SAME fixed-px dot the galaxy helper produces at radius 0
@@ -34,5 +35,24 @@ describe('near0RingRadiusPx', () => {
     expect(near).toBeCloseTo(216, 4);
     expect(near).toBeGreaterThan(far);
     expect(far).toBeGreaterThanOrEqual(floor);
+  });
+
+  it('wraps a real NEAR0 body (Earth from low orbit) instead of freezing at the floor', () => {
+    // The regression whose absence let the bug ship: at REAL NEAR0 scale every
+    // camera distance sits far below the galaxy helper's 0.001-Mpc floor, so a
+    // Mpc-scale clamp on `camDistMpc` replaced the true distance and pinned the
+    // ring at the far floor forever. Hand-computed at Earth scale:
+    //
+    //   radiusMpc = 6371 km × KM_TO_MPC (≈ 3.2408e-20) ≈ 2.0647e-16 Mpc
+    //   camDist   ≈ 7.4e-16 Mpc            (Earth from ~23,000 km altitude)
+    //   apparent  = (2.0647e-16 / 7.4e-16) × 1078 ≈ 0.27901 × 1078 ≈ 300.78 px
+    //   ring      = max(farFloor 2.5×6=15, 1.5 × 300.78) ≈ 451.16 px
+    //
+    // Under the old `max(camDistMpc, 0.001)` clamp this returned the 15 px floor
+    // (apparent collapsed to ~2e-10 px) — a fixed dot that never grew with the
+    // body. The 1e-18 divide-by-zero epsilon lets the true distance through.
+    const radiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC; // ≈ 2.0647e-16 Mpc
+    const camDist = 7.4e-16;
+    expect(near0RingRadiusPx(radiusMpc, camDist, 1078, 2.5)).toBeCloseTo(451.16, 1);
   });
 });
