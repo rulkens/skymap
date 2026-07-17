@@ -53,6 +53,7 @@ import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
+import package::lib::pickDepthBands::PICK_BAND_SCENE_STAR_EPS;
 
 @group(0) @binding(0) var<uniform> u: CameraUniforms;
 
@@ -60,10 +61,6 @@ import package::lib::billboard::expandBillboardScreen;
 // labelled scene stars, sized generously so a label's click invitation lands
 // (see module header). Deliberately larger than the survey pick's minimal clamp.
 const FAMOUS_STAR_PICK_RADIUS_PX: f32 = 9.0;
-
-// Pull the clamped clip-z this far inside the far plane so a point sitting
-// exactly ON it still passes the clip test (same epsilon the visual stage uses).
-const CLIP_Z_EPS: f32 = 1e-4;
 
 struct VSOut {
   @builtin(position) clip: vec4<f32>,
@@ -86,12 +83,18 @@ fn vs(
   var out: VSOut;
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);
 
-  // Survive the adaptive foreground far plane on a deep descent, as the visual
-  // starPoints stage does. This pass IS depth tested (unlike the depthless
-  // visual point pass), but the clamp stays benign: a beyond-far point lands at
-  // z ~= w (the maximum depth), so any nearer body still wins the 'less' test —
-  // the far sub-pixel star merely stays pickable instead of being clipped away.
-  out.clip.z = min(out.clip.z, out.clip.w * (1.0 - CLIP_Z_EPS));
+  // Clamp true depth onto the SCENE-STAR band (header 'lib/pickDepthBands'). A
+  // within-far scene star keeps its TRUE depth (min leaves it untouched), so
+  // scene stars sort physically among themselves and sit in front of every
+  // survey star and the backdrop. A BEYOND-far scene star (past the adaptive
+  // foreground far plane on a deep descent) lands exactly on the scene band
+  // 'z = w * (1 - PICK_BAND_SCENE_STAR_EPS)' — still the SHALLOWEST band, so it
+  // beats every survey star while staying pickable instead of being clipped
+  // away. This is the shared scene-star clamp value the survey pick stage names
+  // as its front band too, single-sourced so the two can never diverge. Glints
+  // (planets/moons) share this shader; their AU-scale true depth keeps them in
+  // front of every band automatically — that IS the planets/moons priority.
+  out.clip.z = min(out.clip.z, out.clip.w * (1.0 - PICK_BAND_SCENE_STAR_EPS));
 
   out.uv = corner;
   out.packedId = packedId;

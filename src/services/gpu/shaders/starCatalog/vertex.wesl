@@ -180,6 +180,7 @@ import package::lib::starPhotometry::STAR_GLOW_MAX_PX;
 import package::lib::starPhotometry::D_REF_MPC;
 import package::lib::starPhotometry::MIN_D2_MPC2;
 import package::lib::starPhotometry::starPeakIntensity;
+import package::lib::pickDepthBands::PICK_BAND_SURVEY_STAR_EPS;
 
 @group(0) @binding(0) var<uniform> u: StarUniforms;
 @group(1) @binding(0) var<storage, read> nodeParams: array<NodeParams>;
@@ -200,8 +201,12 @@ const STAR_COLORIDX_STEP: f32 = 0.078125;
 // In-cell 10-bit offset unit: reciprocal of 1024 (offset 0..1023 spans one box).
 const OFFSET_SCALE: f32 = 0.0009765625; // 1.0 / 1024.0
 
-// Depth epsilon: pull the clamped clip-z this far inside the far plane so a
-// point sitting exactly ON it still passes the clip test.
+// Visual-pass depth epsilon: pull the clamped clip-z this far inside the far
+// plane so a point sitting exactly ON it still passes the clip test. Only the
+// VISUAL pass uses this min-clamp — that pass is depthless additive and needs
+// only the clip-survival property. The PICK pass instead FORCES the survey
+// depth band (PICK_BAND_SURVEY_STAR_EPS, imported) so survey stars rank by
+// importance, not distance — see the depth write at the end of 'vs'.
 const CLIP_Z_EPS: f32 = 1e-4;
 
 // Pick-pass clickable-footprint floor in px. A star sized honestly by the
@@ -394,14 +399,29 @@ fn vs(
   var out: VSOut;
   out.clip = center + vec4<f32>(screenOffset, 0.0, 0.0);
 
-  // Survive the adaptive foreground far plane on a deep descent — identical to
-  // bodies/starPoints. In the VISUAL pass this is a pure clip-pass fix: that
-  // pass is depthless additive (no depth test/write), so clamping clip-z
-  // perturbs no depth compare. The pick pass shares this stage but IS depth
-  // tested; the clamp stays benign there because a beyond-far point lands at the
-  // maximum depth (z ≈ w), so any nearer star still wins the 'less' test — the
-  // far sub-pixel star merely stays pickable instead of being clipped away.
-  out.clip.z = min(out.clip.z, out.clip.w * (1.0 - CLIP_Z_EPS));
+  // Depth write — the two passes diverge here (header 'lib/pickDepthBands').
+  //
+  // VISUAL pass: survive the adaptive foreground far plane on a deep descent by
+  // pulling clip-z just inside it. That pass is depthless additive (no depth
+  // test/write), so this min-clamp perturbs no depth compare; it only keeps a
+  // beyond-far sprite from being clipped away.
+  //
+  // PICK pass: this stage IS depth tested, and the user wants IMPORTANCE order,
+  // not distance order — a Gaia field star a parsec in front of a famous star
+  // must NOT steal its click. So instead of the true-depth clamp we FORCE every
+  // survey star onto the survey band 'z = w * (1 - PICK_BAND_SURVEY_STAR_EPS)'.
+  // That band sits DEEPER than the scene-star band (smaller eps → larger z/w →
+  // loses 'less'), so survey stars always lose to scene/famous stars, glints and
+  // spheres, and DEEPER than nothing else — they stay ahead of only the Milky
+  // Way backdrop band. Consequence: two overlapping survey stars tie on this one
+  // constant depth, so the leaf-walk draw order decides between them — acceptable
+  // because 'nearest of two overlapping dots in a dense 7 px field' carries no
+  // user meaning, whereas 'famous star beats the field behind it' does.
+  out.clip.z = select(
+    min(out.clip.z, out.clip.w * (1.0 - CLIP_Z_EPS)),
+    out.clip.w * (1.0 - PICK_BAND_SURVEY_STAR_EPS),
+    u.pickPass == 1u
+  );
 
   out.uv = corner;
 
