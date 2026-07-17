@@ -507,43 +507,43 @@ the `earthTexture` field on `EngineAssetSlots`, the `'earthTexture'` member of
 `AssetKey`, and the committed `public/images/earth/blue-marble-4k.jpg`. Earth now
 loads through the family as key `'earth'`.
 
-- [ ] Add `bodyTextures` to `EngineAssetSlots.d.ts` (docblock: keyed family
+- [x] Add `bodyTextures` to `EngineAssetSlots.d.ts` (docblock: keyed family
   mirroring `.points`, per-body proximity-gated + released); union the family
   keys into `AssetKey.d.ts` (docblock: the asset set widens with the body
   textures); route family keys in `slotFor.ts` to
   `state.assetSlots.bodyTextures.get(key)`.
-- [ ] Add `bodyTextureSlotRegistry.ts` (mint + per-key commit dispatch +
+- [x] Add `bodyTextureSlotRegistry.ts` (mint + per-key commit dispatch +
   `onRelease`), mint the family in `initGpu.ts` beside the foreground renderers.
   Didactic module header: mirrors `wireGalaxyCatalogSourceSlot`; commit routes
   `'earth'` now, other keys extend in Plan 02.
-- [ ] Add the `bodyTextureRow` family (`...ALL_BODY_TEXTURE_KEYS.map(bodyTextureRow)`)
+- [x] Add the `bodyTextureRow` family (`...ALL_BODY_TEXTURE_KEYS.map(bodyTextureRow)`)
   to `ASSET_WIRING`; DELETE the `earthTexture` row + import +
   `EARTH_TEXTURE_MAX_DISTANCE_MPC`.
-- [ ] Add the `bodyTextures` stale-tier release condition to
+- [x] Add the `bodyTextures` stale-tier release condition to
   `reevaluateDemand.ts` (documented as one release concept with the distance
   edge, spec §5.4).
-- [ ] Delete `earthTextureSlot.ts`, `earthTextureFetcher.ts`, the `earthTexture`
+- [x] Delete `earthTextureSlot.ts`, `earthTextureFetcher.ts`, the `earthTexture`
   `EngineAssetSlots` field + `AssetKey` member, and
   `public/images/earth/blue-marble-4k.jpg`; remove any `engine.ts` seed/teardown
   of the old slot.
-- [ ] Test `bodyTextureRow demand/release encodes hysteresis` — with a stub
+- [x] Test `bodyTextureRow demand/release encodes hysteresis` — with a stub
   `DemandCtx` whose `cameraPosMpc` sits (a) inside `loadRadiusMpc(id)` → `demand`
   true, `release` false; (b) between `loadRadius` and `2·loadRadius` → BOTH false
   (the gap `!demand` could not encode); (c) beyond `2·loadRadius` → `demand`
   false, `release` true. Hand-place the camera relative to a known body position.
-- [ ] Test `bodyTextureSlotRegistry mints one slot per textured body + the ring`
+- [x] Test `bodyTextureSlotRegistry mints one slot per textured body + the ring`
   — after minting, `state.assetSlots.bodyTextures` has a slot for every
   `BodyTextureId` and `'saturn-ring'`; the `'earth'` slot's commit calls
   `earthRenderer.setTexture` (spy renderer). Structural, no pipeline restatement.
-- [ ] Test `reevaluateDemand releases a stale-tier bodyTextures slot` — a `ready`
+- [x] Test `reevaluateDemand releases a stale-tier bodyTextures slot` — a `ready`
   slot committed at `medium` with `state.tier === 'small'` (whose clamped `req`
   tier differs) is released; a slot whose committed tier already matches is left
   alone.
-- [ ] **Grep gate — no references left:** a repo search for `earthTextureSlot`,
+- [x] **Grep gate — no references left:** a repo search for `earthTextureSlot`,
   `earthTextureFetcher`, `EARTH_TEXTURE_MAX_DISTANCE_MPC`, and `.textureUrl`
   returns ZERO hits outside this plan/spec (spec §12). (Main thread runs the
   search — `feedback_bg_subagents_no_npm`.)
-- [ ] `npm test -- bodyTextureSlotRegistry assetWiring reevaluateDemand initGpu`
+- [x] `npm test -- bodyTextureSlotRegistry assetWiring reevaluateDemand initGpu`
   → green. Commit.
 
 ## Task 11 — Full gate

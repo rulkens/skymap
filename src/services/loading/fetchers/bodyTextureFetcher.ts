@@ -20,8 +20,9 @@
  * prior fetch is still in flight) aborts the multi-MB download AND — because the
  * decode is chained off `res.blob()` — skips the `createImageBitmap` decode too.
  *
- * Posture on failure is silent-optional-asset (same as the deleted
- * `earthTextureFetcher`): a 404 / decode failure throws, the error flows to the
+ * Posture on failure is silent-optional-asset (the same posture the former
+ * bespoke Earth-texture fetcher carried): a 404 / decode failure throws, the
+ * error flows to the
  * slot's `error` state, and the renderer keeps drawing its flat-albedo
  * placeholder sphere rather than crashing the descent. Non-Earth textures
  * demanded before Plan 03 ships their assets take exactly this harmless path.

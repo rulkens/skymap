@@ -38,6 +38,7 @@
  */
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
+import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -46,11 +47,23 @@ export function slotFor(
   state: EngineState,
   key: AssetKey,
 ): AssetSlot<unknown, unknown> | undefined {
-  const slot =
-    typeof key === 'number'
-      ? SOURCE_REGISTRY[key].type === 'starCatalog'
+  // Numeric = Source code; dispatch on the registry entry's kind (star vs
+  // galaxy) for which per-source map holds the slot.
+  if (typeof key === 'number') {
+    const slot =
+      SOURCE_REGISTRY[key].type === 'starCatalog'
         ? state.assetSlots.starCatalogs.get(key)
-        : state.assetSlots.points.get(key)
-      : state.assetSlots[key];
-  return (slot ?? undefined) as AssetSlot<unknown, unknown> | undefined;
+        : state.assetSlots.points.get(key);
+    return (slot ?? undefined) as AssetSlot<unknown, unknown> | undefined;
+  }
+  // A body-texture family key routes through the keyed `bodyTextures` Map (the
+  // fourth slot home, alongside points / starCatalogs / named sidecar fields).
+  // The guard narrows `key` so the else-branch below can index the named
+  // sidecar fields without a cast.
+  if (isBodyTextureKey(key)) {
+    return (state.assetSlots.bodyTextures.get(key) ?? undefined) as
+      | AssetSlot<unknown, unknown>
+      | undefined;
+  }
+  return (state.assetSlots[key] ?? undefined) as AssetSlot<unknown, unknown> | undefined;
 }

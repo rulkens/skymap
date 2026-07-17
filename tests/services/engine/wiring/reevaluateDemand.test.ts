@@ -20,11 +20,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { evaluateRows } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { Source } from '../../../../src/data/sources';
+import { clampTier } from '../../../../src/utils/math/clampTier';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { Tier } from '../../../../src/@types/data/Tier';
 
 type StubSlot = AssetSlot<unknown, unknown> & {
   load: ReturnType<typeof vi.fn>;
@@ -39,7 +41,10 @@ type StubSlot = AssetSlot<unknown, unknown> & {
  * already loading/ready and assert the idle-guard (load) or ready-guard
  * (release) fires the right edge.
  */
-function stubSlot(initialKind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
+function stubSlot(
+  initialKind: LoadState<unknown>['kind'] = 'idle',
+  lastReq: unknown = null,
+): StubSlot {
   const load = vi.fn();
   const release = vi.fn();
   let kind = initialKind;
@@ -49,6 +54,9 @@ function stubSlot(initialKind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
     current: () => null,
     state: () => ({ kind }) as LoadState<unknown>,
     subscribe: () => () => {},
+    // The request the slot last committed with — the stale-tier evict edge reads
+    // its tier. Seeded per stub so a test can model a slot resident at a tier.
+    lastRequest: () => lastReq,
     forceReload: () => {},
     cancel: () => {},
     release: release as unknown as StubSlot['release'],
@@ -70,8 +78,8 @@ function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): Engine
     requests: new Set(),
     assetSlots: { points },
     // buildDemandCtx assembles the camera eye from pose + projection, so both
-    // must be present. A far resting pose keeps the descent-gated earthTexture
-    // row out of the demand set.
+    // must be present. A far resting pose keeps the proximity-gated body-texture
+    // rows out of the demand set.
     cameraRuntime: {
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 } },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
@@ -226,5 +234,44 @@ describe('evaluateRows', () => {
     expect(sdss.release).not.toHaveBeenCalled();
     expect(glade.release).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalled();
+  });
+});
+
+describe('evaluateRows — bodyTextures stale-tier evict', () => {
+  /** A body-texture row (key routes through the bodyTextures map) whose req
+   *  clamps the tier to Earth's 'large' ceiling — so req('small').tier === 'small'. */
+  const earthRow: AssetWiringRow = {
+    key: 'earth',
+    factory: () => stubSlot(),
+    req: (tier) => ({ bodyId: 'earth', tier: clampTier(tier, 'large') }),
+    demand: () => false,
+  };
+
+  /** State with the 'earth' slot in the keyed bodyTextures map at the given tier. */
+  function makeBodyState(earthSlot: AssetSlot<unknown, unknown>, tier: Tier): EngineState {
+    return {
+      tier,
+      settings: {},
+      requests: new Set(),
+      assetSlots: { points: new Map(), bodyTextures: new Map([['earth', earthSlot]]) },
+      cameraRuntime: {
+        lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 } },
+        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+      },
+    } as unknown as EngineState;
+  }
+
+  it('releases a ready slot whose committed tier no longer matches the current tier', () => {
+    // Resident at 'medium', current tier 'small' ⇒ clamped req tier 'small' ≠
+    // 'medium' ⇒ release so it re-fetches at the new tier.
+    const slot = stubSlot('ready', { bodyId: 'earth', tier: 'medium' });
+    evaluateRows(makeBodyState(slot, 'small'), [earthRow]);
+    expect(slot.release).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a ready slot whose committed tier already matches alone', () => {
+    const slot = stubSlot('ready', { bodyId: 'earth', tier: 'small' });
+    evaluateRows(makeBodyState(slot, 'small'), [earthRow]);
+    expect(slot.release).not.toHaveBeenCalled();
   });
 });

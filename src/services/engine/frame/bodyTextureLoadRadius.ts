@@ -41,15 +41,17 @@
  * sparse, so a giant's wide gate rarely overlaps a neighbour.
  *
  * The ring (`'saturn-ring'`) has no body of its own — it rides Saturn's disk —
- * so its load radius is Saturn's. Accepting `RingTextureId` here (mapping it to
- * `'saturn'`) lets the wiring row call this with the same key space it uses for
- * the slot family, rather than special-casing the ring at the call site.
+ * so its load radius is Saturn's. Resolving the host via the shared `hostBodyId`
+ * (derived from `SCENE_RINGS`) lets the wiring row call this with the same key
+ * space it uses for the slot family, rather than special-casing the ring at the
+ * call site.
  */
 
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { hostBodyId } from '../../../utils/scene/hostBodyId';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
 // How many of the body's own radii out from its centre the texture demand
@@ -57,13 +59,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 // header's trade-off rationale.
 const LOAD_RADIUS_BODY_RADII = 1e4;
 
-// The ring's texture demand rides Saturn's disk, so its load radius is Saturn's.
-const RING_HOST: Record<RingTextureId, BodyTextureId> = {
-  'saturn-ring': 'saturn',
-};
-
 export function loadRadiusMpc(id: BodyTextureId | RingTextureId): number {
-  const bodyId = id in RING_HOST ? RING_HOST[id as RingTextureId] : id;
-  const body = findByIdOrThrow(SCENE_BODIES, bodyId, 'bodyTextureLoadRadius');
+  const body = findByIdOrThrow(SCENE_BODIES, hostBodyId(id), 'bodyTextureLoadRadius');
   return body.radiusKm * SCALE_UNITS.KM_TO_MPC * LOAD_RADIUS_BODY_RADII;
 }

@@ -327,6 +327,9 @@ function makeState(): EngineState {
     settings: {},
     assetSlots: {
       points: new Map(),
+      // initGpu mints the body-texture family into this keyed map (beside the
+      // body renderers) — declared here so the phase can write into it.
+      bodyTextures: new Map(),
     },
   } as unknown as EngineState;
 }
@@ -393,6 +396,11 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // Reachability claim for the textured Earth — it owns the position +
     // uv VBOs, index IBO, uniform buffer, and Earth texture.
     expect(state.gpu.earthRenderer).toBe(stubs.earthRenderer);
+    // The body-texture slot family is minted beside the body renderers: one
+    // slot per key, including Earth's (the descent texture now rides this
+    // family, not a bespoke path).
+    expect(state.assetSlots.bodyTextures.has('earth')).toBe(true);
+    expect(state.assetSlots.bodyTextures.has('saturn-ring')).toBe(true);
     // The resolved-star renderer (the Sun sphere) must reach state.gpu.* the
     // same way.
     expect(state.gpu.starRenderer).toBe(stubs.starRenderer);

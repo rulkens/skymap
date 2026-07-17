@@ -5,8 +5,8 @@
  *
  * The assertion is the monotonic relation against the seeded radii (Jupiter is
  * the largest textured body, Mercury one of the smallest), not a pinned Mpc
- * value — the exact figure is a product of `KM_TO_MPC` and the generous
- * lead-time multiplier, neither of which a test should restate. A regression
+ * value — the exact figure is a product of `KM_TO_MPC` and the selectivity-tuned
+ * multiplier, neither of which a test should restate. A regression
  * that decouples the radius from the seed (a hand-typed literal, a swapped
  * lookup) breaks the ordering and fails here.
  */

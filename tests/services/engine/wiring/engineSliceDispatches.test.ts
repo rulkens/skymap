@@ -156,6 +156,7 @@ function makeStructureState(): {
         load: vi.fn(),
         state: () => ({ kind: 'idle' }),
         current: () => null,
+        lastRequest: () => null,
         forceReload: vi.fn(),
         cancel: vi.fn(),
         release: vi.fn(),
@@ -177,6 +178,7 @@ function makeProgressState(): EngineState {
     current: () => null,
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
+    lastRequest: () => null,
     forceReload: () => {},
     cancel: () => {},
     release: () => {},
@@ -195,6 +197,8 @@ function makeProgressState(): EngineState {
       cf4Density: stubSlot('cf4Density'),
       mcpm: stubSlot('mcpm'),
       flow: stubSlot('flow'),
+      // Empty keyed family: installLoadProgress walks it like points.
+      bodyTextures: new Map(),
     },
     subsystems: { loadProgress: null },
   } as unknown as EngineState;
@@ -250,7 +254,8 @@ function makeSyntheticFallbackState(): {
       current: () => null,
       state: () => ({ kind: 'idle' }),
       subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
-      forceReload: () => {},
+      lastRequest: () => null,
+    forceReload: () => {},
       cancel: () => {},
       release: () => {},
     });
@@ -261,10 +266,10 @@ function makeSyntheticFallbackState(): {
     settings: { galaxyCatalogs: { items } } as never,
     requests: new Set<string>(),
     gpu: { renderer: { totalCount: () => 99 } },
-    assetSlots: { points: assetSlotPoints },
+    assetSlots: { points: assetSlotPoints, bodyTextures: new Map() },
     // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
-    // so both must be present; a far resting pose keeps the descent-gated
-    // earthTexture row out of the demand set.
+    // so both must be present; a far resting pose keeps the proximity-gated
+    // body-texture rows out of the demand set.
     cameraRuntime: {
       lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
       projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },

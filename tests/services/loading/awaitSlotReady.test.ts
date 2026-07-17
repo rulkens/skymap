@@ -54,6 +54,7 @@ function makeFakeSlot<T>(initial: LoadState<T>): {
       listeners.add(wrapped);
       return () => listeners.delete(wrapped);
     },
+    lastRequest: () => null,
     forceReload: vi.fn(),
     cancel: vi.fn(),
     release: vi.fn(),

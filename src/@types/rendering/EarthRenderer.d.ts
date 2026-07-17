@@ -11,9 +11,10 @@
  *
  * ### Texture lifecycle
  *
- * The Blue Marble bitmap is fetched by the descent-gated `earthTexture` asset
- * slot (`createEarthTextureSlot` + its `ASSET_WIRING` row), whose commit calls
- * `setTexture`. Until it lands the renderer draws a plain mid-blue sphere sampled
+ * The Blue Marble bitmap is fetched by the proximity-gated `bodyTextures` slot
+ * family under key `'earth'` (minted in `initGpu`, `bodyTextureSlotRegistry`),
+ * whose commit dispatches to `setTexture`. Until it lands the renderer draws a
+ * plain mid-blue sphere sampled
  * from a 1×1 placeholder texture created at construction — the geometry is
  * visible-but-plain rather than absent, which keeps the descent legible even
  * before the asset arrives. `setTexture(bitmap)` replaces the placeholder with

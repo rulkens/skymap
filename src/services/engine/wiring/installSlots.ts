@@ -30,6 +30,7 @@
  */
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
+import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -55,6 +56,11 @@ export function installSlots(
       // Galaxy point sources are installed in initGpu — never here.
       continue;
     }
+    // Body-texture family keys are `built: 'external'` (minted in initGpu into
+    // the keyed `bodyTextures` map), so the construction pass never hands them
+    // here — the guard is a defensive skip that also narrows `key` off the
+    // family members so the named-field index below typechecks.
+    if (isBodyTextureKey(key)) continue;
     state.assetSlots[key] = slot as never;
   }
 }

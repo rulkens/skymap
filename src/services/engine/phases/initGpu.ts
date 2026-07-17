@@ -79,6 +79,7 @@ import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   wireGalaxyCatalogSourceSlot,
 } from '../wiring/galaxyCatalogSourceRegistry';
+import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
 import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
@@ -480,11 +481,17 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // + this comment rather than an import.
   state.gpu.earthRenderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
 
-  // The Blue Marble texture that re-skins this placeholder sphere loads via a
-  // first-class demand-gated asset row (`createEarthTextureSlot` + the
-  // `earthTexture` ASSET_WIRING row), NOT a fire-and-forget fetch here — so the
-  // ~MB JPG is paid on the descent, not at boot, and its lifecycle (abort on
-  // release, render wake on ready) is owned by the slot machinery.
+  // ── Body-surface texture slot family ─────────────────────────────────
+  //
+  // One demand-gated asset slot per textured body + the Saturn ring, minted
+  // here (after the body renderers exist — the commit uploads into them) just
+  // like the per-source point slots. The Blue Marble texture that re-skins this
+  // placeholder Earth is now key `'earth'` in that family, NOT a bespoke
+  // fire-and-forget fetch: each surface is paid on proximity (per-body load
+  // radius), and its lifecycle (abort on release, render wake on ready) is owned
+  // by the slot machinery. Commit routes `'earth'` today; Plan 02 extends the
+  // dispatch to the planet/moon/ring renderers.
+  wireBodyTextureSlots(state);
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

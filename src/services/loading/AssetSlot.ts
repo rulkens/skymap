@@ -237,6 +237,9 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       subscribers.add(fn);
       return () => subscribers.delete(fn);
     },
+    lastRequest(): Req | null {
+      return lastRequest;
+    },
     forceReload(): void {
       if (lastRequest !== null) this.load(lastRequest);
     },
@@ -274,6 +277,10 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       controller?.abort();
       controller = null;
       lastReady = null;
+      // Clear the committed request too: a released slot holds nothing, so the
+      // stale-tier check reads `null` and `forceReload()` is a no-op until the
+      // demand loop re-loads it at the current tier.
+      lastRequest = null;
       state = { kind: 'idle' };
       if (releasing && onRelease) onRelease(releasing.value);
       for (const sub of subscribers) sub(state);

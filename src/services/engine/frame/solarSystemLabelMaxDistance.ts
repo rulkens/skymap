@@ -19,8 +19,9 @@
  * exactly 0 at this distance, so the fade-in cannot pop the frame the layer
  * switches on.
  *
- * Intentionally independent of `EARTH_TEXTURE_MAX_DISTANCE_MPC` (the Blue
- * Marble demand gate): the two are separate tuning knobs that currently
- * coincide at 1e-3 — caption onset and texture-load onset may be tuned apart.
+ * Intentionally independent of the body-texture demand gates (`loadRadiusMpc`,
+ * now per-body): caption onset and texture-load onset are separate tuning knobs
+ * — this caption gate is a single distance-to-focus, the texture gates are
+ * per-body proximity radii, so the two may be tuned apart.
  */
 export const SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC = 1e-3;

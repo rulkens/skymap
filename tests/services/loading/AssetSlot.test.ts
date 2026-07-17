@@ -328,4 +328,19 @@ describe('AssetSlot — cancel and forceReload', () => {
     await vi.waitFor(() => expect(slot.current()).toBe('payload-2'));
     expect(calls).toBe(2);
   });
+
+  it('lastRequest() exposes the loaded request and clears on release', async () => {
+    // The read surface the stale-tier evict edge consults: null before the
+    // first load, the loaded request while resident, null again after release.
+    const fetch: Fetcher<string, number> = vi.fn().mockResolvedValue('A');
+    const slot = createAssetSlot<string, number>({ name: 'test', fetch, retry: noRetry });
+    expect(slot.lastRequest()).toBeNull();
+
+    slot.load(7);
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    expect(slot.lastRequest()).toBe(7);
+
+    slot.release();
+    expect(slot.lastRequest()).toBeNull();
+  });
 });
