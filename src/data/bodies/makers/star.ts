@@ -20,15 +20,11 @@
  */
 
 import { SCALE_UNITS } from '../../scaleUnits';
+import { SOLAR_RADIUS_KM } from '../solarRadiusKm';
 import { raDecDistToCartesian } from '../../../utils/math/raDecDistToCartesian';
 import { temperatureToLinearRgb } from '../../../utils/color/temperatureToLinearRgb';
 import type { FamousStarRow } from '../../../@types/data/FamousStarRow';
 import type { StarBody } from '../../../@types/scene/StarBody';
-
-// The Sun's real radius in kilometres — the anchor `radiusSolar` scales from.
-// Module-local to the maker: `star()` is its only reader, and it cannot live in
-// the stars table file without a circular import.
-const SOLAR_RADIUS_KM = 696340;
 
 export function star(row: FamousStarRow): StarBody {
   return {
