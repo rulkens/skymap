@@ -159,15 +159,15 @@ export function temperatureToLinearRgb(kelvin: number): Vec3;
 **Rule (put in the task text for the implementer):** every file in `src/@types/` exports
 **exactly one** `type`; filename = the type name. Deep relative imports, no barrel.
 
-- [ ] Add `FamousStarRow.d.ts`, `StarInfo.d.ts`, `FamousStarMetaEntry.d.ts` verbatim from
+- [x] Add `FamousStarRow.d.ts`, `StarInfo.d.ts`, `FamousStarMetaEntry.d.ts` verbatim from
       the Interfaces section, each with a didactic docblock (what it projects and why the
       shape is exactly this — render+search for the row, sync-knowable fields for
       `StarInfo`, sidecar physical properties for the meta entry).
-- [ ] Add `readonly oblateness?: number;` to `StarBody` (`StarBody.d.ts:23-30`) with a
+- [x] Add `readonly oblateness?: number;` to `StarBody` (`StarBody.d.ts:23-30`) with a
       one-line comment (flattening `(a−c)/a`, absent ⇒ spherical; feeds the per-axis MVP
       scale). Update the module header's "colour is the spectral-class palette" note to
       "colour derives from blackbody `temperatureK`; radius is the real per-star value".
-- [ ] **No runtime test** — `tsc` proves these (testing.md: no runtime tests of type
+- [x] **No runtime test** — `tsc` proves these (testing.md: no runtime tests of type
       declarations). Downstream tasks consume them. Commit.
 
 ## Task 2 — `temperatureToLinearRgb` blackbody util
@@ -181,16 +181,16 @@ Implementation is the implementer's (a standard Planckian-locus polynomial fit �
 RGB). Reusable later for Gaia `teff_gspphot` tinting — that's why it's a leaf util, not
 inlined in the maker (spec §6).
 
-- [ ] Add `temperatureToLinearRgb.ts` with a didactic docblock (blackbody locus; why
+- [x] Add `temperatureToLinearRgb.ts` with a didactic docblock (blackbody locus; why
       linear RGB; the future Gaia reuse).
-- [ ] Test `hotter stars are bluer than the Sun` — `temperatureToLinearRgb(30000)` (Rigel)
+- [x] Test `hotter stars are bluer than the Sun` — `temperatureToLinearRgb(30000)` (Rigel)
       has a higher blue:red channel ratio than `temperatureToLinearRgb(5772)` (Sun).
-- [ ] Test `cooler stars are redder than the Sun` — `temperatureToLinearRgb(3000)`
+- [x] Test `cooler stars are redder than the Sun` — `temperatureToLinearRgb(3000)`
       (M dwarf) has a higher red:blue ratio than the Sun.
-- [ ] Test `the Sun is near-neutral` — at 5772 K the three channels sit within a modest
+- [x] Test `the Sun is near-neutral` — at 5772 K the three channels sit within a modest
       band of each other (no channel dominates). **Assert channel *relationships*, never
       literal RGB constants** (spec §6 pins directional realism, not magic numbers).
-- [ ] `npm test -- temperatureToLinearRgb` → green. Commit.
+- [x] `npm test -- temperatureToLinearRgb` → green. Commit.
 
 ## Task 3 — Seed parser + validation
 
@@ -216,23 +216,23 @@ throws naming the offending `id`, mirroring `validateFamousEntry`, `famousSeed.t
 
 **Tests (spec §10 — each fails on a real bug):**
 
-- [ ] `throws on a duplicate id`.
-- [ ] `throws on a missing gaiaDr3 field` — an entry object with no `gaiaDr3` key at all
+- [x] `throws on a duplicate id`.
+- [x] `throws on a missing gaiaDr3 field` — an entry object with no `gaiaDr3` key at all
       throws (the required-field invariant — hand-build the object without the key).
-- [ ] `accepts gaiaDr3: null` — a `null` entry validates.
-- [ ] `throws on a non-digit gaiaDr3 string` — e.g. `"DR3 123"` or `"12a3"` throws.
-- [ ] `throws on out-of-range ra / dec / distancePc / temperatureK` — one case each
+- [x] `accepts gaiaDr3: null` — a `null` entry validates.
+- [x] `throws on a non-digit gaiaDr3 string` — e.g. `"DR3 123"` or `"12a3"` throws.
+- [x] `throws on out-of-range ra / dec / distancePc / temperatureK` — one case each
       (`distancePc: -1` throws; `distancePc: 0` is ACCEPTED — the Sun).
-- [ ] `throws when names[0] !== commonName`.
-- [ ] `accepts an entry with no names[1]` — a single-name entry (`names: ['Barnard's
+- [x] `throws when names[0] !== commonName`.
+- [x] `accepts an entry with no names[1]` — a single-name entry (`names: ['Barnard's
       Star']`, `commonName` equal) validates (correction 3 regression guard).
-- [ ] `accepts an entry omitting massSolar/luminositySolar/ageGyr` (correction 4).
-- [ ] **Coverage invariant (migrated from the deleted `famousStarGaiaIds.test.ts`):**
+- [x] `accepts an entry omitting massSolar/luminositySolar/ageGyr` (correction 4).
+- [x] **Coverage invariant (migrated from the deleted `famousStarGaiaIds.test.ts`):**
       `every parsed entry carries gaiaDr3, and the Sun's is null` — parse the *real*
       committed seed (once it lands in Task 5) via `rawDataPath('famous-stars.seed')`,
       assert every entry has the property and `entries.find(e => e.id === 'sun').gaiaDr3
       === null`. (Structural invariant over curated data — a keep-rule test.)
-- [ ] `npm test -- famousStarsSeed` → green. Commit.
+- [x] `npm test -- famousStarsSeed` → green. Commit.
 
 > **Ordering note:** the coverage-invariant test reads the real seed, which Task 5
 > authors. Write it now against a tiny inline fixture for the field-present check, and add
@@ -275,20 +275,20 @@ edit (spec §3).
 
 **Test (spec §10 — fixture round-trip, not the full roster):**
 
-- [ ] Add `buildFamousStars.ts` with a didactic module header (why split-at-build; why a
+- [x] Add `buildFamousStars.ts` with a didactic module header (why split-at-build; why a
       committed generated `.ts`; the two artefacts). Extract the seed→row projection and
       the seed→meta projection as pure functions the test can call directly (keep the file
       thin so the test needn't touch the filesystem).
-- [ ] Add the `'famous-stars.seed'` registry row and the `package.json` script.
-- [ ] Test `projects a fixture seed into the generated table` — feed a 2–3-entry fixture
+- [x] Add the `'famous-stars.seed'` registry row and the `package.json` script.
+- [x] Test `projects a fixture seed into the generated table` — feed a 2–3-entry fixture
       (one spherical, one with `oblateness` + `variable`, one with a `null` gaiaDr3 +
       omitted `massSolar`); assert the generated rows carry exactly the render+search
       fields (id/commonName/names/constellation/raDeg/decDeg/distancePc/absMag/
       temperatureK/radiusSolar/oblateness?) and **omit** description/spectralType/magV.
-- [ ] Test `projects a fixture seed into the sidecar` — assert the sidecar entries carry
+- [x] Test `projects a fixture seed into the sidecar` — assert the sidecar entries carry
       the physical fields + `description`, that an omitted optional (`massSolar`) is
       **absent** (not `0`/`null`) in the JSON, and that `variable` round-trips.
-- [ ] `npm test -- buildFamousStars` → green. Commit (tool + registry + script; no
+- [x] `npm test -- buildFamousStars` → green. Commit (tool + registry + script; no
       generated artefact yet — that lands in Task 5).
 
 ## Task 5 — Initial seed (curation batch 0): the existing 26 stars, fully curated
