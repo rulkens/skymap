@@ -199,6 +199,8 @@ describe('planetsLayer.draw', () => {
       expect(call[1]).toBe(planet.positionMpc);
       expect(call[2]).toBe(RENDER_ORIGIN_MPC);
       expect(call[3]).toBe(planet.radiusKm * SCALE_UNITS.KM_TO_MPC);
+      // Each planet forwards its own baked orientation as the rotation factor.
+      expect(call[4]).toBe(planet.orientation);
     });
 
     // Exactly one draw for the whole batch, with count == planet count.

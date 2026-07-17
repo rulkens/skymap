@@ -136,6 +136,7 @@ export const planetsLayer: ContentLayer = {
         planet.positionMpc,
         RENDER_ORIGIN_MPC,
         planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        planet.orientation,
       );
       const base = n * INSTANCE_FLOATS;
       staging.set(mvp, base);

@@ -202,6 +202,8 @@ describe('earthLayer.draw', () => {
     expect(call[1]).toBe(SCENE_EARTH.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
     expect(call[3]).toBe(SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC);
+    // The body's baked orientation is forwarded as the model's rotation factor.
+    expect(call[4]).toBe(SCENE_EARTH.orientation);
 
     // The renderer receives the pass + the composed length-16 f32 MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);

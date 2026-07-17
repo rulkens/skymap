@@ -25,10 +25,13 @@
 import { describe, expect, it } from 'vitest';
 import { mat4, mat4d, vec4 } from 'wgpu-matrix';
 
+import type { Mat3 } from '../../../src/@types/math/Mat3';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { composeBodyMvp } from '../../../src/utils/camera/composeBodyMvp';
 import { computeForegroundViewProj } from '../../../src/utils/camera/computeForegroundViewProj';
+import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { narrowMat4 } from '../../../src/utils/math/narrowMat4';
 
 // ── Shared test geometry ──────────────────────────────────────────────────────
@@ -136,7 +139,7 @@ function ndcErrorMpc(
 describe('composeBodyMvp', () => {
   it('an Earth-radius body at 1 AU survives compose-then-narrow with sub-metre error', () => {
     // Compose-before-narrow path (the implementation under test).
-    const mvpF32 = composeBodyMvp(foregroundVp, bodyPosMpc, renderOrigin, radiusMpc);
+    const mvpF32 = composeBodyMvp(foregroundVp, bodyPosMpc, renderOrigin, radiusMpc, IDENTITY_MAT3);
     const ndcF32 = transformF32ToNdc(mvpF32);
 
     // Pure-f64 ground truth.
@@ -232,6 +235,7 @@ describe('composeBodyMvp', () => {
       pcBodyPosMpc,
       pcRenderOrigin,
       radiusMpc,
+      IDENTITY_MAT3,
     );
     const ndcGood = transformF32ToNdc(mvpF32Good);
     const errorGoodMpc = ndcErrorMpc(ndcGood, ndcF64);
@@ -270,5 +274,78 @@ describe('composeBodyMvp', () => {
     );
 
     expect(errorBadMpc).toBeGreaterThan(radiusMpc);
+  });
+
+  // ── Rotation round-trip ─────────────────────────────────────────────────────
+  //
+  // NOT a mirror test. The util embeds `orientation` as the model's R factor and
+  // returns the narrowed MVP; the test forward-projects the INDEPENDENTLY-rotated
+  // world surface point through the same VP (standard clip→NDC pipeline) and
+  // asserts the util's MVP lands the body-local vertex at the same NDC. A
+  // transposed embed would rotate by −90° (local +x → world −y), landing the
+  // vertex at a different NDC — so a pass proves the columns are placed right.
+
+  it('with a non-identity orientation projects the rotated surface direction', () => {
+    const rotRenderOrigin: Vec3 = [0, 0, 0];
+    const rotBodyPos: Vec3 = [0.5, 0, 0];
+    const rotRadiusMpc = 0.3;
+
+    // A concrete f64 VP, built independently of the util: perspective · lookAt,
+    // camera 5 units in front of the body along +Z.
+    const rotVp = mat4d.multiply(
+      mat4d.perspective(Math.PI / 4, 1, 0.1, 100),
+      mat4d.lookAt([0.5, 0, 5], rotBodyPos, [0, 1, 0]),
+    ) as Float64Array;
+
+    // +90° about +z (column-major, m[c*3+r]): image of local +x is world +y,
+    // image of local +y is world −x.
+    const rot90z: Mat3 = [0, 1, 0, -1, 0, 0, 0, 0, 1];
+
+    // Body-local +x surface vertex.
+    const localVx: [number, number, number, number] = [1, 0, 0, 1];
+
+    const mvp = composeBodyMvp(rotVp, rotBodyPos, rotRenderOrigin, rotRadiusMpc, rot90z);
+    const actualNdc = transformF32ToNdc(mvp);
+
+    // Independent expectation: rotate local +x into world +y, scale by the radius,
+    // translate to the body centre → world surface point. Project through the VP
+    // via the standard column-major pipeline (renderOrigin is [0,0,0]).
+    const worldSurface: Vec3 = [
+      rotBodyPos[0] + rotRadiusMpc * 0,
+      rotBodyPos[1] + rotRadiusMpc * 1,
+      rotBodyPos[2] + rotRadiusMpc * 0,
+    ];
+    const cx = rotVp[0]! * worldSurface[0] + rotVp[4]! * worldSurface[1] + rotVp[8]! * worldSurface[2] + rotVp[12]!;
+    const cy = rotVp[1]! * worldSurface[0] + rotVp[5]! * worldSurface[1] + rotVp[9]! * worldSurface[2] + rotVp[13]!;
+    const cz = rotVp[2]! * worldSurface[0] + rotVp[6]! * worldSurface[1] + rotVp[10]! * worldSurface[2] + rotVp[14]!;
+    const cw = rotVp[3]! * worldSurface[0] + rotVp[7]! * worldSurface[1] + rotVp[11]! * worldSurface[2] + rotVp[15]!;
+    const expectedNdc: [number, number, number] = [cx / cw, cy / cw, cz / cw];
+
+    expect(actualNdc[0]).toBeCloseTo(expectedNdc[0], 5);
+    expect(actualNdc[1]).toBeCloseTo(expectedNdc[1], 5);
+    expect(actualNdc[2]).toBeCloseTo(expectedNdc[2], 5);
+  });
+
+  it('with IDENTITY_MAT3 matches the pre-rotation MVP', () => {
+    // Regression that the star-sphere path (identity orientation) is unchanged:
+    // embedding the identity R must be an exact no-op versus a plain T·S model.
+    // The reference builds T·S with NO rotation factor at all — the impl embeds
+    // and multiplies by identity R — so this proves the embed doesn't corrupt.
+    const delta: [number, number, number] = [
+      (bodyPosMpc[0] as number) - (renderOrigin[0] as number),
+      (bodyPosMpc[1] as number) - (renderOrigin[1] as number),
+      (bodyPosMpc[2] as number) - (renderOrigin[2] as number),
+    ];
+    const modelTS = mat4d.multiply(
+      mat4d.translation(delta),
+      mat4d.scaling([radiusMpc, radiusMpc, radiusMpc]),
+    ) as Float64Array;
+    const referenceMvp = narrowMat4(mat4d.multiply(foregroundVp, modelTS) as Float64Array);
+
+    const actualMvp = composeBodyMvp(foregroundVp, bodyPosMpc, renderOrigin, radiusMpc, IDENTITY_MAT3);
+
+    for (let i = 0; i < 16; i++) {
+      expect(actualMvp[i]).toBeCloseTo(referenceMvp[i] as number, 6);
+    }
   });
 });

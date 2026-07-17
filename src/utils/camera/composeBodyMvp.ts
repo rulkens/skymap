@@ -12,6 +12,16 @@
  *
  *     radiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC
  *
+ * ### The model is `T · R · S` (translate · rotate · scale)
+ *
+ * A body's model matrix carries three factors: scale the unit sphere to
+ * `radiusMpc`, rotate it by the baked `orientation` `R` into its equatorial-
+ * world facing, then translate it to the body centre. The rotation sits
+ * BETWEEN translate and scale — a column vector transforms as `(T·R·S)·v`, so
+ * the spin acts on the sphere at the origin before the translate carries it
+ * into place. A rotation-invariant body (a flat-albedo or emissive sphere)
+ * passes `IDENTITY_MAT3`, collapsing the model back to `T·S`.
+ *
  * ### Why compose the FULL MVP in f64 before narrowing (spec §3 / §9)
  *
  * Earth sits at ~1 AU ≈ 4.85×10⁻¹² Mpc from the Sun. The body position is
@@ -37,6 +47,7 @@
  */
 
 import { mat4d } from 'wgpu-matrix';
+import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { narrowMat4 } from '../math/narrowMat4';
 
@@ -50,6 +61,10 @@ import { narrowMat4 } from '../math/narrowMat4';
  * @param renderOrigin  The render origin (same value passed to
  *                      `computeForegroundViewProj`).
  * @param radiusMpc     Body radius in Mpc (e.g. `6371 * SCALE_UNITS.KM_TO_MPC`).
+ * @param orientation   The body's baked local→equatorial-world rotation `R`,
+ *                      embedded between translate and scale (`T·R·S`). Pass
+ *                      `IDENTITY_MAT3` for a rotation-invariant body (a flat
+ *                      albedo / emissive sphere renders identically under `R`).
  * @returns  A `Float32Array` of 16 values (column-major proj·view·model),
  *           composed entirely in f64 before narrowing to preserve sub-metre
  *           accuracy at 1-AU distances.
@@ -59,6 +74,7 @@ export function composeBodyMvp(
   bodyPosMpc: Readonly<Vec3>,
   renderOrigin: Readonly<Vec3>,
   radiusMpc: number,
+  orientation: Readonly<Mat3>,
 ): Float32Array {
   // Delta in Mpc, expressed in the renderOrigin-relative frame that foregroundVp
   // was built for. Subtracting renderOrigin here mirrors what computeForegroundViewProj
@@ -70,12 +86,30 @@ export function composeBodyMvp(
     bodyPosMpc[2] - renderOrigin[2],
   ];
 
-  // Unit sphere → scale by radiusMpc → translate to body centre.
-  // mat4d.translation and mat4d.scaling each return a fresh Float64Array.
-  // mat4d.multiply(T, S) = T * S; a column-vector v transforms as (T·S)·v,
-  // which first scales then translates — correct for "unit sphere at delta".
+  // Embed the body's baked rotation `R` into the top-left 3×3 block of a mat4d.
+  // `Mat3` is a tight 9-element column-major tuple (m[c*3+r]); each of its three
+  // columns becomes a mat4 column, with the homogeneous row/column left identity.
+  // This is a hand embed, NOT `mat4d.fromMat3` — wgpu-matrix's mat3 is a padded
+  // 12-element layout (columns at 0,4,8), so feeding it our tight tuple would
+  // read the wrong slots. Placing the columns wrong (a transpose) would mirror
+  // every textured body; the round-trip test discriminates that.
+  const r = orientation;
+  const rot = new Float64Array([
+    r[0], r[1], r[2], 0,
+    r[3], r[4], r[5], 0,
+    r[6], r[7], r[8], 0,
+    0, 0, 0, 1,
+  ]);
+
+  // Model = T · R · S. A column vector v transforms as (T·R·S)·v — read
+  // right-to-left: scale the unit sphere by radiusMpc, rotate it into its
+  // equatorial-world facing, then translate it to the body centre. `R` sits
+  // between `T` and `S` (not outside both) so the spin acts on the sphere at
+  // the origin, before the translation carries it into place — a rotation
+  // applied after the translate would swing the body around the render origin.
+  // mat4d.translation / scaling each return a fresh Float64Array.
   const model = mat4d.multiply(
-    mat4d.translation(delta),
+    mat4d.multiply(mat4d.translation(delta), rot),
     mat4d.scaling([radiusMpc, radiusMpc, radiusMpc]),
   ) as Float64Array;
 

@@ -103,6 +103,7 @@ export const earthLayer: ContentLayer = {
       earth.positionMpc,
       RENDER_ORIGIN_MPC,
       earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      earth.orientation,
     );
     renderer.draw(pass, mvp);
   },

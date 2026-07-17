@@ -304,29 +304,31 @@ albedo sphere renders identically under rotation, so this is visually
 identity-safe (spec §6.1); Earth's placeholder texture makes its rotation inert
 until Plan 03.
 
-- [ ] Grow `composeBodyMvp`'s signature + the `T·R·S` compose. Didactic comment:
+- [x] Grow `composeBodyMvp`'s signature + the `T·R·S` compose. Didactic comment:
   WHY `R` sits between `T` and `S` (rotate the unit sphere, then scale, then
   translate — a column vector transforms `T·R·S·v`), and the column-major embed
-  note.
-- [ ] Update `earthLayer` / `planetsLayer` to pass `body.orientation`;
+  note. _(Embed is a hand-written mat4 rotation block — wgpu-matrix's mat3 is a
+  padded 12-element layout incompatible with the tight 9-element `Mat3`.)_
+- [x] Update `earthLayer` / `planetsLayer` to pass `body.orientation`;
   `starSpheresLayer` to pass `IDENTITY_MAT3`.
-- [ ] Test `composeBodyMvp with a non-identity orientation projects the rotated
+- [x] Test `composeBodyMvp with a non-identity orientation projects the rotated
   surface direction` — construct a simple f64 VP (`mat4d.perspective ∘
   mat4d.lookAt`) + a 90°-about-`+z` orientation; take a body-local `+x` surface
   point, project it through the returned MVP, and assert it lands where the
   independently-rotated world direction (local `+x` → world `+y`) projects (a
   round-trip against a constructed VP — the forward projection is computed
   independently of the util, so not a mirror; mirrors the `composeOrbitConic`
-  test shape at `tests/utils/camera/composeOrbitConic.test.ts`).
-- [ ] Test `composeBodyMvp with IDENTITY_MAT3 matches the pre-rotation MVP` — for
+  test shape at `tests/utils/camera/composeOrbitConic.test.ts`). _(Confirmed to
+  fail against the pre-change impl.)_
+- [x] Test `composeBodyMvp with IDENTITY_MAT3 matches the pre-rotation MVP` — for
   identity orientation the output equals a fresh compose with no rotation
   (regression that the star-sphere path is unchanged; assert element-wise within
   f32 tolerance against a hand-built `T·S`-only reference VP·model, computed
   independently).
-- [ ] Update the three layer tests to pass the new argument (and assert
+- [x] Update the three layer tests to pass the new argument (and assert
   `starSpheresLayer` forwards `IDENTITY_MAT3`, planets forward the body
   orientation).
-- [ ] `npm test -- composeBodyMvp earthLayer planetsLayer starSpheresLayer` →
+- [x] `npm test -- composeBodyMvp earthLayer planetsLayer starSpheresLayer` →
   green. Commit.
 
 ## Task 7 — `BodyTextureReq` + `tierToTexturePx` + `clampTier`
