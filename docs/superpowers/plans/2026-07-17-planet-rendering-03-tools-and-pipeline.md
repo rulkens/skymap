@@ -108,18 +108,22 @@ The provenance README documents each upstream URL, licence, native dims, fetch
 date, and checksum (spec §3 + §10) — the SSS CC-BY-4.0 line, NASA Earth
 Observatory (BMNG, PD), NASA/USGS (moon mosaics, PD).
 
-- [ ] Add `fetchTextures.ts`. Didactic module header: WHY GET-only (SSS breaks
+- [x] Add `fetchTextures.ts`. Didactic module header: WHY GET-only (SSS breaks
   `HEAD` + `Range`, spec §3), the size-gate + `--dev` subset, the `.sha256`
-  sidecars. Reads/writes only through `rawDataPath('textures.*')`.
-- [ ] Add `data/raw/textures/README.md` — the provenance table (upstream URLs,
+  sidecars. Reads/writes only through `rawDataPath('textures.*')`. NOTE: the
+  dev subset includes the Saturn-ring 2k PNG (spec §12 DoD needs rings visually
+  verifiable on the dev subset); GET-only path is a dedicated `downloadGetOnly`
+  with '.part'-rename completeness (CF-4's `downloadWithResume` sends `Range`,
+  which SSS ignores and would corrupt partials).
+- [x] Add `data/raw/textures/README.md` — the provenance table (upstream URLs,
   licences, dims, fetch date placeholder, checksums).
-- [ ] Test `fetchTextures --dev selects the small subset` — the pure
+- [x] Test `fetchTextures --dev selects the small subset` — the pure
   subset-selection helper returns exactly the SSS-2k + NASA-dev keys for `--dev`,
   and the full source list otherwise (a behavioural property of the subset
   chooser, driven headlessly — NO network in the test). If the size-gate
   confirmation is a pure predicate, assert it blocks the full pull without the
   flag.
-- [ ] `npm test -- fetchTextures` → green. Commit.
+- [x] `npm test -- fetchTextures` → green. Commit.
 
 ## Task 3 — `buildTextures` (sharp; GeoTIFF; tint; tier downsample; ring PNG)
 

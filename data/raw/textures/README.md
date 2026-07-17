@@ -1,0 +1,89 @@
+# Planet-body textures — raw sources
+
+Raw source images for the true-scale foreground bodies (7 planets + Earth +
+Moon + the four Galilean moons). The fetcher pulls each body's highest usable
+native tier; `build-textures` then downsamples per
+`BODY_TEXTURE_REGISTRY[id].maxTier` — **never upscaling**. See
+`docs/superpowers/specs/2026-07-17-planet-rendering.md` §3 for the source
+verification (URLs GET-probed, licence text read, pixel dims confirmed
+2026-07-17) and §10 for the pipeline.
+
+| Field      | Value                                                                             |
+| ---------- | --------------------------------------------------------------------------------- |
+| Fetch date | _(pending — filled by the maintainer's first full pull from `main`)_              |
+| Full size  | ~700 MB (all native tiers)                                                        |
+| Dev subset | ~7 MB (`--dev`: 2k SSS variants + 5400×2700 BMNG)                                 |
+| Checksums  | `textures.sha256` — one `<hex>  <filename>` line per file, written on first fetch |
+
+## How to obtain
+
+```
+npm run fetch-textures -- --confirm   # full ~700 MB pull (size-gated)
+npm run fetch-textures -- --dev        # ~7 MB visual-check subset, no confirm
+```
+
+The fetcher is **GET-only — no `HEAD`, no `Range`**: `solarsystemscope.com`
+returns `200 text/html` to a `HEAD` and ignores `Range` (spec §3), so
+completeness is tracked per-file (each download lands in `<file>.part` and is
+renamed on a clean finish) and re-runs skip files already verified against
+`textures.sha256`.
+
+## Solar System Scope — CC BY 4.0
+
+Attribution required: **Solar System Scope (solarsystemscope.com), CC BY 4.0**
+(page text: "use, adapt, share… even commercially"). Base URL:
+`https://www.solarsystemscope.com/textures/download/<file>`
+
+| Body               | Native file (full pull)    | Native dims | Dev (2k) file              | Notes                                                                   |
+| ------------------ | -------------------------- | ----------- | -------------------------- | ----------------------------------------------------------------------- |
+| Mercury            | `8k_mercury.jpg`           | ~8192×4096  | `2k_mercury.jpg`           | albedo map                                                              |
+| Venus (atmosphere) | `4k_venus_atmosphere.jpg`  | 4096×2048   | `2k_venus_atmosphere.jpg`  | caps at 4k — the 8k SSS variant is the radar surface (wrong appearance) |
+| Mars               | `8k_mars.jpg`              | ~8192×4096  | `2k_mars.jpg`              | albedo map                                                              |
+| Jupiter            | `8k_jupiter.jpg`           | ~8192×4096  | `2k_jupiter.jpg`           | cloud bands                                                             |
+| Saturn             | `8k_saturn.jpg`            | ~8192×4096  | `2k_saturn.jpg`            | cloud bands                                                             |
+| Saturn ring        | `8k_saturn_ring_alpha.png` | 8k×N RGBA   | `2k_saturn_ring_alpha.png` | radial alpha strip, real alpha; sampled by radius, shipped N×1          |
+| Uranus             | `2k_uranus.jpg`            | 2048×1024   | `2k_uranus.jpg` (same)     | 2k only — near-featureless, never upscaled                              |
+| Neptune            | `2k_neptune.jpg`           | 2048×1024   | `2k_neptune.jpg` (same)    | 2k only — same caveat                                                   |
+| Moon               | `8k_moon.jpg`              | ~8192×4096  | `2k_moon.jpg`              | albedo map                                                              |
+
+No 4k tier exists on SSS except Venus atmosphere; the 4k build tier is always a
+downsample of the 8k raw. Uranus/Neptune's native file _is_ the 2k tier, so the
+dev subset reuses it (never fetched twice).
+
+## NASA Blue Marble Next Generation — Earth (public domain; credit "NASA Earth Observatory")
+
+December topography+bathymetry equirect.
+
+| Purpose    | File                                        | Dims        | Size    |
+| ---------- | ------------------------------------------- | ----------- | ------- |
+| Full pull  | `world.topo.bathy.200412.3x21600x10800.jpg` | 21600×10800 | ~30 MB  |
+| Dev subset | `world.topo.bathy.200412.3x5400x2700.jpg`   | 5400×2700   | ~2.4 MB |
+
+Base:
+`https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/`
+(`Access-Control-Allow-Origin: *`). Replaces the retired committed
+`public/images/earth/blue-marble-4k.jpg` — Earth now joins the R2 texture family.
+
+## USGS Astrogeology — Galilean moons (public domain; credit "NASA/USGS")
+
+Plain 8-bit GeoTIFFs (no ISIS toolchain needed; sharp/libvips reads TIFF
+directly). Full pull only — no dev variant. Base:
+`https://planetarymaps.usgs.gov/mosaic/<file>`
+
+| Body     | File                                                     | Native     | Bands | Build note                                                           |
+| -------- | -------------------------------------------------------- | ---------- | ----- | -------------------------------------------------------------------- |
+| Io       | `Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif`   | 11445×5723 | RGB   | —                                                                    |
+| Europa   | `Europa_Voyager_GalileoSSI_global_mosaic_500m.tif`       | 19631×9816 | gray  | tinted in build (no global colour; S-pole gap below −83° acceptable) |
+| Ganymede | `Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif` | 11520×5760 | RGB   | —                                                                    |
+| Callisto | `Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif`      | 15138×7569 | gray  | tinted in build (no global colour; near-uniform)                     |
+
+**Titan is intentionally absent** — its only global map is a 938 nm surface
+mosaic, not Titan's visual haze appearance, so Titan renders through the flat
+path like the irregular moons (spec §3, Q13).
+
+## Attribution
+
+The runtime credits Solar System Scope (CC BY 4.0), NASA Earth Observatory
+(Blue Marble), and NASA/USGS (moon mosaics) in the Splash footer. The raw
+`.jpg`/`.png`/`.tif` files are gitignored build inputs; only this README and
+the `textures.sha256` sidecar are committed.
