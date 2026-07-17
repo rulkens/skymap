@@ -2,15 +2,14 @@
 
 /**
  * RenderTogglesSection — verify the checkbox list reflects the `disabledPasses`
- * prop and that toggling calls the `onTogglePass` callback with the pass name.
+ * prop, groups the passes by the frame program's (target, slab) step structure,
+ * and calls `onTogglePass` with the pass name on toggle.
  *
- * The section is NOW presentational — it imports nothing from `store/` or
- * `state/`.  Accordingly these tests need no Redux Provider: props drive
- * rendering and the `onTogglePass` typed spy captures dispatch-like calls.
- *
- * The render/checkbox-state assertions from the original store-backed suite are
- * preserved unchanged; only the toggle-assertion replaces the store-read with a
- * spy call check.
+ * The section is presentational — it imports nothing from `store/` or `state/`.
+ * Props drive rendering and the `onTogglePass` typed spy captures dispatch-like
+ * calls. Grouping is derived from `frameProgram.groupPassNames`, so the row
+ * order here is the GROUPED order (matching GpuTimingsSection), not the raw
+ * `passNames` draw order.
  *
  * Project convention: `.test.ts` + `createElement` (no JSX) — see
  * `vitest.config.ts` `include` glob `tests/**\/*.test.ts`.
@@ -21,10 +20,15 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import { RenderTogglesSection } from '../../../src/components/DebugPanel/RenderTogglesSection';
 
-const ALL_NAMES = ['point-sprites', 'procedural-disks', 'textured-quads', 'textured-disks'];
+// Real togglable pass names spanning four groups, given in draw order. Grouping
+// reorders them: star-aggregates (Volumes & aggregates) leads, then the two
+// hdr·COSMO rows (Cosmos · HDR), then earth (Foreground bodies · depth), then
+// labels (Overlays).
+const ALL_NAMES = ['point-sprites', 'procedural-disks', 'labels', 'earth', 'star-aggregates'];
+const GROUPED_ORDER = ['star-aggregates', 'point-sprites', 'procedural-disks', 'earth', 'labels'];
 
 describe('RenderTogglesSection', () => {
-  it('renders one checkbox per pass name in passNames order', () => {
+  it('renders one checkbox per pass name, ordered by pass group', () => {
     const { container } = render(
       createElement(RenderTogglesSection, {
         passNames: ALL_NAMES,
@@ -33,11 +37,37 @@ describe('RenderTogglesSection', () => {
       }),
     );
     const labels = container.querySelectorAll('label');
-    expect(labels).toHaveLength(4);
-    expect(labels[0]!.textContent).toContain('point-sprites');
-    expect(labels[1]!.textContent).toContain('procedural-disks');
-    expect(labels[2]!.textContent).toContain('textured-quads');
-    expect(labels[3]!.textContent).toContain('textured-disks');
+    expect(labels).toHaveLength(5);
+    expect([...labels].map((l) => l.textContent)).toEqual(GROUPED_ORDER);
+  });
+
+  it('renders a group header for each non-empty group, in title order', () => {
+    const { container } = render(
+      createElement(RenderTogglesSection, {
+        passNames: ALL_NAMES,
+        disabledPasses: {},
+        onTogglePass: vi.fn<(name: string) => void>(),
+      }),
+    );
+    const text = container.textContent ?? '';
+    const titles = ['Volumes & aggregates', 'Cosmos · HDR', 'Foreground bodies · depth', 'Overlays'];
+    for (const t of titles) expect(text).toContain(t);
+    // Headers appear in title order.
+    const positions = titles.map((t) => text.indexOf(t));
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  });
+
+  it('omits non-togglable composite/pick rows (no such group appears)', () => {
+    const { container } = render(
+      createElement(RenderTogglesSection, {
+        passNames: ALL_NAMES,
+        disabledPasses: {},
+        onTogglePass: vi.fn<(name: string) => void>(),
+      }),
+    );
+    const text = container.textContent ?? '';
+    expect(text).not.toContain('Composites & pick');
+    expect(text).not.toContain('hdr→swap');
   });
 
   it('checks every box when the disabledPasses record is empty', () => {
@@ -58,14 +88,15 @@ describe('RenderTogglesSection', () => {
     const { container } = render(
       createElement(RenderTogglesSection, {
         passNames: ALL_NAMES,
-        disabledPasses: { 'textured-disks': true },
+        disabledPasses: { earth: true },
         onTogglePass: vi.fn<(name: string) => void>(),
       }),
     );
-    const boxes = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
-    // passNames order: point-sprites, procedural-disks, textured-quads, textured-disks
-    expect(boxes[0]!.checked).toBe(true);
-    expect(boxes[3]!.checked).toBe(false);
+    const boxByName = (name: string) =>
+      [...container.querySelectorAll('label')].find((l) => l.textContent === name)!
+        .querySelector<HTMLInputElement>('input')!;
+    expect(boxByName('point-sprites').checked).toBe(true);
+    expect(boxByName('earth').checked).toBe(false);
   });
 
   it('calls onTogglePass with the pass name when a checkbox is clicked', () => {
@@ -77,11 +108,12 @@ describe('RenderTogglesSection', () => {
         onTogglePass,
       }),
     );
-    // Click the third box (index 2) — 'textured-quads'
-    const box = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[2]!;
-    fireEvent.click(box);
+    const earthBox = [...container.querySelectorAll('label')]
+      .find((l) => l.textContent === 'earth')!
+      .querySelector<HTMLInputElement>('input')!;
+    fireEvent.click(earthBox);
     expect(onTogglePass).toHaveBeenCalledOnce();
-    expect(onTogglePass).toHaveBeenCalledWith('textured-quads');
+    expect(onTogglePass).toHaveBeenCalledWith('earth');
   });
 
   it('reflects the prop after the parent re-renders with an updated record', () => {
@@ -92,12 +124,14 @@ describe('RenderTogglesSection', () => {
         onTogglePass: vi.fn<(name: string) => void>(),
       }),
     );
-    const box = () => container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[2]!;
+    const box = () =>
+      [...container.querySelectorAll('label')].find((l) => l.textContent === 'labels')!
+        .querySelector<HTMLInputElement>('input')!;
     expect(box().checked).toBe(true);
     rerender(
       createElement(RenderTogglesSection, {
         passNames: ALL_NAMES,
-        disabledPasses: { 'textured-quads': true },
+        disabledPasses: { labels: true },
         onTogglePass: vi.fn<(name: string) => void>(),
       }),
     );

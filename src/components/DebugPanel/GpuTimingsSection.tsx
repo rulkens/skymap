@@ -47,29 +47,18 @@ import { useEffect, useState, useRef, type ReactElement } from 'react';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
-import { TIMED_SLOTS, TIMED_SLOT_SLABS } from '../../services/engine/frame/frameProgram';
+import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/frameProgram';
 import { Sparkline } from './Sparkline';
 
-// Row order = the timing registry's order, which is encoder draw order
-// (scalar-volume, the HDR layers, the hdr→swap composite, the swap overlays,
-// pick). Derived from the FRAME program + content-layer registry, the SAME
-// list the timing service allocates query-set slots from — so a renderer that
-// joins the registry gets a row here automatically.
-const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = TIMED_SLOTS;
+// Rows are grouped by the frame program's (target, slab) step structure — the
+// SAME grouping RenderTogglesSection uses, so the two lists scan positionally.
+// `TIMED_SLOT_GROUPS` is derived from the FRAME program + content-layer
+// registry (the list the timing service allocates query-set slots from), so a
+// renderer that joins the registry lands in the right group automatically. The
+// group header carries slab identity now, so there's no per-row slab badge.
 
 const AVG_WINDOW = 60;
 const SPARKLINE_WINDOW = 8;
-
-// Fixed, subtle per-slab badge colours so a row's projection slab (which depth
-// slab its layer/pass renders through) is identifiable at a glance. A tiny
-// inline palette matches this debug panel's inline-style approach. Slots with
-// no single slab (the whole-texture composites, the pick pass — they carry the
-// NO_SLAB_BADGE marker from the derivation) fall through to the muted default.
-const SLAB_BADGE_COLORS: Readonly<Record<string, string>> = {
-  COSMO: '#6f9fd8',
-  NEAR0: '#d8a06f',
-};
-const NO_SLAB_BADGE_COLOR = '#7a7a7a';
 
 type SlotStats = {
   recent: number[]; // up to AVG_WINDOW entries; newest at the end.
@@ -139,14 +128,15 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
 
   // ── Branch 3: live data ───────────────────────────────────────────
   const stats = statsRef.current;
+  const avgOf = (row: SlotStats): number =>
+    row.recent.length === 0 ? 0 : row.recent.reduce((a, b) => a + b, 0) / row.recent.length;
+
   // Header sums per-slot AVG_WINDOW averages, matching the visible
   // row values. Stale slots excluded so the total reflects current
   // GPU work, not a gated-off subsystem's last cost.
   let frameTotalMs = 0;
   for (const [, row] of stats) {
-    if (row.staleFrames === 0 && row.recent.length > 0) {
-      frameTotalMs += row.recent.reduce((a, b) => a + b, 0) / row.recent.length;
-    }
+    if (row.staleFrames === 0 && row.recent.length > 0) frameTotalMs += avgOf(row);
   }
 
   return (
@@ -156,58 +146,48 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
       </summary>
       <div style={{ marginTop: 4 }}>
         {/*
-          Iterate `DISPLAY_SLOT_ORDER` (derived from the FRAME program +
-          the CONTENT_LAYERS registry via `TIMED_SLOTS`) rather than
-          `stats` directly so row order is stable regardless of which
-          slot emits first.  Slots that haven't sampled yet are simply
-          skipped (no row).  This keeps the panel in lockstep with the
-          actual renderer draw order — reordering CONTENT_LAYERS in
-          `passes/index.ts` automatically reorders the timing UI.
+          Iterate `TIMED_SLOT_GROUPS` (derived from the FRAME program +
+          the CONTENT_LAYERS registry) so groups + row order stay in
+          lockstep with the actual renderer draw order — reordering
+          CONTENT_LAYERS in `passes/index.ts` automatically reorders the
+          timing UI. A slot that hasn't sampled yet is skipped; a group
+          with no sampled rows renders no header.
         */}
-        {DISPLAY_SLOT_ORDER.map((slot) => {
-          const row = stats.get(slot);
-          if (!row) return null;
-          const avg =
-            row.recent.length === 0 ? 0 : row.recent.reduce((a, b) => a + b, 0) / row.recent.length;
-          // Gate the row's opacity on staleness.  Anything beyond 0
-          // means the pass is currently gated off; keep the rolling
-          // avg + sparkline visible (so the user can see what it cost
-          // when it was on) but dimmed so they don't read it as live.
-          const isIdle = row.staleFrames > 0;
-          // Which depth slab this slot renders through, derived from the same
-          // program+registry walk that orders the rows — so a new layer's
-          // badge appears here with no edit to this component.
-          const slab = TIMED_SLOT_SLABS.get(slot) ?? '';
+        {TIMED_SLOT_GROUPS.map((group) => {
+          const liveRows = group.rows.filter((r) => stats.has(r.name));
+          if (liveRows.length === 0) return null;
+          // Per-group subtotal: sum of the group's non-stale row averages, so
+          // it reflects current GPU work (a gated-off row's last cost
+          // excluded), matching the header total's rule.
+          let groupMs = 0;
+          for (const r of liveRows) {
+            const row = stats.get(r.name)!;
+            if (row.staleFrames === 0 && row.recent.length > 0) groupMs += avgOf(row);
+          }
           return (
-            <div key={slot} style={isIdle ? { opacity: 0.4 } : undefined}>
-              <span style={{ display: 'inline-block', width: 130 }}>{slot}</span>
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: 70,
-                  textAlign: 'right',
-                }}
-              >
-                {avg.toFixed(1)} ms
-              </span>
-              <span style={{ marginLeft: 8 }}>
-                <Sparkline samples={row.spark} />
-              </span>
-              {/*
-                Slab badge trails the sparkline (the last column) so it never
-                shifts the fixed-width name/ms/sparkline alignment.
-              */}
-              <span
-                style={{
-                  marginLeft: 8,
-                  fontFamily: 'monospace',
-                  fontSize: 10,
-                  opacity: 0.75,
-                  color: SLAB_BADGE_COLORS[slab] ?? NO_SLAB_BADGE_COLOR,
-                }}
-              >
-                {slab}
-              </span>
+            <div key={group.title} style={{ marginTop: 6 }}>
+              <div style={{ fontWeight: 'bold', opacity: 0.6, marginBottom: 2 }}>
+                {group.title} ({groupMs.toFixed(1)} ms)
+              </div>
+              {liveRows.map((r) => {
+                const row = stats.get(r.name)!;
+                // Gate the row's opacity on staleness.  Anything beyond 0
+                // means the pass is currently gated off; keep the rolling
+                // avg + sparkline visible (so the user can see what it cost
+                // when it was on) but dimmed so they don't read it as live.
+                const isIdle = row.staleFrames > 0;
+                return (
+                  <div key={r.name} style={isIdle ? { opacity: 0.4 } : undefined}>
+                    <span style={{ display: 'inline-block', width: 130 }}>{r.name}</span>
+                    <span style={{ display: 'inline-block', width: 70, textAlign: 'right' }}>
+                      {avgOf(row).toFixed(1)} ms
+                    </span>
+                    <span style={{ marginLeft: 8 }}>
+                      <Sparkline samples={row.spark} />
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           );
         })}

@@ -79,6 +79,45 @@ describe('GpuTimingsSection', () => {
     expect(container.textContent).toContain('4.8');
   });
 
+  it('renders a group header per non-empty group with the summed per-group subtotal', () => {
+    const { svc, emit } = makeStubService({ enabled: true });
+    const { container } = render(createElement(GpuTimingsSection, { service: svc }));
+
+    act(() => {
+      emit({
+        frameIndex: 0,
+        perPassMs: new Map([
+          // Two rows in the Cosmos · HDR group + one in Foreground bodies · depth.
+          ['point-sprites', 2.0],
+          ['procedural-disks', 1.0],
+          ['earth', 3.0],
+        ]),
+      });
+    });
+
+    const text = container.textContent ?? '';
+    expect(text).toContain('Cosmos · HDR');
+    expect(text).toContain('Foreground bodies · depth');
+    // Per-group subtotal = sum of the group's row averages: 2.0 + 1.0 = 3.0,
+    // a value no single row in that group shows.
+    expect(text).toContain('3.0');
+  });
+
+  it('drops the per-row slab badge (no COSMO/NEAR0 marker text)', () => {
+    const { svc, emit } = makeStubService({ enabled: true });
+    const { container } = render(createElement(GpuTimingsSection, { service: svc }));
+
+    act(() => {
+      emit({ frameIndex: 0, perPassMs: new Map([['point-sprites', 1.0]]) });
+    });
+
+    const text = container.textContent ?? '';
+    // Group titles carry slab identity now ("Cosmos · HDR"); the raw slab
+    // badge is gone.
+    expect(text).not.toContain('COSMO');
+    expect(text).not.toContain('NEAR0');
+  });
+
   it('unsubscribes on unmount', () => {
     const { svc } = makeStubService({ enabled: true });
     const { unmount } = render(createElement(GpuTimingsSection, { service: svc }));
