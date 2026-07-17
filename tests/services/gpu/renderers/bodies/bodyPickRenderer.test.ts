@@ -32,7 +32,9 @@ function mockDevice(): GPUDevice {
     createBindGroupLayout: vi.fn(() => ({})),
     createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => ({ label: desc.label })),
     createPipelineLayout: vi.fn(() => ({})),
-    createRenderPipeline: vi.fn(() => ({})),
+    // Surface the descriptor label so the two point pipelines (scene-star vs
+    // glint) are distinguishable by the variant test.
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => ({ label: desc.label })),
     queue: { writeBuffer: vi.fn() },
   } as unknown as GPUDevice;
 }
@@ -127,6 +129,31 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
       .calls[0]![1];
 
     expect(reusedVbo).toBe(firstVbo);
+  });
+
+  it('selects the glint pipeline for variant "glint", the scene-star pipeline by default', () => {
+    const device = mockDevice();
+    const renderer = createBodyPickRenderer(device);
+    const pass = mockPass();
+
+    // Default variant → scene-star point pipeline (clamps true depth).
+    renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, points: [pt(1, 1)] });
+    // Explicit glint variant → the glint pipeline (forces the shallow glint band).
+    renderer.drawPoints(pass, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      points: [pt(2, 2)],
+      variant: 'glint',
+    });
+
+    const setPipeline = pass.setPipeline as unknown as ReturnType<typeof vi.fn>;
+    const first = setPipeline.mock.calls[0]![0] as { label?: string };
+    const second = setPipeline.mock.calls[1]![0] as { label?: string };
+    // Two DIFFERENT pipeline objects — a shared pipeline would ignore the variant
+    // and both point classes would sort by the same depth rule.
+    expect(first).not.toBe(second);
+    expect(first.label).toBe('body-pick-point-pipeline');
+    expect(second.label).toBe('body-pick-point-glint-pipeline');
   });
 
   it('an empty batch is a no-op that costs no slot', () => {

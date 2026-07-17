@@ -72,14 +72,30 @@ export type BodyPointPick = {
   readonly packedId: number;
 };
 
-/** The instanced scene-star point-pick batch for one frame. */
+/**
+ * Which pick-depth semantics the point batch draws with — the two share every
+ * buffer and one explicit pipeline layout, differing only in the vertex entry:
+ *
+ *   - `'sceneStar'` (default) — the famous / scene stars: `vs` MIN-CLAMPS true
+ *     depth onto the scene-star band, so within-far stars sort physically.
+ *   - `'glint'` — the sub-pixel solar-system body glints (+ the Earth stamp):
+ *     `vsGlint` FORCES the shallower glint band so importance, not nearness,
+ *     orders them and the instance DRAW ORDER breaks the intra-band tie (a planet
+ *     out-picks its moons; Earth, prepended first, out-picks the Moon). See
+ *     `starPointPick.wesl` / `lib/pickDepthBands.wesl`.
+ */
+export type BodyPointPickVariant = 'sceneStar' | 'glint';
+
+/** The instanced scene-star / body-glint point-pick batch for one frame. */
 export type BodyPointPickArgs = {
   /** Rebased camera-relative view-projection (`narrowMat4(rebaseViewProj(...))`). */
   readonly vp: Float32Array;
   /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */
   readonly viewportPx: Vec2;
-  /** The point-partition scene stars to draw (≤25). One packed id per instance. */
+  /** The point-partition bodies to draw (≤25). One packed id per instance. */
   readonly points: readonly BodyPointPick[];
+  /** Pick-depth variant; defaults to `'sceneStar'` so existing callers are unchanged. */
+  readonly variant?: BodyPointPickVariant;
 };
 
 export type BodyPickRenderer = Renderer & {

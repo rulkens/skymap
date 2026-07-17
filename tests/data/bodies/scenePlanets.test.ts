@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
 import { rotationById } from '../../../src/data/bodies/rotationElements';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
@@ -51,6 +52,28 @@ describe('SCENE_PLANETS', () => {
     const distKm = hypot3(offset) / SCALE_UNITS.KM_TO_MPC;
     expect(distKm).toBeGreaterThan(350_000);
     expect(distKm).toBeLessThan(420_000);
+  });
+
+  it('lists every heliocentric planet before every satellite (the glint pick tie-break)', () => {
+    // Load-bearing for the glint pick priority: at glint scale every sub-pixel
+    // body forces the SAME pick depth band, so the depth test cannot order a
+    // planet against its moons — the instance DRAW ORDER breaks the tie, and that
+    // order is this seed order (bodyGlintsLayer packs SCENE_PLANETS in sequence,
+    // Earth prepended). With depthCompare 'less' the FIRST-drawn instance wins, so
+    // a planet only out-picks its moons if it PRECEDES them here. A moon inserted
+    // above its planet would silently invert that priority with no compile error;
+    // nothing else catches it.
+    //
+    // Classify by parentId (satellites carry a planet parentId; the heliocentric
+    // planets carry null) via the one element table, not a hardcoded id list.
+    const isSatellite = (id: string) => elementsById(id).parentId !== null;
+    const firstSatellite = SCENE_PLANETS.findIndex((p) => isSatellite(p.id));
+    const lastPlanet = SCENE_PLANETS.map((p) => p.id).reduce(
+      (last, id, i) => (isSatellite(id) ? last : i),
+      -1,
+    );
+    expect(firstSatellite).toBeGreaterThan(-1); // there ARE satellites
+    expect(lastPlanet).toBeLessThan(firstSatellite);
   });
 
   it('bake IAU orientation for textured bodies', () => {

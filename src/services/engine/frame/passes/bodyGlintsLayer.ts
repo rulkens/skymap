@@ -60,6 +60,7 @@ import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { sceneBodyPartition } from '../sceneBodyPartition';
+import { earthLayer } from './earthLayer';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness';
@@ -181,9 +182,10 @@ export const bodyGlintsLayer: ContentLayer = {
   // NOT its slot in the glints partition (which shifts as a body crosses
   // `BODY_GLINT_MAX_PX` — see `seedIndexOfBody`); a body id absent from the seed
   // table returns −1 and is dropped (a packed id from −1 would alias body 0). Earth
-  // is never in this partition (it rides its own `bodies.earth` / `earthLayer`), so
-  // no `Source.Earth` mapping arises here. Anchors are rebased into the
-  // camera-relative frame in f64 before narrowing, the SAME seam `draw` uses.
+  // is not in this partition (it rides its own `bodies.earth` / `earthLayer`), but
+  // its glint-scale pick footprint IS prepended here as a `Source.Earth` stamp (see
+  // the prepend note in the body). Anchors are rebased into the camera-relative
+  // frame in f64 before narrowing, the SAME seam `draw` uses.
   //
   // `bodyPickRenderer.drawPoints` is safe to call once per caller per pass (it
   // claims its own per-pass slot of buffers); this layer and `starPointsLayer` are
@@ -196,6 +198,35 @@ export const bodyGlintsLayer: ContentLayer = {
 
     const camPos = view.camPos;
     const pickPoints: BodyPointPick[] = [];
+
+    // PREPEND the Earth glint stamp FIRST, so it is instance 0 and wins the
+    // draw-order tie-break inside the shared glint band (all glints force the same
+    // depth — see the `'glint'` variant below and `lib/pickDepthBands.wesl`),
+    // making Earth out-pick the Moon and every planet at glint scale. Earth is not
+    // in `sceneBodyPartition` (it rides `bodies.earth` / `earthLayer`), so without
+    // this stamp its only glint-scale pick coverage is its sub-pixel sphere — the
+    // Moon's 18 px footprint would own the area and steal the click.
+    //
+    // Gate on the SAME predicate `earthLayer.enabled` encodes (called directly, so
+    // its handle + foreground-distance + sub-pixel-cull conditions are
+    // single-sourced — this layer copies none of them). Pick follows visibility:
+    // Earth's visible form at this scale is `earthLayer`'s tiny sphere, so its pick
+    // follows THAT sphere's visibility. When Earth is resolved and large the extra
+    // 18 px point is harmless — it writes the SAME `Source.Earth` id `earthLayer`'s
+    // sphere pick writes. Unlike the per-body glint brightness skip below, the
+    // Earth stamp is NOT brightness-gated (it is not a partition glint).
+    const earth = state.data.bodies.earth;
+    if (earth !== null && earthLayer.enabled(state, ctx)) {
+      pickPoints.push({
+        posRelCamMpc: [
+          earth.positionMpc[0] - camPos[0],
+          earth.positionMpc[1] - camPos[1],
+          earth.positionMpc[2] - camPos[2],
+        ] as Vec3,
+        packedId: packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
+      });
+    }
+
     for (const body of glints) {
       const seedIndex = seedIndexOfBody(body.id, SCENE_PLANETS);
       if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
@@ -237,6 +268,10 @@ export const bodyGlintsLayer: ContentLayer = {
       vp: rebasedVp,
       viewportPx: view.viewportPx,
       points: pickPoints,
+      // The glint depth variant: every point forces the shallow glint band, so
+      // importance (not nearness) decides and the instance order above is the
+      // priority — Earth, then planets, then their moons.
+      variant: 'glint',
     });
   },
 };

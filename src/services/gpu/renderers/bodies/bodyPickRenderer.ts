@@ -18,9 +18,18 @@
  *     click-invited targets; the survey star pick keeps its minimal clamp for its
  *     dense field — see `starPointPick.wesl`). Called ONCE PER CALLER PER PASS,
  *     each caller claiming its own per-pass slot (see the drawPoints race note).
+ *     The caller's `variant` selects the pick-depth semantics: `'sceneStar'`
+ *     (default, the famous stars — `vs` min-clamps true depth) vs `'glint'` (the
+ *     body glints + Earth stamp — `vsGlint` forces the shallow glint band so
+ *     importance, not nearness, orders them). See the two-point-pipelines note
+ *     below.
  *
- * Each compiles its OWN `GPUShaderModule` + explicit pipeline layout (never a
- * shared module across pipelines — the WebGPU 'auto'-layout trap).
+ * The sphere and points paths each compile their OWN `GPUShaderModule` (never a
+ * shared module across the sphere/points pipelines — the WebGPU 'auto'-layout
+ * trap). WITHIN the points path the two variant pipelines (`vs`/`vsGlint`) share
+ * ONE `GPUShaderModule` AND one EXPLICIT pipeline layout, so a per-pass slot's
+ * bind group binds to either — an explicit shared layout is precisely the fix for
+ * the 'auto'-layout trap, so no per-variant bind group is needed.
  *
  * ### The writeBuffer-vs-submit trap, applied to `drawSphere`
  *
@@ -250,38 +259,55 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     starPointPickCode,
     'bodyPick.starPointPick',
   );
-  const pointPipeline = device.createRenderPipeline({
-    label: 'body-pick-point-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'body-pick-point-pipeline-layout',
-      bindGroupLayouts: [pointBgl],
-    }),
-    vertex: {
-      module: pointModule,
-      entryPoint: 'vs',
-      buffers: [
-        {
-          arrayStride: POINT_INSTANCE_STRIDE,
-          stepMode: 'instance',
-          attributes: [
-            { shaderLocation: 0, offset: 0, format: 'float32x3' }, // posRelCamMpc
-            { shaderLocation: 1, offset: 12, format: 'uint32' }, // packedId
-          ],
-        },
-      ],
-    },
-    fragment: {
-      module: pointModule,
-      entryPoint: 'fsPick',
-      targets: [{ format: 'r32uint' }],
-    },
-    primitive: { topology: 'triangle-list' },
-    depthStencil: {
-      format: 'depth32float',
-      depthWriteEnabled: true,
-      depthCompare: 'less',
-    },
+
+  // Both point pipelines share ONE explicit layout, so their bind groups are
+  // interchangeable — the per-pass slot's bind group binds correctly to either.
+  // (The 'auto'-layout trap does NOT arise here: it only bites pipelines whose
+  // layout was inferred; an EXPLICIT shared layout is exactly the fix for it.)
+  const pointPipelineLayout = device.createPipelineLayout({
+    label: 'body-pick-point-pipeline-layout',
+    bindGroupLayouts: [pointBgl],
   });
+
+  // One pipeline per vertex entry of starPointPick.wesl: 'vs' clamps true depth
+  // onto the scene-star band (the famous stars, whose within-far members sort
+  // physically); 'vsGlint' FORCES the shallower glint band so sub-pixel planets/
+  // moons rank by importance and the instance DRAW ORDER breaks the tie (see the
+  // shader header). Everything else — instance layout, fragment, r32uint target,
+  // NEAR0 depth profile — is identical, so one builder makes both.
+  function makePointPipeline(entryPoint: 'vs' | 'vsGlint', label: string): GPURenderPipeline {
+    return device.createRenderPipeline({
+      label,
+      layout: pointPipelineLayout,
+      vertex: {
+        module: pointModule,
+        entryPoint,
+        buffers: [
+          {
+            arrayStride: POINT_INSTANCE_STRIDE,
+            stepMode: 'instance',
+            attributes: [
+              { shaderLocation: 0, offset: 0, format: 'float32x3' }, // posRelCamMpc
+              { shaderLocation: 1, offset: 12, format: 'uint32' }, // packedId
+            ],
+          },
+        ],
+      },
+      fragment: {
+        module: pointModule,
+        entryPoint: 'fsPick',
+        targets: [{ format: 'r32uint' }],
+      },
+      primitive: { topology: 'triangle-list' },
+      depthStencil: {
+        format: 'depth32float',
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+      },
+    });
+  }
+  const pointPipeline = makePointPipeline('vs', 'body-pick-point-pipeline');
+  const pointGlintPipeline = makePointPipeline('vsGlint', 'body-pick-point-glint-pipeline');
 
   // ── Per-pass point-pick slots (own buffers per caller → multi-call safe) ──
   //
@@ -363,7 +389,7 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
 
   function drawPoints(pass: GPURenderPassEncoder, args: BodyPointPickArgs): void {
     beginPassIfNew(pass);
-    const { vp, viewportPx, points } = args;
+    const { vp, viewportPx, points, variant = 'sceneStar' } = args;
     const n = points.length;
     if (n === 0) return;
 
@@ -405,7 +431,9 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     }
     device.queue.writeBuffer(slot.instanceBuffer, 0, interleaved);
 
-    pass.setPipeline(pointPipeline);
+    // Pick the depth-semantics variant. The bind group is layout-shared, so it
+    // binds to either pipeline unchanged (see the pipeline-layout note above).
+    pass.setPipeline(variant === 'glint' ? pointGlintPipeline : pointPipeline);
     pass.setBindGroup(0, slot.bindGroup);
     pass.setVertexBuffer(0, slot.instanceBuffer);
     // Six vertices per instanced billboard quad (lib/billboard's quadCorner).

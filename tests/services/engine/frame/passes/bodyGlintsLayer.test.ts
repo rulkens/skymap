@@ -213,17 +213,38 @@ function makePickRenderer() {
   return {
     drawSphere: vi.fn(),
     drawPoints:
-      vi.fn<(pass: GPURenderPassEncoder, args: { vp: Float32Array; viewportPx: readonly [number, number]; points: readonly { posRelCamMpc: Vec3; packedId: number }[] }) => void>(),
+      vi.fn<(pass: GPURenderPassEncoder, args: { vp: Float32Array; viewportPx: readonly [number, number]; points: readonly { posRelCamMpc: Vec3; packedId: number }[]; variant?: 'sceneStar' | 'glint' }) => void>(),
   };
 }
+
+// A resolved Earth 1.1e6 km down +x — with the camera at 1e6 km its apparent
+// diameter is many px, so `earthLayer.enabled` (the SAME predicate the Earth
+// stamp is gated on) holds and the stamp is emitted.
+const EARTH_RESOLVED: PlanetBody = {
+  id: 'earth',
+  label: 'Earth',
+  positionMpc: [1_100_000 * KM, 0, 0],
+  radiusKm: 6371,
+  albedo: [0.2, 0.4, 0.8],
+  orientation: IDENTITY,
+};
 
 function makePickState(
   bodyPickRenderer: unknown,
   planets: readonly PlanetBody[],
+  opts?: { earth?: PlanetBody | null; earthRenderer?: unknown },
 ): EngineState {
   return {
-    gpu: { bodyPickRenderer },
-    data: { bodies: { planets } },
+    // earthRenderer defaults to a truthy stand-in so `earthLayer.enabled` (which
+    // short-circuits on a null handle) is exercised by the earth+distance test,
+    // not skipped. Distinguish "not provided" (→ {}) from an explicit `null` — a
+    // `?? {}` fallback would collapse the pre-bootstrap null-handle case. earth
+    // defaults to null → no Earth stamp (the pre-Earth-stamp tests keep theirs).
+    gpu: {
+      bodyPickRenderer,
+      earthRenderer: opts && 'earthRenderer' in opts ? opts.earthRenderer : {},
+    },
+    data: { bodies: { planets, earth: opts?.earth ?? null } },
     assetSlots: { bodyTextures: new Map() },
   } as unknown as EngineState;
 }
@@ -268,6 +289,74 @@ describe('bodyGlintsLayer.drawPick', () => {
     expect(args.vp).not.toBe(view.vp);
     expect(args.vp).toEqual(narrowMat4(rebaseViewProj(view.slab.vp, CAM_POS)));
     expect(args.viewportPx).toBe(view.viewportPx);
+  });
+
+  it('requests the glint pick variant (so glints collapse onto the shallow priority band)', () => {
+    const pickRenderer = makePickRenderer();
+    const state = makePickState(pickRenderer, [JUPITER]);
+    bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), state);
+    const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
+    expect(args.variant).toBe('glint');
+  });
+
+  it('prepends the Earth stamp FIRST when earthLayer.enabled holds, so Earth out-picks every glint', () => {
+    // Two lit io/jupiter glints plus a resolved Earth. Earth is not in the
+    // partition (it rides earthLayer), so the layer prepends its stamp — and it
+    // must be instance 0 so the draw-order tie-break inside the shared glint band
+    // makes Earth beat the Moon and every planet.
+    const IO_LIT = bodyAt('io', 1_120_000, [0.8, 0.8, 0.8]); // seed index 10, lit
+    const pickRenderer = makePickRenderer();
+    const state = makePickState(pickRenderer, [JUPITER, IO_LIT], { earth: EARTH_RESOLVED });
+    bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), state);
+
+    const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
+    // Earth first, then the seed-order glints (Jupiter before Io).
+    expect(args.points).toHaveLength(3);
+    expect(args.points[0]!.packedId).toBe(packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET));
+    expect(args.points[1]!.packedId).toBe(packSelection(Source.Planet, 3 + PICK_SENTINEL_OFFSET));
+    expect(args.points[2]!.packedId).toBe(packSelection(Source.Planet, 10 + PICK_SENTINEL_OFFSET));
+    // The Earth stamp's anchor is Earth's position rebased into the camera frame.
+    expect(args.points[0]!.posRelCamMpc[0]).toBeCloseTo(
+      EARTH_RESOLVED.positionMpc[0] - CAM_POS[0],
+      20,
+    );
+  });
+
+  it('omits the Earth stamp when earthLayer.enabled is false (earth null or handle null)', () => {
+    const pickRenderer = makePickRenderer();
+    // earth null → earthLayer.enabled false → no stamp (only the lit Jupiter).
+    const noEarth = makePickState(pickRenderer, [JUPITER], { earth: null });
+    bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), noEarth);
+    const [, argsA] = pickRenderer.drawPoints.mock.calls[0]!;
+    expect(argsA.points.some((p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET))).toBe(false);
+    expect(argsA.points).toHaveLength(1);
+
+    // earthRenderer null (pre-bootstrap) even with a seeded earth → still no stamp.
+    const pickRenderer2 = makePickRenderer();
+    const noHandle = makePickState(pickRenderer2, [JUPITER], {
+      earth: EARTH_RESOLVED,
+      earthRenderer: null,
+    });
+    bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), noHandle);
+    const [, argsB] = pickRenderer2.drawPoints.mock.calls[0]!;
+    expect(argsB.points.some((p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET))).toBe(false);
+  });
+
+  it('preserves the partition (seed) order of glints in the instance list', () => {
+    // Three lit glints in a known input order — the pick list must keep it so the
+    // draw-order tie-break equals the seed priority (planet before its moons).
+    const IO_LIT = bodyAt('io', 1_120_000, [0.8, 0.8, 0.8]); // index 10
+    const EUROPA_LIT = bodyAt('europa', 1_140_000, [0.8, 0.8, 0.8]); // index 11
+    const pickRenderer = makePickRenderer();
+    const state = makePickState(pickRenderer, [JUPITER, IO_LIT, EUROPA_LIT]);
+    bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), state);
+
+    const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
+    expect(args.points.map((p) => p.packedId)).toEqual([
+      packSelection(Source.Planet, 3 + PICK_SENTINEL_OFFSET),
+      packSelection(Source.Planet, 10 + PICK_SENTINEL_OFFSET),
+      packSelection(Source.Planet, 11 + PICK_SENTINEL_OFFSET),
+    ]);
   });
 
   it('is a no-op when the bodyPickRenderer handle is null (pre-bootstrap)', () => {

@@ -5,10 +5,29 @@
 // dot from apparent flux and paints a soft Gaussian; the pick stage needs only a
 // clickable footprint at the star's TRUE screen position, so it drops all the
 // photometry and expands a fixed 18 px billboard, writing the star's packed
-// identity where the round dot covers a pixel. One module carries both stages
-// (vs + fsPick); bodyPickRenderer compiles it into its OWN GPUShaderModule for
-// the points pipeline (never shared with the sphere pipeline — the 'auto'-layout
-// trap).
+// identity where the round dot covers a pixel.
+//
+// ## Two vertex entries, one footprint + fragment: 'vs' and 'vsGlint'
+//
+// The module carries TWO vertex entries that share the identical billboard
+// expansion and the one 'fsPick' fragment, differing ONLY in how they set depth:
+//
+//   - 'vs'      — the scene / famous stars. It MIN-CLAMPS true depth onto the
+//                 scene-star band, so a within-far star keeps its true depth and
+//                 the class sorts physically among itself while still beating every
+//                 survey star and the backdrop.
+//   - 'vsGlint' — the sub-pixel solar-system body glints (planets, moons, and the
+//                 Earth glint stamp). It FORCES depth onto the shallower glint band
+//                 (see 'lib/pickDepthBands'): a glint is a UI affordance, not
+//                 geometry, so a moon a micro-Mpc nearer than its planet must NOT
+//                 steal the click. Collapsing the whole class onto one depth makes
+//                 the instance DRAW ORDER (seed order: planets before their moons,
+//                 Earth prepended by the layer) the priority instead of nearness.
+//
+// bodyPickRenderer compiles this module into its OWN GPUShaderModule and builds
+// one points pipeline per entry (never shared with the sphere pipeline — the
+// 'auto'-layout trap; the two point pipelines share ONE explicit layout, so their
+// bind groups are interchangeable).
 //
 // ## Why a fixed footprint, not the visual flux ramp
 //
@@ -54,6 +73,7 @@ import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::pickDepthBands::PICK_BAND_SCENE_STAR_EPS;
+import package::lib::pickDepthBands::PICK_BAND_GLINT_EPS;
 
 @group(0) @binding(0) var<uniform> u: CameraUniforms;
 
@@ -95,6 +115,37 @@ fn vs(
   // (planets/moons) share this shader; their AU-scale true depth keeps them in
   // front of every band automatically — that IS the planets/moons priority.
   out.clip.z = min(out.clip.z, out.clip.w * (1.0 - PICK_BAND_SCENE_STAR_EPS));
+
+  out.uv = corner;
+  out.packedId = packedId;
+  return out;
+}
+
+@vertex
+fn vsGlint(
+  @builtin(vertex_index) vi: u32,
+  @location(0) posRelCamMpc: vec3<f32>,
+  @location(1) packedId: u32,
+) -> VSOut {
+  // Same billboard expansion as 'vs' (identical footprint at the true screen
+  // position); ONLY the depth handling differs.
+  let center = worldToClip(u, posRelCamMpc);
+  let corner = quadCorner(vi);
+  let offset = expandBillboardScreen(u, center, FAMOUS_STAR_PICK_RADIUS_PX, corner);
+
+  var out: VSOut;
+  out.clip = center + vec4<f32>(offset, 0.0, 0.0);
+
+  // FORCE the glint band (header 'lib/pickDepthBands'), NOT the min-clamp 'vs'
+  // uses. Sub-pixel glints are UI affordances, not geometry: a moon 1e-6 Mpc
+  // nearer than its planet must not steal the click, so the whole class collapses
+  // onto this ONE band 'z = w * (1 - PICK_BAND_GLINT_EPS)' and the instance ORDER
+  // (seed order: planets before their moons; Earth prepended by the layer) becomes
+  // the priority. The glint band is the SHALLOWEST, so a glint out-picks every
+  // scene star, survey star, and the backdrop; a resolved sphere nearer than
+  // ~orbitDistance/4 keeps a true z/w below this band and correctly wins — a
+  // planet's own disk out-picks its glint stamp.
+  out.clip.z = out.clip.w * (1.0 - PICK_BAND_GLINT_EPS);
 
   out.uv = corner;
   out.packedId = packedId;
