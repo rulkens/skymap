@@ -381,18 +381,20 @@ the slot's `AbortSignal`, throws on non-ok. `dataUrl` resolves under
 `VITE_DATA_BASE_URL` (R2 in prod, `public/data/` in dev). The ring request
 (`bodyId: 'saturn-ring'`) fetches the `.png`; every other id fetches `.jpg`.
 
-- [ ] Add `bodyTextureFetcher.ts`. Didactic docblock: tier-sized filename via
+- [x] Add `bodyTextureFetcher.ts`. Didactic docblock: tier-sized filename via
   `tierToTexturePx`; PNG-for-alpha only on the ring strip; silent-optional-asset
   posture (a 404 flows to the slot's `error` state, renderer keeps its
   placeholder — same as `earthTextureFetcher`).
-- [ ] Test `bodyTextureFetcher requests the tier-sized JPG url` — stub
+  _(BodyTextureReq.bodyId widened to `BodyTextureId | RingTextureId` so the ring
+  request typechecks — matches Task 10's family Map keys.)_
+- [x] Test `bodyTextureFetcher requests the tier-sized JPG url` — stub
   `globalThis.fetch` (returning a blob + a stubbed `createImageBitmap`); call
   with `{ bodyId: 'mars', tier: 'small' }`; assert the fetched URL ends with
   `images/textures/mars-2048.jpg`. (Behaviour through the public surface — the
   filename contract, not a source grep.)
-- [ ] Test `bodyTextureFetcher requests the ring PNG` — `{ bodyId: 'saturn-ring',
+- [x] Test `bodyTextureFetcher requests the ring PNG` — `{ bodyId: 'saturn-ring',
   tier: 'large' }` → URL ends with `images/textures/saturn-ring-8192.png`.
-- [ ] `npm test -- bodyTextureFetcher` → green. Commit.
+- [x] `npm test -- bodyTextureFetcher` → green. Commit.
 
 ## Task 9 — `bodyTextureLoadRadius`
 

@@ -1,4 +1,5 @@
 import type { BodyTextureId } from '../data/BodyTextureId';
+import type { RingTextureId } from '../data/RingTextureId';
 import type { Tier } from '../data/Tier';
 
 /**
@@ -8,9 +9,14 @@ import type { Tier } from '../data/Tier';
  * been clamped to the body's `maxTier` ceiling by the wiring row, so a body that
  * only ships a `small` texture is never asked for a `large` one.
  *
- * `bodyId` also carries `'saturn-ring'` (a `RingTextureId`) in practice — the
- * ring rides the same fetcher and slot family — but the request type names
- * `BodyTextureId` because the ring key widens the family Map's key union at the
- * slot layer, not this per-body request.
+ * `bodyId` spans `BodyTextureId | RingTextureId`: the ring strip rides the same
+ * fetcher and slot family, and its `'saturn-ring'` key is what selects the
+ * PNG-for-alpha filename branch inside the fetcher — so the request type (not
+ * just the slot Map's key union) must admit it, or the fetcher could never be
+ * called with the ring id through its typed surface. This matches Task 10's
+ * family Map key space (`BodyTextureId | RingTextureId`).
  */
-export type BodyTextureReq = { readonly bodyId: BodyTextureId; readonly tier: Tier };
+export type BodyTextureReq = {
+  readonly bodyId: BodyTextureId | RingTextureId;
+  readonly tier: Tier;
+};
