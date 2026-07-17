@@ -640,11 +640,11 @@ component gets its own folder, `<Name>.tsx` + `<Name>.module.css`, one component
 beside `famous_meta.json` (`syncR2.ts:140`), with a didactic comment (the star meta sidecar
 is a gitignored build artefact shipped only via R2, exactly like `famous_meta.json`).
 
-- [ ] Add the clause + comment.
-- [ ] Test `ALLOW accepts famous_stars_meta.json` — extend the existing ALLOW test with the
+- [x] Add the clause + comment.
+- [x] Test `ALLOW accepts famous_stars_meta.json` — extend the existing ALLOW test with the
       new name passing (an independent behavioural check, not a restatement of the full
       filter list).
-- [ ] `npm test -- syncR2` → green. Commit.
+- [x] `npm test -- syncR2` → green. Commit.
 
 ## Task 14 — Entanglement-radar review (house convention)
 
