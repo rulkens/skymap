@@ -88,6 +88,132 @@ struct TintedSphereUniforms {
   tint: vec3<f32>,
 };
 
+// ── LitBodyUniforms ──────────────────────────────────────────────────
+//
+// 'SphereUniforms' plus the per-body sun direction — the uniform layout for a
+// lit sphere drawn through its own per-draw uniform buffer. Earth is the
+// current consumer: its fragment reads a real sun-relative Lambert term
+// ('lib/bodyLighting.wesl') instead of a fixed light direction, so the
+// terminator tracks the body's actual position relative to the Sun.
+//
+// Why carry 'sunDirLocal' on the uniform rather than derive it in the shader?
+// The sun direction is rotated into the body's LOCAL frame CPU-side
+// ('utils/camera/sunDirLocal.ts') so the fragment stays a plain dot product
+// even when the body carries an axial tilt — no per-fragment matrix. See the
+// 'sunDirLocal' util header for why the transpose is the inverse.
+//
+// ## Where the ambient floor lives (not here)
+//
+// The vec3 'sunDirLocal' leaves a 4-byte tail the struct must round over. That
+// tail is pure padding — the ambient floor is NOT carried on the uniform. Every
+// lit path ('litShade' in 'lib/bodyLighting.wesl') reads the shared 'AMBIENT'
+// const directly, and the flat planet instance record has no ambient field at
+// all, so the const is the load-bearing single source. A dead uniform field
+// would be a second place ambient could appear to live; the tail stays '_pad'.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset  0..63: mvp         (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75: sunDirLocal (vec3<f32> — 16-byte ALIGNED at offset 64;
+//                               12 bytes of data)
+//   offset 76..79: _pad        (f32 — the vec3's trailing pad, zeroed; ambient
+//                               lives in bodyLighting.wesl's AMBIENT const)
+//   total: 80 bytes.
+//
+// The CPU side uploads 20 f32s: 16 mvp + 3 sunDirLocal + 1 zeroed pad. The
+// single source of truth for that packing is 'utils/gpu/packLitBodyUniforms.ts'.
+
+struct LitBodyUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  _pad: f32,
+};
+
+// ── TexturedBodyUniforms ─────────────────────────────────────────────
+//
+// 'LitBodyUniforms' plus the two ring radii — the uniform layout for a
+// textured planet or moon drawn through the 'texturedBodyRenderer'. The ring
+// ratios are DATA, not a Saturn-only code path: 'ringOuterRatio == 0' means
+// 'this body has no ring', which cleanly short-circuits the ring-on-planet
+// shadow branch in the fragment. Only Saturn ships non-zero ratios; every
+// other body packs zeros and pays nothing.
+//
+// Both ratios are expressed in planet-radius units (ring radius / planet
+// radius), so the shadow-march maths is unit-free and rides the body's local
+// sphere directly.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset  0..63: mvp            (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75: sunDirLocal    (vec3<f32> — 16-byte aligned)
+//   offset 76..79: _pad           (f32 — the vec3's trailing pad, as in
+//                                  LitBodyUniforms; ambient lives in the const)
+//   offset 80..83: ringInnerRatio (f32 — ring inner radius / planet radius)
+//   offset 84..87: ringOuterRatio (f32 — ring outer / planet radius; 0 = none)
+//   offset 88..91: _pad0          (f32 — zeroed; rounds the struct to 16)
+//   offset 92..95: _pad1          (f32 — zeroed)
+//   total: 96 bytes.
+//
+// The CPU side uploads 24 f32s. The single source of truth for that packing is
+// 'utils/gpu/packTexturedBodyUniforms.ts', which reuses 'packLitBodyUniforms'
+// for the shared 80-byte prefix so the two layouts can never drift.
+
+struct TexturedBodyUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  _pad: f32,
+  ringInnerRatio: f32,
+  ringOuterRatio: f32,
+  _pad0: f32,
+  _pad1: f32,
+};
+
+// ── RingUniforms ─────────────────────────────────────────────────────
+//
+// The uniform layout for the ring renderer -- the OTHER half of Saturn's
+// rings. The textured body draws the ring's shadow ON the planet
+// ('TexturedBodyUniforms' above); this draws the translucent annulus itself,
+// with the planet's shadow cast ON the ring.
+//
+// It carries the same MVP + body-local sun direction prefix as 'LitBodyUniforms'
+// (the ring rides the host body's exact 'composeBodyMvp' frame, and the sun is
+// rotated into that local frame CPU-side), then two ring-shape scalars the
+// fragment needs:
+//
+//   - 'planetRadiusRatio' = planet radius / ring OUTER radius (in (0, 1)).
+//     The annulus is authored at unit outer radius, so in that mesh frame the
+//     planet is a sphere of this radius. Dividing a ring point by it rescales
+//     into BODY-RADIUS units, where the planet is the UNIT sphere and the ring
+//     radii exceed 1 -- the frame the planet-on-ring shadow ray-sphere test runs
+//     in. It fills the vec3's trailing 4-byte slot, so it is a REAL field, not a
+//     pad (contrast 'LitBodyUniforms._pad').
+//   - 'innerRatio' = ring inner radius / ring OUTER radius (in (0, 1)). The ring
+//     geometry is a ring-agnostic disc; this punches the hole per-draw (the
+//     fragment discards radii below it) and normalizes the radius for the strip
+//     u, so ONE geometry serves any ring's proportions.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset  0..63: mvp               (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75: sunDirLocal       (vec3<f32> -- 16-byte aligned at 64)
+//   offset 76..79: planetRadiusRatio (f32 -- fills the vec3's 4th slot)
+//   offset 80..83: innerRatio        (f32)
+//   offset 84..95: _pad0/1/2         (f32 x3 -- rounds the struct to 96 / 16-byte)
+//   total: 96 bytes.
+//
+// The CPU side uploads 24 f32s. The single source of truth for that packing is
+// 'utils/gpu/packRingUniforms.ts'.
+
+struct RingUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  planetRadiusRatio: f32,
+  innerRatio: f32,
+  _pad0: f32,
+  _pad1: f32,
+  _pad2: f32,
+};
+
 // ── clip_from_local ──────────────────────────────────────────────────
 //
 // Transform a unit-sphere local-space position to homogeneous clip

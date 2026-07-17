@@ -50,8 +50,10 @@ function fakeSlot(name: string): {
       subs.add(fn);
       return () => subs.delete(fn);
     },
+    lastRequest: () => null,
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
   };
   function set(next: LoadState<unknown>): void {
     cur = next;

@@ -225,6 +225,11 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       gpu: {
         starPointRenderer: makeRenderer(),
         orbitTrailRenderer: { draw: vi.fn() },
+        // Explicit null so bodyGlintsLayer.enabled (a member of the same
+        // (hdr, NEAR0) group this filter walks) short-circuits on its strict
+        // `=== null` handle check rather than reading state.data.bodies.planets,
+        // which this star-focused fixture does not carry.
+        bodyGlintRenderer: null,
         starCatalogRenderer: null,
       },
       data: { bodies: { stars: SCENE_STARS } },

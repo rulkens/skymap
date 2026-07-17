@@ -49,6 +49,10 @@
  *  11. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
  *                            Moon) as screen-space conics with a brightness
  *                            lobe at the body's position (f64 compose seam)
+ *  11b. body-glints        — the sub-pixel bodies (the glints branch of the body
+ *                            partition) as brightness-scaled additive points
+ *                            (size x albedo x phase, cross-fading with the mesh
+ *                            over 1-3 px), sibling of star-points (f64 rebase seam)
  *  12. star-aggregates     — the survey (Gaia bin) AGGREGATE stream (interior
  *                            flux-mip glows), drawn LINEAR into the half-res
  *                            `star-aggregates` offscreen by its own render step
@@ -82,9 +86,16 @@
  *                            any star crossing STAR_RESOLVE_PX) as true-scale
  *                            flat-emissive spheres (f64 compose seam), opaque
  *                            into the same `foreground:0` target
- *  22. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
- *                            (f64 compose seam), opaque into the same target
- *  23. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *  22. planets             — the flat branch of the body partition: resolved
+ *                            bodies without a resident surface texture, as
+ *                            true-scale flat-lit albedo spheres (f64 compose
+ *                            seam), opaque into the same target
+ *  23. textured-bodies     — the textured branch of the body partition: resolved
+ *                            bodies whose surface texture is resident, as lit
+ *                            surface-mapped spheres (Saturn's ring casts an
+ *                            analytic on-planet shadow); opaque into the same
+ *                            target (f64 compose seam)
+ *  24. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
  *
@@ -167,7 +178,10 @@ import { clipPathDebugLayer } from './clipPathDebugLayer';
 import { earthLayer } from './earthLayer';
 import { starSpheresLayer } from './starSpheresLayer';
 import { planetsLayer } from './planetsLayer';
+import { texturedBodiesLayer } from './texturedBodiesLayer';
+import { ringsLayer } from './ringsLayer';
 import { starPointsLayer } from './starPointsLayer';
+import { bodyGlintsLayer } from './bodyGlintsLayer';
 import { starCatalogLayer } from './starCatalogLayer';
 import { starAggregatesLayer } from './starAggregatesLayer';
 import { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
@@ -205,6 +219,11 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   milkyWayLayer,
   starPointsLayer,
   orbitTrailsLayer,
+  // The sub-pixel bodies (the glints branch of the body partition) as
+  // brightness-scaled additive points — the far half of the body LOD, sibling of
+  // star-points. Additive into HDR through NEAR0, so its position among the
+  // additive rows is a listing choice, not a compositing one.
+  bodyGlintsLayer,
   // The survey (Gaia bin) stars split into two streams sharing one per-frame
   // walk: the AGGREGATE glow field draws LINEAR into the half-res
   // `star-aggregates` offscreen by its OWN render step (so its position here is
@@ -233,6 +252,13 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   earthLayer,
   starSpheresLayer,
   planetsLayer,
+  texturedBodiesLayer,
+  // Saturn's rings: the translucent overlay half of the ring system, drawn LAST
+  // in the (foreground:0, NEAR0) group so it depth-tests against the opaque
+  // spheres already stamped there (far ring half occluded), writing no depth and
+  // blending straight-alpha OVER — the one blend exception in the otherwise
+  // opaque foreground group (spec §8).
+  ringsLayer,
   // Near-field captions: the scene-body name labels drawn OVER onto the swap
   // chain through the near0 slab. The frame program's (swap, NEAR0) render
   // step drives it — the (swap, COSMO) step selects nothing here by
@@ -258,7 +284,10 @@ export { clipPathDebugLayer } from './clipPathDebugLayer';
 export { earthLayer } from './earthLayer';
 export { starSpheresLayer } from './starSpheresLayer';
 export { planetsLayer } from './planetsLayer';
+export { texturedBodiesLayer } from './texturedBodiesLayer';
+export { ringsLayer } from './ringsLayer';
 export { starPointsLayer } from './starPointsLayer';
+export { bodyGlintsLayer } from './bodyGlintsLayer';
 export { starCatalogLayer } from './starCatalogLayer';
 export { starAggregatesLayer } from './starAggregatesLayer';
 export { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';

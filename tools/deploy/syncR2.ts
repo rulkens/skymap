@@ -92,6 +92,7 @@ import { execSync } from 'node:child_process';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
 import { collectHiResImages } from './collectHiResImages';
+import { collectTextureImages } from './collectTextureImages';
 
 const DATA_DIR = 'public/data';
 /**
@@ -101,6 +102,13 @@ const DATA_DIR = 'public/data';
  * public/data/.  See `collectHiResImages.ts` for the inventory contract.
  */
 const HIRES_DIR = 'public/data/images/famous-hires';
+/**
+ * The flat planet-texture directory written by the texture build step.
+ * Listed explicitly (rather than via a recursive walk of public/data/) for
+ * the same reason as HIRES_DIR — see `collectTextureImages.ts` for the
+ * inventory contract.
+ */
+const TEXTURES_DIR = 'public/data/images/textures';
 const BUCKET = 'skymap-data';
 const CACHE_CONTROL = 'public, max-age=86400';
 
@@ -426,9 +434,17 @@ async function main(): Promise<void> {
   // so `dataUrl('images/famous-hires/<id>.webp')` resolves at runtime.
   const hiResImages = collectHiResImages(HIRES_DIR);
 
+  // Tiered planet-surface textures from `public/data/images/textures/`.
+  // Built by the texture pipeline; missing on a code-only deploy that
+  // hasn't run it, which is fine — the inventory helper returns [] in that
+  // case.  Each upload becomes `data/images/textures/<file>` so
+  // `dataUrl('images/textures/<file>')` resolves at runtime.
+  const textureImages = collectTextureImages(TEXTURES_DIR);
+
   console.log(
     `Syncing ${files.length} public/data files` +
       (hiResImages.length > 0 ? ` + ${hiResImages.length} hi-res image(s)` : '') +
+      (textureImages.length > 0 ? ` + ${textureImages.length} texture(s)` : '') +
       (presentExtras.length > 0 ? ` + ${presentExtras.length} extra file(s)` : '') +
       ` to r2://${BUCKET}/data/\n`,
   );
@@ -446,6 +462,13 @@ async function main(): Promise<void> {
   if (hiResImages.length > 0) {
     console.log('\n--- Hi-res famous-galaxy images ---\n');
     for (const { localPath, r2Key } of hiResImages) {
+      await uploadIfChanged(localPath, r2Key, touchedKeys);
+    }
+  }
+
+  if (textureImages.length > 0) {
+    console.log('\n--- Planet-surface textures ---\n');
+    for (const { localPath, r2Key } of textureImages) {
       await uploadIfChanged(localPath, r2Key, touchedKeys);
     }
   }
@@ -468,7 +491,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const total = files.length + hiResImages.length + presentExtras.length;
+  const total = files.length + hiResImages.length + textureImages.length + presentExtras.length;
   const uploaded = touchedKeys.length;
   console.log(
     `\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/` +

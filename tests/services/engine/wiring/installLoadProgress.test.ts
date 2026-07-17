@@ -41,8 +41,10 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> {
     current: () => null,
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
+    lastRequest: () => null,
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
   };
 }
 
@@ -54,10 +56,14 @@ function makeState(): EngineState {
   const starCatalogs = new Map<SourceType, AssetSlot<unknown, unknown>>([
     [Source.GaiaStars, stubSlot('starCatalog:gaiaStars')],
   ]);
+  const bodyTextures = new Map<string, AssetSlot<unknown, unknown>>([
+    ['earth', stubSlot('earth-texture')],
+  ]);
   return {
     assetSlots: {
       points,
       starCatalogs,
+      bodyTextures,
       filaments: stubSlot('filaments'),
       famousMeta: stubSlot('famous-meta'),
       structureCatalog: stubSlot('structure-catalog'),
@@ -103,6 +109,9 @@ describe('installLoadProgress', () => {
     // star catalog gets no loading-bar progress AND no slot-ready render wake
     // (installSlotReadyWake subscribes over this same Map).
     expect(names.has('starCatalog:gaiaStars')).toBe(true);
+    // Body-texture family slots ride the same registry (gathered from the keyed
+    // bodyTextures map, not a named field).
+    expect(names.has('earth-texture')).toBe(true);
     expect(names.has('filaments')).toBe(true);
     expect(names.has('famous-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);

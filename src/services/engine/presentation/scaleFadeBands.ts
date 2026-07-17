@@ -16,14 +16,15 @@
  * distinction is carried per-row by the comment naming WHICH quantity feeds
  * the band, not by splitting the table. Three rows key on the camera's distance
  * from the heliocentric render origin (`hypot(view.camPos)`, Mpc); one keys on
- * a star's OWN distance from the camera (pc). Keeping them one table is the
- * point: they are all "the descent's fades", and a reader tuning the descent
- * wants them in one view.
+ * a star's OWN distance from the camera (pc); one keys on a scene body's
+ * apparent DIAMETER in pixels. Keeping them one table is the point: they are all
+ * "the descent's fades", and a reader tuning the descent wants them in one view.
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
 import { FARTHEST_BODY_MPC, FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
+import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
 // The roster's farthest seed expressed in parsecs — the derivation source for
@@ -104,4 +105,17 @@ export const SCALE_FADE_BANDS = {
     fullAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC / 2,
     goneAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC,
   },
+
+  // Keyed on: a scene BODY's apparent diameter, px. The sub-pixel glint
+  // cross-fade: a body renders as a brightness-scaled additive point that is at
+  // FULL strength at/below 1 px and GONE at/above `BODY_GLINT_MAX_PX` (a recede
+  // fade — full at the low edge). The mesh keeps its hard `SUB_PIXEL_BODY_CULL_PX
+  // = 1` cull and the partition sends everything below `BODY_GLINT_MAX_PX` to the
+  // glint, so over the (BODY_GLINT_MAX_PX)->1 px band the glint fades IN while the
+  // mesh still draws: at the top edge the glint is ~0 (the mesh carries), by 1 px
+  // it is full (the mesh is about to cull) — a popless handoff. `goneAt` IS the
+  // partition-boundary symbol `BODY_GLINT_MAX_PX`, not a hardcoded copy of it: the
+  // handoff is popless BY CONSTRUCTION only while the fade edge and the partition
+  // boundary are the SAME value, so they share one source and cannot drift.
+  bodyGlint: { fullAt: 1, goneAt: BODY_GLINT_MAX_PX },
 } as const satisfies Readonly<Record<string, FadeBand>>;

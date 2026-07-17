@@ -8,9 +8,9 @@
  * draws N planets in a single `drawIndexed(indexCount, count)`. The planet's
  * vertex stage forwards the unit-sphere local position (== outward normal) and
  * the fragment modulates the per-instance albedo by ONE lambert dot product
- * against a fixed light direction plus a small ambient floor — see
- * `planet/fragment.wesl` for why the fixed direction is a documented stand-in
- * for real sun-relative lighting, not a lighting system.
+ * against the per-instance sun direction (the Sun's direction rotated into the
+ * body's local frame, baked into the instance record) plus a small ambient
+ * floor — see `planet/fragment.wesl` and the shared `lib/bodyLighting.wesl`.
  *
  * No texture machinery: a per-instance albedo is enough at the descent's
  * fly-past distances. If a body ever earns imagery it would grow the Earth's
@@ -62,24 +62,25 @@ export const MAX_PLANETS = 24;
 
 /**
  * Float32 slots per per-instance record: four `vec4<f32>` MVP columns (16) +
- * one `vec4<f32>` albedo (rgb + 1 pad float, 4) = 20. The caller writes each
- * body's record at `i * INSTANCE_FLOATS`, and `draw` uploads `count` records
- * in one `writeBuffer`.
+ * one `vec4<f32>` albedo (rgb + 1 pad float, 4) + one `vec4<f32>` sunDirLocal
+ * (xyz + 1 pad float, 4) = 24. The caller writes each body's record at
+ * `i * INSTANCE_FLOATS`, and `draw` uploads `count` records in one
+ * `writeBuffer`.
  */
-export const INSTANCE_FLOATS = 20;
+export const INSTANCE_FLOATS = 24;
 
 /**
- * Per-instance byte stride: 20 × 4 = 80. Declared here AND in the pipeline's
+ * Per-instance byte stride: 24 × 4 = 96. Declared here AND in the pipeline's
  * instance-buffer descriptor; a mismatch either validate-errors or silently
  * reads garbage.
  */
-export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 80 bytes
+export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 96 bytes
 
 /**
  * Per-instance vertex attributes — the four MVP columns (reassembled into a
- * `mat4x4<f32>` in the shader) followed by the albedo, at `@location`s 1..5
- * (location 0 is the per-vertex sphere position). Byte offsets must match
- * `planet/vertex.wesl` exactly.
+ * `mat4x4<f32>` in the shader), the albedo, then the body-local sun direction,
+ * at `@location`s 1..6 (location 0 is the per-vertex sphere position). Byte
+ * offsets must match `planet/vertex.wesl` exactly.
  */
 const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 1, offset: 0, format: 'float32x4' }, // mvp column 0
@@ -87,6 +88,7 @@ const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 3, offset: 32, format: 'float32x4' }, // mvp column 2
   { shaderLocation: 4, offset: 48, format: 'float32x4' }, // mvp column 3
   { shaderLocation: 5, offset: 64, format: 'float32x4' }, // albedo (rgb + pad)
+  { shaderLocation: 6, offset: 80, format: 'float32x4' }, // sunDirLocal (xyz + pad)
 ];
 
 export function createPlanetRenderer(
@@ -114,7 +116,8 @@ export function createPlanetRenderer(
 
   // ── Instance vertex buffer ────────────────────────────────────────────────
   //
-  // Holds up to MAX_PLANETS 80-byte records (four MVP columns + albedo). `draw`
+  // Holds up to MAX_PLANETS 96-byte records (four MVP columns + albedo +
+  // sunDirLocal). `draw`
   // overwrites the first `count` records each frame with one `writeBuffer`; the
   // instance step means `@builtin(instance_index)` selects a body's record, so
   // every planet renders with its OWN matrix — no per-body bind, no per-draw
@@ -131,10 +134,10 @@ export function createPlanetRenderer(
 
   // ── Render pipeline (opaque foreground profile, same as earthRenderer) ────
   //
-  // No bind groups: the MVP + albedo are per-instance vertex attributes and the
-  // lighting constants are WESL `const`s, so the shader reads nothing from the
-  // uniform address space. An explicit empty pipeline layout keeps this off the
-  // 'auto'-layout path entirely.
+  // No bind groups: the MVP + albedo + sunDirLocal are per-instance vertex
+  // attributes and the ambient floor is a WESL `const` (in `lib/bodyLighting`),
+  // so the shader reads nothing from the uniform address space. An explicit
+  // empty pipeline layout keeps this off the 'auto'-layout path entirely.
   const pipeline = device.createRenderPipeline({
     label: 'planet-pipeline',
     layout: device.createPipelineLayout({

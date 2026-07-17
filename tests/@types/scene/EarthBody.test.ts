@@ -10,7 +10,7 @@ describe('EarthBody type', () => {
       label: 'Earth',
       positionMpc: [0, 0, 0],
       radiusKm: 6371,
-      textureUrl: '/images/bodies/blue-marble.jpg',
+      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     };
     expect(earth.radiusKm).toBe(6371);
   });

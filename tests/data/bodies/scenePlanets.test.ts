@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
+import { rotationById } from '../../../src/data/bodies/rotationElements';
+import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 
 const findPlanet = (id: string) => {
   const planet = SCENE_PLANETS.find((p) => p.id === id);
@@ -48,5 +51,17 @@ describe('SCENE_PLANETS', () => {
     const distKm = hypot3(offset) / SCALE_UNITS.KM_TO_MPC;
     expect(distKm).toBeGreaterThan(350_000);
     expect(distKm).toBeLessThan(420_000);
+  });
+
+  it('bake IAU orientation for textured bodies', () => {
+    // Pins that the maker wired the registry-keyed choice, NOT a formula mirror:
+    // the expectation is built from the authored ROTATION_ELEMENTS table through
+    // the same util the maker calls, so this exercises the WIRING (does Saturn's
+    // orientation come from its rotation elements?) rather than restating a
+    // matrix. A textured body carries its baked IAU rotation; an irregular moon
+    // with no registry row (Phobos) carries the identity, the honest "no facing
+    // modelled" value.
+    expect(findPlanet('saturn').orientation).toEqual(rotationFromIau(rotationById('saturn')));
+    expect(findPlanet('phobos').orientation).toEqual(IDENTITY_MAT3);
   });
 });

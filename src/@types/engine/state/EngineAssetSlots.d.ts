@@ -36,6 +36,9 @@ import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
 import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
 import type { StarCatalogReq } from '../../loading/StarCatalogReq';
 import type { SourceType } from '../../data/SourceType';
+import type { BodyTextureReq } from '../../loading/BodyTextureReq';
+import type { BodyTextureId } from '../../data/BodyTextureId';
+import type { RingTextureId } from '../../data/RingTextureId';
 
 export type EngineAssetSlots = {
   points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
@@ -142,21 +145,26 @@ export type EngineAssetSlots = {
    */
   flow: AssetSlot<ScalarCube, void> | null;
   /**
-   * Blue Marble equirectangular texture that skins the true-scale Earth on
-   * deep descent (`SCENE_EARTH.textureUrl`).
+   * The keyed body-surface texture family — one slot per textured spherical body
+   * (`'earth'`, `'mars'`, …) plus the Saturn ring strip (`'saturn-ring'`),
+   * keyed by `BodyTextureId | RingTextureId`.
    *
-   * Descent-gated (unlike the settings-toggled `flow` / `cf4Density`): the slot
-   * stays idle until the camera's orbit distance-to-focus drops below
-   * `EARTH_TEXTURE_MAX_DISTANCE_MPC`, at which point the per-frame
-   * `reevaluateDemand` fires `earthTextureFetcher` and the commit re-skins the
-   * already-visible placeholder sphere via `earthRenderer.setTexture`. The ~MB
-   * JPG fetch + decode is therefore paid on the way down, not at boot.
+   * A keyed Map that mirrors `points`: any consumer looks up a body's texture
+   * slot by id without iterating, and the family shares one fetcher +
+   * demand/release rail rather than a per-body field. Each slot is
+   * proximity-gated (demanded inside the body's own load radius, released
+   * outside twice it — hysteresis) and re-fetched at the clamped current tier on
+   * a data-volume tier change. Earth's former bespoke single-texture path folds
+   * into this family as key `'earth'`.
    *
-   * Null until `wireSlots` mints it (matches `flow` for the same lifecycle
-   * reason — the renderer must exist before the slot can commit). A 404 / decode
-   * failure surfaces as a never-fires commit; the blue placeholder stays.
+   * Unlike `flow` / `cf4Density` (null-then-set named fields minted in
+   * `wireSlots`), these are minted in `initGpu` beside the body renderers their
+   * commit uploads into — the same posture as the `points` slots — so the Map is
+   * declared non-null (empty at construction, filled during `initGpu`) and
+   * consumers need no null check. A 404 / decode failure surfaces as a
+   * never-fires commit; the renderer keeps its flat-albedo placeholder.
    */
-  earthTexture: AssetSlot<ImageBitmap, void> | null;
+  bodyTextures: Map<BodyTextureId | RingTextureId, AssetSlot<ImageBitmap, BodyTextureReq>>;
   /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being

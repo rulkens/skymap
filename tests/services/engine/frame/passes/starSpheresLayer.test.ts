@@ -24,6 +24,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { starSpheresLayer } from '../../../../../src/services/engine/frame/passes/starSpheresLayer';
+import { IDENTITY_MAT3 } from '../../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
@@ -184,6 +185,8 @@ describe('starSpheresLayer.draw', () => {
     expect(call[1]).toBe(SUN.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
     expect(call[3]).toBe(SUN.radiusKm * SCALE_UNITS.KM_TO_MPC);
+    // A star is a rotation-invariant emissive sphere — it forwards the identity.
+    expect(call[4]).toBe(IDENTITY_MAT3);
 
     // The renderer receives the pass + the composed f32 MVP + the Sun's
     // blackbody colour.

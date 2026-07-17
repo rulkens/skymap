@@ -21,6 +21,7 @@ import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
+import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -101,19 +102,30 @@ function makeNear0View(): SlabView {
   };
 }
 
-// Draw ctx: camera at the origin (the Sun), 60° fov — the pack loop's
-// sub-pixel cull reads ctx.drawCamPos + ctx.fovYRad (paired with the
-// fixture's tall viewport above so every seeded body resolves).
+// Draw ctx: camera at the origin (the Sun), 60° fov — the partition (shared by
+// enabled + draw) reads ctx.drawCamPos + ctx.canvasSize.height + ctx.fovYRad.
+// An astronomically TALL viewport (1e12 px) buys pixels so every seeded body
+// resolves past the glint threshold and lands in the `flat` branch — the layout
+// pins below want EVERY seeded body packed from one impossible-on-a-real-viewport
+// camera position (Mercury is sub-pixel from Neptune). The cull itself has a
+// dedicated test on a real 720-px viewport.
 const DRAW_CTX = {
   drawCamPos: [0, 0, 0],
+  canvasSize: { width: 1280, height: 1e12 },
   fovYRad: (60 * Math.PI) / 180,
 } as unknown as ReadyFrameContext;
 
-/** State with a `planetRenderer` handle set and a seeded planet list. */
+/**
+ * State with a `planetRenderer` handle, a seeded planet list, and an empty
+ * `bodyTextures` slot Map — so no body's texture is resident and the partition
+ * routes every resolved body to the `flat` branch this layer draws (a resident
+ * body would slide to `textured`, drawn by `texturedBodiesLayer` instead).
+ */
 function makeState(planetRenderer: unknown, planets: readonly PlanetBody[]): EngineState {
   return {
     gpu: { planetRenderer },
     data: { bodies: { planets } },
+    assetSlots: { bodyTextures: new Map() },
   } as unknown as EngineState;
 }
 
@@ -201,6 +213,8 @@ describe('planetsLayer.draw', () => {
       expect(call[1]).toBe(planet.positionMpc);
       expect(call[2]).toBe(RENDER_ORIGIN_MPC);
       expect(call[3]).toBe(planet.radiusKm * SCALE_UNITS.KM_TO_MPC);
+      // Each planet forwards its own baked orientation as the rotation factor.
+      expect(call[4]).toBe(planet.orientation);
     });
 
     // Exactly one draw for the whole batch, with count == planet count.
@@ -211,19 +225,42 @@ describe('planetsLayer.draw', () => {
     expect(staging).toBeInstanceOf(Float32Array);
 
     // The staging layout: each planet's albedo sits at floats base+16..18 of
-    // its 20-float record. Planet 1 (Jupiter) → base 20 → albedo at 36..38.
+    // its 24-float record. Planet 1 (Jupiter) → base 24 → albedo at 40..42.
     SCENE_PLANETS.forEach((planet, i) => {
       const base = i * INSTANCE_FLOATS;
-      expect(base).toBe(i * 20);
+      expect(base).toBe(i * 24);
       expect(staging[base + 16]).toBeCloseTo(planet.albedo[0]);
       expect(staging[base + 17]).toBeCloseTo(planet.albedo[1]);
       expect(staging[base + 18]).toBeCloseTo(planet.albedo[2]);
-      expect(staging[base + 19]).toBe(0); // trailing pad stays zeroed
+      expect(staging[base + 19]).toBe(0); // albedo pad stays zeroed
     });
-    // Spelled out for the second planet so the 36..38 offset is explicit.
-    expect(staging[36]).toBeCloseTo(SCENE_PLANETS[1]!.albedo[0]);
-    expect(staging[37]).toBeCloseTo(SCENE_PLANETS[1]!.albedo[1]);
-    expect(staging[38]).toBeCloseTo(SCENE_PLANETS[1]!.albedo[2]);
+    // Spelled out for the second planet so the 40..42 offset is explicit.
+    expect(staging[40]).toBeCloseTo(SCENE_PLANETS[1]!.albedo[0]);
+    expect(staging[41]).toBeCloseTo(SCENE_PLANETS[1]!.albedo[1]);
+    expect(staging[42]).toBeCloseTo(SCENE_PLANETS[1]!.albedo[2]);
+  });
+
+  it('packs each body`s sunDirLocal at floats base+20..22 with a zeroed pad', () => {
+    // The per-instance sun direction that replaced the shader`s fixed LIGHT_DIR:
+    // floats 20..22 carry sunDirLocal(pos, RENDER_ORIGIN_MPC, orientation) —
+    // computed independently here — and float 23 the trailing pad. sunDirLocal
+    // is NOT mocked, so the layer runs the real transpose-rotate.
+    composeMock.mockClear();
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+    const state = makeState(renderer, SCENE_PLANETS);
+
+    planetsLayer.draw(PASS_STUB, view, DRAW_CTX, state);
+
+    const [, staging] = renderer.draw.mock.calls[0]!;
+    SCENE_PLANETS.forEach((planet, i) => {
+      const base = i * INSTANCE_FLOATS;
+      const sun = sunDirLocal(planet.positionMpc, RENDER_ORIGIN_MPC, planet.orientation);
+      expect(staging[base + 20]).toBeCloseTo(sun[0]);
+      expect(staging[base + 21]).toBeCloseTo(sun[1]);
+      expect(staging[base + 22]).toBeCloseTo(sun[2]);
+      expect(staging[base + 23]).toBe(0); // sunDir pad stays zeroed
+    });
   });
 
   it('packs only the bodies that resolve past the sub-pixel cull', () => {
@@ -241,6 +278,7 @@ describe('planetsLayer.draw', () => {
     const nearFirst = SCENE_PLANETS[0]!.positionMpc;
     const ctx = {
       drawCamPos: [nearFirst[0] + 1e-14, nearFirst[1], nearFirst[2]],
+      canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
     } as unknown as ReadyFrameContext;
 
@@ -261,6 +299,7 @@ describe('planetsLayer.draw', () => {
     const state = makeState(renderer, SCENE_PLANETS);
     const ctx = {
       drawCamPos: [0, 0, 1e-3],
+      canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
     } as unknown as ReadyFrameContext;
 

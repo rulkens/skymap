@@ -11,13 +11,15 @@
  * ever moves (ADR-0010 extension point).
  *
  * Earth keeps this bespoke derivation rather than going through
- * `heliocentricPlanet`: an `EarthBody` carries a `textureUrl` (the Blue Marble
- * asset) where a `PlanetBody` carries a flat `albedo`, so the two do not share
- * a maker.
+ * `heliocentricPlanet`: an `EarthBody` carries no flat `albedo` (it is always
+ * textured — the Blue Marble rides the keyed `bodyTextures` slot family), where
+ * a `PlanetBody` carries one, so the two do not share a maker. Its `orientation`
+ * is baked from the same registry-keyed choice the planet makers use.
  */
 
 import { RENDER_ORIGIN_MPC } from '../renderOrigin';
 import { elementsById } from './orbitalElements';
+import { orientationForBody } from './orientationForBody';
 import { keplerianPositionMpc } from '../../utils/orbit/keplerianPositionMpc';
 import { addVec3 } from '../../utils/math/addVec3';
 import type { EarthBody } from '../../@types/scene/EarthBody';
@@ -27,5 +29,5 @@ export const SCENE_EARTH: EarthBody = {
   label: 'Earth',
   positionMpc: addVec3(RENDER_ORIGIN_MPC, keplerianPositionMpc(elementsById('earth'))),
   radiusKm: 6371,
-  textureUrl: '/images/earth/blue-marble-4k.jpg',
+  orientation: orientationForBody('earth'),
 };

@@ -1,4 +1,6 @@
 import type { SourceType } from '../data/SourceType';
+import type { BodyTextureId } from '../data/BodyTextureId';
+import type { RingTextureId } from '../data/RingTextureId';
 
 /**
  * Registry key for every fetchable asset in the engine's asset-wiring layer.
@@ -38,12 +40,17 @@ import type { SourceType } from '../data/SourceType';
  *     slot lives as a named field on `state.assetSlots` and needs a string
  *     asset key to route through `slotFor`.
  *
- *   - `'earthTexture'` — the Blue Marble equirectangular texture that skins the
- *     true-scale Earth on deep descent. A single tier-agnostic asset with no
- *     point-`Source` code, descent-gated (`cameraDistanceMpc < threshold`)
- *     rather than settings-toggled. Its slot lives as a named field on
- *     `state.assetSlots` and needs a string asset key to route through
- *     `slotFor`.
+ *   - `BodyTextureId | RingTextureId` — the keyed `bodyTextures` slot family:
+ *     one asset per textured spherical body (`'earth'`, `'mars'`, …) plus the
+ *     Saturn ring strip (`'saturn-ring'`). Unlike the single sidecar assets
+ *     above, these do NOT live as named fields — they share the keyed
+ *     `state.assetSlots.bodyTextures` Map (mirroring the per-source `points`
+ *     map), and `slotFor` routes a family key through it via `isBodyTextureKey`.
+ *     Each is proximity-gated on its own load radius and released on retreat
+ *     (two-way demand), and re-fetched at the clamped current tier when the
+ *     data-volume tier changes. The asset set widens with the body textures:
+ *     Earth's former bespoke `'earthTexture'` key is gone — Earth loads through
+ *     this family as key `'earth'`.
  *
  * The asymmetry cuts both ways: some `Source`s are NOT fetched individually
  * (Cluster / Supercluster / Void all arrive via `'structureCatalog'`), and the
@@ -62,4 +69,5 @@ export type AssetKey =
   | 'cf4Density'
   | 'mcpm'
   | 'flow'
-  | 'earthTexture';
+  | BodyTextureId
+  | RingTextureId;

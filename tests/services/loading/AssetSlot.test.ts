@@ -191,6 +191,108 @@ describe('AssetSlot — retry', () => {
   });
 });
 
+describe('AssetSlot — release (the evict edge)', () => {
+  it('release() on a ready slot drops to idle and runs onRelease once with the payload', async () => {
+    const fetch: Fetcher<string, void> = vi.fn().mockResolvedValue('payload');
+    const commit = vi.fn().mockResolvedValue(undefined);
+    const onRelease = vi.fn();
+    const slot = createAssetSlot<string, void>({
+      name: 'test',
+      fetch,
+      commit,
+      onRelease,
+      retry: noRetry,
+    });
+    slot.load();
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    slot.release();
+
+    expect(slot.state().kind).toBe('idle');
+    expect(slot.current()).toBeNull();
+    // The un-commit hook fires exactly once with the committed payload.
+    expect(onRelease).toHaveBeenCalledTimes(1);
+    expect(onRelease).toHaveBeenCalledWith('payload');
+  });
+
+  it('release() while a fetch is in flight aborts it and does NOT run onRelease', async () => {
+    const pending = deferred<string>();
+    const fetch: Fetcher<string, void> = (_req, signal) => {
+      signal.addEventListener('abort', () =>
+        pending.reject(Object.assign(new Error('aborted'), { name: 'AbortError' })),
+      );
+      return pending.promise;
+    };
+    const commit = vi.fn().mockResolvedValue(undefined);
+    const onRelease = vi.fn();
+    const slot = createAssetSlot<string, void>({
+      name: 'test',
+      fetch,
+      commit,
+      onRelease,
+      retry: noRetry,
+    });
+    slot.load();
+    await vi.waitFor(() => expect(slot.state().kind).toBe('loading'));
+
+    slot.release();
+
+    expect(slot.state().kind).toBe('idle');
+    // Nothing was committed, so there is nothing to un-commit.
+    expect(commit).not.toHaveBeenCalled();
+    expect(onRelease).not.toHaveBeenCalled();
+  });
+
+  it('discards a commit that resolves after release (stale-commit race)', async () => {
+    const fetchGate = deferred<string>();
+    const fetch: Fetcher<string, void> = vi.fn(() => fetchGate.promise);
+    const commit = vi.fn().mockResolvedValue(undefined);
+    const onRelease = vi.fn();
+    const slot = createAssetSlot<string, void>({
+      name: 'test',
+      fetch,
+      commit,
+      onRelease,
+      retry: noRetry,
+    });
+
+    slot.load();
+    await vi.waitFor(() => expect(slot.state().kind).toBe('loading'));
+    // Release before the fetch resolves — generation bumps, controller aborts.
+    slot.release();
+    // The late fetch resolution must not resurrect the slot: the post-fetch
+    // race-check drops it before commit, so no commit and no ready state.
+    fetchGate.resolve('late');
+    // Give the microtask queue a chance to run the (discarded) continuation.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(slot.state().kind).toBe('idle');
+    expect(commit).not.toHaveBeenCalled();
+    expect(onRelease).not.toHaveBeenCalled();
+  });
+
+  it('re-loads after release when demand returns (full evict → re-enter cycle)', async () => {
+    let calls = 0;
+    const fetch: Fetcher<string, void> = vi.fn(async () => {
+      calls += 1;
+      return `payload-${calls}`;
+    });
+    const onRelease = vi.fn();
+    const slot = createAssetSlot<string, void>({ name: 'test', fetch, onRelease, retry: noRetry });
+
+    slot.load();
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    slot.release();
+    expect(slot.state().kind).toBe('idle');
+
+    slot.load();
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    expect(slot.current()).toBe('payload-2');
+    expect(calls).toBe(2);
+  });
+});
+
 describe('AssetSlot — cancel and forceReload', () => {
   it('cancel() aborts active fetch and reverts to last ready value', async () => {
     const first: Fetcher<string, number> = vi.fn().mockResolvedValue('A');
@@ -225,5 +327,20 @@ describe('AssetSlot — cancel and forceReload', () => {
     slot.forceReload();
     await vi.waitFor(() => expect(slot.current()).toBe('payload-2'));
     expect(calls).toBe(2);
+  });
+
+  it('lastRequest() exposes the loaded request and clears on release', async () => {
+    // The read surface the stale-tier evict edge consults: null before the
+    // first load, the loaded request while resident, null again after release.
+    const fetch: Fetcher<string, number> = vi.fn().mockResolvedValue('A');
+    const slot = createAssetSlot<string, number>({ name: 'test', fetch, retry: noRetry });
+    expect(slot.lastRequest()).toBeNull();
+
+    slot.load(7);
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    expect(slot.lastRequest()).toBe(7);
+
+    slot.release();
+    expect(slot.lastRequest()).toBeNull();
   });
 });

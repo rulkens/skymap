@@ -7,10 +7,12 @@
  * The single seeded `bodies.earth` record, composed as a unit sphere scaled to
  * the body's radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and
  * translated to its `positionMpc`, in the `RENDER_ORIGIN_MPC`-relative frame.
- * `earthRenderer.draw` writes the MVP into its single (non-dynamic) uniform
- * buffer and issues one indexed draw — so this row must draw the Earth AT MOST
- * once per frame (the renderer's own header spells out the `writeBuffer`-vs-
- * `submit` race a second same-frame draw with a different MVP would trigger).
+ * The layer packs the 80-byte `LitBodyUniforms` record (MVP + body-local sun
+ * direction; the ambient floor is the shared `AMBIENT` const in
+ * `bodyLighting.wesl`, not a uniform field); `earthRenderer.draw` writes it into its single
+ * (non-dynamic) uniform buffer and issues one indexed draw — so this row must
+ * draw the Earth AT MOST once per frame (the renderer's own header spells out
+ * the `writeBuffer`-vs-`submit` race a second same-frame draw would trigger).
  *
  * ### The f64 seam — why `view.slab.vp`, NOT `view.vp`
  *
@@ -51,6 +53,8 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
+import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { packLitBodyUniforms } from '../../../../utils/gpu/packLitBodyUniforms';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
@@ -103,7 +107,13 @@ export const earthLayer: ContentLayer = {
       earth.positionMpc,
       RENDER_ORIGIN_MPC,
       earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      earth.orientation,
     );
-    renderer.draw(pass, mvp);
+    // Rotate the sun direction into Earth's local frame (its baked orientation
+    // carries the axial tilt), so the fragment's Lambert term stays a plain dot
+    // product. Pack MVP + sunDirLocal into the 80-byte lit record; the ambient
+    // floor is the shared AMBIENT const in bodyLighting.wesl, not a uniform.
+    const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
+    renderer.draw(pass, packLitBodyUniforms(mvp, sun));
   },
 };
