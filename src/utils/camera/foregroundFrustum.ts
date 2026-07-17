@@ -17,11 +17,12 @@
  *
  * WHY near stays strictly positive: a depth buffer's precision is dominated by
  * the near plane, and `near = 0` is a degenerate perspective matrix (the
- * projection divides by the near distance). At the deepZoom distance floor of
- * 1e-17 Mpc the pure ratio `distance·1e-4` would be 1e-21 — still positive in
- * f64, but we floor near at `MIN_NEAR_MPC` to keep it robustly above zero and
- * out of the denormal/underflow neighbourhood regardless of how far the
- * distance clamp is ever lowered.
+ * projection divides by the near distance). At the wheel-zoom distance floor
+ * of 1e-17 Mpc (`clampDistance.ts: MIN_DISTANCE_MPC`) the pure ratio
+ * `distance·1e-4` would be 1e-21 — still positive in f64, but we floor near
+ * at `MIN_NEAR_MPC` to keep it robustly above zero and out of the
+ * denormal/underflow neighbourhood regardless of how far the distance clamp
+ * is ever lowered.
  *
  * WHY far has a scene floor: the near-field scene is SEEDED with real orbit
  * geometry — the planet orbit-ring quads (drawn depthless into HDR, so the
@@ -39,8 +40,9 @@
 
 /**
  * Floor for the near plane, in Mpc. Strictly positive and comfortably above
- * the deepZoom distance floor's implied `1e-17·1e-4 = 1e-21`, so the
- * perspective matrix never degenerates even at the tightest zoom.
+ * the wheel-zoom distance floor's implied `1e-17·1e-4 = 1e-21`
+ * (`clampDistance.ts: MIN_DISTANCE_MPC`), so the perspective matrix never
+ * degenerates even at the tightest zoom.
  */
 export const MIN_NEAR_MPC = 1e-19;
 

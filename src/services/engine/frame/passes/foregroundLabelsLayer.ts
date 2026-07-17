@@ -43,7 +43,7 @@
  * the NEAR0 vp's view translation (≈ −4.85×10⁻¹²) are BOTH ~1 AU from the
  * render origin. Their f32 subtraction cancels to ~4 digits, quantising the
  * camera-relative anchor onto a ~13 km grid — so the caption visibly hops
- * (~1 px at cam.distance 1e-15, ~24 px at the 1e-17 deepZoom floor) as the
+ * (~1 px at cam.distance 1e-15, ~24 px at the 1e-17 Mpc distance floor) as the
  * camera moves. The precision killer is each term's distance FROM THE ORIGIN,
  * not the (tiny) camera-to-anchor distance: two points metres apart but 1 AU
  * from the origin still cancel. Consuming the f32-narrowed `view.vp` — whose
