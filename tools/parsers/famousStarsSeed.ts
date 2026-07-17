@@ -209,6 +209,31 @@ export function validateFamousStarEntry(e: FamousStarEntry): FamousStarEntry {
 }
 
 /**
+ * Select the entries that contribute a Gaia dedup id: those whose `gaiaDr3` is a
+ * real DR3 `source_id`, dropping the `null` ones (the Sun; saturated bright stars
+ * SIMBAD confirms have no DR3 row — a genuine "no row to subtract", not a gap).
+ *
+ * This selection rule has ONE home because it is applied by two independent build
+ * paths — `buildStars.ts` bakes the ids into a `Set<bigint>` for the TS star bin,
+ * `buildFamousStars.ts` emits them as a `[u64; N]` Rust const for the native
+ * builder.  Were the `e.gaiaDr3 !== null` predicate restated in each, a future
+ * clause (say, excluding an id flagged unreliable) could be added to one and
+ * silently forgotten in the other, drifting the two star bins apart — and no test
+ * binds them (the Rust side lives outside vitest).  Both encoders call this, so
+ * the rule can only change in one place.
+ *
+ * Generic over the entry shape so each caller keeps its own input: the return
+ * type narrows `gaiaDr3` from `string | null` to `string`, so callers read
+ * `e.gaiaDr3` as a plain string with no non-null assertion.  Preserves seed order
+ * (the Rust provenance comments and the emitted array both read in seed order).
+ */
+export function selectDedupEntries<T extends Pick<FamousStarEntry, 'gaiaDr3'>>(
+  entries: readonly T[],
+): (T & { gaiaDr3: string })[] {
+  return entries.filter((e): e is T & { gaiaDr3: string } => e.gaiaDr3 !== null);
+}
+
+/**
  * Parse and validate the entire seed JSON.  Throws on any per-entry problem AND
  * on duplicate ids across the catalog.
  */

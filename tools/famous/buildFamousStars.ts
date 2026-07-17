@@ -48,7 +48,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { parseFamousStarsSeed, type FamousStarEntry } from '../parsers/famousStarsSeed';
+import {
+  parseFamousStarsSeed,
+  selectDedupEntries,
+  type FamousStarEntry,
+} from '../parsers/famousStarsSeed';
 import type { FamousStarRow } from '../../src/@types/data/FamousStarRow';
 import type { FamousStarMetaEntry } from '../../src/@types/loading/FamousStarMetaEntry';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
@@ -162,12 +166,13 @@ const RUST_GENERATED_BANNER =
  * Emit the generated `.rs` module text: a `[u64; N]` array of the non-null
  * `gaiaDr3` ids, in seed order, each tagged with its star id as provenance
  * (mirroring the SIMBAD-sourced comments the old hand-maintained array carried).
- * `N` is the count of non-null entries — a `null` gaiaDr3 (the Sun; saturated
- * bright stars with no DR3 row) drops out, exactly as the TS `seedToFamousGaiaIds`
- * set does, so both languages subtract the same stars from the one seed.
+ * The selection (which entries contribute) lives in `selectDedupEntries` — its
+ * one home, shared with the `Set<bigint>` encoder in `buildStars.ts` — so both
+ * languages subtract the same stars from the one seed; this function owns only
+ * the Rust-text encoding. `N` is the count of contributing entries.
  */
 export function seedToRustConst(entries: readonly FamousStarEntry[]): string {
-  const matched = entries.filter((e) => e.gaiaDr3 !== null);
+  const matched = selectDedupEntries(entries);
   const rows = matched.map((e) => `    ${e.gaiaDr3}, // ${e.id}`).join('\n');
   return (
     RUST_GENERATED_BANNER +
