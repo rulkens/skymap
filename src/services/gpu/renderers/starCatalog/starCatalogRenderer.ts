@@ -92,6 +92,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type {
   StarCatalogRenderer,
   StarCatalogDrawArgs,
+  StarCatalogPickResources,
   StarDrawStream,
 } from '../../../../@types/rendering/StarCatalogRenderer';
 import type { SourceType } from '../../../../@types/data/SourceType';
@@ -125,15 +126,18 @@ function alignUp(value: number, align: number): number {
 
 /**
  * Byte size of the star `StarUniforms` @group(0) buffer: the shared
- * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32 + `glowOverlap` f32,
- * rounded up to the prefix's 16-byte alignment = 96 (mirrors `struct
- * StarUniforms` in shaders/starCatalog/io.wesl). The three appended scalars fit
- * inside the same 16-byte rounding tail as `sizePx` alone did (80 + 12 → 96), so
- * the buffer size is unchanged; derived from `CAMERA_UNIFORM_BYTES` so the
- * prefix size stays single-sourced, the way the galaxy points `Uniforms` struct
- * appends its own scalars.
+ * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32 + `glowOverlap` f32
+ * + `pickPass` u32, rounded up to the prefix's 16-byte alignment = 96 (mirrors
+ * `struct StarUniforms` in shaders/starCatalog/io.wesl). The four appended
+ * scalars fill the 16-byte rounding tail exactly (80 + 16 → 96), so the buffer
+ * size is unchanged from when `sizePx` alone rode it; derived from
+ * `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced, the way the
+ * galaxy points `Uniforms` struct appends its own scalars. This visual renderer
+ * never WRITES `pickPass` (float 23) — it stays zero-init, so the vertex stage
+ * reads pickPass == 0 and takes the visual path; only `starCatalogPickRenderer`
+ * writes it = 1.
  */
-const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 12, 16);
+const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 16, 16);
 
 /**
  * Float index of `sizePx` in the `StarUniforms` scratch: byte 80 (right after
@@ -149,7 +153,9 @@ const BRIGHTNESS_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 4) / 4;
 
 /**
  * Float index of `glowOverlap` in the `StarUniforms` scratch: byte 88 (right
- * after `brightness`) / 4. Float 23 stays zero-init pad.
+ * after `brightness`) / 4. The next slot (float 23, byte 92) is `pickPass`,
+ * which this visual renderer never writes — it stays zero-init so the vertex
+ * stage takes the visual path.
  */
 const GLOW_OVERLAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 8) / 4;
 
@@ -383,7 +389,11 @@ export function createStarCatalogRenderer(
    * rebuilt each frame with the exact bound size so `arrayLength(&prefix)` reads
    * the live draw count.
    */
-  function ensureDrawBuffers(buffers: StreamBuffers, stream: StarDrawStream, drawCount: number): void {
+  function ensureDrawBuffers(
+    buffers: StreamBuffers,
+    stream: StarDrawStream,
+    drawCount: number,
+  ): void {
     if (buffers.nodeParamsBuffer !== null && buffers.drawCapacity >= drawCount) return;
     buffers.nodeParamsBuffer?.destroy();
     buffers.prefixBuffer?.destroy();
@@ -461,7 +471,13 @@ export function createStarCatalogRenderer(
     }
 
     ensureDrawBuffers(buffers, stream, drawCount);
-    device.queue.writeBuffer(buffers.nodeParamsBuffer!, 0, nodeScratch, 0, drawCount * NODE_PARAMS_BYTES);
+    device.queue.writeBuffer(
+      buffers.nodeParamsBuffer!,
+      0,
+      nodeScratch,
+      0,
+      drawCount * NODE_PARAMS_BYTES,
+    );
     device.queue.writeBuffer(buffers.prefixBuffer!, 0, prefixScratch, 0, drawCount);
 
     // Bind group rebuilt per frame with the EXACT bound size (grow-only buffers
@@ -487,6 +503,26 @@ export function createStarCatalogRenderer(
     pass.draw(3, totalInstances);
   }
 
+  /**
+   * The resources the sibling `starCatalogPickRenderer` shares to keep its own
+   * r32uint pick pipeline bind-group compatible: the three explicit BGLs (so its
+   * pick pipeline layout is group-equivalent) plus the per-source records bind
+   * group (uploaded once here, bound verbatim by the pick draw — the pick pass
+   * re-uses the static record blob rather than re-uploading). The pick renderer
+   * builds its OWN camera + node-params buffers against `cameraBgl` / `drawBgl`,
+   * so the writeBuffer/submit ordering trap can never let a pick draw scribble on
+   * this renderer's live buffers. `recordsBindGroup` reads the live `sources`
+   * map, so a tier swap that unloads a source correctly returns `null`.
+   */
+  function pickResources(): StarCatalogPickResources {
+    return {
+      cameraBgl,
+      drawBgl,
+      recordsBgl,
+      recordsBindGroup: (source) => sources.get(source)?.recordsBindGroup ?? null,
+    };
+  }
+
   function destroy(): void {
     for (const entry of sources.values()) {
       entry.recordsBuffer.destroy();
@@ -501,6 +537,7 @@ export function createStarCatalogRenderer(
     upload,
     loadedCatalogs,
     draw,
+    pickResources,
     destroy,
   };
   renderer satisfies Renderer;

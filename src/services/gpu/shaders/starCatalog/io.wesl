@@ -50,14 +50,28 @@ import package::lib::camera::CameraUniforms;
 //   offset 80  sizePx      f32             (user base star-dot size in px)
 //   offset 84  brightness  f32             (user exposure trim; 1.0 = identity)
 //   offset 88  glowOverlap f32             (aggregate glow spread; 1.0 = identity)
-//   struct size 96 (rounded up to the prefix's 16-byte alignment; the three
+//   offset 92  pickPass    u32             (0 = visual, 1 = pick)
+//   struct size 96 (rounded up to the prefix's 16-byte alignment; the four
 //   scalars share the same rounding tail, so appending them did not grow the
 //   struct).
+//
+// 'pickPass' occupies the last 4 bytes of that 16-byte rounding tail (float
+// index 23, byte 92) that were pure pad. The VISUAL draw never writes it -- the
+// renderer's per-source camera write stops at 'glowOverlap' (float 22) and the
+// scratch is zero-init -- so the visual pipeline reads pickPass == 0 and is
+// byte-for-byte unchanged. Only the sibling 'starCatalogPickRenderer' writes it
+// = 1 into its OWN uniform buffer, which flips the vertex stage's ~3 px
+// clickable-footprint floor on (so a sub-pixel star still covers a pickable
+// pixel at its true screen position) and routes the record identity to the pick
+// fragment. Baking the flag into the uniform rather than compiling a second
+// vertex module keeps the two pipelines drawing ONE shared vertex stage -- the
+// same one-flag-not-two-modules choice the galaxy points pipeline made.
 struct StarUniforms {
   cam: CameraUniforms,
   sizePx: f32,
   brightness: f32,
   glowOverlap: f32,
+  pickPass: u32,
 };
 
 struct VSOut {
@@ -79,6 +93,16 @@ struct VSOut {
   // light — so the two deposit the same total whether or not the walker refined
   // the node.
   @location(3) intensity: f32,
+  // Bin-global record index of this instance's record — 'node.firstRecord +
+  // (instance_index - prefix[slot])', the same offset the vertex stage already
+  // computed to vertex-pull the record. It is the value 'resolveStarRecord'
+  // decodes a pick's localIdx back into (the pick fragment packs it into the
+  // r32uint texture; see starCatalog/pickFragment.wesl). Flat-interpolated
+  // because integers cannot be linearly interpolated and all three triangle
+  // vertices of one instance share the value. Only the pick fragment reads it;
+  // the visual fragments ('fs' / 'fsLinear') declare 'in: VSOut' but ignore it,
+  // so carrying it costs the visual pass one unused flat varying and nothing more.
+  @location(4) @interpolate(flat) recordIdx: u32,
 };
 
 // Per-drawn-node storage element. Byte layout (WGSL std430 storage rules) must

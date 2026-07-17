@@ -69,6 +69,7 @@ import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
 import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
+import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { sceneBodyLabels, FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
@@ -437,6 +438,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // octree per frame.  Constructed unconditionally (the pipeline is cheap);
   // stays a no-op draw until a catalog is uploaded.
   state.gpu.starCatalogRenderer = createStarCatalogRenderer(device, 'rgba16float');
+
+  // starCatalogPickRenderer is the pick twin — it stamps a picked survey star's
+  // identity into the pick program's r32uint pass. Constructed right after the
+  // visual star renderer because it borrows that renderer's exposed BGLs +
+  // per-source records bind group (`pickResources()`) so its own pick pipeline
+  // stays bind-group compatible; it owns only its `pickPass = 1` uniform + per-
+  // source node-params/prefix buffers. The star layer's `drawPick` row (Task 7)
+  // drives it; a no-op draw until a catalog is uploaded.
+  state.gpu.starCatalogPickRenderer = createStarCatalogPickRenderer(
+    device,
+    state.gpu.starCatalogRenderer.pickResources(),
+  );
 
   // orbitTrailRenderer draws the accurate Keplerian orbit trails (Earth /
   // Jupiter / Moon) as additive screen-space conics into the same depthless

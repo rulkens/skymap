@@ -204,6 +204,18 @@ const OFFSET_SCALE: f32 = 0.0009765625; // 1.0 / 1024.0
 // point sitting exactly ON it still passes the clip test.
 const CLIP_Z_EPS: f32 = 1e-4;
 
+// Pick-pass clickable-footprint floor in px. A star sized honestly by the
+// flux-glow math (STAR_GLOW_MIN_PX = 1.5, before the user's sizeScale) can land
+// sub-pixel at deep zoom, so the visual dot may cover no pixel centre and the
+// r32uint pick would miss it. When 'u.pickPass == 1u' the billboard radius is
+// floored to this so every drawn star claims a small clickable patch AT ITS
+// TRUE SCREEN POSITION (no brightness change -- the pick fragment ignores
+// intensity, so only geometry is inflated). The visual pass leaves it a no-op:
+// the floor is applied via a select() that resolves to 0.0 when pickPass == 0u,
+// and max(rPx, 0.0) == rPx (rPx is always > 0), so the visual radius is
+// byte-identical. Mirrors the galaxy points pick's clamp-to-'pointSizePx' floor.
+const STAR_PICK_MIN_RADIUS_PX: f32 = 1.5; // ~3 px diameter
+
 // The sizing floor/ceiling + size reference, the inverse-square apparent-flux
 // reference distance + its fly-through floor, the calibrated exposure baseline,
 // and the peak-from-flux relation now live in lib/starPhotometry.wesl, shared
@@ -305,14 +317,27 @@ fn vs(
   // (lib/starPhotometry.wesl).
   let intensity = starPeakIntensity(u.brightness, fluxApp, rPx);
 
-  let screenOffset = expandBillboardScreen(u.cam, center, rPx, corner);
+  // Pick pass only: floor the BILLBOARD radius so a sub-pixel star still covers
+  // a clickable pixel at its true screen position. The floor rides a select()
+  // that is 0.0 in the visual pass, and max(rPx, 0.0) == rPx (rPx > 0 always),
+  // so the visual geometry is byte-identical -- only the pick draw inflates. The
+  // peak above stays on the UNCLAMPED rPx: the pick fragment ignores intensity,
+  // and leaving the visual peak untouched keeps the two paths provably disjoint.
+  let pickFloorPx = select(0.0, STAR_PICK_MIN_RADIUS_PX, u.pickPass == 1u);
+  let rPxDraw = max(rPx, pickFloorPx);
+
+  let screenOffset = expandBillboardScreen(u.cam, center, rPxDraw, corner);
 
   var out: VSOut;
   out.clip = center + vec4<f32>(screenOffset, 0.0, 0.0);
 
   // Survive the adaptive foreground far plane on a deep descent — identical to
-  // bodies/starPoints. Safe ONLY because this is the depthless additive HDR
-  // pass (no depth test/write), so clamping clip-z perturbs no depth compare.
+  // bodies/starPoints. In the VISUAL pass this is a pure clip-pass fix: that
+  // pass is depthless additive (no depth test/write), so clamping clip-z
+  // perturbs no depth compare. The pick pass shares this stage but IS depth
+  // tested; the clamp stays benign there because a beyond-far point lands at the
+  // maximum depth (z ≈ w), so any nearer star still wins the 'less' test — the
+  // far sub-pixel star merely stays pickable instead of being clipped away.
   out.clip.z = min(out.clip.z, out.clip.w * (1.0 - CLIP_Z_EPS));
 
   out.uv = corner;
@@ -322,5 +347,9 @@ fn vs(
   out.color = starTint(bpRp);
   out.opacity = node.opacity;
   out.intensity = intensity;
+  // The record's bin-global index (its slice base + in-node index), already
+  // computed above as 'base' to vertex-pull the record. The pick fragment packs
+  // it into the r32uint texture; 'resolveStarRecord' inverts it back to the star.
+  out.recordIdx = base;
   return out;
 }
