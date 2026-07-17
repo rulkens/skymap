@@ -213,12 +213,12 @@ Radii stay in km (native unit), resolved to Mpc at draw time like `radiusKm`.
 The ring reuses Saturn's baked `orientation` + `positionMpc` — no plane frame
 stored here (spec §4.4: the ring plane IS the body's equatorial plane).
 
-- [ ] Add `RingSpec.d.ts` + `sceneRings.ts`. Didactic docblock: Saturn only
+- [x] Add `RingSpec.d.ts` + `sceneRings.ts`. Didactic docblock: Saturn only
   (Uranus near-black, Jupiter gossamer — spec §8); no separate plane frame.
-- [ ] Test `SCENE_RINGS structural invariants` — Saturn's `bodyId` is a
+- [x] Test `SCENE_RINGS structural invariants` — Saturn's `bodyId` is a
   `BODY_TEXTURE_REGISTRY` key; `innerRadiusKm < outerRadiusKm`; `textureId ===
   'saturn-ring'`.
-- [ ] `npm test -- sceneRings` → green. Commit.
+- [x] `npm test -- sceneRings` → green. Commit.
 
 ## Task 5 — Bake `orientation` onto `PlanetBody` / `EarthBody` in the makers
 
