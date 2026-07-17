@@ -591,11 +591,11 @@ already scales `radiusSolar` by, so authored star radii do not move.
 ~0.09% framing shift is accepted). Didactic docblock: one home for the Sun's
 radius in km; the ~0.09%-drifted `focusFraming` copy folds in here.
 
-- [ ] Add `solarRadiusKm.ts` with the const + docblock; repoint `makers/star.ts`
+- [x] Add `solarRadiusKm.ts` with the const + docblock; repoint `makers/star.ts`
       to import it (delete the module-local literal). No behaviour change (same
       value), so no new test — the existing star-maker tests cover the radius.
-- [ ] `npm run typecheck` (both tsconfigs) → green.
-- [ ] Commit.
+- [x] `npm run typecheck` (both tsconfigs) → green.
+- [x] Commit.
 
 ## Task 8b — `star` row carries `radiusKm`; fold `focusFraming` star arm into body (spec amendment, radar Finding 4)
 
@@ -624,20 +624,22 @@ The `star` and `body` arms STAY (their row shapes differ — the essential
 asymmetry); only the duplicated framing body folds into `bodyLikeFraming`. Do NOT
 try to merge the two switch cases into one.
 
-- [ ] Add `radiusKm` to the `star` `SelectionRow` arm; set it to `SOLAR_RADIUS_KM`
+- [x] Add `radiusKm` to the `star` `SelectionRow` arm; set it to `SOLAR_RADIUS_KM`
       in `extractSelectionRow.star`.
-- [ ] Add `bodyLikeFraming` (didactic docblock: why one helper for two arms —
+- [x] Add `bodyLikeFraming` (didactic docblock: why one helper for two arms —
       the row-shape asymmetry is essential, the framing body was accidental).
       Delete `NOMINAL_STAR_RADIUS_KM`; point `focusFraming`'s `body` + `star` arms
       at `bodyLikeFraming`.
-- [ ] Add the test `focusFraming frames a star and a body identically for equal position + radius`
+- [x] Add the test `focusFraming frames a star and a body identically for equal position + radius`
       — a `star` row and a `body` row with the same `positionMpc` + `radiusKm`
       yield equal `FocusFraming` (pins the shared helper).
-- [ ] Add the test `extractSelectionRow star snapshots the nominal solar radius`
+- [x] Add the test `extractSelectionRow star snapshots the nominal solar radius`
       — the extracted `star` row's `radiusKm === SOLAR_RADIUS_KM`.
-- [ ] `npx vitest run tests/services/engine/camera/focusFraming.test.ts tests/services/engine/helpers/extractSelectionRow.test.ts`
+- [x] `npx vitest run tests/services/engine/camera/focusFraming.test.ts tests/services/engine/helpers/extractSelectionRow.test.ts`
       → fail, implement, pass. `npm run typecheck` (both tsconfigs) → green.
-- [ ] Commit.
+      _Executed note: 4 star-row test fixtures gained `radiusKm: 696340` literals
+      (framing-agnostic; reviewer-adjudicated acceptable)._
+- [x] Commit.
 
 ## Task 8c — `starTintFromBpRp` CPU twin of the canonical ramp (spec amendment, constraint 2)
 
