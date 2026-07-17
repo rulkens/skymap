@@ -14,7 +14,7 @@
  * layer uploads (via `setStars`) EXACTLY the `points` branch of
  * `partitionStarsByResolution` — the complement of the `spheres` branch
  * `starSpheresLayer`'s suite asserts over the same
- * camera-half-an-AU-off-Proxima mixed fixture. Because the anchors are rebased
+ * camera-half-an-AU-off-Sirius mixed fixture. Because the anchors are rebased
  * per frame, the upload is per-frame (no membership cache): a promoted star
  * still LEAVES the point set the frame it resolves, so it is never drawn as
  * point AND sphere — the double-draw the partition exists to forbid.
@@ -245,19 +245,19 @@ describe('starPointsLayer.draw', () => {
 
   it('starPointsLayer draws only the point stars', () => {
     const renderer = makeRenderer();
-    // Mixed fixture, camera half an AU off Proxima: only Proxima resolves
-    // and belongs to starSpheresLayer — its suite asserts exactly that set
-    // over this same fixture — leaving the Sun (1.3 pc out, sub-pixel: a
-    // point is what keeps it VISIBLE from here) and Sirius as the point
-    // stars. Disjoint + covering by construction: the structural XOR.
-    const camPos = halfAuFrom(PROXIMA.positionMpc);
+    // Mixed fixture, camera half an AU off Sirius: only Sirius resolves
+    // (1.71 R☉) and belongs to starSpheresLayer — its suite asserts exactly
+    // that set over this same fixture — leaving the Sun and Proxima (parsecs
+    // out, sub-pixel: a point is what keeps them VISIBLE from here) as the
+    // point stars. Disjoint + covering by construction: the structural XOR.
+    const camPos = halfAuFrom(SIRIUS.positionMpc);
     const view = makeNear0View(camPos);
     const state = makeState(renderer, [SUN, PROXIMA, SIRIUS]);
 
     starPointsLayer.draw(PASS_STUB, view, makeCtx(camPos), state);
 
     expect(renderer.setStars).toHaveBeenCalledTimes(1);
-    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([SUN.id, SIRIUS.id]);
+    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([SUN.id, PROXIMA.id]);
     expect(renderer.draw).toHaveBeenCalledTimes(1);
   });
 
@@ -277,13 +277,13 @@ describe('starPointsLayer.draw', () => {
       SIRIUS.id,
     ]);
 
-    // The camera closes on Proxima: it resolves, so it must LEAVE the
+    // The camera closes on Sirius: it resolves, so it must LEAVE the
     // uploaded point set — otherwise it would draw as point AND sphere. The
-    // Sun stays a point (1.3 pc away, sub-pixel).
-    const nearCam = halfAuFrom(PROXIMA.positionMpc);
+    // Sun and Proxima stay points (parsecs away, sub-pixel).
+    const nearCam = halfAuFrom(SIRIUS.positionMpc);
     starPointsLayer.draw(PASS_STUB, makeNear0View(nearCam), makeCtx(nearCam), state);
     expect(renderer.setStars).toHaveBeenCalledTimes(3);
-    expect(renderer.setStars.mock.calls[2]![0].map((star) => star.id)).toEqual([SUN.id, SIRIUS.id]);
+    expect(renderer.setStars.mock.calls[2]![0].map((star) => star.id)).toEqual([SUN.id, PROXIMA.id]);
     expect(renderer.draw).toHaveBeenCalledTimes(3);
   });
 

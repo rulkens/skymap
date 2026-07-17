@@ -16,7 +16,7 @@
  * crosses `STAR_RESOLVE_PX`, the Sun included (sub-resolve it demotes to a
  * point like any other star) — while `starPointsLayer` draws the
  * complementary `points` branch of the same call. The two layer suites
- * share the camera-half-an-AU-off-Proxima mixed fixture, so the sphere set
+ * share the camera-half-an-AU-off-Sirius mixed fixture, so the sphere set
  * asserted here and the point set asserted there are disjoint and cover the
  * input (the structural XOR).
  */
@@ -193,11 +193,11 @@ describe('starSpheresLayer.draw', () => {
   it('starSpheresLayer draws only the resolved stars', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
-    // Mixed fixture, camera half an AU off Proxima: only Proxima resolves.
-    // The Sun (1.3 pc away, sub-pixel) and Sirius stay points and belong to
-    // starPointsLayer — the complementary set its suite asserts over this
+    // Mixed fixture, camera half an AU off Sirius: only Sirius resolves
+    // (1.71 R☉). The Sun and Proxima stay parsecs away, sub-pixel, and belong
+    // to starPointsLayer — the complementary set its suite asserts over this
     // same fixture (the structural XOR).
-    const camPos = halfAuFrom(PROXIMA.positionMpc);
+    const camPos = halfAuFrom(SIRIUS.positionMpc);
     const view = makeNear0View(camPos);
     const state = makeState({ draw: drawSpy }, [SUN, PROXIMA, SIRIUS]);
 
@@ -205,9 +205,9 @@ describe('starSpheresLayer.draw', () => {
 
     // Exactly the resolved star composed, by identity.
     expect(composeMock).toHaveBeenCalledTimes(1);
-    expect(composeMock.mock.calls.map((c) => c[1])).toEqual([PROXIMA.positionMpc]);
+    expect(composeMock.mock.calls.map((c) => c[1])).toEqual([SIRIUS.positionMpc]);
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([PROXIMA.color]);
+    expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([SIRIUS.color]);
   });
 
   it('is a no-op when the starRenderer handle is null (pre-bootstrap)', () => {
