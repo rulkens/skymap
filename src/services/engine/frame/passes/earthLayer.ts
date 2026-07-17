@@ -50,6 +50,8 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { Source } from '../../../../data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
@@ -105,5 +107,34 @@ export const earthLayer: ContentLayer = {
       earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
     );
     renderer.draw(pass, mvp);
+  },
+
+  // Pick aspect — stamps Earth's packed identity into the NEAR0 r32uint pick
+  // pass via the shared `bodyPickRenderer`. The pick program only reaches here
+  // when `enabled` (the same foreground-distance + sub-pixel gate) passed for
+  // the pick-time camera, so the pick sphere is drawn exactly where the visual
+  // sphere is. The MVP is composed the SAME way `draw` does — `composeBodyMvp`
+  // from the slab's f64 vp (the "f64 seam" note) — so the pick silhouette is
+  // identical to the drawn one.
+  //
+  // Earth is the sole body of its source (`Source.Earth`), so its seed index is
+  // the constant 0 — there is no seed table to look up. The packed id is
+  // `packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET)`; the offset keeps a
+  // real (source, index 0) hit distinct from the cleared-to-zero no-hit texel.
+  drawPick(pass, view, _ctx, state) {
+    const pickRenderer = state.gpu.bodyPickRenderer;
+    const earth = state.data.bodies.earth;
+    if (pickRenderer === null || earth === null) return;
+
+    const mvp = composeBodyMvp(
+      view.slab.vp,
+      earth.positionMpc,
+      RENDER_ORIGIN_MPC,
+      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
+    );
+    pickRenderer.drawSphere(pass, {
+      mvp,
+      packedId: packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
+    });
   },
 };

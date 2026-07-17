@@ -763,21 +763,27 @@ describe('pointSpritesLayer.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly five pickables expose drawPick, in registry order', () => {
-    // Pins the spec's migration table: pointSprites / proceduralDisks /
-    // structureMarkers / milkyWay / starCatalog participate in picking, and they
-    // do so in registry order (pointSprites first — the @group(0) prefix contract
-    // for the COSMO pick pass; milkyWay and starCatalog trail because they live
-    // on the NEAR0 slab, each self-binding its own slot-0 camera in its own pass).
-    // The production code stays name-blind: the pick program filters by
-    // `drawPick` presence + `enabled`, never a hardcoded name list — so this
-    // test is the ONLY place the five names are asserted.
+  it('exactly the nine pickables expose drawPick, in registry order', () => {
+    // Pins the spec's migration table: the five COSMO/near-field survey
+    // pickables (pointSprites / proceduralDisks / structureMarkers / milkyWay /
+    // starCatalog) PLUS the four NEAR0 true-scale foreground bodies (starPoints /
+    // earth / starSpheres / planets — Task 11). Order is registry order: the
+    // COSMO pick pass leads with point-sprites (the @group(0) prefix contract);
+    // every NEAR0 body self-binds its own slot-0 camera in its own pass, so their
+    // relative order carries no @group(0) dependence (it is depth-resolved,
+    // nearest-wins). The production code stays name-blind — the pick program
+    // filters by `drawPick` presence + `enabled`, never a hardcoded name list —
+    // so this test is the ONLY place the nine names are asserted.
     expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'procedural-disks',
       'structure-markers',
       'milky-way',
+      'star-points',
       'star-catalog',
+      'earth',
+      'star-spheres',
+      'planets',
     ]);
   });
 });

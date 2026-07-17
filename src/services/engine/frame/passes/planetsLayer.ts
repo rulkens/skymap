@@ -52,9 +52,13 @@ import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { Source } from '../../../../data/sources';
+import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
+import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 
@@ -146,5 +150,42 @@ export const planetsLayer: ContentLayer = {
       n++;
     }
     if (n > 0) renderer.draw(pass, staging, n);
+  },
+
+  // Pick aspect — stamps one packed identity per RESOLVED planet into the NEAR0
+  // r32uint pick pass, one `drawSphere` per body (each carries its own MVP +
+  // packed id, so the ≤`MAX_PLANETS` sphere picks never collapse onto the last
+  // body — the writeBuffer-vs-submit race `bodyPickRenderer` guards with
+  // per-draw dynamic offsets). The visible set is keyed the SAME way `draw`'s
+  // pack loop is: the shared `planetResolvesPx` cull against `ctx.drawCamPos`
+  // and `view.viewportPx[1]`, so a sub-pixel planet is unpickable exactly when
+  // it is undrawn.
+  //
+  // The packed id carries each planet's STABLE `SCENE_PLANETS` index, NOT its
+  // slot in the resolved subset (which shifts as planets enter/leave the cull —
+  // see `seedIndexOfBody`). A planet id absent from the seed table returns −1
+  // and is skipped: a packed id from −1 would alias body 0.
+  drawPick(pass, view, ctx, state) {
+    const pickRenderer = state.gpu.bodyPickRenderer;
+    if (pickRenderer === null) return;
+    const planets = state.data.bodies.planets;
+    const limit = Math.min(planets.length, MAX_PLANETS);
+
+    for (let i = 0; i < limit; i++) {
+      const planet = planets[i]!;
+      if (!planetResolvesPx(planet, ctx.drawCamPos, view.viewportPx[1], ctx.fovYRad)) continue;
+      const seedIndex = seedIndexOfBody(planet.id, SCENE_PLANETS);
+      if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+      const mvp = composeBodyMvp(
+        view.slab.vp,
+        planet.positionMpc,
+        RENDER_ORIGIN_MPC,
+        planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      );
+      pickRenderer.drawSphere(pass, {
+        mvp,
+        packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
+      });
+    }
   },
 };

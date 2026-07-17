@@ -80,12 +80,17 @@
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { BodyPointPick } from '../../../../@types/rendering/BodyPickRenderer';
 import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { visibleStars } from '../visibleStars';
+import { seedIndexOfBody } from './seedIndexOfBody';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
+import { Source } from '../../../../data/sources';
+import { SCENE_STARS } from '../../../../data/bodies/sceneStars';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
@@ -200,5 +205,65 @@ export const starPointsLayer: ContentLayer = {
         state.settings.starCatalogs.exposureFarX,
       );
     renderer.draw(pass, rebasedVp, view.viewportPx, { sizePx, brightness });
+  },
+
+  // Pick aspect — stamps the POINT-partition scene stars into the NEAR0 r32uint
+  // pick pass as ONE instanced pick-billboard draw (each floored to a clickable
+  // ~3 px footprint by `bodyPickRenderer`), so a sub-pixel star stays pickable
+  // at its true screen position. The point set is the SAME
+  // `partitionStarsByResolution` call `draw` runs — `visibleStars(state)` split
+  // at `STAR_RESOLVE_PX` against `view.camPos`/`view.viewportPx[1]` — so a star
+  // is pickable-as-a-point exactly when it draws as one (its complement rides
+  // `starSpheresLayer`'s sphere pick).
+  //
+  // `bodyPickRenderer.drawPoints` is ONE-CALL-PER-PASS by documented contract
+  // (it rebuilds a single instance buffer with one `writeBuffer`; a second
+  // same-pass call would race that write against submit). This layer is that
+  // renderer's SOLE `drawPoints` caller, and it calls it exactly once per
+  // `drawPick`, so the contract holds by construction.
+  //
+  // Each point's packed id carries its STABLE `SCENE_STARS` index, NOT its slot
+  // in the point partition (which shifts as a star crosses `STAR_RESOLVE_PX` —
+  // see `seedIndexOfBody`); a star id absent from the seed table returns −1 and
+  // is dropped (a packed id from −1 would alias body 0). Anchors are rebased
+  // into the camera-relative frame in f64 before narrowing, the SAME seam
+  // `draw` uses — the backdrop-dissolve colour scale is a visual-only concern
+  // the pick omits (pick has no opacity; the `enabled` gate already drops the
+  // whole layer once the band zeroes).
+  drawPick(pass, view, ctx, state) {
+    const pickRenderer = state.gpu.bodyPickRenderer;
+    if (pickRenderer === null) return;
+
+    const { points } = partitionStarsByResolution({
+      stars: visibleStars(state),
+      camPosMpc: view.camPos,
+      thresholdPx: STAR_RESOLVE_PX,
+      viewportHeightPx: view.viewportPx[1],
+      fovYRad: ctx.fovYRad,
+    });
+
+    const camPos = view.camPos;
+    const pickPoints: BodyPointPick[] = [];
+    for (const star of points) {
+      const seedIndex = seedIndexOfBody(star.id, SCENE_STARS);
+      if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+      pickPoints.push({
+        posRelCamMpc: [
+          star.positionMpc[0] - camPos[0],
+          star.positionMpc[1] - camPos[1],
+          star.positionMpc[2] - camPos[2],
+        ] as Vec3,
+        packedId: packSelection(Source.FamousStar, seedIndex + PICK_SENTINEL_OFFSET),
+      });
+    }
+
+    // Fold the eye offset into the vp so it pairs with the camera-relative
+    // anchors — narrowed at the GPU-upload boundary, exactly as `draw` does.
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
+    pickRenderer.drawPoints(pass, {
+      vp: rebasedVp,
+      viewportPx: view.viewportPx,
+      points: pickPoints,
+    });
   },
 };

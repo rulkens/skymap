@@ -65,9 +65,13 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { Source } from '../../../../data/sources';
+import { SCENE_STARS } from '../../../../data/bodies/sceneStars';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { visibleStars } from '../visibleStars';
+import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 export const starSpheresLayer: ContentLayer = {
@@ -117,6 +121,54 @@ export const starSpheresLayer: ContentLayer = {
         star.oblateness,
       );
       renderer.draw(pass, mvp, star.color);
+    }
+  },
+
+  // Pick aspect — stamps one packed identity per RESOLVED scene-star sphere into
+  // the NEAR0 r32uint pick pass, one `drawSphere` per body (each with its own
+  // MVP + packed id, so the sphere picks never collapse onto the last star — the
+  // writeBuffer-vs-submit race `bodyPickRenderer` guards with per-draw dynamic
+  // offsets). The resolved set is the SAME `partitionStarsByResolution` call
+  // `draw` runs — `visibleStars(state)` split at `STAR_RESOLVE_PX` against
+  // `view.camPos` and `view.viewportPx[1]` — so a star is pickable-as-a-sphere
+  // exactly when it draws as a sphere (its complement rides `starPointsLayer`'s
+  // point pick), never both and never neither.
+  //
+  // The packed id carries each star's STABLE `SCENE_STARS` index, NOT its slot
+  // in the sphere partition (which shifts as a star crosses `STAR_RESOLVE_PX` —
+  // see `seedIndexOfBody`). A star id absent from the seed table returns −1 and
+  // is skipped: a packed id from −1 would alias body 0. The MVP folds
+  // `oblateness` the same way `draw` does, so the pick silhouette matches.
+  //
+  // This row self-binds its own @group(0) pick camera inside `drawSphere` (the
+  // sphere pick's per-draw uniform); on NEAR0 there is no shared point-pick
+  // prefix to inherit or restore — that contract is a COSMO-pass fact.
+  drawPick(pass, view, ctx, state) {
+    const pickRenderer = state.gpu.bodyPickRenderer;
+    if (pickRenderer === null) return;
+
+    const { spheres } = partitionStarsByResolution({
+      stars: visibleStars(state),
+      camPosMpc: view.camPos,
+      thresholdPx: STAR_RESOLVE_PX,
+      viewportHeightPx: view.viewportPx[1],
+      fovYRad: ctx.fovYRad,
+    });
+
+    for (const star of spheres) {
+      const seedIndex = seedIndexOfBody(star.id, SCENE_STARS);
+      if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+      const mvp = composeBodyMvp(
+        view.slab.vp,
+        star.positionMpc,
+        RENDER_ORIGIN_MPC,
+        star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        star.oblateness,
+      );
+      pickRenderer.drawSphere(pass, {
+        mvp,
+        packedId: packSelection(Source.FamousStar, seedIndex + PICK_SENTINEL_OFFSET),
+      });
     }
   },
 };
