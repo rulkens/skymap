@@ -17,9 +17,15 @@
  * through the galaxy-scale helper would be both lossy and misleading about
  * intent.
  *
+ * Returns NaN if `distancePc <= 0` (logarithm undefined) — the same guard and
+ * return convention its inverse `math/absoluteMagnitude.ts` carries, so the
+ * pair degrades uniformly and the InfoCard's "N/A" formatter triggers rather
+ * than rendering a −Infinity.
+ *
  * @param absMag      Absolute magnitude M.
  * @param distancePc  Distance to the star in parsecs. Must be > 0.
  */
 export function apparentMagnitudeFromAbs(absMag: number, distancePc: number): number {
+  if (distancePc <= 0) return NaN;
   return absMag + 5 * Math.log10(distancePc / 10);
 }

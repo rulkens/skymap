@@ -32,11 +32,15 @@ export const NEAR0 = 0;
 export const COSMO = 1;
 
 /**
- * Human-readable slab names, keyed by slab index, for debug surfaces (the
- * GPU-timings slab badge). Kept beside the NEAR0/COSMO index constants so a new
- * slab row names itself here in the same edit that assigns its index — the
- * badge derivation reads this, so an unnamed slab surfaces as a missing badge
- * rather than a wrong one.
+ * Human-readable slab names, keyed by slab index, for debug surfaces. Kept
+ * beside the NEAR0/COSMO index constants so a new slab row names itself here in
+ * the same edit that assigns its index. `timedSlotRowsOf` (frameProgram.ts)
+ * reads this to build each render slot's `groupKey` — `'<target>·<SLAB_NAME>'`,
+ * e.g. `'hdr·COSMO'` — which the DebugPanel then buckets into a titled group.
+ * A slab index missing here degrades gracefully: `SLAB_NAME[slab] ?? String(slab)`
+ * yields a numeric key (e.g. `'hdr·5'`) whose unmapped title falls back to the
+ * raw key rather than dropping the slot — so an unnamed slab reads as a
+ * numerically-keyed group, never a lost one.
  */
 export const SLAB_NAME: Readonly<Record<number, string>> = {
   [NEAR0]: 'NEAR0',

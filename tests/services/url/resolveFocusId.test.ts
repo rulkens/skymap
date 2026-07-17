@@ -221,6 +221,16 @@ describe('resolveFocusId', () => {
     expect(resolveFocusId('star--1', deps)).toBeNull();
   });
 
+  it('star- with a non-canonical numeric suffix → null', () => {
+    // `Number()` accepts exponent and decimal forms, so `star-1e3` would parse
+    // to 1000 and silently focus the wrong star from a malformed shared URL.
+    // The suffix must be digits-only (the pgc/sdss idiom), so these reject.
+    expect(resolveFocusId('star-1e3', deps)).toBeNull();
+    expect(resolveFocusId('star-1.5', deps)).toBeNull();
+    // The canonical `star-0` stays valid.
+    expect(resolveFocusId('star-0', deps)).toEqual({ type: 'star', index: 0 });
+  });
+
   // ── structure ────────────────────────────────────────────────────────────
 
   it('structure id with invalid chars → null', () => {

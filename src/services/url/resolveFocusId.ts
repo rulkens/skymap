@@ -142,14 +142,17 @@ const FOCUS_ID_DECODERS: readonly FocusIdDecoder[] = [
     },
   },
   // stars (`star-<recordIndex>`).  The suffix is the bin-stable global
-  // star-record index; a non-negative integer resolves to a positional star
-  // ref, anything else is garbage → null.  Precedes famous because `star-42`
-  // also passes the greedy famous character class.
+  // star-record index; a digits-only non-negative integer resolves to a
+  // positional star ref, anything else is garbage → null.  The `/^\d+$/` gate
+  // matches the pgc/sdss idiom above: `Number()` would also accept exponent
+  // (`1e3` → 1000) and decimal (`1.5`) forms, so a malformed shared URL could
+  // silently focus the wrong star.  Precedes famous because `star-42` also
+  // passes the greedy famous character class.
   {
     matches: (id) => id.startsWith(STAR_FOCUS_PREFIX),
     decode: (id) => {
-      const n = Number(id.slice(STAR_FOCUS_PREFIX.length));
-      return Number.isInteger(n) && n >= 0 ? { type: 'star', index: n } : null;
+      const n = id.slice(STAR_FOCUS_PREFIX.length);
+      return /^\d+$/.test(n) ? { type: 'star', index: Number(n) } : null;
     },
   },
   // famous id — the greedy fallback.  MUST stay last: its character class also
