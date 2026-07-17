@@ -548,6 +548,228 @@ calls `state.gpu.starCatalogPickRenderer.draw(...)` once per source with the reb
 
 ---
 
+# Stage 1.5 — Field-star close-range sphere (amendment) (spec § "Amendment (2026-07-17)")
+
+Adjudicated during Stage-1 visual verification: a focused Gaia field star has no
+close-range geometry and its `starCatalog` sprite swims (f32 large-minus-large
+cancellation within ~AU). This stage **builds the sphere** — a thin dedicated
+NEAR0 foreground layer (`focusedFieldStarSphereLayer`) that reuses the existing
+`starRenderer` on the f64 `composeBodyMvp` path (which does not wobble), tints it
+from BP−RP via the one canonical ramp, and retires the wobbling near sprite
+in-shader. It also absorbs Task-8 radar Findings 2 (solar-radius single-source)
+and 4 (star≈body framing fold). Independently shippable.
+
+**Mechanism (spec amendment):** option **B** (thin sphere layer reusing
+`starRenderer`), NOT option A (transient scene-star injection) — B keeps the
+authored scene-body star set free of runtime selection state and does not double
+the picked star through the point-partition path it already has a sprite in.
+
+**Amendment-specific constraints (in addition to the Global constraints above):**
+
+- **Do NOT touch the shared `starCatalogLayout` packing surface**
+  (`src/services/gpu/renderers/starCatalog/starCatalogLayout.ts` + the
+  `StarUniforms` byte layout). A concurrent refactor owns it. The sprite-retire
+  task (8e) is pure `vertex.wesl` math + one WESL const — **no uniform field
+  added**. Reference the layout module abstractly if you brush it.
+- **One canonical BP−RP ramp.** The single home is `starTint` in
+  `starCatalog/tint.wesl`. Task 8c adds the CPU **evaluation** of that same ramp
+  (anchors + breakpoints copied verbatim), never a second ramp.
+
+## Task 8a — Single-source `SOLAR_RADIUS_KM` (spec amendment, radar Finding 2)
+
+**Files:** `src/data/bodies/solarRadiusKm.ts` (new — one exported const),
+`src/data/bodies/makers/star.ts` (drop the private `SOLAR_RADIUS_KM = 696340` at
+`:31`, import the shared one).
+
+**Interfaces:** produces `export const SOLAR_RADIUS_KM = 696340;` (km). Consumed
+here by `makers/star.ts`; consumed in 8b by `extractSelectionRow.ts` +
+`focusFraming.ts`.
+
+**Contract:** the canonical value is **`696340`** — the value `makers/star.ts`
+already scales `radiusSolar` by, so authored star radii do not move.
+`focusFraming`'s `NOMINAL_STAR_RADIUS_KM = 6.957e5` is retired in 8b (the
+~0.09% framing shift is accepted). Didactic docblock: one home for the Sun's
+radius in km; the ~0.09%-drifted `focusFraming` copy folds in here.
+
+- [ ] Add `solarRadiusKm.ts` with the const + docblock; repoint `makers/star.ts`
+      to import it (delete the module-local literal). No behaviour change (same
+      value), so no new test — the existing star-maker tests cover the radius.
+- [ ] `npm run typecheck` (both tsconfigs) → green.
+- [ ] Commit.
+
+## Task 8b — `star` row carries `radiusKm`; fold `focusFraming` star arm into body (spec amendment, radar Finding 4)
+
+**Files:**
+`src/@types/engine/SelectionRow.d.ts` (add `radiusKm` to the `star` arm, `:38-44`),
+`src/services/engine/helpers/extractSelectionRow.ts` (set `radiusKm: SOLAR_RADIUS_KM` in the `star` arm, `:51-64`),
+`src/services/engine/camera/bodyLikeFraming.ts` (new — the shared body/star framing helper),
+`src/services/engine/camera/focusFraming.ts` (delete `NOMINAL_STAR_RADIUS_KM` `:61`; `body` + `star` arms each delegate to `bodyLikeFraming`),
+`tests/services/engine/helpers/extractSelectionRow.test.ts` (extend),
+`tests/services/engine/camera/focusFraming.test.ts` (extend).
+
+**Type + signatures:**
+
+```ts
+// SelectionRow star arm — gains the nominal solar radius (spec amendment "Data delta").
+| { readonly type: 'star'; readonly index: number; readonly positionMpc: Vec3;
+    readonly absMag: number; readonly bpRp: number; readonly radiusKm: number }
+// bodyLikeFraming — the shared frame-a-discrete-body-on-its-radius helper both
+// the body and star arms of focusFraming delegate to (radar Finding 4 un-braid).
+export function bodyLikeFraming(positionMpc: Vec3, radiusKm: number, fovYRad: number): FocusFraming;
+//   radiusMpc = radiusKm · SCALE_UNITS.KM_TO_MPC;
+//   { target: positionMpc, distance: bodyFocusDistance(radiusMpc, fovYRad), radius: radiusMpc }
+```
+
+The `star` and `body` arms STAY (their row shapes differ — the essential
+asymmetry); only the duplicated framing body folds into `bodyLikeFraming`. Do NOT
+try to merge the two switch cases into one.
+
+- [ ] Add `radiusKm` to the `star` `SelectionRow` arm; set it to `SOLAR_RADIUS_KM`
+      in `extractSelectionRow.star`.
+- [ ] Add `bodyLikeFraming` (didactic docblock: why one helper for two arms —
+      the row-shape asymmetry is essential, the framing body was accidental).
+      Delete `NOMINAL_STAR_RADIUS_KM`; point `focusFraming`'s `body` + `star` arms
+      at `bodyLikeFraming`.
+- [ ] Add the test `focusFraming frames a star and a body identically for equal position + radius`
+      — a `star` row and a `body` row with the same `positionMpc` + `radiusKm`
+      yield equal `FocusFraming` (pins the shared helper).
+- [ ] Add the test `extractSelectionRow star snapshots the nominal solar radius`
+      — the extracted `star` row's `radiusKm === SOLAR_RADIUS_KM`.
+- [ ] `npx vitest run tests/services/engine/camera/focusFraming.test.ts tests/services/engine/helpers/extractSelectionRow.test.ts`
+      → fail, implement, pass. `npm run typecheck` (both tsconfigs) → green.
+- [ ] Commit.
+
+## Task 8c — `starTintFromBpRp` CPU twin of the canonical ramp (spec amendment, constraint 2)
+
+**Files:** `src/utils/color/starTintFromBpRp.ts` (new, one fn),
+`tests/utils/color/starTintFromBpRp.test.ts` (new),
+`src/services/gpu/shaders/starCatalog/tint.wesl` (correct the header's "no CPU
+twin" claim → name the twin + the sync obligation; the code is UNCHANGED).
+
+**Signature + contract:**
+
+```ts
+export function starTintFromBpRp(bpRp: number): Vec3;
+// The CPU EVALUATION of starCatalog/tint.wesl's `starTint` — the ONE canonical
+// Gaia BP−RP → linear-RGB ramp. Copy the five spectral-class anchors
+// (ob/af/gc/kc/mc) and the four breakpoints (-0.30, 0.30, 0.85, 1.25, 2.20)
+// VERBATIM from tint.wesl:46-59; same chained-saturating-mix (or the equivalent
+// piecewise-linear) evaluation. Returns linear RGB (0..1), the shape
+// starRenderer.draw expects. NOT a second ramp — the CPU twin of the one ramp.
+```
+
+- [ ] Add the test `starTintFromBpRp returns the O/B anchor below the first breakpoint`
+      — a very blue `bpRp = −0.5` returns the O/B anchor `[0.6, 0.7, 1.0]`
+      (hand-computed: clamped flat end).
+- [ ] Add the test `starTintFromBpRp interpolates to a segment midpoint` — a
+      `bpRp` at a segment midpoint (e.g. `0.0`, halfway between −0.30 and 0.30)
+      returns the componentwise midpoint of the O/B and A/F anchors
+      (hand-computed, an independent value).
+- [ ] `npx vitest run tests/utils/color/starTintFromBpRp.test.ts` → fail,
+      implement, pass.
+- [ ] Correct `tint.wesl`'s header (the "no CPU twin to drift against" paragraph)
+      to name `starTintFromBpRp` as the CPU mirror and state the keep-in-sync
+      obligation. Shader code byte-unchanged. Single quotes only, no backticks.
+- [ ] Commit.
+
+## Task 8d — `focusedFieldStarSphereLayer` (spec amendment, layer + gate + draw)
+
+**Files:**
+`src/services/engine/frame/passes/focusedFieldStarSphereLayer.ts` (new),
+`src/services/engine/frame/passes/index.ts` (register in `CONTENT_LAYERS` right
+after `starSpheresLayer` `:245`, and re-export),
+`tests/services/engine/frame/passes/focusedFieldStarSphereLayer.test.ts` (new —
+the pure `enabled` gate; the sphere draw is visually verified).
+
+**Interfaces consumed (do NOT redeclare):** `state.gpu.starRenderer`
+(`StarRenderer.draw(pass, mvp, color)`), `composeBodyMvp`, `RENDER_ORIGIN_MPC`,
+`SCALE_UNITS.KM_TO_MPC`, `apparentSizePx`, `resolvesToSphere`, `STAR_RESOLVE_PX`,
+`starTintFromBpRp` (8c), the `star` `SelectionRow` with `radiusKm` (8b).
+
+**Contract:** a `ContentLayer` `{ name: 'focused-field-star-sphere', slab: NEAR0,
+target: 'foreground:0', blend: 'opaque' }` reusing `state.gpu.starRenderer`
+UNCHANGED (the `starSpheresLayer` idiom, `starSpheresLayer.ts:95-121`).
+
+- **`enabled(state, ctx)`** — `state.gpu.starRenderer !== null` AND
+  `state.selectionRows.select` is a `star` row AND the star's sphere clears
+  `STAR_RESOLVE_PX` at the **camera-to-star** distance
+  (`resolvesToSphere({ apparentSizePx: apparentSizePx({ diameterKpc, distanceMpc,
+  viewportHeightPx, fovYRad }), thresholdPx: STAR_RESOLVE_PX })`, with
+  `diameterKpc` from `row.radiusKm` and `distanceMpc = |row.positionMpc −
+  ctx.drawCamPos|`). Gate on camera-to-STAR distance, NOT `ctx.cam.distance` from
+  the render origin (a field star sits parsecs from the Sun — see the spec
+  amendment's gate note).
+- **`draw(pass, view, ctx, state)`** — read the `star` row; `mvp =
+  composeBodyMvp(view.slab.vp, row.positionMpc, RENDER_ORIGIN_MPC, row.radiusKm ·
+  SCALE_UNITS.KM_TO_MPC)` (no oblateness); `starRenderer.draw(pass, mvp,
+  starTintFromBpRp(row.bpRp))`.
+
+Didactic docblock: why option B not A (spec amendment); why the camera-to-star
+gate; why the f64 `composeBodyMvp` seam kills the wobble; renderer reused unchanged.
+
+- [ ] Add `focusedFieldStarSphereLayer`; register + re-export in `passes/index.ts`
+      (update the header's foreground-group draw-order list to name the new row).
+- [ ] Add the test `enabled only for a star row within sphere-resolve range` — a
+      `star` row with the camera close (sphere ≥ `STAR_RESOLVE_PX`) → true; the
+      same row with the camera far (sphere sub-pixel) → false; a non-`star` row
+      (or null) → false; a null `starRenderer` → false. Behavioural gate, mirroring
+      `starSpheresLayer` / `near0SelectionRingLayer`.
+- [ ] `npx vitest run tests/services/engine/frame/passes/focusedFieldStarSphereLayer.test.ts`
+      → fail, implement, pass. `npm run typecheck` (both tsconfigs) → green.
+- [ ] **Visual verification (dev server):** double-click a Gaia field star and let
+      the focus descend; expect a resolved emissive sphere of the BP−RP-derived
+      colour filling the frame — where before there was only a dot. (The sprite
+      handoff is verified in 8e.)
+- [ ] Commit.
+
+## Task 8e — Retire the wobbling near sprite in-shader (spec amendment, constraint 3)
+
+**Files:** `src/services/gpu/shaders/starCatalog/vertex.wesl` (add a
+visual-pass-only near-distance billboard dissolve).
+
+**Contract (spec amendment "sprite→sphere handoff"):** on the VISUAL pass only
+(`u.pickPass == 0u`), a star whose reconstructed camera-relative distance
+`length(worldRelCam)` (already computed at `vertex.wesl:262,269` — reuse it, do
+NOT recompute) falls inside a near-fade band collapses its billboard radius to
+zero via a `smoothstep` over the band. Pure vertex math + one WESL const
+(`STAR_SPRITE_NEAR_FADE` — near/far edges in Mpc). **No uniform field added — do
+NOT touch `StarUniforms` / the `starCatalogLayout` packing surface.** The pick
+pass (`u.pickPass == 1u`) is UNFADED so the star stays clickable at close range.
+Set the band's outer edge so the sphere (8d, `STAR_RESOLVE_PX`) is already
+resolved before the sprite finishes dissolving — a seamless crossover, no gap,
+no double-image. WESL comments single-quoted, no backticks; be meticulous
+(shared shader — the visual math must stay byte-identical outside the band).
+
+- [ ] Add the near-fade band const + the `pickPass == 0u` `smoothstep` collapse
+      of the billboard radius (fold it into `rPxDraw` / the visual radius so the
+      pick floor path at `:326-327` is untouched). Didactic comment: why fade any
+      near star (targets exactly the wobble set), the non-focused fly-through
+      trade-off, and why in-shader not per-record (packing-surface avoidance).
+- [ ] No unit test (WebGPU is unavailable in vitest; shader correctness is a
+      visual concern). `npm run typecheck` (both tsconfigs) → green.
+- [ ] **Visual verification (dev server):** descend into a focused field star and
+      confirm the wobbling sprite is GONE at close range (no swimming dot beside
+      the sphere) and the point→sphere crossover reads seamlessly with no frame
+      where the star vanishes or double-draws; confirm a non-focused nearby star
+      handled the same way; confirm the star still picks (hover) at close range.
+- [ ] Commit.
+
+## Task 8f — Entanglement-radar over the Stage 1.5 diff
+
+**Files:** none (review + any fixes it surfaces, each with its own test if behavioural).
+
+- [ ] Run the `entanglement-radar` skill over the Stage 1.5 diff (Tasks 8a–8e).
+      Confirm the framing fold landed as ONE shared helper (not a third framing
+      copy), the BP−RP ramp is a single canonical home with a documented CPU
+      mirror (not a divergent second ramp), and the sphere layer added no scene-set
+      coupling (option B stayed B — `visibleStars`/`partitionStarsByResolution`
+      untouched). Un-braid via `/simplify` where clear; else capture in
+      `docs/BACKLOG.md` per backlog hygiene.
+- [ ] `npm run typecheck` (both tsconfigs) + `npm test` → green.
+- [ ] Commit any fixes.
+
+---
+
 # Stage 2 — Bodies (spec §8, §12)
 
 Earth / planets / scene stars become NEAR0 pickables carrying their stable seed index; the
