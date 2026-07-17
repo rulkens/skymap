@@ -6,7 +6,9 @@
  * (`uvSphereMesh`), shaded by sampling an equirectangular Blue Marble bitmap
  * and attenuated by the shared sun-relative Lambert term. It shares
  * `lib/sphere.wesl`'s `LitBodyUniforms` (80-byte block: mat4x4<f32> MVP +
- * body-local sun direction + ambient floor) and `clip_from_local`, so the
+ * body-local sun direction + zeroed pad; the ambient floor is the shared
+ * `AMBIENT` const in `lib/bodyLighting.wesl`, not a uniform field) and
+ * `clip_from_local`, so the
  * CPU-side matrix layout and the GPU-side projection stay a single source of
  * truth across every sphere-shaped body.
  *
@@ -36,7 +38,7 @@ export type EarthRenderer = Renderer & {
   /**
    * Draw the Earth into the current pass. `uniforms` is a length-20 Float32Array
    * (the 80-byte `LitBodyUniforms` record from `packLitBodyUniforms`): 16 f32
-   * column-major MVP + 3 f32 body-local sun direction + 1 f32 ambient floor —
+   * column-major MVP + 3 f32 body-local sun direction + 1 f32 zeroed pad —
    * written to the uniform buffer and drawn indexed.
    */
   draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void;

@@ -472,7 +472,12 @@ documents). Earth uses `LitBodyUniforms`; the textured path uses
 |---|---|---|
 | 0..63 | `mvp` mat4x4<f32> | `composeBodyMvp` output |
 | 64..75 | `sunDirLocal` vec3<f32> | 16-byte aligned |
-| 76..79 | `ambient` f32 | (folds into the vec4 tail) |
+| 76..79 | `_pad` f32 | the vec3's trailing pad, zeroed |
+
+The ambient floor is **not** carried on either struct — `litShade` reads
+`bodyLighting.wesl`'s `AMBIENT` const directly in every lit path (matching the
+2-arg `litShade(normalLocal, sunDirLocal)` signature in §6.2), so the const is
+the single source and the vec3 tail stays pure padding.
 
 `TexturedBodyUniforms` (textured planets/moons — 96 B / 24 f32) = `LitBodyUniforms` +
 

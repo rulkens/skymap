@@ -7,7 +7,9 @@
  * and attenuated by the shared sun-relative Lambert term
  * (`lib/bodyLighting.wesl` `litShade`). It shares `lib/sphere.wesl`'s uniform
  * (`LitBodyUniforms`, an 80-byte block: the mat4x4<f32> MVP plus the
- * body-local sun direction + ambient floor) and the `clip_from_local`
+ * body-local sun direction, with a zeroed pad tail — the ambient floor is the
+ * shared `AMBIENT` const in `lib/bodyLighting.wesl`, not a uniform field) and
+ * the `clip_from_local`
  * projection helper with the other sphere renderers, so the CPU-side matrix
  * layout and the GPU-side projection stay a single source of truth. The CPU
  * side packs the uniform through `packLitBodyUniforms`.
@@ -136,7 +138,7 @@ export function createEarthRenderer(
   //
   // A single Earth is drawn per frame, so one 80-byte `LitBodyUniforms`
   // block suffices — no multi-slot dynamic-offset buffer needed. `draw`
-  // writes the packed record (MVP + sunDirLocal + ambient) here before issuing
+  // writes the packed record (MVP + sunDirLocal + zeroed pad) here before issuing
   // the indexed draw.
   const uniformBuffer = device.createBuffer({
     label: 'earth-uniform-buffer',

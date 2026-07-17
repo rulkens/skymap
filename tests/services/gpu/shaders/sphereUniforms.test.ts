@@ -34,13 +34,12 @@ for (let i = 0; i < 16; i++) MVP[i] = i + 1;
 // the check would catch (not a normalised vector — the packer does not
 // renormalise, and using 0.5/0.25/0.75 makes each lane unique).
 const SUN_DIR: Vec3 = [0.5, 0.25, 0.75];
-const AMBIENT = 0.08;
 const RING_INNER = 1.24;
 const RING_OUTER = 2.27;
 
 describe('LitBodyUniforms byte offsets', () => {
-  it('packs mvp, sunDirLocal@64, ambient@76 into an 80-byte / 20-f32 record', () => {
-    const rec = packLitBodyUniforms(MVP, SUN_DIR, AMBIENT);
+  it('packs mvp + sunDirLocal@64 into an 80-byte / 20-f32 record, tail @76 zeroed', () => {
+    const rec = packLitBodyUniforms(MVP, SUN_DIR);
     expect(rec.length).toBe(LIT_BODY_UNIFORM_FLOATS);
     expect(rec.length).toBe(20); // 80 bytes
     expect(rec.byteLength).toBe(80);
@@ -53,21 +52,22 @@ describe('LitBodyUniforms byte offsets', () => {
     expect(rec[17]).toBe(SUN_DIR[1]); // byte 68
     expect(rec[18]).toBe(SUN_DIR[2]); // byte 72
 
-    // ambient — folds into the vec4 tail at byte 76 (float index 19).
-    expect(rec[19]).toBeCloseTo(AMBIENT); // byte 76
+    // byte 76 (float index 19) is the vec3's trailing pad — zeroed. Ambient is
+    // NOT carried on the uniform; it lives in bodyLighting.wesl's AMBIENT const.
+    expect(rec[19]).toBe(0); // byte 76 — _pad
   });
 });
 
 describe('TexturedBodyUniforms byte offsets', () => {
   it('extends the lit prefix with ringInnerRatio@80, ringOuterRatio@84 into a 96-byte / 24-f32 record', () => {
-    const rec = packTexturedBodyUniforms(MVP, SUN_DIR, AMBIENT, RING_INNER, RING_OUTER);
+    const rec = packTexturedBodyUniforms(MVP, SUN_DIR, RING_INNER, RING_OUTER);
     expect(rec.length).toBe(TEXTURED_BODY_UNIFORM_FLOATS);
     expect(rec.length).toBe(24); // 96 bytes
     expect(rec.byteLength).toBe(96);
 
     // The 80-byte lit prefix is identical to what packLitBodyUniforms writes —
     // proves the shared prefix is reused, not re-derived (no drift seam).
-    const lit = packLitBodyUniforms(MVP, SUN_DIR, AMBIENT);
+    const lit = packLitBodyUniforms(MVP, SUN_DIR);
     for (let i = 0; i < 20; i++) expect(rec[i]).toBe(lit[i]);
 
     // Ring ratios at their pinned offsets.
@@ -82,7 +82,7 @@ describe('TexturedBodyUniforms byte offsets', () => {
   it('defaults to no ring — ringOuterRatio 0 is the "no ring" sentinel', () => {
     // A non-ringed body packs zeros; the fragment short-circuits on
     // ringOuterRatio == 0 (ring presence is data, not a Saturn-only branch).
-    const rec = packTexturedBodyUniforms(MVP, SUN_DIR, AMBIENT, 0, 0);
+    const rec = packTexturedBodyUniforms(MVP, SUN_DIR, 0, 0);
     expect(rec[20]).toBe(0);
     expect(rec[21]).toBe(0);
   });

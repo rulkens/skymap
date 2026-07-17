@@ -90,12 +90,11 @@ struct TintedSphereUniforms {
 
 // ── LitBodyUniforms ──────────────────────────────────────────────────
 //
-// 'SphereUniforms' plus the per-body sun direction and ambient floor — the
-// uniform layout for a lit sphere drawn through its own per-draw uniform
-// buffer. Earth is the current consumer: its fragment reads a real
-// sun-relative Lambert term ('lib/bodyLighting.wesl') instead of a fixed light
-// direction, so the terminator tracks the body's actual position relative to
-// the Sun.
+// 'SphereUniforms' plus the per-body sun direction — the uniform layout for a
+// lit sphere drawn through its own per-draw uniform buffer. Earth is the
+// current consumer: its fragment reads a real sun-relative Lambert term
+// ('lib/bodyLighting.wesl') instead of a fixed light direction, so the
+// terminator tracks the body's actual position relative to the Sun.
 //
 // Why carry 'sunDirLocal' on the uniform rather than derive it in the shader?
 // The sun direction is rotated into the body's LOCAL frame CPU-side
@@ -103,22 +102,31 @@ struct TintedSphereUniforms {
 // even when the body carries an axial tilt — no per-fragment matrix. See the
 // 'sunDirLocal' util header for why the transpose is the inverse.
 //
+// ## Where the ambient floor lives (not here)
+//
+// The vec3 'sunDirLocal' leaves a 4-byte tail the struct must round over. That
+// tail is pure padding — the ambient floor is NOT carried on the uniform. Every
+// lit path ('litShade' in 'lib/bodyLighting.wesl') reads the shared 'AMBIENT'
+// const directly, and the flat planet instance record has no ambient field at
+// all, so the const is the load-bearing single source. A dead uniform field
+// would be a second place ambient could appear to live; the tail stays '_pad'.
+//
 // ## Byte layout (uniform address space)
 //
 //   offset  0..63: mvp         (mat4x4<f32>, column-major, 64 bytes)
 //   offset 64..75: sunDirLocal (vec3<f32> — 16-byte ALIGNED at offset 64;
 //                               12 bytes of data)
-//   offset 76..79: ambient     (f32 — folds into the vec4 tail the vec3 would
-//                               otherwise leave as pad, so no byte is wasted)
+//   offset 76..79: _pad        (f32 — the vec3's trailing pad, zeroed; ambient
+//                               lives in bodyLighting.wesl's AMBIENT const)
 //   total: 80 bytes.
 //
-// The CPU side uploads 20 f32s: 16 mvp + 3 sunDirLocal + 1 ambient. The single
-// source of truth for that packing is 'utils/gpu/packLitBodyUniforms.ts'.
+// The CPU side uploads 20 f32s: 16 mvp + 3 sunDirLocal + 1 zeroed pad. The
+// single source of truth for that packing is 'utils/gpu/packLitBodyUniforms.ts'.
 
 struct LitBodyUniforms {
   mvp: mat4x4<f32>,
   sunDirLocal: vec3<f32>,
-  ambient: f32,
+  _pad: f32,
 };
 
 // ── TexturedBodyUniforms ─────────────────────────────────────────────
@@ -138,7 +146,8 @@ struct LitBodyUniforms {
 //
 //   offset  0..63: mvp            (mat4x4<f32>, column-major, 64 bytes)
 //   offset 64..75: sunDirLocal    (vec3<f32> — 16-byte aligned)
-//   offset 76..79: ambient        (f32 — the vec4 tail, as in LitBodyUniforms)
+//   offset 76..79: _pad           (f32 — the vec3's trailing pad, as in
+//                                  LitBodyUniforms; ambient lives in the const)
 //   offset 80..83: ringInnerRatio (f32 — ring inner radius / planet radius)
 //   offset 84..87: ringOuterRatio (f32 — ring outer / planet radius; 0 = none)
 //   offset 88..91: _pad0          (f32 — zeroed; rounds the struct to 16)
@@ -152,7 +161,7 @@ struct LitBodyUniforms {
 struct TexturedBodyUniforms {
   mvp: mat4x4<f32>,
   sunDirLocal: vec3<f32>,
-  ambient: f32,
+  _pad: f32,
   ringInnerRatio: f32,
   ringOuterRatio: f32,
   _pad0: f32,
