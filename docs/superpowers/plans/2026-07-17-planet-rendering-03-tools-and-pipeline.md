@@ -149,17 +149,22 @@ Sharp precedent: `tools/famous/fetchFamousImages.ts`. `npm run build-textures`
 wires to it (Task 6). Reads sources via `rawDataPath('textures.*')`; writes under
 `rawDataPath('textures.dir')` / `public/data/images/textures/`.
 
-- [ ] Add `emittedTiersForBody.ts` — the pure registry→tier-set helper. Didactic
+- [x] Add `emittedTiersForBody.ts` — the pure registry→tier-set helper. Didactic
   docblock: never emit above `maxTier` (never upscale, spec §3); the 4k tier is a
   build-time downsample of the 8k raw.
-- [ ] Add `buildTextures.ts`. Didactic module header: the three source formats,
+- [x] Add `buildTextures.ts`. Didactic module header: the three source formats,
   the grayscale tint for mono USGS moons, the non-upscaled tier downsample, the
   ring-PNG alpha passthrough. All raw reads via `rawDataPath('textures.*')`.
-- [ ] Test `emittedTiersForBody honours the ceiling` — Uranus (`maxTier: 'small'`)
+  NOTE: dev-subset builds supported — per body, best available source on disk
+  (native raw, else 2k dev variant / dev Earth sibling), emitting
+  `emittedTiersForBody` INTERSECT `tiersFittingSourceWidth` (extracted pure
+  helper) so a 2k-only fetch still builds what it can; missing source = logged
+  skip, never a crash.
+- [x] Test `emittedTiersForBody honours the ceiling` — Uranus (`maxTier: 'small'`)
   → `['small']` only; Venus (`'medium'`) → `['small', 'medium']`; Mars
   (`'large'`) → `['small', 'medium', 'large']` (the non-upscaling build contract,
   hand-derived from the ceilings — NOT a full-registry restatement).
-- [ ] `npm test -- emittedTiersForBody` → green. Commit.
+- [x] `npm test -- emittedTiersForBody` → green. Commit.
 
 ## Task 4 — `collectTextureImages` + `syncR2` sweep
 
