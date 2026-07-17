@@ -8,6 +8,7 @@
  *
  * Writes:
  *   - `src/data/bodies/famousStars.generated.ts`  (committed generated code)
+ *   - `tools/stars-rs/src/famous_ids.generated.rs` (committed generated Rust)
  *   - `public/data/famous_stars_meta.json`        (gitignored build artefact)
  *
  * Why split at build time?  The seed carries everything a curator authors — sky
@@ -31,6 +32,15 @@
  *
  * Artefact (2) is the same sidecar shape `buildFamous`/`buildStructures` emit,
  * written through the shared `writeMetaSidecar` helper — this is its third caller.
+ *
+ * Artefact (3) is the Gaia-dedup id array the Rust star-catalog builder
+ * (`tools/stars-rs`) subtracts from the bin.  The TS build (`buildStars.ts`)
+ * reads the seed directly for the same fact, but Rust's `Cargo.toml` carries no
+ * JSON/serde dependency (the builder is deliberately dependency-light), so the
+ * seed can't be parsed at Rust build time.  Committed codegen closes that gap:
+ * we emit a plain `.rs` const here, `include!`d into `population.rs`, so both
+ * languages derive the same dedup set from the one seed instead of hand-copying
+ * a second 17-id array (the drift hazard this task removes).
  *
  * The npm script is `build-famous-stars`.
  */
@@ -137,6 +147,34 @@ export function serializeGeneratedTable(rows: readonly FamousStarRow[]): string 
   );
 }
 
+const RUST_GENERATED_BANNER =
+  '// tools/stars-rs/src/famous_ids.generated.rs\n' +
+  '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
+  '// Regenerate with:  npm run build-famous-stars\n' +
+  '// Source of truth:  data/seeds/famous_stars.seed.json\n' +
+  '//\n' +
+  '// FamousStar -> Gaia DR3 ids: the non-null gaiaDr3 values of every seed\n' +
+  '// entry, the scene-body dedup keys the star-bin build subtracts from the\n' +
+  '// Gaia bin.  include!()-d into population.rs so the const lands in that\n' +
+  "// module's namespace, exactly where the hand-maintained array used to live.\n";
+
+/**
+ * Emit the generated `.rs` module text: a `[u64; N]` array of the non-null
+ * `gaiaDr3` ids, in seed order, each tagged with its star id as provenance
+ * (mirroring the SIMBAD-sourced comments the old hand-maintained array carried).
+ * `N` is the count of non-null entries — a `null` gaiaDr3 (the Sun; saturated
+ * bright stars with no DR3 row) drops out, exactly as the TS `seedToFamousGaiaIds`
+ * set does, so both languages subtract the same stars from the one seed.
+ */
+export function seedToRustConst(entries: readonly FamousStarEntry[]): string {
+  const matched = entries.filter((e) => e.gaiaDr3 !== null);
+  const rows = matched.map((e) => `    ${e.gaiaDr3}, // ${e.id}`).join('\n');
+  return (
+    RUST_GENERATED_BANNER +
+    `pub const FAMOUS_STAR_GAIA_IDS: [u64; ${matched.length}] = [\n${rows}\n];\n`
+  );
+}
+
 function main(): void {
   const seedPath = rawDataPath('famous-stars.seed');
   const entries = parseFamousStarsSeed(readFileSync(seedPath, 'utf8'));
@@ -145,6 +183,10 @@ function main(): void {
   const generatedPath = resolve('src/data/bodies/famousStars.generated.ts');
   writeFileSync(generatedPath, serializeGeneratedTable(seedToGeneratedRows(entries)));
   process.stderr.write(`wrote ${entries.length} rows to famousStars.generated.ts\n`);
+
+  const rustPath = resolve('tools/stars-rs/src/famous_ids.generated.rs');
+  writeFileSync(rustPath, seedToRustConst(entries));
+  process.stderr.write(`wrote famous_ids.generated.rs\n`);
 
   const metaPath = resolve('public/data/famous_stars_meta.json');
   writeMetaSidecar(seedToMetaEntries(entries), metaPath);

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildStarCatalog,
+  seedToFamousGaiaIds,
   type GaiaMainRow,
   type GcnsRow,
 } from '../../../tools/stars/buildStars';
@@ -151,6 +152,20 @@ describe('buildStarCatalog', () => {
     // The fixture's photometry sits inside the frozen LUT windows, so nothing
     // saturates — a nonzero count here would mean a clamp-detection sign error.
     expect(result.clamps).toEqual({ absMag: 0, colorIdx: 0 });
+  });
+
+  it('derives the famous-dedup set from the seed — a non-null gaiaDr3 is subtracted, a null contributes nothing', () => {
+    // The seed is the single source of the dedup fact now (the standalone
+    // FAMOUS_STAR_GAIA_IDS table is gone). A matched entry's DR3 id joins the
+    // set as a bigint; a `null` entry (the Sun, saturated bright stars) is a
+    // real "no row to subtract" value and must add nothing.
+    const set = seedToFamousGaiaIds([
+      { gaiaDr3: PROXIMA_ID.toString() },
+      { gaiaDr3: null },
+    ]);
+
+    expect(set.has(PROXIMA_ID)).toBe(true);
+    expect(set.size).toBe(1);
   });
 
   it('reports the drop counters', async () => {

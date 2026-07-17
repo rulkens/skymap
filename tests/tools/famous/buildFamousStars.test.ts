@@ -14,6 +14,7 @@ import type { FamousStarEntry } from '../../../tools/parsers/famousStarsSeed';
 import {
   seedToGeneratedRows,
   seedToMetaEntries,
+  seedToRustConst,
   serializeGeneratedTable,
 } from '../../../tools/famous/buildFamousStars';
 
@@ -141,5 +142,21 @@ describe('serializeGeneratedTable', () => {
     expect(text).toContain("id: 'sirius',");
     expect(text).toContain('oblateness: 0.35,');
     expect(text).not.toContain('description');
+  });
+});
+
+describe('seedToRustConst', () => {
+  it('emits a u64 array of the non-null gaiaDr3 ids, excluding the null entry', () => {
+    const text = seedToRustConst(FIXTURE);
+
+    expect(text).toContain('!!! GENERATED FILE — DO NOT EDIT BY HAND !!!');
+    // Sirius + Achernar carry a gaiaDr3; Proxima's is null, so the array length
+    // is 2 — nothing hardcodes 17. The length tracks the non-null seed count.
+    expect(text).toContain('pub const FAMOUS_STAR_GAIA_IDS: [u64; 2] = [');
+    // Each id is a bare u64 literal with the star id as a provenance comment.
+    expect(text).toContain('2947050466531873024, // sirius');
+    expect(text).toContain('4732214452838183424, // achernar');
+    // The null entry contributes no element — Proxima's id never appears.
+    expect(text).not.toContain('proxima-centauri');
   });
 });

@@ -89,7 +89,7 @@ import {
   type OctreeLeafStar,
   type StarOctreeGrid,
 } from './buildStarOctree';
-import { FAMOUS_STAR_GAIA_IDS } from '../catalog/famousStarGaiaIds';
+import { parseFamousStarsSeed, type FamousStarEntry } from '../parsers/famousStarsSeed';
 import { keepStar } from './supplementTaper';
 import { bvToBpRp } from '../utils/color/bvToBpRp';
 import { mortonEncode3 } from '../../src/utils/math/mortonEncode3';
@@ -258,6 +258,22 @@ export type BuildStarResult = {
 /** Absolute magnitude from apparent: M = m − 5·log10(d_pc) + 5. */
 function absoluteMagnitude(apparentMag: number, distPc: number): number {
   return apparentMag - 5 * Math.log10(distPc) + 5;
+}
+
+/**
+ * Project the curated famous-star seed entries onto the Gaia-dedup set: every
+ * entry's non-null `gaiaDr3` as a `bigint`. A `null` (the Sun; saturated bright
+ * stars SIMBAD confirms have no DR3 row) contributes nothing — it is a real "no
+ * row to subtract" value, not a curation gap. The parameter is narrowed to the
+ * one field this depends on so the seed→set fact reads at a glance and the test
+ * can exercise it without constructing a full entry.
+ */
+export function seedToFamousGaiaIds(
+  entries: readonly Pick<FamousStarEntry, 'gaiaDr3'>[],
+): ReadonlySet<bigint> {
+  return new Set(
+    entries.filter((e) => e.gaiaDr3 !== null).map((e) => BigInt(e.gaiaDr3 as string)),
+  );
 }
 
 /**
@@ -756,9 +772,12 @@ async function runCli(): Promise<void> {
   const hipToSourceId = parseHipXmatch(readFileSync(rawDataPath('gaia.hip-xmatch'), 'utf8'));
   process.stderr.write(`  ${hipToSourceId.size.toLocaleString()} HIP→source_id pairs\n`);
 
-  const famousGaiaIds = new Set(
-    Object.values(FAMOUS_STAR_GAIA_IDS).filter((v): v is bigint => v !== null),
-  );
+  // The curated seed is the single source of the Gaia-dedup fact now: subtract
+  // each entry's Gaia DR3 source_id from the bin so a nearby named star isn't
+  // drawn twice (once as a scene body, once as a Gaia point). A null gaiaDr3
+  // (the Sun; saturated bright stars with no DR3 row) drops out.
+  const famousSeed = parseFamousStarsSeed(readFileSync(rawDataPath('famous-stars.seed'), 'utf8'));
+  const famousGaiaIds = seedToFamousGaiaIds(famousSeed);
 
   process.stderr.write('building star catalog (dedup + octree + tiers)…\n');
   const result = await buildStarCatalog({

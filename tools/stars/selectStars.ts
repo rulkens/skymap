@@ -14,9 +14,10 @@
  *     on the very brightest naked-eye stars, so for those the Hipparcos row is
  *     the trustworthy one and WINS over any Gaia row for the same physical star.
  *   - `famousStarSet` — the Gaia `source_id`s the SCENE already draws as named
- *     foreground bodies (`FAMOUS_STAR_GAIA_IDS`). Drawing them again as bin
- *     points would double-render the same photons, so they are removed from the
- *     whole result.
+ *     foreground bodies (the non-null `gaiaDr3` values of the famous-stars seed,
+ *     `data/seeds/famous_stars.seed.json`). Drawing them again as bin points
+ *     would double-render the same photons, so they are removed from the whole
+ *     result.
  *
  * `hipMatched` is NOT "every HIP number that has a map entry" — it is only the
  * HIP numbers actually PRESENT in `hipparcosBright` that ALSO resolve to a Gaia
@@ -86,7 +87,7 @@ export type SelectStarsInputs = {
   gaia: readonly GaiaSelectedRow[]; // Gaia rows already G-sorted + distance-resolved
   hipparcosBright: readonly HipBrightRow[]; // hip2 rows with Hpmag < 4.0, distance-resolved
   hipToSourceId: ReadonlyMap<number, bigint>; // from hip2_best_neighbour (HIP → source_id)
-  famousGaiaIds: ReadonlySet<bigint>; // non-null FAMOUS_STAR_GAIA_IDS values
+  famousGaiaIds: ReadonlySet<bigint>; // non-null gaiaDr3 values from the famous-stars seed
 };
 
 export type SelectStarsResult = {
