@@ -250,21 +250,24 @@ rotation-invariant, so identity is the honest "no facing modelled" value — spe
 Use `bodyTextureSpec(id)` (Task 3) as the "is textured?" predicate so the maker
 reads the registry, not a second list.
 
-- [ ] Add `orientation: Mat3` to `PlanetBody.d.ts`; add `orientation`, remove
+- [x] Add `orientation: Mat3` to `PlanetBody.d.ts`; add `orientation`, remove
   `textureUrl` from `EarthBody.d.ts`. Update the `EarthBody` docblock (Blue
   Marble now rides the `bodyTextures` family, not a per-body URL).
-- [ ] Update the three makers to bake `orientation` via the registry-keyed
+- [x] Update the three makers to bake `orientation` via the registry-keyed
   choice above. Didactic comment at the choice site: identity for
   non-registry bodies (rotation-invariant flat spheres).
-- [ ] Test `scenePlanets bake IAU orientation for textured bodies` — Saturn's
+  _(Executed with a shared `orientationForBody.ts` helper instead of a
+  triplicated ternary — single choice site. `earthTextureFetcher` bridges on an
+  inlined URL literal until Task 10 deletes it.)_
+- [x] Test `scenePlanets bake IAU orientation for textured bodies` — Saturn's
   `orientation` equals `rotationFromIau(rotationById('saturn'))` (component-wise;
   this pins the maker wired the registry, not a formula mirror — the expectation
   comes from the authored table via the util, exercising the wiring), and
   Phobos's `orientation` equals `IDENTITY_MAT3` (an irregular moon gets identity).
-- [ ] Test `SCENE_EARTH carries a baked orientation and no textureUrl` — `SCENE_EARTH.orientation`
+- [x] Test `SCENE_EARTH carries a baked orientation and no textureUrl` — `SCENE_EARTH.orientation`
   equals `rotationFromIau(rotationById('earth'))`; `'textureUrl' in SCENE_EARTH === false`.
-- [ ] Delete any test asserting `SCENE_EARTH.textureUrl` (the removed field).
-- [ ] `npm test -- scenePlanets sceneBodies sceneEarth` → green. Commit.
+- [x] Delete any test asserting `SCENE_EARTH.textureUrl` (the removed field).
+- [x] `npm test -- scenePlanets sceneBodies sceneEarth` → green. Commit.
 
 ## Task 6 — `composeBodyMvp` grows the `orientation` param (`T·R·S`) + all callers
 

@@ -143,7 +143,7 @@ export type EngineAssetSlots = {
   flow: AssetSlot<ScalarCube, void> | null;
   /**
    * Blue Marble equirectangular texture that skins the true-scale Earth on
-   * deep descent (`SCENE_EARTH.textureUrl`).
+   * deep descent.
    *
    * Descent-gated (unlike the settings-toggled `flow` / `cf4Density`): the slot
    * stays idle until the camera's orbit distance-to-focus drops below

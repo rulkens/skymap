@@ -11,6 +11,7 @@ describe('PlanetBody type', () => {
       positionMpc: [0, 0, 0],
       radiusKm: 3389.5,
       albedo: [0.8, 0.4, 0.2],
+      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     };
     expect(mars.radiusKm).toBe(3389.5);
   });

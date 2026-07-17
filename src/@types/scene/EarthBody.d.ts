@@ -3,8 +3,10 @@
  *
  * The record carries authored constants, not runtime-derived state: an
  * `id`/`label` for identity and UI, the body's absolute `positionMpc`, its
- * physical `radiusKm`, and the equirectangular Blue Marble `textureUrl` that
- * clothes the sphere.
+ * physical `radiusKm`, and the baked `orientation` that aims the sphere. The
+ * Blue Marble skin is no longer a per-body `textureUrl`: Earth now rides the
+ * keyed `bodyTextures` slot family alongside the other textured bodies, so the
+ * texture is demanded by proximity through the registry, not authored here.
  *
  * `positionMpc` is canonical megaparsecs — the same absolute heliocentric
  * frame every catalogue position lives in — authored via `SCALE_UNITS` so a
@@ -17,11 +19,12 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
+import type { Mat3 } from '../math/Mat3';
 
 export type EarthBody = {
   readonly id: string;
   readonly label: string;
   readonly positionMpc: Vec3; // absolute heliocentric, f64-valued
   readonly radiusKm: number; // 6371
-  readonly textureUrl: string; // Blue Marble equirectangular
+  readonly orientation: Mat3; // local → equatorial-world, baked from ROTATION_ELEMENTS
 };

@@ -21,10 +21,15 @@
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
+
+// Blue Marble placeholder URL, inlined here as a temporary bridge: Earth's
+// per-body `textureUrl` field is gone (Earth now rides the keyed `bodyTextures`
+// slot family). This whole bespoke fetcher is deleted when Earth joins that
+// family, so the literal need not find a permanent home.
+const BLUE_MARBLE_URL = '/images/earth/blue-marble-4k.jpg';
 
 export const earthTextureFetcher: Fetcher<ImageBitmap, void> = async (_req, signal) => {
-  const res = await fetch(SCENE_EARTH.textureUrl, { signal });
-  if (!res.ok) throw new Error(`earthTexture: HTTP ${res.status} for ${SCENE_EARTH.textureUrl}`);
+  const res = await fetch(BLUE_MARBLE_URL, { signal });
+  if (!res.ok) throw new Error(`earthTexture: HTTP ${res.status} for ${BLUE_MARBLE_URL}`);
   return createImageBitmap(await res.blob());
 };
