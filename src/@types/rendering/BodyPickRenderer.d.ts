@@ -18,7 +18,7 @@
  *     fully-packed pick id, so the ≤10 sphere draws recorded into one pass each
  *     resolve to their OWN body.
  *   - `drawPoints` rasterises the sub-pixel scene-star POINT partition as one
- *     instanced draw of ≤25 pick billboards, each expanded to a generous 8 px
+ *     instanced draw of ≤25 pick billboards, each expanded to a generous 18 px
  *     clickable footprint (these labelled scene stars are click-invited targets)
  *     so a sub-pixel star stays easily clickable at its true screen position.
  *

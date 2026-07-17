@@ -209,7 +209,7 @@ export const starPointsLayer: ContentLayer = {
 
   // Pick aspect — stamps the POINT-partition scene stars into the NEAR0 r32uint
   // pick pass as ONE instanced pick-billboard draw (each expanded to a generous
-  // clickable 8 px footprint by `bodyPickRenderer` — these labelled scene stars
+  // clickable 18 px footprint by `bodyPickRenderer` — these labelled scene stars
   // are click-invited targets), so a sub-pixel star stays easily pickable at its
   // true screen position. The point set is the SAME
   // `partitionStarsByResolution` call `draw` runs — `visibleStars(state)` split

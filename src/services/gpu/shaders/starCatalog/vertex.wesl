@@ -214,7 +214,7 @@ const CLIP_Z_EPS: f32 = 1e-4;
 // the floor is applied via a select() that resolves to 0.0 when pickPass == 0u,
 // and max(rPx, 0.0) == rPx (rPx is always > 0), so the visual radius is
 // byte-identical. Mirrors the galaxy points pick's clamp-to-'pointSizePx' floor.
-const STAR_PICK_MIN_RADIUS_PX: f32 = 1.5; // ~3 px diameter
+const STAR_PICK_MIN_RADIUS_PX: f32 = 3.5; // 7 px diameter
 
 // Near-sprite dissolve constants (visual pass only -- see the fade block in
 // 'vs'). Close to a star, the f32 reconstruction 'originRelCamMpc + offset *
