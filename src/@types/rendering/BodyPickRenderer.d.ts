@@ -18,8 +18,9 @@
  *     fully-packed pick id, so the ≤10 sphere draws recorded into one pass each
  *     resolve to their OWN body.
  *   - `drawPoints` rasterises the sub-pixel scene-star POINT partition as one
- *     instanced draw of ≤25 pick billboards, each floored to a ~3 px clickable
- *     footprint so a sub-pixel star stays clickable at its true screen position.
+ *     instanced draw of ≤25 pick billboards, each expanded to a generous 8 px
+ *     clickable footprint (these labelled scene stars are click-invited targets)
+ *     so a sub-pixel star stays easily clickable at its true screen position.
  *
  * ### Why own-uniform, not the COSMO shared pick camera
  *

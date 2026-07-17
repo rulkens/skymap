@@ -13,7 +13,9 @@
  *   - `drawSphere` — ONE body sphere per call (Earth, a planet, a resolved
  *     scene-star sphere), same unit-sphere mesh as the visual sphere bodies.
  *   - `drawPoints` — the sub-pixel scene-star POINT partition as one instanced
- *     draw of pick billboards, ~3 px minimum footprint.
+ *     draw of pick billboards, each expanded to a generous 8 px footprint (these
+ *     ≤25 labelled scene stars are click-invited targets; the survey star pick
+ *     keeps its minimal clamp for its dense field — see `starPointPick.wesl`).
  *
  * Each compiles its OWN `GPUShaderModule` + explicit pipeline layout (never a
  * shared module across pipelines — the WebGPU 'auto'-layout trap).

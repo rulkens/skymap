@@ -4,7 +4,7 @@
 // The pick twin of 'bodies/starPoints/vertex.wesl'. The visual stage sizes each
 // dot from apparent flux and paints a soft Gaussian; the pick stage needs only a
 // clickable footprint at the star's TRUE screen position, so it drops all the
-// photometry and expands a fixed ~3 px billboard, writing the star's packed
+// photometry and expands a fixed 8 px billboard, writing the star's packed
 // identity where the round dot covers a pixel. One module carries both stages
 // (vs + fsPick); bodyPickRenderer compiles it into its OWN GPUShaderModule for
 // the points pipeline (never shared with the sphere pipeline — the 'auto'-layout
@@ -17,8 +17,17 @@
 // partition is by construction the sub-pixel stars ('partitionStarsByResolution').
 // So a fixed clickable floor IS the whole footprint here; there is no larger
 // visual dot to match, unlike the survey star pick which clamps 'max(visual,
-// floor)'. The 1.5 px radius (~3 px diameter) mirrors the survey pick clamp
-// (STAR_PICK_MIN_RADIUS_PX in starCatalog/vertex.wesl).
+// floor)'.
+//
+// ## Why a generous 8 px footprint, larger than the survey clamp
+//
+// These are the <=25 seeded scene stars — sparse, named, and drawn with a label
+// that invites a click. A too-small hit area makes those labelled targets feel
+// unclickable, so their footprint is deliberately LARGER than the survey star
+// pick's minimal clamp. The survey path (starCatalog/vertex.wesl) keeps its
+// 1.5 px radius because dense field stars would occlude each other's picks if
+// each grabbed a wide footprint; here the roster is tiny and well separated, so
+// a 4 px radius (8 px diameter) grabs comfortably without any collision risk.
 //
 // ## The identity is written RAW
 //
@@ -47,9 +56,10 @@ import package::lib::billboard::expandBillboardScreen;
 
 @group(0) @binding(0) var<uniform> u: CameraUniforms;
 
-// ~3 px clickable footprint (1.5 px radius). Mirrors STAR_PICK_MIN_RADIUS_PX in
-// the survey pick clamp; here it is the WHOLE footprint (see module header).
-const STAR_PICK_MIN_RADIUS_PX: f32 = 1.5;
+// 8 px clickable footprint (4 px radius) — the WHOLE footprint for these <=25
+// labelled scene stars, sized generously so a label's click invitation lands
+// (see module header). Deliberately larger than the survey pick's minimal clamp.
+const FAMOUS_STAR_PICK_RADIUS_PX: f32 = 4.0;
 
 // Pull the clamped clip-z this far inside the far plane so a point sitting
 // exactly ON it still passes the clip test (same epsilon the visual stage uses).
@@ -71,7 +81,7 @@ fn vs(
 ) -> VSOut {
   let center = worldToClip(u, posRelCamMpc);
   let corner = quadCorner(vi);
-  let offset = expandBillboardScreen(u, center, STAR_PICK_MIN_RADIUS_PX, corner);
+  let offset = expandBillboardScreen(u, center, FAMOUS_STAR_PICK_RADIUS_PX, corner);
 
   var out: VSOut;
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);
