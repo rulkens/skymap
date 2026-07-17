@@ -879,21 +879,23 @@ rich rows until T13 teaches them the non-star body case; between T9 and T13 a fo
 shows its label headline alone via the fail-soft famous-meta path — no crash, an incomplete card
 T13's visual pass finishes.)
 
-- [ ] `npm run move-files -- src/@types/engine/StarInfo.d.ts src/@types/engine/BodyInfo.d.ts`
+- [x] `npm run move-files -- src/@types/engine/StarInfo.d.ts src/@types/engine/BodyInfo.d.ts`
       (run `--dry` first), then the two card-folder moves. Rename the exported symbols
       (`StarInfo`→`BodyInfo`, `StarDetailCard`→`BodyDetailCard`, `CompactStarCard`→`CompactBodyCard`)
       via the `create-component` conventions; update every importer. Grep for the old names — no
       straggler.
-- [ ] Lift the `FAMOUS_STAR_IDS` guard in `buildFocusable.body` (build a `BodyInfo` for every row);
+      _Executed note: .module.css files moved via git mv (move-files rewrites TS specifiers only);
+      css docblock headers renamed in the follow-up commit._
+- [x] Lift the `FAMOUS_STAR_IDS` guard in `buildFocusable.body` (build a `BodyInfo` for every row);
       remove the now-dead `FAMOUS_STAR_IDS` import from `buildFocusable.ts`.
-- [ ] Add the test `buildFocusable body resolves Earth and a planet (guard lifted)` — a
+- [x] Add the test `buildFocusable body resolves Earth and a planet (guard lifted)` — a
       `body-earth` and a `body-jupiter` row each build a non-null `BodyInfo` with the row's
       label/radius (both were `null` pre-lift); a famous-star `body-sirius` row still resolves.
       Names the behaviour the lift changes.
-- [ ] `npx vitest run tests/services/engine/helpers/buildFocusable.test.ts` → fail, implement, pass.
+- [x] `npx vitest run tests/services/engine/helpers/buildFocusable.test.ts` → fail, implement, pass.
       `npm run typecheck` (both tsconfigs) → green (all four focusable tables already carry the
       `body` arm — #444 — so the rename + lift keeps them green).
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 10 — Body pick shaders + `bodyPickRenderer` (spec §8.3)
 
