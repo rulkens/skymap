@@ -212,16 +212,19 @@ export function resolveStarRecord(
 // 4. absMag = lutIndexToAbsMag(absMagIdx); bpRp = colorIdxToBpRp(colorIdx).
 ```
 
-- [ ] Add the test `round-trips a packed leaf star's position within quantisation` — build a
+- [x] Add the test `round-trips a packed leaf star's position within quantisation` — build a
       small synthetic `StarCatalog` (a handful of leaf cells across ≥2 octree levels via the
       plan-02 `buildStarOctree` fixture pattern, or a hand-authored `nodes`/`records` pair),
       pick a known leaf `recordIndex`, and assert `resolveStarRecord`'s `positionMpc` matches
       the star's **hand-computed** reconstructed position within the 10-bit cell quantisation,
       and `absMag`/`bpRp` equal the exact dequantised bin centres. Independent round-trip —
       fails on a wrong bsearch or a wrong reconstruction.
-- [ ] Add the test `returns null for an out-of-range record index` (index ≥ starCount → null).
-- [ ] `npx vitest run tests/services/engine/helpers/resolveStarRecord.test.ts` → fail, implement, pass.
-- [ ] Commit.
+      (Executed note: the bsearch runs over the LEAF subsequence, not `catalog.nodes` — nodes
+      sort by (level, morton), so leaf/aggregate firstRecord interleave; whole-table bsearch
+      is provably wrong. Reviewer-adjudicated, documented in resolveStarRecord.ts.)
+- [x] Add the test `returns null for an out-of-range record index` (index ≥ starCount → null).
+- [x] `npx vitest run tests/services/engine/helpers/resolveStarRecord.test.ts` → fail, implement, pass.
+- [x] Commit.
 
 ## Task 3 — Star refs / rows / pick / URL plumbing (engine + url, no React) (spec §7, §11)
 

@@ -109,6 +109,7 @@ const DIVE_DEPS: ResolveDeps = {
       type: 'galaxy',
     },
   ],
+  stars: { current: () => null },
   structures: {
     byId: (id) =>
       ({

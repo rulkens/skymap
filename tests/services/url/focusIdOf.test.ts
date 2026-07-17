@@ -55,6 +55,7 @@ const deps: ResolveDeps = {
     { id: 'm31', names: ['M31', 'Andromeda'], description: 'The Andromeda Galaxy', type: 'Sb' },
   ],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 describe('focusIdOf', () => {

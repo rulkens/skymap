@@ -85,6 +85,7 @@ const CAMERA_RUNTIME: FocusCameraRuntime = {
 const STRUCTURE_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
+  stars: { current: () => null },
   structures: {
     byId: (id) =>
       ({
@@ -203,6 +204,7 @@ describe('visitBeatSaga', () => {
       catalogs: { get: () => (cloudLoaded ? CLOUD : undefined) },
       famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 } as never],
       structures: { byId: () => null },
+      stars: { current: () => null },
     };
 
     const famousBeat: BeatData = {

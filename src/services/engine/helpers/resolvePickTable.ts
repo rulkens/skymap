@@ -41,4 +41,8 @@ export const RESOLVE_PICK: Partial<
   // The Milky Way is a singleton: the pick resolves to the tag with no
   // per-instance data needed.
   milkyWay: () => ({ type: 'milkyWay' }),
+  // Star identity is positional like the galaxy arm — the pick's localIdx is
+  // the bin-stable global star-record index. No catalog read here; the
+  // reconciler resolves the record to a row at display time.
+  starCatalog: (_entry, pick) => ({ type: 'star', index: pick.localIdx }),
 };

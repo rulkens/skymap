@@ -35,6 +35,7 @@ const EMPTY_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 const RUNTIME: FocusCameraRuntime = {

@@ -53,6 +53,7 @@ const EMPTY_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 const RUNTIME: FocusCameraRuntime = {
@@ -146,6 +147,7 @@ describe('watchClipSaga', () => {
       catalogs: { get: () => undefined },
       famousMeta: [],
       structures: { byId: (id) => groups[id] ?? null },
+      stars: { current: () => null },
     };
 
     const seam = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);

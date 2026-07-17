@@ -33,6 +33,7 @@ export type SelectionHalo = {
 
 type MilkyWayRow = { readonly type: 'milkyWay' };
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
+type StarRow = Extract<SelectionRow, { type: 'star' }>;
 
 // Table keyed on the SelectionRow union tag. Each arm receives the narrowed row
 // and returns a descriptor (or null for the structure arm, which uses the
@@ -42,6 +43,7 @@ const SELECTION_HALO_TABLE: {
   milkyWay: (row: MilkyWayRow) => SelectionHalo;
   structure: (row: StructureInfo) => null;
   body: (row: BodyRow) => null;
+  star: (row: StarRow) => SelectionHalo;
 } = {
   // `max(diameterKpc, 30)` handles the synthetic-fallback source and any
   // pre-v4-format galaxy without a measured size; *2 = diameter→radius span.
@@ -60,6 +62,13 @@ const SELECTION_HALO_TABLE: {
   // Scene bodies render as true-scale spheres in the deep-zoom foreground; a
   // Mpc-scale halo ring around a ~2e-16 Mpc planet would be meaningless chrome.
   body: (_row) => null,
+  // A star is a point with no physical extent to size a ring by, so radiusMpc
+  // is 0: the px-based ring layer (§9) floors it to a pixel minimum, and the
+  // ring centres on the star's world position carried by the row.
+  star: (row) => ({
+    radiusMpc: 0,
+    worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
+  }),
 };
 
 /**

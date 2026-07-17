@@ -66,6 +66,7 @@ const deps: ResolveDeps = {
     },
   ],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 describe('resolveFocusId', () => {
@@ -201,6 +202,23 @@ describe('resolveFocusId', () => {
     const id = focusIdOf({ type: 'body', id: 'earth' }, deps);
     expect(id).toBe('body-earth');
     expect(resolveFocusId(id as string, deps)).toEqual({ type: 'body', id: 'earth' });
+  });
+
+  // ── stars ────────────────────────────────────────────────────────────────
+
+  it('round-trips star-<index> and beats the famous fallback', () => {
+    // star-42 must resolve to a positional star ref via the dedicated decoder
+    // row — NOT tumble into the greedy famous scan (which its character class
+    // would otherwise pass). deps.stars is null here, proving the decode never
+    // touches the catalog: the index alone is the identity.
+    expect(resolveFocusId('star-42', deps)).toEqual({ type: 'star', index: 42 });
+    // Encode↔decode round-trip closes through the shared STAR_FOCUS_PREFIX.
+    expect(focusIdOf({ type: 'star', index: 42 }, deps)).toBe('star-42');
+  });
+
+  it('star- with a non-integer / negative suffix → null', () => {
+    expect(resolveFocusId('star-abc', deps)).toBeNull();
+    expect(resolveFocusId('star--1', deps)).toBeNull();
   });
 
   // ── structure ────────────────────────────────────────────────────────────

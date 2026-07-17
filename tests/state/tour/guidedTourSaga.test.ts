@@ -60,6 +60,7 @@ const immediateDeps: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 // Narration clip: empty timeline, no focus ids. clipFociReady returns true

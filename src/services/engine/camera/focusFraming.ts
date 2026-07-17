@@ -49,6 +49,17 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 const KPC_PER_MPC = 1000;
 const FALLBACK_DIAMETER_KPC = 30;
 
+/**
+ * Nominal stellar radius (km) for framing a picked survey star. The star row
+ * carries no per-star radius — the bin quantises position + photometry only —
+ * so a single representative solar radius (Sun ≈ 6.957e5 km) frames every star
+ * as a discrete near-field body through the shared `bodyFocusDistance`. This is
+ * a placeholder framing: Task 4 owns the StarInfo view-model and may refine it
+ * (e.g. an absMag-derived radius). It only matters for a `star-<index>`
+ * deep-link, the one path that reaches focusFraming before Task 4 lands.
+ */
+const NOMINAL_STAR_RADIUS_KM = 6.957e5;
+
 export type FocusFraming = Pick<CameraPose, 'target' | 'distance'> & {
   /**
    * The subject's pass-by extent (Mpc) — the unit a fly-past offset scales by.
@@ -111,6 +122,17 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
         distance: bodyFocusDistance(radiusMpc, fovYRad),
         // A body is a discrete object like a galaxy, so its physical radius is
         // a real pass-by extent for flyPath's offset geometry.
+        radius: radiusMpc,
+      };
+    }
+    case 'star': {
+      // A survey star is a discrete near-field point framed like a body, using
+      // a nominal stellar radius (the row has no per-star size). Placeholder —
+      // see NOMINAL_STAR_RADIUS_KM; reachable only via a star deep-link today.
+      const radiusMpc = NOMINAL_STAR_RADIUS_KM * SCALE_UNITS.KM_TO_MPC;
+      return {
+        target: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
+        distance: bodyFocusDistance(radiusMpc, fovYRad),
         radius: radiusMpc,
       };
     }

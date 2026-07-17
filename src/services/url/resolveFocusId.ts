@@ -59,6 +59,7 @@ import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
 import { cartesianToRaDec } from '../../utils/math/cartesianToRaDec';
 import { MILKY_WAY_FOCUS_ID } from './milkyWayFocusId';
 import { BODY_FOCUS_PREFIX } from './bodyFocusId';
+import { STAR_FOCUS_PREFIX } from './starFocusId';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
@@ -138,6 +139,17 @@ const FOCUS_ID_DECODERS: readonly FocusIdDecoder[] = [
     decode: (id) => {
       const seedId = id.slice(BODY_FOCUS_PREFIX.length);
       return SCENE_BODIES.some((b) => b.id === seedId) ? { type: 'body', id: seedId } : null;
+    },
+  },
+  // stars (`star-<recordIndex>`).  The suffix is the bin-stable global
+  // star-record index; a non-negative integer resolves to a positional star
+  // ref, anything else is garbage → null.  Precedes famous because `star-42`
+  // also passes the greedy famous character class.
+  {
+    matches: (id) => id.startsWith(STAR_FOCUS_PREFIX),
+    decode: (id) => {
+      const n = Number(id.slice(STAR_FOCUS_PREFIX.length));
+      return Number.isInteger(n) && n >= 0 ? { type: 'star', index: n } : null;
     },
   },
   // famous id — the greedy fallback.  MUST stay last: its character class also

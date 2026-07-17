@@ -528,6 +528,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     famousMeta: state.data.galaxies.famousMeta,
     structures: { byId: (id) => state.data.structures.byId(id) },
+    // The sole loaded star catalog — the first (only, in v1) committed Gaia
+    // catalog off the renderer, or null before the star cloud lands or after
+    // the GPU tears down. Read lazily like the other getters so a star pick /
+    // deep-link always sees the current catalog.
+    stars: {
+      current: () => {
+        const renderer = state.gpu.starCatalogRenderer;
+        if (!renderer) return null;
+        for (const { catalog } of renderer.loadedCatalogs()) return catalog;
+        return null;
+      },
+    },
   });
 
   // Bound clip player, hoisted into the saga context as the single clip-run

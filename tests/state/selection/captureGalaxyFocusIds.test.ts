@@ -61,6 +61,7 @@ function makeSdssResolveDeps(objId: bigint): ResolveDeps {
     },
     famousMeta: [],
     structures: { byId: () => null },
+    stars: { current: () => null },
   };
 }
 
@@ -137,6 +138,7 @@ describe('captureGalaxyFocusIds', () => {
       catalogs: { get: () => undefined },
       famousMeta: [],
       structures: { byId: () => null },
+      stars: { current: () => null },
     };
 
     const result = captureGalaxyFocusIds(store.getState(), resolveDeps, 'medium', 'large');
@@ -182,6 +184,7 @@ describe('captureGalaxyFocusIds', () => {
       catalogs: { get: () => undefined }, // SDSS cloud absent
       famousMeta: [],
       structures: { byId: () => null },
+      stars: { current: () => null },
     };
 
     const result = captureGalaxyFocusIds(store.getState(), emptyDeps, 'medium', 'large');

@@ -42,6 +42,7 @@ const emptyDeps: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 // FamousMetaEntry stub for 'm87'. The famous branch of resolveFocusId scans
@@ -62,6 +63,7 @@ const depsM87NotLoaded: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [m87Meta],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 // ─── flyToClip-shaped clip for 'm87' ─────────────────────────────────────────

@@ -101,6 +101,7 @@ const NARRATION_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 // ─── Harness ─────────────────────────────────────────────────────────────────

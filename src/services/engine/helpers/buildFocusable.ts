@@ -24,6 +24,11 @@ const BUILD_FOCUSABLE: {
   structure: (row) => row,
   milkyWay: () => MILKY_WAY_INFO,
   body: () => null,
+  // Temporarily null, exactly like the body arm: Task 4 flips this to a
+  // StarInfo once FocusableTarget widens to carry stars. Keeping it null here
+  // means this task lands without touching FocusableTarget or any of its
+  // consumers (InfoCard, urlHashFor, targetIdentityKey).
+  star: () => null,
 };
 
 export function buildFocusable(row: SelectionRow | null): FocusableTarget | null {

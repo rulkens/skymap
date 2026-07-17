@@ -49,6 +49,7 @@ describe('watchRequestFocusSaga', () => {
       },
       famousMeta: [],
       structures: { byId: () => null },
+      stars: { current: () => null },
     };
     mw.run(watchRequestFocusSaga);
     mw.setContext({ resolveDeps: () => deps });
