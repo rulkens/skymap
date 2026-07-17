@@ -40,11 +40,9 @@ import {
   lutIndexToAbsMag,
   colorIdxToBpRp,
   RECORD_BYTES,
+  STAR_OFFSET_LEVELS,
 } from '../../../data/starCatalog/starCatalogFormat';
 import { starNodeOriginRelCamMpc } from '../../gpu/renderers/starCatalog/starNodeOriginRelCamMpc';
-
-/** In-cell offsets are 10-bit integers spanning `[0, 1024)` of the box edge. */
-const OFFSET_SCALE = 1024;
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];
@@ -104,9 +102,9 @@ export function resolveStarRecord(
   // the node's box. This inverts exactly what the shader draws.
   const { originRelCamMpc, cellScaleMpc } = starNodeOriginRelCamMpc(catalog, node, SUN);
   const positionMpc: Vec3 = [
-    originRelCamMpc[0] + (offset[0] / OFFSET_SCALE) * cellScaleMpc,
-    originRelCamMpc[1] + (offset[1] / OFFSET_SCALE) * cellScaleMpc,
-    originRelCamMpc[2] + (offset[2] / OFFSET_SCALE) * cellScaleMpc,
+    originRelCamMpc[0] + (offset[0] / STAR_OFFSET_LEVELS) * cellScaleMpc,
+    originRelCamMpc[1] + (offset[1] / STAR_OFFSET_LEVELS) * cellScaleMpc,
+    originRelCamMpc[2] + (offset[2] / STAR_OFFSET_LEVELS) * cellScaleMpc,
   ];
 
   return { positionMpc, absMag: lutIndexToAbsMag(absMagIdx), bpRp: colorIdxToBpRp(colorIdx) };
