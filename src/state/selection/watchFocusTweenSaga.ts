@@ -7,7 +7,21 @@
  * The saga is a thin resolve→build→dispatch shell:
  *   1. re-resolve the ref to a row via the live `resolveDeps` (firing on the REF,
  *      not the reconciled row, keeps the tween a response to the Intent and free
- *      of any dependence on watchSelectionRowsSaga running first);
+ *      of any dependence on watchSelectionRowsSaga running first). A STAR deep
+ *      link races the Gaia bin the way a body deep link races the camera: its id
+ *      resolves statically (index-based), so `updateSelectionFocus` fires at
+ *      bootstrap, but `extractSelectionRow`'s star arm returns null until the
+ *      star catalog commits. So the row resolve DEFERS, symmetric with the camera
+ *      wait below: while the row is null AND the ref is a still-unloaded star, it
+ *      waits on `engineSourceCountReported` — the pulse each catalog (star
+ *      included) dispatches the instant it commits, by when `stars.current()` is
+ *      non-null — and re-extracts. The guard is catalog PRESENCE, not row-ness:
+ *      a null row with the catalog loaded is a stale/garbage index, which drops
+ *      to the no-op below rather than waiting for a report that never recurs.
+ *      Galaxy deep links never reach here null (their `updateSelectionFocus` is
+ *      itself deferred on `catalogLoaded`), so this loop is star-specific by its
+ *      guard. The star catalog is already demanded at boot (its source ships
+ *      `visible: true`), so nothing here has to trigger the load — only await it;
  *   2. read the live camera Resources (`cameraRuntime`) — the visible from-pose
  *      and the lens FOV. When the camera is not ready yet the saga DEFERS on the
  *      `engineStatusChanged` pulse rather than dropping the tween: a deep-link
@@ -37,7 +51,7 @@ import { startCameraTween } from '../camera/cameraSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
 import { suspendDuringClip } from './suspendDuringClip';
-import { engineStatusChanged } from '../engine/engineSlice';
+import { engineStatusChanged, engineSourceCountReported } from '../engine/engineSlice';
 import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {
@@ -47,7 +61,23 @@ export function* watchFocusTweenSaga() {
       const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
-      const row = extractSelectionRow(action.payload, resolveDeps());
+      // A star deep link resolves its ref statically at bootstrap, before the
+      // Gaia bin commits, so the star arm returns null until the catalog lands.
+      // Defer on the per-source count report (fired the instant a catalog
+      // commits, by when `stars.current()` is non-null) and re-extract — but
+      // only while the star catalog is genuinely absent, so a garbage index
+      // (row null with the catalog present) falls through to the no-op rather
+      // than waiting forever. `takeLatest` discards this waiter if a newer focus
+      // supersedes it.
+      let row = extractSelectionRow(action.payload, resolveDeps());
+      while (
+        row === null &&
+        action.payload?.type === 'star' &&
+        resolveDeps().stars.current() === null
+      ) {
+        yield* take(engineSourceCountReported);
+        row = extractSelectionRow(action.payload, resolveDeps());
+      }
       if (row === null) return;
 
       // A focus that resolves during bootstrap can outrun the camera: the ref is
