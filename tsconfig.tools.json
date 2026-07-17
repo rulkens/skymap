@@ -5,5 +5,5 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
   "include": ["tools", "src"],
-  "exclude": []
+  "exclude": ["tools/stars-rs/target"]
 }
