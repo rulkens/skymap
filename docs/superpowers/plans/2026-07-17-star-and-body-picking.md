@@ -176,18 +176,18 @@ export function spectralClassFromBpRp(bpRp: number): string;
 // CLASSIFIER: the implementer picks the bin edges; the ordering (blue→red) is the contract.
 ```
 
-- [ ] Add the test `apparentMagnitudeFromAbs is the absolute magnitude at 10 pc` asserting
+- [x] Add the test `apparentMagnitudeFromAbs is the absolute magnitude at 10 pc` asserting
       `apparentMagnitudeFromAbs(5, 10) === 5` (distance modulus 0 — **hand-computed**).
-- [ ] Add the test `apparentMagnitudeFromAbs dims by 5 mag per decade` asserting
+- [x] Add the test `apparentMagnitudeFromAbs dims by 5 mag per decade` asserting
       `apparentMagnitudeFromAbs(5, 100)` is `10` (5·log10(10)=5 — **hand-computed**, an
       independent value, not the source formula re-run).
-- [ ] Add the test `spectralClassFromBpRp bins a blue star vs a red star` with a couple of
+- [x] Add the test `spectralClassFromBpRp bins a blue star vs a red star` with a couple of
       representative **hand-chosen** BP−RP values (e.g. a very blue `−0.3` → the O/B bin, a
       Sun-like `~0.82` → the G bin, a very red `~2.5` → the M bin). Monotone-classifier
       property, not a boundary mirror.
-- [ ] `npx vitest run tests/utils/star/apparentMagnitudeFromAbs.test.ts tests/utils/star/spectralClassFromBpRp.test.ts`
+- [x] `npx vitest run tests/utils/star/apparentMagnitudeFromAbs.test.ts tests/utils/star/spectralClassFromBpRp.test.ts`
       → both files fail (functions absent), then implement, then pass.
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 2 — `resolveStarRecord` (record-index → node bsearch + reconstruction) (spec §7, §11)
 
