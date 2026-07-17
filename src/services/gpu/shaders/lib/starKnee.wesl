@@ -1,5 +1,7 @@
-// starCatalog/knee.wesl — the survey-star hue-preserving soft-knee, the ONE
-// home of the compression constant and curve.
+// lib/starKnee.wesl — the star-pass hue-preserving soft-knee, the ONE home of
+// the compression constant and curve. Shared by every star fragment stage (the
+// survey leaf + aggregate-upsample composite AND the famous / scene point
+// sprites), so it lives in lib/ rather than any one family's folder.
 //
 // The star pass paints 'tint * scalar', where the tint's channel ratios carry
 // the star's colour and the scalar is the flux-derived glow amplitude. Under
@@ -23,12 +25,14 @@
 //
 // ## Why the constant lives here, alone
 //
-// Two stages apply this exact curve: the leaf fragment (per-glow, at deposit
-// time) and the aggregate-upsample composite (on the SUMMED half-res field, so
-// a stack of sub-knee aggregate quads gets compressed like a concentrated
-// bright leaf does — the LOD-symmetry fix). If each copied the KNEE literal the
-// two could silently drift and reintroduce the very asymmetry the split exists
-// to remove, so both import this module and neither restates the number.
+// Several stages apply this exact curve: the survey leaf fragment (per-glow, at
+// deposit time), the aggregate-upsample composite (on the SUMMED half-res
+// field, so a stack of sub-knee aggregate quads gets compressed like a
+// concentrated bright leaf does — the LOD-symmetry fix), and the famous-star
+// fragment (per-glow, so a famous leaf compresses identically to a survey
+// leaf). If each copied the KNEE literal they could silently drift and
+// reintroduce the very asymmetry the split exists to remove, so all import this
+// module and none restates the number.
 //
 // KNEE sits comfortably above 1.0 so bloom still sees genuine HDR values and
 // bright cores still bloom, yet well below the old unbounded peaks so the
