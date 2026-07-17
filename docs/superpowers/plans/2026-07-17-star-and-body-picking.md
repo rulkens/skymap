@@ -352,18 +352,21 @@ apparent magnitude, BP−RP, spectral class); `CompactStarCard` is the hover-pre
 (title + distance + class). Both follow the existing galaxy/structure card structure and
 the create-component conventions.
 
-- [ ] `create-component` for `StarDetailCard` + `CompactStarCard` (props `{ target: StarInfo }`
+- [x] `create-component` for `StarDetailCard` + `CompactStarCard` (props `{ target: StarInfo }`
       / `{ info: StarInfo }` matching the existing card prop shape).
-- [ ] Add `StarInfo.d.ts`; widen `FocusableTarget`. Fill `buildFocusable.star` (real),
+      _Executed note: the #444 (famous stars) merge subsequently renamed this task's
+      artifacts to `FieldStarInfo` / `FieldStarDetailCard` / `CompactFieldStarCard` —
+      main's famous-star `body` arm owns the `StarInfo` / `StarDetailCard` names._
+- [x] Add `StarInfo.d.ts`; widen `FocusableTarget`. Fill `buildFocusable.star` (real),
       `refOf.star`, `urlHashFor.star`, `targetIdentityKey.star`, `detailCardTable.star`.
-- [ ] Add the test `buildFocusable star builds a StarInfo with derived fields` — a
+- [x] Add the test `buildFocusable star builds a StarInfo with derived fields` — a
       `{type:'star', positionMpc, absMag, bpRp}` row → a `StarInfo` whose `distancePc`,
       `apparentMag`, `spectralClass` match the Task-1 helpers on **hand-chosen** inputs
       (e.g. a 10-pc star has `apparentMag === absMag`). One targeted assertion per field —
       not a whole-object snapshot.
-- [ ] `npx vitest run tests/services/engine/helpers/buildFocusable.test.ts` → fail, implement, pass.
+- [x] `npx vitest run tests/services/engine/helpers/buildFocusable.test.ts` → fail, implement, pass.
       `npm run typecheck` (both tsconfigs) → green (all four focusable tables filled).
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 5 — NEAR0 selection-ring layer (spec §9)
 
