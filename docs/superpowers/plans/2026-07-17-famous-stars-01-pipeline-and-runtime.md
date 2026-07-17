@@ -410,17 +410,17 @@ model **Z** axis as polar (document the simplification — a fuller pole vector 
 field). The point of this task is that **the code path lands now**; visual proof comes with
 plan 02's oblate entries (Achernar ~0.35). None of the 26 initial stars are oblate.
 
-- [ ] Grow `composeBodyMvp` to a per-axis scale (default uniform preserves every existing
+- [x] Grow `composeBodyMvp` to a per-axis scale (default uniform preserves every existing
       caller — Earth, planets). Update its docblock (why per-axis; the polar-Z
       simplification).
-- [ ] Wire `starSpheresLayer.draw` to pass the per-axis scale derived from `star.oblateness`
+- [x] Wire `starSpheresLayer.draw` to pass the per-axis scale derived from `star.oblateness`
       (absent ⇒ uniform). Update the layer header's radius note.
-- [ ] Test `oblate body flattens the polar axis` — compose an MVP for a body with
+- [x] Test `oblate body flattens the polar axis` — compose an MVP for a body with
       `oblateness = 0.5` and one without; assert the polar-axis extent of the transformed
       unit sphere is **half** the equatorial extent (transform a `+Z` unit point vs a `+X`
       unit point through the model portion and compare — a hand-computed geometric
       property, not a mirror of the compose maths).
-- [ ] `npm test -- composeBodyMvp` → green. Commit.
+- [x] `npm test -- composeBodyMvp` → green. Commit.
 
 ## Task 8 — Gaia dedup reads the seed; delete the standalone table
 
