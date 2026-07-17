@@ -550,10 +550,10 @@ loads through the family as key `'earth'`.
 
 **Files:** none new — the plan-01 gate.
 
-- [ ] `npm run typecheck` (both src + tools tsconfigs) → clean (proves nothing
+- [x] `npm run typecheck` (both src + tools tsconfigs) → clean (proves nothing
   imports a deleted Earth-texture symbol).
-- [ ] `npm test` (full suite) → green.
-- [ ] Commit.
+- [x] `npm test` (full suite) → green (701 files / 4154 tests).
+- [x] Commit.
 
 ---
 
