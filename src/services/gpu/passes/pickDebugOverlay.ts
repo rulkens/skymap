@@ -2,6 +2,17 @@
  * pickDebugOverlay — fullscreen pass that colour-maps the r32uint pick
  * texture onto the tone-mapped swap chain.
  *
+ * ### Colouring: hue by source code
+ *
+ * The fragment derives every pixel's hue from its packed source code via
+ * golden-angle spacing (`fract(sourceCode * 0.618034)`), so each pickable
+ * source — galaxy catalog, structure ring, Gaia star, famous star, planet,
+ * Earth — reads as its own stable, well-separated colour with no
+ * hand-maintained palette to keep in step with `Source`. A hash of the
+ * 27-bit `localIdx` modulates brightness (HSV value) so adjacent instances
+ * of the same source stay individually distinguishable. See
+ * `shaders/pickDebugOverlay/fragment.wesl` for the full rationale.
+ *
  * ### Why a dedicated factory
  *
  * Same shape as `volumeUpsample`: a single covering-triangle pipeline
