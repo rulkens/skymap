@@ -174,19 +174,19 @@ export function bodyTextureSpec(id: string): BodyTextureSpec | null; // registry
 `provenance`: `sss` for the SSS planets + Moon; `nasa` for Earth; `usgs` for the
 four Galilean moons.
 
-- [ ] Add the three `.d.ts` (one type each). `BodyTextureId` docblock: the
+- [x] Add the three `.d.ts` (one type each). `BodyTextureId` docblock: the
   registry-keyed union IS texture identity — a body is textured iff its id keys
   the registry (spec §4.2, no baked `textured` flag).
-- [ ] Add `bodyTextureRegistry.ts`. Didactic docblock: one table feeds three
+- [x] Add `bodyTextureRegistry.ts`. Didactic docblock: one table feeds three
   consumers (runtime tier clamp, build tier-set, fetch source-list); a new
   textured body is one row here + its raw-data entries.
-- [ ] Test `BODY_TEXTURE_REGISTRY structural invariants` — for every entry
+- [x] Test `BODY_TEXTURE_REGISTRY structural invariants` — for every entry
   `spec.bodyId === key`; a `grayscaleTint` is present iff the body is Europa or
   Callisto (the mono-USGS-source contract, spec §3); `bodyTextureSpec('earth')`
   is non-null and `bodyTextureSpec('phobos')` is null. (Invariants, not a
   full-table `maxTier` restatement — the ceilings are exercised by Task 7's
   `clampTier` tests.)
-- [ ] `npm test -- bodyTextureRegistry` → green. Commit.
+- [x] `npm test -- bodyTextureRegistry` → green. Commit.
 
 ## Task 4 — `SCENE_RINGS` + `RingSpec` type
 
