@@ -61,6 +61,27 @@
  * the ONE canonical Gaia BP−RP ramp (`starCatalog/tint.wesl`), so the resolved
  * sphere lands the same colour as the point cloud it rose out of.
  *
+ * ### Pick aspect — the sphere occludes the stars behind it
+ *
+ * `draw` alone leaves the sphere absent from the r32uint pick pass, so the
+ * background Gaia point-picks read THROUGH its face and a click lands on a
+ * tiny star parsecs behind the one framed. `drawPick` closes both gaps: it
+ * stamps the focused star's identity into the NEAR0 pick pass via
+ * `bodyPickRenderer.drawSphere`, gated by the SAME `enabled` predicate `draw`
+ * rides (the pick program filters pickables by `drawPick` presence + `enabled`,
+ * so pickability tracks visibility) and composing the SAME `composeBodyMvp` —
+ * so the pick silhouette is identical to the visual sphere. Because the sphere
+ * pick pipeline and the `starCatalog` POINT pick pipeline share the pick pass's
+ * `depth32float` attachment and both depth-test (`less`) + depth-write, the
+ * near sphere occludes the far star points nearest-wins, order-independently:
+ * the sphere is both itself pickable AND a depth occluder for the stars behind
+ * it.
+ *
+ * The packed id is `packSelection(Source.GaiaStars, row.index + PICK_SENTINEL_OFFSET)`
+ * — byte-for-byte what `starCatalog/pickFragment.wesl` writes for this star's
+ * point pick (`row.index` IS the bin-global `recordIdx` the pick ref carried),
+ * so clicking the sphere resolves to the exact same star the point pick would.
+ *
  * `RENDER_ORIGIN_MPC` is imported directly (not threaded through ctx state) —
  * the render origin is fixed at the Sun for the zoom-to-earth fold.
  */
@@ -69,6 +90,8 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { Source } from '../../../../data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { STAR_RESOLVE_PX } from '../partitionStarsByResolution';
@@ -139,5 +162,35 @@ export const focusedFieldStarSphereLayer: ContentLayer = {
       IDENTITY_MAT3,
     );
     renderer.draw(pass, mvp, starTintFromBpRp(row.bpRp));
+  },
+
+  // Pick aspect — stamps the focused star's identity into the NEAR0 r32uint pick
+  // pass with ONE `drawSphere` (its own dynamic-offset uniform: mvp + packed id).
+  // This mirrors `draw` argument-for-argument so the pick sphere is silhouette-
+  // identical to the visual one; `enabled` (the shared `starResolves` gate) has
+  // already decided the sphere resolves, so this runs exactly when `draw` runs.
+  //
+  // The packed id carries the star's bin-global record index — `row.index`, the
+  // very `recordIdx` the point pick fragment packs — so the sphere pick resolves
+  // to the SAME star as its `starCatalog` point pick. Because both pick pipelines
+  // depth-test + depth-write the shared NEAR0 depth attachment, the near sphere
+  // occludes the far background star points nearest-wins.
+  drawPick(pass, view, _ctx, state) {
+    const pickRenderer = state.gpu.bodyPickRenderer;
+    if (pickRenderer === null) return;
+    const row = state.selectionRows.select;
+    if (row === null || row.type !== 'star') return;
+
+    const mvp = composeBodyMvp(
+      view.slab.vp,
+      row.positionMpc,
+      RENDER_ORIGIN_MPC,
+      row.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      IDENTITY_MAT3,
+    );
+    pickRenderer.drawSphere(pass, {
+      mvp,
+      packedId: packSelection(Source.GaiaStars, row.index + PICK_SENTINEL_OFFSET),
+    });
   },
 };

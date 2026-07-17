@@ -21,10 +21,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { focusedFieldStarSphereLayer } from '../../../../../src/services/engine/frame/passes/focusedFieldStarSphereLayer';
 import { SOLAR_RADIUS_KM } from '../../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
+import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
+import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { Source } from '../../../../../src/data/sources';
 
@@ -99,6 +103,43 @@ function stateWith(
   } as unknown as EngineState;
 }
 
+const PASS_STUB = {
+  setPipeline: vi.fn(),
+  setVertexBuffer: vi.fn(),
+  setIndexBuffer: vi.fn(),
+  setBindGroup: vi.fn(),
+  drawIndexed: vi.fn(),
+} as unknown as GPURenderPassEncoder;
+
+/**
+ * A NEAR0 SlabView whose f64 `slab.vp` and f32 `vp` are deliberately DIFFERENT
+ * arrays, mirroring the `starSpheresLayer` fixture: the layer must compose from
+ * `view.slab.vp` (the f64 seam), and both `draw` and `drawPick` must read the
+ * same one so the pick sphere lands on the visual sphere.
+ */
+function makeNear0View(camPos: Vec3): SlabView {
+  const slab: Slab = {
+    index: NEAR0,
+    nearMpc: 0.0005,
+    farMpc: 500,
+    vp: Float64Array.from({ length: 16 }, (_, i) => i + 0.5),
+    originRelative: true,
+    precision: 'f64',
+  };
+  return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, 720] };
+}
+
+/** State exposing the body pick renderer `drawPick` reads (plus the select row). */
+function pickStateWith(
+  row: SelectionRow | null,
+  bodyPickRenderer: unknown = { drawSphere: vi.fn() },
+): EngineState {
+  return {
+    gpu: { bodyPickRenderer },
+    selectionRows: { select: row, focus: null, hover: null },
+  } as unknown as EngineState;
+}
+
 describe('focusedFieldStarSphereLayer.enabled', () => {
   it('enables only for a star row within sphere-resolve range', () => {
     // A star row with the camera half an AU off it: the sphere clears
@@ -134,5 +175,83 @@ describe('focusedFieldStarSphereLayer.enabled', () => {
         {} as unknown as ReadyFrameContext,
       ),
     ).toBe(false);
+  });
+});
+
+describe('focusedFieldStarSphereLayer.drawPick', () => {
+  const CAM = halfAuFrom(STAR_POS);
+
+  it('stamps the focused star’s Gaia record index — the SAME id the point pick packs', () => {
+    // The sphere pick must resolve to the same star as the star's `starCatalog`
+    // point pick, so it packs the star's bin-global record index (`row.index`)
+    // under `Source.GaiaStars`. Hand-computed independently of the production
+    // packer: (24 << 27) | (7 + 1) — the ref index 7 plus the +1 pick sentinel
+    // offset the point-pick fragment also adds pre-pack.
+    let packedId = -1;
+    const bodyPickRenderer = {
+      drawSphere: vi.fn((_pass: GPURenderPassEncoder, args: { packedId: number }) => {
+        packedId = args.packedId;
+      }),
+    };
+    focusedFieldStarSphereLayer.drawPick!(
+      PASS_STUB,
+      makeNear0View(CAM),
+      makeCtx(CAM),
+      pickStateWith(STAR_ROW, bodyPickRenderer),
+    );
+
+    expect(bodyPickRenderer.drawSphere).toHaveBeenCalledTimes(1);
+    expect(packedId).toBe(((Source.GaiaStars << 27) | (7 + 1)) >>> 0);
+    // And it decodes straight back to Gaia record 7 — what `resolveStarRecord`
+    // then turns into the same star the visual sphere framed.
+    const decoded = unpackPick(packedId)!;
+    expect(decoded.sourceCode).toBe(Source.GaiaStars);
+    expect(decoded.localIdx).toBe(7);
+  });
+
+  it('composes the pick MVP from the same inputs as draw (silhouette parity)', () => {
+    // The pick sphere must be silhouette-identical to the visual one, so it
+    // feeds `composeBodyMvp` the SAME slab.vp + position + radius. Run both
+    // aspects on the same view/row and assert the composed MVP matches.
+    const view = makeNear0View(CAM);
+    const ctx = makeCtx(CAM);
+
+    const drawSpy = vi.fn();
+    focusedFieldStarSphereLayer.draw(PASS_STUB, view, ctx, stateWith(STAR_ROW, { draw: drawSpy }));
+    const drawMvp = drawSpy.mock.calls[0]![1] as Float32Array;
+
+    const drawSphereSpy = vi.fn();
+    focusedFieldStarSphereLayer.drawPick!(
+      PASS_STUB,
+      view,
+      ctx,
+      pickStateWith(STAR_ROW, { drawSphere: drawSphereSpy }),
+    );
+    const pickMvp = (drawSphereSpy.mock.calls[0]![1] as { mvp: Float32Array }).mvp;
+
+    expect(pickMvp).toEqual(drawMvp);
+  });
+
+  it('no-ops for a non-star row and while the bodyPickRenderer is null (gate parity with draw)', () => {
+    // Same internal guards as `draw`: a non-`star` row and a null pick renderer
+    // both skip the draw. (The resolve gate itself lives in `enabled`, proven
+    // above — the pick program only calls `drawPick` when `enabled` is true.)
+    const nonStar = vi.fn();
+    focusedFieldStarSphereLayer.drawPick!(
+      PASS_STUB,
+      makeNear0View(CAM),
+      makeCtx(CAM),
+      pickStateWith(GALAXY_ROW, { drawSphere: nonStar }),
+    );
+    expect(nonStar).not.toHaveBeenCalled();
+
+    expect(() =>
+      focusedFieldStarSphereLayer.drawPick!(
+        PASS_STUB,
+        makeNear0View(CAM),
+        makeCtx(CAM),
+        pickStateWith(STAR_ROW, null),
+      ),
+    ).not.toThrow();
   });
 });
