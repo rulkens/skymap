@@ -6,7 +6,9 @@
  * Owns the star-catalogs group UI: a master gate toggle on the section header
  * and per-catalog visibility checkboxes (just `gaiaStars` today; the
  * `STAR_CATALOG_IDS.map(...)` row loop is the extension point for a future
- * second catalog), plus a default-closed "Advanced" sub-section carrying the
+ * second catalog), plus a "Famous stars" sibling row — a singleton overlay gate
+ * (`settings.famousStars`), not a `starCatalog` row, so it carries no
+ * loaded-count chip — plus a default-closed "Advanced" sub-section carrying the
  * shared star-size and star-brightness sliders — the star-catalog twins of the
  * Galaxies section's point-size and brightness controls — plus two lattice
  * controls unique to the octree-cut star renderer: "Detail" (the CPU refine
@@ -70,6 +72,12 @@ type StarsSectionProps = {
   exposureMidX: number;
   /** Current far-anchor display exposure — the "Exposure (far)" tuning knob. */
   exposureFarX: number;
+  /**
+   * Whether the seeded famous-star map is shown. A sibling of the mapped
+   * per-catalog rows, but a singleton overlay gate (`settings.famousStars`) —
+   * NOT a `starCatalog` row — so it takes no loaded-count chip.
+   */
+  famousStarsEnabled: boolean;
   /** Called when the user toggles the master gate on or off. */
   onToggleMaster: (enabled: boolean) => void;
   /** Called when the user toggles a single star catalog on or off. */
@@ -88,6 +96,8 @@ type StarsSectionProps = {
   onExposureMidXChange: (v: number) => void;
   /** Called when the user moves the Exposure (far) slider. */
   onExposureFarXChange: (v: number) => void;
+  /** Called when the user toggles the famous-star map on or off. */
+  onToggleFamousStars: (enabled: boolean) => void;
 };
 
 // ── StarsSection ─────────────────────────────────────────────────────────────
@@ -107,6 +117,7 @@ function StarsSection({
   exposureNearX,
   exposureMidX,
   exposureFarX,
+  famousStarsEnabled,
   onToggleMaster,
   onToggleCatalog,
   onSizeChange,
@@ -116,6 +127,7 @@ function StarsSection({
   onExposureNearXChange,
   onExposureMidXChange,
   onExposureFarXChange,
+  onToggleFamousStars,
 }: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
   // "gate on, but not every catalog is individually enabled" (mixed).
@@ -150,6 +162,21 @@ function StarsSection({
             </div>
           );
         })}
+
+        {/* Famous stars — a sibling row to the mapped catalogs, but a singleton
+            overlay gate (`settings.famousStars`) rather than a `starCatalog`
+            row, so it carries no loaded-count chip (the set is seeded, not
+            fetched). Toggling it hides the seeded near-field star map; the Sun
+            keeps rendering to anchor the descent. */}
+        <div className={styles.panelRow}>
+          <label htmlFor="toggle-famous-stars">Famous stars</label>
+          <input
+            id="toggle-famous-stars"
+            type="checkbox"
+            checked={famousStarsEnabled}
+            onChange={(e) => onToggleFamousStars(e.target.checked)}
+          />
+        </div>
       </CollapsibleSection>
 
       <CollapsibleSection title="Advanced">

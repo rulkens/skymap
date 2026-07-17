@@ -151,11 +151,15 @@ const STAR_CATALOG_SETTINGS = {
 };
 
 /** State with a `starPointRenderer` handle, a seeded star list, and settings. */
-function makeState(starPointRenderer: unknown, stars: readonly StarBody[]): EngineState {
+function makeState(
+  starPointRenderer: unknown,
+  stars: readonly StarBody[],
+  famousStarsEnabled = true,
+): EngineState {
   return {
     gpu: { starPointRenderer },
     data: { bodies: { stars } },
-    settings: { starCatalogs: STAR_CATALOG_SETTINGS },
+    settings: { starCatalogs: STAR_CATALOG_SETTINGS, famousStars: { enabled: famousStarsEnabled } },
   } as unknown as EngineState;
 }
 
@@ -229,7 +233,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // gate — at galaxy scale it legitimately draws while the star rows
       // skip. Toggle it off (and zero its fade tail) so this test keeps
       // pinning the STAR rows' wholesale-skip property.
-      settings: { milkyWay: { enabled: false } },
+      settings: { milkyWay: { enabled: false }, famousStars: { enabled: true } },
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
@@ -401,6 +405,23 @@ describe('starPointsLayer.draw', () => {
     expect(opts.brightness).toBeCloseTo(expectedBrightness, 12);
     // The ramp actually bent the trim — a raw-brightness bug would fail here.
     expect(opts.brightness).not.toBeCloseTo(STAR_CATALOG_SETTINGS.brightness, 6);
+  });
+
+  it('uploads ONLY the Sun when the famous-stars gate is off', () => {
+    // Mid-band camera so the layer draws; the seed is the full roster but the
+    // famousStars master gate is OFF — the star layers fall back to the Sun
+    // alone (its map is muted, the descent's aim point kept). The Sun is
+    // parsecs-sub-pixel here, so it rides the point branch.
+    const camDistMpc =
+      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const renderer = makeRenderer();
+    const camPos: Vec3 = [0, 0, camDistMpc];
+    const state = makeState(renderer, SCENE_STARS, false);
+
+    starPointsLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
+
+    expect(renderer.setStars).toHaveBeenCalledTimes(1);
+    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([SUN.id]);
   });
 
   it('is a no-op when the starPointRenderer handle is null (pre-bootstrap)', () => {

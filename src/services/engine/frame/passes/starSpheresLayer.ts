@@ -67,6 +67,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
+import { visibleStars } from '../visibleStars';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 export const starSpheresLayer: ContentLayer = {
@@ -82,7 +83,7 @@ export const starSpheresLayer: ContentLayer = {
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     return (
       partitionStarsByResolution({
-        stars: state.data.bodies.stars,
+        stars: visibleStars(state),
         camPosMpc: ctx.drawCamPos,
         thresholdPx: STAR_RESOLVE_PX,
         viewportHeightPx: ctx.canvasSize.height,
@@ -96,7 +97,7 @@ export const starSpheresLayer: ContentLayer = {
     if (renderer === null) return;
 
     const { spheres } = partitionStarsByResolution({
-      stars: state.data.bodies.stars,
+      stars: visibleStars(state),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: view.viewportPx[1],

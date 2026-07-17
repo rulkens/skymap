@@ -82,6 +82,7 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
+import { visibleStars } from '../visibleStars';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
@@ -109,7 +110,7 @@ export const starPointsLayer: ContentLayer = {
     if (fadeBand(SCALE_FADE_BANDS.starBackdrop, camDistMpc) <= 0) return false;
     return (
       partitionStarsByResolution({
-        stars: state.data.bodies.stars,
+        stars: visibleStars(state),
         camPosMpc: ctx.drawCamPos,
         thresholdPx: STAR_RESOLVE_PX,
         viewportHeightPx: ctx.canvasSize.height,
@@ -123,7 +124,7 @@ export const starPointsLayer: ContentLayer = {
     if (renderer === null) return;
 
     const { points } = partitionStarsByResolution({
-      stars: state.data.bodies.stars,
+      stars: visibleStars(state),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: view.viewportPx[1],

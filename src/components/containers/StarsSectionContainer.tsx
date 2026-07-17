@@ -24,6 +24,11 @@
  * live in the separate Labels section, mirroring how the Galaxies section
  * exposes no per-catalog label toggle.
  *
+ * The "Famous stars" row is a SIBLING of the per-catalog rows but reads/writes a
+ * separate singleton overlay flag (`selectFamousStarsEnabled` /
+ * `setFamousStarsEnabled`), independent of the star-catalogs master gate — it
+ * hides the seeded near-field star map, not the Gaia survey.
+ *
  * Per-catalog loaded counts ride the same engine slice the Galaxies section
  * reads: the star-catalog slot dispatches `engineSourceCountReported` as each
  * bin lands, keyed by the catalog's numeric `SourceType`. Because the section
@@ -40,7 +45,7 @@
 import { memo, useCallback, useMemo } from 'react';
 import StarsSection from '../SettingsPanel/StarsSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectStarCatalogs } from '../../state/settings/selectors';
+import { selectStarCatalogs, selectFamousStarsEnabled } from '../../state/settings/selectors';
 import { selectSourceCounts } from '../../state/engine/selectors';
 import {
   setStarCatalogEnabled,
@@ -52,6 +57,7 @@ import {
   setStarCatalogExposureMidX,
   setStarCatalogExposureFarX,
   setStarCatalogVisible,
+  setFamousStarsEnabled,
 } from '../../state/settings/settingsSlice';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../data/sourceEntries';
@@ -72,6 +78,10 @@ function StarsSectionContainer(): React.ReactElement {
     exposureFarX,
     items,
   } = useAppSelector(selectStarCatalogs);
+
+  // The famous-star map's own visibility gate — a singleton overlay flag
+  // (`settings.famousStars`), independent of the star-catalogs master above.
+  const famousStarsEnabled = useAppSelector(selectFamousStarsEnabled);
 
   // Per-catalog loaded counts from the engine slice, keyed by numeric
   // `SourceType`. Re-key into the string `StarCatalogId` domain the section
@@ -133,6 +143,11 @@ function StarsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onToggleFamousStars = useCallback(
+    (next: boolean) => dispatch(setFamousStarsEnabled(next)),
+    [dispatch],
+  );
+
   return (
     <StarsSection
       enabled={enabled}
@@ -145,6 +160,7 @@ function StarsSectionContainer(): React.ReactElement {
       exposureNearX={exposureNearX}
       exposureMidX={exposureMidX}
       exposureFarX={exposureFarX}
+      famousStarsEnabled={famousStarsEnabled}
       onToggleMaster={onToggleMaster}
       onToggleCatalog={onToggleCatalog}
       onSizeChange={onSizeChange}
@@ -154,6 +170,7 @@ function StarsSectionContainer(): React.ReactElement {
       onExposureNearXChange={onExposureNearXChange}
       onExposureMidXChange={onExposureMidXChange}
       onExposureFarXChange={onExposureFarXChange}
+      onToggleFamousStars={onToggleFamousStars}
     />
   );
 }

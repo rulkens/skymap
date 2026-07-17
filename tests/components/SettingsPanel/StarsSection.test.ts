@@ -46,6 +46,7 @@ function baseProps() {
     exposureNearX: 15,
     exposureMidX: 57,
     exposureFarX: 70,
+    famousStarsEnabled: true,
     onToggleMaster: vi.fn<(enabled: boolean) => void>(),
     onToggleCatalog: vi.fn<(id: StarCatalogId, enabled: boolean) => void>(),
     onSizeChange: vi.fn<(v: number) => void>(),
@@ -55,6 +56,7 @@ function baseProps() {
     onExposureNearXChange: vi.fn<(v: number) => void>(),
     onExposureMidXChange: vi.fn<(v: number) => void>(),
     onExposureFarXChange: vi.fn<(v: number) => void>(),
+    onToggleFamousStars: vi.fn<(enabled: boolean) => void>(),
   };
 }
 
@@ -81,6 +83,32 @@ describe('StarsSection', () => {
       fireEvent.click(gaia);
       expect(onToggleCatalog).toHaveBeenCalledOnce();
       expect(onToggleCatalog).toHaveBeenCalledWith('gaiaStars', false);
+    });
+  });
+
+  describe('famous-stars row', () => {
+    it('reflects the famousStarsEnabled prop and has no loaded-count chip', () => {
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), famousStarsEnabled: false }),
+      );
+      const toggle = container.querySelector<HTMLInputElement>('#toggle-famous-stars');
+      expect(toggle).not.toBeNull();
+      expect(toggle!.checked).toBe(false);
+      const label = container.querySelector('label[for="toggle-famous-stars"]')!;
+      expect(label.textContent).toBe('Famous stars');
+      // Seeded set, not fetched — no count chip like the mapped catalog rows.
+      expect(label.querySelector('span')).toBeNull();
+    });
+
+    it('fires onToggleFamousStars(false) when the checked row is clicked', () => {
+      const onToggleFamousStars = vi.fn<(enabled: boolean) => void>();
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), famousStarsEnabled: true, onToggleFamousStars }),
+      );
+      const toggle = container.querySelector<HTMLInputElement>('#toggle-famous-stars')!;
+      fireEvent.click(toggle);
+      expect(onToggleFamousStars).toHaveBeenCalledOnce();
+      expect(onToggleFamousStars).toHaveBeenCalledWith(false);
     });
   });
 

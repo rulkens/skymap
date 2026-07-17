@@ -118,10 +118,15 @@ function makeNear0View(camPos: Vec3): SlabView {
 }
 
 /** State with a `starRenderer` handle and a seeded star list. */
-function makeState(starRenderer: unknown, stars: readonly StarBody[]): EngineState {
+function makeState(
+  starRenderer: unknown,
+  stars: readonly StarBody[],
+  famousStarsEnabled = true,
+): EngineState {
   return {
     gpu: { starRenderer },
     data: { bodies: { stars } },
+    settings: { famousStars: { enabled: famousStarsEnabled } },
   } as unknown as EngineState;
 }
 
@@ -208,6 +213,28 @@ describe('starSpheresLayer.draw', () => {
     expect(composeMock.mock.calls.map((c) => c[1])).toEqual([SIRIUS.positionMpc]);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([SIRIUS.color]);
+  });
+
+  it('with the famous-stars gate off, only the Sun can resolve — never a neighbour', () => {
+    composeMock.mockClear();
+    // Camera half an AU off Sirius, which WOULD resolve — but the famousStars
+    // gate is OFF, so the layer sees the Sun alone. The Sun is parsecs away from
+    // this camera (sub-pixel), so nothing resolves: no sphere is composed.
+    const offSirius = makeState({ draw: vi.fn() }, [SUN, PROXIMA, SIRIUS], false);
+    starSpheresLayer.draw(PASS_STUB, makeNear0View(halfAuFrom(SIRIUS.positionMpc)),
+      makeCtx(halfAuFrom(SIRIUS.positionMpc)), offSirius);
+    expect(composeMock).not.toHaveBeenCalled();
+
+    // Camera half an AU off the Sun with the gate still off: the Sun is exempt,
+    // so it resolves and is the sole composed sphere — the map is muted, the
+    // descent's aim point kept.
+    composeMock.mockClear();
+    const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
+    const onSun = makeState({ draw: drawSpy }, [SUN, PROXIMA, SIRIUS], false);
+    starSpheresLayer.draw(PASS_STUB, makeNear0View(halfAuFrom(SUN.positionMpc)),
+      makeCtx(halfAuFrom(SUN.positionMpc)), onSun);
+    expect(composeMock).toHaveBeenCalledTimes(1);
+    expect(composeMock.mock.calls[0]![1]).toBe(SUN.positionMpc);
   });
 
   it('is a no-op when the starRenderer handle is null (pre-bootstrap)', () => {
