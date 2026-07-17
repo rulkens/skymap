@@ -533,12 +533,18 @@ calls `state.gpu.starCatalogPickRenderer.draw(...)` once per source with the reb
 
 **Files:** none (review + any fixes it surfaces, each with its own test if behavioural).
 
-- [ ] Run the `entanglement-radar` skill over the Stage 1 diff (Tasks 1–7). Name any complecting
+- [x] Run the `entanglement-radar` skill over the Stage 1 diff (Tasks 1–7). Name any complecting
       knot precisely (e.g. a second predicate on the pick discriminant, a mirrored constant, a
       renderer field shadowing engine state). Apply the un-braiding via `/simplify` where clear;
       otherwise capture it in `docs/BACKLOG.md` per backlog hygiene.
-- [ ] `npm run typecheck` (both tsconfigs) + `npm test` → green.
-- [ ] Commit any fixes.
+      _Executed: report in the SDD ledger dir. Applied — STAR_OFFSET_LEVELS single-sourced into
+      starCatalogFormat. User-adjudicated dispositions: the NodeParams/StarUniforms packing
+      duplication is fixed on this branch (shared packer + parity test, rides Stage 1.5); the
+      solar-radius mirror + the star≈body framing-arm fold are absorbed into the Stage 1.5
+      field-star sphere amendment, so no BACKLOG.md captures were needed. Union/table/slab-tag
+      work reviewed clean._
+- [x] `npm run typecheck` (both tsconfigs) + `npm test` → green.
+- [x] Commit any fixes.
 
 ---
 
