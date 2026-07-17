@@ -2,23 +2,29 @@
  * bodyTextureRegistry — the single authored table of textured bodies and how
  * each body's surface texture is sized, sourced, and tinted.
  *
- * ### One table, three consumers
+ * ### The single home for texture identity
  *
  * This registry is deliberately the *only* place the textured-body set is
- * enumerated. Three otherwise-independent parts of the system read it:
+ * enumerated for the runtime and the build. It is the single home for a body's
+ * texture identity, its per-tier resolution ceiling, and its mono-source tint.
+ * Two parts of the system derive from it:
  *
  *  - the **runtime tier clamp** — `clampTier(userTier, spec.maxTier)` keeps the
  *    proximity loader from requesting a resolution a body has no file for;
- *  - the **build tier-set** — the texture tool emits only the tiers `≤ maxTier`;
- *  - the **fetch source-list** — the fetcher walks the keys to know which bodies
- *    to pull, and `provenance` / `grayscaleTint` tell it where from and whether
- *    to tint a mono source.
+ *  - the **build tier-set** — the texture tool emits only the tiers `≤ maxTier`,
+ *    and `provenance` / `grayscaleTint` tell it whether a source is mono and how
+ *    to tint it.
  *
- * Because all three derive from this one table, adding a textured body is a
- * single row here (plus its id in the `BodyTextureId` union and its raw-data
- * entries) — never a coordinated edit across three parallel lists. That is the
- * whole reason texture identity lives in registry membership rather than a baked
- * per-body `textured` flag (spec §4.2/§4.3).
+ * The offline raw-texture fetcher (`tools/fetch/fetchTextures.ts`) does NOT read
+ * this registry today: it authors its own source list (`SSS_BODIES` / `USGS_KEYS`)
+ * keyed by raw-data key rather than by body id, so the download set and this
+ * registry can drift (see the backlog item 'Texture source table single home').
+ *
+ * Because the runtime and build both derive from this one table, adding a
+ * textured body is a single row here (plus its id in the `BodyTextureId` union
+ * and its raw-data entries) — never a coordinated edit across parallel lists.
+ * That is the whole reason texture identity lives in registry membership rather
+ * than a baked per-body `textured` flag (spec §4.2/§4.3).
  *
  * ### Ceilings and tints
  *
@@ -37,9 +43,7 @@ import type { BodyTextureSpec } from '../../@types/scene/BodyTextureSpec';
  * array) so a missing or extra key is a compile error and lookup is O(1) — the
  * proximity loader hits this per body per frame.
  */
-export const BODY_TEXTURE_REGISTRY: Readonly<
-  Record<BodyTextureId, BodyTextureSpec>
-> = {
+export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSpec>> = {
   // Solar System Scope full-colour maps for the eight planets + the Moon; NASA
   // Blue Marble for Earth; USGS single-channel maps for the four Galilean moons.
   mercury: { bodyId: 'mercury', maxTier: 'large', provenance: 'sss' },
@@ -78,8 +82,5 @@ export const BODY_TEXTURE_REGISTRY: Readonly<
  * body id and branch on the `null`; a textured id round-trips to its row.
  */
 export function bodyTextureSpec(id: string): BodyTextureSpec | null {
-  return (
-    (BODY_TEXTURE_REGISTRY as Record<string, BodyTextureSpec | undefined>)[id] ??
-    null
-  );
+  return (BODY_TEXTURE_REGISTRY as Record<string, BodyTextureSpec | undefined>)[id] ?? null;
 }

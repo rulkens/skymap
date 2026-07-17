@@ -236,9 +236,13 @@ mosaics). **Load the `create-component` skill before editing this component**
 dev texture subset present (`npm run fetch-textures -- --dev` then `npm run
 build-textures`, run in this worktree/main per the data-isolation rule).
 
-- [ ] Fetch the dev subset + build it locally so `public/data/images/textures/`
+- [x] Fetch the dev subset + build it locally so `public/data/images/textures/`
   has the 2k bodies + the NASA-dev Earth (announce/confirm as the tool requires).
-- [ ] **STOP and ask the user to confirm on the dev server (`?deepZoom`, spec
+  (Surfaced + fixed en route: ring strips lacked RENDER_ATTACHMENT usage so
+  copyExternalImageToTexture was rejected — rings never drew; commit dd883903.
+  Dev-subset viewing requires TIER=Small — Medium requests 4096 tiers the dev
+  build cannot emit; graceful flat-path degrade.)
+- [x] **STOP and ask the user to confirm on the dev server (`?deepZoom`, spec
   §12):**
   - lit textured **Mars** and **Jupiter** (2k dev subset) with correct band /
     feature orientation from the rotation elements;
@@ -289,17 +293,23 @@ texture / Saturn-rings / glint item and delete it (index line AND detail file) i
 this commit if present (`feedback_backlog_index_terse`, the Backlog-hygiene
 convention). Record "none found" if clean.
 
-- [ ] Run `entanglement-radar` over the full Plans 01–03 diff; record the
+- [x] Run `entanglement-radar` over the full Plans 01–03 diff; record the
   per-candidate verdicts (essential vs accidental) in the PR body. Fold any
   accidental mirror surfaced; if a fold is non-trivial, capture it in
-  `docs/backlog/` and note it.
-- [ ] Backlog-hygiene sweep: delete any matching `BACKLOG.md` index line + its
-  `docs/backlog/` detail file, or record "none found".
-- [ ] `npm run typecheck` (both tsconfigs) → clean.
-- [ ] `npm test` (full suite) → green.
-- [ ] PR body records the user-confirmed visual properties (Plan 02 Task 11 +
+  `docs/backlog/` and note it. (All five plan candidates: essential-and-unbraided.
+  One accidental mirror surfaced — fetch `SSS_BODIES` vs build `BODY_SOURCE_KEYS`
+  — non-trivial, captured as backlog "Texture source table single home"; the
+  false registry-docstring claim + a bodyGlint shader-header inaccuracy folded
+  in-branch. Tier-ladder copies captured as a second backlog line.)
+- [x] Backlog-hygiene sweep: delete any matching `BACKLOG.md` index line + its
+  `docs/backlog/` detail file, or record "none found". (Deleted "Improve planet
+  rendering" index line — this feature; no detail file existed. The grill's
+  future-Earth ambitions re-captured as "Ultra-real Earth" `needs-design`.)
+- [x] `npm run typecheck` (both tsconfigs) → clean.
+- [x] `npm test` (full suite) → green (725 files / 4304 tests, post-merge tree).
+- [x] PR body records the user-confirmed visual properties (Plan 02 Task 11 +
   Plan 03 Task 7) and the entanglement-radar verdicts.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 

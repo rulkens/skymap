@@ -15,9 +15,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { createTexturedBodyRenderer } from '../../../../src/services/gpu/renderers/bodies/texturedBodyRenderer';
-import { mipLevelCount } from '../../../../src/services/gpu/lib/generateMipChain';
-import type { Renderer } from '../../../../src/@types/rendering/Renderer';
+import { createTexturedBodyRenderer } from '../../../../../src/services/gpu/renderers/bodies/texturedBodyRenderer';
+import { mipLevelCount } from '../../../../../src/services/gpu/lib/generateMipChain';
+import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 function mockDevice(recorders?: {
   renderPipelines?: GPURenderPipelineDescriptor[];

@@ -38,11 +38,12 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Source-registry factory** `needs-design` — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry; today each source is hand-wired across `slots/`, `assetWiring.ts`, `initGpu`. → [details](backlog/2026-06-29-source-registry-factory.md)
 - [ ] **GPU-handle nullability follow-on** `deferred` — `EngineGpuHandles` fields are all `T | null` (a transient bootstrap fact as a perpetual null-check); narrow into a non-null "ready GPU" view and shed `PassDeps`' renderer fields. → [details](backlog/2026-06-29-gpu-handle-nullability.md)
 - [ ] **`useStructureMemberCount` honest invalidation** `deferred` — the hook's `sourceCounts`/`tier` args are memo tripwires for live GPU catalog state; swap for a real catalog-generation signal. → [details](backlog/2026-06-29-usestructuremembercount-invalidation.md)
+- [ ] **Texture source table single home** `ready` — fold fetchTextures' SSS_BODIES and buildTextures' BODY_SOURCE_KEYS into one bodyId-keyed table both derive from. → [details](backlog/2026-07-17-texture-source-table-single-home.md)
 - [ ] **Derive `BULK_CATALOG_CATEGORIES` from a registry flag** `deferred` — add `hasBulkCatalog` to `SOURCE_REGISTRY` rows so the hand-listed `['cluster','supercluster','void']` in `assetWiring.ts` derives from it. Keep the three category lists (UI / marker / bulk-fetch) separate — membership genuinely differs. (`bearsMarker` + `DEFAULT_CATEGORY_VISIBILITY` already shipped.)
 
 ## Rendering
 
-- [ ] **Improve planet rendering** `needs-design` — the procedural planet bodies need a visual-quality pass (surfaces, lighting, atmosphere); brainstorm scope first.
+- [ ] **Ultra-real Earth** `needs-design` — atmosphere scattering, day/night lights, specular oceans on the dedicated `earthRenderer` seam; scope in a brainstorm first.
 - [ ] **Lower-res offscreen star-aggregate pass** `ready` — try `STAR_AGGREGATE_DIVISOR` 2 → 4 (`renderTargets.ts`); ~4× further fill cut if the upsampled glow field survives visually.
 - [ ] **Bright star clump at ~5.9 kpc** `deferred` — flux verified conserved; residual over-exposure is display policy (mid-anchor slider + summed knee shipped; retune or tone-map shoulder next). → [details](backlog/2026-07-17-star-clump-brightness-5-9kpc.md)
 - [ ] **Star drawBudget small-tier mobile cap + iOS device pass** `deferred` — lower `hardCap` for `tier === 'small'` in `gaia-stars.ts`, tuned on a real device; verify the new vertex-stage storage bindings under WebKit's stricter WebGPU in the same pass.
@@ -59,6 +60,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Galaxy impostor LOD** `needs-design` — per-galaxy rgba16f impostors baked from the GPU generator (photo-thumbnail band retires; procedural disk stays as placeholder band), full star+dust geometry above ~128 px; band counts, churn, per-tier memory, and Hubble-type coverage all measured. → [details](backlog/2026-07-08-galaxy-impostor-lod.md)
 - [ ] **`degToRad`/`addVec3` sweep + `data/<domain>/palette.ts` convention** `deferred` — migrate the ~5 remaining inline `Math.PI/180` sites and audit other data folders against the palette convention the bodies cleanup set. → [details](backlog/2026-07-14-scale-helpers-palette-convention-sweep.md)
 - [ ] **`CatalogDrawEntry` bind-group coverage** `deferred` — a wrong-source `fadeBindGroup`/`sourceBindGroup` on a `catalogStore.entries()` entry would pass every test (the draw test only smoke-checks the command list). → [details](backlog/2026-07-14-catalog-draw-entry-coverage.md)
+- [ ] **Tier-ladder single home** `ready` — one exported TIER_LADDER const (Tier type derived) replacing the copies in clampTier, emittedTiersForBody, tiersFittingSourceWidth, buildAllBins, buildStars.
 - [ ] **Star-bin ↔ MW-cloud crossfade density calibration** `deferred` — calibrate the procedural cloud's inner density/colors to Gaia counts if the v1 hand-tuned crossfade band shows a seam; gated on the star bin shipping. → [details](backlog/2026-07-13-star-bin-crossfade-density-calibration.md)
 
 ## UI & UX
