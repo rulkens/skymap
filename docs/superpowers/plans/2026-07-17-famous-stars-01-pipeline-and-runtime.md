@@ -450,20 +450,34 @@ Replace both:
 - **Delete** `tools/catalog/famousStarGaiaIds.ts` + its test (delete-proxy-surfaces rule).
   The coverage invariant already moved to the parser tests (Task 3).
 
-- [ ] Replace the import + `famousGaiaIds` construction in `buildStars.ts` with the
+- [x] Replace the import + `famousGaiaIds` construction in `buildStars.ts` with the
       seed-derived set (add a didactic line: the seed is the single source of the dedup
       fact now).
-- [ ] Delete `famousStarGaiaIds.ts` and `tests/tools/catalog/famousStarGaiaIds.test.ts`.
+- [x] Delete `famousStarGaiaIds.ts` and `tests/tools/catalog/famousStarGaiaIds.test.ts`.
       Grep for any other importer of `FAMOUS_STAR_GAIA_IDS` and confirm none remain.
-- [ ] Test (in `buildStars.test.ts`, extending the existing synthetic-fixture test) `a
+- [x] Test (in `buildStars.test.ts`, extending the existing synthetic-fixture test) `a
       seed entry's non-null gaiaDr3 is subtracted and a null entry subtracts nothing` —
       feed a tiny fixture seed (one Gaia-matched entry, one `null` entry) through the
       seed→set path and assert the matched `source_id` is removed while the `null` entry
       contributes no subtraction (the behaviour the deleted table's coverage test guarded,
       spec §10).
-- [ ] `npm test -- buildStars` → green. Commit.
+- [x] `npm test -- buildStars` → green. Commit.
 
 ## Task 9 — Search: ungate bodies, star aliases, constellation secondary
+
+> **Post-merge rescope (origin/main merged mid-plan, PRs #442/#443):** the
+> `hasUrlGate('deepZoom')` gate no longer exists anywhere in `src/` — main removed it
+> when the Gaia star bin shipped, and `rankPaletteMatches.ts:85-95` now scores ALL
+> `SCENE_BODIES` unconditionally on `[body.label]`. The "remove the gate" sub-item and
+> its stranding-rationale comment deletion are DONE upstream — do not hunt for them.
+> Remaining scope: the shared `famousStarsIndex.ts`, scoring stars over their full
+> `names[]` via `FAMOUS_STAR_SEARCH`, and the star constellation/aliases secondary in
+> `ROW_VIEW.body` (`paletteRows.tsx:104-117`; `paletteRowModel.ts` lives at
+> `src/components/CommandPalette/paletteRowModel.ts`, not under `utils/`). The
+> `a body row appears without the gate` test: first check whether the post-merge
+> `rankPaletteMatches.test.ts` already pins a body row appearing — if it does, extend
+> rather than duplicate; the Bayer-alias test is still fully in scope (nothing scores
+> star aliases yet).
 
 **Files:** `src/data/bodies/famousStarsIndex.ts` (new — the shared derived index),
 `src/components/CommandPalette/utils/rankPaletteMatches.ts` (modify),
