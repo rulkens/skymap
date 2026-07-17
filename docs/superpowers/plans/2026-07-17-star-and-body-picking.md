@@ -468,16 +468,17 @@ the pick pass is depth-tested so the nearest star wins). Own vs/pickFragment `GP
 explicit pipeline layout built from `starCatalogRenderer`'s exposed BGLs so the per-source
 records bind group is compatible. No blending. `isAggregate` is packed 0 for every leaf draw.
 
-- [ ] Edit `io.wesl` (`pickPass` + `recordIdx`) and `vertex.wesl` (populate + ~3 px pick clamp),
+- [x] Edit `io.wesl` (`pickPass` + `recordIdx`) and `vertex.wesl` (populate + ~3 px pick clamp),
       then add `pickFragment.wesl`. Add the `starCatalogPickRenderer` + type + the star renderer's
       shared-pick-resource accessor + the handle + construction. Didactic docblocks throughout.
-- [ ] No unit test (WebGPU is unavailable in vitest; the pack logic is exercised via Task 7's
+      _Executed: constructed in `initGpu` only (mirrors `milkyWayPickRenderer`), not `wireInput`._
+- [x] No unit test (WebGPU is unavailable in vitest; the pack logic is exercised via Task 7's
       pure helper). `npm run typecheck` (both tsconfigs) → green.
 - [ ] **Visual verification (deferred to Task 7's wiring)** — recorded here: after Task 7, on the
       dev server, descend into the Gaia bubble and confirm hovering a star lands a pick (ring +
       "Field star" card) at the star's true screen position, and a bright star in front of a dim
       one wins the pick (depth-tested nearest).
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 7 — `starCatalogLayer.drawPick` + pick draw-list + doc cleanup (spec §4, §5, §11, §12)
 
