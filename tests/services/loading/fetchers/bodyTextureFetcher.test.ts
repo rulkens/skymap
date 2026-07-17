@@ -28,7 +28,11 @@ describe('bodyTextureFetcher', () => {
   });
 
   it('requests the tier-sized JPG url', async () => {
-    await bodyTextureFetcher({ bodyId: 'mars', tier: 'small' }, new AbortController().signal, () => {});
+    await bodyTextureFetcher(
+      { bodyId: 'mars', tier: 'small' },
+      new AbortController().signal,
+      () => {},
+    );
     const url = String(fetch.mock.mock.calls[0]?.[0]);
     expect(url.endsWith('images/textures/mars-2048.jpg')).toBe(true);
   });

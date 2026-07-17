@@ -37,9 +37,7 @@ export const bodyTextureFetcher: Fetcher<ImageBitmap, BodyTextureReq> = async (r
   // The ring strip is a PNG for its alpha channel; every spherical body is an
   // opaque JPG. A single-id branch is honest because only the ring is non-opaque.
   const filename =
-    req.bodyId === 'saturn-ring'
-      ? `saturn-ring-${px}.png`
-      : `${req.bodyId}-${px}.jpg`;
+    req.bodyId === 'saturn-ring' ? `saturn-ring-${px}.png` : `${req.bodyId}-${px}.jpg`;
   const url = dataUrl(`images/textures/${filename}`);
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`bodyTexture: HTTP ${res.status} for ${url}`);
