@@ -141,9 +141,11 @@ describe('planetsLayer.enabled', () => {
     // At galaxy scale every planet is a deep-sub-pixel speck: the shared gate
     // turns the row off so the (foreground:0, NEAR0) step can be skipped
     // wholesale.
+    // Gate edge + a decade beyond it (cosmic scale), both derived from the gate
+    // so a farther seed growing FOREGROUND_MAX_DISTANCE_MPC carries this check.
     const state = makeState(makeRendererSpy(), SCENE_PLANETS);
     expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
-    expect(planetsLayer.enabled(state, makeCtx(0.43))).toBe(false);
+    expect(planetsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toBe(false);
   });
 
   it('is disabled while every seeded body is sub-pixel, even inside the foreground band', () => {

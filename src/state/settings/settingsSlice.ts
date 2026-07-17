@@ -115,6 +115,15 @@ const settingsSlice = createSlice({
       settings.milkyWay.labelEnabled = action.payload;
     },
 
+    // ── famous stars ────────────────────────────────────────────────────────
+    // Singleton-overlay master gate on the seeded near-field star map (its own
+    // single writer, like setMilkyWayEnabled). Distinct from
+    // setStarCatalogEnabled (the Gaia survey gate); when off the star layers
+    // fall back to the Sun alone.
+    setFamousStarsEnabled: (settings, action: PayloadAction<boolean>) => {
+      settings.famousStars.enabled = action.payload;
+    },
+
     // ── filaments ───────────────────────────────────────────────────────────
     setFilamentsEnabled: (settings, action: PayloadAction<boolean>) => {
       settings.filaments.enabled = action.payload;
@@ -380,6 +389,7 @@ export const {
   setThumbnailsEnabled,
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
+  setFamousStarsEnabled,
   setFilamentsEnabled,
   setFilamentIntensity,
   setStarCatalogEnabled,

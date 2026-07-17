@@ -29,6 +29,8 @@ import {
   sceneBodyLabelId,
   SCENE_STAR_LABEL_IDS,
 } from '../../../../../src/services/engine/presentation/sceneBodyLabels';
+import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 
 // The Sun's caption id — its own file no longer exports one (the layer routes
 // the caption by `kind === 'sun'`, and the Sun now rides a fade band rather
@@ -113,10 +115,14 @@ function makeState(
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
   starLabelsEnabled = true,
   planetLabelsEnabled = true,
+  famousStarsEnabled = true,
 ): EngineState {
   return {
     gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
-    settings: { labels: { starLabelsEnabled, planetLabelsEnabled } },
+    settings: {
+      labels: { starLabelsEnabled, planetLabelsEnabled },
+      famousStars: { enabled: famousStarsEnabled },
+    },
     // The envelope wakes the render loop while alphas ramp — the layer calls
     // this spy on mid-ramp frames and stays quiet once settled.
     subsystems: { scheduler: { requestRender: vi.fn<() => void>() } },
@@ -314,6 +320,48 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(offLabels.some((l) => l.id === sceneBodyLabelId('earth'))).toBe(true);
   });
 
+  it('suppresses the star map but KEEPS the Sun when the famous-stars gate is off', () => {
+    // Camera at Earth (deep inside the neighbourhood), spread vp so declutter
+    // keeps every separated caption. The famousStars gate is a THIRD, independent
+    // mute switch: with it off the seeded star map drops — but the Sun (its own
+    // `sunCaption` band) and Earth still show. This is the caption twin of the
+    // point/sphere layers falling back to the Sun alone.
+    const base = sceneBodyLabels();
+    const earthId = sceneBodyLabelId('earth');
+    const earth = base.find((l) => l.id === earthId)!;
+    const camPos: Vec3 = [...earth.worldPos] as Vec3;
+
+    // Gate ON: at least one NON-Sun star caption emits.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const onRenderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(onRenderer, makeLineRenderer(), true, true, true),
+    );
+    const onSpy = onRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const onLabels = onSpy.mock.calls[0]![0] as readonly Label[];
+    expect(onLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(true);
+
+    // Gate OFF (famousStars): no non-Sun star caption, but the Sun + Earth still show.
+    rebaseMock.mockReturnValueOnce(makeSpreadVp());
+    const offRenderer = makeRenderer(6);
+    foregroundLabelsLayer.draw(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(5e-4),
+      makeState(offRenderer, makeLineRenderer(), true, true, false),
+    );
+    const offSpy = offRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
+    const offLabels = offSpy.mock.calls[0]![0] as readonly Label[];
+    expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id) && l.id !== SUN_LABEL_ID)).toBe(
+      false,
+    );
+    expect(offLabels.some((l) => l.id === SUN_LABEL_ID)).toBe(true);
+    expect(offLabels.some((l) => l.id === earthId)).toBe(true);
+  });
+
   it('suppresses Earth + planet captions when the planet toggle is off', () => {
     // Camera at Earth, spread vp so declutter keeps every separated caption:
     // with the planet toggle ON the Earth caption emits; with it OFF the Earth
@@ -352,30 +400,50 @@ describe('foregroundLabelsLayer.draw', () => {
     expect(offLabels.some((l) => SCENE_STAR_LABEL_IDS.has(l.id))).toBe(true);
   });
 
-  it('shows the whole star map at full alpha from Earth and none beyond the neighbourhood', () => {
+  it('shows the local neighbourhood at full alpha from Earth and none beyond the neighbourhood', () => {
     const base = sceneBodyLabels();
     const starLabels = (labels: readonly Label[]) =>
       labels.filter((l) => SCENE_STAR_LABEL_IDS.has(l.id));
 
-    // ── Camera at Earth: the LOCAL STAR MAP — every seeded star (Pollux, the
-    // farthest, is 10.34 pc out) is inside the full-alpha band, so ALL star
-    // captions emit at fadeAlpha 1. The spread vp keeps the declutter from
-    // eating any of them (see makeSpreadVp).
+    // ── Camera at Earth: the LOCAL STAR MAP. The seed now mixes true
+    // neighbourhood stars with distant famous supergiants (Deneb at 802 pc,
+    // Rigel at 264 pc), so only the stars INSIDE the starCaption full-alpha
+    // band emit at fadeAlpha 1 — the "whole map" is the local set, derived
+    // from the band rather than the whole seed table (which would strand this
+    // assertion the moment a distant star was seeded). The spread vp keeps the
+    // declutter from eating any of them (see makeSpreadVp).
     rebaseMock.mockReturnValueOnce(makeSpreadVp());
     const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
+    const camPos = earth.worldPos;
+    const fullAlphaStarIds = base
+      .filter((l) => SCENE_STAR_LABEL_IDS.has(l.id))
+      .filter((l) => {
+        // The caption fade keys on the star's OWN distance from the camera, pc.
+        const distPc =
+          Math.hypot(
+            l.worldPos[0] - camPos[0],
+            l.worldPos[1] - camPos[1],
+            l.worldPos[2] - camPos[2],
+          ) / SCALE_UNITS.PC_TO_MPC;
+        return distPc <= SCALE_FADE_BANDS.starCaption.fullAt;
+      })
+      .map((l) => l.id);
+    expect(fullAlphaStarIds.length).toBeGreaterThan(0);
+
     const nearRenderer = makeRenderer(6);
     foregroundLabelsLayer.draw(
       PASS_STUB,
-      makeNear0View([...earth.worldPos] as Vec3),
+      makeNear0View([...camPos] as Vec3),
       makeCtx(5e-4),
       makeState(nearRenderer, makeLineRenderer()),
     );
     const nearSpy = nearRenderer.setLabels as unknown as ReturnType<typeof vi.fn>;
     const nearLabels = nearSpy.mock.calls[0]![0] as readonly Label[];
-    const mapLabels = starLabels(nearLabels);
-    expect(mapLabels).toHaveLength(SCENE_STAR_LABEL_IDS.size);
-    for (const star of mapLabels) {
-      expect(star.fadeAlpha, `expected ${star.id} at full alpha from Earth`).toBe(1);
+    const byId = new Map(starLabels(nearLabels).map((l) => [l.id, l]));
+    for (const id of fullAlphaStarIds) {
+      const emitted = byId.get(id);
+      expect(emitted, `expected ${id} emitted from Earth`).toBeDefined();
+      expect(emitted!.fadeAlpha, `expected ${id} at full alpha from Earth`).toBe(1);
     }
 
     // ── Camera far outside the neighbourhood (Mpc-scale, past every seed's

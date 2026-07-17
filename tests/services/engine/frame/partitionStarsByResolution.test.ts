@@ -33,9 +33,10 @@ const VIEWPORT_HEIGHT_PX = 720;
 const FOV_Y_RAD = Math.PI / 3;
 
 /**
- * A camera half an AU from the given position: a solar-diameter sphere at
- * that range subtends ~12 px in a 720-px, 60°-fov viewport — comfortably
- * above STAR_RESOLVE_PX — while every star parsecs away stays sub-pixel.
+ * A camera half an AU from the given position: a sphere the size of the near
+ * fixture (Sirius, 1.71 R☉) at that range subtends tens of pixels in a 720-px,
+ * 60°-fov viewport — comfortably above STAR_RESOLVE_PX — while every star
+ * parsecs away stays sub-pixel.
  */
 function halfAuFrom(positionMpc: Readonly<Vec3>): Vec3 {
   return [positionMpc[0] + 0.5 * SCALE_UNITS.AU_TO_MPC, positionMpc[1], positionMpc[2]];
@@ -44,38 +45,39 @@ function halfAuFrom(positionMpc: Readonly<Vec3>): Vec3 {
 describe('partitionStarsByResolution', () => {
   it('partitionStarsByResolution puts a near large star in spheres and a far small star in points', () => {
     // Membership comes purely from the apparent-size threshold: the camera
-    // hovers half an AU off Proxima while Sirius sits parsecs away.
+    // hovers half an AU off Sirius (1.71 R☉, resolves) while the smaller
+    // Proxima (0.154 R☉) sits parsecs away and stays sub-pixel.
     const { spheres, points } = partitionStarsByResolution({
-      stars: [PROXIMA, SIRIUS],
-      camPosMpc: halfAuFrom(PROXIMA.positionMpc),
+      stars: [SIRIUS, PROXIMA],
+      camPosMpc: halfAuFrom(SIRIUS.positionMpc),
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: VIEWPORT_HEIGHT_PX,
       fovYRad: FOV_Y_RAD,
     });
 
-    expect(spheres.map((star) => star.id)).toEqual(['proxima-centauri']);
-    expect(points.map((star) => star.id)).toEqual(['sirius']);
+    expect(spheres.map((star) => star.id)).toEqual(['sirius']);
+    expect(points.map((star) => star.id)).toEqual(['proxima-centauri']);
     // Identity preserved — the layers read positionMpc/color off the same
     // seed records, never copies.
-    expect(spheres[0]).toBe(PROXIMA);
-    expect(points[0]).toBe(SIRIUS);
+    expect(spheres[0]).toBe(SIRIUS);
+    expect(points[0]).toBe(PROXIMA);
   });
 
   it('demotes a sub-resolve Sun to the points branch so it stays visible', () => {
-    // Camera parked on Proxima: the Sun is 1.3 pc away, deep sub-pixel. It
-    // must land in POINTS — a blanket always-resolve override kept it a
-    // (sub-pixel, invisible) sphere here, which is exactly the "no Sun when
-    // zoomed out" bug: never a point, its sphere unseeable.
+    // Camera parked half an AU off Sirius: the Sun is ~2.6 pc away, deep
+    // sub-pixel. It must land in POINTS — a blanket always-resolve override
+    // kept it a (sub-pixel, invisible) sphere here, which is exactly the "no
+    // Sun when zoomed out" bug: never a point, its sphere unseeable.
     const { spheres, points } = partitionStarsByResolution({
       stars: [SUN, PROXIMA, SIRIUS],
-      camPosMpc: halfAuFrom(PROXIMA.positionMpc),
+      camPosMpc: halfAuFrom(SIRIUS.positionMpc),
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: VIEWPORT_HEIGHT_PX,
       fovYRad: FOV_Y_RAD,
     });
 
-    expect(points.map((star) => star.id)).toEqual(['sun', 'sirius']);
-    expect(spheres.map((star) => star.id)).toEqual(['proxima-centauri']);
+    expect(points.map((star) => star.id)).toEqual(['sun', 'proxima-centauri']);
+    expect(spheres.map((star) => star.id)).toEqual(['sirius']);
   });
 
   it('resolves a star at degenerate zero camera distance', () => {

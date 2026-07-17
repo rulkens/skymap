@@ -8,9 +8,12 @@
  * whose apparent size clears `STAR_RESOLVE_PX` (the Sun included: below the
  * threshold it demotes to an additive point like any other star, so it
  * never vanishes) — each composed as a unit sphere scaled to the body's
- * radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and translated to
- * its `positionMpc` in the `RENDER_ORIGIN_MPC`-relative frame, tinted by
- * its spectral-class colour. `starPointsLayer` draws the complementary
+ * equatorial radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and
+ * translated to its `positionMpc` in the `RENDER_ORIGIN_MPC`-relative frame,
+ * tinted by its blackbody colour — derived from its `temperatureK` via
+ * `temperatureToLinearRgb`. A star's optional `oblateness` flattens
+ * the polar (model-Z) axis via `composeBodyMvp` — the sphere is the
+ * `oblateness` absent (⇒ 0) case. `starPointsLayer` draws the complementary
  * `points` branch of the SAME partition call, so a star is a sphere XOR a
  * point by construction — see the partition module's docblock for the
  * structural-disjointness argument.
@@ -64,6 +67,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
+import { visibleStars } from '../visibleStars';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
 export const starSpheresLayer: ContentLayer = {
@@ -79,7 +83,7 @@ export const starSpheresLayer: ContentLayer = {
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     return (
       partitionStarsByResolution({
-        stars: state.data.bodies.stars,
+        stars: visibleStars(state),
         camPosMpc: ctx.drawCamPos,
         thresholdPx: STAR_RESOLVE_PX,
         viewportHeightPx: ctx.canvasSize.height,
@@ -93,7 +97,7 @@ export const starSpheresLayer: ContentLayer = {
     if (renderer === null) return;
 
     const { spheres } = partitionStarsByResolution({
-      stars: state.data.bodies.stars,
+      stars: visibleStars(state),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: view.viewportPx[1],
@@ -102,13 +106,15 @@ export const starSpheresLayer: ContentLayer = {
 
     // Compose each resolved star's MVP from the slab's f64 vp — see the
     // module header's "f64 seam" note for why `view.slab.vp`, not `view.vp`.
-    // Radius is the authored kilometres resolved into Mpc at the draw site.
+    // Radius is the authored kilometres resolved into Mpc at the draw site;
+    // `oblateness` (absent ⇒ 0 ⇒ sphere) flattens the polar axis in the compose.
     for (const star of spheres) {
       const mvp = composeBodyMvp(
         view.slab.vp,
         star.positionMpc,
         RENDER_ORIGIN_MPC,
         star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        star.oblateness,
       );
       renderer.draw(pass, mvp, star.color);
     }

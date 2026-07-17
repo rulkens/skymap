@@ -42,9 +42,8 @@ import type { SlotFactory } from '../../../@types/loading/SlotFactory';
  * Marble always resolves before the surface is visible.
  *
  * Intentionally independent of `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` (the
- * solar-system caption gate): the two are separate tuning knobs that
- * currently coincide at 1e-3 — texture-load onset and caption onset may be
- * tuned apart.
+ * solar-system caption gate): the two are separate tuning knobs — texture-load
+ * onset and caption onset — free to move apart.
  */
 export const EARTH_TEXTURE_MAX_DISTANCE_MPC = 1e-3;
 

@@ -135,9 +135,10 @@ describe('orbitTrailsLayer.enabled', () => {
     // Handle present, camera inside the shared foreground gate.
     expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2))).toBe(true);
     // Beyond the gate the AU-to-lunar-scale trails are deep sub-pixel: off, so
-    // the (hdr, NEAR0) step can be skipped wholesale at galaxy zoom.
+    // the (hdr, NEAR0) step can be skipped wholesale at galaxy zoom. Gate edge +
+    // a decade beyond, both derived so a farther seed growing the gate carries.
     expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toBe(false);
-    expect(orbitTrailsLayer.enabled(state, makeCtx(0.43))).toBe(false);
+    expect(orbitTrailsLayer.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toBe(false);
   });
 
   it('disables when even the largest orbit is sub-CULL_PX (whole-layer cull)', () => {

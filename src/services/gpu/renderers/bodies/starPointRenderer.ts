@@ -63,7 +63,7 @@ import type { Vec2 } from '../../../../@types/math/Vec2';
 import vsCode from '../../shaders/bodies/starPoints/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/starPoints/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
+import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 
 /**
@@ -75,20 +75,32 @@ import { ADDITIVE_BLEND } from '../../lib/blendStates';
 const FLOATS_PER_STAR = 7;
 const STAR_STRIDE = FLOATS_PER_STAR * 4; // 28 bytes
 
+/**
+ * Uniform-buffer size for `StarPointUniforms` (`starPoints/io.wesl`): the shared
+ * 80-byte `CameraUniforms` prefix + a `sizePx` / `brightness` tail rounded up to
+ * the 16-byte alignment the prefix's `mat4x4` demands. `sizePx` lands at float
+ * index 20 (byte 80), `brightness` at 21 (byte 84); floats 22..23 are the
+ * alignment pad (Float32Array zero-init, never written).
+ */
+const STAR_POINT_UNIFORM_BYTES = 96;
+const UNIFORM_SIZEPX_INDEX = 20;
+const UNIFORM_BRIGHTNESS_INDEX = 21;
+
 export function createStarPointRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
 ): StarPointRenderer {
   // ── Uniform buffer + CPU scratch ──────────────────────────────────────────
   //
-  // The bare 80-byte CameraUniforms prefix: floats 0..15 = viewProj,
-  // 16..17 = viewportPx, 18..19 = named pads (stay 0).
+  // The 80-byte CameraUniforms prefix (floats 0..15 = viewProj, 16..17 =
+  // viewportPx, 18..19 = named pads, stay 0) plus the sizePx / brightness tail
+  // at floats 20 / 21 (22..23 pad, stay 0). See STAR_POINT_UNIFORM_BYTES.
   const uniformBuffer = device.createBuffer({
     label: 'star-points-uniform-buffer',
-    size: CAMERA_UNIFORM_BYTES,
+    size: STAR_POINT_UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const uniformScratch = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+  const uniformScratch = new Float32Array(STAR_POINT_UNIFORM_BYTES / 4);
 
   // ── Bind group (explicit layout, not 'auto') ──────────────────────────────
   const bindGroupLayout = device.createBindGroupLayout({
@@ -208,12 +220,21 @@ export function createStarPointRenderer(
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2): void {
+  function draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportPx: Vec2,
+    opts: { sizePx: number; brightness: number },
+  ): void {
     if (instanceBuffer === null || starCount === 0) return;
 
-    // uniformScratch[18..19] are CameraUniforms' named pads — never
-    // written, so they hold their construction-time zeros across frames.
+    // uniformScratch[18..19] are CameraUniforms' named pads and [22..23] the
+    // tail's alignment pad — never written, so they hold their construction-time
+    // zeros across frames. sizePx / brightness ride the tail at floats 20 / 21
+    // (byte-exact with StarPointUniforms in starPoints/io.wesl).
     writeCameraPrefix(uniformScratch, viewProj, viewportPx);
+    uniformScratch[UNIFORM_SIZEPX_INDEX] = opts.sizePx;
+    uniformScratch[UNIFORM_BRIGHTNESS_INDEX] = opts.brightness;
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
     pass.setPipeline(pipeline);

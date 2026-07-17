@@ -47,6 +47,7 @@ import {
   selectStarCatalogExposureNearX,
   selectStarCatalogExposureMidX,
   selectStarCatalogExposureFarX,
+  selectFamousStarsEnabled,
 } from '../../../src/state/settings/selectors';
 import {
   setStarCatalogSize,
@@ -99,6 +100,24 @@ describe('StarsSectionContainer', () => {
     fireEvent.click(gaiaCheckbox!);
 
     expect(selectStarCatalogs(store.getState()).items.gaiaStars.enabled).toBe(false);
+  });
+
+  it('dispatches setFamousStarsEnabled and flips the flag when the famous-stars row is toggled', () => {
+    const { store } = createAppStore();
+    // Famous stars start enabled in the default store state.
+    expect(selectFamousStarsEnabled(store.getState())).toBe(true);
+
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const toggle = container.querySelector<HTMLInputElement>('#toggle-famous-stars');
+    expect(toggle).not.toBeNull();
+    expect(toggle!.checked).toBe(true);
+
+    fireEvent.click(toggle!);
+
+    expect(selectFamousStarsEnabled(store.getState())).toBe(false);
   });
 
   it('reflects seeded sizePx in the star-size slider value', () => {

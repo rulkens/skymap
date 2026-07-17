@@ -103,10 +103,26 @@ function transformF64ToNdc(mvp: Float64Array): [number, number, number] {
   const y = localVertex[1] as number;
   const z = localVertex[2] as number;
   const w = localVertex[3] as number;
-  const cx = (mvp[0] as number) * x + (mvp[4] as number) * y + (mvp[8] as number) * z + (mvp[12] as number) * w;
-  const cy = (mvp[1] as number) * x + (mvp[5] as number) * y + (mvp[9] as number) * z + (mvp[13] as number) * w;
-  const cz = (mvp[2] as number) * x + (mvp[6] as number) * y + (mvp[10] as number) * z + (mvp[14] as number) * w;
-  const cw = (mvp[3] as number) * x + (mvp[7] as number) * y + (mvp[11] as number) * z + (mvp[15] as number) * w;
+  const cx =
+    (mvp[0] as number) * x +
+    (mvp[4] as number) * y +
+    (mvp[8] as number) * z +
+    (mvp[12] as number) * w;
+  const cy =
+    (mvp[1] as number) * x +
+    (mvp[5] as number) * y +
+    (mvp[9] as number) * z +
+    (mvp[13] as number) * w;
+  const cz =
+    (mvp[2] as number) * x +
+    (mvp[6] as number) * y +
+    (mvp[10] as number) * z +
+    (mvp[14] as number) * w;
+  const cw =
+    (mvp[3] as number) * x +
+    (mvp[7] as number) * y +
+    (mvp[11] as number) * z +
+    (mvp[15] as number) * w;
   return [cx / cw, cy / cw, cz / cw];
 }
 
@@ -121,10 +137,7 @@ function transformF32ToNdc(mvp: Float32Array): [number, number, number] {
 // The NDC cube is [-1,1]^3 and the body fills roughly the full frustum
 // (fovY = π/4, eye at 2×radiusMpc), so ~1 NDC unit ≈ 1 radiusMpc.
 // Multiplying by radiusMpc converts NDC distance to Mpc.
-function ndcErrorMpc(
-  a: [number, number, number],
-  b: [number, number, number],
-): number {
+function ndcErrorMpc(a: [number, number, number], b: [number, number, number]): number {
   const dx = (a[0] as number) - (b[0] as number);
   const dy = (a[1] as number) - (b[1] as number);
   const dz = (a[2] as number) - (b[2] as number);
@@ -148,7 +161,7 @@ describe('composeBodyMvp', () => {
 
     console.log(
       `[positive] NDC error in Mpc: ${errorMpc.toExponential(4)} ` +
-      `(tolerance: ${toleranceMpc.toExponential(4)} Mpc)`,
+        `(tolerance: ${toleranceMpc.toExponential(4)} Mpc)`,
     );
 
     expect(errorMpc).toBeLessThan(toleranceMpc);
@@ -175,11 +188,7 @@ describe('composeBodyMvp', () => {
 
     // ── Parsec-scale geometry ─────────────────────────────────────────────────
 
-    const pcBodyPosMpc: [number, number, number] = [
-      1.301 * SCALE_UNITS.PC_TO_MPC,
-      0,
-      0,
-    ];
+    const pcBodyPosMpc: [number, number, number] = [1.301 * SCALE_UNITS.PC_TO_MPC, 0, 0];
     const pcRenderOrigin: [number, number, number] = [
       RENDER_ORIGIN_MPC[0] as number,
       RENDER_ORIGIN_MPC[1] as number,
@@ -187,16 +196,8 @@ describe('composeBodyMvp', () => {
     ];
 
     // Camera sits ~2 body-radii from the body along +Z, looking at it.
-    const pcEyeMpc: [number, number, number] = [
-      pcBodyPosMpc[0] as number,
-      0,
-      2 * radiusMpc,
-    ];
-    const pcTargetMpc: [number, number, number] = [
-      pcBodyPosMpc[0] as number,
-      0,
-      0,
-    ];
+    const pcEyeMpc: [number, number, number] = [pcBodyPosMpc[0] as number, 0, 2 * radiusMpc];
+    const pcTargetMpc: [number, number, number] = [pcBodyPosMpc[0] as number, 0, 0];
 
     const pcForegroundVp = computeForegroundViewProj({
       eyeMpc: pcEyeMpc,
@@ -227,18 +228,13 @@ describe('composeBodyMvp', () => {
     // ── Assertion 1: composeBodyMvp (f64 compose then narrow) survives ────────
     // Error should be comfortably below one body radius.
 
-    const mvpF32Good = composeBodyMvp(
-      pcForegroundVp,
-      pcBodyPosMpc,
-      pcRenderOrigin,
-      radiusMpc,
-    );
+    const mvpF32Good = composeBodyMvp(pcForegroundVp, pcBodyPosMpc, pcRenderOrigin, radiusMpc);
     const ndcGood = transformF32ToNdc(mvpF32Good);
     const errorGoodMpc = ndcErrorMpc(ndcGood, ndcF64);
 
     console.log(
       `[negative/f64] NDC error in Mpc: ${errorGoodMpc.toExponential(4)} ` +
-      `(radiusMpc: ${radiusMpc.toExponential(4)})`,
+        `(radiusMpc: ${radiusMpc.toExponential(4)})`,
     );
 
     expect(errorGoodMpc).toBeLessThan(radiusMpc);
@@ -265,10 +261,36 @@ describe('composeBodyMvp', () => {
 
     console.log(
       `[negative/f32-sep] NDC error in Mpc: ${errorBadMpc.toExponential(4)} ` +
-      `(radiusMpc: ${radiusMpc.toExponential(4)}) ` +
-      `= ${(errorBadMpc / radiusMpc).toExponential(2)} body radii`,
+        `(radiusMpc: ${radiusMpc.toExponential(4)}) ` +
+        `= ${(errorBadMpc / radiusMpc).toExponential(2)} body radii`,
     );
 
     expect(errorBadMpc).toBeGreaterThan(radiusMpc);
+  });
+
+  it('oblate body flattens the polar axis (model-Z) to (1 − oblateness) of the equatorial radius', () => {
+    // Drive the per-axis scale path in isolation: an identity VP with the render
+    // origin AT the body centre collapses the MVP to the model matrix alone
+    // (scale · translate(0)), so a transformed unit point reads the per-axis
+    // scale directly — no perspective distortion to unpick. A clean unit radius
+    // keeps the ratio (the property under test) scale-independent and f32-exact.
+    const r = 1;
+    const centre: [number, number, number] = [0, 0, 0];
+    const identityVp = mat4d.identity() as Float64Array;
+
+    const oblateMvp = composeBodyMvp(identityVp, centre, centre, r, 0.5);
+    const sphereMvp = composeBodyMvp(identityVp, centre, centre, r);
+
+    // +X is an equatorial point, +Z the polar point (the polar-Z simplification
+    // composeBodyMvp documents). Compare the transformed extents, not the compose
+    // maths: for oblateness 0.5 the polar extent must be exactly half the
+    // equatorial extent, and the spherical control must keep the two equal.
+    const oblateEquator = vec4.transformMat4([1, 0, 0, 1], oblateMvp)[0] as number;
+    const oblatePolar = vec4.transformMat4([0, 0, 1, 1], oblateMvp)[2] as number;
+    expect(oblatePolar / oblateEquator).toBeCloseTo(0.5, 6);
+
+    const sphereEquator = vec4.transformMat4([1, 0, 0, 1], sphereMvp)[0] as number;
+    const spherePolar = vec4.transformMat4([0, 0, 1, 1], sphereMvp)[2] as number;
+    expect(spherePolar / sphereEquator).toBeCloseTo(1, 6);
   });
 });

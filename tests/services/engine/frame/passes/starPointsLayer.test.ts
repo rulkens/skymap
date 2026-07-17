@@ -14,7 +14,7 @@
  * layer uploads (via `setStars`) EXACTLY the `points` branch of
  * `partitionStarsByResolution` — the complement of the `spheres` branch
  * `starSpheresLayer`'s suite asserts over the same
- * camera-half-an-AU-off-Proxima mixed fixture. Because the anchors are rebased
+ * camera-half-an-AU-off-Sirius mixed fixture. Because the anchors are rebased
  * per frame, the upload is per-frame (no membership cache): a promoted star
  * still LEAVES the point set the frame it resolves, so it is never drawn as
  * point AND sphere — the double-draw the partition exists to forbid.
@@ -25,8 +25,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { starPointsLayer } from '../../../../../src/services/engine/frame/passes/starPointsLayer';
 import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
+import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
+import { starExposureRamp } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
@@ -70,8 +73,9 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-// A below-gate camera 5 kpc down +z: inside FOREGROUND_MAX_DISTANCE_MPC
-// (~10 kpc), so the distance gate passes — yet still parsecs beyond every
+// A below-gate camera 5 kpc down +z: well inside FOREGROUND_MAX_DISTANCE_MPC
+// (~0.23 Mpc) AND inside the starBackdrop band's live range (goneAt ~0.023 Mpc),
+// so both the distance gate and the band pass — yet still parsecs beyond every
 // seeded star, so all 24 non-Sun neighbours stay sub-pixel points.
 const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
 
@@ -122,15 +126,40 @@ function makeNear0View(camPos: Vec3): SlabView {
 function makeRenderer() {
   return {
     setStars: vi.fn<(stars: readonly StarBody[]) => void>(),
-    draw: vi.fn<(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2) => void>(),
+    draw: vi.fn<
+      (
+        pass: GPURenderPassEncoder,
+        viewProj: Float32Array,
+        viewportPx: Vec2,
+        opts: { sizePx: number; brightness: number },
+      ) => void
+    >(),
   };
 }
 
-/** State with a `starPointRenderer` handle and a seeded star list. */
-function makeState(starPointRenderer: unknown, stars: readonly StarBody[]): EngineState {
+/**
+ * The `starCatalogs` appearance slice the layer reads: the shared sizePx slider,
+ * the brightness trim, and the three exposure-ramp anchors. Concrete non-default
+ * values so the ramp fold is observable (a raw-brightness bug would show).
+ */
+const STAR_CATALOG_SETTINGS = {
+  sizePx: 3.25,
+  brightness: 0.8,
+  exposureNearX: 15,
+  exposureMidX: 57,
+  exposureFarX: 70,
+};
+
+/** State with a `starPointRenderer` handle, a seeded star list, and settings. */
+function makeState(
+  starPointRenderer: unknown,
+  stars: readonly StarBody[],
+  famousStarsEnabled = true,
+): EngineState {
   return {
     gpu: { starPointRenderer },
     data: { bodies: { stars } },
+    settings: { starCatalogs: STAR_CATALOG_SETTINGS, famousStars: { enabled: famousStarsEnabled } },
   } as unknown as EngineState;
 }
 
@@ -160,11 +189,26 @@ describe('starPointsLayer.enabled', () => {
   });
 
   it('is disabled beyond the foreground gate even with point stars present', () => {
-    // At galaxy scale (0.43 Mpc) the whole neighbourhood is far below a
-    // pixel: the shared gate turns the backdrop off before the partition is
-    // even computed, so the (hdr, NEAR0) step can be skipped wholesale.
+    // A decade beyond the gate (cosmic scale) the whole neighbourhood is far
+    // below a pixel: the shared gate turns the backdrop off before the
+    // partition is even computed, so the (hdr, NEAR0) step can be skipped
+    // wholesale. Derived from the gate so a farther seed growing it carries.
     const state = makeState(makeRenderer(), SCENE_STARS);
-    expect(starPointsLayer.enabled(state, makeCtx([0, 0, 0.43]))).toBe(false);
+    expect(starPointsLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]))).toBe(
+      false,
+    );
+  });
+
+  it('is disabled once the backdrop band has dissolved, even inside the foreground gate', () => {
+    // Just past the backdrop band's goneAt but still WELL inside the shared
+    // foreground gate: the additive sprite field has faded to black, so the
+    // layer must disable outright (the "opacity 0 ⇒ no render" house rule)
+    // rather than draw invisible sprites and hold the (hdr, NEAR0) step open.
+    // Derived from the band + gate so a roster growth carries both edges.
+    const beyondBand = SCALE_FADE_BANDS.starBackdrop.goneAt * 1.01;
+    expect(beyondBand).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC); // still inside the gate
+    const state = makeState(makeRenderer(), SCENE_STARS);
+    expect(starPointsLayer.enabled(state, makeCtx([0, 0, beyondBand]))).toBe(false);
   });
 });
 
@@ -189,7 +233,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // gate — at galaxy scale it legitimately draws while the star rows
       // skip. Toggle it off (and zero its fade tail) so this test keeps
       // pinning the STAR rows' wholesale-skip property.
-      settings: { milkyWay: { enabled: false } },
+      settings: { milkyWay: { enabled: false }, famousStars: { enabled: true } },
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>
@@ -204,9 +248,10 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       'star-points',
       'orbit-trails',
     ]);
-    // Above the gate: empty group → the executor never opens the pass.
+    // Above the gate: empty group → the executor never opens the pass. Gate
+    // edge + a decade beyond, both derived from the gate.
     expect(groupAt(makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toEqual([]);
-    expect(groupAt(makeCtx([0, 0, 0.43]))).toEqual([]);
+    expect(groupAt(makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]))).toEqual([]);
   });
 });
 
@@ -259,19 +304,22 @@ describe('starPointsLayer.draw', () => {
 
   it('starPointsLayer draws only the point stars', () => {
     const renderer = makeRenderer();
-    // Mixed fixture, camera half an AU off Proxima: only Proxima resolves
-    // and belongs to starSpheresLayer — its suite asserts exactly that set
-    // over this same fixture — leaving the Sun (1.3 pc out, sub-pixel: a
-    // point is what keeps it VISIBLE from here) and Sirius as the point
-    // stars. Disjoint + covering by construction: the structural XOR.
-    const camPos = halfAuFrom(PROXIMA.positionMpc);
+    // Mixed fixture, camera half an AU off Sirius: only Sirius resolves
+    // (1.71 R☉) and belongs to starSpheresLayer — its suite asserts exactly
+    // that set over this same fixture — leaving the Sun and Proxima (parsecs
+    // out, sub-pixel: a point is what keeps them VISIBLE from here) as the
+    // point stars. Disjoint + covering by construction: the structural XOR.
+    const camPos = halfAuFrom(SIRIUS.positionMpc);
     const view = makeNear0View(camPos);
     const state = makeState(renderer, [SUN, PROXIMA, SIRIUS]);
 
     starPointsLayer.draw(PASS_STUB, view, makeCtx(camPos), state);
 
     expect(renderer.setStars).toHaveBeenCalledTimes(1);
-    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([SUN.id, SIRIUS.id]);
+    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([
+      SUN.id,
+      PROXIMA.id,
+    ]);
     expect(renderer.draw).toHaveBeenCalledTimes(1);
   });
 
@@ -291,14 +339,89 @@ describe('starPointsLayer.draw', () => {
       SIRIUS.id,
     ]);
 
-    // The camera closes on Proxima: it resolves, so it must LEAVE the
+    // The camera closes on Sirius: it resolves, so it must LEAVE the
     // uploaded point set — otherwise it would draw as point AND sphere. The
-    // Sun stays a point (1.3 pc away, sub-pixel).
-    const nearCam = halfAuFrom(PROXIMA.positionMpc);
+    // Sun and Proxima stay points (parsecs away, sub-pixel).
+    const nearCam = halfAuFrom(SIRIUS.positionMpc);
     starPointsLayer.draw(PASS_STUB, makeNear0View(nearCam), makeCtx(nearCam), state);
     expect(renderer.setStars).toHaveBeenCalledTimes(3);
-    expect(renderer.setStars.mock.calls[2]![0].map((star) => star.id)).toEqual([SUN.id, SIRIUS.id]);
+    expect(renderer.setStars.mock.calls[2]![0].map((star) => star.id)).toEqual([
+      SUN.id,
+      PROXIMA.id,
+    ]);
     expect(renderer.draw).toHaveBeenCalledTimes(3);
+  });
+
+  it('premultiplies each uploaded colour by the backdrop-dissolve alpha', () => {
+    // Camera parked mid-band (between the starBackdrop fullAt and goneAt edges),
+    // where the dissolve alpha is a genuine fraction — the pin that fails if the
+    // scale is dropped (colours upload at full strength) or inverted. From ~14
+    // kpc every seeded star is a sub-pixel point, so the whole roster uploads.
+    const camDistMpc =
+      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const expectedFade = fadeBand(SCALE_FADE_BANDS.starBackdrop, camDistMpc);
+    expect(expectedFade).toBeGreaterThan(0);
+    expect(expectedFade).toBeLessThan(1);
+
+    const renderer = makeRenderer();
+    const camPos: Vec3 = [0, 0, camDistMpc];
+    const state = makeState(renderer, [SUN, PROXIMA, SIRIUS]);
+    starPointsLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
+
+    const uploaded = renderer.setStars.mock.calls[0]![0];
+    const uploadedProxima = uploaded.find((star) => star.id === PROXIMA.id)!;
+    expect(uploadedProxima.color).toEqual([
+      PROXIMA.color[0] * expectedFade,
+      PROXIMA.color[1] * expectedFade,
+      PROXIMA.color[2] * expectedFade,
+    ]);
+    // Distinctly NOT the raw colour — the scale actually happened.
+    expect(uploadedProxima.color).not.toEqual([...PROXIMA.color]);
+  });
+
+  it('hands the renderer the sizePx slider and brightness × exposure-ramp factor', () => {
+    // Camera parked mid-band so the roster uploads and the exposure ramp is a
+    // genuine non-trivial factor. The layer must forward `starCatalogs.sizePx`
+    // verbatim and `brightness × starExposureRamp(camDistMpc, near, mid, far)` —
+    // the SAME fold `starCatalogLayer` applies — NOT the raw brightness trim.
+    const camDistMpc =
+      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const renderer = makeRenderer();
+    const camPos: Vec3 = [0, 0, camDistMpc];
+    const state = makeState(renderer, SCENE_STARS);
+
+    starPointsLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
+
+    const opts = renderer.draw.mock.calls[0]![3];
+    const expectedBrightness =
+      STAR_CATALOG_SETTINGS.brightness *
+      starExposureRamp(
+        camDistMpc,
+        STAR_CATALOG_SETTINGS.exposureNearX,
+        STAR_CATALOG_SETTINGS.exposureMidX,
+        STAR_CATALOG_SETTINGS.exposureFarX,
+      );
+    expect(opts.sizePx).toBe(STAR_CATALOG_SETTINGS.sizePx);
+    expect(opts.brightness).toBeCloseTo(expectedBrightness, 12);
+    // The ramp actually bent the trim — a raw-brightness bug would fail here.
+    expect(opts.brightness).not.toBeCloseTo(STAR_CATALOG_SETTINGS.brightness, 6);
+  });
+
+  it('uploads ONLY the Sun when the famous-stars gate is off', () => {
+    // Mid-band camera so the layer draws; the seed is the full roster but the
+    // famousStars master gate is OFF — the star layers fall back to the Sun
+    // alone (its map is muted, the descent's aim point kept). The Sun is
+    // parsecs-sub-pixel here, so it rides the point branch.
+    const camDistMpc =
+      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const renderer = makeRenderer();
+    const camPos: Vec3 = [0, 0, camDistMpc];
+    const state = makeState(renderer, SCENE_STARS, false);
+
+    starPointsLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
+
+    expect(renderer.setStars).toHaveBeenCalledTimes(1);
+    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([SUN.id]);
   });
 
   it('is a no-op when the starPointRenderer handle is null (pre-bootstrap)', () => {

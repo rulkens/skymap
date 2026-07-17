@@ -147,6 +147,13 @@ export const RAW_DATA = {
     description:
       'Hand-authored seed list of well-known galaxies (M31, M33, NGC 253, …). Drives the famous-galaxy build + image fetcher.',
   },
+  'famous-stars.seed': {
+    path: 'data/seeds/famous_stars.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-authored seed list of well-known stars (Sirius, Betelgeuse, the Sun, …). Drives the famous-stars build (generated render table + meta sidecar) and the Gaia dedup.',
+  },
   'famous.curated': {
     path: 'data/seeds/famous_curated_overrides.json',
     kind: 'file',
@@ -387,8 +394,7 @@ export const RAW_DATA = {
     path: 'data/raw/desi/QSO_NGC_clustering.dat.fits',
     kind: 'file',
     source: 'gitignored',
-    description:
-      'DESI DR1 (iron) LSS clustering catalog, QSO tracer, NGC — quasars, z 0.4-3.5.',
+    description: 'DESI DR1 (iron) LSS clustering catalog, QSO tracer, NGC — quasars, z 0.4-3.5.',
     upstream:
       'https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/QSO_NGC_clustering.dat.fits',
     fetcher: 'tools/fetch/fetchDesi.ts',

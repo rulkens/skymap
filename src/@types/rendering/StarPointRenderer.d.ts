@@ -36,8 +36,17 @@ export type StarPointRenderer = Renderer & {
    * Draw every uploaded star as an instanced billboard into the current
    * (depthless, additive) pass. `viewProj` is the length-16 view-projection
    * rebased into the same camera-relative frame as the uploaded positions;
-   * `viewportPx` feeds the pixel-size-to-clip-offset conversion. No-op until
+   * `viewportPx` feeds the pixel-size-to-clip-offset conversion. `opts` carries
+   * the shared star appearance the survey stage also reads — `sizePx` (base
+   * dot radius, the `starCatalogs.sizePx` slider) and `brightness` (the exposure
+   * trim, already folded with the camera-distance ramp by the layer) — so a
+   * famous leaf and a survey leaf render pixel-identically. No-op until
    * `setStars` has delivered a non-empty upload.
    */
-  draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportPx: Vec2,
+    opts: { sizePx: number; brightness: number },
+  ): void;
 };

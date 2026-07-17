@@ -75,11 +75,14 @@ export type DesiredHashOutput = {
  * Pure decision: given the current focus target and the URL's current
  * hash, what should the URL's hash *body* be, and does it already agree?
  *
- * Body shape:
+ * Body shape (one row per `URL_HASH_FOR` arm of the FocusableTarget union):
  *   1. focused is a galaxy    → `focus=<id>` (or `''` if non-encodable,
  *      e.g. Synthetic source).
  *   2. focused is a structure → `focus=<id>`.
- *   3. focused is null        → `''`.
+ *   3. focused is the Milky Way → `focus=milkyWay` (the fixed deep-link
+ *      literal).
+ *   4. focused is a scene body (a star) → `focus=body-<id>`.
+ *   5. focused is null        → `''`.
  *
  * `matches` is the strip-leading-#-and-compare result, used by the write
  * effect to skip no-op `pushState` calls.

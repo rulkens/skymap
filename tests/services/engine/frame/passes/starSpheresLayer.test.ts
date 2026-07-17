@@ -16,7 +16,7 @@
  * crosses `STAR_RESOLVE_PX`, the Sun included (sub-resolve it demotes to a
  * point like any other star) — while `starPointsLayer` draws the
  * complementary `points` branch of the same call. The two layer suites
- * share the camera-half-an-AU-off-Proxima mixed fixture, so the sphere set
+ * share the camera-half-an-AU-off-Sirius mixed fixture, so the sphere set
  * asserted here and the point set asserted there are disjoint and cover the
  * input (the structural XOR).
  */
@@ -118,10 +118,15 @@ function makeNear0View(camPos: Vec3): SlabView {
 }
 
 /** State with a `starRenderer` handle and a seeded star list. */
-function makeState(starRenderer: unknown, stars: readonly StarBody[]): EngineState {
+function makeState(
+  starRenderer: unknown,
+  stars: readonly StarBody[],
+  famousStarsEnabled = true,
+): EngineState {
   return {
     gpu: { starRenderer },
     data: { bodies: { stars } },
+    settings: { famousStars: { enabled: famousStarsEnabled } },
   } as unknown as EngineState;
 }
 
@@ -181,7 +186,7 @@ describe('starSpheresLayer.draw', () => {
     expect(call[3]).toBe(SUN.radiusKm * SCALE_UNITS.KM_TO_MPC);
 
     // The renderer receives the pass + the composed f32 MVP + the Sun's
-    // spectral colour.
+    // blackbody colour.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, mvp, color] = drawSpy.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
@@ -193,11 +198,11 @@ describe('starSpheresLayer.draw', () => {
   it('starSpheresLayer draws only the resolved stars', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
-    // Mixed fixture, camera half an AU off Proxima: only Proxima resolves.
-    // The Sun (1.3 pc away, sub-pixel) and Sirius stay points and belong to
-    // starPointsLayer — the complementary set its suite asserts over this
+    // Mixed fixture, camera half an AU off Sirius: only Sirius resolves
+    // (1.71 R☉). The Sun and Proxima stay parsecs away, sub-pixel, and belong
+    // to starPointsLayer — the complementary set its suite asserts over this
     // same fixture (the structural XOR).
-    const camPos = halfAuFrom(PROXIMA.positionMpc);
+    const camPos = halfAuFrom(SIRIUS.positionMpc);
     const view = makeNear0View(camPos);
     const state = makeState({ draw: drawSpy }, [SUN, PROXIMA, SIRIUS]);
 
@@ -205,9 +210,31 @@ describe('starSpheresLayer.draw', () => {
 
     // Exactly the resolved star composed, by identity.
     expect(composeMock).toHaveBeenCalledTimes(1);
-    expect(composeMock.mock.calls.map((c) => c[1])).toEqual([PROXIMA.positionMpc]);
+    expect(composeMock.mock.calls.map((c) => c[1])).toEqual([SIRIUS.positionMpc]);
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([PROXIMA.color]);
+    expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([SIRIUS.color]);
+  });
+
+  it('with the famous-stars gate off, only the Sun can resolve — never a neighbour', () => {
+    composeMock.mockClear();
+    // Camera half an AU off Sirius, which WOULD resolve — but the famousStars
+    // gate is OFF, so the layer sees the Sun alone. The Sun is parsecs away from
+    // this camera (sub-pixel), so nothing resolves: no sphere is composed.
+    const offSirius = makeState({ draw: vi.fn() }, [SUN, PROXIMA, SIRIUS], false);
+    starSpheresLayer.draw(PASS_STUB, makeNear0View(halfAuFrom(SIRIUS.positionMpc)),
+      makeCtx(halfAuFrom(SIRIUS.positionMpc)), offSirius);
+    expect(composeMock).not.toHaveBeenCalled();
+
+    // Camera half an AU off the Sun with the gate still off: the Sun is exempt,
+    // so it resolves and is the sole composed sphere — the map is muted, the
+    // descent's aim point kept.
+    composeMock.mockClear();
+    const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
+    const onSun = makeState({ draw: drawSpy }, [SUN, PROXIMA, SIRIUS], false);
+    starSpheresLayer.draw(PASS_STUB, makeNear0View(halfAuFrom(SUN.positionMpc)),
+      makeCtx(halfAuFrom(SUN.positionMpc)), onSun);
+    expect(composeMock).toHaveBeenCalledTimes(1);
+    expect(composeMock.mock.calls[0]![1]).toBe(SUN.positionMpc);
   });
 
   it('is a no-op when the starRenderer handle is null (pre-bootstrap)', () => {

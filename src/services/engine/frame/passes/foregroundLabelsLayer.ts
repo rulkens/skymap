@@ -90,12 +90,15 @@
  *      heliocentric origin) so its name FADES IN smoothly as the camera
  *      descends: exactly 0 at the layer's enable gate (no pop) up to full alpha
  *      by half that distance. Earth + the planets ride the planet-labels toggle
- *      (`settings.labels.planetLabelsEnabled`). Two independent mute switches
- *      gate the two caption groups: the star-labels toggle
+ *      (`settings.labels.planetLabelsEnabled`). Three independent mute switches
+ *      gate the caption groups: the star-labels toggle
  *      (`settings.labels.starLabelsEnabled`) zeroes the star map's target (Sun
- *      included); the planet-labels toggle zeroes the Earth + planet (+ Moon,
- *      which rides the 'planet' kind) target. Both flow through the envelope
- *      below, so flipping either fades rather than pops.
+ *      included); the famous-stars master gate
+ *      (`settings.famousStars.enabled`) zeroes the star map EXCEPT the Sun (the
+ *      descent's aim point, which its own `sunCaption` band still governs), in
+ *      lockstep with the point/sphere layers; the planet-labels toggle zeroes
+ *      the Earth + planet (+ Moon, which rides the 'planet' kind) target. All
+ *      flow through the envelope below, so flipping any fades rather than pops.
  *   2. DECLUTTER — EVERY visible caption contends in one screen-space cull
  *      (`declutterByScreenSeparation`), Earth and the planets included. The
  *      collision winner is the higher `CAPTION_PRIORITY` kind tier (sun >
@@ -268,6 +271,10 @@ export const foregroundLabelsLayer: ContentLayer = {
     const rebasedVpF32 = narrowMat4(rebasedVp);
     const starLabelsEnabled = state.settings.labels.starLabelsEnabled;
     const planetLabelsEnabled = state.settings.labels.planetLabelsEnabled;
+    // The famous-stars master gate mutes the seeded star MAP's captions in
+    // lockstep with the point/sphere layers — but NOT the Sun (`kind === 'sun'`),
+    // which anchors the descent and rides its own `sunCaption` band regardless.
+    const famousStarsEnabled = state.settings.famousStars.enabled;
 
     // ── Pass 1: rebase + size every body, and derive each caption's fade TARGET ──
     // (Stage 1 of the module header's three-stage pipeline.)
@@ -323,7 +330,9 @@ export const foregroundLabelsLayer: ContentLayer = {
           ? 0
           : label.kind === 'sun'
             ? fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc)
-            : fadeBand(SCALE_FADE_BANDS.starCaption, distanceMpc / SCALE_UNITS.PC_TO_MPC);
+            : famousStarsEnabled
+              ? fadeBand(SCALE_FADE_BANDS.starCaption, distanceMpc / SCALE_UNITS.PC_TO_MPC)
+              : 0;
 
       // Screen position for the declutter. Behind the camera there is none —
       // those captions bypass the cull (the shader clips them anyway; pass 2
