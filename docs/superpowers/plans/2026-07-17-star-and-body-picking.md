@@ -774,15 +774,19 @@ threshold with the layer it hands off to.
 
 **Files:** none (review + any fixes it surfaces, each with its own test if behavioural).
 
-- [ ] Run the `entanglement-radar` skill over the Stage 1.5 diff (Tasks 8a–8e).
+- [x] Run the `entanglement-radar` skill over the Stage 1.5 diff (Tasks 8a–8e).
       Confirm the framing fold landed as ONE shared helper (not a third framing
       copy), the BP−RP ramp is a single canonical home with a documented CPU
       mirror (not a divergent second ramp), and the sphere layer added no scene-set
       coupling (option B stayed B — `visibleStars`/`partitionStarsByResolution`
       untouched). Un-braid via `/simplify` where clear; else capture in
       `docs/BACKLOG.md` per backlog hygiene.
-- [ ] `npm run typecheck` (both tsconfigs) + `npm test` → green.
-- [ ] Commit any fixes.
+      _Executed: all three confirmations pass; the TS↔WESL mirror consts judged
+      fine as documented mirrors (IAU-frozen value + self-checking threshold).
+      One knot captured to BACKLOG (starResolves duplicates
+      partitionStarsByResolution's resolve predicate — design-bearing fold)._
+- [x] `npm run typecheck` (both tsconfigs) + `npm test` → green.
+- [x] Commit any fixes.
 
 ---
 
