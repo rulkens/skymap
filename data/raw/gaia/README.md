@@ -7,7 +7,7 @@ the Hipparcos-2 bright-star table, and the Hipparcos↔Gaia cross-match.
 | Field         | Value |
 |---------------|-------|
 | Data release  | Gaia DR3 (public since 2022-06-13) |
-| Fetch date    | _(filled in when the fetch runs — see Task 11)_ |
+| Fetch date    | 2026-07-15 (checksum sidecar written on completion; main-catalog pages fetched 2026-07-14 → 2026-07-15) |
 | Fetch command | `npm run fetch-gaia` |
 
 ## Upstream services + tables
