@@ -52,9 +52,15 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { BodyPointPick } from '../../../../@types/rendering/BodyPickRenderer';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
+import { Source } from '../../../../data/sources';
+import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { sceneBodyPartition } from '../sceneBodyPartition';
+import { seedIndexOfBody } from './seedIndexOfBody';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness';
 import { fadeBand } from '../../../../utils/math/fadeBand';
@@ -144,5 +150,64 @@ export const bodyGlintsLayer: ContentLayer = {
     // narrowed HERE, at the GPU-upload boundary.
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
     renderer.draw(pass, staging, count, rebasedVp, view.viewportPx);
+  },
+
+  // Pick aspect — stamps the sub-pixel `glints` bodies into the NEAR0 r32uint pick
+  // pass as ONE instanced pick-billboard draw (each expanded to the same generous
+  // clickable footprint the scene-star points get in `bodyPickRenderer.drawPoints`
+  // — these seeded solar-system bodies are sparse, labelled, click-invited
+  // targets), so a sub-pixel planet stays easily pickable at its true screen
+  // position. The set is the SAME `sceneBodyPartition(state, ctx).glints` branch
+  // `draw` packs — a body is pickable-as-a-glint exactly when it draws as one; its
+  // resolved complement (`flat` ∪ `textured`) rides `planetsLayer`'s sphere pick.
+  //
+  // The per-frame brightness (phase + cross-fade) is VISUAL-ONLY and omitted here:
+  // pick has no opacity, and a body turned to its unlit far side or mid-fade at the
+  // 3 px crossover is still THERE to click — the same reasoning `starPointsLayer`'s
+  // pick uses to omit the backdrop-dissolve colour scale. The `enabled` gate
+  // already drops the whole layer above the foreground distance.
+  //
+  // Each body's packed id carries its STABLE `SCENE_PLANETS` index (the same seed
+  // table + `Source.Planet` code `planetsLayer`'s sphere pick stamps, so a body
+  // round-trips to the SAME selection whether it is picked as a glint or a sphere),
+  // NOT its slot in the glints partition (which shifts as a body crosses
+  // `BODY_GLINT_MAX_PX` — see `seedIndexOfBody`); a body id absent from the seed
+  // table returns −1 and is dropped (a packed id from −1 would alias body 0). Earth
+  // is never in this partition (it rides its own `bodies.earth` / `earthLayer`), so
+  // no `Source.Earth` mapping arises here. Anchors are rebased into the
+  // camera-relative frame in f64 before narrowing, the SAME seam `draw` uses.
+  //
+  // `bodyPickRenderer.drawPoints` is safe to call once per caller per pass (it
+  // claims its own per-pass slot of buffers); this layer and `starPointsLayer` are
+  // its two callers, each calling exactly once per `drawPick`.
+  drawPick(pass, view, ctx, state) {
+    const pickRenderer = state.gpu.bodyPickRenderer;
+    if (pickRenderer === null) return;
+
+    const { glints } = sceneBodyPartition(state, ctx);
+
+    const camPos = view.camPos;
+    const pickPoints: BodyPointPick[] = [];
+    for (const body of glints) {
+      const seedIndex = seedIndexOfBody(body.id, SCENE_PLANETS);
+      if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+      pickPoints.push({
+        posRelCamMpc: [
+          body.positionMpc[0] - camPos[0],
+          body.positionMpc[1] - camPos[1],
+          body.positionMpc[2] - camPos[2],
+        ] as Vec3,
+        packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
+      });
+    }
+
+    // Fold the eye offset into the vp so it pairs with the camera-relative
+    // anchors — narrowed at the GPU-upload boundary, exactly as `draw` does.
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
+    pickRenderer.drawPoints(pass, {
+      vp: rebasedVp,
+      viewportPx: view.viewportPx,
+      points: pickPoints,
+    });
   },
 };

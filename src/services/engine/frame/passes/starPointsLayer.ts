@@ -217,11 +217,11 @@ export const starPointsLayer: ContentLayer = {
   // is pickable-as-a-point exactly when it draws as one (its complement rides
   // `starSpheresLayer`'s sphere pick).
   //
-  // `bodyPickRenderer.drawPoints` is ONE-CALL-PER-PASS by documented contract
-  // (it rebuilds a single instance buffer with one `writeBuffer`; a second
-  // same-pass call would race that write against submit). This layer is that
-  // renderer's SOLE `drawPoints` caller, and it calls it exactly once per
-  // `drawPick`, so the contract holds by construction.
+  // `bodyPickRenderer.drawPoints` is safe to call once per caller per pass — each
+  // caller claims its own per-pass slot of buffers, so this layer's call and the
+  // body-glint layer's call in the same pick pass write DIFFERENT buffers and
+  // neither races `writeBuffer` against submit. This layer calls it exactly once
+  // per `drawPick`.
   //
   // Each point's packed id carries its STABLE `SCENE_STARS` index, NOT its slot
   // in the point partition (which shifts as a star crosses `STAR_RESOLVE_PX` —

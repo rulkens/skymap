@@ -17,10 +17,12 @@
  *     resolved scene-star sphere). Each call carries its OWN CPU-baked MVP + a
  *     fully-packed pick id, so the ≤10 sphere draws recorded into one pass each
  *     resolve to their OWN body.
- *   - `drawPoints` rasterises the sub-pixel scene-star POINT partition as one
- *     instanced draw of ≤25 pick billboards, each expanded to a generous 18 px
- *     clickable footprint (these labelled scene stars are click-invited targets)
- *     so a sub-pixel star stays easily clickable at its true screen position.
+ *   - `drawPoints` rasterises a sub-pixel body POINT partition as one instanced
+ *     draw of ≤25 pick billboards, each expanded to a generous 18 px clickable
+ *     footprint (labelled scene stars and sub-pixel solar-system body glints —
+ *     click-invited targets) so a sub-pixel body stays easily clickable at its
+ *     true screen position. Called once per caller per pass, each caller claiming
+ *     its own per-pass slot of buffers.
  *
  * ### Why own-uniform, not the COSMO shared pick camera
  *
@@ -89,10 +91,11 @@ export type BodyPickRenderer = Renderer & {
    */
   drawSphere(pass: GPURenderPassEncoder, args: BodySpherePickArgs): void;
   /**
-   * Record the scene-star POINT partition as one instanced pick-billboard draw.
-   * MUST be called at most once per pick pass — it rebuilds its single instance
-   * buffer with one `writeBuffer`, so a second same-pass call would race that
-   * write against submit. No-op on an empty batch.
+   * Record a sub-pixel body POINT partition as one instanced pick-billboard draw.
+   * Safe to call MULTIPLE times per pick pass (once per caller: the scene stars +
+   * the body glints): each call claims its own per-pass slot of buffers, so no
+   * caller's `writeBuffer` races another's against submit. No-op on an empty
+   * batch (the cursor is not advanced, so the empty call costs no slot).
    */
   drawPoints(pass: GPURenderPassEncoder, args: BodyPointPickArgs): void;
 };

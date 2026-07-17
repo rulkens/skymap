@@ -12,10 +12,12 @@
  *
  *   - `drawSphere` — ONE body sphere per call (Earth, a planet, a resolved
  *     scene-star sphere), same unit-sphere mesh as the visual sphere bodies.
- *   - `drawPoints` — the sub-pixel scene-star POINT partition as one instanced
- *     draw of pick billboards, each expanded to a generous 18 px footprint (these
- *     ≤25 labelled scene stars are click-invited targets; the survey star pick
- *     keeps its minimal clamp for its dense field — see `starPointPick.wesl`).
+ *   - `drawPoints` — a sub-pixel body POINT partition as one instanced draw of
+ *     pick billboards, each expanded to a generous 18 px footprint (these are the
+ *     ≤25 labelled scene stars and the sub-pixel solar-system body glints — sparse
+ *     click-invited targets; the survey star pick keeps its minimal clamp for its
+ *     dense field — see `starPointPick.wesl`). Called ONCE PER CALLER PER PASS,
+ *     each caller claiming its own per-pass slot (see the drawPoints race note).
  *
  * Each compiles its OWN `GPUShaderModule` + explicit pipeline layout (never a
  * shared module across pipelines — the WebGPU 'auto'-layout trap).
@@ -52,12 +54,26 @@
  *     so the single fixed-size buffer never needs to grow — the pool's only
  *     advantage does not arise here.
  *
- * `drawPoints` is instanced (per-instance posRelCamMpc + packedId baked into a
- * per-frame instance buffer), so it dodges the race by construction — every
- * instance reads its OWN record. Its ONE precondition: call it at most once per
- * pass (it rebuilds that instance buffer with one `writeBuffer`, so a second
- * same-pass call would race that write). The single `starPointsLayer` caller
- * honours this; the contract documents it (the `starRenderer` idiom).
+ * `drawPoints` is instanced (per-instance posRelCamMpc + packedId baked into an
+ * instance buffer), so WITHIN one draw every instance reads its OWN record — no
+ * race there. The hazard is ACROSS draws: it rebuilds its instance buffer + camera
+ * uniform with one `writeBuffer` each, so if two same-pass callers shared one
+ * instance buffer the second write would clobber the first before the GPU ran
+ * either draw, collapsing both point batches onto the last caller's data.
+ *
+ * **Mechanism chosen for multi-call: per-pass SLOTS, one own set of buffers per
+ * caller.** Each `drawPoints` call claims the next slot (a `{ uniformBuffer,
+ * bindGroup, instanceBuffer }` record, grown on demand) via a per-pass cursor
+ * that resets alongside the sphere cursor in `beginPassIfNew`. Two callers in one
+ * pass — the scene stars (`starPointsLayer`) and the sub-pixel body glints
+ * (`bodyGlintsLayer`) — therefore write DIFFERENT buffers, so no `writeBuffer`
+ * races submit. This is `texturedBodyRenderer`'s own-buffer-per-body fix, keyed
+ * here by a per-pass slot cursor rather than a body id; per-slot buffers (not the
+ * sphere path's dynamic-offset uniform) because each call also needs its OWN
+ * variable-length instance VERTEX buffer, which a dynamic uniform offset cannot
+ * express. Slots are reused across passes (the prior pass was already submitted
+ * before its slots are handed out again), so the allocation is bounded by the
+ * max callers in any one pass (two today).
  *
  * ### Depth-tested, r32uint, no blend
  *
@@ -218,23 +234,15 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     },
   });
 
-  // ── Scene-star point pick pipeline (instanced billboards) ─────────────────
-  const pointUniformBuffer = device.createBuffer({
-    label: 'body-pick-point-uniform',
-    size: POINT_UNIFORM_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
+  // ── Scene-star / body-glint point pick pipeline (instanced billboards) ─────
   // 20-float scratch: writeCameraPrefix fills [0..17]; [18..19] stay 0 pads.
+  // Shared across per-pass slots — writeBuffer copies it immediately, so reusing
+  // the CPU scratch between slot uploads is safe.
   const pointUniformScratch = new Float32Array(POINT_UNIFORM_BYTES / 4);
 
   const pointBgl = device.createBindGroupLayout({
     label: 'body-pick-point-bgl',
     entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
-  });
-  const pointBindGroup = device.createBindGroup({
-    label: 'body-pick-point-bg',
-    layout: pointBgl,
-    entries: [{ binding: 0, resource: { buffer: pointUniformBuffer } }],
   });
 
   const pointModule = createShaderModuleWithDevLog(
@@ -275,25 +283,60 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     },
   });
 
-  // Grow-only per-frame instance buffer for the point pick (rebuilt per pass,
-  // like starPointRenderer's — the camera-relative anchors change per frame).
-  let pointInstanceBuffer: GPUBuffer | null = null;
-  let pointCapacity = 0;
-
-  // ── Per-pass cursor + reset ───────────────────────────────────────────────
+  // ── Per-pass point-pick slots (own buffers per caller → multi-call safe) ──
   //
-  // The sphere cursor advances per draw within a pass and resets when a NEW pass
-  // object is first seen. Comparing pass identity is the per-pass boundary: the
-  // pick program calls `beginRenderPass` once per `pick()` / `renderForDebug()`,
-  // so each fresh encoder object marks a fresh submit whose writeBuffer slots may
-  // be reused from scratch.
+  // Each `drawPoints` call in a pass takes the NEXT slot: its own uniform buffer +
+  // bind group + grow-only instance buffer. Two callers in one pass (the scene
+  // stars and the sub-pixel body glints) therefore write DIFFERENT buffers, so no
+  // `queue.writeBuffer` races submit — see the module header's drawPoints race
+  // note. Slots are created on first use and reused across passes (the prior pass
+  // was already submitted before its slots are handed out again).
+  type PointSlot = {
+    uniformBuffer: GPUBuffer;
+    bindGroup: GPUBindGroup;
+    instanceBuffer: GPUBuffer | null;
+    capacity: number;
+  };
+  const pointSlots: PointSlot[] = [];
+
+  function pointSlotAt(index: number): PointSlot {
+    const existing = pointSlots[index];
+    if (existing) return existing;
+    const uniformBuffer = device.createBuffer({
+      label: `body-pick-point-uniform-${index}`,
+      size: POINT_UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const slot: PointSlot = {
+      uniformBuffer,
+      bindGroup: device.createBindGroup({
+        label: `body-pick-point-bg-${index}`,
+        layout: pointBgl,
+        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+      }),
+      instanceBuffer: null,
+      capacity: 0,
+    };
+    pointSlots[index] = slot;
+    return slot;
+  }
+
+  // ── Per-pass cursors + reset ──────────────────────────────────────────────
+  //
+  // The sphere cursor advances per draw within a pass; the point cursor advances
+  // per drawPoints CALLER within a pass. Both reset when a NEW pass object is
+  // first seen. Comparing pass identity is the per-pass boundary: the pick program
+  // calls `beginRenderPass` once per `pick()` / `renderForDebug()`, so each fresh
+  // encoder object marks a fresh submit whose slots may be reused from scratch.
   let currentPass: GPURenderPassEncoder | null = null;
   let sphereCursor = 0;
+  let pointCursor = 0;
 
   function beginPassIfNew(pass: GPURenderPassEncoder): void {
     if (pass !== currentPass) {
       currentPass = pass;
       sphereCursor = 0;
+      pointCursor = 0;
     }
   }
 
@@ -324,10 +367,15 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     const n = points.length;
     if (n === 0) return;
 
-    // Own per-frame uniform (camera prefix only). One draw per pass, so this
-    // single buffer is written once — no in-pass race.
+    // Claim THIS call's own slot for the pass, advancing the per-pass cursor so a
+    // second same-pass caller writes a DIFFERENT uniform + instance buffer — no
+    // in-pass writeBuffer race (see the module header's drawPoints race note).
+    const slot = pointSlotAt(pointCursor);
+    pointCursor += 1;
+
+    // Own per-frame uniform (camera prefix only), written into this slot's buffer.
     writeCameraPrefix(pointUniformScratch, vp, viewportPx);
-    device.queue.writeBuffer(pointUniformBuffer, 0, pointUniformScratch);
+    device.queue.writeBuffer(slot.uniformBuffer, 0, pointUniformScratch);
 
     // Pack posRelCamMpc (f32×3) + packedId (u32) interleaved. One ArrayBuffer
     // viewed as both, so the mixed types share the 16-byte stride.
@@ -343,22 +391,23 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
       u32[base + 3] = p.packedId >>> 0;
     }
 
-    // Grow-only reuse: reallocate only when the batch outgrows the buffer (the
-    // ~25-star seed never grows post-boot, so this is one bounded allocation).
-    if (pointInstanceBuffer === null || n > pointCapacity) {
-      pointInstanceBuffer?.destroy();
-      pointCapacity = n;
-      pointInstanceBuffer = device.createBuffer({
-        label: 'body-pick-point-instance-vbo',
-        size: pointCapacity * POINT_INSTANCE_STRIDE,
+    // Grow-only reuse per slot: reallocate only when the batch outgrows this
+    // slot's buffer (the ~25-body seeds never grow post-boot, so this is one
+    // bounded allocation per slot).
+    if (slot.instanceBuffer === null || n > slot.capacity) {
+      slot.instanceBuffer?.destroy();
+      slot.capacity = n;
+      slot.instanceBuffer = device.createBuffer({
+        label: `body-pick-point-instance-vbo-${pointCursor - 1}`,
+        size: slot.capacity * POINT_INSTANCE_STRIDE,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
     }
-    device.queue.writeBuffer(pointInstanceBuffer, 0, interleaved);
+    device.queue.writeBuffer(slot.instanceBuffer, 0, interleaved);
 
     pass.setPipeline(pointPipeline);
-    pass.setBindGroup(0, pointBindGroup);
-    pass.setVertexBuffer(0, pointInstanceBuffer);
+    pass.setBindGroup(0, slot.bindGroup);
+    pass.setVertexBuffer(0, slot.instanceBuffer);
     // Six vertices per instanced billboard quad (lib/billboard's quadCorner).
     pass.draw(6, n);
   }
@@ -367,9 +416,11 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     positionBuffer.destroy();
     indexBuffer.destroy();
     sphereUniformBuffer.destroy();
-    pointUniformBuffer.destroy();
-    pointInstanceBuffer?.destroy();
-    pointInstanceBuffer = null;
+    for (const slot of pointSlots) {
+      slot.uniformBuffer.destroy();
+      slot.instanceBuffer?.destroy();
+    }
+    pointSlots.length = 0;
   }
 
   const renderer: BodyPickRenderer = {

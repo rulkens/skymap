@@ -25,6 +25,9 @@ import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodie
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
+import { Source } from '../../../../../src/data/sources';
+import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -190,5 +193,82 @@ describe('bodyGlintsLayer.draw', () => {
     const view = makeNear0View(CAM_POS);
     const state = { gpu: { bodyGlintRenderer: null } } as unknown as EngineState;
     expect(() => bodyGlintsLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
+  });
+});
+
+// Glint bodies with REAL seed ids so `seedIndexOfBody(id, SCENE_PLANETS)` resolves
+// to a stable index (radius 160 km at ~1e5 km keeps both sub-3 px, so both land in
+// the glints branch). JUPITER sits farther from the Sun than the camera (lit);
+// MARS sits closer (unlit far side) — the pick must include BOTH, since brightness
+// is a visual-only concern the pick omits (unlike `draw`, which skips MARS).
+const JUPITER = bodyAt('jupiter', 1_100_000, [0.8, 0.8, 0.8]); // SCENE_PLANETS index 3
+const MARS = bodyAt('mars', 900_000, [0.6, 0.32, 0.23]); // SCENE_PLANETS index 2, unlit phase
+// An id absent from SCENE_PLANETS: seedIndexOfBody returns −1, so it is DROPPED
+// (a packed id from −1 would alias body 0).
+const UNKNOWN = bodyAt('not-a-planet', 1_050_000, [0.5, 0.5, 0.5]);
+
+function makePickRenderer() {
+  return {
+    drawSphere: vi.fn(),
+    drawPoints:
+      vi.fn<(pass: GPURenderPassEncoder, args: { vp: Float32Array; viewportPx: readonly [number, number]; points: readonly { posRelCamMpc: Vec3; packedId: number }[] }) => void>(),
+  };
+}
+
+function makePickState(
+  bodyPickRenderer: unknown,
+  planets: readonly PlanetBody[],
+): EngineState {
+  return {
+    gpu: { bodyPickRenderer },
+    data: { bodies: { planets } },
+    assetSlots: { bodyTextures: new Map() },
+  } as unknown as EngineState;
+}
+
+describe('bodyGlintsLayer.drawPick', () => {
+  it('stamps every glint body (phase-independent) with its stable SCENE_PLANETS id, dropping unknowns', () => {
+    const pickRenderer = makePickRenderer();
+    // MARS is unlit here — `draw` would skip it, but the pick keeps it (a body on
+    // its unlit far side is still THERE to click). UNKNOWN is not in the seed
+    // table → dropped.
+    const state = makePickState(pickRenderer, [JUPITER, MARS, UNKNOWN]);
+    const view = makeNear0View(CAM_POS);
+
+    bodyGlintsLayer.drawPick!(PASS_STUB, view, makeCtx(CAM_POS), state);
+
+    expect(pickRenderer.drawPoints).toHaveBeenCalledTimes(1);
+    const [passArg, args] = pickRenderer.drawPoints.mock.calls[0]!;
+    expect(passArg).toBe(PASS_STUB);
+
+    // Both seeded bodies present (JUPITER lit + MARS unlit); UNKNOWN dropped.
+    expect(args.points).toHaveLength(2);
+
+    // Jupiter's packed id, hand-computed: (Source.Planet=22 << 27) | (seedIndex 3 +
+    // PICK_SENTINEL_OFFSET 1) = 2952790016 | 4 = 2952790020.
+    const jupiter = args.points.find(
+      (p) => p.packedId === packSelection(Source.Planet, 3 + PICK_SENTINEL_OFFSET),
+    )!;
+    expect(jupiter).toBeDefined();
+    expect(jupiter.packedId).toBe(2_952_790_020);
+    // Its anchor is rebased into the camera-relative frame (pos − camPos), f64.
+    expect(jupiter.posRelCamMpc[0]).toBeCloseTo(JUPITER.positionMpc[0] - CAM_POS[0], 20);
+
+    // Mars carries its own stable index (2), NOT its slot in the partition.
+    const mars = args.points.find(
+      (p) => p.packedId === packSelection(Source.Planet, 2 + PICK_SENTINEL_OFFSET),
+    )!;
+    expect(mars).toBeDefined();
+
+    // The vp is the f32 narrow of the f64 rebase — NOT the raw f32 view.vp.
+    expect(args.vp).not.toBe(view.vp);
+    expect(args.vp).toEqual(narrowMat4(rebaseViewProj(view.slab.vp, CAM_POS)));
+    expect(args.viewportPx).toBe(view.viewportPx);
+  });
+
+  it('is a no-op when the bodyPickRenderer handle is null (pre-bootstrap)', () => {
+    const view = makeNear0View(CAM_POS);
+    const state = { gpu: { bodyPickRenderer: null } } as unknown as EngineState;
+    expect(() => bodyGlintsLayer.drawPick!(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
   });
 });
