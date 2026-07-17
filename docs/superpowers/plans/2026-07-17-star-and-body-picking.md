@@ -660,19 +660,19 @@ export function starTintFromBpRp(bpRp: number): Vec3;
 // starRenderer.draw expects. NOT a second ramp — the CPU twin of the one ramp.
 ```
 
-- [ ] Add the test `starTintFromBpRp returns the O/B anchor below the first breakpoint`
+- [x] Add the test `starTintFromBpRp returns the O/B anchor below the first breakpoint`
       — a very blue `bpRp = −0.5` returns the O/B anchor `[0.6, 0.7, 1.0]`
       (hand-computed: clamped flat end).
-- [ ] Add the test `starTintFromBpRp interpolates to a segment midpoint` — a
+- [x] Add the test `starTintFromBpRp interpolates to a segment midpoint` — a
       `bpRp` at a segment midpoint (e.g. `0.0`, halfway between −0.30 and 0.30)
       returns the componentwise midpoint of the O/B and A/F anchors
       (hand-computed, an independent value).
-- [ ] `npx vitest run tests/utils/color/starTintFromBpRp.test.ts` → fail,
+- [x] `npx vitest run tests/utils/color/starTintFromBpRp.test.ts` → fail,
       implement, pass.
-- [ ] Correct `tint.wesl`'s header (the "no CPU twin to drift against" paragraph)
+- [x] Correct `tint.wesl`'s header (the "no CPU twin to drift against" paragraph)
       to name `starTintFromBpRp` as the CPU mirror and state the keep-in-sync
       obligation. Shader code byte-unchanged. Single quotes only, no backticks.
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 8d — `focusedFieldStarSphereLayer` (spec amendment, layer + gate + draw)
 
