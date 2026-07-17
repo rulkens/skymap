@@ -576,19 +576,19 @@ tests. Spec §7 "The `body` FocusableTarget arm" + **correction 1**.
 
 **Tests (spec §10):**
 
-- [ ] Grow each type + table row above. Confirm `DETAIL_CARD` (Task 12) is the only
+- [x] Grow each type + table row above. Confirm `DETAIL_CARD` (Task 12) is the only
       remaining `FocusableTargetType` consumer that must also gain the `body` key —
       `tsc`'s exhaustive `Record<FocusableTargetType, …>` will flag it; note that Task 12
       lands that row.
-- [ ] Test `buildFocusable returns StarInfo for a star id and null for a non-star id` —
+- [x] Test `buildFocusable returns StarInfo for a star id and null for a non-star id` —
       a body row whose id is in `FAMOUS_STARS_GENERATED` (e.g. `'sirius'`) → `StarInfo`
       with `type:'body'`, `label`, `positionMpc`, `radiusKm`; a body row for `'earth'` →
       `null` (correction 1's star-only guard — the load-bearing branch).
-- [ ] Test `#focus=body-<id> round-trips for a star` — `URL_HASH_FOR.body({type:'body',
+- [x] Test `#focus=body-<id> round-trips for a star` — `URL_HASH_FOR.body({type:'body',
       id:'sirius', …})` yields `'sirius'`, and `resolveFocusId('body-sirius')` yields
       `{type:'body', id:'sirius'}` (reuse the existing focus-id codec test shape; spec
       §10 deep-link test).
-- [ ] `npm test` for the touched suites → green. Commit. (If `DETAIL_CARD`'s missing `body`
+- [x] `npm test` for the touched suites → green. Commit. (If `DETAIL_CARD`'s missing `body`
       key breaks `tsc` here, land Task 12's `DETAIL_CARD` row in the same or the next commit
       so the tree typechecks — sequence Task 12 immediately after.)
 
