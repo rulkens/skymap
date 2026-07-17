@@ -17,6 +17,7 @@ import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { FocusableTargetType } from '../@types/engine/FocusableTargetType';
 import { selectionToFocusId } from '../services/url/focusUrl';
 import { MILKY_WAY_FOCUS_ID } from '../services/url/milkyWayFocusId';
+import { BODY_FOCUS_PREFIX } from '../services/url/bodyFocusId';
 
 export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => string | null> = {
   // Galaxy ids ride the codec's priority ladder (famous → PGC → SDSS objID →
@@ -27,4 +28,10 @@ export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => s
   // Milky Way singleton → the fixed deep-link literal; resolveFocusId decodes
   // it back to `{ type: 'milkyWay' }`, closing the `#focus=milkyWay` round-trip.
   milkyWay: () => MILKY_WAY_FOCUS_ID,
+  // Scene body (star-only here — a non-star body never reaches a focusable) →
+  // its seed id under the shared BODY_FOCUS_PREFIX (`body-sirius`). The same
+  // prefix the sibling encoders (focusIdOf, focusIdForRow) emit and
+  // resolveFocusId strips, closing the `#focus=body-<id>` round-trip. A bare
+  // `t.id` would collide with the famous-galaxy character class and mis-decode.
+  body: (t) => (t.type === 'body' ? `${BODY_FOCUS_PREFIX}${t.id}` : null),
 };

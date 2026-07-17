@@ -8,13 +8,15 @@ import type { Vec3 } from '../math/Vec3';
  * `GalaxyRow` (built React-side into a `GalaxyInfo` by `buildFocusable`); the
  * structure arm is the already-serializable `StructureInfo` record used as-is;
  * the Milky Way is the singleton tag; the body arm carries a seeded scene body's
- * position + physical radius (the fields `focusFraming` frames on), snapshotted
- * off the static `SCENE_BODIES` table at extract time — like the structure arm,
- * the row is self-contained so downstream framing reads its fields directly
- * rather than re-looking-up the seed.
+ * label, position + physical radius (the fields the InfoCard headline shows and
+ * `focusFraming` frames on), snapshotted off the static `SCENE_BODIES` table at
+ * extract time — like the structure arm, the row is self-contained so
+ * downstream framing reads its fields directly rather than re-looking-up the
+ * seed. The `label` rides the row (not the async meta sidecar) so a star's name
+ * shows the instant it is selected, before the JSON has loaded.
  *
  * Every arm is JSON-serializable (`GalaxyRow.objId` is a string,
- * `StructureInfo` is a plain record, the body arm is flat numbers + a string),
+ * `StructureInfo` is a plain record, the body arm is flat numbers + strings),
  * so the RTK serializability check stays on.
  */
 export type SelectionRow =
@@ -24,6 +26,7 @@ export type SelectionRow =
   | {
       readonly type: 'body';
       readonly id: string;
+      readonly label: string;
       readonly positionMpc: Vec3;
       readonly radiusKm: number;
     };

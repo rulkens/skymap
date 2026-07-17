@@ -24,11 +24,13 @@ import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
+import type { StarInfo } from '../../../@types/engine/StarInfo';
 
 const REF_OF: {
   galaxyCatalog: (t: GalaxyInfo) => SelectionRef;
   structure: (t: StructureInfo) => SelectionRef;
   milkyWay: (t: MilkyWayInfo) => SelectionRef;
+  body: (t: StarInfo) => SelectionRef;
 } = {
   galaxyCatalog: (t) => ({
     type: 'galaxyCatalog',
@@ -37,6 +39,9 @@ const REF_OF: {
   }),
   structure: (t) => ({ type: 'structure', id: t.id }),
   milkyWay: () => ({ type: 'milkyWay' }),
+  // A displayed star (StarInfo) maps to its body ref — the seed id is the
+  // durable identity the selection slice stores.
+  body: (t) => ({ type: 'body', id: t.id }),
 };
 
 export function refOf(target: FocusableTarget): SelectionRef {

@@ -14,4 +14,7 @@ export const TARGET_IDENTITY_KEY: Record<FocusableTargetType, (t: FocusableTarge
   structure: (t) => (t.type === 'structure' ? `structure:${t.id}` : ''),
   // The Milky Way is a singleton — its identity is the tag itself.
   milkyWay: () => 'milkyWay',
+  // A scene body's seed id is stable and unique within the body namespace, so
+  // the `body:${id}` key names it exactly — the same shape as the structure arm.
+  body: (t) => (t.type === 'body' ? `body:${t.id}` : ''),
 };
