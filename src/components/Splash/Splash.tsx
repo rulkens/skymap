@@ -70,10 +70,8 @@ function Splash({
     const root = dialogRef.current;
     if (!root) return;
 
-    const FOCUSABLE_SELECTOR =
-      'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
-    const focusables = () =>
-      Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+    const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+    const focusables = () => Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
 
     const initial =
       root.querySelector<HTMLElement>('[data-splash-primary]:not([disabled])') ??
@@ -149,12 +147,7 @@ function Splash({
 
         {hardError ? (
           <div className={styles.ctas}>
-            <button
-              type="button"
-              className={styles.cta}
-              onClick={onReload}
-              data-splash-primary
-            >
+            <button type="button" className={styles.cta} onClick={onReload} data-splash-primary>
               Reload
               <span className={styles.arrow} aria-hidden="true">
                 →
@@ -212,7 +205,11 @@ function Splash({
               GLADE
             </a>
             ,{' '}
-            <a href="https://lambda.gsfc.nasa.gov/product/2mass/" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://lambda.gsfc.nasa.gov/product/2mass/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               2MRS
             </a>
             ,{' '}
@@ -227,7 +224,12 @@ function Splash({
             <a href="https://data.desi.lbl.gov/" target="_blank" rel="noopener noreferrer">
               DESI DR1
             </a>{' '}
-            (CC&nbsp;BY&nbsp;4.0) catalogues.
+            (CC&nbsp;BY&nbsp;4.0) catalogues. Planet, moon and ring textures from{' '}
+            <a href="https://www.solarsystemscope.com/" target="_blank" rel="noopener noreferrer">
+              Solar System Scope
+            </a>{' '}
+            (solarsystemscope.com), CC&nbsp;BY&nbsp;4.0, with Earth from NASA Earth Observatory
+            (Blue Marble) and the Galilean moons from NASA/USGS.
           </p>
           <p className={styles.attribution}>
             by Alexander Rulkens

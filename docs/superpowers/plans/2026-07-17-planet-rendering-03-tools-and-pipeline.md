@@ -207,13 +207,13 @@ System Scope (CC BY 4.0), NASA Earth Observatory (Blue Marble), NASA/USGS (moon
 mosaics). **Load the `create-component` skill before editing this component**
 (`feedback_one_component_per_file` — it governs any `src/components/**` edit).
 
-- [ ] Add the three-source attribution to the `.credits` paragraph text (the
+- [x] Add the three-source attribution to the `.credits` paragraph text (the
   exact copy is the SSS-required `Solar System Scope (solarsystemscope.com), CC BY
   4.0` plus the NASA/USGS credits, spec §3).
-- [ ] Confirm the existing Splash component test (if any) still passes; add a
+- [x] Confirm the existing Splash component test (if any) still passes; add a
   targeted assertion only if the component has a credits test — otherwise this is
-  copy, verified visually.
-- [ ] `npm test -- Splash` → green (or no-op if untested). Commit.
+  copy, verified visually. (No Splash test exists; copy only.)
+- [x] `npm test -- Splash` → green (or no-op if untested). Commit.
 
 ## Task 6 — `package.json` scripts + CLAUDE.md re-run order
 
