@@ -761,20 +761,21 @@ describe('pointSpritesLayer.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly four pickables expose drawPick, in registry order', () => {
-    // Pins the spec's migration table: only pointSprites / proceduralDisks /
-    // structureMarkers / milkyWay participate in picking, and they do so in
-    // registry order (pointSprites first — the @group(0) prefix contract for
-    // the COSMO pick pass; milkyWay now trails because it moved to the NEAR0
-    // slab, where it picks alone in its own pass with a self-bound camera).
+  it('exactly five pickables expose drawPick, in registry order', () => {
+    // Pins the spec's migration table: pointSprites / proceduralDisks /
+    // structureMarkers / milkyWay / starCatalog participate in picking, and they
+    // do so in registry order (pointSprites first — the @group(0) prefix contract
+    // for the COSMO pick pass; milkyWay and starCatalog trail because they live
+    // on the NEAR0 slab, each self-binding its own slot-0 camera in its own pass).
     // The production code stays name-blind: the pick program filters by
     // `drawPick` presence + `enabled`, never a hardcoded name list — so this
-    // test is the ONLY place the four names are asserted.
+    // test is the ONLY place the five names are asserted.
     expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'procedural-disks',
       'structure-markers',
       'milky-way',
+      'star-catalog',
     ]);
   });
 });

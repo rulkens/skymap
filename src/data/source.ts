@@ -167,9 +167,11 @@ export const Source = {
    * `stars-<tier>.bin` point clouds and drawn by the star renderer. The
    * wide-field twin of the curated `famousStar` neighbourhood (code 21): that
    * one seeds a hand-picked map from the body store; this one loads the bulk
-   * survey from disk. Registry-key-only code (not persisted, not pickable) —
-   * the stars render through their own renderer gated by a camera-distance
-   * crossfade band, never the galaxy-catalog points pipeline. Appended at 24,
+   * survey from disk. The code tags the source in the NEAR0 pick texture — leaf
+   * stars ARE pickable — but is not persisted to the `.bin` (a star's identity
+   * is its record index). The stars render through their own renderer gated by a
+   * camera-distance crossfade band, never the galaxy-catalog points pipeline.
+   * Appended at 24,
    * the first code after the three contiguous body codes (FamousStar=21,
    * Planet=22, Earth=23). Never renumber the codes below it.
    */

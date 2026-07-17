@@ -173,9 +173,11 @@ export const milkyWayLayer: ContentLayer = {
   // galactic centre. `pickMilkyWay` sizes it on the GPU from the pick-camera
   // uniform, so there is no CPU size argument.
   //
-  // This row SELF-BINDS its @group(0) pick camera: it is the sole pickable on
-  // the NEAR0 slab, so its pick pass has no earlier draw to inherit a camera
-  // from (the point-sprites @group(0) prefix contract is a COSMO-pass fact).
+  // This row SELF-BINDS its @group(0) pick camera: the NEAR0 pick pass carries
+  // no shared point-sprites prefix (that @group(0) contract is a COSMO-pass
+  // fact), so this row cannot inherit a camera from an earlier draw. The Gaia
+  // star catalog — the other NEAR0 pickable — self-binds its own camera the same
+  // way, so the two are order-independent within the pass.
   // The bytes are the SAME complete pick image point-sprites uploads —
   // `pickUniformBytesOf` against THIS row's slab view — so the billboard's
   // in-shader sizing reads the identical camera facts, just projected through

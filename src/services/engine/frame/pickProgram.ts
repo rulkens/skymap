@@ -35,8 +35,9 @@
  * this program allocates its own `pick:cosmo` (r32uint + depth24plus) and
  * `pick:near0` (r32uint + depth32float) targets, lazily and resize-aware, one
  * per slab that actually has an enabled pickable layer. A slab with no pickable
- * layer is never allocated — `pick:near0` exists only while the Milky-Way
- * impostor (the near-field slab's sole pickable) passes its visibility gate.
+ * layer is never allocated — `pick:near0` exists only while a near-field
+ * pickable (the Milky-Way impostor or the Gaia star catalog) passes its
+ * visibility gate; on a cosmic-zoom frame neither is enabled and it stays unallocated.
  *
  * @module
  */
@@ -216,8 +217,9 @@ export function createPickProgram(deps: {
   // within each slab (a `.filter()` keeps the array order), which is the
   // @group(0) prefix contract: point-sprites runs first in the COSMO pass and
   // leaves slot 0 bound to the shared pick camera for the ring / disk
-  // fold-ins. (The Milky-Way pick — alone in the NEAR0 pass — binds its own
-  // slot-0 camera and needs no prefix.)
+  // fold-ins. (The NEAR0 pickables — the Milky-Way impostor and the Gaia star
+  // catalog — share no such prefix: each binds its OWN complete slot-0 camera in
+  // its own draw, so their registry order carries no @group(0) dependence.)
   function pickablesBySlab(
     ctx: ReadyFrameContext,
   ): { slabIndex: number; layers: ContentLayer[] }[] {
