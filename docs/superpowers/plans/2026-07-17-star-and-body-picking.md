@@ -508,21 +508,26 @@ calls `state.gpu.starCatalogPickRenderer.draw(...)` once per source with the reb
 `enabled` is `starCatalogVisible` (already carries the foreground-distance + crossfade gate,
 `:196`), a cosmic-zoom frame never reaches this draw and `pick:near0` is not even allocated for it.
 
-- [ ] Add `starPickLeafDraws` (didactic docblock: why leaf-only + opacity>0; no re-traversal).
+- [x] Add `starPickLeafDraws` (didactic docblock: why leaf-only + opacity>0; no re-traversal).
       Add `starCatalogLayer.drawPick`. Rewrite the three §12 doc sites so "not pickable" is no
       longer asserted (state what IS true: leaf stars pick via `drawPick` on NEAR0).
-- [ ] Add the test `starPickLeafDraws excludes aggregates and zero-opacity leaves` — build a
+      _Executed notes: four additional comment sites whose 'sole pickable / alone in NEAR0'
+      claims this task falsified were corrected, and the pickables pin test went four → five.
+      The 'no re-traversal' framing above was itself inaccurate — the pick pass mints a fresh
+      ctx, so 'prepareStarCut' re-walks at pick time against the last-rendered camera; the
+      docblocks teach the real mechanism (reviewer-verified)._
+- [x] Add the test `starPickLeafDraws excludes aggregates and zero-opacity leaves` — build a
       `PreparedStarCut` with (a) an aggregate node in the aggregate stream, (b) a leaf at
       opacity 0, (c) a leaf at opacity > 0; assert only (c) appears in the result. The
       load-bearing "an aggregate or a fully-faded leaf never enters the pick draw" guard.
-- [ ] `npx vitest run tests/services/gpu/renderers/starCatalog/starPickLeafDraws.test.ts` → fail, implement, pass.
+- [x] `npx vitest run tests/services/gpu/renderers/starCatalog/starPickLeafDraws.test.ts` → fail, implement, pass.
 - [ ] **Visual verification (dev server):** descend into the Gaia star bubble; hover a star →
       expect a NEAR0 selection ring at the star + a "Field star" InfoCard (distance, abs/apparent
       mag, BP−RP, spectral class); click → expect the `#focus=star-<index>` hash and a camera
       focus tween; reload the URL → expect the same star re-selected (or cleared after a tier
       switch — the accepted stale-index behaviour). Confirm an aggregate glow (no individual
       star resolved) is NOT pickable.
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 8 — Entanglement-radar over the Stage 1 diff
 
