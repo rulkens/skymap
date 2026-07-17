@@ -684,3 +684,52 @@ The sphere geometry, the tint on-screen, and the sprite→sphere dissolve are
 verified **visually on the dev server** (meticulous-WGSL): descend into a focused
 field star; confirm a resolved sphere of the right colour, the near sprite gone
 (no swimming dot), and a seamless crossover with no gap.
+
+---
+
+## Amendment (2026-07-17): Stage 2 re-scope post-#444
+
+**Status:** Amendment (adjudicated after the famous-stars feature, #444, merged into this
+branch). Supersedes parts of §8.4; §8.1–§8.3 (the pick side) stand.
+
+#444 shipped a `body` arm on `FocusableTarget` and the whole **display** half of what §8.4
+projected as new work — but famous-stars-only, and with the arm's identifiers mis-named for
+"star". This amendment records how Stage 2 re-scopes around it.
+
+### Already shipped by #444 (§8.4 items now done, do NOT rebuild)
+
+- The `body` `FocusableTarget` arm (type `StarInfo` — the mis-named body arm —
+  `{ type: 'body'; id; label; positionMpc; radiusKm }`), plus `StarDetailCard` /
+  `CompactStarCard`, wired through the `body` row of `DETAIL_CARD`.
+- The `body` arm in `refOf`, `urlHashFor` (`hooks/urlHashFor.ts`), and `targetIdentityKey` — so
+  the three `Record<FocusableTargetType, …>` tables + `refOf` are already complete for `body`.
+- The `body-<id>` URL round-trip (`bodyFocusId.ts` + `resolveFocusId` + `focusIdOf`) and the
+  `focusFraming` `body` case (already generic via `bodyLikeFraming` — no guard).
+- `SelectionRef` / `SelectionRow` `body` arms and `extractSelectionRow.body` against
+  `SCENE_BODIES`.
+
+### What §8.4 gets wrong now, and the correction
+
+- **"`buildFocusable`'s body arm is a deliberate `null`."** No longer true — #444 made it a
+  `StarInfo` **guarded on `FAMOUS_STAR_IDS`** (Earth/planets return `null`). So the Stage-2 task
+  is not *fill a null* but **lift the guard** so every scene body resolves to a focusable
+  (plan Task 9).
+- **"`SelectionRow`'s body arm is extended to carry `absMag` / colour for scene-star bodies."**
+  DROPPED. #444's `StarDetailCard` reads a scene star's rich physical rows (spectral type, mass,
+  luminosity, …) from the async `famous_stars_meta.json` sidecar via `useFamousStarsMeta`, so the
+  `SelectionRow` body arm does **not** need `absMag` / `bpRp`, and `BodyInfo` stays #444's lean
+  shape. The pre-#444 richer `BodyInfo` sketch (with `x/y/z` + `absMag?` + `spectralClass?`) is
+  superseded.
+- **`selectionHaloTable.body` is still a `null` to fill** — unchanged from §8.4, filled with a
+  NEAR0-tagged descriptor (the Stage-1 slab-tagged halo gating; body halo arms carry NEAR0).
+
+### Naming correction (house naming-correctness convention)
+
+The `body`-arm type `StarInfo` and its cards `StarDetailCard` / `CompactStarCard` read "star" but
+mean "body" (the discriminant is `'body'` and, once the guard lifts, the arm carries Earth and
+planets). Type names track their discriminant, so Stage 2 renames them to `BodyInfo` /
+`BodyDetailCard` / `CompactBodyCard` (our survey-star `star` arm already owns the honest
+`FieldStar*` names from the merge). Done via `move-files` + a hand-rename of the exported symbols
+(plan Task 9). The renamed cards then grow a **non-star** body branch (name + radius, no
+famous-meta dependency) so a focused Earth / planet renders a real card, not a blank "Star" one
+(plan Task 13).

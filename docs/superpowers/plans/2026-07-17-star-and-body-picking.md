@@ -792,11 +792,110 @@ threshold with the layer it hands off to.
 
 # Stage 2 — Bodies (spec §8, §12)
 
-Earth / planets / scene stars become NEAR0 pickables carrying their stable seed index; the
-`body` selection plumbing (half-built by zoom-to-earth) gains its missing pieces. Independently
-shippable.
+Earth / planets / scene stars become NEAR0 pickables carrying their stable seed index. The
+`body` selection plumbing is now **more than half-built**: the zoom-to-earth palette search gave
+it the read side, and **#444 (famous stars), merged into this branch, shipped the whole display
+half** — so this stage adds the PICK side and lifts the star-only guard. Independently shippable.
 
-## Task 9 — Body pick shaders + `bodyPickRenderer` (spec §8.3)
+> **Re-scope (2026-07-17, post-#444).** This stage was drafted before #444 merged. #444 already
+> shipped the `body` `FocusableTarget` arm and its InfoCard / URL / framing plumbing — but
+> **star-only** (guarded on `FAMOUS_STAR_IDS`), and with the arm's type + cards **mis-named** for
+> "star" when the discriminant is `'body'`. What that changes here:
+>
+> - **Shipped by #444 (do NOT rebuild):** the `body` arm on `FocusableTarget` (type `StarInfo` —
+>   the mis-named body arm — `{ type: 'body'; id; label; positionMpc; radiusKm }`),
+>   `StarDetailCard` / `CompactStarCard`, the `body-<id>` URL round-trip (`bodyFocusId.ts` +
+>   `resolveFocusId` + `focusIdOf`), the `focusFraming` `body` case (already generic —
+>   `bodyLikeFraming`, no guard), the `SelectionRef` / `SelectionRow` `body` arms,
+>   `extractSelectionRow.body` against `SCENE_BODIES`, and the `body` arm in all four focusable
+>   tables (`buildFocusable`, `refOf`, `urlHashFor`, `targetIdentityKey`, `detailCardTable`).
+> - **T9 (new):** rename the mis-named identifiers to track the `body` discriminant — `StarInfo`
+>   → `BodyInfo`, `StarDetailCard` → `BodyDetailCard`, `CompactStarCard` → `CompactBodyCard`
+>   (house naming-correctness convention; large cross-cutting renames welcome) — and **lift the
+>   star-only guard** in `buildFocusable.body` so Earth / planets resolve to a focusable too.
+> - **T10–T12:** the actual new feature — the pick side (`bodyPickRenderer`, body-layer
+>   `drawPick`, the stable seed index), the three `RESOLVE_PICK` body arms, and the NEAR0 halo.
+>   This is where the work is.
+> - **T13 is mostly FOLDED:** the pre-#444 T13 ("build a `BodyInfo` focusable + cards + fill the
+>   four tables") is done by #444 + T9. What genuinely remains is teaching the (renamed) body
+>   cards to render a **non-star** body (Earth / a planet: name + radius, no famous-meta
+>   dependency), plus the §12 body doc cleanup.
+> - **The pre-#444 T12 `SelectionRow` stellar-field extension is DROPPED.** #444's card reads a
+>   scene star's rich rows (spectral type, mass, …) from the async `famous_stars_meta.json`
+>   sidecar (`useFamousStarsMeta`), so the `SelectionRow` `body` arm does **not** need
+>   `absMag` / `bpRp`, and `BodyInfo` keeps #444's lean shape — the richer `BodyInfo` the pre-#444
+>   draft sketched is superseded by the sidecar. Only the halo-fill half of the old T12 survives
+>   (into T12 below).
+
+## Task 9 — Rename the mis-named `body` arm + lift the star-only focusable guard (spec §8.4, naming convention)
+
+**Files (rename via `npm run move-files`, then hand-rename the exported symbols):**
+`src/@types/engine/StarInfo.d.ts` → `src/@types/engine/BodyInfo.d.ts` (+ rename the exported type),
+`src/components/InfoCard/StarDetailCard/` → `.../BodyDetailCard/` (`.tsx` + `.module.css`, + rename the component fn),
+`src/components/InfoCard/CompactStarCard/` → `.../CompactBodyCard/` (`.tsx` + `.module.css`, + rename the component fn),
+**then edited:**
+`src/services/engine/helpers/buildFocusable.ts` (lift the `FAMOUS_STAR_IDS` guard on the `body`
+arm, `:37`; drop the now-unused import),
+`src/services/engine/helpers/refOf.ts` + `src/components/InfoCard/detailCardTable.ts` (import the
+renamed identifiers — `move-files` rewrites the paths; the exported-symbol rename is manual),
+`tests/services/engine/helpers/buildFocusable.test.ts` (extend — Earth/planet now resolve).
+
+**Why the rename (house naming-correctness convention):** #444's `body`-arm type is named
+`StarInfo` and its cards `StarDetailCard` / `CompactStarCard` — names that read "star" but the
+arm's discriminant is `'body'` and (post-guard-lift) it carries Earth and planets, not only
+stars. Our `star` discriminant already owns the honest `FieldStar*` names (the #444 merge renamed
+ours to avoid the collision). Type names track their discriminant, so the `body` arm's names move
+to `Body*`. This is a `move-files` job (ts-morph rewrites every relative import + the `tests/`
+mirror); the exported **symbols** (`type StarInfo`, `function StarDetailCard`,
+`function CompactStarCard` and their `export default`) are renamed **by hand** after the move
+(move-files renames files/paths, not identifiers), and every importer updated. Grep for
+`StarInfo` / `StarDetailCard` / `CompactStarCard` afterwards (move-files blind spots: `?static` +
+string-literal paths — none expected here, but confirm). The two components go through the
+`create-component` skill (own folder, `<Name>.tsx` + `<Name>.module.css`, `function Name` +
+`export default Name`, top-level `.root`).
+
+**The guard lift (spec §8.4 — the substantive behaviour change):** `buildFocusable.body` today
+returns a focusable ONLY when `FAMOUS_STAR_IDS.has(row.id)`, mapping Earth/planets to `null` so
+they "stay body-unaware." Once bodies are pickable (T10–T12) every scene body needs a card + a
+`#focus=body-<id>` hash, so the arm builds a `BodyInfo` for **every** body row — drop the
+`FAMOUS_STAR_IDS` branch (`extractSelectionRow.body` already resolves any `SCENE_BODIES` id, and
+`focusFraming.body` is already guard-free). `BodyInfo` keeps #444's lean shape:
+
+```ts
+export type BodyInfo = {
+  readonly type: 'body';
+  readonly id: string;
+  readonly label: string;
+  readonly positionMpc: Vec3;
+  readonly radiusKm: number;
+};
+// buildFocusable.body(row) → BodyInfo (no FAMOUS_STAR_IDS gate):
+//   { type: 'body', id: row.id, label: row.label, positionMpc: row.positionMpc, radiusKm: row.radiusKm }
+```
+
+`FAMOUS_STAR_IDS` stays in use by the palette search (`famousStarsIndex.ts`) — only its
+`buildFocusable` consumer is removed. (The renamed body cards still render only the famous-star
+rich rows until T13 teaches them the non-star body case; between T9 and T13 a focused planet
+shows its label headline alone via the fail-soft famous-meta path — no crash, an incomplete card
+T13's visual pass finishes.)
+
+- [ ] `npm run move-files -- src/@types/engine/StarInfo.d.ts src/@types/engine/BodyInfo.d.ts`
+      (run `--dry` first), then the two card-folder moves. Rename the exported symbols
+      (`StarInfo`→`BodyInfo`, `StarDetailCard`→`BodyDetailCard`, `CompactStarCard`→`CompactBodyCard`)
+      via the `create-component` conventions; update every importer. Grep for the old names — no
+      straggler.
+- [ ] Lift the `FAMOUS_STAR_IDS` guard in `buildFocusable.body` (build a `BodyInfo` for every row);
+      remove the now-dead `FAMOUS_STAR_IDS` import from `buildFocusable.ts`.
+- [ ] Add the test `buildFocusable body resolves Earth and a planet (guard lifted)` — a
+      `body-earth` and a `body-jupiter` row each build a non-null `BodyInfo` with the row's
+      label/radius (both were `null` pre-lift); a famous-star `body-sirius` row still resolves.
+      Names the behaviour the lift changes.
+- [ ] `npx vitest run tests/services/engine/helpers/buildFocusable.test.ts` → fail, implement, pass.
+      `npm run typecheck` (both tsconfigs) → green (all four focusable tables already carry the
+      `body` arm — #444 — so the rename + lift keeps them green).
+- [ ] Commit.
+
+## Task 10 — Body pick shaders + `bodyPickRenderer` (spec §8.3)
 
 **Files:**
 `src/services/gpu/shaders/bodies/spherePick.wesl` (new — flat sphere pick),
@@ -804,7 +903,7 @@ shippable.
 `src/services/gpu/renderers/bodies/bodyPickRenderer.ts` (new),
 `src/@types/rendering/BodyPickRenderer.d.ts` (new type),
 `src/@types/engine/handles/EngineGpuHandles.d.ts` (add `bodyPickRenderer` handle),
-`src/services/engine/phases/{initGpu,wireInput}.ts` (construct it).
+`src/services/engine/phases/initGpu.ts` (construct it — see note).
 
 **Contract (own-uniform, no shared COSMO pick camera — bodies bake MVP CPU-side, §8.3):**
 
@@ -825,15 +924,20 @@ export type BodyPickRenderer = Renderer & {
 
 **Pipeline profile:** r32uint colour, NEAR0 `depth32float` depth, `less` + write-enabled (so a
 Moon in front of Earth resolves correctly, §8.3). Both entry points compile their OWN module +
-explicit pipeline layout. WESL comments single-quoted, no backticks.
+explicit pipeline layout. WESL comments single-quoted, no backticks. Follow the
+`starCatalogPickRenderer` idiom Stage 1 established (own GPUShaderModules, explicit BGLs).
 
 - [ ] Add `spherePick.wesl` + `starPointPick.wesl` + `bodyPickRenderer` + type + handle +
       construction. Didactic docblocks (why own-uniform not shared camera; why depth-tested).
+      Construct it in `phases/initGpu.ts` alongside `starCatalogPickRenderer` (`initGpu.ts:449`) —
+      Stage 1 built the pick renderers in `initGpu` only, mirroring `milkyWayPickRenderer`, NOT
+      `wireInput`.
 - [ ] No unit test (GPU). `npm run typecheck` (both tsconfigs) → green.
-- [ ] Visual verification is folded into Task 10 (once the layers wire the pick draws).
+- [ ] Visual verification is folded into Task 13 (once the layers wire the pick draws and
+      RESOLVE_PICK closes the loop).
 - [ ] Commit.
 
-## Task 10 — Body layers `drawPick` with stable seed index (spec §8.1, §8.3)
+## Task 11 — Body layers `drawPick` with stable seed index (spec §8.1, §8.3)
 
 **Files:**
 `src/services/engine/frame/passes/earthLayer.ts` (add `drawPick`),
@@ -845,9 +949,10 @@ explicit pipeline layout. WESL comments single-quoted, no backticks.
 
 **The stable seed index (spec §8.1 — NOT `instance_index`):** each body's pick id carries its
 index into its seed array (`SCENE_STARS` for `FamousStar`, `SCENE_PLANETS` for `Planet`, `0`
-for `Earth`), composed CPU-side. `planetsLayer` packs only resolved planets and
-`starSpheresLayer`/`starPointsLayer` draw a camera-dependent subset, so an instance slot shifts
-as bodies enter/leave the resolved set — the seed index does not.
+for `Earth`), composed CPU-side. `planetsLayer` packs only resolved planets and the #444-reworked
+`starSpheresLayer` / `starPointsLayer` draw `partitionStarsByResolution`'s camera-dependent
+subset of `visibleStars(state)`, so an instance slot shifts as bodies enter/leave the resolved
+set — the seed index does not.
 
 ```ts
 export function seedIndexOfBody(id: string, seeds: readonly { id: string }[]): number;   // indexOf by id
@@ -856,139 +961,125 @@ export function seedIndexOfBody(id: string, seeds: readonly { id: string }[]): n
 //   star spheres/points → Source.FamousStar, SCENE_STARS index.
 ```
 
-Each `drawPick` composes its body's MVP the same way its `draw` does (`composeBodyMvp` from
-`view.slab.vp`, `earthLayer.ts:101`) — bodies pick as their true depth-tested surface. The
-star-points `drawPick` rebases like its `draw` (`starPointsLayer.ts:132-147`) and hands
+**Key off the SAME visible/resolved set the visual `draw` uses (#444's rework).** Each star
+`drawPick` runs the identical `partitionStarsByResolution({ stars: visibleStars(state), … })`
+call its `draw` runs (`starSpheresLayer.ts:99`, `starPointsLayer.ts:126`), so the pick set matches
+the drawn set exactly — but the seed index is `seedIndexOfBody(star.id, SCENE_STARS)` into the
+FULL seed table, not the partition subset. `earthLayer` / `planetsLayer` `drawPick` compose the
+MVP the way their `draw` does (`composeBodyMvp` from `view.slab.vp`, `earthLayer.ts:101`;
+`planetsLayer` reusing the shared `planetResolvesPx` cull, `:71`) → `bodyPickRenderer.drawSphere`.
+The star-points `drawPick` rebases like its `draw` (`starPointsLayer.ts:134-183`) and hands
 `bodyPickRenderer.drawPoints` the ≤25 camera-relative points + seed-indexed packedIds.
 
-- [ ] Add `seedIndexOfBody` + the four `drawPick`s (each null-guards `state.gpu.bodyPickRenderer`).
+- [ ] Add `seedIndexOfBody` + the four `drawPick`s (each null-guards `state.gpu.bodyPickRenderer`;
+      each keys off the same visible/resolved subset its `draw` uses).
 - [ ] Add the test `seedIndexOfBody returns the seed array position` — a body id maps to its
       `SCENE_PLANETS` / `SCENE_STARS` index; an unknown id → −1.
 - [ ] `npx vitest run tests/services/engine/frame/passes/seedIndexOfBody.test.ts` → fail, implement, pass.
-- [ ] Commit (visual verification lands in Task 11 once RESOLVE_PICK closes the loop).
+- [ ] Commit (visual verification lands in Task 13 once RESOLVE_PICK closes the loop).
 
-## Task 11 — `RESOLVE_PICK` body arms + seed-index stability (spec §8.2, §11)
+## Task 12 — `RESOLVE_PICK` body arms + NEAR0 halo + seed-index stability (spec §8.2, §8.4, §11)
 
 **Files:** `src/services/engine/helpers/resolvePickTable.ts` (add `famousStar`/`planet`/`earth`
-arms), `tests/services/engine/helpers/resolvePickTable.test.ts` (extend),
-`tests/services/engine/frame/passes/planetsLayer.test.ts` (extend — the stability regression).
+arms), `src/services/engine/helpers/selectionHaloTable.ts` (fill the body arm — no longer `null`,
+`:80`), `tests/services/engine/helpers/resolvePickTable.test.ts` (extend),
+`tests/services/engine/helpers/selectionHaloTable.test.ts` (extend),
+`tests/services/engine/frame/passes/seedIndexOfBody.test.ts` (extend — the stability regression).
 
-**Arm contract (reuses the existing `{ type: 'body', id }` ref end-to-end):**
+Merges the pre-#444 T11 (RESOLVE_PICK arms + seed-index stability) with the **halo-fill** half of
+the pre-#444 T12; the `SelectionRow` stellar-field extension half is DROPPED (see the stage note
+— #444's card sources those rows from the famous-meta sidecar).
+
+**Arm + halo contract:**
 
 ```ts
-// keyed on SourceEntry['type']; each maps (code, seedIndex) → { type: 'body', id } via the seed array.
+// RESOLVE_PICK — keyed on SourceEntry['type']; each maps (code, seedIndex) → { type: 'body', id }
+// via the seed array. Reuses the existing `{ type: 'body', id }` ref end-to-end.
 famousStar: (_entry, pick) => { const b = SCENE_STARS[pick.localIdx];   return b ? { type: 'body', id: b.id } : null; },
 planet:     (_entry, pick) => { const b = SCENE_PLANETS[pick.localIdx]; return b ? { type: 'body', id: b.id } : null; },
 earth:      (_entry, pick) => (pick.localIdx === 0 ? { type: 'body', id: SCENE_EARTH.id } : null),
+// selectionHaloTable.body — was `null` under the COSMO Mpc-scale "meaningless chrome" assumption;
+// the NEAR0 ring layer (§9, already built in Task 5) draws px rings, meaningful around a body.
+// MUST carry the NEAR0 slab tag (Task-5 slab-tagged halo gating — the ledger records: body halo
+// arms carry NEAR0). Change the table's `body` sig from `(row: BodyRow) => null` to
+// `=> SelectionHalo`; `NEAR0` is already imported in the module for the `star` arm.
+body: (row) => ({
+  radiusMpc: 0,
+  worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
+  slab: NEAR0,
+}),
 ```
 
-- [ ] Add the three arms (import `SCENE_STARS` / `SCENE_PLANETS` / `SCENE_EARTH` — static, like
-      `extractSelectionRow` imports `SCENE_BODIES`).
+Filling the `body` halo arm with the NEAR0 tag lets the **existing** `near0SelectionRingLayer`
+(Task 5) draw the body ring with no new layer — its slab-exclusivity is already tested there.
+
+- [ ] Add the three `RESOLVE_PICK` arms (import `SCENE_STARS` / `SCENE_PLANETS` / `SCENE_EARTH` —
+      static, like `extractSelectionRow` imports `SCENE_BODIES`). Fill `selectionHaloTable.body`
+      with the NEAR0-tagged descriptor.
 - [ ] Add the test `RESOLVE_PICK body arms recover the seed id` — `famousStar`/`planet`/`earth`
       picks at known seed indices resolve to `{ type: 'body', id }` with the right id; an
       out-of-range index → null.
-- [ ] Add the test `a culled planet does not move another planet's pick id` (§8.1 regression) —
-      run `planetsLayer`'s pack loop (or the seed-index composition) with one planet sub-pixel so
-      it is skipped, and assert the packed pick id of a still-drawn planet is unchanged from the
-      all-visible case (the pick id is the seed index, not the pack-loop slot). Names the bug it
-      guards.
-- [ ] `npx vitest run tests/services/engine/helpers/resolvePickTable.test.ts tests/services/engine/frame/passes/planetsLayer.test.ts` → fail, implement, pass.
+- [ ] Add the test `a body's seed index is stable when a sibling is culled` (§8.1 regression) —
+      assert `seedIndexOfBody('jupiter', SCENE_PLANETS)` is unchanged when an earlier planet is
+      dropped from the drawn set, and differs from `'jupiter'`'s position in that culled list —
+      proving the pick id is the seed index, not the pack-loop slot. Names the bug it guards.
+- [ ] Add the test `selectionHalo returns a NEAR0 descriptor for a body row` (was null) — the body
+      arm now yields `{ radiusMpc: 0, worldPos, slab: NEAR0 }` at the body position.
+- [ ] `npx vitest run tests/services/engine/helpers/resolvePickTable.test.ts tests/services/engine/helpers/selectionHaloTable.test.ts tests/services/engine/frame/passes/seedIndexOfBody.test.ts` → fail, implement, pass.
 - [ ] Commit.
 
-## Task 12 — `SelectionRow` body arm extended + halo filled (spec §8.4)
+## Task 13 — Body cards render non-star bodies + §12 body doc cleanup (spec §8.4, §12)
+
+> **Folded:** the pre-#444 Task 13 (build a `BodyInfo` focusable + its cards + fill the four
+> focusable tables) is shipped by #444 (the tables + cards) and Task 9 (the rename + guard lift).
+> What genuinely remains is (a) teaching the renamed body cards to render a **non-star** body —
+> #444 built them famous-star-only — and (b) the §12 body "not pickable" doc cleanup.
 
 **Files:**
-`src/@types/engine/SelectionRow.d.ts` (extend the body arm with `absMag` / `bpRp`),
-`src/services/engine/helpers/extractSelectionRow.ts` (populate the new fields for scene stars, `:34`),
-`src/services/engine/helpers/selectionHaloTable.ts` (fill the body arm — no longer `null`, `:62`),
-plus mirror tests.
-
-**Contract (spec §8.4):** the body `SelectionRow` gains optional `absMag` / `bpRp` so a picked
-scene star (e.g. Sirius) shows the same stellar fields a picked Gaia star does, alongside the
-existing `positionMpc` / `radiusKm`. `EXTRACT_ROW.body` fills them for `SCENE_STARS` bodies (a
-`StarBody` carries `absMag`; BP−RP derives from its spectral-class colour, or is omitted when
-the seed carries no colour index — keep them optional so planets/Earth omit them). The
-`selectionHaloTable.body` arm returns the body's picked position + a px-based ring radius (the
-NEAR0 ring layer draws px rings, which ARE meaningful around a body — the old "meaningless
-chrome" assumption held only under COSMO's Mpc scale).
-
-```ts
-// SelectionRow body arm (extended):
-| { readonly type: 'body'; readonly id: string; readonly positionMpc: Vec3; readonly radiusKm: number;
-//   optional stellar fields for scene-star bodies:
-    readonly absMag?: number; readonly bpRp?: number }
-// selectionHaloTable.body(row) → { radiusMpc: 0, worldPos: row.positionMpc }   // px-floored by the layer
-```
-
-- [ ] Extend the body `SelectionRow` arm; populate `absMag`/`bpRp` in `EXTRACT_ROW.body` for
-      `SCENE_STARS` bodies; fill `selectionHaloTable.body`.
-- [ ] Add the test `EXTRACT_ROW body carries stellar fields for a scene star` — a `body-sirius`
-      ref → a row with `absMag`/`bpRp` set; a `body-earth` / `body-jupiter` ref → a row with them
-      omitted.
-- [ ] Add the test `selectionHalo returns a descriptor for a body row` (was null) — asserts the
-      body arm now yields `{ radiusMpc, worldPos }` at the body position.
-- [ ] `npx vitest run tests/services/engine/helpers/extractSelectionRow.test.ts tests/services/engine/helpers/selectionHaloTable.test.ts` → fail, implement, pass.
-- [ ] Commit.
-
-## Task 13 — `BodyInfo` focusable + cards + fill focusable tables + doc cleanup (spec §8.4, §12)
-
-**Files:**
-`src/@types/engine/BodyInfo.d.ts` (new type),
-`src/@types/engine/FocusableTarget.d.ts` (add `BodyInfo`),
-`src/services/engine/helpers/buildFocusable.ts` (flip `body` arm null → real `BodyInfo`, `:26`),
-`src/services/engine/helpers/refOf.ts` (add `body` arm),
-`src/hooks/urlHashFor.ts` (add `body` arm),
-`src/services/engine/helpers/targetIdentityKey.ts` (add `body` arm),
-`src/components/InfoCard/detailCardTable.ts` (add `body` row),
-`src/components/InfoCard/BodyDetailCard/BodyDetailCard.{tsx,module.css}` (new — `create-component`),
-`src/components/InfoCard/CompactBodyCard/CompactBodyCard.{tsx,module.css}` (new — `create-component`),
-`src/@types/data/body/{EarthSourceEntry,PlanetSourceEntry,FamousStarSourceEntry}.d.ts`
-(rewrite the "Bodies are not pickable" comment — §12),
+`src/components/InfoCard/BodyDetailCard/BodyDetailCard.tsx` (render the non-star body case),
+`src/components/InfoCard/CompactBodyCard/CompactBodyCard.tsx` (same),
 `src/data/source.ts` (rewrite the body "not pickable" doc lines, `:142/:150/:157` — §12),
-`src/data/sources.ts` (rewrite the body "not pickable" line, `:26` — §12),
-plus mirror tests.
+`src/data/sources.ts` (rewrite the body "not pickable" clause, `:26` — §12),
+`src/@types/data/body/{EarthSourceEntry,PlanetSourceEntry,FamousStarSourceEntry}.d.ts`
+(rewrite the "not pickable" comment — §12),
+`tests/components/InfoCard/BodyDetailCard.test.tsx` (new — the non-star branch).
 
-**`BodyInfo` shape (a FocusableTarget arm — filling the deliberate `buildFocusable.body` null,
-`buildFocusable.ts:26`):**
+**Contract:** `BodyDetailCard` today assumes a famous star — eyebrow "Star", rows from
+`useFamousStarsMeta`. For a non-star body (Earth, a planet) it must show the body's name + physical
+radius (km) with a body-appropriate eyebrow and NO famous-meta dependency. Branch on
+`FAMOUS_STAR_IDS.has(target.id)`: a famous star keeps today's rich meta card; any other body
+renders the lean name + radius card. `CompactBodyCard` likewise shows the label (no meta-only
+rows) for a non-star body. `BodyInfo` already carries `radiusKm`, so no new field. Preserve the
+outer-wrapper-stable contract (no `<details>` remount on hover, CLAUDE.md).
 
-```ts
-export type BodyInfo = {
-  readonly type: 'body';
-  readonly id: string;
-  readonly displayName: string;          // the seed label (SCENE_BODIES.find(id).label)
-  readonly x: number; readonly y: number; readonly z: number;   // for framing
-  readonly radiusKm: number;
-  // stellar fields present only for scene-star bodies (from the extended SelectionRow):
-  readonly absMag?: number; readonly spectralClass?: number | string;
-};
-```
-
-`buildFocusable.body` builds it from the row (label via `SCENE_BODIES`); `BodyDetailCard`
-renders the body's name + radius (+ stellar rows when present). URL/identity arms mirror the
-star arms with the `body-` prefix (`urlHashFor.body → body-<id>`, `targetIdentityKey.body →
-body:<id>`, `refOf.body → { type: 'body', id }`). Adding `BodyInfo` to `FocusableTarget`
-compile-forces all four focusable tables (P2).
-
-- [ ] `create-component` for `BodyDetailCard` + `CompactBodyCard`.
-- [ ] Add `BodyInfo.d.ts`; widen `FocusableTarget`; fill `buildFocusable.body` (real),
-      `refOf.body`, `urlHashFor.body`, `targetIdentityKey.body`, `detailCardTable.body`. Rewrite
-      the §12 body "not pickable" doc sites.
-- [ ] Add the test `buildFocusable body builds a BodyInfo` — a `body-earth` row → a `BodyInfo`
-      with the label/radius; a scene-star `body-sirius` row → a `BodyInfo` carrying its `absMag`.
-- [ ] `npx vitest run tests/services/engine/helpers/buildFocusable.test.ts` → fail, implement, pass.
+- [ ] Extend `BodyDetailCard` / `CompactBodyCard` (via `create-component`) to render a non-star
+      body (name + radius, body eyebrow, no meta lookup) while keeping the famous-star rich path.
+      Rewrite the §12 body "not pickable" doc sites — state what IS true: scene bodies pick via
+      `drawPick` on the NEAR0 pick pass; a body's identity is its stable seed id.
+- [ ] Add the test `BodyDetailCard shows a planet's radius and omits the stellar rows` — render a
+      `body-jupiter` `BodyInfo`; assert the radius row is present and the spectral/meta rows are
+      absent (the branch worth pinning; a famous-star render still shows the meta rows once loaded).
+- [ ] `npx vitest run tests/components/InfoCard/BodyDetailCard.test.tsx` → fail, implement, pass.
       `npm run typecheck` (both tsconfigs) → green.
 - [ ] **Visual verification (dev server):** in the near-field descent, hover Earth / a planet /
       the Sun / Sirius → expect a body InfoCard + a NEAR0 ring at the body; click → expect the
       `#focus=body-<id>` hash + a focus tween; confirm a Moon in front of Earth picks the Moon
-      (depth-tested), and a sub-pixel scene-star dot is still pickable at its true position.
+      (depth-tested), a sub-pixel scene-star dot is still pickable at its true position, and Earth /
+      a planet shows a body card (name + radius), not a blank "Star" card.
 - [ ] Commit.
 
 ## Task 14 — Entanglement-radar over the Stage 2 diff
 
-- [ ] Run `entanglement-radar` over the Stage 2 diff (Tasks 9–13). Watch for the star/body arms
-      drifting into a shared-but-forked shape (e.g. two nearly-identical `drawPick` seed-index
-      packers that should fold into one) and the `SelectionRow` stellar fields being read for
-      truth in two places. Un-braid via `/simplify` where clear; else backlog it.
+- [ ] Run `entanglement-radar` over the Stage 2 diff (Tasks 9–13). Named confirmations for the
+      revised scope: (a) the rename left no `StarInfo` / `StarDetailCard` / `CompactStarCard`
+      straggler and the `body`-arm names now track the `'body'` discriminant (grep clean); (b) the
+      star and body `drawPick` seed-index packers did NOT fork into two near-duplicate packers —
+      the one shared `seedIndexOfBody` helper + `bodyPickRenderer`'s two honest entry points
+      (`drawSphere` / `drawPoints`) are the only seed-index sites; (c) the `star` + `body` halo
+      arms both carry the NEAR0 slab tag and neither duplicates the ring-layer gate (the Task-5
+      slab-exclusivity test still holds); (d) the guard lift left no dead `FAMOUS_STAR_IDS` branch
+      in `buildFocusable`. Un-braid via `/simplify` where clear; else capture in `docs/BACKLOG.md`
+      per backlog hygiene.
 - [ ] `npm run typecheck` (both tsconfigs) + `npm test` → green.
 - [ ] Commit any fixes.
 
