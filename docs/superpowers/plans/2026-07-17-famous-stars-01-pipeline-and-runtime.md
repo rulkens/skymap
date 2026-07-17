@@ -662,7 +662,7 @@ diff. Specifically check:
 - The generated `.ts` is written by exactly one tool and consumed synchronously; no second
   parse path.
 
-- [ ] Run `entanglement-radar`; if it names a knot, either fix it in a follow-up commit
+- [x] Run `entanglement-radar`; if it names a knot, either fix it in a follow-up commit
       (main thread edits or a dispatched implementer) or record why it's essential. Report
       findings.
 
