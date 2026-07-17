@@ -5,13 +5,15 @@
  * Coverage focus:
  *   - No-op when `showPickBuffer` is off.
  *   - No-op when `pickProgram` / `pickDebugOverlay` is null.
- *   - No-op when `pickProgram.renderForDebug()` returns null (engine not ready
- *     to pick, or no cosmological pickable layer enabled).
+ *   - No-op when `pickProgram.renderForDebug()` returns an empty array (engine
+ *     not ready to pick, or no slab has an enabled pickable layer).
  *   - Calls `renderForDebug()` and submits an overlay pass when all conditions
- *     are met.
+ *     are met, drawing each returned slab texture far→near in ONE pass so the
+ *     premultiplied OVER blend gives near-wins compositing.
  *
  * The what-is-pickable and is-the-engine-ready decisions all live inside
- * `pickProgram` now — this helper only asks it for a texture and composites it.
+ * `pickProgram` now — this helper only asks it for the slab textures and
+ * composites them.
  * The helper is called from `runFrame` AFTER the main `renderFrame` submit, so
  * it uses a separate encoder with `loadOp: 'load'` — the tests assert that the
  * swap-chain view is acquired fresh and the pass preserves the frame beneath.
@@ -99,17 +101,18 @@ function makeDeps(callLog: string[]): DrawPickDebugOverlayDeps {
 
 /**
  * Build a minimal EngineState fragment. `showPickBuffer` gates the whole
- * helper; `pickProgram.renderForDebug()` returns the pick texture (or null);
- * `pickDebugOverlay.draw` is the composite step.
+ * helper; `pickProgram.renderForDebug()` returns the slab pick textures
+ * far→near (empty for nothing to show); `pickDebugOverlay.draw` is the
+ * composite step, invoked once per returned texture.
  */
 function makeState({
   showPickBuffer = true,
-  renderForDebugResult = makePickTex() as GPUTexture | null,
+  renderForDebugResult = [makePickTex()] as readonly GPUTexture[],
 }: {
   showPickBuffer?: boolean;
-  renderForDebugResult?: GPUTexture | null;
+  renderForDebugResult?: readonly GPUTexture[];
 } = {}) {
-  const renderForDebug = vi.fn<() => GPUTexture | null>(() => renderForDebugResult);
+  const renderForDebug = vi.fn<() => readonly GPUTexture[]>(() => renderForDebugResult);
   const overlayDraw = vi.fn<(pass: GPURenderPassEncoder, view: GPUTextureView) => void>();
 
   return {
@@ -158,10 +161,10 @@ describe('drawPickDebugOverlay', () => {
     expect(callLog).toHaveLength(0);
   });
 
-  it('is a no-op when renderForDebug returns null (no pick texture)', () => {
+  it('is a no-op when renderForDebug returns an empty array (no pickable slab)', () => {
     const callLog: string[] = [];
     const deps = makeDeps(callLog);
-    const state = makeState({ renderForDebugResult: null });
+    const state = makeState({ renderForDebugResult: [] });
     drawPickDebugOverlay(state, deps);
     // createCommandEncoder must NOT have been called.
     expect(callLog.find((e) => e === 'device.createCommandEncoder')).toBeUndefined();
@@ -213,7 +216,7 @@ describe('drawPickDebugOverlay', () => {
     const callLog: string[] = [];
     const deps = makeDeps(callLog);
     const pickTex = makePickTex();
-    const state = makeState({ renderForDebugResult: pickTex });
+    const state = makeState({ renderForDebugResult: [pickTex] });
     drawPickDebugOverlay(state, deps);
 
     const drawSpy = state.gpu.pickDebugOverlay!.draw as ReturnType<typeof vi.fn>;
@@ -221,5 +224,32 @@ describe('drawPickDebugOverlay', () => {
     const [, viewArg] = drawSpy.mock.calls[0]!;
     // The view is the one createView() returned on the pick texture.
     expect(viewArg).toBe((pickTex.createView as ReturnType<typeof vi.fn>).mock.results[0]!.value);
+  });
+
+  it('composites every returned texture in one pass, far→near, in order', () => {
+    // renderForDebug returns FAR → NEAR; the overlay must draw each texture into
+    // the single pass in that order so the near slab (drawn last) composites on
+    // top under the premultiplied OVER blend — mirroring frontmostPick.
+    const callLog: string[] = [];
+    const deps = makeDeps(callLog);
+    const farTex = makePickTex();
+    const nearTex = makePickTex();
+    const state = makeState({ renderForDebugResult: [farTex, nearTex] });
+    drawPickDebugOverlay(state, deps);
+
+    // A single overlay pass is opened, and draw is invoked once per texture.
+    const beginCalls = (
+      (deps.device.createCommandEncoder as ReturnType<typeof vi.fn>).mock.results[0]!
+        .value as GPUCommandEncoder
+    ).beginRenderPass as ReturnType<typeof vi.fn>;
+    expect(beginCalls).toHaveBeenCalledOnce();
+
+    const drawSpy = state.gpu.pickDebugOverlay!.draw as ReturnType<typeof vi.fn>;
+    expect(drawSpy).toHaveBeenCalledTimes(2);
+    const viewOrder = drawSpy.mock.calls.map(([, view]) => view);
+    expect(viewOrder).toEqual([
+      (farTex.createView as ReturnType<typeof vi.fn>).mock.results[0]!.value,
+      (nearTex.createView as ReturnType<typeof vi.fn>).mock.results[0]!.value,
+    ]);
   });
 });

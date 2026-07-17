@@ -98,7 +98,9 @@ function makeDevice(
   const device = {
     createTexture: vi.fn((desc: { format: GPUTextureFormat; label?: string }) => {
       createTextureCalls.push({ format: desc.format, label: desc.label });
-      return { createView: () => ({}), destroy: vi.fn() };
+      // `__label` lets a test correlate a returned GPUTexture back to its slab
+      // (pick:cosmo-target / pick:near0-target) — used to assert far→near order.
+      return { createView: () => ({}), destroy: vi.fn(), __label: desc.label };
     }),
     createBuffer: vi.fn((desc?: { label?: string }) => {
       const label = desc?.label ?? '';
@@ -313,8 +315,8 @@ describe('createPickProgram', () => {
 
   it('renderForDebug records the same draws without readback and ignores inFlight', async () => {
     // A hanging pick keeps the program's inFlight guard set; renderForDebug
-    // must still record the cosmological draws and return the pick texture —
-    // it never touches the staging buffers the guard protects.
+    // must still record the pickable draws and return the pick texture — it
+    // never touches the staging buffers the guard protects.
     let resolveFirst!: () => void;
     const firstMap = new Promise<void>((res) => {
       resolveFirst = res;
@@ -335,14 +337,76 @@ describe('createPickProgram', () => {
     expect(drawPick).toHaveBeenCalledTimes(1);
     const copiesAfterPick = getCopyCount();
 
-    const debugTex = program.renderForDebug();
-    expect(debugTex).not.toBeNull();
+    const debugTextures = program.renderForDebug();
+    expect(debugTextures).toHaveLength(1);
     // The debug recording replays the same drawPick — no extra readback.
     expect(drawPick).toHaveBeenCalledTimes(2);
     expect(getCopyCount()).toBe(copiesAfterPick); // renderForDebug issues no copyTextureToBuffer
 
     resolveFirst();
     await inFlightPick;
+  });
+
+  it('renderForDebug returns the NEAR0 texture when only a NEAR0 pickable is enabled', () => {
+    // The regression the old COSMO-only filter caused: a star / Milky-Way pick
+    // lives on NEAR0, and the debug overlay used to skip it entirely. With no
+    // COSMO pickable enabled, renderForDebug must still return the NEAR0 slab's
+    // pick texture (length 1) rather than an empty array.
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
+
+    const layers = [makeLayer({ name: 'star', slab: NEAR0, enabled: true, drawPick: vi.fn() })];
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      layers,
+    });
+
+    const textures = program.renderForDebug() as ReadonlyArray<{ __label?: string }>;
+    expect(textures).toHaveLength(1);
+    expect(textures[0]!.__label).toBe('pick:near0-target');
+  });
+
+  it('renderForDebug returns every enabled slab far→near', () => {
+    // Both slabs have an enabled pickable. renderForDebug returns their pick
+    // textures ordered FAR → NEAR so the overlay paints far first and near on
+    // top — the same near-wins occlusion frontmostPick folds for hover/click.
+    // NEAR0 (index 0) is nearest, COSMO (index 1) is farther, so the returned
+    // order is [cosmo, near0].
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
+
+    const layers = [
+      makeLayer({ name: 'cosmo', slab: COSMO, enabled: true, drawPick: vi.fn() }),
+      makeLayer({ name: 'near', slab: NEAR0, enabled: true, drawPick: vi.fn() }),
+    ];
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      layers,
+    });
+
+    const textures = program.renderForDebug() as ReadonlyArray<{ __label?: string }>;
+    expect(textures.map((t) => t.__label)).toEqual(['pick:cosmo-target', 'pick:near0-target']);
+  });
+
+  it('renderForDebug returns an empty array when no slab has an enabled pickable', () => {
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
+
+    const layers = [
+      makeLayer({ name: 'disabled', slab: COSMO, enabled: false, drawPick: vi.fn() }),
+    ];
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      layers,
+    });
+
+    expect(program.renderForDebug()).toEqual([]);
   });
 
   it('returns null when the engine is not ready to pick', async () => {

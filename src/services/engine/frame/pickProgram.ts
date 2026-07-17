@@ -291,24 +291,40 @@ export function createPickProgram(deps: {
     }
   }
 
-  function renderForDebug(): GPUTexture | null {
+  function renderForDebug(): readonly GPUTexture[] {
     const ctx = pickFrameContext(state, canvas);
-    if (ctx === null) return null;
+    if (ctx === null) return [];
 
-    // The debug overlay samples the cosmological slab's pick texture.
-    const cosmoPickables = layers.filter(
-      (l) => l.drawPick && l.slab === COSMO && l.enabled(state, ctx),
-    );
-    if (cosmoPickables.length === 0) return null;
+    // The debug overlay samples EVERY slab that has an enabled pickable layer —
+    // not just the cosmological slab. Reuse the same slab enumeration the real
+    // `pick()` path uses (`pickablesBySlab`, near→far) so star / Milky-Way picks
+    // on NEAR0 show up in the overlay too.
+    const groups = pickablesBySlab(ctx);
+    if (groups.length === 0) return [];
 
-    const target = ensureSlabTextures(COSMO, canvas.width, canvas.height);
-    // No timing descriptor: the debug overlay is not the timed 'pick' pass —
-    // it only writes the texture the overlay samples, and consuming the shared
-    // query-set slot here would double-book it against a real pick.
+    const w = canvas.width;
+    const h = canvas.height;
+    // Record every slab's pick pass on ONE encoder. Each slab writes its OWN
+    // colour + depth textures and each layer's `drawPick` binds its own per-draw
+    // uniforms, so the passes share no mutable buffer — no writeBuffer/submit
+    // ordering hazard from batching them. No timing descriptor: the debug
+    // overlay is not the timed 'pick' pass, and consuming the shared query-set
+    // slot here would double-book it against a real pick.
     const encoder = device.createCommandEncoder({ label: 'pick-program-debug-encoder' });
-    recordSlabPass(encoder, COSMO, target, ctx, cosmoPickables, undefined);
+    const texturesNearToFar: GPUTexture[] = [];
+    for (const { slabIndex, layers: slabPickables } of groups) {
+      const target = ensureSlabTextures(slabIndex, w, h);
+      recordSlabPass(encoder, slabIndex, target, ctx, slabPickables, undefined);
+      texturesNearToFar.push(target.pickTexture);
+    }
     device.queue.submit([encoder.finish()]);
-    return target.pickTexture;
+
+    // Return FAR → NEAR so the caller can paint the textures in order with the
+    // overlay's premultiplied OVER blend: farther slabs first, nearer slabs on
+    // top. Because background texels pack to 0 (alpha 0 → no-op blend), a nearer
+    // slab's real pick composites over a farther one — the same near-wins
+    // occlusion `frontmostPick` folds on the CPU for the hover/click path.
+    return texturesNearToFar.reverse();
   }
 
   function destroy(): void {
