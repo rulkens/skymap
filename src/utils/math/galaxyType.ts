@@ -90,12 +90,17 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.DebugSpherical:
     case Source.MilkyWay:
     case Source.Flow:
-    case Source.Star:
+    case Source.FamousStar:
     case Source.Planet:
     case Source.Earth:
-      // Non-galaxy catalog sources (structure markers, filaments, volumes,
-      // the Milky-Way + flow overlays, and body sources like star/planet/Earth) have no
-      // per-record photometry and no galaxy type. Reaching this branch
+    case Source.GaiaStars:
+      // Non-galaxy catalog sources have no galaxy type. Most (structure
+      // markers, filaments, volumes, the Milky-Way + flow overlays, and body
+      // sources like famous star/planet/Earth) carry no per-record photometry
+      // at all. The Gaia star catalog is the exception that proves the rule:
+      // it's a point-source star survey whose records DO carry photometry,
+      // but stellar photometry is not galaxy photometry, so it has no galaxy
+      // classification either. Reaching this branch
       // indicates the InfoCard is rendering a galaxy row for a
       // non-galaxy catalog pick / handle; route those through their own info
       // panel instead.

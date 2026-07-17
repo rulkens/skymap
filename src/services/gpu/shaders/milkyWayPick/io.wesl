@@ -19,17 +19,19 @@
 // ## Bindings the pipeline declares
 //
 //   @group(0) Uniforms — a prefix mirror of the points pick uniform
-//             buffer (points/io.wesl::Uniforms).  pickMilkyWay does NOT
-//             bind @group(0); it reuses the caller's bind group (the
-//             galaxy pick draws bound the full 176-byte points pick
-//             buffer immediately before), so the mirrored struct below
-//             must byte-match the points layout for every field it
-//             declares.  Reads extend through 'pxPerRad' at byte 108 —
-//             i.e. the first 112 bytes of that buffer, not just the
-//             80-byte CameraUniforms prefix — because the vertex stage
-//             derives the billboard's apparent size the same way the
-//             points shader does (camPosWorld + pxPerRad + the
-//             pointSizePx floor).
+//             image (points/io.wesl::Uniforms).  pickMilkyWay binds its
+//             OWN buffer here: the MW is the sole pickable in the NEAR0
+//             pick pass, so there is no caller-bound slot 0 to inherit.
+//             The BYTES are still the full points pick image — the layer
+//             builds them with pickUniformBytesOf, the same packer the
+//             points pick uses — so the mirrored struct below must
+//             byte-match the points layout for every field it declares.
+//             Reads extend through 'pxPerRad' at byte 108 — i.e. the
+//             first 112 bytes of that image, not just the 80-byte
+//             CameraUniforms prefix — because the vertex stage derives
+//             the billboard's apparent size the same way the points
+//             shader does (camPosWorld + pxPerRad + the pointSizePx
+//             floor).
 //   @group(1) FadeUniforms — declared for layout symmetry with the
 //             points / structure pick pipelines (the prior pass left a
 //             fade bind group at slot 1).  This shader never reads it; a
@@ -45,8 +47,8 @@ import package::lib::camera::CameraUniforms;
 // Field-for-field prefix of 'points/io.wesl::Uniforms' — same names,
 // same offsets — truncated after the last field this shader reads.
 // Mirroring the points layout (rather than inventing a private camera
-// struct) is what lets the MW draw reuse the caller's bound @group(0)
-// and read the exact uniform bytes the pick pass replays:
+// struct) is what lets the MW draw consume the pickUniformBytesOf image
+// verbatim and read the exact camera facts the pick pass replays:
 //
 //   offset 0  : cam            CameraUniforms (80 B)
 //   offset 80 : selectedPacked u32   (unread here)

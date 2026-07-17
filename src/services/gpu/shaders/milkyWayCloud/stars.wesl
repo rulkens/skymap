@@ -52,6 +52,10 @@ import package::lib::camera::worldToClip;
 import package::lib::cloudSprite::fluxConservingLod;
 import package::lib::cloudSprite::starGlowAlpha;
 
+// Depth epsilon: pull the clamped clip-z this far inside the far plane so a
+// sprite sitting exactly ON it still passes the clip test.
+const CLIP_Z_EPS: f32 = 1e-4;
+
 struct VSOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
@@ -103,6 +107,15 @@ fn vs(@location(0) corner: vec2<f32>,
       kClip = vec4<f32>((cN + d) * kClip.w, kClip.z, kClip.w);
     }
   }
+
+  // Survive the adaptive NEAR0 far plane: on a deep descent (or a tight orbit
+  // of another local-volume body) the foreground far plane pulls inside the
+  // disc's far edge, and without this the distant half of the cloud is
+  // frustum-clipped while the approach fade still shows it. Clamp clip-z just
+  // inside the far plane instead — identical to starCatalog/vertex.wesl. Safe
+  // ONLY because this is a depthless pass (no depth test/write in the
+  // pipeline), so the clamped depth perturbs no depth compare.
+  kClip.z = min(kClip.z, kClip.w * (1.0 - CLIP_Z_EPS));
 
   // Flux-conserving LOD — the band math and its tuning rationale live in
   // lib/cloudSprite.wesl, shared with the galaxy-renderer tool's passes.

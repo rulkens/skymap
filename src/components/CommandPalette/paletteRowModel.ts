@@ -30,8 +30,8 @@ export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as con
  * for the durable focus id.  `milkyWay` carries no payload — it's the singleton
  * FocusableTarget, resolved by the saga.  `body` carries a seeded scene body
  * (Earth, the stars, the planets — the `SceneBody` union; the row only reads
- * the shared `id`/`label` fields); it surfaces only behind the `deepZoom` URL
- * gate (see `rankPaletteMatches`).
+ * the shared `id`/`label` fields); it's scored and ranked in like a famous
+ * row (see `rankPaletteMatches`).
  */
 export type ScoredRow =
   | { kind: 'famous'; entry: FamousMetaEntry; score: number }

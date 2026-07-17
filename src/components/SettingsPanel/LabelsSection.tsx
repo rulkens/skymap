@@ -3,12 +3,14 @@
  * LabelsSection — presentational component for the Labels thematic group
  * inside the SettingsPanel.
  *
- * Owns the Labels thematic group UI: the tri-state master toggle and per-
- * category label checkboxes. Isolating this into its own component ensures a
+ * Owns the Labels thematic group UI: the tri-state master toggle, the per-
+ * category label checkboxes, and the two foreground scene-body caption rows
+ * (star names, planet names). Isolating this into its own component ensures a
  * label toggle re-renders ONLY this section rather than the entire HUD. The
  * section owns the tri-state master derivation (the `labelsMaster` object) —
- * that logic is section-local, summarising the per-category toggles that live
- * right here, so it belongs here, not in a shared parent.
+ * that logic is section-local, summarising EVERY row in the section (the COSMO
+ * label categories plus the two foreground caption rows), so it belongs here,
+ * not in a shared parent.
  *
  * Three kinds of sources bear labels, which the container routes to three
  * dispatch homes (structure / milkyWay singleton / galaxy catalog). This
@@ -43,6 +45,10 @@ type LabelsSectionProps = {
   starLabelsEnabled: boolean;
   /** Called when the user toggles the local-star captions on or off. */
   onSetStarLabelsEnabled: (enabled: boolean) => void;
+  /** Whether the Earth + planet captions in the true-scale foreground are shown. */
+  planetLabelsEnabled: boolean;
+  /** Called when the user toggles the Earth + planet captions on or off. */
+  onSetPlanetLabelsEnabled: (enabled: boolean) => void;
 };
 
 // ── LabelsSection ──────────────────────────────────────────────────────────────
@@ -60,16 +66,23 @@ function LabelsSection({
   onSetLabelCategoryVisibility,
   starLabelsEnabled,
   onSetStarLabelsEnabled,
+  planetLabelsEnabled,
+  onSetPlanetLabelsEnabled,
 }: LabelsSectionProps) {
   // ── Master tri-state derivation ──────────────────────────────────────────────
-  // Tri-state master = how many LABEL_CATEGORIES are currently label-visible.
+  // Tri-state master = how many of the section's rows are currently label-
+  // visible. The rows are the COSMO LABEL_CATEGORIES PLUS the two foreground
+  // caption rows (star names, planet names) — the master summarises every row
+  // the section renders, so those two count toward it even though they live in
+  // their own settings cluster rather than the category map.
   // Tri-state click convention (Windows Explorer / Finder / GitHub file-tree):
   //   "none" → set all on; "all" or "mixed" → clear everything.
-  const enabledCount = LABEL_CATEGORIES.reduce<number>(
-    (n, cat) => (labelCategoryVisibility[cat] ? n + 1 : n),
-    0,
-  );
-  const allOn = enabledCount === LABEL_CATEGORIES.length;
+  const total = LABEL_CATEGORIES.length + 2;
+  const enabledCount =
+    LABEL_CATEGORIES.reduce<number>((n, cat) => (labelCategoryVisibility[cat] ? n + 1 : n), 0) +
+    (starLabelsEnabled ? 1 : 0) +
+    (planetLabelsEnabled ? 1 : 0);
+  const allOn = enabledCount === total;
   const noneOn = enabledCount === 0;
   const labelsMaster = {
     allOn,
@@ -79,6 +92,8 @@ function LabelsSection({
       for (const cat of LABEL_CATEGORIES) {
         onSetLabelCategoryVisibility(cat, targetEnabled);
       }
+      onSetStarLabelsEnabled(targetEnabled);
+      onSetPlanetLabelsEnabled(targetEnabled);
     },
   };
 
@@ -103,9 +118,11 @@ function LabelsSection({
           />
         </div>
       ))}
-      {/* The local-star captions are a foreground scene-body set, not a COSMO
-          label category, so they get their own row rather than joining the
-          category map above. */}
+      {/* The foreground scene-body captions (local-star map, Earth + planets)
+          are not COSMO label categories, so they get their own rows rather than
+          joining the category map above — they live in the `labels` settings
+          cluster, not the structure/galaxy-catalog registries. They still count
+          toward the master tri-state, which summarises every row in the section. */}
       <div className={styles.panelRow}>
         <label htmlFor="toggle-label-stars">Star names</label>
         <input
@@ -113,6 +130,15 @@ function LabelsSection({
           type="checkbox"
           checked={starLabelsEnabled}
           onChange={(e) => onSetStarLabelsEnabled(e.target.checked)}
+        />
+      </div>
+      <div className={styles.panelRow}>
+        <label htmlFor="toggle-label-planets">Planet names</label>
+        <input
+          id="toggle-label-planets"
+          type="checkbox"
+          checked={planetLabelsEnabled}
+          onChange={(e) => onSetPlanetLabelsEnabled(e.target.checked)}
         />
       </div>
     </CollapsibleSection>

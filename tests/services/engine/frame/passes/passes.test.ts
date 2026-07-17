@@ -31,6 +31,9 @@ import {
   horizonShellLayer,
   starPointsLayer,
   orbitTrailsLayer,
+  starCatalogLayer,
+  starAggregatesLayer,
+  starAggregateUpsampleLayer,
   foregroundLabelsLayer,
   structureMarkersLayer,
 } from '../../../../../src/services/engine/frame/passes';
@@ -95,9 +98,10 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     isReady: true,
     cam,
     vp,
-    // Index 0 (NEAR0) is unused by every test below; duplicating the
-    // cosmological row there keeps the array non-empty without a
-    // near-field fixture no test reads.
+    // Index 0 (NEAR0) duplicates the cosmological row: the milky-way draw
+    // tests resolve slabViewOf(ctx, NEAR0) (the layer's slab), and reusing
+    // the cosmo fixture there gives them a real vp without a bespoke
+    // near-field double.
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
     drawCamPos,
@@ -181,7 +185,6 @@ const HDR_NAMES = [
   'point-sprites',
   'procedural-disks',
   'textured-disks',
-  'milky-way',
   'filaments',
   'flow',
   'volume-upsample',
@@ -209,10 +212,15 @@ const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets'];
 
 // The near-field hdr rows: the layers that pair the hdr target with the
 // near0 slab — additive like every hdr row, but projected through NEAR0 so
-// parsec-to-AU-scale anchors clear the near plane. One (hdr, NEAR0) render
+// kpc-to-AU-scale anchors clear the near plane. One (hdr, NEAR0) render
 // group, driven by the program's dedicated step before the tone-map: the
-// far-partition star points, then the orbit trails.
-const NEAR_HDR_NAMES = ['star-points', 'orbit-trails'];
+// Milky-Way impostor first (its multiplicative dust must never darken the
+// local starfield drawn after it), then the far-partition star points, the
+// orbit trails, the survey star LEAF catalog, and the survey aggregate
+// UPSAMPLE composite (adjacent to the leaf draw it composites). The survey
+// aggregate STREAM itself targets 'star-aggregates', not hdr, so it is not in
+// this group.
+const NEAR_HDR_NAMES = ['milky-way', 'star-points', 'orbit-trails', 'star-catalog', 'star-upsample'];
 
 // The near-field captions group: the scene-body name labels. Like the COSMO
 // swap overlays they target the swap chain with premultiplied-OVER, but they
@@ -242,19 +250,25 @@ describe('CONTENT_LAYERS migration table (hdr group)', () => {
 });
 
 describe('CONTENT_LAYERS migration table (near-field hdr group)', () => {
-  it('the (hdr, NEAR0) group holds star-points then orbit-trails, additive', () => {
-    // The hdr rows outside the cosmological slab: the far-partition
-    // neighbourhood stars and the orbit trails, projected through NEAR0
-    // (COSMO's 0.01 Mpc near plane would clip their parsec-to-AU-scale
-    // anchors) but accumulating into the same HDR target so they ride the
-    // galaxies' tone-map. Drawn by the program's dedicated (hdr, NEAR0) step
-    // before the hdr→swap composite.
+  it('the (hdr, NEAR0) group holds milky-way, star-points, orbit-trails, star-catalog, additive', () => {
+    // The hdr rows outside the cosmological slab: the Milky-Way impostor,
+    // the far-partition neighbourhood stars, and the orbit trails, projected
+    // through NEAR0 (COSMO's FIXED 0.01 Mpc near plane would clip their
+    // kpc-to-AU-scale anchors — for the Milky Way it clipped the disc
+    // mid-descent before the approach fade completed) but accumulating into
+    // the same HDR target so they ride the galaxies' tone-map. Drawn by the
+    // program's dedicated (hdr, NEAR0) step before the hdr→swap composite.
+    // Milky-way MUST lead: its dust pass is multiplicative, and drawing it
+    // first keeps the local starfield out of that multiply.
     const nearHdr = CONTENT_LAYERS.filter(
       (layer) => layer.target === 'hdr' && layer.slab === NEAR0,
     );
     expect(nearHdr.map((layer) => layer.name)).toEqual(NEAR_HDR_NAMES);
+    expect(nearHdr).toContain(milkyWayLayer);
     expect(nearHdr).toContain(starPointsLayer);
     expect(nearHdr).toContain(orbitTrailsLayer);
+    expect(nearHdr).toContain(starCatalogLayer);
+    expect(nearHdr).toContain(starAggregateUpsampleLayer);
     for (const layer of nearHdr) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('hdr');
@@ -320,7 +334,11 @@ describe('CONTENT_LAYERS blend legality', () => {
     // task 10). A layer whose target/blend pair falls outside this table
     // is a data-entry bug in its own file, not a new legal combination.
     for (const layer of CONTENT_LAYERS) {
-      if (layer.target === 'hdr' || layer.target === 'volume') {
+      if (
+        layer.target === 'hdr' ||
+        layer.target === 'volume' ||
+        layer.target === 'star-aggregates'
+      ) {
         expect(layer.blend).toBe('additive');
       } else if (layer.target === 'foreground:0') {
         expect(layer.blend).toBe('opaque');
@@ -351,6 +369,25 @@ describe('scalarVolumeLayer registry row', () => {
     expect(scalarVolumeLayer.blend).toBe('additive');
     expect(CONTENT_LAYERS.filter((l) => l.target === 'hdr')).not.toContain(scalarVolumeLayer);
     expect(CONTENT_LAYERS.filter((l) => l.target === 'swap')).not.toContain(scalarVolumeLayer);
+  });
+});
+
+describe('starAggregatesLayer registry row', () => {
+  it('draws into the star-aggregates offscreen through NEAR0, additive, and stays out of the hdr group', () => {
+    // The survey-star AGGREGATE stream draws LINEAR into its own half-res
+    // offscreen via a dedicated (star-aggregates, NEAR0) render step, so its
+    // 'star-aggregates' target keeps it out of both the hdr and swap groups —
+    // the same isolation `scalar-volume` gets from its 'volume' target.
+    expect(starAggregatesLayer.name).toBe('star-aggregates');
+    expect(starAggregatesLayer.target).toBe('star-aggregates');
+    expect(starAggregatesLayer.slab).toBe(NEAR0);
+    expect(starAggregatesLayer.blend).toBe('additive');
+    expect(CONTENT_LAYERS.filter((l) => l.target === 'hdr')).not.toContain(starAggregatesLayer);
+    expect(CONTENT_LAYERS.filter((l) => l.target === 'swap')).not.toContain(starAggregatesLayer);
+    // The upsample consumer and the aggregate producer share ONE visibility
+    // gate, so a frame can never composite a stale offscreen the producer
+    // skipped clearing.
+    expect(starAggregateUpsampleLayer.enabled).toBe(starAggregatesLayer.enabled);
   });
 });
 
@@ -486,7 +523,10 @@ describe('milkyWayLayer.draw', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
     });
-    const view = slabViewOf(ctx, COSMO);
+    // NEAR0 — the layer's slab since the fixed COSMO near plane clipped the
+    // disc mid-descent (the fixture duplicates the cosmo row at index 0, so
+    // the resolved view carries the same vp).
+    const view = slabViewOf(ctx, NEAR0);
     const state = {
       ...STATE_STUB,
       gpu: { ...STATE_STUB.gpu, milkyWayCloudRenderer: { draw: drawSpy } },
@@ -514,7 +554,7 @@ describe('milkyWayLayer.draw', () => {
       drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
     });
     expect(() =>
-      milkyWayLayer.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, STATE_STUB),
+      milkyWayLayer.draw(PASS_STUB, slabViewOf(ctx, NEAR0), ctx, STATE_STUB),
     ).not.toThrow();
   });
 });
@@ -709,18 +749,20 @@ describe('pointSpritesLayer.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly the four cosmological pickables expose drawPick, in registry order', () => {
+  it('exactly four pickables expose drawPick, in registry order', () => {
     // Pins the spec's migration table: only pointSprites / proceduralDisks /
-    // milkyWay / structureMarkers participate in picking, and they do so in
-    // registry order (pointSprites first — the @group(0) prefix contract).
+    // structureMarkers / milkyWay participate in picking, and they do so in
+    // registry order (pointSprites first — the @group(0) prefix contract for
+    // the COSMO pick pass; milkyWay now trails because it moved to the NEAR0
+    // slab, where it picks alone in its own pass with a self-bound camera).
     // The production code stays name-blind: the pick program filters by
     // `drawPick` presence + `enabled`, never a hardcoded name list — so this
     // test is the ONLY place the four names are asserted.
     expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'procedural-disks',
-      'milky-way',
       'structure-markers',
+      'milky-way',
     ]);
   });
 });

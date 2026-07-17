@@ -28,10 +28,32 @@ import { SLOT_SIDE } from '../../services/gpu/resources/textureAtlas';
 import { dataUrl } from '../../services/loading/fetchWithProgress';
 import type { FetchGalaxyBitmapInput } from '../../@types/loading/FetchGalaxyBitmapInput';
 
+// A `fetch()` promise that never settles leaks more than a browser socket:
+// the thumbnail PriorityQueue (utils/concurrency/priorityQueue.ts) marks the
+// key "in flight" until its fetcher promise resolves or rejects, and the
+// engine's render-on-demand loop treats `inFlightCount() > 0` as "keep
+// ticking, more work is coming." A cutout endpoint that stalls (SDSS
+// ImgCutout or CDS hips2fits under load) therefore never settles, the
+// in-flight entry never clears, and the RAF loop spins forever even though
+// nothing is visibly happening. The queue itself can't fix this: it's generic over any
+// fetcher and has no opinion on what "too long" means for a given task.
+// Settlement is the fetcher's contract, so the deadline lives here. 30 s is
+// generous — hips2fits legitimately takes 5-15 s under load — the goal is
+// "eventually settles", not "fast".
+const FETCH_DEADLINE_MS = 30_000;
+
 export async function fetchGalaxyBitmap(
   input: FetchGalaxyBitmapInput,
 ): Promise<ImageBitmap | null> {
-  const { ra, dec, signal, famousId, fetchHiRes, hiResTargetDim } = input;
+  const { ra, dec, famousId, fetchHiRes, hiResTargetDim } = input;
+
+  // One deadline signal covers the whole call, composed with the caller's
+  // optional cancellation signal when given. AbortSignal.timeout and
+  // AbortSignal.any are both baseline-available in every WebGPU-capable
+  // browser, so no fallback polyfill is needed.
+  const signal = input.signal
+    ? AbortSignal.any([input.signal, AbortSignal.timeout(FETCH_DEADLINE_MS)])
+    : AbortSignal.timeout(FETCH_DEADLINE_MS);
 
   // ── Hi-res famous branch ────────────────────────────────────────────────
   //

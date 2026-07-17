@@ -456,6 +456,15 @@ Skip the maintainer flow unless you're refreshing the upstream cubes
 
 ## Milky Way star field (Gaia DR3)
 
+Zoom in from the galaxy point cloud toward the Sun and skymap swaps catalogued
+galaxies for catalogued stars: the ~16.8 M Gaia DR3 stars render as a real-data
+stellar bubble around the observer, each tinted by its BP−RP colour — hot blue
+through cool red — and accumulated additively in the HDR pass so the bright
+naked-eye stars bloom against the dark. It's the real-data middle of the descent
+toward Earth: the last measured layer before the view crosses into the
+procedural Milky-Way cloud, which the star field crossfades into as the two
+overlap.
+
 The star-bin build turns the Gaia DR3 + GCNS + Hipparcos-2 raw inputs (see
 the download table above) into the runtime binary format:
 

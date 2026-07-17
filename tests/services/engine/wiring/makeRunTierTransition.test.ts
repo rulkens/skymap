@@ -52,6 +52,7 @@ function makeFixture(opts?: {
   enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
   device?: GPUDevice | undefined;
   texturedDiskRenderer?: unknown;
+  gaiaStarsState?: 'idle' | 'ready';
 }) {
   const items = Object.fromEntries(
     GALAXY_CATALOG_SOURCES.map((s) => {
@@ -69,6 +70,13 @@ function makeFixture(opts?: {
   const pointSlots = new Map<number, SlotStub>();
   for (const s of GALAXY_CATALOG_SOURCES) pointSlots.set(s, { load: vi.fn() });
   const mcpm: SlotStub = { load: vi.fn() };
+  // Star-catalog slot stub carries `state()` because the runner's idle-guard
+  // reads it (a never-demanded catalog must not fetch on a tier flip).
+  const gaiaStars = {
+    load: vi.fn(),
+    state: vi.fn(() => ({ kind: opts?.gaiaStarsState ?? 'ready' })),
+  };
+  const starCatalogs = new Map<number, typeof gaiaStars>([[Source.GaiaStars, gaiaStars]]);
 
   // The Milky-Way cloud handle records its `regenerate` calls so the tier-swap
   // regeneration can be asserted without a real GPU generation.
@@ -80,6 +88,7 @@ function makeFixture(opts?: {
     },
     assetSlots: {
       points: pointSlots,
+      starCatalogs,
       mcpm,
       // famous companion sidecar — loadCompanionAssets fires `.load` on it.
       famousMeta: { load: vi.fn() } as SlotStub,
@@ -97,7 +106,7 @@ function makeFixture(opts?: {
     phaseLocals: opts?.device ? { device: opts.device } : undefined,
   } as unknown as BootstrapDeps;
 
-  return { state, store, pointSlots, mcpm, milkyWayCloud, bootstrapDeps };
+  return { state, store, pointSlots, mcpm, gaiaStars, milkyWayCloud, bootstrapDeps };
 }
 
 describe('makeRunTierTransition', () => {
@@ -149,6 +158,30 @@ describe('makeRunTierTransition', () => {
 
     expect(fx.mcpm.load).toHaveBeenCalledTimes(1);
     expect(fx.mcpm.load).toHaveBeenCalledWith({ tier: 'medium' });
+  });
+
+  it('reloads a loaded star catalog at the next tier (per-source request)', () => {
+    // The star catalogs are tier-aware like MCPM but per-source: without this
+    // reload, a tier flip would leave the Gaia layer drawing the OLD tier's
+    // star population while every other tiered layer swapped.
+    const fx = makeFixture();
+    const run = makeRunTierTransition(fx.state, fx.bootstrapDeps);
+    run('small', 'medium');
+
+    expect(fx.gaiaStars.load).toHaveBeenCalledTimes(1);
+    expect(fx.gaiaStars.load).toHaveBeenCalledWith({ source: Source.GaiaStars, tier: 'medium' });
+  });
+
+  it('skips an idle (never-demanded) star catalog — disabled ⇒ no work', () => {
+    // An idle slot means the catalog was never demanded (layer disabled): a
+    // tier flip must not start fetching data for a hidden layer. When the
+    // user later enables it, reevaluateDemand issues the current tier's
+    // request against the still-idle slot.
+    const fx = makeFixture({ gaiaStarsState: 'idle' });
+    const run = makeRunTierTransition(fx.state, fx.bootstrapDeps);
+    run('small', 'medium');
+
+    expect(fx.gaiaStars.load).not.toHaveBeenCalled();
   });
 
   it('regenerates the Milky Way cloud for the new tier', () => {

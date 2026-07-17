@@ -26,6 +26,7 @@
 
 import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { seedVolumeFields } from '../../../src/data/volume/volumeFieldDefaults';
 import {
@@ -54,14 +55,23 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_STAR_BRIGHTNESS,
+  DEFAULT_STAR_GLOW_OVERLAP,
+  DEFAULT_STAR_EXPOSURE_NEAR_X,
+  DEFAULT_STAR_EXPOSURE_MID_X,
+  DEFAULT_STAR_EXPOSURE_FAR_X,
+  DEFAULT_STAR_SIZE_PX,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
+import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
+import type { StarCatalogId } from '../../../src/@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
 import type { StructureItemSettings } from '../../../src/@types/settings/StructureItemSettings';
 
 export function makeSettingsFixture(
@@ -90,9 +100,22 @@ export function makeSettingsFixture(
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
+    starCatalogs: {
+      enabled: true,
+      sizePx: DEFAULT_STAR_SIZE_PX,
+      brightness: DEFAULT_STAR_BRIGHTNESS,
+      refineThreshold: DEFAULT_REFINE_THRESHOLD,
+      glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
+      exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
+      exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
+      exposureFarX: DEFAULT_STAR_EXPOSURE_FAR_X,
+      items: Object.fromEntries(
+        STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+      ) as Record<StarCatalogId, StarCatalogItemSettings>,
+    },
     volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: seedVolumeFields() },
     flow: { ...DEFAULT_FLOW },
-    labels: { focusedOnly: false, starLabelsEnabled: true },
+    labels: { focusedOnly: false, starLabelsEnabled: true, planetLabelsEnabled: true },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,

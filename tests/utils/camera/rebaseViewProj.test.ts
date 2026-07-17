@@ -29,7 +29,7 @@ import { narrowMat4 } from '../../../src/utils/math/narrowMat4';
 
 const AU = SCALE_UNITS.AU_TO_MPC; // ≈ 4.85e-12 Mpc
 
-// Camera distance at the 1e-17 Mpc deepZoom floor (~300 km) — well inside
+// Camera distance at the 1e-17 Mpc distance floor (~300 km) — well inside
 // Earth's radius, where the flicker is worst (~24 px in the un-rebased path).
 const camDist = 1e-17;
 

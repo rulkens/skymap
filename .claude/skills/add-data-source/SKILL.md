@@ -93,10 +93,43 @@ binary format family. Treat it as a sibling precedent, not a Path A instance:
   upstream catalog (Gaia DR3 / GCNS / Hipparcos-2); the entries themselves are
   a data-acquisition concern, not this skill's.
 
-**Scope note:** this sidebar covers the *pipeline* surface only — raw data →
-build → `.bin`. The runtime surface (a `starCatalog` variant in
-`SOURCE_REGISTRY`, the loader, the renderer) doesn't exist yet; this skill
-gets a second pass once the star catalog gains that runtime surface.
+### Runtime surface: the `starCatalog` source-type family
+
+The star bin has a full runtime edit surface that runs *parallel* to the
+galaxy-catalog one — a distinct `starCatalog` source-type family, not a
+special-case of the survey path. A future star-like source (curated famous
+stars, say — Decision A) mirrors these seams rather than inventing new ones.
+Walk them in the same registry row → settings cluster → fetcher/slot/wiring →
+renderer/layer order the galaxy catalogs use:
+
+- **Registry row + id domain** — a `type: 'starCatalog'` `SOURCE_REGISTRY` row
+  (`src/data/sources/gaia-stars.ts` is the template). `StarCatalogId`
+  (`@types/data/starCatalog/StarCatalogId`) is the `type: 'starCatalog'`
+  narrowing of the source-entry union, and `STAR_CATALOG_IDS`
+  (`src/data/starCatalog/starCatalogIds.ts`) its auto-widening runtime list —
+  the star-only analogue of the galaxy-catalog id domain. Add the row and both
+  widen with no further edit.
+- **Settings cluster** — `settings.starCatalogs` mirrors `settings.galaxyCatalogs`
+  exactly: an `enabled` master plus `items: Record<StarCatalogId,
+  StarCatalogItemSettings>`, driven from `StarsSection` the way `galaxyCatalogs`
+  drives its survey rows. The two clusters share shape — no divergent per-item
+  accessor.
+- **Fetcher + slot + wiring** — one source-parameterized `starCatalogFetcher`
+  and one `starCatalogSlot` factory serve *every* `starCatalog` row
+  (parameterized by `source`), the same reuse seam the galaxy catalogs use.
+  `assetWiring` mints the per-source rows and keys them into
+  `state.assetSlots.starCatalogs` — a separate slot map from the galaxy slots in
+  the same numeric key space (see `slotFor.ts`), so tier reloads flow through
+  the shared machinery.
+- **Renderer + layer** — a dedicated per-source `starCatalog/` renderer family
+  (`src/services/gpu/renderers/starCatalog/` + `shaders/starCatalog/`):
+  vertex-pulling billboards, BP−RP tint, additive HDR, an octree draw-cut walker
+  and an f64 origin seam. `starCatalogLayer` (in `frame/passes/`) draws it and
+  owns the crossfade to the procedural Milky-Way cloud — whose fade band lives in
+  exactly one home, the registry row's `crossfadePc`, evaluated per source. Don't
+  reuse the galaxy point renderer or `galaxyCatalogFormat.ts` machinery for star
+  data; both the encoding and the draw path diverge (see the Binary format
+  bullet above).
 
 ## Path B — a new featured structure category
 

@@ -51,9 +51,13 @@ function makeState(): EngineState {
     [Source.SDSS, stubSlot('sdss-points')],
     [Source.TwoMRS, stubSlot('2mrs-points')],
   ]);
+  const starCatalogs = new Map<SourceType, AssetSlot<unknown, unknown>>([
+    [Source.GaiaStars, stubSlot('starCatalog:gaiaStars')],
+  ]);
   return {
     assetSlots: {
       points,
+      starCatalogs,
       filaments: stubSlot('filaments'),
       famousMeta: stubSlot('famous-meta'),
       structureCatalog: stubSlot('structure-catalog'),
@@ -95,6 +99,10 @@ describe('installLoadProgress', () => {
     const names = new Set(deps.allSlots.keys());
     expect(names.has('sdss-points')).toBe(true);
     expect(names.has('2mrs-points')).toBe(true);
+    // Star-catalog slots ride the same registry: without this, a committing
+    // star catalog gets no loading-bar progress AND no slot-ready render wake
+    // (installSlotReadyWake subscribes over this same Map).
+    expect(names.has('starCatalog:gaiaStars')).toBe(true);
     expect(names.has('filaments')).toBe(true);
     expect(names.has('famous-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);

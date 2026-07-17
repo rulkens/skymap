@@ -37,10 +37,11 @@ import package::lib::billboard::expandBillboardScreen;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 
-// @group(0) points-pick uniform mirror — reused from the caller's bound
-// group (the galaxy pick draws set it).  Reads extend through 'pxPerRad'
-// at byte 108 of the points pick buffer — see io.wesl for the mirrored
-// prefix layout.
+// @group(0) points-pick uniform mirror — bound by pickMilkyWay itself
+// from its own buffer (the MW is the sole pickable in the NEAR0 pick
+// pass, so there is no prior draw to inherit a camera from). Reads extend
+// through 'pxPerRad' at byte 108 of the points pick image — see io.wesl
+// for the mirrored prefix layout.
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
 // @group(2) MilkyWayPickUniforms — world centre + source code + disc

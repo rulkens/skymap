@@ -40,6 +40,17 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
     allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }
 
+  // Star-catalog slots (registry-built, keyed by Source in the starCatalogs
+  // map). Their wiring rows carry NUMERIC keys, so the string-keyed sidecar
+  // walk below misses them — they must be gathered from their per-source map
+  // like the points, or a committing catalog would get no loading-bar
+  // progress and, worse, no slot-ready render wake (`installSlotReadyWake`
+  // subscribes over this same registry, and in the render-on-demand loop an
+  // unwoken commit simply never presents).
+  for (const [, slot] of state.assetSlots.starCatalogs) {
+    allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
+  }
+
   // Named sidecar slots (installed by installSlots): the ASSET_WIRING rows
   // with string keys (point rows carry numeric Source keys, included above).
   // pgcAlias is lazy but still registered so its eventual load shows in the
