@@ -29,8 +29,22 @@
  * tokens.  DO NOT use `isStructureId(raw)` — that checks whether raw IS a
  * category id (e.g. 'cluster'), not whether it starts with one.
  *
- * The structure loop MUST run before the famous-id fallback, or 'cluster-virgo'
- * would route to the famous resolver.
+ * ─── Ordered decoder table ───────────────────────────────────────────────────
+ *
+ * The prefixes are recognised by FOCUS_ID_DECODERS, an ORDERED table of rows.
+ * Each row is `{ matches, decode }`: `matches` claims the id (by prefix,
+ * literal, or character class), and the FIRST claiming row is authoritative —
+ * its `decode` result is returned even when null.  A malformed but claimed id
+ * (`pgc-abc`, `cluster-virgo m87`, `body-krypton`) therefore resolves to null
+ * rather than tumbling into a later row.
+ *
+ * Order is load-bearing: the famous-id row's `matches` is the permissive
+ * `[a-z0-9_-]+` character class, which also accepts structure ids
+ * (`cluster-virgo`), the milkyWay literal, and body ids (`body-earth`).  Those
+ * specific rows MUST precede the greedy famous row, so famous is the explicit
+ * LAST row — a token reaches the famous resolver only after every structured
+ * form has declined it.  This ordering lives in the table's row order, not in
+ * comment discipline scattered across branches.
  *
  * ─── Performance ────────────────────────────────────────────────────────────
  *
@@ -52,83 +66,102 @@ import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/Ga
 /** Strict regex for the pos@ form.  Anchored at both ends — matches focusUrl.ts. */
 const POS_RE = /^pos@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/;
 
+/** Character class a bare token must satisfy to be a structure or famous seed id. */
+const SAFE_ID_RE = /^[a-z0-9_-]+$/i;
+
+/**
+ * One row of the focus-id decoder table.  `matches` decides whether this row
+ * claims the id; `decode` maps a claimed id to a SelectionRef (or null when the
+ * id is malformed, or its catalog cloud is not yet loaded).  A claiming row is
+ * authoritative — the resolver never falls through to a later row once `matches`
+ * returns true, so `decode` returning null means "no ref", not "try the next
+ * row".
+ */
+type FocusIdDecoder = {
+  readonly matches: (focusId: string) => boolean;
+  readonly decode: (focusId: string, deps: ResolveDeps) => SelectionRef | null;
+};
+
+/**
+ * The decoder rows in resolution order.  See the module header: order is
+ * load-bearing (structure / milkyWay / body precede the greedy famous row), so
+ * the famous fallback is the explicit final entry.
+ */
+const FOCUS_ID_DECODERS: readonly FocusIdDecoder[] = [
+  // pgc-<n> — PGC number into the GLADE / 2MRS clouds.
+  {
+    matches: (id) => id.startsWith('pgc-'),
+    decode: (id, deps) => {
+      const n = id.slice(4);
+      if (!/^\d+$/.test(n)) return null;
+      return resolvePgc(BigInt(n), deps);
+    },
+  },
+  // sdss-<n> — SDSS 64-bit objID into the SDSS cloud.
+  {
+    matches: (id) => id.startsWith('sdss-'),
+    decode: (id, deps) => {
+      const n = id.slice(5);
+      if (!/^\d+$/.test(n)) return null;
+      return resolveSdss(BigInt(n), deps);
+    },
+  },
+  // pos@ra,dec — nearest-neighbour positional fallback.
+  {
+    matches: (id) => POS_RE.test(id),
+    decode: (id, deps) => {
+      const posMatch = POS_RE.exec(id)!;
+      const raDeg = parseFloat(posMatch[1]!);
+      const decDeg = parseFloat(posMatch[2]!);
+      if (!Number.isFinite(raDeg) || !Number.isFinite(decDeg)) return null;
+      return resolvePos(raDeg, decDeg, deps);
+    },
+  },
+  // structure ids (`${category}-${seedId}`).  The prefix set is derived from
+  // STRUCTURE_IDS, so a new structure category extends the decoder for free.
+  // Precedes famous because `cluster-virgo` also passes the famous character
+  // class.
+  {
+    matches: (id) => STRUCTURE_IDS.some((cat) => id.startsWith(`${cat}-`)),
+    decode: (id) => (SAFE_ID_RE.test(id) ? { type: 'structure', id } : null),
+  },
+  // milkyWay literal — the singleton, no per-instance data.  The encoders
+  // (focusIdOf, urlHashFor) emit the same constant, closing the round-trip.
+  {
+    matches: (id) => id === MILKY_WAY_FOCUS_ID,
+    decode: () => ({ type: 'milkyWay' }),
+  },
+  // scene bodies (`body-<seedId>`).  SCENE_BODIES is a static import, so an
+  // unknown seed is definitively garbage (null forever), never "not loaded yet".
+  {
+    matches: (id) => id.startsWith(BODY_FOCUS_PREFIX),
+    decode: (id) => {
+      const seedId = id.slice(BODY_FOCUS_PREFIX.length);
+      return SCENE_BODIES.some((b) => b.id === seedId) ? { type: 'body', id: seedId } : null;
+    },
+  },
+  // famous id — the greedy fallback.  MUST stay last: its character class also
+  // accepts every structured form above.  The downstream scan is the authority
+  // on whether the id exists in famousMeta; no eager validation here.
+  {
+    matches: (id) => SAFE_ID_RE.test(id),
+    decode: (id, deps) => resolveFamous(id, deps),
+  },
+];
+
 /**
  * Parse the given focus-id string and resolve it to a SelectionRef using the
  * live engine state in `deps`.  Returns null when the id is malformed, when
  * the relevant catalog cloud is not yet loaded, or when a nearest-neighbour
  * pos@ search finds nothing within the 30-arcsec threshold.
+ *
+ * Walks FOCUS_ID_DECODERS and returns the first claiming row's decode result.
  */
 export function resolveFocusId(focusId: string, deps: ResolveDeps): SelectionRef | null {
   if (!focusId) return null;
-
-  // ── pgc- / sdss- prefixes ────────────────────────────────────────────────
-
-  if (focusId.startsWith('pgc-')) {
-    const n = focusId.slice(4);
-    if (!/^\d+$/.test(n)) return null;
-    return resolvePgc(BigInt(n), deps);
+  for (const decoder of FOCUS_ID_DECODERS) {
+    if (decoder.matches(focusId)) return decoder.decode(focusId, deps);
   }
-
-  if (focusId.startsWith('sdss-')) {
-    const n = focusId.slice(5);
-    if (!/^\d+$/.test(n)) return null;
-    return resolveSdss(BigInt(n), deps);
-  }
-
-  // ── pos@ positional fallback ─────────────────────────────────────────────
-
-  const posMatch = POS_RE.exec(focusId);
-  if (posMatch) {
-    const raDeg = parseFloat(posMatch[1]!);
-    const decDeg = parseFloat(posMatch[2]!);
-    if (!Number.isFinite(raDeg) || !Number.isFinite(decDeg)) return null;
-    return resolvePos(raDeg, decDeg, deps);
-  }
-
-  // ── structure ids (`${category}-${seedId}`) ──────────────────────────────
-  //
-  // Must run BEFORE the famous-id fallback — `cluster-virgo` passes the
-  // `[a-z0-9_-]+` character-class test and would otherwise route to famous.
-  // We derive the prefix set from STRUCTURE_IDS so adding a new structure
-  // category automatically extends the codec without touching this file.
-
-  for (const cat of STRUCTURE_IDS) {
-    if (focusId.startsWith(`${cat}-`)) {
-      // Validate the full id against the safe character class.
-      if (/^[a-z0-9_-]+$/i.test(focusId)) return { type: 'structure', id: focusId };
-      return null;
-    }
-  }
-
-  // ── milkyWay literal ────────────────────────────────────────────────────
-  //
-  // Milky Way is a singleton; return its SelectionRef directly.  Must run
-  // before the famous fallback or the id would be scanned (and missed) in
-  // famousMeta.  The encoders (focusIdOf, urlHashFor) emit the same constant.
-
-  if (focusId === MILKY_WAY_FOCUS_ID) return { type: 'milkyWay' };
-
-  // ── scene bodies (`body-<seedId>`) ────────────────────────────────────────
-  //
-  // Seeded scene bodies (Earth, later stars/planets). Like the structure loop,
-  // this must run before the famous fallback — `body-earth` passes the famous
-  // character class. Unlike catalogs, SCENE_BODIES is a static import, so an
-  // unknown seed id is definitively garbage (null forever), never "not loaded
-  // yet" — the saga's catalogLoaded retry loop simply never resolves it.
-
-  if (focusId.startsWith(BODY_FOCUS_PREFIX)) {
-    const seedId = focusId.slice(BODY_FOCUS_PREFIX.length);
-    return SCENE_BODIES.some((b) => b.id === seedId) ? { type: 'body', id: seedId } : null;
-  }
-
-  // ── famous id fallback ───────────────────────────────────────────────────
-  //
-  // Anything left that passes the character-class gate is treated as a famous
-  // seed id.  The downstream scan is the authority on whether the id actually
-  // exists in famousMeta — we do no eager validation here.
-
-  if (/^[a-z0-9_-]+$/i.test(focusId)) return resolveFamous(focusId, deps);
-
   return null;
 }
 
