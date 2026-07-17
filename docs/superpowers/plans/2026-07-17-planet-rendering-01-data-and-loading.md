@@ -414,13 +414,18 @@ from `SCENE_BODIES` (so a moved/added body carries its own radius; the
 `LOAD_RADIUS_BODY_RADII` const (fetch of an 8 k JPG needs descent lead time —
 the deleted `EARTH_TEXTURE_MAX_DISTANCE_MPC` argument, now per-body).
 
-- [ ] Add `bodyTextureLoadRadius.ts` — `loadRadiusMpc` + the
+- [x] Add `bodyTextureLoadRadius.ts` — `loadRadiusMpc` + the
   `LOAD_RADIUS_BODY_RADII` const. Didactic docblock: derived per-body from the
   body radius (not a hand-typed literal); WHY generous (descent lead time).
-- [ ] Test `loadRadiusMpc scales with body radius` — `loadRadiusMpc('jupiter') >
+  _(Executed with `LOAD_RADIUS_BODY_RADII = 1e4`, not "generous": a gate sized
+  like the old Earth 1e-3 Mpc would exceed the whole solar system's extent and
+  load every texture at once — selectivity is the premise that makes 8k tiers
+  affordable. Param accepts the ring key via `RING_HOST` → saturn.)_
+- [x] Test `loadRadiusMpc scales with body radius` — `loadRadiusMpc('jupiter') >
   loadRadiusMpc('mercury')` (a monotonic property vs the seeded radii, not a
-  value pin), and both are positive + finite.
-- [ ] `npm test -- bodyTextureLoadRadius` → green. Commit.
+  value pin), and both are positive + finite. _(Plus a selectivity invariant:
+  Earth's gate < seeded Earth–Mars distance.)_
+- [x] `npm test -- bodyTextureLoadRadius` → green. Commit.
 
 ## Task 10 — Keyed `bodyTextures` slot family: mint, demand, release; delete Earth's path
 
