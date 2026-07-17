@@ -675,10 +675,10 @@ diff. Specifically check:
 
 **Files:** none (verification + hygiene).
 
-- [ ] `npm run typecheck` (both src + tools tsconfigs) → green.
-- [ ] `npm test` (full suite) → green.
-- [ ] `npm run format` on **touched files only** (never repo-wide).
-- [ ] Confirm `data/seeds/famous_stars.seed.json` + `src/data/bodies/famousStars.generated.ts`
+- [x] `npm run typecheck` (both src + tools tsconfigs) → green.
+- [x] `npm test` (full suite) → green.
+- [x] `npm run format` on **touched files only** (never repo-wide).
+- [x] Confirm `data/seeds/famous_stars.seed.json` + `src/data/bodies/famousStars.generated.ts`
       are committed together and in sync (re-run `npm run build-famous-stars`; the generated
       file should not change → `git diff` clean). Commit any final formatting.
 
