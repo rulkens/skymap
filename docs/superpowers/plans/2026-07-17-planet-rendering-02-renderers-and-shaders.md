@@ -317,20 +317,20 @@ Update `EarthRenderer.draw`'s signature so `mvp: Float32Array` becomes the
 80-byte `LitBodyUniforms` buffer (name it `uniforms`), and `earthLayer` packs mvp
 + sunDirLocal + ambient.
 
-- [ ] Update `earth/vertex.wesl` to bind `LitBodyUniforms` (forwarding the local
+- [x] Update `earth/vertex.wesl` to bind `LitBodyUniforms` (forwarding the local
   normal for the fragment) + `earth/fragment.wesl` to apply `litShade`. WESL
   constraints; verify visually (Task 11). Update the shader headers (the
   full-bright note is now a Lambert note).
-- [ ] Grow `earthRenderer`'s uniform buffer to 80 B, call `generateMipChain` in
+- [x] Grow `earthRenderer`'s uniform buffer to 80 B, call `generateMipChain` in
   `setTexture`, set `mipmapFilter: 'linear'`; update `EarthRenderer.d.ts`'s `draw`
   doc/signature.
-- [ ] `earthLayer` computes `sunDirLocal` and packs the `LitBodyUniforms` record.
-- [ ] Test (`earthLayer.test.ts`) `earth layer packs sunDirLocal into the lit
+- [x] `earthLayer` computes `sunDirLocal` and packs the `LitBodyUniforms` record.
+- [x] Test (`earthLayer.test.ts`) `earth layer packs sunDirLocal into the lit
   uniform` — assert the record `earthRenderer.draw` receives is length 20 and its
   bytes 64..75 carry `sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC,
   earth.orientation)` (computed independently in the test, not via the layer).
   Keep the existing `composeBodyMvp` slab-`vp` assertion.
-- [ ] `npm test -- earthRenderer earthLayer` → green. Commit.
+- [x] `npm test -- earthRenderer earthLayer` → green. Commit.
 
 ## Task 7 — Flat `planetRenderer` grows to 24 f32 (+`sunDirLocal`); planet shaders drop `LIGHT_DIR`
 

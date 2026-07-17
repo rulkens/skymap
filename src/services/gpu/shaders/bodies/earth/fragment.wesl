@@ -1,10 +1,20 @@
 // earth/fragment.wesl — fragment stage for the true-scale textured Earth.
 //
-// Samples an equirectangular Blue Marble texture at the mesh uv and emits the
-// colour straight into the rgba16float foreground colour target. Before the
-// real bitmap arrives the bound texture is a 1×1 mid-blue placeholder, so this
-// same sample path draws a plain blue sphere -- visible-but-plain rather than
-// black or absent (see 'earthRenderer.ts' header).
+// Samples an equirectangular Blue Marble texture at the mesh uv, then
+// attenuates it by the shared sun-relative Lambert term ('lib/bodyLighting.wesl'
+// 'litShade') so the terminator tracks Earth's real position relative to the
+// Sun. The lit colour goes straight into the rgba16float foreground colour
+// target. Before the real bitmap arrives the bound texture is a 1×1 mid-blue
+// placeholder, so this same path draws a plain lit blue sphere -- visible-but-
+// plain rather than black or absent (see 'earthRenderer.ts' header).
+//
+// ## Renormalize the interpolated normal
+//
+// 'normalLocal' arrives interpolated across the triangle face. Linear
+// interpolation of two unit vectors yields a SHORTER vector between them, so a
+// raw dot with the sun direction would under-report the Lambert term mid-face
+// and band the terminator. 'normalize' restores unit length before the dot --
+// the standard per-fragment normal fix for smooth-shaded spheres.
 //
 // ## uv / v-orientation
 //
@@ -48,7 +58,10 @@
 // read -- the value handed to us is already linear, correct for the HDR target.
 
 import package::bodies::earth::io::VSOut;
+import package::lib::sphere::LitBodyUniforms;
+import package::lib::bodyLighting::litShade;
 
+@group(0) @binding(0) var<uniform> u: LitBodyUniforms;
 @group(0) @binding(1) var earthSampler: sampler;
 @group(0) @binding(2) var earthTexture: texture_2d<f32>;
 
@@ -58,6 +71,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // texture's east already reads to screen-right for an outside viewer, so no u
   // flip is needed; v is likewise raw -- the bitmap is uploaded flipY:true (see
   // the notes above).
-  let colour = textureSample(earthTexture, earthSampler, in.uv).rgb;
+  let albedo = textureSample(earthTexture, earthSampler, in.uv).rgb;
+  // Renormalize the interpolated normal (see the header) and attenuate the
+  // albedo by the shared sun-relative Lambert-plus-ambient term.
+  let n = normalize(in.normalLocal);
+  let colour = albedo * litShade(n, u.sunDirLocal);
   return vec4<f32>(colour, 1.0);
 }

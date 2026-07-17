@@ -3,11 +3,12 @@
  * the opaque near-field foreground target.
  *
  * The Earth is the same UV-sphere mesh the star and planet renderers use
- * (`uvSphereMesh`), shaded by sampling an equirectangular Blue Marble
- * bitmap. It shares `lib/sphere.wesl`'s `SphereUniforms` (64-byte
- * mat4x4<f32> MVP) and `clip_from_local`, so the CPU-side matrix layout and
- * the GPU-side projection stay a single source of truth across every
- * sphere-shaped body.
+ * (`uvSphereMesh`), shaded by sampling an equirectangular Blue Marble bitmap
+ * and attenuated by the shared sun-relative Lambert term. It shares
+ * `lib/sphere.wesl`'s `LitBodyUniforms` (80-byte block: mat4x4<f32> MVP +
+ * body-local sun direction + ambient floor) and `clip_from_local`, so the
+ * CPU-side matrix layout and the GPU-side projection stay a single source of
+ * truth across every sphere-shaped body.
  *
  * ### Texture lifecycle
  *
@@ -33,10 +34,10 @@ export type EarthRenderer = Renderer & {
    */
   setTexture(bitmap: ImageBitmap): void;
   /**
-   * Draw the Earth into the current pass. `mvp` is a length-16 Float32Array
-   * (column-major mat4x4<f32>, 64 bytes) folding the Earth's model scale +
-   * translate + view + projection — written to the `SphereUniforms` buffer and
-   * drawn indexed.
+   * Draw the Earth into the current pass. `uniforms` is a length-20 Float32Array
+   * (the 80-byte `LitBodyUniforms` record from `packLitBodyUniforms`): 16 f32
+   * column-major MVP + 3 f32 body-local sun direction + 1 f32 ambient floor —
+   * written to the uniform buffer and drawn indexed.
    */
-  draw(pass: GPURenderPassEncoder, mvp: Float32Array): void;
+  draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void;
 };

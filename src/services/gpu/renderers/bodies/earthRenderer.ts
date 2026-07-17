@@ -3,17 +3,21 @@
  * near-field foreground target.
  *
  * The geometry is the same UV sphere every body renderer uses
- * (`uvSphereMesh`), shaded by sampling an equirectangular Blue Marble
- * bitmap. It shares `lib/sphere.wesl`'s uniform (`SphereUniforms`, a 64-byte
- * mat4x4<f32> MVP) and the `clip_from_local` projection helper with the
- * star/planet renderers, so the CPU-side matrix layout and the GPU-side
- * projection stay a single source of truth.
+ * (`uvSphereMesh`), shaded by sampling an equirectangular Blue Marble bitmap
+ * and attenuated by the shared sun-relative Lambert term
+ * (`lib/bodyLighting.wesl` `litShade`). It shares `lib/sphere.wesl`'s uniform
+ * (`LitBodyUniforms`, an 80-byte block: the mat4x4<f32> MVP plus the
+ * body-local sun direction + ambient floor) and the `clip_from_local`
+ * projection helper with the other sphere renderers, so the CPU-side matrix
+ * layout and the GPU-side projection stay a single source of truth. The CPU
+ * side packs the uniform through `packLitBodyUniforms`.
  *
- * **Precondition — draw at most once per frame:** `draw` writes the MVP into a
- * single non-dynamic uniform buffer before issuing the indexed draw, so a
- * second same-frame `draw` with a different MVP would race `queue.writeBuffer`
- * against the pending `queue.submit` and render both spheres with whichever
- * matrix won — the caller must issue exactly one Earth draw per frame.
+ * **Precondition — draw at most once per frame:** `draw` writes the uniforms
+ * into a single non-dynamic uniform buffer before issuing the indexed draw, so
+ * a second same-frame `draw` with different uniforms would race
+ * `queue.writeBuffer` against the pending `queue.submit` and render both
+ * spheres with whichever record won — the caller must issue exactly one Earth
+ * draw per frame. Earth is a single body, so this holds by construction.
  *
  * ### Untextured behaviour (placeholder texture)
  *
@@ -56,8 +60,17 @@
  * An explicit `bindGroupLayout` (not `layout: 'auto'`) so the texture swap in
  * `setTexture` can rebuild a bind group against a stable layout object, and to
  * avoid the auto-layout trap documented in `feedback_webgpu_auto_layout_trap`.
- * Binding 0: `SphereUniforms` (vertex). Binding 1: sampler (fragment).
+ * Binding 0: `LitBodyUniforms` — visible in BOTH stages now (the vertex reads
+ * `u.mvp`, the fragment reads `u.sunDirLocal`). Binding 1: sampler (fragment).
  * Binding 2: the 2D Earth texture (fragment).
+ *
+ * ### Mip generation
+ *
+ * `setTexture` sizes the Earth texture with a full mip chain
+ * (`mipLevelCount(w,h)` levels + `RENDER_ATTACHMENT` usage) and runs
+ * `generateMipChain` after upload, and the sampler sets `mipmapFilter: 'linear'`
+ * — so the surface stops shimmering as Earth shrinks toward the sub-pixel glint
+ * handoff during the descent.
  *
  * @module
  */
@@ -65,6 +78,7 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { EarthRenderer } from '../../../../@types/rendering/EarthRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/earth/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -76,8 +90,10 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 const SEGMENTS = 48;
 const RINGS = 24;
 
-/** `SphereUniforms` contains one mat4x4<f32> — 16 floats × 4 bytes. */
-const UNIFORM_BUFFER_SIZE = 64;
+/** `LitBodyUniforms` is 80 bytes (20 f32): the 64-byte mat4x4<f32> MVP plus the
+ *  body-local sun direction (vec3, 16-byte aligned at offset 64) and the ambient
+ *  floor folded into the vec4 tail. Written from `packLitBodyUniforms`. */
+const UNIFORM_BUFFER_SIZE = 80;
 
 export function createEarthRenderer(
   device: GPUDevice,
@@ -116,11 +132,12 @@ export function createEarthRenderer(
   });
   device.queue.writeBuffer(indexBuffer, 0, mesh.indices);
 
-  // ── Uniform buffer (one MVP) ──────────────────────────────────────────────
+  // ── Uniform buffer (one lit-body record) ──────────────────────────────────
   //
-  // A single Earth is drawn per frame, so one 64-byte `SphereUniforms`
+  // A single Earth is drawn per frame, so one 80-byte `LitBodyUniforms`
   // block suffices — no multi-slot dynamic-offset buffer needed. `draw`
-  // writes the MVP here before issuing the indexed draw.
+  // writes the packed record (MVP + sunDirLocal + ambient) here before issuing
+  // the indexed draw.
   const uniformBuffer = device.createBuffer({
     label: 'earth-uniform-buffer',
     size: UNIFORM_BUFFER_SIZE,
@@ -129,13 +146,16 @@ export function createEarthRenderer(
 
   // ── Sampler ───────────────────────────────────────────────────────────────
   //
-  // Linear filtering for a smooth surface. `repeat` on u lets the duplicated
-  // seam column blend across the longitude wrap; `clamp-to-edge` on v avoids
-  // sampling past the poles.
+  // Linear filtering for a smooth surface. `mipmapFilter: 'linear'` trilinearly
+  // blends the mip chain `setTexture` builds, so the surface stops shimmering as
+  // Earth shrinks toward the sub-pixel glint handoff. `repeat` on u lets the
+  // duplicated seam column blend across the longitude wrap; `clamp-to-edge` on v
+  // avoids sampling past the poles.
   const sampler = device.createSampler({
     label: 'earth-sampler',
     magFilter: 'linear',
     minFilter: 'linear',
+    mipmapFilter: 'linear',
     addressModeU: 'repeat',
     addressModeV: 'clamp-to-edge',
   });
@@ -164,7 +184,7 @@ export function createEarthRenderer(
 
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   //
-  // Binding 0: `SphereUniforms`, vertex stage only.
+  // Binding 0: `LitBodyUniforms`, VERTEX (mvp) + FRAGMENT (sunDirLocal).
   // Binding 1: the sampler, fragment stage.
   // Binding 2: the 2D Earth texture, fragment stage (filterable f32).
   const bindGroupLayout = device.createBindGroupLayout({
@@ -172,7 +192,7 @@ export function createEarthRenderer(
     entries: [
       {
         binding: 0,
-        visibility: GPUShaderStage.VERTEX,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
         buffer: { type: 'uniform' },
       },
       {
@@ -261,10 +281,14 @@ export function createEarthRenderer(
     // Retire the previous texture (placeholder or a prior bitmap) and create a
     // fresh one sized to the incoming bitmap.
     texture.destroy();
+    const levels = mipLevelCount(bitmap.width, bitmap.height);
     texture = device.createTexture({
       label: 'earth-texture',
       size: [bitmap.width, bitmap.height, 1],
       format: 'rgba8unorm-srgb',
+      mipLevelCount: levels,
+      // RENDER_ATTACHMENT is required: generateMipChain renders each level below
+      // 0 as a downsample pass (see its module header).
       usage:
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.COPY_DST |
@@ -277,14 +301,17 @@ export function createEarthRenderer(
       bitmap.height,
       1,
     ]);
+    // Fill mip levels 1..N-1 so the mipmapFilter:'linear' sampler has a real
+    // chain to trilinearly blend as Earth shrinks toward the glint handoff.
+    generateMipChain(device, texture);
     // Rebuild the bind group against the new texture view.
     bindGroup = buildBindGroup();
   }
 
   // ── draw ────────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, mvp: Float32Array): void {
-    device.queue.writeBuffer(uniformBuffer, 0, mvp);
+  function draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void {
+    device.queue.writeBuffer(uniformBuffer, 0, uniforms);
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setVertexBuffer(0, positionBuffer);
