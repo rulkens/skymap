@@ -314,6 +314,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       starPointRenderer: null,
       starCatalogRenderer: null,
       starCatalogPickRenderer: null,
+      // r32uint pick provider for the NEAR0 foreground bodies (Earth / planets /
+      // scene-star spheres + the sub-pixel scene-star points). null until
+      // initGpu; excluded from isEngineReady, driven by the body layers' drawPick.
+      bodyPickRenderer: null,
       // Keplerian orbit trails (Earth / Jupiter / Moon) — additive screen-space
       // conics on the (hdr, NEAR0) step. null until initGpu; excluded from
       // isEngineReady, null-checked at use by orbitTrailsLayer.
@@ -758,6 +762,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.starCatalogRenderer = null;
     state.gpu.starCatalogPickRenderer?.destroy();
     state.gpu.starCatalogPickRenderer = null;
+    state.gpu.bodyPickRenderer?.destroy();
+    state.gpu.bodyPickRenderer = null;
     state.gpu.orbitTrailRenderer?.destroy();
     state.gpu.orbitTrailRenderer = null;
     state.gpu.timingService.destroy();

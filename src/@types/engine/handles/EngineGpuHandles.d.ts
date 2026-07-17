@@ -68,6 +68,7 @@ import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
 import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
 import type { StarCatalogPickRenderer } from '../../rendering/StarCatalogPickRenderer';
+import type { BodyPickRenderer } from '../../rendering/BodyPickRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
@@ -430,6 +431,21 @@ export type EngineGpuHandles = {
    * shared records buffers belong to the visual renderer).
    */
   starCatalogPickRenderer: StarCatalogPickRenderer | null;
+  /**
+   * The r32uint pick provider for the NEAR0 foreground bodies (Earth, the
+   * planets, and the ~25 seeded scene stars incl. the Sun) — the body-family
+   * analogue of `starCatalogPickRenderer`.  Records ONE body sphere per
+   * `drawSphere` call (via a 256-byte-aligned dynamic-offset uniform whose
+   * per-pass cursor sidesteps the writeBuffer/submit race) and the sub-pixel
+   * scene-star POINT partition as one instanced pick-billboard draw.  Depth-
+   * tested (`depth32float`, 'less') so overlapping bodies resolve nearest-wins.
+   * Constructed in `initGpu` alongside `starCatalogPickRenderer`; the body
+   * layers' `drawPick` rows (Task 11) drive it.  Excluded from `isEngineReady`
+   * and null-checked at use.  Released and re-nulled by `destroy()` (its sphere
+   * mesh VBO/IBO, the sphere dynamic-offset + point camera uniforms, and the
+   * grow-only point instance buffer).
+   */
+  bodyPickRenderer: BodyPickRenderer | null;
   /**
    * The accurate Keplerian orbit trails (Earth / Jupiter around the Sun, the
    * Moon around Earth) as additive screen-space conics into the depthless HDR

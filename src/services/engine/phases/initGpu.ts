@@ -70,6 +70,7 @@ import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer'
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
 import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
 import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
+import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { sceneBodyLabels, FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
@@ -450,6 +451,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     device,
     state.gpu.starCatalogRenderer.pickResources(),
   );
+
+  // bodyPickRenderer is the pick provider for the NEAR0 foreground bodies (Earth
+  // + planets + the seeded scene stars). Constructed here alongside
+  // `starCatalogPickRenderer` (both are `initGpu`-built pick providers, mirroring
+  // `milkyWayPickRenderer` — NOT wired in `wireInput`); it owns its OWN sphere
+  // mesh + dynamic-offset uniform (the per-draw slot that sidesteps the
+  // writeBuffer/submit race) + point instance buffer, so it needs no other
+  // renderer's resources. The body layers' `drawPick` rows (Task 11) drive it; a
+  // no-op until a pick pass records into it.
+  state.gpu.bodyPickRenderer = createBodyPickRenderer(device);
 
   // orbitTrailRenderer draws the accurate Keplerian orbit trails (Earth /
   // Jupiter / Moon) as additive screen-space conics into the same depthless

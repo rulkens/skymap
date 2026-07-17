@@ -240,6 +240,12 @@ vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogRenderer'
 vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogPickRenderer', () => ({
   createStarCatalogPickRenderer: vi.fn(() => makeStub('starCatalogPickRenderer')),
 }));
+// The body pick renderer builds two r32uint pick pipelines (a dynamic-offset
+// sphere path + an instanced point path) against the full device API the plain
+// stub device can't service, so mock the factory like the other pick providers.
+vi.mock('../../../../src/services/gpu/renderers/bodies/bodyPickRenderer', () => ({
+  createBodyPickRenderer: vi.fn(() => makeStub('bodyPickRenderer')),
+}));
 // Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
 // real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its
@@ -322,6 +328,7 @@ function makeState(): EngineState {
       starRenderer: null,
       planetRenderer: null,
       starPointRenderer: null,
+      bodyPickRenderer: null,
       orbitTrailRenderer: null,
     },
     // The real seeded stores: planets draw through a single instanced
@@ -427,6 +434,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // The orbit-trail renderer needs no data delivery (SCENE_ORBIT_CONICS is a
     // static module-level table) — construction alone lands the handle.
     expect(state.gpu.orbitTrailRenderer).toBe(stubs.orbitTrailRenderer);
+    // The body pick renderer owns its sphere mesh VBO/IBO + the sphere/point
+    // uniform + point instance buffers — the destroy chain must reach it.
+    expect(state.gpu.bodyPickRenderer).toBe(stubs.bodyPickRenderer);
     expect(stubs.starPointRenderer!.setStars).toHaveBeenCalledTimes(1);
     const uploaded = stubs.starPointRenderer!.setStars.mock.calls[0]![0] as ReadonlyArray<{
       id: string;
