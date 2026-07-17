@@ -1114,9 +1114,12 @@ Cross-cutting tuning once both families select. Independently shippable.
 needed), possibly `src/services/gpu/shaders/selectionRing/fragment.wesl` (appearance only if the
 existing ring reads wrong at NEAR0 scale — otherwise untouched).
 
-- [ ] Tune the NEAR0 ring's px radius / floor so the halo reads as a clean "this one" affordance
+- [x] Tune the NEAR0 ring's px radius / floor so the halo reads as a clean "this one" affordance
       around a star and around a body (Earth-through-Sirius scale range), matching the COSMO ring's
       visual weight. Keep the renderer shared/unchanged if the sizing lives entirely in the layer.
+      _Executed to the user's pinned spec: halo star/body arms carry physical radii; new
+      `near0RingRadiusPx` helper = max(far-field floor, 1.5 × apparent sphere radius); galaxy
+      path byte-identical._
 - [ ] **Visual verification (dev server):** pick a Gaia star, a planet, Earth, and a scene star in
       turn; confirm the ring is legible and correctly centred at each scale, and does not balloon
       or vanish across the descent.
