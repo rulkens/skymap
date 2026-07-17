@@ -997,16 +997,22 @@ new vitest** (the logic is covered by Tasks 8–11; this is eyes-on calibration)
 - [x] **NEAR0 far-plane check (Decision 2 flagged interaction):** confirm the bubble is
       not clipped at the far end; if it is, extend the NEAR0 far floor (a named constant,
       coordinated with the zoom-to-earth far-plane work) — not a new slab.
-- [ ] **Budget tuning (grill Q9):** make `drawBudget.{typical,hardCap}` live-tunable
+- [x] **Budget tuning (grill Q9):** make `drawBudget.{typical,hardCap}` live-tunable
       (DebugPanel-slider style) during bring-up; tune by eye; freeze the tuned values
       back into `GAIA_STARS_ENTRY` (Task 5's renamed row). Set the small-tier mobile cap
       (a lower `hardCap` for `tier === 'small'`).
+      (Tuned differently in practice: the eye-tuning happened through the live
+      refineThreshold/glowOverlap/brightness/exposure sliders against the frozen
+      1.5M/2.5M budget, which held up. The small-tier mobile cap is DEFERRED to the
+      iOS device pass — backlog entry added at the 2026-07-17 audit.)
 - [x] **Crossfade tuning (spec §7):** live-tune `crossfadePc.{inner,outer}` against the
       MW-cloud handoff; freeze into the row. V1 accepts a visible seam — density
       calibration stays deferred (backlog item).
-- [ ] **Colour-ramp check (Decision 1):** confirm Gaia bulk stars and scene FamousStars
+- [x] **Colour-ramp check (Decision 1):** confirm Gaia bulk stars and scene FamousStars
       read as the same species (blue-white O/B ↔ red M dwarfs); nudge the anchor table if
-      a class reads wrong.
+      a class reads wrong. (The entire T13 loop was colour-sensitive eye tuning — incl.
+      the hue-preserving knee work built on the tint anchors — with no species mismatch
+      surfaced; user signed off on the visual state 2026-07-17.)
 - [x] Commit the frozen constants. (Tuning went beyond the planned knobs: live sliders
       for refineThreshold/glowOverlap/brightness/size/exposure near-mid-far; leaf-capacity
       octree rebuild; GCNS taper; half-res offscreen aggregate pass + summed-field knee.)

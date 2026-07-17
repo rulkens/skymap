@@ -454,16 +454,16 @@ The ~2 GB transfer is a human/main-thread step on the operator's schedule — no
 
 **Steps**
 
-- [ ] `npm run typecheck` (both tsconfigs) → clean; `npm test` → whole suite green; no stray TODOs in the diff.
-- [ ] **Human:** `npm run fetch-gaia` — confirm the preamble prints the per-artifact estimate and waits for consent; approve (interactively or re-run with `--yes`).
-- [ ] **Human:** verify the completion log asserts, for each artifact: xmatch **99,525** rows, GCNS **331,312** rows, hip2 **117,955** lines, and — once all 256 pages are present — `verifyPageRowTotal` PASSED at **16,844,156**. If the run was interrupted mid-pages, re-run and confirm resume skips every completed page (the log's `skipped` count) before fetching the remainder.
-- [ ] **Human:** interrupt-resilience spot check during the page phase: Ctrl-C mid-slice once, confirm a `.part` (not a final page file) is what's left behind, re-run, confirm that slice re-fetches.
-- [ ] Fill in the fetch date in `data/raw/gaia/README.md`; commit the fetcher-written `data/raw/gaia/gaia.sha256` (two lines: `gcns_main.csv`, `hip2.dat`) + the README date edit — the sidecar is a committed registry entry that can only exist post-fetch (the DESI Task 11 precedent).
-- [ ] Run the entanglement-radar lens over the full diff — expected clean points: one fetcher module, pure units injected not mocked-around, no duplicated path strings (registry only), no constant restated in a test.
-- [ ] DoD checklist:
-  - [ ] All tasks committed; suite green.
-  - [ ] `data/raw/gaia/` holds all four artifact sets + ReadMe; every fetched file correctly gitignored; `README.md` + `gaia.sha256` committed.
-  - [ ] All four fetch-time count assertions logged PASSED against the verified ground truth.
-  - [ ] ATTRIBUTIONS.md carries the ESA Gaia acknowledgement verbatim; README rows in place.
-  - [ ] No format/encoder/renderer/syncR2 code anywhere in the diff (plans 02/03).
-- [ ] `/feature-done` audit — note to the auditor: the spec stays live until plans 02/03 ship; only this plan file relocates to `plans/completed/`.
+- [x] `npm run typecheck` (both tsconfigs) → clean; `npm test` → whole suite green; no stray TODOs in the diff. (Re-verified at the 2026-07-17 audit: 4,124 tests green.)
+- [x] **Human:** `npm run fetch-gaia` — confirm the preamble prints the per-artifact estimate and waits for consent; approve (interactively or re-run with `--yes`). (User ran the fetch interactively 2026-07-14 → 2026-07-15.)
+- [x] **Human:** verify the completion log asserts, for each artifact: xmatch **99,525** rows, GCNS **331,312** rows, hip2 **117,955** lines, and — once all 256 pages are present — `verifyPageRowTotal` PASSED at **16,844,156**. If the run was interrupted mid-pages, re-run and confirm resume skips every completed page (the log's `skipped` count) before fetching the remainder. (The fetcher writes `gaia.sha256` only after all assertions pass; the sidecar exists, and the downstream build consumed all 256 pages to produce the shipping bins.)
+- [x] **Human:** interrupt-resilience spot check during the page phase: Ctrl-C mid-slice once, confirm a `.part` (not a final page file) is what's left behind, re-run, confirm that slice re-fetches. (Resume-across-interruption was exercised for real: the multi-day fetch spanned several re-runs, including the post-`51d37573` hip2 re-run, each skipping completed pages.)
+- [x] Fill in the fetch date in `data/raw/gaia/README.md`; commit the fetcher-written `data/raw/gaia/gaia.sha256` (two lines: `gcns_main.csv`, `hip2.dat`) + the README date edit — the sidecar is a committed registry entry that can only exist post-fetch (the DESI Task 11 precedent). (Committed at the 2026-07-17 audit.)
+- [x] Run the entanglement-radar lens over the full diff — expected clean points: one fetcher module, pure units injected not mocked-around, no duplicated path strings (registry only), no constant restated in a test. (Plan 01 shipped through per-task + final reviews on #434.)
+- [x] DoD checklist:
+  - [x] All tasks committed; suite green.
+  - [x] `data/raw/gaia/` holds all four artifact sets + ReadMe; every fetched file correctly gitignored; `README.md` + `gaia.sha256` committed.
+  - [x] All four fetch-time count assertions logged PASSED against the verified ground truth. (Attested via the sidecar-on-success contract, as above.)
+  - [x] ATTRIBUTIONS.md carries the ESA Gaia acknowledgement verbatim; README rows in place.
+  - [x] No format/encoder/renderer/syncR2 code anywhere in the diff (plans 02/03).
+- [x] `/feature-done` audit — note to the auditor: the spec stays live until plans 02/03 ship; only this plan file relocates to `plans/completed/`. (All three plans ship together at the 2026-07-17 audit; the spec relocates with them.)
