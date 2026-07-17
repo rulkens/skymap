@@ -184,17 +184,18 @@ export function collectTextureImages(sourceDir: string): TextureImageUpload[];
 sweep at `syncR2.ts:417-444`), so `dataUrl('images/textures/…')` resolves. The
 r2Key `data/images/textures/<file>` matches the `dataUrl` base like the `.bin`s.
 
-- [ ] Add `collectTextureImages.ts` (`TextureImageUpload` = `{ localPath, r2Key
+- [x] Add `collectTextureImages.ts` (`TextureImageUpload` = `{ localPath, r2Key
   }`, same shape as `HiResImageUpload`). Didactic docblock: mirrors
   `collectHiResImages`; the `data/images/textures/` r2Key prefix matches
   `dataUrl`.
-- [ ] Wire the sweep into `syncR2.ts`'s `main` beside the hi-res sweep.
-- [ ] Test `collectTextureImages maps files to the textures r2 prefix` — a
+- [x] Wire the sweep into `syncR2.ts`'s `main` beside the hi-res sweep (via
+  `uploadIfChanged`, so touchedKeys/CDN-purge stay in sync).
+- [x] Test `collectTextureImages maps files to the textures r2 prefix` — a
   fixture dir of `mars-2048.jpg` + `saturn-ring-8192.png` → r2Keys
   `data/images/textures/mars-2048.jpg` / `…/saturn-ring-8192.png`; an absent dir
   → `[]`; a non-image file is skipped (the r2-key mapping + sweep coverage,
   spec §11).
-- [ ] `npm test -- collectTextureImages` → green. Commit.
+- [x] `npm test -- collectTextureImages` → green. Commit.
 
 ## Task 5 — Splash attribution
 
