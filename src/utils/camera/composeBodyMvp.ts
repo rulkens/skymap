@@ -20,7 +20,26 @@
  * BETWEEN translate and scale — a column vector transforms as `(T·R·S)·v`, so
  * the spin acts on the sphere at the origin before the translate carries it
  * into place. A rotation-invariant body (a flat-albedo or emissive sphere)
- * passes `IDENTITY_MAT3`, collapsing the model back to `T·S`.
+ * passes `IDENTITY_MAT3`, collapsing the rotation to a no-op.
+ *
+ * ### Oblateness — a per-axis model scale composed INSIDE the oriented frame
+ *
+ * A rotating star is an oblate spheroid: its equatorial radius exceeds its
+ * polar radius. Rather than teach the sphere renderer (its mat4 + tint uniform
+ * is deliberately minimal) about flattening, the spheroid is baked into the
+ * CPU-side model scale — the two equatorial axes scale by `radiusMpc`, the
+ * polar (model-Z) axis by `radiusMpc·(1 − oblateness)`. A sphere is just the
+ * `oblateness = 0` case, so the default leaves every uniform-radius caller
+ * (Earth, planets) composing exactly the matrix they did before.
+ *
+ * Because the flatten lives in `S` — the INNERMOST model factor — the
+ * orientation `R` rotates the ALREADY-flattened spheroid: a tilted oblate body
+ * flattens along its OWN pole (its local +Z carried into world by `R`), not
+ * along world-Z. A rotation-invariant star passes `IDENTITY_MAT3`, so its pole
+ * stays fixed to model **Z** — a deliberate simplification (the seed carries no
+ * pole vector) that renders the flattening as a Z-flatten, the visually
+ * dominant effect for a lone resolved star. A per-star pole vector is a future
+ * orientation field; once it exists, that star's flatten tilts with it for free.
  *
  * ### Why compose the FULL MVP in f64 before narrowing (spec §3 / §9)
  *
@@ -60,11 +79,16 @@ import { narrowMat4 } from '../math/narrowMat4';
  * @param bodyPosMpc    Absolute body position in world-space Mpc (heliocentric).
  * @param renderOrigin  The render origin (same value passed to
  *                      `computeForegroundViewProj`).
- * @param radiusMpc     Body radius in Mpc (e.g. `6371 * SCALE_UNITS.KM_TO_MPC`).
+ * @param radiusMpc     Equatorial body radius in Mpc (e.g.
+ *                      `6371 * SCALE_UNITS.KM_TO_MPC`).
  * @param orientation   The body's baked local→equatorial-world rotation `R`,
  *                      embedded between translate and scale (`T·R·S`). Pass
  *                      `IDENTITY_MAT3` for a rotation-invariant body (a flat
  *                      albedo / emissive sphere renders identically under `R`).
+ * @param oblateness    Flattening `(a − c)/a`; the polar (model-Z) axis scales
+ *                      by `radiusMpc·(1 − oblateness)` INSIDE the oriented frame,
+ *                      so the flatten tilts with `orientation`. Defaults to `0`
+ *                      (a true sphere), leaving uniform-radius callers unchanged.
  * @returns  A `Float32Array` of 16 values (column-major proj·view·model),
  *           composed entirely in f64 before narrowing to preserve sub-metre
  *           accuracy at 1-AU distances.
@@ -75,6 +99,7 @@ export function composeBodyMvp(
   renderOrigin: Readonly<Vec3>,
   radiusMpc: number,
   orientation: Readonly<Mat3>,
+  oblateness = 0,
 ): Float32Array {
   // Delta in Mpc, expressed in the renderOrigin-relative frame that foregroundVp
   // was built for. Subtracting renderOrigin here mirrors what computeForegroundViewProj
@@ -102,15 +127,18 @@ export function composeBodyMvp(
   ]);
 
   // Model = T · R · S. A column vector v transforms as (T·R·S)·v — read
-  // right-to-left: scale the unit sphere by radiusMpc, rotate it into its
-  // equatorial-world facing, then translate it to the body centre. `R` sits
-  // between `T` and `S` (not outside both) so the spin acts on the sphere at
-  // the origin, before the translation carries it into place — a rotation
-  // applied after the translate would swing the body around the render origin.
-  // mat4d.translation / scaling each return a fresh Float64Array.
+  // right-to-left: scale the unit sphere (equatorial axes X,Y by radiusMpc; the
+  // polar axis Z shortened by 1 − oblateness so oblateness 0 is a true sphere),
+  // rotate the spheroid into its equatorial-world facing, then translate it to
+  // the body centre. `S` is the INNERMOST factor, so `R` flattens the pole along
+  // the body's OWN axis, not world-Z. `R` sits between `T` and `S` (not outside
+  // both) so the spin acts on the sphere at the origin, before the translation
+  // carries it into place — a rotation applied after the translate would swing
+  // the body around the render origin. mat4d.translation / scaling each return a
+  // fresh Float64Array.
   const model = mat4d.multiply(
     mat4d.multiply(mat4d.translation(delta), rot),
-    mat4d.scaling([radiusMpc, radiusMpc, radiusMpc]),
+    mat4d.scaling([radiusMpc, radiusMpc, radiusMpc * (1 - oblateness)]),
   ) as Float64Array;
 
   // Full compose in f64: the cancellation between the large VP translation and

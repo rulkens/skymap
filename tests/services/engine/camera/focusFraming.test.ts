@@ -122,6 +122,7 @@ describe('focusFraming', () => {
   const bodyRow = (over: Partial<BodyRow> = {}): BodyRow => ({
     type: 'body',
     id: 'earth',
+    label: 'Earth',
     positionMpc: [4.8481e-12, 0, 0], // ~1 AU in Mpc
     radiusKm: EARTH_RADIUS_KM,
     ...over,

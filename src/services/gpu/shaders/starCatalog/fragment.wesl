@@ -3,7 +3,7 @@
 // Two entry points share the rim-zeroed Gaussian glow profile below:
 //
 //   fs        — the LEAF stream. Applies the hue-preserving soft-knee
-//               ('starKnee', knee.wesl) per glow, at deposit time, and writes
+//               ('starKnee', lib/starKnee.wesl) per glow, at deposit time, writes
 //               premultiplied '(tint * a, a)' into the HDR accumulation. This
 //               is the full-resolution point-star path; its output is unchanged
 //               by the aggregate split.
@@ -29,8 +29,9 @@
 // The circumscribing-triangle billboard puts the unit disc inside the triangle,
 // so fragments past r = 1 fall outside the disc and are discarded anyway; the
 // rim-zero removes the residual edge just inside it. Flux stays conserved
-// because K_GAUSS in vertex.wesl integrates THIS shifted profile (~0.7268), not
-// the bare Gaussian -- the two files mirror EDGE and the profile shape.
+// because K_GAUSS in lib/starPhotometry.wesl integrates THIS shifted profile
+// (~0.7268), not the bare Gaussian -- and both live in that one lib module
+// (EDGE + starGlowProfile), so the shape and its integral cannot drift apart.
 //
 // ## Flux-integrated peak
 //
@@ -53,7 +54,7 @@
 // scalar runs far over the displayable range clips its channels one at a time,
 // collapsing every hue toward white; the survey's real colour structure would
 // die at the DISPLAY step. So the LEAF path ('fs') compresses the SCALAR with
-// the soft knee BEFORE the tint multiply -- 'starKnee' in knee.wesl, which owns
+// the soft knee BEFORE the tint multiply -- 'starKnee' in lib/starKnee.wesl, owns
 // the curve and its derivation -- keeping the channel ratios (the hue) intact
 // at any exposure. Compressing the shared scalar, not per-channel after the
 // multiply, is what keeps 'tint' pristine (the red channel would otherwise
@@ -85,12 +86,8 @@
 // octree-cut LOD fade) scales the raw scalar BEFORE compression (below).
 
 import package::starCatalog::io::VSOut;
-import package::starCatalog::knee::starKnee;
-
-// Rim value of the bare Gaussian: exp(-4), the profile's height at r = 1. We
-// subtract it and rescale (below) so the dot fades to exactly 0 at the disc edge
-// -- see the header. Mirrors K_GAUSS's shifted-profile derivation in vertex.wesl.
-const EDGE: f32 = 0.0183156; // exp(-4)
+import package::lib::starKnee::starKnee;
+import package::lib::starPhotometry::starGlowProfile;
 
 // The rim-zeroed Gaussian glow scalar, shared by both entry points: the
 // flux-derived peak 'intensity' spread by the profile and faded by the per-node
@@ -102,10 +99,10 @@ const EDGE: f32 = 0.0183156; // exp(-4)
 // this helper contains NO discard (each entry point keeps its own, matching the
 // original single-entry shader exactly).
 fn glowScalar(r2: f32, intensity: f32, opacity: f32) -> f32 {
-  // Rim-zeroed Gaussian: (exp(-4 r2) - EDGE) / (1 - EDGE) reaches exactly 0 at
-  // the rim (r2 = 1) so saturated peaks show no hard edge, while g(0) = 1.
-  // K_GAUSS in vertex.wesl integrates THIS profile, keeping total flux conserved.
-  let g = (exp(-r2 * 4.0) - EDGE) / (1.0 - EDGE);
+  // Rim-zeroed Gaussian profile (starGlowProfile, lib/starPhotometry.wesl):
+  // reaches exactly 0 at the rim (r2 = 1) so saturated peaks show no hard edge,
+  // while g(0) = 1. K_GAUSS there integrates THIS profile, flux conserved.
+  let g = starGlowProfile(r2);
   return intensity * g * opacity;
 }
 
@@ -118,7 +115,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Hue-preserving soft-knee compression on the SCALAR, tint applied AFTER, so
   // the tint's channel ratios (the colour) survive any exposure instead of
   // clipping toward yellow-white in the shared per-channel tonemap. The curve
-  // lives in knee.wesl, shared with the aggregate-upsample composite.
+  // lives in lib/starKnee.wesl, shared with the aggregate-upsample composite.
   let a = starKnee(I);
   return vec4<f32>(in.color * a, a);
 }

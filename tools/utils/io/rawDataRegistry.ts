@@ -148,6 +148,13 @@ export const RAW_DATA = {
     description:
       'Hand-authored seed list of well-known galaxies (M31, M33, NGC 253, …). Drives the famous-galaxy build + image fetcher.',
   },
+  'famous-stars.seed': {
+    path: 'data/seeds/famous_stars.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-authored seed list of well-known stars (Sirius, Betelgeuse, the Sun, …). Drives the famous-stars build (generated render table + meta sidecar) and the Gaia dedup.',
+  },
   'famous.curated': {
     path: 'data/seeds/famous_curated_overrides.json',
     kind: 'file',

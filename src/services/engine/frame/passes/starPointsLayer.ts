@@ -59,17 +59,20 @@
  *
  * `enabled` gates on the `starPointRenderer` GPU handle (null in the
  * pre-bootstrap window), the shared near-field distance gate
- * (`FOREGROUND_MAX_DISTANCE_MPC`), AND a non-empty `points` branch — the
- * same partition `draw` consumes, so the enable gate and the uploaded set
- * cannot disagree. The distance gate's derived margin is deliberately
- * generous (see its module header): the points are the local starfield
- * BACKDROP, so they must survive well past the seed extent — the gate cuts
- * them only once the whole neighbourhood is far below a pixel, which also
- * empties the `(hdr, NEAR0)` render step the executor then skips. The
- * handle check short-circuits first so pre-bootstrap fixtures (null
- * renderer, no bodies bag, bare ctx) never touch `state.data` or `ctx`;
- * the distance gate runs second so the per-star partition is not computed
- * at all when the camera is far. `enabled` reads the camera from
+ * (`FOREGROUND_MAX_DISTANCE_MPC`), the backdrop-dissolve band
+ * (`SCALE_FADE_BANDS.starBackdrop` > 0), AND a non-empty `points` branch —
+ * the same partition `draw` consumes, so the enable gate and the uploaded
+ * set cannot disagree. The backdrop is a minimum-size additive sprite field,
+ * so at galaxy framing the whole roster collapses onto a few pixels into one
+ * bright blob; the `starBackdrop` band dissolves it smoothly (its rgb scaled
+ * per frame in `draw`) and completes STRICTLY inside the shared gate, so the
+ * gate's hard cut lands on already-black sprites and never pops. Once the band
+ * hits 0 the layer disables outright — the "opacity 0 ⇒ no render" house rule
+ * — which also empties the `(hdr, NEAR0)` render step the executor then skips.
+ * The handle check short-circuits first so pre-bootstrap fixtures (null
+ * renderer, no bodies bag, bare ctx) never touch `state.data` or `ctx`; the
+ * distance gate and the band run before the per-star partition so it is not
+ * computed at all when the camera is far. `enabled` reads the camera from
  * `ctx.drawCamPos` (absolute frame) while `draw` reads `view.camPos`
  * (NEAR0's origin-relative frame); the two coincide because
  * `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
@@ -79,9 +82,13 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
+import { visibleStars } from '../visibleStars';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { fadeBand } from '../../../../utils/math/fadeBand';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
+import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
 
 export const starPointsLayer: ContentLayer = {
   name: 'star-points',
@@ -90,13 +97,20 @@ export const starPointsLayer: ContentLayer = {
   blend: 'additive',
 
   enabled(state, ctx) {
-    // Handle first, distance second, partition last — see the module
-    // header's gate note.
+    // Handle first, distance second, backdrop-band third, partition last —
+    // see the module header's gate note.
     if (state.gpu.starPointRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+    // Once the dissolve band has zeroed the backdrop, DISABLE the layer rather
+    // than draw black sprites — the "opacity 0 ⇒ no render" house rule, which
+    // also empties the (hdr, NEAR0) step so the executor skips it. Keyed on the
+    // camera's distance from the heliocentric origin, the quantity the band
+    // reads (drawCamPos is the absolute-frame eye; the origin is [0,0,0]).
+    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
+    if (fadeBand(SCALE_FADE_BANDS.starBackdrop, camDistMpc) <= 0) return false;
     return (
       partitionStarsByResolution({
-        stars: state.data.bodies.stars,
+        stars: visibleStars(state),
         camPosMpc: ctx.drawCamPos,
         thresholdPx: STAR_RESOLVE_PX,
         viewportHeightPx: ctx.canvasSize.height,
@@ -110,7 +124,7 @@ export const starPointsLayer: ContentLayer = {
     if (renderer === null) return;
 
     const { points } = partitionStarsByResolution({
-      stars: state.data.bodies.stars,
+      stars: visibleStars(state),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
       viewportHeightPx: view.viewportPx[1],
@@ -124,17 +138,40 @@ export const starPointsLayer: ContentLayer = {
     // view translation `rebaseViewProj` folds into the vp.
     const camPos = view.camPos;
 
-    // Re-express each anchor as a small camera-relative vector. The subtraction
-    // runs on the f64 seed coordinates before the renderer narrows to f32;
-    // narrowing the raw ~1e-6 Mpc anchor would already have lost the low bits.
-    // Re-partitioned and re-uploaded every frame — the point set is ≤25 stars,
-    // so the per-frame buffer rebuild is trivially cheap (module header).
+    // The backdrop-dissolve alpha for THIS frame, keyed on the camera's distance
+    // from the heliocentric origin — the same quantity `enabled` gates on, read
+    // here from `view.camPos` (the frames coincide; see the module header). It
+    // scales each star's uploaded colour below.
+    const backdropFade = fadeBand(
+      SCALE_FADE_BANDS.starBackdrop,
+      Math.hypot(camPos[0], camPos[1], camPos[2]),
+    );
+
+    // Re-express each anchor as a small camera-relative vector, and premultiply
+    // the colour by the dissolve alpha. The subtraction runs on the f64 seed
+    // coordinates before the renderer narrows to f32; narrowing the raw ~1e-6
+    // Mpc anchor would already have lost the low bits. Re-partitioned and
+    // re-uploaded every frame — the point set is ≤25 stars, so the per-frame
+    // buffer rebuild (and the colour scale riding it) is trivially cheap
+    // (module header).
+    //
+    // Scaling the colour CPU-side is a COMPLETE fade, not an approximation: the
+    // pipeline is one/one additive into the depthless HDR target, so each
+    // fragment's rgb contribution scales linearly with the uploaded colour, and
+    // the hdr→swap composite runs `blend: 'replace'` (`preserveAlpha 0`,
+    // `compositor.ts` BLEND_TABLE), which discards the fragment's unscaled alpha
+    // channel — so multiplying rgb here is the whole story.
     const rebasedPoints = points.map((star) => ({
       ...star,
       positionMpc: [
         star.positionMpc[0] - camPos[0],
         star.positionMpc[1] - camPos[1],
         star.positionMpc[2] - camPos[2],
+      ] as Vec3,
+      color: [
+        star.color[0] * backdropFade,
+        star.color[1] * backdropFade,
+        star.color[2] * backdropFade,
       ] as Vec3,
     }));
     renderer.setStars(rebasedPoints);
@@ -144,6 +181,24 @@ export const starPointsLayer: ContentLayer = {
     // narrowed HERE, at the GPU-upload boundary (`rebaseViewProj` stays f64
     // for consumers that must invert it).
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
-    renderer.draw(pass, rebasedVp, view.viewportPx);
+
+    // The same shared star appearance the survey (Gaia bin) leaf stage reads, so
+    // a famous star obeys the identical sizePx slider and exposure model. NOT
+    // gated on `starCatalogs.enabled` — that flag is the Gaia survey's master
+    // toggle, and the famous layer has its own visibility gate. `brightness`
+    // folds the SAME scale-dependent `starExposureRamp` `starCatalogLayer`
+    // applies: the user trim times the camera-distance ramp, keyed on the
+    // camera's heliocentric Mpc distance (the ramp's own input unit).
+    const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
+    const { sizePx, brightness: brightnessTrim } = state.settings.starCatalogs;
+    const brightness =
+      brightnessTrim *
+      starExposureRamp(
+        camDistMpc,
+        state.settings.starCatalogs.exposureNearX,
+        state.settings.starCatalogs.exposureMidX,
+        state.settings.starCatalogs.exposureFarX,
+      );
+    renderer.draw(pass, rebasedVp, view.viewportPx, { sizePx, brightness });
   },
 };

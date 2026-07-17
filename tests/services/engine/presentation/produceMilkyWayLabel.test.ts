@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { produceMilkyWayLabel } from '../../../../src/services/engine/presentation/produceMilkyWayLabel';
 import { MILKY_WAY_LABEL_STYLE } from '../../../../src/services/engine/presentation/milkyWayLabelStyle';
+import { milkyWayLabelAlpha } from '../../../../src/services/gpu/labelLayout/milkyWayLabelVisibility';
+import { fadeBand } from '../../../../src/utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import {
   LEADER_LINE_PADDING_PX,
   MIN_LABEL_CLEARANCE_PX,
@@ -98,16 +101,29 @@ function expectedLiftPx(camDistMpc: number, viewportHeightPx: number): number {
   return 1.5 * (30 / (camDistMpc * 1000)) * pxPerRad;
 }
 
+// The producer composes fadeAlpha = milkyWayLabelAlpha(dist) ·
+// fadeBand(surveyDeepZoom, dist) · layerOpacity. The surveyDeepZoom band's FULL
+// edge tracks FOREGROUND_MAX_DISTANCE_MPC, which the famous-stars seed roster
+// grows (Deneb at 802 pc now pushes the gate to ~0.8 Mpc, above the Milky-Way
+// label's 0.6 Mpc near band). So the distance fade at a fixed camera distance is
+// DERIVED here rather than pinned at 1 — keeping these expectations green as the
+// gate moves. (NOTE the coupling flagged for the spec owner: the label no longer
+// reaches full alpha at 0.5 Mpc.)
+const distanceFadeAt = (camDistMpc: number): number =>
+  milkyWayLabelAlpha(camDistMpc) * fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
+
 describe('produceMilkyWayLabel', () => {
-  it('emits one label and one line at full alpha when close (<= 0.6 Mpc) and enabled', () => {
+  it('emits one label and one line at the composed distance fade when close and enabled', () => {
     const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
     expect(out.labels).toHaveLength(1);
     expect(out.lines).toHaveLength(1);
     expect(out.labels[0]!.id).toBe('milkyWay'); // id = source id; text stays below
     expect(out.labels[0]!.text).toBe('You are here');
     expect(out.lines[0]!.ownerLabelId).toBe('milkyWay');
-    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(1);
-    expect(out.lines[0]!.fadeAlpha).toBeCloseTo(1);
+    // Label and stem fade in lock-step at the derived distance fade.
+    const expected = distanceFadeAt(0.5);
+    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(expected);
+    expect(out.lines[0]!.fadeAlpha).toBeCloseTo(expected);
   });
 
   it('outranks every structure label in the declutter (top prominence)', () => {
@@ -144,14 +160,15 @@ describe('produceMilkyWayLabel', () => {
 
   it('multiplies the layer opacity into the distance fade', () => {
     const out = produceMilkyWayLabel(makeState(true, 0.5), makeCtx(0.5));
-    // distAlpha = 1 at 0.5 Mpc, layerOpacity = 0.5 → 0.5
-    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.5);
+    // fadeAlpha = distanceFade(0.5) · layerOpacity(0.5)
+    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(distanceFadeAt(0.5) * 0.5);
   });
 
   it('keeps emitting the fade-out tail when disabled but still fading (opacity > 0)', () => {
     const out = produceMilkyWayLabel(makeState(false, 0.3), makeCtx(0.5));
     expect(out.labels).toHaveLength(1);
-    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.3);
+    // fadeAlpha = distanceFade(0.5) · layerOpacity(0.3)
+    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(distanceFadeAt(0.5) * 0.3);
   });
 
   it('focusedOnly mode: emits nothing when something else (or nothing) is focused', () => {

@@ -1,5 +1,5 @@
 /**
- * composeBodyMvp — precision tests.
+ * composeBodyMvp — precision + model-compose tests.
  *
  * ### Positive case
  *
@@ -19,7 +19,15 @@
  * composeBodyMvp's f64-before-narrow path stays under one body radius while
  * the separate-narrow f32 path exceeds it.
  *
- * Both cases compare clip-space positions converted to NDC (divide by w).
+ * Both precision cases compare clip-space positions converted to NDC (÷ w).
+ *
+ * ### Orientation + oblateness cases
+ *
+ * The rotation round-trip proves `orientation` is embedded as the model's `R`
+ * factor (a transposed embed would land the surface vertex at the wrong NDC).
+ * The oblateness cases prove the polar (model-Z) axis scales by `1 − oblateness`
+ * INSIDE the oriented frame — a tilted oblate body flattens along its OWN pole,
+ * not world-Z.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -301,9 +309,6 @@ describe('composeBodyMvp', () => {
     // image of local +y is world −x.
     const rot90z: Mat3 = [0, 1, 0, -1, 0, 0, 0, 0, 1];
 
-    // Body-local +x surface vertex.
-    const localVx: [number, number, number, number] = [1, 0, 0, 1];
-
     const mvp = composeBodyMvp(rotVp, rotBodyPos, rotRenderOrigin, rotRadiusMpc, rot90z);
     const actualNdc = transformF32ToNdc(mvp);
 
@@ -347,5 +352,58 @@ describe('composeBodyMvp', () => {
     for (let i = 0; i < 16; i++) {
       expect(actualMvp[i]).toBeCloseTo(referenceMvp[i] as number, 6);
     }
+  });
+
+  it('oblate body flattens the polar axis (model-Z) to (1 − oblateness) of the equatorial radius', () => {
+    // Drive the per-axis scale path in isolation: an identity VP with the render
+    // origin AT the body centre collapses the MVP to the model matrix alone
+    // (scale · translate(0)), so a transformed unit point reads the per-axis
+    // scale directly — no perspective distortion to unpick. A clean unit radius
+    // keeps the ratio (the property under test) scale-independent and f32-exact.
+    // Identity orientation keeps the pole on model-Z so the axis-aligned reads hold.
+    const r = 1;
+    const centre: [number, number, number] = [0, 0, 0];
+    const identityVp = mat4d.identity() as Float64Array;
+
+    const oblateMvp = composeBodyMvp(identityVp, centre, centre, r, IDENTITY_MAT3, 0.5);
+    const sphereMvp = composeBodyMvp(identityVp, centre, centre, r, IDENTITY_MAT3);
+
+    // +X is an equatorial point, +Z the polar point (the polar-Z simplification
+    // composeBodyMvp documents). Compare the transformed extents, not the compose
+    // maths: for oblateness 0.5 the polar extent must be exactly half the
+    // equatorial extent, and the spherical control must keep the two equal.
+    const oblateEquator = vec4.transformMat4([1, 0, 0, 1], oblateMvp)[0] as number;
+    const oblatePolar = vec4.transformMat4([0, 0, 1, 1], oblateMvp)[2] as number;
+    expect(oblatePolar / oblateEquator).toBeCloseTo(0.5, 6);
+
+    const sphereEquator = vec4.transformMat4([1, 0, 0, 1], sphereMvp)[0] as number;
+    const spherePolar = vec4.transformMat4([0, 0, 1, 1], sphereMvp)[2] as number;
+    expect(spherePolar / sphereEquator).toBeCloseTo(1, 6);
+  });
+
+  it('a tilted oblate body flattens along its OWN pole, not world-Z', () => {
+    // Render origin AT the body centre + identity VP collapse the MVP to the
+    // model (T(0)·R·S), so a transformed local point reads R·S·v directly.
+    // Rotate the body 90° about X so its pole (local +Z) tilts to world −Y.
+    // The flatten lives in S (the innermost factor), so the pole EXTENT stays
+    // radius·(1 − oblateness) regardless of the tilt — a world-Z flatten
+    // (S outside R) would instead leave the tilted pole at full radius and
+    // shorten world-Z. Asserting the tilted-pole extent is the shortened one
+    // discriminates the two composes; a rotation preserves length, so the read
+    // is the flatten alone.
+    const centre: [number, number, number] = [0, 0, 0];
+    const identityVp = mat4d.identity() as Float64Array;
+    // +90° about +x (column-major, m[c*3+r]): local +z → world −y.
+    const rotX90: Mat3 = [1, 0, 0, 0, 0, 1, 0, -1, 0];
+
+    const mvp = composeBodyMvp(identityVp, centre, centre, 1, rotX90, 0.5);
+
+    const pole = vec4.transformMat4([0, 0, 1, 1], mvp);
+    const poleLen = Math.hypot(pole[0] as number, pole[1] as number, pole[2] as number);
+    expect(poleLen).toBeCloseTo(0.5, 6);
+
+    const equator = vec4.transformMat4([1, 0, 0, 1], mvp);
+    const equatorLen = Math.hypot(equator[0] as number, equator[1] as number, equator[2] as number);
+    expect(equatorLen).toBeCloseTo(1, 6);
   });
 });

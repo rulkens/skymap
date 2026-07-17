@@ -25,32 +25,56 @@
  * this reason). A hand-typed Mpc literal would silently strand a future
  * farther seed outside its own render gate.
  *
- * ### Why the margin is generous (×1000)
+ * The `FARTHEST_BODY_MPC` extent is exported because it is the ONE derivation
+ * source for the whole descent's near-field edges: this gate (×100), the
+ * caption gate (`SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`, ×4), and the star fade
+ * bands (`SCALE_FADE_BANDS.starCaption` / `.starBackdrop`) all scale off it, so
+ * growing the roster's farthest seed carries every edge in lockstep — no second
+ * hand literal to fall out of sync.
  *
- * The farthest seed is Pollux at ~10.34 pc ≈ 1.03e-5 Mpc, so the gate lands
- * at ~1e-2 Mpc (~10 kpc). Three properties motivate that decade:
- *   - `starPointsLayer` draws a fixed-size local starfield backdrop; the gate
- *     must not cut the points while the ~10 pc neighbourhood is still being
- *     framed (camera within a few hundred parsecs), so a tight bound over the
- *     seed extent would pop the backdrop mid-shot.
- *   - It stays a decade ABOVE the caption gate
- *     (`SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`, 1 kpc), preserving the intended
- *     order: the bodies/backdrop appear first on descent, the captions later.
- *   - It stays two decades BELOW 1 Mpc, so at galaxy scale the foreground
- *     passes are provably idle — the property the constant's test pins.
+ * ### Why the margin is a ×100 enclosure
+ *
+ * The farthest seed is now Eta Carinae at ~2300 pc ≈ 2.3e-3 Mpc — the roster
+ * carries deep stars (Deneb at ~800 pc, Eta Carinae at ~2300 pc) where it once
+ * topped out near Pollux at ~10 pc. The gate is that extent times a margin, and
+ * the margin resolves two opposed pulls at once:
+ *   - ENCLOSE the farthest body with real headroom, so the star-points backdrop
+ *     is never cut while the deep neighbourhood is still being framed (the
+ *     camera sits a few times the seed extent out while composing the shot). A
+ *     ×100 margin keeps the whole foreground alive until the camera is ~230 kpc
+ *     out — generous, not a hair above the seed extent.
+ *   - Stay well BELOW galaxy scale (< 1 Mpc), so at galaxy / cosmic zoom the
+ *     four NEAR0 foreground passes are provably idle — the property the
+ *     constant's test pins.
+ * ×100 lands the gate at ~0.23 Mpc. That is a coarser gate than the ~1e-2 Mpc
+ * the shallow Pollux-era roster produced, because enclosing a ~2.3 kpc
+ * neighbourhood with the same backdrop headroom simply reaches further — yet it
+ * stays two decades over every body AND comfortably under 1 Mpc, so both hard
+ * properties hold. The margin dropped ×10 from the earlier ×1000 to keep the
+ * gate under 1 Mpc as the roster's farthest seed grew ~200×.
+ *
+ * The gate is also the FULL edge of the coupled `surveyDeepZoom` band, so this
+ * value has to stay below the Milky-Way "You are here" label's 0.6 Mpc near
+ * band (`MILKY_WAY_LABEL_NEAR_MPC`): at ~0.23 Mpc the band reads full before the
+ * label's own distance fade does, so the origin-anchored annotation reaches full
+ * alpha again as the camera parks in the Local Group — a ×1000 gate (2.3 Mpc)
+ * would have dimmed it there.
  */
 
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 
 // The farthest seeded foreground element from the heliocentric render origin.
 // `positionMpc` is authored origin-relative, so |positionMpc| IS the distance.
-const FARTHEST_BODY_MPC = Math.max(
+export const FARTHEST_BODY_MPC = Math.max(
   ...SCENE_BODIES.map((body) =>
     Math.hypot(body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]),
   ),
 );
 
-// Generous on purpose — see the module header's margin rationale.
-const MARGIN = 1000;
+// ×100 enclosure headroom over the farthest seed — see the module header's
+// margin rationale. Kept small (down from ×1000) now that the roster carries
+// deep stars, so the gate stays under 1 Mpc and below the Milky-Way label's
+// near band.
+const MARGIN = 100;
 
 export const FOREGROUND_MAX_DISTANCE_MPC = FARTHEST_BODY_MPC * MARGIN;

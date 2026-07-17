@@ -27,6 +27,7 @@ import {
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
+  DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
@@ -141,6 +142,13 @@ export function buildInitialSettings(): EngineSettingsState {
           { enabled: e.visible, labelEnabled: true },
         ]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
+    },
+    // Famous-stars singleton overlay: the master gate on the seeded near-field
+    // star map. A flat `enabled` field like `milkyWay` / `filaments`, seeded
+    // from the SOURCE_REGISTRY famousStar row's `visible` gate. Gates the seeded
+    // map only — the star layers still draw the Sun alone when it's off.
+    famousStars: {
+      enabled: DEFAULT_FAMOUS_STARS_ENABLED,
     },
     volumes: {
       enabled: DEFAULT_VOLUMES_ENABLED,

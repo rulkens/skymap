@@ -74,12 +74,14 @@ describe('createStarPointRenderer', () => {
     expect(() => renderer.destroy()).not.toThrow();
   });
 
+  const DRAW_OPTS = { sizePx: 2.5, brightness: 1 };
+
   it('setStars and draw are callable with the right arity', () => {
     const renderer = createStarPointRenderer(mockDevice(), 'rgba16float');
     expect(typeof renderer.setStars).toBe('function');
     expect(renderer.setStars.length).toBe(1);
     expect(typeof renderer.draw).toBe('function');
-    expect(renderer.draw.length).toBe(3);
+    expect(renderer.draw.length).toBe(4);
   });
 
   it('draw is a no-op before setStars, draws 6×N after, and clears on empty upload', () => {
@@ -87,21 +89,49 @@ describe('createStarPointRenderer', () => {
 
     // Late binding: nothing uploaded yet — no draw call recorded.
     const before = mockPass();
-    expect(() => renderer.draw(before, new Float32Array(16), [1920, 1080])).not.toThrow();
+    expect(() => renderer.draw(before, new Float32Array(16), [1920, 1080], DRAW_OPTS)).not.toThrow();
     expect(before.draw).not.toHaveBeenCalled();
 
     // Two stars uploaded — one instanced draw of 6 vertices × 2 instances.
     renderer.setStars([SUN, SIRIUS]);
     const after = mockPass();
-    renderer.draw(after, new Float32Array(16), [1920, 1080]);
+    renderer.draw(after, new Float32Array(16), [1920, 1080], DRAW_OPTS);
     expect(after.draw).toHaveBeenCalledTimes(1);
     expect(after.draw).toHaveBeenCalledWith(6, 2);
 
     // Empty upload clears the renderer back to the no-op state.
     renderer.setStars([]);
     const cleared = mockPass();
-    renderer.draw(cleared, new Float32Array(16), [1920, 1080]);
+    renderer.draw(cleared, new Float32Array(16), [1920, 1080], DRAW_OPTS);
     expect(cleared.draw).not.toHaveBeenCalled();
+  });
+
+  it('writes sizePx / brightness into the uniform tail at floats 20 / 21, buffer sized 96', () => {
+    const device = mockDevice();
+    const renderer = createStarPointRenderer(device, 'rgba16float');
+    const createBuffer = device.createBuffer as unknown as ReturnType<typeof vi.fn>;
+    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+
+    // The StarPointUniforms buffer is the CameraUniforms prefix (80 B) plus the
+    // sizePx / brightness tail rounded to 96 B — must match starPoints/io.wesl.
+    const uniformCreate = createBuffer.mock.calls.find(
+      ([desc]) => (desc as GPUBufferDescriptor).label === 'star-points-uniform-buffer',
+    );
+    expect((uniformCreate![0] as GPUBufferDescriptor).size).toBe(96);
+
+    renderer.setStars([SUN, SIRIUS]);
+    renderer.draw(mockPass(), new Float32Array(16), [1920, 1080], { sizePx: 3.5, brightness: 42 });
+
+    const uniformWrite = writeBuffer.mock.calls.find(
+      ([buffer]) => (buffer as { label?: string }).label === 'star-points-uniform-buffer',
+    );
+    const scratch = uniformWrite![2] as Float32Array;
+    // sizePx at float 20 (byte 80), brightness at float 21 (byte 84); the pad
+    // floats 22..23 stay zero.
+    expect(scratch[20]).toBe(3.5);
+    expect(scratch[21]).toBe(42);
+    expect(scratch[22]).toBe(0);
+    expect(scratch[23]).toBe(0);
   });
 
   it('reuses the instance buffer across same-length setStars — one createBuffer, one writeBuffer per upload', () => {

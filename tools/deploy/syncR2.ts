@@ -44,7 +44,8 @@
  *
  * The ALLOW filter mirrors the runtime fetch surface: tier-suffixed
  * SDSS/GLADE bins, the unsuffixed 2mrs.bin / famous.bin / filaments.bin,
- * and the famous JSON sidecar.  (The pgc_aliases.json palette-search map is
+ * and the famous JSON sidecars (famous_meta.json + famous_stars_meta.json).
+ * (The pgc_aliases.json palette-search map is
  * also runtime-fetched but ships via EXTRA_FILES — it's a committed data/
  * source artefact, not a public/data build output.)
  * The legacy un-tiered glade.bin / sdss.bin
@@ -146,6 +147,10 @@ export const ALLOW = (name: string): boolean =>
   // cloudLoader.filamentFilenameForTier().
   name === 'filaments-small.bin' ||
   name === 'famous_meta.json' ||
+  // The famous-stars metadata sidecar — a gitignored build artefact emitted by
+  // the star pipeline and fetched by the runtime, shipped only via R2 exactly
+  // like famous_meta.json (never committed, no tier suffix).
+  name === 'famous_stars_meta.json' ||
   // NB: pgc_aliases.json is NOT here — it's a committed source artefact in
   // data/ (an expensive HyperLEDA pull, not a local build output), so it
   // ships via EXTRA_FILES below, same as the data/raw/ enrichment files.

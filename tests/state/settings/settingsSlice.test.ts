@@ -27,6 +27,7 @@ import reducer, {
   setStarCatalogRefineThreshold,
   setStarCatalogGlowOverlap,
   setStarCatalogVisible,
+  setFamousStarsEnabled,
   setPassDisabled,
   setClipPathLinger,
   setClipPathLingerSec,
@@ -228,6 +229,16 @@ describe('settingsSlice — star catalogs', () => {
   it('setStarCatalogGlowOverlap writes the aggregate glow-overlap spread', () => {
     const next = reducer(base(), setStarCatalogGlowOverlap(1.8));
     expect(next.starCatalogs.glowOverlap).toBe(1.8);
+  });
+});
+
+describe('settingsSlice — famous stars', () => {
+  it('setFamousStarsEnabled toggles the map gate without touching the star-catalogs master', () => {
+    // The famous-stars gate is a separate singleton overlay flag from the Gaia
+    // survey master (`starCatalogs.enabled`); flipping it leaves that untouched.
+    const next = reducer(base(), setFamousStarsEnabled(false));
+    expect(next.famousStars.enabled).toBe(false);
+    expect(next.starCatalogs.enabled).toBe(true);
   });
 });
 

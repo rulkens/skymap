@@ -21,6 +21,12 @@ describe('syncR2 ALLOW', () => {
     expect(ALLOW('structures_meta.json')).toBe(true);
   });
 
+  it('accepts famous_stars_meta.json', () => {
+    // The famous-stars metadata sidecar is a gitignored build artefact shipped
+    // only via R2, exactly like famous_meta.json — it must pass the filter.
+    expect(ALLOW('famous_stars_meta.json')).toBe(true);
+  });
+
   it('still rejects glade.bin / sdss.bin', () => {
     // The un-tiered legacy bins are offline DisPerSE inputs, never fetched
     // from the browser — they must stay out of the R2 sync.

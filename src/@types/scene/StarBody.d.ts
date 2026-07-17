@@ -8,11 +8,12 @@
  * A star renders two ways over the descent. Far out it is a point whose
  * brightness and on-screen size come from `absMag` (the same absolute-magnitude
  * quantity the catalogue point cloud uses, so the LOD crossover is one
- * language) tinted by `color` (its spectral-class colour, in linear RGB so it
- * composites correctly in the HDR pass). Up close — the Sun in the local
- * neighbourhood — it resolves into a lit sphere sized from `radiusKm`, left in
- * kilometres (the body's native unit) and converted to draw space at render
- * time, matching `EarthBody.radiusKm`.
+ * language) tinted by `color` (which derives from the star's blackbody
+ * `temperatureK`, in linear RGB so it composites correctly in the HDR pass).
+ * Up close — the Sun in the local neighbourhood — it resolves into a lit sphere
+ * sized from `radiusKm`, the real per-star value, left in kilometres (the
+ * body's native unit) and converted to draw space at render time, matching
+ * `EarthBody.radiusKm`.
  *
  * `positionMpc` stays a `Vec3` (never a raw tuple) so every position site
  * speaks the one absolute heliocentric, f64-valued frame.
@@ -25,6 +26,7 @@ export type StarBody = {
   readonly label: string;
   readonly positionMpc: Vec3; // absolute heliocentric, f64-valued
   readonly absMag: number; // drives point brightness/size + LOD
-  readonly color: Vec3; // spectral-class colour, linear RGB
+  readonly color: Vec3; // blackbody colour from temperatureK, linear RGB
   readonly radiusKm: number; // used once resolved to a sphere (the Sun)
+  readonly oblateness?: number; // flattening (a−c)/a; absent ⇒ spherical; feeds per-axis MVP scale
 };
