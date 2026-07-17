@@ -52,46 +52,23 @@ import type { SourceType } from '../../../../@types/data/SourceType';
 import vsCode from '../../shaders/starCatalog/vertex.wesl?static';
 import pickFsCode from '../../shaders/starCatalog/pickFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
-
-/**
- * Bytes of one `NodeParams` element — mirrors the `struct NodeParams` in
- * `shaders/starCatalog/io.wesl` (origin vec3 0..11 + cellScale 12..15 +
- * firstRecord 16..19 + opacity 20..23 + isAggregate 24..27 + subtreeStarCount
- * 28..31, rounded to the vec3's 16-byte alignment = 32). The WESL struct is the
- * single source of truth both this and the visual packer mirror.
- */
-const NODE_PARAMS_BYTES = 32;
-
-/** Bytes of one `prefix` element (a `u32` exclusive instance-start index). */
-const PREFIX_BYTES = 4;
-
-/** Round `value` up to the next multiple of `align` (a power of two). */
-function alignUp(value: number, align: number): number {
-  return Math.ceil(value / align) * align;
-}
-
-/**
- * Byte size of the `StarUniforms` @group(0) buffer: the 80-byte `CameraUniforms`
- * prefix + four appended scalars (sizePx, brightness, glowOverlap, pickPass),
- * rounded up to the prefix's 16-byte alignment = 96 (mirrors `struct
- * StarUniforms` in `shaders/starCatalog/io.wesl`). Derived from
- * `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced.
- */
-const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 16, 16);
-
-/** Float index of `sizePx` in the `StarUniforms` scratch (byte 80 / 4). */
-const SIZE_PX_FLOAT_INDEX = CAMERA_UNIFORM_BYTES / 4;
-/** Float index of `brightness` (byte 84 / 4). */
-const BRIGHTNESS_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 4) / 4;
-/** Float index of `glowOverlap` (byte 88 / 4). */
-const GLOW_OVERLAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 8) / 4;
-/**
- * u32 index of `pickPass` (byte 92 / 4 = 23). Written as a u32, NOT a float: a
- * `1.0` float bit pattern (0x3F800000) would read back as ~1e9 in the shader's
- * `u32`, silently disabling the pick branch — the value must be the integer 1.
- */
-const PICK_PASS_U32_INDEX = (CAMERA_UNIFORM_BYTES + 12) / 4;
+import { writeCameraPrefix } from '../../lib/cameraUniforms';
+// The NodeParams / StarUniforms byte layout lives in ONE home both star
+// renderers import — see starCatalogLayout.ts (the WESL structs in
+// shaders/starCatalog/io.wesl are the source of truth). This pick renderer is
+// the ONLY writer of `pickPass` (u32 index 23 = 1), which flips the vertex
+// stage's clickable-footprint floor on and routes the record identity to the
+// pick fragment.
+import {
+  NODE_PARAMS_BYTES,
+  PREFIX_BYTES,
+  STAR_UNIFORM_BYTES,
+  SIZE_PX_FLOAT_INDEX,
+  BRIGHTNESS_FLOAT_INDEX,
+  GLOW_OVERLAP_FLOAT_INDEX,
+  PICK_PASS_U32_INDEX,
+  writeStarNodeParams,
+} from './starCatalogLayout';
 
 /**
  * One source's per-source pick buffers: the contiguous NodeParams block and its
@@ -251,16 +228,18 @@ export function createStarCatalogPickRenderer(
     ensureScratch(drawCount);
     let totalInstances = 0;
     for (let i = 0; i < drawCount; i++) {
-      const base = i * NODE_PARAMS_BYTES;
-      const o = originRelCamMpc[i]!;
-      nodeScratchView.setFloat32(base + 0, o[0], true);
-      nodeScratchView.setFloat32(base + 4, o[1], true);
-      nodeScratchView.setFloat32(base + 8, o[2], true);
-      nodeScratchView.setFloat32(base + 12, cellScaleMpc[i]!, true);
-      nodeScratchView.setUint32(base + 16, nodeDraws[i]!.firstRecord >>> 0, true);
-      nodeScratchView.setFloat32(base + 20, 1.0, true); // opacity — unused by the pick fragment
-      nodeScratchView.setUint32(base + 24, 0, true); // isAggregate — always leaf
-      nodeScratchView.setFloat32(base + 28, 1.0, true); // subtreeStarCount — one star per leaf record
+      // Same byte layout as the visual packer, with pick-fixed fields: opacity 1
+      // (ignored by the pick fragment), isAggregate 0 (point-source leaf),
+      // subtreeStarCount 1 (one star per leaf record). `writeStarNodeParams`
+      // owns the offsets.
+      writeStarNodeParams(nodeScratchView, i * NODE_PARAMS_BYTES, {
+        originRelCamMpc: originRelCamMpc[i]!,
+        cellScaleMpc: cellScaleMpc[i]!,
+        firstRecord: nodeDraws[i]!.firstRecord,
+        opacity: 1.0,
+        isAggregate: 0,
+        subtreeStarCount: 1.0,
+      });
       prefixScratch[i] = totalInstances;
       totalInstances += nodeDraws[i]!.recordCount;
     }
