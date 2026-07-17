@@ -1,7 +1,7 @@
 /*
- * StarDetailCard.module.css — the focused-star panel's outer hook.
+ * BodyDetailCard.module.css — the focused-body panel's outer hook.
  *
- * All chrome comes from the shared cardChrome vocabulary; a star card is short
+ * All chrome comes from the shared cardChrome vocabulary; a body card is short
  * content (name + a properties block), so it borrows the structure variant's
  * width floor to keep the panel from collapsing to its min-width when swapped in
  * beside the galaxy card.
