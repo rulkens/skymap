@@ -230,9 +230,12 @@ handled — the machine enforces completeness.
   (`src/@types/engine/SelectionRef.d.ts`). Valid per loaded tier bin; invalidates
   on a tier switch — identical semantics to the galaxy positional ref. An
   out-of-range index at resolve time → warn + null (the existing pattern).
-- **`SelectionRow`** gains `{ type: 'star'; positionMpc: Vec3; absMag: number;
-  bpRp: number }` (`src/@types/engine/SelectionRow.d.ts`) — self-contained, so
-  React-side framing/card read its fields directly (like the body row).
+- **`SelectionRow`** gains `{ type: 'star'; index: number; positionMpc: Vec3;
+  absMag: number; bpRp: number }` (`src/@types/engine/SelectionRow.d.ts`) —
+  self-contained, so React-side framing/card read its fields directly (like the
+  body row). It carries `index` because `buildFocusable` is row-only and the
+  `StarInfo` focusable must round-trip through `refOf` / the `star-<index>` URL
+  — the galaxy precedent (`GalaxyRow` carries `index`).
 - **`RESOLVE_PICK`** (`resolvePickTable.ts:16`) gains a `starCatalog` arm →
   `{ type: 'star', index: pick.localIdx }`.
 - **`EXTRACT_ROW`** (`extractSelectionRow.ts:21`) gains a `star` arm. It
