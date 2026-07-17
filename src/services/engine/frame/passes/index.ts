@@ -82,9 +82,16 @@
  *                            any star crossing STAR_RESOLVE_PX) as true-scale
  *                            flat-emissive spheres (f64 compose seam), opaque
  *                            into the same `foreground:0` target
- *  22. planets             — Moon / Jupiter as true-scale flat-lit albedo spheres
- *                            (f64 compose seam), opaque into the same target
- *  23. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *  22. planets             — the flat branch of the body partition: resolved
+ *                            bodies without a resident surface texture, as
+ *                            true-scale flat-lit albedo spheres (f64 compose
+ *                            seam), opaque into the same target
+ *  23. textured-bodies     — the textured branch of the body partition: resolved
+ *                            bodies whose surface texture is resident, as lit
+ *                            surface-mapped spheres (Saturn's ring casts an
+ *                            analytic on-planet shadow); opaque into the same
+ *                            target (f64 compose seam)
+ *  24. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
  *
@@ -167,6 +174,7 @@ import { clipPathDebugLayer } from './clipPathDebugLayer';
 import { earthLayer } from './earthLayer';
 import { starSpheresLayer } from './starSpheresLayer';
 import { planetsLayer } from './planetsLayer';
+import { texturedBodiesLayer } from './texturedBodiesLayer';
 import { starPointsLayer } from './starPointsLayer';
 import { starCatalogLayer } from './starCatalogLayer';
 import { starAggregatesLayer } from './starAggregatesLayer';
@@ -233,6 +241,7 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   earthLayer,
   starSpheresLayer,
   planetsLayer,
+  texturedBodiesLayer,
   // Near-field captions: the scene-body name labels drawn OVER onto the swap
   // chain through the near0 slab. The frame program's (swap, NEAR0) render
   // step drives it — the (swap, COSMO) step selects nothing here by
@@ -258,6 +267,7 @@ export { clipPathDebugLayer } from './clipPathDebugLayer';
 export { earthLayer } from './earthLayer';
 export { starSpheresLayer } from './starSpheresLayer';
 export { planetsLayer } from './planetsLayer';
+export { texturedBodiesLayer } from './texturedBodiesLayer';
 export { starPointsLayer } from './starPointsLayer';
 export { starCatalogLayer } from './starCatalogLayer';
 export { starAggregatesLayer } from './starAggregatesLayer';

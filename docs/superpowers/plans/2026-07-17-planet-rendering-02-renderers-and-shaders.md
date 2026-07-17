@@ -404,23 +404,23 @@ shader (spec §8 un-braiding). Also route `'saturn-ring'` commits:
 `texturedBodyRenderer.setRingTexture('saturn', bitmap)` in
 `bodyTextureSlotRegistry`.
 
-- [ ] Add `texturedBodiesLayer.ts` + register in `CONTENT_LAYERS`
+- [x] Add `texturedBodiesLayer.ts` + register in `CONTENT_LAYERS`
   (`passes/index.ts`) in the foreground group beside `planetsLayer`. Didactic
   header: the f64 slab-`vp` seam, the presentation partition, the ring ratios as
   uniform data.
-- [ ] Add the ring-on-planet shadow term to `texturedBody/fragment.wesl` (guarded
+- [x] Add the ring-on-planet shadow term to `texturedBody/fragment.wesl` (guarded
   by `ringOuterRatio > 0`). WESL constraints; verify visually (Task 11). Route
   `'saturn-ring'` commits to `setRingTexture` in `bodyTextureSlotRegistry`.
-- [ ] Test (`texturedBodiesLayer.test.ts`, modelled on `earthLayer.test.ts`):
+- [x] Test (`texturedBodiesLayer.test.ts`, modelled on `earthLayer.test.ts`):
   `textured layer composes with the slab f64 vp and per-body orientation` —
   assert `composeBodyMvp`'s first arg `toBe(view.slab.vp)` (`not.toBe(view.vp)`),
   carries the body `orientation`, and `texturedBodyRenderer.draw` receives a
   length-24 `Float32Array` per textured body; `enabled` false when the renderer
   handle is null.
-- [ ] Test (`passes.test.ts`): extend the foreground migration table with
+- [x] Test (`passes.test.ts`): extend the foreground migration table with
   `'textured-bodies'` `{slab: NEAR0, target: 'foreground:0', blend: 'opaque'}`
   (the blend-legality test already enforces opaque for `foreground:0`).
-- [ ] `npm test -- texturedBodiesLayer passes` → green. Commit.
+- [x] `npm test -- texturedBodiesLayer passes` → green. Commit.
 
 ## Task 9 — `annulusMesh` + `ringRenderer` + ring shaders + `ringsLayer` (planet-on-ring shadow)
 

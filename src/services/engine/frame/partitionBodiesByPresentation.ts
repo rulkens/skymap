@@ -55,10 +55,13 @@ export const BODY_GLINT_MAX_PX = 3;
  * whose texture has not landed yet is `flat` — the flat albedo sphere IS the
  * placeholder, exactly as Earth shows mid-blue before Blue Marble arrives.
  *
- * A body the camera sits INSIDE (distance 0) resolves unconditionally: at zero
- * distance `apparentSizePx`'s divide-by-zero guard returns 0, which a bare size
- * test would misread as sub-pixel and demote to a glint — the same degenerate
- * guard `partitionStarsByResolution` and `planetsLayer` keep.
+ * A body the camera sits INSIDE (distance 0) resolves unconditionally:
+ * `bodyApparentDiameterPx` returns `Infinity` at distance 0 (the camera is
+ * inside the body, maximally resolved), which clears the `BODY_GLINT_MAX_PX`
+ * threshold so the body is a mesh, never a glint. That degenerate case lives in
+ * the shared projection helper, so every LOD gate reading it (this partition,
+ * `partitionStarsByResolution`, the planet layers) gets the right answer with a
+ * plain `>= threshold` comparison and no per-site branch.
  */
 export function partitionBodiesByPresentation(input: {
   bodies: readonly PlanetBody[];

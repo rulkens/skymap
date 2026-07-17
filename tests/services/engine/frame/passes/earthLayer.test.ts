@@ -166,7 +166,12 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
     // source then skips its composite too. Earth's handle + body are present;
     // the sibling handles are null (their handle gates short-circuit).
     const state = {
-      gpu: { earthRenderer: { draw: vi.fn() }, starRenderer: null, planetRenderer: null },
+      gpu: {
+        earthRenderer: { draw: vi.fn() },
+        starRenderer: null,
+        planetRenderer: null,
+        texturedBodyRenderer: null,
+      },
       data: { bodies: { earth: SCENE_EARTH } },
     } as unknown as EngineState;
     const groupAt = (ctx: ReadyFrameContext) =>

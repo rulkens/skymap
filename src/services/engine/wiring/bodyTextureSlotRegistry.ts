@@ -25,9 +25,12 @@
  *    frees that body's GPU texture via `clearTexture(bodyId)` — the slot family's
  *    eviction premise, so a body leaving its proximity radius actually releases
  *    its (up to ~135 MB) surface texture rather than leaking it.
- *  - the ring keys (`RingTextureId`, currently `'saturn-ring'`) stay a documented
- *    no-op: `setRingTexture` routing lands in Plan 02 Task 8. A ring texture
- *    demanded before then commits harmlessly to nothing.
+ *  - the ring keys (`RingTextureId`, currently `'saturn-ring'`) route to the
+ *    shared `texturedBodyRenderer.setRingTexture`, keyed on the ring's HOST body
+ *    (`hostBodyId` resolves `'saturn-ring'` → `'saturn'`), so the strip lands on
+ *    binding 3 of the sphere it rides. Their `onRelease` is a no-op — the ring
+ *    strip is a small, non-evicted asset that shares the body's per-body
+ *    resources.
  *
  * Earth's `onRelease` is likewise a no-op — `earthRenderer` has no clear surface
  * (its texture lifecycle is a Plan-02 follow-up), so the descent texture is not
@@ -47,6 +50,7 @@ import { createAssetSlot } from '../../loading/AssetSlot';
 import { bodyTextureFetcher } from '../../loading/fetchers/bodyTextureFetcher';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
+import { hostBodyId } from '../../../utils/scene/hostBodyId';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
@@ -67,8 +71,10 @@ function isTexturedBodyKey(key: BodyTextureKey): key is BodyTextureId {
 
 /**
  * Route a committed bitmap to the resident renderer for `key`. Earth →
- * `earthRenderer`; the twelve other bodies → the shared `texturedBodyRenderer`;
- * ring keys → no-op until Task 8 (see header).
+ * `earthRenderer`; the twelve other bodies → the shared `texturedBodyRenderer`'s
+ * `setTexture`; a ring key → that renderer's `setRingTexture`, keyed on the
+ * ring's HOST body (`hostBodyId` resolves `'saturn-ring'` → `'saturn'`), so the
+ * ring strip lands on binding 3 of the sphere it rides.
  */
 function commitBodyTexture(state: EngineState, key: BodyTextureKey, bitmap: ImageBitmap): void {
   // Destroy race: each handle may be null mid-bootstrap or post-teardown — a
@@ -77,8 +83,12 @@ function commitBodyTexture(state: EngineState, key: BodyTextureKey, bitmap: Imag
     state.gpu.earthRenderer?.setTexture(bitmap);
   } else if (isTexturedBodyKey(key)) {
     state.gpu.texturedBodyRenderer?.setTexture(key, bitmap);
+  } else {
+    // A ring key (no BODY_TEXTURE_REGISTRY row): its strip binds to the host
+    // body's binding 3 via setRingTexture. hostBodyId keeps the ring→host link
+    // in one authored home (SCENE_RINGS) rather than a literal here.
+    state.gpu.texturedBodyRenderer?.setRingTexture(hostBodyId(key), bitmap);
   }
-  // Ring keys have no resident target yet — setRingTexture routing is Task 8.
 }
 
 /**

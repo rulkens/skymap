@@ -23,6 +23,7 @@ type Gpu = {
   texturedBodyRenderer: {
     setTexture: ReturnType<typeof vi.fn>;
     clearTexture: ReturnType<typeof vi.fn>;
+    setRingTexture: ReturnType<typeof vi.fn>;
   };
 };
 
@@ -36,7 +37,7 @@ function makeState(gpu: Gpu): EngineState {
 function makeGpu(): Gpu {
   return {
     earthRenderer: { setTexture: vi.fn() },
-    texturedBodyRenderer: { setTexture: vi.fn(), clearTexture: vi.fn() },
+    texturedBodyRenderer: { setTexture: vi.fn(), clearTexture: vi.fn(), setRingTexture: vi.fn() },
   };
 }
 
@@ -108,7 +109,7 @@ describe('wireBodyTextureSlots', () => {
     expect(gpu.texturedBodyRenderer.clearTexture).toHaveBeenCalledWith('mars');
   });
 
-  it("the ring slot commits harmlessly (its resident target lands in Task 8)", async () => {
+  it("the ring slot's commit dispatches to texturedBodyRenderer.setRingTexture(hostBody, …)", async () => {
     const gpu = makeGpu();
     const state = makeState(gpu);
     wireBodyTextureSlots(state);
@@ -117,7 +118,10 @@ describe('wireBodyTextureSlots', () => {
     slot.load({ bodyId: 'saturn-ring', tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    // The ring's setRingTexture routing is Task 8 — no body renderer is touched.
+    // The ring strip binds to its HOST body (saturn) via setRingTexture — the
+    // sphere setTexture path is untouched, and Earth's renderer stays clear.
+    expect(gpu.texturedBodyRenderer.setRingTexture).toHaveBeenCalledTimes(1);
+    expect(gpu.texturedBodyRenderer.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
     expect(gpu.texturedBodyRenderer.setTexture).not.toHaveBeenCalled();
     expect(gpu.earthRenderer.setTexture).not.toHaveBeenCalled();
   });

@@ -186,8 +186,8 @@ describe('timedSlotsOf', () => {
     // sits adjacent to the star-catalog leaf draw it composites), the tone-map
     // composite, the five swap overlays, then the near-field tail (the
     // foreground:0 body render — one slot per body layer: earth, star-spheres,
-    // planets — the foreground:0→swap composite, and the NEAR0 swap caption
-    // render → foreground-labels), and pick last.
+    // planets, textured-bodies — the foreground:0→swap composite, and the NEAR0
+    // swap caption render → foreground-labels), and pick last.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'point-sprites',
@@ -213,6 +213,7 @@ describe('timedSlotsOf', () => {
       'earth',
       'star-spheres',
       'planets',
+      'textured-bodies',
       'foreground:0→swap',
       'foreground-labels',
       'pick',

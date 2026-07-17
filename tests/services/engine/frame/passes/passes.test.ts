@@ -204,11 +204,12 @@ const SWAP_NAMES = [
   'clip-path-debug',
 ];
 
-// The near-field foreground group: the true-scale bodies (Earth, the Sun
-// sphere, the planets) drawn into the depth-bearing `foreground:0` target
-// through the near0 slab. Opaque (depth-tested), unlike the additive HDR
-// group and the OVER swap group.
-const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets'];
+// The near-field foreground group: the true-scale bodies drawn into the
+// depth-bearing `foreground:0` target through the near0 slab — Earth, the Sun
+// sphere, the partition's flat-lit `planets` branch, and its `textured-bodies`
+// branch. Opaque (depth-tested), unlike the additive HDR group and the OVER
+// swap group.
+const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets', 'textured-bodies'];
 
 // The near-field hdr rows: the layers that pair the hdr target with the
 // near0 slab — additive like every hdr row, but projected through NEAR0 so

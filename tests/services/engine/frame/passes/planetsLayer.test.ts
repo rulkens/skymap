@@ -102,19 +102,30 @@ function makeNear0View(): SlabView {
   };
 }
 
-// Draw ctx: camera at the origin (the Sun), 60° fov — the pack loop's
-// sub-pixel cull reads ctx.drawCamPos + ctx.fovYRad (paired with the
-// fixture's tall viewport above so every seeded body resolves).
+// Draw ctx: camera at the origin (the Sun), 60° fov — the partition (shared by
+// enabled + draw) reads ctx.drawCamPos + ctx.canvasSize.height + ctx.fovYRad.
+// An astronomically TALL viewport (1e12 px) buys pixels so every seeded body
+// resolves past the glint threshold and lands in the `flat` branch — the layout
+// pins below want EVERY seeded body packed from one impossible-on-a-real-viewport
+// camera position (Mercury is sub-pixel from Neptune). The cull itself has a
+// dedicated test on a real 720-px viewport.
 const DRAW_CTX = {
   drawCamPos: [0, 0, 0],
+  canvasSize: { width: 1280, height: 1e12 },
   fovYRad: (60 * Math.PI) / 180,
 } as unknown as ReadyFrameContext;
 
-/** State with a `planetRenderer` handle set and a seeded planet list. */
+/**
+ * State with a `planetRenderer` handle, a seeded planet list, and an empty
+ * `bodyTextures` slot Map — so no body's texture is resident and the partition
+ * routes every resolved body to the `flat` branch this layer draws (a resident
+ * body would slide to `textured`, drawn by `texturedBodiesLayer` instead).
+ */
 function makeState(planetRenderer: unknown, planets: readonly PlanetBody[]): EngineState {
   return {
     gpu: { planetRenderer },
     data: { bodies: { planets } },
+    assetSlots: { bodyTextures: new Map() },
   } as unknown as EngineState;
 }
 
@@ -265,6 +276,7 @@ describe('planetsLayer.draw', () => {
     const nearFirst = SCENE_PLANETS[0]!.positionMpc;
     const ctx = {
       drawCamPos: [nearFirst[0] + 1e-14, nearFirst[1], nearFirst[2]],
+      canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
     } as unknown as ReadyFrameContext;
 
@@ -285,6 +297,7 @@ describe('planetsLayer.draw', () => {
     const state = makeState(renderer, SCENE_PLANETS);
     const ctx = {
       drawCamPos: [0, 0, 1e-3],
+      canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
     } as unknown as ReadyFrameContext;
 
