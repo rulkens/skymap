@@ -277,6 +277,26 @@ delivery path for the whole asset class; Earth gains 2k/4k/8k tiers (NASA
 Visible Earth ships Blue Marble well past 8k — source to be verified with the
 other 13).
 
+## Q13 (post-verification): source realities
+
+Source verification (2026-07-17, AFK-authorized decisions) adjusted three things:
+
+**Titan drops from the textured set → flat albedo.** The only global Titan map is
+a Cassini ISS 938 nm surface mosaic — real surface albedo, but not what Titan
+looks like: visually it is a featureless orange haze ball, which is exactly what
+the flat-albedo path renders. Same philosophy as the Venus cloud-deck decision
+(Q11). The USGS mosaic (tinted) remains a possible future "pierce the haze" treat.
+
+**Per-body tier ceilings are data, not uniform.** SSS ships no 4k tier (the 4k
+tier is a build-time downsample of the 8k raw — downsampling fine, upscaling
+never); Uranus/Neptune cap at 2k (genuinely featureless source data); Venus
+atmosphere caps at 4k. The body-texture registry carries each body's available
+tiers and the runtime clamps the requested tier to the ceiling.
+
+**Earth raw source = NASA Blue Marble NG 21600×10800** (single public-domain
+equirect JPEG, CORS-open, ~28 MB) — downsampled to all three tiers; replaces the
+committed public/images 4k JPG per Q12.
+
 ## Out of scope (explicit)
 
 - **Animated ephemeris / clock** — separate future feature; `orbitalElements.ts`
