@@ -84,17 +84,17 @@ Wikipedia brightest-stars table (~93, down to apparent V +2.50)
      51 Pegasi, + implementer-proposed candidates
 ```
 
-- [ ] Fetch the Wikipedia "List of brightest stars" table (down to V +2.50) via
+- [x] Fetch the Wikipedia "List of brightest stars" table (down to V +2.50) via
       WebFetch; extract the ~93 rows (name, Bayer, constellation, V mag, spectral type,
       distance).
-- [ ] **Dedup against the 26 batch-0 ids** (`data/seeds/famous_stars.seed.json`) — ~7
+- [x] **Dedup against the 26 batch-0 ids** (`data/seeds/famous_stars.seed.json`) — ~7
       overlap (Sirius, Procyon, Altair, Vega, Fomalhaut, Pollux, α Cen), so the brightest
       table contributes ~86 net-new.
-- [ ] Assemble the ~10 iconic extras. Include the named ones (Mira, Algol, Albireo, η Car,
+- [x] Assemble the ~10 iconic extras. Include the named ones (Mira, Algol, Albireo, η Car,
       Polaris, 51 Pegasi) and **surface any implementer-proposed candidates to the user for
       approval** before authoring (kept short — grill Q2). Dedup these against the 26 + the
       brightest table.
-- [ ] Produce the final ordered net-new roster (~90–100 entries) split into batch buckets
+- [x] Produce the final ordered net-new roster (~90–100 entries) split into batch buckets
       of ~15–20, and report it. **Checkpoint with the user** on the extras list before
       Task 2 begins.
 
@@ -107,18 +107,18 @@ seeded, Betelgeuse, Rigel, Capella, Aldebaran, Antares, Spica, Deneb — land fi
 
 Per batch task:
 
-- [ ] Author ~15–20 entries: full schema; `gaiaDr3` via SIMBAD identifier lists (`null`
+- [x] Author ~15–20 entries: full schema; `gaiaDr3` via SIMBAD identifier lists (`null`
       only on SIMBAD-confirmed absence, `gaiaDr3Note` for non-obvious component choices);
       descriptions 3–5 sentences, fact-checked; **omit** unknown optional fields; one entry
       per naked-eye system (companions in prose).
-- [ ] Append the entries to `data/seeds/famous_stars.seed.json` (no duplicate ids —
+- [x] Append the entries to `data/seeds/famous_stars.seed.json` (no duplicate ids —
       the validator's duplicate-id check gates this).
-- [ ] (main thread) `npm run build-famous-stars` — the validator gates the batch (any
+- [x] (main thread) `npm run build-famous-stars` — the validator gates the batch (any
       schema drift, out-of-range value, missing `gaiaDr3`, or duplicate id throws loudly
       naming the id). Fix and re-run until green; the table + sidecar regenerate.
-- [ ] (main thread) `npm test` — the suite stays green (the `sceneStars` length lower-bound
+- [x] (main thread) `npm test` — the suite stays green (the `sceneStars` length lower-bound
       and the parser coverage invariant absorb the growth; no per-batch test to write).
-- [ ] (main thread) `git add data/seeds/famous_stars.seed.json
+- [x] (main thread) `git add data/seeds/famous_stars.seed.json
     src/data/bodies/famousStars.generated.ts` and commit both together.
 
 > **Batch count** is driven by Task 1's roster size (~90–100 net-new ÷ ~18 ≈ 5 batches).
@@ -129,7 +129,7 @@ Per batch task:
 
 **Files:** none (verification + handoff notes). **Do NOT run the R2 sync in this plan.**
 
-- [ ] **Visual pass — caption density (grill Q10 Option A).** With ~120 labelled stars, ask
+- [x] **Visual pass — caption density (grill Q10 Option A).** With ~120 labelled stars, ask
       the user to judge clutter at star-map zoom (roughly Stellarium's default density). If
       it reads too dense, capture a **one-line `magV` caption threshold** follow-up as a
       backlog note — the seed already carries `magV`, so no re-author is needed. This is a
@@ -138,16 +138,16 @@ Per batch task:
 - [ ] **Oblateness spot-check.** Confirm the batch entries flagged `oblateness` (Achernar,
       Altair, Regulus) actually render flattened — this is the first real visual proof of
       plan 01 Task 7's code path.
-- [ ] **Timing note (spec §9, grill Q8/Q11 item 5) — LOAD-BEARING.** The complete seed
+- [x] **Timing note (spec §9, grill Q8/Q11 item 5) — LOAD-BEARING.** The complete seed
       (every entry's resolved `gaiaDr3`) MUST land **before the first real `npm run
     build-stars`** run, so the Gaia bin's dedup is complete on its first build and no
       rebuild is needed. Record in the close-out that this plan's completion is that
       gate — the Gaia fetch being still in flight is why the window is ideal.
-- [ ] **R2 sync reminder (do NOT run here).** The regenerated `famous_stars_meta.json` (and
+- [x] **R2 sync reminder (do NOT run here).** The regenerated `famous_stars_meta.json` (and
       any downstream bins) reach production only via `npm run sync-r2-secure`, which must
       run **from the main worktree** (project memory `project_worktree_data_isolation`) —
       not from this worktree, not in this plan. Note it for the user as the deploy step.
-- [ ] Report the final entry count and confirm the seed + generated table are committed in
+- [x] Report the final entry count and confirm the seed + generated table are committed in
       sync (`npm run build-famous-stars` leaves `git diff` clean).
 
 ---
