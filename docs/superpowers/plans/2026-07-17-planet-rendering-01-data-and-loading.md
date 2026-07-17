@@ -120,19 +120,19 @@ same human-units + `findByIdOrThrow`-lookup style as `orbitalElements.ts`
 (`orbitPlaneFrames.ts:82`) is built from, so rings + Saturn's moons share one
 equatorial frame (spec §4.1, Q9).
 
-- [ ] Add `rotationElements.ts` — the 13-row table + `rotationById`. Didactic
+- [x] Add `rotationElements.ts` — the 13-row table + `rotationById`. Didactic
   docblock: only the textured bodies need rotation (a flat sphere is
   rotation-invariant); the JPL/WGCCRE provenance; that Saturn's pole is shared
   with `SATURN_EQUATORIAL_FRAME`.
-- [ ] Test `ROTATION_ELEMENTS has valid structure` — the load-bearing invariants
+- [x] Test `ROTATION_ELEMENTS has valid structure` — the load-bearing invariants
   only (per `testing.md`, NOT a value restatement): every `id` unique; length 13;
   each `poleDecDeg` in `[-90, 90]`.
-- [ ] Test `Saturn's rotation pole equals SATURN_EQUATORIAL_FRAME.normal` —
+- [x] Test `Saturn's rotation pole equals SATURN_EQUATORIAL_FRAME.normal` —
   build the pole unit vector from Saturn's `poleRaDeg`/`poleDecDeg` and assert it
   equals `SATURN_EQUATORIAL_FRAME.normal` within tolerance (the rings/moons
   shared-frame invariant, spec §4.1/§10 — a real cross-table contract, not a
   self-restatement).
-- [ ] `npm test -- rotationElements` → green. Commit.
+- [x] `npm test -- rotationElements` → green. Commit.
 
 ## Task 3 — `BodyTextureId` + `BodyTextureSpec` + `BODY_TEXTURE_REGISTRY`
 
