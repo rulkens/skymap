@@ -456,6 +456,15 @@ Skip the maintainer flow unless you're refreshing the upstream cubes
 
 ## Milky Way star field (Gaia DR3)
 
+Zoom in from the galaxy point cloud toward the Sun and skymap swaps catalogued
+galaxies for catalogued stars: the ~16.8 M Gaia DR3 stars render as a real-data
+stellar bubble around the observer, each tinted by its BP−RP colour — hot blue
+through cool red — and accumulated additively in the HDR pass so the bright
+naked-eye stars bloom against the dark. It's the real-data middle of the descent
+toward Earth: the last measured layer before the view crosses into the
+procedural Milky-Way cloud, which the star field crossfades into as the two
+overlap.
+
 The star-bin build turns the Gaia DR3 + GCNS + Hipparcos-2 raw inputs (see
 the download table above) into the runtime binary format:
 
@@ -470,6 +479,12 @@ supplement (`gcns_main.csv`), and the Hipparcos-2 bright-star patch
 The full build holds the ~16.8 M-row Gaia superset in memory at once, so
 run it on a machine with roughly 16 GB of free RAM — the npm script raises
 Node's heap limit accordingly.
+
+For real-scale runs the canonical builder is the Rust port `tools/stars-rs/`,
+invoked with `npm run build-stars-rs` (requires a Rust toolchain). It emits
+byte-identical `.bin` files far faster and with a lower memory ceiling; the
+TypeScript `buildStars.ts` above stays the reference implementation the vitest
+suite covers. See `tools/stars-rs/README.md` for the bit-parity contract.
 
 ## Brightness controls
 

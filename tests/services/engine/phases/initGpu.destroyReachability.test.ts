@@ -176,6 +176,10 @@ vi.mock('../../../../src/services/gpu/passes/volumeUpsample', () => ({
   createVolumeUpsample: vi.fn(() => makeStub('volumeUpsample')),
 }));
 
+vi.mock('../../../../src/services/gpu/passes/starAggregateUpsample', () => ({
+  createStarAggregateUpsample: vi.fn(() => makeStub('starAggregateUpsample')),
+}));
+
 vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub('pickDebugOverlay')),
 }));
@@ -210,6 +214,13 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (i
 }));
 vi.mock('../../../../src/services/gpu/renderers/bodies/starPointRenderer', () => ({
   createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
+}));
+// The survey star-catalog renderer's constructor uses the full device API
+// (limits + createBuffer + bind groups + pipeline), so a `limits` patch on
+// the plain stub device wouldn't survive the next line — mock the factory
+// like every other renderer here.
+vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogRenderer', () => ({
+  createStarCatalogRenderer: vi.fn(() => makeStub('starCatalogRenderer')),
 }));
 // Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
@@ -286,6 +297,7 @@ function makeState(): EngineState {
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
+      starAggregateUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,
       earthRenderer: null,

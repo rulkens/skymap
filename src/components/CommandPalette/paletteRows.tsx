@@ -101,7 +101,6 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
   // Scene-body row (Earth, later stars/planets) — letter glyph like the Milky
   // Way (no atlas thumb for a procedurally-rendered sphere) + a 'Solar System'
   // chip in the source slot so the row reads as "not a galaxy" at a glance.
-  // Only ranked in behind the deepZoom URL gate (see rankPaletteMatches).
   body: (m) =>
     m.kind === 'body'
       ? {

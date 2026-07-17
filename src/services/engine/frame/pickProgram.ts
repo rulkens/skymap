@@ -35,8 +35,8 @@
  * this program allocates its own `pick:cosmo` (r32uint + depth24plus) and
  * `pick:near0` (r32uint + depth32float) targets, lazily and resize-aware, one
  * per slab that actually has an enabled pickable layer. A slab with no pickable
- * layer is never allocated — the near-field slab hosts no pickable layer today,
- * so `pick:near0` is never created at the current two-slab instantiation.
+ * layer is never allocated — `pick:near0` exists only while the Milky-Way
+ * impostor (the near-field slab's sole pickable) passes its visibility gate.
  *
  * @module
  */
@@ -53,9 +53,10 @@ import { unpackPick } from '../../../data/selectionEncoding';
 
 // The r32uint pick texture is written by the pass and read back a texel at a
 // time; the depth attachment resolves overlapping billboards so the front-most
-// wins (matching visual occlusion). Only the cosmological slab exists as a
-// pickable target today, but the near-field slab's depth format is pinned here
-// so a future NEAR0 pickable allocates the right precision.
+// wins (matching visual occlusion). Any pipeline drawing into a slab's pick
+// pass must declare the matching depthStencil format: the points / ring / disk
+// picks declare depth24plus (COSMO), the Milky-Way pick declares depth32float
+// (NEAR0 — see milkyWayPickRenderer).
 const COSMO_DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
 const NEAR0_DEPTH_FORMAT: GPUTextureFormat = 'depth32float';
 
@@ -213,8 +214,10 @@ export function createPickProgram(deps: {
 
   // Pickable layers grouped by slab, near→far. Registry order is preserved
   // within each slab (a `.filter()` keeps the array order), which is the
-  // @group(0) prefix contract: point-sprites runs first and leaves slot 0
-  // bound to the shared pick camera for the ring / disk / MW fold-ins.
+  // @group(0) prefix contract: point-sprites runs first in the COSMO pass and
+  // leaves slot 0 bound to the shared pick camera for the ring / disk
+  // fold-ins. (The Milky-Way pick — alone in the NEAR0 pass — binds its own
+  // slot-0 camera and needs no prefix.)
   function pickablesBySlab(
     ctx: ReadyFrameContext,
   ): { slabIndex: number; layers: ContentLayer[] }[] {

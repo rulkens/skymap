@@ -21,6 +21,12 @@ import reducer, {
   writeVolumeField,
   setFlowEnabled,
   setFlow,
+  setStarCatalogEnabled,
+  setStarCatalogSize,
+  setStarCatalogBrightness,
+  setStarCatalogRefineThreshold,
+  setStarCatalogGlowOverlap,
+  setStarCatalogVisible,
   setPassDisabled,
   setClipPathLinger,
   setClipPathLingerSec,
@@ -186,6 +192,42 @@ describe('settingsSlice — flow', () => {
     expect(next.flow.flowSpeed).toBe(9.5);
     // An untouched leaf is preserved.
     expect(next.flow.count).toBe(before.flow.count);
+  });
+});
+
+describe('settingsSlice — star catalogs', () => {
+  it('setStarCatalogEnabled toggles the master gate', () => {
+    // Master gate seeds true; dispatch false collapses the whole cluster.
+    const next = reducer(base(), setStarCatalogEnabled(false));
+    expect(next.starCatalogs.enabled).toBe(false);
+  });
+
+  it('setStarCatalogVisible toggles a catalog’s enabled', () => {
+    // gaiaStars seeds enabled: true from SOURCE_REGISTRY[Source.GaiaStars].visible;
+    // the per-item reducer flips one row without touching the master gate.
+    const next = reducer(base(), setStarCatalogVisible({ id: 'gaiaStars', enabled: false }));
+    expect(next.starCatalogs.items.gaiaStars.enabled).toBe(false);
+    expect(next.starCatalogs.enabled).toBe(true);
+  });
+
+  it('setStarCatalogSize writes the shared star-billboard size', () => {
+    const next = reducer(base(), setStarCatalogSize(5.5));
+    expect(next.starCatalogs.sizePx).toBe(5.5);
+  });
+
+  it('setStarCatalogBrightness writes the shared star-brightness trim', () => {
+    const next = reducer(base(), setStarCatalogBrightness(2.2));
+    expect(next.starCatalogs.brightness).toBe(2.2);
+  });
+
+  it('setStarCatalogRefineThreshold writes the octree-cut Detail knob', () => {
+    const next = reducer(base(), setStarCatalogRefineThreshold(0.12));
+    expect(next.starCatalogs.refineThreshold).toBe(0.12);
+  });
+
+  it('setStarCatalogGlowOverlap writes the aggregate glow-overlap spread', () => {
+    const next = reducer(base(), setStarCatalogGlowOverlap(1.8));
+    expect(next.starCatalogs.glowOverlap).toBe(1.8);
   });
 });
 

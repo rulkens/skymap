@@ -20,7 +20,6 @@ import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import { MILKY_WAY_NAMES } from '../paletteRowModel';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import type { ScoredRow } from '../paletteRowModel';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
@@ -83,21 +82,16 @@ export function rankPaletteMatches(
     .filter((s) => s.score > 0);
   famousScored.sort((a, b) => b.score - a.score);
 
-  // Seeded scene bodies (Earth, later stars/planets) surface ONLY behind the
-  // `?deepZoom` URL gate. Without it the wheel-zoom floor (clampDistance, 0.05
-  // Mpc) stops the flight while a body is still sub-pixel, so a picked "Earth"
-  // would strand the camera in an empty patch of sky — a dead-end UX we hide the
-  // row to avoid. `hasUrlGate` is called live (per rank, never cached at module
-  // load) so the gate reads the current URL and tests can toggle it. Bodies are
-  // scored on the label like a famous row; they skip the empty-query browse list
-  // (like aliases/structures) so browsing stays famous + Milky Way.
-  const bodyScored: ScoredRow[] = hasUrlGate('deepZoom')
-    ? SCENE_BODIES.map<ScoredRow>((body) => ({
-        kind: 'body',
-        body,
-        score: scoreFamousMatch({ id: body.id, names: [body.label], description: '' }, query),
-      })).filter((s) => s.score > 0)
-    : [];
+  // Seeded scene bodies (Earth, later stars/planets) are scored on the label
+  // like a famous row; they skip the empty-query browse list (like
+  // aliases/structures) so browsing stays famous + Milky Way. The wheel-zoom
+  // floor (clampDistance.ts: MIN_DISTANCE_MPC) reaches Earth-surface scale, so
+  // a picked body always resolves to a reachable, non-sub-pixel focus target.
+  const bodyScored: ScoredRow[] = SCENE_BODIES.map<ScoredRow>((body) => ({
+    kind: 'body',
+    body,
+    score: scoreFamousMatch({ id: body.id, names: [body.label], description: '' }, query),
+  })).filter((s) => s.score > 0);
   bodyScored.sort((a, b) => b.score - a.score);
 
   const aliasScored: ScoredRow[] = (aliasIndex ?? [])

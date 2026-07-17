@@ -37,9 +37,11 @@
  * their node instead and gets the same integrated glow for a fraction of
  * the vertices. Because a leaf and an aggregate are byte-identical, the
  * leaf-vs-aggregate distinction is recovered from the owning node's
- * level, not from a marker bit in the record — which is why the record's
- * 5 spare bits stay reserved and zeroed in v1 rather than spending one
- * on a leaf flag.
+ * `childMask` (0 ⇒ leaf), not from a marker bit in the record — which is
+ * why the record's 5 spare bits stay reserved and zeroed in v1 rather than
+ * spending one on a leaf flag. (The distinction is NOT the node's level:
+ * a fat leaf — a sparse subtree merged into one node to shrink the node
+ * table — lives at level > 0 yet is a leaf whose records are real stars.)
  *
  * ── Serialization, compression, and the loud regenerate contract ──────────
  *

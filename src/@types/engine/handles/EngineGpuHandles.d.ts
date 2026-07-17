@@ -53,6 +53,7 @@ import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRen
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
+import type { StarAggregateUpsample } from '../../rendering/StarAggregateUpsample';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
@@ -65,6 +66,7 @@ import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
+import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
@@ -312,6 +314,17 @@ export type EngineGpuHandles = {
    */
   volumeUpsample: VolumeUpsample | null;
   /**
+   * Half-res-to-HDR survey-star aggregate upsample composite. Reads the
+   * `star-aggregates` offscreen the aggregate stream drew LINEAR into,
+   * re-applies the star pass's hue-preserving knee to the summed field, and
+   * additively blends the result into HDR (the LOD-symmetry fix). Null until
+   * `initGpu` constructs it (same phase as `volumeUpsample`). Excluded from
+   * `isEngineReady` — when null, `starAggregateUpsampleLayer` skips its draw, so
+   * a null handle is a silent no-op. Stored here so `destroy()` can release the
+   * pipeline + sampler + bind-group-layout via the pass's no-op destroy method.
+   */
+  starAggregateUpsample: StarAggregateUpsample | null;
+  /**
    * Pick-buffer debug overlay — fullscreen colour-map of the r32uint
    * pick texture over the tone-mapped frame.  Null until `initGpu`
    * constructs it.  Excluded from `isEngineReady`: it's a debug-only
@@ -389,6 +402,18 @@ export type EngineGpuHandles = {
    * instance + uniform buffers).
    */
   starPointRenderer: StarPointRenderer | null;
+  /**
+   * The survey (Gaia bin) stars as additive point sprites into the depthless
+   * HDR target — the wide-field twin of `starPointRenderer`, fed from an
+   * in-file octree of cell-quantized records rather than a flat seed list.
+   * Records upload once per source (`upload`); the star layer walks each
+   * octree per frame (`loadedCatalogs`) and draws the per-frame cut.  No depth
+   * format: the hdr row has no depth attachment.  Excluded from
+   * `isEngineReady` and null-checked at use.  Null until `initGpu` constructs
+   * it; released and re-nulled by `destroy()` (releases the per-source records
+   * + node-params buffers and the shared camera uniform).
+   */
+  starCatalogRenderer: StarCatalogRenderer | null;
   /**
    * The accurate Keplerian orbit trails (Earth / Jupiter around the Sun, the
    * Moon around Earth) as additive screen-space conics into the depthless HDR

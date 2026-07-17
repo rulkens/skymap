@@ -8,18 +8,23 @@
  * screen-size-clamped billboard at the galactic centre that stamps the
  * MW identity into the r32uint pick texture.  It draws nothing visible.
  *
- * ### Why mirror structureMarkerRenderer.pickRing
+ * ### Why it OWNS its @group(0) pick camera (unlike the COSMO pickables)
  *
- * The MW pick is the sibling of the structure-ring pick path: a small
- * dedicated pipeline writing into the SAME pick texture the galaxy draws
- * use, sharing their depth attachment so a foreground galaxy still claims
- * the pixel.  The engine's pick pass calls `pickMilkyWay(pass)` after the
- * galaxy + structure + disk pick draws, reusing the caller's bound
- * `@group(0)` (the points pick uniform buffer).  The billboard's apparent
- * on-screen size is computed IN the vertex shader from those shared
+ * The MW layer projects through the NEAR0 slab, and it is the SOLE pickable
+ * on that slab — so its pick pass has no earlier draw to inherit a camera
+ * from.  The COSMO pickables (rings, disks) reuse the @group(0) the
+ * point-sprites pick draw binds first in their shared pass; porting that
+ * inherit pattern here would leave slot 0 unbound (a validation error that
+ * can silently drop the whole pick submit).  So `pickMilkyWay` takes the
+ * complete pick-uniform image as bytes — built by the layer via
+ * `pickUniformBytesOf` against the NEAR0 slab view, the SAME packer the
+ * points pick uses, so the byte layout has one home — uploads them to its
+ * OWN buffer, and binds its own @group(0).  Self-binding also deletes the
+ * hidden order coupling the inherit pattern carried.  The billboard's
+ * apparent on-screen size is computed IN the vertex shader from those
  * camera uniforms — the same derivation galaxy points use — so this
- * renderer's own `@group(2)` uniform is fully static: world centre,
- * source code, and disc world radius, all written once at construction.
+ * renderer's `@group(2)` uniform is fully static: world centre, source
+ * code, and disc world radius, all written once at construction.
  *
  * ### Pipeline layout (the 'auto'-layout trap)
  *
@@ -47,6 +52,7 @@ import { createDummyFadeBindGroup } from '../../lib/dummyFade';
 import { Source } from '../../../../data/sources';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_RADIUS_MPC } from '../../galaxy/milkyWayCalibration';
+import { UNIFORM_BYTES } from '../galaxyCatalog/pointVertexLayout';
 import vsCode from '../../shaders/milkyWayPick/vertex.wesl?static';
 import pickFsCode from '../../shaders/milkyWayPick/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -56,7 +62,7 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
  * sourceCode (offset 12) + f32 radiusMpc (offset 16) = 32 bytes (WGSL
  * pads the struct to a 16-byte multiple).  Every field is a physical
  * constant of the scene, written once at construction — the vertex
- * shader projects radiusMpc to apparent pixels itself from the shared
+ * shader projects radiusMpc to apparent pixels itself from the pick
  * camera uniforms at @group(0).
  */
 const MW_PICK_UNIFORM_BYTES = 32;
@@ -79,6 +85,8 @@ export function createMilkyWayPickRenderer(
 
   // GPU resources — null when device is null.
   let pickPipeline: GPURenderPipeline | null = null;
+  let cameraUniformBuffer: GPUBuffer | null = null;
+  let cameraBindGroup: GPUBindGroup | null = null;
   let mwUniformBuffer: GPUBuffer | null = null;
   let mwBindGroup: GPUBindGroup | null = null;
   let dummyFadeBuffer: GPUBuffer | null = null;
@@ -86,9 +94,10 @@ export function createMilkyWayPickRenderer(
 
   if (device) {
     // @group(0) CameraUniforms BGL — same single-uniform shape the points
-    // pick pipeline declares.  pickMilkyWay reuses the caller's bound
-    // group rather than building one of its own, so this BGL only has to
-    // be layout-compatible with that group.
+    // pick pipeline declares.  Unlike the COSMO pickables this renderer
+    // binds its OWN group against this BGL (see the module header): the MW
+    // is alone in the NEAR0 pick pass, so there is no caller-bound slot 0
+    // to inherit.
     const cameraBgl = device.createBindGroupLayout({
       label: 'milky-way-pick-camera-bgl',
       entries: [
@@ -136,13 +145,36 @@ export function createMilkyWayPickRenderer(
         targets: [{ format: 'r32uint' }],
       },
       primitive: { topology: 'triangle-list' },
-      // Shared depth state with the galaxy + structure pick draws so a
-      // closer galaxy claims the pixel over the MW billboard.
+      // depth32float matches the NEAR0 pick target's depth attachment
+      // (NEAR0_DEPTH_FORMAT in pickProgram.ts — the pass this pipeline
+      // draws in since the layer moved to the NEAR0 slab; a mismatched
+      // format is a validation error). The MW is the pass's sole occupant
+      // over a cleared-to-1.0 depth, so the test is near-vestigial here;
+      // cross-slab occlusion is resolved by the pick program's CPU fold,
+      // not this attachment.
       depthStencil: {
-        format: 'depth24plus',
+        format: 'depth32float',
         depthWriteEnabled: true,
         depthCompare: 'less',
       },
+    });
+
+    // The renderer's OWN @group(0) pick-camera buffer + bind group — the
+    // self-bind seam (module header). Sized to the full points pick uniform
+    // image (UNIFORM_BYTES from pointVertexLayout, the single layout truth):
+    // the shader declares only a prefix of that struct, which WGSL permits,
+    // and `pickUniformBytesOf` always packs the complete image. Built once;
+    // `pickMilkyWay` re-uploads the bytes per pick and re-binds the same
+    // group — the same own-buffer discipline the points pickRenderer uses.
+    cameraUniformBuffer = device.createBuffer({
+      label: 'milky-way-pick-camera',
+      size: UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    cameraBindGroup = device.createBindGroup({
+      label: 'milky-way-pick-camera-bg',
+      layout: cameraBgl,
+      entries: [{ binding: 0, resource: { buffer: cameraUniformBuffer } }],
     });
 
     // @group(2) uniform — vec3 centre + u32 source code + f32 disc world
@@ -178,24 +210,34 @@ export function createMilkyWayPickRenderer(
     dummyFadeBindGroup = dummyFade.bindGroup;
   }
 
-  function pickMilkyWay(pass: GPURenderPassEncoder): void {
-    if (!device || !pickPipeline || !mwBindGroup || !dummyFadeBindGroup) return;
-    // No uniform upload here — the @group(2) uniform is fully static
-    // (written once at construction) and the apparent size is derived in
-    // the vertex shader from the caller's @group(0) camera uniforms, so
-    // the draw is pure command recording.
+  function pickMilkyWay(pass: GPURenderPassEncoder, uniformBytes: ArrayBuffer): void {
+    if (
+      !device ||
+      !pickPipeline ||
+      !cameraUniformBuffer ||
+      !cameraBindGroup ||
+      !mwBindGroup ||
+      !dummyFadeBindGroup
+    ) {
+      return;
+    }
+    // Upload the caller's complete pick-camera image VERBATIM to the
+    // renderer's own buffer (byte-shaping has one home: pickUniformBytesOf)
+    // and bind our own @group(0) — the MW is the sole draw in the NEAR0
+    // pick pass, so there is no earlier-bound camera to inherit (module
+    // header). @group(2) stays static (written once at construction); the
+    // apparent size is derived in the vertex shader from these camera
+    // uniforms.
+    device.queue.writeBuffer(cameraUniformBuffer, 0, uniformBytes);
     pass.setPipeline(pickPipeline);
-    // @group(0) is the pick pass's camera uniform group — the caller
-    // re-binds it immediately before this call (ring / disk picks bind
-    // their own smaller uniforms at slot 0, so inheriting the last-bound
-    // group would read the wrong buffer); we bind only @group(1) (dummy
-    // fade) + @group(2) (MW uniform).
+    pass.setBindGroup(0, cameraBindGroup);
     pass.setBindGroup(1, dummyFadeBindGroup);
     pass.setBindGroup(2, mwBindGroup);
     pass.draw(6, 1);
   }
 
   function destroy(): void {
+    cameraUniformBuffer?.destroy();
     mwUniformBuffer?.destroy();
     dummyFadeBuffer?.destroy();
   }

@@ -294,6 +294,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
+      // null until initGpu; excluded from isEngineReady —
+      // starAggregateUpsampleLayer null-checks it in draw, so a null no-ops.
+      starAggregateUpsample: null,
       // Debug overlays. null until initGpu; the per-frame consumer
       // null-checks each together with its `settings.debug.*` toggle.
       pickDebugOverlay: null,
@@ -309,6 +312,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       starRenderer: null,
       planetRenderer: null,
       starPointRenderer: null,
+      starCatalogRenderer: null,
       // Keplerian orbit trails (Earth / Jupiter / Moon) — additive screen-space
       // conics on the (hdr, NEAR0) step. null until initGpu; excluded from
       // isEngineReady, null-checked at use by orbitTrailsLayer.
@@ -415,6 +419,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // born there.
     assetSlots: {
       points: new Map(),
+      // Per-source star catalogs — registry-built (wireSlots), unlike points'
+      // initGpu minting; the star slot's commit null-guards the renderer.
+      starCatalogs: new Map(),
       filaments: null,
       famousMeta: null,
       structureCatalog: null,
@@ -720,6 +727,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.flowFieldRenderer = null;
     state.gpu.volumeUpsample?.destroy();
     state.gpu.volumeUpsample = null;
+    state.gpu.starAggregateUpsample?.destroy();
+    state.gpu.starAggregateUpsample = null;
     state.gpu.pickDebugOverlay?.destroy();
     state.gpu.pickDebugOverlay = null;
     state.gpu.diskRadiusRing?.destroy();
@@ -732,6 +741,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.planetRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
+    state.gpu.starCatalogRenderer?.destroy();
+    state.gpu.starCatalogRenderer = null;
     state.gpu.orbitTrailRenderer?.destroy();
     state.gpu.orbitTrailRenderer = null;
     state.gpu.timingService.destroy();

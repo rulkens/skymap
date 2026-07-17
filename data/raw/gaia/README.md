@@ -7,7 +7,7 @@ the Hipparcos-2 bright-star table, and the Hipparcos↔Gaia cross-match.
 | Field         | Value |
 |---------------|-------|
 | Data release  | Gaia DR3 (public since 2022-06-13) |
-| Fetch date    | _(filled in when the fetch runs — see Task 11)_ |
+| Fetch date    | 2026-07-15 (checksum sidecar written on completion; main-catalog pages fetched 2026-07-14 → 2026-07-15) |
 | Fetch command | `npm run fetch-gaia` |
 
 ## Upstream services + tables
@@ -50,6 +50,13 @@ on `source_id` via a `LEFT OUTER JOIN`.
 ```
 source_id, ra, dec, parallax, dist_50, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag
 ```
+
+`dist_50` is in **kiloparsecs** (unlike every other distance field in this
+pipeline, which is parsecs) — verified against `parallax` for several rows
+(e.g. source_id 41888816866304 has parallax 11.0285 mas ⇒ ~90.7 pc, and its
+`dist_50` cell reads `0.090678625`). The build's `parseGcns` (in
+`tools/stars/buildStars.ts`) converts `dist_50 * 1000` at parse time so the
+in-memory `GcnsRow.distPc` is in parsecs like everything else.
 
 **Cross-match** (`hip2_best_neighbour.csv`):
 

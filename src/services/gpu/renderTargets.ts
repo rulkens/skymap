@@ -46,6 +46,26 @@
  * layer's dither-frequency viewport) read the SAME `scale` off the
  * `'volume'` spec row, so the two sites cannot drift.
  *
+ * ### Why the star-aggregate row renders at half scale
+ *
+ * The survey (Gaia bin) star pass splits into two streams. Leaf stars (real
+ * point-source dots, ~1.5 px) stay full-resolution in the HDR accumulation.
+ * The AGGREGATE stream — interior octree nodes whose glow fills the box
+ * footprint × the glow-overlap spread — is the fill-bound half: measured at
+ * tens-to-hundreds of full screens of additive overdraw at kpc-scale zoom.
+ * That glow field is low-frequency (a smooth summed-flux haze, not sharp
+ * dots), so rendering it into a half-res target and bilinearly upsampling is
+ * invisible while quartering its fragment cost. The `star-aggregates` row
+ * matches the HDR precision (rgba16float) so the additive flux sum keeps its
+ * dynamic range across the upsample. Its `scale` is the downsample divisor —
+ * total fragment reduction is its square (2 → 1/4 the fragments). Like the
+ * volume row it clears to a=0 so the composite's additive blend adds nothing
+ * for fragments the aggregates didn't reach. Unlike the volume row, the
+ * upsample composite is NOT a plain blit: it re-applies the star pass's
+ * hue-preserving knee to the SUMMED aggregate field (the offscreen alpha
+ * carries the pre-knee scalar), fixing the LOD compression asymmetry between
+ * a concentrated bright leaf and a stack of sub-knee aggregate quads.
+ *
  * ### Why the foreground row carries a depth texture
  *
  * `foreground:0` is the first row to declare `depth`. The foreground pass
@@ -93,6 +113,8 @@ import type { Size } from '../../@types/rendering/Size';
  * `foreground:0` clears transparent (a=0) so the later OVER composite leaves
  * every pixel the foreground did not draw unchanged — an empty foreground
  * frame composites to a no-op rather than a black wash over the background.
+ * `star-aggregates` clears to a=0 for the same reason `volume` does — its
+ * upsample composite adds nothing where no aggregate glow landed.
  *
  * The paired depth clear (`1.0`, the far plane) is NOT table data here — it
  * is the same constant for every depth-bearing row, so the executor supplies
@@ -101,9 +123,18 @@ import type { Size } from '../../@types/rendering/Size';
 export const TARGET_CLEAR_VALUES: Readonly<Record<string, GPUColor>> = {
   hdr: { r: 0, g: 0, b: 0, a: 1 },
   volume: { r: 0, g: 0, b: 0, a: 0 },
+  'star-aggregates': { r: 0, g: 0, b: 0, a: 0 },
   'foreground:0': { r: 0, g: 0, b: 0, a: 0 },
   swap: { r: 0, g: 0, b: 0, a: 1 },
 };
+
+/**
+ * Downsample divisor for the half-res `star-aggregates` row — total fragment
+ * reduction is its square (2 → 1/4 the fragments). Named here beside the
+ * target table (the volume row's divisor is inline `scale: 3`) so raising it
+ * to 4 to shed more fill is a one-line change.
+ */
+const STAR_AGGREGATE_DIVISOR = 2;
 
 /**
  * Build the concrete target table for this frame configuration. A function
@@ -116,6 +147,7 @@ function buildSpecs(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
   return [
     { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
     { id: 'volume', format: 'rgba16float', depth: null, scale: 3 },
+    { id: 'star-aggregates', format: 'rgba16float', depth: null, scale: STAR_AGGREGATE_DIVISOR },
     { id: 'foreground:0', format: 'rgba16float', depth: 'depth32float', scale: 1 },
     { id: 'swap', format: swapFormat, depth: null, scale: 1 },
   ];

@@ -156,10 +156,11 @@ export const pointSpritesLayer: ContentLayer = {
   //
   // This row is first among the cosmological pickables in the registry,
   // and `drawPoints` uploads + binds @group(0) (the pick CameraUniforms)
-  // even with zero sources. The ring / disk / Milky-Way pick pipelines
-  // read that same @group(0) prefix, so point-sprites running first — and
-  // always leaving slot 0 pointing at the fresh pick camera — is
-  // load-bearing, not incidental ordering.
+  // even with zero sources. The ring / disk pick pipelines read that same
+  // @group(0) prefix, so point-sprites running first — and always leaving
+  // slot 0 pointing at the fresh pick camera — is load-bearing, not
+  // incidental ordering. (The Milky-Way pick left this pass for NEAR0 and
+  // binds its own slot-0 camera there.)
   //
   // ### Mask semantics
   //
@@ -176,7 +177,7 @@ export const pointSpritesLayer: ContentLayer = {
   //
   // `drawPoints` is called even when the filter empties the list — the
   // @group(0) pick-camera upload/bind it performs is the prefix contract
-  // above, and the ring / disk / Milky-Way pick pipelines still need it.
+  // above, and the ring / disk pick pipelines still need it.
   drawPick(pass, view, ctx, state) {
     if (state.gpu.pickRenderer === null) return;
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
