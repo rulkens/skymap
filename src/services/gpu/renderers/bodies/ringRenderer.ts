@@ -219,7 +219,12 @@ export function createRingRenderer(
       label: 'ring-strip-texture',
       size: [bitmap.width, bitmap.height, 1],
       format: 'rgba8unorm-srgb',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+      // RENDER_ATTACHMENT is required by copyExternalImageToTexture even though
+      // we never render INTO the strip — Dawn rejects the upload without it.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [
       bitmap.width,

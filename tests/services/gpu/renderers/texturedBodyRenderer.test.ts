@@ -184,6 +184,23 @@ describe('createTexturedBodyRenderer', () => {
     expect(() => renderer.setRingTexture('saturn', strip)).not.toThrow();
   });
 
+  it('sizes the ring-shadow strip with RENDER_ATTACHMENT usage', () => {
+    // copyExternalImageToTexture requires the destination to carry BOTH COPY_DST
+    // and RENDER_ATTACHMENT (a WebGPU runtime rule no compiler check catches);
+    // omitting it makes Dawn reject the upload and the ring samples a zeroed
+    // strip. This asserts the flag is present on the upload target.
+    const textures: GPUTextureDescriptor[] = [];
+    const renderer = createTexturedBodyRenderer(
+      mockDevice({ textures }),
+      'rgba16float',
+      'depth32float',
+    );
+    renderer.setRingTexture('saturn', { width: 512, height: 1 } as unknown as ImageBitmap);
+    const stripTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 512);
+    expect(stripTex).toBeDefined();
+    expect((stripTex!.usage & GPUTextureUsage.RENDER_ATTACHMENT) !== 0).toBe(true);
+  });
+
   it('clearTexture destroys the body surface texture and reverts to the placeholder', () => {
     // clearTexture is the eviction inverse of setTexture: releasing a body's
     // bodyTextures slot must actually free its (up to ~135 MB) GPU texture, not
@@ -213,7 +230,12 @@ describe('createTexturedBodyRenderer', () => {
       createTexture: vi.fn((desc: GPUTextureDescriptor) => {
         const destroy = vi.fn();
         created.push({ destroy, desc });
-        return { createView: () => ({}), destroy, mipLevelCount: desc.mipLevelCount ?? 1, format: desc.format };
+        return {
+          createView: () => ({}),
+          destroy,
+          mipLevelCount: desc.mipLevelCount ?? 1,
+          format: desc.format,
+        };
       }),
     } as unknown as GPUDevice;
     const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float');

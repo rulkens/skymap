@@ -16,12 +16,16 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createRingRenderer } from '../../../../../src/services/gpu/renderers/bodies/ringRenderer';
-import { packRingUniforms, RING_UNIFORM_FLOATS } from '../../../../../src/utils/gpu/packRingUniforms';
+import {
+  packRingUniforms,
+  RING_UNIFORM_FLOATS,
+} from '../../../../../src/utils/gpu/packRingUniforms';
 import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 function mockDevice(recorders?: {
   renderPipelines?: GPURenderPipelineDescriptor[];
   bindGroupLayouts?: GPUBindGroupLayoutDescriptor[];
+  textures?: GPUTextureDescriptor[];
 }): GPUDevice {
   return {
     createShaderModule: vi.fn(() => ({
@@ -29,11 +33,14 @@ function mockDevice(recorders?: {
     })),
     createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
     createSampler: vi.fn(() => ({})),
-    createTexture: vi.fn((desc: GPUTextureDescriptor) => ({
-      createView: () => ({}),
-      destroy: vi.fn(),
-      format: desc.format,
-    })),
+    createTexture: vi.fn((desc: GPUTextureDescriptor) => {
+      recorders?.textures?.push(desc);
+      return {
+        createView: () => ({}),
+        destroy: vi.fn(),
+        format: desc.format,
+      };
+    }),
     createBindGroupLayout: vi.fn((desc: GPUBindGroupLayoutDescriptor) => {
       recorders?.bindGroupLayouts?.push(desc);
       return {};
@@ -88,6 +95,19 @@ describe('createRingRenderer', () => {
     const pass = stubPass();
     expect(() => renderer.draw(pass, new Float32Array(RING_UNIFORM_FLOATS))).not.toThrow();
     expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
+  });
+
+  it('sizes the ring strip with RENDER_ATTACHMENT usage', () => {
+    // copyExternalImageToTexture requires the destination to carry BOTH COPY_DST
+    // and RENDER_ATTACHMENT (a WebGPU runtime rule no compiler check catches);
+    // omitting it makes Dawn reject the upload and the ring samples a zeroed
+    // strip. This asserts the flag is present on the upload target.
+    const textures: GPUTextureDescriptor[] = [];
+    const renderer = createRingRenderer(mockDevice({ textures }), 'rgba16float', 'depth32float');
+    renderer.setTexture({ width: 512, height: 1 } as unknown as ImageBitmap);
+    const stripTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 512);
+    expect(stripTex).toBeDefined();
+    expect((stripTex!.usage & GPUTextureUsage.RENDER_ATTACHMENT) !== 0).toBe(true);
   });
 
   it('bakes the foreground profile: over blend, two-sided, depth read / no write', () => {

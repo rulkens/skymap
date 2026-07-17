@@ -227,7 +227,9 @@ export function createTexturedBodyRenderer(
   // Build a bind group from a body's current resources, falling back to the
   // shared placeholders while a body texture / ring texture is unset. Called at
   // first reference and rebuilt on every texture swap against the stable layout.
-  function buildBindGroup(res: Pick<BodyResources, 'uniformBuffer' | 'texture' | 'ringTexture'>): GPUBindGroup {
+  function buildBindGroup(
+    res: Pick<BodyResources, 'uniformBuffer' | 'texture' | 'ringTexture'>,
+  ): GPUBindGroup {
     return device.createBindGroup({
       label: 'texturedBody-bg',
       layout: bindGroupLayout,
@@ -321,7 +323,12 @@ export function createTexturedBodyRenderer(
       label: `texturedBody-ring-${bodyId}`,
       size: [bitmap.width, bitmap.height, 1],
       format: 'rgba8unorm-srgb',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+      // RENDER_ATTACHMENT is required by copyExternalImageToTexture even though
+      // we never render INTO the strip — Dawn rejects the upload without it.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [
       bitmap.width,
