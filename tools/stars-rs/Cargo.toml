@@ -1,0 +1,24 @@
+# stars-rs — speed-first Rust reimplementation of the Gaia star-bin build
+# (tools/stars/buildStars.ts is the executable spec).
+#
+# Backend choice for gzip: flate2 with the zlib-ng backend. The TS encoder is
+# Node's WHATWG CompressionStream('gzip'), i.e. zlib at its default level 6 —
+# the equivalence gate only requires that the DECOMPRESSED payload match and
+# that the compressed size drive the same "largest k under budget" search, so
+# a zlib-compatible deflate at level 6 is what matters, not byte-identical
+# gzip output. zlib-ng is ~2x faster than madler zlib at the same level, and
+# the probe loop is gzip-dominated, so the backend choice is on the critical
+# path of the 10x speed target.
+[package]
+name = "stars-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rayon = "1"
+flate2 = { version = "1", default-features = false, features = ["zlib-ng"] }
+rustc-hash = "2"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

@@ -480,6 +480,12 @@ The full build holds the ~16.8 M-row Gaia superset in memory at once, so
 run it on a machine with roughly 16 GB of free RAM — the npm script raises
 Node's heap limit accordingly.
 
+For real-scale runs the canonical builder is the Rust port `tools/stars-rs/`,
+invoked with `npm run build-stars-rs` (requires a Rust toolchain). It emits
+byte-identical `.bin` files far faster and with a lower memory ceiling; the
+TypeScript `buildStars.ts` above stays the reference implementation the vitest
+suite covers. See `tools/stars-rs/README.md` for the bit-parity contract.
+
 ## Brightness controls
 
 Real catalogue galaxies span ~10 magnitudes of apparent brightness — the
