@@ -135,9 +135,11 @@ Per batch task:
       backlog note — the seed already carries `magV`, so no re-author is needed. This is a
       judgment checkpoint, **not** a designed gate here (avoid a second gating mechanism
       built blind).
-- [ ] **Oblateness spot-check.** Confirm the batch entries flagged `oblateness` (Achernar,
+- [x] **Oblateness spot-check.** Confirm the batch entries flagged `oblateness` (Achernar,
       Altair, Regulus) actually render flattened — this is the first real visual proof of
-      plan 01 Task 7's code path.
+      plan 01 Task 7's code path. _Waived at the DoD audit (user decision): shipped without
+      the close-approach check; the MVP scale path is unit-tested, visual proof deferred to
+      normal use._
 - [x] **Timing note (spec §9, grill Q8/Q11 item 5) — LOAD-BEARING.** The complete seed
       (every entry's resolved `gaiaDr3`) MUST land **before the first real `npm run
     build-stars`** run, so the Gaia bin's dedup is complete on its first build and no
