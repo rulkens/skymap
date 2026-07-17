@@ -7,7 +7,7 @@
 // entry, the scene-body dedup keys the star-bin build subtracts from the
 // Gaia bin.  include!()-d into population.rs so the const lands in that
 // module's namespace, exactly where the hand-maintained array used to live.
-pub const FAMOUS_STAR_GAIA_IDS: [u64; 24] = [
+pub const FAMOUS_STAR_GAIA_IDS: [u64; 35] = [
     5853498713190525696, // proxima-centauri
     4472832130942575872, // barnards-star
     3864972938605115520, // wolf-359
@@ -32,4 +32,15 @@ pub const FAMOUS_STAR_GAIA_IDS: [u64; 24] = [
     3011968416163350272, // saiph
     6127791439360208640, // muhlifain
     5300300156538723328, // aspidiske
+    1222646935698492160, // alphecca
+    2067518817314952576, // sadr
+    418551920284673408, // schedar
+    5534788672055388032, // naos
+    423018377034969216, // caph
+    1279798794197267072, // izar
+    5905821894507108864, // alpha-lupi
+    6026152137856166912, // larawag
+    856096765753549056, // merak
+    4993479684438433792, // ankaa
+    5961206940987571200, // girtab
 ];
