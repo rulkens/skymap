@@ -929,15 +929,19 @@ Moon in front of Earth resolves correctly, §8.3). Both entry points compile the
 explicit pipeline layout. WESL comments single-quoted, no backticks. Follow the
 `starCatalogPickRenderer` idiom Stage 1 established (own GPUShaderModules, explicit BGLs).
 
-- [ ] Add `spherePick.wesl` + `starPointPick.wesl` + `bodyPickRenderer` + type + handle +
+- [x] Add `spherePick.wesl` + `starPointPick.wesl` + `bodyPickRenderer` + type + handle +
       construction. Didactic docblocks (why own-uniform not shared camera; why depth-tested).
       Construct it in `phases/initGpu.ts` alongside `starCatalogPickRenderer` (`initGpu.ts:449`) —
       Stage 1 built the pick renderers in `initGpu` only, mirroring `milkyWayPickRenderer`, NOT
       `wireInput`.
-- [ ] No unit test (GPU). `npm run typecheck` (both tsconfigs) → green.
+      _Executed note: per-draw sphere uniforms via ONE buffer + 256-B dynamic offsets with a
+      per-pass cursor (writeBuffer/submit race defeated; reviewer-verified against the real
+      pickProgram pass cadence). 'drawPoints' is one-call-per-pass by documented contract —
+      Task 11's caller must honour it._
+- [x] No unit test (GPU). `npm run typecheck` (both tsconfigs) → green.
 - [ ] Visual verification is folded into Task 13 (once the layers wire the pick draws and
       RESOLVE_PICK closes the loop).
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 11 — Body layers `drawPick` with stable seed index (spec §8.1, §8.3)
 
