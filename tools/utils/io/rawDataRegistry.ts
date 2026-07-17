@@ -388,8 +388,7 @@ export const RAW_DATA = {
     path: 'data/raw/desi/QSO_NGC_clustering.dat.fits',
     kind: 'file',
     source: 'gitignored',
-    description:
-      'DESI DR1 (iron) LSS clustering catalog, QSO tracer, NGC — quasars, z 0.4-3.5.',
+    description: 'DESI DR1 (iron) LSS clustering catalog, QSO tracer, NGC — quasars, z 0.4-3.5.',
     upstream:
       'https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/QSO_NGC_clustering.dat.fits',
     fetcher: 'tools/fetch/fetchDesi.ts',
@@ -491,7 +490,8 @@ export const RAW_DATA = {
     path: 'data/raw/textures/8k_mercury.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Mercury albedo map, 8k JPG (CC BY 4.0). Downsampled to the small/medium/large tiers.',
+    description:
+      'Solar System Scope Mercury albedo map, 8k JPG (CC BY 4.0). Downsampled to the small/medium/large tiers.',
     upstream: 'https://www.solarsystemscope.com/textures/download/8k_mercury.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -500,7 +500,8 @@ export const RAW_DATA = {
     path: 'data/raw/textures/4k_venus_atmosphere.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Venus cloud-top atmosphere, 4k JPG (CC BY 4.0). Caps at 4k — the 8k SSS variant is the radar surface (wrong appearance).',
+    description:
+      'Solar System Scope Venus cloud-top atmosphere, 4k JPG (CC BY 4.0). Caps at 4k — the 8k SSS variant is the radar surface (wrong appearance).',
     upstream: 'https://www.solarsystemscope.com/textures/download/4k_venus_atmosphere.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -536,7 +537,8 @@ export const RAW_DATA = {
     path: 'data/raw/textures/8k_saturn_ring_alpha.png',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Saturn ring radial alpha strip, 8k RGBA PNG (CC BY 4.0). Real alpha; sampled by radius, shipped as an Nx1 texture_2d.',
+    description:
+      'Solar System Scope Saturn ring radial alpha strip, 8k RGBA PNG (CC BY 4.0). Real alpha; sampled by radius, shipped as an Nx1 texture_2d.',
     upstream: 'https://www.solarsystemscope.com/textures/download/8k_saturn_ring_alpha.png',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -545,7 +547,8 @@ export const RAW_DATA = {
     path: 'data/raw/textures/2k_uranus.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Uranus, 2k JPG (CC BY 4.0). Near-featureless source — 2k only, never upscaled.',
+    description:
+      'Solar System Scope Uranus, 2k JPG (CC BY 4.0). Near-featureless source — 2k only, never upscaled.',
     upstream: 'https://www.solarsystemscope.com/textures/download/2k_uranus.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -554,7 +557,8 @@ export const RAW_DATA = {
     path: 'data/raw/textures/2k_neptune.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'Solar System Scope Neptune, 2k JPG (CC BY 4.0). Near-featureless source — 2k only, never upscaled.',
+    description:
+      'Solar System Scope Neptune, 2k JPG (CC BY 4.0). Near-featureless source — 2k only, never upscaled.',
     upstream: 'https://www.solarsystemscope.com/textures/download/2k_neptune.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -572,8 +576,10 @@ export const RAW_DATA = {
     path: 'data/raw/textures/world.topo.bathy.200412.3x21600x10800.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'NASA Blue Marble Next Generation, December topo+bathymetry equirect, 21600x10800 JPG (public domain, credit NASA Earth Observatory). Full-res Earth source.',
-    upstream: 'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x21600x10800.jpg',
+    description:
+      'NASA Blue Marble Next Generation, December topo+bathymetry equirect, 21600x10800 JPG (public domain, credit NASA Earth Observatory). Full-res Earth source.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x21600x10800.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
@@ -581,8 +587,10 @@ export const RAW_DATA = {
     path: 'data/raw/textures/world.topo.bathy.200412.3x5400x2700.jpg',
     kind: 'file',
     source: 'gitignored',
-    description: 'NASA Blue Marble Next Generation, 5400x2700 sibling of the full BMNG Earth equirect (public domain). The --dev quick-fetch subset source.',
-    upstream: 'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x5400x2700.jpg',
+    description:
+      'NASA Blue Marble Next Generation, 5400x2700 sibling of the full BMNG Earth equirect (public domain). The --dev quick-fetch subset source.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x5400x2700.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
@@ -590,8 +598,10 @@ export const RAW_DATA = {
     path: 'data/raw/textures/Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
     kind: 'file',
     source: 'gitignored',
-    description: 'USGS Astrogeology Io global colour mosaic (Galileo SSI + Voyager), 11445x5723 RGB GeoTIFF (public domain, credit NASA/USGS).',
-    upstream: 'https://planetarymaps.usgs.gov/mosaic/Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
+    description:
+      'USGS Astrogeology Io global colour mosaic (Galileo SSI + Voyager), 11445x5723 RGB GeoTIFF (public domain, credit NASA/USGS).',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
@@ -599,8 +609,10 @@ export const RAW_DATA = {
     path: 'data/raw/textures/Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
     kind: 'file',
     source: 'gitignored',
-    description: 'USGS Astrogeology Europa global mosaic (Voyager + Galileo SSI), 19631x9816 grayscale GeoTIFF (public domain, credit NASA/USGS). Grayscale — build-tinted.',
-    upstream: 'https://planetarymaps.usgs.gov/mosaic/Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
+    description:
+      'USGS Astrogeology Europa global mosaic (Voyager + Galileo SSI), 19631x9816 grayscale GeoTIFF (public domain, credit NASA/USGS). Grayscale — build-tinted.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
@@ -608,8 +620,10 @@ export const RAW_DATA = {
     path: 'data/raw/textures/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
     kind: 'file',
     source: 'gitignored',
-    description: 'USGS Astrogeology Ganymede global colour mosaic (Voyager + Galileo SSI), 11520x5760 RGB GeoTIFF (public domain, credit NASA/USGS).',
-    upstream: 'https://planetarymaps.usgs.gov/mosaic/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
+    description:
+      'USGS Astrogeology Ganymede global colour mosaic (Voyager + Galileo SSI), 11520x5760 RGB GeoTIFF (public domain, credit NASA/USGS).',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
@@ -617,8 +631,10 @@ export const RAW_DATA = {
     path: 'data/raw/textures/Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
     kind: 'file',
     source: 'gitignored',
-    description: 'USGS Astrogeology Callisto global mosaic (Voyager + Galileo SSI), 15138x7569 grayscale GeoTIFF (public domain, credit NASA/USGS). Grayscale — build-tinted.',
-    upstream: 'https://planetarymaps.usgs.gov/mosaic/Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
+    description:
+      'USGS Astrogeology Callisto global mosaic (Voyager + Galileo SSI), 15138x7569 grayscale GeoTIFF (public domain, credit NASA/USGS). Grayscale — build-tinted.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
@@ -626,21 +642,24 @@ export const RAW_DATA = {
     path: 'data/raw/textures',
     kind: 'directory',
     source: 'gitignored',
-    description: 'Planet-texture raw-data directory — fetcher output target; consumers join(rawDataPath(...), <filename>) for dynamically-selected sources.',
+    description:
+      'Planet-texture raw-data directory — fetcher output target; consumers join(rawDataPath(...), <filename>) for dynamically-selected sources.',
     fetcher: 'tools/fetch/fetchTextures.ts',
   },
   'textures.sha256': {
     path: 'data/raw/textures/textures.sha256',
     kind: 'file',
     source: 'committed',
-    description: 'Combined SHA-256 sidecar for the raw texture sources (one `<hex>  <filename>` line each) — committed so the fetcher can detect truncated or stale downloads.',
+    description:
+      'Combined SHA-256 sidecar for the raw texture sources (one `<hex>  <filename>` line each) — committed so the fetcher can detect truncated or stale downloads.',
     fetcher: 'tools/fetch/fetchTextures.ts',
   },
   'textures.readme': {
     path: 'data/raw/textures/README.md',
     kind: 'file',
     source: 'committed',
-    description: 'Provenance for the planet-texture sources — upstream URLs, licences (SSS CC BY 4.0, NASA/USGS public domain), native dims, fetch date, checksums.',
+    description:
+      'Provenance for the planet-texture sources — upstream URLs, licences (SSS CC BY 4.0, NASA/USGS public domain), native dims, fetch date, checksums.',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────
