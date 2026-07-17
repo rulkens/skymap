@@ -1085,7 +1085,7 @@ outer-wrapper-stable contract (no `<details>` remount on hover, CLAUDE.md).
 
 ## Task 14 — Entanglement-radar over the Stage 2 diff
 
-- [ ] Run `entanglement-radar` over the Stage 2 diff (Tasks 9–13). Named confirmations for the
+- [x] Run `entanglement-radar` over the Stage 2 diff (Tasks 9–13). Named confirmations for the
       revised scope: (a) the rename left no `StarInfo` / `StarDetailCard` / `CompactStarCard`
       straggler and the `body`-arm names now track the `'body'` discriminant (grep clean); (b) the
       star and body `drawPick` seed-index packers did NOT fork into two near-duplicate packers —
@@ -1095,8 +1095,11 @@ outer-wrapper-stable contract (no `<details>` remount on hover, CLAUDE.md).
       slab-exclusivity test still holds); (d) the guard lift left no dead `FAMOUS_STAR_IDS` branch
       in `buildFocusable`. Un-braid via `/simplify` where clear; else capture in `docs/BACKLOG.md`
       per backlog hygiene.
-- [ ] `npm run typecheck` (both tsconfigs) + `npm test` → green.
-- [ ] Commit any fixes.
+      _Executed: all four confirmations pass; nothing mechanical to apply. One design-bearing
+      observation captured to BACKLOG (draw/drawPick mirrored resolved-set invocations →
+      shared per-frame resolvedSet — touches the ContentLayer shape, deferred)._
+- [x] `npm run typecheck` (both tsconfigs) + `npm test` → green.
+- [x] Commit any fixes.
 
 ---
 
