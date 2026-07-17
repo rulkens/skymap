@@ -25,6 +25,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { starPointsLayer } from '../../../../../src/services/engine/frame/passes/starPointsLayer';
 import { CONTENT_LAYERS } from '../../../../../src/services/engine/frame/passes';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
+import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
@@ -70,8 +72,9 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-// A below-gate camera 5 kpc down +z: inside FOREGROUND_MAX_DISTANCE_MPC
-// (~10 kpc), so the distance gate passes — yet still parsecs beyond every
+// A below-gate camera 5 kpc down +z: well inside FOREGROUND_MAX_DISTANCE_MPC
+// (~0.23 Mpc) AND inside the starBackdrop band's live range (goneAt ~0.023 Mpc),
+// so both the distance gate and the band pass — yet still parsecs beyond every
 // seeded star, so all 24 non-Sun neighbours stay sub-pixel points.
 const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
 
@@ -168,6 +171,18 @@ describe('starPointsLayer.enabled', () => {
     expect(starPointsLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]))).toBe(
       false,
     );
+  });
+
+  it('is disabled once the backdrop band has dissolved, even inside the foreground gate', () => {
+    // Just past the backdrop band's goneAt but still WELL inside the shared
+    // foreground gate: the additive sprite field has faded to black, so the
+    // layer must disable outright (the "opacity 0 ⇒ no render" house rule)
+    // rather than draw invisible sprites and hold the (hdr, NEAR0) step open.
+    // Derived from the band + gate so a roster growth carries both edges.
+    const beyondBand = SCALE_FADE_BANDS.starBackdrop.goneAt * 1.01;
+    expect(beyondBand).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC); // still inside the gate
+    const state = makeState(makeRenderer(), SCENE_STARS);
+    expect(starPointsLayer.enabled(state, makeCtx([0, 0, beyondBand]))).toBe(false);
   });
 });
 
@@ -309,6 +324,33 @@ describe('starPointsLayer.draw', () => {
       PROXIMA.id,
     ]);
     expect(renderer.draw).toHaveBeenCalledTimes(3);
+  });
+
+  it('premultiplies each uploaded colour by the backdrop-dissolve alpha', () => {
+    // Camera parked mid-band (between the starBackdrop fullAt and goneAt edges),
+    // where the dissolve alpha is a genuine fraction — the pin that fails if the
+    // scale is dropped (colours upload at full strength) or inverted. From ~14
+    // kpc every seeded star is a sub-pixel point, so the whole roster uploads.
+    const camDistMpc =
+      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const expectedFade = fadeBand(SCALE_FADE_BANDS.starBackdrop, camDistMpc);
+    expect(expectedFade).toBeGreaterThan(0);
+    expect(expectedFade).toBeLessThan(1);
+
+    const renderer = makeRenderer();
+    const camPos: Vec3 = [0, 0, camDistMpc];
+    const state = makeState(renderer, [SUN, PROXIMA, SIRIUS]);
+    starPointsLayer.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
+
+    const uploaded = renderer.setStars.mock.calls[0]![0];
+    const uploadedProxima = uploaded.find((star) => star.id === PROXIMA.id)!;
+    expect(uploadedProxima.color).toEqual([
+      PROXIMA.color[0] * expectedFade,
+      PROXIMA.color[1] * expectedFade,
+      PROXIMA.color[2] * expectedFade,
+    ]);
+    // Distinctly NOT the raw colour — the scale actually happened.
+    expect(uploadedProxima.color).not.toEqual([...PROXIMA.color]);
   });
 
   it('is a no-op when the starPointRenderer handle is null (pre-bootstrap)', () => {

@@ -25,6 +25,13 @@
  * this reason). A hand-typed Mpc literal would silently strand a future
  * farther seed outside its own render gate.
  *
+ * The `FARTHEST_BODY_MPC` extent is exported because it is the ONE derivation
+ * source for the whole descent's near-field edges: this gate (×100), the
+ * caption gate (`SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`, ×4), and the star fade
+ * bands (`SCALE_FADE_BANDS.starCaption` / `.starBackdrop`) all scale off it, so
+ * growing the roster's farthest seed carries every edge in lockstep — no second
+ * hand literal to fall out of sync.
+ *
  * ### Why the margin is a ×100 enclosure
  *
  * The farthest seed is now Eta Carinae at ~2300 pc ≈ 2.3e-3 Mpc — the roster
@@ -58,7 +65,7 @@ import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 
 // The farthest seeded foreground element from the heliocentric render origin.
 // `positionMpc` is authored origin-relative, so |positionMpc| IS the distance.
-const FARTHEST_BODY_MPC = Math.max(
+export const FARTHEST_BODY_MPC = Math.max(
   ...SCENE_BODIES.map((body) =>
     Math.hypot(body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]),
   ),
