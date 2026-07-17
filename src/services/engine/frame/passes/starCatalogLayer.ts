@@ -474,10 +474,20 @@ export const starCatalogLayer: ContentLayer = {
   },
 
   // Pick aspect — stamps every visible LEAF star's packed identity into the
-  // NEAR0 r32uint pick pass. It reuses `prepareStarCut` (memoised on `ctx`), so
-  // hover/click reads the SAME per-frame cut the visual pass drew — the pick
-  // lands exactly where the sprite is — with no second octree walk. Aggregates
-  // and opacity-0 leaves are filtered out by `starPickLeafDraws` (leaf-only,
+  // NEAR0 r32uint pick pass. The pick pass runs on a FRESH `ctx` minted by
+  // `pickFrameContext` (→ `deriveFrameContext` from `lastPose.current`, the pose
+  // the last frame actually rendered), so `prepareStarCut`'s per-`ctx` memo
+  // (`preparedByCtx`) MISSES and recomputes the leaf cut here — a second octree
+  // walk, but against that same last-rendered camera, so the pick lands exactly
+  // where the sprite drew. The alternative — threading the visual frame's cached
+  // cut into the pick path — would braid pick into frame ordering (the pick pass
+  // could only run if a visual frame had cached first); recomputing keeps the
+  // pick a pure function of the last-rendered pose. The cost is one extra
+  // traversal on a PICKED frame, which is acceptable because picks are
+  // event-driven, not per-frame. The recompute also re-advances the per-node LOD
+  // fades, but that stays monotonic — the fade `clockMs` clamps `dt ≥ 0`, so the
+  // second walk can only nudge a ramp forward, never rewind it. Aggregates and
+  // opacity-0 leaves are filtered out by `starPickLeafDraws` (leaf-only,
   // visible-only): an aggregate glow names no single star, and an invisible
   // newcomer / fully-faded leaf must not claim the cursor.
   //
