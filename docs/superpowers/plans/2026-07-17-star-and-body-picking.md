@@ -977,12 +977,14 @@ MVP the way their `draw` does (`composeBodyMvp` from `view.slab.vp`, `earthLayer
 The star-points `drawPick` rebases like its `draw` (`starPointsLayer.ts:134-183`) and hands
 `bodyPickRenderer.drawPoints` the ≤25 camera-relative points + seed-indexed packedIds.
 
-- [ ] Add `seedIndexOfBody` + the four `drawPick`s (each null-guards `state.gpu.bodyPickRenderer`;
+- [x] Add `seedIndexOfBody` + the four `drawPick`s (each null-guards `state.gpu.bodyPickRenderer`;
       each keys off the same visible/resolved subset its `draw` uses).
-- [ ] Add the test `seedIndexOfBody returns the seed array position` — a body id maps to its
+      _Executed note: −1 seed index → defensive skip at every non-Earth site; pickables pin test
+      extended 5 → 9 in registry order._
+- [x] Add the test `seedIndexOfBody returns the seed array position` — a body id maps to its
       `SCENE_PLANETS` / `SCENE_STARS` index; an unknown id → −1.
-- [ ] `npx vitest run tests/services/engine/frame/passes/seedIndexOfBody.test.ts` → fail, implement, pass.
-- [ ] Commit (visual verification lands in Task 13 once RESOLVE_PICK closes the loop).
+- [x] `npx vitest run tests/services/engine/frame/passes/seedIndexOfBody.test.ts` → fail, implement, pass.
+- [x] Commit (visual verification lands in Task 13 once RESOLVE_PICK closes the loop).
 
 ## Task 12 — `RESOLVE_PICK` body arms + NEAR0 halo + seed-index stability (spec §8.2, §8.4, §11)
 
