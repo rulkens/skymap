@@ -768,7 +768,7 @@ threshold with the layer it hands off to.
       the sphere) and the point→sphere crossover reads seamlessly with no frame
       where the star vanishes or double-draws; confirm a non-focused nearby star
       handled the same way; confirm the star still picks (hover) at close range.
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 8f — Entanglement-radar over the Stage 1.5 diff
 
