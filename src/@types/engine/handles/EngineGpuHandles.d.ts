@@ -68,6 +68,7 @@ import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
 import type { RingRenderer } from '../../rendering/RingRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
+import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
 import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
@@ -435,6 +436,22 @@ export type EngineGpuHandles = {
    * instance + uniform buffers).
    */
   starPointRenderer: StarPointRenderer | null;
+  /**
+   * The sub-pixel scene bodies (the `glints` branch of
+   * `partitionBodiesByPresentation`) as brightness-scaled additive point sprites
+   * into the depthless HDR target — the far half of the body LOD (`body-glints`
+   * layer, sharing the frame program's `(hdr, NEAR0)` render step with
+   * `star-points`).  Its brightness encodes apparent size x albedo x phase, and
+   * cross-fades with the resolved mesh over 1-3 px so bodies stop popping in/out
+   * on descent.  The close sibling of `starPointRenderer` — a separate renderer
+   * for this feature by design (the fold candidate is deferred, spec §14).  No
+   * depth format: the hdr row has no depth attachment.  Needs no data-delivery
+   * step: `bodyGlintsLayer` packs and hands the whole batch every frame.
+   * Excluded from `isEngineReady` and null-checked at use.  Null until `initGpu`
+   * constructs it; released and re-nulled by `destroy()` (releases the instance +
+   * uniform buffers).
+   */
+  bodyGlintRenderer: BodyGlintRenderer | null;
   /**
    * The survey (Gaia bin) stars as additive point sprites into the depthless
    * HDR target — the wide-field twin of `starPointRenderer`, fed from an

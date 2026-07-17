@@ -226,6 +226,19 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (i
 vi.mock('../../../../src/services/gpu/renderers/bodies/starPointRenderer', () => ({
   createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
 }));
+// Partial mock, same rationale as planetRenderer's below: bodyGlintsLayer.ts
+// (loaded transitively via the frame program's registry import) reads the real
+// MAX_GLINTS / INSTANCE_FLOATS constants at module scope to size its staging
+// buffer, so only the factory is stubbed.
+vi.mock(
+  '../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer')
+    >()),
+    createBodyGlintRenderer: vi.fn(() => makeStub('bodyGlintRenderer')),
+  }),
+);
 // The survey star-catalog renderer's constructor uses the full device API
 // (limits + createBuffer + bind groups + pipeline), so a `limits` patch on
 // the plain stub device wouldn't survive the next line — mock the factory
@@ -317,6 +330,7 @@ function makeState(): EngineState {
       texturedBodyRenderer: null,
       ringRenderer: null,
       starPointRenderer: null,
+      bodyGlintRenderer: null,
       orbitTrailRenderer: null,
     },
     // The real seeded stores: planets draw through a single instanced
@@ -433,6 +447,11 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // included) is a sub-pixel point, so the whole seed IS the boot
     // partition; the layer's draw stays pure.
     expect(state.gpu.starPointRenderer).toBe(stubs.starPointRenderer);
+    // The body-glint renderer (sub-pixel body sprites) needs no data delivery —
+    // bodyGlintsLayer packs and hands the batch every frame — so construction
+    // alone lands the handle; the destroy chain must reach it to release its
+    // instance + uniform buffers.
+    expect(state.gpu.bodyGlintRenderer).toBe(stubs.bodyGlintRenderer);
     // The orbit-trail renderer needs no data delivery (SCENE_ORBIT_CONICS is a
     // static module-level table) — construction alone lands the handle.
     expect(state.gpu.orbitTrailRenderer).toBe(stubs.orbitTrailRenderer);

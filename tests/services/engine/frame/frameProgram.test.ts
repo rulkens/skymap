@@ -203,6 +203,7 @@ describe('timedSlotsOf', () => {
       'milky-way',
       'star-points',
       'orbit-trails',
+      'body-glints',
       'star-catalog',
       'star-upsample',
       'hdr→swap',

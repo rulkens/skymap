@@ -221,7 +221,14 @@ const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets', 'textured-bodies']
 // UPSAMPLE composite (adjacent to the leaf draw it composites). The survey
 // aggregate STREAM itself targets 'star-aggregates', not hdr, so it is not in
 // this group.
-const NEAR_HDR_NAMES = ['milky-way', 'star-points', 'orbit-trails', 'star-catalog', 'star-upsample'];
+const NEAR_HDR_NAMES = [
+  'milky-way',
+  'star-points',
+  'orbit-trails',
+  'body-glints',
+  'star-catalog',
+  'star-upsample',
+];
 
 // The near-field captions group: the scene-body name labels. Like the COSMO
 // swap overlays they target the swap chain with premultiplied-OVER, but they

@@ -70,6 +70,7 @@ import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
 import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
+import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRenderer';
 import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { sceneBodyLabels } from '../presentation/sceneBodyLabels';
@@ -432,6 +433,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // partition and re-uploads per frame.
   state.gpu.starPointRenderer = createStarPointRenderer(device, 'rgba16float');
   state.gpu.starPointRenderer.setStars(state.data.bodies.stars);
+
+  // bodyGlintRenderer draws the sub-pixel scene bodies (the glints branch of the
+  // body partition) as brightness-scaled additive points into the same depthless
+  // HDR target — no depth format, like starPointRenderer above. The close
+  // sibling of starPointRenderer (kept a separate pipeline by design, spec §14).
+  // No construction-time data delivery: bodyGlintsLayer recomputes every glint's
+  // brightness + camera-relative anchor per frame and hands the whole batch to
+  // draw, so the renderer stays a dumb pipeline with nothing to seed.
+  state.gpu.bodyGlintRenderer = createBodyGlintRenderer(device, 'rgba16float');
 
   // starCatalogRenderer draws the survey (Gaia bin) stars — the wide-field
   // twin of starPointRenderer — as additive points into the same depthless

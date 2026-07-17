@@ -550,24 +550,24 @@ cull; the glint fades IN over 3→1 px while the mesh still draws — smooth han
 no pop. `feedback_opacity_zero_no_render`: a glint whose `brightness·fadeBand`
 rounds to 0 skips its draw.
 
-- [ ] Add `bodyGlint/{io,vertex,fragment}.wesl` (additive Gaussian dot; reuse
+- [x] Add `bodyGlint/{io,vertex,fragment}.wesl` (additive Gaussian dot; reuse
   `lib/billboard` + `lib/camera`). WESL constraints; verify visually (Task 11).
-- [ ] Add `BodyGlintRenderer.d.ts` + `bodyGlintRenderer.ts` (`satisfies
+- [x] Add `BodyGlintRenderer.d.ts` + `bodyGlintRenderer.ts` (`satisfies
   Renderer`, camera-relative f64 rebase like `starPointRenderer.ts:33-45`).
-- [ ] Add the `bodyGlint` band to `scaleFadeBands.ts` (keyed on apparent diameter
+- [x] Add the `bodyGlint` band to `scaleFadeBands.ts` (keyed on apparent diameter
   px; didactic comment naming the keying quantity, like the other rows).
-- [ ] Add `bodyGlintsLayer.ts` + handle + construct/seed/destroy + register in
+- [x] Add `bodyGlintsLayer.ts` + handle + construct/seed/destroy + register in
   `CONTENT_LAYERS` (hdr, NEAR0 additive group). Didactic header: brightness =
   size×albedo×phase; the `fadeBand` cross-fade; the zero-brightness skip.
-- [ ] Test `bodyGlintsLayer skips zero-brightness glints` — a body whose
+- [x] Test `bodyGlintsLayer skips zero-brightness glints` — a body whose
   `brightness·fadeBand(apparentPx)` rounds to 0 (fully faded or unlit far side)
   is NOT in the drawn instance buffer; a mid-fade body IS, with `brightness` in
   `(0,1)` (the `feedback_opacity_zero_no_render` behaviour + the phase term).
-- [ ] Test `bodyGlintRenderer.test.ts` — `satisfies Renderer` + the 7-f32 / 28-B
+- [x] Test `bodyGlintRenderer.test.ts` — `satisfies Renderer` + the 7-f32 / 28-B
   instance stride/offsets (the vertex-stride keep-rule); `draw` clamps `count`,
   a zero-count `draw` is a no-op. Migration row in `passes.test.ts` (`'body-glints'`
   `{slab: NEAR0, target: 'hdr', blend: 'additive'}`).
-- [ ] `npm test -- bodyGlintRenderer bodyGlintsLayer scaleFadeBands passes` →
+- [x] `npm test -- bodyGlintRenderer bodyGlintsLayer scaleFadeBands passes` →
   green. Commit.
 
 ## Task 11 — VISUAL verification (dev server)

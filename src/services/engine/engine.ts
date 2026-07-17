@@ -322,6 +322,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // from isEngineReady, null-checked at use by ringsLayer.
       ringRenderer: null,
       starPointRenderer: null,
+      // Sub-pixel bodies (the glints branch of the body partition) as
+      // brightness-scaled additive points on the (hdr, NEAR0) step — the far
+      // half of the body LOD, sibling of starPointRenderer. null until initGpu;
+      // excluded from isEngineReady, null-checked at use by bodyGlintsLayer.
+      bodyGlintRenderer: null,
       starCatalogRenderer: null,
       // Keplerian orbit trails (Earth / Jupiter / Moon) — additive screen-space
       // conics on the (hdr, NEAR0) step. null until initGpu; excluded from
@@ -757,6 +762,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.ringRenderer = null;
     state.gpu.starPointRenderer?.destroy();
     state.gpu.starPointRenderer = null;
+    state.gpu.bodyGlintRenderer?.destroy();
+    state.gpu.bodyGlintRenderer = null;
     state.gpu.starCatalogRenderer?.destroy();
     state.gpu.starCatalogRenderer = null;
     state.gpu.orbitTrailRenderer?.destroy();

@@ -49,6 +49,10 @@
  *  11. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
  *                            Moon) as screen-space conics with a brightness
  *                            lobe at the body's position (f64 compose seam)
+ *  11b. body-glints        — the sub-pixel bodies (the glints branch of the body
+ *                            partition) as brightness-scaled additive points
+ *                            (size x albedo x phase, cross-fading with the mesh
+ *                            over 1-3 px), sibling of star-points (f64 rebase seam)
  *  12. star-aggregates     — the survey (Gaia bin) AGGREGATE stream (interior
  *                            flux-mip glows), drawn LINEAR into the half-res
  *                            `star-aggregates` offscreen by its own render step
@@ -177,6 +181,7 @@ import { planetsLayer } from './planetsLayer';
 import { texturedBodiesLayer } from './texturedBodiesLayer';
 import { ringsLayer } from './ringsLayer';
 import { starPointsLayer } from './starPointsLayer';
+import { bodyGlintsLayer } from './bodyGlintsLayer';
 import { starCatalogLayer } from './starCatalogLayer';
 import { starAggregatesLayer } from './starAggregatesLayer';
 import { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
@@ -214,6 +219,11 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   milkyWayLayer,
   starPointsLayer,
   orbitTrailsLayer,
+  // The sub-pixel bodies (the glints branch of the body partition) as
+  // brightness-scaled additive points — the far half of the body LOD, sibling of
+  // star-points. Additive into HDR through NEAR0, so its position among the
+  // additive rows is a listing choice, not a compositing one.
+  bodyGlintsLayer,
   // The survey (Gaia bin) stars split into two streams sharing one per-frame
   // walk: the AGGREGATE glow field draws LINEAR into the half-res
   // `star-aggregates` offscreen by its OWN render step (so its position here is
@@ -277,6 +287,7 @@ export { planetsLayer } from './planetsLayer';
 export { texturedBodiesLayer } from './texturedBodiesLayer';
 export { ringsLayer } from './ringsLayer';
 export { starPointsLayer } from './starPointsLayer';
+export { bodyGlintsLayer } from './bodyGlintsLayer';
 export { starCatalogLayer } from './starCatalogLayer';
 export { starAggregatesLayer } from './starAggregatesLayer';
 export { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
