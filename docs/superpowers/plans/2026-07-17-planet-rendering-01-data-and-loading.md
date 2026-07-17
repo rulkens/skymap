@@ -80,21 +80,25 @@ export const IDENTITY_MAT3: Readonly<Mat3>;
 `m[c*3+r]`). Pure. `IDENTITY_MAT3` is the flat-body / emissive-body "no facing
 modelled" value.
 
-- [ ] Add `RotationElements.d.ts` — one `type`, didactic docblock (IAU/WGCCRE
+- [x] Add `RotationElements.d.ts` — one `type`, didactic docblock (IAU/WGCCRE
   J2000 mean elements; `Ẇ` rate omitted = the named static-scene clock extension
   point, spec §4.1).
-- [ ] Add `identityMat3.ts` — the shared `IDENTITY_MAT3` const.
-- [ ] Add `rotationFromIau.ts`. Didactic docblock: WHY the `Rz·Rx·Rz` composition
+- [x] Add `identityMat3.ts` — the shared `IDENTITY_MAT3` const.
+- [x] Add `rotationFromIau.ts`. Didactic docblock: WHY the `Rz·Rx·Rz` composition
   (IAU convention maps a body-fixed frame to the equatorial world frame), WHY a
   baked `Mat3` (composed once per body, so the shader stays a matrix multiply).
-- [ ] Test `rotationFromIau puts the pole on +z for (α=0, δ=90)` — `poleRaDeg=0,
+- [x] Test `rotationFromIau puts the pole on +z for (α=0, δ=90)` — `poleRaDeg=0,
   poleDecDeg=90, primeMeridianDeg=0`: assert the matrix maps local `+z` (the body
   pole) to world `+z` within tolerance (hand-derived: a pole at the equatorial
   north pole is already `+z`).
-- [ ] Test `rotationFromIau rotates the prime meridian by W0` — same pole,
+- [x] Test `rotationFromIau rotates the prime meridian by W0` — same pole,
   `primeMeridianDeg=90`: assert the local prime-meridian direction (local `+x`)
   maps to world `+y` within tolerance (a 90° W₀ about the pole).
-- [ ] `npm test -- rotationFromIau` → green. Commit.
+  _(Executed with a correction: at this polar configuration W₀=90 yields +x→−x —
+  the +y expectation was an authoring slip; the test asserts +x→+y at W₀=0 and
+  +x→−x at W₀=90, per the spec §4.1 formula whose +90° azimuth offset the Saturn
+  frame invariant depends on.)_
+- [x] `npm test -- rotationFromIau` → green. Commit.
 
 ## Task 2 — `ROTATION_ELEMENTS` table + `rotationById`
 
