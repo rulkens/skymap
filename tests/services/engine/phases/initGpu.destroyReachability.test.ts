@@ -45,6 +45,7 @@ type Stub = {
   setBiasMode: ReturnType<typeof vi.fn>;
   setLabels: ReturnType<typeof vi.fn>;
   setStars: ReturnType<typeof vi.fn>;
+  pickResources: ReturnType<typeof vi.fn>;
 };
 
 const stubs: Record<string, Stub> = {};
@@ -61,6 +62,16 @@ function makeStub(name: string): Stub {
     // `initGpu` calls `starPointRenderer.setStars(<the far partition>)`
     // synchronously after constructing the star-point renderer.
     setStars: vi.fn(),
+    // `initGpu` calls `starCatalogRenderer.pickResources()` synchronously to
+    // hand the pick twin (`starCatalogPickRenderer`) its shared BGLs + the
+    // per-source records bind-group lookup. The pick factory is itself mocked
+    // here, so this only needs to be a callable returning the resource shape.
+    pickResources: vi.fn(() => ({
+      cameraBgl: { __mockStarCameraBgl: true },
+      drawBgl: { __mockStarDrawBgl: true },
+      recordsBgl: { __mockStarRecordsBgl: true },
+      recordsBindGroup: () => null,
+    })),
   };
   stubs[name] = stub;
   return stub;
@@ -221,6 +232,13 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/starPointRenderer', () =>
 // like every other renderer here.
 vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogRenderer', () => ({
   createStarCatalogRenderer: vi.fn(() => makeStub('starCatalogRenderer')),
+}));
+// The pick twin borrows the visual renderer's BGLs + records bind group and
+// builds its OWN r32uint pick pipeline against them — a full device pipeline
+// dance the plain stub device can't service, so mock the factory like every
+// other renderer. `initGpu` calls it with `starCatalogRenderer.pickResources()`.
+vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogPickRenderer', () => ({
+  createStarCatalogPickRenderer: vi.fn(() => makeStub('starCatalogPickRenderer')),
 }));
 // Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
