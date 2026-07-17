@@ -46,19 +46,30 @@
  *
  * ## CPU-side ringRadiusPx
  *
- * A star has no physical extent, so its `selectionHalo` descriptor carries
- * `radiusMpc: 0`; `selectionRingRadiusPx` then floors the on-screen size to
- * the `galaxyCatalogs.sizePx` px minimum (the same far-field-dot floor the
- * points shader applies), so the ring is a fixed-px circle around the star.
- * `camDist` is the camera-relative centre's length — the star's distance from
- * the eye in the origin-relative NEAR0 frame.
+ * A NEAR0 target (a survey star, a planet, Earth, a scene star) is drawn as a
+ * real sphere, so its `selectionHalo` descriptor carries a REAL physical
+ * radius (`radiusKm` → Mpc) and `near0RingRadiusPx` sizes the halo like the
+ * galaxy ring: `max(farFloor, 1.5 × apparentRadiusPx)`. Far away the sphere is
+ * sub-pixel and the far floor wins — the same fixed-px `galaxyCatalogs.sizePx ·
+ * 6` dot the COSMO helper produces at radius 0 — so nothing changes at
+ * distance. Once the sphere resolves, the 1.5×-apparent term takes over and the
+ * ring hugs the silhouette instead of sitting as a fixed dot lost inside it.
+ *
+ * It deliberately does NOT reuse the galaxy `selectionRingRadiusPx`: that helper
+ * bakes billboard provenance (a 2× padded footprint input, a `× 0.5`
+ * padding-cancel, then a × 6 ring scale — a NET × 3 on apparent radius) sized
+ * for a soft point glow, which would balloon around a hard sphere. The 1.5×
+ * apparent term matches how the sphere is actually drawn (r/d radians, see
+ * `bodyApparentDiameterPx`), so the ring meets the sphere at the resolve
+ * handoff. `camDist` is the camera-relative centre's length — the target's
+ * distance from the eye in the origin-relative NEAR0 frame.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
-import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
+import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 
@@ -96,12 +107,12 @@ export const near0SelectionRingLayer: ContentLayer = {
       worldPos[2] - view.camPos[2],
     ];
     const camDist = Math.hypot(centre[0], centre[1], centre[2]);
-    const ringRadiusPx = selectionRingRadiusPx(
+    const ringRadiusPx = near0RingRadiusPx(
       radiusMpc,
       camDist,
       // The same apparent-size scale the COSMO sibling passes — the NEAR0 draw
       // shares the canvas, so `drawPxPerRad` (height / 2·tan(fovY/2)) applies
-      // unchanged; a star's radiusMpc is 0, so this only scales the px floor.
+      // unchanged. It sizes both the far floor and the 1.5×-apparent term.
       ctx.drawPxPerRad,
       state.settings.galaxyCatalogs.sizePx,
     );

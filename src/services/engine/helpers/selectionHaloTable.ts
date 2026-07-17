@@ -6,10 +6,12 @@
  *
  * A galaxy uses its catalog diameter (with a synthetic-fallback floor); the
  * Milky Way its disc radius anchored at the galactic centre; a scene body (a
- * planet, a famous star, Earth) has no physical Mpc extent to size a ring by, so
- * radiusMpc is 0 and the px-based NEAR0 ring layer floors it to a pixel minimum
- * — the same treatment as a survey star. A structure returns null because it
- * renders its ring through the cluster marker pass, not this one.
+ * planet, a famous star, Earth) and a survey star each carry a REAL physical
+ * radius — `radiusKm` converted to Mpc — so the NEAR0 ring layer can wrap the
+ * rendered sphere on close approach instead of floating a fixed-px dot inside
+ * it (`near0RingRadiusPx` floors to a px minimum far away, then tracks 1.5× the
+ * sphere's apparent radius once it resolves). A structure returns null because
+ * it renders its ring through the cluster marker pass, not this one.
  *
  * Radius, position, and slab travel together because all three are per-kind
  * facts the halo needs, and because galaxy/Milky-Way carry their world position
@@ -35,6 +37,7 @@ import {
   MILKY_WAY_DISC_RADIUS_KPC,
   MILKY_WAY_CENTER_WORLD,
 } from '../../../data/milkyWay/galacticCenter';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { NEAR0, COSMO } from '../frame/slabs';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
@@ -78,22 +81,22 @@ const SELECTION_HALO_TABLE: {
   }),
   // Structures render their ring through the cluster marker pass.
   structure: (_row) => null,
-  // A scene body (planet / famous star / Earth) is a discrete foreground body
-  // with no Mpc-scale extent to size a ring by, so radiusMpc is 0 — the px-based
-  // NEAR0 ring layer (§9) floors it to a pixel minimum, exactly like a survey
-  // star, and centres the ring on the body's world position carried by the row.
-  // The NEAR0 slab tag routes it through `near0SelectionRingLayer` (not the
-  // COSMO layer), so the two layers stay slab-exclusive on the shared renderer.
+  // A scene body (planet / famous star / Earth) is drawn as a real sphere, so
+  // its ring rides its true physical radius — `radiusKm` → Mpc — letting the
+  // NEAR0 ring layer (§9) wrap the sphere on close approach (far away
+  // `near0RingRadiusPx` floors it to a px minimum). The NEAR0 slab tag routes
+  // it through `near0SelectionRingLayer` (not the COSMO layer), so the two
+  // layers stay slab-exclusive on the shared renderer.
   body: (row) => ({
-    radiusMpc: 0,
+    radiusMpc: row.radiusKm * SCALE_UNITS.KM_TO_MPC,
     worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
     slab: NEAR0,
   }),
-  // A star is a point with no physical extent to size a ring by, so radiusMpc
-  // is 0: the px-based ring layer (§9) floors it to a pixel minimum, and the
-  // ring centres on the star's world position carried by the row.
+  // A survey star carries the nominal solar radius (`radiusKm`, stamped by the
+  // extractor) and resolves to a sphere on close approach, so its ring rides
+  // that physical radius in Mpc too — same NEAR0 treatment as a scene body.
   star: (row) => ({
-    radiusMpc: 0,
+    radiusMpc: row.radiusKm * SCALE_UNITS.KM_TO_MPC,
     worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
     slab: NEAR0,
   }),

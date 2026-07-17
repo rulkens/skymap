@@ -6,6 +6,7 @@ import {
   MILKY_WAY_DISC_RADIUS_KPC,
 } from '../../../../src/data/milkyWay/galacticCenter';
 import { Source } from '../../../../src/data/sources';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -56,12 +57,13 @@ describe('selectionHalo', () => {
     expect(selectionHalo(structureRow() as SelectionRow)).toBeNull();
   });
 
-  // A body's px-scale ring rides the NEAR0 slab (its parsec/AU-scale anchor
-  // falls inside COSMO's near plane once rebased), so the body arm must yield a
-  // NEAR0-tagged descriptor centred on the body — not null. A null here (the old
-  // COSMO-era "meaningless chrome" assumption) would leave a picked planet with
-  // no ring; a COSMO tag would revive the writeBuffer/submit race.
-  it('returns a NEAR0 descriptor for a body row centred on the body position', () => {
+  // A body's ring rides the NEAR0 slab (its parsec/AU-scale anchor falls inside
+  // COSMO's near plane once rebased), so the body arm must yield a NEAR0-tagged
+  // descriptor centred on the body — not null. It now carries the body's REAL
+  // physical radius (radiusKm → Mpc) so the ring can wrap the rendered sphere on
+  // close approach, not the old radiusMpc:0 fixed-px dot. A null here would leave
+  // a picked planet with no ring; a COSMO tag would revive the writeBuffer race.
+  it('returns a NEAR0 descriptor for a body row carrying its physical radius', () => {
     const bodyRow: SelectionRow = {
       type: 'body',
       id: 'earth',
@@ -71,7 +73,8 @@ describe('selectionHalo', () => {
     };
     const halo = selectionHalo(bodyRow);
     expect(halo).not.toBeNull();
-    expect(halo!.radiusMpc).toBe(0);
+    expect(halo!.radiusMpc).toBeCloseTo(6371 * SCALE_UNITS.KM_TO_MPC, 24);
+    expect(halo!.radiusMpc).toBeGreaterThan(0);
     expect(halo!.worldPos).toEqual([4.8481e-12, 0, 0]);
     expect(halo!.slab).toBe(NEAR0);
   });
