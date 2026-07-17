@@ -31,17 +31,16 @@
 
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
 
 /**
- * Apparent-diameter ceiling (px) below which a body demotes from a resolved
- * mesh to an additive glint. Equal to the `bodyGlint` scale-fade band's
- * `goneAt` (spec §9): the glint fades IN over 3→1 px while the mesh still draws
- * down to its `SUB_PIXEL_BODY_CULL_PX = 1` cull, so at 3 px the glint is ~0 and
- * the mesh carries — a smooth handoff, no pop. ONE constant, so the partition
- * boundary and the fade band cannot drift to different pixel sizes.
+ * Apparent-diameter threshold (px): a body renders as a resolved mesh at/above
+ * it and as an additive glint below it — a hard XOR, never both. Equal to the
+ * `bodyGlint` scale-fade band's `goneAt` (spec §9): the glint carries the whole
+ * 1–3 px band, its fade ramping to ~0 by 3 px so that at the crossover the glint
+ * is already invisible and the mesh takes over with no pop. ONE constant, so the
+ * partition boundary and the fade band cannot drift to different pixel sizes.
  */
 export const BODY_GLINT_MAX_PX = 3;
 
@@ -74,16 +73,17 @@ export function partitionBodiesByPresentation(input: {
   const textured: PlanetBody[] = [];
 
   for (const body of bodies) {
-    const dx = body.positionMpc[0] - camPosMpc[0];
-    const dy = body.positionMpc[1] - camPosMpc[1];
-    const dz = body.positionMpc[2] - camPosMpc[2];
-    const distanceMpc = Math.hypot(dx, dy, dz);
-    // Physical diameter in kpc: radiusKm·2 → Mpc → kpc, every step through a
-    // named SCALE_UNITS constant (no inline magic factors).
-    const diameterKpc = (body.radiusKm * 2 * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC;
-    const diameterPx = apparentSizePx({ diameterKpc, distanceMpc, viewportHeightPx, fovYRad });
-    // Degenerate guard only (see the docblock) — no per-body special case.
-    const resolved = distanceMpc <= 0 || diameterPx >= BODY_GLINT_MAX_PX;
+    // Shared projection: apparent diameter in px, Infinity when the camera sits
+    // inside the body (that degenerate case is owned by the util, so no per-body
+    // branch here). A body resolves to a mesh at/above BODY_GLINT_MAX_PX.
+    const diameterPx = bodyApparentDiameterPx({
+      positionMpc: body.positionMpc,
+      radiusKm: body.radiusKm,
+      camPosMpc,
+      viewportHeightPx,
+      fovYRad,
+    });
+    const resolved = diameterPx >= BODY_GLINT_MAX_PX;
 
     if (!resolved) {
       glints.push(body);

@@ -24,8 +24,7 @@
 
 import type { StarBody } from '../../../@types/scene/StarBody';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { resolvesToSphere } from '../../../utils/scene/resolvesToSphere';
 
 /**
@@ -54,10 +53,11 @@ export const STAR_RESOLVE_PX = 4;
  * visible from any distance inside the foreground gate. (A blanket
  * always-resolve-the-Sun override was tried first and made the Sun VANISH
  * beyond ~tens of AU — never a point, its sphere sub-pixel.) The one narrow
- * guard kept from that override is the degenerate camera-ON-the-star case:
- * at distance 0 `apparentSizePx`'s divide-by-zero guard returns 0, so a bare
- * size test would demote the star the camera sits inside — zero distance
- * resolves unconditionally instead.
+ * guard kept from that override is the degenerate camera-ON-the-star case: a
+ * star the camera sits inside must resolve, not demote. That case is owned by
+ * `bodyApparentDiameterPx`, which returns Infinity at distance 0 (rather than
+ * the raw 0 the divide-by-zero guard emits), so it clears any threshold and
+ * `alwaysResolved` stays false here — no per-star special case.
  */
 export function partitionStarsByResolution(input: {
   stars: readonly StarBody[];
@@ -70,18 +70,22 @@ export function partitionStarsByResolution(input: {
   const spheres: StarBody[] = [];
   const points: StarBody[] = [];
   for (const star of stars) {
-    const dx = star.positionMpc[0] - camPosMpc[0];
-    const dy = star.positionMpc[1] - camPosMpc[1];
-    const dz = star.positionMpc[2] - camPosMpc[2];
-    const distanceMpc = Math.hypot(dx, dy, dz);
-    // The star's physical diameter in kpc: radiusKm·2 → Mpc → kpc, every
-    // step through a named SCALE_UNITS constant (no inline magic factors).
-    const diameterKpc = (star.radiusKm * 2 * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC;
+    // Shared projection: apparent diameter in px, Infinity when the camera sits
+    // inside the star. That degenerate case (the star the camera is inside must
+    // resolve, not demote) is owned by `bodyApparentDiameterPx` — Infinity
+    // clears any threshold — so `alwaysResolved` stays false and there is no
+    // per-star special case here.
+    const diameterPx = bodyApparentDiameterPx({
+      positionMpc: star.positionMpc,
+      radiusKm: star.radiusKm,
+      camPosMpc,
+      viewportHeightPx,
+      fovYRad,
+    });
     const resolved = resolvesToSphere({
-      apparentSizePx: apparentSizePx({ diameterKpc, distanceMpc, viewportHeightPx, fovYRad }),
+      apparentSizePx: diameterPx,
       thresholdPx,
-      // Degenerate guard only (see the docblock) — no per-star special case.
-      alwaysResolved: distanceMpc <= 0,
+      alwaysResolved: false,
     });
     (resolved ? spheres : points).push(star);
   }

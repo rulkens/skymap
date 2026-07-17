@@ -53,7 +53,7 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
-import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
+import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
@@ -65,23 +65,19 @@ const staging = new Float32Array(MAX_PLANETS * INSTANCE_FLOATS);
 
 // The single per-body sub-pixel test `enabled` and `draw`'s pack loop both
 // call — by construction the two sites cannot drift apart on which bodies
-// count as sub-pixel. Zero distance means the camera is INSIDE the body;
-// `apparentSizePx` defensively returns 0 there, which would misread as
-// sub-pixel, so that case is treated as resolved.
+// count as sub-pixel. `bodyApparentDiameterPx` owns the degenerate distance-0
+// case (camera INSIDE the body → Infinity → resolved), so this stays a plain
+// threshold comparison with no special-case branch.
 function planetResolvesPx(
   planet: PlanetBody,
   camPos: Readonly<Vec3>,
   viewportHeightPx: number,
   fovYRad: number,
 ): boolean {
-  const dx = planet.positionMpc[0] - camPos[0];
-  const dy = planet.positionMpc[1] - camPos[1];
-  const dz = planet.positionMpc[2] - camPos[2];
-  const distanceMpc = Math.hypot(dx, dy, dz);
-  if (distanceMpc === 0) return true;
-  const diameterPx = apparentSizePx({
-    diameterKpc: (2 * planet.radiusKm * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
-    distanceMpc,
+  const diameterPx = bodyApparentDiameterPx({
+    positionMpc: planet.positionMpc,
+    radiusKm: planet.radiusKm,
+    camPosMpc: camPos,
     viewportHeightPx,
     fovYRad,
   });

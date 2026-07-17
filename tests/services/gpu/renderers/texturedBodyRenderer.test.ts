@@ -192,10 +192,9 @@ describe('createTexturedBodyRenderer', () => {
     const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float');
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setTexture('mars', bitmap);
-    // Reaching into the just-created body texture's destroy spy is not exposed;
-    // instead assert clearTexture is callable, idempotent, and non-throwing —
-    // and that a subsequent draw still works (placeholder rebind succeeded).
-    expect(renderer.clearTexture.length).toBe(1);
+    // Assert clearTexture is idempotent and non-throwing, and that a subsequent
+    // draw still works (the placeholder rebind succeeded) — a dangling destroyed
+    // view or a missing rebuild would throw here.
     expect(() => renderer.clearTexture('mars')).not.toThrow();
     // Idempotent: clearing an already-cleared (or never-textured) body is a no-op.
     expect(() => renderer.clearTexture('mars')).not.toThrow();
