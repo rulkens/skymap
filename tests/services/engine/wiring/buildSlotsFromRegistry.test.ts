@@ -31,6 +31,7 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> {
     subscribe: () => () => {},
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
   };
 }
 

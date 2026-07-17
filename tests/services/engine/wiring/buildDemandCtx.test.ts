@@ -32,6 +32,7 @@ function makeState(
     points?: Map<SourceType, AssetSlot<unknown, unknown>>;
     famousMetaState?: LoadState<unknown>['kind'];
     cameraDistance?: number;
+    pose?: { target: [number, number, number]; yaw: number; pitch: number; distance: number };
   } = {},
 ): EngineState {
   const famousMeta =
@@ -41,6 +42,12 @@ function makeState(
           unknown,
           unknown
         >);
+  const pose = opts.pose ?? {
+    target: [0, 0, 0],
+    yaw: 0,
+    pitch: 0,
+    distance: opts.cameraDistance ?? 100,
+  };
   return {
     settings: {
       marker: 'sentinel',
@@ -52,7 +59,10 @@ function makeState(
       points: opts.points ?? new Map(),
       famousMeta,
     },
-    cameraRuntime: { lastPose: { current: { distance: opts.cameraDistance ?? 100 } } },
+    cameraRuntime: {
+      lastPose: { current: pose },
+      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+    },
   } as unknown as EngineState;
 }
 
@@ -91,5 +101,18 @@ describe('buildDemandCtx', () => {
     // builder threads it straight off the boxed lastPose.
     const ctx = buildDemandCtx(makeState({ cameraDistance: 5e-4 }));
     expect(ctx.cameraDistanceMpc).toBe(5e-4);
+  });
+
+  it('derives cameraPosMpc as the world eye position, not the focus target', () => {
+    // The eye sits at target + distance·dir. At yaw=0,pitch=0 the direction is
+    // +Z, so a target offset plus distance lands the eye at [tx, ty, tz+d]. This
+    // pins that the builder reports the derived eye — a wiring that returned the
+    // raw target ([1,2,3]) or the distance scalar would fail here.
+    const ctx = buildDemandCtx(
+      makeState({ pose: { target: [1, 2, 3], yaw: 0, pitch: 0, distance: 10 } }),
+    );
+    expect(ctx.cameraPosMpc[0]).toBeCloseTo(1);
+    expect(ctx.cameraPosMpc[1]).toBeCloseTo(2);
+    expect(ctx.cameraPosMpc[2]).toBeCloseTo(13);
   });
 });

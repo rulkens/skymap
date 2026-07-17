@@ -51,6 +51,9 @@ function makeCtx(over: {
     // Default far away (never within the descent gate) so unrelated demand
     // tests aren't accidentally in the Earth-texture proximity window.
     cameraDistanceMpc: over.cameraDistanceMpc ?? Infinity,
+    // No existing row reads the eye position; a far-away default keeps the
+    // surface present without affecting any demand predicate under test.
+    cameraPosMpc: [Infinity, Infinity, Infinity],
   };
 }
 

@@ -158,6 +158,7 @@ function makeStructureState(): {
         current: () => null,
         forceReload: vi.fn(),
         cancel: vi.fn(),
+        release: vi.fn(),
       },
     },
   } as unknown as EngineState;
@@ -178,6 +179,7 @@ function makeProgressState(): EngineState {
     subscribe: () => () => {},
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
   });
   return {
     assetSlots: {
@@ -248,6 +250,7 @@ function makeSyntheticFallbackState(): {
       subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
       forceReload: () => {},
       cancel: () => {},
+      release: () => {},
     });
   }
 
@@ -257,9 +260,13 @@ function makeSyntheticFallbackState(): {
     requests: new Set<string>(),
     gpu: { renderer: { totalCount: () => 99 } },
     assetSlots: { points: assetSlotPoints },
-    // Far from Earth — buildDemandCtx reads the pose box unconditionally, and
-    // Infinity keeps the descent-gated earthTexture row out of the demand set.
-    cameraRuntime: { lastPose: { current: { distance: Infinity } } },
+    // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
+    // so both must be present; a far resting pose keeps the descent-gated
+    // earthTexture row out of the demand set.
+    cameraRuntime: {
+      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
+      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+    },
   } as unknown as EngineState;
 
   return { state, slots };

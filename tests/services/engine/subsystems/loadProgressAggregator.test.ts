@@ -52,6 +52,7 @@ function fakeSlot(name: string): {
     },
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
   };
   function set(next: LoadState<unknown>): void {
     cur = next;

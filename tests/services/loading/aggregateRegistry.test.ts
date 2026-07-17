@@ -12,6 +12,7 @@ function fakeSlot<T>(name: string, state: LoadState<T>): AssetSlot<T, unknown> {
     subscribe: () => () => {},
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
   };
 }
 

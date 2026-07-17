@@ -62,15 +62,28 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
   const ctx = buildDemandCtx(state);
   for (const row of rows) {
     try {
-      // Load only an idle slot whose demand is true. A loading/ready/error
-      // slot is left alone — see the module docstring on why the idle-guard
-      // lives here rather than inside load() (which stays a re-fetch primitive).
       const slot = slotFor(state, row.key);
-      if (slot && row.demand(ctx) && slot.state().kind === 'idle') {
+      if (!slot) continue;
+      const kind = slot.state().kind;
+      // ── Load edge ────────────────────────────────────────────────────────
+      // Load only an idle slot whose demand is true. A loading/ready/error slot
+      // is left alone — see the module docstring on why the idle-guard lives
+      // here rather than inside load() (which stays a re-fetch primitive).
+      if (kind === 'idle' && row.demand(ctx)) {
         slot.load(row.req(state.tier));
       }
+      // ── Evict edge ───────────────────────────────────────────────────────
+      // Release a ready slot whose (optional) release predicate is true. Omitted
+      // release ⇒ never evict, so every load-once row is untouched. The predicate
+      // is separate from `demand` to encode hysteresis (load inside X, evict
+      // outside 2X) — see AssetWiringRow's docblock. The two edges are mutually
+      // exclusive by slot state (idle XOR ready), so an else-if is exact.
+      else if (kind === 'ready' && row.release?.(ctx)) {
+        slot.release();
+      }
     } catch (err) {
-      // Contain the failure to this row so later rows still evaluate.
+      // Contain the failure to this row so later rows still evaluate — the same
+      // per-row guard the load edge has always had, now covering release too.
       console.warn(`reevaluateDemand: row '${String(row.key)}' threw during evaluation`, err);
     }
   }

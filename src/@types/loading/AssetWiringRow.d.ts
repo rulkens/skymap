@@ -62,6 +62,21 @@ import type { SlotDeps } from './SlotDeps';
 import type { DemandCtx } from './DemandCtx';
 import type { Tier } from '../data/Tier';
 
+/**
+ * ### Evict predicate (release)
+ *
+ * `release(ctx)` is the mirror of `demand`: while the slot is `ready`, a true
+ * result makes the demand loop call `slot.release()`, dropping the payload and
+ * running its un-commit hook. Omitted ⇒ never evict — the load-once behaviour
+ * every existing row relies on.
+ *
+ * It is a SEPARATE predicate, not `!demand`, on purpose: the two edges want
+ * hysteresis. A proximity asset loads inside radius X but should only evict
+ * outside 2X, so a camera dithering at the boundary doesn't thrash a
+ * multi-MB texture load/free cycle. `demand` and `release` therefore both
+ * return false in the band between X and 2X — a gap `!demand` could not encode.
+ */
+
 export type AssetWiringRow<T = unknown, R = unknown> = {
   key: AssetKey;
   /**
@@ -72,6 +87,11 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
   /** Build the request from the current tier (void/empty for tier-agnostic). */
   req: (tier: Tier) => R;
   demand: (ctx: DemandCtx) => boolean;
+  /**
+   * The evict edge, checked while the slot is `ready`. Omitted ⇒ never evict.
+   * Separate from `demand` to encode hysteresis — see the docblock above.
+   */
+  release?: (ctx: DemandCtx) => boolean;
   /**
    * `'external'` when the slot is minted outside the registry (point sources,
    * built in `initGpu`). The slot-construction pass skips these; the demand

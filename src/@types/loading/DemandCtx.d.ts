@@ -77,6 +77,7 @@ import type { EngineSettingsState } from '../settings/EngineSettingsState';
 import type { AssetKey } from './AssetKey';
 import type { LoadState } from './LoadState';
 import type { RequestKey } from './RequestKey';
+import type { Vec3 } from '../math/Vec3';
 
 export type DemandCtx = {
   /** Read-only view of the user-facing rendering settings. */
@@ -94,4 +95,13 @@ export type DemandCtx = {
    * The one proximity read surface: the Earth-texture row descent-gates on it.
    */
   cameraDistanceMpc: number;
+  /**
+   * World-space camera eye position of the last produced pose, in Mpc.
+   * Where `cameraDistanceMpc` answers 'how close to the focus target', this
+   * answers 'where in the world' — the surface a proximity `release` predicate
+   * consults to hysteresis-evict an asset once the camera leaves its neighbourhood.
+   * Derived from the same `assembleOrbitCamera(pose, projection)` the frame uses
+   * for `drawCamPos`, so demand-time proximity and draw-time position agree.
+   */
+  cameraPosMpc: Readonly<Vec3>;
 };

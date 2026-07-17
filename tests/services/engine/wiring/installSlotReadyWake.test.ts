@@ -31,6 +31,7 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> & {
     subscribe: subscribeSpy,
     forceReload: vi.fn(),
     cancel: vi.fn(),
+    release: vi.fn(),
     _fire(s: LoadState<unknown>) {
       captured?.(s);
     },

@@ -56,6 +56,7 @@ function makeFakeSlot<T>(initial: LoadState<T>): {
     },
     forceReload: vi.fn(),
     cancel: vi.fn(),
+    release: vi.fn(),
   };
   return {
     slot,

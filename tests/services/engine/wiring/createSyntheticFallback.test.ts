@@ -60,6 +60,7 @@ function stubSlot(): StubSlot {
     },
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
     emit: (s) => {
       for (const fn of [...listeners]) fn(s);
     },
@@ -143,9 +144,13 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     assetSlots: {
       points: slots as unknown as Map<SourceType, AssetSlot<unknown, unknown>>,
     },
-    // Far from Earth — buildDemandCtx reads the pose box unconditionally, and
-    // Infinity keeps the descent-gated earthTexture row out of the demand set.
-    cameraRuntime: { lastPose: { current: { distance: Infinity } } },
+    // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
+    // so both must be present; a far resting pose keeps the descent-gated
+    // earthTexture row out of the demand set.
+    cameraRuntime: {
+      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
+      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+    },
   } as unknown as EngineState;
 
   return { state, slots, cb };
