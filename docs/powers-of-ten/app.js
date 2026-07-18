@@ -62,7 +62,7 @@ function render() {
         </div>
         <div class="body">
           ${flag}
-          <h3 class="subject">${r.subject} <span class="badge">${st.label}</span></h3>
+          <h3 class="subject">${r.subject} <span class="badge">${st.label}</span>${r.ref ? ` <a class="ref" href="${r.ref[1]}" target="_blank" rel="noopener">${r.ref[0]} ↗</a>` : ""}</h3>
           <p class="field"><span class="k">Visualize</span><span class="v">${r.viz}</span></p>
           <p class="field"><span class="k">Data</span><span class="v sources">${sourceHtml(r.src)}</span></p>
           ${thumbsHtml(r)}
