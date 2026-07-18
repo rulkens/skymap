@@ -1132,12 +1132,12 @@ existing ring reads wrong at NEAR0 scale — otherwise untouched).
 visual pass surfaces (e.g. the hover debounce or the compact-vs-detail switch, if star/body hover
 needs the same treatment galaxies get).
 
-- [ ] Finalise the "Field star" / body card copy (field labels, units — pc for star distance,
+- [x] Finalise the "Field star" / body card copy (field labels, units — pc for star distance,
       km/radius for bodies) and confirm hover shows the compact card, click pins the detail card,
       with the outer-wrapper-stable contract preserved (no `<details>` remount on hover, CLAUDE.md).
 - [ ] **Visual verification (dev server):** hover→pin→close a star card and a body card; confirm no
       flicker/remount and that the copy reads correctly.
-- [ ] Commit (React copy/behaviour tweaks; add a targeted card render assertion only if a specific
+- [x] Commit (React copy/behaviour tweaks; add a targeted card render assertion only if a specific
       branch — e.g. "a planet omits the spectral-class row" — is worth pinning).
 
 ## Task 17 — Entanglement-radar over the Stage 3 diff + final DoD sweep
