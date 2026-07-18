@@ -345,7 +345,8 @@ describe('planetsLayer.pickEnabled (Bug A — textured-only frame stays pickable
       gpu: { planetRenderer: makeRendererSpy(), bodyPickRenderer: { drawSphere: vi.fn() } },
       data: { bodies: { planets: [texturedBody] } },
       // Resident texture slot for the body → partition routes it to `textured`.
-      assetSlots: { bodyTextures: new Map([['mars', { current: () => ({}) }]]) },
+      // Keyed by the composite `${id}:surface` slot key.
+      assetSlots: { bodyTextures: new Map([['mars:surface', { current: () => ({}) }]]) },
     } as unknown as EngineState;
   }
 
@@ -359,7 +360,10 @@ describe('planetsLayer.pickEnabled (Bug A — textured-only frame stays pickable
 
   it('is false beyond the foreground gate even with a textured body', () => {
     const state = texturedState();
-    const farCtx = { ...texturedCtx, cam: { distance: FOREGROUND_MAX_DISTANCE_MPC } } as ReadyFrameContext;
+    const farCtx = {
+      ...texturedCtx,
+      cam: { distance: FOREGROUND_MAX_DISTANCE_MPC },
+    } as ReadyFrameContext;
     expect(planetsLayer.pickEnabled!(state, farCtx)).toBe(false);
   });
 
@@ -367,8 +371,9 @@ describe('planetsLayer.pickEnabled (Bug A — textured-only frame stays pickable
     const state = texturedState();
     const view: SlabView = { ...makeNear0View(), camPos: [1e-14, 0, 0] };
     planetsLayer.drawPick!(PASS_STUB, view, texturedCtx, state);
-    const drawSphere = (state.gpu.bodyPickRenderer as unknown as { drawSphere: ReturnType<typeof vi.fn> })
-      .drawSphere;
+    const drawSphere = (
+      state.gpu.bodyPickRenderer as unknown as { drawSphere: ReturnType<typeof vi.fn> }
+    ).drawSphere;
     expect(drawSphere).toHaveBeenCalledTimes(1);
   });
 });

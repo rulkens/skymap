@@ -5,6 +5,15 @@
  * browser loads on close approach: `public/data/images/textures/<bodyId>-<px>.jpg`
  * for the 13 spherical bodies, plus `saturn-ring-<px>.png` for the ring strip.
  *
+ * The output name comes from the shared `bodyTextureFilename` helper — the SAME
+ * helper the runtime fetcher (`bodyTextureFetcher`) calls to build its request
+ * URL — so the emitted file and the requested URL can never drift onto different
+ * names (a mismatch would 404 every body). Only the `surface` (day/albedo) kind
+ * is built here; because `surface` is the helper's unsegmented default, the
+ * emitted names are byte-identical to the historical `<bodyId>-<px>.jpg` /
+ * `saturn-ring-<px>.png`, so re-running this tool needs no R2 re-sync. Non-surface
+ * feature maps land with their own PRs.
+ *
  * ## Three source formats, one sharp path
  *
  * The raws arrive in three shapes, all read by the same sharp/libvips pipeline:
@@ -29,8 +38,8 @@
  *
  * ## Non-upscaled tier downsample (the source-cap intersection)
  *
- * Each body emits `emittedTiersForBody(id)` — its registry policy ceiling
- * (Uranus/Neptune 2k, Venus 4k, else 8k) — INTERSECTED with
+ * Each body emits `emittedTiersForBody(id, 'surface')` — its registry policy
+ * ceiling (Uranus/Neptune 2k, Venus 4k, else 8k) — INTERSECTED with
  * `tiersFittingSourceWidth(sourceWidth)`, the tiers the source on disk can make
  * without upscaling. The intersection is what lets a `--dev` fetch (only the 2 k
  * SSS files + the 5400×2700 Earth sibling on disk) build correctly: a 2 k source
@@ -66,6 +75,7 @@ import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
+import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
 import { RAW_DATA, rawDataPath, type RawDataKey } from '../utils/io/rawDataRegistry';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
@@ -222,7 +232,7 @@ export async function buildTextures(outDir: string): Promise<void> {
     }
     const width = await sourceWidth(srcPath);
     const fitting = tiersFittingSourceWidth(width);
-    const tiers = emittedTiersForBody(id).filter((tier) => fitting.includes(tier));
+    const tiers = emittedTiersForBody(id, 'surface').filter((tier) => fitting.includes(tier));
     const tint = BODY_TEXTURE_REGISTRY[id].grayscaleTint;
     if (tiers.length === 0) {
       process.stderr.write(`  warn ${id}: source ${width}px too small for any tier — skipping\n`);
@@ -230,9 +240,9 @@ export async function buildTextures(outDir: string): Promise<void> {
     }
     for (const tier of tiers) {
       const px = tierToTexturePx(tier);
-      const outPath = join(outDir, `${id}-${px}.jpg`);
-      await writeBodyTier(srcPath, tint, px, outPath);
-      process.stderr.write(`  ok   ${id}-${px}.jpg${tint ? '  (tinted)' : ''}\n`);
+      const filename = bodyTextureFilename(id, 'surface', tier);
+      await writeBodyTier(srcPath, tint, px, join(outDir, filename));
+      process.stderr.write(`  ok   ${filename}${tint ? '  (tinted)' : ''}\n`);
     }
   }
 
@@ -244,9 +254,9 @@ export async function buildTextures(outDir: string): Promise<void> {
     const ringTiers = tiersFittingSourceWidth(width);
     for (const tier of ringTiers) {
       const px = tierToTexturePx(tier);
-      const outPath = join(outDir, `saturn-ring-${px}.png`);
-      await writeRingTier(ringSrc, px, outPath);
-      process.stderr.write(`  ok   saturn-ring-${px}.png\n`);
+      const filename = bodyTextureFilename('saturn-ring', 'surface', tier);
+      await writeRingTier(ringSrc, px, join(outDir, filename));
+      process.stderr.write(`  ok   ${filename}\n`);
     }
   }
 }

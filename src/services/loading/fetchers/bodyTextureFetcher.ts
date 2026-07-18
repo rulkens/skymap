@@ -3,17 +3,12 @@
  * `bodyTextures` slot family: one shared fetcher across every textured body and
  * the Saturn ring strip.
  *
- * The filename encodes the tier: `tierToTexturePx` turns the request tier into
- * the pixel edge (2k / 4k / 8k) the build pipeline emitted, so the runtime
- * reconstructs the exact on-disk name — `<bodyId>-<px>.jpg`. A mismatch between
- * the build's size ladder and this one would surface as a silent 404, which is
- * why the tier→px mapping lives in one small shared function both sides call.
- *
- * The ring strip is the one PNG: `saturn-ring-<px>.png`. It needs a real alpha
- * channel (the annulus has a transparent centre and soft radial gaps), which a
- * JPG cannot carry — every spherical body is opaque and ships as the smaller
- * JPG. `bodyId === 'saturn-ring'` is the whole branch; there is no per-body
- * extension table because only the ring is non-opaque.
+ * The on-disk name comes from the shared `bodyTextureFilename` helper, which the
+ * build tool (`buildTextures`) also calls — so the runtime URL and the emitted
+ * file can never drift onto different names (a mismatch would 404 and render the
+ * blue placeholder). The helper folds in the tier→px mapping, the
+ * surface-is-unsegmented convention, and the ring's PNG-for-alpha extension, so
+ * this fetcher no longer special-cases the ring id or constructs the name inline.
  *
  * The `AssetSlot` threads its own `AbortSignal` into `fetch`, so a slot
  * cancel/reload (teardown, a re-demand at a new tier, or an eviction while a
@@ -30,16 +25,11 @@
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
-import { tierToTexturePx } from '../../../utils/math/tierToTexturePx';
+import { bodyTextureFilename } from '../../../utils/scene/bodyTextureFilename';
 import { dataUrl } from '../fetchWithProgress';
 
 export const bodyTextureFetcher: Fetcher<ImageBitmap, BodyTextureReq> = async (req, signal) => {
-  const px = tierToTexturePx(req.tier);
-  // The ring strip is a PNG for its alpha channel; every spherical body is an
-  // opaque JPG. A single-id branch is honest because only the ring is non-opaque.
-  const filename =
-    req.bodyId === 'saturn-ring' ? `saturn-ring-${px}.png` : `${req.bodyId}-${px}.jpg`;
-  const url = dataUrl(`images/textures/${filename}`);
+  const url = dataUrl(`images/textures/${bodyTextureFilename(req.bodyId, req.kind, req.tier)}`);
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`bodyTexture: HTTP ${res.status} for ${url}`);
   return createImageBitmap(await res.blob());

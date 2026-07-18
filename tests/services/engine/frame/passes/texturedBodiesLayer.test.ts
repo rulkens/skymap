@@ -110,8 +110,9 @@ function makeState(
   bodies: readonly PlanetBody[],
   residentIds: readonly string[],
 ): EngineState {
+  // The residency lookup keys on the composite `${id}:surface` slot key.
   const bodyTextures = new Map(
-    residentIds.map((id) => [id, { current: () => ({}) as ImageBitmap }]),
+    residentIds.map((id) => [`${id}:surface`, { current: () => ({}) as ImageBitmap }]),
   );
   return {
     gpu: { texturedBodyRenderer: renderer },

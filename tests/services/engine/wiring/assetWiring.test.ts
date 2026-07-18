@@ -21,6 +21,7 @@ import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKe
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTextureLoadRadius';
 import { hostBodyId } from '../../../../src/utils/scene/hostBodyId';
+import { bodyTextureSlotKey } from '../../../../src/utils/scene/bodyTextureSlotKey';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
@@ -60,7 +61,7 @@ function makeCtx(over: {
 }
 
 /** The world position a body-texture key's proximity gate is measured from. */
-function bodyPosOf(id: AssetKey): Readonly<Vec3> {
+function bodyPosOf(id: string): Readonly<Vec3> {
   return findByIdOrThrow(SCENE_BODIES, hostBodyId(id as never), 'test').positionMpc;
 }
 
@@ -84,7 +85,7 @@ describe('ASSET_WIRING membership', () => {
       'flow',
       'structureCatalog',
       'pgcAlias',
-      ...ALL_BODY_TEXTURE_KEYS,
+      ...ALL_BODY_TEXTURE_KEYS.map((e) => bodyTextureSlotKey(e.bodyId, e.kind)),
       Source.GaiaStars,
     ];
     expect(new Set(keys)).toEqual(new Set(expected));
@@ -122,14 +123,14 @@ describe('ASSET_WIRING membership', () => {
   });
 
   it('mints one externally-built row per body-texture family key', () => {
-    // Every textured body + the ring is an externally-built row (minted in
-    // initGpu beside its renderer, like the point slots), with a tier-clamped
-    // BodyTextureReq — not a registry-built sidecar.
-    for (const key of ALL_BODY_TEXTURE_KEYS) {
-      const row = rowFor(key);
+    // Every (body, kind) entry + the ring is an externally-built row (minted in
+    // initGpu beside its renderer, like the point slots), keyed by its composite
+    // slot key, with a tier-clamped BodyTextureReq — not a registry-built sidecar.
+    for (const entry of ALL_BODY_TEXTURE_KEYS) {
+      const row = rowFor(bodyTextureSlotKey(entry.bodyId, entry.kind));
       expect(row.built).toBe('external');
-      // req carries { bodyId, tier } clamped to the body ceiling.
-      expect(row.req('large')).toMatchObject({ bodyId: key });
+      // req carries { bodyId, kind, tier } clamped to the (body, kind) ceiling.
+      expect(row.req('large')).toMatchObject({ bodyId: entry.bodyId, kind: entry.kind });
     }
   });
 
@@ -271,7 +272,7 @@ describe('ASSET_WIRING demand predicates', () => {
     // fires outside 2X, and the band between is the hysteresis gap where NEITHER
     // fires — a gap `!demand` could not encode, so a camera dithering at the
     // boundary never thrashes the multi-MB texture load/free cycle.
-    const earth = rowFor('earth');
+    const earth = rowFor('earth:surface');
     const pos = bodyPosOf('earth');
     const r = loadRadiusMpc('earth');
     const at = (d: number): Vec3 => [pos[0] + d, pos[1], pos[2]];

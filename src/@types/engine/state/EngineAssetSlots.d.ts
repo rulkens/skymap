@@ -37,8 +37,7 @@ import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
 import type { StarCatalogReq } from '../../loading/StarCatalogReq';
 import type { SourceType } from '../../data/SourceType';
 import type { BodyTextureReq } from '../../loading/BodyTextureReq';
-import type { BodyTextureId } from '../../data/BodyTextureId';
-import type { RingTextureId } from '../../data/RingTextureId';
+import type { BodyTextureSlotKey } from '../../data/BodyTextureSlotKey';
 
 export type EngineAssetSlots = {
   points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
@@ -145,17 +144,18 @@ export type EngineAssetSlots = {
    */
   flow: AssetSlot<ScalarCube, void> | null;
   /**
-   * The keyed body-surface texture family — one slot per textured spherical body
-   * (`'earth'`, `'mars'`, …) plus the Saturn ring strip (`'saturn-ring'`),
-   * keyed by `BodyTextureId | RingTextureId`.
+   * The keyed body-texture family — one slot per `(bodyId, kind)` map, keyed by
+   * the composite `BodyTextureSlotKey` (`'earth:surface'`, `'mars:surface'`, the
+   * Saturn ring strip `'saturn-ring:surface'`, and — with the feature PRs —
+   * Earth's `'earth:night'` / `'earth:clouds'`).
    *
    * A keyed Map that mirrors `points`: any consumer looks up a body's texture
-   * slot by id without iterating, and the family shares one fetcher +
-   * demand/release rail rather than a per-body field. Each slot is
+   * slot by its composite key without iterating, and the family shares one
+   * fetcher + demand/release rail rather than a per-body field. Each slot is
    * proximity-gated (demanded inside the body's own load radius, released
    * outside twice it — hysteresis) and re-fetched at the clamped current tier on
    * a data-volume tier change. Earth's former bespoke single-texture path folds
-   * into this family as key `'earth'`.
+   * into this family as key `'earth:surface'`.
    *
    * Unlike `flow` / `cf4Density` (null-then-set named fields minted in
    * `wireSlots`), these are minted in `initGpu` beside the body renderers their
@@ -164,7 +164,7 @@ export type EngineAssetSlots = {
    * consumers need no null check. A 404 / decode failure surfaces as a
    * never-fires commit; the renderer keeps its flat-albedo placeholder.
    */
-  bodyTextures: Map<BodyTextureId | RingTextureId, AssetSlot<ImageBitmap, BodyTextureReq>>;
+  bodyTextures: Map<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>>;
   /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being

@@ -1,16 +1,18 @@
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { Tier } from '../../src/@types/data/Tier';
+import type { TextureKind } from '../../src/@types/data/TextureKind';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 
 /**
- * emittedTiersForBody — the tiers `build-textures` may ever ship for a body,
- * capped at the body's registry `maxTier`.
+ * emittedTiersForBody — the tiers `build-textures` may ever ship for a body's
+ * `kind` map, capped at that kind's registry tier ceiling.
  *
- * This answers the *policy* question — "what resolutions does this body's
- * surface justify?" — read straight off `BODY_TEXTURE_REGISTRY[id].maxTier`
- * (Uranus/Neptune → `small`, Venus → `medium`, everything else → `large`). The
- * tier ladder is a strict `small < medium < large` prefix, so the emitted set
- * is every tier up to and including the ceiling.
+ * This answers the *policy* question — "what resolutions does this body's `kind`
+ * map justify?" — read straight off `BODY_TEXTURE_REGISTRY[id].kinds[kind]`
+ * (surface: Uranus/Neptune → `small`, Venus → `medium`, everything else →
+ * `large`). The tier ladder is a strict `small < medium < large` prefix, so the
+ * emitted set is every tier up to and including the ceiling. A body that has no
+ * map of the requested kind emits nothing.
  *
  * The ceiling exists because a near-featureless disc buys nothing from an 8 k
  * texture, and — the load-bearing rule — the pipeline must **never upscale**: a
@@ -31,7 +33,8 @@ import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry
 // mirroring the same private `TIER_ORDER` const in `clampTier.ts`.
 const TIER_LADDER: readonly Tier[] = ['small', 'medium', 'large'];
 
-export function emittedTiersForBody(id: BodyTextureId): readonly Tier[] {
-  const ceiling = BODY_TEXTURE_REGISTRY[id].maxTier;
+export function emittedTiersForBody(id: BodyTextureId, kind: TextureKind): readonly Tier[] {
+  const ceiling = BODY_TEXTURE_REGISTRY[id].kinds[kind];
+  if (ceiling === undefined) return [];
   return TIER_LADDER.slice(0, TIER_LADDER.indexOf(ceiling) + 1);
 }

@@ -65,6 +65,7 @@ import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
+import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import type { SourceType } from '../../../@types/data/SourceType';
@@ -72,6 +73,9 @@ import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyC
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
+import type { BodyTextureKey } from '../../../@types/data/BodyTextureKey';
+import type { TextureKind } from '../../../@types/data/TextureKind';
+import type { Tier } from '../../../@types/data/Tier';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 /**
@@ -155,11 +159,14 @@ function bodyPosOf(id: BodyTextureId | RingTextureId): Readonly<Vec3> {
   return findByIdOrThrow(SCENE_BODIES, hostBodyId(id), 'bodyTextureRow').positionMpc;
 }
 
-/** The body's tier ceiling from the texture registry (the ring's is its host's). */
-function ceilingOf(
-  id: BodyTextureId | RingTextureId,
-): (typeof BODY_TEXTURE_REGISTRY)[BodyTextureId]['maxTier'] {
-  return BODY_TEXTURE_REGISTRY[hostBodyId(id)].maxTier;
+/**
+ * The body's per-`kind` tier ceiling from the texture registry (the ring's is
+ * its host's). Every family entry in `ALL_BODY_TEXTURE_KEYS` is enumerated from a
+ * present `kinds` key, so the lookup is total — the assertion encodes that
+ * invariant rather than widening the return to `Tier | undefined`.
+ */
+function ceilingOf(id: BodyTextureId | RingTextureId, kind: TextureKind): Tier {
+  return BODY_TEXTURE_REGISTRY[hostBodyId(id)].kinds[kind]!;
 }
 
 /**
@@ -170,17 +177,26 @@ function ceilingOf(
  * twice that radius. `release` is separate from `!demand` on purpose — the band
  * between `X` and `2X` is the hysteresis gap where neither fires, so a camera
  * dithering at the boundary never thrashes a multi-MB texture load/free cycle
- * (see `AssetWiringRow`). `req` clamps the current tier to the body's ceiling so
- * a body that only ships a `small` texture is never asked for a `large` one.
+ * (see `AssetWiringRow`). `req` clamps the current tier to the `(body, kind)`
+ * ceiling so a body that only ships a `small` texture is never asked for a
+ * `large` one. The row's `key` is the composite `bodyTextureSlotKey`, matching
+ * the slot Map + `AssetKey`; the demand/release gates read `entry.bodyId` (the
+ * ring rides its host body).
  */
-function bodyTextureRow(id: BodyTextureId | RingTextureId): AssetWiringRow {
+function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
   return {
-    key: id,
+    key: bodyTextureSlotKey(entry.bodyId, entry.kind),
     built: 'external',
     factory: externalFactory,
-    req: (tier) => ({ bodyId: id, tier: clampTier(tier, ceilingOf(id)) }),
-    demand: (ctx) => distanceMpc(ctx.cameraPosMpc, bodyPosOf(id)) < loadRadiusMpc(id),
-    release: (ctx) => distanceMpc(ctx.cameraPosMpc, bodyPosOf(id)) > 2 * loadRadiusMpc(id),
+    req: (tier) => ({
+      bodyId: entry.bodyId,
+      kind: entry.kind,
+      tier: clampTier(tier, ceilingOf(entry.bodyId, entry.kind)),
+    }),
+    demand: (ctx) =>
+      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId)) < loadRadiusMpc(entry.bodyId),
+    release: (ctx) =>
+      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId)) > 2 * loadRadiusMpc(entry.bodyId),
   };
 }
 

@@ -241,17 +241,17 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
   /** A body-texture row (key routes through the bodyTextures map) whose req
    *  clamps the tier to Earth's 'large' ceiling — so req('small').tier === 'small'. */
   const earthRow: AssetWiringRow = {
-    key: 'earth',
+    key: 'earth:surface',
     factory: () => stubSlot(),
-    req: (tier) => ({ bodyId: 'earth', tier: clampTier(tier, 'large') }),
+    req: (tier) => ({ bodyId: 'earth', kind: 'surface', tier: clampTier(tier, 'large') }),
     demand: () => false,
   };
 
   /** A low-ceiling body-texture row (Uranus ships only up to 'small'). */
   const uranusRow: AssetWiringRow = {
-    key: 'uranus',
+    key: 'uranus:surface',
     factory: () => stubSlot(),
-    req: (tier) => ({ bodyId: 'uranus', tier: clampTier(tier, 'small') }),
+    req: (tier) => ({ bodyId: 'uranus', kind: 'surface', tier: clampTier(tier, 'small') }),
     demand: () => false,
   };
 
@@ -273,13 +273,13 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
     // Resident at 'medium', current tier 'small' ⇒ clamped req tier 'small' ≠
     // 'medium' ⇒ release so it re-fetches at the new tier.
     const slot = stubSlot('ready', { bodyId: 'earth', tier: 'medium' });
-    evaluateRows(makeBodyState('earth', slot, 'small'), [earthRow]);
+    evaluateRows(makeBodyState('earth:surface', slot, 'small'), [earthRow]);
     expect(slot.release).toHaveBeenCalledTimes(1);
   });
 
   it('leaves a ready slot whose committed tier already matches alone', () => {
     const slot = stubSlot('ready', { bodyId: 'earth', tier: 'small' });
-    evaluateRows(makeBodyState('earth', slot, 'small'), [earthRow]);
+    evaluateRows(makeBodyState('earth:surface', slot, 'small'), [earthRow]);
     expect(slot.release).not.toHaveBeenCalled();
   });
 
@@ -290,7 +290,7 @@ describe('evaluateRows — bodyTextures stale-tier evict', () => {
     // slot is left alone. Comparing against the raw tier ('large') would release
     // and re-load every re-evaluation forever — the bug the clamp prevents.
     const slot = stubSlot('ready', { bodyId: 'uranus', tier: 'small' });
-    evaluateRows(makeBodyState('uranus', slot, 'large'), [uranusRow]);
+    evaluateRows(makeBodyState('uranus:surface', slot, 'large'), [uranusRow]);
     expect(slot.release).not.toHaveBeenCalled();
   });
 });
