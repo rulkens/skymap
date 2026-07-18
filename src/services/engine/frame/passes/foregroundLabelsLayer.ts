@@ -153,10 +153,20 @@
  * scale moves camera-space x/y/z together, so the projected NDC x/y — ratios
  * against w ∝ z — are IDENTICAL and only depth slides inward, into the
  * well-conditioned interior where the inverse is stable. The on-screen caption
- * lands in exactly the same place; it just stops trembling. Only the LIFT
- * reads the clamped anchor — everything sized off the anchor's true length
- * (apparent size, the distance fade band, the declutter screen point) keeps the
- * raw `anchor`, because those must stay physical.
+ * lands in exactly the same place; it just stops trembling. Only the drawn
+ * GEOMETRY reads the clamped frame — everything sized off the anchor's true
+ * length (apparent size, the distance fade band, the declutter screen point)
+ * keeps the raw `anchor`, because those must stay physical.
+ *
+ * The clamp has one obligatory companion: the caption's `worldEmMpc` is scaled
+ * by the SAME ratio before emit. The label shader sizes glyphs from the drawn
+ * anchor's depth (`pxPerEm = worldEmMpc / clip.w`, then the [min,max]px clamp),
+ * so a caption drawn ~4e7× closer with its PHYSICAL em inflates by exactly the
+ * clamp ratio — a sub-pixel supergiant that belongs on the 30px floor pins the
+ * 150px ceiling. Scaling the em restores em/clip.w to the true-depth value, so
+ * the drawn size is bit-for-bit what an in-frustum anchor would produce. The
+ * (worldEmMpc, worldPos) pair must always describe ONE frame — clamp both or
+ * neither.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -466,8 +476,30 @@ export const foregroundLabelsLayer: ContentLayer = {
       // slab and is the one feeding out-of-domain input, so it clamps at the
       // call site rather than inside the pure lift util. Everything sized off the
       // anchor's TRUE length (subjectSizePx, fade, the declutter screen point)
-      // still reads the un-clamped `anchor`; ONLY the lift/leader inputs switch.
+      // still reads the un-clamped `anchor`; ONLY the drawn geometry — the
+      // lift/leader inputs and the em that projects at the drawn depth — switches.
       const liftAnchor = clampVec3Length(anchor, view.slab.farMpc * 0.99);
+
+      // Scale the caption's world em by the SAME ratio the clamp applied. The
+      // label shader sizes glyphs from the DRAWN anchor's depth — pxPerEm =
+      // worldEmMpc / clip.w · viewportH/2, clamped to [min,max]px
+      // (labels/vertex.wesl) — and the clamp just moved that anchor up to
+      // ~4e7× closer (VY CMa at ~1.2e-3 Mpc drawn at the ~3e-11 far plane).
+      // Keeping the star's PHYSICAL em at the clamped depth inflates the
+      // projected size by exactly the clamp ratio: a sub-pixel supergiant that
+      // should sit on the min-px floor slams into the max-px ceiling instead.
+      // Because the clamp scales camera-space x/y/z — hence clip.w — uniformly,
+      // multiplying the em by the same factor makes em/clip.w, and therefore
+      // the on-screen size, IDENTICAL to the true-depth projection. The scaled
+      // em also feeds `liftedLabelPlacement`, whose ink-clearance math mirrors
+      // the shader's sizing and must agree with what actually draws.
+      // `clampVec3Length` returns the input reference when in range, so the
+      // identity check makes the common near-body case an exact no-op.
+      const anchorScale =
+        liftAnchor === anchor
+          ? 1
+          : (view.slab.farMpc * 0.99) / Math.hypot(anchor[0], anchor[1], anchor[2]);
+      const liftEmMpc = label.worldEmMpc * anchorScale;
 
       // The single lifted-label chain (see `liftedLabelPlacement`) — identical
       // to the famous + Milky-Way producers: screen-space proportional lift
@@ -483,7 +515,7 @@ export const foregroundLabelsLayer: ContentLayer = {
         viewportPx,
         subjectSizePx,
         textBbox: renderer.measure(label),
-        worldEmMpc: label.worldEmMpc,
+        worldEmMpc: liftEmMpc,
         minPixelSize: label.minPixelSize,
         maxPixelSize: label.maxPixelSize,
         // End the connector a constant gap ABOVE the body instead of at its
@@ -504,7 +536,17 @@ export const foregroundLabelsLayer: ContentLayer = {
         continue;
       }
 
-      liftedLabels.push({ ...label, worldPos: placement.labelWorldPos, fadeAlpha });
+      // The emitted caption carries the SCALED em to pair with its clamped-depth
+      // worldPos — the invariant is that (worldEmMpc, worldPos) always describe
+      // the same frame, so the shader's em/clip.w reproduces the true apparent
+      // size. The null-placement fallback below keeps the raw pair (unclamped
+      // anchor + physical em) for the same reason.
+      liftedLabels.push({
+        ...label,
+        worldPos: placement.labelWorldPos,
+        worldEmMpc: liftEmMpc,
+        fadeAlpha,
+      });
       if (placement.line !== null) {
         lines.push({
           id: `${label.id}-anchor`,

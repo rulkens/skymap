@@ -36,6 +36,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFrustum';
+import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -230,5 +231,59 @@ describe('foregroundLabelsLayer — far-star caption/leader stability at Earth z
     expect(len(line!.fromWorld as Vec3), 'leader bottom beyond far plane').toBeLessThanOrEqual(
       farMpc,
     );
+  });
+
+  it('draws the far-star caption at the SAME apparent px size as its true-depth projection', () => {
+    // The clamp moves the DRAWN anchor ~4e7× closer than the star really is,
+    // but the label shader sizes glyphs from the drawn anchor's clip-w:
+    // pxPerEm = worldEmMpc / clipW · viewportH/2, clamped to [min, max]px
+    // (labels/vertex.wesl, mirrored by liftedLabelPlacement). If the emitted
+    // caption keeps the star's PHYSICAL worldEmMpc while its position sits at
+    // the clamped depth, the projected em inflates by exactly the clamp ratio —
+    // a sub-pixel star that should render at the 30px floor slams into the
+    // 150px ceiling. The fix scales the emitted worldEmMpc by the same ratio,
+    // so em/clipW — hence the drawn px size — matches the true-depth value.
+    const star = farVisibleStar();
+    const base = sceneBodyLabels();
+    const earth = base.find((l) => l.id === sceneBodyLabelId('earth'))!;
+    const trueLabel = base.find((l) => l.id === star.id)!;
+    const eye: Vec3 = [...earth.worldPos] as Vec3;
+    const view = makeRealNear0View(eye, star.worldPos);
+
+    const renderer = makeRenderer();
+    const lineRenderer = makeLineRenderer();
+    foregroundLabelsLayer.draw(PASS_STUB, view, makeCtx(), makeState(renderer, lineRenderer));
+    const cap = emittedCaption(renderer, star.id)!;
+    expect(cap).toBeDefined();
+
+    // Replicate the shader's sizing at the DRAWN anchor: project through the
+    // same rebased vp the layer draws with (the lift preserves the dot's
+    // clip-w, so the lifted label anchor carries the dot's depth).
+    const vp = rebaseViewProj(view.slab.vp, eye);
+    const clipW = (p: Vec3) => vp[3]! * p[0] + vp[7]! * p[1] + vp[11]! * p[2] + vp[15]!;
+    const viewportH = view.viewportPx[1];
+    const shaderPx = (emMpc: number, w: number) =>
+      Math.min(Math.max((emMpc / w) * (viewportH * 0.5), cap.minPixelSize!), cap.maxPixelSize!);
+
+    const drawnPx = shaderPx(cap.worldEmMpc!, clipW(cap.worldPos as Vec3));
+
+    // The intended size: the same shader math at the star's TRUE camera-relative
+    // depth with its physical em — what an un-clamped (stable) pipeline would
+    // have drawn. For a ~1000pc star the physical em is deeply sub-pixel, so
+    // this lands on the minPixelSize floor.
+    const trueAnchor: Vec3 = [
+      star.worldPos[0] - eye[0],
+      star.worldPos[1] - eye[1],
+      star.worldPos[2] - eye[2],
+    ];
+    const intendedPx = shaderPx(trueLabel.worldEmMpc, clipW(trueAnchor));
+
+    // 1% tolerance: the clamp ratio cancels algebraically, so the only slack
+    // needed is f64 round-off — a drawn size at the 150px ceiling instead of
+    // the 30px floor fails by 5×.
+    expect(
+      Math.abs(drawnPx - intendedPx) / intendedPx,
+      `drawn ${drawnPx}px vs intended ${intendedPx}px (inflation ×${(drawnPx / intendedPx).toFixed(2)})`,
+    ).toBeLessThan(0.01);
   });
 });
