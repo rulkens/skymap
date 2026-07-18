@@ -319,9 +319,18 @@ body at top tier during descent), riding the existing `build-textures` tier ladd
   straight resize of a fetched source). Elevation heightmap → tangent-space normal via a
   gradient kernel, tunable exaggeration. Needs a raw heightmap source (`textures.earthElevation`).
 
-Runtime URL derivation and R2 sync need **no** change beyond the kind axis: the fetcher
-filename gains a `kind` segment (Prep 1), and `collectTextureImages` already globs the
-whole textures dir so new `earth-<kind>-<px>.{jpg,png}` sweep to R2 automatically.
+Runtime URL derivation and R2 sync need **no** change beyond the kind axis. The filename
+convention is **surface = default, unsegmented**: `surface` keeps the existing
+`<id>-<px>.{jpg,png}` name (so every already-deployed texture stays valid and Prep 1 is a
+zero-data-op refactor), and only non-surface kinds get a `-<kind>-` segment
+(`earth-night-<px>.jpg`, …). A single `bodyTextureFilename(bodyId, kind, tier)` helper is
+the one home for that convention, called by both the runtime fetcher and the build tool so
+they cannot drift. `collectTextureImages` globs the whole textures dir, so future segmented
+maps sweep to R2 automatically when their feature PR builds them. (The §2 ideal-shape sketch
+showed an always-segmented name; it is superseded here — a uniform segment would force a
+rebuild + re-sync of all deployed textures for a behavior-neutral prep. The `(body,kind)`
+*data shape* is unchanged; only the `surface` filename *encoding* differs. See Prep 1 plan
+"Coupling".)
 
 ### 9.4 Bandwidth
 
