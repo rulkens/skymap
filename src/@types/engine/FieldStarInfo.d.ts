@@ -1,7 +1,7 @@
 /**
  * FieldStarInfo — a picked survey star as a resolved focusable target, parallel
  * to `GalaxyInfo`, `StructureInfo`, `MilkyWayInfo`, and the seeded-body
- * `StarInfo`.  All are arms of the FocusableTarget union and flow through the
+ * `BodyInfo`.  All are arms of the FocusableTarget union and flow through the
  * same hover / select / focus slots; every dispatch table and type-guard keys
  * on the `type` discriminant (`'star'` here — the anonymous Gaia/SKST survey
  * star, distinct from the named-scene-body `'body'` arm).

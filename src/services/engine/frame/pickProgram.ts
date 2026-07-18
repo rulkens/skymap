@@ -12,7 +12,9 @@
  * render loop. Folding it into the FRAME would braid "which galaxy is under the
  * cursor?" into "draw the next frame" — two concerns that vary independently.
  * So this program is a sibling of the FRAME executor: it shares only the same
- * `ContentLayer` registry, filters it by `drawPick` presence + `enabled`,
+ * `ContentLayer` registry, filters it by `drawPick` presence + the pick gate
+ * `(pickEnabled ?? enabled)` — a layer's own pick gate when its pick set is
+ * wider than its draw set, else `enabled` (see `ContentLayer.pickEnabled`) —
  * groups the survivors by slab, and re-rasterises each slab's pickable geometry
  * through the r32uint pick pipeline into its own pick target. See the
  * renderer-unification design's "Pick" section.

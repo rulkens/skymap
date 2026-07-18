@@ -70,42 +70,59 @@ export type BodyPointPick = {
   readonly posRelCamMpc: Vec3;
   /** Fully-packed pick id (`packSelection(code, seedIndex + offset)`). */
   readonly packedId: number;
-  /**
-   * Glint priority CLASS — `0` earth, `1` planet, `2` moon. Read ONLY by the
-   * `'glint'` variant (the 20-byte instance stride), where `vsGlint` maps it to
-   * its own pick-depth band so importance, not nearness, orders overlapping
-   * glints. The `'sceneStar'` variant (16-byte stride) ignores it; omit it there.
-   */
-  readonly bandClass?: number;
 };
 
 /**
- * Which pick-depth semantics the point batch draws with — the two share one
- * explicit pipeline layout, differing in the vertex entry AND its instance
- * stride:
+ * One GLINT point: a `BodyPointPick` plus the REQUIRED glint priority CLASS
+ * (`0` earth, `1` planet, `2` moon — see `glintBandClass.ts`). Read by the
+ * `'glint'` variant (the 20-byte instance stride), where `vsGlint` maps it to
+ * its own pick-depth band so importance, not nearness, orders overlapping glints.
+ *
+ * `bandClass` is REQUIRED, not optional: the scene-star and glint point sets are
+ * distinguished at the TYPE level by whether they carry it, so a glint caller
+ * cannot silently omit it and fall to a runtime default band (class 0 is the
+ * strongest — the Earth band — so a forgotten class would tie Earth at forced-
+ * equal depth and reintroduce the ulp-jitter roulette the class bands exist to
+ * eliminate). Making illegal states unrepresentable is why there is no `?? …`
+ * default on the packing side.
+ */
+export type BodyGlintPick = BodyPointPick & {
+  readonly bandClass: number;
+};
+
+/**
+ * The instanced scene-star / body-glint point-pick batch for one frame — a
+ * DISCRIMINATED UNION on `variant`, so each variant's `points` element type is
+ * pinned. The two share one explicit pipeline layout, differing in the vertex
+ * entry AND its instance stride:
  *
  *   - `'sceneStar'` (default) — the famous / scene stars: `vs` MIN-CLAMPS true
  *     depth onto the scene-star band, so within-far stars sort physically.
- *     16-byte instance stride (posRelCamMpc + packedId).
+ *     `BodyPointPick[]`, 16-byte instance stride (posRelCamMpc + packedId).
  *   - `'glint'` — the sub-pixel solar-system body glints (+ the Earth stamp):
  *     `vsGlint` FORCES a per-instance CLASS band (`bandClass`) so importance, not
  *     nearness, orders them — earth-over-planet-over-moon is an unconditional
- *     depth win, no draw-order tie-break. 20-byte instance stride (posRelCamMpc +
- *     packedId + bandClass). See `starPointPick.wesl` / `lib/pickDepthBands.wesl`.
+ *     depth win, no draw-order tie-break. `BodyGlintPick[]` (bandClass REQUIRED),
+ *     20-byte stride. See `starPointPick.wesl` / `lib/pickDepthBands.wesl`.
  */
-export type BodyPointPickVariant = 'sceneStar' | 'glint';
-
-/** The instanced scene-star / body-glint point-pick batch for one frame. */
-export type BodyPointPickArgs = {
-  /** Rebased camera-relative view-projection (`narrowMat4(rebaseViewProj(...))`). */
-  readonly vp: Float32Array;
-  /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */
-  readonly viewportPx: Vec2;
-  /** The point-partition bodies to draw (≤25). One packed id per instance. */
-  readonly points: readonly BodyPointPick[];
-  /** Pick-depth variant; defaults to `'sceneStar'` so existing callers are unchanged. */
-  readonly variant?: BodyPointPickVariant;
-};
+export type BodyPointPickArgs =
+  | {
+      /** Rebased camera-relative view-projection (`narrowMat4(rebaseViewProj(...))`). */
+      readonly vp: Float32Array;
+      /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */
+      readonly viewportPx: Vec2;
+      /** The scene-star point-partition bodies to draw (≤25). One packed id per instance. */
+      readonly points: readonly BodyPointPick[];
+      /** Defaults to `'sceneStar'` so existing callers are unchanged. */
+      readonly variant?: 'sceneStar';
+    }
+  | {
+      readonly vp: Float32Array;
+      readonly viewportPx: Vec2;
+      /** The glint points to draw (≤25). Each carries its REQUIRED `bandClass`. */
+      readonly points: readonly BodyGlintPick[];
+      readonly variant: 'glint';
+    };
 
 export type BodyPickRenderer = Renderer & {
   /**

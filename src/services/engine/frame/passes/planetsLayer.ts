@@ -67,7 +67,7 @@ import { sceneBodyPartition } from '../sceneBodyPartition';
 import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
-import { minPickRadiusMpc } from '../../helpers/minPickRadiusMpc';
+import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized for
 // the renderer's cap; each planet's 24-float record (MVP + albedo + pad +
@@ -101,6 +101,10 @@ export const planetsLayer: ContentLayer = {
   // its sphere stays clickable. Handle + distance gates match `enabled`; only
   // the partition predicate differs. See `ContentLayer.pickEnabled`.
   pickEnabled(state, ctx) {
+    // Short-circuits on the DRAW handle (`planetRenderer`), not the pick handle
+    // (`bodyPickRenderer` — which `drawPick` re-checks): the two GPU resources
+    // bootstrap together, so the draw handle is a sound pre-bootstrap proxy, and
+    // gating on it keeps `pickEnabled` reading the same fixtures `enabled` does.
     if (state.gpu.planetRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const { flat, textured } = sceneBodyPartition(state, ctx);
@@ -179,27 +183,17 @@ export const planetsLayer: ContentLayer = {
       const seedIndex = seedIndexOfBody(planet.id, SCENE_PLANETS);
       if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
       // Floor the PICK radius to the shared min footprint (visual sphere
-      // untouched): a resolved-but-small planet near the foreground far edge can
-      // project to a couple of pixels, too small to click, so its pick sphere
-      // inflates to the 9 px-radius floor. `max(true radius, floor)` leaves a
-      // comfortably-sized planet alone.
-      const dx = planet.positionMpc[0] - view.camPos[0];
-      const dy = planet.positionMpc[1] - view.camPos[1];
-      const dz = planet.positionMpc[2] - view.camPos[2];
-      const pickRadiusMpc = minPickRadiusMpc(
-        planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
-        Math.hypot(dx, dy, dz),
-        ctx.drawPxPerRad,
-      );
-      const mvp = composeBodyMvp(
-        view.slab.vp,
-        planet.positionMpc,
-        RENDER_ORIGIN_MPC,
-        pickRadiusMpc,
-        planet.orientation,
-      );
-      pickRenderer.drawSphere(pass, {
-        mvp,
+      // untouched) via the shared `drawFlooredSpherePick` recipe: a resolved-but-
+      // small planet near the foreground far edge can project to a couple of
+      // pixels, too small to click. Each body folds its baked orientation and its
+      // stable seed-index identity.
+      drawFlooredSpherePick(pickRenderer, pass, {
+        vp: view.slab.vp,
+        positionMpc: planet.positionMpc,
+        radiusMpc: planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        camPosMpc: view.camPos,
+        drawPxPerRad: ctx.drawPxPerRad,
+        orientation: planet.orientation,
         packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
       });
     }

@@ -74,7 +74,7 @@ import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsBy
 import { visibleStars } from '../visibleStars';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
-import { minPickRadiusMpc } from '../../helpers/minPickRadiusMpc';
+import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 
 export const starSpheresLayer: ContentLayer = {
   name: 'star-spheres',
@@ -164,27 +164,18 @@ export const starSpheresLayer: ContentLayer = {
       const seedIndex = seedIndexOfBody(star.id, SCENE_STARS);
       if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
       // Floor the PICK radius to the shared min footprint (visual sphere
-      // untouched): a just-resolved star near STAR_RESOLVE_PX is only a few pixels
-      // across, so its pick sphere inflates to the 9 px-radius floor. `max(true
-      // radius, floor)` leaves a comfortably-resolved star alone.
-      const dx = star.positionMpc[0] - view.camPos[0];
-      const dy = star.positionMpc[1] - view.camPos[1];
-      const dz = star.positionMpc[2] - view.camPos[2];
-      const pickRadiusMpc = minPickRadiusMpc(
-        star.radiusKm * SCALE_UNITS.KM_TO_MPC,
-        Math.hypot(dx, dy, dz),
-        ctx.drawPxPerRad,
-      );
-      const mvp = composeBodyMvp(
-        view.slab.vp,
-        star.positionMpc,
-        RENDER_ORIGIN_MPC,
-        pickRadiusMpc,
-        IDENTITY_MAT3,
-        star.oblateness,
-      );
-      pickRenderer.drawSphere(pass, {
-        mvp,
+      // untouched) via the shared `drawFlooredSpherePick` recipe: a just-resolved
+      // star near STAR_RESOLVE_PX is only a few pixels across. A resolved star is
+      // a rotation-invariant emissive sphere (IDENTITY_MAT3) that carries its
+      // measured `oblateness`; its identity is the stable SCENE_STARS seed index.
+      drawFlooredSpherePick(pickRenderer, pass, {
+        vp: view.slab.vp,
+        positionMpc: star.positionMpc,
+        radiusMpc: star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        camPosMpc: view.camPos,
+        drawPxPerRad: ctx.drawPxPerRad,
+        orientation: IDENTITY_MAT3,
+        oblateness: star.oblateness,
         packedId: packSelection(Source.FamousStar, seedIndex + PICK_SENTINEL_OFFSET),
       });
     }

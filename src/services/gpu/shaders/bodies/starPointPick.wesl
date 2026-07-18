@@ -84,6 +84,8 @@ import package::lib::pickDepthBands::PICK_BAND_SCENE_STAR_EPS;
 import package::lib::pickDepthBands::PICK_BAND_EARTH_EPS;
 import package::lib::pickDepthBands::PICK_BAND_PLANET_EPS;
 import package::lib::pickDepthBands::PICK_BAND_MOON_EPS;
+import package::lib::pickDepthBands::GLINT_CLASS_EARTH;
+import package::lib::pickDepthBands::GLINT_CLASS_PLANET;
 
 @group(0) @binding(0) var<uniform> u: CameraUniforms;
 
@@ -162,10 +164,13 @@ fn vsGlint(
   // every scene star, survey star, and the backdrop. A resolved sphere nearer than
   // ~orbitDistance/4 keeps a true z/w below these bands and correctly wins — a
   // planet's own disk out-picks its glint stamp.
+  // The class integers are single-sourced in 'lib/pickDepthBands' (GLINT_CLASS_*)
+  // and mirrored in TS 'glintBandClass.ts' under a parity test; MOON is the
+  // fallthrough default, so only EARTH + PLANET are compared here.
   var eps: f32 = PICK_BAND_MOON_EPS;
-  if (bandClass == 0u) {
+  if (bandClass == GLINT_CLASS_EARTH) {
     eps = PICK_BAND_EARTH_EPS;
-  } else if (bandClass == 1u) {
+  } else if (bandClass == GLINT_CLASS_PLANET) {
     eps = PICK_BAND_PLANET_EPS;
   }
   out.clip.z = out.clip.w * (1.0 - eps);

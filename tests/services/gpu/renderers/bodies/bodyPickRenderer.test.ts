@@ -16,7 +16,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createBodyPickRenderer } from '../../../../../src/services/gpu/renderers/bodies/bodyPickRenderer';
 import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
-import type { BodyPointPick } from '../../../../../src/@types/rendering/BodyPickRenderer';
+import type {
+  BodyPointPick,
+  BodyGlintPick,
+} from '../../../../../src/@types/rendering/BodyPickRenderer';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
@@ -53,6 +56,12 @@ function mockPass(): GPURenderPassEncoder {
 const pt = (packedId: number, x: number): BodyPointPick => ({
   posRelCamMpc: [x, 0, 0] as Vec3,
   packedId,
+});
+
+const gpt = (packedId: number, x: number, bandClass: number): BodyGlintPick => ({
+  posRelCamMpc: [x, 0, 0] as Vec3,
+  packedId,
+  bandClass,
 });
 
 const VP = new Float32Array(16);
@@ -142,7 +151,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     renderer.drawPoints(pass, {
       vp: VP,
       viewportPx: VIEWPORT,
-      points: [pt(2, 2)],
+      points: [gpt(2, 2, 1)],
       variant: 'glint',
     });
 
@@ -179,7 +188,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
 
     // Pass 2 (fresh pass → cursor resets to slot 0): the GLINT variant inherits
     // slot 0 with the SAME instance count but a WIDER 20-byte stride (40 total).
-    const glintPoints: BodyPointPick[] = [
+    const glintPoints: BodyGlintPick[] = [
       { posRelCamMpc: [1, 0, 0] as Vec3, packedId: 1, bandClass: 1 },
       { posRelCamMpc: [2, 0, 0] as Vec3, packedId: 2, bandClass: 2 },
     ];
@@ -211,7 +220,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     const renderer = createBodyPickRenderer(device);
     const pass = mockPass();
 
-    const points: BodyPointPick[] = [
+    const points: BodyGlintPick[] = [
       { posRelCamMpc: [1, 0, 0] as Vec3, packedId: 10, bandClass: 0 }, // earth
       { posRelCamMpc: [2, 0, 0] as Vec3, packedId: 20, bandClass: 2 }, // moon
     ];

@@ -49,11 +49,15 @@
  * `q = Ginv·(px, py, 1)`: the top-degree `px` terms are `(a·g − a·g)·px` and
  * cancel IDENTICALLY, leaving a numerator that is AFFINE in `(px, py)` with a
  * 2×2-minor coefficient.  Algebraically exact — but on the near-edge-on
- * Earth-zoom pose `Ginv`'s entries reach ~1e15, so in f32 that difference is
- * two ~1e30 products whose true result (a ~1e15-scale minor) is buried below
- * the ~1e22 rounding floor: the residual is garbage, `invZ2` amplifies it, the
- * Sampson `dist` goes noisy, and the two hard discards flip per-pixel coverage
- * across the flared band — the reported speckle in Earth's orbit fill.
+ * Earth-zoom pose the plane→pixel homography is ILL-CONDITIONED (condition
+ * number ~1e15), so the two products are nearly equal and their f32 difference
+ * cancels catastrophically: the tiny true minor keeps almost none of f32's
+ * significant digits.  The loss is set by the CONDITION NUMBER, not the entry
+ * magnitudes — rescaling `Ginv` to O(1) (which the code does below, so `q` stays
+ * in f32's precise range) does NOT fix it — so the residual is garbage, `invZ2`
+ * amplifies it, the Sampson `dist` goes noisy, and the two hard discards flip
+ * per-pixel coverage across the flared band — the reported speckle in Earth's
+ * orbit fill.
  *
  * So we eliminate the cancellation SYMBOLICALLY here, in f64, and hand the
  * fragment the six affine coefficients directly.  Each is a 2×2 minor of
@@ -79,9 +83,12 @@
  * `± det(Ginv)` times an entry of the WELL-CONDITIONED forward homography `G`
  * (plane → pixel, entries ~pixel scale).  Computing it in f64 from the f64
  * `Ginv` therefore lands on the true minor with ~6e-8 RELATIVE error; the old
- * f32 path's error was 6e-8 of the ~1e30 products — i.e. unbounded relative to
- * the tiny difference.  The minors narrow to f32 last, at the upload boundary,
- * carrying only that ~6e-8 relative error into the shader.
+ * f32 path's error was ~6e-8 of the two nearly-equal products, and because they
+ * nearly cancel that absolute error swamps the tiny true difference — an
+ * unbounded RELATIVE error, the condition number (~1e15) made visible (rescaling
+ * the products to O(1) does not change the cancellation).  The minors narrow to
+ * f32 last, at the upload boundary, carrying only that ~6e-8 relative error into
+ * the shader.
  *
  * ### Why the minors come from the RESCALED `Ginv` (normalization consistency)
  *

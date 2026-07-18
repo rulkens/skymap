@@ -63,8 +63,10 @@
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { BodyPointPick } from '../../../../@types/rendering/BodyPickRenderer';
+import type { BodyGlintPick } from '../../../../@types/rendering/BodyPickRenderer';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';
@@ -95,6 +97,21 @@ const staging = new Float32Array(MAX_GLINTS * INSTANCE_FLOATS);
 // range (within it the label carries the click — see `drawPick`). The opacity-0
 // house rule, deferred to the label where a label still invites the click.
 const GLINT_MIN_BRIGHTNESS = 1e-4;
+
+/**
+ * The one fact "the Earth caption invites a click": the seeded Earth exists AND
+ * the camera is within the solar-system caption range. `pickEnabled` (admit this
+ * layer for an Earth-only pick frame) and `drawPick` (emit the Earth pick stamp)
+ * must AGREE on it — the gate and the emit are one decision — so it is spelled
+ * ONCE here rather than copied into both. A future change to the Earth caption
+ * gate then can't make the two diverge (admit-the-row-but-emit-no-stamp, a dead
+ * pick frame, or the reverse).
+ */
+function earthCaptionPickable(state: EngineState, ctx: ReadyFrameContext): boolean {
+  return (
+    state.data.bodies.earth !== null && ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC
+  );
+}
 
 export const bodyGlintsLayer: ContentLayer = {
   name: 'body-glints',
@@ -132,10 +149,7 @@ export const bodyGlintsLayer: ContentLayer = {
     if (state.gpu.bodyGlintRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     if (sceneBodyPartition(state, ctx).glints.length > 0) return true;
-    return (
-      state.data.bodies.earth !== null &&
-      ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC
-    );
+    return earthCaptionPickable(state, ctx);
   },
 
   draw(pass, view, ctx, state) {
@@ -269,7 +283,7 @@ export const bodyGlintsLayer: ContentLayer = {
     // glint that renders nothing. Within the caption gate the label carries the
     // click regardless, so the skip never fires and this value is inert (see below).
     const backdropFade = fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, ctx.cam.distance);
-    const pickPoints: BodyPointPick[] = [];
+    const pickPoints: BodyGlintPick[] = [];
 
     // Emit the Earth glint stamp with the EARTH priority class (0), the shallowest
     // glint band, so Earth out-picks the Moon and every planet at glint scale
@@ -293,7 +307,7 @@ export const bodyGlintsLayer: ContentLayer = {
     // skip below, the Earth stamp is NOT brightness-gated (it is not a partition
     // glint).
     const earth = state.data.bodies.earth;
-    if (earth !== null && ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC) {
+    if (earth !== null && earthCaptionPickable(state, ctx)) {
       pickPoints.push({
         posRelCamMpc: [
           earth.positionMpc[0] - camPos[0],

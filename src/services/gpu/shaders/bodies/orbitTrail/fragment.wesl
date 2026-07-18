@@ -116,10 +116,14 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // (e.g. ginv[0].x * q.z - q.x * ginv[0].z). Expand q = ginv * (px, py, 1) and
   // the top-degree px (resp. py) terms cancel IDENTICALLY, leaving a numerator
   // that is AFFINE in the pixel with a 2x2-minor coefficient. At the near-edge-
-  // on Earth-zoom pose ginv's entries reach ~1e15, so that f32 difference is two
-  // ~1e30 products whose true ~1e15 result is buried below the rounding floor --
-  // the garbage residual, amplified by invZ2, is what speckled Earth's orbit
-  // fill. So composeOrbitConic hoists the exactly-cancelling numerators to CPU
+  // on Earth-zoom pose the plane-to-pixel homography is ILL-CONDITIONED (its
+  // condition number reaches ~1e15), so the two products are nearly equal and
+  // that f32 difference cancels catastrophically -- the tiny true result keeps
+  // almost none of f32's significant digits. The loss is set by the condition
+  // number, NOT the entry magnitudes: rescaling ginv to O(1) (which
+  // composeOrbitConic does) does not help, so the garbage residual, amplified by
+  // invZ2, is what speckled Earth's orbit fill. So composeOrbitConic hoists the
+  // exactly-cancelling numerators to CPU
   // f64 as the minors minorS = (M1, M2, M3) and minorT = (M4, M5, M6), and the
   // fragment just evaluates the affine forms (a multiply-add, no cancellation):
   //   d s/d px numerator = M1*py + M2,   d s/d py numerator = -M1*px + M3

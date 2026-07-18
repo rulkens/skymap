@@ -418,7 +418,7 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
 
   function drawPoints(pass: GPURenderPassEncoder, args: BodyPointPickArgs): void {
     beginPassIfNew(pass);
-    const { vp, viewportPx, points, variant = 'sceneStar' } = args;
+    const { vp, viewportPx, points } = args;
     const n = points.length;
     if (n === 0) return;
 
@@ -433,9 +433,13 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     device.queue.writeBuffer(slot.uniformBuffer, 0, pointUniformScratch);
 
     // The glint variant carries a third `bandClass` u32 per instance (stride 20);
-    // the scene-star variant does not (stride 16). The chosen stride must match
-    // the pipeline's vertex layout selected below.
-    const isGlint = variant === 'glint';
+    // the scene-star variant does not (stride 16). Narrowing on `variant` here
+    // pins `glintPoints` to the `BodyGlintPick[]` arm of the discriminated union
+    // (`BodyPointPickArgs`), so each point's `bandClass` below is a REQUIRED number
+    // — no runtime default, no cast. The chosen stride must match the pipeline's
+    // vertex layout selected below.
+    const glintPoints = args.variant === 'glint' ? args.points : null;
+    const isGlint = glintPoints !== null;
     const stride = isGlint ? POINT_INSTANCE_STRIDE_GLINT : POINT_INSTANCE_STRIDE;
     const words = isGlint ? POINT_INSTANCE_WORDS_GLINT : POINT_INSTANCE_WORDS;
 
@@ -452,13 +456,14 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
       f32[base + 1] = p.posRelCamMpc[1];
       f32[base + 2] = p.posRelCamMpc[2];
       u32[base + 3] = p.packedId >>> 0;
-      if (isGlint) {
-        // Default an UNSET class to the LOSING moon band (2), never Earth's band
-        // (0). Class 0 is the strongest — the Earth stamp's band — so a glint point
-        // that forgot its `bandClass` would tie Earth at forced-equal depth and
-        // reintroduce the ulp-jitter roulette these class bands exist to eliminate.
-        // The default must LOSE every tie, not win one, so it falls to band 2.
-        u32[base + GLINT_BAND_CLASS_WORD] = (p.bandClass ?? 2) >>> 0;
+      if (glintPoints !== null) {
+        // `bandClass` is type-required on `BodyGlintPick` (the glint arm of the
+        // discriminated union), so it is always present here — no `?? …` default.
+        // That the type FORBIDS omitting it is load-bearing: class 0 is the
+        // strongest (the Earth band), so a forgotten class defaulting to it would
+        // tie Earth at forced-equal depth and reintroduce the ulp-jitter roulette
+        // the class bands exist to eliminate. Illegal state, made unrepresentable.
+        u32[base + GLINT_BAND_CLASS_WORD] = glintPoints[i]!.bandClass >>> 0;
       }
     }
 
@@ -488,7 +493,7 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
 
     // Pick the depth-semantics variant. The bind group is layout-shared, so it
     // binds to either pipeline unchanged (see the pipeline-layout note above).
-    pass.setPipeline(variant === 'glint' ? pointGlintPipeline : pointPipeline);
+    pass.setPipeline(isGlint ? pointGlintPipeline : pointPipeline);
     pass.setBindGroup(0, slot.bindGroup);
     pass.setVertexBuffer(0, slot.instanceBuffer);
     // Six vertices per instanced billboard quad (lib/billboard's quadCorner).

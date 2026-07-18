@@ -75,6 +75,7 @@ import { near0RingRadiusPx } from '../../helpers/near0RingRadiusPx';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
+import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
 
 export const near0SelectionRingLayer: ContentLayer = {
   name: 'near0-selection-ring',
@@ -138,7 +139,7 @@ export const near0SelectionRingLayer: ContentLayer = {
     // is otherwise unobserved. Far side only: in practice the orbit target is
     // always at or beyond the anchor's scale when zoomed out, so the anchor can
     // only ever exit the FAR plane, never the near — no symmetric near clamp.
-    const clampedCentre = clampVec3Length(centre, view.slab.farMpc * 0.99);
+    const clampedCentre = clampVec3Length(centre, view.slab.farMpc * NEAR0_FAR_CLAMP_FRACTION);
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
     // centre. Uses the slab's f64 `vp`, narrowed HERE at the GPU-upload

@@ -97,15 +97,20 @@ describe('composeOrbitConic', () => {
 //
 // This is the numerical heart of the speckle fix. At Earth-surface zoom the
 // camera sits essentially ON Earth's orbit plane, so the plane→pixel homography
-// G is near-singular (condition ~1e16) and Ginv's entries reach ~1e15. The
-// fragment's antialiasing needs the pixel gradient of the plane coordinates
-// s = q.x/q.z, t = q.y/q.z. Written the obvious way each gradient numerator is a
-// difference of two products — e.g. ds/dpx ∝ ginv[0].x·q.z − q.x·ginv[0].z —
-// whose top-degree px term cancels IDENTICALLY, leaving an affine 2×2-minor
-// coefficient. Exact in real arithmetic; in f32 it is two ~1e30 products
-// cancelling to a ~1e15 result buried below the rounding floor, so the residual
-// is garbage. composeOrbitConic hoists the exactly-cancelling numerators to CPU
-// f64 as the minors and hands the fragment the affine forms.
+// G is near-singular — condition number ~1e16. The fragment's antialiasing needs
+// the pixel gradient of the plane coordinates s = q.x/q.z, t = q.y/q.z. Written
+// the obvious way each gradient numerator is a difference of two products —
+// e.g. ds/dpx ∝ ginv[0].x·q.z − q.x·ginv[0].z — whose top-degree px term cancels
+// IDENTICALLY, leaving an affine 2×2-minor coefficient. Exact in real arithmetic;
+// in f32 the two products are NEARLY EQUAL and cancel catastrophically, so the
+// tiny true result keeps almost none of f32's significant digits. Crucially the
+// loss is set by the CONDITION NUMBER, not the entry magnitudes: the OLD path
+// below is fed the SAME rescaled O(1) ginv the shader reads (G0..G10 off
+// composeOrbitConic's output, products ~O(1), NOT ~1e30) and is STILL grossly
+// wrong (~54% below) — which is exactly why rescaling alone did not cure the
+// speckle and the minor hoist was needed. composeOrbitConic hoists the exactly-
+// cancelling numerators to CPU f64 as the minors and hands the fragment the
+// affine forms.
 //
 // The test builds an INDEPENDENT f64 reference homography (its own inverse of
 // G = V·H), then over a grid of on-band pixels compares three evaluations of the

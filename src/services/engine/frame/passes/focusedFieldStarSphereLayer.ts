@@ -68,8 +68,10 @@
  * tiny star parsecs behind the one framed. `drawPick` closes both gaps: it
  * stamps the focused star's identity into the NEAR0 pick pass via
  * `bodyPickRenderer.drawSphere`, gated by the SAME `enabled` predicate `draw`
- * rides (the pick program filters pickables by `drawPick` presence + `enabled`,
- * so pickability tracks visibility) and composing the SAME `composeBodyMvp` —
+ * rides (the pick program filters pickables by `drawPick` presence +
+ * `(pickEnabled ?? enabled)`; this layer declares no `pickEnabled`, so its pick
+ * gate IS `enabled` and pickability tracks visibility) and composing the SAME
+ * `composeBodyMvp` —
  * except the pick radius is FLOORED to the shared min footprint
  * (`minPickRadiusMpc`), so a just-resolved few-pixel star still gets a clickable
  * hit area (the visual sphere keeps its true radius). Because the sphere
@@ -100,7 +102,7 @@ import { STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { resolvesToSphere } from '../../../../utils/scene/resolvesToSphere';
 import { starTintFromBpRp } from '../../../../utils/color/starTintFromBpRp';
-import { minPickRadiusMpc } from '../../helpers/minPickRadiusMpc';
+import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 
 /**
  * The focused-star sphere resolves iff the current `select` row is a `star`
@@ -185,27 +187,19 @@ export const focusedFieldStarSphereLayer: ContentLayer = {
     const row = state.selectionRows.select;
     if (row === null || row.type !== 'star') return;
 
-    // Floor the PICK radius to the shared min footprint (visual sphere untouched):
-    // the descent gates this sphere on just clearing STAR_RESOLVE_PX, so it can be
-    // only a few pixels across, too small to click — its pick sphere inflates to
-    // the 9 px-radius floor. `max(true radius, floor)` leaves a close star alone.
-    const dx = row.positionMpc[0] - view.camPos[0];
-    const dy = row.positionMpc[1] - view.camPos[1];
-    const dz = row.positionMpc[2] - view.camPos[2];
-    const pickRadiusMpc = minPickRadiusMpc(
-      row.radiusKm * SCALE_UNITS.KM_TO_MPC,
-      Math.hypot(dx, dy, dz),
-      ctx.drawPxPerRad,
-    );
-    const mvp = composeBodyMvp(
-      view.slab.vp,
-      row.positionMpc,
-      RENDER_ORIGIN_MPC,
-      pickRadiusMpc,
-      IDENTITY_MAT3,
-    );
-    pickRenderer.drawSphere(pass, {
-      mvp,
+    // Floor the PICK radius to the shared min footprint (visual sphere untouched)
+    // via the shared `drawFlooredSpherePick` recipe: the descent gates this sphere
+    // on just clearing STAR_RESOLVE_PX, so it can be only a few pixels across. A
+    // field star is a rotation-invariant emissive sphere (IDENTITY_MAT3, no
+    // oblateness); its identity is the bin-global record index `row.index`, the
+    // very `recordIdx` the point pick fragment packs.
+    drawFlooredSpherePick(pickRenderer, pass, {
+      vp: view.slab.vp,
+      positionMpc: row.positionMpc,
+      radiusMpc: row.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      camPosMpc: view.camPos,
+      drawPxPerRad: ctx.drawPxPerRad,
+      orientation: IDENTITY_MAT3,
       packedId: packSelection(Source.GaiaStars, row.index + PICK_SENTINEL_OFFSET),
     });
   },

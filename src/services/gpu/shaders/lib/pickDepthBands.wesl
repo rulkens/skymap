@@ -122,3 +122,16 @@ const PICK_BAND_SURVEY_STAR_EPS: f32 = 0.5e-4;
 // resolvable Gaia dot overlapping the galaxy backdrop now wins the click over
 // it. A quarter of the scene eps.
 const PICK_BAND_BACKDROP_EPS: f32 = 0.25e-4;
+
+// The glint priority CLASS integers — the per-instance selector each glint
+// carries, which 'starPointPick.wesl::vsGlint' maps to the three glint eps bands
+// above (EARTH -> PICK_BAND_EARTH_EPS, PLANET -> PICK_BAND_PLANET_EPS, else the
+// MOON band). This is the single WESL home for the class values; the TS twin is
+// 'glintBandClass.ts', and a parity test pins the two so a class renumbered on
+// one side without the other (which would silently mis-map a body to the wrong
+// priority band, no compile error) is caught. The MOON value is the vsGlint
+// 'else' fallthrough, so the shader imports only EARTH + PLANET, but all three
+// are named here as the class vocabulary the parity test asserts.
+const GLINT_CLASS_EARTH: u32 = 0u;
+const GLINT_CLASS_PLANET: u32 = 1u;
+const GLINT_CLASS_MOON: u32 = 2u;

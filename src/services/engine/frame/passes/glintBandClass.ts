@@ -26,13 +26,27 @@
  * ### Contract with the shader
  *
  * The returned integer is written raw into the glint instance's `bandClass`
- * attribute and read by `vsGlint`, whose `bandClass == 0u / == 1u / else` chain
- * must stay in step with these values (0 earth, 1 planet, 2 moon).
+ * attribute and read by `vsGlint`, whose `GLINT_CLASS_EARTH / GLINT_CLASS_PLANET`
+ * comparison chain must stay in step with these values (0 earth, 1 planet, 2
+ * moon). The three integers are single-sourced on the WESL side as
+ * `lib/pickDepthBands`'s `GLINT_CLASS_*` and here as the exported constants
+ * below; a parity test pins the two so a renumbering on one side without the
+ * other is caught (it would silently mis-map a body to the wrong priority band,
+ * with no compile error).
  */
 
 import { elementsById } from '../../../../data/bodies/orbitalElements';
 
+/** Glint priority class — the Earth stamp (the descent's focus body). Shallowest band. */
+export const GLINT_CLASS_EARTH = 0;
+/** Glint priority class — a heliocentric major planet (`parentId === null`). */
+export const GLINT_CLASS_PLANET = 1;
+/** Glint priority class — a satellite (a moon; `parentId` names its parent). Deepest band. */
+export const GLINT_CLASS_MOON = 2;
+
 export function glintBandClass(bodyId: string): number {
-  if (bodyId === 'earth') return 0; // the focus body — class 0, not derivable from elements
-  return elementsById(bodyId).parentId === null ? 1 : 2; // heliocentric planet : satellite moon
+  // the focus body — class earth, not derivable from elements
+  if (bodyId === 'earth') return GLINT_CLASS_EARTH;
+  // heliocentric planet : satellite moon
+  return elementsById(bodyId).parentId === null ? GLINT_CLASS_PLANET : GLINT_CLASS_MOON;
 }

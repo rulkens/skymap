@@ -191,6 +191,7 @@ import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { declutterByScreenSeparation } from '../../../../utils/scene/declutterByScreenSeparation';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../solarSystemLabelMaxDistance';
+import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
 
 /**
  * Minimum on-screen gap (px) between two foreground captions before the lower-
@@ -478,7 +479,7 @@ export const foregroundLabelsLayer: ContentLayer = {
       // anchor's TRUE length (subjectSizePx, fade, the declutter screen point)
       // still reads the un-clamped `anchor`; ONLY the drawn geometry — the
       // lift/leader inputs and the em that projects at the drawn depth — switches.
-      const liftAnchor = clampVec3Length(anchor, view.slab.farMpc * 0.99);
+      const liftAnchor = clampVec3Length(anchor, view.slab.farMpc * NEAR0_FAR_CLAMP_FRACTION);
 
       // Scale the caption's world em by the SAME ratio the clamp applied. The
       // label shader sizes glyphs from the DRAWN anchor's depth — pxPerEm =
@@ -493,12 +494,20 @@ export const foregroundLabelsLayer: ContentLayer = {
       // the on-screen size, IDENTICAL to the true-depth projection. The scaled
       // em also feeds `liftedLabelPlacement`, whose ink-clearance math mirrors
       // the shader's sizing and must agree with what actually draws.
+      //
+      // The ratio is READ OFF the clamp's own output — `|liftAnchor| / |anchor|`
+      // — not re-derived from a second `farMpc · NEAR0_FAR_CLAMP_FRACTION`
+      // spelling. Reading the clamp result means the em multiplier can never
+      // drift from what the clamp actually did (the two are ONE length ratio).
       // `clampVec3Length` returns the input reference when in range, so the
-      // identity check makes the common near-body case an exact no-op.
+      // identity check makes the common near-body case an exact no-op (the ratio
+      // is exactly 1 there, so the branch is also a numerical guard against a
+      // spurious non-unit ratio from f64 round-off on the hypot).
       const anchorScale =
         liftAnchor === anchor
           ? 1
-          : (view.slab.farMpc * 0.99) / Math.hypot(anchor[0], anchor[1], anchor[2]);
+          : Math.hypot(liftAnchor[0], liftAnchor[1], liftAnchor[2]) /
+            Math.hypot(anchor[0], anchor[1], anchor[2]);
       const liftEmMpc = label.worldEmMpc * anchorScale;
 
       // The single lifted-label chain (see `liftedLabelPlacement`) — identical
