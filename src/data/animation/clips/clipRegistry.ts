@@ -12,6 +12,7 @@ import type { Clip } from '../../../@types/animation/Clip';
 import type { ClipId } from '../../../@types/animation/ClipId';
 import { cosmicFlows } from './cosmicFlows';
 import { flyout } from './flyout';
+import { earthFlyout } from './earthFlyout';
 import { flowOrbit } from './flowOrbit';
 import { flyPathDemo } from './flyPathDemo';
 import { famousFlythrough } from './famousFlythrough';
@@ -37,6 +38,7 @@ import {
 export const clipRegistry: Record<ClipId, Clip> = {
   cosmicFlows,
   flyout,
+  earthFlyout,
   flowOrbit,
   flyPathDemo,
   famousFlythrough,
