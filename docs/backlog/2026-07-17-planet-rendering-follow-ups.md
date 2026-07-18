@@ -18,5 +18,4 @@ review record.
    says "route in Task 8" (a plan-execution artifact); reword timelessly on next
    touch (`feedback_comment_style`).
 
-Related, already indexed separately: "Texture source table single home",
-"Tier-ladder single home".
+Related, already indexed separately: "Tier-ladder single home".

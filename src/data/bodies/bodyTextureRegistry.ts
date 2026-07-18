@@ -15,10 +15,12 @@
  *    ceiling, and `provenance` / `grayscaleTint` tell it whether a source is mono
  *    and how to tint it.
  *
- * The offline raw-texture fetcher (`tools/fetch/fetchTextures.ts`) does NOT read
- * this registry today: it authors its own source list (`SSS_BODIES` / `USGS_KEYS`)
- * keyed by raw-data key rather than by body id, so the download set and this
- * registry can drift (see the backlog item 'Texture source table single home').
+ * The offline fetch (`tools/fetch/fetchTextures.ts`) and build
+ * (`tools/textures/buildTextures.ts`) both derive their raw-source sets from a
+ * single `TEXTURE_SOURCES` table (`tools/utils/io/textureSources.ts`), keyed by
+ * the same `(bodyId|ring, kind)` space this registry enumerates. A textured body
+ * with no source is therefore a type/test failure — not a silent download-set
+ * drift that renders the body untextured with no error.
  *
  * Because the runtime and build both derive from this one table, adding a
  * textured body is a single row here (plus its id in the `BodyTextureId` union

@@ -158,11 +158,11 @@ untextured render. It is a cross-table invariant (runtime family ⊆ table's `su
 entries), not a restatement of the table — and `Partial<…>` means the compiler does **not**
 already guarantee it (per `docs/superpowers/conventions/testing.md`).
 
-- [ ] Add `tools/utils/io/textureSources.ts` with `TextureSourceEntry` + `TEXTURE_SOURCES`.
-- [ ] Add the drift test above.
-- [ ] `npx tsc --noEmit` (tools) clean — confirms the `satisfies` completeness check + the
+- [x] Add `tools/utils/io/textureSources.ts` with `TextureSourceEntry` + `TEXTURE_SOURCES`.
+- [x] Add the drift test above.
+- [x] `npx tsc --noEmit` (tools) clean — confirms the `satisfies` completeness check + the
       `TextureKind` import resolve.
-- [ ] `npm test -- textureSources` → green.
+- [x] `npm test -- textureSources` → green.
 
 ### Task 2: Fetch side derives from the table
 
@@ -189,9 +189,9 @@ the exact dev + full filename sets, dedup, and the Uranus/Neptune-both-modes pro
 are the behavior-neutral guard. Do **not** touch their assertions; the import block may add
 `TextureSource` from the same module if needed but assertions stay byte-identical.
 
-- [ ] Rewire `textureSourcesFor` per above; delete the three dead tables + `SssBody`.
-- [ ] `npm test -- fetchTextures` → all existing assertions green, unchanged.
-- [ ] `npx tsc --noEmit` clean (confirms literal-narrowing survived — no `upstream` optional
+- [x] Rewire `textureSourcesFor` per above; delete the three dead tables + `SssBody`.
+- [x] `npm test -- fetchTextures` → all existing assertions green, unchanged.
+- [x] `npx tsc --noEmit` clean (confirms literal-narrowing survived — no `upstream` optional
       error at the `fullSource`/`devSource` call sites).
 
 ### Task 3: Build side derives from the table
@@ -214,9 +214,9 @@ Behavior-neutrality here is covered by Task 1's drift test (every body has a `su
 source that build now reads) + typecheck; no build assertion changes and no sharp run is
 added (the tier/tint logic is untouched).
 
-- [ ] Rewire `sourcePathsFor` + `ringSourcePaths`; delete the dead build table + type.
-- [ ] `npx tsc --noEmit` clean.
-- [ ] `npm test -- textures` → existing build tests (`emittedTiersForBody`,
+- [x] Rewire `sourcePathsFor` + `ringSourcePaths`; delete the dead build table + type.
+- [x] `npx tsc --noEmit` clean.
+- [x] `npm test -- textures` → existing build tests (`emittedTiersForBody`,
       `tiersFittingSourceWidth`, `writeTintedMonoTier`) green.
 
 ### Task 4: Update the registry docstring that documented the drift
@@ -230,8 +230,8 @@ fetch and build now derive their source sets from the single `TEXTURE_SOURCES` t
 (`tools/utils/io/textureSources.ts`), so a body with no source is a type/test failure rather
 than a silent drift. Keep the didactic tone; drop the backlog reference.
 
-- [ ] Update the `:18-27` paragraph; remove the drift/backlog callout.
-- [ ] No test — doc-only.
+- [x] Update the `:18-27` paragraph; remove the drift/backlog callout.
+- [x] No test — doc-only.
 
 ### Task 5: Retire the backlog item
 
@@ -241,8 +241,8 @@ than a silent drift. Keep the didactic tone; drop the backlog reference.
 Per the Backlog-hygiene convention: picking up an item deletes its index line **and** its
 detail file in the same change. This plan IS the pickup.
 
-- [ ] `rm -f docs/backlog/2026-07-17-texture-source-table-single-home.md`.
-- [ ] Delete the `docs/BACKLOG.md:41` "Texture source table single home" index line.
+- [x] `rm -f docs/backlog/2026-07-17-texture-source-table-single-home.md`.
+- [x] Delete the `docs/BACKLOG.md:41` "Texture source table single home" index line.
 
 ### Task 6: Full gate + commit
 

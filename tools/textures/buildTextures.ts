@@ -76,7 +76,8 @@ import type { Vec3 } from '../../src/@types/math/Vec3';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
-import { RAW_DATA, rawDataPath, type RawDataKey } from '../utils/io/rawDataRegistry';
+import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
+import { TEXTURE_SOURCES } from '../utils/io/textureSources';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
 
@@ -84,60 +85,40 @@ import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
 const JPEG_QUALITY = 80;
 
 /**
- * Per-body raw-source keys, best-first. `native` is the full-res registry row;
- * the optional dev variant is the smaller source a `--dev` fetch leaves on disk
- * — either its own registry row (Earth's 5400×2700 BMNG sibling, `devKey`) or a
- * loose 2 k file in `textures.dir` (the SSS bodies, `devFilename`). Uranus /
- * Neptune have neither: their native SSS map IS the 2 k file, so a dev fetch
- * lands it at the native path. The USGS moons have no dev subset (full pull only).
- *
- * This is the build-side view of the raw sources — bodyId → source file — which
- * `fetchTextures`'s flat download list does not carry (it maps registry key →
- * URL, with no body identity), so the mapping is authored once here.
+ * The `surface` source of one textured body or ring, read from the single
+ * `TEXTURE_SOURCES` table (`tools/utils/io/textureSources.ts`) — the same table
+ * `fetchTextures` derives its download list from, so the built set can never
+ * drift from what was fetched. Derived (not annotated) so each `native` /
+ * `devKey` stays a string LITERAL for `rawDataPath`.
  */
-type BodySourceKeys = {
-  readonly native: RawDataKey;
-  readonly devKey?: RawDataKey;
-  readonly devFilename?: string;
-};
+type SurfaceSource = (typeof TEXTURE_SOURCES)[keyof typeof TEXTURE_SOURCES]['surface'];
 
-const BODY_SOURCE_KEYS = {
-  mercury: { native: 'textures.sssMercury8k', devFilename: '2k_mercury.jpg' },
-  venus: { native: 'textures.sssVenus4k', devFilename: '2k_venus_atmosphere.jpg' },
-  earth: { native: 'textures.nasaBmng', devKey: 'textures.nasaBmngDev' },
-  mars: { native: 'textures.sssMars8k', devFilename: '2k_mars.jpg' },
-  jupiter: { native: 'textures.sssJupiter8k', devFilename: '2k_jupiter.jpg' },
-  saturn: { native: 'textures.sssSaturn8k', devFilename: '2k_saturn.jpg' },
-  uranus: { native: 'textures.sssUranus2k' },
-  neptune: { native: 'textures.sssNeptune2k' },
-  moon: { native: 'textures.sssMoon8k', devFilename: '2k_moon.jpg' },
-  io: { native: 'textures.usgsIo' },
-  europa: { native: 'textures.usgsEuropa' },
-  ganymede: { native: 'textures.usgsGanymede' },
-  callisto: { native: 'textures.usgsCallisto' },
-} as const satisfies Record<BodyTextureId, BodySourceKeys>;
-
-/** The ring strip's raw sources, best-first: full 8 k, then the 2 k dev variant. */
-const RING_SOURCE_FILENAME_DEV = '2k_saturn_ring_alpha.png';
-
-/** Ordered candidate paths for a body's source, best (native) first. */
-function sourcePathsFor(id: BodyTextureId): readonly string[] {
-  const keys: BodySourceKeys = BODY_SOURCE_KEYS[id];
-  const paths = [rawDataPath(keys.native)];
-  if (keys.devKey !== undefined) {
-    paths.push(rawDataPath(keys.devKey));
-  } else if (keys.devFilename !== undefined) {
-    paths.push(join(rawDataPath('textures.dir'), keys.devFilename));
+/**
+ * Ordered candidate paths for a surface source, best (native full-res) first,
+ * then the `--dev` variant if any. `devKey` is its own registry row (Earth's
+ * BMNG sibling); `devFilename` is a loose 2 k file under `textures.dir` (the SSS
+ * bodies and the ring). Uranus/Neptune's `devFilename` resolves to the same
+ * on-disk path as native (their native IS the 2 k file), so the extra candidate
+ * is a harmless duplicate; the USGS moons carry neither.
+ */
+function candidatePaths(entry: SurfaceSource): readonly string[] {
+  const paths = [rawDataPath(entry.native)];
+  if ('devKey' in entry) {
+    paths.push(rawDataPath(entry.devKey));
+  } else if ('devFilename' in entry) {
+    paths.push(join(rawDataPath('textures.dir'), entry.devFilename));
   }
   return paths;
 }
 
+/** Ordered candidate paths for a body's source, best (native) first. */
+function sourcePathsFor(id: BodyTextureId): readonly string[] {
+  return candidatePaths(TEXTURE_SOURCES[id].surface);
+}
+
 /** Ordered candidate paths for the Saturn ring strip, best (full) first. */
 function ringSourcePaths(): readonly string[] {
-  return [
-    rawDataPath('textures.sssRing'),
-    join(rawDataPath('textures.dir'), RING_SOURCE_FILENAME_DEV),
-  ];
+  return candidatePaths(TEXTURE_SOURCES['saturn-ring'].surface);
 }
 
 /** The first candidate path that exists on disk, or `null` if none do. */
