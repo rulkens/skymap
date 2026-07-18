@@ -8,10 +8,11 @@
  *      `view.vp` (identity-pinned via a mocked `composeOrbitConic`).
  *   2. The single instanced draw — ONE `renderer.draw(pass, staging, n)`
  *      paints every VISIBLE conic, with conic i's trail params packed at
- *      instance stride 20 floats (Ginv at floats base+0..11, colour +
+ *      instance stride 28 floats (Ginv at floats base+0..11, colour +
  *      eccentricity at base+12..15, mean anomaly at base+16, apparent-size fade
- *      alpha at base+17, pad at base+18..19), and orbits below the cull
- *      threshold dropped from the batch entirely.
+ *      alpha at base+17, pad at base+18..19, and the two gradient-minor triples
+ *      at base+20..23 / base+24..27), and orbits below the cull threshold
+ *      dropped from the batch entirely.
  *
  * Plus the handle gates: `enabled` is renderer-presence AND the shared
  * foreground distance gate AND the whole-layer sub-pixel bound (the largest
@@ -33,11 +34,17 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 
 // Mock composeOrbitConic so the test can (a) assert which vp it consumed by
-// object identity and (b) hand each conic a recognisable Float32Array. The
-// real composition math is covered by composeOrbitConic's own tests. Ginv is a
-// 12-float padded mat3.
+// object identity and (b) hand each conic recognisable Float32Arrays. The real
+// composition math is covered by composeOrbitConic's own tests. Ginv is a
+// 12-float padded mat3; minorS/minorT are 4-float padded triples (the gradient-
+// minor hoist). Distinct sentinel values so the packing offsets are pinned.
+type ConicOut = { ginv: Float32Array; minorS: Float32Array; minorT: Float32Array };
 vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
-  composeOrbitConic: vi.fn<() => Float32Array>(() => new Float32Array(12)),
+  composeOrbitConic: vi.fn<() => ConicOut>(() => ({
+    ginv: new Float32Array(12),
+    minorS: new Float32Array([101, 102, 103, 0]),
+    minorT: new Float32Array([201, 202, 203, 0]),
+  })),
 }));
 import { composeOrbitConic } from '../../../../../src/utils/camera/composeOrbitConic';
 
@@ -191,9 +198,10 @@ describe('orbitTrailsLayer.draw', () => {
     expect(count).toBe(n);
     expect(staging).toBeInstanceOf(Float32Array);
 
-    // Staging layout for the first conic (instance 0, stride 20): colour +
+    // Staging layout for the first conic (instance 0, stride 28): colour +
     // eccentricity at floats 12..15, mean anomaly at 16, fade alpha at 17
-    // (saturated — Mercury's orbit is large from the Sun), pad at 18..19.
+    // (saturated — Mercury's orbit is large from the Sun), pad at 18..19, then
+    // the two gradient-minor triples at 20..23 and 24..27 (the CPU-f64 hoist).
     expect(staging[12]).toBeCloseTo(first.color[0]);
     expect(staging[13]).toBeCloseTo(first.color[1]);
     expect(staging[14]).toBeCloseTo(first.color[2]);
@@ -202,6 +210,9 @@ describe('orbitTrailsLayer.draw', () => {
     expect(staging[17]).toBe(1);
     expect(staging[18]).toBe(0);
     expect(staging[19]).toBe(0);
+    // minorS (M1/M2/M3 + pad) → floats 20..23, minorT (M4/M5/M6 + pad) → 24..27.
+    expect(Array.from(staging.slice(20, 24))).toEqual([101, 102, 103, 0]);
+    expect(Array.from(staging.slice(24, 28))).toEqual([201, 202, 203, 0]);
   });
 
   it('is a no-op when the orbitTrailRenderer handle is null (pre-bootstrap)', () => {
