@@ -223,7 +223,11 @@ export function createPickProgram(deps: {
   function pickablesBySlab(
     ctx: ReadyFrameContext,
   ): { slabIndex: number; layers: ContentLayer[] }[] {
-    const pickable = layers.filter((l) => l.drawPick && l.enabled(state, ctx));
+    // Filter by the PICK gate: `pickEnabled` when a layer declares one (its pick
+    // set is wider than its draw set — planetsLayer's flat ∪ textured, the Earth
+    // caption stamp), else `enabled` (pick set == draw set, the common case). See
+    // `ContentLayer.pickEnabled`.
+    const pickable = layers.filter((l) => l.drawPick && (l.pickEnabled ?? l.enabled)(state, ctx));
     const slabIndices = [...new Set(pickable.map((l) => l.slab))].sort((a, b) => a - b);
     return slabIndices.map((slabIndex) => ({
       slabIndex,

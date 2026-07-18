@@ -54,11 +54,16 @@ function makeCtx(): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-/** A fake layer. Omit `drawPick` to model a non-pickable layer. */
+/**
+ * A fake layer. Omit `drawPick` to model a non-pickable layer. Pass
+ * `pickEnabled` to model a layer whose pick gate diverges from its draw gate
+ * (planetsLayer's flat ∪ textured, the Earth caption stamp).
+ */
 function makeLayer(opts: {
   name: string;
   slab: number;
   enabled: boolean;
+  pickEnabled?: boolean;
   drawPick?: ContentLayer['drawPick'];
 }): ContentLayer {
   return {
@@ -68,6 +73,7 @@ function makeLayer(opts: {
     blend: 'additive',
     enabled: () => opts.enabled,
     draw: vi.fn(),
+    ...(opts.pickEnabled !== undefined ? { pickEnabled: () => opts.pickEnabled } : {}),
     ...(opts.drawPick ? { drawPick: opts.drawPick } : {}),
   } as ContentLayer;
 }
@@ -222,6 +228,43 @@ describe('createPickProgram', () => {
 
     await program.pick(10, 10);
     expect(callLog).toEqual(['a', 'd']);
+  });
+
+  it('admits a layer whose pickEnabled widens its enabled gate (pick set ⊃ draw set)', async () => {
+    // The Bug A seam: a layer disabled for DRAW (enabled:false) but pickEnabled:true
+    // must STILL be recorded into the pick pass — planetsLayer's textured-only frame
+    // is the real case (pick = flat ∪ textured, draw = flat), and bodyGlintsLayer's
+    // Earth-stamp-only frame the other. A layer with only enabled:false (no
+    // pickEnabled) stays excluded, so the program falls back to `enabled` per layer.
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
+
+    const callLog: string[] = [];
+    const layers = [
+      makeLayer({
+        name: 'pick-wider',
+        slab: COSMO,
+        enabled: false,
+        pickEnabled: true,
+        drawPick: () => callLog.push('pick-wider'),
+      }),
+      makeLayer({
+        name: 'draw-off',
+        slab: COSMO,
+        enabled: false,
+        drawPick: () => callLog.push('draw-off'),
+      }),
+    ];
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      layers,
+    });
+
+    await program.pick(10, 10);
+    // Only the pickEnabled layer is admitted; the enabled-only-false layer is not.
+    expect(callLog).toEqual(['pick-wider']);
   });
 
   it('decodes the cosmo texel readback via unpackPick', async () => {

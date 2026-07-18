@@ -92,6 +92,21 @@ export const planetsLayer: ContentLayer = {
     return sceneBodyPartition(state, ctx).flat.length > 0;
   },
 
+  // Pick gate — WIDER than `enabled`: this layer is the sole pick site for the
+  // whole planet source (`flat ∪ textured`; `texturedBodiesLayer` carries no
+  // pick aspect — see `drawPick`'s header), so the pick pass must admit the row
+  // whenever EITHER partition branch is non-empty. `enabled` stays flat-only so
+  // a textured-only frame (a lone textured Saturn before its untextured moons
+  // resolve into `flat`) leaves no zero-body row in the VISUAL pass plan while
+  // its sphere stays clickable. Handle + distance gates match `enabled`; only
+  // the partition predicate differs. See `ContentLayer.pickEnabled`.
+  pickEnabled(state, ctx) {
+    if (state.gpu.planetRenderer === null) return false;
+    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+    const { flat, textured } = sceneBodyPartition(state, ctx);
+    return flat.length + textured.length > 0;
+  },
+
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.planetRenderer;
     if (renderer === null) return;

@@ -23,6 +23,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { bodyGlintsLayer } from '../../../../../src/services/engine/frame/passes/bodyGlintsLayer';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { Source } from '../../../../../src/data/sources';
@@ -148,6 +149,44 @@ describe('bodyGlintsLayer.enabled', () => {
   });
 });
 
+describe('bodyGlintsLayer.pickEnabled (Bug B — Earth-stamp-only frame stays in the pick pass)', () => {
+  // With NO glints (empty partition) `enabled` is false, but the Earth caption
+  // stamp still needs to ride this layer's pick pass while the caption is on. The
+  // pick gate is therefore WIDER than the draw gate: admit when glints are present
+  // OR when Earth is seeded within the caption range.
+  const earthWithinGate: PlanetBody = {
+    id: 'earth',
+    label: 'Earth',
+    positionMpc: [1_100_000 * KM, 0, 0],
+    radiusKm: 6371,
+    albedo: [0.2, 0.4, 0.8],
+    orientation: IDENTITY,
+  };
+  function stampState(earth: PlanetBody | null): EngineState {
+    return {
+      gpu: { bodyGlintRenderer: {} },
+      data: { bodies: { planets: [], earth } },
+      assetSlots: { bodyTextures: new Map() },
+    } as unknown as EngineState;
+  }
+  const camWithin: Vec3 = [1e-6, 0, 0]; // inside the caption gate
+  const camBeyond: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
+
+  it('is true when Earth is seeded within the caption gate even with an empty glints branch — while enabled is false', () => {
+    const state = stampState(earthWithinGate);
+    // No glints → the VISUAL draw gate is off.
+    expect(bodyGlintsLayer.enabled(state, makeCtx(camWithin))).toBe(false);
+    // But the Earth caption stamp must still be recorded → pick gate admits the row.
+    expect(bodyGlintsLayer.pickEnabled!(state, makeCtx(camWithin))).toBe(true);
+  });
+
+  it('is false with no Earth and no glints, and false beyond the caption gate', () => {
+    expect(bodyGlintsLayer.pickEnabled!(stampState(null), makeCtx(camWithin))).toBe(false);
+    // Earth seeded but the camera is past the caption gate → no stamp to admit for.
+    expect(bodyGlintsLayer.pickEnabled!(stampState(earthWithinGate), makeCtx(camBeyond))).toBe(false);
+  });
+});
+
 describe('bodyGlintsLayer.draw', () => {
   it('skips the zero-brightness (unlit far side) body and packs only the lit mid-fade one', () => {
     const renderer = makeRenderer();
@@ -250,11 +289,14 @@ function makePickState(
 }
 
 describe('bodyGlintsLayer.drawPick', () => {
-  it('picks the lit glint but skips the invisible (unlit) one, dropping unknowns', () => {
+  it('WITHIN the caption gate picks BOTH the lit and the invisible (unlit) glint, dropping unknowns', () => {
+    // Bug B: the camera (CAM_POS, ~3e-14 Mpc) sits deep inside
+    // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC, so every body's foreground LABEL is on
+    // and pick follows the LABEL, not the glint's own brightness. MARS is unlit
+    // here (brightness → 0) — `draw` still skips it, but its label invites the
+    // click, so the pick keeps it. JUPITER is lit and picked. UNKNOWN is not in the
+    // seed table → dropped regardless.
     const pickRenderer = makePickRenderer();
-    // MARS is unlit here (brightness → 0) — `draw` skips it and so must the pick,
-    // since it renders no pixels (pick follows visibility). JUPITER is lit and IS
-    // picked. UNKNOWN is not in the seed table → dropped.
     const state = makePickState(pickRenderer, [JUPITER, MARS, UNKNOWN]);
     const view = makeNear0View(CAM_POS);
 
@@ -264,8 +306,8 @@ describe('bodyGlintsLayer.drawPick', () => {
     const [passArg, args] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
 
-    // Only the lit JUPITER survives: the invisible MARS is skipped, UNKNOWN dropped.
-    expect(args.points).toHaveLength(1);
+    // Both seeded bodies survive within the caption gate; only UNKNOWN is dropped.
+    expect(args.points).toHaveLength(2);
 
     // Jupiter's packed id, hand-computed: (Source.Planet=22 << 27) | (seedIndex 3 +
     // PICK_SENTINEL_OFFSET 1) = 2952790016 | 4 = 2952790020.
@@ -280,18 +322,44 @@ describe('bodyGlintsLayer.drawPick', () => {
     // Its anchor is rebased into the camera-relative frame (pos − camPos), f64.
     expect(jupiter.posRelCamMpc[0]).toBeCloseTo(JUPITER.positionMpc[0] - CAM_POS[0], 20);
 
-    // The invisible MARS (unlit far side) is NOT clickable — no pick point carries
-    // its stable index (2). This is the inverse of the old behaviour: pick now
-    // mirrors `draw`'s per-body visibility skip.
+    // The invisible (unlit) MARS IS clickable inside the caption gate — pick follows
+    // the label. Mars is a heliocentric planet, so it carries class 1 too.
     const mars = args.points.find(
       (p) => p.packedId === packSelection(Source.Planet, 2 + PICK_SENTINEL_OFFSET),
-    );
-    expect(mars).toBeUndefined();
+    )!;
+    expect(mars).toBeDefined();
+    expect(mars.bandClass).toBe(1);
 
     // The vp is the f32 narrow of the f64 rebase — NOT the raw f32 view.vp.
     expect(args.vp).not.toBe(view.vp);
     expect(args.vp).toEqual(narrowMat4(rebaseViewProj(view.slab.vp, CAM_POS)));
     expect(args.viewportPx).toBe(view.viewportPx);
+  });
+
+  it('BEYOND the caption gate skips the invisible (unlit) glint — pick reverts to glint visibility', () => {
+    // Past SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC no label invites the click, so the
+    // old pick-follows-glint-visibility rule holds: an unlit glint (brightness → 0)
+    // renders no pixels and must not stay clickable. Camera parked 2× the caption
+    // gate down +x; a 160 km MARS between the Sun and the camera is deeply
+    // sub-pixel (→ glints branch) AND unlit (camera beyond it along the sun ray →
+    // illuminated fraction 0), so it is skipped.
+    const marsFar: PlanetBody = {
+      id: 'mars',
+      label: 'mars',
+      positionMpc: [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC, 0, 0],
+      radiusKm: 160,
+      albedo: [0.6, 0.32, 0.23],
+      orientation: IDENTITY,
+    };
+    const camFar: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
+    const pickRenderer = makePickRenderer();
+    const state = makePickState(pickRenderer, [marsFar]);
+
+    bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar), state);
+
+    const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
+    // No label, unlit → skipped. No Earth seeded → the batch is empty.
+    expect(args.points).toHaveLength(0);
   });
 
   it('requests the glint pick variant (so glints collapse onto the shallow priority band)', () => {
@@ -302,9 +370,11 @@ describe('bodyGlintsLayer.drawPick', () => {
     expect(args.variant).toBe('glint');
   });
 
-  it('emits the Earth stamp with the EARTH class (0) when earthLayer.enabled holds, so Earth out-picks every glint', () => {
-    // Two lit io/jupiter glints plus a resolved Earth. Earth is not in the
-    // partition (it rides earthLayer), so the layer emits its stamp. Priority is
+  it('emits the Earth stamp with the EARTH class (0) inside the caption gate, so Earth out-picks every glint', () => {
+    // Two lit io/jupiter glints plus a resolved Earth, camera inside the caption
+    // gate. Earth is not in the partition (it rides earthLayer), so the layer emits
+    // its stamp gated on the caption range (earth !== null && distance < gate).
+    // Priority is
     // now the per-instance bandClass — 0 (earth) beats 1 (planet) beats 2 (moon) as
     // an unconditional depth win — NOT the list order, so the load-bearing check is
     // the CLASS each point carries, not its index.
@@ -328,24 +398,56 @@ describe('bodyGlintsLayer.drawPick', () => {
     expect(earthPt.posRelCamMpc[0]).toBeCloseTo(EARTH_RESOLVED.positionMpc[0] - CAM_POS[0], 20);
   });
 
-  it('omits the Earth stamp when earthLayer.enabled is false (earth null or handle null)', () => {
+  it('omits the Earth stamp when earth is null OR the camera is beyond the caption gate', () => {
     const pickRenderer = makePickRenderer();
-    // earth null → earthLayer.enabled false → no stamp (only the lit Jupiter).
+    // earth null → no stamp (only the lit Jupiter).
     const noEarth = makePickState(pickRenderer, [JUPITER], { earth: null });
     bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), noEarth);
     const [, argsA] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(argsA.points.some((p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET))).toBe(false);
     expect(argsA.points).toHaveLength(1);
 
-    // earthRenderer null (pre-bootstrap) even with a seeded earth → still no stamp.
+    // Camera beyond the caption gate (2× the gate distance) even with a seeded
+    // Earth → no label invites the click → no stamp. The stamp is no longer coupled
+    // to earthRenderer's handle (pick draws via bodyPickRenderer, not earthRenderer).
     const pickRenderer2 = makePickRenderer();
-    const noHandle = makePickState(pickRenderer2, [JUPITER], {
-      earth: EARTH_RESOLVED,
-      earthRenderer: null,
-    });
-    bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), noHandle);
+    const camFar: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
+    const farEarth = makePickState(pickRenderer2, [], { earth: EARTH_RESOLVED });
+    bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar), farEarth);
     const [, argsB] = pickRenderer2.drawPoints.mock.calls[0]!;
     expect(argsB.points.some((p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET))).toBe(false);
+  });
+
+  it('emits the Earth stamp beyond the 1 px sphere cull while inside the caption gate (Bug B)', () => {
+    // The core Bug B regression: Earth's sphere pick dies at the
+    // SUB_PIXEL_BODY_CULL_PX 1 px cull, but its caption stays on out to
+    // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC — ten orders of magnitude of zoom where
+    // the label invites a click. A camera 1e-6 Mpc from a 6371 km Earth makes it
+    // ~1e-7 px across (deep sub-pixel — earthLayer.enabled is FALSE here), yet
+    // 1e-6 Mpc ≪ the caption gate. No planets seeded (empty glints branch), so the
+    // Earth stamp is the ONLY pick point. On the pre-fix code (gated on
+    // earthLayer.enabled) this batch is empty — the bite.
+    const earthSubPixel: PlanetBody = {
+      id: 'earth',
+      label: 'Earth',
+      positionMpc: [1_100_000 * KM, 0, 0],
+      radiusKm: 6371,
+      albedo: [0.2, 0.4, 0.8],
+      orientation: IDENTITY,
+    };
+    const camMid: Vec3 = [1e-6, 0, 0]; // deep past the 1 px cull, deep inside the caption gate
+    const pickRenderer = makePickRenderer();
+    const state = makePickState(pickRenderer, [], { earth: earthSubPixel });
+
+    bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(camMid), makeCtx(camMid), state);
+
+    const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
+    const earthPt = args.points.find(
+      (p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
+    );
+    expect(earthPt).toBeDefined();
+    expect(earthPt!.bandClass).toBe(0);
+    expect(args.points).toHaveLength(1);
   });
 
   it('tags a planet with class 1 and its moons with class 2 (priority is the class, not order)', () => {
