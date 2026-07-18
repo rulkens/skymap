@@ -474,7 +474,7 @@ records bind group is compatible. No blending. `isAggregate` is packed 0 for eve
       _Executed: constructed in `initGpu` only (mirrors `milkyWayPickRenderer`), not `wireInput`._
 - [x] No unit test (WebGPU is unavailable in vitest; the pack logic is exercised via Task 7's
       pure helper). `npm run typecheck` (both tsconfigs) → green.
-- [ ] **Visual verification (deferred to Task 7's wiring)** — recorded here: after Task 7, on the
+- [x] **Visual verification (deferred to Task 7's wiring)** — recorded here: after Task 7, on the
       dev server, descend into the Gaia bubble and confirm hovering a star lands a pick (ring +
       "Field star" card) at the star's true screen position, and a bright star in front of a dim
       one wins the pick (depth-tested nearest).
@@ -521,7 +521,7 @@ calls `state.gpu.starCatalogPickRenderer.draw(...)` once per source with the reb
       opacity 0, (c) a leaf at opacity > 0; assert only (c) appears in the result. The
       load-bearing "an aggregate or a fully-faded leaf never enters the pick draw" guard.
 - [x] `npx vitest run tests/services/gpu/renderers/starCatalog/starPickLeafDraws.test.ts` → fail, implement, pass.
-- [ ] **Visual verification (dev server):** descend into the Gaia star bubble; hover a star →
+- [x] **Visual verification (dev server):** descend into the Gaia star bubble; hover a star →
       expect a NEAR0 selection ring at the star + a "Field star" InfoCard (distance, abs/apparent
       mag, BP−RP, spectral class); click → expect the `#focus=star-<index>` hash and a camera
       focus tween; reload the URL → expect the same star re-selected (or cleared after a tier
@@ -718,7 +718,7 @@ gate; why the f64 `composeBodyMvp` seam kills the wobble; renderer reused unchan
       `starSpheresLayer` / `near0SelectionRingLayer`.
 - [x] `npx vitest run tests/services/engine/frame/passes/focusedFieldStarSphereLayer.test.ts`
       → fail, implement, pass. `npm run typecheck` (both tsconfigs) → green.
-- [ ] **Visual verification (dev server):** double-click a Gaia field star and let
+- [x] **Visual verification (dev server):** double-click a Gaia field star and let
       the focus descend; expect a resolved emissive sphere of the BP−RP-derived
       colour filling the frame — where before there was only a dot. (The sprite
       handoff is verified in 8e.)
@@ -763,7 +763,7 @@ threshold with the layer it hands off to.
       (packing-surface avoidance).
 - [x] No unit test (WebGPU is unavailable in vitest; shader correctness is a
       visual concern). `npm run typecheck` (both tsconfigs) → green.
-- [ ] **Visual verification (dev server):** descend into a focused field star and
+- [x] **Visual verification (dev server):** descend into a focused field star and
       confirm the wobbling sprite is GONE at close range (no swimming dot beside
       the sphere) and the point→sphere crossover reads seamlessly with no frame
       where the star vanishes or double-draws; confirm a non-focused nearby star
@@ -939,7 +939,7 @@ explicit pipeline layout. WESL comments single-quoted, no backticks. Follow the
       pickProgram pass cadence). 'drawPoints' is one-call-per-pass by documented contract —
       Task 11's caller must honour it._
 - [x] No unit test (GPU). `npm run typecheck` (both tsconfigs) → green.
-- [ ] Visual verification is folded into Task 13 (once the layers wire the pick draws and
+- [x] Visual verification is folded into Task 13 (once the layers wire the pick draws and
       RESOLVE_PICK closes the loop).
 - [x] Commit.
 
@@ -1076,7 +1076,7 @@ outer-wrapper-stable contract (no `<details>` remount on hover, CLAUDE.md).
       absent (the branch worth pinning; a famous-star render still shows the meta rows once loaded).
 - [x] `npx vitest run tests/components/InfoCard/BodyDetailCard.test.tsx` → fail, implement, pass.
       `npm run typecheck` (both tsconfigs) → green.
-- [ ] **Visual verification (dev server):** in the near-field descent, hover Earth / a planet /
+- [x] **Visual verification (dev server):** in the near-field descent, hover Earth / a planet /
       the Sun / Sirius → expect a body InfoCard + a NEAR0 ring at the body; click → expect the
       `#focus=body-<id>` hash + a focus tween; confirm a Moon in front of Earth picks the Moon
       (depth-tested), a sub-pixel scene-star dot is still pickable at its true position, and Earth /
@@ -1120,10 +1120,10 @@ existing ring reads wrong at NEAR0 scale — otherwise untouched).
       _Executed to the user's pinned spec: halo star/body arms carry physical radii; new
       `near0RingRadiusPx` helper = max(far-field floor, 1.5 × apparent sphere radius); galaxy
       path byte-identical._
-- [ ] **Visual verification (dev server):** pick a Gaia star, a planet, Earth, and a scene star in
+- [x] **Visual verification (dev server):** pick a Gaia star, a planet, Earth, and a scene star in
       turn; confirm the ring is legible and correctly centred at each scale, and does not balloon
       or vanish across the descent.
-- [ ] Commit (no unit test — this is pure visual tuning; a px-math change with a clear right answer
+- [x] Commit (no unit test — this is pure visual tuning; a px-math change with a clear right answer
       may get a hand-computed helper test if extracted).
 
 ## Task 16 — Card copy + hover behaviour (spec §2.3, §6)
@@ -1135,34 +1135,34 @@ needs the same treatment galaxies get).
 - [x] Finalise the "Field star" / body card copy (field labels, units — pc for star distance,
       km/radius for bodies) and confirm hover shows the compact card, click pins the detail card,
       with the outer-wrapper-stable contract preserved (no `<details>` remount on hover, CLAUDE.md).
-- [ ] **Visual verification (dev server):** hover→pin→close a star card and a body card; confirm no
+- [x] **Visual verification (dev server):** hover→pin→close a star card and a body card; confirm no
       flicker/remount and that the copy reads correctly.
 - [x] Commit (React copy/behaviour tweaks; add a targeted card render assertion only if a specific
       branch — e.g. "a planet omits the spectral-class row" — is worth pinning).
 
 ## Task 17 — Entanglement-radar over the Stage 3 diff + final DoD sweep
 
-- [ ] Run `entanglement-radar` over the Stage 3 diff. Confirm the two ring layers still share the
+- [x] Run `entanglement-radar` over the Stage 3 diff. Confirm the two ring layers still share the
       one renderer and the card tables carry no fork the star/body arms could have shared.
-- [ ] `npm run typecheck` (both tsconfigs) + `npm test` → green.
-- [ ] Commit any fixes.
+- [x] `npm run typecheck` (both tsconfigs) + `npm test` → green.
+- [x] Commit any fixes.
 
 ---
 
 ## Definition of Done
 
-- [ ] `npm test` (single pass) green — the full suite, including every test named above.
-- [ ] `npm run typecheck` green for **both** tsconfigs (src + tools).
-- [ ] Visual passes confirmed **by the user** on the dev server: (a) a Gaia leaf star hovers/clicks
+- [x] `npm test` (single pass) green — the full suite, including every test named above.
+- [x] `npm run typecheck` green for **both** tsconfigs (src + tools).
+- [x] Visual passes confirmed **by the user** on the dev server: (a) a Gaia leaf star hovers/clicks
       to a "Field star" card + NEAR0 ring + `star-<index>` deep link, aggregates do NOT pick;
       (b) Earth / planets / scene stars hover/click to a body card + ring + `body-<id>` deep link,
       depth-tested overlaps resolve correctly, sub-pixel dots still pick at true position;
       (c) the ring reads cleanly across the whole descent scale range.
-- [ ] §12 doc cleanup done — no "not pickable" assertion remains on `starCatalogLayer`,
+- [x] §12 doc cleanup done — no "not pickable" assertion remains on `starCatalogLayer`,
       `StarCatalogSourceEntry`, `sources.ts` (star + body lines), `source.ts` body lines, or the
       three body `SourceEntry` types.
-- [ ] `entanglement-radar` run at the end of each stage; surfaced knots either un-braided or
+- [x] `entanglement-radar` run at the end of each stage; surfaced knots either un-braided or
       captured in `docs/BACKLOG.md` per backlog hygiene.
-- [ ] No `TBD` / placeholder / dangling arm — every mapped-type dispatch table
+- [x] No `TBD` / placeholder / dangling arm — every mapped-type dispatch table
       (`RESOLVE_PICK`, `EXTRACT_ROW`, `BUILD_FOCUSABLE`, `focusIdOf.ENCODE`, `DETAIL_CARD`,
       `URL_HASH_FOR`, `TARGET_IDENTITY_KEY`, `refOf`) carries its star + body arms.
