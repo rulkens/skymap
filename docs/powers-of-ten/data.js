@@ -47,7 +47,7 @@ export const RUNGS = [
   { exp: 19, m: "9.5 × 10¹⁸ m", anchor: "the Local Bubble (1000 ly)", zone: "stellar", status: "buildable",
     subject: "The stars around the Sun",
     viz: "The true-position star field already renders; wrapping it in a 3D interstellar-dust density volume (the half-res raymarch already exists) is what's left.",
-    src: [["3D dust maps (Edenhofer 2024)","https://zenodo.org/records/12668220","800 pc extinction cube"],["Gaia DR3","https://www.cosmos.esa.int/web/gaia/dr3"]] },
+    src: [["3D dust map (Edenhofer 2024)","https://zenodo.org/records/8187943","Gaia-based extinction cube, out to 1.25 kpc"],["Gaia DR3","https://www.cosmos.esa.int/web/gaia/dr3"]] },
   { exp: 18, m: "9.5 × 10¹⁷ m", anchor: "the Orion Nebula (100 ly)", zone: "stellar", status: "aspirational",
     subject: "A nebula",
     viz: "Volumetric emission raymarch with embedded newborn stars.",
