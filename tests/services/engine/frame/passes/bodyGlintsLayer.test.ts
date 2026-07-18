@@ -24,6 +24,8 @@ import { bodyGlintsLayer } from '../../../../../src/services/engine/frame/passes
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
+import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
+import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { Source } from '../../../../../src/data/sources';
@@ -146,6 +148,84 @@ describe('bodyGlintsLayer.enabled', () => {
     // At galaxy scale the whole neighbourhood is far below a pixel: the shared
     // gate turns the glints off before the partition even matters.
     expect(bodyGlintsLayer.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]))).toBe(false);
+  });
+});
+
+describe('bodyGlintsLayer.enabled — far dissolve (the bite)', () => {
+  it('stays on mid-dissolve but LEAVES the pass plan past the backdrop goneAt while still inside the foreground gate', () => {
+    // The user-reported bug: the glints have only a NEAR handoff (`bodyGlint`, the
+    // 3→1 px fade-in), so as their apparent size drops toward zero they read FULL
+    // forever and draw at full additive brightness all the way to the coarse
+    // `FOREGROUND_MAX_DISTANCE_MPC` gate — deep in Milky-Way framing, where all ~22
+    // collapse onto one bright dot. The `bodyGlintBackdrop` far-dissolve fixes it:
+    // once the band zeroes, the layer must LEAVE the pass plan (opacity 0 ⇒ no
+    // render), exactly as `starPointsLayer` does with `starBackdrop`.
+    const backdrop = SCALE_FADE_BANDS.bodyGlintBackdrop;
+    const dMid = (backdrop.fullAt + backdrop.goneAt) / 2; // mid fade → band in (0,1)
+    const dGone = backdrop.goneAt * 2; // past goneAt → band 0
+    // The far test point is still well inside the shared foreground gate, so ONLY
+    // the new far-dissolve gate can flip `enabled` off there.
+    expect(dGone).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+    expect(fadeBand(backdrop, dMid)).toBeGreaterThan(0);
+    expect(fadeBand(backdrop, dGone)).toBe(0);
+
+    // One body a hair off the Sun: deeply sub-pixel from BOTH cameras (each is
+    // astronomically farther out), so it sits in the glints branch either way and
+    // the far-dissolve band is the sole thing that flips `enabled`.
+    const glint = bodyAt('mars', 1, [0.6, 0.32, 0.23]);
+    const state = makeState(makeRenderer(), [glint]);
+
+    expect(bodyGlintsLayer.enabled(state, makeCtx([dMid, 0, 0]))).toBe(true);
+    // The bite: unfixed `enabled` has no far-dissolve check, so this reads true.
+    expect(bodyGlintsLayer.enabled(state, makeCtx([dGone, 0, 0]))).toBe(false);
+  });
+});
+
+describe('bodyGlintsLayer.draw — far-dissolve brightness scaling', () => {
+  it('scales the packed glint brightness by the backdrop band (identical geometry, only camera-origin distance differs)', () => {
+    // Two cameras at DIFFERENT origin distances, but the body pinned the SAME small
+    // offset just beyond each (farther from the Sun → full phase at both). So the
+    // camera→body geometry — apparent size AND illuminated fraction — is identical
+    // at the two cameras and the ONLY thing that can change the packed brightness
+    // is the far-dissolve band, which keys on the camera-origin distance. The raw
+    // brightness therefore cancels in the ratio and a missing backdrop multiply
+    // would leave the two brightnesses equal.
+    const backdrop = SCALE_FADE_BANDS.bodyGlintBackdrop;
+    const OFF = 1e5 * KM; // ~2 px glint at radius 160 km, like the LIT fixture
+    const dFull = backdrop.fullAt * 0.5; // full band → backdrop 1
+    const dMid = (backdrop.fullAt + backdrop.goneAt) / 2; // mid fade → backdrop in (0,1)
+    expect(fadeBand(backdrop, dFull)).toBe(1);
+    const midFade = fadeBand(backdrop, dMid);
+    expect(midFade).toBeGreaterThan(0);
+    expect(midFade).toBeLessThan(1);
+
+    const brightnessAt = (camX: number): number => {
+      const camPos: Vec3 = [camX, 0, 0];
+      const body: PlanetBody = {
+        id: 'jupiter',
+        label: 'jupiter',
+        positionMpc: [camX + OFF, 0, 0], // just beyond the camera → lit, ~2 px glint
+        radiusKm: 160,
+        albedo: [0.8, 0.8, 0.8],
+        orientation: IDENTITY,
+      };
+      const renderer = makeRenderer();
+      bodyGlintsLayer.draw(
+        PASS_STUB,
+        makeNear0View(camPos),
+        makeCtx(camPos),
+        makeState(renderer, [body]),
+      );
+      const [, instances, count] = renderer.draw.mock.calls[0]!;
+      expect(count).toBe(1);
+      return instances[6]!;
+    };
+
+    const full = brightnessAt(dFull);
+    const mid = brightnessAt(dMid);
+    // The far dissolve dims the mid-band glint; the ratio is exactly the band value.
+    expect(mid).toBeLessThan(full);
+    expect(mid).toBeCloseTo(full * midFade, 12);
   });
 });
 
@@ -359,6 +439,36 @@ describe('bodyGlintsLayer.drawPick', () => {
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     // No label, unlit → skipped. No Earth seeded → the batch is empty.
+    expect(args.points).toHaveLength(0);
+  });
+
+  it('BEYOND the caption gate drops even a LIT glint once the backdrop has dissolved (far dissolve narrows pick past the label range)', () => {
+    // Past SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC no label invites the click, so pick
+    // follows the glint's DRAWN brightness — which now folds the far-dissolve
+    // backdrop. A LIT, ~2 px planet parked past the caption gate has fully
+    // dissolved (backdrop 0), so `draw` packs nothing and its pick footprint must
+    // go too — otherwise a glint that renders no pixels stays clickable. Pre-fix
+    // (the pick brightness omitted the backdrop band) the lit body's raw brightness
+    // clears GLINT_MIN and it stays pickable → the bite.
+    const camFar: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
+    // Still inside the shared foreground gate, so the pick pass admits the row and
+    // only the far dissolve can drop the point.
+    expect(camFar[0]).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+    expect(fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, camFar[0])).toBe(0);
+    const litFar: PlanetBody = {
+      id: 'jupiter',
+      label: 'jupiter',
+      positionMpc: [camFar[0] + 1e5 * KM, 0, 0], // just beyond the camera → lit, ~2 px glint
+      radiusKm: 160,
+      albedo: [0.8, 0.8, 0.8],
+      orientation: IDENTITY,
+    };
+    const pickRenderer = makePickRenderer();
+    const state = makePickState(pickRenderer, [litFar]);
+
+    bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar), state);
+
+    const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(args.points).toHaveLength(0);
   });
 

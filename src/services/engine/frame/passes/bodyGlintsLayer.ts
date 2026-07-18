@@ -15,13 +15,20 @@
  *
  * Each glint's stored `brightness` is `bodyGlintBrightness` (apparent size x
  * albedo luminance x illuminated fraction — a crescent Venus dims, a gibbous
- * Moon brightens; the unlit far side adds nothing) MULTIPLIED by the `bodyGlint`
- * `fadeBand`, keyed on the apparent diameter in px. The band is a RECEDE fade —
- * full at/below 1 px, gone at/above 3 px — so the glint fades IN over 3->1 px
- * while the mesh still draws: at 3 px the glint is ~0 (the mesh carries), by 1 px
- * it is full (the mesh is about to cull at `SUB_PIXEL_BODY_CULL_PX`), a popless
- * handoff. `color` is the body's albedo tint (the shader premultiplies it by
- * brightness).
+ * Moon brightens; the unlit far side adds nothing) MULTIPLIED by TWO fade bands:
+ *   - `bodyGlint`, keyed on the apparent diameter in px. A RECEDE fade — full
+ *     at/below 1 px, gone at/above 3 px — so the glint fades IN over 3->1 px while
+ *     the mesh still draws: at 3 px the glint is ~0 (the mesh carries), by 1 px it
+ *     is full (the mesh is about to cull at `SUB_PIXEL_BODY_CULL_PX`), a popless
+ *     handoff. This is the NEAR handoff to the resolved sphere.
+ *   - `bodyGlintBackdrop`, keyed on the camera's heliocentric distance. The FAR
+ *     dissolve: the glints are minimum-size additive sprites (like the star
+ *     points), so as the camera pulls back from the solar system all ~22 collapse
+ *     onto one bright dot. This band fades the whole field out a few solar-system
+ *     radii out, so glints stop mattering long before Milky-Way framing rather
+ *     than riding full-brightness to the coarse foreground gate — the sibling of
+ *     `starPointsLayer`'s `starBackdrop`. Hoisted per-frame in `draw` (one camera).
+ * `color` is the body's albedo tint (the shader premultiplies it by brightness).
  *
  * ### The zero-brightness skip (`feedback_opacity_zero_no_render`)
  *
@@ -44,11 +51,15 @@
  *
  * `enabled` gates on the `bodyGlintRenderer` GPU handle (null pre-bootstrap),
  * the shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC` — nothing
- * changes at galaxy scale), AND a non-empty `glints` branch — the same partition
- * `draw` consumes, so the enable gate and the packed set cannot disagree. The
- * handle check short-circuits first (so pre-bootstrap fixtures with a null
- * renderer and no bodies bag never touch `state.data` or the partition);
- * `draw` re-checks the handle so a stale call is a harmless no-op.
+ * changes at galaxy scale), the far-dissolve band (`SCALE_FADE_BANDS.bodyGlintBackdrop`
+ * > 0 — once it zeroes the layer LEAVES the pass plan rather than pack invisible
+ * points, the "opacity 0 ⇒ no render" house rule), AND a non-empty `glints`
+ * branch — the same partition `draw` consumes, so the enable gate and the packed
+ * set cannot disagree. The band completes deep inside the shared gate, so it is
+ * the binding, smooth gate for the glints. The handle check short-circuits first
+ * (so pre-bootstrap fixtures with a null renderer and no bodies bag never touch
+ * `state.data` or the partition); `draw` re-checks the handle so a stale call is a
+ * harmless no-op.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -93,9 +104,19 @@ export const bodyGlintsLayer: ContentLayer = {
 
   enabled(state, ctx) {
     // Handle first (short-circuits before any ctx / state.data read — matches
-    // starPointsLayer), distance second, partition last.
+    // starPointsLayer), shared distance gate second, far-dissolve band third,
+    // partition last.
     if (state.gpu.bodyGlintRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+    // Once the far-dissolve band has zeroed the glint backdrop, DISABLE the layer
+    // rather than pack invisible points — the "opacity 0 ⇒ no render" house rule,
+    // mirroring `starPointsLayer`'s `starBackdrop` gate (which also empties the
+    // (hdr, NEAR0) step so the executor skips it). Keyed on the camera's
+    // heliocentric distance, the quantity the band reads. `bodyGlintBackdrop`
+    // completes deep inside `FOREGROUND_MAX_DISTANCE_MPC`, so this is the binding —
+    // and smooth — gate for the glints; without it they draw at full additive
+    // brightness all the way to the coarse gate, into Milky-Way framing.
+    if (fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, ctx.cam.distance) <= 0) return false;
     return sceneBodyPartition(state, ctx).glints.length > 0;
   },
 
@@ -130,6 +151,14 @@ export const bodyGlintsLayer: ContentLayer = {
     // render origin is the heliocentric [0,0,0].
     const camPos = view.camPos;
 
+    // The far-dissolve alpha for THIS frame — the glint backdrop keyed on the
+    // camera's heliocentric distance. Per-frame constant (every glint shares one
+    // camera), so it is hoisted OUT of the per-body loop. It scales every glint's
+    // brightness so the whole sub-pixel body field dissolves as the camera pulls
+    // back from the solar system, mirroring `starPointsLayer`'s backdrop fade.
+    // `enabled` already dropped the layer once this hit 0, so here it is > 0.
+    const backdropFade = fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, ctx.cam.distance);
+
     // Pack one 7-float record per glint whose brightness survives the phase +
     // cross-fade, skipping the rest (the opacity-0 house rule). `count` tracks
     // the packed subset — a skipped body leaves a hole no record fills.
@@ -151,7 +180,7 @@ export const bodyGlintsLayer: ContentLayer = {
         renderOriginMpc: RENDER_ORIGIN_MPC,
         apparentDiameterPx: diameterPx,
       });
-      const brightness = raw * fadeBand(SCALE_FADE_BANDS.bodyGlint, diameterPx);
+      const brightness = raw * fadeBand(SCALE_FADE_BANDS.bodyGlint, diameterPx) * backdropFade;
       if (brightness <= GLINT_MIN_BRIGHTNESS) continue;
 
       // Camera-relative anchor (pos - camPos), computed in f64 before the
@@ -185,19 +214,27 @@ export const bodyGlintsLayer: ContentLayer = {
   // `draw` packs — a body is pickable-as-a-glint exactly when it draws as one; its
   // resolved complement (`flat` ∪ `textured`) rides `planetsLayer`'s sphere pick.
   //
-  // The per-body `brightness` term (phase x cross-fade) is mirrored here — but
-  // only BEYOND the caption range. Pick follows the visible AFFORDANCE: within
-  // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC the affordance is the body's foreground
-  // LABEL, so pick follows the label and a near-invisible glint (a new-phase
-  // Venus, or one fully faded at the 3 px crossover) stays clickable. Beyond that
-  // gate no label invites the click, so pick reverts to following the glint's own
-  // brightness: a glint whose `brightness · fadeBand(apparentPx)` drops to
+  // The per-body `brightness` term (phase x near cross-fade x FAR dissolve) is
+  // mirrored here — but the skip fires only BEYOND the caption range. Pick follows
+  // the visible AFFORDANCE, and within SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC the
+  // affordance is the body's foreground LABEL. Planet / moon / Earth captions ride
+  // a FLAT `planetLabelsEnabled` toggle in `foregroundLabelsLayer` — full alpha
+  // (declutter aside) out to the caption gate, with NO distance fade band (unlike
+  // the star map, which keys on the star's own pc distance). So the label persists
+  // across the ENTIRE `bodyGlintBackdrop` dissolve (which completes ~6 decades
+  // inside the caption gate), and pick must stay wide there even for a glint whose
+  // brightness has dissolved to 0 — a Jupiter you can still read the name of stays
+  // clickable. That is why the far dissolve does NOT narrow pick within the label
+  // range. Beyond the caption gate no label invites the click, so pick reverts to
+  // following the glint's own DRAWN brightness — now including the far dissolve, so
+  // a glint whose `brightness · fadeBand(apparentPx) · fadeBand(backdrop)` drops to
   // `GLINT_MIN_BRIGHTNESS` renders NO pixels in `draw` and must not claim an ~18 px
   // pick footprint. The skip recomputes `draw`'s EXACT brightness from the same
   // inputs against the shared `GLINT_MIN_BRIGHTNESS`, ANDed with the caption gate,
   // so within the gate the pick set is wider than the drawn set and beyond it the
-  // two match. The `enabled` gate already drops the whole layer above the
-  // foreground distance.
+  // two match. The `enabled` gate already drops the whole VISUAL layer once the
+  // backdrop zeroes; the pick pass outlives it to the caption gate on the label's
+  // affordance.
   //
   // Each body's packed id carries its STABLE `SCENE_PLANETS` index (the same seed
   // table + `Source.Planet` code `planetsLayer`'s sphere pick stamps, so a body
@@ -225,6 +262,13 @@ export const bodyGlintsLayer: ContentLayer = {
     const { glints } = sceneBodyPartition(state, ctx);
 
     const camPos = view.camPos;
+    // The same far-dissolve alpha `draw` folds into each glint's brightness, so the
+    // per-body skip below recomputes `draw`'s EXACT brightness. Per-frame constant,
+    // hoisted out of the loop. Beyond the caption gate this reads 0 (the band is
+    // long gone by then), so the skip drops EVERY glint there — no orphan pick on a
+    // glint that renders nothing. Within the caption gate the label carries the
+    // click regardless, so the skip never fires and this value is inert (see below).
+    const backdropFade = fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, ctx.cam.distance);
     const pickPoints: BodyPointPick[] = [];
 
     // Emit the Earth glint stamp with the EARTH priority class (0), the shallowest
@@ -266,15 +310,18 @@ export const bodyGlintsLayer: ContentLayer = {
       if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
 
       // Per-body visibility skip — but only BEYOND the caption range. Within it
-      // the visible affordance is the body's LABEL (which stays on out to
-      // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC), so pick follows the label and a
-      // near-invisible glint stays clickable — a new-phase Venus with a visible
-      // name must still be pickable. Beyond the caption gate no label invites the
-      // click, so the old pick-follows-glint-visibility rule holds: a glint that
-      // renders no pixels (unlit far side, or fully faded at the 3 px crossover)
-      // must not claim a pick footprint. `draw` recomputes the same brightness
-      // from the same inputs against the same `GLINT_MIN_BRIGHTNESS`, so within
-      // the gate the pick set is WIDER than the drawn set and beyond it they match.
+      // the visible affordance is the body's LABEL, which rides a flat toggle in
+      // `foregroundLabelsLayer` (no distance fade) and so stays on out to
+      // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC; pick follows the label and a
+      // near-invisible glint stays clickable — a new-phase Venus, or a Jupiter
+      // whose far-dissolve backdrop has zeroed, with a visible name must still be
+      // pickable. Beyond the caption gate no label invites the click, so the old
+      // pick-follows-glint-visibility rule holds: a glint that renders no pixels
+      // (unlit far side, faded at the 3 px crossover, OR far-dissolved) must not
+      // claim a pick footprint. `brightness` recomputes `draw`'s EXACT value —
+      // phase x near cross-fade x far dissolve — against the same
+      // `GLINT_MIN_BRIGHTNESS`, so within the gate the pick set is WIDER than the
+      // drawn set and beyond it they match.
       const diameterPx = bodyApparentDiameterPx({
         positionMpc: body.positionMpc,
         radiusKm: body.radiusKm,
@@ -289,7 +336,9 @@ export const bodyGlintsLayer: ContentLayer = {
           camPosMpc: camPos,
           renderOriginMpc: RENDER_ORIGIN_MPC,
           apparentDiameterPx: diameterPx,
-        }) * fadeBand(SCALE_FADE_BANDS.bodyGlint, diameterPx);
+        }) *
+        fadeBand(SCALE_FADE_BANDS.bodyGlint, diameterPx) *
+        backdropFade;
       if (
         brightness <= GLINT_MIN_BRIGHTNESS &&
         ctx.cam.distance >= SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC

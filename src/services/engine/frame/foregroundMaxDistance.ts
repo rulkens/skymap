@@ -62,11 +62,34 @@
  */
 
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 
 // The farthest seeded foreground element from the heliocentric render origin.
 // `positionMpc` is authored origin-relative, so |positionMpc| IS the distance.
 export const FARTHEST_BODY_MPC = Math.max(
   ...SCENE_BODIES.map((body) =>
+    Math.hypot(body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]),
+  ),
+);
+
+// The farthest seeded PLANET-roster body from the heliocentric origin — Neptune
+// at ~30 AU (~1.5e-10 Mpc). Derived from `SCENE_PLANETS` the same single-source-
+// of-truth way `FARTHEST_BODY_MPC` is derived from `SCENE_BODIES`: the max over
+// the roster, so adding or moving a planet/moon seed carries this edge in
+// lockstep. The whole roster is scanned rather than filtered to the heliocentric
+// planets because the geocentric moons ride their parent no farther than Saturn's
+// ~9.5 AU, comfortably inside Neptune's 30 AU — so the max lands on Neptune with
+// no need to discriminate body kind.
+//
+// This is the SOLAR-SYSTEM analogue of `FARTHEST_BODY_MPC`: where that scales the
+// star-neighbourhood edges (the shared gate, the caption gate, the star fade
+// bands), this scales the ONE edge that must key on the solar system's own extent
+// — the body-glint far-dissolve band (`SCALE_FADE_BANDS.bodyGlintBackdrop`),
+// which fades the sub-pixel planet/moon glints out as the camera pulls back from
+// the solar system, so they stop mattering long before Milky-Way framing rather
+// than riding full-brightness to the coarse ×100 foreground gate.
+export const FARTHEST_PLANET_MPC = Math.max(
+  ...SCENE_PLANETS.map((body) =>
     Math.hypot(body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]),
   ),
 );

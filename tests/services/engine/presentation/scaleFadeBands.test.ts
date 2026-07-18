@@ -42,4 +42,14 @@ describe('star fade bands — pop-free coupling to their gates', () => {
     // reintroduce the hard-cut blob this fix dissolved.
     expect(SCALE_FADE_BANDS.starBackdrop.goneAt).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
   });
+
+  it('the body-glint backdrop dissolves fully inside the shared foreground gate', () => {
+    // The same pop-free property as the star backdrop, one scale-decade down: the
+    // body-glint far-dissolve must complete STRICTLY before the shared foreground
+    // gate hard-cuts the layer, so the gate lands on already-dark glints. A retune
+    // that pushed `goneAt` out to (or past) the gate would reintroduce the bright-
+    // blob pop this fix removed (all ~22 glints collapsed onto one dot into
+    // Milky-Way framing).
+    expect(SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+  });
 });
