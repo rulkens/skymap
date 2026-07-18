@@ -345,7 +345,12 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     uniformBuffer: GPUBuffer;
     bindGroup: GPUBindGroup;
     instanceBuffer: GPUBuffer | null;
-    capacity: number;
+    // Allocated instance-buffer size in BYTES, NOT instance count. A slot is keyed
+    // by CALL ORDER (pointCursor), not by caller, so the SAME slot can be claimed
+    // by a different-STRIDE variant across passes (a 16-byte scene-star batch one
+    // pass, a 20-byte glint batch the next). Tracking bytes — not count — lets the
+    // grow check catch a stride widening that a count-only check would miss.
+    byteCapacity: number;
   };
   const pointSlots: PointSlot[] = [];
 
@@ -365,7 +370,7 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
         entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
       }),
       instanceBuffer: null,
-      capacity: 0,
+      byteCapacity: 0,
     };
     pointSlots[index] = slot;
     return slot;
@@ -447,20 +452,35 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
       f32[base + 1] = p.posRelCamMpc[1];
       f32[base + 2] = p.posRelCamMpc[2];
       u32[base + 3] = p.packedId >>> 0;
-      if (isGlint) u32[base + GLINT_BAND_CLASS_WORD] = (p.bandClass ?? 0) >>> 0;
+      if (isGlint) {
+        // Default an UNSET class to the LOSING moon band (2), never Earth's band
+        // (0). Class 0 is the strongest — the Earth stamp's band — so a glint point
+        // that forgot its `bandClass` would tie Earth at forced-equal depth and
+        // reintroduce the ulp-jitter roulette these class bands exist to eliminate.
+        // The default must LOSE every tie, not win one, so it falls to band 2.
+        u32[base + GLINT_BAND_CLASS_WORD] = (p.bandClass ?? 2) >>> 0;
+      }
     }
 
-    // Grow-only reuse per slot: reallocate only when the batch outgrows this
-    // slot's buffer (the ~25-body seeds never grow post-boot, so this is one
-    // bounded allocation per slot).
-    if (slot.instanceBuffer === null || n > slot.capacity) {
+    // Grow-only, BYTE-aware reuse per slot: reallocate whenever the batch's
+    // required BYTES outgrow this slot's allocation. Sizing the check by bytes (not
+    // instance count) is load-bearing: a slot is claimed by call ORDER, so the same
+    // slot can be inherited by a WIDER-stride variant across passes — e.g. when
+    // starPointsLayer drops out of the pass (famous-stars toggle off, or the roster
+    // resolves to spheres) and bodyGlintsLayer becomes the first point caller,
+    // inheriting slot 0 that was last sized for 16-byte scene-star instances. A
+    // count-only check (`n > capacity`) would keep the 16-byte buffer for 20-byte
+    // glints whenever `n` still fits, and `writeBuffer` would then run PAST the
+    // buffer end — a validation error that silently drops the pick pass. Comparing
+    // bytes makes the stride change trigger a realloc; grow-only otherwise (the
+    // ~25-body seeds never grow post-boot, so this is one bounded allocation).
+    const requiredBytes = n * stride;
+    if (slot.instanceBuffer === null || requiredBytes > slot.byteCapacity) {
       slot.instanceBuffer?.destroy();
-      slot.capacity = n;
+      slot.byteCapacity = requiredBytes;
       slot.instanceBuffer = device.createBuffer({
         label: `body-pick-point-instance-vbo-${pointCursor - 1}`,
-        // Size by THIS call's stride — a slot is claimed by a stable caller (so a
-        // stable variant) across passes, so its stride does not change under it.
-        size: slot.capacity * stride,
+        size: slot.byteCapacity,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
     }

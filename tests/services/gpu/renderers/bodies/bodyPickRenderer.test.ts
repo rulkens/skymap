@@ -156,6 +156,51 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     expect(second.label).toBe('body-pick-point-glint-pipeline');
   });
 
+  it('reuses a slot across a stride change and reallocates to the wider byte size (byte-aware capacity)', () => {
+    // Slots are keyed by CALL ORDER (pointCursor), not by caller: when
+    // starPointsLayer drops out of a pass (famous-stars toggle off / roster all
+    // spheres), bodyGlintsLayer becomes the FIRST point caller and inherits slot 0
+    // — a slot last sized for 16-byte scene-star instances. A count-only reuse
+    // check keeps that 16-byte buffer for the wider 20-byte glints whenever the
+    // count fits (n <= capacity), and writeBuffer then runs past the buffer end (a
+    // WebGPU validation error that silently drops the whole pick pass). A
+    // byte-aware capacity must reallocate on the stride change.
+    const device = mockDevice();
+    const renderer = createBodyPickRenderer(device);
+    const N = 2;
+
+    // Pass 1: the scene-star variant claims slot 0 at 16 bytes/instance (32 total).
+    const passOne = mockPass();
+    renderer.drawPoints(passOne, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      points: [pt(1, 1), pt(2, 2)],
+    });
+
+    // Pass 2 (fresh pass → cursor resets to slot 0): the GLINT variant inherits
+    // slot 0 with the SAME instance count but a WIDER 20-byte stride (40 total).
+    const glintPoints: BodyPointPick[] = [
+      { posRelCamMpc: [1, 0, 0] as Vec3, packedId: 1, bandClass: 1 },
+      { posRelCamMpc: [2, 0, 0] as Vec3, packedId: 2, bandClass: 2 },
+    ];
+    const passTwo = mockPass();
+    renderer.drawPoints(passTwo, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      points: glintPoints,
+      variant: 'glint',
+    });
+
+    const createBuffer = device.createBuffer as unknown as ReturnType<typeof vi.fn>;
+    const instanceAllocs = createBuffer.mock.calls
+      .map(([desc]) => desc as GPUBufferDescriptor)
+      .filter((desc) => desc.label?.startsWith('body-pick-point-instance-vbo'));
+    // Two allocations for the same slot 0: the 16-byte scene-star sizing, then the
+    // wider glint reallocation. Count-only reuse would skip the second (n <= cap).
+    expect(instanceAllocs).toHaveLength(2);
+    expect(instanceAllocs[instanceAllocs.length - 1]!.size).toBeGreaterThanOrEqual(N * 20);
+  });
+
   it('the glint variant packs a 20-byte instance stride carrying each point bandClass', () => {
     // The glint pipeline reads a third `bandClass` u32 (offset 16), so its instance
     // stride is 20 bytes — 4 more than the scene-star 16. This proves the layer
