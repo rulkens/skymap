@@ -43,7 +43,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Ultra-real Earth** `needs-design` — atmosphere scattering, day/night lights, specular oceans on the dedicated `earthRenderer` seam; scope in a brainstorm first.
 - [ ] **Lower-res offscreen star-aggregate pass** `ready` — try `STAR_AGGREGATE_DIVISOR` 2 → 4 (`renderTargets.ts`); ~4× further fill cut if the upsampled glow field survives visually.
 - [ ] **Bright star clump at ~5.9 kpc** `deferred` — flux verified conserved; residual over-exposure is display policy (mid-anchor slider + summed knee shipped; retune or tone-map shoulder next). → [details](backlog/2026-07-17-star-clump-brightness-5-9kpc.md)
 - [ ] **Field-star resolve predicate duplicated** `ready` — `starResolves` (focusedFieldStarSphereLayer) restates partitionStarsByResolution's per-star diameter+resolve rule; extract a shared `starResolvesToSphere` util both call.
