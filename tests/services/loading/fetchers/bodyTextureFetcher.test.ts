@@ -29,7 +29,7 @@ describe('bodyTextureFetcher', () => {
 
   it('requests the tier-sized JPG url', async () => {
     await bodyTextureFetcher(
-      { bodyId: 'mars', tier: 'small' },
+      { bodyId: 'mars', kind: 'surface', tier: 'small' },
       new AbortController().signal,
       () => {},
     );
@@ -39,7 +39,7 @@ describe('bodyTextureFetcher', () => {
 
   it('requests the ring PNG', async () => {
     await bodyTextureFetcher(
-      { bodyId: 'saturn-ring', tier: 'large' },
+      { bodyId: 'saturn-ring', kind: 'surface', tier: 'large' },
       new AbortController().signal,
       () => {},
     );

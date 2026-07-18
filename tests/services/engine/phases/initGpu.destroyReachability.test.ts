@@ -451,8 +451,8 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // The body-texture slot family is minted beside the body renderers: one
     // slot per key, including Earth's (the descent texture now rides this
     // family, not a bespoke path).
-    expect(state.assetSlots.bodyTextures.has('earth')).toBe(true);
-    expect(state.assetSlots.bodyTextures.has('saturn-ring')).toBe(true);
+    expect(state.assetSlots.bodyTextures.has('earth:surface')).toBe(true);
+    expect(state.assetSlots.bodyTextures.has('saturn-ring:surface')).toBe(true);
     // The resolved-star renderer (the Sun sphere) must reach state.gpu.* the
     // same way.
     expect(state.gpu.starRenderer).toBe(stubs.starRenderer);

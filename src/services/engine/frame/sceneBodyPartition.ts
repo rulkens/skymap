@@ -26,6 +26,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
+import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
 
 export function sceneBodyPartition(
@@ -37,10 +38,14 @@ export function sceneBodyPartition(
     camPosMpc: ctx.drawCamPos,
     viewportHeightPx: ctx.canvasSize.height,
     fovYRad: ctx.fovYRad,
-    // Resident iff the body's keyed bodyTextures slot holds a committed bitmap.
-    // The id is a plain string on the body record; the slot Map is keyed by the
-    // BodyTextureId union, and a non-registry body simply misses the Map (→ not
-    // resident → flat), so the cast is safe.
-    isTextureResident: (id) => state.assetSlots.bodyTextures.get(id as BodyTextureId)?.current() != null,
+    // Resident iff the body's SURFACE texture slot holds a committed bitmap. The
+    // id is a plain string on the body record; the slot Map is keyed by the
+    // composite `bodyId:kind`, and a non-registry body simply misses the Map (→
+    // not resident → flat), so the cast is safe. Residency tracks the surface
+    // (day) map — the base drawn body — not the feature kinds.
+    isTextureResident: (id) =>
+      state.assetSlots.bodyTextures
+        .get(bodyTextureSlotKey(id as BodyTextureId, 'surface'))
+        ?.current() != null,
   });
 }

@@ -5,6 +5,15 @@
  * browser loads on close approach: `public/data/images/textures/<bodyId>-<px>.jpg`
  * for the 13 spherical bodies, plus `saturn-ring-<px>.png` for the ring strip.
  *
+ * The output name comes from the shared `bodyTextureFilename` helper — the SAME
+ * helper the runtime fetcher (`bodyTextureFetcher`) calls to build its request
+ * URL — so the emitted file and the requested URL can never drift onto different
+ * names (a mismatch would 404 every body). Only the `surface` (day/albedo) kind
+ * is built here; because `surface` is the helper's unsegmented default, the
+ * emitted names are byte-identical to the historical `<bodyId>-<px>.jpg` /
+ * `saturn-ring-<px>.png`, so re-running this tool needs no R2 re-sync. Non-surface
+ * feature maps land with their own PRs.
+ *
  * ## Three source formats, one sharp path
  *
  * The raws arrive in three shapes, all read by the same sharp/libvips pipeline:
@@ -29,8 +38,8 @@
  *
  * ## Non-upscaled tier downsample (the source-cap intersection)
  *
- * Each body emits `emittedTiersForBody(id)` — its registry policy ceiling
- * (Uranus/Neptune 2k, Venus 4k, else 8k) — INTERSECTED with
+ * Each body emits `emittedTiersForBody(id, 'surface')` — its registry policy
+ * ceiling (Uranus/Neptune 2k, Venus 4k, else 8k) — INTERSECTED with
  * `tiersFittingSourceWidth(sourceWidth)`, the tiers the source on disk can make
  * without upscaling. The intersection is what lets a `--dev` fetch (only the 2 k
  * SSS files + the 5400×2700 Earth sibling on disk) build correctly: a 2 k source
@@ -66,7 +75,9 @@ import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
-import { RAW_DATA, rawDataPath, type RawDataKey } from '../utils/io/rawDataRegistry';
+import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
+import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
+import { TEXTURE_SOURCES } from '../utils/io/textureSources';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
 
@@ -74,60 +85,40 @@ import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
 const JPEG_QUALITY = 80;
 
 /**
- * Per-body raw-source keys, best-first. `native` is the full-res registry row;
- * the optional dev variant is the smaller source a `--dev` fetch leaves on disk
- * — either its own registry row (Earth's 5400×2700 BMNG sibling, `devKey`) or a
- * loose 2 k file in `textures.dir` (the SSS bodies, `devFilename`). Uranus /
- * Neptune have neither: their native SSS map IS the 2 k file, so a dev fetch
- * lands it at the native path. The USGS moons have no dev subset (full pull only).
- *
- * This is the build-side view of the raw sources — bodyId → source file — which
- * `fetchTextures`'s flat download list does not carry (it maps registry key →
- * URL, with no body identity), so the mapping is authored once here.
+ * The `surface` source of one textured body or ring, read from the single
+ * `TEXTURE_SOURCES` table (`tools/utils/io/textureSources.ts`) — the same table
+ * `fetchTextures` derives its download list from, so the built set can never
+ * drift from what was fetched. Derived (not annotated) so each `native` /
+ * `devKey` stays a string LITERAL for `rawDataPath`.
  */
-type BodySourceKeys = {
-  readonly native: RawDataKey;
-  readonly devKey?: RawDataKey;
-  readonly devFilename?: string;
-};
+type SurfaceSource = (typeof TEXTURE_SOURCES)[keyof typeof TEXTURE_SOURCES]['surface'];
 
-const BODY_SOURCE_KEYS = {
-  mercury: { native: 'textures.sssMercury8k', devFilename: '2k_mercury.jpg' },
-  venus: { native: 'textures.sssVenus4k', devFilename: '2k_venus_atmosphere.jpg' },
-  earth: { native: 'textures.nasaBmng', devKey: 'textures.nasaBmngDev' },
-  mars: { native: 'textures.sssMars8k', devFilename: '2k_mars.jpg' },
-  jupiter: { native: 'textures.sssJupiter8k', devFilename: '2k_jupiter.jpg' },
-  saturn: { native: 'textures.sssSaturn8k', devFilename: '2k_saturn.jpg' },
-  uranus: { native: 'textures.sssUranus2k' },
-  neptune: { native: 'textures.sssNeptune2k' },
-  moon: { native: 'textures.sssMoon8k', devFilename: '2k_moon.jpg' },
-  io: { native: 'textures.usgsIo' },
-  europa: { native: 'textures.usgsEuropa' },
-  ganymede: { native: 'textures.usgsGanymede' },
-  callisto: { native: 'textures.usgsCallisto' },
-} as const satisfies Record<BodyTextureId, BodySourceKeys>;
-
-/** The ring strip's raw sources, best-first: full 8 k, then the 2 k dev variant. */
-const RING_SOURCE_FILENAME_DEV = '2k_saturn_ring_alpha.png';
-
-/** Ordered candidate paths for a body's source, best (native) first. */
-function sourcePathsFor(id: BodyTextureId): readonly string[] {
-  const keys: BodySourceKeys = BODY_SOURCE_KEYS[id];
-  const paths = [rawDataPath(keys.native)];
-  if (keys.devKey !== undefined) {
-    paths.push(rawDataPath(keys.devKey));
-  } else if (keys.devFilename !== undefined) {
-    paths.push(join(rawDataPath('textures.dir'), keys.devFilename));
+/**
+ * Ordered candidate paths for a surface source, best (native full-res) first,
+ * then the `--dev` variant if any. `devKey` is its own registry row (Earth's
+ * BMNG sibling); `devFilename` is a loose 2 k file under `textures.dir` (the SSS
+ * bodies and the ring). Uranus/Neptune's `devFilename` resolves to the same
+ * on-disk path as native (their native IS the 2 k file), so the extra candidate
+ * is a harmless duplicate; the USGS moons carry neither.
+ */
+function candidatePaths(entry: SurfaceSource): readonly string[] {
+  const paths = [rawDataPath(entry.native)];
+  if ('devKey' in entry) {
+    paths.push(rawDataPath(entry.devKey));
+  } else if ('devFilename' in entry) {
+    paths.push(join(rawDataPath('textures.dir'), entry.devFilename));
   }
   return paths;
 }
 
+/** Ordered candidate paths for a body's source, best (native) first. */
+function sourcePathsFor(id: BodyTextureId): readonly string[] {
+  return candidatePaths(TEXTURE_SOURCES[id].surface);
+}
+
 /** Ordered candidate paths for the Saturn ring strip, best (full) first. */
 function ringSourcePaths(): readonly string[] {
-  return [
-    rawDataPath('textures.sssRing'),
-    join(rawDataPath('textures.dir'), RING_SOURCE_FILENAME_DEV),
-  ];
+  return candidatePaths(TEXTURE_SOURCES['saturn-ring'].surface);
 }
 
 /** The first candidate path that exists on disk, or `null` if none do. */
@@ -222,7 +213,7 @@ export async function buildTextures(outDir: string): Promise<void> {
     }
     const width = await sourceWidth(srcPath);
     const fitting = tiersFittingSourceWidth(width);
-    const tiers = emittedTiersForBody(id).filter((tier) => fitting.includes(tier));
+    const tiers = emittedTiersForBody(id, 'surface').filter((tier) => fitting.includes(tier));
     const tint = BODY_TEXTURE_REGISTRY[id].grayscaleTint;
     if (tiers.length === 0) {
       process.stderr.write(`  warn ${id}: source ${width}px too small for any tier — skipping\n`);
@@ -230,9 +221,9 @@ export async function buildTextures(outDir: string): Promise<void> {
     }
     for (const tier of tiers) {
       const px = tierToTexturePx(tier);
-      const outPath = join(outDir, `${id}-${px}.jpg`);
-      await writeBodyTier(srcPath, tint, px, outPath);
-      process.stderr.write(`  ok   ${id}-${px}.jpg${tint ? '  (tinted)' : ''}\n`);
+      const filename = bodyTextureFilename(id, 'surface', tier);
+      await writeBodyTier(srcPath, tint, px, join(outDir, filename));
+      process.stderr.write(`  ok   ${filename}${tint ? '  (tinted)' : ''}\n`);
     }
   }
 
@@ -244,9 +235,9 @@ export async function buildTextures(outDir: string): Promise<void> {
     const ringTiers = tiersFittingSourceWidth(width);
     for (const tier of ringTiers) {
       const px = tierToTexturePx(tier);
-      const outPath = join(outDir, `saturn-ring-${px}.png`);
-      await writeRingTier(ringSrc, px, outPath);
-      process.stderr.write(`  ok   saturn-ring-${px}.png\n`);
+      const filename = bodyTextureFilename('saturn-ring', 'surface', tier);
+      await writeRingTier(ringSrc, px, join(outDir, filename));
+      process.stderr.write(`  ok   ${filename}\n`);
     }
   }
 }

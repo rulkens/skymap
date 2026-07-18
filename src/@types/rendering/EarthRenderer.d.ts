@@ -15,26 +15,30 @@
  * ### Texture lifecycle
  *
  * The Blue Marble bitmap is fetched by the proximity-gated `bodyTextures` slot
- * family under key `'earth'` (minted in `initGpu`, `bodyTextureSlotRegistry`),
- * whose commit dispatches to `setTexture`. Until it lands the renderer draws a
- * plain mid-blue sphere sampled
- * from a 1×1 placeholder texture created at construction — the geometry is
- * visible-but-plain rather than absent, which keeps the descent legible even
- * before the asset arrives. `setTexture(bitmap)` replaces the placeholder with
- * the real equirectangular texture (via `copyExternalImageToTexture`) and
- * rebuilds the fragment bind group.
+ * family under key `'earth:surface'` (minted in `initGpu`,
+ * `bodyTextureSlotRegistry`), whose commit dispatches to `setMap('surface', …)`.
+ * Until it lands the renderer draws a plain mid-blue sphere sampled from a 1×1
+ * placeholder texture created at construction — the geometry is visible-but-plain
+ * rather than absent, which keeps the descent legible even before the asset
+ * arrives. `setMap('surface', bitmap)` replaces the placeholder with the real
+ * equirectangular texture (via `copyExternalImageToTexture`) and rebuilds the
+ * fragment bind group.
  */
 
 import type { Renderer } from './Renderer';
+import type { TextureKind } from '../data/TextureKind';
 
 export type EarthRenderer = Renderer & {
   /**
-   * Replace the current texture (initially a 1×1 mid-blue placeholder) with the
-   * supplied equirectangular bitmap. Uploads via `copyExternalImageToTexture`
-   * into a fresh `rgba8unorm-srgb` texture sized to the bitmap, then rebuilds
-   * the fragment bind group so subsequent draws sample the real Earth.
+   * Install a texture map by kind. The `'surface'` kind replaces the current
+   * day-map texture (initially a 1×1 mid-blue placeholder) with the supplied
+   * equirectangular bitmap: uploads via `copyExternalImageToTexture` into a fresh
+   * `rgba8unorm-srgb` texture sized to the bitmap, then rebuilds the fragment
+   * bind group so subsequent draws sample the real Earth. The other kinds
+   * (`night`/`clouds`/`material`/`normal`) land with the photoreal-Earth feature
+   * PRs and are inert until then — one `(bodyId, kind)` family feeds one setter.
    */
-  setTexture(bitmap: ImageBitmap): void;
+  setMap(kind: TextureKind, bitmap: ImageBitmap): void;
   /**
    * Draw the Earth into the current pass. `uniforms` is a length-20 Float32Array
    * (the 80-byte `LitBodyUniforms` record from `packLitBodyUniforms`): 16 f32

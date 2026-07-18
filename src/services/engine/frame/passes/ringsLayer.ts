@@ -62,6 +62,7 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
+import { bodyTextureSlotKey } from '../../../../utils/scene/bodyTextureSlotKey';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { packRingUniforms } from '../../../../utils/gpu/packRingUniforms';
@@ -81,8 +82,12 @@ function drawableRings(
 ): ReadonlyArray<{ ring: RingSpec; body: PlanetBody }> {
   const out: Array<{ ring: RingSpec; body: PlanetBody }> = [];
   for (const ring of SCENE_RINGS) {
-    // Resident iff the ring's keyed bodyTextures slot holds a committed strip.
-    if (state.assetSlots.bodyTextures.get(ring.textureId)?.current() == null) continue;
+    // Resident iff the ring's surface strip slot holds a committed bitmap.
+    if (
+      state.assetSlots.bodyTextures.get(bodyTextureSlotKey(ring.textureId, 'surface'))?.current() ==
+      null
+    )
+      continue;
     const body = state.data.bodies.planets.find((b) => b.id === ring.bodyId);
     if (body === undefined) continue;
     // Sub-pixel cull on the ring's outer diameter: below a pixel the annulus

@@ -23,15 +23,17 @@
  *
  * ### Untextured behaviour (placeholder texture)
  *
- * The Blue Marble bitmap is fetched asynchronously by the engine (the NEXT
- * task), so at construction there is nothing to sample. Rather than branch the
- * fragment shader on a "has-texture" flag, the renderer creates a 1×1
- * mid-blue `rgba8unorm-srgb` texture at construction and binds THAT. The
- * fragment shader always samples a real texture; before the bitmap lands it
- * simply reads back a uniform mid-blue, so the Earth is visible-but-plain
- * (a plain blue ball) rather than black or absent. When `setTexture(bitmap)`
- * runs it creates a fresh texture sized to the bitmap, uploads it, and rebuilds
- * the fragment bind group to point at the new view.
+ * The Blue Marble bitmap is fetched asynchronously by the engine's
+ * `bodyTextures` slot family (key `'earth:surface'`), so at construction there is
+ * nothing to sample. Rather than branch the fragment shader on a "has-texture"
+ * flag, the renderer creates a 1×1 mid-blue `rgba8unorm-srgb` texture at
+ * construction and binds THAT. The fragment shader always samples a real texture;
+ * before the bitmap lands it simply reads back a uniform mid-blue, so the Earth
+ * is visible-but-plain (a plain blue ball) rather than black or absent. When
+ * `setMap('surface', bitmap)` runs it creates a fresh texture sized to the
+ * bitmap, uploads it, and rebuilds the fragment bind group to point at the new
+ * view. The `night`/`clouds`/`material`/`normal` kinds land with the
+ * photoreal-Earth feature PRs; `setMap` ignores them until then.
  *
  * ### uv / texture orientation
  *
@@ -60,7 +62,7 @@
  * ### Bind group layout
  *
  * An explicit `bindGroupLayout` (not `layout: 'auto'`) so the texture swap in
- * `setTexture` can rebuild a bind group against a stable layout object, and to
+ * `setMap` can rebuild a bind group against a stable layout object, and to
  * avoid the auto-layout trap documented in `feedback_webgpu_auto_layout_trap`.
  * Binding 0: `LitBodyUniforms` — visible in BOTH stages now (the vertex reads
  * `u.mvp`, the fragment reads `u.sunDirLocal`). Binding 1: sampler (fragment).
@@ -68,7 +70,7 @@
  *
  * ### Mip generation
  *
- * `setTexture` sizes the Earth texture with a full mip chain
+ * `setMap` sizes the Earth texture with a full mip chain
  * (`mipLevelCount(w,h)` levels + `RENDER_ATTACHMENT` usage) and runs
  * `generateMipChain` after upload, and the sampler sets `mipmapFilter: 'linear'`
  * — so the surface stops shimmering as Earth shrinks toward the sub-pixel glint
@@ -79,6 +81,7 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { EarthRenderer } from '../../../../@types/rendering/EarthRenderer';
+import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';
@@ -150,7 +153,7 @@ export function createEarthRenderer(
   // ── Sampler ───────────────────────────────────────────────────────────────
   //
   // Linear filtering for a smooth surface. `mipmapFilter: 'linear'` trilinearly
-  // blends the mip chain `setTexture` builds, so the surface stops shimmering as
+  // blends the mip chain `setMap` builds, so the surface stops shimmering as
   // Earth shrinks toward the sub-pixel glint handoff. `repeat` on u lets the
   // duplicated seam column blend across the longitude wrap; `clamp-to-edge` on v
   // avoids sampling past the poles.
@@ -166,7 +169,7 @@ export function createEarthRenderer(
   // ── Placeholder texture ───────────────────────────────────────────────────
   //
   // A 1×1 mid-blue texel stands in until the Blue Marble bitmap arrives via
-  // `setTexture`. Binding a real texture at all times means the fragment shader
+  // `setMap`. Binding a real texture at all times means the fragment shader
   // never needs a "has-texture" branch — it always samples, and before the
   // bitmap lands it reads this uniform blue. `rgba8unorm-srgb` matches the
   // real Earth texture so the hardware linearises identically in both cases.
@@ -211,7 +214,7 @@ export function createEarthRenderer(
     ],
   });
 
-  // The bind group references the current `texture` view. `setTexture` rebuilds
+  // The bind group references the current `texture` view. `setMap` rebuilds
   // it against a fresh texture, so it lives in a mutable closure slot.
   function buildBindGroup(): GPUBindGroup {
     return device.createBindGroup({
@@ -278,9 +281,13 @@ export function createEarthRenderer(
     },
   });
 
-  // ── setTexture ─────────────────────────────────────────────────────────────
+  // ── setMap ─────────────────────────────────────────────────────────────────
 
-  function setTexture(bitmap: ImageBitmap): void {
+  function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
+    // Prep 1 wires only the `surface` (day) map; the night/cloud/material/normal
+    // kinds land with the photoreal-Earth feature PRs, which add their cases +
+    // GPU bindings here. A non-surface kind is inert until then.
+    if (kind !== 'surface') return;
     // Retire the previous texture (placeholder or a prior bitmap) and create a
     // fresh one sized to the incoming bitmap.
     texture.destroy();
@@ -335,7 +342,7 @@ export function createEarthRenderer(
 
   const renderer: EarthRenderer = {
     label: 'earthRenderer',
-    setTexture,
+    setMap,
     draw,
     destroy,
   };

@@ -77,17 +77,17 @@ describe('createEarthRenderer', () => {
     expect(() => renderer.destroy()).not.toThrow();
   });
 
-  it('setTexture and draw are callable with the right arity', () => {
+  it('setMap and draw are callable with the right arity', () => {
     const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float');
 
-    expect(typeof renderer.setTexture).toBe('function');
-    expect(renderer.setTexture.length).toBe(1);
+    expect(typeof renderer.setMap).toBe('function');
+    expect(renderer.setMap.length).toBe(2);
     expect(typeof renderer.draw).toBe('function');
     expect(renderer.draw.length).toBe(2);
 
-    // setTexture accepts an ImageBitmap-shaped value without throwing.
+    // setMap('surface', …) accepts an ImageBitmap-shaped value without throwing.
     const bitmap = { width: 4, height: 2 } as unknown as ImageBitmap;
-    expect(() => renderer.setTexture(bitmap)).not.toThrow();
+    expect(() => renderer.setMap('surface', bitmap)).not.toThrow();
 
     // draw writes the 80-byte LitBodyUniforms record (20 f32) and records the
     // indexed draw against a stub pass.
@@ -110,7 +110,7 @@ describe('createEarthRenderer', () => {
     expect(target!.format).toBe('rgba16float');
   });
 
-  it('setTexture sizes the Earth texture with a full mip chain and runs the downsample passes', () => {
+  it('setMap sizes the Earth texture with a full mip chain and runs the downsample passes', () => {
     // The lit Earth now consumes a mip chain (mipmapFilter linear) so the
     // surface stops shimmering as it shrinks toward the sub-pixel glint handoff.
     // Structural proof: setTexture sizes the texture with mipLevelCount(w,h)
@@ -121,7 +121,7 @@ describe('createEarthRenderer', () => {
     const device = mockDevice({ textures, encoderCount });
     const renderer = createEarthRenderer(device, 'rgba16float', 'depth32float');
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
-    renderer.setTexture(bitmap);
+    renderer.setMap('surface', bitmap);
     const earthTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 8);
     expect(earthTex).toBeDefined();
     expect(earthTex!.mipLevelCount).toBe(mipLevelCount(8, 4));
