@@ -130,6 +130,43 @@
  * independent of where the far plane happens to sit this frame. The clamp is
  * inert for depth: both passes are depthless OVER composites on every path
  * (the COSMO director labels included), so no depth comparison is perturbed.
+ *
+ * ### Why the LIFT anchor is clamped inside the far plane (far-star flicker)
+ *
+ * The clip-z clamp above keeps a beyond-far caption VISIBLE; a separate hazard
+ * threatens its POSITION. A far star (VY Canis Majoris at ~1170 pc ≈ 1.2e-3
+ * Mpc) rides this pipeline at Earth zoom, where the far plane has floored at
+ * `FAR_MIN_MPC = 3e-11` Mpc — so the anchor sits tens of MILLIONS of times
+ * beyond it. The lift chain (`liftedLabelPlacement` → `labelLeaderLine`)
+ * un-projects the lifted screen point by INVERTING `rebasedVp`; for an anchor
+ * that far past the far plane `ndc_z` rounds to 1.0 within f64 round-off, and
+ * the inverse's huge depth-row elements amplify the residual, so the
+ * un-projected caption world position AND both leader-line endpoints hop every
+ * frame as the camera — hence the matrix — moves. That is the user-reported
+ * flicker (both `rebaseViewProj` and `labelLeaderLine` document a ~1e-6 Mpc
+ * anchor validity window; far stars are ~1000× past it).
+ *
+ * Pass 2 therefore clamps the anchor handed to the lift with
+ * `clampVec3Length(anchor, farMpc·0.99)`, the SAME move
+ * `near0SelectionRingLayer` makes for its ring quad. In the camera-relative
+ * frame (`rebasedVp` has the eye translation folded out) a uniform length
+ * scale moves camera-space x/y/z together, so the projected NDC x/y — ratios
+ * against w ∝ z — are IDENTICAL and only depth slides inward, into the
+ * well-conditioned interior where the inverse is stable. The on-screen caption
+ * lands in exactly the same place; it just stops trembling. Only the drawn
+ * GEOMETRY reads the clamped frame — everything sized off the anchor's true
+ * length (apparent size, the distance fade band, the declutter screen point)
+ * keeps the raw `anchor`, because those must stay physical.
+ *
+ * The clamp has one obligatory companion: the caption's `worldEmMpc` is scaled
+ * by the SAME ratio before emit. The label shader sizes glyphs from the drawn
+ * anchor's depth (`pxPerEm = worldEmMpc / clip.w`, then the [min,max]px clamp),
+ * so a caption drawn ~4e7× closer with its PHYSICAL em inflates by exactly the
+ * clamp ratio — a sub-pixel supergiant that belongs on the 30px floor pins the
+ * 150px ceiling. Scaling the em restores em/clip.w to the true-depth value, so
+ * the drawn size is bit-for-bit what an in-frustum anchor would produce. The
+ * (worldEmMpc, worldPos) pair must always describe ONE frame — clamp both or
+ * neither.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -143,6 +180,7 @@ import { sceneBodyLabels } from '../../presentation/sceneBodyLabels';
 import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from '../../presentation/captionPriority';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
 import { liftedLabelPlacement } from '../../presentation/liftedLabelPlacement';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -153,6 +191,7 @@ import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { declutterByScreenSeparation } from '../../../../utils/scene/declutterByScreenSeparation';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../solarSystemLabelMaxDistance';
+import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
 
 /**
  * Minimum on-screen gap (px) between two foreground captions before the lower-
@@ -417,21 +456,75 @@ export const foregroundLabelsLayer: ContentLayer = {
     const liftedLabels: Label[] = [];
     const lines: MarkerLine[] = [];
     for (const { label, anchor, subjectSizePx, fadeAlpha } of toEmit) {
+      // Pull the anchor inside the NEAR0 far plane before the lift. A far star
+      // (VY CMa at ~1170 pc ≈ 1.2e-3 Mpc) sits tens of MILLIONS of times beyond
+      // the far plane, which floors at `FAR_MIN_MPC = 3e-11` on a deep Earth
+      // descent (see `foregroundFrustum`). The lift chain (`liftedLabelPlacement`
+      // → `labelLeaderLine`) INVERTS `rebasedVp` to un-project the lifted screen
+      // point back to world; for an anchor that far past the far plane its
+      // `ndc_z` rounds to 1.0 within f64 error, and the inverse's huge depth-row
+      // elements amplify that residual — so the un-projected caption + leader
+      // endpoints shift every frame as the camera (hence the matrix) moves. That
+      // is the reported flicker.
+      //
+      // The clamp is direction-preserving in the CAMERA-RELATIVE frame
+      // (`rebasedVp` has no translation — the eye is at the origin), so clip
+      // x/y/w scale together and the projected screen position is IDENTICAL;
+      // only depth moves inward, into the well-conditioned interior where the
+      // inverse is stable. The overlay shaders already clamp clip-z
+      // (`CLIP_Z_EPS`), so the drawn depth is unaffected either way. This mirrors
+      // `near0SelectionRingLayer`'s ring-clip clamp exactly — the layer owns the
+      // slab and is the one feeding out-of-domain input, so it clamps at the
+      // call site rather than inside the pure lift util. Everything sized off the
+      // anchor's TRUE length (subjectSizePx, fade, the declutter screen point)
+      // still reads the un-clamped `anchor`; ONLY the drawn geometry — the
+      // lift/leader inputs and the em that projects at the drawn depth — switches.
+      const liftAnchor = clampVec3Length(anchor, view.slab.farMpc * NEAR0_FAR_CLAMP_FRACTION);
+
+      // Scale the caption's world em by the SAME ratio the clamp applied. The
+      // label shader sizes glyphs from the DRAWN anchor's depth — pxPerEm =
+      // worldEmMpc / clip.w · viewportH/2, clamped to [min,max]px
+      // (labels/vertex.wesl) — and the clamp just moved that anchor up to
+      // ~4e7× closer (VY CMa at ~1.2e-3 Mpc drawn at the ~3e-11 far plane).
+      // Keeping the star's PHYSICAL em at the clamped depth inflates the
+      // projected size by exactly the clamp ratio: a sub-pixel supergiant that
+      // should sit on the min-px floor slams into the max-px ceiling instead.
+      // Because the clamp scales camera-space x/y/z — hence clip.w — uniformly,
+      // multiplying the em by the same factor makes em/clip.w, and therefore
+      // the on-screen size, IDENTICAL to the true-depth projection. The scaled
+      // em also feeds `liftedLabelPlacement`, whose ink-clearance math mirrors
+      // the shader's sizing and must agree with what actually draws.
+      //
+      // The ratio is READ OFF the clamp's own output — `|liftAnchor| / |anchor|`
+      // — not re-derived from a second `farMpc · NEAR0_FAR_CLAMP_FRACTION`
+      // spelling. Reading the clamp result means the em multiplier can never
+      // drift from what the clamp actually did (the two are ONE length ratio).
+      // `clampVec3Length` returns the input reference when in range, so the
+      // identity check makes the common near-body case an exact no-op (the ratio
+      // is exactly 1 there, so the branch is also a numerical guard against a
+      // spurious non-unit ratio from f64 round-off on the hypot).
+      const anchorScale =
+        liftAnchor === anchor
+          ? 1
+          : Math.hypot(liftAnchor[0], liftAnchor[1], liftAnchor[2]) /
+            Math.hypot(anchor[0], anchor[1], anchor[2]);
+      const liftEmMpc = label.worldEmMpc * anchorScale;
+
       // The single lifted-label chain (see `liftedLabelPlacement`) — identical
       // to the famous + Milky-Way producers: screen-space proportional lift
       // with the MIN_LABEL_CLEARANCE_PX ink-bottom guarantee (load-bearing for
       // the top-aligned sun/moon captions, whose glyph block hangs below the
       // anchor), connector top derived from the measured text bottom minus the
-      // shared padding. Projecting through the already-rebased anchor + `rebasedVp`
+      // shared padding. Projecting through the clamped anchor + `rebasedVp`
       // means both endpoints come back in the SAME camera-relative frame, so
       // they pair with `rebasedVp` at draw with no second rebase.
       const placement = liftedLabelPlacement({
-        anchorWorldPos: anchor,
+        anchorWorldPos: liftAnchor,
         vp: rebasedVp,
         viewportPx,
         subjectSizePx,
         textBbox: renderer.measure(label),
-        worldEmMpc: label.worldEmMpc,
+        worldEmMpc: liftEmMpc,
         minPixelSize: label.minPixelSize,
         maxPixelSize: label.maxPixelSize,
         // End the connector a constant gap ABOVE the body instead of at its
@@ -452,7 +545,17 @@ export const foregroundLabelsLayer: ContentLayer = {
         continue;
       }
 
-      liftedLabels.push({ ...label, worldPos: placement.labelWorldPos, fadeAlpha });
+      // The emitted caption carries the SCALED em to pair with its clamped-depth
+      // worldPos — the invariant is that (worldEmMpc, worldPos) always describe
+      // the same frame, so the shader's em/clip.w reproduces the true apparent
+      // size. The null-placement fallback below keeps the raw pair (unclamped
+      // anchor + physical em) for the same reason.
+      liftedLabels.push({
+        ...label,
+        worldPos: placement.labelWorldPos,
+        worldEmMpc: liftEmMpc,
+        fadeAlpha,
+      });
       if (placement.line !== null) {
         lines.push({
           id: `${label.id}-anchor`,

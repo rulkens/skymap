@@ -11,19 +11,30 @@
 //      shows through unchanged (0 is the "no hit" sentinel — see
 //      'PICK_SENTINEL_OFFSET' in 'pickFragment.wesl').
 //   3. Otherwise, decode 'packed - 1' as '(sourceCode << 27) | localIdx'
-//      and emit a per-source debug colour with a hashed per-instance
-//      intensity modulation so adjacent picks of the same source
-//      visually separate.
+//      and emit a per-source hue with a hashed per-instance brightness
+//      so adjacent picks of the same source visually separate.
 //
-// ## Why a per-source palette + hashed intensity
+// ## Why colour BY SOURCE CODE, and why the golden angle
 //
-// The whole point of the overlay is to answer "what would a click
-// here hit?".  Distinct colours per galaxy catalog make it obvious whether
-// the cursor is over an SDSS billboard, a 2MRS billboard, or a structure
-// ring.  The localIdx-hash brightness modulation keeps two adjacent
-// galaxies of the same galaxy catalog from blurring into a single coloured
-// patch — they read as discrete instances with slightly different
-// brightnesses.
+// The whole point of the overlay is to answer 'what would a click here
+// hit, and WHICH source claimed this pixel?'. So every pixel takes its
+// hue straight from the packed source code — an SDSS billboard, a 2MRS
+// billboard, a cluster ring, a Gaia star and a famous star each read as
+// their own stable colour.
+//
+// The hue comes from golden-angle spacing rather than a hand-maintained
+// colour table: 'hue = fract(sourceCode * 0.618034)'. 0.618034 is the
+// golden-ratio conjugate (1/phi); stepping the hue circle by it gives
+// the maximally-spread, low-discrepancy sequence — adjacent source codes
+// land far apart on the wheel, and ANY source (present or future) gets a
+// well-separated hue with zero colours to maintain. A literal palette
+// would need a new branch every time a pickable source is added; this is
+// self-maintaining, matching the house 'derive, don't enumerate' style.
+//
+// The localIdx hash modulates BRIGHTNESS (HSV value), not hue, so two
+// adjacent instances of the same source read as discrete points of the
+// same colour rather than blurring into one solid patch — while the hue
+// stays fully readable as 'which source'.
 //
 // ## Why pre-multiplied alpha
 //
@@ -36,8 +47,22 @@ import package::pickDebugOverlay::io::VSOut;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::selectionEncoding::SELECTION_SOURCE_SHIFT;
 import package::lib::selectionEncoding::SELECTION_LOCAL_IDX_MASK;
+import package::lib::selectionEncoding::SOURCE_GAIA_STARS;
 
 @group(0) @binding(0) var pickTex: texture_2d<u32>;
+
+// Fully-saturated hue -> rgb for hue in [0, 1). Reconstructs the three
+// RGB ramps of an HSV wheel at S=1, V=1 directly from the hue: each
+// channel is a clamped triangle peaking 1/3 of the wheel apart. The
+// caller scales the result by the desired value (brightness). Cheaper
+// and branch-free versus a full hsv2rgb with sector selection, and we
+// only ever need the S=1 slice.
+fn hueToRgb(h: f32) -> vec3<f32> {
+  let r = abs(h * 6.0 - 3.0) - 1.0;
+  let g = 2.0 - abs(h * 6.0 - 2.0);
+  let b = 2.0 - abs(h * 6.0 - 4.0);
+  return clamp(vec3<f32>(r, g, b), vec3<f32>(0.0), vec3<f32>(1.0));
+}
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
@@ -56,36 +81,48 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let srcCode = raw >> SELECTION_SOURCE_SHIFT;
   let localIdx = raw & SELECTION_LOCAL_IDX_MASK;
 
-  // Per-source debug palette.  Indexed by 'Source.*' enum value.
-  // Codes ≥ 9 (Filaments, Cf4Density, Mcpm) never appear in the pick
-  // texture — picking is galaxy/structure only — so the palette stops at
-  // Milliquas (8).  An out-of-range code falls back to neutral grey
-  // so a future enum widening surfaces visually rather than
-  // silently rendering black.
-  var col = vec3<f32>(0.7, 0.7, 0.7);
-  if (srcCode == 0u) { col = vec3<f32>(0.50, 0.50, 0.50); } // Synthetic
-  else if (srcCode == 1u) { col = vec3<f32>(1.00, 0.25, 0.25); } // SDSS — red
-  else if (srcCode == 2u) { col = vec3<f32>(0.25, 1.00, 0.25); } // 2MRS — green
-  else if (srcCode == 3u) { col = vec3<f32>(0.30, 0.45, 1.00); } // GLADE — blue
-  else if (srcCode == 4u) { col = vec3<f32>(1.00, 0.95, 0.25); } // Famous — yellow
-  else if (srcCode == 5u) { col = vec3<f32>(0.25, 1.00, 1.00); } // Cluster — cyan
-  else if (srcCode == 6u) { col = vec3<f32>(1.00, 0.25, 1.00); } // Supercluster — magenta
-  else if (srcCode == 7u) { col = vec3<f32>(1.00, 1.00, 1.00); } // Void — white
-  else if (srcCode == 8u) { col = vec3<f32>(1.00, 0.55, 0.10); } // Milliquas — orange
-
-  // Hashed per-instance brightness so two adjacent picks of the same
-  // galaxy catalog don't blur into one solid patch.  Multiplier is Knuth's
-  // 2654435761 (golden-ratio prime), then shift to drop the noisy
-  // low bits.  Maps to [0.6, 1.0] so even the dimmest instance still
-  // reads as distinctly coloured against the background scene.
-  let hash = f32((localIdx * 2654435761u) >> 24u) / 255.0;
-  let intensity = 0.6 + 0.4 * hash;
-
   // OVER blend with pre-multiplied alpha.  Alpha = 0.65 is a
   // visibility/transparency compromise — opaque enough to read the
   // colour clearly, transparent enough that the scene structure
-  // underneath stays legible for "did I click the right galaxy?"
+  // underneath stays legible for 'did I click the right galaxy?'
   // judgments.
   let alpha = 0.65;
-  return vec4<f32>(col * intensity * alpha, alpha);
+
+  // Reserved all-ones sentinel band (source code 31 — see
+  // 'selectionEncoding'). It never denotes a real hit, so it must stay
+  // visually disjoint from every golden-angle hue: paint it near-black
+  // so a stray sentinel texel reads as 'nothing here', not as a source.
+  if (srcCode == 31u) {
+    return vec4<f32>(vec3<f32>(0.02) * alpha, alpha);
+  }
+
+  // Hue straight from the source code via golden-angle spacing — no
+  // colour table to maintain, distant hues for adjacent codes.
+  let hue = fract(f32(srcCode) * 0.618034);
+  let rgb = hueToRgb(hue);
+
+  // Hashed per-instance brightness so two adjacent picks of the same
+  // source don't blur into one solid patch.  Multiplier is Knuth's
+  // 2654435761 (golden-ratio prime), then shift to drop the noisy
+  // low bits.  Maps to [0.55, 1.0] so even the dimmest instance still
+  // reads as distinctly coloured against the background scene while the
+  // hue stays legible.
+  let hash = f32((localIdx * 2654435761u) >> 24u) / 255.0;
+  var value = 0.55 + 0.45 * hash;
+
+  // GaiaStars (imported SOURCE_GAIA_STARS — the single WESL home for the code,
+  // mirror of TS Source.GaiaStars, parity-tested) is a survey-wide point cloud:
+  // thousands of star footprints blanket the overlay, and at the golden-angle
+  // value band above they drown out the sparse sources (bodies, famous stars)
+  // that this debug view exists to make readable. Dim just this one dense source
+  // to ~[0.14, 0.25], keeping its hue and the per-instance hash variation so
+  // individual stars still separate up close. A general per-source brightness
+  // table would be over-engineering for a single outlier — one dense source
+  // doesn't warrant enumerating brightness for the self-maintaining golden-angle
+  // set.
+  if (srcCode == SOURCE_GAIA_STARS) {
+    value = value * 0.25;
+  }
+
+  return vec4<f32>(rgb * value * alpha, alpha);
 }

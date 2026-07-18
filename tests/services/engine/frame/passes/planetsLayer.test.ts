@@ -21,6 +21,7 @@ import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
+import { minPickRadiusMpc } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -28,6 +29,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
 // object identity and (b) hand each planet a recognisable Float32Array.
@@ -312,5 +314,114 @@ describe('planetsLayer.draw', () => {
     const view = makeNear0View();
     const state = { gpu: { planetRenderer: null } } as unknown as EngineState;
     expect(() => planetsLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
+  });
+});
+
+describe('planetsLayer.pickEnabled (Bug A — textured-only frame stays pickable)', () => {
+  // A resolved body whose texture IS resident routes to the partition's `textured`
+  // branch, NOT `flat` — so `enabled` (flat-only) is false, but the layer is the
+  // SOLE pick site for flat ∪ textured (texturedBodiesLayer carries no pick
+  // aspect). Camera 1e-14 Mpc off a 6371 km body → tens of px → resolved; a
+  // resident bodyTextures slot → textured. This is the lone-textured-Saturn case:
+  // before untextured moons resolve into `flat`, the whole planet source would be
+  // unpickable if the pick pass filtered on `enabled`.
+  const texturedBody: PlanetBody = {
+    id: 'mars', // a real registry id → bodyTextureSpec('mars') !== null
+    label: 'Mars',
+    positionMpc: [0, 0, 0],
+    radiusKm: 6371,
+    albedo: [0.6, 0.32, 0.23],
+    orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as PlanetBody['orientation'],
+  };
+  const texturedCtx = {
+    cam: { distance: 1e-14 },
+    drawCamPos: [1e-14, 0, 0],
+    canvasSize: { width: 1280, height: 720 },
+    fovYRad: Math.PI / 3,
+    drawPxPerRad: 720 / (2 * Math.tan(Math.PI / 6)),
+  } as unknown as ReadyFrameContext;
+  function texturedState(): EngineState {
+    return {
+      gpu: { planetRenderer: makeRendererSpy(), bodyPickRenderer: { drawSphere: vi.fn() } },
+      data: { bodies: { planets: [texturedBody] } },
+      // Resident texture slot for the body → partition routes it to `textured`.
+      assetSlots: { bodyTextures: new Map([['mars', { current: () => ({}) }]]) },
+    } as unknown as EngineState;
+  }
+
+  it('is true while enabled is false — the flat branch is empty but textured is not', () => {
+    const state = texturedState();
+    // enabled mirrors the VISUAL draw's flat-only branch → false (nothing flat).
+    expect(planetsLayer.enabled(state, texturedCtx)).toBe(false);
+    // pickEnabled admits the row because the textured branch is non-empty.
+    expect(planetsLayer.pickEnabled!(state, texturedCtx)).toBe(true);
+  });
+
+  it('is false beyond the foreground gate even with a textured body', () => {
+    const state = texturedState();
+    const farCtx = { ...texturedCtx, cam: { distance: FOREGROUND_MAX_DISTANCE_MPC } } as ReadyFrameContext;
+    expect(planetsLayer.pickEnabled!(state, farCtx)).toBe(false);
+  });
+
+  it('drawPick stamps the textured body as a sphere (the sole pick site for flat ∪ textured)', () => {
+    const state = texturedState();
+    const view: SlabView = { ...makeNear0View(), camPos: [1e-14, 0, 0] };
+    planetsLayer.drawPick!(PASS_STUB, view, texturedCtx, state);
+    const drawSphere = (state.gpu.bodyPickRenderer as unknown as { drawSphere: ReturnType<typeof vi.fn> })
+      .drawSphere;
+    expect(drawSphere).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('planetsLayer.drawPick', () => {
+  it('floors the pick-pass sphere radius to the shared min footprint for a small resolved body', () => {
+    // A resolved-but-small planet (just past the 3 px glint threshold, so it lands
+    // in `flat`) can be only a handful of pixels across — too small to click. The
+    // pick-pass sphere radius must inflate to the shared 9 px-radius floor
+    // (`minPickRadiusMpc`), NOT stay the true physical radius, while the VISUAL
+    // draw keeps the true radius. Since composeBodyMvp is mocked, we read the
+    // radius arg (index 3) the layer handed it and pin it to the inflated value.
+    composeMock.mockClear();
+    const KM = SCALE_UNITS.KM_TO_MPC;
+    const radiusMpc = 6371 * KM;
+    const pxPerRad = 720 / (2 * Math.tan(Math.PI / 6));
+    // Distance chosen (small-angle) so the body subtends ~8 px — above the 3 px
+    // glint threshold (→ `flat`), under the 18 px pick floor (→ inflated).
+    const dist = (2 * radiusMpc * pxPerRad) / 8;
+
+    // A real SCENE_PLANETS id ('mercury' → seed 0) so seedIndexOfBody resolves;
+    // custom radius/position put it in the small-resolved regime.
+    const body: PlanetBody = {
+      id: 'mercury',
+      label: 'Mercury',
+      positionMpc: [0, 0, 0],
+      radiusKm: 6371,
+      albedo: [0.3, 0.3, 0.3],
+      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as PlanetBody['orientation'],
+    };
+    const camPos: Vec3 = [dist, 0, 0];
+    const view: SlabView = { ...makeNear0View(), camPos };
+    const ctx = {
+      cam: { distance: dist },
+      drawCamPos: camPos,
+      canvasSize: { width: 1280, height: 720 },
+      fovYRad: Math.PI / 3,
+      drawPxPerRad: pxPerRad,
+    } as unknown as ReadyFrameContext;
+    const state = {
+      gpu: { bodyPickRenderer: { drawSphere: vi.fn() } },
+      data: { bodies: { planets: [body] } },
+      assetSlots: { bodyTextures: new Map() },
+    } as unknown as EngineState;
+
+    planetsLayer.drawPick!(PASS_STUB, view, ctx, state);
+
+    // The body resolved to `flat` and was composed exactly once.
+    expect(composeMock).toHaveBeenCalledTimes(1);
+    const radiusArg = composeMock.mock.calls[0]![3] as number;
+    const expected = minPickRadiusMpc(radiusMpc, dist, pxPerRad);
+    expect(radiusArg).toBeCloseTo(expected, 30);
+    // The floor is genuinely active here — the pick radius exceeds the true radius.
+    expect(radiusArg).toBeGreaterThan(radiusMpc);
   });
 });

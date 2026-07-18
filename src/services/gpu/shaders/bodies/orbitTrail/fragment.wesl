@@ -112,17 +112,35 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let r = length(vec2<f32>(s, t));
 
   // Pixel gradients of s = q.x/q.z and t = q.y/q.z via the quotient rule.
-  // dq/dpx is Ginv's column 0, dq/dpy is its column 1 (q = Ginv * (px, py, 1)),
-  // and q.z > 0 here (the behind-camera arc was already discarded).
+  // Written the obvious way, each numerator is a difference of two products
+  // (e.g. ginv[0].x * q.z - q.x * ginv[0].z). Expand q = ginv * (px, py, 1) and
+  // the top-degree px (resp. py) terms cancel IDENTICALLY, leaving a numerator
+  // that is AFFINE in the pixel with a 2x2-minor coefficient. At the near-edge-
+  // on Earth-zoom pose the plane-to-pixel homography is ILL-CONDITIONED (its
+  // condition number reaches ~1e15), so the two products are nearly equal and
+  // that f32 difference cancels catastrophically -- the tiny true result keeps
+  // almost none of f32's significant digits. The loss is set by the condition
+  // number, NOT the entry magnitudes: rescaling ginv to O(1) (which
+  // composeOrbitConic does) does not help, so the garbage residual, amplified by
+  // invZ2, is what speckled Earth's orbit fill. So composeOrbitConic hoists the
+  // exactly-cancelling numerators to CPU
+  // f64 as the minors minorS = (M1, M2, M3) and minorT = (M4, M5, M6), and the
+  // fragment just evaluates the affine forms (a multiply-add, no cancellation):
+  //   d s/d px numerator = M1*py + M2,   d s/d py numerator = -M1*px + M3
+  //   d t/d px numerator = M4*py + M5,   d t/d py numerator = -M4*px + M6
+  // The pixel is in.clip.xy (the same @builtin(position) that formed q above);
+  // q.z > 0 here (the behind-camera arc was already discarded).
+  let px = in.clip.x;
+  let py = in.clip.y;
   let invZ2 = 1.0 / (q.z * q.z);
   let dsdp = vec2<f32>(
-    (ginv[0].x * q.z - q.x * ginv[0].z) * invZ2,
-    (ginv[1].x * q.z - q.x * ginv[1].z) * invZ2,
-  );
+    in.minorS.x * py + in.minorS.y,
+    -in.minorS.x * px + in.minorS.z,
+  ) * invZ2;
   let dtdp = vec2<f32>(
-    (ginv[0].y * q.z - q.y * ginv[0].z) * invZ2,
-    (ginv[1].y * q.z - q.y * ginv[1].z) * invZ2,
-  );
+    in.minorT.x * py + in.minorT.y,
+    -in.minorT.x * px + in.minorT.z,
+  ) * invZ2;
   // grad_pixel r = (s * grad s + t * grad t) / r; the pixel distance to the
   // orbit is abs(r - 1) / |grad_pixel r|. Guard the conic centre (r -> 0) and
   // the zero-gradient point with tiny epsilons so the stroke never divides by

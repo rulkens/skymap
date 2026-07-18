@@ -118,7 +118,7 @@ beforeEach(() => {
     pickProgram: {
       label: 'pickProgram',
       pick: picker.pick,
-      renderForDebug: vi.fn<() => null>(() => null),
+      renderForDebug: vi.fn<() => readonly GPUTexture[]>(() => []),
       destroy: vi.fn<() => void>(),
     },
     store: { dispatch: dispatchSpy },

@@ -92,6 +92,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type {
   StarCatalogRenderer,
   StarCatalogDrawArgs,
+  StarCatalogPickResources,
   StarDrawStream,
 } from '../../../../@types/rendering/StarCatalogRenderer';
 import type { SourceType } from '../../../../@types/data/SourceType';
@@ -100,58 +101,24 @@ import { RECORD_BYTES } from '../../../../data/starCatalog/starCatalogFormat';
 import vsCode from '../../shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../shaders/starCatalog/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
+import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
-
-/**
- * Bytes of one `NodeParams` element in the `array<NodeParams>` storage buffer:
- * originRelCamMpc vec3 (0..11) + cellScaleMpc f32 (12..15) + firstRecord u32
- * (16..19) + opacity f32 (20..23) + isAggregate u32 (24..27) + subtreeStarCount
- * f32 (28..31), rounded up to the vec3's 16-byte alignment = 32. Under WGSL
- * std430 (storage) the array stride is that 16-byte-aligned struct size — the
- * same 32 the std140 window was — so the CPU packs draws back-to-back at this
- * stride with no gaps. `isAggregate` and `subtreeStarCount` ride the pad the
- * vec3 alignment already reserved, so adding them did NOT change this size.
- */
-const NODE_PARAMS_BYTES = 32;
-
-/** Bytes of one `prefix` element (a `u32` exclusive instance-start index). */
-const PREFIX_BYTES = 4;
-
-/** Round `value` up to the next multiple of `align` (a power of two). */
-function alignUp(value: number, align: number): number {
-  return Math.ceil(value / align) * align;
-}
-
-/**
- * Byte size of the star `StarUniforms` @group(0) buffer: the shared
- * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32 + `glowOverlap` f32,
- * rounded up to the prefix's 16-byte alignment = 96 (mirrors `struct
- * StarUniforms` in shaders/starCatalog/io.wesl). The three appended scalars fit
- * inside the same 16-byte rounding tail as `sizePx` alone did (80 + 12 → 96), so
- * the buffer size is unchanged; derived from `CAMERA_UNIFORM_BYTES` so the
- * prefix size stays single-sourced, the way the galaxy points `Uniforms` struct
- * appends its own scalars.
- */
-const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 12, 16);
-
-/**
- * Float index of `sizePx` in the `StarUniforms` scratch: byte 80 (right after
- * the camera prefix) / 4.
- */
-const SIZE_PX_FLOAT_INDEX = CAMERA_UNIFORM_BYTES / 4;
-
-/**
- * Float index of `brightness` in the `StarUniforms` scratch: byte 84 (right
- * after `sizePx`) / 4.
- */
-const BRIGHTNESS_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 4) / 4;
-
-/**
- * Float index of `glowOverlap` in the `StarUniforms` scratch: byte 88 (right
- * after `brightness`) / 4. Float 23 stays zero-init pad.
- */
-const GLOW_OVERLAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 8) / 4;
+// The NodeParams / StarUniforms byte layout lives in ONE home both star
+// renderers import — see starCatalogLayout.ts (the WESL structs in
+// shaders/starCatalog/io.wesl are the source of truth). This renderer never
+// writes `pickPass` (u32 index 23): its per-source camera write stops at
+// `glowOverlap`, and the scratch is zero-init, so the vertex stage reads
+// pickPass == 0 and takes the visual path; only `starCatalogPickRenderer` writes
+// it = 1.
+import {
+  NODE_PARAMS_BYTES,
+  PREFIX_BYTES,
+  STAR_UNIFORM_BYTES,
+  SIZE_PX_FLOAT_INDEX,
+  BRIGHTNESS_FLOAT_INDEX,
+  GLOW_OVERLAP_FLOAT_INDEX,
+  writeStarNodeParams,
+} from './starCatalogLayout';
 
 /**
  * One draw stream's per-source storage buffers: the contiguous NodeParams block
@@ -383,7 +350,11 @@ export function createStarCatalogRenderer(
    * rebuilt each frame with the exact bound size so `arrayLength(&prefix)` reads
    * the live draw count.
    */
-  function ensureDrawBuffers(buffers: StreamBuffers, stream: StarDrawStream, drawCount: number): void {
+  function ensureDrawBuffers(
+    buffers: StreamBuffers,
+    stream: StarDrawStream,
+    drawCount: number,
+  ): void {
     if (buffers.nodeParamsBuffer !== null && buffers.drawCapacity >= drawCount) return;
     buffers.nodeParamsBuffer?.destroy();
     buffers.prefixBuffer?.destroy();
@@ -441,18 +412,17 @@ export function createStarCatalogRenderer(
     ensureScratch(drawCount);
     let totalInstances = 0;
     for (let i = 0; i < drawCount; i++) {
-      const base = i * NODE_PARAMS_BYTES;
-      const o = originRelCamMpc[i]!;
-      nodeScratchView.setFloat32(base + 0, o[0], true);
-      nodeScratchView.setFloat32(base + 4, o[1], true);
-      nodeScratchView.setFloat32(base + 8, o[2], true);
-      nodeScratchView.setFloat32(base + 12, cellScaleMpc[i]!, true);
-      nodeScratchView.setUint32(base + 16, nodeDraws[i]!.firstRecord >>> 0, true);
       // Per-node opacity = source crossfade × this node's LOD fade (see the
-      // draw-args docblock). Parallel to `nodeDraws`, so index `i` here.
-      nodeScratchView.setFloat32(base + 20, opacity[i]!, true);
-      nodeScratchView.setUint32(base + 24, isAggregate[i]! >>> 0, true);
-      nodeScratchView.setFloat32(base + 28, subtreeStarCount[i]!, true);
+      // draw-args docblock). All per-node arrays are parallel to `nodeDraws`, so
+      // index `i` throughout. `writeStarNodeParams` owns the byte offsets.
+      writeStarNodeParams(nodeScratchView, i * NODE_PARAMS_BYTES, {
+        originRelCamMpc: originRelCamMpc[i]!,
+        cellScaleMpc: cellScaleMpc[i]!,
+        firstRecord: nodeDraws[i]!.firstRecord,
+        opacity: opacity[i]!,
+        isAggregate: isAggregate[i]!,
+        subtreeStarCount: subtreeStarCount[i]!,
+      });
       // Exclusive prefix: this draw's first global instance index is the sum of
       // all earlier draws' record counts. Strictly increasing (every draw has
       // ≥ 1 record), so the shader's binary search resolves a unique slot.
@@ -461,7 +431,13 @@ export function createStarCatalogRenderer(
     }
 
     ensureDrawBuffers(buffers, stream, drawCount);
-    device.queue.writeBuffer(buffers.nodeParamsBuffer!, 0, nodeScratch, 0, drawCount * NODE_PARAMS_BYTES);
+    device.queue.writeBuffer(
+      buffers.nodeParamsBuffer!,
+      0,
+      nodeScratch,
+      0,
+      drawCount * NODE_PARAMS_BYTES,
+    );
     device.queue.writeBuffer(buffers.prefixBuffer!, 0, prefixScratch, 0, drawCount);
 
     // Bind group rebuilt per frame with the EXACT bound size (grow-only buffers
@@ -487,6 +463,26 @@ export function createStarCatalogRenderer(
     pass.draw(3, totalInstances);
   }
 
+  /**
+   * The resources the sibling `starCatalogPickRenderer` shares to keep its own
+   * r32uint pick pipeline bind-group compatible: the three explicit BGLs (so its
+   * pick pipeline layout is group-equivalent) plus the per-source records bind
+   * group (uploaded once here, bound verbatim by the pick draw — the pick pass
+   * re-uses the static record blob rather than re-uploading). The pick renderer
+   * builds its OWN camera + node-params buffers against `cameraBgl` / `drawBgl`,
+   * so the writeBuffer/submit ordering trap can never let a pick draw scribble on
+   * this renderer's live buffers. `recordsBindGroup` reads the live `sources`
+   * map, so a tier swap that unloads a source correctly returns `null`.
+   */
+  function pickResources(): StarCatalogPickResources {
+    return {
+      cameraBgl,
+      drawBgl,
+      recordsBgl,
+      recordsBindGroup: (source) => sources.get(source)?.recordsBindGroup ?? null,
+    };
+  }
+
   function destroy(): void {
     for (const entry of sources.values()) {
       entry.recordsBuffer.destroy();
@@ -501,6 +497,7 @@ export function createStarCatalogRenderer(
     upload,
     loadedCatalogs,
     draw,
+    pickResources,
     destroy,
   };
   renderer satisfies Renderer;

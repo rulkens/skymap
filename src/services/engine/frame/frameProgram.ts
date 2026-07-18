@@ -48,14 +48,6 @@ import { COSMO, NEAR0, SLAB_NAME } from './slabs';
 import { CONTENT_LAYERS } from './passes';
 
 /**
- * Badge shown for a slot that doesn't project through a single slab — the
- * whole-texture composites and the parallel pick program (which spans both
- * slabs). A render slot always resolves to a real `SLAB_NAME`; only these
- * slab-less slots carry the marker.
- */
-export const NO_SLAB_BADGE = '—';
-
-/**
  * Build this frame's step program. `tone` is threaded into BOTH composites —
  * the same object reference — so the tone-map curve is identical where the
  * foreground bodies meet the tonemapped cosmological scene. The cosmological
@@ -122,17 +114,52 @@ export function timedSlotsOf(
 
 /**
  * One derived timing slot: its `name` (what the timing service allocates a
- * query pair for and the DebugPanel rows on) plus the `slab` badge it renders
- * through. `slab` is a real `SLAB_NAME` for a render slot and the
- * `NO_SLAB_BADGE` marker for the slab-less composite/pick slots.
+ * query pair for and the DebugPanel rows on) plus the `groupKey` of the step
+ * that produced it — `'<target>·<SLAB>'` for a render slot (e.g. `'hdr·COSMO'`,
+ * `'foreground:0·NEAR0'`), the literal `'composite'` for a whole-texture
+ * merge, and `'pick'` for the parallel pick program. The groupKey is what the
+ * two DebugPanel lists bucket on, so a new layer lands in the right visual
+ * group automatically via its `(target, slab)`.
  */
-type TimedSlotRow = { readonly name: string; readonly slab: string };
+export type TimedSlotRow = { readonly name: string; readonly groupKey: string };
 
 /**
- * The single walk both projections share: the ordered slot list
- * (`timedSlotsOf`) and the slot→slab badge map (`TIMED_SLOT_SLABS`) are each a
- * projection of this one derivation, so the badge for a slot can't drift from
- * the slot's position in the row order — a new layer joins both at once.
+ * A run of timed slots the two DebugPanel lists render under one header: a
+ * human `title` (from `PASS_GROUP_TITLES`, or the raw groupKey as fallback)
+ * and the slots that map to it, in draw order.
+ */
+export type TimedSlotGroup = { readonly title: string; readonly rows: readonly TimedSlotRow[] };
+
+/**
+ * groupKey → human group title, in the order the DebugPanel renders the
+ * groups. Several producing steps deliberately share one title — the
+ * cosmological scalar-volume raymarch and the near-field star aggregates are
+ * both "volumes & aggregates"; the two whole-texture composites and the pick
+ * pass are all infra "composites & pick"; the COSMO and NEAR0 swap overlays
+ * are both "overlays" — so grouping-by-title merges those (non-adjacent in
+ * execution order) into one scannable seam. A groupKey with no entry here
+ * degrades to its raw key as the title (self-maintaining: a genuinely new
+ * target/slab step still gets its own group rather than vanishing). The value
+ * order fixes the group display order — see `groupRows`.
+ */
+export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
+  'volume·COSMO': 'Volumes & aggregates',
+  'star-aggregates·NEAR0': 'Volumes & aggregates',
+  'hdr·COSMO': 'Cosmos · HDR',
+  'hdr·NEAR0': 'Near field · HDR',
+  'foreground:0·NEAR0': 'Foreground bodies · depth',
+  'swap·COSMO': 'Overlays',
+  'swap·NEAR0': 'Overlays',
+  composite: 'Composites & pick',
+  pick: 'Composites & pick',
+};
+
+/**
+ * The single walk every projection shares: the ordered slot list
+ * (`timedSlotsOf`), the grouped lists (`timedSlotGroupsOf` / `groupPassNames`),
+ * and the name→groupKey map (`PASS_GROUP_KEYS`) are each a projection of this
+ * one derivation, so a slot's group can't drift from its position in the row
+ * order — a new layer joins them all at once.
  */
 function timedSlotRowsOf(
   program: readonly FrameStep[],
@@ -141,26 +168,75 @@ function timedSlotRowsOf(
   const rows: TimedSlotRow[] = [];
   for (const step of program) {
     if (step.kind === 'render') {
-      // Every layer matched by this step shares the step's slab, so the badge
-      // is the step's slab name — `?? NO_SLAB_BADGE` degrades gracefully if a
-      // step ever references a slab index `SLAB_NAME` doesn't cover.
-      const slab = SLAB_NAME[step.slab] ?? NO_SLAB_BADGE;
+      // Every layer matched by this step shares the step's `(target, slab)`, so
+      // one groupKey covers the whole run. `?? String(step.slab)` keeps the key
+      // stable if a step ever references a slab index `SLAB_NAME` doesn't cover.
+      const groupKey = `${step.target}·${SLAB_NAME[step.slab] ?? String(step.slab)}`;
       for (const layer of layers) {
         if (layer.target === step.target && layer.slab === step.slab) {
-          rows.push({ name: layer.name, slab });
+          rows.push({ name: layer.name, groupKey });
         }
       }
     } else if (step.kind === 'composite') {
-      // A composite merges whole textures rather than projecting geometry, so
-      // it belongs to no single slab.
-      rows.push({ name: `${step.step.source}→${step.step.dest}`, slab: NO_SLAB_BADGE });
+      // A composite merges whole textures rather than projecting geometry — it
+      // belongs to no slab, and all composites share the one infra group.
+      rows.push({ name: `${step.step.source}→${step.step.dest}`, groupKey: 'composite' });
     }
     // 'compute' steps contribute no timing slot.
   }
-  // Pick is a parallel program over the whole registry (both slabs), so it too
-  // has no single slab.
-  rows.push({ name: 'pick', slab: NO_SLAB_BADGE });
+  // Pick is a parallel program over the whole registry (both slabs).
+  rows.push({ name: 'pick', groupKey: 'pick' });
   return rows;
+}
+
+/**
+ * Bucket an ordered row list into display groups by title. The group order is
+ * the unique titles of `PASS_GROUP_TITLES` in declared order (which fixes the
+ * six-group layout), then any fallback titles (raw groupKeys with no mapping)
+ * in first-appearance order. Rows keep their draw order within a group, and an
+ * empty group is dropped — that's how the toggles list omits the "composites &
+ * pick" group whose rows aren't togglable.
+ */
+function groupRows(rows: readonly TimedSlotRow[]): readonly TimedSlotGroup[] {
+  const titleOf = (groupKey: string): string => PASS_GROUP_TITLES[groupKey] ?? groupKey;
+
+  const order: string[] = [];
+  const seen = new Set<string>();
+  const remember = (title: string): void => {
+    if (!seen.has(title)) {
+      seen.add(title);
+      order.push(title);
+    }
+  };
+  for (const title of Object.values(PASS_GROUP_TITLES)) remember(title);
+  for (const row of rows) remember(titleOf(row.groupKey));
+
+  const byTitle = new Map<string, TimedSlotRow[]>();
+  for (const row of rows) {
+    const title = titleOf(row.groupKey);
+    const bucket = byTitle.get(title);
+    if (bucket) bucket.push(row);
+    else byTitle.set(title, [row]);
+  }
+
+  const groups: TimedSlotGroup[] = [];
+  for (const title of order) {
+    const bucket = byTitle.get(title);
+    if (bucket && bucket.length > 0) groups.push({ title, rows: bucket });
+  }
+  return groups;
+}
+
+/**
+ * The ordered GPU-timing slots grouped for display — the shape both DebugPanel
+ * lists consume. A projection of the same program + registry walk that orders
+ * `timedSlotsOf`, so the grouping can't drift from the executed frame.
+ */
+export function timedSlotGroupsOf(
+  program: readonly FrameStep[],
+  layers: readonly ContentLayer[],
+): readonly TimedSlotGroup[] {
+  return groupRows(timedSlotRowsOf(program, layers));
 }
 
 /**
@@ -181,17 +257,34 @@ export const TIMED_SLOTS: readonly string[] = timedSlotsOf(
 );
 
 /**
- * Slot name → slab badge, for the DebugPanel GPU-timings rows. Derived from
- * the SAME program + registry walk that orders `TIMED_SLOTS` (both are
- * projections of `timedSlotRowsOf`), so the badges inherit that list's
- * self-maintaining property: a renderer that joins `CONTENT_LAYERS` gets both
- * a row AND its slab badge with zero DebugPanel edits. Render slots carry their
- * projection slab's name; the whole-texture composites and the parallel pick
- * pass carry `NO_SLAB_BADGE`.
+ * The real timing slots grouped for the GpuTimingsSection. Same program +
+ * registry walk that orders `TIMED_SLOTS`, so a renderer that joins
+ * `CONTENT_LAYERS` gets a grouped row here with zero DebugPanel edits.
  */
-export const TIMED_SLOT_SLABS: ReadonlyMap<string, string> = new Map(
+export const TIMED_SLOT_GROUPS: readonly TimedSlotGroup[] = timedSlotGroupsOf(
+  frameProgram({ exposure: 1, curve: 0 }),
+  CONTENT_LAYERS,
+);
+
+/**
+ * Layer/slot name → groupKey, so a consumer holding only names (the
+ * RenderTogglesSection, fed the engine handle's live togglable-pass list) can
+ * project them into the same groups the timing list uses. Built from the same
+ * walk, so the two lists stay positionally aligned.
+ */
+const PASS_GROUP_KEYS: ReadonlyMap<string, string> = new Map(
   timedSlotRowsOf(frameProgram({ exposure: 1, curve: 0 }), CONTENT_LAYERS).map((row) => [
     row.name,
-    row.slab,
+    row.groupKey,
   ]),
 );
+
+/**
+ * Group an arbitrary ordered name list (the DebugPanel toggles' live pass
+ * names) into the same display groups as the timing list. A name with no known
+ * groupKey (e.g. a stale/removed pass) falls back to a group titled with the
+ * name itself rather than being dropped.
+ */
+export function groupPassNames(names: readonly string[]): readonly TimedSlotGroup[] {
+  return groupRows(names.map((name) => ({ name, groupKey: PASS_GROUP_KEYS.get(name) ?? name })));
+}

@@ -68,6 +68,32 @@ export type ContentLayer = {
     state: EngineState,
   ): void;
   /**
+   * Whether this layer should record PICK draw commands this frame — the
+   * gate the pick program filters `drawPick` by, in place of `enabled`.
+   *
+   * Optional because for MOST layers the pick set equals the draw set: what
+   * you can click is exactly what you can see, so a single `enabled` gate
+   * serves both and the layer omits this. A layer declares `pickEnabled`
+   * only when its pick set is WIDER than its draw set — then the two gates
+   * must diverge:
+   *
+   *  - `planetsLayer` draws only the partition's `flat` branch but is the
+   *    SOLE pick site for `flat ∪ textured` (`texturedBodiesLayer` carries no
+   *    pick aspect), so a textured-only frame (a lone textured Saturn before
+   *    its untextured moons resolve into `flat`) must stay pickable while its
+   *    visual row leaves the pass plan;
+   *  - `bodyGlintsLayer` draws only the `glints` branch but also stamps
+   *    Earth's caption-range pick footprint, so it must be admitted even with
+   *    an empty `glints` branch when the Earth caption is on.
+   *
+   * Keeping `enabled` narrow (draw set) preserves the executor's "a row that
+   * would draw zero bodies must leave the VISUAL pass plan" invariant; the
+   * wider pick gate lives here so picking is not forced to inject a no-op row
+   * into the visual program. When absent the pick program falls back to
+   * `enabled`. Pure: no side effects.
+   */
+  pickEnabled?(state: EngineState, ctx: ReadyFrameContext): boolean;
+  /**
    * Issue pick-ID draw calls for this layer, into the parallel pick
    * program's render pass. Optional: layers that don't participate in
    * picking simply omit it.

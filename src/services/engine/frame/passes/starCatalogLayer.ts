@@ -91,13 +91,19 @@
  * origin-relative `view.camPos`; the two coincide because `RENDER_ORIGIN_MPC`
  * is the heliocentric origin.
  *
- * ### Not pickable, and the Sun-exclusion note
+ * ### Pickable (leaf stars only), and the Sun-exclusion note
  *
- * The Gaia bin carries no `drawPick` — stars are not persisted to a stable id
- * and the layer stays out of the parked foreground-body-picking item (spec §6).
- * The Sun is excluded from the catalog at build time (it is the origin, drawn
- * by the true-scale `starSpheresLayer`/`starPointsLayer` seed), so the octree
- * carries no record at [0,0,0] to double the local starfield.
+ * The Gaia bin IS pickable: `drawPick` stamps every visible LEAF star's packed
+ * identity into the NEAR0 r32uint pick pass — via `starCatalogPickRenderer` and
+ * the leaf-only, visible-only `starPickLeafDraws` filter — so a hover/click over
+ * a resolved star yields a Field-star selection. AGGREGATE glows are never
+ * pickable: a flux mip that stands in for a whole subtree has no single star to
+ * name. A star's identity is its record index; it is not persisted to disk (the
+ * source code is composed at pick time from the pick uniform, never baked into
+ * the record), so a tier swap can stale a saved index — accepted, it clears on
+ * mismatch. The Sun is excluded from the catalog at build time (it is the
+ * origin, drawn by the true-scale `starSpheresLayer`/`starPointsLayer` seed), so
+ * the octree carries no record at [0,0,0] to double the local starfield.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -116,6 +122,7 @@ import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { walkStarOctreeCut } from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
+import { starPickLeafDraws } from '../../../gpu/renderers/starCatalog/starPickLeafDraws';
 import { starNodeOriginRelCamMpc } from '../../../gpu/renderers/starCatalog/starNodeOriginRelCamMpc';
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
 import { subtreeStarCounts } from '../../../gpu/renderers/starCatalog/subtreeStarCounts';
@@ -464,5 +471,55 @@ export const starCatalogLayer: ContentLayer = {
     if (prep === null) return;
     // The LEAF stream: full-resolution point stars into HDR, per-glow knee.
     drawStream(renderer, pass, view, prep, 'leaf');
+  },
+
+  // Pick aspect — stamps every visible LEAF star's packed identity into the
+  // NEAR0 r32uint pick pass. The pick pass runs on a FRESH `ctx` minted by
+  // `pickFrameContext` (→ `deriveFrameContext` from `lastPose.current`, the pose
+  // the last frame actually rendered), so `prepareStarCut`'s per-`ctx` memo
+  // (`preparedByCtx`) MISSES and recomputes the leaf cut here — a second octree
+  // walk, but against that same last-rendered camera, so the pick lands exactly
+  // where the sprite drew. The alternative — threading the visual frame's cached
+  // cut into the pick path — would braid pick into frame ordering (the pick pass
+  // could only run if a visual frame had cached first); recomputing keeps the
+  // pick a pure function of the last-rendered pose. The cost is one extra
+  // traversal on a PICKED frame, which is acceptable because picks are
+  // event-driven, not per-frame. The recompute also re-advances the per-node LOD
+  // fades, but that stays monotonic — the fade `clockMs` clamps `dt ≥ 0`, so the
+  // second walk can only nudge a ramp forward, never rewind it. Aggregates and
+  // opacity-0 leaves are filtered out by `starPickLeafDraws` (leaf-only,
+  // visible-only): an aggregate glow names no single star, and an invisible
+  // newcomer / fully-faded leaf must not claim the cursor.
+  //
+  // The rebased vp is computed ONCE before the per-source loop — the same
+  // shared-vp discipline `drawStream` follows (every source in a frame receives
+  // the identical `narrowMat4(rebaseViewProj(...))` matrix; the pick renderer's
+  // camera uniform is one shared buffer, safe only under that invariant).
+  //
+  // This row self-binds its own @group(0) pick camera inside the renderer's
+  // `draw`, like the Milky-Way pick: on NEAR0 there is no shared point-pick
+  // prefix to inherit or restore (that contract is a COSMO-pass fact). Visibility
+  // is NOT re-checked here — the pick program filters by `enabled`
+  // (`starCatalogVisible`, the foreground-distance + crossfade gate) against the
+  // pick-time camera, the SAME gate the draw program runs, so a cosmic-zoom
+  // frame never reaches this draw and `pick:near0` is not even allocated for it.
+  drawPick(pass, view, ctx, state) {
+    const pickRenderer = state.gpu.starCatalogPickRenderer;
+    if (pickRenderer === null) return;
+    const prep = prepareStarCut(state, ctx);
+    if (prep === null) return;
+
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+    for (const d of starPickLeafDraws(prep)) {
+      pickRenderer.draw(pass, {
+        source: d.source,
+        vp: rebasedVp,
+        viewportPx: view.viewportPx,
+        nodeDraws: d.nodeDraws,
+        originRelCamMpc: d.originRelCamMpc,
+        cellScaleMpc: d.cellScaleMpc,
+        sizePx: prep.sizePx,
+      });
+    }
   },
 };

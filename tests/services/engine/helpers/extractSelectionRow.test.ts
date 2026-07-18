@@ -1,11 +1,19 @@
 import { describe, it, expect } from 'vitest';
 
 import { extractSelectionRow } from '../../../../src/services/engine/helpers/extractSelectionRow';
+import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
+import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
+import {
+  encodeStarCatalog,
+  decodeStarCatalog,
+} from '../../../../src/data/starCatalog/starCatalogFormat';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
 
 function makeCloud(): GalaxyCatalog {
   return {
@@ -40,7 +48,20 @@ const deps: ResolveDeps = {
   catalogs: { get: (s) => (s === Source.SDSS ? makeCloud() : undefined) },
   famousMeta: [],
   structures: { byId: (id) => (id === 'abell-2065' ? structure : null) },
+  stars: { current: () => null },
 };
+
+/** A small real star catalog through the octree + encode/decode path. */
+async function makeStarCatalog(): Promise<StarCatalog> {
+  const octree = buildStarOctree(
+    [
+      { mortonIndex: 0, offset: [3, 1, 2], absMag: 5, bpRp: 0.3 },
+      { mortonIndex: 0, offset: [7, 8, 9], absMag: 4, bpRp: 0.5 },
+    ],
+    { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] },
+  );
+  return decodeStarCatalog(await encodeStarCatalog(octree));
+}
 
 describe('extractSelectionRow', () => {
   it('null ref → null', () => {
@@ -90,5 +111,35 @@ describe('extractSelectionRow', () => {
 
   it('body ref with an unknown seed id → null (garbage, not "loading")', () => {
     expect(extractSelectionRow({ type: 'body', id: 'krypton' }, deps)).toBeNull();
+  });
+
+  it('star ref resolves against the loaded catalog (matches resolveStarRecord)', async () => {
+    const catalog = await makeStarCatalog();
+    const starDeps: ResolveDeps = { ...deps, stars: { current: () => catalog } };
+    const record = resolveStarRecord(catalog, 1)!;
+    expect(extractSelectionRow({ type: 'star', index: 1 }, starDeps)).toEqual({
+      type: 'star',
+      index: 1,
+      positionMpc: record.positionMpc,
+      absMag: record.absMag,
+      bpRp: record.bpRp,
+      radiusKm: SOLAR_RADIUS_KM,
+    });
+  });
+
+  it('star snapshots the nominal solar radius', async () => {
+    // The bin quantises position + photometry only, so the extractor stamps the
+    // one representative radius (the Sun's) onto every star row — the size
+    // downstream framing/gating read for a field star that carries no measured one.
+    const catalog = await makeStarCatalog();
+    const starDeps: ResolveDeps = { ...deps, stars: { current: () => catalog } };
+    const row = extractSelectionRow({ type: 'star', index: 0 }, starDeps);
+    expect(row !== null && row.type === 'star' && row.radiusKm).toBe(SOLAR_RADIUS_KM);
+  });
+
+  it('star ref with no loaded catalog → null (cloud not loaded yet)', () => {
+    // The shared deps' stars.current() returns null — a deep link / mid-load
+    // race, not a garbage id, so the reconciler retries.
+    expect(extractSelectionRow({ type: 'star', index: 0 }, deps)).toBeNull();
   });
 });

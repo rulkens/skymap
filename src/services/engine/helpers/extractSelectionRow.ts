@@ -13,7 +13,9 @@
  * (buildFocusable) is pure and runs React-side.
  */
 import { extractGalaxyRow } from './extractGalaxyRow';
+import { resolveStarRecord } from './resolveStarRecord';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
@@ -41,6 +43,28 @@ const EXTRACT_ROW: {
       positionMpc: [body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]],
       radiusKm: body.radiusKm,
     };
+  },
+  // The star's physical fields are resolved off the LIVE catalog through the
+  // shared resolveStarRecord (never re-derived here — that resolver owns the
+  // record→world math so the row lands exactly where the sprite drew). A null
+  // catalog (cloud not loaded) or an out-of-range index → null, letting the
+  // reconciler retry rather than materialise a garbage row.
+  star: (ref, deps) => {
+    const catalog = deps.stars.current();
+    if (!catalog) return null;
+    const record = resolveStarRecord(catalog, ref.index);
+    return record
+      ? {
+          type: 'star' as const,
+          index: ref.index,
+          positionMpc: record.positionMpc,
+          absMag: record.absMag,
+          bpRp: record.bpRp,
+          // No per-star size in the bin — stamp the one representative radius
+          // (the Sun's) so framing/gating treat the star as a discrete body.
+          radiusKm: SOLAR_RADIUS_KM,
+        }
+      : null;
   },
 };
 

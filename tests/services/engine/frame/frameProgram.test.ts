@@ -21,13 +21,15 @@ import type { Mat4 } from 'wgpu-matrix';
 import {
   frameProgram,
   timedSlotsOf,
-  TIMED_SLOTS,
-  TIMED_SLOT_SLABS,
+  timedSlotGroupsOf,
+  groupPassNames,
+  TIMED_SLOT_GROUPS,
 } from '../../../../src/services/engine/frame/frameProgram';
 import { CONTENT_LAYERS } from '../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { ContentLayer } from '../../../../src/@types/engine/frame/ContentLayer';
+import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4 };
@@ -144,27 +146,6 @@ describe('timedSlotsOf', () => {
     ]);
   });
 
-  it('badges every timed slot: content layers resolve to a real slab, composites and pick to the marker', () => {
-    // The DebugPanel derives each row's slab badge from TIMED_SLOT_SLABS. Its
-    // keys must cover exactly the ordered slot list — no unbadged row, no
-    // orphan badge.
-    expect(new Set(TIMED_SLOT_SLABS.keys())).toEqual(new Set(TIMED_SLOTS));
-
-    // The load-bearing invariant: every registry layer projects through a slab
-    // index SLAB_NAME knows, so its badge is a real slab name — never the
-    // no-slab marker. A new slab index added without a SLAB_NAME entry would
-    // silently regress that layer's badge to the marker and trip this.
-    for (const layer of CONTENT_LAYERS) {
-      expect(TIMED_SLOT_SLABS.get(layer.name)).toMatch(/^(COSMO|NEAR0)$/);
-    }
-
-    // The slab-less slots — whole-texture composites and the parallel pick
-    // pass — carry the marker rather than a slab name.
-    expect(TIMED_SLOT_SLABS.get('hdr→swap')).toBe('—');
-    expect(TIMED_SLOT_SLABS.get('foreground:0→swap')).toBe('—');
-    expect(TIMED_SLOT_SLABS.get('pick')).toBe('—');
-  });
-
   it('yields unique names', () => {
     const layers: readonly ContentLayer[] = [
       fakeLayer('point-sprites', 'hdr', COSMO),
@@ -186,9 +167,9 @@ describe('timedSlotsOf', () => {
     // sits adjacent to the star-catalog leaf draw it composites), the tone-map
     // composite, the five swap overlays, then the near-field tail (the
     // foreground:0 body render — one slot per body layer: earth, star-spheres,
-    // planets, textured-bodies, then the translucent rings overlay last — the
-    // foreground:0→swap composite, and the NEAR0
-    // swap caption render → foreground-labels), and pick last.
+    // focused-field-star-sphere, planets, textured-bodies, then the translucent
+    // rings overlay last — the foreground:0→swap composite, and the (swap, NEAR0)
+    // render group → near0-selection-ring then foreground-labels), and pick last.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'point-sprites',
@@ -214,12 +195,121 @@ describe('timedSlotsOf', () => {
       'clip-path-debug',
       'earth',
       'star-spheres',
+      'focused-field-star-sphere',
       'planets',
       'textured-bodies',
       'rings',
       'foreground:0→swap',
+      'near0-selection-ring',
       'foreground-labels',
       'pick',
+    ]);
+  });
+});
+
+describe('timedSlotGroupsOf', () => {
+  it('buckets each render step’s layers under its (target, slab) group title, in the six-group order', () => {
+    // Fake layers matched against the REAL program: two hdr·COSMO layers, one
+    // swap·COSMO overlay, one foreground:0·NEAR0 body. The hdr·NEAR0,
+    // star-aggregates and volume steps match nothing, so their groups are
+    // empty and don't appear; the composite steps + trailing pick always do.
+    const layers: readonly ContentLayer[] = [
+      fakeLayer('point-sprites', 'hdr', COSMO),
+      fakeLayer('milky-way', 'hdr', COSMO),
+      fakeLayer('labels', 'swap', COSMO),
+      fakeLayer('earth', 'foreground:0', NEAR0),
+    ];
+    const groups = timedSlotGroupsOf(frameProgram(TONE), layers);
+
+    // Group titles in draw/table order; empty groups (no matched layers)
+    // omitted. The two composites and pick collapse into one trailing group.
+    expect(groups.map((g) => g.title)).toEqual([
+      'Cosmos · HDR',
+      'Foreground bodies · depth',
+      'Overlays',
+      'Composites & pick',
+    ]);
+
+    // Rows keep draw order within their group, and carry the groupKey the
+    // producing step stamped.
+    expect(groups.map((g) => g.rows.map((r) => r.name))).toEqual([
+      ['point-sprites', 'milky-way'],
+      ['earth'],
+      ['labels'],
+      ['hdr→swap', 'foreground:0→swap', 'pick'],
+    ]);
+    expect(groups[0]!.rows[0]!.groupKey).toBe('hdr·COSMO');
+    expect(groups[3]!.rows.map((r) => r.groupKey)).toEqual(['composite', 'composite', 'pick']);
+  });
+
+  it('merges scalar-volume + star-aggregates into one group and sinks composites+pick to the last group', () => {
+    // The real registry against the real program — the value the DebugPanel
+    // consumes. scalar-volume (volume·COSMO) and star-aggregates
+    // (star-aggregates·NEAR0) are non-adjacent steps that both map to
+    // "Volumes & aggregates"; the two composites and pick — scattered through
+    // execution order — collapse into the trailing "Composites & pick".
+    expect(TIMED_SLOT_GROUPS.map((g) => g.title)).toEqual([
+      'Volumes & aggregates',
+      'Cosmos · HDR',
+      'Near field · HDR',
+      'Foreground bodies · depth',
+      'Overlays',
+      'Composites & pick',
+    ]);
+
+    const byTitle = (title: string) => TIMED_SLOT_GROUPS.find((g) => g.title === title)!;
+    expect(byTitle('Volumes & aggregates').rows.map((r) => r.name)).toEqual([
+      'scalar-volume',
+      'star-aggregates',
+    ]);
+    // Overlays merges the COSMO swap overlays with the NEAR0 near-field swap
+    // rows (two non-adjacent swap steps).
+    expect(byTitle('Overlays').rows.map((r) => r.name)).toEqual([
+      'selection-ring',
+      'disk-radius-ring',
+      'marker-lines',
+      'labels',
+      'clip-path-debug',
+      'near0-selection-ring',
+      'foreground-labels',
+    ]);
+    expect(byTitle('Composites & pick').rows.map((r) => r.name)).toEqual([
+      'hdr→swap',
+      'foreground:0→swap',
+      'pick',
+    ]);
+  });
+
+  it('falls back to the raw groupKey as the title for an unmapped (target, slab) step', () => {
+    // A genuinely new render target/slab the title table doesn't know: the
+    // group still forms (self-maintaining), titled with the raw key rather
+    // than vanishing. Known titles hold their fixed positions; the unmapped
+    // fallback group appends after them (a nudge to give it a real title).
+    const program: readonly FrameStep[] = [{ kind: 'render', target: 'foo', slab: COSMO }];
+    const groups = timedSlotGroupsOf(program, [fakeLayer('x', 'foo', COSMO)]);
+    expect(groups.map((g) => g.title)).toEqual(['Composites & pick', 'foo·COSMO']);
+    const fallback = groups.find((g) => g.title === 'foo·COSMO')!;
+    expect(fallback.rows).toEqual([{ name: 'x', groupKey: 'foo·COSMO' }]);
+  });
+});
+
+describe('groupPassNames', () => {
+  it('groups an arbitrary togglable-name list by pass group, in title order, omitting empty groups', () => {
+    const groups = groupPassNames(['labels', 'point-sprites', 'earth', 'star-aggregates']);
+    expect(groups.map((g) => g.title)).toEqual([
+      'Volumes & aggregates', // star-aggregates
+      'Cosmos · HDR', // point-sprites
+      'Foreground bodies · depth', // earth
+      'Overlays', // labels
+    ]);
+    // No composite/pick names supplied (they aren't togglable), so that group
+    // never appears in the toggles projection.
+    expect(groups.some((g) => g.title === 'Composites & pick')).toBe(false);
+  });
+
+  it('puts an unknown pass name in a fallback group titled with the name itself', () => {
+    expect(groupPassNames(['textured-quads'])).toEqual([
+      { title: 'textured-quads', rows: [{ name: 'textured-quads', groupKey: 'textured-quads' }] },
     ]);
   });
 });

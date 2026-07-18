@@ -70,20 +70,21 @@ describe('createOrbitTrailRenderer', () => {
     expect(() => renderer.destroy()).not.toThrow();
   });
 
-  it('allocates an instance buffer sized MAX_ORBITS × 80 bytes', () => {
+  it('allocates an instance buffer sized MAX_ORBITS × 112 bytes', () => {
     const buffers: BufferDesc[] = [];
     createOrbitTrailRenderer(mockDevice({ buffers }), 'rgba16float');
     const instance = buffers.find((b) => b.label === 'orbit-trail-instance-vbo');
     expect(instance).toBeDefined();
-    expect(INSTANCE_STRIDE).toBe(80);
-    expect(INSTANCE_FLOATS).toBe(20);
-    expect(instance!.size).toBe(MAX_ORBITS * 80);
+    expect(INSTANCE_STRIDE).toBe(112);
+    expect(INSTANCE_FLOATS).toBe(28);
+    expect(instance!.size).toBe(MAX_ORBITS * 112);
   });
 
   it('pins the FULL instance attribute layout — ONE instance buffer, no position VBO', () => {
     // The byte-for-byte contract with orbitTrail/vertex.wesl: three Ginv
     // columns at locations 1..3 (offsets 0/16/32), then colour+eccentricity at
-    // location 4 (offset 48) and meanAnomaly+pad at location 5 (offset 64). The
+    // location 4 (offset 48), meanAnomaly+fade at location 5 (offset 64), and
+    // the two gradient-minor triples at locations 6/7 (offsets 80/96). The
     // fullscreen triangle is generated from @builtin(vertex_index), so there is
     // NO location-0 position buffer — the instance record is the pipeline's
     // only vertex buffer. A drifted offset silently reads garbage on real
@@ -101,7 +102,9 @@ describe('createOrbitTrailRenderer', () => {
       { shaderLocation: 2, offset: 16, format: 'float32x4' }, // Ginv col 1
       { shaderLocation: 3, offset: 32, format: 'float32x4' }, // Ginv col 2
       { shaderLocation: 4, offset: 48, format: 'float32x4' }, // color + eccentricity
-      { shaderLocation: 5, offset: 64, format: 'float32x4' }, // meanAnomaly + pad
+      { shaderLocation: 5, offset: 64, format: 'float32x4' }, // meanAnomaly + fade + pad
+      { shaderLocation: 6, offset: 80, format: 'float32x4' }, // gradient minors M1/M2/M3 + pad
+      { shaderLocation: 7, offset: 96, format: 'float32x4' }, // gradient minors M4/M5/M6 + pad
     ]);
   });
 
@@ -139,7 +142,7 @@ describe('createOrbitTrailRenderer', () => {
     expect(call[1]).toBe(3);
   });
 
-  it('draw does exactly one writeBuffer of the callers array with count × 20 float elements', () => {
+  it('draw does exactly one writeBuffer of the callers array with count × 28 float elements', () => {
     const device = mockDevice();
     const renderer = createOrbitTrailRenderer(device, 'rgba16float');
     const pass = mockPass();
@@ -154,7 +157,7 @@ describe('createOrbitTrailRenderer', () => {
     expect(byteOffset).toBe(0);
     expect(data).toBe(instances); // the caller's array, uploaded directly
     expect(dataOffset).toBe(0);
-    // Element counts (not bytes): 2 records × 20 floats.
+    // Element counts (not bytes): 2 records × 28 floats.
     expect(size).toBe(2 * INSTANCE_FLOATS);
 
     // Exactly one vertex buffer bound (the per-instance records — no position

@@ -1,12 +1,20 @@
 /**
- * StarDetailCard — rich panel for a focused famous star.
+ * BodyDetailCard — rich panel for a focused scene body (a famous star, Earth, or
+ * a planet).
  *
- * The engine hands React a lean `StarInfo` (id + label + position) so a star is
- * always immediately selectable; the narrative/physical rows live in the async
- * `famous_stars_meta.json` sidecar.  This card looks its entry up by `id` in
- * `useFamousStarsMeta()` and fills in the properties block + description once the
- * fetch settles.  Before that (or on a dev clone with no sidecar) it renders the
- * headline alone — the fail-soft path the hook's `ready` contract guarantees.
+ * The engine hands React a lean `BodyInfo` (id + label + position + radius) so a
+ * body is always immediately selectable.  The card then branches on the body's
+ * kind, keyed by `FAMOUS_STAR_IDS.has(target.id)`:
+ *
+ *   - A famous star gets the rich stellar panel: its narrative/physical rows live
+ *     in the async `famous_stars_meta.json` sidecar, looked up by `id` in
+ *     `useFamousStarsMeta()` and filled in once the fetch settles.  A star with no
+ *     meta entry (before the fetch settles, or a dev clone with no sidecar)
+ *     renders the headline alone — the fail-soft path the hook's `ready` contract
+ *     guarantees.
+ *   - Any other body (Earth, a planet, a moon) has no stellar sidecar, so it
+ *     renders a lean panel: the headline plus its physical radius (km) straight
+ *     off the `BodyInfo`, no fetch dependency.
  *
  * Optional physical fields (mass, luminosity, age, variability) drop their row
  * entirely when absent rather than showing a blank — the same absent-row pattern
@@ -16,34 +24,39 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { StarInfo } from '../../../@types/engine/StarInfo';
+import type { BodyInfo } from '../../../@types/engine/BodyInfo';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { formatDistance } from '../../../utils/format/formatDistance';
+import { FAMOUS_STAR_IDS } from '../../../data/bodies/famousStarsIndex';
 import { useFamousStarsMeta } from '../../../hooks/useFamousStarsMeta';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import styles from '../cardChrome.module.css';
-import local from './StarDetailCard.module.css';
+import local from './BodyDetailCard.module.css';
 
-export type StarDetailCardProps = {
-  target: StarInfo;
+export type BodyDetailCardProps = {
+  target: BodyInfo;
   pinned?: boolean;
   chrome?: boolean;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
 
-function StarDetailCard({
+function BodyDetailCard({
   target,
   pinned = false,
   chrome = true,
   onFocus,
   onClose,
-}: StarDetailCardProps): ReactNode {
+}: BodyDetailCardProps): ReactNode {
+  // Rules-of-hooks forbid a conditional hook call, so `useFamousStarsMeta`
+  // always runs; we gate its *consumption* on the star branch — a non-star body
+  // never reads the stellar sidecar.
   const { famousStarsMeta } = useFamousStarsMeta();
-  const entry = famousStarsMeta.find((m) => m.id === target.id);
+  const isFamousStar = FAMOUS_STAR_IDS.has(target.id);
+  const entry = isFamousStar ? famousStarsMeta.find((m) => m.id === target.id) : undefined;
 
   const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
   const aliases = entry ? entry.names.slice(1) : [];
@@ -51,7 +64,7 @@ function StarDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
-        eyebrow="Star"
+        eyebrow={isFamousStar ? 'Star' : 'Body'}
         onFocus={pinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.label}`}
         onClose={pinned ? onClose : undefined}
@@ -61,9 +74,19 @@ function StarDetailCard({
       {aliases.length > 0 && <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>}
 
       {/*
-        No entry yet (fetch in flight, or a deployment without the sidecar):
-        headline only — the fail-soft path.  The properties + description fill in
-        the instant the sidecar resolves.
+        Non-star body (Earth, a planet, a moon): the physical radius straight off
+        the BodyInfo — no stellar sidecar, so this is all the card can show.
+      */}
+      {!isFamousStar && (
+        <div className={styles.cardSection}>
+          <CardRow label="Radius" value={`${target.radiusKm.toLocaleString()} km`} />
+        </div>
+      )}
+
+      {/*
+        Famous star with no entry yet (fetch in flight, or a deployment without
+        the sidecar): headline only — the fail-soft path.  The properties +
+        description fill in the instant the sidecar resolves.
       */}
       {entry && (
         <>
@@ -104,4 +127,4 @@ function StarDetailCard({
   );
 }
 
-export default StarDetailCard;
+export default BodyDetailCard;

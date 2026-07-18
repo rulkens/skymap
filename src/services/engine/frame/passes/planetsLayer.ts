@@ -58,11 +58,16 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { Source } from '../../../../data/sources';
+import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
+import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { drawFlooredSpherePick } from '../../helpers/drawFlooredSpherePick';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized for
 // the renderer's cap; each planet's 24-float record (MVP + albedo + pad +
@@ -85,6 +90,25 @@ export const planetsLayer: ContentLayer = {
     // A row that would draw zero bodies must leave the pass plan (see header):
     // mirror draw's branch with the SAME partition.
     return sceneBodyPartition(state, ctx).flat.length > 0;
+  },
+
+  // Pick gate — WIDER than `enabled`: this layer is the sole pick site for the
+  // whole planet source (`flat ∪ textured`; `texturedBodiesLayer` carries no
+  // pick aspect — see `drawPick`'s header), so the pick pass must admit the row
+  // whenever EITHER partition branch is non-empty. `enabled` stays flat-only so
+  // a textured-only frame (a lone textured Saturn before its untextured moons
+  // resolve into `flat`) leaves no zero-body row in the VISUAL pass plan while
+  // its sphere stays clickable. Handle + distance gates match `enabled`; only
+  // the partition predicate differs. See `ContentLayer.pickEnabled`.
+  pickEnabled(state, ctx) {
+    // Short-circuits on the DRAW handle (`planetRenderer`), not the pick handle
+    // (`bodyPickRenderer` — which `drawPick` re-checks): the two GPU resources
+    // bootstrap together, so the draw handle is a sound pre-bootstrap proxy, and
+    // gating on it keeps `pickEnabled` reading the same fixtures `enabled` does.
+    if (state.gpu.planetRenderer === null) return false;
+    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+    const { flat, textured } = sceneBodyPartition(state, ctx);
+    return flat.length + textured.length > 0;
   },
 
   draw(pass, view, ctx, state) {
@@ -125,5 +149,53 @@ export const planetsLayer: ContentLayer = {
       staging[base + 23] = 0; // sunDir pad — kept zeroed across frames
     }
     if (limit > 0) renderer.draw(pass, staging, limit);
+  },
+
+  // Pick aspect — stamps one packed identity per RESOLVED planet-source body into
+  // the NEAR0 r32uint pick pass, one `drawSphere` per body (each carries its own
+  // MVP + packed id, so the sphere picks never collapse onto the last body — the
+  // writeBuffer-vs-submit race `bodyPickRenderer` guards with per-draw dynamic
+  // offsets).
+  //
+  // This is the SOLE pick site for the whole planet source: the two opaque
+  // foreground sphere layers split the resolved bodies across `planetsLayer`
+  // (the `flat` branch) and `texturedBodiesLayer` (the `textured` branch, which
+  // carries no pick aspect of its own), so the pick set here is the UNION of both
+  // partition branches — a body is pickable-as-a-sphere exactly when it draws as
+  // one, flat or textured alike. Sub-pixel `glints` are additive points, not
+  // spheres, so they stay unpickable (the same set the pre-partition resolution
+  // cull selected). The partition is the SAME per-frame `sceneBodyPartition`
+  // split `draw` consumes, so the pick and draw sets cannot disagree.
+  //
+  // The packed id carries each planet's STABLE `SCENE_PLANETS` index, NOT its
+  // slot in the resolved subset (which shifts as planets enter/leave the cull or
+  // cross the texture-residency boundary — see `seedIndexOfBody`). A planet id
+  // absent from the seed table returns −1 and is skipped: a packed id from −1
+  // would alias body 0. The MVP folds `orientation` the same way `draw` does, so
+  // the pick silhouette matches the drawn sphere.
+  drawPick(pass, view, ctx, state) {
+    const pickRenderer = state.gpu.bodyPickRenderer;
+    if (pickRenderer === null) return;
+
+    const { flat, textured } = sceneBodyPartition(state, ctx);
+
+    for (const planet of [...flat, ...textured]) {
+      const seedIndex = seedIndexOfBody(planet.id, SCENE_PLANETS);
+      if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+      // Floor the PICK radius to the shared min footprint (visual sphere
+      // untouched) via the shared `drawFlooredSpherePick` recipe: a resolved-but-
+      // small planet near the foreground far edge can project to a couple of
+      // pixels, too small to click. Each body folds its baked orientation and its
+      // stable seed-index identity.
+      drawFlooredSpherePick(pickRenderer, pass, {
+        vp: view.slab.vp,
+        positionMpc: planet.positionMpc,
+        radiusMpc: planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        camPosMpc: view.camPos,
+        drawPxPerRad: ctx.drawPxPerRad,
+        orientation: planet.orientation,
+        packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
+      });
+    }
   },
 };

@@ -10,8 +10,10 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  * Its presentation defaults live in-row (like `VolumeSourceEntry`) rather
  * than in a separate settings table, so the draw budget and the crossfade
  * band that hands off to the procedural Milky-Way cloud sit next to the
- * `binBaseName` they govern. Stars are not persisted to a stable id and
- * not pickable — the `code` is a registry key only.
+ * `binBaseName` they govern. Leaf stars ARE pickable — `drawPick` stamps a
+ * resolved star's identity into the NEAR0 pick pass — and the `code` tags the
+ * source in that pick encoding, but a star's identity is its record index and
+ * is never persisted to the `.bin`.
  */
 export type StarCatalogSourceEntry = SourceEntryBase & {
   readonly type: 'starCatalog';

@@ -475,3 +475,261 @@ becomes pickable — update them in the same stage:
   `src/services/engine/frame/passes/selectionRingLayer.ts`
 - Gaia star bin design: `docs/superpowers/specs/completed/2026-07-13-gaia-star-bin-design.md`
 - Pick-as-service design: `docs/superpowers/specs/completed/2026-06-22-pick-out-of-frame-design.md`
+
+---
+
+## Amendment (2026-07-17): field-star close-range sphere
+
+**Status:** Amendment (adjudicated during Stage-1 visual verification). Ships as
+**Stage 1.5**, between Stage 1 (stars) and Stage 2 (bodies).
+
+### Why
+
+Double-clicking a Gaia field star focuses it and frames the camera down to
+solar-radius distance (`focusFraming`'s `star` arm → `bodyFocusDistance`). Two
+gaps surface there:
+
+1. **No close-range geometry.** At the framing distance only the point sprite
+   exists — the picked star has no resolved surface, so the descent bottoms out
+   on a dot instead of a body.
+2. **The sprite swims.** The `starCatalog` visual vertex path reconstructs each
+   star as `originRelCamMpc + offset · cellScaleMpc` in f32 (`vertex.wesl:262`).
+   Within ~a couple of AU of a star those two terms nearly cancel, so the result
+   carries the ulp-of-the-big-terms error — AU-scale for parsec-scale cells. The
+   f64 focus **target** keeps the camera stable, but the f32 **sprite** hops by
+   AUs, and at solar-radius framing distance an AU is many screen-widths: the
+   sprite visibly flies around.
+
+The fix is to **build the sphere**: render a real close-range sphere for the
+focused field star on the f64 camera-relative scene-body path (`composeBodyMvp`
+→ `starRenderer`), which is precisely the path that is well-conditioned at the
+distances where the sphere is the visible representation. The wobble is not
+"fixed" in the sprite — the sprite is retired from the near field (below), and
+the sphere, composed in f64, does not wobble.
+
+### Mechanism — a thin dedicated sphere layer (option B), NOT a transient scene star (option A)
+
+A picked field star becomes a close-range sphere by adding **one thin
+`ContentLayer`** — `focusedFieldStarSphereLayer` — that reuses the existing
+`starRenderer` unchanged, exactly as `near0SelectionRingLayer` (Stage 1, §9) is
+a thin NEAR0 sibling reusing `selectionRingRenderer`. It reads the current
+`state.selectionRows.select` `star` row and, when the star's sphere clears the
+resolve threshold, composes its MVP via `composeBodyMvp(view.slab.vp,
+row.positionMpc, RENDER_ORIGIN_MPC, radiusMpc)` and draws it tinted by
+`starTintFromBpRp(row.bpRp)`.
+
+**Rejected — option A (inject a transient scene-star `StarBody`).** Appending
+the picked star to `visibleStars(state)` so `partitionStarsByResolution` /
+`starSpheresLayer` / `starPointsLayer` pick it up "for free" reads tidy but is a
+braid: it makes the authored **scene-body star set** (a static seed table + one
+settings toggle) depend on **runtime selection state**, and it drives the
+catalog star through the point-partition path it does not need — the star
+**already** has a representation there (its `starCatalog` sprite). Option A
+would then draw the picked star as a scene point *and* a Gaia sprite across the
+whole foreground range, widening the very sprite/sphere overlap this amendment
+must resolve. Option B keeps the scene-body set pure and scopes the new geometry
+to exactly the focused star at exactly close range — **growth at the "NEAR0
+foreground sphere layer" seam**, the same seam Stage 1 just grew for the ring.
+
+The layer reuses the *renderer* machinery (`starRenderer`, `composeBodyMvp`,
+`RENDER_ORIGIN_MPC`, `SCALE_UNITS.KM_TO_MPC`, `apparentSizePx`/`resolvesToSphere`)
+— **not** the *scene-set* machinery (`visibleStars`/`partitionStarsByResolution`),
+which is authored-body plumbing.
+
+### Data delta
+
+- **`SelectionRow` `star` arm gains `radiusKm: number`** — the nominal solar
+  radius, snapshotted at extract time (`extractSelectionRow.ts` `star`). It
+  serves two consumers: the sphere layer (MVP scale) and the framing fold
+  (below). The bin stores no per-star size (SKST v1 quantises position +
+  photometry only), so this is a single representative radius, not a per-star
+  fact — the `FieldStarInfo` card still shows no physical size (§6).
+- **No format change, no new renderer, no new GPU handle.** `starRenderer`
+  already exists on `state.gpu` and already draws famous-star spheres.
+
+### Constraint resolutions
+
+**(1) Single-source the solar radius** (absorbs Task-8 radar Finding 2). One
+exported `SOLAR_RADIUS_KM` in a new `src/data/bodies/solarRadiusKm.ts`
+(one-const data module, importable by `data/bodies/makers/star.ts`,
+`extractSelectionRow.ts`, and `focusFraming.ts` with no import cycle). The
+**canonical value is `696340`** — the value `makers/star.ts` already scales real
+`radiusSolar` by, so authored star radii are unchanged. `focusFraming`'s drifted
+`NOMINAL_STAR_RADIUS_KM = 6.957e5` (695700) is deleted; the ~0.09% framing-distance
+shift that produces is accepted (framing fill has a 0.4-of-viewport tolerance).
+
+**(2) Colour from BP−RP — reuse the one canonical ramp.** The single canonical
+Gaia BP−RP → linear-RGB mapping is `starTint` in
+`src/services/gpu/shaders/starCatalog/tint.wesl` (the survey sprite's own tint,
+already imported by `vertex.wesl`). The sphere renders through the CPU-colour
+`starRenderer.draw(pass, mvp, color)`, so it needs a CPU evaluation of that
+**same** ramp: a new `src/utils/color/starTintFromBpRp.ts` that mirrors
+`tint.wesl`'s five spectral-class anchors + four breakpoints **verbatim** — the
+CPU evaluation of the one ramp, not a second ramp. This is a deliberate,
+cross-referenced TS↔WESL mirror in the exact idiom `vertex.wesl` already uses for
+the dequant windows (`STAR_ABSMAG_MIN`/`STEP`, `STAR_COLORIDX_MIN`/`STEP`, which
+mirror `starCatalogFormat.ts`). `tint.wesl`'s header (which today asserts "no CPU
+twin to drift against") is corrected to name the twin and the sync obligation. A
+TS↔WESL parity test for the ramp anchors is deferred (same disposition as the
+dequant-constant parity item in Finding 3) — the value is small and the mirror is
+short.
+
+**(3) Sprite→sphere handoff — retire the near sprite in-shader.** At framing
+distance the sphere is the visible body, but the wobbling Gaia sprite for the
+same star does **not** hide behind it — the opaque foreground sphere composites
+over the additive HDR sprite only *at the sphere's own pixels*, while the swum
+sprite lands elsewhere as a bright floating dot. So the sprite must be suppressed,
+not occluded. The chosen mechanism is an **in-shader apparent-size dissolve** in
+`vertex.wesl`: on the **visual pass only** (`u.pickPass == 0u`), the vertex stage
+computes the star's would-be solar-diameter sphere size in px — from the
+camera-relative depth already in hand (`worldRelCam` → `center.w`) and the
+already-bound viewport, via the shared `worldLenToPx` path — and collapses the
+billboard radius to zero as that size crosses the sphere-resolve threshold (a
+`smoothstep` from `STAR_RESOLVE_PX` to a fixed ratio above it). This is pure
+vertex math plus WESL consts mirroring their TS twins (`SOLAR_RADIUS_KM`,
+`STAR_RESOLVE_PX`) — **it adds no uniform field and does not touch the shared
+`starCatalogLayout` packing surface** (which a concurrent refactor owns). Because
+the fade keys on the same apparent-size threshold the sphere layer gates on, the
+sphere is resolved before the sprite starts dissolving **at every viewport
+size**, giving a seamless crossover with no gap and no double-image. The pick
+pass is left unfaded, so the star stays pickable at close range.
+
+  Numeric anchor (1080 px viewport, the 60° default fov): a solar-diameter
+  sphere (2 · 696340 km ≈ 4.513e-14 Mpc) subtends `STAR_RESOLVE_PX` = 4 px at
+  ≈ 1.06e-11 Mpc ≈ 2.18 AU — matching the "wobble within ~a couple of AU"
+  observation above. The shader's `worldLenToPx` estimate omits the projection's
+  1/tan(fovY/2) factor (it has only clip.w + the viewport), so at 60° the fade
+  in practice begins once the true sphere size is ~1.7× the threshold (~1.3 AU)
+  and completes at 4× the fade start (~0.3 AU) — comfortably outside the
+  ~0.02 AU focus-framing distance, with the sphere always resolved before the
+  fade begins (the safe direction for any fov below 90°).
+
+  _Amended during execution (Task 8e):_ the original draft specified a fixed
+  near/far distance band in Mpc (`STAR_SPRITE_NEAR_FADE`). A fixed band agrees
+  with the sphere layer's gate at exactly one viewport height + fov (the gate's
+  resolve distance scales with both), producing a double-image on larger
+  viewports and a gap on smaller ones; the px-keyed fade is viewport-exact and
+  single-sources the handoff threshold (`STAR_RESOLVE_PX`) with the sphere layer
+  it hands off to.
+
+- *Why distance, not a focused-record match.* Fading **any** near star (not just
+  the focused one) targets exactly the set that wobbles — a star only wobbles
+  when the camera is within ~AU of it — and needs no per-focus uniform. The
+  accepted trade-off: free-flying within the band of a **non-focused** star fades
+  its sprite with no sphere to replace it (only the focused star gets a sphere).
+  You reach AU-proximity to a star essentially only by focus-framing it, so a
+  transiently-vanishing fly-through sprite is unobtrusive.
+- *Rejected — per-record suppression uniform.* Passing the focused
+  `recordIdx` (or its camera-relative position) as a uniform and collapsing only
+  that star is more precise but adds a field to `StarUniforms` — the packing
+  surface the concurrent layout refactor owns — and per-focus plumbing for a case
+  the local distance band already covers. Not worth the coupling.
+- *Rejected — "sphere covers the sprite; no suppression."* Dishonest here: the
+  sprite swims off the sphere rather than staying under it, so occlusion alone
+  leaves a floating wobbling dot.
+
+**(4) Framing fold** (absorbs Task-8 radar Finding 4). With the `star` row now
+carrying a real `radiusKm`, `focusFraming`'s `star` arm becomes byte-identical to
+its `body` arm (both frame `row.positionMpc` on `row.radiusKm` through
+`bodyFocusDistance`). Extract a shared `bodyLikeFraming(positionMpc, radiusKm,
+fovYRad): FocusFraming` that both arms delegate to in one line each. The two arms
+stay (the row shapes differ — the essential asymmetry), but the duplicated body
+is gone (the accidental one). The framing distance is unchanged apart from the
+~0.09% solar-radius shift (1), and `bodyFocusDistance`'s 0.4 fill already frames
+the sphere at ~40% of viewport height — comfortably visible.
+
+### Layer placement, gate, and draw
+
+- **Registered** in `CONTENT_LAYERS` in the near-field foreground group, right
+  after `starSpheresLayer` (`passes/index.ts` — same `(foreground:0, NEAR0)`
+  render step; order within an opaque depth-tested group is a listing choice).
+- **`enabled`**: `state.gpu.starRenderer !== null`, the current
+  `selectionRows.select` is a `star` row, AND the star's sphere clears
+  `STAR_RESOLVE_PX` at the **camera-to-star** distance (via `apparentSizePx` +
+  `resolvesToSphere`, the shared threshold). Note this gates on camera-to-**star**
+  distance, not `ctx.cam.distance` from the render origin (`starSpheresLayer`'s
+  gate) — a field star sits parsecs from the Sun, so the origin distance is
+  irrelevant; only its apparent sphere size matters.
+- **`draw`**: `composeBodyMvp(view.slab.vp, row.positionMpc, RENDER_ORIGIN_MPC,
+  row.radiusKm · SCALE_UNITS.KM_TO_MPC)` (no oblateness), colour
+  `starTintFromBpRp(row.bpRp)`, `starRenderer.draw(pass, mvp, colour)`. The f64
+  `composeBodyMvp` seam is what kills the wobble at these distances (§ the
+  starSpheresLayer / composeBodyMvp headers).
+
+### Ground preparation
+
+Growth, no prep refactor: the sphere layer is a thin sibling reusing an existing
+renderer (the `near0SelectionRingLayer` precedent); the framing fold and the
+solar-radius single-source are the two Task-8 radar findings this amendment was
+explicitly created to absorb. The BP−RP CPU twin is an in-idiom TS↔WESL mirror.
+No packing-surface edit (constraint 3 keeps the shader change to pure vertex math
++ a constant).
+
+### Testing
+
+Per `docs/superpowers/conventions/testing.md`:
+
+- **`starTintFromBpRp`** — hand-computed anchor + one midpoint (a very blue input
+  returns the O/B anchor; a value halfway along a segment returns the segment
+  midpoint colour). The CPU-evaluation-of-the-ramp guard.
+- **The framing fold** — a `star` row and a `body` row with equal position +
+  radius return equal `FocusFraming` (pins that the arms share one helper), and a
+  `star` row frames at `bodyFocusDistance(SOLAR_RADIUS_KM · KM_TO_MPC, fov)`.
+- **`extractSelectionRow.star` carries `radiusKm`** — the row snapshot includes
+  the nominal solar radius.
+- **The sphere layer `enabled` gate** — a `star` row at close range enables; the
+  same row at far range (sphere sub-pixel) and a non-`star` row disable.
+
+The sphere geometry, the tint on-screen, and the sprite→sphere dissolve are
+verified **visually on the dev server** (meticulous-WGSL): descend into a focused
+field star; confirm a resolved sphere of the right colour, the near sprite gone
+(no swimming dot), and a seamless crossover with no gap.
+
+---
+
+## Amendment (2026-07-17): Stage 2 re-scope post-#444
+
+**Status:** Amendment (adjudicated after the famous-stars feature, #444, merged into this
+branch). Supersedes parts of §8.4; §8.1–§8.3 (the pick side) stand.
+
+#444 shipped a `body` arm on `FocusableTarget` and the whole **display** half of what §8.4
+projected as new work — but famous-stars-only, and with the arm's identifiers mis-named for
+"star". This amendment records how Stage 2 re-scopes around it.
+
+### Already shipped by #444 (§8.4 items now done, do NOT rebuild)
+
+- The `body` `FocusableTarget` arm (type `StarInfo` — the mis-named body arm —
+  `{ type: 'body'; id; label; positionMpc; radiusKm }`), plus `StarDetailCard` /
+  `CompactStarCard`, wired through the `body` row of `DETAIL_CARD`.
+- The `body` arm in `refOf`, `urlHashFor` (`hooks/urlHashFor.ts`), and `targetIdentityKey` — so
+  the three `Record<FocusableTargetType, …>` tables + `refOf` are already complete for `body`.
+- The `body-<id>` URL round-trip (`bodyFocusId.ts` + `resolveFocusId` + `focusIdOf`) and the
+  `focusFraming` `body` case (already generic via `bodyLikeFraming` — no guard).
+- `SelectionRef` / `SelectionRow` `body` arms and `extractSelectionRow.body` against
+  `SCENE_BODIES`.
+
+### What §8.4 gets wrong now, and the correction
+
+- **"`buildFocusable`'s body arm is a deliberate `null`."** No longer true — #444 made it a
+  `StarInfo` **guarded on `FAMOUS_STAR_IDS`** (Earth/planets return `null`). So the Stage-2 task
+  is not *fill a null* but **lift the guard** so every scene body resolves to a focusable
+  (plan Task 9).
+- **"`SelectionRow`'s body arm is extended to carry `absMag` / colour for scene-star bodies."**
+  DROPPED. #444's `StarDetailCard` reads a scene star's rich physical rows (spectral type, mass,
+  luminosity, …) from the async `famous_stars_meta.json` sidecar via `useFamousStarsMeta`, so the
+  `SelectionRow` body arm does **not** need `absMag` / `bpRp`, and `BodyInfo` stays #444's lean
+  shape. The pre-#444 richer `BodyInfo` sketch (with `x/y/z` + `absMag?` + `spectralClass?`) is
+  superseded.
+- **`selectionHaloTable.body` is still a `null` to fill** — unchanged from §8.4, filled with a
+  NEAR0-tagged descriptor (the Stage-1 slab-tagged halo gating; body halo arms carry NEAR0).
+
+### Naming correction (house naming-correctness convention)
+
+The `body`-arm type `StarInfo` and its cards `StarDetailCard` / `CompactStarCard` read "star" but
+mean "body" (the discriminant is `'body'` and, once the guard lifts, the arm carries Earth and
+planets). Type names track their discriminant, so Stage 2 renames them to `BodyInfo` /
+`BodyDetailCard` / `CompactBodyCard` (our survey-star `star` arm already owns the honest
+`FieldStar*` names from the merge). Done via `move-files` + a hand-rename of the exported symbols
+(plan Task 9). The renamed cards then grow a **non-star** body branch (name + radius, no
+famous-meta dependency) so a focused Earth / planet renders a real card, not a blank "Star" one
+(plan Task 13).

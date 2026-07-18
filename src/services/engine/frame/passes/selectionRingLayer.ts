@@ -23,10 +23,17 @@
  *
  * ## Why one writeBuffer is fine
  *
- * Only one galaxy is selected per frame.  The layer is gated
- * `enabled()`-false when nothing is selected, so the 16-byte
- * selection + 80-byte camera upload only fires on frames where the
- * ring is actually visible.
+ * This layer shares `state.gpu.selectionRingRenderer` — and its
+ * `queue.writeBuffer`-backed camera + selection uniforms — with the NEAR0
+ * `near0SelectionRingLayer`.  A frame records both into one encoder with one
+ * `queue.submit`, so if both drew, both draws would read the last-written
+ * uniforms (the writeBuffer/submit race).  The two layers avoid that by
+ * partitioning the `selectionHalo` table by slab: this layer is
+ * `enabled()`-true only for a COSMO-slab descriptor, the sibling only for
+ * NEAR0.  Nothing selected, a star, or a structure leaves this layer disabled,
+ * so its 16-byte selection + 80-byte camera upload fires only on frames where
+ * a COSMO ring is actually visible.  See `near0SelectionRingLayer`'s header for
+ * the full race argument.
  */
 
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
@@ -43,8 +50,12 @@ export const selectionRingLayer: ContentLayer = {
   enabled(state, _ctx) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const row = state.selectionRows.select;
-    // A row drives the halo iff the table yields a descriptor for its kind.
-    return selectionHalo(row) !== null;
+    // A row drives THIS ring iff the table yields a COSMO-slab descriptor for
+    // its kind. The slab test is what keeps this layer and the NEAR0 sibling
+    // from both firing on the same frame — they share one renderer, and only
+    // one may write its uniforms per frame (see `near0SelectionRingLayer`).
+    const halo = selectionHalo(row);
+    return halo !== null && halo.slab === COSMO;
   },
 
   draw(pass, view, ctx, state) {

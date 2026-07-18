@@ -328,6 +328,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // excluded from isEngineReady, null-checked at use by bodyGlintsLayer.
       bodyGlintRenderer: null,
       starCatalogRenderer: null,
+      starCatalogPickRenderer: null,
+      // r32uint pick provider for the NEAR0 foreground bodies (Earth / planets /
+      // scene-star spheres + the sub-pixel scene-star points). null until
+      // initGpu; excluded from isEngineReady, driven by the body layers' drawPick.
+      bodyPickRenderer: null,
       // Keplerian orbit trails (Earth / Jupiter / Moon) — additive screen-space
       // conics on the (hdr, NEAR0) step. null until initGpu; excluded from
       // isEngineReady, null-checked at use by orbitTrailsLayer.
@@ -545,6 +550,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     famousMeta: state.data.galaxies.famousMeta,
     structures: { byId: (id) => state.data.structures.byId(id) },
+    // The sole loaded star catalog — the first (only, in v1) committed Gaia
+    // catalog off the renderer, or null before the star cloud lands or after
+    // the GPU tears down. Read lazily like the other getters so a star pick /
+    // deep-link always sees the current catalog.
+    stars: {
+      current: () => {
+        const renderer = state.gpu.starCatalogRenderer;
+        if (!renderer) return null;
+        for (const { catalog } of renderer.loadedCatalogs()) return catalog;
+        return null;
+      },
+    },
   });
 
   // Bound clip player, hoisted into the saga context as the single clip-run
@@ -766,6 +783,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.bodyGlintRenderer = null;
     state.gpu.starCatalogRenderer?.destroy();
     state.gpu.starCatalogRenderer = null;
+    state.gpu.starCatalogPickRenderer?.destroy();
+    state.gpu.starCatalogPickRenderer = null;
+    state.gpu.bodyPickRenderer?.destroy();
+    state.gpu.bodyPickRenderer = null;
     state.gpu.orbitTrailRenderer?.destroy();
     state.gpu.orbitTrailRenderer = null;
     state.gpu.timingService.destroy();

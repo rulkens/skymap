@@ -45,6 +45,7 @@ type Stub = {
   setBiasMode: ReturnType<typeof vi.fn>;
   setLabels: ReturnType<typeof vi.fn>;
   setStars: ReturnType<typeof vi.fn>;
+  pickResources: ReturnType<typeof vi.fn>;
 };
 
 const stubs: Record<string, Stub> = {};
@@ -61,6 +62,16 @@ function makeStub(name: string): Stub {
     // `initGpu` calls `starPointRenderer.setStars(<the far partition>)`
     // synchronously after constructing the star-point renderer.
     setStars: vi.fn(),
+    // `initGpu` calls `starCatalogRenderer.pickResources()` synchronously to
+    // hand the pick twin (`starCatalogPickRenderer`) its shared BGLs + the
+    // per-source records bind-group lookup. The pick factory is itself mocked
+    // here, so this only needs to be a callable returning the resource shape.
+    pickResources: vi.fn(() => ({
+      cameraBgl: { __mockStarCameraBgl: true },
+      drawBgl: { __mockStarDrawBgl: true },
+      recordsBgl: { __mockStarRecordsBgl: true },
+      recordsBindGroup: () => null,
+    })),
   };
   stubs[name] = stub;
   return stub;
@@ -246,6 +257,19 @@ vi.mock(
 vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogRenderer', () => ({
   createStarCatalogRenderer: vi.fn(() => makeStub('starCatalogRenderer')),
 }));
+// The pick twin borrows the visual renderer's BGLs + records bind group and
+// builds its OWN r32uint pick pipeline against them — a full device pipeline
+// dance the plain stub device can't service, so mock the factory like every
+// other renderer. `initGpu` calls it with `starCatalogRenderer.pickResources()`.
+vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogPickRenderer', () => ({
+  createStarCatalogPickRenderer: vi.fn(() => makeStub('starCatalogPickRenderer')),
+}));
+// The body pick renderer builds two r32uint pick pipelines (a dynamic-offset
+// sphere path + an instanced point path) against the full device API the plain
+// stub device can't service, so mock the factory like the other pick providers.
+vi.mock('../../../../src/services/gpu/renderers/bodies/bodyPickRenderer', () => ({
+  createBodyPickRenderer: vi.fn(() => makeStub('bodyPickRenderer')),
+}));
 // Partial mock, same rationale as planetRenderer's above: orbitTrailsLayer.ts
 // (loaded transitively via the frame program's registry import) reads the
 // real MAX_ORBITS / INSTANCE_FLOATS constants at module scope to size its
@@ -330,6 +354,7 @@ function makeState(): EngineState {
       texturedBodyRenderer: null,
       ringRenderer: null,
       starPointRenderer: null,
+      bodyPickRenderer: null,
       bodyGlintRenderer: null,
       orbitTrailRenderer: null,
     },
@@ -455,6 +480,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // The orbit-trail renderer needs no data delivery (SCENE_ORBIT_CONICS is a
     // static module-level table) — construction alone lands the handle.
     expect(state.gpu.orbitTrailRenderer).toBe(stubs.orbitTrailRenderer);
+    // The body pick renderer owns its sphere mesh VBO/IBO + the sphere/point
+    // uniform + point instance buffers — the destroy chain must reach it.
+    expect(state.gpu.bodyPickRenderer).toBe(stubs.bodyPickRenderer);
     expect(stubs.starPointRenderer!.setStars).toHaveBeenCalledTimes(1);
     const uploaded = stubs.starPointRenderer!.setStars.mock.calls[0]![0] as ReadonlyArray<{
       id: string;

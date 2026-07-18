@@ -35,6 +35,7 @@ import {
   starAggregatesLayer,
   starAggregateUpsampleLayer,
   foregroundLabelsLayer,
+  near0SelectionRingLayer,
   structureMarkersLayer,
 } from '../../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -206,10 +207,20 @@ const SWAP_NAMES = [
 
 // The near-field foreground group: the true-scale bodies drawn into the
 // depth-bearing `foreground:0` target through the near0 slab — Earth, the Sun
-// sphere, the partition's flat-lit `planets` branch, and its `textured-bodies`
-// branch. Opaque (depth-tested), unlike the additive HDR group and the OVER
-// swap group.
-const FOREGROUND_NAMES = ['earth', 'star-spheres', 'planets', 'textured-bodies'];
+// sphere, the selection-gated focused field-star sphere, the partition's
+// flat-lit `planets` branch, and its `textured-bodies` branch. Opaque
+// (depth-tested), unlike the additive HDR group and the OVER swap group. The
+// focused-field-star sphere sits right after star-spheres — a selection-gated
+// sibling reusing the same star renderer. The translucent `rings` overlay is
+// NOT in this list: it targets foreground:0 but blends OVER, so it is pinned
+// separately (see the ringsLayer registry-row test below).
+const FOREGROUND_NAMES = [
+  'earth',
+  'star-spheres',
+  'focused-field-star-sphere',
+  'planets',
+  'textured-bodies',
+];
 
 // The near-field hdr rows: the layers that pair the hdr target with the
 // near0 slab — additive like every hdr row, but projected through NEAR0 so
@@ -230,12 +241,14 @@ const NEAR_HDR_NAMES = [
   'star-upsample',
 ];
 
-// The near-field captions group: the scene-body name labels. Like the COSMO
-// swap overlays they target the swap chain with premultiplied-OVER, but they
-// project through the near0 slab so the caption anchors track the true-scale
-// bodies rather than being clipped by the cosmological near plane. Its own
-// (swap, NEAR0) render group, distinct from the (swap, COSMO) overlays above.
-const NEAR_LABEL_NAMES = ['foreground-labels'];
+// The near-field swap group: the overlays that pair the swap target with the
+// near0 slab. Like the COSMO swap overlays they premultiply-OVER post-tone-map,
+// but they project through the near0 slab so their anchors track true-scale
+// near-field content rather than being clipped by the cosmological near plane.
+// Its own (swap, NEAR0) render group, distinct from the (swap, COSMO) overlays
+// above: the star selection ring first (so its stroke sits under the caption,
+// mirroring the COSMO ring→labels order), then the scene-body name captions.
+const NEAR_SWAP_NAMES = ['near0-selection-ring', 'foreground-labels'];
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
@@ -317,17 +330,21 @@ describe('CONTENT_LAYERS migration table (foreground group)', () => {
   });
 });
 
-describe('CONTENT_LAYERS migration table (near-field labels group)', () => {
-  it('the scene-body captions draw into swap through the near0 slab, over', () => {
-    // The near-field captions are the second foreground group: like the COSMO
-    // swap overlays they target the swap chain with premultiplied-OVER, but
-    // they project through NEAR0 so the caption anchors track the true-scale
-    // bodies. Drawn by the program's (swap, NEAR0) render step. See the
-    // design's migration table (spec line 216).
-    const nearLabels = CONTENT_LAYERS.filter((layer) => NEAR_LABEL_NAMES.includes(layer.name));
-    expect(nearLabels.map((layer) => layer.name)).toEqual(NEAR_LABEL_NAMES);
-    expect(nearLabels).toContain(foregroundLabelsLayer);
-    for (const layer of nearLabels) {
+describe('CONTENT_LAYERS migration table (near-field swap group)', () => {
+  it('the star selection ring and scene-body captions draw into swap through the near0 slab, over', () => {
+    // The (swap, NEAR0) group: like the COSMO swap overlays these target the
+    // swap chain with premultiplied-OVER, but they project through NEAR0 so
+    // their anchors track true-scale near-field content (a picked star, a body
+    // caption) rather than being clipped by the cosmological near plane. Drawn
+    // by the program's (swap, NEAR0) render step, filtered here by (target,
+    // slab) so a mis-registered member surfaces — the ring leads the caption.
+    const nearSwap = CONTENT_LAYERS.filter(
+      (layer) => layer.target === 'swap' && layer.slab === NEAR0,
+    );
+    expect(nearSwap.map((layer) => layer.name)).toEqual(NEAR_SWAP_NAMES);
+    expect(nearSwap).toContain(near0SelectionRingLayer);
+    expect(nearSwap).toContain(foregroundLabelsLayer);
+    for (const layer of nearSwap) {
       expect(layer.slab).toBe(NEAR0);
       expect(layer.target).toBe('swap');
       expect(layer.blend).toBe('over');
@@ -369,11 +386,13 @@ describe('CONTENT_LAYERS blend legality', () => {
         );
       }
     }
-    // Seven layers blend OVER: the five COSMO swap overlays, the near-field
-    // foreground-labels (swap-target, NEAR0), and the translucent ring (the sole
-    // OVER member of the otherwise-opaque foreground group). Was six before the
-    // ring row landed.
-    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(7);
+    // Eight layers blend OVER: the five COSMO swap overlays, the two (swap,
+    // NEAR0) overlays (the near0 star selection ring and foreground-labels), and
+    // the translucent ring (the sole OVER member of the otherwise-opaque
+    // foreground group). The star-picking branch adds near0-selection-ring and
+    // the planet-rendering branch adds the ring, so both merged in raise the
+    // count from the pre-merge six to eight.
+    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(8);
   });
 });
 
@@ -788,20 +807,31 @@ describe('pointSpritesLayer.draw', () => {
 });
 
 describe('drawPick migration-table rows', () => {
-  it('exactly four pickables expose drawPick, in registry order', () => {
-    // Pins the spec's migration table: only pointSprites / proceduralDisks /
-    // structureMarkers / milkyWay participate in picking, and they do so in
-    // registry order (pointSprites first — the @group(0) prefix contract for
-    // the COSMO pick pass; milkyWay now trails because it moved to the NEAR0
-    // slab, where it picks alone in its own pass with a self-bound camera).
-    // The production code stays name-blind: the pick program filters by
-    // `drawPick` presence + `enabled`, never a hardcoded name list — so this
-    // test is the ONLY place the four names are asserted.
+  it('exactly the eleven pickables expose drawPick, in registry order', () => {
+    // Pins the spec's migration table: the five COSMO/near-field survey
+    // pickables (pointSprites / proceduralDisks / structureMarkers / milkyWay /
+    // starCatalog) PLUS the six NEAR0 true-scale foreground bodies (starPoints /
+    // bodyGlints / earth / starSpheres / focusedFieldStarSphere / planets — Task 11
+    // + the selection-gated focused-field-star sphere's pick + the sub-pixel body
+    // glints' pick). Order is registry order: the COSMO pick pass leads with
+    // point-sprites (the @group(0) prefix contract); every NEAR0 body self-binds
+    // its own slot-0 camera in its own pass, so their relative order carries no
+    // @group(0) dependence (it is depth-resolved, nearest-wins). The production
+    // code stays name-blind — the pick program filters by `drawPick` presence +
+    // `enabled`, never a hardcoded name list — so this test is the ONLY place the
+    // eleven names are asserted.
     expect(CONTENT_LAYERS.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
       'point-sprites',
       'procedural-disks',
       'structure-markers',
       'milky-way',
+      'star-points',
+      'body-glints',
+      'star-catalog',
+      'earth',
+      'star-spheres',
+      'focused-field-star-sphere',
+      'planets',
     ]);
   });
 });

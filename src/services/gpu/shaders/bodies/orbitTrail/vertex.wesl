@@ -38,7 +38,9 @@
 //   @location(2) ginv1: vec4<f32>  — Ginv column 1                       } instance
 //   @location(3) ginv2: vec4<f32>  — Ginv column 2                       } record,
 //   @location(4) params: vec4<f32> — color.rgb in .xyz, eccentricity .w  } stride
-//   @location(5) phase: vec4<f32>  — meanAnomalyRad .x, fade alpha .y, .zw pad } 80 B
+//   @location(5) phase: vec4<f32>  — meanAnomalyRad .x, fade alpha .y, .zw pad } 112 B
+//   @location(6) minorS: vec4<f32> — gradient minors M1/M2/M3 in .xyz, .w pad
+//   @location(7) minorT: vec4<f32> — gradient minors M4/M5/M6 in .xyz, .w pad
 
 import package::bodies::orbitTrail::io::VSOut;
 
@@ -50,6 +52,8 @@ fn vs(
   @location(3) ginv2: vec4<f32>,
   @location(4) params: vec4<f32>,
   @location(5) phase: vec4<f32>,
+  @location(6) minorS: vec4<f32>,
+  @location(7) minorT: vec4<f32>,
 ) -> VSOut {
   var out: VSOut;
   // Oversized triangle covering the whole NDC square in one primitive.
@@ -69,5 +73,8 @@ fn vs(
   out.eccentricity = params.w;
   out.meanAnomaly = phase.x;
   out.alpha = phase.y;
+  // The affine Sampson-gradient minors (padded vec4, .xyz is the real data).
+  out.minorS = minorS.xyz;
+  out.minorT = minorT.xyz;
   return out;
 }

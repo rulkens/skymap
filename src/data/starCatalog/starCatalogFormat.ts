@@ -125,6 +125,15 @@ export const STAR_COLORIDX_MAX = 4.4;
 export const STAR_COLORIDX_STEP = (STAR_COLORIDX_MAX - STAR_COLORIDX_MIN) / STAR_COLORIDX_LEVELS;
 
 /**
+ * In-cell offset resolution — the 10-bit per-axis offset triple spans `[0, 1024)`
+ * of the owning node's box edge (see the record layout above). This is the one
+ * home for that span: both the reconstruction in `resolveStarRecord` and the
+ * vertex shader's `OFFSET_SCALE` (`1 / 1024`) invert it, so they must read the
+ * same 1024. Sibling of `STAR_ABSMAG_LEVELS` / `STAR_COLORIDX_LEVELS`.
+ */
+export const STAR_OFFSET_LEVELS = 1024;
+
+/**
  * Clamp `value` into the inclusive integer range `[0, maxIndex]`.
  * Out-of-range inputs saturate at the endpoints — the caller (encode
  * time) is responsible for counting saturations against the frozen
@@ -266,7 +275,8 @@ export function unpackStarRecord(
 export async function encodeStarCatalog(cat: StarCatalog): Promise<ArrayBuffer> {
   const { starCount, nodeCount, mortonBitsPerAxis, cellEdgePc, gridOrigin, nodes, records } = cat;
   if (nodes.length !== nodeCount) throw new Error('nodes length mismatch');
-  if (records.length % RECORD_BYTES !== 0) throw new Error('records length not a whole number of records');
+  if (records.length % RECORD_BYTES !== 0)
+    throw new Error('records length not a whole number of records');
 
   const buf = new ArrayBuffer(HEADER_BYTES + nodeCount * NODE_BYTES + records.length);
   const dv = new DataView(buf);

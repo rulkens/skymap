@@ -9,11 +9,15 @@
 // ## Why the anchors live here
 //
 // The five spectral-class anchor colours are authored inline below — this is
-// the ramp's own definition, not a mirror of any CPU table. The survey-star
-// tint is keyed on Gaia BP−RP, an input this shader alone consumes, so there
-// is no CPU twin to drift against: this function is the single home of the
-// BP−RP → RGB mapping. The Gaia survey bin carries hot early-type stars, so
-// the blue end of the ramp (the O/B anchor) is live rather than decorative.
+// the ramp's canonical definition. The Gaia survey bin carries hot early-type
+// stars, so the blue end of the ramp (the O/B anchor) is live rather than
+// decorative.
+//
+// This ramp has one CPU twin: 'src/utils/color/starTintFromBpRp.ts' evaluates
+// the SAME anchors and breakpoints on the CPU to tint the focused-star sphere,
+// so a picked star matches the point it rose out of. The two are one ramp with
+// two evaluations — any edit to the anchors or breakpoints here MUST be
+// mirrored there (its tests guard the shared values), and vice versa.
 //
 // A separate, intentionally independent CPU path colours the hand-seeded
 // foreground scene stars: temperatureToLinearRgb turns each star's kelvin

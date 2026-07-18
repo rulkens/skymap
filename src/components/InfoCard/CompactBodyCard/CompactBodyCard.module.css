@@ -1,5 +1,5 @@
 /*
- * CompactStarCard.module.css — the star hover-preview's outer hook.
+ * CompactBodyCard.module.css — the body hover-preview's outer hook.
  * The chrome is the shared compactChrome vocabulary; .root composes the panel
  * and the component reads the inner classes (cardTitle) straight from
  * compactChrome.

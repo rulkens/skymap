@@ -85,6 +85,7 @@ const DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
   structures: { byId: (id) => (id === 'cluster-virgo' ? VIRGO : null) },
+  stars: { current: () => null },
 };
 
 // Pre-computed expected framing values (mirrors what focusFraming returns for VIRGO):

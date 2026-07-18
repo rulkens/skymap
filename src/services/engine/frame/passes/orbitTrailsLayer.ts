@@ -59,9 +59,9 @@ const CULL_PX = 10;
 const FULL_PX = 20;
 
 // Reused across frames — the engine hot path allocates nothing here. Sized
-// for the renderer's cap; each conic's 20-float record (three Ginv columns +
-// colour/eccentricity + mean anomaly) is rewritten in place before the single
-// instanced draw.
+// for the renderer's cap; each conic's 28-float record (three Ginv columns +
+// colour/eccentricity + mean anomaly + the two gradient-minor triples) is
+// rewritten in place before the single instanced draw.
 const staging = new Float32Array(MAX_ORBITS * INSTANCE_FLOATS);
 
 // The system's reach from the heliocentric origin: the farthest any orbit
@@ -119,13 +119,17 @@ export const orbitTrailsLayer: ContentLayer = {
     const camPos = ctx.drawCamPos;
     const viewportHeightPx = view.viewportPx[1];
 
-    // Pack one 20-float instance record per VISIBLE conic (byte offsets mirror
+    // Pack one 28-float instance record per VISIBLE conic (byte offsets mirror
     // the renderer's INSTANCE_ATTRIBUTES):
     //   floats 0..11  — the three Ginv columns (loc1/2/3 at byte 0/16/32),
     //                    composed from the slab's f64 vp (the hard invariant
     //                    in the module header),
     //   floats 12..15 — colour.rgb + eccentricity (loc4 at byte 48),
-    //   floats 16..19 — mean anomaly + fade alpha + pad×2 (loc5 at byte 64).
+    //   floats 16..19 — mean anomaly + fade alpha + pad×2 (loc5 at byte 64),
+    //   floats 20..23 — gradient minors M1/M2/M3 + pad (loc6 at byte 80),
+    //   floats 24..27 — gradient minors M4/M5/M6 + pad (loc7 at byte 96).
+    // The minors are the CPU-f64 hoist that keeps the fragment's Sampson
+    // gradient affine (no f32 difference-of-products cancellation).
     // Orbits below the apparent-size cull threshold are skipped entirely (not
     // drawn), so `n` counts only the packed records; the rest fade in via the
     // alpha the fragment multiplies through. The fragment's Newton horizon
@@ -153,7 +157,7 @@ export const orbitTrailsLayer: ContentLayer = {
       if (diameterPx < CULL_PX) continue; // deep sub-pixel — do not render
       const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX));
 
-      const ginv = composeOrbitConic(
+      const { ginv, minorS, minorT } = composeOrbitConic(
         view.slab.vp,
         conic.centerMpc,
         conic.semiMajorMpc,
@@ -171,6 +175,8 @@ export const orbitTrailsLayer: ContentLayer = {
       staging[base + 17] = alpha;
       staging[base + 18] = 0; // trailing pad — kept zeroed across frames
       staging[base + 19] = 0;
+      staging.set(minorS, base + 20); // gradient minors M1/M2/M3 + pad → floats 20..23
+      staging.set(minorT, base + 24); // gradient minors M4/M5/M6 + pad → floats 24..27
       n++;
     }
     if (n > 0) renderer.draw(pass, staging, n);

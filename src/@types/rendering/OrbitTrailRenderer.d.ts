@@ -19,10 +19,10 @@ import type { Renderer } from './Renderer';
 export type OrbitTrailRenderer = Renderer & {
   /**
    * Draw the first `count` orbit trails into the caller's additive HDR pass.
-   * `instances` is a packed 20-float / 80-byte-stride record per orbit (the
-   * `Ginv` columns + colour/eccentricity + mean anomaly — see the renderer's
-   * instance-attribute table). `count` is clamped to `MAX_ORBITS`; a zero
-   * count is a no-op.
+   * `instances` is a packed 28-float / 112-byte-stride record per orbit (the
+   * `Ginv` columns + colour/eccentricity + mean anomaly + the two gradient-minor
+   * triples — see the renderer's instance-attribute table). `count` is clamped
+   * to `MAX_ORBITS`; a zero count is a no-op.
    */
   draw(pass: GPURenderPassEncoder, instances: Float32Array, count: number): void;
 };

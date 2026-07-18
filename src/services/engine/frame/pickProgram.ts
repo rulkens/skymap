@@ -12,7 +12,9 @@
  * render loop. Folding it into the FRAME would braid "which galaxy is under the
  * cursor?" into "draw the next frame" — two concerns that vary independently.
  * So this program is a sibling of the FRAME executor: it shares only the same
- * `ContentLayer` registry, filters it by `drawPick` presence + `enabled`,
+ * `ContentLayer` registry, filters it by `drawPick` presence + the pick gate
+ * `(pickEnabled ?? enabled)` — a layer's own pick gate when its pick set is
+ * wider than its draw set, else `enabled` (see `ContentLayer.pickEnabled`) —
  * groups the survivors by slab, and re-rasterises each slab's pickable geometry
  * through the r32uint pick pipeline into its own pick target. See the
  * renderer-unification design's "Pick" section.
@@ -35,8 +37,9 @@
  * this program allocates its own `pick:cosmo` (r32uint + depth24plus) and
  * `pick:near0` (r32uint + depth32float) targets, lazily and resize-aware, one
  * per slab that actually has an enabled pickable layer. A slab with no pickable
- * layer is never allocated — `pick:near0` exists only while the Milky-Way
- * impostor (the near-field slab's sole pickable) passes its visibility gate.
+ * layer is never allocated — `pick:near0` exists only while a near-field
+ * pickable (the Milky-Way impostor or the Gaia star catalog) passes its
+ * visibility gate; on a cosmic-zoom frame neither is enabled and it stays unallocated.
  *
  * @module
  */
@@ -216,12 +219,17 @@ export function createPickProgram(deps: {
   // within each slab (a `.filter()` keeps the array order), which is the
   // @group(0) prefix contract: point-sprites runs first in the COSMO pass and
   // leaves slot 0 bound to the shared pick camera for the ring / disk
-  // fold-ins. (The Milky-Way pick — alone in the NEAR0 pass — binds its own
-  // slot-0 camera and needs no prefix.)
+  // fold-ins. (The NEAR0 pickables — the Milky-Way impostor and the Gaia star
+  // catalog — share no such prefix: each binds its OWN complete slot-0 camera in
+  // its own draw, so their registry order carries no @group(0) dependence.)
   function pickablesBySlab(
     ctx: ReadyFrameContext,
   ): { slabIndex: number; layers: ContentLayer[] }[] {
-    const pickable = layers.filter((l) => l.drawPick && l.enabled(state, ctx));
+    // Filter by the PICK gate: `pickEnabled` when a layer declares one (its pick
+    // set is wider than its draw set — planetsLayer's flat ∪ textured, the Earth
+    // caption stamp), else `enabled` (pick set == draw set, the common case). See
+    // `ContentLayer.pickEnabled`.
+    const pickable = layers.filter((l) => l.drawPick && (l.pickEnabled ?? l.enabled)(state, ctx));
     const slabIndices = [...new Set(pickable.map((l) => l.slab))].sort((a, b) => a - b);
     return slabIndices.map((slabIndex) => ({
       slabIndex,
@@ -289,24 +297,40 @@ export function createPickProgram(deps: {
     }
   }
 
-  function renderForDebug(): GPUTexture | null {
+  function renderForDebug(): readonly GPUTexture[] {
     const ctx = pickFrameContext(state, canvas);
-    if (ctx === null) return null;
+    if (ctx === null) return [];
 
-    // The debug overlay samples the cosmological slab's pick texture.
-    const cosmoPickables = layers.filter(
-      (l) => l.drawPick && l.slab === COSMO && l.enabled(state, ctx),
-    );
-    if (cosmoPickables.length === 0) return null;
+    // The debug overlay samples EVERY slab that has an enabled pickable layer —
+    // not just the cosmological slab. Reuse the same slab enumeration the real
+    // `pick()` path uses (`pickablesBySlab`, near→far) so star / Milky-Way picks
+    // on NEAR0 show up in the overlay too.
+    const groups = pickablesBySlab(ctx);
+    if (groups.length === 0) return [];
 
-    const target = ensureSlabTextures(COSMO, canvas.width, canvas.height);
-    // No timing descriptor: the debug overlay is not the timed 'pick' pass —
-    // it only writes the texture the overlay samples, and consuming the shared
-    // query-set slot here would double-book it against a real pick.
+    const w = canvas.width;
+    const h = canvas.height;
+    // Record every slab's pick pass on ONE encoder. Each slab writes its OWN
+    // colour + depth textures and each layer's `drawPick` binds its own per-draw
+    // uniforms, so the passes share no mutable buffer — no writeBuffer/submit
+    // ordering hazard from batching them. No timing descriptor: the debug
+    // overlay is not the timed 'pick' pass, and consuming the shared query-set
+    // slot here would double-book it against a real pick.
     const encoder = device.createCommandEncoder({ label: 'pick-program-debug-encoder' });
-    recordSlabPass(encoder, COSMO, target, ctx, cosmoPickables, undefined);
+    const texturesNearToFar: GPUTexture[] = [];
+    for (const { slabIndex, layers: slabPickables } of groups) {
+      const target = ensureSlabTextures(slabIndex, w, h);
+      recordSlabPass(encoder, slabIndex, target, ctx, slabPickables, undefined);
+      texturesNearToFar.push(target.pickTexture);
+    }
     device.queue.submit([encoder.finish()]);
-    return target.pickTexture;
+
+    // Return FAR → NEAR so the caller can paint the textures in order with the
+    // overlay's premultiplied OVER blend: farther slabs first, nearer slabs on
+    // top. Because background texels pack to 0 (alpha 0 → no-op blend), a nearer
+    // slab's real pick composites over a farther one — the same near-wins
+    // occlusion `frontmostPick` folds on the CPU for the hover/click path.
+    return texturesNearToFar.reverse();
   }
 
   function destroy(): void {

@@ -54,6 +54,19 @@ export const MIN_NEAR_MPC = 1e-19;
  */
 export const FAR_MIN_MPC = 3e-11;
 
+/**
+ * Fraction of the NEAR0 far plane a direction-preserving anchor clamp pulls a
+ * beyond-far point to, so the clamped point lands JUST INSIDE the far plane and
+ * survives the clip test instead of sitting exactly on (or past) it. Consumed by
+ * `near0SelectionRingLayer` (the ring quad) and `foregroundLabelsLayer` (the
+ * caption lift anchor); each clamps a camera-relative vector to
+ * `slab.farMpc * NEAR0_FAR_CLAMP_FRACTION`. 0.99 = 1% inside — comfortably clear
+ * of f32 round-off at the plane while the projected screen position is unchanged
+ * (a uniform length scale in the rebased frame moves only depth, not clip x/y).
+ * Single-sourced so the two clamps can never pull to different depths.
+ */
+export const NEAR0_FAR_CLAMP_FRACTION = 0.99;
+
 const NEAR_RATIO = 1e-4;
 const FAR_RATIO = 100;
 

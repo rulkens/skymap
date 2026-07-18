@@ -43,4 +43,11 @@ struct VSOut {
   // Per-orbit apparent-size fade (CPU-side): 1 well above the cull threshold,
   // ramping to 0 as the orbit shrinks toward it. Multiplies the final colour.
   @location(6) @interpolate(flat) alpha: f32,
+  // The gradient minors that make the fragment's Sampson gradient AFFINE in the
+  // pixel, hoisted to CPU f64 to kill the old difference-of-products
+  // cancellation (see composeOrbitConic's header). 'minorS' = (M1, M2, M3)
+  // drives d s/d p, 'minorT' = (M4, M5, M6) drives d t/d p; the fragment
+  // evaluates each numerator as a plain multiply-add. Per-orbit constant, flat.
+  @location(7) @interpolate(flat) minorS: vec3<f32>,
+  @location(8) @interpolate(flat) minorT: vec3<f32>,
 };

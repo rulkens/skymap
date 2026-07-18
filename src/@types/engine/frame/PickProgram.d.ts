@@ -49,13 +49,16 @@ export type PickProgram = {
    */
   pick(pickXPx: number, pickYPx: number): Promise<PickResult | null>;
   /**
-   * Record the cosmological slab's pick draws into `pick:cosmo` WITHOUT a
-   * readback and return the texture, for the pick-debug overlay to sample.
-   * Independent of `pick()`'s in-flight guard (it never touches the staging
-   * buffers). Returns `null` when the engine is not ready or no cosmological
-   * pickable layer is enabled.
+   * Record the pick draws of EVERY slab that has an enabled pickable layer
+   * WITHOUT a readback, and return their pick textures ordered FAR → NEAR for
+   * the pick-debug overlay to composite. Painting them in that order under the
+   * overlay's premultiplied OVER blend reproduces `pick()`'s near-wins
+   * occlusion: farther slabs paint first, nearer slabs (whose background texels
+   * pack to 0 → alpha 0 → no-op) composite on top. Independent of `pick()`'s
+   * in-flight guard (it never touches the staging buffers). Returns an empty
+   * array when the engine is not ready or no slab has an enabled pickable layer.
    */
-  renderForDebug(): GPUTexture | null;
+  renderForDebug(): readonly GPUTexture[];
   /** Release every per-slab pick target, depth texture, and staging buffer. */
   destroy(): void;
 };

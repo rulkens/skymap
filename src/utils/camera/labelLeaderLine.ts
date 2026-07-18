@@ -43,6 +43,14 @@
  * NEAR0 layer passes its rebased f64 matrix straight through, while the f32
  * COSMO callers widen exactly (f32 → f64 is lossless), behaviour-identical.
  *
+ * The f64 inverse holds only for anchors INSIDE the frustum. An anchor far
+ * BEYOND the far plane still un-projects to a jittering point (its `ndc_z`
+ * rounds to 1.0 within f64 error, which the inverse's huge depth rows amplify),
+ * so the caller must keep the anchor in range: `foregroundLabelsLayer` clamps
+ * far-star anchors to just inside the far plane before the lift (see its
+ * header). This function trusts an in-domain anchor rather than clamping itself
+ * — the layer owns the slab, so it owns the domain guard.
+ *
  * Pure geometry — no engine state, no clock. The forward-projection math
  * mirrors the declutter projection in `labelDirectorSubsystem`.
  */

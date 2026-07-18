@@ -9,10 +9,22 @@ import {
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import {
+  engineStatusChanged,
+  engineSourceCountReported,
+} from '../../../src/state/engine/engineSlice';
+import { Source } from '../../../src/data/sources';
 import { cameraRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
+import { buildStarOctree } from '../../../tools/stars/buildStarOctree';
+import {
+  encodeStarCatalog,
+  decodeStarCatalog,
+} from '../../../src/data/starCatalog/starCatalogFormat';
+import { resolveStarRecord } from '../../../src/services/engine/helpers/resolveStarRecord';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
 import type { FocusCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
@@ -23,13 +35,33 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 // (ref type, from-pose) — no engine cloud needed for the milkyWay case.
 const FROM: CameraPose = { target: [1, 1, 1], yaw: 0.5, pitch: -0.2, distance: 9 };
 
-// resolveDeps stub — the milkyWay ref resolves without touching catalogs.
+// The live star catalog the resolveDeps stub reads. Null until a test flips it,
+// modelling the Gaia bin landing mid-flight — a star deep link's row is null
+// until this is set. Reset per test in `beforeEach`.
+let starCatalogStub: StarCatalog | null = null;
+
+// resolveDeps stub — the milkyWay ref resolves without touching catalogs; the
+// `stars` getter reads the live `starCatalogStub` so a test can bring the Gaia
+// bin online between dispatches.
 const resolveDeps = (): ResolveDeps =>
   ({
     catalogs: { get: () => undefined },
     famousMeta: undefined,
     structures: { byId: () => undefined },
+    stars: { current: () => starCatalogStub },
   }) as unknown as ResolveDeps;
+
+/** A small real star catalog through the octree + encode/decode path. */
+async function makeStarCatalog(): Promise<StarCatalog> {
+  const octree = buildStarOctree(
+    [
+      { mortonIndex: 0, offset: [3, 1, 2], absMag: 5, bpRp: 0.3 },
+      { mortonIndex: 0, offset: [7, 8, 9], absMag: 4, bpRp: 0.5 },
+    ],
+    { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] },
+  );
+  return decodeStarCatalog(await encodeStarCatalog(octree));
+}
 
 describe('watchFocusTweenSaga', () => {
   let store: ReturnType<typeof build>;
@@ -44,6 +76,7 @@ describe('watchFocusTweenSaga', () => {
     return s;
   }
   beforeEach(() => {
+    starCatalogStub = null;
     store = build();
   });
 
@@ -67,6 +100,68 @@ describe('watchFocusTweenSaga', () => {
   it('no-ops when the camera is not ready (cameraRuntime returns null)', async () => {
     cameraRuntime = () => null;
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+  });
+
+  // Regression: the body / milkyWay / star deep-link bug. A statically-
+  // resolvable focus id dispatches updateSelectionFocus during engine bootstrap,
+  // BEFORE initGpu has built state.cam — so cameraRuntime() is null. The tween
+  // must not be silently dropped; it must fire once the engine emits its
+  // readiness pulse (by when wireInput has installed the camera). Galaxy deep
+  // links dodge this because their updateSelectionFocus is itself deferred on
+  // catalogLoaded, which only fires after the camera exists.
+  it('defers the tween when the camera is not ready, then plants it on the engine-ready pulse', async () => {
+    cameraRuntime = () => null;
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    // The camera comes online during wireInput; the engine then emits a status
+    // pulse as the first catalog arrives (or the synthetic fallback fires).
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8 });
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 1, source: Source.SDSS }));
+    await flush();
+
+    const tween = store.getState()[cameraRoute].tween;
+    expect(tween).not.toBeNull();
+    expect(tween!.from).toEqual(FROM);
+    expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+  });
+
+  // Regression: the star deep-link second gap. `resolveFocusId` resolves
+  // `star-<n>` statically, so `updateSelectionFocus` fires at bootstrap — but
+  // `extractSelectionRow`'s star arm returns null until the Gaia bin commits, so
+  // the naive `row === null` early return dropped the focus forever. The saga
+  // must instead defer on the per-source count report (dispatched the instant a
+  // catalog commits) and re-extract once the star cloud lands.
+  it('defers a star focus whose catalog has not loaded, then plants it once the bin commits', async () => {
+    store.dispatch(updateSelectionFocus({ type: 'star', index: 1 }));
+    await flush();
+    // No catalog yet → row null → tween must not fire (and must not be dropped).
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    // The Gaia bin lands: the star slot uploads to the renderer, then reports its
+    // count. By then `stars.current()` is non-null, so re-extraction succeeds.
+    const catalog = await makeStarCatalog();
+    starCatalogStub = catalog;
+    store.dispatch(engineSourceCountReported({ source: Source.GaiaStars, count: 2 }));
+    await flush();
+
+    const tween = store.getState()[cameraRoute].tween;
+    expect(tween).not.toBeNull();
+    expect(tween!.from).toEqual(FROM);
+    // Framed on the resolved star's world position — the descriptor targets it.
+    const record = resolveStarRecord(catalog, 1)!;
+    expect(tween!.to.target).toEqual(record.positionMpc);
+  });
+
+  it('a star focus with a garbage index no-ops once the catalog is present (no infinite wait)', async () => {
+    // A stale/out-of-range star index resolves to null even with the catalog
+    // loaded. The deferral guard checks catalog presence, not row-ness, so this
+    // exits rather than looping forever waiting for a report that never recurs.
+    starCatalogStub = await makeStarCatalog();
+    store.dispatch(updateSelectionFocus({ type: 'star', index: 999_999 }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
   });

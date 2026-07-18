@@ -22,7 +22,11 @@
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
-import { FARTHEST_BODY_MPC, FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
+import {
+  FARTHEST_BODY_MPC,
+  FARTHEST_PLANET_MPC,
+  FOREGROUND_MAX_DISTANCE_MPC,
+} from '../frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
 import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -92,6 +96,26 @@ export const SCALE_FADE_BANDS = {
   // FOREGROUND_MAX_DISTANCE_MPC = FARTHEST_BODY_MPC × 100) is what makes the
   // gate cut invisible.
   starBackdrop: { fullAt: FARTHEST_BODY_MPC * 2, goneAt: FARTHEST_BODY_MPC * 10 },
+
+  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the same
+  // quantity as `starBackdrop`, but scaled off the SOLAR-SYSTEM extent, not the
+  // star roster). Consumer: `bodyGlintsLayer`. The planet/moon glints are
+  // minimum-size additive sprites exactly like the star points, so as the camera
+  // pulls back from the solar system all ~22 of them collapse onto a couple of
+  // pixels into one bright dot — this band dissolves them smoothly instead of
+  // letting them ride full-brightness to the coarse `FOREGROUND_MAX_DISTANCE_MPC`
+  // gate, which sits deep in Milky-Way framing. Full while the camera still frames
+  // the outer planets a couple of Neptune-orbits out (`FARTHEST_PLANET_MPC * 2`),
+  // fully dissolved by `FARTHEST_PLANET_MPC * 10` (~1.5e-9 Mpc, ~10 Neptune
+  // orbits) — well before the neighbourhood, let alone the galaxy, frames up. Its
+  // sibling `starBackdrop` does the same for the star points one scale-decade out.
+  // The band completing STRICTLY inside the shared gate (`goneAt ≪
+  // FOREGROUND_MAX_DISTANCE_MPC = FARTHEST_BODY_MPC × 100`) is what makes the hard
+  // gate cut invisible; like `starPointsLayer`, `bodyGlintsLayer` DISABLES outright
+  // once this reads 0 (the "opacity 0 ⇒ no render" house rule), so the far-dissolve
+  // is the binding, smooth gate for the glints. These x2 / x10 edges are an
+  // eye-tuning STARTING POINT — the user tunes them visually.
+  bodyGlintBackdrop: { fullAt: FARTHEST_PLANET_MPC * 2, goneAt: FARTHEST_PLANET_MPC * 10 },
 
   // Keyed on: CAMERA distance from the heliocentric render origin, Mpc (the Sun
   // sits at the origin, so the Sun caption's own distance-from-camera IS that

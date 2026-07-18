@@ -17,4 +17,6 @@ export const TARGET_IDENTITY_KEY: Record<FocusableTargetType, (t: FocusableTarge
   // A scene body's seed id is stable and unique within the body namespace, so
   // the `body:${id}` key names it exactly — the same shape as the structure arm.
   body: (t) => (t.type === 'body' ? `body:${t.id}` : ''),
+  // A survey star's identity is its bin-stable record index.
+  star: (t) => (t.type === 'star' ? `star:${t.index}` : ''),
 };

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { selectionRingLayer } from '../../../../../src/services/engine/frame/passes/selectionRingLayer';
+import { near0SelectionRingLayer } from '../../../../../src/services/engine/frame/passes/near0SelectionRingLayer';
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -117,6 +118,28 @@ function structureRow(): StructureInfo {
 // The milkyWay singleton row (bare tag — position resolved from the constant).
 const MILKY_WAY_ROW: SelectionRow = { type: 'milkyWay' };
 
+// A scene-body row (planet / famous star / Earth). Like a survey star its halo
+// is NEAR0-tagged (radiusMpc 0, floored to a pixel ring), so the COSMO layer
+// must ignore it and the NEAR0 sibling must own it.
+const BODY_ROW: SelectionRow = {
+  type: 'body',
+  id: 'jupiter',
+  label: 'Jupiter',
+  positionMpc: [1e-9, 2e-9, -3e-9],
+  radiusKm: 69911,
+};
+
+// A survey-star row — its halo is NEAR0-tagged, so the COSMO layer must ignore
+// it and the NEAR0 sibling must own it.
+const STAR_ROW: SelectionRow = {
+  type: 'star',
+  index: 7,
+  positionMpc: [0.001, -0.002, 0.0005],
+  absMag: 4.8,
+  bpRp: 0.65,
+  radiusKm: 696340,
+};
+
 function makeStateWithSelection(row: SelectionRow | null): EngineState {
   return {
     gpu: { selectionRingRenderer: makeRendererSpy() },
@@ -154,6 +177,47 @@ describe('selectionRingLayer.enabled', () => {
     const state = makeStateWithSelection(structureRow() as SelectionRow);
     expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
   });
+
+  it('stays false for a star row (its NEAR0 halo belongs to the sibling layer)', () => {
+    const state = makeStateWithSelection(STAR_ROW);
+    expect(selectionRingLayer.enabled(state, makeCtx())).toBe(false);
+  });
+});
+
+// ── slab-exclusivity invariant ────────────────────────────────────
+//
+// The two ring layers share one `selectionRingRenderer`; a frame records both
+// into one encoder with one submit, so if both were ever `enabled()`-true in a
+// frame both draws would read the last-written uniforms (the writeBuffer/submit
+// race). This guards the real bug directly: for EVERY selection kind at most one
+// layer is enabled, and the halo-bearing kinds route to the expected slab's
+// layer.
+describe('selection-ring slab exclusivity (COSMO vs NEAR0)', () => {
+  const ctx = makeCtx();
+  const cases: ReadonlyArray<{
+    name: string;
+    row: SelectionRow | null;
+    cosmo: boolean;
+    near0: boolean;
+  }> = [
+    { name: 'nothing selected', row: null, cosmo: false, near0: false },
+    { name: 'galaxy', row: galaxyRow(), cosmo: true, near0: false },
+    { name: 'milkyWay', row: MILKY_WAY_ROW, cosmo: true, near0: false },
+    { name: 'star', row: STAR_ROW, cosmo: false, near0: true },
+    { name: 'body', row: BODY_ROW, cosmo: false, near0: true },
+    { name: 'structure', row: structureRow() as SelectionRow, cosmo: false, near0: false },
+  ];
+
+  for (const { name, row, cosmo, near0 } of cases) {
+    it(`${name}: never both layers, routes to the right slab`, () => {
+      const state = makeStateWithSelection(row);
+      const cosmoEnabled = selectionRingLayer.enabled(state, ctx);
+      const near0Enabled = near0SelectionRingLayer.enabled(state, ctx);
+      expect(cosmoEnabled && near0Enabled).toBe(false);
+      expect(cosmoEnabled).toBe(cosmo);
+      expect(near0Enabled).toBe(near0);
+    });
+  }
 });
 
 // ── draw() ────────────────────────────────────────────────────────

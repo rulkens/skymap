@@ -29,4 +29,21 @@ export type SelectionRow =
       readonly label: string;
       readonly positionMpc: Vec3;
       readonly radiusKm: number;
+    }
+  // Star arm — the self-contained display projection of a picked star, its
+  // physical fields (`positionMpc`/`absMag`/`bpRp`) snapshotted off the loaded
+  // StarCatalog at extract time so framing/card read them directly. It also
+  // carries `index` (from the ref) so `buildFocusable` can rebuild the ref /
+  // the `star-<index>` URL, mirroring how GalaxyRow carries its index.
+  | {
+      readonly type: 'star';
+      readonly index: number;
+      readonly positionMpc: Vec3;
+      readonly absMag: number;
+      readonly bpRp: number;
+      // Nominal solar radius (km), stamped by the extractor. The bin quantises
+      // position + photometry only, so a field star carries no measured size;
+      // this representative radius is the one framing (bodyLikeFraming) and the
+      // sphere gate read for a discrete near-field star.
+      readonly radiusKm: number;
     };

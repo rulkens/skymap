@@ -36,6 +36,7 @@ import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
+import package::lib::pickDepthBands::PICK_BAND_BACKDROP_EPS;
 
 // @group(0) points-pick uniform mirror — bound by pickMilkyWay itself
 // from its own buffer (the MW is the sole pickable in the NEAR0 pick
@@ -66,9 +67,17 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   let offset = expandBillboardScreen(u.cam, centerClip, halfExtentPx, corner);
 
   var out: VsOut;
-  // Only X/Y move — depth + w pass through so the shared depth test
-  // resolves a foreground galaxy over the MW billboard.
-  out.pos = vec4<f32>(centerClip.xy + offset, centerClip.zw);
+  // The impostor is the ULTIMATE pick fallback (header 'lib/pickDepthBands'):
+  // its true depth would let it beat a forced-far survey star, but by IMPORTANCE
+  // the galaxy backdrop must sit behind everything. So instead of passing depth
+  // through we FORCE the deepest band, 'z = w * (1 - PICK_BAND_BACKDROP_EPS)'.
+  // That band has the SMALLEST eps of the three, hence the LARGEST z/w, so it
+  // LOSES the 'less' test to every star band — an overlapping resolvable Gaia
+  // dot now wins the click over the galaxy. It still stays just inside the far
+  // plane so the billboard survives the clip test. Only X/Y take the billboard
+  // offset; w passes through so the perspective divide lands the band correctly.
+  let bandZ = centerClip.w * (1.0 - PICK_BAND_BACKDROP_EPS);
+  out.pos = vec4<f32>(centerClip.xy + offset, bandZ, centerClip.w);
   out.uv = corner;
   // MW localIdx is always 0; add PICK_SENTINEL_OFFSET here — the
   // fragment writes this value verbatim.

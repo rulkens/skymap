@@ -27,11 +27,14 @@
  * ### The per-instance record is `Ginv` + trail params, not an MVP
  *
  * The pixel→plane inverse homography `Ginv` (a padded `mat3x3<f32>`) streams as
- * three `vec4<f32>` columns, followed by `(color.rgb, eccentricity)` and
- * `(meanAnomalyRad, pad×3)`. Same rationale as the ring twin: each orbit reads
- * its OWN baked record via `@builtin(instance_index)`, so there is no mid-frame
- * uniform for a later write to clobber (the writeBuffer-vs-submit landmine).
- * One `writeBuffer`, one `draw`, no bind group at all.
+ * three `vec4<f32>` columns, followed by `(color.rgb, eccentricity)`,
+ * `(meanAnomalyRad, fadeAlpha, pad×2)`, and the two `vec4<f32>` gradient-minor
+ * triples `(M1, M2, M3, pad)` / `(M4, M5, M6, pad)` that make the fragment's
+ * Sampson gradient affine (see `composeOrbitConic`'s header). Same rationale as
+ * the ring twin: each orbit reads its OWN baked record via
+ * `@builtin(instance_index)`, so there is no mid-frame uniform for a later write
+ * to clobber (the writeBuffer-vs-submit landmine). One `writeBuffer`, one
+ * `draw`, no bind group at all.
  *
  * @module
  */
@@ -51,35 +54,37 @@ export const MAX_ORBITS = 24;
 /**
  * Float32 slots per per-instance record: three `vec4<f32>` `Ginv` columns (12)
  * + one `vec4<f32>` `(color.rgb, eccentricity)` (4) + one `vec4<f32>`
- * `(meanAnomalyRad, pad, pad, pad)` (4) = 20. The caller writes each orbit's
- * record at `i * INSTANCE_FLOATS`, and `draw` uploads `count` records in one
- * `writeBuffer`. Same 20-float stride the ring renderer used (a different
- * payload — three matrix columns + trail params rather than four MVP columns +
- * colour — at the same size), so the instance-buffer sizing carries over.
+ * `(meanAnomalyRad, fadeAlpha, pad, pad)` (4) + two `vec4<f32>` gradient-minor
+ * triples `(M1, M2, M3, pad)` / `(M4, M5, M6, pad)` (8) = 28. The caller writes
+ * each orbit's record at `i * INSTANCE_FLOATS`, and `draw` uploads `count`
+ * records in one `writeBuffer`. The two minor triples are the CPU-f64 hoist that
+ * makes the fragment's Sampson gradient affine (see `composeOrbitConic`).
  */
-export const INSTANCE_FLOATS = 20;
+export const INSTANCE_FLOATS = 28;
 
 /**
- * Per-instance byte stride: 20 × 4 = 80. Declared here AND in the pipeline's
+ * Per-instance byte stride: 28 × 4 = 112. Declared here AND in the pipeline's
  * instance-buffer descriptor; a mismatch either validate-errors or silently
  * reads garbage.
  */
-export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 80 bytes
+export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 112 bytes
 
 /**
  * Per-instance vertex attributes — the three `Ginv` columns (reassembled into a
- * `mat3x3<f32>` in the fragment) followed by the colour+eccentricity and the
- * mean anomaly, at `@location`s 1..5. There is no `@location(0)` — the
- * fullscreen triangle is generated from `@builtin(vertex_index)`, so this
- * instance buffer is the pipeline's ONLY vertex buffer. Byte offsets must match
- * `orbitTrail/vertex.wesl` exactly.
+ * `mat3x3<f32>` in the fragment) followed by the colour+eccentricity, the mean
+ * anomaly+fade, and the two gradient-minor triples, at `@location`s 1..7. There
+ * is no `@location(0)` — the fullscreen triangle is generated from
+ * `@builtin(vertex_index)`, so this instance buffer is the pipeline's ONLY
+ * vertex buffer. Byte offsets must match `orbitTrail/vertex.wesl` exactly.
  */
 const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 1, offset: 0, format: 'float32x4' }, // Ginv column 0 (.xyz + pad)
   { shaderLocation: 2, offset: 16, format: 'float32x4' }, // Ginv column 1
   { shaderLocation: 3, offset: 32, format: 'float32x4' }, // Ginv column 2
   { shaderLocation: 4, offset: 48, format: 'float32x4' }, // color.rgb + eccentricity
-  { shaderLocation: 5, offset: 64, format: 'float32x4' }, // meanAnomalyRad + pad
+  { shaderLocation: 5, offset: 64, format: 'float32x4' }, // meanAnomalyRad + fadeAlpha + pad
+  { shaderLocation: 6, offset: 80, format: 'float32x4' }, // gradient minors M1/M2/M3 + pad
+  { shaderLocation: 7, offset: 96, format: 'float32x4' }, // gradient minors M4/M5/M6 + pad
 ];
 
 export function createOrbitTrailRenderer(
@@ -88,7 +93,8 @@ export function createOrbitTrailRenderer(
 ): OrbitTrailRenderer {
   // ── Instance vertex buffer ────────────────────────────────────────────────
   //
-  // Holds up to MAX_ORBITS 80-byte records (three Ginv columns + trail params).
+  // Holds up to MAX_ORBITS 112-byte records (three Ginv columns + trail params
+  // + the two gradient-minor triples).
   // `draw` overwrites the first `count` records each frame with one
   // `writeBuffer`; the instance step means every orbit renders with its OWN
   // matrix — no per-orbit bind, no per-draw uniform for a later write to

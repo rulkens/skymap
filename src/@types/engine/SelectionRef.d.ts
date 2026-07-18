@@ -21,4 +21,9 @@ export type SelectionRef =
     }
   | { readonly type: 'structure'; readonly id: string }
   | { readonly type: 'milkyWay' }
-  | { readonly type: 'body'; readonly id: string };
+  | { readonly type: 'body'; readonly id: string }
+  // Star refs are POSITIONAL like the galaxy ref: `index` is the bin-stable
+  // global star-record index the pick texture names. It is tier-scoped, so a
+  // stale index after a tier swap warns+nulls rather than mis-resolving —
+  // unlike the durable `id` a structure or body carries.
+  | { readonly type: 'star'; readonly index: number };

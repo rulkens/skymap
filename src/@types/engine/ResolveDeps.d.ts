@@ -2,6 +2,7 @@ import type { GalaxyCatalog } from '../data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
 import type { StructureInfo } from '../data/structure/StructureInfo';
+import type { StarCatalog } from '../data/starCatalog/StarCatalog';
 
 /**
  * ResolveDeps — the engine resources the reconciler saga reads to turn a
@@ -16,4 +17,9 @@ export type ResolveDeps = {
   readonly catalogs: { get(source: GalaxyCatalogSourceType): GalaxyCatalog | undefined };
   readonly famousMeta: readonly FamousMetaEntry[];
   readonly structures: { byId(id: string): StructureInfo | null };
+  // The sole loaded star catalog (v1 ships one starCatalog source, the Gaia
+  // bin). Reads LIVE engine state each call like the other getters — null
+  // before the star cloud lands, so a star deep-link retries rather than
+  // resolving against an empty catalog.
+  readonly stars: { current(): StarCatalog | null };
 };

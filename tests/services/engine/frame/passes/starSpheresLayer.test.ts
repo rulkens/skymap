@@ -24,11 +24,14 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { starSpheresLayer } from '../../../../../src/services/engine/frame/passes/starSpheresLayer';
+import { seedIndexOfBody } from '../../../../../src/services/engine/frame/passes/seedIndexOfBody';
 import { IDENTITY_MAT3 } from '../../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { Source } from '../../../../../src/data/sources';
+import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -77,6 +80,9 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
     drawCamPos: camPos,
     fovYRad: Math.PI / 3,
     canvasSize: { width: 1280, height: 720 },
+    // The drawPick radius floor (`minPickRadiusMpc`) reads this pinhole
+    // radian→pixel conversion: 720 / (2·tan(30°)).
+    drawPxPerRad: 720 / (2 * Math.tan(Math.PI / 6)),
   } as unknown as ReadyFrameContext;
 }
 
@@ -224,8 +230,12 @@ describe('starSpheresLayer.draw', () => {
     // gate is OFF, so the layer sees the Sun alone. The Sun is parsecs away from
     // this camera (sub-pixel), so nothing resolves: no sphere is composed.
     const offSirius = makeState({ draw: vi.fn() }, [SUN, PROXIMA, SIRIUS], false);
-    starSpheresLayer.draw(PASS_STUB, makeNear0View(halfAuFrom(SIRIUS.positionMpc)),
-      makeCtx(halfAuFrom(SIRIUS.positionMpc)), offSirius);
+    starSpheresLayer.draw(
+      PASS_STUB,
+      makeNear0View(halfAuFrom(SIRIUS.positionMpc)),
+      makeCtx(halfAuFrom(SIRIUS.positionMpc)),
+      offSirius,
+    );
     expect(composeMock).not.toHaveBeenCalled();
 
     // Camera half an AU off the Sun with the gate still off: the Sun is exempt,
@@ -234,8 +244,12 @@ describe('starSpheresLayer.draw', () => {
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
     const onSun = makeState({ draw: drawSpy }, [SUN, PROXIMA, SIRIUS], false);
-    starSpheresLayer.draw(PASS_STUB, makeNear0View(halfAuFrom(SUN.positionMpc)),
-      makeCtx(halfAuFrom(SUN.positionMpc)), onSun);
+    starSpheresLayer.draw(
+      PASS_STUB,
+      makeNear0View(halfAuFrom(SUN.positionMpc)),
+      makeCtx(halfAuFrom(SUN.positionMpc)),
+      onSun,
+    );
     expect(composeMock).toHaveBeenCalledTimes(1);
     expect(composeMock.mock.calls[0]![1]).toBe(SUN.positionMpc);
   });
@@ -244,5 +258,58 @@ describe('starSpheresLayer.draw', () => {
     const view = makeNear0View([0, 0, 5]);
     const state = { gpu: { starRenderer: null } } as unknown as EngineState;
     expect(() => starSpheresLayer.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
+  });
+});
+
+// §8.1 regression — the pick id carries the body's STABLE SCENE_STARS seed
+// index, NOT its slot in the frame's camera-dependent sphere partition. This
+// bites at the real `drawPick` call site: a `bodyPickRenderer` stub captures
+// the packedId Sirius is stamped with in a frame where earlier seeds (the Sun
+// at seed 0, Proxima at seed 1) are culled to sub-pixel points, so Sirius is
+// the SOLE resolved sphere — slot 0 of the drawn list. If the layer ever
+// stamped that pack-loop slot (the `@builtin(instance_index)` bug §8.1 guards),
+// the decoded index would be 0 and Sirius' saved selection would rename the
+// instant a sibling entered or left the partition. The helper's own
+// determinism has plain unit tests in `seedIndexOfBody.test.ts`; this proves
+// the call site actually feeds it the seed table.
+describe('starSpheresLayer.drawPick', () => {
+  it('stamps each sphere’s SCENE_STARS seed index, not its slot in the culled sphere partition', () => {
+    // Mixed roster [Sun, Proxima, Sirius], camera half an AU off Sirius: only
+    // Sirius (SCENE_STARS index 6) resolves to a sphere — the Sun (seed 0) and
+    // Proxima (seed 1) stay parsecs away and sub-pixel (the same fixture the
+    // `draw` suite above pins to one composed sphere). Sirius therefore draws
+    // at slot 0 of the resolved sphere list, but its pick id must decode to
+    // seed index 6.
+    const captured: number[] = [];
+    const bodyPickRenderer = {
+      label: 'bodyPickRenderer',
+      drawSphere: vi.fn((_pass: GPURenderPassEncoder, args: { packedId: number }) =>
+        captured.push(args.packedId),
+      ),
+      drawPoints: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const camPos = halfAuFrom(SIRIUS.positionMpc);
+    const view = makeNear0View(camPos);
+    const state = {
+      gpu: { bodyPickRenderer },
+      data: { bodies: { stars: [SUN, PROXIMA, SIRIUS] } },
+      settings: { famousStars: { enabled: true } },
+    } as unknown as EngineState;
+
+    starSpheresLayer.drawPick!(PASS_STUB, view, makeCtx(camPos), state);
+
+    // Exactly one sphere pick recorded — only Sirius resolved.
+    expect(bodyPickRenderer.drawSphere).toHaveBeenCalledTimes(1);
+
+    const decoded = unpackPick(captured[0]!)!;
+    const seedIndex = seedIndexOfBody('sirius', SCENE_STARS);
+    // The durable identity: Sirius' SCENE_STARS row, decoded straight back.
+    expect(decoded.sourceCode).toBe(Source.FamousStar);
+    expect(decoded.localIdx).toBe(seedIndex);
+    // ...and that seed index is NOT Sirius' slot in the drawn sphere list (0).
+    // Stamping the pack-loop slot would decode to 0, aliasing the first seed.
+    expect(seedIndex).toBeGreaterThan(0);
+    expect(decoded.localIdx).not.toBe(0);
   });
 });

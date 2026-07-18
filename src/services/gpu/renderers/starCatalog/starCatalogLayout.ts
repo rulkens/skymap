@@ -1,0 +1,131 @@
+/**
+ * starCatalogLayout — the ONE TS home for the survey-star (Gaia bin) pipeline's
+ * CPU-side byte-layout knowledge: the `NodeParams` storage-element packing and
+ * the `StarUniforms` @group(0) uniform's scalar offsets.
+ *
+ * ### Why this module exists (the un-braid)
+ *
+ * The authoritative layout is the WESL `struct NodeParams` / `struct
+ * StarUniforms` in `shaders/starCatalog/io.wesl` — that is what the GPU uses to
+ * address bytes. Two TS renderers reconstruct those bytes on the CPU: the visual
+ * `starCatalogRenderer` and its pick twin `starCatalogPickRenderer`. Each owns
+ * its OWN GPU buffers (the essential writeBuffer/submit race fix — a buffer
+ * shared across the two draws in one frame would read only the last-written
+ * bytes at submit), but *which byte holds which field* is ONE fact. Before this
+ * module the two renderers each re-declared the constants and re-wrote the pack
+ * loop, so growing a `NodeParams` field meant editing three sites in lockstep
+ * with nothing to catch a drift — the exact bug-class `selectionEncoding`'s
+ * parity test guards against, applied to the star layout here (see
+ * `tests/services/gpu/renderers/starCatalog/nodeParamsLayout.test.ts`).
+ *
+ * Both renderers now import the constants and `writeStarNodeParams` from here and
+ * keep their own buffers; only the layout knowledge is shared.
+ *
+ * @module
+ */
+
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import { CAMERA_UNIFORM_BYTES } from '../../lib/cameraUniforms';
+
+/**
+ * Bytes of one `NodeParams` element in the `array<NodeParams>` storage buffer:
+ * originRelCamMpc vec3 (0..11) + cellScaleMpc f32 (12..15) + firstRecord u32
+ * (16..19) + opacity f32 (20..23) + isAggregate u32 (24..27) + subtreeStarCount
+ * f32 (28..31), rounded up to the vec3's 16-byte alignment = 32. Under WGSL
+ * std430 (storage) the array stride is that 16-byte-aligned struct size, so the
+ * CPU packs draws back-to-back at this stride with no gaps. `isAggregate` and
+ * `subtreeStarCount` ride the pad the vec3 alignment already reserved, so adding
+ * them did NOT change this size. Mirrors `struct NodeParams` in
+ * `shaders/starCatalog/io.wesl`.
+ */
+export const NODE_PARAMS_BYTES = 32;
+
+/** Bytes of one `prefix` element (a `u32` exclusive instance-start index). */
+export const PREFIX_BYTES = 4;
+
+/** Round `value` up to the next multiple of `align` (a power of two). */
+function alignUp(value: number, align: number): number {
+  return Math.ceil(value / align) * align;
+}
+
+/**
+ * Byte size of the star `StarUniforms` @group(0) buffer: the shared
+ * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32 + `glowOverlap` f32
+ * + `pickPass` u32, rounded up to the prefix's 16-byte alignment = 96 (mirrors
+ * `struct StarUniforms` in shaders/starCatalog/io.wesl). The four appended
+ * scalars fill the 16-byte rounding tail exactly (80 + 16 → 96), so the buffer
+ * size is unchanged from when `sizePx` alone rode it; derived from
+ * `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced, the way the
+ * galaxy points `Uniforms` struct appends its own scalars.
+ */
+export const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 16, 16);
+
+/**
+ * Float index of `sizePx` in the `StarUniforms` scratch: byte 80 (right after
+ * the camera prefix) / 4.
+ */
+export const SIZE_PX_FLOAT_INDEX = CAMERA_UNIFORM_BYTES / 4;
+
+/**
+ * Float index of `brightness` in the `StarUniforms` scratch: byte 84 (right
+ * after `sizePx`) / 4.
+ */
+export const BRIGHTNESS_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 4) / 4;
+
+/**
+ * Float index of `glowOverlap` in the `StarUniforms` scratch: byte 88 (right
+ * after `brightness`) / 4.
+ */
+export const GLOW_OVERLAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 8) / 4;
+
+/**
+ * u32 index of `pickPass` in the `StarUniforms` scratch: byte 92 / 4 = 23. The
+ * visual renderer never writes it (its per-source camera write stops at
+ * `glowOverlap`, float 22, and the scratch is zero-init) so the vertex stage
+ * reads pickPass == 0 and takes the visual path; only `starCatalogPickRenderer`
+ * writes it. It MUST be written as a u32, NOT a float: a `1.0` float bit pattern
+ * (0x3F800000) would read back as ~1e9 in the shader's `u32`, silently disabling
+ * the pick branch — the value must be the integer 1.
+ */
+export const PICK_PASS_U32_INDEX = (CAMERA_UNIFORM_BYTES + 12) / 4;
+
+/**
+ * One drawn octree node's `NodeParams` field values, the shape both renderers'
+ * pack loops feed `writeStarNodeParams`. The visual renderer sources these from
+ * its per-frame draw args; the pick renderer fixes `isAggregate = 0`,
+ * `subtreeStarCount = 1`, `opacity = 1` (leaf-only, point-source, pick fragment
+ * ignores opacity).
+ */
+export type StarNodeParams = {
+  /** Node box origin, camera-relative Mpc. */
+  readonly originRelCamMpc: Readonly<Vec3>;
+  /** Node box edge in Mpc (the in-cell offset unit = /1024). */
+  readonly cellScaleMpc: number;
+  /** Base index into the records blob for this node's slice. */
+  readonly firstRecord: number;
+  /** Per-node draw opacity (crossfade alpha × node LOD fade). */
+  readonly opacity: number;
+  /** 0 = leaf (point source), 1 = aggregate (box-filling glow). */
+  readonly isAggregate: number;
+  /** Real stars this record stands in for (1 for a leaf). */
+  readonly subtreeStarCount: number;
+};
+
+/**
+ * Pack one `NodeParams` block at byte `base` of `view`, in the field order the
+ * WESL `struct NodeParams` declares. Both star renderers call this once per
+ * drawn node into their OWN contiguous scratch (index = draw slot). The offsets
+ * here are the single CPU statement of the layout; a WESL struct change without
+ * a matching move here is caught by `nodeParamsLayout.test.ts`.
+ */
+export function writeStarNodeParams(view: DataView, base: number, params: StarNodeParams): void {
+  const o = params.originRelCamMpc;
+  view.setFloat32(base + 0, o[0], true);
+  view.setFloat32(base + 4, o[1], true);
+  view.setFloat32(base + 8, o[2], true);
+  view.setFloat32(base + 12, params.cellScaleMpc, true);
+  view.setUint32(base + 16, params.firstRecord >>> 0, true);
+  view.setFloat32(base + 20, params.opacity, true);
+  view.setUint32(base + 24, params.isAggregate >>> 0, true);
+  view.setFloat32(base + 28, params.subtreeStarCount, true);
+}
