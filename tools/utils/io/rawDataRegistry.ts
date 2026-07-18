@@ -487,7 +487,7 @@ export const RAW_DATA = {
   // pulls each body's highest usable native tier (8k SSS JPGs, the 4k
   // Venus atmosphere cap, the 2k featureless ice giants, the BMNG Earth
   // equirect, the USGS Galilean-moon GeoTIFFs); `build-textures` then
-  // downsamples per `BODY_TEXTURE_REGISTRY[id].maxTier` — never upscaling.
+  // downsamples per `BODY_TEXTURE_REGISTRY[id].kinds[kind]` — never upscaling.
   // All raw sources are gitignored build inputs (like the catalog .dat
   // files); the combined `.sha256` sidecar + provenance README are the
   // committed record (covered by the `!/data/raw/**/*.sha256` +

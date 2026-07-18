@@ -47,7 +47,7 @@
  *
  * ### Late-bound star data
  *
- * Mirrors `earthRenderer.setTexture`: the factory builds the pipeline
+ * Mirrors `earthRenderer.setMap`: the factory builds the pipeline
  * immediately and the layer delivers data when it has it. Until a
  * non-empty `setStars` lands, `draw` is a no-op (no placeholder needed —
  * an additive pass with nothing to add is correctly invisible, unlike the
