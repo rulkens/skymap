@@ -6,8 +6,9 @@
  * is the singleton const; the body arm builds a `BodyInfo` for EVERY body row —
  * a famous star, Earth, or a planet — so any clicked/deep-linked scene body
  * drives the InfoCard and the `#focus=body-<id>` hash. (The card rows fill in
- * from the async famous-star meta only for the famous ids; a planet shows its
- * label headline alone until its own card copy lands.) The star arm builds a
+ * from the async famous-star meta only for the famous ids; a planet or Earth
+ * renders BodyDetailCard's name + radius rows from the BodyInfo fields alone,
+ * with no async lookup.) The star arm builds a
  * `FieldStarInfo` view-model for a picked survey star.
  *
  * This imports only pure builders + a static const/set, so React can call it
