@@ -12,6 +12,7 @@
 export type ClipId =
   | 'cosmicFlows'
   | 'flyout'
+  | 'earthFlyout'
   | 'flowOrbit'
   | 'flyPathDemo'
   | 'famousFlythrough'
