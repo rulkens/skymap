@@ -1,7 +1,9 @@
 /**
  * CompactFieldStarCard — slim hover-preview for a picked survey star.
  * Star variant of CompactCard / CompactStructureCard: the fixed 'Field star'
- * headline plus a short distance · spectral-class line, no thumbnail.
+ * headline with its spectral-class badge (the star's at-a-glance kind, the
+ * galaxy-source / structure-category idiom), plus a short distance line, no
+ * thumbnail.  The class rides the badge only — it is not repeated on the line.
  */
 
 import type { ReactNode } from 'react';
@@ -23,9 +25,7 @@ function CompactFieldStarCard({ info }: CompactFieldStarCardProps): ReactNode {
       <CardRow type="headline" badge={info.spectralClass}>
         {info.displayName}
       </CardRow>
-      <div className={styles.cardDistLine}>
-        {Math.round(info.distancePc).toLocaleString()} pc &middot; {info.spectralClass}
-      </div>
+      <div className={styles.cardDistLine}>{Math.round(info.distancePc).toLocaleString()} pc</div>
     </div>
   );
 }

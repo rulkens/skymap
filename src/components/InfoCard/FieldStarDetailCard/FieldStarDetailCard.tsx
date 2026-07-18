@@ -5,8 +5,11 @@
  * headline plus a section of label/value rows.  SKST v1 carries no per-star
  * identity, so the headline is the fixed 'Field star' and there is no
  * thumbnail to fetch (a single star subtends no resolvable disk) — the card is
- * pure derived numbers: distance in parsecs, absolute + apparent magnitude,
- * BP−RP colour, and the rough spectral class binned off that colour.
+ * pure derived numbers: distance in parsecs, absolute + apparent magnitude, and
+ * BP−RP colour.  The rough spectral class (binned off that colour) rides the
+ * headline badge — the star's at-a-glance kind — rather than a labelled row, so
+ * it is shown once, the same way a galaxy shows its source and a structure its
+ * category in the badge and never repeats it as a row.
  *
  * The outer wrapper's tag + className stays stable across hover ↔ pin
  * transitions so InfoCard's single-wrapper layout keeps its DOM identity.
@@ -56,7 +59,6 @@ function FieldStarDetailCard({
         <CardRow label="Absolute mag" value={target.absMag.toFixed(2)} />
         <CardRow label="Apparent mag" value={target.apparentMag.toFixed(2)} />
         <CardRow label="Colour BP−RP" value={target.bpRp.toFixed(2)} />
-        <CardRow label="Spectral class" value={target.spectralClass} />
       </div>
     </div>
   );
