@@ -67,6 +67,7 @@ import { sceneBodyPartition } from '../sceneBodyPartition';
 import { MAX_PLANETS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { minPickRadiusMpc } from '../../helpers/minPickRadiusMpc';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized for
 // the renderer's cap; each planet's 24-float record (MVP + albedo + pad +
@@ -162,11 +163,24 @@ export const planetsLayer: ContentLayer = {
     for (const planet of [...flat, ...textured]) {
       const seedIndex = seedIndexOfBody(planet.id, SCENE_PLANETS);
       if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+      // Floor the PICK radius to the shared min footprint (visual sphere
+      // untouched): a resolved-but-small planet near the foreground far edge can
+      // project to a couple of pixels, too small to click, so its pick sphere
+      // inflates to the 9 px-radius floor. `max(true radius, floor)` leaves a
+      // comfortably-sized planet alone.
+      const dx = planet.positionMpc[0] - view.camPos[0];
+      const dy = planet.positionMpc[1] - view.camPos[1];
+      const dz = planet.positionMpc[2] - view.camPos[2];
+      const pickRadiusMpc = minPickRadiusMpc(
+        planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        Math.hypot(dx, dy, dz),
+        ctx.drawPxPerRad,
+      );
       const mvp = composeBodyMvp(
         view.slab.vp,
         planet.positionMpc,
         RENDER_ORIGIN_MPC,
-        planet.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        pickRadiusMpc,
         planet.orientation,
       );
       pickRenderer.drawSphere(pass, {

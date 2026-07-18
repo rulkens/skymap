@@ -21,49 +21,55 @@
 // sits at a SMALLER depth and therefore WINS. Ordering the bands by descending
 // eps ranks the classes:
 //
-//   glint band        eps = 4.00e-4  → z/w = 0.9996   (shallowest, wins)
-//   scene-star band   eps = 1.00e-4  → z/w = 0.9999
-//   survey-star band  eps = 0.50e-4  → z/w = 0.99995
-//   backdrop band     eps = 0.25e-4  → z/w = 0.999975 (deepest, loses)
+//   earth glint band   eps = 5.00e-4  → z/w = 0.99950  (shallowest, wins)
+//   planet glint band  eps = 4.50e-4  → z/w = 0.99955
+//   moon glint band    eps = 4.00e-4  → z/w = 0.99960
+//   scene-star band    eps = 1.00e-4  → z/w = 0.99990
+//   survey-star band   eps = 0.50e-4  → z/w = 0.99995
+//   backdrop band      eps = 0.25e-4  → z/w = 0.999975 (deepest, loses)
 //
-// So at any pixel where the classes overlap: sub-pixel glints (planets/moons +
-// the Earth glint stamp) beat scene/famous stars beat survey stars beat the
+// So at any pixel where the classes overlap: the Earth glint beats a planet
+// glint beats a moon glint beats scene/famous stars beat survey stars beat the
 // Milky Way backdrop — pure importance, independent of true distance. (Classes
 // that keep TRUE depth — resolved spheres, and within-far scene stars — sit in
-// front of every band automatically because their z/w is well below 0.9996 at
+// front of every band automatically because their z/w is well below 0.99950 at
 // foreground range; that is the resolved-sphere + physical-star priority, free.
 // A glint deliberately LOSES to a resolved sphere nearer than ~orbitDistance/4,
-// whose true z/w drops below 0.9996 — a planet's own disk out-picks its glint
-// stamp, which is right.)
+// whose true z/w drops below the glint bands — a planet's own disk out-picks its
+// glint stamp, which is right.)
 //
-// ## Ties within the glint band are intentional
+// ## Why the glint class carries its priority as DATA, not draw order
 //
-// Unlike the scene-star band (which keeps true depth via a min-clamp, so its
-// members sort physically), the glint band FORCES every member onto the ONE
-// depth z/w = 0.9996. Importance-not-nearness is the whole point: a moon a
-// micro-Mpc nearer than its planet must not steal the click. Collapsing the
-// class onto one depth makes the depth test unable to order its members, so the
-// INSTANCE DRAW ORDER breaks the tie instead — and with 'depthCompare: less' an
-// equal-depth LATER fragment loses, so the FIRST-drawn instance wins.
-// 'bodyGlintsLayer' draws Earth first, then the heliocentric planets, then the
-// moons (the SCENE_PLANETS seed order with Earth prepended), so a planet
-// out-picks its own moons and Earth out-picks the Moon. The seed order is
-// guarded by a scenePlanets test so a moon can never silently be seeded above a
-// planet and invert the priority.
+// An earlier design forced EVERY glint onto ONE depth and relied on the
+// instance DRAW ORDER to break the exact-depth tie (Earth first, then planets,
+// then moons). That was unreliable: 'z = w * (1 - eps)' followed by the
+// rasterizer's 'z / w' is NOT bit-exact across instances — each instance's
+// different w rounds differently, so the forced depths jitter by a ulp and the
+// intended draw-order tie-break degenerates into rounding-noise roulette. It
+// also hid a coupling in the seed order (Earth prepended, planets-before-moons).
 //
-// ## Why these four values are safe to distinguish
+// The fix here makes priority EXPLICIT per-instance data: each glint carries a
+// band CLASS (0 = earth, 1 = planet, 2 = moon) and 'starPointPick.wesl::vsGlint'
+// maps the class to its OWN band above. The three glint bands are separated by
+// 5e-5 in z/w — about 800 f32-resolvable steps near 1.0 (ulp ~6e-8) — so
+// planet-over-moon and earth-over-both are UNCONDITIONAL depth wins, needing no
+// ordering and admitting no ties. Nearness cannot invert them (all three force
+// their band regardless of true depth), and draw order is irrelevant.
 //
-// All four stay strictly inside the 1.0 clear, so a banded fragment always
+// ## Why these six values are safe to distinguish
+//
+// All six stay strictly inside the 1.0 clear, so a banded fragment always
 // survives the clip test (the same clip-survival property the visual far-plane
-// clamp needs). depth32float near 1.0 resolves steps of roughly 1e-7, and the
-// tightest gap here is 0.25e-4 = 2.5e-5 — about 250 resolvable steps — so the
-// bands never collapse into one another through float rounding. The glint band
-// sits deepest INTO the true-depth headroom (0.9996), which is deliberate: a
-// resolved sphere must fall below it to out-pick a glint, and a foreground
-// sphere's true z/w is far below 0.9996, so that boundary lands exactly where a
-// planet's disk grows past its glint stamp. Wider gaps than necessary among the
-// three star/backdrop bands would eat that headroom for no rank gain, so those
-// three still cluster tightly just under the clear.
+// clamp needs). depth32float near 1.0 resolves steps of roughly 6e-8, and the
+// tightest gap here is 0.25e-4 = 2.5e-5 — hundreds of resolvable steps — so the
+// bands never collapse into one another through float rounding. The three glint
+// bands sit deepest INTO the true-depth headroom (0.99950–0.99960), which is
+// deliberate: a resolved sphere must fall below the shallowest glint band to
+// out-pick a glint, and a foreground sphere's true z/w is far below it, so that
+// boundary lands exactly where a planet's disk grows past its glint stamp. Wider
+// gaps than necessary among the three star/backdrop bands would eat that
+// headroom for no rank gain, so those three still cluster tightly just under the
+// clear.
 //
 // ## The consumers
 //
@@ -74,31 +80,33 @@
 //                                true depth to PICK_BAND_SCENE_STAR_EPS (within-far
 //                                scene stars keep true depth; a beyond-far one
 //                                lands on the scene band, still ahead of every
-//                                survey star). 'vsGlint' FORCES clip.z to
-//                                PICK_BAND_GLINT_EPS so every sub-pixel planet/moon
-//                                collapses onto the shallowest band — importance,
-//                                not nearness, decides among glints.
+//                                survey star). 'vsGlint' FORCES clip.z to the
+//                                per-instance glint CLASS band (earth / planet /
+//                                moon eps below) so importance, not nearness,
+//                                decides among glints.
 //   - milkyWayPick/vertex.wesl — FORCES clip.z to PICK_BAND_BACKDROP_EPS (the
 //                                impostor is the ultimate fallback).
 //
-// The constants live here, not in any one consumer, so the four bands can
-// never drift out of order and silently invert the priority — the same
-// single-source discipline lib/starPhotometry.wesl uses for its parity
-// constants. A sign or magnitude slip in one eps would flip a class's rank
-// without any compile error, so the ordering is asserted once, here, by the
-// descending values and this header.
+// The constants live here, not in any one consumer, so the bands can never drift
+// out of order and silently invert the priority — the same single-source
+// discipline lib/starPhotometry.wesl uses for its parity constants. A sign or
+// magnitude slip in one eps would flip a class's rank without any compile error,
+// so the ordering is asserted once, here, by the descending values and this
+// header.
 
-// Sub-pixel glint planets/moons + the Earth glint stamp — the SHALLOWEST band, so
-// a glint wins every contested pick against a scene star, survey star, or
-// backdrop. Larger eps than the scene band because a glint is a UI affordance,
-// not geometry: a moon a micro-Mpc nearer than its planet must not steal the
-// click, so the whole class forces this ONE depth and the instance DRAW ORDER
-// (Earth, then planets, then moons) is the intra-band priority instead of
-// nearness. A resolved sphere nearer than ~orbitDistance/4 keeps a true z/w below
-// 0.9996 and correctly out-picks the glint.
-const PICK_BAND_GLINT_EPS: f32 = 4e-4;
+// The three GLINT class bands — the sub-pixel solar-system bodies. Each glint
+// carries its class (0 earth, 1 planet, 2 moon); 'starPointPick.wesl::vsGlint'
+// maps the class to the matching eps below. All three are SHALLOWER than the
+// scene band, so any glint out-picks a scene star, survey star, or backdrop; and
+// the 5e-5 spacing makes earth-over-planet-over-moon an unconditional depth win,
+// independent of nearness or draw order. A resolved sphere nearer than
+// ~orbitDistance/4 keeps a true z/w below these bands and correctly out-picks the
+// glint (a planet's own disk beats its glint stamp).
+const PICK_BAND_EARTH_EPS: f32 = 5.0e-4; // z/w 0.99950 — shallowest, Earth wins
+const PICK_BAND_PLANET_EPS: f32 = 4.5e-4; // z/w 0.99955
+const PICK_BAND_MOON_EPS: f32 = 4.0e-4; // z/w 0.99960
 
-// Scene / famous stars — deeper than the glint band, so a within-far scene star
+// Scene / famous stars — deeper than the glint bands, so a within-far scene star
 // still loses a contested pixel to a sub-pixel glint but beats every survey star
 // and the backdrop. This is the value the survey and scene pick stages previously
 // each spelled inline as their local 'CLIP_Z_EPS' far-plane clamp; naming it as a

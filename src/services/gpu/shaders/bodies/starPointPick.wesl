@@ -17,12 +17,13 @@
 //                 the class sorts physically among itself while still beating every
 //                 survey star and the backdrop.
 //   - 'vsGlint' — the sub-pixel solar-system body glints (planets, moons, and the
-//                 Earth glint stamp). It FORCES depth onto the shallower glint band
-//                 (see 'lib/pickDepthBands'): a glint is a UI affordance, not
-//                 geometry, so a moon a micro-Mpc nearer than its planet must NOT
-//                 steal the click. Collapsing the whole class onto one depth makes
-//                 the instance DRAW ORDER (seed order: planets before their moons,
-//                 Earth prepended by the layer) the priority instead of nearness.
+//                 Earth glint stamp). It FORCES depth onto a per-instance glint
+//                 CLASS band (see 'lib/pickDepthBands'): a glint is a UI affordance,
+//                 not geometry, so a moon a micro-Mpc nearer than its planet must
+//                 NOT steal the click. Each glint carries its priority class (0
+//                 earth, 1 planet, 2 moon) as instance data and the class selects
+//                 its own well-separated band, so earth-over-planet-over-moon is an
+//                 unconditional depth win — no draw order, no exact-depth tie.
 //
 // bodyPickRenderer compiles this module into its OWN GPUShaderModule and builds
 // one points pipeline per entry (never shared with the sphere pipeline — the
@@ -63,17 +64,26 @@
 // parsec-scale anchor and the view translation never cancel catastrophically in
 // f32. See starPointRenderer.ts's precision note.
 //
-// ## Attribute layout (stepMode 'instance', stride 16 bytes)
+// ## Attribute layout (stepMode 'instance')
 //
-//   @location(0) posRelCamMpc: vec3<f32>  — camera-relative anchor, offset 0.
-//   @location(1) packedId:     u32        — fully-packed pick id, offset 12.
+// The two entries take DIFFERENT instance strides, supplied by their two
+// pipelines (bodyPickRenderer builds one vertex-buffer layout each):
+//
+//   'vs'      — stride 16 bytes:
+//     @location(0) posRelCamMpc: vec3<f32>  — camera-relative anchor, offset 0.
+//     @location(1) packedId:     u32        — fully-packed pick id, offset 12.
+//   'vsGlint' — stride 20 bytes: the same two, plus
+//     @location(2) bandClass:    u32        — glint priority class, offset 16
+//                                             (0 earth, 1 planet, 2 moon).
 
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::pickDepthBands::PICK_BAND_SCENE_STAR_EPS;
-import package::lib::pickDepthBands::PICK_BAND_GLINT_EPS;
+import package::lib::pickDepthBands::PICK_BAND_EARTH_EPS;
+import package::lib::pickDepthBands::PICK_BAND_PLANET_EPS;
+import package::lib::pickDepthBands::PICK_BAND_MOON_EPS;
 
 @group(0) @binding(0) var<uniform> u: CameraUniforms;
 
@@ -127,6 +137,7 @@ fn vsGlint(
   @builtin(vertex_index) vi: u32,
   @location(0) posRelCamMpc: vec3<f32>,
   @location(1) packedId: u32,
+  @location(2) bandClass: u32,
 ) -> VSOut {
   // Same billboard expansion as 'vs' (identical footprint at the true screen
   // position); ONLY the depth handling differs.
@@ -137,16 +148,27 @@ fn vsGlint(
   var out: VSOut;
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);
 
-  // FORCE the glint band (header 'lib/pickDepthBands'), NOT the min-clamp 'vs'
-  // uses. Sub-pixel glints are UI affordances, not geometry: a moon 1e-6 Mpc
-  // nearer than its planet must not steal the click, so the whole class collapses
-  // onto this ONE band 'z = w * (1 - PICK_BAND_GLINT_EPS)' and the instance ORDER
-  // (seed order: planets before their moons; Earth prepended by the layer) becomes
-  // the priority. The glint band is the SHALLOWEST, so a glint out-picks every
-  // scene star, survey star, and the backdrop; a resolved sphere nearer than
-  // ~orbitDistance/4 keeps a true z/w below this band and correctly wins — a
+  // FORCE the per-instance glint CLASS band (header 'lib/pickDepthBands'), NOT the
+  // min-clamp 'vs' uses. Sub-pixel glints are UI affordances, not geometry, and
+  // importance-not-nearness is the whole point: a moon 1e-6 Mpc nearer than its
+  // planet must not steal the click. Each glint carries its class (0 earth, 1
+  // planet, 2 moon) as instance data, and the class selects its OWN band here.
+  // The three bands are separated by 5e-5 in z/w (hundreds of f32-resolvable steps
+  // near 1.0), so earth-over-planet-over-moon is an UNCONDITIONAL depth win — no
+  // draw order, no exact-depth tie to break (the older single-band design leaned
+  // on draw order and a ulp of rasterizer 'z / w' rounding defeated it). Larger
+  // eps = smaller z/w = wins under 'depthCompare: less', so EARTH (largest eps) is
+  // shallowest and out-picks a planet, which out-picks a moon; all three out-pick
+  // every scene star, survey star, and the backdrop. A resolved sphere nearer than
+  // ~orbitDistance/4 keeps a true z/w below these bands and correctly wins — a
   // planet's own disk out-picks its glint stamp.
-  out.clip.z = out.clip.w * (1.0 - PICK_BAND_GLINT_EPS);
+  var eps: f32 = PICK_BAND_MOON_EPS;
+  if (bandClass == 0u) {
+    eps = PICK_BAND_EARTH_EPS;
+  } else if (bandClass == 1u) {
+    eps = PICK_BAND_PLANET_EPS;
+  }
+  out.clip.z = out.clip.w * (1.0 - eps);
 
   out.uv = corner;
   out.packedId = packedId;

@@ -80,6 +80,9 @@ function makeCtx(camPos: Vec3): ReadyFrameContext {
     drawCamPos: camPos,
     fovYRad: Math.PI / 3,
     canvasSize: { width: 1280, height: 720 },
+    // Pinhole radian→pixel conversion the drawPick radius floor reads
+    // (`minPickRadiusMpc`): 720 / (2·tan(30°)).
+    drawPxPerRad: 720 / (2 * Math.tan(Math.PI / 6)),
   } as unknown as ReadyFrameContext;
 }
 
@@ -209,10 +212,15 @@ describe('focusedFieldStarSphereLayer.drawPick', () => {
     expect(decoded.localIdx).toBe(7);
   });
 
-  it('composes the pick MVP from the same inputs as draw (silhouette parity)', () => {
-    // The pick sphere must be silhouette-identical to the visual one, so it
-    // feeds `composeBodyMvp` the SAME slab.vp + position + radius. Run both
-    // aspects on the same view/row and assert the composed MVP matches.
+  it('floors the pick sphere to the min footprint: same body center, inflated radius', () => {
+    // The pick sphere is the visual sphere FLOORED to the shared min pick footprint
+    // (`minPickRadiusMpc`). At half-an-AU the solar sphere clears STAR_RESOLVE_PX
+    // by only a few pixels — under the 9 px-radius floor — so the pick radius
+    // inflates ABOVE the visual radius. The two MVPs must therefore share the body-
+    // center TRANSLATION column (same star, same screen position) while the pick
+    // BASIS is scaled up (larger footprint). A site that skipped the floor would
+    // leave pick == visual and the basis check fails; a site that mis-measured the
+    // distance would move the translation column and that check fails.
     const view = makeNear0View(CAM);
     const ctx = makeCtx(CAM);
 
@@ -229,7 +237,12 @@ describe('focusedFieldStarSphereLayer.drawPick', () => {
     );
     const pickMvp = (drawSphereSpy.mock.calls[0]![1] as { mvp: Float32Array }).mvp;
 
-    expect(pickMvp).toEqual(drawMvp);
+    // Translation column (indices 12..15 = P·V·bodyCenter) is radius-independent,
+    // so it is identical between pick and visual — the pick sphere is the SAME star.
+    for (const i of [12, 13, 14, 15]) expect(pickMvp[i]).toBeCloseTo(drawMvp[i]!, 12);
+    // The pick basis is strictly larger than the visual basis (floor active here) —
+    // this is what a missing floor would fail (the two would be equal).
+    expect(Math.abs(pickMvp[0]!)).toBeGreaterThan(Math.abs(drawMvp[0]!));
   });
 
   it('no-ops for a non-star row and while the bodyPickRenderer is null (gate parity with draw)', () => {

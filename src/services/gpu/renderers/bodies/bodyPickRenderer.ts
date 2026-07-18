@@ -136,13 +136,25 @@ const MAX_SPHERE_DRAWS = 64;
 const POINT_UNIFORM_BYTES = 80;
 
 /**
- * Per-instance byte stride for the scene-star point pick: posRelCamMpc
+ * Per-instance byte stride for the SCENE-STAR point pick (`vs`): posRelCamMpc
  * (float32x3, 12) + packedId (u32, 4) = 16. Byte-exact with the `@location`
  * offsets in starPointPick.wesl.
  */
 const POINT_INSTANCE_STRIDE = 16;
-/** Float/word count per instance (3 f32 + 1 u32). */
+/** Word count per scene-star instance (3 f32 + 1 u32). */
 const POINT_INSTANCE_WORDS = 4;
+
+/**
+ * Per-instance byte stride for the GLINT point pick (`vsGlint`): the scene-star
+ * 16 plus a `bandClass` u32 (offset 16) = 20. The glint pipeline supplies this
+ * wider vertex layout; the two pipelines share only the BIND-GROUP layout, so
+ * their instance strides may differ. Byte-exact with `vsGlint`'s `@location(2)`.
+ */
+const POINT_INSTANCE_STRIDE_GLINT = 20;
+/** Word count per glint instance (3 f32 + 2 u32). */
+const POINT_INSTANCE_WORDS_GLINT = 5;
+/** u32 word index of `bandClass` in a glint instance (byte 16 / 4). */
+const GLINT_BAND_CLASS_WORD = 4;
 
 export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
   // ── Shared sphere geometry (positions + indices; no uvs — the pick fragment
@@ -271,28 +283,21 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
 
   // One pipeline per vertex entry of starPointPick.wesl: 'vs' clamps true depth
   // onto the scene-star band (the famous stars, whose within-far members sort
-  // physically); 'vsGlint' FORCES the shallower glint band so sub-pixel planets/
-  // moons rank by importance and the instance DRAW ORDER breaks the tie (see the
-  // shader header). Everything else — instance layout, fragment, r32uint target,
-  // NEAR0 depth profile — is identical, so one builder makes both.
-  function makePointPipeline(entryPoint: 'vs' | 'vsGlint', label: string): GPURenderPipeline {
+  // physically); 'vsGlint' FORCES a per-instance CLASS band so sub-pixel planets/
+  // moons rank by importance (earth > planet > moon, unconditional — see the
+  // shader header). The two differ in the vertex entry AND the instance layout —
+  // 'vsGlint' reads a third `bandClass` attribute, widening the stride 16 → 20 —
+  // so the buffer layout is a parameter; the fragment, r32uint target, and NEAR0
+  // depth profile are identical.
+  function makePointPipeline(
+    entryPoint: 'vs' | 'vsGlint',
+    label: string,
+    buffers: GPUVertexBufferLayout[],
+  ): GPURenderPipeline {
     return device.createRenderPipeline({
       label,
       layout: pointPipelineLayout,
-      vertex: {
-        module: pointModule,
-        entryPoint,
-        buffers: [
-          {
-            arrayStride: POINT_INSTANCE_STRIDE,
-            stepMode: 'instance',
-            attributes: [
-              { shaderLocation: 0, offset: 0, format: 'float32x3' }, // posRelCamMpc
-              { shaderLocation: 1, offset: 12, format: 'uint32' }, // packedId
-            ],
-          },
-        ],
-      },
+      vertex: { module: pointModule, entryPoint, buffers },
       fragment: {
         module: pointModule,
         entryPoint: 'fsPick',
@@ -306,8 +311,27 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
       },
     });
   }
-  const pointPipeline = makePointPipeline('vs', 'body-pick-point-pipeline');
-  const pointGlintPipeline = makePointPipeline('vsGlint', 'body-pick-point-glint-pipeline');
+  const pointPipeline = makePointPipeline('vs', 'body-pick-point-pipeline', [
+    {
+      arrayStride: POINT_INSTANCE_STRIDE,
+      stepMode: 'instance',
+      attributes: [
+        { shaderLocation: 0, offset: 0, format: 'float32x3' }, // posRelCamMpc
+        { shaderLocation: 1, offset: 12, format: 'uint32' }, // packedId
+      ],
+    },
+  ]);
+  const pointGlintPipeline = makePointPipeline('vsGlint', 'body-pick-point-glint-pipeline', [
+    {
+      arrayStride: POINT_INSTANCE_STRIDE_GLINT,
+      stepMode: 'instance',
+      attributes: [
+        { shaderLocation: 0, offset: 0, format: 'float32x3' }, // posRelCamMpc
+        { shaderLocation: 1, offset: 12, format: 'uint32' }, // packedId
+        { shaderLocation: 2, offset: 16, format: 'uint32' }, // bandClass (glint only)
+      ],
+    },
+  ]);
 
   // ── Per-pass point-pick slots (own buffers per caller → multi-call safe) ──
   //
@@ -403,18 +427,27 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
     writeCameraPrefix(pointUniformScratch, vp, viewportPx);
     device.queue.writeBuffer(slot.uniformBuffer, 0, pointUniformScratch);
 
-    // Pack posRelCamMpc (f32×3) + packedId (u32) interleaved. One ArrayBuffer
-    // viewed as both, so the mixed types share the 16-byte stride.
-    const interleaved = new ArrayBuffer(n * POINT_INSTANCE_STRIDE);
+    // The glint variant carries a third `bandClass` u32 per instance (stride 20);
+    // the scene-star variant does not (stride 16). The chosen stride must match
+    // the pipeline's vertex layout selected below.
+    const isGlint = variant === 'glint';
+    const stride = isGlint ? POINT_INSTANCE_STRIDE_GLINT : POINT_INSTANCE_STRIDE;
+    const words = isGlint ? POINT_INSTANCE_WORDS_GLINT : POINT_INSTANCE_WORDS;
+
+    // Pack posRelCamMpc (f32×3) + packedId (u32) [+ bandClass (u32) for glints]
+    // interleaved. One ArrayBuffer viewed as both, so the mixed types share the
+    // stride.
+    const interleaved = new ArrayBuffer(n * stride);
     const f32 = new Float32Array(interleaved);
     const u32 = new Uint32Array(interleaved);
     for (let i = 0; i < n; i++) {
       const p = points[i]!;
-      const base = i * POINT_INSTANCE_WORDS;
+      const base = i * words;
       f32[base + 0] = p.posRelCamMpc[0];
       f32[base + 1] = p.posRelCamMpc[1];
       f32[base + 2] = p.posRelCamMpc[2];
       u32[base + 3] = p.packedId >>> 0;
+      if (isGlint) u32[base + GLINT_BAND_CLASS_WORD] = (p.bandClass ?? 0) >>> 0;
     }
 
     // Grow-only reuse per slot: reallocate only when the batch outgrows this
@@ -425,7 +458,9 @@ export function createBodyPickRenderer(device: GPUDevice): BodyPickRenderer {
       slot.capacity = n;
       slot.instanceBuffer = device.createBuffer({
         label: `body-pick-point-instance-vbo-${pointCursor - 1}`,
-        size: slot.capacity * POINT_INSTANCE_STRIDE,
+        // Size by THIS call's stride — a slot is claimed by a stable caller (so a
+        // stable variant) across passes, so its stride does not change under it.
+        size: slot.capacity * stride,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
     }

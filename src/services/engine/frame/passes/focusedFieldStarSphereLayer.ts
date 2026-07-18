@@ -70,7 +70,9 @@
  * `bodyPickRenderer.drawSphere`, gated by the SAME `enabled` predicate `draw`
  * rides (the pick program filters pickables by `drawPick` presence + `enabled`,
  * so pickability tracks visibility) and composing the SAME `composeBodyMvp` —
- * so the pick silhouette is identical to the visual sphere. Because the sphere
+ * except the pick radius is FLOORED to the shared min footprint
+ * (`minPickRadiusMpc`), so a just-resolved few-pixel star still gets a clickable
+ * hit area (the visual sphere keeps its true radius). Because the sphere
  * pick pipeline and the `starCatalog` POINT pick pipeline share the pick pass's
  * `depth32float` attachment and both depth-test (`less`) + depth-write, the
  * near sphere occludes the far star points nearest-wins, order-independently:
@@ -98,6 +100,7 @@ import { STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { resolvesToSphere } from '../../../../utils/scene/resolvesToSphere';
 import { starTintFromBpRp } from '../../../../utils/color/starTintFromBpRp';
+import { minPickRadiusMpc } from '../../helpers/minPickRadiusMpc';
 
 /**
  * The focused-star sphere resolves iff the current `select` row is a `star`
@@ -166,26 +169,39 @@ export const focusedFieldStarSphereLayer: ContentLayer = {
 
   // Pick aspect — stamps the focused star's identity into the NEAR0 r32uint pick
   // pass with ONE `drawSphere` (its own dynamic-offset uniform: mvp + packed id).
-  // This mirrors `draw` argument-for-argument so the pick sphere is silhouette-
-  // identical to the visual one; `enabled` (the shared `starResolves` gate) has
-  // already decided the sphere resolves, so this runs exactly when `draw` runs.
+  // This mirrors `draw` except the pick radius is FLOORED to the shared min
+  // footprint (`minPickRadiusMpc`), so a just-resolved few-pixel star stays
+  // clickable; `enabled` (the shared `starResolves` gate) has already decided the
+  // sphere resolves, so this runs exactly when `draw` runs.
   //
   // The packed id carries the star's bin-global record index — `row.index`, the
   // very `recordIdx` the point pick fragment packs — so the sphere pick resolves
   // to the SAME star as its `starCatalog` point pick. Because both pick pipelines
   // depth-test + depth-write the shared NEAR0 depth attachment, the near sphere
   // occludes the far background star points nearest-wins.
-  drawPick(pass, view, _ctx, state) {
+  drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null) return;
     const row = state.selectionRows.select;
     if (row === null || row.type !== 'star') return;
 
+    // Floor the PICK radius to the shared min footprint (visual sphere untouched):
+    // the descent gates this sphere on just clearing STAR_RESOLVE_PX, so it can be
+    // only a few pixels across, too small to click — its pick sphere inflates to
+    // the 9 px-radius floor. `max(true radius, floor)` leaves a close star alone.
+    const dx = row.positionMpc[0] - view.camPos[0];
+    const dy = row.positionMpc[1] - view.camPos[1];
+    const dz = row.positionMpc[2] - view.camPos[2];
+    const pickRadiusMpc = minPickRadiusMpc(
+      row.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      Math.hypot(dx, dy, dz),
+      ctx.drawPxPerRad,
+    );
     const mvp = composeBodyMvp(
       view.slab.vp,
       row.positionMpc,
       RENDER_ORIGIN_MPC,
-      row.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      pickRadiusMpc,
       IDENTITY_MAT3,
     );
     pickRenderer.drawSphere(pass, {

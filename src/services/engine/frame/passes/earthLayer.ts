@@ -60,6 +60,7 @@ import { packLitBodyUniforms } from '../../../../utils/gpu/packLitBodyUniforms';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
+import { minPickRadiusMpc } from '../../helpers/minPickRadiusMpc';
 
 export const earthLayer: ContentLayer = {
   name: 'earth',
@@ -131,16 +132,29 @@ export const earthLayer: ContentLayer = {
   // the constant 0 — there is no seed table to look up. The packed id is
   // `packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET)`; the offset keeps a
   // real (source, index 0) hit distinct from the cleared-to-zero no-hit texel.
-  drawPick(pass, view, _ctx, state) {
+  drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     const earth = state.data.bodies.earth;
     if (pickRenderer === null || earth === null) return;
 
+    // Floor the PICK radius to the shared min footprint (visual sphere untouched):
+    // a far-edge Earth can project to a couple of pixels, too small to click, so
+    // its pick sphere inflates to the same 9 px-radius floor the point-partition
+    // bodies get. `max(true radius, floor)` leaves a comfortably-sized Earth alone.
+    const dx = earth.positionMpc[0] - view.camPos[0];
+    const dy = earth.positionMpc[1] - view.camPos[1];
+    const dz = earth.positionMpc[2] - view.camPos[2];
+    const camDistMpc = Math.hypot(dx, dy, dz);
+    const pickRadiusMpc = minPickRadiusMpc(
+      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      camDistMpc,
+      ctx.drawPxPerRad,
+    );
     const mvp = composeBodyMvp(
       view.slab.vp,
       earth.positionMpc,
       RENDER_ORIGIN_MPC,
-      earth.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      pickRadiusMpc,
       earth.orientation,
     );
     pickRenderer.drawSphere(pass, {

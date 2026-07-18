@@ -156,6 +156,60 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-pass', () => {
     expect(second.label).toBe('body-pick-point-glint-pipeline');
   });
 
+  it('the glint variant packs a 20-byte instance stride carrying each point bandClass', () => {
+    // The glint pipeline reads a third `bandClass` u32 (offset 16), so its instance
+    // stride is 20 bytes — 4 more than the scene-star 16. This proves the layer
+    // packs the wider stride AND writes each point's class at word 4, the datum
+    // vsGlint maps to its pick-depth band. A default-variant call (16 bytes) would
+    // leave no room for the class and the priority would collapse.
+    const device = mockDevice();
+    const renderer = createBodyPickRenderer(device);
+    const pass = mockPass();
+
+    const points: BodyPointPick[] = [
+      { posRelCamMpc: [1, 0, 0] as Vec3, packedId: 10, bandClass: 0 }, // earth
+      { posRelCamMpc: [2, 0, 0] as Vec3, packedId: 20, bandClass: 2 }, // moon
+    ];
+    renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, points, variant: 'glint' });
+
+    // The glint pipeline was selected.
+    const setPipeline = pass.setPipeline as unknown as ReturnType<typeof vi.fn>;
+    expect((setPipeline.mock.calls[0]![0] as { label?: string }).label).toBe(
+      'body-pick-point-glint-pipeline',
+    );
+
+    // The interleaved instance buffer is 2 × 20 bytes, and each 5-word record
+    // carries packedId at word 3 and bandClass at word 4.
+    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+    const instWrite = writeBuffer.mock.calls.find(([buffer]) =>
+      (buffer as { label?: string }).label?.startsWith('body-pick-point-instance-vbo'),
+    )!;
+    const data = instWrite[2] as ArrayBuffer;
+    expect(data.byteLength).toBe(2 * 20);
+    const u32 = new Uint32Array(data);
+    expect(u32[3]).toBe(10); // point 0 packedId
+    expect(u32[4]).toBe(0); //  point 0 bandClass (earth)
+    expect(u32[8]).toBe(20); // point 1 packedId (word 5+3)
+    expect(u32[9]).toBe(2); //  point 1 bandClass (moon)
+  });
+
+  it('the scene-star (default) variant packs the narrower 16-byte instance stride', () => {
+    // The default pipeline has no bandClass attribute, so its stride stays 16: one
+    // point → a 16-byte buffer, not 20. Guards against the glint stride leaking
+    // into the scene-star path (which would misalign every famous-star pick).
+    const device = mockDevice();
+    const renderer = createBodyPickRenderer(device);
+    const pass = mockPass();
+
+    renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, points: [pt(7, 1)] });
+
+    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+    const instWrite = writeBuffer.mock.calls.find(([buffer]) =>
+      (buffer as { label?: string }).label?.startsWith('body-pick-point-instance-vbo'),
+    )!;
+    expect((instWrite[2] as ArrayBuffer).byteLength).toBe(16);
+  });
+
   it('an empty batch is a no-op that costs no slot', () => {
     const device = mockDevice();
     const renderer = createBodyPickRenderer(device);

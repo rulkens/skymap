@@ -80,6 +80,9 @@ function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
     drawCamPos: camPos,
     fovYRad: Math.PI / 3,
     canvasSize: { width: 1280, height: 720 },
+    // The drawPick radius floor (`minPickRadiusMpc`) reads this pinhole
+    // radian→pixel conversion: 720 / (2·tan(30°)).
+    drawPxPerRad: 720 / (2 * Math.tan(Math.PI / 6)),
   } as unknown as ReadyFrameContext;
 }
 

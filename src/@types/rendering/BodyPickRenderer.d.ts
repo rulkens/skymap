@@ -70,19 +70,28 @@ export type BodyPointPick = {
   readonly posRelCamMpc: Vec3;
   /** Fully-packed pick id (`packSelection(code, seedIndex + offset)`). */
   readonly packedId: number;
+  /**
+   * Glint priority CLASS — `0` earth, `1` planet, `2` moon. Read ONLY by the
+   * `'glint'` variant (the 20-byte instance stride), where `vsGlint` maps it to
+   * its own pick-depth band so importance, not nearness, orders overlapping
+   * glints. The `'sceneStar'` variant (16-byte stride) ignores it; omit it there.
+   */
+  readonly bandClass?: number;
 };
 
 /**
- * Which pick-depth semantics the point batch draws with — the two share every
- * buffer and one explicit pipeline layout, differing only in the vertex entry:
+ * Which pick-depth semantics the point batch draws with — the two share one
+ * explicit pipeline layout, differing in the vertex entry AND its instance
+ * stride:
  *
  *   - `'sceneStar'` (default) — the famous / scene stars: `vs` MIN-CLAMPS true
  *     depth onto the scene-star band, so within-far stars sort physically.
+ *     16-byte instance stride (posRelCamMpc + packedId).
  *   - `'glint'` — the sub-pixel solar-system body glints (+ the Earth stamp):
- *     `vsGlint` FORCES the shallower glint band so importance, not nearness,
- *     orders them and the instance DRAW ORDER breaks the intra-band tie (a planet
- *     out-picks its moons; Earth, prepended first, out-picks the Moon). See
- *     `starPointPick.wesl` / `lib/pickDepthBands.wesl`.
+ *     `vsGlint` FORCES a per-instance CLASS band (`bandClass`) so importance, not
+ *     nearness, orders them — earth-over-planet-over-moon is an unconditional
+ *     depth win, no draw-order tie-break. 20-byte instance stride (posRelCamMpc +
+ *     packedId + bandClass). See `starPointPick.wesl` / `lib/pickDepthBands.wesl`.
  */
 export type BodyPointPickVariant = 'sceneStar' | 'glint';
 

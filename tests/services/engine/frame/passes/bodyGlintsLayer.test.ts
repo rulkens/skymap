@@ -213,7 +213,7 @@ function makePickRenderer() {
   return {
     drawSphere: vi.fn(),
     drawPoints:
-      vi.fn<(pass: GPURenderPassEncoder, args: { vp: Float32Array; viewportPx: readonly [number, number]; points: readonly { posRelCamMpc: Vec3; packedId: number }[]; variant?: 'sceneStar' | 'glint' }) => void>(),
+      vi.fn<(pass: GPURenderPassEncoder, args: { vp: Float32Array; viewportPx: readonly [number, number]; points: readonly { posRelCamMpc: Vec3; packedId: number; bandClass?: number }[]; variant?: 'sceneStar' | 'glint' }) => void>(),
   };
 }
 
@@ -274,6 +274,9 @@ describe('bodyGlintsLayer.drawPick', () => {
     )!;
     expect(jupiter).toBeDefined();
     expect(jupiter.packedId).toBe(2_952_790_020);
+    // A heliocentric planet carries the PLANET priority class (1) — the datum the
+    // glint variant maps to its own depth band so Jupiter out-picks its moons.
+    expect(jupiter.bandClass).toBe(1);
     // Its anchor is rebased into the camera-relative frame (pos − camPos), f64.
     expect(jupiter.posRelCamMpc[0]).toBeCloseTo(JUPITER.positionMpc[0] - CAM_POS[0], 20);
 
@@ -299,27 +302,30 @@ describe('bodyGlintsLayer.drawPick', () => {
     expect(args.variant).toBe('glint');
   });
 
-  it('prepends the Earth stamp FIRST when earthLayer.enabled holds, so Earth out-picks every glint', () => {
+  it('emits the Earth stamp with the EARTH class (0) when earthLayer.enabled holds, so Earth out-picks every glint', () => {
     // Two lit io/jupiter glints plus a resolved Earth. Earth is not in the
-    // partition (it rides earthLayer), so the layer prepends its stamp — and it
-    // must be instance 0 so the draw-order tie-break inside the shared glint band
-    // makes Earth beat the Moon and every planet.
-    const IO_LIT = bodyAt('io', 1_120_000, [0.8, 0.8, 0.8]); // seed index 10, lit
+    // partition (it rides earthLayer), so the layer emits its stamp. Priority is
+    // now the per-instance bandClass — 0 (earth) beats 1 (planet) beats 2 (moon) as
+    // an unconditional depth win — NOT the list order, so the load-bearing check is
+    // the CLASS each point carries, not its index.
+    const IO_LIT = bodyAt('io', 1_120_000, [0.8, 0.8, 0.8]); // seed index 10, lit — a MOON
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer, [JUPITER, IO_LIT], { earth: EARTH_RESOLVED });
     bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), state);
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
-    // Earth first, then the seed-order glints (Jupiter before Io).
     expect(args.points).toHaveLength(3);
-    expect(args.points[0]!.packedId).toBe(packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET));
-    expect(args.points[1]!.packedId).toBe(packSelection(Source.Planet, 3 + PICK_SENTINEL_OFFSET));
-    expect(args.points[2]!.packedId).toBe(packSelection(Source.Planet, 10 + PICK_SENTINEL_OFFSET));
+
+    // Look each body up by its packed id (order carries no priority now) and assert
+    // its class: Earth 0, the heliocentric Jupiter 1, the Jovian moon Io 2.
+    const byId = (code: number, idx: number) =>
+      args.points.find((p) => p.packedId === packSelection(code, idx + PICK_SENTINEL_OFFSET))!;
+    const earthPt = byId(Source.Earth, 0);
+    expect(earthPt.bandClass).toBe(0);
+    expect(byId(Source.Planet, 3).bandClass).toBe(1); // Jupiter — planet
+    expect(byId(Source.Planet, 10).bandClass).toBe(2); // Io — moon
     // The Earth stamp's anchor is Earth's position rebased into the camera frame.
-    expect(args.points[0]!.posRelCamMpc[0]).toBeCloseTo(
-      EARTH_RESOLVED.positionMpc[0] - CAM_POS[0],
-      20,
-    );
+    expect(earthPt.posRelCamMpc[0]).toBeCloseTo(EARTH_RESOLVED.positionMpc[0] - CAM_POS[0], 20);
   });
 
   it('omits the Earth stamp when earthLayer.enabled is false (earth null or handle null)', () => {
@@ -342,21 +348,24 @@ describe('bodyGlintsLayer.drawPick', () => {
     expect(argsB.points.some((p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET))).toBe(false);
   });
 
-  it('preserves the partition (seed) order of glints in the instance list', () => {
-    // Three lit glints in a known input order — the pick list must keep it so the
-    // draw-order tie-break equals the seed priority (planet before its moons).
-    const IO_LIT = bodyAt('io', 1_120_000, [0.8, 0.8, 0.8]); // index 10
-    const EUROPA_LIT = bodyAt('europa', 1_140_000, [0.8, 0.8, 0.8]); // index 11
+  it('tags a planet with class 1 and its moons with class 2 (priority is the class, not order)', () => {
+    // A planet plus two of its moons, all lit. Priority is the per-instance
+    // bandClass — the planet's 1 out-picks the moons' 2 as an unconditional depth
+    // win — so the load-bearing datum is the CLASS each carries, whatever order the
+    // list happens to be in. Classified through the element table (parentId).
+    const IO_LIT = bodyAt('io', 1_120_000, [0.8, 0.8, 0.8]); // index 10, moon of Jupiter
+    const EUROPA_LIT = bodyAt('europa', 1_140_000, [0.8, 0.8, 0.8]); // index 11, moon of Jupiter
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer, [JUPITER, IO_LIT, EUROPA_LIT]);
     bodyGlintsLayer.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), state);
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
-    expect(args.points.map((p) => p.packedId)).toEqual([
-      packSelection(Source.Planet, 3 + PICK_SENTINEL_OFFSET),
-      packSelection(Source.Planet, 10 + PICK_SENTINEL_OFFSET),
-      packSelection(Source.Planet, 11 + PICK_SENTINEL_OFFSET),
-    ]);
+    const classOf = (idx: number) =>
+      args.points.find((p) => p.packedId === packSelection(Source.Planet, idx + PICK_SENTINEL_OFFSET))!
+        .bandClass;
+    expect(classOf(3)).toBe(1); // Jupiter — heliocentric planet
+    expect(classOf(10)).toBe(2); // Io — satellite moon
+    expect(classOf(11)).toBe(2); // Europa — satellite moon
   });
 
   it('is a no-op when the bodyPickRenderer handle is null (pre-bootstrap)', () => {

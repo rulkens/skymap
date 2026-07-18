@@ -74,6 +74,7 @@ import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsBy
 import { visibleStars } from '../visibleStars';
 import { seedIndexOfBody } from './seedIndexOfBody';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { minPickRadiusMpc } from '../../helpers/minPickRadiusMpc';
 
 export const starSpheresLayer: ContentLayer = {
   name: 'star-spheres',
@@ -162,11 +163,23 @@ export const starSpheresLayer: ContentLayer = {
     for (const star of spheres) {
       const seedIndex = seedIndexOfBody(star.id, SCENE_STARS);
       if (seedIndex < 0) continue; // unknown id: a packed id from −1 would alias body 0.
+      // Floor the PICK radius to the shared min footprint (visual sphere
+      // untouched): a just-resolved star near STAR_RESOLVE_PX is only a few pixels
+      // across, so its pick sphere inflates to the 9 px-radius floor. `max(true
+      // radius, floor)` leaves a comfortably-resolved star alone.
+      const dx = star.positionMpc[0] - view.camPos[0];
+      const dy = star.positionMpc[1] - view.camPos[1];
+      const dz = star.positionMpc[2] - view.camPos[2];
+      const pickRadiusMpc = minPickRadiusMpc(
+        star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        Math.hypot(dx, dy, dz),
+        ctx.drawPxPerRad,
+      );
       const mvp = composeBodyMvp(
         view.slab.vp,
         star.positionMpc,
         RENDER_ORIGIN_MPC,
-        star.radiusKm * SCALE_UNITS.KM_TO_MPC,
+        pickRadiusMpc,
         IDENTITY_MAT3,
         star.oblateness,
       );

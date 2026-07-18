@@ -62,6 +62,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { earthLayer } from './earthLayer';
 import { seedIndexOfBody } from './seedIndexOfBody';
+import { glintBandClass } from './glintBandClass';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness';
 import { fadeBand } from '../../../../utils/math/fadeBand';
@@ -183,9 +184,14 @@ export const bodyGlintsLayer: ContentLayer = {
   // `BODY_GLINT_MAX_PX` — see `seedIndexOfBody`); a body id absent from the seed
   // table returns −1 and is dropped (a packed id from −1 would alias body 0). Earth
   // is not in this partition (it rides its own `bodies.earth` / `earthLayer`), but
-  // its glint-scale pick footprint IS prepended here as a `Source.Earth` stamp (see
-  // the prepend note in the body). Anchors are rebased into the camera-relative
+  // its glint-scale pick footprint IS emitted here as a `Source.Earth` stamp (see
+  // the Earth-stamp note in the body). Anchors are rebased into the camera-relative
   // frame in f64 before narrowing, the SAME seam `draw` uses.
+  //
+  // Each point also carries a glint priority CLASS (`glintBandClass`: 0 earth, 1
+  // planet, 2 moon) which the `'glint'` variant maps to its own pick-depth band —
+  // so earth-over-planet-over-moon is an unconditional depth win and the ORDER the
+  // points appear in this list carries no priority. See `starPointPick.wesl`.
   //
   // `bodyPickRenderer.drawPoints` is safe to call once per caller per pass (it
   // claims its own per-pass slot of buffers); this layer and `starPointsLayer` are
@@ -199,10 +205,10 @@ export const bodyGlintsLayer: ContentLayer = {
     const camPos = view.camPos;
     const pickPoints: BodyPointPick[] = [];
 
-    // PREPEND the Earth glint stamp FIRST, so it is instance 0 and wins the
-    // draw-order tie-break inside the shared glint band (all glints force the same
-    // depth — see the `'glint'` variant below and `lib/pickDepthBands.wesl`),
-    // making Earth out-pick the Moon and every planet at glint scale. Earth is not
+    // Emit the Earth glint stamp with the EARTH priority class (0), the shallowest
+    // glint band, so Earth out-picks the Moon and every planet at glint scale
+    // regardless of nearness or list position (the class, not draw order, decides —
+    // see the `'glint'` variant below and `lib/pickDepthBands.wesl`). Earth is not
     // in `sceneBodyPartition` (it rides `bodies.earth` / `earthLayer`), so without
     // this stamp its only glint-scale pick coverage is its sub-pixel sphere — the
     // Moon's 18 px footprint would own the area and steal the click.
@@ -224,6 +230,7 @@ export const bodyGlintsLayer: ContentLayer = {
           earth.positionMpc[2] - camPos[2],
         ] as Vec3,
         packedId: packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
+        bandClass: glintBandClass('earth'),
       });
     }
 
@@ -258,6 +265,9 @@ export const bodyGlintsLayer: ContentLayer = {
           body.positionMpc[2] - camPos[2],
         ] as Vec3,
         packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
+        // Priority class from the element table: 1 (heliocentric planet) or 2
+        // (satellite moon), so a planet out-picks its own moons unconditionally.
+        bandClass: glintBandClass(body.id),
       });
     }
 
@@ -268,9 +278,9 @@ export const bodyGlintsLayer: ContentLayer = {
       vp: rebasedVp,
       viewportPx: view.viewportPx,
       points: pickPoints,
-      // The glint depth variant: every point forces the shallow glint band, so
-      // importance (not nearness) decides and the instance order above is the
-      // priority — Earth, then planets, then their moons.
+      // The glint depth variant: every point forces its per-instance CLASS band
+      // (`bandClass` above), so importance (not nearness, not list order) decides —
+      // Earth out-picks planets out-pick their moons, unconditionally.
       variant: 'glint',
     });
   },
