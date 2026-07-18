@@ -79,9 +79,9 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p1_0.jpg",
       "full": "images/full/p1_0.jpg",
-      "title": "Balaenoptera musculus (blue whale) 1",
-      "page": "https://www.flickr.com/photos/47445767@N05/31068434305",
-      "author": "James St. John",
+      "title": "Blue Whale",
+      "page": "https://www.flickr.com/photos/79721788@N00/14787573029",
+      "author": "D-Stanley",
       "license": "CC BY 2.0",
       "source": "Openverse · flickr"
     },
@@ -97,9 +97,9 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p1_2.jpg",
       "full": "images/full/p1_2.jpg",
-      "title": "Mirissa, whale watching, blue whale",
-      "page": "https://www.flickr.com/photos/67769030@N07/6918166357",
-      "author": "Arian Zwegers",
+      "title": "Balaenoptera musculus (blue whale) 1",
+      "page": "https://www.flickr.com/photos/47445767@N05/31068434305",
+      "author": "James St. John",
       "license": "CC BY 2.0",
       "source": "Openverse · flickr"
     },
@@ -115,9 +115,9 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p1_4.jpg",
       "full": "images/full/p1_4.jpg",
-      "title": "Dark Blue Whale Amigurumi",
-      "page": "https://www.flickr.com/photos/32496161@N07/4197187094",
-      "author": "toadstool ring",
+      "title": "Mirissa, whale watching, blue whale",
+      "page": "https://www.flickr.com/photos/67769030@N07/6918166357",
+      "author": "Arian Zwegers",
       "license": "CC BY 2.0",
       "source": "Openverse · flickr"
     },
@@ -131,22 +131,22 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/p1_6.png",
-      "full": "images/full/p1_6.png",
+      "thumb": "images/thumbs/p1_6.jpg",
+      "full": "images/full/p1_6.jpg",
+      "title": "Dark Blue Whale Amigurumi",
+      "page": "https://www.flickr.com/photos/32496161@N07/4197187094",
+      "author": "toadstool ring",
+      "license": "CC BY 2.0",
+      "source": "Openverse · flickr"
+    },
+    {
+      "thumb": "images/thumbs/p1_7.png",
+      "full": "images/full/p1_7.png",
       "title": "Balaenoptera musculus size comparison for Wikipedia",
       "page": "https://commons.wikimedia.org/wiki/File:Balaenoptera_musculus_size_comparison_for_Wikipedia.png",
       "author": "ChrisTheWhaleKing & Frederique Lucas",
       "license": "CC0",
       "source": "Wikimedia Commons"
-    },
-    {
-      "thumb": "images/thumbs/p1_7.jpg",
-      "full": "images/full/p1_7.jpg",
-      "title": "Baby Blue Whale Amigurumi",
-      "page": "https://www.flickr.com/photos/32496161@N07/3431181043",
-      "author": "toadstool ring",
-      "license": "CC BY 2.0",
-      "source": "Openverse · flickr"
     }
   ],
   "2": [
@@ -189,9 +189,9 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p2_4.jpg",
       "full": "images/full/p2_4.jpg",
-      "title": "Art Nouveau Architecture in Riga (1) 50",
-      "page": "https://commons.wikimedia.org/wiki/File:Art_Nouveau_Architecture_in_Riga_(1)_50.jpg",
-      "author": "Inga Tomane",
+      "title": "Olomouc - Vídeňská - View South - Neo-Baroque (Baroque Revival architecture)",
+      "page": "https://commons.wikimedia.org/wiki/File:Olomouc_-_V%C3%ADde%C5%88sk%C3%A1_-_View_South_-_Neo-Baroque_(Baroque_Revival_architecture).jpg",
+      "author": "Txllxt TxllxT",
       "license": "CC BY-SA 4.0",
       "source": "Wikimedia Commons"
     },
@@ -207,18 +207,18 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p2_6.jpg",
       "full": "images/full/p2_6.jpg",
-      "title": "Olomouc - Vídeňská - View South - Neo-Baroque (Baroque Revival architecture)",
-      "page": "https://commons.wikimedia.org/wiki/File:Olomouc_-_V%C3%ADde%C5%88sk%C3%A1_-_View_South_-_Neo-Baroque_(Baroque_Revival_architecture).jpg",
-      "author": "Txllxt TxllxT",
+      "title": "Art Nouveau Architecture in Riga (1) 50",
+      "page": "https://commons.wikimedia.org/wiki/File:Art_Nouveau_Architecture_in_Riga_(1)_50.jpg",
+      "author": "Inga Tomane",
       "license": "CC BY-SA 4.0",
       "source": "Wikimedia Commons"
     },
     {
       "thumb": "images/thumbs/p2_7.jpg",
       "full": "images/full/p2_7.jpg",
-      "title": "BLOX the Building Danish Architecture Center",
-      "page": "https://commons.wikimedia.org/wiki/File:BLOX_the_Building_Danish_Architecture_Center.jpg",
-      "author": "kallerna",
+      "title": "Modern architecture in Toronto",
+      "page": "https://commons.wikimedia.org/wiki/File:Modern_architecture_in_Toronto.jpg",
+      "author": "ThomasLendt",
       "license": "CC BY-SA 4.0",
       "source": "Wikimedia Commons"
     }
@@ -355,9 +355,9 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p4_6.jpg",
       "full": "images/full/p4_6.jpg",
-      "title": "Foster City aerial view, February 2018",
-      "page": "https://commons.wikimedia.org/w/index.php?curid=67059667",
-      "author": "Pi.1415926535",
+      "title": "Jaffa Old City Aerial View",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=23491873",
+      "author": "Amos Meron",
       "license": "CC BY-SA 3.0",
       "source": "Openverse · wikimedia"
     },
@@ -411,15 +411,6 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p5_4.jpg",
       "full": "images/full/p5_4.jpg",
-      "title": "The Aral Sea",
-      "page": "https://www.flickr.com/photos/24662369@N07/7630269132",
-      "author": "NASA Goddard Photo and Video",
-      "license": "CC BY 2.0",
-      "source": "Openverse · nasa"
-    },
-    {
-      "thumb": "images/thumbs/p5_5.jpg",
-      "full": "images/full/p5_5.jpg",
       "title": "Mississippi River Delta",
       "page": "https://images.nasa.gov/details/PIA03497",
       "author": "NASA / JPL",
@@ -427,8 +418,8 @@ export const IMAGES = {
       "source": "NASA"
     },
     {
-      "thumb": "images/thumbs/p5_6.jpg",
-      "full": "images/full/p5_6.jpg",
+      "thumb": "images/thumbs/p5_5.jpg",
+      "full": "images/full/p5_5.jpg",
       "title": "Building Up the Yellow River Delta",
       "page": "https://commons.wikimedia.org/wiki/File:Building_Up_the_Yellow_River_Delta.jpeg",
       "author": "NASA Earth Observatory images by Lauren Dauphin, using Landsat data from the U.S. Geological Survey. Story by Adam Voiland.",
@@ -436,13 +427,22 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/p5_7.jpg",
-      "full": "images/full/p5_7.jpg",
-      "title": "NASA Satellite Captures Snow Covered Alaska",
-      "page": "https://www.flickr.com/photos/24662369@N07/5376362076",
+      "thumb": "images/thumbs/p5_6.jpg",
+      "full": "images/full/p5_6.jpg",
+      "title": "The Aral Sea",
+      "page": "https://www.flickr.com/photos/24662369@N07/7630269132",
       "author": "NASA Goddard Photo and Video",
       "license": "CC BY 2.0",
       "source": "Openverse · nasa"
+    },
+    {
+      "thumb": "images/thumbs/p5_7.jpg",
+      "full": "images/full/p5_7.jpg",
+      "title": "Zambezi River Delta",
+      "page": "https://images.nasa.gov/details/PIA18155",
+      "author": "NASA / JPL",
+      "license": "Public domain (NASA)",
+      "source": "NASA"
     }
   ],
   "6": [
@@ -550,24 +550,15 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p7_3.jpg",
       "full": "images/full/p7_3.jpg",
-      "title": "Earth - Global Elevation Model with Satellite Imagery (Version 5)",
-      "page": "https://www.flickr.com/photos/53460575@N03/7374419816",
-      "author": "Kevin M. Gill",
+      "title": "NASA Blue Marble",
+      "page": "https://www.flickr.com/photos/35278629@N08/4442496969",
+      "author": "NASA Goddard Space Flight Center",
       "license": "CC BY 2.0",
       "source": "Openverse · flickr"
     },
     {
       "thumb": "images/thumbs/p7_4.jpg",
       "full": "images/full/p7_4.jpg",
-      "title": "Eastern Hemisphere - Blue Marble 2012",
-      "page": "https://images.nasa.gov/details/GSFC_20171208_Archive_e001788",
-      "author": "NASA / GSFC",
-      "license": "Public domain (NASA)",
-      "source": "NASA"
-    },
-    {
-      "thumb": "images/thumbs/p7_5.jpg",
-      "full": "images/full/p7_5.jpg",
       "title": "The Earth seen from Apollo 17",
       "page": "https://commons.wikimedia.org/wiki/File:The_Earth_seen_from_Apollo_17.jpg",
       "author": "NASA/Apollo 17 crew; taken by either Harrison Schmitt or Ron Evans",
@@ -575,22 +566,31 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/p7_6.jpg",
-      "full": "images/full/p7_6.jpg",
-      "title": "Black Marble - Asia and Australia",
-      "page": "https://www.flickr.com/photos/24662369@N07/8246893143",
-      "author": "NASA Goddard Photo and Video",
+      "thumb": "images/thumbs/p7_5.jpg",
+      "full": "images/full/p7_5.jpg",
+      "title": "Earth - Global Elevation Model with Satellite Imagery (Version 4)",
+      "page": "https://www.flickr.com/photos/53460575@N03/7187190855",
+      "author": "Kevin M. Gill",
       "license": "CC BY 2.0",
-      "source": "Openverse · nasa"
+      "source": "Openverse · flickr"
     },
     {
-      "thumb": "images/thumbs/p7_7.jpg",
-      "full": "images/full/p7_7.jpg",
+      "thumb": "images/thumbs/p7_6.jpg",
+      "full": "images/full/p7_6.jpg",
       "title": "Former VP Al Gore at NASA Goddard",
       "page": "https://images.nasa.gov/details/20241016-131557",
       "author": "NASA / GSFC / Travis Wohlrab",
       "license": "Public domain (NASA)",
       "source": "NASA"
+    },
+    {
+      "thumb": "images/thumbs/p7_7.png",
+      "full": "images/full/p7_7.png",
+      "title": "Blue Marble 2002",
+      "page": "https://commons.wikimedia.org/wiki/File:Blue_Marble_2002.png",
+      "author": "NASA’s Terra satellite for the MODIS imageries, combined by Meow. Credit: NASA Goddard Space Flight Center Image by Reto Stöckli (land surface, shallow water, clouds). Enhancements by Robert Simmon (ocean color, compositing, 3D globes, animation). Data and technical support: MODIS Land Group; MODIS Science Data Support Team; MODIS Atmosphere Group; MODIS Ocean Group Additional data: USGS EROS Data Center (topography); USGS Terrestrial Remote Sensing Flagstaff Field Center (Antarctica); Defense Meteorological Satellite Program (city lights).",
+      "license": "Public domain",
+      "source": "Wikimedia Commons"
     }
   ],
   "8": [
@@ -642,8 +642,8 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p8_5.jpg",
       "full": "images/full/p8_5.jpg",
-      "title": "Apollo 17, Evan performs EVA",
-      "page": "https://www.flickr.com/photos/24662369@N07/8252448913",
+      "title": "The Earth From The Moon",
+      "page": "https://www.flickr.com/photos/24662369@N07/4989807885",
       "author": "NASA Goddard Photo and Video",
       "license": "CC BY 2.0",
       "source": "Openverse · nasa"
@@ -790,6 +790,15 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p10_5.jpg",
       "full": "images/full/p10_5.jpg",
+      "title": "Solar eclipse taken from Artemis II - April 2026",
+      "page": "https://commons.wikimedia.org/wiki/File:Solar_eclipse_taken_from_Artemis_II_-_April_2026.jpg",
+      "author": "NASA",
+      "license": "Public domain",
+      "source": "Wikimedia Commons"
+    },
+    {
+      "thumb": "images/thumbs/p10_6.jpg",
+      "full": "images/full/p10_6.jpg",
       "title": "Solar Eclipse - November 13, 2012",
       "page": "https://www.flickr.com/photos/24662369@N07/8188704492",
       "author": "NASA Goddard Photo and Video",
@@ -797,22 +806,13 @@ export const IMAGES = {
       "source": "Openverse · nasa"
     },
     {
-      "thumb": "images/thumbs/p10_6.jpg",
-      "full": "images/full/p10_6.jpg",
+      "thumb": "images/thumbs/p10_7.jpg",
+      "full": "images/full/p10_7.jpg",
       "title": "Orion and the Eclipse",
       "page": "https://images.nasa.gov/details/art002e016318",
       "author": "NASA / JSC / NASA",
       "license": "Public domain (NASA)",
       "source": "NASA"
-    },
-    {
-      "thumb": "images/thumbs/p10_7.jpg",
-      "full": "images/full/p10_7.jpg",
-      "title": "RBerteig - Solar eclipse partial phase and corona (by)",
-      "page": "https://commons.wikimedia.org/wiki/File:RBerteig_-_Solar_eclipse_partial_phase_and_corona_(by).jpg",
-      "author": "RBerteig",
-      "license": "CC BY 2.0",
-      "source": "Wikimedia Commons"
     }
   ],
   "11": [
@@ -929,24 +929,6 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p12_4.jpg",
       "full": "images/full/p12_4.jpg",
-      "title": "Jupiter 2021",
-      "page": "https://www.flickr.com/photos/144614754@N02/51689953640",
-      "author": "NASA Hubble",
-      "license": "CC BY 2.0",
-      "source": "Openverse · flickr"
-    },
-    {
-      "thumb": "images/thumbs/p12_5.jpg",
-      "full": "images/full/p12_5.jpg",
-      "title": "Artist's impression of a Hot Jupiter with hidden water",
-      "page": "https://commons.wikimedia.org/wiki/File:Artist%27s_impression_of_a_Hot_Jupiter_with_hidden_water.jpg",
-      "author": "ESA / NASA and JPL-Caltech",
-      "license": "CC BY 4.0",
-      "source": "Wikimedia Commons"
-    },
-    {
-      "thumb": "images/thumbs/p12_6.jpg",
-      "full": "images/full/p12_6.jpg",
       "title": "Ultra-hot-jupiter",
       "page": "https://commons.wikimedia.org/wiki/File:Ultra-hot-jupiter.jpg",
       "author": "Pablo Carlos Budassi",
@@ -954,11 +936,29 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/p12_7.jpg",
-      "full": "images/full/p12_7.jpg",
+      "thumb": "images/thumbs/p12_5.jpg",
+      "full": "images/full/p12_5.jpg",
       "title": "Saturn and its moons at opposition",
       "page": "https://www.flickr.com/photos/37472264@N04/30719439998",
       "author": "europeanspaceagency",
+      "license": "CC BY 2.0",
+      "source": "Openverse · flickr"
+    },
+    {
+      "thumb": "images/thumbs/p12_6.jpg",
+      "full": "images/full/p12_6.jpg",
+      "title": "Artist's impression of a Hot Jupiter with hidden water",
+      "page": "https://commons.wikimedia.org/wiki/File:Artist%27s_impression_of_a_Hot_Jupiter_with_hidden_water.jpg",
+      "author": "ESA / NASA and JPL-Caltech",
+      "license": "CC BY 4.0",
+      "source": "Wikimedia Commons"
+    },
+    {
+      "thumb": "images/thumbs/p12_7.jpg",
+      "full": "images/full/p12_7.jpg",
+      "title": "Jupiter 2021",
+      "page": "https://www.flickr.com/photos/144614754@N02/51689953640",
+      "author": "NASA Hubble",
       "license": "CC BY 2.0",
       "source": "Openverse · flickr"
     }
@@ -987,8 +987,8 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p14_1.jpg",
       "full": "images/full/p14_1.jpg",
-      "title": "Animation of Solar and Heliospheric Observatory trajectory - Polar view",
-      "page": "https://commons.wikimedia.org/w/index.php?curid=74424782",
+      "title": "Animation of Solar and Heliospheric Observatory trajectory - Equatorial view",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=74424787",
       "author": "Phoenix7777",
       "license": "CC BY-SA 4.0",
       "source": "Openverse · wikimedia"
@@ -1041,11 +1041,11 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p14_7.jpg",
       "full": "images/full/p14_7.jpg",
-      "title": "Voyager 2: Hello Interstellar Space, Goodbye Heliosphere",
-      "page": "https://images.nasa.gov/details/PIA22924",
-      "author": "NASA / JPL",
-      "license": "Public domain (NASA)",
-      "source": "NASA"
+      "title": "Heliosphere sv",
+      "page": "https://commons.wikimedia.org/wiki/File:Heliosphere_sv.jpg",
+      "author": "NASA/me",
+      "license": "Public domain",
+      "source": "Wikimedia Commons"
     }
   ],
   "15": [
@@ -1079,11 +1079,11 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p15_3.jpg",
       "full": "images/full/p15_3.jpg",
-      "title": "NASA’s Hubble Telescope Finds Potential Kuiper Belt Targets for New Horizons Pluto Mission",
-      "page": "https://www.flickr.com/photos/24662369@N07/15364418860",
-      "author": "NASA Goddard Photo and Video",
+      "title": "New horizons - Pluto and the Kuiper Belt",
+      "page": "https://www.flickr.com/photos/26208889@N05/4635499552",
+      "author": "tonynetone",
       "license": "CC BY 2.0",
-      "source": "Openverse · nasa"
+      "source": "Openverse · flickr"
     },
     {
       "thumb": "images/thumbs/p15_4.jpg",
@@ -1098,19 +1098,19 @@ export const IMAGES = {
       "thumb": "images/thumbs/p15_5.png",
       "full": "images/full/p15_5.png",
       "title": "Kuiper belt plot objects of outer solar system",
-      "page": "https://commons.wikimedia.org/w/index.php?curid=38097918",
+      "page": "https://commons.wikimedia.org/wiki/File:Kuiper_belt_plot_objects_of_outer_solar_system.png",
       "author": "WilyD at English Wikipedia",
       "license": "CC BY-SA 3.0",
-      "source": "Openverse · wikimedia"
+      "source": "Wikimedia Commons"
     },
     {
       "thumb": "images/thumbs/p15_6.jpg",
       "full": "images/full/p15_6.jpg",
-      "title": "New horizons - Pluto and the Kuiper Belt",
-      "page": "https://www.flickr.com/photos/26208889@N05/4635499552",
-      "author": "tonynetone",
+      "title": "NASA’s Hubble Telescope Finds Potential Kuiper Belt Targets for New Horizons Pluto Mission",
+      "page": "https://www.flickr.com/photos/24662369@N07/15364418860",
+      "author": "NASA Goddard Photo and Video",
       "license": "CC BY 2.0",
-      "source": "Openverse · flickr"
+      "source": "Openverse · nasa"
     },
     {
       "thumb": "images/thumbs/p15_7.jpg",
@@ -1171,17 +1171,17 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p16_5.jpg",
       "full": "images/full/p16_5.jpg",
-      "title": "Neowise - comet 2013 US10 Catalina",
-      "page": "https://commons.wikimedia.org/wiki/File:Neowise_-_comet_2013_US10_Catalina.jpg",
-      "author": "NASA/JPL-Caltech",
-      "license": "Public domain",
+      "title": "Comet 2013 US10 between M51 and M101",
+      "page": "https://commons.wikimedia.org/wiki/File:Comet_2013_US10_between_M51_and_M101.jpg",
+      "author": "gianni",
+      "license": "CC BY-SA 2.0",
       "source": "Wikimedia Commons"
     },
     {
       "thumb": "images/thumbs/p16_6.jpg",
       "full": "images/full/p16_6.jpg",
-      "title": "Hubble's Last Look at Comet ISON Before Perihelion",
-      "page": "https://www.flickr.com/photos/24662369@N07/10998871423",
+      "title": "NASA Study Hints at Possible Change in Water ‘Fingerprint’ of Comet",
+      "page": "https://www.flickr.com/photos/24662369@N07/33043478941",
       "author": "NASA Goddard Photo and Video",
       "license": "CC BY 2.0",
       "source": "Openverse · nasa"
@@ -1209,29 +1209,29 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p17_1.jpg",
       "full": "images/full/p17_1.jpg",
-      "title": "Planetary Nebula PN G054.2-03.4 • The Necklace",
-      "page": "https://www.flickr.com/photos/34168865@N08/6045152163",
-      "author": "Hubble Heritage",
-      "license": "CC BY-SA 2.0",
-      "source": "Openverse · flickr"
+      "title": "Hubble Sees a Star ‘Inflating’ a Giant Bubble",
+      "page": "https://www.flickr.com/photos/24662369@N07/26534662246",
+      "author": "NASA Goddard Photo and Video",
+      "license": "CC BY 2.0",
+      "source": "Openverse · nasa"
     },
     {
       "thumb": "images/thumbs/p17_2.jpg",
       "full": "images/full/p17_2.jpg",
-      "title": "Hubble Sees a Star ‘Inflating’ a Giant Bubble",
-      "page": "https://images.nasa.gov/details/GSFC_20171208_Archive_e000382",
-      "author": "NASA / GSFC",
-      "license": "Public domain (NASA)",
-      "source": "NASA"
-    },
-    {
-      "thumb": "images/thumbs/p17_3.jpg",
-      "full": "images/full/p17_3.jpg",
       "title": "New shot of Proxima Centauri, our nearest neighbour",
       "page": "https://commons.wikimedia.org/wiki/File:New_shot_of_Proxima_Centauri,_our_nearest_neighbour.jpg",
       "author": "ESA/Hubble & NASA",
       "license": "CC BY 4.0",
       "source": "Wikimedia Commons"
+    },
+    {
+      "thumb": "images/thumbs/p17_3.jpg",
+      "full": "images/full/p17_3.jpg",
+      "title": "Planetary Nebula PN G054.2-03.4 • The Necklace",
+      "page": "https://www.flickr.com/photos/34168865@N08/6045152163",
+      "author": "Hubble Heritage",
+      "license": "CC BY-SA 2.0",
+      "source": "Openverse · flickr"
     },
     {
       "thumb": "images/thumbs/p17_4.jpg",
@@ -1542,10 +1542,10 @@ export const IMAGES = {
       "thumb": "images/thumbs/p21_5.jpg",
       "full": "images/full/p21_5.jpg",
       "title": "Astronomers Discover Dizzying Spin of the Milky Way Galaxy’s “Halo”",
-      "page": "https://www.flickr.com/photos/24662369@N07/28543855025",
-      "author": "NASA Goddard Photo and Video",
-      "license": "CC BY 2.0",
-      "source": "Openverse · nasa"
+      "page": "https://images.nasa.gov/details/GSFC_20171208_Archive_e000261",
+      "author": "NASA / GSFC",
+      "license": "Public domain (NASA)",
+      "source": "NASA"
     },
     {
       "thumb": "images/thumbs/p21_6.jpg",
@@ -1597,11 +1597,11 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p22_3.jpg",
       "full": "images/full/p22_3.jpg",
-      "title": "The Andromeda Galaxy, Messier 31",
-      "page": "https://www.flickr.com/photos/50769593@N00/43929816675",
-      "author": "kees scherer",
-      "license": "Public domain",
-      "source": "Openverse · flickr"
+      "title": "Best-ever Ultraviolet Portrait of Andromeda Galaxy",
+      "page": "https://www.flickr.com/photos/24662369@N07/3927825968",
+      "author": "NASA Goddard Photo and Video",
+      "license": "CC BY 2.0",
+      "source": "Openverse · nasa"
     },
     {
       "thumb": "images/thumbs/p22_4.jpg",
@@ -1624,10 +1624,10 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p22_6.jpg",
       "full": "images/full/p22_6.jpg",
-      "title": "The Andromeda Galaxy",
-      "page": "https://www.flickr.com/photos/97839409@N00/52631685208",
-      "author": "StephenGA",
-      "license": "CC0",
+      "title": "The Andromeda Galaxy, Messier 31",
+      "page": "https://www.flickr.com/photos/50769593@N00/43929816675",
+      "author": "kees scherer",
+      "license": "Public domain",
       "source": "Openverse · flickr"
     },
     {
@@ -1662,11 +1662,11 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p23_2.jpg",
       "full": "images/full/p23_2.jpg",
-      "title": "Gravitational Lens in Galaxy Cluster RCS2 032727-132623",
-      "page": "https://www.flickr.com/photos/34168865@N08/6918842643",
-      "author": "Hubble Heritage",
-      "license": "CC BY-SA 2.0",
-      "source": "Openverse · flickr"
+      "title": "Hubble’s Galaxy Cluster Cornucopia",
+      "page": "https://www.flickr.com/photos/24662369@N07/27479539697",
+      "author": "NASA Goddard Photo and Video",
+      "license": "CC BY 2.0",
+      "source": "Openverse · nasa"
     },
     {
       "thumb": "images/thumbs/p23_3.jpg",
@@ -1689,11 +1689,11 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p23_5.jpg",
       "full": "images/full/p23_5.jpg",
-      "title": "Faint Glow Within Galaxy Clusters Illuminates Dark Matter",
-      "page": "https://www.flickr.com/photos/24662369@N07/44577923390",
-      "author": "NASA Goddard Photo and Video",
-      "license": "CC BY 2.0",
-      "source": "Openverse · nasa"
+      "title": "Gravitational Lens in Galaxy Cluster RCS2 032727-132623",
+      "page": "https://www.flickr.com/photos/34168865@N08/6918842643",
+      "author": "Hubble Heritage",
+      "license": "CC BY-SA 2.0",
+      "source": "Openverse · flickr"
     },
     {
       "thumb": "images/thumbs/p23_6.jpg",
@@ -1853,13 +1853,13 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/p25_7.jpg",
-      "full": "images/full/p25_7.jpg",
-      "title": "Three-Dimensional Distribution of Dark Matter in the Universe (with 3 slices of time) (2007-01-2026)",
-      "page": "https://commons.wikimedia.org/wiki/File:Three-Dimensional_Distribution_of_Dark_Matter_in_the_Universe_(with_3_slices_of_time)_(2007-01-2026).jpg",
-      "author": "NASA, ESA, and R. Massey (California Institute of Technology)",
-      "license": "Public domain",
-      "source": "Wikimedia Commons"
+      "thumb": "images/thumbs/p25_7.png",
+      "full": "images/full/p25_7.png",
+      "title": "PAN-z14-1",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=187377821",
+      "author": "JWST/NIRCam team.",
+      "license": "CC BY 4.0",
+      "source": "Openverse · wikimedia"
     }
   ],
   "26": [
@@ -1882,12 +1882,12 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/p26_2.png",
-      "full": "images/full/p26_2.png",
-      "title": "Euclid key visual ESA24697556",
-      "page": "https://commons.wikimedia.org/w/index.php?curid=128901855",
-      "author": "ESA/Euclid/Euclid Consortium/NASA. Background galaxies: NASA ESA and S. Beckwith (STScI) and the HUDF Team",
-      "license": "CC BY-SA 3.0",
+      "thumb": "images/thumbs/p26_2.jpg",
+      "full": "images/full/p26_2.jpg",
+      "title": "Cropped frame of the Constrained Local Universe Evolution Simulation (CLUES) (cropped variant 1)",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=98343644",
+      "author": "CLUES - Constrained Local Universe Evolution Simulation SCIENCE ADVISORS Dr. Joel Primack - University of California Santa Cruz Dr. Anatoly Klypin - New Mexico State University Dr. Stefan Gottlöber - Astrophysical Institute Potsdam CLUES - VISUALIZATION Chris Henze - Advanced Supercomputing Division - NASA Ames Research Center Nina McCurdy - Outreach Coordinator - University of California Santa Cruz Dr. Mark SubbaRao - Adler Planetarium Patrick McPike - Adler Planetarium CLUES - ADLER SHOW INTEGRATION Dr. Doug Roberts - Adler Planetarium Mark Paternostro - Adler Planetarium",
+      "license": "CC BY 4.0",
       "source": "Openverse · wikimedia"
     },
     {
@@ -1900,12 +1900,12 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/p26_4.jpg",
-      "full": "images/full/p26_4.jpg",
-      "title": "Cropped frame of the Constrained Local Universe Evolution Simulation (CLUES) (cropped variant 1)",
-      "page": "https://commons.wikimedia.org/w/index.php?curid=98343644",
-      "author": "CLUES - Constrained Local Universe Evolution Simulation SCIENCE ADVISORS Dr. Joel Primack - University of California Santa Cruz Dr. Anatoly Klypin - New Mexico State University Dr. Stefan Gottlöber - Astrophysical Institute Potsdam CLUES - VISUALIZATION Chris Henze - Advanced Supercomputing Division - NASA Ames Research Center Nina McCurdy - Outreach Coordinator - University of California Santa Cruz Dr. Mark SubbaRao - Adler Planetarium Patrick McPike - Adler Planetarium CLUES - ADLER SHOW INTEGRATION Dr. Doug Roberts - Adler Planetarium Mark Paternostro - Adler Planetarium",
-      "license": "CC BY 4.0",
+      "thumb": "images/thumbs/p26_4.png",
+      "full": "images/full/p26_4.png",
+      "title": "Euclid key visual ESA24697556",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=128901855",
+      "author": "ESA/Euclid/Euclid Consortium/NASA. Background galaxies: NASA ESA and S. Beckwith (STScI) and the HUDF Team",
+      "license": "CC BY-SA 3.0",
       "source": "Openverse · wikimedia"
     },
     {
@@ -1949,8 +1949,8 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p27_2.jpg",
       "full": "images/full/p27_2.jpg",
-      "title": "Hubble Reveals Stellar Fireworks in ‘Skyrocket’ Galaxy",
-      "page": "https://www.flickr.com/photos/24662369@N07/27946907106",
+      "title": "Tracing the growth of Milky Way-like galaxies",
+      "page": "https://www.flickr.com/photos/24662369@N07/10870358595",
       "author": "NASA Goddard Photo and Video",
       "license": "CC BY 2.0",
       "source": "Openverse · nasa"
@@ -1976,8 +1976,8 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p27_5.jpg",
       "full": "images/full/p27_5.jpg",
-      "title": "Tracing the growth of Milky Way-like galaxies",
-      "page": "https://www.flickr.com/photos/24662369@N07/10870358595",
+      "title": "Hubble Peers Into Vast Distances",
+      "page": "https://www.flickr.com/photos/24662369@N07/47211856311",
       "author": "NASA Goddard Photo and Video",
       "license": "CC BY 2.0",
       "source": "Openverse · nasa"
@@ -1994,8 +1994,8 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/p27_7.jpg",
       "full": "images/full/p27_7.jpg",
-      "title": "Hubble Peers Into Vast Distances",
-      "page": "https://www.flickr.com/photos/24662369@N07/47211856311",
+      "title": "Hubble Spies a Loopy Galaxy",
+      "page": "https://www.flickr.com/photos/24662369@N07/16429259005",
       "author": "NASA Goddard Photo and Video",
       "license": "CC BY 2.0",
       "source": "Openverse · nasa"
@@ -2023,11 +2023,11 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/m1_2.jpg",
       "full": "images/full/m1_2.jpg",
-      "title": "Characteristic rash of hand, foot, and mouth disease, on human hands",
-      "page": "https://commons.wikimedia.org/w/index.php?curid=12445555",
-      "author": "James Heilman, MD",
-      "license": "CC BY-SA 3.0",
-      "source": "Openverse · wikimedia"
+      "title": "Robot and human hands",
+      "page": "https://www.flickr.com/photos/37996612193@N01/55487598",
+      "author": "smith",
+      "license": "CC BY 2.0",
+      "source": "Openverse · flickr"
     },
     {
       "thumb": "images/thumbs/m1_3.png",
@@ -2041,9 +2041,9 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/m1_4.jpg",
       "full": "images/full/m1_4.jpg",
-      "title": "Thermal-plume-from-human-hand",
-      "page": "https://commons.wikimedia.org/w/index.php?curid=29523610",
-      "author": "Gary Settles",
+      "title": "Characteristic rash of hand, foot, and mouth disease, on human hands",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=12445555",
+      "author": "James Heilman, MD",
       "license": "CC BY-SA 3.0",
       "source": "Openverse · wikimedia"
     },
@@ -2059,11 +2059,11 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/m1_6.jpg",
       "full": "images/full/m1_6.jpg",
-      "title": "Robot and human hands",
-      "page": "https://www.flickr.com/photos/37996612193@N01/55487598",
-      "author": "smith",
-      "license": "CC BY 2.0",
-      "source": "Openverse · flickr"
+      "title": "Thermal-plume-from-human-hand",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=29523610",
+      "author": "Gary Settles",
+      "license": "CC BY-SA 3.0",
+      "source": "Openverse · wikimedia"
     },
     {
       "thumb": "images/thumbs/m1_7.jpg",
@@ -2133,9 +2133,9 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/m2_6.jpg",
       "full": "images/full/m2_6.jpg",
-      "title": "Amy's eye",
-      "page": "https://www.flickr.com/photos/71753457@N00/249341740",
-      "author": "orangeacid",
+      "title": "Nothin but skin",
+      "page": "https://www.flickr.com/photos/12836528@N00/2188851719",
+      "author": "kevin dooley",
       "license": "CC BY 2.0",
       "source": "Openverse · flickr"
     },
@@ -2254,10 +2254,10 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/m4_4.jpg",
       "full": "images/full/m4_4.jpg",
-      "title": "SK8-18-2 human derived cells, fluorescence microscopy (29942101073)",
-      "page": "https://commons.wikimedia.org/wiki/File:SK8-18-2_human_derived_cells,_fluorescence_microscopy_(29942101073).jpg",
+      "title": "Laser TIRF 3 (6908564909)",
+      "page": "https://commons.wikimedia.org/wiki/File:Laser_TIRF_3_(6908564909).jpg",
       "author": "ZEISS Microscopy from Germany",
-      "license": "CC BY 2.0",
+      "license": "CC BY-SA 2.0",
       "source": "Wikimedia Commons"
     },
     {
@@ -2272,10 +2272,10 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/m4_6.jpg",
       "full": "images/full/m4_6.jpg",
-      "title": "Laser TIRF 3 (6908564909)",
-      "page": "https://commons.wikimedia.org/wiki/File:Laser_TIRF_3_(6908564909).jpg",
+      "title": "SK8-18-2 human derived cells, fluorescence microscopy (29942101073)",
+      "page": "https://commons.wikimedia.org/wiki/File:SK8-18-2_human_derived_cells,_fluorescence_microscopy_(29942101073).jpg",
       "author": "ZEISS Microscopy from Germany",
-      "license": "CC BY-SA 2.0",
+      "license": "CC BY 2.0",
       "source": "Wikimedia Commons"
     },
     {
@@ -2310,20 +2310,20 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/m5_2.jpg",
       "full": "images/full/m5_2.jpg",
-      "title": "Neural stem cells",
-      "page": "https://www.flickr.com/photos/63450246@N03/6126204428",
-      "author": "CodonAUG",
-      "license": "CC BY 2.0",
-      "source": "Openverse · flickr"
-    },
-    {
-      "thumb": "images/thumbs/m5_3.jpg",
-      "full": "images/full/m5_3.jpg",
       "title": "Neuron in tissue culture",
       "page": "https://commons.wikimedia.org/wiki/File:Neuron_in_tissue_culture.jpg",
       "author": "GerryShaw",
       "license": "CC BY-SA 3.0",
       "source": "Wikimedia Commons"
+    },
+    {
+      "thumb": "images/thumbs/m5_3.jpg",
+      "full": "images/full/m5_3.jpg",
+      "title": "Neural stem cells",
+      "page": "https://www.flickr.com/photos/63450246@N03/6126204704",
+      "author": "CodonAUG",
+      "license": "CC BY 2.0",
+      "source": "Openverse · flickr"
     },
     {
       "thumb": "images/thumbs/m5_4.jpg",
@@ -2532,10 +2532,10 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/m8_5.png",
       "full": "images/full/m8_5.png",
-      "title": "Cryo-EM structure of the human nucleosome Histone H2B type 1-J (2) 8KB5",
-      "page": "https://commons.wikimedia.org/w/index.php?curid=184217512",
-      "author": "Hirai S, Kujirai T, Akatsu M, Ogasawara M, Ehara H, Sekine SI, Ohkawa Y, Takizawa Y, Kurumizaka H",
-      "license": "CC0",
+      "title": "Nucleosome organization",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=21977693",
+      "author": "Darekk2",
+      "license": "CC BY-SA 3.0",
       "source": "Openverse · wikimedia"
     },
     {
@@ -2548,11 +2548,11 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/m8_7.png",
-      "full": "images/full/m8_7.png",
-      "title": "Nucleosome organization",
-      "page": "https://commons.wikimedia.org/w/index.php?curid=21977693",
-      "author": "Darekk2",
+      "thumb": "images/thumbs/m8_7.jpg",
+      "full": "images/full/m8_7.jpg",
+      "title": "Nucleosome core particle 1EQZ v.5",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=21983635",
+      "author": "Darekk2 using the cited above Protein Data Bank (PDB) structural data",
       "license": "CC BY-SA 3.0",
       "source": "Openverse · wikimedia"
     }
@@ -2736,20 +2736,20 @@ export const IMAGES = {
     {
       "thumb": "images/thumbs/m11_3.jpg",
       "full": "images/full/m11_3.jpg",
-      "title": "Hubble View of a Galaxy Resembling an Atomic Nucleus",
-      "page": "https://www.flickr.com/photos/24662369@N07/23054747873",
-      "author": "NASA Goddard Photo and Video",
-      "license": "CC BY 2.0",
-      "source": "Openverse · nasa"
-    },
-    {
-      "thumb": "images/thumbs/m11_4.jpg",
-      "full": "images/full/m11_4.jpg",
       "title": "Single electron orbitals",
       "page": "https://commons.wikimedia.org/wiki/File:Single_electron_orbitals.jpg",
       "author": "haade",
       "license": "CC BY-SA 3.0",
       "source": "Wikimedia Commons"
+    },
+    {
+      "thumb": "images/thumbs/m11_4.png",
+      "full": "images/full/m11_4.png",
+      "title": "Stylised atom with three Bohr model orbits and stylised nucleus",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=295612",
+      "author": "Halfdan.",
+      "license": "CC BY-SA 3.0",
+      "source": "Openverse · wikimedia"
     },
     {
       "thumb": "images/thumbs/m11_5.png",
@@ -2761,13 +2761,13 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/m11_6.png",
-      "full": "images/full/m11_6.png",
-      "title": "Stylised atom with three Bohr model orbits and stylised nucleus",
-      "page": "https://commons.wikimedia.org/w/index.php?curid=295612",
-      "author": "Halfdan.",
-      "license": "CC BY-SA 3.0",
-      "source": "Openverse · wikimedia"
+      "thumb": "images/thumbs/m11_6.jpg",
+      "full": "images/full/m11_6.jpg",
+      "title": "Hubble View of a Galaxy Resembling an Atomic Nucleus",
+      "page": "https://www.flickr.com/photos/24662369@N07/23054747873",
+      "author": "NASA Goddard Photo and Video",
+      "license": "CC BY 2.0",
+      "source": "Openverse · nasa"
     },
     {
       "thumb": "images/thumbs/m11_7.png",
@@ -2790,22 +2790,22 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/m12_1.jpg",
-      "full": "images/full/m12_1.jpg",
+      "thumb": "images/thumbs/m12_1.png",
+      "full": "images/full/m12_1.png",
+      "title": "Bohr atom model-mr",
+      "page": "https://commons.wikimedia.org/wiki/File:Bohr_atom_model-mr.svg",
+      "author": "Mamtapawar512",
+      "license": "CC BY-SA 4.0",
+      "source": "Wikimedia Commons"
+    },
+    {
+      "thumb": "images/thumbs/m12_2.jpg",
+      "full": "images/full/m12_2.jpg",
       "title": "Atomic model of Ag-Al quasicrystal",
       "page": "https://www.flickr.com/photos/41639353@N08/6214624380",
       "author": "CORE-Materials",
       "license": "CC BY 2.0",
       "source": "Openverse · flickr"
-    },
-    {
-      "thumb": "images/thumbs/m12_2.jpg",
-      "full": "images/full/m12_2.jpg",
-      "title": "Atom model How does the static theory of the atom explain chemical properties of elements valency",
-      "page": "https://commons.wikimedia.org/wiki/File:Atom_model_How_does_the_static_theory_of_the_atom_explain_chemical_properties_of_elements_valency.jpg",
-      "author": "Чукічев Дмитро Віталійович",
-      "license": "CC0",
-      "source": "Wikimedia Commons"
     },
     {
       "thumb": "images/thumbs/m12_3.png",
@@ -2817,40 +2817,40 @@ export const IMAGES = {
       "source": "Openverse · wikimedia"
     },
     {
-      "thumb": "images/thumbs/m12_4.jpg",
-      "full": "images/full/m12_4.jpg",
-      "title": "Atom model. Cubic modeling of the outer electron layer from a sphere to a cube",
-      "page": "https://commons.wikimedia.org/wiki/File:Atom_model._Cubic_modeling_of_the_outer_electron_layer_from_a_sphere_to_a_cube.jpg",
-      "author": "Чукічев Дмитро Віталійович",
-      "license": "CC0",
+      "thumb": "images/thumbs/m12_4.png",
+      "full": "images/full/m12_4.png",
+      "title": "Atom Diagram-ka",
+      "page": "https://commons.wikimedia.org/wiki/File:Atom_Diagram-ka.png",
+      "author": "AG Caesar",
+      "license": "CC BY 4.0",
       "source": "Wikimedia Commons"
     },
     {
       "thumb": "images/thumbs/m12_5.jpg",
       "full": "images/full/m12_5.jpg",
-      "title": "Atom model Cubic modeling of molecules from atoms Элементарный кристалл алмаза Elementary diamond crystal Углеродные нанотрубки Carbon nanotubes",
-      "page": "https://commons.wikimedia.org/wiki/File:Atom_model_Cubic_modeling_of_molecules_from_atoms_%D0%AD%D0%BB%D0%B5%D0%BC%D0%B5%D0%BD%D1%82%D0%B0%D1%80%D0%BD%D1%8B%D0%B9_%D0%BA%D1%80%D0%B8%D1%81%D1%82%D0%B0%D0%BB%D0%BB_%D0%B0%D0%BB%D0%BC%D0%B0%D0%B7%D0%B0_Elementary_diamond_crystal_%D0%A3%D0%B3%D0%BB%D0%B5%D1%80%D0%BE%D0%B4%D0%BD%D1%8B%D0%B5_%D0%BD%D0%B0%D0%BD%D0%BE%D1%82%D1%80%D1%83%D0%B1%D0%BA%D0%B8_Carbon_nanotubes.jpg",
-      "author": "Чукічев Дмитро Віталійович",
-      "license": "CC0",
-      "source": "Wikimedia Commons"
-    },
-    {
-      "thumb": "images/thumbs/m12_6.jpg",
-      "full": "images/full/m12_6.jpg",
-      "title": "Mathematical geometric model of the atom Static atomic theory Proof",
-      "page": "https://commons.wikimedia.org/wiki/File:Mathematical_geometric_model_of_the_atom_Static_atomic_theory_Proof.jpg",
-      "author": "Чукічев Дмитро Віталійович",
-      "license": "CC0",
-      "source": "Wikimedia Commons"
-    },
-    {
-      "thumb": "images/thumbs/m12_7.jpg",
-      "full": "images/full/m12_7.jpg",
       "title": "File:The dynamid atomic model, by Philipp Lenard, 1903.gif",
       "page": "https://commons.wikimedia.org/w/index.php?curid=50636912",
       "author": "Ufim",
       "license": "CC BY-SA 4.0",
       "source": "Openverse · wikimedia"
+    },
+    {
+      "thumb": "images/thumbs/m12_6.png",
+      "full": "images/full/m12_6.png",
+      "title": "Tropomyosin atomic model",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=1883518",
+      "author": "No machine-readable author provided. Spid~commonswiki assumed (based on copyright claims).",
+      "license": "CC BY-SA 3.0",
+      "source": "Openverse · wikimedia"
+    },
+    {
+      "thumb": "images/thumbs/m12_7.jpg",
+      "full": "images/full/m12_7.jpg",
+      "title": "Atom nucleon",
+      "page": "https://commons.wikimedia.org/wiki/File:Atom_nucleon.jpg",
+      "author": "Shymaahemdan",
+      "license": "CC BY-SA 4.0",
+      "source": "Wikimedia Commons"
     }
   ],
   "-13": [
@@ -2873,26 +2873,8 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/m13_2.jpg",
-      "full": "images/full/m13_2.jpg",
-      "title": "Theory of chemical reaction (Static theory of atomic model)",
-      "page": "https://commons.wikimedia.org/wiki/File:Theory_of_chemical_reaction_(Static_theory_of_atomic_model).jpg",
-      "author": "Чукічев Дмитро Віталійович",
-      "license": "CC0",
-      "source": "Wikimedia Commons"
-    },
-    {
-      "thumb": "images/thumbs/m13_3.jpg",
-      "full": "images/full/m13_3.jpg",
-      "title": "Mathematical geometric model of the atom Static atomic theory Proof",
-      "page": "https://commons.wikimedia.org/wiki/File:Mathematical_geometric_model_of_the_atom_Static_atomic_theory_Proof.jpg",
-      "author": "Чукічев Дмитро Віталійович",
-      "license": "CC0",
-      "source": "Wikimedia Commons"
-    },
-    {
-      "thumb": "images/thumbs/m13_4.png",
-      "full": "images/full/m13_4.png",
+      "thumb": "images/thumbs/m13_2.png",
+      "full": "images/full/m13_2.png",
       "title": "RutherfordConcentrated",
       "page": "https://commons.wikimedia.org/wiki/File:RutherfordConcentrated.png",
       "author": "Johnjbarton",
@@ -2900,17 +2882,26 @@ export const IMAGES = {
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/m13_5.jpg",
-      "full": "images/full/m13_5.jpg",
-      "title": "Atom model. Static theory of atomic structure. Electron. Complex structure (hypothesis) An electron consists of a positron (+) and four tetrons (-)",
-      "page": "https://commons.wikimedia.org/wiki/File:Atom_model._Static_theory_of_atomic_structure._Electron._Complex_structure_(hypothesis)_An_electron_consists_of_a_positron_(%2B)_and_four_tetrons_(-).jpg",
+      "thumb": "images/thumbs/m13_3.jpg",
+      "full": "images/full/m13_3.jpg",
+      "title": "Theory of chemical reaction (Static theory of atomic model)",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=147822897",
       "author": "Чукічев Дмитро Віталійович",
       "license": "CC0",
+      "source": "Openverse · wikimedia"
+    },
+    {
+      "thumb": "images/thumbs/m13_4.png",
+      "full": "images/full/m13_4.png",
+      "title": "Rutherford gold foil experiment results",
+      "page": "https://commons.wikimedia.org/wiki/File:Rutherford_gold_foil_experiment_results.svg",
+      "author": "Drawn by User:Fastfission in Illustrator and Inkscape. --Fastfission 15:04, 14 April 2008 (UTC)",
+      "license": "Public domain",
       "source": "Wikimedia Commons"
     },
     {
-      "thumb": "images/thumbs/m13_6.jpg",
-      "full": "images/full/m13_6.jpg",
+      "thumb": "images/thumbs/m13_5.jpg",
+      "full": "images/full/m13_5.jpg",
       "title": "Atom model Cubic modeling of molecules from atoms Элементарный кристалл алмаза Elementary diamond crystal Углеродные нанотрубки Carbon nanotubes",
       "page": "https://commons.wikimedia.org/w/index.php?curid=147822881",
       "author": "Чукічев Дмитро Віталійович",
@@ -2918,13 +2909,22 @@ export const IMAGES = {
       "source": "Openverse · wikimedia"
     },
     {
-      "thumb": "images/thumbs/m13_7.png",
-      "full": "images/full/m13_7.png",
-      "title": "Rutherford gold foil experiment results",
-      "page": "https://commons.wikimedia.org/wiki/File:Rutherford_gold_foil_experiment_results.svg",
-      "author": "Drawn by User:Fastfission in Illustrator and Inkscape. --Fastfission 15:04, 14 April 2008 (UTC)",
-      "license": "Public domain",
+      "thumb": "images/thumbs/m13_6.png",
+      "full": "images/full/m13_6.png",
+      "title": "Rutherford gold foil experiment results2",
+      "page": "https://commons.wikimedia.org/wiki/File:Rutherford_gold_foil_experiment_results2.svg",
+      "author": "File:Rutherford gold foil experiment results.svg: Drawn by User:Fastfission in Illustrator and Inkscape. --Fastfission 15:04, 14 April 2008 (UTC) derivative work: MikeRun",
+      "license": "see source",
       "source": "Wikimedia Commons"
+    },
+    {
+      "thumb": "images/thumbs/m13_7.jpg",
+      "full": "images/full/m13_7.jpg",
+      "title": "Static model of the atom. Rules for filling the outer electronic layer (4th and 5th periods)",
+      "page": "https://commons.wikimedia.org/w/index.php?curid=147822894",
+      "author": "Чукічев Дмитро Віталійович",
+      "license": "CC0",
+      "source": "Openverse · wikimedia"
     }
   ],
   "-14": [
@@ -3064,15 +3064,6 @@ export const IMAGES = {
       "author": "DESY-Kommunikation",
       "license": "CC BY-SA 4.0",
       "source": "Openverse · wikimedia"
-    },
-    {
-      "thumb": "images/thumbs/m15_7.jpg",
-      "full": "images/full/m15_7.jpg",
-      "title": "Proton and neutron",
-      "page": "https://commons.wikimedia.org/wiki/File:Proton_and_neutron.jpg",
-      "author": "User:Harp, User:Harp File:Quark structure proton.svg: Harp File:Quark structure neutron.svg: Harp Derived work: PelicanTwo",
-      "license": "CC BY-SA 4.0",
-      "source": "Wikimedia Commons"
     }
   ],
   "-16": [
