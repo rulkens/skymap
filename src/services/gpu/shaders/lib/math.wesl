@@ -24,10 +24,10 @@
 
 // ── constants ────────────────────────────────────────────────────────
 //
-// Pulled out of points.wesl + milkyWayImpostor.wesl, which had
-// hand-typed '3.14159...' and '2.30258...' literals. Centralising
-// gives us one place to bump precision if compute shaders ever need
-// f64-equivalent constants.
+// Consolidated from hand-typed '3.14159...' and '2.30258...' literals
+// that recurred across shaders. Centralising gives us one place to
+// bump precision if compute shaders ever need f64-equivalent
+// constants.
 
 const PI: f32 = 3.14159265358979;
 const TAU: f32 = 6.28318530717958;
@@ -53,8 +53,7 @@ fn saturate(x: f32) -> f32 {
 
 // ── rot2 ─────────────────────────────────────────────────────────────
 //
-// 2D rotation of a point around the origin. Pulled from
-// milkyWayImpostor.wesl's inline 'rot()'. Renamed to 'rot2' so the
+// 2D rotation of a point around the origin. Named 'rot2' so the
 // bare name 'rot' is free for a future 'rot3' (axis-angle 3D rotation
 // for camera-frame helpers); the "2" tag matches the WGSL pattern of
 // suffixing a dimensional hint to a free-function name (cf. 'vec2',
@@ -99,8 +98,7 @@ fn sabs(x: f32, k: f32) -> f32 {
 
 // ── toPolar / toRect ─────────────────────────────────────────────────
 //
-// Cartesian (x, y) ↔ polar (r, θ). Pulled out of milkyWayImpostor
-// where the 'twirl' arm distortion and the 'stars' density warp both
+// Cartesian (x, y) ↔ polar (r, θ). For procedural passes that
 // round-trip points through polar coords to apply rotation-symmetric
 // transformations (multiply θ by an angular frequency, scale r
 // non-linearly, etc.).

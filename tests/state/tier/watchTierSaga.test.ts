@@ -130,6 +130,7 @@ describe('watchTierSaga', () => {
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
       famousMeta: [],
       structures: { byId: () => null },
+      stars: { current: () => null },
     });
 
     store = buildStore(resolveDeps);
@@ -165,6 +166,7 @@ describe('watchTierSaga', () => {
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
       famousMeta: [],
       structures: { byId: () => null },
+      stars: { current: () => null },
     });
 
     store = buildStore(resolveDeps);
@@ -215,6 +217,7 @@ describe('watchTierSaga', () => {
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
       famousMeta: [],
       structures: { byId: () => null },
+      stars: { current: () => null },
     });
 
     store = buildStore(resolveDeps);

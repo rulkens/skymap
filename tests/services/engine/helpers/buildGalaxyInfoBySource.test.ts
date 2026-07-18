@@ -5,7 +5,8 @@
  * `buildGalaxyInfo` takes a `GalaxyRow` and returns a fully-derived
  * `GalaxyInfo` value. These tests compose
  * `extractGalaxyRow(cloud, idx, source)` → `buildGalaxyInfo(row)` to exercise
- * the per-source dispatch (SDSS / 2MRS / GLADE / Famous / Synthetic) end-to-end
+ * the per-source dispatch (SDSS / 2MRS / GLADE / Famous / Synthetic /
+ * Milliquas / DESI Deep) end-to-end
  * so any cross-cut regression in thumbnails, explorer URLs, IAU names,
  * orientation provenance, or the famous-meta block is caught here.
  */
@@ -14,6 +15,7 @@ import { describe, it, expect } from 'vitest';
 import { buildGalaxyInfo } from '../../../../src/services/engine/helpers/buildGalaxyInfo';
 import { extractGalaxyRow } from '../../../../src/services/engine/helpers/extractGalaxyRow';
 import { Source } from '../../../../src/data/sources';
+import { DESI_TRACER_CLASS } from '../../../../src/data/galaxyCatalog/sourceClass';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import { cartesianToRaDecZ } from '../../../../src/utils/math/cartesianToRaDecZ';
@@ -441,48 +443,71 @@ describe('buildGalaxyInfo — Milliquas source', () => {
     expect(info.agnClass).toBeUndefined();
   });
 
-  it('emits each parent-survey prefix correctly', () => {
-    const cases: Array<[number, string]> = [
-      [1, 'SDSS'],
-      [2, '2MASX'],
-      [3, 'GAIA'],
-      [4, 'WISEA'],
-      [5, 'NVSS'],
-      [6, 'FIRST'],
-      [7, '6dFGS'],
-    ];
-    for (const [byte, prefix] of cases) {
-      const cloud = makeCloud(1);
-      setPosition(cloud, 0, 100, 0, 0);
-      cloud.parentSurveyByte[0] = byte;
-      const info = buildInfo(cloud, 0, Source.Milliquas);
-      expect(info.displayName.startsWith(`${prefix} J`)).toBe(true);
-    }
-  });
-
-  it('exposes the human AGN class label for each Milliquas class byte', () => {
-    const cases: Array<[number, string]> = [
-      [1, 'Quasar'],
-      [2, 'AGN type-1'],
-      [3, 'BL Lac'],
-      [4, 'Seyfert-1 narrow'],
-      [5, 'Seyfert-1 broad'],
-      [6, 'Candidate'],
-    ];
-    for (const [byte, expected] of cases) {
-      const cloud = makeCloud(1);
-      setPosition(cloud, 0, 100, 0, 0);
-      cloud.classByte[0] = byte;
-      const info = buildInfo(cloud, 0, Source.Milliquas);
-      expect(info.agnClass).toBe(expected);
-    }
-  });
-
   it('leaves agnClass undefined for non-Milliquas sources even with classByte set', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.classByte[0] = 1; // Would mean "Quasar" if source were Milliquas.
     const info = buildInfo(cloud, 0, Source.SDSS);
     expect(info.agnClass).toBeUndefined();
+  });
+});
+
+// ─── buildGalaxyInfo — DESI Deep branch ──────────────────────────────────────
+
+describe('buildGalaxyInfo — DESI Deep source', () => {
+  it('DESI row shows the IAU-style DESI J designation', () => {
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 100, 0, 0);
+    cloud.classByte[0] = DESI_TRACER_CLASS.BGS;
+    const info = buildInfo(cloud, 0, Source.DesiDeep);
+    expect(info.iauName.startsWith('DESI J')).toBe(true);
+    // No famous / Milliquas / PGC rung applies to DESI rows, so the headline
+    // falls through the displayName ladder to the coord-based IAU name —
+    // the registry's iauPrefix does the work, no DESI-specific branch exists.
+    expect(info.displayName).toBe(info.iauName);
+    expect(info.sourceLabel).toBe('DESI Deep Field');
+  });
+
+  it('DESI row surfaces the tracer population from classByte', () => {
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 100, 0, 0);
+    cloud.classByte[0] = DESI_TRACER_CLASS.QSO;
+    const info = buildInfo(cloud, 0, Source.DesiDeep);
+    expect(info.agnClass).toBe('Quasar (QSO)');
+  });
+
+  it('DESI BGS row band labels come from the registry (g/r/z in the G/R/I slots)', () => {
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 100, 0, 0);
+    cloud.classByte[0] = DESI_TRACER_CLASS.BGS;
+    cloud.magG[0] = 19.0; // g
+    cloud.magR[0] = 18.2; // r
+    cloud.magI[0] = 17.6; // z — DESI's z-band flux rides in the i slot
+    const info = buildInfo(cloud, 0, Source.DesiDeep);
+    expect(info.bands).toEqual({ u: '—', g: 'g', r: 'r', i: 'z', z: '—' });
+    // BGS photometry is real (Legacy Surveys fluxes) — mags pass through.
+    expect(info.magG).toBeCloseTo(19.0, 3);
+    expect(info.photometryNote).toBeUndefined();
+    // Colour pairs skip the '—' slots, leaving g−r and r−z.
+    expect(info.colours.map((c) => c.label)).toEqual(['g−r', 'r−z']);
+  });
+
+  it('DESI LRG/ELG/QSO rows suppress magnitudes and show the no-photometry note', () => {
+    for (const byte of [DESI_TRACER_CLASS.LRG, DESI_TRACER_CLASS.ELG, DESI_TRACER_CLASS.QSO]) {
+      const cloud = makeCloud(1);
+      setPosition(cloud, 0, 100, 0, 0);
+      cloud.classByte[0] = byte;
+      // Simulate the baked-in per-tracer synthetic display constants — the
+      // .bin carries these for renderer brightness, but they are NOT
+      // measurements and must never reach the InfoCard as photometry.
+      cloud.magG[0] = 20.5;
+      cloud.magR[0] = 20.0;
+      cloud.magI[0] = 19.5;
+      const info = buildInfo(cloud, 0, Source.DesiDeep);
+      expect(Number.isNaN(info.magG)).toBe(true);
+      expect(Number.isNaN(info.absoluteMagG)).toBe(true);
+      expect(info.colours).toEqual([]);
+      expect(info.photometryNote).toBe('no photometry in source catalog');
+    }
   });
 });

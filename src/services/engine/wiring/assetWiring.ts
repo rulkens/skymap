@@ -38,8 +38,8 @@
  *
  * ### Point-source rows are `built: 'external'`
  *
- * The six point slots (5 galaxy catalogs + Synthetic) are minted in `initGpu` by
- * `wireGalaxyCatalogSourceSlot`, alongside the renderer their commit uploads
+ * The nine point slots (8 galaxy catalogs + Synthetic) are minted in `initGpu`
+ * by `wireGalaxyCatalogSourceSlot`, alongside the renderer their commit uploads
  * into. They appear here ONLY so the demand loop can trigger their
  * already-minted slots with the right `req(tier)`; the slot-construction pass
  * skips them (`built: 'external'`). Their `factory` is a guard that throws if
@@ -57,8 +57,22 @@ import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
+import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
+import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
+import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
+import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { clampTier } from '../../../utils/math/clampTier';
+import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { hostBodyId } from '../../../utils/scene/hostBodyId';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
+import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
+import type { RingTextureId } from '../../../@types/data/RingTextureId';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 /**
  * The categories backed by the bulk `.ccat` catalog — their visibility
@@ -104,6 +118,72 @@ function pointRow(source: SourceType): AssetWiringRow {
   };
 }
 
+/**
+ * Star-catalog sources, derived from the registry's `type: 'starCatalog'` rows
+ * rather than re-spelled, so a future famous-star catalog joins the demand
+ * table automatically — the same auto-widening `STAR_CATALOG_IDS` gives the
+ * settings key domain. `code` is the numeric `Source` twin of each row (it IS
+ * a `SourceType` at the entry literal; the union type widens it to `number`
+ * once read through `SOURCE_ENTRIES`, so the cast re-narrows it).
+ */
+const STAR_CATALOG_SOURCES: readonly SourceType[] = SOURCE_ENTRIES.filter(
+  (e) => e.type === 'starCatalog',
+).map((e) => e.code);
+
+/**
+ * One demand+req row for a star catalog. Unlike the galaxy `pointRow` family,
+ * these are registry-built (no `built: 'external'`): `createStarCatalogSlot`
+ * null-guards the `starCatalogRenderer` handle at commit time, so the slot
+ * needs no `initGpu` co-minting. Demand is the source-type-cluster gate — the
+ * coarse `starCatalogs.enabled` master AND the per-catalog `items[id].enabled`
+ * bit, mirroring the galaxy/structure/volume clusters. Tier reload is inherent:
+ * `reevaluateDemand` re-issues `req(newTier)` on any state change.
+ */
+function starCatalogRow(source: SourceType): AssetWiringRow {
+  const id = SOURCE_REGISTRY[source].id as StarCatalogId;
+  return {
+    key: source,
+    factory: (deps) => createStarCatalogSlot(source, deps.state, deps.cb),
+    req: (tier) => ({ source, tier }),
+    demand: (ctx) =>
+      ctx.settings.starCatalogs.enabled && ctx.settings.starCatalogs.items[id]?.enabled === true,
+  };
+}
+
+/** The body's world position (the ring rides its host body's). */
+function bodyPosOf(id: BodyTextureId | RingTextureId): Readonly<Vec3> {
+  return findByIdOrThrow(SCENE_BODIES, hostBodyId(id), 'bodyTextureRow').positionMpc;
+}
+
+/** The body's tier ceiling from the texture registry (the ring's is its host's). */
+function ceilingOf(
+  id: BodyTextureId | RingTextureId,
+): (typeof BODY_TEXTURE_REGISTRY)[BodyTextureId]['maxTier'] {
+  return BODY_TEXTURE_REGISTRY[hostBodyId(id)].maxTier;
+}
+
+/**
+ * One demand+release row for a body-surface texture, generated per family key,
+ * mirroring `pointRow`: `built: 'external'` (minted in `initGpu` next to the
+ * body renderer), demand+req only here. The slot is DEMANDED once the camera
+ * closes inside the body's own load radius and RELEASED once it retreats past
+ * twice that radius. `release` is separate from `!demand` on purpose — the band
+ * between `X` and `2X` is the hysteresis gap where neither fires, so a camera
+ * dithering at the boundary never thrashes a multi-MB texture load/free cycle
+ * (see `AssetWiringRow`). `req` clamps the current tier to the body's ceiling so
+ * a body that only ships a `small` texture is never asked for a `large` one.
+ */
+function bodyTextureRow(id: BodyTextureId | RingTextureId): AssetWiringRow {
+  return {
+    key: id,
+    built: 'external',
+    factory: externalFactory,
+    req: (tier) => ({ bodyId: id, tier: clampTier(tier, ceilingOf(id)) }),
+    demand: (ctx) => distanceMpc(ctx.cameraPosMpc, bodyPosOf(id)) < loadRadiusMpc(id),
+    release: (ctx) => distanceMpc(ctx.cameraPosMpc, bodyPosOf(id)) > 2 * loadRadiusMpc(id),
+  };
+}
+
 export const ASSET_WIRING: readonly AssetWiringRow[] = [
   // ── Point sources (demand+req only; slots minted in initGpu) ──────
   pointRow(Source.SDSS),
@@ -111,6 +191,9 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   pointRow(Source.Glade),
   pointRow(Source.Milliquas),
   pointRow(Source.FamousGalaxy),
+  pointRow(Source.DesiDeep),
+  pointRow(Source.DesiWedge),
+  pointRow(Source.DesiSgw),
   {
     // Synthetic fallback: loads only when armed by `createSyntheticFallback`,
     // which runs the precise gate (count-aware, hidden-at-boot-aware) at the
@@ -199,4 +282,16 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     req: () => undefined,
     demand: (ctx) => ctx.request('paletteOpened'),
   },
+
+  // ── Body-surface textures (proximity-demanded + released) ────────
+  // One row per textured body + the Saturn ring, each minted in initGpu
+  // (`built: 'external'`) and gated on the camera closing inside that body's
+  // own load radius — the proximity family that replaces Earth's bespoke
+  // descent-gated texture. See `bodyTextureRow` for the hysteresis rationale.
+  ...ALL_BODY_TEXTURE_KEYS.map(bodyTextureRow),
+
+  // ── Survey star catalogs (Gaia bin today) ────────────────────────
+  // Per-source, tier-aware, registry-built. One row per `type: 'starCatalog'`
+  // registry entry; a new star catalog joins the table with no edit here.
+  ...STAR_CATALOG_SOURCES.map(starCatalogRow),
 ];

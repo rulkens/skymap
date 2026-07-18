@@ -11,6 +11,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchGalaxyBitmap } from '../../../src/utils/network/fetchGalaxyBitmap';
+import { SLOT_SIDE } from '../../../src/services/gpu/resources/textureAtlas';
 
 // Capture originals so we can restore them and not leak across tests
 // (vitest workers are reused across files — see tests/setup/fetchMock.ts
@@ -142,5 +143,41 @@ describe('fetchGalaxyBitmap — fetchHiRes branch', () => {
     expect(result).toBeNull();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(bitmapSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchGalaxyBitmap — deadline signal', () => {
+  // A hung cutout request (SDSS ImgCutout / CDS hips2fits stall) must not
+  // leave the PriorityQueue's in-flight entry open forever — see the
+  // FETCH_DEADLINE_MS comment in fetchGalaxyBitmap.ts. We can't drive that
+  // end-to-end with a fake-timer wait: this vitest environment's
+  // AbortSignal.timeout does not observe vi.useFakeTimers (verified —
+  // advancing fake timers past the deadline never fires the abort event),
+  // so a real-timer version of that test would have to sleep 30 real
+  // seconds and would be flaky under CI load. Instead we assert the
+  // plumbing that makes the deadline effective: every fetch() call always
+  // receives a non-undefined AbortSignal, even when the caller supplies
+  // none, proving a call site can't accidentally opt out of the deadline
+  // by omitting `signal`.
+  it('passes a non-undefined signal to fetch even when the caller supplies none', async () => {
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: { 'content-type': 'image/jpeg' },
+        }),
+    );
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+    globalThis.createImageBitmap = vi.fn(
+      async () => ({ width: SLOT_SIDE, height: SLOT_SIDE, close() {} }) as unknown as ImageBitmap,
+    ) as unknown as typeof createImageBitmap;
+
+    await fetchGalaxyBitmap({ ra: 10, dec: 20 });
+
+    expect(fetchSpy).toHaveBeenCalled();
+    for (const call of fetchSpy.mock.calls) {
+      const init = (call as unknown[])[1] as RequestInit | undefined;
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+    }
   });
 });

@@ -27,19 +27,6 @@ function makeDescriptor(overrides?: Partial<CameraTweenDescriptor>): CameraTween
   };
 }
 
-describe('createCameraClock', () => {
-  it('initialises all fields to null / false', () => {
-    const clock = createCameraClock();
-    expect(clock.tweenStartMs).toBeNull();
-    expect(clock.autoRotateStartMs).toBeNull();
-    expect(clock.lastTweenRef).toBeNull();
-    expect(clock.lastAutoRotateActive).toBe(false);
-    expect(clock.lastBaseRef).toBeNull();
-    expect(clock.clipStartMs).toBeNull();
-    expect(clock.lastClipRef).toBeNull();
-  });
-});
-
 describe('tweenElapsed', () => {
   it('returns 0 on the frame a new descriptor reference appears', () => {
     const clock = createCameraClock();

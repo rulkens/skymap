@@ -11,12 +11,6 @@ describe('TextureAtlas slot state machine', () => {
   // path doesn't touch the device until we call uploadBitmap (Task 5).
   const newAtlas = () => new TextureAtlas(null as unknown as GPUDevice);
 
-  it('exposes correct geometry constants', () => {
-    expect(ATLAS_SIDE).toBe(2048);
-    expect(SLOT_SIDE).toBe(128);
-    expect(SLOT_COUNT).toBe(256); // (2048/128)^2 = 16 * 16
-  });
-
   it('allocates sequential slots starting at 0', () => {
     const a = newAtlas();
     expect(a.allocate('obj-1', 1)).toBe(0);

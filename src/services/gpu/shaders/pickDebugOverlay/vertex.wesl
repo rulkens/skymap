@@ -4,7 +4,7 @@
 // in [0, 1]².  The fragment stage uses 'uv * textureDimensions' to
 // index the r32uint pick texture via 'textureLoad'.
 //
-// Standard 'big triangle' trick — see toneMap/vertex.wesl for why
+// Standard 'big triangle' trick — see compositor/vertex.wesl for why
 // one over-sized triangle beats a quad-of-two-triangles (no shared
 // edge, no helper invocations, one less vertex).
 

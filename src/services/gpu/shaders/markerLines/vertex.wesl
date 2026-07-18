@@ -25,6 +25,10 @@ import package::lib::camera::worldToClip;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
+// Depth epsilon: pull the clamped clip-z this far inside the far plane (in
+// ndc-z terms) so an endpoint sitting exactly ON it still passes the clip test.
+const CLIP_Z_EPS: f32 = 1e-4;
+
 @vertex
 fn vs(input: VsIn) -> VsOut {
   // Unpack the packed instance attributes.
@@ -65,10 +69,21 @@ fn vs(input: VsIn) -> VsOut {
   // Apply the offset to the chosen endpoint, then re-multiply by w to
   // restore clip space (perspective-correct interpolation across the
   // rasterised triangle).
+  //
+  // The z is clamped to survive any far plane. The NEAR0 foreground
+  // connectors keep endpoints far beyond the adaptive far plane
+  // ('foregroundFrustum' collapses it to camDist * 100 on a deep descent)
+  // and would frustum-clip without this, mirroring the star-point
+  // backdrop's clamp in 'starPoints/vertex.wesl'. Inert for depth on every
+  // path this shader serves (the COSMO director connectors included): the
+  // marker-line pass is a depthless OVER composite — no depth test or
+  // write — so a clamped z perturbs no depth comparison.
+  let clampedClipZ = min(endpoint.z, endpoint.w * (1.0 - CLIP_Z_EPS));
   var out: VsOut;
   out.pos = vec4<f32>(
     endpoint.xy + offsetNdc * endpoint.w,
-    endpoint.zw,
+    clampedClipZ,
+    endpoint.w,
   );
   out.uv = input.uv;
   // Pre-multiply fadeAlpha into both rgb and a so the fragment stage

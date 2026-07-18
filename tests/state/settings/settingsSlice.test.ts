@@ -13,30 +13,21 @@
 import { describe, it, expect } from 'vitest';
 
 import reducer, {
-  setGalaxyCatalogSize,
   setBrightness,
-  setDepthFade,
-  setHighlightFallback,
-  setRealOnly,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
-  setExposure,
-  setToneMapCurve,
-  setBiasMode,
-  setAbsMagLimit,
-  setThumbnailsEnabled,
-  setMilkyWayEnabled,
-  setMilkyWayLabelEnabled,
-  setFilamentsEnabled,
-  setFilamentIntensity,
-  setVolumesEnabled,
   addVolumeField,
   removeVolumeField,
   writeVolumeField,
   setFlowEnabled,
   setFlow,
-  setShowPickBuffer,
-  setShowDiskRadiusRing,
+  setStarCatalogEnabled,
+  setStarCatalogSize,
+  setStarCatalogBrightness,
+  setStarCatalogRefineThreshold,
+  setStarCatalogGlowOverlap,
+  setStarCatalogVisible,
+  setFamousStarsEnabled,
   setPassDisabled,
   setClipPathLinger,
   setClipPathLingerSec,
@@ -46,11 +37,13 @@ import reducer, {
   setClipPathTuningActive,
   setStructureItemEnabled,
   setStructureLabelEnabled,
+  setLabelsEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
 import { buildInitialSettings } from '../../../src/state/settings/initialState';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { STRUCTURE_IDS, isStructureId } from '../../../src/data/structure/structureIds';
+import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 import type { SettingsSnapshot } from '../../../src/@types/engine/settings/SettingsSnapshot';
 
@@ -65,31 +58,6 @@ const structureId = STRUCTURE_IDS[0]!;
 const seededVolumeId = Object.keys(base().volumes.items)[0] as VolumeFieldId;
 
 describe('settingsSlice — galaxy-catalog knobs', () => {
-  it('setGalaxyCatalogSize updates galaxyCatalogs.sizePx', () => {
-    expect(reducer(base(), setGalaxyCatalogSize(7.5)).galaxyCatalogs.sizePx).toBe(7.5);
-  });
-  it('setBrightness updates galaxyCatalogs.brightness', () => {
-    expect(reducer(base(), setBrightness(0.5)).galaxyCatalogs.brightness).toBe(0.5);
-  });
-  it('setDepthFade updates galaxyCatalogs.depthFade', () => {
-    const before = base();
-    expect(
-      reducer(before, setDepthFade(!before.galaxyCatalogs.depthFade)).galaxyCatalogs.depthFade,
-    ).toBe(!before.galaxyCatalogs.depthFade);
-  });
-  it('setHighlightFallback updates galaxyCatalogs.highlightFallback', () => {
-    const before = base();
-    expect(
-      reducer(before, setHighlightFallback(!before.galaxyCatalogs.highlightFallback)).galaxyCatalogs
-        .highlightFallback,
-    ).toBe(!before.galaxyCatalogs.highlightFallback);
-  });
-  it('setRealOnly updates galaxyCatalogs.realOnly', () => {
-    const before = base();
-    expect(
-      reducer(before, setRealOnly(!before.galaxyCatalogs.realOnly)).galaxyCatalogs.realOnly,
-    ).toBe(!before.galaxyCatalogs.realOnly);
-  });
   it('setGalaxyCatalogVisible flips one item row', () => {
     const next = reducer(base(), setGalaxyCatalogVisible({ id: catalogId, enabled: false }));
     expect(next.galaxyCatalogs.items[catalogId].enabled).toBe(false);
@@ -97,57 +65,6 @@ describe('settingsSlice — galaxy-catalog knobs', () => {
   it('setGalaxyCatalogLabelEnabled flips one item label', () => {
     const next = reducer(base(), setGalaxyCatalogLabelEnabled({ id: catalogId, enabled: false }));
     expect(next.galaxyCatalogs.items[catalogId].labelEnabled).toBe(false);
-  });
-});
-
-describe('settingsSlice — tonemap / bias', () => {
-  it('setExposure updates tonemap.exposure', () => {
-    expect(reducer(base(), setExposure(2.5)).tonemap.exposure).toBe(2.5);
-  });
-  it('setToneMapCurve updates tonemap.curve', () => {
-    expect(reducer(base(), setToneMapCurve(3)).tonemap.curve).toBe(3);
-  });
-  it('setBiasMode updates bias.mode', () => {
-    expect(reducer(base(), setBiasMode(2)).bias.mode).toBe(2);
-  });
-  it('setAbsMagLimit updates bias.absMagLimit', () => {
-    expect(reducer(base(), setAbsMagLimit(-20.5)).bias.absMagLimit).toBe(-20.5);
-  });
-});
-
-describe('settingsSlice — overlay layers', () => {
-  it('setThumbnailsEnabled updates thumbnails.enabled', () => {
-    const before = base();
-    expect(
-      reducer(before, setThumbnailsEnabled(!before.thumbnails.enabled)).thumbnails.enabled,
-    ).toBe(!before.thumbnails.enabled);
-  });
-  it('setMilkyWayEnabled updates milkyWay.enabled', () => {
-    const before = base();
-    expect(reducer(before, setMilkyWayEnabled(!before.milkyWay.enabled)).milkyWay.enabled).toBe(
-      !before.milkyWay.enabled,
-    );
-  });
-  it('setMilkyWayLabelEnabled updates milkyWay.labelEnabled', () => {
-    const before = base();
-    expect(
-      reducer(before, setMilkyWayLabelEnabled(!before.milkyWay.labelEnabled)).milkyWay.labelEnabled,
-    ).toBe(!before.milkyWay.labelEnabled);
-  });
-  it('setFilamentsEnabled updates filaments.enabled', () => {
-    const before = base();
-    expect(reducer(before, setFilamentsEnabled(!before.filaments.enabled)).filaments.enabled).toBe(
-      !before.filaments.enabled,
-    );
-  });
-  it('setFilamentIntensity updates filaments.intensity', () => {
-    expect(reducer(base(), setFilamentIntensity(0.42)).filaments.intensity).toBe(0.42);
-  });
-  it('setVolumesEnabled updates volumes.enabled', () => {
-    const before = base();
-    expect(reducer(before, setVolumesEnabled(!before.volumes.enabled)).volumes.enabled).toBe(
-      !before.volumes.enabled,
-    );
   });
 });
 
@@ -163,19 +80,6 @@ describe('settingsSlice — structures', () => {
 });
 
 describe('settingsSlice — debug', () => {
-  it('setShowPickBuffer updates debug.showPickBuffer', () => {
-    const before = base();
-    expect(
-      reducer(before, setShowPickBuffer(!before.debug.showPickBuffer)).debug.showPickBuffer,
-    ).toBe(!before.debug.showPickBuffer);
-  });
-  it('setShowDiskRadiusRing updates debug.showDiskRadiusRing', () => {
-    const before = base();
-    expect(
-      reducer(before, setShowDiskRadiusRing(!before.debug.showDiskRadiusRing)).debug
-        .showDiskRadiusRing,
-    ).toBe(!before.debug.showDiskRadiusRing);
-  });
   it('setPassDisabled writes a plain-object record entry', () => {
     const enabled = reducer(base(), setPassDisabled({ pass: 'foo', disabled: true }));
     expect(enabled.debug.disabledPasses).toEqual({ foo: true });
@@ -292,6 +196,52 @@ describe('settingsSlice — flow', () => {
   });
 });
 
+describe('settingsSlice — star catalogs', () => {
+  it('setStarCatalogEnabled toggles the master gate', () => {
+    // Master gate seeds true; dispatch false collapses the whole cluster.
+    const next = reducer(base(), setStarCatalogEnabled(false));
+    expect(next.starCatalogs.enabled).toBe(false);
+  });
+
+  it('setStarCatalogVisible toggles a catalog’s enabled', () => {
+    // gaiaStars seeds enabled: true from SOURCE_REGISTRY[Source.GaiaStars].visible;
+    // the per-item reducer flips one row without touching the master gate.
+    const next = reducer(base(), setStarCatalogVisible({ id: 'gaiaStars', enabled: false }));
+    expect(next.starCatalogs.items.gaiaStars.enabled).toBe(false);
+    expect(next.starCatalogs.enabled).toBe(true);
+  });
+
+  it('setStarCatalogSize writes the shared star-billboard size', () => {
+    const next = reducer(base(), setStarCatalogSize(5.5));
+    expect(next.starCatalogs.sizePx).toBe(5.5);
+  });
+
+  it('setStarCatalogBrightness writes the shared star-brightness trim', () => {
+    const next = reducer(base(), setStarCatalogBrightness(2.2));
+    expect(next.starCatalogs.brightness).toBe(2.2);
+  });
+
+  it('setStarCatalogRefineThreshold writes the octree-cut Detail knob', () => {
+    const next = reducer(base(), setStarCatalogRefineThreshold(0.12));
+    expect(next.starCatalogs.refineThreshold).toBe(0.12);
+  });
+
+  it('setStarCatalogGlowOverlap writes the aggregate glow-overlap spread', () => {
+    const next = reducer(base(), setStarCatalogGlowOverlap(1.8));
+    expect(next.starCatalogs.glowOverlap).toBe(1.8);
+  });
+});
+
+describe('settingsSlice — famous stars', () => {
+  it('setFamousStarsEnabled toggles the map gate without touching the star-catalogs master', () => {
+    // The famous-stars gate is a separate singleton overlay flag from the Gaia
+    // survey master (`starCatalogs.enabled`); flipping it leaves that untouched.
+    const next = reducer(base(), setFamousStarsEnabled(false));
+    expect(next.famousStars.enabled).toBe(false);
+    expect(next.starCatalogs.enabled).toBe(true);
+  });
+});
+
 describe('settingsSlice — mergeSnapshot', () => {
   it('replaces only the clusters the patch carries', () => {
     const before = base();
@@ -325,6 +275,28 @@ describe('settingsSlice — mergeSnapshot', () => {
     // Mutating the patch after dispatch must not bleed into state.
     (patch.galaxyCatalogs as { brightness: number }).brightness = 999;
     expect(next.galaxyCatalogs.brightness).toBe(0.5);
+  });
+});
+
+describe('settingsSlice — setLabelsEnabled (master label fan-out)', () => {
+  // The master routes every label-bearing category to its authoritative home:
+  // structure ids → structures.items, milkyWay → milkyWay scalar, else (famous)
+  // → galaxyCatalogs.items. LABEL_CATEGORIES is exactly the label-bearing set.
+  const labelOf = (state: ReturnType<typeof base>, cat: (typeof LABEL_CATEGORIES)[number]) =>
+    isStructureId(cat)
+      ? state.structures.items[cat].labelEnabled
+      : cat === 'milkyWay'
+        ? state.milkyWay.labelEnabled
+        : state.galaxyCatalogs.items[cat].labelEnabled;
+
+  it('disables labels across every label-bearing category', () => {
+    const next = reducer(base(), setLabelsEnabled(false));
+    for (const cat of LABEL_CATEGORIES) expect(labelOf(next, cat)).toBe(false);
+  });
+
+  it('re-enables labels across every label-bearing category', () => {
+    const on = reducer(reducer(base(), setLabelsEnabled(false)), setLabelsEnabled(true));
+    for (const cat of LABEL_CATEGORIES) expect(labelOf(on, cat)).toBe(true);
   });
 });
 

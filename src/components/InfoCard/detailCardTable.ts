@@ -30,9 +30,13 @@ import type { FocusableTargetType } from '../../@types/engine/FocusableTargetTyp
 import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
 import StructureDetailCard from './StructureDetailCard/StructureDetailCard';
 import MilkyWayDetailCard from './MilkyWayDetailCard/MilkyWayDetailCard';
+import BodyDetailCard from './BodyDetailCard/BodyDetailCard';
+import FieldStarDetailCard from './FieldStarDetailCard/FieldStarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
 import CompactStructureCard from './CompactStructureCard/CompactStructureCard';
 import CompactMilkyWayCard from './CompactMilkyWayCard/CompactMilkyWayCard';
+import CompactBodyCard from './CompactBodyCard/CompactBodyCard';
+import CompactFieldStarCard from './CompactFieldStarCard/CompactFieldStarCard';
 
 /** Props InfoCard passes to a detail-card variant, identical across arms. */
 export type DetailCardProps = {
@@ -106,5 +110,33 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
     },
     Compact: ({ target }) =>
       target.type === 'milkyWay' ? createElement(CompactMilkyWayCard, { target }) : null,
+  },
+  body: {
+    Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
+      if (target.type !== 'body') return null;
+      return createElement(BodyDetailCard, {
+        target,
+        pinned,
+        chrome,
+        onFocus,
+        onClose,
+      });
+    },
+    Compact: ({ target }) =>
+      target.type === 'body' ? createElement(CompactBodyCard, { target }) : null,
+  },
+  star: {
+    Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
+      if (target.type !== 'star') return null;
+      return createElement(FieldStarDetailCard, {
+        target,
+        pinned,
+        chrome,
+        onFocus,
+        onClose,
+      });
+    },
+    Compact: ({ target }) =>
+      target.type === 'star' ? createElement(CompactFieldStarCard, { info: target }) : null,
   },
 };

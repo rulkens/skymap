@@ -14,8 +14,18 @@
 
 A plan is a strategy + task list. The implementer reads the current code, the
 spec, and the test names — and writes the body themselves. Code in the plan
-exists to *pin a contract the implementer must hit*, not to demonstrate the
+exists to _pin a contract the implementer must hit_, not to demonstrate the
 implementation.
+
+## Precondition: the spec must have a "Ground preparation" section
+
+Do not author a plan against a spec that lacks a **Ground preparation** section —
+either filled in (the ideal-shape sketch, growth/bolt-on verdicts, and prep-refactor
+list) or explicitly "none needed — because X". That section is produced by the
+`refactor-ground` skill, run between brainstorming and spec-writing, and it is what
+guarantees the plan is written against an architecture that can _grow_ the feature
+instead of bolting it on. If the section is missing, stop and run `/refactor-ground`
+first; the spec may need to change shape.
 
 ## What earns its place in a plan
 
@@ -25,7 +35,7 @@ These four kinds of code are the contract. Include them, exactly.
    The implementer must match them; vague prose ("add a method that returns
    the entry") loses information.
 2. **Test names and assertions.**
-   The test names *are* the acceptance criteria. "Write a test for X" without
+   The test names _are_ the acceptance criteria. "Write a test for X" without
    showing the assertion lets the implementer ship something that passes the
    wrong test.
 3. **Byte / offset tables** for binary formats, WGSL uniform layouts, vertex
@@ -33,6 +43,12 @@ These four kinds of code are the contract. Include them, exactly.
    the table can.
 4. **Tiny before / after sketches** when the prose alone can't make the
    intended diff obvious. Keep these to a few lines each.
+5. **The `npm run move-files` invocation, spelled out, in any task that moves
+   or renames TS files.** Implementers who aren't told otherwise default to
+   `git mv` + hand-editing every import path (observed, repeatedly); naming
+   the tool in the task text is the only channel that reliably reaches a
+   subagent, since they never load project skills. See
+   `.claude/skills/move-files/SKILL.md`.
 
 ## What doesn't
 
@@ -55,7 +71,7 @@ refactors that move the code, and forces the implementer to read current
 state instead of trusting a stale snippet.
 
 The only exception: when a tiny before/after diff is genuinely clarifying
-(category 4 above), paste *just* the changing lines, never the whole function.
+(category 4 above), paste _just_ the changing lines, never the whole function.
 
 ## Refactor vs green-field
 
@@ -81,7 +97,7 @@ But still no implementation bodies.
 
 \`\`\`ts
 test('getFalloffHalfMpc returns the survey value', () => {
-  expect(getFalloffHalfMpc(SDSS_CODE)).toBe(1000);
+expect(getFalloffHalfMpc(SDSS_CODE)).toBe(1000);
 });
 \`\`\`
 
@@ -89,9 +105,9 @@ test('getFalloffHalfMpc returns the survey value', () => {
 
 \`\`\`ts
 export function getFalloffHalfMpc(code: number): number {
-  const entry = SOURCE_REGISTRY[code];
-  if (entry.type !== 'survey') throw new Error(...);
-  return entry.falloffHalfMpc;
+const entry = SOURCE_REGISTRY[code];
+if (entry.type !== 'survey') throw new Error(...);
+return entry.falloffHalfMpc;
 }
 \`\`\`
 ```
@@ -109,7 +125,7 @@ export function getFalloffHalfMpc(code: number): number {
 - [ ] Add the test `getFalloffHalfMpc returns the survey value` asserting SDSS → 1000.
 - [ ] Add the test `getFalloffHalfMpc throws for synthetic codes` asserting the throw.
 - [ ] Implement against the existing `SOURCE_REGISTRY` lookup pattern (see
-  `getMaxDistMpc` at `sources.ts:142` for the shape).
+      `getMaxDistMpc` at `sources.ts:142` for the shape).
 - [ ] `npm test -- sources` → both new tests pass.
 - [ ] Commit.
 ```
@@ -123,7 +139,7 @@ The upstream `writing-plans` skill targets a generic engineer "with zero
 context for our codebase and questionable taste." Skymap's implementer is
 usually a fresh subagent dispatched mid-session — they have the full repo,
 the spec, and the conventions docs available, and the plan's job is to
-*direct attention*, not *substitute for reading*. Pre-pasted code defeats
+_direct attention_, not _substitute for reading_. Pre-pasted code defeats
 that: the subagent copies the snippet instead of reading the current file,
 and inherits whatever staleness the plan-author baked in.
 

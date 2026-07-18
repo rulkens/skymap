@@ -71,6 +71,25 @@ export function makeRunTierTransition(
     // AssetSlot machinery.
     state.assetSlots.mcpm?.load({ tier: nextTier });
 
+    // Star catalogs are tier-aware like MCPM, but per-source and demand-loaded.
+    // This runner (not reevaluateDemand, whose idle-guard deliberately leaves
+    // non-idle slots alone) is the tier-reload path, so each loaded catalog
+    // re-fetches its per-tier bin here or the drawn star population would
+    // silently keep the old tier. The idle-skip is the disabled ⇒ no-work
+    // rule: an idle slot was never demanded (catalog toggled off), and a tier
+    // flip must not start fetching a hidden layer — when the user enables it,
+    // reevaluateDemand issues the then-current tier's request.
+    for (const [source, slot] of state.assetSlots.starCatalogs) {
+      if (slot.state().kind === 'idle') continue;
+      slot.load({ source, tier: nextTier });
+    }
+
+    // The Milky-Way point cloud folds the tier's star budget into its
+    // generation, so a tier swap regenerates it (destroy old star/dust VBs →
+    // carve + dispatch the new budget). The handle is null until initGpu
+    // constructs it, so `?.` IS the pre-bootstrap guard — no device check needed.
+    state.gpu.milkyWayCloud?.regenerate(nextTier);
+
     // The hi-res LOD-3 famous-galaxy texture is tier-aware on its layerSide.
     // WebGPU textures are immutable in shape, so a tier flip destroys + recreates
     // the texture + planner pair and re-binds the renderer's hi-res view (see

@@ -118,12 +118,11 @@ function makeState(): EngineState {
     picking: {
       pickInFlight: false,
       pointerDown: false,
-      lastFrameUniformBytes: null as ArrayBuffer | null,
     },
     gpu: {
       renderer: null,
       pickRenderer: null,
-      postProcess: null,
+      renderTargets: null,
       filamentRenderer: null,
     },
     subsystems: {
@@ -198,11 +197,6 @@ function makeDeps(store = makeStore()): RunFrameDeps {
     cb: { store } as unknown as RunFrameDeps['cb'],
     device: {} as unknown as GPUDevice,
     context: {} as unknown as GPUCanvasContext,
-    milkyWayRenderer: {} as unknown as RunFrameDeps['milkyWayRenderer'],
-    horizonShellRenderer: {} as unknown as RunFrameDeps['horizonShellRenderer'],
-    filamentRenderer: {} as unknown as RunFrameDeps['filamentRenderer'],
-    texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer'],
-    proceduralDiskRenderer: {} as unknown as RunFrameDeps['proceduralDiskRenderer'],
     // Disabled stub matches production's "no `?gpuTimings`" path.
     timingService: createDisabledGpuTimingService(),
     drivers: buildCameraDrivers({} as unknown as EngineState),

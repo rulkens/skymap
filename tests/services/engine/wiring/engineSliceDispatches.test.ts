@@ -110,9 +110,7 @@ import { createSyntheticFallback } from '../../../../src/services/engine/wiring/
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
-function makeGalaxyState(opts: {
-  rendererUpload: ReturnType<typeof vi.fn>;
-}): EngineState {
+function makeGalaxyState(opts: { rendererUpload: ReturnType<typeof vi.fn> }): EngineState {
   return {
     gpu: {
       renderer: {
@@ -156,8 +154,10 @@ function makeStructureState(): {
         load: vi.fn(),
         state: () => ({ kind: 'idle' }),
         current: () => null,
+        lastRequest: () => null,
         forceReload: vi.fn(),
         cancel: vi.fn(),
+        release: vi.fn(),
       },
     },
   } as unknown as EngineState;
@@ -176,14 +176,18 @@ function makeProgressState(): EngineState {
     current: () => null,
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
+    lastRequest: () => null,
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
   });
   return {
     assetSlots: {
       points: new Map<SourceType, AssetSlot<unknown, unknown>>([
         [Source.SDSS, stubSlot('sdss-points')],
       ]),
+      // Real (empty) map: installLoadProgress walks it like points.
+      starCatalogs: new Map<SourceType, AssetSlot<unknown, unknown>>(),
       filaments: stubSlot('filaments'),
       famousMeta: stubSlot('famous-meta'),
       structureCatalog: stubSlot('structure-catalog'),
@@ -191,6 +195,8 @@ function makeProgressState(): EngineState {
       cf4Density: stubSlot('cf4Density'),
       mcpm: stubSlot('mcpm'),
       flow: stubSlot('flow'),
+      // Empty keyed family: installLoadProgress walks it like points.
+      bodyTextures: new Map(),
     },
     subsystems: { loadProgress: null },
   } as unknown as EngineState;
@@ -198,11 +204,23 @@ function makeProgressState(): EngineState {
 
 function makeSyntheticFallbackState(): {
   state: EngineState;
-  slots: Map<SourceType, { emit: (s: LoadState<GalaxyCatalog>) => void; load: ReturnType<typeof vi.fn> }>;
+  slots: Map<
+    SourceType,
+    { emit: (s: LoadState<GalaxyCatalog>) => void; load: ReturnType<typeof vi.fn> }
+  >;
 } {
   const disabled = new Set<SourceType>();
   const items: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const src of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Milliquas, Source.FamousGalaxy]) {
+  for (const src of [
+    Source.SDSS,
+    Source.TwoMRS,
+    Source.Glade,
+    Source.Milliquas,
+    Source.FamousGalaxy,
+    Source.DesiDeep,
+    Source.DesiWedge,
+    Source.DesiSgw,
+  ]) {
     items[galaxyCatalogIdOf(src)] = { enabled: !disabled.has(src), labelEnabled: true };
   }
 
@@ -213,11 +231,23 @@ function makeSyntheticFallbackState(): {
   const slots = new Map<SourceType, SlotStub>();
   const assetSlotPoints = new Map<SourceType, AssetSlot<GalaxyCatalog, unknown>>();
 
-  for (const src of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Milliquas, Source.FamousGalaxy, Source.Synthetic]) {
+  for (const src of [
+    Source.SDSS,
+    Source.TwoMRS,
+    Source.Glade,
+    Source.Milliquas,
+    Source.FamousGalaxy,
+    Source.DesiDeep,
+    Source.DesiWedge,
+    Source.DesiSgw,
+    Source.Synthetic,
+  ]) {
     const listeners = new Set<(s: LoadState<GalaxyCatalog>) => void>();
     const load = vi.fn();
     const stub: SlotStub = {
-      emit: (s) => { for (const fn of [...listeners]) fn(s); },
+      emit: (s) => {
+        for (const fn of [...listeners]) fn(s);
+      },
       load,
     };
     slots.set(src, stub);
@@ -226,9 +256,14 @@ function makeSyntheticFallbackState(): {
       load: load as unknown as AssetSlot<GalaxyCatalog, unknown>['load'],
       current: () => null,
       state: () => ({ kind: 'idle' }),
-      subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
+      subscribe: (fn) => {
+        listeners.add(fn);
+        return () => listeners.delete(fn);
+      },
+      lastRequest: () => null,
       forceReload: () => {},
       cancel: () => {},
+      release: () => {},
     });
   }
 
@@ -237,7 +272,14 @@ function makeSyntheticFallbackState(): {
     settings: { galaxyCatalogs: { items } } as never,
     requests: new Set<string>(),
     gpu: { renderer: { totalCount: () => 99 } },
-    assetSlots: { points: assetSlotPoints },
+    assetSlots: { points: assetSlotPoints, bodyTextures: new Map() },
+    // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
+    // so both must be present; a far resting pose keeps the proximity-gated
+    // body-texture rows out of the demand set.
+    cameraRuntime: {
+      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
+      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+    },
   } as unknown as EngineState;
 
   return { state, slots };
@@ -254,7 +296,7 @@ describe('wireGalaxyCatalogSourceSlot → engineSourceCountReported', () => {
     const cfg: GalaxyCatalogSourceConfig = {
       source: Source.SDSS,
       shortName: 'sdss',
-      fetcher: async () => ({ count: 42 } as GalaxyCatalog),
+      fetcher: async () => ({ count: 42 }) as GalaxyCatalog,
       category: 'survey',
     };
     const deps: WirePointSourceDeps = {
@@ -267,9 +309,7 @@ describe('wireGalaxyCatalogSourceSlot → engineSourceCountReported', () => {
 
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    expect(spy).toHaveBeenCalledWith(
-      engineSourceCountReported({ source: Source.SDSS, count: 42 }),
-    );
+    expect(spy).toHaveBeenCalledWith(engineSourceCountReported({ source: Source.SDSS, count: 42 }));
   });
 });
 
@@ -323,9 +363,7 @@ describe('wireStructureProjection → engineStructureCountsChanged', () => {
     fireSlot({ kind: 'ready', req: {}, value: payload, loadedAtMs: 0 });
 
     expect(spy).toHaveBeenCalledWith(
-      engineStructureCountsChanged(
-        expect.objectContaining({ cluster: expect.any(Number) }),
-      ),
+      engineStructureCountsChanged(expect.objectContaining({ cluster: expect.any(Number) })),
     );
   });
 });
@@ -411,15 +449,15 @@ describe('createSyntheticFallback → engineStatusChanged({ kind: "ready" })', (
 
     createSyntheticFallback(state, cb);
 
-    slots.get(Source.SDSS)?.emit({ kind: 'ready', req: {}, value: { count: 0 } as GalaxyCatalog, loadedAtMs: 0 });
+    slots
+      .get(Source.SDSS)
+      ?.emit({ kind: 'ready', req: {}, value: { count: 0 } as GalaxyCatalog, loadedAtMs: 0 });
 
     // count=0 must NOT trigger a ready dispatch (the gate treats it as no data).
-    const readyDispatches = spy.mock.calls.filter(
-      (call) => {
-        const action = call[0] as { payload?: { kind?: string } };
-        return action?.payload?.kind === 'ready';
-      },
-    );
+    const readyDispatches = spy.mock.calls.filter((call) => {
+      const action = call[0] as { payload?: { kind?: string } };
+      return action?.payload?.kind === 'ready';
+    });
     expect(readyDispatches).toHaveLength(0);
   });
 

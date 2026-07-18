@@ -7,7 +7,7 @@
  * `clipRegistry`, waits for its foci + the camera runtime, resolves the foci to
  * world positions, and calls `clipPathInspect.compute(id, resolved)` — the seam
  * samples the route into the `clipPathInspector` subsystem, which the
- * `clipPathDebugPass` reads each frame. `clearClipPath` drops the snapshot.
+ * `clipPathDebugLayer` reads each frame. `clearClipPath` drops the snapshot.
  *
  * ### Why mirror watchClipSaga's foci-wait verbatim
  *
@@ -67,7 +67,8 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   // Block until every id-bearing cue resolves AND the camera runtime (which
   // carries the FOV resolveClipFoci needs) exists — same gate as watchClipSaga.
   yield* call(waitUntil, () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null);
-  const resolved = resolveClipFoci(clip.data, resolveDeps(), cameraRuntime()!.fovYRad);
+  const rt = cameraRuntime()!;
+  const resolved = resolveClipFoci(clip.data, resolveDeps(), rt.fovYRad, rt.from);
   // Bake only the ACTIVATED pacing knobs into the flyPath nodes before
   // sampling, so the overlay AND the pinned (replayable) clip carry the
   // overrides — while inactive knobs let the clip's own authored value through.

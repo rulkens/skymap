@@ -58,7 +58,7 @@ describe('mergeSettingsSnapshot', () => {
     expect(next.flow.flowSpeed).toBe(1);
   });
 
-  it('merges all six clusters when given a full snapshot', () => {
+  it('merges all seven clusters when given a full snapshot', () => {
     const state = makeSettingsFixture();
     const full: SettingsSnapshot = {
       galaxyCatalogs: { ...state.galaxyCatalogs, enabled: !state.galaxyCatalogs.enabled },
@@ -67,6 +67,7 @@ describe('mergeSettingsSnapshot', () => {
       filaments: { ...state.filaments, intensity: 0.123 },
       milkyWay: { ...state.milkyWay, enabled: !state.milkyWay.enabled },
       flow: { ...state.flow, flowSpeed: 7 },
+      labels: { ...state.labels, focusedOnly: !state.labels.focusedOnly },
     };
 
     const next = mergeSettingsSnapshot(state, full);

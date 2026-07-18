@@ -33,7 +33,7 @@ export type PathTuning = {
   readonly rampSec?: number;
   /** Per-target dwell depth ∈ [0,1] (0 = cruise straight through). Omit to keep the clip's value. */
   readonly linger?: number;
-  /** Dwell window width (seconds). Omit to keep the clip's value. */
+  /** Dwell window width (wall-clock seconds). Omit to keep the clip's value. */
   readonly lingerSec?: number;
   /**
    * The whole spline config (basis + its causal-only knobs) as ONE override unit

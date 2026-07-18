@@ -55,6 +55,37 @@ describe('buildDwellWarp', () => {
     expect(w.baseTimeAt(2)).toBeCloseTo(2, 3);
   });
 
+  it('treats windowSec as WALL-CLOCK: added time stays under the window width', () => {
+    // The old base-time window braided the knobs: at depth 1 the camera runs at
+    // ~12% cruise, so a base-time window cost ~4.7× its width in wall seconds
+    // (windowSec 3 → ~11s added). Wall-clock semantics cap the whole slow
+    // moment at ~windowSec, whatever the depth.
+    const w = buildDwellWarp(KNOT_TIME, [0, 1, 0], 3, 8);
+    expect(w.totalSec - 8).toBeLessThan(3);
+    expect(w.totalSec).toBeGreaterThan(8); // still a real dwell
+  });
+
+  it('keeps the wall-clock length of the slow moment ~constant across depths', () => {
+    // Measure the wall time spent below 95% cruise speed. Depth should set how
+    // SLOW the crawl gets, not how LONG it lasts — both depths dwell for about
+    // the authored window, so their spans stay within a small factor.
+    const span = (depth: number): number => {
+      const w = buildDwellWarp(KNOT_TIME, [0, depth, 0], 3, 8);
+      const dt = w.totalSec / 4000;
+      let t = 0;
+      for (let i = 1; i < 4000; i++) {
+        const wall = i * dt;
+        const slope = (w.baseTimeAt(wall + dt) - w.baseTimeAt(wall - dt)) / (2 * dt);
+        if (slope < 0.95) t += dt;
+      }
+      return t;
+    };
+    const shallow = span(0.4);
+    const deep = span(1);
+    expect(deep).toBeLessThan(3.2); // ≈ windowSec, not 4.7× it
+    expect(deep / shallow).toBeLessThan(1.6);
+  });
+
   it('crawls with the slow-down biased BEFORE the knot (approach, not departure)', () => {
     const w = buildDwellWarp(KNOT_TIME, [0, 0.9, 0], 2, 8);
     // Local slope dBase/dWall via finite difference.

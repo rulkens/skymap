@@ -2,12 +2,11 @@
 
 > **Audience.** You're adding a new GPU renderer to skymap, or modernising an existing one.
 > This doc pins the shape every renderer should follow so the next person reading the code
-> doesn't have to relearn 11 different factory signatures and lifecycle conventions.
+> doesn't have to relearn a different factory signature and lifecycle convention per file.
 >
-> **Status.** Codifies the dominant pattern across the 11 renderers in
-> `src/services/gpu/renderers/` as of 2026-05-11 (post PR #99). Where the existing renderers
-> drift, the doc says what's prescribed and what's a known outlier — the outliers are
-> tracked at the bottom.
+> **Status.** Codifies the dominant pattern across the renderers under
+> `src/services/gpu/renderers/`. Where an existing renderer drifts, the doc says what's
+> prescribed and what's a known outlier — the outliers are tracked at the bottom.
 
 ## TL;DR
 
@@ -25,24 +24,23 @@ export function createFoobarRenderer(ctx: GpuContext): FoobarRenderer {
   const pipeline = /* … */;
   const uniformBuffer = /* … */;
 
-  const renderer: FoobarRenderer = {
-    label: 'foobarRenderer',
-    destroy() { /* release GPU resources */ },
-    draw(pass, viewProj, viewportPx) { /* … */ },
-  };
+  function draw(pass: GPURenderPassEncoder, viewProj: Mat4, viewportPx: Vec2) { /* … */ }
+  function destroy() { /* release GPU resources */ }
+
+  const renderer: FoobarRenderer = { label: 'foobarRenderer', draw, destroy };
 
   renderer satisfies Renderer;     // Compile-time latch on the base contract.
   return renderer;
 }
 ```
 
-That's the whole shape. Everything below explains *why* each piece is there and which
+That's the whole shape. Everything below explains _why_ each piece is there and which
 boxes to tick when your renderer needs more.
 
 ## The `Renderer` base type
 
 ```ts
-// src/@types/Renderer.d.ts
+// src/@types/rendering/Renderer.d.ts
 export type Renderer = {
   readonly label: string;
   destroy(): void;
@@ -57,6 +55,97 @@ teardown hook.
 The `satisfies` clause matters: it makes "I forgot to add `label`" or "I removed
 `destroy()` while refactoring" a compile-time error rather than a runtime surprise
 when `engine.destroy()` walks the GPU bag.
+
+## Where the file lives — family folders
+
+`src/services/gpu/renderers/` holds **no loose files**. Every renderer sits in a _family_
+folder, and a family means one thing only: **these files change together.** The families
+are drawn along real coupling edges — a shared vertex layout, a shared shader, a shared
+feeder subsystem, a shared data table — never along subject-matter kinship.
+
+```
+renderers/
+  galaxyCatalog/    the LOD chain of one "draw a galaxy catalog" renderer:
+                    pointRenderer → proceduralDiskRenderer → texturedDiskRenderer,
+                    plus instancedQuadRenderer (the shared quad pipeline the two
+                    disk stages wrap), pickRenderer, pointVertexLayout, catalogStore
+  bodies/           the true-scale solar-system foreground: earth, planet, star,
+                    starPoint, orbitTrail
+  milkyWay/         cloud + pick — the pick footprint must match the cloud
+  labels/           labelRenderer + markerLineRenderer (label stems) — one feeder
+  filaments/        filamentRenderer + its pure CPU instance builder
+  devTools/         debugLineRenderer, diskRadiusRing — debug draws that are renderers
+  volumeField/  flowField/  horizonShell/  selectionRing/  structureMarker/
+                    genuine singletons — a one-file folder says "this one is alone"
+```
+
+Two rules follow from that:
+
+- **Put a new renderer in the family it will change with.** If none fits, give it its own
+  folder. A one-file folder is information, not a smell; a renderer dumped into a family it
+  shares no edge with is a lie the next reader has to disprove.
+- **Nest a family's shader dirs only when nesting adds meaning.** `shaders/` is a flat
+  namespace by default. Nest under `shaders/<family>/` when both hold: the family owns those
+  dirs **exclusively**, and their names only read _in context_ —
+  `shaders/galaxyCatalog/{points,proceduralDisks,texturedDisks}/` and
+  `shaders/bodies/{earth,planet,star,starPoints,orbitTrail}/` qualify, because a bare
+  `points/` or `star/` at the top level says nothing about which renderer it belongs to.
+  Dirs that already **name themselves** stay flat: `milkyWayCloud/`, `milkyWayPick/`,
+  `selectionRing/`, `structureMarker/` need no parent folder to be unambiguous, and wrapping
+  them in one would only add a path segment that repeats the prefix. Dirs **shared across
+  families** cannot nest at all without lying about ownership — `shaders/markerLines/` is
+  consumed by both `labels/markerLineRenderer.ts` and `devTools/debugLineRenderer.ts`, so
+  filing it under either family would mislead the next reader who greps for its other caller.
+
+  Two renderer↔shader-dir names are deliberately _not_ the same word: `volumeField/` reads
+  `shaders/scalarVolume/`, and `flowField/` reads `shaders/flow/`. Both are known mismatches
+  (the shader dirs pre-date the renderer names), harmless because the import path in the
+  renderer file is the only way anyone finds a shader anyway.
+
+  Genuinely shared WESL stays in `shaders/lib/`; genuinely shared TS primitives (camera-uniform
+  prefix, unit quad, blend states, dummy fade group) stay in `gpu/lib/`, a sibling of
+  `renderers/` and `passes/` — they serve `gpu/` broadly, so they can't sit below one of their
+  consumers.
+
+`renderers/` is also not `passes/`: a renderer draws **world-space content** and appears in
+`CONTENT_LAYERS`; a pass operates on **textures** (compositor, volume upsample, pick-debug
+overlay). Draw the geometry → you're a renderer, wherever it feels like it belongs.
+
+## File anatomy
+
+Every renderer file reads top-to-bottom in the same order. Following it means a reviewer can
+find the pipeline build, the byte map, or the draw call in any renderer without a search:
+
+```
+module docblock
+  → imports
+  → layout / uniform constants (with byte-map comments)
+  → factory:
+      shader modules
+      → BGLs + pipeline layout + pipeline
+      → buffers
+      → methods as named functions
+      → return object literal `satisfies Renderer`
+```
+
+The ordering isn't arbitrary — it's dependency order, so nothing is referenced before it's
+built, and the reader meets the _shape of the data_ (the byte map) before the code that
+packs it.
+
+**Methods are named functions, not inline literal members.** A named `function draw(...)`
+above the return literal gets a real name in stack traces and profiles, can be documented
+with its own docblock, and doesn't push the return object past a screenful. The return
+literal then reads as a table of contents for the renderer's public surface:
+
+```ts
+const renderer: FoobarRenderer = { label: 'foobarRenderer', upload, draw, destroy };
+renderer satisfies Renderer;
+return renderer;
+```
+
+`flowFieldRenderer` and `volumeFieldRenderer` still define their methods inline in the return
+literal. Normalize them to named functions when you next touch them — not as a standalone
+sweep, which would be a large diff with zero behavioural payload.
 
 ## Factory shape
 
@@ -77,12 +166,19 @@ is exactly what the type declares.
 
 ```ts
 // Prescribed:
-export function createFoobarRenderer(ctx: GpuContext, config?: FoobarConfig): FoobarRenderer
+export function createFoobarRenderer(ctx: GpuContext, config?: FoobarConfig): FoobarRenderer;
 // or
-export function createFoobarRenderer(init: { device: GPUDevice; format: GPUTextureFormat /*, … */ }): FoobarRenderer
+export function createFoobarRenderer(init: {
+  device: GPUDevice;
+  format: GPUTextureFormat; /*, … */
+}): FoobarRenderer;
 
 // Discouraged (old style):
-export function createFoobarRenderer(device: GPUDevice, format: GPUTextureFormat, foo: number): FoobarRenderer
+export function createFoobarRenderer(
+  device: GPUDevice,
+  format: GPUTextureFormat,
+  foo: number,
+): FoobarRenderer;
 ```
 
 Take a single context bag — typically the shared `GpuContext` (`{ device, context, format, canvas }`)
@@ -90,9 +186,9 @@ plus an optional per-renderer config object. Positional `(device, format, ...)` 
 every new dependency reorders the call site and reviewers can't tell `(device, format)`
 from `(format, device)` at a glance.
 
-Four older renderers (`pointRenderer`, `pickRenderer`, `filamentRenderer`,
-`scalarVolumeRenderer`) still use the positional style. Don't extend them with more
-positional args — convert to a named bag if you need a new dependency.
+Three older renderers (`pickRenderer`, `filamentRenderer`, `volumeFieldRenderer`) still use
+the positional style. Don't extend them with more positional args — convert to a named bag
+if you need a new dependency.
 
 ## Where state lives
 
@@ -114,7 +210,7 @@ export function createFoobarRenderer(ctx: GpuContext): FoobarRenderer {
 ### Per-frame inputs: arguments to `draw()`
 
 Camera matrices, viewport size, per-frame settings — passed in by the caller. The
-renderer is *stateless across frames* with respect to the camera and the visual
+renderer is _stateless across frames_ with respect to the camera and the visual
 configuration. This is what makes the renderer easy to test and easy to retire when
 the engine's frame-loop shape changes.
 
@@ -133,8 +229,8 @@ Data that arrives asynchronously (point clouds, label sets, atlas textures, volu
 cubes) goes through setter methods:
 
 ```ts
-upload(source: Source, cloud: PointCloud): void;
-unload(source: Source): void;
+upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
+unload(id: GalaxyCatalogId): void;
 bindAtlas(atlasView: GPUTextureView): void;
 setLabels(labels: Label[]): void;
 ```
@@ -145,17 +241,18 @@ storage and lifecycle for this data — it doesn't reach into `EngineState` for 
 ### No mirror state
 
 A renderer must NOT cache values that have an authoritative home in `EngineState`.
-If the engine knows the current `points.sizePx`, the renderer should receive it
+If the engine knows the current `galaxyCatalogs.sizePx`, the renderer should receive it
 through `draw()` — not store its own copy.
 
 The reason this matters is straightforward: every cached duplicate adds a "did the
 setter fire?" failure mode. Render-on-demand makes this worse — a forgotten
 `requestRender()` after a setter call means the mirror lags the source.
 
-The current outlier here is `scalarVolumeRenderer`, which mirrors per-field
-enablement, intensity, contrast, palette, etc. inside each `FieldEntry`. That
-predates this convention and is being addressed by the queued "Option C on
-scalarVolumeRenderer" work — don't model new renderers on it.
+`volumeFieldRenderer` is the worked example of getting this right under pressure: it draws
+many independently-configured fields, and rather than mirroring each field's enablement,
+intensity, contrast and palette, it takes a `settingsOf(id)` projection in `draw()` and
+reads the live values per frame. The GPU resources it _owns_ (the volume texture, the
+palette LUT, the uniform buffer) live in its per-field entry; the user's knobs do not.
 
 ## The `draw()` method
 
@@ -191,9 +288,9 @@ not call `requestRender()` (that's the caller's job).
 Each renderer has a typed slot on `EngineGpuHandles`:
 
 ```ts
-// src/@types/EngineGpuHandles.d.ts
+// src/@types/engine/handles/EngineGpuHandles.d.ts
 export type EngineGpuHandles = {
-  pointRenderer: PointRenderer | null;
+  renderer: PointRenderer | null;
   pickRenderer: PickRenderer | null;
   foobarRenderer: FoobarRenderer | null;
   // …
@@ -208,62 +305,67 @@ Add the construction call in `src/services/engine/phases/initGpu.ts`. Don't
 construct renderers anywhere else — the bootstrap phase order matters (shared
 resources like the HDR context have to exist first).
 
-### Setting state via `settingsTable`
+### Feeding settings: the layer's `draw`, not a setter
 
-Renderer setters that map 1:1 to a settings leaf go through
-`src/services/engine/wiring/settingsTable.ts`:
+A renderer's appearance knobs are **not** pushed in through setters. Each renderer is driven
+by exactly one `ContentLayer` in `src/services/engine/frame/passes/`, whose `draw(pass, view,
+ctx, state)` projects the relevant `state.settings.*` leaves into the renderer's `draw()`
+argument bag each frame:
 
 ```ts
-{
-  path: ['settings', 'points', 'sizePx'],
-  callback: ['points', 'setSize'],
-  apply: (state, value) => {
-    state.gpu.pointRenderer?.setSize(value);
-    state.subsystems.scheduler.requestRender();
-  },
-},
+// pointSpritesLayer.ts
+renderer.draw(pass, view.vp, view.viewportPx, {
+  pointSizePx: state.settings.galaxyCatalogs.sizePx,
+  brightness: state.settings.galaxyCatalogs.brightness,
+  // …the rest of the per-frame projection
+});
 ```
 
-This is the single-write path. Don't reach for `state.gpu.pointRenderer?.setSize(...)`
-in component code; the settings table is what guarantees the public `engine.points.setSize()`
-sub-handle, the React-side state, and the renderer call all stay in sync.
+The layer is where the settings tree meets the GPU. Pushing the same values in through
+setters would give every knob two homes and a "did the setter fire?" failure mode, and under
+render-on-demand a missed `requestRender()` would leave the renderer's copy stale — the "no
+mirror state" rule above, enforced by construction.
 
-Setters that don't map to a single settings leaf (uploads, per-cloud splices,
-atlas bindings) call the renderer directly from the subsystem that owns the
-data flow.
+Data that _isn't_ a settings leaf — catalog uploads, per-cloud splices, atlas bindings —
+still goes through explicit renderer methods, called by the subsystem that owns that data
+flow.
 
 ## Multi-handle renderers
 
 A renderer is "multi-handle" when it manages multiple independent instances of
-the same conceptual thing, each with its own lifecycle. Currently `scalarVolumeRenderer`
-is the only one — it owns a `Map<ScalarFieldHandle, FieldEntry>` where each
-field has its own volume texture, palette, uniform buffer, and bind group.
+the same conceptual thing, each with its own lifecycle. `volumeFieldRenderer` is the
+canonical one — it owns a `Map<VolumeFieldId, FieldEntry>` where each field has its own
+volume texture, palette LUT, uniform buffer, and bind group. (`catalogStore` — the
+per-catalog GPU-buffer index `pointRenderer` composes — is the same pattern keyed by
+galaxy-catalog id.)
 
 The shape:
 
 ```ts
-export type ScalarVolumeRenderer = {
+export type VolumeFieldRenderer = {
   readonly label: string;
   destroy(): void;
-  addField(handle: ScalarFieldHandle, cube: VolumeCube): void;
-  removeField(handle: ScalarFieldHandle): void;
-  setIntensity(handle: ScalarFieldHandle, value: number): void;
-  // …other per-field setters
-  draw(pass, viewProj, viewportPx, cameraPosWorld): void;   // walks all fields
+  upload(id: VolumeFieldId, cube: ScalarCube): void;
+  unload(id: VolumeFieldId): void;
+  listIds(): VolumeFieldId[];
+  // Walks every field; per-field knobs arrive through the `settingsOf` projection.
+  draw(pass, viewProj, viewportPx, cameraPosWorld, settingsOf, fadeOpacityOf): void;
 };
 ```
 
-**Only reach for this pattern if you have a real per-instance lifecycle.** Three
-copies of "thumbnail / disk / proceduralDisk" weren't worth multi-handling because
-they're constructed once and live for the engine's lifetime — three sibling
-renderers reading from a shared `InstancedQuadRenderer` was the right call.
+**Only reach for this pattern if you have a real per-instance lifecycle.** The disk stages
+weren't worth multi-handling: they're constructed once and live for the engine's lifetime —
+two sibling renderers wrapping a shared `instancedQuadRenderer` was the right call.
 
 If you do go multi-handle:
-- The handle is the public identity; `Map<Handle, Entry>` is the internal index.
-- `addField` returns nothing or returns the handle; never return the entry — that
-  would hand the caller a mutable reference to renderer-internal state.
-- Setters take `(handle, value)`. Looking up a missing handle is a silent no-op
-  (the field may have been removed between `addField` and the late-firing setter).
+
+- The id is the public identity; `Map<Id, Entry>` is the internal index.
+- `upload` returns nothing; never return the entry — that would hand the caller a
+  mutable reference to renderer-internal state.
+- The entry holds GPU resources only. Per-instance _settings_ come in through `draw()` (see
+  "No mirror state"), so there are no per-instance setters to fall out of sync. Looking up a
+  missing id is a silent no-op — an id can be unloaded between a settings write and the
+  frame that reads it.
 - `draw()` iterates the map in insertion order — there is no z-sort yet because
   every multi-handle case so far is additive.
 
@@ -271,9 +373,9 @@ If you do go multi-handle:
 
 `instancedQuadRenderer` is a deliberate exception to several of the rules above:
 it's not constructed in `initGpu` and it has a `draw` that takes a named-parameter
-bag instead of positional args. That's because it's *shared infrastructure* —
-three downstream renderers (thumbnail, disk, procedural disk) wrap it to get
-the same atlas-quad pipeline with different per-instance encodings.
+bag instead of positional args. That's because it's _shared infrastructure_ — the two
+disk stages (`texturedDiskRenderer`, `proceduralDiskRenderer`) wrap it to get the same
+atlas-quad pipeline with different per-instance encodings.
 
 If you find yourself writing two renderers that differ only in instance-encoding
 shape, factor out a shared factory like this rather than duplicating the
@@ -283,15 +385,21 @@ up as a separate field on `state.gpu`.
 
 ## Checklist for a new renderer
 
+- [ ] Lives in the family folder it changes with (its own, if none fits). Shader dirs stay flat
+      in `shaders/` unless the family owns them exclusively AND their names only read in
+      context — never nest a dir two families share.
+- [ ] File reads in anatomy order; methods are named functions.
 - [ ] Public type extends `Renderer` (`label`, `destroy`).
 - [ ] `satisfies Renderer` clause at the factory return.
 - [ ] Factory takes a named bag, not positional args.
+- [ ] Shared primitives (camera prefix, unit quad, blend states, dummy fade) come from
+      `gpu/lib/` rather than being re-typed inline.
 - [ ] GPU resources built once at factory time, captured in the closure.
 - [ ] Per-frame inputs threaded through `draw()` — no mirror state.
 - [ ] Per-asset data goes through explicit `upload` / `set*` / `bind*` methods.
 - [ ] Slot added to `EngineGpuHandles` (nullable until `initGpu`).
 - [ ] Constructed in `initGpu.ts`.
-- [ ] Settings-driven setters added to `settingsTable.ts` (not called directly from components).
+- [ ] Settings projected in by its `ContentLayer`'s `draw` (not pushed in from components).
 - [ ] `destroy()` releases every GPU resource the closure captured.
 - [ ] At least one test that exercises construction + a representative call.
 
@@ -300,12 +408,10 @@ up as a separate field on `state.gpu`.
 These pre-date the convention. Don't model new code on them; clean up incidentally
 when you're already editing the file.
 
-- **Positional factory args.** `createPointRenderer`, `createPickRenderer`,
-  `createFilamentRenderer`, `createScalarVolumeRenderer` take `(device, format)`
-  instead of a context bag. Convert when you next need to add a constructor arg.
-- **`pickRenderer` shares `pointRenderer.uniformBuffer`.** This is load-bearing
-  (selection encoding has to round-trip through the same buffer the visual pass
-  sees) but it's the only cross-renderer shared mutable resource in the codebase.
-  If you find yourself reaching for the same pattern, talk to someone first —
-  the second-architectural-audit's finding #3 (selection-pack module) is the
-  cleaner long-term home.
+- **Positional factory args.** `createPickRenderer`, `createFilamentRenderer` and
+  `createVolumeFieldRenderer` take `(device, format, …)` instead of a context bag. Convert
+  when you next need to add a constructor arg — that's the occasion the conversion pays for
+  itself, and `createPointRenderer`'s named-bag conversion is the worked precedent.
+- **Methods inline in the return literal.** `flowFieldRenderer` and `volumeFieldRenderer`
+  define their public methods inside the returned object rather than as named functions
+  above it. Normalize on next touch (see "File anatomy").

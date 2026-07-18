@@ -58,8 +58,10 @@ function stubSlot(): StubSlot {
       listeners.add(fn as Listener);
       return () => listeners.delete(fn as Listener);
     },
+    lastRequest: () => null,
     forceReload: () => {},
     cancel: () => {},
+    release: () => {},
     emit: (s) => {
       for (const fn of [...listeners]) fn(s);
     },
@@ -109,6 +111,9 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     Source.Glade,
     Source.Milliquas,
     Source.FamousGalaxy,
+    Source.DesiDeep,
+    Source.DesiWedge,
+    Source.DesiSgw,
   ]) {
     items[galaxyCatalogIdOf(src)] = { enabled: !disabled.has(src), labelEnabled: true };
   }
@@ -120,6 +125,9 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     Source.Glade,
     Source.Milliquas,
     Source.FamousGalaxy,
+    Source.DesiDeep,
+    Source.DesiWedge,
+    Source.DesiSgw,
     Source.Synthetic,
   ]) {
     slots.set(src, stubSlot());
@@ -136,6 +144,14 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
     gpu: { renderer: { totalCount: () => 42 } },
     assetSlots: {
       points: slots as unknown as Map<SourceType, AssetSlot<unknown, unknown>>,
+      bodyTextures: new Map(),
+    },
+    // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
+    // so both must be present; a far resting pose keeps the proximity-gated
+    // body-texture rows out of the demand set.
+    cameraRuntime: {
+      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
+      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
     },
   } as unknown as EngineState;
 
@@ -173,6 +189,9 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.TwoMRS)?.emit(errored());
     slots.get(Source.Glade)?.emit(errored());
     slots.get(Source.Milliquas)?.emit(errored());
+    slots.get(Source.DesiDeep)?.emit(errored());
+    slots.get(Source.DesiWedge)?.emit(errored());
+    slots.get(Source.DesiSgw)?.emit(errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(false);
     expect(slots.get(Source.Synthetic)?.load).not.toHaveBeenCalled();
@@ -194,6 +213,9 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.TwoMRS)?.emit(errored());
     slots.get(Source.Glade)?.emit(errored());
     slots.get(Source.Milliquas)?.emit(errored());
+    slots.get(Source.DesiDeep)?.emit(errored());
+    slots.get(Source.DesiWedge)?.emit(errored());
+    slots.get(Source.DesiSgw)?.emit(errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(true);
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
@@ -201,7 +223,7 @@ describe('createSyntheticFallback', () => {
 
   it('counts a hidden-at-boot galaxy catalog as already settled', () => {
     // Disable SDSS's enabled intent: its slot never transitions, but the gate
-    // reads the enabled flag and must not wait on it. Driving the OTHER three
+    // reads the enabled flag and must not wait on it. Driving the OTHER
     // galaxy catalogs to error then arms.
     const { state, slots, cb } = makeState({ disabledSources: [Source.SDSS] });
     createSyntheticFallback(state, cb);
@@ -209,6 +231,9 @@ describe('createSyntheticFallback', () => {
     slots.get(Source.TwoMRS)?.emit(errored());
     slots.get(Source.Glade)?.emit(errored());
     slots.get(Source.Milliquas)?.emit(errored());
+    slots.get(Source.DesiDeep)?.emit(errored());
+    slots.get(Source.DesiWedge)?.emit(errored());
+    slots.get(Source.DesiSgw)?.emit(errored());
     // SDSS never emits — it was hidden at boot.
 
     expect(state.requests.has('syntheticFallback')).toBe(true);

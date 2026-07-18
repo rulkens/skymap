@@ -10,8 +10,8 @@
  *      being null, true only when all six are populated.
  *   2. Type narrowing — after `if (isEngineReady(state))`, the
  *      compiler treats `state.cam`, `state.gpu.renderer`,
- *      `state.gpu.postProcess`, `state.gpu.pickRenderer`,
- *      `state.gpu.volumeOffscreen`, and
+ *      `state.gpu.renderTargets`, `state.gpu.pickRenderer`,
+ *      `state.gpu.compositor`, and
  *      `state.subsystems.texturedDisks` as non-null without `!` or
  *      `?.`.  We assert this with `@ts-expect-error` over an
  *      access that is intentionally rejected pre-narrowing, plus
@@ -43,32 +43,33 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
  * populated by default.  Each test override can null any one of them
  * to exercise the false-branch for that field.
  *
- * The `volumeOffscreen` field was added as part of the half-res volume
- * render-target work (Task 3).  It shares the same lifecycle as the
- * other GPU handles: constructed in `initGpu`, torn down in `destroy()`.
- * Including it here ensures the bootstrap gate checks all of them.
+ * `renderTargets` is the offscreen-target table (HDR + half-res volume
+ * rows).  It shares the same lifecycle as the other GPU handles:
+ * constructed in `initGpu`, torn down in `destroy()`.  Including it here
+ * ensures the bootstrap gate checks all of them.
  */
-function makeState(overrides: {
-  cam?: OrbitCamera | null;
-  renderer?: unknown;
-  postProcess?: unknown;
-  pickRenderer?: unknown;
-  volumeOffscreen?: unknown;
-  texturedDisks?: unknown;
-} = {}): EngineState {
+function makeState(
+  overrides: {
+    cam?: OrbitCamera | null;
+    renderer?: unknown;
+    renderTargets?: unknown;
+    compositor?: unknown;
+    pickRenderer?: unknown;
+    texturedDisks?: unknown;
+  } = {},
+): EngineState {
   const cam = overrides.cam === undefined ? ({} as unknown as OrbitCamera) : overrides.cam;
   const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
-  const postProcess =
-    overrides.postProcess === undefined ? ({} as unknown) : overrides.postProcess;
+  const renderTargets =
+    overrides.renderTargets === undefined ? ({} as unknown) : overrides.renderTargets;
+  const compositor = overrides.compositor === undefined ? ({} as unknown) : overrides.compositor;
   const pickRenderer =
     overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
-  const volumeOffscreen =
-    overrides.volumeOffscreen === undefined ? ({} as unknown) : overrides.volumeOffscreen;
   const texturedDisks =
     overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
-    gpu: { renderer, postProcess, pickRenderer, volumeOffscreen },
+    gpu: { renderer, renderTargets, compositor, pickRenderer },
     subsystems: { texturedDisks },
   } as unknown as EngineState;
 }
@@ -82,20 +83,22 @@ describe('isEngineReady — false branch', () => {
     expect(isEngineReady(makeState({ renderer: null }))).toBe(false);
   });
 
-  it('returns false when state.gpu.postProcess is null', () => {
-    expect(isEngineReady(makeState({ postProcess: null }))).toBe(false);
+  it('returns false when state.gpu.renderTargets is null', () => {
+    // renderTargets owns every offscreen row the frame draws into; the
+    // engine is never "ready" without it because every render step's
+    // viewFor resolution would throw.
+    expect(isEngineReady(makeState({ renderTargets: null }))).toBe(false);
+  });
+
+  it('returns false when state.gpu.compositor is null', () => {
+    // compositor shares renderTargets' bootstrap lifecycle: minted in initGpu,
+    // released in destroy(). The FRAME program's hdr→swap composite calls
+    // compositor.draw, so a frame must never run without it.
+    expect(isEngineReady(makeState({ compositor: null }))).toBe(false);
   });
 
   it('returns false when state.gpu.pickRenderer is null', () => {
     expect(isEngineReady(makeState({ pickRenderer: null }))).toBe(false);
-  });
-
-  it('returns false when state.gpu.volumeOffscreen is null', () => {
-    // volumeOffscreen shares the same bootstrap lifecycle as postProcess:
-    // both are allocated in initGpu and released in destroy().  The engine
-    // is never "ready" without a valid half-res render target because every
-    // volume-enabled frame would immediately NPE in encodeVolumes.
-    expect(isEngineReady(makeState({ volumeOffscreen: null }))).toBe(false);
   });
 
   it('returns false when state.subsystems.texturedDisks is null', () => {
@@ -104,7 +107,7 @@ describe('isEngineReady — false branch', () => {
 });
 
 describe('isEngineReady — true branch', () => {
-  it('returns true when all six handles are non-null', () => {
+  it('returns true when all guard handles are non-null', () => {
     expect(isEngineReady(makeState())).toBe(true);
   });
 
@@ -140,10 +143,10 @@ describe('isEngineReady — type narrowing', () => {
       // forcing tsc to type-check the property access.
       void state.cam.target;
       void state.gpu.renderer.totalCount;
-      void state.gpu.postProcess.draw;
-      void state.gpu.pickRenderer.pick;
-      void state.gpu.volumeOffscreen.view;
-      void state.subsystems.texturedDisks.runFrame;
+      void state.gpu.renderTargets.viewOf;
+      void state.gpu.compositor.draw;
+      void state.gpu.pickRenderer.drawPoints;
+      void state.subsystems.texturedDisks.beginFrame;
 
       // Sanity: the runtime value is the same object, only the type
       // narrowing changed.  This guards against a future

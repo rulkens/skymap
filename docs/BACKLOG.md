@@ -10,6 +10,8 @@ Pickup-able work + surfaced issues. The git log is ground truth for _what shippe
 - `manual` — a human smoke-test, not code.
 - `process` — awaiting a human action (review, write-up).
 - `blocked` — external dependency.
+- `needs-verification` — a data/API fact must be confirmed before it can be spec'd.
+- `awaiting-decision` — a choice only a human can make blocks the next step.
 
 Items with a **→ details** link have a full write-up in [`backlog/`](backlog/) — the problem, verified current state with `file:line` evidence, and options — ready to promote into a spec/plan.
 
@@ -34,20 +36,39 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Engine & State
 
 - [ ] **Source-registry factory** `needs-design` — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry; today each source is hand-wired across `slots/`, `assetWiring.ts`, `initGpu`. → [details](backlog/2026-06-29-source-registry-factory.md)
-- [ ] **Render-graph restructure** `deferred` — turn the imperative `runFrame.ts` body into a declarative pass DAG. → [details](backlog/2026-06-29-render-graph-restructure.md)
 - [ ] **GPU-handle nullability follow-on** `deferred` — `EngineGpuHandles` fields are all `T | null` (a transient bootstrap fact as a perpetual null-check); narrow into a non-null "ready GPU" view and shed `PassDeps`' renderer fields. → [details](backlog/2026-06-29-gpu-handle-nullability.md)
 - [ ] **`useStructureMemberCount` honest invalidation** `deferred` — the hook's `sourceCounts`/`tier` args are memo tripwires for live GPU catalog state; swap for a real catalog-generation signal. → [details](backlog/2026-06-29-usestructuremembercount-invalidation.md)
+- [ ] **Texture source table single home** `ready` — fold fetchTextures' SSS_BODIES and buildTextures' BODY_SOURCE_KEYS into one bodyId-keyed table both derive from. → [details](backlog/2026-07-17-texture-source-table-single-home.md)
 - [ ] **Derive `BULK_CATALOG_CATEGORIES` from a registry flag** `deferred` — add `hasBulkCatalog` to `SOURCE_REGISTRY` rows so the hand-listed `['cluster','supercluster','void']` in `assetWiring.ts` derives from it. Keep the three category lists (UI / marker / bulk-fetch) separate — membership genuinely differs. (`bearsMarker` + `DEFAULT_CATEGORY_VISIBILITY` already shipped.)
 
 ## Rendering
 
+- [ ] **Ultra-real Earth** `needs-design` — atmosphere scattering, day/night lights, specular oceans on the dedicated `earthRenderer` seam; scope in a brainstorm first.
+- [ ] **Lower-res offscreen star-aggregate pass** `ready` — try `STAR_AGGREGATE_DIVISOR` 2 → 4 (`renderTargets.ts`); ~4× further fill cut if the upsampled glow field survives visually.
+- [ ] **Bright star clump at ~5.9 kpc** `deferred` — flux verified conserved; residual over-exposure is display policy (mid-anchor slider + summed knee shipped; retune or tone-map shoulder next). → [details](backlog/2026-07-17-star-clump-brightness-5-9kpc.md)
+- [ ] **Field-star resolve predicate duplicated** `ready` — `starResolves` (focusedFieldStarSphereLayer) restates partitionStarsByResolution's per-star diameter+resolve rule; extract a shared `starResolvesToSphere` util both call.
+- [ ] **Foreground body draw/drawPick share a per-frame resolved set** `deferred` — mirrored partition/cull invocations can desync under future edits; star partition runs up to 4×/frame at deep zoom. → [details](backlog/2026-07-17-foreground-body-resolved-set.md)
+- [ ] **Star drawBudget small-tier mobile cap + iOS device pass** `deferred` — lower `hardCap` for `tier === 'small'` in `gaia-stars.ts`, tuned on a real device; verify the new vertex-stage storage bindings under WebKit's stricter WebGPU in the same pass.
+- [ ] **Star field → own slab** `needs-design` — the depthless star map (points/captions/connectors) inherits NEAR0's Earth-scale depth bracket; a STARS slab row deletes the three clip-z clamps + far-plane coupling. → [details](backlog/2026-07-13-star-field-own-slab.md)
+- [ ] **Orbit-trail residual speckle (edge-on pose)** `deferred` — gradient-minors hoist shipped (#448) but per-pixel stipple survives on hardware; remaining suspects ranked (q.z horizon noise, Newton-refine flicker, hard-discard binarization). → [details](backlog/2026-07-18-orbit-trail-residual-speckle.md)
+- [ ] **Star-picking deferred edges** `ready` — star deep link waits forever with Gaia disabled; ring collapses on a degenerate sizePx=0 frame; both small guards. → [details](backlog/2026-07-18-star-picking-deferred-edges.md)
+- [ ] **bodyTextureFetcher content-type guard** `ready` — Vite's SPA fallback serves index.html for missing texture files; the fetcher hands it to createImageBitmap and fails as "source image could not be decoded" — check the response content-type and fail loudly with the real 404 path instead.
+- [ ] **Sun z-fighting / clip issues at Earth zoom** `needs-design` — user-observed 2026-07-18; the Sun (1 AU ≈ 4.9e-12 Mpc) sits near the NEAR0 adaptive far floor (3e-11) across a ~6-decade depth bracket at Earth zoom; diagnose first — plausibly the same NEAR0 depth-bracket family the star-slab item would restructure.
 - [ ] **Milliquas AGN colormap** `needs-design` — AGN reuse the galaxy B−R ramp and misread as blue star-forming; give them their own encoding. Only the kPerZ=0 clamp shipped (#282). → [details](backlog/2026-06-29-milliquas-agn-colormap.md)
 - [ ] **Supercluster/wall shape in focus** `needs-design` — membership is a sphere, so sheets like the Hydra Wall get swallowed; try an ellipsoid fit or density-field membership. → [details](backlog/2026-06-29-supercluster-shape-focus.md)
 - [ ] **In-scene thumbnail quality (SDSS/DSS)** `needs-design` — the auto-fetched atlas-quad path still uses fixed cutout sizes; mask / sky-sub / per-galaxy size / DESI / brightness-norm. (InfoCard path already got sizing + DSS color.) → [details](backlog/2026-06-29-thumbnail-quality-sdss-dss.md)
 - [ ] **Half-res ↔ post-process resize type-safety** `deferred` — the offscreen-volume and post-process targets resize via two independent `?.resize()` calls in `runFrame.ts`; enforce the coupling in the type system.
-- [ ] **Unify the two disk-planner catalog walks** `ready` — procedural + textured planners walk the catalogs twice per frame, computing each row's geometry twice (~4.2 ms of a 5.1 ms frame, M1 Max); merge into one shared walk feeding two row-reducers. Prerequisite pure helpers shipped in `src/utils/render/disk/`. → [details](backlog/2026-06-30-unify-disk-planner-walks.md)
 - [ ] **Thumbnail-priority loop scaling** `deferred` — the per-frame priority scan (`texturedDiskSubsystem.ts`) is CPU-linear with stride decimation (#79); add a BVH or compute-shader pass for larger tiers. → [details](backlog/2026-06-29-thumbnail-loop-scaling.md)
 - [ ] **Picking GPU resources → own subsystem** `deferred` — `pickRenderer.ts` owns its per-camera pick texture directly; migrate it (parallel to fade per ADR 0001). Pick texture is per-camera, so it needs its own ADR. → [details](backlog/2026-06-29-picking-gpu-subsystem.md)
+- [ ] **galaxy-renderer `dispose()` skips GPU teardown** `ready` — RAF loop + DOM listeners are removed but buffers/pipelines/UBOs (incl. per-extra UBOs) are never `destroy()`ed; spike-era behavior, flagged in the GPU-generation final review.
+- [ ] **MW point-cloud follow-ups** `ready` — five small knots from the T10 radar (orphaned WESL helpers, record-field offsets, billboard-basis mirror, tool↔app constants, pick bind-group injection). → [details](backlog/2026-07-08-mw-point-cloud-follow-ups.md)
+- [ ] **Planet-rendering follow-ups** `ready` — four small knots from the final review (Saturn pole dual-source, runtime type-shape tests, uniform-size hardcode, stale plan comment). → [details](backlog/2026-07-17-planet-rendering-follow-ups.md)
+- [ ] **starRenderer per-instance uniforms** `ready` — the star-sphere renderer's single non-dynamic uniform means two same-frame resolved stars share the last-written MVP (benign with today's seeds, documented in `starSpheresLayer`); upgrade to the `planetRenderer` instanced shape, natural fold candidate for the renderers reorg.
+- [ ] **Galaxy impostor LOD** `needs-design` — per-galaxy rgba16f impostors baked from the GPU generator (photo-thumbnail band retires; procedural disk stays as placeholder band), full star+dust geometry above ~128 px; band counts, churn, per-tier memory, and Hubble-type coverage all measured. → [details](backlog/2026-07-08-galaxy-impostor-lod.md)
+- [ ] **`degToRad`/`addVec3` sweep + `data/<domain>/palette.ts` convention** `deferred` — migrate the ~5 remaining inline `Math.PI/180` sites and audit other data folders against the palette convention the bodies cleanup set. → [details](backlog/2026-07-14-scale-helpers-palette-convention-sweep.md)
+- [ ] **`CatalogDrawEntry` bind-group coverage** `deferred` — a wrong-source `fadeBindGroup`/`sourceBindGroup` on a `catalogStore.entries()` entry would pass every test (the draw test only smoke-checks the command list). → [details](backlog/2026-07-14-catalog-draw-entry-coverage.md)
+- [ ] **Tier-ladder single home** `ready` — one exported TIER_LADDER const (Tier type derived) replacing the copies in clampTier, emittedTiersForBody, tiersFittingSourceWidth, buildAllBins, buildStars.
+- [ ] **Star-bin ↔ MW-cloud crossfade density calibration** `deferred` — calibrate the procedural cloud's inner density/colors to Gaia counts if the v1 hand-tuned crossfade band shows a seam; gated on the star bin shipping. → [details](backlog/2026-07-13-star-bin-crossfade-density-calibration.md)
 
 ## UI & UX
 
@@ -58,17 +79,26 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Label declutter toggle + hysteresis** `needs-design` — add `settings.labels.declutter` wired to `labelDirectorSubsystem` (replacing the `?nodeclutter` stopgap) and hysteresis-damp the cull so labels stop flickering under camera motion. → [details](backlog/2026-06-29-label-declutter-toggle.md)
 - [ ] **Label fade opt-out ADR** `needs-design` — decide whether per-character MSDF label opacity opts out of the per-handle fade bind-group pattern; follow-up to ADR 0001.
 - [ ] **Reusable structure-visit tour clip** `needs-design` — generalize the hardcoded Virgo/M87 tour beats into a parameterized `structureVisitClip`. Focus-isolation primitive already shipped. → [details](backlog/2026-06-29-structure-visit-tour-clip.md)
+- [ ] **`emphasize()` clip cue** `ready` — per-structure spotlight lift composing with `fade` dims (staggered group highlights in the tour's neighbourhood beat). → [details](backlog/2026-07-07-emphasize-clip-cue.md)
+- [ ] **Sun constellation chip renders 'None'** `ready` — the Sun's palette-row / compact-card constellation chip prints its literal seed value 'None'; suppress the chip when constellation is absent.
+- [ ] **Star/body card row tooltips** `ready` — galaxy detail-card rows have hover tooltips explaining each field; the field-star and famous-star/body cards' rows have none — extend the same tooltips.tsx wiring to their row tables.
 - [ ] **DebugPanel sections → modules + containers** `ready` — migrate the remaining DebugPanel sections to CSS modules + per-section containers, like the two clip sections. → [details](backlog/2026-06-30-debugpanel-sections-modules-containers.md)
+- [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
 
 ## Docs & process
 
 - [ ] **Cosmic-zoom plan review** `process` — 60-doc "Powers of Ten" walkthrough plan drafted in worktree `cosmic-zoom-plan` (2026-05-08), awaiting user review (memory `project_cosmic_zoom_plan`).
+- [ ] **Famous-curator suite runtime cost** `deferred` — real sharp encodes + tmpdir I/O dominate suite wall-clock; cache fixtures, shrink images, or tag a slow-suite split. → [details](backlog/2026-07-10-famous-curator-suite-runtime-cost.md)
+- [ ] **Deproject invariant consolidation** `deferred` — square-in/square-out tested 4× across the curator export surface; fold into one parameterized test if that surface is reworked. → [details](backlog/2026-07-10-deproject-invariant-consolidation.md)
+- [ ] **move-files: untracked references** `ready` — ts-morph skips `?worker`/`?static` specifiers + `vi.mock` literals; a stale `?worker` is silent on BOTH tsc and vite build. Rewrite them, then fail loudly on anything still dangling. → [details](backlog/2026-07-14-move-files-untracked-references.md)
 
 ## External / blocked
 
 - [ ] **Rhizome SDSS calibration** `blocked` — in flight in the PolyPhy fork (branch `rhizome-spec`, PR #114); skymap is read-only until it lands (memory `project_rhizome_handoff_in_flight`).
 - [ ] **HyperLEDA cache backfill** `blocked` — R2 cache is intentionally partial (52k / ~1.5M PGCs); don't auto-refetch, promote only on concrete need (memory `project_hyperleda_partial_cache`).
-- [ ] **DESI DR1 as a data source** `blocked` — viable + ~90% new data, but ~10× points (~9.75M) exceeds the interactive-render ceiling; revisit after the point ceiling lifts to ~25M+ ([research](research/2026-06-05-desi-dr1-as-a-data-source.md), memory `project_desi_deferred`).
+- [ ] **DESI DR1 as a data source** `blocked` — viable + ~90% new data, but ~10× points (~9.75M) exceeds the interactive-render ceiling; revisit after the point ceiling lifts to ~25M+ ([research](research/2026-06-05-desi-dr1-as-a-data-source.md), memory `project_desi_deferred`). A scoped 2.5° patch shipped separately via the [deep-cone spec](superpowers/specs/completed/2026-07-07-desi-deep-cone-design.md).
+- [ ] **DESI BGS real galaxy shapes** `needs-verification` — DR1 LSS clustering catalogs carry no shape columns; every DESI row renders at the default size + hashed fallback orientation. → [details](backlog/2026-07-09-desi-bgs-real-shapes.md)
+- [ ] **Second DESI deep cone** `awaiting-decision` — Coma is DR2-blocked (zero LRG/ELG/QSO rows in DR1); Stripe 82 is a ready-now alternative target. → [details](backlog/2026-07-09-second-desi-deep-cone.md)
 
 ## Outreach (long-tail)
 

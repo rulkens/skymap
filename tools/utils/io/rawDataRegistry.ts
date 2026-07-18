@@ -9,7 +9,8 @@
  *
  * - **Keys**: `<catalog>.<artifact>`. First segment = catalog/producer
  *   (`2mrs`, `glade`, `hyperleda`, `sdss`, `famous`, `cf4`, `mcpm`,
- *   `milliquas`, `mcxc`, `mscc`, `fonts`, `starnet`, `filaments`).
+ *   `milliquas`, `mcxc`, `mscc`, `desi`, `gaia`, `textures`, `fonts`,
+ *   `starnet`, `filaments`).
  * - **`source`**: `'committed'` = in git; `'gitignored'` = fetcher output.
  *   A missing gitignored file → run the fetcher; a missing committed file
  *   → the repo is broken.
@@ -146,6 +147,13 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'Hand-authored seed list of well-known galaxies (M31, M33, NGC 253, …). Drives the famous-galaxy build + image fetcher.',
+  },
+  'famous-stars.seed': {
+    path: 'data/seeds/famous_stars.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-authored seed list of well-known stars (Sirius, Betelgeuse, the Sun, …). Drives the famous-stars build (generated render table + meta sidecar) and the Gaia dedup.',
   },
   'famous.curated': {
     path: 'data/seeds/famous_curated_overrides.json',
@@ -346,6 +354,319 @@ export const RAW_DATA = {
     description:
       'SHA-256 sidecar for mscc.dat — committed so the parser can detect truncated or stale downloads.',
     fetcher: 'tools/fetch/fetchStructureCatalogs.ts',
+  },
+
+  // ─── DESI DR1 (LSS clustering catalogs) — ultra-deep cone ─────────────
+
+  'desi.bgs': {
+    path: 'data/raw/desi/BGS_BRIGHT_NGC_clustering.dat.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'DESI DR1 (iron) LSS clustering catalog, BGS_BRIGHT tracer, NGC — bright-galaxy sample, z < 0.4.',
+    upstream:
+      'https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/BGS_BRIGHT_NGC_clustering.dat.fits',
+    fetcher: 'tools/fetch/fetchDesi.ts',
+    readme: 'desi.readme',
+  },
+  'desi.lrg': {
+    path: 'data/raw/desi/LRG_NGC_clustering.dat.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'DESI DR1 (iron) LSS clustering catalog, LRG tracer, NGC — luminous red galaxies, z 0.4-1.0.',
+    upstream:
+      'https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/LRG_NGC_clustering.dat.fits',
+    fetcher: 'tools/fetch/fetchDesi.ts',
+    readme: 'desi.readme',
+  },
+  'desi.elg': {
+    path: 'data/raw/desi/ELG_LOPnotqso_NGC_clustering.dat.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'DESI DR1 (iron) LSS clustering catalog, ELG_LOPnotqso tracer, NGC — emission-line galaxies (QSO targets excluded), z 0.6-1.6.',
+    upstream:
+      'https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/ELG_LOPnotqso_NGC_clustering.dat.fits',
+    fetcher: 'tools/fetch/fetchDesi.ts',
+    readme: 'desi.readme',
+  },
+  'desi.qso': {
+    path: 'data/raw/desi/QSO_NGC_clustering.dat.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description: 'DESI DR1 (iron) LSS clustering catalog, QSO tracer, NGC — quasars, z 0.4-3.5.',
+    upstream:
+      'https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/QSO_NGC_clustering.dat.fits',
+    fetcher: 'tools/fetch/fetchDesi.ts',
+    readme: 'desi.readme',
+  },
+  'desi.readme': {
+    path: 'data/raw/desi/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the DESI DR1 LSS clustering catalogs — upstream URL, licence, row counts, byte layout, columns skymap consumes.',
+  },
+  'desi.sha256': {
+    path: 'data/raw/desi/desi_dr1_lss.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Combined SHA-256 sidecar for the four DESI .fits files (one `<hex>  <filename>` line each) — committed so the parser can detect truncated or stale downloads.',
+    fetcher: 'tools/fetch/fetchDesi.ts',
+  },
+
+  // ─── Gaia DR3 star bin (G<14 main + GCNS + Hipparcos-2 bright patch) ──
+
+  'gaia.dir': {
+    path: 'data/raw/gaia',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Gaia DR3 raw-data directory. Holds the paged main-catalog CSVs `gaia_page_<NNNN>.csv` (one file per contiguous random_index slice; consumers join(rawDataPath(...), pageFileName(i))) plus the GCNS + Hipparcos artifacts.',
+    upstream: 'https://gea.esac.esa.int/tap-server/tap/sync',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+  },
+  'gaia.gcns': {
+    path: 'data/raw/gaia/gcns_main.csv',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Gaia Catalogue of Nearby Stars (100 pc supplement) — external.gaiaedr3_gcns_main_1, 331,312 rows. Single TAP-sync CSV, ORDER BY source_id for a stable sha256.',
+    upstream: 'https://gea.esac.esa.int/tap-server/tap/sync',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+  },
+  'gaia.hipparcos': {
+    path: 'data/raw/gaia/hip2.dat',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Hipparcos-2 astrometric catalogue (van Leeuwen 2007, VizieR I/311) — 117,955 fixed-width records, the bright-star patch above the Gaia saturation limit. CDS serves it only gzipped (hip2.dat.gz); the fetcher decompresses to this path.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/I/311/hip2.dat.gz',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+    readme: 'gaia.hipparcos-readme',
+  },
+  'gaia.hipparcos-readme': {
+    path: 'data/raw/gaia/ReadMe',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'VizieR ReadMe for I/311 — byte-offset spec for hip2.dat. Downloaded alongside the table per the "ReadMes live next to the file they describe" convention.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/I/311/ReadMe',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+  },
+  'gaia.hip-xmatch': {
+    path: 'data/raw/gaia/hip2_best_neighbour.csv',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Hipparcos↔Gaia cross-match — gaiadr3.hipparcos2_best_neighbour, 99,525 rows (source_id ↔ HIP number). Single TAP-sync CSV, ORDER BY source_id; the dedup key for the Hipparcos bright patch.',
+    upstream: 'https://gea.esac.esa.int/tap-server/tap/sync',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+  },
+  'gaia.readme': {
+    path: 'data/raw/gaia/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Gaia DR3 star bin — upstream services + tables, SELECT column lists, the G<14 cut + row counts, the paging scheme, and the fetch command.',
+  },
+  'gaia.sha256': {
+    path: 'data/raw/gaia/gaia.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Combined SHA-256 sidecar for the two stable single-file Gaia artifacts (`gcns_main.csv`, `hip2.dat`), one `<hex>  <filename>` line each — committed so the fetcher can detect truncated or stale downloads. The paged CSVs get a fetch-completion row-count check instead.',
+    fetcher: 'tools/fetch/fetchGaia.ts',
+  },
+
+  // ─── Planet-body textures (SSS CC-BY + NASA BMNG + USGS moons) ────────
+  //
+  // Raw source images for the true-scale foreground bodies. The fetcher
+  // pulls each body's highest usable native tier (8k SSS JPGs, the 4k
+  // Venus atmosphere cap, the 2k featureless ice giants, the BMNG Earth
+  // equirect, the USGS Galilean-moon GeoTIFFs); `build-textures` then
+  // downsamples per `BODY_TEXTURE_REGISTRY[id].maxTier` — never upscaling.
+  // All raw sources are gitignored build inputs (like the catalog .dat
+  // files); the combined `.sha256` sidecar + provenance README are the
+  // committed record (covered by the `!/data/raw/**/*.sha256` +
+  // `!/data/raw/**/README.md` globs).
+
+  'textures.sssMercury8k': {
+    path: 'data/raw/textures/8k_mercury.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Solar System Scope Mercury albedo map, 8k JPG (CC BY 4.0). Downsampled to the small/medium/large tiers.',
+    upstream: 'https://www.solarsystemscope.com/textures/download/8k_mercury.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.sssVenus4k': {
+    path: 'data/raw/textures/4k_venus_atmosphere.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Solar System Scope Venus cloud-top atmosphere, 4k JPG (CC BY 4.0). Caps at 4k — the 8k SSS variant is the radar surface (wrong appearance).',
+    upstream: 'https://www.solarsystemscope.com/textures/download/4k_venus_atmosphere.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.sssMars8k': {
+    path: 'data/raw/textures/8k_mars.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description: 'Solar System Scope Mars albedo map, 8k JPG (CC BY 4.0).',
+    upstream: 'https://www.solarsystemscope.com/textures/download/8k_mars.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.sssJupiter8k': {
+    path: 'data/raw/textures/8k_jupiter.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description: 'Solar System Scope Jupiter cloud bands, 8k JPG (CC BY 4.0).',
+    upstream: 'https://www.solarsystemscope.com/textures/download/8k_jupiter.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.sssSaturn8k': {
+    path: 'data/raw/textures/8k_saturn.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description: 'Solar System Scope Saturn cloud bands, 8k JPG (CC BY 4.0).',
+    upstream: 'https://www.solarsystemscope.com/textures/download/8k_saturn.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.sssRing': {
+    path: 'data/raw/textures/8k_saturn_ring_alpha.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Solar System Scope Saturn ring radial alpha strip, 8k RGBA PNG (CC BY 4.0). Real alpha; sampled by radius, shipped as an Nx1 texture_2d.',
+    upstream: 'https://www.solarsystemscope.com/textures/download/8k_saturn_ring_alpha.png',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.sssUranus2k': {
+    path: 'data/raw/textures/2k_uranus.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Solar System Scope Uranus, 2k JPG (CC BY 4.0). Near-featureless source — 2k only, never upscaled.',
+    upstream: 'https://www.solarsystemscope.com/textures/download/2k_uranus.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.sssNeptune2k': {
+    path: 'data/raw/textures/2k_neptune.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Solar System Scope Neptune, 2k JPG (CC BY 4.0). Near-featureless source — 2k only, never upscaled.',
+    upstream: 'https://www.solarsystemscope.com/textures/download/2k_neptune.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.sssMoon8k': {
+    path: 'data/raw/textures/8k_moon.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description: 'Solar System Scope Moon albedo map, 8k JPG (CC BY 4.0).',
+    upstream: 'https://www.solarsystemscope.com/textures/download/8k_moon.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmng': {
+    path: 'data/raw/textures/world.topo.bathy.200412.3x21600x10800.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Blue Marble Next Generation, December topo+bathymetry equirect, 21600x10800 JPG (public domain, credit NASA Earth Observatory). Full-res Earth source.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x21600x10800.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaBmngDev': {
+    path: 'data/raw/textures/world.topo.bathy.200412.3x5400x2700.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Blue Marble Next Generation, 5400x2700 sibling of the full BMNG Earth equirect (public domain). The --dev quick-fetch subset source.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/december/world.topo.bathy.200412.3x5400x2700.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.usgsIo': {
+    path: 'data/raw/textures/Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Io global colour mosaic (Galileo SSI + Voyager), 11445x5723 RGB GeoTIFF (public domain, credit NASA/USGS).',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.usgsEuropa': {
+    path: 'data/raw/textures/Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Europa global mosaic (Voyager + Galileo SSI), 19631x9816 grayscale GeoTIFF (public domain, credit NASA/USGS). Grayscale — build-tinted.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.usgsGanymede': {
+    path: 'data/raw/textures/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Ganymede global colour mosaic (Voyager + Galileo SSI), 11520x5760 RGB GeoTIFF (public domain, credit NASA/USGS).',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.usgsCallisto': {
+    path: 'data/raw/textures/Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Callisto global mosaic (Voyager + Galileo SSI), 15138x7569 grayscale GeoTIFF (public domain, credit NASA/USGS). Grayscale — build-tinted.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.dir': {
+    path: 'data/raw/textures',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Planet-texture raw-data directory — fetcher output target; consumers join(rawDataPath(...), <filename>) for dynamically-selected sources.',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+  },
+  'textures.sha256': {
+    path: 'data/raw/textures/textures.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Combined SHA-256 sidecar for the raw texture sources (one `<hex>  <filename>` line each) — committed so the fetcher can detect truncated or stale downloads.',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+  },
+  'textures.readme': {
+    path: 'data/raw/textures/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the planet-texture sources — upstream URLs, licences (SSS CC BY 4.0, NASA/USGS public domain), native dims, fetch date, checksums.',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────

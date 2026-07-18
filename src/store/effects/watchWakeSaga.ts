@@ -23,9 +23,16 @@ import type { ReconcileEffects } from './ReconcileEffects';
 
 // WAKE_ROUTES — the registry of store routes whose writes affect the drawn
 // scene and must poke the passive render-on-demand scheduler. Settings and
-// camera today; selection joins when it lands. Membership by route means new
-// actions within any listed slice wake the renderer by construction, with no
-// per-action `did we remember requestRender?` audit.
+// camera. Membership by route means new actions within any listed slice wake
+// the renderer by construction, with no per-action `did we remember
+// requestRender?` audit.
+//
+// Selection is deliberately NOT a wake route: it has its own dedicated
+// `watchSelectionWakeSaga` (src/state/selection/) that wakes on select / focus
+// / clear via takeEvery. Route-level granularity would wake on the whole
+// selection slice — including `updateSelectionHover`, which has no GPU
+// consequence (it only feeds the React InfoCard) and must stay wake-free. The
+// per-action saga draws that line; a route membership can't.
 const WAKE_ROUTES = new Set<string>([settingsRoute, cameraRoute]);
 const isWakeWrite = (a: Action): boolean =>
   typeof a.type === 'string' && WAKE_ROUTES.has(a.type.split('/')[0]!);

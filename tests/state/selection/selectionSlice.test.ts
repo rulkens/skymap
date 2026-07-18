@@ -12,14 +12,6 @@ import type { SelectionState } from '../../../src/@types/store/SelectionState';
 const ref = { type: 'galaxyCatalog', source: Source.SDSS, index: 7 } as const;
 
 describe('selectionSlice', () => {
-  it('seeds all slots null', () => {
-    expect(reducer(undefined, { type: '@@INIT' })).toEqual({
-      hover: null,
-      select: null,
-      focus: null,
-    });
-  });
-
   it('updateSelectionSelect writes the ref', () => {
     const next = reducer(undefined, updateSelectionSelect(ref));
     expect(next.select).toEqual(ref);

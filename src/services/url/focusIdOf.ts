@@ -20,6 +20,8 @@
 
 import { encodeGalaxyId } from './encodeGalaxyId';
 import { MILKY_WAY_FOCUS_ID } from './milkyWayFocusId';
+import { BODY_FOCUS_PREFIX } from './bodyFocusId';
+import { STAR_FOCUS_PREFIX } from './starFocusId';
 import { extractGalaxyRow } from '../engine/helpers/extractGalaxyRow';
 import { cartesianToRaDec } from '../../utils/math/cartesianToRaDec';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
@@ -57,6 +59,14 @@ const ENCODE: EncodeTable = {
   // Milky Way singleton → the fixed deep-link literal; resolveFocusId decodes
   // it back to `{ type: 'milkyWay' }`.
   milkyWay: () => MILKY_WAY_FOCUS_ID,
+
+  // Scene body → its seed id under the shared prefix (`body-earth`);
+  // resolveFocusId strips the prefix and validates against SCENE_BODIES.
+  body: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
+
+  // Star → its bin-stable record index under the shared prefix (`star-42`);
+  // resolveFocusId strips the prefix and validates a non-negative integer.
+  star: (ref) => `${STAR_FOCUS_PREFIX}${ref.index}`,
 };
 
 // ─── Galaxy arm ──────────────────────────────────────────────────────────────

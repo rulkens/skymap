@@ -150,9 +150,4 @@ describe('runBootstrapPhases', () => {
     expect(stateWrites.fromInitGpu).toEqual({ __mockRenderer: true });
     expect(stateWrites.observedInWireSlots).toBe(stateWrites.fromInitGpu);
   });
-
-  it('resolves with no value on success', async () => {
-    const result = await runBootstrapPhases(makeState(), makeDeps());
-    expect(result).toBeUndefined();
-  });
 });

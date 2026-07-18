@@ -14,6 +14,7 @@ import {
   selectTourDwellNonce,
   selectActiveTour,
   selectTourTotal,
+  selectTourBeatTitles,
   selectTourCanPrev,
 } from '../../../src/state/tour/selectors';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
@@ -31,12 +32,13 @@ describe('tourSlice reducers', () => {
       beatIndex: 0,
       paused: false,
       dwellNonce: 0,
+      dwellSec: 0,
     });
   });
 
   it('tourStarted activates, records the id, resets to beat 0', () => {
     const s = tourReducer(
-      { active: false, tourId: '', beatIndex: 3, paused: true, dwellNonce: 7 },
+      { active: false, tourId: '', beatIndex: 3, paused: true, dwellNonce: 7, dwellSec: 5 },
       tourStarted({ tourId: 'webShowcase' }),
     );
     expect(s).toEqual({
@@ -45,6 +47,7 @@ describe('tourSlice reducers', () => {
       beatIndex: 0,
       paused: false,
       dwellNonce: 0,
+      dwellSec: 0,
     });
   });
 
@@ -57,6 +60,7 @@ describe('tourSlice reducers', () => {
       beatIndex: 0,
       paused: true,
       dwellNonce: 2,
+      dwellSec: 8,
     };
     const s = tourReducer(before, beatChanged(1));
     expect(s.beatIndex).toBe(1);
@@ -64,12 +68,20 @@ describe('tourSlice reducers', () => {
     expect(s.dwellNonce).toBe(2);
   });
 
-  it('dwellStarted bumps the nonce only', () => {
+  it('dwellStarted bumps the nonce and records the dwell length', () => {
     const s = tourReducer(
-      { active: true, tourId: 'webShowcase', beatIndex: 1, paused: false, dwellNonce: 2 },
-      dwellStarted(),
+      {
+        active: true,
+        tourId: 'webShowcase',
+        beatIndex: 1,
+        paused: false,
+        dwellNonce: 2,
+        dwellSec: 0,
+      },
+      dwellStarted({ dwellSec: 8 }),
     );
     expect(s.dwellNonce).toBe(3);
+    expect(s.dwellSec).toBe(8);
     expect(s.beatIndex).toBe(1);
   });
 
@@ -81,7 +93,14 @@ describe('tourSlice reducers', () => {
 
   it('tourEnded returns to the inert initial state', () => {
     const s = tourReducer(
-      { active: true, tourId: 'webShowcase', beatIndex: 2, paused: true, dwellNonce: 5 },
+      {
+        active: true,
+        tourId: 'webShowcase',
+        beatIndex: 2,
+        paused: true,
+        dwellNonce: 5,
+        dwellSec: 9,
+      },
       tourEnded(),
     );
     expect(s).toEqual(initial());
@@ -96,6 +115,7 @@ describe('tour selectors', () => {
       beatIndex: 2,
       paused: true,
       dwellNonce: 4,
+      dwellSec: 8,
     });
     expect(selectTourActive(st)).toBe(true);
     expect(selectTourPaused(st)).toBe(true);
@@ -112,6 +132,7 @@ describe('tour selectors', () => {
           beatIndex: 0,
           paused: false,
           dwellNonce: 0,
+          dwellSec: 0,
         }),
       ),
     ).toBeNull();
@@ -123,6 +144,7 @@ describe('tour selectors', () => {
           beatIndex: 0,
           paused: false,
           dwellNonce: 0,
+          dwellSec: 0,
         }),
       ),
     ).toBe(tourRegistry.webShowcase);
@@ -131,7 +153,14 @@ describe('tour selectors', () => {
   it('selectActiveTour returns null for an unknown id', () => {
     expect(
       selectActiveTour(
-        asState({ active: true, tourId: 'nope', beatIndex: 0, paused: false, dwellNonce: 0 }),
+        asState({
+          active: true,
+          tourId: 'nope',
+          beatIndex: 0,
+          paused: false,
+          dwellNonce: 0,
+          dwellSec: 0,
+        }),
       ),
     ).toBeNull();
   });
@@ -143,14 +172,68 @@ describe('tour selectors', () => {
       beatIndex: 0,
       paused: false,
       dwellNonce: 0,
+      dwellSec: 0,
     });
     expect(selectTourTotal(st)).toBe(tourRegistry.webShowcase.beats.length);
+  });
+
+  it('selectTourBeatTitles maps beat titles with null for silent beats', () => {
+    const st = asState({
+      active: true,
+      tourId: 'webShowcase',
+      beatIndex: 0,
+      paused: false,
+      dwellNonce: 0,
+      dwellSec: 0,
+    });
+    const titles = selectTourBeatTitles(st);
+    expect(titles).toHaveLength(tourRegistry.webShowcase.beats.length);
+    titles.forEach((title, i) => {
+      expect(title).toBe(tourRegistry.webShowcase.beats[i]?.caption?.title ?? null);
+    });
+  });
+
+  it('selectTourBeatTitles is empty when inactive and referentially stable across the run', () => {
+    expect(
+      selectTourBeatTitles(
+        asState({
+          active: false,
+          tourId: 'webShowcase',
+          beatIndex: 0,
+          paused: false,
+          dwellNonce: 0,
+          dwellSec: 0,
+        }),
+      ),
+    ).toEqual([]);
+
+    // Different runtime states, same registry tour → the memo must hold the
+    // array's identity, or the rail re-renders on every dispatch.
+    const at = (beatIndex: number, paused: boolean) =>
+      selectTourBeatTitles(
+        asState({
+          active: true,
+          tourId: 'webShowcase',
+          beatIndex,
+          paused,
+          dwellNonce: 0,
+          dwellSec: 0,
+        }),
+      );
+    expect(at(0, false)).toBe(at(2, true));
   });
 
   it('selectTourCanPrev is false on the first beat and when inactive', () => {
     const at = (beatIndex: number, active = true) =>
       selectTourCanPrev(
-        asState({ active, tourId: 'webShowcase', beatIndex, paused: false, dwellNonce: 0 }),
+        asState({
+          active,
+          tourId: 'webShowcase',
+          beatIndex,
+          paused: false,
+          dwellNonce: 0,
+          dwellSec: 0,
+        }),
       );
     expect(at(0)).toBe(false);
     expect(at(1)).toBe(true);

@@ -89,6 +89,7 @@ The renderer can ingest up to three galaxy catalogs in parallel. Each is just a 
 - **2MRS** (2MASS Redshift Survey) — a smaller (~45 k), all-sky redshift survey concentrated on the local volume around the Milky Way. Useful for nearby galaxies in any direction.
 - **GLADE** — a million-galaxy all-sky mega-catalog cross-matched from several surveys. Reaches roughly the same radial depth as SDSS, but covers the full sky — so its main contribution is filling in the celestial regions outside SDSS's northern footprint, while also extending well beyond 2MRS's local volume.
 - **Milliquas v8** ([Flesch 2023, OJAp 6, 49](https://doi.org/10.21105/astro.2308.01505)) — the Million Quasars compilation: ~940 k spec-z type-I QSOs, BL Lacs, type-II AGN, and radio/X-ray candidates from the literature, deduplicated across source catalogs. Renders as point-source AGN alongside the galaxy surveys; hidden by default — toggle on in the SettingsPanel.
+- **Gaia DR3 stars** — the raw inputs to skymap's Milky-Way star bin: the ~16.8 M `G<14` slice of the [Gaia DR3](https://doi.org/10.1051/0004-6361/202243940) main catalog with Bailer-Jones distances, the GCNS 100 pc supplement, and a Hipparcos-2 bright-star patch for the naked-eye stars Gaia saturates on. Stars rather than galaxies, so it's a separate build target — not one of the three galaxy catalogs above.
 
 You can run with any one, any two, or all three. The renderer falls back to synthetic data if no `.bin` files are present.
 
@@ -104,6 +105,9 @@ The renderer fetches `/data/sdss.bin`, `/data/2mrs.bin`, and `/data/glade.bin` a
 | 2MRS      | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. Drop into `data/raw/2mrs/2mrs_table3.dat`. |
 | GLADE     | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281)             | `glade2.3.dat`, 256-byte fixed-width, 3.26 M rows, ~838 MB. Drop into `data/raw/glade/glade2.3.dat`. |
 | Milliquas | [quasars.org](https://quasars.org/milliquas.htm)                                           | Run `npm run fetch-milliquas` — pulls the 31 MB zip, verifies SHA-256, unpacks to `data/raw/milliquas/milliquas.txt`. |
+| Gaia DR3  | [ESA Gaia archive (TAP)](https://gea.esac.esa.int/archive/)                                | Run `npm run fetch-gaia` — pages the `G<14` main catalog + Bailer-Jones distances via ADQL into `data/raw/gaia/gaia_page_*.csv`. ~2 GB total; gated behind a `--yes` (or interactive) size confirmation. |
+| GCNS      | [ESA Gaia archive (TAP)](https://gea.esac.esa.int/archive/)                                | Fetched automatically by `npm run fetch-gaia` — the 100 pc nearby-star supplement to `data/raw/gaia/gcns_main.csv`. |
+| Hipparcos-2 | [VizieR I/311](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=I/311)                | Fetched automatically by `npm run fetch-gaia` — `hip2.dat` (~33 MB) + Gaia cross-match to `data/raw/gaia/`. |
 
 GLADE alone subsumes 2MPZ and 6dFGS — the GLADE team has already cross-matched and deduplicated 2MPZ + 2MASS XSC + HyperLEDA + GWGC + SDSS-DR12Q, so a single download replaces what would otherwise be three.
 
@@ -449,6 +453,38 @@ README, but the rough shape is:
 
 Skip the maintainer flow unless you're refreshing the upstream cubes
 — the R2-hosted tiers stay current with each release.
+
+## Milky Way star field (Gaia DR3)
+
+Zoom in from the galaxy point cloud toward the Sun and skymap swaps catalogued
+galaxies for catalogued stars: the ~16.8 M Gaia DR3 stars render as a real-data
+stellar bubble around the observer, each tinted by its BP−RP colour — hot blue
+through cool red — and accumulated additively in the HDR pass so the bright
+naked-eye stars bloom against the dark. It's the real-data middle of the descent
+toward Earth: the last measured layer before the view crosses into the
+procedural Milky-Way cloud, which the star field crossfades into as the two
+overlap.
+
+The star-bin build turns the Gaia DR3 + GCNS + Hipparcos-2 raw inputs (see
+the download table above) into the runtime binary format:
+
+```bash
+npm run build-stars
+```
+
+Consumes `data/raw/gaia/` — the paged Gaia DR3 CSVs, the GCNS 100 pc
+supplement (`gcns_main.csv`), and the Hipparcos-2 bright-star patch
+(`hip2.dat` + `hip2_best_neighbour.csv`) — and emits the per-tier binaries
+`public/data/stars-small.bin`, `stars-medium.bin`, and `stars-large.bin`.
+The full build holds the ~16.8 M-row Gaia superset in memory at once, so
+run it on a machine with roughly 16 GB of free RAM — the npm script raises
+Node's heap limit accordingly.
+
+For real-scale runs the canonical builder is the Rust port `tools/stars-rs/`,
+invoked with `npm run build-stars-rs` (requires a Rust toolchain). It emits
+byte-identical `.bin` files far faster and with a lower memory ceiling; the
+TypeScript `buildStars.ts` above stays the reference implementation the vitest
+suite covers. See `tools/stars-rs/README.md` for the bit-parity contract.
 
 ## Brightness controls
 

@@ -16,24 +16,43 @@ src/
                       imports are deep + relative.
   components/         React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
   data/               Static data definitions: sources enum, colourIndex spec, binary format
+  hooks/              React hooks (useEngine, useSplash, useUrlSync,
+                      useKeyboardShortcuts, alias/structure indexes)
   services/
     camera/           OrbitCamera, OrbitControls (mouse pan/orbit), tweens
     engine/           Top-level engine orchestrator, autoLod, cloud loader
     gpu/              Renderers, texture atlas, image queue/fetcher, WGSL shaders
     input/            SpaceMouse + raw input → camera deltas
+  state/              Framework-agnostic RTK slices + selectors + sagas, one
+                      subdir per domain (camera/, settings/, selection/, tour/,
+                      ui/, …). Forbids react-redux — see store/ for the wiring.
+  store/              RTK store wiring: createAppStore, root reducer/saga,
+                      react-redux hooks, effects, SagaContextProvider
+  styles/             global.css — design tokens + body/html reset only
   utils/              Pure helpers (math, format, random) — heavily tested
 tools/
+  animation/          tourLength — beat-sheet / clip-length reporting for tours
   catalog/            buildAllBins (pipeline entry point), crossMatch dedup,
                       subsampleByAbsMag
+  curation/           shared curation helpers (dedupeByProximity, writeMetaSidecar)
+  dev/                tmux + worktree helpers — see "Tmux workflow helpers" below
   famous/             famous-galaxy seed expansion + image fetcher cluster
                       (buildFamous, expandFamousFromCatalogs, fetchFamousImages,
                       famousImageProcessor)
+  famous-curator/     local-only Vite dev tool for hand-curating Famous
+                      thumbnails (npm run curate-famous)
   filaments/          buildFilaments — DisPerSE wrapper
+  flow/               CF4++ peculiar-velocity flow-field builder + verifier
+  flow-workbench/     "Cosmic Flow" WebGPU dev tool visualising the flow field
+  galaxy-renderer/    WebGPU dev tool drawing a single procedural Hubble-sequence
+                      galaxy behind an HDR bloom pipeline
   volumes/            scalar-field volume builders (CF-4, MCPM) + diagnostics
                       (auditCf4Anchors, verifyCf4Scfd, buildScalarVolumeFixture,
                       extractMcpmCube.py)
   fonts/              buildFontAtlas — MSDF multi-font atlas generator
+  record/             offline tour recorder → mp4 (npm run record-tour)
   site/               makeFavicon, makeOgImage
+  structures/         buildStructures — cluster/supercluster catalog builder
   deploy/             syncR2 + r2Cors.json + r2-static/ static assets
   fetch/              fetch2massXsc, fetchHyperLeda, buildPgcAliases — long-running
                       external-catalog fetchers with on-disk resume caches
@@ -65,8 +84,10 @@ tests/                Vitest suite — mirrors src/ tree
 - **One symbol per file in `utils/` and `@types/`**: every file in `src/utils/` (and `tools/utils/`) exports exactly **one function**; every file in `src/@types/` exports exactly **one type**. Filename = the exported symbol's name (kebab/camel as the symbol dictates). No multi-export helper grab-bags — if a "data" file grows a generic pure helper, extract it to its own `utils/<area>/<fn>.ts` (math/format/color/random/gpu/…) with a focused test. Deep relative imports, no barrels.
 - **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. To verify a UI change, ask the user to look (or describe what they should see).
 - **TDD via plans**: substantial features get a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with bite-sized TDD tasks. Plans are executed via the `subagent-driven-development` workflow (fresh subagent per task + spec + quality reviews). Plans follow [`docs/superpowers/conventions/plan-style.md`](docs/superpowers/conventions/plan-style.md) — **contract code yes, implementation code no** (overrides the upstream `writing-plans` skill's "complete code in every step" default). When a plan ships, run the `/feature-done` audit: it gates on the DoD then relocates the plan + its spec to `plans/completed/` + `specs/completed/`.
+- **Refactor the ground before building**: any feature substantial enough for a spec/plan runs the `refactor-ground` skill **after brainstorming converges, before the spec is written**. It sketches the feature's ideal diff (data delta first), issues growth/bolt-on verdicts per touchpoint, and checkpoints the shape with the user; the spec then carries a "Ground preparation" section (filled, or "none needed — because X") and is written against the post-refactor architecture. Prep refactors land as their own PR(s) before the feature PR. `plan-style.md` gates plan authoring on that section existing.
 - **Plans coexist**: multiple in-flight plans is normal. Check the file list before starting new work to avoid stomping on something else.
 - **Backlog hygiene**: [`docs/BACKLOG.md`](docs/BACKLOG.md) lists only _unstarted_ work, grouped by subsystem area with a readiness tag; design-bearing items have a `docs/backlog/YYYY-MM-DD-<slug>.md` detail file linked from the index. **Keep the index line very short** — title + readiness tag + one terse clause + the `→ [details]` link. Anything longer (file lists, evidence, approach, options) goes in the detail md, NEVER inline in `BACKLOG.md`; the index is a scannable list, not a write-up. **Picking up an item removes it in the same change** — whether you implement it directly or write a spec/plan, delete its index line **and** its detail file in that commit/branch (the detail file seeds the spec; the spec/plan is then the source of truth). **Never strike through a done item** — delete it; the completion record is the git log + `*/completed/`. `/feature-done` sweeps the backlog when a plan ships; audit the whole file against the git log periodically to catch stragglers.
+- **Test what can break**: judge every test by "will it ever fail on a real bug no other test or compiler check catches?" — no runtime type tests, constant/registry restatements, clamp-boundary or mirror tests. See [`docs/superpowers/conventions/testing.md`](docs/superpowers/conventions/testing.md).
 - **Simplicity over ease**: judge a design by the artifact (what runs and gets changed), not the keystrokes; un-braid concerns that could vary independently. Principles + the known-entanglements backlog live in [`docs/superpowers/conventions/simplicity.md`](docs/superpowers/conventions/simplicity.md) (Rich Hickey's _Simple Made Easy_, applied to skymap). Run the `entanglement-radar` skill to review a diff/module — **and at design time over a spec/plan**: a section that exists to teach handling of an "asymmetry"/"subtlety"/"special-case" is a STOP-and-un-braid signal (classify essential vs accidental), not a note to write more carefully.
 
 ## Commands
@@ -80,9 +101,11 @@ npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs
 npm run build-tiers # alias for build-all — emits per-tier .bin variants
 npm run format      # prettier
+npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/skills/move-files)
+npm run record-tour # offline 4K tour recorder → tools/record/README.md
 ```
 
-Currently 590+ tests passing across 76 files. Keep it green.
+The suite is large (600+ test files) and must stay green. Tests follow [`docs/superpowers/conventions/testing.md`](docs/superpowers/conventions/testing.md) — what _not_ to test matters as much as what to test.
 
 ### Tmux workflow helpers
 
@@ -127,6 +150,20 @@ Re-run order when cluster/supercluster data changes:
 
 The `.ccat` + `structures_meta.json` artefacts are gitignored (build outputs, like the `.bin` files). The raw `.dat`/`ReadMe` files are also gitignored; only the provenance `README.md` + `.dat.sha256` sidecars are committed.
 
+Re-run order when DESI raw data changes:
+
+1. `npm run fetch-desi` — downloads the four DESI DR1 LSS tracer `.fits` files into `data/raw/desi/` and writes the committed `desi_dr1_lss.sha256` sidecar. Same pattern as `npm run fetch-cf4`.
+2. `npm run build-tiers` — re-bakes `desi-deep.bin` (the CrB deep-cone patch) alongside the other catalog bins.
+3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
+
+Re-run order when planet textures change:
+
+1. `npm run fetch-textures` — pulls the source planet maps (~700 MB full; `--dev` fetches the ~7 MB 2k subset). GET-only fetcher, resumes by completed files.
+2. `npm run build-textures` — tiers the maps into `public/data/images/textures/`.
+3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
+
+The full-res pull, build, and sync run post-merge from the main worktree.
+
 ### Deploy workflow (Cloudflare Workers Assets + R2)
 
 Two Cloudflare resources serve skymap, and they're updated independently:
@@ -146,7 +183,7 @@ If you only changed code and not catalog bytes, **step 4 alone is enough**. The 
 
 The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitignored). They are pure build artefacts: deterministic outputs of `tools/catalog/buildAllBins.ts` against the raw catalog files in `data/raw/`. Checking them in would inflate every clone by ~150 MB for no informational gain — the same bytes can always be rebuilt from source on demand. Keeping them out also avoids accidental drift between `tools/catalog/buildAllBins.ts` settings (tier targets, abs-mag thresholds) and a stale committed binary; the R2 sync ships a fresh build on demand, so what's hosted is always in sync with the current pipeline code.
 
-The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, `filaments.bin`, `structures.ccat`, and `structures_meta.json`. The `tools/deploy/syncR2.ts` ALLOW filter encodes that set.
+The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, `desi-deep.bin`, `filaments.bin`, `structures.ccat`, and `structures_meta.json`. The `tools/deploy/syncR2.ts` ALLOW filter encodes that set.
 
 ### MCPM Cosmic Web volume
 
@@ -189,27 +226,27 @@ When a new catalog or dataset gets added to the build pipeline, follow this chec
 1. **Pick a per-catalog subdir** under `data/raw/<catalog>/` (lowercase, single word — e.g. `data/raw/cf4/`, `data/raw/hyperleda/`). Every loose file at `data/raw/` root is wrong — they all live in subdirs now.
 2. **Register every file** in `tools/utils/io/rawDataRegistry.ts`. Keys are dotted-lowercase `<catalog>.<artifact>` (e.g. `'cf4.table2'`, `'cf4.readme'`, `'cf4.sha256'`). For dynamically-named outputs (chunks, tier variants), register the directory as `<catalog>.dir` and let consumers `join(rawDataPath(...), <dynamic>)`. Fill in `source: 'committed' | 'gitignored'`, a one-line `description`, and optional `upstream` URL + `fetcher` script.
 3. **Consume via the registry.** Fetchers / parsers / build scripts call `rawDataPath('<catalog>.<artifact>')` — never `resolve('data/raw/<catalog>/<file>')`. If the consumer needs the path relative (e.g. for `wrangler --file`), use `RAW_DATA['<key>'].path`.
-4. **`.gitignore` exception** only for a *non-standard* committed file. The `/data/**` block already re-includes the common committed artefacts — `data/raw/**/README.md`, `data/raw/**/*.sha256`, `data/raw/fonts/*.ttf`, and `data/seeds/*.json` — so a new catalog's README and checksum sidecar need **no** gitignore edit and track with a plain `git add` (the functional glob pattern makes the negations work, so no `git add -f`). Add a new `!` line only for a committed file that none of those globs cover, and explain it in a comment.
+4. **`.gitignore` exception** only for a _non-standard_ committed file. The `/data/**` block already re-includes the common committed artefacts — `data/raw/**/README.md`, `data/raw/**/*.sha256`, `data/raw/fonts/*.ttf`, and `data/seeds/*.json` — so a new catalog's README and checksum sidecar need **no** gitignore edit and track with a plain `git add` (the functional glob pattern makes the negations work, so no `git add -f`). Add a new `!` line only for a committed file that none of those globs cover, and explain it in a comment.
 5. **Provenance README** at `data/raw/<catalog>/README.md` documenting the upstream URL, the columns / byte layout, the fetch date, and the checksum (if any). Already covered by the `!/data/raw/**/README.md` glob — just `git add` it.
 
 A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetch/fetch2massXsc.ts` is the easiest reference for "where does the new file get written, and how does the consumer find it." Both of those have already been migrated to the registry.
 
 ## Renderer quick map
 
-- **`pointRenderer.ts` + `shaders/points.wesl`**: instanced billboards. Vertex stride is 48 bytes / 12 slots (xyz, magnitude, colorIndex, kPerZ, axisRatio + sign-bit fallback flag, positionAngleDeg, diameterKpc, vMaxWeight, schechterRatio, angularDensityWeight). Identity is composed on the GPU from a per-draw `SourceUniforms.sourceCode` + `@builtin(instance_index)`, NOT baked per-vertex.
+- **`pointRenderer.ts` + `shaders/points/*.wesl`**: instanced billboards. Vertex stride is 52 bytes / 13 slots (xyz, magnitude, colorIndex, axisRatio + sign-bit fallback flag, baked paCos/paSin, radiusMpc, vMaxWeight, schechterRatio, angularDensityWeight, baked absMag). Galaxy-static values (PA rotation, absolute magnitude) are baked at upload, not recomputed per vertex. Identity is composed on the GPU from a per-draw `SourceUniforms.sourceCode` + `@builtin(instance_index)`, NOT baked per-vertex.
 - **`pickRenderer.ts`**: r32uint pick texture. The fragment writes `(sourceCode << 27) | (localIdx + PICK_SENTINEL_OFFSET)`; see `src/data/selectionEncoding.ts` for the encoding (5 bits source, 27 bits localIdx, code 31 reserved as the all-ones sentinel). Source codes are append-only (the rule lives in `sources.ts`'s docstring) — same hygiene as enum values that get persisted to .bin, applied to POI-only codes too. Read the texture with `copyTextureToBuffer` for hover/click.
-- **`textureAtlas.ts` + `quadRenderer.ts` + `shaders/quads.wgsl`**: 2048×2048 atlas of 128×128 slots for galaxy thumbnails. LRU eviction.
-- **`galaxyImageQueue.ts`**: priority queue + concurrency limiter (max 4) for thumbnail fetches. Idempotent enqueue (don't re-add in-flight keys — see the long comment for the bug history).
-- **`galaxyImageFetcher.ts`**: SDSS DR18 ImgCutout (CORS-safe) for SDSS galaxies; CDS hips2fits (CORS-safe DSS proxy) for 2MRS/GLADE.
+- **`textureAtlas.ts` + `texturedDiskRenderer.ts` + `shaders/texturedDisks/*.wesl`**: 2048×2048 atlas of 128×128 slots for galaxy thumbnails. LRU eviction.
+- **`engine/subsystems/galaxyAtlasSubsystem.ts`**: the shared atlas + fetch infrastructure — LRU clock, priority-queued concurrency-limited bitmap fetcher, and the `bitmapReady`/`bitmapFailed` memoisation pair. Enqueue is idempotent (don't re-add in-flight keys — see the module header for the bug history). Thumbnail URLs are built by `src/utils/math/{sdss,dss}ThumbnailUrl.ts`: SDSS DR18 ImgCutout (CORS-safe) for SDSS galaxies; CDS hips2fits (CORS-safe DSS proxy) for 2MRS/GLADE.
 - **`engine.ts`**: per-frame loop. Per-galaxy `apparentSizePx` gates thumbnail enqueue — but the inner loop hoists `Math.tan` and pre-computes `maxCamDistForVisibility` to avoid 2.5M trig calls per frame.
 - **`renderScheduler.ts` + `engine.ts` frame tail**: render-on-demand. `requestRender()` from event handlers wakes the loop; the frame body re-schedules only while `autoRotate || currentTween || hasAnyAxis || queue.inFlightCount > 0 || recent-fade` is true.
 
 ## When the user asks you to…
 
-- **"add a feature"** → check `docs/BACKLOG.md` and `docs/superpowers/plans/` for an existing plan or captured issue. If it's substantial, write a new plan via the `writing-plans` skill rather than coding inline. If the work matches a backlog item, **remove that item (index line + `docs/backlog/` detail file) in the same change** that starts it — see the Backlog-hygiene convention.
+- **"add a feature"** → check `docs/BACKLOG.md` and `docs/superpowers/plans/` for an existing plan or captured issue. If it's substantial, run the `refactor-ground` skill once the shape of the ask is clear (before the spec is written — see the Refactor-the-ground convention), then write a new plan via the `writing-plans` skill rather than coding inline. If the work matches a backlog item, **remove that item (index line + `docs/backlog/` detail file) in the same change** that starts it — see the Backlog-hygiene convention.
 - **"fix this bug"** → check tests first; the project favours reproducing bugs as failing tests, then fixing.
 - **"why is this slow?"** → profile mental model first: per-frame work scales with on-screen galaxies (~2.5M total). Inner-loop trig and `Math.sqrt` are real costs. Hoist constants, gate with squared distances, avoid per-galaxy `Math.tan`.
-- **"refactor X"** → keep the services/ layout. Cross-cutting helpers go in `utils/`; rendering subsystems in `services/gpu/`. Tests mirror the src tree.
+- **"refactor X"** → keep the services/ layout. Cross-cutting helpers go in `utils/`; rendering subsystems in `services/gpu/`. Tests mirror the src tree. Any file move/rename goes through `npm run move-files` (next entry), not `git mv` + hand-edited imports.
+- **"move/rename/relocate a file"** (incl. folder reorgs) → `npm run move-files -- <from> <to>`, or `-- --manifest <moves.json>` for a batch. ts-morph rewrites every relative import project-wide and drags the `tests/` mirror along; run `--dry` first. Hand-editing import paths after a move is always the wrong plan. Not covered: `.wesl` `package::` imports + string-literal paths — grep for the old path afterwards. Details in `.claude/skills/move-files/SKILL.md`.
 - **"why does the renderer use index Y?"** → check `pointRenderer.ts` SLOTS_PER_POINT and the matching attribute layout in the shader. They must agree byte-for-byte.
 
 ## Things that have bitten us before

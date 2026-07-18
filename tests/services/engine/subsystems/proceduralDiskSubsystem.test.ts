@@ -1,5 +1,10 @@
 /**
- * proceduralDiskSubsystem — unit tests for the LOD-1 per-frame planner.
+ * proceduralDiskSubsystem — unit tests for the LOD-1 per-frame planner body.
+ *
+ * The subsystem exposes a DiskRowVisitor via beginFrame; the shared
+ * diskPlannerWalk owns the catalog loop and drives it. These tests run the
+ * body solo through the walk (see diskWalkHarness) so the assertions stay
+ * about BODY behaviour — gates, sticky maps, crossfades.
  *
  * Coverage focus:
  *   - emits a ProceduralDiskInstance for every galaxy whose apparent
@@ -9,7 +14,7 @@
  *   - respects visibleSourceMask
  *   - stride decimation walks 1/N of the cloud per frame and the
  *     sticky map keeps un-visited galaxies on screen between sweeps
- *   - `lastOutput` is updated each runFrame
+ *   - `lastOutput` is updated each frame
  */
 
 import { describe, it, expect } from 'vitest';
@@ -18,6 +23,8 @@ import {
   createProceduralDiskSubsystem,
   type ProceduralDiskDeps,
 } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
+import { createDiskPlannerWalk } from '../../../../src/services/engine/subsystems/diskPlannerWalk';
+import { runProceduralSolo } from './diskWalkHarness';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
@@ -78,42 +85,47 @@ function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) 
 
 describe('createProceduralDiskSubsystem', () => {
   it('emits one ProceduralDiskInstance per galaxy above 8 px with finite orientation', () => {
-    const sys = createProceduralDiskSubsystem({ decimationFactor: 1 });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createProceduralDiskSubsystem();
     const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
-    const out = sys.runFrame(makeInput(clouds));
+    const out = runProceduralSolo(walk, sys, makeInput(clouds));
     expect(out.instances.length).toBe(4);
   });
 
   it('emits nothing for a cloud whose source bit is clear', () => {
-    const sys = createProceduralDiskSubsystem({ decimationFactor: 1 });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createProceduralDiskSubsystem();
     const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
-    const out = sys.runFrame(makeInput(clouds, 0));
+    const out = runProceduralSolo(walk, sys, makeInput(clouds, 0));
     expect(out.instances.length).toBe(0);
   });
 
   it('skips galaxies with NaN orientation', () => {
-    const sys = createProceduralDiskSubsystem({ decimationFactor: 1 });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createProceduralDiskSubsystem();
     const clouds = new Map([[Source.SDSS, makeDenseCloud(4, NaN, NaN)]]);
-    const out = sys.runFrame(makeInput(clouds));
+    const out = runProceduralSolo(walk, sys, makeInput(clouds));
     expect(out.instances.length).toBe(0);
   });
 
   it('decimationFactor=2 walks half the cloud per frame, sticky map covers gap', () => {
-    const sys = createProceduralDiskSubsystem({ decimationFactor: 2 });
+    const walk = createDiskPlannerWalk({ decimationFactor: 2 });
+    const sys = createProceduralDiskSubsystem();
     const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
-    const out1 = sys.runFrame(makeInput(clouds));
+    const out1 = runProceduralSolo(walk, sys, makeInput(clouds));
     expect(out1.instances.length).toBe(2);
-    const out2 = sys.runFrame(makeInput(clouds));
+    const out2 = runProceduralSolo(walk, sys, makeInput(clouds));
     // Frame 2: cursor visits the other 2 indices; sticky entries from
     // frame 1 persist, so total stays at 4.
     expect(out2.instances.length).toBe(4);
   });
 
-  it('lastOutput mirrors the most recent runFrame return', () => {
-    const sys = createProceduralDiskSubsystem({ decimationFactor: 1 });
+  it('lastOutput mirrors the most recent frame result', () => {
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createProceduralDiskSubsystem();
     expect(sys.lastOutput.instances.length).toBe(0);
     const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
-    sys.runFrame(makeInput(clouds));
+    runProceduralSolo(walk, sys, makeInput(clouds));
     expect(sys.lastOutput.instances.length).toBe(2);
   });
 
@@ -122,9 +134,10 @@ describe('createProceduralDiskSubsystem', () => {
     // The 4-row cloud uses the same camera/size setup as the existing
     // 'emits one ProceduralDiskInstance per galaxy above 8 px' test —
     // known to produce 4 emitted instances.
-    const sys = createProceduralDiskSubsystem({ decimationFactor: 1 });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createProceduralDiskSubsystem();
     const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
-    const out = sys.runFrame(makeInput(clouds));
+    const out = runProceduralSolo(walk, sys, makeInput(clouds));
     expect(out.instances.length).toBe(4);
     // Every instance must carry the SDSS source code.
     for (const ins of out.instances) {
@@ -183,9 +196,10 @@ describe('createProceduralDiskSubsystem', () => {
       // Same fixture as the SDSS path above — explicitly asserts that
       // the new code path doesn't disturb instances when the dep is
       // absent (tests + back-compat).
-      const sys = createProceduralDiskSubsystem({ decimationFactor: 1 });
+      const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+      const sys = createProceduralDiskSubsystem();
       const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
-      const out = sys.runFrame(makeInput(clouds));
+      const out = runProceduralSolo(walk, sys, makeInput(clouds));
       expect(out.instances.length).toBe(2);
       for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
     });
@@ -194,12 +208,12 @@ describe('createProceduralDiskSubsystem', () => {
       // SDSS / DSS thumbnails intentionally keep the procedural pattern
       // underneath — their lumGate transparency expects the procedural
       // fill.  See spec scope section.
+      const walk = createDiskPlannerWalk({ decimationFactor: 1 });
       const sys = createProceduralDiskSubsystem({
-        decimationFactor: 1,
         atlas: makeStubAtlas(new Set(['anything'])),
       });
       const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
-      const out = sys.runFrame(makeInput(clouds));
+      const out = runProceduralSolo(walk, sys, makeInput(clouds));
       expect(out.instances.length).toBe(2);
       for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
     });
@@ -209,12 +223,12 @@ describe('createProceduralDiskSubsystem', () => {
       // isn't in the loaded set.  The default 1.0 must be preserved so
       // the procedural pattern still draws while the user waits for the
       // fetch to complete.
+      const walk = createDiskPlannerWalk({ decimationFactor: 1 });
       const sys = createProceduralDiskSubsystem({
-        decimationFactor: 1,
         atlas: makeStubAtlas(new Set()), // empty set → nothing loaded
       });
       const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
-      const out = sys.runFrame(makeInput(clouds));
+      const out = runProceduralSolo(walk, sys, makeInput(clouds));
       expect(out.instances.length).toBe(2);
       for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
     });

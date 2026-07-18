@@ -18,7 +18,13 @@
  *   - `index` changes      → a new beat's fly begins → hide the caption.
  *   - `dwellNonce` bumps    → the dwell has landed     → show the caption.
  *
- * The nav, by contrast, is always visible (you can scrub or exit mid-fly).
+ * The nav, by contrast, is always visible (you can scrub or exit mid-fly) —
+ * in an interactive session. `chrome=false` (cinema mode, the recorder's
+ * capture surface) is the same overlay in its recorded-film presentation:
+ * the caption stays, the transport nav and the beat counter are not mounted
+ * at all. A boolean prop rather than a second overlay component, because the
+ * dwell-gated caption timing — the one real behaviour here — is identical in
+ * both modes and must not fork.
  *
  * The root is a fixed, full-viewport, click-through layer; only the nav
  * buttons opt back into pointer events, so the canvas stays interactive
@@ -33,6 +39,12 @@ import TourNav from './TourNav';
 import styles from './TourOverlay.module.css';
 
 export type TourOverlayProps = {
+  /**
+   * Interactive-session chrome: the transport nav + the beat counter.
+   * `false` = cinema presentation (caption only). Defaults to true so the
+   * interactive path needs no opt-in.
+   */
+  readonly chrome?: boolean;
   readonly caption: BeatCaption | null;
   readonly label: string | null;
   readonly index: number;
@@ -58,6 +70,7 @@ const VIGNETTE_CLASS = {
 } as const;
 
 function TourOverlay({
+  chrome = true,
   caption,
   label,
   index,
@@ -97,20 +110,31 @@ function TourOverlay({
            * replays the staggered fade-up reveal rather than cross-fading
            * text in place.
            */}
-          <TourCaption key={index} caption={caption} label={label} index={index} total={total} />
+          <TourCaption
+            key={index}
+            chrome={chrome}
+            caption={caption}
+            label={label}
+            index={index}
+            total={total}
+          />
         </>
       ) : null}
 
-      <TourNav
-        paused={paused}
-        dwellSec={dwellSec}
-        dwellNonce={dwellNonce}
-        canPrev={canPrev}
-        onPrev={onPrev}
-        onNext={onNext}
-        onTogglePause={onTogglePause}
-        onExit={onExit}
-      />
+      {/* Not merely hidden in cinema mode — the recorder screenshots the
+          page, so unmounted is the only presentation that can't leak. */}
+      {chrome ? (
+        <TourNav
+          paused={paused}
+          dwellSec={dwellSec}
+          dwellNonce={dwellNonce}
+          canPrev={canPrev}
+          onPrev={onPrev}
+          onNext={onNext}
+          onTogglePause={onTogglePause}
+          onExit={onExit}
+        />
+      ) : null}
     </div>
   );
 }

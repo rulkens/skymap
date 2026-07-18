@@ -21,6 +21,12 @@ describe('syncR2 ALLOW', () => {
     expect(ALLOW('structures_meta.json')).toBe(true);
   });
 
+  it('accepts famous_stars_meta.json', () => {
+    // The famous-stars metadata sidecar is a gitignored build artefact shipped
+    // only via R2, exactly like famous_meta.json — it must pass the filter.
+    expect(ALLOW('famous_stars_meta.json')).toBe(true);
+  });
+
   it('still rejects glade.bin / sdss.bin', () => {
     // The un-tiered legacy bins are offline DisPerSE inputs, never fetched
     // from the browser — they must stay out of the R2 sync.
@@ -37,6 +43,52 @@ describe('syncR2 ALLOW', () => {
     // flowfield-large.scfd, so a tier suffix must not slip through the filter.
     expect(ALLOW('flowfield-large.scfd')).toBe(false);
     expect(ALLOW('flowfield.bin')).toBe(false);
+  });
+
+  it('accepts desi-deep.bin', () => {
+    // The DESI deep-cone catalog is a single tier-agnostic bin (a fixed
+    // 2.5° CrB patch, like 2mrs.bin) — the browser fetches it unsuffixed.
+    expect(ALLOW('desi-deep.bin')).toBe(true);
+  });
+
+  it('rejects a tier-suffixed desi-deep variant', () => {
+    // There is no per-tier DESI variant — the cone is a fixed patch, not a
+    // tiered downsample — so a tier suffix must not slip through the filter.
+    expect(ALLOW('desi-deep-large.bin')).toBe(false);
+  });
+
+  it('accepts desi-wedge.bin', () => {
+    // The DESI dec-band wedge is a second tier-agnostic bin (a fixed patch,
+    // like the cone) — the browser fetches it unsuffixed.
+    expect(ALLOW('desi-wedge.bin')).toBe(true);
+  });
+
+  it('rejects a tier-suffixed desi-wedge variant', () => {
+    // Like the cone, the wedge is a fixed patch, not a tiered downsample, so
+    // a tier suffix must not slip through the filter.
+    expect(ALLOW('desi-wedge-large.bin')).toBe(false);
+  });
+
+  it('accepts desi-sgw.bin', () => {
+    // The DESI Sloan Great Wall is a third tier-agnostic bin (a fixed
+    // depth-bounded patch, like the cone/wedge) — the browser fetches it
+    // unsuffixed.
+    expect(ALLOW('desi-sgw.bin')).toBe(true);
+  });
+
+  it('rejects a tier-suffixed desi-sgw variant', () => {
+    // Like the cone/wedge, the Sloan Great Wall is a fixed patch, not a tiered
+    // downsample, so a tier suffix must not slip through the filter.
+    expect(ALLOW('desi-sgw-large.bin')).toBe(false);
+  });
+
+  it('accepts stars-{small,medium,large}.bin and rejects stars-huge.bin', () => {
+    // Gaia star bins follow the same tier-suffixed pattern as SDSS/GLADE —
+    // this exercises the regex's tier alternation, not just the filter list.
+    expect(ALLOW('stars-small.bin')).toBe(true);
+    expect(ALLOW('stars-medium.bin')).toBe(true);
+    expect(ALLOW('stars-large.bin')).toBe(true);
+    expect(ALLOW('stars-huge.bin')).toBe(false);
   });
 });
 

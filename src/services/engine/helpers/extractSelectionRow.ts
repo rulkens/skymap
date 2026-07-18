@@ -4,13 +4,18 @@
  * the ref tag (never a predicate chain). The galaxy arm reads the cloud at the
  * index (null if the cloud isn't loaded yet — a deep link or a mid-flight tier
  * swap); the structure arm resolves the durable id to its already-serializable
- * record; the Milky Way arm is the static tag.
+ * record; the Milky Way arm is the static tag; the body arm resolves its seed
+ * id against the static SCENE_BODIES table — no deps needed, the seeds are a
+ * compile-time import, so a miss is a garbage id rather than "not loaded yet".
  *
  * This is the ONE engine-side step in the selection read path — the reconciler
  * saga calls it via getContext('resolveDeps'). Everything downstream
  * (buildFocusable) is pure and runs React-side.
  */
 import { extractGalaxyRow } from './extractGalaxyRow';
+import { resolveStarRecord } from './resolveStarRecord';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
@@ -25,6 +30,42 @@ const EXTRACT_ROW: {
     extractGalaxyRow(deps.catalogs.get(ref.source), ref.index, ref.source, deps.famousMeta),
   structure: (ref, deps) => deps.structures.byId(ref.id),
   milkyWay: () => ({ type: 'milkyWay' as const }),
+  // The position is copied (not aliased) because the row lands in the RTK
+  // store, whose immutability middleware freezes state — freezing the shared
+  // SCENE_BODIES seed would poison every other consumer of the constant.
+  body: (ref) => {
+    const body = SCENE_BODIES.find((b) => b.id === ref.id);
+    if (!body) return null;
+    return {
+      type: 'body' as const,
+      id: body.id,
+      label: body.label,
+      positionMpc: [body.positionMpc[0], body.positionMpc[1], body.positionMpc[2]],
+      radiusKm: body.radiusKm,
+    };
+  },
+  // The star's physical fields are resolved off the LIVE catalog through the
+  // shared resolveStarRecord (never re-derived here — that resolver owns the
+  // record→world math so the row lands exactly where the sprite drew). A null
+  // catalog (cloud not loaded) or an out-of-range index → null, letting the
+  // reconciler retry rather than materialise a garbage row.
+  star: (ref, deps) => {
+    const catalog = deps.stars.current();
+    if (!catalog) return null;
+    const record = resolveStarRecord(catalog, ref.index);
+    return record
+      ? {
+          type: 'star' as const,
+          index: ref.index,
+          positionMpc: record.positionMpc,
+          absMag: record.absMag,
+          bpRp: record.bpRp,
+          // No per-star size in the bin — stamp the one representative radius
+          // (the Sun's) so framing/gating treat the star as a discrete body.
+          radiusKm: SOLAR_RADIUS_KM,
+        }
+      : null;
+  },
 };
 
 export function extractSelectionRow(

@@ -43,11 +43,15 @@ import {
   selectStructureItems,
   selectGalaxyCatalogItems,
   selectMilkyWayLabelEnabled,
+  selectStarLabelsEnabled,
+  selectPlanetLabelsEnabled,
 } from '../../state/settings/selectors';
 import {
   setStructureLabelEnabled,
   setMilkyWayLabelEnabled,
   setGalaxyCatalogLabelEnabled,
+  setStarLabelsEnabled,
+  setPlanetLabelsEnabled,
 } from '../../state/settings/settingsSlice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { isStructureId } from '../../data/structure/structureIds';
@@ -59,6 +63,8 @@ function LabelsSectionContainer(): React.ReactElement {
   const structureItems = useAppSelector(selectStructureItems);
   const galaxyCatalogItems = useAppSelector(selectGalaxyCatalogItems);
   const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
+  const starLabelsEnabled = useAppSelector(selectStarLabelsEnabled);
+  const planetLabelsEnabled = useAppSelector(selectPlanetLabelsEnabled);
 
   // Project items → flat label-visibility record. Rebuilds only when any of the
   // three stable-reference inputs change.
@@ -83,10 +89,28 @@ function LabelsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onSetStarLabelsEnabled = useCallback(
+    (enabled: boolean) => {
+      dispatch(setStarLabelsEnabled(enabled));
+    },
+    [dispatch],
+  );
+
+  const onSetPlanetLabelsEnabled = useCallback(
+    (enabled: boolean) => {
+      dispatch(setPlanetLabelsEnabled(enabled));
+    },
+    [dispatch],
+  );
+
   return (
     <LabelsSection
       labelCategoryVisibility={labelCategoryVisibility}
       onSetLabelCategoryVisibility={onSetLabelCategoryVisibility}
+      starLabelsEnabled={starLabelsEnabled}
+      onSetStarLabelsEnabled={onSetStarLabelsEnabled}
+      planetLabelsEnabled={planetLabelsEnabled}
+      onSetPlanetLabelsEnabled={onSetPlanetLabelsEnabled}
     />
   );
 }

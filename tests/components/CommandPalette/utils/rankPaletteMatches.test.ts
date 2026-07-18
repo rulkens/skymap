@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { rankPaletteMatches } from '../../../../src/components/CommandPalette/utils/rankPaletteMatches';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
@@ -90,5 +91,33 @@ describe('rankPaletteMatches', () => {
   it('yields no Milky Way row for a query that matches nothing', () => {
     const rows = rankPaletteMatches([M31], [], [], 'zzznotathing');
     expect(rows.some((r) => r.kind === 'milkyWay')).toBe(false);
+  });
+});
+
+describe('rankPaletteMatches — scene-body rows', () => {
+  it("surfaces Earth for the query 'earth'", () => {
+    const rows = rankPaletteMatches([M31], [], [], 'earth');
+    const hit = rows.find((r) => r.kind === 'body');
+    expect(hit?.kind === 'body' && hit.body.id).toBe('earth');
+    expect(hit?.kind === 'body' && hit.body).toBe(SCENE_EARTH);
+  });
+
+  it('shows no body rows on an empty query (browse = famous + MW)', () => {
+    const rows = rankPaletteMatches([M31], [], [], '');
+    expect(rows.some((r) => r.kind === 'body')).toBe(false);
+  });
+
+  it('yields no body row for a query that matches no body name', () => {
+    const rows = rankPaletteMatches([M31], [], [], 'zzznotathing');
+    expect(rows.some((r) => r.kind === 'body')).toBe(false);
+  });
+
+  it('a star is findable by its Bayer alias without the deepZoom gate', () => {
+    // No deepZoom URL gate is set, yet a query for Sirius's Bayer designation
+    // (not its common name) surfaces the Sirius body row — pins both the ungate
+    // and the alias scoring over the star's full names[].
+    const rows = rankPaletteMatches([M31], [], [], 'Alpha Canis Majoris');
+    const hit = rows.find((r) => r.kind === 'body');
+    expect(hit?.kind === 'body' && hit.body.id).toBe('sirius');
   });
 });

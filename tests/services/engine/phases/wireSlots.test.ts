@@ -243,8 +243,10 @@ function makeFakeSlot(name: string): FakeSlot {
         subs.delete(fn);
       };
     },
+    lastRequest: () => null,
     forceReload: vi.fn(),
     cancel: vi.fn(),
+    release: vi.fn(),
     fire(s) {
       current = s;
       // Subs may unsubscribe themselves during dispatch — iterate a copy.
@@ -292,9 +294,12 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * post-`initGpu` shape: the GPU renderers are present (so commit
  * subscribers don't NPE), the per-source slot map is empty (the test
  * populates it per-case), the galaxy catalogs are seeded all-enabled via
- * `GALAXY_CATALOG_IDS` exactly like the engine's boot seed (so the demand loop —
- * which reads `settings.galaxyCatalogs.items[id].enabled` — demands
- * every galaxy catalog at boot), and the volume fields are seeded via
+ * `GALAXY_CATALOG_IDS` — a uniform all-on scenario, deliberately BROADER than
+ * the engine's boot seed, which derives each `enabled` from the registry's
+ * `visible` field and so leaves default-off catalogs (desiDeep) out. All-on
+ * keeps the demand loop — which reads
+ * `settings.galaxyCatalogs.items[id].enabled` — demanding every catalog whose
+ * slot a test provides. The volume fields are seeded via
  * `settings.volumes.items: seedVolumeFields()` (so the MCPM demand
  * predicate reads true at boot, as wireSlots expects).
  */
@@ -336,9 +341,11 @@ function makeState(
         depthFade: true,
         highlightFallback: true,
         realOnly: false,
-        // All galaxy catalogs enabled, mirroring the engine's boot seed — galaxy catalog
-        // demand reads these `enabled` bits (not `sources.drawMask`),
-        // so the boot-load expectations for sdss/2mrs/glade hang off this seed.
+        // All galaxy catalogs enabled (a uniform test scenario; the real boot
+        // seed derives `enabled` from each registry entry's `visible`, so
+        // desiDeep boots off) — galaxy catalog demand reads these `enabled`
+        // bits (not `sources.drawMask`), so the boot-load expectations for
+        // sdss/2mrs/glade hang off this seed.
         items: Object.fromEntries(
           GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
         ),
@@ -366,7 +373,7 @@ function makeState(
       // renderer is stubbed so CF-4 and synthetic commits can land.
       renderer: { totalCount: () => 0, loadedSources: () => [] as unknown[] } as never,
       pickRenderer: null,
-      postProcess: null,
+      renderTargets: null,
       filamentRenderer: {
         upload: vi.fn(async () => {}),
       } as never,
@@ -375,7 +382,6 @@ function makeState(
       texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
       texturedDiskRenderer: { bindAtlas: vi.fn(), bindHiResArray: vi.fn() } as never,
       proceduralDiskRenderer: {} as never,
-      milkyWayRenderer: null,
       volumeFieldRenderer: {
         upload: vi.fn(),
       } as never,
@@ -406,14 +412,28 @@ function makeState(
       },
     } as never,
     cam: null,
+    // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
+    // so both must be present; a far resting pose keeps the proximity-gated
+    // body-texture rows out of the demand set (boot-load expectations stay
+    // sdss/2mrs/glade/…, no Blue Marble fetch).
+    cameraRuntime: {
+      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity } },
+      projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
+    },
     assetSlots: {
       points: points as Map<SourceType, never>,
+      // Real (empty) map: installSlots routes the registry-built star-catalog
+      // slots here, so the fixture must carry the destination.
+      starCatalogs: new Map(),
       filaments: null,
       famousMeta: null,
       structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,
       mcpm: null,
+      // Real (empty) map: installLoadProgress walks it, and the body-texture
+      // rows are `built: 'external'` so the construction pass skips them.
+      bodyTextures: new Map(),
     },
   } as unknown as EngineState;
 }

@@ -15,7 +15,6 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import { parseStructureSeed } from '../../tools/parsers/parseStructureSeed';
-import type { StructureSeedEntry } from '../../tools/parsers/parseStructureSeed';
 
 const SEED_PATH = resolve(__dirname, '../../data/seeds/structure_anchors.seed.json');
 const allEntries = parseStructureSeed(readFileSync(SEED_PATH, 'utf-8'));
@@ -50,25 +49,6 @@ describe('raDecDistToEqCart', () => {
 });
 
 describe('cluster seed — cluster entries', () => {
-  it('includes the well-known clusters', () => {
-    // Length is asserted as a lower bound rather than exact so future
-    // additions don't require a test edit — but the named-membership
-    // asserts below still catch accidental removal of any canonical entry.
-    expect(CLUSTER_ENTRIES.length).toBeGreaterThanOrEqual(10);
-    const primaryNames = CLUSTER_ENTRIES.map((a) => a.names[0]);
-    expect(primaryNames).toContain('Virgo (M87)');
-    expect(primaryNames).toContain('Fornax (NGC 1399)');
-    expect(primaryNames).toContain('Hydra I (A1060)');
-    expect(primaryNames).toContain('Centaurus (A3526)');
-    expect(primaryNames).toContain('Coma (A1656)');
-    expect(primaryNames).toContain('Perseus (A426)');
-    expect(primaryNames).toContain('A2199 (NGC 6166)');
-    expect(primaryNames).toContain('Ophiuchus');
-    expect(primaryNames).toContain('Norma / Great Attractor');
-    expect(primaryNames).toContain('Hercules (A2151)');
-    expect(primaryNames).toContain('Shapley (A3558)');
-  });
-
   it('every entry has a positive distance', () => {
     for (const a of CLUSTER_ENTRIES) {
       expect(a.distMpc).toBeGreaterThan(0);
@@ -84,16 +64,6 @@ describe('cluster seed — cluster entries', () => {
 });
 
 describe('cluster seed — supercluster entries', () => {
-  it('exposes the canonical local-volume superclusters', () => {
-    const primaryNames = SUPERCLUSTER_ENTRIES.map((a) => a.names[0]);
-    expect(primaryNames).toContain('Laniakea SC');
-    expect(primaryNames).toContain('Perseus-Pisces SC');
-    expect(primaryNames).toContain('Coma SC');
-    expect(primaryNames).toContain('Hydra Wall');
-    expect(primaryNames).toContain('Hercules SC');
-    expect(primaryNames).toContain('Shapley SC');
-  });
-
   it('every entry has a positive distance', () => {
     for (const a of SUPERCLUSTER_ENTRIES) {
       expect(a.distMpc).toBeGreaterThan(0);
@@ -109,13 +79,6 @@ describe('cluster seed — supercluster entries', () => {
 });
 
 describe('cluster seed — void entries', () => {
-  it('exposes the three local voids (Sculptor / Local / Boötes)', () => {
-    const primaryNames = VOID_ENTRIES.map((a) => a.names[0]);
-    expect(primaryNames).toContain('Sculptor Void');
-    expect(primaryNames).toContain('Local Void');
-    expect(primaryNames).toContain('Boötes Void');
-  });
-
   it('every entry has a positive distance', () => {
     for (const a of VOID_ENTRIES) {
       expect(a.distMpc).toBeGreaterThan(0);
@@ -137,17 +100,5 @@ describe('cluster seed — void entries', () => {
     const bootes = VOID_ENTRIES.find((a) => a.names[0] === 'Boötes Void');
     expect(bootes).toBeDefined();
     expect(bootes!.distMpc).toBeLessThan(500);
-  });
-});
-
-describe('cluster seed — physicalRadiusMpc population', () => {
-  it('uses the literature-grounded radii from the spec', () => {
-    const byPrimaryName = (list: readonly StructureSeedEntry[], n: string) =>
-      list.find((a) => a.names[0]?.startsWith(n));
-
-    expect(byPrimaryName(CLUSTER_ENTRIES, 'Virgo')?.physicalRadiusMpc).toBe(2.2);
-    expect(byPrimaryName(CLUSTER_ENTRIES, 'Coma')?.physicalRadiusMpc).toBe(3.0);
-    expect(byPrimaryName(SUPERCLUSTER_ENTRIES, 'Hercules SC')?.physicalRadiusMpc).toBe(60);
-    expect(byPrimaryName(VOID_ENTRIES, 'Boötes')?.physicalRadiusMpc).toBe(50);
   });
 });

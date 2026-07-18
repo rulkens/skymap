@@ -47,14 +47,15 @@ import { useEffect, useState, useRef, type ReactElement } from 'react';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
-import { TIMED_SLOT_NAMES } from '../../services/engine/frame/passes';
+import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/frameProgram';
 import { Sparkline } from './Sparkline';
 
-// Row order = the timing registry's order, which is encoder draw order
-// (scalar-volume pre-pass, the HDR loop, tone-map, ui-overlay, pick).
-// This is the same list the service allocates query-set slots from, so a
-// renderer that joins `HDR_PASSES` gets a row here automatically.
-const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = TIMED_SLOT_NAMES;
+// Rows are grouped by the frame program's (target, slab) step structure — the
+// SAME grouping RenderTogglesSection uses, so the two lists scan positionally.
+// `TIMED_SLOT_GROUPS` is derived from the FRAME program + content-layer
+// registry (the list the timing service allocates query-set slots from), so a
+// renderer that joins the registry lands in the right group automatically. The
+// group header carries slab identity now, so there's no per-row slab badge.
 
 const AVG_WINDOW = 60;
 const SPARKLINE_WINDOW = 8;
@@ -127,14 +128,15 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
 
   // ── Branch 3: live data ───────────────────────────────────────────
   const stats = statsRef.current;
+  const avgOf = (row: SlotStats): number =>
+    row.recent.length === 0 ? 0 : row.recent.reduce((a, b) => a + b, 0) / row.recent.length;
+
   // Header sums per-slot AVG_WINDOW averages, matching the visible
   // row values. Stale slots excluded so the total reflects current
   // GPU work, not a gated-off subsystem's last cost.
   let frameTotalMs = 0;
   for (const [, row] of stats) {
-    if (row.staleFrames === 0 && row.recent.length > 0) {
-      frameTotalMs += row.recent.reduce((a, b) => a + b, 0) / row.recent.length;
-    }
+    if (row.staleFrames === 0 && row.recent.length > 0) frameTotalMs += avgOf(row);
   }
 
   return (
@@ -144,39 +146,48 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
       </summary>
       <div style={{ marginTop: 4 }}>
         {/*
-          Iterate `DISPLAY_SLOT_ORDER` (derived from HDR_PASSES + the
-          two trailing passes) rather than `stats` directly so row
-          order is stable regardless of which slot emits first.  Slots
-          that haven't sampled yet are simply skipped (no row).  This
-          keeps the panel in lockstep with the actual renderer draw
-          order — reordering HDR_PASSES in `passes/index.ts`
-          automatically reorders the timing UI.
+          Iterate `TIMED_SLOT_GROUPS` (derived from the FRAME program +
+          the CONTENT_LAYERS registry) so groups + row order stay in
+          lockstep with the actual renderer draw order — reordering
+          CONTENT_LAYERS in `passes/index.ts` automatically reorders the
+          timing UI. A slot that hasn't sampled yet is skipped; a group
+          with no sampled rows renders no header.
         */}
-        {DISPLAY_SLOT_ORDER.map((slot) => {
-          const row = stats.get(slot);
-          if (!row) return null;
-          const avg =
-            row.recent.length === 0 ? 0 : row.recent.reduce((a, b) => a + b, 0) / row.recent.length;
-          // Gate the row's opacity on staleness.  Anything beyond 0
-          // means the pass is currently gated off; keep the rolling
-          // avg + sparkline visible (so the user can see what it cost
-          // when it was on) but dimmed so they don't read it as live.
-          const isIdle = row.staleFrames > 0;
+        {TIMED_SLOT_GROUPS.map((group) => {
+          const liveRows = group.rows.filter((r) => stats.has(r.name));
+          if (liveRows.length === 0) return null;
+          // Per-group subtotal: sum of the group's non-stale row averages, so
+          // it reflects current GPU work (a gated-off row's last cost
+          // excluded), matching the header total's rule.
+          let groupMs = 0;
+          for (const r of liveRows) {
+            const row = stats.get(r.name)!;
+            if (row.staleFrames === 0 && row.recent.length > 0) groupMs += avgOf(row);
+          }
           return (
-            <div key={slot} style={isIdle ? { opacity: 0.4 } : undefined}>
-              <span style={{ display: 'inline-block', width: 130 }}>{slot}</span>
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: 70,
-                  textAlign: 'right',
-                }}
-              >
-                {avg.toFixed(1)} ms
-              </span>
-              <span style={{ marginLeft: 8 }}>
-                <Sparkline samples={row.spark} />
-              </span>
+            <div key={group.title} style={{ marginTop: 6 }}>
+              <div style={{ fontWeight: 'bold', opacity: 0.6, marginBottom: 2 }}>
+                {group.title} ({groupMs.toFixed(1)} ms)
+              </div>
+              {liveRows.map((r) => {
+                const row = stats.get(r.name)!;
+                // Gate the row's opacity on staleness.  Anything beyond 0
+                // means the pass is currently gated off; keep the rolling
+                // avg + sparkline visible (so the user can see what it cost
+                // when it was on) but dimmed so they don't read it as live.
+                const isIdle = row.staleFrames > 0;
+                return (
+                  <div key={r.name} style={isIdle ? { opacity: 0.4 } : undefined}>
+                    <span style={{ display: 'inline-block', width: 130 }}>{r.name}</span>
+                    <span style={{ display: 'inline-block', width: 70, textAlign: 'right' }}>
+                      {avgOf(row).toFixed(1)} ms
+                    </span>
+                    <span style={{ marginLeft: 8 }}>
+                      <Sparkline samples={row.spark} />
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           );
         })}

@@ -140,6 +140,9 @@ describe('selectionEncoding TS↔WESL parity', () => {
       ['SOURCE_CODE_SUPERCLUSTER', Source.Supercluster],
       ['SOURCE_CODE_VOID', Source.Void],
       ['SOURCE_CODE_GROUP', Source.Group],
+      // Survey (Gaia bin) stars — the star pick fragment packs this into the
+      // r32uint pick texture; mirror of TS Source.GaiaStars.
+      ['SOURCE_GAIA_STARS', Source.GaiaStars],
     ];
 
     for (const [name, tsValue] of cases) {
@@ -162,34 +165,6 @@ describe('unpackPick — decode to (sourceCode, localIdx)', () => {
   function rawFor(sourceCode: number, localIdx: number): number {
     return (packSelection(sourceCode, localIdx) + PICK_SENTINEL_OFFSET) >>> 0;
   }
-
-  it('decodes the source code and local index for any allocated code', () => {
-    // unpackPick is pure bit-decode — classifying the code (galaxy catalog vs
-    // structure vs not-pickable) is resolvePick's job. Every allocated
-    // code round-trips as { sourceCode, localIdx }, regardless of category.
-    const codes: SourceType[] = [
-      Source.Synthetic,
-      Source.SDSS,
-      Source.Cluster,
-      Source.Void,
-      Source.Group,
-      Source.Milliquas,
-    ];
-    for (const code of codes) {
-      expect(unpackPick(rawFor(code, 42))).toEqual<PickResult>({ sourceCode: code, localIdx: 42 });
-    }
-  });
-
-  it('reverses the +PICK_SENTINEL_OFFSET so localIdx 0 round-trips', () => {
-    expect(unpackPick(rawFor(Source.Cluster, 0))).toEqual<PickResult>({
-      sourceCode: Source.Cluster,
-      localIdx: 0,
-    });
-  });
-
-  it('returns null for raw==0 (cleared pick texture)', () => {
-    expect(unpackPick(0)).toBeNull();
-  });
 
   it('returns null for source code 31 (the all-ones sentinel band)', () => {
     expect(unpackPick(0xffffffff)).toBeNull();

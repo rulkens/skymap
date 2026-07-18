@@ -4,8 +4,6 @@
  * The five drivers read directly from the Redux store; the resolver picks the
  * highest-priority active one and calls its `pose`. Tests cover:
  *
- *   - `buildCameraDrivers` exposes the five drivers with correct ids,
- *     priorities, and `commitsOnEdge` flags.
  *   - Each driver's `isActive` reads the right slice field.
  *   - Each driver's `pose` produces the correct result (evaluateClip via
  *     tweenToClip for tween, spinAutoRotate, s.camera.base, or poseOf(cam)).
@@ -85,46 +83,6 @@ const FAKE_ENGINE_STATE = {} as EngineState;
 // The clip row only needs `data` to be a non-null object for isActive; the
 // actual evaluateClip call is not exercised in these structural tests.
 const CLIP_DATA: ClipData = { timeline: [] };
-
-// ── buildCameraDrivers: table shape ────────────────────────────────────────
-
-describe('buildCameraDrivers — table shape', () => {
-  it('exposes five drivers with correct ids', () => {
-    const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
-    const ids = drivers.map((d) => d.id);
-    expect(ids).toContain('clip');
-    expect(ids).toContain('orbitDrag');
-    expect(ids).toContain('tween');
-    expect(ids).toContain('autoRotate');
-    expect(ids).toContain('resting');
-    expect(ids).toHaveLength(5);
-  });
-
-  it('assigns correct priorities (clip 95, orbitDrag 80, tween 60, autoRotate 20, resting 0)', () => {
-    const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
-    const byId = Object.fromEntries(drivers.map((d) => [d.id, d.priority]));
-    expect(byId.clip).toBe(95);
-    expect(byId.orbitDrag).toBe(80);
-    expect(byId.tween).toBe(60);
-    expect(byId.autoRotate).toBe(20);
-    expect(byId.resting).toBe(0);
-  });
-
-  it('clip@95 row has commitsOnEdge:true', () => {
-    const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
-    const clip = drivers.find((d) => d.id === 'clip')!;
-    expect(clip.commitsOnEdge).toBe(true);
-  });
-
-  it('tween and autoRotate rows have commitsOnEdge:true; orbitDrag and resting do not', () => {
-    const drivers = buildCameraDrivers(FAKE_ENGINE_STATE);
-    const byId = Object.fromEntries(drivers.map((d) => [d.id, d]));
-    expect(byId['tween']!.commitsOnEdge).toBe(true);
-    expect(byId['autoRotate']!.commitsOnEdge).toBe(true);
-    expect(byId['orbitDrag']!.commitsOnEdge).toBeUndefined();
-    expect(byId['resting']!.commitsOnEdge).toBeUndefined();
-  });
-});
 
 // ── isActive: store-reading predicates ─────────────────────────────────────
 

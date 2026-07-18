@@ -106,4 +106,77 @@ export const Source = {
    * gate plus the look/motion defaults. Appended at 17.
    */
   Flow: 17,
+  /**
+   * DESI DR1 deep-cone galaxy catalog — a narrow, ultra-deep pencil-beam
+   * (BGS_BRIGHT + LRG + ELG_LOPnotqso + QSO tracers, NGC-only, Corona
+   * Borealis cone) reaching z ≈ 3.5, far past every other galaxy catalog
+   * source. Persisted to its own `.bin` like the other galaxy catalogs;
+   * appended at 18 — never renumber the codes below it.
+   */
+  DesiDeep: 18,
+  /**
+   * DESI DR1 dec-band wedge galaxy catalog — a 2.5°-thick, 65°-long
+   * declination-band fan (same four BGS/LRG/ELG/QSO tracers, NGC-only)
+   * across the Corona Borealis arm of the DR1 footprint. A second drill
+   * geometry through the same survey as the deep cone (see `DESI_PATCHES`);
+   * persisted to its own `.bin`, appended at 19 — never renumber the codes
+   * below it.
+   */
+  DesiWedge: 19,
+  /**
+   * DESI DR1 Sloan Great Wall galaxy catalog — the first DEPTH-bounded patch:
+   * a bounded volume floating in space rather than the cone/wedge's infinite
+   * drills, sculpted as a smooth union of ellipsoids on the wall's density
+   * peaks (see `makeEllipsoidUnionFilter`) so the selection follows the wall's
+   * true 3D extent with feathered, dissolved edges. Pure BGS by geometry
+   * (LRG/ELG/QSO have nothing at z<0.1), so it carries real photometry. A third
+   * drill geometry through the same survey (see `DESI_PATCHES`); persisted to
+   * its own `.bin`, appended at 20 — never renumber the codes below it.
+   */
+  DesiSgw: 20,
+  /**
+   * Curated, true-scale stellar neighbourhood (the Sun + the hand-picked
+   * nearby-star map) in the near-field descent — the overlay twin of the
+   * survey-wide Gaia star bin, named for the dedup story (famous stars are the
+   * curated overlay, the Gaia bin is the survey), mirroring FamousGalaxy.
+   * Not persisted to any `.bin` — a body's identity is its stable seed id, not a
+   * record index — but pickable: scene bodies draw into the NEAR0 pick texture
+   * via `drawPick`, tagged with this code. The entry is a body row that renders
+   * through its own content-layer, not the galaxy catalog points pipeline.
+   * Value 21 — the first of the three contiguous body codes. Never renumber the
+   * codes below it.
+   */
+  FamousStar: 21,
+  /**
+   * True-scale Solar-System bodies (Moon, Jupiter, …) in the near-field
+   * descent. Not persisted (identity is the stable seed id) but pickable on the
+   * NEAR0 pick pass via `drawPick`; a body row that renders through its own
+   * content-layer. Value 22. Never renumber the codes below it.
+   */
+  Planet: 22,
+  /**
+   * Textured true-scale Earth in the near-field descent. Not persisted (identity
+   * is the stable seed id) but pickable on the NEAR0 pick pass via `drawPick`;
+   * the entry is a body row that renders through its own content-layer, not the
+   * galaxy catalog points pipeline.
+   * Value 23, the last of the three contiguous body codes (FamousStar=21, Planet=22,
+   * Earth=23). Codes are append-only by VALUE; the insertion order in this
+   * const is cosmetic, so Earth keeps 23 even though its two siblings are
+   * declared above it. Never renumber the codes below it.
+   */
+  Earth: 23,
+  /**
+   * Survey-wide Gaia stellar catalog — millions of stars streamed as tiered
+   * `stars-<tier>.bin` point clouds and drawn by the star renderer. The
+   * wide-field twin of the curated `famousStar` neighbourhood (code 21): that
+   * one seeds a hand-picked map from the body store; this one loads the bulk
+   * survey from disk. The code tags the source in the NEAR0 pick texture — leaf
+   * stars ARE pickable — but is not persisted to the `.bin` (a star's identity
+   * is its record index). The stars render through their own renderer gated by a
+   * camera-distance crossfade band, never the galaxy-catalog points pipeline.
+   * Appended at 24,
+   * the first code after the three contiguous body codes (FamousStar=21,
+   * Planet=22, Earth=23). Never renumber the codes below it.
+   */
+  GaiaStars: 24,
 } as const;

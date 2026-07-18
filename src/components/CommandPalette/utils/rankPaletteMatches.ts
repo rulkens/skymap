@@ -19,6 +19,8 @@
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import { MILKY_WAY_NAMES } from '../paletteRowModel';
+import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { FAMOUS_STAR_SEARCH } from '../../../data/bodies/famousStarsIndex';
 import type { ScoredRow } from '../paletteRowModel';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
@@ -81,6 +83,29 @@ export function rankPaletteMatches(
     .filter((s) => s.score > 0);
   famousScored.sort((a, b) => b.score - a.score);
 
+  // Seeded scene bodies (Earth, the stars, the planets) are scored like a famous
+  // row; they skip the empty-query browse list (like aliases/structures) so
+  // browsing stays famous + Milky Way. The wheel-zoom floor (clampDistance.ts:
+  // MIN_DISTANCE_MPC) reaches Earth-surface scale, so a picked body always
+  // resolves to a reachable, non-sub-pixel focus target.
+  //
+  // A famous star scores over its full alias list (FAMOUS_STAR_SEARCH), so a
+  // Bayer designation ("Alpha Canis Majoris") surfaces the same row as the
+  // common name ("Sirius"). Earth/planets aren't in the map and fall back to
+  // their single label.
+  const bodyScored: ScoredRow[] = SCENE_BODIES.map<ScoredRow>((body) => {
+    const search = FAMOUS_STAR_SEARCH.get(body.id);
+    return {
+      kind: 'body',
+      body,
+      score: scoreFamousMatch(
+        { id: body.id, names: search ? search.names : [body.label], description: '' },
+        query,
+      ),
+    };
+  }).filter((s) => s.score > 0);
+  bodyScored.sort((a, b) => b.score - a.score);
+
   const aliasScored: ScoredRow[] = (aliasIndex ?? [])
     .map<ScoredRow>((entry) => ({
       kind: 'alias',
@@ -115,6 +140,7 @@ export function rankPaletteMatches(
   return [
     ...(milkyWayRow ? [milkyWayRow] : []),
     ...famousScored,
+    ...bodyScored,
     ...aliasCapped,
     ...structureCapped,
   ];

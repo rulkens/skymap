@@ -33,10 +33,30 @@ import type { MCPMReq } from '../../loading/MCPMReq';
 import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
 import type { StructureCatalogPayload } from '../../loading/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
+import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
+import type { StarCatalogReq } from '../../loading/StarCatalogReq';
 import type { SourceType } from '../../data/SourceType';
+import type { BodyTextureReq } from '../../loading/BodyTextureReq';
+import type { BodyTextureId } from '../../data/BodyTextureId';
+import type { RingTextureId } from '../../data/RingTextureId';
 
 export type EngineAssetSlots = {
   points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
+  /**
+   * Per-source survey star catalogs (the Gaia bin today) — the star twin of
+   * `points`, keyed by the numeric `Source` code so any consumer can look up
+   * a star row's slot without iterating. A SEPARATE map rather than a widened
+   * `points` because the payload/request types differ (`StarCatalog` /
+   * `StarCatalogReq` vs the galaxy pair) — one shared map would erase both to
+   * a union every consumer re-narrows. Unlike `points` (minted and
+   * self-installed in initGpu, next to the renderer the commit closes over),
+   * these slots are registry-built: `installSlots` routes numeric keys whose
+   * registry entry is `type: 'starCatalog'` into this map, and the slot's
+   * commit null-guards `state.gpu.starCatalogRenderer` instead of closing
+   * over it. Declared up-front as an empty Map (like `points`) so consumers
+   * need no null check.
+   */
+  starCatalogs: Map<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
   /**
    * Null until the GPU init IIFE constructs the filament renderer and
    * mints this slot — same lifecycle pattern as `state.gpu.renderer`.
@@ -124,6 +144,27 @@ export type EngineAssetSlots = {
    * commit only proves the fetch → decode → commit path.
    */
   flow: AssetSlot<ScalarCube, void> | null;
+  /**
+   * The keyed body-surface texture family — one slot per textured spherical body
+   * (`'earth'`, `'mars'`, …) plus the Saturn ring strip (`'saturn-ring'`),
+   * keyed by `BodyTextureId | RingTextureId`.
+   *
+   * A keyed Map that mirrors `points`: any consumer looks up a body's texture
+   * slot by id without iterating, and the family shares one fetcher +
+   * demand/release rail rather than a per-body field. Each slot is
+   * proximity-gated (demanded inside the body's own load radius, released
+   * outside twice it — hysteresis) and re-fetched at the clamped current tier on
+   * a data-volume tier change. Earth's former bespoke single-texture path folds
+   * into this family as key `'earth'`.
+   *
+   * Unlike `flow` / `cf4Density` (null-then-set named fields minted in
+   * `wireSlots`), these are minted in `initGpu` beside the body renderers their
+   * commit uploads into — the same posture as the `points` slots — so the Map is
+   * declared non-null (empty at construction, filled during `initGpu`) and
+   * consumers need no null check. A 404 / decode failure surfaces as a
+   * never-fires commit; the renderer keeps its flat-albedo placeholder.
+   */
+  bodyTextures: Map<BodyTextureId | RingTextureId, AssetSlot<ImageBitmap, BodyTextureReq>>;
   /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being

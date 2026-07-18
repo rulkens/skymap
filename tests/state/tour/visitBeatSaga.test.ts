@@ -46,6 +46,7 @@ import type { FocusCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
+import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { focusId } from '../../../src/utils/animation/focusId';
 
 // CANCEL is typed as `string` in @redux-saga/core, but its runtime value is a
@@ -84,6 +85,7 @@ const CAMERA_RUNTIME: FocusCameraRuntime = {
 const STRUCTURE_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
+  stars: { current: () => null },
   structures: {
     byId: (id) =>
       ({
@@ -104,9 +106,9 @@ const STRUCTURE_DEPS: ResolveDeps = {
 // A clip with a milkyWay focus id — resolves immediately without catalog data.
 const milkyWayClip: ClipData = flyAndFocusOnClip(focusId('milkyWay'));
 const milkyWayBeat: BeatData = {
-  clip: milkyWayClip,
+  enterClip: milkyWayClip,
   caption: { title: 'Our galaxy' },
-  dwellSec: 5,
+  dwellClip: dwellDrift(5),
 };
 
 // A clip with no focus ids — trivially ready. Used for the silent
@@ -116,9 +118,9 @@ const narrationClip: ClipData = { start: 'live', timeline: [] };
 // A clip with a structure focus id — resolves immediately (structures are always in deps).
 const structureClip: ClipData = flyAndFocusOnClip(focusId('cluster-virgo'));
 const structureBeat: BeatData = {
-  clip: structureClip,
+  enterClip: structureClip,
   caption: { title: 'Virgo Cluster' },
-  dwellSec: 3,
+  dwellClip: dwellDrift(3),
 };
 
 // ─── Harness ────────────────────────────────────────────────────────────────
@@ -202,12 +204,13 @@ describe('visitBeatSaga', () => {
       catalogs: { get: () => (cloudLoaded ? CLOUD : undefined) },
       famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 } as never],
       structures: { byId: () => null },
+      stars: { current: () => null },
     };
 
     const famousBeat: BeatData = {
-      clip: flyAndFocusOnClip(focusId(FAMOUS_ID)),
+      enterClip: flyAndFocusOnClip(focusId(FAMOUS_ID)),
       caption: { title: 'M87' },
-      dwellSec: 3,
+      dwellClip: dwellDrift(3),
     };
 
     const playClipMock = flyThenBlockingDrift(true);
@@ -285,16 +288,55 @@ describe('visitBeatSaga', () => {
     expect(store.getState().tour.beatIndex).toBe(2);
     expect(store.getState().tour.dwellNonce).toBe(0);
 
-    // advanceTour during the fly must have no effect (clip not done).
-    store.dispatch(advanceTour());
-    await flush();
-    expect(store.getState().tour.dwellNonce).toBe(0);
-
     // Land the fly — the dwell now begins and the nonce bumps.
     resolveFly();
     await flush();
     await flush();
     expect(store.getState().tour.dwellNonce).toBe(1);
+  });
+
+  // ── (3b) navigation during the FLY skips it — the enter clip is not a lock ──
+
+  it("returns 'next' when advanceTour arrives mid-fly, cancelling the fly and skipping the dwell", async () => {
+    let flyCancelled = false;
+    const playClipMock = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
+      // The fly never lands on its own; it must be cancelled by the race.
+      const p = new Promise<void>(() => {}) as Promise<void> & { [key: symbol]: () => void };
+      p[CANCEL_SYM] = () => {
+        flyCancelled = true;
+      };
+      return p;
+    });
+
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+
+    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 0);
+    await flush(); // saga reaches the fly race and awaits
+
+    store.dispatch(advanceTour());
+    const outcome = await task.toPromise();
+
+    expect(outcome).toBe('next');
+    expect(flyCancelled).toBe(true);
+    // The dwell never started — the caption/ring nonce stays untouched.
+    expect(store.getState().tour.dwellNonce).toBe(0);
+  });
+
+  it("returns 'prev' when prevBeat arrives mid-fly", async () => {
+    const playClipMock = vi
+      .fn<(clip: ClipData) => Promise<void>>()
+      .mockImplementation(() => new Promise<void>(() => {}));
+
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+
+    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 1);
+    await flush();
+
+    store.dispatch(prevBeat());
+    const outcome = await task.toPromise();
+
+    expect(outcome).toBe('prev');
+    expect(store.getState().tour.dwellNonce).toBe(0);
   });
 
   // ── (4) advanceTour during the dwell resolves to 'next' ───────────────────
@@ -347,7 +389,11 @@ describe('visitBeatSaga', () => {
   it("returns 'next' when the dwell timer expires with no input", async () => {
     vi.useFakeTimers();
 
-    const shortDwellBeat: BeatData = { clip: narrationClip, caption: null, dwellSec: 2 };
+    const shortDwellBeat: BeatData = {
+      enterClip: narrationClip,
+      caption: null,
+      dwellClip: dwellDrift(2),
+    };
     const { sagaMiddleware } = buildStore({ playClip: flyThenBlockingDrift(true) });
 
     const task = sagaMiddleware.run(visitBeatSaga, shortDwellBeat, 0);
@@ -406,7 +452,25 @@ describe('visitBeatSaga', () => {
     expect(store.getState().tour.paused).toBe(false);
   });
 
-  // ── (9) in-clip focus path: resolved clip carries a { kind: 'focus', ref } cue ──
+  // ── (9) a clip-less beat starts its dwell immediately ─────────────────────
+
+  it('a beat with no enterClip skips the fly: the dwell starts at once and only the dwell clip plays', async () => {
+    const playClipMock = flyThenBlockingDrift(true);
+    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
+
+    const clipLessBeat: BeatData = { caption: { title: 'Still here' }, dwellClip: dwellDrift(5) };
+    sagaMiddleware.run(visitBeatSaga, clipLessBeat, 1);
+
+    await flush();
+
+    // No establishing fly — the dwell begins immediately (nonce bumped, length
+    // recorded) and the only playClip call is the dwell clip.
+    expect(store.getState().tour.dwellNonce).toBe(1);
+    expect(store.getState().tour.dwellSec).toBe(5);
+    expect(playClipMock).toHaveBeenCalledTimes(1);
+  });
+
+  // ── (10) in-clip focus path: resolved clip carries a { kind: 'focus', ref } cue ──
 
   it('a flyAndFocusOnClip beat resolves its focusId cue to a concrete focus ref', async () => {
     const playClipMock = flyThenBlockingDrift(true);

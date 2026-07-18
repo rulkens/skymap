@@ -31,7 +31,7 @@ export type SourceEntryBase = {
    * label subsystem. The two real label sets are:
    *   - galaxyNames layer: famousGalaxy
    *   - structure layer:   cluster, supercluster, void, group
-   * All bulk galaxy catalogs (sdss, glade, 2mrs, milliquas, synthetic) are false.
+   * All bulk galaxy catalogs (sdss, glade, 2mrs, milliquas, desiDeep, synthetic) are false.
    */
   readonly bearsLabel: boolean;
   /**

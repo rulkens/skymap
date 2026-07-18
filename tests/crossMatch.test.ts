@@ -68,6 +68,7 @@ describe('crossMatch', () => {
       // and dropped in favour of the higher-priority SDSS record.
       twoMrs: [rec(Source.TwoMRS, 180.0001, 0, 0.10005)],
       glade: [],
+      desiPatches: [],
     });
     expect(out).toHaveLength(1);
     expect(out[0]!.source).toBe(Source.SDSS);
@@ -82,6 +83,7 @@ describe('crossMatch', () => {
       sdss: [rec(Source.SDSS, 180, 0, 0.1)],
       twoMrs: [],
       glade: [rec(Source.Glade, 180, 0, 0.5)],
+      desiPatches: [],
     });
     expect(out).toHaveLength(2);
   });
@@ -94,6 +96,7 @@ describe('crossMatch', () => {
       sdss: [],
       twoMrs: [rec(Source.TwoMRS, 180, 0, 0.05)],
       glade: [rec(Source.Glade, 180.0001, 0, 0.05005)],
+      desiPatches: [],
     });
     expect(out).toHaveLength(1);
     expect(out[0]!.source).toBe(Source.TwoMRS);
@@ -107,7 +110,100 @@ describe('crossMatch', () => {
       sdss: [],
       twoMrs: [],
       glade: [rec(Source.Glade, 30, -25, 0.001), rec(Source.Glade, 200, -43, 0.001)],
+      desiPatches: [],
     });
     expect(out).toHaveLength(2);
+  });
+
+  // DESI Deep is the lowest-priority input — concatenated last, so it can
+  // only claim sky+z neighbourhoods nobody else already claimed. These
+  // three tests pin down the three shapes that matter: dedup against a
+  // higher-priority survey, finger-of-god preservation among DESI's own
+  // rows, and the untouched-passthrough case.
+  it('drops a DESI record within 5 arcsec and 1% z of an SDSS record (SDSS wins)', () => {
+    const out = crossMatch({
+      sdss: [rec(Source.SDSS, 180, 0, 0.1)],
+      twoMrs: [],
+      glade: [],
+      // Same ~0.36 arcsec / ~0.05% offsets as the SDSS-vs-2MRS dedup test
+      // above — well within both tolerances, so this DESI row is the
+      // low-z BGS overlap the priority rule exists to collapse away.
+      desiPatches: [[rec(Source.DesiDeep, 180.0001, 0, 0.10005)]],
+    });
+    expect(out).toHaveLength(1);
+    expect(out[0]!.source).toBe(Source.SDSS);
+  });
+
+  it('keeps a DESI same-sightline pair when Δz is beyond tolerance (finger-of-god survives)', () => {
+    // Two DESI rows at the identical sky position but z 0.07 vs 0.09:
+    // |Δz|/(1+min(z)) = 0.02/1.07 ≈ 1.9%, past the 1% gate, so both are
+    // real distinct cluster members rather than one row seen twice. This
+    // is the exact behaviour the deep-cone source exists to exploit —
+    // dense enough sampling that real fingers of god show up as several
+    // close-but-distinct redshifts along one line of sight.
+    const out = crossMatch({
+      sdss: [],
+      twoMrs: [],
+      glade: [],
+      desiPatches: [
+        [rec(Source.DesiDeep, 233.2, 32.3, 0.07), rec(Source.DesiDeep, 233.2, 32.3, 0.09)],
+      ],
+    });
+    expect(out).toHaveLength(2);
+  });
+
+  it('passes a DESI-only sky region through untouched', () => {
+    // No other survey contributes anything at these positions — DESI rows
+    // with no candidate match in the grid must survive exactly as parsed.
+    const out = crossMatch({
+      sdss: [],
+      twoMrs: [],
+      glade: [],
+      desiPatches: [
+        [rec(Source.DesiDeep, 233.2, 32.3, 0.07), rec(Source.DesiDeep, 234.5, 31.1, 0.7)],
+      ],
+    });
+    expect(out).toHaveLength(2);
+    expect(out.every((r) => r.source === Source.DesiDeep)).toBe(true);
+  });
+
+  it('does NOT dedup one DESI patch against another (cone↔wedge overlap survives)', () => {
+    // The cone and the wedge overlap on the sky: ~15k rows fall in both. A
+    // wedge row at the identical sky position AND redshift as a cone row must
+    // still ship in both bins — deduping siblings would punch a hole in the
+    // wedge whenever the cone toggles off. Each patch is an independent group,
+    // so both survive here even though, within a single group, they'd collapse.
+    const shared = { ra: 233.2, dec: 30.9, z: 0.08 };
+    const out = crossMatch({
+      sdss: [],
+      twoMrs: [],
+      glade: [],
+      desiPatches: [
+        [rec(Source.DesiDeep, shared.ra, shared.dec, shared.z)],
+        [rec(Source.DesiWedge, shared.ra, shared.dec, shared.z)],
+      ],
+    });
+    expect(out).toHaveLength(2);
+    expect(out.map((r) => r.source).sort()).toEqual(
+      [Source.DesiDeep, Source.DesiWedge].sort(),
+    );
+  });
+
+  it('DOES dedup DESI rows within a single patch (position + z match)', () => {
+    // Isolation is per-patch, not blanket "DESI never dedups". Two rows in the
+    // SAME group at the same position and z are one object seen twice → the
+    // second drops, exactly as SDSS-internal duplicates would.
+    const out = crossMatch({
+      sdss: [],
+      twoMrs: [],
+      glade: [],
+      desiPatches: [
+        [
+          rec(Source.DesiDeep, 233.2, 30.9, 0.08),
+          rec(Source.DesiDeep, 233.20005, 30.9, 0.08),
+        ],
+      ],
+    });
+    expect(out).toHaveLength(1);
   });
 });

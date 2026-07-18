@@ -11,6 +11,7 @@ import {
   milliquasParentSurveyPrefix,
   MILLIQUAS_CLASS_BYTE,
   MILLIQUAS_PARENT_SURVEY_BYTE,
+  DESI_TRACER_CLASS,
 } from '../../../src/data/galaxyCatalog/sourceClass';
 import { Source } from '../../../src/data/sources';
 
@@ -28,7 +29,21 @@ describe('sourceClassLabel', () => {
     expect(sourceClassLabel(Source.Milliquas, 0)).toBeNull();
   });
 
-  it('returns null for any non-Milliquas source today', () => {
+  it('maps each DESI tracer class byte to a tracer-flavoured label', () => {
+    expect(sourceClassLabel(Source.DesiDeep, DESI_TRACER_CLASS.BGS)).toContain('BGS');
+    expect(sourceClassLabel(Source.DesiDeep, DESI_TRACER_CLASS.LRG)).toContain('LRG');
+    expect(sourceClassLabel(Source.DesiDeep, DESI_TRACER_CLASS.ELG)).toContain('ELG');
+    expect(sourceClassLabel(Source.DesiDeep, DESI_TRACER_CLASS.QSO)).toContain('QSO');
+  });
+
+  it('returns null for DESI byte 0 (unclassified) and unrecognised DESI bytes', () => {
+    expect(sourceClassLabel(Source.DesiDeep, 0)).toBeNull();
+    expect(sourceClassLabel(Source.DesiDeep, 99)).toBeNull();
+    expect(sourceClassLabel(Source.DesiWedge, 0)).toBeNull();
+    expect(sourceClassLabel(Source.DesiSgw, 0)).toBeNull();
+  });
+
+  it('returns null for any source without class semantics today', () => {
     expect(sourceClassLabel(Source.SDSS, 0)).toBeNull();
     expect(sourceClassLabel(Source.SDSS, 1)).toBeNull();
     expect(sourceClassLabel(Source.TwoMRS, 5)).toBeNull();

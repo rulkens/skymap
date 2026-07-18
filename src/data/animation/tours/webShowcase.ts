@@ -10,18 +10,17 @@
  * galaxy ids at playback time — the guided-tour path (`visitBeatSaga` →
  * `flyToClip` / `flyAndFocusOnClip`) — so it is a `Tour`, not a static `Clip`.
  *
- * ### Scene setup
+ * ### Scene strip
  *
- * `setup.effects` strips the scene before the first beat: cosmic-web volumes,
- * filaments, and famous-galaxy labels all OFF, leaving galaxy points + structure
- * rings + their names. The guided-tour snapshot/restore pair winds all three
- * back when the tour exits, so these changes are transient.
+ * Beat 1's clip opens with a `hide()` sweep: cosmic-web volumes, filaments, and
+ * famous-galaxy labels all OFF, leaving galaxy points + structure rings + their
+ * names. In-clip (not a tour-level setup list) so there is one authoring
+ * surface; the guided-tour snapshot/restore winds it back when the tour exits.
  *
  * ### Beats
  *
  *   1. Milky Way — the establishing wide read on the named cosmic web.
- *      Camera-only (`flyToClip`): no focus change; the scene is already stripped
- *      by `setup.effects`.
+ *      Scene strip + camera move; no focus change.
  *   2. Virgo Cluster — `flyAndFocusOnClip` fires a `focus(id)` cue at beat
  *      start, then moves the camera in. The focus cue isolates the cluster:
  *      members stay bright, the rest of the sky recedes via `focusRecession`.
@@ -43,25 +42,26 @@
  */
 
 import type { Tour } from '../../../@types/animation/tour/Tour';
-import {
-  setFilamentsEnabled,
-  setGalaxyCatalogLabelEnabled,
-  setVolumesEnabled,
-} from '../../../state/settings/settingsSlice';
+import type { ClipData } from '../../../@types/animation/ClipData';
+import { hide } from '../../../services/engine/animation/effectHelpers';
 import { flyToClip } from '../../../state/tour/flyToClip';
 import { flyAndFocusOnClip } from '../../../state/tour/flyAndFocusOnClip';
+import { dwellDrift } from '../../../state/tour/dwellDrift';
 import { focusId } from '../../../utils/animation/focusId';
+
+// Beat 1 = flyToClip's establishing move, prefixed with the scene strip. The
+// strip snaps (over 0) so the tour opens on a clean frame, not mid-fade.
+const establishTheWeb: ClipData = (() => {
+  const fly = flyToClip(focusId('milkyWay'));
+  return {
+    ...fly,
+    timeline: [hide(['volumesMaster', 'filaments', 'surveyLabel'], 0), ...fly.timeline],
+  };
+})();
 
 export const webShowcase: Tour = {
   id: 'webShowcase',
   label: 'Named Cosmic Web',
-  setup: {
-    effects: [
-      setVolumesEnabled(false),
-      setFilamentsEnabled(false),
-      setGalaxyCatalogLabelEnabled({ id: 'famousGalaxy', enabled: false }),
-    ],
-  },
   beats: [
     {
       caption: {
@@ -69,8 +69,8 @@ export const webShowcase: Tour = {
         body: "Home — a few hundred billion stars, and the one vantage point in this entire map you're looking out **from**.",
         position: 'bottom-left',
       },
-      dwellSec: 8,
-      clip: flyToClip(focusId('milkyWay')),
+      dwellClip: dwellDrift(8),
+      enterClip: establishTheWeb,
     },
     {
       caption: {
@@ -78,8 +78,8 @@ export const webShowcase: Tour = {
         body: 'Two thousand galaxies bound by gravity — the dense heart of the supercluster we call **home**, 54 million light-years away.',
         position: 'bottom-left',
       },
-      dwellSec: 10,
-      clip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
+      dwellClip: dwellDrift(10),
+      enterClip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
     },
     {
       caption: {
@@ -87,8 +87,8 @@ export const webShowcase: Tour = {
         body: "The cluster's giant — a trillion stars around a black hole six billion times the Sun's mass, the **first ever photographed**.",
         position: 'bottom-right',
       },
-      dwellSec: 10,
-      clip: flyToClip(focusId('m87')),
+      dwellClip: dwellDrift(10),
+      enterClip: flyToClip(focusId('m87')),
     },
   ],
 };

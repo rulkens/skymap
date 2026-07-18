@@ -65,6 +65,10 @@ function baseProps() {
   return {
     labelCategoryVisibility: allOnVisibility(),
     onSetLabelCategoryVisibility: vi.fn<(category: LabelCategory, visible: boolean) => void>(),
+    starLabelsEnabled: true,
+    onSetStarLabelsEnabled: vi.fn<(enabled: boolean) => void>(),
+    planetLabelsEnabled: true,
+    onSetPlanetLabelsEnabled: vi.fn<(enabled: boolean) => void>(),
   };
 }
 
@@ -90,13 +94,31 @@ describe('LabelsSection', () => {
       expect(headerCheckbox.indeterminate).toBe(true);
     });
 
-    it('is unchecked (noneOn) when no categories are enabled', () => {
-      const props = { ...baseProps(), labelCategoryVisibility: noneOnVisibility() };
+    it('is unchecked (noneOn) when no categories and no foreground rows are enabled', () => {
+      const props = {
+        ...baseProps(),
+        labelCategoryVisibility: noneOnVisibility(),
+        starLabelsEnabled: false,
+        planetLabelsEnabled: false,
+      };
       const { container } = render(createElement(LabelsSection, props));
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       expect(headerCheckbox.checked).toBe(false);
       expect(headerCheckbox.indeterminate).toBe(false);
+    });
+
+    it('is indeterminate when all categories are on but a foreground row is off', () => {
+      // The two foreground caption rows (star names, planet names) count toward
+      // the master tri-state: with every COSMO category on but the star-names
+      // row off, the section is a mixed set — the master must read indeterminate,
+      // not checked. This is the pin for the rows joining the master.
+      const props = { ...baseProps(), starLabelsEnabled: false };
+      const { container } = render(createElement(LabelsSection, props));
+      const headerCheckbox =
+        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
+      expect(headerCheckbox.checked).toBe(false);
+      expect(headerCheckbox.indeterminate).toBe(true);
     });
   });
 
@@ -151,17 +173,23 @@ describe('LabelsSection', () => {
       expect(onSetLabelCategoryVisibility).toHaveBeenCalledWith('famousGalaxy', false);
     });
 
-    it('calls onSetLabelCategoryVisibility for all LABEL_CATEGORIES when master toggled from noneOn', () => {
+    it('calls every category AND both foreground callbacks with true when master toggled from noneOn', () => {
       const onSetLabelCategoryVisibility =
         vi.fn<(category: LabelCategory, visible: boolean) => void>();
+      const onSetStarLabelsEnabled = vi.fn<(enabled: boolean) => void>();
+      const onSetPlanetLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const props = {
         ...baseProps(),
         labelCategoryVisibility: noneOnVisibility(),
+        starLabelsEnabled: false,
+        planetLabelsEnabled: false,
         onSetLabelCategoryVisibility,
+        onSetStarLabelsEnabled,
+        onSetPlanetLabelsEnabled,
       };
       const { container } = render(createElement(LabelsSection, props));
 
-      // noneOn → master click sets all to true.
+      // noneOn → master click sets all rows to true, foreground rows included.
       // Master checkbox is the first input — in the header, always accessible.
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
@@ -171,19 +199,25 @@ describe('LabelsSection', () => {
       for (const cat of LABEL_CATEGORIES) {
         expect(onSetLabelCategoryVisibility).toHaveBeenCalledWith(cat, true);
       }
+      expect(onSetStarLabelsEnabled).toHaveBeenCalledWith(true);
+      expect(onSetPlanetLabelsEnabled).toHaveBeenCalledWith(true);
     });
 
-    it('calls onSetLabelCategoryVisibility with false for all LABEL_CATEGORIES when master toggled from allOn', () => {
+    it('calls every category AND both foreground callbacks with false when master toggled from allOn', () => {
       const onSetLabelCategoryVisibility =
         vi.fn<(category: LabelCategory, visible: boolean) => void>();
+      const onSetStarLabelsEnabled = vi.fn<(enabled: boolean) => void>();
+      const onSetPlanetLabelsEnabled = vi.fn<(enabled: boolean) => void>();
       const props = {
         ...baseProps(),
         labelCategoryVisibility: allOnVisibility(),
         onSetLabelCategoryVisibility,
+        onSetStarLabelsEnabled,
+        onSetPlanetLabelsEnabled,
       };
       const { container } = render(createElement(LabelsSection, props));
 
-      // allOn → master click sets all to false.
+      // allOn → master click clears every row, foreground rows included.
       const headerCheckbox =
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
@@ -192,6 +226,8 @@ describe('LabelsSection', () => {
       for (const cat of LABEL_CATEGORIES) {
         expect(onSetLabelCategoryVisibility).toHaveBeenCalledWith(cat, false);
       }
+      expect(onSetStarLabelsEnabled).toHaveBeenCalledWith(false);
+      expect(onSetPlanetLabelsEnabled).toHaveBeenCalledWith(false);
     });
   });
 });

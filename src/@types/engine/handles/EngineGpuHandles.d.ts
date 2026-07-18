@@ -28,7 +28,7 @@
  * **Every field on this bag shares the same lifecycle rule** — null
  * before bootstrap, non-null after `initGpu` resolves, released and
  * re-nulled by `destroy()`.  That symmetry is load-bearing: the
- * `texturedDiskRenderer` / `proceduralDiskRenderer` / `milkyWayRenderer`
+ * `texturedDiskRenderer` / `proceduralDiskRenderer` / `milkyWayCloudRenderer`
  * fields exist on this bag specifically so the `destroy()` chain has a
  * reachable reference to call `.destroy()` on — they are not consumed
  * via this bag at runtime (the frame loop receives them through
@@ -40,9 +40,9 @@
  */
 
 import type { PointRenderer } from '../../rendering/PointRenderer';
-import type { PostProcess } from '../../rendering/PostProcess';
-import type { VolumeOffscreen } from '../../rendering/VolumeOffscreen';
+import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { PickRenderer } from '../../rendering/PickRenderer';
+import type { PickProgram } from '../frame/PickProgram';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
@@ -53,29 +53,53 @@ import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRen
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
+import type { StarAggregateUpsample } from '../../rendering/StarAggregateUpsample';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
-import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { MilkyWayCloud } from '../../galaxy/MilkyWayCloud';
+import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
+import type { EarthRenderer } from '../../rendering/EarthRenderer';
+import type { StarRenderer } from '../../rendering/StarRenderer';
+import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
+import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
+import type { RingRenderer } from '../../rendering/RingRenderer';
+import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
+import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
+import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
+import type { StarCatalogPickRenderer } from '../../rendering/StarCatalogPickRenderer';
+import type { BodyPickRenderer } from '../../rendering/BodyPickRenderer';
+import type { OrbitTrailRenderer } from '../../rendering/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
+import type { Compositor } from '../../rendering/Compositor';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
   pickRenderer: PickRenderer | null;
   /**
+   * The parallel per-slab pick program over the content-layer registry.
+   * Owns the hover / click / debug-overlay pick path: it filters the registry
+   * by `drawPick` presence + `enabled`, re-rasterises each pickable slab into
+   * its own r32uint target, reads back the cursor texel, and folds the results
+   * near→far. Constructed in `wireInput` (alongside `pickRenderer`, from which
+   * it borrows the point-pick draw provider) once the registry + GPU handles
+   * exist; null until then. Destroyed in teardown alongside the other pick
+   * providers — it owns per-slab pick + depth textures and staging buffers.
+   */
+  pickProgram: PickProgram | null;
+  /**
    * Invisible, pick-only Milky-Way billboard.  Stamps the MW identity
    * into the r32uint pick texture so the galactic centre is clickable.
-   * Constructed in `wireInput` alongside `pickRenderer` (it is one of the
-   * pick pass's optional providers) and threaded into `createPickRenderer`.
-   * Null until then; destroyed in teardown alongside the other pick
-   * providers.  Drawn only while the MW disk is on screen (gated by the
-   * callback the pick renderer holds).
+   * Constructed in `wireInput`; null until then.  Drawn by the Milky-Way
+   * layer's own `drawPick` row in the content-layer registry, gated by the
+   * layer's `enabled` predicate so it only stamps while the disk is on
+   * screen.  Destroyed in teardown alongside the other pick providers.
    */
   milkyWayPickRenderer: MilkyWayPickRenderer | null;
   /**
@@ -111,23 +135,25 @@ export type EngineGpuHandles = {
    */
   focusUniform: FocusUniformBuffer | null;
   /**
-   * Combined HDR offscreen target + tone-map post-process.  One field
-   * because their lifetimes are identical and they're always used
-   * together (HDR pass writes the texture, post-process samples it).
-   * See `services/gpu/postProcess.ts` for the rationale.
+   * The offscreen render-target table — one owner for every offscreen
+   * row's (`hdr`, `volume`, …) texture lifecycle, resized as a unit on
+   * canvas resize.  See `services/gpu/renderTargets.ts` for the target
+   * table + the per-row rationale (why the HDR offscreen exists, why the
+   * volume row renders at 1/3 scale).
    */
-  postProcess: PostProcess | null;
+  renderTargets: RenderTargets | null;
   /**
-   * Half-resolution intermediate render target consumed by the scalar-
-   * volume pass.  Volume fields raymarch into this target at 1/4 the
-   * fragment count (floor(canvas/2) on each axis), then the upsample
-   * pass bilinearly samples it and additively blends into the HDR
-   * target.  Resized in lockstep with `postProcess`, but kept as a
-   * separate module because conceptually it has nothing to do with
-   * the tone-map (postProcess only ever reads the HDR view).  See
-   * `services/gpu/passes/volumeOffscreen.ts` for the full rationale.
+   * Unified 'merge offscreen texture into target' primitive — the single
+   * pipeline cache every composite draw (tone-mapped HDR→swap, foreground
+   * OVER, additive field→HDR) shares. Constructed once in `initGpu`
+   * alongside the render targets; the blend→dstFormat mapping baked in
+   * at construction is a constructor argument rather than a per-draw one
+   * because a render-pass encoder cannot be queried for its own colour-
+   * attachment format. Null until `initGpu` resolves; released and
+   * re-nulled by `destroy()`, which must reach it because it owns the
+   * cached pipelines' uniform buffers.
    */
-  volumeOffscreen: VolumeOffscreen | null;
+  compositor: Compositor | null;
   /**
    * Cosmic-web filament-skeleton renderer.  Constructed unconditionally
    * during GPU init (the pipeline is cheap), stays empty-segment until
@@ -142,16 +168,45 @@ export type EngineGpuHandles = {
    * `loadFontAtlas()` fetch and constructs the renderer against the
    * decoded atlas bitmap.  Excluded from the `isEngineReady` predicate
    * — same rationale as `filamentRenderer`: the atlas load is async and
-   * optional from the engine's perspective; the `labelsPass` null-checks
+   * optional from the engine's perspective; the `labelsLayer` null-checks
    * this field at point of use.  Stored here so `destroy()` can release
    * the GPU buffers (uniform + storage + instance + corner + atlas texture).
    */
   labelRenderer: LabelRenderer | null;
   /**
+   * Second MSDF label renderer for the true-scale foreground bodies
+   * (zoom-to-Earth).  Separate from `labelRenderer` because the scene-body
+   * captions project through the NEAR0 slab view — whose near plane scales
+   * with `cam.distance` so it always contains the bodies — rather than the
+   * galaxy-scale `vp` the main labels use, and one renderer draws with one
+   * view-projection.  Holds the static `sceneBodyLabels()` set (Earth, the
+   * local star map, the planets), uploaded once at construction.  Null until
+   * `initGpu` builds it against the font atlas; excluded from
+   * `isEngineReady` and null-checked at use, like `labelRenderer`.
+   * Released and re-nulled by `destroy()`.
+   */
+  foregroundLabelRenderer: LabelRenderer | null;
+  /**
+   * Second thick screen-space line renderer, the leader-line sibling of
+   * `foregroundLabelRenderer`.  A SEPARATE instance from `markerLineRenderer`
+   * for the same reason `foregroundLabelRenderer` is separate from
+   * `labelRenderer`: the scene-body leader lines project through the NEAR0
+   * slab (whose near plane scales with `cam.distance` so it always contains
+   * the AU-scale bodies), while `markerLineRenderer`'s director-driven lines
+   * project through the galaxy-scale COSMO `vp` that would clip the bodies
+   * away — and one renderer draws with one view-projection.  Drawn by
+   * `foregroundLabelsLayer`, which rebases its connectors into the
+   * camera-relative frame each frame exactly as it rebases the captions.
+   * Null until `initGpu` builds it (same UI ctx / swap-chain format as the
+   * caption renderer, no atlas dep); excluded from `isEngineReady` and
+   * null-checked at use.  Released and re-nulled by `destroy()`.
+   */
+  foregroundMarkerLineRenderer: MarkerLineRenderer | null;
+  /**
    * Thick screen-space line overlay renderer.  Null until `initGpu`
    * constructs it alongside `labelRenderer` (same phase, no atlas dep).
    * Excluded from the `isEngineReady` predicate for the same reason as
-   * `labelRenderer`.  The `markerLinesPass` null-checks this field at
+   * `labelRenderer`.  The `markerLinesLayer` null-checks this field at
    * point of use.  Stored here so `destroy()` can release the GPU
    * buffers (uniform + instance + corner).
    */
@@ -160,7 +215,7 @@ export type EngineGpuHandles = {
    * Dedicated debug-draw thick-line renderer — the substrate for the clip-path
    * inspector overlay (speed-coloured route + scrub gizmo). Constructed
    * alongside `markerLineRenderer` (same UI ctx, swap-chain format, no atlas
-   * dep), but decoupled from the label director: the `clipPathDebugPass`
+   * dep), but decoupled from the label director: the `clipPathDebugLayer`
    * null-checks it and feeds it a freshly built `DebugLine[]` each frame.
    * Excluded from `isEngineReady`. Stored here so `destroy()` releases its GPU
    * buffers (uniform + instance + corner).
@@ -169,7 +224,7 @@ export type EngineGpuHandles = {
   /**
    * Selection-ring overlay renderer — draws a white annulus around the
    * currently-selected galaxy on the swap-chain UI overlay. Null until
-   * `initGpu` constructs it; `selectionRingPass` null-checks at point
+   * `initGpu` constructs it; `selectionRingLayer` null-checks at point
    * of use. Stored here so `destroy()` can release the renderer's
    * two uniform buffers and bind group.
    */
@@ -206,11 +261,24 @@ export type EngineGpuHandles = {
    */
   proceduralDiskRenderer: ProceduralDiskRenderer | null;
   /**
-   * Procedural Milky-Way impostor renderer at world origin.  Same
-   * lifecycle, same reachability rationale, and same isEngineReady
-   * exclusion as `texturedDiskRenderer` above.
+   * GPU-generated Milky-Way star+dust point cloud — the buffer resource
+   * (per-tier star/dust instance buffers + regenerate/destroy) that the
+   * `milkyWayCloudRenderer` draws.  Null until `initGpu` generates the first
+   * tier's cloud; regenerated in `makeRunTierTransition` on a tier swap.
+   * Same lifecycle + isEngineReady exclusion as the other optional GPU
+   * resources; stored here so `destroy()` can release the star/dust vertex
+   * buffers + the reused generation UBO.
    */
-  milkyWayRenderer: MilkyWayRenderer | null;
+  milkyWayCloud: MilkyWayCloud | null;
+  /**
+   * The two-pass (additive stars + multiplicative dust) renderer that draws
+   * `milkyWayCloud` on the HDR path.  Null until `initGpu` constructs it;
+   * `milkyWayLayer` reads it off `state.gpu.*` at draw time.  Stored here
+   * so `destroy()` can release its shared uniform + corner-quad buffers.
+   * Excluded from `isEngineReady` (same rationale as the other optional
+   * renderers).
+   */
+  milkyWayCloudRenderer: MilkyWayCloudRenderer | null;
   /**
    * Cosmic-horizon shell renderer — translucent sphere at the
    * comoving particle-horizon radius.  Same lifecycle as the other
@@ -222,7 +290,7 @@ export type EngineGpuHandles = {
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — the renderer is
-   * optional at runtime; the `volumeUpsamplePass.enabled` gate checks
+   * optional at runtime; the `volumeUpsampleLayer.enabled` gate checks
    * the master `volumesEnabled` setting first and then consults
    * `hasActiveFields()`, so a null handle (pre-bootstrap or destroyed)
    * is silently a no-op.  Stored here so `destroy()` can release every
@@ -234,7 +302,7 @@ export type EngineGpuHandles = {
    * CF4++ peculiar-velocity flow-field renderer — the engine's first compute
    * renderer. Null until `initGpu` constructs it (same phase as the other
    * optional renderers). Excluded from the `isEngineReady` predicate: the layer
-   * is default-off and demand-loaded, and `encodeFlowCompute` / `flowFieldPass`
+   * is default-off and demand-loaded, and `encodeFlowCompute` / `flowFieldLayer`
    * null-check the handle alongside the `settings.flow.enabled` +
    * `slotReady(assetSlots.flow)` gate, so a null handle is a silent no-op. Stored here so
    * `destroy()` can release the particle buffers, the three compute pipelines,
@@ -245,11 +313,22 @@ export type EngineGpuHandles = {
    * Half-res-to-HDR volume upsample pass.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — when null, the
-   * `volumeUpsamplePass` skips its draw (so a null handle is a silent
+   * `volumeUpsampleLayer` skips its draw (so a null handle is a silent
    * no-op).  Stored here so `destroy()` can release the pipeline +
    * sampler + bind-group-layout.
    */
   volumeUpsample: VolumeUpsample | null;
+  /**
+   * Half-res-to-HDR survey-star aggregate upsample composite. Reads the
+   * `star-aggregates` offscreen the aggregate stream drew LINEAR into,
+   * re-applies the star pass's hue-preserving knee to the summed field, and
+   * additively blends the result into HDR (the LOD-symmetry fix). Null until
+   * `initGpu` constructs it (same phase as `volumeUpsample`). Excluded from
+   * `isEngineReady` — when null, `starAggregateUpsampleLayer` skips its draw, so
+   * a null handle is a silent no-op. Stored here so `destroy()` can release the
+   * pipeline + sampler + bind-group-layout via the pass's no-op destroy method.
+   */
+  starAggregateUpsample: StarAggregateUpsample | null;
   /**
    * Pick-buffer debug overlay — fullscreen colour-map of the r32uint
    * pick texture over the tone-mapped frame.  Null until `initGpu`
@@ -271,6 +350,168 @@ export type EngineGpuHandles = {
    * uniform buffers, so the `destroy()` chain must release it.
    */
   diskRadiusRing: DiskRadiusRing | null;
+  /**
+   * True-scale, Blue-Marble-textured Earth drawn into the `foreground:0`
+   * render-target row (Plan 02 — zoom-to-Earth).  Same UV-sphere mesh as the
+   * star/planet renderers below, but shaded by sampling an equirectangular
+   * Blue Marble bitmap. Its ('rgba16float', 'depth32float') pipeline formats
+   * MUST match that row's `format` / `depth` in `renderTargets.ts` — the
+   * target↔renderer-profile invariant. Constructed in `initGpu`, which also
+   * mints its surface texture into the `bodyTextures` slot family (key
+   * `'earth'`); that slot is proximity-demanded on descent and its commit calls
+   * `setTexture`. Until the bitmap lands the renderer draws a plain mid-blue
+   * placeholder sphere.  Excluded
+   * from `isEngineReady` and null-checked at use by `earthLayer`.  Null until
+   * `initGpu` constructs it; released and re-nulled by `destroy()` (releases
+   * the position + uv VBOs, index IBO, uniform buffer, and the Earth texture).
+   */
+  earthRenderer: EarthRenderer | null;
+  /**
+   * Flat-emissive resolved stars (the `spheres` branch of
+   * `partitionStarsByResolution` — any star whose apparent size crosses
+   * `STAR_RESOLVE_PX`, the Sun included) drawn into the `foreground:0`
+   * render-target row.  Same ('rgba16float', 'depth32float') format
+   * invariant as `earthRenderer`.  Owns a single non-dynamic uniform
+   * buffer, so same-frame draws through it clobber each other's uniforms
+   * (last write wins) — a known gap should two stars ever resolve at once;
+   * see `starSpheresLayer`'s module header for why the case is out of
+   * reach today and what the real fix is.
+   * Excluded from `isEngineReady` and null-checked at use.  Null until
+   * `initGpu` constructs it; released and re-nulled by `destroy()`.
+   */
+  starRenderer: StarRenderer | null;
+  /**
+   * Flat-lit albedo planets — a SINGLE renderer instance that draws every
+   * seeded planet in one frame via GPU instancing: `planetsLayer` packs each
+   * body's MVP + albedo into a per-instance vertex-buffer record and hands
+   * the whole batch to one `draw` call, which does one `queue.writeBuffer`
+   * followed by one instanced `drawIndexed`. Each instance reads its OWN
+   * baked record, so there is no shared per-draw uniform for a later write
+   * to clobber (the writeBuffer-vs-submit landmine that a dynamic-offset or
+   * shared-slot design would have to guard against). Same `foreground:0`
+   * format invariant as the other sphere bodies. Excluded from
+   * `isEngineReady` and null-checked at use. Null until `initGpu` constructs
+   * it; released and re-nulled by `destroy()`.
+   */
+  planetRenderer: PlanetRenderer | null;
+  /**
+   * The shared textured-sphere renderer for the twelve non-Earth textured
+   * bodies (the seven other major planets, the Moon, and the four Galilean
+   * moons) — one UV-sphere pipeline whose per-body `Map` gives each body its
+   * own uniform buffer + bind group + surface texture, so no shared uniform can
+   * be clobbered mid-frame. `texturedBodiesLayer` draws the `textured` branch of
+   * `partitionBodiesByPresentation` through it; the `bodyTextures` slot family's
+   * commit routes each non-Earth body's bitmap to `setTexture`, and its
+   * onRelease frees that body's texture via `clearTexture`. Same `foreground:0`
+   * ('rgba16float', 'depth32float') format invariant as `earthRenderer` /
+   * `planetRenderer`. Excluded from `isEngineReady` and null-checked at use.
+   * Null until `initGpu` constructs it; released and re-nulled by `destroy()`
+   * (which also frees every per-body uniform buffer + surface/ring texture).
+   */
+  texturedBodyRenderer: TexturedBodyRenderer | null;
+  /**
+   * The translucent planetary-ring renderer (Saturn's rings) — the overlay half
+   * of the ring system, drawn LAST in the `(foreground:0, NEAR0)` group as a
+   * two-sided translucent annulus that depth-tests against the opaque spheres
+   * but writes no depth and blends straight-alpha OVER. Its ('rgba16float',
+   * 'depth32float') pipeline formats match the `foreground:0` row like the sphere
+   * bodies. `ringsLayer` draws each resident `SCENE_RINGS` entry through it; the
+   * `bodyTextures` family's `saturn-ring` commit routes the radial strip to
+   * `setTexture` (alongside `texturedBodyRenderer.setRingTexture` for the
+   * ring-on-planet shadow half). Excluded from `isEngineReady` and null-checked
+   * at use. Null until `initGpu` constructs it; released and re-nulled by
+   * `destroy()` (releases the disc VBO/IBO, uniform buffer, and strip texture).
+   */
+  ringRenderer: RingRenderer | null;
+  /**
+   * The unresolved stars (the `points` branch of
+   * `partitionStarsByResolution`) as additive point sprites into the
+   * depthless HDR target — the far half of the star LOD (`star-points`
+   * layer, drawn by the frame program's dedicated `(hdr, NEAR0)` render
+   * step).  No depth format: the hdr row has no depth attachment.  Star
+   * instances are seeded in `initGpu` via `setStars` (the full star list —
+   * at the galaxy-scale boot camera every star is a sub-pixel point) and
+   * re-uploaded by `starPointsLayer` per frame from the
+   * apparent-size partition.  Excluded from
+   * `isEngineReady` and null-checked at use.  Null until `initGpu`
+   * constructs it; released and re-nulled by `destroy()` (releases the
+   * instance + uniform buffers).
+   */
+  starPointRenderer: StarPointRenderer | null;
+  /**
+   * The sub-pixel scene bodies (the `glints` branch of
+   * `partitionBodiesByPresentation`) as brightness-scaled additive point sprites
+   * into the depthless HDR target — the far half of the body LOD (`body-glints`
+   * layer, sharing the frame program's `(hdr, NEAR0)` render step with
+   * `star-points`).  Its brightness encodes apparent size x albedo x phase, and
+   * cross-fades with the resolved mesh over 1-3 px so bodies stop popping in/out
+   * on descent.  The close sibling of `starPointRenderer` — a separate renderer
+   * for this feature by design (the fold candidate is deferred, spec §14).  No
+   * depth format: the hdr row has no depth attachment.  Needs no data-delivery
+   * step: `bodyGlintsLayer` packs and hands the whole batch every frame.
+   * Excluded from `isEngineReady` and null-checked at use.  Null until `initGpu`
+   * constructs it; released and re-nulled by `destroy()` (releases the instance +
+   * uniform buffers).
+   */
+  bodyGlintRenderer: BodyGlintRenderer | null;
+  /**
+   * The survey (Gaia bin) stars as additive point sprites into the depthless
+   * HDR target — the wide-field twin of `starPointRenderer`, fed from an
+   * in-file octree of cell-quantized records rather than a flat seed list.
+   * Records upload once per source (`upload`); the star layer walks each
+   * octree per frame (`loadedCatalogs`) and draws the per-frame cut.  No depth
+   * format: the hdr row has no depth attachment.  Excluded from
+   * `isEngineReady` and null-checked at use.  Null until `initGpu` constructs
+   * it; released and re-nulled by `destroy()` (releases the per-source records
+   * + node-params buffers and the shared camera uniform).
+   */
+  starCatalogRenderer: StarCatalogRenderer | null;
+  /**
+   * The r32uint pick provider for the survey (Gaia bin) stars — the pick twin
+   * of `starCatalogRenderer`, making a catalogued star clickable.  Records one
+   * source's leaf cut into the pick program's r32uint pass, stamping the picked
+   * star's packed identity.  Shares the visual renderer's records bind group
+   * (via its `pickResources()`) but owns its own `pickPass = 1` uniform + per-
+   * source node-params/prefix buffers (the writeBuffer/submit ordering fix).
+   * Depth-tested so the nearest star wins the pixel, unlike the depthless
+   * additive visual star pass.  Constructed in `initGpu` right after
+   * `starCatalogRenderer` (it depends on that renderer's exposed BGLs); null
+   * until then.  Excluded from `isEngineReady` and null-checked at use.  Released
+   * and re-nulled by `destroy()` (its own uniform + per-source pick buffers; the
+   * shared records buffers belong to the visual renderer).
+   */
+  starCatalogPickRenderer: StarCatalogPickRenderer | null;
+  /**
+   * The r32uint pick provider for the NEAR0 foreground bodies (Earth, the
+   * planets, and the ~25 seeded scene stars incl. the Sun) — the body-family
+   * analogue of `starCatalogPickRenderer`.  Records ONE body sphere per
+   * `drawSphere` call (via a 256-byte-aligned dynamic-offset uniform whose
+   * per-pass cursor sidesteps the writeBuffer/submit race) and the sub-pixel
+   * scene-star POINT partition as one instanced pick-billboard draw.  Depth-
+   * tested (`depth32float`, 'less') so overlapping bodies resolve nearest-wins.
+   * Constructed in `initGpu` alongside `starCatalogPickRenderer`; the body
+   * layers' `drawPick` rows (Task 11) drive it.  Excluded from `isEngineReady`
+   * and null-checked at use.  Released and re-nulled by `destroy()` (its sphere
+   * mesh VBO/IBO, the sphere dynamic-offset + point camera uniforms, and the
+   * grow-only point instance buffer).
+   */
+  bodyPickRenderer: BodyPickRenderer | null;
+  /**
+   * The accurate Keplerian orbit trails (Earth / Jupiter around the Sun, the
+   * Moon around Earth) as additive screen-space conics into the depthless HDR
+   * target — the `orbit-trails` layer, sharing the frame program's
+   * `(hdr, NEAR0)` render step with `star-points`.  No depth format: the hdr
+   * row has no depth attachment.  ONE instanced draw paints every trail:
+   * `orbitTrailsLayer` packs each orbit's f64-composed inverse homography
+   * `Ginv` + trail params into a per-instance vertex record, so no per-orbit
+   * bind or mid-frame uniform exists for the writeBuffer-vs-submit race to
+   * clobber.  The conic table itself is a static module-level derivation of
+   * the orbital elements (`SCENE_ORBIT_CONICS`), so the renderer needs no data
+   * delivery at all.  Excluded from `isEngineReady` and null-checked at use.
+   * Null until `initGpu` constructs it; released and re-nulled by `destroy()`
+   * (releases the instance buffer).
+   */
+  orbitTrailRenderer: OrbitTrailRenderer | null;
   /**
    * Per-pass GPU timing service.  Always non-null — the engine state
    * is initialized with a no-op stub (see `createDisabledGpuTimingService`)

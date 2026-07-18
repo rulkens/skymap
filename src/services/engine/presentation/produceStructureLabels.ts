@@ -5,7 +5,11 @@
  * Reads `state.data.structures` and emits structure labels — applying the
  * marker close-approach / far-distance fades, the featured + visibility gates,
  * and the ring-centre anchor. Famous-galaxy labels come from
- * `produceFamousLabels` instead.
+ * `produceFamousLabels` instead — a split that also carries the deep-zoom
+ * exemption: THIS producer rides the `surveyDeepZoom` band (structure labels
+ * dissolve with their rings on the descent into the solar system), while
+ * famous labels stay visible with the famous points they name. The exemption
+ * is per-producer, not per-label — no flag to thread through the loop.
  *
  * ### Per-category opacity × focused-exempt recession bakes into fadeAlpha
  *
@@ -49,6 +53,9 @@ import type { LabelProducerOutput } from '../../../@types/engine/subsystems/Labe
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
+import { wrapLabelName } from '../../../utils/format/wrapLabelName';
+import { fadeBand } from '../../../utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from './scaleFadeBands';
 
 export function produceStructureLabels(
   state: EngineState,
@@ -59,10 +66,21 @@ export function produceStructureLabels(
   const pxPerRad = ctx.drawPxPerRad;
   const [cx, cy, cz] = ctx.drawCamPos;
 
+  // Deep-zoom survey fade — keyed on the camera's distance from the
+  // heliocentric render origin, the same quantity every other band consumer
+  // uses. Structure labels dissolve with their rings (structureMarkersLayer
+  // rides the same band) so a cosmic-scale annotation can't linger over the
+  // solar-system view. Hoisted once: the factor is spatial, identical for
+  // every label this frame. At exactly 0 the producer emits nothing — the
+  // fade reaches 0 continuously before this skip engages, so no pop.
+  const camDistMpc = Math.hypot(cx, cy, cz);
+  const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
+  if (surveyFade === 0) return { labels: [], lines: [], awake: false };
+
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.
   const fades = state.subsystems.fades;
-  const now = performance.now();
+  const now = ctx.nowMs;
   const focusedStructureId = structureIdOf(state.selection.focus);
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
@@ -72,8 +90,14 @@ export function produceStructureLabels(
   // maps every structure-label FadeId to this value without discrimination.
   const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('structureLabel', now);
 
+  // focusedOnly mode: only the focused structure's label draws — a hard
+  // suppression, not a recession. With nothing (or a non-structure) focused,
+  // no structure labels draw at all.
+  const focusedOnly = state.settings.labels.focusedOnly;
+
   const structures = state.data.structures;
   for (const p of structures.all()) {
+    if (focusedOnly && p.id !== focusedStructureId) continue;
     // Per-category label opacity: the category toggle's fade, read from the
     // registry. The authoritative gate is the boolean — emit while the
     // category's label is enabled OR still fading out. Skip only when it's both
@@ -151,11 +175,14 @@ export function produceStructureLabels(
 
     // Bake the resolved layer opacity into fadeAlpha on top of the distance
     // fade: catOpacity (toggle fade) × recession (focus fade) × clipFactor
-    // (clip-owned transient dimming). The focused structure's own label is
-    // exempt from recession — a faded ring never carries a bright label, but
-    // the thing under inspection keeps its label. clipFactor is NOT exempted
-    // for the focused structure: a tour cue that dims all structure labels is
-    // expected to dim even the focused one (the tour controls the whole scene).
+    // (clip-owned transient dimming) × surveyFade (the deep-zoom band, hoisted
+    // above — labels dissolve with their rings on descent). The focused
+    // structure's own label is exempt from recession — a faded ring never
+    // carries a bright label, but the thing under inspection keeps its label.
+    // clipFactor is NOT exempted for the focused structure: a tour cue that
+    // dims all structure labels is expected to dim even the focused one (the
+    // tour controls the whole scene). Nothing is exempt from surveyFade —
+    // at solar-system zoom even the focused structure's label is chrome.
     const recession =
       p.id === focusedStructureId
         ? 1
@@ -163,14 +190,17 @@ export function produceStructureLabels(
             { kind: 'labelLayer', layer: 'structure', category: p.category },
             ctx.focusBlend,
           );
-    fadeAlpha *= catOpacity * recession * clipFactor;
+    fadeAlpha *= catOpacity * recession * clipFactor * surveyFade;
 
     labels.push({
       id: p.id,
       // Structures anchor at the ring centre, centred on both axes (only
       // famous galaxies lift their label off the dot).
       worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
-      text: p.name,
+      // Long names ("Perseus-Pisces Supercluster") break onto two balanced
+      // lines here, at the presentation seam — the store keeps the unwrapped
+      // name for the palette / InfoCard, and the layout just honours the '\n'.
+      text: wrapLabelName(p.name),
       font: 'cormorant',
       pixelSize: 0, // unused — superseded by the worldEm sizing model
       color: [...style.labelColor],

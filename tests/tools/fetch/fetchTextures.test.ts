@@ -1,0 +1,186 @@
+import { describe, it, expect } from 'vitest';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
+
+import {
+  downloadGetOnly,
+  requiresConfirm,
+  textureSourcesFor,
+  type FetchTransport,
+  type TextureSource,
+} from '../../../tools/fetch/fetchTextures';
+
+/** Destination basenames of a source list — the identity we assert on
+ *  (paths are absolute, so the filename is the stable, readable key). */
+function filenames(sources: readonly TextureSource[]): string[] {
+  return sources.map((s) => basename(s.destPath));
+}
+
+describe('textureSourcesFor', () => {
+  it('--dev selects exactly the 2k SSS variants + the NASA 5400x2700 sibling', () => {
+    const dev = textureSourcesFor(true);
+    expect(filenames(dev).sort()).toEqual(
+      [
+        '2k_mercury.jpg',
+        '2k_venus_atmosphere.jpg',
+        '2k_mars.jpg',
+        '2k_jupiter.jpg',
+        '2k_saturn.jpg',
+        '2k_saturn_ring_alpha.png',
+        '2k_uranus.jpg',
+        '2k_neptune.jpg',
+        '2k_moon.jpg',
+        'world.topo.bathy.200412.3x5400x2700.jpg',
+      ].sort(),
+    );
+  });
+
+  it('the full pull selects the native tiers + full BMNG + the four USGS moons', () => {
+    const full = textureSourcesFor(false);
+    expect(filenames(full).sort()).toEqual(
+      [
+        '8k_mercury.jpg',
+        '4k_venus_atmosphere.jpg',
+        '8k_mars.jpg',
+        '8k_jupiter.jpg',
+        '8k_saturn.jpg',
+        '8k_saturn_ring_alpha.png',
+        '2k_uranus.jpg',
+        '2k_neptune.jpg',
+        '8k_moon.jpg',
+        'world.topo.bathy.200412.3x21600x10800.jpg',
+        'Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
+        'Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
+        'Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
+        'Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
+      ].sort(),
+    );
+  });
+
+  it('derives the dev URL by swapping the SSS resolution prefix, not a hand-typed link', () => {
+    const dev = textureSourcesFor(true);
+    const mars = dev.find((s) => basename(s.destPath) === '2k_mars.jpg');
+    expect(mars?.url).toBe('https://www.solarsystemscope.com/textures/download/2k_mars.jpg');
+  });
+
+  it('never lists a source twice — one dest path per source in either mode', () => {
+    for (const dev of [true, false]) {
+      const paths = textureSourcesFor(dev).map((s) => s.destPath);
+      expect(new Set(paths).size).toBe(paths.length);
+    }
+  });
+
+  it('Uranus/Neptune resolve to their native 2k registry path in BOTH modes (2k IS the native tier)', () => {
+    const devUranus = textureSourcesFor(true).find((s) => basename(s.destPath) === '2k_uranus.jpg');
+    const fullUranus = textureSourcesFor(false).find(
+      (s) => basename(s.destPath) === '2k_uranus.jpg',
+    );
+    expect(devUranus?.destPath).toBe(fullUranus?.destPath);
+    expect(devUranus?.url).toBe(fullUranus?.url);
+  });
+});
+
+/** A transport whose body streams `chunks` then closes cleanly. */
+function completingTransport(chunks: Uint8Array[]): FetchTransport {
+  return async () => ({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const c of chunks) controller.enqueue(c);
+        controller.close();
+      },
+    }),
+  });
+}
+
+/** A transport that emits `prefix`, then errors the stream mid-flight —
+ *  the "connection dropped after a partial body" case. */
+function erroringTransport(prefix: Uint8Array): FetchTransport {
+  return async () => ({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(prefix);
+        controller.error(new Error('connection reset mid-stream'));
+      },
+    }),
+  });
+}
+
+describe('downloadGetOnly', () => {
+  // The whole point of the .part -> renameSync dance: the final path only
+  // ever appears when the body fully streamed. These drive that gate with a
+  // fake transport, no network.
+  it('a clean stream lands the exact bytes at the final path, leaving no .part behind', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fetchTextures-ok-'));
+    try {
+      const dest = join(dir, 'body.jpg');
+      const bytes = new Uint8Array([1, 2, 3, 4, 5]);
+      const { totalBytes } = await downloadGetOnly(
+        'https://example.test/body.jpg',
+        dest,
+        completingTransport([bytes.subarray(0, 2), bytes.subarray(2)]),
+      );
+      expect(totalBytes).toBe(5);
+      expect(new Uint8Array(readFileSync(dest))).toEqual(bytes);
+      expect(existsSync(`${dest}.part`)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('a stream that errors mid-flight never produces the final file (no truncated pass-through)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fetchTextures-err-'));
+    try {
+      const dest = join(dir, 'body.jpg');
+      await expect(
+        downloadGetOnly(
+          'https://example.test/body.jpg',
+          dest,
+          erroringTransport(new Uint8Array([9, 9, 9])),
+        ),
+      ).rejects.toThrow();
+      // The rename is gated on a clean finish — a half-streamed body must
+      // not masquerade as a complete download. (A .part remnant is fine.)
+      expect(existsSync(dest)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('a non-2xx response throws and writes no final file', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fetchTextures-404-'));
+    try {
+      const dest = join(dir, 'body.jpg');
+      const notFound: FetchTransport = async () => ({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        body: null,
+      });
+      await expect(
+        downloadGetOnly('https://example.test/missing.jpg', dest, notFound),
+      ).rejects.toThrow(/404/);
+      expect(existsSync(dest)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('requiresConfirm', () => {
+  it('blocks the full pull unless --confirm is passed', () => {
+    expect(requiresConfirm(false, false)).toBe(true); // full, no flag -> blocked
+    expect(requiresConfirm(false, true)).toBe(false); // full, --confirm -> allowed
+  });
+
+  it('never blocks the --dev subset', () => {
+    expect(requiresConfirm(true, false)).toBe(false);
+    expect(requiresConfirm(true, true)).toBe(false);
+  });
+});

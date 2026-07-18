@@ -41,6 +41,8 @@ import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCata
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
+import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogItemSettings } from '../../@types/settings/StarCatalogItemSettings';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
@@ -102,6 +104,16 @@ export const selectMilkyWayEnabled = (state: RootState): boolean =>
 
 export const selectMilkyWayLabelEnabled = (state: RootState): boolean =>
   selectSettings(state).milkyWay.labelEnabled;
+
+// --- famousStars cluster ------------------------------------------------------
+
+/**
+ * Master gate on the seeded famous-star map. A primitive read, so no
+ * memoization. Distinct from `selectStarCatalogs(...).enabled` (the Gaia survey
+ * gate) — this gates only the curated near-field scene bodies.
+ */
+export const selectFamousStarsEnabled = (state: RootState): boolean =>
+  selectSettings(state).famousStars.enabled;
 
 // --- filaments cluster --------------------------------------------------------
 
@@ -171,11 +183,100 @@ export const selectClipPathPassByDir = (state: RootState): PassByDir =>
 export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
   selectSettings(state).debug.clipPathInspect.active;
 
+// --- labels cluster -----------------------------------------------------------
+
+export const selectStarLabelsEnabled = (state: RootState): boolean =>
+  selectSettings(state).labels.starLabelsEnabled;
+
+export const selectPlanetLabelsEnabled = (state: RootState): boolean =>
+  selectSettings(state).labels.planetLabelsEnabled;
+
 // --- structures cluster -------------------------------------------------------
 
 export const selectStructureItems = (
   state: RootState,
 ): Record<StructureId, StructureItemSettings> => selectSettings(state).structures.items;
+
+// --- starCatalogs cluster -----------------------------------------------------
+
+/**
+ * Passthrough read of the whole star-catalogs cluster (`{ enabled, items }`).
+ * Returns the raw Immer-stable reference — no fresh object — so react-redux
+ * bails on unrelated writes. The `StarsSectionContainer` needs both the master
+ * gate and the per-catalog items, so it reads the cluster once here rather than
+ * through two split selectors.
+ */
+export const selectStarCatalogs = (
+  state: RootState,
+): {
+  enabled: boolean;
+  sizePx: number;
+  brightness: number;
+  refineThreshold: number;
+  glowOverlap: number;
+  exposureNearX: number;
+  exposureMidX: number;
+  exposureFarX: number;
+  items: Record<StarCatalogId, StarCatalogItemSettings>;
+} => selectSettings(state).starCatalogs;
+
+/**
+ * Star-billboard pixel radius — the star-catalog twin of
+ * `selectGalaxyCatalogSize`. A primitive read, so no memoization.
+ */
+export const selectStarCatalogSize = (state: RootState): number =>
+  selectSettings(state).starCatalogs.sizePx;
+
+/**
+ * Star-brightness trim — the star-catalog twin of `selectBrightness`. A
+ * primitive read, so no memoization. The renderer multiplies the flux-glow
+ * peak by it (1.0 = identity).
+ */
+export const selectStarCatalogBrightness = (state: RootState): number =>
+  selectSettings(state).starCatalogs.brightness;
+
+/**
+ * Octree-cut refine threshold — the "Detail" knob. A primitive read, so no
+ * memoization. Unlike the size/brightness twins this is NOT a GPU uniform: the
+ * layer feeds it to `walkStarOctreeCut`. Lower ⇒ boxes split earlier.
+ */
+export const selectStarCatalogRefineThreshold = (state: RootState): number =>
+  selectSettings(state).starCatalogs.refineThreshold;
+
+/**
+ * Aggregate glow-overlap spread — the "Glow overlap" knob. A primitive read, so
+ * no memoization. The vertex stage multiplies an aggregate's radius by it (and
+ * divides the peak by the square, so total luminance is conserved); 1.0 =
+ * identity.
+ */
+export const selectStarCatalogGlowOverlap = (state: RootState): number =>
+  selectSettings(state).starCatalogs.glowOverlap;
+
+/**
+ * Near-anchor star display exposure — the "Exposure (near)" tuning knob. A
+ * primitive read, so no memoization. The layer feeds it (with `exposureFarX`) to
+ * `starExposureRamp` each frame; it is the absolute exposure the ramp targets at
+ * its near (solar-system) anchor.
+ */
+export const selectStarCatalogExposureNearX = (state: RootState): number =>
+  selectSettings(state).starCatalogs.exposureNearX;
+
+/**
+ * Middle-anchor star display exposure — the "Exposure (mid)" tuning knob. A
+ * primitive read, so no memoization. The absolute exposure `starExposureRamp`
+ * targets at its middle (few-kpc) anchor; pulling it down darkens the
+ * intermediate zone without touching either end.
+ */
+export const selectStarCatalogExposureMidX = (state: RootState): number =>
+  selectSettings(state).starCatalogs.exposureMidX;
+
+/**
+ * Far-anchor star display exposure — the "Exposure (far)" tuning knob. A
+ * primitive read, so no memoization. The absolute exposure `starExposureRamp`
+ * targets at its far (whole-galaxy) anchor.
+ */
+export const selectStarCatalogExposureFarX = (state: RootState): number =>
+  selectSettings(state).starCatalogs.exposureFarX;
 
 // --- derived ------------------------------------------------------------------
 

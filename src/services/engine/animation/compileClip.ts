@@ -233,8 +233,8 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
       // A bare bob (no `over`) is perpetual: the maximal window, never gated,
       // never faded — identical to the historical always-on sine. A windowed
       // bob plays over `[atSec, atSec + over)` and fades its amplitude at the
-      // ends. The phase is read off absolute time in the evaluator, so the
-      // window carries no phase offset.
+      // ends; its phase is window-local in the evaluator (sine starts at 0
+      // where the window starts). Perpetual bobs read absolute time.
       const windowed = effect.over !== undefined;
       acc.oscTracks.push({
         channel: effect.ch,
@@ -266,6 +266,8 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
     // programming error — the clip was passed to compileClip with unresolved IDs.
     case 'moveTargetId':
     case 'dollyToId':
+    case 'lookAtId':
+    case 'strafeId':
     case 'focusId': {
       throw new Error(`resolveClipFoci must run before compileClip (unresolved ${effect.kind})`);
     }

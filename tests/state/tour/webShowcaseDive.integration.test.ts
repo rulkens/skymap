@@ -23,7 +23,7 @@
  *
  * ### Approach
  *
- * Assertions 1 and 2 call `resolveClipFoci` directly on each beat's `.clip`,
+ * Assertions 1 and 2 call `resolveClipFoci` directly on each beat's `.enterClip`,
  * which is simpler and faster than running the full saga: the resolved clip is
  * plain data whose structure we can inspect without any async machinery. The
  * deps stub is minimal — Virgo resolves via `structures.byId`, M87 resolves
@@ -109,6 +109,7 @@ const DIVE_DEPS: ResolveDeps = {
       type: 'galaxy',
     },
   ],
+  stars: { current: () => null },
   structures: {
     byId: (id) =>
       ({
@@ -145,8 +146,13 @@ describe('webShowcase dive invariants', () => {
   it('beat 2 resolved clip carries a { kind:"focus", ref: { type:"structure", id:"cluster-virgo-m87" } } cue', () => {
     // flyAndFocusOnClip('cluster-virgo-m87') prepends a focusId cue before
     // the camera-move block. resolveClipFoci rewrites it to a concrete focus cue.
-    const beat2Clip: ClipData = webShowcase.beats[1]!.clip;
-    const resolved = resolveClipFoci(beat2Clip, DIVE_DEPS, CAMERA_RUNTIME.fovYRad);
+    const beat2Clip: ClipData = webShowcase.beats[1]!.enterClip!;
+    const resolved = resolveClipFoci(
+      beat2Clip,
+      DIVE_DEPS,
+      CAMERA_RUNTIME.fovYRad,
+      CAMERA_RUNTIME.from,
+    );
 
     const nodes = collectNodes(resolved.timeline);
     const focusCues = nodes.filter((e) => e.kind === 'focus') as Array<{
@@ -167,8 +173,13 @@ describe('webShowcase dive invariants', () => {
     // flyToClip('m87') produces only camera cues (moveTargetId + dollyToId).
     // After resolution there must be no 'focus' or 'focusId' kind, so the
     // selection.focus that beat 2 set (Virgo) stays in place.
-    const beat3Clip: ClipData = webShowcase.beats[2]!.clip;
-    const resolved = resolveClipFoci(beat3Clip, DIVE_DEPS, CAMERA_RUNTIME.fovYRad);
+    const beat3Clip: ClipData = webShowcase.beats[2]!.enterClip!;
+    const resolved = resolveClipFoci(
+      beat3Clip,
+      DIVE_DEPS,
+      CAMERA_RUNTIME.fovYRad,
+      CAMERA_RUNTIME.from,
+    );
 
     const nodes = collectNodes(resolved.timeline);
     const focusKinds = nodes.filter((e) => e.kind === 'focus' || e.kind === 'focusId');
@@ -199,7 +210,7 @@ describe('webShowcase dive invariants', () => {
     sagaMiddleware.run(watchFocusTweenSaga);
 
     // Activate a clip so camera.clip !== null.
-    const beat2Clip = webShowcase.beats[1]!.clip;
+    const beat2Clip = webShowcase.beats[1]!.enterClip!;
     store.dispatch(clipStarted(beat2Clip));
     expect(store.getState().camera.clip).not.toBeNull(); // guard: clip is active
 

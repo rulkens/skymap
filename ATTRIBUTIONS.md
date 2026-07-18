@@ -59,6 +59,62 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
 - **Reference:** Jarrett et al. 2000, AJ 119, 2498.
 - **Licence:** Publicly released; cite the paper above.
 
+### DESI DR1 — Dark Energy Spectroscopic Instrument
+
+- **Use:** DR1 large-scale-structure clustering catalogs (the four NGC tracer
+  files `BGS_BRIGHT`, `LRG`, `ELG_LOPnotqso`, `QSO`), cone-filtered at build
+  time to a narrow 2.5° deep cone around Corona Borealis. Positions +
+  redshifts feed the point cloud; only `BGS_BRIGHT` carries photometry.
+- **Reference:** DESI Collaboration et al. (2026), "Data Release 1 of the
+  Dark Energy Spectroscopic Instrument", AJ 171, 285
+  (ads: [2026AJ....171..285D](https://ui.adsabs.harvard.edu/abs/2026AJ....171..285D)).
+- **Licence:** CC BY 4.0.
+- **Required acknowledgment** (verbatim, per
+  <https://data.desi.lbl.gov/doc/acknowledgments/>):
+
+  > This research used data obtained with the Dark Energy Spectroscopic Instrument (DESI). DESI construction and operations is managed by the Lawrence Berkeley National Laboratory. This material is based upon work supported by the U.S. Department of Energy, Office of Science, Office of High-Energy Physics, under Contract No. DE–AC02–05CH11231, and by the National Energy Research Scientific Computing Center, a DOE Office of Science User Facility under the same contract. Additional support for DESI was provided by the U.S. National Science Foundation (NSF), Division of Astronomical Sciences under Contract No. AST-0950945 to the NSF's National Optical-Infrared Astronomy Research Laboratory; the Science and Technology Facilities Council of the United Kingdom; the Gordon and Betty Moore Foundation; the Heising-Simons Foundation; the French Alternative Energies and Atomic Energy Commission (CEA); the National Council of Humanities, Science and Technology of Mexico (CONAHCYT); the Ministry of Science and Innovation of Spain (MICINN), and by the DESI Member Institutions.
+
+### Gaia DR3 — ESA Gaia mission
+
+- **Use:** The G<14 slice of the `gaiadr3.gaia_source_lite` main catalog
+  (positions, `G` magnitude, `BP−RP` colour) — the bright-star raw input to
+  skymap's star bin, fetched via the ESA Gaia TAP service by
+  `npm run fetch-gaia`. Provenance + column contract in `data/raw/gaia/README.md`.
+- **Reference:** Gaia Collaboration, Vallenari et al. 2023, A&A 674, A1 (Gaia DR3).
+- **Licence:** Gaia data are publicly released under the Gaia Data Licence
+  (<https://www.cosmos.esa.int/web/gaia-users/license>); cite the paper above.
+- **Required acknowledgment** (verbatim, per ESA's canonical credit page
+  <https://gea.esac.esa.int/archive/documentation/GDR3/Miscellaneous/sec_credit_and_citation_instructions/>,
+  fetched 2026-07-14 — this is the canonical in-repo copy):
+
+  > This work has made use of data from the European Space Agency (ESA) mission Gaia (https://www.cosmos.esa.int/gaia), processed by the Gaia Data Processing and Analysis Consortium (DPAC, https://www.cosmos.esa.int/web/gaia/dpac/consortium). Funding for the DPAC has been provided by national institutions, in particular the institutions participating in the Gaia Multilateral Agreement.
+
+### Bailer-Jones geometric / photogeometric distances
+
+- **Use:** Per-star geometric (`r_med_geo`) and photogeometric
+  (`r_med_photogeo`) distance estimates from `external.gaiaedr3_distance`,
+  joined onto the Gaia DR3 main-catalog rows on `source_id` to place bright
+  stars in 3D.
+- **Reference:** Bailer-Jones et al. 2021, AJ 161, 147.
+- **Licence:** Publicly released via the Gaia archive; cite the paper above.
+
+### GCNS — Gaia Catalogue of Nearby Stars
+
+- **Use:** The `external.gaiaedr3_gcns_main_1` 100 pc supplement (parallax +
+  photometric distance for 331,312 nearby stars), filling in the local
+  volume below the G<14 main-catalog cut.
+- **Reference:** Gaia Collaboration, Smart et al. 2021, A&A 649, A6.
+- **Licence:** Publicly released via the Gaia archive; cite the paper above.
+  The Gaia mission acknowledgment under **Gaia DR3** applies to this table as well.
+
+### Hipparcos-2 — the re-reduced Hipparcos catalogue
+
+- **Use:** The `hip2.dat` bright-star table (VizieR I/311), cross-matched to
+  Gaia via `gaiadr3.hipparcos2_best_neighbour`, to supply the naked-eye bright
+  stars that saturate or fall outside Gaia's faint-limited photometry.
+- **Reference:** van Leeuwen 2007, A&A 474, 653 (VizieR I/311).
+- **Licence:** Publicly released via CDS VizieR; cite the paper above.
+
 ## Volume reconstructions
 
 The two scalar-field overlays drawn underneath the point cloud (CF-4 DM

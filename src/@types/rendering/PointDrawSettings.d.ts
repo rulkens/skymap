@@ -51,7 +51,7 @@ export type PointDrawSettings = {
    * once per visible source per frame from the points draw loop;
    * the renderer writes the returned value into the per-source
    * fadeBuffer. The renderer passes the numeric source code;
-   * the pointSpritesPass closure resolves it to the catalog's string
+   * the `pointSpritesLayer` closure resolves it to the catalog's string
    * id and reads `state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id }, now)`.
    */
   readonly fadeOpacityOf: (source: SourceType) => number;

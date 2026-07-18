@@ -1,0 +1,402 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
+
+import {
+  planRandomIndexSlices,
+  pageFileName,
+  buildGaiaPageQuery,
+  buildGcnsQuery,
+  buildHipXmatchQuery,
+  gateDecision,
+  fetchPagedCatalog,
+  verifyPageRowTotal,
+  fetchGcns,
+  fetchHip2,
+  HIP2_URL,
+  verifyOrRecordSha256,
+  type TapTransport,
+} from '../../../tools/fetch/fetchGaia';
+
+describe('planRandomIndexSlices', () => {
+  it('tiles [0, total) contiguously: 1000 into 4 → bounds 0|250|500|750|1000', () => {
+    const slices = planRandomIndexSlices(1000, 4);
+    expect(slices.map((s) => s.start)).toEqual([0, 250, 500, 750]);
+    expect(slices.map((s) => s.endExclusive)).toEqual([250, 500, 750, 1000]);
+    // Each start equals the previous endExclusive — no gaps, no overlaps.
+    for (let i = 1; i < slices.length; i++) {
+      expect(slices[i]!.start).toBe(slices[i - 1]!.endExclusive);
+    }
+  });
+
+  it('a non-divisible total loses no rows: 1003 into 4 → last endExclusive is 1003', () => {
+    const slices = planRandomIndexSlices(1003, 4);
+    // First start is 0, last endExclusive is exactly total — the union is [0, 1003).
+    expect(slices[0]!.start).toBe(0);
+    expect(slices[slices.length - 1]!.endExclusive).toBe(1003);
+    // Contiguous, and no empty slice swallowed the remainder.
+    for (let i = 0; i < slices.length; i++) {
+      expect(slices[i]!.endExclusive).toBeGreaterThan(slices[i]!.start);
+      if (i > 0) expect(slices[i]!.start).toBe(slices[i - 1]!.endExclusive);
+    }
+  });
+});
+
+describe('pageFileName', () => {
+  it("pads to four digits: 3 → 'gaia_page_0003.csv'; 1234 → 'gaia_page_1234.csv'", () => {
+    expect(pageFileName(3)).toBe('gaia_page_0003.csv');
+    expect(pageFileName(1234)).toBe('gaia_page_1234.csv');
+  });
+});
+
+describe('buildGaiaPageQuery', () => {
+  it('page query carries half-open slice bounds: {start: 100, endExclusive: 200} → contains \'random_index >= 100\' and \'random_index < 200\'', () => {
+    // An off-by-one here duplicates or drops rows at every slice boundary:
+    // slices are contiguous half-open ranges, so the low bound must be
+    // inclusive (>=) and the high bound exclusive (<) — the load-bearing
+    // assertion of this task.
+    const query = buildGaiaPageQuery({ index: 0, start: 100, endExclusive: 200 });
+    expect(query).toContain('random_index >= 100');
+    expect(query).toContain('random_index < 200');
+  });
+
+  it('page query selects the pinned plan-02 column list in order', () => {
+    const query = buildGaiaPageQuery({ index: 0, start: 0, endExclusive: 10 });
+    // Plan 02's CSV parser consumes the header in this exact order — a
+    // reorder silently mislabels every column downstream.
+    const columns = [
+      'source_id',
+      'ra',
+      'dec',
+      'phot_g_mean_mag',
+      'bp_rp',
+      'r_med_geo',
+      'r_med_photogeo',
+      'random_index',
+    ];
+    let previous = -1;
+    for (const column of columns) {
+      const at = query.indexOf(column);
+      expect(at).toBeGreaterThan(previous);
+      previous = at;
+    }
+    expect(query).toContain('phot_g_mean_mag < 14');
+  });
+});
+
+describe('buildGcnsQuery and buildHipXmatchQuery', () => {
+  it('gcns and xmatch queries order by source_id', () => {
+    // ORDER BY pins CSV byte order so the gaia.sha256 sidecar is meaningful
+    // across re-fetches (gcns) and diffs stay stable (xmatch).
+    expect(buildGcnsQuery()).toContain('ORDER BY source_id');
+    expect(buildHipXmatchQuery()).toContain('ORDER BY source_id');
+  });
+});
+
+describe('gateDecision', () => {
+  it('aborts when stdin is not a TTY and --yes is absent', () => {
+    // The real bug this guards: a dispatched background run (no TTY) must
+    // never hang on an unanswerable prompt, and a piped "y" must never be
+    // able to green-light a 2 GB pull nobody approved. Without --yes and
+    // without a TTY the only safe answer is to stop with instructions.
+    expect(gateDecision(false, false)).toBe('abort');
+    // A real interactive terminal falls through to the y/N prompt.
+    expect(gateDecision(false, true)).toBe('prompt');
+    // --yes is explicit consent — it proceeds regardless of TTY-ness, so the
+    // same flag works in CI and at an interactive shell.
+    expect(gateDecision(true, false)).toBe('proceed');
+    expect(gateDecision(true, true)).toBe('proceed');
+  });
+});
+
+describe('fetchPagedCatalog', () => {
+  let dir: string;
+
+  // A tiny deterministic page body: the pinned header line plus `rows` data
+  // lines. countDataRows must return exactly `rows` — the header never counts.
+  const pageBody = (rows: number): string => {
+    const header =
+      'source_id,ra,dec,phot_g_mean_mag,bp_rp,r_med_geo,r_med_photogeo,random_index';
+    const lines = [header];
+    for (let r = 0; r < rows; r++) {
+      lines.push(`${r},10.0,20.0,13.5,0.5,100,101,${r}`);
+    }
+    return lines.join('\n') + '\n';
+  };
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'fetch-gaia-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('skips slices whose final page file exists: transport not called for them, skipped counted', async () => {
+    const slices = planRandomIndexSlices(100, 2);
+    // Slice 0 is already fully cached; the resume scan must never re-download it.
+    writeFileSync(join(dir, pageFileName(0)), pageBody(2));
+    const transport = vi.fn<TapTransport>(async () => pageBody(2));
+
+    const result = await fetchPagedCatalog({ slices, dir, transport });
+
+    expect(result.skipped).toBe(1);
+    expect(result.fetched).toBe(1);
+    // Transport ran once — for slice 1 only — and never saw slice 0's bounds.
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(transport.mock.calls[0]![0]).toContain(`random_index >= ${slices[1]!.start}`);
+    expect(existsSync(join(dir, pageFileName(1)))).toBe(true);
+  });
+
+  it('a leftover .part file does not count as complete: the slice is refetched and the .part replaced by the final file', async () => {
+    const slices = planRandomIndexSlices(100, 1);
+    // A crash left a partial write behind. A `.part` is never a completion
+    // signal — the slice must refetch and the final file must appear.
+    writeFileSync(join(dir, `${pageFileName(0)}.part`), 'truncated garbage');
+    const transport = vi.fn<TapTransport>(async () => pageBody(2));
+
+    const result = await fetchPagedCatalog({ slices, dir, transport });
+
+    expect(result.fetched).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(existsSync(join(dir, pageFileName(0)))).toBe(true);
+    expect(existsSync(join(dir, `${pageFileName(0)}.part`))).toBe(false);
+  });
+
+  it('on success no .part remains; on transport failure no final file exists for that slice', async () => {
+    const slices = planRandomIndexSlices(100, 2);
+    // Slice 1 (start 50) fails; slice 0 succeeds. Both halves of the
+    // atomicity contract: the good slice leaves no .part, the bad slice
+    // leaves no final file (a half-written page must never look complete).
+    const transport = vi.fn<TapTransport>(async (query) => {
+      if (query.includes(`random_index >= ${slices[1]!.start}`)) {
+        throw new Error('HTTP 503: service unavailable');
+      }
+      return pageBody(2);
+    });
+
+    await fetchPagedCatalog({ slices, dir, transport });
+
+    expect(existsSync(join(dir, pageFileName(0)))).toBe(true);
+    expect(existsSync(join(dir, `${pageFileName(0)}.part`))).toBe(false);
+    expect(existsSync(join(dir, pageFileName(1)))).toBe(false);
+    expect(existsSync(join(dir, `${pageFileName(1)}.part`))).toBe(false);
+  });
+
+  it('a failing slice is counted and logged but does not stop the remaining slices', async () => {
+    const slices = planRandomIndexSlices(300, 3);
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // The middle slice fails; the fetcher must count it and carry on so a
+    // single flaky page never aborts a multi-hour run.
+    const transport = vi.fn<TapTransport>(async (query) => {
+      if (query.includes(`random_index >= ${slices[1]!.start}`)) {
+        throw new Error('HTTP 500: boom');
+      }
+      return pageBody(2);
+    });
+
+    const result = await fetchPagedCatalog({ slices, dir, transport });
+
+    expect(result.failed).toBe(1);
+    expect(result.fetched).toBe(2);
+    // Slices after the failure still ran and landed on disk.
+    expect(existsSync(join(dir, pageFileName(2)))).toBe(true);
+    // The first failure was logged verbatim, not swallowed.
+    expect(warn).toHaveBeenCalled();
+    expect(warn.mock.calls.some((c) => String(c[0]).includes('HTTP 500: boom'))).toBe(true);
+    warn.mockRestore();
+  });
+
+  it('rowsFetched excludes each page CSV header line', async () => {
+    const slices = planRandomIndexSlices(100, 2);
+    // Two pages, each a header + 2 data rows. The header must not count:
+    // 2 pages x 2 data rows = 4, never 6.
+    const transport = vi.fn<TapTransport>(async () => pageBody(2));
+
+    const result = await fetchPagedCatalog({ slices, dir, transport });
+
+    expect(result.rowsFetched).toBe(4);
+  });
+
+  it('resume against a pages plan sliced for a different partition throws instead of mixing partitions', async () => {
+    // First run pins (totalCount, sliceCount) in the plan sidecar.
+    const firstSlices = planRandomIndexSlices(100, 2);
+    const transport = vi.fn<TapTransport>(async () => pageBody(2));
+    await fetchPagedCatalog({ slices: firstSlices, dir, transport });
+
+    // A second run with a different totalCount would tile a different range —
+    // resuming against the old pages would silently mix two partitions.
+    const drifted = planRandomIndexSlices(200, 2);
+    await expect(fetchPagedCatalog({ slices: drifted, dir, transport })).rejects.toThrow(
+      /partition/i,
+    );
+  });
+});
+
+describe('verifyPageRowTotal', () => {
+  let dir: string;
+
+  const pageBody = (rows: number): string => {
+    const header =
+      'source_id,ra,dec,phot_g_mean_mag,bp_rp,r_med_geo,r_med_photogeo,random_index';
+    const lines = [header];
+    for (let r = 0; r < rows; r++) lines.push(`${r},10.0,20.0,13.5,0.5,100,101,${r}`);
+    return lines.join('\n') + '\n';
+  };
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'verify-gaia-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('sums data rows across pages and throws on mismatch', async () => {
+    // Three pages of 2 data rows each: hand-computed total is 6, headers excluded.
+    writeFileSync(join(dir, pageFileName(0)), pageBody(2));
+    writeFileSync(join(dir, pageFileName(1)), pageBody(2));
+    writeFileSync(join(dir, pageFileName(2)), pageBody(2));
+
+    await expect(verifyPageRowTotal(dir, 6)).resolves.toBe(6);
+
+    // Drop one data row from one page → 5 rows now; the guard must reject and
+    // name both the actual (5) and expected (6) counts.
+    writeFileSync(join(dir, pageFileName(1)), pageBody(1));
+    await expect(verifyPageRowTotal(dir, 6)).rejects.toThrow(/5.*6|6.*5/s);
+  });
+});
+
+describe('fetchGcns', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gcns-gaia-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('gcns: a row-count mismatch leaves no final file', async () => {
+    const csvPath = join(dir, 'gcns_main.csv');
+    const sidecarPath = join(dir, 'gaia.sha256');
+    // A truncated response: a header plus two data rows — nowhere near the
+    // 331,312 GCNS rows. The gate must reject it and, crucially, never let the
+    // short body become the final file (nor a `.part` that a resume misreads).
+    const transport = vi.fn<TapTransport>(
+      async () => 'source_id,ra,dec\n1,10.0,20.0\n2,11.0,21.0\n',
+    );
+
+    await expect(fetchGcns({ csvPath, sidecarPath, transport })).rejects.toThrow(/331,?312/);
+
+    expect(existsSync(csvPath)).toBe(false);
+    expect(existsSync(`${csvPath}.part`)).toBe(false);
+  });
+
+  it('gcns: a pre-existing final file short-circuits to skipped without calling the transport', async () => {
+    const csvPath = join(dir, 'gcns_main.csv');
+    const sidecarPath = join(dir, 'gaia.sha256');
+    // The "never re-download" tight-network guarantee: an already-present final
+    // file must skip the whole fetch — the transport is never called (no bytes
+    // over the wire) and the cached content is left byte-for-byte untouched.
+    const cached = 'source_id,ra,dec\n1,10.0,20.0\n';
+    writeFileSync(csvPath, cached);
+    const transport = vi.fn<TapTransport>(async () => 'unused body\n');
+
+    const result = await fetchGcns({ csvPath, sidecarPath, transport });
+
+    expect(result).toBe('skipped');
+    expect(transport).not.toHaveBeenCalled();
+    expect(readFileSync(csvPath, 'utf8')).toBe(cached);
+  });
+});
+
+describe('fetchHip2', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'hip2-gaia-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+    vi.unstubAllGlobals();
+  });
+
+  // A fetch stub that serves the ReadMe as plain bytes and the table URL as a
+  // gzipped body — the shape CDS actually returns. Everything runs through
+  // downloadWithResume's global-fetch transport, so stubbing fetch exercises the
+  // real download→gunzip→gate order rather than a hand-rolled seam.
+  const stubFetch = (gzBody: Buffer): ReturnType<typeof vi.fn> => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const body = url.endsWith('.gz') ? gzBody : Buffer.from('hip2 ReadMe\n');
+      // Buffer IS a Uint8Array at runtime; the lib.dom BodyInit union just
+      // doesn't name Node's subclass, so re-wrap to the type it does name.
+      return new Response(new Uint8Array(body), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  };
+
+  it('downloads the .gz URL, gunzips it, and gates on the decompressed line count', async () => {
+    // A gz whose decompressed body has far fewer lines than a real hip2.dat: the
+    // download→gunzip→line-count-gate order is the whole contract. If the code
+    // gated the compressed bytes instead of the decompressed file (the class of
+    // bug that shipped the plain-URL 404), this would not throw the line-count
+    // mismatch — and the decompressed file would not exist to inspect.
+    const gz = gzipSync(Buffer.from('one star line\ntwo star line\n'));
+    const fetchMock = stubFetch(gz);
+    const hip2Path = join(dir, 'hip2.dat');
+
+    await expect(
+      fetchHip2({
+        hip2Path,
+        readmePath: join(dir, 'ReadMe'),
+        sidecarPath: join(dir, 'gaia.sha256'),
+      }),
+    ).rejects.toThrow(/line-count mismatch/i);
+
+    // The download landed as a .gz and was decompressed to the final path before
+    // the gate fired — both must be on disk, proving the order.
+    expect(existsSync(`${hip2Path}.gz`)).toBe(true);
+    expect(existsSync(hip2Path)).toBe(true);
+
+    // The table request went to the gzipped URL, not a plain hip2.dat that 404s.
+    const requestedUrls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(requestedUrls).toContain(HIP2_URL);
+    expect(HIP2_URL.endsWith('.dat.gz')).toBe(true);
+  });
+});
+
+describe('verifyOrRecordSha256', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gaia-sidecar-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('verifyOrRecordSha256 records on first sight, verifies on match, throws on mismatch', () => {
+    const sidecarPath = join(dir, 'gaia.sha256');
+
+    // First sight of gcns_main.csv: no pinned line, so the digest is appended
+    // and the call reports 'recorded'. The written line uses the shasum -a 256
+    // two-space '<hex>  <filename>' convention.
+    expect(verifyOrRecordSha256(sidecarPath, 'gcns_main.csv', 'aaaa')).toBe('recorded');
+    expect(readFileSync(sidecarPath, 'utf8')).toContain('aaaa  gcns_main.csv');
+
+    // A second artifact coexists as its own line without disturbing the first.
+    expect(verifyOrRecordSha256(sidecarPath, 'hip2.dat', 'bbbb')).toBe('recorded');
+
+    // Same digest as the pinned line → 'verified', no throw, no rewrite churn.
+    expect(verifyOrRecordSha256(sidecarPath, 'gcns_main.csv', 'aaaa')).toBe('verified');
+
+    // A changed digest for a pinned file must throw and name the file — this is
+    // the guard against silently re-pinning a truncated or upstream-changed
+    // download.
+    expect(() => verifyOrRecordSha256(sidecarPath, 'gcns_main.csv', 'cccc')).toThrow(
+      /gcns_main\.csv/,
+    );
+  });
+});

@@ -17,6 +17,7 @@
 import type { ReactNode } from 'react';
 import { SOURCE_REGISTRY } from '../../data/sources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
+import { FAMOUS_STAR_SEARCH } from '../../data/bodies/famousStarsIndex';
 import { MILKY_WAY_NAMES } from './paletteRowModel';
 import type { ScoredRow } from './paletteRowModel';
 import styles from './ResultsList.module.css';
@@ -94,6 +95,33 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
             <span className={styles.secondary}>{remaining.join(' · ')}</span>
           )}
           <span className={styles.source}>{SOURCE_REGISTRY[m.entry.source].label}</span>
+        </>
+      ),
+    };
+  },
+  // Scene-body row — letter glyph like the Milky Way (no atlas thumb for a
+  // procedurally-rendered sphere). A famous star (in FAMOUS_STAR_SEARCH) shows
+  // its alias names in the secondary slot and its constellation as the chip
+  // (e.g. "Alpha Canis Majoris · … · Canis Major"); Earth and the planets, which
+  // aren't in the index, keep the 'Solar System' chip so the row reads as "not a
+  // galaxy" at a glance.
+  body: (m) => {
+    if (m.kind !== 'body') return EMPTY_ROW_VIEW;
+    const star = FAMOUS_STAR_SEARCH.get(m.body.id);
+    const aliases = star ? star.names.slice(1) : [];
+    return {
+      key: `body:${m.body.id}`,
+      testid: `body-row-${m.body.id}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {m.body.label[0] ?? '·'}
+        </span>
+      ),
+      primary: m.body.label,
+      secondary: (
+        <>
+          {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
+          <span className={styles.source}>{star ? star.constellation : 'Solar System'}</span>
         </>
       ),
     };

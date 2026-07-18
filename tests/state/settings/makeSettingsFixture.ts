@@ -6,11 +6,18 @@
  * `EngineSettingsState`. Rather than re-inline the ~30-line literal in each
  * file (where it would drift the moment a cluster gains a field), they all
  * build it here. The body mirrors the engine's startup construction
- * (`engine.ts` settings literal) so the fixture stays a true shape: defaults
+ * (`buildInitialSettings`) so the fixture stays a true shape: defaults
  * from `data/defaults.ts`, item rows DERIVED from `GALAXY_CATALOG_IDS` /
  * `STRUCTURE_IDS`, volume items from `seedVolumeFields()`. Deriving the
  * item keys (rather than hand-listing them) means adding a galaxy catalog or category
  * can't silently leave the fixture stale.
+ *
+ * One deliberate divergence from the boot seed: every galaxy catalog row is
+ * `enabled: true` here, whereas the real seed derives `enabled` from each
+ * registry entry's `visible` field (so default-off catalogs like desiDeep boot
+ * disabled). Reducer/selector tests want a uniform all-on baseline they can
+ * flip bits off of — a registry-shaped fixture would couple every "toggle X"
+ * test to which catalogs happen to ship visible.
  *
  * `overrides` is a shallow top-level merge for the rare test that wants one
  * cluster swapped wholesale; reducer tests generally take the unmodified
@@ -19,6 +26,7 @@
 
 import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { seedVolumeFields } from '../../../src/data/volume/volumeFieldDefaults';
 import {
@@ -38,6 +46,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
+  DEFAULT_FAMOUS_STARS_ENABLED,
   DEFAULT_FLOW,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
@@ -47,14 +56,23 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_STAR_BRIGHTNESS,
+  DEFAULT_STAR_GLOW_OVERLAP,
+  DEFAULT_STAR_EXPOSURE_NEAR_X,
+  DEFAULT_STAR_EXPOSURE_MID_X,
+  DEFAULT_STAR_EXPOSURE_FAR_X,
+  DEFAULT_STAR_SIZE_PX,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
+import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
+import type { StarCatalogId } from '../../../src/@types/data/starCatalog/StarCatalogId';
+import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
 import type { StructureItemSettings } from '../../../src/@types/settings/StructureItemSettings';
 
 export function makeSettingsFixture(
@@ -83,8 +101,23 @@ export function makeSettingsFixture(
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
+    starCatalogs: {
+      enabled: true,
+      sizePx: DEFAULT_STAR_SIZE_PX,
+      brightness: DEFAULT_STAR_BRIGHTNESS,
+      refineThreshold: DEFAULT_REFINE_THRESHOLD,
+      glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
+      exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
+      exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
+      exposureFarX: DEFAULT_STAR_EXPOSURE_FAR_X,
+      items: Object.fromEntries(
+        STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+      ) as Record<StarCatalogId, StarCatalogItemSettings>,
+    },
+    famousStars: { enabled: DEFAULT_FAMOUS_STARS_ENABLED },
     volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: seedVolumeFields() },
     flow: { ...DEFAULT_FLOW },
+    labels: { focusedOnly: false, starLabelsEnabled: true, planetLabelsEnabled: true },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,

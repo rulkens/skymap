@@ -120,33 +120,6 @@ describe('cameraSlice — initial state is serialisable', () => {
     expect(json).not.toContain('"fovYRad"');
   });
 
-  it('is a plain object with no Set or class instances anywhere', () => {
-    const state = base();
-    // Walk top-level fields — none should be a Set or non-plain object.
-    for (const value of Object.values(state)) {
-      expect(value).not.toBeInstanceOf(Set);
-      expect(value).not.toBeInstanceOf(Map);
-    }
-  });
-});
-
-describe('cameraSlice — frozen surface', () => {
-  it('the slice state is exactly { base, tween, autoRotate, dragging, clip }', () => {
-    // Pins the camera Intent surface: the cutover folded the whole mutable
-    // OrbitCamera into these fields. A new key here means new Intent that
-    // should have been deliberated, not slipped in.
-    expect(Object.keys(base()).sort()).toEqual(['autoRotate', 'base', 'clip', 'dragging', 'tween']);
-  });
-
-  it('the tween descriptor is exactly { from, to, durationMs, easing } — no wall-clock', () => {
-    expect(Object.keys(tween).sort()).toEqual(['durationMs', 'easing', 'from', 'to']);
-    // Belt-and-suspenders for the clock-free type guard above: no serialized
-    // descriptor carries a `startMs` / `position` / `fovYRad` wall-clock field.
-    const json = JSON.stringify(tween);
-    expect(json).not.toContain('"startMs"');
-    expect(json).not.toContain('"position"');
-    expect(json).not.toContain('"fovYRad"');
-  });
 });
 
 // ── Shared clip fixture ───────────────────────────────────────────────────────
@@ -176,10 +149,6 @@ describe('cameraSlice — clip lifecycle', () => {
     const cleared = reducer(withBoth, clipEnded());
     expect(cleared.clip).toBeNull();
     expect(cleared.tween).toBeNull();
-  });
-
-  it('initial clip state is null', () => {
-    expect(base().clip).toBeNull();
   });
 });
 

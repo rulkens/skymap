@@ -26,9 +26,10 @@
  *    - `only: effect.layers` so only the affected layers are re-synced.
  *    - `animate: effect.over !== 0` — `over === 0` snaps; `over === undefined`
  *      or a positive number animates.
- *    - `durationMs: effect.over` — forwarded to `applyIntent` so a clip cue
- *      with a custom `over` overrides the default FADE_IN/OUT constants.
- *      `undefined` means "use the defaults"; `0` goes through the snap path
+ *    - `durationMs: effect.over * 1000` — `over` is authored in SECONDS (like
+ *      every clip-land duration) and the fade bridge consumes milliseconds, so
+ *      this boundary owns the conversion. `undefined` means "use the default
+ *      FADE_IN/OUT constants"; `0` goes through the snap path
  *      (`animate: false`) so `durationMs` is ignored there anyway.
  *
  * ### scene
@@ -51,6 +52,7 @@ import type { AppDispatch } from '../../store/types';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import { syncVisibilityFades } from '../engine/wiring/syncVisibilityFades';
 import { VISIBILITY_ACTION_ROW } from './visibilityActionRow';
+import { scopedVisibilityActions } from './scopedVisibilityActions';
 
 export function applySceneEffect(
   effect: SceneEffect,
@@ -62,16 +64,23 @@ export function applySceneEffect(
     case 'show': {
       // Dispatch the visibility-on settings actions for each layer, then sync
       // the fade bridge so the opacity animates (or snaps) to reflect the new
-      // intent.
+      // intent. Scoped entries ('survey:milliquas') dispatch their targeted
+      // action instead — the reactive settings→fade bridge animates those, so
+      // they take no part in the explicit sync below.
       for (const layer of effect.layers) {
         for (const action of VISIBILITY_ACTION_ROW[layer](true, state.settings)) {
+          store.dispatch(action);
+        }
+      }
+      for (const scopedArg of effect.scoped ?? []) {
+        for (const action of scopedVisibilityActions(scopedArg, true, state.settings)) {
           store.dispatch(action);
         }
       }
       syncVisibilityFades(state, {
         animate: effect.over !== 0,
         only: effect.layers,
-        durationMs: effect.over,
+        durationMs: effect.over !== undefined ? effect.over * 1000 : undefined,
       });
       return;
     }
@@ -83,10 +92,15 @@ export function applySceneEffect(
           store.dispatch(action);
         }
       }
+      for (const scopedArg of effect.scoped ?? []) {
+        for (const action of scopedVisibilityActions(scopedArg, false, state.settings)) {
+          store.dispatch(action);
+        }
+      }
       syncVisibilityFades(state, {
         animate: effect.over !== 0,
         only: effect.layers,
-        durationMs: effect.over,
+        durationMs: effect.over !== undefined ? effect.over * 1000 : undefined,
       });
       return;
     }

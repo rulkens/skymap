@@ -86,3 +86,41 @@ describe('tierTarget — Milliquas', () => {
     expect(tierTarget(Source.Milliquas, 'large')).toBeUndefined();
   });
 });
+
+describe('tierFilenameForSource — DesiDeep', () => {
+  it('emits the shared filename for every tier (tier-agnostic, like 2MRS)', () => {
+    // DesiDeep's tierTargets is {} — a single small pencil-beam cone, not
+    // a bulk catalog that needs per-tier subsampling.
+    expect(tierFilenameForSource(Source.DesiDeep, 'small')).toBe('desi-deep.bin');
+    expect(tierFilenameForSource(Source.DesiDeep, 'medium')).toBe('desi-deep.bin');
+    expect(tierFilenameForSource(Source.DesiDeep, 'large')).toBe('desi-deep.bin');
+  });
+});
+
+describe('tierTarget — DesiDeep', () => {
+  it('is uncapped in every tier (undefined)', () => {
+    expect(tierTarget(Source.DesiDeep, 'small')).toBeUndefined();
+    expect(tierTarget(Source.DesiDeep, 'medium')).toBeUndefined();
+    expect(tierTarget(Source.DesiDeep, 'large')).toBeUndefined();
+  });
+});
+
+describe('tierFilenameForSource — DesiWedge', () => {
+  it('emits the shared filename for every tier (tier-agnostic, like the cone)', () => {
+    // DesiWedge's tierTargets is {} — a fixed dec-band patch, not a bulk
+    // catalog that needs per-tier subsampling.
+    expect(tierFilenameForSource(Source.DesiWedge, 'small')).toBe('desi-wedge.bin');
+    expect(tierFilenameForSource(Source.DesiWedge, 'medium')).toBe('desi-wedge.bin');
+    expect(tierFilenameForSource(Source.DesiWedge, 'large')).toBe('desi-wedge.bin');
+  });
+});
+
+describe('tierFilenameForSource — DesiSgw', () => {
+  it('emits the shared filename for every tier (tier-agnostic, like the cone)', () => {
+    // DesiSgw's tierTargets is {} — a fixed depth-bounded patch, not a bulk
+    // catalog that needs per-tier subsampling.
+    expect(tierFilenameForSource(Source.DesiSgw, 'small')).toBe('desi-sgw.bin');
+    expect(tierFilenameForSource(Source.DesiSgw, 'medium')).toBe('desi-sgw.bin');
+    expect(tierFilenameForSource(Source.DesiSgw, 'large')).toBe('desi-sgw.bin');
+  });
+});

@@ -22,14 +22,17 @@ function makeRegistry(): FadeRegistry {
 // (if any) occupies the focus slot. The items bag defaults all-enabled; tests
 // flip an entry to drive the disabled path.
 function makeState(
-  opts: { focusedStructureId?: string | null; fades?: FadeRegistry } = {},
+  opts: { focusedStructureId?: string | null; fades?: FadeRegistry; focusedOnly?: boolean } = {},
 ): EngineState {
   const fades = opts.fades ?? makeRegistry();
   registerAllCategories(fades);
   const focusedStructureId = opts.focusedStructureId ?? null;
   return {
     data: createEngineData(),
-    settings: { structures: { enabled: true, items: makeStructureItems() } },
+    settings: {
+      structures: { enabled: true, items: makeStructureItems() },
+      labels: { focusedOnly: opts.focusedOnly ?? false },
+    },
     selection: {
       focus: focusedStructureId === null ? null : { type: 'structure', id: focusedStructureId },
       select: null,
@@ -70,13 +73,21 @@ function registerAllCategories(fades: FadeRegistry): void {
   }
 }
 
+// The fixture camera sits 5 Mpc from the heliocentric origin — NOT at the
+// origin itself, because origin distance is the surveyDeepZoom band's key and
+// a camera at the origin is "deep zoom": the producer would emit nothing.
+// Every record's worldPos carries the same +5 z offset so the camera-to-
+// structure distances the apparent-size fades read are unchanged.
+const CAM_Z = 5;
+
 function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   return {
-    drawCamPos: [0, 0, 0],
+    drawCamPos: [0, 0, CAM_Z],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
+    nowMs: 0,
     ...over,
   } as unknown as ReadyFrameContext;
 }
@@ -85,7 +96,7 @@ const rec = (id: string, over: Partial<StructureInfo> = {}): StructureInfo =>
   ({
     id,
     name: id,
-    worldPos: [10, 0, 0],
+    worldPos: [10, 0, CAM_Z],
     category: 'cluster',
     featured: true,
     physicalRadiusMpc: 5,
@@ -98,6 +109,16 @@ describe('produceStructureLabels', () => {
     state.data.structures.setGroup('bulk', [rec('a'), rec('b', { featured: false })]);
     const out = produceStructureLabels(state, makeCtx());
     expect(out.labels.map((l) => l.id)).toEqual(['a']);
+  });
+
+  it('wraps a long name onto two balanced lines; short names stay one line', () => {
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [
+      rec('lan', { name: 'Laniakea Supercluster' }),
+      rec('virgo', { name: 'Virgo Cluster', worldPos: [0, 10, CAM_Z] }),
+    ]);
+    const texts = produceStructureLabels(state, makeCtx()).labels.map((l) => l.text);
+    expect(texts).toEqual(['Laniakea\nSupercluster', 'Virgo Cluster']);
   });
 
   it('skips a label category that is disabled AND fully faded', () => {
@@ -170,7 +191,7 @@ describe('produceStructureLabels', () => {
     // Camera very close → apparent radius far past markerMaxApparentRadiusPx
     // (700 + 400 band) → fully faded → label dropped entirely.
     const state = makeState();
-    state.data.structures.setGroup('anchors', [rec('huge', { worldPos: [0.1, 0, 0] })]);
+    state.data.structures.setGroup('anchors', [rec('huge', { worldPos: [0.1, 0, CAM_Z] })]);
     expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
   });
 
@@ -178,7 +199,7 @@ describe('produceStructureLabels', () => {
     // Tiny apparent radius (far away, below markerMinApparentRadiusPx=5) →
     // minFadeOut 0 → dropped.
     const state = makeState();
-    state.data.structures.setGroup('anchors', [rec('far', { worldPos: [100000, 0, 0] })]);
+    state.data.structures.setGroup('anchors', [rec('far', { worldPos: [100000, 0, CAM_Z] })]);
     expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
   });
 
@@ -227,6 +248,19 @@ describe('produceStructureLabels', () => {
     expect(blend1Alpha).toBeCloseTo(blend0Alpha, 6);
   });
 
+  it('focusedOnly mode: emits only the focused structure label', () => {
+    const state = makeState({ focusedStructureId: 'a', focusedOnly: true });
+    state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
+    const out = produceStructureLabels(state, makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['a']);
+  });
+
+  it('focusedOnly mode: emits nothing when no structure is focused', () => {
+    const state = makeState({ focusedOnly: true });
+    state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
+    expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
+  });
+
   it('at-rest output is unchanged (blend 0, all categories at 1, no focus)', () => {
     // Golden: at rest the distance-fade fadeAlpha is unscaled (catOpacity 1 ×
     // recession 1). Two featured anchors at distance 10 Mpc sit in the flat
@@ -235,5 +269,34 @@ describe('produceStructureLabels', () => {
     state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
     const out = produceStructureLabels(state, makeCtx());
     expect(out.labels.map((l) => l.fadeAlpha)).toEqual([1, 1]);
+  });
+
+  it('emits nothing at deep zoom — the surveyDeepZoom band empties the producer', () => {
+    // Camera 0.001 Mpc from the heliocentric origin (inside the band's goneAt
+    // edge). The record sits 10 Mpc from the CAMERA — squarely in the flat
+    // band of both apparent-size fades, featured, all toggles on — so the
+    // band factor is the only thing suppressing it.
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [rec('a', { worldPos: [10, 0, 0.001] })]);
+    const out = produceStructureLabels(
+      state,
+      makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> }),
+    );
+    expect(out.labels).toEqual([]);
+  });
+
+  it('scales fadeAlpha by a fractional band factor mid-descent', () => {
+    // Camera 0.005 Mpc from the origin: strictly inside the band (goneAt
+    // 0.002 < 0.005 < fullAt ≈ 0.0103), so the label FADES rather than
+    // popping — a strict fraction, not the 0/1 a boolean gate would produce.
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [rec('a', { worldPos: [10, 0, 0.005] })]);
+    const out = produceStructureLabels(
+      state,
+      makeCtx({ drawCamPos: [0, 0, 0.005] as Readonly<[number, number, number]> }),
+    );
+    const alpha = out.labels[0]!.fadeAlpha!;
+    expect(alpha).toBeGreaterThan(0);
+    expect(alpha).toBeLessThan(1);
   });
 });

@@ -17,10 +17,10 @@
  *    parsed float value.
  *
  * Source codes from `src/data/source.ts`:
- *   SDSS=1, TwoMRS=2, Glade=3, FamousGalaxy=4, Milliquas=8
+ *   SDSS=1, TwoMRS=2, Glade=3, FamousGalaxy=4, Milliquas=8, DesiDeep=18, DesiWedge=19, DesiSgw=20
  *
- * TOGGLEABLE_SOURCES = [FamousGalaxy(4), TwoMRS(2), SDSS(1), Glade(3), Milliquas(8)]
- * All-on mask = (1<<4)|(1<<2)|(1<<1)|(1<<3)|(1<<8) = 286
+ * TOGGLEABLE_SOURCES = [FamousGalaxy(4), TwoMRS(2), SDSS(1), Glade(3), Milliquas(8), DesiDeep(18), DesiWedge(19), DesiSgw(20)]
+ * All-on mask = (1<<4)|(1<<2)|(1<<1)|(1<<3)|(1<<8)|(1<<18)|(1<<19)|(1<<20)
  * Partial mask (only SDSS + TwoMRS on): (1<<1)|(1<<2) = 6
  * None-on mask: 0
  */
@@ -34,8 +34,16 @@ import type { BiasMode as BiasModeT } from '../../../src/@types/data/galaxyCatal
 import type { SourceType } from '../../../src/@types/data/SourceType';
 import { Source } from '../../../src/data/source';
 
-// All TOGGLEABLE_SOURCES bits set: FamousGalaxy(4)|TwoMRS(2)|SDSS(1)|Glade(3)|Milliquas(8)
-const ALL_ON_MASK = (1 << 4) | (1 << 2) | (1 << 1) | (1 << 3) | (1 << 8);
+// All TOGGLEABLE_SOURCES bits set: FamousGalaxy(4)|TwoMRS(2)|SDSS(1)|Glade(3)|Milliquas(8)|DesiDeep(18)|DesiWedge(19)|DesiSgw(20)
+const ALL_ON_MASK =
+  (1 << 4) |
+  (1 << 2) |
+  (1 << 1) |
+  (1 << 3) |
+  (1 << 8) |
+  (1 << 18) |
+  (1 << 19) |
+  (1 << 20);
 // Only SDSS + TwoMRS — a strict subset → should produce indeterminate
 const PARTIAL_MASK = (1 << Source.SDSS) | (1 << Source.TwoMRS);
 
@@ -105,6 +113,20 @@ describe('GalaxiesSection', () => {
       expect(twomrsCheckbox).not.toBeNull();
       expect(twomrsCheckbox!.checked).toBe(false);
     });
+
+    it('renders a checkbox row for DESI Deep Field', () => {
+      const { container } = render(createElement(GalaxiesSection, baseProps()));
+      const desiCheckbox = container.querySelector<HTMLInputElement>(
+        `#toggle-source-${Source.DesiDeep}`,
+      );
+      expect(desiCheckbox).not.toBeNull();
+      // DesiDeep's bit is part of ALL_ON_MASK, so the box renders checked.
+      expect(desiCheckbox!.checked).toBe(true);
+      const desiLabel = container.querySelector(`label[for="toggle-source-${Source.DesiDeep}"]`);
+      expect(desiLabel).not.toBeNull();
+      expect(desiLabel!.textContent).toContain('DESI Deep Field');
+    });
+
   });
 
   describe('point-size slider', () => {
@@ -158,13 +180,16 @@ describe('GalaxiesSection', () => {
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
 
-      // Should call once per TOGGLEABLE_SOURCE (5 sources), each with true
-      expect(onToggleSource).toHaveBeenCalledTimes(5);
+      // Should call once per TOGGLEABLE_SOURCE (8 sources), each with true
+      expect(onToggleSource).toHaveBeenCalledTimes(8);
       expect(onToggleSource).toHaveBeenCalledWith(Source.FamousGalaxy, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.TwoMRS, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.Glade, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.Milliquas, true);
+      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiDeep, true);
+      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiWedge, true);
+      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiSgw, true);
     });
 
     it('calls onToggleSource with false for all TOGGLEABLE_SOURCES when master is toggled from allOn', () => {
@@ -178,9 +203,12 @@ describe('GalaxiesSection', () => {
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       fireEvent.click(headerCheckbox);
 
-      expect(onToggleSource).toHaveBeenCalledTimes(5);
+      expect(onToggleSource).toHaveBeenCalledTimes(8);
       expect(onToggleSource).toHaveBeenCalledWith(Source.FamousGalaxy, false);
       expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, false);
+      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiDeep, false);
+      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiWedge, false);
+      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiSgw, false);
     });
   });
 });

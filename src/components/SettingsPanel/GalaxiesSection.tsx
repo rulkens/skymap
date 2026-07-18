@@ -36,8 +36,10 @@ import styles from './SettingsPanel.module.css';
 /**
  * Galaxy catalog sources the user can toggle. Synthetic is omitted — it is a
  * fallback rendered while real catalogs load; toggling it invites confusing
- * "empty sky" states with no clear recovery. Ordered smallest → largest so the
- * user sees the "iceberg tip" first.
+ * "empty sky" states with no clear recovery. All-sky catalogs are ordered
+ * smallest → largest so the user sees the "iceberg tip" first; the DESI deep
+ * pencil-beam, dec-band wedge, and Sloan Great Wall sit last as
+ * footprint-limited appendices to that ladder.
  */
 const TOGGLEABLE_SOURCES: readonly SourceType[] = [
   Source.FamousGalaxy,
@@ -45,6 +47,9 @@ const TOGGLEABLE_SOURCES: readonly SourceType[] = [
   Source.SDSS,
   Source.Glade,
   Source.Milliquas,
+  Source.DesiDeep,
+  Source.DesiWedge,
+  Source.DesiSgw,
 ];
 
 // ── Props ──────────────────────────────────────────────────────────────────────

@@ -19,6 +19,8 @@ import {
   moveTargetId,
   dollyToId,
   focus,
+  lookAtId,
+  strafeId,
   hold,
   seq,
   all,
@@ -40,6 +42,7 @@ const emptyDeps: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 // FamousMetaEntry stub for 'm87'. The famous branch of resolveFocusId scans
@@ -60,6 +63,7 @@ const depsM87NotLoaded: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [m87Meta],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 // ─── flyToClip-shaped clip for 'm87' ─────────────────────────────────────────
@@ -69,7 +73,9 @@ const depsM87NotLoaded: ResolveDeps = {
 
 const m87FlyClip: ClipData = {
   start: 'live',
-  timeline: [all([moveTargetId(id('m87'), 5, 'inOut'), dollyToId(id('m87'), 5, 'inOut')])],
+  timeline: [
+    all([moveTargetId(id('m87'), 5, 'inOut'), dollyToId(id('m87'), 5, { ease: 'inOut' })]),
+  ],
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -81,6 +87,22 @@ describe('clipFociReady', () => {
     expect(clipFociReady(m87FlyClip, depsM87NotLoaded)).toBe(false);
   });
 
+  it('clipFociReady gates lookAtId and strafeId like the other id-bearing arms', () => {
+    // Both carry a FocusId that must resolve before the resolve-time math can
+    // run — an unloaded famous id blocks readiness, a structure id never does.
+    const m87LookClip: ClipData = { start: 'live', timeline: [lookAtId(id('m87'), 3)] };
+    expect(clipFociReady(m87LookClip, depsM87NotLoaded)).toBe(false);
+
+    const m87StrafeClip: ClipData = { start: 'live', timeline: [strafeId(id('m87'), 10, 3)] };
+    expect(clipFociReady(m87StrafeClip, depsM87NotLoaded)).toBe(false);
+
+    const virgoLookClip: ClipData = {
+      start: 'live',
+      timeline: [lookAtId(id('cluster-virgo-m87'), 3)],
+    };
+    expect(clipFociReady(virgoLookClip, emptyDeps)).toBe(true);
+  });
+
   it('clipFociReady is true for a structure id', () => {
     // Structure ids resolve by format alone — resolveFocusId returns a
     // SelectionRef without consulting catalogs or famousMeta. The readiness gate
@@ -90,7 +112,7 @@ describe('clipFociReady', () => {
       timeline: [
         all([
           moveTargetId(id('cluster-virgo-m87'), 5, 'inOut'),
-          dollyToId(id('cluster-virgo-m87'), 5, 'inOut'),
+          dollyToId(id('cluster-virgo-m87'), 5, { ease: 'inOut' }),
           focus(id('cluster-virgo-m87')),
         ]),
       ],

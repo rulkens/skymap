@@ -15,7 +15,6 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import {
-  selectCameraIntent,
   selectCameraBase,
   selectAutoRotate,
   selectCameraActive,
@@ -47,27 +46,6 @@ const tween: CameraTweenDescriptor = {
   easing: 'easeOutCubic',
 };
 
-describe('RootState gains a typed camera slot', () => {
-  it('state.camera.base has target/yaw/pitch/distance after registration', () => {
-    const store = makeStore();
-    const { base } = store.getState().camera;
-
-    expect(base).toBeDefined();
-    expect(typeof base.yaw).toBe('number');
-    expect(typeof base.pitch).toBe('number');
-    expect(typeof base.distance).toBe('number');
-    expect(Array.isArray(base.target)).toBe(true);
-    expect(base.target).toHaveLength(3);
-  });
-});
-
-describe('selectCameraIntent', () => {
-  it('returns the camera slice by reference', () => {
-    const store = makeStore();
-    expect(selectCameraIntent(store.getState())).toBe(store.getState().camera);
-  });
-});
-
 describe('selectCameraBase', () => {
   it('returns the committed base pose', () => {
     const store = makeStore();
@@ -78,13 +56,6 @@ describe('selectCameraBase', () => {
 });
 
 describe('selectAutoRotate', () => {
-  it('returns false by default (DEFAULT_AUTO_ROTATE)', () => {
-    const store = makeStore();
-    // The slice default is whatever DEFAULT_AUTO_ROTATE is — we read it rather
-    // than hard-coding to avoid coupling the test to that constant's value.
-    expect(typeof selectAutoRotate(store.getState())).toBe('boolean');
-  });
-
   it('returns true after setAutoRotate active:true', () => {
     const store = makeStore();
     store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));

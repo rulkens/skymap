@@ -10,21 +10,19 @@
 // ─── Distance limits ──────────────────────────────────────────────────────────
 
 /**
- * Minimum allowed `cam.distance` in Mpc.
+ * Minimum allowed `cam.distance` in Mpc: 1e-17 Mpc ≈ Earth-surface scale
+ * (Earth's radius 6371 km ≈ 2.06e-17 Mpc).  Close enough that the orbit
+ * camera can sit just off Earth's surface during the "zoom to Earth"
+ * foreground descent past the Milky Way.
  *
- * 0.05 Mpc = 50 kpc — below the focus-on tween's end distance (0.12 Mpc,
- * see `galaxyFocusDistance.ts`) so that focus snaps the camera
- * to its target framing without `clampDistance` ratcheting it back out
- * the next time the user wheel-zooms.  At this distance the camera is
- * sitting inside the Local-Group footprint of a typical galaxy — close
- * enough that the disk's 30-kpc-diameter texture fills a substantial
- * fraction of the screen but not so close we're inside the disk plane
- * itself (which would expose perspective artefacts the billboard
- * approximation isn't built for).  Hard floor; the orbit-camera near
- * plane (engine.ts: 0.01 Mpc) handles the much-closer case where the
- * tween briefly puts the camera right on top of the galaxy mid-flight.
+ * Sits below the galaxy-focus tween's minimum end distance (0.15 Mpc,
+ * `galaxyFocusDistance.ts: MIN_FOCUS_DISTANCE_MPC`), so `clampDistance`
+ * never ratchets a focus-on tween back outward — `clampDistance(0.15)`
+ * returns 0.15 unchanged. The renderer's near plane and the foreground
+ * viewport handle depth precision at sub-kpc scales; this constant is only
+ * the wheel-zoom floor, not a depth-buffer guarantee.
  */
-export const MIN_DISTANCE_MPC = 0.05;
+export const MIN_DISTANCE_MPC = 1e-17;
 
 /**
  * Maximum allowed `cam.distance` in Mpc.

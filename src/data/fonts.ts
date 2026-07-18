@@ -6,7 +6,7 @@
  * ## Why a registry instead of one TS module per font?
  *
  * The bake step (`tools/buildFontAtlas.ts`) and the runtime loader
- * (`src/services/gpu/labels/loadFontAtlas.ts`) both need the font
+ * (`src/services/gpu/labelLayout/loadFontAtlases.ts`) both need the font
  * list.  Per-side constants would mean adding a font requires
  * parallel edits, getting the order right by hand, and hoping the
  * atlas envelope (size, distance range, font size) stays in sync
@@ -47,11 +47,11 @@ import type { FontId } from '../@types/data/FontId';
 /**
  * Atlas page dimensions in pixels.  Every font bakes into a single
  * `ATLAS_PX × ATLAS_PX` PNG; this becomes the per-layer size of the
- * runtime `texture_2d_array<f32>`.  512² fits the ASCII-printable +
- * `°±µ` charset at `ATLAS_FONT_SIZE` 42 with comfortable margin —
+ * runtime `texture_2d_array<f32>`.  1024² fits the ASCII-printable +
+ * `°±µ` charset at `ATLAS_FONT_SIZE` 84 with comfortable margin —
  * `assertAtlasDimensions` catches any future overflow at build time.
  */
-export const ATLAS_PX = 512;
+export const ATLAS_PX = 1024;
 
 /**
  * MSDF distance range in pixels.  Controls how wide the signed-distance
@@ -63,29 +63,38 @@ export const ATLAS_PX = 512;
  * beyond `±DISTANCE_RANGE_PX / 2` clamps at the texel boundary,
  * cutting off the falloff tail.
  *
- * 16 is sized for the per-label outline + glow pass.  Glow extents
- * scale with `maxPixelSize` (60 px) and reach ~12 px past the glyph
- * edge in the worst case; add ~2 px of outline and we need at least
- * 14 px of encoded headroom on either side.  Choosing 16 (so ±8 px
- * on each side) keeps ~25% margin past the worst-case effect extent
- * while still fitting the 95-glyph charset into the 512² atlas.
+ * 32 is sized for the per-label outline + glow pass, scaled to the
+ * 84 px atlas em.  The outline band samples `outlineEmFrac` (0.16 em
+ * = ~13.4 px) past the contour; ±16 px of encoded range keeps ~19%
+ * margin past that worst-case extent while still fitting the
+ * 95-glyph charset into the 1024² atlas.
  *
- * msdf-bmfont-xml's default of 4 is sized only for the smoothstep
- * body-fill band and clamps the soft glow tail to a hard step a
- * couple of pixels past the contour.  Shader-side
- * SDF-units math (e.g. `widthInSdfUnits = (emFrac * ATLAS_EM_PX) /
- * DISTANCE_RANGE_PX`) bakes this constant in too, so changing it
+ * The ratio `DISTANCE_RANGE_PX / ATLAS_FONT_SIZE` is load-bearing:
+ * shader-side SDF-units math (`widthInSdfUnits = (emFrac *
+ * ATLAS_EM_PX) / DISTANCE_RANGE_PX`) bakes both constants in, so the
+ * pair must scale together — and a *larger* ratio squeezes thin
+ * strokes.  A hairline stroke's SDF peaks at
+ * (strokeHalfWidth / DISTANCE_RANGE_PX) above the 0.5 fill
+ * threshold; at the old 42 px em with range 16 that headroom was
+ * ~0.05, and msdfgen's error at sub-2-texel features pushed sections
+ * of Cormorant's hairlines below 0.5, baking visible gaps into
+ * glyphs like C, G, and S.  Doubling em and range together keeps the
+ * outline math identical while resolving hairlines at ~3 texels,
+ * which removes the baked-in breakups.  Changing either constant
  * requires regenerating the atlas via `npm run build-fonts`.
  */
-export const DISTANCE_RANGE_PX = 16;
+export const DISTANCE_RANGE_PX = 32;
 
 /**
  * Em-size of glyphs in atlas pixels at the source SDF resolution.
  * Higher means crisper edges but fewer glyphs per page; lower packs
- * more glyphs but blurs at extreme upscales.  42 is the
- * msdf-bmfont-xml convention for a 512² atlas with ~100 glyphs.
+ * more glyphs but blurs at extreme upscales.  84 gives Cormorant
+ * Garamond's hairline strokes ~3 texels of resolution — enough for
+ * msdfgen to encode them without dropping below the 0.5 fill
+ * threshold (at 42 they were ~1.5 texels and glyphs baked with
+ * disconnected pieces).  Scale DISTANCE_RANGE_PX with this value.
  */
-export const ATLAS_FONT_SIZE = 42;
+export const ATLAS_FONT_SIZE = 84;
 
 /**
  * ASCII printable: space (32) through tilde (126) — 95 characters.

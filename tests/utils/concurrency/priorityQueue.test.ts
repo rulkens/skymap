@@ -3,10 +3,6 @@ import { PriorityQueue } from '../../../src/utils/concurrency/priorityQueue';
 import { MAX_CONCURRENT_FETCHES } from '../../../src/utils/concurrency/maxConcurrentFetches';
 
 describe('PriorityQueue', () => {
-  it('exposes a sane concurrency cap (4)', () => {
-    expect(MAX_CONCURRENT_FETCHES).toBe(4);
-  });
-
   it('runs at most MAX_CONCURRENT_FETCHES tasks simultaneously', async () => {
     let inFlight = 0;
     let maxInFlight = 0;

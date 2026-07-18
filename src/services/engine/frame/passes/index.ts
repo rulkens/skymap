@@ -1,39 +1,118 @@
 /**
- * passes/index — the pass registries.
+ * passes/index — the content-layer registry.
  *
- * Two ordered arrays of `Pass` consts:
+ * `CONTENT_LAYERS` is the flat, ordered list of every `ContentLayer` the
+ * renderer draws — the additive-into-HDR layers, the premultiplied-OVER
+ * swap-chain overlays, and the near-field groups.  It replaces the two `Pass[]`
+ * arrays this module once exported — those were two arrays because a `Pass`
+ * baked its target and blend into "which array it lives in"; a `ContentLayer`
+ * states `target` and `blend` as data fields on the row itself, so one array is
+ * enough and grouping by `(target, slab)` becomes a `.filter()`.
  *
- *   - `HDR_PASSES` — additively blended into the HDR `rgba16float`
- *     target.  Iterated by `hdrSinglePass` / `hdrSplitPasses` inside
- *     a render pass against the HDR view.
- *   - `UI_PASSES` — premultiplied-OVER UI overlays, drawn after
- *     tone-map directly onto the swap chain.  Iterated by
- *     `uiOverlay` inside one render pass against the swap-chain view.
+ * There is no longer any hand-maintained hdr-vs-swap split here: the frame
+ * executor walks a `FrameStep[]` program that groups layers by `(target, slab)`
+ * directly, and the timing-slot list is derived from that program (`TIMED_SLOTS`
+ * in `frameProgram.ts`).  Consumers that need one group take a `.filter()` over
+ * `CONTENT_LAYERS` at the call site (e.g. the DebugPanel's toggle-name list).
  *
- * The two registries share the `Pass` interface so a future overlay
- * (e.g. structure labels, debug HUD elements) just adds itself to whichever
- * registry matches its blend semantics.  The DebugPanel's
- * `DISPLAY_SLOT_ORDER` derives from HDR_PASSES (timing-instrumented
- * per-pass) plus three trailing slots: `tone-map`, `ui-overlay` (the
- * combined UI_PASSES timing slot — all entries bill against one slot
- * because they share one render pass), and `pick`.
+ * ### CONTENT_LAYERS — draw order
  *
- * Reordering passes in either array is a one-line shuffle with a
- * clear semantic.
- *
- * ### HDR_PASSES — additive content, in deterministic draw order
- *
- * All seven entries are additively blended into the HDR `rgba16float`
- * target:
+ * The first eight entries are additively blended into the HDR `rgba16float`
+ * target, projected through the cosmological slab:
  *
  *   1. point-sprites       — instanced billboards (always-on)
  *   2. procedural-disks    — LOD-1 procedural-disk impostors
  *   3. textured-disks      — LOD-2 3D-oriented textured-disk impostors
- *   4. milky-way           — procedural impostor at the world origin
- *   5. filaments           — cosmic-web skeleton overlay
+ *   4. filaments           — cosmic-web skeleton overlay
+ *   5. flow                — CF4++ peculiar-velocity ribbon overlay
  *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
- *   7. structure-markers     — at-rest halo + ring for cluster / SC / void structures
+ *   7. horizon-shell       — translucent sphere at the observable-universe edge
+ *   8. structure-markers   — at-rest halo + ring for cluster / SC / void structures
+ *
+ * Six more near-field rows follow, projected through the near0 slab (COSMO's
+ * fixed near plane would clip their kpc-to-AU-scale anchors). Five accumulate
+ * into the HDR target via the shared `(hdr, NEAR0)` render step (milky-way,
+ * star-points, orbit-trails, star-catalog, star-upsample); the sixth,
+ * `star-aggregates`, has its OWN `(star-aggregates, NEAR0)` render step into the
+ * half-res offscreen that `star-upsample` then composites back:
+ *
+ *   9. milky-way           — star/dust point cloud at the galactic centre
+ *                            (the fixed 10 kpc COSMO near plane clipped the
+ *                            disc mid-descent; drawn FIRST in the group so
+ *                            its multiplicative dust never darkens the local
+ *                            starfield below)
+ *  10. star-points         — the unresolved partition of the neighbourhood
+ *                            stars (partitionStarsByResolution) as additive
+ *                            point sprites, riding the same tone-map as the
+ *                            galaxies
+ *  11. orbit-trails        — accurate Keplerian orbit trails (Earth / Jupiter /
+ *                            Moon) as screen-space conics with a brightness
+ *                            lobe at the body's position (f64 compose seam)
+ *  11b. body-glints        — the sub-pixel bodies (the glints branch of the body
+ *                            partition) as brightness-scaled additive points
+ *                            (size x albedo x phase, cross-fading with the mesh
+ *                            over 1-3 px), sibling of star-points (f64 rebase seam)
+ *  12. star-aggregates     — the survey (Gaia bin) AGGREGATE stream (interior
+ *                            flux-mip glows), drawn LINEAR into the half-res
+ *                            `star-aggregates` offscreen by its own render step
+ *                            (the fill-bound half of the star pass)
+ *  13. star-catalog        — the survey LEAF stream (real point-source stars),
+ *                            drawn full-res into HDR as a per-frame flux-mip
+ *                            cut of additive point sprites (f64 rebase seam),
+ *                            crossfading to the procedural Milky-Way cloud
+ *  14. star-upsample       — composites the half-res `star-aggregates` offscreen
+ *                            back into HDR, applying the hue-preserving knee to
+ *                            the summed aggregate field (the LOD-symmetry fix)
+ *
+ * The next six are premultiplied-OVER overlays, projected through the
+ * cosmological slab (except near0-selection-ring, which rides near0) and drawn
+ * post-tone-map onto the swap chain:
+ *
+ *  15. selection-ring      — per-galaxy / Milky-Way / structure selection halo
+ *                            (COSMO slab)
+ *  16. near0-selection-ring — the same halo for a NEAR0-slab pick (a survey
+ *                            star): shared renderer + selectionHalo gate,
+ *                            projected through near0 with the f64 rebase seam
+ *  17. disk-radius-ring    — debug: catalog-disk-radius calibration ring
+ *  18. marker-lines        — screen-space thick-line overlay (e.g. label stems)
+ *  19. labels              — MSDF text labels
+ *  20. clip-path-debug     — debug: clip-path inspector route + gizmo
+ *
+ * The final rows leave the cosmological slab entirely — the near-field
+ * foreground group, projected through the near0 slab (whose near/far track
+ * the camera's orbit distance) so the true-scale bodies are never clipped by
+ * the cosmological near plane:
+ *
+ *  21. earth               — true-scale Blue-Marble-textured Earth (f64 compose
+ *                            seam), opaque (depth-tested) into the `foreground:0`
+ *                            target
+ *  22. star-spheres        — the resolved partition of the stars (the Sun +
+ *                            any star crossing STAR_RESOLVE_PX) as true-scale
+ *                            flat-emissive spheres (f64 compose seam), opaque
+ *                            into the same `foreground:0` target
+ *  23. focused-field-star-sphere — the close-range sphere for the ONE focused
+ *                            Gaia field star (selection-gated), reusing the same
+ *                            star renderer + f64 compose seam, opaque into the
+ *                            same target
+ *  24. planets             — the flat branch of the body partition: resolved
+ *                            bodies without a resident surface texture, as
+ *                            true-scale flat-lit albedo spheres (f64 compose
+ *                            seam), opaque into the same target
+ *  25. textured-bodies     — the textured branch of the body partition: resolved
+ *                            bodies whose surface texture is resident, as lit
+ *                            surface-mapped spheres (Saturn's ring casts an
+ *                            analytic on-planet shadow); opaque into the same
+ *                            target (f64 compose seam)
+ *  26. rings               — Saturn's translucent ring overlay, drawn LAST in the
+ *                            (foreground:0, NEAR0) group so it depth-tests against
+ *                            the opaque spheres already stamped there (far ring
+ *                            half occluded), writing no depth and blending
+ *                            straight-alpha OVER — the one blend exception in the
+ *                            otherwise opaque foreground group
+ *  27. foreground-labels   — scene-body name captions, premultiplied-OVER onto
+ *                            the swap chain post-tone-map (like the COSMO labels,
+ *                            but anchored through the near0 vp)
  *
  * `textured-disks` is what remains of the briefly-split (and never-shipped)
  * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
@@ -44,42 +123,44 @@
  * where the point sprite handled them.  See
  * `texturedDiskSubsystem.ts` for the full rationale.
  *
- * Reordering passes is a one-line array shuffle with a clear
- * semantic.  The DebugPanel `GpuTimingsSection` derives its row order
- * from this same array (plus tone-map, ui-overlay, and pick
- * appended), so a reorder here automatically propagates to the
- * timing UI.
+ * Reordering layers is a one-line array shuffle with a clear
+ * semantic.  The GPU-timing slot order is derived from the FRAME program +
+ * this registry (`TIMED_SLOTS` in `frameProgram.ts`), which the DebugPanel
+ * `GpuTimingsSection` iterates, so a reorder here automatically propagates to
+ * the timing UI.
  *
- * ### Why no marker-lines / labels in HDR_PASSES anymore
+ * ### Why no marker-lines / labels in the HDR group
  *
- * Those two were premultiplied-OVER UI overlays mixed in among the
- * additive content.  Two problems with that placement:
+ * Those two are premultiplied-OVER UI overlays mixed in among the
+ * additive content pre-unification.  Two problems with that placement:
  *
  *   1. Colour mismatch — LDR-sane label colours (`[1, 1, 1, 1]`) would be
  *      compressed by the tone-map curve to mid-grey, so the UI overlay is
- *      composited after the tone-map (see encodeUiOverlay) instead.
+ *      composited after the tone-map instead, as the program's swap
+ *      render step (see `executeFrame.ts`).
  *   2. OVER-blend coherency — when timing was enabled (per-pass
  *      split for `timestampWrites`), every `pass.end` stored the HDR
  *      target to DRAM and the next `pass.begin` reloaded it.  On M1
  *      the OVER blends saw partially-coherent `dst.color` and
  *      rendered the marker / label at wrong alpha.  The additive
- *      passes tolerated the same coherency error invisibly because
+ *      layers tolerated the same coherency error invisibly because
  *      their blend (`one, one`) doesn't read `dst.color`.
  *
  * Both issues vanish once the OVER overlays live POST-tone-map on
- * the swap chain.  See `services/engine/frame/uiOverlay.ts`.
+ * the swap chain.  See the swap render step in
+ * `services/engine/frame/executeFrame.ts`.
  *
- * ### Why milky-way BEFORE filaments / scalar-volume?
+ * ### Why milky-way LEADS the (hdr, NEAR0) group
  *
- * The Milky Way impostor is the densest, brightest near-field
- * additive contributor.  Drawing it early lets the broader large-
- * scale-structure overlays (filaments, scalar volumes) composite
- * over its bulge rather than the other way round — the cosmic-web
- * skeleton and density fields read clearly against a bright MW
- * backdrop, and the bulge doesn't visually swallow the thin
- * filament lines or wispy volume haloes.  All three are additively
- * blended so this is a visual-hierarchy choice rather than a
- * correctness constraint.
+ * The Milky Way rode the COSMO group until its fixed 10 kpc near plane
+ * clipped the disc mid-descent (the disc's near edge is ~9.5 kpc from
+ * the origin) — see milkyWayLayer's module header.  Living in the NEAR0
+ * step means the whole cloud now draws AFTER the cosmological group, so
+ * its multiplicative dust pass darkens the full COSMO accumulation behind
+ * it (physically reasonable extinction of background light).  Within the
+ * NEAR0 group it draws FIRST so the local starfield (star-points /
+ * star-catalog) is never darkened by the dust — during the descent those
+ * stars sit between the camera and the disc.
  *
  * ### Why a single-purpose `index.ts` despite the project's
  * "no barrel exports" convention
@@ -87,101 +168,160 @@
  * The convention applies to React component folders — components
  * shouldn't be re-exported via barrel files; they should be
  * imported directly from their `.tsx`.  This module isn't a barrel
- * — it owns the *registry decision* (which passes run, in what
- * order).  Splitting "the array" out of any individual pass file
- * keeps each pass file a one-thing module and makes the registry's
+ * — it owns the *registry decision* (which layers run, in what
+ * order).  Splitting "the array" out of any individual layer file
+ * keeps each layer file a one-thing module and makes the registry's
  * single responsibility explicit at one site.
  */
 
-import type { Pass } from '../../../../@types/engine/frame/Pass';
-import { pointSpritesPass } from './pointSpritesPass';
-import { proceduralDisksPass } from './proceduralDisksPass';
-import { texturedDisksPass } from './texturedDisksPass';
-import { filamentsPass } from './filamentsPass';
-import { flowFieldPass } from './flowFieldPass';
-import { volumeUpsamplePass } from './volumeUpsamplePass';
-import { milkyWayPass } from './milkyWayPass';
-import { horizonShellPass } from './horizonShellPass';
-import { markerLinesPass } from './markerLinesPass';
-import { labelsPass } from './labelsPass';
-import { clipPathDebugPass } from './clipPathDebugPass';
-import { structureMarkersPass } from './structureMarkersPass';
-import { selectionRingPass } from './selectionRingPass';
-import { diskRadiusRingPass } from './diskRadiusRingPass';
-
-/** The HDR passes, in deterministic draw order. */
-export const HDR_PASSES: readonly Pass[] = [
-  pointSpritesPass,
-  proceduralDisksPass,
-  texturedDisksPass,
-  milkyWayPass,
-  filamentsPass,
-  flowFieldPass,
-  volumeUpsamplePass,
-  horizonShellPass,
-  structureMarkersPass,
-];
-
-/**
- * The UI overlay passes, in deterministic draw order.  The selection
- * ring leads so marker-lines and labels composite over its stroke —
- * labels carry information that must stay legible.  The disk-radius
- * debug ring follows the selection ring (both are world-space strokes
- * around the selected galaxy); it is default-off, so it contributes
- * nothing unless the curator enables it.  All entries share one
- * swap-chain `beginRenderPass` (see `uiOverlay.ts`) and one timing slot
- * (`ui-overlay`).
- */
-export const UI_PASSES: readonly Pass[] = [
-  selectionRingPass,
-  diskRadiusRingPass,
-  markerLinesPass,
-  labelsPass,
-  // Debug overlay last so the clip-path route + gizmo draw on top of
-  // everything; default-quiet (no snapshot held) until the curator clicks
-  // "Calculate" in the DebugPanel.
-  clipPathDebugPass,
-];
+import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
+import { scalarVolumeLayer } from './scalarVolumeLayer';
+import { pointSpritesLayer } from './pointSpritesLayer';
+import { proceduralDisksLayer } from './proceduralDisksLayer';
+import { texturedDisksLayer } from './texturedDisksLayer';
+import { filamentsLayer } from './filamentsLayer';
+import { flowFieldLayer } from './flowFieldLayer';
+import { volumeUpsampleLayer } from './volumeUpsampleLayer';
+import { milkyWayLayer } from './milkyWayLayer';
+import { horizonShellLayer } from './horizonShellLayer';
+import { structureMarkersLayer } from './structureMarkersLayer';
+import { selectionRingLayer } from './selectionRingLayer';
+import { near0SelectionRingLayer } from './near0SelectionRingLayer';
+import { diskRadiusRingLayer } from './diskRadiusRingLayer';
+import { markerLinesLayer } from './markerLinesLayer';
+import { labelsLayer } from './labelsLayer';
+import { clipPathDebugLayer } from './clipPathDebugLayer';
+import { earthLayer } from './earthLayer';
+import { starSpheresLayer } from './starSpheresLayer';
+import { focusedFieldStarSphereLayer } from './focusedFieldStarSphereLayer';
+import { planetsLayer } from './planetsLayer';
+import { texturedBodiesLayer } from './texturedBodiesLayer';
+import { ringsLayer } from './ringsLayer';
+import { starPointsLayer } from './starPointsLayer';
+import { bodyGlintsLayer } from './bodyGlintsLayer';
+import { starCatalogLayer } from './starCatalogLayer';
+import { starAggregatesLayer } from './starAggregatesLayer';
+import { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
+import { orbitTrailsLayer } from './orbitTrailsLayer';
+import { foregroundLabelsLayer } from './foregroundLabelsLayer';
 
 /**
- * The ordered list of GPU-timing slots — the single source of truth for
- * both slot allocation (`gpuTimingService` builds its query-set index
- * map from this) and display order (the DebugPanel iterates it).
- *
- * It is every `HDR_PASSES` entry's name, bracketed by the four framework
- * slots that aren't members of either registry:
- *
- *   - `scalar-volume` — the half-resolution volume pre-pass, encoded in
- *     `encodeVolumes` before the HDR loop.
- *   - `tone-map`      — the post-process tonemap (`renderFrame`).
- *   - `ui-overlay`    — the combined `UI_PASSES` slot; all UI overlays
- *     share one swap-chain render pass, so they bill one slot.
- *   - `pick`          — the r32uint pick pass (`runFrame` / `wireInput`).
- *
- * The order is encoder draw order, so the timing panel reads top-to-
- * bottom as the frame executes.  Adding a renderer to `HDR_PASSES` is
- * the ONLY edit needed: it auto-acquires a query-set slot here and a
- * DebugPanel row, with no timing-layer change.
+ * The flat content-layer registry, in deterministic draw order.  HDR
+ * layers (additive, into the HDR offscreen target) lead; the five
+ * swap-target layers (premultiplied-OVER, post-tone-map onto the swap
+ * chain) follow.  Grouping by target is a `.filter()` at the call site —
+ * see the module header.
  */
-export const TIMED_SLOT_NAMES: readonly string[] = [
-  'scalar-volume',
-  ...HDR_PASSES.map((p) => p.name),
-  'tone-map',
-  'ui-overlay',
-  'pick',
+export const CONTENT_LAYERS: readonly ContentLayer[] = [
+  // Half-res scalar-volume raymarch into the volume offscreen — drawn first
+  // (its own target), before the hdr group upsamples it in. Not an hdr-group
+  // member: it targets 'volume', so the hdr render step excludes it.
+  scalarVolumeLayer,
+  pointSpritesLayer,
+  proceduralDisksLayer,
+  texturedDisksLayer,
+  filamentsLayer,
+  flowFieldLayer,
+  volumeUpsampleLayer,
+  horizonShellLayer,
+  structureMarkersLayer,
+  // The near-field NEAR0 rows: they project through NEAR0 (COSMO's fixed near
+  // plane would clip their kpc-to-AU scale anchors), drawn AFTER the eight COSMO
+  // hdr layers above and before the tone-map — so the HDR-target members ride
+  // the same tone curve as the galaxies. Milky Way FIRST — its dust pass is
+  // multiplicative, and leading the group keeps the local starfield below out of
+  // that multiply (see the header) — then star points, the conic orbit trails,
+  // and the survey (Gaia bin) star streams. All the HDR members are additive, so
+  // their relative order is a listing choice, not a compositing one.
+  milkyWayLayer,
+  starPointsLayer,
+  orbitTrailsLayer,
+  // The sub-pixel bodies (the glints branch of the body partition) as
+  // brightness-scaled additive points — the far half of the body LOD, sibling of
+  // star-points. Additive into HDR through NEAR0, so its position among the
+  // additive rows is a listing choice, not a compositing one.
+  bodyGlintsLayer,
+  // The survey (Gaia bin) stars split into two streams sharing one per-frame
+  // walk: the AGGREGATE glow field draws LINEAR into the half-res
+  // `star-aggregates` offscreen by its OWN render step (so its position here is
+  // a listing choice — a different target); the `star-catalog` LEAF dots draw
+  // full-res into HDR; then `star-upsample` composites the offscreen back in
+  // with the knee applied to the summed field. star-upsample sits adjacent to
+  // the leaf draw for GPU-timing legibility (additive order is commutative).
+  starAggregatesLayer,
+  starCatalogLayer,
+  starAggregateUpsampleLayer,
+  // Swap-target rows: post-tone-map, premultiplied-OVER overlays. Selection
+  // ring leads so marker-lines and labels composite over its stroke; the
+  // debug clip-path overlay trails so its route + gizmo draw on top of
+  // everything else.
+  selectionRingLayer,
+  // The NEAR0 sibling of selection-ring: same shared renderer + `selectionHalo`
+  // gate, but projected through the near0 slab (with the f64 rebase the other
+  // NEAR0 rows do) so a picked star — whose parsec-scale anchor COSMO's fixed
+  // near plane would clip — rings cleanly. Each ring lands only in the slab
+  // whose frustum contains its anchor, so the two identical gates never
+  // double-draw. Ordered right after its COSMO sibling for legibility.
+  near0SelectionRingLayer,
+  diskRadiusRingLayer,
+  markerLinesLayer,
+  labelsLayer,
+  clipPathDebugLayer,
+  // Near-field foreground group: the true-scale bodies drawn into the
+  // depth-bearing 'foreground:0' target through the near0 slab, all riding
+  // the single (foreground:0, NEAR0) render step. Registered after the swap
+  // group — position only affects timing-slot listing, since no other group
+  // shares this (target, slab). Order within the group is depth-tested
+  // opaque, so it's a listing choice, not a compositing one.
+  earthLayer,
+  starSpheresLayer,
+  // The focused field star's close-range sphere: a thin selection-gated sibling
+  // reusing the same star renderer + f64 compose seam as star-spheres, but
+  // scoped to the ONE picked Gaia star at close range (a runtime-selection
+  // layer, not an authored scene body). Order within this opaque depth-tested
+  // group is a listing choice — placed right after star-spheres for legibility.
+  focusedFieldStarSphereLayer,
+  planetsLayer,
+  texturedBodiesLayer,
+  // Saturn's rings: the translucent overlay half of the ring system, drawn LAST
+  // in the (foreground:0, NEAR0) group so it depth-tests against the opaque
+  // spheres already stamped there (far ring half occluded), writing no depth and
+  // blending straight-alpha OVER — the one blend exception in the otherwise
+  // opaque foreground group (spec §8).
+  ringsLayer,
+  // Near-field captions: the scene-body name labels drawn OVER onto the swap
+  // chain through the near0 slab. The frame program's (swap, NEAR0) render
+  // step drives it — the (swap, COSMO) step selects nothing here by
+  // construction.
+  foregroundLabelsLayer,
 ];
 
-export { pointSpritesPass } from './pointSpritesPass';
-export { proceduralDisksPass } from './proceduralDisksPass';
-export { texturedDisksPass } from './texturedDisksPass';
-export { filamentsPass } from './filamentsPass';
-export { flowFieldPass } from './flowFieldPass';
-export { volumeUpsamplePass } from './volumeUpsamplePass';
-export { milkyWayPass } from './milkyWayPass';
-export { horizonShellPass } from './horizonShellPass';
-export { markerLinesPass } from './markerLinesPass';
-export { labelsPass } from './labelsPass';
-export { clipPathDebugPass } from './clipPathDebugPass';
-export { structureMarkersPass } from './structureMarkersPass';
-export { selectionRingPass } from './selectionRingPass';
-export { diskRadiusRingPass } from './diskRadiusRingPass';
+export { scalarVolumeLayer } from './scalarVolumeLayer';
+export { pointSpritesLayer } from './pointSpritesLayer';
+export { proceduralDisksLayer } from './proceduralDisksLayer';
+export { texturedDisksLayer } from './texturedDisksLayer';
+export { filamentsLayer } from './filamentsLayer';
+export { flowFieldLayer } from './flowFieldLayer';
+export { volumeUpsampleLayer } from './volumeUpsampleLayer';
+export { milkyWayLayer } from './milkyWayLayer';
+export { horizonShellLayer } from './horizonShellLayer';
+export { structureMarkersLayer } from './structureMarkersLayer';
+export { selectionRingLayer } from './selectionRingLayer';
+export { near0SelectionRingLayer } from './near0SelectionRingLayer';
+export { diskRadiusRingLayer } from './diskRadiusRingLayer';
+export { markerLinesLayer } from './markerLinesLayer';
+export { labelsLayer } from './labelsLayer';
+export { clipPathDebugLayer } from './clipPathDebugLayer';
+export { earthLayer } from './earthLayer';
+export { starSpheresLayer } from './starSpheresLayer';
+export { focusedFieldStarSphereLayer } from './focusedFieldStarSphereLayer';
+export { planetsLayer } from './planetsLayer';
+export { texturedBodiesLayer } from './texturedBodiesLayer';
+export { ringsLayer } from './ringsLayer';
+export { starPointsLayer } from './starPointsLayer';
+export { bodyGlintsLayer } from './bodyGlintsLayer';
+export { starCatalogLayer } from './starCatalogLayer';
+export { starAggregatesLayer } from './starAggregatesLayer';
+export { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
+export { orbitTrailsLayer } from './orbitTrailsLayer';
+export { foregroundLabelsLayer } from './foregroundLabelsLayer';

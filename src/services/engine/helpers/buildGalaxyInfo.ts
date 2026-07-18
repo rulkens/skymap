@@ -14,6 +14,7 @@
  */
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import {
+  DESI_TRACER_CLASS,
   sourceClassLabel,
   milliquasParentSurveyPrefix,
 } from '../../../data/galaxyCatalog/sourceClass';
@@ -43,6 +44,19 @@ import {
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
 
+/**
+ * DESI tracers whose .bin magnitudes are per-tracer synthetic display
+ * constants, not measurements. The DESI LSS clustering catalogs ship no
+ * fluxes for LRG/ELG/QSO; the build pipeline bakes a constant per tracer
+ * purely so the renderer has a brightness to draw with. Only BGS carries
+ * real (Legacy Surveys g/r/z) photometry.
+ */
+const DESI_NO_PHOTOMETRY_TRACERS: ReadonlySet<number> = new Set([
+  DESI_TRACER_CLASS.LRG,
+  DESI_TRACER_CLASS.ELG,
+  DESI_TRACER_CLASS.QSO,
+]);
+
 export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   const { x: px, y: py, z: pz, source } = row;
   const objID = BigInt(row.objId);
@@ -51,7 +65,25 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   const redshift = Number.isFinite(row.redshift) ? row.redshift : fallbackRedshift;
   const distanceMpc = Math.sqrt(px * px + py * py + pz * pz);
 
-  const { magU, magG, magR, magI, magZ } = row;
+  // NaN out the mag slots for tracers with no real photometry BEFORE any
+  // derived quantity (colours, absoluteMagG, galaxyType) is computed, so a
+  // synthetic constant can never masquerade as a measurement downstream.
+  // The InfoCard renders `photometryNote` in place of the magnitude rows.
+  //
+  // The gate is PER-ROW, not per-source: it fires only for the fluxless
+  // tracers (LRG/ELG/QSO), so a BGS row's REAL photometry is never suppressed.
+  // The Sloan Great Wall patch is pure BGS by geometry, so this branch never
+  // suppresses any SGW row — but it is listed alongside the cone/wedge so that a
+  // stray non-BGS SGW row (if the selection ever caught one) would still be
+  // caught by the classByte check rather than silently painting synthetic mags.
+  const suppressPhotometry =
+    (source === Source.DesiDeep ||
+      source === Source.DesiWedge ||
+      source === Source.DesiSgw) &&
+    DESI_NO_PHOTOMETRY_TRACERS.has(row.classByte);
+  const { magU, magG, magR, magI, magZ } = suppressPhotometry
+    ? { magU: NaN, magG: NaN, magR: NaN, magI: NaN, magZ: NaN }
+    : row;
 
   const entry = SOURCE_REGISTRY[source];
   if (entry.type !== 'galaxyCatalog') {
@@ -204,6 +236,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     source,
     sourceLabel: SOURCE_REGISTRY[source].label,
     agnClass,
+    ...(suppressPhotometry ? { photometryNote: 'no photometry in source catalog' } : {}),
     catalogues,
     thumbnailUrl,
     ...(thumbnailFallbackUrl !== undefined ? { thumbnailFallbackUrl } : {}),

@@ -15,6 +15,24 @@ import { flyout } from './flyout';
 import { flowOrbit } from './flowOrbit';
 import { flyPathDemo } from './flyPathDemo';
 import { famousFlythrough } from './famousFlythrough';
+import {
+  tourOpeningTitle,
+  tourYouAreHere,
+  tourYouAreHereDwell,
+  tourApproachM31,
+  tourLocalGroup,
+  tourNeighbourhoodReveal,
+  tourNeighbourhood,
+  tourApproachVirgo,
+  tourLaniakea,
+  tourCosmicWeb,
+  tourCosmicWebDwell,
+  tourCosmicFlows,
+  tourEmptiness,
+  tourDeepField,
+  tourTheEdge,
+  tourHomeAgain,
+} from './grandTourBeats';
 
 export const clipRegistry: Record<ClipId, Clip> = {
   cosmicFlows,
@@ -22,4 +40,20 @@ export const clipRegistry: Record<ClipId, Clip> = {
   flowOrbit,
   flyPathDemo,
   famousFlythrough,
+  tourOpeningTitle,
+  tourYouAreHere,
+  tourYouAreHereDwell,
+  tourApproachM31,
+  tourLocalGroup,
+  tourNeighbourhoodReveal,
+  tourNeighbourhood,
+  tourApproachVirgo,
+  tourLaniakea,
+  tourCosmicWeb,
+  tourCosmicWebDwell,
+  tourCosmicFlows,
+  tourEmptiness,
+  tourDeepField,
+  tourTheEdge,
+  tourHomeAgain,
 };

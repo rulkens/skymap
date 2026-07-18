@@ -66,6 +66,7 @@ const deps: ResolveDeps = {
     },
   ],
   structures: { byId: () => null },
+  stars: { current: () => null },
 };
 
 describe('resolveFocusId', () => {
@@ -183,6 +184,51 @@ describe('resolveFocusId', () => {
     const id = focusIdOf({ type: 'milkyWay' }, deps);
     expect(id).not.toBeNull();
     expect(resolveFocusId(id as string, deps)).toEqual({ type: 'milkyWay' });
+  });
+
+  // ── scene bodies ─────────────────────────────────────────────────────────
+
+  it('body-<seedId> → body ref for a seeded scene body', () => {
+    // SCENE_BODIES is a static import, so resolution needs no loaded catalog:
+    // the fixture deps are irrelevant to this branch.
+    expect(resolveFocusId('body-earth', deps)).toEqual({ type: 'body', id: 'earth' });
+  });
+
+  it('body-<unknownSeed> → null (garbage id, never "not loaded yet")', () => {
+    expect(resolveFocusId('body-krypton', deps)).toBeNull();
+  });
+
+  it('round-trips a body ref through encode → decode', () => {
+    const id = focusIdOf({ type: 'body', id: 'earth' }, deps);
+    expect(id).toBe('body-earth');
+    expect(resolveFocusId(id as string, deps)).toEqual({ type: 'body', id: 'earth' });
+  });
+
+  // ── stars ────────────────────────────────────────────────────────────────
+
+  it('round-trips star-<index> and beats the famous fallback', () => {
+    // star-42 must resolve to a positional star ref via the dedicated decoder
+    // row — NOT tumble into the greedy famous scan (which its character class
+    // would otherwise pass). deps.stars is null here, proving the decode never
+    // touches the catalog: the index alone is the identity.
+    expect(resolveFocusId('star-42', deps)).toEqual({ type: 'star', index: 42 });
+    // Encode↔decode round-trip closes through the shared STAR_FOCUS_PREFIX.
+    expect(focusIdOf({ type: 'star', index: 42 }, deps)).toBe('star-42');
+  });
+
+  it('star- with a non-integer / negative suffix → null', () => {
+    expect(resolveFocusId('star-abc', deps)).toBeNull();
+    expect(resolveFocusId('star--1', deps)).toBeNull();
+  });
+
+  it('star- with a non-canonical numeric suffix → null', () => {
+    // `Number()` accepts exponent and decimal forms, so `star-1e3` would parse
+    // to 1000 and silently focus the wrong star from a malformed shared URL.
+    // The suffix must be digits-only (the pgc/sdss idiom), so these reject.
+    expect(resolveFocusId('star-1e3', deps)).toBeNull();
+    expect(resolveFocusId('star-1.5', deps)).toBeNull();
+    // The canonical `star-0` stays valid.
+    expect(resolveFocusId('star-0', deps)).toEqual({ type: 'star', index: 0 });
   });
 
   // ── structure ────────────────────────────────────────────────────────────

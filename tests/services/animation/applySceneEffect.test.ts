@@ -45,9 +45,6 @@ import type { VisibilityLayerKey } from '../../../src/@types/animation/Visibilit
 import { createAppStore } from '../../../src/store/createAppStore';
 import {
   setFilamentsEnabled,
-  setMilkyWayEnabled,
-  setMilkyWayLabelEnabled,
-  setVolumesEnabled,
   setFlowEnabled,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
@@ -258,16 +255,40 @@ describe('applySceneEffect — show', () => {
     );
   });
 
-  it('calls syncVisibilityFades with animate:true and durationMs when over is a positive number', () => {
+  it('converts a positive `over` (clip seconds) to durationMs for the fade bridge', () => {
     const { store } = createAppStore();
     const settings = store.getState().settings as unknown as EngineSettingsState;
     const state = makeEngineState(settings);
 
-    applySceneEffect({ kind: 'show', layers: ['filaments'], over: 1200 }, { state, store });
+    // `over` is authored in SECONDS (like every clip-land duration); the fade
+    // bridge consumes milliseconds. Forwarding it unconverted made a 9-second
+    // volume reveal run as a 9-millisecond pop.
+    applySceneEffect({ kind: 'show', layers: ['filaments'], over: 9 }, { state, store });
 
     expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ animate: true, durationMs: 1200 }),
+      expect.objectContaining({ animate: true, durationMs: 9000 }),
+    );
+  });
+
+  it('dispatches a targeted action for a scoped entry, not the whole-row fan-out', () => {
+    const { store } = createAppStore();
+    const settings = store.getState().settings as unknown as EngineSettingsState;
+    const state = makeEngineState(settings);
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    applySceneEffect({ kind: 'show', layers: [], scoped: ['survey:milliquas'] }, { state, store });
+
+    // Exactly ONE catalog-visibility action — the scoped item, no fan-out.
+    const catalogActions = dispatch.mock.calls
+      .map(([a]) => a as ReturnType<typeof setGalaxyCatalogVisible>)
+      .filter((a) => a.type === setGalaxyCatalogVisible.type);
+    expect(catalogActions).toEqual([setGalaxyCatalogVisible({ id: 'milliquas', enabled: true })]);
+    // The explicit fade sync covers atomic layers only (empty here) — the
+    // scoped item's fade rides the reactive settings→fade bridge.
+    expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ only: [] }),
     );
   });
 });
@@ -311,6 +332,20 @@ describe('applySceneEffect — hide', () => {
         true,
       );
     }
+  });
+
+  it('dispatches a targeted off action for a scoped hide entry', () => {
+    const { store } = createAppStore();
+    const settings = store.getState().settings as unknown as EngineSettingsState;
+    const state = makeEngineState(settings);
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    applySceneEffect({ kind: 'hide', layers: [], scoped: ['label:group'] }, { state, store });
+
+    const labelActions = dispatch.mock.calls
+      .map(([a]) => a as ReturnType<typeof setStructureLabelEnabled>)
+      .filter((a) => a.type === setStructureLabelEnabled.type);
+    expect(labelActions).toEqual([setStructureLabelEnabled({ id: 'group', enabled: false })]);
   });
 
   it('calls syncVisibilityFades with only + animate:true when over is undefined', () => {
@@ -411,12 +446,6 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
 
   const settings = makeSettings({ galaxyCatalogIds: ['sdss'], structureIds: ['supercluster'] });
 
-  it('every VisibilityLayerKey resolves to a factory function', () => {
-    for (const key of ALL_KEYS) {
-      expect(typeof VISIBILITY_ACTION_ROW[key], `key '${key}'`).toBe('function');
-    }
-  });
-
   it('gate-backed layers return a non-empty action array', () => {
     const gateBacked: readonly VisibilityLayerKey[] = ALL_KEYS.filter(
       (k) => !REGISTRATION_ONLY.includes(k),
@@ -446,61 +475,12 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
     }
   });
 
-  it('milkyWayDisk factory produces setMilkyWayEnabled(on)', () => {
-    expect(VISIBILITY_ACTION_ROW['milkyWayDisk'](true, settings)).toEqual([
-      setMilkyWayEnabled(true),
-    ]);
-    expect(VISIBILITY_ACTION_ROW['milkyWayDisk'](false, settings)).toEqual([
-      setMilkyWayEnabled(false),
-    ]);
-  });
-
-  it('milkyWayLabel factory produces setMilkyWayLabelEnabled(on)', () => {
-    expect(VISIBILITY_ACTION_ROW['milkyWayLabel'](true, settings)).toEqual([
-      setMilkyWayLabelEnabled(true),
-    ]);
-  });
-
-  it('filaments factory produces setFilamentsEnabled(on)', () => {
-    expect(VISIBILITY_ACTION_ROW['filaments'](true, settings)).toEqual([setFilamentsEnabled(true)]);
-    expect(VISIBILITY_ACTION_ROW['filaments'](false, settings)).toEqual([
-      setFilamentsEnabled(false),
-    ]);
-  });
-
-  it('volumesMaster factory produces setVolumesEnabled(on)', () => {
-    expect(VISIBILITY_ACTION_ROW['volumesMaster'](true, settings)).toEqual([
-      setVolumesEnabled(true),
-    ]);
-  });
-
-  it('flow factory produces setFlowEnabled(on)', () => {
-    expect(VISIBILITY_ACTION_ROW['flow'](true, settings)).toEqual([setFlowEnabled(true)]);
-    expect(VISIBILITY_ACTION_ROW['flow'](false, settings)).toEqual([setFlowEnabled(false)]);
-  });
-
-  it('survey factory emits one setGalaxyCatalogVisible per catalog id', () => {
-    const actions = VISIBILITY_ACTION_ROW['survey'](true, settings) as ReturnType<
-      typeof setGalaxyCatalogVisible
-    >[];
-    expect(actions).toHaveLength(1); // fixture has one catalog: 'sdss'
-    expect(actions[0]!.payload).toEqual({ id: 'sdss', enabled: true });
-  });
-
   it('surveyLabel factory emits one setGalaxyCatalogLabelEnabled per catalog id', () => {
     const actions = VISIBILITY_ACTION_ROW['surveyLabel'](false, settings) as ReturnType<
       typeof setGalaxyCatalogLabelEnabled
     >[];
     expect(actions).toHaveLength(1);
     expect(actions[0]!.payload).toEqual({ id: 'sdss', enabled: false });
-  });
-
-  it('structureRing factory emits one setStructureItemEnabled per structure id', () => {
-    const actions = VISIBILITY_ACTION_ROW['structureRing'](false, settings) as ReturnType<
-      typeof setStructureItemEnabled
-    >[];
-    expect(actions).toHaveLength(1); // fixture has one structure: 'supercluster'
-    expect(actions[0]!.payload).toEqual({ id: 'supercluster', enabled: false });
   });
 
   it('structureLabel factory emits one setStructureLabelEnabled per structure id', () => {

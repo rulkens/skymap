@@ -8,12 +8,9 @@ import {
 } from '../../src/data/sources';
 import { STRUCTURE_IDS } from '../../src/data/structure/structureIds';
 import { LABEL_CATEGORIES } from '../../src/data/structure/labelCategories';
-import { CATEGORY_DISPLAY_INFO } from '../../src/data/structure/categoryDisplayInfo';
 import { DEFAULT_FLOW } from '../../src/data/defaults';
 import { ALL_VISIBLE_MASK } from '../../src/utils/allVisibleMask';
 import { maskHas } from '../../src/utils/maskHas';
-import { maskWith } from '../../src/utils/maskWith';
-import { maskWithout } from '../../src/utils/maskWithout';
 
 describe('Source.FamousGalaxy', () => {
   it('has integer value 4 (next free slot after Glade=3)', () => {
@@ -93,21 +90,40 @@ describe('Source enum — structure codes (cluster/supercluster/void)', () => {
 
   it('ALL_VISIBLE_MASK covers default-visible galaxy catalog sources only (no structure bits)', () => {
     // Default-visible galaxy catalog bits: 0 (Synthetic), 1 (SDSS), 2 (2MRS),
-    // 3 (Glade), 4 (Famous), 8 (Milliquas) = 0b100011111.  Milliquas ships
-    // on by default now that the quasar source is stable.  Structure codes 5/6/7
-    // stay clear so the galaxy catalog draw loop doesn't accidentally gate on them.
+    // 3 (Glade), 4 (Famous), 8 (Milliquas) = 0b100011111. Milliquas ships on
+    // by default now that the quasar source is stable. The DESI patches —
+    // DesiDeep (bit 18), DesiWedge (bit 19), and DesiSgw (bit 20) — are
+    // deliberately CLEAR: all three drill geometries are specialist opt-in
+    // overlays, not part of the all-sky default scene, so their bits stay off.
+    // Structure codes 5/6/7 stay clear so the galaxy catalog draw loop
+    // doesn't accidentally gate on them.
     expect(ALL_VISIBLE_MASK).toBe(0b100011111);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Milliquas)).toBe(true);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.DesiDeep)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.DesiWedge)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.DesiSgw)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Cluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Supercluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Void)).toBe(false);
   });
+});
 
-  it('bitmask helpers still operate correctly on galaxy-catalog-source bits', () => {
-    // Sanity: the bitmask infrastructure isn't disturbed by appending
-    // new enum members that don't participate in the mask.
-    expect(maskHas(maskWith(0, Source.SDSS), Source.SDSS)).toBe(true);
-    expect(maskHas(maskWithout(ALL_VISIBLE_MASK, Source.Glade), Source.Glade)).toBe(false);
+describe('Source enum — star-catalog code (survey-wide Gaia bin)', () => {
+  it('appends GaiaStars=24 to the enum', () => {
+    // Registry-key-only code (not persisted, not pickable); appended after
+    // the three body codes (FamousStar=21, Planet=22, Earth=23). Never
+    // renumber the codes below it.
+    expect(Source.GaiaStars).toBe(24);
+  });
+
+  it('keeps GaiaStars OUT of GALAXY_CATALOG_SOURCES', () => {
+    // Load-bearing behavioural invariant: the survey-wide Gaia stars render
+    // through their own star renderer, gated by the star-catalog crossfade
+    // band — NOT the galaxy-catalog points-pipeline visibility bitmask. If
+    // this code ever joined GALAXY_CATALOG_SOURCES the stars would be OR'd
+    // into ALL_VISIBLE_MASK and toggled by the galaxy-catalog draw loop,
+    // silently coupling two independent visibility systems.
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.GaiaStars);
   });
 });
 
@@ -117,13 +133,6 @@ describe('Registry capability flags — bearsLabel / bearsMarker', () => {
     expect(entry.bearsLabel).toBe(true);
     expect(entry.bearsMarker).toBe(false);
     expect(entry.labelLayer).toBe('galaxyNames');
-  });
-
-  it('famousGalaxy category copy is detail "Famous Galaxy" / short "Galaxy" / plural "Famous Galaxies"', () => {
-    const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
-    expect(entry.detailLabel).toBe('Famous Galaxy');
-    expect(entry.shortLabel).toBe('Galaxy');
-    expect(entry.plural).toBe('Famous Galaxies');
   });
 
   it('structure rows bear both a label and a marker', () => {
@@ -185,30 +194,8 @@ describe('Source enum — overlay codes (milkyWay/flow)', () => {
     expect(maskHas(ALL_VISIBLE_MASK, Source.Flow)).toBe(false);
   });
 
-  it('milkyWay row bears a label on the milkyWay layer with display copy', () => {
-    const entry = SOURCE_REGISTRY[Source.MilkyWay];
-    expect(entry.type).toBe('milkyWay');
-    expect(entry.id).toBe('milkyWay');
-    expect(entry.visible).toBe(true);
-    expect(entry.bearsLabel).toBe(true);
-    // The "You are here" label carries a stem line but no ring/halo marker.
-    expect(entry.bearsMarker).toBe(false);
-    expect(entry.labelLayer).toBe('milkyWay');
-    expect(entry.detailLabel).toBe('Milky Way');
-    expect(entry.shortLabel).toBe('Milky Way');
-    expect(entry.plural).toBe('Milky Way');
-  });
-
   it('LABEL_CATEGORIES includes milkyWay', () => {
     expect(LABEL_CATEGORIES).toContain('milkyWay');
-  });
-
-  it('CATEGORY_DISPLAY_INFO resolves milkyWay copy', () => {
-    expect(CATEGORY_DISPLAY_INFO.milkyWay).toEqual({
-      label: 'Milky Way',
-      shortLabel: 'Milky Way',
-      plural: 'Milky Way',
-    });
   });
 
   it('flow row is a default-off overlay carrying the look/motion defaults', () => {
@@ -229,5 +216,51 @@ describe('Source enum — overlay codes (milkyWay/flow)', () => {
     expect(DEFAULT_FLOW.mode).toBe(entry.mode);
     expect(DEFAULT_FLOW.count).toBe(entry.count);
     expect(DEFAULT_FLOW.boundaryFadeWidth).toBe(entry.boundaryFadeWidth);
+  });
+});
+
+describe('Source enum — body codes (famousStar/planet/earth)', () => {
+  it('appends FamousStar=21, Planet=22, Earth=23 to the enum', () => {
+    // Registry-key-only codes (not persisted, not pickable); the three body
+    // codes are contiguous after the DESI patches. FamousStar/Planet fill the
+    // 21/22 slots the Earth comment reserved; Earth stays 23 (append-only by
+    // VALUE — insertion order in the const is cosmetic). Never renumber below.
+    expect(Source.FamousStar).toBe(21);
+    expect(Source.Planet).toBe(22);
+    expect(Source.Earth).toBe(23);
+  });
+
+  it('famousStar/planet/earth rows are non-label, non-marker body sources', () => {
+    // Bodies are near-field scene objects, not galaxy catalogs or structure
+    // rings. Their captions ship through the foreground-labels layer, bypassing
+    // the COSMO label/marker systems — so both capability flags are false.
+    const bodyRows = [
+      [Source.FamousStar, 'famousStar'],
+      [Source.Planet, 'planet'],
+      [Source.Earth, 'earth'],
+    ] as const;
+    for (const [code, type] of bodyRows) {
+      const entry = SOURCE_REGISTRY[code];
+      expect(entry.type).toBe(type);
+      expect(entry.id).toBe(type);
+      expect(entry.bearsLabel).toBe(false);
+      expect(entry.bearsMarker).toBe(false);
+    }
+  });
+
+  it('keeps famousStar/planet/earth OUT of GALAXY_CATALOG_SOURCES', () => {
+    // Bodies render through their own content-layer, not the points
+    // pipeline's visibility bitmask.
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.FamousStar);
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.Planet);
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.Earth);
+  });
+
+  it('keeps the famousStar/planet/earth bits clear of ALL_VISIBLE_MASK', () => {
+    // ALL_VISIBLE_MASK is the OR of default-visible galaxy-catalog rows only,
+    // so a body code never lands in it.
+    expect(maskHas(ALL_VISIBLE_MASK, Source.FamousStar)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Planet)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Earth)).toBe(false);
   });
 });

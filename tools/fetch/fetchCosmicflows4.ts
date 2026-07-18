@@ -86,10 +86,10 @@ export async function downloadWithResume(
     return { bytesAdded: 0, totalBytes: startOffset };
   }
   if (!res.ok && res.status !== 206 && res.status !== 200) {
-    throw new Error(`CF4 download failed: HTTP ${res.status} ${res.statusText}`);
+    throw new Error(`Download failed: HTTP ${res.status} ${res.statusText} (${url})`);
   }
   if (!res.body) {
-    throw new Error('CF4 download failed: empty body');
+    throw new Error(`Download failed: empty body (${url})`);
   }
 
   const stream = createWriteStream(destPath, {
@@ -131,7 +131,7 @@ const SHA256_PATH = rawDataPath('cf4.sha256');
  * intermediate stays on disk so a re-run hits the Range: 416 fast-path
  * instead of pulling 2.5 MB again.
  */
-async function gunzipToFile(srcGz: string, dest: string): Promise<void> {
+export async function gunzipToFile(srcGz: string, dest: string): Promise<void> {
   await pipeline(createReadStream(srcGz), createGunzip(), createWriteStream(dest));
 }
 

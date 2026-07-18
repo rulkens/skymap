@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { focusIdForRow } from '../../../../src/components/CommandPalette/utils/focusIdForRow';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
@@ -42,5 +43,9 @@ describe('focusIdForRow', () => {
 
   it('the Milky Way row → the durable singleton focus id', () => {
     expect(focusIdForRow({ kind: 'milkyWay', score: 0 })).toBe('milkyWay');
+  });
+
+  it('a scene-body row → its seed id under the body- prefix', () => {
+    expect(focusIdForRow({ kind: 'body', body: SCENE_EARTH, score: 0 })).toBe('body-earth');
   });
 });

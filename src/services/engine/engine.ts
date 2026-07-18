@@ -81,7 +81,7 @@ import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { HDR_PASSES, UI_PASSES } from './frame/passes';
+import { CONTENT_LAYERS } from './frame/passes';
 import { logCameraState } from './helpers/logCameraState';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -138,8 +138,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //   - `sources`    → loaded `GalaxyCatalog`s + visibility bitmasks + tier
   //                    + optional famous-galaxy sidecars.
   //   - `picking`    → hover / click / drag mutables.
-  //   - `gpu`        → renderers / HDR target / tone-map pass — null until
-  //                    `initGpu` finishes.
+  //   - `gpu`        → renderers / offscreen render-target table /
+  //                    compositor — null until `initGpu` finishes.
   //   - `subsystems` → long-lived helpers; some construct up-front, the rest
   //                    land later.
   //   - `cam`        → orbit camera, null until the first cloud loads.
@@ -239,7 +239,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // tracks its own `latest`/`picked` locals.
       pickInFlight: false,
       pointerDown: false,
-      lastFrameUniformBytes: null,
     },
     gpu: {
       // All GPU handles populate during the async IIFE below and
@@ -247,6 +246,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // for the null-until-init lifecycle rationale.
       renderer: null,
       pickRenderer: null,
+      pickProgram: null,
       milkyWayPickRenderer: null,
       // Canonical fade + source + focus bind-group layouts. Built once in
       // initGpu and threaded into every renderer's createPipelineLayout so
@@ -256,37 +256,87 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       sourceBgl: null,
       focusBgl: null,
       focusUniform: null,
-      postProcess: null,
-      volumeOffscreen: null,
+      renderTargets: null,
+      compositor: null,
       filamentRenderer: null,
       // labelRenderer + markerLineRenderer: null until initGpu finishes the
       // font-atlas fetch.  Excluded from isEngineReady (optional async
-      // resources, null-checked at use by labelsPass / markerLinesPass).
+      // resources, null-checked at use by labelsLayer / markerLinesLayer).
       labelRenderer: null,
       markerLineRenderer: null,
+      // Second MSDF label renderer for the foreground Sun/Earth captions
+      // (Plan 01 — zoom-to-Earth). null until initGpu; excluded from
+      // isEngineReady, null-checked at use like labelRenderer.
+      foregroundLabelRenderer: null,
+      // Leader-line sibling of foregroundLabelRenderer — the NEAR0-slab
+      // connectors under the scene-body captions. null until initGpu;
+      // excluded from isEngineReady, null-checked at use.
+      foregroundMarkerLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use by
-      // clipPathDebugPass.
+      // clipPathDebugLayer.
       debugLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
-      // texturedDiskRenderer / proceduralDiskRenderer / milkyWayRenderer:
-      // null until initGpu constructs them.  The frame body reads them via
-      // RunFrameDeps; they live here so `destroy()` can reach them and so
-      // later phases consume the same identities by reading `state.gpu.X`.
+      // texturedDiskRenderer / proceduralDiskRenderer: null until initGpu
+      // constructs them.  The frame body reads them straight off
+      // `state.gpu.*` (see `passes/index.ts`); they live here so `destroy()`
+      // can reach them and so later phases consume the same identities.
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
-      milkyWayRenderer: null,
+      // Milky-Way point cloud + its two-pass renderer. null until initGpu.
+      // Excluded from isEngineReady; released in destroy().
+      milkyWayCloud: null,
+      milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
-      // null until initGpu; excluded from isEngineReady — volumeUpsamplePass
+      // null until initGpu; excluded from isEngineReady — volumeUpsampleLayer
       // null-checks both before hasActiveFields(), so a null state no-ops.
       volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
+      // null until initGpu; excluded from isEngineReady —
+      // starAggregateUpsampleLayer null-checks it in draw, so a null no-ops.
+      starAggregateUpsample: null,
       // Debug overlays. null until initGpu; the per-frame consumer
       // null-checks each together with its `settings.debug.*` toggle.
       pickDebugOverlay: null,
       diskRadiusRing: null,
+      // True-scale textured Earth (Plan 02 — zoom-to-Earth). null until initGpu
+      // constructs it + mints its 'earth' texture slot in the bodyTextures
+      // family (proximity-demanded, commits via setTexture); excluded from
+      // isEngineReady, null-checked at use by earthLayer.
+      earthRenderer: null,
+      // Anchor renderers (Plan 02 — zoom-to-Earth): the resolved near star
+      // (the Sun), one instanced planet renderer drawing every seeded
+      // planet, and the far-star additive points. null until initGpu;
+      // excluded from isEngineReady, null-checked at use by their layers.
+      starRenderer: null,
+      planetRenderer: null,
+      // Shared textured-sphere renderer for the twelve non-Earth textured bodies
+      // (planets + Moon + Galilean moons). null until initGpu; excluded from
+      // isEngineReady, null-checked at use by texturedBodiesLayer; the
+      // bodyTextures family's commit/onRelease call its setTexture/clearTexture.
+      texturedBodyRenderer: null,
+      // Saturn's rings — the translucent overlay half of the ring system, drawn
+      // last in the (foreground:0, NEAR0) group. null until initGpu; excluded
+      // from isEngineReady, null-checked at use by ringsLayer.
+      ringRenderer: null,
+      starPointRenderer: null,
+      // Sub-pixel bodies (the glints branch of the body partition) as
+      // brightness-scaled additive points on the (hdr, NEAR0) step — the far
+      // half of the body LOD, sibling of starPointRenderer. null until initGpu;
+      // excluded from isEngineReady, null-checked at use by bodyGlintsLayer.
+      bodyGlintRenderer: null,
+      starCatalogRenderer: null,
+      starCatalogPickRenderer: null,
+      // r32uint pick provider for the NEAR0 foreground bodies (Earth / planets /
+      // scene-star spheres + the sub-pixel scene-star points). null until
+      // initGpu; excluded from isEngineReady, driven by the body layers' drawPick.
+      bodyPickRenderer: null,
+      // Keplerian orbit trails (Earth / Jupiter / Moon) — additive screen-space
+      // conics on the (hdr, NEAR0) step. null until initGpu; excluded from
+      // isEngineReady, null-checked at use by orbitTrailsLayer.
+      orbitTrailRenderer: null,
       // Per-pass GPU timing service.  Always non-null — a no-op stub until
       // initGpu swaps in the device-aware service.  Consumers gate on
       // `.enabled`.
@@ -300,6 +350,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       galaxyAtlas: null,
       proceduralDisks: null,
       texturedDisks: null,
+      diskPlannerWalk: null,
       hiResFamous: null,
       hiResFamousTexture: null,
 
@@ -388,6 +439,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // born there.
     assetSlots: {
       points: new Map(),
+      // Per-source star catalogs — registry-built (wireSlots), unlike points'
+      // initGpu minting; the star slot's commit null-guards the renderer.
+      starCatalogs: new Map(),
       filaments: null,
       famousMeta: null,
       structureCatalog: null,
@@ -397,6 +451,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       mcpm: null,
       // Default-off velocity flow field; demand-loaded like cf4Density.
       flow: null,
+      // Keyed body-surface texture family (Earth + planets/moons + Saturn ring),
+      // minted in initGpu beside the body renderers. Empty map at construction —
+      // proximity-demanded + released per body (mirrors the `points` map).
+      bodyTextures: new Map(),
     },
     // ── One-shot transient request flags ────────────────────────────────
     //
@@ -492,6 +550,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     famousMeta: state.data.galaxies.famousMeta,
     structures: { byId: (id) => state.data.structures.byId(id) },
+    // The sole loaded star catalog — the first (only, in v1) committed Gaia
+    // catalog off the renderer, or null before the star cloud lands or after
+    // the GPU tears down. Read lazily like the other getters so a star pick /
+    // deep-link always sees the current catalog.
+    stars: {
+      current: () => {
+        const renderer = state.gpu.starCatalogRenderer;
+        if (!renderer) return null;
+        for (const { catalog } of renderer.loadedCatalogs()) return catalog;
+        return null;
+      },
+    },
   });
 
   // Bound clip player, hoisted into the saga context as the single clip-run
@@ -511,7 +581,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // Debug clip-path inspector seam — `watchClipPathInspectSaga` calls `compute`
   // to sample a clip's camera route into the `clipPathInspector` subsystem (read
-  // each frame by `clipPathDebugPass`) and `clear` to drop it. Shares the same
+  // each frame by `clipPathDebugLayer`) and `clear` to drop it. Shares the same
   // live-pose accessor as `playClip` so a `start:'live'` clip samples from the
   // pose the user sees. 384 samples keeps the route + target polylines smooth
   // through the tight Catmull-Rom corners of a flyPath (must stay within the
@@ -538,6 +608,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             fovYRad: state.cameraRuntime.projection.fovYRad,
           }
         : null,
+    // The live Earth record `watchFlyToEarthKeySaga` frames its descent tween
+    // on. Read lazily (like `resolveDeps`) because the scene-body seed installs
+    // Earth after the root saga forks; null until then, so the fly-to key
+    // no-ops rather than tween toward a body that isn't there.
+    earthBody: () => state.data.bodies.earth,
     playClip,
     clipPathInspect,
   });
@@ -628,6 +703,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.hiResFamousTexture = null;
     state.subsystems.proceduralDisks?.destroy();
     state.subsystems.proceduralDisks = null;
+    // The shared walk holds no GPU resource — just the stride cursor — so
+    // its teardown order relative to the atlas is irrelevant; grouped with
+    // the disk planners it drives.
+    state.subsystems.diskPlannerWalk?.destroy();
+    state.subsystems.diskPlannerWalk = null;
     state.subsystems.galaxyAtlas?.destroy();
     state.subsystems.galaxyAtlas = null;
     state.subsystems.clickResolver?.destroy();
@@ -641,16 +721,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     //    SDSS deck).
     state.gpu.pickRenderer?.destroy();
     state.gpu.pickRenderer = null;
+    state.gpu.pickProgram?.destroy();
+    state.gpu.pickProgram = null;
     state.gpu.milkyWayPickRenderer?.destroy();
     state.gpu.milkyWayPickRenderer = null;
-    state.gpu.postProcess?.destroy();
-    state.gpu.postProcess = null;
-    state.gpu.volumeOffscreen?.destroy();
-    state.gpu.volumeOffscreen = null;
+    state.gpu.renderTargets?.destroy();
+    state.gpu.renderTargets = null;
+    state.gpu.compositor?.destroy();
+    state.gpu.compositor = null;
     state.gpu.filamentRenderer?.destroy();
     state.gpu.filamentRenderer = null;
     state.gpu.labelRenderer?.destroy();
     state.gpu.labelRenderer = null;
+    state.gpu.foregroundLabelRenderer?.destroy();
+    state.gpu.foregroundLabelRenderer = null;
+    state.gpu.foregroundMarkerLineRenderer?.destroy();
+    state.gpu.foregroundMarkerLineRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
     state.gpu.debugLineRenderer?.destroy();
@@ -663,8 +749,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
     state.gpu.proceduralDiskRenderer = null;
-    state.gpu.milkyWayRenderer?.destroy();
-    state.gpu.milkyWayRenderer = null;
+    state.gpu.milkyWayCloud?.destroy();
+    state.gpu.milkyWayCloud = null;
+    state.gpu.milkyWayCloudRenderer?.destroy();
+    state.gpu.milkyWayCloudRenderer = null;
     state.gpu.horizonShellRenderer?.destroy();
     state.gpu.horizonShellRenderer = null;
     state.gpu.volumeFieldRenderer?.destroy();
@@ -673,10 +761,34 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.flowFieldRenderer = null;
     state.gpu.volumeUpsample?.destroy();
     state.gpu.volumeUpsample = null;
+    state.gpu.starAggregateUpsample?.destroy();
+    state.gpu.starAggregateUpsample = null;
     state.gpu.pickDebugOverlay?.destroy();
     state.gpu.pickDebugOverlay = null;
     state.gpu.diskRadiusRing?.destroy();
     state.gpu.diskRadiusRing = null;
+    state.gpu.earthRenderer?.destroy();
+    state.gpu.earthRenderer = null;
+    state.gpu.starRenderer?.destroy();
+    state.gpu.starRenderer = null;
+    state.gpu.planetRenderer?.destroy();
+    state.gpu.planetRenderer = null;
+    state.gpu.texturedBodyRenderer?.destroy();
+    state.gpu.texturedBodyRenderer = null;
+    state.gpu.ringRenderer?.destroy();
+    state.gpu.ringRenderer = null;
+    state.gpu.starPointRenderer?.destroy();
+    state.gpu.starPointRenderer = null;
+    state.gpu.bodyGlintRenderer?.destroy();
+    state.gpu.bodyGlintRenderer = null;
+    state.gpu.starCatalogRenderer?.destroy();
+    state.gpu.starCatalogRenderer = null;
+    state.gpu.starCatalogPickRenderer?.destroy();
+    state.gpu.starCatalogPickRenderer = null;
+    state.gpu.bodyPickRenderer?.destroy();
+    state.gpu.bodyPickRenderer = null;
+    state.gpu.orbitTrailRenderer?.destroy();
+    state.gpu.orbitTrailRenderer = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
@@ -723,8 +835,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // would be null forever.
     //
     // `passOverrides`: read-only pass-name list for the DebugPanel's renderer
-    // toggle section. `allNames` is materialised from HDR_PASSES + UI_PASSES so
-    // the React rows track the encoder's actual pass loop in draw order.
+    // toggle section. `allNames` is materialised from the hdr- and swap-target
+    // `CONTENT_LAYERS` (the volume-target raymarch has no user toggle, so it is
+    // excluded) so the React rows track the frame's actual draw order.
     // The DebugPanel dispatches `setPassDisabled` directly; `watchWakeSaga` wakes
     // the render loop on the store write.
     debug: {
@@ -732,7 +845,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         return state.gpu.timingService;
       },
       passOverrides: {
-        allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
+        allNames: CONTENT_LAYERS.filter((l) => l.target !== 'volume').map((p) => p.name),
       },
     },
 

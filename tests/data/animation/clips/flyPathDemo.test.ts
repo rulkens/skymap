@@ -73,11 +73,12 @@ const DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousMeta: [],
   structures: { byId: (id) => GROUPS[id] ?? null },
+  stars: { current: () => null },
 };
 
 /** Resolve foci + live start, then compile — the play-time pipeline. */
 function prepared() {
-  const foci = resolveClipFoci(flyPathDemo.data, DEPS, FOV_Y);
+  const foci = resolveClipFoci(flyPathDemo.data, DEPS, FOV_Y, TEST_POSE);
   return resolveClipStart(foci, TEST_POSE);
 }
 

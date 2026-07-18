@@ -44,7 +44,8 @@
  *
  * The ALLOW filter mirrors the runtime fetch surface: tier-suffixed
  * SDSS/GLADE bins, the unsuffixed 2mrs.bin / famous.bin / filaments.bin,
- * and the famous JSON sidecar.  (The pgc_aliases.json palette-search map is
+ * and the famous JSON sidecars (famous_meta.json + famous_stars_meta.json).
+ * (The pgc_aliases.json palette-search map is
  * also runtime-fetched but ships via EXTRA_FILES — it's a committed data/
  * source artefact, not a public/data build output.)
  * The legacy un-tiered glade.bin / sdss.bin
@@ -91,6 +92,7 @@ import { execSync } from 'node:child_process';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
 import { collectHiResImages } from './collectHiResImages';
+import { collectTextureImages } from './collectTextureImages';
 
 const DATA_DIR = 'public/data';
 /**
@@ -100,6 +102,13 @@ const DATA_DIR = 'public/data';
  * public/data/.  See `collectHiResImages.ts` for the inventory contract.
  */
 const HIRES_DIR = 'public/data/images/famous-hires';
+/**
+ * The flat planet-texture directory written by the texture build step.
+ * Listed explicitly (rather than via a recursive walk of public/data/) for
+ * the same reason as HIRES_DIR — see `collectTextureImages.ts` for the
+ * inventory contract.
+ */
+const TEXTURES_DIR = 'public/data/images/textures';
 const BUCKET = 'skymap-data';
 const CACHE_CONTROL = 'public, max-age=86400';
 
@@ -112,8 +121,25 @@ export const ALLOW = (name: string): boolean =>
   // SDSS/GLADE.  Class + parent-survey metadata rides on the bin
   // itself — no JSON sidecar to upload.
   /^milliquas-(small|medium|large)\.bin$/.test(name) ||
+  // Gaia star bin — same tiered-gitignored-build-artefact pattern as the
+  // SDSS/GLADE galaxy bins above, built by `npm run build-stars` from the
+  // Gaia DR3 raw tables.  Shipped only via R2, never committed.
+  /^stars-(small|medium|large)\.bin$/.test(name) ||
   name === '2mrs.bin' ||
   name === 'famous.bin' ||
+  // DESI DR1 deep-cone catalog — a single fixed 2.5° patch around Corona
+  // Borealis, built by `npm run build-tiers` from the four DESI LSS tracer
+  // files in data/raw/desi/.  Tier-agnostic like 2mrs.bin (the cone is a
+  // fixed region, not a tiered downsample), so there is no desi-deep-*.bin.
+  name === 'desi-deep.bin' ||
+  // DESI DR1 dec-band wedge — a second fixed patch (2.5°-thick declination
+  // band across the Corona Borealis arm) built by `npm run build-tiers`
+  // alongside the cone. Tier-agnostic like desi-deep.bin.
+  name === 'desi-wedge.bin' ||
+  // DESI DR1 Sloan Great Wall — a third fixed patch (a bounded volume isolating
+  // the Sloan Great Wall, sculpted as an ellipsoid union) built by
+  // `npm run build-tiers` alongside the cone + wedge. Tier-agnostic.
+  name === 'desi-sgw.bin' ||
   name === 'filaments.bin' ||
   // The small-tier filament variant — built by `npm run build-filaments-small`
   // with a higher DisPerSE persistence cut.  Roughly half the size of the
@@ -121,6 +147,10 @@ export const ALLOW = (name: string): boolean =>
   // cloudLoader.filamentFilenameForTier().
   name === 'filaments-small.bin' ||
   name === 'famous_meta.json' ||
+  // The famous-stars metadata sidecar — a gitignored build artefact emitted by
+  // the star pipeline and fetched by the runtime, shipped only via R2 exactly
+  // like famous_meta.json (never committed, no tier suffix).
+  name === 'famous_stars_meta.json' ||
   // NB: pgc_aliases.json is NOT here — it's a committed source artefact in
   // data/ (an expensive HyperLEDA pull, not a local build output), so it
   // ships via EXTRA_FILES below, same as the data/raw/ enrichment files.
@@ -404,9 +434,17 @@ async function main(): Promise<void> {
   // so `dataUrl('images/famous-hires/<id>.webp')` resolves at runtime.
   const hiResImages = collectHiResImages(HIRES_DIR);
 
+  // Tiered planet-surface textures from `public/data/images/textures/`.
+  // Built by the texture pipeline; missing on a code-only deploy that
+  // hasn't run it, which is fine — the inventory helper returns [] in that
+  // case.  Each upload becomes `data/images/textures/<file>` so
+  // `dataUrl('images/textures/<file>')` resolves at runtime.
+  const textureImages = collectTextureImages(TEXTURES_DIR);
+
   console.log(
     `Syncing ${files.length} public/data files` +
       (hiResImages.length > 0 ? ` + ${hiResImages.length} hi-res image(s)` : '') +
+      (textureImages.length > 0 ? ` + ${textureImages.length} texture(s)` : '') +
       (presentExtras.length > 0 ? ` + ${presentExtras.length} extra file(s)` : '') +
       ` to r2://${BUCKET}/data/\n`,
   );
@@ -424,6 +462,13 @@ async function main(): Promise<void> {
   if (hiResImages.length > 0) {
     console.log('\n--- Hi-res famous-galaxy images ---\n');
     for (const { localPath, r2Key } of hiResImages) {
+      await uploadIfChanged(localPath, r2Key, touchedKeys);
+    }
+  }
+
+  if (textureImages.length > 0) {
+    console.log('\n--- Planet-surface textures ---\n');
+    for (const { localPath, r2Key } of textureImages) {
       await uploadIfChanged(localPath, r2Key, touchedKeys);
     }
   }
@@ -446,7 +491,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const total = files.length + hiResImages.length + presentExtras.length;
+  const total = files.length + hiResImages.length + textureImages.length + presentExtras.length;
   const uploaded = touchedKeys.length;
   console.log(
     `\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/` +

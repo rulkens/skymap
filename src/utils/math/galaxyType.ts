@@ -66,6 +66,18 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
       const br = mags.magG - mags.magR;
       return Number.isFinite(br) ? galaxyTypeFromBminusJ(br) : UNKNOWN;
     }
+    case Source.DesiDeep:
+    case Source.DesiWedge:
+    case Source.DesiSgw: {
+      // DESI patches (deep cone + dec-band wedge + Sloan Great Wall): g in
+      // g-slot, r in r-slot (DERED optical fluxes; see BAND_LABELS in
+      // sources.ts). g−r is the natural SDSS-like optical discriminator, so
+      // this reuses the SDSS-style colour classifier — the mixed BGS/LRG/ELG/QSO
+      // population doesn't have a single established red-sequence threshold, but
+      // a coarse "red vs blue" InfoCard tag is all this branch needs to provide.
+      const gr = mags.magG - mags.magR;
+      return Number.isFinite(gr) ? galaxyTypeFromColor(gr) : UNKNOWN;
+    }
     case Source.Cluster:
     case Source.Supercluster:
     case Source.Void:
@@ -78,9 +90,17 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.DebugSpherical:
     case Source.MilkyWay:
     case Source.Flow:
-      // Non-galaxy catalog sources (structure markers, filaments, volumes,
-      // the Milky-Way + flow overlays) have no
-      // per-record photometry and no galaxy type. Reaching this branch
+    case Source.FamousStar:
+    case Source.Planet:
+    case Source.Earth:
+    case Source.GaiaStars:
+      // Non-galaxy catalog sources have no galaxy type. Most (structure
+      // markers, filaments, volumes, the Milky-Way + flow overlays, and body
+      // sources like famous star/planet/Earth) carry no per-record photometry
+      // at all. The Gaia star catalog is the exception that proves the rule:
+      // it's a point-source star survey whose records DO carry photometry,
+      // but stellar photometry is not galaxy photometry, so it has no galaxy
+      // classification either. Reaching this branch
       // indicates the InfoCard is rendering a galaxy row for a
       // non-galaxy catalog pick / handle; route those through their own info
       // panel instead.

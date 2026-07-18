@@ -7,13 +7,18 @@
  * computation and the InfoCard's distance display — and duplicating it
  * would risk the two drifting apart.
  *
- * Switches to kpc below 1 Mpc and Gpc above 1000 Mpc so the displayed
- * value is always between 1 and 1000 (with adaptive units), making the
- * scale bar and info-card distance fields easy to read at any zoom
- * level.  The light-year conversion uses the same decade so the two
- * sides of the slash agree — kpc↔kly, Mpc↔Mly, Gpc↔Gly — rather than
- * forcing readers to mentally re-scale across different unit decades.
+ * Steps through a unit ladder so the displayed value stays between 1 and
+ * 1000 (with adaptive units), making the scale bar and info-card distance
+ * fields easy to read at every zoom level — from the whole observable
+ * universe down to a planetary surface:
  *
+ *     Gpc · Mpc · kpc · pc   (parsec family, ≥ 1 pc)
+ *     AU                     (solar-system scale, 1 AU … 1 pc)
+ *     km                     (planetary surface, < 1 AU)
+ *
+ * In the parsec family the light-year conversion uses the same decade so
+ * the two sides of the slash agree — pc↔ly, kpc↔kly, Mpc↔Mly, Gpc↔Gly —
+ * rather than forcing readers to mentally re-scale across unit decades.
  * Parsecs are the working unit of cosmology but not of casual readers;
  * the dual format ("100 Mpc / 326 Mly") gives a parsec-fluent astronomer
  * the precise number while letting a layperson anchor it against the more
@@ -22,23 +27,37 @@
  * it would conflate "alternate unit for the same distance" with "another
  * fact".
  *
+ * Below a parsec the light-year companion stops helping — a fraction of a
+ * light-year is no more intuitive than a fraction of a parsec — so the AU
+ * and km bands drop the slash and show a single, scale-appropriate unit.
+ * AU is the natural ruler across the solar system; km takes over once the
+ * camera is closer than an astronomical unit (near a planet's surface).
+ *
  * @param mpc  Distance in megaparsecs. Must be non-negative.
  */
 
 import { PC_TO_LY } from '../math/constants';
+import { SCALE_UNITS } from '../../data/scaleUnits';
 import { formatScalar } from './formatScalar';
 
 export function formatDistance(mpc: number): string {
-  if (mpc < 1) {
-    const kpc = mpc * 1000;
-    const kly = kpc * PC_TO_LY;
-    return `${formatScalar(kpc)} kpc / ${formatScalar(kly)} kly`;
-  }
   if (mpc >= 1000) {
     const gpc = mpc / 1000;
-    const gly = gpc * PC_TO_LY;
-    return `${formatScalar(gpc)} Gpc / ${formatScalar(gly)} Gly`;
+    return `${formatScalar(gpc)} Gpc / ${formatScalar(gpc * PC_TO_LY)} Gly`;
   }
-  const mly = mpc * PC_TO_LY;
-  return `${formatScalar(mpc)} Mpc / ${formatScalar(mly)} Mly`;
+  if (mpc >= 1) {
+    return `${formatScalar(mpc)} Mpc / ${formatScalar(mpc * PC_TO_LY)} Mly`;
+  }
+  if (mpc >= SCALE_UNITS.KPC_TO_MPC) {
+    const kpc = mpc / SCALE_UNITS.KPC_TO_MPC;
+    return `${formatScalar(kpc)} kpc / ${formatScalar(kpc * PC_TO_LY)} kly`;
+  }
+  if (mpc >= SCALE_UNITS.PC_TO_MPC) {
+    const pc = mpc / SCALE_UNITS.PC_TO_MPC;
+    return `${formatScalar(pc)} pc / ${formatScalar(pc * PC_TO_LY)} ly`;
+  }
+  if (mpc >= SCALE_UNITS.AU_TO_MPC) {
+    return `${formatScalar(mpc / SCALE_UNITS.AU_TO_MPC)} AU`;
+  }
+  return `${formatScalar(mpc / SCALE_UNITS.KM_TO_MPC)} km`;
 }

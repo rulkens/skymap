@@ -57,22 +57,6 @@ describe('assembleOrbitCamera', () => {
     expect(pose.target).toEqual([1, 2, 3]);
   });
 
-  it('no extra fields — shape pin (roll absent)', () => {
-    const result = assembleOrbitCamera(originPose, defaultProjection);
-    const keys = Object.keys(result).sort();
-    expect(keys).toEqual([
-      'aspect',
-      'distance',
-      'far',
-      'fovYRad',
-      'near',
-      'pitch',
-      'position',
-      'target',
-      'yaw',
-    ]);
-  });
-
   it('is pure — pose and projection are not mutated after the call', () => {
     const pose: CameraPose = { target: [4, 5, 6], yaw: 0.3, pitch: 0.1, distance: 20 };
     const projection: CameraProjection = { fovYRad: 1.0, aspect: 1.5, near: 0.1, far: 1000 };

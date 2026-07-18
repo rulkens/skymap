@@ -1,6 +1,6 @@
 /**
  * PickSourceDraw — one per-source draw record passed to
- * `PickRenderer.pick()`.
+ * `PickRenderer.drawPoints()`.
  *
  * Multi-galaxy catalog rendering issues one instanced draw per loaded galaxy catalog; the
  * picker mirrors that so its packed-identity space lines up with the
@@ -11,8 +11,8 @@
  *
  * The `source` field is mostly ceremonial — picker drives all real
  * decoding from the packed value the GPU writes — but it lets the
- * caller filter by visibility mask before handing the iterable to
- * `pick()`.
+ * caller filter by visibility mask before handing the records to
+ * `drawPoints()`.
  */
 
 import type { SourceType } from '../data/SourceType';

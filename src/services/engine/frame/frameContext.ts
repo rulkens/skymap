@@ -56,7 +56,7 @@
  *
  * ### Why the GPU handles ride along on the ready context
  *
- * `state.gpu.renderer`, `state.gpu.postProcess`, and `state.subsystems.thumbnails`
+ * `state.gpu.renderer`, `state.gpu.renderTargets`, and `state.subsystems.thumbnails`
  * are all part of the 5-way bootstrap gate. Once the gate passes, downstream
  * code wants to use those handles without re-checking they're non-null — but if
  * we left them on `state.gpu.*` and `state.subsystems.*`, every consumer would
@@ -79,7 +79,8 @@
  * a second time (which would advance the clock twice on the same frame — the
  * clock is idempotent for the same descriptor reference, but two calls is still
  * conceptually wrong). `deriveFrameContext` is therefore side-effect-free again:
- * it only calls `assembleOrbitCamera(pose, projection)` and `computeViewProj`.
+ * it only calls `assembleOrbitCamera(pose, projection)`, `computeViewProj`, and
+ * `deriveSlabs` to build the frame's slab table.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -91,6 +92,7 @@ import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
+import { deriveSlabs } from './slabs';
 
 /**
  * Derive the per-frame context from an already-produced pose and projection.
@@ -109,6 +111,11 @@ import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
  * Side-effect-free: the clock is advanced by `runFrame`'s produce step, not
  * here. Safe to call speculatively; a second call in the same frame is a no-op
  * on clock state.
+ *
+ * `nowMs` is runFrame's single wall-clock sample, stamped onto the ready
+ * context so every animated consumer reads the frame clock instead of
+ * sampling `performance.now()` itself — the seam a frame-by-frame recorder
+ * needs to step time deterministically.
  */
 export function deriveFrameContext(
   state: EngineState,
@@ -116,6 +123,7 @@ export function deriveFrameContext(
   pose: CameraPose,
   projection: CameraProjection,
   visibleSourceMask: number,
+  nowMs: number,
 ): FrameContext {
   // The bootstrap gate. Every site that asks 'is the engine bootstrapped?' —
   // per-frame, slot-commit, public-handle — funnels through the one
@@ -126,8 +134,7 @@ export function deriveFrameContext(
     return { isReady: false };
   }
   const renderer = state.gpu.renderer;
-  const postProcess = state.gpu.postProcess;
-  const volumeOffscreen = state.gpu.volumeOffscreen;
+  const renderTargets = state.gpu.renderTargets;
   const texturedDisks = state.subsystems.texturedDisks;
 
   // Assemble the full OrbitCamera from the already-produced store pose and the
@@ -140,6 +147,11 @@ export function deriveFrameContext(
   // derivations can't drift.
   const canvasSize = { width: canvas.width, height: canvas.height };
   const vp = computeViewProj(cam);
+  // deriveSlabs is called here — alongside vp, not from a separate site —
+  // so there is exactly one per-frame derivation of the slab table (see the
+  // module header's point 2 on why derived scalars must not be recomputed
+  // in two places).
+  const slabs = deriveSlabs(cam, vp);
   const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
   const drawPxPerRad = canvasSize.height / (2 * Math.tan(cam.fovYRad / 2));
 
@@ -164,16 +176,17 @@ export function deriveFrameContext(
     isReady: true,
     cam,
     vp,
+    slabs,
     canvasSize,
     drawCamPos,
     drawPxPerRad,
+    nowMs,
     fovYRad: cam.fovYRad,
     focusBlend: 0,
     visibleSourceMask,
     focus: ZERO_FOCUS,
     renderer,
-    postProcess,
-    volumeOffscreen,
+    renderTargets,
     texturedDisks,
   };
 }

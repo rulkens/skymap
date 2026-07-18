@@ -67,6 +67,7 @@ describe('watchSelectionRowsSaga', () => {
       catalogs: { get: (src) => (cloudPresent && src === Source.SDSS ? makeCloud() : undefined) },
       famousMeta: [],
       structures: { byId: () => null },
+      stars: { current: () => null },
     };
     sagaMiddleware.run(watchSelectionRowsSaga);
     sagaMiddleware.setContext({ resolveDeps: () => deps });

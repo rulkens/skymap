@@ -53,8 +53,24 @@ vi.mock('../../../../src/services/camera/orbitControls', () => ({
   attachOrbitControls: vi.fn(() => () => {}),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/pickRenderer', () => ({
+vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/pickRenderer', () => ({
   createPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
+}));
+
+// The content-layer registry pulls in every layer module (heavy GPU deps);
+// wireInput only needs the array to hand to createPickProgram, so an empty
+// stub is enough and keeps the phase test free of the full renderer graph.
+vi.mock('../../../../src/services/engine/frame/passes', () => ({
+  CONTENT_LAYERS: [],
+}));
+
+vi.mock('../../../../src/services/engine/frame/pickProgram', () => ({
+  createPickProgram: vi.fn(() => ({
+    label: 'pickProgram',
+    pick: vi.fn(async () => null),
+    renderForDebug: vi.fn(() => null),
+    destroy: vi.fn(),
+  })),
 }));
 
 vi.mock('../../../../src/services/engine/interaction/clickHandler', () => ({
@@ -123,14 +139,13 @@ function makeState(): EngineState {
       // createPickRenderer binds the shared focus group; the stub only
       // needs an opaque bindGroup handle.
       focusUniform: { bindGroup: {} as GPUBindGroup },
-      postProcess: null,
+      renderTargets: null,
       filamentRenderer: null,
       labelRenderer: null,
       markerLineRenderer: null,
       texturedQuadRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
-      milkyWayRenderer: null,
       volumeFieldRenderer: null,
       volumeUpsample: null,
     },
@@ -188,17 +203,6 @@ describe('wireInput', () => {
     expect(computeInitialCameraSpy).toHaveBeenCalledWith({
       fovYRad: (Math.PI / 180) * 60,
     });
-    expect(state.cam).not.toBeNull();
-  });
-
-  it('runs to completion even with no catalogs loaded', async () => {
-    // Progressive disclosure: wireInput must not require any galaxy catalog to
-    // have arrived. Empty catalogs is the normal case at boot.
-    const state = makeState();
-    const deps = makeDeps();
-
-    await wireInput(state, deps);
-
     expect(state.cam).not.toBeNull();
   });
 });

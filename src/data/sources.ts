@@ -1,12 +1,13 @@
 /**
  * `Source` enum + `SOURCE_REGISTRY`.
  *
- * The single registry of every data source skymap loads. Six kinds,
+ * The single registry of every data source skymap loads. Eight kinds,
  * discriminated by `type`:
  *
  *   'galaxyCatalog' — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
- *                     Milliquas, Synthetic).  Codes are baked into the `.bin`
- *                     point-cloud format and packed into the pick texture.
+ *                     Milliquas, DESI Deep, Synthetic).  Codes are baked
+ *                     into the `.bin` point-cloud format and packed into
+ *                     the pick texture.
  *   'structure'     — galaxy-cluster / supercluster / void / group marker rings.
  *                     Codes are also packed into the pick texture (upper 5 bits).
  *   'filament'      — derived line-strip geometry (DisPerSE skeleton).
@@ -19,9 +20,21 @@
  *   'flow'          — CF4++ peculiar-velocity field overlay (single
  *                     flowfield.scfd cube). No per-record identity; carries
  *                     its own look/motion defaults.
+ *   'famousStar'/'planet'/'earth'
+ *                   — near-field true-scale bodies (the curated stellar
+ *                     neighbourhood, Solar-System planets, Earth). Seeded records
+ *                     drawn by their own content-layer; not persisted (a body's
+ *                     identity is its stable seed id), but pickable on the NEAR0
+ *                     pick pass via `drawPick`.
+ *   'starCatalog'   — survey-wide stellar point clouds (the Gaia bin today).
+ *                     Streamed as tiered `.bin` clouds and drawn by the star
+ *                     renderer. Leaf stars are pickable on the NEAR0 pick pass
+ *                     (the code tags the source there); a star's identity is its
+ *                     record index and is not persisted to the `.bin`.
  *
  * Only `'galaxyCatalog'` and `'structure'` codes are persisted to disk / packed into
- * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, and `'flow'` codes exist
+ * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, `'starCatalog'`, and
+ * the body codes (`'famousStar'`, `'planet'`, `'earth'`) exist
  * solely so every data source has one place to look. The visibility-bitmask helpers
  * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
  * galaxy catalog codes only.
@@ -57,6 +70,13 @@ import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
 import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
 import { MILKY_WAY_ENTRY } from './sources/milky-way';
 import { FLOW_ENTRY } from './sources/flow';
+import { DESI_DEEP_ENTRY } from './sources/desiDeep';
+import { DESI_WEDGE_ENTRY } from './sources/desiWedge';
+import { DESI_SGW_ENTRY } from './sources/desiSgw';
+import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
+import { PLANET_ENTRY } from './sources/planet';
+import { EARTH_ENTRY } from './sources/earth';
+import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
 
 export { Source } from './source';
 
@@ -107,6 +127,13 @@ export const SOURCE_REGISTRY = {
   [Source.DebugSpherical]: DEBUG_SPHERICAL_ENTRY,
   [Source.MilkyWay]: MILKY_WAY_ENTRY,
   [Source.Flow]: FLOW_ENTRY,
+  [Source.DesiDeep]: DESI_DEEP_ENTRY,
+  [Source.DesiWedge]: DESI_WEDGE_ENTRY,
+  [Source.DesiSgw]: DESI_SGW_ENTRY,
+  [Source.FamousStar]: FAMOUS_STAR_ENTRY,
+  [Source.Planet]: PLANET_ENTRY,
+  [Source.Earth]: EARTH_ENTRY,
+  [Source.GaiaStars]: GAIA_STARS_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
@@ -159,4 +186,7 @@ export const GALAXY_CATALOG_SOURCES: readonly SourceType[] = [
   Source.SDSS,
   Source.Glade,
   Source.Milliquas,
+  Source.DesiDeep,
+  Source.DesiWedge,
+  Source.DesiSgw,
 ];

@@ -18,6 +18,8 @@
  *                `resolveFocusId` accepts and `structures.byId` resolves. No
  *                re-encoding — the store already holds the canonical id.
  *   - milkyWay → the fixed singleton literal `MILKY_WAY_FOCUS_ID`.
+ *   - body     → the seed id under the shared `BODY_FOCUS_PREFIX` (`body-earth`),
+ *                which `resolveFocusId` strips back to a body ref.
  *
  * TABLE-DISPATCH on `row.kind` (simplicity convention item 7): a new row kind is
  * one row here, not a new predicate branch. The fallback arms are unreachable —
@@ -26,6 +28,7 @@
 
 import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
 import { MILKY_WAY_FOCUS_ID } from '../../../services/url/milkyWayFocusId';
+import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import type { ScoredRow } from '../paletteRowModel';
 
 const FOCUS_ID: Record<ScoredRow['kind'], (row: ScoredRow) => string> = {
@@ -46,6 +49,7 @@ const FOCUS_ID: Record<ScoredRow['kind'], (row: ScoredRow) => string> = {
       : '',
   structure: (row) => (row.kind === 'structure' ? row.entry.id : ''),
   milkyWay: () => MILKY_WAY_FOCUS_ID,
+  body: (row) => (row.kind === 'body' ? `${BODY_FOCUS_PREFIX}${row.body.id}` : ''),
 };
 
 export function focusIdForRow(row: ScoredRow): string {

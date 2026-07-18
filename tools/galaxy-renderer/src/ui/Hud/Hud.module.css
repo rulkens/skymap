@@ -1,0 +1,55 @@
+.root {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--label);
+  font-weight: 600;
+}
+
+.title {
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  margin-top: 2px;
+}
+
+.badges {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.fpsPill {
+  padding: 4px 9px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.fpsGood {
+  background: rgba(46, 160, 110, 0.18);
+  border: 1px solid rgba(70, 200, 140, 0.4);
+  color: var(--good);
+}
+
+.fpsWarn {
+  background: rgba(210, 150, 60, 0.18);
+  border: 1px solid rgba(220, 170, 90, 0.4);
+  color: #e6b866;
+}
+
+.badge {
+  padding: 4px 9px;
+  border-radius: 20px;
+  background: rgba(16, 20, 34, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #aab3c9;
+}

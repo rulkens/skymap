@@ -16,11 +16,14 @@
  *
  * ### Why deps are passed explicitly instead of lifted to EngineState
  *
- * The IIFE-local renderers (`device`, `context`, `milkyWayRenderer`,
- * `filamentRenderer`, `texturedDiskRenderer`) are read *only* by the frame body;
- * promoting them to `state.gpu.*` would widen `EngineState`'s contract for one
- * consumer and force every other reader to null-check fields it never touches.
- * They flow through `RunFrameDeps` instead.
+ * The IIFE-local `device` and `context` GPU handles are read *only* by the
+ * frame body; promoting them to `state.gpu.*` would widen `EngineState`'s
+ * contract for one consumer and force every other reader to null-check
+ * fields it never touches.  They flow through `RunFrameDeps` instead.  Every
+ * per-frame renderer (`milkyWayCloudRenderer`, `filamentRenderer`,
+ * `texturedDiskRenderer`, …) DOES live on `state.gpu.*` already — every
+ * `ContentLayer.draw` reads its renderer straight from there (see
+ * `passes/index.ts`), so `RunFrameDeps` carries no renderer fields.
  *
  * ### Camera produce → commit-on-edge ordering
  *
@@ -118,10 +121,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Resize → projection Resource ─────────────────────────────────────────
   //
   // `resizeCanvasToDisplay` returns `true` only when dimensions changed, so we
-  // patch `cameraRuntime.projection.aspect` + the HDR/volume targets only in
-  // that branch. The HDR texture is sized 1:1 with the swap chain, so a stale
+  // patch `cameraRuntime.projection.aspect` + the offscreen target table only
+  // in that branch. The HDR row is sized 1:1 with the swap chain, so a stale
   // target after resize would smear pixels or render off-canvas; the tone-map
-  // pass rebuilds its bind group each frame so it picks up the new view.
+  // composite rebuilds its bind group each frame so it picks up the new view.
+  // One `renderTargets.resize` reallocates every offscreen row at its own
+  // size/scale — the frame body never enumerates targets by hand.
   //
   // Aspect lives on `projection` (the engine Resource), NOT on `state.cam`.
   // `state.cam` is the drag register; its `aspect` field is set at bootstrap
@@ -132,11 +137,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // cloud lands) — `projection` is always non-null, so no guard is needed.
   if (resizeCanvasToDisplay(deps.canvas)) {
     state.cameraRuntime.projection.aspect = deps.canvas.width / deps.canvas.height;
-    state.gpu.postProcess?.resize({ width: deps.canvas.width, height: deps.canvas.height });
-    state.gpu.volumeOffscreen?.resize({
-      width: deps.canvas.width,
-      height: deps.canvas.height,
-    });
+    state.gpu.renderTargets?.resize({ width: deps.canvas.width, height: deps.canvas.height });
   }
 
   // ── Camera produce → commit-on-edge ──────────────────────────────────────
@@ -273,6 +274,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     renderPose,
     state.cameraRuntime.projection,
     masks.draw,
+    nowMs,
   );
   if (!ctx.isReady) {
     // Essential wake: bootstrap populates cam/GPU handles without waking any
@@ -312,19 +314,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Per-frame impostor planners ───────────────────────────────────────────
   //
   // CPU-side step that populates the LOD subsystems' `lastOutput` arrays, which
-  // the HDR_PASSES loop reads via proceduralDisksPass / texturedDisksPass. The
+  // `proceduralDisksLayer` / `texturedDisksLayer` read at draw time. The
   // atlas subsystem is mutated transitively by the textured-disk run (slot
   // allocations + fetch enqueues).
-  if (state.subsystems.proceduralDisks !== null) {
-    state.subsystems.proceduralDisks.runFrame({
-      cam: ctx.cam,
-      catalogs: state.data.galaxies.catalogs,
-      visibleSourceMask: masks.draw,
-      pxPerRad: ctx.drawPxPerRad,
-    });
-  }
-  // hiResFamous must run BEFORE texturedDisks: the textured-disk planner reads
-  // hiResFamous.lastOutput.byFamousIdx and folds layer indices + crossfade
+  // hiResFamous must run BEFORE the shared disk walk: the textured-disk body
+  // reads hiResFamous.lastOutput.byFamousIdx and folds layer indices + crossfade
   // alphas into the DiskInstance literals it emits. Running it after would lag
   // by a frame and produce a visible flicker on close approach to a famous galaxy.
   if (state.subsystems.hiResFamous !== null) {
@@ -336,14 +330,28 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       famousMeta: state.data.galaxies.famousMeta,
     });
   }
-  if (state.subsystems.texturedDisks !== null) {
-    state.subsystems.texturedDisks.runFrame({
+  // ONE shared catalog walk drives both disk-planner bodies. It computes each
+  // surviving row's geometry once and hands the scalars to the procedural body
+  // (LOD-1) then the textured body (LOD-2) at two fixed call sites; each
+  // subsystem's `beginFrame` returns the per-frame visitor the walk drives, and
+  // that visitor's `endFrame` stashes the sorted result on its `lastOutput`.
+  const { proceduralDisks, texturedDisks, diskPlannerWalk } = state.subsystems;
+  if (proceduralDisks !== null && texturedDisks !== null && diskPlannerWalk !== null) {
+    const sharedInput = {
       cam: ctx.cam,
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
-      famousMeta: state.data.galaxies.famousMeta,
-    });
+    };
+    diskPlannerWalk.runFrame(
+      sharedInput,
+      proceduralDisks.beginFrame(sharedInput),
+      texturedDisks.beginFrame({
+        ...sharedInput,
+        famousMeta: state.data.galaxies.famousMeta,
+        nowMs: ctx.nowMs,
+      }),
+    );
   }
 
   // ── Label director per-frame update ──────────────────────────────────────
@@ -361,7 +369,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Like the label flush above: produceStructureMarkers walks the structure
   // store, applies fade math, and hands descriptors to the renderer. Must run
   // BEFORE the GPU dispatch so the instance buffer is uploaded before
-  // structureMarkersPass reads it. Null-checked for the pre-initGpu window.
+  // `structureMarkersLayer` reads it. Null-checked for the pre-initGpu window.
   if (state.gpu.structureMarkerRenderer !== null) {
     const markers = produceStructureMarkers(state, ctx);
     state.gpu.structureMarkerRenderer.setMarkers(markers);
@@ -369,36 +377,31 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── GPU dispatch ──────────────────────────────────────────────────────────
   //
-  // The whole encoder lifecycle (createCommandEncoder, beginRenderPass against
-  // the HDR target, the draws, postProcess.draw, queue.submit) lives in
-  // `renderFrame.ts`; every value it reads is forwarded as a field on
-  // `RenderFrameInput` so this site stays free of GPU bookkeeping.
+  // The whole encoder lifecycle (createCommandEncoder, the FRAME program's
+  // render/composite steps, queue.submit) lives in `renderFrame.ts`; every
+  // value it reads is forwarded as a field on `RenderFrameInput` so this
+  // site stays free of GPU bookkeeping.
   renderFrame({
     ctx,
     state,
     device: deps.device,
     context: deps.context,
-    milkyWayRenderer: deps.milkyWayRenderer,
-    horizonShellRenderer: deps.horizonShellRenderer,
-    filamentRenderer: deps.filamentRenderer,
-    volumeFieldRenderer: state.gpu.volumeFieldRenderer,
-    flowFieldRenderer: state.gpu.flowFieldRenderer,
-    texturedDiskRenderer: deps.texturedDiskRenderer,
-    proceduralDiskRenderer: deps.proceduralDiskRenderer,
     timingService: deps.timingService,
   });
 
   // ── Pick-buffer debug overlay ─────────────────────────────────────────────
   //
   // Composite a colour-mapped pick-buffer overlay over the swap chain.
-  // Runs AFTER renderFrame's submit (the packed uniform bytes are stashed
-  // by pointSpritesPass just before that submit). The helper owns its own
-  // encoder/submit with `loadOp: 'load'` so the OVER blend composites on
-  // top of the tone-mapped frame without re-rendering the scene.
+  // Runs AFTER renderFrame's submit — placed post-frame purely as a latency
+  // choice (reflect the just-rendered pose with minimal lag), not because it
+  // depends on the frame having drawn: `pickProgram.renderForDebug()` rebuilds
+  // the pick-time camera as a value and re-draws the pickable layers itself.
+  // The helper owns its own encoder/submit with `loadOp: 'load'` so the OVER
+  // blend composites on top of the tone-mapped frame without re-rendering.
   //
   // Hover picking is now fully pointer-driven (hoverPickDriver, wired in
   // wireInput.ts) — there is no longer an in-frame pick block here.
-  drawPickDebugOverlay(state, deps, masks);
+  drawPickDebugOverlay(state, deps);
 
   // ── Render-on-demand: continue ticking ONLY if motion or async work is in
   // flight. Otherwise the loop sleeps until a channel mouth wakes it: input,
@@ -412,7 +415,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // fade-out in galaxy-catalog visibility changes and tier-swap commits would
   // hang forever.
   state.subsystems.fades.tick(nowMs);
-  if (shouldKeepTicking(state, rootState, nowMs)) {
+  const keepTicking = shouldKeepTicking(state, rootState, nowMs);
+
+  if (keepTicking) {
     state.subsystems.scheduler.requestRender();
   }
 }

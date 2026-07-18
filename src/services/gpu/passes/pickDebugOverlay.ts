@@ -2,14 +2,24 @@
  * pickDebugOverlay — fullscreen pass that colour-maps the r32uint pick
  * texture onto the tone-mapped swap chain.
  *
+ * ### Colouring: hue by source code
+ *
+ * The fragment derives every pixel's hue from its packed source code via
+ * golden-angle spacing (`fract(sourceCode * 0.618034)`), so each pickable
+ * source — galaxy catalog, structure ring, Gaia star, famous star, planet,
+ * Earth — reads as its own stable, well-separated colour with no
+ * hand-maintained palette to keep in step with `Source`. A hash of the
+ * 27-bit `localIdx` modulates brightness (HSV value) so adjacent instances
+ * of the same source stay individually distinguishable. See
+ * `shaders/pickDebugOverlay/fragment.wesl` for the full rationale.
+ *
  * ### Why a dedicated factory
  *
- * Same shape as `volumeUpsample` / `postProcess`: a single covering-
- * triangle pipeline that samples one texture and writes one RGBA
- * target.  Each fullscreen blit lives in its own factory under
- * `services/gpu/passes/` so the consumer threads exactly one
- * descriptor through one call.  Bundling them would force any caller
- * to construct dependencies it doesn't use.
+ * Same shape as `volumeUpsample`: a single covering-triangle pipeline
+ * that samples one texture and writes one RGBA target.  Each fullscreen
+ * blit lives in its own factory under `services/gpu/passes/` so the
+ * consumer threads exactly one descriptor through one call.  Bundling
+ * them would force any caller to construct dependencies it doesn't use.
  *
  * ### Sampler-less
  *
@@ -17,12 +27,13 @@
  * via `textureSample` (that operation is float-only).  The fragment
  * uses `textureLoad` at exact integer texel coordinates, which doesn't
  * need a sampler binding.  Saves a bind-group slot and a sampler
- * allocation versus the volumeUpsample / postProcess shape.
+ * allocation versus the volumeUpsample shape.
  */
 
 import vsCode from '../shaders/pickDebugOverlay/vertex.wesl?static';
 import fsCode from '../shaders/pickDebugOverlay/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
 import type { PickDebugOverlay } from '../../../@types/rendering/PickDebugOverlay';
 
 export function createPickDebugOverlay(
@@ -65,10 +76,7 @@ export function createPickDebugOverlay(
           // the standard "src on top of dst" composite.  Background
           // pixels emit alpha = 0, which evaluates to a no-op blend
           // (preserves the underlying scene exactly).
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          },
+          blend: PREMULTIPLIED_OVER_BLEND,
         },
       ],
     },

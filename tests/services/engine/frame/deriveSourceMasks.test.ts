@@ -5,8 +5,9 @@
  * an enabled galaxy catalog gets both bits; a galaxy catalog toggled off but still fading
  * keeps its DRAW bit (smooth ramp-down) while losing its PICK bit (intent-
  * only, unclickable instantly); and a fully-faded disabled galaxy catalog loses both.
- * The all-enabled case pins boot-equivalence with `ALL_VISIBLE_MASK`, the
- * construction-time seed the rest of the system relies on.
+ * The all-enabled case pins that enabling every catalog lights every
+ * galaxy-catalog bit — which is `ALL_VISIBLE_MASK` (the default-visible set)
+ * plus the opt-in DesiDeep bit that ships off.
  *
  * `deriveSourceMasks` is a PURE projection: it RETURNS `{ draw, pick }` and
  * writes nothing. The fixture is therefore just its two inputs — a settings stub
@@ -86,12 +87,20 @@ describe('deriveSourceMasks', () => {
     expect(maskHas(pick, Source.SDSS)).toBe(false);
   });
 
-  it('derives exactly ALL_VISIBLE_MASK when every galaxy catalog is enabled', () => {
-    // Every galaxy catalog id defaults to enabled in the fixture, so this pins the
-    // boot-equivalence the construction seed relies on.
+  it('lights every galaxy-catalog bit when every galaxy catalog is enabled', () => {
+    // Every galaxy catalog id defaults to enabled in the fixture. ALL_VISIBLE_MASK
+    // is the DEFAULT-visible set, which omits the opt-in DESI patches (cone +
+    // wedge + sgw), so enabling *every* catalog yields ALL_VISIBLE_MASK plus the
+    // DesiDeep, DesiWedge, and DesiSgw bits: enabling a default-off catalog still
+    // sets its bit, which is the invariant this pins.
     const state = makeState({});
     const { draw, pick } = deriveSourceMasks(state);
-    expect(draw).toBe(ALL_VISIBLE_MASK);
-    expect(pick).toBe(ALL_VISIBLE_MASK);
+    const everyBit =
+      ALL_VISIBLE_MASK |
+      (1 << Source.DesiDeep) |
+      (1 << Source.DesiWedge) |
+      (1 << Source.DesiSgw);
+    expect(draw).toBe(everyBit);
+    expect(pick).toBe(everyBit);
   });
 });

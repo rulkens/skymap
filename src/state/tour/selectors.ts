@@ -3,19 +3,22 @@
  * `RootState`, mirroring the camera/selection slice conventions (one read
  * surface per slice).
  *
- * The slice stores only `active / tourId / beatIndex / paused / dwellNonce`;
- * everything the overlay actually renders — the kicker label, the beat count,
- * the active caption, the dwell duration — is DERIVED here by resolving the
- * active tour from `tourRegistry` and indexing its beats. This is the whole
- * reason the runtime state can stay so small: the registry is already the
- * single source of truth for tour content, so duplicating any of it into the
- * slice would only invite drift.
+ * The slice stores only `active / tourId / beatIndex / paused / dwellNonce /
+ * dwellSec`; everything else the overlay renders — the kicker label, the beat
+ * count, the active caption — is DERIVED here by resolving the active tour from
+ * `tourRegistry` and indexing its beats. This is the whole reason the runtime
+ * state can stay so small: the registry is already the single source of truth
+ * for tour content, so duplicating any of it into the slice would only invite
+ * drift. (`dwellSec` is the one exception: the compiled duration of the beat's
+ * RESOLVED dwellClip isn't derivable from the registry alone, so the saga
+ * records it at dwell start.)
  *
  * Every selector is `RootState`-scoped, so each drops unchanged into both the
  * React side (`useAppSelector(...)`) and the saga/engine side
  * (`selectTourActive(store.getState())`).
  */
 
+import { createSelector } from '@reduxjs/toolkit';
 import { tourRoute } from '../../store/constants';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import type { RootState } from '../../store/types';
@@ -58,8 +61,19 @@ export const selectCurrentBeat = (state: RootState): BeatData | null => {
 export const selectTourCaption = (state: RootState): BeatCaption | null =>
   selectCurrentBeat(state)?.caption ?? null;
 
-export const selectTourDwellSec = (state: RootState): number =>
-  selectCurrentBeat(state)?.dwellSec ?? 0;
+// The beat-title list for the progress rail (null = a silent beat's dot, which
+// reveals nothing on hover). The one selector here that DERIVES an array, so
+// it is the one that must be memoized: a plain arrow would hand
+// `useAppSelector` a fresh reference on every dispatch and re-render the rail
+// constantly. The memo keys on the registry-resolved tour object, whose
+// reference is stable for the whole run, so the memoization is exact.
+export const selectTourBeatTitles = createSelector(
+  [selectActiveTour],
+  (tour): readonly (string | null)[] =>
+    tour ? tour.beats.map((beat) => beat.caption?.title ?? null) : [],
+);
+
+export const selectTourDwellSec = (state: RootState): number => selectTourRuntime(state).dwellSec;
 
 // Prev is available on every beat except the first. Next is always available
 // (advancing off the last beat ends the tour), so it needs no guard.

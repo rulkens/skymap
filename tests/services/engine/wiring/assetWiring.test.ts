@@ -17,12 +17,18 @@
 import { describe, it, expect } from 'vitest';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { Source } from '../../../../src/data/sources';
+import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
+import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
+import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTextureLoadRadius';
+import { hostBodyId } from '../../../../src/utils/scene/hostBodyId';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { RequestKey } from '../../../../src/@types/loading/RequestKey';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 /** Find the single row for an asset key (throws if absent — keeps tests crisp). */
 function rowFor(key: AssetKey) {
@@ -41,12 +47,21 @@ function makeCtx(over: {
   settings?: unknown;
   requests?: Set<RequestKey>;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
+  cameraPosMpc?: Vec3;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
     request: (k) => over.requests?.has(k) ?? false,
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
+    // The body-texture rows read the eye position; a far-away default keeps the
+    // surface present without demanding any body texture.
+    cameraPosMpc: over.cameraPosMpc ?? [Infinity, Infinity, Infinity],
   };
+}
+
+/** The world position a body-texture key's proximity gate is measured from. */
+function bodyPosOf(id: AssetKey): Readonly<Vec3> {
+  return findByIdOrThrow(SCENE_BODIES, hostBodyId(id as never), 'test').positionMpc;
 }
 
 describe('ASSET_WIRING membership', () => {
@@ -58,6 +73,9 @@ describe('ASSET_WIRING membership', () => {
       Source.Glade,
       Source.Milliquas,
       Source.FamousGalaxy,
+      Source.DesiDeep,
+      Source.DesiWedge,
+      Source.DesiSgw,
       Source.Synthetic,
       'famousMeta',
       'filaments',
@@ -66,6 +84,8 @@ describe('ASSET_WIRING membership', () => {
       'flow',
       'structureCatalog',
       'pgcAlias',
+      ...ALL_BODY_TEXTURE_KEYS,
+      Source.GaiaStars,
     ];
     expect(new Set(keys)).toEqual(new Set(expected));
     // No duplicate rows.
@@ -88,6 +108,9 @@ describe('ASSET_WIRING membership', () => {
       Source.Glade,
       Source.Milliquas,
       Source.FamousGalaxy,
+      Source.DesiDeep,
+      Source.DesiWedge,
+      Source.DesiSgw,
       Source.Synthetic,
     ];
     for (const k of pointKeys) {
@@ -96,6 +119,18 @@ describe('ASSET_WIRING membership', () => {
     // The sidecar rows are registry-built (no marker).
     expect(rowFor('filaments').built).toBeUndefined();
     expect(rowFor('famousMeta').built).toBeUndefined();
+  });
+
+  it('mints one externally-built row per body-texture family key', () => {
+    // Every textured body + the ring is an externally-built row (minted in
+    // initGpu beside its renderer, like the point slots), with a tier-clamped
+    // BodyTextureReq — not a registry-built sidecar.
+    for (const key of ALL_BODY_TEXTURE_KEYS) {
+      const row = rowFor(key);
+      expect(row.built).toBe('external');
+      // req carries { bodyId, tier } clamped to the body ceiling.
+      expect(row.req('large')).toMatchObject({ bodyId: key });
+    }
   });
 
   it('external point rows carry a factory that throws if the builder calls it', () => {
@@ -112,7 +147,9 @@ describe('ASSET_WIRING demand predicates', () => {
   it("galaxy catalog rows demand the galaxy catalog's enabled settings bit", () => {
     const sdss = rowFor(Source.SDSS);
     expect(
-      sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } })),
+      sdss.demand(
+        makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } }),
+      ),
     ).toBe(true);
     // Absent items row (or disabled bit) ⇒ not demanded.
     expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: {} } } }))).toBe(false);
@@ -208,6 +245,51 @@ describe('ASSET_WIRING demand predicates', () => {
         }),
       ),
     ).toBe(true);
+  });
+
+  it('gaiaStars demand follows settings.starCatalogs (master gate AND per-item bit)', () => {
+    // The star-catalog cluster mirrors the galaxy-catalog cluster: a coarse
+    // master gate (`starCatalogs.enabled`) AND a per-catalog `items[id].enabled`
+    // bit must BOTH be true for the layer to load — the source-type-cluster
+    // convention. Exercised as a predicate over ctx variations, not a
+    // restatement of the row literal.
+    const gaia = rowFor(Source.GaiaStars);
+    const on = (starCatalogs: unknown) => gaia.demand(makeCtx({ settings: { starCatalogs } }));
+    // Master on + item on ⇒ demanded.
+    expect(on({ enabled: true, items: { gaiaStars: { enabled: true } } })).toBe(true);
+    // Master off overrides an enabled item ⇒ not demanded.
+    expect(on({ enabled: false, items: { gaiaStars: { enabled: true } } })).toBe(false);
+    // Item off under an on master ⇒ not demanded.
+    expect(on({ enabled: true, items: { gaiaStars: { enabled: false } } })).toBe(false);
+    // Absent item row (nothing seeded) ⇒ not demanded.
+    expect(on({ enabled: true, items: {} })).toBe(false);
+  });
+
+  it('body-texture rows encode load/evict hysteresis via demand vs release', () => {
+    // Hand-place the camera along +x from a known body's position at three
+    // distances relative to its load radius. `demand` fires inside X, `release`
+    // fires outside 2X, and the band between is the hysteresis gap where NEITHER
+    // fires — a gap `!demand` could not encode, so a camera dithering at the
+    // boundary never thrashes the multi-MB texture load/free cycle.
+    const earth = rowFor('earth');
+    const pos = bodyPosOf('earth');
+    const r = loadRadiusMpc('earth');
+    const at = (d: number): Vec3 => [pos[0] + d, pos[1], pos[2]];
+
+    // (a) inside the load radius: demand true, release false.
+    const inside = makeCtx({ cameraPosMpc: at(0.5 * r) });
+    expect(earth.demand(inside)).toBe(true);
+    expect(earth.release!(inside)).toBe(false);
+
+    // (b) in the hysteresis band (between X and 2X): BOTH false.
+    const band = makeCtx({ cameraPosMpc: at(1.5 * r) });
+    expect(earth.demand(band)).toBe(false);
+    expect(earth.release!(band)).toBe(false);
+
+    // (c) beyond 2X: demand false, release true.
+    const beyond = makeCtx({ cameraPosMpc: at(2.5 * r) });
+    expect(earth.demand(beyond)).toBe(false);
+    expect(earth.release!(beyond)).toBe(true);
   });
 
   it('pgcAlias demands only when the paletteOpened request is set', () => {

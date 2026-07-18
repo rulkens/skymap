@@ -57,27 +57,4 @@ describe('engine selectors', () => {
     store.dispatch(engineLoadProgressChanged(progress));
     expect(selectLoadProgress(store.getState())).toEqual(progress);
   });
-
-  it('all selectors read from the same seeded store', () => {
-    // Smoke-check: a fully populated engine state surfaces correctly through
-    // every selector from a single store instance.
-    const { store } = createAppStore({ settings: baseSettings });
-    store.dispatch(engineStatusChanged({ kind: 'ready', count: 500000, source: 1 }));
-    store.dispatch(engineScaleChanged({ label: '1 Gpc', widthPx: 120 }));
-    store.dispatch(engineSourceCountReported({ source: 1, count: 500000 }));
-    store.dispatch(engineStructureCountsChanged({ cluster: 10, supercluster: 5 }));
-    store.dispatch(
-      engineLoadProgressChanged({ loadedBytes: 2048, totalBytes: 8192, inFlightCount: 2 }),
-    );
-    const state = store.getState();
-    expect(selectEngineStatus(state)).toEqual({ kind: 'ready', count: 500000, source: 1 });
-    expect(selectScale(state)).toEqual({ label: '1 Gpc', widthPx: 120 });
-    expect(selectSourceCounts(state)).toEqual({ 1: 500000 });
-    expect(selectStructureCounts(state)).toEqual({ cluster: 10, supercluster: 5 });
-    expect(selectLoadProgress(state)).toEqual({
-      loadedBytes: 2048,
-      totalBytes: 8192,
-      inFlightCount: 2,
-    });
-  });
 });

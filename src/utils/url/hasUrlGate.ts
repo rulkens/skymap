@@ -3,25 +3,15 @@
  *
  * The skymap project uses URL-gated dev features (e.g. `?debug`,
  * `?gpuTimings`).  Before this helper landed, each call site spelled
- * the predicate out:
+ * the window read + parse boilerplate out; four copies of that was
+ * one too many.  This helper collapses it to `hasUrlGate('foo')`.
  *
- *   typeof window !== 'undefined' &&
- *     (() => { try { return new URLSearchParams(window.location.search).has('foo'); }
- *              catch { return false; } })()
- *
- * Four copies of that boilerplate is one too many.  This helper
- * collapses it to `hasUrlGate('foo')`.
- *
- * ### Defensiveness
- *
- *   - `typeof window === 'undefined'` guards SSR-like environments
- *     (jsdom has window, but be defensive — vitest unit-test runs
- *     sometimes inject minimal-jsdom shims that lack `location`).
- *   - The try/catch absorbs the (rare) `URLSearchParams` throw on
- *     malformed search strings.  In practice this never fires in a
- *     real browser; the catch exists for paranoia and ergonomics —
- *     callers shouldn't have to defend against URL parsing failures
- *     for a debug toggle.
+ * The parse itself (presence semantics + malformed-string
+ * defensiveness) lives in the pure `searchHasGate`; this wrapper
+ * adds only the live `window.location.search` read. The
+ * `typeof window === 'undefined'` guard covers SSR-like environments,
+ * and the `?.search ?? ''` optional-chain covers the narrower case of
+ * minimal-jsdom shims that have a `window` but lack `location`.
  *
  * ### Why "has", not "get"
  *
@@ -32,11 +22,9 @@
  * `urlGateValue(name): string | null` rather than overloading this.
  */
 
+import { searchHasGate } from './searchHasGate';
+
 export function hasUrlGate(name: string): boolean {
   if (typeof window === 'undefined') return false;
-  try {
-    return new URLSearchParams(window.location.search).has(name);
-  } catch {
-    return false;
-  }
+  return searchHasGate(window.location?.search ?? '', name);
 }

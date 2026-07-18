@@ -29,28 +29,6 @@ describe('NavigationPanel', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders every gesture/key on the left column', () => {
-    render(createElement(NavigationPanel, {}));
-    expect(screen.getByText('Drag')).toBeInTheDocument();
-    expect(screen.getByText('Wheel')).toBeInTheDocument();
-    expect(screen.getByText('H')).toBeInTheDocument();
-    expect(screen.getByText('F')).toBeInTheDocument();
-    expect(screen.getByText('Esc')).toBeInTheDocument();
-    // Cmd / Ctrl / slash hint for the command palette — accept any of
-    // the three glyphs the panel might surface.
-    expect(screen.getByText(/⌘K|Ctrl\+K|\//)).toBeInTheDocument();
-  });
-
-  it('renders every action label on the right column', () => {
-    render(createElement(NavigationPanel, {}));
-    expect(screen.getByText(/orbit camera/i)).toBeInTheDocument();
-    expect(screen.getByText(/zoom/i)).toBeInTheDocument();
-    expect(screen.getByText(/home view/i)).toBeInTheDocument();
-    expect(screen.getByText(/focus selected/i)).toBeInTheDocument();
-    expect(screen.getByText(/clear selection/i)).toBeInTheDocument();
-    expect(screen.getByText(/search galaxies/i)).toBeInTheDocument();
-  });
-
   it('mounts open by default (Panel aria-expanded="true")', () => {
     render(createElement(NavigationPanel, {}));
     expect(

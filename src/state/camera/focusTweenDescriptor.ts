@@ -10,10 +10,11 @@
  *
  * ### Why a table, not a branch chain in the saga
  *
- * The three focus targets — a catalog galaxy, a structure, the Milky Way — frame
- * differently: a galaxy by its `diameterKpc`, a structure by its apparent radius
- * through the projection FOV, the Milky Way at a fixed view distance on the
- * galactic centre. That is a tagged-union dispatch on `row.type`, so it is an
+ * The four focus targets — a catalog galaxy, a structure, the Milky Way, a scene
+ * body — frame differently: a galaxy by its `diameterKpc`, a structure by its
+ * apparent radius through the projection FOV, the Milky Way at a fixed view
+ * distance on the galactic centre, a scene body by its physical radius through
+ * the FOV. That is a tagged-union dispatch on `row.type`, so it is an
  * exhaustive `switch` returning one descriptor per arm — not an `if/else` ladder
  * spread through the saga body (simplicity.md §7).
  *
@@ -37,8 +38,8 @@ import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescr
  *
  * `from` is the live produced pose (the camera the user actually sees), so an
  * in-flight tween hands off smoothly when the user re-focuses mid-animation.
- * `fovYRad` is the projection FOV the structure arm needs to frame a cluster to
- * screen-fill; the galaxy and Milky Way arms ignore it.
+ * `fovYRad` is the projection FOV the structure and body arms need to frame
+ * their subject to screen-fill; the galaxy and Milky Way arms ignore it.
  */
 export function focusTweenDescriptor(
   row: SelectionRow,
