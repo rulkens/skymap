@@ -230,6 +230,14 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/ringRenderer', () => ({
 vi.mock('../../../../src/services/gpu/renderers/bodies/cloudShellRenderer', () => ({
   createCloudShellRenderer: vi.fn(() => makeStub('cloudShellRenderer')),
 }));
+// Earth's atmosphere-shell renderer bakes LUTs against the full device API (compute
+// pipelines + storage textures) the plain stub device can't service, and keeps its
+// `?static` WESL imports out of JSDOM; mock it so initGpu's foreground block lands a
+// stub on `state.gpu.atmosphereShellRenderer`. initGpu calls it with
+// `ATMOSPHERE_PARAMS['earth']` (a real data row — no mock needed for that import).
+vi.mock('../../../../src/services/gpu/renderers/atmosphere/atmosphereShellRenderer', () => ({
+  createAtmosphereShellRenderer: vi.fn(() => makeStub('atmosphereShellRenderer')),
+}));
 // Partial mock: planetsLayer.ts imports the real MAX_PLANETS/INSTANCE_FLOATS
 // constants at module scope to size its staging buffer, so only the factory
 // is stubbed — passing those constants through keeps that sizing real.
@@ -359,6 +367,7 @@ function makeState(): EngineState {
       texturedBodyRenderer: null,
       ringRenderer: null,
       cloudShellRenderer: null,
+      atmosphereShellRenderer: null,
       starPointRenderer: null,
       bodyPickRenderer: null,
       bodyGlintRenderer: null,
@@ -476,6 +485,10 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // Earth's cloud shell owns its position + uv VBOs, index IBO, uniform buffer,
     // and cloud texture — the destroy chain must reach it the same way.
     expect(state.gpu.cloudShellRenderer).toBe(stubs.cloudShellRenderer);
+    // Earth's atmosphere shell owns three LUT textures + their pipelines, the proxy
+    // sphere geometry, the shell pipeline, and three uniform buffers — the destroy
+    // chain must reach it the same way.
+    expect(state.gpu.atmosphereShellRenderer).toBe(stubs.atmosphereShellRenderer);
     // The star-point renderer receives the FULL star list exactly once, at
     // construction — at the galaxy-scale boot camera every star (the Sun
     // included) is a sub-pixel point, so the whole seed IS the boot

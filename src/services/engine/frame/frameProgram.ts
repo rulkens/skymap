@@ -1,7 +1,8 @@
 /**
  * frameProgram — the FRAME as data, and the timing slots derived from it.
  *
- * A frame is an ordered sequence of steps: a flow compute, a volume render,
+ * A frame is an ordered sequence of steps: the compute prelude (the flow
+ * integrate + the atmosphere sky-view LUT bake), a volume render,
  * an HDR render, a half-res survey-star-aggregate render into its own
  * offscreen, a near-field star-point render into that same HDR accumulation
  * (which also composites the aggregate offscreen back in), a tone-mapping
@@ -58,6 +59,14 @@ import { CONTENT_LAYERS } from './passes';
 export function frameProgram(tone: ToneMap): readonly FrameStep[] {
   return [
     { kind: 'compute', name: 'flow' },
+    // Atmosphere sky-view LUT bake — folds in this frame's camera altitude + sun
+    // direction, so it re-bakes every frame (unlike the once-baked transmittance
+    // + multi-scatter LUTs). In the compute prelude with `flow`, well ahead of the
+    // `foreground:0` render step, so the atmosphere shell samples this frame's
+    // table (WebGPU orders the compute write before the later fragment read).
+    // Like `flow`, a `'compute'` step contributes no timing slot, so TIMED_SLOTS
+    // is unaffected.
+    { kind: 'compute', name: 'atmosphereSkyView' },
     { kind: 'render', target: 'volume', slab: COSMO },
     { kind: 'render', target: 'hdr', slab: COSMO },
     // Survey-star AGGREGATE stream into its own half-res offscreen, projected

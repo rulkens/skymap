@@ -406,6 +406,10 @@ function makeInput(
           earthRenderer: null,
           starRenderer: null,
           planetRenderer: null,
+          // Near-field handle null → atmosphereShellLayer reports enabled=false
+          // AND the atmosphereSkyView compute step early-outs, so these fixtures
+          // stay a pure cosmological-frame trace (like the other body handles).
+          atmosphereShellRenderer: null,
           starPointRenderer: null,
           orbitTrailRenderer: null,
           starCatalogRenderer: null,

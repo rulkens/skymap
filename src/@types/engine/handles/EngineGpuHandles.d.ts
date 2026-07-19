@@ -68,6 +68,7 @@ import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
 import type { RingRenderer } from '../../rendering/RingRenderer';
 import type { CloudShellRenderer } from '../../rendering/CloudShellRenderer';
+import type { AtmosphereShellRenderer } from '../../rendering/AtmosphereShellRenderer';
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
 import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
 import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
@@ -439,6 +440,23 @@ export type EngineGpuHandles = {
    * uv VBOs, index IBO, uniform buffer, and the cloud texture).
    */
   cloudShellRenderer: CloudShellRenderer | null;
+  /**
+   * Earth's physically-based in-scatter atmosphere (Earth today; Mars / Venus /
+   * Titan opt in later via their own `ATMOSPHERE_PARAMS` rows + renderer
+   * instances) — the LAST `(foreground:0, NEAR0)` row, a translucent proxy sphere
+   * at the atmosphere-top radius drawn AFTER every opaque sphere and the
+   * rings/cloud-shell, depth-tested against them but writing no depth and blending
+   * straight-alpha OVER — the same profile as `ringRenderer` / `cloudShellRenderer`.
+   * Its ('rgba16float', 'depth32float') pipeline formats match the `foreground:0`
+   * row. It owns three LUT textures (transmittance + multi-scatter baked once at
+   * construction, sky-view re-baked each frame by the `atmosphereSkyView` compute
+   * step). `atmosphereShellLayer` draws it once per frame; it is non-pickable
+   * (a translucent halo has no clickable silhouette). Excluded from `isEngineReady`
+   * and null-checked at use. Null until `initGpu` constructs it; released and
+   * re-nulled by `destroy()` (releases the three LUTs + their pipelines, the proxy
+   * sphere geometry, the shell pipeline, and the three uniform buffers).
+   */
+  atmosphereShellRenderer: AtmosphereShellRenderer | null;
   /**
    * The unresolved stars (the `points` branch of
    * `partitionStarsByResolution`) as additive point sprites into the

@@ -68,6 +68,8 @@ import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
 import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
 import { createCloudShellRenderer } from '../../gpu/renderers/bodies/cloudShellRenderer';
+import { createAtmosphereShellRenderer } from '../../gpu/renderers/atmosphere/atmosphereShellRenderer';
+import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
@@ -562,6 +564,25 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // `earth:clouds` bodyTextures slot routes the cloud map to `setTexture`; until
   // then a 1×1 transparent placeholder keeps the shell invisible.
   state.gpu.cloudShellRenderer = createCloudShellRenderer(device, 'rgba16float', 'depth32float');
+
+  // ── Earth's atmosphere shell (Plan E — the in-scatter halo) ──────────
+  //
+  // The atmosphere renderer draws the translucent proxy sphere at the
+  // atmosphere-top radius, LAST in the (foreground:0, NEAR0) group. Its pipeline
+  // bakes the `foreground:0` format invariant AND the shell profile: straight-alpha
+  // OVER, front-culled (only the far wall rasterises), depth-tested but no depth
+  // write — so its limb passes over space and is occluded over the opaque disc.
+  // It bakes ITS `AtmosphereParams` set (Earth today) at construction — the
+  // view-independent transmittance + multi-scatter LUTs — while the sky-view LUT
+  // is re-baked each frame by the `atmosphereSkyView` compute step. A second
+  // atmosphere body would want a second instance with its own params row; the
+  // factory takes the params so that stays a construction-site choice.
+  state.gpu.atmosphereShellRenderer = createAtmosphereShellRenderer(
+    device,
+    'rgba16float',
+    'depth32float',
+    ATMOSPHERE_PARAMS['earth']!,
+  );
 
   // ── Body-surface texture slot family ─────────────────────────────────
   //

@@ -367,14 +367,19 @@ describe('CONTENT_LAYERS blend legality', () => {
       ) {
         expect(layer.blend).toBe('additive');
       } else if (layer.target === 'foreground:0') {
-        // The `foreground:0` group is opaque bodies EXCEPT the two translucent
-        // overlays — the ring and Earth's cloud shell — each drawn AFTER the
-        // opaque spheres, depth-tested against them but writing no depth,
-        // straight-alpha OVER (spec §8 / grill Q9). Their pipelines bake exactly
-        // that profile (foreground:0 formats, depth read / no write, over blend),
-        // so those rows legitimately carry `over` where their siblings carry
-        // `opaque` — the sole target that admits two blends today.
-        if (layer.name === 'rings' || layer.name === 'cloud-shell') {
+        // The `foreground:0` group is opaque bodies EXCEPT the three translucent
+        // overlays — the ring, Earth's cloud shell, and Earth's in-scatter
+        // atmosphere — each drawn AFTER the opaque spheres, depth-tested against
+        // them but writing no depth, straight-alpha OVER (spec §8 / §8.3 / grill
+        // Q9). Their pipelines bake exactly that profile (foreground:0 formats,
+        // depth read / no write, over blend), so those rows legitimately carry
+        // `over` where their siblings carry `opaque` — the sole target that admits
+        // two blends today.
+        if (
+          layer.name === 'rings' ||
+          layer.name === 'cloud-shell' ||
+          layer.name === 'atmosphere-shell'
+        ) {
           expect(layer.blend).toBe('over');
         } else {
           expect(layer.blend).toBe('opaque');
@@ -387,14 +392,15 @@ describe('CONTENT_LAYERS blend legality', () => {
         );
       }
     }
-    // Nine layers blend OVER: the five COSMO swap overlays, the two (swap,
+    // Ten layers blend OVER: the five COSMO swap overlays, the two (swap,
     // NEAR0) overlays (the near0 star selection ring and foreground-labels), and
-    // the two translucent foreground members — the ring and Earth's cloud shell
-    // (the two OVER members of the otherwise-opaque foreground group). The
-    // star-picking branch added near0-selection-ring, the planet-rendering branch
-    // added the ring, and the cloud-shell branch adds the shell — raising the
-    // count from the pre-merge six to nine.
-    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(9);
+    // the three translucent foreground members — the ring, Earth's cloud shell,
+    // and Earth's in-scatter atmosphere (the three OVER members of the
+    // otherwise-opaque foreground group). The star-picking branch added
+    // near0-selection-ring, the planet-rendering branch added the ring, the
+    // cloud-shell branch added the shell, and the atmosphere branch adds the
+    // in-scatter shell — raising the count to ten.
+    expect(CONTENT_LAYERS.filter((layer) => layer.blend === 'over')).toHaveLength(10);
   });
 });
 
@@ -433,6 +439,33 @@ describe('cloudShellLayer registry row', () => {
     const idxEarth = CONTENT_LAYERS.findIndex((layer) => layer.name === 'earth');
     const idxCloud = CONTENT_LAYERS.findIndex((layer) => layer.name === 'cloud-shell');
     expect(idxCloud).toBeGreaterThan(idxEarth);
+  });
+});
+
+describe('atmosphereShellLayer registry row', () => {
+  it('draws into foreground:0 through NEAR0 with over, LAST — after the rings overlay', () => {
+    // Earth's in-scatter atmosphere is the outermost translucent overlay of the
+    // (foreground:0, NEAR0) group (spec §8.3): it blends OVER and must be ordered
+    // AFTER every opaque sphere AND the ring overlay, so it depth-tests against
+    // their stamped z (over-disc occluded, limb over space passes). It is
+    // deliberately NOT in FOREGROUND_NAMES (that group's opaque assertion) — it is
+    // the third exception, alongside the ring and cloud shell. Non-pickable.
+    const atmosphere = CONTENT_LAYERS.find((layer) => layer.name === 'atmosphere-shell')!;
+    expect(atmosphere).toBeDefined();
+    expect(atmosphere.slab).toBe(NEAR0);
+    expect(atmosphere.target).toBe('foreground:0');
+    expect(atmosphere.blend).toBe('over');
+    expect(atmosphere.drawPick).toBeUndefined();
+
+    // It is the LAST foreground:0 layer in registry order (after the ring), so
+    // its draw trails every opaque + translucent sibling in the group.
+    const idxRings = CONTENT_LAYERS.findIndex((layer) => layer.name === 'rings');
+    const idxAtmosphere = CONTENT_LAYERS.findIndex((layer) => layer.name === 'atmosphere-shell');
+    expect(idxAtmosphere).toBeGreaterThan(idxRings);
+    const fgIndices = CONTENT_LAYERS.map((layer, i) => ({ layer, i })).filter(
+      ({ layer }) => layer.target === 'foreground:0' && layer.slab === NEAR0,
+    );
+    expect(fgIndices[fgIndices.length - 1]!.layer).toBe(atmosphere);
   });
 });
 

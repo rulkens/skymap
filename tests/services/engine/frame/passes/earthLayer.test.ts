@@ -182,6 +182,9 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
         // Earth's cloud shell also shares this group; same null-handle
         // short-circuit keeps it out below and above the gate.
         cloudShellRenderer: null,
+        // Earth's in-scatter atmosphere shares this group too (drawn last); same
+        // null-handle short-circuit keeps it out below and above the gate.
+        atmosphereShellRenderer: null,
       },
       data: { bodies: { earth: SCENE_EARTH } },
     } as unknown as EngineState;

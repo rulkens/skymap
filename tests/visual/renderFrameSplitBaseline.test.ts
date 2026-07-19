@@ -408,6 +408,10 @@ describe('renderFrame visual baseline', () => {
           earthRenderer: null,
           starRenderer: null,
           planetRenderer: null,
+          // Near-field handle null → atmosphereShellLayer disabled AND the
+          // atmosphereSkyView compute step early-outs, so the recorded draw
+          // sequence stays the pure cosmological shape this baseline pins.
+          atmosphereShellRenderer: null,
           starPointRenderer: null,
           orbitTrailRenderer: null,
           starCatalogRenderer: null,

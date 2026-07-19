@@ -65,16 +65,19 @@ function fakeLayer(name: string, target: string, slab: number): ContentLayer {
 }
 
 describe('frameProgram', () => {
-  it('emits the ten-step main program', () => {
+  it('emits the eleven-step main program', () => {
     // The survey-star AGGREGATE render (into its own half-res offscreen) sits
     // BEFORE the hdr NEAR0 step, so the `star-upsample` layer inside that step
     // can composite it — the twin of the volume render preceding volume-upsample.
     // The (hdr, NEAR0) step then sits after the cosmological hdr render and
     // BEFORE the hdr→swap composite, so the stars accumulate into HDR and ride
     // the same tone-map as the galaxies (COSMO's 0.01 Mpc near plane would clip
-    // their parsec-scale anchors).
+    // their parsec-scale anchors). The compute prelude carries TWO steps — the
+    // flow integrate and the atmosphere sky-view LUT bake — both ahead of the
+    // foreground render so the atmosphere shell samples this frame's LUT.
     expect(frameProgram(TONE)).toEqual([
       { kind: 'compute', name: 'flow' },
+      { kind: 'compute', name: 'atmosphereSkyView' },
       { kind: 'render', target: 'volume', slab: COSMO },
       { kind: 'render', target: 'hdr', slab: COSMO },
       { kind: 'render', target: 'star-aggregates', slab: NEAR0 },
@@ -202,6 +205,10 @@ describe('timedSlotsOf', () => {
       'planets',
       'textured-bodies',
       'rings',
+      // Earth's in-scatter atmosphere: the LAST foreground:0 layer in registry
+      // order, so its slot trails the ring's inside the foreground:0 render step
+      // (before the foreground:0→swap composite).
+      'atmosphere-shell',
       'foreground:0→swap',
       'near0-selection-ring',
       'foreground-labels',

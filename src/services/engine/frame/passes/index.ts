@@ -118,6 +118,18 @@
  *  28. foreground-labels   — scene-body name captions, premultiplied-OVER onto
  *                            the swap chain post-tone-map (like the COSMO labels,
  *                            but anchored through the near0 vp)
+ *  29. atmosphere-shell    — Earth's physically-based in-scatter atmosphere,
+ *                            the LAST content-layer row (spec §8.3): a
+ *                            translucent proxy sphere at the atmosphere-top
+ *                            radius, drawn last in the (foreground:0, NEAR0)
+ *                            group so it depth-tests against every opaque
+ *                            sphere AND the rings/cloud-shell already stamped
+ *                            there — limb over space passes, over-disc is
+ *                            occluded — writing no depth and blending
+ *                            straight-alpha OVER (non-pickable). Its sky-view
+ *                            LUT is baked each frame by the atmosphereSkyView
+ *                            compute step in the compute prelude, so the shell
+ *                            samples this frame's table
  *
  * `textured-disks` is what remains of the briefly-split (and never-shipped)
  * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
@@ -210,6 +222,7 @@ import { starAggregatesLayer } from './starAggregatesLayer';
 import { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
 import { orbitTrailsLayer } from './orbitTrailsLayer';
 import { foregroundLabelsLayer } from './foregroundLabelsLayer';
+import { atmosphereShellLayer } from './atmosphereShellLayer';
 
 /**
  * The flat content-layer registry, in deterministic draw order.  HDR
@@ -305,6 +318,15 @@ export const CONTENT_LAYERS: readonly ContentLayer[] = [
   // step drives it — the (swap, COSMO) step selects nothing here by
   // construction.
   foregroundLabelsLayer,
+  // Earth's in-scatter atmosphere: the LAST content-layer row (spec §8.3),
+  // drawn LAST within the (foreground:0, NEAR0) group so it depth-tests against
+  // every opaque sphere AND the rings/cloud-shell already stamped there (limb
+  // over space passes, over-disc occluded), writing no depth and blending
+  // straight-alpha OVER — the outermost translucent shell of the foreground
+  // group. Non-adjacent to the cloud-shell it sits outside of: the opaque
+  // spheres + rings draw between them. Its sky-view LUT is baked each frame by
+  // the atmosphereSkyView compute step (compute prelude), before this draw.
+  atmosphereShellLayer,
 ];
 
 export { scalarVolumeLayer } from './scalarVolumeLayer';
@@ -337,3 +359,4 @@ export { starAggregatesLayer } from './starAggregatesLayer';
 export { starAggregateUpsampleLayer } from './starAggregateUpsampleLayer';
 export { orbitTrailsLayer } from './orbitTrailsLayer';
 export { foregroundLabelsLayer } from './foregroundLabelsLayer';
+export { atmosphereShellLayer } from './atmosphereShellLayer';
