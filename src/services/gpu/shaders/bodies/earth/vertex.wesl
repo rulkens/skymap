@@ -9,10 +9,11 @@
 //
 // ## Bindings
 //
-// '@group(0) @binding(0)' holds 'LitBodyUniforms' (80 bytes: the mat4x4<f32>
-// MVP plus the local sun direction), visible in BOTH stages:
-// the vertex reads 'u.mvp', the fragment reads 'u.sunDirLocal'. The texture +
-// sampler live at bindings 1 and 2 for the fragment stage (declared in the
+// '@group(0) @binding(0)' holds 'EarthSurfaceUniforms' (112 bytes: the
+// mat4x4<f32> MVP, the local sun direction, and the PBR shading params), visible
+// in BOTH stages: the vertex reads only 'u.mvp', the fragment reads the sun
+// direction, camera position, and material knobs. The albedo + material textures
+// and the sampler live at bindings 1..3 for the fragment stage (declared in the
 // fragment module).
 //
 // As with the other sphere bodies, the '@group/@binding' declaration is
@@ -30,10 +31,10 @@
 //                                       v south-to-north.
 
 import package::bodies::earth::io::VSOut;
-import package::lib::sphere::LitBodyUniforms;
+import package::lib::sphere::EarthSurfaceUniforms;
 import package::lib::sphere::clip_from_local;
 
-@group(0) @binding(0) var<uniform> u: LitBodyUniforms;
+@group(0) @binding(0) var<uniform> u: EarthSurfaceUniforms;
 
 @vertex
 fn vs(@location(0) position: vec3<f32>, @location(1) uv: vec2<f32>) -> VSOut {

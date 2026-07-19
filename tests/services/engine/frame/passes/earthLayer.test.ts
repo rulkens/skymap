@@ -216,13 +216,14 @@ describe('earthLayer.draw', () => {
     // The body's baked orientation is forwarded as the model's rotation factor.
     expect(call[4]).toBe(SCENE_EARTH.orientation);
 
-    // The renderer receives the pass + the packed length-20 LitBodyUniforms
-    // record (16 mvp + 3 sunDirLocal + 1 pad), not the bare 16-float MVP.
+    // The renderer receives the pass + the packed length-28 EarthSurfaceUniforms
+    // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
+    // sunIrradiance + cloudShadowStrength + 2 pad), not the bare 16-float MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
     expect(uniforms).toBeInstanceOf(Float32Array);
-    expect(uniforms).toHaveLength(20);
+    expect(uniforms).toHaveLength(28);
   });
 
   it('packs sunDirLocal into the lit uniform', () => {
@@ -239,8 +240,12 @@ describe('earthLayer.draw', () => {
     earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(20);
-    const expected = sunDirLocal(SCENE_EARTH.positionMpc, RENDER_ORIGIN_MPC, SCENE_EARTH.orientation);
+    expect(uniforms).toHaveLength(28);
+    const expected = sunDirLocal(
+      SCENE_EARTH.positionMpc,
+      RENDER_ORIGIN_MPC,
+      SCENE_EARTH.orientation,
+    );
     expect(uniforms[16]).toBeCloseTo(expected[0]);
     expect(uniforms[17]).toBeCloseTo(expected[1]);
     expect(uniforms[18]).toBeCloseTo(expected[2]);

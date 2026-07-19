@@ -89,8 +89,12 @@ describe('createEarthRenderer', () => {
     const bitmap = { width: 4, height: 2 } as unknown as ImageBitmap;
     expect(() => renderer.setMap('surface', bitmap)).not.toThrow();
 
-    // draw writes the 80-byte LitBodyUniforms record (20 f32) and records the
-    // indexed draw against a stub pass.
+    // setMap('material', …) accepts an ImageBitmap-shaped value without throwing
+    // (the linear roughness/ocean-mask map now has a real case).
+    expect(() => renderer.setMap('material', bitmap)).not.toThrow();
+
+    // draw writes the 112-byte EarthSurfaceUniforms record (28 f32) and records
+    // the indexed draw against a stub pass.
     const pass = {
       setPipeline: vi.fn(),
       setBindGroup: vi.fn(),
@@ -98,7 +102,7 @@ describe('createEarthRenderer', () => {
       setIndexBuffer: vi.fn(),
       drawIndexed: vi.fn(),
     } as unknown as GPURenderPassEncoder;
-    expect(() => renderer.draw(pass, new Float32Array(20))).not.toThrow();
+    expect(() => renderer.draw(pass, new Float32Array(28))).not.toThrow();
     expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
   });
 

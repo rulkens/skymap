@@ -1,12 +1,30 @@
 // earth/fragment.wesl — fragment stage for the true-scale textured Earth.
 //
-// Samples an equirectangular Blue Marble texture at the mesh uv, then
-// attenuates it by the shared sun-relative Lambert term ('lib/bodyLighting.wesl'
-// 'litShade') so the terminator tracks Earth's real position relative to the
-// Sun. The lit colour goes straight into the rgba16float foreground colour
-// target. Before the real bitmap arrives the bound texture is a 1×1 mid-blue
-// placeholder, so this same path draws a plain lit blue sphere -- visible-but-
-// plain rather than black or absent (see 'earthRenderer.ts' header).
+// Samples an equirectangular Blue Marble albedo at the mesh uv and a co-registered
+// LINEAR material map (roughness in .r, ocean mask in .g), then shades it with the
+// shared physically-based microfacet core ('lib/pbr.wesl' 'pbrDirect') under the
+// sun-relative light direction so the terminator tracks Earth's real position
+// relative to the Sun AND the smooth ocean returns a tight specular glint. The lit
+// colour goes straight into the rgba16float foreground colour target. Before the
+// real bitmaps arrive the bound textures are 1×1 placeholders -- mid-blue albedo
+// and an all-land material (R=1 roughness, G=0 ocean mask) -- so this same path
+// draws a plain lit, glint-free blue sphere: visible-but-plain rather than black
+// or absent (see 'earthRenderer.ts' header).
+//
+// ## Composition (spec §5)
+//
+//   roughness = mix(clamp(mat.r * roughnessBase, MIN_ROUGHNESS, 1), OCEAN_ROUGHNESS, mat.g)
+//   direct    = pbrDirect(n, v, l, albedo, roughness, f0)
+//   colour    = direct * sunIrradiance + AMBIENT * albedo
+//
+// The material's ocean mask 'mat.g' selects the smooth open-water roughness
+// ('OCEAN_ROUGHNESS' from pbr.wesl) over the land micro-roughness, so the two
+// surfaces get one continuous roughness field. 'pbrDirect' is the DIRECT
+// (sun-lit) term only; the shared 'AMBIENT' floor ('lib/bodyLighting.wesl') is
+// added here so the night hemisphere never dissolves at the terminator -- the
+// same single-source-of-truth discipline every lit body follows. 'sunIrradiance'
+// scales the direct term and is set (in 'earthSurfaceParams.ts') to roughly
+// preserve the previous 'litShade' brightness.
 //
 // ## Renormalize the interpolated normal
 //
@@ -58,23 +76,47 @@
 // read -- the value handed to us is already linear, correct for the HDR target.
 
 import package::bodies::earth::io::VSOut;
-import package::lib::sphere::LitBodyUniforms;
-import package::lib::bodyLighting::litShade;
+import package::lib::sphere::EarthSurfaceUniforms;
+import package::lib::pbr::pbrDirect;
+import package::lib::pbr::MIN_ROUGHNESS;
+import package::lib::pbr::OCEAN_ROUGHNESS;
+import package::lib::bodyLighting::AMBIENT;
 
-@group(0) @binding(0) var<uniform> u: LitBodyUniforms;
+@group(0) @binding(0) var<uniform> u: EarthSurfaceUniforms;
 @group(0) @binding(1) var earthSampler: sampler;
 @group(0) @binding(2) var earthTexture: texture_2d<f32>;
+@group(0) @binding(3) var materialTexture: texture_2d<f32>;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Sample the mesh uv directly. With longitude on +Y the equirectangular
   // texture's east already reads to screen-right for an outside viewer, so no u
-  // flip is needed; v is likewise raw -- the bitmap is uploaded flipY:true (see
-  // the notes above).
+  // flip is needed; v is likewise raw -- both bitmaps are uploaded flipY:true
+  // (see the notes above). The albedo texture is 'rgba8unorm-srgb' (hardware
+  // linearises on read); the material texture is LINEAR 'rgba8unorm' so its
+  // packed roughness (.r) and ocean mask (.g) are read as raw numbers, not
+  // gamma-shifted colour.
   let albedo = textureSample(earthTexture, earthSampler, in.uv).rgb;
-  // Renormalize the interpolated normal (see the header) and attenuate the
-  // albedo by the shared sun-relative Lambert-plus-ambient term.
+  let mat = textureSample(materialTexture, earthSampler, in.uv).rg;
+
+  // Renormalize the interpolated normal (see the header). The view vector is the
+  // camera minus the surface point, both in the body's local frame: 'normalLocal'
+  // doubles as the unit-sphere surface POSITION here (V is the only term that
+  // needs it), and 'u.camPosLocal' is the camera in that same frame (body-radii
+  // units), so their difference is the surface->camera direction.
   let n = normalize(in.normalLocal);
-  let colour = albedo * litShade(n, u.sunDirLocal);
+  let v = normalize(u.camPosLocal - in.normalLocal);
+  let l = u.sunDirLocal;
+
+  // Ocean mask selects the smooth open-water roughness over the land
+  // micro-roughness; MIN_ROUGHNESS floors the land side away from the GGX
+  // singularity (both constants live in pbr.wesl beside the BRDF that reads them).
+  let roughness = mix(clamp(mat.r * u.roughnessBase, MIN_ROUGHNESS, 1.0), OCEAN_ROUGHNESS, mat.g);
+
+  // Direct (sun-lit) microfacet term, scaled by the body's sun irradiance, plus
+  // the shared ambient floor. 'u.cloudShadowStrength' is bound but UNUSED in plan
+  // A -- plan D (the cloud shell) multiplies 'direct' by the cloud-shadow term.
+  let direct = pbrDirect(n, v, l, albedo, roughness, u.f0);
+  let colour = direct * u.sunIrradiance + AMBIENT * albedo;
   return vec4<f32>(colour, 1.0);
 }

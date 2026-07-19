@@ -14,15 +14,18 @@
  * close-approach descent — and the `(face, level, tileX, tileY)` parameters set
  * up Plan C's terrain quadtree without a later mesh swap. The mesh keeps
  * J2000 / equirect / CCW parity with `uvSphereMesh`, so the orientation and
- * winding notes below carry over unchanged. The Lambert term is
- * `lib/bodyLighting.wesl`'s `litShade`. It shares `lib/sphere.wesl`'s uniform
- * (`LitBodyUniforms`, an 80-byte block: the mat4x4<f32> MVP plus the
- * body-local sun direction, with a zeroed pad tail — the ambient floor is the
- * shared `AMBIENT` const in `lib/bodyLighting.wesl`, not a uniform field) and
- * the `clip_from_local`
- * projection helper with the other sphere renderers, so the CPU-side matrix
- * layout and the GPU-side projection stay a single source of truth. The CPU
- * side packs the uniform through `packLitBodyUniforms`.
+ * winding notes below carry over unchanged. The shading is the shared
+ * physically-based microfacet core (`lib/pbr.wesl`'s `pbrDirect`): a co-registered
+ * LINEAR material map (roughness + ocean mask) drives GGX specular, so the smooth
+ * ocean returns a tight sun glint while land stays matte, plus the shared
+ * `AMBIENT` floor from `lib/bodyLighting.wesl`. It binds `lib/sphere.wesl`'s
+ * `EarthSurfaceUniforms` (a 112-byte block: the 80-byte `LitBodyUniforms` prefix
+ * — MVP + body-local sun direction — followed by the camera position in the
+ * body's local frame and the PBR params `roughnessBase`/`f0`/`sunIrradiance`/
+ * `cloudShadowStrength`) and the `clip_from_local` projection helper with the
+ * other sphere renderers, so the CPU-side matrix layout and the GPU-side
+ * projection stay a single source of truth. The CPU side packs the uniform
+ * through `packEarthSurfaceUniforms`.
  *
  * **Precondition — draw at most once per frame:** `draw` writes the uniforms
  * into a single non-dynamic uniform buffer before issuing the indexed draw, so
@@ -39,11 +42,15 @@
  * flag, the renderer creates a 1×1 mid-blue `rgba8unorm-srgb` texture at
  * construction and binds THAT. The fragment shader always samples a real texture;
  * before the bitmap lands it simply reads back a uniform mid-blue, so the Earth
- * is visible-but-plain (a plain blue ball) rather than black or absent. When
- * `setMap('surface', bitmap)` runs it creates a fresh texture sized to the
- * bitmap, uploads it, and rebuilds the fragment bind group to point at the new
- * view. The `night`/`clouds`/`material`/`normal` kinds land with the
- * photoreal-Earth feature PRs; `setMap` ignores them until then.
+ * is visible-but-plain (a plain blue ball) rather than black or absent. A second
+ * 1×1 LINEAR placeholder (`rgba8unorm`, R=255 G=0 → roughness 1, ocean mask 0)
+ * stands in for the material map so the fragment shades a matte, glint-free
+ * sphere until the real map arrives. When `setMap('surface', bitmap)` or
+ * `setMap('material', bitmap)` runs it creates a fresh texture sized to the
+ * bitmap (format chosen by `isLinearTextureKind`), uploads it, generates mips,
+ * and rebuilds the fragment bind group to point at the new view. The
+ * `night`/`clouds`/`normal` kinds land with plans B/C/D; `setMap` ignores them
+ * until then.
  *
  * ### uv / texture orientation
  *
@@ -74,9 +81,10 @@
  * An explicit `bindGroupLayout` (not `layout: 'auto'`) so the texture swap in
  * `setMap` can rebuild a bind group against a stable layout object, and to
  * avoid the auto-layout trap documented in `feedback_webgpu_auto_layout_trap`.
- * Binding 0: `LitBodyUniforms` — visible in BOTH stages now (the vertex reads
- * `u.mvp`, the fragment reads `u.sunDirLocal`). Binding 1: sampler (fragment).
- * Binding 2: the 2D Earth texture (fragment).
+ * Binding 0: `EarthSurfaceUniforms` — visible in BOTH stages (the vertex reads
+ * `u.mvp`, the fragment reads the sun direction, camera position, and material
+ * knobs). Binding 1: sampler (fragment). Binding 2: the 2D Earth albedo texture
+ * (fragment). Binding 3: the 2D material (roughness/ocean-mask) texture (fragment).
  *
  * ### Mip generation
  *
@@ -94,6 +102,7 @@ import type { EarthRenderer } from '../../../../@types/rendering/EarthRenderer';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
+import { isLinearTextureKind } from '../../../../utils/scene/isLinearTextureKind';
 import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/earth/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -108,11 +117,13 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
  *  tileX, tileY)` addressing without touching this build. */
 const CUBESPHERE_FACE_RESOLUTION = 48;
 
-/** `LitBodyUniforms` is 80 bytes (20 f32): the 64-byte mat4x4<f32> MVP plus the
- *  body-local sun direction (vec3, 16-byte aligned at offset 64) and a zeroed
- *  pad tail — the ambient floor lives in `lib/bodyLighting.wesl`'s `AMBIENT`
- *  const, not a uniform field. Written from `packLitBodyUniforms`. */
-const UNIFORM_BUFFER_SIZE = 80;
+/** `EarthSurfaceUniforms` is 112 bytes (28 f32): the 80-byte `LitBodyUniforms`
+ *  prefix (mat4x4<f32> MVP + body-local sun direction, with `roughnessBase`
+ *  filling the sun-dir vec3 tail) followed by `camPosLocal` (vec3), `f0`,
+ *  `sunIrradiance`, `cloudShadowStrength`, and two zeroed pad floats. The ambient
+ *  floor lives in `lib/bodyLighting.wesl`'s `AMBIENT` const, not a uniform field.
+ *  Written from `packEarthSurfaceUniforms`. */
+const UNIFORM_BUFFER_SIZE = 112;
 
 /** Concatenate the six whole level-0 cube-sphere faces into one indexed mesh.
  *  Each `cubeSphereMesh` call builds a single face tile, so we sum the six
@@ -209,12 +220,12 @@ export function createEarthRenderer(
   });
   device.queue.writeBuffer(indexBuffer, 0, mesh.indices);
 
-  // ── Uniform buffer (one lit-body record) ──────────────────────────────────
+  // ── Uniform buffer (one Earth-surface record) ─────────────────────────────
   //
-  // A single Earth is drawn per frame, so one 80-byte `LitBodyUniforms`
+  // A single Earth is drawn per frame, so one 112-byte `EarthSurfaceUniforms`
   // block suffices — no multi-slot dynamic-offset buffer needed. `draw`
-  // writes the packed record (MVP + sunDirLocal + zeroed pad) here before issuing
-  // the indexed draw.
+  // writes the packed record (MVP + sunDirLocal + camPosLocal + PBR params) here
+  // before issuing the indexed draw.
   const uniformBuffer = device.createBuffer({
     label: 'earth-uniform-buffer',
     size: UNIFORM_BUFFER_SIZE,
@@ -259,11 +270,37 @@ export function createEarthRenderer(
     [1, 1, 1],
   );
 
+  // ── Placeholder material texture ──────────────────────────────────────────
+  //
+  // A 1×1 LINEAR (`rgba8unorm`, NO sRGB de-gamma) texel standing in until the
+  // real roughness/ocean-mask map arrives via `setMap('material', …)`. The
+  // material map packs DATA, not colour: `.r` = roughness, `.g` = ocean mask.
+  // R=255 → roughness 1.0 (fully rough, `roughness = roughnessBase`); G=0 → ocean
+  // mask off (all land, no glint). So before the real map lands the fragment
+  // shades a matte, glint-free sphere — the "still lit, no glint yet" behaviour.
+  // Mirrors the surface placeholder so the fragment always samples a real texture
+  // at binding 3 without a "has-material" branch.
+  let materialTexture = device.createTexture({
+    label: 'earth-placeholder-material',
+    size: [1, 1, 1],
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+  device.queue.writeTexture(
+    { texture: materialTexture },
+    // roughness=1 (R), ocean mask=0 (G); B/A unused. Linear format — raw bytes.
+    new Uint8Array([255, 0, 0, 255]),
+    { bytesPerRow: 4, rowsPerImage: 1 },
+    [1, 1, 1],
+  );
+
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   //
-  // Binding 0: `LitBodyUniforms`, VERTEX (mvp) + FRAGMENT (sunDirLocal).
-  // Binding 1: the sampler, fragment stage.
-  // Binding 2: the 2D Earth texture, fragment stage (filterable f32).
+  // Binding 0: `EarthSurfaceUniforms`, VERTEX (mvp) + FRAGMENT (sun dir, camera,
+  //            material knobs).
+  // Binding 1: the sampler, fragment stage (shared by both textures).
+  // Binding 2: the 2D Earth albedo texture, fragment stage (filterable f32).
+  // Binding 3: the 2D material (roughness/ocean-mask) texture, fragment stage.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'earth-bgl',
     entries: [
@@ -282,11 +319,17 @@ export function createEarthRenderer(
         visibility: GPUShaderStage.FRAGMENT,
         texture: { sampleType: 'float' },
       },
+      {
+        binding: 3,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float' },
+      },
     ],
   });
 
-  // The bind group references the current `texture` view. `setMap` rebuilds
-  // it against a fresh texture, so it lives in a mutable closure slot.
+  // The bind group references the current `texture` + `materialTexture` views.
+  // `setMap` rebuilds it against a fresh texture (either binding 2 or 3), so it
+  // lives in a mutable closure slot.
   function buildBindGroup(): GPUBindGroup {
     return device.createBindGroup({
       label: 'earth-bg',
@@ -295,6 +338,7 @@ export function createEarthRenderer(
         { binding: 0, resource: { buffer: uniformBuffer } },
         { binding: 1, resource: sampler },
         { binding: 2, resource: texture.createView() },
+        { binding: 3, resource: materialTexture.createView() },
       ],
     });
   }
@@ -355,18 +399,23 @@ export function createEarthRenderer(
   // ── setMap ─────────────────────────────────────────────────────────────────
 
   function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
-    // Prep 1 wires only the `surface` (day) map; the night/cloud/material/normal
-    // kinds land with the photoreal-Earth feature PRs, which add their cases +
-    // GPU bindings here. A non-surface kind is inert until then.
-    if (kind !== 'surface') return;
-    // Retire the previous texture (placeholder or a prior bitmap) and create a
-    // fresh one sized to the incoming bitmap.
-    texture.destroy();
+    // Plan A wires the `surface` (day albedo) and `material` (roughness/ocean-mask)
+    // maps. The `night`/`clouds`/`normal` kinds land with plans B/C/D, which add
+    // their cases + GPU bindings here. Those kinds are inert until then.
+    if (kind !== 'surface' && kind !== 'material') return;
+
+    // sRGB colour (surface) samples through `rgba8unorm-srgb` so the hardware
+    // de-gammas on read; linear-packed data (material) samples through plain
+    // `rgba8unorm` so its numeric channels (roughness, ocean mask) are read raw,
+    // not gamma-shifted. `isLinearTextureKind` is the single home for that axis —
+    // shared with the fetcher's decode path and the filename helper — so the
+    // sRGB-vs-linear decision can never drift between the three consumers.
+    const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
     const levels = mipLevelCount(bitmap.width, bitmap.height);
-    texture = device.createTexture({
-      label: 'earth-texture',
+    const fresh = device.createTexture({
+      label: kind === 'material' ? 'earth-material' : 'earth-texture',
       size: [bitmap.width, bitmap.height, 1],
-      format: 'rgba8unorm-srgb',
+      format,
       mipLevelCount: levels,
       // RENDER_ATTACHMENT is required: generateMipChain renders each level below
       // 0 as a downsample pass (see its module header).
@@ -376,16 +425,26 @@ export function createEarthRenderer(
         GPUTextureUsage.RENDER_ATTACHMENT,
     });
     // flipY:true so texture v=0 is the image's bottom (south) row, matching the
-    // mesh's south-first v — see the module header's orientation note.
-    device.queue.copyExternalImageToTexture({ source: bitmap, flipY: true }, { texture }, [
+    // mesh's south-first v — see the module header's orientation note. The
+    // material map is co-registered with the albedo, so it takes the same flip
+    // and the fragment samples both at one uv.
+    device.queue.copyExternalImageToTexture({ source: bitmap, flipY: true }, { texture: fresh }, [
       bitmap.width,
       bitmap.height,
       1,
     ]);
     // Fill mip levels 1..N-1 so the mipmapFilter:'linear' sampler has a real
     // chain to trilinearly blend as Earth shrinks toward the glint handoff.
-    generateMipChain(device, texture);
-    // Rebuild the bind group against the new texture view.
+    generateMipChain(device, fresh);
+    // Retire the previous texture (placeholder or a prior bitmap) in the matching
+    // slot and rebuild the bind group against the new view.
+    if (kind === 'material') {
+      materialTexture.destroy();
+      materialTexture = fresh;
+    } else {
+      texture.destroy();
+      texture = fresh;
+    }
     bindGroup = buildBindGroup();
   }
 
@@ -409,6 +468,7 @@ export function createEarthRenderer(
     indexBuffer.destroy();
     uniformBuffer.destroy();
     texture.destroy();
+    materialTexture.destroy();
   }
 
   const renderer: EarthRenderer = {
