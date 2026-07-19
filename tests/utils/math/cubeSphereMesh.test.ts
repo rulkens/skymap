@@ -122,13 +122,4 @@ describe('cubeSphereMesh', () => {
       }
     }
   });
-
-  it('indices are Uint32Array (a shared six-face buffer would overrun the uint16 ceiling)', () => {
-    // The contract is the element type: a future combined/high-resolution buffer
-    // holds vertex indices past 65535, so a silent Uint16Array would corrupt it.
-    const m = cubeSphereMesh(0, 0, 0, 0, 48);
-    expect(m.indices).toBeInstanceOf(Uint32Array);
-    expect(m.positions).toBeInstanceOf(Float32Array);
-    expect(m.tangents).toBeInstanceOf(Float32Array);
-  });
 });

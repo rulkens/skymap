@@ -30,6 +30,8 @@ import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
+import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -249,6 +251,42 @@ describe('earthLayer.draw', () => {
     expect(uniforms[16]).toBeCloseTo(expected[0]);
     expect(uniforms[17]).toBeCloseTo(expected[1]);
     expect(uniforms[18]).toBeCloseTo(expected[2]);
+  });
+
+  it('packs camPosLocal and the PBR surface params into their tail slots', () => {
+    // The other view-dependent seam: the ocean glint needs the camera in Earth's
+    // local frame (slots 20..22), and the PBR dials fill the vec3 tails / trailing
+    // scalars — roughnessBase at 19, f0 at 23, sunIrradiance at 24. Pinning the
+    // scalars by their named source makes an argument-order swap at the pack call
+    // (e.g. f0 ↔ roughnessBase) a failure here, not a visual-only regression.
+    composeMock.mockClear();
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const view = makeNear0View();
+    const state = makeState({ draw: drawSpy }, SCENE_EARTH);
+
+    earthLayer.draw(PASS_STUB, view, CTX_STUB, state);
+
+    const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
+    expect(uniforms).toHaveLength(28);
+
+    // Independent recompute of the camera-in-local-frame vector. The fixture camera
+    // sits 5 Mpc out while Earth's radius is ~2e-16 Mpc, so the local coords are
+    // astronomically large (~1e16) — toBeCloseTo's absolute tolerance is meaningless
+    // there. The layer and this recompute call the SAME util with identical inputs,
+    // so the f32-narrowed slot equals Math.fround of the recomputed value exactly.
+    const expectedCam = camPosLocal(
+      view.camPos,
+      SCENE_EARTH.positionMpc,
+      SCENE_EARTH.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      SCENE_EARTH.orientation,
+    );
+    expect(uniforms[20]).toBe(Math.fround(expectedCam[0]));
+    expect(uniforms[21]).toBe(Math.fround(expectedCam[1]));
+    expect(uniforms[22]).toBe(Math.fround(expectedCam[2]));
+
+    expect(uniforms[19]).toBeCloseTo(EARTH_SURFACE_PARAMS.roughnessBase);
+    expect(uniforms[23]).toBeCloseTo(EARTH_SURFACE_PARAMS.f0);
+    expect(uniforms[24]).toBeCloseTo(EARTH_SURFACE_PARAMS.sunIrradiance);
   });
 
   it('is a no-op when the earthRenderer handle is null (pre-bootstrap)', () => {

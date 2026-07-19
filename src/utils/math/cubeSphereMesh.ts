@@ -67,12 +67,13 @@
  */
 
 import type { CubeSphereMesh } from '../../@types/math/CubeSphereMesh';
+import type { Vec3 } from '../../@types/math/Vec3';
 
 // Six cube faces (index 0..5 = +x, -x, +y, -y, +z, -z). Each carries its outward
 // normal and two in-plane axes chosen so sAxis × tAxis = normal — which makes the
 // (i,j)→(i+1,j)→(i,j+1) triangle order CCW as seen from outside, on every face.
-type Face = { normal: Vec3; sAxis: Vec3; tAxis: Vec3 };
-type Vec3 = readonly [number, number, number];
+// The axes are constants read but never mutated, so `Readonly<Vec3>` at the field.
+type Face = { normal: Readonly<Vec3>; sAxis: Readonly<Vec3>; tAxis: Readonly<Vec3> };
 
 const FACES: readonly Face[] = [
   { normal: [1, 0, 0], sAxis: [0, 1, 0], tAxis: [0, 0, 1] }, // +x:  y × z =  x
@@ -207,7 +208,8 @@ export function cubeSphereMesh(
   return {
     positions: new Float32Array(positions),
     uvs: new Float32Array(uvs),
-    // Uint32: six faces at resolution ≈ 48 exceed the 65535 uint16 vertex ceiling.
+    // Uint32: one face fits in uint16 (≤2401 verts), but the renderer concatenates
+    // all six faces into a single index buffer whose vertex indices run past 65535.
     indices: new Uint32Array(indices),
     tangents: new Float32Array(tangents),
   };
