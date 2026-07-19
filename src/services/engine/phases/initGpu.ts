@@ -573,7 +573,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // OVER, two-sided (`cullMode: 'none'`, the fragment splits duty by front_facing),
   // depth-tested but no depth write — so its limb passes over space and is occluded
   // over the opaque disc. It bakes ONE bundle per `ATMOSPHERE_PARAMS` row (Earth
-  // today) at construction — the view-independent transmittance + multi-scatter
+  // + six planets) at construction — the view-independent transmittance + multi-scatter
   // LUTs — while each body's sky-view LUT is re-baked per frame by the
   // `atmosphereSkyView` compute step. The factory takes the whole table, so a
   // second atmosphere body is a new params row, no wiring change here.

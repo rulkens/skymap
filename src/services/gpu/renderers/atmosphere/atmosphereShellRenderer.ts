@@ -157,7 +157,7 @@ export function createAtmosphereShellRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat, // 'rgba16float' (foreground:0)
   depthFormat: GPUTextureFormat, // 'depth32float' (foreground:0)
-  paramsById: Readonly<Record<string, AtmosphereParams>>, // one bundle per row (Earth today)
+  paramsById: Readonly<Record<string, AtmosphereParams>>, // one bundle per row (Earth + six planets)
 ): AtmosphereShellRenderer {
   // ── Sampler: linear + clamp-to-edge both axes (SHARED across bodies) ────────
   //
