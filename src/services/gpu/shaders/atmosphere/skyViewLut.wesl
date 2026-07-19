@@ -145,17 +145,19 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
     // Phase-weighted single-scatter source + isotropic multi-scatter source.
     let scatterPhased = m.scatterR * rp + vec3<f32>(m.scatterM * mp);
     let scatterTotal = m.scatterR + vec3<f32>(m.scatterM);
-    // twilightSoftness: fade the single-scatter sun source across the terminator so deep
-    // planet shadow goes black instead of clamping to the transmittance LUT's grazing edge.
-    // 'muHorizon' is the sun-zenith cosine at which the sun grazes this sample's local
-    // horizon. Multi-scatter is left unfactored (isotropic ambient floor; its own LUT
-    // already decays with sun depression).
+    // twilightSoftness: fade the WHOLE in-scatter source (single + multi) across the
+    // terminator so deep planet shadow goes black instead of clamping to the LUTs'
+    // grazing-edge rows. 'muHorizon' is the sun-zenith cosine at which the sun grazes
+    // this sample's local horizon. The multi-scatter term MUST be inside the fade: its
+    // LUT shares the same below-horizon edge clamp, and at the night limb that ambient
+    // floor dominates the grazing-attenuated single scatter by orders of magnitude —
+    // gating single scatter alone leaves the knob modulating a sub-percent component.
     let muHorizon = -sqrt(max(0.0, r * r - bottom * bottom)) / r;
     // Clamp the fade width to a tiny epsilon: a zero width collides smoothstep's two edges
     // (its internal divide-by-(edge1-edge0) goes 0/0), so the hard-shadow limit is a near-step.
     let fadeWidth = max(view.twilightSoftness, 1e-4);
     let sunVis = smoothstep(muHorizon - fadeWidth, muHorizon, sunCosZenith);
-    let s = sunVis * sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal;
+    let s = sunVis * (sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal);
 
     let sInt = (s - s * sampleTransmittance) / max(m.extinction, vec3<f32>(EXTINCTION_EPS));
     L = L + throughput * sInt;
