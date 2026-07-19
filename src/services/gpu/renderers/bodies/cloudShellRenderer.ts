@@ -243,6 +243,38 @@ export function createCloudShellRenderer(
       // writes NO depth — a translucent overlay must not stamp z.
       depthWriteEnabled: false,
       depthCompare: 'less',
+      // A rasterizer depth bias nudges the shell's depth toward the camera so it
+      // never z-fights the surface it hovers over.
+      //
+      // WHY it's needed. The shell sits at radius ~1.002 (~13 km above Earth's
+      // surface), and the NEAR0 foreground slab uses an ADAPTIVE frustum whose
+      // near plane tracks the focus distance: near = distance × 1e-4
+      // (`foregroundFrustum.ts`). A `depth32float` buffer therefore resolves only
+      // ~6e-4 × distance of depth separation right at the focus body, so the 13 km
+      // shell gap falls UNDER one depth ulp once distance exceeds ~21,000 km
+      // (~3 Earth radii). Beyond that the interpolated shell and surface depths
+      // quantize into the same values and flicker per-pixel. A constant bias in
+      // ulps at the primitive's depth exponent lifts the shell clear of that
+      // ±1–2 ulp interpolation noise at EVERY zoom level (the fixed offset scales
+      // with the exponent, so it stays effective as the body recedes); the slope
+      // term covers grazing fragments near the limb where the depth gradient is
+      // steepest. Signs are NEGATIVE because, under `depthCompare: 'less'`, smaller
+      // depth is nearer — toward the camera is toward zero.
+      //
+      // WHY it can never cause wrong occlusion. The shell's near wall is
+      // concentric with, and strictly OUTSIDE, its own planet: the planet can
+      // never legitimately occlude the shell, so pulling the shell a few ulps
+      // nearer can't flip a correct depth verdict there. The only other occluders
+      // are separate bodies thousands of km away — orders of magnitude beyond a
+      // few ulps — so cross-body occlusion still resolves correctly.
+      //
+      // ALTERNATIVE not taken: dropping the depth test entirely
+      // (`depthCompare: 'always'`) would also kill the flicker, but it would let
+      // the shell draw over bodies that genuinely sit in front of it, losing the
+      // cross-body occlusion the test is there to provide. The bias keeps the test
+      // and only resolves the self-vs-surface tie.
+      depthBias: -4,
+      depthBiasSlopeScale: -2,
     },
   });
 
