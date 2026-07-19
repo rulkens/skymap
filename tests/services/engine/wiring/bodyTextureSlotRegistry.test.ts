@@ -21,6 +21,7 @@ const fetch = useFetchMock();
 
 type Gpu = {
   earthRenderer: { setMap: ReturnType<typeof vi.fn> };
+  cloudShellRenderer: { setTexture: ReturnType<typeof vi.fn> };
   texturedBodyRenderer: {
     setTexture: ReturnType<typeof vi.fn>;
     clearTexture: ReturnType<typeof vi.fn>;
@@ -38,6 +39,7 @@ function makeState(gpu: Gpu): EngineState {
 function makeGpu(): Gpu {
   return {
     earthRenderer: { setMap: vi.fn() },
+    cloudShellRenderer: { setTexture: vi.fn() },
     texturedBodyRenderer: { setTexture: vi.fn(), clearTexture: vi.fn(), setRingTexture: vi.fn() },
   };
 }
@@ -79,6 +81,25 @@ describe('wireBodyTextureSlots', () => {
     expect(gpu.earthRenderer.setMap).toHaveBeenCalledWith('surface', bitmap);
     // Earth keeps its own renderer — the shared textured renderer is untouched.
     expect(gpu.texturedBodyRenderer.setTexture).not.toHaveBeenCalled();
+    // The surface kind is NOT a cloud map — the shell stays clear.
+    expect(gpu.cloudShellRenderer.setTexture).not.toHaveBeenCalled();
+  });
+
+  it("the 'earth:clouds' slot's commit fans ONE bitmap to both the surface renderer and the cloud shell", async () => {
+    const gpu = makeGpu();
+    const state = makeState(gpu);
+    wireBodyTextureSlots(state);
+
+    const slot = state.assetSlots.bodyTextures.get('earth:clouds')!;
+    slot.load({ bodyId: 'earth', kind: 'clouds', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    // One committed cloud bitmap reaches BOTH resident consumers: the surface
+    // pipeline (shadow + night occlusion) and the translucent shell.
+    expect(gpu.earthRenderer.setMap).toHaveBeenCalledTimes(1);
+    expect(gpu.earthRenderer.setMap).toHaveBeenCalledWith('clouds', bitmap);
+    expect(gpu.cloudShellRenderer.setTexture).toHaveBeenCalledTimes(1);
+    expect(gpu.cloudShellRenderer.setTexture).toHaveBeenCalledWith(bitmap);
   });
 
   it("a non-'earth' body slot's commit dispatches to texturedBodyRenderer.setTexture(bodyId, …)", async () => {

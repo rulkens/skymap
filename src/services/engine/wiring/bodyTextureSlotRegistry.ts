@@ -20,9 +20,11 @@
  *
  *  - `'earth'` re-skins its dedicated placeholder sphere through
  *    `earthRenderer.setMap(kind, …)` (Earth keeps its own renderer — the planned
- *    atmosphere/day-night divergence). Today only the `surface` kind is wired; the
- *    `clouds` kind will route to a `cloudShellRenderer` when PR D lands (see the
- *    extension-point comment in the commit dispatch).
+ *    atmosphere/day-night divergence). The `clouds` kind additionally fans to a
+ *    SECOND resident consumer — `cloudShellRenderer.setTexture` — so one committed
+ *    cloud bitmap reaches both the surface pipeline (shadow + night occlusion) and
+ *    the translucent shell, the same one-asset/two-consumers shape the ring commit
+ *    uses.
  *  - every other `BodyTextureId` (the twelve non-Earth textured bodies) routes to
  *    the shared `texturedBodyRenderer.setTexture(bodyId, …)`; its `onRelease`
  *    frees that body's GPU texture via `clearTexture(bodyId)` — the slot family's
@@ -84,11 +86,15 @@ function commitBodyTexture(state: EngineState, entry: BodyTextureKey, bitmap: Im
   // Destroy race: each handle may be null mid-bootstrap or post-teardown — a
   // null-guarded drop keeps the slot's `ready` transition intact.
   if (entry.bodyId === 'earth') {
-    // Earth owns every kind through one renderer's `setMap`. In Prep 1 only the
-    // `surface` case is implemented; the `clouds` kind is the PR D extension
-    // point — it will route to a `cloudShellRenderer` (which does not exist yet),
-    // not `earthRenderer`, so add that branch here when it lands.
+    // Earth owns every kind through one renderer's `setMap` — for `clouds` this
+    // binds the surface-pipeline copy sampled for the ring shadow + night
+    // occlusion (spec §7.3).
     state.gpu.earthRenderer?.setMap(entry.kind, bitmap);
+    // Clouds fan to a SECOND resident consumer — the body-agnostic cloud shell —
+    // the same one-asset/two-consumers shape the ring commit below uses. Surface
+    // (setMap above) samples it for shadow + night-occlusion; the shell renders it
+    // as the translucent layer.
+    if (entry.kind === 'clouds') state.gpu.cloudShellRenderer?.setTexture(bitmap);
   } else if (isTexturedBodyKey(entry.bodyId)) {
     state.gpu.texturedBodyRenderer?.setTexture(entry.bodyId, bitmap);
   } else {
