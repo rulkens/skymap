@@ -53,6 +53,7 @@ describe('textureSourcesFor', () => {
         '8k_moon.jpg',
         'world.topo.bathy.200412.3x21600x10800.jpg',
         'world.watermask.21600x10800.png',
+        'gebco_08_rev_elev_21600x10800.png',
         'BlackMarble_2016_3km.jpg',
         'Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
         'Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',

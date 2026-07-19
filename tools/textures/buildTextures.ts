@@ -8,11 +8,11 @@
  * The output name comes from the shared `bodyTextureFilename` helper — the SAME
  * helper the runtime fetcher (`bodyTextureFetcher`) calls to build its request
  * URL — so the emitted file and the requested URL can never drift onto different
- * names (a mismatch would 404 every body). Only the `surface` (day/albedo) kind
- * is built here; because `surface` is the helper's unsegmented default, the
- * emitted names are byte-identical to the historical `<bodyId>-<px>.jpg` /
- * `saturn-ring-<px>.png`, so re-running this tool needs no R2 re-sync. Non-surface
- * feature maps land with their own PRs.
+ * names (a mismatch would 404 every body). Each body builds one file per `kind`
+ * it declares in `BODY_TEXTURE_REGISTRY` (a `surface` albedo plus, for Earth,
+ * `night` / `material` / `normal` feature maps); `surface` is the helper's
+ * unsegmented default, so its names stay byte-identical to the historical
+ * `<bodyId>-<px>.jpg` / `saturn-ring-<px>.png`.
  *
  * ## Three source formats, one sharp path
  *
@@ -80,6 +80,7 @@ import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
+import { bakeNormalMap, DEFAULT_EXAGGERATION } from './bakeNormalMap';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
 import { writeLinearTier } from './writeLinearTier';
@@ -252,12 +253,126 @@ async function writeMaterialTier(srcPath: string, widthPx: number, outPath: stri
 }
 
 /**
- * Write one `(body, kind)` tier, dispatched by kind, and return a short log note.
- * `surface` takes the existing albedo path — mono USGS sources (Europa/Callisto,
- * carrying a registry `grayscaleTint`) go through the two-pass tint; full-colour
- * sources encode in one pass. `material` composes a linear roughness/ocean-mask
- * PNG (Earth's PBR map) via `writeMaterialTier`. An unhandled kind is a build
- * error, never a silent skip that would leave a body's map unbuilt.
+ * Per-source cache of the baked normal buffer. The bake is a pure JS Sobel loop,
+ * so it runs ONCE per elevation source and every tier is a resize of the shared
+ * result (a normal map downsamples cleanly). Keyed by source path; the build loop
+ * is sequential, but caching the Promise makes the memoisation correct even if it
+ * were not.
+ */
+const bakedNormalCache = new Map<
+  string,
+  Promise<{ data: Buffer; info: { width: number; height: number; channels: 4 } }>
+>();
+
+/**
+ * Bake `bodyId`'s elevation source into a tangent-space normal map ONCE, at a
+ * width capped to the widest tier the body emits for `normal`.
+ *
+ * The cap is load-bearing: the GEBCO relief is 21600×10800 (233 Mpx), so reading
+ * it raw would hold a ~930 MB workload and Sobel-loop it pointlessly when the
+ * widest tier we ship is 4 k. sharp resizes to the cap BEFORE `.raw()`, then we
+ * stride-extract a single greyscale channel — `.greyscale()` keeps three
+ * identical bands, so we read channel 0 by the reported stride, the same pattern
+ * `writeMaterialTier` uses for its mask — and hand that heightfield to
+ * `bakeNormalMap`. The result feeds `writeLinearTier` per tier.
+ */
+function bakeNormalOnce(
+  bodyId: BodyTextureId,
+  srcPath: string,
+): Promise<{ data: Buffer; info: { width: number; height: number; channels: 4 } }> {
+  let baked = bakedNormalCache.get(srcPath);
+  if (baked === undefined) {
+    const capPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
+    baked = (async () => {
+      const grey = await sharp(srcPath, { limitInputPixels: false })
+        .resize({ width: capPx })
+        .greyscale()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const { width, height, channels } = grey.info;
+      const single = new Uint8Array(width * height);
+      for (let i = 0; i < width * height; i++) single[i] = grey.data[i * channels]!;
+      return bakeNormalMap({ data: single, width, height }, DEFAULT_EXAGGERATION);
+    })();
+    bakedNormalCache.set(srcPath, baked);
+  }
+  return baked;
+}
+
+/** Bake (or reuse) the normal map and write one tier as a linear PNG. */
+async function writeNormalTier(
+  bodyId: BodyTextureId,
+  srcPath: string,
+  widthPx: number,
+  outPath: string,
+): Promise<void> {
+  const baked = await bakeNormalOnce(bodyId, srcPath);
+  await writeLinearTier(baked, widthPx, outPath);
+}
+
+/**
+ * The per-kind writer plus the log note that annotates its tier. `write` produces
+ * the file; `note` reads whatever the note depends on (only the sRGB writer's
+ * does — its tint) off the registry.
+ */
+type KindWriter = {
+  readonly write: (
+    bodyId: BodyTextureId,
+    srcPath: string,
+    widthPx: number,
+    outPath: string,
+  ) => Promise<void>;
+  readonly note: (bodyId: BodyTextureId) => string;
+};
+
+/**
+ * The sRGB (JPEG albedo) writer, shared by `surface` and `night`. The two differ
+ * only in whether a grayscale tint applies, and that tint is a per-BODY property
+ * (`grayscaleTint`), not a per-kind one: the mono USGS moons carry a `surface`
+ * tint, Earth's `surface` AND `night` carry none. So a single registry lookup
+ * serves both kinds — Europa's surface tints through the two-pass mono path,
+ * Earth's night passes `undefined` and encodes in one pass — and the '(tinted)'
+ * note derives from that same tint presence.
+ */
+const SRGB_WRITER: KindWriter = {
+  write: (bodyId, srcPath, widthPx, outPath) =>
+    writeBodyTier(srcPath, BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint, widthPx, outPath),
+  note: (bodyId) => (BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint ? '  (tinted)' : ''),
+};
+
+/**
+ * The build's kind→writer dispatch expressed AS DATA. Each `TextureKind` maps to
+ * how its tier is produced plus its log note, so a new kind is one row rather
+ * than another branch of an if-chain:
+ *
+ *  - **`surface` + `night`** → the shared `SRGB_WRITER` (JPEG albedo / night
+ *    lights), tint-parameterised off the registry.
+ *  - **`material`** → `writeMaterialTier`, packing a linear roughness/ocean-mask
+ *    PNG (Earth's PBR map).
+ *  - **`normal`** → `writeNormalTier`, baking a tangent-space normal map from the
+ *    elevation source.
+ *
+ * A kind with no row (e.g. `clouds`, not yet built) is a loud build error at the
+ * dispatch below, never a silent skip that would leave a body's map unbuilt.
+ */
+const KIND_WRITERS: Partial<Record<TextureKind, KindWriter>> = {
+  surface: SRGB_WRITER,
+  night: SRGB_WRITER,
+  material: {
+    write: (_bodyId, srcPath, widthPx, outPath) => writeMaterialTier(srcPath, widthPx, outPath),
+    note: () => '  (material)',
+  },
+  normal: {
+    write: (bodyId, srcPath, widthPx, outPath) =>
+      writeNormalTier(bodyId, srcPath, widthPx, outPath),
+    note: () => '  (normal)',
+  },
+};
+
+/**
+ * Write one `(body, kind)` tier via the per-kind writer table and return its log
+ * note. A kind with no table row is a build error, never a silent skip that would
+ * leave a body's map unbuilt.
  */
 async function writeBodyKindTier(
   bodyId: BodyTextureId,
@@ -266,23 +381,12 @@ async function writeBodyKindTier(
   widthPx: number,
   outPath: string,
 ): Promise<string> {
-  if (kind === 'surface') {
-    const tint = BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint;
-    await writeBodyTier(srcPath, tint, widthPx, outPath);
-    return tint ? '  (tinted)' : '';
+  const writer = KIND_WRITERS[kind];
+  if (writer === undefined) {
+    throw new Error(`buildTextures: no writer for texture kind '${kind}' (${bodyId})`);
   }
-  if (kind === 'night') {
-    // Night lights are sRGB colour like the day albedo (JPG), but the Black Marble
-    // source is already full-colour — no grayscale tint (that marker is for the
-    // mono USGS moons), so pass `undefined` and encode in one pass.
-    await writeBodyTier(srcPath, undefined, widthPx, outPath);
-    return '';
-  }
-  if (kind === 'material') {
-    await writeMaterialTier(srcPath, widthPx, outPath);
-    return '  (material)';
-  }
-  throw new Error(`buildTextures: no writer for texture kind '${kind}' (${bodyId})`);
+  await writer.write(bodyId, srcPath, widthPx, outPath);
+  return writer.note(bodyId);
 }
 
 /**

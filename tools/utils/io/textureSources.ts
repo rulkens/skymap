@@ -75,6 +75,13 @@ export const TEXTURE_SOURCES = {
     // mask. Full-pull only — no cheap dev variant, so the mask is fetched only
     // on the real pull, never in the ~7 MB `--dev` subset.
     material: { native: 'textures.earthWaterMask' },
+    // The normal (tangent-space relief) map. Its `native` names the ELEVATION
+    // heightfield input, not the normal map's own pixels — the build BAKES a
+    // Sobel gradient from the greyscale relief (see buildTextures' `normal`
+    // writer); the row shape is identical to `material`'s, only the build writer
+    // differs. Full-pull only — no cheap dev variant, like `material` — so a
+    // `--dev` fetch/build skips it.
+    normal: { native: 'textures.earthElevation' },
   },
   mars: { surface: { native: 'textures.sssMars8k', devFilename: '2k_mars.jpg' } },
   jupiter: { surface: { native: 'textures.sssJupiter8k', devFilename: '2k_jupiter.jpg' } },
