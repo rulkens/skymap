@@ -67,6 +67,7 @@ import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRin
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
 import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
+import { createCloudShellRenderer } from '../../gpu/renderers/bodies/cloudShellRenderer';
 import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
@@ -550,6 +551,17 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // opaque spheres already in the target. The `saturn-ring` bodyTextures slot
   // (minted just below) routes the radial strip to `setTexture`.
   state.gpu.ringRenderer = createRingRenderer(device, 'rgba16float', 'depth32float');
+
+  // ── Earth's cloud shell (Plan D — the translucent deck above the surface) ──
+  //
+  // The shell renderer draws the thin translucent sphere of clouds just above the
+  // opaque globe, immediately after `earthLayer` in the (foreground:0, NEAR0)
+  // group. Its pipeline bakes the `foreground:0` format invariant AND the shell
+  // profile: straight-alpha OVER, back-culled closed sphere, depth-tested but no
+  // depth write — so it overlays the opaque surface already in the target. The
+  // `earth:clouds` bodyTextures slot routes the cloud map to `setTexture`; until
+  // then a 1×1 transparent placeholder keeps the shell invisible.
+  state.gpu.cloudShellRenderer = createCloudShellRenderer(device, 'rgba16float', 'depth32float');
 
   // ── Body-surface texture slot family ─────────────────────────────────
   //

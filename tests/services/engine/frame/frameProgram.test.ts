@@ -166,10 +166,12 @@ describe('timedSlotsOf', () => {
     // multiplicative dust never darkens the local starfield, and star-upsample
     // sits adjacent to the star-catalog leaf draw it composites), the tone-map
     // composite, the five swap overlays, then the near-field tail (the
-    // foreground:0 body render — one slot per body layer: earth, star-spheres,
-    // focused-field-star-sphere, planets, textured-bodies, then the translucent
-    // rings overlay last — the foreground:0→swap composite, and the (swap, NEAR0)
-    // render group → near0-selection-ring then foreground-labels), and pick last.
+    // foreground:0 body render — one slot per body layer: earth, then Earth's
+    // translucent cloud-shell overlay (drawn right after the opaque surface),
+    // star-spheres, focused-field-star-sphere, planets, textured-bodies, then the
+    // translucent rings overlay last — the foreground:0→swap composite, and the
+    // (swap, NEAR0) render group → near0-selection-ring then foreground-labels),
+    // and pick last.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
       'point-sprites',
@@ -194,6 +196,7 @@ describe('timedSlotsOf', () => {
       'labels',
       'clip-path-debug',
       'earth',
+      'cloud-shell',
       'star-spheres',
       'focused-field-star-sphere',
       'planets',

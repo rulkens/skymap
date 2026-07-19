@@ -178,6 +178,9 @@ describe('the (foreground:0, NEAR0) render group above the foreground gate', () 
         // The ring shares this group; its null handle short-circuits enabled, so
         // it stays out of the group below and above the gate (like the siblings).
         ringRenderer: null,
+        // Earth's cloud shell also shares this group; same null-handle
+        // short-circuit keeps it out below and above the gate.
+        cloudShellRenderer: null,
       },
       data: { bodies: { earth: SCENE_EARTH } },
     } as unknown as EngineState;

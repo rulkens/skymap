@@ -225,6 +225,11 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/texturedBodyRenderer', ()
 vi.mock('../../../../src/services/gpu/renderers/bodies/ringRenderer', () => ({
   createRingRenderer: vi.fn(() => makeStub('ringRenderer')),
 }));
+// Earth's cloud-shell renderer keeps its `?static` WESL imports out of JSDOM;
+// mock it so initGpu's foreground block lands a stub on `state.gpu.cloudShellRenderer`.
+vi.mock('../../../../src/services/gpu/renderers/bodies/cloudShellRenderer', () => ({
+  createCloudShellRenderer: vi.fn(() => makeStub('cloudShellRenderer')),
+}));
 // Partial mock: planetsLayer.ts imports the real MAX_PLANETS/INSTANCE_FLOATS
 // constants at module scope to size its staging buffer, so only the factory
 // is stubbed — passing those constants through keeps that sizing real.
@@ -353,6 +358,7 @@ function makeState(): EngineState {
       planetRenderer: null,
       texturedBodyRenderer: null,
       ringRenderer: null,
+      cloudShellRenderer: null,
       starPointRenderer: null,
       bodyPickRenderer: null,
       bodyGlintRenderer: null,
@@ -467,6 +473,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // The ring renderer owns the disc VBO/IBO + strip texture — the destroy chain
     // must reach it the same way.
     expect(state.gpu.ringRenderer).toBe(stubs.ringRenderer);
+    // Earth's cloud shell owns its position + uv VBOs, index IBO, uniform buffer,
+    // and cloud texture — the destroy chain must reach it the same way.
+    expect(state.gpu.cloudShellRenderer).toBe(stubs.cloudShellRenderer);
     // The star-point renderer receives the FULL star list exactly once, at
     // construction — at the galaxy-scale boot camera every star (the Sun
     // included) is a sub-pixel point, so the whole seed IS the boot
