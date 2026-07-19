@@ -60,6 +60,7 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { CloudShellRenderer } from '../../../../@types/rendering/CloudShellRenderer';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import { CLOUD_SHELL_UNIFORM_FLOATS } from '../../../../utils/gpu/packCloudShellUniforms';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/cloudShell/vertex.wesl?static';
@@ -77,11 +78,13 @@ import fsCode from '../../shaders/bodies/cloudShell/fragment.wesl?static';
 const SEGMENTS = 128;
 const RINGS = 64;
 
-/** `CloudShellUniforms` is 96 bytes (24 f32): the 80-byte lit prefix (mvp +
- *  sunDirLocal) with `cloudOpacity` filling the vec3's trailing slot, then a
- *  16-byte row carrying `sunIrradiance` (+ 3 pad). Written from
- *  `packCloudShellUniforms` (`CLOUD_SHELL_UNIFORM_FLOATS × 4`). */
-const UNIFORM_BUFFER_SIZE = 96;
+/** `CloudShellUniforms` is the 80-byte lit prefix (mvp + sunDirLocal) with
+ *  `cloudOpacity` filling the vec3's trailing slot, then a 16-byte row carrying
+ *  `sunIrradiance` + `ambientLight` (+ 2 pad). Derived from the packer's f32
+ *  count (`CLOUD_SHELL_UNIFORM_FLOATS × 4`) so the buffer can never drift from
+ *  the layout `packCloudShellUniforms` writes — the same single-source rule
+ *  `earthRenderer` follows. */
+const UNIFORM_BUFFER_SIZE = CLOUD_SHELL_UNIFORM_FLOATS * 4;
 
 export function createCloudShellRenderer(
   device: GPUDevice,
