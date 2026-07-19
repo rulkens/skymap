@@ -137,7 +137,7 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Earth's per-body look dials. Two fields today:
+   * Earth's per-body look dials. Three fields today:
    *   - `atmosphereExposure`, the exposure scale on the in-scatter atmosphere
    *     shell's HDR output. Seeded from `ATMOSPHERE_SHELL_PARAMS.exposure` and
    *     read live by `atmosphereShellLayer` each frame.
@@ -147,12 +147,20 @@ export type EngineSettingsState = {
    *     `AMBIENT` const in `bodyLighting.wesl`, but Earth-scoped: that const
    *     stays the floor for every OTHER lit body, this overrides it for Earth
    *     alone. Read live by `earthLayer` + `cloudShellLayer` each frame.
+   *   - `oceanRoughness`, the GGX perceptual roughness the material mask selects
+   *     wholesale for open water — the dial that sets how broad the ocean sun
+   *     glint reads. Seeded from `EARTH_SURFACE_PARAMS.oceanRoughness` — the SAME
+   *     value as the `OCEAN_ROUGHNESS` const in `lib/pbr.wesl`, but Earth-scoped:
+   *     that const stays the seed / documentation home (and any future non-Earth
+   *     water), this overrides it for Earth alone. Read live by `earthLayer` each
+   *     frame.
    * Each stays the data file's single source of truth for its default (the same
    * relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`).
    */
   earth: {
     atmosphereExposure: number;
     ambientLight: number;
+    oceanRoughness: number;
   };
 
   /**

@@ -7,10 +7,10 @@
  * equirectangular Blue Marble albedo plus a co-registered linear material map
  * (roughness + ocean mask) that gives the ocean its sun glint, over the
  * sun-relative light direction, with the shared `AMBIENT` floor. It binds
- * `lib/sphere.wesl`'s `EarthSurfaceUniforms` (112-byte block: the 80-byte
+ * `lib/sphere.wesl`'s `EarthSurfaceUniforms` (128-byte block: the 80-byte
  * `LitBodyUniforms` prefix — mat4x4<f32> MVP + body-local sun direction — plus
- * the camera in the body's local frame and the PBR params; the ambient floor is
- * the shared `AMBIENT` const in `lib/bodyLighting.wesl`, not a uniform field) and
+ * the camera in the body's local frame and the PBR params, including the
+ * user-tunable night-side ambient floor and open-water roughness) and
  * `clip_from_local`, so the CPU-side matrix layout and the GPU-side projection
  * stay a single source of truth across every sphere-shaped body.
  *
@@ -52,11 +52,12 @@ export type EarthRenderer = Renderer & {
    */
   setMap(kind: TextureKind, bitmap: ImageBitmap): void;
   /**
-   * Draw the Earth into the current pass. `uniforms` is a length-28 Float32Array
-   * (the 112-byte `EarthSurfaceUniforms` record from `packEarthSurfaceUniforms`):
+   * Draw the Earth into the current pass. `uniforms` is a length-32 Float32Array
+   * (the 128-byte `EarthSurfaceUniforms` record from `packEarthSurfaceUniforms`):
    * 16 f32 column-major MVP + 3 f32 body-local sun direction + `roughnessBase` +
    * 3 f32 camera-in-local-frame + `f0` + `sunIrradiance` + `cloudShadowStrength` +
-   * `cloudShellRadius` + 1 f32 pad — written to the uniform buffer and drawn indexed.
+   * `cloudShellRadius` + `ambientLight` + `oceanRoughness` + 3 f32 pad — written to
+   * the uniform buffer and drawn indexed.
    */
   draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void;
 };

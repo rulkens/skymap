@@ -60,6 +60,18 @@
  *   body; this dial overrides it for Earth alone (the surface + cloud shell read
  *   `u.ambientLight`, not the const). The layers read the settings value each
  *   frame, not this constant, so a drag updates the night side without a reload.
+ *
+ * - **`oceanRoughness`** is the GGX perceptual roughness the material ocean mask
+ *   selects wholesale for open water — the dial that sets how broad the sun glint
+ *   reads (lower = tighter/sharper, higher = a broader sheen). It is the SEED
+ *   DEFAULT for the user-tunable `settings.earth.oceanRoughness` slider, and
+ *   starts at `0.3`, the SAME value as the Meteosat-calibrated `OCEAN_ROUGHNESS`
+ *   const in `lib/pbr.wesl`, so routing the const read through this uniform is a
+ *   no-op at the default. This object is the AUTHORITATIVE default: it seeds the
+ *   live setting the Earth surface fragment reads (`u.oceanRoughness`). The WESL
+ *   const stays only as that value's documentation home and the seed for any
+ *   future NON-Earth water; the two must agree. The layer reads the settings
+ *   value each frame, so a drag re-tunes the glint without a reload.
  */
 
 export const EARTH_SURFACE_PARAMS: {
@@ -68,10 +80,12 @@ export const EARTH_SURFACE_PARAMS: {
   readonly sunIrradiance: number;
   readonly cloudShadowStrength: number;
   readonly ambientLight: number;
+  readonly oceanRoughness: number;
 } = {
   roughnessBase: 1.0,
   f0: 0.02,
   sunIrradiance: 3.0,
   cloudShadowStrength: 0.65,
   ambientLight: 0.08,
+  oceanRoughness: 0.3,
 };

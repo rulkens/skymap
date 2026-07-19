@@ -7,10 +7,11 @@
  * The single seeded `bodies.earth` record, composed as a unit sphere scaled to
  * the body's radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and
  * translated to its `positionMpc`, in the `RENDER_ORIGIN_MPC`-relative frame.
- * The layer packs the 112-byte `EarthSurfaceUniforms` record (MVP + body-local
+ * The layer packs the 128-byte `EarthSurfaceUniforms` record (MVP + body-local
  * sun direction + camera-in-local-frame + the PBR surface params, including the
- * user-tunable night-side ambient floor `settings.earth.ambientLight` — an
- * Earth-scoped override of the shared `AMBIENT` const other bodies read);
+ * user-tunable night-side ambient floor `settings.earth.ambientLight` and the
+ * user-tunable open-water roughness `settings.earth.oceanRoughness` — both
+ * Earth-scoped overrides of the WESL consts other bodies read);
  * `earthRenderer.draw` writes it into its single
  * (non-dynamic) uniform buffer and issues one indexed draw — so this row must
  * draw the Earth AT MOST once per frame (the renderer's own header spells out
@@ -135,7 +136,7 @@ export const earthLayer: ContentLayer = {
       earth.orientation,
     );
     // Pack MVP + sunDirLocal + camPosLocal + the PBR surface params into the
-    // 112-byte EarthSurfaceUniforms record.
+    // 128-byte EarthSurfaceUniforms record.
     renderer.draw(
       pass,
       packEarthSurfaceUniforms(
@@ -153,6 +154,10 @@ export const earthLayer: ContentLayer = {
         // Night-side ambient floor — the live user setting, not the WESL const
         // (seeded from EARTH_SURFACE_PARAMS.ambientLight so the default matches).
         state.settings.earth.ambientLight,
+        // Open-water GGX roughness — the live user setting, not the pbr.wesl
+        // OCEAN_ROUGHNESS const (seeded from EARTH_SURFACE_PARAMS.oceanRoughness
+        // so the default matches).
+        state.settings.earth.oceanRoughness,
       ),
     );
   },

@@ -23,6 +23,7 @@ import reducer, {
   setFlow,
   setAtmosphereExposure,
   setAmbientLight,
+  setOceanRoughness,
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,
@@ -207,6 +208,11 @@ describe('settingsSlice — earth', () => {
   it('setAmbientLight writes the night-side ambient floor', () => {
     const next = reducer(base(), setAmbientLight(0.15));
     expect(next.earth.ambientLight).toBe(0.15);
+  });
+
+  it('setOceanRoughness writes the open-water GGX roughness', () => {
+    const next = reducer(base(), setOceanRoughness(0.4));
+    expect(next.earth.oceanRoughness).toBe(0.4);
   });
 });
 

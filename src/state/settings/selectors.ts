@@ -131,6 +131,9 @@ export const selectAtmosphereExposure = (state: RootState): number =>
 export const selectAmbientLight = (state: RootState): number =>
   selectSettings(state).earth.ambientLight;
 
+export const selectOceanRoughness = (state: RootState): number =>
+  selectSettings(state).earth.oceanRoughness;
+
 // --- volumes cluster ----------------------------------------------------------
 
 export const selectVolumesEnabled = (state: RootState): boolean =>

@@ -144,6 +144,12 @@ const settingsSlice = createSlice({
     setAmbientLight: (settings, action: PayloadAction<number>) => {
       settings.earth.ambientLight = action.payload;
     },
+    // Open-water GGX roughness on Earth's surface — read live by `earthLayer`
+    // each frame. An Earth-scoped override of the `OCEAN_ROUGHNESS` const in
+    // `lib/pbr.wesl` (which stays the seed / documentation home).
+    setOceanRoughness: (settings, action: PayloadAction<number>) => {
+      settings.earth.oceanRoughness = action.payload;
+    },
 
     // ── star catalogs (fourth source-type cluster) ──────────────────────────
     // Master gate + per-catalog items, mirroring the galaxy-catalog cluster:
@@ -407,6 +413,7 @@ export const {
   setFilamentIntensity,
   setAtmosphereExposure,
   setAmbientLight,
+  setOceanRoughness,
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,

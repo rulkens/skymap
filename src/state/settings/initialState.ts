@@ -124,11 +124,13 @@ export function buildInitialSettings(): EngineSettingsState {
     // that file stays the default's single source of truth (the same
     // relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`):
     // `atmosphereExposure` from the atmosphere shell, `ambientLight` (Earth's
-    // night-side floor) from the surface params — where it matches the shared
-    // `AMBIENT` const so this Earth-scoped override is a no-op at the default.
+    // night-side floor) + `oceanRoughness` (the ocean glint's GGX roughness) from
+    // the surface params — where each matches the shared WESL const it mirrors so
+    // these Earth-scoped overrides are no-ops at the default.
     earth: {
       atmosphereExposure: ATMOSPHERE_SHELL_PARAMS.exposure,
       ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
+      oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
     },
     // Star-catalog layer: master gate on + one item row per star catalog. Rows
     // are DERIVED from the star-catalog registry entries (mirroring

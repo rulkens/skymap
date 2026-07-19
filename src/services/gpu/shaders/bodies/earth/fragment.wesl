@@ -13,7 +13,7 @@
 //
 // ## Composition (spec §5 + §7.2/§7.3)
 //
-//   roughness = mix(clamp(mat.r * roughnessBase, MIN_ROUGHNESS, 1), OCEAN_ROUGHNESS, mat.g)
+//   roughness = mix(clamp(mat.r * roughnessBase, MIN_ROUGHNESS, 1), u.oceanRoughness, mat.g)
 //   direct    = pbrDirect(n, v, l, albedo, roughness, f0)
 //   direct   *= (1 - cloudShadow.a * cloudShadowStrength)  // ground shadow, §7.2
 //   colour    = direct * sunIrradiance + ambientLight * albedo
@@ -41,7 +41,8 @@
 // so both couplings are inert (no shadow, no extra occlusion) -- branch-free.
 //
 // The material's ocean mask 'mat.g' selects the smooth open-water roughness
-// ('OCEAN_ROUGHNESS' from pbr.wesl) over the land micro-roughness, so the two
+// ('u.oceanRoughness', the user-tunable Earth-scoped override of the
+// 'OCEAN_ROUGHNESS' const in pbr.wesl) over the land micro-roughness, so the two
 // surfaces get one continuous roughness field. 'pbrDirect' is the DIRECT
 // (sun-lit) term only; the ambient floor 'u.ambientLight' is added here so the
 // night hemisphere never dissolves at the terminator. Unlike every OTHER lit
@@ -117,7 +118,6 @@ import package::bodies::earth::io::VSOut;
 import package::lib::sphere::EarthSurfaceUniforms;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
-import package::lib::pbr::OCEAN_ROUGHNESS;
 import package::lib::nightLights::nightLights;
 import package::lib::util::raySphere;
 import package::lib::math::PI;
@@ -190,10 +190,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let v = normalize(u.camPosLocal - in.normalLocal);
   let l = u.sunDirLocal;
 
-  // Ocean mask selects the smooth open-water roughness over the land
-  // micro-roughness; MIN_ROUGHNESS floors the land side away from the GGX
-  // singularity (both constants live in pbr.wesl beside the BRDF that reads them).
-  let roughness = mix(clamp(mat.r * u.roughnessBase, MIN_ROUGHNESS, 1.0), OCEAN_ROUGHNESS, mat.g);
+  // Ocean mask selects the smooth open-water roughness ('u.oceanRoughness', the
+  // user-tunable Earth-scoped override of pbr.wesl's OCEAN_ROUGHNESS seed) over
+  // the land micro-roughness; MIN_ROUGHNESS floors the land side away from the
+  // GGX singularity (that const lives in pbr.wesl beside the BRDF that reads it).
+  let roughness = mix(clamp(mat.r * u.roughnessBase, MIN_ROUGHNESS, 1.0), u.oceanRoughness, mat.g);
 
   // Direct (sun-lit) microfacet term, scaled by the body's sun irradiance, plus
   // the shared ambient floor.

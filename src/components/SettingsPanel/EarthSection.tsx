@@ -3,10 +3,11 @@
  * EarthSection — presentational component for the "Earth" settings subgroup
  * inside the SettingsPanel's Display section.
  *
- * Owns the Earth-specific UI: the atmosphere-shell exposure slider and the
- * night-side ambient-light slider. Rendered as its own CollapsibleSection
- * (default closed, mirroring Display) nested inside the Display disclosure, so
- * an unrelated re-render higher up does not cascade into this section.
+ * Owns the Earth-specific UI: the atmosphere-shell exposure slider, the
+ * night-side ambient-light slider, and the ocean-roughness slider. Rendered as
+ * its own CollapsibleSection (default closed, mirroring Display) nested inside
+ * the Display disclosure, so an unrelated re-render higher up does not cascade
+ * into this section.
  *
  * ### Props-driven, no internal state
  *
@@ -35,20 +36,26 @@ export type EarthSectionProps = {
   ambientLight: number;
   /** Called with the new ambient floor as the slider drags. */
   onAmbientLightChange: (value: number) => void;
+  /** Open-water GGX roughness — the ocean sun-glint breadth. */
+  oceanRoughness: number;
+  /** Called with the new ocean roughness as the slider drags. */
+  onOceanRoughnessChange: (value: number) => void;
 };
 
 // ── EarthSection ─────────────────────────────────────────────────────────────
 
 /**
- * Renders the Earth subgroup: the atmosphere-shell exposure slider and the
- * night-side ambient-light slider in a default-closed disclosure nested inside
- * the Display section.
+ * Renders the Earth subgroup: the atmosphere-shell exposure slider, the
+ * night-side ambient-light slider, and the ocean-roughness slider in a
+ * default-closed disclosure nested inside the Display section.
  */
 function EarthSection({
   atmosphereExposure,
   onAtmosphereExposureChange,
   ambientLight,
   onAmbientLightChange,
+  oceanRoughness,
+  onOceanRoughnessChange,
 }: EarthSectionProps) {
   return (
     <CollapsibleSection title="Earth">
@@ -80,6 +87,21 @@ function EarthSection({
           step="0.005"
           value={ambientLight}
           onChange={(e) => onAmbientLightChange(Number(e.target.value))}
+        />
+      </div>
+      <div className={styles.panelRow}>
+        <label htmlFor="ocean-roughness">Ocean roughness</label>
+        <span className={styles.panelValue}>{oceanRoughness.toFixed(2)}</span>
+      </div>
+      <div className={styles.panelRow}>
+        <input
+          id="ocean-roughness"
+          type="range"
+          min="0.02"
+          max="0.6"
+          step="0.01"
+          value={oceanRoughness}
+          onChange={(e) => onOceanRoughnessChange(Number(e.target.value))}
         />
       </div>
     </CollapsibleSection>

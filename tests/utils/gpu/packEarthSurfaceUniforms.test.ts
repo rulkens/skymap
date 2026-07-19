@@ -41,9 +41,11 @@ const CLOUD_SHELL_RADIUS = 1.03;
 // Dyadic + distinct from every other sentinel, so float32 `toBe` is exact for
 // the slot that used to be the zeroed pad.
 const AMBIENT_LIGHT = 0.03125;
+// Dyadic + distinct sentinel for the new 16-byte row's first slot (byte 112).
+const OCEAN_ROUGHNESS = 0.28125;
 
 describe('EarthSurfaceUniforms byte offsets', () => {
-  it('packs a 112-byte / 28-f32 record with roughnessBase filling the vec3 tail @76', () => {
+  it('packs a 128-byte / 32-f32 record with roughnessBase filling the vec3 tail @76', () => {
     const rec = packEarthSurfaceUniforms(
       MVP,
       SUN_DIR,
@@ -54,10 +56,11 @@ describe('EarthSurfaceUniforms byte offsets', () => {
       CLOUD_SHADOW,
       CLOUD_SHELL_RADIUS,
       AMBIENT_LIGHT,
+      OCEAN_ROUGHNESS,
     );
     expect(rec.length).toBe(EARTH_SURFACE_UNIFORM_FLOATS);
-    expect(rec.length).toBe(28); // 112 bytes
-    expect(rec.byteLength).toBe(112);
+    expect(rec.length).toBe(32); // 128 bytes
+    expect(rec.byteLength).toBe(128);
 
     // mvp — all 16 floats verbatim at bytes 0..63.
     for (let i = 0; i < 16; i++) expect(rec[i]).toBe(MVP[i]);
@@ -91,8 +94,19 @@ describe('EarthSurfaceUniforms byte offsets', () => {
     expect(rec[26]).toBeCloseTo(CLOUD_SHELL_RADIUS); // byte 104
 
     // ambientLight — float index 27 (byte 108), the slot that used to be the
-    // zeroed tail pad. A REAL field now (the night-side floor); a packer that
-    // dropped the 9th arg zeroes it and fails here. Dyadic sentinel ⇒ exact toBe.
+    // struct's original zeroed tail pad. A REAL field (the night-side floor); a
+    // packer that dropped the 9th arg zeroes it. Dyadic sentinel ⇒ exact toBe.
     expect(rec[27]).toBe(AMBIENT_LIGHT); // byte 108
+
+    // oceanRoughness — float index 28 (byte 112), the first slot of the new
+    // 16-byte row. A REAL field (the open-water GGX roughness); a packer that
+    // dropped the 10th arg zeroes it and fails here. Dyadic sentinel ⇒ exact toBe.
+    expect(rec[28]).toBe(OCEAN_ROUGHNESS); // byte 112
+
+    // The row's trailing three slots (indices 29..31, bytes 116..127) are the
+    // zeroed pad that rounds the struct to 128 bytes.
+    expect(rec[29]).toBe(0);
+    expect(rec[30]).toBe(0);
+    expect(rec[31]).toBe(0);
   });
 });

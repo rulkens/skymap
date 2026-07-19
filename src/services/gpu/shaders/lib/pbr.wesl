@@ -91,11 +91,18 @@ const MIN_ROUGHNESS: f32 = 0.02;
 // The anchor is a Meteosat full-disc reference: on real full-disc imagery the
 // sun glint is a spread-out sheen -- wave-slope variance plus mesoscale surface
 // roughness widen the effective GGX lobe far past a mirror. GGX linear alpha is
-// roughness^2, so 0.25 gives alpha ~= 0.06 -- a highlight tens of degrees wide,
-// the right order for that broad-glow target. Only the ocean sees this: the
-// surface fragment's 'mix(..., mat.g)' selects it wholesale for water, so raising
-// it does NOT roughen land (land rides 'mat.r * roughnessBase').
-const OCEAN_ROUGHNESS: f32 = 0.25;
+// roughness^2, so 0.3 gives alpha ~= 0.09 -- a highlight tens of degrees wide,
+// the right order for that broad-glow target.
+//
+// EARTH no longer reads this const: its ocean roughness is a live uniform
+// ('u.oceanRoughness'), the user-tunable Earth-scoped override seeded from
+// 'EARTH_SURFACE_PARAMS.oceanRoughness' (the AUTHORITATIVE default -- the two
+// must agree). This const stays as that value's documentation home and the seed
+// for any FUTURE non-Earth water (the Moon/Mars reuse) that has no per-body
+// dial. When a body does read it, only its ocean sees it: the fragment's
+// 'mix(..., mat.g)' selects it wholesale for water, so raising it does NOT
+// roughen land (land rides 'mat.r * roughnessBase').
+const OCEAN_ROUGHNESS: f32 = 0.3;
 
 // ── distributionGGX (D) — Trowbridge-Reitz normal distribution ───────
 //

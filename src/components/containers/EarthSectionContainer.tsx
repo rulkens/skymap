@@ -3,9 +3,10 @@
  * EarthSectionContainer — store boundary for the Earth settings subgroup.
  *
  * Owns all Redux reach for the Earth group: reads `selectAtmosphereExposure` +
- * `selectAmbientLight` and wraps the `setAtmosphereExposure` /
- * `setAmbientLight` dispatches in `useCallback`. The presentational
- * `EarthSection` imports nothing from `store/` or `state/`.
+ * `selectAmbientLight` + `selectOceanRoughness` and wraps the
+ * `setAtmosphereExposure` / `setAmbientLight` / `setOceanRoughness` dispatches in
+ * `useCallback`. The presentational `EarthSection` imports nothing from `store/`
+ * or `state/`.
  *
  * ### Handler stability
  *
@@ -18,13 +19,22 @@
 import { memo, useCallback } from 'react';
 import EarthSection from '../SettingsPanel/EarthSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectAtmosphereExposure, selectAmbientLight } from '../../state/settings/selectors';
-import { setAtmosphereExposure, setAmbientLight } from '../../state/settings/settingsSlice';
+import {
+  selectAtmosphereExposure,
+  selectAmbientLight,
+  selectOceanRoughness,
+} from '../../state/settings/selectors';
+import {
+  setAtmosphereExposure,
+  setAmbientLight,
+  setOceanRoughness,
+} from '../../state/settings/settingsSlice';
 
 function EarthSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const atmosphereExposure = useAppSelector(selectAtmosphereExposure);
   const ambientLight = useAppSelector(selectAmbientLight);
+  const oceanRoughness = useAppSelector(selectOceanRoughness);
 
   const onAtmosphereExposureChange = useCallback(
     (value: number) => dispatch(setAtmosphereExposure(value)),
@@ -34,6 +44,10 @@ function EarthSectionContainer(): React.ReactElement {
     (value: number) => dispatch(setAmbientLight(value)),
     [dispatch],
   );
+  const onOceanRoughnessChange = useCallback(
+    (value: number) => dispatch(setOceanRoughness(value)),
+    [dispatch],
+  );
 
   return (
     <EarthSection
@@ -41,6 +55,8 @@ function EarthSectionContainer(): React.ReactElement {
       onAtmosphereExposureChange={onAtmosphereExposureChange}
       ambientLight={ambientLight}
       onAmbientLightChange={onAmbientLightChange}
+      oceanRoughness={oceanRoughness}
+      onOceanRoughnessChange={onOceanRoughnessChange}
     />
   );
 }

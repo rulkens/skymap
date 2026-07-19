@@ -1,5 +1,5 @@
 /**
- * packEarthSurfaceUniforms — pure packer for the 112-byte `EarthSurfaceUniforms`
+ * packEarthSurfaceUniforms — pure packer for the 128-byte `EarthSurfaceUniforms`
  * struct (`shaders/lib/sphere.wesl`).
  *
  * The photoreal-Earth surface pass binds one per-draw uniform buffer carrying
@@ -34,12 +34,15 @@
  * shadow fragment intersects this sphere). Both are bound and unused in plan A —
  * carrying them now means plan D (cloud shell) reads the slots without reshaping
  * the struct. `ambientLight` at float index 27 fills what was the struct's
- * trailing pad: the night-side ambient floor (the user-tunable Earth-scoped
- * override of the shared `AMBIENT` const), which the surface fragment reads in
- * place of that const. The struct is already 112 bytes (7×16) with this slot
- * filled, so no pad remains.
+ * original trailing pad: the night-side ambient floor (the user-tunable
+ * Earth-scoped override of the shared `AMBIENT` const), which the surface
+ * fragment reads in place of that const. `oceanRoughness` at float index 28
+ * opens a fresh 16-byte row: the open-water GGX roughness (the user-tunable
+ * Earth-scoped override of the `OCEAN_ROUGHNESS` const in `lib/pbr.wesl`), which
+ * the surface fragment reads in place of that const. Its row's remaining three
+ * slots (indices 29..31) are the zeroed pad that rounds the struct to 128 bytes.
  *
- * ## Byte layout (uniform address space) — 112 bytes / 28 f32
+ * ## Byte layout (uniform address space) — 128 bytes / 32 f32
  *
  *   f32 0..15  (byte  0..63):  mvp (column-major mat4x4)
  *   f32 16..18 (byte 64..75):  sunDirLocal (vec3, 16-byte aligned)
@@ -50,6 +53,8 @@
  *   f32 25     (byte 100..103): cloudShadowStrength
  *   f32 26     (byte 104..107): cloudShellRadius (unit-sphere shell radius)
  *   f32 27     (byte 108..111): ambientLight (night-side floor; Earth-scoped)
+ *   f32 28     (byte 112..115): oceanRoughness (open-water GGX roughness; Earth-scoped)
+ *   f32 29..31 (byte 116..127): _pad0..2 (zeroed; rounds the struct to 128)
  *
  * @param mvp                 16-element column-major MVP (from `composeBodyMvp`).
  * @param sunDirLocal         Sun direction in the body's local frame.
@@ -63,13 +68,17 @@
  * @param ambientLight        Night-side ambient floor (fraction of albedo the
  *                            unlit hemisphere shows); Earth-scoped override of
  *                            the shared `AMBIENT` const.
+ * @param oceanRoughness      Open-water GGX perceptual roughness (the ocean
+ *                            glint breadth); Earth-scoped override of the
+ *                            `OCEAN_ROUGHNESS` const in `lib/pbr.wesl`.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
 import { packLitBodyUniforms } from './packLitBodyUniforms';
 
-/** f32 count of `EarthSurfaceUniforms` — 16 mvp + 4 (sun+rough) + 4 (cam+f0) + 4 tail. */
-export const EARTH_SURFACE_UNIFORM_FLOATS = 28;
+/** f32 count of `EarthSurfaceUniforms` — 16 mvp + 4 (sun+rough) + 4 (cam+f0) + 4
+ *  (irradiance/cloud/ambient) + 4 (oceanRoughness + pad). */
+export const EARTH_SURFACE_UNIFORM_FLOATS = 32;
 
 export function packEarthSurfaceUniforms(
   mvp: Float32Array,
@@ -81,6 +90,7 @@ export function packEarthSurfaceUniforms(
   cloudShadowStrength: number,
   cloudShellRadius: number,
   ambientLight: number,
+  oceanRoughness: number,
 ): Float32Array {
   const out = new Float32Array(EARTH_SURFACE_UNIFORM_FLOATS);
   // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
@@ -94,5 +104,7 @@ export function packEarthSurfaceUniforms(
   out[25] = cloudShadowStrength; // byte 100
   out[26] = cloudShellRadius; // byte 104 — the shadow shell's local radius
   out[27] = ambientLight; // byte 108 — night-side floor, fills the former pad
+  out[28] = oceanRoughness; // byte 112 — open-water GGX roughness, new 16-byte row
+  // out[29..31] stay 0 — the row's trailing pad rounds the struct to 128 bytes.
   return out;
 }

@@ -19,10 +19,10 @@
  * LINEAR material map (roughness + ocean mask) drives GGX specular, so the smooth
  * ocean returns a tight sun glint while land stays matte, plus the shared
  * `AMBIENT` floor from `lib/bodyLighting.wesl`. It binds `lib/sphere.wesl`'s
- * `EarthSurfaceUniforms` (a 112-byte block: the 80-byte `LitBodyUniforms` prefix
+ * `EarthSurfaceUniforms` (a 128-byte block: the 80-byte `LitBodyUniforms` prefix
  * — MVP + body-local sun direction — followed by the camera position in the
  * body's local frame and the PBR params `roughnessBase`/`f0`/`sunIrradiance`/
- * `cloudShadowStrength`) and the `clip_from_local` projection helper with the
+ * `cloudShadowStrength`/`oceanRoughness`) and the `clip_from_local` projection helper with the
  * other sphere renderers, so the CPU-side matrix layout and the GPU-side
  * projection stay a single source of truth. The CPU side packs the uniform
  * through `packEarthSurfaceUniforms`.
@@ -119,6 +119,7 @@ import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { isLinearTextureKind } from '../../../../utils/scene/isLinearTextureKind';
+import { EARTH_SURFACE_UNIFORM_FLOATS } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/earth/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -133,13 +134,14 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
  *  tileX, tileY)` addressing without touching this build. */
 const CUBESPHERE_FACE_RESOLUTION = 48;
 
-/** `EarthSurfaceUniforms` is 112 bytes (28 f32): the 80-byte `LitBodyUniforms`
+/** `EarthSurfaceUniforms` is 128 bytes (32 f32): the 80-byte `LitBodyUniforms`
  *  prefix (mat4x4<f32> MVP + body-local sun direction, with `roughnessBase`
  *  filling the sun-dir vec3 tail) followed by `camPosLocal` (vec3), `f0`,
- *  `sunIrradiance`, `cloudShadowStrength`, `cloudShellRadius`, and one zeroed pad float. The ambient
- *  floor lives in `lib/bodyLighting.wesl`'s `AMBIENT` const, not a uniform field.
+ *  `sunIrradiance`, `cloudShadowStrength`, `cloudShellRadius`, `ambientLight`,
+ *  `oceanRoughness`, and three zeroed pad floats. Size derives from the packer's
+ *  f32 count (× 4 bytes) so this can never drift from the layout it writes.
  *  Written from `packEarthSurfaceUniforms`. */
-const UNIFORM_BUFFER_SIZE = 112;
+const UNIFORM_BUFFER_SIZE = EARTH_SURFACE_UNIFORM_FLOATS * 4;
 
 /** Concatenate the six whole level-0 cube-sphere faces into one indexed mesh.
  *  Each `cubeSphereMesh` call builds a single face tile, so we sum the six
@@ -256,7 +258,7 @@ export function createEarthRenderer(
 
   // ── Uniform buffer (one Earth-surface record) ─────────────────────────────
   //
-  // A single Earth is drawn per frame, so one 112-byte `EarthSurfaceUniforms`
+  // A single Earth is drawn per frame, so one 128-byte `EarthSurfaceUniforms`
   // block suffices — no multi-slot dynamic-offset buffer needed. `draw`
   // writes the packed record (MVP + sunDirLocal + camPosLocal + PBR params) here
   // before issuing the indexed draw.

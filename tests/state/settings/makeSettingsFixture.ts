@@ -106,6 +106,7 @@ export function makeSettingsFixture(
     earth: {
       atmosphereExposure: ATMOSPHERE_SHELL_PARAMS.exposure,
       ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
+      oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
     },
     starCatalogs: {
       enabled: true,
