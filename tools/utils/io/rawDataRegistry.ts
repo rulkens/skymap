@@ -606,9 +606,9 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      "NASA Blue Marble Next Generation land/water mask, equirect PNG (land=255, water=0), subsampled to 21600x10800 (public domain, credit NASA Earth Observatory). Feeds Earth's material map. Exact URL + native dims are verified live by the fetch (Task 9) before the first pull.",
+      "NASA Blue Marble Next Generation land/water mask, equirect PNG (land=255, water=0), subsampled to 21600x10800 (public domain, credit NASA Earth Observatory). Feeds Earth's material map. Verified live 2026-07-19 (4.3 MB, original NEO file preserved by the Internet Archive; NASA retired the NEO bluemarble archive and the relocated BMNG collection dropped the mask files).",
     upstream:
-      'https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/landmask/world.watermask.21600x10800.png',
+      'https://web.archive.org/web/20240509231512if_/https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/landmask/world.watermask.21600x10800.png',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },

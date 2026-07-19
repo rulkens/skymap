@@ -74,15 +74,23 @@ BMNG topo tier we already fetch and downsamples cleanly to the 4k material
 ceiling. `build-textures` ramps roughness across the mask (ocean glossy, land
 diffuse) and stores the ocean flag in G — see `buildTextures.ts`.
 
-| Purpose   | File                              | Dims        | Bands |
-| --------- | --------------------------------- | ----------- | ----- |
-| Full pull | `world.watermask.21600x10800.png` | 21600×10800 | gray  |
+| Purpose   | File                              | Dims        | Bands | Size            |
+| --------- | --------------------------------- | ----------- | ----- | --------------- |
+| Full pull | `world.watermask.21600x10800.png` | 21600×10800 | gray  | 4,463,359 bytes |
 
-Base: `https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/landmask/`. Full-pull
-only — no dev variant. **The exact filename + native dimensions are verified
-live by the fetch (plan A Task 9) before the first pull** (the NEO archive
-publishes several subsampled sizes; the row above records the best-documented
-candidate). Credit "NASA Earth Observatory".
+Original source: NASA NEO Blue Marble Next Generation landmask (public domain,
+credit NASA Earth Observatory). NASA has since retired the NEO bluemarble
+archive (`neo.gsfc.nasa.gov/archive/bluemarble/…` now 404s), and the relocated
+science.nasa.gov BMNG collection dropped the mask files entirely — neither the
+base-map nor the topography-bathymetry subpages carry a watermask. The exact
+original file is preserved by the Internet Archive with verified headers
+(HTTP 200, `image/png`, 4,463,359 bytes, original `last-modified: 15 May 2009`),
+so the canonical fetch URL is the Wayback snapshot below, verified live
+2026-07-19. Full-pull only — no dev variant.
+
+```
+https://web.archive.org/web/20240509231512if_/https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/landmask/world.watermask.21600x10800.png
+```
 
 ## USGS Astrogeology — Galilean moons (public domain; credit "NASA/USGS")
 
