@@ -3,8 +3,8 @@ import sharp from 'sharp';
 /**
  * writeCloudTier — the build's sRGB-colour-PLUS-alpha output primitive for the
  * cloud shell (spec §9.1): resize a source to a tier width, DERIVE an alpha
- * channel from luminance when the source has none, and write PNG keeping the RGB
- * as sRGB colour.
+ * channel from luminance when the source has none, and write lossless WebP
+ * keeping the RGB as sRGB colour.
  *
  * ### Alpha from luminance — the whole point
  *
@@ -21,11 +21,14 @@ import sharp from 'sharp';
  * Contrast `writeLinearTier` (`material` / `normal`): those maps pack numeric
  * fields and must NOT be gamma-touched. The cloud RGB is the opposite — it IS
  * gamma-encoded sRGB colour, sampled at runtime through an `*-srgb` format like
- * the day albedo. sharp writes a raw buffer's bytes through to PNG without
+ * the day albedo. sharp writes a raw buffer's bytes through to WebP without
  * applying any gamma, so the source's sRGB bytes pass through byte-for-byte
  * (correct here) — the distinction from `writeLinearTier` is semantic (what the
  * bytes mean, and how the runtime samples them), not a different sharp call.
- * PNG (lossless) is mandatory because JPEG cannot carry the alpha channel.
+ * A lossless encoding is mandatory because JPEG cannot carry the alpha channel;
+ * WebP LOSSLESS also happens to compress this near-white-on-transparent content
+ * SMALLER than lossy would (lossy wastes bits on the flat RGB and the
+ * high-frequency alpha), so there is no quality-for-size trade to make here.
  *
  * The resize is width-only (the composite is 2:1 equirect, so height follows) and
  * a downsample — we never upscale (spec §3).
@@ -69,6 +72,6 @@ export async function writeCloudTier(
   }
 
   await sharp(rgba, { raw: { width, height, channels: 4 } })
-    .png()
+    .webp({ lossless: true })
     .toFile(outPath);
 }
