@@ -9,7 +9,7 @@
  *      `view.vp` (identity-pinned via a mocked `composeBodyMvp`), and forwards
  *      the body's baked `orientation`.
  *   2. One `texturedBodyRenderer.draw(pass, bodyId, uniforms)` per textured
- *      body, each carrying the packed 24-float `TexturedBodyUniforms` block
+ *      body, each carrying the packed 28-float `TexturedBodyUniforms` block
  *      (`packTexturedBodyUniforms` is the SSOT).
  *   3. The ring ratios are DATA: Saturn packs its `SCENE_RINGS` radii in
  *      planet-radius units; a ringless body packs zeros (the fragment's "no
@@ -151,7 +151,7 @@ describe('texturedBodiesLayer.enabled', () => {
 });
 
 describe('texturedBodiesLayer.draw', () => {
-  it('composes each textured body from the slab f64 vp with its orientation and draws length-24 uniforms', () => {
+  it('composes each textured body from the slab f64 vp with its orientation and draws length-28 uniforms', () => {
     composeMock.mockClear();
     const renderer = makeRendererSpy();
     const view = makeNear0View();
@@ -174,13 +174,13 @@ describe('texturedBodiesLayer.draw', () => {
       expect(call[4]).toBe(body.orientation);
     });
 
-    // One per-body draw, in seed order, each with the packed 24-float record.
+    // One per-body draw, in seed order, each with the packed 28-float record.
     expect(renderer.draw).toHaveBeenCalledTimes(2);
     const [p0, id0, u0] = renderer.draw.mock.calls[0]!;
     expect(p0).toBe(PASS_STUB);
     expect(id0).toBe('mars');
     expect(u0).toBeInstanceOf(Float32Array);
-    expect(u0).toHaveLength(24);
+    expect(u0).toHaveLength(28);
     expect(renderer.draw.mock.calls[1]![1]).toBe('jupiter');
 
     // sunDirLocal is packed at floats 16..18 (recomputed independently, NOT
@@ -189,6 +189,12 @@ describe('texturedBodiesLayer.draw', () => {
     expect(u0[16]).toBeCloseTo(expectedSun[0]);
     expect(u0[17]).toBeCloseTo(expectedSun[1]);
     expect(u0[18]).toBeCloseTo(expectedSun[2]);
+
+    // The Minnaert limb params + body-local camera are the identity until Task 4
+    // wires them: strength 0 (a no-op factor), and camPosLocal zeroed. This pins
+    // Task 3 as behaviour-neutral — the layer draws every body as plain Lambert.
+    expect(u0[22]).toBe(0); // limbStrength
+    expect([u0[24], u0[25], u0[26]]).toEqual([0, 0, 0]); // camPosLocal
   });
 
   it('packs Saturn`s SCENE_RINGS radii as ring ratios and zeros for a ringless body', () => {

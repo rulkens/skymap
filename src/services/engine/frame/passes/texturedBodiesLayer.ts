@@ -50,6 +50,7 @@
 import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -67,6 +68,10 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
  * never samples the ring strip. The ratios are unit-free, so the shadow-march
  * maths rides the body's local unit sphere directly.
  */
+/** Placeholder body-local camera for the Minnaert view term — zeroed until
+ *  Task 4 supplies the real value; `limbStrength == 0` makes it a no-op today. */
+const LIMB_CAM_UNUSED: Readonly<Vec3> = [0, 0, 0];
+
 function ringRatios(body: PlanetBody): { inner: number; outer: number } {
   const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
   if (ring === undefined) return { inner: 0, outer: 0 };
@@ -113,7 +118,12 @@ export const texturedBodiesLayer: ContentLayer = {
       // a plain co-framed dot product — the same rotate earth/planets do.
       const sun = sunDirLocal(body.positionMpc, RENDER_ORIGIN_MPC, body.orientation);
       const { inner, outer } = ringRatios(body);
-      const uniforms = packTexturedBodyUniforms(mvp, sun, inner, outer);
+      // Minnaert limb-darkening params + the body-local camera are packed as the
+      // identity (strength 0, exponent 0, camera at the origin) until Task 4
+      // wires the per-body param table and the view-dependent fragment term.
+      // `limbStrength == 0` makes the factor a no-op regardless of the other two,
+      // so every body renders as plain Lambert here — behaviour-neutral.
+      const uniforms = packTexturedBodyUniforms(mvp, sun, inner, outer, 0, 0, LIMB_CAM_UNUSED);
       // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into
       // `textured`, so the string id IS a BodyTextureId the renderer accepts.
       renderer.draw(pass, body.id as BodyTextureId, uniforms);

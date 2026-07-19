@@ -131,30 +131,50 @@ struct LitBodyUniforms {
 
 // ── TexturedBodyUniforms ─────────────────────────────────────────────
 //
-// 'LitBodyUniforms' plus the two ring radii — the uniform layout for a
-// textured planet or moon drawn through the 'texturedBodyRenderer'. The ring
-// ratios are DATA, not a Saturn-only code path: 'ringOuterRatio == 0' means
-// 'this body has no ring', which cleanly short-circuits the ring-on-planet
-// shadow branch in the fragment. Only Saturn ships non-zero ratios; every
-// other body packs zeros and pays nothing.
+// 'LitBodyUniforms' plus the two ring radii and the Minnaert limb-darkening
+// params — the uniform layout for a textured planet or moon drawn through the
+// 'texturedBodyRenderer'. The ring ratios are DATA, not a Saturn-only code path:
+// 'ringOuterRatio == 0' means 'this body has no ring', which cleanly
+// short-circuits the ring-on-planet shadow branch in the fragment. Only Saturn
+// ships non-zero ratios; every other body packs zeros and pays nothing.
 //
 // Both ratios are expressed in planet-radius units (ring radius / planet
 // radius), so the shadow-march maths is unit-free and rides the body's local
 // sphere directly.
 //
+// ## The two trailing pads become the Minnaert params (the sibling trick)
+//
+// 'limbStrength' and 'limbExponent' reuse what were the struct's two trailing
+// pad floats (bytes 88 and 92) — the same pad-slot-becomes-real-field trick the
+// sibling structs ('RingUniforms.planetRadiusRatio',
+// 'CloudShellUniforms.cloudOpacity') use. Growing the struct here costs no new
+// row for them; 'strength == 0' (packed for every body without a Minnaert row)
+// is the identity, so the fields are behaviour-neutral until a row opts in.
+//
+// ## Why 'camPosLocal' joins the struct (a NEW 16-byte tail)
+//
+// Minnaert's emission-angle cosine 'mu = dot(N, V)' is VIEW-dependent, and the
+// lit prefix carries no camera position. The fragment reconstructs the view
+// vector from the camera in the body's LOCAL frame (rotated CPU-side, same frame
+// as 'sunDirLocal'), so the dot product stays a plain per-fragment cosine even
+// under axial tilt. Byte 96 is already a vec3 boundary, so the tail costs one
+// fresh 16-byte row: 12 bytes of data + one trailing pad rounding to 112.
+//
 // ## Byte layout (uniform address space)
 //
-//   offset  0..63: mvp            (mat4x4<f32>, column-major, 64 bytes)
-//   offset 64..75: sunDirLocal    (vec3<f32> — 16-byte aligned)
-//   offset 76..79: _pad           (f32 — the vec3's trailing pad, as in
-//                                  LitBodyUniforms; ambient lives in the const)
-//   offset 80..83: ringInnerRatio (f32 — ring inner radius / planet radius)
-//   offset 84..87: ringOuterRatio (f32 — ring outer / planet radius; 0 = none)
-//   offset 88..91: _pad0          (f32 — zeroed; rounds the struct to 16)
-//   offset 92..95: _pad1          (f32 — zeroed)
-//   total: 96 bytes.
+//   offset  0..63:  mvp            (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75:  sunDirLocal    (vec3<f32> — 16-byte aligned)
+//   offset 76..79:  _pad           (f32 — the vec3's trailing pad, as in
+//                                   LitBodyUniforms; ambient lives in the const)
+//   offset 80..83:  ringInnerRatio (f32 — ring inner radius / planet radius)
+//   offset 84..87:  ringOuterRatio (f32 — ring outer / planet radius; 0 = none)
+//   offset 88..91:  limbStrength   (f32 — Minnaert blend, 0 = plain Lambert)
+//   offset 92..95:  limbExponent   (f32 — Minnaert k; 1 = plain Lambert)
+//   offset 96..107: camPosLocal    (vec3<f32> — 16-byte aligned at 96)
+//   offset 108..111: _pad0         (f32 — zeroed; rounds the struct to 112 / 16)
+//   total: 112 bytes.
 //
-// The CPU side uploads 24 f32s. The single source of truth for that packing is
+// The CPU side uploads 28 f32s. The single source of truth for that packing is
 // 'utils/gpu/packTexturedBodyUniforms.ts', which reuses 'packLitBodyUniforms'
 // for the shared 80-byte prefix so the two layouts can never drift.
 
@@ -164,8 +184,10 @@ struct TexturedBodyUniforms {
   _pad: f32,
   ringInnerRatio: f32,
   ringOuterRatio: f32,
+  limbStrength: f32,
+  limbExponent: f32,
+  camPosLocal: vec3<f32>,
   _pad0: f32,
-  _pad1: f32,
 };
 
 // ── RingUniforms ─────────────────────────────────────────────────────

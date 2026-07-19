@@ -16,7 +16,7 @@
  * id owns its OWN uniform buffer + bind group in a `Map`; `draw` writes a body's
  * buffer immediately before that body's own indexed draw. A later body writes a
  * DIFFERENT buffer — no shared state for the race to corrupt. The cost is one
- * 96-byte buffer + one bind group per body (~12 of each), trivially cheap.
+ * 112-byte buffer + one bind group per body (~12 of each), trivially cheap.
  *
  * ## Placeholder posture (visible-but-plain before the bitmap lands)
  *
@@ -68,9 +68,10 @@ import fsCode from '../../shaders/bodies/texturedBody/fragment.wesl?static';
 const SEGMENTS = 48;
 const RINGS = 24;
 
-/** `TexturedBodyUniforms` is 96 bytes (24 f32): the 80-byte lit prefix + two
- *  ring ratios + two pad floats. Written from `packTexturedBodyUniforms`. */
-const UNIFORM_BUFFER_SIZE = 96;
+/** `TexturedBodyUniforms` is 112 bytes (28 f32): the 80-byte lit prefix + two
+ *  ring ratios + two Minnaert limb params + camPosLocal vec3 + one pad float.
+ *  Written from `packTexturedBodyUniforms`. */
+const UNIFORM_BUFFER_SIZE = 112;
 
 /** Per-body GPU resources. Each body owns its uniform buffer + bind group so no
  *  shared uniform can be clobbered mid-frame. `texture`/`ringTexture` are `null`
