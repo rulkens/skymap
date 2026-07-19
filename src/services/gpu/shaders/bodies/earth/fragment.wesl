@@ -16,6 +16,13 @@
 //   roughness = mix(clamp(mat.r * roughnessBase, MIN_ROUGHNESS, 1), OCEAN_ROUGHNESS, mat.g)
 //   direct    = pbrDirect(n, v, l, albedo, roughness, f0)
 //   colour    = direct * sunIrradiance + AMBIENT * albedo
+//   emissive  = nightLights(nightColour, NoL, 0.0)   // ADDED, not lit (see below)
+//   return      colour + emissive
+//
+// The Black Marble night map contributes an EMISSIVE city-lights term added on
+// top of the lit result -- 'lib/nightLights.wesl' owns the terminator fade, so
+// the fragment passes the raw Lambert 'NoL' straight in. 'cloudAlpha = 0.0' is
+// the plan-D seam (spec §7.3): no cloud map is bound in plan B.
 //
 // The material's ocean mask 'mat.g' selects the smooth open-water roughness
 // ('OCEAN_ROUGHNESS' from pbr.wesl) over the land micro-roughness, so the two
@@ -81,11 +88,13 @@ import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::pbr::OCEAN_ROUGHNESS;
 import package::lib::bodyLighting::AMBIENT;
+import package::lib::nightLights::nightLights;
 
 @group(0) @binding(0) var<uniform> u: EarthSurfaceUniforms;
 @group(0) @binding(1) var earthSampler: sampler;
 @group(0) @binding(2) var earthTexture: texture_2d<f32>;
 @group(0) @binding(3) var materialTexture: texture_2d<f32>;
+@group(0) @binding(4) var nightTexture: texture_2d<f32>;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
@@ -118,5 +127,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // A -- plan D (the cloud shell) multiplies 'direct' by the cloud-shadow term.
   let direct = pbrDirect(n, v, l, albedo, roughness, u.f0);
   let colour = direct * u.sunIrradiance + AMBIENT * albedo;
-  return vec4<f32>(colour, 1.0);
+
+  // City lights (Black Marble) are EMISSIVE, so 'nightLights' is ADDED to the lit
+  // colour, never multiplied through the Lambert term (see 'lib/nightLights.wesl').
+  // The night texture is 'rgba8unorm-srgb', so the sample is already linear.
+  // 'NoL' is the RAW clamped Lambert term -- 'nightLights' owns the terminator
+  // fade, so we must not pre-shape it here. Before the map lands the night
+  // texture is a 1x1 black placeholder, so 'emissive' is zero.
+  let nightColour = textureSample(nightTexture, earthSampler, in.uv).rgb;
+  let NoL = max(dot(n, l), 0.0);
+  // cloudAlpha = 0.0 is the plan-D seam (spec §7.3): no cloud map is bound in
+  // plan B, so '(1 - cloudAlpha)' is a no-op until plan D samples coverage here.
+  let emissive = nightLights(nightColour, NoL, 0.0);
+  return vec4<f32>(colour + emissive, 1.0);
 }

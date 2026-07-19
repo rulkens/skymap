@@ -45,11 +45,14 @@
  * is visible-but-plain (a plain blue ball) rather than black or absent. A second
  * 1×1 LINEAR placeholder (`rgba8unorm`, R=255 G=0 → roughness 1, ocean mask 0)
  * stands in for the material map so the fragment shades a matte, glint-free
- * sphere until the real map arrives. When `setMap('surface', bitmap)` or
- * `setMap('material', bitmap)` runs it creates a fresh texture sized to the
- * bitmap (format chosen by `isLinearTextureKind`), uploads it, generates mips,
- * and rebuilds the fragment bind group to point at the new view. The
- * `night`/`clouds`/`normal` kinds land with plans B/C/D; `setMap` ignores them
+ * sphere until the real map arrives. A third 1×1 BLACK `rgba8unorm-srgb`
+ * placeholder stands in for the Black Marble night map so the emissive
+ * city-lights term contributes nothing (the dark side is lit only by `AMBIENT`)
+ * until `setMap('night', …)` lands. When `setMap('surface', …)`,
+ * `setMap('material', …)`, or `setMap('night', …)` runs it creates a fresh
+ * texture sized to the bitmap (format chosen by `isLinearTextureKind`), uploads
+ * it, generates mips, and rebuilds the fragment bind group to point at the new
+ * view. The `clouds`/`normal` kinds land with plans D/C; `setMap` ignores them
  * until then.
  *
  * ### uv / texture orientation
@@ -85,6 +88,7 @@
  * `u.mvp`, the fragment reads the sun direction, camera position, and material
  * knobs). Binding 1: sampler (fragment). Binding 2: the 2D Earth albedo texture
  * (fragment). Binding 3: the 2D material (roughness/ocean-mask) texture (fragment).
+ * Binding 4: the 2D night (Black Marble city-lights) texture (fragment).
  *
  * ### Mip generation
  *
@@ -294,13 +298,37 @@ export function createEarthRenderer(
     [1, 1, 1],
   );
 
+  // ── Placeholder night texture ─────────────────────────────────────────────
+  //
+  // A 1×1 BLACK `rgba8unorm-srgb` texel (the same sRGB colour format as the
+  // surface albedo — the Black Marble night map is emissive sRGB colour, NOT
+  // linear data) standing in until the real city-lights map arrives via
+  // `setMap('night', …)`. Black → the emissive `nightLights` term contributes
+  // nothing, so before the map lands the dark hemisphere is lit only by `AMBIENT`
+  // — the correct "no city lights yet" behaviour. Mirrors the surface placeholder
+  // so the fragment always samples a real texture at binding 4 without a branch.
+  let nightTexture = device.createTexture({
+    label: 'earth-placeholder-night',
+    size: [1, 1, 1],
+    format: 'rgba8unorm-srgb',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+  device.queue.writeTexture(
+    { texture: nightTexture },
+    // Black, opaque. sRGB-encoded — no emissive contribution until the map lands.
+    new Uint8Array([0, 0, 0, 255]),
+    { bytesPerRow: 4, rowsPerImage: 1 },
+    [1, 1, 1],
+  );
+
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   //
   // Binding 0: `EarthSurfaceUniforms`, VERTEX (mvp) + FRAGMENT (sun dir, camera,
   //            material knobs).
-  // Binding 1: the sampler, fragment stage (shared by both textures).
+  // Binding 1: the sampler, fragment stage (shared by all three textures).
   // Binding 2: the 2D Earth albedo texture, fragment stage (filterable f32).
   // Binding 3: the 2D material (roughness/ocean-mask) texture, fragment stage.
+  // Binding 4: the 2D night (Black Marble city-lights) texture, fragment stage.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'earth-bgl',
     entries: [
@@ -324,12 +352,17 @@ export function createEarthRenderer(
         visibility: GPUShaderStage.FRAGMENT,
         texture: { sampleType: 'float' },
       },
+      {
+        binding: 4,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float' },
+      },
     ],
   });
 
-  // The bind group references the current `texture` + `materialTexture` views.
-  // `setMap` rebuilds it against a fresh texture (either binding 2 or 3), so it
-  // lives in a mutable closure slot.
+  // The bind group references the current `texture` + `materialTexture` +
+  // `nightTexture` views. `setMap` rebuilds it against a fresh texture (binding 2,
+  // 3, or 4), so it lives in a mutable closure slot.
   function buildBindGroup(): GPUBindGroup {
     return device.createBindGroup({
       label: 'earth-bg',
@@ -339,6 +372,7 @@ export function createEarthRenderer(
         { binding: 1, resource: sampler },
         { binding: 2, resource: texture.createView() },
         { binding: 3, resource: materialTexture.createView() },
+        { binding: 4, resource: nightTexture.createView() },
       ],
     });
   }
@@ -400,9 +434,10 @@ export function createEarthRenderer(
 
   function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
     // Plan A wires the `surface` (day albedo) and `material` (roughness/ocean-mask)
-    // maps. The `night`/`clouds`/`normal` kinds land with plans B/C/D, which add
-    // their cases + GPU bindings here. Those kinds are inert until then.
-    if (kind !== 'surface' && kind !== 'material') return;
+    // maps; plan B adds the `night` (Black Marble city-lights) map. The
+    // `clouds`/`normal` kinds land with plans D/C, which add their cases + GPU
+    // bindings here. Those kinds are inert until then.
+    if (kind !== 'surface' && kind !== 'material' && kind !== 'night') return;
 
     // sRGB colour (surface) samples through `rgba8unorm-srgb` so the hardware
     // de-gammas on read; linear-packed data (material) samples through plain
@@ -413,7 +448,8 @@ export function createEarthRenderer(
     const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
     const levels = mipLevelCount(bitmap.width, bitmap.height);
     const fresh = device.createTexture({
-      label: kind === 'material' ? 'earth-material' : 'earth-texture',
+      label:
+        kind === 'material' ? 'earth-material' : kind === 'night' ? 'earth-night' : 'earth-texture',
       size: [bitmap.width, bitmap.height, 1],
       format,
       mipLevelCount: levels,
@@ -441,6 +477,9 @@ export function createEarthRenderer(
     if (kind === 'material') {
       materialTexture.destroy();
       materialTexture = fresh;
+    } else if (kind === 'night') {
+      nightTexture.destroy();
+      nightTexture = fresh;
     } else {
       texture.destroy();
       texture = fresh;
@@ -469,6 +508,7 @@ export function createEarthRenderer(
     uniformBuffer.destroy();
     texture.destroy();
     materialTexture.destroy();
+    nightTexture.destroy();
   }
 
   const renderer: EarthRenderer = {
