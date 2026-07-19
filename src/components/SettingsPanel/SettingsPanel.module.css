@@ -271,18 +271,6 @@
 }
 
 /*
- * Sub-section heading — visually distinct from the panel header only by
- * being smaller-margin'd (it sits between sections, not at the top).
- */
-.panelSubtitle {
-  margin: var(--space-2) 0;
-  font-size: var(--font-size-sm);
-  letter-spacing: var(--letter-spacing-widest);
-  text-transform: uppercase;
-  color: var(--color-fg-dim);
-}
-
-/*
  * LOD mode indicator — a tiny status line under the Auto-LOD checkbox that
  * tells the user whether the engine is in "auto (by zoom)" or "manual
  * override" mode.  Sub-sized + dimmed because it's informational, not a

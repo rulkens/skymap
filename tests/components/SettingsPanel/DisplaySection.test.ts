@@ -36,8 +36,6 @@ function baseProps(overrides?: Partial<DisplaySectionProps>): DisplaySectionProp
   return {
     toneMapCurve: ToneMapCurve.Reinhard as ToneMapCurveT,
     onToneMapCurveChange: vi.fn<(curve: ToneMapCurveT) => void>(),
-    atmosphereExposure: 1.0,
-    onAtmosphereExposureChange: vi.fn<(value: number) => void>(),
     ...overrides,
   };
 }
