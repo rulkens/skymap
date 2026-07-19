@@ -113,6 +113,28 @@ NPP VIIRS (Black Marble 2016). Public domain. Verified live 2026-07-19
 https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg
 ```
 
+## Earth elevation map — NASA Visible Earth "Topography" (GEBCO_08)
+
+Earth's `normal` map (tangent-space bump, packed linear RGBA → PNG) is **baked**
+from NASA Visible Earth's "Topography" grayscale relief — a GEBCO_08-derived
+equirect where pixel brightness encodes land elevation plus bathymetry shading.
+`build-textures` differentiates the heightfield into a tangent-space normal map
+(see `bakeNormalMap.ts`); the raw relief is a **build-only bake input, never
+shipped** as a runtime texture. Full-pull only — no dev variant.
+
+| Purpose   | File                                | Dims        | Bands | Size             |
+| --------- | ----------------------------------- | ----------- | ----- | ---------------- |
+| Full pull | `gebco_08_rev_elev_21600x10800.png` | 21600×10800 | gray  | 18,414,843 bytes |
+
+Credit: **NASA Earth Observatory (Visible Earth)**, imagery by Jesse Allen using
+`GEBCO_08` grid data. Public domain. Verified live 2026-07-19 (HTTP 200,
+`image/png`, 18,414,843 bytes). The smaller 5400×2700 variant 404s — the full-res
+file is the only source. Checksum: _(pending — filled by the fetch task)_.
+
+```
+https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73934/gebco_08_rev_elev_21600x10800.png
+```
+
 ## USGS Astrogeology — Galilean moons (public domain; credit "NASA/USGS")
 
 Plain 8-bit GeoTIFFs (no ISIS toolchain needed; sharp/libvips reads TIFF

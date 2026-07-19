@@ -623,6 +623,17 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.earthElevation': {
+    path: 'data/raw/textures/gebco_08_rev_elev_21600x10800.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Visible Earth 'Topography' GEBCO_08-derived grayscale relief (land elevation + bathymetry shading), 21600x10800 equirect PNG (public domain, credit NASA Earth Observatory, imagery by Jesse Allen using GEBCO_08 grid data). Build-only bake input for Earth's normal map — never shipped as a runtime texture. Verified live 2026-07-19 (18,414,843 bytes, image/png).",
+    upstream:
+      'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73934/gebco_08_rev_elev_21600x10800.png',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.usgsIo': {
     path: 'data/raw/textures/Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
     kind: 'file',
