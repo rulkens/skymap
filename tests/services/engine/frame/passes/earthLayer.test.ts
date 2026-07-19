@@ -32,6 +32,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -223,7 +224,8 @@ describe('earthLayer.draw', () => {
 
     // The renderer receives the pass + the packed length-28 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
-    // sunIrradiance + cloudShadowStrength + 2 pad), not the bare 16-float MVP.
+    // sunIrradiance + cloudShadowStrength + cloudShellRadius + 1 pad), not the
+    // bare 16-float MVP.
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
@@ -258,10 +260,12 @@ describe('earthLayer.draw', () => {
 
   it('packs camPosLocal and the PBR surface params into their tail slots', () => {
     // The other view-dependent seam: the ocean glint needs the camera in Earth's
-    // local frame (slots 20..22), and the PBR dials fill the vec3 tails / trailing
-    // scalars — roughnessBase at 19, f0 at 23, sunIrradiance at 24. Pinning the
-    // scalars by their named source makes an argument-order swap at the pack call
-    // (e.g. f0 ↔ roughnessBase) a failure here, not a visual-only regression.
+    // local frame (slots 20..22), and the PBR + cloud dials fill the vec3 tails /
+    // trailing scalars — roughnessBase at 19, f0 at 23, sunIrradiance at 24,
+    // cloudShadowStrength at 25, cloudShellRadius at 26. Pinning the scalars by
+    // their named source makes an argument-order swap at the pack call (e.g.
+    // f0 ↔ roughnessBase, or the cloudShadowStrength ↔ cloudShellRadius wiring
+    // this task introduces) a failure here, not a visual-only regression.
     composeMock.mockClear();
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeNear0View();
@@ -290,6 +294,11 @@ describe('earthLayer.draw', () => {
     expect(uniforms[19]).toBeCloseTo(EARTH_SURFACE_PARAMS.roughnessBase);
     expect(uniforms[23]).toBeCloseTo(EARTH_SURFACE_PARAMS.f0);
     expect(uniforms[24]).toBeCloseTo(EARTH_SURFACE_PARAMS.sunIrradiance);
+    expect(uniforms[25]).toBeCloseTo(EARTH_SURFACE_PARAMS.cloudShadowStrength);
+    // Slot 26 is the cloud shell radius the surface shadow ray intersects — it
+    // must be the real CLOUD_SHELL_PARAMS.radiusRatio, not the placeholder 1.0
+    // this task replaced (the shadow geometry and the drawn deck share it).
+    expect(uniforms[26]).toBeCloseTo(CLOUD_SHELL_PARAMS.radiusRatio);
   });
 
   it('is a no-op when the earthRenderer handle is null (pre-bootstrap)', () => {

@@ -39,14 +39,16 @@ export type EarthRenderer = Renderer & {
    * city-lights map (initially a 1×1 black placeholder → no emissive contribution,
    * so the dark side is lit only by `AMBIENT` until it lands), and `'normal'`
    * replaces the tangent-space relief map (initially a 1×1 flat-normal placeholder
-   * → shading normal equals the geometric normal, so no relief until it lands):
-   * each uploads via `copyExternalImageToTexture` into a fresh texture sized to
-   * the bitmap — format chosen by `isLinearTextureKind` (`rgba8unorm-srgb` for
-   * the sRGB surface + emissive night colour, linear `rgba8unorm` for the
-   * material + normal data) — generates mips, then rebuilds the fragment bind
-   * group so subsequent draws sample the real map. The remaining kind (`clouds`)
-   * lands with plan D and is inert until then — one `(bodyId, kind)` family feeds
-   * one setter.
+   * → shading normal equals the geometric normal, so no relief until it lands),
+   * and `'clouds'` replaces the cloud coverage map (initially a 1×1 transparent
+   * placeholder → cloud alpha reads 0, so the surface fragment's cloud ground
+   * shadow + city-light occlusion contribute nothing until it lands): each
+   * uploads via `copyExternalImageToTexture` into a fresh texture sized to the
+   * bitmap — format chosen by `isLinearTextureKind` (`rgba8unorm-srgb` for the
+   * sRGB surface + emissive night colour + cloud colour, linear `rgba8unorm` for
+   * the material + normal data) — generates mips, then rebuilds the fragment bind
+   * group so subsequent draws sample the real map. Every `TextureKind` is now
+   * wired — one `(bodyId, kind)` family feeds one setter, no inert kind remains.
    */
   setMap(kind: TextureKind, bitmap: ImageBitmap): void;
   /**
@@ -54,7 +56,7 @@ export type EarthRenderer = Renderer & {
    * (the 112-byte `EarthSurfaceUniforms` record from `packEarthSurfaceUniforms`):
    * 16 f32 column-major MVP + 3 f32 body-local sun direction + `roughnessBase` +
    * 3 f32 camera-in-local-frame + `f0` + `sunIrradiance` + `cloudShadowStrength` +
-   * 2 f32 pad — written to the uniform buffer and drawn indexed.
+   * `cloudShellRadius` + 1 f32 pad — written to the uniform buffer and drawn indexed.
    */
   draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void;
 };

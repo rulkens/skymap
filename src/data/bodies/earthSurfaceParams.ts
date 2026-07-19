@@ -42,9 +42,13 @@
  *   diffuse hemisphere from over-brightening). The ambient floor is unchanged —
  *   both paths add `AMBIENT * albedo` — so only the lit side is being matched.
  *
- * - **`cloudShadowStrength`** is `0` in plan A: the cloud shell (plan D) is what
- *   multiplies the direct term by a cloud-shadow factor. It is carried through
- *   the uniform now only so plan D never has to reshape the struct.
+ * - **`cloudShadowStrength`** scales how darkly the cloud deck shadows the
+ *   surface: the fragment multiplies the DIRECT sun term by
+ *   `(1 - cloudCoverage * cloudShadowStrength)`, so `0` disables the shadow and
+ *   `1` drives a fully overcast fragment's direct sunlight to black. `0.65` is a
+ *   starting point — a deep, readable shadow under thick cloud without the ground
+ *   going pure black (the ambient floor still shows through). The Task 8 visual
+ *   pass tunes it against the real Blue Marble cloud map.
  */
 
 export const EARTH_SURFACE_PARAMS: {
@@ -56,5 +60,5 @@ export const EARTH_SURFACE_PARAMS: {
   roughnessBase: 1.0,
   f0: 0.02,
   sunIrradiance: 3.0,
-  cloudShadowStrength: 0,
+  cloudShadowStrength: 0.65,
 };

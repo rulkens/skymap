@@ -51,13 +51,18 @@
  * until `setMap('night', …)` lands. A fourth 1×1 FLAT-NORMAL `rgba8unorm` LINEAR
  * placeholder (`[128,128,255,255]` → tangent-space `(0,0,1)`) stands in for the
  * normal map so the shading normal equals the geometric normal — no relief —
- * until `setMap('normal', …)` lands. All four placeholder FORMATS derive from the
- * one `isLinearTextureKind` predicate (only the placeholder COLOUR is per-kind),
- * so a placeholder can never disagree with the real map that later replaces it.
- * When `setMap('surface'|'material'|'night'|'normal', …)` runs it creates a fresh
- * texture sized to the bitmap (format chosen by that same `isLinearTextureKind`),
- * uploads it, generates mips, and rebuilds the fragment bind group to point at
- * the new view. The `clouds` kind lands with plan D; `setMap` ignores it until then.
+ * until `setMap('normal', …)` lands. A fifth 1×1 TRANSPARENT `rgba8unorm-srgb`
+ * placeholder (`[0,0,0,0]`) stands in for the cloud map so its alpha reads 0 →
+ * the surface fragment's ground shadow and night occlusion (both keyed on cloud
+ * alpha) contribute nothing until `setMap('clouds', …)` lands. All five
+ * placeholder FORMATS derive from the one `isLinearTextureKind` predicate (only
+ * the placeholder COLOUR is per-kind), so a placeholder can never disagree with
+ * the real map that later replaces it. When
+ * `setMap('surface'|'material'|'night'|'normal'|'clouds', …)` runs it creates a
+ * fresh texture sized to the bitmap (format chosen by that same
+ * `isLinearTextureKind`), uploads it, generates mips, and rebuilds the fragment
+ * bind group to point at the new view. Every `TextureKind` is now wired — no kind
+ * is inert.
  *
  * ### uv / texture orientation
  *
@@ -94,6 +99,8 @@
  * (fragment). Binding 3: the 2D material (roughness/ocean-mask) texture (fragment).
  * Binding 4: the 2D night (Black Marble city-lights) texture (fragment).
  * Binding 5: the 2D tangent-space normal (relief) texture (fragment).
+ * Binding 6: the 2D cloud (coverage-in-alpha) texture (fragment) — sampled for
+ * the surface's cloud ground shadow + night-light occlusion.
  *
  * ### Mip generation
  *
@@ -129,7 +136,7 @@ const CUBESPHERE_FACE_RESOLUTION = 48;
 /** `EarthSurfaceUniforms` is 112 bytes (28 f32): the 80-byte `LitBodyUniforms`
  *  prefix (mat4x4<f32> MVP + body-local sun direction, with `roughnessBase`
  *  filling the sun-dir vec3 tail) followed by `camPosLocal` (vec3), `f0`,
- *  `sunIrradiance`, `cloudShadowStrength`, and two zeroed pad floats. The ambient
+ *  `sunIrradiance`, `cloudShadowStrength`, `cloudShellRadius`, and one zeroed pad float. The ambient
  *  floor lives in `lib/bodyLighting.wesl`'s `AMBIENT` const, not a uniform field.
  *  Written from `packEarthSurfaceUniforms`. */
 const UNIFORM_BUFFER_SIZE = 112;
@@ -322,6 +329,11 @@ export function createEarthRenderer(
   // Flat tangent-space normal: RG=128 → nxy=(0,0), so nz reconstructs to 1 →
   // n == the geometric normal → no relief until the baked normal map lands.
   let normalTexture = createPlaceholder('normal', 'earth-placeholder-normal', [128, 128, 255, 255]);
+  // Transparent → cloud alpha reads 0, so the surface fragment's ground shadow
+  // and night occlusion (both keyed on cloud alpha) are inert until the Blue
+  // Marble cloud map lands. sRGB colour like surface/night (`isLinearTextureKind`
+  // returns false for `clouds`), so it allocates `rgba8unorm-srgb` automatically.
+  let cloudTexture = createPlaceholder('clouds', 'earth-placeholder-clouds', [0, 0, 0, 0]);
 
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   //
@@ -332,6 +344,8 @@ export function createEarthRenderer(
   // Binding 3: the 2D material (roughness/ocean-mask) texture, fragment stage.
   // Binding 4: the 2D night (Black Marble city-lights) texture, fragment stage.
   // Binding 5: the 2D tangent-space normal (relief) texture, fragment stage.
+  // Binding 6: the 2D cloud (coverage in alpha) texture, fragment stage — the
+  //            surface samples it for the ground shadow + night occlusion.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'earth-bgl',
     entries: [
@@ -365,12 +379,18 @@ export function createEarthRenderer(
         visibility: GPUShaderStage.FRAGMENT,
         texture: { sampleType: 'float' },
       },
+      {
+        binding: 6,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float' },
+      },
     ],
   });
 
   // The bind group references the current `texture` + `materialTexture` +
-  // `nightTexture` + `normalTexture` views. `setMap` rebuilds it against a fresh
-  // texture (binding 2, 3, 4, or 5), so it lives in a mutable closure slot.
+  // `nightTexture` + `normalTexture` + `cloudTexture` views. `setMap` rebuilds it
+  // against a fresh texture (binding 2, 3, 4, 5, or 6), so it lives in a mutable
+  // closure slot.
   function buildBindGroup(): GPUBindGroup {
     return device.createBindGroup({
       label: 'earth-bg',
@@ -382,6 +402,7 @@ export function createEarthRenderer(
         { binding: 3, resource: materialTexture.createView() },
         { binding: 4, resource: nightTexture.createView() },
         { binding: 5, resource: normalTexture.createView() },
+        { binding: 6, resource: cloudTexture.createView() },
       ],
     });
   }
@@ -446,18 +467,20 @@ export function createEarthRenderer(
   // ── setMap ─────────────────────────────────────────────────────────────────
 
   function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
-    // Plan A wires the `surface` (day albedo) and `material` (roughness/ocean-mask)
-    // maps; plan B adds the `night` (Black Marble city-lights) map; plan C adds the
-    // `normal` (tangent-space relief) map. The `clouds` kind lands with plan D,
-    // which adds its case + GPU binding here. That kind is inert until then.
-    if (kind !== 'surface' && kind !== 'material' && kind !== 'night' && kind !== 'normal') return;
+    // Every `TextureKind` is wired: plan A the `surface` (day albedo) +
+    // `material` (roughness/ocean-mask) maps, plan B the `night` (Black Marble
+    // city-lights) map, plan C the `normal` (tangent-space relief) map, and plan D
+    // the `clouds` (coverage-in-alpha) map the surface samples for its ground
+    // shadow + night occlusion. No kind is inert, so there is no early-return
+    // guard — the retirement branch below is exhaustive over the union.
 
-    // sRGB colour (surface/night) samples through `rgba8unorm-srgb` so the hardware
-    // de-gammas on read; linear-packed data (material/normal) samples through plain
-    // `rgba8unorm` so its numeric channels (roughness, ocean mask, tangent-space
-    // normal) are read raw, not gamma-shifted. `isLinearTextureKind` is the single
-    // home for that axis — shared with the fetcher's decode path and the filename
-    // helper — so the sRGB-vs-linear decision can never drift between the consumers.
+    // sRGB colour (surface/night/clouds) samples through `rgba8unorm-srgb` so the
+    // hardware de-gammas on read; linear-packed data (material/normal) samples
+    // through plain `rgba8unorm` so its numeric channels (roughness, ocean mask,
+    // tangent-space normal) are read raw, not gamma-shifted. `isLinearTextureKind`
+    // is the single home for that axis — shared with the fetcher's decode path and
+    // the filename helper — so the sRGB-vs-linear decision can never drift between
+    // the consumers.
     const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
     const levels = mipLevelCount(bitmap.width, bitmap.height);
     const fresh = device.createTexture({
@@ -468,7 +491,9 @@ export function createEarthRenderer(
             ? 'earth-night'
             : kind === 'normal'
               ? 'earth-normal'
-              : 'earth-texture',
+              : kind === 'clouds'
+                ? 'earth-clouds'
+                : 'earth-texture',
       size: [bitmap.width, bitmap.height, 1],
       format,
       mipLevelCount: levels,
@@ -502,6 +527,9 @@ export function createEarthRenderer(
     } else if (kind === 'normal') {
       normalTexture.destroy();
       normalTexture = fresh;
+    } else if (kind === 'clouds') {
+      cloudTexture.destroy();
+      cloudTexture = fresh;
     } else {
       texture.destroy();
       texture = fresh;
@@ -534,6 +562,7 @@ export function createEarthRenderer(
     materialTexture.destroy();
     nightTexture.destroy();
     normalTexture.destroy();
+    cloudTexture.destroy();
   }
 
   const renderer: EarthRenderer = {

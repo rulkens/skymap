@@ -60,6 +60,7 @@ import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
@@ -143,7 +144,10 @@ export const earthLayer: ContentLayer = {
         EARTH_SURFACE_PARAMS.f0,
         EARTH_SURFACE_PARAMS.sunIrradiance,
         EARTH_SURFACE_PARAMS.cloudShadowStrength,
-        1.0, // cloud shell radius — real value wired when CLOUD_SHELL_PARAMS lands (plan D)
+        // The cloud deck's unit-sphere local radius — the surface shadow ray
+        // intersects this SAME shell the cloudShellLayer draws, so the cast
+        // shadow and the drawn deck agree by construction.
+        CLOUD_SHELL_PARAMS.radiusRatio,
       ),
     );
   },
