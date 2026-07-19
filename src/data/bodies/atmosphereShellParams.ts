@@ -31,9 +31,13 @@
  *
  * - **`exposure`** scales the shell's in-scattered radiance as it lands in the
  *   HDR target, before the shared tone-map compresses it with the rest of the
- *   scene. `1.0` starts neutral; the visual pass nudges it so the blue limb and
- *   the reddened terminator arc read at a plausible strength against the
- *   tonemapped Earth rather than blowing out or washing to grey.
+ *   scene. `1.0` starts neutral so the blue limb and the reddened terminator arc
+ *   read at a plausible strength against the tonemapped Earth rather than blowing
+ *   out or washing to grey. This value is the SEED DEFAULT for
+ *   `settings.earth.atmosphereExposure`, tuned live via the Settings → Display →
+ *   Earth slider — the same relationship `DEFAULT_EXPOSURE` in `data/defaults.ts`
+ *   has to `tonemap.exposure`. The shell draw reads the settings value each
+ *   frame, not this constant, so a drag updates the limb without a reload.
  */
 
 export const ATMOSPHERE_SHELL_PARAMS: {

@@ -21,6 +21,7 @@ import reducer, {
   writeVolumeField,
   setFlowEnabled,
   setFlow,
+  setAtmosphereExposure,
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,
@@ -193,6 +194,13 @@ describe('settingsSlice — flow', () => {
     expect(next.flow.flowSpeed).toBe(9.5);
     // An untouched leaf is preserved.
     expect(next.flow.count).toBe(before.flow.count);
+  });
+});
+
+describe('settingsSlice — earth', () => {
+  it('setAtmosphereExposure writes the atmosphere-shell exposure', () => {
+    const next = reducer(base(), setAtmosphereExposure(2.5));
+    expect(next.earth.atmosphereExposure).toBe(2.5);
   });
 });
 

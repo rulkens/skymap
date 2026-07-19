@@ -58,6 +58,7 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from '../../services/engine/animation/pathDefaults';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
+import { ATMOSPHERE_SHELL_PARAMS } from '../../data/bodies/atmosphereShellParams';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -117,6 +118,12 @@ export function buildInitialSettings(): EngineSettingsState {
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
+    },
+    // Earth's per-body look dials. Seeded from the atmosphere shell's authored
+    // exposure so the data file stays the default's single source of truth (the
+    // same relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`).
+    earth: {
+      atmosphereExposure: ATMOSPHERE_SHELL_PARAMS.exposure,
     },
     // Star-catalog layer: master gate on + one item row per star catalog. Rows
     // are DERIVED from the star-catalog registry entries (mirroring

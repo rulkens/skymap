@@ -123,6 +123,11 @@ export const selectFilamentsEnabled = (state: RootState): boolean =>
 export const selectFilamentIntensity = (state: RootState): number =>
   selectSettings(state).filaments.intensity;
 
+// --- earth cluster ------------------------------------------------------------
+
+export const selectAtmosphereExposure = (state: RootState): number =>
+  selectSettings(state).earth.atmosphereExposure;
+
 // --- volumes cluster ----------------------------------------------------------
 
 export const selectVolumesEnabled = (state: RootState): boolean =>

@@ -158,6 +158,10 @@ export const atmosphereShellLayer: ContentLayer = {
     // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
     // atmosphere top is the unit sphere and the ground sphere has this radius.
     const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;
+    // Exposure is the live Settings → Display → Earth knob (seeded from
+    // `ATMOSPHERE_SHELL_PARAMS.exposure`); `EngineState.settings` is a live store
+    // getter, so this reads the current value every frame. sunIrradiance stays a
+    // static data-file constant (fragment-unused today).
     renderer.draw(
       pass,
       packAtmosphereUniforms(
@@ -166,7 +170,7 @@ export const atmosphereShellLayer: ContentLayer = {
         camLocal,
         bottomRadius,
         ATMOSPHERE_SHELL_PARAMS.sunIrradiance,
-        ATMOSPHERE_SHELL_PARAMS.exposure,
+        state.settings.earth.atmosphereExposure,
       ),
     );
   },

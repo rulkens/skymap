@@ -132,6 +132,13 @@ const settingsSlice = createSlice({
       settings.filaments.intensity = action.payload;
     },
 
+    // ── earth ───────────────────────────────────────────────────────────────
+    // Exposure scale on the atmosphere shell's HDR output — read live by
+    // `atmosphereShellLayer` each frame. Twin of `setFilamentIntensity`.
+    setAtmosphereExposure: (settings, action: PayloadAction<number>) => {
+      settings.earth.atmosphereExposure = action.payload;
+    },
+
     // ── star catalogs (fourth source-type cluster) ──────────────────────────
     // Master gate + per-catalog items, mirroring the galaxy-catalog cluster:
     // `setStarCatalogEnabled` writes the coarse "hide all star catalogs" gate,
@@ -392,6 +399,7 @@ export const {
   setFamousStarsEnabled,
   setFilamentsEnabled,
   setFilamentIntensity,
+  setAtmosphereExposure,
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,

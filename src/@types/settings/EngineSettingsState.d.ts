@@ -137,6 +137,18 @@ export type EngineSettingsState = {
   };
 
   /**
+   * Earth's per-body look dials — the home for future Earth knobs (cloud
+   * opacity, night-side brightness, …). Today it holds a single field:
+   * `atmosphereExposure`, the exposure scale on the in-scatter atmosphere
+   * shell's HDR output. Seeded from `ATMOSPHERE_SHELL_PARAMS.exposure` (the
+   * data file stays the default's single source of truth) and read live by
+   * `atmosphereShellLayer` each frame.
+   */
+  earth: {
+    atmosphereExposure: number;
+  };
+
+  /**
    * Star-catalog master gate and per-catalog items — the FOURTH source-type
    * cluster, symmetric with `galaxyCatalogs` / `structures` / `volumes`.
    * `enabled` is the coarse "hide all star catalogs" gate; per-catalog state

@@ -66,6 +66,7 @@ import {
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
 import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
+import { ATMOSPHERE_SHELL_PARAMS } from '../../../src/data/bodies/atmosphereShellParams';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -101,6 +102,7 @@ export function makeSettingsFixture(
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
+    earth: { atmosphereExposure: ATMOSPHERE_SHELL_PARAMS.exposure },
     starCatalogs: {
       enabled: true,
       sizePx: DEFAULT_STAR_SIZE_PX,
