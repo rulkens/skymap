@@ -44,18 +44,28 @@ export async function writeCloudTier(
   const rgba = Buffer.allocUnsafe(width * height * 4);
   for (let i = 0; i < width * height; i++) {
     const base = i * channels;
+    // RGB extraction per sharp raw channel semantics:
+    //   1 → gray               → RGB = gray, gray, gray
+    //   2 → gray + alpha       → RGB = gray (ch0); ch1 is the alpha (below)
+    //   3 → RGB                → the three colour bytes as-is
+    //   4 → RGBA               → the three colour bytes; ch3 is the alpha (below)
+    // The <3 branch is the fix: a 2-channel source is gray+alpha, so its
+    // second byte is NOT green — colour must come from ch0 alone.
+    const isGray = channels < 3;
     const r = src.data[base] ?? 0;
-    const g = channels >= 2 ? (src.data[base + 1] ?? r) : r;
-    const b = channels >= 3 ? (src.data[base + 2] ?? r) : r;
+    const g = isGray ? r : (src.data[base + 1] ?? r);
+    const b = isGray ? r : (src.data[base + 2] ?? r);
     rgba[i * 4 + 0] = r;
     rgba[i * 4 + 1] = g;
     rgba[i * 4 + 2] = b;
-    // Keep an existing alpha; otherwise derive it from Rec.709 luminance so
-    // bright cloud is opaque and black sky is clear.
+    // Keep an existing alpha (gray+alpha at ch1, RGBA at ch3); otherwise derive
+    // it from Rec.709 luminance so bright cloud is opaque and black sky clear.
     rgba[i * 4 + 3] =
-      channels >= 4
-        ? (src.data[base + 3] ?? 255)
-        : Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+      channels === 2
+        ? (src.data[base + 1] ?? 255)
+        : channels >= 4
+          ? (src.data[base + 3] ?? 255)
+          : Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
   }
 
   await sharp(rgba, { raw: { width, height, channels: 4 } })

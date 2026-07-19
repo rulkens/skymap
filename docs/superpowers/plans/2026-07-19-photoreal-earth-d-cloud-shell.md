@@ -1,6 +1,6 @@
 # Photoreal Earth D — Cloud Shell Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a **translucent cloud shell** above Earth's surface — a body-agnostic shell renderer drawing its own cloud+alpha map, `blend:'over'`, depth-tested/no-depth-write (modeled on `ringsLayer`) — plus the surface-side coupling that makes it read as physical: a **soft ground shadow** (the surface fragment samples cloud alpha along `sunDirLocal` and darkens the direct sun term) and **night-light occlusion** (city lights dim under cloud). The acceptance win is **clouds + soft ground shadows, with city lights dimmed under cloud** (spec §12 row D).
 
@@ -66,15 +66,15 @@ export function raySphereRoots(
 
 **Steps (TDD):**
 
-- [ ] Write `tests/utils/math/raySphereRoots.test.ts` with **hand-computed** expectations:
-  - [ ] `hit from outside returns both crossings` — ray from `[−3,0,0]` along `+x` at unit sphere at origin ⇒ `[2, 4]`.
-  - [ ] `origin inside returns a straddling interval` — ray from origin along `+x`, radius `2` ⇒ `tNear = −2`, `tFar = 2` (the shadow-ray case: `tFar > 0` is the crossing toward the sun).
-  - [ ] `surface point along the sun hits the shell` — ro `[1,0,0]` (on the unit sphere), rd `+x`, sphere radius `1.01` ⇒ `tFar ≈ 0.01` (fails if the shell radius or the exit-root pick is wrong — the shadow's core geometry).
-  - [ ] `tangent returns a double root` — ray grazing the sphere (discr ≈ 0) ⇒ `tNear ≈ tFar` (fails if the discriminant sign handling drops the tangent case).
-  - [ ] `miss returns null` — ray pointing away from / past a sphere it never reaches ⇒ `null` (fails if `discr < 0` is not guarded).
-- [ ] Implement `raySphereRoots`; didactic header citing the WESL twin (`util.wesl:116-143`) and the accepted TS↔WESL mirror.
-- [ ] `npm test -- raySphereRoots` green; `npx tsc --noEmit` clean.
-- [ ] Commit.
+- [x] Write `tests/utils/math/raySphereRoots.test.ts` with **hand-computed** expectations:
+  - [x] `hit from outside returns both crossings` — ray from `[−3,0,0]` along `+x` at unit sphere at origin ⇒ `[2, 4]`.
+  - [x] `origin inside returns a straddling interval` — ray from origin along `+x`, radius `2` ⇒ `tNear = −2`, `tFar = 2` (the shadow-ray case: `tFar > 0` is the crossing toward the sun).
+  - [x] `surface point along the sun hits the shell` — ro `[1,0,0]` (on the unit sphere), rd `+x`, sphere radius `1.01` ⇒ `tFar ≈ 0.01` (fails if the shell radius or the exit-root pick is wrong — the shadow's core geometry).
+  - [x] `tangent returns a double root` — ray grazing the sphere (discr ≈ 0) ⇒ `tNear ≈ tFar` (fails if the discriminant sign handling drops the tangent case).
+  - [x] `miss returns null` — ray pointing away from / past a sphere it never reaches ⇒ `null` (fails if `discr < 0` is not guarded).
+- [x] Implement `raySphereRoots`; didactic header citing the WESL twin (`util.wesl:116-143`) and the accepted TS↔WESL mirror.
+- [x] `npm test -- raySphereRoots` green; `npx tsc --noEmit` clean.
+- [x] Commit.
 
 ---
 
@@ -117,12 +117,12 @@ export function packCloudShellUniforms(
 
 **Steps (TDD):**
 
-- [ ] Add `CloudShellUniforms` to `lib/sphere.wesl` with a didactic byte-layout header (sibling-not-overload; the reused lit prefix; `cloudOpacity` filling the vec3 tail); rename `EarthSurfaceUniforms._pad0` → `cloudShellRadius` and update that struct's byte table + plan-A note.
-- [ ] Write `tests/utils/gpu/packCloudShellUniforms.test.ts` — byte-layout parity (WGSL↔TS, iOS-silent-drop guard): `out.length === CLOUD_SHELL_UNIFORM_FLOATS`; `out[0..15] === mvp`; `out[16..18] === sunDirLocal`; `out[19] === cloudOpacity` (fails if the packer leaves the lit pad zeroed).
-- [ ] Extend `tests/utils/gpu/packEarthSurfaceUniforms.test.ts`: add `out[26] === cloudShellRadius` (fails if the 8th arg is dropped); keep every existing assertion green.
-- [ ] Implement both packers.
-- [ ] `npm test -- packCloudShellUniforms packEarthSurfaceUniforms` green; `npx tsc --noEmit` clean.
-- [ ] Commit (`sphere.wesl`, both packers, both tests).
+- [x] Add `CloudShellUniforms` to `lib/sphere.wesl` with a didactic byte-layout header (sibling-not-overload; the reused lit prefix; `cloudOpacity` filling the vec3 tail); rename `EarthSurfaceUniforms._pad0` → `cloudShellRadius` and update that struct's byte table + plan-A note.
+- [x] Write `tests/utils/gpu/packCloudShellUniforms.test.ts` — byte-layout parity (WGSL↔TS, iOS-silent-drop guard): `out.length === CLOUD_SHELL_UNIFORM_FLOATS`; `out[0..15] === mvp`; `out[16..18] === sunDirLocal`; `out[19] === cloudOpacity` (fails if the packer leaves the lit pad zeroed).
+- [x] Extend `tests/utils/gpu/packEarthSurfaceUniforms.test.ts`: add `out[26] === cloudShellRadius` (fails if the 8th arg is dropped); keep every existing assertion green.
+- [x] Implement both packers.
+- [x] `npm test -- packCloudShellUniforms packEarthSurfaceUniforms` green; `npx tsc --noEmit` clean.
+- [x] Commit (`sphere.wesl`, both packers, both tests).
 
 ---
 
@@ -167,9 +167,9 @@ export function createCloudShellRenderer(
 
 **Steps:**
 
-- [ ] Write the type, renderer, and three shaders (didactic headers; single-quote WESL comments; the shell rides the host body's frame via the caller's `composeBodyMvp` — state the `blend:'over'`/no-depth-write/static-no-drift posture, and that the shell is the body-agnostic reusable renderer Venus/Titan opt into later).
-- [ ] `npx tsc --noEmit` clean; `npm run build` clean (the `?static` WESL imports link; watch the iOS-strict traps — valid struct/binding layout, no `texture_1d`; use `createShaderModuleWithDevLog` output if it fails).
-- [ ] No visual check yet (no layer/bootstrap wiring — Task 4). Commit (stage each path).
+- [x] Write the type, renderer, and three shaders (didactic headers; single-quote WESL comments; the shell rides the host body's frame via the caller's `composeBodyMvp` — state the `blend:'over'`/no-depth-write/static-no-drift posture, and that the shell is the body-agnostic reusable renderer Venus/Titan opt into later).
+- [x] `npx tsc --noEmit` clean; `npm run build` clean (the `?static` WESL imports link; watch the iOS-strict traps — valid struct/binding layout, no `texture_1d`; use `createShaderModuleWithDevLog` output if it fails).
+- [x] No visual check yet (no layer/bootstrap wiring — Task 4). Commit (stage each path).
 
 ---
 
@@ -205,10 +205,10 @@ export const CLOUD_SHELL_PARAMS: {
 
 **Steps:**
 
-- [ ] Add `CLOUD_SHELL_PARAMS`; the engine handle + init/destroy; `cloudShellLayer`; the `index.ts` import/export + insertion + header note.
-- [ ] `npx tsc --noEmit` clean; `npm run build` clean.
-- [ ] **Visual check (transparent placeholder, before Task 6/8 data):** ask the user to confirm on the already-running dev server (do not start/kill it) that Earth renders exactly as after plans A+B — no cloud shell visible yet (the placeholder is transparent), no crash, no z-fighting on the globe. Verify on iOS (the shell pipeline is now in the shared foreground encoder — a bad pipeline would silently blank the canvas).
-- [ ] Commit (stage each path).
+- [x] Add `CLOUD_SHELL_PARAMS`; the engine handle + init/destroy; `cloudShellLayer`; the `index.ts` import/export + insertion + header note.
+- [x] `npx tsc --noEmit` clean; `npm run build` clean.
+- [x] **Visual check (transparent placeholder, before Task 6/8 data):** ask the user to confirm on the already-running dev server (do not start/kill it) that Earth renders exactly as after plans A+B — no cloud shell visible yet (the placeholder is transparent), no crash, no z-fighting on the globe. Verify on iOS (the shell pipeline is now in the shared foreground encoder — a bad pipeline would silently blank the canvas).
+- [x] Commit (stage each path).
 
 ---
 
@@ -250,13 +250,13 @@ export function writeCloudTier(srcPath: string, widthPx: number, outPath: string
 
 **Steps (TDD):**
 
-- [ ] `isAlphaTextureKind` test: `clouds carries alpha`, `surface/night/material/normal do not` — a small structural predicate driving the filename ext.
-- [ ] Extend `bodyTextureFilename.test.ts`: `an alpha kind uses PNG` → `bodyTextureFilename('earth','clouds','large') === 'earth-clouds-8192.png'` (fails if clouds get a JPG name → the fetcher 404s the map). Keep the surface/ring/material/night cases green.
-- [ ] `writeCloudTier` test: `derives alpha from luminance when the source has none` — feed a tiny known no-alpha RGBA (a white cell + a black cell), write at same width, read the PNG back to raw, assert the white cell's alpha ≈ 255 and the black cell's ≈ 0, RGB preserved (fails if the luminance→alpha derivation is dropped or inverted — a real property, spec §9.1).
-- [ ] In `buildTextures.test.ts`: assert `textureBuildEntries` now contains `{ bodyId:'earth', kind:'clouds' }` (the plan-A drift-test set derives from `TEXTURE_SOURCES` — this pins the new source row is picked up by the already-rewired iteration; the required one-line assertion, NOT a re-fix of the landmine). If the writer dispatch is an explicit switch, assert `clouds` selects `writeCloudTier`.
-- [ ] Add the registry/source/kinds rows + the README provenance stub (URL, dimensions, fetch-date placeholder filled in Task 8); implement `isAlphaTextureKind`, `writeCloudTier`, the filename OR, and the build dispatch.
-- [ ] `npm test -- isAlphaTextureKind bodyTextureFilename writeCloudTier buildTextures fetchTextures textureSources` green; `npx tsc --noEmit` + `npx tsc --noEmit -p tsconfig.tools.json` clean.
-- [ ] Commit (stage each path).
+- [x] `isAlphaTextureKind` test: `clouds carries alpha`, `surface/night/material/normal do not` — a small structural predicate driving the filename ext.
+- [x] Extend `bodyTextureFilename.test.ts`: `an alpha kind uses PNG` → `bodyTextureFilename('earth','clouds','large') === 'earth-clouds-8192.png'` (fails if clouds get a JPG name → the fetcher 404s the map). Keep the surface/ring/material/night cases green.
+- [x] `writeCloudTier` test: `derives alpha from luminance when the source has none` — feed a tiny known no-alpha RGBA (a white cell + a black cell), write at same width, read the PNG back to raw, assert the white cell's alpha ≈ 255 and the black cell's ≈ 0, RGB preserved (fails if the luminance→alpha derivation is dropped or inverted — a real property, spec §9.1).
+- [x] In `buildTextures.test.ts`: assert `textureBuildEntries` now contains `{ bodyId:'earth', kind:'clouds' }` (the plan-A drift-test set derives from `TEXTURE_SOURCES` — this pins the new source row is picked up by the already-rewired iteration; the required one-line assertion, NOT a re-fix of the landmine). If the writer dispatch is an explicit switch, assert `clouds` selects `writeCloudTier`.
+- [x] Add the registry/source/kinds rows + the README provenance stub (URL, dimensions, fetch-date placeholder filled in Task 8); implement `isAlphaTextureKind`, `writeCloudTier`, the filename OR, and the build dispatch.
+- [x] `npm test -- isAlphaTextureKind bodyTextureFilename writeCloudTier buildTextures fetchTextures textureSources` green; `npx tsc --noEmit` + `npx tsc --noEmit -p tsconfig.tools.json` clean.
+- [x] Commit (stage each path).
 
 ---
 
@@ -286,9 +286,9 @@ The `(earth,'clouds')` key still flows through the ONE `commitBodyTexture` funct
 
 **Steps:**
 
-- [ ] Add the guarded `cloudShellRenderer.setTexture` line + update the header note.
-- [ ] `npx tsc --noEmit` clean; `npm run build` clean.
-- [ ] Commit.
+- [x] Add the guarded `cloudShellRenderer.setTexture` line + update the header note.
+- [x] `npx tsc --noEmit` clean; `npm run build` clean.
+- [x] Commit.
 
 ---
 
@@ -319,10 +319,10 @@ The `(earth,'clouds')` key still flows through the ONE `commitBodyTexture` funct
 
 **Steps:**
 
-- [ ] Wire the renderer (binding 6, transparent placeholder, `clouds` `setMap` case), the fragment (bind + two cloud samples, shadow-darken `direct`, fill B's `cloudAlpha`), `earthSurfaceParams.cloudShadowStrength`, and `earthLayer`'s `cloudShellRadius` arg + `EarthRenderer.d.ts` doc.
-- [ ] `npx tsc --noEmit` clean; `npm run build` clean (the WESL links; iOS-strict traps — valid binding layout, no `texture_1d`; `createShaderModuleWithDevLog` output if it fails).
-- [ ] **Visual check (transparent placeholder, before Task 8 data):** ask the user to confirm Earth still renders exactly as after plans A+B — day PBR + ocean glint + city lights intact, NO shadow and NO extra occlusion yet (cloud alpha is 0 everywhere), no crash. Verify on iOS.
-- [ ] Commit (stage each path).
+- [x] Wire the renderer (binding 6, transparent placeholder, `clouds` `setMap` case), the fragment (bind + two cloud samples, shadow-darken `direct`, fill B's `cloudAlpha`), `earthSurfaceParams.cloudShadowStrength`, and `earthLayer`'s `cloudShellRadius` arg + `EarthRenderer.d.ts` doc.
+- [x] `npx tsc --noEmit` clean; `npm run build` clean (the WESL links; iOS-strict traps — valid binding layout, no `texture_1d`; `createShaderModuleWithDevLog` output if it fails).
+- [x] **Visual check (transparent placeholder, before Task 8 data):** ask the user to confirm Earth still renders exactly as after plans A+B — day PBR + ocean glint + city lights intact, NO shadow and NO extra occlusion yet (cloud alpha is 0 everywhere), no crash. Verify on iOS.
+- [x] Commit (stage each path).
 
 ---
 
@@ -330,11 +330,11 @@ The `(earth,'clouds')` key still flows through the ONE `commitBodyTexture` funct
 
 **Files:** none (data + verification). Produces `data/raw/textures/<cloud-composite>` (gitignored) and `public/data/images/textures/earth-clouds-{…,8192}.png` (gitignored build artefacts).
 
-- [ ] **Announce the download** (announce-big-downloads): tell the user the NASA cloud-composite source is ~10–20 MB, state the exact URL + size confirmed against `textures.earthClouds`, and **get explicit go-ahead before fetching**. Do not fetch otherwise. Fill the verified URL + native dimensions back into the `textures.earthClouds` registry row + the `data/raw/textures/README.md` provenance (fetch date, dimensions, licence/credit) if they differed from the Task 5 stub.
-- [ ] On go-ahead, fetch the cloud composite (`npm run fetch-textures -- --confirm`, or a targeted single-source fetch) — it lands via `downloadGetOnly` into `data/raw/textures/` and upserts its `textures.sha256` line.
-- [ ] Build the cloud tiers: `npm run build-textures` emits `earth-clouds-8192.png` (+ smaller tiers) into `public/data/images/textures/` via the Task 5 `writeCloudTier` path. Confirm the files exist, are PNG, and carry an alpha channel.
-- [ ] **Visual check (the acceptance win, spec §12 row D):** ask the user to fly close to Earth on the running dev server and confirm: (1) a **translucent cloud shell** wrapping the globe, lit by the sun (bright day-side clouds, dark night-side), the far hemisphere correctly hidden behind the globe; (2) **soft ground shadows** cast by the clouds onto the day-side surface, fading out at the terminator; (3) **city lights dimming under cloud** on the night side. Confirm the map loaded (network tab shows `earth-clouds-8192.png`, not a 404 to the placeholder). Tune `EARTH_SURFACE_PARAMS.cloudShadowStrength` + `CLOUD_SHELL_PARAMS.opacity` with the user if the shadow/opacity reads too strong or too faint.
-- [ ] No commit (all artefacts gitignored). Note for the merge: R2 sync of the new `earth-clouds-*.png` is a post-merge deploy step (spec §9.3 — the textures dir glob sweeps it automatically), not part of this PR.
+- [x] **Announce the download** (announce-big-downloads): tell the user the NASA cloud-composite source is ~10–20 MB, state the exact URL + size confirmed against `textures.earthClouds`, and **get explicit go-ahead before fetching**. Do not fetch otherwise. Fill the verified URL + native dimensions back into the `textures.earthClouds` registry row + the `data/raw/textures/README.md` provenance (fetch date, dimensions, licence/credit) if they differed from the Task 5 stub.
+- [x] On go-ahead, fetch the cloud composite (`npm run fetch-textures -- --confirm`, or a targeted single-source fetch) — it lands via `downloadGetOnly` into `data/raw/textures/` and upserts its `textures.sha256` line.
+- [x] Build the cloud tiers: `npm run build-textures` emits `earth-clouds-8192.png` (+ smaller tiers) into `public/data/images/textures/` via the Task 5 `writeCloudTier` path. Confirm the files exist, are PNG, and carry an alpha channel.
+- [x] **Visual check (the acceptance win, spec §12 row D):** ask the user to fly close to Earth on the running dev server and confirm: (1) a **translucent cloud shell** wrapping the globe, lit by the sun (bright day-side clouds, dark night-side), the far hemisphere correctly hidden behind the globe; (2) **soft ground shadows** cast by the clouds onto the day-side surface, fading out at the terminator; (3) **city lights dimming under cloud** on the night side. Confirm the map loaded (network tab shows `earth-clouds-8192.png`, not a 404 to the placeholder). Tune `EARTH_SURFACE_PARAMS.cloudShadowStrength` + `CLOUD_SHELL_PARAMS.opacity` with the user if the shadow/opacity reads too strong or too faint.
+- [x] No commit (all artefacts gitignored). Note for the merge: R2 sync of the new `earth-clouds-*.png` is a post-merge deploy step (spec §9.3 — the textures dir glob sweeps it automatically), not part of this PR.
 
 ---
 
@@ -342,14 +342,14 @@ The `(earth,'clouds')` key still flows through the ONE `commitBodyTexture` funct
 
 **Files:** none (review).
 
-- [ ] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay attention to:
+- [x] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay attention to:
   - the **accepted coupling** (spec §7.3) being the ONLY non-independence — the cloud map bound in both pipelines, two surface samples — and being Earth-specific + data-gated (Venus reuses the shell but `cloudShadowStrength = 0`), not a leak into the body-agnostic shell;
   - the **two-consumer commit fan-out** genuinely reusing the existing seam (mirrors the ring commit) — no forked dispatch, no `(earth,'clouds')`-special-cased slot;
   - the **TS↔WESL intersection mirror** (`raySphereRoots` ↔ `lib/util.wesl::raySphere`) named as an accepted parity (same posture as the uniform packers), with the graduate-to-`lib/raycast.wesl` option noted if it reads as a real knot;
   - the **PNG axis** split cleanly across two orthogonal predicates (`isLinearTextureKind` = precision, `isAlphaTextureKind` = channel count) — no third "is-clouds" special-case leaking into the filename or GPU-format logic;
   - the shell radius living in ONE home (`CLOUD_SHELL_PARAMS.radiusRatio`) feeding both the shell scale and the shadow uniform — not duplicated as a WESL const.
   - Name any knot precisely and fix or file it before the final review.
-- [ ] Address findings (or record why deferred); keep the suite green.
+- [x] Address findings (or record why deferred); keep the suite green.
 
 ---
 
@@ -357,9 +357,9 @@ The `(earth,'clouds')` key still flows through the ONE `commitBodyTexture` funct
 
 **Files:** none.
 
-- [ ] Run `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
-- [ ] Request code review (`superpowers:requesting-code-review`) covering: the `CloudShellUniforms` byte-layout parity, the `raySphereRoots` intersection test, the shadow-darken + night-occlusion composition, the two-consumer commit fan-out, and the clouds data chain (registry/source/kinds/filename/`writeCloudTier`).
-- [ ] Confirm the DoD before marking the plan done (`/feature-done`), which sweeps the backlog + relocates spec/plan on merge.
+- [x] Run `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
+- [x] Request code review (`superpowers:requesting-code-review`) covering: the `CloudShellUniforms` byte-layout parity, the `raySphereRoots` intersection test, the shadow-darken + night-occlusion composition, the two-consumer commit fan-out, and the clouds data chain (registry/source/kinds/filename/`writeCloudTier`).
+- [x] Confirm the DoD before marking the plan done (`/feature-done`), which sweeps the backlog + relocates spec/plan on merge.
 
 ---
 
