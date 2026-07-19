@@ -72,16 +72,16 @@ export function atmosphereDrawList(
 
 **Steps (TDD):**
 
-- [ ] Add the `AtmosphereDrawEntry` type (one type per file; `EarthBody`/`PlanetBody`/`AtmosphereParams` alias imports) with a didactic header.
-- [ ] Write `tests/services/engine/frame/atmosphereDrawList.test.ts` — the behavioral branches, each an independent reason to fail (model the fixture on `encodeAtmosphereSkyView.test.ts`'s `makeState`/`makeCtx`, extended with `data.bodies.planets` and `ctx.canvasSize`/`ctx.fovYRad`):
-  - [ ] `includes a body with a row, in near-field range, and a supra-pixel disc` — Earth seeded, `ctx.cam.distance` inside the near-field edge, `canvasSize`/`fovYRad`/`drawCamPos` chosen so the disc clears `SUB_PIXEL_BODY_CULL_PX` ⇒ the entry is present with `body` and `params`.
-  - [ ] `excludes a body with no ATMOSPHERE_PARAMS row` — a seeded planet whose id is absent from `ATMOSPHERE_PARAMS` ⇒ not in the list (the data-gate).
-  - [ ] `excludes a body beyond FOREGROUND_MAX_DISTANCE_MPC` — `ctx.cam.distance === FOREGROUND_MAX_DISTANCE_MPC` ⇒ empty (distance cull).
-  - [ ] `excludes a body whose disc is sub-pixel` — same body but `drawCamPos` far enough (or a tiny `canvasSize.height`) that the disc falls below `SUB_PIXEL_BODY_CULL_PX` ⇒ not in the list (this is the cull that makes the bake↔draw relation equality).
-  - [ ] `skips a null earth without throwing` — `state.data.bodies.earth === null`, `planets: []` ⇒ empty list, no throw.
-- [ ] Implement `atmosphereDrawList`.
-- [ ] `npm test -- atmosphereDrawList` green; `npx tsc --noEmit` clean.
-- [ ] Commit (`AtmosphereDrawEntry.d.ts`, `atmosphereDrawList.ts`, its test).
+- [x] Add the `AtmosphereDrawEntry` type (one type per file; `EarthBody`/`PlanetBody`/`AtmosphereParams` alias imports) with a didactic header.
+- [x] Write `tests/services/engine/frame/atmosphereDrawList.test.ts` — the behavioral branches, each an independent reason to fail (model the fixture on `encodeAtmosphereSkyView.test.ts`'s `makeState`/`makeCtx`, extended with `data.bodies.planets` and `ctx.canvasSize`/`ctx.fovYRad`):
+  - [x] `includes a body with a row, in near-field range, and a supra-pixel disc` — Earth seeded, `ctx.cam.distance` inside the near-field edge, `canvasSize`/`fovYRad`/`drawCamPos` chosen so the disc clears `SUB_PIXEL_BODY_CULL_PX` ⇒ the entry is present with `body` and `params`.
+  - [x] `excludes a body with no ATMOSPHERE_PARAMS row` — a seeded planet whose id is absent from `ATMOSPHERE_PARAMS` ⇒ not in the list (the data-gate).
+  - [x] `excludes a body beyond FOREGROUND_MAX_DISTANCE_MPC` — `ctx.cam.distance === FOREGROUND_MAX_DISTANCE_MPC` ⇒ empty (distance cull).
+  - [x] `excludes a body whose disc is sub-pixel` — same body but `drawCamPos` far enough (or a tiny `canvasSize.height`) that the disc falls below `SUB_PIXEL_BODY_CULL_PX` ⇒ not in the list (this is the cull that makes the bake↔draw relation equality).
+  - [x] `skips a null earth without throwing` — `state.data.bodies.earth === null`, `planets: []` ⇒ empty list, no throw.
+- [x] Implement `atmosphereDrawList`.
+- [x] `npm test -- atmosphereDrawList` green; `npx tsc --noEmit` clean.
+- [x] Commit (`AtmosphereDrawEntry.d.ts`, `atmosphereDrawList.ts`, its test).
 
 ---
 
@@ -101,11 +101,11 @@ export function atmosphereDrawList(
 
 **Steps:**
 
-- [ ] Rewrite `atmosphereShellLayer.ts` to iterate `atmosphereDrawList`; delete the local derivation + duplicated imports; update the header (superset→equality, shared derivation).
-- [ ] Rewrite `encodeAtmosphereSkyView.ts` to iterate `atmosphereDrawList`; delete the duplicated gate; update the header.
-- [ ] Update `encodeAtmosphereSkyView.test.ts` fixtures (`planets: []`, `canvasSize`, `fovYRad`) so the bake case is supra-pixel; keep the packing + no-op assertions.
-- [ ] `npm test -- encodeAtmosphereSkyView` green; `npx tsc --noEmit` clean.
-- [ ] Commit (both consumers + the test).
+- [x] Rewrite `atmosphereShellLayer.ts` to iterate `atmosphereDrawList`; delete the local derivation + duplicated imports; update the header (superset→equality, shared derivation).
+- [x] Rewrite `encodeAtmosphereSkyView.ts` to iterate `atmosphereDrawList`; delete the duplicated gate; update the header.
+- [x] Update `encodeAtmosphereSkyView.test.ts` fixtures (`planets: []`, `canvasSize`, `fovYRad`) so the bake case is supra-pixel; keep the packing + no-op assertions.
+- [x] `npm test -- encodeAtmosphereSkyView` green; `npx tsc --noEmit` clean.
+- [x] Commit (both consumers + the test).
 
 ---
 
@@ -164,13 +164,13 @@ type AtmosphereShellRenderer = Renderer & {
 
 **Steps:**
 
-- [ ] Reshape `atmosphereShellRenderer.ts` to `paramsById` + per-body `Map<string, AtmosphereBundle>`, shared pipelines/sampler/mesh, one-encoder bake loop, `bodyId`-selecting `encodeSkyView`/`draw` (throw on unknown), bundle-looping `destroy`. Update the module header (per-body bundles; the shared-vs-per-body split rationale).
-- [ ] Update `AtmosphereShellRenderer.d.ts`: per-`bodyId` signatures, "one bundle per `paramsById` row" prose, corrected `cullMode: 'none'` + `front_facing` description.
-- [ ] `initGpu.ts`: pass the whole `ATMOSPHERE_PARAMS` table; update the comment.
-- [ ] `atmosphereShellLayer.ts` + `encodeAtmosphereSkyView.ts`: pass `body.id` at the `draw` / `encodeSkyView` call sites.
-- [ ] `encodeAtmosphereSkyView.test.ts`: update the spy-call destructure to the 3-arg shape; assert the `bodyId`.
-- [ ] `npx tsc --noEmit` clean; `npm test -- encodeAtmosphereSkyView` green; `npm run build` clean (the WESL relinks — watch the shared-encoder frame-drop failure mode).
-- [ ] Commit (renderer, `.d.ts`, `initGpu`, both consumers, the test — stage each path explicitly).
+- [x] Reshape `atmosphereShellRenderer.ts` to `paramsById` + per-body `Map<string, AtmosphereBundle>`, shared pipelines/sampler/mesh, one-encoder bake loop, `bodyId`-selecting `encodeSkyView`/`draw` (throw on unknown), bundle-looping `destroy`. Update the module header (per-body bundles; the shared-vs-per-body split rationale).
+- [x] Update `AtmosphereShellRenderer.d.ts`: per-`bodyId` signatures, "one bundle per `paramsById` row" prose, corrected `cullMode: 'none'` + `front_facing` description.
+- [x] `initGpu.ts`: pass the whole `ATMOSPHERE_PARAMS` table; update the comment.
+- [x] `atmosphereShellLayer.ts` + `encodeAtmosphereSkyView.ts`: pass `body.id` at the `draw` / `encodeSkyView` call sites.
+- [x] `encodeAtmosphereSkyView.test.ts`: update the spy-call destructure to the 3-arg shape; assert the `bodyId`.
+- [x] `npx tsc --noEmit` clean; `npm test -- encodeAtmosphereSkyView` green; `npm run build` clean (the WESL relinks — watch the shared-encoder frame-drop failure mode).
+- [x] Commit (renderer, `.d.ts`, `initGpu`, both consumers, the test — stage each path explicitly).
 
 ---
 
@@ -178,13 +178,13 @@ type AtmosphereShellRenderer = Renderer & {
 
 **Files:** none (review).
 
-- [ ] Run the `entanglement-radar` skill over the whole branch diff (house convention `feedback_operationalize_simplicity`). Pay attention to:
+- [x] Run the `entanglement-radar` skill over the whole branch diff (house convention `feedback_operationalize_simplicity`). Pay attention to:
   - `atmosphereDrawList` being the **single** home for the `bodies.earth`+gate derivation — confirm NO residual `bodies.earth` read or gate copy survives in `atmosphereShellLayer` / `encodeAtmosphereSkyView` (the whole point of the consolidation; a leftover copy re-braids the two sites);
   - the bake↔draw relation being **equality** by construction (both read the same list), not two prose-linked copies — confirm no separate bake gate remains and the "superset" prose is gone from both headers;
   - the renderer's **shared-vs-per-body** split being clean — pipelines/sampler/mesh created once, only textures/buffers/bind-groups per body (no accidental per-body pipeline, which would be the `'auto'`-layout-style duplication);
   - `paramsById` staying pure data with **no per-body branch** in the renderer (a body is a `Map` entry, never an `if (id === …)`);
   - the exposure/sunIrradiance reads still being the unchanged Earth-row values (no premature feature-PR `body.id === 'earth' ? …` branch crept in).
-- [ ] Address findings (or record why deferred); keep the suite green.
+- [x] Address findings (or record why deferred); keep the suite green.
 
 ---
 
@@ -192,6 +192,6 @@ type AtmosphereShellRenderer = Renderer & {
 
 **Files:** none.
 
-- [ ] `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
-- [ ] **Neutrality visual pass — ask the USER** (do NOT start or kill the dev server; it is left running for HMR): fly close to Earth on the running dev server and confirm the Earth limb, sunset/terminator arc, and over-disc haze read **exactly as on `main`** before this PR — the prep is behavior-neutral (spec §2.3). Explicitly ask the user to confirm on **iOS/WebKit** as well (the per-body bundle loop multiplies the LUT bakes; the risk is only the bundle count — navigation + the limb must both still present, no whole-frame drop).
-- [ ] Report the verification results (test/typecheck/build output + the user's visual confirmation) back before marking the plan done.
+- [x] `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
+- [x] **Neutrality visual pass — ask the USER** (do NOT start or kill the dev server; it is left running for HMR): fly close to Earth on the running dev server and confirm the Earth limb, sunset/terminator arc, and over-disc haze read **exactly as on `main`** before this PR — the prep is behavior-neutral (spec §2.3). Explicitly ask the user to confirm on **iOS/WebKit** as well (the per-body bundle loop multiplies the LUT bakes; the risk is only the bundle count — navigation + the limb must both still present, no whole-frame drop).
+- [x] Report the verification results (test/typecheck/build output + the user's visual confirmation) back before marking the plan done.
