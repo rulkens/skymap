@@ -59,4 +59,17 @@ describe('raySphereRoots', () => {
     const ro: Vec3 = [-3, 2, 0];
     expect(raySphereRoots(ro, PLUS_X, ORIGIN, 1)).toBeNull();
   });
+
+  it('sphere fully behind the origin still returns both (negative) roots', () => {
+    // ro=[3,0,0] looking +x, unit sphere at origin sits entirely behind us.
+    //   m=[3,0,0]; b=3; c=9-1=8; discr=9-8=1; s=1
+    //   roots = -3-1=-4, -3+1=-2   →  both negative, NOT null.
+    // This pins the documented divergence from the WESL sentinel (which
+    // early-outs `c>0 && b>0` to vec2(-1,-1)): this util returns the real
+    // roots so a caller — atmosphereShellBound — can test the sign it needs
+    // (top roots both < 0 ⇒ shell behind origin ⇒ that caller returns null).
+    // If someone "fixes" this util to match the WESL sentinel, this fails.
+    const ro: Vec3 = [3, 0, 0];
+    expect(raySphereRoots(ro, PLUS_X, ORIGIN, 1)).toEqual([-4, -2]);
+  });
 });
