@@ -4,7 +4,6 @@
  * inside the SettingsPanel's Display section.
  *
  * Owns the Earth-specific UI: the atmosphere-shell exposure slider, the
- * night-limb twilight-softness slider, the twilight-intensity slider, the
  * night-side ambient-light slider, and the ocean-roughness slider. Rendered as
  * its own CollapsibleSection (default closed, mirroring Display) nested inside
  * the Display disclosure, so an unrelated re-render higher up does not cascade
@@ -33,14 +32,6 @@ export type EarthSectionProps = {
   atmosphereExposure: number;
   /** Called with the new exposure as the slider drags. */
   onAtmosphereExposureChange: (value: number) => void;
-  /** Night-limb twilight-fade width (mu = cos-zenith) on Earth's atmosphere shell. */
-  twilightSoftness: number;
-  /** Called with the new twilight softness as the slider drags. */
-  onTwilightSoftnessChange: (value: number) => void;
-  /** Brightness gain on Earth's night-limb twilight band (1 = physical). */
-  twilightIntensity: number;
-  /** Called with the new twilight intensity as the slider drags. */
-  onTwilightIntensityChange: (value: number) => void;
   /** Night-side ambient floor on Earth's surface + cloud shell. */
   ambientLight: number;
   /** Called with the new ambient floor as the slider drags. */
@@ -55,17 +46,12 @@ export type EarthSectionProps = {
 
 /**
  * Renders the Earth subgroup: the atmosphere-shell exposure slider, the
- * night-limb twilight-softness slider, the twilight-intensity slider, the
  * night-side ambient-light slider, and the ocean-roughness slider in a
  * default-closed disclosure nested inside the Display section.
  */
 function EarthSection({
   atmosphereExposure,
   onAtmosphereExposureChange,
-  twilightSoftness,
-  onTwilightSoftnessChange,
-  twilightIntensity,
-  onTwilightIntensityChange,
   ambientLight,
   onAmbientLightChange,
   oceanRoughness,
@@ -86,36 +72,6 @@ function EarthSection({
           step="0.05"
           value={atmosphereExposure}
           onChange={(e) => onAtmosphereExposureChange(Number(e.target.value))}
-        />
-      </div>
-      <div className={styles.panelRow}>
-        <label htmlFor="twilight-softness">Twilight softness</label>
-        <span className={styles.panelValue}>{twilightSoftness.toFixed(3)}</span>
-      </div>
-      <div className={styles.panelRow}>
-        <input
-          id="twilight-softness"
-          type="range"
-          min="0"
-          max="0.5"
-          step="0.005"
-          value={twilightSoftness}
-          onChange={(e) => onTwilightSoftnessChange(Number(e.target.value))}
-        />
-      </div>
-      <div className={styles.panelRow}>
-        <label htmlFor="twilight-intensity">Twilight intensity</label>
-        <span className={styles.panelValue}>{twilightIntensity.toFixed(2)}</span>
-      </div>
-      <div className={styles.panelRow}>
-        <input
-          id="twilight-intensity"
-          type="range"
-          min="0"
-          max="10"
-          step="0.05"
-          value={twilightIntensity}
-          onChange={(e) => onTwilightIntensityChange(Number(e.target.value))}
         />
       </div>
       <div className={styles.panelRow}>

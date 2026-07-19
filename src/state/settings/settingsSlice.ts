@@ -138,18 +138,6 @@ const settingsSlice = createSlice({
     setAtmosphereExposure: (settings, action: PayloadAction<number>) => {
       settings.earth.atmosphereExposure = action.payload;
     },
-    // Night-limb twilight-fade width on Earth's atmosphere shell — read live by
-    // `encodeAtmosphereSkyView` (packed into the per-frame `SkyViewParams`) each
-    // frame. The exposure seam's twin: Earth alone carries a live slider.
-    setTwilightSoftness: (settings, action: PayloadAction<number>) => {
-      settings.earth.twilightSoftness = action.payload;
-    },
-    // Night-limb twilight-band brightness gain on Earth's atmosphere shell — read
-    // live by `encodeAtmosphereSkyView` (packed into the per-frame `SkyViewParams`)
-    // each frame, the exact twin of `setTwilightSoftness`.
-    setTwilightIntensity: (settings, action: PayloadAction<number>) => {
-      settings.earth.twilightIntensity = action.payload;
-    },
     // Night-side ambient floor on Earth's surface + cloud shell — read live by
     // `earthLayer` / `cloudShellLayer` each frame. An Earth-scoped override of
     // the shared `AMBIENT` const (which stays every other lit body's floor).
@@ -430,8 +418,6 @@ export const {
   setFilamentsEnabled,
   setFilamentIntensity,
   setAtmosphereExposure,
-  setTwilightSoftness,
-  setTwilightIntensity,
   setAmbientLight,
   setOceanRoughness,
   setStarCatalogEnabled,

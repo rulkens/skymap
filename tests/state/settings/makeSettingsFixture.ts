@@ -108,8 +108,6 @@ export function makeSettingsFixture(
       // `earth` is a definitional row in the atmosphere table, so the indexed
       // read is non-null (see `initialState.ts` — the index signature widens it).
       atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure,
-      twilightSoftness: ATMOSPHERE_PARAMS.earth!.twilightSoftness,
-      twilightIntensity: ATMOSPHERE_PARAMS.earth!.twilightIntensity,
       ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
       oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
     },

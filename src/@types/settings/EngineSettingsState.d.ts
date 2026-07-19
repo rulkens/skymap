@@ -137,23 +137,10 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Earth's per-body look dials. Four fields today:
+   * Earth's per-body look dials. Three fields today:
    *   - `atmosphereExposure`, the exposure scale on the in-scatter atmosphere
    *     shell's HDR output. Seeded from `ATMOSPHERE_PARAMS.earth.exposure` and
    *     read live by `atmosphereShellLayer` each frame.
-   *   - `twilightSoftness`, the night-limb twilight-fade width (in mu = cos-zenith
-   *     space) — how far past the terminator the single-scatter sun source fades
-   *     before deep planet shadow goes black. Seeded from
-   *     `ATMOSPHERE_PARAMS.earth.twilightSoftness` and read live by
-   *     `encodeAtmosphereSkyView`, which packs it into the per-frame `SkyViewParams`
-   *     (NOT the construction-written `ScatteringParams`, which is why the slider
-   *     tunes it live). The exact exposure-seam twin: Earth reads this settings
-   *     value, every other body reads its own `AtmosphereParams` row.
-   *   - `twilightIntensity`, the brightness gain on the night-limb twilight band
-   *     (1 = physical result, > 1 amplifies only the band). Seeded from
-   *     `ATMOSPHERE_PARAMS.earth.twilightIntensity` and read live by
-   *     `encodeAtmosphereSkyView` through the IDENTICAL Earth-keyed seam as
-   *     `twilightSoftness`.
    *   - `ambientLight`, the night-side ambient floor lifting Earth's unlit
    *     hemisphere off pure black (earthshine / moonlight, physically). Seeded
    *     from `EARTH_SURFACE_PARAMS.ambientLight` — the SAME value as the shared
@@ -172,8 +159,6 @@ export type EngineSettingsState = {
    */
   earth: {
     atmosphereExposure: number;
-    twilightSoftness: number;
-    twilightIntensity: number;
     ambientLight: number;
     oceanRoughness: number;
   };

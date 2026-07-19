@@ -7,11 +7,10 @@
  * it; on iOS it drops the frame). We pin the three live fields —
  * `viewHeightKm = |camPosLocal| × atmosphereTopKm` at slot 0,
  * `sunZenithCos = dot(normalize(camPosLocal), sunDirLocal)` at slot 1, and the
- * Earth-keyed `twilightSoftness` (the settings-slider value) at slot 2 — by
- * recomputing them from the contract's formula, so a slot swap, a dropped
- * `× atmosphereTopKm`, or a surface-vs-atmosphere-top radius choice lands as a
- * failure here. Slot 2 riding the settings value (not the params-row seed) is
- * what makes the twilight knob live — the exposure seam's twin.
+ * body's `twilightSoftness` params-row value at slot 2 — by recomputing them from
+ * the contract's formula, so a slot swap, a dropped `× atmosphereTopKm`, or a
+ * surface-vs-atmosphere-top radius choice lands as a failure here. Slots 2 + 3
+ * pack the body's `AtmosphereParams` twilight softness + intensity for every body.
  *
  * The other load-bearing assertion is the SOURCE of the camera altitude: the
  * bake must read the RENDERED pose (`ctx.drawCamPos`) — the exact vector the
@@ -49,20 +48,10 @@ function spyRenderer(): { encodeSkyView: ReturnType<typeof vi.fn> } {
   return { encodeSkyView: vi.fn() };
 }
 
-// The Earth-keyed live twilight-fade width the encode packs at slot 2 for Earth.
-// Distinct from any params-row value so the assertion pins the SETTINGS read
-// (the live seam), not the construction-time seed.
-const EARTH_TWILIGHT_SOFTNESS = 0.123;
-
-// The Earth-keyed live twilight-band brightness gain the encode packs at slot 3.
-// Distinct from the params-row default (1.0) so the assertion pins the SETTINGS
-// read, the exact twin of the slot-2 twilight-softness seam.
-const EARTH_TWILIGHT_INTENSITY = 4.2;
-
 /**
  * Assemble the minimal EngineState the encode reads: the renderer handle off
- * `gpu`, the seeded bodies off `data.bodies`, and `settings.earth.twilightSoftness`
- * (the live slider value the Earth-keyed seam reads each frame).
+ * `gpu` and the seeded bodies off `data.bodies`. The twilight softness + intensity
+ * come from each body's `AtmosphereParams` row, so no settings are read.
  * `atmosphereDrawList` spreads `bodies.planets`, so seed it empty (only Earth
  * carries an atmosphere row today). `camStalePosition` is threaded onto
  * `state.cam.position` — the STALE drag register the encode must NOT read.
@@ -77,12 +66,6 @@ function makeState(init: {
     gpu: { atmosphereShellRenderer: init.renderer },
     data: {
       bodies: { earth: 'earth' in init ? (init.earth ?? null) : SCENE_EARTH, planets: [] },
-    },
-    settings: {
-      earth: {
-        twilightSoftness: EARTH_TWILIGHT_SOFTNESS,
-        twilightIntensity: EARTH_TWILIGHT_INTENSITY,
-      },
     },
     cam,
   } as unknown as EngineState;
@@ -217,10 +200,9 @@ describe('encodeAtmosphereSkyView', () => {
     // height must clear the ground radius — a guard against a surface-radius
     // mis-scale that would collapse the altitude.
     expect(uniforms[0]!).toBeGreaterThan(params.planetRadiusKm);
-    // Slots 2 + 3 carry the LIVE settings twilight softness + intensity for Earth
-    // (the exposure seam's twins), not the params-row seeds — the transport that
-    // makes them tunable.
-    expect(uniforms[2]).toBe(Math.fround(EARTH_TWILIGHT_SOFTNESS));
-    expect(uniforms[3]).toBe(Math.fround(EARTH_TWILIGHT_INTENSITY));
+    // Slots 2 + 3 carry the body's `AtmosphereParams` twilight softness + intensity
+    // — packed from the params row for every body.
+    expect(uniforms[2]).toBe(Math.fround(params.twilightSoftness));
+    expect(uniforms[3]).toBe(Math.fround(params.twilightIntensity));
   });
 });
