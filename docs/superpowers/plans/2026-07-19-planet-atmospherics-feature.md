@@ -319,6 +319,11 @@ No `strength`/`exponent` value test.
 
 ## Task 6: entanglement-radar review + full verification + per-body visual pass
 
+> **Execution order:** **Task 7 (`twilightSoftness`) executes BEFORE this task.** Task 6
+> stays the final verification / visual-pass task — the twilight knob must be in the tree
+> before this pass so the Earth night-limb check below has something to verify. (Task 7 is
+> numbered after Task 6 only because it was added on 2026-07-19, mid-execution.)
+
 **Files:** none (review + verification + visual).
 
 - [ ] Run the `entanglement-radar` skill over the whole feature-branch diff (house convention). Pay attention to:
@@ -337,10 +342,105 @@ No `strength`/`exponent` value test.
   - **Uranus / Neptune** — limb darkening + a cyan-blue methane limb.
   - **Airless control** — Mercury, Moon, Galileans show NO limb band and NO disc darkening (both tables absent → identity).
   - **Moon-in-front occlusion** still correct (the depth test, unchanged).
-  - **Earth pixel-identical** — limb, sunset arc, over-disc haze read exactly as before the six rows (spec §2.3 / §5.3).
+  - **Earth pixel-identical** — limb, sunset arc, over-disc haze read exactly as before the six rows (spec §2.3 / §5.3). (The night-limb twilight ring below is the one deliberate Earth change, from Task 7.)
+  - **Earth night-side limb shows a soft twilight ring fading to true black** — no hard edge, no constant grazing glow in deep shadow (Task 7 / spec §7.1). Tune `twilightSoftness` on the Earth row via HMR if the band reads too wide or too narrow.
   - **iOS spot-check** — the extra shells + the reshaped `TexturedBodyUniforms` present correctly on iOS WebKit (the risk is the multiplied bundle count + the new uniform tail; a bad struct silently blanks the canvas).
 - [ ] Tune coefficients with the user via HMR as needed (no commit needed for a pure look tweak unless a value changes on disk — those coefficient edits DO get committed as the final tuned values).
 - [ ] Confirm the DoD before marking the plan done (`/feature-done`, which sweeps the backlog + relocates spec/plan on merge — run BEFORE merge per feedback_feature_done_before_merge).
+
+---
+
+## Task 7: `twilightSoftness` — per-body night-limb twilight knob
+
+> **Execution order:** **Task 7 EXECUTES BEFORE Task 6.** Task 6 stays the final
+> verification / visual-pass task; this knob must be in the tree before that pass so the
+> Earth night-limb check (Task 6) has something to verify. It is numbered 7 only because it
+> was added on **2026-07-19, mid-execution** (user-approved scope addition), after Tasks 1–6
+> were written. It lands AFTER Task 2, so every row (earth + the six new rows) gets a value
+> in one edit.
+
+A per-body `twilightSoftness` field on `AtmosphereParams` (unit: a width in mu = cos-zenith
+space; `0` disables) that fades the single-scatter sun source across the terminator. It fixes
+an existing unphysical clamp: today a march sample in deep planet shadow still receives the
+transmittance LUT's horizon-grazing edge (deep-red, small, nonzero), so the night limb never
+goes properly black and the terminator falloff is uncontrollable (spec §7.1).
+
+**Files:**
+
+- Modify `src/@types/scene/AtmosphereParams.d.ts` (one new field on the row)
+- Modify `src/data/bodies/atmosphereParams.ts` (a `twilightSoftness` value on all seven rows)
+- Modify `src/utils/gpu/packScatteringParams.ts` (`out[18]` = the field; header slot-table comment)
+- Modify `src/services/gpu/shaders/atmosphere/scattering.wesl` (`_pad0` → `twilightSoftness` in `ScatteringParams` + its byte-layout comment)
+- Modify `src/services/gpu/shaders/atmosphere/skyViewLut.wesl` (the `muHorizon` / `sunVis` weighting in `raymarchInScatter`)
+- Test: extend the existing packer parity test `tests/utils/gpu/packScatteringParams.test.ts` with a slot-18 assertion (no new test file — this is the test that already covers the packer's byte layout)
+
+**Interfaces:**
+
+Consumes the post-Task-1/Task-2 `AtmosphereParams` type + its seven rows (earth + the six new
+rows from Task 2). Produces `twilightSoftness: number` on the type, slot 18 in the packer
+(replacing `_pad0`), and the two WESL edits (the struct field rename + the `raymarchInScatter`
+weighting).
+
+**The type field (append to the row):**
+
+```ts
+// @types/scene/AtmosphereParams.d.ts
+readonly twilightSoftness: number; // night-limb twilight width in mu (cos-zenith) space; 0 = hard shadow (no fade)
+```
+
+**The packer line + slot-table row (`packScatteringParams.ts`):**
+
+```ts
+out[18] = params.twilightSoftness; // was the zeroed _pad0
+// its header slot-table comment gains the row:  f32 18 twilightSoftness, 19 _pad1
+```
+
+**The `scattering.wesl` struct field:** `_pad0: f32,` → `twilightSoftness: f32,` in
+`struct ScatteringParams`, and its byte-layout comment's `offset 72..75 : _pad0` row becomes
+`twilightSoftness`.
+
+**The `skyViewLut.wesl` weighting** (single quotes in comments; never backticks — house rule),
+replacing the current `let s = ...` line in `raymarchInScatter`:
+
+```
+// twilightSoftness: fade the single-scatter sun source across the terminator so deep
+// planet shadow goes black instead of clamping to the transmittance LUT's grazing edge.
+// 'muHorizon' is the sun-zenith cosine at which the sun grazes this sample's local
+// horizon. Multi-scatter is left unfactored (isotropic ambient floor; its own LUT
+// already decays with sun depression).
+let muHorizon = -sqrt(max(0.0, r * r - bottom * bottom)) / r;
+let sunVis = smoothstep(muHorizon - params.twilightSoftness, muHorizon, sunCosZenith);
+let s = sunVis * sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal;
+```
+
+(`bottom = params.planetRadiusKm` and `r = length(pos)` are already in scope.)
+
+**The seven row values** (HMR-tunable starting points; eye-tuned, **no numeric test** — the
+same convention the other coefficients follow, spec §7 / §10): earth `0.05`, venus `0.05`,
+mars `0.07`, jupiter `0.03`, saturn `0.03`, uranus `0.03`, neptune `0.03`.
+
+**Resolved decisions (spec §7.1):**
+
+- **Single-scatter only** — only the phase-weighted single-scatter source is factored by
+  `sunVis`; the multi-scatter term stays as-is (factoring it too would double-darken the
+  night limb; that is the deferred refinement if the night side reads too bright).
+- **Startup LUTs untouched** — only the per-frame sky-view bake reads the knob, so HMR tuning
+  is instant (no transmittance / multi-scatter rebake).
+- **Replaces `_pad0`** — no struct or byte growth (80 B / 20 f32 unchanged); slot 19 `_pad1`
+  remains.
+- **Lands AFTER Task 2** — the six rows must already exist so every row (earth + six) gets a
+  `twilightSoftness` value in one edit, no orphaned row.
+
+**Steps (TDD):**
+
+- [ ] Extend `tests/utils/gpu/packScatteringParams.test.ts`: add `twilightSoftness` to the `PARAMS` fixture (a distinct dyadic sentinel, e.g. `19 / 16`) and change the slot-18 assertion from `expect(rec[18]).toBe(0)` to `expect(rec[18]).toBe(PARAMS.twilightSoftness)` (slot 19 stays `0`). Red — the packer still writes `0` at slot 18.
+- [ ] Add `twilightSoftness` to `AtmosphereParams`; set the seven row values in `atmosphereParams.ts`; write `out[18] = params.twilightSoftness` in `packScatteringParams.ts` and update its slot-table comment (`18 twilightSoftness, 19 _pad1`). Green.
+- [ ] Rename `_pad0` → `twilightSoftness` in `scattering.wesl`'s `ScatteringParams` struct + its byte-layout comment; add the `muHorizon` / `sunVis` weighting to `raymarchInScatter` in `skyViewLut.wesl` (single quotes, no backticks).
+- [ ] `npx tsc --noEmit` clean; focused `npm test -- packScatteringParams` green; `npm run build` clean (WESL relink — iOS-strict: valid struct layout; `smoothstep` / `sqrt` are core WGSL, no `texture_1d` risk here).
+- [ ] Commit (stage each path) with a `feat(atmosphere): per-body twilightSoftness night-limb knob` message.
+
+The per-body visual pass (including the Earth night-limb twilight-ring check) happens in
+Task 6, which runs after this task.
 
 ---
 
@@ -348,6 +448,7 @@ No `strength`/`exponent` value test.
 
 - **`AtmosphereParams`** (`@types/scene/AtmosphereParams.d.ts`) grows `sunIrradiance` + `exposure`; `ATMOSPHERE_SHELL_PARAMS` is deleted (Earth row absorbs its `1.0` / `2.35`).
 - **`ATMOSPHERE_PARAMS`** (`data/bodies/atmosphereParams.ts`) grows six rows (venus, mars, jupiter, saturn, uranus, neptune); `planetRadiusKm` + `groundAlbedo` derived from `SCENE_PLANETS`.
+- **`AtmosphereParams.twilightSoftness`** (Task 7, added 2026-07-19 mid-execution) — night-limb twilight-fade width in mu space; packed into `ScatteringParams` slot 18 (replaces `_pad0`, no struct growth), consumed by `raymarchInScatter` in `skyViewLut.wesl` as a `smoothstep` sun-visibility factor on the single-scatter source.
 - **`LIMB_DARKENING_PARAMS`** (`data/bodies/limbDarkeningParams.ts`) — NEW `Record<string, { strength; exponent }>`; five rows (venus, jupiter, saturn, uranus, neptune).
 - **`lib/limbDarkening.wesl`** — NEW `limbDarkening(mu0, mu, strength, exponent) -> f32` (Minnaert relative to Lambert).
 - **`TexturedBodyUniforms`** (`lib/sphere.wesl`) — 96 → 112 bytes / 24 → 28 f32: `_pad0`→`limbStrength` [22], `_pad1`→`limbExponent` [23], + `camPosLocal` [24..26] + `_pad0` [27]. `packTexturedBodyUniforms` gains `limbStrength`, `limbExponent`, `camPosLocal` args; `TEXTURED_BODY_UNIFORM_FLOATS = 28`; `texturedBodyRenderer` `UNIFORM_BUFFER_SIZE = 112`.
