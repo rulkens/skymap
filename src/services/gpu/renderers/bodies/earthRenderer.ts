@@ -2,10 +2,20 @@
  * earthRenderer — true-scale, texture-mapped Earth drawn into the opaque
  * near-field foreground target.
  *
- * The geometry is the same UV sphere every body renderer uses
- * (`uvSphereMesh`), shaded by sampling an equirectangular Blue Marble bitmap
- * and attenuated by the shared sun-relative Lambert term
- * (`lib/bodyLighting.wesl` `litShade`). It shares `lib/sphere.wesl`'s uniform
+ * The geometry is a cube-sphere — the six whole level-0 faces of
+ * `cubeSphereMesh` concatenated into one indexed mesh — shaded by sampling an
+ * equirectangular Blue Marble bitmap and attenuated by the shared sun-relative
+ * Lambert term. Earth switched off the shared `uvSphereMesh` (still used by the
+ * distant star/planet renderers) because a UV sphere collapses every longitude
+ * into a single vertex at each pole: the cap triangles degenerate and the
+ * equirectangular map puckers where the continents smear across the pinch. A
+ * cube-sphere subdivides each cube face into a uniform quad grid normalized to
+ * the unit sphere, so the silhouette stays even and pole-pinch-free at the
+ * close-approach descent — and the `(face, level, tileX, tileY)` parameters set
+ * up Plan C's terrain quadtree without a later mesh swap. The mesh keeps
+ * J2000 / equirect / CCW parity with `uvSphereMesh`, so the orientation and
+ * winding notes below carry over unchanged. The Lambert term is
+ * `lib/bodyLighting.wesl`'s `litShade`. It shares `lib/sphere.wesl`'s uniform
  * (`LitBodyUniforms`, an 80-byte block: the mat4x4<f32> MVP plus the
  * body-local sun direction, with a zeroed pad tail — the ambient floor is the
  * shared `AMBIENT` const in `lib/bodyLighting.wesl`, not a uniform field) and
@@ -37,7 +47,7 @@
  *
  * ### uv / texture orientation
  *
- * `uvSphereMesh` emits v south-to-north (v=0 south pole, v=1 north pole).
+ * `cubeSphereMesh` emits v south-to-north (v=0 south pole, v=1 north pole).
  * Equirectangular Blue Marble imagery stores the north pole in its top row, so
  * the bitmap is uploaded with `flipY: true` — texture v=0 becomes the image's
  * bottom (south) row, matching the mesh's south-first v. So v needs no remap.
@@ -47,7 +57,7 @@
  * sphere — matching an equirectangular map's east-increases-left-to-right
  * convention, and the raw u draws the continents in the correct orientation.
  * See `earth/fragment.wesl` for the two-vertex derivation. The sampler still
- * uses `repeat` addressing on u so the mesh's duplicated seam column wraps
+ * uses `repeat` addressing on u so the mesh's per-triangle seam duplicates wrap
  * cleanly across the longitude seam.
  *
  * ### Pipeline state
@@ -56,7 +66,7 @@
  * `rgba16float`). Depth: the caller's `depthFormat` (`depth32float`) with
  * `depthWriteEnabled: true` + `depthCompare: 'less'` so the Earth occludes /
  * is occluded correctly. Front face CCW + `cull: 'back'` matches
- * `uvSphereMesh`'s outward winding. No blend descriptor = opaque replace; the
+ * `cubeSphereMesh`'s outward winding. No blend descriptor = opaque replace; the
  * fragment emits alpha=1 and the foreground composite handles layer blending.
  *
  * ### Bind group layout
@@ -82,24 +92,78 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { EarthRenderer } from '../../../../@types/rendering/EarthRenderer';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
-import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
+import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/earth/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 
-/** UV-sphere tessellation counts — 48 segments × 24 rings gives a smooth
- *  silhouette at close range without overwhelming the vertex throughput.
- *  Matches `starRenderer` / `planetRenderer` so every sphere body shares a
- *  mesh shape. */
-const SEGMENTS = 48;
-const RINGS = 24;
+/** Per-face grid subdivision for the cube-sphere: each of the six faces is a
+ *  `RES × RES` quad grid, so the whole globe is `6 × 48² ≈ 13.8k` quads — about
+ *  12× the old 48×24 UV sphere's 1,152 quads, but still trivial for a single
+ *  hero-body draw. The extra density buys even, pole-pinch-free tessellation
+ *  (no polar vertex singularity) at the close-approach descent, and (per spec
+ *  §11) this is a single fixed subdivision with no runtime LOD. A future
+ *  terrain LOD can subdivide per-tile via the generator's `(face, level,
+ *  tileX, tileY)` addressing without touching this build. */
+const CUBESPHERE_FACE_RESOLUTION = 48;
 
 /** `LitBodyUniforms` is 80 bytes (20 f32): the 64-byte mat4x4<f32> MVP plus the
  *  body-local sun direction (vec3, 16-byte aligned at offset 64) and a zeroed
  *  pad tail — the ambient floor lives in `lib/bodyLighting.wesl`'s `AMBIENT`
  *  const, not a uniform field. Written from `packLitBodyUniforms`. */
 const UNIFORM_BUFFER_SIZE = 80;
+
+/** Concatenate the six whole level-0 cube-sphere faces into one indexed mesh.
+ *  Each `cubeSphereMesh` call builds a single face tile, so we sum the six
+ *  faces' vertex/index counts, then copy each face's positions/uvs end-to-end
+ *  and re-base its indices by the running vertex count so they address the
+ *  merged position array. Sizes aren't known up-front (per-triangle seam
+ *  duplication appends a variable handful of vertices), hence the two-pass
+ *  measure-then-fill. Tangents are intentionally dropped — Plan C uploads them
+ *  when the normal map is sampled, so emitting a tangent VBO now would leave a
+ *  dead vertex buffer + varying. */
+function concatCubeSphereFaces(resolution: number): {
+  positions: Float32Array;
+  uvs: Float32Array;
+  indices: Uint32Array;
+} {
+  const faces: ReturnType<typeof cubeSphereMesh>[] = [];
+  for (let face = 0; face < 6; face++) {
+    faces.push(cubeSphereMesh(face, 0, 0, 0, resolution));
+  }
+
+  let totalPos = 0;
+  let totalUv = 0;
+  let totalIdx = 0;
+  for (const f of faces) {
+    totalPos += f.positions.length;
+    totalUv += f.uvs.length;
+    totalIdx += f.indices.length;
+  }
+
+  const positions = new Float32Array(totalPos);
+  const uvs = new Float32Array(totalUv);
+  const indices = new Uint32Array(totalIdx);
+
+  let posOff = 0;
+  let uvOff = 0;
+  let idxOff = 0;
+  let vertexBase = 0; // running vertex count = index rebase offset for this face
+  for (const f of faces) {
+    positions.set(f.positions, posOff);
+    uvs.set(f.uvs, uvOff);
+    for (let k = 0; k < f.indices.length; k++) {
+      indices[idxOff + k] = (f.indices[k] as number) + vertexBase;
+    }
+    posOff += f.positions.length;
+    uvOff += f.uvs.length;
+    idxOff += f.indices.length;
+    vertexBase += f.positions.length / 3;
+  }
+
+  return { positions, uvs, indices };
+}
 
 export function createEarthRenderer(
   device: GPUDevice,
@@ -113,8 +177,15 @@ export function createEarthRenderer(
   // They go into two tightly-packed VBOs — positions (f32x3, stride 12) at
   // slot 0, uvs (f32x2, stride 8) at slot 1 — matching the two vertex-buffer
   // layouts declared on the pipeline. Two separate buffers (rather than one
-  // interleaved) mirror `uvSphereMesh`'s two output arrays with no repack.
-  const mesh = uvSphereMesh(SEGMENTS, RINGS);
+  // interleaved) mirror the mesh's two output arrays with no repack.
+  //
+  // `cubeSphereMesh` builds ONE face tile per call, so the six whole level-0
+  // faces are concatenated here into a single indexed mesh: positions and uvs
+  // are appended end-to-end, and each face's indices are offset by the running
+  // vertex count so they address the concatenated position array. (The mesh
+  // also emits tangents; Plan C uploads them for normal mapping — this task
+  // drops them so there is no dead vertex buffer / varying.)
+  const mesh = concatCubeSphereFaces(CUBESPHERE_FACE_RESOLUTION);
   const indexCount = mesh.indices.length;
 
   const positionBuffer = device.createBuffer({
@@ -271,7 +342,7 @@ export function createEarthRenderer(
     },
     primitive: {
       topology: 'triangle-list',
-      frontFace: 'ccw', // CCW = outward-facing (matches uvSphereMesh winding)
+      frontFace: 'ccw', // CCW = outward-facing (matches cubeSphereMesh winding)
       cullMode: 'back', // discard inward-facing (inner-surface) triangles
     },
     depthStencil: {
@@ -326,7 +397,7 @@ export function createEarthRenderer(
     pass.setBindGroup(0, bindGroup);
     pass.setVertexBuffer(0, positionBuffer);
     pass.setVertexBuffer(1, uvBuffer);
-    pass.setIndexBuffer(indexBuffer, 'uint16');
+    pass.setIndexBuffer(indexBuffer, 'uint32');
     pass.drawIndexed(indexCount);
   }
 
