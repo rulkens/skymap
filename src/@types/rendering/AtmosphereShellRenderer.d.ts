@@ -85,8 +85,13 @@ export type AtmosphereShellRenderer = Renderer & {
    *   f32 1 : sunZenithCos  — `dot(localUp, sunDirLocal)`, where
    *           `localUp = normalize(camPosLocal)` (cos of the sun's zenith angle at
    *           the camera).
-   *   f32 2 : _pad0         — zero (rounds the struct to 16 bytes).
-   *   f32 3 : _pad1         — zero.
+   *   f32 2 : twilightSoftness — night-limb sun-fade width in mu (cos-zenith). Rides
+   *           HERE, not on the construction-written `ScatteringParams`, alongside the
+   *           per-frame camera/sun state (this buffer is repacked every frame); its
+   *           value is read from the body's `AtmosphereParams` row.
+   *   f32 3 : twilightIntensity — brightness gain on the twilight band. Rides HERE
+   *           alongside `twilightSoftness`, likewise sourced from the body's
+   *           `AtmosphereParams` row.
    */
   encodeSkyView(encoder: GPUCommandEncoder, bodyId: string, skyViewUniforms: Float32Array): void;
 

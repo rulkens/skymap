@@ -16,7 +16,11 @@
  *   0..2 rayleighScatter  3 rayleighScaleHeightKm  4..6 ozoneAbsorption
  *   7 mieScaleHeightKm  8..10 groundAlbedo  11 miePhaseG  12 mieScatter
  *   13 mieAbsorption  14 ozoneCenterKm  15 ozoneWidthKm  16 planetRadiusKm
- *   17 atmosphereTopKm  18/19 pad
+ *   17 atmosphereTopKm  18 pad  19 pad
+ *
+ * `twilightSoftness` is NOT packed here — it rides the per-frame `SkyViewParams`
+ * so the Earth slider tunes it live — so it is grouped with the other row fields
+ * this physics packer ignores.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -26,7 +30,7 @@ import {
 } from '../../../src/utils/gpu/packScatteringParams';
 import type { AtmosphereParams } from '../../../src/@types/scene/AtmosphereParams';
 
-// One distinct dyadic sentinel per field — k/16 for k = 1..18, all exactly
+// One distinct dyadic sentinel per field — k/16 for k = 1..19, all exactly
 // float32-representable and pairwise distinct, so a swap or a mis-slotted field
 // perturbs a slot this test pins.
 const PARAMS: AtmosphereParams = {
@@ -42,6 +46,14 @@ const PARAMS: AtmosphereParams = {
   ozoneWidthKm: 16 / 16, //                      slot 15
   planetRadiusKm: 17 / 16, //                    slot 16
   atmosphereTopKm: 18 / 16, //                   slot 17
+  // Row fields NOT part of ScatteringParams — this physics packer ignores them,
+  // so they occupy no slot and any value serves. `twilightSoftness` +
+  // `twilightIntensity` ride the per-frame SkyViewParams; the two look dials ride
+  // AtmosphereUniforms.
+  twilightSoftness: 19 / 16,
+  twilightIntensity: 20 / 16,
+  sunIrradiance: 21 / 16,
+  exposure: 22 / 16,
 };
 
 describe('ScatteringParams byte offsets', () => {
@@ -75,6 +87,7 @@ describe('ScatteringParams byte offsets', () => {
     expect(rec[17]).toBe(PARAMS.atmosphereTopKm);
 
     // Trailing pads zeroed — round the struct to 80 / 16-byte alignment.
+    // `twilightSoftness` is deliberately NOT here (it rides SkyViewParams).
     expect(rec[18]).toBe(0);
     expect(rec[19]).toBe(0);
   });

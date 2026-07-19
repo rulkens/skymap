@@ -192,6 +192,9 @@ neutrality task and a visual before/after check on the Earth limb.
 + sunIrradiance: number   // solar radiance into the in-scatter integral
                           //   (carried per the uniform contract; fragment-unused today)
 + exposure: number        // per-body in-scatter look dial (HDR intensity scale)
++ twilightSoftness: number // [ADDED 2026-07-19, mid-execution — see §7.1] night-limb
+                          //   twilight width in mu (cos-zenith) space; 0 = hard shadow.
+                          //   Replaces ScatteringParams _pad0 (slot 18) — no struct growth.
 
 ── ATMOSPHERE_PARAMS (data/bodies/atmosphereParams.ts) ──────────────────
   earth   { … , sunIrradiance: 1.0, exposure: 2.35 }   // folded in from the deleted table
@@ -469,6 +472,104 @@ Notes on the physical motivation encoded:
 - **Uranus and Neptune** carry methane-blue-tinted Rayleigh (blue/cyan-heavy, red
   suppressed, mimicking methane's red absorption), giving the cyan-blue limb both worlds
   show.
+
+### 7.1 Twilight softness (night-limb glow)
+
+> **Provenance — 2026-07-19 mid-execution scope addition (user-approved).** The rest of
+> this spec is a pre-execution artifact. This subsection was added on 2026-07-19 *during*
+> the feature PR's execution, after the user approved one scope addition: a per-body
+> twilight-softness knob. It ships in the feature plan as **Task 7** (which executes before
+> the plan's final visual-pass task). The reader should know it arrived later than the
+> surrounding design.
+
+A per-body `twilightSoftness` field on `AtmosphereParams` (unit: a width in mu = cos-zenith
+space; `0` disables). It controls how the **whole in-scatter source (single + multi
+scatter)** fades as the sun drops below a march sample's local horizon — and in doing so
+**fixes an existing unphysical clamp** on the night limb.
+
+**Today's behaviour (the bug it fixes).** `raymarchInScatter`
+(`src/services/gpu/shaders/atmosphere/skyViewLut.wesl`) is the only consumer of per-sample
+sun lighting. Each sample's sun contribution is
+`sunTransmittance = sampleTransmittanceToTop(..., r, sunCosZenith)` with **no planet-shadow
+test**. When the sun is below the sample's local horizon, the transmittance LUT's `(r, mu)`
+parametrisation clamps to its horizon-grazing edge — a deep-red, small, but **nonzero**
+value. So a sample in deep planet shadow is still lit at a constant grazing value: deep
+shadow is unphysically lit, and the terminator's falloff is not controllable.
+
+**The knob.** In `raymarchInScatter`, per sample, compute the local horizon cosine and a
+sun-visibility factor, and weight the **whole in-scatter source** (single + multi scatter) by
+it (single quotes in WESL comments; never backticks):
+
+```
+// twilightSoftness: fade the WHOLE in-scatter source (single + multi) across the
+// terminator. 'muHorizon' is the cosine of the sun-zenith angle at which the sun grazes
+// this sample's local horizon; below it the sun is geometrically set. Without this the
+// transmittance LUT clamps to its grazing edge and deep shadow stays lit.
+let muHorizon = -sqrt(max(0.0, r * r - bottom * bottom)) / r;
+let sunVis = smoothstep(muHorizon - params.twilightSoftness, muHorizon, sunCosZenith);
+let s = sunVis * (sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal);
+```
+
+(`bottom` and `r` are already in scope in `raymarchInScatter` — `bottom = params.planetRadiusKm`,
+`r = length(pos)`.)
+
+**Why this is the right model (didactically):**
+
+1. **It is what the real twilight ring is.** At altitude the sun sets ~`sqrt(2h/R)` later than
+   at the surface, so a band above the terminator stays sunlit while the ground below is dark
+   — the twilight ring. The `smoothstep` width stands in for the sun's finite angular diameter
+   plus the atmospheric refraction this model omits, both of which soften the geometric
+   terminator into a band.
+2. **It fixes the unphysical clamp.** With `sunVis`, a sample whose sun is well below
+   `muHorizon` gets `sunVis → 0`, so deep night goes properly black; only the
+   `[muHorizon - twilightSoftness, muHorizon]` band keeps a controlled glow. The old LUT-edge
+   grazing floor is gone.
+3. **The multi-scatter term IS factored, on purpose.** `psiMultiScatter * scatterTotal` is the
+   isotropic ambient floor, and at the night limb it dominates the grazing-attenuated single
+   scatter by orders of magnitude: its own LUT clamps to the same below-horizon edge, so
+   gating single scatter alone leaves the knob modulating a sub-percent component and the fade
+   reads as visually inert. Multiplying the whole source by `sunVis` is what makes deep night
+   go black.
+4. **The startup LUT bakes do not read the knob.** Only the per-frame sky-view bake
+   (`raymarchInScatter`) consumes `twilightSoftness`; the transmittance and multi-scatter
+   bakes (startup, once) are untouched. So tuning the value is **instant via HMR** — no LUT
+   rebake.
+5. **Per-body because twilight character is a per-atmosphere property** — Mars's wide, dusty
+   twilight versus the giants' thin, sharp rings.
+
+**Data + packing.** `twilightSoftness` replaces `ScatteringParams._pad0` (f32 slot 18) —
+**no struct growth** (80 B / 20 f32 unchanged); `packScatteringParams` writes
+`out[18] = params.twilightSoftness` in place of the zeroed pad (`_pad1` at slot 19 remains).
+The byte-layout parity test gains a slot-18 assertion.
+
+**Starting values (HMR-tunable; the visual pass adjusts):** earth `0.05`, venus `0.05`,
+mars `0.07`, jupiter `0.03`, saturn `0.03`, uranus `0.03`, neptune `0.03`.
+
+> **Amendment — 2026-07-19 mid-visual-pass (user-approved).** The transport moved off the
+> construction-written `ScatteringParams` buffer and onto the per-frame `SkyViewParams`
+> (`skyViewLut.wesl`) — `twilightSoftness` lands at that struct's slot 2 (its former `_pad0`),
+> and `ScatteringParams` slots 18/19 revert to inert pad. The reason is **live tunability**:
+> `ScatteringParams` is written once at LUT-bake construction, so a value packed there needs a
+> reload to change, whereas `encodeAtmosphereSkyView` repacks `SkyViewParams` every frame. With
+> the knob there, Earth gains a **live Settings → Display → Earth "Twilight softness" slider**
+> (range 0–0.5, step 0.005), seeded from `ATMOSPHERE_PARAMS.earth.twilightSoftness` — the exact
+> **exposure-seam twin**: Earth reads the settings value each frame, every other body reads its
+> own `AtmosphereParams` row. `AtmosphereParams` keeps the field (the seed + the six planets'
+> authored values); only the *packer* stops reading it. The march reads `view.twilightSoftness`
+> instead of `params.twilightSoftness`; the byte-parity test moves its slot assertion accordingly.
+
+> **Amendment — 2026-07-19 mid-visual-pass (user-approved).** A second knob,
+> **`twilightIntensity`**, tunes the twilight band's brightness. The surviving twilight band —
+> once the whole in-scatter source is faded — is physically dim, so `twilightIntensity` is a
+> gain applied *inside* the fade: `let twilightGain = mix(1.0, view.twilightIntensity, 1.0 - sunVis);`
+> and `let s = sunVis * twilightGain * (sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal);`.
+> The gain is identity where the sun is above the local horizon (`sunVis = 1 -> gain = 1`, day
+> side untouched); at intensity `1` the whole thing is the physical result; `> 1` amplifies only
+> the twilight band; deep night stays black at any intensity because `sunVis -> 0` dominates. It
+> is a per-body `AtmosphereParams` row value (default `1.0` = physical for all seven bodies),
+> rides `SkyViewParams` slot 3 (the former `_pad1`), and Earth gains a **live Settings → Display
+> → Earth "Twilight intensity" slider** (range 0–10, step 0.05) through the exact same
+> Earth-keyed seam as `twilightSoftness`.
 
 ## 8. Settings story
 

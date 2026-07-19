@@ -33,7 +33,7 @@
  * The renderer's `encodeSkyView` writes the passed 16-byte record VERBATIM into
  * its `SkyViewParams` buffer, so its layout is fixed by `AtmosphereShellRenderer`'s
  * `.d.ts` and mis-packing silently mis-indexes the LUT (the GPU would not report
- * it; on iOS it would drop the frame). Two live fields:
+ * it; on iOS it would drop the frame). Four live fields:
  *
  *   - `viewHeightKm` = |camPosLocal| × atmosphereTopKm. `camPosLocal` is the
  *     camera in atmosphere-top-radius units, built from the SAME rendered pose
@@ -44,8 +44,12 @@
  *   - `sunZenithCos` = dot(normalize(camPosLocal), sunDirLocal) — the cosine of
  *     the sun's zenith angle at the camera, `localUp` being the camera's radial
  *     direction in the body frame.
- *
- * The trailing two floats are pad (zeroed) rounding the struct to 16 bytes.
+ *   - `twilightSoftness` — the night-limb fade width. This rides the per-frame
+ *     `SkyViewParams` (not the construction-written `ScatteringParams`) alongside
+ *     the view-dependent altitude + sun direction, read from the body's
+ *     `AtmosphereParams` row for every body.
+ *   - `twilightIntensity` — the brightness gain on the twilight band, read from
+ *     the same `AtmosphereParams` row.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -99,10 +103,23 @@ export function encodeAtmosphereSkyView(
     // radius > 0 whenever the camera is off the body centre (always, in practice);
     // guard the divide so a degenerate centre pose bakes a defined (nadir) value.
     const sunZenithCos =
-      radius > 0 ? (camLocal[0] * sun[0] + camLocal[1] * sun[1] + camLocal[2] * sun[2]) / radius : 0;
+      radius > 0
+        ? (camLocal[0] * sun[0] + camLocal[1] * sun[1] + camLocal[2] * sun[2]) / radius
+        : 0;
 
-    // f32 [viewHeightKm, sunZenithCos, _pad0, _pad1] — the 16-byte SkyViewParams
-    // record the renderer writes verbatim (see AtmosphereShellRenderer.d.ts).
-    renderer.encodeSkyView(encoder, body.id, new Float32Array([viewHeightKm, sunZenithCos, 0, 0]));
+    // The twilight fade width + band gain come from the body's `AtmosphereParams`
+    // row for every body. They ride the per-frame SkyViewParams (not the
+    // construction-written ScatteringParams) alongside the view-dependent altitude
+    // and sun direction, which is what keeps the LUT rebake self-contained.
+    const twilight = params.twilightSoftness;
+    const twilightIntensity = params.twilightIntensity;
+
+    // f32 [viewHeightKm, sunZenithCos, twilightSoftness, twilightIntensity] — the
+    // 16-byte SkyViewParams record the renderer writes verbatim (see AtmosphereShellRenderer.d.ts).
+    renderer.encodeSkyView(
+      encoder,
+      body.id,
+      new Float32Array([viewHeightKm, sunZenithCos, twilight, twilightIntensity]),
+    );
   }
 }

@@ -4,12 +4,13 @@
  * The load-bearing assertion is the `SkyViewParams` packing contract
  * (AtmosphereShellRenderer.d.ts): the renderer writes the 16-byte record
  * VERBATIM, so a mis-pack silently mis-indexes the LUT (the GPU never reports
- * it; on iOS it drops the frame). We pin the two live fields —
- * `viewHeightKm = |camPosLocal| × atmosphereTopKm` at slot 0, and
- * `sunZenithCos = dot(normalize(camPosLocal), sunDirLocal)` at slot 1 — by
- * recomputing them from the contract's formula, so a slot swap, a dropped
- * `× atmosphereTopKm`, or a surface-vs-atmosphere-top radius choice lands as a
- * failure here.
+ * it; on iOS it drops the frame). We pin the three live fields —
+ * `viewHeightKm = |camPosLocal| × atmosphereTopKm` at slot 0,
+ * `sunZenithCos = dot(normalize(camPosLocal), sunDirLocal)` at slot 1, and the
+ * body's `twilightSoftness` params-row value at slot 2 — by recomputing them from
+ * the contract's formula, so a slot swap, a dropped `× atmosphereTopKm`, or a
+ * surface-vs-atmosphere-top radius choice lands as a failure here. Slots 2 + 3
+ * pack the body's `AtmosphereParams` twilight softness + intensity for every body.
  *
  * The other load-bearing assertion is the SOURCE of the camera altitude: the
  * bake must read the RENDERED pose (`ctx.drawCamPos`) — the exact vector the
@@ -49,10 +50,11 @@ function spyRenderer(): { encodeSkyView: ReturnType<typeof vi.fn> } {
 
 /**
  * Assemble the minimal EngineState the encode reads: the renderer handle off
- * `gpu` and the seeded bodies off `data.bodies`. `atmosphereDrawList` spreads
- * `bodies.planets`, so seed it empty (only Earth carries an atmosphere row today).
- * `camStalePosition` is threaded onto `state.cam.position` — the STALE drag
- * register the encode must NOT read.
+ * `gpu` and the seeded bodies off `data.bodies`. The twilight softness + intensity
+ * come from each body's `AtmosphereParams` row, so no settings are read.
+ * `atmosphereDrawList` spreads `bodies.planets`, so seed it empty (only Earth
+ * carries an atmosphere row today). `camStalePosition` is threaded onto
+ * `state.cam.position` — the STALE drag register the encode must NOT read.
  */
 function makeState(init: {
   renderer: unknown;
@@ -198,7 +200,9 @@ describe('encodeAtmosphereSkyView', () => {
     // height must clear the ground radius — a guard against a surface-radius
     // mis-scale that would collapse the altitude.
     expect(uniforms[0]!).toBeGreaterThan(params.planetRadiusKm);
-    expect(uniforms[2]).toBe(0);
-    expect(uniforms[3]).toBe(0);
+    // Slots 2 + 3 carry the body's `AtmosphereParams` twilight softness + intensity
+    // — packed from the params row for every body.
+    expect(uniforms[2]).toBe(Math.fround(params.twilightSoftness));
+    expect(uniforms[3]).toBe(Math.fround(params.twilightIntensity));
   });
 });

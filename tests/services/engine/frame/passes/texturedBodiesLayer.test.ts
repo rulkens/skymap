@@ -9,7 +9,7 @@
  *      `view.vp` (identity-pinned via a mocked `composeBodyMvp`), and forwards
  *      the body's baked `orientation`.
  *   2. One `texturedBodyRenderer.draw(pass, bodyId, uniforms)` per textured
- *      body, each carrying the packed 24-float `TexturedBodyUniforms` block
+ *      body, each carrying the packed 28-float `TexturedBodyUniforms` block
  *      (`packTexturedBodyUniforms` is the SSOT).
  *   3. The ring ratios are DATA: Saturn packs its `SCENE_RINGS` radii in
  *      planet-radius units; a ringless body packs zeros (the fragment's "no
@@ -17,6 +17,10 @@
  *   4. The partition gate — a body is `textured` only when resolved AND its
  *      surface texture is resident; otherwise it is flat (drawn by
  *      `planetsLayer`, not here), so this layer's `enabled` is false.
+ *   5. Minnaert limb darkening is DATA: a body with a `LIMB_DARKENING_PARAMS`
+ *      row packs its strength/exponent (floats 22/23); an absent body packs the
+ *      identity (0/1). Each body packs its body-local camera (`camPosLocal`,
+ *      floats 24..26) at its surface radius — recomputed here to catch a drift.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -26,7 +30,9 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
+import { LIMB_DARKENING_PARAMS } from '../../../../../src/data/bodies/limbDarkeningParams';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { camPosLocal } from '../../../../../src/utils/camera/camPosLocal';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -151,7 +157,7 @@ describe('texturedBodiesLayer.enabled', () => {
 });
 
 describe('texturedBodiesLayer.draw', () => {
-  it('composes each textured body from the slab f64 vp with its orientation and draws length-24 uniforms', () => {
+  it('composes each textured body from the slab f64 vp with its orientation and draws length-28 uniforms', () => {
     composeMock.mockClear();
     const renderer = makeRendererSpy();
     const view = makeNear0View();
@@ -174,13 +180,13 @@ describe('texturedBodiesLayer.draw', () => {
       expect(call[4]).toBe(body.orientation);
     });
 
-    // One per-body draw, in seed order, each with the packed 24-float record.
+    // One per-body draw, in seed order, each with the packed 28-float record.
     expect(renderer.draw).toHaveBeenCalledTimes(2);
     const [p0, id0, u0] = renderer.draw.mock.calls[0]!;
     expect(p0).toBe(PASS_STUB);
     expect(id0).toBe('mars');
     expect(u0).toBeInstanceOf(Float32Array);
-    expect(u0).toHaveLength(24);
+    expect(u0).toHaveLength(28);
     expect(renderer.draw.mock.calls[1]![1]).toBe('jupiter');
 
     // sunDirLocal is packed at floats 16..18 (recomputed independently, NOT
@@ -189,6 +195,34 @@ describe('texturedBodiesLayer.draw', () => {
     expect(u0[16]).toBeCloseTo(expectedSun[0]);
     expect(u0[17]).toBeCloseTo(expectedSun[1]);
     expect(u0[18]).toBeCloseTo(expectedSun[2]);
+
+    // Minnaert limb params are DATA-gated: mars (no LIMB_DARKENING_PARAMS row)
+    // packs the identity (strength 0, exponent 1 — a no-op factor); jupiter (a
+    // row) packs its authored strength/exponent at floats 22/23. Read from the
+    // table, not restated, so a value tweak does not touch this test.
+    expect(u0[22]).toBe(0); // mars limbStrength — absent ⇒ identity
+    expect(u0[23]).toBe(1); // mars limbExponent — absent ⇒ identity
+    const u1 = renderer.draw.mock.calls[1]![2];
+    expect(u1[22]).toBeCloseTo(LIMB_DARKENING_PARAMS.jupiter!.strength);
+    expect(u1[23]).toBeCloseTo(LIMB_DARKENING_PARAMS.jupiter!.exponent);
+
+    // camPosLocal at floats 24..26 — recomputed independently (NOT through the
+    // layer) at the body's SURFACE radius, so a drift in the derivation lands
+    // here, the same posture as the sun-at-16..18 assertion above. Mars carries a
+    // non-identity orientation, so this also exercises the local-frame rotate.
+    // Exact `Math.fround` equality (not `toBeCloseTo`): the layer's value and the
+    // recompute are the SAME double through the SAME util, differing only by the
+    // packer's f32 narrowing — and these body-radii magnitudes are far too large
+    // for `toBeCloseTo`'s absolute tolerance to mean anything.
+    const expectedCam = camPosLocal(
+      view.camPos,
+      mars.positionMpc,
+      mars.radiusKm * SCALE_UNITS.KM_TO_MPC,
+      mars.orientation,
+    );
+    expect(u0[24]).toBe(Math.fround(expectedCam[0]));
+    expect(u0[25]).toBe(Math.fround(expectedCam[1]));
+    expect(u0[26]).toBe(Math.fround(expectedCam[2]));
   });
 
   it('packs Saturn`s SCENE_RINGS radii as ring ratios and zeros for a ringless body', () => {

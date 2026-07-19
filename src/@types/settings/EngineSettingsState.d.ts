@@ -139,7 +139,7 @@ export type EngineSettingsState = {
   /**
    * Earth's per-body look dials. Three fields today:
    *   - `atmosphereExposure`, the exposure scale on the in-scatter atmosphere
-   *     shell's HDR output. Seeded from `ATMOSPHERE_SHELL_PARAMS.exposure` and
+   *     shell's HDR output. Seeded from `ATMOSPHERE_PARAMS.earth.exposure` and
    *     read live by `atmosphereShellLayer` each frame.
    *   - `ambientLight`, the night-side ambient floor lifting Earth's unlit
    *     hemisphere off pure black (earthshine / moonlight, physically). Seeded

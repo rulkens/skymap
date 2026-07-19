@@ -42,7 +42,10 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Photoreal-Earth follow-ups** `deferred` — drift traps + fidelity gaps from plans A–E (atmosphere-pose derivation, equirect-uv mirror, setMap kind table, multi-atmosphere shape, shared proxy-sphere idiom). → [details](backlog/2026-07-19-photoreal-earth-followups.md)
+- [ ] **Saturn ring brightness** `ready` — the ring reads too dim next to the new limb-darkened disc; retune ring albedo/exposure (surfaced in the planet-atmospherics per-body visual pass).
+- [ ] **Near labels occlude behind planets** `needs-design` — **HIGH PRIORITY**: NEAR0 captions draw after the body composite so they float over planet discs; cosmo labels vanish via paint-over order, not depth — pick per-label cull vs real depth test. → [details](backlog/2026-07-19-near-labels-occlude-behind-planets.md)
+- [ ] **Photoreal-Earth follow-ups** `deferred` — drift traps + fidelity gaps from plans A–E (equirect-uv mirror, setMap kind table, shared proxy-sphere idiom). → [details](backlog/2026-07-19-photoreal-earth-followups.md)
+- [ ] **Titan atmosphere** `needs-design` — minimal params-row-over-flat-sphere vs full Venus-style cloud-as-surface + limb treatment (needs a texture through the fetch/build pipeline). → [details](backlog/2026-07-19-titan-atmosphere.md)
 - [ ] **Cloud deck PBR + live coverage** `deferred` — deck is Lambert-lit with no thickness channel (alpha = luminance of RGB); analytic multiple-scattering phase term is cheap, real τ / live GIBS clouds are separable data-layer efforts. → [details](backlog/2026-07-19-cloud-deck-pbr.md)
 - [ ] **Local interstellar-dust volume (Edenhofer 2024)** `needs-design` — Sun-centered per-parsec extinction cube as an SCFD field (MCPM-clone, ~3.2 GB one-time via `dustmaps`); blocked on a sub-kpc render slab (COSMO near-clip = 10 kpc) + emissive-vs-absorptive compositing choice. → [details](backlog/2026-07-18-local-dust-volume.md)
 - [ ] **Lower-res offscreen star-aggregate pass** `ready` — try `STAR_AGGREGATE_DIVISOR` 2 → 4 (`renderTargets.ts`); ~4× further fill cut if the upsampled glow field survives visually.

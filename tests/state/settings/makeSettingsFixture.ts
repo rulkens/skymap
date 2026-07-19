@@ -67,7 +67,7 @@ import {
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
 import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
-import { ATMOSPHERE_SHELL_PARAMS } from '../../../src/data/bodies/atmosphereShellParams';
+import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
@@ -105,7 +105,9 @@ export function makeSettingsFixture(
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
     earth: {
-      atmosphereExposure: ATMOSPHERE_SHELL_PARAMS.exposure,
+      // `earth` is a definitional row in the atmosphere table, so the indexed
+      // read is non-null (see `initialState.ts` — the index signature widens it).
+      atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure,
       ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
       oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
     },

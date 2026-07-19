@@ -37,6 +37,24 @@
 // never touched. One pipeline serves ringed and ringless bodies alike: the ring
 // is DATA on the uniform, not a Saturn-only shader branch (spec S8).
 //
+// ## Minnaert limb darkening (view-dependent, multiplicative)
+//
+// After the Lambert shade and the ring shadow, we fold in a Minnaert limb term
+// ('lib/limbDarkening.wesl') so a body's disc dims toward its edge the way a real
+// planet's does. Minnaert needs both the incidence cosine 'noL = dot(n, sunDir)'
+// -- the same sun cosine Lambert uses -- and the emission cosine 'noV = dot(n, V)'
+// toward the viewer. The view vector needs NO new vertex varying: on the unit
+// sphere the surface position IS the unit normal 'n', so 'V = camPosLocal - n'
+// with the camera already carried in the body's local frame on the uniform
+// (packed by 'utils/camera/camPosLocal.ts', body-radii units). Both cosines are
+// clamped to 0 so a night-side or beyond-the-limb fragment feeds a non-negative
+// base to the law's 'pow'.
+//
+// The term is DATA-gated: 'u.limbStrength == 0' (every body without a
+// 'LIMB_DARKENING_PARAMS' row) makes 'limbDarkening' return 1.0 exactly, so the
+// multiply is a shader identity and those bodies render as plain Lambert -- the
+// same data-gate the ring branch uses.
+//
 // ## Blend target
 //
 // Output @location(0) writes to the rgba16float foreground colour target. The
@@ -48,6 +66,7 @@
 import package::bodies::texturedBody::io::VSOut;
 import package::lib::sphere::TexturedBodyUniforms;
 import package::lib::bodyLighting::litShade;
+import package::lib::limbDarkening::limbDarkening;
 
 @group(0) @binding(0) var<uniform> u: TexturedBodyUniforms;
 @group(0) @binding(1) var bodySampler: sampler;
@@ -115,6 +134,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // curve and the shadow just dims the sunlit contribution. Full occlusion
   // ('sunVis == 0') leaves exactly the ambient floor.
   let shade = litShade(n, u.sunDirLocal * sunVis);
-  let colour = albedo * shade;
+  // Minnaert limb darkening: dims the disc toward its edge. 'noL' is the sun
+  // cosine (as Lambert), 'noV' the emission cosine toward the viewer -- V is
+  // 'camPosLocal - n' since the unit-sphere surface point IS the normal 'n'.
+  // 'u.limbStrength == 0' (every body without a param row) returns 1.0, so this
+  // is a no-op for them.
+  let noL = max(dot(n, u.sunDirLocal), 0.0);
+  let v = normalize(u.camPosLocal - n);
+  let noV = max(dot(n, v), 0.0);
+  let limb = limbDarkening(noL, noV, u.limbStrength, u.limbExponent);
+  let colour = albedo * shade * limb;
   return vec4<f32>(colour, 1.0);
 }

@@ -11,8 +11,10 @@
  * on which bodies have a live atmosphere this frame.
  *
  * `body` is the union `EarthBody | PlanetBody`: the derivation reads only the
- * fields common to both (`id`, `positionMpc`, `radiusKm`, `orientation`), so an
- * atmosphere body may be Earth or any seeded planet with a params row.
+ * fields common to both (`id`, `positionMpc`, `radiusKm`), so an atmosphere body
+ * may be Earth or any seeded planet with a params row. The entry carries the whole
+ * body because its consumers (the sky-view bake and the shell draw) additionally
+ * read its baked `orientation`.
  */
 
 import type { EarthBody } from '../../scene/EarthBody';
