@@ -92,6 +92,27 @@ so the canonical fetch URL is the Wayback snapshot below, verified live
 https://web.archive.org/web/20240509231512if_/https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/landmask/world.watermask.21600x10800.png
 ```
 
+## Earth night map — NASA Black Marble 2016
+
+Earth's `night` map (city lights, sRGB → JPG) is NASA's **Black Marble 2016**
+"3 km" global night-lights composite (Suomi NPP VIIRS Day/Night Band). It ships
+sRGB colour like the day albedo — non-linear, so JPG, not PNG — segmented as
+`earth-night-<px>.jpg` and capped at the `large` (8k) tier (spec §9.1).
+Full-pull only — no dev variant, so `--dev` fetch/build skip it; the visual
+check needs the full source.
+
+| Purpose   | File                       | Dims       | Size            |
+| --------- | -------------------------- | ---------- | --------------- |
+| Full pull | `BlackMarble_2016_3km.jpg` | 13500×6750 | 8,106,233 bytes |
+
+Credit: **NASA Earth Observatory / NASA's Goddard Space Flight Center**, Suomi
+NPP VIIRS (Black Marble 2016). Public domain. Verified live 2026-07-19
+(HTTP 200, `image/jpeg`, 8,106,233 bytes).
+
+```
+https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg
+```
+
 ## USGS Astrogeology — Galilean moons (public domain; credit "NASA/USGS")
 
 Plain 8-bit GeoTIFFs (no ISIS toolchain needed; sharp/libvips reads TIFF

@@ -67,6 +67,10 @@ export const TEXTURE_SOURCES = {
   venus: { surface: { native: 'textures.sssVenus4k', devFilename: '2k_venus_atmosphere.jpg' } },
   earth: {
     surface: { native: 'textures.nasaBmng', devKey: 'textures.nasaBmngDev' },
+    // The night-lights (Black Marble) map. Full-pull only — no cheap dev variant,
+    // like `material` below — so `--dev` fetch/build skip it; the Task 4 visual
+    // check needs the full night source.
+    night: { native: 'textures.earthNight' },
     // The material (roughness/ocean-mask) map derives from the NASA land/water
     // mask. Full-pull only — no cheap dev variant, so the mask is fetched only
     // on the real pull, never in the ~7 MB `--dev` subset.

@@ -11,9 +11,11 @@ describe('bodyTextureFilename', () => {
     expect(bodyTextureFilename('earth', 'surface', 'large')).toBe('earth-8192.jpg');
   });
 
-  it('segments a non-surface kind', () => {
-    // Future feature-map naming — no such map ships in Prep 1, but the branch is
-    // exercised so the segment convention is pinned.
+  it('keeps a non-surface sRGB kind segmented but JPG', () => {
+    // Earth's night-lights map (plan B) is a non-surface kind, so it carries the
+    // `-night-` segment — but it is sRGB COLOUR, not linear-packed data, so it
+    // stays JPG. If `night` were ever treated as linear it would become `.png` and
+    // the runtime fetcher would 404 the map.
     expect(bodyTextureFilename('earth', 'night', 'large')).toBe('earth-night-8192.jpg');
   });
 

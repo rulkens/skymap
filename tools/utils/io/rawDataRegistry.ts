@@ -612,6 +612,17 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.earthNight': {
+    path: 'data/raw/textures/BlackMarble_2016_3km.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Black Marble 2016 night lights, 13500x6750 equirect JPG (public domain, credit NASA Earth Observatory / NASA's Goddard Space Flight Center, Suomi NPP VIIRS). Earth night-lights source — full pull only, no dev variant. Verified live 2026-07-19 (8,106,233 bytes, image/jpeg).",
+    upstream:
+      'https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.usgsIo': {
     path: 'data/raw/textures/Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
     kind: 'file',

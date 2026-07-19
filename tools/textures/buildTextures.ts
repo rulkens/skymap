@@ -271,6 +271,13 @@ async function writeBodyKindTier(
     await writeBodyTier(srcPath, tint, widthPx, outPath);
     return tint ? '  (tinted)' : '';
   }
+  if (kind === 'night') {
+    // Night lights are sRGB colour like the day albedo (JPG), but the Black Marble
+    // source is already full-colour — no grayscale tint (that marker is for the
+    // mono USGS moons), so pass `undefined` and encode in one pass.
+    await writeBodyTier(srcPath, undefined, widthPx, outPath);
+    return '';
+  }
   if (kind === 'material') {
     await writeMaterialTier(srcPath, widthPx, outPath);
     return '  (material)';

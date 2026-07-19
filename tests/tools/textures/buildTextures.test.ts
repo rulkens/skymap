@@ -31,4 +31,13 @@ describe('textureBuildEntries', () => {
     const actual = new Set(textureBuildEntries().map((e) => keyOf(e.bodyId, e.kind)));
     expect(actual).toEqual(expected);
   });
+
+  // Plan B pins the night map explicitly: the (earth, 'night') source row must be
+  // picked up by the already-rewired iteration and land in the build work list.
+  // Redundant with the drift test above only while both sides agree — this is the
+  // direct assertion that the new row exists, not a re-derivation of the coupling.
+  it('includes the Earth night map', () => {
+    const actual = new Set(textureBuildEntries().map((e) => keyOf(e.bodyId, e.kind)));
+    expect(actual).toContain(keyOf('earth', 'night'));
+  });
 });
