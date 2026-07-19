@@ -30,4 +30,12 @@ describe('bodyTextureFilename', () => {
     // 404 the material map.
     expect(bodyTextureFilename('earth', 'material', 'medium')).toBe('earth-material-4096.png');
   });
+
+  it('uses PNG for an alpha kind on a sphere', () => {
+    // Clouds are sRGB COLOUR (not linear-packed) yet must ship as PNG: the shell
+    // carries a transparency channel a JPEG cannot hold. This routes through the
+    // alpha axis, orthogonal to the linear one. If the extension ignored alpha this
+    // would be `.jpg` and the fetcher would 404 the cloud map.
+    expect(bodyTextureFilename('earth', 'clouds', 'large')).toBe('earth-clouds-8192.png');
+  });
 });

@@ -40,4 +40,14 @@ describe('textureBuildEntries', () => {
     const actual = new Set(textureBuildEntries().map((e) => keyOf(e.bodyId, e.kind)));
     expect(actual).toContain(keyOf('earth', 'night'));
   });
+
+  // Plan D pins the clouds map explicitly: the (earth, 'clouds') source row must be
+  // picked up by the rewired iteration and land in the build work list. Its writer
+  // row (KIND_WRITERS.clouds -> writeCloudTier) must land in the same change — a
+  // kinds row with no writer makes build-textures THROW at the dispatch (the
+  // intended loud guard), which this entry's presence exercises via the build loop.
+  it('includes the Earth clouds map', () => {
+    const actual = new Set(textureBuildEntries().map((e) => keyOf(e.bodyId, e.kind)));
+    expect(actual).toContain(keyOf('earth', 'clouds'));
+  });
 });

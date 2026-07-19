@@ -135,6 +135,32 @@ file is the only source. Checksum: _(pending — filled by the fetch task)_.
 https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73934/gebco_08_rev_elev_21600x10800.png
 ```
 
+## Earth clouds map — NASA Visible Earth Blue Marble cloud composite
+
+Earth's `clouds` map (cloud shell, sRGB colour + luminance-derived alpha → PNG)
+is NASA's **Blue Marble** cloud composite — a white-cloud-on-black equirect with
+**no alpha channel**. `build-textures` derives opacity from luminance (white
+cloud → opaque, black sky → clear) and keeps the RGB as the cloud colour (see
+`writeCloudTier.ts`); it ships segmented as `earth-clouds-<px>.png` at the
+`large` (8k) tier (spec §9.1). sharp reads TIFF natively (the USGS moon sources
+are already `.tif`). Full-pull only — no dev variant.
+
+The 2048px JPG variant is too small for the 8k ceiling, and the two 21600px
+halves (~210 MB each) were rejected as oversize — the single 8192×4096 combined
+TIFF is the right source.
+
+| Purpose   | File                      | Dims      | Size             |
+| --------- | ------------------------- | --------- | ---------------- |
+| Full pull | `cloud_combined_8192.tif` | 8192×4096 | 35,870,468 bytes |
+
+Credit: **NASA Goddard Space Flight Center** (Reto Stöckli). Public domain.
+Verified live 2026-07-19 (HTTP 200, `image/tiff`, 35,870,468 bytes). Checksum:
+_(pending — filled by the fetch task)_.
+
+```
+https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif
+```
+
 ## USGS Astrogeology — Galilean moons (public domain; credit "NASA/USGS")
 
 Plain 8-bit GeoTIFFs (no ISIS toolchain needed; sharp/libvips reads TIFF

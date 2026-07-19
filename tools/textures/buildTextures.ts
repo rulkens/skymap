@@ -83,6 +83,7 @@ import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSourc
 import { bakeNormalMap, DEFAULT_EXAGGERATION } from './bakeNormalMap';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
+import { writeCloudTier } from './writeCloudTier';
 import { writeLinearTier } from './writeLinearTier';
 
 /** Output JPEG quality for the spherical body textures (spec §10, ~80). */
@@ -353,9 +354,12 @@ const SRGB_WRITER: KindWriter = {
  *    PNG (Earth's PBR map).
  *  - **`normal`** → `writeNormalTier`, baking a tangent-space normal map from the
  *    elevation source.
+ *  - **`clouds`** → `writeCloudTier`, an sRGB-colour PNG whose alpha is derived
+ *    from the composite's luminance (white cloud → opaque, black sky → clear).
  *
- * A kind with no row (e.g. `clouds`, not yet built) is a loud build error at the
- * dispatch below, never a silent skip that would leave a body's map unbuilt.
+ * A kind with no row is a loud build error at the dispatch below, never a silent
+ * skip that would leave a body's map unbuilt — so a `kinds` row and its writer
+ * row here MUST land together.
  */
 const KIND_WRITERS: Partial<Record<TextureKind, KindWriter>> = {
   surface: SRGB_WRITER,
@@ -368,6 +372,10 @@ const KIND_WRITERS: Partial<Record<TextureKind, KindWriter>> = {
     write: (bodyId, srcPath, widthPx, outPath) =>
       writeNormalTier(bodyId, srcPath, widthPx, outPath),
     note: () => '  (normal)',
+  },
+  clouds: {
+    write: (_bodyId, srcPath, widthPx, outPath) => writeCloudTier(srcPath, widthPx, outPath),
+    note: () => '  (clouds)',
   },
 };
 

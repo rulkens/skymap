@@ -55,6 +55,7 @@ describe('textureSourcesFor', () => {
         'world.watermask.21600x10800.png',
         'gebco_08_rev_elev_21600x10800.png',
         'BlackMarble_2016_3km.jpg',
+        'cloud_combined_8192.tif',
         'Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
         'Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
         'Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',

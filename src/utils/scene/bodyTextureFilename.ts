@@ -3,6 +3,7 @@ import type { RingTextureId } from '../../@types/data/RingTextureId';
 import type { TextureKind } from '../../@types/data/TextureKind';
 import type { Tier } from '../../@types/data/Tier';
 import { tierToTexturePx } from '../math/tierToTexturePx';
+import { isAlphaTextureKind } from './isAlphaTextureKind';
 import { isLinearTextureKind } from './isLinearTextureKind';
 
 /**
@@ -21,15 +22,17 @@ import { isLinearTextureKind } from './isLinearTextureKind';
  * re-emits byte-identical surface files, so no rebuild / R2 re-sync / CDN purge
  * is needed. The `-${kind}-` maps land with their own feature PRs.
  *
- * ### PNG for the ring OR a linear-data map, JPG for every sRGB sphere
+ * ### PNG for the ring, a linear-data map, OR an alpha map; JPG for opaque sRGB
  *
- * Two things force PNG over JPG. The Saturn ring strip carries a real alpha
+ * Three things force PNG over JPG. The Saturn ring strip carries a real alpha
  * channel (transparent centre + soft radial gaps) a JPG cannot hold. A linear
- * kind (`material`, and later `normal`) packs numeric fields — roughness, an
- * ocean mask, a normal vector — into its channels; JPEG's chroma subsampling and
- * sRGB assumption would corrupt those numbers along coastlines. Both cases route
- * through `isLinearTextureKind` (the single home for the sRGB-vs-linear axis)
- * plus the ring; every opaque sRGB-colour sphere names a `.jpg`.
+ * kind (`material`, `normal`) packs numeric fields — roughness, an ocean mask, a
+ * normal vector — into its channels; JPEG's chroma subsampling and sRGB
+ * assumption would corrupt those numbers along coastlines. An alpha kind
+ * (`clouds`) is still sRGB COLOUR but carries a transparency channel a JPG cannot
+ * hold. The three cases route through the ring id, `isLinearTextureKind` (the
+ * sRGB-vs-linear precision axis), and `isAlphaTextureKind` (the channel-count
+ * axis) respectively; every opaque sRGB-colour sphere names a `.jpg`.
  */
 export function bodyTextureFilename(
   bodyId: BodyTextureId | RingTextureId,
@@ -38,6 +41,9 @@ export function bodyTextureFilename(
 ): string {
   const seg = kind === 'surface' ? '' : `-${kind}`;
   const px = tierToTexturePx(tier);
-  const ext = bodyId === 'saturn-ring' || isLinearTextureKind(kind) ? 'png' : 'jpg';
+  const ext =
+    bodyId === 'saturn-ring' || isLinearTextureKind(kind) || isAlphaTextureKind(kind)
+      ? 'png'
+      : 'jpg';
   return `${bodyId}${seg}-${px}.${ext}`;
 }

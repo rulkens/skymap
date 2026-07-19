@@ -82,6 +82,11 @@ export const TEXTURE_SOURCES = {
     // differs. Full-pull only — no cheap dev variant, like `material` — so a
     // `--dev` fetch/build skips it.
     normal: { native: 'textures.earthElevation' },
+    // The cloud shell (sRGB colour + luminance-derived alpha → PNG). The NASA
+    // Blue Marble cloud composite is white-cloud-on-black with no alpha; the
+    // build derives opacity from luminance (see buildTextures' `clouds` writer).
+    // Full-pull only — no cheap dev variant, like `material`/`normal`.
+    clouds: { native: 'textures.earthClouds' },
   },
   mars: { surface: { native: 'textures.sssMars8k', devFilename: '2k_mars.jpg' } },
   jupiter: { surface: { native: 'textures.sssJupiter8k', devFilename: '2k_jupiter.jpg' } },

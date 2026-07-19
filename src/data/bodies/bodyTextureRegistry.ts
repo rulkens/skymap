@@ -57,12 +57,20 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // JPG at the full `large` (8k) ceiling — the Black Marble source resolves fine
   // detail worth keeping — a `material` (roughness + ocean mask) packed linear
   // PNG capped at `medium` (4k), since the ocean/land boundary needs no 8k detail
-  // and the mask source subsamples cleanly to 4k — and a `normal` (tangent-space
+  // and the mask source subsamples cleanly to 4k — a `normal` (tangent-space
   // relief) linear PNG, likewise `medium`: it is BAKED from the GEBCO elevation
-  // heightfield and a normal map downsamples cleanly, so 4k is the useful ceiling.
+  // heightfield and a normal map downsamples cleanly, so 4k is the useful ceiling
+  // — and a `clouds` (sRGB colour + luminance-derived alpha) PNG shell at the full
+  // `large` (8k) ceiling, since the composite resolves fine cloud structure.
   earth: {
     bodyId: 'earth',
-    kinds: { surface: 'large', night: 'large', material: 'medium', normal: 'medium' },
+    kinds: {
+      surface: 'large',
+      night: 'large',
+      material: 'medium',
+      normal: 'medium',
+      clouds: 'large',
+    },
     provenance: 'nasa',
   },
   mars: { bodyId: 'mars', kinds: { surface: 'large' }, provenance: 'sss' },
