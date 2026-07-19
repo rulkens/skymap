@@ -1,6 +1,6 @@
 # Photoreal Earth C — Normal / Relief Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Give Earth's terminator **relief** — mountains and ranges catch grazing sunlight — by baking a **tangent-space normal map** offline from an elevation heightmap and perturbing the surface shading normal with it. The bake is the pipeline's first **derived/computed** output; every existing texture is a straight resize of a fetched source.
 
@@ -71,15 +71,15 @@ where `(nx, ny, nz) = normalize(vec3(-gx * exaggeration, -gy * exaggeration, 1))
 
 **Steps (TDD):**
 
-- [ ] Write `tests/tools/textures/bakeNormalMap.test.ts` with **hand-computed** expectations (independent of the implementation — not a mirror):
-  - [ ] `a flat heightfield bakes to the neutral normal` — every-texel-equal input ⇒ every output pixel `R ≈ 128, G ≈ 128, B = 255` (fails if the gradient reports nonzero on flat ground — the commonest kernel bug).
-  - [ ] `a +x ramp tilts R, not G, with the downhill sign` — height increasing a fixed step per column ⇒ all interior pixels share ONE `RG`, with `G ≈ 128` and `R` on the **hand-derived** side of 128 (assert the exact `<` or `>` — that pins the sign). Fails on axis swap, wrong sign, or a non-constant result.
-  - [ ] `a +y ramp tilts G, not R` — the symmetric case ⇒ `R ≈ 128`, `G` off-neutral. Catches an x/y axis swap the +x test alone can't.
-  - [ ] `exaggeration scales the tilt monotonically` — the same +x ramp at `exaggeration` 2× vs 1× ⇒ `|R − 128|` strictly larger at 2× (independent monotonicity property; fails if exaggeration is ignored or misapplied).
-  - [ ] `the longitude seam does not fabricate a gradient` — a heightfield varying only in y (constant across each row, equal at column 0 and `width-1`) ⇒ the seam columns' `R ≈ 128` (no spurious x-gradient from mishandling the wrap). Fails if x-edges clamp instead of wrap.
-- [ ] Implement `bakeNormalMap`; didactic header explaining the Sobel kernel, the RG encoding + Z-reconstruction split, the equirect wrap/clamp edge rule, and the row/sign convention.
-- [ ] `npm test -- bakeNormalMap` green; `npx tsc --noEmit -p tsconfig.tools.json` clean.
-- [ ] Commit (`tools/textures/bakeNormalMap.ts`, its test).
+- [x] Write `tests/tools/textures/bakeNormalMap.test.ts` with **hand-computed** expectations (independent of the implementation — not a mirror):
+  - [x] `a flat heightfield bakes to the neutral normal` — every-texel-equal input ⇒ every output pixel `R ≈ 128, G ≈ 128, B = 255` (fails if the gradient reports nonzero on flat ground — the commonest kernel bug).
+  - [x] `a +x ramp tilts R, not G, with the downhill sign` — height increasing a fixed step per column ⇒ all interior pixels share ONE `RG`, with `G ≈ 128` and `R` on the **hand-derived** side of 128 (assert the exact `<` or `>` — that pins the sign). Fails on axis swap, wrong sign, or a non-constant result.
+  - [x] `a +y ramp tilts G, not R` — the symmetric case ⇒ `R ≈ 128`, `G` off-neutral. Catches an x/y axis swap the +x test alone can't.
+  - [x] `exaggeration scales the tilt monotonically` — the same +x ramp at `exaggeration` 2× vs 1× ⇒ `|R − 128|` strictly larger at 2× (independent monotonicity property; fails if exaggeration is ignored or misapplied).
+  - [x] `the longitude seam does not fabricate a gradient` — a heightfield varying only in y (constant across each row, equal at column 0 and `width-1`) ⇒ the seam columns' `R ≈ 128` (no spurious x-gradient from mishandling the wrap). Fails if x-edges clamp instead of wrap.
+- [x] Implement `bakeNormalMap`; didactic header explaining the Sobel kernel, the RG encoding + Z-reconstruction split, the equirect wrap/clamp edge rule, and the row/sign convention.
+- [x] `npm test -- bakeNormalMap` green; `npx tsc --noEmit -p tsconfig.tools.json` clean.
+- [x] Commit (`tools/textures/bakeNormalMap.ts`, its test).
 
 ---
 
@@ -99,10 +99,10 @@ where `(nx, ny, nz) = normalize(vec3(-gx * exaggeration, -gy * exaggeration, 1))
 
 **Steps (TDD):**
 
-- [ ] Extend `isLinearTextureKind.test.ts`: assert `normal is linear` and keep `surface/night/clouds are not` (hand-listed structural predicate driving three consumers' correctness — not a constant restatement). `material` stays linear.
-- [ ] Add the `'textures.earthElevation'` registry row + the README provenance line.
-- [ ] `npm test -- isLinearTextureKind` green; `npx tsc --noEmit -p tsconfig.tools.json` + `npx tsc --noEmit` clean.
-- [ ] Commit (stage each path explicitly).
+- [x] Extend `isLinearTextureKind.test.ts`: assert `normal is linear` and keep `surface/night/clouds are not` (hand-listed structural predicate driving three consumers' correctness — not a constant restatement). `material` stays linear.
+- [x] Add the `'textures.earthElevation'` registry row + the README provenance line.
+- [x] `npm test -- isLinearTextureKind` green; `npx tsc --noEmit -p tsconfig.tools.json` + `npx tsc --noEmit` clean.
+- [x] Commit (stage each path explicitly).
 
 ---
 
@@ -122,10 +122,10 @@ where `(nx, ny, nz) = normalize(vec3(-gx * exaggeration, -gy * exaggeration, 1))
 
 **Steps:**
 
-- [ ] Add the `TEXTURE_SOURCES.earth.normal` + `BODY_TEXTURE_REGISTRY.earth.kinds.normal` rows; add the `normal` writer branch to the build loop; add the missing-source skip for a kind.
-- [ ] The plan A Task-6 drift tests (`textureBuildEntries covers every non-ring (body,kind)`, `the full pull covers every (body,kind) native`) now automatically exercise `normal` — run `npm test -- buildTextures fetchTextures textureSources` and confirm they stay green (the source is covered by the single table; no new drift test needed — the generic guard already binds).
-- [ ] `npx tsc --noEmit -p tsconfig.tools.json` clean.
-- [ ] Commit (stage each path explicitly).
+- [x] Add the `TEXTURE_SOURCES.earth.normal` + `BODY_TEXTURE_REGISTRY.earth.kinds.normal` rows; add the `normal` writer branch to the build loop; add the missing-source skip for a kind.
+- [x] The plan A Task-6 drift tests (`textureBuildEntries covers every non-ring (body,kind)`, `the full pull covers every (body,kind) native`) now automatically exercise `normal` — run `npm test -- buildTextures fetchTextures textureSources` and confirm they stay green (the source is covered by the single table; no new drift test needed — the generic guard already binds).
+- [x] `npx tsc --noEmit -p tsconfig.tools.json` clean.
+- [x] Commit (stage each path explicitly).
 
 ---
 
@@ -161,10 +161,10 @@ where `(nx, ny, nz) = normalize(vec3(-gx * exaggeration, -gy * exaggeration, 1))
 
 **Steps:**
 
-- [ ] Wire the varying, both shaders, the tangent VBO, binding 5, the flat-normal placeholder, and the `setMap('normal')` case.
-- [ ] `npx tsc --noEmit` clean; `npm run build` clean (WESL links — watch the iOS-strict traps; use `createShaderModuleWithDevLog` output if it fails).
-- [ ] **Visual check (placeholder normal, before Task 5 data):** ask the user to confirm on the running dev server (do not start/kill it) that Earth still renders correctly — with the flat-normal placeholder the shading is **identical to plan A** (no relief yet), no crash, terminator intact, ocean glint unchanged.
-- [ ] Commit (stage each path explicitly).
+- [x] Wire the varying, both shaders, the tangent VBO, binding 5, the flat-normal placeholder, and the `setMap('normal')` case.
+- [x] `npx tsc --noEmit` clean; `npm run build` clean (WESL links — watch the iOS-strict traps; use `createShaderModuleWithDevLog` output if it fails).
+- [x] **Visual check (placeholder normal, before Task 5 data):** ask the user to confirm on the running dev server (do not start/kill it) that Earth still renders correctly — with the flat-normal placeholder the shading is **identical to plan A** (no relief yet), no crash, terminator intact, ocean glint unchanged.
+- [x] Commit (stage each path explicitly).
 
 ---
 
@@ -172,11 +172,11 @@ where `(nx, ny, nz) = normalize(vec3(-gx * exaggeration, -gy * exaggeration, 1))
 
 **Files:** none (data + verification). Produces `data/raw/textures/<elevation>` (gitignored) and `public/data/images/textures/earth-normal-{2048,4096}.png` (gitignored build artefacts).
 
-- [ ] **Announce the download** (announce-big-downloads): tell the user the GEBCO/SRTM elevation proxy is ~10–30 MB, state the exact URL + size confirmed against `textures.earthElevation`, and **get explicit go-ahead before fetching**. Do not fetch otherwise.
-- [ ] On go-ahead, fetch the elevation source (`npm run fetch-textures -- --confirm`, or a targeted single-source fetch) — it lands via `downloadGetOnly` into `data/raw/textures/` and upserts its `textures.sha256` line + README fetch date.
-- [ ] Build the normal tiers: `npm run build-textures` emits `earth-normal-4096.png` (+ `-2048`) via the Task 3 bake path. Confirm the files exist and are PNG.
-- [ ] **Visual check (the acceptance win):** ask the user to fly close to Earth at a **grazing sun angle** and confirm **terminator relief** — mountain ranges (Andes, Himalaya, Rockies) catch light on their sun-facing slopes and cast micro-shadow on the far slopes, with the effect strongest near the terminator and vanishing at local noon. Confirm relief tilts the **correct** way (the Task 1 G-sign): if ridges look inverted (valleys lit, peaks dark) the `gy` sign is flipped — fix in `bakeNormalMap` and rebuild. Confirm the network tab shows `earth-normal-4096.png` (not a 404 to the flat placeholder).
-- [ ] No commit (all artefacts gitignored). Note for the merge: R2 sync of `earth-normal-*.png` is a post-merge deploy step (spec §9.3 — the dir glob sweeps it), not part of this PR.
+- [x] **Announce the download** (announce-big-downloads): tell the user the GEBCO/SRTM elevation proxy is ~10–30 MB, state the exact URL + size confirmed against `textures.earthElevation`, and **get explicit go-ahead before fetching**. Do not fetch otherwise.
+- [x] On go-ahead, fetch the elevation source (`npm run fetch-textures -- --confirm`, or a targeted single-source fetch) — it lands via `downloadGetOnly` into `data/raw/textures/` and upserts its `textures.sha256` line + README fetch date.
+- [x] Build the normal tiers: `npm run build-textures` emits `earth-normal-4096.png` (+ `-2048`) via the Task 3 bake path. Confirm the files exist and are PNG.
+- [x] **Visual check (the acceptance win):** ask the user to fly close to Earth at a **grazing sun angle** and confirm **terminator relief** — mountain ranges (Andes, Himalaya, Rockies) catch light on their sun-facing slopes and cast micro-shadow on the far slopes, with the effect strongest near the terminator and vanishing at local noon. Confirm relief tilts the **correct** way (the Task 1 G-sign): if ridges look inverted (valleys lit, peaks dark) the `gy` sign is flipped — fix in `bakeNormalMap` and rebuild. Confirm the network tab shows `earth-normal-4096.png` (not a 404 to the flat placeholder).
+- [x] No commit (all artefacts gitignored). Note for the merge: R2 sync of `earth-normal-*.png` is a post-merge deploy step (spec §9.3 — the dir glob sweeps it), not part of this PR.
 
 ---
 
@@ -184,8 +184,8 @@ where `(nx, ny, nz) = normalize(vec3(-gx * exaggeration, -gy * exaggeration, 1))
 
 **Files:** none (review).
 
-- [ ] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay attention to: `isLinearTextureKind` genuinely staying the **single home** for the sRGB-vs-linear axis (filename ext + fetch decode + GPU format — `normal` must add zero new sites); the baked-vs-fetched `normal` path living **only** in the build's per-kind writer branch (no new fetch/build iteration branch, no parallel source table or filename site); the bake's RG encoding and the shader's Z-reconstruction being one agreed format contract; the equirect wrap/clamp edge rule being essential geometry, not an accidental special case. Name any knot precisely and fix or file it before the final review.
-- [ ] Address findings (or record why deferred); keep the suite green.
+- [x] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay attention to: `isLinearTextureKind` genuinely staying the **single home** for the sRGB-vs-linear axis (filename ext + fetch decode + GPU format — `normal` must add zero new sites); the baked-vs-fetched `normal` path living **only** in the build's per-kind writer branch (no new fetch/build iteration branch, no parallel source table or filename site); the bake's RG encoding and the shader's Z-reconstruction being one agreed format contract; the equirect wrap/clamp edge rule being essential geometry, not an accidental special case. Name any knot precisely and fix or file it before the final review.
+- [x] Address findings (or record why deferred); keep the suite green.
 
 ---
 
@@ -193,9 +193,9 @@ where `(nx, ny, nz) = normalize(vec3(-gx * exaggeration, -gy * exaggeration, 1))
 
 **Files:** none.
 
-- [ ] Run `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
-- [ ] Request code review (`superpowers:requesting-code-review`) covering the `bakeNormalMap` gradient/sign correctness (its hand-computed tests), the bake↔shader encoding agreement, and the single-seam baked-kind derivation.
-- [ ] Confirm the DoD before marking the plan done (`/feature-done`), which sweeps the backlog + relocates spec/plan on merge.
+- [x] Run `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
+- [x] Request code review (`superpowers:requesting-code-review`) covering the `bakeNormalMap` gradient/sign correctness (its hand-computed tests), the bake↔shader encoding agreement, and the single-seam baked-kind derivation.
+- [x] Confirm the DoD before marking the plan done (`/feature-done`), which sweeps the backlog + relocates spec/plan on merge.
 
 ---
 

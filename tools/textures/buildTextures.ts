@@ -274,7 +274,9 @@ const bakedNormalCache = new Map<
  * stride-extract a single greyscale channel — `.greyscale()` keeps three
  * identical bands, so we read channel 0 by the reported stride, the same pattern
  * `writeMaterialTier` uses for its mask — and hand that heightfield to
- * `bakeNormalMap`. The result feeds `writeLinearTier` per tier.
+ * `bakeNormalMap`. The result feeds `writeLinearTier` per tier. Upscaling is
+ * guarded off (`withoutEnlargement`), so a source narrower than the cap resizes
+ * down to itself rather than being blown up past its native detail.
  */
 function bakeNormalOnce(
   bodyId: BodyTextureId,
@@ -285,7 +287,7 @@ function bakeNormalOnce(
     const capPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
     baked = (async () => {
       const grey = await sharp(srcPath, { limitInputPixels: false })
-        .resize({ width: capPx })
+        .resize({ width: capPx, withoutEnlargement: true })
         .greyscale()
         .raw()
         .toBuffer({ resolveWithObject: true });

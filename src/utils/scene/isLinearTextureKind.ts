@@ -15,12 +15,13 @@ import type { TextureKind } from '../../@types/data/TextureKind';
  *    as PNG (lossless, no chroma subsampling) and sample through a linear
  *    (`unorm`) format with no hardware de-gamma.
  *
- * Three consumers read this one predicate so the sRGB-vs-linear decision can
+ * Four read-sites use this one predicate so the sRGB-vs-linear decision can
  * never drift between them: `bodyTextureFilename` (PNG vs JPEG extension),
- * `bodyTextureFetcher` (which decode path), and `earthRenderer.setMap` (which GPU
- * texture format). Hand-listing the linear kinds here — rather than a flag on
- * each `TextureKind` — keeps the vocabulary type (`TextureKind`) a plain string
- * union and puts the axis where the three consumers already look.
+ * `bodyTextureFetcher` (which decode path), and earthRenderer (both `setMap` and
+ * its placeholder factory, for which GPU texture format to allocate).
+ * Hand-listing the linear kinds here — rather than a flag on each
+ * `TextureKind` — keeps the vocabulary type (`TextureKind`) a plain string
+ * union and puts the axis where the four read-sites already look.
  */
 export function isLinearTextureKind(kind: TextureKind): boolean {
   return kind === 'material' || kind === 'normal';
