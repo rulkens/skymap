@@ -1,6 +1,6 @@
 # Photoreal Earth A — Cubesphere + PBR Surface Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace Earth's UV-sphere + single-Lambert surface with a pole-pinch-free **cubesphere** mesh and a **physically-based** surface (GGX specular + Oren-Nayar diffuse + Fresnel) driven by a channel-packed **material map**, so Earth gains an even silhouette and a real sun **glint** off the ocean on close approach.
 
@@ -68,15 +68,15 @@ export function cubeSphereMesh(
 
 **Steps (TDD):**
 
-- [ ] Write `tests/utils/math/cubeSphereMesh.test.ts` (model style on `tests/utils/math/uvSphereMesh.test.ts`), asserting for a whole-face call and for the six faces assembled:
-  - [ ] `every position is unit length` — `Math.hypot(x,y,z) ≈ 1` for all vertices (fails if the cube→sphere normalize is dropped).
-  - [ ] `winding is outward-facing` — first-triangle geometric normal `·` centroid `> 0`, the same assertion as the uvSphere test (fails on inverted winding, which would cull all of Earth).
-  - [ ] `tangents are unit length and perpendicular to the normal` — `hypot(t) ≈ 1` and `dot(t, normalize(pos)) ≈ 0` (fails if tangents are garbage — the load-bearing contract plan C reads).
-  - [ ] `equirect uv matches the J2000 convention at face centres` — the +x face centre vertex is `≈ (1,0,0)` with `v ≈ 0.5`; the +z face centre is `≈ (0,0,1)` with `v ≈ 1`; the +y face centre `≈ (0,1,0)` with `u ≈ 0.25`. Hand-computed from `u=lon/2π, v=lat/π+0.5` — the same map orientation `uvSphereMesh` produces (fails if the frame or uv formula drifts from uvSphere, which would render continents rotated/mirrored).
-  - [ ] `no triangle spans more than half the u range` across all six faces' triangles (fails on the +x seam wrap bug — a triangle straddling u=0/1 would smear the whole texture).
-- [ ] Implement `cubeSphereMesh`; keep a didactic module header explaining the face→sphere map, the J2000/winding parity with `uvSphereMesh`, and the seam-continuity choice.
-- [ ] `npm test -- cubeSphereMesh` green; `npx tsc --noEmit` clean.
-- [ ] Commit (`src/@types/math/CubeSphereMesh.d.ts`, `src/utils/math/cubeSphereMesh.ts`, `tests/utils/math/cubeSphereMesh.test.ts`).
+- [x] Write `tests/utils/math/cubeSphereMesh.test.ts` (model style on `tests/utils/math/uvSphereMesh.test.ts`), asserting for a whole-face call and for the six faces assembled:
+  - [x] `every position is unit length` — `Math.hypot(x,y,z) ≈ 1` for all vertices (fails if the cube→sphere normalize is dropped).
+  - [x] `winding is outward-facing` — first-triangle geometric normal `·` centroid `> 0`, the same assertion as the uvSphere test (fails on inverted winding, which would cull all of Earth).
+  - [x] `tangents are unit length and perpendicular to the normal` — `hypot(t) ≈ 1` and `dot(t, normalize(pos)) ≈ 0` (fails if tangents are garbage — the load-bearing contract plan C reads).
+  - [x] `equirect uv matches the J2000 convention at face centres` — the +x face centre vertex is `≈ (1,0,0)` with `v ≈ 0.5`; the +z face centre is `≈ (0,0,1)` with `v ≈ 1`; the +y face centre `≈ (0,1,0)` with `u ≈ 0.25`. Hand-computed from `u=lon/2π, v=lat/π+0.5` — the same map orientation `uvSphereMesh` produces (fails if the frame or uv formula drifts from uvSphere, which would render continents rotated/mirrored).
+  - [x] `no triangle spans more than half the u range` across all six faces' triangles (fails on the +x seam wrap bug — a triangle straddling u=0/1 would smear the whole texture).
+- [x] Implement `cubeSphereMesh`; keep a didactic module header explaining the face→sphere map, the J2000/winding parity with `uvSphereMesh`, and the seam-continuity choice.
+- [x] `npm test -- cubeSphereMesh` green; `npx tsc --noEmit` clean.
+- [x] Commit (`src/@types/math/CubeSphereMesh.d.ts`, `src/utils/math/cubeSphereMesh.ts`, `tests/utils/math/cubeSphereMesh.test.ts`).
 
 ---
 
@@ -96,10 +96,10 @@ export function cubeSphereMesh(
 
 **Steps:**
 
-- [ ] Swap the mesh source + index type; add the `CUBESPHERE_FACE_RESOLUTION` const; update the module header's "same UV sphere every body renderer uses" note to describe the cubesphere.
-- [ ] `npx tsc --noEmit` clean; `npm run build` clean (the `?static` WESL import must still link).
-- [ ] **Visual check:** ask the user to look at the already-running dev server (do not start/kill it) and confirm Earth on close approach has an **even, pole-pinch-free silhouette** — no puckering at the poles, texture continents in the same orientation as before. Note nothing else should have changed (still the plain Lambert day map).
-- [ ] Commit (`src/services/gpu/renderers/bodies/earthRenderer.ts`).
+- [x] Swap the mesh source + index type; add the `CUBESPHERE_FACE_RESOLUTION` const; update the module header's "same UV sphere every body renderer uses" note to describe the cubesphere.
+- [x] `npx tsc --noEmit` clean; `npm run build` clean (the `?static` WESL import must still link).
+- [x] **Visual check:** ask the user to look at the already-running dev server (do not start/kill it) and confirm Earth on close approach has an **even, pole-pinch-free silhouette** — no puckering at the poles, texture continents in the same orientation as before. Note nothing else should have changed (still the plain Lambert day map).
+- [x] Commit (`src/services/gpu/renderers/bodies/earthRenderer.ts`).
 
 ---
 
@@ -128,13 +128,13 @@ export function camPosLocal(
 
 **Steps (TDD):**
 
-- [ ] Write the failing test with **hand-computed** expectations (independent of the implementation, not a mirror):
-  - [ ] `identity orientation, unit radius` — body at `[10,0,0]`, camera at `[13,0,0]`, radius `1` ⇒ `[3,0,0]` (camera 3 body-radii along +x).
-  - [ ] `radius scaling` — same geometry, radius `3` ⇒ `[1,0,0]`.
-  - [ ] `orientation rotates into the local frame` — a 90°-about-z `orientation` maps a world +x offset to local −y (or +y — assert the exact hand-derived sign for the column-major `Rᵀ` convention `sunDirLocal` uses).
-- [ ] Implement `camPosLocal`.
-- [ ] `npm test -- camPosLocal` green; `npx tsc --noEmit` clean.
-- [ ] Commit.
+- [x] Write the failing test with **hand-computed** expectations (independent of the implementation, not a mirror):
+  - [x] `identity orientation, unit radius` — body at `[10,0,0]`, camera at `[13,0,0]`, radius `1` ⇒ `[3,0,0]` (camera 3 body-radii along +x).
+  - [x] `radius scaling` — same geometry, radius `3` ⇒ `[1,0,0]`.
+  - [x] `orientation rotates into the local frame` — a 90°-about-z `orientation` maps a world +x offset to local −y (or +y — assert the exact hand-derived sign for the column-major `Rᵀ` convention `sunDirLocal` uses).
+- [x] Implement `camPosLocal`.
+- [x] `npm test -- camPosLocal` green; `npx tsc --noEmit` clean.
+- [x] Commit.
 
 ---
 
@@ -184,15 +184,15 @@ export function packEarthSurfaceUniforms(
 
 **Steps (TDD):**
 
-- [ ] Add the `EarthSurfaceUniforms` struct to `lib/sphere.wesl` with a didactic header (single-quote comments) explaining: sibling-not-overload, the reused lit prefix, `roughnessBase` filling the vec3 pad, and `cloudShadowStrength` as the plan-D seam.
-- [ ] Write `tests/utils/gpu/packEarthSurfaceUniforms.test.ts` — a **uniform byte-layout** test (a keep-rule category: WGSL↔TS parity, iOS-silent-drop guard). Pack distinct hand-placed values and assert:
-  - [ ] `out.length === EARTH_SURFACE_UNIFORM_FLOATS`.
-  - [ ] `out[0..15]` equals the mvp, `out[16..18]` equals `sunDirLocal`.
-  - [ ] `out[19] === roughnessBase` (the pad-slot override — fails if the packer leaves the lit pad zeroed).
-  - [ ] `out[20..22] === camPosLocal`, `out[23] === f0`, `out[24] === sunIrradiance`, `out[25] === cloudShadowStrength`.
-- [ ] Implement `packEarthSurfaceUniforms`.
-- [ ] `npm test -- packEarthSurfaceUniforms` green; `npx tsc --noEmit` clean.
-- [ ] Commit (`sphere.wesl`, `packEarthSurfaceUniforms.ts`, its test).
+- [x] Add the `EarthSurfaceUniforms` struct to `lib/sphere.wesl` with a didactic header (single-quote comments) explaining: sibling-not-overload, the reused lit prefix, `roughnessBase` filling the vec3 pad, and `cloudShadowStrength` as the plan-D seam.
+- [x] Write `tests/utils/gpu/packEarthSurfaceUniforms.test.ts` — a **uniform byte-layout** test (a keep-rule category: WGSL↔TS parity, iOS-silent-drop guard). Pack distinct hand-placed values and assert:
+  - [x] `out.length === EARTH_SURFACE_UNIFORM_FLOATS`.
+  - [x] `out[0..15]` equals the mvp, `out[16..18]` equals `sunDirLocal`.
+  - [x] `out[19] === roughnessBase` (the pad-slot override — fails if the packer leaves the lit pad zeroed).
+  - [x] `out[20..22] === camPosLocal`, `out[23] === f0`, `out[24] === sunIrradiance`, `out[25] === cloudShadowStrength`.
+- [x] Implement `packEarthSurfaceUniforms`.
+- [x] `npm test -- packEarthSurfaceUniforms` green; `npx tsc --noEmit` clean.
+- [x] Commit (`sphere.wesl`, `packEarthSurfaceUniforms.ts`, its test).
 
 ---
 
@@ -220,9 +220,9 @@ fn pbrDirect(n: vec3<f32>, v: vec3<f32>, l: vec3<f32>, albedo: vec3<f32>, roughn
 
 **Steps:**
 
-- [ ] Write `lib/pbr.wesl` with the five functions + a didactic header (the microfacet decomposition, why dielectric-constant-F0, why Oren-Nayar over Lambert, the `AMBIENT`-is-separate note).
-- [ ] `npm run build` clean (the module links; no consumer yet — that is fine, it is imported in Task 8).
-- [ ] Commit.
+- [x] Write `lib/pbr.wesl` with the five functions + a didactic header (the microfacet decomposition, why dielectric-constant-F0, why Oren-Nayar over Lambert, the `AMBIENT`-is-separate note).
+- [x] `npm run build` clean (the module links; no consumer yet — that is fine, it is imported in Task 8).
+- [x] Commit.
 
 ---
 
@@ -249,12 +249,12 @@ export function textureBuildEntries(): readonly { bodyId: BodyTextureId; kind: T
 
 **Steps (TDD):**
 
-- [ ] Add the generic drift tests (they pass now — all-surface — and become load-bearing in Task 7):
-  - [ ] In `fetchTextures.test.ts`: `the full pull covers every (body,kind) native in TEXTURE_SOURCES` — for every `(bodyId, kind)` entry in `TEXTURE_SOURCES`, `rawDataPath(entry.native)` is among `textureSourcesFor(false)` dest paths. Fails if fetch iterates surface-only while a non-surface source exists.
-  - [ ] In `buildTextures.test.ts`: `textureBuildEntries covers every non-ring (body,kind) in TEXTURE_SOURCES` — the entry set equals the `TEXTURE_SOURCES` `(bodyId, kind)` keys minus ring ids. Fails if the build loop drops a kind.
-- [ ] Rewire `fetchTextures.ts` and `buildTextures.ts`; run the existing `fetchTextures.test.ts` cases (`textureSourcesFor` dev/full lists at `fetchTextures.test.ts:20-82`) — they must stay green (behavior-neutral).
-- [ ] `npm test -- fetchTextures buildTextures` green; `npx tsc --noEmit -p tsconfig.tools.json` clean.
-- [ ] Commit.
+- [x] Add the generic drift tests (they pass now — all-surface — and become load-bearing in Task 7):
+  - [x] In `fetchTextures.test.ts`: `the full pull covers every (body,kind) native in TEXTURE_SOURCES` — for every `(bodyId, kind)` entry in `TEXTURE_SOURCES`, `rawDataPath(entry.native)` is among `textureSourcesFor(false)` dest paths. Fails if fetch iterates surface-only while a non-surface source exists.
+  - [x] In `buildTextures.test.ts`: `textureBuildEntries covers every non-ring (body,kind) in TEXTURE_SOURCES` — the entry set equals the `TEXTURE_SOURCES` `(bodyId, kind)` keys minus ring ids. Fails if the build loop drops a kind.
+- [x] Rewire `fetchTextures.ts` and `buildTextures.ts`; run the existing `fetchTextures.test.ts` cases (`textureSourcesFor` dev/full lists at `fetchTextures.test.ts:20-82`) — they must stay green (behavior-neutral).
+- [x] `npm test -- fetchTextures buildTextures` green; `npx tsc --noEmit -p tsconfig.tools.json` clean.
+- [x] Commit.
 
 ---
 
@@ -296,12 +296,12 @@ export function writeLinearTier(
 
 **Steps (TDD):**
 
-- [ ] `isLinearTextureKind` test: `material is linear`, `surface/night/clouds are not` — hand-listed, a small structural predicate (not a constant restatement — it drives three consumers' correctness).
-- [ ] Extend `bodyTextureFilename.test.ts`: `a linear kind uses PNG` → `bodyTextureFilename('earth','material','medium')` is `'earth-material-4096.png'` (fails if the ext ignores linear kinds → the fetcher 404s the material map). Keep the existing surface/ring cases green.
-- [ ] `writeLinearTier` test: `preserves raw pixel values (no sRGB gamma applied)` — feed a tiny known linear RGBA buffer, write at same width, read the PNG back to raw, assert the bytes round-trip unchanged (fails if a gamma/sRGB transform sneaks in — a real property, not a mirror).
-- [ ] Add the registry/source/kinds rows; implement `isLinearTextureKind`, `writeLinearTier`, and the build material path.
-- [ ] `npm test -- isLinearTextureKind bodyTextureFilename writeLinearTier buildTextures fetchTextures textureSources` green (the Task 6 drift tests now exercise `material`). `npx tsc --noEmit` + `npx tsc --noEmit -p tsconfig.tools.json` clean.
-- [ ] Commit (stage each path explicitly).
+- [x] `isLinearTextureKind` test: `material is linear`, `surface/night/clouds are not` — hand-listed, a small structural predicate (not a constant restatement — it drives three consumers' correctness).
+- [x] Extend `bodyTextureFilename.test.ts`: `a linear kind uses PNG` → `bodyTextureFilename('earth','material','medium')` is `'earth-material-4096.png'` (fails if the ext ignores linear kinds → the fetcher 404s the material map). Keep the existing surface/ring cases green.
+- [x] `writeLinearTier` test: `preserves raw pixel values (no sRGB gamma applied)` — feed a tiny known linear RGBA buffer, write at same width, read the PNG back to raw, assert the bytes round-trip unchanged (fails if a gamma/sRGB transform sneaks in — a real property, not a mirror).
+- [x] Add the registry/source/kinds rows; implement `isLinearTextureKind`, `writeLinearTier`, and the build material path.
+- [x] `npm test -- isLinearTextureKind bodyTextureFilename writeLinearTier buildTextures fetchTextures textureSources` green (the Task 6 drift tests now exercise `material`). `npx tsc --noEmit` + `npx tsc --noEmit -p tsconfig.tools.json` clean.
+- [x] Commit (stage each path explicitly).
 
 ---
 
@@ -346,10 +346,10 @@ export const EARTH_SURFACE_PARAMS: {
 
 **Steps:**
 
-- [ ] Add `EARTH_SURFACE_PARAMS`; wire the renderer (uniform size, binding 3, placeholder material, `setMap` material case), the fetcher linear-decode branch, both shaders, and `earthLayer`.
-- [ ] `npx tsc --noEmit` clean; `npm run build` clean (the WESL links — watch for the iOS-strict traps: no `texture_1d`, valid struct layout; use `createShaderModuleWithDevLog` output if it fails).
-- [ ] **Visual check (placeholder material, before Task 9 data):** ask the user to confirm Earth still renders lit — a plausible surface with the day map, no crash, terminator intact. No glint yet (material is the all-land placeholder).
-- [ ] Commit (stage each path explicitly).
+- [x] Add `EARTH_SURFACE_PARAMS`; wire the renderer (uniform size, binding 3, placeholder material, `setMap` material case), the fetcher linear-decode branch, both shaders, and `earthLayer`.
+- [x] `npx tsc --noEmit` clean; `npm run build` clean (the WESL links — watch for the iOS-strict traps: no `texture_1d`, valid struct layout; use `createShaderModuleWithDevLog` output if it fails).
+- [x] **Visual check (placeholder material, before Task 9 data):** ask the user to confirm Earth still renders lit — a plausible surface with the day map, no crash, terminator intact. No glint yet (material is the all-land placeholder).
+- [x] Commit (stage each path explicitly).
 
 ---
 
@@ -357,11 +357,11 @@ export const EARTH_SURFACE_PARAMS: {
 
 **Files:** none (data + verification). Produces `data/raw/textures/<water-mask>` (gitignored) and `public/data/images/textures/earth-material-{2048,4096}.png` (gitignored build artefacts).
 
-- [ ] **Announce the download** (announce-big-downloads): tell the user the NASA water-mask source is ~10–20 MB, state the exact URL + size confirmed against `textures.earthWaterMask`, and **get explicit go-ahead before fetching**. Do not fetch otherwise.
-- [ ] On go-ahead, fetch the water mask (`npm run fetch-textures -- --confirm`, or a targeted single-source fetch) — it lands via `downloadGetOnly` into `data/raw/textures/` and upserts its `textures.sha256` line.
-- [ ] Build the material tiers: `npm run build-textures` emits `earth-material-4096.png` (+ `-2048`) into `public/data/images/textures/` via the Task 7 material path. Confirm the files exist and are PNG.
-- [ ] **Visual check (the acceptance win):** ask the user to fly close to Earth on the running dev server and confirm a tight, bright **ocean glint** tracking the sun's sub-solar point, with land reading rougher/matte and no glint — the primary realism win (spec §12 row A). Confirm the material loaded (network tab shows `earth-material-4096.png`, not a 404 to the placeholder).
-- [ ] No commit (all artefacts gitignored). Note for the merge: R2 sync of the new `earth-material-*.png` is a post-merge deploy step (spec §9.3 — the dir glob sweeps it automatically), not part of this PR.
+- [x] **Announce the download** (announce-big-downloads): tell the user the NASA water-mask source is ~10–20 MB, state the exact URL + size confirmed against `textures.earthWaterMask`, and **get explicit go-ahead before fetching**. Do not fetch otherwise.
+- [x] On go-ahead, fetch the water mask (`npm run fetch-textures -- --confirm`, or a targeted single-source fetch) — it lands via `downloadGetOnly` into `data/raw/textures/` and upserts its `textures.sha256` line.
+- [x] Build the material tiers: `npm run build-textures` emits `earth-material-4096.png` (+ `-2048`) into `public/data/images/textures/` via the Task 7 material path. Confirm the files exist and are PNG.
+- [x] **Visual check (the acceptance win):** ask the user to fly close to Earth on the running dev server and confirm a tight, bright **ocean glint** tracking the sun's sub-solar point, with land reading rougher/matte and no glint — the primary realism win (spec §12 row A). Confirm the material loaded (network tab shows `earth-material-4096.png`, not a 404 to the placeholder).
+- [x] No commit (all artefacts gitignored). Note for the merge: R2 sync of the new `earth-material-*.png` is a post-merge deploy step (spec §9.3 — the dir glob sweeps it automatically), not part of this PR.
 
 ---
 
@@ -369,8 +369,8 @@ export const EARTH_SURFACE_PARAMS: {
 
 **Files:** none (review).
 
-- [ ] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay attention to: the `isLinearTextureKind` predicate genuinely being the single home for the sRGB-vs-linear distinction (filename ext + fetch decode + GPU format — no fourth site); the `(body, kind)` fetch/build derivations not re-splitting into surface-vs-material special cases; the cubesphere seam handling being essential geometry, not an accidental branch. Name any knot precisely and fix or file it before the final review.
-- [ ] Address findings (or record why deferred); keep the suite green.
+- [x] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay attention to: the `isLinearTextureKind` predicate genuinely being the single home for the sRGB-vs-linear distinction (filename ext + fetch decode + GPU format — no fourth site); the `(body, kind)` fetch/build derivations not re-splitting into surface-vs-material special cases; the cubesphere seam handling being essential geometry, not an accidental branch. Name any knot precisely and fix or file it before the final review.
+- [x] Address findings (or record why deferred); keep the suite green.
 
 ---
 
@@ -378,9 +378,9 @@ export const EARTH_SURFACE_PARAMS: {
 
 **Files:** none.
 
-- [ ] Run `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
-- [ ] Request code review (`superpowers:requesting-code-review`) covering the byte-layout parity (`EarthSurfaceUniforms` ↔ `packEarthSurfaceUniforms`), the landmine rewire drift tests, and the linear-material path.
-- [ ] Confirm the DoD before marking the plan done (`/feature-done`), which sweeps the backlog + relocates spec/plan on merge.
+- [x] Run `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
+- [x] Request code review (`superpowers:requesting-code-review`) covering the byte-layout parity (`EarthSurfaceUniforms` ↔ `packEarthSurfaceUniforms`), the landmine rewire drift tests, and the linear-material path.
+- [x] Confirm the DoD before marking the plan done (`/feature-done`), which sweeps the backlog + relocates spec/plan on merge.
 
 ---
 
