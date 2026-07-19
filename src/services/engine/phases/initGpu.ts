@@ -83,6 +83,7 @@ import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/frameProgram';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
+import { isPerfMode } from '../../../utils/url/isPerfMode';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   wireGalaxyCatalogSourceSlot,
@@ -406,7 +407,11 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // gate is off OR the adapter lacks `timestamp-query`, so consumers gate
   // behind one `state.gpu.timingService.enabled` check.  The no-op path
   // allocates no GPU resources.
-  state.gpu.timingService = createGpuTimingService(device, hasUrlGate('gpuTimings'), TIMED_SLOTS);
+  state.gpu.timingService = createGpuTimingService(
+    device,
+    hasUrlGate('gpuTimings') || isPerfMode(),
+    TIMED_SLOTS,
+  );
 
   // ── Foreground / anchor renderers (Plans 01+02 — zoom-to-Earth) ──────
   //
