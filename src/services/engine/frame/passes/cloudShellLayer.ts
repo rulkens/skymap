@@ -140,7 +140,9 @@ export const cloudShellLayer: ContentLayer = {
     const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
     // Scale the shell's direct (sun-lit) term by the SAME irradiance the surface
     // uses (single source of truth), so clouds — the brightest real feature — are
-    // not dimmer than the ground beneath them.
+    // not dimmer than the ground beneath them. The ambient floor is likewise the
+    // SAME live user setting the surface reads (`settings.earth.ambientLight`), so
+    // the deck's night side dims in lockstep with the ground.
     renderer.draw(
       pass,
       packCloudShellUniforms(
@@ -148,6 +150,7 @@ export const cloudShellLayer: ContentLayer = {
         sun,
         CLOUD_SHELL_PARAMS.opacity,
         EARTH_SURFACE_PARAMS.sunIrradiance,
+        state.settings.earth.ambientLight,
       ),
     );
   },

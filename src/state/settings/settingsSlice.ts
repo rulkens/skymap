@@ -138,6 +138,12 @@ const settingsSlice = createSlice({
     setAtmosphereExposure: (settings, action: PayloadAction<number>) => {
       settings.earth.atmosphereExposure = action.payload;
     },
+    // Night-side ambient floor on Earth's surface + cloud shell — read live by
+    // `earthLayer` / `cloudShellLayer` each frame. An Earth-scoped override of
+    // the shared `AMBIENT` const (which stays every other lit body's floor).
+    setAmbientLight: (settings, action: PayloadAction<number>) => {
+      settings.earth.ambientLight = action.payload;
+    },
 
     // ── star catalogs (fourth source-type cluster) ──────────────────────────
     // Master gate + per-catalog items, mirroring the galaxy-catalog cluster:
@@ -400,6 +406,7 @@ export const {
   setFilamentsEnabled,
   setFilamentIntensity,
   setAtmosphereExposure,
+  setAmbientLight,
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,

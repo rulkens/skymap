@@ -59,6 +59,7 @@ import {
 } from '../../services/engine/animation/pathDefaults';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { ATMOSPHERE_SHELL_PARAMS } from '../../data/bodies/atmosphereShellParams';
+import { EARTH_SURFACE_PARAMS } from '../../data/bodies/earthSurfaceParams';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -119,11 +120,15 @@ export function buildInitialSettings(): EngineSettingsState {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
     },
-    // Earth's per-body look dials. Seeded from the atmosphere shell's authored
-    // exposure so the data file stays the default's single source of truth (the
-    // same relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`).
+    // Earth's per-body look dials. Each seeds from its authored data constant so
+    // that file stays the default's single source of truth (the same
+    // relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`):
+    // `atmosphereExposure` from the atmosphere shell, `ambientLight` (Earth's
+    // night-side floor) from the surface params — where it matches the shared
+    // `AMBIENT` const so this Earth-scoped override is a no-op at the default.
     earth: {
       atmosphereExposure: ATMOSPHERE_SHELL_PARAMS.exposure,
+      ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
     },
     // Star-catalog layer: master gate on + one item row per star catalog. Rows
     // are DERIVED from the star-catalog registry entries (mirroring

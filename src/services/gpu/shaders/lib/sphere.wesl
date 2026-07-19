@@ -240,6 +240,14 @@ struct RingUniforms {
 // shadow fragment intersects. Both are bound but UNUSED in plan A -- present now
 // so plan D (cloud shell) reads the slots without reshaping the struct.
 //
+// 'ambientLight' fills what was the struct's trailing pad (byte 108): the
+// night-side ambient floor lifting Earth's unlit hemisphere off pure black. It
+// is the user-tunable Earth-scoped override of the shared 'AMBIENT' const in
+// 'lib/bodyLighting.wesl' -- that const stays every OTHER lit body's floor, this
+// slot carries Earth's. So the fragment reads 'u.ambientLight', not the const.
+// The struct is already 112 bytes (7 * 16) with this slot filled, so no pad
+// remains.
+//
 // ## Byte layout (uniform address space)
 //
 //   offset   0..63:  mvp                 (mat4x4<f32>, column-major, 64 bytes)
@@ -250,7 +258,7 @@ struct RingUniforms {
 //   offset  96..99:  sunIrradiance       (f32)
 //   offset 100..103: cloudShadowStrength (f32 -- unused in plan A)
 //   offset 104..107: cloudShellRadius    (f32 -- unit-sphere shell radius; unused in A)
-//   offset 108..111: _pad1               (f32 -- zeroed; rounds struct to 112 / 16)
+//   offset 108..111: ambientLight        (f32 -- night-side floor; Earth-scoped)
 //   total: 112 bytes.
 //
 // The CPU side uploads 28 f32s. The single source of truth for that packing is
@@ -266,7 +274,7 @@ struct EarthSurfaceUniforms {
   sunIrradiance: f32,
   cloudShadowStrength: f32,
   cloudShellRadius: f32,
-  _pad1: f32,
+  ambientLight: f32,
 };
 
 // ── CloudShellUniforms ───────────────────────────────────────────────
@@ -293,27 +301,34 @@ struct EarthSurfaceUniforms {
 // it and leaves the ambient floor untouched, mirroring the surface, so the night
 // side is unchanged.
 //
+// 'ambientLight' fills the first of that row's trailing pads (byte 84): the SAME
+// night-side ambient floor the surface reads from 'EARTH_SURFACE_PARAMS.ambientLight'
+// (the user-tunable Earth-scoped override of the shared 'AMBIENT' const), so the
+// deck's night side dims in lockstep with the ground beneath it. The fragment
+// reads 'u.ambientLight' in place of the const.
+//
 // ## Byte layout (uniform address space)
 //
 //   offset  0..63: mvp           (mat4x4<f32>, column-major, 64 bytes)
 //   offset 64..75: sunDirLocal   (vec3<f32> -- 16-byte aligned at 64)
 //   offset 76..79: cloudOpacity  (f32 -- fills the vec3's 4th slot; a real field)
 //   offset 80..83: sunIrradiance (f32 -- new row; direct-term scale)
-//   offset 84..95: _pad0/1/2     (f32 x3 -- rounds the struct to 96 / 16-byte)
+//   offset 84..87: ambientLight  (f32 -- night-side floor; Earth-scoped)
+//   offset 88..95: _pad1/2       (f32 x2 -- rounds the struct to 96 / 16-byte)
 //   total: 96 bytes.
 //
 // The CPU side uploads 24 f32s. The single source of truth for that packing is
 // 'utils/gpu/packCloudShellUniforms.ts', which reuses 'packLitBodyUniforms' for
 // the shared 80-byte prefix. 'cloudOpacity' is sourced from
-// 'CLOUD_SHELL_PARAMS.opacity'; 'sunIrradiance' from
-// 'EARTH_SURFACE_PARAMS.sunIrradiance'.
+// 'CLOUD_SHELL_PARAMS.opacity'; 'sunIrradiance' + 'ambientLight' from
+// 'EARTH_SURFACE_PARAMS'.
 
 struct CloudShellUniforms {
   mvp: mat4x4<f32>,
   sunDirLocal: vec3<f32>,
   cloudOpacity: f32,
   sunIrradiance: f32,
-  _pad0: f32,
+  ambientLight: f32,
   _pad1: f32,
   _pad2: f32,
 };

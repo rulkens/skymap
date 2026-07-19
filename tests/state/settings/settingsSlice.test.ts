@@ -22,6 +22,7 @@ import reducer, {
   setFlowEnabled,
   setFlow,
   setAtmosphereExposure,
+  setAmbientLight,
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,
@@ -201,6 +202,11 @@ describe('settingsSlice — earth', () => {
   it('setAtmosphereExposure writes the atmosphere-shell exposure', () => {
     const next = reducer(base(), setAtmosphereExposure(2.5));
     expect(next.earth.atmosphereExposure).toBe(2.5);
+  });
+
+  it('setAmbientLight writes the night-side ambient floor', () => {
+    const next = reducer(base(), setAmbientLight(0.15));
+    expect(next.earth.ambientLight).toBe(0.15);
   });
 });
 

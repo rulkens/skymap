@@ -8,9 +8,10 @@
  * the body's radius (`radiusKm` → Mpc via `SCALE_UNITS.KM_TO_MPC`) and
  * translated to its `positionMpc`, in the `RENDER_ORIGIN_MPC`-relative frame.
  * The layer packs the 112-byte `EarthSurfaceUniforms` record (MVP + body-local
- * sun direction + camera-in-local-frame + the PBR surface params; the ambient
- * floor is the shared `AMBIENT` const in `bodyLighting.wesl`, not a uniform
- * field); `earthRenderer.draw` writes it into its single
+ * sun direction + camera-in-local-frame + the PBR surface params, including the
+ * user-tunable night-side ambient floor `settings.earth.ambientLight` — an
+ * Earth-scoped override of the shared `AMBIENT` const other bodies read);
+ * `earthRenderer.draw` writes it into its single
  * (non-dynamic) uniform buffer and issues one indexed draw — so this row must
  * draw the Earth AT MOST once per frame (the renderer's own header spells out
  * the `writeBuffer`-vs-`submit` race a second same-frame draw would trigger).
@@ -118,8 +119,9 @@ export const earthLayer: ContentLayer = {
     );
     // Rotate the sun direction into Earth's local frame (its baked orientation
     // carries the axial tilt), so the fragment's lighting stays a plain dot
-    // product. The ambient floor is the shared AMBIENT const in bodyLighting.wesl,
-    // not a uniform.
+    // product. The night-side ambient floor rides the uniform below
+    // (`settings.earth.ambientLight`), an Earth-scoped override of the shared
+    // AMBIENT const other bodies read.
     const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
     // The camera in Earth's local frame (body-radii units) — the view vector the
     // PBR fragment needs for the view-dependent ocean glint. `view.camPos` and
@@ -148,6 +150,9 @@ export const earthLayer: ContentLayer = {
         // intersects this SAME shell the cloudShellLayer draws, so the cast
         // shadow and the drawn deck agree by construction.
         CLOUD_SHELL_PARAMS.radiusRatio,
+        // Night-side ambient floor — the live user setting, not the WESL const
+        // (seeded from EARTH_SURFACE_PARAMS.ambientLight so the default matches).
+        state.settings.earth.ambientLight,
       ),
     );
   },

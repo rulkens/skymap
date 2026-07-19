@@ -23,8 +23,12 @@
  * `sunIrradiance` opens a fresh 16-byte row (float index 20, byte 80) because
  * the vec3 tail is already spent on `cloudOpacity`. It is the SAME
  * `EARTH_SURFACE_PARAMS.sunIrradiance` the surface scales its direct term by,
- * passed in at the call site — not a second constant. The three trailing floats
- * (21..23) round the struct to 96 bytes / 16-byte alignment and stay zeroed.
+ * passed in at the call site — not a second constant. `ambientLight` fills the
+ * first of that row's trailing pads (float index 21, byte 84): the SAME
+ * `EARTH_SURFACE_PARAMS.ambientLight` night-side floor the surface reads (the
+ * user-tunable Earth-scoped override of the shared `AMBIENT` const), so the deck
+ * dims in lockstep with the ground. The last two floats (22..23) round the
+ * struct to 96 bytes / 16-byte alignment and stay zeroed.
  *
  * ## Byte layout (matches `CloudShellUniforms`) — 96 bytes / 24 f32
  *
@@ -32,12 +36,15 @@
  *   f32 16..18 (byte 64..75): sunDirLocal (vec3, 16-byte aligned)
  *   f32 19     (byte 76..79): cloudOpacity (fills sunDirLocal's vec3 tail)
  *   f32 20     (byte 80..83): sunIrradiance (new row; direct-term scale)
- *   f32 21..23 (byte 84..95): _pad0/1/2 (zeroed; rounds struct to 96)
+ *   f32 21     (byte 84..87): ambientLight (night-side floor; Earth-scoped)
+ *   f32 22..23 (byte 88..95): _pad1/2 (zeroed; rounds struct to 96)
  *
  * @param mvp           16-element column-major MVP (from `composeBodyMvp`).
  * @param sunDirLocal   Sun direction in the body's local frame.
  * @param cloudOpacity  Coverage-to-alpha opacity multiplier for the shell.
  * @param sunIrradiance Direct-term scale (`EARTH_SURFACE_PARAMS.sunIrradiance`).
+ * @param ambientLight  Night-side ambient floor (`EARTH_SURFACE_PARAMS.ambientLight`);
+ *                      Earth-scoped override of the shared `AMBIENT` const.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -45,7 +52,7 @@ import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /**
  * f32 count of `CloudShellUniforms` — 16 mvp + 3 sunDirLocal + 1 opacity + 1
- * irradiance + 3 pad = 24.
+ * irradiance + 1 ambient + 2 pad = 24.
  */
 export const CLOUD_SHELL_UNIFORM_FLOATS = 24;
 
@@ -54,11 +61,13 @@ export function packCloudShellUniforms(
   sunDirLocal: Readonly<Vec3>,
   cloudOpacity: number,
   sunIrradiance: number,
+  ambientLight: number,
 ): Float32Array {
   const out = new Float32Array(CLOUD_SHELL_UNIFORM_FLOATS);
   // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
   out.set(packLitBodyUniforms(mvp, sunDirLocal), 0); // f32 0..19
   out[19] = cloudOpacity; // byte 76 — overwrite the lit pad with a real field
   out[20] = sunIrradiance; // byte 80 — new row; scales the fragment's direct term
+  out[21] = ambientLight; // byte 84 — night-side floor, fills the first tail pad
   return out;
 }

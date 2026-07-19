@@ -128,6 +128,9 @@ export const selectFilamentIntensity = (state: RootState): number =>
 export const selectAtmosphereExposure = (state: RootState): number =>
   selectSettings(state).earth.atmosphereExposure;
 
+export const selectAmbientLight = (state: RootState): number =>
+  selectSettings(state).earth.ambientLight;
+
 // --- volumes cluster ----------------------------------------------------------
 
 export const selectVolumesEnabled = (state: RootState): boolean =>

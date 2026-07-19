@@ -3,17 +3,16 @@
 // Samples an equirectangular cloud map at the mesh uv -- RGB is the cloud colour
 // (sRGB, hardware-linearised on read), '.a' is the coverage that becomes the
 // shell's alpha -- then shades it with the shared sun-relative Lambert term
-// ('lib/bodyLighting.wesl' 'AMBIENT' floor + direct term) so the clouds go dark
-// on the night side (down to the shared 'AMBIENT' floor) and stay bright in
-// daylight. The result is emitted as STRAIGHT alpha into the rgba16float
-// foreground colour target; the renderer's OVER blend composites it over the
-// opaque surface already drawn.
+// (the 'u.ambientLight' floor + direct term) so the clouds go dark on the night
+// side (down to that ambient floor) and stay bright in daylight. The result is
+// emitted as STRAIGHT alpha into the rgba16float foreground colour target; the
+// renderer's OVER blend composites it over the opaque surface already drawn.
 //
 // ## Composition
 //
 //   c       = textureSample(cloudTexture, cloudSampler, uv) // rgb colour, a coverage
 //   lambert = max(dot(normalize(normalLocal), sunDirLocal), 0)
-//   lit     = AMBIENT + (1 - AMBIENT) * lambert * sunIrradiance  // direct scaled
+//   lit     = ambientLight + (1 - ambientLight) * lambert * sunIrradiance  // direct scaled
 //   out     = vec4(c.rgb * lit, c.a * cloudOpacity)         // straight alpha
 //
 // ## Why 'sunIrradiance' scales only the direct term
@@ -23,10 +22,20 @@
 // unscaled. Left unscaled the shell's lit output would top out at the raw Lambert
 // term (peak ~1) -- so the clouds, the brightest real feature (albedo ~0.8),
 // rendered DIMMER than the ~3x-brighter ground beneath them. Scaling the same
-// direct portion here matches the two. The 'AMBIENT' floor stays unscaled, so the
-// night-side deck is unchanged -- exactly the surface's split. 'sunIrradiance' is
-// the SAME constant, packed at byte 80 from 'EARTH_SURFACE_PARAMS.sunIrradiance'
-// (single source of truth), never a second cloud-only irradiance.
+// direct portion here matches the two. The 'u.ambientLight' floor stays unscaled,
+// so the night-side deck is unchanged -- exactly the surface's split.
+// 'sunIrradiance' is the SAME constant, packed at byte 80 from
+// 'EARTH_SURFACE_PARAMS.sunIrradiance' (single source of truth), never a second
+// cloud-only irradiance.
+//
+// ## Why 'ambientLight' is a uniform, not the shared const
+//
+// The ambient floor here is 'u.ambientLight' (packed at byte 84 from
+// 'EARTH_SURFACE_PARAMS.ambientLight'), the SAME Earth-scoped, user-tunable value
+// the surface reads -- NOT the shared 'AMBIENT' const the flat + textured planets
+// use. Reading it from the uniform keeps the deck's night side dimming in lockstep
+// with the ground; it seeds from the same 0.08 the const holds, so the default is
+// unchanged.
 //
 // 'cloudOpacity' (from 'CLOUD_SHELL_PARAMS.opacity', packed at byte 76) is a
 // global coverage-to-alpha multiplier so the whole deck can be dialed to a
@@ -58,7 +67,6 @@
 
 import package::bodies::cloudShell::io::VSOut;
 import package::lib::sphere::CloudShellUniforms;
-import package::lib::bodyLighting::AMBIENT;
 
 @group(0) @binding(0) var<uniform> u: CloudShellUniforms;
 @group(0) @binding(1) var cloudSampler: sampler;
@@ -70,11 +78,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let c = textureSample(cloudTexture, cloudSampler, in.uv);
   // Sun-relative day/night term, decomposed so 'sunIrradiance' scales the DIRECT
   // (sun-lit) portion only -- mirroring the surface, whose direct term is scaled
-  // by the same irradiance while its ambient floor is not. The 'AMBIENT' floor
-  // stays unscaled so the night-side deck never dissolves to pure black at the
-  // terminator, and night-side brightness is unchanged by the irradiance boost.
+  // by the same irradiance while its ambient floor is not. The 'u.ambientLight'
+  // floor stays unscaled so the night-side deck never dissolves to pure black at
+  // the terminator, and night-side brightness is unchanged by the irradiance
+  // boost.
   let lambert = max(dot(normalize(in.normalLocal), u.sunDirLocal), 0.0);
-  let lit = AMBIENT + (1.0 - AMBIENT) * lambert * u.sunIrradiance;
+  let lit = u.ambientLight + (1.0 - u.ambientLight) * lambert * u.sunIrradiance;
   // Straight-alpha OVER: colour shaded by the light term, coverage scaled by the
   // per-shell opacity multiplier.
   return vec4<f32>(c.rgb * lit, c.a * u.cloudOpacity);

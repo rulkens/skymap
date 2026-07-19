@@ -38,6 +38,9 @@ const F0 = 0.02;
 const SUN_IRRADIANCE = 3.14;
 const CLOUD_SHADOW = 0.68;
 const CLOUD_SHELL_RADIUS = 1.03;
+// Dyadic + distinct from every other sentinel, so float32 `toBe` is exact for
+// the slot that used to be the zeroed pad.
+const AMBIENT_LIGHT = 0.03125;
 
 describe('EarthSurfaceUniforms byte offsets', () => {
   it('packs a 112-byte / 28-f32 record with roughnessBase filling the vec3 tail @76', () => {
@@ -50,6 +53,7 @@ describe('EarthSurfaceUniforms byte offsets', () => {
       SUN_IRRADIANCE,
       CLOUD_SHADOW,
       CLOUD_SHELL_RADIUS,
+      AMBIENT_LIGHT,
     );
     expect(rec.length).toBe(EARTH_SURFACE_UNIFORM_FLOATS);
     expect(rec.length).toBe(28); // 112 bytes
@@ -86,7 +90,9 @@ describe('EarthSurfaceUniforms byte offsets', () => {
     // fails here. Distinct from every other slot's sentinel.
     expect(rec[26]).toBeCloseTo(CLOUD_SHELL_RADIUS); // byte 104
 
-    // Tail pad zeroed (bytes 108..111) — rounds the struct to 112 / 16-byte.
-    expect(rec[27]).toBe(0); // byte 108 — _pad1
+    // ambientLight — float index 27 (byte 108), the slot that used to be the
+    // zeroed tail pad. A REAL field now (the night-side floor); a packer that
+    // dropped the 9th arg zeroes it and fails here. Dyadic sentinel ⇒ exact toBe.
+    expect(rec[27]).toBe(AMBIENT_LIGHT); // byte 108
   });
 });

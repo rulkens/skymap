@@ -33,8 +33,11 @@
  * `cloudShellRadius` is the unit-sphere local radius of that shell (the surface
  * shadow fragment intersects this sphere). Both are bound and unused in plan A —
  * carrying them now means plan D (cloud shell) reads the slots without reshaping
- * the struct. `_pad1` at float index 27 stays a zeroed pad that rounds the
- * struct to 16-byte alignment.
+ * the struct. `ambientLight` at float index 27 fills what was the struct's
+ * trailing pad: the night-side ambient floor (the user-tunable Earth-scoped
+ * override of the shared `AMBIENT` const), which the surface fragment reads in
+ * place of that const. The struct is already 112 bytes (7×16) with this slot
+ * filled, so no pad remains.
  *
  * ## Byte layout (uniform address space) — 112 bytes / 28 f32
  *
@@ -46,7 +49,7 @@
  *   f32 24     (byte 96..99):  sunIrradiance
  *   f32 25     (byte 100..103): cloudShadowStrength
  *   f32 26     (byte 104..107): cloudShellRadius (unit-sphere shell radius)
- *   f32 27     (byte 108..111): _pad1 (zeroed; rounds struct to 112 / 16-byte)
+ *   f32 27     (byte 108..111): ambientLight (night-side floor; Earth-scoped)
  *
  * @param mvp                 16-element column-major MVP (from `composeBodyMvp`).
  * @param sunDirLocal         Sun direction in the body's local frame.
@@ -57,6 +60,9 @@
  * @param cloudShadowStrength Cloud-shadow darkening (plan A: bound, unused).
  * @param cloudShellRadius    Unit-sphere local radius of the cloud shell the
  *                            surface shadow fragment intersects (plan A: unused).
+ * @param ambientLight        Night-side ambient floor (fraction of albedo the
+ *                            unlit hemisphere shows); Earth-scoped override of
+ *                            the shared `AMBIENT` const.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -74,6 +80,7 @@ export function packEarthSurfaceUniforms(
   sunIrradiance: number,
   cloudShadowStrength: number,
   cloudShellRadius: number,
+  ambientLight: number,
 ): Float32Array {
   const out = new Float32Array(EARTH_SURFACE_UNIFORM_FLOATS);
   // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
@@ -86,6 +93,6 @@ export function packEarthSurfaceUniforms(
   out[24] = sunIrradiance; // byte 96
   out[25] = cloudShadowStrength; // byte 100
   out[26] = cloudShellRadius; // byte 104 — the shadow shell's local radius
-  // out[27] (bytes 108..111) stays zero — the tail pad rounding to 16-byte.
+  out[27] = ambientLight; // byte 108 — night-side floor, fills the former pad
   return out;
 }

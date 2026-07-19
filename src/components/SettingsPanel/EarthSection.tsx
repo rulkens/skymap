@@ -3,10 +3,10 @@
  * EarthSection — presentational component for the "Earth" settings subgroup
  * inside the SettingsPanel's Display section.
  *
- * Owns the Earth-specific UI: the atmosphere-shell exposure slider. Rendered
- * as its own CollapsibleSection (default closed, mirroring Display) nested
- * inside the Display disclosure, so an unrelated re-render higher up does not
- * cascade into this section.
+ * Owns the Earth-specific UI: the atmosphere-shell exposure slider and the
+ * night-side ambient-light slider. Rendered as its own CollapsibleSection
+ * (default closed, mirroring Display) nested inside the Display disclosure, so
+ * an unrelated re-render higher up does not cascade into this section.
  *
  * ### Props-driven, no internal state
  *
@@ -31,15 +31,25 @@ export type EarthSectionProps = {
   atmosphereExposure: number;
   /** Called with the new exposure as the slider drags. */
   onAtmosphereExposureChange: (value: number) => void;
+  /** Night-side ambient floor on Earth's surface + cloud shell. */
+  ambientLight: number;
+  /** Called with the new ambient floor as the slider drags. */
+  onAmbientLightChange: (value: number) => void;
 };
 
 // ── EarthSection ─────────────────────────────────────────────────────────────
 
 /**
- * Renders the Earth subgroup: the atmosphere-shell exposure slider in a
- * default-closed disclosure nested inside the Display section.
+ * Renders the Earth subgroup: the atmosphere-shell exposure slider and the
+ * night-side ambient-light slider in a default-closed disclosure nested inside
+ * the Display section.
  */
-function EarthSection({ atmosphereExposure, onAtmosphereExposureChange }: EarthSectionProps) {
+function EarthSection({
+  atmosphereExposure,
+  onAtmosphereExposureChange,
+  ambientLight,
+  onAmbientLightChange,
+}: EarthSectionProps) {
   return (
     <CollapsibleSection title="Earth">
       <div className={styles.panelRow}>
@@ -55,6 +65,21 @@ function EarthSection({ atmosphereExposure, onAtmosphereExposureChange }: EarthS
           step="0.05"
           value={atmosphereExposure}
           onChange={(e) => onAtmosphereExposureChange(Number(e.target.value))}
+        />
+      </div>
+      <div className={styles.panelRow}>
+        <label htmlFor="ambient-light">Ambient light</label>
+        <span className={styles.panelValue}>{ambientLight.toFixed(3)}</span>
+      </div>
+      <div className={styles.panelRow}>
+        <input
+          id="ambient-light"
+          type="range"
+          min="0"
+          max="0.2"
+          step="0.005"
+          value={ambientLight}
+          onChange={(e) => onAmbientLightChange(Number(e.target.value))}
         />
       </div>
     </CollapsibleSection>

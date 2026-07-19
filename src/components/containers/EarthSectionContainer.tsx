@@ -2,9 +2,10 @@
 /**
  * EarthSectionContainer — store boundary for the Earth settings subgroup.
  *
- * Owns all Redux reach for the Earth group: reads `selectAtmosphereExposure`
- * and wraps the `setAtmosphereExposure` dispatch in `useCallback`. The
- * presentational `EarthSection` imports nothing from `store/` or `state/`.
+ * Owns all Redux reach for the Earth group: reads `selectAtmosphereExposure` +
+ * `selectAmbientLight` and wraps the `setAtmosphereExposure` /
+ * `setAmbientLight` dispatches in `useCallback`. The presentational
+ * `EarthSection` imports nothing from `store/` or `state/`.
  *
  * ### Handler stability
  *
@@ -17,15 +18,20 @@
 import { memo, useCallback } from 'react';
 import EarthSection from '../SettingsPanel/EarthSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectAtmosphereExposure } from '../../state/settings/selectors';
-import { setAtmosphereExposure } from '../../state/settings/settingsSlice';
+import { selectAtmosphereExposure, selectAmbientLight } from '../../state/settings/selectors';
+import { setAtmosphereExposure, setAmbientLight } from '../../state/settings/settingsSlice';
 
 function EarthSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const atmosphereExposure = useAppSelector(selectAtmosphereExposure);
+  const ambientLight = useAppSelector(selectAmbientLight);
 
   const onAtmosphereExposureChange = useCallback(
     (value: number) => dispatch(setAtmosphereExposure(value)),
+    [dispatch],
+  );
+  const onAmbientLightChange = useCallback(
+    (value: number) => dispatch(setAmbientLight(value)),
     [dispatch],
   );
 
@@ -33,6 +39,8 @@ function EarthSectionContainer(): React.ReactElement {
     <EarthSection
       atmosphereExposure={atmosphereExposure}
       onAtmosphereExposureChange={onAtmosphereExposureChange}
+      ambientLight={ambientLight}
+      onAmbientLightChange={onAmbientLightChange}
     />
   );
 }

@@ -35,10 +35,11 @@ for (let i = 0; i < 16; i++) MVP[i] = i + 1;
 const SUN_DIR: Vec3 = [0.5, 0.25, 0.75];
 const CLOUD_OPACITY = 0.625;
 const SUN_IRRADIANCE = 17.25;
+const AMBIENT_LIGHT = 0.1875; // dyadic + distinct from every other sentinel
 
 describe('CloudShellUniforms byte offsets', () => {
-  it('packs a 96-byte / 24-f32 record: cloudOpacity @76, sunIrradiance @80', () => {
-    const rec = packCloudShellUniforms(MVP, SUN_DIR, CLOUD_OPACITY, SUN_IRRADIANCE);
+  it('packs a 96-byte / 24-f32 record: cloudOpacity @76, sunIrradiance @80, ambientLight @84', () => {
+    const rec = packCloudShellUniforms(MVP, SUN_DIR, CLOUD_OPACITY, SUN_IRRADIANCE, AMBIENT_LIGHT);
     expect(rec.length).toBe(CLOUD_SHELL_UNIFORM_FLOATS);
     expect(rec.length).toBe(24); // 96 bytes
     expect(rec.byteLength).toBe(96);
@@ -63,8 +64,11 @@ describe('CloudShellUniforms byte offsets', () => {
     // packer dropped it.
     expect(rec[20]).toBe(SUN_IRRADIANCE); // byte 80
 
-    // Trailing pad — floats 21..23 round the struct to 96 bytes and stay zeroed.
-    expect(rec[21]).toBe(0); // byte 84
+    // ambientLight — float index 21 (byte 84), the first of the row's trailing
+    // pads, now a REAL field (the night-side floor). Fails if the 5th arg dropped.
+    expect(rec[21]).toBe(AMBIENT_LIGHT); // byte 84
+
+    // Trailing pad — floats 22..23 round the struct to 96 bytes and stay zeroed.
     expect(rec[22]).toBe(0); // byte 88
     expect(rec[23]).toBe(0); // byte 92
   });

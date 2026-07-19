@@ -137,15 +137,22 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Earth's per-body look dials — the home for future Earth knobs (cloud
-   * opacity, night-side brightness, …). Today it holds a single field:
-   * `atmosphereExposure`, the exposure scale on the in-scatter atmosphere
-   * shell's HDR output. Seeded from `ATMOSPHERE_SHELL_PARAMS.exposure` (the
-   * data file stays the default's single source of truth) and read live by
-   * `atmosphereShellLayer` each frame.
+   * Earth's per-body look dials. Two fields today:
+   *   - `atmosphereExposure`, the exposure scale on the in-scatter atmosphere
+   *     shell's HDR output. Seeded from `ATMOSPHERE_SHELL_PARAMS.exposure` and
+   *     read live by `atmosphereShellLayer` each frame.
+   *   - `ambientLight`, the night-side ambient floor lifting Earth's unlit
+   *     hemisphere off pure black (earthshine / moonlight, physically). Seeded
+   *     from `EARTH_SURFACE_PARAMS.ambientLight` — the SAME value as the shared
+   *     `AMBIENT` const in `bodyLighting.wesl`, but Earth-scoped: that const
+   *     stays the floor for every OTHER lit body, this overrides it for Earth
+   *     alone. Read live by `earthLayer` + `cloudShellLayer` each frame.
+   * Each stays the data file's single source of truth for its default (the same
+   * relationship the tonemap exposure default has to `DEFAULT_EXPOSURE`).
    */
   earth: {
     atmosphereExposure: number;
+    ambientLight: number;
   };
 
   /**

@@ -49,6 +49,17 @@
  *   starting point — a deep, readable shadow under thick cloud without the ground
  *   going pure black (the ambient floor still shows through). The Task 8 visual
  *   pass tunes it against the real Blue Marble cloud map.
+ *
+ * - **`ambientLight`** is Earth's night-side ambient floor — the fraction of
+ *   albedo the unlit hemisphere still shows so its silhouette never dissolves at
+ *   the terminator (earthshine / moonlight, physically). It is the SEED DEFAULT
+ *   for the user-tunable `settings.earth.ambientLight` slider, and starts at
+ *   `0.08`, the SAME value as the shared `AMBIENT` const in
+ *   `lib/bodyLighting.wesl`, so routing the const read through this uniform is a
+ *   no-op at the default. The WESL const stays the floor for every OTHER lit
+ *   body; this dial overrides it for Earth alone (the surface + cloud shell read
+ *   `u.ambientLight`, not the const). The layers read the settings value each
+ *   frame, not this constant, so a drag updates the night side without a reload.
  */
 
 export const EARTH_SURFACE_PARAMS: {
@@ -56,9 +67,11 @@ export const EARTH_SURFACE_PARAMS: {
   readonly f0: number;
   readonly sunIrradiance: number;
   readonly cloudShadowStrength: number;
+  readonly ambientLight: number;
 } = {
   roughnessBase: 1.0,
   f0: 0.02,
   sunIrradiance: 3.0,
   cloudShadowStrength: 0.65,
+  ambientLight: 0.08,
 };

@@ -16,7 +16,7 @@
 //   roughness = mix(clamp(mat.r * roughnessBase, MIN_ROUGHNESS, 1), OCEAN_ROUGHNESS, mat.g)
 //   direct    = pbrDirect(n, v, l, albedo, roughness, f0)
 //   direct   *= (1 - cloudShadow.a * cloudShadowStrength)  // ground shadow, §7.2
-//   colour    = direct * sunIrradiance + AMBIENT * albedo
+//   colour    = direct * sunIrradiance + ambientLight * albedo
 //   emissive  = nightLights(nightColour, NoL, cloud.a)     // ADDED, not lit; §7.3
 //   return      colour + emissive
 //
@@ -43,11 +43,14 @@
 // The material's ocean mask 'mat.g' selects the smooth open-water roughness
 // ('OCEAN_ROUGHNESS' from pbr.wesl) over the land micro-roughness, so the two
 // surfaces get one continuous roughness field. 'pbrDirect' is the DIRECT
-// (sun-lit) term only; the shared 'AMBIENT' floor ('lib/bodyLighting.wesl') is
-// added here so the night hemisphere never dissolves at the terminator -- the
-// same single-source-of-truth discipline every lit body follows. 'sunIrradiance'
-// scales the direct term and is set (in 'earthSurfaceParams.ts') to roughly
-// preserve the previous 'litShade' brightness.
+// (sun-lit) term only; the ambient floor 'u.ambientLight' is added here so the
+// night hemisphere never dissolves at the terminator. Unlike every OTHER lit
+// body -- which reads the shared 'AMBIENT' const in 'lib/bodyLighting.wesl' --
+// Earth reads a per-draw uniform so the value is user-tunable (earthshine /
+// moonlight varies); it seeds from the same 0.08 the const holds, so the default
+// look is unchanged. The const stays the floor for the flat + textured planets.
+// 'sunIrradiance' scales the direct term and is set (in 'earthSurfaceParams.ts')
+// to roughly preserve the previous 'litShade' brightness.
 //
 // ## Renormalize the interpolated normal + normal mapping
 //
@@ -115,7 +118,6 @@ import package::lib::sphere::EarthSurfaceUniforms;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::pbr::OCEAN_ROUGHNESS;
-import package::lib::bodyLighting::AMBIENT;
 import package::lib::nightLights::nightLights;
 import package::lib::util::raySphere;
 import package::lib::math::PI;
@@ -220,7 +222,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let shadowAlpha = textureSample(cloudTexture, earthSampler, dirToEquirectUv(normalize(crossing))).a;
   let direct = directBase * (1.0 - shadowAlpha * u.cloudShadowStrength);
 
-  let colour = direct * u.sunIrradiance + AMBIENT * albedo;
+  let colour = direct * u.sunIrradiance + u.ambientLight * albedo;
 
   // City lights (Black Marble) are EMISSIVE, so 'nightLights' is ADDED to the lit
   // colour, never multiplied through the Lambert term (see 'lib/nightLights.wesl').
