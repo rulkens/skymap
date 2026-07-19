@@ -136,15 +136,24 @@ describe('timedSlotsOf', () => {
     // independent of the layers fixture (a composite step always contributes
     // its '<source>→<dest>' slot). This synthetic fixture has no near-field
     // rows (no (hdr, NEAR0) star points, no foreground bodies, no NEAR0
-    // captions), so those RENDER slots correctly don't appear — but the
-    // composite slot must.
+    // captions), so those RENDER slots correctly contribute no LAYER rows — but
+    // each render STEP still emits its '<target>·<SLAB>' group-key slot (the
+    // merged-pass timing slot), so the empty steps show up as their group key
+    // alone and the matched steps show their layers then the group total.
     expect(timedSlotsOf(frameProgram(TONE), layers)).toEqual([
+      'volume·COSMO',
       'point-sprites',
       'milky-way',
+      'hdr·COSMO',
+      'star-aggregates·NEAR0',
+      'hdr·NEAR0',
       'hdr→swap',
       'selection-ring',
       'labels',
+      'swap·COSMO',
+      'foreground:0·NEAR0',
       'foreground:0→swap',
+      'swap·NEAR0',
       'pick',
     ]);
   });
@@ -175,8 +184,13 @@ describe('timedSlotsOf', () => {
     // translucent rings overlay last — the foreground:0→swap composite, and the
     // (swap, NEAR0) render group → near0-selection-ring then foreground-labels),
     // and pick last.
+    // Each render STEP trails its layers with its own '<target>·<SLAB>'
+    // group-key slot (the merged-pass timing slot Joint 2 adds), so
+    // 'volume·COSMO' follows scalar-volume, 'hdr·COSMO' follows the eight COSMO
+    // hdr layers, and so on down to 'swap·NEAR0' after the near-field captions.
     expect(timedSlotsOf(frameProgram(TONE), CONTENT_LAYERS)).toEqual([
       'scalar-volume',
+      'volume·COSMO',
       'point-sprites',
       'procedural-disks',
       'textured-disks',
@@ -185,19 +199,23 @@ describe('timedSlotsOf', () => {
       'volume-upsample',
       'horizon-shell',
       'structure-markers',
+      'hdr·COSMO',
       'star-aggregates',
+      'star-aggregates·NEAR0',
       'milky-way',
       'star-points',
       'orbit-trails',
       'body-glints',
       'star-catalog',
       'star-upsample',
+      'hdr·NEAR0',
       'hdr→swap',
       'selection-ring',
       'disk-radius-ring',
       'marker-lines',
       'labels',
       'clip-path-debug',
+      'swap·COSMO',
       'earth',
       'cloud-shell',
       'star-spheres',
@@ -207,11 +225,14 @@ describe('timedSlotsOf', () => {
       'rings',
       // Earth's in-scatter atmosphere: the LAST foreground:0 layer in registry
       // order, so its slot trails the ring's inside the foreground:0 render step
-      // (before the foreground:0→swap composite).
+      // (before that step's foreground:0·NEAR0 group slot and the
+      // foreground:0→swap composite).
       'atmosphere-shell',
+      'foreground:0·NEAR0',
       'foreground:0→swap',
       'near0-selection-ring',
       'foreground-labels',
+      'swap·NEAR0',
       'pick',
     ]);
   });
@@ -220,9 +241,12 @@ describe('timedSlotsOf', () => {
 describe('timedSlotGroupsOf', () => {
   it('buckets each render step’s layers under its (target, slab) group title, in the six-group order', () => {
     // Fake layers matched against the REAL program: two hdr·COSMO layers, one
-    // swap·COSMO overlay, one foreground:0·NEAR0 body. The hdr·NEAR0,
-    // star-aggregates and volume steps match nothing, so their groups are
-    // empty and don't appear; the composite steps + trailing pick always do.
+    // swap·COSMO overlay, one foreground:0·NEAR0 body. Every render step now
+    // ALSO emits its '<target>·<SLAB>' group-key row (the merged-pass timing
+    // slot), so even the steps matching no fake layer — volume·COSMO,
+    // star-aggregates·NEAR0, hdr·NEAR0, swap·NEAR0 — contribute their group key
+    // and their titles appear. All six groups therefore show, and each row's
+    // group key buckets it under its step's title.
     const layers: readonly ContentLayer[] = [
       fakeLayer('point-sprites', 'hdr', COSMO),
       fakeLayer('milky-way', 'hdr', COSMO),
@@ -231,25 +255,31 @@ describe('timedSlotGroupsOf', () => {
     ];
     const groups = timedSlotGroupsOf(frameProgram(TONE), layers);
 
-    // Group titles in draw/table order; empty groups (no matched layers)
-    // omitted. The two composites and pick collapse into one trailing group.
+    // Group titles in draw/table order. The two composites and pick collapse
+    // into one trailing group.
     expect(groups.map((g) => g.title)).toEqual([
+      'Volumes & aggregates',
       'Cosmos · HDR',
+      'Near field · HDR',
       'Foreground bodies · depth',
       'Overlays',
       'Composites & pick',
     ]);
 
-    // Rows keep draw order within their group, and carry the groupKey the
-    // producing step stamped.
+    // Rows keep draw order within their group: each matched layer, then its
+    // step's group-key row; the two swap steps merge under Overlays.
     expect(groups.map((g) => g.rows.map((r) => r.name))).toEqual([
-      ['point-sprites', 'milky-way'],
-      ['earth'],
-      ['labels'],
+      ['volume·COSMO', 'star-aggregates·NEAR0'],
+      ['point-sprites', 'milky-way', 'hdr·COSMO'],
+      ['hdr·NEAR0'],
+      ['earth', 'foreground:0·NEAR0'],
+      ['labels', 'swap·COSMO', 'swap·NEAR0'],
       ['hdr→swap', 'foreground:0→swap', 'pick'],
     ]);
-    expect(groups[0]!.rows[0]!.groupKey).toBe('hdr·COSMO');
-    expect(groups[3]!.rows.map((r) => r.groupKey)).toEqual(['composite', 'composite', 'pick']);
+    // The 'Cosmos · HDR' group's first row (point-sprites) carries the step's
+    // group key; the trailing infra group carries composite/composite/pick.
+    expect(groups[1]!.rows[0]!.groupKey).toBe('hdr·COSMO');
+    expect(groups[5]!.rows.map((r) => r.groupKey)).toEqual(['composite', 'composite', 'pick']);
   });
 
   it('merges scalar-volume + star-aggregates into one group and sinks composites+pick to the last group', () => {
@@ -268,21 +298,30 @@ describe('timedSlotGroupsOf', () => {
     ]);
 
     const byTitle = (title: string) => TIMED_SLOT_GROUPS.find((g) => g.title === title)!;
+    // Each render step trails its layers with its '<target>·<SLAB>' group-key
+    // row, so volume·COSMO follows scalar-volume and star-aggregates·NEAR0
+    // follows star-aggregates within this merged group.
     expect(byTitle('Volumes & aggregates').rows.map((r) => r.name)).toEqual([
       'scalar-volume',
+      'volume·COSMO',
       'star-aggregates',
+      'star-aggregates·NEAR0',
     ]);
     // Overlays merges the COSMO swap overlays with the NEAR0 near-field swap
-    // rows (two non-adjacent swap steps).
+    // rows (two non-adjacent swap steps), each trailed by its group-key row.
     expect(byTitle('Overlays').rows.map((r) => r.name)).toEqual([
       'selection-ring',
       'disk-radius-ring',
       'marker-lines',
       'labels',
       'clip-path-debug',
+      'swap·COSMO',
       'near0-selection-ring',
       'foreground-labels',
+      'swap·NEAR0',
     ]);
+    // Composites and pick emit no group-key rows (only render steps do), so
+    // this group is unchanged.
     expect(byTitle('Composites & pick').rows.map((r) => r.name)).toEqual([
       'hdr→swap',
       'foreground:0→swap',
@@ -299,7 +338,11 @@ describe('timedSlotGroupsOf', () => {
     const groups = timedSlotGroupsOf(program, [fakeLayer('x', 'foo', COSMO)]);
     expect(groups.map((g) => g.title)).toEqual(['Composites & pick', 'foo·COSMO']);
     const fallback = groups.find((g) => g.title === 'foo·COSMO')!;
-    expect(fallback.rows).toEqual([{ name: 'x', groupKey: 'foo·COSMO' }]);
+    // The layer row, then the step's own group-key row (name === groupKey).
+    expect(fallback.rows).toEqual([
+      { name: 'x', groupKey: 'foo·COSMO' },
+      { name: 'foo·COSMO', groupKey: 'foo·COSMO' },
+    ]);
   });
 });
 

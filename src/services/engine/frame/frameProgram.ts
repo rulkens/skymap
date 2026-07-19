@@ -186,6 +186,17 @@ function timedSlotRowsOf(
           rows.push({ name: layer.name, groupKey });
         }
       }
+      // One extra slot per render STEP whose NAME is the groupKey itself, so
+      // the `merged` executor — which draws the whole group in one pass — has a
+      // slot to attach `timestampWrites` to (a merged pass can't bill the
+      // per-layer slots; those exist only for the `perLayerTimed` shape). Pushed
+      // AFTER the layer loop so the group total trails its layers in draw order.
+      // Emitted unconditionally (even for a step that matched no layer): the
+      // step still opens a merged pass whose time we want to see. `groupKey` is
+      // unique per step (each has a distinct `(target, slab)`) and never
+      // collides with a layer name, so it earns its own timing slot and, in the
+      // DebugPanel's grouped lists, its own row under the step's group title.
+      rows.push({ name: groupKey, groupKey });
     } else if (step.kind === 'composite') {
       // A composite merges whole textures rather than projecting geometry — it
       // belongs to no slab, and all composites share the one infra group.
