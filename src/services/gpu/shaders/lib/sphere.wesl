@@ -214,6 +214,59 @@ struct RingUniforms {
   _pad2: f32,
 };
 
+// ── EarthSurfaceUniforms ─────────────────────────────────────────────
+//
+// The uniform layout for the photoreal-Earth surface pass. It is a SIBLING of
+// 'TexturedBodyUniforms', NOT an overload of 'LitBodyUniforms' -- planets,
+// moons and the ring bind those; only Earth's dedicated surface fragment binds
+// this. It carries the same MVP + body-local sun-direction prefix as
+// 'LitBodyUniforms' (so it reuses that packer for the shared 80-byte prefix and
+// the two layouts can never drift), then the physically-based shading params
+// the Earth fragment needs.
+//
+// Two vec3 tails are filled with REAL fields rather than padding, the same
+// trick 'RingUniforms.planetRadiusRatio' uses:
+//   - 'roughnessBase' fills 'sunDirLocal's trailing 4-byte slot (byte 76).
+//   - 'f0' fills 'camPosLocal's trailing slot (byte 92).
+//
+// 'camPosLocal' (the camera in the body's local frame) is the one field beyond
+// the design spec's literal list: GGX specular is view-dependent, and the lit
+// prefix carries no camera position, so the ocean glint is uncomputable without
+// this view vector.
+//
+// 'cloudShadowStrength' is bound but UNUSED in plan A -- it is a plan-D (cloud
+// shell) seam, present now so plan D never has to reshape the struct. Likewise
+// '_pad0' is reserved: plan D renames it to 'cloudShellRadius'.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset   0..63:  mvp                 (mat4x4<f32>, column-major, 64 bytes)
+//   offset  64..75:  sunDirLocal         (vec3<f32> -- 16-byte aligned at 64)
+//   offset  76..79:  roughnessBase       (f32 -- fills sunDirLocal's 4th slot)
+//   offset  80..91:  camPosLocal         (vec3<f32> -- 16-byte aligned at 80)
+//   offset  92..95:  f0                  (f32 -- fills camPosLocal's 4th slot)
+//   offset  96..99:  sunIrradiance       (f32)
+//   offset 100..103: cloudShadowStrength (f32 -- plan-D placeholder, unused in A)
+//   offset 104..107: _pad0               (f32 -- zeroed; plan-D -> cloudShellRadius)
+//   offset 108..111: _pad1               (f32 -- zeroed; rounds struct to 112 / 16)
+//   total: 112 bytes.
+//
+// The CPU side uploads 28 f32s. The single source of truth for that packing is
+// 'utils/gpu/packEarthSurfaceUniforms.ts', which reuses 'packLitBodyUniforms'
+// for the shared 80-byte prefix.
+
+struct EarthSurfaceUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  roughnessBase: f32,
+  camPosLocal: vec3<f32>,
+  f0: f32,
+  sunIrradiance: f32,
+  cloudShadowStrength: f32,
+  _pad0: f32,
+  _pad1: f32,
+};
+
 // ── clip_from_local ──────────────────────────────────────────────────
 //
 // Transform a unit-sphere local-space position to homogeneous clip
