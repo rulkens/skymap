@@ -45,8 +45,9 @@ import package::atmosphere::scattering::UNIFORM_PHASE;
 import package::atmosphere::scattering::EXTINCTION_EPS;
 import package::lib::math::PI;
 
-const MULTI_SCATTER_LUT_WIDTH: u32 = 32u;
-const MULTI_SCATTER_LUT_HEIGHT: u32 = 32u;
+// The LUT dimensions are NOT restated here — they derive from
+// 'textureDimensions(outTex)' at dispatch, so the renderer's createTexture size
+// ('MULTI_SCATTER_LUT_SIZE') is their single home and cannot drift from a mirror.
 // Sphere-of-directions sampling: SQRT_SAMPLES per axis, so SQRT_SAMPLES^2 rays
 // (8 -> 64). The march is short (a low-frequency estimate), so a modest step
 // count suffices.
@@ -135,11 +136,11 @@ fn integrateRay(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> RayContribu
 
 @compute @workgroup_size(8, 8)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
-  if (gid.x >= MULTI_SCATTER_LUT_WIDTH || gid.y >= MULTI_SCATTER_LUT_HEIGHT) {
+  let dims = textureDimensions(outTex);
+  if (gid.x >= dims.x || gid.y >= dims.y) {
     return;
   }
-  let uv = (vec2<f32>(f32(gid.x), f32(gid.y)) + vec2<f32>(0.5))
-    / vec2<f32>(f32(MULTI_SCATTER_LUT_WIDTH), f32(MULTI_SCATTER_LUT_HEIGHT));
+  let uv = (vec2<f32>(f32(gid.x), f32(gid.y)) + vec2<f32>(0.5)) / vec2<f32>(dims);
 
   // Invert the linear (sunCosZenith, altitude) mapping to recover this texel's
   // sample point + sun direction.

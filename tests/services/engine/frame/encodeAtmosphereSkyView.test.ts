@@ -18,9 +18,10 @@
  * seeds DIFFERENT positions in the two places and the packing test recomputes
  * from `ctx.drawCamPos`, so a regression to the stale source fails here.
  *
- * The gate mirrors the layer's `enabled` minus its ctx-only parts (a strict
+ * The gate mirrors the layer's `enabled` minus its sub-pixel cull (a strict
  * superset), so the shell can never draw against a LUT this frame skipped
- * baking. We check the two no-op paths (null renderer / unseeded Earth).
+ * baking. We check the three no-op paths (null renderer / camera beyond the
+ * near-field distance gate / unseeded Earth).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -32,6 +33,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { camPosLocal } from '../../../../src/utils/camera/camPosLocal';
 import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
@@ -63,12 +65,13 @@ function makeState(init: {
 }
 
 /**
- * The minimal ReadyFrameContext the encode reads: only `drawCamPos`, the
- * RENDERED pose the shell fragment marches along and the source the bake must
- * derive its altitude from.
+ * The minimal ReadyFrameContext the encode reads: `drawCamPos` (the RENDERED pose
+ * the shell fragment marches along, the source the bake derives its altitude
+ * from) and `cam.distance` (the near-field distance gate). `camDistance` defaults
+ * to 0 — inside the near-field edge, the common Earth-framed path.
  */
-function makeCtx(drawCamPos: Vec3): ReadyFrameContext {
-  return { drawCamPos } as unknown as ReadyFrameContext;
+function makeCtx(drawCamPos: Vec3, camDistance = 0): ReadyFrameContext {
+  return { drawCamPos, cam: { distance: camDistance } } as unknown as ReadyFrameContext;
 }
 
 // The RENDERED pose (what the shell fragment sees) — a few Earth radii off the
@@ -98,6 +101,16 @@ describe('encodeAtmosphereSkyView', () => {
         makeState({ renderer: null, camStalePosition: CAM_POS_STALE }),
       ),
     ).not.toThrow();
+  });
+
+  it('is a no-op when the camera is beyond the near-field distance gate', () => {
+    const renderer = spyRenderer();
+    encodeAtmosphereSkyView(
+      encoder,
+      makeCtx(CAM_POS_RENDERED, FOREGROUND_MAX_DISTANCE_MPC),
+      makeState({ renderer, camStalePosition: CAM_POS_STALE }),
+    );
+    expect(renderer.encodeSkyView).not.toHaveBeenCalled();
   });
 
   it('is a no-op when bodies.earth is unseeded', () => {

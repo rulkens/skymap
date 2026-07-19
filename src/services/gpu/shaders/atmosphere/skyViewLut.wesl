@@ -39,8 +39,10 @@ import package::atmosphere::scattering::sampleMultiScatter;
 import package::atmosphere::scattering::skyViewLutUvToParams;
 import package::atmosphere::scattering::EXTINCTION_EPS;
 
-const SKY_VIEW_LUT_WIDTH: u32 = 192u;
-const SKY_VIEW_LUT_HEIGHT: u32 = 108u;
+// Step count for the fixed-step in-scatter quadrature (the only quality knob).
+// The LUT DIMENSIONS are NOT restated here — they derive from
+// 'textureDimensions(outTex)' at dispatch, so the renderer's createTexture size
+// ('SKY_VIEW_LUT_SIZE') is their single home and cannot drift from a mirror.
 const SKY_VIEW_STEPS: f32 = 30.0;
 
 // ── SkyViewParams — the per-frame camera + sun state (16 bytes) ──────
@@ -116,11 +118,11 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
 
 @compute @workgroup_size(8, 8)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
-  if (gid.x >= SKY_VIEW_LUT_WIDTH || gid.y >= SKY_VIEW_LUT_HEIGHT) {
+  let dims = textureDimensions(outTex);
+  if (gid.x >= dims.x || gid.y >= dims.y) {
     return;
   }
-  let uv = (vec2<f32>(f32(gid.x), f32(gid.y)) + vec2<f32>(0.5))
-    / vec2<f32>(f32(SKY_VIEW_LUT_WIDTH), f32(SKY_VIEW_LUT_HEIGHT));
+  let uv = (vec2<f32>(f32(gid.x), f32(gid.y)) + vec2<f32>(0.5)) / vec2<f32>(dims);
 
   let r = view.viewHeightKm;
   let angles = skyViewLutUvToParams(params.planetRadiusKm, r, uv);

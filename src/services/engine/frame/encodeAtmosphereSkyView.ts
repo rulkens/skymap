@@ -15,18 +15,22 @@
  * storage barrier between the compute write and the later fragment read within
  * the one encoder. Same shape as `encodeFlowCompute`.
  *
- * ### The gate is the layer's `enabled`, minus the ctx-only parts
+ * ### The gate is the layer's `enabled`, minus the sub-pixel cull
  *
  * This runs inside the ready-context gate, so it always has a `ReadyFrameContext`.
- * It applies the ctx-free subset of the layer's gate: the renderer handle, the
- * seeded Earth body, and the body's `ATMOSPHERE_PARAMS` row — but NOT the layer's
- * ctx-bound distance / sub-pixel culls. That subset is a strict SUPERSET of the
- * layer's gate: whenever `atmosphereShellLayer.enabled` is true (which
- * additionally requires the camera in near-field range and the disc above
- * sub-pixel), this bake has already run — so the shell can never draw against a
- * LUT this frame skipped baking. Over-baking when Earth is out of near-field
- * range is a harmless wasted compute (the layer's gate keeps the shell from
- * drawing).
+ * It applies every part of the layer's gate EXCEPT the sub-pixel disc cull: the
+ * renderer handle, the shared near-field distance gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC` — the SAME `ctx.cam.distance` test the layer
+ * uses), the seeded Earth body, and the body's `ATMOSPHERE_PARAMS` row. That is a
+ * strict SUPERSET of the layer's gate: whenever `atmosphereShellLayer.enabled` is
+ * true (which additionally requires the disc above sub-pixel), this bake has
+ * already run — so the shell can never draw against a LUT this frame skipped
+ * baking. The distance gate matters: without it the 192×108×30-step march would
+ * run every frame post-bootstrap (Earth is seeded unconditionally), burning a full
+ * sky-view bake even at galaxy / cosmic zoom where the shell is culled. Beyond the
+ * near-field edge this is a no-op; the only residual over-bake is the thin band
+ * where the camera is in near-field range but the disc has gone sub-pixel — a
+ * harmless wasted compute (the layer's gate keeps the shell from drawing there).
  *
  * ### The sky-view uniform packing (the `SkyViewParams` contract)
  *
@@ -56,6 +60,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { camPosLocal } from '../../../utils/camera/camPosLocal';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
+import { FOREGROUND_MAX_DISTANCE_MPC } from './foregroundMaxDistance';
 
 /**
  * Bake this frame's sky-view LUT into the atmosphere renderer's own texture,
@@ -71,6 +76,10 @@ export function encodeAtmosphereSkyView(
 ): void {
   const renderer = state.gpu.atmosphereShellRenderer;
   if (renderer === null) return;
+  // Near-field distance gate — the SAME cull `atmosphereShellLayer.enabled`
+  // applies (handle first, then distance). Beyond this edge the shell is culled,
+  // so baking its per-frame LUT would be pure overhead at galaxy / cosmic zoom.
+  if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return;
   const earth = state.data.bodies.earth;
   if (earth === null) return;
   const params = ATMOSPHERE_PARAMS[earth.id];

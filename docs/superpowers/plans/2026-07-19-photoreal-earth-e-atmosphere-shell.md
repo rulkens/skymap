@@ -1,6 +1,6 @@
 # Photoreal Earth E — Atmosphere Shell Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Give Earth a physically-based **atmosphere shell** (Bruneton/Hillaire precomputed scattering, LUTs baked on-device at startup) so close approach shows a **blue limb** and a **reddened sunset ring**. The shell is a body-agnostic renderer parameterized by per-body `AtmosphereParams` data — Earth now, Mars/Venus/Titan later by coefficient rows.
 
@@ -84,10 +84,10 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>>;
 
 **Steps:**
 
-- [ ] Add the `AtmosphereParams` type (one type per file, `Vec3` alias imports) with a didactic header describing each field + its unit + the Bruneton reference.
-- [ ] Add `ATMOSPHERE_PARAMS` with the Earth row + a header explaining "data, not code — Mars/Venus/Titan later by rows (spec §8.1)" and the `planetRadiusKm == SCENE_EARTH.radiusKm` concentricity requirement.
-- [ ] `npx tsc --noEmit` clean. (No test — pure data.)
-- [ ] Commit (`AtmosphereParams.d.ts`, `atmosphereParams.ts`).
+- [x] Add the `AtmosphereParams` type (one type per file, `Vec3` alias imports) with a didactic header describing each field + its unit + the Bruneton reference.
+- [x] Add `ATMOSPHERE_PARAMS` with the Earth row + a header explaining "data, not code — Mars/Venus/Titan later by rows (spec §8.1)" and the `planetRadiusKm == SCENE_EARTH.radiusKm` concentricity requirement.
+- [x] `npx tsc --noEmit` clean. (No test — pure data.)
+- [x] Commit (`AtmosphereParams.d.ts`, `atmosphereParams.ts`).
 
 ---
 
@@ -138,15 +138,15 @@ export function packAtmosphereUniforms(
 
 **Steps (TDD):**
 
-- [ ] Add the `AtmosphereUniforms` struct to `lib/sphere.wesl` with a didactic single-quoted header: sibling-not-overload, the reused lit prefix, `bottomRadius` filling the vec3 tail (cite RingUniforms), the atmosphere-top-unit-sphere convention, `topRadius=1` implicit.
-- [ ] Write `tests/utils/gpu/packAtmosphereUniforms.test.ts` — a **uniform byte-layout parity** test (a keep-rule category: WGSL↔TS parity, the iOS-silent-drop guard). Pack distinct hand-placed values and assert:
-  - [ ] `out.length === ATMOSPHERE_UNIFORM_FLOATS`.
-  - [ ] `out[0..15]` equals the mvp; `out[16..18]` equals `sunDirLocal`.
-  - [ ] `out[19] === bottomRadius` (the pad-slot override — fails if the packer leaves the lit pad zeroed).
-  - [ ] `out[20..22] === camPosLocal`, `out[23] === sunIrradiance`, `out[24] === exposure`, `out[25..27] === 0`.
-- [ ] Implement `packAtmosphereUniforms`.
-- [ ] `npm test -- packAtmosphereUniforms` green; `npx tsc --noEmit` clean.
-- [ ] Commit (`sphere.wesl`, `packAtmosphereUniforms.ts`, its test).
+- [x] Add the `AtmosphereUniforms` struct to `lib/sphere.wesl` with a didactic single-quoted header: sibling-not-overload, the reused lit prefix, `bottomRadius` filling the vec3 tail (cite RingUniforms), the atmosphere-top-unit-sphere convention, `topRadius=1` implicit.
+- [x] Write `tests/utils/gpu/packAtmosphereUniforms.test.ts` — a **uniform byte-layout parity** test (a keep-rule category: WGSL↔TS parity, the iOS-silent-drop guard). Pack distinct hand-placed values and assert:
+  - [x] `out.length === ATMOSPHERE_UNIFORM_FLOATS`.
+  - [x] `out[0..15]` equals the mvp; `out[16..18]` equals `sunDirLocal`.
+  - [x] `out[19] === bottomRadius` (the pad-slot override — fails if the packer leaves the lit pad zeroed).
+  - [x] `out[20..22] === camPosLocal`, `out[23] === sunIrradiance`, `out[24] === exposure`, `out[25..27] === 0`.
+- [x] Implement `packAtmosphereUniforms`.
+- [x] `npm test -- packAtmosphereUniforms` green; `npx tsc --noEmit` clean.
+- [x] Commit (`sphere.wesl`, `packAtmosphereUniforms.ts`, its test).
 
 ---
 
@@ -180,14 +180,14 @@ export function atmosphereShellBound(
 
 **Steps (TDD):** Write `tests/utils/math/atmosphereShellBound.test.ts` with **hand-computed** expectations (independent of the implementation), using `topRadius=1`, `bottomRadius=0.5`, all rays down the ±z axis for clean numbers:
 
-- [ ] `misses the shell entirely` — origin `[0,0,3]`, dir `[0,1,0]` (tangent-away) ⇒ `null`.
-- [ ] `outside, looking through the planet` — origin `[0,0,3]`, dir `[0,0,-1]` ⇒ `{ tNear: 2, tFar: 2.5 }` (enters top at r=1 → t=2; hits ground at r=0.5 → t=2.5; far clamped to the ground hit, NOT the top far exit at 4).
-- [ ] `outside, grazing the limb (misses ground)` — origin `[0,0,3]`, dir toward a point on the top sphere that clears the ground (e.g. aimed at `[0.75,0,0]`), asserting `tFar` is the **top-sphere far exit** (no ground clamp) and `tNear` the top-sphere entry — hand-derived.
-- [ ] `inside the shell, looking up` — origin `[0,0,0.75]` (between ground and top), dir `[0,0,1]` ⇒ `tNear === 0` (clamped) and `tFar === 0.25` (top exit at r=1).
-- [ ] `shell entirely behind the origin` — origin `[0,0,3]`, dir `[0,0,1]` ⇒ `null` (both top roots negative).
-- [ ] Implement `atmosphereShellBound` as a composition over `raySphereRoots` (plan D) — two calls (top + ground sphere) + the clamp logic, no fresh quadratic; didactic header explaining the two-sphere bound, the ground-occlusion clamp, the `tNear→0` inside clamp, and the WESL-mirror relationship (the WESL fragment mirrors the clamp; the quadratic is `lib/util.wesl::raySphere` on the GPU side, `raySphereRoots` on the CPU side).
-- [ ] `npm test -- atmosphereShellBound` green; `npx tsc --noEmit` clean.
-- [ ] Commit.
+- [x] `misses the shell entirely` — origin `[0,0,3]`, dir `[0,1,0]` (tangent-away) ⇒ `null`.
+- [x] `outside, looking through the planet` — origin `[0,0,3]`, dir `[0,0,-1]` ⇒ `{ tNear: 2, tFar: 2.5 }` (enters top at r=1 → t=2; hits ground at r=0.5 → t=2.5; far clamped to the ground hit, NOT the top far exit at 4).
+- [x] `outside, grazing the limb (misses ground)` — origin `[0,0,3]`, dir toward a point on the top sphere that clears the ground (e.g. aimed at `[0.75,0,0]`), asserting `tFar` is the **top-sphere far exit** (no ground clamp) and `tNear` the top-sphere entry — hand-derived.
+- [x] `inside the shell, looking up` — origin `[0,0,0.75]` (between ground and top), dir `[0,0,1]` ⇒ `tNear === 0` (clamped) and `tFar === 0.25` (top exit at r=1).
+- [x] `shell entirely behind the origin` — origin `[0,0,3]`, dir `[0,0,1]` ⇒ `null` (both top roots negative).
+- [x] Implement `atmosphereShellBound` as a composition over `raySphereRoots` (plan D) — two calls (top + ground sphere) + the clamp logic, no fresh quadratic; didactic header explaining the two-sphere bound, the ground-occlusion clamp, the `tNear→0` inside clamp, and the WESL-mirror relationship (the WESL fragment mirrors the clamp; the quadratic is `lib/util.wesl::raySphere` on the GPU side, `raySphereRoots` on the CPU side).
+- [x] `npm test -- atmosphereShellBound` green; `npx tsc --noEmit` clean.
+- [x] Commit.
 
 ---
 
@@ -215,9 +215,9 @@ export function atmosphereShellBound(
 
 **Steps:**
 
-- [ ] Author the six modules with didactic single-quoted headers (the Bruneton/Hillaire model, the LUT parametrizations, why 2D-only for iOS, the premultiplied-OVER contract).
-- [ ] `npm run build` clean — the `?static` linker resolves every `package::atmosphere::*` + `package::lib::util::raySphere` import. Watch the iOS-strict traps (no `texture_1d`; valid struct layout; storage-texture format legality). If any module fails to link, read `createShaderModuleWithDevLog`'s `getCompilationInfo()` dump.
-- [ ] Commit (all six WESL files).
+- [x] Author the six modules with didactic single-quoted headers (the Bruneton/Hillaire model, the LUT parametrizations, why 2D-only for iOS, the premultiplied-OVER contract).
+- [x] `npm run build` clean — the `?static` linker resolves every `package::atmosphere::*` + `package::lib::util::raySphere` import. Watch the iOS-strict traps (no `texture_1d`; valid struct layout; storage-texture format legality). If any module fails to link, read `createShaderModuleWithDevLog`'s `getCompilationInfo()` dump.
+- [x] Commit (all six WESL files).
 
 ---
 
@@ -258,10 +258,10 @@ export function createAtmosphereShellRenderer(
 
 **Steps:**
 
-- [ ] Write `AtmosphereShellRenderer.d.ts` (extends `Renderer`) + the factory. Didactic header: the three-LUT structure, the on-device startup bake (cite `createGenerationPipelines.ts` + `flow/compute.wesl`), the back-face+depth-test rationale, the one-baked-set-in-v1 note, the explicit-BGL trap.
-- [ ] `npx tsc --noEmit` clean; `npm run build` clean (the shell + bake modules link).
-- [ ] **iOS/WebKit compile check:** confirm every module built here loads without a `getCompilationInfo` error via `createShaderModuleWithDevLog`; if a storage-texture write is rejected on WebKit, fall back to the fragment render-to-texture bake (Global Constraints iOS note). No visual yet — the layer wires it in Task 6.
-- [ ] Commit (`AtmosphereShellRenderer.d.ts`, `atmosphereShellRenderer.ts`).
+- [x] Write `AtmosphereShellRenderer.d.ts` (extends `Renderer`) + the factory. Didactic header: the three-LUT structure, the on-device startup bake (cite `createGenerationPipelines.ts` + `flow/compute.wesl`), the back-face+depth-test rationale, the one-baked-set-in-v1 note, the explicit-BGL trap.
+- [x] `npx tsc --noEmit` clean; `npm run build` clean (the shell + bake modules link).
+- [x] **iOS/WebKit compile check:** confirm every module built here loads without a `getCompilationInfo` error via `createShaderModuleWithDevLog`; if a storage-texture write is rejected on WebKit, fall back to the fragment render-to-texture bake (Global Constraints iOS note). No visual yet — the layer wires it in Task 6.
+- [x] Commit (`AtmosphereShellRenderer.d.ts`, `atmosphereShellRenderer.ts`).
 
 ---
 
@@ -292,12 +292,12 @@ export function createAtmosphereShellRenderer(
 
 **Steps:**
 
-- [ ] Wire the handle + import in `EngineGpuHandles.d.ts`; construct in `initGpu.ts`.
-- [ ] Add `encodeAtmosphereSkyView.ts` + the `executeFrame.ts` step.
-- [ ] Add `atmosphereShellLayer.ts`; register LAST + re-export in `index.ts`; extend the draw-order header.
-- [ ] `npx tsc --noEmit` clean; `npm run build` clean (the WESL links — watch the iOS-strict traps + the shared-encoder frame-drop failure mode).
-- [ ] **Visual check (the acceptance win, spec §12 row E):** ask the user to fly close to Earth on the already-running dev server (do NOT start/kill it) and confirm: a **blue limb** haloing the day side, a **reddened ring** along the terminator/sunset arc, the atmosphere correctly **occluded by the planet disc** (froxel-over-disc absent = expected), no z-fighting, no whole-frame drop. Explicitly confirm on **iOS/WebKit** (the silent-frame-drop trap): navigation + the limb both render there.
-- [ ] Commit (stage each path explicitly).
+- [x] Wire the handle + import in `EngineGpuHandles.d.ts`; construct in `initGpu.ts`.
+- [x] Add `encodeAtmosphereSkyView.ts` + the `executeFrame.ts` step.
+- [x] Add `atmosphereShellLayer.ts`; register LAST + re-export in `index.ts`; extend the draw-order header.
+- [x] `npx tsc --noEmit` clean; `npm run build` clean (the WESL links — watch the iOS-strict traps + the shared-encoder frame-drop failure mode).
+- [x] **Visual check (the acceptance win, spec §12 row E):** ask the user to fly close to Earth on the already-running dev server (do NOT start/kill it) and confirm: a **blue limb** haloing the day side, a **reddened ring** along the terminator/sunset arc, the atmosphere correctly **occluded by the planet disc** (froxel-over-disc absent = expected), no z-fighting, no whole-frame drop. Explicitly confirm on **iOS/WebKit** (the silent-frame-drop trap): navigation + the limb both render there.
+- [x] Commit (stage each path explicitly).
 
 ---
 
@@ -305,13 +305,13 @@ export function createAtmosphereShellRenderer(
 
 **Files:** none (review).
 
-- [ ] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay attention to:
+- [x] Run the `entanglement-radar` skill over the whole branch diff (house convention). Pay attention to:
   - `atmosphereShellBound` genuinely COMPOSING over plan D's `raySphereRoots` (two calls + clamp) rather than re-solving the quadratic — confirm NO second CPU intersection solver crept in (the quadratic has exactly one CPU home, D's `raySphereRoots`, and one WESL home, `lib/util.wesl::raySphere`; E adds only the clamp/occlusion logic, tested once);
   - `ATMOSPHERE_PARAMS` staying pure data with no per-body branch in the renderer/layer (a new atmosphere body must be a row, not a code path — spec §8.1);
   - the back-face + depth-test profile being expressed once (the renderer pipeline), not re-derived in the layer;
   - the sky-view compute step mirroring `encodeFlowCompute` rather than inventing a parallel frame-hook shape;
   - the `bottomRadius`/atmosphere-top-unit convention being the single home for the radial mapping (not duplicated km-vs-ratio maths across CPU and shader).
-- [ ] Address findings (or record why deferred); keep the suite green.
+- [x] Address findings (or record why deferred); keep the suite green.
 
 ---
 
@@ -319,9 +319,9 @@ export function createAtmosphereShellRenderer(
 
 **Files:** none.
 
-- [ ] Run `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
-- [ ] Request code review (`superpowers:requesting-code-review`) covering: the `AtmosphereUniforms` ↔ `packAtmosphereUniforms` byte-layout parity, the `atmosphereShellBound` inside/outside/miss/clamp cases, the on-device bake ordering (transmittance before multi-scatter in one encoder), and the back-face+depth-test+premultiplied-OVER pipeline profile.
-- [ ] Confirm the DoD before marking the plan done (`/feature-done`), which — as the LAST photoreal-Earth plan — sweeps the backlog + relocates the spec + all A–E plans on merge.
+- [x] Run `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
+- [x] Request code review (`superpowers:requesting-code-review`) covering: the `AtmosphereUniforms` ↔ `packAtmosphereUniforms` byte-layout parity, the `atmosphereShellBound` inside/outside/miss/clamp cases, the on-device bake ordering (transmittance before multi-scatter in one encoder), and the back-face+depth-test+premultiplied-OVER pipeline profile.
+- [x] Confirm the DoD before marking the plan done (`/feature-done`), which — as the LAST photoreal-Earth plan — sweeps the backlog + relocates the spec + all A–E plans on merge.
 
 ---
 

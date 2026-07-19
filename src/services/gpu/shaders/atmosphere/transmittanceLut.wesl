@@ -33,11 +33,11 @@ import package::atmosphere::scattering::sampleMedium;
 import package::atmosphere::scattering::distanceToTop;
 import package::atmosphere::scattering::transmittanceLutUvToParams;
 
-// Named dimension + step consts (spec §11: lowering a dimension / a step count
-// is the only quality knob; no adaptive machinery). Must match the CPU-side
-// 'TRANSMITTANCE_LUT_SIZE' the renderer allocates + dispatches against.
-const TRANSMITTANCE_LUT_WIDTH: u32 = 256u;
-const TRANSMITTANCE_LUT_HEIGHT: u32 = 64u;
+// Step count for the fixed-step optical-depth quadrature (spec §11: lowering a
+// step count is the only quality knob; no adaptive machinery). The LUT
+// DIMENSIONS are NOT restated here — they derive from 'textureDimensions(outTex)'
+// at dispatch, so the renderer's createTexture size ('TRANSMITTANCE_LUT_SIZE') is
+// their single home and the TS quality knob cannot silently drift from a mirror.
 const TRANSMITTANCE_STEPS: f32 = 40.0;
 
 @group(0) @binding(0) var<uniform> params: ScatteringParams;
@@ -70,11 +70,11 @@ fn opticalDepthToTop(r: f32, mu: f32) -> vec3<f32> {
 
 @compute @workgroup_size(8, 8)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
-  if (gid.x >= TRANSMITTANCE_LUT_WIDTH || gid.y >= TRANSMITTANCE_LUT_HEIGHT) {
+  let dims = textureDimensions(outTex);
+  if (gid.x >= dims.x || gid.y >= dims.y) {
     return;
   }
-  let uv = (vec2<f32>(f32(gid.x), f32(gid.y)) + vec2<f32>(0.5))
-    / vec2<f32>(f32(TRANSMITTANCE_LUT_WIDTH), f32(TRANSMITTANCE_LUT_HEIGHT));
+  let uv = (vec2<f32>(f32(gid.x), f32(gid.y)) + vec2<f32>(0.5)) / vec2<f32>(dims);
   let rmu = transmittanceLutUvToParams(params.planetRadiusKm, params.atmosphereTopKm, uv);
   let opticalDepth = opticalDepthToTop(rmu.x, rmu.y);
   let transmittance = exp(-opticalDepth);

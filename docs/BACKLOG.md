@@ -42,6 +42,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Photoreal-Earth follow-ups** `deferred` — radar-surfaced drift traps from plans A–E (shared atmosphere-pose derivation, equirect-uv mirror, setMap kind table, multi-atmosphere shape). → [details](backlog/2026-07-19-photoreal-earth-followups.md)
 - [ ] **Local interstellar-dust volume (Edenhofer 2024)** `needs-design` — Sun-centered per-parsec extinction cube as an SCFD field (MCPM-clone, ~3.2 GB one-time via `dustmaps`); blocked on a sub-kpc render slab (COSMO near-clip = 10 kpc) + emissive-vs-absorptive compositing choice. → [details](backlog/2026-07-18-local-dust-volume.md)
 - [ ] **Lower-res offscreen star-aggregate pass** `ready` — try `STAR_AGGREGATE_DIVISOR` 2 → 4 (`renderTargets.ts`); ~4× further fill cut if the upsampled glow field survives visually.
 - [ ] **Bright star clump at ~5.9 kpc** `deferred` — flux verified conserved; residual over-exposure is display policy (mid-anchor slider + summed knee shipped; retune or tone-map shoulder next). → [details](backlog/2026-07-17-star-clump-brightness-5-9kpc.md)

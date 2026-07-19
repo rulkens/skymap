@@ -57,6 +57,10 @@ import type { AtmosphereShellRenderer } from '../../../../@types/rendering/Atmos
 import type { AtmosphereParams } from '../../../../@types/scene/AtmosphereParams';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import { ATMOSPHERE_UNIFORM_FLOATS } from '../../../../utils/gpu/packAtmosphereUniforms';
+import {
+  packScatteringParams,
+  SCATTERING_PARAMS_FLOATS,
+} from '../../../../utils/gpu/packScatteringParams';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import transmittanceCode from '../../shaders/atmosphere/transmittanceLut.wesl?static';
 import multiScatterCode from '../../shaders/atmosphere/multiScatterLut.wesl?static';
@@ -70,7 +74,10 @@ import shellFsCode from '../../shaders/atmosphere/shell/fragment.wesl?static';
 const SEGMENTS = 48;
 const RINGS = 24;
 
-/** LUT dimensions — MUST match the named consts inside the E4 bake modules. */
+/** LUT dimensions — the SINGLE home for each table's size. The E4 bake modules no
+ *  longer restate these: each derives its bounds guard + uv divisor from
+ *  `textureDimensions(outTex)`, so this `createTexture` size drives both the
+ *  allocation + dispatch here AND the shader parametrisation. */
 const TRANSMITTANCE_LUT_SIZE: readonly [number, number] = [256, 64];
 const MULTI_SCATTER_LUT_SIZE: readonly [number, number] = [32, 32];
 const SKY_VIEW_LUT_SIZE: readonly [number, number] = [192, 108];
@@ -81,8 +88,6 @@ const WORKGROUP_SIZE = 8;
 /** LUT storage format — first `rgba16float` storage-texture write in the repo. */
 const LUT_FORMAT: GPUTextureFormat = 'rgba16float';
 
-/** `ScatteringParams` — 80 bytes / 20 f32 (see `scattering.wesl`). */
-const SCATTERING_PARAMS_FLOATS = 20;
 /** `SkyViewParams` — 16 bytes / 4 f32 (see `skyViewLut.wesl`). */
 const SKY_VIEW_PARAMS_BYTES = 16;
 /** `AtmosphereUniforms` byte size — derived from the packer's f32 count (single
@@ -92,44 +97,6 @@ const ATMOSPHERE_UNIFORM_BYTES = ATMOSPHERE_UNIFORM_FLOATS * 4;
 /** Ceil-divide a LUT dimension into 8×8 workgroups. */
 function dispatchCount(px: number): number {
   return Math.ceil(px / WORKGROUP_SIZE);
-}
-
-/**
- * Pack `AtmosphereParams` into the 80-byte `ScatteringParams` uniform layout
- * (`scattering.wesl`). Each `vec3` is 16-aligned and its trailing 4-byte slot is
- * filled by the following scalar (the `RingUniforms.planetRadiusRatio` trick), so
- * the struct is a dense 20-f32 write with no interior gaps:
- *
- *   0..2  rayleighScatter        3   rayleighScaleHeightKm
- *   4..6  ozoneAbsorption        7   mieScaleHeightKm
- *   8..10 groundAlbedo          11   miePhaseG
- *   12    mieScatter            13   mieAbsorption
- *   14    ozoneCenterKm         15   ozoneWidthKm
- *   16    planetRadiusKm        17   atmosphereTopKm
- *   18/19 _pad0/_pad1 (zero, rounds to 80 / 16-byte)
- */
-function packScatteringParams(params: AtmosphereParams): Float32Array {
-  const out = new Float32Array(SCATTERING_PARAMS_FLOATS);
-  out[0] = params.rayleighScatter[0];
-  out[1] = params.rayleighScatter[1];
-  out[2] = params.rayleighScatter[2];
-  out[3] = params.rayleighScaleHeightKm;
-  out[4] = params.ozoneAbsorption[0];
-  out[5] = params.ozoneAbsorption[1];
-  out[6] = params.ozoneAbsorption[2];
-  out[7] = params.mieScaleHeightKm;
-  out[8] = params.groundAlbedo[0];
-  out[9] = params.groundAlbedo[1];
-  out[10] = params.groundAlbedo[2];
-  out[11] = params.miePhaseG;
-  out[12] = params.mieScatter;
-  out[13] = params.mieAbsorption;
-  out[14] = params.ozoneCenterKm;
-  out[15] = params.ozoneWidthKm;
-  out[16] = params.planetRadiusKm;
-  out[17] = params.atmosphereTopKm;
-  // out[18..19] stay zero — pads rounding the struct to 80 / 16-byte alignment.
-  return out;
 }
 
 export function createAtmosphereShellRenderer(

@@ -1,9 +1,18 @@
 /**
  * atmosphereParams — the authored table of atmosphere-scattering constants the
  * shell renderer integrates (spec §8.1). Data, not code: Earth alone today;
- * Mars, Venus, and Titan arrive later as additional rows here, no renderer
- * change. A body absent from the table has no atmosphere shell (Moon, gas
- * giants) — the same data-gate the ring table uses (`sceneRings.ts`).
+ * Mars, Venus, and Titan arrive later as additional rows here. A body absent from
+ * the table has no atmosphere shell (Moon, gas giants) — the same data-gate the
+ * ring table uses (`sceneRings.ts`).
+ *
+ * The RENDERER itself is body-agnostic — it bakes whichever `AtmosphereParams`
+ * row the factory is handed, so a new row needs no renderer change. But the wiring
+ * AROUND it (the `atmosphereShellLayer`, the per-frame `encodeAtmosphereSkyView`
+ * bake, `initGpu`, and the single `gpu.atmosphereShellRenderer` handle) is
+ * Earth-scoped today: it constructs one renderer for `bodies.earth` and draws that
+ * one shell. A second atmosphere body would need a second renderer instance and
+ * the layer/encode to iterate the atmosphere bodies rather than read Earth — so
+ * adding a row is necessary but not sufficient until that wiring is generalised.
  *
  * ### Earth = standard Bruneton/Hillaire constants
  *
