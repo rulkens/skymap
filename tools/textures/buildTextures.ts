@@ -72,6 +72,8 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
+import type { RingTextureId } from '../../src/@types/data/RingTextureId';
+import type { TextureKind } from '../../src/@types/data/TextureKind';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
@@ -85,23 +87,41 @@ import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
 const JPEG_QUALITY = 80;
 
 /**
- * The `surface` source of one textured body or ring, read from the single
+ * The raw source of one `(body, kind)` texture, read from the single
  * `TEXTURE_SOURCES` table (`tools/utils/io/textureSources.ts`) — the same table
  * `fetchTextures` derives its download list from, so the built set can never
- * drift from what was fetched. Derived (not annotated) so each `native` /
- * `devKey` stays a string LITERAL for `rawDataPath`.
+ * drift from what was fetched. A union over every entry across all bodies AND
+ * kinds (not just `surface`), so a new non-surface map is built with no edit
+ * here. Derived (not annotated) so each `native` / `devKey` stays a string
+ * LITERAL for `rawDataPath`. (fetchTextures.ts carries the twin of this alias;
+ * folding both onto the exported `TextureSourceEntry` would forfeit the literal
+ * narrowing — that type is the widened shape the table `satisfies`.)
  */
-type SurfaceSource = (typeof TEXTURE_SOURCES)[keyof typeof TEXTURE_SOURCES]['surface'];
+type TextureSourceEntry = {
+  [Body in keyof typeof TEXTURE_SOURCES]: (typeof TEXTURE_SOURCES)[Body][keyof (typeof TEXTURE_SOURCES)[Body]];
+}[keyof typeof TEXTURE_SOURCES];
 
 /**
- * Ordered candidate paths for a surface source, best (native full-res) first,
- * then the `--dev` variant if any. `devKey` is its own registry row (Earth's
- * BMNG sibling); `devFilename` is a loose 2 k file under `textures.dir` (the SSS
+ * `TEXTURE_SOURCES` viewed by the wide `(bodyId, kind)` key space the build loop
+ * ranges over. The const table's per-body key set is narrower than the whole
+ * `TextureKind` union (today just `surface`), so the variable-kind lookup needs
+ * this view; every `(bodyId, kind)` the build derives is populated, so the `!`
+ * holds.
+ */
+const SOURCE_TABLE = TEXTURE_SOURCES as Record<
+  BodyTextureId | RingTextureId,
+  Partial<Record<TextureKind, TextureSourceEntry>>
+>;
+
+/**
+ * Ordered candidate paths for a source, best (native full-res) first, then the
+ * `--dev` variant if any. `devKey` is its own registry row (Earth's BMNG
+ * sibling); `devFilename` is a loose 2 k file under `textures.dir` (the SSS
  * bodies and the ring). Uranus/Neptune's `devFilename` resolves to the same
  * on-disk path as native (their native IS the 2 k file), so the extra candidate
  * is a harmless duplicate; the USGS moons carry neither.
  */
-function candidatePaths(entry: SurfaceSource): readonly string[] {
+function candidatePaths(entry: TextureSourceEntry): readonly string[] {
   const paths = [rawDataPath(entry.native)];
   if ('devKey' in entry) {
     paths.push(rawDataPath(entry.devKey));
@@ -111,9 +131,9 @@ function candidatePaths(entry: SurfaceSource): readonly string[] {
   return paths;
 }
 
-/** Ordered candidate paths for a body's source, best (native) first. */
-function sourcePathsFor(id: BodyTextureId): readonly string[] {
-  return candidatePaths(TEXTURE_SOURCES[id].surface);
+/** Ordered candidate paths for a body's `(kind)` source, best (native) first. */
+function sourcePathsFor(id: BodyTextureId, kind: TextureKind): readonly string[] {
+  return candidatePaths(SOURCE_TABLE[id][kind]!);
 }
 
 /** Ordered candidate paths for the Saturn ring strip, best (full) first. */
@@ -191,6 +211,29 @@ async function writeBodyTier(
 }
 
 /**
+ * Write one `(body, kind)` tier, dispatched by kind, and return a short log note.
+ * `surface` takes the existing albedo path — mono USGS sources (Europa/Callisto,
+ * carrying a registry `grayscaleTint`) go through the two-pass tint; full-colour
+ * sources encode in one pass. Non-surface kinds land their own branch here
+ * (Task 7's `material`); an unhandled kind is a build error, never a silent skip
+ * that would leave a body's map unbuilt.
+ */
+async function writeBodyKindTier(
+  bodyId: BodyTextureId,
+  kind: TextureKind,
+  srcPath: string,
+  widthPx: number,
+  outPath: string,
+): Promise<string> {
+  if (kind === 'surface') {
+    const tint = BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint;
+    await writeBodyTier(srcPath, tint, widthPx, outPath);
+    return tint ? '  (tinted)' : '';
+  }
+  throw new Error(`buildTextures: no writer for texture kind '${kind}' (${bodyId})`);
+}
+
+/**
  * Downsample the ring strip to a tier and write the PNG. Width-only resize
  * preserves the radial aspect; PNG keeps the alpha channel intact (no flatten).
  */
@@ -201,29 +244,48 @@ async function writeRingTier(srcPath: string, widthPx: number, outPath: string):
     .toFile(outPath);
 }
 
+/**
+ * The build's per-`(body, kind)` work list — one entry per map every textured
+ * body declares in its registry `kinds`, in registry order. The ring is NOT here:
+ * it carries only `surface` and is not registry-driven (`emittedTiersForBody`
+ * indexes `BODY_TEXTURE_REGISTRY`, which has no ring row), so it rides its own
+ * loop below. Pure over the registry — the unit-testable spine the build loop
+ * consumes, and the guard (paired with the fetch drift test) that a new map kind
+ * on a body actually gets built rather than silently dropped.
+ */
+export function textureBuildEntries(): readonly { bodyId: BodyTextureId; kind: TextureKind }[] {
+  return (Object.keys(BODY_TEXTURE_REGISTRY) as BodyTextureId[]).flatMap((bodyId) =>
+    (Object.keys(BODY_TEXTURE_REGISTRY[bodyId].kinds) as TextureKind[]).map((kind) => ({
+      bodyId,
+      kind,
+    })),
+  );
+}
+
 /** Build every body + the ring into `outDir`, logging per-source progress. */
 export async function buildTextures(outDir: string): Promise<void> {
   mkdirSync(outDir, { recursive: true });
 
-  for (const id of Object.keys(BODY_TEXTURE_REGISTRY) as BodyTextureId[]) {
-    const srcPath = firstExisting(sourcePathsFor(id));
+  for (const { bodyId, kind } of textureBuildEntries()) {
+    const srcPath = firstExisting(sourcePathsFor(bodyId, kind));
     if (srcPath === null) {
-      process.stderr.write(`  skip ${id}: no source on disk\n`);
+      process.stderr.write(`  skip ${bodyId}:${kind}: no source on disk\n`);
       continue;
     }
     const width = await sourceWidth(srcPath);
     const fitting = tiersFittingSourceWidth(width);
-    const tiers = emittedTiersForBody(id, 'surface').filter((tier) => fitting.includes(tier));
-    const tint = BODY_TEXTURE_REGISTRY[id].grayscaleTint;
+    const tiers = emittedTiersForBody(bodyId, kind).filter((tier) => fitting.includes(tier));
     if (tiers.length === 0) {
-      process.stderr.write(`  warn ${id}: source ${width}px too small for any tier — skipping\n`);
+      process.stderr.write(
+        `  warn ${bodyId}:${kind}: source ${width}px too small for any tier — skipping\n`,
+      );
       continue;
     }
     for (const tier of tiers) {
       const px = tierToTexturePx(tier);
-      const filename = bodyTextureFilename(id, 'surface', tier);
-      await writeBodyTier(srcPath, tint, px, join(outDir, filename));
-      process.stderr.write(`  ok   ${filename}${tint ? '  (tinted)' : ''}\n`);
+      const filename = bodyTextureFilename(bodyId, kind, tier);
+      const note = await writeBodyKindTier(bodyId, kind, srcPath, px, join(outDir, filename));
+      process.stderr.write(`  ok   ${filename}${note}\n`);
     }
   }
 

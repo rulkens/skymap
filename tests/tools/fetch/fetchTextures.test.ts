@@ -10,6 +10,8 @@ import {
   type FetchTransport,
   type TextureSource,
 } from '../../../tools/fetch/fetchTextures';
+import { rawDataPath } from '../../../tools/utils/io/rawDataRegistry';
+import { TEXTURE_SOURCES } from '../../../tools/utils/io/textureSources';
 
 /** Destination basenames of a source list — the identity we assert on
  *  (paths are absolute, so the filename is the stable, readable key). */
@@ -78,6 +80,20 @@ describe('textureSourcesFor', () => {
     );
     expect(devUranus?.destPath).toBe(fullUranus?.destPath);
     expect(devUranus?.url).toBe(fullUranus?.url);
+  });
+
+  // Drift guard for the (body, kind) rewire: the full pull must fetch the native
+  // raw of EVERY (body, kind) authored in TEXTURE_SOURCES, not just the `surface`
+  // ones. It passes today (every kind is `surface`) and goes red the moment a
+  // non-surface source row (Earth's `material`) is added but the fetch still
+  // iterates surface-only — the exact regression this rewire prevents.
+  it('the full pull covers every (body,kind) native in TEXTURE_SOURCES', () => {
+    const destPaths = new Set(textureSourcesFor(false).map((s) => s.destPath));
+    for (const [bodyId, kinds] of Object.entries(TEXTURE_SOURCES)) {
+      for (const [kind, entry] of Object.entries(kinds)) {
+        expect(destPaths.has(rawDataPath(entry.native)), `${bodyId}:${kind}`).toBe(true);
+      }
+    }
   });
 });
 
