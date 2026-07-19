@@ -91,8 +91,8 @@ const EXTINCTION_EPS: f32 = 1e-7;
 //   offset 60..63 : ozoneWidthKm          (f32)
 //   offset 64..67 : planetRadiusKm        (f32 — ground / atmosphere bottom)
 //   offset 68..71 : atmosphereTopKm       (f32 — top-of-atmosphere radius)
-//   offset 72..75 : _pad0                 (f32 — rounds struct to 80 / 16-byte)
-//   offset 76..79 : _pad1                 (f32)
+//   offset 72..75 : twilightSoftness      (f32 — night-limb sun-fade width in mu)
+//   offset 76..79 : _pad1                 (f32 — rounds struct to 80 / 16-byte)
 //   total: 80 bytes / 20 f32.
 //
 // 'planetRadiusKm' and 'atmosphereTopKm' ride here (not only on
@@ -113,7 +113,7 @@ struct ScatteringParams {
   ozoneWidthKm: f32,
   planetRadiusKm: f32,
   atmosphereTopKm: f32,
-  _pad0: f32,
+  twilightSoftness: f32,
   _pad1: f32,
 };
 

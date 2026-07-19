@@ -16,7 +16,7 @@
  *   0..2 rayleighScatter  3 rayleighScaleHeightKm  4..6 ozoneAbsorption
  *   7 mieScaleHeightKm  8..10 groundAlbedo  11 miePhaseG  12 mieScatter
  *   13 mieAbsorption  14 ozoneCenterKm  15 ozoneWidthKm  16 planetRadiusKm
- *   17 atmosphereTopKm  18/19 pad
+ *   17 atmosphereTopKm  18 twilightSoftness  19 pad
  */
 
 import { describe, it, expect } from 'vitest';
@@ -26,7 +26,7 @@ import {
 } from '../../../src/utils/gpu/packScatteringParams';
 import type { AtmosphereParams } from '../../../src/@types/scene/AtmosphereParams';
 
-// One distinct dyadic sentinel per field — k/16 for k = 1..18, all exactly
+// One distinct dyadic sentinel per field — k/16 for k = 1..19, all exactly
 // float32-representable and pairwise distinct, so a swap or a mis-slotted field
 // perturbs a slot this test pins.
 const PARAMS: AtmosphereParams = {
@@ -42,10 +42,11 @@ const PARAMS: AtmosphereParams = {
   ozoneWidthKm: 16 / 16, //                      slot 15
   planetRadiusKm: 17 / 16, //                    slot 16
   atmosphereTopKm: 18 / 16, //                   slot 17
+  twilightSoftness: 19 / 16, //                  slot 18
   // Look dials on the row but NOT part of ScatteringParams — this physics packer
   // ignores them, so they occupy no slot and any value serves.
-  sunIrradiance: 19 / 16,
-  exposure: 20 / 16,
+  sunIrradiance: 20 / 16,
+  exposure: 21 / 16,
 };
 
 describe('ScatteringParams byte offsets', () => {
@@ -77,9 +78,10 @@ describe('ScatteringParams byte offsets', () => {
     expect(rec[15]).toBe(PARAMS.ozoneWidthKm);
     expect(rec[16]).toBe(PARAMS.planetRadiusKm);
     expect(rec[17]).toBe(PARAMS.atmosphereTopKm);
+    // twilightSoftness rides the former _pad0 slot; slot 19 is the last pad.
+    expect(rec[18]).toBe(PARAMS.twilightSoftness);
 
-    // Trailing pads zeroed — round the struct to 80 / 16-byte alignment.
-    expect(rec[18]).toBe(0);
+    // Trailing pad zeroed — rounds the struct to 80 / 16-byte alignment.
     expect(rec[19]).toBe(0);
   });
 });

@@ -39,6 +39,7 @@ export type AtmosphereParams = {
   readonly ozoneCenterKm: number; // tent-profile centre altitude
   readonly ozoneWidthKm: number; // tent-profile half-width
   readonly groundAlbedo: Vec3; // isotropic ground bounce for the multi-scatter LUT
+  readonly twilightSoftness: number; // night-limb twilight width in mu (cos-zenith) space; 0 = hard shadow (no fade)
   readonly sunIrradiance: number; // solar radiance into the in-scatter integral (carried per the uniform contract; fragment-unused today — 1.0 is neutral)
   readonly exposure: number; // per-body HDR in-scatter look dial, before the shared tone-map
 };
