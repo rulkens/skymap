@@ -47,6 +47,7 @@ import {
   selectStarCatalogExposureNearX,
   selectStarCatalogExposureMidX,
   selectStarCatalogExposureFarX,
+  selectStarCatalogAggregateIntensityCap,
   selectFamousStarsEnabled,
 } from '../../../src/state/settings/selectors';
 import {
@@ -57,6 +58,7 @@ import {
   setStarCatalogExposureNearX,
   setStarCatalogExposureMidX,
   setStarCatalogExposureFarX,
+  setStarCatalogAggregateIntensityCap,
 } from '../../../src/state/settings/settingsSlice';
 import type { AppStore } from '../../../src/store/types';
 
@@ -297,5 +299,30 @@ describe('StarsSectionContainer', () => {
     fireEvent.change(slider, { target: { value: '140' } });
 
     expect(selectStarCatalogExposureFarX(store.getState())).toBeCloseTo(140);
+  });
+
+  it('reflects seeded aggregateIntensityCap in the Fog cap slider value', () => {
+    const { store } = createAppStore();
+    store.dispatch(setStarCatalogAggregateIntensityCap(0.2));
+
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-fog-cap');
+    expect(slider).not.toBeNull();
+    expect(slider!.value).toBe('0.2');
+  });
+
+  it('dispatches setStarCatalogAggregateIntensityCap and updates the store when the slider moves', () => {
+    const { store } = createAppStore();
+    const { container } = render(createElement(StarsSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+
+    const slider = container.querySelector<HTMLInputElement>('#slider-star-fog-cap')!;
+    fireEvent.change(slider, { target: { value: '0.3' } });
+
+    expect(selectStarCatalogAggregateIntensityCap(store.getState())).toBeCloseTo(0.3);
   });
 });

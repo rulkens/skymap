@@ -242,14 +242,16 @@ export type PreparedStarSource = {
 /**
  * The per-frame star cut, shared by the leaf / aggregate / upsample layers. The
  * per-source partitioned streams plus the source-independent shader scalars
- * (base dot size, exposure-ramped brightness trim, aggregate glow spread) —
- * each computed once and forwarded identically to every source's draw.
+ * (base dot size, exposure-ramped brightness trim, aggregate glow spread,
+ * aggregate peak ceiling) — each computed once and forwarded identically to
+ * every source's draw.
  */
 export type PreparedStarCut = {
   sources: PreparedStarSource[];
   sizePx: number;
   brightness: number;
   glowOverlap: number;
+  aggregateIntensityCap: number;
 };
 
 function emptyStream(): StarNodeStream {
@@ -322,6 +324,7 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
 
   const refineThreshold = state.settings.starCatalogs.refineThreshold;
   const glowOverlap = state.settings.starCatalogs.glowOverlap;
+  const aggregateIntensityCap = state.settings.starCatalogs.aggregateIntensityCap;
 
   const sources: PreparedStarSource[] = [];
   // Tracks whether ANY node is mid-fade across ALL sources this frame, to keep
@@ -415,7 +418,7 @@ function computeStarCut(state: EngineState, ctx: ReadyFrameContext): PreparedSta
 
   if (anyNodeFading) state.subsystems.scheduler.requestRender();
 
-  return { sources, sizePx, brightness, glowOverlap };
+  return { sources, sizePx, brightness, glowOverlap, aggregateIntensityCap };
 }
 
 /**
@@ -450,6 +453,7 @@ function drawStream(
       sizePx: prep.sizePx,
       brightness: prep.brightness,
       glowOverlap: prep.glowOverlap,
+      aggregateIntensityCap: prep.aggregateIntensityCap,
     });
   }
 }

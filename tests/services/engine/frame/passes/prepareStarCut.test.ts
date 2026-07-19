@@ -70,6 +70,7 @@ function makeState(renderer: unknown, opts: { master?: boolean; item?: boolean }
         brightness: 1.0,
         refineThreshold: 0.05,
         glowOverlap: 1.0,
+        aggregateIntensityCap: 0.06,
         items: { gaiaStars: { enabled: item, labelEnabled: false } },
       },
     },
@@ -184,6 +185,7 @@ describe('prepareStarCut liveness', () => {
     const prep = prepareStarCut(makeState(renderer), makeCtx(camAtPc(inner + (outer - inner) * 0.5)));
     expect(prep!.sizePx).toBe(2.5);
     expect(prep!.glowOverlap).toBe(1.0);
+    expect(prep!.aggregateIntensityCap).toBe(0.06);
     // brightness = slider (1.0) × the exposure ramp — a positive value.
     expect(prep!.brightness).toBeGreaterThan(0);
   });

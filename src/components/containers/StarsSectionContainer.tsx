@@ -56,6 +56,7 @@ import {
   setStarCatalogExposureNearX,
   setStarCatalogExposureMidX,
   setStarCatalogExposureFarX,
+  setStarCatalogAggregateIntensityCap,
   setStarCatalogVisible,
   setFamousStarsEnabled,
 } from '../../state/settings/settingsSlice';
@@ -76,6 +77,7 @@ function StarsSectionContainer(): React.ReactElement {
     exposureNearX,
     exposureMidX,
     exposureFarX,
+    aggregateIntensityCap,
     items,
   } = useAppSelector(selectStarCatalogs);
 
@@ -143,6 +145,11 @@ function StarsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onAggregateIntensityCapChange = useCallback(
+    (next: number) => dispatch(setStarCatalogAggregateIntensityCap(next)),
+    [dispatch],
+  );
+
   const onToggleFamousStars = useCallback(
     (next: boolean) => dispatch(setFamousStarsEnabled(next)),
     [dispatch],
@@ -160,6 +167,7 @@ function StarsSectionContainer(): React.ReactElement {
       exposureNearX={exposureNearX}
       exposureMidX={exposureMidX}
       exposureFarX={exposureFarX}
+      aggregateIntensityCap={aggregateIntensityCap}
       famousStarsEnabled={famousStarsEnabled}
       onToggleMaster={onToggleMaster}
       onToggleCatalog={onToggleCatalog}
@@ -170,6 +178,7 @@ function StarsSectionContainer(): React.ReactElement {
       onExposureNearXChange={onExposureNearXChange}
       onExposureMidXChange={onExposureMidXChange}
       onExposureFarXChange={onExposureFarXChange}
+      onAggregateIntensityCapChange={onAggregateIntensityCapChange}
       onToggleFamousStars={onToggleFamousStars}
     />
   );

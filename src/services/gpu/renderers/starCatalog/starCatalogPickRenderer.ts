@@ -155,7 +155,9 @@ export function createStarCatalogPickRenderer(
   // brightness / glowOverlap do not affect leaf pick GEOMETRY (brightness only
   // scales the unused peak; glowOverlap only widens AGGREGATE glows, and every
   // leaf selects 1.0 regardless), but set them to the identity so the uniform is
-  // fully defined rather than carrying stale scratch.
+  // fully defined rather than carrying stale scratch. 'aggregateIntensityCap'
+  // (the next scalar) is left at its zero-init default: it clamps AGGREGATE peaks
+  // only, and this pipeline draws leaves, so the vertex stage never consults it.
   uniformF32[BRIGHTNESS_FLOAT_INDEX] = 1.0;
   uniformF32[GLOW_OVERLAP_FLOAT_INDEX] = 1.0;
 

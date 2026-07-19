@@ -228,6 +228,7 @@ export const selectStarCatalogs = (
   exposureNearX: number;
   exposureMidX: number;
   exposureFarX: number;
+  aggregateIntensityCap: number;
   items: Record<StarCatalogId, StarCatalogItemSettings>;
 } => selectSettings(state).starCatalogs;
 
@@ -288,6 +289,15 @@ export const selectStarCatalogExposureMidX = (state: RootState): number =>
  */
 export const selectStarCatalogExposureFarX = (state: RootState): number =>
   selectSettings(state).starCatalogs.exposureFarX;
+
+/**
+ * Aggregate surface-brightness cap — the "Fog cap" tuning knob. A primitive
+ * read, so no memoization. The ceiling on an AGGREGATE record's per-pixel peak
+ * intensity (leaves uncapped); the renderer writes it into the shared star
+ * uniform and the vertex stage clamps aggregate peaks to it.
+ */
+export const selectStarCatalogAggregateIntensityCap = (state: RootState): number =>
+  selectSettings(state).starCatalogs.aggregateIntensityCap;
 
 // --- derived ------------------------------------------------------------------
 

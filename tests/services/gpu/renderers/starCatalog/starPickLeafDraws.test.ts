@@ -67,6 +67,7 @@ describe('starPickLeafDraws', () => {
       sizePx: 2,
       brightness: 1,
       glowOverlap: 1,
+      aggregateIntensityCap: 0.06,
     };
 
     const draws = starPickLeafDraws(prep);

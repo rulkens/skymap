@@ -366,7 +366,24 @@ fn vs(
   // the inverse-square-dimmed apparent flux (header 'Apparent flux'). The
   // peak-from-flux relation is shared with the famous / scene star stage
   // (lib/starPhotometry.wesl).
-  let intensity = starPeakIntensity(u.brightness, fluxApp, rPxRaw);
+  let intensityRaw = starPeakIntensity(u.brightness, fluxApp, rPxRaw);
+
+  // Aggregate surface-brightness cap -- the user's live 'Fog cap' setting
+  // ('u.aggregateIntensityCap', settings.starCatalogs.aggregateIntensityCap). A
+  // near sub-threshold aggregate deposits its subtree's honest summed light as a
+  // box-filling glow; around the Sun (~0.5-1.3 kpc camera distance) that reads as
+  // jarring luminous fog. Clamp the PEAK (per-pixel surface brightness) of
+  // AGGREGATE records only -- leaves stay uncapped so bright resolved stars still
+  // bloom. Aggregate-only because the fog is a property of the box-filling glow a
+  // leaf point source never has. Deliberately NON-physical: light above the
+  // ceiling is DISCARDED, not conserved -- the flux-conserving route (spreading
+  // the excess into a wider dot, as 'glowOverlap' does) is what makes the fog in
+  // the first place, since the offending glow is already box-sized.
+  let intensity = select(
+    intensityRaw,
+    min(intensityRaw, u.aggregateIntensityCap),
+    node.isAggregate != 0u
+  );
 
   // Near-sprite dissolve -- retire the wobbling sprite as its would-be sphere
   // resolves (constants block above). Why fade ANY near record and not just the

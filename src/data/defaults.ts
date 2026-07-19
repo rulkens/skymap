@@ -142,6 +142,28 @@ export const DEFAULT_STAR_EXPOSURE_MID_X = 57;
 export const DEFAULT_STAR_EXPOSURE_FAR_X = 70;
 
 /**
+ * Default aggregate surface-brightness cap — seeds
+ * `settings.starCatalogs.aggregateIntensityCap`, the "Fog cap" slider. A ceiling
+ * on the per-pixel PEAK intensity of survey-star AGGREGATE records (octree
+ * flux-mip glows) only; leaf (resolved-star) records stay uncapped so bright
+ * stars still bloom.
+ *
+ * Why a cap at all: an octree aggregate deposits its whole subtree's honestly
+ * summed light spread across its box footprint. A near, sub-refinement-threshold
+ * aggregate at ~0.5–1.3 kpc camera distance therefore paints a large,
+ * box-filling glow that reads as jarring luminous fog around the Sun. The cap
+ * clips the peak so those near aggregates can't over-fill the frame.
+ *
+ * Deliberately NON-physical: light above the ceiling is DISCARDED, not
+ * conserved (the flux-conserving alternative — spreading the excess into a wider
+ * dot, the way `glowOverlap` conserves — is exactly what produces the fog, since
+ * the offending glow is already box-sized). 0.06 is eye-tuned against the
+ * running renderer; live-tunable (UI range 0.01–0.5) so the ceiling can be
+ * re-dialled without a rebuild.
+ */
+export const DEFAULT_STAR_AGGREGATE_INTENSITY_CAP = 0.06;
+
+/**
  * Default global brightness multiplier.  1.0 = "intensity exactly as the
  * shader computes it from the apparent magnitude".  Range 0.2–3.0.
  */

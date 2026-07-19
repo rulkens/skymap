@@ -83,6 +83,8 @@ type StarsSectionProps = {
   exposureMidX: number;
   /** Current far-anchor display exposure — the "Exposure (far)" tuning knob. */
   exposureFarX: number;
+  /** Current aggregate surface-brightness cap — the "Fog cap" tuning knob. */
+  aggregateIntensityCap: number;
   /**
    * Whether the seeded famous-star map is shown. Leads the mapped per-catalog
    * rows, but is a singleton overlay gate (`settings.famousStars`), NOT a
@@ -108,6 +110,8 @@ type StarsSectionProps = {
   onExposureMidXChange: (v: number) => void;
   /** Called when the user moves the Exposure (far) slider. */
   onExposureFarXChange: (v: number) => void;
+  /** Called when the user moves the Fog cap slider. */
+  onAggregateIntensityCapChange: (v: number) => void;
   /** Called when the user toggles the famous-star map on or off. */
   onToggleFamousStars: (enabled: boolean) => void;
 };
@@ -129,6 +133,7 @@ function StarsSection({
   exposureNearX,
   exposureMidX,
   exposureFarX,
+  aggregateIntensityCap,
   famousStarsEnabled,
   onToggleMaster,
   onToggleCatalog,
@@ -139,6 +144,7 @@ function StarsSection({
   onExposureNearXChange,
   onExposureMidXChange,
   onExposureFarXChange,
+  onAggregateIntensityCapChange,
   onToggleFamousStars,
 }: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
@@ -327,6 +333,26 @@ function StarsSection({
             step={1}
             value={exposureFarX}
             onChange={(e) => onExposureFarXChange(parseFloat(e.target.value))}
+          />
+        </div>
+
+        {/* Fog cap — ceiling on an AGGREGATE glow's per-pixel peak intensity
+            (leaves uncapped). Tames the box-filling glow a near sub-threshold
+            aggregate deposits as luminous fog around the Sun. Deliberately
+            non-physical: light above the cap is discarded. Range 0.01–0.5. */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-star-fog-cap">Fog cap</label>
+          <span className={styles.panelValue}>{aggregateIntensityCap.toFixed(2)}</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-star-fog-cap"
+            type="range"
+            min={0.01}
+            max={0.5}
+            step={0.01}
+            value={aggregateIntensityCap}
+            onChange={(e) => onAggregateIntensityCapChange(parseFloat(e.target.value))}
           />
         </div>
       </CollapsibleSection>

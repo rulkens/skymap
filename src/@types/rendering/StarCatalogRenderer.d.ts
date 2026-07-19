@@ -142,6 +142,16 @@ export type StarCatalogDrawArgs = {
    * `sizePx` / `brightness`.
    */
   readonly glowOverlap: number;
+  /**
+   * User's aggregate surface-brightness cap (`settings.starCatalogs.
+   * aggregateIntensityCap`, default 0.06 = the "Fog cap" slider). A ceiling the
+   * vertex stage clamps an AGGREGATE record's peak intensity to (leaves stay
+   * uncapped), taming the box-filling glow a near sub-threshold aggregate
+   * deposits as fog around the Sun. Deliberately non-physical — light above the
+   * ceiling is discarded, not conserved. Source-independent, so it rides the
+   * shared camera uniform beside `sizePx` / `brightness` / `glowOverlap`.
+   */
+  readonly aggregateIntensityCap: number;
 };
 
 /**

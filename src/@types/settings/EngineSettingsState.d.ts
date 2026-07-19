@@ -213,6 +213,14 @@ export type EngineSettingsState = {
    * anchor there; the 57 mid anchor sits on the old near→far continuation, so the
    * defaults reproduce the two-anchor look and pulling `exposureMidX` down bends
    * only the intermediate few-kpc segment.
+   *
+   * `aggregateIntensityCap` is the "Fog cap" knob — a ceiling on the per-pixel
+   * PEAK intensity of AGGREGATE (octree flux-mip) records only; leaves stay
+   * uncapped. It exists to tame the box-filling glow a near sub-threshold
+   * aggregate deposits as luminous fog around the Sun. Unlike `glowOverlap`
+   * (flux-conserving) it is DELIBERATELY non-physical: light above the ceiling is
+   * discarded. Rides the shared GPU uniform beside `sizePx` / `brightness` /
+   * `glowOverlap`; default 0.06.
    */
   starCatalogs: {
     enabled: boolean;
@@ -223,6 +231,7 @@ export type EngineSettingsState = {
     exposureNearX: number;
     exposureMidX: number;
     exposureFarX: number;
+    aggregateIntensityCap: number;
     items: Record<StarCatalogId, StarCatalogItemSettings>;
   };
 
