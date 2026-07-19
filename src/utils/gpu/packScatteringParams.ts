@@ -23,7 +23,11 @@
  *   f32 12    mieScatter            13   mieAbsorption
  *   f32 14    ozoneCenterKm         15   ozoneWidthKm
  *   f32 16    planetRadiusKm        17   atmosphereTopKm
- *   f32 18    twilightSoftness      19   _pad1 (zero, rounds to 80 / 16-byte alignment)
+ *   f32 18    _pad0 (zero)          19   _pad1 (zero, rounds to 80 / 16-byte alignment)
+ *
+ * The twilight knob rides the per-frame `SkyViewParams` (`skyViewLut.wesl`), NOT
+ * this construction-written buffer, so it stays live-tunable; both tail slots
+ * here are inert pad again.
  *
  * @param params The body's authored `AtmosphereParams` row (`atmosphereParams.ts`).
  */
@@ -53,7 +57,8 @@ export function packScatteringParams(params: AtmosphereParams): Float32Array {
   out[15] = params.ozoneWidthKm;
   out[16] = params.planetRadiusKm;
   out[17] = params.atmosphereTopKm;
-  out[18] = params.twilightSoftness;
-  // out[19] stays zero — the pad rounding the struct to 80 / 16-byte alignment.
+  // out[18] / out[19] stay zero — the two pads rounding the struct to 80 /
+  // 16-byte alignment. `twilightSoftness` is NOT packed here: it rides the
+  // per-frame `SkyViewParams` so the Earth slider can tune it live.
   return out;
 }

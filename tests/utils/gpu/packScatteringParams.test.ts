@@ -16,7 +16,11 @@
  *   0..2 rayleighScatter  3 rayleighScaleHeightKm  4..6 ozoneAbsorption
  *   7 mieScaleHeightKm  8..10 groundAlbedo  11 miePhaseG  12 mieScatter
  *   13 mieAbsorption  14 ozoneCenterKm  15 ozoneWidthKm  16 planetRadiusKm
- *   17 atmosphereTopKm  18 twilightSoftness  19 pad
+ *   17 atmosphereTopKm  18 pad  19 pad
+ *
+ * `twilightSoftness` is NOT packed here — it rides the per-frame `SkyViewParams`
+ * so the Earth slider tunes it live — so it is grouped with the other row fields
+ * this physics packer ignores.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -42,9 +46,10 @@ const PARAMS: AtmosphereParams = {
   ozoneWidthKm: 16 / 16, //                      slot 15
   planetRadiusKm: 17 / 16, //                    slot 16
   atmosphereTopKm: 18 / 16, //                   slot 17
-  twilightSoftness: 19 / 16, //                  slot 18
-  // Look dials on the row but NOT part of ScatteringParams — this physics packer
-  // ignores them, so they occupy no slot and any value serves.
+  // Row fields NOT part of ScatteringParams — this physics packer ignores them,
+  // so they occupy no slot and any value serves. `twilightSoftness` rides the
+  // per-frame SkyViewParams; the two look dials ride AtmosphereUniforms.
+  twilightSoftness: 19 / 16,
   sunIrradiance: 20 / 16,
   exposure: 21 / 16,
 };
@@ -78,10 +83,10 @@ describe('ScatteringParams byte offsets', () => {
     expect(rec[15]).toBe(PARAMS.ozoneWidthKm);
     expect(rec[16]).toBe(PARAMS.planetRadiusKm);
     expect(rec[17]).toBe(PARAMS.atmosphereTopKm);
-    // twilightSoftness rides the former _pad0 slot; slot 19 is the last pad.
-    expect(rec[18]).toBe(PARAMS.twilightSoftness);
 
-    // Trailing pad zeroed — rounds the struct to 80 / 16-byte alignment.
+    // Trailing pads zeroed — round the struct to 80 / 16-byte alignment.
+    // `twilightSoftness` is deliberately NOT here (it rides SkyViewParams).
+    expect(rec[18]).toBe(0);
     expect(rec[19]).toBe(0);
   });
 });

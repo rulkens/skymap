@@ -544,6 +544,19 @@ The byte-layout parity test gains a slot-18 assertion.
 **Starting values (HMR-tunable; the visual pass adjusts):** earth `0.05`, venus `0.05`,
 mars `0.07`, jupiter `0.03`, saturn `0.03`, uranus `0.03`, neptune `0.03`.
 
+> **Amendment — 2026-07-19 mid-visual-pass (user-approved).** The transport moved off the
+> construction-written `ScatteringParams` buffer and onto the per-frame `SkyViewParams`
+> (`skyViewLut.wesl`) — `twilightSoftness` lands at that struct's slot 2 (its former `_pad0`),
+> and `ScatteringParams` slots 18/19 revert to inert pad. The reason is **live tunability**:
+> `ScatteringParams` is written once at LUT-bake construction, so a value packed there needs a
+> reload to change, whereas `encodeAtmosphereSkyView` repacks `SkyViewParams` every frame. With
+> the knob there, Earth gains a **live Settings → Display → Earth "Twilight softness" slider**
+> (range 0–0.5, step 0.005), seeded from `ATMOSPHERE_PARAMS.earth.twilightSoftness` — the exact
+> **exposure-seam twin**: Earth reads the settings value each frame, every other body reads its
+> own `AtmosphereParams` row. `AtmosphereParams` keeps the field (the seed + the six planets'
+> authored values); only the *packer* stops reading it. The march reads `view.twilightSoftness`
+> instead of `params.twilightSoftness`; the byte-parity test moves its slot assertion accordingly.
+
 ## 8. Settings story
 
 `settings.earth.atmosphereExposure` **stays Earth's live override**, unchanged in behavior:

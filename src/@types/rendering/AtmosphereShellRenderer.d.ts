@@ -85,8 +85,10 @@ export type AtmosphereShellRenderer = Renderer & {
    *   f32 1 : sunZenithCos  — `dot(localUp, sunDirLocal)`, where
    *           `localUp = normalize(camPosLocal)` (cos of the sun's zenith angle at
    *           the camera).
-   *   f32 2 : _pad0         — zero (rounds the struct to 16 bytes).
-   *   f32 3 : _pad1         — zero.
+   *   f32 2 : twilightSoftness — night-limb sun-fade width in mu (cos-zenith). Rides
+   *           HERE, not on the construction-written `ScatteringParams`, so Earth's
+   *           Settings slider tunes it live (this buffer is repacked every frame).
+   *   f32 3 : _pad1         — zero (rounds the struct to 16 bytes).
    */
   encodeSkyView(encoder: GPUCommandEncoder, bodyId: string, skyViewUniforms: Float32Array): void;
 

@@ -3,10 +3,10 @@
  * EarthSectionContainer — store boundary for the Earth settings subgroup.
  *
  * Owns all Redux reach for the Earth group: reads `selectAtmosphereExposure` +
- * `selectAmbientLight` + `selectOceanRoughness` and wraps the
- * `setAtmosphereExposure` / `setAmbientLight` / `setOceanRoughness` dispatches in
- * `useCallback`. The presentational `EarthSection` imports nothing from `store/`
- * or `state/`.
+ * `selectTwilightSoftness` + `selectAmbientLight` + `selectOceanRoughness` and
+ * wraps the `setAtmosphereExposure` / `setTwilightSoftness` / `setAmbientLight` /
+ * `setOceanRoughness` dispatches in `useCallback`. The presentational
+ * `EarthSection` imports nothing from `store/` or `state/`.
  *
  * ### Handler stability
  *
@@ -21,11 +21,13 @@ import EarthSection from '../SettingsPanel/EarthSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectAtmosphereExposure,
+  selectTwilightSoftness,
   selectAmbientLight,
   selectOceanRoughness,
 } from '../../state/settings/selectors';
 import {
   setAtmosphereExposure,
+  setTwilightSoftness,
   setAmbientLight,
   setOceanRoughness,
 } from '../../state/settings/settingsSlice';
@@ -33,11 +35,16 @@ import {
 function EarthSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const atmosphereExposure = useAppSelector(selectAtmosphereExposure);
+  const twilightSoftness = useAppSelector(selectTwilightSoftness);
   const ambientLight = useAppSelector(selectAmbientLight);
   const oceanRoughness = useAppSelector(selectOceanRoughness);
 
   const onAtmosphereExposureChange = useCallback(
     (value: number) => dispatch(setAtmosphereExposure(value)),
+    [dispatch],
+  );
+  const onTwilightSoftnessChange = useCallback(
+    (value: number) => dispatch(setTwilightSoftness(value)),
     [dispatch],
   );
   const onAmbientLightChange = useCallback(
@@ -53,6 +60,8 @@ function EarthSectionContainer(): React.ReactElement {
     <EarthSection
       atmosphereExposure={atmosphereExposure}
       onAtmosphereExposureChange={onAtmosphereExposureChange}
+      twilightSoftness={twilightSoftness}
+      onTwilightSoftnessChange={onTwilightSoftnessChange}
       ambientLight={ambientLight}
       onAmbientLightChange={onAmbientLightChange}
       oceanRoughness={oceanRoughness}

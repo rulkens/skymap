@@ -63,18 +63,23 @@ const SKY_VIEW_STEPS: f32 = 30.0;
 // ── SkyViewParams — the per-frame camera + sun state (16 bytes) ──────
 //
 // The camera's altitude (as a RADIUS in km, so the LUT parametrisations agree
-// with the km-baked transmittance/multi-scatter tables) and the cosine of the
-// sun's zenith angle at the camera. Packed inline by the renderer each frame
-// ('encodeSkyView'), a small enough struct that no exported packer/test earns
-// its keep (verified visually).
+// with the km-baked transmittance/multi-scatter tables), the cosine of the
+// sun's zenith angle at the camera, and the night-limb twilight-fade width.
+// Packed inline by the renderer each frame ('encodeSkyView'), a small enough
+// struct that no exported packer/test earns its keep (verified visually).
 //
-//   offset 0..3 : viewHeightKm  (f32 — camera radius from planet centre, km)
-//   offset 4..7 : sunZenithCos  (f32 — cos angle between local up and the sun)
-//   offset 8..15: _pad0, _pad1  (f32 x2 — rounds to 16)
+// 'twilightSoftness' rides HERE, not on the construction-written
+// 'ScatteringParams' buffer, so Earth's Settings slider can tune it live: this
+// buffer is repacked every frame from the current settings value.
+//
+//   offset 0..3 : viewHeightKm     (f32 — camera radius from planet centre, km)
+//   offset 4..7 : sunZenithCos     (f32 — cos angle between local up and the sun)
+//   offset 8..11: twilightSoftness (f32 — night-limb sun-fade width in mu)
+//   offset 12..15: _pad1           (f32 — rounds to 16)
 struct SkyViewParams {
   viewHeightKm: f32,
   sunZenithCos: f32,
-  _pad0: f32,
+  twilightSoftness: f32,
   _pad1: f32,
 };
 
@@ -148,7 +153,7 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
     let muHorizon = -sqrt(max(0.0, r * r - bottom * bottom)) / r;
     // Clamp the fade width to a tiny epsilon: a zero width collides smoothstep's two edges
     // (its internal divide-by-(edge1-edge0) goes 0/0), so the hard-shadow limit is a near-step.
-    let fadeWidth = max(params.twilightSoftness, 1e-4);
+    let fadeWidth = max(view.twilightSoftness, 1e-4);
     let sunVis = smoothstep(muHorizon - fadeWidth, muHorizon, sunCosZenith);
     let s = sunVis * sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal;
 
