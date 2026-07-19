@@ -14,6 +14,28 @@ The gas-giant "cloud-tops-as-ground" treatment is pure data: a giant's `planetRa
 
 **Depends on:** the prep PR's shapes — `atmosphereDrawList(state, ctx): readonly AtmosphereDrawEntry[]` (entry = `{ body, params }`), the reshaped `atmosphereShellLayer` / `encodeAtmosphereSkyView` that iterate it, `createAtmosphereShellRenderer(…, paramsById)`, and the `AtmosphereShellRenderer.d.ts` per-bodyId signatures. **Read the current post-prep files before editing** — do not trust any line offsets below; where a citation shifts, read the current file.
 
+## Completion note (2026-07-19)
+
+Shipped. The core feature (six atmosphere rows + limb darkening, Tasks 1–6) landed as
+written. The twilight work (Task 7) diverged after this plan was authored — reconciling
+the as-built result against the Task 7 text below:
+
+- **`twilightSoftness` shipped, but not as Task 7 documents it.** The transport moved OFF
+  `ScatteringParams` slot 18 onto the per-frame `SkyViewParams` buffer (so the value could be
+  tuned live), and the sky-view weighting gates the WHOLE in-scatter source (single + multi),
+  not single-scatter only — the night limb is dominated by the multi-scatter ambient, so
+  single-scatter-only gating was visually inert. `ScatteringParams` slot 18 reverted to `_pad0`.
+- **Two inline scope additions (no plan task):** `twilightIntensity` (a second per-body
+  brightness knob on `SkyViewParams`) and live Earth Settings sliders for both knobs.
+- **The Earth sliders were then removed** (commit `fa98e5c7`): the multiplicative knobs proved
+  visually inert — both scattering LUTs clamp to ~0 for a below-horizon sun, so there is
+  nothing at the dark limb for a multiplicative knob to scale. Net as-built twilight state:
+  per-body `twilightSoftness` + `twilightIntensity` params + shader terms baked at their
+  defaults, **no UI, no settings state**.
+- **Deferred:** the dark-limb twilight bleed the sliders were meant to control needs an
+  ADDITIVE terminator glow (a real design change, not a multiplicative fade); Saturn ring
+  brightness; the iOS spot-check (accepted as an override at ship time).
+
 ## Global Constraints
 
 Binding values copied from the spec; every task inherits them.
@@ -65,15 +87,15 @@ This is the one Earth-keyed branch — an **essential** asymmetry (Earth alone h
 
 **Steps:**
 
-- [ ] Grep every importer of `ATMOSPHERE_SHELL_PARAMS` / `atmosphereShellParams` and confirm the full edit set (today: `initialState.ts`, `EngineSettingsState.d.ts` docstring, `atmosphereShellLayer.ts`, `tests/state/settings/makeSettingsFixture.ts`, the self file; re-grep against post-prep state).
-- [ ] Add the two fields to `AtmosphereParams`; add `sunIrradiance: 1.0, exposure: 2.35` to the Earth row; move the physics-vs-look + eye-tuning docblock from `atmosphereShellParams.ts` into `atmosphereParams.ts`'s header.
-- [ ] Delete `src/data/bodies/atmosphereShellParams.ts`.
-- [ ] `initialState.ts`: replace the `ATMOSPHERE_SHELL_PARAMS` import + `atmosphereExposure: ATMOSPHERE_SHELL_PARAMS.exposure` with `ATMOSPHERE_PARAMS.earth.exposure` (import `ATMOSPHERE_PARAMS`); update the adjacent seed comment's "from the atmosphere shell" phrasing to cite the Earth row.
-- [ ] `EngineSettingsState.d.ts`: update the `earth.atmosphereExposure` docstring's `ATMOSPHERE_SHELL_PARAMS.exposure` reference to `ATMOSPHERE_PARAMS.earth.exposure`.
-- [ ] `makeSettingsFixture.ts`: repoint its seed to `ATMOSPHERE_PARAMS.earth.exposure` (or the shared `buildInitialSettings` value it derives from) so no dangling `ATMOSPHERE_SHELL_PARAMS` import remains.
-- [ ] `atmosphereShellLayer.ts`: drop the `ATMOSPHERE_SHELL_PARAMS` import; source `sunIrradiance` from `entry.params.sunIrradiance`; add the Earth-keyed `exposure` branch above. Update the draw's exposure comment (it currently cites `ATMOSPHERE_SHELL_PARAMS.exposure` as the seed — cite the Earth row, and note the per-body `params.exposure` path for the other bodies).
-- [ ] `npm run typecheck` clean (both tsconfigs); `npm test -- settings makeSettingsFixture atmosphereShellLayer` green (the existing settings-seed + layer tests still pass with the retargeted source).
-- [ ] Commit (stage each path).
+- [x] Grep every importer of `ATMOSPHERE_SHELL_PARAMS` / `atmosphereShellParams` and confirm the full edit set (today: `initialState.ts`, `EngineSettingsState.d.ts` docstring, `atmosphereShellLayer.ts`, `tests/state/settings/makeSettingsFixture.ts`, the self file; re-grep against post-prep state).
+- [x] Add the two fields to `AtmosphereParams`; add `sunIrradiance: 1.0, exposure: 2.35` to the Earth row; move the physics-vs-look + eye-tuning docblock from `atmosphereShellParams.ts` into `atmosphereParams.ts`'s header.
+- [x] Delete `src/data/bodies/atmosphereShellParams.ts`.
+- [x] `initialState.ts`: replace the `ATMOSPHERE_SHELL_PARAMS` import + `atmosphereExposure: ATMOSPHERE_SHELL_PARAMS.exposure` with `ATMOSPHERE_PARAMS.earth.exposure` (import `ATMOSPHERE_PARAMS`); update the adjacent seed comment's "from the atmosphere shell" phrasing to cite the Earth row.
+- [x] `EngineSettingsState.d.ts`: update the `earth.atmosphereExposure` docstring's `ATMOSPHERE_SHELL_PARAMS.exposure` reference to `ATMOSPHERE_PARAMS.earth.exposure`.
+- [x] `makeSettingsFixture.ts`: repoint its seed to `ATMOSPHERE_PARAMS.earth.exposure` (or the shared `buildInitialSettings` value it derives from) so no dangling `ATMOSPHERE_SHELL_PARAMS` import remains.
+- [x] `atmosphereShellLayer.ts`: drop the `ATMOSPHERE_SHELL_PARAMS` import; source `sunIrradiance` from `entry.params.sunIrradiance`; add the Earth-keyed `exposure` branch above. Update the draw's exposure comment (it currently cites `ATMOSPHERE_SHELL_PARAMS.exposure` as the seed — cite the Earth row, and note the per-body `params.exposure` path for the other bodies).
+- [x] `npm run typecheck` clean (both tsconfigs); `npm test -- settings makeSettingsFixture atmosphereShellLayer` green (the existing settings-seed + layer tests still pass with the retargeted source).
+- [x] Commit (stage each path).
 
 ---
 
@@ -123,10 +145,10 @@ test('every key resolves to a real seeded body', () => {
 
 **Steps:**
 
-- [ ] Write `tests/data/bodies/atmosphereParams.test.ts` with the two structural tests above (both iterate the whole table, so they cover the Earth row + all six new rows and won't break when a legitimate row is added later).
-- [ ] Add the `SCENE_PLANETS` import + an in-module `radiusKmById` lookup helper; add the six rows sourcing `planetRadiusKm` + `groundAlbedo` from `SCENE_PLANETS`, with the §7 coefficients + per-row physical-motivation notes.
-- [ ] `npm test -- atmosphereParams` green; `npm run typecheck` clean.
-- [ ] Commit (stage each path).
+- [x] Write `tests/data/bodies/atmosphereParams.test.ts` with the two structural tests above (both iterate the whole table, so they cover the Earth row + all six new rows and won't break when a legitimate row is added later).
+- [x] Add the `SCENE_PLANETS` import + an in-module `radiusKmById` lookup helper; add the six rows sourcing `planetRadiusKm` + `groundAlbedo` from `SCENE_PLANETS`, with the §7 coefficients + per-row physical-motivation notes.
+- [x] `npm test -- atmosphereParams` green; `npm run typecheck` clean.
+- [x] Commit (stage each path).
 
 ---
 
@@ -206,13 +228,13 @@ test('packs the lit prefix, ring ratios, limb fields, and camPosLocal at the fix
 
 **Steps:**
 
-- [ ] Create `lib/limbDarkening.wesl` with the didactic header + the function above (single-quote comments, no backticks).
-- [ ] Reshape `TexturedBodyUniforms` in `lib/sphere.wesl` (rename the two pads to real fields, add the `camPosLocal` vec3 tail + `_pad0`), and rewrite its byte-layout table to the 112-byte layout above.
-- [ ] Extend `packTexturedBodyUniforms` (three new args, `out[22]`/`out[23]`/`out[24..26]`, FLOATS → 28); update its docblock byte table.
-- [ ] Write `tests/utils/gpu/packTexturedBodyUniforms.test.ts` with the parity assertions above.
-- [ ] Bump `UNIFORM_BUFFER_SIZE` 96 → 112 in `texturedBodyRenderer.ts` and update its "96 bytes (24 f32)" header comment to 112 / 28 (the derive-from-packer-count knot stays a restated literal — untriggered, per spec §6.3).
-- [ ] `npm test -- packTexturedBodyUniforms` green; `npm run typecheck` clean; `npm run build` clean (the `?static` WESL imports link — watch iOS-strict traps: valid struct layout, no `texture_1d`).
-- [ ] Commit (stage each path). No visual check yet — the fragment does not consume the new fields until Task 4, and the layer still packs `0`/`0`/`[0,0,0]` for them until then (identity), so Task 3 is behavior-neutral on its own.
+- [x] Create `lib/limbDarkening.wesl` with the didactic header + the function above (single-quote comments, no backticks).
+- [x] Reshape `TexturedBodyUniforms` in `lib/sphere.wesl` (rename the two pads to real fields, add the `camPosLocal` vec3 tail + `_pad0`), and rewrite its byte-layout table to the 112-byte layout above.
+- [x] Extend `packTexturedBodyUniforms` (three new args, `out[22]`/`out[23]`/`out[24..26]`, FLOATS → 28); update its docblock byte table.
+- [x] Write `tests/utils/gpu/packTexturedBodyUniforms.test.ts` with the parity assertions above.
+- [x] Bump `UNIFORM_BUFFER_SIZE` 96 → 112 in `texturedBodyRenderer.ts` and update its "96 bytes (24 f32)" header comment to 112 / 28 (the derive-from-packer-count knot stays a restated literal — untriggered, per spec §6.3).
+- [x] `npm test -- packTexturedBodyUniforms` green; `npm run typecheck` clean; `npm run build` clean (the `?static` WESL imports link — watch iOS-strict traps: valid struct layout, no `texture_1d`).
+- [x] Commit (stage each path). No visual check yet — the fragment does not consume the new fields until Task 4, and the layer still packs `0`/`0`/`[0,0,0]` for them until then (identity), so Task 3 is behavior-neutral on its own.
 
 ---
 
@@ -283,12 +305,12 @@ No `strength`/`exponent` value test.
 
 **Steps:**
 
-- [ ] Create `limbDarkeningParams.ts` (didactic header: data-gate, eye-tuned, absent = identity) + `tests/data/bodies/limbDarkeningParams.test.ts` (key-resolution test).
-- [ ] Compose the limb term into `texturedBody/fragment.wesl` (import + `noL`/`noV`/`limb` + fold into `colour`); update the fragment header to note the view vector comes from `u.camPosLocal` on the unit sphere and the `limbStrength == 0` identity.
-- [ ] Add `limbParams` + the `camPosLocal` derivation to `texturedBodiesLayer.ts`; pass the three new args; update the layer header's ring-ratios paragraph to also mention the limb datum + the surface-radius `camPosLocal`.
-- [ ] Update `texturedBodiesLayer.test.ts`: length 24 → 28, the limb-field + `camPosLocal` assertions above.
-- [ ] `npm test -- texturedBodiesLayer limbDarkeningParams` green; `npm run typecheck` clean; `npm run build` clean (WESL links; iOS-strict — a bad textured-body pipeline silently blanks the canvas; use `createShaderModuleWithDevLog` output if it fails).
-- [ ] Commit (stage each path). The per-body visual pass happens in Task 6 (HMR).
+- [x] Create `limbDarkeningParams.ts` (didactic header: data-gate, eye-tuned, absent = identity) + `tests/data/bodies/limbDarkeningParams.test.ts` (key-resolution test).
+- [x] Compose the limb term into `texturedBody/fragment.wesl` (import + `noL`/`noV`/`limb` + fold into `colour`); update the fragment header to note the view vector comes from `u.camPosLocal` on the unit sphere and the `limbStrength == 0` identity.
+- [x] Add `limbParams` + the `camPosLocal` derivation to `texturedBodiesLayer.ts`; pass the three new args; update the layer header's ring-ratios paragraph to also mention the limb datum + the surface-radius `camPosLocal`.
+- [x] Update `texturedBodiesLayer.test.ts`: length 24 → 28, the limb-field + `camPosLocal` assertions above.
+- [x] `npm test -- texturedBodiesLayer limbDarkeningParams` green; `npm run typecheck` clean; `npm run build` clean (WESL links; iOS-strict — a bad textured-body pipeline silently blanks the canvas; use `createShaderModuleWithDevLog` output if it fails).
+- [x] Commit (stage each path). The per-body visual pass happens in Task 6 (HMR).
 
 ---
 
@@ -310,10 +332,10 @@ No `strength`/`exponent` value test.
 
 **Steps:**
 
-- [ ] Remove #1 and #4 from the follow-ups file (keep the other headings' numbers).
-- [ ] Update the `BACKLOG.md` Rendering parenthetical; add the Titan index line.
-- [ ] Create the Titan detail file (minimal vs full paths).
-- [ ] Commit (stage each path).
+- [x] Remove #1 and #4 from the follow-ups file (keep the other headings' numbers).
+- [x] Update the `BACKLOG.md` Rendering parenthetical; add the Titan index line.
+- [x] Create the Titan detail file (minimal vs full paths).
+- [x] Commit (stage each path).
 
 ---
 
@@ -326,15 +348,15 @@ No `strength`/`exponent` value test.
 
 **Files:** none (review + verification + visual).
 
-- [ ] Run the `entanglement-radar` skill over the whole feature-branch diff (house convention). Pay attention to:
+- [x] Run the `entanglement-radar` skill over the whole feature-branch diff (house convention). Pay attention to:
   - the **one Earth-keyed exposure branch** (spec §5.3) being an ESSENTIAL asymmetry (Earth has a slider, the rest do not), one line at one pack site — not a shading-model fork, not a co-keyed mirror table;
   - the fold of `sunIrradiance`/`exposure` into `ATMOSPHERE_PARAMS` collapsing the former co-keyed-mirror risk (spec §3.1) — one row per body, one home;
   - the limb term data-gated by `LIMB_DARKENING_PARAMS` absence (identity at `strength 0`) — the same gate `SCENE_RINGS` / `ATMOSPHERE_PARAMS` use, no per-body shader branch;
   - `planetRadiusKm` + `groundAlbedo` sourced from `SCENE_PLANETS` (single source), not re-typed literals;
   - the `camPosLocal` derivation reusing the existing util with the surface radius (the fragment's unit sphere), matching the layer's `composeBodyMvp` inputs — not a second bespoke computation.
   - Name any knot precisely; fix or file it before completion.
-- [ ] `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
-- [ ] **Per-body visual pass (spec §11)** — ask the user to look on the running dev server (never start/kill it). HMR-driven tuning is expected: adjusting coefficients in `atmosphereParams.ts` / `limbDarkeningParams.ts` live is the intended loop. Confirm:
+- [x] `npm test` (full suite green), `npm run typecheck` (both tsconfigs), `npm run build`.
+- [x] **Per-body visual pass (spec §11)** — ask the user to look on the running dev server (never start/kill it). HMR-driven tuning is expected: adjusting coefficients in `atmosphereParams.ts` / `limbDarkeningParams.ts` live is the intended loop. Confirm:
   - **Venus** — thick warm/whitish-yellow limb band; mild disc limb-darkening; surface is the existing cloud-as-surface map (no cloud shell).
   - **Mars** — thin reddish/butterscotch limb; NO disc darkening.
   - **Jupiter** — pronounced limb darkening across the banded disc (the dominant effect); a faint thin scattering rim.
@@ -345,8 +367,8 @@ No `strength`/`exponent` value test.
   - **Earth pixel-identical** — limb, sunset arc, over-disc haze read exactly as before the six rows (spec §2.3 / §5.3). (The night-limb twilight ring below is the one deliberate Earth change, from Task 7.)
   - **Earth night-side limb shows a soft twilight ring fading to true black** — no hard edge, no constant grazing glow in deep shadow (Task 7 / spec §7.1). Tune `twilightSoftness` on the Earth row via HMR if the band reads too wide or too narrow.
   - **iOS spot-check** — the extra shells + the reshaped `TexturedBodyUniforms` present correctly on iOS WebKit (the risk is the multiplied bundle count + the new uniform tail; a bad struct silently blanks the canvas).
-- [ ] Tune coefficients with the user via HMR as needed (no commit needed for a pure look tweak unless a value changes on disk — those coefficient edits DO get committed as the final tuned values).
-- [ ] Confirm the DoD before marking the plan done (`/feature-done`, which sweeps the backlog + relocates spec/plan on merge — run BEFORE merge per feedback_feature_done_before_merge).
+- [x] Tune coefficients with the user via HMR as needed (no commit needed for a pure look tweak unless a value changes on disk — those coefficient edits DO get committed as the final tuned values).
+- [x] Confirm the DoD before marking the plan done (`/feature-done`, which sweeps the backlog + relocates spec/plan on merge — run BEFORE merge per feedback_feature_done_before_merge).
 
 ---
 
@@ -433,11 +455,11 @@ mars `0.07`, jupiter `0.03`, saturn `0.03`, uranus `0.03`, neptune `0.03`.
 
 **Steps (TDD):**
 
-- [ ] Extend `tests/utils/gpu/packScatteringParams.test.ts`: add `twilightSoftness` to the `PARAMS` fixture (a distinct dyadic sentinel, e.g. `19 / 16`) and change the slot-18 assertion from `expect(rec[18]).toBe(0)` to `expect(rec[18]).toBe(PARAMS.twilightSoftness)` (slot 19 stays `0`). Red — the packer still writes `0` at slot 18.
-- [ ] Add `twilightSoftness` to `AtmosphereParams`; set the seven row values in `atmosphereParams.ts`; write `out[18] = params.twilightSoftness` in `packScatteringParams.ts` and update its slot-table comment (`18 twilightSoftness, 19 _pad1`). Green.
-- [ ] Rename `_pad0` → `twilightSoftness` in `scattering.wesl`'s `ScatteringParams` struct + its byte-layout comment; add the `muHorizon` / `sunVis` weighting to `raymarchInScatter` in `skyViewLut.wesl` (single quotes, no backticks).
-- [ ] `npx tsc --noEmit` clean; focused `npm test -- packScatteringParams` green; `npm run build` clean (WESL relink — iOS-strict: valid struct layout; `smoothstep` / `sqrt` are core WGSL, no `texture_1d` risk here).
-- [ ] Commit (stage each path) with a `feat(atmosphere): per-body twilightSoftness night-limb knob` message.
+- [x] Extend `tests/utils/gpu/packScatteringParams.test.ts`: add `twilightSoftness` to the `PARAMS` fixture (a distinct dyadic sentinel, e.g. `19 / 16`) and change the slot-18 assertion from `expect(rec[18]).toBe(0)` to `expect(rec[18]).toBe(PARAMS.twilightSoftness)` (slot 19 stays `0`). Red — the packer still writes `0` at slot 18.
+- [x] Add `twilightSoftness` to `AtmosphereParams`; set the seven row values in `atmosphereParams.ts`; write `out[18] = params.twilightSoftness` in `packScatteringParams.ts` and update its slot-table comment (`18 twilightSoftness, 19 _pad1`). Green.
+- [x] Rename `_pad0` → `twilightSoftness` in `scattering.wesl`'s `ScatteringParams` struct + its byte-layout comment; add the `muHorizon` / `sunVis` weighting to `raymarchInScatter` in `skyViewLut.wesl` (single quotes, no backticks).
+- [x] `npx tsc --noEmit` clean; focused `npm test -- packScatteringParams` green; `npm run build` clean (WESL relink — iOS-strict: valid struct layout; `smoothstep` / `sqrt` are core WGSL, no `texture_1d` risk here).
+- [x] Commit (stage each path) with a `feat(atmosphere): per-body twilightSoftness night-limb knob` message.
 
 The per-body visual pass (including the Earth night-limb twilight-ring check) happens in
 Task 6, which runs after this task.
