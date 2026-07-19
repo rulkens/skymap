@@ -58,7 +58,6 @@ import type { ContentLayer } from '../../../../@types/engine/frame/ContentLayer'
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { ATMOSPHERE_SHELL_PARAMS } from '../../../../data/bodies/atmosphereShellParams';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { camPosLocal } from '../../../../utils/camera/camPosLocal';
@@ -108,21 +107,18 @@ export const atmosphereShellLayer: ContentLayer = {
       // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
       // atmosphere top is the unit sphere and the ground sphere has this radius.
       const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;
-      // Exposure is the live Settings → Display → Earth knob (seeded from
-      // `ATMOSPHERE_SHELL_PARAMS.exposure`); `EngineState.settings` is a live store
-      // getter, so this reads the current value every frame. sunIrradiance stays a
-      // static data-file constant (fragment-unused today).
+      // Exposure resolution — the one Earth-keyed branch: Earth alone carries a
+      // live Settings → Display → Earth slider (seeded from
+      // `ATMOSPHERE_PARAMS.earth.exposure`), so it reads the store value each frame
+      // (`EngineState.settings` is a live getter — a drag overrides the limb
+      // without a reload); every other body reads its own params-row `exposure`.
+      // sunIrradiance is the per-body params dial (fragment-unused today).
+      const exposure =
+        body.id === 'earth' ? state.settings.earth.atmosphereExposure : params.exposure;
       renderer.draw(
         pass,
         body.id,
-        packAtmosphereUniforms(
-          mvp,
-          sun,
-          camLocal,
-          bottomRadius,
-          ATMOSPHERE_SHELL_PARAMS.sunIrradiance,
-          state.settings.earth.atmosphereExposure,
-        ),
+        packAtmosphereUniforms(mvp, sun, camLocal, bottomRadius, params.sunIrradiance, exposure),
       );
     }
   },

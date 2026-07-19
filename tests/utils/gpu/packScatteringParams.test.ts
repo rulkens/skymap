@@ -42,6 +42,10 @@ const PARAMS: AtmosphereParams = {
   ozoneWidthKm: 16 / 16, //                      slot 15
   planetRadiusKm: 17 / 16, //                    slot 16
   atmosphereTopKm: 18 / 16, //                   slot 17
+  // Look dials on the row but NOT part of ScatteringParams — this physics packer
+  // ignores them, so they occupy no slot and any value serves.
+  sunIrradiance: 19 / 16,
+  exposure: 20 / 16,
 };
 
 describe('ScatteringParams byte offsets', () => {

@@ -113,11 +113,7 @@ describe('atmosphereDrawList', () => {
   });
 
   it('skips a null earth without throwing', () => {
-    expect(() =>
-      atmosphereDrawList(makeState({ earth: null, planets: [] }), makeCtx([0, 0, 0])),
-    ).not.toThrow();
-    expect(atmosphereDrawList(makeState({ earth: null, planets: [] }), makeCtx([0, 0, 0]))).toEqual(
-      [],
-    );
+    const list = atmosphereDrawList(makeState({ earth: null, planets: [] }), makeCtx([0, 0, 0]));
+    expect(list).toEqual([]);
   });
 });
