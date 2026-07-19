@@ -1,14 +1,15 @@
 /**
- * Property test for the linear-PNG build primitive.
+ * Property test for the linear lossless-WebP build primitive.
  *
  * The whole reason `writeLinearTier` exists apart from the sRGB `writeBodyTier`
  * path is that a linear-packed map's bytes must survive the write UNCHANGED — a
  * sneaky `.toColourspace('srgb')` / `.gamma()` would bend a roughness of 0.5 off
  * its value and no pure-helper test would catch it (the transform lives inside
  * sharp). So this drives sharp end-to-end over a tiny known linear RGBA buffer,
- * writes at the same width (an identity resize), reads the PNG back to raw, and
- * asserts byte equality. A gamma/sRGB transform slipping into the pipeline flips
- * this red.
+ * writes at the same width (an identity resize), reads the WebP back to raw, and
+ * asserts byte equality. Lossless WebP is per-pixel exact for the RGB wherever
+ * alpha is non-zero (both test pixels are), so a gamma/sRGB transform — or a
+ * regression to a lossy encoder — slipping into the pipeline flips this red.
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -45,7 +46,7 @@ it('round-trips raw pixel values unchanged (no sRGB gamma applied)', async () =>
     96,
     128,
   ]);
-  const outPath = join(dir, 'linear-2.png');
+  const outPath = join(dir, 'linear-2.webp');
 
   await writeLinearTier({ data, info: { width, height, channels: 4 } }, width, outPath);
 

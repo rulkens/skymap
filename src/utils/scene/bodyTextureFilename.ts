@@ -16,23 +16,26 @@ import { isLinearTextureKind } from './isLinearTextureKind';
  * ### `surface` is the default kind — unsegmented
  *
  * The `surface` (day/albedo) map keeps the exact name every body ships today:
- * `${bodyId}-${px}.{jpg|png}`. Only non-surface kinds
+ * `${bodyId}-${px}.{jpg|webp}`. Only non-surface kinds
  * (`night`/`clouds`/`material`/`normal`) carry a `-${kind}-` segment. Omitting
  * the segment for `surface` is what keeps this a zero-data-op refactor: the build
  * re-emits byte-identical surface files, so no rebuild / R2 re-sync / CDN purge
  * is needed. The `-${kind}-` maps land with their own feature PRs.
  *
- * ### PNG for the ring, a linear-data map, OR an alpha map; JPG for opaque sRGB
+ * ### Lossless WebP for the ring, a linear-data map, OR an alpha map; JPG for opaque sRGB
  *
- * Three things force PNG over JPG. The Saturn ring strip carries a real alpha
- * channel (transparent centre + soft radial gaps) a JPG cannot hold. A linear
- * kind (`material`, `normal`) packs numeric fields — roughness, an ocean mask, a
- * normal vector — into its channels; JPEG's chroma subsampling and sRGB
- * assumption would corrupt those numbers along coastlines. An alpha kind
+ * Three things force a non-JPG encoding. The Saturn ring strip carries a real
+ * alpha channel (transparent centre + soft radial gaps) a JPG cannot hold. A
+ * linear kind (`material`, `normal`) packs numeric fields — roughness, an ocean
+ * mask, a normal vector — into its channels; a lossy codec's chroma subsampling
+ * and sRGB assumption would corrupt those numbers along coastlines. An alpha kind
  * (`clouds`) is still sRGB COLOUR but carries a transparency channel a JPG cannot
- * hold. The three cases route through the ring id, `isLinearTextureKind` (the
- * sRGB-vs-linear precision axis), and `isAlphaTextureKind` (the channel-count
- * axis) respectively; every opaque sRGB-colour sphere names a `.jpg`.
+ * hold. All three ship as LOSSLESS WebP — bit-exact for the numeric maps, exact
+ * alpha for the ring and clouds, and ~40% smaller than the PNG it replaces (the
+ * build emits `.webp({ lossless: true })` for these). The three cases route
+ * through the ring id, `isLinearTextureKind` (the sRGB-vs-linear precision axis),
+ * and `isAlphaTextureKind` (the channel-count axis) respectively; every opaque
+ * sRGB-colour sphere still names a `.jpg`.
  */
 export function bodyTextureFilename(
   bodyId: BodyTextureId | RingTextureId,
@@ -43,7 +46,7 @@ export function bodyTextureFilename(
   const px = tierToTexturePx(tier);
   const ext =
     bodyId === 'saturn-ring' || isLinearTextureKind(kind) || isAlphaTextureKind(kind)
-      ? 'png'
+      ? 'webp'
       : 'jpg';
   return `${bodyId}${seg}-${px}.${ext}`;
 }
