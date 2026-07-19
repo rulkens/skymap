@@ -18,10 +18,11 @@
  * seeds DIFFERENT positions in the two places and the packing test recomputes
  * from `ctx.drawCamPos`, so a regression to the stale source fails here.
  *
- * The gate mirrors the layer's `enabled` minus its sub-pixel cull (a strict
- * superset), so the shell can never draw against a LUT this frame skipped
- * baking. We check the three no-op paths (null renderer / camera beyond the
- * near-field distance gate / unseeded Earth).
+ * The bake iterates the SAME `atmosphereDrawList` the shell draw walks, so
+ * bake↔draw is equality — the shell bakes iff it draws. The bake fixture is
+ * therefore sized supra-pixel (the list applies the sub-pixel disc cull) so the
+ * packing case reaches an entry. We check the three no-op paths (null renderer /
+ * camera beyond the near-field distance gate / unseeded Earth), each an empty list.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -48,8 +49,10 @@ function spyRenderer(): { encodeSkyView: ReturnType<typeof vi.fn> } {
 
 /**
  * Assemble the minimal EngineState the encode reads: the renderer handle off
- * `gpu` and the seeded Earth off `data.bodies`. `camStalePosition` is threaded
- * onto `state.cam.position` — the STALE drag register the encode must NOT read.
+ * `gpu` and the seeded bodies off `data.bodies`. `atmosphereDrawList` spreads
+ * `bodies.planets`, so seed it empty (only Earth carries an atmosphere row today).
+ * `camStalePosition` is threaded onto `state.cam.position` — the STALE drag
+ * register the encode must NOT read.
  */
 function makeState(init: {
   renderer: unknown;
@@ -59,7 +62,9 @@ function makeState(init: {
   const cam = init.camStalePosition == null ? null : { position: init.camStalePosition };
   return {
     gpu: { atmosphereShellRenderer: init.renderer },
-    data: { bodies: { earth: 'earth' in init ? (init.earth ?? null) : SCENE_EARTH } },
+    data: {
+      bodies: { earth: 'earth' in init ? (init.earth ?? null) : SCENE_EARTH, planets: [] },
+    },
     cam,
   } as unknown as EngineState;
 }
@@ -67,11 +72,19 @@ function makeState(init: {
 /**
  * The minimal ReadyFrameContext the encode reads: `drawCamPos` (the RENDERED pose
  * the shell fragment marches along, the source the bake derives its altitude
- * from) and `cam.distance` (the near-field distance gate). `camDistance` defaults
- * to 0 — inside the near-field edge, the common Earth-framed path.
+ * from), `cam.distance` (the near-field distance gate), and `canvasSize` +
+ * `fovYRad` (the sub-pixel disc cull `atmosphereDrawList` applies). `camDistance`
+ * defaults to 0 — inside the near-field edge, the common Earth-framed path. The
+ * viewport is sized so the `CAM_POS_RENDERED` disc resolves well above sub-pixel,
+ * clearing the cull the bake now shares with the draw.
  */
 function makeCtx(drawCamPos: Vec3, camDistance = 0): ReadyFrameContext {
-  return { drawCamPos, cam: { distance: camDistance } } as unknown as ReadyFrameContext;
+  return {
+    drawCamPos,
+    cam: { distance: camDistance },
+    canvasSize: { width: 1920, height: 1080 },
+    fovYRad: Math.PI / 4,
+  } as unknown as ReadyFrameContext;
 }
 
 // The RENDERED pose (what the shell fragment sees) — a few Earth radii off the

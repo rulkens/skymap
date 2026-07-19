@@ -15,22 +15,18 @@
  * storage barrier between the compute write and the later fragment read within
  * the one encoder. Same shape as `encodeFlowCompute`.
  *
- * ### The gate is the layer's `enabled`, minus the sub-pixel cull
+ * ### The bake reads the SAME list the draw does
  *
  * This runs inside the ready-context gate, so it always has a `ReadyFrameContext`.
- * It applies every part of the layer's gate EXCEPT the sub-pixel disc cull: the
- * renderer handle, the shared near-field distance gate
- * (`FOREGROUND_MAX_DISTANCE_MPC` — the SAME `ctx.cam.distance` test the layer
- * uses), the seeded Earth body, and the body's `ATMOSPHERE_PARAMS` row. That is a
- * strict SUPERSET of the layer's gate: whenever `atmosphereShellLayer.enabled` is
- * true (which additionally requires the disc above sub-pixel), this bake has
- * already run — so the shell can never draw against a LUT this frame skipped
- * baking. The distance gate matters: without it the 192×108×30-step march would
- * run every frame post-bootstrap (Earth is seeded unconditionally), burning a full
- * sky-view bake even at galaxy / cosmic zoom where the shell is culled. Beyond the
- * near-field edge this is a no-op; the only residual over-bake is the thin band
- * where the camera is in near-field range but the disc has gone sub-pixel — a
- * harmless wasted compute (the layer's gate keeps the shell from drawing there).
+ * It iterates the SAME `atmosphereDrawList` the shell draw (`atmosphereShellLayer`)
+ * walks — the one per-frame derivation of which seeded bodies have a live
+ * atmosphere this frame (data-gate, near-field distance cull, sub-pixel disc cull).
+ * So bake↔draw is equality by construction: the shell bakes this frame's LUT iff it
+ * draws it, and can never draw against a LUT the bake skipped. Routing the bake
+ * through the same list also keeps the 192×108×30-step march from running every
+ * frame post-bootstrap (Earth is seeded unconditionally) — beyond the near-field
+ * edge, or once the disc goes sub-pixel, the list is empty and the bake is a no-op,
+ * so no sky-view compute burns at galaxy / cosmic zoom where the shell is culled.
  *
  * ### The sky-view uniform packing (the `SkyViewParams` contract)
  *
@@ -57,17 +53,16 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { camPosLocal } from '../../../utils/camera/camPosLocal';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
-import { FOREGROUND_MAX_DISTANCE_MPC } from './foregroundMaxDistance';
+import { atmosphereDrawList } from './atmosphereDrawList';
 
 /**
- * Bake this frame's sky-view LUT into the atmosphere renderer's own texture,
- * reading the gate off `state` (the renderer handle, the seeded Earth, its
- * `ATMOSPHERE_PARAMS` row) and the camera altitude off `ctx.drawCamPos`. The gate
- * inputs must all hold — otherwise this is a no-op, the common Earth-out-of-view
- * path.
+ * Bake this frame's sky-view LUT into the atmosphere renderer's own texture for
+ * each body in `atmosphereDrawList` — the shared derivation the shell draw walks
+ * too — reading the camera altitude off `ctx.drawCamPos`. When the list is empty
+ * (Earth out of view, sub-pixel, or the handle absent) this is a no-op, the common
+ * path away from the near field.
  */
 export function encodeAtmosphereSkyView(
   encoder: GPUCommandEncoder,
@@ -76,44 +71,38 @@ export function encodeAtmosphereSkyView(
 ): void {
   const renderer = state.gpu.atmosphereShellRenderer;
   if (renderer === null) return;
-  // Near-field distance gate — the SAME cull `atmosphereShellLayer.enabled`
-  // applies (handle first, then distance). Beyond this edge the shell is culled,
-  // so baking its per-frame LUT would be pure overhead at galaxy / cosmic zoom.
-  if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return;
-  const earth = state.data.bodies.earth;
-  if (earth === null) return;
-  const params = ATMOSPHERE_PARAMS[earth.id];
-  if (params === undefined) return;
 
-  // Bake from the RENDERED pose (`ctx.drawCamPos`), NOT `state.cam.position`. The
-  // latter is the drag register, re-seeded only on pointer-down and so stale
-  // between gestures (scroll-zoom, tweens, tours) — baking the LUT for that
-  // altitude while the shell fragment samples it at the live one violates the
-  // AtmosphereShellRenderer sky-view MUST-equal contract. `ctx.drawCamPos` is the
-  // exact vector the fragment marches along (via `view.camPos`), so the two agree.
-  const camPosMpc: Vec3 = [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]];
-  // The camera in atmosphere-top-radius units — the SAME rendered pose the shell
-  // fragment receives (same util, same atmosphere-top scale), so the LUT's baked
-  // view height and the fragment's local altitude cannot disagree.
-  const camLocal = camPosLocal(
-    camPosMpc,
-    earth.positionMpc,
-    params.atmosphereTopKm * SCALE_UNITS.KM_TO_MPC,
-    earth.orientation,
-  );
-  const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
+  for (const { body, params } of atmosphereDrawList(state, ctx)) {
+    // Bake from the RENDERED pose (`ctx.drawCamPos`), NOT `state.cam.position`. The
+    // latter is the drag register, re-seeded only on pointer-down and so stale
+    // between gestures (scroll-zoom, tweens, tours) — baking the LUT for that
+    // altitude while the shell fragment samples it at the live one violates the
+    // AtmosphereShellRenderer sky-view MUST-equal contract. `ctx.drawCamPos` is the
+    // exact vector the fragment marches along (via `view.camPos`), so the two agree.
+    const camPosMpc: Vec3 = [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]];
+    // The camera in atmosphere-top-radius units — the SAME rendered pose the shell
+    // fragment receives (same util, same atmosphere-top scale), so the LUT's baked
+    // view height and the fragment's local altitude cannot disagree.
+    const camLocal = camPosLocal(
+      camPosMpc,
+      body.positionMpc,
+      params.atmosphereTopKm * SCALE_UNITS.KM_TO_MPC,
+      body.orientation,
+    );
+    const sun = sunDirLocal(body.positionMpc, RENDER_ORIGIN_MPC, body.orientation);
 
-  const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
-  // |camPosLocal| × atmosphereTopKm recovers the camera radius in km (camLocal is
-  // in atmosphere-top-radius units), matching the km-baked LUT parametrisation.
-  const viewHeightKm = radius * params.atmosphereTopKm;
-  // dot(normalize(camLocal), sun) — cos of the sun's zenith angle at the camera.
-  // radius > 0 whenever the camera is off the body centre (always, in practice);
-  // guard the divide so a degenerate centre pose bakes a defined (nadir) value.
-  const sunZenithCos =
-    radius > 0 ? (camLocal[0] * sun[0] + camLocal[1] * sun[1] + camLocal[2] * sun[2]) / radius : 0;
+    const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
+    // |camPosLocal| × atmosphereTopKm recovers the camera radius in km (camLocal is
+    // in atmosphere-top-radius units), matching the km-baked LUT parametrisation.
+    const viewHeightKm = radius * params.atmosphereTopKm;
+    // dot(normalize(camLocal), sun) — cos of the sun's zenith angle at the camera.
+    // radius > 0 whenever the camera is off the body centre (always, in practice);
+    // guard the divide so a degenerate centre pose bakes a defined (nadir) value.
+    const sunZenithCos =
+      radius > 0 ? (camLocal[0] * sun[0] + camLocal[1] * sun[1] + camLocal[2] * sun[2]) / radius : 0;
 
-  // f32 [viewHeightKm, sunZenithCos, _pad0, _pad1] — the 16-byte SkyViewParams
-  // record the renderer writes verbatim (see AtmosphereShellRenderer.d.ts).
-  renderer.encodeSkyView(encoder, new Float32Array([viewHeightKm, sunZenithCos, 0, 0]));
+    // f32 [viewHeightKm, sunZenithCos, _pad0, _pad1] — the 16-byte SkyViewParams
+    // record the renderer writes verbatim (see AtmosphereShellRenderer.d.ts).
+    renderer.encodeSkyView(encoder, new Float32Array([viewHeightKm, sunZenithCos, 0, 0]));
+  }
 }
