@@ -46,3 +46,37 @@ atmosphere-bearing bodies, and the encode gating per body. Same shape applies
 to `cloudShellLayer` (Venus cloud deck). Recorded so the "just add a row"
 docstring shortcut doesn't mislead a future implementer — the honest wording
 fix landed in the plan-E close commit.
+
+## 5. Three sphere-proxy meshes each hand-tuning their own margin (low-med)
+
+Earth now draws three concentric sphere approximations, each carrying its own
+tessellation constant and sag/margin bookkeeping: the cubesphere SURFACE
+(`earthRenderer`, `CUBESPHERE_FACE_RESOLUTION`), the cloud shell
+(`cloudShellRenderer`, 128×64 UV sphere at `radiusRatio` 1.002), and the
+atmosphere-top shell (`atmosphereShellRenderer`, 128×64 UV sphere). The
+tessellation-vs-radius-margin invariant (a facet's centre sag must stay under
+the shell's clearance over the surface it hovers on) is stated separately in
+each renderer's comment and would have to be re-derived by hand for a fourth
+shell (Venus deck, a haze layer). A shared proxy-sphere idiom — one mesh
+factory that takes the target radius margin and returns a tessellation that
+guarantees the sag stays under it — would make the invariant one enforced
+thing instead of three restated ones. NOT urgent: the three are correct today
+and the surface's cubesphere has an independent reason to keep its own mesh
+(the deferred terrain-displacement quadtree needs its vertices). Trigger: the
+fourth sphere shell, or the next time two of these are open for surgery
+together.
+
+## 6. Cloud deck is Lambert-lit, not multiple-scattering (fidelity, med)
+
+`cloudShell/fragment.wesl` shades the deck with a single Lambert term scaled by
+`sunIrradiance` (plus the ambient floor). Real cloud brightness is dominated by
+MULTIPLE scattering: it is why decks stay bright at high sun angles, why thick
+clouds self-shadow, and why their edges glow (forward-scatter silver lining).
+The current model gives none of that — a flat textured shell that dims by
+`N·L` alone. A physically-fuller cloud deck would want at least a cheap
+multiple-scattering approximation (a Hillaire-style powder/HG term, or a
+2-parameter analytic phase) driven by the cloud map's optical thickness. This
+is the biggest remaining PBR gap in the Earth stack (the surface is
+Cook-Torrance + Oren-Nayar, the atmosphere is Bruneton/Hillaire; only the
+clouds are ad-hoc). Deferred as its own effort — it needs a cloud optical model
+and probably a thickness channel, not just a shader tweak.
