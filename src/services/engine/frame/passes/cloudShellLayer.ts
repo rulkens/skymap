@@ -59,6 +59,7 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
+import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { bodyTextureSlotKey } from '../../../../utils/scene/bodyTextureSlotKey';
 import { composeBodyMvp } from '../../../../utils/camera/composeBodyMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
@@ -137,6 +138,17 @@ export const cloudShellLayer: ContentLayer = {
     // axial tilt), so the fragment's Lambert dim on the night side stays co-framed
     // with the surface.
     const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
-    renderer.draw(pass, packCloudShellUniforms(mvp, sun, CLOUD_SHELL_PARAMS.opacity));
+    // Scale the shell's direct (sun-lit) term by the SAME irradiance the surface
+    // uses (single source of truth), so clouds — the brightest real feature — are
+    // not dimmer than the ground beneath them.
+    renderer.draw(
+      pass,
+      packCloudShellUniforms(
+        mvp,
+        sun,
+        CLOUD_SHELL_PARAMS.opacity,
+        EARTH_SURFACE_PARAMS.sunIrradiance,
+      ),
+    );
   },
 };

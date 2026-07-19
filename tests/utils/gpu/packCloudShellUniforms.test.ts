@@ -7,11 +7,13 @@
  * This is the `testing.md` keep-rule for uniform layouts — it fails on a real
  * drift no compiler check catches.
  *
- * The test drives the real packer with distinct, non-round values in every
- * slot and reads the returned `Float32Array` at the offsets the struct pins.
- * In particular it pins `cloudOpacity` at float index 19 — the slot the lit
- * packer leaves a zeroed pad — so a packer that forgot to overwrite it (and
- * left the lit pad in place) fails.
+ * The test drives the real packer with distinct, dyadic values in every slot
+ * (exactly representable in float32, so `toBe` is exact) and reads the returned
+ * `Float32Array` at the offsets the struct pins. It pins `cloudOpacity` at float
+ * index 19 — the slot the lit packer leaves a zeroed pad — so a packer that
+ * forgot to overwrite it (and left the lit pad in place) fails, and
+ * `sunIrradiance` at float index 20 (the new 16-byte row), so a packer that
+ * dropped it fails too.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -27,17 +29,19 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 const MVP = new Float32Array(16);
 for (let i = 0; i < 16; i++) MVP[i] = i + 1;
 
-// Distinct, non-unit vectors so a mis-mapped component perturbs a byte the
-// check would catch (the packer does not renormalise).
+// Distinct, dyadic vectors + scalars so a mis-mapped component perturbs a byte
+// the check would catch, and float32 `toBe` is exact (the packer does not
+// renormalise).
 const SUN_DIR: Vec3 = [0.5, 0.25, 0.75];
-const CLOUD_OPACITY = 0.42;
+const CLOUD_OPACITY = 0.625;
+const SUN_IRRADIANCE = 17.25;
 
 describe('CloudShellUniforms byte offsets', () => {
-  it('packs an 80-byte / 20-f32 record with cloudOpacity filling the vec3 tail @76', () => {
-    const rec = packCloudShellUniforms(MVP, SUN_DIR, CLOUD_OPACITY);
+  it('packs a 96-byte / 24-f32 record: cloudOpacity @76, sunIrradiance @80', () => {
+    const rec = packCloudShellUniforms(MVP, SUN_DIR, CLOUD_OPACITY, SUN_IRRADIANCE);
     expect(rec.length).toBe(CLOUD_SHELL_UNIFORM_FLOATS);
-    expect(rec.length).toBe(20); // 80 bytes
-    expect(rec.byteLength).toBe(80);
+    expect(rec.length).toBe(24); // 96 bytes
+    expect(rec.byteLength).toBe(96);
 
     // mvp — all 16 floats verbatim at bytes 0..63.
     for (let i = 0; i < 16; i++) expect(rec[i]).toBe(MVP[i]);
@@ -53,6 +57,15 @@ describe('CloudShellUniforms byte offsets', () => {
     // cloudOpacity — float index 19 (byte 76), the vec3's trailing slot. A REAL
     // field here (like RingUniforms.planetRadiusRatio), NOT the zeroed pad the
     // lit packer leaves — so this fails if the override was dropped.
-    expect(rec[19]).toBeCloseTo(CLOUD_OPACITY); // byte 76
+    expect(rec[19]).toBe(CLOUD_OPACITY); // byte 76
+
+    // sunIrradiance — float index 20 (byte 80), the new 16-byte row. Fails if the
+    // packer dropped it.
+    expect(rec[20]).toBe(SUN_IRRADIANCE); // byte 80
+
+    // Trailing pad — floats 21..23 round the struct to 96 bytes and stay zeroed.
+    expect(rec[21]).toBe(0); // byte 84
+    expect(rec[22]).toBe(0); // byte 88
+    expect(rec[23]).toBe(0); // byte 92
   });
 });

@@ -86,10 +86,16 @@ import package::lib::math::PI;
 // the divide-by-zero in 'distributionGGX'. Smooth-water sits above it.
 const MIN_ROUGHNESS: f32 = 0.02;
 
-// Smooth open-water roughness — low enough that the sun's reflection stays a
-// tight, bright specular glint rather than a broad sheen. The starting point for
-// Task 8's tuning; the ocean is the reason this whole module exists.
-const OCEAN_ROUGHNESS: f32 = 0.06;
+// Open-water roughness, calibrated so the sun's reflection reads as a BROAD
+// glow spanning a large fraction of an ocean basin, not a tight specular dot.
+// The anchor is a Meteosat full-disc reference: on real full-disc imagery the
+// sun glint is a spread-out sheen -- wave-slope variance plus mesoscale surface
+// roughness widen the effective GGX lobe far past a mirror. GGX linear alpha is
+// roughness^2, so 0.25 gives alpha ~= 0.06 -- a highlight tens of degrees wide,
+// the right order for that broad-glow target. Only the ocean sees this: the
+// surface fragment's 'mix(..., mat.g)' selects it wholesale for water, so raising
+// it does NOT roughen land (land rides 'mat.r * roughnessBase').
+const OCEAN_ROUGHNESS: f32 = 0.25;
 
 // ── distributionGGX (D) — Trowbridge-Reitz normal distribution ───────
 //

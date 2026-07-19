@@ -277,28 +277,45 @@ struct EarthSurfaceUniforms {
 // same body-local 'sunDirLocal' as the surface, reusing that packer for the
 // shared 80-byte prefix so the two layouts can never drift.
 //
-// It carries one field beyond the lit prefix: 'cloudOpacity', a per-shell
-// coverage-to-alpha multiplier that fills the vec3's trailing 4-byte slot
+// It carries two fields beyond the lit prefix. The first, 'cloudOpacity', a
+// per-shell coverage-to-alpha multiplier, fills the vec3's trailing 4-byte slot
 // (byte 76). That makes it a REAL field, not a pad -- the same
-// 'RingUniforms.planetRadiusRatio' trick, so every sibling adds a real field
+// 'RingUniforms.planetRadiusRatio' trick, so the sibling adds a real field
 // beyond the lit prefix rather than growing a dead tail.
+//
+// The second, 'sunIrradiance', opens a fresh 16-byte row because the vec3 tail is
+// already spent on 'cloudOpacity'. It is the SAME sun irradiance the surface
+// scales its direct term by ('EARTH_SURFACE_PARAMS.sunIrradiance'), passed at the
+// pack site -- NOT a second constant. Without it the shell's lit output topped out
+// at the raw Lambert term (peak ~1) while the surface beneath it was scaled ~3x,
+// so the brightest real feature -- cloud (albedo ~0.8) -- rendered dimmer than the
+// ground. The fragment scales the DIRECT (sun-lit) portion of the Lambert term by
+// it and leaves the ambient floor untouched, mirroring the surface, so the night
+// side is unchanged.
 //
 // ## Byte layout (uniform address space)
 //
-//   offset  0..63: mvp          (mat4x4<f32>, column-major, 64 bytes)
-//   offset 64..75: sunDirLocal  (vec3<f32> -- 16-byte aligned at 64)
-//   offset 76..79: cloudOpacity (f32 -- fills the vec3's 4th slot; a real field)
-//   total: 80 bytes.
+//   offset  0..63: mvp           (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75: sunDirLocal   (vec3<f32> -- 16-byte aligned at 64)
+//   offset 76..79: cloudOpacity  (f32 -- fills the vec3's 4th slot; a real field)
+//   offset 80..83: sunIrradiance (f32 -- new row; direct-term scale)
+//   offset 84..95: _pad0/1/2     (f32 x3 -- rounds the struct to 96 / 16-byte)
+//   total: 96 bytes.
 //
-// The CPU side uploads 20 f32s. The single source of truth for that packing is
+// The CPU side uploads 24 f32s. The single source of truth for that packing is
 // 'utils/gpu/packCloudShellUniforms.ts', which reuses 'packLitBodyUniforms' for
 // the shared 80-byte prefix. 'cloudOpacity' is sourced from
-// 'CLOUD_SHELL_PARAMS.opacity'.
+// 'CLOUD_SHELL_PARAMS.opacity'; 'sunIrradiance' from
+// 'EARTH_SURFACE_PARAMS.sunIrradiance'.
 
 struct CloudShellUniforms {
   mvp: mat4x4<f32>,
   sunDirLocal: vec3<f32>,
   cloudOpacity: f32,
+  sunIrradiance: f32,
+  _pad0: f32,
+  _pad1: f32,
+  _pad2: f32,
 };
 
 // ── AtmosphereUniforms ───────────────────────────────────────────────

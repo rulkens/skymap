@@ -77,10 +77,11 @@ import fsCode from '../../shaders/bodies/cloudShell/fragment.wesl?static';
 const SEGMENTS = 128;
 const RINGS = 64;
 
-/** `CloudShellUniforms` is 80 bytes (20 f32): the 80-byte lit prefix (mvp +
- *  sunDirLocal) with `cloudOpacity` filling the vec3's trailing slot. Written
- *  from `packCloudShellUniforms` (`CLOUD_SHELL_UNIFORM_FLOATS × 4`). */
-const UNIFORM_BUFFER_SIZE = 80;
+/** `CloudShellUniforms` is 96 bytes (24 f32): the 80-byte lit prefix (mvp +
+ *  sunDirLocal) with `cloudOpacity` filling the vec3's trailing slot, then a
+ *  16-byte row carrying `sunIrradiance` (+ 3 pad). Written from
+ *  `packCloudShellUniforms` (`CLOUD_SHELL_UNIFORM_FLOATS × 4`). */
+const UNIFORM_BUFFER_SIZE = 96;
 
 export function createCloudShellRenderer(
   device: GPUDevice,
@@ -156,7 +157,8 @@ export function createCloudShellRenderer(
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   //
   // Binding 0: `CloudShellUniforms`, VERTEX (mvp) + FRAGMENT (sunDirLocal +
-  // opacity). Binding 1: sampler. Binding 2: the cloud colour+coverage map.
+  // opacity + sunIrradiance). Binding 1: sampler. Binding 2: the cloud
+  // colour+coverage map.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'cloudShell-bgl',
     entries: [
