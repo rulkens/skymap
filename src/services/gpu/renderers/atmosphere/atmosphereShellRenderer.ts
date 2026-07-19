@@ -213,7 +213,11 @@ export function createAtmosphereShellRenderer(
     'atmosphere.multiScatterLut',
   );
   const skyViewModule = createShaderModuleWithDevLog(device, skyViewCode, 'atmosphere.skyViewLut');
-  const shellVsModule = createShaderModuleWithDevLog(device, shellVsCode, 'atmosphere.shell.vertex');
+  const shellVsModule = createShaderModuleWithDevLog(
+    device,
+    shellVsCode,
+    'atmosphere.shell.vertex',
+  );
   const shellFsModule = createShaderModuleWithDevLog(
     device,
     shellFsCode,
@@ -394,7 +398,10 @@ export function createAtmosphereShellRenderer(
       `atmosphere-transmittance-lut-${bodyId}`,
       TRANSMITTANCE_LUT_SIZE,
     );
-    const multiScatterTex = createLut(`atmosphere-multiscatter-lut-${bodyId}`, MULTI_SCATTER_LUT_SIZE);
+    const multiScatterTex = createLut(
+      `atmosphere-multiscatter-lut-${bodyId}`,
+      MULTI_SCATTER_LUT_SIZE,
+    );
     const skyViewTex = createLut(`atmosphere-skyview-lut-${bodyId}`, SKY_VIEW_LUT_SIZE);
 
     const transmittanceView = transmittanceTex.createView();

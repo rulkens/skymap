@@ -103,7 +103,12 @@ export const atmosphereShellLayer: ContentLayer = {
       // what that SAME-radius LUT bake expects, so the baked view height and the
       // fragment altitude agree (the bake packs |camPosLocal| × atmosphereTopKm from
       // the same pose).
-      const camLocal = camPosLocal(view.camPos, body.positionMpc, atmosphereTopMpc, body.orientation);
+      const camLocal = camPosLocal(
+        view.camPos,
+        body.positionMpc,
+        atmosphereTopMpc,
+        body.orientation,
+      );
       // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
       // atmosphere top is the unit sphere and the ground sphere has this radius.
       const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;
