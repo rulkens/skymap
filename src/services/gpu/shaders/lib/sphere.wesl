@@ -234,9 +234,11 @@ struct RingUniforms {
 // prefix carries no camera position, so the ocean glint is uncomputable without
 // this view vector.
 //
-// 'cloudShadowStrength' is bound but UNUSED in plan A -- it is a plan-D (cloud
-// shell) seam, present now so plan D never has to reshape the struct. Likewise
-// '_pad0' is reserved: plan D renames it to 'cloudShellRadius'.
+// 'cloudShadowStrength' and 'cloudShellRadius' are the cloud-shell fields:
+// 'cloudShadowStrength' scales how darkly the shell shadows the surface, and
+// 'cloudShellRadius' is the unit-sphere local radius of the shell the surface
+// shadow fragment intersects. Both are bound but UNUSED in plan A -- present now
+// so plan D (cloud shell) reads the slots without reshaping the struct.
 //
 // ## Byte layout (uniform address space)
 //
@@ -246,8 +248,8 @@ struct RingUniforms {
 //   offset  80..91:  camPosLocal         (vec3<f32> -- 16-byte aligned at 80)
 //   offset  92..95:  f0                  (f32 -- fills camPosLocal's 4th slot)
 //   offset  96..99:  sunIrradiance       (f32)
-//   offset 100..103: cloudShadowStrength (f32 -- plan-D placeholder, unused in A)
-//   offset 104..107: _pad0               (f32 -- zeroed; plan-D -> cloudShellRadius)
+//   offset 100..103: cloudShadowStrength (f32 -- unused in plan A)
+//   offset 104..107: cloudShellRadius    (f32 -- unit-sphere shell radius; unused in A)
 //   offset 108..111: _pad1               (f32 -- zeroed; rounds struct to 112 / 16)
 //   total: 112 bytes.
 //
@@ -263,8 +265,40 @@ struct EarthSurfaceUniforms {
   f0: f32,
   sunIrradiance: f32,
   cloudShadowStrength: f32,
-  _pad0: f32,
+  cloudShellRadius: f32,
   _pad1: f32,
+};
+
+// ── CloudShellUniforms ───────────────────────────────────────────────
+//
+// The uniform layout for the translucent cloud shell drawn just above Earth's
+// surface. It is a SIBLING of 'RingUniforms' / 'TexturedBodyUniforms', NOT an
+// overload of 'LitBodyUniforms': a body-agnostic translucent shell lit by the
+// same body-local 'sunDirLocal' as the surface, reusing that packer for the
+// shared 80-byte prefix so the two layouts can never drift.
+//
+// It carries one field beyond the lit prefix: 'cloudOpacity', a per-shell
+// coverage-to-alpha multiplier that fills the vec3's trailing 4-byte slot
+// (byte 76). That makes it a REAL field, not a pad -- the same
+// 'RingUniforms.planetRadiusRatio' trick, so every sibling adds a real field
+// beyond the lit prefix rather than growing a dead tail.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset  0..63: mvp          (mat4x4<f32>, column-major, 64 bytes)
+//   offset 64..75: sunDirLocal  (vec3<f32> -- 16-byte aligned at 64)
+//   offset 76..79: cloudOpacity (f32 -- fills the vec3's 4th slot; a real field)
+//   total: 80 bytes.
+//
+// The CPU side uploads 20 f32s. The single source of truth for that packing is
+// 'utils/gpu/packCloudShellUniforms.ts', which reuses 'packLitBodyUniforms' for
+// the shared 80-byte prefix. 'cloudOpacity' is sourced from
+// 'CLOUD_SHELL_PARAMS.opacity'.
+
+struct CloudShellUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  cloudOpacity: f32,
 };
 
 // ── clip_from_local ──────────────────────────────────────────────────

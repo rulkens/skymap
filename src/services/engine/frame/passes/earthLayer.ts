@@ -143,6 +143,7 @@ export const earthLayer: ContentLayer = {
         EARTH_SURFACE_PARAMS.f0,
         EARTH_SURFACE_PARAMS.sunIrradiance,
         EARTH_SURFACE_PARAMS.cloudShadowStrength,
+        1.0, // cloud shell radius — real value wired when CLOUD_SHELL_PARAMS lands (plan D)
       ),
     );
   },

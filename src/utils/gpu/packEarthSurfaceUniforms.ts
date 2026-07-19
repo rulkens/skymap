@@ -27,12 +27,14 @@
  * field beyond the spec §10 literal list; it fills the second vec3's tail with
  * `f0` just as `roughnessBase` fills the first.
  *
- * ## cloudShadowStrength — the plan-D seam
+ * ## cloudShadowStrength + cloudShellRadius — the cloud-shell fields
  *
- * `cloudShadowStrength` is bound and unused in plan A; carrying it now means
- * plan D (cloud shell) never has to reshape the struct — it only reads the slot.
- * The `_pad0` at float index 26 is likewise reserved: plan D renames it to
- * `cloudShellRadius` and gives the packer an 8th argument.
+ * `cloudShadowStrength` scales how darkly the cloud shell shadows the surface;
+ * `cloudShellRadius` is the unit-sphere local radius of that shell (the surface
+ * shadow fragment intersects this sphere). Both are bound and unused in plan A —
+ * carrying them now means plan D (cloud shell) reads the slots without reshaping
+ * the struct. `_pad1` at float index 27 stays a zeroed pad that rounds the
+ * struct to 16-byte alignment.
  *
  * ## Byte layout (uniform address space) — 112 bytes / 28 f32
  *
@@ -42,8 +44,8 @@
  *   f32 20..22 (byte 80..91):  camPosLocal (vec3, 16-byte aligned)
  *   f32 23     (byte 92..95):  f0 (fills camPosLocal's vec3 tail)
  *   f32 24     (byte 96..99):  sunIrradiance
- *   f32 25     (byte 100..103): cloudShadowStrength (plan-D placeholder)
- *   f32 26     (byte 104..107): _pad0 (zeroed; plan-D → cloudShellRadius)
+ *   f32 25     (byte 100..103): cloudShadowStrength
+ *   f32 26     (byte 104..107): cloudShellRadius (unit-sphere shell radius)
  *   f32 27     (byte 108..111): _pad1 (zeroed; rounds struct to 112 / 16-byte)
  *
  * @param mvp                 16-element column-major MVP (from `composeBodyMvp`).
@@ -53,6 +55,8 @@
  * @param f0                  Fresnel reflectance at normal incidence.
  * @param sunIrradiance       Scalar sun irradiance scaling the direct term.
  * @param cloudShadowStrength Cloud-shadow darkening (plan A: bound, unused).
+ * @param cloudShellRadius    Unit-sphere local radius of the cloud shell the
+ *                            surface shadow fragment intersects (plan A: unused).
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -69,6 +73,7 @@ export function packEarthSurfaceUniforms(
   f0: number,
   sunIrradiance: number,
   cloudShadowStrength: number,
+  cloudShellRadius: number,
 ): Float32Array {
   const out = new Float32Array(EARTH_SURFACE_UNIFORM_FLOATS);
   // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
@@ -80,6 +85,7 @@ export function packEarthSurfaceUniforms(
   out[23] = f0; // byte 92 — fills camPosLocal's vec3 tail
   out[24] = sunIrradiance; // byte 96
   out[25] = cloudShadowStrength; // byte 100
-  // out[26..27] (bytes 104..111) stay zero — the tail pad (plan-D seam).
+  out[26] = cloudShellRadius; // byte 104 — the shadow shell's local radius
+  // out[27] (bytes 108..111) stays zero — the tail pad rounding to 16-byte.
   return out;
 }

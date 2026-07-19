@@ -37,6 +37,7 @@ const ROUGHNESS = 0.37;
 const F0 = 0.02;
 const SUN_IRRADIANCE = 3.14;
 const CLOUD_SHADOW = 0.68;
+const CLOUD_SHELL_RADIUS = 1.03;
 
 describe('EarthSurfaceUniforms byte offsets', () => {
   it('packs a 112-byte / 28-f32 record with roughnessBase filling the vec3 tail @76', () => {
@@ -48,6 +49,7 @@ describe('EarthSurfaceUniforms byte offsets', () => {
       F0,
       SUN_IRRADIANCE,
       CLOUD_SHADOW,
+      CLOUD_SHELL_RADIUS,
     );
     expect(rec.length).toBe(EARTH_SURFACE_UNIFORM_FLOATS);
     expect(rec.length).toBe(28); // 112 bytes
@@ -79,8 +81,12 @@ describe('EarthSurfaceUniforms byte offsets', () => {
     expect(rec[24]).toBeCloseTo(SUN_IRRADIANCE); // byte 96
     expect(rec[25]).toBeCloseTo(CLOUD_SHADOW); // byte 100
 
-    // Tail pad zeroed (bytes 104..111) — rounds the struct to 112 / 16-byte.
-    expect(rec[26]).toBe(0); // byte 104 — _pad0
+    // cloudShellRadius — float index 26 (byte 104). The shadow fragment
+    // intersects this unit-sphere shell; a dropped 8th arg zeroes the slot and
+    // fails here. Distinct from every other slot's sentinel.
+    expect(rec[26]).toBeCloseTo(CLOUD_SHELL_RADIUS); // byte 104
+
+    // Tail pad zeroed (bytes 108..111) — rounds the struct to 112 / 16-byte.
     expect(rec[27]).toBe(0); // byte 108 — _pad1
   });
 });
