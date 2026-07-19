@@ -47,11 +47,13 @@ const PARAMS: AtmosphereParams = {
   planetRadiusKm: 17 / 16, //                    slot 16
   atmosphereTopKm: 18 / 16, //                   slot 17
   // Row fields NOT part of ScatteringParams — this physics packer ignores them,
-  // so they occupy no slot and any value serves. `twilightSoftness` rides the
-  // per-frame SkyViewParams; the two look dials ride AtmosphereUniforms.
+  // so they occupy no slot and any value serves. `twilightSoftness` +
+  // `twilightIntensity` ride the per-frame SkyViewParams; the two look dials ride
+  // AtmosphereUniforms.
   twilightSoftness: 19 / 16,
-  sunIrradiance: 20 / 16,
-  exposure: 21 / 16,
+  twilightIntensity: 20 / 16,
+  sunIrradiance: 21 / 16,
+  exposure: 22 / 16,
 };
 
 describe('ScatteringParams byte offsets', () => {

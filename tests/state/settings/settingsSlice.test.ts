@@ -23,6 +23,7 @@ import reducer, {
   setFlow,
   setAtmosphereExposure,
   setTwilightSoftness,
+  setTwilightIntensity,
   setAmbientLight,
   setOceanRoughness,
   setStarCatalogEnabled,
@@ -209,6 +210,11 @@ describe('settingsSlice — earth', () => {
   it('setTwilightSoftness writes the night-limb twilight-fade width', () => {
     const next = reducer(base(), setTwilightSoftness(0.2));
     expect(next.earth.twilightSoftness).toBe(0.2);
+  });
+
+  it('setTwilightIntensity writes the night-limb twilight-band brightness gain', () => {
+    const next = reducer(base(), setTwilightIntensity(3.5));
+    expect(next.earth.twilightIntensity).toBe(3.5);
   });
 
   it('setAmbientLight writes the night-side ambient floor', () => {

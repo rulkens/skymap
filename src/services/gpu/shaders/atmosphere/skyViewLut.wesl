@@ -64,23 +64,25 @@ const SKY_VIEW_STEPS: f32 = 30.0;
 //
 // The camera's altitude (as a RADIUS in km, so the LUT parametrisations agree
 // with the km-baked transmittance/multi-scatter tables), the cosine of the
-// sun's zenith angle at the camera, and the night-limb twilight-fade width.
-// Packed inline by the renderer each frame ('encodeSkyView'), a small enough
-// struct that no exported packer/test earns its keep (verified visually).
+// sun's zenith angle at the camera, the night-limb twilight-fade width, and the
+// twilight-band brightness gain. Packed inline by the renderer each frame
+// ('encodeSkyView'), a small enough struct that no exported packer/test earns
+// its keep (verified visually).
 //
-// 'twilightSoftness' rides HERE, not on the construction-written
-// 'ScatteringParams' buffer, so Earth's Settings slider can tune it live: this
-// buffer is repacked every frame from the current settings value.
+// 'twilightSoftness' + 'twilightIntensity' ride HERE, not on the
+// construction-written 'ScatteringParams' buffer, so Earth's Settings sliders
+// can tune them live: this buffer is repacked every frame from the current
+// settings values.
 //
-//   offset 0..3 : viewHeightKm     (f32 — camera radius from planet centre, km)
-//   offset 4..7 : sunZenithCos     (f32 — cos angle between local up and the sun)
-//   offset 8..11: twilightSoftness (f32 — night-limb sun-fade width in mu)
-//   offset 12..15: _pad1           (f32 — rounds to 16)
+//   offset 0..3 : viewHeightKm      (f32 — camera radius from planet centre, km)
+//   offset 4..7 : sunZenithCos      (f32 — cos angle between local up and the sun)
+//   offset 8..11: twilightSoftness  (f32 — night-limb sun-fade width in mu)
+//   offset 12..15: twilightIntensity (f32 — brightness gain on the twilight band)
 struct SkyViewParams {
   viewHeightKm: f32,
   sunZenithCos: f32,
   twilightSoftness: f32,
-  _pad1: f32,
+  twilightIntensity: f32,
 };
 
 @group(0) @binding(0) var<uniform> params: ScatteringParams;
@@ -157,7 +159,13 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
     // (its internal divide-by-(edge1-edge0) goes 0/0), so the hard-shadow limit is a near-step.
     let fadeWidth = max(view.twilightSoftness, 1e-4);
     let sunVis = smoothstep(muHorizon - fadeWidth, muHorizon, sunCosZenith);
-    let s = sunVis * (sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal);
+    // twilightIntensity: a brightness gain applied ONLY across the fade band. The
+    // gain is identity where the sun is above the local horizon (sunVis = 1 ->
+    // gain = 1, so the day side is untouched); at intensity 1 the whole thing is
+    // the physical result; > 1 amplifies only the twilight band. Deep night stays
+    // black at any intensity because sunVis -> 0 dominates the product.
+    let twilightGain = mix(1.0, view.twilightIntensity, 1.0 - sunVis);
+    let s = sunVis * twilightGain * (sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal);
 
     let sInt = (s - s * sampleTransmittance) / max(m.extinction, vec3<f32>(EXTINCTION_EPS));
     L = L + throughput * sInt;

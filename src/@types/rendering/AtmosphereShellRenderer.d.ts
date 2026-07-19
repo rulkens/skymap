@@ -88,7 +88,9 @@ export type AtmosphereShellRenderer = Renderer & {
    *   f32 2 : twilightSoftness — night-limb sun-fade width in mu (cos-zenith). Rides
    *           HERE, not on the construction-written `ScatteringParams`, so Earth's
    *           Settings slider tunes it live (this buffer is repacked every frame).
-   *   f32 3 : _pad1         — zero (rounds the struct to 16 bytes).
+   *   f32 3 : twilightIntensity — brightness gain on the twilight band. Rides HERE
+   *           through the SAME Earth-keyed seam as `twilightSoftness`, so Earth's
+   *           Settings slider tunes it live.
    */
   encodeSkyView(encoder: GPUCommandEncoder, bodyId: string, skyViewUniforms: Float32Array): void;
 

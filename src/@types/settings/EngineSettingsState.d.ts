@@ -149,6 +149,11 @@ export type EngineSettingsState = {
    *     (NOT the construction-written `ScatteringParams`, which is why the slider
    *     tunes it live). The exact exposure-seam twin: Earth reads this settings
    *     value, every other body reads its own `AtmosphereParams` row.
+   *   - `twilightIntensity`, the brightness gain on the night-limb twilight band
+   *     (1 = physical result, > 1 amplifies only the band). Seeded from
+   *     `ATMOSPHERE_PARAMS.earth.twilightIntensity` and read live by
+   *     `encodeAtmosphereSkyView` through the IDENTICAL Earth-keyed seam as
+   *     `twilightSoftness`.
    *   - `ambientLight`, the night-side ambient floor lifting Earth's unlit
    *     hemisphere off pure black (earthshine / moonlight, physically). Seeded
    *     from `EARTH_SURFACE_PARAMS.ambientLight` — the SAME value as the shared
@@ -168,6 +173,7 @@ export type EngineSettingsState = {
   earth: {
     atmosphereExposure: number;
     twilightSoftness: number;
+    twilightIntensity: number;
     ambientLight: number;
     oceanRoughness: number;
   };

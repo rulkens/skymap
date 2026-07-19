@@ -131,6 +131,9 @@ export const selectAtmosphereExposure = (state: RootState): number =>
 export const selectTwilightSoftness = (state: RootState): number =>
   selectSettings(state).earth.twilightSoftness;
 
+export const selectTwilightIntensity = (state: RootState): number =>
+  selectSettings(state).earth.twilightIntensity;
+
 export const selectAmbientLight = (state: RootState): number =>
   selectSettings(state).earth.ambientLight;
 

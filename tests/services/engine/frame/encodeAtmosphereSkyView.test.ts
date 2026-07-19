@@ -54,6 +54,11 @@ function spyRenderer(): { encodeSkyView: ReturnType<typeof vi.fn> } {
 // (the live seam), not the construction-time seed.
 const EARTH_TWILIGHT_SOFTNESS = 0.123;
 
+// The Earth-keyed live twilight-band brightness gain the encode packs at slot 3.
+// Distinct from the params-row default (1.0) so the assertion pins the SETTINGS
+// read, the exact twin of the slot-2 twilight-softness seam.
+const EARTH_TWILIGHT_INTENSITY = 4.2;
+
 /**
  * Assemble the minimal EngineState the encode reads: the renderer handle off
  * `gpu`, the seeded bodies off `data.bodies`, and `settings.earth.twilightSoftness`
@@ -73,7 +78,12 @@ function makeState(init: {
     data: {
       bodies: { earth: 'earth' in init ? (init.earth ?? null) : SCENE_EARTH, planets: [] },
     },
-    settings: { earth: { twilightSoftness: EARTH_TWILIGHT_SOFTNESS } },
+    settings: {
+      earth: {
+        twilightSoftness: EARTH_TWILIGHT_SOFTNESS,
+        twilightIntensity: EARTH_TWILIGHT_INTENSITY,
+      },
+    },
     cam,
   } as unknown as EngineState;
 }
@@ -207,9 +217,10 @@ describe('encodeAtmosphereSkyView', () => {
     // height must clear the ground radius — a guard against a surface-radius
     // mis-scale that would collapse the altitude.
     expect(uniforms[0]!).toBeGreaterThan(params.planetRadiusKm);
-    // Slot 2 carries the LIVE settings twilight value for Earth (the exposure
-    // seam's twin), not the params-row seed — the transport that makes it tunable.
+    // Slots 2 + 3 carry the LIVE settings twilight softness + intensity for Earth
+    // (the exposure seam's twins), not the params-row seeds — the transport that
+    // makes them tunable.
     expect(uniforms[2]).toBe(Math.fround(EARTH_TWILIGHT_SOFTNESS));
-    expect(uniforms[3]).toBe(0);
+    expect(uniforms[3]).toBe(Math.fround(EARTH_TWILIGHT_INTENSITY));
   });
 });

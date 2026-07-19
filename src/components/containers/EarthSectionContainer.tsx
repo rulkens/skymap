@@ -3,8 +3,9 @@
  * EarthSectionContainer — store boundary for the Earth settings subgroup.
  *
  * Owns all Redux reach for the Earth group: reads `selectAtmosphereExposure` +
- * `selectTwilightSoftness` + `selectAmbientLight` + `selectOceanRoughness` and
- * wraps the `setAtmosphereExposure` / `setTwilightSoftness` / `setAmbientLight` /
+ * `selectTwilightSoftness` + `selectTwilightIntensity` + `selectAmbientLight` +
+ * `selectOceanRoughness` and wraps the `setAtmosphereExposure` /
+ * `setTwilightSoftness` / `setTwilightIntensity` / `setAmbientLight` /
  * `setOceanRoughness` dispatches in `useCallback`. The presentational
  * `EarthSection` imports nothing from `store/` or `state/`.
  *
@@ -22,12 +23,14 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectAtmosphereExposure,
   selectTwilightSoftness,
+  selectTwilightIntensity,
   selectAmbientLight,
   selectOceanRoughness,
 } from '../../state/settings/selectors';
 import {
   setAtmosphereExposure,
   setTwilightSoftness,
+  setTwilightIntensity,
   setAmbientLight,
   setOceanRoughness,
 } from '../../state/settings/settingsSlice';
@@ -36,6 +39,7 @@ function EarthSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const atmosphereExposure = useAppSelector(selectAtmosphereExposure);
   const twilightSoftness = useAppSelector(selectTwilightSoftness);
+  const twilightIntensity = useAppSelector(selectTwilightIntensity);
   const ambientLight = useAppSelector(selectAmbientLight);
   const oceanRoughness = useAppSelector(selectOceanRoughness);
 
@@ -45,6 +49,10 @@ function EarthSectionContainer(): React.ReactElement {
   );
   const onTwilightSoftnessChange = useCallback(
     (value: number) => dispatch(setTwilightSoftness(value)),
+    [dispatch],
+  );
+  const onTwilightIntensityChange = useCallback(
+    (value: number) => dispatch(setTwilightIntensity(value)),
     [dispatch],
   );
   const onAmbientLightChange = useCallback(
@@ -62,6 +70,8 @@ function EarthSectionContainer(): React.ReactElement {
       onAtmosphereExposureChange={onAtmosphereExposureChange}
       twilightSoftness={twilightSoftness}
       onTwilightSoftnessChange={onTwilightSoftnessChange}
+      twilightIntensity={twilightIntensity}
+      onTwilightIntensityChange={onTwilightIntensityChange}
       ambientLight={ambientLight}
       onAmbientLightChange={onAmbientLightChange}
       oceanRoughness={oceanRoughness}
