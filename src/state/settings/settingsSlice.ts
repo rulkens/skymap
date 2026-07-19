@@ -190,6 +190,12 @@ const settingsSlice = createSlice({
     setStarCatalogExposureFarX: (settings, action: PayloadAction<number>) => {
       settings.starCatalogs.exposureFarX = action.payload;
     },
+    // The "Fog cap" knob — ceiling on the per-pixel peak intensity of AGGREGATE
+    // glows only (leaves uncapped). Rides the shared GPU uniform; tames the
+    // box-filling fog a near sub-threshold aggregate deposits around the Sun.
+    setStarCatalogAggregateIntensityCap: (settings, action: PayloadAction<number>) => {
+      settings.starCatalogs.aggregateIntensityCap = action.payload;
+    },
     setStarCatalogVisible: (
       settings,
       action: PayloadAction<{ id: StarCatalogId; enabled: boolean }>,
@@ -422,6 +428,7 @@ export const {
   setStarCatalogExposureNearX,
   setStarCatalogExposureMidX,
   setStarCatalogExposureFarX,
+  setStarCatalogAggregateIntensityCap,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,
   setVolumesEnabled,

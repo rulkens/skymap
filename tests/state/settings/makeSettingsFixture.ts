@@ -61,6 +61,7 @@ import {
   DEFAULT_STAR_EXPOSURE_NEAR_X,
   DEFAULT_STAR_EXPOSURE_MID_X,
   DEFAULT_STAR_EXPOSURE_FAR_X,
+  DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
   DEFAULT_STAR_SIZE_PX,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
@@ -117,6 +118,7 @@ export function makeSettingsFixture(
       exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
       exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
       exposureFarX: DEFAULT_STAR_EXPOSURE_FAR_X,
+      aggregateIntensityCap: DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
       items: Object.fromEntries(
         STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,

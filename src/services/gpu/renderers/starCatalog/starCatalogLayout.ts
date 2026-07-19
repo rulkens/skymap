@@ -51,14 +51,15 @@ function alignUp(value: number, align: number): number {
 /**
  * Byte size of the star `StarUniforms` @group(0) buffer: the shared
  * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32 + `glowOverlap` f32
- * + `pickPass` u32, rounded up to the prefix's 16-byte alignment = 96 (mirrors
- * `struct StarUniforms` in shaders/starCatalog/io.wesl). The four appended
- * scalars fill the 16-byte rounding tail exactly (80 + 16 → 96), so the buffer
- * size is unchanged from when `sizePx` alone rode it; derived from
+ * + `pickPass` u32 + `aggregateIntensityCap` f32, rounded up to the prefix's
+ * 16-byte alignment = 112 (mirrors `struct StarUniforms` in
+ * shaders/starCatalog/io.wesl). The first four appended scalars fill one 16-byte
+ * tail (80 + 16 → 96); `aggregateIntensityCap` opens a second, so 12 bytes at
+ * 100..111 are pad and the buffer rounds to 112. Derived from
  * `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced, the way the
  * galaxy points `Uniforms` struct appends its own scalars.
  */
-export const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 16, 16);
+export const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 20, 16);
 
 /**
  * Float index of `sizePx` in the `StarUniforms` scratch: byte 80 (right after
@@ -88,6 +89,14 @@ export const GLOW_OVERLAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 8) / 4;
  * the pick branch — the value must be the integer 1.
  */
 export const PICK_PASS_U32_INDEX = (CAMERA_UNIFORM_BYTES + 12) / 4;
+
+/**
+ * Float index of `aggregateIntensityCap` in the `StarUniforms` scratch: byte 96
+ * (right after `pickPass`) / 4 = 24. The visual renderer writes it from the
+ * user's "Fog cap" setting; the pick renderer leaves it zero-init (it draws
+ * leaves only, and the cap clamps aggregate peaks only).
+ */
+export const AGG_INTENSITY_CAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 16) / 4;
 
 /**
  * One drawn octree node's `NodeParams` field values, the shape both renderers'

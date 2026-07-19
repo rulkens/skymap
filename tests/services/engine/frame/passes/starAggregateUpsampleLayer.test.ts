@@ -73,6 +73,7 @@ function makeState(upsample: unknown, renderer: unknown = makeRenderer()): Engin
         brightness: 1.0,
         refineThreshold: 0.05,
         glowOverlap: 1.0,
+        aggregateIntensityCap: 0.06,
         items: { gaiaStars: { enabled: true, labelEnabled: false } },
       },
     },

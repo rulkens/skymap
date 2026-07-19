@@ -141,6 +141,13 @@
 // 'sizePx' slider, which therefore acts as a global spread/sharpness control
 // (total luminance is unaffected -- see fact 2).
 //
+// One deliberate exception to fact 2's invariance: the STAR_GLOW_MAX_PX
+// ceiling bounds only the DRAWN radius, while the peak divides by the
+// UNCAPPED radius -- so a near aggregate whose footprint outgrows the ceiling
+// freezes at the surface brightness it held at the cap and under-deposits by
+// (rPx/rPxRaw)^2, rather than concentrating its still-growing 1/d^2 flux into
+// a saturated fixed-size blob (see the peak computation in 'vs').
+//
 // ## Brightness: the calibrated baseline and the user's trim
 //
 // STAR_FLUX_EXPOSURE is the eye-tuned CALIBRATED baseline -- the exposure that
@@ -160,11 +167,12 @@
 // ('settings.starCatalogs.glowOverlap', 1.0 = identity) multiplies the AGGREGATE
 // radius so each glow spills PAST its box and overlaps its neighbours, melting
 // the lattice into a continuous field. It is a 'sizePx'-style spread, not a
-// 'brightness': because the peak is computed from the FINAL 'rPx' (peak =
-// EXPOSURE*fluxApp / (K*rPx^2), fact 2), folding 'glowOverlap' into 'rPx' divides
-// the peak by 'glowOverlap^2' automatically, so total luminance is conserved --
-// no separate peak term is needed. Leaves are POINT sources with no box to spill
-// past, so they select 1.0 and stay exactly as they were.
+// 'brightness': because the peak divides by the same overlap-spread radius
+// (peak = EXPOSURE*fluxApp / (K*rPxRaw^2), fact 2), folding 'glowOverlap' into
+// the radius divides the peak by 'glowOverlap^2' automatically, so total
+// luminance is conserved -- no separate peak term is needed. Leaves are POINT
+// sources with no box to spill past, so they select 1.0 and stay exactly as
+// they were.
 
 import package::starCatalog::io::VSOut;
 import package::starCatalog::io::NodeParams;
@@ -332,22 +340,50 @@ fn vs(
   // 'rPx' here, so the peak's /(K*rPx^2) below divides by 'glowOverlap^2' too --
   // total luminance stays conserved (header 'Glow overlap' + fact 2).
   let overlap = select(1.0, u.glowOverlap, node.isAggregate != 0u);
-  // Floor first (legibility), then the size/overlap spread, then the absolute
-  // px CEILING last -- so STAR_GLOW_MAX_PX bounds the FINAL radius regardless of
-  // 'sizeScale' or 'overlap', capping per-star fill at pi*MAX^2. The peak below
-  // divides by this same clamped rPx^2, so clamping conserves total luminance
-  // (header fact 2) -- a compact bright core, not a huge dim halo.
-  let rPx = min(STAR_GLOW_MAX_PX, max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale * overlap);
+  // Floor first (legibility), then the size/overlap spread -- 'rPxRaw' is the
+  // radius the luminance-conserving photometry wants. The absolute px CEILING
+  // applies last and bounds only the DRAWN radius, so STAR_GLOW_MAX_PX caps
+  // per-star fill at pi*MAX^2 regardless of 'sizeScale' or 'overlap'.
+  let rPxRaw = max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale * overlap;
+  let rPx = min(STAR_GLOW_MAX_PX, rPxRaw);
 
-  // Peak so the dot's INTEGRATED luminance equals STAR_FLUX_EXPOSURE * fluxApp
-  // regardless of rPx: I_peak * K_GAUSS * rPx^2 == EXPOSURE * fluxApp. Refining
-  // an aggregate or not therefore deposits identical total light (header fact 2).
+  // Peak from the UNCAPPED radius: I_peak * K_GAUSS * rPxRaw^2 == EXPOSURE *
+  // fluxApp. Wherever the ceiling is not biting (rPx == rPxRaw -- every leaf
+  // and every far aggregate) this is exactly the luminance conservation of
+  // header fact 2: refining an aggregate or not deposits identical total
+  // light. Once a NEAR aggregate's footprint outgrows STAR_GLOW_MAX_PX,
+  // dividing by the still-growing rPxRaw^2 rather than the pinned rPx^2
+  // FREEZES its surface brightness at the value it held when it hit the cap,
+  // instead of letting the peak climb as 1/d^2 into a saturated blob (the
+  // over-bright star bins around the Sun at ~0.5-1.3 kpc camera distance,
+  // where near bins are radius-capped but not yet refined to leaves). That is
+  // how a real extended source behaves -- approaching makes it BIGGER, not
+  // brighter per solid angle -- applied consistently to a radius we truncate.
+  // Deposited light becomes EXPOSURE * fluxApp * (rPx/rPxRaw)^2: a deliberate
+  // under-deposit for radius-capped aggregates only (header 'Radius' note).
   // 'u.brightness' is the user's exposure trim ON TOP of the calibrated
   // STAR_FLUX_EXPOSURE baseline (1.0 = identity -- see the header). 'fluxApp' is
   // the inverse-square-dimmed apparent flux (header 'Apparent flux'). The
   // peak-from-flux relation is shared with the famous / scene star stage
   // (lib/starPhotometry.wesl).
-  let intensity = starPeakIntensity(u.brightness, fluxApp, rPx);
+  let intensityRaw = starPeakIntensity(u.brightness, fluxApp, rPxRaw);
+
+  // Aggregate surface-brightness cap -- the user's live 'Fog cap' setting
+  // ('u.aggregateIntensityCap', settings.starCatalogs.aggregateIntensityCap). A
+  // near sub-threshold aggregate deposits its subtree's honest summed light as a
+  // box-filling glow; around the Sun (~0.5-1.3 kpc camera distance) that reads as
+  // jarring luminous fog. Clamp the PEAK (per-pixel surface brightness) of
+  // AGGREGATE records only -- leaves stay uncapped so bright resolved stars still
+  // bloom. Aggregate-only because the fog is a property of the box-filling glow a
+  // leaf point source never has. Deliberately NON-physical: light above the
+  // ceiling is DISCARDED, not conserved -- the flux-conserving route (spreading
+  // the excess into a wider dot, as 'glowOverlap' does) is what makes the fog in
+  // the first place, since the offending glow is already box-sized.
+  let intensity = select(
+    intensityRaw,
+    min(intensityRaw, u.aggregateIntensityCap),
+    node.isAggregate != 0u
+  );
 
   // Near-sprite dissolve -- retire the wobbling sprite as its would-be sphere
   // resolves (constants block above). Why fade ANY near record and not just the

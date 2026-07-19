@@ -47,6 +47,7 @@ function baseProps() {
     exposureNearX: 15,
     exposureMidX: 57,
     exposureFarX: 70,
+    aggregateIntensityCap: 0.06,
     famousStarsEnabled: true,
     onToggleMaster: vi.fn<(enabled: boolean) => void>(),
     onToggleCatalog: vi.fn<(id: StarCatalogId, enabled: boolean) => void>(),
@@ -57,6 +58,7 @@ function baseProps() {
     onExposureNearXChange: vi.fn<(v: number) => void>(),
     onExposureMidXChange: vi.fn<(v: number) => void>(),
     onExposureFarXChange: vi.fn<(v: number) => void>(),
+    onAggregateIntensityCapChange: vi.fn<(v: number) => void>(),
     onToggleFamousStars: vi.fn<(enabled: boolean) => void>(),
   };
 }
@@ -343,6 +345,28 @@ describe('StarsSection', () => {
       fireEvent.change(slider, { target: { value: '140' } });
       expect(onExposureFarXChange).toHaveBeenCalledOnce();
       expect(onExposureFarXChange).toHaveBeenCalledWith(140);
+    });
+  });
+
+  describe('Fog cap slider', () => {
+    it('has value matching the aggregateIntensityCap prop', () => {
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), aggregateIntensityCap: 0.2 }),
+      );
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-fog-cap');
+      expect(slider).not.toBeNull();
+      expect(slider!.value).toBe('0.2');
+    });
+
+    it('fires onAggregateIntensityCapChange with the parsed float when the slider moves', () => {
+      const onAggregateIntensityCapChange = vi.fn<(v: number) => void>();
+      const { container } = render(
+        createElement(StarsSection, { ...baseProps(), onAggregateIntensityCapChange }),
+      );
+      const slider = container.querySelector<HTMLInputElement>('#slider-star-fog-cap')!;
+      fireEvent.change(slider, { target: { value: '0.3' } });
+      expect(onAggregateIntensityCapChange).toHaveBeenCalledOnce();
+      expect(onAggregateIntensityCapChange).toHaveBeenCalledWith(0.3);
     });
   });
 });

@@ -13,7 +13,7 @@
  *   2. `draw` records the LEAF stream only, computing the rebased vp ONCE and
  *      handing the IDENTICAL matrix to every source's `renderer.draw` (the
  *      shared-camera-uniform invariant), tagged `stream: 'leaf'`, forwarding
- *      the live size / brightness / glow-overlap scalars.
+ *      the live size / brightness / glow-overlap / fog-cap scalars.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -88,6 +88,7 @@ function makeState(
     brightness?: number;
     refineThreshold?: number;
     glowOverlap?: number;
+    aggregateIntensityCap?: number;
   } = {},
 ): EngineState {
   const {
@@ -97,6 +98,7 @@ function makeState(
     brightness = 1.0,
     refineThreshold = 0.05,
     glowOverlap = 1.0,
+    aggregateIntensityCap = 0.06,
   } = opts;
   return {
     gpu: { starCatalogRenderer: renderer },
@@ -108,6 +110,7 @@ function makeState(
         brightness,
         refineThreshold,
         glowOverlap,
+        aggregateIntensityCap,
         items: { gaiaStars: { enabled: item, labelEnabled: false } },
       },
     },
@@ -191,7 +194,7 @@ describe('starCatalogLayer.draw', () => {
     expect(call0.nodeDraws.length).toBe(1);
   });
 
-  it('forwards the live size / brightness-ramp / glow-overlap scalars to every leaf draw', () => {
+  it('forwards the live size / brightness-ramp / glow-overlap / fog-cap scalars to every leaf draw', () => {
     const loaded = [
       { source: Source.GaiaStars, catalog: makeCatalog() },
       { source: Source.GaiaStars, catalog: makeCatalog() },
@@ -205,7 +208,12 @@ describe('starCatalogLayer.draw', () => {
       PASS_STUB,
       view,
       makeCtx(camPos),
-      makeState(renderer, { size: 6.25, brightness: 2.0, glowOverlap: 2.2 }),
+      makeState(renderer, {
+        size: 6.25,
+        brightness: 2.0,
+        glowOverlap: 2.2,
+        aggregateIntensityCap: 0.15,
+      }),
     );
 
     const expectedBrightness = 2.0 * starExposureRamp(distPc * SCALE_UNITS.PC_TO_MPC);
@@ -213,6 +221,7 @@ describe('starCatalogLayer.draw', () => {
     for (const call of renderer.draw.mock.calls) {
       expect(call[1].sizePx).toBe(6.25);
       expect(call[1].glowOverlap).toBe(2.2);
+      expect(call[1].aggregateIntensityCap).toBe(0.15);
       expect(call[1].brightness).toBeCloseTo(expectedBrightness, 10);
     }
   });

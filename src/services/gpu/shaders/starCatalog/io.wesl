@@ -33,9 +33,10 @@
 //   StarUniforms — the @group(0) per-frame uniform: the shared 80-byte
 //                'CameraUniforms' prefix (rebased vp + viewportPx) followed
 //                by the user's base star-dot size 'sizePx', star-brightness
-//                trim 'brightness' and aggregate glow spread 'glowOverlap'. The
+//                trim 'brightness', aggregate glow spread 'glowOverlap' and
+//                aggregate peak ceiling 'aggregateIntensityCap'. The
 //                mirror of the galaxy points 'Uniforms { cam: CameraUniforms,
-//                ..., pointSizePx, brightness, ... }' shape — all three scalars
+//                ..., pointSizePx, brightness, ... }' shape — the scalars
 //                are source-independent, so they ride the camera uniform that is
 //                already shared/idempotent across every source's draw this frame
 //                (see the renderer header) rather than being duplicated into
@@ -46,32 +47,39 @@ import package::lib::camera::CameraUniforms;
 // Per-frame @group(0) uniform. Byte layout (WGSL std140 uniform rules) must
 // stay byte-exact with the renderer's camera-uniform write:
 //
-//   offset  0  cam         CameraUniforms  (80 B; viewProj + viewportPx + 2 pads)
-//   offset 80  sizePx      f32             (user base star-dot size in px)
-//   offset 84  brightness  f32             (user exposure trim; 1.0 = identity)
-//   offset 88  glowOverlap f32             (aggregate glow spread; 1.0 = identity)
-//   offset 92  pickPass    u32             (0 = visual, 1 = pick)
-//   struct size 96 (rounded up to the prefix's 16-byte alignment; the four
-//   scalars share the same rounding tail, so appending them did not grow the
-//   struct).
+//   offset  0  cam                   CameraUniforms  (80 B; viewProj + viewportPx + 2 pads)
+//   offset 80  sizePx                f32             (user base star-dot size in px)
+//   offset 84  brightness            f32             (user exposure trim; 1.0 = identity)
+//   offset 88  glowOverlap           f32             (aggregate glow spread; 1.0 = identity)
+//   offset 92  pickPass              u32             (0 = visual, 1 = pick)
+//   offset 96  aggregateIntensityCap f32             (peak ceiling for aggregates)
+//   struct size 112 (rounded up to the prefix's 16-byte alignment; the five
+//   scalars overflow the first 16-byte tail, so 'aggregateIntensityCap' opens a
+//   second one and 12 bytes at 100..111 are pure pad).
 //
-// 'pickPass' occupies the last 4 bytes of that 16-byte rounding tail (float
-// index 23, byte 92) that were pure pad. The VISUAL draw never writes it -- the
-// renderer's per-source camera write stops at 'glowOverlap' (float 22) and the
-// scratch is zero-init -- so the visual pipeline reads pickPass == 0 and is
-// byte-for-byte unchanged. Only the sibling 'starCatalogPickRenderer' writes it
-// = 1 into its OWN uniform buffer, which flips the vertex stage's ~3 px
+// 'pickPass' (float index 23, byte 92) is written only by the pick pipeline. The
+// VISUAL draw never writes it -- the renderer's per-source camera write stops at
+// 'glowOverlap' (float 22) plus 'aggregateIntensityCap' (float 24) and the
+// scratch is zero-init -- so the visual pipeline reads pickPass == 0 and takes
+// the visual path. Only the sibling 'starCatalogPickRenderer' writes it = 1 into
+// its OWN uniform buffer, which flips the vertex stage's ~3 px
 // clickable-footprint floor on (so a sub-pixel star still covers a pickable
 // pixel at its true screen position) and routes the record identity to the pick
 // fragment. Baking the flag into the uniform rather than compiling a second
 // vertex module keeps the two pipelines drawing ONE shared vertex stage -- the
 // same one-flag-not-two-modules choice the galaxy points pipeline made.
+//
+// 'aggregateIntensityCap' is the user's 'Fog cap' knob: the vertex stage clamps
+// an AGGREGATE record's peak intensity to it (leaves stay uncapped), taming the
+// box-filling glow a near sub-threshold aggregate deposits as fog around the
+// Sun. The pick pipeline draws leaves only, so it leaves this slot zero-init.
 struct StarUniforms {
   cam: CameraUniforms,
   sizePx: f32,
   brightness: f32,
   glowOverlap: f32,
   pickPass: u32,
+  aggregateIntensityCap: f32,
 };
 
 struct VSOut {

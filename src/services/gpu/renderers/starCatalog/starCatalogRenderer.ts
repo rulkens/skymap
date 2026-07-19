@@ -117,6 +117,7 @@ import {
   SIZE_PX_FLOAT_INDEX,
   BRIGHTNESS_FLOAT_INDEX,
   GLOW_OVERLAP_FLOAT_INDEX,
+  AGG_INTENSITY_CAP_FLOAT_INDEX,
   writeStarNodeParams,
 } from './starCatalogLayout';
 
@@ -386,6 +387,7 @@ export function createStarCatalogRenderer(
       sizePx,
       brightness,
       glowOverlap,
+      aggregateIntensityCap,
     } = args;
     const entry = sources.get(source);
     const drawCount = nodeDraws.length;
@@ -394,16 +396,18 @@ export function createStarCatalogRenderer(
 
     // Camera uniform: identical bytes every source, so this repeated write is
     // idempotent (see the module header). floats 18/19 stay zero-init.
-    // `sizePx`, `brightness` and `glowOverlap` ride this buffer too — all three
-    // are source-independent (the same base star-dot size + exposure trim + glow
-    // spread for every source this frame), so appending them to the shared
-    // camera prefix is safe: each source's repeated write lands the identical
-    // values. Written here, ONCE per source before its draw, so there is no
-    // mid-frame mutation for the writeBuffer/submit ordering race to corrupt.
+    // `sizePx`, `brightness`, `glowOverlap` and `aggregateIntensityCap` ride this
+    // buffer too — all four are source-independent (the same base star-dot size +
+    // exposure trim + glow spread + aggregate peak ceiling for every source this
+    // frame), so appending them to the shared camera prefix is safe: each
+    // source's repeated write lands the identical values. Written here, ONCE per
+    // source before its draw, so there is no mid-frame mutation for the
+    // writeBuffer/submit ordering race to corrupt.
     writeCameraPrefix(cameraScratch, vp, viewportPx);
     cameraScratch[SIZE_PX_FLOAT_INDEX] = sizePx;
     cameraScratch[BRIGHTNESS_FLOAT_INDEX] = brightness;
     cameraScratch[GLOW_OVERLAP_FLOAT_INDEX] = glowOverlap;
+    cameraScratch[AGG_INTENSITY_CAP_FLOAT_INDEX] = aggregateIntensityCap;
     device.queue.writeBuffer(cameraBuffer, 0, cameraScratch);
 
     // Pack every draw's params contiguously and build the exclusive prefix sum
