@@ -33,7 +33,7 @@
 // scales the direct term and is set (in 'earthSurfaceParams.ts') to roughly
 // preserve the previous 'litShade' brightness.
 //
-// ## Renormalize the interpolated normal
+// ## Renormalize the interpolated normal + normal mapping
 //
 // 'normalLocal' arrives interpolated across the triangle face. Linear
 // interpolation of two unit vectors yields a SHORTER vector between them, so a
@@ -41,9 +41,21 @@
 // and band the terminator. 'normalize' restores unit length before the dot --
 // the standard per-fragment normal fix for smooth-shaded spheres.
 //
+// The geometric normal 'Ng' is then perturbed by the tangent-space normal map
+// (binding 5, LINEAR RG -- 'bakeNormalMap.ts' stores nx along +u=east in R and
+// ny along +v=north in G; nz is always positive and reconstructed here). A TBN
+// basis is built per-fragment: 'T' is the interpolated +u (east) tangent,
+// Gram-Schmidt-re-orthonormalized against 'Ng' (interpolation skews it off
+// perpendicular), and the bitangent 'Bt = cross(Ng, T)' points +v = NORTH --
+// which matches the bake's G axis (see the inline equator check + bakeNormalMap's
+// row/sign section, the shared contract). The perturbed 'n' feeds 'pbrDirect' in
+// place of 'Ng' so relief catches the sun. The flat-normal placeholder encodes
+// (0,0,1), so before the real map arrives 'n == Ng' and the shading is identical
+// to the un-perturbed path.
+//
 // ## uv / v-orientation
 //
-// 'uvSphereMesh' emits v south-to-north: v=0 at the south pole, v=1 at the
+// 'cubeSphereMesh' emits v south-to-north: v=0 at the south pole, v=1 at the
 // north pole. A standard equirectangular Blue Marble image stores the north
 // pole in its TOP row. If that bitmap were uploaded unflipped, texture-space
 // v=0 would land on the north pole and the globe would render upside-down
@@ -55,7 +67,7 @@
 //
 // ## uv / u-orientation (no flip needed)
 //
-// The raw u reads correctly for an outside viewer. 'uvSphereMesh' now places
+// The raw u reads correctly for an outside viewer. 'cubeSphereMesh' now places
 // longitude on the +Y axis (equatorial J2000 frame): a vertex at world position
 // cosLat*cosLon (x), cosLat*sinLon (y), sinLat (z), with the pole on +Z. Walk
 // two equatorial vertices to see where increasing u goes for a viewer OUTSIDE
@@ -95,6 +107,7 @@ import package::lib::nightLights::nightLights;
 @group(0) @binding(2) var earthTexture: texture_2d<f32>;
 @group(0) @binding(3) var materialTexture: texture_2d<f32>;
 @group(0) @binding(4) var nightTexture: texture_2d<f32>;
+@group(0) @binding(5) var normalTexture: texture_2d<f32>;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
@@ -108,12 +121,30 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let albedo = textureSample(earthTexture, earthSampler, in.uv).rgb;
   let mat = textureSample(materialTexture, earthSampler, in.uv).rg;
 
-  // Renormalize the interpolated normal (see the header). The view vector is the
-  // camera minus the surface point, both in the body's local frame: 'normalLocal'
-  // doubles as the unit-sphere surface POSITION here (V is the only term that
-  // needs it), and 'u.camPosLocal' is the camera in that same frame (body-radii
-  // units), so their difference is the surface->camera direction.
-  let n = normalize(in.normalLocal);
+  // Tangent-space normal perturbation (see the '## Renormalize the interpolated
+  // normal + normal mapping' header). The baked map stores nx (R) along +u=east
+  // and ny (G) along +v=north; the shader reconstructs the always-positive nz.
+  // We build a per-fragment TBN from the
+  // interpolated geometric normal + east tangent, then rotate the tangent-space
+  // vector into local space. Before the real map lands the placeholder encodes
+  // (0,0,1) -> n == Ng, so the shading is identical to the geometric-normal path.
+  let nEnc = textureSample(normalTexture, earthSampler, in.uv).rg; // LINEAR RG
+  let nxy = nEnc * 2.0 - 1.0;
+  let nz = sqrt(max(0.0, 1.0 - dot(nxy, nxy))); // reconstruct Z (always +)
+  // Geometric normal (renormalized -- interpolation across a face shortens it).
+  let Ng = normalize(in.normalLocal);
+  // Gram-Schmidt: re-orthonormalize the interpolated east tangent against Ng.
+  let T = normalize(in.tangent - Ng * dot(Ng, in.tangent));
+  // Bitangent = cross(Ng, T) points +v = NORTH, matching the bake's G axis: at
+  // the equator (lon=0) Ng=(1,0,0), T=(0,1,0) -> cross=(0,0,1)=celestial north,
+  // the direction of increasing latitude. So nxy.y (G, +v=north) rides Bt with
+  // the sign the bake encoded (bakeNormalMap's row/sign section is the contract).
+  let Bt = cross(Ng, T);
+  let n = normalize(T * nxy.x + Bt * nxy.y + Ng * nz); // perturbed shading normal
+  // View vector: camera minus surface point, both in the body's local frame.
+  // 'normalLocal' doubles as the unit-sphere surface POSITION here, and
+  // 'u.camPosLocal' is the camera in that same frame (body-radii units), so their
+  // difference is the surface->camera direction.
   let v = normalize(u.camPosLocal - in.normalLocal);
   let l = u.sunDirLocal;
 

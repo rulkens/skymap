@@ -32,4 +32,9 @@ struct VSOut {
   // Unit-sphere local-space normal (== the local vertex position). The fragment
   // renormalizes this before lighting -- see the fragment module.
   @location(1) normalLocal: vec3<f32>,
+  // Interpolated unit local-space +u (east) tangent, forwarded raw from the mesh.
+  // The fragment Gram-Schmidt-re-orthonormalizes it against the interpolated
+  // normal (interpolation across a face shortens and skews both vectors), then
+  // builds the tangent-space basis for the normal-map perturbation.
+  @location(2) tangent: vec3<f32>,
 };

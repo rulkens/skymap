@@ -35,16 +35,18 @@ export type EarthRenderer = Renderer & {
    * Install a texture map by kind. The `'surface'` kind replaces the current
    * day-albedo texture (initially a 1×1 mid-blue placeholder) with the supplied
    * equirectangular bitmap, `'material'` replaces the roughness/ocean-mask map
-   * (initially a 1×1 all-land placeholder), and `'night'` replaces the Black
-   * Marble city-lights map (initially a 1×1 black placeholder → no emissive
-   * contribution, so the dark side is lit only by `AMBIENT` until it lands):
+   * (initially a 1×1 all-land placeholder), `'night'` replaces the Black Marble
+   * city-lights map (initially a 1×1 black placeholder → no emissive contribution,
+   * so the dark side is lit only by `AMBIENT` until it lands), and `'normal'`
+   * replaces the tangent-space relief map (initially a 1×1 flat-normal placeholder
+   * → shading normal equals the geometric normal, so no relief until it lands):
    * each uploads via `copyExternalImageToTexture` into a fresh texture sized to
    * the bitmap — format chosen by `isLinearTextureKind` (`rgba8unorm-srgb` for
    * the sRGB surface + emissive night colour, linear `rgba8unorm` for the
-   * material data) — generates mips, then rebuilds the fragment bind group so
-   * subsequent draws sample the real map. The other kinds (`clouds`/`normal`)
-   * land with plans D/C and are inert until then — one `(bodyId, kind)` family
-   * feeds one setter.
+   * material + normal data) — generates mips, then rebuilds the fragment bind
+   * group so subsequent draws sample the real map. The remaining kind (`clouds`)
+   * lands with plan D and is inert until then — one `(bodyId, kind)` family feeds
+   * one setter.
    */
   setMap(kind: TextureKind, bitmap: ImageBitmap): void;
   /**

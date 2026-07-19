@@ -48,12 +48,16 @@
  * sphere until the real map arrives. A third 1×1 BLACK `rgba8unorm-srgb`
  * placeholder stands in for the Black Marble night map so the emissive
  * city-lights term contributes nothing (the dark side is lit only by `AMBIENT`)
- * until `setMap('night', …)` lands. When `setMap('surface', …)`,
- * `setMap('material', …)`, or `setMap('night', …)` runs it creates a fresh
- * texture sized to the bitmap (format chosen by `isLinearTextureKind`), uploads
- * it, generates mips, and rebuilds the fragment bind group to point at the new
- * view. The `clouds`/`normal` kinds land with plans D/C; `setMap` ignores them
- * until then.
+ * until `setMap('night', …)` lands. A fourth 1×1 FLAT-NORMAL `rgba8unorm` LINEAR
+ * placeholder (`[128,128,255,255]` → tangent-space `(0,0,1)`) stands in for the
+ * normal map so the shading normal equals the geometric normal — no relief —
+ * until `setMap('normal', …)` lands. All four placeholder FORMATS derive from the
+ * one `isLinearTextureKind` predicate (only the placeholder COLOUR is per-kind),
+ * so a placeholder can never disagree with the real map that later replaces it.
+ * When `setMap('surface'|'material'|'night'|'normal', …)` runs it creates a fresh
+ * texture sized to the bitmap (format chosen by that same `isLinearTextureKind`),
+ * uploads it, generates mips, and rebuilds the fragment bind group to point at
+ * the new view. The `clouds` kind lands with plan D; `setMap` ignores it until then.
  *
  * ### uv / texture orientation
  *
@@ -89,6 +93,7 @@
  * knobs). Binding 1: sampler (fragment). Binding 2: the 2D Earth albedo texture
  * (fragment). Binding 3: the 2D material (roughness/ocean-mask) texture (fragment).
  * Binding 4: the 2D night (Black Marble city-lights) texture (fragment).
+ * Binding 5: the 2D tangent-space normal (relief) texture (fragment).
  *
  * ### Mip generation
  *
@@ -131,16 +136,17 @@ const UNIFORM_BUFFER_SIZE = 112;
 
 /** Concatenate the six whole level-0 cube-sphere faces into one indexed mesh.
  *  Each `cubeSphereMesh` call builds a single face tile, so we sum the six
- *  faces' vertex/index counts, then copy each face's positions/uvs end-to-end
- *  and re-base its indices by the running vertex count so they address the
- *  merged position array. Sizes aren't known up-front (per-triangle seam
- *  duplication appends a variable handful of vertices), hence the two-pass
- *  measure-then-fill. Tangents are intentionally dropped — Plan C uploads them
- *  when the normal map is sampled, so emitting a tangent VBO now would leave a
- *  dead vertex buffer + varying. */
+ *  faces' vertex/index counts, then copy each face's positions/uvs/tangents
+ *  end-to-end and re-base its indices by the running vertex count so they
+ *  address the merged position array. Sizes aren't known up-front (per-triangle
+ *  seam duplication appends a variable handful of vertices), hence the two-pass
+ *  measure-then-fill. The tangents (the mesh's unit +u=east direction) ride the
+ *  same layout as positions — one f32x3 per vertex — and feed Plan C's
+ *  tangent-space normal mapping. */
 function concatCubeSphereFaces(resolution: number): {
   positions: Float32Array;
   uvs: Float32Array;
+  tangents: Float32Array;
   indices: Uint32Array;
 } {
   const faces: ReturnType<typeof cubeSphereMesh>[] = [];
@@ -150,34 +156,40 @@ function concatCubeSphereFaces(resolution: number): {
 
   let totalPos = 0;
   let totalUv = 0;
+  let totalTan = 0;
   let totalIdx = 0;
   for (const f of faces) {
     totalPos += f.positions.length;
     totalUv += f.uvs.length;
+    totalTan += f.tangents.length;
     totalIdx += f.indices.length;
   }
 
   const positions = new Float32Array(totalPos);
   const uvs = new Float32Array(totalUv);
+  const tangents = new Float32Array(totalTan);
   const indices = new Uint32Array(totalIdx);
 
   let posOff = 0;
   let uvOff = 0;
+  let tanOff = 0;
   let idxOff = 0;
   let vertexBase = 0; // running vertex count = index rebase offset for this face
   for (const f of faces) {
     positions.set(f.positions, posOff);
     uvs.set(f.uvs, uvOff);
+    tangents.set(f.tangents, tanOff);
     for (let k = 0; k < f.indices.length; k++) {
       indices[idxOff + k] = (f.indices[k] as number) + vertexBase;
     }
     posOff += f.positions.length;
     uvOff += f.uvs.length;
+    tanOff += f.tangents.length;
     idxOff += f.indices.length;
     vertexBase += f.positions.length / 3;
   }
 
-  return { positions, uvs, indices };
+  return { positions, uvs, tangents, indices };
 }
 
 export function createEarthRenderer(
@@ -187,19 +199,20 @@ export function createEarthRenderer(
 ): EarthRenderer {
   // ── Geometry upload ───────────────────────────────────────────────────────
   //
-  // Both the positions and the uvs are uploaded (the untextured star/planet
-  // renderers skip uvs).
-  // They go into two tightly-packed VBOs — positions (f32x3, stride 12) at
-  // slot 0, uvs (f32x2, stride 8) at slot 1 — matching the two vertex-buffer
-  // layouts declared on the pipeline. Two separate buffers (rather than one
-  // interleaved) mirror the mesh's two output arrays with no repack.
+  // The positions, uvs, and tangents are uploaded (the untextured star/planet
+  // renderers skip uvs + tangents).
+  // They go into three tightly-packed VBOs — positions (f32x3, stride 12) at
+  // slot 0, uvs (f32x2, stride 8) at slot 1, tangents (f32x3, stride 12) at
+  // slot 2 — matching the three vertex-buffer layouts declared on the pipeline.
+  // Three separate buffers (rather than one interleaved) mirror the mesh's three
+  // output arrays with no repack.
   //
   // `cubeSphereMesh` builds ONE face tile per call, so the six whole level-0
-  // faces are concatenated here into a single indexed mesh: positions and uvs
-  // are appended end-to-end, and each face's indices are offset by the running
-  // vertex count so they address the concatenated position array. (The mesh
-  // also emits tangents; Plan C uploads them for normal mapping — this task
-  // drops them so there is no dead vertex buffer / varying.)
+  // faces are concatenated here into a single indexed mesh: positions, uvs, and
+  // tangents are appended end-to-end, and each face's indices are offset by the
+  // running vertex count so they address the concatenated position array. The
+  // tangents (the mesh's unit +u=east direction) feed the fragment's tangent-space
+  // normal mapping (Plan C).
   const mesh = concatCubeSphereFaces(CUBESPHERE_FACE_RESOLUTION);
   const indexCount = mesh.indices.length;
 
@@ -216,6 +229,16 @@ export function createEarthRenderer(
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
   device.queue.writeBuffer(uvBuffer, 0, mesh.uvs);
+
+  // Tangent VBO (slot 2): the mesh's unit +u=east tangent, one f32x3 per vertex.
+  // The fragment Gram-Schmidt-re-orthonormalizes it per-fragment and builds the
+  // tangent-space basis for the normal-map perturbation.
+  const tangentBuffer = device.createBuffer({
+    label: 'earth-tangent-vbo',
+    size: mesh.tangents.byteLength,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(tangentBuffer, 0, mesh.tangents);
 
   const indexBuffer = device.createBuffer({
     label: 'earth-index-ibo',
@@ -252,74 +275,53 @@ export function createEarthRenderer(
     addressModeV: 'clamp-to-edge',
   });
 
-  // ── Placeholder texture ───────────────────────────────────────────────────
+  // ── Placeholder textures ──────────────────────────────────────────────────
   //
-  // A 1×1 mid-blue texel stands in until the Blue Marble bitmap arrives via
-  // `setMap`. Binding a real texture at all times means the fragment shader
-  // never needs a "has-texture" branch — it always samples, and before the
-  // bitmap lands it reads this uniform blue. `rgba8unorm-srgb` matches the
-  // real Earth texture so the hardware linearises identically in both cases.
-  let texture = device.createTexture({
-    label: 'earth-placeholder-texture',
-    size: [1, 1, 1],
-    format: 'rgba8unorm-srgb',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-  });
-  device.queue.writeTexture(
-    { texture },
-    // Mid-blue, opaque. sRGB-encoded byte values — the texture format
-    // linearises them on sample.
-    new Uint8Array([70, 110, 160, 255]),
-    { bytesPerRow: 4, rowsPerImage: 1 },
-    [1, 1, 1],
-  );
+  // Each texture binding is fed a 1×1 placeholder at construction so the fragment
+  // shader never needs a "has-texture" branch — it always samples a real texture,
+  // and before the real bitmap lands it reads a uniform value chosen so that map
+  // contributes nothing surprising (mid-blue albedo, all-land material, black
+  // night = no city lights, flat normal = no relief).
+  //
+  // The sRGB-vs-linear FORMAT is not hardcoded per placeholder: it derives from
+  // `isLinearTextureKind(kind)` — the exact same predicate `setMap` uses for the
+  // real texture — so a placeholder can never disagree with the map that later
+  // replaces it. Only the placeholder COLOUR is per-kind. Surface/night are sRGB
+  // colour (`rgba8unorm-srgb`, hardware de-gammas on read); material/normal are
+  // linear-packed DATA (`rgba8unorm`, raw numeric channels).
+  function createPlaceholder(
+    kind: TextureKind,
+    label: string,
+    rgba: readonly [number, number, number, number],
+  ): GPUTexture {
+    const tex = device.createTexture({
+      label,
+      size: [1, 1, 1],
+      format: isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    });
+    device.queue.writeTexture(
+      { texture: tex },
+      new Uint8Array(rgba),
+      { bytesPerRow: 4, rowsPerImage: 1 },
+      [1, 1, 1],
+    );
+    return tex;
+  }
 
-  // ── Placeholder material texture ──────────────────────────────────────────
-  //
-  // A 1×1 LINEAR (`rgba8unorm`, NO sRGB de-gamma) texel standing in until the
-  // real roughness/ocean-mask map arrives via `setMap('material', …)`. The
-  // material map packs DATA, not colour: `.r` = roughness, `.g` = ocean mask.
-  // R=255 → roughness 1.0 (fully rough, `roughness = roughnessBase`); G=0 → ocean
-  // mask off (all land, no glint). So before the real map lands the fragment
-  // shades a matte, glint-free sphere — the "still lit, no glint yet" behaviour.
-  // Mirrors the surface placeholder so the fragment always samples a real texture
-  // at binding 3 without a "has-material" branch.
-  let materialTexture = device.createTexture({
-    label: 'earth-placeholder-material',
-    size: [1, 1, 1],
-    format: 'rgba8unorm',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-  });
-  device.queue.writeTexture(
-    { texture: materialTexture },
-    // roughness=1 (R), ocean mask=0 (G); B/A unused. Linear format — raw bytes.
-    new Uint8Array([255, 0, 0, 255]),
-    { bytesPerRow: 4, rowsPerImage: 1 },
-    [1, 1, 1],
+  // Mid-blue, opaque — a visible-but-plain sphere until the Blue Marble lands.
+  let texture = createPlaceholder('surface', 'earth-placeholder-texture', [70, 110, 160, 255]);
+  // roughness=1 (R), ocean mask=0 (G) → matte, glint-free until the map lands.
+  let materialTexture = createPlaceholder(
+    'material',
+    'earth-placeholder-material',
+    [255, 0, 0, 255],
   );
-
-  // ── Placeholder night texture ─────────────────────────────────────────────
-  //
-  // A 1×1 BLACK `rgba8unorm-srgb` texel (the same sRGB colour format as the
-  // surface albedo — the Black Marble night map is emissive sRGB colour, NOT
-  // linear data) standing in until the real city-lights map arrives via
-  // `setMap('night', …)`. Black → the emissive `nightLights` term contributes
-  // nothing, so before the map lands the dark hemisphere is lit only by `AMBIENT`
-  // — the correct "no city lights yet" behaviour. Mirrors the surface placeholder
-  // so the fragment always samples a real texture at binding 4 without a branch.
-  let nightTexture = device.createTexture({
-    label: 'earth-placeholder-night',
-    size: [1, 1, 1],
-    format: 'rgba8unorm-srgb',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-  });
-  device.queue.writeTexture(
-    { texture: nightTexture },
-    // Black, opaque. sRGB-encoded — no emissive contribution until the map lands.
-    new Uint8Array([0, 0, 0, 255]),
-    { bytesPerRow: 4, rowsPerImage: 1 },
-    [1, 1, 1],
-  );
+  // Black → no emissive city-lights term; dark side lit only by `AMBIENT`.
+  let nightTexture = createPlaceholder('night', 'earth-placeholder-night', [0, 0, 0, 255]);
+  // Flat tangent-space normal: RG=128 → nxy=(0,0), so nz reconstructs to 1 →
+  // n == the geometric normal → no relief until the baked normal map lands.
+  let normalTexture = createPlaceholder('normal', 'earth-placeholder-normal', [128, 128, 255, 255]);
 
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   //
@@ -329,6 +331,7 @@ export function createEarthRenderer(
   // Binding 2: the 2D Earth albedo texture, fragment stage (filterable f32).
   // Binding 3: the 2D material (roughness/ocean-mask) texture, fragment stage.
   // Binding 4: the 2D night (Black Marble city-lights) texture, fragment stage.
+  // Binding 5: the 2D tangent-space normal (relief) texture, fragment stage.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'earth-bgl',
     entries: [
@@ -357,12 +360,17 @@ export function createEarthRenderer(
         visibility: GPUShaderStage.FRAGMENT,
         texture: { sampleType: 'float' },
       },
+      {
+        binding: 5,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float' },
+      },
     ],
   });
 
   // The bind group references the current `texture` + `materialTexture` +
-  // `nightTexture` views. `setMap` rebuilds it against a fresh texture (binding 2,
-  // 3, or 4), so it lives in a mutable closure slot.
+  // `nightTexture` + `normalTexture` views. `setMap` rebuilds it against a fresh
+  // texture (binding 2, 3, 4, or 5), so it lives in a mutable closure slot.
   function buildBindGroup(): GPUBindGroup {
     return device.createBindGroup({
       label: 'earth-bg',
@@ -373,6 +381,7 @@ export function createEarthRenderer(
         { binding: 2, resource: texture.createView() },
         { binding: 3, resource: materialTexture.createView() },
         { binding: 4, resource: nightTexture.createView() },
+        { binding: 5, resource: normalTexture.createView() },
       ],
     });
   }
@@ -405,6 +414,10 @@ export function createEarthRenderer(
           arrayStride: 8, // 2 × f32 uv
           attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }],
         },
+        {
+          arrayStride: 12, // 3 × f32 tangent (unit +u=east)
+          attributes: [{ shaderLocation: 2, offset: 0, format: 'float32x3' }],
+        },
       ],
     },
     fragment: {
@@ -434,22 +447,28 @@ export function createEarthRenderer(
 
   function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
     // Plan A wires the `surface` (day albedo) and `material` (roughness/ocean-mask)
-    // maps; plan B adds the `night` (Black Marble city-lights) map. The
-    // `clouds`/`normal` kinds land with plans D/C, which add their cases + GPU
-    // bindings here. Those kinds are inert until then.
-    if (kind !== 'surface' && kind !== 'material' && kind !== 'night') return;
+    // maps; plan B adds the `night` (Black Marble city-lights) map; plan C adds the
+    // `normal` (tangent-space relief) map. The `clouds` kind lands with plan D,
+    // which adds its case + GPU binding here. That kind is inert until then.
+    if (kind !== 'surface' && kind !== 'material' && kind !== 'night' && kind !== 'normal') return;
 
-    // sRGB colour (surface) samples through `rgba8unorm-srgb` so the hardware
-    // de-gammas on read; linear-packed data (material) samples through plain
-    // `rgba8unorm` so its numeric channels (roughness, ocean mask) are read raw,
-    // not gamma-shifted. `isLinearTextureKind` is the single home for that axis —
-    // shared with the fetcher's decode path and the filename helper — so the
-    // sRGB-vs-linear decision can never drift between the three consumers.
+    // sRGB colour (surface/night) samples through `rgba8unorm-srgb` so the hardware
+    // de-gammas on read; linear-packed data (material/normal) samples through plain
+    // `rgba8unorm` so its numeric channels (roughness, ocean mask, tangent-space
+    // normal) are read raw, not gamma-shifted. `isLinearTextureKind` is the single
+    // home for that axis — shared with the fetcher's decode path and the filename
+    // helper — so the sRGB-vs-linear decision can never drift between the consumers.
     const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
     const levels = mipLevelCount(bitmap.width, bitmap.height);
     const fresh = device.createTexture({
       label:
-        kind === 'material' ? 'earth-material' : kind === 'night' ? 'earth-night' : 'earth-texture',
+        kind === 'material'
+          ? 'earth-material'
+          : kind === 'night'
+            ? 'earth-night'
+            : kind === 'normal'
+              ? 'earth-normal'
+              : 'earth-texture',
       size: [bitmap.width, bitmap.height, 1],
       format,
       mipLevelCount: levels,
@@ -480,6 +499,9 @@ export function createEarthRenderer(
     } else if (kind === 'night') {
       nightTexture.destroy();
       nightTexture = fresh;
+    } else if (kind === 'normal') {
+      normalTexture.destroy();
+      normalTexture = fresh;
     } else {
       texture.destroy();
       texture = fresh;
@@ -495,6 +517,7 @@ export function createEarthRenderer(
     pass.setBindGroup(0, bindGroup);
     pass.setVertexBuffer(0, positionBuffer);
     pass.setVertexBuffer(1, uvBuffer);
+    pass.setVertexBuffer(2, tangentBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint32');
     pass.drawIndexed(indexCount);
   }
@@ -504,11 +527,13 @@ export function createEarthRenderer(
   function destroy(): void {
     positionBuffer.destroy();
     uvBuffer.destroy();
+    tangentBuffer.destroy();
     indexBuffer.destroy();
     uniformBuffer.destroy();
     texture.destroy();
     materialTexture.destroy();
     nightTexture.destroy();
+    normalTexture.destroy();
   }
 
   const renderer: EarthRenderer = {

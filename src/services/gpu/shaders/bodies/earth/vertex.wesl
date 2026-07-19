@@ -12,9 +12,9 @@
 // '@group(0) @binding(0)' holds 'EarthSurfaceUniforms' (112 bytes: the
 // mat4x4<f32> MVP, the local sun direction, and the PBR shading params), visible
 // in BOTH stages: the vertex reads only 'u.mvp', the fragment reads the sun
-// direction, camera position, and material knobs. The albedo + material textures
-// and the sampler live at bindings 1..3 for the fragment stage (declared in the
-// fragment module).
+// direction, camera position, and material knobs. The fragment stage also binds
+// the sampler at binding 1 and the per-kind textures from binding 2 up (declared
+// in the fragment module) -- see 'earthRenderer.ts' for the current bound set.
 //
 // As with the other sphere bodies, the '@group/@binding' declaration is
 // module-local (WESL has no global state), so we declare 'u' here and pass
@@ -27,8 +27,12 @@
 //                                       (tightly-packed f32x3 VBO, stride 12).
 //   @location(1) uv:       vec2<f32>  — equirectangular texture coordinate
 //                                       (tightly-packed f32x2 VBO, stride 8);
-//                                       'uvSphereMesh' writes u west-to-east,
+//                                       'cubeSphereMesh' writes u west-to-east,
 //                                       v south-to-north.
+//   @location(2) tangent:  vec3<f32>  — unit local-space +u (east) tangent
+//                                       (tightly-packed f32x3 VBO, stride 12);
+//                                       'cubeSphereMesh' emits (-sinLon,cosLon,0).
+//                                       Forwarded raw; the fragment re-orthonormalizes.
 
 import package::bodies::earth::io::VSOut;
 import package::lib::sphere::EarthSurfaceUniforms;
@@ -37,11 +41,18 @@ import package::lib::sphere::clip_from_local;
 @group(0) @binding(0) var<uniform> u: EarthSurfaceUniforms;
 
 @vertex
-fn vs(@location(0) position: vec3<f32>, @location(1) uv: vec2<f32>) -> VSOut {
+fn vs(
+  @location(0) position: vec3<f32>,
+  @location(1) uv: vec2<f32>,
+  @location(2) tangent: vec3<f32>,
+) -> VSOut {
   var out: VSOut;
   out.clip = clip_from_local(u.mvp, position);
   out.uv = uv;
   // Unit-sphere local position IS the outward normal; the fragment renormalizes.
   out.normalLocal = position;
+  // +u (east) tangent, forwarded raw -- the fragment Gram-Schmidt-re-orthonormalizes
+  // it against the interpolated normal before building the tangent-space basis.
+  out.tangent = tangent;
   return out;
 }
