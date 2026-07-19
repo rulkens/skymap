@@ -21,8 +21,23 @@
 // warp to recover (viewZenithCos, lightViewCos) for the texel. From those, plus
 // the camera altitude + sun zenith carried in 'SkyViewParams', we rebuild the
 // view ray and the sun direction in a local frame whose up axis is +z, then
-// march the single-plus-multi-scatter integral to the atmosphere (or ground)
-// boundary. Fixed-step quadrature, 'SKY_VIEW_STEPS' samples (named tunable).
+// march the single-plus-multi-scatter integral across the IN-ATMOSPHERE segment
+// of the ray. Fixed-step quadrature, 'SKY_VIEW_STEPS' samples (named tunable).
+//
+// ## From-space entry clamp (why we march [tNear, tFar], not [0, tMax])
+//
+// skymap's camera views Earth from SPACE, so the ray origin's radius is far
+// outside the atmosphere top. Marching t in [0, tMax] (tMax = the far exit) would
+// spend nearly every one of the ~30 fixed steps in the tens of thousands of km of
+// VACUUM between the camera and the planet, with dt hundreds-to-thousands of km
+// wide; the ~1,400 km of dense atmosphere near the ray's tangent point would catch
+// zero or one sample and the LUT would bake to near-zero noise (the shell then
+// renders almost nothing). Instead we clamp to the ray's atmosphere-top ENTRY:
+// tNear = max(0, top.x) is the near intersection of the top sphere (0 for a camera
+// already inside it), tFar the far exit or the ground hit, and we spread all
+// samples across [tNear, tFar]. This is Hillaire's 'MoveToTopAtmosphere' clamp. For
+// a camera INSIDE the atmosphere top.x < 0 -> tNear = 0, so the from-below case is
+// byte-identical to the old bound; only the from-space case changes.
 //
 // rgba16float storage write — same first-in-repo caveat + render-to-texture
 // fallback as the other two bakes (consumers only SAMPLE this LUT).
@@ -31,13 +46,13 @@
 
 import package::atmosphere::scattering::ScatteringParams;
 import package::atmosphere::scattering::sampleMedium;
-import package::atmosphere::scattering::marchDistance;
 import package::atmosphere::scattering::rayleighPhase;
 import package::atmosphere::scattering::miePhase;
 import package::atmosphere::scattering::sampleTransmittanceToTop;
 import package::atmosphere::scattering::sampleMultiScatter;
 import package::atmosphere::scattering::skyViewLutUvToParams;
 import package::atmosphere::scattering::EXTINCTION_EPS;
+import package::lib::util::raySphere;
 
 // Step count for the fixed-step in-scatter quadrature (the only quality knob).
 // The LUT DIMENSIONS are NOT restated here — they derive from
@@ -76,11 +91,30 @@ struct SkyViewParams {
 // directional lookup, unlike the isotropic multi-scatter bake); the precomputed
 // multi-scatter is added with the total scattering coefficient (it is already
 // isotropic). Standard '(S - S*T)/extinction' analytic step integral.
+//
+// The march is confined to the ray's IN-ATMOSPHERE segment [tNear, tFar] — the
+// entry/exit of the top-of-atmosphere sphere, clamped to a ground hit — NOT to
+// [0, tMax]. With a from-space camera the origin is far outside the top sphere,
+// so tNear > 0 skips the leading vacuum and every sample lands in the medium (the
+// module-header 'From-space entry clamp'); for a camera inside the atmosphere
+// top.x < 0 -> tNear = 0, recovering the plain 'origin-to-boundary' march. A ray
+// that never meets the top sphere (top.y < 0) is empty space -> return zero.
 fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
   let bottom = params.planetRadiusKm;
-  let top = params.atmosphereTopKm;
-  let tMax = marchDistance(p0, dir, bottom, top);
-  let dt = tMax / SKY_VIEW_STEPS;
+  let topRadius = params.atmosphereTopKm;
+
+  // Confine the march to the atmosphere-top sphere's [entry, exit] interval, the
+  // same bound shape the shell fragment + CPU 'atmosphereShellBound' already use.
+  let top = raySphere(p0, dir, vec3<f32>(0.0), topRadius);
+  if (top.y < 0.0) { return vec3<f32>(0.0); }
+  let tNear = max(0.0, top.x);
+  var tFar = top.y;
+  // Ground clamp: a down-looking ray stops at the opaque surface ahead of tNear.
+  let ground = raySphere(p0, dir, vec3<f32>(0.0), bottom);
+  if (ground.x > 0.0 && ground.x > tNear) {
+    tFar = min(tFar, ground.x);
+  }
+  let dt = (tFar - tNear) / SKY_VIEW_STEPS;
 
   let cosTheta = dot(dir, sunDir);
   let rp = rayleighPhase(cosTheta);
@@ -92,7 +126,7 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
   var i: u32 = 0u;
   loop {
     if (f32(i) >= SKY_VIEW_STEPS) { break; }
-    let t = (f32(i) + 0.5) * dt;
+    let t = tNear + (f32(i) + 0.5) * dt;
     let pos = p0 + dir * t;
     let r = length(pos);
     let up = pos / r;
@@ -100,8 +134,8 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
 
     let m = sampleMedium(params, pos);
     let sampleTransmittance = exp(-m.extinction * dt);
-    let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, top, r, sunCosZenith);
-    let psiMultiScatter = sampleMultiScatter(multiScatterLut, lutSamp, bottom, top, r, sunCosZenith);
+    let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, topRadius, r, sunCosZenith);
+    let psiMultiScatter = sampleMultiScatter(multiScatterLut, lutSamp, bottom, topRadius, r, sunCosZenith);
 
     // Phase-weighted single-scatter source + isotropic multi-scatter source.
     let scatterPhased = m.scatterR * rp + vec3<f32>(m.scatterM * mp);

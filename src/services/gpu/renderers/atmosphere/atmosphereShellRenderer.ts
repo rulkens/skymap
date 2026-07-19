@@ -68,11 +68,19 @@ import skyViewCode from '../../shaders/atmosphere/skyViewLut.wesl?static';
 import shellVsCode from '../../shaders/atmosphere/shell/vertex.wesl?static';
 import shellFsCode from '../../shaders/atmosphere/shell/fragment.wesl?static';
 
-/** Proxy-sphere tessellation — 48×24, shared with the other sphere shells. The
- *  atmosphere shell is body-agnostic + low-frequency (a glow, not a texture), so
- *  the UV sphere's pole pinch is invisible and the cube-sphere is unnecessary. */
-const SEGMENTS = 48;
-const RINGS = 24;
+/** Proxy-sphere tessellation — 128×64. This shell's SILHOUETTE bounds the visible
+ *  limb band: only the atmosphere-top proxy's far wall rasterises, and its outer
+ *  edge is the sphere silhouette, which a coarse UV sphere polygonises INWARD. A
+ *  facet's silhouette chord sags to ~cos(π/SEGMENTS) of the atmosphere-top radius,
+ *  clipping that fraction off the limb. The atmosphere band is only ~1.4% of the
+ *  planet radius to begin with, so at 48×24 the ~0.0021 silhouette sag eats ~15% of
+ *  the band and scallops its outer edge into a visible polygon. At 128×64 the sag is
+ *  ~cos(π/128) ≈ 0.9997 (≈ 0.03% of radius, ~2% of the band) — a smooth limb. The
+ *  glow being low-frequency does NOT excuse the coarse mesh: coarseness is invisible
+ *  across the interior but reads sharply at the silhouette, which is where this proxy
+ *  does its work. */
+const SEGMENTS = 128;
+const RINGS = 64;
 
 /** LUT dimensions — the SINGLE home for each table's size. The E4 bake modules no
  *  longer restate these: each derives its bounds guard + uv divisor from

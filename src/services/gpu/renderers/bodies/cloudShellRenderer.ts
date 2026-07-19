@@ -65,10 +65,17 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/cloudShell/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/cloudShell/fragment.wesl?static';
 
-/** UV-sphere tessellation — 48×24, shared with every sphere body renderer for a
- *  smooth silhouette at close range without overwhelming vertex throughput. */
-const SEGMENTS = 48;
-const RINGS = 24;
+/** UV-sphere tessellation — 128×64. A UV-sphere quad's CENTRE sags inward of the
+ *  true radius: at the cell centre the surface dips to cos(halfLonStep)·cos(halfLatStep)
+ *  of the sphere radius, so the deepest facet sag is 1 − cos²(π/SEGMENTS) (both half-
+ *  steps equal π/SEGMENTS at SEGMENTS=2·RINGS). That sag MUST stay below the shell's
+ *  radius margin over the surface (`CLOUD_SHELL_PARAMS.radiusRatio − 1 = 0.002`), or
+ *  the opaque globe pokes up through the middle of every facet as a grid of bumps.
+ *  At 48×24 the sag is 1 − cos²(π/48) ≈ 0.00428 > 0.002 — the facet centres fall
+ *  ~15 km BELOW the surface and the globe shows through. At 128×64 the sag is
+ *  1 − cos²(π/128) ≈ 0.00060 → min shell radius ≈ 1.0014, ~9 km clear of the surface. */
+const SEGMENTS = 128;
+const RINGS = 64;
 
 /** `CloudShellUniforms` is 80 bytes (20 f32): the 80-byte lit prefix (mvp +
  *  sunDirLocal) with `cloudOpacity` filling the vec3's trailing slot. Written
