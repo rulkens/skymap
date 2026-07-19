@@ -45,9 +45,13 @@
  * Colour: `targetFormat` with premultiplied OVER (`srcFactor: 'one'`,
  * `dstFactor: 'one-minus-src-alpha'` — the fragment emits premultiplied rgb).
  * Depth: `depthFormat`, `depthWriteEnabled: false`, `depthCompare: 'less-equal'`
- * (depth-TESTED against the opaque planet, writes no z). `cullMode: 'front'` —
- * only the atmosphere-top proxy's FAR wall rasterises (the delta vs the ring's
- * `'none'` and the cloud shell's `'back'`), `frontFace: 'ccw'`.
+ * (depth-TESTED against the opaque planet, writes no z). `cullMode: 'none'` —
+ * BOTH walls of the atmosphere-top proxy rasterise, and the fragment splits duty
+ * by `@builtin(front_facing)`: the NEAR wall carries the over-disc aerial
+ * perspective (haze on the lit disc), the FAR wall carries the limb + sky.
+ * Depth-testing EACH wall against the scene keeps cross-body occlusion for both
+ * (a nearer body occludes the disc haze via the near wall's depth and the limb
+ * via the far wall's). `frontFace: 'ccw'`.
  *
  * @module
  */
@@ -398,12 +402,13 @@ export function createAtmosphereShellRenderer(
     },
     primitive: {
       topology: 'triangle-list',
-      // Draw BACK faces: cull FRONT so only the atmosphere-top proxy's FAR wall
-      // rasterises (the delta vs the ring's 'none' and the cloud shell's 'back').
-      // Depth-testing that far wall against the opaque planet splits limb / disc /
-      // occluded-by-nearer-body for free.
+      // Draw BOTH walls (no cull): the fragment splits duty by front_facing — the
+      // NEAR (front) wall carries the over-disc aerial perspective, the FAR (back)
+      // wall carries the limb + sky. Depth-testing each wall against the opaque
+      // scene keeps cross-body occlusion for both (disc haze via the near wall's
+      // depth, the limb via the far wall's).
       frontFace: 'ccw',
-      cullMode: 'front',
+      cullMode: 'none',
     },
     depthStencil: {
       format: depthFormat,

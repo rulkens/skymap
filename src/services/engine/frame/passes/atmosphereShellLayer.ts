@@ -4,18 +4,21 @@
  * (spec §8.3). A translucent proxy sphere scaled to the atmosphere-TOP radius,
  * sitting just outside the cloud shell.
  *
- * ### What it draws — the blue limb + reddened terminator
+ * ### What it draws — the blue limb, reddened terminator, and over-disc haze
  *
  * For the seeded `bodies.earth` (the only atmosphere body today), this layer
  * draws the atmosphere-top proxy sphere through the shared `atmosphereShellRenderer`.
- * The renderer's shell pipeline culls FRONT faces, so only the proxy sphere's FAR
- * wall rasterises; depth-testing that far wall against the already-stamped opaque
- * planet separates the three regions for free — limb (space behind → passes),
- * over-disc (planet behind → occluded), nearer body in front (occluded) — with no
- * branch. The fragment samples this frame's sky-view LUT (baked by the
+ * The renderer's shell pipeline draws BOTH walls (no cull) and the fragment splits
+ * duty by facing: the NEAR wall carries the over-disc aerial perspective (haze on
+ * the lit disc), the FAR wall the limb + sky. Depth-testing each wall against the
+ * already-stamped opaque scene keeps cross-body occlusion for both — a nearer body
+ * occludes the disc haze via the near wall's depth and the limb via the far
+ * wall's. The fragment samples this frame's sky-view LUT (baked by the
  * `atmosphereSkyView` compute step, in the compute prelude) to compose the
  * in-scattered radiance: a blue limb over the day side, a reddened arc along the
- * terminator/sunset.
+ * terminator/sunset, and haze greying the disc with distance. Per-pixel
+ * scene-depth-aware aerial perspective (arbitrary occluder depth, in-atmosphere
+ * descent) is the deferred froxel upgrade.
  *
  * ### Why it draws LAST, OVER not opaque (spec §8.3)
  *

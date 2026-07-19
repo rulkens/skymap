@@ -10,14 +10,14 @@
 // and forwards the unit-atmosphere-top LOCAL position to the fragment, which
 // reconstructs the view ray from it and 'u.camPosLocal'.
 //
-// ## Back-face draw (the renderer's 'cullMode:\'front\'')
+// ## Both-wall draw (the renderer's 'cullMode:\'none\'')
 //
-// The pipeline (Task 5) culls FRONT faces, so only the atmosphere-top sphere's
-// FAR wall rasterises. Depth-testing that far-wall fragment against the already-
-// stamped opaque planet is what splits the three regions for free: the limb ring
-// (space behind -> passes), over the disc (planet behind -> fails = the deferred
-// froxel), a nearer body in front (occludes). This vertex stage is unaware of
-// that -- it just projects; the split is pure pipeline + fragment geometry.
+// The pipeline draws BOTH walls, and the fragment splits duty by
+// '@builtin(front_facing)': the NEAR (front) wall carries the over-disc aerial
+// perspective (haze on the lit disc), the FAR (back) wall the limb + sky.
+// Depth-testing each wall against the already-stamped opaque scene keeps
+// cross-body occlusion for both. This vertex stage is unaware of that -- it just
+// projects; the split is pure pipeline + fragment geometry.
 //
 // ## Bindings
 //

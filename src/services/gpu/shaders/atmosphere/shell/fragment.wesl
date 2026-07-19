@@ -1,12 +1,34 @@
 // atmosphere/shell/fragment.wesl — the atmosphere in-scatter shell fragment.
 //
-// Per fragment of the atmosphere-top proxy sphere's FAR wall (front faces are
-// culled by the pipeline), this reconstructs the view ray, finds the segment of
-// it inside the atmosphere shell (the analytic march bound), looks up the
+// Per fragment of the atmosphere-top proxy sphere (BOTH walls rasterise —
+// 'cullMode:\'none\''), this reconstructs the view ray, finds the segment of it
+// inside the atmosphere shell (the analytic march bound), looks up the
 // in-scattered sky radiance from the per-frame sky-view LUT, and emits it with a
-// premultiplied-OVER alpha so the limb glows and the sunset arc reddens. There
-// is NO per-pixel march here -- the march lives in the LUT bakes; this stage is
-// a couple of texture samples + the analytic intersection (spec §11).
+// premultiplied-OVER alpha so the limb glows, the sunset arc reddens, AND the
+// lit disc gains over-disc aerial perspective (haze). There is NO per-pixel
+// march here -- the march lives in the LUT bakes; this stage is a couple of
+// texture samples + the analytic intersection (spec §11).
+//
+// ## Two walls, one duty each ('front_facing' split)
+//
+// The pipeline draws both walls; the fragment splits duty by facing so the two
+// are exhaustive AND mutually exclusive:
+//   - NEAR wall (front-facing): carries the OVER-DISC aerial perspective. It
+//     renders ONLY ground-hitting rays -- a ray past the limb belongs to the far
+//     wall, so a front face there discards (else the limb double-counts: both
+//     walls pass the depth test at the limb).
+//   - FAR wall (back-facing): carries the LIMB + SKY. It renders ONLY
+//     ground-missing rays -- a back face over the disc discards. Today those disc
+//     rays are depth-culled anyway (the far wall sits behind the planet), but the
+//     explicit discard keeps the split exhaustive whatever the depth state.
+// Depth-testing EACH wall against the opaque scene keeps cross-body occlusion for
+// both: a nearer body occludes the disc haze via the near wall's depth and the
+// limb via the far wall's.
+//
+// Case analysis: camera OUTSIDE the shell -> disc = near wall, limb = far wall.
+// Camera INSIDE the shell -> only back faces are geometrically visible, so the
+// sky/limb still renders and down-looking (ground) rays lose their haze
+// (acceptable: the in-atmosphere descent regime is the deferred froxel's job).
 //
 // ## The analytic march bound (WESL mirror of 'atmosphereShellBound')
 //
@@ -27,10 +49,15 @@
 //     the reddening at the terminator is baked per-channel into it, which is why
 //     v1's scalar alpha suffices (see below).
 //   - Transmittance LUT (startup): sampled at the near + far endpoints of the
-//     bound; the RATIO 'T(near)/T(far)' is the transmittance of the segment
-//     itself (the Bruneton ratio identity, exact for a ray that continues to the
-//     top -- the limb + sky cases that actually render here). Its luminance
-//     drives the scalar background-opacity.
+//     bound; the RATIO of the two transmittance-to-top lookups is the
+//     transmittance of the segment itself (the Bruneton ratio identity). Its
+//     luminance drives the scalar background-opacity. For the FAR wall's limb +
+//     sky rays (which continue to the top) the ratio 'T(near)/T(far)' reads with
+//     (r, mu) as-is. For the NEAR wall's ground-hitting rays the endpoints look
+//     DOWN, off the LUT's covered domain (its d-range ends at the horizon-grazing
+//     ray), so the segment is read in the REVERSED direction (both endpoints then
+//     look 'up' and land inside the LUT) -- see the direction-flip identity at
+//     the lookup below.
 //
 // All LUT parametrisations are UNIT-AGNOSTIC (built from radii ratios), so this
 // stage feeds LOCAL radii (top == 1, bottom == u.bottomRadius, camera radius in
@@ -44,9 +71,12 @@
 // 'vec4(inScatter * u.exposure, opacity)', opacity = 1 - luminance(segment
 // transmittance) -- exactly the spec's 'out = inScatter + dst*(1 - opacity)'.
 // The visible sunset reddening rides the PER-CHANNEL 'inScatter'; the scalar
-// alpha only attenuates the background, which behind the limb is space (dst ~ 0),
-// so a scalar there is invisible in v1 (per-channel/dual-source is the deferred
-// upgrade). A ray that never enters the atmosphere discards (no contribution).
+// alpha attenuates the background. Behind the LIMB that background is space
+// (dst ~ 0), so a scalar there is invisible; over the DISC the background is the
+// lit planet, and the scalar alpha is exactly the over-disc aerial-perspective
+// haze that greys the surface with distance. A per-channel/dual-source alpha (so
+// the haze reddens per wavelength like the limb) is the deferred upgrade. A ray
+// that never enters the atmosphere, or falls on the wrong wall, discards.
 //
 // Comments single-quoted, never backticks. Literal 'package::' imports.
 //
@@ -76,6 +106,10 @@ const LUMINANCE: vec3<f32> = vec3<f32>(0.2126, 0.7152, 0.0722);
 struct FsIn {
   // Unit-atmosphere-top local-space position (see vertex.wesl VsOut.localPos).
   @location(0) localPos: vec3<f32>,
+  // Which wall this fragment belongs to (the pipeline draws both). True on the
+  // NEAR (front) wall, which carries the over-disc haze; false on the FAR (back)
+  // wall, which carries the limb + sky. Drives the duty split below.
+  @builtin(front_facing) frontFacing: bool,
 };
 
 @fragment
@@ -101,6 +135,21 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
   let intersectsGround = ground.x > 0.0;
   if (intersectsGround && ground.x > tNear) {
     tFar = min(tFar, ground.x);
+  }
+
+  // ── Wall-duty split (front_facing) ─────────────────────────────────
+  //
+  // The near wall (front-facing) renders ONLY ground-hitting rays (the disc
+  // haze); the far wall (back-facing) renders ONLY ground-missing rays (the limb
+  // + sky). Discard the other half on each so the pair is exhaustive AND mutually
+  // exclusive whatever the depth state (incl. the camera-inside case). Without
+  // the near-wall guard the limb would double-count -- both walls pass the depth
+  // test past the limb.
+  if (in.frontFacing && !intersectsGround) {
+    discard;
+  }
+  if (!in.frontFacing && intersectsGround) {
+    discard;
   }
 
   // ── Sky-view LUT lookup for the in-scattered radiance ──────────────
@@ -132,11 +181,26 @@ fn fs(in: FsIn) -> @location(0) vec4<f32> {
   let rFar = length(farPos);
   let muFar = dot(dir, farPos / rFar);
 
-  let tToTopNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rNear, muNear);
-  let tToTopFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rFar, muFar);
-  // Bruneton ratio identity: transmittance of the near->far segment is the ratio
-  // of the two transmittance-to-top lookups, clamped to a valid [0,1] range.
-  let segTransmittance = clamp(tToTopNear / max(tToTopFar, vec3<f32>(1e-6)), vec3<f32>(0.0), vec3<f32>(1.0));
+  // Bruneton ratio identity: the transmittance of the near->far segment is the
+  // ratio of the two transmittance-to-top lookups, clamped to a valid [0,1].
+  //
+  // Direction-flip identity: T(a to b) equals T(b to a); read the segment in
+  // whichever direction points AWAY from the ground so both endpoints live in the
+  // LUT's covered domain (its d-range ends at the horizon-grazing ray, so a
+  // down-looking endpoint clamps to the LUT edge and the ratio degrades). The far
+  // wall's limb + sky rays already point up (keep (r, mu) as-is); the near wall's
+  // ground rays point down, so NEGATE mu at each endpoint (both then read 'up')
+  // and INVERT the ratio (the far endpoint is now the 'start' of the upward read).
+  var segTransmittance: vec3<f32>;
+  if (intersectsGround) {
+    let tUpFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rFar, -muFar);
+    let tUpNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rNear, -muNear);
+    segTransmittance = clamp(tUpFar / max(tUpNear, vec3<f32>(1e-6)), vec3<f32>(0.0), vec3<f32>(1.0));
+  } else {
+    let tToTopNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rNear, muNear);
+    let tToTopFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rFar, muFar);
+    segTransmittance = clamp(tToTopNear / max(tToTopFar, vec3<f32>(1e-6)), vec3<f32>(0.0), vec3<f32>(1.0));
+  }
   let opacity = 1.0 - dot(segTransmittance, LUMINANCE);
 
   // Premultiplied-OVER: rgb is the added in-scatter, alpha attenuates the
