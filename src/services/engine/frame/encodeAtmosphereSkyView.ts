@@ -103,6 +103,6 @@ export function encodeAtmosphereSkyView(
 
     // f32 [viewHeightKm, sunZenithCos, _pad0, _pad1] — the 16-byte SkyViewParams
     // record the renderer writes verbatim (see AtmosphereShellRenderer.d.ts).
-    renderer.encodeSkyView(encoder, new Float32Array([viewHeightKm, sunZenithCos, 0, 0]));
+    renderer.encodeSkyView(encoder, body.id, new Float32Array([viewHeightKm, sunZenithCos, 0, 0]));
   }
 }

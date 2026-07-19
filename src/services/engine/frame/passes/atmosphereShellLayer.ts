@@ -114,6 +114,7 @@ export const atmosphereShellLayer: ContentLayer = {
       // static data-file constant (fragment-unused today).
       renderer.draw(
         pass,
+        body.id,
         packAtmosphereUniforms(
           mvp,
           sun,

@@ -147,11 +147,13 @@ describe('encodeAtmosphereSkyView', () => {
     );
 
     expect(renderer.encodeSkyView).toHaveBeenCalledTimes(1);
-    const [encoderArg, uniforms] = renderer.encodeSkyView.mock.calls[0]! as [
+    const [encoderArg, bodyIdArg, uniforms] = renderer.encodeSkyView.mock.calls[0]! as [
       GPUCommandEncoder,
+      string,
       Float32Array,
     ];
     expect(encoderArg).toBe(encoder);
+    expect(bodyIdArg).toBe(SCENE_EARTH.id);
     expect(uniforms).toBeInstanceOf(Float32Array);
     expect(uniforms).toHaveLength(4);
 

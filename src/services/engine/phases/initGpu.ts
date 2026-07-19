@@ -570,18 +570,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // The atmosphere renderer draws the translucent proxy sphere at the
   // atmosphere-top radius, LAST in the (foreground:0, NEAR0) group. Its pipeline
   // bakes the `foreground:0` format invariant AND the shell profile: straight-alpha
-  // OVER, front-culled (only the far wall rasterises), depth-tested but no depth
-  // write — so its limb passes over space and is occluded over the opaque disc.
-  // It bakes ITS `AtmosphereParams` set (Earth today) at construction — the
-  // view-independent transmittance + multi-scatter LUTs — while the sky-view LUT
-  // is re-baked each frame by the `atmosphereSkyView` compute step. A second
-  // atmosphere body would want a second instance with its own params row; the
-  // factory takes the params so that stays a construction-site choice.
+  // OVER, two-sided (`cullMode: 'none'`, the fragment splits duty by front_facing),
+  // depth-tested but no depth write — so its limb passes over space and is occluded
+  // over the opaque disc. It bakes ONE bundle per `ATMOSPHERE_PARAMS` row (Earth
+  // today) at construction — the view-independent transmittance + multi-scatter
+  // LUTs — while each body's sky-view LUT is re-baked per frame by the
+  // `atmosphereSkyView` compute step. The factory takes the whole table, so a
+  // second atmosphere body is a new params row, no wiring change here.
   state.gpu.atmosphereShellRenderer = createAtmosphereShellRenderer(
     device,
     'rgba16float',
     'depth32float',
-    ATMOSPHERE_PARAMS['earth']!,
+    ATMOSPHERE_PARAMS,
   );
 
   // ── Body-surface texture slot family ─────────────────────────────────
