@@ -301,6 +301,62 @@ struct CloudShellUniforms {
   cloudOpacity: f32,
 };
 
+// ── AtmosphereUniforms ───────────────────────────────────────────────
+//
+// The uniform layout for the atmosphere in-scatter shell drawn just outside
+// Earth's cloud shell. It is a SIBLING of 'RingUniforms' / 'CloudShellUniforms',
+// NOT an overload of 'LitBodyUniforms': only Earth's dedicated atmosphere
+// fragment binds this. It carries the same MVP + body-local 'sunDirLocal'
+// prefix as 'LitBodyUniforms' (so it reuses that packer for the shared 80-byte
+// prefix and the two layouts can never drift), then the in-scatter params the
+// fragment needs.
+//
+// ## The atmosphere-top-unit-sphere convention
+//
+// The proxy sphere is scaled by 'composeBodyMvp' to the ATMOSPHERE-TOP radius,
+// so in the mesh's local frame the atmosphere top is the UNIT sphere
+// ('topRadius == 1', implicit -- no field) and the ground sphere has radius
+// 'bottomRadius' in (0, 1) -- the exact 'planetRadiusRatio' trick 'RingUniforms'
+// uses. The shell fragment maps its local altitude to the LUT radial axis via
+// 'bottomRadius' alone: normalized altitude
+// 'h = (r_local - bottomRadius) / (1 - bottomRadius)'.
+//
+// Two vec3 tails are filled with REAL fields rather than padding, the same
+// trick 'RingUniforms.planetRadiusRatio' uses:
+//   - 'bottomRadius'  fills 'sunDirLocal's trailing 4-byte slot (byte 76).
+//   - 'sunIrradiance' fills 'camPosLocal's trailing slot (byte 92).
+//
+// 'camPosLocal' (the camera in atmosphere-top-radius units, sphere centre at the
+// origin) is the view vector the in-scatter integral needs, which the lit prefix
+// does not carry.
+//
+// ## Byte layout (uniform address space)
+//
+//   offset   0..63:  mvp           (mat4x4<f32>, column-major, 64 bytes)
+//   offset  64..75:  sunDirLocal   (vec3<f32> -- 16-byte aligned at 64)
+//   offset  76..79:  bottomRadius  (f32 -- fills sunDirLocal's 4th slot)
+//   offset  80..91:  camPosLocal   (vec3<f32> -- 16-byte aligned at 80)
+//   offset  92..95:  sunIrradiance (f32 -- fills camPosLocal's 4th slot)
+//   offset  96..99:  exposure      (f32 -- in-scatter intensity scale)
+//   offset 100..111: _pad0/1/2     (f32 x3 -- rounds the struct to 112 / 16-byte)
+//   total: 112 bytes.
+//
+// The CPU side uploads 28 f32s. The single source of truth for that packing is
+// 'utils/gpu/packAtmosphereUniforms.ts', which reuses 'packLitBodyUniforms' for
+// the shared 80-byte prefix.
+
+struct AtmosphereUniforms {
+  mvp: mat4x4<f32>,
+  sunDirLocal: vec3<f32>,
+  bottomRadius: f32,
+  camPosLocal: vec3<f32>,
+  sunIrradiance: f32,
+  exposure: f32,
+  _pad0: f32,
+  _pad1: f32,
+  _pad2: f32,
+};
+
 // ── clip_from_local ──────────────────────────────────────────────────
 //
 // Transform a unit-sphere local-space position to homogeneous clip
