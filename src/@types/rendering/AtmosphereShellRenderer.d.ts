@@ -29,22 +29,28 @@
  * passes in the same encoder (the two-pass ordering `flowFieldRenderer` and
  * `createGenerationPipelines` document). This is the on-device bake of spec §8.2.
  *
- * ### Back-face draw + depth test splits the three regions for free
+ * ### Two-sided draw + front_facing duty split + depth test, no branch
  *
- * The shell pipeline culls FRONT faces (`cullMode: 'front'`), so only the
- * atmosphere-top proxy sphere's FAR wall rasterises. Depth-testing that far wall
- * against the already-stamped opaque planet (`depthCompare: 'less-equal'`,
- * `depthWriteEnabled: false`) is what separates limb (space behind → passes),
- * over-disc (planet behind → occluded), and a nearer body in front — with no
- * branch. This is the delta vs `ringRenderer` (`cullMode: 'none'`) and
- * `cloudShellRenderer` (`cullMode: 'back'`).
+ * The shell pipeline draws BOTH walls (`cullMode: 'none'`) and the fragment splits
+ * duty by `@builtin(front_facing)`: the NEAR (front) wall carries the over-disc
+ * aerial perspective (haze on the lit disc), the FAR (back) wall carries the limb
+ * + sky. Depth-testing EACH wall against the already-stamped opaque scene
+ * (`depthCompare: 'less-equal'`, `depthWriteEnabled: false`) keeps cross-body
+ * occlusion for both — a nearer body occludes the disc haze via the near wall's
+ * depth and the limb via the far wall's — with no branch. `cloudShellRenderer`
+ * back-culls (`cullMode: 'back'`); this shell and `ringRenderer` share
+ * `cullMode: 'none'`.
  *
- * ### One baked set in v1
+ * ### One bundle per `paramsById` row
  *
- * The renderer bakes ITS `AtmosphereParams` set once (Earth today). A second
- * atmosphere body would want a second renderer instance (its own LUT set); the
- * factory takes the params so that extension is a construction-site choice, no
- * renderer change.
+ * The factory takes the whole `paramsById` table and builds one bundle per row
+ * (Earth alone today): that body's three LUT textures + three uniform buffers +
+ * four bind groups. The pipelines, sampler, and proxy-sphere mesh are built ONCE
+ * and shared across every bundle — one program serves all bodies. Per-body buffers
+ * are the WebGPU `queue.writeBuffer` ordering trap defused by construction: a
+ * later body's per-frame write lands in a DIFFERENT buffer, so no shared state
+ * exists for the race to corrupt. Adding an atmosphere body is a new `paramsById`
+ * row — no renderer change.
  *
  * ### Explicit bind-group layouts everywhere (the `'auto'` trap)
  *
@@ -60,10 +66,12 @@ import type { Renderer } from './Renderer';
 
 export type AtmosphereShellRenderer = Renderer & {
   /**
-   * Regenerate the per-frame sky-view LUT into this renderer's own texture via a
+   * Regenerate body `bodyId`'s per-frame sky-view LUT into its own texture via a
    * compute pass recorded into the SAME frame `encoder` (before the foreground
-   * render pass opens). Writes `skyViewUniforms` to the internal `SkyViewParams`
-   * buffer first, then dispatches. Modeled on `flowFieldRenderer.encodeCompute`.
+   * render pass opens). Writes `skyViewUniforms` to that body's `SkyViewParams`
+   * buffer first, then dispatches. THROWS on an unknown `bodyId` (a programming
+   * error — callers only pass `atmosphereDrawList` ids, which come from the same
+   * table this renderer bundles). Modeled on `flowFieldRenderer.encodeCompute`.
    *
    * `skyViewUniforms` is the 16-byte (4 × f32) `SkyViewParams` record the caller
    * (Task 6) packs — written to the internal buffer VERBATIM, so its layout is
@@ -80,13 +88,14 @@ export type AtmosphereShellRenderer = Renderer & {
    *   f32 2 : _pad0         — zero (rounds the struct to 16 bytes).
    *   f32 3 : _pad1         — zero.
    */
-  encodeSkyView(encoder: GPUCommandEncoder, skyViewUniforms: Float32Array): void;
+  encodeSkyView(encoder: GPUCommandEncoder, bodyId: string, skyViewUniforms: Float32Array): void;
 
   /**
-   * Draw the atmosphere-top proxy sphere's back faces into the open foreground
-   * pass. `uniforms` is the 112-byte `AtmosphereUniforms` record from
+   * Draw body `bodyId`'s atmosphere-top proxy sphere (both walls) into the open
+   * foreground pass. `uniforms` is the 112-byte `AtmosphereUniforms` record from
    * `packAtmosphereUniforms` (MVP + body-local sun dir + bottomRadius +
-   * camPosLocal + sunIrradiance + exposure).
+   * camPosLocal + sunIrradiance + exposure). THROWS on an unknown `bodyId` (a
+   * programming error — callers only pass `atmosphereDrawList` ids).
    */
-  draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void;
+  draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void;
 };
