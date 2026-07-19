@@ -44,13 +44,17 @@ const STAR_GLOW_MIN_PX: f32 = 1.5;
 // Ceiling on the glow radius in px, bounding per-star FILL. Additive-blend
 // overdraw scales with the SUM of pi*rPx^2 across drawn quads, so at
 // solar-neighbourhood zoom a few dozen near stars whose glows expand to
-// thousands of px each dominate the whole pass. Clamping rPx from above caps
-// each quad at pi*MAX^2 regardless of proximity. The photometry is preserved
-// for free: the peak is EXPOSURE*fluxApp/(K_GAUSS*rPx^2) (starPeakIntensity),
-// so a smaller clamped rPx RAISES the peak by exactly rPx^-2 -- total
-// integrated luminance is invariant to rPx. The ceiling therefore turns a huge
-// dim halo into a COMPACT BRIGHT CORE with the SAME total light; the raised
-// peak then rides the fragment stage's hue-preserving knee.
+// thousands of px each dominate the whole pass. Clamping the DRAWN radius
+// caps each quad at pi*MAX^2 regardless of proximity. Both vertex stages
+// compute the peak from the PRE-CEILING radius (starPeakIntensity), so the
+// ceiling also caps SURFACE BRIGHTNESS: a radius-capped source keeps the peak
+// it held when it reached the ceiling and under-deposits total light by
+// (capped/raw)^2, rather than concentrating a still-growing 1/d^2 flux into
+// an ever-brighter fixed-size core. Feeding the CAPPED radius to the peak
+// would conserve total light instead -- that alternative made near survey
+// aggregates blow out into saturated blobs around the Sun in the band where
+// they are radius-capped but not yet refined to leaves (see the survey
+// stage's capped-aggregate note in starCatalog/vertex.wesl).
 const STAR_GLOW_MAX_PX: f32 = 384.0;
 
 // Rim value of the bare Gaussian: exp(-4), the profile's height at r = 1. The
@@ -130,7 +134,10 @@ const STAR_FLUX_EXPOSURE: f32 = 6000.0;
 //   fluxApp    -- the inverse-square-dimmed apparent flux
 //                 (10^(-0.4*absMag) * D_REF^2 / max(d2, MIN_D2_MPC2), times the
 //                 survey aggregate's subtreeStarCount where it applies).
-//   rPx        -- the FINAL clamped glow radius in px.
+//   rPx        -- the PRE-CEILING glow radius in px. Both stages pass the
+//                 radius from BEFORE the STAR_GLOW_MAX_PX clamp, so a
+//                 radius-capped source freezes its surface brightness at the
+//                 ceiling instead of over-concentrating (see STAR_GLOW_MAX_PX).
 //
 // Both vertex stages call this with the identical expression, so an equal
 // (brightness, fluxApp, rPx) yields an equal peak -- the numeric half of the

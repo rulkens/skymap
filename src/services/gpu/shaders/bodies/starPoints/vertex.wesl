@@ -46,10 +46,11 @@
 // (lib/starPhotometry.wesl):
 //
 //   sizeScale = sizePx / STAR_SIZE_REF_PX      -- default slider ⇒ 1
-//   rPx       = min(STAR_GLOW_MAX_PX, STAR_GLOW_MIN_PX * sizeScale)
+//   rPxRaw    = STAR_GLOW_MIN_PX * sizeScale   -- pre-ceiling photometric radius
+//   rPx       = min(STAR_GLOW_MAX_PX, rPxRaw)  -- drawn radius
 //   d2        = dot(position, position)        -- squared camera distance (Mpc^2)
 //   fluxApp   = 10^(-0.4*absMag) * D_REF^2 / max(d2, MIN_D2)   -- apparent flux
-//   intensity = starPeakIntensity(brightness, fluxApp, rPx)
+//   intensity = starPeakIntensity(brightness, fluxApp, rPxRaw)
 //
 // The peak scales so the dot's INTEGRATED luminance is EXPOSURE * brightness *
 // fluxApp regardless of rPx (starPeakIntensity), so the slider redistributes a
@@ -84,10 +85,13 @@ fn vs(
   let corner = quadCorner(vi);
 
   // Radius: a fixed slider-scaled legibility floor (point source, no box to
-  // fill), capped by the absolute px ceiling. 'sizeScale' makes the default
-  // slider the identity; luminance is invariant to rPx (starPeakIntensity).
+  // fill); the px ceiling bounds only the DRAWN radius. 'sizeScale' makes the
+  // default slider the identity. A point radius reaches the ceiling only at
+  // implausible slider values -- the raw/drawn split exists to keep the peak
+  // convention identical to the survey stage's (lib/starPhotometry.wesl).
   let sizeScale = u.sizePx / STAR_SIZE_REF_PX;
-  let rPx = min(STAR_GLOW_MAX_PX, STAR_GLOW_MIN_PX * sizeScale);
+  let rPxRaw = STAR_GLOW_MIN_PX * sizeScale;
+  let rPx = min(STAR_GLOW_MAX_PX, rPxRaw);
 
   // Inverse-square attenuation: 'position' is the star's camera-relative vector
   // (Mpc), so its squared length is the squared camera distance. D_REF^2/d2 dims
@@ -96,9 +100,10 @@ fn vs(
   let d2 = dot(position, position);
   let fluxApp = pow(10.0, -0.4 * absMag) * (D_REF_MPC * D_REF_MPC) / max(d2, MIN_D2_MPC2);
 
-  // Peak so the dot's INTEGRATED luminance equals EXPOSURE * brightness *
-  // fluxApp regardless of rPx — shared with the survey leaf stage.
-  let intensity = starPeakIntensity(u.brightness, fluxApp, rPx);
+  // Peak from the pre-ceiling radius, so the dot's INTEGRATED luminance equals
+  // EXPOSURE * brightness * fluxApp wherever the ceiling is not biting —
+  // the shared convention with the survey stage (lib/starPhotometry.wesl).
+  let intensity = starPeakIntensity(u.brightness, fluxApp, rPxRaw);
 
   let offset = expandBillboardScreen(u.cam, center, rPx, corner);
 
