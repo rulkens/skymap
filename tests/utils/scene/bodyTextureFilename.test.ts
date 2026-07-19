@@ -20,4 +20,12 @@ describe('bodyTextureFilename', () => {
   it('uses PNG for the ring strip', () => {
     expect(bodyTextureFilename('saturn-ring', 'surface', 'large')).toBe('saturn-ring-8192.png');
   });
+
+  it('uses PNG for a linear-data kind on a sphere', () => {
+    // A linear-packed map (material) must be PNG even on an opaque sphere: JPEG's
+    // chroma subsampling would corrupt the packed roughness/mask channels. If the
+    // extension ignored the linear axis this would be `.jpg` and the fetcher would
+    // 404 the material map.
+    expect(bodyTextureFilename('earth', 'material', 'medium')).toBe('earth-material-4096.png');
+  });
 });

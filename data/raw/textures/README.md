@@ -64,6 +64,26 @@ Base:
 (`Access-Control-Allow-Origin: *`). Replaces the retired committed
 `public/images/earth/blue-marble-4k.jpg` — Earth now joins the R2 texture family.
 
+### Earth material map — NASA BMNG land/water mask
+
+Earth's `material` map (roughness + ocean mask, packed linear RGBA → PNG) is
+built from the NASA Blue Marble Next Generation **water mask**: a time-invariant
+equirect where land = 255 and water = 0 (rivers + lakes + oceans all count as
+water). The full mask is 86400×43200; a subsampled 21600×10800 PNG matches the
+BMNG topo tier we already fetch and downsamples cleanly to the 4k material
+ceiling. `build-textures` ramps roughness across the mask (ocean glossy, land
+diffuse) and stores the ocean flag in G — see `buildTextures.ts`.
+
+| Purpose   | File                              | Dims        | Bands |
+| --------- | --------------------------------- | ----------- | ----- |
+| Full pull | `world.watermask.21600x10800.png` | 21600×10800 | gray  |
+
+Base: `https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/landmask/`. Full-pull
+only — no dev variant. **The exact filename + native dimensions are verified
+live by the fetch (plan A Task 9) before the first pull** (the NEO archive
+publishes several subsampled sizes; the row above records the best-documented
+candidate). Credit "NASA Earth Observatory".
+
 ## USGS Astrogeology — Galilean moons (public domain; credit "NASA/USGS")
 
 Plain 8-bit GeoTIFFs (no ISIS toolchain needed; sharp/libvips reads TIFF

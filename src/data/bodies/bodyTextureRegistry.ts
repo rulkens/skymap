@@ -53,7 +53,10 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   mercury: { bodyId: 'mercury', kinds: { surface: 'large' }, provenance: 'sss' },
   // Venus tops out at medium — the source is unresolved cloud, no 8 k detail exists.
   venus: { bodyId: 'venus', kinds: { surface: 'medium' }, provenance: 'sss' },
-  earth: { bodyId: 'earth', kinds: { surface: 'large' }, provenance: 'nasa' },
+  // Earth carries a second map: a `material` (roughness + ocean mask) packed
+  // linear PNG, capped at `medium` (4k) — the ocean/land boundary needs no 8k
+  // detail, and the mask source subsamples cleanly to 4k.
+  earth: { bodyId: 'earth', kinds: { surface: 'large', material: 'medium' }, provenance: 'nasa' },
   mars: { bodyId: 'mars', kinds: { surface: 'large' }, provenance: 'sss' },
   jupiter: { bodyId: 'jupiter', kinds: { surface: 'large' }, provenance: 'sss' },
   saturn: { bodyId: 'saturn', kinds: { surface: 'large' }, provenance: 'sss' },

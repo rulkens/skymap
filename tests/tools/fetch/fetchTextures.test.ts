@@ -52,6 +52,7 @@ describe('textureSourcesFor', () => {
         '2k_neptune.jpg',
         '8k_moon.jpg',
         'world.topo.bathy.200412.3x21600x10800.jpg',
+        'world.watermask.21600x10800.png',
         'Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
         'Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
         'Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',

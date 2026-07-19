@@ -79,27 +79,28 @@ import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
-import { TEXTURE_SOURCES } from '../utils/io/textureSources';
+import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
+import { writeLinearTier } from './writeLinearTier';
 
 /** Output JPEG quality for the spherical body textures (spec §10, ~80). */
 const JPEG_QUALITY = 80;
 
 /**
- * The raw source of one `(body, kind)` texture, read from the single
- * `TEXTURE_SOURCES` table (`tools/utils/io/textureSources.ts`) — the same table
- * `fetchTextures` derives its download list from, so the built set can never
- * drift from what was fetched. A union over every entry across all bodies AND
- * kinds (not just `surface`), so a new non-surface map is built with no edit
- * here. Derived (not annotated) so each `native` / `devKey` stays a string
- * LITERAL for `rawDataPath`. (fetchTextures.ts carries the twin of this alias;
- * folding both onto the exported `TextureSourceEntry` would forfeit the literal
- * narrowing — that type is the widened shape the table `satisfies`.)
+ * The material map's R channel packs perceptual roughness in [0,1] (0 = a
+ * mirror, 1 = fully diffuse), ramped across the water mask: open ocean is a
+ * near-mirror glossy surface, land is rough. The ramp is linear in the mask's
+ * land fraction, so an antialiased coastline gets an in-between roughness rather
+ * than a hard specular seam.
+ *
+ * The shader's 'lib/pbr.wesl' `OCEAN_ROUGHNESS` overrides the ocean end via the
+ * G-mask mix on pure-ocean pixels, so this baked ramp value only shapes the
+ * coastline blend where the mask is fractional — tune glint tightness in the
+ * shader const, not here.
  */
-type TextureSourceEntry = {
-  [Body in keyof typeof TEXTURE_SOURCES]: (typeof TEXTURE_SOURCES)[Body][keyof (typeof TEXTURE_SOURCES)[Body]];
-}[keyof typeof TEXTURE_SOURCES];
+const OCEAN_RAMP_ROUGHNESS = 0.3;
+const LAND_ROUGHNESS = 0.95;
 
 /**
  * `TEXTURE_SOURCES` viewed by the wide `(bodyId, kind)` key space the build loop
@@ -110,7 +111,7 @@ type TextureSourceEntry = {
  */
 const SOURCE_TABLE = TEXTURE_SOURCES as Record<
   BodyTextureId | RingTextureId,
-  Partial<Record<TextureKind, TextureSourceEntry>>
+  Partial<Record<TextureKind, TextureSourceRow>>
 >;
 
 /**
@@ -121,7 +122,7 @@ const SOURCE_TABLE = TEXTURE_SOURCES as Record<
  * on-disk path as native (their native IS the 2 k file), so the extra candidate
  * is a harmless duplicate; the USGS moons carry neither.
  */
-function candidatePaths(entry: TextureSourceEntry): readonly string[] {
+function candidatePaths(entry: TextureSourceRow): readonly string[] {
   const paths = [rawDataPath(entry.native)];
   if ('devKey' in entry) {
     paths.push(rawDataPath(entry.devKey));
@@ -211,12 +212,52 @@ async function writeBodyTier(
 }
 
 /**
+ * Compose Earth's material map from the NASA water mask and write one tier.
+ *
+ * The mask is a single-channel image where land = 255 and water = 0. We resize
+ * it to the tier width FIRST (keeping the working buffer small — the native mask
+ * is 21600×10800), read it raw, and pack a linear RGBA:
+ *
+ *  - **R** = roughness, ramped `OCEAN_RAMP_ROUGHNESS → LAND_ROUGHNESS` by the mask's
+ *    land fraction, so calm ocean is glossy and land is diffuse;
+ *  - **G** = ocean mask, `255` where the pixel is water (`255 - land`), so 1 = ocean;
+ *  - **B**, **A** = spare (0 / opaque) for a future plan to claim.
+ *
+ * The packed buffer goes through `writeLinearTier`, which encodes PNG with NO
+ * sRGB gamma — the channels are numeric fields, not colour, so a gamma curve
+ * would corrupt them. Resizing before packing means `writeLinearTier`'s own
+ * resize is an identity op here; it stays general for a source that hands it a
+ * full-res buffer to downsample.
+ */
+async function writeMaterialTier(srcPath: string, widthPx: number, outPath: string): Promise<void> {
+  const mask = await sharp(srcPath, { limitInputPixels: false })
+    .resize({ width: widthPx })
+    .toColourspace('b-w')
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { width, height, channels } = mask.info;
+  const rgba = Buffer.allocUnsafe(width * height * 4);
+  for (let i = 0; i < width * height; i++) {
+    const land = mask.data[i * channels] ?? 0; // 0 = water, 255 = land
+    const landFraction = land / 255;
+    const roughness = OCEAN_RAMP_ROUGHNESS + (LAND_ROUGHNESS - OCEAN_RAMP_ROUGHNESS) * landFraction;
+    rgba[i * 4 + 0] = Math.round(roughness * 255);
+    rgba[i * 4 + 1] = 255 - land; // 255 where water — G's "1 = ocean"
+    rgba[i * 4 + 2] = 0; // B spare
+    rgba[i * 4 + 3] = 255; // A spare (opaque)
+  }
+
+  await writeLinearTier({ data: rgba, info: { width, height, channels: 4 } }, widthPx, outPath);
+}
+
+/**
  * Write one `(body, kind)` tier, dispatched by kind, and return a short log note.
  * `surface` takes the existing albedo path — mono USGS sources (Europa/Callisto,
  * carrying a registry `grayscaleTint`) go through the two-pass tint; full-colour
- * sources encode in one pass. Non-surface kinds land their own branch here
- * (Task 7's `material`); an unhandled kind is a build error, never a silent skip
- * that would leave a body's map unbuilt.
+ * sources encode in one pass. `material` composes a linear roughness/ocean-mask
+ * PNG (Earth's PBR map) via `writeMaterialTier`. An unhandled kind is a build
+ * error, never a silent skip that would leave a body's map unbuilt.
  */
 async function writeBodyKindTier(
   bodyId: BodyTextureId,
@@ -229,6 +270,10 @@ async function writeBodyKindTier(
     const tint = BODY_TEXTURE_REGISTRY[bodyId].grayscaleTint;
     await writeBodyTier(srcPath, tint, widthPx, outPath);
     return tint ? '  (tinted)' : '';
+  }
+  if (kind === 'material') {
+    await writeMaterialTier(srcPath, widthPx, outPath);
+    return '  (material)';
   }
   throw new Error(`buildTextures: no writer for texture kind '${kind}' (${bodyId})`);
 }

@@ -601,6 +601,17 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.earthWaterMask': {
+    path: 'data/raw/textures/world.watermask.21600x10800.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "NASA Blue Marble Next Generation land/water mask, equirect PNG (land=255, water=0), subsampled to 21600x10800 (public domain, credit NASA Earth Observatory). Feeds Earth's material map. Exact URL + native dims are verified live by the fetch (Task 9) before the first pull.",
+    upstream:
+      'https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/landmask/world.watermask.21600x10800.png',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.usgsIo': {
     path: 'data/raw/textures/Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
     kind: 'file',

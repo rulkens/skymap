@@ -61,7 +61,7 @@ import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import { ALL_BODY_TEXTURE_KEYS } from '../../src/data/bodies/bodyTextureKeys';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
-import { TEXTURE_SOURCES } from '../utils/io/textureSources';
+import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
 import { skipIfAlreadyFetched, upsertSha256Sidecar } from './fetchDesi';
 
 /** Approximate size of the full raw pull (all native tiers). The USGS mono
@@ -80,24 +80,8 @@ export type TextureSource = {
   readonly destPath: string;
 };
 
-/**
- * The raw source of one `(body, kind)` texture, as authored in the single
- * `TEXTURE_SOURCES` table — a union over every entry across all bodies AND kinds
- * (not just `surface`), so a new non-surface source row is fetched with no edit
- * here. Derived (not annotated) so each `native` / `devKey` stays a string
- * LITERAL — `RAW_DATA[native]` then narrows to a texture row (all of which carry
- * `upstream`) instead of widening to the whole registry union, where `upstream`
- * is optional. Same literal-preserving trick the table itself and `fetchDesi`'s
- * `DESI_KEYS` use. (buildTextures.ts carries the twin of this alias; folding both
- * onto the exported `TextureSourceEntry` would forfeit the literal narrowing —
- * that type is the widened shape the table `satisfies` — so the two stay derived.)
- */
-type TextureSourceEntry = {
-  [Body in keyof typeof TEXTURE_SOURCES]: (typeof TEXTURE_SOURCES)[Body][keyof (typeof TEXTURE_SOURCES)[Body]];
-}[keyof typeof TEXTURE_SOURCES];
-
 /** The native (full-res) source for a body/ring: its registered file. */
-function fullSource(entry: TextureSourceEntry): TextureSource {
+function fullSource(entry: TextureSourceRow): TextureSource {
   return { url: RAW_DATA[entry.native].upstream, destPath: rawDataPath(entry.native) };
 }
 
@@ -114,7 +98,7 @@ function fullSource(entry: TextureSourceEntry): TextureSource {
  *    tier (Uranus/Neptune) the swap is a no-op and the dest is the native
  *    registry path — the same source, not a duplicate.
  */
-function devSource(entry: TextureSourceEntry): TextureSource | null {
+function devSource(entry: TextureSourceRow): TextureSource | null {
   if ('devKey' in entry) {
     return { url: RAW_DATA[entry.devKey].upstream, destPath: rawDataPath(entry.devKey) };
   }
@@ -143,13 +127,13 @@ function devSource(entry: TextureSourceEntry): TextureSource | null {
  */
 const SOURCE_TABLE = TEXTURE_SOURCES as Record<
   BodyTextureId | RingTextureId,
-  Partial<Record<TextureKind, TextureSourceEntry>>
+  Partial<Record<TextureKind, TextureSourceRow>>
 >;
 
 /** The raw source of every `(body, kind)` texture key, in family-key order — one
  *  entry per map every textured body carries plus each ring's surface. A new map
  *  kind on a body joins this list via `ALL_BODY_TEXTURE_KEYS`, no edit here. */
-const TEXTURE_ENTRIES: readonly TextureSourceEntry[] = ALL_BODY_TEXTURE_KEYS.map(
+const TEXTURE_ENTRIES: readonly TextureSourceRow[] = ALL_BODY_TEXTURE_KEYS.map(
   ({ bodyId, kind }) => SOURCE_TABLE[bodyId][kind]!,
 );
 

@@ -64,8 +64,6 @@ describe('wireBodyTextureSlots', () => {
     expect(new Set(state.assetSlots.bodyTextures.keys())).toEqual(
       new Set(ALL_BODY_TEXTURE_KEYS.map((e) => bodyTextureSlotKey(e.bodyId, e.kind))),
     );
-    // Sanity: 13 bodies (surface) + the Saturn ring (surface).
-    expect(state.assetSlots.bodyTextures.size).toBe(14);
   });
 
   it("the 'earth:surface' slot's commit dispatches the bitmap to earthRenderer.setMap", async () => {
