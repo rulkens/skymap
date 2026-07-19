@@ -131,6 +131,7 @@ export function makeSettingsFixture(
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       disabledPasses: {},
+      renderStrategy: 'auto',
       clipPathInspect: {
         clipId: null,
         scrub01: 0,

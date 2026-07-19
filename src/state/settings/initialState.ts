@@ -187,6 +187,9 @@ export function buildInitialSettings(): EngineSettingsState {
       // Empty in production: a developer populates it from the DebugPanel's
       // renderer-toggle section. A fresh record per engine — never persisted.
       disabledPasses: {},
+      // 'auto' reproduces the old timing-derived pass shape, so production +
+      // ?gpuTimings stay identical to before Joint 1 (see `resolveStrategy`).
+      renderStrategy: 'auto',
       // Clip-path inspector idle: no clip chosen, scrubber at the start. The
       // overlay stays quiet until the curator clicks "Calculate". The pacing
       // knobs seed from the flyPath defaults but every override is INACTIVE, so a

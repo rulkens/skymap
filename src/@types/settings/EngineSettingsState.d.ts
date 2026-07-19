@@ -58,6 +58,7 @@ import type { ClipId } from '../animation/ClipId';
 import type { SplineMode } from '../animation/SplineMode';
 import type { PassByDir } from '../animation/PassByDir';
 import type { ClipPathTuningActive } from './ClipPathTuningActive';
+import type { RenderStrategy } from '../engine/frame/RenderStrategy';
 
 export type EngineSettingsState = {
   /**
@@ -324,6 +325,16 @@ export type EngineSettingsState = {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
     disabledPasses: Record<string, boolean>;
+    /**
+     * Render-strategy override — decouples the frame's pass SHAPE from whether
+     * GPU timing is collected (see `resolveStrategy` for the Joint-1 rationale).
+     * `'auto'` (the default) reproduces the old timing-derived choice —
+     * `'perLayerTimed'` when timing is on, `'merged'` otherwise — so production
+     * and `?gpuTimings` stay byte-identical. An explicit `RenderStrategy` pins
+     * the shape regardless of timing (e.g. `'merged'` WITH timing on, the
+     * harness's production-true timed mode).
+     */
+    renderStrategy: RenderStrategy | 'auto';
     /**
      * Clip-path inspector — the debug overlay that draws a selected clip's
      * camera route (speed-coloured) plus a scrub gizmo. Only the two scalars

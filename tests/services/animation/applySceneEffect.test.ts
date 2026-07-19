@@ -102,7 +102,7 @@ function makeSettings(opts?: {
     tonemap: { exposure: 1, curve: 0 } as EngineSettingsState['tonemap'],
     bias: { mode: 0, absMagLimit: -20 } as EngineSettingsState['bias'],
     thumbnails: { enabled: true },
-    debug: { showPickBuffer: false, showDiskRadiusRing: false, disabledPasses: {} },
+    debug: { showPickBuffer: false, showDiskRadiusRing: false, disabledPasses: {}, renderStrategy: 'auto' },
   } as unknown as EngineSettingsState;
 }
 
