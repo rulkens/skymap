@@ -7,7 +7,7 @@
  * build tool (`buildTextures`) also calls — so the runtime URL and the emitted
  * file can never drift onto different names (a mismatch would 404 and render the
  * blue placeholder). The helper folds in the tier→px mapping, the
- * surface-is-unsegmented convention, and the ring's PNG-for-alpha extension, so
+ * surface-is-unsegmented convention, and the ring's WebP-for-alpha extension, so
  * this fetcher no longer special-cases the ring id or constructs the name inline.
  *
  * The `AssetSlot` threads its own `AbortSignal` into `fetch`, so a slot
@@ -39,7 +39,7 @@ export const bodyTextureFetcher: Fetcher<ImageBitmap, BodyTextureReq> = async (r
   // the default colour management would gamma-shift those numbers; `colorSpaceConversion:
   // 'none'` hands back the raw bytes. sRGB colour maps (surface/night/clouds) take
   // the default managed decode. `isLinearTextureKind` is the single home for that
-  // axis — the same predicate that picks the PNG extension and the GPU format.
+  // axis — the same predicate that picks the WebP extension and the GPU format.
   if (isLinearTextureKind(req.kind)) {
     return createImageBitmap(blob, { colorSpaceConversion: 'none' });
   }

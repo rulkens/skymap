@@ -3,7 +3,7 @@
  * buildTextures — turn the raw planet-body texture sources fetched into
  * data/raw/textures/ (see fetchTextures.ts) into the tiered runtime files the
  * browser loads on close approach: `public/data/images/textures/<bodyId>-<px>.jpg`
- * for the 13 spherical bodies, plus `saturn-ring-<px>.png` for the ring strip.
+ * for the 13 spherical bodies, plus `saturn-ring-<px>.webp` for the ring strip.
  *
  * The output name comes from the shared `bodyTextureFilename` helper — the SAME
  * helper the runtime fetcher (`bodyTextureFetcher`) calls to build its request
@@ -11,8 +11,8 @@
  * names (a mismatch would 404 every body). Each body builds one file per `kind`
  * it declares in `BODY_TEXTURE_REGISTRY` (a `surface` albedo plus, for Earth,
  * `night` / `material` / `normal` feature maps); `surface` is the helper's
- * unsegmented default, so its names stay byte-identical to the historical
- * `<bodyId>-<px>.jpg` / `saturn-ring-<px>.png`.
+ * unsegmented default, so its opaque-sRGB names stay `<bodyId>-<px>.jpg`, while
+ * the alpha/linear maps and the ring ship as lossless `.webp`.
  *
  * ## Three source formats, one sharp path
  *
@@ -48,14 +48,14 @@
  * narrower tier, never the reverse (spec §3). A body with no source on disk is
  * logged and skipped; the run emits whatever it can rather than crashing.
  *
- * ## Ring PNG — alpha passthrough
+ * ## Ring WebP — alpha passthrough
  *
  * Saturn's ring is a radial alpha strip (transparent gaps between the ring
- * bands), so it ships as PNG, not JPEG — a JPEG cannot carry the alpha channel.
- * The strip is resized to each tier width preserving its aspect and re-encoded as
- * PNG with the alpha untouched (no flatten). It rides Saturn's `large` ceiling,
- * so its emitted set is purely the source cap. The runtime samples it by radius
- * and uploads it as an N×1 `texture_2d`.
+ * bands), so it ships as lossless WebP, not JPEG — a JPEG cannot carry the alpha
+ * channel. The strip is resized to each tier width preserving its aspect and
+ * re-encoded as lossless WebP with the alpha untouched (no flatten). It rides
+ * Saturn's `large` ceiling, so its emitted set is purely the source cap. The
+ * runtime samples it by radius and uploads it as an N×1 `texture_2d`.
  *
  * All raw reads resolve through `rawDataPath('textures.*')` (or, for the loose
  * 2 k dev variants that are not their own registry rows, `join(rawDataPath(
@@ -225,8 +225,8 @@ async function writeBodyTier(
  *  - **G** = ocean mask, `255` where the pixel is water (`255 - land`), so 1 = ocean;
  *  - **B**, **A** = spare (0 / opaque) for a future plan to claim.
  *
- * The packed buffer goes through `writeLinearTier`, which encodes PNG with NO
- * sRGB gamma — the channels are numeric fields, not colour, so a gamma curve
+ * The packed buffer goes through `writeLinearTier`, which encodes lossless WebP
+ * with NO sRGB gamma — the channels are numeric fields, not colour, so a gamma curve
  * would corrupt them. Resizing before packing means `writeLinearTier`'s own
  * resize is an identity op here; it stays general for a source that hands it a
  * full-res buffer to downsample.
@@ -302,7 +302,7 @@ function bakeNormalOnce(
   return baked;
 }
 
-/** Bake (or reuse) the normal map and write one tier as a linear PNG. */
+/** Bake (or reuse) the normal map and write one tier as a linear lossless WebP. */
 async function writeNormalTier(
   bodyId: BodyTextureId,
   srcPath: string,
@@ -351,11 +351,12 @@ const SRGB_WRITER: KindWriter = {
  *  - **`surface` + `night`** → the shared `SRGB_WRITER` (JPEG albedo / night
  *    lights), tint-parameterised off the registry.
  *  - **`material`** → `writeMaterialTier`, packing a linear roughness/ocean-mask
- *    PNG (Earth's PBR map).
+ *    lossless WebP (Earth's PBR map).
  *  - **`normal`** → `writeNormalTier`, baking a tangent-space normal map from the
  *    elevation source.
- *  - **`clouds`** → `writeCloudTier`, an sRGB-colour PNG whose alpha is derived
- *    from the composite's luminance (white cloud → opaque, black sky → clear).
+ *  - **`clouds`** → `writeCloudTier`, an sRGB-colour lossless WebP whose alpha is
+ *    derived from the composite's luminance (white cloud → opaque, black sky →
+ *    clear).
  *
  * A kind with no row is a loud build error at the dispatch below, never a silent
  * skip that would leave a body's map unbuilt — so a `kinds` row and its writer
@@ -400,13 +401,14 @@ async function writeBodyKindTier(
 }
 
 /**
- * Downsample the ring strip to a tier and write the PNG. Width-only resize
- * preserves the radial aspect; PNG keeps the alpha channel intact (no flatten).
+ * Downsample the ring strip to a tier and write lossless WebP. Width-only resize
+ * preserves the radial aspect; lossless WebP keeps the alpha channel intact (no
+ * flatten) and crushes the mostly-transparent strip far smaller than PNG.
  */
 async function writeRingTier(srcPath: string, widthPx: number, outPath: string): Promise<void> {
   await sharp(srcPath, { limitInputPixels: false })
     .resize({ width: widthPx })
-    .png()
+    .webp({ lossless: true })
     .toFile(outPath);
 }
 

@@ -68,15 +68,7 @@ together.
 
 ## 6. Cloud deck is Lambert-lit, not multiple-scattering (fidelity, med)
 
-`cloudShell/fragment.wesl` shades the deck with a single Lambert term scaled by
-`sunIrradiance` (plus the ambient floor). Real cloud brightness is dominated by
-MULTIPLE scattering: it is why decks stay bright at high sun angles, why thick
-clouds self-shadow, and why their edges glow (forward-scatter silver lining).
-The current model gives none of that — a flat textured shell that dims by
-`N·L` alone. A physically-fuller cloud deck would want at least a cheap
-multiple-scattering approximation (a Hillaire-style powder/HG term, or a
-2-parameter analytic phase) driven by the cloud map's optical thickness. This
-is the biggest remaining PBR gap in the Earth stack (the surface is
-Cook-Torrance + Oren-Nayar, the atmosphere is Bruneton/Hillaire; only the
-clouds are ad-hoc). Deferred as its own effort — it needs a cloud optical model
-and probably a thickness channel, not just a shader tweak.
+Promoted to its own item — see `2026-07-19-cloud-deck-pbr.md`. The deck is the
+last ad-hoc layer in an otherwise PBR stack; the fuller analysis covers the
+missing thickness channel, the cheap analytic phase term, and live-coverage vs
+real-τ data sources.

@@ -1,7 +1,7 @@
 /**
  * Enumerate the tiered planet-surface textures that should ship to R2.
  *
- * The texture build pipeline writes one `<body>-<size>.{jpg,png}` per
+ * The texture build pipeline writes one `<body>-<size>.{jpg,webp}` per
  * planet/moon surface (and ring sheet) into
  * `public/data/images/textures/`.  Like the hi-res famous-galaxy WebPs,
  * that directory is one level below the flat `*.bin` listing the main
@@ -23,7 +23,7 @@
  * Pure apart from the directory read: returns an empty array when the
  * directory is absent (a code-only deploy that hasn't run the texture
  * build should not fail the sync).  Only files ending in `.jpg` or
- * `.png` are returned.
+ * `.webp` are returned.
  */
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -36,7 +36,7 @@ export type TextureImageUpload = {
 export function collectTextureImages(sourceDir: string): TextureImageUpload[] {
   if (!existsSync(sourceDir)) return [];
   return readdirSync(sourceDir)
-    .filter((name) => name.endsWith('.jpg') || name.endsWith('.png'))
+    .filter((name) => name.endsWith('.jpg') || name.endsWith('.webp'))
     .filter((name) => statSync(join(sourceDir, name)).isFile())
     .sort()
     .map((name) => ({

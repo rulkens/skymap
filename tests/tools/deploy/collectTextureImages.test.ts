@@ -8,7 +8,7 @@
  *
  * Two contracts pinned:
  *
- *   1. ALLOW shape: `.jpg` / `.png` files are included; sidecar files
+ *   1. ALLOW shape: `.jpg` / `.webp` files are included; sidecar files
  *      (e.g. a manifest.json the build drops next to the textures) are
  *      not.
  *   2. R2 key shape: `data/images/textures/<file>`. The `data/` prefix
@@ -33,7 +33,7 @@ function fixtureDir(): string {
   const dir = join(root, 'textures');
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'mars-2048.jpg'), Buffer.from([1, 2, 3, 4]));
-  writeFileSync(join(dir, 'saturn-ring-8192.png'), Buffer.from([5, 6, 7, 8]));
+  writeFileSync(join(dir, 'saturn-ring-8192.webp'), Buffer.from([5, 6, 7, 8]));
   writeFileSync(join(dir, 'manifest.json'), '{}');
   return dir;
 }
@@ -44,8 +44,8 @@ describe('collectTextureImages', () => {
     const inventory = collectTextureImages(dir);
     const mars = inventory.find((e) => e.localPath.endsWith('mars-2048.jpg'));
     expect(mars?.r2Key).toBe('data/images/textures/mars-2048.jpg');
-    const saturn = inventory.find((e) => e.localPath.endsWith('saturn-ring-8192.png'));
-    expect(saturn?.r2Key).toBe('data/images/textures/saturn-ring-8192.png');
+    const saturn = inventory.find((e) => e.localPath.endsWith('saturn-ring-8192.webp'));
+    expect(saturn?.r2Key).toBe('data/images/textures/saturn-ring-8192.webp');
     expect(inventory.map((e) => e.r2Key.split('/').pop())).not.toContain('manifest.json');
     expect(inventory).toHaveLength(2);
   });

@@ -2,8 +2,8 @@ import sharp from 'sharp';
 
 /**
  * writeLinearTier — the build's first LINEAR-data output primitive (spec §9.3):
- * resize a prepared linear RGBA buffer to a tier width and write it as PNG with
- * NO sRGB gamma re-encoding.
+ * resize a prepared linear RGBA buffer to a tier width and write it as lossless
+ * WebP with NO sRGB gamma re-encoding.
  *
  * ### Why this is separate from the sRGB `writeBodyTier` path
  *
@@ -19,9 +19,11 @@ import sharp from 'sharp';
  *    so the byte values pass through untouched. Applying one would bend the
  *    packed numbers along their curve — a roughness of 0.5 would no longer read
  *    back as 0.5.
- *  - **PNG, not JPEG.** JPEG's lossy DCT + chroma subsampling would smear the
+ *  - **Lossless, not lossy.** A lossy DCT + chroma subsampling would smear the
  *    packed channels across pixel boundaries (worst along coastlines in the
- *    ocean mask); PNG is lossless and per-pixel exact.
+ *    ocean mask). WebP LOSSLESS is per-pixel exact — bit-identical RGB wherever
+ *    alpha is non-zero, and these maps are fully opaque (A = 255) — while
+ *    encoding ~40% smaller than the PNG it replaces.
  *
  * The resize is width-only (the maps are 2:1 equirect, so height follows). It is
  * a downsample of a wider prepared buffer, or an identity op when the buffer is
@@ -44,6 +46,6 @@ export async function writeLinearTier(
     limitInputPixels: false,
   })
     .resize({ width: widthPx })
-    .png()
+    .webp({ lossless: true })
     .toFile(outPath);
 }

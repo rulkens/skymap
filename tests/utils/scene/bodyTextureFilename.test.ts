@@ -14,28 +14,28 @@ describe('bodyTextureFilename', () => {
   it('keeps a non-surface sRGB kind segmented but JPG', () => {
     // Earth's night-lights map (plan B) is a non-surface kind, so it carries the
     // `-night-` segment — but it is sRGB COLOUR, not linear-packed data, so it
-    // stays JPG. If `night` were ever treated as linear it would become `.png` and
+    // stays JPG. If `night` were ever treated as linear it would become `.webp` and
     // the runtime fetcher would 404 the map.
     expect(bodyTextureFilename('earth', 'night', 'large')).toBe('earth-night-8192.jpg');
   });
 
-  it('uses PNG for the ring strip', () => {
-    expect(bodyTextureFilename('saturn-ring', 'surface', 'large')).toBe('saturn-ring-8192.png');
+  it('uses lossless WebP for the ring strip', () => {
+    expect(bodyTextureFilename('saturn-ring', 'surface', 'large')).toBe('saturn-ring-8192.webp');
   });
 
-  it('uses PNG for a linear-data kind on a sphere', () => {
-    // A linear-packed map (material) must be PNG even on an opaque sphere: JPEG's
-    // chroma subsampling would corrupt the packed roughness/mask channels. If the
-    // extension ignored the linear axis this would be `.jpg` and the fetcher would
-    // 404 the material map.
-    expect(bodyTextureFilename('earth', 'material', 'medium')).toBe('earth-material-4096.png');
+  it('uses lossless WebP for a linear-data kind on a sphere', () => {
+    // A linear-packed map (material) must ship losslessly even on an opaque sphere:
+    // a lossy codec's chroma subsampling would corrupt the packed roughness/mask
+    // channels. If the extension ignored the linear axis this would be `.jpg` and
+    // the fetcher would 404 the material map.
+    expect(bodyTextureFilename('earth', 'material', 'medium')).toBe('earth-material-4096.webp');
   });
 
-  it('uses PNG for an alpha kind on a sphere', () => {
-    // Clouds are sRGB COLOUR (not linear-packed) yet must ship as PNG: the shell
+  it('uses lossless WebP for an alpha kind on a sphere', () => {
+    // Clouds are sRGB COLOUR (not linear-packed) yet must ship as WebP: the shell
     // carries a transparency channel a JPEG cannot hold. This routes through the
     // alpha axis, orthogonal to the linear one. If the extension ignored alpha this
     // would be `.jpg` and the fetcher would 404 the cloud map.
-    expect(bodyTextureFilename('earth', 'clouds', 'large')).toBe('earth-clouds-8192.png');
+    expect(bodyTextureFilename('earth', 'clouds', 'large')).toBe('earth-clouds-8192.webp');
   });
 });

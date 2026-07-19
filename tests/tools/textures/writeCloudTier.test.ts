@@ -17,7 +17,7 @@ describe('writeCloudTier', () => {
     const dir = mkdtempSync(join(tmpdir(), 'writeCloudTier-'));
     try {
       const srcPath = join(dir, 'src.png');
-      const outPath = join(dir, 'out.png');
+      const outPath = join(dir, 'out.webp');
 
       // A 2x1 RGB source (no alpha): a white cell then a black cell.
       const rgb = Buffer.from([255, 255, 255, 0, 0, 0]);
